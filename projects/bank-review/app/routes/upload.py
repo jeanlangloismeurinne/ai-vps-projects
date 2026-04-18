@@ -18,7 +18,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_page(request: Request):
     if not is_authenticated(request):
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("upload.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "upload.html", {"error": None})
 
 
 @router.post("/upload", response_class=HTMLResponse)
@@ -30,8 +30,8 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in allowed:
         return templates.TemplateResponse(
-            "upload.html",
-            {"request": request, "error": f"Format .{ext} non supporté. Utilisez Excel (.xlsx) ou CSV."},
+            request, "upload.html",
+            {"error": f"Format .{ext} non supporté. Utilisez Excel (.xlsx) ou CSV."},
         )
 
     content = await file.read()
@@ -40,7 +40,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         df, warnings = parse_upload(file.filename, content)
     except Exception as e:
         return templates.TemplateResponse(
-            "upload.html", {"request": request, "error": f"Erreur de lecture : {e}"}
+            request, "upload.html", {"error": f"Erreur de lecture : {e}"}
         )
 
     preview = df_to_preview(df)
@@ -56,6 +56,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     request.session["file_path"] = dest
 
     return templates.TemplateResponse(
-        "view.html",
-        {"request": request, "file_name": file.filename, "preview": preview, "warnings": warnings},
+        request, "view.html",
+        {"file_name": file.filename, "preview": preview, "warnings": warnings},
     )

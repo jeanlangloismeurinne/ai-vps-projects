@@ -15,7 +15,7 @@ def is_authenticated(request: Request) -> bool:
 async def login_page(request: Request):
     if is_authenticated(request):
         return RedirectResponse("/upload", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
 @router.post("/login", response_class=HTMLResponse)
@@ -24,7 +24,7 @@ async def login(request: Request, password: str = Form(...)):
     if password == expected:
         request.session["authenticated"] = True
         return RedirectResponse("/upload", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Mot de passe incorrect."})
+    return templates.TemplateResponse(request, "login.html", {"error": "Mot de passe incorrect."})
 
 
 @router.get("/logout")

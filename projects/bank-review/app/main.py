@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 
 from app.routes import auth, upload, analyze
+from app.routes import import_route
 
 load_dotenv()
 
@@ -22,3 +23,4 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth.router)
 app.include_router(upload.router)
 app.include_router(analyze.router, prefix="/api")
+app.include_router(import_route.router)

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Review — Résultats</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="logo">Bank Review</span>
+    <div class="header-actions">
+      <a href="/import" class="btn-secondary small">Nouvel import</a>
+      <a href="/logout" class="logout">Déconnexion</a>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-value">{{ stats.total }}</span>
+        <span class="stat-label">nouvelles transactions</span>
+      </div>
+      <div class="stat-item high">
+        <span class="stat-value">{{ stats.high }}</span>
+        <span class="stat-label">confiance élevée ≥80%</span>
+      </div>
+      <div class="stat-item medium">
+        <span class="stat-value">{{ stats.medium }}</span>
+        <span class="stat-label">confiance moyenne 50–79%</span>
+      </div>
+      <div class="stat-item low">
+        <span class="stat-value">{{ stats.low }}</span>
+        <span class="stat-label">confiance faible &lt;50%</span>
+      </div>
+    </div>
+
+    {% if stats.total == 0 %}
+    <div class="alert warning" style="margin-top:20px">Aucune nouvelle transaction détectée — tout est déjà dans l'historique.</div>
+    {% else %}
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterRows('all', this)">Toutes ({{ stats.total }})</button>
+      <button class="filter-btn" onclick="filterRows('low', this)">Faible confiance ({{ stats.low }})</button>
+      <button class="filter-btn" onclick="filterRows('medium', this)">Moyenne ({{ stats.medium }})</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper" style="margin-bottom:24px">
+      <table id="reviewTable">
+        <thead>
+          <tr>
+            <th>Date op.</th>
+            <th>Date réelle</th>
+            <th>Libellé</th>
+            <th>Montant</th>
+            <th>Catégorie banque</th>
+            <th>Catégorie proposée</th>
+            <th>Confiance</th>
+            <th>Méthode</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          {% set conf_class = "high" if row.confidence >= 80 else ("medium" if row.confidence >= 50 else "low") %}
+          <tr data-conf="{{ conf_class }}" data-idx="{{ loop.index0 }}">
+            <td>{{ row.dateOp }}</td>
+            <td>{{ row.realDate or "—" }}</td>
+            <td class="label-cell" title="{{ row.label }}">{{ row.label[:55] }}{% if row.label|length > 55 %}…{% endif %}</td>
+            <td class="{{ 'amount-neg' if row.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(row.amount) }} €</td>
+            <td class="bank-cat">{{ row.bankCategory }}</td>
+            <td>
+              <select class="cat-select" data-idx="{{ loop.index0 }}" onchange="markEdited(this)">
+                {% for cat in ["Nourriture","Restaurant","Vacances","Transport","Navigo","Voiture","Appartement","Loyer","Electricité","Box","Assurances","Charges appartement","Santé","Pharmacie","Crèche","Loisirs","Culture","Cadeaux","Dons","Impôts","Jean","Amélie","Paul","Bébé","Entrée mensuelle","Entrée exceptionnelle","Entrée","Espèces","Travaux","Déménagement","Notaire","Taxe foncière","Non catégorisé"] %}
+                <option value="{{ cat }}" {% if cat == row.category %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <span class="conf-badge {{ conf_class }}">{{ row.confidence }}%</span>
+            </td>
+            <td><span class="method-badge {{ row.method }}">{{ row.method }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Confirm button -->
+    <div class="confirm-bar">
+      <div id="confirmMsg"></div>
+      <button class="btn-confirm" id="confirmBtn" onclick="confirmImport()">
+        Valider et ajouter à l'historique ({{ stats.total }} transactions)
+      </button>
+    </div>
+
+    {% endif %}
+  </div>
+
+  <script>
+    const originalRows = {{ rows | tojson }};
+
+    function filterRows(level, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('#reviewTable tbody tr').forEach(tr => {
+        const show = level === 'all' || tr.dataset.conf === level;
+        tr.style.display = show ? '' : 'none';
+      });
+    }
+
+    function markEdited(sel) {
+      sel.closest('tr').classList.add('edited');
+    }
+
+    async function confirmImport() {
+      const btn = document.getElementById('confirmBtn');
+      const msg = document.getElementById('confirmMsg');
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement…';
+
+      // Collect current categories (with any user edits)
+      const rows = originalRows.map((row, i) => {
+        const sel = document.querySelector(`.cat-select[data-idx="${i}"]`);
+        return { ...row, category: sel ? sel.value : row.category };
+      });
+
+      const res = await fetch('/api/import/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        msg.innerHTML = `<span class="error">${data.error}</span>`;
+        btn.disabled = false;
+        btn.textContent = 'Réessayer';
+      } else {
+        msg.innerHTML = `<span class="success">${data.added} transactions ajoutées à l'historique.</span>`;
+        btn.textContent = 'Terminé ✓';
+      }
+    }
+  </script>
+</body>
+</html>

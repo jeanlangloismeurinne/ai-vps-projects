@@ -212,3 +212,65 @@ tbody tr:hover { background: var(--surface2); }
 #analysisText li { margin-bottom: 4px; }
 #analysisText strong { color: #fff; }
 #analysisText .error { color: var(--error); }
+
+/* ── Import / Review page ── */
+
+.radio-group { display: flex; gap: 20px; }
+.radio-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.radio-label input { accent-color: var(--accent); }
+
+.period-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.period-label { color: var(--text-muted); font-size: 13px; min-width: 70px; }
+.period-row input[type="date"] { background: var(--surface2); border: 1px solid var(--border); border-radius:6px; padding:8px 12px; color:var(--text); font-size:13px; outline:none; }
+.period-row input[type="date"]:focus { border-color: var(--accent); }
+.btn-remove { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:4px 8px; }
+.btn-remove:hover { color:var(--error); }
+
+/* Stats bar */
+.stats-bar { display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+.stat-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 20px; min-width:140px; }
+.stat-item.high { border-color: rgba(62,207,142,0.3); }
+.stat-item.medium { border-color: rgba(240,180,41,0.3); }
+.stat-item.low { border-color: rgba(224,92,106,0.3); }
+.stat-value { display:block; font-size:24px; font-weight:700; }
+.stat-label { font-size:12px; color:var(--text-muted); }
+
+/* Filter bar */
+.filter-bar { display:flex; gap:8px; margin-bottom:14px; }
+.filter-btn { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:12px; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+.filter-btn:hover { color:var(--text); }
+.filter-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* Confidence badges */
+.conf-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:600; }
+.conf-badge.high { background:rgba(62,207,142,0.15); color:var(--success); }
+.conf-badge.medium { background:rgba(240,180,41,0.15); color:var(--warning-text); }
+.conf-badge.low { background:rgba(224,92,106,0.15); color:var(--error); }
+
+/* Method badges */
+.method-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; }
+.method-badge.vacation { background:rgba(79,126,248,0.15); color:var(--accent); }
+.method-badge.label_rule { background:rgba(62,207,142,0.1); color:var(--success); }
+.method-badge.bank_mapping { background:rgba(240,180,41,0.1); color:var(--warning-text); }
+.method-badge.claude { background:rgba(167,139,250,0.15); color:#a78bfa; }
+.method-badge.unclassified { background:rgba(224,92,106,0.1); color:var(--error); }
+
+/* Category select */
+.cat-select { background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:4px 8px; color:var(--text); font-size:12px; outline:none; cursor:pointer; }
+.cat-select:focus { border-color:var(--accent); }
+tr.edited .cat-select { border-color:var(--accent); }
+
+/* Amount colors */
+.amount-neg { color: var(--error); }
+.amount-pos { color: var(--success); }
+
+/* Label cell */
+.label-cell { max-width: 280px; overflow:hidden; text-overflow:ellipsis; }
+.bank-cat { color:var(--text-muted); font-size:12px; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+
+/* Confirm bar */
+.confirm-bar { display:flex; align-items:center; justify-content:flex-end; gap:16px; padding:16px 0; border-top:1px solid var(--border); }
+.btn-confirm { background:var(--success); color:#000; border:none; border-radius:6px; padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer; transition:opacity 0.15s; }
+.btn-confirm:hover:not(:disabled) { opacity:0.85; }
+.btn-confirm:disabled { opacity:0.5; cursor:not-allowed; }
+.success { color:var(--success); font-weight:600; }
