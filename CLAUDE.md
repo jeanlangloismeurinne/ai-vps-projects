@@ -13,6 +13,7 @@ Déploiement : Coolify — chaque projet est une application séparée.
 
 ## Projets actifs
 - projects/assistant-ia/ : bot Slack + résumé newsletters
+- projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/

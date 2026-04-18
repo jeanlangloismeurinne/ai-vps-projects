@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Review — {{ file_name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="logo">Bank Review</span>
+    <div class="header-actions">
+      <a href="/upload" class="btn-secondary small">Nouveau fichier</a>
+      <a href="/logout" class="logout">Déconnexion</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="file-info">
+      <strong>{{ file_name }}</strong>
+      <span class="badge">{{ preview.total_rows }} lignes</span>
+      {% if preview.truncated %}<span class="badge warning">Aperçu limité à 100 lignes</span>{% endif %}
+    </div>
+
+    {% for w in warnings %}
+    <div class="alert warning">{{ w }}</div>
+    {% endfor %}
+
+    <!-- Data table -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>{% for col in preview.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in preview.rows %}
+          <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Claude analysis panel -->
+    <div class="analysis-panel">
+      <h3>Analyse par Claude</h3>
+      <div class="question-row">
+        <input type="text" id="question" placeholder="Question spécifique (optionnel) — ex: quelles sont les dépenses récurrentes ?">
+        <button id="analyzeBtn" onclick="runAnalysis()">Analyser</button>
+      </div>
+      <div id="analysisResult" class="analysis-result hidden">
+        <div class="spinner" id="spinner"></div>
+        <div id="analysisText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function runAnalysis() {
+      const btn = document.getElementById('analyzeBtn');
+      const result = document.getElementById('analysisResult');
+      const text = document.getElementById('analysisText');
+      const spinner = document.getElementById('spinner');
+      const question = document.getElementById('question').value;
+
+      btn.disabled = true;
+      btn.textContent = 'Analyse en cours…';
+      result.classList.remove('hidden');
+      spinner.style.display = 'block';
+      text.textContent = '';
+
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: question || null }),
+        });
+        const data = await res.json();
+        spinner.style.display = 'none';
+        if (data.error) {
+          text.innerHTML = `<span class="error">${data.error}</span>`;
+        } else {
+          text.innerHTML = formatMarkdown(data.analysis);
+        }
+      } catch (e) {
+        spinner.style.display = 'none';
+        text.innerHTML = `<span class="error">Erreur de connexion.</span>`;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Analyser';
+    }
+
+    function formatMarkdown(text) {
+      return text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/^/, '<p>').replace(/$/, '</p>');
+    }
+  </script>
+</body>
+</html>

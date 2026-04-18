@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Review — Import</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <span class="logo">Bank Review</span>
+    <a href="/logout" class="logout">Déconnexion</a>
+  </header>
+  <div class="card">
+    <h2>Importer un fichier</h2>
+    <p class="subtitle">Formats acceptés : <strong>Excel (.xlsx, .xls)</strong> ou <strong>CSV</strong></p>
+    {% if error %}
+    <div class="alert error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/upload" enctype="multipart/form-data" id="uploadForm">
+      <div class="drop-zone" id="dropZone">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Glissez-déposez votre fichier ici</p>
+        <p class="hint">ou</p>
+        <label for="file" class="btn-secondary">Choisir un fichier</label>
+        <input type="file" id="file" name="file" accept=".xlsx,.xls,.csv" required hidden>
+        <p class="file-name" id="fileName"></p>
+      </div>
+      <button type="submit" id="submitBtn" disabled>Analyser</button>
+    </form>
+  </div>
+  <script>
+    const input = document.getElementById('file');
+    const fileName = document.getElementById('fileName');
+    const submitBtn = document.getElementById('submitBtn');
+    const dropZone = document.getElementById('dropZone');
+
+    input.addEventListener('change', () => {
+      if (input.files[0]) {
+        fileName.textContent = input.files[0].name;
+        submitBtn.disabled = false;
+      }
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        fileName.textContent = file.name;
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

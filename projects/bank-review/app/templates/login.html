@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Review — Connexion</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="card center">
+    <h1>Bank Review</h1>
+    <p class="subtitle">Analyse de relevés bancaires</p>
+    {% if error %}
+    <div class="alert error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login">
+      <label for="password">Mot de passe</label>
+      <input type="password" id="password" name="password" autofocus required placeholder="••••••••">
+      <button type="submit">Accéder</button>
+    </form>
+  </div>
+</body>
+</html>
