@@ -1,0 +1,32 @@
+version: '3.9'
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: shared-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: CHANGE_ME_STRONG_PASSWORD
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - infra-net
+  redis:
+    image: redis:7-alpine
+    container_name: shared-redis
+    restart: always
+    volumes:
+      - redisdata:/data
+    ports:
+      - '6379:6379'
+    networks:
+      - infra-net
+volumes:
+  pgdata:
+  redisdata:
+networks:
+  infra-net:
+    name: infra-net
+    driver: bridge
