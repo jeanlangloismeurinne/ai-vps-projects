@@ -1,20 +1,20 @@
 ---
-id: 1776628724682
+id: 1776629217225
 type: suggestion
-status: closed
-date: 2026-04-19T19:58:44.683233
+status: open
+date: 2026-04-19T20:06:57.225683
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget
 ---
 
 ## 💡 Suggestion
 
-**Date** : 19/04/2026 19:58
+**Date** : 19/04/2026 20:06
 **URL** : `https://bank.jlmvpscode.duckdns.org/budget`
 
 ### Description
 
-Lorsque la somme des entrées et dépenses d'une case est nulle, affiche 0 et permet à l'utilisateur de cliquer dessus pour voir les dépenses correspondantes
+CAF DE PARIS doit être classifié comme "Crèche"
 
 ### Contexte
 

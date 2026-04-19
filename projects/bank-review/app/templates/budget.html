@@ -110,13 +110,13 @@
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}
                    {{ m_status(m, cat.is_income) }}
-                   {% if not m.is_future and m.actual != 0 %}cell-link{% endif %}"
-            {% if not m.is_future and m.actual != 0 %}
+                   {% if not m.is_future and m.has_tx %}cell-link{% endif %}"
+            {% if not m.is_future and m.has_tx %}
             data-cat="{{ cat.category|e }}" data-month="{{ m.month }}"
             onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
             title="Voir les transactions — {{ cat.category }}"
             {% endif %}>
-          {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
+          {% if not m.is_future and m.has_tx %}{{ "%.0f"|format(m.actual) }}{% endif %}
         </td>
         {% endfor %}
       </tr>
@@ -387,9 +387,13 @@
     });
     if (res.ok) {
       _allCats = null;
+      const cats = await loadCats();
+      renderCatsTable(cats);
       const row = document.getElementById(`cat-row-${lineId}`);
-      row.style.background = 'var(--cell-green-bg)';
-      setTimeout(() => { row.style.background = ''; }, 1200);
+      if (row) {
+        row.style.background = 'var(--cell-green-bg)';
+        setTimeout(() => { row.style.background = ''; }, 1200);
+      }
     }
   }
 

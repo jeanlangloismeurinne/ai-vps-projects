@@ -96,10 +96,13 @@ async def update_budget_line(year_id: int, category: str, monthly_budget: float)
     )
 
 
-async def get_monthly_actuals(year_id: int) -> dict[str, dict[str, float]]:
+async def get_monthly_actuals(
+    year_id: int,
+) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, int]]]:
     """
-    Returns {category: {YYYY-MM: signed_amount}} for all transactions in the year.
-    Expenses are negative (money out), income/refunds are positive (money in).
+    Returns (actuals, tx_counts).
+    actuals: {category: {YYYY-MM: signed_amount}}
+    tx_counts: {category: {YYYY-MM: transaction_count}}
     """
     pool = await get_pool()
     rows = await pool.fetch(
@@ -107,7 +110,8 @@ async def get_monthly_actuals(year_id: int) -> dict[str, dict[str, float]]:
         SELECT
             t.category,
             TO_CHAR(t.date_op, 'YYYY-MM') AS month,
-            SUM(t.amount)                 AS total
+            SUM(t.amount)                 AS total,
+            COUNT(*)                      AS tx_count
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
         WHERE y.id = $1
@@ -118,9 +122,11 @@ async def get_monthly_actuals(year_id: int) -> dict[str, dict[str, float]]:
         year_id,
     )
     result: dict[str, dict[str, float]] = defaultdict(dict)
+    counts: dict[str, dict[str, int]] = defaultdict(dict)
     for r in rows:
         result[r["category"]][r["month"]] = float(r["total"])
-    return dict(result)
+        counts[r["category"]][r["month"]] = int(r["tx_count"])
+    return dict(result), dict(counts)
 
 
 # ── Budget view builder ───────────────────────────────────────────────────────
@@ -129,6 +135,7 @@ def build_budget_view(
     year: dict,
     lines: list[dict],
     actuals: dict[str, dict[str, float]],
+    tx_counts: dict[str, dict[str, int]] | None = None,
     today: date | None = None,
 ) -> dict:
     """
@@ -145,6 +152,7 @@ def build_budget_view(
         budget = float(line["monthly_budget"])
         cat_actuals = actuals.get(cat, {})
 
+        cat_counts = (tx_counts or {}).get(cat, {})
         monthly = []
         for m in months:
             actual = cat_actuals.get(m, 0.0)
@@ -158,6 +166,7 @@ def build_budget_view(
                 "variance": round(variance, 2),
                 "is_current": m == today.strftime("%Y-%m"),
                 "is_future": m > today.strftime("%Y-%m"),
+                "has_tx": cat_counts.get(m, 0) > 0,
             })
 
         ytd_actual = sum(cat_actuals.get(m, 0.0) for m in months[:elapsed_months])

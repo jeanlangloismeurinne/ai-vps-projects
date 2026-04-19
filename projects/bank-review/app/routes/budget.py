@@ -33,8 +33,8 @@ async def budget_page(request: Request, year_id: int = Query(default=None)):
     )
     selected = next((y for y in years if y["id"] == year_id), default)
     lines = await get_budget_lines(selected["id"])
-    actuals = await get_monthly_actuals(selected["id"])
-    view = build_budget_view(selected, lines, actuals)
+    actuals, tx_counts = await get_monthly_actuals(selected["id"])
+    view = build_budget_view(selected, lines, actuals, tx_counts)
 
     # Serialize dates for template
     for y in years:
