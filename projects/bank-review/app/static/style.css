@@ -173,6 +173,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .alert.error   { background: rgba(192,57,43,0.10); color: var(--error); border: 1px solid rgba(192,57,43,0.25); }
 .alert.warning { background: var(--warning-bg); color: var(--warning-text); border: 1px solid rgba(180,83,9,0.2); }
+.budget-update-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.btn-dismiss-banner { flex-shrink: 0; padding: 4px 10px; font-size: 12px; border: 1px solid rgba(180,83,9,0.4); background: transparent; color: var(--warning-text); border-radius: 4px; cursor: pointer; }
+.btn-dismiss-banner:hover { background: rgba(180,83,9,0.12); }
 
 /* ── Drop zone ── */
 .drop-zone {

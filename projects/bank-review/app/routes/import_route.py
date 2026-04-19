@@ -10,6 +10,7 @@ from app.routes.auth import is_authenticated
 from app.services.importer import run_import_pipeline
 from app.services.database import insert_transactions, upsert_account
 from app.services.format_checker import check_format, apply_mapping
+from app.services.budget import get_budget_years, create_next_budget_year
 
 router = APIRouter()
 
@@ -72,7 +73,7 @@ async def import_upload(
             request, "import.html", {"error": f"Erreur pipeline : {e}"}
         )
 
-    serializable = _serialize_rows(classified)
+    serializable = sorted(_serialize_rows(classified), key=lambda r: r.get("confidence") or 0)
     stats = _compute_stats(serializable)
 
     return templates.TemplateResponse(
@@ -118,7 +119,21 @@ async def import_confirm(request: Request, payload: ConfirmPayload):
             db_rows.append(db_row)
 
         nb = await insert_transactions(db_rows)
-        return {"added": nb}
+
+        # Check if imported dates exceed the last budget year → auto-create next year
+        new_year = None
+        dates = [r["date_op"] for r in db_rows if r.get("date_op")]
+        if dates:
+            max_date = max(d for d in dates if isinstance(d, date))
+            years = await get_budget_years()
+            if years:
+                latest_end = years[0]["end_date"]  # already ordered DESC
+                if isinstance(latest_end, str):
+                    latest_end = date.fromisoformat(latest_end)
+                if max_date > latest_end:
+                    new_year = await create_next_budget_year()
+
+        return {"added": nb, "new_year": new_year}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 

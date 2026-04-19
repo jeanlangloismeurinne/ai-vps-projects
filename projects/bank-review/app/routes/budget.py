@@ -10,6 +10,7 @@ from app.services.budget import (
     get_transactions_by_cell, recategorize_transaction,
     get_all_categories_for_year, add_budget_category,
     update_budget_category, rename_budget_category, delete_budget_category,
+    dismiss_budget_update_flag,
 )
 
 router = APIRouter()
@@ -140,4 +141,12 @@ async def api_delete_category(request: Request, line_id: int):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     await delete_budget_category(line_id)
+    return {"ok": True}
+
+
+@router.post("/api/budget/year/{year_id}/dismiss-update")
+async def api_dismiss_update(request: Request, year_id: int):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await dismiss_budget_update_flag(year_id)
     return {"ok": True}

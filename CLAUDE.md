@@ -14,6 +14,11 @@ Déploiement : Coolify — chaque projet est une application séparée.
 ## Projets actifs
 - projects/assistant-ia/ : bot Slack + résumé newsletters
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
+- projects/feedback-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
+
+## Feedback utilisateur
+Au début de chaque session sur un projet avec interface web, lire :
+`projects/feedback-module/TICKETS.md` — contient tous les bugs, features et suggestions remontés par les utilisateurs.
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/

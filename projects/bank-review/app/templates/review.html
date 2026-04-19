@@ -25,10 +25,17 @@
   <div class="alert warning">Aucune nouvelle transaction détectée — tout est déjà dans l'historique.</div>
   {% else %}
 
+  {% if stats.low > 0 %}
+  <div class="alert warning" style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <span style="font-size:20px">⚠</span>
+    <span><strong>{{ stats.low }} transaction{{ 's' if stats.low > 1 }} à vérifier</strong> — la classification proposée est peu fiable. Corrigez-les avant de valider.</span>
+  </div>
+  {% endif %}
+
   <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterRows('all',this)">Toutes ({{ stats.total }})</button>
-    <button class="filter-btn" onclick="filterRows('low',this)">Faible confiance ({{ stats.low }})</button>
-    <button class="filter-btn" onclick="filterRows('medium',this)">Moyenne ({{ stats.medium }})</button>
+    <button class="filter-btn {% if stats.low == 0 %}active{% endif %}" onclick="filterRows('all',this)">Toutes ({{ stats.total }})</button>
+    <button class="filter-btn {% if stats.low > 0 %}active{% endif %}" onclick="filterRows('low',this)">À vérifier — confiance faible ({{ stats.low }})</button>
+    <button class="filter-btn" onclick="filterRows('medium',this)">Confiance moyenne ({{ stats.medium }})</button>
   </div>
 
   <div class="table-wrapper" style="margin-bottom:24px">
@@ -81,6 +88,11 @@
       tr.style.display = (level === 'all' || tr.dataset.conf === level) ? '' : 'none';
     });
   }
+  // Apply initial filter: show only low-confidence rows if any exist
+  document.addEventListener('DOMContentLoaded', () => {
+    const hasLow = {{ 'true' if stats.low > 0 else 'false' }};
+    if (hasLow) filterRows('low', document.querySelector('.filter-btn.active'));
+  });
   function markEdited(sel) { sel.closest('tr').classList.add('edited'); }
   async function confirmImport() {
     const btn = document.getElementById('confirmBtn');
@@ -93,7 +105,12 @@
     const res = await fetch('/api/import/confirm', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rows}) });
     const data = await res.json();
     if (data.error) { msg.innerHTML = `<span class="error">${data.error}</span>`; btn.disabled = false; btn.textContent = 'Réessayer'; }
-    else { msg.innerHTML = `<span class="success">${data.added} transactions ajoutées à l'historique.</span>`; btn.textContent = 'Terminé ✓'; }
+    else {
+      let txt = `${data.added} transactions ajoutées à l'historique.`;
+      if (data.new_year) txt += ` Nouvel onglet budget créé : <a href="/budget?year_id=${data.new_year.id}">${data.new_year.year_label}</a> — pensez à actualiser les budgets.`;
+      msg.innerHTML = `<span class="success">${txt}</span>`;
+      btn.textContent = 'Terminé ✓';
+    }
   }
 </script>
 {% endblock %}

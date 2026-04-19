@@ -2,7 +2,7 @@
 Budget aggregation service.
 Computes monthly actuals from transactions and compares to budget lines.
 """
-from datetime import date
+from datetime import date, timedelta
 from collections import defaultdict
 from app.services.database import get_pool
 
@@ -12,9 +12,61 @@ from app.services.database import get_pool
 async def get_budget_years() -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT id, year_label, start_date, end_date FROM budget_years ORDER BY start_date DESC"
+        "SELECT id, year_label, start_date, end_date, needs_budget_update FROM budget_years ORDER BY start_date DESC"
     )
     return [dict(r) for r in rows]
+
+
+async def create_next_budget_year() -> dict | None:
+    """
+    If the most recent budget_year has no successor, create one covering the next
+    calendar year (Jan 1 – Dec 31), copying all budget_lines from the current year
+    and flagging the new year as needing a budget review.
+    Returns the new year dict, or None if it already exists.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        latest = await conn.fetchrow(
+            "SELECT id, year_label, start_date, end_date FROM budget_years ORDER BY end_date DESC LIMIT 1"
+        )
+        if not latest:
+            return None
+
+        # Fiscal year: next day after end_date, same duration as current year
+        prev_start = latest["start_date"]
+        prev_end   = latest["end_date"]
+        duration_days = (prev_end - prev_start).days  # preserve exact duration
+        next_start = prev_end + timedelta(days=1)
+        next_end   = next_start + timedelta(days=duration_days)
+        year_label = f"{next_start.year}-{next_end.year}" if next_start.year != next_end.year else str(next_start.year)
+
+        existing = await conn.fetchval(
+            "SELECT id FROM budget_years WHERE start_date = $1", next_start
+        )
+        if existing:
+            return None
+
+        async with conn.transaction():
+            new_id = await conn.fetchval(
+                """
+                INSERT INTO budget_years (year_label, start_date, end_date, needs_budget_update)
+                VALUES ($1, $2, $3, TRUE)
+                RETURNING id
+                """,
+                year_label, next_start, next_end,
+            )
+            await conn.execute(
+                """
+                INSERT INTO budget_lines (year_id, category, monthly_budget, group_name, sort_order, is_income)
+                SELECT $1, category, monthly_budget, group_name, sort_order, is_income
+                FROM budget_lines
+                WHERE year_id = $2
+                ON CONFLICT (year_id, category) DO NOTHING
+                """,
+                new_id, latest["id"],
+            )
+
+        return {"id": new_id, "year_label": year_label, "start_date": str(next_start), "end_date": str(next_end)}
 
 
 async def get_budget_lines(year_id: int) -> list[dict]:
@@ -300,6 +352,14 @@ async def rename_budget_category(line_id: int, new_name: str):
 async def delete_budget_category(line_id: int):
     pool = await get_pool()
     await pool.execute("DELETE FROM budget_lines WHERE id = $1", line_id)
+
+
+async def dismiss_budget_update_flag(year_id: int):
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE budget_years SET needs_budget_update = FALSE WHERE id = $1",
+        year_id,
+    )
 
 
 def _status(variance: float, ytd_budget: float, is_income: bool) -> str:

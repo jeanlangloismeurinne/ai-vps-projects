@@ -24,6 +24,13 @@
     {% endif %}
   </div>
 
+  {% if view and view.year.needs_budget_update %}
+  <div class="alert warning budget-update-banner">
+    ⚠️ Budget à actualiser — cette période a été créée automatiquement avec les montants de l'année précédente. Vérifiez et ajustez les budgets mensuels.
+    <button class="btn-dismiss-banner" onclick="dismissBudgetBanner({{ view.year.id }})">Marquer comme vérifié</button>
+  </div>
+  {% endif %}
+
   {% if not view or not view.groups %}
   <div class="alert warning">Aucune donnée pour cette année.</div>
   {% else %}
@@ -397,5 +404,13 @@
 
   function closeCats() { document.getElementById('catsModal').classList.add('hidden'); }
   function closeCatsOutside(e) { if (e.target.id === 'catsModal') closeCats(); }
+
+  async function dismissBudgetBanner(yearId) {
+    const res = await fetch(`/api/budget/year/${yearId}/dismiss-update`, { method: 'POST' });
+    if (res.ok) {
+      const banner = document.querySelector('.budget-update-banner');
+      if (banner) banner.remove();
+    }
+  }
 </script>
 {% endblock %}

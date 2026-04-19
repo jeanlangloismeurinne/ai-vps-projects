@@ -18,7 +18,6 @@
     <nav class="main-nav">
       <a href="/budget" class="nav-link {% if active == 'budget' %}active{% endif %}">Suivi budget</a>
       <a href="/import" class="nav-link {% if active == 'import' %}active{% endif %}">Importer</a>
-      <a href="/upload" class="nav-link {% if active == 'upload' %}active{% endif %}">Visualiser</a>
     </nav>
     <div class="header-actions">
       <button class="theme-toggle" id="themeToggle" title="Changer le thème" onclick="toggleTheme()">
@@ -39,5 +38,11 @@
       localStorage.setItem('theme', next);
     }
   </script>
+  <script
+    src="/static/feedback-widget.js"
+    data-api=""
+    data-project="bank-review"
+    defer
+  ></script>
 </body>
 </html>
