@@ -5,16 +5,16 @@ from fastapi import APIRouter, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Optional
 
 from app.routes.auth import is_authenticated
-from app.services.importer import run_import_pipeline, append_to_historical
+from app.services.importer import run_import_pipeline
+from app.services.database import insert_transactions, upsert_account
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 UPLOAD_DIR = "uploads"
-HISTORY_PATH = os.path.join(UPLOAD_DIR, "2025_comptes_raw_data.xlsx")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.get("/import", response_class=HTMLResponse)
@@ -29,18 +29,16 @@ async def import_upload(
     request: Request,
     file: UploadFile = File(...),
     has_vacations: str = Form("no"),
-    vacation_ranges: str = Form(""),   # JSON: [["2025-07-14","2025-07-28"], ...]
+    vacation_ranges: str = Form(""),
 ):
     if not is_authenticated(request):
         return RedirectResponse("/", status_code=302)
 
-    # Save uploaded CSV
     content = await file.read()
     dest = os.path.join(UPLOAD_DIR, "import_pending.csv")
     with open(dest, "wb") as f:
         f.write(content)
 
-    # Parse vacation periods
     periods: list[tuple[date, date]] = []
     if has_vacations == "yes" and vacation_ranges.strip():
         try:
@@ -55,26 +53,25 @@ async def import_upload(
                 {"error": f"Dates de vacances invalides : {e}"}
             )
 
-    # Run pipeline
     try:
-        classified = await run_import_pipeline(HISTORY_PATH, dest, periods)
+        classified = await run_import_pipeline(dest, periods)
     except Exception as e:
         return templates.TemplateResponse(
             request, "import.html", {"error": f"Erreur pipeline : {e}"}
         )
 
-    # Store in session for confirmation step
-    request.session["classified"] = json.dumps(classified)
+    # Serialize for template (dates → strings)
+    serializable = _serialize_rows(classified)
+    stats = _compute_stats(serializable)
 
-    stats = _compute_stats(classified)
     return templates.TemplateResponse(
         request, "review.html",
-        {"rows": classified, "stats": stats}
+        {"rows": serializable, "stats": stats}
     )
 
 
 class ConfirmPayload(BaseModel):
-    rows: list[dict]   # may include user overrides on "category"
+    rows: list[dict]
 
 
 @router.post("/api/import/confirm")
@@ -82,21 +79,53 @@ async def import_confirm(request: Request, payload: ConfirmPayload):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     try:
-        nb = append_to_historical(HISTORY_PATH, payload.rows)
-        # Clear session state
-        request.session.pop("classified", None)
+        # Upsert accounts found in this batch
+        accounts_seen: set[tuple] = set()
+        for row in payload.rows:
+            num = row.get("account_num")
+            label = row.get("account_label")
+            if num and (num, label) not in accounts_seen:
+                await upsert_account(num, label or "")
+                accounts_seen.add((num, label))
+
+        # Prepare rows for DB (restore date types, strip UI-only fields)
+        db_rows = []
+        for row in payload.rows:
+            db_row = {k: v for k, v in row.items() if not k.startswith("_")}
+            for date_field in ("date_op", "date_val", "real_date"):
+                val = db_row.get(date_field)
+                if isinstance(val, str) and val:
+                    try:
+                        db_row[date_field] = datetime.strptime(val, "%Y-%m-%d").date()
+                    except Exception:
+                        db_row[date_field] = None
+            db_rows.append(db_row)
+
+        nb = await insert_transactions(db_rows)
         return {"added": nb}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+def _serialize_rows(rows: list[dict]) -> list[dict]:
+    out = []
+    for row in rows:
+        r = dict(row)
+        for k, v in r.items():
+            if isinstance(v, date):
+                r[k] = v.isoformat()
+        out.append(r)
+    return out
+
+
 def _compute_stats(rows: list[dict]) -> dict:
     if not rows:
         return {"total": 0, "high": 0, "medium": 0, "low": 0, "by_method": {}}
-    high = sum(1 for r in rows if r["confidence"] >= 80)
-    medium = sum(1 for r in rows if 50 <= r["confidence"] < 80)
-    low = sum(1 for r in rows if r["confidence"] < 50)
+    high   = sum(1 for r in rows if (r.get("confidence") or 0) >= 80)
+    medium = sum(1 for r in rows if 50 <= (r.get("confidence") or 0) < 80)
+    low    = sum(1 for r in rows if (r.get("confidence") or 0) < 50)
     by_method: dict[str, int] = {}
     for r in rows:
-        by_method[r["method"]] = by_method.get(r["method"], 0) + 1
+        m = r.get("classification_method", "?")
+        by_method[m] = by_method.get(m, 0) + 1
     return {"total": len(rows), "high": high, "medium": medium, "low": low, "by_method": by_method}

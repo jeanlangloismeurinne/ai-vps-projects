@@ -155,6 +155,22 @@ class TransactionClassifier:
     def set_history_sample(self, df_history: pd.DataFrame, n: int = 150):
         self._history_index = build_history_index(df_history)
 
+    def set_history_from_db(self, rows: list[dict]):
+        """Build history index from DB rows (label_clean + category)."""
+        from collections import defaultdict
+        by_cat: dict[str, list[str]] = defaultdict(list)
+        seen: set[str] = set()
+        for r in rows:
+            cat = str(r.get("category") or "").strip()
+            merchant = str(r.get("label_clean") or clean_label_for_claude(r.get("label", "")))
+            if cat and merchant and merchant not in seen:
+                seen.add(merchant)
+                by_cat[cat].append(merchant)
+        lines = []
+        for cat, merchants in sorted(by_cat.items()):
+            lines.append(f"{cat}: {', '.join(merchants[-6:])}")
+        self._history_index = "\n".join(lines)
+
     def _is_vacation(self, label: str, date_op: str) -> tuple[bool, Optional[str]]:
         real = extract_real_date(label)
         check_date = real or _parse_date(date_op)
