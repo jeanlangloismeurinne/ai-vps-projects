@@ -1,7 +1,7 @@
 ---
 id: 1776611973047
 type: bug
-status: open
+status: closed
 date: 2026-04-19T15:19:33.047429
 project: bank-review
 url: /budget

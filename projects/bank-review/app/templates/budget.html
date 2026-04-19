@@ -73,7 +73,7 @@
         <td class="col-month group-total
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}">
-          {% if not m.is_future and m.actual > 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
+          {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
         </td>
         {% endfor %}
       </tr>

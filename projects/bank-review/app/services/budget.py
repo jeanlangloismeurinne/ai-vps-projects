@@ -98,8 +98,8 @@ async def update_budget_line(year_id: int, category: str, monthly_budget: float)
 
 async def get_monthly_actuals(year_id: int) -> dict[str, dict[str, float]]:
     """
-    Returns {category: {YYYY-MM: amount}} for all transactions in the year.
-    Amounts are absolute values (expenses positive, income positive).
+    Returns {category: {YYYY-MM: signed_amount}} for all transactions in the year.
+    Expenses are negative (money out), income/refunds are positive (money in).
     """
     pool = await get_pool()
     rows = await pool.fetch(
@@ -107,7 +107,7 @@ async def get_monthly_actuals(year_id: int) -> dict[str, dict[str, float]]:
         SELECT
             t.category,
             TO_CHAR(t.date_op, 'YYYY-MM') AS month,
-            SUM(ABS(t.amount))            AS total
+            SUM(t.amount)                 AS total
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
         WHERE y.id = $1
@@ -148,7 +148,9 @@ def build_budget_view(
         monthly = []
         for m in months:
             actual = cat_actuals.get(m, 0.0)
-            variance = budget - actual if not line["is_income"] else actual - budget
+            # actual is signed: negative = expense, positive = income/refund
+            # variance > 0 means "good" in both cases
+            variance = budget + actual if not line["is_income"] else actual - budget
             monthly.append({
                 "month": m,
                 "actual": actual,
@@ -160,10 +162,10 @@ def build_budget_view(
 
         ytd_actual = sum(cat_actuals.get(m, 0.0) for m in months[:elapsed_months])
         ytd_budget = budget * elapsed_months
-        ytd_variance = (ytd_budget - ytd_actual) if not line["is_income"] else (ytd_actual - ytd_budget)
+        ytd_variance = (ytd_budget + ytd_actual) if not line["is_income"] else (ytd_actual - ytd_budget)
         avg_actual = (ytd_actual / elapsed_months) if elapsed_months else 0.0
 
-        progress = round(100 * ytd_actual / ytd_budget) if ytd_budget else 0
+        progress = round(100 * abs(ytd_actual) / ytd_budget) if ytd_budget else 0
 
         groups[line["group_name"]].append({
             "category":      cat,
@@ -202,7 +204,7 @@ def build_budget_view(
             "categories":    cats,
             "ytd_actual":    round(g_ytd_actual, 2),
             "ytd_budget":    round(g_ytd_budget, 2),
-            "ytd_variance":  round(g_ytd_budget - g_ytd_actual, 2),
+            "ytd_variance":  round(g_ytd_budget + g_ytd_actual, 2),
             "monthly":       monthly_totals,
         })
 

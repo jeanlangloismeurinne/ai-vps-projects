@@ -42,6 +42,12 @@ BANK_TO_USER: dict[str, tuple[str, int]] = {
 }
 
 # ── Keyword rules on label ────────────────────────────────────────────────────
+# Rules checked BEFORE vacation period — use for recurring charges that happen
+# regardless of travel (payroll taxes, regular staff, subscriptions).
+PRIORITY_LABEL_RULES: list[tuple[str, str, int]] = [
+    (r"\bURSSAF\b",      "Nounou",    95),
+    (r"\bJUSTINIANO\b",  "Nounou",    95),
+]
 
 LABEL_RULES: list[tuple[str, str, int]] = [
     (r"\bNAVIGO\b",                                                                    "Navigo",          95),
@@ -53,7 +59,9 @@ LABEL_RULES: list[tuple[str, str, int]] = [
     (r"\bLOYER\b",                                                                      "Loyer",           95),
     (r"\bSALAIRE\b|\bPAIE\b",                                                          "Entrée mensuelle",90),
     (r"\bCAF\b",                                                                        "Entrée",          90),
-    (r"\bIMPOT\b|\bDGFIP\b|\bFISC\b|\bURSSAF\b",                                      "Impôts",          95),
+    (r"\bIMPOT\b|\bDGFIP\b|\bFISC\b",                                                 "Impôts",          95),
+    (r"\bSAS\s+LORIN\b",                                                               "Restaurant",      95),
+    (r"\bVIREMENT\s+AUTOMATIQUE\s+JLM\b",                                             "Entrée mensuelle",95),
     (r"\bAMELI\b|\bCPAM\b",                                                            "Santé",           90),
     (r"\bAXA\b|\bMAIF\b|\bMACIF\b|\bALLIANZ\b|\bGMF\b",                              "Assurances",      90),
     (r"\bCRECHE\b|\bNOUNOU\b|\bBABY\b",                                                "Crèche",          90),
@@ -61,7 +69,8 @@ LABEL_RULES: list[tuple[str, str, int]] = [
     (r"\bMEDECIN\b|\bDOCTEUR\b|\bDR \b|\bCLINIQUE\b|\bHOPITAL\b|\bLABO\b|\bCERBA\b","Santé",           85),
     (r"\bVINTED\b",                                                                     "Paul",            70),
     (r"\bAMAZON\b|\bFNAC\b|\bDECATHLON\b|\bZARA\b|\bH&M\b",                          "Loisirs",         65),
-    (r"\bLECLERC\b|\bCAREFOUR\b|\bLIDL\b|\bALDI\b|\bINTERMARCHE\b|\bMONOPRIX\b|\bFRANCHIPRIX\b|\bPRIMEUR\b", "Nourriture", 85),
+    (r"\bLECLERC\b|\bCAREFOUR\b|\bLIDL\b|\bALDI\b|\bINTERMARCHE\b|\bMONOPRIX\b|\bFRANCHIPRIX\b|\bPRIMEUR\b|\bMON.MARCHE\b", "Nourriture", 85),
+    (r"\bAVANTAGES\b.*\bMETAL\b|\bRETROC\b.*\bMETAL\b",                             "Entrée",          90),
 ]
 
 # Bank categories whose value is too generic to be useful for Claude
@@ -184,12 +193,17 @@ class TransactionClassifier:
     def classify_one(self, label: str, date_op: str, bank_category: str) -> ClassificationResult:
         label_up = str(label).upper()
 
-        # 1. Vacation period
+        # 1. Priority rules — override vacation period
+        for pattern, cat, conf in PRIORITY_LABEL_RULES:
+            if re.search(pattern, label_up):
+                return ClassificationResult(cat, conf, "label_rule", None)
+
+        # 2. Vacation period
         in_vacation, real_date = self._is_vacation(label, date_op)
         if in_vacation:
             return ClassificationResult("Vacances", 95, "vacation", real_date)
 
-        # 2. Label keyword rules
+        # 3. Label keyword rules
         for pattern, cat, conf in LABEL_RULES:
             if re.search(pattern, label_up):
                 return ClassificationResult(cat, conf, "label_rule", None)
