@@ -1,7 +1,7 @@
 ---
 id: 1776625931852
 type: suggestion
-status: open
+status: closed
 date: 2026-04-19T19:12:11.853135
 project: bank-review
 url: /budget
