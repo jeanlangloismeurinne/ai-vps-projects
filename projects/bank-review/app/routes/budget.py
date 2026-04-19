@@ -1,0 +1,60 @@
+from fastapi import APIRouter, Request, Query
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from app.templates_env import templates
+from pydantic import BaseModel
+
+from app.routes.auth import is_authenticated
+from app.services.budget import (
+    get_budget_years, get_budget_lines, get_monthly_actuals,
+    build_budget_view, update_budget_line,
+)
+
+router = APIRouter()
+
+
+@router.get("/budget", response_class=HTMLResponse)
+async def budget_page(request: Request, year_id: int = Query(default=None)):
+    if not is_authenticated(request):
+        return RedirectResponse("/", status_code=302)
+
+    years = await get_budget_years()
+    if not years:
+        return templates.TemplateResponse(request, "budget.html", {"years": [], "view": None})
+
+    from datetime import date as _date
+    today_str = _date.today().isoformat()
+    default = next(
+        (y for y in years if str(y["start_date"]) <= today_str <= str(y["end_date"])),
+        years[0]
+    )
+    selected = next((y for y in years if y["id"] == year_id), default)
+    lines = await get_budget_lines(selected["id"])
+    actuals = await get_monthly_actuals(selected["id"])
+    view = build_budget_view(selected, lines, actuals)
+
+    # Serialize dates for template
+    for y in years:
+        y["start_date"] = str(y["start_date"])
+        y["end_date"] = str(y["end_date"])
+    view["year"]["start_date"] = str(view["year"]["start_date"])
+    view["year"]["end_date"] = str(view["year"]["end_date"])
+
+    return templates.TemplateResponse(request, "budget.html", {
+        "years": years,
+        "selected_year_id": selected["id"],
+        "view": view,
+    })
+
+
+class BudgetUpdate(BaseModel):
+    year_id: int
+    category: str
+    monthly_budget: float
+
+
+@router.post("/api/budget/update")
+async def budget_update(request: Request, payload: BudgetUpdate):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await update_budget_line(payload.year_id, payload.category, payload.monthly_budget)
+    return {"ok": True}

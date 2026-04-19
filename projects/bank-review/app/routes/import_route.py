@@ -3,7 +3,7 @@ import json
 from datetime import date, datetime
 from fastapi import APIRouter, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from app.templates_env import templates
 from pydantic import BaseModel
 
 from app.routes.auth import is_authenticated
@@ -12,7 +12,6 @@ from app.services.database import insert_transactions, upsert_account
 from app.services.format_checker import check_format, apply_mapping
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

@@ -2,13 +2,12 @@ import os
 import json
 from fastapi import APIRouter, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from app.templates_env import templates
 
 from app.routes.auth import is_authenticated
 from app.services.file_parser import parse_upload, df_to_preview
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

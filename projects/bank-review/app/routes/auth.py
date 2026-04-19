@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from app.templates_env import templates
 import os
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 def is_authenticated(request: Request) -> bool:

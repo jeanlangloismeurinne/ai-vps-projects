@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -7,6 +7,7 @@ import os
 
 from app.routes import auth, upload, analyze
 from app.routes import import_route
+from app.routes import budget as budget_route
 
 load_dotenv()
 
@@ -20,7 +21,23 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+# Jinja2 global helpers
+_templates = Jinja2Templates(directory="app/templates")
+
+def _m_status(m: dict, is_income: bool) -> str:
+    if m.get("is_future") or m.get("actual", 0) == 0:
+        return ""
+    v = m.get("variance", 0)
+    if v >= 0:
+        return "cell-green"
+    if v >= -m.get("budget", 1) * 0.2:
+        return "cell-yellow"
+    return "cell-red"
+
+_templates.env.globals["m_status"] = _m_status
+
 app.include_router(auth.router)
 app.include_router(upload.router)
 app.include_router(analyze.router, prefix="/api")
 app.include_router(import_route.router)
+app.include_router(budget_route.router)

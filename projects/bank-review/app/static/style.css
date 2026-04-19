@@ -297,3 +297,141 @@ tr.edited .cat-select { border-color:var(--accent); }
   margin: 0;
   line-height: 1.6;
 }
+
+/* ── Budget page ── */
+
+.budget-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.year-tabs { display: flex; gap: 8px; }
+.year-tab {
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: all 0.15s;
+}
+.year-tab:hover { color: var(--text); }
+.year-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.budget-subtitle { font-size: 12px; color: var(--text-muted); }
+
+/* Scrollable table */
+.budget-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+
+.budget-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.budget-table thead th {
+  background: var(--surface2);
+  padding: 8px 10px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.budget-table thead th.col-cat { text-align: left; }
+.th-sub { font-weight: 400; font-size: 10px; }
+
+/* Column widths */
+.col-cat    { width: 160px; min-width: 140px; text-align: left !important; }
+.col-budget { width: 72px; }
+.col-ytd    { width: 72px; }
+.col-var    { width: 72px; font-weight: 600; }
+.col-bar    { width: 110px; }
+.col-month  { width: 46px; min-width: 40px; text-align: right; }
+
+/* Month highlight */
+.month-current { background: rgba(79,126,248,0.08) !important; }
+.month-future  { opacity: 0.35; }
+
+/* Group rows */
+.group-header {
+  background: var(--surface2);
+  cursor: pointer;
+  user-select: none;
+}
+.group-header:hover { background: var(--border); }
+.group-name {
+  padding: 9px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.group-chevron { margin-right: 8px; font-size: 10px; color: var(--text-muted); }
+.group-total { font-weight: 600; color: var(--text-muted); padding: 8px 6px; }
+.group-spacer td { height: 6px; background: var(--bg); border: none; }
+
+/* Category rows */
+.cat-row td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(46,51,80,0.5);
+  text-align: right;
+}
+.cat-row:last-child td { border-bottom: none; }
+.cat-row:hover td { background: rgba(79,126,248,0.04); }
+.cat-name { text-align: left !important; color: var(--text); }
+
+/* Editable budget input */
+.budget-input {
+  width: 58px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 5px;
+  color: var(--text);
+  font-size: 12px;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.budget-input:hover { border-color: var(--border); background: var(--surface2); }
+.budget-input:focus { border-color: var(--accent); background: var(--surface2); }
+.budget-input.saving { opacity: 0.5; }
+.budget-input.saved { border-color: var(--success); }
+
+/* Variance / status colors */
+.green { color: var(--success); }
+.yellow { color: var(--warning-text); }
+.red { color: var(--error); }
+.neutral { color: var(--text-muted); }
+.cell-green { background: rgba(62,207,142,0.07) !important; }
+.cell-yellow { background: rgba(240,180,41,0.07) !important; }
+.cell-red { background: rgba(224,92,106,0.10) !important; }
+
+/* Progress bar */
+.progress-wrap {
+  position: relative;
+  background: var(--surface2);
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.progress-bar.green  { background: var(--success); }
+.progress-bar.yellow { background: var(--warning-text); }
+.progress-bar.red    { background: var(--error); }
+.progress-bar.neutral { background: var(--text-muted); }
+.progress-over {
+  position: absolute;
+  top: 0; right: 0;
+  height: 100%;
+  background: var(--error);
+  opacity: 0.5;
+  border-radius: 0 3px 3px 0;
+}
+.progress-pct { font-size: 10px; }
