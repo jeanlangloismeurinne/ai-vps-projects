@@ -105,7 +105,8 @@
                    {{ m_status(m, cat.is_income) }}
                    {% if not m.is_future and m.actual != 0 %}cell-link{% endif %}"
             {% if not m.is_future and m.actual != 0 %}
-            onclick="openDrillDown({{ cat.category|tojson }}, {{ m.month|tojson }})"
+            data-cat="{{ cat.category|e }}" data-month="{{ m.month }}"
+            onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
             title="Voir les transactions — {{ cat.category }}"
             {% endif %}>
           {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
