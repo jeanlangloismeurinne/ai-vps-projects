@@ -17,6 +17,17 @@
 
   <div class="container">
 
+    <!-- Format warning banner -->
+    {% if format_summary %}
+    <div class="format-banner">
+      <div class="format-banner-icon">⚠</div>
+      <div class="format-banner-body">
+        <strong>Format modifié détecté</strong>
+        <pre class="format-detail">{{ format_summary }}</pre>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat-item">

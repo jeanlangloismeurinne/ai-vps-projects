@@ -274,3 +274,26 @@ tr.edited .cat-select { border-color:var(--accent); }
 .btn-confirm:hover:not(:disabled) { opacity:0.85; }
 .btn-confirm:disabled { opacity:0.5; cursor:not-allowed; }
 .success { color:var(--success); font-weight:600; }
+
+/* ── Format warning banner ── */
+.format-banner {
+  display: flex;
+  gap: 14px;
+  background: rgba(240,180,41,0.08);
+  border: 1px solid rgba(240,180,41,0.3);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+.format-banner-icon { font-size: 18px; color: var(--warning-text); flex-shrink: 0; margin-top: 2px; }
+.format-banner-body { flex: 1; }
+.format-banner-body strong { color: var(--warning-text); display: block; margin-bottom: 8px; }
+.format-detail {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  margin: 0;
+  line-height: 1.6;
+}

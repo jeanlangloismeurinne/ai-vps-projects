@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.routes.auth import is_authenticated
 from app.services.importer import run_import_pipeline
 from app.services.database import insert_transactions, upsert_account
+from app.services.format_checker import check_format, apply_mapping
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -35,6 +36,18 @@ async def import_upload(
         return RedirectResponse("/", status_code=302)
 
     content = await file.read()
+
+    # Format check — remap columns if needed, block if required cols missing
+    fmt = check_format(content)
+    if not fmt.can_proceed:
+        return templates.TemplateResponse(
+            request, "import.html",
+            {"error": f"Fichier non reconnu — colonnes obligatoires introuvables : "
+                      f"{', '.join(fmt.missing_required)}"}
+        )
+    if not fmt.is_exact_match:
+        content = apply_mapping(content, fmt)
+
     dest = os.path.join(UPLOAD_DIR, "import_pending.csv")
     with open(dest, "wb") as f:
         f.write(content)
@@ -60,13 +73,17 @@ async def import_upload(
             request, "import.html", {"error": f"Erreur pipeline : {e}"}
         )
 
-    # Serialize for template (dates → strings)
     serializable = _serialize_rows(classified)
     stats = _compute_stats(serializable)
 
     return templates.TemplateResponse(
         request, "review.html",
-        {"rows": serializable, "stats": stats}
+        {
+            "rows": serializable,
+            "stats": stats,
+            "format_warnings": fmt.warnings,
+            "format_summary": fmt.summary() if not fmt.is_exact_match else None,
+        }
     )
 
 
