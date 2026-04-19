@@ -182,6 +182,100 @@ def _elapsed_months(months: list[str], today: date) -> int:
     return max(1, count)
 
 
+# ── Transaction drill-down ────────────────────────────────────────────────────
+
+async def get_transactions_by_cell(category: str, month: str) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT id, date_op, real_date, label, label_clean, amount,
+               bank_category, category, confidence, classification_method, precision_note
+        FROM transactions
+        WHERE category = $1 AND TO_CHAR(date_op, 'YYYY-MM') = $2
+        ORDER BY date_op DESC
+        """,
+        category, month,
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["date_op"] = str(d["date_op"])
+        d["real_date"] = str(d["real_date"]) if d["real_date"] else None
+        d["amount"] = float(d["amount"])
+        result.append(d)
+    return result
+
+
+async def recategorize_transaction(tx_id: int, new_category: str):
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE transactions SET category = $1 WHERE id = $2",
+        new_category, tx_id,
+    )
+
+
+# ── Category management ───────────────────────────────────────────────────────
+
+async def get_all_categories_for_year(year_id: int) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT id, category, monthly_budget, group_name, sort_order, is_income
+        FROM budget_lines
+        WHERE year_id = $1
+        ORDER BY sort_order, group_name, category
+        """,
+        year_id,
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["monthly_budget"] = float(d["monthly_budget"])
+        result.append(d)
+    return result
+
+
+async def add_budget_category(
+    year_id: int, category: str, group_name: str,
+    monthly_budget: float, is_income: bool, sort_order: int,
+) -> int | None:
+    pool = await get_pool()
+    await pool.execute(
+        "INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING",
+        category,
+    )
+    row = await pool.fetchrow(
+        """
+        INSERT INTO budget_lines (year_id, category, monthly_budget, group_name, sort_order, is_income)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (year_id, category) DO NOTHING
+        RETURNING id
+        """,
+        year_id, category, monthly_budget, group_name, sort_order, is_income,
+    )
+    return row["id"] if row else None
+
+
+async def update_budget_category(
+    line_id: int, group_name: str, monthly_budget: float,
+    is_income: bool, sort_order: int,
+):
+    pool = await get_pool()
+    await pool.execute(
+        """
+        UPDATE budget_lines
+        SET group_name = $1, monthly_budget = $2, is_income = $3, sort_order = $4
+        WHERE id = $5
+        """,
+        group_name, monthly_budget, is_income, sort_order, line_id,
+    )
+
+
+async def delete_budget_category(line_id: int):
+    pool = await get_pool()
+    await pool.execute("DELETE FROM budget_lines WHERE id = $1", line_id)
+
+
 def _status(variance: float, ytd_budget: float, is_income: bool) -> str:
     """green / yellow / red based on variance vs budget."""
     if ytd_budget == 0:

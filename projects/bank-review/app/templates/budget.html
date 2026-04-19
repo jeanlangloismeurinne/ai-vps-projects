@@ -12,6 +12,9 @@
         {{ y.year_label }}
       </a>
       {% endfor %}
+      {% if view %}
+      <button class="btn-secondary small" onclick="openCats()" style="margin-left:8px">⚙ Catégories</button>
+      {% endif %}
     </div>
     {% if view %}
     <span class="budget-subtitle">
@@ -47,7 +50,6 @@
       {% for group in view.groups %}
       {% set gidx = loop.index %}
 
-      <!-- Group total row -->
       <tr class="group-header" onclick="toggleGroup({{ gidx }})">
         <td class="group-name col-cat">
           <span class="group-chevron" id="chev-{{ gidx }}">▾</span>
@@ -69,7 +71,6 @@
         {% endfor %}
       </tr>
 
-      <!-- Category rows -->
       {% for cat in group.categories %}
       <tr class="cat-row" data-group="{{ gidx }}">
         <td class="col-cat cat-name">{{ cat.category }}</td>
@@ -101,7 +102,12 @@
         <td class="col-month
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}
-                   {{ m_status(m, cat.is_income) }}">
+                   {{ m_status(m, cat.is_income) }}
+                   {% if not m.is_future and m.actual != 0 %}cell-link{% endif %}"
+            {% if not m.is_future and m.actual != 0 %}
+            onclick="openDrillDown({{ cat.category|tojson }}, {{ m.month|tojson }})"
+            title="Voir les transactions — {{ cat.category }}"
+            {% endif %}>
           {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
         </td>
         {% endfor %}
@@ -114,11 +120,39 @@
   </table>
   </div>
   {% endif %}
+
+  <!-- Transaction drill-down modal -->
+  <div id="drillModal" class="modal-overlay hidden" onclick="closeDrillOutside(event)">
+    <div class="modal-box modal-xl">
+      <div class="modal-hd">
+        <strong id="drillTitle"></strong>
+        <button class="modal-close" onclick="closeDrill()">✕</button>
+      </div>
+      <div class="modal-bd" id="drillContent"></div>
+      <div class="modal-ft">
+        <span id="drillMsg" class="modal-msg"></span>
+        <button class="btn-confirm" id="drillSaveBtn" onclick="saveDrillChanges()">Enregistrer les modifications</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category management modal -->
+  <div id="catsModal" class="modal-overlay hidden" onclick="closeCatsOutside(event)">
+    <div class="modal-box modal-wide">
+      <div class="modal-hd">
+        <strong>Gérer les catégories</strong>
+        <button class="modal-close" onclick="closeCats()">✕</button>
+      </div>
+      <div class="modal-bd" id="catsContent"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
   const YEAR_ID = {{ selected_year_id }};
   const groupVisible = {};
+  let _allCats = null;
 
   function toggleGroup(idx) {
     const rows = document.querySelectorAll(`[data-group="${idx}"]`);
@@ -140,5 +174,225 @@
     input.classList.remove('saving');
     if (res.ok) { input.classList.add('saved'); setTimeout(() => input.classList.remove('saved'), 1200); }
   }
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+
+  async function loadCats() {
+    if (_allCats) return _allCats;
+    const r = await fetch(`/api/budget/year-categories?year_id=${YEAR_ID}`);
+    _allCats = await r.json();
+    return _allCats;
+  }
+
+  function catOptions(selected) {
+    if (!_allCats) return '';
+    const existing = _allCats.map(c => c.category);
+    const opts = _allCats.map(c =>
+      `<option value="${esc(c.category)}"${c.category === selected ? ' selected' : ''}>${esc(c.category)}</option>`
+    );
+    if (selected && !existing.includes(selected))
+      opts.unshift(`<option value="${esc(selected)}" selected>${esc(selected)}</option>`);
+    return opts.join('');
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Drill-down ─────────────────────────────────────────────────────────────
+
+  let drillChanges = {};
+
+  async function openDrillDown(category, month) {
+    drillChanges = {};
+    document.getElementById('drillTitle').textContent = `${category} — ${month}`;
+    document.getElementById('drillContent').innerHTML = '<div class="spinner" style="margin:24px auto"></div>';
+    document.getElementById('drillMsg').textContent = '';
+    const btn = document.getElementById('drillSaveBtn');
+    btn.disabled = false; btn.textContent = 'Enregistrer les modifications';
+    document.getElementById('drillModal').classList.remove('hidden');
+
+    await loadCats();
+    const res = await fetch(`/api/transactions/by-cell?category=${encodeURIComponent(category)}&month=${encodeURIComponent(month)}`);
+    const rows = await res.json();
+
+    if (!rows.length) {
+      document.getElementById('drillContent').innerHTML = '<p class="modal-empty">Aucune transaction pour cette période.</p>';
+      return;
+    }
+
+    const html = `<div class="modal-table-wrap"><table class="modal-table">
+      <thead><tr>
+        <th>Date op.</th><th>Date réelle</th><th>Libellé</th>
+        <th>Montant</th><th>Banque</th><th>Catégorie</th><th>Conf.</th><th>Méthode</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const lbl = r.label_clean || r.label || '';
+        return `<tr>
+          <td>${r.date_op}</td>
+          <td>${r.real_date || '—'}</td>
+          <td class="label-cell" title="${esc(r.label)}">${esc(lbl.substring(0,52))}${lbl.length > 52 ? '…' : ''}</td>
+          <td class="${r.amount < 0 ? 'amount-neg' : 'amount-pos'}">${r.amount.toFixed(2)} €</td>
+          <td class="bank-cat">${esc(r.bank_category) || '—'}</td>
+          <td><select class="cat-select" data-id="${r.id}" data-orig="${esc(r.category)}" onchange="markDrillChange(this)">
+            ${catOptions(r.category)}
+          </select></td>
+          <td>${r.confidence != null ? r.confidence + '%' : '—'}</td>
+          <td><span class="method-badge ${esc(r.classification_method)}" title="${esc(r.precision_note)}">${esc(r.classification_method) || '—'}</span></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+    document.getElementById('drillContent').innerHTML = html;
+  }
+
+  function markDrillChange(sel) {
+    const id = sel.dataset.id;
+    if (sel.value !== sel.dataset.orig) {
+      drillChanges[id] = sel.value;
+      sel.closest('tr').classList.add('edited');
+    } else {
+      delete drillChanges[id];
+      sel.closest('tr').classList.remove('edited');
+    }
+  }
+
+  async function saveDrillChanges() {
+    const ids = Object.keys(drillChanges);
+    if (!ids.length) { closeDrill(); return; }
+    const btn = document.getElementById('drillSaveBtn');
+    const msg = document.getElementById('drillMsg');
+    btn.disabled = true; btn.textContent = 'Enregistrement…';
+    let errors = 0;
+    for (const id of ids) {
+      const res = await fetch(`/api/transactions/${id}/recategorize`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category: drillChanges[id]}),
+      });
+      if (!res.ok) errors++;
+    }
+    if (errors) {
+      msg.innerHTML = `<span class="error">${errors} erreur(s)</span>`;
+      btn.disabled = false; btn.textContent = 'Réessayer';
+    } else {
+      msg.innerHTML = `<span class="success">${ids.length} transaction(s) mise(s) à jour</span>`;
+      btn.textContent = 'Terminé ✓';
+      setTimeout(() => { closeDrill(); location.reload(); }, 900);
+    }
+  }
+
+  function closeDrill() { document.getElementById('drillModal').classList.add('hidden'); }
+  function closeDrillOutside(e) { if (e.target.id === 'drillModal') closeDrill(); }
+
+  // ── Category management ────────────────────────────────────────────────────
+
+  async function openCats() {
+    document.getElementById('catsContent').innerHTML = '<div class="spinner" style="margin:24px auto"></div>';
+    document.getElementById('catsModal').classList.remove('hidden');
+    _allCats = null;
+    const cats = await loadCats();
+    renderCatsTable(cats);
+  }
+
+  function renderCatsTable(cats) {
+    const groups = [...new Set(cats.map(c => c.group_name))];
+    const datalist = `<datalist id="groupList">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist>`;
+
+    const rows = cats.map(c => `
+      <tr id="cat-row-${c.id}">
+        <td style="font-weight:500">${esc(c.category)}</td>
+        <td><input class="cats-input" value="${esc(c.group_name)}" list="groupList" id="cat-group-${c.id}"></td>
+        <td><input class="cats-input cats-num" type="number" value="${c.monthly_budget}" min="0" step="10" id="cat-budget-${c.id}"></td>
+        <td style="text-align:center"><input type="checkbox" id="cat-income-${c.id}"${c.is_income ? ' checked' : ''}></td>
+        <td><input class="cats-input cats-num" type="number" value="${c.sort_order}" min="0" id="cat-sort-${c.id}"></td>
+        <td class="cats-actions">
+          <button class="btn-secondary small" onclick="saveCatRow(${c.id})">Sauver</button>
+          <button class="btn-remove" onclick="deleteCatRow(${c.id}, ${JSON.stringify(c.category)})">✕</button>
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('catsContent').innerHTML = `
+      ${datalist}
+      <div style="margin-bottom:14px">
+        <button class="btn-secondary small" onclick="toggleAddForm()">+ Nouvelle catégorie</button>
+      </div>
+      <div id="addCatForm" class="cats-add-panel hidden">
+        <div class="cats-add-row">
+          <input class="cats-input" placeholder="Nom *" id="new-cat-name" style="flex:2;min-width:120px">
+          <input class="cats-input" placeholder="Groupe *" list="groupList" id="new-cat-group" style="flex:2;min-width:120px">
+          <input class="cats-input cats-num" type="number" placeholder="Budget/mois" min="0" step="10" id="new-cat-budget" value="0">
+          <label class="cats-check-label"><input type="checkbox" id="new-cat-income"> Revenus</label>
+          <input class="cats-input cats-num" type="number" placeholder="Ordre" min="0" id="new-cat-sort" value="99">
+          <button class="btn-secondary small" onclick="submitAddCat()">Ajouter</button>
+        </div>
+        <p id="addCatMsg" class="cats-msg"></p>
+      </div>
+      <div class="modal-table-wrap">
+        <table class="modal-table cats-table">
+          <thead><tr>
+            <th>Catégorie</th><th>Groupe</th><th>Budget/mois</th>
+            <th>Revenus</th><th>Ordre</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function toggleAddForm() {
+    document.getElementById('addCatForm').classList.toggle('hidden');
+  }
+
+  async function submitAddCat() {
+    const name   = document.getElementById('new-cat-name').value.trim();
+    const group  = document.getElementById('new-cat-group').value.trim();
+    const budget = parseFloat(document.getElementById('new-cat-budget').value) || 0;
+    const income = document.getElementById('new-cat-income').checked;
+    const sort   = parseInt(document.getElementById('new-cat-sort').value) || 99;
+    const msg    = document.getElementById('addCatMsg');
+    if (!name || !group) { msg.textContent = 'Nom et groupe requis.'; return; }
+    const res = await fetch('/api/budget/category', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({year_id: YEAR_ID, category: name, group_name: group, monthly_budget: budget, is_income: income, sort_order: sort}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      _allCats = null;
+      renderCatsTable(await loadCats());
+    } else {
+      msg.textContent = data.error || 'Erreur lors de l\'ajout.';
+    }
+  }
+
+  async function saveCatRow(lineId) {
+    const group  = document.getElementById(`cat-group-${lineId}`).value.trim();
+    const budget = parseFloat(document.getElementById(`cat-budget-${lineId}`).value) || 0;
+    const income = document.getElementById(`cat-income-${lineId}`).checked;
+    const sort   = parseInt(document.getElementById(`cat-sort-${lineId}`).value) || 99;
+    const res = await fetch(`/api/budget/category/${lineId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({group_name: group, monthly_budget: budget, is_income: income, sort_order: sort}),
+    });
+    if (res.ok) {
+      _allCats = null;
+      const row = document.getElementById(`cat-row-${lineId}`);
+      row.style.background = 'var(--cell-green-bg)';
+      setTimeout(() => { row.style.background = ''; }, 1200);
+    }
+  }
+
+  async function deleteCatRow(lineId, catName) {
+    if (!confirm(`Supprimer "${catName}" du budget ?\nLes transactions existantes ne seront pas affectées.`)) return;
+    const res = await fetch(`/api/budget/category/${lineId}`, { method: 'DELETE' });
+    if (res.ok) {
+      _allCats = null;
+      renderCatsTable(await loadCats());
+    }
+  }
+
+  function closeCats() { document.getElementById('catsModal').classList.add('hidden'); }
+  function closeCatsOutside(e) { if (e.target.id === 'catsModal') closeCats(); }
 </script>
 {% endblock %}
