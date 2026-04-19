@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bank Review{% if title %} — {{ title }}{% endif %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script>
+    (function() {
+      const t = localStorage.getItem('theme') || 'dark';
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
 <body>
   <header>
@@ -14,9 +20,24 @@
       <a href="/import" class="nav-link {% if active == 'import' %}active{% endif %}">Importer</a>
       <a href="/upload" class="nav-link {% if active == 'upload' %}active{% endif %}">Visualiser</a>
     </nav>
-    <a href="/logout" class="logout">Déconnexion</a>
+    <div class="header-actions">
+      <button class="theme-toggle" id="themeToggle" title="Changer le thème" onclick="toggleTheme()">
+        <span class="theme-icon-dark">☀</span>
+        <span class="theme-icon-light">☾</span>
+      </button>
+      <a href="/logout" class="logout">Déconnexion</a>
+    </div>
   </header>
 
   {% block content %}{% endblock %}
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      html.dataset.theme = next;
+      localStorage.setItem('theme', next);
+    }
+  </script>
 </body>
 </html>
