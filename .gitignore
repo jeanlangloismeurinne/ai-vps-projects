@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.egg-info/
+
+# Node
+node_modules/
+
+# Uploads & données temporaires
+projects/bank-review/uploads/
+
+# Fichiers système
+.DS_Store
