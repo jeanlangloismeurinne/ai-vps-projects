@@ -111,8 +111,7 @@ def build_budget_view(
         ytd_variance = (ytd_budget - ytd_actual) if not line["is_income"] else (ytd_actual - ytd_budget)
         avg_actual = (ytd_actual / elapsed_months) if elapsed_months else 0.0
 
-        # Progress ratio for bar (capped at 150%)
-        progress = min(150, round(100 * ytd_actual / ytd_budget)) if ytd_budget else 0
+        progress = round(100 * ytd_actual / ytd_budget) if ytd_budget else 0
 
         groups[line["group_name"]].append({
             "category":      cat,
