@@ -1,176 +1,144 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bank Review — Suivi budget</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <header>
-    <span class="logo">Bank Review</span>
-    <div class="header-actions">
-      <a href="/import" class="btn-secondary small">Import</a>
-      <a href="/logout" class="logout">Déconnexion</a>
+{% extends "base.html" %}
+{% set title = "Suivi budget" %}
+{% set active = "budget" %}
+{% block content %}
+<div class="container">
+
+  <div class="budget-topbar">
+    <div class="year-tabs">
+      {% for y in years %}
+      <a href="/budget?year_id={{ y.id }}"
+         class="year-tab {% if y.id == selected_year_id %}active{% endif %}">
+        {{ y.year_label }}
+      </a>
+      {% endfor %}
     </div>
-  </header>
-
-  <div class="container">
-
-    <!-- Year selector -->
-    <div class="budget-topbar">
-      <div class="year-tabs">
-        {% for y in years %}
-        <a href="/budget?year_id={{ y.id }}"
-           class="year-tab {% if y.id == selected_year_id %}active{% endif %}">
-          {{ y.year_label }}
-        </a>
-        {% endfor %}
-      </div>
-      {% if view %}
-      <span class="budget-subtitle">
-        {{ view.elapsed_months }} mois écoulés sur {{ view.months|length }}
-        &nbsp;·&nbsp; Données au {{ view.today }}
-      </span>
-      {% endif %}
-    </div>
-
-    {% if not view or not view.groups %}
-    <div class="alert warning">Aucune donnée pour cette année.</div>
-    {% else %}
-
-    <!-- Month header row -->
-    <div class="budget-scroll">
-    <table class="budget-table" id="budgetTable">
-      <thead>
-        <tr>
-          <th class="col-cat">Catégorie</th>
-          <th class="col-budget">Budget<br><span class="th-sub">mensuel</span></th>
-          <th class="col-ytd">Réel YTD</th>
-          <th class="col-ytd">Budget YTD</th>
-          <th class="col-var">Écart YTD</th>
-          <th class="col-bar">Avancement</th>
-          {% for m in view.months %}
-          <th class="col-month {% if m == view.today %}month-current{% endif %}
-                               {% if m > view.today %}month-future{% endif %}">
-            {{ m[5:] }}/{{ m[2:4] }}
-          </th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for group in view.groups %}
-
-        <!-- Group header row -->
-        <tr class="group-header" onclick="toggleGroup('{{ loop.index }}')">
-          <td colspan="6" class="group-name">
-            <span class="group-chevron" id="chev-{{ loop.index }}">▾</span>
-            {{ group.name }}
-          </td>
-          {% for m in group.monthly %}
-          <td class="col-month group-total {% if m.is_current %}month-current{% endif %}
-                                            {% if m.is_future %}month-future{% endif %}">
-            {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
-          </td>
-          {% endfor %}
-        </tr>
-
-        <!-- Category rows -->
-        {% for cat in group.categories %}
-        <tr class="cat-row group-{{ loop.index0 }}-rows"
-            data-group="{{ loop.index0 }}"
-            style="display:table-row">
-          <td class="col-cat cat-name">{{ cat.category }}</td>
-
-          <!-- Editable budget -->
-          <td class="col-budget">
-            <input type="number"
-                   class="budget-input"
-                   value="{{ cat.monthly_budget|int }}"
-                   data-cat="{{ cat.category }}"
-                   data-year="{{ selected_year_id }}"
-                   onchange="saveBudget(this)"
-                   step="10" min="0">
-          </td>
-
-          <!-- YTD -->
-          <td class="col-ytd">{{ "%.0f"|format(cat.ytd_actual) }}</td>
-          <td class="col-ytd">{{ "%.0f"|format(cat.ytd_budget) }}</td>
-          <td class="col-var {{ cat.status }}">
-            {% if cat.ytd_variance > 0 %}+{% endif %}{{ "%.0f"|format(cat.ytd_variance) }}
-          </td>
-
-          <!-- Progress bar -->
-          <td class="col-bar">
-            {% if cat.ytd_budget > 0 %}
-            <div class="progress-wrap">
-              <div class="progress-bar {{ cat.status }}"
-                   style="width:{{ [cat.progress, 100]|min }}%"></div>
-              {% if cat.progress > 100 %}
-              <div class="progress-over"
-                   style="width:{{ [cat.progress - 100, 50]|min }}%"></div>
-              {% endif %}
-            </div>
-            <span class="progress-pct {{ cat.status }}">{{ cat.progress }}%</span>
-            {% endif %}
-          </td>
-
-          <!-- Monthly actuals -->
-          {% for m in cat.monthly %}
-          <td class="col-month
-                     {% if m.is_current %}month-current{% endif %}
-                     {% if m.is_future %}month-future{% endif %}
-                     {{ m_status(m, cat.is_income) }}">
-            {% if not m.is_future %}
-              {% if m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
-            {% endif %}
-          </td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-
-        <!-- Spacer -->
-        <tr class="group-spacer"><td colspan="999"></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
+    {% if view %}
+    <span class="budget-subtitle">
+      {{ view.elapsed_months }} mois écoulés sur {{ view.months|length }}
+      &nbsp;·&nbsp; Données au {{ view.today }}
+    </span>
     {% endif %}
   </div>
 
-  <script>
-    const YEAR_ID = {{ selected_year_id }};
+  {% if not view or not view.groups %}
+  <div class="alert warning">Aucune donnée pour cette année.</div>
+  {% else %}
 
-    // Toggle group visibility
-    const groupOpen = {};
-    function toggleGroup(idx) {
-      const rows = document.querySelectorAll(`[data-group="${idx - 1}"]`);
-      const chev = document.getElementById(`chev-${idx}`);
-      groupOpen[idx] = !groupOpen[idx];
-      rows.forEach(r => r.style.display = groupOpen[idx] ? 'none' : 'table-row');
-      chev.textContent = groupOpen[idx] ? '▸' : '▾';
-    }
+  <div class="budget-scroll">
+  <table class="budget-table" id="budgetTable">
+    <thead>
+      <tr>
+        <th class="col-cat">Catégorie</th>
+        <th class="col-budget" title="Budget mensuel — cliquez pour modifier">Budget/mois</th>
+        <th class="col-ytd">Réel YTD</th>
+        <th class="col-ytd">Budget YTD</th>
+        <th class="col-var">Écart YTD</th>
+        <th class="col-bar">Avancement</th>
+        {% for m in view.months %}
+        <th class="col-month {% if m == view.today %}month-current{% endif %}
+                             {% if m > view.today %}month-future{% endif %}">
+          {{ m[5:] }}/{{ m[2:4] }}
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in view.groups %}
+      {% set gidx = loop.index %}
 
-    // Save budget on change
-    async function saveBudget(input) {
-      const cat = input.dataset.cat;
-      const val = parseFloat(input.value) || 0;
-      input.classList.add('saving');
-      try {
-        const res = await fetch('/api/budget/update', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({year_id: YEAR_ID, category: cat, monthly_budget: val}),
-        });
-        if (res.ok) {
-          input.classList.remove('saving');
-          input.classList.add('saved');
-          setTimeout(() => input.classList.remove('saved'), 1200);
-        }
-      } catch(e) {
-        input.classList.remove('saving');
-      }
-    }
-  </script>
-</body>
-</html>
+      <!-- Group total row -->
+      <tr class="group-header" onclick="toggleGroup({{ gidx }})">
+        <td class="group-name col-cat">
+          <span class="group-chevron" id="chev-{{ gidx }}">▾</span>
+          {{ group.name }}
+        </td>
+        <td class="col-budget"></td>
+        <td class="col-ytd group-total-val">{{ "%.0f"|format(group.ytd_actual) }}</td>
+        <td class="col-ytd group-total-val">{{ "%.0f"|format(group.ytd_budget) }}</td>
+        <td class="col-var group-total-val {% if group.ytd_variance >= 0 %}green{% else %}red{% endif %}">
+          {% if group.ytd_variance > 0 %}+{% endif %}{{ "%.0f"|format(group.ytd_variance) }}
+        </td>
+        <td class="col-bar"></td>
+        {% for m in group.monthly %}
+        <td class="col-month group-total
+                   {% if m.is_current %}month-current{% endif %}
+                   {% if m.is_future %}month-future{% endif %}">
+          {% if not m.is_future and m.actual > 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+
+      <!-- Category rows -->
+      {% for cat in group.categories %}
+      <tr class="cat-row" data-group="{{ gidx }}">
+        <td class="col-cat cat-name">{{ cat.category }}</td>
+        <td class="col-budget">
+          <input type="number" class="budget-input"
+                 value="{{ cat.monthly_budget|int }}"
+                 data-cat="{{ cat.category }}"
+                 data-year="{{ selected_year_id }}"
+                 onchange="saveBudget(this)"
+                 step="10" min="0">
+        </td>
+        <td class="col-ytd">{{ "%.0f"|format(cat.ytd_actual) }}</td>
+        <td class="col-ytd">{{ "%.0f"|format(cat.ytd_budget) }}</td>
+        <td class="col-var {{ cat.status }}">
+          {% if cat.ytd_variance > 0 %}+{% endif %}{{ "%.0f"|format(cat.ytd_variance) }}
+        </td>
+        <td class="col-bar">
+          {% if cat.ytd_budget > 0 %}
+          <div class="progress-wrap">
+            <div class="progress-bar {{ cat.status }}" style="width:{{ [cat.progress, 100]|min }}%"></div>
+            {% if cat.progress > 100 %}
+            <div class="progress-over" style="width:{{ [cat.progress - 100, 50]|min }}%"></div>
+            {% endif %}
+          </div>
+          <span class="progress-pct {{ cat.status }}">{{ cat.progress }}%</span>
+          {% endif %}
+        </td>
+        {% for m in cat.monthly %}
+        <td class="col-month
+                   {% if m.is_current %}month-current{% endif %}
+                   {% if m.is_future %}month-future{% endif %}
+                   {{ m_status(m, cat.is_income) }}">
+          {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+
+      <tr class="group-spacer"><td colspan="999"></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  const YEAR_ID = {{ selected_year_id }};
+  const groupVisible = {};
+
+  function toggleGroup(idx) {
+    const rows = document.querySelectorAll(`[data-group="${idx}"]`);
+    const chev = document.getElementById(`chev-${idx}`);
+    groupVisible[idx] = (groupVisible[idx] === false) ? true : false;
+    const hide = groupVisible[idx] === false;
+    rows.forEach(r => r.style.display = hide ? 'none' : 'table-row');
+    chev.textContent = hide ? '▸' : '▾';
+  }
+
+  async function saveBudget(input) {
+    const val = parseFloat(input.value) || 0;
+    input.classList.add('saving');
+    const res = await fetch('/api/budget/update', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({year_id: YEAR_ID, category: input.dataset.cat, monthly_budget: val}),
+    });
+    input.classList.remove('saving');
+    if (res.ok) { input.classList.add('saved'); setTimeout(() => input.classList.remove('saved'), 1200); }
+  }
+</script>
+{% endblock %}

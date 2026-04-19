@@ -1,117 +1,80 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bank Review — Import</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <header>
-    <span class="logo">Bank Review</span>
-    <div class="header-actions">
-      <a href="/upload" class="btn-secondary small">Visualiser</a>
-      <a href="/logout" class="logout">Déconnexion</a>
+{% extends "base.html" %}
+{% set title = "Importer" %}
+{% set active = "import" %}
+{% block content %}
+<div class="container" style="max-width:680px">
+  <h2 style="margin-bottom:6px">Importer un relevé</h2>
+  <p class="subtitle">Le fichier sera dédupliqué et classifié automatiquement.</p>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/import" enctype="multipart/form-data" id="importForm">
+    <div class="card" style="padding:24px;margin-bottom:20px">
+      <label style="font-weight:600;font-size:14px;color:var(--text)">Fichier CSV</label>
+      <div class="drop-zone" id="dropZone" style="margin-top:12px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Glissez votre export CSV ici</p>
+        <label for="file" class="btn-secondary">Choisir un fichier</label>
+        <input type="file" id="file" name="file" accept=".csv" required hidden>
+        <p class="file-name" id="fileName"></p>
+      </div>
     </div>
-  </header>
 
-  <div class="container" style="max-width:680px">
-    <h2 style="margin-bottom:6px">Importer un relevé</h2>
-    <p class="subtitle">Le fichier sera dédupliqué et classifié automatiquement.</p>
-
-    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
-
-    <form method="post" action="/import" enctype="multipart/form-data" id="importForm">
-
-      <!-- File drop zone -->
-      <div class="card" style="padding:24px;margin-bottom:20px">
-        <label style="font-weight:600;font-size:14px;color:var(--text)">Fichier CSV</label>
-        <div class="drop-zone" id="dropZone" style="margin-top:12px">
-          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <p>Glissez votre export CSV ici</p>
-          <label for="file" class="btn-secondary">Choisir un fichier</label>
-          <input type="file" id="file" name="file" accept=".csv" required hidden>
-          <p class="file-name" id="fileName"></p>
-        </div>
+    <div class="card" style="padding:24px;margin-bottom:20px">
+      <label style="font-weight:600;font-size:14px;color:var(--text)">Vacances dans la période ?</label>
+      <p class="subtitle" style="margin-top:4px;margin-bottom:16px">Les dépenses effectuées pendant les vacances seront classifiées en "Vacances".</p>
+      <div class="radio-group">
+        <label class="radio-label"><input type="radio" name="has_vacations" value="no" checked onchange="toggleVacations(false)"> Non</label>
+        <label class="radio-label"><input type="radio" name="has_vacations" value="yes" onchange="toggleVacations(true)"> Oui</label>
       </div>
-
-      <!-- Vacation question -->
-      <div class="card" style="padding:24px;margin-bottom:20px">
-        <label style="font-weight:600;font-size:14px;color:var(--text)">Vacances dans la période ?</label>
-        <p class="subtitle" style="margin-top:4px;margin-bottom:16px">Les dépenses effectuées pendant les vacances seront classifiées en "Vacances".</p>
-
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" name="has_vacations" value="no" checked onchange="toggleVacations(false)"> Non
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="has_vacations" value="yes" onchange="toggleVacations(true)"> Oui
-          </label>
-        </div>
-
-        <div id="vacationPeriods" style="display:none;margin-top:16px">
-          <div id="periodsContainer"></div>
-          <button type="button" class="btn-secondary" onclick="addPeriod()" style="margin-top:10px">+ Ajouter une période</button>
-          <input type="hidden" name="vacation_ranges" id="vacation_ranges">
-        </div>
+      <div id="vacationPeriods" style="display:none;margin-top:16px">
+        <div id="periodsContainer"></div>
+        <button type="button" class="btn-secondary" onclick="addPeriod()" style="margin-top:10px">+ Ajouter une période</button>
+        <input type="hidden" name="vacation_ranges" id="vacation_ranges">
       </div>
+    </div>
 
-      <button type="submit" id="submitBtn" disabled>Analyser et classifier</button>
-    </form>
-  </div>
+    <button type="submit" id="submitBtn" disabled>Analyser et classifier</button>
+  </form>
+</div>
+<script>
+  const input = document.getElementById('file');
+  const fileName = document.getElementById('fileName');
+  const submitBtn = document.getElementById('submitBtn');
+  const dropZone = document.getElementById('dropZone');
+  input.addEventListener('change', () => { if (input.files[0]) { fileName.textContent = input.files[0].name; submitBtn.disabled = false; } });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; fileName.textContent = f.name; submitBtn.disabled = false; }
+  });
 
-  <script>
-    // File input
-    const input = document.getElementById('file');
-    const fileName = document.getElementById('fileName');
-    const submitBtn = document.getElementById('submitBtn');
-    const dropZone = document.getElementById('dropZone');
-
-    input.addEventListener('change', () => {
-      if (input.files[0]) { fileName.textContent = input.files[0].name; submitBtn.disabled = false; }
+  let periodCount = 0;
+  function toggleVacations(show) {
+    document.getElementById('vacationPeriods').style.display = show ? 'block' : 'none';
+    if (show && periodCount === 0) addPeriod();
+  }
+  function addPeriod() {
+    periodCount++;
+    const id = periodCount;
+    const div = document.createElement('div');
+    div.className = 'period-row'; div.id = `period-${id}`;
+    div.innerHTML = `<span class="period-label">Période ${id}</span>
+      <input type="date" class="period-start" required>
+      <span style="color:var(--text-muted)">→</span>
+      <input type="date" class="period-end" required>
+      <button type="button" class="btn-remove" onclick="document.getElementById('period-${id}').remove()">✕</button>`;
+    document.getElementById('periodsContainer').appendChild(div);
+  }
+  document.getElementById('importForm').addEventListener('submit', () => {
+    const periods = [];
+    document.querySelectorAll('.period-row').forEach(row => {
+      const s = row.querySelector('.period-start').value;
+      const e = row.querySelector('.period-end').value;
+      if (s && e) periods.push([s, e]);
     });
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault(); dropZone.classList.remove('drag-over');
-      const f = e.dataTransfer.files[0];
-      if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; fileName.textContent = f.name; submitBtn.disabled = false; }
-    });
-
-    // Vacation periods
-    let periodCount = 0;
-
-    function toggleVacations(show) {
-      document.getElementById('vacationPeriods').style.display = show ? 'block' : 'none';
-      if (show && periodCount === 0) addPeriod();
-    }
-
-    function addPeriod() {
-      periodCount++;
-      const id = periodCount;
-      const div = document.createElement('div');
-      div.className = 'period-row';
-      div.id = `period-${id}`;
-      div.innerHTML = `
-        <span class="period-label">Période ${id}</span>
-        <input type="date" class="period-start" placeholder="Début" required>
-        <span style="color:var(--text-muted)">→</span>
-        <input type="date" class="period-end" placeholder="Fin" required>
-        <button type="button" class="btn-remove" onclick="document.getElementById('period-${id}').remove();periodCount--">✕</button>
-      `;
-      document.getElementById('periodsContainer').appendChild(div);
-    }
-
-    // Serialize periods before submit
-    document.getElementById('importForm').addEventListener('submit', () => {
-      const periods = [];
-      document.querySelectorAll('.period-row').forEach(row => {
-        const s = row.querySelector('.period-start').value;
-        const e = row.querySelector('.period-end').value;
-        if (s && e) periods.push([s, e]);
-      });
-      document.getElementById('vacation_ranges').value = JSON.stringify(periods);
-    });
-  </script>
-</body>
-</html>
+    document.getElementById('vacation_ranges').value = JSON.stringify(periods);
+  });
+</script>
+{% endblock %}
