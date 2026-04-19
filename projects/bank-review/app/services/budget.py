@@ -271,6 +271,32 @@ async def update_budget_category(
     )
 
 
+async def rename_budget_category(line_id: int, new_name: str):
+    """Cascade rename: categories + all budget_lines + all transactions."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        old_name = await conn.fetchval(
+            "SELECT category FROM budget_lines WHERE id = $1", line_id
+        )
+        if not old_name or old_name == new_name:
+            return
+        async with conn.transaction():
+            await conn.execute(
+                "INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING", new_name
+            )
+            await conn.execute(
+                "UPDATE transactions SET category = $1 WHERE category = $2", new_name, old_name
+            )
+            await conn.execute(
+                "UPDATE budget_lines SET category = $1 WHERE category = $2", new_name, old_name
+            )
+            still_used = await conn.fetchval(
+                "SELECT COUNT(*) FROM transactions WHERE category = $1", old_name
+            )
+            if still_used == 0:
+                await conn.execute("DELETE FROM categories WHERE name = $1", old_name)
+
+
 async def delete_budget_category(line_id: int):
     pool = await get_pool()
     await pool.execute("DELETE FROM budget_lines WHERE id = $1", line_id)

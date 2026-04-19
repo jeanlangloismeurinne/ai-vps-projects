@@ -302,7 +302,7 @@
 
     const rows = cats.map(c => `
       <tr id="cat-row-${c.id}">
-        <td style="font-weight:500">${esc(c.category)}</td>
+        <td><input class="cats-input" value="${esc(c.category)}" id="cat-name-${c.id}"></td>
         <td><input class="cats-input" value="${esc(c.group_name)}" list="groupList" id="cat-group-${c.id}"></td>
         <td><input class="cats-input cats-num" type="number" value="${c.monthly_budget}" min="0" step="10" id="cat-budget-${c.id}"></td>
         <td style="text-align:center"><input type="checkbox" id="cat-income-${c.id}"${c.is_income ? ' checked' : ''}></td>
@@ -367,14 +367,16 @@
   }
 
   async function saveCatRow(lineId) {
+    const name   = document.getElementById(`cat-name-${lineId}`).value.trim();
     const group  = document.getElementById(`cat-group-${lineId}`).value.trim();
     const budget = parseFloat(document.getElementById(`cat-budget-${lineId}`).value) || 0;
     const income = document.getElementById(`cat-income-${lineId}`).checked;
     const sort   = parseInt(document.getElementById(`cat-sort-${lineId}`).value) || 99;
+    if (!name) return;
     const res = await fetch(`/api/budget/category/${lineId}`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({group_name: group, monthly_budget: budget, is_income: income, sort_order: sort}),
+      body: JSON.stringify({category: name, group_name: group, monthly_budget: budget, is_income: income, sort_order: sort}),
     });
     if (res.ok) {
       _allCats = null;

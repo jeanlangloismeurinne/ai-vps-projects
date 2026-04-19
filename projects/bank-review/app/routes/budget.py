@@ -9,7 +9,7 @@ from app.services.budget import (
     build_budget_view, update_budget_line,
     get_transactions_by_cell, recategorize_transaction,
     get_all_categories_for_year, add_budget_category,
-    update_budget_category, delete_budget_category,
+    update_budget_category, rename_budget_category, delete_budget_category,
 )
 
 router = APIRouter()
@@ -77,6 +77,7 @@ class CategoryAddPayload(BaseModel):
 
 
 class CategoryUpdatePayload(BaseModel):
+    category: str
     group_name: str
     monthly_budget: float = 0
     is_income: bool = False
@@ -126,6 +127,7 @@ async def api_add_category(request: Request, payload: CategoryAddPayload):
 async def api_update_category(request: Request, line_id: int, payload: CategoryUpdatePayload):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await rename_budget_category(line_id, payload.category)
     await update_budget_category(
         line_id, payload.group_name, payload.monthly_budget,
         payload.is_income, payload.sort_order,
