@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 
 from app.routes import auth, analyze
+from app.routes import upload as upload_route
 from app.routes import import_route
 from app.routes import budget as budget_route
 from app.routes import feedback as feedback_route
@@ -38,6 +39,7 @@ def _m_status(m: dict, is_income: bool) -> str:
 _templates.env.globals["m_status"] = _m_status
 
 app.include_router(auth.router)
+app.include_router(upload_route.router)
 app.include_router(analyze.router, prefix="/api")
 app.include_router(import_route.router)
 app.include_router(budget_route.router)
