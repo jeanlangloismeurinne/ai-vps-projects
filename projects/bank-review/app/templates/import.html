@@ -2,7 +2,8 @@
 {% set title = "Importer" %}
 {% set active = "import" %}
 {% block content %}
-<div class="container" style="max-width:680px">
+<div class="container" style="max-width:900px;display:grid;grid-template-columns:1fr 320px;gap:32px;align-items:start">
+<div>
   <h2 style="margin-bottom:6px">Importer un relevé</h2>
   <p class="subtitle">Le fichier sera dédupliqué et classifié automatiquement.</p>
   {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
@@ -77,4 +78,30 @@
     document.getElementById('vacation_ranges').value = JSON.stringify(periods);
   });
 </script>
+</div>
+
+<!-- Import history panel -->
+<div>
+  <h3 style="margin-bottom:12px;font-size:15px">Historique des imports</h3>
+  {% if sessions %}
+  <div class="sessions-list">
+    {% for s in sessions %}
+    <a href="/import/history/{{ s.id }}" class="session-card">
+      <div class="session-date">{{ s.created_at[:10] if s.created_at else "—" }}</div>
+      <div class="session-file">{{ s.filename or "fichier inconnu" }}</div>
+      <div class="session-meta">
+        {{ s.row_count or 0 }} transactions
+        {% if s.date_min and s.date_max %}
+        · {{ s.date_min }} → {{ s.date_max }}
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="subtitle" style="font-size:13px">Aucun import pour l'instant.</p>
+  {% endif %}
+</div>
+
+</div>
 {% endblock %}

@@ -31,6 +31,12 @@
   </div>
   {% endif %}
 
+  {% if uncovered_count and uncovered_count > 0 %}
+  <div class="alert warning" style="margin-bottom:12px">
+    ⚠️ <strong>{{ uncovered_count }} transaction{{ 's' if uncovered_count > 1 }} non couvertes</strong> — des transactions appartiennent à des catégories absentes du budget de cette année.
+  </div>
+  {% endif %}
+
   {% if not view or not view.groups %}
   <div class="alert warning">Aucune donnée pour cette année.</div>
   {% else %}
@@ -48,7 +54,7 @@
         {% for m in view.months %}
         <th class="col-month {% if m == view.today %}month-current{% endif %}
                              {% if m > view.today %}month-future{% endif %}">
-          {{ m[5:] }}/{{ m[2:4] }}
+          <a href="/budget/month?year_id={{ selected_year_id }}&month={{ m }}" class="month-link">{{ m[5:] }}/{{ m[2:4] }}</a>
         </th>
         {% endfor %}
       </tr>
@@ -234,7 +240,7 @@
     const html = `<div class="modal-table-wrap"><table class="modal-table">
       <thead><tr>
         <th>Date op.</th><th>Date réelle</th><th>Libellé</th>
-        <th>Montant</th><th>Banque</th><th>Catégorie</th><th>Conf.</th><th>Méthode</th>
+        <th>Montant</th><th>Banque</th><th>Catégorie</th><th>Conf.</th><th>Méthode</th><th></th>
       </tr></thead>
       <tbody>${rows.map(r => {
         const lbl = r.label_clean || r.label || '';
@@ -249,6 +255,8 @@
           </select></td>
           <td>${r.confidence != null ? r.confidence + '%' : '—'}</td>
           <td><span class="method-badge ${esc(r.classification_method)}" title="${esc(r.precision_note)}">${esc(r.classification_method) || '—'}</span></td>
+          <td><button class="btn-rule-add" title="Toujours classifier ainsi"
+            onclick="openRuleModalInline(${JSON.stringify(lbl)}, document.querySelector('.cat-select[data-id=\\'${r.id}\\']'))">⚡</button></td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
     document.getElementById('drillContent').innerHTML = html;
@@ -416,5 +424,90 @@
       if (banner) banner.remove();
     }
   }
+
+  // ── Rule modal ─────────────────────────────────────────────────────────────
+
+  let _ruleTargetSelect = null;
+
+  async function openRuleModalInline(labelClean, catSelect) {
+    _ruleTargetSelect = catSelect;
+    const currentCat = catSelect ? catSelect.value : '';
+    document.getElementById('ruleKeyword').value = labelClean || '';
+    await loadCats();
+    const catSel = document.getElementById('ruleCategory');
+    catSel.innerHTML = catOptions(currentCat);
+    document.getElementById('ruleConflictMsg').style.display = 'none';
+    document.getElementById('ruleSuccessMsg').style.display = 'none';
+    document.getElementById('ruleModal').classList.remove('hidden');
+    checkRuleConflict();
+  }
+
+  let _conflictCheckTimer = null;
+  function checkRuleConflict() {
+    clearTimeout(_conflictCheckTimer);
+    _conflictCheckTimer = setTimeout(async () => {
+      const kw = document.getElementById('ruleKeyword').value.trim();
+      const cat = document.getElementById('ruleCategory').value;
+      const msg = document.getElementById('ruleConflictMsg');
+      if (!kw) { msg.style.display = 'none'; return; }
+      const res = await fetch(`/api/rules/check?keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
+      const data = await res.json();
+      if (data.conflict && data.existing) {
+        msg.textContent = `⚠ Conflit : une règle existe déjà pour "${data.existing.keyword}" → "${data.existing.category}"`;
+        msg.style.display = 'block';
+      } else {
+        msg.style.display = 'none';
+      }
+    }, 300);
+  }
+
+  async function submitRule() {
+    const kw = document.getElementById('ruleKeyword').value.trim();
+    const cat = document.getElementById('ruleCategory').value;
+    const successMsg = document.getElementById('ruleSuccessMsg');
+    if (!kw || !cat) return;
+    const res = await fetch('/api/rules', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: kw, category: cat}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      successMsg.style.display = 'block';
+      setTimeout(closeRuleModal, 1200);
+    }
+  }
+
+  function closeRuleModal() { document.getElementById('ruleModal').classList.add('hidden'); }
+  function closeRuleOutside(e) { if (e.target.id === 'ruleModal') closeRuleModal(); }
 </script>
+
+<!-- Rule creation modal -->
+<div id="ruleModal" class="modal-overlay hidden" onclick="closeRuleOutside(event)">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-hd">
+      <strong>Nouvelle règle de classification</strong>
+      <button class="modal-close" onclick="closeRuleModal()">✕</button>
+    </div>
+    <div class="modal-bd" style="padding:20px">
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Mot-clé (correspondance partielle)</label>
+        <input id="ruleKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO" oninput="checkRuleConflict()">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Catégorie cible</label>
+        <select id="ruleCategory" class="cat-select" style="width:100%" onchange="checkRuleConflict()">
+          <!-- populated dynamically from _allCats cache -->
+        </select>
+      </div>
+      <div id="ruleConflictMsg" style="display:none;padding:8px;border-radius:6px;font-size:13px;margin-bottom:10px;background:var(--cell-yellow-bg);color:var(--text)"></div>
+      <div id="ruleSuccessMsg" style="display:none;padding:8px;border-radius:6px;font-size:13px;margin-bottom:10px;background:var(--cell-green-bg);color:var(--text)"></div>
+    </div>
+    <div class="modal-ft">
+      <span></span>
+      <button class="btn-confirm" onclick="submitRule()">Créer la règle</button>
+    </div>
+  </div>
+</div>
 {% endblock %}

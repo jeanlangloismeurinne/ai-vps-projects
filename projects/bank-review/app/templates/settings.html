@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% set title = "Règles de classification" %}
+{% set active = "settings" %}
+{% block content %}
+<div class="container" style="max-width:860px">
+  <h2 style="margin-bottom:6px">Règles de classification</h2>
+  <p class="subtitle">Les règles s'appliquent lors de chaque import, après les règles prioritaires (Nounou) et les vacances, avant les règles intégrées.</p>
+
+  <div class="card" style="padding:24px;margin-bottom:24px">
+    <h3 style="font-size:14px;margin-bottom:16px">Nouvelle règle</h3>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:2;min-width:160px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Mot-clé</label>
+        <input id="newKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO" oninput="checkNewConflict()">
+      </div>
+      <div style="flex:2;min-width:160px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Catégorie</label>
+        <select id="newCategory" class="cat-select" style="width:100%" onchange="checkNewConflict()">
+          {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <button class="btn-confirm" onclick="addRule()">Ajouter</button>
+      </div>
+    </div>
+    <div id="conflictMsg" style="display:none;margin-top:10px;padding:8px;border-radius:6px;font-size:13px;background:var(--cell-yellow-bg);color:var(--text)"></div>
+    <div id="addMsg" style="display:none;margin-top:10px;padding:8px;border-radius:6px;font-size:13px;background:var(--cell-green-bg);color:var(--text)"></div>
+  </div>
+
+  <div id="rulesContainer">
+    {% if rules %}
+    <div class="modal-table-wrap">
+      <table class="modal-table" id="rulesTable">
+        <thead>
+          <tr>
+            <th>Mot-clé</th>
+            <th>Catégorie</th>
+            <th>Créée le</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rulesBody">
+          {% for r in rules %}
+          <tr id="rule-row-{{ r.id }}">
+            <td><code>{{ r.keyword }}</code></td>
+            <td>{{ r.category }}</td>
+            <td style="color:var(--text-muted);font-size:12px">{{ r.created_at[:10] if r.created_at else "—" }}</td>
+            <td>
+              <button class="btn-remove" onclick="deleteRule({{ r.id }})">✕</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p id="noRulesMsg" class="subtitle" style="font-size:13px">Aucune règle définie. Ajoutez-en via le formulaire ci-dessus ou depuis les vues de revue d'import.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  let _conflictTimer = null;
+
+  function checkNewConflict() {
+    clearTimeout(_conflictTimer);
+    _conflictTimer = setTimeout(async () => {
+      const kw = document.getElementById('newKeyword').value.trim();
+      const cat = document.getElementById('newCategory').value;
+      const msg = document.getElementById('conflictMsg');
+      if (!kw) { msg.style.display = 'none'; return; }
+      const res = await fetch(`/api/rules/check?keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
+      const data = await res.json();
+      if (data.conflict && data.existing) {
+        msg.textContent = `⚠ Conflit : une règle existe déjà pour "${data.existing.keyword}" → "${data.existing.category}"`;
+        msg.style.display = 'block';
+      } else {
+        msg.style.display = 'none';
+      }
+    }, 300);
+  }
+
+  async function addRule() {
+    const kw = document.getElementById('newKeyword').value.trim();
+    const cat = document.getElementById('newCategory').value;
+    const addMsg = document.getElementById('addMsg');
+    if (!kw || !cat) return;
+    const res = await fetch('/api/rules', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: kw, category: cat}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      addMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      addMsg.style.display = 'block';
+      document.getElementById('newKeyword').value = '';
+      document.getElementById('conflictMsg').style.display = 'none';
+      // Add row to table
+      const tbody = document.getElementById('rulesBody');
+      const noMsg = document.getElementById('noRulesMsg');
+      if (noMsg) noMsg.remove();
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.id = `rule-row-${data.id}`;
+        tr.innerHTML = `<td><code>${esc(kw)}</code></td><td>${esc(cat)}</td><td style="color:var(--text-muted);font-size:12px">aujourd'hui</td><td><button class="btn-remove" onclick="deleteRule(${data.id})">✕</button></td>`;
+        tbody.prepend(tr);
+      }
+      setTimeout(() => { addMsg.style.display = 'none'; }, 2000);
+    }
+  }
+
+  async function deleteRule(id) {
+    if (!confirm('Supprimer cette règle ?')) return;
+    const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      const row = document.getElementById(`rule-row-${id}`);
+      if (row) row.remove();
+    }
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+{% endblock %}

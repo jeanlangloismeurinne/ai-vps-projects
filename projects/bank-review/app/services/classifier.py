@@ -160,6 +160,11 @@ class TransactionClassifier:
         self.vacation_periods: list[tuple[date, date]] = vacation_periods or []
         self._claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self._history_index: str = ""
+        self._user_rules: list[tuple[str, str]] = []  # (keyword_upper, category)
+
+    def set_user_rules(self, rules: list[dict]):
+        """Load user-defined rules from DB (case-insensitive substring match)."""
+        self._user_rules = [(r["keyword"].upper(), r["category"]) for r in rules]
 
     def set_history_sample(self, df_history: pd.DataFrame, n: int = 150):
         self._history_index = build_history_index(df_history)
@@ -203,12 +208,17 @@ class TransactionClassifier:
         if in_vacation:
             return ClassificationResult("Vacances", 95, "vacation", real_date)
 
-        # 3. Label keyword rules
+        # 3. User-defined rules (case-insensitive partial match)
+        for kw, cat in self._user_rules:
+            if kw in label_up:
+                return ClassificationResult(cat, 95, "user_rule", None)
+
+        # 4. Hardcoded label keyword rules
         for pattern, cat, conf in LABEL_RULES:
             if re.search(pattern, label_up):
                 return ClassificationResult(cat, conf, "label_rule", None)
 
-        # 3. Bank category mapping
+        # 5. Bank category mapping
         bank_low = str(bank_category).lower()
         for key, (cat, conf) in BANK_TO_USER.items():
             if key in bank_low:

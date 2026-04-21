@@ -335,29 +335,61 @@ async def update_budget_category(
 
 
 async def rename_budget_category(line_id: int, new_name: str):
-    """Cascade rename: categories + all budget_lines + all transactions."""
+    """
+    Rename a category for a specific year only.
+    - Only this year's budget_line is renamed.
+    - Only transactions within this year's date range are updated.
+    - Other years and their transactions are untouched.
+    - The old name is kept in the categories table (other years may still use it).
+    """
     pool = await get_pool()
     async with pool.acquire() as conn:
-        old_name = await conn.fetchval(
-            "SELECT category FROM budget_lines WHERE id = $1", line_id
+        row = await conn.fetchrow(
+            """
+            SELECT bl.category, by_.start_date, by_.end_date
+            FROM budget_lines bl
+            JOIN budget_years by_ ON bl.year_id = by_.id
+            WHERE bl.id = $1
+            """,
+            line_id,
         )
-        if not old_name or old_name == new_name:
+        if not row or row["category"] == new_name:
             return
+        old_name = row["category"]
+        start_date = row["start_date"]
+        end_date = row["end_date"]
         async with conn.transaction():
             await conn.execute(
                 "INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING", new_name
             )
+            # Only rename this specific budget line
             await conn.execute(
-                "UPDATE transactions SET category = $1 WHERE category = $2", new_name, old_name
+                "UPDATE budget_lines SET category = $1 WHERE id = $2", new_name, line_id
             )
+            # Only rename transactions within this year's date range
             await conn.execute(
-                "UPDATE budget_lines SET category = $1 WHERE category = $2", new_name, old_name
+                "UPDATE transactions SET category = $1 WHERE category = $2 AND date_op BETWEEN $3 AND $4",
+                new_name, old_name, start_date, end_date,
             )
-            still_used = await conn.fetchval(
-                "SELECT COUNT(*) FROM transactions WHERE category = $1", old_name
-            )
-            if still_used == 0:
-                await conn.execute("DELETE FROM categories WHERE name = $1", old_name)
+
+
+async def get_uncovered_count(year_id: int) -> int:
+    """Count transactions in this year whose category has no matching budget_line."""
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """
+        SELECT COUNT(*) AS cnt
+        FROM transactions t
+        JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
+        WHERE y.id = $1
+          AND t.category IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM budget_lines bl WHERE bl.year_id = y.id AND bl.category = t.category
+          )
+        """,
+        year_id,
+    )
+    return int(row["cnt"]) if row else 0
 
 
 async def delete_budget_category(line_id: int):
@@ -371,6 +403,30 @@ async def dismiss_budget_update_flag(year_id: int):
         "UPDATE budget_years SET needs_budget_update = FALSE WHERE id = $1",
         year_id,
     )
+
+
+async def get_month_transactions(year_id: int, month: str) -> list[dict]:
+    """All transactions for a given YYYY-MM within the year's date range."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+               t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
+        FROM transactions t
+        JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
+        WHERE y.id = $1 AND TO_CHAR(t.date_op, 'YYYY-MM') = $2
+        ORDER BY t.date_op, t.category
+        """,
+        year_id, month,
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["date_op"] = str(d["date_op"])
+        d["real_date"] = str(d["real_date"]) if d["real_date"] else None
+        d["amount"] = float(d["amount"])
+        result.append(d)
+    return result
 
 
 def _status(variance: float, ytd_budget: float, is_income: bool) -> str:

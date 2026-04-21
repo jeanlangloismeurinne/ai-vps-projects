@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% set title = "Transactions " ~ month %}
+{% set active = "budget" %}
+{% block content %}
+<div class="container">
+
+  <div class="budget-topbar" style="margin-bottom:16px">
+    <div>
+      <a href="/budget?year_id={{ year_id }}" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Suivi budget {{ year.year_label }}</a>
+      <h2 style="margin:4px 0 2px">{{ month }}</h2>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="stats-bar" style="margin-bottom:20px">
+    <div class="stat-item">
+      <span class="stat-value">{{ txs|length }}</span>
+      <span class="stat-label">transactions</span>
+    </div>
+    <div class="stat-item low">
+      <span class="stat-value amount-neg">{{ "%.0f"|format(total_expenses) }} €</span>
+      <span class="stat-label">dépenses</span>
+    </div>
+    <div class="stat-item high">
+      <span class="stat-value amount-pos">+{{ "%.0f"|format(total_income) }} €</span>
+      <span class="stat-label">entrées</span>
+    </div>
+    <div class="stat-item {% if net >= 0 %}high{% else %}low{% endif %}">
+      <span class="stat-value {{ 'amount-pos' if net >= 0 else 'amount-neg' }}">{{ "%.0f"|format(net) }} €</span>
+      <span class="stat-label">solde net</span>
+    </div>
+  </div>
+
+  <!-- Sort controls -->
+  <div class="filter-bar" style="margin-bottom:16px">
+    <button class="filter-btn {% if sort == 'date' %}active{% endif %}"
+            onclick="sortTable('date', this)">Par date</button>
+    <button class="filter-btn {% if sort == 'category' %}active{% endif %}"
+            onclick="sortTable('category', this)">Par catégorie puis date</button>
+  </div>
+
+  {% if txs %}
+  <div class="table-wrapper" style="margin-bottom:24px">
+    <table id="monthTable">
+      <thead>
+        <tr>
+          <th>Date op.</th><th>Date réelle</th><th>Libellé</th><th>Montant</th>
+          <th>Catégorie</th><th>Conf.</th><th>Méthode</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="monthBody">
+        {% for tx in txs %}
+        <tr data-date="{{ tx.date_op }}" data-cat="{{ tx.category or '' }}" data-txid="{{ tx.id }}">
+          <td>{{ tx.date_op }}</td>
+          <td>{{ tx.real_date or "—" }}</td>
+          <td class="label-cell" title="{{ tx.label }}">{{ (tx.label_clean or tx.label or "")[:55] }}{% if (tx.label_clean or tx.label or "")|length > 55 %}…{% endif %}</td>
+          <td class="{{ 'amount-neg' if tx.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(tx.amount) }} €</td>
+          <td>
+            {% if tx._matched_rule_category %}
+            <span class="rule-badge" title="Règle existante : {{ tx._matched_rule_category }}">⚡ {{ tx._matched_rule_category }}</span>
+            {% endif %}
+            <select class="cat-select" data-txid="{{ tx.id }}" data-orig="{{ tx.category }}" onchange="markChange(this)">
+              {% for cat in categories %}
+              <option value="{{ cat }}" {% if cat == tx.category %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+              {% if tx.category and tx.category not in categories %}
+              <option value="{{ tx.category }}" selected>{{ tx.category }}</option>
+              {% endif %}
+            </select>
+          </td>
+          <td>{% if tx.confidence is not none %}<span class="conf-badge {{ 'high' if tx.confidence >= 80 else ('medium' if tx.confidence >= 50 else 'low') }}">{{ tx.confidence }}%</span>{% else %}—{% endif %}</td>
+          <td><span class="method-badge {{ tx.classification_method or '' }}">{{ tx.classification_method or "—" }}</span></td>
+          <td>
+            <button class="btn-rule-add" title="Toujours classifier ainsi"
+              data-label-clean="{{ tx.label_clean or tx.label }}"
+              onclick="openRuleModal(this)">⚡</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="confirm-bar">
+    <div id="saveMsg"></div>
+    <button class="btn-confirm" id="saveBtn" onclick="saveChanges()">Enregistrer les modifications</button>
+  </div>
+  {% else %}
+  <div class="alert warning">Aucune transaction pour ce mois.</div>
+  {% endif %}
+</div>
+
+<!-- Rule creation modal -->
+<div id="ruleModal" class="modal-overlay hidden" onclick="closeRuleOutside(event)">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-hd">
+      <strong>Nouvelle règle de classification</strong>
+      <button class="modal-close" onclick="closeRuleModal()">✕</button>
+    </div>
+    <div class="modal-bd" style="padding:20px">
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Mot-clé (correspondance partielle)</label>
+        <input id="ruleKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO" oninput="checkRuleConflict()">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Catégorie cible</label>
+        <select id="ruleCategory" class="cat-select" style="width:100%" onchange="checkRuleConflict()">
+          {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="ruleConflictMsg" style="display:none;padding:8px;border-radius:6px;font-size:13px;margin-bottom:10px;background:var(--cell-yellow-bg);color:var(--text)"></div>
+      <div id="ruleSuccessMsg" style="display:none;padding:8px;border-radius:6px;font-size:13px;margin-bottom:10px;background:var(--cell-green-bg);color:var(--text)"></div>
+    </div>
+    <div class="modal-ft">
+      <span></span>
+      <button class="btn-confirm" onclick="submitRule()">Créer la règle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let _changes = {};
+  let _ruleSourceBtn = null;
+  let _currentSort = '{{ sort }}';
+
+  function markChange(sel) {
+    const id = sel.dataset.txid;
+    if (sel.value !== sel.dataset.orig) {
+      _changes[id] = sel.value;
+      sel.closest('tr').classList.add('edited');
+    } else {
+      delete _changes[id];
+      sel.closest('tr').classList.remove('edited');
+    }
+  }
+
+  async function saveChanges() {
+    const ids = Object.keys(_changes);
+    if (!ids.length) { document.getElementById('saveMsg').innerHTML = '<span class="success">Aucune modification.</span>'; return; }
+    const btn = document.getElementById('saveBtn');
+    const msg = document.getElementById('saveMsg');
+    btn.disabled = true; btn.textContent = 'Enregistrement…';
+    let errors = 0;
+    for (const id of ids) {
+      const res = await fetch(`/api/transactions/${id}/recategorize`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category: _changes[id]}),
+      });
+      if (!res.ok) errors++;
+    }
+    if (errors) {
+      msg.innerHTML = `<span class="error">${errors} erreur(s)</span>`;
+      btn.disabled = false; btn.textContent = 'Réessayer';
+    } else {
+      msg.innerHTML = `<span class="success">${ids.length} transaction(s) mise(s) à jour ✓</span>`;
+      btn.textContent = 'Terminé ✓';
+      _changes = {};
+      document.querySelectorAll('#monthTable tbody tr.edited').forEach(tr => {
+        tr.classList.remove('edited');
+        const sel = tr.querySelector('.cat-select');
+        if (sel) sel.dataset.orig = sel.value;
+      });
+    }
+  }
+
+  function sortTable(mode, btn) {
+    _currentSort = mode;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tbody = document.getElementById('monthBody');
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.subtotal-row)'));
+
+    // Remove existing subtotal rows
+    tbody.querySelectorAll('.subtotal-row').forEach(r => r.remove());
+
+    if (mode === 'date') {
+      rows.sort((a, b) => a.dataset.date.localeCompare(b.dataset.date));
+      rows.forEach(r => tbody.appendChild(r));
+    } else {
+      rows.sort((a, b) => {
+        const catCmp = (a.dataset.cat || '').localeCompare(b.dataset.cat || '');
+        return catCmp !== 0 ? catCmp : a.dataset.date.localeCompare(b.dataset.date);
+      });
+      // Group by category and insert subtotals
+      let currentCat = null;
+      let catRows = [];
+      const flushGroup = () => {
+        if (!catRows.length) return;
+        catRows.forEach(r => tbody.appendChild(r));
+        const sum = catRows.reduce((acc, r) => {
+          const amtCell = r.querySelector('td:nth-child(4)');
+          return acc + parseFloat(amtCell ? amtCell.textContent.replace(' €','').replace(',','.') : '0');
+        }, 0);
+        const tr = document.createElement('tr');
+        tr.className = 'subtotal-row';
+        tr.innerHTML = `<td colspan="3" style="font-weight:600;color:var(--text-muted);font-size:12px">${esc(currentCat)} — ${catRows.length} opération(s)</td>
+          <td class="${sum < 0 ? 'amount-neg' : 'amount-pos'}" style="font-weight:600">${sum.toFixed(2)} €</td>
+          <td colspan="4"></td>`;
+        tbody.appendChild(tr);
+        catRows = [];
+      };
+      rows.forEach(r => {
+        const cat = r.dataset.cat || '';
+        if (cat !== currentCat) { flushGroup(); currentCat = cat; }
+        catRows.push(r);
+      });
+      flushGroup();
+    }
+  }
+
+  // ── Rule modal ────────────────────────────────────────────────────────────
+
+  function openRuleModal(btn) {
+    _ruleSourceBtn = btn;
+    const labelClean = btn.dataset.labelClean || '';
+    const tr = btn.closest('tr');
+    const sel = tr.querySelector('.cat-select');
+    const currentCat = sel ? sel.value : '';
+    document.getElementById('ruleKeyword').value = labelClean;
+    const catSel = document.getElementById('ruleCategory');
+    for (let opt of catSel.options) { opt.selected = opt.value === currentCat; }
+    document.getElementById('ruleConflictMsg').style.display = 'none';
+    document.getElementById('ruleSuccessMsg').style.display = 'none';
+    document.getElementById('ruleModal').classList.remove('hidden');
+    checkRuleConflict();
+  }
+
+  let _conflictTimer = null;
+  function checkRuleConflict() {
+    clearTimeout(_conflictTimer);
+    _conflictTimer = setTimeout(async () => {
+      const kw = document.getElementById('ruleKeyword').value.trim();
+      const cat = document.getElementById('ruleCategory').value;
+      const msg = document.getElementById('ruleConflictMsg');
+      if (!kw) { msg.style.display = 'none'; return; }
+      const res = await fetch(`/api/rules/check?keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
+      const data = await res.json();
+      if (data.conflict && data.existing) {
+        msg.textContent = `⚠ Conflit : une règle existe déjà pour "${data.existing.keyword}" → "${data.existing.category}"`;
+        msg.style.display = 'block';
+      } else {
+        msg.style.display = 'none';
+      }
+    }, 300);
+  }
+
+  async function submitRule() {
+    const kw = document.getElementById('ruleKeyword').value.trim();
+    const cat = document.getElementById('ruleCategory').value;
+    const successMsg = document.getElementById('ruleSuccessMsg');
+    if (!kw || !cat) return;
+    const res = await fetch('/api/rules', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: kw, category: cat}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      successMsg.style.display = 'block';
+      if (_ruleSourceBtn) {
+        const tr = _ruleSourceBtn.closest('tr');
+        if (tr && !tr.querySelector('.rule-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'rule-badge';
+          badge.title = `Règle existante : ${cat}`;
+          badge.textContent = `⚡ ${cat}`;
+          tr.querySelector('td:nth-child(5)').prepend(badge);
+        }
+      }
+      setTimeout(closeRuleModal, 1200);
+    }
+  }
+
+  function closeRuleModal() { document.getElementById('ruleModal').classList.add('hidden'); }
+  function closeRuleOutside(e) { if (e.target.id === 'ruleModal') closeRuleModal(); }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // Apply default sort on load
+  document.addEventListener('DOMContentLoaded', () => {
+    if (_currentSort === 'category') {
+      sortTable('category', document.querySelector('.filter-btn.active'));
+    }
+  });
+</script>
+{% endblock %}

@@ -1,65 +1,59 @@
 {% extends "base.html" %}
-{% set title = "Résultats import" %}
+{% set title = "Historique import" %}
 {% set active = "import" %}
 {% block content %}
 <div class="container">
 
-  {% if format_summary %}
-  <div class="format-banner">
-    <div class="format-banner-icon">⚠</div>
-    <div class="format-banner-body">
-      <strong>Format modifié détecté</strong>
-      <pre class="format-detail">{{ format_summary }}</pre>
+  <div class="budget-topbar" style="margin-bottom:16px">
+    <div>
+      <a href="/import" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Retour aux imports</a>
+      <h2 style="margin:4px 0 2px">Import du {{ session.created_at[:10] if session.created_at else "—" }}</h2>
+      <p class="subtitle" style="margin:0">
+        {{ session.filename or "fichier inconnu" }}
+        {% if session.date_min and session.date_max %}· {{ session.date_min }} → {{ session.date_max }}{% endif %}
+      </p>
     </div>
   </div>
-  {% endif %}
 
   <div class="stats-bar">
-    <div class="stat-item"><span class="stat-value">{{ stats.total }}</span><span class="stat-label">nouvelles transactions</span></div>
+    <div class="stat-item"><span class="stat-value">{{ stats.total }}</span><span class="stat-label">transactions</span></div>
     <div class="stat-item high"><span class="stat-value">{{ stats.high }}</span><span class="stat-label">confiance élevée ≥80%</span></div>
     <div class="stat-item medium"><span class="stat-value">{{ stats.medium }}</span><span class="stat-label">confiance moyenne 50–79%</span></div>
     <div class="stat-item low"><span class="stat-value">{{ stats.low }}</span><span class="stat-label">confiance faible &lt;50%</span></div>
   </div>
 
   {% if stats.total == 0 %}
-  <div class="alert warning">Aucune nouvelle transaction détectée — tout est déjà dans l'historique.</div>
+  <div class="alert warning">Aucune transaction trouvée pour cet import.</div>
   {% else %}
 
-  {% if stats.low > 0 %}
-  <div class="alert warning" style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-    <span style="font-size:20px">⚠</span>
-    <span><strong>{{ stats.low }} transaction{{ 's' if stats.low > 1 }} à vérifier</strong> — la classification proposée est peu fiable. Corrigez-les avant de valider.</span>
-  </div>
-  {% endif %}
-
   <div class="filter-bar">
-    <button class="filter-btn {% if stats.low == 0 %}active{% endif %}" onclick="filterRows('all',this)">Toutes ({{ stats.total }})</button>
-    <button class="filter-btn {% if stats.low > 0 %}active{% endif %}" onclick="filterRows('low',this)">À vérifier — confiance faible ({{ stats.low }})</button>
+    <button class="filter-btn active" onclick="filterRows('all',this)">Toutes ({{ stats.total }})</button>
+    <button class="filter-btn" onclick="filterRows('low',this)">Confiance faible ({{ stats.low }})</button>
     <button class="filter-btn" onclick="filterRows('medium',this)">Confiance moyenne ({{ stats.medium }})</button>
   </div>
 
   <div class="table-wrapper" style="margin-bottom:24px">
-    <table id="reviewTable">
+    <table id="historyTable">
       <thead>
         <tr>
           <th>Date op.</th><th>Date réelle</th><th>Libellé</th><th>Montant</th>
-          <th>Catégorie banque</th><th>Catégorie proposée</th><th>Conf.</th><th>Méthode</th><th></th>
+          <th>Catégorie banque</th><th>Catégorie</th><th>Conf.</th><th>Méthode</th><th></th>
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
-        {% set conf_class = "high" if row.confidence >= 80 else ("medium" if row.confidence >= 50 else "low") %}
-        <tr data-conf="{{ conf_class }}" data-idx="{{ loop.index0 }}">
-          <td>{{ row.dateOp or row.date_op }}</td>
-          <td>{{ row.realDate or row.real_date or "—" }}</td>
-          <td class="label-cell" title="{{ row.label }}">{{ (row._display_label or row.label)[:55] }}{% if (row._display_label or row.label)|length > 55 %}…{% endif %}</td>
+        {% set conf_class = "high" if (row.confidence or 0) >= 80 else ("medium" if (row.confidence or 0) >= 50 else "low") %}
+        <tr data-conf="{{ conf_class }}" data-txid="{{ row.id }}">
+          <td>{{ row.date_op }}</td>
+          <td>{{ row.real_date or "—" }}</td>
+          <td class="label-cell" title="{{ row.label }}">{{ (row.label_clean or row.label or "")[:55] }}{% if (row.label_clean or row.label or "")|length > 55 %}…{% endif %}</td>
           <td class="{{ 'amount-neg' if row.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(row.amount) }} €</td>
-          <td class="bank-cat">{{ row.bankCategory or row.bank_category }}</td>
+          <td class="bank-cat">{{ row.bank_category or "—" }}</td>
           <td>
             {% if row._matched_rule_category %}
             <span class="rule-badge" title="Règle existante : {{ row._matched_rule_category }}">⚡ {{ row._matched_rule_category }}</span>
             {% endif %}
-            <select class="cat-select" data-idx="{{ loop.index0 }}" onchange="markEdited(this)">
+            <select class="cat-select" data-txid="{{ row.id }}" data-orig="{{ row.category }}" onchange="markChange(this)">
               {% for cat in categories %}
               <option value="{{ cat }}" {% if cat == row.category %}selected{% endif %}>{{ cat }}</option>
               {% endfor %}
@@ -68,12 +62,12 @@
               {% endif %}
             </select>
           </td>
-          <td><span class="conf-badge {{ conf_class }}">{{ row.confidence }}%</span></td>
-          <td><span class="method-badge {{ row.classification_method or row.method }}">{{ row.classification_method or row.method }}</span></td>
+          <td><span class="conf-badge {{ conf_class }}">{{ row.confidence or 0 }}%</span></td>
+          <td><span class="method-badge {{ row.classification_method or '' }}">{{ row.classification_method or "—" }}</span></td>
           <td>
             <button class="btn-rule-add" title="Toujours classifier ainsi"
               data-label-clean="{{ row.label_clean or row.label }}"
-              data-idx="{{ loop.index0 }}"
+              data-txid="{{ row.id }}"
               onclick="openRuleModal(this)">⚡</button>
           </td>
         </tr>
@@ -83,10 +77,8 @@
   </div>
 
   <div class="confirm-bar">
-    <div id="confirmMsg"></div>
-    <button class="btn-confirm" id="confirmBtn" onclick="confirmImport()">
-      Valider et ajouter à l'historique ({{ stats.total }} transactions)
-    </button>
+    <div id="saveMsg"></div>
+    <button class="btn-confirm" id="saveBtn" onclick="saveChanges()">Enregistrer les modifications</button>
   </div>
   {% endif %}
 </div>
@@ -100,9 +92,8 @@
     </div>
     <div class="modal-bd" style="padding:20px">
       <div style="margin-bottom:14px">
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Mot-clé (correspondance partielle, insensible à la casse)</label>
-        <input id="ruleKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO"
-               oninput="checkRuleConflict()">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Mot-clé (correspondance partielle)</label>
+        <input id="ruleKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO" oninput="checkRuleConflict()">
       </div>
       <div style="margin-bottom:14px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Catégorie cible</label>
@@ -123,74 +114,80 @@
 </div>
 
 <script>
-  const originalRows = {{ rows | tojson }};
   const PAGE_CATEGORIES = {{ categories | tojson }};
-  let _ruleSourceIdx = null;
+  let _changes = {};
+  let _ruleSourceBtn = null;
 
   function filterRows(level, btn) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('#reviewTable tbody tr').forEach(tr => {
+    document.querySelectorAll('#historyTable tbody tr').forEach(tr => {
       tr.style.display = (level === 'all' || tr.dataset.conf === level) ? '' : 'none';
     });
   }
-  document.addEventListener('DOMContentLoaded', () => {
-    const hasLow = {{ 'true' if stats.low > 0 else 'false' }};
-    if (hasLow) filterRows('low', document.querySelector('.filter-btn.active'));
-  });
 
-  function markEdited(sel) { sel.closest('tr').classList.add('edited'); }
+  function markChange(sel) {
+    const id = sel.dataset.txid;
+    if (sel.value !== sel.dataset.orig) {
+      _changes[id] = sel.value;
+      sel.closest('tr').classList.add('edited');
+    } else {
+      delete _changes[id];
+      sel.closest('tr').classList.remove('edited');
+    }
+  }
 
-  async function confirmImport() {
-    const btn = document.getElementById('confirmBtn');
-    const msg = document.getElementById('confirmMsg');
+  async function saveChanges() {
+    const ids = Object.keys(_changes);
+    if (!ids.length) { document.getElementById('saveMsg').innerHTML = '<span class="success">Aucune modification.</span>'; return; }
+    const btn = document.getElementById('saveBtn');
+    const msg = document.getElementById('saveMsg');
     btn.disabled = true; btn.textContent = 'Enregistrement…';
-    const rows = originalRows.map((row, i) => {
-      const sel = document.querySelector(`.cat-select[data-idx="${i}"]`);
-      return { ...row, category: sel ? sel.value : row.category };
-    });
-    const res = await fetch('/api/import/confirm', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({rows, filename: {{ filename | tojson }} })
-    });
-    const data = await res.json();
-    if (data.error) {
-      msg.innerHTML = `<span class="error">${data.error}</span>`;
+    let errors = 0;
+    for (const id of ids) {
+      const res = await fetch(`/api/transactions/${id}/recategorize`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category: _changes[id]}),
+      });
+      if (!res.ok) errors++;
+    }
+    if (errors) {
+      msg.innerHTML = `<span class="error">${errors} erreur(s)</span>`;
       btn.disabled = false; btn.textContent = 'Réessayer';
     } else {
-      let txt = `${data.added} transactions ajoutées à l'historique.`;
-      if (data.session_id) txt += ` <a href="/import/history/${data.session_id}">Voir l'import</a>.`;
-      if (data.new_year) txt += ` Nouvel onglet budget créé : <a href="/budget?year_id=${data.new_year.id}">${data.new_year.year_label}</a> — pensez à actualiser les budgets.`;
-      msg.innerHTML = `<span class="success">${txt}</span>`;
+      msg.innerHTML = `<span class="success">${ids.length} transaction(s) mise(s) à jour</span>`;
       btn.textContent = 'Terminé ✓';
+      _changes = {};
+      document.querySelectorAll('#historyTable tbody tr.edited').forEach(tr => {
+        tr.classList.remove('edited');
+        const sel = tr.querySelector('.cat-select');
+        if (sel) sel.dataset.orig = sel.value;
+      });
     }
   }
 
   // ── Rule modal ────────────────────────────────────────────────────────────
 
   function openRuleModal(btn) {
-    _ruleSourceIdx = parseInt(btn.dataset.idx);
+    _ruleSourceBtn = btn;
     const labelClean = btn.dataset.labelClean || '';
     const tr = btn.closest('tr');
     const sel = tr.querySelector('.cat-select');
     const currentCat = sel ? sel.value : '';
-
     document.getElementById('ruleKeyword').value = labelClean;
     const catSel = document.getElementById('ruleCategory');
-    for (let opt of catSel.options) {
-      opt.selected = opt.value === currentCat;
-    }
+    for (let opt of catSel.options) { opt.selected = opt.value === currentCat; }
     document.getElementById('ruleConflictMsg').style.display = 'none';
     document.getElementById('ruleSuccessMsg').style.display = 'none';
     document.getElementById('ruleModal').classList.remove('hidden');
     checkRuleConflict();
   }
 
-  let _conflictCheckTimer = null;
+  let _conflictTimer = null;
   function checkRuleConflict() {
-    clearTimeout(_conflictCheckTimer);
-    _conflictCheckTimer = setTimeout(async () => {
+    clearTimeout(_conflictTimer);
+    _conflictTimer = setTimeout(async () => {
       const kw = document.getElementById('ruleKeyword').value.trim();
       const cat = document.getElementById('ruleCategory').value;
       const msg = document.getElementById('ruleConflictMsg');
@@ -212,26 +209,21 @@
     const successMsg = document.getElementById('ruleSuccessMsg');
     if (!kw || !cat) return;
     const res = await fetch('/api/rules', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({keyword: kw, category: cat}),
     });
     const data = await res.json();
     if (data.ok) {
       successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
       successMsg.style.display = 'block';
-      // Add badge to the source row
-      if (_ruleSourceIdx !== null) {
-        const tr = document.querySelector(`tr[data-idx="${_ruleSourceIdx}"]`);
-        if (tr) {
-          let badge = tr.querySelector('.rule-badge');
-          if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'rule-badge';
-            tr.querySelector('td:nth-child(6)').prepend(badge);
-          }
-          badge.textContent = `⚡ ${cat}`;
+      if (_ruleSourceBtn) {
+        const tr = _ruleSourceBtn.closest('tr');
+        if (tr && !tr.querySelector('.rule-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'rule-badge';
           badge.title = `Règle existante : ${cat}`;
+          badge.textContent = `⚡ ${cat}`;
+          tr.querySelector('td:nth-child(6)').prepend(badge);
         }
       }
       setTimeout(closeRuleModal, 1200);

@@ -123,6 +123,22 @@ onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
 `normalize_amount()` doit gérer `-1 442.00` (espace) et `-1 442,00` (virgule + espace).
 Le `.replace(" ", "").replace("\u00a0", "")` doit précéder le `.replace(",", ".")`.
 
+## Workflow de déploiement production
+
+Le repo source Coolify est **GitHub** (`jeanlangloismeurinne/ai-vps-projects`, branche `main`).
+Un rebuild Coolify sans push GitHub préalable redéploie l'ancienne version.
+
+Ordre obligatoire :
+1. `git push origin main`
+2. Déclencher le rebuild via l'API Coolify :
+
+```bash
+curl -s -X POST "http://localhost:8000/api/v1/applications/ji9jg7ngkva7j4d2uic05d3v/start" \
+  -H "Authorization: Bearer {id}|{token}"
+```
+
+Attendre `status: finished` avant de valider en prod.
+
 ## API Coolify
 
 Le token stocké en DB (`personal_access_tokens.token`) est un hash SHA-256 — inutilisable directement.

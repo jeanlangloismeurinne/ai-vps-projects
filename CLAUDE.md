@@ -17,8 +17,14 @@ Déploiement : Coolify — chaque projet est une application séparée.
 - projects/feedback-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 
 ## Feedback utilisateur
-Au début de chaque session sur un projet avec interface web, lire :
-`projects/feedback-module/TICKETS.md` — contient tous les bugs, features et suggestions remontés par les utilisateurs.
+
+Les tickets (bugs, suggestions, features) sont stockés dans le dossier
+`feedback-tickets/` de chaque projet concerné, au format Markdown.
+
+Pour bank-review : `projects/bank-review/feedback-tickets/`
+
+Chaque fichier = un ticket. Champ `status: open` = en attente de traitement.
+Marquer `status: closed` une fois résolu.
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/
