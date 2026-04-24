@@ -1,20 +1,20 @@
 ---
-id: 1776629217225
-type: suggestion
-status: closed
-date: 2026-04-19T20:06:57.225683
+id: 1776803150955
+type: bug
+status: open
+date: 2026-04-21T20:25:50.955314
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget
 ---
 
-## 💡 Suggestion
+## 🐛 Bug
 
-**Date** : 19/04/2026 20:06
+**Date** : 21/04/2026 20:25
 **URL** : `https://bank.jlmvpscode.duckdns.org/budget`
 
 ### Description
 
-CAF DE PARIS doit être classifié comme "Crèche"
+L'ajout "Toujours catégoriser ainsi" ne fonctionne pas sur l'onglet d'édition des dépenses d'une case d'un mois et d'une catégorie
 
 ### Contexte
 

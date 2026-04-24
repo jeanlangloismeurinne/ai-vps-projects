@@ -15,4 +15,17 @@ def _m_status(m: dict, is_income: bool) -> str:
     return "cell-red"
 
 
+def _fmtnum(v, decimals=0):
+    try:
+        v = float(v)
+        s = f"{v:,.{decimals}f}"
+        if decimals > 0:
+            int_part, dec_part = s.rsplit(".", 1)
+            return int_part.replace(",", "\u202f") + "," + dec_part
+        return s.replace(",", "\u202f")
+    except (TypeError, ValueError):
+        return str(v)
+
+
 templates.env.globals["m_status"] = _m_status
+templates.env.filters["fmtnum"] = _fmtnum

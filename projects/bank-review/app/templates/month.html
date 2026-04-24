@@ -18,15 +18,15 @@
       <span class="stat-label">transactions</span>
     </div>
     <div class="stat-item low">
-      <span class="stat-value amount-neg">{{ "%.0f"|format(total_expenses) }} €</span>
+      <span class="stat-value amount-neg">{{ total_expenses|fmtnum }} €</span>
       <span class="stat-label">dépenses</span>
     </div>
     <div class="stat-item high">
-      <span class="stat-value amount-pos">+{{ "%.0f"|format(total_income) }} €</span>
+      <span class="stat-value amount-pos">+{{ total_income|fmtnum }} €</span>
       <span class="stat-label">entrées</span>
     </div>
     <div class="stat-item {% if net >= 0 %}high{% else %}low{% endif %}">
-      <span class="stat-value {{ 'amount-pos' if net >= 0 else 'amount-neg' }}">{{ "%.0f"|format(net) }} €</span>
+      <span class="stat-value {{ 'amount-pos' if net >= 0 else 'amount-neg' }}">{{ net|fmtnum }} €</span>
       <span class="stat-label">solde net</span>
     </div>
   </div>
@@ -54,7 +54,7 @@
           <td>{{ tx.date_op }}</td>
           <td>{{ tx.real_date or "—" }}</td>
           <td class="label-cell" title="{{ tx.label }}">{{ (tx.label_clean or tx.label or "")[:55] }}{% if (tx.label_clean or tx.label or "")|length > 55 %}…{% endif %}</td>
-          <td class="{{ 'amount-neg' if tx.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(tx.amount) }} €</td>
+          <td class="{{ 'amount-neg' if tx.amount < 0 else 'amount-pos' }}">{{ tx.amount|fmtnum(2) }} €</td>
           <td>
             {% if tx._matched_rule_category %}
             <span class="rule-badge" title="Règle existante : {{ tx._matched_rule_category }}">⚡ {{ tx._matched_rule_category }}</span>
@@ -162,6 +162,7 @@
         const sel = tr.querySelector('.cat-select');
         if (sel) sel.dataset.orig = sel.value;
       });
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Enregistrer les modifications'; }, 1500);
     }
   }
 
@@ -196,7 +197,7 @@
         const tr = document.createElement('tr');
         tr.className = 'subtotal-row';
         tr.innerHTML = `<td colspan="3" style="font-weight:600;color:var(--text-muted);font-size:12px">${esc(currentCat)} — ${catRows.length} opération(s)</td>
-          <td class="${sum < 0 ? 'amount-neg' : 'amount-pos'}" style="font-weight:600">${sum.toFixed(2)} €</td>
+          <td class="${sum < 0 ? 'amount-neg' : 'amount-pos'}" style="font-weight:600">${formatNum(sum, 2)} €</td>
           <td colspan="4"></td>`;
         tbody.appendChild(tr);
         catRows = [];
@@ -257,10 +258,18 @@
     });
     const data = await res.json();
     if (data.ok) {
-      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
-      successMsg.style.display = 'block';
       if (_ruleSourceBtn) {
         const tr = _ruleSourceBtn.closest('tr');
+        const sel = tr ? tr.querySelector('.cat-select') : null;
+        if (sel && sel.value !== sel.dataset.orig) {
+          await fetch(`/api/transactions/${sel.dataset.txid}/recategorize`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({category: sel.value}),
+          });
+          sel.dataset.orig = sel.value;
+          tr.classList.remove('edited');
+          delete _changes[sel.dataset.txid];
+        }
         if (tr && !tr.querySelector('.rule-badge')) {
           const badge = document.createElement('span');
           badge.className = 'rule-badge';
@@ -269,6 +278,8 @@
           tr.querySelector('td:nth-child(5)').prepend(badge);
         }
       }
+      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      successMsg.style.display = 'block';
       setTimeout(closeRuleModal, 1200);
     }
   }
@@ -279,6 +290,10 @@
   function esc(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function formatNum(v, decimals = 0) {
+    return v.toLocaleString('fr-FR', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
   }
 
   // Apply default sort on load

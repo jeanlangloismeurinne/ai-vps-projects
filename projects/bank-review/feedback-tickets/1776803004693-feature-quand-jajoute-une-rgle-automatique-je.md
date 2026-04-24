@@ -1,20 +1,20 @@
 ---
-id: 1776629217225
-type: suggestion
-status: closed
-date: 2026-04-19T20:06:57.225683
+id: 1776803004693
+type: feature
+status: open
+date: 2026-04-21T20:23:24.693136
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget
 ---
 
-## 💡 Suggestion
+## ✨ Feature
 
-**Date** : 19/04/2026 20:06
+**Date** : 21/04/2026 20:23
 **URL** : `https://bank.jlmvpscode.duckdns.org/budget`
 
 ### Description
 
-CAF DE PARIS doit être classifié comme "Crèche"
+Quand j'ajoute une règle automatique, je veux que ça reclasse les dépenses de l'année en cours dans cette catégorie
 
 ### Contexte
 

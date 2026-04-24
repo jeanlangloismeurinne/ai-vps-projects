@@ -69,17 +69,17 @@
           {{ group.name }}
         </td>
         <td class="col-budget"></td>
-        <td class="col-ytd group-total-val">{{ "%.0f"|format(group.ytd_actual) }}</td>
-        <td class="col-ytd group-total-val">{{ "%.0f"|format(group.ytd_budget) }}</td>
+        <td class="col-ytd group-total-val">{{ group.ytd_actual|fmtnum }}</td>
+        <td class="col-ytd group-total-val">{{ group.ytd_budget|fmtnum }}</td>
         <td class="col-var group-total-val {% if group.ytd_variance >= 0 %}green{% else %}red{% endif %}">
-          {% if group.ytd_variance > 0 %}+{% endif %}{{ "%.0f"|format(group.ytd_variance) }}
+          {% if group.ytd_variance > 0 %}+{% endif %}{{ group.ytd_variance|fmtnum }}
         </td>
         <td class="col-bar"></td>
         {% for m in group.monthly %}
         <td class="col-month group-total
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}">
-          {% if not m.is_future and m.actual != 0 %}{{ "%.0f"|format(m.actual) }}{% endif %}
+          {% if not m.is_future and m.actual != 0 %}{{ m.actual|fmtnum }}{% endif %}
         </td>
         {% endfor %}
       </tr>
@@ -95,10 +95,10 @@
                  onchange="saveBudget(this)"
                  step="10" min="0">
         </td>
-        <td class="col-ytd">{{ "%.0f"|format(cat.ytd_actual) }}</td>
-        <td class="col-ytd">{{ "%.0f"|format(cat.ytd_budget) }}</td>
+        <td class="col-ytd">{{ cat.ytd_actual|fmtnum }}</td>
+        <td class="col-ytd">{{ cat.ytd_budget|fmtnum }}</td>
         <td class="col-var {{ cat.status }}">
-          {% if cat.ytd_variance > 0 %}+{% endif %}{{ "%.0f"|format(cat.ytd_variance) }}
+          {% if cat.ytd_variance > 0 %}+{% endif %}{{ cat.ytd_variance|fmtnum }}
         </td>
         <td class="col-bar">
           {% if cat.ytd_budget > 0 %}
@@ -122,7 +122,7 @@
             onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
             title="Voir les transactions — {{ cat.category }}"
             {% endif %}>
-          {% if not m.is_future and m.has_tx %}{{ "%.0f"|format(m.actual) }}{% endif %}
+          {% if not m.is_future and m.has_tx %}{{ m.actual|fmtnum }}{% endif %}
         </td>
         {% endfor %}
       </tr>
@@ -215,6 +215,10 @@
                     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
+  function formatNum(v, decimals = 0) {
+    return v.toLocaleString('fr-FR', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+  }
+
   // ── Drill-down ─────────────────────────────────────────────────────────────
 
   let drillChanges = {};
@@ -248,7 +252,7 @@
           <td>${r.date_op}</td>
           <td>${r.real_date || '—'}</td>
           <td class="label-cell" title="${esc(r.label)}">${esc(lbl.substring(0,52))}${lbl.length > 52 ? '…' : ''}</td>
-          <td class="${r.amount < 0 ? 'amount-neg' : 'amount-pos'}">${r.amount.toFixed(2)} €</td>
+          <td class="${r.amount < 0 ? 'amount-neg' : 'amount-pos'}">${formatNum(r.amount, 2)} €</td>
           <td class="bank-cat">${esc(r.bank_category) || '—'}</td>
           <td><select class="cat-select" data-id="${r.id}" data-orig="${esc(r.category)}" onchange="markDrillChange(this)">
             ${catOptions(r.category)}
@@ -473,6 +477,17 @@
     });
     const data = await res.json();
     if (data.ok) {
+      if (_ruleTargetSelect && _ruleTargetSelect.value !== _ruleTargetSelect.dataset.orig) {
+        const txId = _ruleTargetSelect.dataset.id;
+        await fetch(`/api/transactions/${txId}/recategorize`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({category: _ruleTargetSelect.value}),
+        });
+        _ruleTargetSelect.dataset.orig = _ruleTargetSelect.value;
+        _ruleTargetSelect.closest('tr').classList.remove('edited');
+        delete drillChanges[txId];
+      }
       successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
       successMsg.style.display = 'block';
       setTimeout(closeRuleModal, 1200);
