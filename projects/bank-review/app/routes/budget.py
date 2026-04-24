@@ -11,10 +11,11 @@ from app.services.budget import (
     get_all_categories_for_year, add_budget_category,
     update_budget_category, rename_budget_category, delete_budget_category,
     dismiss_budget_update_flag, get_uncovered_count, get_month_transactions,
+    get_uncovered_transactions, get_category_year_transactions,
 )
 from app.services.database import (
     get_classification_rules, create_classification_rule,
-    delete_classification_rule, check_rule_conflict,
+    delete_classification_rule, check_rule_conflict, apply_rule_to_year,
 )
 
 router = APIRouter()
@@ -72,7 +73,7 @@ async def budget_month_page(
 
     txs = await get_month_transactions(year_id, month)
     lines = await get_budget_lines(year_id)
-    categories = sorted([l["category"] for l in lines])
+    categories = [l["category"] for l in lines]  # ordered by sort_order
 
     # Annotate with rule badges
     rules = await get_classification_rules()
@@ -90,6 +91,91 @@ async def budget_month_page(
         "year": year,
         "year_id": year_id,
         "month": month,
+        "sort": sort,
+        "txs": txs,
+        "categories": categories,
+        "total_expenses": round(total_expenses, 2),
+        "total_income": round(total_income, 2),
+        "net": round(total_income + total_expenses, 2),
+    })
+
+
+@router.get("/budget/uncovered", response_class=HTMLResponse)
+async def budget_uncovered_page(
+    request: Request,
+    year_id: int = Query(...),
+    sort: str = Query(default="date"),
+):
+    if not is_authenticated(request):
+        return RedirectResponse("/", status_code=302)
+
+    years = await get_budget_years()
+    year = next((y for y in years if y["id"] == year_id), None)
+    if not year:
+        return RedirectResponse("/budget", status_code=302)
+
+    txs = await get_uncovered_transactions(year_id)
+    lines = await get_budget_lines(year_id)
+    categories = [l["category"] for l in lines]
+
+    rules = await get_classification_rules()
+    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
+    for tx in txs:
+        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
+        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
+        tx["_matched_rule_category"] = matched[0] if matched else None
+        tx["_matched_rule_id"] = matched[1] if matched else None
+
+    total_expenses = sum(t["amount"] for t in txs if t["amount"] < 0)
+    total_income = sum(t["amount"] for t in txs if t["amount"] > 0)
+
+    return templates.TemplateResponse(request, "month.html", {
+        "year": year,
+        "year_id": year_id,
+        "month": f"Non couvertes — {year['year_label']}",
+        "sort": sort,
+        "txs": txs,
+        "categories": categories,
+        "total_expenses": round(total_expenses, 2),
+        "total_income": round(total_income, 2),
+        "net": round(total_income + total_expenses, 2),
+    })
+
+
+@router.get("/budget/ytd", response_class=HTMLResponse)
+async def budget_ytd_page(
+    request: Request,
+    year_id: int = Query(...),
+    category: str = Query(...),
+    sort: str = Query(default="date"),
+):
+    if not is_authenticated(request):
+        return RedirectResponse("/", status_code=302)
+
+    years = await get_budget_years()
+    year = next((y for y in years if y["id"] == year_id), None)
+    if not year:
+        return RedirectResponse("/budget", status_code=302)
+
+    txs = await get_category_year_transactions(year_id, category)
+    lines = await get_budget_lines(year_id)
+    categories = [l["category"] for l in lines]
+
+    rules = await get_classification_rules()
+    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
+    for tx in txs:
+        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
+        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
+        tx["_matched_rule_category"] = matched[0] if matched else None
+        tx["_matched_rule_id"] = matched[1] if matched else None
+
+    total_expenses = sum(t["amount"] for t in txs if t["amount"] < 0)
+    total_income = sum(t["amount"] for t in txs if t["amount"] > 0)
+
+    return templates.TemplateResponse(request, "month.html", {
+        "year": year,
+        "year_id": year_id,
+        "month": f"{category} — {year['year_label']}",
         "sort": sort,
         "txs": txs,
         "categories": categories,
@@ -121,9 +207,12 @@ async def budget_settings(request: Request):
         if hasattr(r["created_at"], "isoformat"):
             r["created_at"] = r["created_at"].isoformat()
 
+    current_year_id = current_year["id"] if years else None
+
     return templates.TemplateResponse(request, "settings.html", {
         "rules": rules,
         "categories": categories,
+        "current_year_id": current_year_id,
     })
 
 
@@ -165,6 +254,7 @@ class CategoryUpdatePayload(BaseModel):
 class RulePayload(BaseModel):
     keyword: str
     category: str
+    year_id: int | None = None
 
 
 @router.get("/api/transactions/by-cell")
@@ -254,7 +344,10 @@ async def api_create_rule(request: Request, payload: RulePayload):
     if not payload.keyword.strip() or not payload.category.strip():
         return JSONResponse({"error": "Mot-clé et catégorie requis."}, status_code=400)
     rule_id = await create_classification_rule(payload.keyword, payload.category)
-    return {"ok": True, "id": rule_id}
+    applied = 0
+    if payload.year_id:
+        applied = await apply_rule_to_year(payload.keyword, payload.category, payload.year_id)
+    return {"ok": True, "id": rule_id, "applied": applied}
 
 
 @router.delete("/api/rules/{rule_id}")

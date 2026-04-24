@@ -34,6 +34,7 @@
   {% if uncovered_count and uncovered_count > 0 %}
   <div class="alert warning" style="margin-bottom:12px">
     ⚠️ <strong>{{ uncovered_count }} transaction{{ 's' if uncovered_count > 1 }} non couvertes</strong> — des transactions appartiennent à des catégories absentes du budget de cette année.
+    <a href="/budget/uncovered?year_id={{ selected_year_id }}" style="margin-left:8px;font-weight:600">Voir →</a>
   </div>
   {% endif %}
 
@@ -68,7 +69,7 @@
           <span class="group-chevron" id="chev-{{ gidx }}">▾</span>
           {{ group.name }}
         </td>
-        <td class="col-budget"></td>
+        <td class="col-budget" style="font-weight:600;color:var(--text-muted)">{{ group.monthly_budget|fmtnum }}</td>
         <td class="col-ytd group-total-val">{{ group.ytd_actual|fmtnum }}</td>
         <td class="col-ytd group-total-val">{{ group.ytd_budget|fmtnum }}</td>
         <td class="col-var group-total-val {% if group.ytd_variance >= 0 %}green{% else %}red{% endif %}">
@@ -95,7 +96,7 @@
                  onchange="saveBudget(this)"
                  step="10" min="0">
         </td>
-        <td class="col-ytd">{{ cat.ytd_actual|fmtnum }}</td>
+        <td class="col-ytd">{% if cat.ytd_actual != 0 %}<a href="/budget/ytd?year_id={{ selected_year_id }}&amp;category={{ cat.category|urlencode }}" style="color:inherit;text-decoration:underline dotted">{{ cat.ytd_actual|fmtnum }}</a>{% else %}0{% endif %}</td>
         <td class="col-ytd">{{ cat.ytd_budget|fmtnum }}</td>
         <td class="col-var {{ cat.status }}">
           {% if cat.ytd_variance > 0 %}+{% endif %}{{ cat.ytd_variance|fmtnum }}
@@ -473,7 +474,7 @@
     const res = await fetch('/api/rules', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({keyword: kw, category: cat}),
+      body: JSON.stringify({keyword: kw, category: cat, year_id: YEAR_ID}),
     });
     const data = await res.json();
     if (data.ok) {
@@ -488,9 +489,10 @@
         _ruleTargetSelect.closest('tr').classList.remove('edited');
         delete drillChanges[txId];
       }
-      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      const applied = data.applied ? ` · ${data.applied} transaction(s) reclassée(s)` : '';
+      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"${applied}`;
       successMsg.style.display = 'block';
-      setTimeout(closeRuleModal, 1200);
+      setTimeout(closeRuleModal, 1800);
     }
   }
 

@@ -189,16 +189,17 @@ def build_budget_view(
             "status":        _status(ytd_variance, ytd_budget, line["is_income"]),
         })
 
-    # Group totals
+    # Group totals — use round() to match displayed (integer-rounded) category values
     group_list = []
     for group_name, cats in groups.items():
-        g_ytd_actual  = sum(c["ytd_actual"]  for c in cats if not c["is_income"])
-        g_ytd_budget  = sum(c["ytd_budget"]  for c in cats if not c["is_income"])
-        g_ytd_income  = sum(c["ytd_actual"]  for c in cats if c["is_income"])
+        # Sum of rounded values so group total = sum of what user sees in rows
+        g_ytd_actual     = sum(round(c["ytd_actual"])  for c in cats if not c["is_income"])
+        g_ytd_budget     = sum(c["ytd_budget"]         for c in cats if not c["is_income"])
+        g_monthly_budget = sum(float(c["monthly_budget"]) for c in cats if not c["is_income"])
 
         monthly_totals = []
         for i, m in enumerate(months):
-            g_actual = sum(c["monthly"][i]["actual"] for c in cats if not c["is_income"])
+            g_actual = sum(round(c["monthly"][i]["actual"]) for c in cats if not c["is_income"])
             g_budget = sum(c["monthly_budget"] for c in cats if not c["is_income"])
             monthly_totals.append({
                 "month": m,
@@ -209,12 +210,13 @@ def build_budget_view(
             })
 
         group_list.append({
-            "name":          group_name,
-            "categories":    cats,
-            "ytd_actual":    round(g_ytd_actual, 2),
-            "ytd_budget":    round(g_ytd_budget, 2),
-            "ytd_variance":  round(g_ytd_budget + g_ytd_actual, 2),
-            "monthly":       monthly_totals,
+            "name":           group_name,
+            "categories":     cats,
+            "monthly_budget": round(g_monthly_budget, 2),
+            "ytd_actual":     round(g_ytd_actual, 2),
+            "ytd_budget":     round(g_ytd_budget, 2),
+            "ytd_variance":   round(g_ytd_budget + g_ytd_actual, 2),
+            "monthly":        monthly_totals,
         })
 
     return {
@@ -395,6 +397,58 @@ async def get_uncovered_count(year_id: int) -> int:
 async def delete_budget_category(line_id: int):
     pool = await get_pool()
     await pool.execute("DELETE FROM budget_lines WHERE id = $1", line_id)
+
+
+async def get_uncovered_transactions(year_id: int) -> list[dict]:
+    """All transactions in the year whose category has no matching budget_line."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+               t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
+        FROM transactions t
+        JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
+        WHERE y.id = $1
+          AND t.category IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM budget_lines bl WHERE bl.year_id = y.id AND bl.category = t.category
+          )
+        ORDER BY t.date_op DESC, t.category
+        """,
+        year_id,
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["date_op"] = str(d["date_op"])
+        d["real_date"] = str(d["real_date"]) if d["real_date"] else None
+        d["amount"] = float(d["amount"])
+        result.append(d)
+    return result
+
+
+async def get_category_year_transactions(year_id: int, category: str) -> list[dict]:
+    """All transactions for a category within a budget year, ordered by date."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+               t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
+        FROM transactions t
+        JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
+        WHERE y.id = $1 AND t.category = $2
+        ORDER BY t.date_op DESC
+        """,
+        year_id, category,
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["date_op"] = str(d["date_op"])
+        d["real_date"] = str(d["real_date"]) if d["real_date"] else None
+        d["amount"] = float(d["amount"])
+        result.append(d)
+    return result
 
 
 async def dismiss_budget_update_flag(year_id: int):

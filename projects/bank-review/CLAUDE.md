@@ -68,8 +68,10 @@ Tables principales :
 - `transactions` — toutes les opérations bancaires, source de vérité
 - `budget_lines` — budget mensuel par catégorie et par année fiscale
 - `budget_years` — années fiscales Sep→Août
-- `categories` — référentiel des noms de catégories (**FK source**)
+- `categories` — référentiel des noms de catégories (référence soft, plus de FK)
 - `accounts` — comptes bancaires
+- `classification_rules` — règles utilisateur keyword→category (correspondance partielle insensible à la casse)
+- `import_sessions` — une ligne par import confirmé ; `transactions.import_session_id` FK vers cette table
 
 `dedup_key` = `date_op[:10]|normalized_label|amount` — contrainte UNIQUE sur `transactions`.
 
@@ -87,9 +89,16 @@ Les exports CSV ont le format `"Libellé lisible | CANONICAL_MAJUSCULES"`.
 
 Autres transformations dans `deduplicator.normalize_label()` : suppression `CARTE DD/MM/YY`, `PRLV SEPA`, `VIR INST`, suffixe `CB*XXXX`, passage en majuscules.
 
-### Catégories — contrainte FK critique
-`transactions.category` a une FK vers `categories(name)`.  
-**Ne jamais modifier `budget_lines.category` directement.** Un renommage doit passer par `budget.rename_budget_category()` qui cascade en transaction : `categories` → `budget_lines` (toutes années) → `transactions`. Faire autrement viole la contrainte FK ou laisse des transactions orphelines.
+### Catégories — pas de FK, renommage isolé par année
+
+`transactions.category` **n'a plus de FK** vers `categories(name)` (supprimée en avril 2026).
+`categories` reste une table de référence soft utilisée par le classifier.
+
+**Renommage** : passer par `budget.rename_budget_category(line_id, new_name)`.
+Cette fonction est **isolée par année** : elle ne touche qu'aux `budget_lines` de l'année concernée
+et aux `transactions` dont `date_op` est dans la plage de cette année.
+Les autres années et leurs transactions sont intactes.
+Ne jamais faire un UPDATE direct sur `budget_lines.category` sans passer par cette fonction.
 
 ### Classifier Claude
 - Modèle : `claude-haiku-4-5-20251001` — ne pas passer à Sonnet sans évaluer le coût token.
@@ -114,6 +123,19 @@ onclick="openDrillDown({{ cat.category|tojson }}, {{ m.month|tojson }})"
 <!-- ✓ Correct -->
 data-cat="{{ cat.category|e }}" data-month="{{ m.month }}"
 onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
+```
+
+### Migrations SQL sur shared-postgres
+
+Les fichiers `.sql` locaux ne sont **pas accessibles** dans le container via `-f`. Utiliser `-c` avec le SQL inline.
+
+Les opérations DDL (`ALTER TABLE`, `CREATE TABLE`, `GRANT`) doivent être exécutées en tant qu'`admin`, pas `bank` (bank n'est pas propriétaire des tables) :
+
+```bash
+docker exec shared-postgres psql -U admin db_bank -c "ALTER TABLE ..."
+# Après CREATE TABLE, penser à :
+# GRANT ALL ON new_table TO bank;
+# GRANT USAGE, SELECT ON SEQUENCE new_table_id_seq TO bank;
 ```
 
 ### asyncpg et pandas NaT

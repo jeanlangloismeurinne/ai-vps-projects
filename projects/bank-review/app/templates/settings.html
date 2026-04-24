@@ -90,11 +90,12 @@
     const res = await fetch('/api/rules', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({keyword: kw, category: cat}),
+      body: JSON.stringify({keyword: kw, category: cat, year_id: {{ current_year_id or 'null' }}}),
     });
     const data = await res.json();
     if (data.ok) {
-      addMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      const applied = data.applied ? ` · ${data.applied} transaction(s) reclassée(s)` : '';
+      addMsg.textContent = `Règle créée : "${kw}" → "${cat}"${applied}`;
       addMsg.style.display = 'block';
       document.getElementById('newKeyword').value = '';
       document.getElementById('conflictMsg').style.display = 'none';

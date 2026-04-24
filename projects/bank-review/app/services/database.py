@@ -148,6 +148,23 @@ async def delete_classification_rule(rule_id: int):
     await pool.execute("DELETE FROM classification_rules WHERE id = $1", rule_id)
 
 
+async def apply_rule_to_year(keyword: str, category: str, year_id: int) -> int:
+    """Apply a keyword rule to all matching transactions in a given year. Returns count updated."""
+    pool = await get_pool()
+    result = await pool.execute(
+        """
+        UPDATE transactions t
+        SET category = $1
+        FROM budget_years y
+        WHERE t.date_op BETWEEN y.start_date AND y.end_date
+          AND y.id = $2
+          AND strpos(UPPER(COALESCE(t.label_clean, t.label, '')), UPPER($3)) > 0
+        """,
+        category, year_id, keyword,
+    )
+    return int(result.split()[-1]) if result else 0
+
+
 async def check_rule_conflict(keyword: str, category: str) -> dict | None:
     """Return the first rule whose keyword matches and points to a different category."""
     pool = await get_pool()

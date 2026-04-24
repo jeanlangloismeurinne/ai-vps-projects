@@ -1,4 +1,5 @@
 from fastapi.templating import Jinja2Templates
+from urllib.parse import quote
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -29,3 +30,4 @@ def _fmtnum(v, decimals=0):
 
 templates.env.globals["m_status"] = _m_status
 templates.env.filters["fmtnum"] = _fmtnum
+templates.env.filters["urlencode"] = lambda v: quote(str(v), safe="")

@@ -124,6 +124,7 @@
   let _changes = {};
   let _ruleSourceBtn = null;
   let _currentSort = '{{ sort }}';
+  const CAT_ORDER = {{ categories|tojson }};
 
   function markChange(sel) {
     const id = sel.dataset.txid;
@@ -181,7 +182,9 @@
       rows.forEach(r => tbody.appendChild(r));
     } else {
       rows.sort((a, b) => {
-        const catCmp = (a.dataset.cat || '').localeCompare(b.dataset.cat || '');
+        const ai = CAT_ORDER.indexOf(a.dataset.cat);
+        const bi = CAT_ORDER.indexOf(b.dataset.cat);
+        const catCmp = (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
         return catCmp !== 0 ? catCmp : a.dataset.date.localeCompare(b.dataset.date);
       });
       // Group by category and insert subtotals
@@ -254,7 +257,7 @@
     if (!kw || !cat) return;
     const res = await fetch('/api/rules', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({keyword: kw, category: cat}),
+      body: JSON.stringify({keyword: kw, category: cat, year_id: {{ year_id }}}),
     });
     const data = await res.json();
     if (data.ok) {
@@ -278,9 +281,10 @@
           tr.querySelector('td:nth-child(5)').prepend(badge);
         }
       }
-      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"`;
+      const applied = data.applied ? ` · ${data.applied} transaction(s) reclassée(s)` : '';
+      successMsg.textContent = `Règle créée : "${kw}" → "${cat}"${applied}`;
       successMsg.style.display = 'block';
-      setTimeout(closeRuleModal, 1200);
+      setTimeout(closeRuleModal, 1800);
     }
   }
 
