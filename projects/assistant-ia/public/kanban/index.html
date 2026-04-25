@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanban</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+/* ── Header ───────────────────────────────────────────────────────── */
+header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: .75rem 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+header h1 { font-size: 1.1rem; font-weight: 600; flex: 1; }
+#board-selector { padding: .35rem .6rem; border: 1px solid #ccc; border-radius: 6px; font-size: .9rem; }
+#grouping-selector { padding: .35rem .6rem; border: 1px solid #ccc; border-radius: 6px; font-size: .9rem; }
+.btn { cursor: pointer; border: none; border-radius: 6px; padding: .4rem .8rem; font-size: .85rem; font-weight: 500; }
+.btn-primary { background: #4f6ef7; color: #fff; }
+.btn-primary:hover { background: #3a57d4; }
+.btn-ghost { background: transparent; color: #555; border: 1px solid #ccc; }
+.btn-ghost:hover { background: #f5f5f5; }
+.btn-danger { background: #e53935; color: #fff; }
+.btn-danger:hover { background: #c62828; }
+
+/* ── Board ────────────────────────────────────────────────────────── */
+#board { display: flex; gap: 1rem; padding: 1rem; overflow-x: auto; min-height: calc(100vh - 56px); align-items: flex-start; }
+
+/* ── Column ───────────────────────────────────────────────────────── */
+.column { background: #e9ecef; border-radius: 10px; min-width: 260px; max-width: 300px; width: 280px; flex-shrink: 0; display: flex; flex-direction: column; }
+.column-header { padding: .75rem 1rem; font-weight: 600; font-size: .9rem; display: flex; justify-content: space-between; align-items: center; }
+.column-header .col-count { font-size: .75rem; color: #666; background: #d4d8dd; border-radius: 10px; padding: .1rem .4rem; }
+.cards-list { padding: 0 .5rem .5rem; min-height: 40px; flex: 1; }
+
+/* ── Card ─────────────────────────────────────────────────────────── */
+.card { background: #fff; border-radius: 8px; padding: .75rem; margin-bottom: .5rem; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.08); transition: box-shadow .15s; }
+.card:active { cursor: grabbing; }
+.card.sortable-ghost { opacity: .4; }
+.card.sortable-chosen { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.card-title { font-size: .9rem; font-weight: 500; margin-bottom: .25rem; }
+.card-desc { font-size: .8rem; color: #666; margin-bottom: .35rem; white-space: pre-wrap; }
+.card-due { font-size: .75rem; color: #888; }
+.card-due.overdue { color: #e53935; font-weight: 600; }
+.card-actions { display: flex; gap: .4rem; margin-top: .5rem; justify-content: flex-end; }
+.card-actions button { font-size: .75rem; padding: .2rem .5rem; }
+
+/* ── Add card button ──────────────────────────────────────────────── */
+.add-card-btn { margin: 0 .5rem .5rem; width: calc(100% - 1rem); text-align: left; color: #555; font-size: .85rem; padding: .5rem .75rem; background: transparent; border: 2px dashed #ccc; border-radius: 6px; cursor: pointer; }
+.add-card-btn:hover { background: #dde0e5; border-color: #aaa; }
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 420px; margin: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modal h2 { font-size: 1.05rem; margin-bottom: 1rem; }
+.field { margin-bottom: .85rem; }
+.field label { display: block; font-size: .8rem; font-weight: 500; margin-bottom: .3rem; }
+.field input, .field textarea, .field select { width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: .5rem .7rem; font-size: .9rem; font-family: inherit; }
+.field textarea { min-height: 80px; resize: vertical; }
+.modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+/* ── Loading / empty ──────────────────────────────────────────────── */
+#loading { padding: 2rem; text-align: center; color: #888; font-size: .9rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Kanban</h1>
+  <select id="board-selector" title="Board"></select>
+  <select id="grouping-selector" title="Vue"></select>
+  <button class="btn btn-primary" id="btn-new-board">+ Board</button>
+  <button class="btn btn-ghost" id="btn-new-col">+ Colonne</button>
+</header>
+
+<div id="board"><p id="loading">Chargement…</p></div>
+
+<!-- Card modal -->
+<div class="overlay" id="card-modal">
+  <div class="modal">
+    <h2 id="card-modal-title">Nouvelle tâche</h2>
+    <div class="field">
+      <label>Titre *</label>
+      <input type="text" id="card-title-input" placeholder="Titre de la tâche">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="card-desc-input" placeholder="Description (optionnel)"></textarea>
+    </div>
+    <div class="field">
+      <label>Échéance</label>
+      <input type="datetime-local" id="card-due-input">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="card-modal-cancel">Annuler</button>
+      <button class="btn btn-danger" id="card-modal-delete" style="display:none">Supprimer</button>
+      <button class="btn btn-primary" id="card-modal-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Board modal -->
+<div class="overlay" id="board-modal">
+  <div class="modal">
+    <h2>Nouveau board</h2>
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" id="board-name-input" placeholder="Ex : Perso">
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="board-default-input"> Board par défaut</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="board-modal-cancel">Annuler</button>
+      <button class="btn btn-primary" id="board-modal-save">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Column modal -->
+<div class="overlay" id="col-modal">
+  <div class="modal">
+    <h2>Nouvelle colonne</h2>
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" id="col-name-input" placeholder="Ex : À faire">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="col-modal-cancel">Annuler</button>
+      <button class="btn btn-primary" id="col-modal-save">Créer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let boards = [];
+let columns = [];
+let currentBoardId = null;
+let editingCardId = null;
+let editingCardColumnId = null;
+
+// ── API helpers ────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(`${method} ${path} → ${r.status}`);
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function isOverdue(iso) {
+  return iso && new Date(iso) < new Date();
+}
+
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+async function loadBoard(boardId) {
+  currentBoardId = boardId;
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  columns = await api('GET', `/api/boards/${boardId}/columns`);
+  for (const col of columns) {
+    const cards = await api('GET', `/api/columns/${col.id}/cards`);
+    board.appendChild(renderColumn(col, cards));
+  }
+  initDragDrop();
+  loadGroupings(boardId);
+}
+
+function renderColumn(col, cards) {
+  const div = document.createElement('div');
+  div.className = 'column';
+  div.dataset.colId = col.id;
+
+  const header = document.createElement('div');
+  header.className = 'column-header';
+  header.innerHTML = `<span>${escHtml(col.name)}</span><span class="col-count">${cards.length}</span>`;
+  div.appendChild(header);
+
+  const list = document.createElement('div');
+  list.className = 'cards-list';
+  list.dataset.colId = col.id;
+  cards.forEach(c => list.appendChild(renderCard(c)));
+  div.appendChild(list);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-card-btn';
+  addBtn.textContent = '+ Ajouter une tâche';
+  addBtn.onclick = () => openCardModal(null, col.id);
+  div.appendChild(addBtn);
+
+  return div;
+}
+
+function renderCard(card) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.dataset.cardId = card.id;
+
+  let inner = `<div class="card-title">${escHtml(card.title)}</div>`;
+  if (card.description) inner += `<div class="card-desc">${escHtml(card.description)}</div>`;
+  if (card.due_date) {
+    const over = isOverdue(card.due_date);
+    inner += `<div class="card-due${over ? ' overdue' : ''}">⏰ ${fmtDate(card.due_date)}</div>`;
+  }
+  inner += `<div class="card-actions">
+    <button class="btn btn-ghost btn-sm" onclick="openCardModal('${card.id}', '${card.column_id}')">Éditer</button>
+  </div>`;
+  div.innerHTML = inner;
+  return div;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Drag & drop ────────────────────────────────────────────────────────────
+function initDragDrop() {
+  document.querySelectorAll('.cards-list').forEach(list => {
+    Sortable.create(list, {
+      group: 'cards',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd(evt) {
+        const cardId = evt.item.dataset.cardId;
+        const targetColId = evt.to.dataset.colId;
+        const position = evt.newIndex;
+        api('PUT', `/api/cards/${cardId}/move`, { column_id: targetColId, position })
+          .catch(e => { console.error(e); loadBoard(currentBoardId); });
+        // Update column counts
+        document.querySelectorAll('.column').forEach(col => {
+          const cnt = col.querySelector('.cards-list').children.length;
+          col.querySelector('.col-count').textContent = cnt;
+        });
+      }
+    });
+  });
+}
+
+// ── Board selector ─────────────────────────────────────────────────────────
+async function loadBoards() {
+  boards = await api('GET', '/api/boards');
+  const sel = document.getElementById('board-selector');
+  sel.innerHTML = boards.map(b => `<option value="${b.id}">${escHtml(b.name)}${b.is_default ? ' ★' : ''}</option>`).join('');
+  if (boards.length) {
+    const def = boards.find(b => b.is_default) || boards[0];
+    sel.value = def.id;
+    loadBoard(def.id);
+  } else {
+    document.getElementById('board').innerHTML = '<p id="loading">Créez un board pour commencer.</p>';
+  }
+}
+
+document.getElementById('board-selector').onchange = e => loadBoard(e.target.value);
+
+// ── Groupings ──────────────────────────────────────────────────────────────
+async function loadGroupings(boardId) {
+  const gs = await api('GET', `/api/boards/${boardId}/groupings`);
+  const sel = document.getElementById('grouping-selector');
+  sel.innerHTML = '<option value="">— Vue par défaut —</option>' +
+    gs.map(g => `<option value="${g.id}"${g.is_active ? ' selected' : ''}>${escHtml(g.name)}</option>`).join('');
+}
+
+document.getElementById('grouping-selector').onchange = async e => {
+  const gId = e.target.value;
+  if (gId) await api('PUT', `/api/groupings/${gId}/activate`);
+};
+
+// ── Card modal ─────────────────────────────────────────────────────────────
+async function openCardModal(cardId, columnId) {
+  editingCardId = cardId;
+  editingCardColumnId = columnId;
+  const isNew = !cardId;
+  document.getElementById('card-modal-title').textContent = isNew ? 'Nouvelle tâche' : 'Modifier la tâche';
+  document.getElementById('card-modal-delete').style.display = isNew ? 'none' : '';
+  document.getElementById('card-title-input').value = '';
+  document.getElementById('card-desc-input').value = '';
+  document.getElementById('card-due-input').value = '';
+
+  if (!isNew) {
+    const card = await api('GET', `/api/cards/${cardId}`);
+    document.getElementById('card-title-input').value = card.title || '';
+    document.getElementById('card-desc-input').value = card.description || '';
+    document.getElementById('card-due-input').value = toLocalInput(card.due_date);
+  }
+  document.getElementById('card-modal').classList.add('open');
+  document.getElementById('card-title-input').focus();
+}
+
+function closeCardModal() {
+  document.getElementById('card-modal').classList.remove('open');
+}
+
+document.getElementById('card-modal-cancel').onclick = closeCardModal;
+document.getElementById('card-modal').onclick = e => { if (e.target === e.currentTarget) closeCardModal(); };
+
+document.getElementById('card-modal-save').onclick = async () => {
+  const title = document.getElementById('card-title-input').value.trim();
+  if (!title) return;
+  const description = document.getElementById('card-desc-input').value.trim() || null;
+  const dueRaw = document.getElementById('card-due-input').value;
+  const due_date = dueRaw ? new Date(dueRaw).toISOString() : null;
+
+  if (editingCardId) {
+    await api('PUT', `/api/cards/${editingCardId}`, { title, description, due_date });
+  } else {
+    await api('POST', `/api/columns/${editingCardColumnId}/cards`, { title, description, due_date });
+  }
+  closeCardModal();
+  loadBoard(currentBoardId);
+};
+
+document.getElementById('card-modal-delete').onclick = async () => {
+  if (!confirm('Supprimer cette tâche ?')) return;
+  await api('DELETE', `/api/cards/${editingCardId}`);
+  closeCardModal();
+  loadBoard(currentBoardId);
+};
+
+// ── Board modal ────────────────────────────────────────────────────────────
+document.getElementById('btn-new-board').onclick = () => {
+  document.getElementById('board-name-input').value = '';
+  document.getElementById('board-default-input').checked = false;
+  document.getElementById('board-modal').classList.add('open');
+  document.getElementById('board-name-input').focus();
+};
+document.getElementById('board-modal-cancel').onclick = () => document.getElementById('board-modal').classList.remove('open');
+document.getElementById('board-modal').onclick = e => { if (e.target === e.currentTarget) document.getElementById('board-modal').classList.remove('open'); };
+document.getElementById('board-modal-save').onclick = async () => {
+  const name = document.getElementById('board-name-input').value.trim();
+  if (!name) return;
+  const is_default = document.getElementById('board-default-input').checked;
+  const board = await api('POST', '/api/boards', { name, is_default });
+  document.getElementById('board-modal').classList.remove('open');
+  await loadBoards();
+  document.getElementById('board-selector').value = board.id;
+  loadBoard(board.id);
+};
+
+// ── Column modal ───────────────────────────────────────────────────────────
+document.getElementById('btn-new-col').onclick = () => {
+  document.getElementById('col-name-input').value = '';
+  document.getElementById('col-modal').classList.add('open');
+  document.getElementById('col-name-input').focus();
+};
+document.getElementById('col-modal-cancel').onclick = () => document.getElementById('col-modal').classList.remove('open');
+document.getElementById('col-modal').onclick = e => { if (e.target === e.currentTarget) document.getElementById('col-modal').classList.remove('open'); };
+document.getElementById('col-modal-save').onclick = async () => {
+  const name = document.getElementById('col-name-input').value.trim();
+  if (!name || !currentBoardId) return;
+  const position = columns.length;
+  await api('POST', `/api/boards/${currentBoardId}/columns`, { name, position });
+  document.getElementById('col-modal').classList.remove('open');
+  loadBoard(currentBoardId);
+};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadBoards();
+</script>
+</body>
+</html>
