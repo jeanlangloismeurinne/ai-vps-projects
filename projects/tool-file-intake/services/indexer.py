@@ -11,7 +11,9 @@ from models import Base, FileRecord
 
 def _make_engine():
     db_path = Path(settings.DB_PATH)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
+    # Le dossier parent est un volume Docker déjà monté ; on ne crée que si absent
+    if not db_path.parent.exists():
+        db_path.parent.mkdir(parents=True, exist_ok=True)
     return create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
 
 
