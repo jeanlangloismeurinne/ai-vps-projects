@@ -7,7 +7,8 @@ def format_tree(base: Path | None = None, max_entries: int = 60) -> str:
     """Retourne une arborescence ASCII formatée pour Slack (bloc code)."""
     tree = get_tree(base)
     lines = ["Documents/"]
-    _render(tree, lines, prefix="", count=[0], max_entries=max_entries)
+    count = [0]
+    _render(tree, lines, prefix="", count=count, max_entries=max_entries)
     if count[0] >= max_entries:
         lines.append("    … (tronqué)")
     return "\n".join(lines)
