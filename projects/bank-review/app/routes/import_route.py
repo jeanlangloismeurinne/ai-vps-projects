@@ -2,7 +2,7 @@ import os
 import uuid
 import json
 from datetime import date, datetime
-from fastapi import APIRouter, Request, UploadFile, File, Form
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from app.templates_env import templates
 from pydantic import BaseModel
@@ -236,13 +236,19 @@ async def import_history(request: Request, session_id: int):
     })
 
 
-@router.post("/api/import/direct")
-async def import_direct(request: Request, file: UploadFile = File(...)):
-    """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review."""
-    api_key = request.headers.get("X-Internal-Api-Key", "")
+def _require_internal_api_key(x_internal_api_key: str = Header(default="")):
     expected = os.getenv("INTERNAL_API_KEY", "")
-    if not expected or api_key != expected:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if not expected or x_internal_api_key != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@router.post("/api/import/direct")
+async def import_direct(
+    request: Request,
+    file: UploadFile = File(...),
+    _: None = Depends(_require_internal_api_key),
+):
+    """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review."""
 
     content = await file.read()
 
