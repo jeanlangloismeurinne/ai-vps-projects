@@ -44,12 +44,18 @@ def get_session() -> Session:
 
 def find_by_sha256(sha256: str) -> Optional[FileRecord]:
     with get_session() as session:
-        return session.query(FileRecord).filter_by(sha256=sha256).first()
+        result = session.query(FileRecord).filter_by(sha256=sha256).first()
+        if result:
+            session.expunge(result)
+        return result
 
 
 def find_by_slack_id(slack_file_id: str) -> Optional[FileRecord]:
     with get_session() as session:
-        return session.query(FileRecord).filter_by(slack_file_id=slack_file_id).first()
+        result = session.query(FileRecord).filter_by(slack_file_id=slack_file_id).first()
+        if result:
+            session.expunge(result)
+        return result
 
 
 def create_record(

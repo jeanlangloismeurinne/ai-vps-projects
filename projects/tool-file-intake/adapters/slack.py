@@ -107,6 +107,7 @@ async def _propose_storage(file_info: dict, event: dict, say) -> None:
         "file_size": file_size,
         "user_id": user_id,
         "channel": channel,
+        "message_ts": event.get("ts", ""),
         "suggested_path": suggested,
     }
 
@@ -114,6 +115,17 @@ async def _propose_storage(file_info: dict, event: dict, say) -> None:
         blocks=_build_proposal_blocks(filename, size_str, mime_type, suggested, meta),
         text=f"Fichier reçu : {filename}",
     )
+
+
+async def _replace_original_with_text(client, meta: dict, text: str) -> None:
+    """Remplace le message Block Kit original (boutons) par un texte simple."""
+    channel = meta.get("channel")
+    ts = meta.get("message_ts")
+    if channel and ts:
+        try:
+            await client.chat_update(channel=channel, ts=ts, text=text, blocks=[])
+        except Exception as e:
+            logger.warning("Impossible de mettre à jour le message original : %s", e)
 
 
 async def _do_store(
@@ -130,27 +142,28 @@ async def _do_store(
     user_id = meta["user_id"]
     dest_channel = channel or meta.get("channel")
 
+    async def _reply(msg: str) -> None:
+        """Envoie la réponse et remplace toujours le message original (boutons)."""
+        if respond:
+            await respond(text=msg, replace_original=True)
+        else:
+            await _replace_original_with_text(client, meta, msg)
+            if dest_channel:
+                await client.chat_postMessage(channel=dest_channel, text=msg)
+
     # Téléchargement
     try:
         content = await _download_slack_file(file_id, client)
     except Exception as e:
         logger.error("Erreur téléchargement %s : %s", file_id, e)
-        msg = f":x: Impossible de télécharger `{filename}` : {e}"
-        if respond:
-            await respond(text=msg, replace_original=True)
-        elif dest_channel:
-            await client.chat_postMessage(channel=dest_channel, text=msg)
+        await _reply(f":x: Impossible de télécharger `{filename}` : {e}")
         return
 
     # Validation
     try:
         storage.validate_file(filename, content, mime_type)
     except ValueError as e:
-        msg = f":x: Fichier refusé : {e}"
-        if respond:
-            await respond(text=msg, replace_original=True)
-        elif dest_channel:
-            await client.chat_postMessage(channel=dest_channel, text=msg)
+        await _reply(f":x: Fichier refusé : {e}")
         return
 
     sha = storage.compute_sha256(content)
@@ -159,14 +172,10 @@ async def _do_store(
     existing = indexer.find_by_sha256(sha)
     if existing:
         tree_text = format_tree()
-        msg = (
+        await _reply(
             f":information_source: Ce fichier existe déjà : `{existing.stored_path}`\n"
             f"Aucun doublon créé.\n\n```{tree_text}```"
         )
-        if respond:
-            await respond(text=msg, replace_original=True)
-        elif dest_channel:
-            await client.chat_postMessage(channel=dest_channel, text=msg)
         return
 
     # Stockage
@@ -174,11 +183,7 @@ async def _do_store(
         dest_path = storage.store_file(content, filename, relative_path)
     except Exception as e:
         logger.error("Erreur stockage : %s", e)
-        msg = f":x: Erreur lors du stockage : {e}"
-        if respond:
-            await respond(text=msg, replace_original=True)
-        elif dest_channel:
-            await client.chat_postMessage(channel=dest_channel, text=msg)
+        await _reply(f":x: Erreur lors du stockage : {e}")
         return
 
     # Index BDD
@@ -194,15 +199,11 @@ async def _do_store(
 
     # Confirmation Slack
     tree_text = format_tree()
-    confirm_msg = (
+    await _reply(
         f":white_check_mark: *`{filename}`* stocké dans\n"
         f"`{dest_path.relative_to(settings.STORAGE_BASE.parent)}`\n\n"
         f"*Arborescence Documents :*\n```{tree_text}```"
     )
-    if respond:
-        await respond(text=confirm_msg, replace_original=True)
-    elif dest_channel:
-        await client.chat_postMessage(channel=dest_channel, text=confirm_msg)
 
     # Notification agent IA
     if settings.AGENT_WEBHOOK_URL:
