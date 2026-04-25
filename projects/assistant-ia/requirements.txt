@@ -7,4 +7,4 @@ asyncpg==0.30.0
 apscheduler==3.11.0
 pytz==2025.2
 slack-bolt==1.22.0
-websockets==14.2
+aiohttp==3.11.18
