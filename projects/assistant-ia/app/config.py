@@ -21,9 +21,10 @@ class Settings(BaseSettings):
     # Feature 2 — Kanban
     SLACK_CHANNEL_TASKS: str = "#tasks"
 
-    # Web auth (shared entre /journal et /kanban)
+    # Web auth
     WEB_USERNAME: str
     WEB_PASSWORD: str
+    SESSION_SECRET: str  # partagé avec homepage pour le cookie hub_session
 
     class Config:
         env_file = ".env"
