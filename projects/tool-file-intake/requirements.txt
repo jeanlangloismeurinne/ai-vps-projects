@@ -1,0 +1,10 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+slack-bolt==1.21.3
+slack-sdk==3.33.4
+websockets==13.1
+sqlalchemy==2.0.36
+httpx==0.28.0
+python-multipart==0.0.18
+pydantic-settings==2.6.1
+aiofiles==24.1.0
