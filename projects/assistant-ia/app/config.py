@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Slack
     SLACK_BOT_TOKEN: str
-    SLACK_SIGNING_SECRET: str = ""
+    SLACK_APP_TOKEN: str  # xapp-... requis pour Socket Mode
 
     # Bank review (existing)
     BANK_REVIEW_CHANNEL_ID: str

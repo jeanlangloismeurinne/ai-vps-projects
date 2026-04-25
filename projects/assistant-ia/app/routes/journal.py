@@ -1,28 +1,11 @@
-import hashlib
-import hmac
-import json
 import logging
-import time
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends
+from fastapi.responses import HTMLResponse
 from app.routes.auth import require_auth
 from app.services import journal as journal_svc
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def _verify_slack_signature(body: bytes, timestamp: str, signature: str) -> bool:
-    if not settings.SLACK_SIGNING_SECRET:
-        return True
-    if abs(time.time() - float(timestamp)) > 300:
-        return False
-    base = f"v0:{timestamp}:{body.decode()}"
-    expected = "v0=" + hmac.new(
-        settings.SLACK_SIGNING_SECRET.encode(), base.encode(), hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
 
 
 @router.get("/journal", response_class=HTMLResponse, dependencies=[Depends(require_auth)])
@@ -66,32 +49,3 @@ async def journal_page():
 </body>
 </html>"""
     return HTMLResponse(content=html)
-
-
-@router.post("/slack/events")
-async def slack_events(request: Request):
-    body = await request.body()
-    timestamp = request.headers.get("X-Slack-Request-Timestamp", "0")
-    signature = request.headers.get("X-Slack-Signature", "")
-
-    if not _verify_slack_signature(body, timestamp, signature):
-        return JSONResponse({"error": "invalid signature"}, status_code=403)
-
-    payload = json.loads(body)
-
-    if payload.get("type") == "url_verification":
-        return JSONResponse({"challenge": payload["challenge"]})
-
-    if payload.get("type") == "event_callback":
-        event = payload.get("event", {})
-        if (
-            event.get("type") == "message"
-            and event.get("thread_ts")
-            and not event.get("bot_id")
-            and not event.get("subtype")
-        ):
-            thread_ts = event["thread_ts"]
-            if await journal_svc.is_journal_thread(thread_ts):
-                await journal_svc.store_entry(event.get("text", ""), event["ts"])
-
-    return JSONResponse({"ok": True})
