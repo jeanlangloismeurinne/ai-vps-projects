@@ -1,17 +1,29 @@
 services:
   homepage:
     build: .
-    ports:
-      - "127.0.0.1:8040:8000"
     networks:
-      - infra-net
+      - coolify
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.http-homepage.entryPoints=http"
+      - "traefik.http.routers.http-homepage.rule=Host(`jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.http-homepage.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-homepage.service=http-homepage"
+      - "traefik.http.routers.https-homepage.entryPoints=https"
+      - "traefik.http.routers.https-homepage.rule=Host(`jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.https-homepage.middlewares=gzip"
+      - "traefik.http.routers.https-homepage.tls=true"
+      - "traefik.http.routers.https-homepage.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-homepage.service=https-homepage"
+      - "traefik.http.services.http-homepage.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-homepage.loadbalancer.server.port=8000"
 
 networks:
-  infra-net:
+  coolify:
     external: true
