@@ -26,6 +26,7 @@ services:
       - "traefik.http.routers.https-assistant.service=https-assistant"
       - "traefik.http.services.http-assistant.loadbalancer.server.port=8000"
       - "traefik.http.services.https-assistant.loadbalancer.server.port=8000"
+      - "traefik.docker.network=coolify"
 
 networks:
   infra-net:
