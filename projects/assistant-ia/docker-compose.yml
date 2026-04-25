@@ -1,19 +1,34 @@
 services:
   assistant-ia:
     build: .
-    ports:
-      - "127.0.0.1:8030:8000"
     volumes:
       - /storage/Documents:/storage/Documents:ro
     networks:
       - infra-net
+      - coolify
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.http-assistant.entryPoints=http"
+      - "traefik.http.routers.http-assistant.rule=Host(`assistant.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.http-assistant.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-assistant.service=http-assistant"
+      - "traefik.http.routers.https-assistant.entryPoints=https"
+      - "traefik.http.routers.https-assistant.rule=Host(`assistant.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.https-assistant.middlewares=gzip"
+      - "traefik.http.routers.https-assistant.tls=true"
+      - "traefik.http.routers.https-assistant.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-assistant.service=https-assistant"
+      - "traefik.http.services.http-assistant.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-assistant.loadbalancer.server.port=8000"
 
 networks:
   infra-net:
+    external: true
+  coolify:
     external: true
