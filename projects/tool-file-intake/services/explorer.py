@@ -23,8 +23,6 @@ def _walk(node: Path, root: Path, depth: int, max_depth: int) -> dict:
         rel = str(child.relative_to(root))
         if child.is_dir():
             result[child.name + "/"] = _walk(child, root, depth + 1, max_depth)
-        else:
-            result[child.name] = None
     return result
 
 

@@ -198,11 +198,9 @@ async def _do_store(
     )
 
     # Confirmation Slack
-    tree_text = format_tree()
     await _reply(
         f":white_check_mark: *`{filename}`* stocké dans\n"
-        f"`{dest_path.relative_to(settings.STORAGE_BASE.parent)}`\n\n"
-        f"*Arborescence Documents :*\n```{tree_text}```"
+        f"`Documents/{dest_path.relative_to(settings.STORAGE_BASE)}`"
     )
 
     # Notification agent IA
