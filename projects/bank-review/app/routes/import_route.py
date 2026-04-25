@@ -1,4 +1,5 @@
 import os
+import uuid
 import json
 from datetime import date, datetime
 from fastapi import APIRouter, Request, UploadFile, File, Form
@@ -233,6 +234,102 @@ async def import_history(request: Request, session_id: int):
         "stats": stats,
         "categories": categories,
     })
+
+
+@router.post("/api/import/direct")
+async def import_direct(request: Request, file: UploadFile = File(...)):
+    """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review."""
+    api_key = request.headers.get("X-Internal-Api-Key", "")
+    expected = os.getenv("INTERNAL_API_KEY", "")
+    if not expected or api_key != expected:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    content = await file.read()
+
+    fmt = check_format(content)
+    if not fmt.can_proceed:
+        return JSONResponse(
+            {"error": f"Format non reconnu : {', '.join(fmt.missing_required)}"},
+            status_code=400,
+        )
+    if not fmt.is_exact_match:
+        content = apply_mapping(content, fmt)
+
+    tmp_name = f"import_direct_{uuid.uuid4().hex}.csv"
+    dest = os.path.join(UPLOAD_DIR, tmp_name)
+    try:
+        with open(dest, "wb") as f:
+            f.write(content)
+
+        classified = await run_import_pipeline(dest, [])
+    except Exception as e:
+        return JSONResponse({"error": f"Erreur pipeline : {e}"}, status_code=500)
+    finally:
+        if os.path.exists(dest):
+            os.remove(dest)
+
+    rows = _serialize_rows(classified)
+
+    try:
+        accounts_seen: set[tuple] = set()
+        for row in rows:
+            num = row.get("account_num")
+            label = row.get("account_label")
+            if num and (num, label) not in accounts_seen:
+                await upsert_account(num, label or "")
+                accounts_seen.add((num, label))
+
+        db_rows = []
+        for row in rows:
+            db_row = {k: v for k, v in row.items() if not k.startswith("_")}
+            for date_field in ("date_op", "date_val", "real_date"):
+                val = db_row.get(date_field)
+                if isinstance(val, str) and val:
+                    try:
+                        db_row[date_field] = datetime.strptime(val, "%Y-%m-%d").date()
+                    except Exception:
+                        db_row[date_field] = None
+            db_rows.append(db_row)
+
+        nb = await insert_transactions(db_rows)
+
+        dates = [r["date_op"] for r in db_rows if isinstance(r.get("date_op"), date)]
+        date_min = min(dates) if dates else None
+        date_max = max(dates) if dates else None
+
+        years = await get_budget_years()
+        year_id_for_session = None
+        if date_max and years:
+            max_str = str(date_max)
+            year_id_for_session = next(
+                (y["id"] for y in years if str(y["start_date"]) <= max_str <= str(y["end_date"])),
+                None,
+            )
+
+        session_id = await create_import_session(
+            file.filename, nb, date_min, date_max, year_id_for_session
+        )
+        dedup_keys = [r["dedup_key"] for r in db_rows if r.get("dedup_key")]
+        await link_transactions_to_session(dedup_keys, session_id)
+
+        new_year = None
+        if date_max and years:
+            latest_end = years[0]["end_date"]
+            if isinstance(latest_end, str):
+                latest_end = date.fromisoformat(latest_end)
+            if date_max > latest_end:
+                new_year = await create_next_budget_year()
+
+        return {
+            "session_id": session_id,
+            "added": nb,
+            "date_min": str(date_min) if date_min else None,
+            "date_max": str(date_max) if date_max else None,
+            "year_id": year_id_for_session,
+            "new_year": new_year,
+        }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 def _serialize_rows(rows: list[dict]) -> list[dict]:

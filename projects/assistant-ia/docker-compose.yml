@@ -1,0 +1,19 @@
+services:
+  assistant-ia:
+    build: .
+    ports:
+      - "127.0.0.1:8030:8000"
+    volumes:
+      - /storage/Documents:/storage/Documents:ro
+    networks:
+      - infra-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  infra-net:
+    external: true

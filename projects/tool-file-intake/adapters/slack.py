@@ -205,7 +205,7 @@ async def _do_store(
 
     # Notification agent IA
     if settings.AGENT_WEBHOOK_URL:
-        await _notify_agent(filename, str(dest_path), mime_type, sha, user_id)
+        await _notify_agent(filename, str(dest_path), mime_type, sha, user_id, dest_channel or "")
 
 
 async def _download_slack_file(file_id: str, client) -> bytes:
@@ -217,7 +217,7 @@ async def _download_slack_file(file_id: str, client) -> bytes:
         return resp.content
 
 
-async def _notify_agent(filename: str, path: str, mime: str, sha256: str, user: str) -> None:
+async def _notify_agent(filename: str, path: str, mime: str, sha256: str, user: str, channel: str) -> None:
     payload = {
         "event": "file_stored",
         "filename": filename,
@@ -225,6 +225,7 @@ async def _notify_agent(filename: str, path: str, mime: str, sha256: str, user: 
         "mime_type": mime,
         "sha256": sha256,
         "uploaded_by": user,
+        "channel_id": channel,
     }
     try:
         async with httpx.AsyncClient(timeout=10) as http:

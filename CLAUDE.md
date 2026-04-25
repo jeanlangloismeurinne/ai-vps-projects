@@ -16,12 +16,17 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 
 ## Infrastructure partagée
 - PostgreSQL 16 : shared-postgres (port 5432)
-  Bases : db_assistant (projet assistant-ia)
+  Bases : db_assistant (réservée pour assistant-ia, pas encore utilisée)
+
+## Clés API inter-services
+- `INTERNAL_API_KEY` (bank-review ↔ assistant-ia) : `a09e3fce7a11df086a317458e4f15bf9f96ee57e7a0837f85d96905723d58585`
+  — Header : `X-Internal-Api-Key`
+  — Endpoint protégé : `POST /api/import/direct` sur bank-review
 - Redis 7 : shared-redis (port 6379)
 - Réseau Docker : infra-net
 
 ## Projets actifs
-- projects/assistant-ia/ : bot Slack + résumé newsletters
+- projects/assistant-ia/ : orchestrateur Slack — reçoit webhooks de tool-file-intake et déclenche les actions par service (bank-review, etc.) — FastAPI, port 8030
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
 - projects/feedback-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
