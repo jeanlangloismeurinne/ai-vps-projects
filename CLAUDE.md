@@ -28,9 +28,15 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 
 ## Slack bot partagé
 
-Token `xoxb-619072475858-...` utilisé par `/opt/cyber-agent/` et `tool-file-intake`.
-Signing secret à récupérer sur api.slack.com → Basic Information → Signing Secret.
+Le bot utilise le **Socket Mode** (pas de signing secret, pas d'URL webhook à exposer).
+Tokens stockés dans `/opt/cyber-agent/.env` :
+- `SLACK_BOT_TOKEN` = `xoxb-619072475858-...`
+- `SLACK_APP_TOKEN` = `xapp-1-A0ATSM6JECA-...` (scope `connections:write`)
+
 Channel Slack principal : `C0AUFGZNBGT`
+
+Le bot doit être **invité explicitement** dans chaque channel pour recevoir ses événements :
+`/invite @ai_vps_jlm`
 
 ## Feedback utilisateur
 
@@ -50,6 +56,31 @@ Marquer `status: closed` une fois résolu.
 
 ## Stack commune
 Node.js 20, TypeScript strict, Fastify, Docker
+
+## Pièges Coolify
+
+### Volumes bind-mount : une seule option `-v` dans `custom_docker_run_options`
+Coolify n'applique pas plusieurs flags `-v` dans `custom_docker_run_options`.
+Pour plusieurs volumes, utiliser le mode `dockercompose` (build_pack = dockercompose) —
+les volumes définis dans `docker-compose.yml` sont alors tous montés correctement.
+
+### Mode `dockercompose` : chemin du fichier compose
+`docker_compose_location` est relatif à `base_directory`. Mettre `/docker-compose.yml`,
+pas le chemin complet — Coolify les concatène et double le chemin sinon.
+
+### `env_file` dans docker-compose.yml
+En mode `dockercompose`, ne pas mettre `env_file: .env` — le fichier `.env` est gitignored
+et absent du build. Coolify injecte ses variables directement dans le service.
+
+### Générer un token API Coolify
+Le token en base est un hash SHA-256 inutilisable directement. Pour créer un token valide :
+```bash
+NEW_TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+NEW_HASH=$(python3 -c "import hashlib; print(hashlib.sha256('$NEW_TOKEN'.encode()).hexdigest())")
+docker exec coolify-db sh -c "psql -U coolify coolify -c \"INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, team_id, created_at, updated_at) SELECT 'App\\\\Models\\\\User', tokenable_id, 'script', '$NEW_HASH', '[\\\"*\\\"]', 0, NOW(), NOW() FROM personal_access_tokens WHERE id=1;\""
+NEW_ID=$(docker exec coolify-db sh -c "psql -U coolify coolify -t -c \"SELECT id FROM personal_access_tokens ORDER BY id DESC LIMIT 1;\"" | tr -d ' ')
+echo "Bearer ${NEW_ID}|${NEW_TOKEN}"
+```
 
 ## Sécurité — règles obligatoires
 
