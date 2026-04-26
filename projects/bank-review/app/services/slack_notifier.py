@@ -29,6 +29,7 @@ async def _post(text: str, blocks: list | None = None) -> None:
 
 
 async def notify_new_feedback(ticket_type: str, message: str, url: str) -> None:
+    """Notifie #feedback-{service} qu'un nouveau ticket vient d'être créé."""
     emoji = TYPE_EMOJI.get(ticket_type, "📝")
     text = f"{emoji} *Nouveau feedback bank-review* — `{ticket_type}`\n{message[:300]}"
     blocks = [
@@ -36,20 +37,3 @@ async def notify_new_feedback(ticket_type: str, message: str, url: str) -> None:
         {"type": "context", "elements": [{"type": "mrkdwn", "text": f"URL : `{url}`"}]},
     ]
     await _post(text, blocks)
-
-
-async def notify_ticket_closed(ticket_type: str, description: str) -> None:
-    emoji = TYPE_EMOJI.get(ticket_type, "📝")
-    text = f"✅ *Implémenté — bank-review* {emoji} `{ticket_type}`\n{description[:300]}"
-    await _post(text)
-
-
-async def notify_deployment_summary(closed_tickets: list) -> None:
-    if not closed_tickets:
-        return
-    lines = ["🚀 *Déploiement bank-review — fonctionnalités réalisées :*"]
-    for t in closed_tickets:
-        emoji = TYPE_EMOJI.get(t.get("type", ""), "📝")
-        desc = (t.get("description") or "")[:100]
-        lines.append(f"• {emoji} {desc}")
-    await _post("\n".join(lines))

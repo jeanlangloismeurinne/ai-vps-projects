@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Header
 from fastapi.responses import JSONResponse
 from pathlib import Path
-from datetime import datetime
-import re, time
+from datetime import datetime, timezone
+import re, time, os
 
 from app.services import slack_notifier
 
@@ -10,6 +10,7 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 TICKETS_DIR = Path(__file__).parent.parent.parent / "feedback-tickets"
 TICKETS_MD = Path(__file__).parent.parent.parent / "TICKETS.md"
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 TYPE_EMOJI = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "🔴"}
 TYPE_LABEL = {"bug": "Bug", "feature": "Feature", "suggestion": "Suggestion", "error": "Erreur JS"}
@@ -31,24 +32,24 @@ def _save_ticket(data: dict) -> tuple[str, int]:
     text = data.get("message") or data.get("description") or "_Aucune description_"
 
     lines = [
-        f"---",
+        "---",
         f"id: {ticket_id}",
         f"type: {data['type']}",
-        f"status: open",
+        "status: open",
         f"date: {datetime.now().isoformat()}",
-        f"project: bank-review",
+        "project: bank-review",
         f"url: {data.get('url', '')}",
-        f"---",
-        f"",
+        "---",
+        "",
         f"## {emoji} {label}",
-        f"",
+        "",
         f"**Date** : {date_str}",
         f"**URL** : `{data.get('url', 'N/A')}`",
-        f"",
-        f"### Description",
-        f"",
+        "",
+        "### Description",
+        "",
         text,
-        f"",
+        "",
     ]
     if data.get("stack"):
         lines += ["### Stack trace", "", "```", data["stack"], "```", ""]
@@ -173,7 +174,10 @@ async def post_feedback(request: Request):
 
 
 @router.post("/{ticket_id}/close")
-async def close_ticket(ticket_id: str):
+async def close_ticket(ticket_id: str, x_internal_api_key: str = Header(default="")):
+    if INTERNAL_API_KEY and x_internal_api_key != INTERNAL_API_KEY:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
     path = _find_ticket(ticket_id)
     if not path:
         return JSONResponse({"error": "Ticket not found"}, status_code=404)
@@ -183,36 +187,51 @@ async def close_ticket(ticket_id: str):
     if ticket.get("status") == "closed":
         return JSONResponse({"error": "Already closed"}, status_code=409)
 
-    updated = raw.replace("status: open", "status: closed", 1)
+    closed_at = datetime.now(timezone.utc).isoformat()
+    updated = raw.replace("status: open", f"status: closed\nclosed_at: {closed_at}", 1)
     path.write_text(updated)
     _regenerate_tickets_md()
-
-    await slack_notifier.notify_ticket_closed(
-        ticket.get("type", ""),
-        ticket.get("description", ""),
-    )
     return {"ok": True, "ticket_id": ticket_id}
 
 
-@router.post("/notify-deployed")
-async def notify_deployed(request: Request):
-    """Poste dans Slack la liste des tickets fermés récemment (à appeler après un déploiement)."""
-    body = await request.json()
-    ticket_ids: list[str] = body.get("ticket_ids", [])
+@router.get("/closed-since")
+async def closed_since(
+    since: str,
+    x_internal_api_key: str = Header(default=""),
+):
+    """Retourne les tickets fermés depuis `since` (ISO 8601). Protégé par X-Internal-Api-Key."""
+    if INTERNAL_API_KEY and x_internal_api_key != INTERNAL_API_KEY:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    closed: list[dict] = []
-    if ticket_ids:
-        for tid in ticket_ids:
-            path = _find_ticket(str(tid))
-            if path:
-                closed.append(_parse_ticket(path))
-    else:
-        # Prend tous les tickets fermés si aucun ID fourni
-        if TICKETS_DIR.exists():
-            for f in sorted(TICKETS_DIR.glob("*.md"), reverse=True)[:20]:
-                t = _parse_ticket(f)
-                if t.get("status") == "closed":
-                    closed.append(t)
+    try:
+        since_dt = datetime.fromisoformat(since)
+        if since_dt.tzinfo is None:
+            since_dt = since_dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return JSONResponse({"error": "Invalid since format (use ISO 8601)"}, status_code=400)
 
-    await slack_notifier.notify_deployment_summary(closed)
-    return {"ok": True, "notified": len(closed)}
+    results = []
+    if TICKETS_DIR.exists():
+        for f in sorted(TICKETS_DIR.glob("*.md"), reverse=True):
+            t = _parse_ticket(f)
+            if t.get("status") != "closed":
+                continue
+            closed_at_str = t.get("closed_at", "")
+            if not closed_at_str:
+                continue
+            try:
+                closed_at_dt = datetime.fromisoformat(closed_at_str)
+                if closed_at_dt.tzinfo is None:
+                    closed_at_dt = closed_at_dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            if closed_at_dt >= since_dt:
+                results.append({
+                    "id": t.get("id", ""),
+                    "type": t.get("type", ""),
+                    "description": t.get("description", ""),
+                    "closed_at": closed_at_str,
+                    "url": t.get("url", ""),
+                })
+
+    return {"tickets": results}

@@ -6,10 +6,12 @@ class Settings(BaseSettings):
     SLACK_BOT_TOKEN: str
     SLACK_APP_TOKEN: str  # xapp-... requis pour Socket Mode
 
-    # Bank review (existing)
+    # Bank review
     BANK_REVIEW_CHANNEL_ID: str
     BANK_REVIEW_BASE_URL: str = "https://bank.jlmvpscode.duckdns.org"
     BANK_REVIEW_API_KEY: str
+    BANK_REVIEW_FEEDBACK_CHANNEL_ID: str = ""  # ID du channel #feedback-bank-review
+
     ASSISTANT_BASE_URL: str = "https://assistant.jlmvpscode.duckdns.org"
 
     # Database
@@ -21,9 +23,8 @@ class Settings(BaseSettings):
     # Feature 2 — Kanban
     SLACK_CHANNEL_TASKS: str = "#tasks"
 
-    # Feedback routing — channel IDs associés à chaque service
-    # Format : "CHANNEL_ID_1,CHANNEL_ID_2" → séparés par virgule si plusieurs par service
-    FEEDBACK_CHANNELS_BANK_REVIEW: str = ""  # IDs des channels liés à bank-review
+    # Sécurité webhook deploy
+    DEPLOY_WEBHOOK_SECRET: str = ""  # si vide, pas d'auth sur /webhook/deploy-complete
 
     # Web auth
     WEB_USERNAME: str

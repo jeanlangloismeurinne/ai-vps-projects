@@ -62,6 +62,12 @@ CREATE TABLE IF NOT EXISTS grouping_configs (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Feature 3 : Suivi des déploiements (pour les notifications feedback)
+CREATE TABLE IF NOT EXISTS service_deploys (
+  service        VARCHAR(100) PRIMARY KEY,
+  last_deploy_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_journal_entries_created ON journal_entries(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cards_column ON cards(column_id);
