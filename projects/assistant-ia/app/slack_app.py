@@ -7,6 +7,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
 
+import httpx
 from slack_bolt.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
@@ -120,6 +121,103 @@ async def cmd_taches(ack, body, respond):
 
     lines = [f"📋 *Tâches dues {label}* ({len(cards)})"] + [fmt(c) for c in cards]
     await respond("\n".join(lines))
+
+
+# ─── /feedback ────────────────────────────────────────────────────────────────
+
+def _build_feedback_channel_map() -> dict:
+    """
+    Construit le mapping channel_id → {name, url} pour la commande /feedback.
+    Chaque service peut avoir plusieurs channels (principal + feedback-*).
+    """
+    mapping: dict = {}
+    services = [
+        {
+            "name": "bank-review",
+            "url": settings.BANK_REVIEW_BASE_URL,
+            "channels_env": settings.FEEDBACK_CHANNELS_BANK_REVIEW,
+            # channel principal toujours inclus
+            "extra_channels": [settings.BANK_REVIEW_CHANNEL_ID],
+        },
+    ]
+    for svc in services:
+        ids = [c.strip() for c in svc["channels_env"].split(",") if c.strip()]
+        ids += [c for c in svc["extra_channels"] if c]
+        for cid in ids:
+            if cid:
+                mapping[cid] = {"name": svc["name"], "url": svc["url"]}
+    return mapping
+
+
+_FEEDBACK_MAP: dict = {}
+
+
+@bolt.command("/feedback")
+async def cmd_feedback(ack, body, respond):
+    await ack()
+    global _FEEDBACK_MAP
+    if not _FEEDBACK_MAP:
+        _FEEDBACK_MAP = _build_feedback_channel_map()
+
+    channel_id: str = body.get("channel_id", "")
+    text: str = (body.get("text") or "").strip()
+    channel_name: str = body.get("channel_name", "")
+
+    service = _FEEDBACK_MAP.get(channel_id)
+    if not service:
+        await respond(
+            "Ce channel n'est pas associé à un service.\n"
+            "Utilisez `/feedback` depuis un channel lié à un service (ex. `#bank-review`, `#feedback-bank-review`)."
+        )
+        return
+
+    # Détection du type : "bug: ...", "feature: ...", "suggestion: ..."
+    feedback_type = "suggestion"
+    for t in ("bug", "feature", "suggestion", "error"):
+        prefix = f"{t}:"
+        if text.lower().startswith(prefix):
+            feedback_type = t
+            text = text[len(prefix):].strip()
+            break
+        prefix_space = f"{t} "
+        if text.lower().startswith(prefix_space):
+            feedback_type = t
+            text = text[len(prefix_space):].strip()
+            break
+
+    if not text:
+        await respond(
+            "Usage : `/feedback [bug:|feature:|suggestion:] votre message`\n"
+            "Exemples :\n"
+            "• `/feedback Le bouton import ne fonctionne pas`\n"
+            "• `/feedback bug: Erreur 500 sur /budget`\n"
+            "• `/feedback feature: Ajouter un export PDF`"
+        )
+        return
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{service['url']}/api/feedback",
+                json={
+                    "type": feedback_type,
+                    "message": text,
+                    "url": f"slack://#{channel_name}",
+                },
+                timeout=8.0,
+            )
+        if resp.status_code == 200:
+            TYPE_EMOJI = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "🔴"}
+            emoji = TYPE_EMOJI.get(feedback_type, "📝")
+            await respond(
+                response_type="ephemeral",
+                text=f"{emoji} Feedback enregistré pour *{service['name']}* (`{feedback_type}`). Merci !",
+            )
+        else:
+            await respond(f"❌ Erreur lors de l'enregistrement ({resp.status_code}).")
+    except Exception as exc:
+        logger.error("cmd_feedback error: %s", exc)
+        await respond("❌ Impossible de joindre le service. Réessayez.")
 
 
 # ─── /vue ─────────────────────────────────────────────────────────────────────

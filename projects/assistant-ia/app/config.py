@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Feature 2 — Kanban
     SLACK_CHANNEL_TASKS: str = "#tasks"
 
+    # Feedback routing — channel IDs associés à chaque service
+    # Format : "CHANNEL_ID_1,CHANNEL_ID_2" → séparés par virgule si plusieurs par service
+    FEEDBACK_CHANNELS_BANK_REVIEW: str = ""  # IDs des channels liés à bank-review
+
     # Web auth
     WEB_USERNAME: str
     WEB_PASSWORD: str

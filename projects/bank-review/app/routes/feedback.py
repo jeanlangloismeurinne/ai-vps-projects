@@ -4,6 +4,8 @@ from pathlib import Path
 from datetime import datetime
 import re, time
 
+from app.services import slack_notifier
+
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 TICKETS_DIR = Path(__file__).parent.parent.parent / "feedback-tickets"
@@ -17,7 +19,7 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9-]", "", re.sub(r"\s+", "-", text[:40].lower()))
 
 
-def _save_ticket(data: dict) -> str:
+def _save_ticket(data: dict) -> tuple[str, int]:
     TICKETS_DIR.mkdir(exist_ok=True)
     ticket_id = int(time.time() * 1000)
     slug = _slug(data.get("message") or data.get("description") or "no-message")
@@ -55,7 +57,7 @@ def _save_ticket(data: dict) -> str:
 
     (TICKETS_DIR / filename).write_text("\n".join(lines))
     _regenerate_tickets_md()
-    return filename
+    return filename, ticket_id
 
 
 def _regenerate_tickets_md():
@@ -129,6 +131,29 @@ def _regenerate_tickets_md():
     TICKETS_MD.write_text("\n".join(md))
 
 
+def _parse_ticket(path: Path) -> dict:
+    raw = path.read_text()
+    fm: dict = {}
+    m = re.search(r"^---\n([\s\S]*?)\n---", raw)
+    if m:
+        for line in m.group(1).split("\n"):
+            if ": " in line:
+                k, _, v = line.partition(": ")
+                fm[k.strip()] = v.strip()
+    desc_m = re.search(r"### Description\n\n([\s\S]*?)(?:\n###|\Z)", raw)
+    fm["description"] = desc_m.group(1).strip()[:120] if desc_m else ""
+    fm["_path"] = path
+    return fm
+
+
+def _find_ticket(ticket_id: str) -> Path | None:
+    if not TICKETS_DIR.exists():
+        return None
+    for f in TICKETS_DIR.glob(f"{ticket_id}-*.md"):
+        return f
+    return None
+
+
 @router.post("")
 async def post_feedback(request: Request):
     data = await request.json()
@@ -138,5 +163,56 @@ async def post_feedback(request: Request):
     if not data.get("message") and data.get("type") != "error":
         return JSONResponse({"error": "Message required"}, status_code=400)
 
-    filename = _save_ticket(data)
+    filename, _ = _save_ticket(data)
+    await slack_notifier.notify_new_feedback(
+        data["type"],
+        data.get("message") or data.get("description") or "",
+        data.get("url", ""),
+    )
     return {"ok": True, "file": filename}
+
+
+@router.post("/{ticket_id}/close")
+async def close_ticket(ticket_id: str):
+    path = _find_ticket(ticket_id)
+    if not path:
+        return JSONResponse({"error": "Ticket not found"}, status_code=404)
+
+    raw = path.read_text()
+    ticket = _parse_ticket(path)
+    if ticket.get("status") == "closed":
+        return JSONResponse({"error": "Already closed"}, status_code=409)
+
+    updated = raw.replace("status: open", "status: closed", 1)
+    path.write_text(updated)
+    _regenerate_tickets_md()
+
+    await slack_notifier.notify_ticket_closed(
+        ticket.get("type", ""),
+        ticket.get("description", ""),
+    )
+    return {"ok": True, "ticket_id": ticket_id}
+
+
+@router.post("/notify-deployed")
+async def notify_deployed(request: Request):
+    """Poste dans Slack la liste des tickets fermés récemment (à appeler après un déploiement)."""
+    body = await request.json()
+    ticket_ids: list[str] = body.get("ticket_ids", [])
+
+    closed: list[dict] = []
+    if ticket_ids:
+        for tid in ticket_ids:
+            path = _find_ticket(str(tid))
+            if path:
+                closed.append(_parse_ticket(path))
+    else:
+        # Prend tous les tickets fermés si aucun ID fourni
+        if TICKETS_DIR.exists():
+            for f in sorted(TICKETS_DIR.glob("*.md"), reverse=True)[:20]:
+                t = _parse_ticket(f)
+                if t.get("status") == "closed":
+                    closed.append(t)
+
+    await slack_notifier.notify_deployment_summary(closed)
+    return {"ok": True, "notified": len(closed)}
