@@ -9,10 +9,10 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 from pathlib import Path
 
-from app.routes import webhooks, journal, kanban, feedback as feedback_route
+from app.routes import webhooks, journal, kanban, feedback as feedback_route, journal_settings, journal_fill
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
-from app.jobs.journal_prompt import send_daily_prompt, send_reminder
+from app.jobs.journal_prompt import send_daily_prompt, send_reminder, check_objectif_reminders
 from app.jobs.task_reminder import check_due_cards
 from app import slack_app as slack
 
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
     _scheduler.add_job(send_daily_prompt, CronTrigger(hour=19, minute=0, timezone=_paris))
     _scheduler.add_job(send_reminder, CronTrigger(hour=22, minute=0, timezone=_paris))
     _scheduler.add_job(check_due_cards, CronTrigger(minute="*"))
+    _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
     _scheduler.start()
     logger.info("Scheduler started")
 
@@ -59,6 +60,8 @@ if _public.exists():
 
 app.include_router(webhooks.router)
 app.include_router(journal.router)
+app.include_router(journal_fill.router)
+app.include_router(journal_settings.router)
 app.include_router(kanban.router)
 app.include_router(feedback_route.router)
 
@@ -132,15 +135,21 @@ _LANDING_HTML = """<!DOCTYPE html>
   <div class="section">
     <div class="section-header">
       <span class="badge">📔</span>
-      <h3>Journal d'apprentissage</h3>
-      <a href="/journal" class="link-btn">Voir les entrées →</a>
+      <h3>Journal</h3>
+      <a href="/journal/fill" class="link-btn">Remplir →</a>
     </div>
     <p class="desc">
-      Chaque jour à <strong>19h00</strong>, un message est envoyé dans <code>#journal</code> sur Slack.
-      Réponds dans le <strong>thread</strong> pour enregistrer ton apprentissage du jour.
-      Une relance est envoyée à <strong>22h00</strong> si aucune réponse n'a été reçue.
+      Parcours de progression avec questions structurées. Rappels Slack par objectif selon leur fréquence propre.
     </p>
-    <div class="note">Aucune commande à retenir — il suffit de répondre dans le thread du message quotidien.</div>
+    <div style="display:flex;gap:.75rem;margin-top:.75rem;flex-wrap:wrap">
+      <a href="/journal/fill" style="color:#4f6ef7;font-size:.85rem">Remplir le journal</a>
+      <span style="color:#444">·</span>
+      <a href="/journal/history" style="color:#4f6ef7;font-size:.85rem">Historique</a>
+      <span style="color:#444">·</span>
+      <a href="/journal/settings" style="color:#4f6ef7;font-size:.85rem">Paramètres</a>
+      <span style="color:#444">·</span>
+      <a href="/journal" style="color:#555;font-size:.85rem">Journal libre (Slack)</a>
+    </div>
   </div>
 
   <!-- Kanban -->
