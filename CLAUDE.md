@@ -115,6 +115,44 @@ pas le chemin complet — Coolify les concatène et double le chemin sinon.
 En mode `dockercompose`, ne pas mettre `env_file: .env` — le fichier `.env` est gitignored
 et absent du build. Coolify injecte ses variables directement dans le service.
 
+### UUIDs des applications Coolify
+
+| Application | UUID |
+|---|---|
+| assistant-ia | `gayg5mw9jikbio2le75olq8b` |
+| bank-review | `ji9jg7ngkva7j4d2uic05d3v` |
+| homepage | `h7dyrhas03di7jqq2wl2j72z` |
+| tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
+
+### Déclencher un rebuild via l'API Coolify
+
+**Seul endpoint qui fonctionne pour un rebuild complet : `/start`**
+
+```bash
+curl -s -X POST "http://localhost:8000/api/v1/applications/{uuid}/start" \
+  -H "Authorization: Bearer {token}"
+```
+
+- `/restart` → échoue avec "No such container" pour les apps `dockercompose`, même quand elles tournent
+- `/deploy` → 404, n'existe pas dans cette version de Coolify
+- `/start` → déclenche un build Docker + deploy complet, retourne `{"deployment_uuid":"..."}`
+
+Vérifier le statut du déploiement :
+```bash
+curl -s "http://localhost:8000/api/v1/deployments/{deployment_uuid}" \
+  -H "Authorization: Bearer {token}" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status'))"
+# "finished" = OK | "failed" = voir les logs dans d.get('logs')
+```
+
+Vérifier que l'app est bien up :
+```bash
+curl -s "http://localhost:8000/api/v1/applications/{uuid}" \
+  -H "Authorization: Bearer {token}" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('status'))"
+# Attendu : "running:healthy"
+```
+
 ### Générer un token API Coolify
 Le token en base est un hash SHA-256 inutilisable directement. Pour créer un token valide :
 ```bash
