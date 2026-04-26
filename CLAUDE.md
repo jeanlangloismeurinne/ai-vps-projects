@@ -49,9 +49,47 @@ Les tickets (bugs, suggestions, features) sont stockés dans le dossier
 `feedback-tickets/` de chaque projet concerné, au format Markdown.
 
 Pour bank-review : `projects/bank-review/feedback-tickets/`
+Pour journal/kanban : `projects/assistant-ia/feedback-tickets/{project}/`
 
 Chaque fichier = un ticket. Champ `status: open` = en attente de traitement.
-Marquer `status: closed` une fois résolu.
+
+### Système feedback — Slack & déploiement
+
+Architecture en deux temps :
+- **Nouveau ticket** (widget web ou `/feedback` Slack) → notifie le channel `#features-{service}`
+- **Déploiement** → notifie le channel principal du service avec la liste des tickets fermés
+
+### Fermeture d'un ticket
+Passer `status: open` → `status: closed` **et ajouter** `closed_at: {datetime ISO}` dans le frontmatter.
+Ne déclenche aucune notification Slack immédiate.
+
+### Notification de déploiement
+Coolify exécute automatiquement après chaque build via `post_deployment_command` :
+```bash
+# bank-review
+curl -sf -X POST https://assistant.jlmvpscode.duckdns.org/webhook/deploy-complete \
+  -H 'Content-Type: application/json' -d '{"service":"bank-review"}' || true
+
+# assistant-ia (journal + kanban)
+curl -sf -X POST https://assistant.jlmvpscode.duckdns.org/webhook/deploy-complete \
+  -H 'Content-Type: application/json' -d '{"service":"journal"}' || true && \
+curl -sf -X POST https://assistant.jlmvpscode.duckdns.org/webhook/deploy-complete \
+  -H 'Content-Type: application/json' -d '{"service":"kanban"}' || true
+```
+Endpoint : `POST /webhook/deploy-complete` sur assistant-ia — accepte `{"service":"nom"}` ou `{"application_uuid":"..."}`.
+
+### Channels Slack (IDs fixes)
+| Channel | ID | Rôle |
+|---|---|---|
+| `#bank-review` | `C0AV2EJHR5H` | déploiement bank-review |
+| `#features-bank-review` | `C0ATW9S0S7N` | nouveaux tickets bank-review |
+| `#journal` | `C0B080X2ZBK` | déploiement journal |
+| `#tasks` | `C0AV5M6385T` | déploiement kanban |
+| `#features-ai-assistant` | `C0AUCE6NELT` | nouveaux tickets journal + kanban |
+
+### Commande Slack `/feedback`
+Utilisable dans tout channel lié à un service. Socket Mode = pas d'URL publique, mais la commande doit être enregistrée dans api.slack.com → Slash Commands.
+Syntaxe : `/feedback [bug:|feature:|suggestion:] message`
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/
@@ -124,6 +162,26 @@ grep "coolify-realtime" /data/coolify/source/docker-compose.prod.yml
 ```
 Si l'image est repassée à `1.0.13` (sans `-patched`), relancer le patch ou attendre
 une image upstream corrigée.
+
+### Modifier `post_deployment_command` via l'API
+
+Toujours utiliser Python pour construire le payload JSON — curl échoue silencieusement
+si la commande contient des guillemets (le JSON est tronqué sans erreur) :
+
+```python
+import urllib.request, json
+
+TOKEN = "..."
+payload = json.dumps({"post_deployment_command": "ma commande ici"}).encode()
+req = urllib.request.Request(
+    "http://localhost:8000/api/v1/applications/{uuid}",
+    data=payload,
+    headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"},
+    method="PATCH",
+)
+with urllib.request.urlopen(req) as r:
+    print(json.loads(r.read()))
+```
 
 ### Checklist avant déploiement d'un service réseau
 - [ ] Port bindé sur `127.0.0.1` si usage interne uniquement

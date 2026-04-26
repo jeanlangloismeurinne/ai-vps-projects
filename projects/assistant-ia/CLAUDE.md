@@ -56,7 +56,33 @@ app/
 | tool-file-intake | reçoit `POST /webhook/file-stored` | aucune (réseau interne) |
 | Slack | `chat.postMessage` | Bearer SLACK_BOT_TOKEN |
 
-## Ajouter un nouveau cas d'usage
+## Registre des services — feedback et déploiement
+
+Le fichier central est `app/services/registry.py`.
+C'est le seul endroit à modifier pour brancher un nouveau service sur le système feedback/déploiement.
+
+### Ajouter un service externe (sa propre app Coolify)
+1. Implémenter sur le service : `GET /api/feedback/closed-since?since=` (protégé par `X-Internal-Api-Key`) et `POST /api/feedback`
+2. Ajouter une entrée dans `_build_registry()` (voir modèle commenté dans le fichier)
+3. Ajouter les variables d'env dans `config.py`
+4. Configurer `post_deployment_command` dans Coolify (voir CLAUDE.md racine)
+
+### Ajouter un service interne (hébergé dans assistant-ia)
+1. Ajouter le nom dans `VALID_PROJECTS` dans `app/routes/feedback.py`
+2. Ajouter une entrée dans `_build_registry()` avec `base_url = ASSISTANT_BASE_URL` et `coolify_uuid = "gayg5mw9jikbio2le75olq8b"`
+
+### UUID Coolify des apps
+- `bank-review` : `ji9jg7ngkva7j4d2uic05d3v`
+- `assistant-ia` : `gayg5mw9jikbio2le75olq8b`
+
+### Endpoints feedback (cette session)
+| Endpoint | Rôle |
+|---|---|
+| `POST /webhook/deploy-complete` | Notification déploiement (Coolify ou manuel) |
+| `POST /api/feedback/{project}` | Soumettre un ticket (journal, kanban) |
+| `GET /api/feedback/{project}/closed-since?since=` | Tickets fermés depuis une date |
+
+## Ajouter un nouveau cas d'usage (file-intake)
 
 1. Créer `app/handlers/mon_handler.py` avec une fonction `async def handle_file_stored(payload)`
 2. Dans `app/routes/webhooks.py`, ajouter le routage par `channel_id`
