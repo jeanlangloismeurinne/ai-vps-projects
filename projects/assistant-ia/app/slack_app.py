@@ -167,9 +167,10 @@ async def cmd_feedback(ack, body, respond):
         return
 
     try:
+        url = svc["base_url"].rstrip("/") + svc["feedback_path"]
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"{svc['base_url'].rstrip('/')}/api/feedback",
+                url,
                 json={"type": feedback_type, "message": message, "url": f"slack://#{channel_name}"},
                 timeout=8.0,
             )

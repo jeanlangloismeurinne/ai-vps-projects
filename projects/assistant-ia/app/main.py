@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 from pathlib import Path
 
-from app.routes import webhooks, journal, kanban
+from app.routes import webhooks, journal, kanban, feedback as feedback_route
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
 from app.jobs.journal_prompt import send_daily_prompt, send_reminder
@@ -60,6 +60,7 @@ if _public.exists():
 app.include_router(webhooks.router)
 app.include_router(journal.router)
 app.include_router(kanban.router)
+app.include_router(feedback_route.router)
 
 
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_auth)])

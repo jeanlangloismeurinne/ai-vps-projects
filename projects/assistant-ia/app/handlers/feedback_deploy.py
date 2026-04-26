@@ -52,33 +52,28 @@ async def handle_deploy_complete(service_name: str) -> None:
         return
 
     last_deploy = await _get_last_deploy(service_name)
-    tickets = await feedback_client.get_closed_since(
-        base_url=svc["base_url"],
-        since=last_deploy.isoformat(),
-        api_key=svc["api_key"],
-    )
+    tickets = await feedback_client.get_closed_since(svc, last_deploy.isoformat())
 
     await _record_deploy(service_name)
 
     if not tickets:
         await slack_client.post_message(
             channel=svc["slack_channel"],
-            text=f"🚀 *{service_name}* déployé avec succès. Aucun ticket fermé depuis le dernier déploiement.",
+            text=f"🚀 *{service_name}* déployé. Aucun ticket fermé depuis le dernier déploiement.",
             blocks=[],
         )
         return
 
-    lines = [f"🚀 *Déploiement {service_name}* — {len(tickets)} ticket(s) réalisé(s) :"]
+    lines = [f"🚀 *Déploiement {service_name}* — {len(tickets)} correction(s) / amélioration(s) :"]
     for t in tickets:
         emoji = TYPE_EMOJI.get(t.get("type", ""), "📝")
         desc = (t.get("description") or "")[:120]
         lines.append(f"• {emoji} {desc}")
 
     text = "\n".join(lines)
-    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": text}}]
     await slack_client.post_message(
         channel=svc["slack_channel"],
         text=text,
-        blocks=blocks,
+        blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
     )
     logger.info("Deploy notification sent for %s (%d tickets)", service_name, len(tickets))
