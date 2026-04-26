@@ -40,9 +40,9 @@ def _build_registry() -> list[dict]:
             "feedback_path": "/api/feedback/journal",
             "closed_since_path": "/api/feedback/journal/closed-since",
             "api_key": _assistant_key,
-            "slack_channel": settings.JOURNAL_CHANNEL_ID,       # notif déploiement → #journal
-            "feedback_channel": settings.FEATURES_AI_CHANNEL_ID,  # nouveaux tickets → #features-ai-assistant
-            "coolify_uuid": "",  # même app que assistant-ia
+            "slack_channel": settings.JOURNAL_CHANNEL_ID,          # notif déploiement → #journal
+            "feedback_channel": settings.FEATURES_AI_CHANNEL_ID,   # nouveaux tickets → #features-ai-assistant
+            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",            # même app que assistant-ia
             "linked_channels": list(filter(None, [
                 settings.JOURNAL_CHANNEL_ID,
                 settings.FEATURES_AI_CHANNEL_ID,
@@ -54,9 +54,9 @@ def _build_registry() -> list[dict]:
             "feedback_path": "/api/feedback/kanban",
             "closed_since_path": "/api/feedback/kanban/closed-since",
             "api_key": _assistant_key,
-            "slack_channel": settings.TASKS_CHANNEL_ID,         # notif déploiement → #tasks
+            "slack_channel": settings.TASKS_CHANNEL_ID,            # notif déploiement → #tasks
             "feedback_channel": settings.FEATURES_AI_CHANNEL_ID,
-            "coolify_uuid": "",  # même app que assistant-ia
+            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",            # même app que assistant-ia
             "linked_channels": list(filter(None, [
                 settings.TASKS_CHANNEL_ID,
                 settings.FEATURES_AI_CHANNEL_ID,
@@ -93,8 +93,6 @@ def by_channel(channel_id: str) -> dict | None:
     )
 
 
-def by_coolify_uuid(uuid: str) -> dict | None:
-    return next(
-        (s for s in _build_registry() if s.get("coolify_uuid") == uuid),
-        None,
-    )
+def by_coolify_uuid(uuid: str) -> list[dict]:
+    """Retourne tous les services associés à un UUID Coolify (peut être plusieurs)."""
+    return [s for s in _build_registry() if s.get("coolify_uuid") == uuid]
