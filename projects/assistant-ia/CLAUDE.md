@@ -117,6 +117,9 @@ pour garantir un seul envoi par objectif par jour.
 
 ## Workflow de déploiement production
 
+Avant tout déploiement d'une nouvelle fonctionnalité :
+- Mettre à jour la **landing page** (`_LANDING_HTML` dans `app/main.py`) : hero subtitle, liens, description de la section concernée.
+
 Ordre obligatoire :
 1. `git push origin main`
 2. Rebuild Coolify via API (voir CLAUDE.md racine pour le template curl)

@@ -128,7 +128,7 @@ _LANDING_HTML = """<!DOCTYPE html>
 
   <div class="hero">
     <h2>Ton assistant personnel</h2>
-    <p>Journal quotidien d'apprentissage et gestion de tâches Kanban, accessibles depuis Slack et le web.</p>
+    <p>Journal de progression par parcours, gestion de tâches Kanban — accessibles depuis Slack et le web.</p>
   </div>
 
   <!-- Journal -->
