@@ -139,17 +139,20 @@ _LANDING_HTML = """<!DOCTYPE html>
       <a href="/journal/fill" class="link-btn">Remplir →</a>
     </div>
     <p class="desc">
-      Parcours de progression avec questions structurées. Rappels Slack par objectif selon leur fréquence propre.
+      Suivi de progression par <strong>parcours</strong> (ex : Humilité) et <strong>objectifs</strong> (ex : Écoute active),
+      chacun avec ses propres questions, sa fréquence et son heure de rappel Slack.
     </p>
-    <div style="display:flex;gap:.75rem;margin-top:.75rem;flex-wrap:wrap">
-      <a href="/journal/fill" style="color:#4f6ef7;font-size:.85rem">Remplir le journal</a>
-      <span style="color:#444">·</span>
-      <a href="/journal/history" style="color:#4f6ef7;font-size:.85rem">Historique</a>
-      <span style="color:#444">·</span>
-      <a href="/journal/settings" style="color:#4f6ef7;font-size:.85rem">Paramètres</a>
-      <span style="color:#444">·</span>
-      <a href="/journal" style="color:#555;font-size:.85rem">Journal libre (Slack)</a>
-    </div>
+    <table>
+      <thead>
+        <tr><th>Section</th><th>Rôle</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><a href="/journal/fill" style="color:#4f6ef7">Remplir</a></td><td>Questions du jour, objectif par objectif</td></tr>
+        <tr><td><a href="/journal/history" style="color:#4f6ef7">Historique</a></td><td>Fil de progression par question</td></tr>
+        <tr><td><a href="/journal/settings" style="color:#4f6ef7">Paramètres</a></td><td>Créer / gérer parcours, objectifs, questions</td></tr>
+      </tbody>
+    </table>
+    <div class="note">10 types de questions disponibles : note, échelle, choix, oui/non, texte, date, durée, classement. Rappels Slack automatiques selon la fréquence de chaque objectif.</div>
   </div>
 
   <!-- Kanban -->
