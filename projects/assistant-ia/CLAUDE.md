@@ -62,6 +62,33 @@ app/
 2. Dans `app/routes/webhooks.py`, ajouter le routage par `channel_id`
 3. Documenter ici
 
+## Migrations — assistant-ia
+
+`db.py` exécute au démarrage **tous les fichiers `.sql`** du dossier `migrations/`
+dans l'ordre alphabétique (001, 002, 003…). Toutes les instructions sont idempotentes
+(`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).
+
+Pour ajouter une migration : créer `migrations/003_xxx.sql`, ne pas modifier les fichiers existants.
+
+## Journal — structure des routes
+
+| Fichier | Rôle |
+|---|---|
+| `routes/journal.py` | Ancien journal libre (prompt Slack → texte) — ne pas étendre |
+| `routes/journal_fill.py` | Remplissage quotidien + historique (journal v2) |
+| `routes/journal_settings.py` | Paramétrage parcours / objectifs / questions |
+| `services/journal_v2.py` | Couche service du journal v2 |
+
+## Journal v2 — rappels Slack
+
+Les rappels Slack envoient un **lien vers l'UI web** (`/journal/fill/{objectif_id}`),
+pas un formulaire interactif dans Slack. Les types de questions structurés (échelle,
+choix, classement…) ne sont pas gérables dans un thread Slack.
+
+Le job `check_objectif_reminders` tourne chaque minute, compare `heure_rappel` (HH:MM)
+à l'heure courante, et utilise `journal_notifications (UNIQUE objectif_id, session_date)`
+pour garantir un seul envoi par objectif par jour.
+
 ## Workflow de déploiement production
 
 Ordre obligatoire :
