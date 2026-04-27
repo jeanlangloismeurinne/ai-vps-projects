@@ -137,7 +137,7 @@ def _parse_feedback_type(text: str) -> tuple[str, str]:
     return "suggestion", text
 
 
-@bolt.command("/feedback")
+@bolt.command("/feature")
 async def cmd_feedback(ack, body, respond):
     await ack()
     from app.services import registry as svc_registry

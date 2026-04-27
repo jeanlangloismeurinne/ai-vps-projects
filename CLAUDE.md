@@ -28,7 +28,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 ## Projets actifs
 - projects/assistant-ia/ : orchestrateur Slack — reçoit webhooks de tool-file-intake et déclenche les actions par service (bank-review, etc.) — FastAPI, port 8030
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
-- projects/feedback-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
+- projects/feature-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
 
 ## Slack bot partagé
@@ -48,15 +48,15 @@ Le bot doit être **invité explicitement** dans chaque channel pour recevoir se
 Les tickets (bugs, suggestions, features) sont stockés dans le dossier
 `feedback-tickets/` de chaque projet concerné, au format Markdown.
 
-Pour bank-review : `projects/bank-review/feedback-tickets/`
-Pour journal/kanban : `projects/assistant-ia/feedback-tickets/{project}/`
+Pour bank-review : `projects/bank-review/feature-tickets/`
+Pour journal/kanban : `projects/assistant-ia/feature-tickets/{project}/`
 
 Chaque fichier = un ticket. Champ `status: open` = en attente de traitement.
 
 ### Système feedback — Slack & déploiement
 
 Architecture en deux temps :
-- **Nouveau ticket** (widget web ou `/feedback` Slack) → notifie le channel `#features-{service}`
+- **Nouveau ticket** (widget web ou `/feature` Slack) → notifie le channel `#features-{service}`
 - **Déploiement** → notifie le channel principal du service avec la liste des tickets fermés
 
 ### Fermeture d'un ticket
@@ -87,9 +87,9 @@ Endpoint : `POST /webhook/deploy-complete` sur assistant-ia — accepte `{"servi
 | `#tasks` | `C0AV5M6385T` | déploiement kanban |
 | `#features-ai-assistant` | `C0AUCE6NELT` | nouveaux tickets journal + kanban |
 
-### Commande Slack `/feedback`
+### Commande Slack `/feature`
 Utilisable dans tout channel lié à un service. Socket Mode = pas d'URL publique, mais la commande doit être enregistrée dans api.slack.com → Slash Commands.
-Syntaxe : `/feedback [bug:|feature:|suggestion:] message`
+Syntaxe : `/feature [bug:|feature:|suggestion:] message`
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/
