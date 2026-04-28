@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 INTERNAL_API_KEY = os.getenv("ASSISTANT_INTERNAL_API_KEY", "")
 
-VALID_PROJECTS = {"journal", "kanban"}
+VALID_PROJECTS = {"journal", "kanban", "assistant-ia"}
 VALID_TYPES = {"bug", "feature", "suggestion", "error"}
 
 TYPE_EMOJI = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "🔴"}
@@ -27,6 +27,7 @@ TYPE_LABEL = {"bug": "Bug", "feature": "Feature", "suggestion": "Suggestion", "e
 _FEEDBACK_CHANNELS = {
     "journal": settings.FEATURES_AI_CHANNEL_ID,
     "kanban": settings.FEATURES_AI_CHANNEL_ID,
+    "assistant-ia": settings.FEATURES_AI_CHANNEL_ID,
 }
 
 

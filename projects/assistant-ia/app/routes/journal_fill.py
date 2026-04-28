@@ -98,6 +98,7 @@ def _shell(title: str, body: str, back_url: str = "", back_label: str = "") -> s
 {back}
 {body}
 </main>
+<script src="/public/feedback-widget.js" data-api="" data-project="journal" defer></script>
 </body>
 </html>"""
 

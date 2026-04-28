@@ -144,6 +144,7 @@ async def journal_page():
     <div style="margin-top:1rem">{slack_rows}</div>
   </details>
 </main>
+<script src="/public/feedback-widget.js" data-api="" data-project="journal" defer></script>
 </body>
 </html>"""
     return HTMLResponse(content=html)

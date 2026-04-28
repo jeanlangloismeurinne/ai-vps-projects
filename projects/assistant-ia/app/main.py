@@ -182,5 +182,6 @@ _LANDING_HTML = """<!DOCTYPE html>
   </div>
 
 </main>
+<script src="/public/feedback-widget.js" data-api="" data-project="assistant-ia" defer></script>
 </body>
 </html>"""
