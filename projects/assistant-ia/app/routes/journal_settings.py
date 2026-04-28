@@ -115,6 +115,7 @@ _JOURS_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 @router.get("/journal/settings", response_class=HTMLResponse)
 async def settings_index():
     parcours_list = await svc.list_parcours()
+    archived_parcours_list = await svc.list_archived_parcours()
 
     cards = ""
     for p in parcours_list:
@@ -161,7 +162,27 @@ async def settings_index():
       </div>
     </details>"""
 
-    body = f"<h2>Parcours de progression</h2>{cards}{form}"
+    archived_p_cards = "".join(f"""
+        <div class="card" style="opacity:.65">
+          <div class="flex-between">
+            <div>
+              <div style="font-weight:600">{p['nom']}</div>
+              {f'<p style="color:var(--muted);font-size:.85rem;margin-top:.3rem">{p["description"]}</p>' if p['description'] else ''}
+            </div>
+            <form method="post" action="/journal/settings/parcours/{p['id']}/restore" style="flex-shrink:0">
+              <button class="btn btn-ghost btn-sm" type="submit">Restaurer</button>
+            </form>
+          </div>
+        </div>""" for p in archived_parcours_list)
+    archived_p_section = ""
+    if archived_p_cards:
+        archived_p_section = f"""
+    <details style="margin-top:2rem">
+      <summary style="font-size:.9rem;color:var(--muted);cursor:pointer">Parcours archivés ({len(archived_parcours_list)})</summary>
+      <div style="margin-top:.75rem">{archived_p_cards}</div>
+    </details>"""
+
+    body = f"<h2>Parcours de progression</h2>{cards}{archived_p_section}{form}"
     return HTMLResponse(_shell("Paramètres", body))
 
 
@@ -252,9 +273,25 @@ async def parcours_detail(id: str):
                   <label>Description</label>
                   <textarea name="description">{desc}</textarea>
                 </div>
-                <div class="flex" style="gap:.75rem">
-                  <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Fréquence</label>
+                    <select name="frequence" onchange="toggleJoursEdit('{oid}',this.value)">{"".join(f'<option value="{v}"{" selected" if o["frequence"]==v else ""}>{lbl}</option>' for v,lbl in [("daily","Quotidien"),("weekly","Hebdomadaire"),("monthly","Mensuel")])}</select>
+                  </div>
+                  <div class="form-group">
+                    <label>Heure du rappel Slack</label>
+                    <input type="time" name="heure_rappel" value="{heure}">
+                  </div>
                 </div>
+                <div class="form-group" id="weekly-jours-edit-{oid}" style="display:{'block' if o['frequence']=='weekly' else 'none'}">
+                  <label>Jours de la semaine</label>
+                  <div style="margin-top:.4rem">{"".join(f'<label style="display:inline-flex;align-items:center;gap:.3rem;margin-right:.75rem;font-size:.85rem"><input type="checkbox" name="jours" value="{i}"{chr(32)+"checked" if i in (o["jours"] if isinstance(o["jours"],list) else json.loads(o["jours"] or "[]")) else ""}> {_JOURS_LABELS[i]}</label>' for i in range(7))}</div>
+                </div>
+                <div class="form-group" id="monthly-jours-edit-{oid}" style="display:{'block' if o['frequence']=='monthly' else 'none'}">
+                  <label>Jours du mois (ex : 1 15)</label>
+                  <input type="text" name="monthly_jours" value="{' '.join(str(j) for j in (o['jours'] if isinstance(o['jours'],list) else json.loads(o['jours'] or '[]'))) if o['frequence']=='monthly' else ''}" placeholder="1 15">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
               </form>
               <form method="post" action="/journal/settings/objectifs/{oid}/archive" style="margin-top:.6rem"
                     onsubmit="return confirm('Archiver cet objectif ? Il ne sera plus visible dans la liste.')">
@@ -327,6 +364,10 @@ async def parcours_detail(id: str):
       document.getElementById('weekly-jours').style.display = v==='weekly'?'block':'none';
       document.getElementById('monthly-jours').style.display = v==='monthly'?'block':'none';
     }}
+    function toggleJoursEdit(oid, v){{
+      document.getElementById('weekly-jours-edit-'+oid).style.display = v==='weekly'?'block':'none';
+      document.getElementById('monthly-jours-edit-'+oid).style.display = v==='monthly'?'block':'none';
+    }}
     </script>"""
 
     edit_form = f"""
@@ -349,6 +390,10 @@ async def parcours_detail(id: str):
               <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
             </form>
           </div>
+        </form>
+        <form method="post" action="/journal/settings/parcours/{id}/archive" style="margin-top:.6rem"
+              onsubmit="return confirm('Archiver ce parcours ? Il ne sera plus visible dans la liste.')">
+          <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--muted)">Archiver</button>
         </form>
       </div>
     </details>"""
@@ -373,6 +418,18 @@ async def update_parcours(id: str, request: Request):
 @router.post("/journal/settings/parcours/{id}/delete")
 async def delete_parcours(id: str):
     await svc.delete_parcours(id)
+    return RedirectResponse("/journal/settings", status_code=303)
+
+
+@router.post("/journal/settings/parcours/{id}/archive")
+async def archive_parcours(id: str):
+    await svc.archive_parcours(id)
+    return RedirectResponse("/journal/settings", status_code=303)
+
+
+@router.post("/journal/settings/parcours/{id}/restore")
+async def restore_parcours(id: str):
+    await svc.restore_parcours(id)
     return RedirectResponse("/journal/settings", status_code=303)
 
 
@@ -412,7 +469,18 @@ async def update_objectif(id: str, request: Request):
     o = await svc.get_objectif(id)
     if not o:
         return RedirectResponse("/journal/settings", status_code=303)
-    await svc.rename_objectif(id, form["nom"], form.get("description", ""))
+    frequence = form.get("frequence", "daily")
+    if frequence == "weekly":
+        jours = [int(j) for j in form.getlist("jours")]
+    elif frequence == "monthly":
+        raw = form.get("monthly_jours", "")
+        jours = [int(x) for x in raw.split() if x.isdigit()]
+    else:
+        jours = []
+    await svc.update_objectif(
+        id, form["nom"], form.get("description", ""),
+        frequence, jours, form.get("heure_rappel", "09:00"),
+    )
     return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
 
 

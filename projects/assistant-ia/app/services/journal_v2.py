@@ -12,7 +12,13 @@ _paris = pytz.timezone("Europe/Paris")
 async def list_parcours() -> list:
     pool = await get_pool()
     return await pool.fetch(
-        "SELECT * FROM journal_parcours ORDER BY sort_order, created_at"
+        "SELECT * FROM journal_parcours WHERE archived_at IS NULL ORDER BY sort_order, created_at"
+    )
+
+async def list_archived_parcours() -> list:
+    pool = await get_pool()
+    return await pool.fetch(
+        "SELECT * FROM journal_parcours WHERE archived_at IS NOT NULL ORDER BY archived_at DESC"
     )
 
 async def get_parcours(id: str):
@@ -39,6 +45,16 @@ async def toggle_parcours(id: str, is_active: bool) -> None:
     await pool.execute(
         "UPDATE journal_parcours SET is_active=$1 WHERE id=$2", is_active, id
     )
+
+async def archive_parcours(id: str) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE journal_parcours SET archived_at=now(), is_active=false WHERE id=$1", id
+    )
+
+async def restore_parcours(id: str) -> None:
+    pool = await get_pool()
+    await pool.execute("UPDATE journal_parcours SET archived_at=NULL WHERE id=$1", id)
 
 async def delete_parcours(id: str) -> None:
     pool = await get_pool()
@@ -125,7 +141,8 @@ async def get_all_active_objectifs() -> list:
         """SELECT o.*, p.nom as parcours_nom
            FROM journal_objectifs o
            JOIN journal_parcours p ON p.id = o.parcours_id
-           WHERE o.is_active = true AND p.is_active = true
+           WHERE o.is_active = true AND o.archived_at IS NULL
+             AND p.is_active = true AND p.archived_at IS NULL
            ORDER BY o.heure_rappel"""
     )
 
@@ -287,6 +304,21 @@ async def record_notification(objectif_id: str, session_date: date) -> None:
     await pool.execute(
         """INSERT INTO journal_notifications (objectif_id, session_date)
            VALUES ($1,$2) ON CONFLICT DO NOTHING""",
+        objectif_id, session_date,
+    )
+
+async def get_notification_today(objectif_id: str, session_date: date):
+    pool = await get_pool()
+    return await pool.fetchrow(
+        "SELECT * FROM journal_notifications WHERE objectif_id=$1 AND session_date=$2",
+        objectif_id, session_date,
+    )
+
+async def record_followup(objectif_id: str, session_date: date) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        """UPDATE journal_notifications SET followup_sent_at=now()
+           WHERE objectif_id=$1 AND session_date=$2""",
         objectif_id, session_date,
     )
 

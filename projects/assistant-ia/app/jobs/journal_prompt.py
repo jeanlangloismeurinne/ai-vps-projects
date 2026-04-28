@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import pytz
 from app.services import journal as journal_svc
 from app.services import journal_v2 as svc_v2
@@ -65,3 +65,25 @@ async def check_objectif_reminders():
         await post_text(channel=settings.SLACK_CHANNEL_JOURNAL, text=text)
         await svc_v2.record_notification(objectif_id, today)
         logger.info(f"Rappel objectif envoyé: {o['nom']} ({objectif_id})")
+
+    # Rappels de suivi : 3h après le premier message, si non complété
+    for o in due:
+        objectif_id = str(o["id"])
+        rappel_time = o["heure_rappel"]
+        followup_hhmm = (datetime.combine(today, rappel_time) + timedelta(hours=3)).strftime("%H:%M")
+        if followup_hhmm != current_hhmm:
+            continue
+        notif = await svc_v2.get_notification_today(objectif_id, today)
+        if not notif or notif["followup_sent_at"]:
+            continue
+        if await svc_v2.is_objectif_complete(objectif_id, today):
+            continue
+        parcours_nom = o.get("parcours_nom", "")
+        text = (
+            f"⏰ *Rappel : {o['nom']}*"
+            + (f" _(Parcours : {parcours_nom})_" if parcours_nom else "")
+            + f"\nTu n'as pas encore rempli ton journal → {settings.ASSISTANT_BASE_URL}/journal/fill/{objectif_id}"
+        )
+        await post_text(channel=settings.SLACK_CHANNEL_JOURNAL, text=text)
+        await svc_v2.record_followup(objectif_id, today)
+        logger.info(f"Rappel suivi envoyé: {o['nom']} ({objectif_id})")
