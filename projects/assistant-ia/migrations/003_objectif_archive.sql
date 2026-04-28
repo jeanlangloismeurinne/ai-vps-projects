@@ -1,0 +1,1 @@
+ALTER TABLE journal_objectifs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;

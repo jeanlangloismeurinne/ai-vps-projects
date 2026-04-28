@@ -49,7 +49,14 @@ async def delete_parcours(id: str) -> None:
 async def list_objectifs(parcours_id: str) -> list:
     pool = await get_pool()
     return await pool.fetch(
-        "SELECT * FROM journal_objectifs WHERE parcours_id=$1 ORDER BY sort_order, created_at",
+        "SELECT * FROM journal_objectifs WHERE parcours_id=$1 AND archived_at IS NULL ORDER BY sort_order, created_at",
+        parcours_id,
+    )
+
+async def list_archived_objectifs(parcours_id: str) -> list:
+    pool = await get_pool()
+    return await pool.fetch(
+        "SELECT * FROM journal_objectifs WHERE parcours_id=$1 AND archived_at IS NOT NULL ORDER BY archived_at DESC",
         parcours_id,
     )
 
@@ -87,6 +94,25 @@ async def toggle_objectif(id: str, is_active: bool) -> None:
     pool = await get_pool()
     await pool.execute(
         "UPDATE journal_objectifs SET is_active=$1 WHERE id=$2", is_active, id
+    )
+
+async def rename_objectif(id: str, nom: str, description: str) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE journal_objectifs SET nom=$1, description=$2 WHERE id=$3",
+        nom, description or None, id,
+    )
+
+async def archive_objectif(id: str) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE journal_objectifs SET archived_at=now(), is_active=false WHERE id=$1", id
+    )
+
+async def restore_objectif(id: str) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE journal_objectifs SET archived_at=NULL WHERE id=$1", id
     )
 
 async def delete_objectif(id: str) -> None:

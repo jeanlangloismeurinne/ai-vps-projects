@@ -188,9 +188,9 @@ async def parcours_detail(id: str):
         return RedirectResponse("/journal/settings", status_code=303)
 
     objectifs = await svc.list_objectifs(id)
+    archived_objectifs = await svc.list_archived_objectifs(id)
 
-    cards = ""
-    for o in objectifs:
+    def _objectif_card(o, archived=False):
         raw = o["jours"]
         jours = raw if isinstance(raw, list) else json.loads(raw or "[]")
         jours_str = ""
@@ -203,10 +203,26 @@ async def parcours_detail(id: str):
         active_cls = "badge-on" if o["is_active"] else "badge-off"
         active_lbl = "Actif" if o["is_active"] else "Inactif"
         desc = o["description"] or ""
+        oid = o["id"]
 
-        cards += f"""
-        <div class="card">
+        if archived:
+            return f"""
+        <div class="card" style="opacity:.65">
           <div class="flex-between">
+            <div>
+              <div style="font-weight:600;margin-bottom:.2rem">{o['nom']}</div>
+              <div style="font-size:.82rem;color:var(--muted)">{freq_str} · {heure}</div>
+              {f'<div style="font-size:.85rem;color:var(--muted);margin-top:.3rem">{desc}</div>' if desc else ''}
+            </div>
+            <form method="post" action="/journal/settings/objectifs/{oid}/restore" style="flex-shrink:0">
+              <button class="btn btn-ghost btn-sm" type="submit">Restaurer</button>
+            </form>
+          </div>
+        </div>"""
+
+        return f"""
+        <div class="card">
+          <div class="flex-between" style="align-items:flex-start">
             <div>
               <div class="flex" style="gap:.75rem;margin-bottom:.3rem">
                 <span style="font-weight:600">{o['nom']}</span>
@@ -216,18 +232,50 @@ async def parcours_detail(id: str):
               {f'<div style="font-size:.85rem;color:var(--muted);margin-top:.3rem">{desc}</div>' if desc else ''}
             </div>
             <div class="flex" style="gap:.5rem;flex-shrink:0">
-              <form method="post" action="/journal/settings/objectifs/{o['id']}/toggle" style="display:inline">
+              <form method="post" action="/journal/settings/objectifs/{oid}/toggle" style="display:inline">
                 <button class="btn btn-ghost btn-sm" type="submit">
                   {'Désactiver' if o['is_active'] else 'Activer'}
                 </button>
               </form>
-              <a href="/journal/settings/objectifs/{o['id']}" class="btn btn-ghost btn-sm">Questions →</a>
+              <a href="/journal/settings/objectifs/{oid}" class="btn btn-ghost btn-sm">Questions →</a>
             </div>
           </div>
+          <details style="margin-top:.75rem">
+            <summary style="font-size:.85rem;color:var(--muted);cursor:pointer">Éditer</summary>
+            <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+              <form method="post" action="/journal/settings/objectifs/{oid}/update">
+                <div class="form-group">
+                  <label>Nom</label>
+                  <input type="text" name="nom" value="{o['nom']}" required>
+                </div>
+                <div class="form-group">
+                  <label>Description</label>
+                  <textarea name="description">{desc}</textarea>
+                </div>
+                <div class="flex" style="gap:.75rem">
+                  <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                </div>
+              </form>
+              <form method="post" action="/journal/settings/objectifs/{oid}/archive" style="margin-top:.6rem"
+                    onsubmit="return confirm('Archiver cet objectif ? Il ne sera plus visible dans la liste.')">
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--muted)">Archiver</button>
+              </form>
+            </div>
+          </details>
         </div>"""
 
+    cards = "".join(_objectif_card(o) for o in objectifs)
     if not cards:
-        cards = '<p class="empty">Aucun objectif. Créez-en un ci-dessous.</p>'
+        cards = '<p class="empty">Aucun objectif actif. Créez-en un ci-dessous.</p>'
+
+    archived_cards = "".join(_objectif_card(o, archived=True) for o in archived_objectifs)
+    archived_section = ""
+    if archived_cards:
+        archived_section = f"""
+    <details style="margin-top:2rem">
+      <summary style="font-size:.9rem;color:var(--muted);cursor:pointer">Objectifs archivés ({len(archived_objectifs)})</summary>
+      <div style="margin-top:.75rem">{archived_cards}</div>
+    </details>"""
 
     freq_options = '<option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option>'
 
@@ -310,6 +358,7 @@ async def parcours_detail(id: str):
     {edit_form}
     <h3>Objectifs</h3>
     {cards}
+    {archived_section}
     {form}"""
     return HTMLResponse(_shell(p["nom"], body, "/journal/settings", "Parcours"))
 
@@ -355,6 +404,35 @@ async def toggle_objectif(id: str):
         return RedirectResponse("/journal/settings", status_code=303)
     await svc.toggle_objectif(id, not o["is_active"])
     return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
+
+
+@router.post("/journal/settings/objectifs/{id}/update")
+async def update_objectif(id: str, request: Request):
+    form = await request.form()
+    o = await svc.get_objectif(id)
+    if not o:
+        return RedirectResponse("/journal/settings", status_code=303)
+    await svc.rename_objectif(id, form["nom"], form.get("description", ""))
+    return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
+
+
+@router.post("/journal/settings/objectifs/{id}/archive")
+async def archive_objectif(id: str):
+    o = await svc.get_objectif(id)
+    if not o:
+        return RedirectResponse("/journal/settings", status_code=303)
+    await svc.archive_objectif(id)
+    return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
+
+
+@router.post("/journal/settings/objectifs/{id}/restore")
+async def restore_objectif(id: str):
+    o = await svc.get_objectif(id)
+    if not o:
+        return RedirectResponse("/journal/settings", status_code=303)
+    await svc.restore_objectif(id)
+    return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
+
 
 # ── Objectif → questions ──────────────────────────────────────────────────────
 
