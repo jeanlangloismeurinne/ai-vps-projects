@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, time
 import pytz
 from app.db import get_pool
 
@@ -67,7 +67,7 @@ async def create_objectif(
            (parcours_id, nom, description, frequence, jours, heure_rappel)
            VALUES ($1,$2,$3,$4,$5,$6) RETURNING id""",
         parcours_id, nom, description or None,
-        frequence, json.dumps(jours), heure_rappel,
+        frequence, json.dumps(jours), time.fromisoformat(heure_rappel),
     )
     return str(row["id"])
 
@@ -80,7 +80,7 @@ async def update_objectif(
         """UPDATE journal_objectifs
            SET nom=$1, description=$2, frequence=$3, jours=$4, heure_rappel=$5
            WHERE id=$6""",
-        nom, description or None, frequence, json.dumps(jours), heure_rappel, id,
+        nom, description or None, frequence, json.dumps(jours), time.fromisoformat(heure_rappel), id,
     )
 
 async def toggle_objectif(id: str, is_active: bool) -> None:
