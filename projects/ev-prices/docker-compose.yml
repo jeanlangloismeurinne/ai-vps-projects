@@ -11,6 +11,22 @@ services:
       - SLACK_ALERT_CHANNEL=${SLACK_ALERT_CHANNEL:-C0AUFGZNBGT}
     networks:
       - infra-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-0-ev0prices0000000000000000.entryPoints=http"
+      - "traefik.http.routers.http-0-ev0prices0000000000000000.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-0-ev0prices0000000000000000.rule=Host(`ev.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.http-0-ev0prices0000000000000000.service=http-0-ev0prices0000000000000000"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.entryPoints=https"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.middlewares=gzip"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.rule=Host(`ev.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.service=https-0-ev0prices0000000000000000"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.tls=true"
+      - "traefik.http.routers.https-0-ev0prices0000000000000000.tls.certresolver=letsencrypt"
+      - "traefik.http.services.http-0-ev0prices0000000000000000.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-0-ev0prices0000000000000000.loadbalancer.server.port=8000"
 
 networks:
   infra-net:
