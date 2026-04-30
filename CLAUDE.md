@@ -120,6 +120,64 @@ pas le chemin complet — Coolify les concatène et double le chemin sinon.
 En mode `dockercompose`, ne pas mettre `env_file: .env` — le fichier `.env` est gitignored
 et absent du build. Coolify injecte ses variables directement dans le service.
 
+### Mode `dockercompose` : labels Traefik obligatoires
+
+**Coolify n'injecte PAS les labels Traefik pour les apps `dockercompose`** (contrairement au mode nixpacks où ils sont auto-générés). Sans ces labels, Traefik ignore le container → "no available server".
+
+Il faut les déclarer explicitement dans `docker-compose.yml` :
+
+```yaml
+services:
+  mon-service:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-0-{UUID}.entryPoints=http"
+      - "traefik.http.routers.http-0-{UUID}.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-0-{UUID}.rule=Host(`{domaine}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.http-0-{UUID}.service=http-0-{UUID}"
+      - "traefik.http.routers.https-0-{UUID}.entryPoints=https"
+      - "traefik.http.routers.https-0-{UUID}.middlewares=gzip"
+      - "traefik.http.routers.https-0-{UUID}.rule=Host(`{domaine}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.https-0-{UUID}.service=https-0-{UUID}"
+      - "traefik.http.routers.https-0-{UUID}.tls=true"
+      - "traefik.http.routers.https-0-{UUID}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.http-0-{UUID}.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-0-{UUID}.loadbalancer.server.port=8000"
+```
+
+Remplacer `{UUID}` par l'UUID Coolify de l'app et `{domaine}` par le FQDN.
+
+### Créer une app dockercompose dans Coolify via DB
+
+L'API `/api/v1/applications` retourne 404 pour les apps dockercompose. Contournement : insertion directe en base, en 3 étapes obligatoires — une manquante = crash silencieux au déploiement.
+
+**Étape 1 — Créer l'application** (voir scripts précédents dans l'historique git)
+
+**Étape 2 — Corriger source_type** (sinon : "disable_build_cache on null")
+```sql
+UPDATE applications SET source_type='App\Models\GithubApp', source_id=0 WHERE uuid='{UUID}';
+```
+
+**Étape 3 — Créer ApplicationSettings** (sinon : "Cannot assign null to property $disableBuildCache")
+```sql
+INSERT INTO application_settings (application_id, created_at, updated_at)
+SELECT id, NOW(), NOW() FROM applications WHERE uuid='{UUID}';
+```
+
+Puis dispatcher le premier déploiement via `php artisan tinker` :
+```php
+$app = \App\Models\Application::where('uuid', '{UUID}')->first();
+\App\Jobs\ApplicationDeploymentJob::dispatch(application_deployment_queue_id: $deploymentId, ...);
+```
+
+### Playwright sur Debian Trixie (Python 3.12-slim)
+
+`playwright install-deps chromium` échoue sur Debian 13 Trixie — les paquets `ttf-unifont` et `ttf-ubuntu-font-family` ont été renommés. **Ne pas utiliser `install-deps`**.
+
+À la place, installer manuellement les dépendances Chromium avec les noms Trixie corrects (suffixe `t64` pour les libs 64-bit, `fonts-unifont` et `fonts-liberation`). Voir le Dockerfile de `projects/ev-prices/` comme référence.
+
 ### UUIDs des applications Coolify
 
 | Application | UUID |
@@ -128,7 +186,7 @@ et absent du build. Coolify injecte ses variables directement dans le service.
 | bank-review | `ji9jg7ngkva7j4d2uic05d3v` |
 | homepage | `h7dyrhas03di7jqq2wl2j72z` |
 | tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
-| ev-prices | `(à renseigner après création dans Coolify)` |
+| ev-prices | `ev0prices0000000000000000` |
 
 ### Déclencher un rebuild via l'API Coolify
 
