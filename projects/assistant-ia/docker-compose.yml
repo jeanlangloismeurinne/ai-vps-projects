@@ -3,6 +3,7 @@ services:
     build: .
     volumes:
       - /storage/Documents:/storage/Documents:ro
+      - /root/ai-vps-projects/projects/assistant-ia/feedback-tickets:/app/feedback-tickets
     networks:
       - infra-net
       - coolify
