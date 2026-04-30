@@ -82,20 +82,24 @@ Endpoint : `POST /webhook/deploy-complete` sur assistant-ia — accepte `{"servi
 | Channel | ID | Rôle |
 |---|---|---|
 | `#bank-review` | `C0AV2EJHR5H` | déploiement bank-review |
-| `#features-bank-review` | `C0ATW9S0S7N` | nouveaux tickets bank-review |
 | `#journal` | `C0B080X2ZBK` | déploiement journal |
 | `#tasks` | `C0AV5M6385T` | déploiement kanban |
-| `#features-ai-assistant` | `C0AUCE6NELT` | nouveaux tickets journal + kanban |
+| `#feedback` | `C0AUCE6NELT` | nouveaux tickets tous projets (ex #features-ai-assistant) |
 
 ### Commande Slack `/feature`
-Utilisable dans tout channel lié à un service. Socket Mode = pas d'URL publique, mais la commande doit être enregistrée dans api.slack.com → Slash Commands.
-Syntaxe : `/feature [bug:|feature:|suggestion:] message`
+Utilisable dans n'importe quel channel. Socket Mode = pas d'URL publique, mais la commande doit être enregistrée dans api.slack.com → Slash Commands.
+- Depuis un channel lié à un projet (`#bank-review`, `#journal`, `#tasks`) → feedback enregistré directement
+- Depuis tout autre channel → sélecteur Block Kit avec la liste des projets + « ➕ Nouveau projet »
+Syntaxe : `/feature votre message`
+
+La variable `FEEDBACK_CHANNEL_ID` a `C0AUCE6NELT` en valeur par défaut — aucune config Coolify nécessaire.
 
 ## Ajouter un projet
 1. Créer projects/nouveau-projet/
 2. Créer la base : docker exec shared-postgres psql -U admin -c 'CREATE DATABASE db_nouveau;'
 3. Créer une app Coolify avec Base Directory = projects/nouveau-projet
 4. Documenter ici
+5. **Ajouter le nom du dossier dans `_KNOWN_PROJECTS`** dans `projects/assistant-ia/app/slack_app.py` — cette liste est la source de vérité pour la commande `/feature` (sélecteur de projet Block Kit)
 
 ## Stack commune
 Node.js 20, TypeScript strict, Fastify, Docker

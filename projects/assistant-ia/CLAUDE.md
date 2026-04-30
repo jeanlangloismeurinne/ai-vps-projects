@@ -66,10 +66,11 @@ C'est le seul endroit à modifier pour brancher un nouveau service sur le systè
 2. Ajouter une entrée dans `_build_registry()` (voir modèle commenté dans le fichier)
 3. Ajouter les variables d'env dans `config.py`
 4. Configurer `post_deployment_command` dans Coolify (voir CLAUDE.md racine)
+5. Ajouter le nom dans `_KNOWN_PROJECTS` dans `app/slack_app.py` (liste des projets proposés par `/feature`)
 
 ### Ajouter un service interne (hébergé dans assistant-ia)
-1. Ajouter le nom dans `VALID_PROJECTS` dans `app/routes/feedback.py`
-2. Ajouter une entrée dans `_build_registry()` avec `base_url = ASSISTANT_BASE_URL` et `coolify_uuid = "gayg5mw9jikbio2le75olq8b"`
+1. Ajouter une entrée dans `_build_registry()` avec `base_url = ASSISTANT_BASE_URL` et `coolify_uuid = "gayg5mw9jikbio2le75olq8b"`
+2. Ajouter le nom dans `_KNOWN_PROJECTS` dans `app/slack_app.py` (liste des projets proposés par `/feature`)
 
 ### UUID Coolify des apps
 - `bank-review` : `ji9jg7ngkva7j4d2uic05d3v`

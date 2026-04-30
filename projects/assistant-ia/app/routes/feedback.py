@@ -17,18 +17,11 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 INTERNAL_API_KEY = os.getenv("ASSISTANT_INTERNAL_API_KEY", "")
 
-VALID_PROJECTS = {"journal", "kanban", "assistant-ia"}
+_VALID_PROJECT_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 VALID_TYPES = {"bug", "feature", "suggestion", "error"}
 
 TYPE_EMOJI = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "🔴"}
 TYPE_LABEL = {"bug": "Bug", "feature": "Feature", "suggestion": "Suggestion", "error": "Erreur JS"}
-
-# Mapping project → channel Slack pour alertes feedback
-_FEEDBACK_CHANNELS = {
-    "journal": settings.FEATURES_AI_CHANNEL_ID,
-    "kanban": settings.FEATURES_AI_CHANNEL_ID,
-    "assistant-ia": settings.FEATURES_AI_CHANNEL_ID,
-}
 
 
 def _tickets_dir(project: str) -> Path:
@@ -98,8 +91,8 @@ def _find_ticket(project: str, ticket_id: str) -> Path | None:
 
 @router.post("/{project}")
 async def post_feedback(project: str, request: Request):
-    if project not in VALID_PROJECTS:
-        return JSONResponse({"error": f"Unknown project '{project}'"}, status_code=404)
+    if not _VALID_PROJECT_RE.match(project):
+        return JSONResponse({"error": f"Invalid project name '{project}'"}, status_code=400)
 
     data = await request.json()
     if data.get("type") not in VALID_TYPES:
@@ -109,7 +102,7 @@ async def post_feedback(project: str, request: Request):
 
     filename = _save_ticket(project, data)
 
-    channel = _FEEDBACK_CHANNELS.get(project, settings.FEATURES_AI_CHANNEL_ID)
+    channel = settings.FEEDBACK_CHANNEL_ID or settings.FEATURES_AI_CHANNEL_ID
     emoji = TYPE_EMOJI.get(data["type"], "📝")
     text = f"{emoji} *Nouveau feedback {project}* — `{data['type']}`\n{(data.get('message') or '')[:300]}"
     try:
@@ -131,8 +124,8 @@ async def post_feedback(project: str, request: Request):
 async def close_ticket(project: str, ticket_id: str, x_internal_api_key: str = Header(default="")):
     if INTERNAL_API_KEY and x_internal_api_key != INTERNAL_API_KEY:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    if project not in VALID_PROJECTS:
-        return JSONResponse({"error": f"Unknown project '{project}'"}, status_code=404)
+    if not _VALID_PROJECT_RE.match(project):
+        return JSONResponse({"error": f"Invalid project name '{project}'"}, status_code=400)
 
     path = _find_ticket(project, ticket_id)
     if not path:
@@ -157,8 +150,8 @@ async def closed_since(
 ):
     if INTERNAL_API_KEY and x_internal_api_key != INTERNAL_API_KEY:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    if project not in VALID_PROJECTS:
-        return JSONResponse({"error": f"Unknown project '{project}'"}, status_code=404)
+    if not _VALID_PROJECT_RE.match(project):
+        return JSONResponse({"error": f"Invalid project name '{project}'"}, status_code=400)
 
     try:
         since_dt = datetime.fromisoformat(since)

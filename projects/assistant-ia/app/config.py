@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     # Channels Slack par service (valeurs par défaut = IDs connus)
     JOURNAL_CHANNEL_ID: str = "C0B080X2ZBK"         # #journal
     TASKS_CHANNEL_ID: str = "C0AV5M6385T"            # #tasks (kanban)
-    FEATURES_AI_CHANNEL_ID: str = "C0AUCE6NELT"      # #features-ai-assistant
+    FEATURES_AI_CHANNEL_ID: str = "C0AUCE6NELT"      # #features-ai-assistant (déprécié)
+    FEEDBACK_CHANNEL_ID: str = "C0AUCE6NELT"         # #feedback (canal unifié)
 
     # Feature 1 — Journal
     SLACK_CHANNEL_JOURNAL: str = "#journal"

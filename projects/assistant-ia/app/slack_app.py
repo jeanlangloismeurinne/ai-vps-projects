@@ -123,18 +123,66 @@ async def cmd_taches(ack, body, respond):
     await respond("\n".join(lines))
 
 
-# ─── /feedback ────────────────────────────────────────────────────────────────
+# ─── /feature ─────────────────────────────────────────────────────────────────
 
-_TYPE_EMOJI = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "🔴"}
+# Liste des dossiers projets — à incrémenter à chaque nouveau projet (voir CLAUDE.md)
+_KNOWN_PROJECTS = [
+    "assistant-ia",
+    "bank-review",
+    "feedback-module",
+    "hello-world",
+    "homepage",
+    "tool-file-intake",
+]
 
 
-def _parse_feedback_type(text: str) -> tuple[str, str]:
-    """Extrait le type du texte (ex: 'bug: message') → ('bug', 'message'). Défaut: suggestion."""
-    for t in ("bug", "feature", "suggestion", "error"):
-        for sep in (f"{t}:", f"{t} "):
-            if text.lower().startswith(sep):
-                return t, text[len(sep):].strip()
-    return "suggestion", text
+async def _submit_feedback(project_name: str, message: str, source_url: str) -> None:
+    from app.services import registry as svc_registry
+    from app.config import settings
+
+    svc = svc_registry.by_name(project_name)
+    if svc:
+        url = svc["base_url"].rstrip("/") + svc["feedback_path"]
+        headers = {"X-Internal-Api-Key": svc["api_key"]} if svc.get("api_key") else {}
+    else:
+        url = settings.ASSISTANT_BASE_URL.rstrip("/") + f"/api/feedback/{project_name}"
+        headers = {"X-Internal-Api-Key": settings.ASSISTANT_INTERNAL_API_KEY} if settings.ASSISTANT_INTERNAL_API_KEY else {}
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            url,
+            json={"type": "suggestion", "message": message, "url": source_url},
+            headers=headers,
+            timeout=8.0,
+        )
+    resp.raise_for_status()
+
+
+def _project_selector_blocks(message: str) -> list:
+    preview = message[:200]
+    buttons = [
+        {
+            "type": "button",
+            "text": {"type": "plain_text", "text": p},
+            "action_id": "feedback_project_select",
+            "value": f"{p}|{message}",
+        }
+        for p in _KNOWN_PROJECTS
+    ]
+    buttons.append({
+        "type": "button",
+        "text": {"type": "plain_text", "text": "➕ Nouveau projet"},
+        "action_id": "feedback_new_project",
+        "value": message,
+        "style": "primary",
+    })
+    return [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"Pour quel projet ce feedback ?\n> {preview}"},
+        },
+        {"type": "actions", "elements": buttons},
+    ]
 
 
 @bolt.command("/feature")
@@ -146,45 +194,55 @@ async def cmd_feedback(ack, body, respond):
     channel_name: str = body.get("channel_name", "")
     text: str = (body.get("text") or "").strip()
 
+    if not text:
+        await respond(response_type="ephemeral", text="Usage : `/feature votre message`")
+        return
+
     svc = svc_registry.by_channel(channel_id)
-    if not svc:
-        await respond(
-            "Ce channel n'est pas associé à un service.\n"
-            "Utilisez `/feedback` depuis un channel lié à un service (ex. `#bank-review`, `#feedback-bank-review`)."
-        )
-        return
-
-    feedback_type, message = _parse_feedback_type(text)
-
-    if not message:
-        await respond(
-            "Usage : `/feedback [bug:|feature:|suggestion:] votre message`\n"
-            "Exemples :\n"
-            "• `/feedback Le bouton import ne fonctionne pas`\n"
-            "• `/feedback bug: Erreur 500 sur /budget`\n"
-            "• `/feedback feature: Ajouter un export PDF`"
-        )
-        return
-
-    try:
-        url = svc["base_url"].rstrip("/") + svc["feedback_path"]
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                url,
-                json={"type": feedback_type, "message": message, "url": f"slack://#{channel_name}"},
-                timeout=8.0,
-            )
-        if resp.status_code == 200:
-            emoji = _TYPE_EMOJI.get(feedback_type, "📝")
+    if svc:
+        try:
+            await _submit_feedback(svc["name"], text, f"slack://#{channel_name}")
             await respond(
                 response_type="ephemeral",
-                text=f"{emoji} Feedback enregistré pour *{svc['name']}* (`{feedback_type}`). Merci !",
+                text=f"✅ Feedback enregistré pour *{svc['name']}*. Merci !",
             )
-        else:
-            await respond(f"❌ Erreur lors de l'enregistrement ({resp.status_code}).")
+        except Exception as exc:
+            logger.error("cmd_feedback direct error: %s", exc)
+            await respond(response_type="ephemeral", text="❌ Impossible d'enregistrer le feedback. Réessayez.")
+        return
+
+    await respond(
+        response_type="ephemeral",
+        blocks=_project_selector_blocks(text),
+        text="Pour quel projet ce feedback ?",
+    )
+
+
+@bolt.action("feedback_project_select")
+async def action_feedback_project(ack, body, respond):
+    await ack()
+    value: str = body["actions"][0]["value"]
+    project_name, _, message = value.partition("|")
+    try:
+        await _submit_feedback(project_name, message, "slack://direct")
+        await respond(
+            replace_original=True,
+            text=f"✅ Feedback enregistré pour *{project_name}*. Merci !",
+        )
     except Exception as exc:
-        logger.error("cmd_feedback error: %s", exc)
-        await respond("❌ Impossible de joindre le service. Réessayez.")
+        logger.error("action_feedback_project error: %s", exc)
+        await respond(replace_original=True, text="❌ Impossible d'enregistrer le feedback. Réessayez.")
+
+
+@bolt.action("feedback_new_project")
+async def action_feedback_new_project(ack, body, respond):
+    await ack()
+    message = body["actions"][0]["value"]
+    preview = message[:200]
+    await respond(
+        replace_original=True,
+        text=f"🆕 *Nouveau projet* noté. On définira la structure ensemble via Claude Code.\n> {preview}",
+    )
 
 
 # ─── /vue ─────────────────────────────────────────────────────────────────────

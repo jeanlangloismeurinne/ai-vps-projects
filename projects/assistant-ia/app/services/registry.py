@@ -21,15 +21,14 @@ def _build_registry() -> list[dict]:
         {
             "name": "bank-review",
             "base_url": settings.BANK_REVIEW_BASE_URL,
-            "feedback_path": "/api/feedback",        # POST pour soumettre
+            "feedback_path": "/api/feedback",
             "closed_since_path": "/api/feedback/closed-since",
             "api_key": settings.BANK_REVIEW_API_KEY,
-            "slack_channel": settings.BANK_REVIEW_CHANNEL_ID,        # notif déploiement
-            "feedback_channel": settings.BANK_REVIEW_FEEDBACK_CHANNEL_ID,  # nouveaux tickets
+            "slack_channel": settings.BANK_REVIEW_CHANNEL_ID,
+            "feedback_channel": settings.FEEDBACK_CHANNEL_ID,
             "coolify_uuid": "ji9jg7ngkva7j4d2uic05d3v",
             "linked_channels": list(filter(None, [
                 settings.BANK_REVIEW_CHANNEL_ID,
-                settings.BANK_REVIEW_FEEDBACK_CHANNEL_ID,
             ])),
         },
 
@@ -40,12 +39,11 @@ def _build_registry() -> list[dict]:
             "feedback_path": "/api/feedback/journal",
             "closed_since_path": "/api/feedback/journal/closed-since",
             "api_key": _assistant_key,
-            "slack_channel": settings.JOURNAL_CHANNEL_ID,          # notif déploiement → #journal
-            "feedback_channel": settings.FEATURES_AI_CHANNEL_ID,   # nouveaux tickets → #features-ai-assistant
-            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",            # même app que assistant-ia
+            "slack_channel": settings.JOURNAL_CHANNEL_ID,
+            "feedback_channel": settings.FEEDBACK_CHANNEL_ID,
+            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",
             "linked_channels": list(filter(None, [
                 settings.JOURNAL_CHANNEL_ID,
-                settings.FEATURES_AI_CHANNEL_ID,
             ])),
         },
         {
@@ -54,12 +52,11 @@ def _build_registry() -> list[dict]:
             "feedback_path": "/api/feedback/kanban",
             "closed_since_path": "/api/feedback/kanban/closed-since",
             "api_key": _assistant_key,
-            "slack_channel": settings.TASKS_CHANNEL_ID,            # notif déploiement → #tasks
-            "feedback_channel": settings.FEATURES_AI_CHANNEL_ID,
-            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",            # même app que assistant-ia
+            "slack_channel": settings.TASKS_CHANNEL_ID,
+            "feedback_channel": settings.FEEDBACK_CHANNEL_ID,
+            "coolify_uuid": "gayg5mw9jikbio2le75olq8b",
             "linked_channels": list(filter(None, [
                 settings.TASKS_CHANNEL_ID,
-                settings.FEATURES_AI_CHANNEL_ID,
             ])),
         },
 
