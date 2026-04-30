@@ -1,0 +1,17 @@
+services:
+  ev-prices:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8040:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_ALERT_CHANNEL=${SLACK_ALERT_CHANNEL:-C0AUFGZNBGT}
+    networks:
+      - infra-net
+
+networks:
+  infra-net:
+    external: true

@@ -38,6 +38,14 @@ SERVICES = [
         "url": "https://bank.jlmvpscode.duckdns.org/",
         "color": "#2da862",
     },
+    {
+        "id": "ev-prices",
+        "emoji": "⚡",
+        "name": "EV Prices",
+        "desc": "Suivi des prix véhicules électriques · 14 constructeurs",
+        "url": "https://ev.jlmvpscode.duckdns.org/",
+        "color": "#f59e0b",
+    },
 ]
 
 # ── Templates ─────────────────────────────────────────────────────────────────

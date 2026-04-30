@@ -16,7 +16,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 
 ## Infrastructure partagée
 - PostgreSQL 16 : shared-postgres (port 5432)
-  Bases : db_assistant (réservée pour assistant-ia, pas encore utilisée)
+  Bases : db_assistant (réservée pour assistant-ia, pas encore utilisée) · db_ev_prices (ev-prices)
 
 ## Clés API inter-services
 - `INTERNAL_API_KEY` (bank-review ↔ assistant-ia) : `a09e3fce7a11df086a317458e4f15bf9f96ee57e7a0837f85d96905723d58585`
@@ -30,6 +30,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
 - projects/feature-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
+- projects/ev-prices/ : suivi des prix véhicules électriques (14 constructeurs, scraping hebdomadaire) — Python 3.12, FastAPI, Playwright, PostgreSQL (port 8040) · URL : ev.jlmvpscode.duckdns.org
 
 ## Slack bot partagé
 
@@ -127,6 +128,7 @@ et absent du build. Coolify injecte ses variables directement dans le service.
 | bank-review | `ji9jg7ngkva7j4d2uic05d3v` |
 | homepage | `h7dyrhas03di7jqq2wl2j72z` |
 | tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
+| ev-prices | `(à renseigner après création dans Coolify)` |
 
 ### Déclencher un rebuild via l'API Coolify
 

@@ -129,6 +129,7 @@ async def cmd_taches(ack, body, respond):
 _KNOWN_PROJECTS = [
     "assistant-ia",
     "bank-review",
+    "ev-prices",
     "feedback-module",
     "hello-world",
     "homepage",
