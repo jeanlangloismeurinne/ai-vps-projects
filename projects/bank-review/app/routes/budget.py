@@ -16,9 +16,36 @@ from app.services.budget import (
 from app.services.database import (
     get_classification_rules, create_classification_rule,
     delete_classification_rule, check_rule_conflict, apply_rule_to_year,
+    get_classifier_rules_all, get_classifier_rules_for_settings,
+    create_classifier_rule_new, update_classifier_rule_fields,
+    delete_classifier_rule_new, reorder_classifier_rules,
+    apply_classifier_rule_to_year, check_rule_conflict_new,
+    get_classifier_snapshots, create_classifier_snapshot,
+    restore_classifier_snapshot,
 )
 
 router = APIRouter()
+
+
+def _annotate_with_rules(txs: list[dict], rules: list[dict]) -> None:
+    """Annotate each transaction with matched rule info (multi-keyword aware)."""
+    for tx in txs:
+        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
+        matched = None
+        for rule in rules:
+            keywords = [k.upper() for k in rule.get("keywords", [])]
+            if not keywords:
+                continue
+            if rule.get("match_mode") == "AND":
+                if all(k in lc for k in keywords):
+                    matched = rule
+                    break
+            else:
+                if any(k in lc for k in keywords):
+                    matched = rule
+                    break
+        tx["_matched_rule_category"] = matched["category"] if matched else None
+        tx["_matched_rule_id"] = matched["id"] if matched else None
 
 
 @router.get("/budget", response_class=HTMLResponse)
@@ -75,14 +102,8 @@ async def budget_month_page(
     lines = await get_budget_lines(year_id)
     categories = [l["category"] for l in lines]  # ordered by sort_order
 
-    # Annotate with rule badges
-    rules = await get_classification_rules()
-    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
-    for tx in txs:
-        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
-        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
-        tx["_matched_rule_category"] = matched[0] if matched else None
-        tx["_matched_rule_id"] = matched[1] if matched else None
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(txs, rules)
 
     total_expenses = sum(t["amount"] for t in txs if t["amount"] < 0)
     total_income = sum(t["amount"] for t in txs if t["amount"] > 0)
@@ -118,13 +139,8 @@ async def budget_uncovered_page(
     lines = await get_budget_lines(year_id)
     categories = [l["category"] for l in lines]
 
-    rules = await get_classification_rules()
-    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
-    for tx in txs:
-        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
-        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
-        tx["_matched_rule_category"] = matched[0] if matched else None
-        tx["_matched_rule_id"] = matched[1] if matched else None
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(txs, rules)
 
     total_expenses = sum(t["amount"] for t in txs if t["amount"] < 0)
     total_income = sum(t["amount"] for t in txs if t["amount"] > 0)
@@ -161,13 +177,8 @@ async def budget_ytd_page(
     lines = await get_budget_lines(year_id)
     categories = [l["category"] for l in lines]
 
-    rules = await get_classification_rules()
-    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
-    for tx in txs:
-        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
-        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
-        tx["_matched_rule_category"] = matched[0] if matched else None
-        tx["_matched_rule_id"] = matched[1] if matched else None
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(txs, rules)
 
     total_expenses = sum(t["amount"] for t in txs if t["amount"] < 0)
     total_income = sum(t["amount"] for t in txs if t["amount"] > 0)
@@ -190,9 +201,11 @@ async def budget_settings(request: Request):
     if not is_authenticated(request):
         return RedirectResponse("/", status_code=302)
 
-    rules = await get_classification_rules()
+    rules = await get_classifier_rules_for_settings()
+    snapshots = await get_classifier_snapshots(limit=20)
     years = await get_budget_years()
     categories = []
+    current_year_id = None
     if years:
         from datetime import date as _date
         today_str = _date.today().isoformat()
@@ -202,16 +215,12 @@ async def budget_settings(request: Request):
         )
         lines = await get_budget_lines(current_year["id"])
         categories = sorted([l["category"] for l in lines])
-
-    for r in rules:
-        if hasattr(r["created_at"], "isoformat"):
-            r["created_at"] = r["created_at"].isoformat()
-
-    current_year_id = current_year["id"] if years else None
+        current_year_id = current_year["id"]
 
     return templates.TemplateResponse(request, "settings.html", {
         "rules": rules,
         "categories": categories,
+        "snapshots": snapshots,
         "current_year_id": current_year_id,
     })
 
@@ -324,16 +333,13 @@ async def api_dismiss_update(request: Request, year_id: int):
     return {"ok": True}
 
 
-# ── Classification rules API ──────────────────────────────────────────────────
+# ── Legacy rules API (kept for ⚡ modal — now creates stage-0 rules) ──────────
 
 @router.get("/api/rules")
 async def api_get_rules(request: Request):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
-    rules = await get_classification_rules()
-    for r in rules:
-        if hasattr(r.get("created_at"), "isoformat"):
-            r["created_at"] = r["created_at"].isoformat()
+    rules = await get_classifier_rules_all()
     return rules
 
 
@@ -343,19 +349,14 @@ async def api_create_rule(request: Request, payload: RulePayload):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     if not payload.keyword.strip() or not payload.category.strip():
         return JSONResponse({"error": "Mot-clé et catégorie requis."}, status_code=400)
-    rule_id = await create_classification_rule(payload.keyword, payload.category)
+    rule_id = await create_classifier_rule_new(
+        stage=0, keywords=[payload.keyword.strip()],
+        match_mode="OR", category=payload.category.strip(), source="auto",
+    )
     applied = 0
     if payload.year_id:
-        applied = await apply_rule_to_year(payload.keyword, payload.category, payload.year_id)
+        applied = await apply_classifier_rule_to_year(rule_id, payload.year_id)
     return {"ok": True, "id": rule_id, "applied": applied}
-
-
-@router.delete("/api/rules/{rule_id}")
-async def api_delete_rule(request: Request, rule_id: int):
-    if not is_authenticated(request):
-        return JSONResponse({"error": "Non authentifié."}, status_code=401)
-    await delete_classification_rule(rule_id)
-    return {"ok": True}
 
 
 @router.get("/api/rules/check")
@@ -366,5 +367,102 @@ async def api_check_rule(
 ):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
-    conflict = await check_rule_conflict(keyword, category)
+    conflict = await check_rule_conflict_new(keyword, category)
     return {"conflict": conflict is not None, "existing": conflict}
+
+
+# ── Classifier rules API (new system) ────────────────────────────────────────
+
+class ClassifierRulePayload(BaseModel):
+    stage: int = 2
+    keywords: list[str]
+    match_mode: str = "OR"
+    category: str
+    source: str = "user"
+    year_id: int | None = None
+
+
+class ClassifierRuleUpdate(BaseModel):
+    stage: int | None = None
+    sort_order: int | None = None
+    keywords: list[str] | None = None
+    match_mode: str | None = None
+    category: str | None = None
+    is_active: bool | None = None
+
+
+class ReorderItem(BaseModel):
+    id: int
+    stage: int
+    sort_order: int
+
+
+@router.get("/api/classifier/rules")
+async def api_get_classifier_rules(request: Request):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    return await get_classifier_rules_for_settings()
+
+
+@router.post("/api/classifier/rules")
+async def api_create_classifier_rule(request: Request, payload: ClassifierRulePayload):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    if not payload.keywords or not payload.category.strip():
+        return JSONResponse({"error": "Mots-clés et catégorie requis."}, status_code=400)
+    rule_id = await create_classifier_rule_new(
+        stage=payload.stage, keywords=payload.keywords,
+        match_mode=payload.match_mode, category=payload.category,
+        source=payload.source, year_id=payload.year_id,
+    )
+    return {"ok": True, "id": rule_id}
+
+
+@router.put("/api/classifier/rules/reorder")
+async def api_reorder_classifier_rules(request: Request, items: list[ReorderItem]):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await reorder_classifier_rules([i.dict() for i in items])
+    return {"ok": True}
+
+
+@router.put("/api/classifier/rules/{rule_id}")
+async def api_update_classifier_rule(request: Request, rule_id: int, payload: ClassifierRuleUpdate):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    fields = {k: v for k, v in payload.dict().items() if v is not None}
+    await update_classifier_rule_fields(rule_id, fields)
+    return {"ok": True}
+
+
+@router.delete("/api/classifier/rules/{rule_id}")
+async def api_delete_classifier_rule(request: Request, rule_id: int):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await delete_classifier_rule_new(rule_id)
+    return {"ok": True}
+
+
+@router.get("/api/classifier/snapshots")
+async def api_get_snapshots(request: Request):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    return await get_classifier_snapshots()
+
+
+@router.post("/api/classifier/snapshots")
+async def api_create_snapshot(request: Request):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    body = await request.json()
+    snap_id = await create_classifier_snapshot(body.get("label", "Manuel"))
+    return {"ok": True, "id": snap_id}
+
+
+@router.post("/api/classifier/snapshots/{snapshot_id}/restore")
+async def api_restore_snapshot(request: Request, snapshot_id: int):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await create_classifier_snapshot("avant-restauration")
+    await restore_classifier_snapshot(snapshot_id)
+    return {"ok": True}

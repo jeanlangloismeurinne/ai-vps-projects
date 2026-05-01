@@ -41,37 +41,6 @@ BANK_TO_USER: dict[str, tuple[str, int]] = {
     "chèques":                                    ("Espèces",      80),
 }
 
-# ── Keyword rules on label ────────────────────────────────────────────────────
-# Rules checked BEFORE vacation period — use for recurring charges that happen
-# regardless of travel (payroll taxes, regular staff, subscriptions).
-PRIORITY_LABEL_RULES: list[tuple[str, str, int]] = [
-    (r"\bURSSAF\b",      "Nounou",    95),
-    (r"\bJUSTINIANO\b",  "Nounou",    95),
-]
-
-LABEL_RULES: list[tuple[str, str, int]] = [
-    (r"\bNAVIGO\b",                                                                    "Navigo",          95),
-    (r"\bRATP\b",                                                                       "Navigo",          95),
-    (r"\bSNCF\b",                                                                       "Transport",       95),
-    (r"\bBLABLACar\b|\bFLIXBUS\b",                                                     "Transport",       90),
-    (r"\bEDF\b|\bENGIE\b",                                                              "Electricité",     95),
-    (r"\bFREE\b|\bORANGE\b|\bSFR\b|\bBOUYGUES\b",                                     "Box",             90),
-    (r"\bLOYER\b",                                                                      "Loyer",           95),
-    (r"\bSALAIRE\b|\bPAIE\b",                                                          "Entrée mensuelle",90),
-    (r"\bCAF\b",                                                                        "Entrée",          90),
-    (r"\bIMPOT\b|\bDGFIP\b|\bFISC\b",                                                 "Impôts",          95),
-    (r"\bSAS\s+LORIN\b",                                                               "Restaurant",      95),
-    (r"\bVIREMENT\s+AUTOMATIQUE\s+JLM\b",                                             "Entrée mensuelle",95),
-    (r"\bAMELI\b|\bCPAM\b",                                                            "Santé",           90),
-    (r"\bAXA\b|\bMAIF\b|\bMACIF\b|\bALLIANZ\b|\bGMF\b",                              "Assurances",      90),
-    (r"\bCRECHE\b|\bNOUNOU\b|\bBABY\b",                                                "Crèche",          90),
-    (r"\bPHARMACI\w*",                                                                  "Pharmacie",       90),
-    (r"\bMEDECIN\b|\bDOCTEUR\b|\bDR \b|\bCLINIQUE\b|\bHOPITAL\b|\bLABO\b|\bCERBA\b","Santé",           85),
-    (r"\bVINTED\b",                                                                     "Paul",            70),
-    (r"\bAMAZON\b|\bFNAC\b|\bDECATHLON\b|\bZARA\b|\bH&M\b",                          "Loisirs",         65),
-    (r"\bLECLERC\b|\bCAREFOUR\b|\bLIDL\b|\bALDI\b|\bINTERMARCHE\b|\bMONOPRIX\b|\bFRANCHIPRIX\b|\bPRIMEUR\b|\bMON.MARCHE\b", "Nourriture", 85),
-    (r"\bAVANTAGES\b.*\bMETAL\b|\bRETROC\b.*\bMETAL\b",                             "Entrée",          90),
-]
 
 # Bank categories whose value is too generic to be useful for Claude
 _UNINFORMATIVE_BANK_CATS = {
@@ -160,11 +129,24 @@ class TransactionClassifier:
         self.vacation_periods: list[tuple[date, date]] = vacation_periods or []
         self._claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self._history_index: str = ""
-        self._user_rules: list[tuple[str, str]] = []  # (keyword_upper, category)
+        self._stage0: list[dict] = []
+        self._stage2: list[dict] = []
+        self._stage3: list[dict] = []
 
-    def set_user_rules(self, rules: list[dict]):
-        """Load user-defined rules from DB (case-insensitive substring match)."""
-        self._user_rules = [(r["keyword"].upper(), r["category"]) for r in rules]
+    def set_rules(self, rules: list[dict]) -> None:
+        """Load classifier rules from DB, grouped by stage."""
+        active = [r for r in rules if r.get("is_active", True)]
+        self._stage0 = sorted([r for r in active if r["stage"] == 0], key=lambda x: x.get("sort_order", 0))
+        self._stage2 = sorted([r for r in active if r["stage"] == 2], key=lambda x: x.get("sort_order", 0))
+        self._stage3 = sorted([r for r in active if r["stage"] == 3], key=lambda x: x.get("sort_order", 0))
+
+    def _match_rule(self, rule: dict, label_up: str) -> bool:
+        keywords = [k.upper() for k in rule.get("keywords", [])]
+        if not keywords:
+            return False
+        if rule.get("match_mode", "OR") == "AND":
+            return all(k in label_up for k in keywords)
+        return any(k in label_up for k in keywords)
 
     def set_history_sample(self, df_history: pd.DataFrame, n: int = 150):
         self._history_index = build_history_index(df_history)
@@ -198,27 +180,27 @@ class TransactionClassifier:
     def classify_one(self, label: str, date_op: str, bank_category: str) -> ClassificationResult:
         label_up = str(label).upper()
 
-        # 1. Priority rules — override vacation period
-        for pattern, cat, conf in PRIORITY_LABEL_RULES:
-            if re.search(pattern, label_up):
-                return ClassificationResult(cat, conf, "label_rule", None)
+        # Stage 0: priority rules — bypass vacation
+        for rule in self._stage0:
+            if self._match_rule(rule, label_up):
+                return ClassificationResult(rule["category"], 95, "priority_rule", None)
 
-        # 2. Vacation period
+        # Stage 1: vacation period
         in_vacation, real_date = self._is_vacation(label, date_op)
         if in_vacation:
             return ClassificationResult("Vacances", 95, "vacation", real_date)
 
-        # 3. User-defined rules (case-insensitive partial match)
-        for kw, cat in self._user_rules:
-            if kw in label_up:
-                return ClassificationResult(cat, 95, "user_rule", None)
+        # Stage 2: user-defined rules
+        for rule in self._stage2:
+            if self._match_rule(rule, label_up):
+                return ClassificationResult(rule["category"], 95, "user_rule", None)
 
-        # 4. Hardcoded label keyword rules
-        for pattern, cat, conf in LABEL_RULES:
-            if re.search(pattern, label_up):
-                return ClassificationResult(cat, conf, "label_rule", None)
+        # Stage 3: predefined keyword rules
+        for rule in self._stage3:
+            if self._match_rule(rule, label_up):
+                return ClassificationResult(rule["category"], 90, "label_rule", None)
 
-        # 5. Bank category mapping
+        # Stage 4: bank category mapping
         bank_low = str(bank_category).lower()
         for key, (cat, conf) in BANK_TO_USER.items():
             if key in bank_low:

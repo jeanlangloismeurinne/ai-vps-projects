@@ -11,9 +11,8 @@ from app.routes.auth import is_authenticated
 from app.services.importer import run_import_pipeline
 from app.services.database import (
     insert_transactions, upsert_account,
-    get_classification_rules,
     create_import_session, get_import_sessions, link_transactions_to_session,
-    get_session_with_transactions,
+    get_session_with_transactions, create_classifier_snapshot,
 )
 from app.services.format_checker import check_format, apply_mapping
 from app.services.budget import (
@@ -88,6 +87,7 @@ async def import_upload(
             )
 
     try:
+        await create_classifier_snapshot("auto-avant-import")
         classified = await run_import_pipeline(dest, periods)
     except Exception as e:
         sessions = await get_import_sessions(limit=20)

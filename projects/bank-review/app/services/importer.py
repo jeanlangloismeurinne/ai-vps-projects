@@ -13,7 +13,7 @@ from typing import Optional
 from app.services.classifier import (
     TransactionClassifier, extract_real_date, clean_label_for_claude,
 )
-from app.services.database import get_existing_dedup_keys, get_classified_history, get_classification_rules
+from app.services.database import get_existing_dedup_keys, get_classified_history, get_classifier_rules_all
 from app.services.deduplicator import normalize_amount
 
 USER_CATEGORIES = [
@@ -73,8 +73,8 @@ async def run_import_pipeline(
     classifier = TransactionClassifier(vacation_periods=vacation_periods or [])
     history = await get_classified_history(500)
     classifier.set_history_from_db(history)
-    rules = await get_classification_rules()
-    classifier.set_user_rules(rules)
+    rules = await get_classifier_rules_all()
+    classifier.set_rules(rules)
 
     results: list[dict] = []
     pending_indices: list[int] = []

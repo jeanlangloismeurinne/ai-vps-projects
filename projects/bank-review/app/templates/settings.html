@@ -2,129 +2,578 @@
 {% set title = "Règles de classification" %}
 {% set active = "settings" %}
 {% block content %}
-<div class="container" style="max-width:860px">
-  <h2 style="margin-bottom:6px">Règles de classification</h2>
-  <p class="subtitle">Les règles s'appliquent lors de chaque import, après les règles prioritaires (Nounou) et les vacances, avant les règles intégrées.</p>
+<style>
+  .settings-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  .settings-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .settings-hd h2 { font-size: 18px; font-weight: 700; }
+  .hd-actions { display: flex; gap: 8px; }
 
-  <div class="card" style="padding:24px;margin-bottom:24px">
-    <h3 style="font-size:14px;margin-bottom:16px">Nouvelle règle</h3>
-    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-      <div style="flex:2;min-width:160px">
-        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Mot-clé</label>
-        <input id="newKeyword" class="cats-input" style="width:100%" placeholder="ex: NAVIGO" oninput="checkNewConflict()">
-      </div>
-      <div style="flex:2;min-width:160px">
-        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Catégorie</label>
-        <select id="newCategory" class="cat-select" style="width:100%" onchange="checkNewConflict()">
-          {% for cat in categories %}
-          <option value="{{ cat }}">{{ cat }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <button class="btn-confirm" onclick="addRule()">Ajouter</button>
-      </div>
+  /* Stage cards */
+  .stage-card { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+  .stage-hd { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .stage-hd:hover { background: var(--surface2); }
+  .stage-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.04em; }
+  .badge-0 { background: rgba(248,113,113,.18); color: #f87171; }
+  .badge-2 { background: rgba(79,126,248,.18); color: #4f7ef8; }
+  .badge-3 { background: rgba(123,130,160,.18); color: #7b82a0; }
+  .stage-title { font-weight: 600; font-size: 13px; }
+  .stage-subtitle { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .stage-body { padding: 8px 12px 12px; background: var(--surface); }
+
+  /* Vacation separator */
+  .vacation-sep { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; background: var(--surface2); }
+  .vacation-sep-hd { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  .vacation-sep-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: rgba(74,222,128,.15); color: #4ade80; }
+  .vacation-sep-desc { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+  /* Fixed stage footer */
+  .fixed-stages { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; background: var(--surface2); }
+  .fixed-stage-row { padding: 9px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+  .fixed-stage-row:last-child { border-bottom: none; }
+  .fixed-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: rgba(123,130,160,.13); color: var(--text-muted); }
+  .fixed-desc { font-size: 12px; color: var(--text-muted); }
+
+  /* Rule rows */
+  .rule-list { min-height: 8px; }
+  .rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 6px; margin-bottom: 4px; background: var(--surface2); flex-wrap: wrap; }
+  .rule-row:hover { background: var(--surface2); }
+  .rule-row.inactive { opacity: .45; }
+  .drag-handle { cursor: grab; color: var(--text-muted); font-size: 16px; line-height: 1; padding: 0 2px; flex-shrink: 0; }
+  .drag-handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: .35; border: 2px dashed var(--accent); }
+
+  /* Keyword chips */
+  .keywords-area { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; flex: 1; min-width: 0; }
+  .kw-chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 12px; font-family: monospace; white-space: nowrap; }
+  .kw-del { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; font-size: 13px; line-height: 1; }
+  .kw-del:hover { color: var(--error); }
+  .kw-add-btn { background: none; border: 1px dashed var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 2px 7px; }
+  .kw-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .kw-input-wrap { display: inline-flex; align-items: center; gap: 3px; }
+  .kw-input { font-size: 12px; font-family: monospace; background: var(--surface); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px; color: var(--text); width: 110px; outline: none; }
+
+  /* Mode toggle */
+  .mode-btn { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); color: var(--text-muted); flex-shrink: 0; }
+  .mode-btn.and { border-color: rgba(251,191,36,.5); color: #fbbf24; background: rgba(251,191,36,.1); }
+  .mode-btn.or  { border-color: var(--border); color: var(--text-muted); }
+
+  .rule-arrow { color: var(--text-muted); font-size: 13px; flex-shrink: 0; }
+
+  .cat-sel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; padding: 3px 6px; max-width: 160px; cursor: pointer; }
+  .cat-sel:focus { border-color: var(--accent); outline: none; }
+
+  .active-btn { background: none; border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-size: 14px; padding: 1px 5px; flex-shrink: 0; }
+  .active-btn.on  { color: var(--success); border-color: rgba(74,222,128,.3); }
+  .active-btn.off { color: var(--text-muted); border-color: var(--border); }
+
+  .del-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 3px 5px; border-radius: 4px; flex-shrink: 0; }
+  .del-btn:hover { color: var(--error); background: rgba(248,113,113,.1); }
+
+  /* Add-rule form */
+  .add-rule-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; padding: 8px 4px 0; border-top: 1px solid var(--border); }
+  .add-rule-form input { flex: 1; min-width: 120px; font-size: 12px; font-family: monospace; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; color: var(--text); }
+  .add-rule-form input:focus { border-color: var(--accent); outline: none; }
+  .add-rule-form select { font-size: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px 6px; }
+  .add-rule-form .mode-new-btn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); color: var(--text-muted); }
+  .add-rule-form .mode-new-btn.and { border-color: rgba(251,191,36,.5); color: #fbbf24; }
+
+  /* Snapshot modal */
+  .snap-list { max-height: 400px; overflow-y: auto; }
+  .snap-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .snap-row:last-child { border-bottom: none; }
+  .snap-info { flex: 1; }
+  .snap-label { font-size: 13px; font-weight: 500; }
+  .snap-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .snap-restore-btn { font-size: 12px; padding: 4px 10px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); cursor: pointer; }
+  .snap-restore-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .snap-restore-btn:disabled { opacity: .5; cursor: default; }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 9999; transform: translateY(80px); opacity: 0; transition: transform .3s, opacity .3s; max-width: 320px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error   { border-left: 3px solid var(--error); }
+</style>
+
+<div class="settings-wrap">
+  <div class="settings-hd">
+    <div>
+      <h2>Règles de classification</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Glisser-déposer pour réordonner, y compris entre étages.</p>
     </div>
-    <div id="conflictMsg" style="display:none;margin-top:10px;padding:8px;border-radius:6px;font-size:13px;background:var(--cell-yellow-bg);color:var(--text)"></div>
-    <div id="addMsg" style="display:none;margin-top:10px;padding:8px;border-radius:6px;font-size:13px;background:var(--cell-green-bg);color:var(--text)"></div>
+    <div class="hd-actions">
+      <button class="btn-outline" id="historyBtn">
+        📋 Historique ({{ snapshots|length }} version{{ 's' if snapshots|length != 1 else '' }})
+      </button>
+      <button class="btn-confirm" id="createSnapshotBtn">+ Snapshot</button>
+    </div>
   </div>
 
-  <div id="rulesContainer">
-    {% if rules %}
-    <div class="modal-table-wrap">
-      <table class="modal-table" id="rulesTable">
-        <thead>
-          <tr>
-            <th>Mot-clé</th>
-            <th>Catégorie</th>
-            <th>Créée le</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="rulesBody">
-          {% for r in rules %}
-          <tr id="rule-row-{{ r.id }}">
-            <td><code>{{ r.keyword }}</code></td>
-            <td>{{ r.category }}</td>
-            <td style="color:var(--text-muted);font-size:12px">{{ r.created_at[:10] if r.created_at else "—" }}</td>
-            <td>
-              <button class="btn-remove" onclick="deleteRule({{ r.id }})">✕</button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- Stage 0: Priority rules -->
+  <div class="stage-card">
+    <div class="stage-hd" onclick="toggleStage(0)">
+      <span class="stage-badge badge-0">Étage 0</span>
+      <span class="stage-title">Priorités absolues</span>
+      <span class="stage-subtitle">bypass vacances · {{ rules|selectattr('stage','eq',0)|list|length }} règle(s)</span>
+      <span id="chevron-0" style="color:var(--text-muted);font-size:12px">▾</span>
     </div>
-    {% else %}
-    <p id="noRulesMsg" class="subtitle" style="font-size:13px">Aucune règle définie. Ajoutez-en via le formulaire ci-dessus ou depuis les vues de revue d'import.</p>
-    {% endif %}
+    <div class="stage-body" id="stage-0-body">
+      <p style="font-size:12px;color:var(--text-muted);padding:4px 4px 8px">Ces règles s'appliquent <strong>avant</strong> la détection des vacances. Utilisez-les pour les transactions récurrentes qui ne sont jamais des vacances (salaires, allocations, abonnements fixes…).</p>
+      <div class="rule-list" id="list-0">
+        {% for r in rules if r.stage == 0 %}
+        <div class="rule-row{% if not r.is_active %} inactive{% endif %}" data-id="{{ r.id }}" data-stage="0">
+          <span class="drag-handle" title="Déplacer">⠿</span>
+          <div class="keywords-area" data-id="{{ r.id }}">
+            {% for kw in r.keywords %}
+            <span class="kw-chip"><span>{{ kw }}</span><button class="kw-del" data-rule-id="{{ r.id }}" data-kw="{{ kw|e }}">×</button></span>
+            {% endfor %}
+            <button class="kw-add-btn" data-rule-id="{{ r.id }}">+ mot-clé</button>
+          </div>
+          <button class="mode-btn {{ 'and' if r.match_mode == 'AND' else 'or' }}" data-rule-id="{{ r.id }}" data-mode="{{ r.match_mode }}">{{ r.match_mode }}</button>
+          <span class="rule-arrow">→</span>
+          <select class="cat-sel" data-rule-id="{{ r.id }}">
+            {% for cat in categories %}<option value="{{ cat }}"{% if cat == r.category %} selected{% endif %}>{{ cat }}</option>{% endfor %}
+          </select>
+          <button class="active-btn {{ 'on' if r.is_active else 'off' }}" data-rule-id="{{ r.id }}" data-active="{{ 'true' if r.is_active else 'false' }}" title="{{ 'Actif — cliquer pour désactiver' if r.is_active else 'Inactif — cliquer pour activer' }}">{{ '✓' if r.is_active else '—' }}</button>
+          <button class="del-btn" data-rule-id="{{ r.id }}" title="Supprimer">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="add-rule-form" id="add-form-0">
+        <input type="text" placeholder="Mot-clé…" id="new-kw-0">
+        <select id="new-cat-0">{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select>
+        <button class="mode-new-btn or" id="new-mode-0" data-mode="OR" onclick="toggleNewMode(0)">OR</button>
+        <button class="btn-confirm" style="font-size:12px;padding:5px 12px" onclick="addRule(0)">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 1: Vacation (fixed) -->
+  <div class="vacation-sep">
+    <div class="vacation-sep-hd">
+      <span class="vacation-badge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(74,222,128,.15);color:#4ade80">Étage 1</span>
+      <span style="font-weight:600;font-size:13px">Détection vacances</span>
+      <span class="vacation-sep-desc">automatique — si la date tombe dans une période de vacances → "Vacances"</span>
+    </div>
+  </div>
+
+  <!-- Stage 2: User rules -->
+  <div class="stage-card">
+    <div class="stage-hd" onclick="toggleStage(2)">
+      <span class="stage-badge badge-2">Étage 2</span>
+      <span class="stage-title">Règles utilisateur</span>
+      <span class="stage-subtitle">après vacances · {{ rules|selectattr('stage','eq',2)|list|length }} règle(s)</span>
+      <span id="chevron-2" style="color:var(--text-muted);font-size:12px">▾</span>
+    </div>
+    <div class="stage-body" id="stage-2-body">
+      <p style="font-size:12px;color:var(--text-muted);padding:4px 4px 8px">Règles personnalisées, créées via le bouton ⚡ ou manuellement.</p>
+      <div class="rule-list" id="list-2">
+        {% for r in rules if r.stage == 2 %}
+        <div class="rule-row{% if not r.is_active %} inactive{% endif %}" data-id="{{ r.id }}" data-stage="2">
+          <span class="drag-handle">⠿</span>
+          <div class="keywords-area" data-id="{{ r.id }}">
+            {% for kw in r.keywords %}
+            <span class="kw-chip"><span>{{ kw }}</span><button class="kw-del" data-rule-id="{{ r.id }}" data-kw="{{ kw|e }}">×</button></span>
+            {% endfor %}
+            <button class="kw-add-btn" data-rule-id="{{ r.id }}">+ mot-clé</button>
+          </div>
+          <button class="mode-btn {{ 'and' if r.match_mode == 'AND' else 'or' }}" data-rule-id="{{ r.id }}" data-mode="{{ r.match_mode }}">{{ r.match_mode }}</button>
+          <span class="rule-arrow">→</span>
+          <select class="cat-sel" data-rule-id="{{ r.id }}">
+            {% for cat in categories %}<option value="{{ cat }}"{% if cat == r.category %} selected{% endif %}>{{ cat }}</option>{% endfor %}
+          </select>
+          <button class="active-btn {{ 'on' if r.is_active else 'off' }}" data-rule-id="{{ r.id }}" data-active="{{ 'true' if r.is_active else 'false' }}">{{ '✓' if r.is_active else '—' }}</button>
+          <button class="del-btn" data-rule-id="{{ r.id }}">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="add-rule-form" id="add-form-2">
+        <input type="text" placeholder="Mot-clé…" id="new-kw-2">
+        <select id="new-cat-2">{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select>
+        <button class="mode-new-btn or" id="new-mode-2" data-mode="OR" onclick="toggleNewMode(2)">OR</button>
+        <button class="btn-confirm" style="font-size:12px;padding:5px 12px" onclick="addRule(2)">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 3: Predefined rules -->
+  <div class="stage-card">
+    <div class="stage-hd" onclick="toggleStage(3)">
+      <span class="stage-badge badge-3">Étage 3</span>
+      <span class="stage-title">Règles prédéfinies</span>
+      <span class="stage-subtitle">mots-clés courants · {{ rules|selectattr('stage','eq',3)|list|length }} règle(s)</span>
+      <span id="chevron-3" style="color:var(--text-muted);font-size:12px">▾</span>
+    </div>
+    <div class="stage-body" id="stage-3-body">
+      <p style="font-size:12px;color:var(--text-muted);padding:4px 4px 8px">Règles système modifiables. Déplacer une règle vers l'étage 0 pour qu'elle bypass les vacances.</p>
+      <div class="rule-list" id="list-3">
+        {% for r in rules if r.stage == 3 %}
+        <div class="rule-row{% if not r.is_active %} inactive{% endif %}" data-id="{{ r.id }}" data-stage="3">
+          <span class="drag-handle">⠿</span>
+          <div class="keywords-area" data-id="{{ r.id }}">
+            {% for kw in r.keywords %}
+            <span class="kw-chip"><span>{{ kw }}</span><button class="kw-del" data-rule-id="{{ r.id }}" data-kw="{{ kw|e }}">×</button></span>
+            {% endfor %}
+            <button class="kw-add-btn" data-rule-id="{{ r.id }}">+ mot-clé</button>
+          </div>
+          <button class="mode-btn {{ 'and' if r.match_mode == 'AND' else 'or' }}" data-rule-id="{{ r.id }}" data-mode="{{ r.match_mode }}">{{ r.match_mode }}</button>
+          <span class="rule-arrow">→</span>
+          <select class="cat-sel" data-rule-id="{{ r.id }}">
+            {% for cat in categories %}<option value="{{ cat }}"{% if cat == r.category %} selected{% endif %}>{{ cat }}</option>{% endfor %}
+          </select>
+          <button class="active-btn {{ 'on' if r.is_active else 'off' }}" data-rule-id="{{ r.id }}" data-active="{{ 'true' if r.is_active else 'false' }}">{{ '✓' if r.is_active else '—' }}</button>
+          <button class="del-btn" data-rule-id="{{ r.id }}">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="add-rule-form" id="add-form-3">
+        <input type="text" placeholder="Mot-clé…" id="new-kw-3">
+        <select id="new-cat-3">{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select>
+        <button class="mode-new-btn or" id="new-mode-3" data-mode="OR" onclick="toggleNewMode(3)">OR</button>
+        <button class="btn-confirm" style="font-size:12px;padding:5px 12px" onclick="addRule(3)">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed stages info -->
+  <div class="fixed-stages">
+    <div class="fixed-stage-row">
+      <span class="fixed-badge">Étage 4</span>
+      <span class="fixed-desc">Mapping catégories bancaires → catégories utilisateur (intégré au code)</span>
+    </div>
+    <div class="fixed-stage-row">
+      <span class="fixed-badge">Étage 5</span>
+      <span class="fixed-desc">Fallback Claude Haiku — classe en batch les transactions non reconnues</span>
+    </div>
   </div>
 </div>
 
+<!-- Snapshot history modal -->
+<div id="snapModal" class="modal-overlay hidden" onclick="closeSnapOutside(event)">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-hd">
+      <strong>Historique des versions</strong>
+      <button class="modal-close" onclick="closeSnapModal()">✕</button>
+    </div>
+    <div class="modal-bd" style="padding:16px 20px">
+      <div class="snap-list" id="snapList">
+        {% if snapshots %}
+          {% for s in snapshots %}
+          <div class="snap-row">
+            <div class="snap-info">
+              <div class="snap-label">{{ s.label or 'Sans titre' }}</div>
+              <div class="snap-meta">{{ s.created_at[:16].replace('T',' ') if s.created_at else '—' }} · {{ s.rule_count or 0 }} règle(s)</div>
+            </div>
+            <button class="snap-restore-btn" data-id="{{ s.id }}" onclick="restoreSnapshot({{ s.id }}, this)">Restaurer</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:var(--text-muted);font-size:13px;padding:8px 0">Aucun snapshot pour l'instant. Un snapshot automatique est créé avant chaque import.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
-  let _conflictTimer = null;
+const ALL_CATEGORIES = {{ categories | tojson }};
+const CURRENT_YEAR_ID = {{ current_year_id or 'null' }};
 
-  function checkNewConflict() {
-    clearTimeout(_conflictTimer);
-    _conflictTimer = setTimeout(async () => {
-      const kw = document.getElementById('newKeyword').value.trim();
-      const cat = document.getElementById('newCategory').value;
-      const msg = document.getElementById('conflictMsg');
-      if (!kw) { msg.style.display = 'none'; return; }
-      const res = await fetch(`/api/rules/check?keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
-      const data = await res.json();
-      if (data.conflict && data.existing) {
-        msg.textContent = `⚠ Conflit : une règle existe déjà pour "${data.existing.keyword}" → "${data.existing.category}"`;
-        msg.style.display = 'block';
-      } else {
-        msg.style.display = 'none';
-      }
-    }, 300);
-  }
+// ── Stage collapse ────────────────────────────────────────────────────────────
+function toggleStage(stage) {
+  const body = document.getElementById(`stage-${stage}-body`);
+  const ch = document.getElementById(`chevron-${stage}`);
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  ch.textContent = hidden ? '▾' : '▸';
+}
 
-  async function addRule() {
-    const kw = document.getElementById('newKeyword').value.trim();
-    const cat = document.getElementById('newCategory').value;
-    const addMsg = document.getElementById('addMsg');
-    if (!kw || !cat) return;
-    const res = await fetch('/api/rules', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({keyword: kw, category: cat, year_id: {{ current_year_id or 'null' }}}),
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Sortable drag-and-drop ───────────────────────────────────────────────────
+const sortableOpts = {
+  group: 'rules',
+  handle: '.drag-handle',
+  animation: 150,
+  ghostClass: 'sortable-ghost',
+  onEnd: saveOrder,
+};
+Sortable.create(document.getElementById('list-0'), sortableOpts);
+Sortable.create(document.getElementById('list-2'), sortableOpts);
+Sortable.create(document.getElementById('list-3'), sortableOpts);
+
+async function saveOrder() {
+  const items = [];
+  [0, 2, 3].forEach(stage => {
+    document.querySelectorAll(`#list-${stage} .rule-row`).forEach((el, idx) => {
+      items.push({ id: parseInt(el.dataset.id), stage, sort_order: (idx + 1) * 10 });
+      el.dataset.stage = stage;
     });
-    const data = await res.json();
-    if (data.ok) {
-      const applied = data.applied ? ` · ${data.applied} transaction(s) reclassée(s)` : '';
-      addMsg.textContent = `Règle créée : "${kw}" → "${cat}"${applied}`;
-      addMsg.style.display = 'block';
-      document.getElementById('newKeyword').value = '';
-      document.getElementById('conflictMsg').style.display = 'none';
-      // Add row to table
-      const tbody = document.getElementById('rulesBody');
-      const noMsg = document.getElementById('noRulesMsg');
-      if (noMsg) noMsg.remove();
-      if (tbody) {
-        const tr = document.createElement('tr');
-        tr.id = `rule-row-${data.id}`;
-        tr.innerHTML = `<td><code>${esc(kw)}</code></td><td>${esc(cat)}</td><td style="color:var(--text-muted);font-size:12px">aujourd'hui</td><td><button class="btn-remove" onclick="deleteRule(${data.id})">✕</button></td>`;
-        tbody.prepend(tr);
-      }
-      setTimeout(() => { addMsg.style.display = 'none'; }, 2000);
-    }
+  });
+  const res = await fetch('/api/classifier/rules/reorder', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(items),
+  });
+  if (res.ok) toast('Ordre enregistré');
+}
+
+// ── Keyword chips ─────────────────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+  const t = e.target;
+
+  if (t.classList.contains('kw-del')) {
+    const ruleId = parseInt(t.dataset.ruleId);
+    const kw = t.dataset.kw;
+    const chip = t.closest('.kw-chip');
+    removeKeyword(ruleId, kw, chip);
+    return;
   }
 
-  async function deleteRule(id) {
-    if (!confirm('Supprimer cette règle ?')) return;
-    const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      const row = document.getElementById(`rule-row-${id}`);
-      if (row) row.remove();
-    }
+  if (t.classList.contains('kw-add-btn')) {
+    startAddKeyword(t);
+    return;
   }
 
-  function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  if (t.classList.contains('mode-btn')) {
+    toggleMode(t);
+    return;
   }
+
+  if (t.classList.contains('active-btn')) {
+    toggleActive(t);
+    return;
+  }
+
+  if (t.classList.contains('del-btn')) {
+    deleteRule(t);
+    return;
+  }
+});
+
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('cat-sel')) {
+    const id = parseInt(e.target.dataset.ruleId);
+    updateRule(id, {category: e.target.value});
+  }
+});
+
+async function removeKeyword(ruleId, kw, chip) {
+  const area = document.querySelector(`.keywords-area[data-id="${ruleId}"]`);
+  const chips = area.querySelectorAll('.kw-chip span');
+  const keywords = Array.from(chips).map(s => s.textContent).filter(k => k !== kw);
+  if (keywords.length === 0) { toast('Une règle doit avoir au moins un mot-clé.', 'error'); return; }
+  const res = await updateRule(ruleId, {keywords});
+  if (res) chip.remove();
+}
+
+function startAddKeyword(btn) {
+  if (btn.nextElementSibling && btn.nextElementSibling.classList.contains('kw-input-wrap')) return;
+  const wrap = document.createElement('span');
+  wrap.className = 'kw-input-wrap';
+  const inp = document.createElement('input');
+  inp.className = 'kw-input';
+  inp.placeholder = 'MOT-CLÉ';
+  inp.setAttribute('autocomplete', 'off');
+  const ok = document.createElement('button');
+  ok.textContent = '✓';
+  ok.className = 'kw-del';
+  ok.style.color = 'var(--success)';
+  const cancel = document.createElement('button');
+  cancel.textContent = '✕';
+  cancel.className = 'kw-del';
+  wrap.appendChild(inp);
+  wrap.appendChild(ok);
+  wrap.appendChild(cancel);
+  btn.after(wrap);
+  inp.focus();
+
+  const ruleId = parseInt(btn.dataset.ruleId);
+
+  ok.addEventListener('click', async () => {
+    const val = inp.value.trim().toUpperCase();
+    if (!val) { wrap.remove(); return; }
+    const area = document.querySelector(`.keywords-area[data-id="${ruleId}"]`);
+    const existing = Array.from(area.querySelectorAll('.kw-chip span')).map(s => s.textContent);
+    const keywords = [...existing, val];
+    const success = await updateRule(ruleId, {keywords});
+    if (success) {
+      wrap.remove();
+      const chip = document.createElement('span');
+      chip.className = 'kw-chip';
+      chip.innerHTML = `<span>${esc(val)}</span><button class="kw-del" data-rule-id="${ruleId}" data-kw="${esc(val)}">×</button>`;
+      btn.before(chip);
+    }
+  });
+
+  cancel.addEventListener('click', () => wrap.remove());
+
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') ok.click();
+    if (e.key === 'Escape') wrap.remove();
+  });
+}
+
+async function toggleMode(btn) {
+  const ruleId = parseInt(btn.dataset.ruleId);
+  const newMode = btn.dataset.mode === 'OR' ? 'AND' : 'OR';
+  const success = await updateRule(ruleId, {match_mode: newMode});
+  if (success) {
+    btn.dataset.mode = newMode;
+    btn.textContent = newMode;
+    btn.className = `mode-btn ${newMode.toLowerCase()}`;
+  }
+}
+
+async function toggleActive(btn) {
+  const ruleId = parseInt(btn.dataset.ruleId);
+  const wasActive = btn.dataset.active === 'true';
+  const success = await updateRule(ruleId, {is_active: !wasActive});
+  if (success) {
+    btn.dataset.active = (!wasActive).toString();
+    btn.textContent = !wasActive ? '✓' : '—';
+    btn.className = `active-btn ${!wasActive ? 'on' : 'off'}`;
+    const row = btn.closest('.rule-row');
+    row.classList.toggle('inactive', wasActive);
+  }
+}
+
+async function deleteRule(btn) {
+  const ruleId = parseInt(btn.dataset.ruleId);
+  if (!confirm('Supprimer cette règle ?')) return;
+  const res = await fetch(`/api/classifier/rules/${ruleId}`, {method: 'DELETE'});
+  if (res.ok) {
+    btn.closest('.rule-row').remove();
+    toast('Règle supprimée');
+  }
+}
+
+async function updateRule(ruleId, fields) {
+  const res = await fetch(`/api/classifier/rules/${ruleId}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) { toast('Erreur lors de la mise à jour', 'error'); return false; }
+  toast('Enregistré');
+  return true;
+}
+
+// ── Add new rule ──────────────────────────────────────────────────────────────
+function toggleNewMode(stage) {
+  const btn = document.getElementById(`new-mode-${stage}`);
+  const cur = btn.dataset.mode;
+  const next = cur === 'OR' ? 'AND' : 'OR';
+  btn.dataset.mode = next;
+  btn.textContent = next;
+  btn.className = `mode-new-btn ${next.toLowerCase()}`;
+}
+
+async function addRule(stage) {
+  const kw = document.getElementById(`new-kw-${stage}`).value.trim().toUpperCase();
+  const cat = document.getElementById(`new-cat-${stage}`).value;
+  const mode = document.getElementById(`new-mode-${stage}`).dataset.mode;
+  if (!kw || !cat) { toast('Mot-clé requis', 'error'); return; }
+
+  const res = await fetch('/api/classifier/rules', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({stage, keywords: [kw], match_mode: mode, category: cat}),
+  });
+  const data = await res.json();
+  if (!data.ok) { toast('Erreur : ' + (data.error || ''), 'error'); return; }
+
+  document.getElementById(`new-kw-${stage}`).value = '';
+  document.getElementById(`new-mode-${stage}`).dataset.mode = 'OR';
+  document.getElementById(`new-mode-${stage}`).textContent = 'OR';
+  document.getElementById(`new-mode-${stage}`).className = 'mode-new-btn or';
+
+  const list = document.getElementById(`list-${stage}`);
+  const row = buildRuleRow(data.id, stage, [kw], mode, cat, true);
+  list.appendChild(row);
+  toast(`Règle ajoutée : ${kw} → ${cat}`);
+}
+
+function buildRuleRow(id, stage, keywords, mode, category, isActive) {
+  const div = document.createElement('div');
+  div.className = 'rule-row';
+  div.dataset.id = id;
+  div.dataset.stage = stage;
+
+  const catOptions = ALL_CATEGORIES.map(c =>
+    `<option value="${esc(c)}"${c === category ? ' selected' : ''}>${esc(c)}</option>`
+  ).join('');
+
+  const chips = keywords.map(kw =>
+    `<span class="kw-chip"><span>${esc(kw)}</span><button class="kw-del" data-rule-id="${id}" data-kw="${esc(kw)}">×</button></span>`
+  ).join('');
+
+  div.innerHTML = `
+    <span class="drag-handle">⠿</span>
+    <div class="keywords-area" data-id="${id}">
+      ${chips}
+      <button class="kw-add-btn" data-rule-id="${id}">+ mot-clé</button>
+    </div>
+    <button class="mode-btn ${mode.toLowerCase()}" data-rule-id="${id}" data-mode="${mode}">${mode}</button>
+    <span class="rule-arrow">→</span>
+    <select class="cat-sel" data-rule-id="${id}">${catOptions}</select>
+    <button class="active-btn on" data-rule-id="${id}" data-active="true">✓</button>
+    <button class="del-btn" data-rule-id="${id}">✕</button>
+  `;
+  return div;
+}
+
+// ── Snapshots ─────────────────────────────────────────────────────────────────
+document.getElementById('historyBtn').addEventListener('click', () => {
+  document.getElementById('snapModal').classList.remove('hidden');
+});
+
+document.getElementById('createSnapshotBtn').addEventListener('click', async () => {
+  const label = prompt('Nom du snapshot (optionnel) :', 'Manuel');
+  if (label === null) return;
+  const res = await fetch('/api/classifier/snapshots', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({label: label || 'Manuel'}),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    toast('Snapshot créé');
+    document.getElementById('historyBtn').textContent = '📋 Historique (mis à jour)';
+  }
+});
+
+async function restoreSnapshot(id, btn) {
+  if (!confirm('Restaurer ce snapshot ? Les règles actuelles seront remplacées (un snapshot de sauvegarde sera créé automatiquement).')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  const res = await fetch(`/api/classifier/snapshots/${id}/restore`, {method: 'POST'});
+  if (res.ok) {
+    toast('Snapshot restauré — rechargement…');
+    setTimeout(() => location.reload(), 1200);
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Restaurer';
+    toast('Erreur lors de la restauration', 'error');
+  }
+}
+
+function closeSnapModal() { document.getElementById('snapModal').classList.add('hidden'); }
+function closeSnapOutside(e) { if (e.target.id === 'snapModal') closeSnapModal(); }
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 </script>
 {% endblock %}

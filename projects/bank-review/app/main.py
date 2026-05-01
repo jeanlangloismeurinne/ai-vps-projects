@@ -15,6 +15,12 @@ load_dotenv()
 
 app = FastAPI(title="Bank Review", docs_url="/api/docs", redoc_url="/api/redoc")
 
+
+@app.on_event("startup")
+async def startup():
+    from app.services.database import migrate_classifier_tables
+    await migrate_classifier_tables()
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SECRET_KEY", "change-me-in-production"),
