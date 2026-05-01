@@ -3,7 +3,7 @@ import json
 import re
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime
 
 import httpx
 from bs4 import BeautifulSoup
@@ -216,7 +216,7 @@ class BaseScraper(ABC):
     async def run(self) -> dict:
         manufacturer = await self._ensure_manufacturer()
         health = await self._ensure_health(manufacturer)
-        health.last_run_at = datetime.now(timezone.utc)
+        health.last_run_at = datetime.utcnow()
 
         try:
             scraped = await self.scrape()
@@ -248,7 +248,7 @@ class BaseScraper(ABC):
             )
             self.db.add(snapshot)
 
-        health.last_success_at = datetime.now(timezone.utc)
+        health.last_success_at = datetime.utcnow()
         health.last_error = None
         health.variants_found = len(scraped)
         health.status = "ok"
@@ -271,7 +271,7 @@ class BaseScraper(ABC):
 
         if changed and health.alert_sent_at is None:
             health.status = "changed"
-            health.alert_sent_at = datetime.now(timezone.utc)
+            health.alert_sent_at = datetime.utcnow()
             health.page_fingerprint = new_fp
             await self.db.flush()
             await self.send_slack_alert(
