@@ -161,11 +161,27 @@ header h1{{font-size:1rem;font-weight:600;color:#aaa;flex:1}}
 .content{{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}}
 .run-all{{background:#4f6ef7;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;margin-bottom:1.5rem}}
 .run-all:hover{{background:#3a57d4}}
+.run-all:disabled{{background:#2a2d3a;color:#555;cursor:not-allowed}}
 table{{width:100%;border-collapse:collapse;font-size:.85rem}}
 th{{text-align:left;color:#555;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.5rem .75rem;border-bottom:1px solid #1e2130}}
 td{{padding:.6rem .75rem;border-bottom:1px solid #1a1d27}}
 tr:hover td{{background:#1a1d27}}
-#toast{{position:fixed;bottom:1.5rem;right:1.5rem;background:#2da862;color:#fff;padding:.75rem 1.25rem;border-radius:8px;font-size:.85rem;display:none}}
+#toast{{position:fixed;bottom:1.5rem;right:1.5rem;background:#2da862;color:#fff;padding:.75rem 1.25rem;border-radius:8px;font-size:.85rem;display:none;z-index:100}}
+#progress-panel{{background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:none}}
+#progress-panel h3{{font-size:.8rem;font-weight:700;color:#aaa;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}}
+.prog-bar-wrap{{background:#0f1117;border-radius:4px;height:6px;margin-bottom:1rem;overflow:hidden}}
+.prog-bar{{height:6px;border-radius:4px;background:#4f6ef7;transition:width .4s ease}}
+.prog-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.4rem}}
+.prog-item{{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#888;padding:.25rem 0}}
+.prog-item .pi-icon{{font-size:.85rem;width:1.1rem;text-align:center}}
+.prog-item.running{{color:#e8e8ea}}
+.prog-item.ok .pi-icon::before{{content:"✓"}}
+.prog-item.ok{{color:#2da862}}
+.prog-item.error .pi-icon::before{{content:"✗"}}
+.prog-item.error{{color:#ef4444}}
+.prog-item.running .pi-icon::before{{content:"◌";animation:spin .8s linear infinite;display:inline-block}}
+.prog-item.pending .pi-icon::before{{content:"·"}}
+@keyframes spin{{from{{transform:rotate(0deg)}}to{{transform:rotate(360deg)}}}}
 </style>
 <header>
   <a href="/" style="color:#555;font-size:.85rem">← Retour</a>
@@ -174,27 +190,113 @@ tr:hover td{{background:#1a1d27}}
 </header>
 <div class="content">
   <button class="run-all" id="run-all-btn">▶ Lancer tous les scrapers</button>
+  <div id="progress-panel">
+    <h3><span id="prog-spinner" style="animation:spin .8s linear infinite;display:inline-block">◌</span> <span id="prog-title">Scraping en cours…</span></h3>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+    <div class="prog-grid" id="prog-grid"></div>
+  </div>
   <table>
     <thead><tr>
       <th>Constructeur</th><th>Statut</th><th>Variantes</th>
       <th>Dernier run</th><th>Dernier succès</th><th>Erreur</th><th></th>
     </tr></thead>
-    <tbody>{rows}</tbody>
+    <tbody id="health-tbody">{rows}</tbody>
   </table>
 </div>
 <div id="toast"></div>
 <script>
+let pollTimer = null;
+let reloadPending = false;
+
+function showToast(msg, color) {{
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color || '#2da862';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3500);
+}}
+
+function renderProgress(data) {{
+  const panel = document.getElementById('progress-panel');
+  if (!data || (!data.active && !data.started_at)) {{
+    panel.style.display = 'none';
+    return;
+  }}
+
+  panel.style.display = 'block';
+  const done = data.done || 0;
+  const total = data.total || 1;
+  const pct = Math.round(done / total * 100);
+
+  document.getElementById('prog-bar').style.width = pct + '%';
+
+  const title = document.getElementById('prog-title');
+  const spinner = document.getElementById('prog-spinner');
+  if (data.active) {{
+    title.textContent = `Scraping en cours… ${{done}}/${{total}}`;
+    spinner.style.display = 'inline-block';
+    document.getElementById('run-all-btn').disabled = true;
+  }} else {{
+    const errors = Object.values(data.scrapers || {{}}).filter(s => s.status === 'error').length;
+    title.textContent = errors ? `Terminé — ${{errors}} erreur(s)` : `Terminé — ${{done}} scrapers OK`;
+    spinner.style.display = 'none';
+    document.getElementById('run-all-btn').disabled = false;
+  }}
+
+  const grid = document.getElementById('prog-grid');
+  grid.innerHTML = '';
+  for (const [slug, s] of Object.entries(data.scrapers || {{}})) {{
+    const el = document.createElement('div');
+    el.className = `prog-item ${{s.status}}`;
+    let detail = '';
+    if (s.status === 'ok') detail = ` <span style="color:#555">(${{s.variants}}v)</span>`;
+    if (s.status === 'error') detail = ` <span style="color:#666;font-size:.7rem" title="${{s.error}}" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">✗</span>`;
+    el.innerHTML = `<span class="pi-icon"></span>${{s.name}}${{detail}}`;
+    grid.appendChild(el);
+  }}
+}}
+
+async function pollProgress() {{
+  try {{
+    const resp = await fetch('/api/scrape/progress');
+    const data = await resp.json();
+    renderProgress(data);
+    if (!data.active && pollTimer) {{
+      clearInterval(pollTimer);
+      pollTimer = null;
+      if (reloadPending) {{
+        reloadPending = false;
+        setTimeout(() => location.reload(), 1500);
+      }}
+    }}
+  }} catch(e) {{}}
+}}
+
+function startPolling() {{
+  if (!pollTimer) {{
+    pollTimer = setInterval(pollProgress, 2000);
+    pollProgress();
+  }}
+}}
+
 async function runScraper(slug) {{
   const url = slug ? `/api/scrape/run/${{slug}}` : '/api/scrape/run';
   await fetch(url, {{method:'POST'}});
-  const t = document.getElementById('toast');
-  t.textContent = slug ? `✓ ${{slug}} lancé` : '✓ Tous les scrapers lancés';
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
+  reloadPending = true;
+  showToast(slug ? `▶ ${{slug}} lancé…` : '▶ Scraping lancé…', '#4f6ef7');
+  setTimeout(startPolling, 500);
 }}
+
 document.getElementById('run-all-btn').addEventListener('click', () => runScraper(null));
 document.querySelectorAll('.run-btn').forEach(btn => {{
   btn.addEventListener('click', () => runScraper(btn.dataset.slug));
+}});
+
+// Check on load if a scrape is already running
+pollProgress().then(() => {{
+  fetch('/api/scrape/progress').then(r => r.json()).then(data => {{
+    if (data.active) startPolling();
+  }});
 }});
 </script>"""
     return HTMLResponse(_base("Admin", body))

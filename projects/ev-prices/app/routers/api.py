@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import Manufacturer, VehicleModel, Variant, PriceSnapshot, ScraperHealth
 from app.scrapers import ALL_SCRAPERS
 from app.scheduler import run_all_scrapers
+from app import progress
 
 router = APIRouter(prefix="/api")
 
@@ -85,9 +86,14 @@ async def get_health(db: AsyncSession = Depends(get_db)):
     ]
 
 
+@router.get("/scrape/progress")
+async def get_progress():
+    return progress.get()
+
+
 @router.post("/scrape/run")
 async def trigger_scrape(background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_all_scrapers)
+    background_tasks.add_task(run_all_scrapers, "manual")
     return {"status": "started", "message": "Scraping lancé en arrière-plan"}
 
 
@@ -99,8 +105,11 @@ async def trigger_scrape_one(slug: str, background_tasks: BackgroundTasks, db: A
 
     async def _run():
         from app.database import AsyncSessionLocal
+        progress.start([scraper_class], trigger="manual")
+        progress.set_running(scraper_class.MANUFACTURER_SLUG)
         async with AsyncSessionLocal() as session:
-            await scraper_class(session).run()
+            result = await scraper_class(session).run()
+        progress.set_done(scraper_class.MANUFACTURER_SLUG, result)
 
     background_tasks.add_task(_run)
     return {"status": "started", "manufacturer": slug}
