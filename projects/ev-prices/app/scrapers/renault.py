@@ -1,5 +1,7 @@
+import json
 import re
 from bs4 import BeautifulSoup
+
 from app.scrapers.base import BaseScraper, ScrapedVariant
 
 
@@ -10,29 +12,21 @@ class RenaultScraper(BaseScraper):
     MANUFACTURER_COLOR = "#efdf00"
     WEBSITE_URL = "https://www.renault.fr"
 
-    # Top 5 modèles électriques Renault France
     MODELS = [
-        ("Renault 5 E-Tech", "https://www.renault.fr/voitures/nouvelle-renault-5-e-tech-electric.html"),
-        ("Mégane E-Tech", "https://www.renault.fr/voitures/megane-e-tech-electric.html"),
-        ("Scenic E-Tech", "https://www.renault.fr/voitures/scenic-e-tech-electric.html"),
-        ("Renault 4 E-Tech", "https://www.renault.fr/voitures/nouvelle-renault-4-e-tech-electric.html"),
-        ("Twingo E-Tech", "https://www.renault.fr/voitures/nouvelle-twingo-e-tech.html"),
+        ("Renault 5 E-Tech", "https://www.renault.fr/vehicules-electriques/r5-e-tech-electrique/pre-configurateur.html"),
+        ("Mégane E-Tech", "https://www.renault.fr/vehicules-electriques/megane-e-tech-electrique/configurateur.html"),
+        ("Scénic E-Tech", "https://www.renault.fr/vehicules-electriques/scenic-e-tech-electrique/configurateur.html"),
+        ("Renault 4 E-Tech", "https://www.renault.fr/vehicules-electriques/r4-e-tech-electrique/pre-configurateur.html"),
+        ("Twingo E-Tech", "https://www.renault.fr/vehicules-electriques/twingo-e-tech-electrique/pre-configurateur.html"),
     ]
 
-    EXPECTED_SELECTORS = [
-        "[class*='price']",
-        "[class*='Prix']",
-        "[data-testid*='price']",
-        ".vehiclePrice",
-        "[class*='version']",
-    ]
+    EXPECTED_SELECTORS = ["script"]
 
     async def scrape(self) -> list[ScrapedVariant]:
         results = []
         for model_name, url in self.MODELS:
             try:
                 html = await self.fetch_with_playwright(url, wait_selector="body")
-                await self.run_with_change_detection(html)
                 results.extend(self._parse_model(model_name, html))
             except Exception:
                 pass
@@ -40,30 +34,26 @@ class RenaultScraper(BaseScraper):
 
     def _parse_model(self, model_name: str, html: str) -> list[ScrapedVariant]:
         soup = BeautifulSoup(html, "lxml")
-        variants = []
+        for script in soup.find_all("script"):
+            txt = script.string or ""
+            if "window.APP_STATE" not in txt:
+                continue
+            m = re.search(r'window\.APP_STATE=JSON\.parse\("(.*?)"\);', txt, re.DOTALL)
+            if not m:
+                continue
+            try:
+                raw = m.group(1).encode().decode("unicode_escape")
+                data = json.loads(raw)
+                grades = data["page"]["data"]["modelParams"]["data"]["grades"]
+            except Exception:
+                continue
 
-        # Renault uses data-testid or class-based price containers
-        for block in soup.select("[class*='version'], [class*='Version'], [class*='finition'], [class*='motorisation']"):
-            name_el = block.select_one("[class*='name'], [class*='Name'], [class*='title'], h2, h3, h4")
-            price_el = block.select_one("[class*='price'], [class*='Price'], [data-testid*='price']")
-            if name_el and price_el:
-                price = self.parse_price(price_el.get_text())
-                if price:
-                    variants.append(ScrapedVariant(model_name, name_el.get_text(strip=True), price))
+            variants = []
+            for grade in grades:
+                label = grade.get("label", "").strip()
+                price = grade.get("minPrice")
+                if label and isinstance(price, (int, float)) and 5_000 <= price <= 500_000:
+                    variants.append(ScrapedVariant(model_name, label, int(price)))
+            return variants
 
-        # Fallback: JSON-LD
-        if not variants:
-            for item in self.extract_jsonld(html):
-                if item.get("@type") in ("Car", "Product") and item.get("offers"):
-                    offers = item["offers"]
-                    if not isinstance(offers, list):
-                        offers = [offers]
-                    for offer in offers:
-                        price_str = str(offer.get("price", ""))
-                        price = self.parse_price(price_str)
-                        name = item.get("name", model_name)
-                        variant_name = offer.get("name", name)
-                        if price:
-                            variants.append(ScrapedVariant(model_name, variant_name, price))
-
-        return variants
+        return []
