@@ -38,6 +38,27 @@
   </div>
   {% endif %}
 
+  {% if view and view.groups %}
+  <div class="budget-totals-bar">
+    <div class="totals-item">
+      <span class="totals-label">Revenus YTD</span>
+      <span class="totals-value green">{{ view.total_income|fmtnum }}</span>
+    </div>
+    <div class="totals-sep">−</div>
+    <div class="totals-item">
+      <span class="totals-label">Dépenses YTD</span>
+      <span class="totals-value">{{ (view.total_expenses * -1)|fmtnum }}</span>
+    </div>
+    <div class="totals-sep">=</div>
+    <div class="totals-item">
+      <span class="totals-label">Net</span>
+      <span class="totals-value {% if view.net >= 0 %}green{% else %}red{% endif %}">
+        {% if view.net > 0 %}+{% endif %}{{ view.net|fmtnum }}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
   {% if not view or not view.groups %}
   <div class="alert warning">Aucune donnée pour cette année.</div>
   {% else %}

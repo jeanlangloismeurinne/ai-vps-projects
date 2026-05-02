@@ -13,7 +13,9 @@ from app.services.database import (
     insert_transactions, upsert_account,
     create_import_session, get_import_sessions, link_transactions_to_session,
     get_session_with_transactions, create_classifier_snapshot,
+    get_classifier_rules_all,
 )
+from app.routes.budget import _annotate_with_rules
 from app.services.format_checker import check_format, apply_mapping
 from app.services.budget import (
     get_budget_years, create_next_budget_year, get_budget_lines, get_all_categories_for_year,
@@ -108,18 +110,10 @@ async def import_upload(
         lines = await get_budget_lines(matching_year["id"])
         categories = sorted([l["category"] for l in lines])
 
-    # Load rules to show badges on rows that already have a matching rule
-    rules = await get_classification_rules()
-    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
-
     serializable = sorted(_serialize_rows(classified), key=lambda r: r.get("confidence") or 0)
 
-    # Annotate each row with matched rule info
-    for row in serializable:
-        lc = (row.get("label_clean") or row.get("label") or "").upper()
-        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
-        row["_matched_rule_category"] = matched[0] if matched else None
-        row["_matched_rule_id"] = matched[1] if matched else None
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(serializable, rules)
 
     stats = _compute_stats(serializable)
 
@@ -217,14 +211,8 @@ async def import_history(request: Request, session_id: int):
         lines = await get_all_categories_for_year(session["year_id"])
         categories = sorted([l["category"] for l in lines])
 
-    # Annotate with rule badges
-    rules = await get_classification_rules()
-    rules_upper = [(r["keyword"].upper(), r["category"], r["id"]) for r in rules]
-    for tx in txs:
-        lc = (tx.get("label_clean") or tx.get("label") or "").upper()
-        matched = next(((cat, rid) for kw, cat, rid in rules_upper if kw in lc), None)
-        tx["_matched_rule_category"] = matched[0] if matched else None
-        tx["_matched_rule_id"] = matched[1] if matched else None
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(txs, rules)
 
     stats = _compute_stats_from_txs(txs)
 

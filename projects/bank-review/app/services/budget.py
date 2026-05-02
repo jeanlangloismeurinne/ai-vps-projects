@@ -219,12 +219,18 @@ def build_budget_view(
             "monthly":        monthly_totals,
         })
 
+    total_income   = round(sum(c["ytd_actual"] for g in group_list for c in g["categories"] if c["is_income"]), 2)
+    total_expenses = round(sum(c["ytd_actual"] for g in group_list for c in g["categories"] if not c["is_income"]), 2)
+
     return {
         "year":            year,
         "months":          months,
         "elapsed_months":  elapsed_months,
         "today":           today.strftime("%Y-%m"),
         "groups":          group_list,
+        "total_income":    total_income,
+        "total_expenses":  total_expenses,
+        "net":             round(total_income + total_expenses, 2),
     }
 
 
