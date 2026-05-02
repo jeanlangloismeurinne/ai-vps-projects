@@ -1,0 +1,55 @@
+# IMPORTANT :
+# - Labels Traefik explicites (pas d'auto-injection mode dockercompose)
+# - Pas de env_file : Coolify injecte les variables directement
+# - Rebuild via /deploy, jamais /restart
+
+networks:
+  infra-net:
+    external: true
+
+services:
+  portfolio-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio-backend
+    networks:
+      - infra-net
+    expose:
+      - "8050"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio-backend.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.portfolio-backend.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portfolio-backend.loadbalancer.server.port=8050"
+
+  portfolio-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: portfolio-frontend
+    networks:
+      - infra-net
+    expose:
+      - "8051"
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://portfolio.jlmvpscode.duckdns.org/api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8051"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio-frontend.rule=Host(`portfolio.jlmvpscode.duckdns.org`)"
+      - "traefik.http.routers.portfolio-frontend.entrypoints=websecure"
+      - "traefik.http.routers.portfolio-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portfolio-frontend.loadbalancer.server.port=8051"

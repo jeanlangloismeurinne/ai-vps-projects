@@ -1,0 +1,24 @@
+{
+  "_reminder": "TODO: créer un schéma complet pour le secteur Industrial (kpis, peers, queries sectorielles, red flags, positive signals) — cf. IT_Services.json comme modèle",
+  "sector": "Industrial",
+  "display_name": "Industrial & Capital Goods",
+  "kpis_specifiques": [
+    "organic_revenue_growth",
+    "order_intake",
+    "book_to_bill_ratio",
+    "ebitda_margin",
+    "backlog_months"
+  ],
+  "peers_defaut": ["SIE", "ABB", "HON", "EMR", "ROK"],
+  "queries_sectorielles": [],
+  "red_flags_sectoriels": [
+    "order cancellations",
+    "capex freeze",
+    "PMI contraction"
+  ],
+  "positive_signals": [
+    "energy transition spending",
+    "reshoring capex",
+    "record backlog"
+  ]
+}

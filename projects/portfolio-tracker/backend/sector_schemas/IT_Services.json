@@ -1,0 +1,30 @@
+{
+  "sector": "IT_Services",
+  "display_name": "IT Services & Consulting",
+  "kpis_specifiques": [
+    "organic_growth_constant_currency",
+    "book_to_bill_ratio",
+    "attrition_rate",
+    "offshore_ratio",
+    "ai_bookings_percentage",
+    "large_deals_tcv"
+  ],
+  "peers_defaut": ["ACN", "CTSH", "TCS", "INFY", "HCLTECH", "WIT"],
+  "queries_sectorielles": [
+    "IT services spending enterprise {year} outlook",
+    "generative AI enterprise adoption IT services {year}",
+    "IT services pricing pressure automation {year}"
+  ],
+  "red_flags_sectoriels": [
+    "budget freeze",
+    "discretionary spending cut",
+    "AI replacing developers",
+    "headcount reduction clients"
+  ],
+  "positive_signals": [
+    "cloud migration",
+    "AI transformation",
+    "record bookings",
+    "deal acceleration"
+  ]
+}

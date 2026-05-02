@@ -1,0 +1,24 @@
+{
+  "_reminder": "TODO: créer un schéma complet pour le secteur Luxury (kpis, peers, queries sectorielles, red flags, positive signals) — cf. IT_Services.json comme modèle",
+  "sector": "Luxury",
+  "display_name": "Luxury Goods",
+  "kpis_specifiques": [
+    "organic_revenue_growth",
+    "like_for_like_growth",
+    "gross_margin",
+    "asia_revenue_pct",
+    "direct_to_consumer_ratio"
+  ],
+  "peers_defaut": ["MC", "OR", "RMS", "CFR", "BRBY"],
+  "queries_sectorielles": [],
+  "red_flags_sectoriels": [
+    "china slowdown",
+    "aspirational consumer pressure",
+    "destocking"
+  ],
+  "positive_signals": [
+    "china recovery",
+    "pricing power",
+    "DTC expansion"
+  ]
+}

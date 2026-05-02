@@ -133,6 +133,7 @@ _KNOWN_PROJECTS = [
     "feedback-module",
     "hello-world",
     "homepage",
+    "portfolio-tracker",
     "tool-file-intake",
 ]
 
