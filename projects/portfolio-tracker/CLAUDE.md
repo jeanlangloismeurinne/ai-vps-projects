@@ -26,77 +26,60 @@ Workspace Dust : `plm-siege`
 
 - [x] `FMP_API_KEY` = `dpl0XXr5F5ElF2M5s70Qmd80Pi3xBS6k`
 
-### Étape 4 — Base de données
+### Étape 4 — Base de données ✅
+
+- [x] `db_portfolio` créée, migration appliquée, user `portfolio_user` configuré
+
+### Étape 5 — Variables d'environnement Coolify ✅
+
+- [x] Toutes les vars sauf `DUST_API_KEY` — à renseigner dans Coolify quand disponible :
+  ```
+  DUST_API_KEY=sk-dust-...
+  ```
+
+### Étape 6 — assistant-ia ✅
+
+- [x] `"portfolio-tracker"` ajouté dans `_KNOWN_PROJECTS`
+
+### Étape 7 — DuckDNS ⚠️ ACTION REQUISE
+
+**Aller sur duckdns.org et créer le sous-domaine `portfolio.jlmvpscode`** pointant sur `204.168.250.110`.
+Sans ça, Let's Encrypt ne peut pas émettre le certificat et Traefik ne route pas.
+
+Une fois créé, forcer la mise à jour DNS :
+```bash
+/root/duckdns/duck.sh
+```
+
+Puis redéployer portfolio-tracker pour que `post_deployment_command` se lance.
+
+### Étape 8 — Bootstrap Capgemini (après DNS opérationnel)
 
 ```bash
-docker exec shared-postgres psql -U admin -c 'CREATE DATABASE db_portfolio;'
-
-docker exec -i shared-postgres psql -U admin -d db_portfolio < \
-  backend/app/db/migrations/001_initial.sql
-```
-
-- [ ] Créer la base `db_portfolio`
-- [ ] Appliquer la migration `001_initial.sql`
-
-### Étape 5 — Variables d'environnement dans Coolify
-
-- [ ] Renseigner dans Coolify (service portfolio-backend) :
-
-```
-DUST_API_KEY=sk-dust-...
-DUST_WORKSPACE_ID=plm-siege
-DUST_RESEARCH_AGENT_ID=[copié étape 1]
-DUST_PORTFOLIO_AGENT_ID=[copié étape 1]
-DUST_MONTHLY_BUDGET_USD=5.0
-DATABASE_URL=postgresql+asyncpg://admin:PASSWORD@shared-postgres:5432/db_portfolio
-REDIS_URL=redis://shared-redis:6379
-SLACK_BOT_TOKEN=[depuis /opt/cyber-agent/.env]
-SLACK_APP_TOKEN=[depuis /opt/cyber-agent/.env]
-SLACK_PORTFOLIO_CHANNEL_ID=[copié étape 2]
-FMP_API_KEY=[copié étape 3]
-BASE_CURRENCY=EUR
-```
-
-### Étape 6 — Enregistrer le projet dans assistant-ia
-
-- [ ] Ajouter `"portfolio-tracker"` dans `_KNOWN_PROJECTS` dans `projects/assistant-ia/app/slack_app.py`
-
-### Étape 7 — Commit, push, deploy
-
-```bash
-git add .
-git commit -m "feat: portfolio-tracker initial setup"
-git push origin main
-# Déclencher rebuild via API Coolify (cf. CLAUDE.md global)
-```
-
-- [ ] Commit + push
-- [ ] Rebuild Coolify (pas restart)
-- [ ] Vérifier `/health` sur `portfolio.jlmvpscode.duckdns.org/api/health`
-
-### Étape 8 — Bootstrap Capgemini
-
-- [ ] Créer la position CAP :
-
-```bash
-curl -X POST https://portfolio.jlmvpscode.duckdns.org/api/positions \
+# 1. Créer la position
+POSITION_ID=$(curl -s -X POST https://portfolio.jlmvpscode.duckdns.org/api/positions \
   -H "Content-Type: application/json" \
-  -d '{
-    "ticker": "CAP",
-    "company_name": "Capgemini",
-    "sector_schema": "IT_Services",
-    "exchange": "EURONEXT",
-    "entry_date": "2026-05-01",
-    "entry_price": 102.00,
-    "entry_price_currency": "EUR",
-    "allocation_pct": 8.5
-  }'
+  -d '{"ticker":"CAP","company_name":"Capgemini","sector_schema":"IT_Services","exchange":"EURONEXT","entry_date":"2026-05-01","entry_price":102.00,"entry_price_currency":"EUR","allocation_pct":8.5}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+echo "Position ID: $POSITION_ID"
+
+# 2. Importer la thèse (payload complet dans spec §17 étape 6)
+curl -X POST https://portfolio.jlmvpscode.duckdns.org/api/positions/$POSITION_ID/thesis \
+  -H "Content-Type: application/json" \
+  -d @/root/ai-vps-projects/projects/portfolio-tracker/capgemini_thesis.json
 ```
 
-- [ ] Importer la thèse Capgemini :
-  - Récupérer le `POSITION_ID` retourné par l'appel précédent
-  - `curl -X POST .../api/positions/{POSITION_ID}/thesis -d @- << 'EOF' [...] EOF`
-  - Payload complet dans la spec §17 étape 6
+Le fichier `capgemini_thesis.json` est à créer depuis le payload de la spec §17 étape 6.
+
+### Note technique — réseau infra-net
+
+Le `post_deployment_command` Coolify connecte automatiquement les containers à `infra-net` après chaque rebuild :
+```bash
+docker ps -q --filter 'name=portfolio-backend-portfolio0tracker000000000' | xargs -I{} docker network connect infra-net {} 2>/dev/null || true; [...]
+```
+
+Coolify crée `portfolio0tracker000000000_infra-net` au lieu de `infra-net` (bug Docker Compose avec `--project-name`). La commande post-deploy corrige ça.
 
 ---
 
