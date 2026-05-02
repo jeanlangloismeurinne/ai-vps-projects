@@ -25,10 +25,21 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.portfolio-backend.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.portfolio-backend.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.portfolio-backend.loadbalancer.server.port=8050"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.entryPoints=http"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.service=http-0-portfolio0tracker000000000-api"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.entryPoints=https"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.middlewares=gzip"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.service=https-0-portfolio0tracker000000000-api"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.tls=true"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.priority=10"
+      - "traefik.http.services.http-0-portfolio0tracker000000000-api.loadbalancer.server.port=8050"
+      - "traefik.http.services.https-0-portfolio0tracker000000000-api.loadbalancer.server.port=8050"
 
   portfolio-frontend:
     build:
@@ -49,7 +60,17 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.portfolio-frontend.rule=Host(`portfolio.jlmvpscode.duckdns.org`)"
-      - "traefik.http.routers.portfolio-frontend.entrypoints=websecure"
-      - "traefik.http.routers.portfolio-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.portfolio-frontend.loadbalancer.server.port=8051"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000.entryPoints=http"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000.middlewares=redirect-to-https"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.http-0-portfolio0tracker000000000.service=http-0-portfolio0tracker000000000"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.entryPoints=https"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.middlewares=gzip"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.service=https-0-portfolio0tracker000000000"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.tls=true"
+      - "traefik.http.routers.https-0-portfolio0tracker000000000.tls.certresolver=letsencrypt"
+      - "traefik.http.services.http-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
+      - "traefik.http.services.https-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
