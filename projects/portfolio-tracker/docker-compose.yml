@@ -5,6 +5,7 @@
 
 networks:
   infra-net:
+    name: infra-net
     external: true
 
 services:
