@@ -1,0 +1,52 @@
+{
+  "sector": "Automotive & EV",
+  "kpis": [
+    "deliveries_quarterly",
+    "gross_margin_auto_pct",
+    "operating_margin_pct",
+    "free_cash_flow",
+    "energy_storage_revenue",
+    "fsd_revenue_recognized",
+    "capex_intensity_pct",
+    "net_cash_position"
+  ],
+  "red_flags": [
+    "auto_gross_margin_below_12pct_two_quarters",
+    "deliveries_decline_yoy",
+    "negative_fcf_two_quarters",
+    "ceo_key_person_risk_event"
+  ],
+  "valuation_multiples": [
+    "ev_revenue",
+    "ev_ebitda",
+    "pe_ntm",
+    "price_to_fcf",
+    "ev_per_vehicle_delivered"
+  ],
+  "key_questions": [
+    "Quel est le rythme de livraisons vs guidance ?",
+    "La marge brute Auto tient-elle au-dessus de 15% malgré la guerre des prix ?",
+    "Le software (FSD, Full Self-Driving) génère-t-il des revenus récurrents ?",
+    "L'énergie (Megapack, Powerwall) compense-t-elle la cyclicité Auto ?",
+    "Le cash burn capex reste-t-il maîtrisé pour financer la croissance ?"
+  ],
+  "peers": {
+    "tier1": [
+      {"ticker": "BYDDF", "name": "BYD Co.", "relevance": "concurrent direct EV global"},
+      {"ticker": "RIVN", "name": "Rivian", "relevance": "EV pure-play US"}
+    ],
+    "tier2": [
+      {"ticker": "GM", "name": "General Motors", "relevance": "bellwether demande auto US"},
+      {"ticker": "STLA", "name": "Stellantis", "relevance": "bellwether marché EU"},
+      {"ticker": "LCID", "name": "Lucid Motors", "relevance": "premium EV segment"}
+    ]
+  },
+  "sector_context": "Transition vers l'électrique portée par régulations CO2 EU/Chine, mais cycles d'adoption volatils. Guerre des prix en Chine (BYD) comprime les marges industrie. Le différenciateur clé long terme est le software embarqué (autonomie, OTA updates) et l'écosystème de recharge.",
+  "monitoring_events": [
+    "earnings_quarterly",
+    "delivery_stats_monthly",
+    "fsd_regulatory_approvals",
+    "gigafactory_capacity_announcements",
+    "battery_day_events"
+  ]
+}
