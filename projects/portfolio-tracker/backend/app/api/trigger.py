@@ -181,9 +181,24 @@ async def _run_regime1(pos: dict, job_id: str = None):
         with open(schema_path) as f:
             sector_schema = json.load(f)
 
-        m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
-        m2 = collect_m2(ticker, pos["company_name"])
-        m3 = await collect_m3(ticker, pos["company_name"], "post_earnings", {}, DustClient())
+        try:
+            m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+        except Exception as e:
+            logger.warning(f"M1 error for {ticker}: {e}")
+            m1 = {"ticker": ticker, "error": str(e)}
+
+        try:
+            m2 = collect_m2(ticker, pos["company_name"])
+        except Exception as e:
+            logger.warning(f"M2 error for {ticker}: {e}")
+            m2 = {}
+
+        try:
+            m3 = await collect_m3(ticker, pos["company_name"], "post_earnings", {}, DustClient())
+        except Exception as e:
+            logger.warning(f"M3 error for {ticker}: {e}")
+            m3 = {}
+
         data_brief = assemble_data_brief(ticker, m1, m2, m3, None, None, None)
 
         thesis = await run_regime_1(ticker, pos["company_name"], data_brief, sector_schema, DustClient())
