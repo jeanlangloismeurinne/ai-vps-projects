@@ -87,11 +87,14 @@ Règles d'escalade :
     try:
         c = result["content"]
         j = c.find("```json")
-        return json.loads(c[j + 7:c.find("```", j + 7)].strip()) if j >= 0 \
+        parsed = json.loads(c[j + 7:c.find("```", j + 7)].strip()) if j >= 0 \
             else json.loads(c[c.find("{"):c.rfind("}") + 1])
+        parsed["dust_conversation_id"] = result.get("conversation_id")
+        return parsed
     except json.JSONDecodeError:
         return {"error": "parse_error", "flag": "REVIEW_REQUIRED",
-                "escalation_reason": "parse_error_requires_manual_review"}
+                "escalation_reason": "parse_error_requires_manual_review",
+                "dust_conversation_id": result.get("conversation_id")}
 
 
 # ── RÉGIME 3 ─────────────────────────────────────────────────────────────────
@@ -159,8 +162,11 @@ reinforce | maintain | reduce_25 | reduce_50 | exit — 3-4 phrases de justifica
     try:
         c = result["content"]
         j = c.find("```json")
-        return json.loads(c[j + 7:c.find("```", j + 7)].strip()) if j >= 0 \
+        parsed = json.loads(c[j + 7:c.find("```", j + 7)].strip()) if j >= 0 \
             else json.loads(c[c.find("{"):c.rfind("}") + 1])
+        parsed["dust_conversation_id"] = result.get("conversation_id")
+        return parsed
     except json.JSONDecodeError as e:
         logger.error(f"Regime 3 parse error {ticker}: {e}")
-        return {"error": "parse_error", "raw_content": result["content"][:1000]}
+        return {"error": "parse_error", "raw_content": result["content"][:1000],
+                "dust_conversation_id": result.get("conversation_id")}

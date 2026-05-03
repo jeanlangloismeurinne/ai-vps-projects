@@ -2,6 +2,7 @@ import '../styles/globals.css'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Script from 'next/script'
+import MarketTemperatureBadge from '../components/MarketTemperatureBadge'
 
 function NavLink({ href, children }) {
   const router = useRouter()
@@ -18,19 +19,18 @@ function NavLink({ href, children }) {
 
 export default function App({ Component, pageProps }) {
   return (
-    <div className="min-h-screen">
-      <Script
-        src="/feedback-widget.js"
-        data-api=""
-        data-project="portfolio-tracker"
-        strategy="lazyOnload"
-      />
-      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-2">
+    <div className="min-h-screen bg-gray-950">
+      <Script src="/feedback-widget.js" data-api="" data-project="portfolio-tracker" strategy="lazyOnload" />
+      <nav className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-2 sticky top-0 z-40">
         <span className="text-white font-bold mr-4">📈 Portfolio Tracker</span>
         <NavLink href="/">Positions</NavLink>
         <NavLink href="/calendar">Calendrier</NavLink>
         <NavLink href="/watchlist">Watchlist</NavLink>
         <NavLink href="/analysts">Analystes</NavLink>
+        <NavLink href="/market-temperature">Marchés</NavLink>
+        <div className="ml-auto">
+          <MarketTemperatureBadge />
+        </div>
       </nav>
       <main className="px-6 py-6 max-w-7xl mx-auto">
         <Component {...pageProps} />

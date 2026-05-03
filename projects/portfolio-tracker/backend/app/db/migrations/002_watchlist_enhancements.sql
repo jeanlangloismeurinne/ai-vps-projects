@@ -1,0 +1,5 @@
+ALTER TABLE watchlist
+  ADD COLUMN IF NOT EXISTS cash_ready            BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS readiness_score       DECIMAL(5,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS alert_triggered_at    TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS alert_acknowledged    BOOLEAN DEFAULT FALSE;

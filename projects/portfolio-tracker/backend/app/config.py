@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     SLACK_APP_TOKEN: str
     SLACK_PORTFOLIO_CHANNEL_ID: str
     FMP_API_KEY: str
+    FRED_API_KEY: str = ""
     BASE_CURRENCY: str = "EUR"
     MAX_SECTOR_CONCENTRATION_PCT: float = 20.0
     PULSE_ESCALATION_THRESHOLD: int = -3

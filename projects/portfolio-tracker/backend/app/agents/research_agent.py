@@ -109,6 +109,7 @@ async def run_regime_1(ticker: str, company_name: str, data_brief: dict,
         thesis = json.loads(c[j + 7:c.find("```", j + 7)].strip()) if j >= 0 \
             else json.loads(c[c.find("{"):c.rfind("}") + 1])
         thesis["dust_cost_usd"] = result.get("cost_usd")
+        thesis["dust_conversation_id"] = result.get("conversation_id")
         return thesis
     except json.JSONDecodeError as e:
         logger.error(f"Regime 1 parse error {ticker}: {e}")

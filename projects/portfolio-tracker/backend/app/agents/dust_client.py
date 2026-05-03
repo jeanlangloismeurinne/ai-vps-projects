@@ -108,7 +108,8 @@ class DustClient:
                                 m = model_override or "claude-sonnet-4-5"
                                 cost = await self.track_cost(m, ti, to)
                                 return {"content": content, "tokens_input": ti,
-                                        "tokens_output": to, "cost_usd": cost}
+                                        "tokens_output": to, "cost_usd": cost,
+                                        "conversation_id": conv_id}
                             elif msg.get("status") == "failed":
                                 raise Exception(f"Agent failed: {msg.get('error')}")
             raise TimeoutError(f"Timeout after {timeout}s")

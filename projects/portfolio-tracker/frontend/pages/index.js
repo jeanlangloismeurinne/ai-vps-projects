@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import RecommendationBadge from '../components/RecommendationBadge'
+import MarketTemperatureBadge from '../components/MarketTemperatureBadge'
+import CashManagementWidget from '../components/CashManagementWidget'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050/api'
 
@@ -43,6 +45,11 @@ export default function Dashboard() {
           </span>
         </div>
       </div>
+
+      <div className="flex items-center gap-3">
+        <MarketTemperatureBadge showCash />
+      </div>
+      <CashManagementWidget />
 
       {flags.length > 0 && (
         <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-4">

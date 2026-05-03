@@ -14,12 +14,19 @@ class PositionCreate(BaseModel):
     entry_price: float
     entry_price_currency: str = "EUR"
     allocation_pct: Optional[float] = None
+    quantity: Optional[float] = None
     status: str = "active"
 
 
 class PositionUpdate(BaseModel):
     allocation_pct: Optional[float] = None
     status: Optional[str] = None
+    exit_price: Optional[float] = None
+    exit_date: Optional[date] = None
+    exit_reason: Optional[str] = None
+    exit_notes: Optional[str] = None
+    quantity: Optional[float] = None
+    schema_json: Optional[dict] = None
 
 
 # ── HYPOTHESIS ────────────────────────────────────────────────────────────────
@@ -65,6 +72,8 @@ class WatchlistUpdate(BaseModel):
     entry_price_target: Optional[float] = None
     trigger_alert_price: Optional[float] = None
     status: Optional[str] = None
+    cash_ready: Optional[bool] = None
+    sector_schema: Optional[str] = None
 
 
 # ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -111,3 +120,28 @@ class PeerCreate(BaseModel):
     rationale: Optional[str] = None
     hypotheses_watched: Optional[List[str]] = None
     metrics_to_extract: Optional[List[str]] = None
+
+
+# ── PORTFOLIO SETTINGS ────────────────────────────────────────────────────────
+
+class PortfolioSettingsUpdate(BaseModel):
+    total_capital_eur: Optional[float] = None
+    cash_balance_eur: Optional[float] = None
+
+
+class CashOperationCreate(BaseModel):
+    operation_type: str  # deposit | withdrawal
+    amount_eur: float
+    notes: Optional[str] = None
+
+
+# ── WATCHLIST VALIDATE ────────────────────────────────────────────────────────
+
+class WatchlistValidateThesis(BaseModel):
+    entry_price_target: Optional[float] = None
+    trigger_alert_price: Optional[float] = None
+    decision: str  # watch | invest_now
+
+
+class WatchlistChatMessage(BaseModel):
+    message: str

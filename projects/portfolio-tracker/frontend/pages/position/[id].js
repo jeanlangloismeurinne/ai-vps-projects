@@ -5,8 +5,16 @@ import ThesisTimeline from '../../components/ThesisTimeline'
 import SectorPulseLog from '../../components/SectorPulseLog'
 import PeerComparison from '../../components/PeerComparison'
 import RecommendationBadge from '../../components/RecommendationBadge'
+import AIActionsPanel from '../../components/AIActionsPanel'
+import MonitoringFeed from '../../components/MonitoringFeed'
+import ExitManagementPanel from '../../components/ExitManagementPanel'
+import PostMortemTab from '../../components/PostMortemTab'
+import ThesisChat from '../../components/ThesisChat'
+import ThesisValidationPanel from '../../components/ThesisValidationPanel'
+import DustRunViewer from '../../components/DustRunViewer'
+import DataSourcesPanel from '../../components/DataSourcesPanel'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050/api'
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
 function Section({ title, children }) {
   return (
@@ -22,34 +30,33 @@ export default function PositionDetail() {
   const { id } = router.query
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [triggering, setTriggering] = useState(null)
+  const [tab, setTab] = useState('overview')
 
-  useEffect(() => {
+  const load = () => {
     if (!id) return
     fetch(`${API}/positions/${id}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [id])
-
-  const triggerRegime = async (regime) => {
-    const ticker = data?.position?.ticker
-    if (!ticker) return
-    setTriggering(regime)
-    try {
-      await fetch(`${API}/trigger/regime${regime}/${ticker}`, { method: 'POST' })
-      alert(`Régime ${regime} déclenché pour ${ticker}`)
-    } catch (e) {
-      alert('Erreur lors du déclenchement')
-    }
-    setTriggering(null)
   }
+
+  useEffect(() => { load() }, [id])
 
   if (loading) return <div className="text-gray-400 py-12 text-center">Chargement…</div>
   if (!data) return <div className="text-red-400 py-12 text-center">Position introuvable</div>
 
   const { position, thesis, hypotheses, reviews, peers, sector_pulses } = data
   const lastReview = reviews?.[0]
+  const isClosed = position?.status === 'closed'
+  const hasThesis = !!thesis
+
+  const tabs = [
+    { key: 'overview', label: 'Vue d\'ensemble' },
+    { key: 'these', label: 'Thèse' },
+    { key: 'monitoring', label: 'Monitoring' },
+    { key: 'schema', label: 'Schéma analytique' },
+    ...(isClosed ? [{ key: 'postmortem', label: 'Post-mortem' }] : []),
+  ]
 
   return (
     <div className="space-y-5">
@@ -58,75 +65,129 @@ export default function PositionDetail() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-white font-mono">{position.ticker}</h1>
             <span className="text-xl text-gray-400">{position.company_name}</span>
+            {isClosed && <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded">Clôturée</span>}
           </div>
           {thesis?.thesis_one_liner && (
             <p className="text-gray-300 mt-2 max-w-2xl italic">&ldquo;{thesis.thesis_one_liner}&rdquo;</p>
           )}
         </div>
-        <div className="flex gap-2 shrink-0">
-          <button onClick={() => triggerRegime(2)}
-            disabled={triggering === 2}
-            className="px-3 py-1.5 text-xs bg-blue-800 hover:bg-blue-700 text-blue-200 rounded font-medium disabled:opacity-50">
-            {triggering === 2 ? '…' : 'Régime 2'}
-          </button>
-          <button onClick={() => triggerRegime(3)}
-            disabled={triggering === 3}
-            className="px-3 py-1.5 text-xs bg-amber-800 hover:bg-amber-700 text-amber-200 rounded font-medium disabled:opacity-50">
-            {triggering === 3 ? '…' : 'Régime 3'}
-          </button>
-        </div>
+        <AIActionsPanel ticker={position.ticker} hasThesis={hasThesis} onDone={load} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Prix entrée', value: position.entry_price != null ? `€${Number(position.entry_price).toFixed(2)}` : '—' },
-          { label: 'Allocation', value: position.allocation_pct != null ? `${position.allocation_pct}%` : '—' },
-          { label: 'Secteur', value: position.sector_schema },
-          { label: 'Exchange', value: position.exchange },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-gray-900 border border-gray-800 rounded-lg p-3">
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className="text-base font-semibold text-white">{value}</p>
-          </div>
+      <div className="flex border-b border-gray-800 gap-1">
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.key ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-gray-200'
+            }`}>{t.label}</button>
         ))}
       </div>
 
-      {lastReview && (
-        <div className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 flex items-center gap-4">
-          <span className="text-sm text-gray-400">Dernière revue :</span>
-          <RecommendationBadge recommendation={lastReview.recommendation} alertLevel={lastReview.alert_level} />
-          <span className="text-sm text-gray-500">
-            {lastReview.review_date ? new Date(lastReview.review_date).toLocaleDateString('fr-FR') : ''}
-          </span>
-          {lastReview.rationale && (
-            <span className="text-sm text-gray-300 truncate">{lastReview.rationale}</span>
+      {tab === 'overview' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Prix entrée', value: position.entry_price != null ? `€${Number(position.entry_price).toFixed(2)}` : '—' },
+              { label: 'Allocation', value: position.allocation_pct != null ? `${position.allocation_pct}%` : '—' },
+              { label: 'Secteur', value: position.sector_schema },
+              { label: 'Exchange', value: position.exchange },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-900 border border-gray-800 rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-1">{label}</p>
+                <p className="text-base font-semibold text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {lastReview && (
+            <div className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 flex items-center gap-4">
+              <span className="text-sm text-gray-400">Dernière revue :</span>
+              <RecommendationBadge recommendation={lastReview.recommendation} alertLevel={lastReview.alert_level} />
+              <span className="text-sm text-gray-500">
+                {lastReview.review_date ? new Date(lastReview.review_date).toLocaleDateString('fr-FR') : ''}
+              </span>
+              {lastReview.rationale && <span className="text-sm text-gray-300 truncate">{lastReview.rationale}</span>}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Section title="Hypothèses fondatrices">
+              <HypothesisScorecard hypotheses={hypotheses} />
+            </Section>
+            <Section title="Historique des revues">
+              <ThesisTimeline reviews={reviews} />
+            </Section>
+            <Section title="Sector Pulses">
+              <SectorPulseLog pulses={sector_pulses} />
+            </Section>
+            <Section title="Comparaison peers">
+              <PeerComparison peers={peers} />
+            </Section>
+          </div>
+
+          {!isClosed && (
+            <Section title="Gestion de la position">
+              <ExitManagementPanel positionId={id} thesis={thesis} onExit={load} />
+            </Section>
+          )}
+
+          {thesis?.scenarios_json && (
+            <Section title="Scénarios 5 ans">
+              <ScenarioTable scenarios={typeof thesis.scenarios_json === 'string'
+                ? JSON.parse(thesis.scenarios_json) : thesis.scenarios_json} />
+            </Section>
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Section title="Hypothèses fondatrices">
-          <HypothesisScorecard hypotheses={hypotheses} />
-        </Section>
+      {tab === 'these' && (
+        <div className="space-y-5">
+          {thesis?.dust_conversation_id && (
+            <Section title="Raisonnement Régime 1">
+              <DustRunViewer dustConversationId={thesis.dust_conversation_id} label="Conversation de construction de thèse" />
+            </Section>
+          )}
+          {thesis && (
+            <Section title="Données utilisées (dernier run)">
+              <DataSourcesPanel
+                dataSources={reviews?.[0]?.data_brief_json?.data_sources}
+                dataQualityFlags={reviews?.[0]?.data_quality_flags}
+                agentVersionResearch={thesis.agent_version_research}
+                agentVersionPortfolio={thesis.agent_version_portfolio}
+              />
+            </Section>
+          )}
+          <Section title="Chat avec l'agent">
+            <ThesisChat entityType="position" entityId={id} ticker={position.ticker} isValidated={!!thesis?.validated_at} />
+          </Section>
+          {!thesis?.validated_at && (
+            <Section title="Validation de la thèse">
+              <ThesisValidationPanel entityType="position" entityId={id} onValidated={load} />
+            </Section>
+          )}
+          {thesis?.validated_at && (
+            <div className="bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
+              <p className="text-emerald-300 text-sm">✅ Thèse validée le {new Date(thesis.validated_at).toLocaleDateString('fr-FR')}</p>
+            </div>
+          )}
+        </div>
+      )}
 
-        <Section title="Historique des revues">
-          <ThesisTimeline reviews={reviews} />
-        </Section>
+      {tab === 'monitoring' && (
+        <MonitoringFeed reviews={reviews} hypotheses={hypotheses} positionId={id} />
+      )}
 
-        <Section title="Sector Pulses">
-          <SectorPulseLog pulses={sector_pulses} />
+      {tab === 'schema' && (
+        <Section title="Schéma analytique">
+          {position.schema_json
+            ? <pre className="text-gray-300 text-xs whitespace-pre-wrap">{JSON.stringify(position.schema_json, null, 2)}</pre>
+            : <p className="text-gray-500 text-sm">Schéma non disponible — déclenchez un Régime 1 pour le générer</p>
+          }
         </Section>
+      )}
 
-        <Section title="Comparaison peers">
-          <PeerComparison peers={peers} />
-        </Section>
-      </div>
-
-      {thesis?.scenarios_json && (
-        <Section title="Scénarios 5 ans">
-          <ScenarioTable scenarios={typeof thesis.scenarios_json === 'string'
-            ? JSON.parse(thesis.scenarios_json) : thesis.scenarios_json} />
-        </Section>
+      {tab === 'postmortem' && isClosed && (
+        <PostMortemTab position={position} thesis={thesis} hypotheses={hypotheses} />
       )}
     </div>
   )

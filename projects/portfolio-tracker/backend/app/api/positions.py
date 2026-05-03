@@ -38,14 +38,22 @@ async def create_position(data: PositionCreate):
         row = await db.fetchrow("""
             INSERT INTO positions
                 (ticker, company_name, sector_schema, exchange, entry_date,
-                 entry_price, entry_price_currency, allocation_pct, status)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                 entry_price, entry_price_currency, allocation_pct, quantity, status)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             RETURNING *
         """,
             data.ticker, data.company_name, data.sector_schema, data.exchange,
             data.entry_date, data.entry_price, data.entry_price_currency,
-            data.allocation_pct, data.status,
+            data.allocation_pct, data.quantity, data.status,
         )
+
+        # Log cash operation si portfolio_settings existe
+        try:
+            from app.api.portfolio_settings import _log_position_cash
+            await _log_position_cash(db, str(row["id"]), float(data.entry_price), data.quantity, "position_open")
+        except Exception:
+            pass
+
     return _serialize(row)
 
 
@@ -177,6 +185,80 @@ async def add_peer(position_id: str, data: PeerCreate):
             data.rationale, data.hypotheses_watched, data.metrics_to_extract,
         )
     return _serialize(row)
+
+
+@router.patch("/{position_id}/monitoring/{run_id}/acknowledge")
+async def acknowledge_review(position_id: str, run_id: str):
+    async with get_db_session() as db:
+        row = await db.fetchrow(
+            "UPDATE reviews SET acknowledged=TRUE WHERE id=$1 AND position_id=$2 RETURNING id",
+            run_id, position_id
+        )
+    if not row:
+        raise HTTPException(404, "Review not found")
+    return {"acknowledged": True}
+
+
+@router.post("/{position_id}/thesis-chat")
+async def position_thesis_chat(position_id: str, data: dict):
+    from app.agents import thesis_chat
+    from app.db.models import WatchlistChatMessage
+    message = data.get("message", "")
+    if not message:
+        raise HTTPException(400, "message required")
+
+    async with get_db_session() as db:
+        thesis = await db.fetchrow(
+            "SELECT * FROM theses WHERE position_id=$1 AND is_current=TRUE", position_id
+        )
+        if not thesis:
+            raise HTTPException(404, "No active thesis found")
+
+        try:
+            if thesis["dust_conversation_id"]:
+                result = await thesis_chat.continue_chat(thesis["dust_conversation_id"], message)
+                result["conversation_id"] = thesis["dust_conversation_id"]
+            else:
+                result = await thesis_chat.start_thesis_chat(
+                    position_id, str(thesis["id"]), message, db
+                )
+        except ValueError as e:
+            if "rate_limit" in str(e):
+                raise HTTPException(503, "Agent temporairement indisponible, réessayez dans 30 secondes")
+            if "dust_error" in str(e):
+                from app.notifications.slack_notifier import SlackNotifier
+                await SlackNotifier().send_error_alert(position_id, f"Erreur agent Dust sur thesis-chat/{position_id}")
+                raise HTTPException(502, "Erreur agent Dust")
+            raise HTTPException(500, str(e))
+
+    return result
+
+
+@router.get("/{position_id}/thesis-chat")
+async def get_position_thesis_chat(position_id: str):
+    from app.agents.thesis_chat import get_chat_history
+    async with get_db_session() as db:
+        thesis = await db.fetchrow(
+            "SELECT dust_conversation_id FROM theses WHERE position_id=$1 AND is_current=TRUE",
+            position_id
+        )
+    if not thesis or not thesis["dust_conversation_id"]:
+        return {"turns": [], "conversation_id": None}
+    turns = await get_chat_history(thesis["dust_conversation_id"])
+    return {"turns": turns, "conversation_id": thesis["dust_conversation_id"]}
+
+
+@router.post("/{position_id}/validate-thesis")
+async def validate_position_thesis(position_id: str):
+    async with get_db_session() as db:
+        row = await db.fetchrow("""
+            UPDATE theses SET validated_at=NOW()
+            WHERE position_id=$1 AND is_current=TRUE
+            RETURNING validated_at
+        """, position_id)
+    if not row:
+        raise HTTPException(404, "No active thesis found")
+    return {"validated": True, "validated_at": row["validated_at"].isoformat()}
 
 
 def _serialize(row) -> dict:
