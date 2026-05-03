@@ -24,6 +24,7 @@ services:
       - '127.0.0.1:6379:6379'
     networks:
       - infra-net
+      - coolify
 volumes:
   pgdata:
   redisdata:
@@ -31,3 +32,5 @@ networks:
   infra-net:
     name: infra-net
     driver: bridge
+  coolify:
+    external: true
