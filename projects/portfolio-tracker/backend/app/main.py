@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.db.database import init_pool, close_pool
 from app.config import settings
-from app.api import positions, calendar, portfolio, watchlist, analysts, trigger
+from app.api import positions, calendar, portfolio, watchlist, analysts, trigger, feedback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ app.include_router(portfolio.router)
 app.include_router(watchlist.router)
 app.include_router(analysts.router)
 app.include_router(trigger.router)
+app.include_router(feedback.router)
 
 
 @app.on_event("startup")

@@ -1,6 +1,7 @@
 import '../styles/globals.css'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import Script from 'next/script'
 
 function NavLink({ href, children }) {
   const router = useRouter()
@@ -18,6 +19,12 @@ function NavLink({ href, children }) {
 export default function App({ Component, pageProps }) {
   return (
     <div className="min-h-screen">
+      <Script
+        src="/feedback-widget.js"
+        data-api=""
+        data-project="portfolio-tracker"
+        strategy="lazyOnload"
+      />
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-2">
         <span className="text-white font-bold mr-4">📈 Portfolio Tracker</span>
         <NavLink href="/">Positions</NavLink>

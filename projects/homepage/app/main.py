@@ -46,6 +46,14 @@ SERVICES = [
         "url": "https://ev.jlmvpscode.duckdns.org/",
         "color": "#f59e0b",
     },
+    {
+        "id": "portfolio",
+        "emoji": "📈",
+        "name": "Portfolio Tracker",
+        "desc": "Suivi investissement long terme · Agents IA · 3 régimes d'analyse",
+        "url": "https://portfolio.jlmvpscode.duckdns.org/",
+        "color": "#7c3aed",
+    },
 ]
 
 # ── Templates ─────────────────────────────────────────────────────────────────
