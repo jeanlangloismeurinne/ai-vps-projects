@@ -3,10 +3,6 @@
 # - Pas de env_file : Coolify injecte les variables directement
 # - Rebuild via /deploy, jamais /restart
 
-networks:
-  infra-net:
-    external: true
-
 services:
   portfolio-backend:
     build:
@@ -74,3 +70,7 @@ services:
       - "traefik.http.routers.https-0-portfolio0tracker000000000.tls.certresolver=letsencrypt"
       - "traefik.http.services.http-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
       - "traefik.http.services.https-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
+
+networks:
+  infra-net:
+    external: true
