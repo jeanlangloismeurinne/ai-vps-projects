@@ -26,8 +26,10 @@ Rapports générés par `/opt/cyber-agent/` — structure :
 Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `description`, `target`, `fix`.
 
 ## Infrastructure partagée
-- PostgreSQL 16 : shared-postgres (port 5432)
+- PostgreSQL 16 : shared-postgres (port 5432) — réseaux : infra-net + coolify
   Bases : db_assistant (réservée pour assistant-ia, pas encore utilisée) · db_ev_prices (ev-prices)
+- Redis 7 : shared-redis (port 6379) — réseaux : infra-net + coolify (2026-05-03)
+  Les apps Coolify (réseau `coolify`) accèdent à Redis directement — pas besoin de `docker network connect infra-net`.
 
 ## Clés API inter-services
 - `INTERNAL_API_KEY` (bank-review ↔ assistant-ia) : `a09e3fce7a11df086a317458e4f15bf9f96ee57e7a0837f85d96905723d58585`
