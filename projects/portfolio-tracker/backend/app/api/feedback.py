@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from app.notifications.slack_notifier import SlackNotifier
 
-router = APIRouter(prefix="/api/feedback", tags=["feedback"])
+router = APIRouter(prefix="/feedback", tags=["feedback"])
 logger = logging.getLogger(__name__)
 
 TICKETS_DIR = Path("/app/feedback-tickets")

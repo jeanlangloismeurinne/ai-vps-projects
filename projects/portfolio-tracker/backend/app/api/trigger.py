@@ -13,7 +13,7 @@ from app.data_collection.assembler import assemble_data_brief
 from app.notifications.slack_notifier import SlackNotifier
 from app.config import settings
 
-router = APIRouter(prefix="/api/trigger", tags=["trigger"])
+router = APIRouter(prefix="/trigger", tags=["trigger"])
 logger = logging.getLogger(__name__)
 
 

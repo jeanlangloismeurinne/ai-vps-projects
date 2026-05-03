@@ -3,7 +3,7 @@ from app.db.database import get_db_session
 from app.db.models import CalendarEventCreate
 from app.calendar.calendar_builder import CalendarBuilder
 
-router = APIRouter(prefix="/api/calendar", tags=["calendar"])
+router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
 @router.get("")

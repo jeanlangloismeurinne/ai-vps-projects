@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import get_db_session
 from app.db.models import WatchlistCreate, WatchlistUpdate
 
-router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
+router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 
 @router.get("")

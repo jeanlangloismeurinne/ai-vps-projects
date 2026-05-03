@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import get_db_session
 from app.db.models import AnalystActionCreate, AnalystActionUpdate
 
-router = APIRouter(prefix="/api/analysts", tags=["analysts"])
+router = APIRouter(prefix="/analysts", tags=["analysts"])
 
 
 @router.get("")

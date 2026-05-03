@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.portfolio.portfolio_view import PortfolioView
 from app.db.database import get_db_session
 
-router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
+router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
 @router.get("")

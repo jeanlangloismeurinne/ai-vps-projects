@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import get_db_session
 from app.db.models import PositionCreate, PositionUpdate, ThesisCreate, PeerCreate
 
-router = APIRouter(prefix="/api/positions", tags=["positions"])
+router = APIRouter(prefix="/positions", tags=["positions"])
 logger = logging.getLogger(__name__)
 
 
