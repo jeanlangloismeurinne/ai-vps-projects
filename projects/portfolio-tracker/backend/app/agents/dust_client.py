@@ -96,7 +96,10 @@ class DustClient:
                 )
                 resp.raise_for_status()
                 for group in reversed(resp.json().get("conversation", {}).get("content", [])):
-                    for msg in group:
+                    msgs = [group] if isinstance(group, dict) else group
+                    for msg in msgs:
+                        if not isinstance(msg, dict):
+                            continue
                         if msg.get("type") == "agent_message":
                             if msg.get("status") == "succeeded":
                                 content = "".join(

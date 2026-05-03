@@ -104,7 +104,6 @@ async def run_scout(watchlist_id: str, ticker: str, db=None, redis=None) -> dict
 
 async def _execute_scout(job_id: str, watchlist_id: str, ticker: str, redis=None):
     from app.data_collection.m1_quantitative import collect_quantitative
-    from app.data_collection.m3_qualitative import collect_m3
     from app.agents.dust_client import DustClient
 
     async def _set_status(status: str, extra: dict = None):
@@ -124,18 +123,11 @@ async def _execute_scout(job_id: str, watchlist_id: str, ticker: str, redis=None
             logger.warning(f"M1 collection error for {ticker}: {e}")
             m1_data = {"ticker": ticker, "error": str(e)}
 
-        # Collecte M3 (optionnelle, ne bloque pas si KO)
-        dust_client = DustClient()
-        try:
-            m3_result = await collect_m3(ticker, ticker, "post_earnings", {}, dust_client)
-        except Exception:
-            m3_result = {}
-
-        # Construire prompt
+        # Construire prompt (M3 omis : l'agent fait ses propres web searches)
         prompt = SCOUT_PROMPT.format(
             ticker=ticker,
             m1_data=json.dumps(m1_data, indent=2, default=str)[:3000],
-            m3_data=json.dumps(m3_result, indent=2, default=str)[:2000],
+            m3_data="{}",
         )
 
         # Appel Dust via polling
