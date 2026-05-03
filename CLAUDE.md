@@ -208,48 +208,103 @@ $app = \App\Models\Application::where('uuid', '{UUID}')->first();
 | tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
 | ev-prices | `ev0prices0000000000000000` |
 
-### Déclencher un rebuild via l'API Coolify
+### Déclencher un rebuild — méthode fiable (PHP script)
 
-**Endpoints qui fonctionnent pour un rebuild complet :**
+**Méthode directe sans token API** — fonctionne toujours, vérifié 2026-05-03.
+
+Créer un fichier `/tmp/deploy.php` et l'exécuter dans le container Coolify :
 
 ```bash
-# Option 1 — /api/v1/deploy (GET avec query param) — vérifié 2026-05-01
-curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid={uuid}&force=false" \
-  -H "Authorization: Bearer {token}"
+cat > /tmp/deploy.php << 'EOF'
+<?php
+require '/var/www/html/vendor/autoload.php';
+$app = require '/var/www/html/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-# Option 2 — /start (POST)
-curl -s -X POST "http://localhost:8000/api/v1/applications/{uuid}/start" \
-  -H "Authorization: Bearer {token}"
+// Remplacer par les UUIDs voulus (voir table UUIDs ci-dessus)
+$uuids = ['portfoliofrontend0000000', 'portfoliobackend00000000'];
+
+foreach ($uuids as $uuid) {
+    $application = App\Models\Application::where('uuid', $uuid)->first();
+    if (!$application) { echo "Not found: $uuid\n"; continue; }
+
+    $deployment = App\Models\ApplicationDeploymentQueue::create([
+        'application_id'   => $application->id,
+        'application_name' => $application->name,
+        'server_id'        => $application->destination->server->id,
+        'destination_id'   => $application->destination_id,
+        'deployment_uuid'  => \Illuminate\Support\Str::uuid(), // obligatoire, NOT NULL
+        'git_type'         => 'commit',
+        'commit'           => 'HEAD',  // ou le SHA git exact
+        'status'           => 'queued',
+    ]);
+
+    // dispatch() prend l'ID (int), PAS le modèle
+    App\Jobs\ApplicationDeploymentJob::dispatch($deployment->id)->onQueue('high');
+    echo "Queued: {$application->name} => deployment #{$deployment->id}\n";
+}
+EOF
+
+docker cp /tmp/deploy.php coolify:/tmp/deploy.php
+docker exec coolify php /tmp/deploy.php
 ```
 
-- `/restart` → échoue avec "No such container" pour les apps `dockercompose`, même quand elles tournent
-- Les deux options ci-dessus retournent `{"deployments":[{"deployment_uuid":"..."}]}`
+**Pièges critiques :**
+- `deployment_uuid` est `NOT NULL` — l'omettre crash silencieusement
+- `ApplicationDeploymentJob::dispatch()` prend un **int** (l'ID), pas le modèle — sinon `TypeError`
+- `onQueue('high')` est obligatoire pour que le job soit pris en charge
 
-Vérifier le statut du déploiement :
+### Surveiller le déploiement (sans token API)
+
 ```bash
-curl -s "http://localhost:8000/api/v1/deployments/{deployment_uuid}" \
-  -H "Authorization: Bearer {token}" \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status'))"
-# "finished" = OK | "failed" = voir les logs dans d.get('logs')
+# Récupérer les IDs retournés par deploy.php, puis :
+until ! docker exec coolify-db psql -U coolify -d coolify -t -c \
+  "SELECT 1 FROM application_deployment_queues WHERE id IN (92,93) AND status IN ('queued','in_progress')" \
+  | grep -q "1"; do
+  echo "$(date +%H:%M:%S) — en cours..."; sleep 15
+done
+
+docker exec coolify-db psql -U coolify -d coolify -c \
+  "SELECT id, application_name, status FROM application_deployment_queues WHERE id IN (92,93);"
+# status = "finished" ✅ | "error" / "failed" ❌
 ```
 
-Vérifier que l'app est bien up :
-```bash
-curl -s "http://localhost:8000/api/v1/applications/{uuid}" \
-  -H "Authorization: Bearer {token}" \
-  | python3 -c "import sys,json; print(json.load(sys.stdin).get('status'))"
-# Attendu : "running:healthy"
-```
+### Méthode alternative — API avec token généré
 
-### Générer un token API Coolify
-Le token en base est un hash SHA-256 inutilisable directement. Pour créer un token valide :
+**Pourquoi les tokens en DB ne fonctionnent pas directement :**
+Les valeurs dans `personal_access_tokens.token` sont des hash SHA-256. Le format Bearer
+attendu par l'API est `{id}|{raw_token}` (jamais le hash brut).
+
+Pour créer un token valide :
 ```bash
 NEW_TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 NEW_HASH=$(python3 -c "import hashlib; print(hashlib.sha256('$NEW_TOKEN'.encode()).hexdigest())")
-docker exec coolify-db sh -c "psql -U coolify coolify -c \"INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, team_id, created_at, updated_at) SELECT 'App\\\\Models\\\\User', tokenable_id, 'script', '$NEW_HASH', '[\\\"*\\\"]', 0, NOW(), NOW() FROM personal_access_tokens WHERE id=1;\""
-NEW_ID=$(docker exec coolify-db sh -c "psql -U coolify coolify -t -c \"SELECT id FROM personal_access_tokens ORDER BY id DESC LIMIT 1;\"" | tr -d ' ')
-echo "Bearer ${NEW_ID}|${NEW_TOKEN}"
+docker exec coolify-db sh -c "psql -U coolify coolify -c \"INSERT INTO personal_access_tokens \
+  (tokenable_type, tokenable_id, name, token, abilities, team_id, created_at, updated_at) \
+  SELECT 'App\\\\Models\\\\User', tokenable_id, 'script', '$NEW_HASH', '[\\\"*\\\"]', 0, NOW(), NOW() \
+  FROM personal_access_tokens WHERE id=1;\""
+NEW_ID=$(docker exec coolify-db sh -c \
+  "psql -U coolify coolify -t -c \"SELECT id FROM personal_access_tokens ORDER BY id DESC LIMIT 1;\"" \
+  | tr -d ' ')
+TOKEN="${NEW_ID}|${NEW_TOKEN}"
+echo "Bearer $TOKEN"
 ```
+
+Puis utiliser ce token :
+```bash
+# Déclencher un rebuild
+curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid={uuid}&force=false" \
+  -H "Authorization: Bearer $TOKEN"
+# Retourne : {"deployments":[{"deployment_uuid":"..."}]}
+
+# Vérifier le statut
+curl -s "http://localhost:8000/api/v1/deployments/{deployment_uuid}" \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status'))"
+# "finished" ✅ | "failed" ❌
+```
+
+**Note :** Préférer la méthode PHP (plus haut) — elle ne dépend pas de la génération d'un token.
 
 ## Sécurité — règles obligatoires
 
