@@ -5,6 +5,17 @@ Repo multi-projets sur VPS Hetzner (204.168.250.110).
 Domaine : jlmvpscode.duckdns.org
 Déploiement : Coolify — chaque projet est une application séparée.
 
+## Accès Coolify — autonomie obligatoire
+
+**J'ai accès direct à Coolify via son API (localhost:8000). Je dois l'utiliser sans demander à l'utilisateur.**
+
+Quand un redéploiement, un restart, ou un diagnostic Coolify est nécessaire :
+1. Générer un token (procédure dans la section "Pièges Coolify" ci-dessous)
+2. Déclencher le déploiement via l'API
+3. Surveiller jusqu'à `status: finished`
+
+Ne jamais demander à l'utilisateur de "cliquer dans Coolify" ou "me donner le token" — je peux le faire moi-même.
+
 ## Agent de sécurité
 
 Rapports générés par `/opt/cyber-agent/` — structure :
@@ -31,6 +42,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 - projects/feature-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
 - projects/ev-prices/ : suivi des prix véhicules électriques (14 constructeurs, scraping hebdomadaire) — Python 3.12, FastAPI, Playwright, PostgreSQL (port 8040) · URL : ev.jlmvpscode.duckdns.org
+- projects/portfolio-tracker/ : suivi investissement long terme, agents IA Dust, 3 régimes d'analyse — **deux apps Coolify distinctes** (dockerfile) : portfolio-backend (port 8050) + portfolio-frontend (port 8051) · URL : portfolio.jlmvpscode.duckdns.org
 
 ## Slack bot partagé
 
@@ -120,6 +132,12 @@ pas le chemin complet — Coolify les concatène et double le chemin sinon.
 En mode `dockercompose`, ne pas mettre `env_file: .env` — le fichier `.env` est gitignored
 et absent du build. Coolify injecte ses variables directement dans le service.
 
+### Mode `dockerfile` multi-services : deux apps séparées
+
+Pour un projet avec backend + frontend sur le même domaine (ex: `/api` et `/`), créer **deux apps Coolify distinctes** en mode `dockerfile` plutôt qu'une seule app `dockercompose`. Raison : Coolify génère `infra-net: null` lors du re-processing YAML multi-services, cassant la résolution DNS interne.
+
+Coolify ajoute automatiquement un middleware `stripprefix` quand le fqdn contient un path (ex: `https://domain.com/api`). Le backend FastAPI doit donc déclarer ses routes **sans le préfixe** (ex: `/positions` et non `/api/positions`).
+
 ### Mode `dockercompose` : labels Traefik obligatoires
 
 **Coolify n'injecte PAS les labels Traefik pour les apps `dockercompose`** (contrairement au mode nixpacks où ils sont auto-générés). Sans ces labels, Traefik ignore le container → "no available server".
@@ -184,22 +202,28 @@ $app = \App\Models\Application::where('uuid', '{UUID}')->first();
 |---|---|
 | assistant-ia | `gayg5mw9jikbio2le75olq8b` |
 | bank-review | `ji9jg7ngkva7j4d2uic05d3v` |
+| portfolio-backend | `portfoliobackend00000000` |
+| portfolio-frontend | `portfoliofrontend0000000` |
 | homepage | `h7dyrhas03di7jqq2wl2j72z` |
 | tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
 | ev-prices | `ev0prices0000000000000000` |
 
 ### Déclencher un rebuild via l'API Coolify
 
-**Seul endpoint qui fonctionne pour un rebuild complet : `/start`**
+**Endpoints qui fonctionnent pour un rebuild complet :**
 
 ```bash
+# Option 1 — /api/v1/deploy (GET avec query param) — vérifié 2026-05-01
+curl -s -X GET "http://localhost:8000/api/v1/deploy?uuid={uuid}&force=false" \
+  -H "Authorization: Bearer {token}"
+
+# Option 2 — /start (POST)
 curl -s -X POST "http://localhost:8000/api/v1/applications/{uuid}/start" \
   -H "Authorization: Bearer {token}"
 ```
 
 - `/restart` → échoue avec "No such container" pour les apps `dockercompose`, même quand elles tournent
-- `/deploy` → 404, n'existe pas dans cette version de Coolify
-- `/start` → déclenche un build Docker + deploy complet, retourne `{"deployment_uuid":"..."}`
+- Les deux options ci-dessus retournent `{"deployments":[{"deployment_uuid":"..."}]}`
 
 Vérifier le statut du déploiement :
 ```bash
