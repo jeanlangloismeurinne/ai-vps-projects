@@ -17,7 +17,7 @@ class ConcentrationChecker:
 
         sector_totals = defaultdict(float)
         for p in active:
-            sector_totals[p["sector_schema"]] += p["allocation_pct"]
+            sector_totals[p["sector_schema"]] += float(p["allocation_pct"])
 
         for sector, total in sector_totals.items():
             if total > self.max_sector_pct:
