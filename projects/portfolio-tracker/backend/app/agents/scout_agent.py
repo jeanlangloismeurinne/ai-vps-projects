@@ -33,7 +33,7 @@ async def _call_dust_scout(message: str, ticker: str) -> dict:
         message=message,
         model_override="gemini-2-5-flash-preview",
         temperature=0.2,
-        timeout=120,
+        timeout=300,
     )
     return result
 
