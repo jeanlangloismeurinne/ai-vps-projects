@@ -180,5 +180,5 @@ async def _execute_scout(job_id: str, watchlist_id: str, ticker: str, redis=None
         await _set_status("done", {"conversation_id": conv_id})
 
     except Exception as e:
-        logger.error(f"Scout error for {ticker}: {e}")
+        logger.error(f"Scout error for {ticker}: {e}", exc_info=True)
         await _set_status("error", {"detail": str(e)})
