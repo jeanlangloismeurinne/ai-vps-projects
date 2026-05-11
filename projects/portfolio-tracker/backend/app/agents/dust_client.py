@@ -84,6 +84,8 @@ class DustClient:
                                   "fullName": "Portfolio Tracker", "email": "plm@lm-associes.com",
                                   "profilePictureUrl": None}},
             )
+            if r2.status_code >= 400:
+                logger.error(f"Dust /messages {r2.status_code}: {r2.text}")
             r2.raise_for_status()
 
             # 3. Polling
