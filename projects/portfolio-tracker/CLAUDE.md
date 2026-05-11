@@ -195,6 +195,7 @@ Le `+asyncpg` est strippé automatiquement dans `database.py` pour asyncpg.
 4. **Commit + push AVANT** tout déclenchement de rebuild Coolify
 5. **post_deployment_command** : payload JSON construit en Python (pas curl avec guillemets)
 6. **Tickers Euronext** : format `CAP.PA` dans yfinance — enrichir `TICKER_EXCHANGE_MAP` dans `m1_quantitative.py` au fil des nouvelles positions
+7. **Traefik + multi-réseaux** : `portfolio-frontend` a le custom label `traefik.docker.network=coolify` dans Coolify. Sans ça, si le container est sur plusieurs réseaux Docker (ex: `coolify` + `infra-net`), Traefik peut choisir la mauvaise IP → gateway timeout.
 
 ---
 
