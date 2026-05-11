@@ -141,6 +141,14 @@ class DustClient:
                 r.raise_for_status()
 
                 data = r.json()
+                # Sauvegarde de la dernière réponse brute pour debug offline
+                try:
+                    import json as _json
+                    _dump = {"agent_id": agent_id, "model_override": model_override, "data": data}
+                    with open("/tmp/dust_last_response.json", "w") as _f:
+                        _json.dump(_dump, _f, indent=2, default=str)
+                except Exception:
+                    pass
                 conv_id = data["conversation"]["sId"]
                 result = self._extract_agent_result(data, model_override, conv_id)
                 if result is None:
