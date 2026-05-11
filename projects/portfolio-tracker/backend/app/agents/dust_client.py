@@ -145,7 +145,10 @@ class DustClient:
                 try:
                     import json as _json
                     _dump = {"agent_id": agent_id, "model_override": model_override, "data": data}
-                    with open("/app/feedback-tickets/_dust_last_response.json", "w") as _f:
+                    save_path = "/app/feedback-tickets/_dust_last_response.json"
+                    import os as _os
+                    _os.makedirs(_os.path.dirname(save_path), exist_ok=True)
+                    with open(save_path, "w") as _f:
                         _json.dump(_dump, _f, indent=2, default=str)
                 except Exception:
                     pass

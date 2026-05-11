@@ -38,9 +38,13 @@ async def get_conversation(dust_conversation_id: str):
                 })
             elif msg_type == "agent_message":
                 content_blocks = msg.get("content", [])
-                content_text = "".join(
-                    b.get("value", "") for b in content_blocks if b.get("type") == "text"
-                )
+                parts = []
+                for b in content_blocks:
+                    if isinstance(b, str):
+                        parts.append(b)
+                    elif isinstance(b, dict) and b.get("type") == "text":
+                        parts.append(b.get("value") or b.get("text") or "")
+                content_text = "".join(parts)
                 cot = msg.get("chainOfThought", "")
                 actions = msg.get("actions", [])
                 tools_used = []
