@@ -246,7 +246,8 @@ async def _run_regime1(pos: dict, job_id: str = None):
         if job_id:
             await _update_job(job_id, {"status": "error", "ticker": ticker, "regime": 1, "detail": "budget_exceeded"})
     except Exception as e:
-        logger.error(f"Regime 1 error for {ticker}: {e}")
+        import traceback
+        logger.error(f"Regime 1 error for {ticker}: {e}\n{traceback.format_exc()}")
         await notifier.send_error_alert(ticker, str(e))
         if job_id:
             await _update_job(job_id, {"status": "error", "ticker": ticker, "regime": 1, "detail": str(e)})
