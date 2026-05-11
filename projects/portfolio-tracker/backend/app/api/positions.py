@@ -297,8 +297,9 @@ async def validate_position_thesis(position_id: str):
         if isinstance(out, str):
             out = _json.loads(out)
 
-        thesis_one_liner = out.get("thesis_one_liner") or "Analyse Régime 1 — à compléter"
-        bear_steel_man   = out.get("bear_steel_man")   or "À compléter après analyse contradictoire"
+        preqal_summary   = out.get("summary", "")
+        thesis_one_liner = out.get("thesis_one_liner") or preqal_summary or "Analyse Régime 1 — à compléter"
+        bear_steel_man   = out.get("bear_steel_man")   or preqal_summary or "À compléter après analyse contradictoire"
         scenarios_json   = out.get("scenarios_json")   or {}
         price_thresholds = out.get("price_thresholds_json") or {}
         conv_id          = review["dust_conversation_id"]
