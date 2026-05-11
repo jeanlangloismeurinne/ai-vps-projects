@@ -273,15 +273,47 @@ async def get_position_thesis_chat(position_id: str):
 
 @router.post("/{position_id}/validate-thesis")
 async def validate_position_thesis(position_id: str):
+    import json as _json
     async with get_db_session() as db:
+        # Try direct update first (thesis row exists)
         row = await db.fetchrow("""
             UPDATE theses SET validated_at=NOW()
             WHERE position_id=$1 AND is_current=TRUE
             RETURNING validated_at
         """, position_id)
-    if not row:
-        raise HTTPException(404, "No active thesis found")
-    return {"validated": True, "validated_at": row["validated_at"].isoformat()}
+        if row:
+            return {"validated": True, "validated_at": row["validated_at"].isoformat()}
+
+        # No thesis row — create one from latest regime 1 review
+        review = await db.fetchrow("""
+            SELECT full_output_json, dust_conversation_id FROM reviews
+            WHERE position_id=$1
+            ORDER BY review_date DESC LIMIT 1
+        """, position_id)
+        if not review:
+            raise HTTPException(404, "No active thesis or regime 1 run found")
+
+        out = review["full_output_json"] or {}
+        if isinstance(out, str):
+            out = _json.loads(out)
+
+        thesis_one_liner = out.get("thesis_one_liner") or "Analyse Régime 1 — à compléter"
+        bear_steel_man   = out.get("bear_steel_man")   or "À compléter après analyse contradictoire"
+        scenarios_json   = out.get("scenarios_json")   or {}
+        price_thresholds = out.get("price_thresholds_json") or {}
+        conv_id          = review["dust_conversation_id"]
+
+        new_row = await db.fetchrow("""
+            INSERT INTO theses
+              (position_id, version, thesis_one_liner, bear_steel_man,
+               scenarios_json, price_thresholds_json,
+               dust_conversation_id, is_current, validated_at)
+            VALUES ($1, 1, $2, $3, $4, $5, $6, TRUE, NOW())
+            RETURNING id, validated_at
+        """, position_id, thesis_one_liner, bear_steel_man,
+             scenarios_json, price_thresholds, conv_id)
+
+    return {"validated": True, "validated_at": new_row["validated_at"].isoformat()}
 
 
 def _serialize(row) -> dict:
