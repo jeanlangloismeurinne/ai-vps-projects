@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import httpx
@@ -176,6 +177,27 @@ async def start_thesis_chat(position_id: str, thesis_id: str, user_message: str,
     }
 
 
+async def _fetch_conversation(dust_conversation_id: str) -> dict:
+    headers = _get_headers()
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(
+            f"{DUST_API_BASE}/w/{settings.DUST_WORKSPACE_ID}/assistant/conversations/{dust_conversation_id}",
+            headers=headers,
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+def _count_agent_messages(conv_data: dict) -> int:
+    count = 0
+    for group in conv_data.get("conversation", {}).get("content", []):
+        msgs = [group] if isinstance(group, dict) else group
+        for msg in msgs:
+            if isinstance(msg, dict) and msg.get("type") == "agent_message":
+                count += 1
+    return count
+
+
 async def continue_chat(dust_conversation_id: str, user_message: str) -> dict:
     headers = _get_headers()
     payload = {
@@ -189,6 +211,13 @@ async def continue_chat(dust_conversation_id: str, user_message: str) -> dict:
         "blocking": True,
     }
 
+    # Snapshot agent message count before sending
+    try:
+        prev_data = await _fetch_conversation(dust_conversation_id)
+        prev_count = _count_agent_messages(prev_data)
+    except Exception:
+        prev_count = 0
+
     async with httpx.AsyncClient(timeout=90) as client:
         r = await client.post(
             f"{DUST_API_BASE}/w/{settings.DUST_WORKSPACE_ID}/assistant/conversations/{dust_conversation_id}/messages",
@@ -199,13 +228,28 @@ async def continue_chat(dust_conversation_id: str, user_message: str) -> dict:
         if r.status_code >= 500:
             raise ValueError("dust_error")
         r.raise_for_status()
-        data = r.json()
+        post_data = r.json()
 
-    response = _extract_agent_response(data)
-    return {
-        "agent_response": response["agent_response"],
-        "chain_of_thought": response["chain_of_thought"],
-    }
+    # Try extracting from POST response first (in case blocking works end-to-end)
+    response = _extract_agent_response(post_data)
+    if response["agent_response"]:
+        return {"agent_response": response["agent_response"], "chain_of_thought": response["chain_of_thought"]}
+
+    # POST /messages may only return the user message — poll GET until a new agent message appears
+    logger.info(f"continue_chat: POST response empty, polling GET for conv {dust_conversation_id}")
+    for attempt in range(30):  # max ~5 min
+        await asyncio.sleep(10)
+        try:
+            conv_data = await _fetch_conversation(dust_conversation_id)
+        except Exception:
+            continue
+        if _count_agent_messages(conv_data) > prev_count:
+            response = _extract_agent_response(conv_data)
+            if response["agent_response"]:
+                logger.info(f"continue_chat: got agent response after {attempt+1} polls")
+                return {"agent_response": response["agent_response"], "chain_of_thought": response["chain_of_thought"]}
+
+    raise TimeoutError(f"Agent did not respond in conversation {dust_conversation_id}")
 
 
 async def get_chat_history(dust_conversation_id: str) -> list:

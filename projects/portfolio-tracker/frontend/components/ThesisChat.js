@@ -40,7 +40,7 @@ export default function ThesisChat({ entityType, entityId, ticker, isValidated }
     setStatus('waiting')
     setTurns(prev => [...prev, { role: 'human', content: msg }])
 
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 360000))
     try {
       const res = await Promise.race([
         fetch(chatUrl, {
