@@ -81,7 +81,7 @@ class DustClient:
                 json={"content": message,
                       "mentions": [{"configurationId": agent_id}],
                       "context": {"timezone": "Europe/Paris", "username": "portfolio-tracker",
-                                  "fullName": "Portfolio Tracker", "email": "bot@portfolio",
+                                  "fullName": "Portfolio Tracker", "email": "plm@lm-associes.com",
                                   "profilePictureUrl": None}},
             )
             r2.raise_for_status()
