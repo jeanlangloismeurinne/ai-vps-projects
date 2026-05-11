@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 import logging
 from datetime import datetime
@@ -67,56 +68,73 @@ class DustClient:
                 await db.execute("UPDATE dust_budget SET alert_sent=TRUE WHERE month=$1", month)
         return cost
 
+    def _extract_agent_result(self, data: dict, model_override: str | None, conv_id: str):
+        """Extrait le résultat de l'agent depuis la réponse Dust (blocking ou polling)."""
+        for group in reversed(data.get("conversation", {}).get("content", [])):
+            msgs = [group] if isinstance(group, dict) else group
+            for msg in msgs:
+                if not isinstance(msg, dict):
+                    continue
+                if msg.get("type") == "agent_message":
+                    if msg.get("status") == "succeeded":
+                        content = "".join(
+                            b.get("value", "") for b in msg.get("content", [])
+                            if isinstance(b, dict) and b.get("type") == "text"
+                        )
+                        ti = msg.get("usage", {}).get("promptTokens", 0)
+                        to = msg.get("usage", {}).get("completionTokens", 0)
+                        return {"content": content, "tokens_input": ti,
+                                "tokens_output": to,
+                                "model": model_override or "claude-sonnet-4-5",
+                                "conversation_id": conv_id}
+                    elif msg.get("status") == "failed":
+                        raise Exception(f"Agent failed: {msg.get('error')}")
+        return None
+
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
                         temperature: float = 0.3, timeout: int = 300) -> dict:
         """
         Crée une conversation Dust avec le message inclus et blocking=True.
         Une seule requête HTTP — pas de polling, pas de step intermédiaire.
-        blocking=True fait attendre la réponse complète de l'agent côté Dust.
+        Retry automatique sur rate limit (backoff exponentiel, max 3 tentatives).
         """
         await self.check_budget()
+        payload = {
+            "visibility": "unlisted",
+            "title": f"portfolio-{datetime.utcnow().isoformat()}",
+            "message": {
+                "content": message,
+                "mentions": [{"configurationId": agent_id}],
+                "context": DUST_CONTEXT,
+            },
+            "blocking": True,
+        }
         async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(
-                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
-                headers=self.headers,
-                json={
-                    "visibility": "unlisted",
-                    "title": f"portfolio-{datetime.utcnow().isoformat()}",
-                    "message": {
-                        "content": message,
-                        "mentions": [{"configurationId": agent_id}],
-                        "context": DUST_CONTEXT,
-                    },
-                    "blocking": True,
-                },
-            )
-            if r.status_code >= 400:
-                logger.error(f"Dust /conversations {r.status_code}: {r.text}")
-            r.raise_for_status()
-
-            data = r.json()
-            conv_id = data["conversation"]["sId"]
-
-            for group in reversed(data.get("conversation", {}).get("content", [])):
-                msgs = [group] if isinstance(group, dict) else group
-                for msg in msgs:
-                    if not isinstance(msg, dict):
+            for attempt in range(3):
+                r = await client.post(
+                    f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
+                    headers=self.headers,
+                    json=payload,
+                )
+                if r.status_code == 403:
+                    body = r.json()
+                    if body.get("error", {}).get("type") == "rate_limit_error":
+                        wait = 30 * (2 ** attempt)  # 30s, 60s, 120s
+                        logger.warning(f"Dust rate limit, retry {attempt+1}/3 dans {wait}s")
+                        await asyncio.sleep(wait)
                         continue
-                    if msg.get("type") == "agent_message":
-                        if msg.get("status") == "succeeded":
-                            content = "".join(
-                                b.get("value", "") for b in msg.get("content", [])
-                                if b.get("type") == "text"
-                            )
-                            ti = msg.get("usage", {}).get("promptTokens", 0)
-                            to = msg.get("usage", {}).get("completionTokens", 0)
-                            m = model_override or "claude-sonnet-4-5"
-                            cost = await self.track_cost(m, ti, to)
-                            return {"content": content, "tokens_input": ti,
-                                    "tokens_output": to, "cost_usd": cost,
-                                    "conversation_id": conv_id}
-                        elif msg.get("status") == "failed":
-                            raise Exception(f"Agent failed: {msg.get('error')}")
+                if r.status_code >= 400:
+                    logger.error(f"Dust /conversations {r.status_code}: {r.text}")
+                r.raise_for_status()
 
-            raise TimeoutError(f"Dust blocking call returned no agent message (conv {conv_id})")
+                data = r.json()
+                conv_id = data["conversation"]["sId"]
+                result = self._extract_agent_result(data, model_override, conv_id)
+                if result is None:
+                    raise TimeoutError(f"Dust blocking: pas de message agent (conv {conv_id})")
+                cost = await self.track_cost(result["model"], result["tokens_input"], result["tokens_output"])
+                result["cost_usd"] = cost
+                return result
+
+            raise Exception("Dust rate limit persistant après 3 tentatives")
