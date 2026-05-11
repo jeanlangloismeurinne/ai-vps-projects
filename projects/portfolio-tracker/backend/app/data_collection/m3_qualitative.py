@@ -48,6 +48,9 @@ async def collect_m3(ticker: str, company_name: str, event_type: str,
         temperature=0.1,
     )
     try:
-        return json.loads(result["content"])
+        parsed = json.loads(result["content"])
+        if not isinstance(parsed, dict):
+            return {"results": [], "error": "unexpected_format"}
+        return parsed
     except json.JSONDecodeError:
         return {"results": [], "error": "parse_error"}

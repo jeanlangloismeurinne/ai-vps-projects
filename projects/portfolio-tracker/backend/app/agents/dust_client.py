@@ -1,4 +1,3 @@
-import asyncio
 import httpx
 import logging
 from datetime import datetime
@@ -11,6 +10,15 @@ MODEL_COSTS = {
     "claude-sonnet-4-5":        {"input": 0.0039,   "output": 0.0195},
     "gemini-2-5-flash-preview": {"input": 0.000195, "output": 0.00078},
     "gpt-4o-mini":              {"input": 0.000195, "output": 0.00078},
+}
+
+DUST_CONTEXT = {
+    "timezone": "Europe/Paris",
+    "username": "portfolio-tracker",
+    "fullName": "Portfolio Tracker",
+    "email": "plm@lm-associes.com",
+    "profilePictureUrl": None,
+    "origin": "api",
 }
 
 
@@ -61,60 +69,54 @@ class DustClient:
 
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
-                        temperature: float = 0.3, timeout: int = 120) -> dict:
+                        temperature: float = 0.3, timeout: int = 300) -> dict:
+        """
+        Crée une conversation Dust avec le message inclus et blocking=True.
+        Une seule requête HTTP — pas de polling, pas de step intermédiaire.
+        blocking=True fait attendre la réponse complète de l'agent côté Dust.
+        """
         await self.check_budget()
         async with httpx.AsyncClient(timeout=timeout) as client:
-            # 1. Créer conversation
             r = await client.post(
                 f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
                 headers=self.headers,
-                json={"visibility": "unlisted",
-                      "title": f"portfolio-{datetime.utcnow().isoformat()}"},
+                json={
+                    "visibility": "unlisted",
+                    "title": f"portfolio-{datetime.utcnow().isoformat()}",
+                    "message": {
+                        "content": message,
+                        "mentions": [{"configurationId": agent_id}],
+                        "context": DUST_CONTEXT,
+                    },
+                    "blocking": True,
+                },
             )
+            if r.status_code >= 400:
+                logger.error(f"Dust /conversations {r.status_code}: {r.text}")
             r.raise_for_status()
-            conv_id = r.json()["conversation"]["sId"]
 
-            # 2. Poster message
-            r2 = await client.post(
-                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations/{conv_id}/messages",
-                headers=self.headers,
-                json={"content": message,
-                      "mentions": [{"configurationId": agent_id}],
-                      "context": {"timezone": "Europe/Paris", "username": "portfolio-tracker",
-                                  "fullName": "Portfolio Tracker", "email": "plm@lm-associes.com",
-                                  "profilePictureUrl": None}},
-            )
-            if r2.status_code >= 400:
-                logger.error(f"Dust /messages {r2.status_code}: {r2.text}")
-            r2.raise_for_status()
+            data = r.json()
+            conv_id = data["conversation"]["sId"]
 
-            # 3. Polling
-            start = asyncio.get_event_loop().time()
-            while asyncio.get_event_loop().time() - start < timeout:
-                await asyncio.sleep(2)
-                resp = await client.get(
-                    f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations/{conv_id}",
-                    headers=self.headers,
-                )
-                resp.raise_for_status()
-                for group in reversed(resp.json().get("conversation", {}).get("content", [])):
-                    msgs = [group] if isinstance(group, dict) else group
-                    for msg in msgs:
-                        if not isinstance(msg, dict):
-                            continue
-                        if msg.get("type") == "agent_message":
-                            if msg.get("status") == "succeeded":
-                                content = "".join(
-                                    b.get("value", "") for b in msg.get("content", [])
-                                    if b.get("type") == "text"
-                                )
-                                ti = msg.get("usage", {}).get("promptTokens", 0)
-                                to = msg.get("usage", {}).get("completionTokens", 0)
-                                m = model_override or "claude-sonnet-4-5"
-                                cost = await self.track_cost(m, ti, to)
-                                return {"content": content, "tokens_input": ti,
-                                        "tokens_output": to, "cost_usd": cost,
-                                        "conversation_id": conv_id}
-                            elif msg.get("status") == "failed":
-                                raise Exception(f"Agent failed: {msg.get('error')}")
-            raise TimeoutError(f"Timeout after {timeout}s")
+            for group in reversed(data.get("conversation", {}).get("content", [])):
+                msgs = [group] if isinstance(group, dict) else group
+                for msg in msgs:
+                    if not isinstance(msg, dict):
+                        continue
+                    if msg.get("type") == "agent_message":
+                        if msg.get("status") == "succeeded":
+                            content = "".join(
+                                b.get("value", "") for b in msg.get("content", [])
+                                if b.get("type") == "text"
+                            )
+                            ti = msg.get("usage", {}).get("promptTokens", 0)
+                            to = msg.get("usage", {}).get("completionTokens", 0)
+                            m = model_override or "claude-sonnet-4-5"
+                            cost = await self.track_cost(m, ti, to)
+                            return {"content": content, "tokens_input": ti,
+                                    "tokens_output": to, "cost_usd": cost,
+                                    "conversation_id": conv_id}
+                        elif msg.get("status") == "failed":
+                            raise Exception(f"Agent failed: {msg.get('error')}")
+
+            raise TimeoutError(f"Dust blocking call returned no agent message (conv {conv_id})")

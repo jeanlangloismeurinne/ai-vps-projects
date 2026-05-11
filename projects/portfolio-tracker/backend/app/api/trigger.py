@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 import json
 import logging
@@ -202,7 +201,6 @@ async def _run_regime1(pos: dict, job_id: str = None):
 
         data_brief = assemble_data_brief(ticker, m1, m2, m3, None, None, None)
 
-        await asyncio.sleep(10)  # éviter rate limit Dust entre M3 et research agent
         thesis = await run_regime_1(ticker, pos["company_name"], data_brief, sector_schema, DustClient())
 
         async with get_db_session() as db:
