@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
 Debug offline du parser Dust.
-Usage :
-  # Copier la dernière réponse depuis le container
-  docker cp portfoliobackend00000000-XXXXX:/tmp/dust_last_response.json /tmp/
 
-  # Lancer le debug
-  python3 debug_dust.py [/tmp/dust_last_response.json]
+Le fichier est écrit automatiquement par le backend à chaque appel Dust,
+dans un volume monté sur le host — il survit aux rebuilds.
+
+Usage :
+  python3 debug_dust.py [chemin]
+
+  Par défaut : /root/ai-vps-projects/projects/portfolio-tracker/feedback-tickets/_dust_last_response.json
 """
 import json
 import sys
-import re
 
-RESPONSE_FILE = sys.argv[1] if len(sys.argv) > 1 else "/tmp/dust_last_response.json"
+RESPONSE_FILE = sys.argv[1] if len(sys.argv) > 1 else (
+    "/root/ai-vps-projects/projects/portfolio-tracker/feedback-tickets/_dust_last_response.json"
+)
 
 with open(RESPONSE_FILE) as f:
     saved = json.load(f)
