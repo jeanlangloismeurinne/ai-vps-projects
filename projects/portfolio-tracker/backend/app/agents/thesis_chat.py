@@ -24,9 +24,13 @@ def _extract_agent_response(conversation_data: dict) -> dict:
     for group in reversed(content_groups):
         for msg in reversed(group):
             if msg.get("type") == "agent_message":
-                content_text = "".join(
-                    b.get("value", "") for b in msg.get("content", []) if b.get("type") == "text"
-                )
+                parts = []
+                for b in msg.get("content", []):
+                    if isinstance(b, str):
+                        parts.append(b)
+                    elif isinstance(b, dict) and b.get("type") == "text":
+                        parts.append(b.get("value") or b.get("text") or "")
+                content_text = "".join(parts)
                 cot = msg.get("chainOfThought", "")
                 return {
                     "agent_response": content_text,
@@ -233,9 +237,13 @@ async def get_chat_history(dust_conversation_id: str) -> list:
                     "created_at": msg.get("created"),
                 })
             elif msg_type == "agent_message":
-                content_text = "".join(
-                    b.get("value", "") for b in msg.get("content", []) if b.get("type") == "text"
-                )
+                parts = []
+                for b in msg.get("content", []):
+                    if isinstance(b, str):
+                        parts.append(b)
+                    elif isinstance(b, dict) and b.get("type") == "text":
+                        parts.append(b.get("value") or b.get("text") or "")
+                content_text = "".join(parts)
                 cot = msg.get("chainOfThought", "")
                 turns.append({
                     "role": "agent",

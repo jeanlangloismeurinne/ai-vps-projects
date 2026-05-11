@@ -202,7 +202,6 @@ async def acknowledge_review(position_id: str, run_id: str):
 @router.post("/{position_id}/thesis-chat")
 async def position_thesis_chat(position_id: str, data: dict):
     from app.agents import thesis_chat
-    from app.db.models import WatchlistChatMessage
     message = data.get("message", "")
     if not message:
         raise HTTPException(400, "message required")
@@ -211,13 +210,26 @@ async def position_thesis_chat(position_id: str, data: dict):
         thesis = await db.fetchrow(
             "SELECT * FROM theses WHERE position_id=$1 AND is_current=TRUE", position_id
         )
-        if not thesis:
-            raise HTTPException(404, "No active thesis found")
+
+        # Fallback: use the latest regime 1 review's conversation_id if no thesis yet
+        conv_id = thesis["dust_conversation_id"] if thesis else None
+        if not conv_id:
+            review_row = await db.fetchrow(
+                """SELECT dust_conversation_id FROM reviews
+                   WHERE position_id=$1 AND dust_conversation_id IS NOT NULL
+                   ORDER BY review_date DESC LIMIT 1""",
+                position_id
+            )
+            if review_row:
+                conv_id = review_row["dust_conversation_id"]
+
+        if not conv_id and not thesis:
+            raise HTTPException(404, "No active thesis or regime 1 run found")
 
         try:
-            if thesis["dust_conversation_id"]:
-                result = await thesis_chat.continue_chat(thesis["dust_conversation_id"], message)
-                result["conversation_id"] = thesis["dust_conversation_id"]
+            if conv_id:
+                result = await thesis_chat.continue_chat(conv_id, message)
+                result["conversation_id"] = conv_id
             else:
                 result = await thesis_chat.start_thesis_chat(
                     position_id, str(thesis["id"]), message, db
@@ -242,10 +254,21 @@ async def get_position_thesis_chat(position_id: str):
             "SELECT dust_conversation_id FROM theses WHERE position_id=$1 AND is_current=TRUE",
             position_id
         )
-    if not thesis or not thesis["dust_conversation_id"]:
+        conv_id = thesis["dust_conversation_id"] if thesis else None
+        if not conv_id:
+            review_row = await db.fetchrow(
+                """SELECT dust_conversation_id FROM reviews
+                   WHERE position_id=$1 AND dust_conversation_id IS NOT NULL
+                   ORDER BY review_date DESC LIMIT 1""",
+                position_id
+            )
+            if review_row:
+                conv_id = review_row["dust_conversation_id"]
+
+    if not conv_id:
         return {"turns": [], "conversation_id": None}
-    turns = await get_chat_history(thesis["dust_conversation_id"])
-    return {"turns": turns, "conversation_id": thesis["dust_conversation_id"]}
+    turns = await get_chat_history(conv_id)
+    return {"turns": turns, "conversation_id": conv_id}
 
 
 @router.post("/{position_id}/validate-thesis")

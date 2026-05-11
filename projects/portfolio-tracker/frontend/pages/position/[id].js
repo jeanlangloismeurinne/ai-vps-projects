@@ -142,9 +142,20 @@ export default function PositionDetail() {
 
       {tab === 'these' && (
         <div className="space-y-5">
-          {thesis?.dust_conversation_id && (
+          {!thesis && lastReview?.dust_conversation_id && (
+            <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">
+              <p className="text-amber-300 text-sm font-medium">⚠ Thèse en attente de validation</p>
+              <p className="text-amber-200/70 text-xs mt-1">
+                Le Régime 1 a produit une réponse. Consultez l&apos;analyse ci-dessous, discutez avec l&apos;agent, puis validez pour créer la thèse formelle.
+              </p>
+            </div>
+          )}
+          {(thesis?.dust_conversation_id || (!thesis && lastReview?.dust_conversation_id)) && (
             <Section title="Raisonnement Régime 1">
-              <DustRunViewer dustConversationId={thesis.dust_conversation_id} label="Conversation de construction de thèse" />
+              <DustRunViewer
+                dustConversationId={thesis?.dust_conversation_id || lastReview.dust_conversation_id}
+                label="Conversation de construction de thèse"
+              />
             </Section>
           )}
           {thesis && (
@@ -157,9 +168,11 @@ export default function PositionDetail() {
               />
             </Section>
           )}
-          <Section title="Chat avec l'agent">
-            <ThesisChat entityType="position" entityId={id} ticker={position.ticker} isValidated={!!thesis?.validated_at} />
-          </Section>
+          {(thesis || lastReview?.dust_conversation_id) && (
+            <Section title="Chat avec l'agent">
+              <ThesisChat entityType="position" entityId={id} ticker={position.ticker} isValidated={!!thesis?.validated_at} />
+            </Section>
+          )}
           {!thesis?.validated_at && (
             <Section title="Validation de la thèse">
               <ThesisValidationPanel entityType="position" entityId={id} onValidated={load} />
