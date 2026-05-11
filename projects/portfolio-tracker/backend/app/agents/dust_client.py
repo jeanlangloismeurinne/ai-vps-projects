@@ -78,15 +78,13 @@ class DustClient:
                 if msg.get("type") == "agent_message":
                     if msg.get("status") == "succeeded":
                         blocks = msg.get("content", [])
-                        content = "".join(
-                            (b.get("value") or b.get("text") or "")
-                            for b in blocks
-                            if isinstance(b, dict) and b.get("type") == "text"
-                        )
-                        if not content:
-                            # Log pour diagnostiquer la structure réelle des blocs Dust
-                            sample = [{"type": b.get("type"), "keys": list(b.keys())} for b in blocks[:5]]
-                            logger.warning(f"Dust content vide (conv {conv_id}), blocs: {sample}")
+                        parts = []
+                        for b in blocks:
+                            if isinstance(b, str):
+                                parts.append(b)
+                            elif isinstance(b, dict) and b.get("type") == "text":
+                                parts.append(b.get("value") or b.get("text") or "")
+                        content = "".join(parts)
                         ti = msg.get("usage", {}).get("promptTokens", 0)
                         to = msg.get("usage", {}).get("completionTokens", 0)
                         return {"content": content, "tokens_input": ti,
