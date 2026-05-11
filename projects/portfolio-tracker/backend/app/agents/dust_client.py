@@ -124,12 +124,20 @@ class DustClient:
                     json=payload,
                 )
                 if r.status_code == 403:
-                    body = r.json()
+                    try:
+                        body = r.json()
+                    except Exception:
+                        body = {}
                     if body.get("error", {}).get("type") == "rate_limit_error":
                         wait = 30 * (2 ** attempt)  # 30s, 60s, 120s
                         logger.warning(f"Dust rate limit, retry {attempt+1}/3 dans {wait}s")
                         await asyncio.sleep(wait)
                         continue
+                if r.status_code in (502, 503, 504):
+                    wait = 30 * (2 ** attempt)
+                    logger.warning(f"Dust {r.status_code}, retry {attempt+1}/3 dans {wait}s")
+                    await asyncio.sleep(wait)
+                    continue
                 if r.status_code >= 400:
                     logger.error(f"Dust /conversations {r.status_code}: {r.text}")
                 r.raise_for_status()
