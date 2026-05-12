@@ -31,7 +31,7 @@ def get_earnings_calendar(ticker: str) -> dict:
         from app.data_collection.m1_quantitative import get_yfinance_ticker
         stock = yf.Ticker(get_yfinance_ticker(ticker))
         cal = stock.calendar
-        if cal is not None and not cal.empty:
+        if cal:
             dates = cal.get("Earnings Date", [])
             if dates:
                 next_date = dates[0]
