@@ -85,7 +85,7 @@ async def update_position(position_id: str, data: PositionUpdate):
 @router.post("/{position_id}/thesis", status_code=201)
 async def create_thesis(position_id: str, data: ThesisCreate):
     async with get_db_session() as db:
-        pos = await db.fetchrow("SELECT id FROM positions WHERE id = $1", position_id)
+        pos = await db.fetchrow("SELECT id, ticker FROM positions WHERE id = $1", position_id)
         if not pos:
             raise HTTPException(404, "Position not found")
 
@@ -143,6 +143,12 @@ async def create_thesis(position_id: str, data: ThesisCreate):
                     p.get("hypotheses_watched"),
                     p.get("metrics_to_extract"),
                 )
+
+    from app.calendar.calendar_builder import CalendarBuilder
+    try:
+        await CalendarBuilder().build_for_position(pos["ticker"])
+    except Exception as e:
+        logger.warning(f"Calendar auto-refresh failed for {pos['ticker']}: {e}")
 
     return {"id": str(thesis["id"]), "version": thesis["version"], "position_id": position_id}
 

@@ -124,15 +124,11 @@ async def _refresh_market_temperature():
 
 
 async def _refresh_all_calendars():
-    from app.calendar.calendar_builder import refresh_all
-    from app.db.database import get_db_session
-    async with get_db_session() as db:
-        positions = await db.fetch("SELECT ticker FROM positions WHERE status='active'")
-    for pos in positions:
-        try:
-            await refresh_all(pos["ticker"])
-        except Exception as e:
-            logger.warning(f"Calendar refresh error for {pos['ticker']}: {e}")
+    from app.calendar.calendar_builder import CalendarBuilder
+    try:
+        await CalendarBuilder().refresh_all()
+    except Exception as e:
+        logger.error(f"Calendar refresh_all error: {e}")
 
 
 async def _refresh_watchlist_peer_calendars():
