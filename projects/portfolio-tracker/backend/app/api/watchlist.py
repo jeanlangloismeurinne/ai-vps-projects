@@ -62,6 +62,21 @@ async def get_full(item_id: str):
     return _serialize(item)
 
 
+@router.get("/{item_id}/m1")
+async def get_m1_data(item_id: str):
+    """Retourne les données M1 (yfinance + FMP) pour un item watchlist, avec cache Redis 4h."""
+    from app.data_collection.data_service import DataService
+    async with get_db_session() as db:
+        item = await db.fetchrow("SELECT ticker FROM watchlist WHERE id = $1", item_id)
+    if not item:
+        raise HTTPException(404, "Watchlist item not found")
+    try:
+        data = await DataService().get_m1(item["ticker"], settings.FMP_API_KEY)
+        return data
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @router.get("/{item_id}/chat")
 async def get_chat(item_id: str):
     from app.agents.thesis_chat import get_chat_history
@@ -114,6 +129,11 @@ async def refresh_prices():
 
             entry_target = item.get("entry_price_target")
             gap = round((float(current_price) / float(entry_target) - 1) * 100, 2) if entry_target else None
+
+            # Guard : yfinance peut retourner le market cap à la place du prix (rate limit)
+            if current_price and float(current_price) > 1_000_000:
+                logger.warning(f"Suspicious price for {item['ticker']}: {current_price}, skipping")
+                continue
 
             async with get_db_session() as db:
                 await db.execute("""

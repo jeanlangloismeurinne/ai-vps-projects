@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import ScoutResultPanel from './ScoutResultPanel'
 import ThesisChat from './ThesisChat'
 import ThesisValidationPanel from './ThesisValidationPanel'
+import M1DataPanel from './M1DataPanel'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -76,12 +77,12 @@ export default function WatchlistItemDrawer({ itemId, onClose, onUpdate }) {
         )}
 
         <div className="flex border-b border-gray-700">
-          {['analyse', 'chat', 'validation'].map(t => (
+          {['analyse', 'donnees', 'chat', 'validation'].map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2.5 text-sm font-medium capitalize transition-colors ${
                 tab === t ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-gray-200'
               }`}>
-              {t === 'analyse' ? 'Analyse' : t === 'chat' ? 'Chat' : 'Validation'}
+              {t === 'analyse' ? 'Analyse' : t === 'donnees' ? 'Données M1' : t === 'chat' ? 'Chat' : 'Validation'}
             </button>
           ))}
         </div>
@@ -89,6 +90,9 @@ export default function WatchlistItemDrawer({ itemId, onClose, onUpdate }) {
         <div className="flex-1 p-6">
           {tab === 'analyse' && item && (
             <ScoutResultPanel item={item} onRelance={launchScout} />
+          )}
+          {tab === 'donnees' && (
+            <M1DataPanel itemId={itemId} />
           )}
           {tab === 'chat' && item && (
             <ThesisChat
