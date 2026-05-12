@@ -35,11 +35,14 @@ def get_earnings_calendar(ticker: str) -> dict:
             dates = cal.get("Earnings Date", [])
             if dates:
                 next_date = dates[0]
+                # yfinance 1.x retourne datetime.date, 0.2.x retournait pd.Timestamp
+                from datetime import date as _date
+                date_obj = next_date if isinstance(next_date, _date) else next_date.date()
                 return {
                     "ticker": ticker,
-                    "next_earnings_date": str(next_date.date()),
-                    "trigger_brief_date": str((next_date - timedelta(days=2)).date()),
-                    "trigger_review_date": str((next_date + timedelta(days=1)).date()),
+                    "next_earnings_date": str(date_obj),
+                    "trigger_brief_date": str(date_obj - timedelta(days=2)),
+                    "trigger_review_date": str(date_obj + timedelta(days=1)),
                     "source": "yfinance",
                 }
     except Exception as e:
