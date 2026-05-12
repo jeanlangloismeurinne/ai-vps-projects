@@ -134,6 +134,10 @@ class DataService:
         }
 
     async def _db_store_calendar(self, ticker: str, data: dict):
+        from datetime import date as _date
+        def _to_date(s):
+            return _date.fromisoformat(s) if s else None
+
         async with get_db_session() as db:
             await db.execute("""
                 INSERT INTO earnings_calendar_cache
@@ -146,8 +150,8 @@ class DataService:
                     source              = EXCLUDED.source,
                     fetched_at          = NOW()
             """, ticker,
-                data.get("next_earnings_date"),
-                data.get("trigger_brief_date"),
-                data.get("trigger_review_date"),
+                _to_date(data.get("next_earnings_date")),
+                _to_date(data.get("trigger_brief_date")),
+                _to_date(data.get("trigger_review_date")),
                 data.get("source", "yfinance"),
             )

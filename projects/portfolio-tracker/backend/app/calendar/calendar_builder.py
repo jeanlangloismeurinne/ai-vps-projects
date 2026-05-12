@@ -20,15 +20,19 @@ class CalendarBuilder:
             """, ticker, cal["next_earnings_date"])
 
             if not existing:
+                from datetime import date as _date
+                def _to_date(s):
+                    return _date.fromisoformat(s) if s else None
+
                 await db.execute("""
                     INSERT INTO calendar_events
                         (ticker, event_type, event_date, trigger_brief_date, trigger_review_date, source)
                     VALUES ($1, 'earnings', $2, $3, $4, $5)
                 """,
                     ticker,
-                    cal["next_earnings_date"],
-                    cal.get("trigger_brief_date"),
-                    cal.get("trigger_review_date"),
+                    _to_date(cal["next_earnings_date"]),
+                    _to_date(cal.get("trigger_brief_date")),
+                    _to_date(cal.get("trigger_review_date")),
                     cal.get("source", "yfinance"),
                 )
                 logger.info(f"Calendar entry created for {ticker} on {cal['next_earnings_date']}")
