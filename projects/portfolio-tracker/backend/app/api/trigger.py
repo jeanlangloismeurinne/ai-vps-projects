@@ -7,8 +7,9 @@ from app.agents.dust_client import DustClient, DustBudgetExceededError
 from app.agents.research_agent import run_regime_1
 from app.agents.portfolio_agent import run_regime_2, run_regime_3
 from app.agents.sector_pulse import run_sector_pulse
-from app.data_collection.m1_quantitative import collect_quantitative, collect_peers_quantitative
+from app.data_collection.m1_quantitative import collect_peers_quantitative
 from app.data_collection.m2_events import collect_m2
+from app.data_collection.data_service import DataService
 from app.data_collection.m3_qualitative import collect_m3
 from app.data_collection.assembler import assemble_data_brief
 from app.notifications.slack_notifier import SlackNotifier
@@ -182,7 +183,7 @@ async def _run_regime1(pos: dict, job_id: str = None):
             sector_schema = json.load(f)
 
         try:
-            m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+            m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regime1")
         except Exception as e:
             logger.warning(f"M1 error for {ticker}: {e}")
             m1 = {"ticker": ticker, "error": str(e)}
@@ -273,7 +274,7 @@ async def _run_regime2(pos: dict, job_id: str = None):
                 ORDER BY pulse_date DESC LIMIT 10
             """, str(pos["id"]))
 
-        m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+        m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regime2")
         m2 = collect_m2(ticker, pos["company_name"])
 
         thesis_data = None
@@ -351,7 +352,7 @@ async def _run_regime3(pos: dict, escalation_reason: str, job_id: str = None):
                 "SELECT * FROM hypotheses WHERE position_id = $1", str(pos["id"])
             )
 
-        m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+        m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regime3")
         m2 = collect_m2(ticker, pos["company_name"])
         m3 = await collect_m3(ticker, pos["company_name"], "post_earnings", {}, DustClient())
 

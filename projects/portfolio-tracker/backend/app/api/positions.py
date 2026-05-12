@@ -144,12 +144,22 @@ async def create_thesis(position_id: str, data: ThesisCreate):
                     p.get("metrics_to_extract"),
                 )
 
+    import asyncio
     from app.calendar.calendar_builder import CalendarBuilder
-    try:
-        await CalendarBuilder().build_for_position(pos["ticker"])
-    except Exception as e:
-        logger.warning(f"Calendar auto-refresh failed for {pos['ticker']}: {e}")
+    from app.data_collection.data_service import DataService
+    from app.config import settings as _settings
 
+    async def _warmup():
+        try:
+            await CalendarBuilder().build_for_position(pos["ticker"])
+        except Exception as e:
+            logger.warning(f"Calendar warmup failed for {pos['ticker']}: {e}")
+        try:
+            await DataService().refresh_m1(pos["ticker"], _settings.FMP_API_KEY, context="warmup")
+        except Exception as e:
+            logger.warning(f"M1 warmup failed for {pos['ticker']}: {e}")
+
+    asyncio.ensure_future(_warmup())
     return {"id": str(thesis["id"]), "version": thesis["version"], "position_id": position_id}
 
 

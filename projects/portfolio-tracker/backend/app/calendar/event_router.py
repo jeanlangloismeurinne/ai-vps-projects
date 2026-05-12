@@ -4,8 +4,8 @@ from app.db.database import get_db_session
 from app.agents.dust_client import DustClient
 from app.agents.portfolio_agent import run_regime_2, run_pre_event_brief
 from app.agents.sector_pulse import run_sector_pulse
-from app.data_collection.m1_quantitative import collect_quantitative, collect_peers_quantitative
 from app.data_collection.m2_events import collect_m2
+from app.data_collection.data_service import DataService
 from app.data_collection.assembler import assemble_data_brief
 from app.notifications.slack_notifier import SlackNotifier
 from app.config import settings
@@ -128,7 +128,7 @@ class EventRouter:
                 ORDER BY pulse_date DESC LIMIT 10
             """, position_id)
 
-        m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+        m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regime2")
         m2 = collect_m2(ticker, company_name)
 
         thesis_data = None

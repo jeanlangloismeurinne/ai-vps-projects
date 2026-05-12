@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from app.db.database import get_db_session
 from app.portfolio.concentration_checker import ConcentrationChecker
-from app.data_collection.m1_quantitative import collect_quantitative
+from app.data_collection.data_service import DataService
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class PortfolioView:
         for row in positions:
             p = dict(row)
             try:
-                m1 = collect_quantitative(p["ticker"], settings.FMP_API_KEY)
+                m1 = await DataService().get_m1(p["ticker"], settings.FMP_API_KEY)
                 current_price = m1.get("price", {}).get("current_price")
                 entry_price = float(p["entry_price"]) if p["entry_price"] else None
                 unrealized_pnl_pct = None

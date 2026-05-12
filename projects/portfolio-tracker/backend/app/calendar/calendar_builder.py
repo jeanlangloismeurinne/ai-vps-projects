@@ -1,7 +1,6 @@
 import logging
-from datetime import timedelta
 from app.db.database import get_db_session
-from app.data_collection.m2_events import get_earnings_calendar
+from app.data_collection.data_service import DataService
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 class CalendarBuilder:
 
     async def build_for_position(self, ticker: str) -> dict:
-        cal = get_earnings_calendar(ticker)
+        cal = await DataService().get_calendar(ticker)
         if not cal.get("next_earnings_date"):
             logger.info(f"No earnings date found for {ticker} — manual entry required")
             return cal

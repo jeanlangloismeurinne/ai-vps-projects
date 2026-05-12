@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.db.database import init_pool, close_pool
+from app.data_collection.data_cache import init_redis, close_redis
 from app.config import settings
 from app.api import positions, calendar, portfolio, watchlist, analysts, trigger, feedback
 
@@ -38,6 +40,7 @@ app.include_router(portfolio_settings_api.router)
 @app.on_event("startup")
 async def startup():
     await init_pool(settings.DATABASE_URL)
+    await init_redis(settings.REDIS_URL)
 
     scheduler.add_job(
         _daily_check,
@@ -65,6 +68,11 @@ async def startup():
         id="weekly_calendar_refresh", replace_existing=True,
     )
     scheduler.add_job(
+        _weekly_m1_snapshot,
+        CronTrigger(day_of_week="mon", hour=8, minute=45, timezone="Europe/Paris"),
+        id="weekly_m1_snapshot", replace_existing=True,
+    )
+    scheduler.add_job(
         _refresh_watchlist_peer_calendars,
         CronTrigger(day_of_week="fri", hour=18, minute=0, timezone="Europe/Paris"),
         id="weekly_watchlist_peer_calendar_refresh", replace_existing=True,
@@ -76,6 +84,7 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     scheduler.shutdown()
+    await close_redis()
     await close_pool()
 
 
@@ -104,7 +113,6 @@ async def _refresh_watchlist_prices():
 async def _refresh_market_temperature():
     from app.data_collection.m4_macro import get_market_temperature
     from app.db.database import get_db_session
-    from app.config import settings
     try:
         data = await get_market_temperature(settings.FRED_API_KEY)
         async with get_db_session() as db:
@@ -131,37 +139,51 @@ async def _refresh_all_calendars():
         logger.error(f"Calendar refresh_all error: {e}")
 
 
+async def _weekly_m1_snapshot():
+    """Snapshot M1 hebdomadaire pour toutes les positions actives — données historiques."""
+    from app.data_collection.data_service import DataService
+    from app.db.database import get_db_session
+    async with get_db_session() as db:
+        positions_rows = await db.fetch("SELECT ticker FROM positions WHERE status = 'active'")
+    ds = DataService()
+    for row in positions_rows:
+        try:
+            await ds.refresh_m1(row["ticker"], settings.FMP_API_KEY, context="weekly")
+            await asyncio.sleep(2)
+        except Exception as e:
+            logger.warning(f"Weekly M1 snapshot error for {row['ticker']}: {e}")
+
+
 async def _refresh_watchlist_peer_calendars():
-    import json
+    from app.data_collection.data_service import DataService
     from app.db.database import get_db_session
     async with get_db_session() as db:
         items = await db.fetch(
             "SELECT ticker, schema_json_draft FROM watchlist WHERE status IN ('watching', 'validated')"
         )
+    ds = DataService()
     for item in items:
         try:
             draft = item["schema_json_draft"] or {}
             peers = draft.get("peers", [])
-            if isinstance(peers, list):
-                for peer in peers[:5]:
-                    peer_ticker = peer if isinstance(peer, str) else peer.get("ticker", "")
-                    if peer_ticker:
-                        import yfinance as yf
-                        from app.db.database import get_db_session as _gs
-                        try:
-                            t = yf.Ticker(peer_ticker)
-                            cal = t.calendar
-                            if cal is not None and not cal.empty:
-                                earnings_date = cal.columns[0] if hasattr(cal, 'columns') else None
-                                if earnings_date:
-                                    async with _gs() as db2:
-                                        await db2.execute("""
-                                            INSERT INTO calendar_events
-                                                (ticker, event_type, event_date, source, notes)
-                                            VALUES ($1,'earnings',$2,'yfinance','watchlist_peer')
-                                            ON CONFLICT DO NOTHING
-                                        """, peer_ticker, earnings_date)
-                        except Exception:
-                            pass
+            if not isinstance(peers, list):
+                continue
+            for peer in peers[:5]:
+                peer_ticker = peer if isinstance(peer, str) else peer.get("ticker", "")
+                if not peer_ticker:
+                    continue
+                try:
+                    cal = await ds.refresh_calendar(peer_ticker)
+                    if cal.get("next_earnings_date"):
+                        async with get_db_session() as db2:
+                            await db2.execute("""
+                                INSERT INTO calendar_events
+                                    (ticker, event_type, event_date, source, notes)
+                                VALUES ($1, 'earnings', $2, $3, 'watchlist_peer')
+                                ON CONFLICT DO NOTHING
+                            """, peer_ticker, cal["next_earnings_date"], cal.get("source", "yfinance"))
+                    await asyncio.sleep(1)
+                except Exception:
+                    pass
         except Exception as e:
             logger.warning(f"Watchlist peer calendar error for {item['ticker']}: {e}")

@@ -1,6 +1,6 @@
 import logging
 from app.db.database import get_db_session
-from app.data_collection.m1_quantitative import collect_quantitative
+from app.data_collection.data_service import DataService
 from app.notifications.slack_notifier import SlackNotifier
 from app.config import settings
 
@@ -18,7 +18,7 @@ class WatchlistMonitor:
             item = dict(row)
             ticker = item["ticker"]
             try:
-                m1 = collect_quantitative(ticker, settings.FMP_API_KEY)
+                m1 = await DataService().get_m1(ticker, settings.FMP_API_KEY)
                 current_price = m1.get("price", {}).get("current_price")
                 if not current_price:
                     continue
