@@ -7,79 +7,20 @@ URL : `portfolio.jlmvpscode.duckdns.org`
 Backend : port 8050 → `/api` | Frontend : port 8051 → `/`
 Workspace Dust : `plm-siege`
 
+**État (2026-05-12) : système en production, deux positions actives (CAP + TSLA).**
+
 ---
 
-## ⚠️ ACTIONS RESTANTES AVANT PREMIER DÉPLOIEMENT
+## Bootstrap initial — tout coché ✅
 
-> À cocher dans l'ordre. Dernière mise à jour : 2026-05-02.
-
-### Étape 1 — Agents Dust ✅
-
-- [x] **`research-agent`** — ID : `eAYsKqZ1D2`
-- [x] **`portfolio-agent`** — ID : `L5rXF6uilh`
-
-### Étape 2 — Canal Slack ✅
-
-- [x] Canal `#portfolio-management` créé — Channel ID : `C0B13KANHPD`
-
-### Étape 3 — Clé FMP ✅
-
+- [x] Agents Dust : `research-agent` ID `eAYsKqZ1D2` · `portfolio-agent` ID `L5rXF6uilh`
+- [x] Canal Slack `#portfolio-management` — Channel ID `C0B13KANHPD`
 - [x] `FMP_API_KEY` = `dpl0XXr5F5ElF2M5s70Qmd80Pi3xBS6k`
-
-### Étape 4 — Base de données ✅
-
-- [x] `db_portfolio` créée, migration appliquée, user `portfolio_user` configuré
-
-### Étape 5 — Variables d'environnement Coolify ✅
-
-- [x] Toutes les vars sauf `DUST_API_KEY` — à renseigner dans Coolify quand disponible :
-  ```
-  DUST_API_KEY=sk-dust-...
-  ```
-
-### Étape 6 — assistant-ia ✅
-
-- [x] `"portfolio-tracker"` ajouté dans `_KNOWN_PROJECTS`
-
-### Étape 7 — DuckDNS ⚠️ ACTION REQUISE
-
-**Aller sur duckdns.org et créer le sous-domaine `portfolio.jlmvpscode`** pointant sur `204.168.250.110`.
-Sans ça, Let's Encrypt ne peut pas émettre le certificat et Traefik ne route pas.
-
-Une fois créé, forcer la mise à jour DNS :
-```bash
-/root/duckdns/duck.sh
-```
-
-Puis redéployer portfolio-tracker pour que `post_deployment_command` se lance.
-
-### Étape 8 — Bootstrap Capgemini (après DNS opérationnel)
-
-```bash
-# 1. Créer la position
-POSITION_ID=$(curl -s -X POST https://portfolio.jlmvpscode.duckdns.org/api/positions \
-  -H "Content-Type: application/json" \
-  -d '{"ticker":"CAP","company_name":"Capgemini","sector_schema":"IT_Services","exchange":"EURONEXT","entry_date":"2026-05-01","entry_price":102.00,"entry_price_currency":"EUR","allocation_pct":8.5}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-
-echo "Position ID: $POSITION_ID"
-
-# 2. Importer la thèse (payload complet dans spec §17 étape 6)
-curl -X POST https://portfolio.jlmvpscode.duckdns.org/api/positions/$POSITION_ID/thesis \
-  -H "Content-Type: application/json" \
-  -d @/root/ai-vps-projects/projects/portfolio-tracker/capgemini_thesis.json
-```
-
-Le fichier `capgemini_thesis.json` est à créer depuis le payload de la spec §17 étape 6.
-
-### Note technique — réseau infra-net
-
-Le `post_deployment_command` Coolify connecte automatiquement les containers à `infra-net` après chaque rebuild :
-```bash
-docker ps -q --filter 'name=portfolio-backend-portfolio0tracker000000000' | xargs -I{} docker network connect infra-net {} 2>/dev/null || true; [...]
-```
-
-Coolify crée `portfolio0tracker000000000_infra-net` au lieu de `infra-net` (bug Docker Compose avec `--project-name`). La commande post-deploy corrige ça.
+- [x] Base `db_portfolio` créée, toutes migrations appliquées
+- [x] Variables Coolify configurées (sauf `DUST_API_KEY` — à renseigner quand disponible)
+- [x] `"portfolio-tracker"` ajouté dans `_KNOWN_PROJECTS` (assistant-ia)
+- [x] DuckDNS `portfolio.jlmvpscode` opérationnel
+- [x] Positions Capgemini (CAP) et Tesla (TSLA) bootstrapées avec thèses
 
 ---
 
@@ -116,9 +57,9 @@ portfolio-tracker/
 │   │   ├── config.py             # Settings (pydantic-settings)
 │   │   ├── api/                  # Endpoints REST
 │   │   ├── agents/               # Dust client + régimes 1/2/3 + sector pulse
-│   │   ├── calendar/             # event_router (cœur scheduling), calendar_builder, watchlist_monitor
-│   │   ├── data_collection/      # M1 (quantitatif), M2 (événementiel), M3 (qualitatif), assembler
-│   │   ├── db/                   # asyncpg pool, modèles Pydantic, migration SQL
+│   │   ├── calendar/             # event_router, calendar_builder, watchlist_monitor
+│   │   ├── data_collection/      # M1/M2/M3/M4 + assembler + data_cache + data_service
+│   │   ├── db/                   # asyncpg pool, modèles Pydantic, migrations SQL
 │   │   ├── learning/             # STUBS P3 : analyst_tracker, pattern_library, thesis_versioning
 │   │   ├── notifications/        # Slack notifier
 │   │   └── portfolio/            # portfolio_view, concentration_checker, post_mortem (STUB P3)
@@ -131,48 +72,98 @@ portfolio-tracker/
 
 ---
 
-## API REST — Endpoints principaux
+## Couche données — DataService
+
+Tous les accès aux données de marché (yfinance + FMP) passent par `app/data_collection/data_service.py`.
+Ne jamais appeler `collect_quantitative()` directement depuis un nouveau code — passer par `DataService`.
+
+### Deux méthodes, deux usages
+
+```python
+# Lecture avec cache — pour dashboard, watchlist, monitoring quotidien
+m1 = await DataService().get_m1(ticker, settings.FMP_API_KEY)
+
+# Fetch forcé — pour les régimes (snapshot DB systématique avec contexte)
+m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regime2")
+```
+
+### TTL Redis
+
+| Données | Clé Redis | TTL |
+|---------|-----------|-----|
+| M1 complet (prix, valorisation, financials) | `pt:m1:{ticker}` | 4h |
+| Earnings date | `pt:calendar:{ticker}` | 7j |
+
+### Flux de données
 
 ```
-GET  /api/positions                        Liste positions actives
-POST /api/positions                        Créer position
-GET  /api/positions/{id}                   Détail position (thèse, hypothèses, revues, peers, pulses)
-POST /api/positions/{id}/thesis            Créer/remplacer thèse (crée hypothèses + peers)
-GET  /api/positions/{id}/thesis            Thèse courante + hypothèses
-GET  /api/positions/{id}/reviews           Historique revues
+get_m1()     : Redis (4h) → DB market_snapshots (4h) → yfinance/FMP
+refresh_m1() : yfinance/FMP → DB market_snapshots (avec context) → Redis
 
-GET  /api/portfolio                        Snapshot portfolio (prix live, P&L, flags concentration)
-GET  /api/portfolio/snapshots              Historique snapshots
-
-GET  /api/calendar                         Événements calendrier
-POST /api/calendar                         Créer événement manuel
-POST /api/calendar/refresh                 Re-fetcher les dates earnings depuis yfinance
-
-GET  /api/watchlist                        Liste watchlist
-POST /api/watchlist                        Ajouter
-POST /api/watchlist/{id}/promote           Promouvoir en position
-
-GET  /api/analysts                         Actions analystes
-POST /api/analysts                         Logger une action
-GET  /api/analysts/track-records           Vue agrégée (lagging_rate, signal_quality)
-
-POST /api/trigger/regime1/{ticker}         Déclencher régime 1 (fond)
-POST /api/trigger/regime2/{ticker}         Déclencher régime 2 (fond)
-POST /api/trigger/regime3/{ticker}         Déclencher régime 3 (fond) ?escalation_reason=...
-POST /api/trigger/sector-pulse/{peer}      Déclencher sector pulse ?main_ticker=...
+get_calendar()     : Redis (7j) → DB earnings_calendar_cache (7j) → yfinance
+refresh_calendar() : yfinance → DB earnings_calendar_cache → Redis
 ```
+
+### Contextes DB (champ `context` de `market_snapshots`)
+
+| Valeur | Déclencheur |
+|--------|-------------|
+| `regime1` | Trigger Régime 1 manuel |
+| `regime2` | Trigger Régime 2 (manuel ou automatique J+1) |
+| `regime3` | Trigger Régime 3 |
+| `weekly` | Snapshot lundi 8h45 |
+| `warmup` | Création de thèse (background) |
+| `api` | Appel API courant (cache miss) |
+
+### Callers actuels
+
+| Fichier | Méthode utilisée | Raison |
+|---------|-----------------|--------|
+| `api/trigger.py` R1/R2/R3 | `refresh_m1(context='regime*')` | Snapshot obligatoire |
+| `calendar/event_router.py` R2 auto | `refresh_m1(context='regime2')` | Snapshot obligatoire |
+| `calendar/watchlist_monitor.py` | `get_m1()` | Prix courant suffit |
+| `portfolio/portfolio_view.py` | `get_m1()` | Prix courant suffit |
+| `calendar/calendar_builder.py` | `get_calendar()` | Cache 7j acceptable |
+| `main.py` `_weekly_m1_snapshot` | `refresh_m1(context='weekly')` | Snapshot hebdo |
+| `main.py` `_refresh_watchlist_peer_calendars` | `refresh_calendar()` | Peer calendars |
+| `api/positions.py` `create_thesis` | `refresh_m1(context='warmup')` en background | Warmup silencieux |
+
+---
+
+## yfinance — comportement et limites
+
+### Format retourné
+
+`yf.Ticker(ticker).calendar` retourne un **dict** (pas un DataFrame). Ne pas utiliser `.empty` — tester avec `if cal:`.
+
+### Tickers Euronext
+
+`TICKER_EXCHANGE_MAP` dans `m1_quantitative.py` — ajouter chaque nouveau ticker Euronext au format `"CAP": "CAP.PA"`. Sans cette map, yfinance retourne `None` pour les cours.
+
+### Rate limiting (429)
+
+Yahoo Finance utilise Fastly comme CDN. En cas de 429 :
+1. Fastly bloque l'IP (rate limit par IP, pas par token)
+2. La requête de re-fetch du crumb CSRF échoue aussi → Fastly retourne le message d'erreur comme crumb
+3. Toutes les requêtes suivantes échouent avec `crumb=Edge%3A+Too+Many+Requests`
+
+**Cause principale** : appels en rafale sans délai. Le cache Redis/DB élimine ce risque en production normale. Ajouter `asyncio.sleep(1-2)` dans les boucles de batch si besoin.
+
+**Volume sûr** : ~500 appels/heure avec 1s de délai. En production normale (2-3 positions), très loin de ce plafond.
 
 ---
 
 ## Scheduling automatique
 
-- **Tous les jours à 7h00 Paris** : `EventRouter.process_daily_events()`
-  - Brief pré-event (J-2 avant publication) → Slack
-  - Revue Régime 2 (J+1 après publication) → Slack
-  - Sector pulses (pairs publiant le même jour)
-  - Check prix watchlist → alerte Slack si seuil franchi
-
-- **Lundi 8h00 Paris** : Portfolio snapshot → digest Slack hebdomadaire
+| Heure | Jour | Job | Détail |
+|-------|------|-----|--------|
+| 7h00 | tous | `_daily_check` | Brief J-2, Régime 2 J+1, sector pulses, check watchlist |
+| 7h30 | tous | `_refresh_watchlist_prices` | Prix watchlist via `get_m1()` |
+| 8h00 | lundi | `_weekly_review` | Snapshot portfolio → digest Slack |
+| 8h15 | lundi | `_refresh_market_temperature` | FRED — Buffett indicator, CAPE |
+| 8h30 | lundi | `_refresh_all_calendars` | Earnings dates via `CalendarBuilder.refresh_all()` |
+| 8h45 | lundi | `_weekly_m1_snapshot` | `refresh_m1(context='weekly')` toutes positions, 2s entre tickers |
+| 18h00 | vendredi | `_refresh_watchlist_peer_calendars` | Peer calendars via `refresh_calendar()`, 1s entre tickers |
 
 ---
 
@@ -185,17 +176,72 @@ Codec JSONB configuré dans `db/database.py` → les champs JSONB passent en Pyt
 DATABASE_URL format Coolify : `postgresql+asyncpg://admin:PASSWORD@shared-postgres:5432/db_portfolio`
 Le `+asyncpg` est strippé automatiquement dans `database.py` pour asyncpg.
 
+### Tables clés
+
+| Table | Usage |
+|-------|-------|
+| `positions` | Positions actives/clôturées |
+| `theses` + `hypotheses` | Thèses d'investissement versionnées |
+| `calendar_events` | Événements déclencheurs (J-2 brief, J+1 review) |
+| `sector_pulses` | Résultats d'analyse des peers |
+| `reviews` | Historique des revues R1/R2/R3 |
+| `market_snapshots` | ★ Historique M1 par contexte (post-mortem, pattern library) |
+| `earnings_calendar_cache` | ★ Persistence des dates earnings (survit aux redémarrages Redis) |
+| `market_indicators` | FRED macro (Buffett indicator, CAPE) |
+| `watchlist` | Titres en surveillance pré-entrée |
+
+★ = tables ajoutées en 2026-05-12
+
+### Migrations appliquées
+001 (initial) → 011 (market_data_history). La prochaine sera 012.
+
 ---
 
-## Conventions héritées de la stack
+## API REST — Endpoints principaux
+
+```
+GET  /api/positions                        Liste positions actives
+POST /api/positions                        Créer position
+GET  /api/positions/{id}                   Détail position (thèse, hypothèses, revues, peers, pulses)
+POST /api/positions/{id}/thesis            Créer/remplacer thèse → déclenche warmup M1 + calendar en background
+GET  /api/positions/{id}/thesis            Thèse courante + hypothèses
+GET  /api/positions/{id}/reviews           Historique revues
+
+GET  /api/portfolio                        Snapshot portfolio (prix live, P&L, flags concentration)
+GET  /api/portfolio/snapshots              Historique snapshots
+
+GET  /api/calendar                         Événements calendrier
+POST /api/calendar                         Créer événement manuel
+POST /api/calendar/refresh                 Re-fetcher les dates earnings (toutes positions actives)
+
+GET  /api/watchlist                        Liste watchlist
+POST /api/watchlist                        Ajouter
+POST /api/watchlist/{id}/promote           Promouvoir en position
+
+GET  /api/analysts                         Actions analystes
+POST /api/analysts                         Logger une action
+GET  /api/analysts/track-records           Vue agrégée (lagging_rate, signal_quality)
+
+POST /api/trigger/regime1/{ticker}         Déclencher régime 1
+POST /api/trigger/regime2/{ticker}         Déclencher régime 2
+POST /api/trigger/regime3/{ticker}         Déclencher régime 3 ?escalation_reason=...
+POST /api/trigger/sector-pulse/{peer}      Déclencher sector pulse ?main_ticker=...
+```
+
+---
+
+## Conventions et pièges
 
 1. **Labels Traefik** : explicites dans `docker-compose.yml` — pas d'auto-injection
 2. **env_file interdit** : Coolify injecte directement — ne pas ajouter `env_file: .env`
 3. **Rebuild ≠ Restart** : toujours `/deploy` (rebuild complet), jamais `/restart`
 4. **Commit + push AVANT** tout déclenchement de rebuild Coolify
-5. **post_deployment_command** : payload JSON construit en Python (pas curl avec guillemets)
-6. **Tickers Euronext** : format `CAP.PA` dans yfinance — enrichir `TICKER_EXCHANGE_MAP` dans `m1_quantitative.py` au fil des nouvelles positions
-7. **Traefik + multi-réseaux** : `portfolio-frontend` a le custom label `traefik.docker.network=coolify` dans Coolify. Sans ça, si le container est sur plusieurs réseaux Docker (ex: `coolify` + `infra-net`), Traefik peut choisir la mauvaise IP → gateway timeout.
+5. **Tickers Euronext** : enrichir `TICKER_EXCHANGE_MAP` dans `m1_quantitative.py` pour chaque nouveau ticker Euronext
+6. **Traefik + multi-réseaux** : `portfolio-frontend` a le custom label `traefik.docker.network=coolify` dans Coolify
+7. **yfinance `.calendar`** : retourne un dict, pas un DataFrame — tester avec `if cal:`, pas `if not cal.empty:`
+8. **DataService** : seul point d'accès aux données de marché — ne pas appeler `collect_quantitative()` directement
+9. **Régimes → refresh_m1()** : les déclencheurs de régimes doivent toujours utiliser `refresh_m1()` pour garantir un snapshot DB daté et contextualisé
+10. **`create_thesis` auto-warmup** : la création d'une thèse déclenche automatiquement en background le calendar + M1 via `asyncio.ensure_future`
 
 ---
 
@@ -203,24 +249,29 @@ Le `+asyncpg` est strippé automatiquement dans `database.py` pour asyncpg.
 
 Ces modules sont des stubs avec `NotImplementedError` :
 
-| Fichier | Fonctionnalité |
-|---------|---------------|
-| `portfolio/post_mortem.py` | Post-mortem automatisé sur exit / réduction >50% |
-| `learning/analyst_tracker.py` | Calcul verdict analystes à J+30 et J+90 |
-| `learning/thesis_versioning.py` | Archivage + nouvelle version de thèse post-Régime 3 |
-| `learning/pattern_library.py` | Enrichissement pattern library depuis post-mortems |
+| Fichier | Fonctionnalité | Dépend de |
+|---------|---------------|-----------|
+| `portfolio/post_mortem.py` | Post-mortem automatisé sur exit / réduction >50% | `market_snapshots` (disponible) |
+| `learning/analyst_tracker.py` | Calcul verdict analystes à J+30 et J+90 | — |
+| `learning/thesis_versioning.py` | Archivage + nouvelle version de thèse post-R3 | — |
+| `learning/pattern_library.py` | Enrichissement depuis post-mortems | `market_snapshots` (disponible) |
 
-Schémas sectoriels à compléter (squelettes actuels insuffisants) :
+`market_snapshots` accumule déjà les données dès maintenant — les P3 auront du recul historique dès qu'on les implémentera.
+
+Schémas sectoriels à compléter :
 - `sector_schemas/Luxury.json` — ajouter kpis, queries, peers complets
 - `sector_schemas/Industrial.json` — idem
 
 ---
 
-## Données initiales — Thèse Capgemini
+## Données initiales
 
-Position bootstrapée manuellement (entrée 2026-05-01 à 102€, allocation 8.5%) :
-- 6 hypothèses H1-H6 (synergies WNS, organique >2%, marge ≥13.3%, reprise EU IT, IA nette positive, Fit for Growth)
-- Scénarios : Bear -5.2%/an → Central 12.4%/an → Bull 23.7%/an (horizon 5 ans)
-- Peers Tier 1 : CTSH (analogie directe), Tier 2 : ACN (bellwether)
-- Seuils : renforcer < 88€, alerte < 78€, sortie partielle 25% à 155-165€, 50% à 200-220€
-- Payload complet dans la spec `portfolio-tracker-spec-v0.md` §17 étape 6
+### Capgemini (CAP)
+Position entrée 2026-05-01 à 102€, allocation 8.5% · 6 hypothèses H1-H6 · Peers : CTSH (T1), ACN (T2)
+Scénarios Bear -5.2%/an → Central 12.4%/an → Bull 23.7%/an (5 ans)
+
+### Tesla (TSLA)
+Position active, thèse définie.
+
+### Note réseau infra-net
+Le `post_deployment_command` Coolify connecte automatiquement les containers à `infra-net` après chaque rebuild. Coolify crée `portfolio0tracker000000000_infra-net` au lieu de `infra-net` — la commande post-deploy corrige ça.
