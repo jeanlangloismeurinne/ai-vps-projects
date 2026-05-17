@@ -27,28 +27,36 @@ _handler: AsyncSocketModeHandler | None = None
 
 @bolt.event("message")
 async def on_message(event: dict, **_):
-    # Ignorer les messages de bots et les sous-types (edited, deleted…)
-    if event.get("bot_id") or event.get("subtype"):
-        return
+    bot_id = event.get("bot_id")
+    subtype = event.get("subtype")
     thread_ts = event.get("thread_ts")
+    user_id = event.get("user", "")
+    logger.debug(f"on_message: user={user_id} bot_id={bot_id} subtype={subtype} thread={thread_ts}")
+
+    if bot_id or subtype:
+        return
     if not thread_ts:
         return
 
     channel = event.get("channel", settings.JOURNAL_CHANNEL_ID)
-    user_id = event.get("user", "")
     text = event.get("text", "")
 
     # Session journal v2 active sur ce fil ?
-    from app.handlers.journal_slack import handle_thread_reply
-    from app.services import journal_v2 as svc_v2
-    session = await svc_v2.get_slack_session_by_thread(thread_ts)
-    if session:
-        await handle_thread_reply(
-            thread_ts=thread_ts,
-            user_id=user_id,
-            text=text,
-            channel=channel,
-        )
+    try:
+        from app.handlers.journal_slack import handle_thread_reply
+        from app.services import journal_v2 as svc_v2
+        session = await svc_v2.get_slack_session_by_thread(thread_ts)
+        if session:
+            logger.info(f"on_message: session trouvée (id={session['id']} q_index={session['question_index']}), traitement réponse")
+            await handle_thread_reply(
+                thread_ts=thread_ts,
+                user_id=user_id,
+                text=text,
+                channel=channel,
+            )
+            return
+    except Exception:
+        logger.exception(f"on_message: erreur lors du traitement session journal (thread={thread_ts})")
         return
 
     # Ancien journal libre (thread du prompt quotidien)

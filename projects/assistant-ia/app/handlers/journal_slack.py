@@ -189,12 +189,16 @@ async def handle_thread_reply(
     q_index = session["question_index"]
 
     questions = await svc.get_questions(objectif_id)
+    logger.info(f"handle_thread_reply: objectif={objectif_id} q_index={q_index}/{len(questions)} text={text[:60]!r}")
+
     if q_index >= len(questions):
+        logger.info("handle_thread_reply: toutes les questions traitées, fin")
         return
 
     q = questions[q_index]
     valeur = _parse_text_answer(q, text)
     if valeur is None:
+        logger.warning(f"handle_thread_reply: réponse non parsée pour type={q['type']}")
         await post_text(
             channel=channel,
             text="Je n'ai pas compris ta réponse. Réessaie.",
@@ -205,6 +209,7 @@ async def handle_thread_reply(
     await svc.store_reponse(str(q["id"]), objectif_id, valeur, today)
     next_index = q_index + 1
     await svc.advance_slack_session(session["id"], next_index)
+    logger.info(f"handle_thread_reply: réponse stockée, avancement à q_index={next_index}")
 
     await _post_next_question(objectif_id, questions, next_index, channel, thread_ts)
 
