@@ -14,6 +14,7 @@ from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from app.config import settings
 from app.services import journal as journal_svc
 from app.services import kanban as kanban_svc
+from app.services import slack_client
 
 logger = logging.getLogger(__name__)
 
@@ -204,10 +205,11 @@ async def cmd_feedback(ack, body, respond):
     if svc:
         try:
             await _submit_feedback(svc["name"], text, f"slack://#{channel_name}")
-            await respond(
-                response_type="ephemeral",
-                text=f"✅ Feedback enregistré pour *{svc['name']}*. Merci !",
+            await slack_client.post_message(
+                channel=channel_id,
+                text=f"💡 *Feedback {svc['name']}* : {text}",
             )
+            await respond(response_type="ephemeral", text="✅ Feedback enregistré. Merci !")
         except Exception as exc:
             logger.error("cmd_feedback direct error: %s", exc)
             await respond(response_type="ephemeral", text="❌ Impossible d'enregistrer le feedback. Réessayez.")
@@ -225,12 +227,15 @@ async def action_feedback_project(ack, body, respond):
     await ack()
     value: str = body["actions"][0]["value"]
     project_name, _, message = value.partition("|")
+    channel_id: str = body.get("channel", {}).get("id", "")
     try:
         await _submit_feedback(project_name, message, "slack://direct")
-        await respond(
-            replace_original=True,
-            text=f"✅ Feedback enregistré pour *{project_name}*. Merci !",
-        )
+        await respond(replace_original=True, text=f"✅ Feedback enregistré pour *{project_name}*. Merci !")
+        if channel_id:
+            await slack_client.post_message(
+                channel=channel_id,
+                text=f"💡 *Feedback {project_name}* : {message}",
+            )
     except Exception as exc:
         logger.error("action_feedback_project error: %s", exc)
         await respond(replace_original=True, text="❌ Impossible d'enregistrer le feedback. Réessayez.")
