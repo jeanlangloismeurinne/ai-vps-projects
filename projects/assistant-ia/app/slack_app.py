@@ -67,7 +67,7 @@ async def on_message(event: dict, **_):
 
 
 @bolt.action(re.compile(r"^jrn_"))
-async def action_journal_answer(ack, body, **_):
+async def action_journal_answer(ack, body, client, **_):
     await ack()
     action = body["actions"][0]
     raw_value = action["value"]
@@ -84,8 +84,27 @@ async def action_journal_answer(ack, body, **_):
     thread_ts = container.get("thread_ts") or body.get("message", {}).get("thread_ts", "")
     channel = container.get("channel_id") or body.get("channel", {}).get("id", settings.JOURNAL_CHANNEL_ID)
     user_id = body.get("user", {}).get("id", "")
+    msg_ts = body.get("message", {}).get("ts", "")
 
-    from app.handlers.journal_slack import handle_block_action
+    from app.handlers.journal_slack import handle_block_action, _display_value
+    display = _display_value(answer_val)
+
+    # Mettre à jour le message avec la réponse sélectionnée avant de traiter
+    if msg_ts and channel:
+        original_text = body.get("message", {}).get("text", "")
+        try:
+            await client.chat_update(
+                channel=channel,
+                ts=msg_ts,
+                text=f"✅ {original_text} — *{display}*",
+                blocks=[{
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"✅ *Répondu :* {display}"},
+                }],
+            )
+        except Exception:
+            logger.warning("action_journal_answer: impossible de mettre à jour le message boutons")
+
     await handle_block_action(
         objectif_id=objectif_id,
         q_index=q_index,

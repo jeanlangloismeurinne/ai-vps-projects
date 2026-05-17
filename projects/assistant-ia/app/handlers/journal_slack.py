@@ -70,6 +70,15 @@ def _question_blocks(question, objectif_id: str, q_index: int) -> list:
     return [header, {"type": "actions", "elements": elements}]
 
 
+def _display_value(raw_value: str) -> str:
+    """Traduit une valeur brute de bouton en label lisible."""
+    if raw_value == "true":
+        return "Oui"
+    if raw_value == "false":
+        return "Non"
+    return raw_value
+
+
 def _parse_text_answer(question, text: str) -> dict | None:
     """Convertit une réponse textuelle libre en valeur structurée selon le type."""
     type_ = question["type"]
