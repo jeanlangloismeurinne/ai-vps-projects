@@ -1,7 +1,8 @@
 ---
 id: 1777667954741
 type: suggestion
-status: open
+status: closed
+closed_at: 2026-05-17T17:49:00+00:00
 date: 2026-05-01T20:39:14.741991
 project: journal
 url: slack://#feedback
