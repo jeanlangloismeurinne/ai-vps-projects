@@ -5,6 +5,7 @@ Socket Mode = pas de Request URL à exposer, la connexion WebSocket est initiée
 """
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -65,7 +66,7 @@ async def on_message(event: dict, **_):
         logger.info(f"Journal entry saved from Slack thread {thread_ts}")
 
 
-@bolt.action("journal_answer")
+@bolt.action(re.compile(r"^jrn_"))
 async def action_journal_answer(ack, body, **_):
     await ack()
     action = body["actions"][0]

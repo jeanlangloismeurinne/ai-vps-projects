@@ -38,26 +38,29 @@ def _question_blocks(question, objectif_id: str, q_index: int) -> list:
             elements.append({
                 "type": "button",
                 "text": {"type": "plain_text", "text": label},
-                "action_id": "journal_answer",
+                "action_id": f"jrn_{q_index}_{val}",
                 "value": f"{objectif_id}|{q_index}|{val}",
             })
 
     elif type_ == "note":
         mn, mx = cfg.get("min", 1), cfg.get("max", 5)
+        if mx - mn > 9:
+            # Trop de valeurs pour des boutons — texte libre
+            return [header]
         for v in range(mn, mx + 1):
             elements.append({
                 "type": "button",
                 "text": {"type": "plain_text", "text": str(v)},
-                "action_id": "journal_answer",
+                "action_id": f"jrn_{q_index}_{v}",
                 "value": f"{objectif_id}|{q_index}|{v}",
             })
 
     elif type_ == "single_choice":
-        for opt in cfg.get("options", [])[:5]:
+        for i, opt in enumerate(cfg.get("options", [])[:5]):
             elements.append({
                 "type": "button",
                 "text": {"type": "plain_text", "text": opt[:75]},
-                "action_id": "journal_answer",
+                "action_id": f"jrn_{q_index}_{i}",
                 "value": f"{objectif_id}|{q_index}|{opt}",
             })
 
@@ -161,6 +164,16 @@ async def start_objectif_flow(
 
 def _question_hint(question) -> str:
     type_ = question["type"]
+    cfg = question["config"]
+    if isinstance(cfg, str):
+        cfg = json.loads(cfg)
+
+    if type_ == "note":
+        mn, mx = cfg.get("min", 1), cfg.get("max", 5)
+        if mx - mn > 9:
+            return f"_Envoie un nombre entre {mn} et {mx}._"
+        return ""  # les boutons suffisent
+
     hints = {
         "text": "_Réponds par un message dans ce fil._",
         "short_text": "_Réponds par un message court._",
