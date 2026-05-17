@@ -57,14 +57,16 @@ async def check_objectif_reminders():
             continue
 
         parcours_nom = o.get("parcours_nom", "")
-        text = (
-            f"📋 *{o['nom']}*"
-            + (f" _(Parcours : {parcours_nom})_" if parcours_nom else "")
-            + f"\nHeure de remplir ton journal → {settings.ASSISTANT_BASE_URL}/journal/fill/{objectif_id}"
+        from app.handlers.journal_slack import start_objectif_flow
+        await start_objectif_flow(
+            objectif_id=objectif_id,
+            objectif_nom=o["nom"],
+            user_id="bot",
+            channel=settings.SLACK_CHANNEL_JOURNAL,
+            parcours_nom=parcours_nom,
         )
-        await post_text(channel=settings.SLACK_CHANNEL_JOURNAL, text=text)
         await svc_v2.record_notification(objectif_id, today)
-        logger.info(f"Rappel objectif envoyé: {o['nom']} ({objectif_id})")
+        logger.info(f"Rappel objectif envoyé (Slack Q1): {o['nom']} ({objectif_id})")
 
     # Rappels de suivi : 3h après le premier message, si non complété
     for o in due:

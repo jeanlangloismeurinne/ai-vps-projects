@@ -103,45 +103,50 @@ def _shell(title: str, body: str, back_url: str = "", back_label: str = "") -> s
 </html>"""
 
 
-def _render_question(q) -> str:
+def _render_question(q, existing: dict = None) -> str:
     qid = str(q["id"])
     texte = q["texte"]
     type_ = q["type"]
     cfg = q["config"]
     if isinstance(cfg, str):
         cfg = json.loads(cfg)
+    ex = existing or {}
 
     name = f"q_{qid}"
     html = f'<div class="question-block" data-question="{qid}">'
     html += f'<div class="question-label">{texte}</div>'
 
     if type_ in ("text",):
-        html += f'<textarea name="{name}" rows="4" placeholder="Ta réponse…"></textarea>'
+        val = ex.get("text", "")
+        html += f'<textarea name="{name}" rows="4" placeholder="Ta réponse…">{val}</textarea>'
 
     elif type_ == "short_text":
-        html += f'<input type="text" name="{name}" placeholder="Ta réponse…">'
+        val = ex.get("text", "")
+        html += f'<input type="text" name="{name}" placeholder="Ta réponse…" value="{val}">'
 
     elif type_ == "note":
         mn, mx = cfg.get("min", 1), cfg.get("max", 5)
+        cur = ex.get("value")
         btns = "".join(
-            f'<button type="button" class="note-btn" data-name="{name}" data-val="{v}" onclick="selectNote(this)">{v}</button>'
+            f'<button type="button" class="note-btn{" selected" if cur == v else ""}" data-name="{name}" data-val="{v}" onclick="selectNote(this)">{v}</button>'
             for v in range(mn, mx + 1)
         )
         html += f'<div class="note-btns">{btns}</div>'
-        html += f'<input type="hidden" name="{name}" id="hidden_{name}">'
+        html += f'<input type="hidden" name="{name}" id="hidden_{name}" value="{cur if cur is not None else ""}">'
 
     elif type_ == "scale":
         mn, mx = cfg.get("min", 1), cfg.get("max", 10)
         lbl_min = cfg.get("label_min", str(mn))
         lbl_max = cfg.get("label_max", str(mx))
         mid = (mn + mx) // 2
+        cur = ex.get("value", mid)
         html += f"""
         <div class="scale-wrap">
-          <input type="range" name="{name}" min="{mn}" max="{mx}" value="{mid}"
+          <input type="range" name="{name}" min="{mn}" max="{mx}" value="{cur}"
                  oninput="document.getElementById('sv_{name}').textContent=this.value">
           <div class="scale-labels">
             <span>{lbl_min}</span>
-            <span id="sv_{name}" style="color:var(--accent);font-weight:600">{mid}</span>
+            <span id="sv_{name}" style="color:var(--accent);font-weight:600">{cur}</span>
             <span>{lbl_max}</span>
           </div>
         </div>"""
@@ -149,77 +154,95 @@ def _render_question(q) -> str:
     elif type_ == "single_choice":
         opts = cfg.get("options", [])
         allow_other = cfg.get("allow_other", False)
+        cur_choice = ex.get("choice", "")
+        cur_other = ex.get("other", "")
         choices = ""
         for opt in opts:
+            checked = 'checked' if cur_choice == opt else ''
             choices += f"""
             <label class="choice-opt">
-              <input type="radio" name="{name}" value="{opt}" onchange="handleOther('{name}',this)">
+              <input type="radio" name="{name}" value="{opt}" {checked} onchange="handleOther('{name}',this)">
               {opt}
             </label>"""
         if allow_other:
+            checked = 'checked' if cur_choice == "__other__" else ''
+            other_style = 'display:block' if cur_choice == "__other__" else ''
             choices += f"""
             <label class="choice-opt">
-              <input type="radio" name="{name}" value="__other__" onchange="handleOther('{name}',this)">
+              <input type="radio" name="{name}" value="__other__" {checked} onchange="handleOther('{name}',this)">
               Autre (préciser)
             </label>
-            <div class="other-input" id="other_{name}">
-              <input type="text" name="{name}_other" placeholder="Précisez…">
+            <div class="other-input" id="other_{name}" style="{other_style}">
+              <input type="text" name="{name}_other" placeholder="Précisez…" value="{cur_other or ''}">
             </div>"""
         html += f'<div class="choice-list">{choices}</div>'
 
     elif type_ == "multiple_choice":
         opts = cfg.get("options", [])
         allow_other = cfg.get("allow_other", False)
+        cur_choices = ex.get("choices", [])
+        cur_other = ex.get("other", "")
         choices = ""
         for opt in opts:
+            checked = 'checked' if opt in cur_choices else ''
             choices += f"""
             <label class="choice-opt">
-              <input type="checkbox" name="{name}[]" value="{opt}">
+              <input type="checkbox" name="{name}[]" value="{opt}" {checked}>
               {opt}
             </label>"""
         if allow_other:
+            has_other = bool(cur_other)
+            checked = 'checked' if has_other else ''
+            other_style = 'display:block' if has_other else ''
             choices += f"""
             <label class="choice-opt">
-              <input type="checkbox" name="{name}[]" value="__other__"
+              <input type="checkbox" name="{name}[]" value="__other__" {checked}
                      onchange="document.getElementById('other_{name}').style.display=this.checked?'block':'none'">
               Autre (préciser)
             </label>
-            <div class="other-input" id="other_{name}">
-              <input type="text" name="{name}_other" placeholder="Précisez…">
+            <div class="other-input" id="other_{name}" style="{other_style}">
+              <input type="text" name="{name}_other" placeholder="Précisez…" value="{cur_other or ''}">
             </div>"""
         html += f'<div class="choice-list">{choices}</div>'
 
     elif type_ == "yes_no":
+        cur = ex.get("value")
+        sel_oui = " selected" if cur is True else ""
+        sel_non = " selected" if cur is False else ""
+        hidden_val = "true" if cur is True else ("false" if cur is False else "")
         html += f"""
         <div class="note-btns">
-          <button type="button" class="note-btn" data-name="{name}" data-val="true" onclick="selectNote(this)">Oui</button>
-          <button type="button" class="note-btn" data-name="{name}" data-val="false" onclick="selectNote(this)">Non</button>
+          <button type="button" class="note-btn{sel_oui}" data-name="{name}" data-val="true" onclick="selectNote(this)">Oui</button>
+          <button type="button" class="note-btn{sel_non}" data-name="{name}" data-val="false" onclick="selectNote(this)">Non</button>
         </div>
-        <input type="hidden" name="{name}" id="hidden_{name}">"""
+        <input type="hidden" name="{name}" id="hidden_{name}" value="{hidden_val}">"""
 
     elif type_ == "date":
-        today = date.today().isoformat()
-        html += f'<input type="date" name="{name}" value="{today}">'
+        val = ex.get("value", date.today().isoformat())
+        html += f'<input type="date" name="{name}" value="{val}">'
 
     elif type_ == "duration":
         unit = cfg.get("unit", "minutes")
         unit_lbl = "minutes" if unit == "minutes" else "heures"
+        val = ex.get("value", "")
         html += f"""
         <div class="flex" style="gap:.5rem;align-items:center">
-          <input type="number" name="{name}" min="0" step="1" style="width:120px" placeholder="0">
+          <input type="number" name="{name}" min="0" step="1" style="width:120px" placeholder="0" value="{val}">
           <span style="color:var(--muted);font-size:.9rem">{unit_lbl}</span>
           <input type="hidden" name="{name}_unit" value="{unit}">
         </div>"""
 
     elif type_ == "ranking":
         items = cfg.get("items", [])
+        cur_order = ex.get("order", items)
         html += '<div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem">Classez du plus important au moins important :</div>'
         for idx, item in enumerate(items, 1):
+            selected_val = cur_order[idx - 1] if idx - 1 < len(cur_order) else item
             html += f"""
             <div class="flex" style="margin-bottom:.4rem;gap:.5rem">
               <span style="color:var(--muted);min-width:1.2rem">{idx}.</span>
               <select name="{name}[]" style="flex:1">
-                {''.join(f'<option value="{it}">{it}</option>' for it in items)}
+                {''.join(f'<option value="{it}"{" selected" if it == selected_val else ""}>{it}</option>' for it in items)}
               </select>
             </div>"""
 
@@ -289,13 +312,14 @@ async def fill_index():
 
 @router.get("/journal/fill/{objectif_id}", response_class=HTMLResponse)
 async def fill_objectif(objectif_id: str):
-    today = date.today()
+    from datetime import datetime
+    import pytz
+    today = datetime.now(pytz.timezone("Europe/Paris")).date()
     o = await svc.get_objectif(objectif_id)
     if not o:
         return RedirectResponse("/journal/fill", status_code=303)
 
     questions = await svc.list_active_questions(objectif_id)
-    answered_ids = await svc.get_session_answered_ids(objectif_id, today)
 
     if not questions:
         body = f"""
@@ -304,20 +328,27 @@ async def fill_objectif(objectif_id: str):
         <a href="/journal/settings/objectifs/{objectif_id}" style="color:var(--accent)">Ajouter des questions →</a></p>"""
         return HTMLResponse(_shell(o["nom"], body, "/journal/fill", "Retour"))
 
-    q_blocks = "".join(_render_question(q) for q in questions)
-    already_done = all(str(q["id"]) in answered_ids for q in questions)
+    existing = await svc.get_session_reponses(objectif_id, today)
+    is_editing = bool(existing)
+    is_complete = await svc.is_objectif_complete(objectif_id, today)
 
-    warning = ""
-    if already_done:
-        warning = '<div style="background:#1a2a1a;border:1px solid #2a4a2a;border-radius:8px;padding:1rem;margin-bottom:1.5rem;color:#5aba7a;font-size:.9rem">✓ Cet objectif a déjà été rempli aujourd\'hui. Tu peux soumettre à nouveau si tu veux corriger.</div>'
+    q_blocks = "".join(_render_question(q, existing.get(str(q["id"]))) for q in questions)
+
+    banner = ""
+    if is_complete:
+        banner = '<div style="background:#1a2a1a;border:1px solid #2a4a2a;border-radius:8px;padding:1rem;margin-bottom:1.5rem;color:#5aba7a;font-size:.9rem">✓ Objectif complété aujourd\'hui. Tes réponses sont modifiables jusqu\'à minuit.</div>'
+    elif is_editing:
+        banner = '<div style="background:#1a1f2a;border:1px solid #2a3a4a;border-radius:8px;padding:1rem;margin-bottom:1.5rem;color:#7aabda;font-size:.9rem">Réponses partielles — tu peux compléter ou modifier jusqu\'à minuit.</div>'
+
+    btn_label = "Mettre à jour" if is_editing else "Enregistrer les réponses"
 
     body = f"""
     <h2>{o['nom']}</h2>
-    {warning}
+    {banner}
     <form method="post" action="/journal/fill/{objectif_id}" id="fill-form">
       {q_blocks}
       <div style="margin-top:2rem;display:flex;gap:1rem">
-        <button type="submit" class="btn btn-primary">Enregistrer les réponses</button>
+        <button type="submit" class="btn btn-primary">{btn_label}</button>
         <a href="/journal/fill" class="btn btn-ghost">Retour</a>
       </div>
     </form>

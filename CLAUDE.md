@@ -140,6 +140,20 @@ Pour un projet avec backend + frontend sur le même domaine (ex: `/api` et `/`),
 
 Coolify ajoute automatiquement un middleware `stripprefix` quand le fqdn contient un path (ex: `https://domain.com/api`). Le backend FastAPI doit donc déclarer ses routes **sans le préfixe** (ex: `/positions` et non `/api/positions`).
 
+### `custom_labels` en mode `dockerfile` : remplace les labels Traefik auto-générés
+
+Quand `custom_labels` est renseigné dans Coolify (champ DB base64), Coolify **remplace entièrement** les labels Traefik auto-générés par ces custom_labels. Le container n'a alors que ce label → "no available server".
+
+**Règle :** si un `custom_labels` est nécessaire (ex: `traefik.docker.network=coolify`), il faut y inclure aussi **tous** les labels Traefik de routage. Mettre à jour en DB :
+
+```bash
+NEW_B64=$(printf 'traefik.docker.network=coolify\ntraefik.enable=true\n...' | base64 -w 0)
+docker exec coolify-db psql -U coolify -d coolify -c \
+  "UPDATE applications SET custom_labels='$NEW_B64' WHERE uuid='{UUID}';"
+```
+
+Puis rebuild. Voir `custom_labels` du frontend portfolio comme exemple complet.
+
 ### Mode `dockercompose` : labels Traefik obligatoires
 
 **Coolify n'injecte PAS les labels Traefik pour les apps `dockercompose`** (contrairement au mode nixpacks où ils sont auto-générés). Sans ces labels, Traefik ignore le container → "no available server".

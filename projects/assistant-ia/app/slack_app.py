@@ -33,9 +33,58 @@ async def on_message(event: dict, **_):
     thread_ts = event.get("thread_ts")
     if not thread_ts:
         return
+
+    channel = event.get("channel", settings.JOURNAL_CHANNEL_ID)
+    user_id = event.get("user", "")
+    text = event.get("text", "")
+
+    # Session journal v2 active sur ce fil ?
+    from app.handlers.journal_slack import handle_thread_reply
+    from app.services import journal_v2 as svc_v2
+    session = await svc_v2.get_slack_session_by_thread(thread_ts)
+    if session:
+        await handle_thread_reply(
+            thread_ts=thread_ts,
+            user_id=user_id,
+            text=text,
+            channel=channel,
+        )
+        return
+
+    # Ancien journal libre (thread du prompt quotidien)
     if await journal_svc.is_journal_thread(thread_ts):
-        await journal_svc.store_entry(event.get("text", ""), event["ts"])
+        await journal_svc.store_entry(text, event["ts"])
         logger.info(f"Journal entry saved from Slack thread {thread_ts}")
+
+
+@bolt.action("journal_answer")
+async def action_journal_answer(ack, body, **_):
+    await ack()
+    action = body["actions"][0]
+    raw_value = action["value"]
+    parts = raw_value.split("|", 2)
+    if len(parts) != 3:
+        return
+    objectif_id, q_index_str, answer_val = parts
+    try:
+        q_index = int(q_index_str)
+    except ValueError:
+        return
+
+    container = body.get("container", {})
+    thread_ts = container.get("thread_ts") or body.get("message", {}).get("thread_ts", "")
+    channel = container.get("channel_id") or body.get("channel", {}).get("id", settings.JOURNAL_CHANNEL_ID)
+    user_id = body.get("user", {}).get("id", "")
+
+    from app.handlers.journal_slack import handle_block_action
+    await handle_block_action(
+        objectif_id=objectif_id,
+        q_index=q_index,
+        raw_value=answer_val,
+        user_id=user_id,
+        channel=channel,
+        thread_ts=thread_ts,
+    )
 
 
 # ─── /tache ───────────────────────────────────────────────────────────────────

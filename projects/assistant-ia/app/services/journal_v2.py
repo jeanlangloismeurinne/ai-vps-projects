@@ -241,7 +241,9 @@ async def store_reponse(
     pool = await get_pool()
     await pool.execute(
         """INSERT INTO journal_reponses (question_id, objectif_id, valeur, session_date)
-           VALUES ($1,$2,$3,$4)""",
+           VALUES ($1,$2,$3,$4)
+           ON CONFLICT (question_id, objectif_id, session_date)
+           DO UPDATE SET valeur=EXCLUDED.valeur, answered_at=now()""",
         question_id, objectif_id, json.dumps(valeur), session_date,
     )
 
@@ -254,11 +256,36 @@ async def get_session_answered_ids(objectif_id: str, session_date: date) -> set:
     return {str(r["question_id"]) for r in rows}
 
 async def is_objectif_complete(objectif_id: str, session_date: date) -> bool:
-    questions = await list_active_questions(objectif_id)
-    if not questions:
+    pool = await get_pool()
+    required = await pool.fetch(
+        """SELECT * FROM journal_questions
+           WHERE objectif_id=$1 AND is_active=true AND is_required=true AND deprecated_at IS NULL
+           ORDER BY sort_order, created_at""",
+        objectif_id,
+    )
+    if not required:
         return True
     answered = await get_session_answered_ids(objectif_id, session_date)
-    return all(str(q["id"]) in answered for q in questions)
+    return all(str(q["id"]) in answered for q in required)
+
+async def get_session_reponses(objectif_id: str, session_date: date) -> dict:
+    """Retourne {question_id: valeur} pour préfill du formulaire."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        "SELECT question_id, valeur FROM journal_reponses WHERE objectif_id=$1 AND session_date=$2",
+        objectif_id, session_date,
+    )
+    result = {}
+    for r in rows:
+        v = r["valeur"]
+        result[str(r["question_id"])] = json.loads(v) if isinstance(v, str) else v
+    return result
+
+
+async def get_questions(objectif_id: str) -> list:
+    """Alias de list_active_questions pour usage externe."""
+    return await list_active_questions(objectif_id)
+
 
 async def get_reponses(question_id: str, limit: int = 100) -> list:
     pool = await get_pool()
@@ -341,3 +368,33 @@ def is_due_today(objectif) -> bool:
 async def get_due_objectifs_today() -> list:
     objectifs = await get_all_active_objectifs()
     return [o for o in objectifs if is_due_today(o)]
+
+
+# ── Sessions Slack ─────────────────────────────────────────────────────────────
+
+async def create_slack_session(
+    user_id: str, objectif_id: str, thread_ts: str, session_date: date
+) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        """INSERT INTO journal_slack_sessions (user_id, objectif_id, thread_ts, question_index, session_date)
+           VALUES ($1,$2,$3,0,$4)
+           ON CONFLICT (user_id, objectif_id, session_date)
+           DO UPDATE SET thread_ts=EXCLUDED.thread_ts, question_index=0""",
+        user_id, objectif_id, thread_ts, session_date,
+    )
+
+
+async def get_slack_session_by_thread(thread_ts: str):
+    pool = await get_pool()
+    return await pool.fetchrow(
+        "SELECT * FROM journal_slack_sessions WHERE thread_ts=$1", thread_ts
+    )
+
+
+async def advance_slack_session(session_id: int, next_index: int) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE journal_slack_sessions SET question_index=$1 WHERE id=$2",
+        next_index, session_id,
+    )

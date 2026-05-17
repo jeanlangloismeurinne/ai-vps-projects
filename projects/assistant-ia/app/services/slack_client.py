@@ -33,3 +33,27 @@ async def post_text(channel: str, text: str, thread_ts: str | None = None) -> st
         if not data.get("ok"):
             raise RuntimeError(f"Slack error: {data.get('error')}")
         return data["ts"]
+
+
+async def post_blocks(
+    channel: str,
+    blocks: list,
+    text: str,
+    thread_ts: str | None = None,
+    mrkdwn: str = "",
+) -> str:
+    """Envoie un message avec blocs Block Kit. Retourne le ts du message."""
+    payload: dict = {"channel": channel, "blocks": blocks, "text": text}
+    if thread_ts:
+        payload["thread_ts"] = thread_ts
+    if mrkdwn:
+        payload["blocks"] = blocks + [
+            {"type": "context", "elements": [{"type": "mrkdwn", "text": mrkdwn}]}
+        ]
+    async with httpx.AsyncClient(timeout=10) as http:
+        resp = await http.post(_SLACK_POST, headers=_headers(), json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"Slack error: {data.get('error')}")
+        return data["ts"]
