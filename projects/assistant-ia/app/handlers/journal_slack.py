@@ -202,8 +202,10 @@ async def handle_thread_reply(
     channel: str,
 ) -> None:
     """Traite une réponse texte dans un fil de session journal Slack."""
+    logger.info(f"handle_thread_reply: début traitement user={user_id} thread={thread_ts} text={text[:60]!r}")
     session = await svc.get_slack_session_by_thread(thread_ts)
     if not session:
+        logger.warning(f"handle_thread_reply: session introuvable pour thread={thread_ts} — message ignoré")
         return
 
     today = date.today()
@@ -211,16 +213,16 @@ async def handle_thread_reply(
     q_index = session["question_index"]
 
     questions = await svc.get_questions(objectif_id)
-    logger.info(f"handle_thread_reply: objectif={objectif_id} q_index={q_index}/{len(questions)} text={text[:60]!r}")
+    logger.info(f"handle_thread_reply: session id={session['id']} objectif={objectif_id} q_index={q_index}/{len(questions)} text={text[:60]!r}")
 
     if q_index >= len(questions):
-        logger.info("handle_thread_reply: toutes les questions traitées, fin")
+        logger.info("handle_thread_reply: toutes les questions déjà traitées, fin")
         return
 
     q = questions[q_index]
     valeur = _parse_text_answer(q, text)
     if valeur is None:
-        logger.warning(f"handle_thread_reply: réponse non parsée pour type={q['type']}")
+        logger.warning(f"handle_thread_reply: réponse non parsée pour type={q['type']} text={text[:60]!r}")
         await post_text(
             channel=channel,
             text="Je n'ai pas compris ta réponse. Réessaie.",
@@ -231,7 +233,7 @@ async def handle_thread_reply(
     await svc.store_reponse(str(q["id"]), objectif_id, valeur, today)
     next_index = q_index + 1
     await svc.advance_slack_session(session["id"], next_index)
-    logger.info(f"handle_thread_reply: réponse stockée, avancement à q_index={next_index}")
+    logger.info(f"handle_thread_reply: réponse stockée (q_id={q['id']} valeur={valeur}), avancement à q_index={next_index}")
 
     await _post_next_question(objectif_id, questions, next_index, channel, thread_ts)
 
@@ -245,10 +247,12 @@ async def handle_block_action(
     thread_ts: str,
 ) -> None:
     """Traite une réponse via bouton Block Kit."""
+    logger.info(f"handle_block_action: user={user_id} objectif={objectif_id} q_index={q_index} value={raw_value!r} thread={thread_ts}")
     today = date.today()
 
     questions = await svc.get_questions(objectif_id)
     if q_index >= len(questions):
+        logger.warning(f"handle_block_action: q_index={q_index} hors limites ({len(questions)} questions) — ignoré")
         return
 
     q = questions[q_index]
@@ -263,16 +267,20 @@ async def handle_block_action(
         try:
             valeur = {"value": int(raw_value)}
         except ValueError:
+            logger.warning(f"handle_block_action: valeur note non parsable: {raw_value!r}")
             return
     else:
         valeur = {"choice": raw_value}
 
     await svc.store_reponse(str(q["id"]), objectif_id, valeur, today)
     next_index = q_index + 1
+    logger.info(f"handle_block_action: réponse stockée (q_id={q['id']} valeur={valeur}), avancement à q_index={next_index}")
 
     session = await svc.get_slack_session_by_thread(thread_ts)
     if session:
         await svc.advance_slack_session(session["id"], next_index)
+    else:
+        logger.warning(f"handle_block_action: session introuvable pour thread={thread_ts} — avancement non effectué")
 
     await _post_next_question(objectif_id, questions, next_index, channel, thread_ts)
 

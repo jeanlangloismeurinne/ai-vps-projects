@@ -32,11 +32,18 @@ async def on_message(event: dict, **_):
     subtype = event.get("subtype")
     thread_ts = event.get("thread_ts")
     user_id = event.get("user", "")
-    logger.debug(f"on_message: user={user_id} bot_id={bot_id} subtype={subtype} thread={thread_ts}")
+    msg_id = event.get("client_msg_id", "—")
+    event_ts = event.get("ts", "—")
+    logger.info(f"on_message reçu: user={user_id} thread={thread_ts} ts={event_ts} msg_id={msg_id} bot_id={bot_id} subtype={subtype}")
 
-    if bot_id or subtype:
+    if bot_id:
+        logger.debug(f"on_message: ignoré (bot_id={bot_id})")
+        return
+    if subtype:
+        logger.debug(f"on_message: ignoré (subtype={subtype})")
         return
     if not thread_ts:
+        logger.debug(f"on_message: ignoré (pas de thread_ts — message parent, ts={event_ts})")
         return
 
     channel = event.get("channel", settings.JOURNAL_CHANNEL_ID)
@@ -48,7 +55,7 @@ async def on_message(event: dict, **_):
         from app.services import journal_v2 as svc_v2
         session = await svc_v2.get_slack_session_by_thread(thread_ts)
         if session:
-            logger.info(f"on_message: session trouvée (id={session['id']} q_index={session['question_index']}), traitement réponse")
+            logger.info(f"on_message: session v2 trouvée (id={session['id']} q_index={session['question_index']}), traitement réponse")
             await handle_thread_reply(
                 thread_ts=thread_ts,
                 user_id=user_id,
@@ -56,14 +63,20 @@ async def on_message(event: dict, **_):
                 channel=channel,
             )
             return
+        else:
+            logger.info(f"on_message: aucune session v2 pour thread={thread_ts}, vérification ancien journal")
     except Exception:
         logger.exception(f"on_message: erreur lors du traitement session journal (thread={thread_ts})")
         return
 
     # Ancien journal libre (thread du prompt quotidien)
-    if await journal_svc.is_journal_thread(thread_ts):
+    is_old_journal = await journal_svc.is_journal_thread(thread_ts)
+    logger.info(f"on_message: ancien journal → is_journal_thread={is_old_journal} (thread={thread_ts})")
+    if is_old_journal:
         await journal_svc.store_entry(text, event["ts"])
-        logger.info(f"Journal entry saved from Slack thread {thread_ts}")
+        logger.info(f"on_message: entrée ancien journal enregistrée (thread={thread_ts})")
+    else:
+        logger.warning(f"on_message: message non traité — ni session v2 ni fil journal connu (user={user_id} thread={thread_ts} msg_id={msg_id})")
 
 
 @bolt.action(re.compile(r"^jrn_"))
