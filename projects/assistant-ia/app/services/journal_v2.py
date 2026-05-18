@@ -54,7 +54,7 @@ async def archive_parcours(id: str) -> None:
 
 async def restore_parcours(id: str) -> None:
     pool = await get_pool()
-    await pool.execute("UPDATE journal_parcours SET archived_at=NULL WHERE id=$1", id)
+    await pool.execute("UPDATE journal_parcours SET archived_at=NULL, is_active=true WHERE id=$1", id)
 
 async def delete_parcours(id: str) -> None:
     pool = await get_pool()
@@ -128,7 +128,7 @@ async def archive_objectif(id: str) -> None:
 async def restore_objectif(id: str) -> None:
     pool = await get_pool()
     await pool.execute(
-        "UPDATE journal_objectifs SET archived_at=NULL WHERE id=$1", id
+        "UPDATE journal_objectifs SET archived_at=NULL, is_active=true WHERE id=$1", id
     )
 
 async def delete_objectif(id: str) -> None:
