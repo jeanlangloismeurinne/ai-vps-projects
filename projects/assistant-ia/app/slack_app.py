@@ -377,6 +377,18 @@ async def cmd_vue(ack, body, respond):
     await respond(response_type="in_channel", text=f"✅ Vue « {text} » activée.")
 
 
+# ─── Socket Mode — connectivité ───────────────────────────────────────────────
+
+@bolt.event("app_connection_opened")
+async def on_connection_opened(**_):
+    logger.info("Socket Mode: connexion WebSocket ouverte")
+
+
+@bolt.event("disconnect")
+async def on_disconnect(**_):
+    logger.warning("Socket Mode: déconnexion WebSocket détectée")
+
+
 # ─── Démarrage / arrêt ────────────────────────────────────────────────────────
 
 async def start():

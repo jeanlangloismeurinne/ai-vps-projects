@@ -380,7 +380,7 @@ async def create_slack_session(
         """INSERT INTO journal_slack_sessions (user_id, objectif_id, thread_ts, question_index, session_date)
            VALUES ($1,$2,$3,0,$4)
            ON CONFLICT (user_id, objectif_id, session_date)
-           DO UPDATE SET thread_ts=EXCLUDED.thread_ts, question_index=0""",
+           DO UPDATE SET thread_ts=EXCLUDED.thread_ts""",
         user_id, objectif_id, thread_ts, session_date,
     )
 
