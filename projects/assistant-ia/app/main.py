@@ -12,14 +12,13 @@ from pathlib import Path
 from app.routes import webhooks, journal, kanban, feedback as feedback_route, journal_settings, journal_fill
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
-from app.jobs.journal_prompt import send_daily_prompt, send_reminder, check_objectif_reminders
+from app.jobs.journal_prompt import check_objectif_reminders
 from app.jobs.task_reminder import check_due_cards
 from app import slack_app as slack
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
 
-_paris = pytz.timezone("Europe/Paris")
 _scheduler = AsyncIOScheduler(timezone=pytz.UTC)
 
 
@@ -27,8 +26,6 @@ _scheduler = AsyncIOScheduler(timezone=pytz.UTC)
 async def lifespan(app: FastAPI):
     await run_migrations()
 
-    _scheduler.add_job(send_daily_prompt, CronTrigger(hour=19, minute=0, timezone=_paris))
-    _scheduler.add_job(send_reminder, CronTrigger(hour=22, minute=0, timezone=_paris))
     _scheduler.add_job(check_due_cards, CronTrigger(minute="*"))
     _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
     _scheduler.start()
