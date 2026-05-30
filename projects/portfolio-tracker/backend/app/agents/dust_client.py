@@ -98,11 +98,11 @@ class DustClient:
 
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
-                        temperature: float = 0.3, timeout: int = 480) -> dict:
+                        temperature: float = 0.3, timeout: int = 720) -> dict:
         """
         Appelle un agent Dust en mode blocking=True.
         Dust attend la réponse complète du LLM avant de retourner (une seule requête HTTP).
-        Timeout par défaut : 480s (8 min) pour les analyses longues.
+        Timeout par défaut : 720s (12 min) pour les analyses longues avec Sonnet.
         Aucun retry — en cas d'erreur, l'utilisateur réessaie manuellement.
         """
         await self.check_budget()
