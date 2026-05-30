@@ -104,16 +104,25 @@ async def action_journal_answer(ack, body, client, **_):
 
     # Mettre à jour le message avec la réponse sélectionnée avant de traiter
     if msg_ts and channel:
-        original_text = body.get("message", {}).get("text", "")
+        original_blocks = body.get("message", {}).get("blocks", [])
+        question_text = ""
+        if original_blocks and original_blocks[0].get("type") == "section":
+            question_text = original_blocks[0].get("text", {}).get("text", "")
         try:
             await client.chat_update(
                 channel=channel,
                 ts=msg_ts,
-                text=f"✅ {original_text} — *{display}*",
-                blocks=[{
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": f"✅ *Répondu :* {display}"},
-                }],
+                text=f"✅ {question_text} — {display}",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": question_text},
+                    },
+                    {
+                        "type": "context",
+                        "elements": [{"type": "mrkdwn", "text": f"✅ *{display}*"}],
+                    },
+                ],
             )
         except Exception:
             logger.warning("action_journal_answer: impossible de mettre à jour le message boutons")
