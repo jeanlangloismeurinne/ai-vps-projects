@@ -193,13 +193,20 @@ export default function OpportunityPage() {
   const refreshBrief = async () => {
     if (!brief?.id) return
     setRefreshing(true)
+    setError('')
     try {
       const res = await fetch(`${API}/opportunities/${brief.id}/refresh-json`, { method: 'POST' })
       if (res.ok) {
         const data = await res.json()
-        setBrief(prev => ({ ...prev, brief_json: data.brief_json || data }))
+        const newJson = data.parsed_json || data.brief?.brief_json
+        if (newJson) setBrief(prev => ({ ...prev, ...data.brief, brief_json: newJson }))
+      } else {
+        const e = await res.json().catch(() => ({}))
+        setError(e.detail || `Erreur ${res.status}`)
       }
-    } catch {}
+    } catch (e) {
+      setError(e.message || 'Erreur réseau')
+    }
     setRefreshing(false)
   }
 
