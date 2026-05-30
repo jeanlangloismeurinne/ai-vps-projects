@@ -127,7 +127,7 @@ class DustClient:
                     except Exception:
                         body = {}
                     if body.get("error", {}).get("type") == "rate_limit_error":
-                        wait = 30 * (2 ** attempt)  # 30s, 60s, 120s
+                        wait = 5 * (2 ** attempt)  # 5s, 10s, 20s
                         logger.warning(f"Dust rate limit, retry {attempt+1}/3 dans {wait}s")
                         await asyncio.sleep(wait)
                         continue
