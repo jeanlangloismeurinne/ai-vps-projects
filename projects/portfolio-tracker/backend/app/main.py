@@ -9,6 +9,16 @@ from app.db.database import init_pool, close_pool
 from app.data_collection.data_cache import init_redis, close_redis
 from app.config import settings
 from app.api import positions, calendar, portfolio, watchlist, analysts, trigger, feedback
+from app.api import (
+    tickers as tickers_v1,
+    opportunity,
+    thesis_v2,
+    monitoring_v2,
+    debates,
+    admin_v1,
+    portfolio_v2,
+    calendar_v2,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,6 +45,16 @@ from app.api import market, dust_runs, portfolio_settings as portfolio_settings_
 app.include_router(market.router)
 app.include_router(dust_runs.router)
 app.include_router(portfolio_settings_api.router)
+
+# V1 routers
+app.include_router(tickers_v1.router)
+app.include_router(opportunity.router)
+app.include_router(thesis_v2.router)
+app.include_router(monitoring_v2.router)
+app.include_router(debates.router)
+app.include_router(admin_v1.router)
+app.include_router(portfolio_v2.router)
+app.include_router(calendar_v2.router)
 
 
 @app.on_event("startup")
@@ -76,6 +96,11 @@ async def startup():
         _refresh_watchlist_peer_calendars,
         CronTrigger(day_of_week="fri", hour=18, minute=0, timezone="Europe/Paris"),
         id="weekly_watchlist_peer_calendar_refresh", replace_existing=True,
+    )
+    scheduler.add_job(
+        _check_price_alerts_v1,
+        CronTrigger(minute="*/5", hour="9-17", day_of_week="mon-fri", timezone="Europe/Paris"),
+        id="price_alerts_v1", replace_existing=True,
     )
     scheduler.start()
     logger.info("Portfolio Tracker démarré")
@@ -177,7 +202,7 @@ async def _refresh_watchlist_peer_calendars():
                     if cal.get("next_earnings_date"):
                         async with get_db_session() as db2:
                             await db2.execute("""
-                                INSERT INTO calendar_events
+                                INSERT INTO v0_calendar_events
                                     (ticker, event_type, event_date, source, notes)
                                 VALUES ($1, 'earnings', $2, $3, 'watchlist_peer')
                                 ON CONFLICT DO NOTHING
@@ -187,3 +212,68 @@ async def _refresh_watchlist_peer_calendars():
                     pass
         except Exception as e:
             logger.warning(f"Watchlist peer calendar error for {item['ticker']}: {e}")
+
+
+async def _check_price_alerts_v1():
+    """
+    Vérifie les price alerts V1 actives et envoie des notifications Slack
+    si le cours a dépassé le seuil défini.
+    Déclenché toutes les 5 minutes en heures de marché (lun-ven 9h-17h Paris).
+    """
+    from app.data_collection.data_service import DataService
+    from app.notifications.slack_webhook import SlackWebhook
+
+    async with get_db_session() as db:
+        alerts = await db.fetch(
+            """
+            SELECT pa.*, t.name AS ticker_name
+            FROM price_alerts pa
+            JOIN tickers t ON t.id = pa.ticker_id
+            WHERE pa.active = TRUE
+            """
+        )
+
+    if not alerts:
+        return
+
+    ds = DataService()
+    webhook = SlackWebhook()
+
+    for alert in alerts:
+        ticker_id = alert["ticker_id"]
+        alert_price = float(alert["price"])
+        direction = alert["direction"]
+
+        try:
+            m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
+            current_price = m1.get("price")
+            if current_price is None:
+                continue
+            current_price = float(current_price)
+
+            triggered = (
+                (direction == "above" and current_price >= alert_price)
+                or (direction == "below" and current_price <= alert_price)
+            )
+
+            if triggered:
+                async with get_db_session() as db:
+                    await db.execute(
+                        """
+                        UPDATE price_alerts
+                        SET active=FALSE, triggered_at=NOW()
+                        WHERE id=$1
+                        """,
+                        alert["id"],
+                    )
+                await webhook.send_price_alert(
+                    ticker=ticker_id,
+                    current_price=current_price,
+                    alert_price=alert_price,
+                    direction=direction,
+                    label=alert.get("label"),
+                )
+                logger.info(f"Price alert triggered: {ticker_id} {direction} {alert_price} (current={current_price})")
+
+        except Exception as e:
+            logger.warning(f"Price alert check error for {ticker_id}: {e}")

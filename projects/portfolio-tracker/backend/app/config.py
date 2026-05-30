@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     MAX_SECTOR_CONCENTRATION_PCT: float = 20.0
     PULSE_ESCALATION_THRESHOLD: int = -3
 
+    # V1 — Agents Dust
+    DUST_OPPORTUNITY_AGENT_ID: str = ""
+    DUST_THESIS_AGENT_ID: str = ""
+    DUST_MONITORING_AGENT_ID: str = ""
+
+    # V1 — Slack Webhook (notifications légères sans Socket Mode)
+    SLACK_WEBHOOK_URL: str = ""
+    SLACK_ALERT_CHANNEL: str = "#portfolio-alerts"
+
     class Config:
         env_file = None  # Coolify injecte les variables
 
