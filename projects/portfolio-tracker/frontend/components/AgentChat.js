@@ -48,9 +48,11 @@ export default function AgentChat({ messages = [], onSend, isLoading = false, di
             <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
               msg.role === 'user'
                 ? 'bg-indigo-700 text-white'
+                : msg.role === 'error'
+                ? 'bg-red-900/40 text-red-300 border border-red-800'
                 : 'bg-gray-800 text-gray-200 border border-gray-700'
             }`}>
-              {msg.content}
+              {msg.role === 'error' && <span className="font-medium">⚠ </span>}{msg.content}
             </div>
           </div>
         ))}

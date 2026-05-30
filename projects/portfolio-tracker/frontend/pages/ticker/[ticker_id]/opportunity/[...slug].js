@@ -149,10 +149,14 @@ export default function OpportunityPage() {
         ])
       } else {
         const e = await res.json().catch(() => ({}))
-        setError(e.detail || `Erreur agent ${res.status}`)
+        const msg = e.detail || `Erreur agent ${res.status}`
+        setError(msg)
+        setMessages(prev => [...prev, { role: 'error', content: msg }])
       }
     } catch (e) {
-      setError(e.message || 'Erreur réseau')
+      const msg = e.message || 'Erreur réseau'
+      setError(msg)
+      setMessages(prev => [...prev, { role: 'error', content: msg }])
     }
     setIsLoading(false)
   }
@@ -174,10 +178,14 @@ export default function OpportunityPage() {
         setMessages(prev => [...prev, { role: 'assistant', content: data.content || data.message || '' }])
       } else {
         const e = await res.json().catch(() => ({}))
-        setError(e.detail || `Erreur agent ${res.status}`)
+        const msg = e.detail || `Erreur agent ${res.status}`
+        setError(msg)
+        setMessages(prev => [...prev, { role: 'error', content: msg }])
       }
     } catch (e) {
-      setError(e.message || 'Erreur réseau')
+      const msg = e.message || 'Erreur réseau'
+      setError(msg)
+      setMessages(prev => [...prev, { role: 'error', content: msg }])
     }
     setIsLoading(false)
   }

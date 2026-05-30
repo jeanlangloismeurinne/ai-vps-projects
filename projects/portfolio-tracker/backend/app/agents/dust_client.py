@@ -132,10 +132,8 @@ class DustClient:
                         await asyncio.sleep(wait)
                         continue
                 if r.status_code in (502, 503, 504):
-                    wait = 5 * (2 ** attempt)  # 5s, 10s, 20s
-                    logger.warning(f"Dust {r.status_code}, retry {attempt+1}/3 dans {wait}s")
-                    await asyncio.sleep(wait)
-                    continue
+                    logger.warning(f"Dust {r.status_code} — pas de retry (évite cascade rate limit)")
+                    r.raise_for_status()
                 if r.status_code >= 400:
                     logger.error(f"Dust /conversations {r.status_code}: {r.text}")
                 r.raise_for_status()
