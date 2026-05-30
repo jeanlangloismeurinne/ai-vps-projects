@@ -64,12 +64,12 @@ async def list_events(
         conditions.append(f"triggered = FALSE")
 
     if ticker_id:
-        conditions.append(f"ticker_id = ${idx}")
+        conditions.append(f"ce.ticker_id = ${idx}")
         params.append(ticker_id)
         idx += 1
 
     if thesis_id:
-        conditions.append(f"thesis_id = ${idx}")
+        conditions.append(f"ce.thesis_id = ${idx}")
         params.append(thesis_id)
         idx += 1
 

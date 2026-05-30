@@ -80,7 +80,7 @@ export default function OpportunityPage() {
         if (briefIdFromUrl) {
           // Load existing brief
           const [bRes, mRes] = await Promise.all([
-            fetch(`${API}/opportunities/${briefIdFromUrl}`),
+            fetch(`${API}/tickers/${ticker_id}/opportunities/${briefIdFromUrl}`),
             fetch(`${API}/opportunities/${briefIdFromUrl}/messages`),
           ])
           if (bRes.ok) setBrief(await bRes.json())
@@ -147,8 +147,13 @@ export default function OpportunityPage() {
           { role: 'user', content },
           { role: 'assistant', content: data.content || data.message || '' }
         ])
+      } else {
+        const e = await res.json().catch(() => ({}))
+        setError(e.detail || `Erreur agent ${res.status}`)
       }
-    } catch {}
+    } catch (e) {
+      setError(e.message || 'Erreur réseau')
+    }
     setIsLoading(false)
   }
 
@@ -157,6 +162,7 @@ export default function OpportunityPage() {
     const userMsg = { role: 'user', content: text }
     setMessages(prev => [...prev, userMsg])
     setIsLoading(true)
+    setError('')
     try {
       const res = await fetch(`${API}/opportunities/${brief.id}/chat`, {
         method: 'POST',
@@ -166,8 +172,13 @@ export default function OpportunityPage() {
       if (res.ok) {
         const data = await res.json()
         setMessages(prev => [...prev, { role: 'assistant', content: data.content || data.message || '' }])
+      } else {
+        const e = await res.json().catch(() => ({}))
+        setError(e.detail || `Erreur agent ${res.status}`)
       }
-    } catch {}
+    } catch (e) {
+      setError(e.message || 'Erreur réseau')
+    }
     setIsLoading(false)
   }
 

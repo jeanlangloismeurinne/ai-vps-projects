@@ -132,7 +132,7 @@ class DustClient:
                         await asyncio.sleep(wait)
                         continue
                 if r.status_code in (502, 503, 504):
-                    wait = 30 * (2 ** attempt)
+                    wait = 5 * (2 ** attempt)  # 5s, 10s, 20s
                     logger.warning(f"Dust {r.status_code}, retry {attempt+1}/3 dans {wait}s")
                     await asyncio.sleep(wait)
                     continue
