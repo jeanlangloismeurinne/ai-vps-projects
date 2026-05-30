@@ -45,21 +45,23 @@ async def list_agents():
 
 @router.patch("/agents/{agent_name}")
 async def update_agent(agent_name: str, data: AgentPromptUpdate):
-    updates = {k: v for k, v in data.model_dump().items() if v is not None}
-    if not updates:
+    fields = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not fields:
         raise HTTPException(400, "Aucun champ à mettre à jour")
-    # Quand on modifie le prompt, on marque synced=FALSE
-    updates["synced"] = False
-    updates["updated_at"] = "now"
 
-    set_parts = ["updated_at=NOW()", "synced=FALSE"]
+    # Marquer hors-sync seulement si le prompt_text change, pas pour dust_agent_id/url
+    prompt_changed = "prompt_text" in fields
+
+    set_parts = ["updated_at=NOW()"]
+    if prompt_changed:
+        set_parts.append("synced=FALSE")
+
     values = []
     idx = 2
-    for k, v in data.model_dump().items():
-        if v is not None:
-            set_parts.append(f"{k}=${idx}")
-            values.append(v)
-            idx += 1
+    for k, v in fields.items():
+        set_parts.append(f"{k}=${idx}")
+        values.append(v)
+        idx += 1
     set_clause = ", ".join(set_parts)
 
     async with get_db_session() as db:

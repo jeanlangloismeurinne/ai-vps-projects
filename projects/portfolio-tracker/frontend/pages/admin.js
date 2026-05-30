@@ -2,32 +2,50 @@ import { useState, useEffect } from 'react'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
+const AGENT_LABELS = {
+  'opportunity-agent': { label: 'Opportunity Agent', desc: 'Analyse d\'opportunité — Pages 3 & Débat', modes: 'freeform · json_generation · conviction_challenge' },
+  'thesis-agent':      { label: 'Thesis Agent',      desc: 'Construction de thèse — Page 4',         modes: 'freeform · json_generation' },
+  'monitoring-agent':  { label: 'Monitoring Agent',  desc: 'Suivi de thèse — Page 5',                modes: 'modes 1→5' },
+}
+
 function AgentCard({ agent, onSync, onUpdate }) {
-  const [editingId, setEditingId] = useState(false)
+  // L'API retourne agent_name et prompt_text — on normalise ici
+  const name = agent.agent_name
+  const promptText = agent.prompt_text || ''
+  const meta = AGENT_LABELS[name] || { label: name, desc: '', modes: '' }
+
+  const [showPrompt, setShowPrompt] = useState(false)
   const [dustId, setDustId] = useState(agent.dust_agent_id || '')
+  const [editingId, setEditingId] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(agent.prompt || '')
+      await navigator.clipboard.writeText(promptText)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {}
   }
 
   const saveId = async () => {
-    await onUpdate(agent.name, { dust_agent_id: dustId })
+    await onUpdate(name, { dust_agent_id: dustId })
     setEditingId(false)
   }
 
+  const needsDustId = !agent.dust_agent_id
+
   return (
-    <div className={`bg-gray-900 border rounded-xl p-5 ${agent.synced ? 'border-gray-800' : 'border-amber-700'}`}>
-      <div className="flex items-start justify-between mb-4">
+    <div className={`bg-gray-900 border rounded-xl overflow-hidden ${agent.synced ? 'border-gray-800' : 'border-amber-700'}`}>
+
+      {/* Header */}
+      <div className="flex items-start justify-between p-5">
         <div>
-          <h3 className="font-semibold text-white">{agent.name}</h3>
-          {agent.description && <p className="text-xs text-gray-500 mt-0.5">{agent.description}</p>}
+          <h3 className="font-semibold text-white">{meta.label}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{meta.desc}</p>
+          <p className="text-xs text-gray-700 mt-0.5 font-mono">{meta.modes}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+          <span className="text-xs text-gray-600 font-mono">v{agent.version}</span>
           <span className={`text-xs px-2 py-0.5 rounded border font-medium ${
             agent.synced
               ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700'
@@ -38,54 +56,86 @@ function AgentCard({ agent, onSync, onUpdate }) {
         </div>
       </div>
 
-      {/* Prompt */}
-      {agent.prompt && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-gray-500">Prompt</label>
-            <button onClick={copyPrompt}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-              {copied ? '✓ Copié !' : 'Copier le prompt'}
-            </button>
-          </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-auto max-h-48">
-            <pre className="font-mono text-xs text-gray-400 p-3 whitespace-pre-wrap">
-              {agent.prompt.split('\n').map((line, i) => (
-                <span key={i} className="flex">
-                  <span className="text-gray-700 select-none mr-3 min-w-[2rem] text-right">{i + 1}</span>
-                  <span>{line}</span>
-                </span>
-              ))}
-            </pre>
-          </div>
+      {/* Dust Agent ID — zone principale */}
+      <div className={`mx-5 mb-4 rounded-lg border p-4 ${needsDustId ? 'border-amber-700/50 bg-amber-950/20' : 'border-gray-800 bg-gray-800/50'}`}>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-medium text-gray-400">
+            ID de l&apos;agent Dust
+            {needsDustId && <span className="ml-2 text-amber-400">— à renseigner</span>}
+          </label>
+          {agent.last_synced_at && (
+            <span className="text-xs text-gray-600">
+              Sync {new Date(agent.last_synced_at).toLocaleDateString('fr-FR')}
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Dust Agent ID */}
-      <div className="mb-4">
-        <label className="text-xs text-gray-500 block mb-1">Dust Agent ID</label>
         {editingId ? (
           <div className="flex gap-2">
             <input
               value={dustId}
               onChange={e => setDustId(e.target.value)}
-              className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-3 py-1.5 font-mono focus:border-indigo-500 focus:outline-none"
+              placeholder="ex: eAYsKqZ1D2"
+              autoFocus
+              className="flex-1 bg-gray-900 border border-gray-600 text-white text-sm rounded px-3 py-1.5 font-mono focus:border-indigo-500 focus:outline-none placeholder-gray-700"
             />
-            <button onClick={saveId} className="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded transition-colors">Sauvegarder</button>
-            <button onClick={() => setEditingId(false)} className="text-xs text-gray-500 hover:text-gray-300 px-2">Annuler</button>
+            <button onClick={saveId}
+              className="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded transition-colors font-medium">
+              Sauvegarder
+            </button>
+            <button onClick={() => { setDustId(agent.dust_agent_id || ''); setEditingId(false) }}
+              className="text-xs text-gray-500 hover:text-gray-300 px-2">
+              Annuler
+            </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-mono text-gray-400">{agent.dust_agent_id || '—'}</span>
-            <button onClick={() => setEditingId(true)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Éditer</button>
+          <div className="flex items-center gap-3">
+            {agent.dust_agent_id
+              ? <span className="text-sm font-mono text-indigo-400">{agent.dust_agent_id}</span>
+              : <span className="text-sm font-mono text-gray-700 italic">non configuré</span>
+            }
+            <button onClick={() => setEditingId(true)}
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline underline-offset-2">
+              Éditer
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Prompt — dropdown */}
+      <div className="mx-5 mb-4">
+        <button
+          onClick={() => setShowPrompt(v => !v)}
+          className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors w-full text-left"
+        >
+          <span className={`transition-transform duration-200 ${showPrompt ? 'rotate-90' : ''}`}>▶</span>
+          <span>Prompt système ({promptText.split('\n').length} lignes)</span>
+          {showPrompt && (
+            <button
+              onClick={e => { e.stopPropagation(); copyPrompt() }}
+              className="ml-auto text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            >
+              {copied ? '✓ Copié !' : 'Copier'}
+            </button>
+          )}
+        </button>
+        {showPrompt && (
+          <div className="mt-2 bg-gray-800 border border-gray-700 rounded-lg overflow-auto max-h-96">
+            <pre className="font-mono text-xs text-gray-400 p-3 whitespace-pre-wrap leading-relaxed">
+              {promptText.split('\n').map((line, i) => (
+                <span key={i} className="flex">
+                  <span className="text-gray-700 select-none mr-3 min-w-[2.5rem] text-right flex-shrink-0">{i + 1}</span>
+                  <span>{line}</span>
+                </span>
+              ))}
+            </pre>
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 px-5 pb-5">
         {!agent.synced && (
-          <button onClick={() => onSync(agent.name)}
+          <button onClick={() => onSync(name)}
             className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg font-medium transition-colors">
             ✓ Marquer synchronisé
           </button>
