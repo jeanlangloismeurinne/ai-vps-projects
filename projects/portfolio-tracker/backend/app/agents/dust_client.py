@@ -116,15 +116,25 @@ class DustClient:
             },
             "blocking": True,
         }
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(
-                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
-                headers=self.headers,
-                json=payload,
-            )
-            if r.status_code >= 400:
-                logger.error(f"Dust {r.status_code}: {r.text[:300]}")
-            r.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                r = await client.post(
+                    f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
+                    headers=self.headers,
+                    json=payload,
+                )
+                if r.status_code >= 400:
+                    logger.error(f"Dust {r.status_code}: {r.text[:300]}")
+                r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            raise RuntimeError(
+                f"Dust a retourné une erreur {status} — l'analyse n'a pas été traitée, tu peux relancer sans risque"
+            ) from e
+        except httpx.TimeoutException as e:
+            raise RuntimeError(
+                "L'agent Dust n'a pas répondu dans le délai imparti — l'analyse n'a pas été traitée, tu peux relancer sans risque"
+            ) from e
 
         data = r.json()
         try:
