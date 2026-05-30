@@ -103,10 +103,7 @@ class DustClient:
         Appelle un agent Dust en mode blocking=True.
         Dust attend la réponse complète du LLM avant de retourner (une seule requête HTTP).
         Timeout par défaut : 480s (8 min) pour les analyses longues.
-
-        Gestion d'erreurs :
-        - 403 rate limit : 1 retry après 30s
-        - 5xx : échec immédiat sans retry (évite les cascades de rate limit)
+        Aucun retry — en cas d'erreur, l'utilisateur réessaie manuellement.
         """
         await self.check_budget()
         payload = {
@@ -120,41 +117,29 @@ class DustClient:
             "blocking": True,
         }
         async with httpx.AsyncClient(timeout=timeout) as client:
-            for attempt in range(2):  # 1 essai + 1 retry sur rate limit uniquement
-                r = await client.post(
-                    f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
-                    headers=self.headers,
-                    json=payload,
-                )
-                if r.status_code == 403:
-                    try:
-                        body = r.json()
-                    except Exception:
-                        body = {}
-                    if body.get("error", {}).get("type") == "rate_limit_error":
-                        if attempt == 0:
-                            logger.warning("Dust rate limit — retry dans 30s")
-                            await asyncio.sleep(30)
-                            continue
-                        raise Exception("Dust rate limit persistant — réessaie dans quelques minutes")
-                if r.status_code >= 400:
-                    logger.error(f"Dust {r.status_code}: {r.text[:300]}")
-                r.raise_for_status()
+            r = await client.post(
+                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
+                headers=self.headers,
+                json=payload,
+            )
+            if r.status_code >= 400:
+                logger.error(f"Dust {r.status_code}: {r.text[:300]}")
+            r.raise_for_status()
 
-                data = r.json()
-                try:
-                    import json as _json, os as _os
-                    save_path = "/app/feedback-tickets/_dust_last_response.json"
-                    _os.makedirs(_os.path.dirname(save_path), exist_ok=True)
-                    with open(save_path, "w") as _f:
-                        _json.dump({"agent_id": agent_id, "data": data}, _f, indent=2, default=str)
-                except Exception:
-                    pass
+        data = r.json()
+        try:
+            import json as _json, os as _os
+            save_path = "/app/feedback-tickets/_dust_last_response.json"
+            _os.makedirs(_os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, "w") as _f:
+                _json.dump({"agent_id": agent_id, "data": data}, _f, indent=2, default=str)
+        except Exception:
+            pass
 
-                conv_id = data["conversation"]["sId"]
-                result = self._extract_agent_result(data, model_override, conv_id)
-                if result is None:
-                    raise TimeoutError(f"Dust blocking: pas de message agent (conv {conv_id})")
-                cost = await self.track_cost(result["model"], result["tokens_input"], result["tokens_output"])
-                result["cost_usd"] = cost
-                return result
+        conv_id = data["conversation"]["sId"]
+        result = self._extract_agent_result(data, model_override, conv_id)
+        if result is None:
+            raise TimeoutError(f"Dust blocking: pas de message agent (conv {conv_id})")
+        cost = await self.track_cost(result["model"], result["tokens_input"], result["tokens_output"])
+        result["cost_usd"] = cost
+        return result
