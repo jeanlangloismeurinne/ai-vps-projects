@@ -144,8 +144,15 @@ async def chat_with_brief(brief_id: int, data: ChatMessage):
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"OpportunityAgent error (brief #{brief_id}): {error_msg}")
+        import httpx as _httpx
+        if isinstance(e, _httpx.HTTPStatusError):
+            status = e.response.status_code
+            error_msg = f"Service Dust indisponible ({status}) — réessaie dans quelques secondes"
+        elif isinstance(e, (_httpx.TimeoutException, TimeoutError)):
+            error_msg = "L'agent Dust n'a pas répondu dans le délai imparti — réessaie"
+        else:
+            error_msg = str(e)
+        logger.error(f"OpportunityAgent error (brief #{brief_id}): {e}")
         async with get_db_session() as db:
             await db.execute(
                 """INSERT INTO opportunity_messages (brief_id, role, content, mode)
