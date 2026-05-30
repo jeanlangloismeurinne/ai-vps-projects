@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Request
@@ -10,11 +9,11 @@ import pytz
 from pathlib import Path
 
 from app.routes import webhooks, journal, kanban, feedback as feedback_route, journal_settings, journal_fill
+from app.routes.slack_events import router as slack_router
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
 from app.jobs.journal_prompt import check_objectif_reminders
 from app.jobs.task_reminder import check_due_cards
-from app import slack_app as slack
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,14 +29,10 @@ async def lifespan(app: FastAPI):
     _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
     _scheduler.start()
     logger.info("Scheduler started")
-
-    slack_task = asyncio.create_task(slack.start())
-    logger.info("Slack Socket Mode started")
+    logger.info("Slack HTTP Events API ready on /slack/events")
 
     yield
 
-    slack_task.cancel()
-    await slack.stop()
     _scheduler.shutdown()
     await close_pool()
 
@@ -55,6 +50,7 @@ _public = Path(__file__).parent.parent / "public"
 if _public.exists():
     app.mount("/public", StaticFiles(directory=str(_public)), name="public")
 
+app.include_router(slack_router)
 app.include_router(webhooks.router)
 app.include_router(journal.router)
 app.include_router(journal_fill.router)

@@ -1,16 +1,14 @@
 """
-Module Slack Bolt (Socket Mode).
+Module Slack Bolt (HTTP Events API).
 Gère : messages journal (thread replies) + slash commands kanban.
-Socket Mode = pas de Request URL à exposer, la connexion WebSocket est initiée par le bot.
+HTTP Events API = Slack envoie des POST vers /slack/events (plus fiable que Socket Mode).
 """
-import asyncio
 import logging
 import re
 from datetime import datetime, timezone, timedelta
 
 import httpx
 from slack_bolt.async_app import AsyncApp
-from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
 from app.config import settings
 from app.services import journal as journal_svc
@@ -19,9 +17,7 @@ from app.services import slack_client
 
 logger = logging.getLogger(__name__)
 
-# ── App Bolt — sans signing_secret car on n'utilise pas l'Events API HTTP ──
-bolt = AsyncApp(token=settings.SLACK_BOT_TOKEN)
-_handler: AsyncSocketModeHandler | None = None
+bolt = AsyncApp(token=settings.SLACK_BOT_TOKEN, signing_secret=settings.SLACK_SIGNING_SECRET)
 
 
 # ─── Journal — réponses en thread ─────────────────────────────────────────────
@@ -386,28 +382,3 @@ async def cmd_vue(ack, body, respond):
     await respond(response_type="in_channel", text=f"✅ Vue « {text} » activée.")
 
 
-# ─── Socket Mode — connectivité ───────────────────────────────────────────────
-
-@bolt.event("app_connection_opened")
-async def on_connection_opened(**_):
-    logger.info("Socket Mode: connexion WebSocket ouverte")
-
-
-@bolt.event("disconnect")
-async def on_disconnect(**_):
-    logger.warning("Socket Mode: déconnexion WebSocket détectée")
-
-
-# ─── Démarrage / arrêt ────────────────────────────────────────────────────────
-
-async def start():
-    global _handler
-    _handler = AsyncSocketModeHandler(bolt, settings.SLACK_APP_TOKEN)
-    await _handler.start_async()
-
-
-async def stop():
-    global _handler
-    if _handler:
-        await _handler.close_async()
-        _handler = None
