@@ -1,6 +1,7 @@
 import asyncio
 import httpx
 import logging
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -9,6 +10,7 @@ DUST_API_BASE = "https://dust.tt/api/v1"
 
 MODEL_COSTS = {
     "claude-sonnet-4-5":        {"input": 0.0039,   "output": 0.0195},
+    "claude-sonnet-4-6":        {"input": 0.0039,   "output": 0.0195},
     "gemini-2-5-flash-preview": {"input": 0.000195, "output": 0.00078},
     "gpt-4o-mini":              {"input": 0.000195, "output": 0.00078},
 }
@@ -69,7 +71,7 @@ class DustClient:
         return cost
 
     def _extract_agent_result(self, data: dict, model_override: str | None, conv_id: str):
-        """Extrait le résultat de l'agent depuis la réponse Dust (blocking ou polling)."""
+        """Extrait le résultat de l'agent depuis la réponse Dust."""
         for group in reversed(data.get("conversation", {}).get("content", [])):
             msgs = [group] if isinstance(group, dict) else group
             for msg in msgs:
@@ -89,7 +91,7 @@ class DustClient:
                         to = msg.get("usage", {}).get("completionTokens", 0)
                         return {"content": content, "tokens_input": ti,
                                 "tokens_output": to,
-                                "model": model_override or "claude-sonnet-4-5",
+                                "model": model_override or "claude-sonnet-4-6",
                                 "conversation_id": conv_id}
                     elif msg.get("status") == "failed":
                         raise Exception(f"Agent failed: {msg.get('error')}")
@@ -97,11 +99,11 @@ class DustClient:
 
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
-                        temperature: float = 0.3, timeout: int = 300) -> dict:
+                        temperature: float = 0.3, timeout: int = 480) -> dict:
         """
-        Crée une conversation Dust avec le message inclus et blocking=True.
-        Une seule requête HTTP — pas de polling, pas de step intermédiaire.
-        Retry automatique sur rate limit (backoff exponentiel, max 3 tentatives).
+        Crée une conversation Dust (blocking=False) puis poll jusqu'à la réponse.
+        Chaque requête HTTP est courte (≤30s) — pas de connexion longue durée.
+        Timeout total par défaut : 480s (8 min).
         """
         await self.check_budget()
         payload = {
@@ -112,9 +114,12 @@ class DustClient:
                 "mentions": [{"configurationId": agent_id}],
                 "context": DUST_CONTEXT,
             },
-            "blocking": True,
+            "blocking": False,
         }
-        async with httpx.AsyncClient(timeout=timeout) as client:
+
+        # Étape 1 — créer la conversation (requête légère, timeout 30s)
+        conv_id = None
+        async with httpx.AsyncClient(timeout=30) as client:
             for attempt in range(3):
                 r = await client.post(
                     f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
@@ -131,31 +136,46 @@ class DustClient:
                         logger.warning(f"Dust rate limit, retry {attempt+1}/3 dans {wait}s")
                         await asyncio.sleep(wait)
                         continue
-                if r.status_code in (502, 503, 504):
-                    logger.warning(f"Dust {r.status_code} — pas de retry (évite cascade rate limit)")
-                    r.raise_for_status()
                 if r.status_code >= 400:
-                    logger.error(f"Dust /conversations {r.status_code}: {r.text}")
+                    logger.error(f"Dust POST /conversations {r.status_code}: {r.text[:300]}")
                 r.raise_for_status()
+                conv_id = r.json()["conversation"]["sId"]
+                break
+            else:
+                raise Exception("Dust rate limit persistant après 3 tentatives")
 
-                data = r.json()
-                # Sauvegarde de la dernière réponse brute pour debug offline
+        # Étape 2 — poll jusqu'à la réponse de l'agent
+        logger.info(f"Dust conv {conv_id} créée — polling (timeout {timeout}s)")
+        deadline = time.monotonic() + timeout
+        poll_url = f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations/{conv_id}"
+
+        async with httpx.AsyncClient(timeout=30) as poll_client:
+            poll_interval = 3
+            while time.monotonic() < deadline:
+                await asyncio.sleep(poll_interval)
                 try:
-                    import json as _json
-                    _dump = {"agent_id": agent_id, "model_override": model_override, "data": data}
-                    save_path = "/app/feedback-tickets/_dust_last_response.json"
-                    import os as _os
-                    _os.makedirs(_os.path.dirname(save_path), exist_ok=True)
-                    with open(save_path, "w") as _f:
-                        _json.dump(_dump, _f, indent=2, default=str)
-                except Exception:
-                    pass
-                conv_id = data["conversation"]["sId"]
-                result = self._extract_agent_result(data, model_override, conv_id)
-                if result is None:
-                    raise TimeoutError(f"Dust blocking: pas de message agent (conv {conv_id})")
-                cost = await self.track_cost(result["model"], result["tokens_input"], result["tokens_output"])
-                result["cost_usd"] = cost
-                return result
+                    pr = await poll_client.get(poll_url, headers=self.headers)
+                except Exception as e:
+                    logger.warning(f"Dust poll error pour {conv_id}: {e}")
+                    continue
+                if not pr.ok:
+                    logger.warning(f"Dust poll {pr.status_code} pour {conv_id}")
+                    continue
 
-            raise Exception("Dust rate limit persistant après 3 tentatives")
+                data = pr.json()
+                result = self._extract_agent_result(data, model_override, conv_id)
+                if result is not None:
+                    try:
+                        import json as _json, os as _os
+                        save_path = "/app/feedback-tickets/_dust_last_response.json"
+                        _os.makedirs(_os.path.dirname(save_path), exist_ok=True)
+                        with open(save_path, "w") as _f:
+                            _json.dump({"agent_id": agent_id, "conv_id": conv_id, "data": data},
+                                       _f, indent=2, default=str)
+                    except Exception:
+                        pass
+                    cost = await self.track_cost(result["model"], result["tokens_input"], result["tokens_output"])
+                    result["cost_usd"] = cost
+                    return result
+
+        raise TimeoutError(f"Agent timeout après {timeout}s (conv {conv_id})")

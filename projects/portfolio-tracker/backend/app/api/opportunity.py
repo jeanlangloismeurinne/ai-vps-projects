@@ -144,8 +144,15 @@ async def chat_with_brief(brief_id: int, data: ChatMessage):
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
-        logger.error(f"OpportunityAgent error (brief #{brief_id}): {e}")
-        raise HTTPException(502, f"Erreur agent: {e}")
+        error_msg = str(e)
+        logger.error(f"OpportunityAgent error (brief #{brief_id}): {error_msg}")
+        async with get_db_session() as db:
+            await db.execute(
+                """INSERT INTO opportunity_messages (brief_id, role, content, mode)
+                   VALUES ($1, 'error', $2, $3)""",
+                brief_id, error_msg, data.mode,
+            )
+        raise HTTPException(502, f"Erreur agent: {error_msg}")
 
     # Stocke la réponse de l'agent
     async with get_db_session() as db:
