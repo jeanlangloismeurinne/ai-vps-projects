@@ -115,7 +115,7 @@ function AddTickerModal({ onClose, onCreated }) {
       const res = await fetch(`${API}/tickers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker_symbol: ticker.trim().toUpperCase() }),
+        body: JSON.stringify({ id: ticker.trim().toUpperCase(), name: ticker.trim().toUpperCase() }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))

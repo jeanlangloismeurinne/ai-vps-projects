@@ -111,9 +111,9 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
       <div className="flex items-start justify-between">
         <div>
           <Link href={`/ticker/${ticker.id}`} className="font-mono font-bold text-indigo-400 hover:text-indigo-300 text-lg">
-            {ticker.ticker_symbol}
+            {ticker.id}
           </Link>
-          <p className="text-xs text-gray-500">{ticker.company_name || ''} {ticker.exchange ? `· ${ticker.exchange}` : ''}</p>
+          <p className="text-xs text-gray-500">{ticker.name || ''} {ticker.exchange ? `· ${ticker.exchange}` : ''}</p>
         </div>
         <div className="text-right">
           <p className="text-white font-semibold">
@@ -228,7 +228,7 @@ export default function WatchlistV2() {
       const res = await fetch(`${API}/tickers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker_symbol: addTicker.trim().toUpperCase(), status: 'watchlist' }),
+        body: JSON.stringify({ id: addTicker.trim().toUpperCase(), name: addTicker.trim().toUpperCase() }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
