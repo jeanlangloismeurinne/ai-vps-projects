@@ -32,7 +32,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
   Les apps Coolify (réseau `coolify`) accèdent à Redis directement — pas besoin de `docker network connect infra-net`.
 
 ## Clés API inter-services
-- `INTERNAL_API_KEY` (bank-review ↔ assistant-ia) : `a09e3fce7a11df086a317458e4f15bf9f96ee57e7a0837f85d96905723d58585`
+- `INTERNAL_API_KEY` (bank-review ↔ assistant-ia) : stockée dans les variables d'env Coolify (`BANK_REVIEW_API_KEY` sur assistant-ia, `INTERNAL_API_KEY` sur bank-review) — ne pas documenter la valeur ici
   — Header : `X-Internal-Api-Key`
   — Endpoint protégé : `POST /api/import/direct` sur bank-review
 - Redis 7 : shared-redis (port 6379)
