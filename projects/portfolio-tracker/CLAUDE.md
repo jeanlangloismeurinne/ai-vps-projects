@@ -7,13 +7,29 @@ URL : `portfolio.jlmvpscode.duckdns.org`
 Backend : port 8050 → `/api` | Frontend : port 8051 → `/`
 Workspace Dust : `plm-siege`
 
-**État (2026-05-12) : système en production, deux positions actives (CAP + TSLA).**
+**État (2026-05-30) : migration V1 déployée. Architecture agents scindée (opportunity/thesis/monitoring). Pages V1 actives.**
+
+---
+
+## Migration V1 — Checklist post-déploiement
+
+Après déploiement, l'utilisateur doit :
+1. Aller sur `/admin` (Page Admin)
+2. Créer les 3 agents dans l'UI Dust (`plm-siege`) et copier les prompts depuis la Page Admin
+3. Renseigner les `dust_agent_id` pour chaque agent dans la Page Admin
+4. Cliquer "✓ Marquer synchronisé" pour chaque agent
+5. Ajouter les variables Coolify : `DUST_OPPORTUNITY_AGENT_ID`, `DUST_THESIS_AGENT_ID`, `DUST_MONITORING_AGENT_ID`
+6. Optionnel : `SLACK_WEBHOOK_URL` pour les notifications V1 (différent du bot Socket Mode V0)
+
+**Tables V0 préservées** : `v0_theses` et `v0_calendar_events` — données CAP/TSLA intactes.
+**Permissions DB** : `ALTER DEFAULT PRIVILEGES` configuré → futures migrations auto-accordées à `portfolio_user`.
 
 ---
 
 ## Bootstrap initial — tout coché ✅
 
-- [x] Agents Dust : `research-agent` ID `eAYsKqZ1D2` · `portfolio-agent` ID `L5rXF6uilh`
+- [x] Agents Dust V1 : `opportunity-agent` · `thesis-agent` · `monitoring-agent` (IDs à renseigner dans Page Admin après création dans Dust)
+- [x] Anciens agents V0 : `research-agent` ID `eAYsKqZ1D2` · `portfolio-agent` ID `L5rXF6uilh` (à supprimer après validation V1)
 - [x] Canal Slack `#portfolio-management` — Channel ID `C0B13KANHPD`
 - [x] `FMP_API_KEY` = `dpl0XXr5F5ElF2M5s70Qmd80Pi3xBS6k`
 - [x] Base `db_portfolio` créée, toutes migrations appliquées
@@ -37,7 +53,15 @@ Workspace Dust : `plm-siege`
 | Agents IA | Dust.tt API (workspace plm-siege) |
 | Notifications | Slack bot @ai_vps_jlm (Socket Mode) |
 
-### Les 3 régimes d'analyse
+### Les 3 agents Dust V1
+
+| Agent | Pages | Modes | Modèle |
+|-------|-------|-------|--------|
+| `opportunity-agent` | Page 3, Page DÉBAT | freeform · json_generation · conviction_challenge | gemini-2-5-flash-preview |
+| `thesis-agent` | Page 4 | freeform · json_generation | claude-sonnet-4-5 |
+| `monitoring-agent` | Page 5 | 1-pré-event · 2-trimestriel · 3-décision · 4-sector · 5-routing | mixte |
+
+### Les 3 régimes V0 (legacy, toujours actifs)
 
 | Régime | Déclenchement | Modèle | Coût |
 |--------|--------------|--------|------|
@@ -53,21 +77,27 @@ Budget hard cap : **$5.00/mois** — alerte Slack à 80%.
 portfolio-tracker/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py               # FastAPI app + APScheduler
+│   │   ├── main.py               # FastAPI app + APScheduler (V0 + V1 routers)
 │   │   ├── config.py             # Settings (pydantic-settings)
-│   │   ├── api/                  # Endpoints REST
-│   │   ├── agents/               # Dust client + régimes 1/2/3 + sector pulse
+│   │   ├── api/                  # V0: positions, trigger, watchlist, calendar, analysts
+│   │   │                         # V1: tickers, opportunity, thesis_v2, monitoring_v2,
+│   │   │                         #     debates, admin_v1, portfolio_v2, calendar_v2
+│   │   ├── agents/               # V0: dust_client, research_agent, portfolio_agent, sector_pulse
+│   │   │                         # V1: opportunity_agent, thesis_agent, monitoring_agent_v1
 │   │   ├── calendar/             # event_router, calendar_builder, watchlist_monitor
 │   │   ├── data_collection/      # M1/M2/M3/M4 + assembler + data_cache + data_service
-│   │   ├── db/                   # asyncpg pool, modèles Pydantic, migrations SQL
-│   │   ├── learning/             # STUBS P3 : analyst_tracker, pattern_library, thesis_versioning
-│   │   ├── notifications/        # Slack notifier
-│   │   └── portfolio/            # portfolio_view, concentration_checker, post_mortem (STUB P3)
-│   └── sector_schemas/           # IT_Services.json (complet), Luxury.json, Industrial.json (squelettes)
+│   │   ├── db/                   # asyncpg pool, modèles Pydantic, migrations SQL (001-013)
+│   │   ├── notifications/        # slack_notifier (V0 Socket Mode) + slack_webhook (V1 webhook)
+│   │   └── portfolio/            # portfolio_view, concentration_checker
+│   └── sector_schemas/           # IT_Services.json (complet), Luxury.json, Industrial.json
 └── frontend/
-    ├── pages/                    # index, position/[id], calendar, watchlist, analysts
-    └── components/               # HypothesisScorecard, ThesisTimeline, SectorPulseLog,
-                                  # PeerComparison, CalendarView, RecommendationBadge
+    ├── pages/                    # V0: index, position/[id], calendar, watchlist, analysts
+    │                             # V1: portfolio, watchlist-v2, admin
+    │                             #     ticker/[ticker_id]/{index, opportunity, thesis,
+    │                             #     monitoring, decision, debate}
+    └── components/               # V0: HypothesisScorecard, ThesisTimeline, ...
+                                  # V1: AgentChat, AgentSyncOverlay, PriceChart,
+                                  #     InvestmentBriefEditor, ThesisEditorV2, CalendarEditor
 ```
 
 ---
