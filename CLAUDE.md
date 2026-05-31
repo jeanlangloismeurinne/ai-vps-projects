@@ -345,6 +345,30 @@ ufw status | grep <PORT>
 ```
 Les ports internes (5432, 6379, etc.) doivent avoir une règle `DENY` explicite.
 
+### `convertDockerRunToCompose` — patch `-v` volumes (2026-05-31)
+
+La fonction `convertDockerRunToCompose` dans `/var/www/html/bootstrap/helpers/docker.php`
+ignore les flags `-v host:container` (seuls les flags `--` longs sont gérés).
+
+**Patch appliqué** — ajout avant le `return $compose_options->toArray()` :
+```php
+// Handle -v / --volume (not covered by the -- mapping above)
+preg_match_all('/-v\s+(\S+)/', $custom_docker_run_options ?? '', $vol_matches);
+if (! empty($vol_matches[1])) {
+    $existing = $compose_options->get('volumes', []);
+    $compose_options->put('volumes', array_merge($existing, $vol_matches[1]));
+}
+```
+
+**Risque** : une mise à jour de Coolify écrase ce fichier. Après toute update, vérifier :
+```bash
+docker exec coolify grep "Handle -v / --volume" /var/www/html/bootstrap/helpers/docker.php
+```
+Si absent, ré-appliquer le patch (copier le fichier hors du container, éditer, recopy).
+
+**Impact actuel** : `portfolio-backend` utilise `-v .../feedback-tickets:/app/feedback-tickets`
+dans `custom_docker_run_options` (DB Coolify). Sans ce patch, le volume n'est pas monté.
+
 ### `coolify-realtime` — image patchée manuellement
 
 L'image `coolify-realtime` (soketi) contient des vulnérabilités npm (mysql2, basic-ftp,
