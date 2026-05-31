@@ -27,6 +27,8 @@ class ThesisUpdate(BaseModel):
     needs_revision: Optional[bool] = None
     conviction_override_note: Optional[str] = None
     conviction_review_date: Optional[str] = None
+    decision_delay_used: Optional[bool] = None
+    reevaluation_date: Optional[str] = None
 
 
 class ChatMessage(BaseModel):

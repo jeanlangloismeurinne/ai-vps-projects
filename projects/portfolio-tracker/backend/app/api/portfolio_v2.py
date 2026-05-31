@@ -23,6 +23,18 @@ class CashMovementCreate(BaseModel):
     label: Optional[str] = None
 
 
+class PositionUpdate(BaseModel):
+    status: str  # 'closed'
+    sell_price: Optional[float] = None
+    sell_date: Optional[str] = None  # ISO date
+
+
+class PositionReduce(BaseModel):
+    reduction_pct: float  # 0–100
+    sell_price: Optional[float] = None
+    sell_date: Optional[str] = None  # ISO date
+
+
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
 def _serialize(row) -> dict:
@@ -188,6 +200,99 @@ async def add_cash_movement(data: CashMovementCreate):
             """,
             data.type, data.amount, data.label,
         )
+    return _serialize(row)
+
+
+@router.patch("/positions/{position_id}")
+async def close_position(position_id: int, data: PositionUpdate):
+    """Clôture une position (status='closed') et enregistre le mouvement cash."""
+    if data.status != "closed":
+        raise HTTPException(400, "status doit être 'closed'")
+
+    sell_date_obj = None
+    if data.sell_date:
+        sell_date_obj = date.fromisoformat(data.sell_date)
+
+    async with get_db_session() as db:
+        pos = await db.fetchrow(
+            "SELECT * FROM portfolio_positions WHERE id=$1 AND status='open'", position_id
+        )
+        if not pos:
+            raise HTTPException(404, f"Position #{position_id} introuvable ou déjà clôturée")
+
+        row = await db.fetchrow(
+            """
+            UPDATE portfolio_positions
+            SET status='closed', sell_price=$1, sell_date=$2, updated_at=NOW()
+            WHERE id=$3
+            RETURNING *
+            """,
+            data.sell_price, sell_date_obj, position_id,
+        )
+
+        if data.sell_price:
+            total_proceeds = float(pos["shares"]) * data.sell_price
+            await db.execute(
+                """
+                INSERT INTO cash_movements (type, amount, label, ticker_id)
+                VALUES ('sell', $1, $2, $3)
+                """,
+                total_proceeds,
+                f"Vente {pos['ticker_id']} — {pos['shares']} titres @ {data.sell_price}",
+                pos["ticker_id"],
+            )
+
+    return _serialize(row)
+
+
+@router.post("/positions/{position_id}/reduce")
+async def reduce_position(position_id: int, data: PositionReduce):
+    """Réduit une position d'un pourcentage donné et enregistre le mouvement cash."""
+    if not (0 < data.reduction_pct <= 100):
+        raise HTTPException(400, "reduction_pct doit être entre 0 et 100")
+
+    sell_date_obj = None
+    if data.sell_date:
+        sell_date_obj = date.fromisoformat(data.sell_date)
+
+    async with get_db_session() as db:
+        pos = await db.fetchrow(
+            "SELECT * FROM portfolio_positions WHERE id=$1 AND status='open'", position_id
+        )
+        if not pos:
+            raise HTTPException(404, f"Position #{position_id} introuvable ou déjà clôturée")
+
+        current_shares = float(pos["shares"])
+        shares_to_sell = round(current_shares * data.reduction_pct / 100, 6)
+        remaining_shares = round(current_shares - shares_to_sell, 6)
+
+        if remaining_shares <= 0:
+            new_status = "closed"
+        else:
+            new_status = "open"
+
+        row = await db.fetchrow(
+            """
+            UPDATE portfolio_positions
+            SET shares=$1, status=$2, sell_price=$3, sell_date=$4, updated_at=NOW()
+            WHERE id=$5
+            RETURNING *
+            """,
+            remaining_shares, new_status, data.sell_price, sell_date_obj, position_id,
+        )
+
+        if data.sell_price:
+            proceeds = shares_to_sell * data.sell_price
+            await db.execute(
+                """
+                INSERT INTO cash_movements (type, amount, label, ticker_id)
+                VALUES ('sell', $1, $2, $3)
+                """,
+                proceeds,
+                f"Vente partielle {pos['ticker_id']} — {shares_to_sell} titres ({data.reduction_pct}%) @ {data.sell_price}",
+                pos["ticker_id"],
+            )
+
     return _serialize(row)
 
 

@@ -128,7 +128,7 @@ export default function TickerPage() {
       setThesis(thData)
       setMonitoring(Array.isArray(mon) ? mon : [])
       setCalendar(Array.isArray(cal) ? cal.slice(0, 3) : [])
-      const phArr = ph ? (Array.isArray(ph) ? ph : ph.prices || []) : []
+      const phArr = ph ? (Array.isArray(ph) ? ph : ph.data || []) : []
       setPriceHistory(phArr)
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -139,7 +139,7 @@ export default function TickerPage() {
     fetch(`${API}/tickers/${ticker_id}/price-history?period=${period}`)
       .then(r => r.ok ? r.json() : null)
       .then(ph => {
-        const phArr = ph ? (Array.isArray(ph) ? ph : ph.prices || []) : []
+        const phArr = ph ? (Array.isArray(ph) ? ph : ph.data || []) : []
         setPriceHistory(phArr)
       })
       .catch(() => {})

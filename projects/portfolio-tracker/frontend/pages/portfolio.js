@@ -230,11 +230,11 @@ export default function PortfolioV1() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Positions</p>
-                <p className="text-xl font-semibold text-gray-300">{loading ? '…' : fmt(summary?.total_positions_value)}</p>
+                <p className="text-xl font-semibold text-gray-300">{loading ? '…' : fmt(summary?.positions_value)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Total</p>
-                <p className="text-xl font-semibold text-indigo-300">{loading ? '…' : fmt(summary?.total_value)}</p>
+                <p className="text-xl font-semibold text-indigo-300">{loading ? '…' : fmt(summary?.total)}</p>
               </div>
             </div>
           </div>
@@ -311,22 +311,22 @@ export default function PortfolioV1() {
                       className="hover:bg-gray-800/50 cursor-pointer transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
-                          <span className="font-mono font-bold text-indigo-400">{p.ticker_symbol || p.ticker}</span>
-                          <span className="text-xs text-gray-500">{p.company_name || p.name || ''}</span>
+                          <span className="font-mono font-bold text-indigo-400">{p.ticker_id}</span>
+                          <span className="text-xs text-gray-500">{p.ticker_name || ''}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-300">{p.quantity ?? p.shares ?? '—'}</td>
+                      <td className="px-4 py-3 text-right text-gray-300">{p.shares ?? '—'}</td>
                       <td className="px-4 py-3 text-right text-gray-300">
-                        {p.avg_buy_price != null ? `€${Number(p.avg_buy_price).toFixed(2)}` : '—'}
+                        {p.purchase_price != null ? `€${Number(p.purchase_price).toFixed(2)}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">
                         {p.current_price != null ? `€${Number(p.current_price).toFixed(2)}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">
-                        {p.total_value != null ? fmt(p.total_value) : '—'}
+                        {p.market_value != null ? fmt(p.market_value) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right"><PnlCell pct={p.perf_pct ?? p.unrealized_pnl_pct} /></td>
-                      <td className="px-4 py-3 text-right"><PnlCell pct={p.perf_annualized_pct} /></td>
+                      <td className="px-4 py-3 text-right"><PnlCell pct={p.perf_pct} /></td>
+                      <td className="px-4 py-3 text-right"><PnlCell pct={p.perf_annualized} /></td>
                       <td className="px-4 py-3">
                         <ThesisStatusBadge status={p.thesis_status} />
                       </td>

@@ -27,6 +27,10 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class SessionUpdate(BaseModel):
+    status: str  # 'archived' | 'reviewed'
+
+
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
 def _serialize(row) -> dict:
@@ -238,6 +242,23 @@ async def get_session(ticker_id: str, session_id: int):
     if not row:
         raise HTTPException(404, f"Session #{session_id} introuvable pour ticker '{ticker_id}'")
     return _serialize(row)
+
+
+@router.patch("/tickers/{ticker_id}/monitoring/{session_id}")
+async def update_session(ticker_id: str, session_id: int, data: SessionUpdate):
+    """Met à jour le statut d'une session (ex: 'archived')."""
+    async with get_db_session() as db:
+        row = await db.fetchrow(
+            "SELECT * FROM monitoring_sessions WHERE id=$1 AND ticker_id=$2",
+            session_id, ticker_id,
+        )
+        if not row:
+            raise HTTPException(404, f"Session #{session_id} introuvable pour ticker '{ticker_id}'")
+        updated = await db.fetchrow(
+            "UPDATE monitoring_sessions SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *",
+            data.status, session_id,
+        )
+    return _serialize(updated)
 
 
 @router.post("/tickers/{ticker_id}/monitoring/{session_id}/chat", status_code=201)

@@ -115,14 +115,13 @@ export default function DecisionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           thesis_id,
-          ticker_id,
-          conviction_note: maintainNote,
-          reevaluation_days: reevaluationDays,
+          opportunity_brief_id: thesis?.opportunity_id,
+          user_conviction_note: maintainNote,
         }),
       })
       if (res.ok) {
         const data = await res.json()
-        router.push(`/ticker/${ticker_id}/debate/${data.id}`)
+        router.push(`/ticker/${ticker_id}/debate/${data.debate?.id || data.id}`)
       } else {
         throw new Error((await res.json().catch(() => ({}))).detail || 'Erreur')
       }
