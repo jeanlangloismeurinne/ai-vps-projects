@@ -36,7 +36,7 @@ export default function ThesisPage() {
     fetch(`${API}/admin/agents`)
       .then(r => r.json())
       .then(agents => {
-        const agent = Array.isArray(agents) ? agents.find(a => a.name === 'thesis-agent') : null
+        const agent = Array.isArray(agents) ? agents.find(a => a.agent_name === 'thesis-agent') : null
         if (agent) setAgentSynced(agent.synced !== false)
       })
       .catch(() => {})
@@ -49,7 +49,7 @@ export default function ThesisPage() {
       setPageLoading(true)
       try {
         const [thRes, mRes, sumRes] = await Promise.all([
-          fetch(`${API}/theses/${thesis_id}`),
+          fetch(`${API}/tickers/${ticker_id}/theses/${thesis_id}`),
           fetch(`${API}/theses/${thesis_id}/messages`),
           fetch(`${API}/portfolio-v2/summary`),
         ])
@@ -161,7 +161,7 @@ export default function ThesisPage() {
     debounceRef.current = setTimeout(async () => {
       setSaving(true)
       try {
-        await fetch(`${API}/theses/${thesis.id}`, {
+        await fetch(`${API}/tickers/${ticker_id}/theses/${thesis.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ thesis_json: newJson }),
@@ -184,8 +184,8 @@ export default function ThesisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shares: parseFloat(valForm.shares),
-          buy_price: parseFloat(valForm.buy_price),
-          validation_date: valForm.date || new Date().toISOString().slice(0, 10),
+          purchase_price: parseFloat(valForm.buy_price),
+          purchase_date: valForm.date || new Date().toISOString().slice(0, 10),
         }),
       })
       if (res.ok) {

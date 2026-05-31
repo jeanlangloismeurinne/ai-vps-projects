@@ -40,7 +40,7 @@ export default function DecisionPage() {
       setPageLoading(true)
       try {
         const [thRes, sesRes] = await Promise.all([
-          fetch(`${API}/theses/${thesis_id}`),
+          fetch(`${API}/tickers/${ticker_id}/theses/${thesis_id}`),
           fetch(`${API}/tickers/${ticker_id}/monitoring?limit=10`),
         ])
         if (thRes.ok) {
@@ -138,7 +138,7 @@ export default function DecisionPage() {
     try {
       const reevalDate = new Date()
       reevalDate.setDate(reevalDate.getDate() + delayDays)
-      await fetch(`${API}/theses/${thesis_id}`, {
+      await fetch(`${API}/tickers/${ticker_id}/theses/${thesis_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

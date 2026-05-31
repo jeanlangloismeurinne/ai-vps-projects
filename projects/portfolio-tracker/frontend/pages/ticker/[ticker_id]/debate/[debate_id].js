@@ -29,18 +29,12 @@ export default function DebatePage() {
     const init = async () => {
       setPageLoading(true)
       try {
-        const [dRes, mRes] = await Promise.all([
-          fetch(`${API}/debates/${debate_id}`),
-          fetch(`${API}/debates/${debate_id}/messages`),
-        ])
+        const dRes = await fetch(`${API}/debates/${debate_id}`)
         if (dRes.ok) {
           const d = await dRes.json()
           setDebate(d)
           setAgentPosition(d.current_position || d.agent_position || 'PASS')
-        }
-        if (mRes.ok) {
-          const msgs = await mRes.json()
-          setMessages(msgs)
+          if (Array.isArray(d.messages)) setMessages(d.messages)
         }
       } catch (e) {
         setError('Erreur de chargement')

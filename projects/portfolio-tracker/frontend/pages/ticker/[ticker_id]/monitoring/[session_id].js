@@ -31,7 +31,7 @@ export default function MonitoringSessionPage() {
       try {
         const [sRes, mRes] = await Promise.all([
           fetch(`${API}/tickers/${ticker_id}/monitoring/${session_id}`),
-          fetch(`${API}/tickers/${ticker_id}/monitoring/${session_id}/messages`),
+          fetch(`${API}/monitoring/${session_id}/messages`),
         ])
         if (sRes.ok) {
           const s = await sRes.json()
@@ -53,7 +53,7 @@ export default function MonitoringSessionPage() {
     setMessages(prev => [...prev, { role: 'user', content: text }])
     setIsLoading(true)
     try {
-      const res = await fetch(`${API}/tickers/${ticker_id}/monitoring/${session.id}/messages`, {
+      const res = await fetch(`${API}/tickers/${ticker_id}/monitoring/${session.id}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: 'user', content: text }),
