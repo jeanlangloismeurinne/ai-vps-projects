@@ -1,14 +1,43 @@
 import { useState, useEffect, useRef } from 'react'
 
+const PHASES = [
+  { until: 8,   label: 'Lecture du contexte…' },
+  { until: 20,  label: 'Analyse en cours…' },
+  { until: 40,  label: 'Rédaction de la réponse…' },
+  { until: 999, label: 'Finalisation…' },
+]
+
 function TypingIndicator() {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const phase = PHASES.find(p => elapsed < p.until) || PHASES[PHASES.length - 1]
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+  const timeLabel = mins > 0 ? `${mins}m${secs.toString().padStart(2, '0')}s` : `${secs}s`
+
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
-      <div className="flex gap-1">
-        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+    <div className="px-4 py-3 min-w-[220px]">
+      {/* Barre de progression indéterminée */}
+      <style>{`
+        @keyframes indeterminate {
+          0%   { transform: translateX(-100%); }
+          50%  { transform: translateX(150%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}</style>
+      <div className="h-0.5 w-full bg-gray-700 rounded-full overflow-hidden mb-3">
+        <div className="h-full bg-indigo-500 rounded-full"
+             style={{ width: '40%', animation: 'indeterminate 2s ease-in-out infinite' }} />
       </div>
-      <span className="text-xs text-gray-500 ml-2">Agent en train de répondre…</span>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-xs text-gray-400">{phase.label}</span>
+        <span className="text-xs text-gray-600 tabular-nums shrink-0">{timeLabel}</span>
+      </div>
     </div>
   )
 }
