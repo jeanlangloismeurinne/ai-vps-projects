@@ -1,11 +1,13 @@
 import asyncio
 import httpx
+import json
 import logging
 from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 DUST_API_BASE = "https://dust.tt/api/v1"
+DUST_SSE_BASE = "https://dust.tt/api/w"  # endpoint SSE — sans /v1
 
 MODEL_COSTS = {
     "claude-sonnet-4-5":        {"input": 0.0039,   "output": 0.0195},
@@ -100,39 +102,139 @@ class DustClient:
                                   model_override: Optional[str] = None,
                                   timeout: int = 720):
         """
-        Appelle un agent Dust en mode blocking=True et simule le streaming.
-        L'endpoint SSE Dust (/events) redirige en 307 vers un serveur SSE qui ne supporte
-        pas le polling simple — on utilise blocking=True (même approche que run_agent).
-        L'agent est stateless : tout le contexte est re-envoyé à chaque appel.
+        Streaming SSE réel via /api/w/ (sans v1).
+        /api/v1/w/.../events redirige vers une infra SSE interne (404 depuis l'extérieur).
+        /api/w/.../messages/{mId}/events est l'endpoint SSE public.
 
-        Yields dicts :
+        Flow :
+          1. POST /api/v1/w/.../conversations  blocking=False  → conv_id + agent_message_id
+          2. GET  /api/w/.../messages/{mId}/events             → SSE token-par-token
+
+        Yields :
           {"type": "started",          "conversation_id": str}
-          {"type": "tokens",           "text": str}           ← tout le contenu en un bloc
+          {"type": "chain_of_thought", "text": str}
+          {"type": "tokens",           "text": str}
           {"type": "done",             "content": str, "chain_of_thought": str,
                                        "tokens_input": int, "tokens_output": int,
                                        "cost_usd": float, "conversation_id": str}
-        Raises RuntimeError / TimeoutError en cas d'erreur.
         """
-        yield {"type": "started", "conversation_id": "pending"}
+        await self.check_budget()
 
-        result = await self.run_agent(
-            agent_id=agent_id,
-            message=message,
-            model_override=model_override,
-            timeout=timeout,
-        )
-
-        yield {"type": "tokens", "text": result["content"]}
-        yield {
-            "type": "done",
-            "content": result["content"],
-            "chain_of_thought": result.get("chain_of_thought", ""),
-            "tokens_input": result.get("tokens_input", 0),
-            "tokens_output": result.get("tokens_output", 0),
-            "cost_usd": result.get("cost_usd", 0.0),
-            "conversation_id": result.get("conversation_id", ""),
-            "model": result.get("model", model_override or ""),
+        # Étape 1 — créer la conversation en non-blocking
+        payload = {
+            "visibility": "unlisted",
+            "title": f"portfolio-{datetime.utcnow().isoformat()}",
+            "blocking": False,
+            "message": {
+                "content": message,
+                "mentions": [{"configurationId": agent_id}],
+                "context": DUST_CONTEXT,
+            },
         }
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
+                headers=self.headers,
+                json=payload,
+            )
+            if r.status_code >= 400:
+                logger.error(f"Dust {r.status_code}: {r.text[:300]}")
+                raise RuntimeError(
+                    f"Dust a retourné une erreur {r.status_code} — l'analyse n'a pas été traitée, tu peux relancer sans risque"
+                )
+            data = r.json()
+
+        conv_id = data["conversation"]["sId"]
+
+        # content[0] = user message, content[1] = agent message (status="created")
+        try:
+            agent_msg_id = data["conversation"]["content"][1][0]["sId"]
+        except (IndexError, KeyError, TypeError) as e:
+            raise RuntimeError(f"Dust: agent_message introuvable dans la réponse (conv {conv_id})") from e
+
+        yield {"type": "started", "conversation_id": conv_id}
+
+        # Étape 2 — SSE sur /api/w/ (pas /api/v1/w/)
+        sse_url = (
+            f"{DUST_SSE_BASE}/{self.workspace_id}/assistant/conversations"
+            f"/{conv_id}/messages/{agent_msg_id}/events"
+        )
+        sse_headers = {**self.headers, "Accept": "text/event-stream"}
+
+        accumulated_content = ""
+        accumulated_cot = ""
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("GET", sse_url, headers=sse_headers) as resp:
+                if resp.status_code >= 400:
+                    body = await resp.aread()
+                    raise RuntimeError(f"Dust SSE {resp.status_code}: {body[:200]}")
+
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    raw = line[6:]
+                    if raw.strip() == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+
+                    etype = event.get("type")
+
+                    if etype == "generation_tokens":
+                        text = event.get("text", "")
+                        classification = event.get("classification", "tokens")
+                        if classification == "chain_of_thought":
+                            accumulated_cot += text
+                            yield {"type": "chain_of_thought", "text": text}
+                        else:
+                            accumulated_content += text
+                            yield {"type": "tokens", "text": text}
+
+                    elif etype == "agent_message_success":
+                        agent_msg = event.get("agentMessage", {})
+                        usage = agent_msg.get("usage", {})
+                        ti = usage.get("promptTokens", 0)
+                        to = usage.get("completionTokens", 0)
+                        model = model_override or "claude-sonnet-4-6"
+                        cost = await self.track_cost(model, ti, to)
+                        yield {
+                            "type": "done",
+                            "content": accumulated_content,
+                            "chain_of_thought": accumulated_cot,
+                            "tokens_input": ti,
+                            "tokens_output": to,
+                            "cost_usd": cost,
+                            "conversation_id": conv_id,
+                            "model": model,
+                        }
+                        return
+
+                    elif etype in ("agent_error", "user_message_error"):
+                        err = event.get("error", event)
+                        msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                        raise RuntimeError(f"Erreur agent Dust: {msg}")
+
+        # Stream terminé sans agent_message_success
+        if accumulated_content:
+            model = model_override or "claude-sonnet-4-6"
+            cost = await self.track_cost(model, 0, 0)
+            yield {
+                "type": "done",
+                "content": accumulated_content,
+                "chain_of_thought": accumulated_cot,
+                "tokens_input": 0,
+                "tokens_output": 0,
+                "cost_usd": cost,
+                "conversation_id": conv_id,
+                "model": model,
+            }
+        else:
+            raise TimeoutError(
+                f"Dust SSE: stream terminé sans réponse (conv {conv_id}) — tu peux relancer sans risque"
+            )
 
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
