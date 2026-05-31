@@ -150,6 +150,57 @@ async def system_status():
     return status
 
 
+# ─────────────────────────── Ping services ───────────────────────────────────
+
+@router.get("/ping/{endpoint}")
+async def ping_service(endpoint: str):
+    """Test de connectivité vers un service externe."""
+    import httpx
+    import time
+
+    start = time.monotonic()
+
+    if endpoint == "slack":
+        if not settings.SLACK_WEBHOOK_URL:
+            return {"status": "unconfigured", "message": "SLACK_WEBHOOK_URL non configuré"}
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.post(settings.SLACK_WEBHOOK_URL, json={"text": "ping"})
+            elapsed = int((time.monotonic() - start) * 1000)
+            return {"status": "ok" if r.status_code == 200 else "error", "code": r.status_code, "elapsed_ms": elapsed}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    elif endpoint == "dust":
+        if not settings.DUST_API_KEY:
+            return {"status": "unconfigured", "message": "DUST_API_KEY non configuré"}
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get(
+                    f"https://dust.tt/api/v1/w/{settings.DUST_WORKSPACE_ID}/members",
+                    headers={"Authorization": f"Bearer {settings.DUST_API_KEY}"},
+                )
+            elapsed = int((time.monotonic() - start) * 1000)
+            return {"status": "ok" if r.status_code == 200 else "error", "code": r.status_code, "elapsed_ms": elapsed}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    elif endpoint == "fmp":
+        if not settings.FMP_API_KEY:
+            return {"status": "unconfigured", "message": "FMP_API_KEY non configuré"}
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get(
+                    f"https://financialmodelingprep.com/api/v3/profile/AAPL?apikey={settings.FMP_API_KEY}"
+                )
+            elapsed = int((time.monotonic() - start) * 1000)
+            return {"status": "ok" if r.status_code == 200 else "error", "code": r.status_code, "elapsed_ms": elapsed}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    return {"status": "error", "message": f"Service '{endpoint}' inconnu. Disponibles : slack, dust, fmp"}
+
+
 # ─────────────────────────── Calendar ────────────────────────────────────────
 
 @router.get("/calendar")

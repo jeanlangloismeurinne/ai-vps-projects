@@ -1,23 +1,64 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useCallback } from 'react'
 
-export default function PriceChart({ data = [], height = 120, color = '#6366f1', showAxes = false }) {
-  const { points, minY, maxY, width, viewBox } = useMemo(() => {
-    if (!data || data.length < 2) return { points: '', minY: 0, maxY: 0, width: 400, viewBox: '0 0 400 120' }
+const W = 400
+const PAD_X = 8
+
+export default function PriceChart({ data = [], height = 120, color = '#6366f1', showAxes = false, showDates = false }) {
+  const svgRef = useRef(null)
+  const [hover, setHover] = useState(null)
+
+  const PAD_TOP = showAxes ? 14 : 8
+  const PAD_BOTTOM = showDates ? 22 : 8
+
+  const { points, minY, maxY, viewBox, pts } = useMemo(() => {
+    const empty = { points: '', minY: 0, maxY: 0, viewBox: `0 0 ${W} ${height}`, pts: [] }
+    if (!data || data.length < 2) return empty
     const prices = data.map(d => Number(d.close || d.price || 0)).filter(v => !isNaN(v))
-    if (prices.length < 2) return { points: '', minY: 0, maxY: 0, width: 400, viewBox: '0 0 400 120' }
+    if (prices.length < 2) return empty
     const minY = Math.min(...prices)
     const maxY = Math.max(...prices)
     const range = maxY - minY || 1
-    const w = 400
-    const h = height
-    const pad = 8
-    const points = prices.map((p, i) => {
-      const x = pad + (i / (prices.length - 1)) * (w - pad * 2)
-      const y = h - pad - ((p - minY) / range) * (h - pad * 2)
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    }).join(' ')
-    return { points, minY, maxY, width: w, viewBox: `0 0 ${w} ${h}` }
-  }, [data, height])
+    const chartH = height - PAD_TOP - PAD_BOTTOM
+    const pts = prices.map((p, i) => {
+      const x = PAD_X + (i / (prices.length - 1)) * (W - PAD_X * 2)
+      const y = PAD_TOP + chartH - ((p - minY) / range) * chartH
+      return { x, y, price: p, date: data[i]?.date || '' }
+    })
+    const points = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+    return { points, minY, maxY, viewBox: `0 0 ${W} ${height}`, pts }
+  }, [data, height, PAD_TOP, PAD_BOTTOM])
+
+  const dateLabels = useMemo(() => {
+    if (!showDates || pts.length < 2) return []
+    const n = pts.length
+    const indices = [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1]
+    return [...new Set(indices)].map(i => {
+      const d = pts[i]
+      let label = ''
+      try { label = new Date(d.date).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }) } catch {}
+      return { x: d.x, label }
+    })
+  }, [pts, showDates])
+
+  const onMove = useCallback((clientX) => {
+    if (!svgRef.current || pts.length < 2) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const svgX = ((clientX - rect.left) / rect.width) * W
+    let near = 0, minD = Infinity
+    pts.forEach((p, i) => {
+      const d = Math.abs(p.x - svgX)
+      if (d < minD) { minD = d; near = i }
+    })
+    setHover(pts[near])
+  }, [pts])
+
+  const fmtDate = (s) => {
+    if (!s) return ''
+    try { return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }) }
+    catch { return s }
+  }
+
+  const fmtPrice = (p) => p == null ? '—' : (p >= 100 ? p.toFixed(0) : p.toFixed(2))
 
   if (!data || data.length < 2) {
     return (
@@ -27,41 +68,87 @@ export default function PriceChart({ data = [], height = 120, color = '#6366f1',
     )
   }
 
-  const isPositive = data.length >= 2 &&
-    (data[data.length - 1].close || 0) >= (data[0].close || 0)
+  const isPositive = (data[data.length - 1].close || 0) >= (data[0].close || 0)
   const lineColor = color === 'auto' ? (isPositive ? '#34d399' : '#f87171') : color
+  const gradId = `grad-${lineColor.replace('#', '')}`
 
   return (
-    <svg viewBox={viewBox} className="w-full" style={{ height }} preserveAspectRatio="none">
-      {/* Area fill */}
-      <defs>
-        <linearGradient id={`grad-${lineColor.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={lineColor} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      {points && (
-        <>
-          <polygon
-            points={`8,${height - 8} ${points} ${width - 8},${height - 8}`}
-            fill={`url(#grad-${lineColor.replace('#', '')})`}
-          />
-          <polyline
-            points={points}
-            fill="none"
-            stroke={lineColor}
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </>
+    <div className="relative select-none" style={{ height }}>
+      <svg
+        ref={svgRef}
+        viewBox={viewBox}
+        className="w-full absolute inset-0"
+        style={{ height }}
+        preserveAspectRatio="none"
+        onMouseMove={e => onMove(e.clientX)}
+        onMouseLeave={() => setHover(null)}
+        onTouchMove={e => onMove(e.touches[0].clientX)}
+        onTouchEnd={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {points && (
+          <>
+            <polygon
+              points={`${PAD_X},${height - PAD_BOTTOM} ${points} ${W - PAD_X},${height - PAD_BOTTOM}`}
+              fill={`url(#${gradId})`}
+            />
+            <polyline
+              points={points}
+              fill="none"
+              stroke={lineColor}
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </>
+        )}
+        {showAxes && (
+          <>
+            <text x="4" y="12" fill="#6b7280" fontSize="9">{maxY.toFixed(0)}</text>
+            <text x="4" y={height - PAD_BOTTOM - 2} fill="#6b7280" fontSize="9">{minY.toFixed(0)}</text>
+          </>
+        )}
+        {showDates && dateLabels.map((d, i) => (
+          <text
+            key={i}
+            x={i === 0 ? d.x + 2 : i === dateLabels.length - 1 ? d.x - 2 : d.x}
+            y={height - 4}
+            fill="#4b5563"
+            fontSize="9"
+            textAnchor={i === 0 ? 'start' : i === dateLabels.length - 1 ? 'end' : 'middle'}
+          >
+            {d.label}
+          </text>
+        ))}
+        {hover && (
+          <>
+            <line
+              x1={hover.x} y1={PAD_TOP} x2={hover.x} y2={height - PAD_BOTTOM}
+              stroke="#6b7280" strokeWidth="1" strokeDasharray="3,3"
+            />
+            <circle cx={hover.x} cy={hover.y} r="3" fill={lineColor} stroke="#1f2937" strokeWidth="1.5" />
+          </>
+        )}
+      </svg>
+      {hover && (
+        <div
+          className="absolute top-1 pointer-events-none z-10"
+          style={{
+            left: `${(hover.x / W) * 100}%`,
+            transform: hover.x > W * 0.6 ? 'translateX(calc(-100% - 8px))' : 'translateX(8px)',
+          }}
+        >
+          <div className="bg-gray-900 border border-gray-700 rounded px-2 py-1 shadow-lg whitespace-nowrap">
+            <div className="text-white text-xs font-semibold">{fmtPrice(hover.price)}</div>
+            <div className="text-gray-400 text-xs">{fmtDate(hover.date)}</div>
+          </div>
+        </div>
       )}
-      {showAxes && (
-        <>
-          <text x="4" y="12" fill="#6b7280" fontSize="9">{maxY.toFixed(0)}</text>
-          <text x="4" y={height - 4} fill="#6b7280" fontSize="9">{minY.toFixed(0)}</text>
-        </>
-      )}
-    </svg>
+    </div>
   )
 }

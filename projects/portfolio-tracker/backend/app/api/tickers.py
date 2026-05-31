@@ -107,6 +107,32 @@ async def create_ticker(data: TickerCreate):
     return _serialize(row)
 
 
+@router.get("/search")
+async def search_tickers(q: str = Query(..., min_length=2)):
+    """Recherche de tickers par nom d'entreprise via yfinance."""
+    try:
+        import yfinance as yf
+        search = yf.Search(q.strip(), max_results=8, news_count=0)
+        results = []
+        for item in (search.quotes or []):
+            symbol = item.get("symbol", "")
+            if not symbol:
+                continue
+            if item.get("quoteType") not in ("EQUITY", "ETF"):
+                continue
+            results.append({
+                "symbol": symbol,
+                "name": item.get("longname") or item.get("shortname") or symbol,
+                "exchange": item.get("exchDisp") or item.get("exchange", ""),
+                "sector": item.get("sectorDisp") or item.get("sector", ""),
+                "type": item.get("quoteType", ""),
+            })
+        return results
+    except Exception as e:
+        logger.warning(f"Ticker search error for '{q}': {e}")
+        raise HTTPException(500, f"Erreur de recherche : {str(e)}")
+
+
 @router.get("/{ticker_id}")
 async def get_ticker(ticker_id: str):
     async with get_db_session() as db:

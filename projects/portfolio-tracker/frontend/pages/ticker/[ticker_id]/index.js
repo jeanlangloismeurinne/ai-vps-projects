@@ -105,7 +105,12 @@ export default function TickerPage() {
   const [priceHistory, setPriceHistory] = useState([])
   const [period, setPeriod] = useState('1Y')
   const [loading, setLoading] = useState(true)
+  const [alerts, setAlerts] = useState([])
   const [showMonitoringModal, setShowMonitoringModal] = useState(false)
+  const [showAlertForm, setShowAlertForm] = useState(false)
+  const [alertForm, setAlertForm] = useState({ price: '', direction: 'below', label: '' })
+  const [alertLoading, setAlertLoading] = useState(false)
+  const [alertError, setAlertError] = useState('')
   const [debugOpen, setDebugOpen] = useState(false)
 
   useEffect(() => {
@@ -119,7 +124,8 @@ export default function TickerPage() {
       fetch(`${API}/tickers/${ticker_id}/monitoring`).then(r => r.ok ? r.json() : null),
       fetch(`${API}/calendar-v2?ticker_id=${ticker_id}`).then(r => r.ok ? r.json() : null),
       fetch(`${API}/tickers/${ticker_id}/price-history?period=${period}`).then(r => r.ok ? r.json() : null),
-    ]).then(([t, m, opp, th, mon, cal, ph]) => {
+      fetch(`${API}/tickers/${ticker_id}/alerts`).then(r => r.ok ? r.json() : []),
+    ]).then(([t, m, opp, th, mon, cal, ph, al]) => {
       setTicker(t)
       setMetrics(m)
       const oppData = opp ? (Array.isArray(opp) ? opp[0] : opp) : null
@@ -130,6 +136,7 @@ export default function TickerPage() {
       setCalendar(Array.isArray(cal) ? cal.slice(0, 3) : [])
       const phArr = ph ? (Array.isArray(ph) ? ph : ph.data || []) : []
       setPriceHistory(phArr)
+      setAlerts(Array.isArray(al) ? al : [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [ticker_id])
@@ -205,7 +212,7 @@ export default function TickerPage() {
               </button>
             ))}
           </div>
-          <PriceChart data={priceHistory} height={160} color="auto" showAxes />
+          <PriceChart data={priceHistory} height={180} color="auto" showAxes showDates />
         </div>
 
         {/* Financial Metrics */}
@@ -383,7 +390,119 @@ export default function TickerPage() {
         )}
       </div>
 
-      {/* Section 5 — Debug (accordéon fermé) */}
+      {/* Section 5 — Alertes de prix */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Alertes de prix</h2>
+          <button onClick={() => { setShowAlertForm(v => !v); setAlertError('') }}
+            className="text-xs bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
+            {showAlertForm ? 'Annuler' : '+ Nouvelle alerte'}
+          </button>
+        </div>
+
+        {showAlertForm && (
+          <div className="mb-4 bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Prix cible</label>
+                <input
+                  type="number" step="0.01" min="0"
+                  value={alertForm.price}
+                  onChange={e => setAlertForm(f => ({ ...f, price: e.target.value }))}
+                  placeholder="ex. 380.00"
+                  className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Direction</label>
+                <select
+                  value={alertForm.direction}
+                  onChange={e => setAlertForm(f => ({ ...f, direction: e.target.value }))}
+                  className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                >
+                  <option value="below">En dessous de</option>
+                  <option value="above">Au dessus de</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Label (optionnel)</label>
+              <input
+                value={alertForm.label}
+                onChange={e => setAlertForm(f => ({ ...f, label: e.target.value }))}
+                placeholder="ex. Stop loss, Take profit…"
+                className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            {alertError && <p className="text-red-400 text-sm">{alertError}</p>}
+            <button
+              disabled={alertLoading || !alertForm.price}
+              onClick={async () => {
+                if (!alertForm.price || isNaN(parseFloat(alertForm.price))) { setAlertError('Prix invalide'); return }
+                setAlertLoading(true); setAlertError('')
+                try {
+                  const res = await fetch(`${API}/tickers/${ticker_id}/alerts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      price: parseFloat(alertForm.price),
+                      direction: alertForm.direction,
+                      label: alertForm.label.trim() || null,
+                    }),
+                  })
+                  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `Erreur ${res.status}`)
+                  const newAlert = await res.json()
+                  setAlerts(prev => [...prev, newAlert])
+                  setAlertForm({ price: '', direction: 'below', label: '' })
+                  setShowAlertForm(false)
+                } catch (e) { setAlertError(e.message) }
+                setAlertLoading(false)
+              }}
+              className="w-full py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded font-medium transition-colors"
+            >
+              {alertLoading ? 'Création…' : 'Créer l\'alerte'}
+            </button>
+          </div>
+        )}
+
+        {alerts.length === 0 ? (
+          <p className="text-gray-600 text-sm">Aucune alerte active</p>
+        ) : (
+          <div className="space-y-2">
+            {alerts.map(a => (
+              <div key={a.id} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs px-2 py-0.5 rounded border font-medium ${
+                    a.direction === 'above'
+                      ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700'
+                      : 'bg-red-900/40 text-red-300 border-red-700'
+                  }`}>
+                    {a.direction === 'above' ? '↑' : '↓'} {a.direction === 'above' ? 'Au-dessus de' : 'En dessous de'}
+                  </span>
+                  <span className="text-white font-semibold text-sm">
+                    {a.price != null ? `${Number(a.price).toFixed(2)}` : '—'}
+                  </span>
+                  {a.label && <span className="text-gray-400 text-xs">{a.label}</span>}
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch(`${API}/tickers/${ticker_id}/alerts/${a.id}`, { method: 'DELETE' })
+                      setAlerts(prev => prev.filter(x => x.id !== a.id))
+                    } catch {}
+                  }}
+                  className="text-gray-600 hover:text-red-400 transition-colors text-sm px-2"
+                  title="Supprimer"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Section 6 — Debug (accordéon fermé) */}
       <div className="border border-gray-800 rounded-xl">
         <button onClick={() => setDebugOpen(o => !o)}
           className="w-full flex items-center justify-between px-5 py-3 text-sm text-gray-600 hover:text-gray-400 transition-colors">

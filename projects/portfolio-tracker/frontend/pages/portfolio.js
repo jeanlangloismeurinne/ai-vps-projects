@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 
@@ -103,26 +103,46 @@ function CashModal({ type, onClose, onConfirm }) {
 
 function AddTickerModal({ onClose, onCreated }) {
   const router = useRouter()
-  const [ticker, setTicker] = useState('')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [selected, setSelected] = useState(null) // { symbol, name, exchange }
+  const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const debounceRef = useRef(null)
 
-  const submit = async () => {
-    if (!ticker.trim()) return
+  const onQueryChange = (val) => {
+    setQuery(val)
+    setSelected(null)
+    setResults([])
+    clearTimeout(debounceRef.current)
+    if (val.trim().length < 2) return
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`${API}/tickers/search?q=${encodeURIComponent(val.trim())}`)
+        if (res.ok) setResults(await res.json())
+      } catch {}
+      setSearching(false)
+    }, 400)
+  }
+
+  const submit = async (symbol, name, exchange) => {
+    if (!symbol) return
     setLoading(true)
     setError('')
     try {
       const res = await fetch(`${API}/tickers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: ticker.trim().toUpperCase(), name: ticker.trim().toUpperCase() }),
+        body: JSON.stringify({ id: symbol, name: name || symbol, exchange: exchange || '' }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
         throw new Error(e.detail || `Erreur ${res.status}`)
       }
       const data = await res.json()
-      router.push(`/ticker/${data.id || data.ticker_id || ticker.trim().toUpperCase()}`)
+      router.push(`/ticker/${data.id || data.ticker_id || symbol}`)
     } catch (e) {
       setError(e.message)
       setLoading(false)
@@ -138,23 +158,160 @@ function AddTickerModal({ onClose, onCreated }) {
           <button onClick={() => !loading && onClose()} className="text-gray-400 hover:text-white text-xl">×</button>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <div>
-            <label className="text-xs text-gray-400 block mb-1">Ticker</label>
+          <div className="relative">
+            <label className="text-xs text-gray-400 block mb-1">Nom ou ticker</label>
             <input
-              value={ticker}
-              onChange={e => setTicker(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === 'Enter' && submit()}
-              placeholder="ex. CAP.PA, MSFT, TSLA"
+              value={query}
+              onChange={e => onQueryChange(e.target.value)}
+              placeholder="ex. Apple, MSFT, Capgemini…"
               autoFocus
-              className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none font-mono uppercase"
+              className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
             />
+            {searching && <span className="absolute right-3 top-8 text-gray-500 text-xs">…</span>}
           </div>
+
+          {selected ? (
+            <div className="bg-indigo-900/30 border border-indigo-700 rounded-lg px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-indigo-300 font-mono font-bold text-sm">{selected.symbol}</span>
+                  <span className="text-gray-400 text-xs ml-2">{selected.exchange}</span>
+                  <p className="text-gray-300 text-xs mt-0.5">{selected.name}</p>
+                </div>
+                <button onClick={() => { setSelected(null); setResults([]) }} className="text-gray-500 hover:text-gray-300 text-sm ml-3">×</button>
+              </div>
+            </div>
+          ) : results.length > 0 ? (
+            <div className="border border-gray-700 rounded-lg overflow-hidden divide-y divide-gray-700 max-h-52 overflow-y-auto">
+              {results.map(r => (
+                <button key={r.symbol} onClick={() => { setSelected(r); setQuery(r.symbol); setResults([]) }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-gray-700 transition-colors flex items-center justify-between">
+                  <div>
+                    <span className="text-indigo-400 font-mono font-bold text-sm">{r.symbol}</span>
+                    <span className="text-gray-400 text-xs ml-2">{r.exchange}</span>
+                    <p className="text-gray-300 text-xs mt-0.5 truncate max-w-xs">{r.name}</p>
+                  </div>
+                  {r.sector && <span className="text-gray-600 text-xs ml-2 flex-shrink-0">{r.sector}</span>}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {error && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded px-3 py-2">{error}</p>}
         </div>
         <div className="px-5 py-4 border-t border-gray-700 flex gap-3">
-          <button onClick={submit} disabled={loading || !ticker.trim()}
+          <button
+            onClick={() => submit(selected?.symbol || query.trim().toUpperCase(), selected?.name, selected?.exchange)}
+            disabled={loading || (!selected && !query.trim())}
+            className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded font-medium transition-colors"
+          >
+            {loading ? 'Création…' : selected ? `Ajouter ${selected.symbol}` : 'Créer le ticker'}
+          </button>
+          <button onClick={() => !loading && onClose()} className="px-4 text-gray-400 hover:text-gray-200 text-sm">Annuler</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AllocateModal({ thesis, onClose, onConfirm }) {
+  const today = new Date().toISOString().split('T')[0]
+  const [form, setForm] = useState({ shares: '', purchase_price: '', purchase_date: today })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async () => {
+    if (!form.shares || isNaN(parseFloat(form.shares)) || parseFloat(form.shares) <= 0) { setError('Nombre d\'actions invalide'); return }
+    if (!form.purchase_price || isNaN(parseFloat(form.purchase_price)) || parseFloat(form.purchase_price) <= 0) { setError('Prix d\'achat invalide'); return }
+    if (!form.purchase_date) { setError('Date requise'); return }
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/theses/${thesis.id}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shares: parseFloat(form.shares),
+          purchase_price: parseFloat(form.purchase_price),
+          purchase_date: form.purchase_date,
+          calendar_events: [],
+        }),
+      })
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        throw new Error(e.detail || `Erreur ${res.status}`)
+      }
+      onConfirm()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={() => !loading && onClose()} />
+      <div className="relative bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+          <div>
+            <h3 className="font-semibold text-white">Allouer le capital</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              <span className="font-mono text-indigo-400">{thesis.ticker_id}</span>
+              {thesis.ticker_name ? ` · ${thesis.ticker_name}` : ''}
+            </p>
+          </div>
+          <button onClick={() => !loading && onClose()} className="text-gray-400 hover:text-white text-xl">×</button>
+        </div>
+        {thesis.one_liner && (
+          <div className="px-5 pt-4">
+            <p className="text-xs text-gray-500 italic">&ldquo;{thesis.one_liner}&rdquo;</p>
+          </div>
+        )}
+        <div className="px-5 py-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Nombre d&apos;actions</label>
+              <input
+                type="number" min="0" step="1"
+                value={form.shares}
+                onChange={e => setForm(f => ({ ...f, shares: e.target.value }))}
+                autoFocus
+                className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat</label>
+              <input
+                type="number" min="0" step="0.01"
+                value={form.purchase_price}
+                onChange={e => setForm(f => ({ ...f, purchase_price: e.target.value }))}
+                className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Date d&apos;achat</label>
+            <input
+              type="date"
+              value={form.purchase_date}
+              onChange={e => setForm(f => ({ ...f, purchase_date: e.target.value }))}
+              className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          {form.shares && form.purchase_price && (
+            <p className="text-xs text-gray-500">
+              Total : <span className="text-gray-300 font-medium">
+                €{(parseFloat(form.shares || 0) * parseFloat(form.purchase_price || 0)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </p>
+          )}
+          {error && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded px-3 py-2">{error}</p>}
+        </div>
+        <div className="px-5 py-4 border-t border-gray-700 flex gap-3">
+          <button onClick={submit} disabled={loading}
             className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded font-medium transition-colors">
-            {loading ? 'Création…' : 'Créer le ticker'}
+            {loading ? 'Validation…' : 'Valider et créer la position'}
           </button>
           <button onClick={() => !loading && onClose()} className="px-4 text-gray-400 hover:text-gray-200 text-sm">Annuler</button>
         </div>
@@ -166,24 +323,28 @@ function AddTickerModal({ onClose, onCreated }) {
 export default function PortfolioV1() {
   const [summary, setSummary] = useState(null)
   const [positions, setPositions] = useState([])
+  const [pendingTheses, setPendingTheses] = useState([])
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [cashModal, setCashModal] = useState(null) // 'deposit' | 'withdraw'
   const [addTicker, setAddTicker] = useState(false)
+  const [allocateThesis, setAllocateThesis] = useState(null)
   const [error, setError] = useState('')
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      const [sumRes, posRes] = await Promise.all([
+      const [sumRes, posRes, pendRes] = await Promise.all([
         fetch(`${API}/portfolio-v2/summary`),
         fetch(`${API}/portfolio-v2/positions`),
+        fetch(`${API}/portfolio-v2/pending-allocation`),
       ])
       if (sumRes.ok) setSummary(await sumRes.json())
       if (posRes.ok) setPositions(await posRes.json())
+      if (pendRes.ok) setPendingTheses(await pendRes.json())
     } catch (e) {
       setError('Erreur de chargement')
     } finally {
@@ -354,6 +515,62 @@ export default function PortfolioV1() {
         )}
       </div>
 
+      {/* En attente d'allocation */}
+      {pendingTheses.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            En attente d&apos;allocation de capital
+            <span className="text-xs bg-amber-800/50 text-amber-300 border border-amber-700 px-2 py-0.5 rounded-full font-normal">
+              {pendingTheses.length}
+            </span>
+          </h2>
+          <div className="overflow-x-auto rounded-xl border border-amber-900/50">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-900">
+                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3">Ticker / Nom</th>
+                  <th className="px-4 py-3">Thèse</th>
+                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3">Mis à jour</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {pendingTheses.map(th => (
+                  <tr key={th.id} className="bg-amber-950/10">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-amber-400">{th.ticker_id}</span>
+                        <span className="text-xs text-gray-500">{th.ticker_name || ''}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs max-w-xs">
+                      <span className="line-clamp-2">{th.one_liner || '—'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs px-2 py-0.5 rounded border bg-gray-800 text-gray-400 border-gray-600">
+                        {th.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {th.updated_at ? new Date(th.updated_at).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setAllocateThesis(th)}
+                        className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs rounded-lg font-medium transition-colors"
+                      >
+                        Allouer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Footer Summary */}
       {!loading && summary && (
         <div className="border-t border-gray-800 pt-4 flex gap-8 text-sm text-gray-500">
@@ -371,6 +588,13 @@ export default function PortfolioV1() {
         />
       )}
       {addTicker && <AddTickerModal onClose={() => setAddTicker(false)} onCreated={() => setAddTicker(false)} />}
+      {allocateThesis && (
+        <AllocateModal
+          thesis={allocateThesis}
+          onClose={() => setAllocateThesis(null)}
+          onConfirm={() => { setAllocateThesis(null); load() }}
+        />
+      )}
     </div>
   )
 }

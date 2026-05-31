@@ -296,6 +296,26 @@ async def reduce_position(position_id: int, data: PositionReduce):
     return _serialize(row)
 
 
+@router.get("/pending-allocation")
+async def pending_allocation():
+    """Thèses actives ou draft sans position ouverte allouée."""
+    async with get_db_session() as db:
+        rows = await db.fetch(
+            """
+            SELECT th.id, th.ticker_id, th.status, th.one_liner, th.thesis_json,
+                   th.created_at, th.updated_at,
+                   t.name AS ticker_name, t.sector
+            FROM theses th
+            LEFT JOIN tickers t ON t.id = th.ticker_id
+            LEFT JOIN portfolio_positions pp ON pp.thesis_id = th.id AND pp.status = 'open'
+            WHERE th.status IN ('draft', 'active')
+              AND pp.id IS NULL
+            ORDER BY th.updated_at DESC
+            """
+        )
+    return [_serialize(r) for r in rows]
+
+
 @router.get("/cash/history")
 async def cash_history(limit: int = 10):
     async with get_db_session() as db:
