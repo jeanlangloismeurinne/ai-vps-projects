@@ -1,11 +1,13 @@
 """
 Theses V1 — construction et validation de thèses d'investissement.
 """
+import json as _json
 import logging
 from datetime import date
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.db.database import get_db_session
@@ -250,6 +252,67 @@ async def chat_with_thesis(thesis_id: int, data: ChatMessage):
         "tokens_output": result.get("tokens_output"),
         "cost_usd": result.get("cost_usd"),
     }
+
+
+@router.post("/theses/{thesis_id}/chat/stream")
+async def chat_with_thesis_stream(thesis_id: int, data: ChatMessage):
+    """
+    Variante streaming de /chat — renvoie les tokens Dust en SSE au fur et à mesure.
+    Rollback : basculer NEXT_PUBLIC_DUST_STREAMING=false dans Coolify → frontend repasse sur /chat.
+    """
+    from app.agents.thesis_agent import ThesisAgent, AgentNotSyncedError
+
+    async with get_db_session() as db:
+        thesis = await _get_thesis_or_404(db, thesis_id)
+        prior_count = await db.fetchval(
+            "SELECT COUNT(*) FROM thesis_messages WHERE thesis_id=$1", thesis_id
+        )
+        await db.execute(
+            "INSERT INTO thesis_messages (thesis_id, role, content, mode) VALUES ($1, $2, $3, $4)",
+            thesis_id, "user", data.content, data.mode,
+        )
+
+    agent_message = data.content
+    if data.mode == "freeform" and prior_count == 0 and thesis["thesis_json"]:
+        handoff_block = _format_handoff(thesis["thesis_json"])
+        agent_message = f"{handoff_block}\n\n{data.content}"
+
+    async def event_stream():
+        try:
+            agent = ThesisAgent()
+            async for event in agent.run_streaming(mode=data.mode, message=agent_message):
+                yield f"data: {_json.dumps(event)}\n\n"
+                if event["type"] == "done":
+                    async with get_db_session() as db:
+                        await db.execute(
+                            """INSERT INTO thesis_messages (thesis_id, role, content, mode, raw_payload)
+                               VALUES ($1, 'agent', $2, $3, $4)""",
+                            thesis_id, event["content"], data.mode,
+                            {"tokens_input": event.get("tokens_input"),
+                             "tokens_output": event.get("tokens_output"),
+                             "cost_usd": event.get("cost_usd"),
+                             "conversation_id": event.get("conversation_id")},
+                        )
+        except AgentNotSyncedError as e:
+            yield f"data: {_json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"ThesisAgent streaming error (thesis #{thesis_id}): {error_msg}")
+            yield f"data: {_json.dumps({'type': 'error', 'message': error_msg})}\n\n"
+            try:
+                async with get_db_session() as db:
+                    await db.execute(
+                        "INSERT INTO thesis_messages (thesis_id, role, content, mode) VALUES ($1, 'error', $2, $3)",
+                        thesis_id, error_msg, data.mode,
+                    )
+            except Exception:
+                pass
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/theses/{thesis_id}/refresh-json")

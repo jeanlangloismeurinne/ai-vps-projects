@@ -7,6 +7,7 @@ import AgentSyncOverlay from '../../../../components/AgentSyncOverlay'
 import CalendarEditor from '../../../../components/CalendarEditor'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
+const STREAMING = process.env.NEXT_PUBLIC_DUST_STREAMING === 'true'
 
 export default function ThesisPage() {
   const router = useRouter()
@@ -88,6 +89,56 @@ export default function ThesisPage() {
     sendHandoff()
   }, [thesis?.id, messages.length, agentSynced])
 
+  const _readStream = async (res, onEvent) => {
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop()
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try { onEvent(JSON.parse(line.slice(6))) } catch {}
+      }
+    }
+  }
+
+  const _sendStreaming = async (url, body, initialMessages) => {
+    setIsLoading(true)
+    setMessages(prev => [...prev, ...initialMessages])
+    setMessages(prev => [...prev, { role: 'streaming', content: '', chainOfThought: '' }])
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'error', content: err.detail || `Erreur ${res.status}` }; return n })
+        return
+      }
+      await _readStream(res, (event) => {
+        if (event.type === 'chain_of_thought') {
+          setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'streaming') n[n.length - 1] = { ...l, chainOfThought: (l.chainOfThought || '') + event.text }; return n })
+        } else if (event.type === 'tokens') {
+          setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'streaming') n[n.length - 1] = { ...l, content: (l.content || '') + event.text }; return n })
+        } else if (event.type === 'done') {
+          setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: event.content, chainOfThought: event.chain_of_thought }; return n })
+        } else if (event.type === 'error') {
+          setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'error', content: event.message }; return n })
+        }
+      })
+    } catch (e) {
+      setMessages(prev => { const n = [...prev]; if (n[n.length - 1]?.role === 'streaming') n[n.length - 1] = { role: 'error', content: 'Impossible de joindre le serveur.' }; return n })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const sendHandoff = async () => {
     if (!thesis?.opportunity_id) return
     setIsLoading(true)
@@ -102,6 +153,15 @@ export default function ThesisPage() {
         proto_hypotheses: brief?.brief_json?.proto_hypotheses || [],
         instruction: 'Construis la thèse d\'investissement complète H1-H7 avec les scénarios Bear/Central/Bull, les seuils de cours, et le calendrier de monitoring suggéré.',
       })
+
+      if (STREAMING) {
+        await _sendStreaming(
+          `${API}/theses/${thesis.id}/chat/stream`,
+          { role: 'user', content: handoffContent },
+          [{ role: 'user', content: '(Handoff automatique depuis le brief d\'opportunité)' }]
+        )
+        return
+      }
 
       const res = await fetch(`${API}/theses/${thesis.id}/chat`, {
         method: 'POST',
@@ -121,6 +181,14 @@ export default function ThesisPage() {
 
   const sendMessage = async (text) => {
     if (!thesis?.id) return
+    if (STREAMING) {
+      await _sendStreaming(
+        `${API}/theses/${thesis.id}/chat/stream`,
+        { role: 'user', content: text },
+        [{ role: 'user', content: text }]
+      )
+      return
+    }
     setMessages(prev => [...prev, { role: 'user', content: text }])
     setIsLoading(true)
     try {

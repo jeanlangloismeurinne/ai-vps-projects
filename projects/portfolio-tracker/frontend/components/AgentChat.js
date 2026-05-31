@@ -45,15 +45,40 @@ export default function AgentChat({ messages = [], onSend, isLoading = false, di
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
-              msg.role === 'user'
-                ? 'bg-indigo-700 text-white'
-                : msg.role === 'error'
-                ? 'bg-red-900/40 text-red-300 border border-red-800'
-                : 'bg-gray-800 text-gray-200 border border-gray-700'
-            }`}>
-              {msg.role === 'error' && <span className="font-medium">⚠ </span>}{msg.content}
-            </div>
+            {msg.role === 'user' && (
+              <div className="max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap bg-indigo-700 text-white">
+                {msg.content}
+              </div>
+            )}
+            {msg.role === 'error' && (
+              <div className="max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap bg-red-900/40 text-red-300 border border-red-800">
+                <span className="font-medium">⚠ </span>{msg.content}
+              </div>
+            )}
+            {msg.role === 'streaming' && (
+              <div className="max-w-[85%] rounded-xl px-4 py-3 text-sm bg-gray-800 text-gray-200 border border-gray-700">
+                {msg.chainOfThought ? (
+                  <div className="text-xs text-gray-600 italic mb-2 pb-2 border-b border-gray-700/50 whitespace-pre-wrap">
+                    {msg.chainOfThought}
+                  </div>
+                ) : null}
+                <span className="whitespace-pre-wrap">{msg.content}</span>
+                <span className="inline-block w-0.5 h-3.5 bg-indigo-400 animate-pulse ml-0.5 align-text-bottom" />
+              </div>
+            )}
+            {msg.role === 'assistant' && (
+              <div className="max-w-[85%] rounded-xl px-4 py-3 text-sm bg-gray-800 text-gray-200 border border-gray-700">
+                {msg.chainOfThought ? (
+                  <details className="mb-2 pb-2 border-b border-gray-700/50">
+                    <summary className="text-xs text-gray-500 cursor-pointer select-none hover:text-gray-400 list-none flex items-center gap-1">
+                      <span>&#9656;</span> Raisonnement
+                    </summary>
+                    <div className="mt-1 text-xs text-gray-600 italic whitespace-pre-wrap">{msg.chainOfThought}</div>
+                  </details>
+                ) : null}
+                <span className="whitespace-pre-wrap">{msg.content}</span>
+              </div>
+            )}
           </div>
         ))}
         {isLoading && (

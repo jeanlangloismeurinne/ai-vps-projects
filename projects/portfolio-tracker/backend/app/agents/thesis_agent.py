@@ -63,6 +63,18 @@ class ThesisAgent:
         )
         return result
 
+    async def run_streaming(self, mode: str, message: str, model_override: str = None):
+        """Async generator — yielde les events Dust au fur et à mesure."""
+        agent_id = await self._check_sync()
+        full_message = f"[mode: {mode}]\n\n{message}"
+        model = model_override or DEFAULT_MODEL
+        async for event in self.client.run_agent_streaming(
+            agent_id=agent_id,
+            message=full_message,
+            model_override=model,
+        ):
+            yield event
+
     def extract_json(self, content: str) -> dict | None:
         """Extrait le JSON entre ```json et ``` dans la réponse de l'agent."""
         m = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
