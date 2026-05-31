@@ -174,7 +174,7 @@ async def get_price_history(
 
     def _fetch():
         ticker = yf.Ticker(ticker_id)
-        hist = ticker.history(period=period)
+        hist = ticker.history(period=period.lower())
         if hist.empty:
             return []
         hist = hist.reset_index()

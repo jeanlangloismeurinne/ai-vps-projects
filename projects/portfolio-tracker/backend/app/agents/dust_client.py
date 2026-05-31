@@ -142,7 +142,7 @@ class DustClient:
         silence_timeout = 90
         last_event_time = asyncio.get_event_loop().time()
 
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             while asyncio.get_event_loop().time() < deadline:
                 if asyncio.get_event_loop().time() - last_event_time > silence_timeout:
                     raise TimeoutError(
