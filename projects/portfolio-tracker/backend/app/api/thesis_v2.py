@@ -221,8 +221,15 @@ async def chat_with_thesis(thesis_id: int, data: ChatMessage):
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
-        logger.error(f"ThesisAgent error (thesis #{thesis_id}): {e}")
-        raise HTTPException(502, f"Erreur agent: {e}")
+        error_msg = str(e)
+        logger.error(f"ThesisAgent error (thesis #{thesis_id}): {error_msg}")
+        async with get_db_session() as db:
+            await db.execute(
+                """INSERT INTO thesis_messages (thesis_id, role, content, mode)
+                   VALUES ($1, 'error', $2, $3)""",
+                thesis_id, error_msg, data.mode,
+            )
+        raise HTTPException(502, f"Erreur agent: {error_msg}")
 
     async with get_db_session() as db:
         msg_row = await db.fetchrow(

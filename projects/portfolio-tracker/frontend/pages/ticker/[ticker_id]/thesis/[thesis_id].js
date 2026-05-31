@@ -132,8 +132,14 @@ export default function ThesisPage() {
       if (res.ok) {
         const data = await res.json()
         setMessages(prev => [...prev, { role: 'assistant', content: data.content || data.message || '' }])
+      } else {
+        const err = await res.json().catch(() => ({}))
+        const detail = err.detail || `Erreur ${res.status}`
+        setMessages(prev => [...prev, { role: 'error', content: detail }])
       }
-    } catch {}
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'error', content: 'Impossible de joindre le serveur.' }])
+    }
     setIsLoading(false)
   }
 
