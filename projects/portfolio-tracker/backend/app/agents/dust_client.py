@@ -142,7 +142,7 @@ class DustClient:
         silence_timeout = 90
         last_event_time = asyncio.get_event_loop().time()
 
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
             while asyncio.get_event_loop().time() < deadline:
                 if asyncio.get_event_loop().time() - last_event_time > silence_timeout:
                     raise TimeoutError(
@@ -162,6 +162,9 @@ class DustClient:
                     continue
                 if r.status_code >= 400:
                     raise RuntimeError(f"Dust events {r.status_code}: {r.text[:200]}")
+                if r.status_code != 200:
+                    await asyncio.sleep(0.5)
+                    continue
 
                 events = r.json().get("events", [])
                 if not events:
