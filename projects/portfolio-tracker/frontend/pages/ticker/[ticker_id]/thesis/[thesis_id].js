@@ -214,17 +214,23 @@ export default function ThesisPage() {
   const refreshThesis = async () => {
     if (!thesis?.id) return
     setRefreshing(true)
+    setError('')
     try {
       const res = await fetch(`${API}/theses/${thesis.id}/refresh-json`, { method: 'POST' })
       if (res.ok) {
         const data = await res.json()
-        const newThesis = { ...thesis, thesis_json: data.thesis_json || data }
+        const newThesis = { ...thesis, thesis_json: data.parsed_json || data.thesis?.thesis_json }
         setThesis(newThesis)
         if (data.calendar_events_suggested) {
           setCalendarEvents(data.calendar_events_suggested)
         }
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setError(err.detail || `Erreur actualisation (${res.status})`)
       }
-    } catch {}
+    } catch {
+      setError('Impossible de joindre le serveur.')
+    }
     setRefreshing(false)
   }
 
