@@ -112,11 +112,11 @@ export default function ThesisPage() {
 
   // Send handoff when thesis loaded (new thesis, no messages)
   useEffect(() => {
-    if (!thesis?.id || initialHandoffSent.current || messages.length > 0 || !agentSynced) return
+    if (pageLoading || !thesis?.id || initialHandoffSent.current || messages.length > 0 || !agentSynced) return
     if (!thesis.opportunity_id) return
     initialHandoffSent.current = true
     sendHandoff()
-  }, [thesis?.id, messages.length, agentSynced])
+  }, [pageLoading, thesis?.id, messages.length, agentSynced])
 
   const _readStream = async (res, onEvent) => {
     const reader = res.body.getReader()
