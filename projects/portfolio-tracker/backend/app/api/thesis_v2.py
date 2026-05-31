@@ -86,6 +86,22 @@ def _normalize_thesis_json(parsed: dict) -> dict:
     """
     out = dict(parsed)
 
+    # ── Metadata (conviction, recommandation, résumé) ──────────────────────────
+    meta = parsed.get("thesis_metadata", {})
+    if isinstance(meta, dict):
+        if meta.get("investment_thesis_summary"):
+            out["one_liner"] = meta["investment_thesis_summary"]
+        if meta.get("analyst_conviction_score") is not None:
+            out["conviction_score"] = meta["analyst_conviction_score"]
+        if meta.get("analyst_conviction_rationale"):
+            out["conviction_rationale"] = meta["analyst_conviction_rationale"]
+        if meta.get("investment_recommendation"):
+            out["recommendation"] = meta["investment_recommendation"]
+        if meta.get("thesis_horizon_years"):
+            out["thesis_horizon_years"] = meta["thesis_horizon_years"]
+        if meta.get("ideal_investor_profile"):
+            out["ideal_investor_profile"] = meta["ideal_investor_profile"]
+
     # ── Scénarios ──────────────────────────────────────────────────────────────
     raw_step4 = parsed.get("step_4_scenarios_5yr", {})
     scenarios_list = (
@@ -93,6 +109,9 @@ def _normalize_thesis_json(parsed: dict) -> dict:
         else (raw_step4 if isinstance(raw_step4, list) else [])
     )
     base_price = raw_step4.get("base_price", 0) if isinstance(raw_step4, dict) else 0
+
+    if isinstance(raw_step4, dict) and raw_step4.get("probability_weighted_target"):
+        out["probability_weighted_target"] = raw_step4["probability_weighted_target"]
 
     scenarios = {}
     for s in scenarios_list:
@@ -112,7 +131,7 @@ def _normalize_thesis_json(parsed: dict) -> dict:
     if scenarios:
         out["scenarios"] = scenarios
 
-    # ── Hypothèses ─────────────────────────────────────────────────────────────
+    # ── Hypothèses (avec KPI + seuils d'alerte) ────────────────────────────────
     raw_step5 = parsed.get("step_5_falsifiable_hypotheses", [])
     hyps_list = raw_step5 if isinstance(raw_step5, list) else []
     if hyps_list:
@@ -122,6 +141,11 @@ def _normalize_thesis_json(parsed: dict) -> dict:
                 "text": h.get("statement", ""),
                 "status": "unverified",
                 "weight": h.get("criticality_level", ""),
+                "kpi_metric": (h.get("kpi_tracking") or {}).get("metric_name", ""),
+                "kpi_target": (h.get("kpi_tracking") or {}).get("baseline_target", ""),
+                "kpi_unit": (h.get("kpi_tracking") or {}).get("unit", ""),
+                "alert_threshold": h.get("alert_threshold", {}),
+                "invalidation_threshold": h.get("invalidation_threshold", {}),
             }
             for i, h in enumerate(hyps_list)
         ]
@@ -142,6 +166,37 @@ def _normalize_thesis_json(parsed: dict) -> dict:
         price_thresholds["target_price"] = bull_pt.get("midpoint")
     if price_thresholds:
         out["price_thresholds"] = price_thresholds
+
+    # ── Analyse fondamentale résumée ───────────────────────────────────────────
+    raw_step1 = parsed.get("step_1_fundamental_analysis", {})
+    if isinstance(raw_step1, dict):
+        fa = {}
+        if raw_step1.get("verdict"):
+            fa["verdict"] = raw_step1["verdict"]
+        moat = raw_step1.get("moat_assessment", {})
+        if isinstance(moat, dict):
+            if moat.get("status"):
+                fa["moat_status"] = moat["status"]
+            if moat.get("components"):
+                fa["moat_components"] = [
+                    {
+                        "type": c.get("moat_type", ""),
+                        "strength": c.get("strength", ""),
+                        "durability": c.get("durability", ""),
+                    }
+                    for c in moat["components"] if isinstance(c, dict)
+                ]
+        pricing = raw_step1.get("pricing_power", {})
+        if isinstance(pricing, dict):
+            if pricing.get("status"):
+                fa["pricing_power_status"] = pricing["status"]
+            if pricing.get("sustainability"):
+                fa["pricing_power_sustainability"] = pricing["sustainability"]
+        capalloc = raw_step1.get("capital_allocation", {})
+        if isinstance(capalloc, dict) and capalloc:
+            fa["capital_allocation"] = capalloc
+        if fa:
+            out["fundamental_analysis"] = fa
 
     # ── Pairs comparables ──────────────────────────────────────────────────────
     raw_step2 = parsed.get("step_2_competitive_analysis", {})
@@ -166,7 +221,7 @@ def _normalize_thesis_json(parsed: dict) -> dict:
             if isinstance(r, dict):
                 cat = r.get("risk_category", "")
                 desc = r.get("description", "")
-                parts.append(f"**{cat}** : {desc}" if cat else desc)
+                parts.append(f"{cat} : {desc}" if cat else desc)
             elif isinstance(r, str):
                 parts.append(r)
         out["bear_steel_man"] = "\n\n".join(parts)
@@ -178,13 +233,17 @@ def _normalize_thesis_json(parsed: dict) -> dict:
         hist = raw_step6.get("historical_reliability", {})
         count = consensus.get("analyst_count", "")
         target_med = consensus.get("price_target_median", "")
+        target_low = consensus.get("price_target_low", "")
+        target_high = consensus.get("price_target_high", "")
         eps_beat = hist.get("eps_beat_ratio_pct", "")
         rev_beat = hist.get("revenue_beat_ratio_pct", "")
+        buy_pct = consensus.get("recommendation_buy_pct", "")
         label = f"Consensus ({count} analystes)" if count else "Consensus Wall Street"
         accuracy_parts = [p for p in [
             f"EPS beat {eps_beat}%" if eps_beat else "",
             f"Rev beat {rev_beat}%" if rev_beat else "",
-            f"PT médian ${target_med}" if target_med else "",
+            f"PT ${target_low}-${target_high} (médian ${target_med})" if target_med else "",
+            f"Buy {buy_pct}%" if buy_pct else "",
         ] if p]
         out["track_record_analysts"] = [{"analyst": label, "accuracy": " | ".join(accuracy_parts)}]
 

@@ -357,9 +357,9 @@ export default function ThesisPage() {
       </div>
 
       {/* Main layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Col 1 — Chat */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col" style={{ height: '75vh' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        {/* Col 1 — Chat — fixed height, sticky so it stays visible while scrolling thesis */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col sticky top-4" style={{ height: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800">
             <h2 className="font-semibold text-white text-sm">Chat — Thesis Agent</h2>
           </div>
@@ -374,8 +374,8 @@ export default function ThesisPage() {
           </div>
         </div>
 
-        {/* Col 2 — Thesis Editor */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ height: '75vh' }}>
+        {/* Col 2 — Thesis Editor — expands naturally, not capped to 75vh */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl" style={{ minHeight: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
             <h2 className="font-semibold text-white text-sm">Thèse en cours</h2>
             <button
@@ -398,7 +398,7 @@ export default function ThesisPage() {
               />
             </div>
           )}
-          <div className="flex-1 min-h-0">
+          <div>
             <ThesisEditorV2
               thesisJson={thesis?.thesis_json}
               onChange={handleThesisChange}
