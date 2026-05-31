@@ -52,6 +52,74 @@ async def _get_brief_or_404(db, brief_id: int):
     return row
 
 
+def _normalize_agent_brief(raw: dict) -> dict:
+    """Mappe les clés step_N_ de l'agent vers le schéma attendu par InvestmentBriefEditor."""
+    # screening
+    details = raw.get("step_1_screening", {}).get("details", [])
+    criteria = []
+    for d in details:
+        s = d.get("status", "")
+        criteria.append({
+            "label": d.get("criterion", ""),
+            "pass": True if s == "pass" else (False if s == "fail" else None),
+            "note": d.get("comment", ""),
+        })
+
+    # anomalie
+    diag = raw.get("step_2_diagnostic", {})
+    anomalie = {
+        "score": None,
+        "facteurs": diag.get("main_finding") or diag.get("root_cause") or "",
+    }
+
+    # analogie (première analogie)
+    step3 = raw.get("step_3_analogies", {})
+    analogies = step3.get("analogies", [])
+    analogie = {}
+    if analogies:
+        a = analogies[0]
+        analogie = {
+            "societe": a.get("comparable", ""),
+            "confiance": step3.get("confidence_score"),
+            "description": a.get("parallel") or a.get("notes") or "",
+        }
+
+    # catalyseurs → liste de strings
+    cats = raw.get("step_4_catalysts", {}).get("catalysts", [])
+    catalyseurs = [c.get("event", "") for c in cats if c.get("event")]
+
+    # proto_hypotheses
+    hyps = raw.get("step_5_proto_hypotheses", {}).get("hypotheses", [])
+    proto_hypotheses = []
+    for h in hyps:
+        crit = h.get("criticality", "")
+        proto_hypotheses.append({
+            "text": h.get("belief", ""),
+            "confidence": "high" if crit == "MUST_BE_TRUE" else "medium",
+        })
+
+    # verdict
+    v = raw.get("step_6_verdict", {})
+    top_risques = [r.get("risk", "") for r in v.get("top_3_risks", []) if r.get("risk")]
+    verdict = {
+        "conviction": v.get("conviction_score"),
+        "conviction_score": v.get("conviction_score"),  # compat extraction DB
+        "recommendation": v.get("recommendation"),
+        "downside_floor": v.get("downside_floor"),
+        "top_risques": top_risques,
+    }
+
+    return {
+        "screening": {"criteria": criteria},
+        "anomalie": anomalie,
+        "analogie": analogie,
+        "catalyseurs": catalyseurs,
+        "proto_hypotheses": proto_hypotheses,
+        "verdict": verdict,
+        "_raw": raw,
+    }
+
+
 # ─────────────────────────── Briefs sous /tickers/{ticker_id} ────────────────
 
 @router.get("/tickers/{ticker_id}/opportunities")
@@ -214,8 +282,13 @@ async def refresh_brief_json(brief_id: int):
     if not parsed:
         raise HTTPException(422, "L'agent n'a pas retourné un JSON valide")
 
+    # Normalise le JSON agent (step_N_ keys) vers le schéma de l'éditeur
+    if any(k.startswith("step_") for k in parsed):
+        parsed = _normalize_agent_brief(parsed)
+
     # Mise à jour du brief
-    conviction_score = parsed.get("verdict", {}).get("conviction_score") or parsed.get("conviction_score")
+    v = parsed.get("verdict", {})
+    conviction_score = v.get("conviction") or v.get("conviction_score") or parsed.get("conviction_score")
     recommendation = (
         parsed.get("verdict", {}).get("recommendation")
         or parsed.get("recommendation")
