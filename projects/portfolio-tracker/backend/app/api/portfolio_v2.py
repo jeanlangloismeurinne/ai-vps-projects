@@ -95,7 +95,7 @@ async def portfolio_summary():
         current_price = None
         try:
             m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            current_price = m1.get("price")
+            current_price = (m1.get("price") or {}).get("current_price")
         except Exception:
             pass
 
@@ -152,7 +152,7 @@ async def list_positions():
         current_price = None
         try:
             m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            current_price = m1.get("price")
+            current_price = (m1.get("price") or {}).get("current_price")
         except Exception:
             pass
 
