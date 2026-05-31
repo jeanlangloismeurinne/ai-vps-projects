@@ -9,6 +9,34 @@ import CalendarEditor from '../../../../components/CalendarEditor'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const STREAMING = process.env.NEXT_PUBLIC_DUST_STREAMING === 'true'
 
+function _detectEventType(name = '') {
+  const n = name.toLowerCase()
+  if (n.includes('earning')) return 'earnings'
+  if (n.includes('conference') || n.includes('investor day')) return 'conference'
+  if (n.includes('product') || n.includes('launch') || n.includes('release')) return 'product_launch'
+  if (n.includes('dividend')) return 'dividend'
+  if (n.includes('macro') || n.includes('regulatory') || n.includes('fed')) return 'macro'
+  return 'other'
+}
+
+function _criticalityToMode(criticality = '') {
+  const c = criticality.toLowerCase()
+  if (c === 'critical') return 3
+  if (c === 'high') return 2
+  return 1
+}
+
+function normalizeCalendarEvents(events = []) {
+  return events.map((ev, i) => ({
+    ...ev,
+    _tempId: ev._tempId || `agent_${i}_${Date.now()}`,
+    label: ev.label || ev.event_name || '',
+    event_date: ev.event_date || ev.scheduled_date || ev.date_estimated || '',
+    event_type: ev.event_type || _detectEventType(ev.event_name),
+    monitoring_mode: ev.monitoring_mode || _criticalityToMode(ev.criticality),
+  }))
+}
+
 export default function ThesisPage() {
   const router = useRouter()
   const { ticker_id, thesis_id } = router.query
@@ -59,7 +87,7 @@ export default function ThesisPage() {
           const th = await thRes.json()
           setThesis(th)
           if (th.calendar_events_suggested) {
-            setCalendarEvents(th.calendar_events_suggested)
+            setCalendarEvents(normalizeCalendarEvents(th.calendar_events_suggested))
           }
         }
         if (mRes.ok) setMessages(await mRes.json())
@@ -232,7 +260,7 @@ export default function ThesisPage() {
             setRefreshChars(prev => prev + (event.text?.length || 0))
           } else if (event.type === 'done_refresh') {
             setThesis(prev => ({ ...prev, thesis_json: event.parsed_json }))
-            if (event.calendar_events_suggested) setCalendarEvents(event.calendar_events_suggested)
+            if (event.calendar_events_suggested) setCalendarEvents(normalizeCalendarEvents(event.calendar_events_suggested))
           } else if (event.type === 'error') {
             setError(event.message)
           }
@@ -252,7 +280,7 @@ export default function ThesisPage() {
         const newThesis = { ...thesis, thesis_json: data.parsed_json || data.thesis?.thesis_json }
         setThesis(newThesis)
         if (data.calendar_events_suggested) {
-          setCalendarEvents(data.calendar_events_suggested)
+          setCalendarEvents(normalizeCalendarEvents(data.calendar_events_suggested))
         }
       } else {
         const err = await res.json().catch(() => ({}))
