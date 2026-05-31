@@ -385,6 +385,74 @@ async def refresh_thesis_json(thesis_id: int):
     }
 
 
+@router.post("/theses/{thesis_id}/refresh-json/stream")
+async def refresh_thesis_json_stream(thesis_id: int):
+    """
+    Variante streaming de /refresh-json — yielde les tokens Dust en SSE.
+    Event final : type='done_refresh' avec parsed_json + calendar_events_suggested.
+    Rollback : basculer NEXT_PUBLIC_DUST_STREAMING=false → frontend repasse sur /refresh-json.
+    """
+    from app.agents.thesis_agent import ThesisAgent, AgentNotSyncedError
+
+    async with get_db_session() as db:
+        thesis = await _get_thesis_or_404(db, thesis_id)
+        messages = await db.fetch(
+            "SELECT role, content FROM thesis_messages WHERE thesis_id=$1 ORDER BY created_at",
+            thesis_id,
+        )
+
+    history_parts = []
+    for msg in messages:
+        history_parts.append(f"[{msg['role'].upper()}]\n{msg['content']}")
+    history_text = "\n\n---\n\n".join(history_parts) if history_parts else "(aucun échange précédent)"
+    full_message = (
+        f"Ticker : {thesis['ticker_id']}\n\n"
+        f"Historique de la conversation :\n\n{history_text}"
+    )
+
+    async def event_stream():
+        try:
+            agent = ThesisAgent()
+            async for event in agent.run_streaming(mode="json_generation", message=full_message):
+                if event["type"] == "done":
+                    content = event.get("content", "")
+                    parsed = agent.extract_json(content)
+                    if not parsed:
+                        yield f"data: {_json.dumps({'type': 'error', 'message': 'L\'agent n\'a pas retourné un JSON valide'})}\n\n"
+                        return
+                    calendar_events_suggested = parsed.get("calendar_events_suggested", [])
+                    one_liner = parsed.get("one_liner") or parsed.get("thesis_one_liner")
+                    async with get_db_session() as db:
+                        row = await db.fetchrow(
+                            """UPDATE theses SET thesis_json=$1, one_liner=COALESCE($2, one_liner), updated_at=NOW()
+                               WHERE id=$3 RETURNING *""",
+                            parsed, one_liner, thesis_id,
+                        )
+                        await db.execute(
+                            """INSERT INTO thesis_messages (thesis_id, role, content, mode, raw_payload)
+                               VALUES ($1, 'agent', $2, 'json_generation', $3)""",
+                            thesis_id, content,
+                            {"tokens_input": event.get("tokens_input"),
+                             "tokens_output": event.get("tokens_output"),
+                             "cost_usd": event.get("cost_usd")},
+                        )
+                    yield f"data: {_json.dumps({'type': 'done_refresh', 'parsed_json': parsed, 'calendar_events_suggested': calendar_events_suggested, 'thesis': _serialize(row)})}\n\n"
+                else:
+                    yield f"data: {_json.dumps(event)}\n\n"
+        except AgentNotSyncedError as e:
+            yield f"data: {_json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"ThesisAgent refresh streaming error (thesis #{thesis_id}): {error_msg}")
+            yield f"data: {_json.dumps({'type': 'error', 'message': error_msg})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/theses/{thesis_id}/validate")
 async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
     """

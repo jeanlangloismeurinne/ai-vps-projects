@@ -18,6 +18,7 @@ export default function ThesisPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [agentSynced, setAgentSynced] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshChars, setRefreshChars] = useState(0)
   const [saving, setSaving] = useState(false)
   const [validating, setValidating] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
@@ -214,7 +215,36 @@ export default function ThesisPage() {
   const refreshThesis = async () => {
     if (!thesis?.id) return
     setRefreshing(true)
+    setRefreshChars(0)
     setError('')
+
+    if (STREAMING) {
+      try {
+        const res = await fetch(`${API}/theses/${thesis.id}/refresh-json/stream`, { method: 'POST' })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          setError(err.detail || `Erreur actualisation (${res.status})`)
+          setRefreshing(false)
+          return
+        }
+        await _readStream(res, (event) => {
+          if (event.type === 'tokens') {
+            setRefreshChars(prev => prev + (event.text?.length || 0))
+          } else if (event.type === 'done_refresh') {
+            setThesis(prev => ({ ...prev, thesis_json: event.parsed_json }))
+            if (event.calendar_events_suggested) setCalendarEvents(event.calendar_events_suggested)
+          } else if (event.type === 'error') {
+            setError(event.message)
+          }
+        })
+      } catch {
+        setError('Impossible de joindre le serveur.')
+      }
+      setRefreshing(false)
+      setRefreshChars(0)
+      return
+    }
+
     try {
       const res = await fetch(`${API}/theses/${thesis.id}/refresh-json`, { method: 'POST' })
       if (res.ok) {
@@ -325,9 +355,21 @@ export default function ThesisPage() {
               disabled={refreshing || !thesis?.id}
               className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
             >
-              {refreshing ? '⟳ Actualisation…' : 'Actualiser la thèse →'}
+              {refreshing
+                ? STREAMING
+                  ? `⟳ Génération… ${refreshChars > 0 ? `(${refreshChars} car.)` : ''}`
+                  : '⟳ Actualisation…'
+                : 'Actualiser la thèse →'}
             </button>
           </div>
+          {refreshing && STREAMING && (
+            <div className="h-1 bg-gray-800 overflow-hidden rounded-b">
+              <div
+                className="h-full bg-indigo-500 transition-all duration-500"
+                style={{ width: `${Math.min(95, (refreshChars / 4000) * 100)}%` }}
+              />
+            </div>
+          )}
           <div className="flex-1 min-h-0">
             <ThesisEditorV2
               thesisJson={thesis?.thesis_json}
