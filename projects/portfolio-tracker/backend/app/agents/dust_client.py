@@ -97,40 +97,146 @@ class DustClient:
                         raise Exception(f"Agent failed: {msg.get('error')}")
         return None
 
+    def _extract_agent_message(self, content: list) -> Optional[dict]:
+        """
+        Retourne le dernier agent_message depuis conversation.content.
+        content est une liste de groupes ; chaque groupe est une liste de versions
+        du même message (on prend la plus récente : group[-1]).
+        """
+        for group in content:
+            versions = [group] if isinstance(group, dict) else group
+            msg = versions[-1]
+            if isinstance(msg, dict) and msg.get("type") == "agent_message":
+                return msg
+        return None
+
     async def run_agent_streaming(self, agent_id: str, message: str,
                                   model_override: Optional[str] = None,
                                   timeout: int = 720):
         """
-        Yields dicts :
-          {"type": "started",          "conversation_id": str}
-          {"type": "tokens",           "text": str}
-          {"type": "done",             "content": str, "chain_of_thought": str,
-                                       "tokens_input": int, "tokens_output": int,
-                                       "cost_usd": float, "conversation_id": str}
+        Crée la conversation Dust en non-blocking puis poll REST toutes les 3s.
+        Les endpoints SSE Dust exigent une session cookie (browser) — inaccessibles par API key.
 
-        Note : l'infrastructure SSE de Dust (/api/sse/) exige une session cookie (auth browser)
-        et est inaccessible par API key. On utilise blocking=True — fiable et sans hack.
+        Yields :
+          {"type": "started",   "conversation_id": str}
+          {"type": "heartbeat", "elapsed": int}          — toutes les 15s (keepalive SSE)
+          {"type": "tokens",    "text": str}             — contenu complet quand l'agent termine
+          {"type": "done",      "content": str, "chain_of_thought": str,
+                                "tokens_input": int, "tokens_output": int,
+                                "cost_usd": float, "conversation_id": str}
         """
-        yield {"type": "started", "conversation_id": "pending"}
+        await self.check_budget()
 
-        result = await self.run_agent(
-            agent_id=agent_id,
-            message=message,
-            model_override=model_override,
-            timeout=timeout,
-        )
-
-        yield {"type": "tokens", "text": result["content"]}
-        yield {
-            "type": "done",
-            "content": result["content"],
-            "chain_of_thought": result.get("chain_of_thought", ""),
-            "tokens_input": result.get("tokens_input", 0),
-            "tokens_output": result.get("tokens_output", 0),
-            "cost_usd": result.get("cost_usd", 0.0),
-            "conversation_id": result.get("conversation_id", ""),
-            "model": result.get("model", model_override or ""),
+        # Étape 1 — créer la conversation en non-blocking
+        payload = {
+            "visibility": "unlisted",
+            "title": f"portfolio-{datetime.utcnow().isoformat()}",
+            "blocking": False,
+            "message": {
+                "content": message,
+                "mentions": [{"configurationId": agent_id}],
+                "context": DUST_CONTEXT,
+            },
         }
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations",
+                headers=self.headers,
+                json=payload,
+            )
+            if r.status_code >= 400:
+                logger.error(f"Dust {r.status_code}: {r.text[:300]}")
+                raise RuntimeError(
+                    f"Dust a retourné une erreur {r.status_code} — l'analyse n'a pas été traitée, tu peux relancer sans risque"
+                )
+            data = r.json()
+
+        conv_id = data["conversation"]["sId"]
+        yield {"type": "started", "conversation_id": conv_id}
+
+        # Étape 2 — poll REST toutes les 3s
+        poll_url = f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations/{conv_id}"
+        t_start = asyncio.get_event_loop().time()
+        t_last_heartbeat = t_start
+        consecutive_errors = 0
+
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                while True:
+                    elapsed = asyncio.get_event_loop().time() - t_start
+                    if elapsed >= timeout:
+                        raise TimeoutError(
+                            f"Dust polling: timeout {timeout}s (conv {conv_id}) — tu peux relancer sans risque"
+                        )
+
+                    await asyncio.sleep(3)
+
+                    # Heartbeat toutes les 15s pour maintenir la connexion SSE browser
+                    if asyncio.get_event_loop().time() - t_last_heartbeat >= 15:
+                        yield {"type": "heartbeat", "elapsed": int(elapsed)}
+                        t_last_heartbeat = asyncio.get_event_loop().time()
+
+                    try:
+                        r = await client.get(poll_url, headers=self.headers)
+                    except httpx.TimeoutException:
+                        consecutive_errors += 1
+                        if consecutive_errors >= 3:
+                            raise RuntimeError("Dust API injoignable après 3 tentatives")
+                        continue
+
+                    if r.status_code >= 500:
+                        consecutive_errors += 1
+                        if consecutive_errors >= 3:
+                            raise RuntimeError(f"Dust API erreur {r.status_code} répétée")
+                        await asyncio.sleep(consecutive_errors * 2)
+                        continue
+                    if r.status_code >= 400:
+                        raise RuntimeError(f"Dust poll {r.status_code}: {r.text[:200]}")
+
+                    consecutive_errors = 0
+                    content = r.json().get("conversation", {}).get("content", [])
+                    agent_msg = self._extract_agent_message(content)
+                    if agent_msg is None:
+                        continue
+
+                    status = agent_msg.get("status")
+                    if status == "succeeded":
+                        blocks = agent_msg.get("content") or []
+                        parts = []
+                        for b in blocks:
+                            if isinstance(b, str):
+                                parts.append(b)
+                            elif isinstance(b, dict) and b.get("type") == "text":
+                                parts.append(b.get("value") or b.get("text") or "")
+                        full_content = "".join(parts)
+
+                        usage = agent_msg.get("usage", {})
+                        ti = usage.get("promptTokens", 0)
+                        to = usage.get("completionTokens", 0)
+                        model = model_override or "claude-sonnet-4-6"
+                        cost = await self.track_cost(model, ti, to)
+
+                        yield {"type": "tokens", "text": full_content}
+                        yield {
+                            "type": "done",
+                            "content": full_content,
+                            "chain_of_thought": "",
+                            "tokens_input": ti,
+                            "tokens_output": to,
+                            "cost_usd": cost,
+                            "conversation_id": conv_id,
+                            "model": model,
+                        }
+                        return
+
+                    elif status == "failed":
+                        err = agent_msg.get("error", "Agent failed")
+                        raise RuntimeError(f"Erreur agent Dust: {err}")
+                    # status in ("created", "running") → continuer à poller
+
+        except asyncio.CancelledError:
+            logger.info(f"Dust polling annulé (client déconnecté) — conv {conv_id}")
+            raise
 
     async def run_agent(self, agent_id: str, message: str,
                         model_override: Optional[str] = None,
