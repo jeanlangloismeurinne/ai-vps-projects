@@ -338,6 +338,11 @@ async def get_thesis(ticker_id: str, thesis_id: int):
         )
     thesis_dict = _serialize(row)
     thesis_dict["messages"] = [_serialize(m) for m in messages]
+    # Expose calendar_events_suggested at top level (stored inside thesis_json by the agent)
+    if isinstance(thesis_dict.get("thesis_json"), dict):
+        cal = thesis_dict["thesis_json"].get("calendar_events_suggested", [])
+        if cal:
+            thesis_dict["calendar_events_suggested"] = cal
     return thesis_dict
 
 
