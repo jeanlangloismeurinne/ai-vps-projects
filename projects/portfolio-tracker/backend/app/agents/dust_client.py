@@ -7,7 +7,6 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 DUST_API_BASE = "https://dust.tt/api/v1"
-DUST_SSE_BASE = "https://dust.tt/api/w"  # endpoint SSE — sans /v1
 
 MODEL_COSTS = {
     "claude-sonnet-4-5":        {"input": 0.0039,   "output": 0.0195},
@@ -98,17 +97,37 @@ class DustClient:
                         raise Exception(f"Agent failed: {msg.get('error')}")
         return None
 
+    async def _resolve_sse_url(self, conv_id: str, msg_id: str) -> str:
+        """
+        Suit manuellement le 307 de /api/v1/w/.../events pour obtenir l'URL SSE réelle.
+        httpx supprime Authorization lors d'un redirect https→http, d'où l'interception manuelle.
+        """
+        v1_url = (
+            f"{DUST_API_BASE}/w/{self.workspace_id}/assistant/conversations"
+            f"/{conv_id}/messages/{msg_id}/events"
+        )
+        async with httpx.AsyncClient(follow_redirects=False, timeout=10) as client:
+            r = await client.get(v1_url, headers=self.headers)
+        if r.status_code == 307:
+            location = r.headers.get("location", "")
+            return location.replace("http://", "https://", 1)
+        if r.status_code == 200:
+            return v1_url
+        raise RuntimeError(f"Dust SSE resolve: statut inattendu {r.status_code}")
+
     async def run_agent_streaming(self, agent_id: str, message: str,
                                   model_override: Optional[str] = None,
                                   timeout: int = 720):
         """
-        Streaming SSE réel via /api/w/ (sans v1).
-        /api/v1/w/.../events redirige vers une infra SSE interne (404 depuis l'extérieur).
-        /api/w/.../messages/{mId}/events est l'endpoint SSE public.
+        Streaming SSE réel.
 
         Flow :
           1. POST /api/v1/w/.../conversations  blocking=False  → conv_id + agent_message_id
-          2. GET  /api/w/.../messages/{mId}/events             → SSE token-par-token
+          2. GET  /api/v1/w/.../messages/{mId}/events          → 307 vers URL SSE réelle
+          3. GET  {sse_url} avec Authorization ré-injecté      → SSE token-par-token
+
+        Le 307 redirige http→https, ce qui pousse httpx à supprimer Authorization.
+        On intercepte le redirect manuellement et on ré-injecte le header sur l'URL finale.
 
         Yields :
           {"type": "started",          "conversation_id": str}
@@ -145,8 +164,6 @@ class DustClient:
             data = r.json()
 
         conv_id = data["conversation"]["sId"]
-
-        # content[0] = user message, content[1] = agent message (status="created")
         try:
             agent_msg_id = data["conversation"]["content"][1][0]["sId"]
         except (IndexError, KeyError, TypeError) as e:
@@ -154,13 +171,15 @@ class DustClient:
 
         yield {"type": "started", "conversation_id": conv_id}
 
-        # Étape 2 — SSE sur /api/w/ (pas /api/v1/w/)
-        sse_url = (
-            f"{DUST_SSE_BASE}/{self.workspace_id}/assistant/conversations"
-            f"/{conv_id}/messages/{agent_msg_id}/events"
-        )
-        sse_headers = {**self.headers, "Accept": "text/event-stream"}
+        # Étape 2 — résoudre l'URL SSE via le 307
+        sse_url = await self._resolve_sse_url(conv_id, agent_msg_id)
+        logger.info(f"Dust SSE URL: {sse_url}")
 
+        # Étape 3 — streamer avec Authorization ré-injecté
+        sse_headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Accept": "text/event-stream",
+        }
         accumulated_content = ""
         accumulated_cot = ""
 
@@ -173,8 +192,8 @@ class DustClient:
                 async for line in resp.aiter_lines():
                     if not line.startswith("data: "):
                         continue
-                    raw = line[6:]
-                    if raw.strip() == "[DONE]":
+                    raw = line[6:].strip()
+                    if raw == "[DONE]":
                         break
                     try:
                         event = json.loads(raw)
