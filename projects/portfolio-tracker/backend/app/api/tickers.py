@@ -22,10 +22,12 @@ class TickerCreate(BaseModel):
     name: str
     exchange: Optional[str] = None
     sector: Optional[str] = None
+    reporting_currency: Optional[str] = None  # EUR, USD, GBP… — déduit du suffixe si absent
 
 
 class TickerStatusUpdate(BaseModel):
-    status: str      # 'watchlist' | 'portfolio' | 'archived'
+    status: Optional[str] = None      # 'watchlist' | 'portfolio' | 'archived'
+    reporting_currency: Optional[str] = None
 
 
 class AlertCreate(BaseModel):
@@ -51,6 +53,28 @@ def _serialize(row) -> dict:
     return d
 
 
+# ─────────────────────────── Helpers ─────────────────────────────────────────
+
+_SUFFIX_CURRENCY = {
+    ".PA": "EUR", ".AS": "EUR", ".MI": "EUR", ".DE": "EUR",
+    ".BR": "EUR", ".LS": "EUR", ".MC": "EUR", ".AT": "EUR",
+    ".CO": "EUR", ".HE": "EUR", ".OL": "EUR", ".ST": "EUR",
+    ".L":  "GBP",
+    ".T":  "JPY",
+    ".HK": "HKD",
+    ".TO": "CAD", ".V": "CAD",
+    ".AX": "AUD",
+    ".SS": "CNY", ".SZ": "CNY",
+    ".SA": "BRL",
+}
+
+def _derive_currency(ticker_id: str) -> str:
+    for suffix, currency in _SUFFIX_CURRENCY.items():
+        if ticker_id.endswith(suffix):
+            return currency
+    return "USD"
+
+
 # ─────────────────────────── Tickers CRUD ────────────────────────────────────
 
 @router.get("")
@@ -71,13 +95,14 @@ async def create_ticker(data: TickerCreate):
         existing = await db.fetchrow("SELECT id FROM tickers WHERE id = $1", data.id)
         if existing:
             raise HTTPException(400, f"Ticker '{data.id}' existe déjà")
+        currency = data.reporting_currency or _derive_currency(data.id)
         row = await db.fetchrow(
             """
-            INSERT INTO tickers (id, name, exchange, sector)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO tickers (id, name, exchange, sector, reporting_currency)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             """,
-            data.id, data.name, data.exchange, data.sector,
+            data.id, data.name, data.exchange, data.sector, currency,
         )
     return _serialize(row)
 
@@ -107,10 +132,18 @@ async def get_ticker(ticker_id: str):
 
 @router.patch("/{ticker_id}")
 async def update_ticker_status(ticker_id: str, data: TickerStatusUpdate):
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "Aucun champ à mettre à jour")
+    set_parts = ["updated_at=NOW()"]
+    values = [ticker_id]
+    for i, (k, v) in enumerate(updates.items(), start=2):
+        set_parts.append(f"{k}=${i}")
+        values.append(v)
     async with get_db_session() as db:
         row = await db.fetchrow(
-            "UPDATE tickers SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *",
-            data.status, ticker_id,
+            f"UPDATE tickers SET {', '.join(set_parts)} WHERE id=$1 RETURNING *",
+            *values,
         )
     if not row:
         raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")

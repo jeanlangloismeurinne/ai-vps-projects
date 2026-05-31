@@ -105,11 +105,16 @@ async def create_thesis(ticker_id: str, data: ThesisCreate):
             if not brief_row:
                 raise HTTPException(404, f"Brief #{data.opportunity_id} introuvable pour ticker '{ticker_id}'")
             brief_dict = _serialize(brief_row)
+            ticker_row = await db.fetchrow(
+                "SELECT name, reporting_currency FROM tickers WHERE id=$1", ticker_id
+            )
             handoff_json = {
                 "opportunity_brief": brief_dict.get("brief_json") or {},
                 "conviction_score": brief_dict.get("conviction_score"),
                 "recommendation": brief_dict.get("recommendation"),
                 "ticker_id": ticker_id,
+                "ticker_name": ticker_row["name"] if ticker_row else ticker_id,
+                "reporting_currency": ticker_row["reporting_currency"] if ticker_row else "USD",
                 "source": brief_dict.get("source"),
             }
 
@@ -167,12 +172,32 @@ async def update_thesis(ticker_id: str, thesis_id: int, data: ThesisUpdate):
 
 # ─────────────────────────── Chat / Refresh / Validate sous /theses/{id} ─────
 
+def _format_handoff(handoff: dict) -> str:
+    import json
+    brief = handoff.get("opportunity_brief") or {}
+    lines = [
+        "=== HANDOFF OPPORTUNITY → THESIS ===",
+        f"Ticker        : {handoff.get('ticker_id')} — {handoff.get('ticker_name', '')}",
+        f"Devise rapport: {handoff.get('reporting_currency', 'USD')}",
+        f"Conviction    : {handoff.get('conviction_score', 'n/a')}/10",
+        f"Recommandation: {handoff.get('recommendation', 'n/a')}",
+        "",
+        "=== BRIEF D'OPPORTUNITÉ VALIDÉ ===",
+        json.dumps(brief, ensure_ascii=False, indent=2),
+        "=====================================",
+    ]
+    return "\n".join(lines)
+
+
 @router.post("/theses/{thesis_id}/chat", status_code=201)
 async def chat_with_thesis(thesis_id: int, data: ChatMessage):
     from app.agents.thesis_agent import ThesisAgent, AgentNotSyncedError
 
     async with get_db_session() as db:
         thesis = await _get_thesis_or_404(db, thesis_id)
+        prior_count = await db.fetchval(
+            "SELECT COUNT(*) FROM thesis_messages WHERE thesis_id=$1", thesis_id
+        )
         await db.execute(
             """
             INSERT INTO thesis_messages (thesis_id, role, content, mode)
@@ -184,9 +209,15 @@ async def chat_with_thesis(thesis_id: int, data: ChatMessage):
     if data.mode not in ("freeform", "json_generation"):
         raise HTTPException(400, "mode doit être 'freeform' ou 'json_generation'")
 
+    # Premier message freeform : préfixer avec le handoff pour que l'agent ait tout le contexte
+    agent_message = data.content
+    if data.mode == "freeform" and prior_count == 0 and thesis["thesis_json"]:
+        handoff_block = _format_handoff(thesis["thesis_json"])
+        agent_message = f"{handoff_block}\n\n{data.content}"
+
     try:
         agent = ThesisAgent()
-        result = await agent.run(mode=data.mode, message=data.content)
+        result = await agent.run(mode=data.mode, message=agent_message)
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
