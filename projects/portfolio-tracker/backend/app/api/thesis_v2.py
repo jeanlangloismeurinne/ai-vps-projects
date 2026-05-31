@@ -58,6 +58,139 @@ class ValidateThesisBody(BaseModel):
 
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
+import math as _math
+
+_TICKER_MAP = {
+    "amazon": "AMZN", "aws": "AMZN",
+    "google": "GOOGL", "alphabet": "GOOGL", "gcp": "GOOGL",
+    "apple": "AAPL",
+    "meta": "META", "facebook": "META",
+    "nvidia": "NVDA",
+    "salesforce": "CRM",
+    "oracle": "ORCL",
+    "ibm": "IBM",
+    "servicenow": "NOW",
+    "sap": "SAP",
+    "workday": "WDAY",
+}
+
+def _guess_ticker(name: str) -> str:
+    first = name.split()[0].lower().rstrip(",()")
+    return _TICKER_MAP.get(first, name.split()[0][:8].upper())
+
+
+def _normalize_thesis_json(parsed: dict) -> dict:
+    """
+    Fusionne les clés plates attendues par ThesisEditorV2 dans le JSON agent (step_1..step_7).
+    Préserve tout l'output original de l'agent.
+    """
+    out = dict(parsed)
+
+    # ── Scénarios ──────────────────────────────────────────────────────────────
+    raw_step4 = parsed.get("step_4_scenarios_5yr", {})
+    scenarios_list = (
+        raw_step4.get("scenarios", []) if isinstance(raw_step4, dict)
+        else (raw_step4 if isinstance(raw_step4, list) else [])
+    )
+    base_price = raw_step4.get("base_price", 0) if isinstance(raw_step4, dict) else 0
+
+    scenarios = {}
+    for s in scenarios_list:
+        name = (s.get("scenario_name") or "").lower()
+        if not name:
+            continue
+        midpoint = (s.get("price_target_5yr") or {}).get("midpoint", 0)
+        prob = s.get("probability_pct", 0)
+        desc = s.get("hypothesis_directrice") or s.get("description", "")
+        cagr = ""
+        if base_price and midpoint:
+            try:
+                cagr = round((_math.pow(midpoint / base_price, 0.2) - 1) * 100, 1)
+            except Exception:
+                pass
+        scenarios[name] = {"probability": prob, "cagr": cagr, "description": desc}
+    if scenarios:
+        out["scenarios"] = scenarios
+
+    # ── Hypothèses ─────────────────────────────────────────────────────────────
+    raw_step5 = parsed.get("step_5_falsifiable_hypotheses", [])
+    hyps_list = raw_step5 if isinstance(raw_step5, list) else []
+    if hyps_list:
+        out["hypotheses"] = [
+            {
+                "id": f"H{h.get('hypothesis_id', i + 1)}",
+                "text": h.get("statement", ""),
+                "status": "unverified",
+                "weight": h.get("criticality_level", ""),
+            }
+            for i, h in enumerate(hyps_list)
+        ]
+
+    # ── Seuils de cours ────────────────────────────────────────────────────────
+    def _get_scenario(name_upper):
+        return next((s for s in scenarios_list if (s.get("scenario_name") or "").upper() == name_upper), {})
+
+    price_thresholds = {}
+    bear_pt = (_get_scenario("BEAR").get("price_target_5yr") or {})
+    central_pt = (_get_scenario("CENTRAL").get("price_target_5yr") or {})
+    bull_pt = (_get_scenario("BULL").get("price_target_5yr") or {})
+    if bear_pt:
+        price_thresholds["stop_loss"] = bear_pt.get("low") or bear_pt.get("midpoint")
+    if central_pt:
+        price_thresholds["fair_value"] = central_pt.get("midpoint")
+    if bull_pt:
+        price_thresholds["target_price"] = bull_pt.get("midpoint")
+    if price_thresholds:
+        out["price_thresholds"] = price_thresholds
+
+    # ── Pairs comparables ──────────────────────────────────────────────────────
+    raw_step2 = parsed.get("step_2_competitive_analysis", {})
+    competitors = raw_step2.get("key_competitors_analysis", []) if isinstance(raw_step2, dict) else []
+    tiers = ["T1", "T2", "T3"]
+    if competitors:
+        out["pairs"] = [
+            {
+                "ticker": _guess_ticker(c.get("competitor", "")),
+                "tier": tiers[min(i, 2)],
+                "note": c.get("competitive_position") or c.get("competitor", ""),
+            }
+            for i, c in enumerate(competitors)
+        ]
+
+    # ── Bear Steel Man ─────────────────────────────────────────────────────────
+    raw_step7 = parsed.get("step_7_devil_advocate_risks", [])
+    risks = raw_step7 if isinstance(raw_step7, list) else raw_step7.get("bear_steel_man", []) if isinstance(raw_step7, dict) else []
+    if risks:
+        parts = []
+        for r in risks[:4]:
+            if isinstance(r, dict):
+                cat = r.get("risk_category", "")
+                desc = r.get("description", "")
+                parts.append(f"**{cat}** : {desc}" if cat else desc)
+            elif isinstance(r, str):
+                parts.append(r)
+        out["bear_steel_man"] = "\n\n".join(parts)
+
+    # ── Track Record Analystes ─────────────────────────────────────────────────
+    raw_step6 = parsed.get("step_6_analyst_track_record", {})
+    if isinstance(raw_step6, dict):
+        consensus = raw_step6.get("consensus_current", {})
+        hist = raw_step6.get("historical_reliability", {})
+        count = consensus.get("analyst_count", "")
+        target_med = consensus.get("price_target_median", "")
+        eps_beat = hist.get("eps_beat_ratio_pct", "")
+        rev_beat = hist.get("revenue_beat_ratio_pct", "")
+        label = f"Consensus ({count} analystes)" if count else "Consensus Wall Street"
+        accuracy_parts = [p for p in [
+            f"EPS beat {eps_beat}%" if eps_beat else "",
+            f"Rev beat {rev_beat}%" if rev_beat else "",
+            f"PT médian ${target_med}" if target_med else "",
+        ] if p]
+        out["track_record_analysts"] = [{"analyst": label, "accuracy": " | ".join(accuracy_parts)}]
+
+    return out
+
+
 def _serialize(row) -> dict:
     if row is None:
         return None
@@ -351,6 +484,7 @@ async def refresh_thesis_json(thesis_id: int):
     parsed = agent.extract_json(result["content"])
     if not parsed:
         raise HTTPException(422, "L'agent n'a pas retourné un JSON valide")
+    parsed = _normalize_thesis_json(parsed)
 
     calendar_events_suggested = parsed.get("calendar_events_suggested", [])
     one_liner = parsed.get("one_liner") or parsed.get("thesis_one_liner")
@@ -420,6 +554,7 @@ async def refresh_thesis_json_stream(thesis_id: int):
                     if not parsed:
                         yield f"data: {_json.dumps({'type': 'error', 'message': 'L\'agent n\'a pas retourné un JSON valide'})}\n\n"
                         return
+                    parsed = _normalize_thesis_json(parsed)
                     calendar_events_suggested = parsed.get("calendar_events_suggested", [])
                     one_liner = parsed.get("one_liner") or parsed.get("thesis_one_liner")
                     async with get_db_session() as db:
