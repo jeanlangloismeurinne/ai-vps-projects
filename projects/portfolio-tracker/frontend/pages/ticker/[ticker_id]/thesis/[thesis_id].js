@@ -219,9 +219,9 @@ export default function ThesisPage() {
       </div>
 
       {/* Main layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: '70vh' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Col 1 — Chat */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col" style={{ minHeight: '600px' }}>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col" style={{ height: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800">
             <h2 className="font-semibold text-white text-sm">Chat — Thesis Agent</h2>
           </div>
@@ -237,7 +237,7 @@ export default function ThesisPage() {
         </div>
 
         {/* Col 2 — Thesis Editor */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ minHeight: '600px' }}>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ height: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
             <h2 className="font-semibold text-white text-sm">Thèse en cours</h2>
             <button

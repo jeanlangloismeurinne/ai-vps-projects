@@ -62,15 +62,16 @@ function ProtoHypotheses({ items = [], onChange }) {
     <div className="space-y-2">
       {items.map((h, i) => (
         <div key={i} className="flex items-start gap-2">
-          <span className="text-indigo-400 text-sm mt-1">H{i + 1}</span>
-          <input
+          <span className="text-indigo-400 text-sm mt-2">H{i + 1}</span>
+          <textarea
             value={h.text}
             onChange={e => {
               const next = [...items]
               next[i] = { ...next[i], text: e.target.value }
               onChange(next)
             }}
-            className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+            rows={3}
+            className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none resize-none"
           />
           <select
             value={h.confidence || 'medium'}
@@ -178,11 +179,12 @@ export default function InvestmentBriefEditor({ briefJson, onChange }) {
           </div>
           <div className="col-span-2">
             <label className="text-xs text-gray-500 block mb-1">Facteurs</label>
-            <input
+            <textarea
               value={briefJson.anomalie?.facteurs || ''}
               onChange={e => update('anomalie', { ...briefJson.anomalie, facteurs: e.target.value })}
               placeholder="Facteurs clés de l'anomalie…"
-              className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+              rows={4}
+              className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none resize-none"
             />
           </div>
         </div>
@@ -214,7 +216,7 @@ export default function InvestmentBriefEditor({ briefJson, onChange }) {
           value={briefJson.analogie?.description || ''}
           onChange={e => update('analogie', { ...briefJson.analogie, description: e.target.value })}
           placeholder="Description de l'analogie…"
-          rows={2}
+          rows={4}
           className="mt-2 w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none resize-none"
         />
       </section>
@@ -289,14 +291,32 @@ export default function InvestmentBriefEditor({ briefJson, onChange }) {
               className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
             />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="text-xs text-gray-500 block mb-1">Top risques</label>
-            <input
-              value={(briefJson.verdict?.top_risques || []).join(', ')}
-              onChange={e => update('verdict', { ...briefJson.verdict, top_risques: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-              placeholder="risque 1, risque 2…"
-              className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
-            />
+            <div className="space-y-1">
+              {(briefJson.verdict?.top_risques || []).map((r, i) => (
+                <div key={i} className="flex gap-2">
+                  <textarea
+                    value={r}
+                    onChange={e => {
+                      const next = [...(briefJson.verdict?.top_risques || [])]
+                      next[i] = e.target.value
+                      update('verdict', { ...briefJson.verdict, top_risques: next })
+                    }}
+                    rows={2}
+                    className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none resize-none"
+                  />
+                  <button
+                    onClick={() => update('verdict', { ...briefJson.verdict, top_risques: (briefJson.verdict?.top_risques || []).filter((_, j) => j !== i) })}
+                    className="text-red-500 hover:text-red-400 text-sm self-start pt-1.5"
+                  >✕</button>
+                </div>
+              ))}
+              <button
+                onClick={() => update('verdict', { ...briefJson.verdict, top_risques: [...(briefJson.verdict?.top_risques || []), ''] })}
+                className="text-xs text-indigo-400 hover:text-indigo-300"
+              >+ Ajouter un risque</button>
+            </div>
           </div>
         </div>
       </section>
