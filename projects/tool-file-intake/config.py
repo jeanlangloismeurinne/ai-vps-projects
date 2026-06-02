@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     SLACK_BOT_TOKEN: str
-    SLACK_APP_TOKEN: str          # xapp-... Socket Mode (scope connections:write)
+    SLACK_SIGNING_SECRET: str
     STORAGE_BASE: Path = Path("/storage/Documents")
     DB_PATH: str = "/data/intake-db/intake.db"
     AGENT_WEBHOOK_URL: str = ""

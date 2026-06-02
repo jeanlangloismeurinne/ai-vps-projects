@@ -23,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_slack_app() -> AsyncApp:
-    # Socket Mode : pas de signing secret — la connexion est initiée par nous via WebSocket
-    app = AsyncApp(token=settings.SLACK_BOT_TOKEN)
+    app = AsyncApp(token=settings.SLACK_BOT_TOKEN, signing_secret=settings.SLACK_SIGNING_SECRET)
 
     # ── Événement : fichier partagé dans un message ──────────────────────────
 
