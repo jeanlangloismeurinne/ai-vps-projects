@@ -159,6 +159,7 @@ async def _do_store(
         return
 
     # Validation
+    logger.info("Validation fichier : name=%s mime=%s size=%d", filename, mime_type, len(content))
     try:
         storage.validate_file(filename, content, mime_type)
     except ValueError as e:
