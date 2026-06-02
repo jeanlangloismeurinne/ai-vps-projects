@@ -36,7 +36,14 @@ async def slack_events(req: Request):
     try:
         data = json.loads(body)
     except Exception:
-        return await handler.handle(req)
+        # block_actions / shortcuts arrivent en form-urlencoded avec un champ "payload"
+        try:
+            from urllib.parse import parse_qs
+            form = parse_qs(body.decode())
+            payload_str = form.get("payload", [None])[0]
+            data = json.loads(payload_str) if payload_str else {}
+        except Exception:
+            return await handler.handle(req)
 
     if data.get("type") == "url_verification":
         return await handler.handle(req)
