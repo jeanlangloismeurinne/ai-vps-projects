@@ -160,10 +160,26 @@ async def _do_store(
 
     # Fallback MIME type depuis l'extension quand Slack ne le fournit pas
     if not mime_type:
-        import mimetypes
-        mime_type, _ = mimetypes.guess_type(filename)
-        mime_type = mime_type or "application/octet-stream"
-        logger.info("MIME type absent — détecté depuis l'extension : %s", mime_type)
+        _EXT_MIME = {
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xls":  "application/vnd.ms-excel",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".doc":  "application/msword",
+            ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".ppt":  "application/vnd.ms-powerpoint",
+            ".pdf":  "application/pdf",
+            ".csv":  "text/csv",
+            ".txt":  "text/plain",
+            ".md":   "text/markdown",
+            ".json": "application/json",
+            ".zip":  "application/zip",
+            ".png":  "image/png",
+            ".jpg":  "image/jpeg",
+            ".jpeg": "image/jpeg",
+        }
+        ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        mime_type = _EXT_MIME.get(ext, "application/octet-stream")
+        logger.info("MIME type absent — détecté depuis l'extension '%s' : %s", ext, mime_type)
 
     logger.info("Validation fichier : name=%s mime=%s size=%d", filename, mime_type, len(content))
     try:
