@@ -16,7 +16,7 @@ from app.services.database import (
     get_classifier_rules_all,
 )
 from app.routes.budget import _annotate_with_rules
-from app.services.format_checker import check_format, apply_mapping
+from app.services.format_checker import check_format, apply_mapping, is_excel, xlsx_to_canonical_csv
 from app.services.budget import (
     get_budget_years, create_next_budget_year, get_budget_lines, get_all_categories_for_year,
 )
@@ -57,6 +57,9 @@ async def import_upload(
         return RedirectResponse("/", status_code=302)
 
     content = await file.read()
+
+    if is_excel(content):
+        content = xlsx_to_canonical_csv(content)
 
     fmt = check_format(content)
     if not fmt.can_proceed:
@@ -239,6 +242,9 @@ async def import_direct(
     """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review."""
 
     content = await file.read()
+
+    if is_excel(content):
+        content = xlsx_to_canonical_csv(content)
 
     fmt = check_format(content)
     if not fmt.can_proceed:

@@ -1,10 +1,14 @@
 """
-Format checker for imported CSV files.
+Format checker for imported CSV/XLSX files.
 
 Validates against the canonical BoursoBank export format.
 If the format differs, attempts column mapping and reports:
 - Which columns were remapped
 - The header line number (for audit / rollback reference)
+
+XLSX support: BoursoBank exports XLSX files without a header row. Column order
+differs from the canonical CSV format. Use is_excel() + xlsx_to_canonical_csv()
+before check_format() to normalise these files.
 """
 import re
 import io
@@ -268,3 +272,69 @@ def _map_columns(raw_cols: list[str]) -> tuple[dict, list[str], list[str], list[
     extra = [c for c in raw_cols if c not in used]
 
     return mapping, missing_req, missing_opt, extra
+
+
+# ── XLSX support ──────────────────────────────────────────────────────────────
+
+# BoursoBank XLSX exports have no header row. Columns are in this fixed order,
+# which differs from EXPECTED_COLS (supplierFound/category/categoryParent are swapped).
+_BOURSOBANK_XLSX_COLS = [
+    "dateOp", "dateVal", "label",
+    "supplierFound", "category", "categoryParent",
+    "amount", "comment", "accountNum", "accountLabel", "accountbalance",
+]
+
+
+def is_excel(content: bytes) -> bool:
+    """Detect XLSX (ZIP magic) or XLS (OLE2 magic) by first bytes."""
+    return content[:4] in (b"PK\x03\x04", b"\xd0\xcf\x11\xe0")
+
+
+def xlsx_to_canonical_csv(content: bytes) -> bytes:
+    """
+    Convert a BoursoBank XLSX export to canonical CSV bytes.
+
+    Handles two cases:
+    - No header (standard BoursoBank export): columns assigned by position
+      using _BOURSOBANK_XLSX_COLS, then reordered to EXPECTED_COLS order.
+    - With header: column names resolved via synonym mapping, reordered to
+      EXPECTED_COLS order.
+
+    Returns UTF-8 CSV with ';' separator in canonical column order.
+    """
+    import pandas as pd
+
+    # Try reading with header first
+    df_hdr = pd.read_excel(io.BytesIO(content), dtype=str, header=0)
+    col_names = [str(c).strip() for c in df_hdr.columns]
+
+    # Determine if the first row is a genuine header (≥2 recognisable column names)
+    known = sum(
+        1 for c in col_names
+        if c in EXPECTED_COLS or _SYNONYMS.get(c.lower()) is not None
+    )
+
+    if known >= 2:
+        # Real header present — remap via synonyms then reorder
+        df = df_hdr.copy()
+        df.columns = [
+            _SYNONYMS.get(c.lower().strip(), c) for c in col_names
+        ]
+    else:
+        # No header — positional mapping
+        df = pd.read_excel(io.BytesIO(content), dtype=str, header=None)
+        df = df.dropna(how="all").reset_index(drop=True)
+        ncols = len(df.columns)
+        df.columns = [
+            _BOURSOBANK_XLSX_COLS[i] if i < len(_BOURSOBANK_XLSX_COLS) else f"col_{i}"
+            for i in range(ncols)
+        ]
+
+    # Reorder to canonical column order, filling missing columns with ""
+    canonical = list(EXPECTED_COLS.keys())
+    for col in canonical:
+        if col not in df.columns:
+            df[col] = ""
+    df = df[canonical].fillna("")
+
+    return df.to_csv(index=False, sep=";").encode("utf-8")
