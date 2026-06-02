@@ -158,7 +158,13 @@ async def _do_store(
         await _reply(f":x: Impossible de télécharger `{filename}` : {e}")
         return
 
-    # Validation
+    # Fallback MIME type depuis l'extension quand Slack ne le fournit pas
+    if not mime_type:
+        import mimetypes
+        mime_type, _ = mimetypes.guess_type(filename)
+        mime_type = mime_type or "application/octet-stream"
+        logger.info("MIME type absent — détecté depuis l'extension : %s", mime_type)
+
     logger.info("Validation fichier : name=%s mime=%s size=%d", filename, mime_type, len(content))
     try:
         storage.validate_file(filename, content, mime_type)
