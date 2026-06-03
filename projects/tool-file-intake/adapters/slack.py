@@ -198,6 +198,9 @@ async def _do_store(
             f":information_source: Ce fichier existe déjà : `{existing.stored_path}`\n"
             f"Aucun doublon créé.\n\n```{tree_text}```"
         )
+        # Notifie quand même l'agent avec le chemin existant — il gère ses propres doublons
+        if settings.AGENT_WEBHOOK_URL:
+            await _notify_agent(filename, existing.stored_path, mime_type, sha, user_id, dest_channel or "")
         return
 
     # Stockage
