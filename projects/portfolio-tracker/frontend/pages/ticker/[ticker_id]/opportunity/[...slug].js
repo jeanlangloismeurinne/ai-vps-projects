@@ -57,7 +57,7 @@ export default function OpportunityPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const debounceRef = useRef(null)
-  const initialMessageSent = useRef(false)
+  const jsonImportRef = useRef(null)
 
   // Check agent sync status
   useEffect(() => {
@@ -123,14 +123,6 @@ export default function OpportunityPage() {
     return newBrief
   }
 
-  // Send initial message when brief is loaded (new brief)
-  useEffect(() => {
-    if (!brief?.id || !isNew || initialMessageSent.current || messages.length > 0) return
-    if (!agentSynced) return
-    initialMessageSent.current = true
-    sendInitialMessage(brief.id)
-  }, [brief?.id, isNew, agentSynced, messages.length])
-
   const sendInitialMessage = async (briefId) => {
     setIsLoading(true)
     try {
@@ -159,6 +151,25 @@ export default function OpportunityPage() {
       setMessages(prev => [...prev, { role: 'error', content: msg }])
     }
     setIsLoading(false)
+  }
+
+  const handleImportJson = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !brief?.id) return
+    e.target.value = ''
+    try {
+      const parsed = JSON.parse(await file.text())
+      setBrief(prev => ({ ...prev, brief_json: parsed }))
+      setSaving(true)
+      await fetch(`${API}/tickers/${ticker_id}/opportunities/${brief.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief_json: parsed }),
+      })
+    } catch {
+      setError('Fichier JSON invalide')
+    }
+    setSaving(false)
   }
 
   const sendMessage = async (text) => {
@@ -247,7 +258,6 @@ export default function OpportunityPage() {
     }).catch(() => {})
     setShowExistingModal(false)
     setExistingBrief(null)
-    initialMessageSent.current = false
     setMessages([])
     setPageLoading(true)
     await createNewBrief()
@@ -302,6 +312,18 @@ export default function OpportunityPage() {
             <h2 className="font-semibold text-white text-sm">Chat — Opportunity Agent</h2>
           </div>
           {!agentSynced && <AgentSyncOverlay agentName="opportunity-agent" />}
+          {messages.length === 0 && !isLoading && brief?.id && (
+            <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
+              <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
+              <button
+                onClick={() => sendInitialMessage(brief.id)}
+                disabled={!agentSynced}
+                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
+              >
+                Lancer l&apos;analyse
+              </button>
+            </div>
+          )}
           <div className="flex-1 min-h-0">
             <AgentChat
               messages={messages}
@@ -321,13 +343,29 @@ export default function OpportunityPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ height: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
             <h2 className="font-semibold text-white text-sm">Investment Brief</h2>
-            <button
-              onClick={refreshBrief}
-              disabled={refreshing || !brief?.id}
-              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
-            >
-              {refreshing ? '⟳ Actualisation…' : 'Actualiser le brief →'}
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                ref={jsonImportRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportJson}
+              />
+              <button
+                onClick={() => jsonImportRef.current?.click()}
+                disabled={!brief?.id}
+                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
+              >
+                Importer JSON
+              </button>
+              <button
+                onClick={refreshBrief}
+                disabled={refreshing || !brief?.id}
+                className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
+              >
+                {refreshing ? '⟳ Actualisation…' : 'Actualiser le brief →'}
+              </button>
+            </div>
           </div>
           <div className="flex-1 min-h-0">
             <InvestmentBriefEditor

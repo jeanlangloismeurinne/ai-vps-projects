@@ -59,7 +59,7 @@ export default function ThesisPage() {
   const [valForm, setValForm] = useState({ shares: '', buy_price: '', date: '' })
 
   const debounceRef = useRef(null)
-  const initialHandoffSent = useRef(false)
+  const jsonImportRef = useRef(null)
 
   // Check agent sync
   useEffect(() => {
@@ -110,14 +110,6 @@ export default function ThesisPage() {
     init()
   }, [thesis_id, ticker_id])
 
-  // Send handoff when thesis loaded (new thesis, no messages)
-  useEffect(() => {
-    if (pageLoading || !thesis?.id || initialHandoffSent.current || messages.length > 0 || !agentSynced) return
-    if (!thesis.opportunity_id) return
-    initialHandoffSent.current = true
-    sendHandoff()
-  }, [pageLoading, thesis?.id, messages.length, agentSynced])
-
   const _readStream = async (res, onEvent) => {
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -166,6 +158,28 @@ export default function ThesisPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleImportJson = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !thesis?.id) return
+    e.target.value = ''
+    try {
+      const parsed = JSON.parse(await file.text())
+      setThesis(prev => ({ ...prev, thesis_json: parsed }))
+      if (parsed.calendar_events_suggested) {
+        setCalendarEvents(normalizeCalendarEvents(parsed.calendar_events_suggested))
+      }
+      setSaving(true)
+      await fetch(`${API}/tickers/${ticker_id}/theses/${thesis.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thesis_json: parsed }),
+      })
+    } catch {
+      setError('Fichier JSON invalide')
+    }
+    setSaving(false)
   }
 
   const sendHandoff = async () => {
@@ -364,6 +378,18 @@ export default function ThesisPage() {
             <h2 className="font-semibold text-white text-sm">Chat — Thesis Agent</h2>
           </div>
           {!agentSynced && <AgentSyncOverlay agentName="thesis-agent" />}
+          {messages.length === 0 && !isLoading && thesis?.id && (
+            <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
+              <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
+              <button
+                onClick={sendHandoff}
+                disabled={!agentSynced}
+                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
+              >
+                Lancer l&apos;analyse
+              </button>
+            </div>
+          )}
           <div className="flex-1 min-h-0">
             <AgentChat
               messages={messages}
@@ -378,17 +404,33 @@ export default function ThesisPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl" style={{ minHeight: '75vh' }}>
           <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
             <h2 className="font-semibold text-white text-sm">Thèse en cours</h2>
-            <button
-              onClick={refreshThesis}
-              disabled={refreshing || !thesis?.id}
-              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
-            >
-              {refreshing
-                ? STREAMING
-                  ? `⟳ Génération… ${refreshChars > 0 ? `(${refreshChars} car.)` : ''}`
-                  : '⟳ Actualisation…'
-                : 'Actualiser la thèse →'}
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                ref={jsonImportRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportJson}
+              />
+              <button
+                onClick={() => jsonImportRef.current?.click()}
+                disabled={!thesis?.id}
+                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
+              >
+                Importer JSON
+              </button>
+              <button
+                onClick={refreshThesis}
+                disabled={refreshing || !thesis?.id}
+                className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
+              >
+                {refreshing
+                  ? STREAMING
+                    ? `⟳ Génération… ${refreshChars > 0 ? `(${refreshChars} car.)` : ''}`
+                    : '⟳ Actualisation…'
+                  : 'Actualiser la thèse →'}
+              </button>
+            </div>
           </div>
           {refreshing && STREAMING && (
             <div className="h-1 bg-gray-800 overflow-hidden rounded-b">
