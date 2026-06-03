@@ -18,9 +18,8 @@ app = FastAPI(title="Bank Review", docs_url="/api/docs", redoc_url="/api/redoc")
 
 @app.on_event("startup")
 async def startup():
-    from app.services.database import migrate_classifier_tables, create_app_settings_table
+    from app.services.database import migrate_classifier_tables
     await migrate_classifier_tables()
-    await create_app_settings_table()
 
 app.add_middleware(
     SessionMiddleware,
