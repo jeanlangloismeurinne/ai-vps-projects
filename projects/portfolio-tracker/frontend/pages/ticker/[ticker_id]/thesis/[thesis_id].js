@@ -9,6 +9,134 @@ import CalendarEditor from '../../../../components/CalendarEditor'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const STREAMING = process.env.NEXT_PUBLIC_DUST_STREAMING === 'true'
 
+const _TICKER_MAP = {
+  amazon: 'AMZN', aws: 'AMZN', google: 'GOOGL', alphabet: 'GOOGL', gcp: 'GOOGL',
+  apple: 'AAPL', meta: 'META', facebook: 'META', nvidia: 'NVDA',
+  salesforce: 'CRM', oracle: 'ORCL', ibm: 'IBM', servicenow: 'NOW',
+  sap: 'SAP', workday: 'WDAY',
+}
+function _guessTicker(name) {
+  const first = (name.split(/[\s,(]/)[0] || '').toLowerCase().replace(/[,()]/g, '')
+  return _TICKER_MAP[first] || (name.split(/[\s,(]/)[0] || '').slice(0, 8).toUpperCase()
+}
+
+function normalizeAgentThesis(raw) {
+  // Déjà normalisé (format frontend) → pass-through
+  if (raw.hypotheses || raw.scenarios) return raw
+
+  const out = { ...raw }
+
+  // ── Metadata ──────────────────────────────────────────────────────────────
+  const meta = raw.thesis_metadata || {}
+  if (meta.investment_thesis_summary) out.one_liner = meta.investment_thesis_summary
+  if (meta.analyst_conviction_score != null) out.conviction_score = meta.analyst_conviction_score
+  if (meta.analyst_conviction_rationale) out.conviction_rationale = meta.analyst_conviction_rationale
+  if (meta.investment_recommendation) out.recommendation = meta.investment_recommendation
+  if (meta.thesis_horizon_years) out.thesis_horizon_years = meta.thesis_horizon_years
+  if (meta.ideal_investor_profile) out.ideal_investor_profile = meta.ideal_investor_profile
+
+  // ── Scénarios ─────────────────────────────────────────────────────────────
+  const rawStep4 = raw.step_4_scenarios_5yr || {}
+  const scenariosList = Array.isArray(rawStep4.scenarios) ? rawStep4.scenarios
+    : Array.isArray(rawStep4) ? rawStep4 : []
+  const basePrice = typeof rawStep4 === 'object' && !Array.isArray(rawStep4) ? (rawStep4.base_price || 0) : 0
+  if (rawStep4.probability_weighted_target) out.probability_weighted_target = rawStep4.probability_weighted_target
+
+  const scenarios = {}
+  for (const s of scenariosList) {
+    const name = (s.scenario_name || '').toLowerCase()
+    if (!name) continue
+    const midpoint = (s.price_target_5yr || {}).midpoint || 0
+    let cagr = ''
+    if (basePrice && midpoint) {
+      try { cagr = Math.round((Math.pow(midpoint / basePrice, 0.2) - 1) * 1000) / 10 } catch {}
+    }
+    scenarios[name] = { probability: s.probability_pct || 0, cagr, description: s.hypothesis_directrice || s.description || '' }
+  }
+  if (Object.keys(scenarios).length) out.scenarios = scenarios
+
+  // ── Hypothèses ────────────────────────────────────────────────────────────
+  const hypsList = Array.isArray(raw.step_5_falsifiable_hypotheses) ? raw.step_5_falsifiable_hypotheses : []
+  if (hypsList.length) {
+    out.hypotheses = hypsList.map((h, i) => ({
+      id: `H${h.hypothesis_id || i + 1}`,
+      text: h.statement || '',
+      status: 'unverified',
+      weight: h.criticality_level || '',
+      kpi_metric: (h.kpi_tracking || {}).metric_name || '',
+      kpi_target: (h.kpi_tracking || {}).baseline_target || '',
+      kpi_unit: (h.kpi_tracking || {}).unit || '',
+      alert_threshold: h.alert_threshold || {},
+      invalidation_threshold: h.invalidation_threshold || {},
+    }))
+  }
+
+  // ── Seuils de cours (dérivés des scénarios) ────────────────────────────────
+  const getScenario = n => scenariosList.find(s => (s.scenario_name || '').toUpperCase() === n) || {}
+  const bearPt = getScenario('BEAR').price_target_5yr || {}
+  const centralPt = getScenario('CENTRAL').price_target_5yr || {}
+  const bullPt = getScenario('BULL').price_target_5yr || {}
+  const price_thresholds = {}
+  if (bearPt.low || bearPt.midpoint) price_thresholds.stop_loss = bearPt.low || bearPt.midpoint
+  if (centralPt.midpoint) price_thresholds.fair_value = centralPt.midpoint
+  if (bullPt.midpoint) price_thresholds.target_price = bullPt.midpoint
+  if (Object.keys(price_thresholds).length) out.price_thresholds = price_thresholds
+
+  // ── Analyse fondamentale ───────────────────────────────────────────────────
+  const rawStep1 = raw.step_1_fundamental_analysis || {}
+  if (typeof rawStep1 === 'object') {
+    const fa = {}
+    if (rawStep1.verdict) fa.verdict = rawStep1.verdict
+    const moat = rawStep1.moat_assessment || {}
+    if (moat.status) fa.moat_status = moat.status
+    if (moat.components?.length) {
+      fa.moat_components = moat.components.map(c => ({ type: c.moat_type || '', strength: c.strength || '', durability: c.durability || '' }))
+    }
+    const pricing = rawStep1.pricing_power || {}
+    if (pricing.status) fa.pricing_power_status = pricing.status
+    if (pricing.sustainability) fa.pricing_power_sustainability = pricing.sustainability
+    const capalloc = rawStep1.capital_allocation || {}
+    if (Object.keys(capalloc).length) fa.capital_allocation = capalloc
+    if (Object.keys(fa).length) out.fundamental_analysis = fa
+  }
+
+  // ── Pairs comparables ──────────────────────────────────────────────────────
+  const competitors = (raw.step_2_competitive_analysis || {}).key_competitors_analysis || []
+  if (competitors.length) {
+    out.pairs = competitors.map((c, i) => ({
+      ticker: _guessTicker(c.competitor || ''),
+      tier: ['T1', 'T2', 'T3'][Math.min(i, 2)],
+      note: c.competitive_position || c.competitor || '',
+    }))
+  }
+
+  // ── Bear Steel Man ─────────────────────────────────────────────────────────
+  const rawStep7 = raw.step_7_devil_advocate_risks || []
+  const risks = Array.isArray(rawStep7) ? rawStep7 : (rawStep7.bear_steel_man || [])
+  if (risks.length) {
+    out.bear_steel_man = risks.slice(0, 4).map(r =>
+      typeof r === 'string' ? r : (r.risk_category ? `${r.risk_category} : ${r.description || ''}` : r.description || '')
+    ).join('\n\n')
+  }
+
+  // ── Track Record Analystes ─────────────────────────────────────────────────
+  const rawStep6 = raw.step_6_analyst_track_record || {}
+  if (typeof rawStep6 === 'object') {
+    const consensus = rawStep6.consensus_current || {}
+    const hist = rawStep6.historical_reliability || {}
+    const label = consensus.analyst_count ? `Consensus (${consensus.analyst_count} analystes)` : 'Consensus Wall Street'
+    const parts = [
+      hist.eps_beat_ratio_pct ? `EPS beat ${hist.eps_beat_ratio_pct}%` : '',
+      hist.revenue_beat_ratio_pct ? `Rev beat ${hist.revenue_beat_ratio_pct}%` : '',
+      consensus.price_target_median ? `PT $${consensus.price_target_low}-$${consensus.price_target_high} (médian $${consensus.price_target_median})` : '',
+      consensus.recommendation_buy_pct ? `Buy ${consensus.recommendation_buy_pct}%` : '',
+    ].filter(Boolean)
+    out.track_record_analysts = [{ analyst: label, accuracy: parts.join(' | ') }]
+  }
+
+  return out
+}
+
 function _detectEventType(name = '') {
   const n = name.toLowerCase()
   if (n.includes('earning')) return 'earnings'
@@ -165,7 +293,7 @@ export default function ThesisPage() {
     if (!file || !thesis?.id) return
     e.target.value = ''
     try {
-      const parsed = JSON.parse(await file.text())
+      const parsed = normalizeAgentThesis(JSON.parse(await file.text()))
       setThesis(prev => ({ ...prev, thesis_json: parsed }))
       if (parsed.calendar_events_suggested) {
         setCalendarEvents(normalizeCalendarEvents(parsed.calendar_events_suggested))

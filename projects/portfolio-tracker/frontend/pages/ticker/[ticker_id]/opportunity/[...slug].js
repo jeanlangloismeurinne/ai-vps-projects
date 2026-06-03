@@ -7,6 +7,61 @@ import AgentSyncOverlay from '../../../../components/AgentSyncOverlay'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
+function normalizeAgentBrief(raw) {
+  // Déjà normalisé (format frontend) → pass-through
+  if (raw.screening || raw.verdict) return raw
+
+  const details = raw.step_1_screening?.details || []
+  const criteria = details.map(d => ({
+    label: d.criterion || '',
+    pass: d.status === 'pass' ? true : d.status === 'fail' ? false : null,
+    note: d.comment || '',
+  }))
+
+  const diag = raw.step_2_diagnostic || {}
+  const anomalie = {
+    score: null,
+    facteurs: diag.main_finding || diag.root_cause || '',
+  }
+
+  const step3 = raw.step_3_analogies || {}
+  const analogies = step3.analogies || []
+  const analogie = analogies.length > 0 ? {
+    societe: analogies[0].comparable || '',
+    confiance: step3.confidence_score ?? null,
+    description: analogies[0].parallel || analogies[0].notes || '',
+  } : {}
+
+  const cats = raw.step_4_catalysts?.catalysts || []
+  const catalyseurs = cats.map(c => c.event || '').filter(Boolean)
+
+  const hyps = raw.step_5_proto_hypotheses?.hypotheses || []
+  const proto_hypotheses = hyps.map(h => ({
+    text: h.belief || '',
+    confidence: h.criticality === 'MUST_BE_TRUE' ? 'high' : 'medium',
+  }))
+
+  const v = raw.step_6_verdict || {}
+  const top_risques = (v.top_3_risks || []).map(r => r.risk || '').filter(Boolean)
+  const verdict = {
+    conviction: v.conviction_score ?? null,
+    conviction_score: v.conviction_score ?? null,
+    recommendation: v.recommendation || '',
+    downside_floor: v.downside_floor ?? null,
+    top_risques,
+  }
+
+  return {
+    screening: { criteria },
+    anomalie,
+    analogie,
+    catalyseurs,
+    proto_hypotheses,
+    verdict,
+    _raw: raw,
+  }
+}
+
 function ExistingBriefModal({ brief, onResume, onRestart }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -158,7 +213,7 @@ export default function OpportunityPage() {
     if (!file || !brief?.id) return
     e.target.value = ''
     try {
-      const parsed = JSON.parse(await file.text())
+      const parsed = normalizeAgentBrief(JSON.parse(await file.text()))
       setBrief(prev => ({ ...prev, brief_json: parsed }))
       setSaving(true)
       await fetch(`${API}/tickers/${ticker_id}/opportunities/${brief.id}`, {
