@@ -56,9 +56,6 @@
           <td class="{{ 'amount-neg' if row.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(row.amount) }} €</td>
           <td class="bank-cat">{{ row.bankCategory or row.bank_category }}</td>
           <td>
-            {% if row._matched_rule_category %}
-            <span class="rule-badge" title="Règle existante : {{ row._matched_rule_category }}">⚡ {{ row._matched_rule_category }}</span>
-            {% endif %}
             <select class="cat-select" data-idx="{{ loop.index0 }}" onchange="markEdited(this)">
               {% for cat in categories %}
               <option value="{{ cat }}" {% if cat == row.category %}selected{% endif %}>{{ cat }}</option>
@@ -67,6 +64,11 @@
               <option value="{{ row.category }}" selected>{{ row.category }}</option>
               {% endif %}
             </select>
+            {% if row._matched_rule_category %}
+            <div style="margin-top:3px">
+              <span class="rule-badge" title="Règle : {{ row._matched_rule_category }}">⚡ {{ row._matched_rule_category }}</span>
+            </div>
+            {% endif %}
           </td>
           <td><span class="conf-badge {{ conf_class }}">{{ row.confidence }}%</span></td>
           <td><span class="method-badge {{ row.classification_method or row.method }}">{{ row.classification_method or row.method }}</span></td>

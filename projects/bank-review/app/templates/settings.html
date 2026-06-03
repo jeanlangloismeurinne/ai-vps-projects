@@ -108,6 +108,22 @@
     </div>
   </div>
 
+  <!-- General settings -->
+  <div class="fixed-stages" style="margin-bottom:20px">
+    <div class="fixed-stage-row" style="justify-content:space-between;align-items:center">
+      <div>
+        <span style="font-weight:600;font-size:13px">Fallback Claude Haiku</span>
+        <span class="fixed-desc" style="display:block;margin-top:2px">Classifie automatiquement les transactions non reconnues par les règles (étage 5)</span>
+      </div>
+      <button id="claudeToggleBtn"
+        class="active-btn {{ 'on' if use_claude_fallback else 'off' }}"
+        style="font-size:13px;padding:4px 14px;min-width:64px"
+        onclick="toggleClaudeFallback(this)">
+        {{ 'Activé' if use_claude_fallback else 'Désactivé' }}
+      </button>
+    </div>
+  </div>
+
   <!-- Stage 0: Priority rules -->
   <div class="stage-card">
     <div class="stage-hd" onclick="toggleStage(0)">
@@ -570,6 +586,23 @@ async function restoreSnapshot(id, btn) {
 
 function closeSnapModal() { document.getElementById('snapModal').classList.add('hidden'); }
 function closeSnapOutside(e) { if (e.target.id === 'snapModal') closeSnapModal(); }
+
+// ── Claude fallback toggle ────────────────────────────────────────────────────
+async function toggleClaudeFallback(btn) {
+  const isOn = btn.classList.contains('on');
+  const newVal = isOn ? 'false' : 'true';
+  const res = await fetch('/api/app-settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: 'use_claude_fallback', value: newVal}),
+  });
+  if (res.ok) {
+    btn.classList.toggle('on', !isOn);
+    btn.classList.toggle('off', isOn);
+    btn.textContent = !isOn ? 'Activé' : 'Désactivé';
+    toast(!isOn ? 'Fallback Claude activé' : 'Fallback Claude désactivé');
+  }
+}
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(s) {

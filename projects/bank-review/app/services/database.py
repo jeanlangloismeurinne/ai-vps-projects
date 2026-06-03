@@ -251,7 +251,7 @@ async def get_session_with_transactions(session_id: int) -> tuple[dict | None, l
                bank_category, category, confidence, classification_method, precision_note
         FROM transactions
         WHERE import_session_id = $1
-        ORDER BY date_op DESC, id DESC
+        ORDER BY date_op ASC, id ASC
         """,
         session_id,
     )
@@ -495,6 +495,39 @@ async def restore_classifier_snapshot(snapshot_id: int) -> None:
                 r["stage"], r["sort_order"], r["keywords"], r["match_mode"],
                 r["category"], r.get("year_id"), r.get("source", "user"), r.get("is_active", True),
             )
+
+
+# ── History for classifier ────────────────────────────────────────────────────
+
+# ── App settings ─────────────────────────────────────────────────────────────
+
+async def create_app_settings_table():
+    pool = await get_pool()
+    await pool.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+
+
+async def get_app_setting(key: str, default: str = "") -> str:
+    pool = await get_pool()
+    row = await pool.fetchrow("SELECT value FROM app_settings WHERE key = $1", key)
+    return row["value"] if row else default
+
+
+async def set_app_setting(key: str, value: str):
+    pool = await get_pool()
+    await pool.execute(
+        """
+        INSERT INTO app_settings (key, value) VALUES ($1, $2)
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        """,
+        key, value,
+    )
 
 
 # ── History for classifier ────────────────────────────────────────────────────

@@ -13,7 +13,7 @@ from typing import Optional
 from app.services.classifier import (
     TransactionClassifier, extract_real_date, clean_label_for_claude,
 )
-from app.services.database import get_existing_dedup_keys, get_classified_history, get_classifier_rules_all
+from app.services.database import get_existing_dedup_keys, get_classified_history, get_classifier_rules_all, get_app_setting
 from app.services.deduplicator import normalize_amount
 
 USER_CATEGORIES = [
@@ -137,18 +137,25 @@ async def run_import_pipeline(
 
     # Claude batch for pending rows
     if pending_indices:
-        pending_rows = [
-            {
-                "label":    results[j]["label"],
-                "bank_cat": results[j]["bank_category"],
-            }
-            for j in pending_indices
-        ]
-        claude_results = await classifier.classify_batch_with_claude(pending_rows, USER_CATEGORIES)
-        for j, cr in zip(pending_indices, claude_results):
-            results[j]["category"] = cr.category
-            results[j]["confidence"] = cr.confidence
-            results[j]["classification_method"] = cr.method
+        use_claude = (await get_app_setting("use_claude_fallback", "true")) == "true"
+        if use_claude:
+            pending_rows = [
+                {
+                    "label":    results[j]["label"],
+                    "bank_cat": results[j]["bank_category"],
+                }
+                for j in pending_indices
+            ]
+            claude_results = await classifier.classify_batch_with_claude(pending_rows, USER_CATEGORIES)
+            for j, cr in zip(pending_indices, claude_results):
+                results[j]["category"] = cr.category
+                results[j]["confidence"] = cr.confidence
+                results[j]["classification_method"] = cr.method
+        else:
+            for j in pending_indices:
+                results[j]["category"] = "Non catégorisé"
+                results[j]["confidence"] = 0
+                results[j]["classification_method"] = "disabled"
 
-    results.sort(key=lambda r: str(r["date_op"] or ""), reverse=True)
+    results.sort(key=lambda r: str(r["date_op"] or ""), reverse=False)
     return results

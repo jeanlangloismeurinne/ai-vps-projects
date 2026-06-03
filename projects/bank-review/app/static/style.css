@@ -415,6 +415,25 @@ tr.edited .cat-select { border-color:var(--accent); }
   white-space: nowrap;
 }
 .budget-table thead th.col-cat { text-align: left; }
+
+/* Sticky first two columns */
+.budget-table .col-cat,
+.budget-table .col-budget {
+  position: sticky;
+  z-index: 1;
+}
+.budget-table .col-cat   { left: 0; }
+.budget-table .col-budget { left: 160px; }
+.budget-table thead th.col-cat,
+.budget-table thead th.col-budget { background: var(--surface2); z-index: 2; }
+.budget-table .group-header td.col-cat,
+.budget-table .group-header td.col-budget { background: var(--surface2); }
+.budget-table .cat-row td.col-cat,
+.budget-table .cat-row td.col-budget,
+.budget-table .group-spacer td.col-cat,
+.budget-table .group-spacer td.col-budget { background: var(--bg); }
+.budget-table .cat-row:hover td.col-cat,
+.budget-table .cat-row:hover td.col-budget { background: rgba(79,126,248,0.04); }
 .th-sub { font-weight: 400; font-size: 10px; }
 
 /* Column widths */

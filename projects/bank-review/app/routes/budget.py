@@ -22,6 +22,7 @@ from app.services.database import (
     apply_classifier_rule_to_year, check_rule_conflict_new,
     get_classifier_snapshots, create_classifier_snapshot,
     restore_classifier_snapshot,
+    get_app_setting, set_app_setting,
 )
 
 router = APIRouter()
@@ -217,11 +218,14 @@ async def budget_settings(request: Request):
         categories = sorted([l["category"] for l in lines])
         current_year_id = current_year["id"]
 
+    use_claude_fallback = (await get_app_setting("use_claude_fallback", "true")) == "true"
+
     return templates.TemplateResponse(request, "settings.html", {
         "rules": rules,
         "categories": categories,
         "snapshots": snapshots,
         "current_year_id": current_year_id,
+        "use_claude_fallback": use_claude_fallback,
     })
 
 
@@ -283,6 +287,19 @@ async def api_recategorize(request: Request, tx_id: int, payload: RecategorizePa
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     await recategorize_transaction(tx_id, payload.category)
+    return {"ok": True}
+
+
+class AppSettingPayload(BaseModel):
+    key: str
+    value: str
+
+
+@router.post("/api/app-settings")
+async def api_set_app_setting(request: Request, payload: AppSettingPayload):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    await set_app_setting(payload.key, payload.value)
     return {"ok": True}
 
 
