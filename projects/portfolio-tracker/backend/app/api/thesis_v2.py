@@ -56,6 +56,18 @@ class ValidateThesisBody(BaseModel):
     calendar_events: Optional[List[CalendarEventInput]] = None
 
 
+class ImportLegacyBody(BaseModel):
+    brief_json: dict
+    conviction_score: int
+    recommendation: str  # PROCEED | MONITOR | PASS
+    thesis_json: dict
+    one_liner: Optional[str] = None
+    shares: float
+    purchase_price: float
+    purchase_date: str  # ISO date
+    calendar_events: Optional[List[CalendarEventInput]] = None
+
+
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
 import math as _math
@@ -737,6 +749,127 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
 
     return {
         "thesis_id": thesis_id,
+        "status": "active",
+        "position": _serialize(position_row),
+        "calendar_events_created": events_created,
+    }
+
+
+@router.post("/tickers/{ticker_id}/import-legacy", status_code=201)
+async def import_legacy_position(ticker_id: str, data: ImportLegacyBody):
+    """
+    Onboarding d'une position legacy (achetée avant le process V1).
+    Crée brief + thèse + position + calendrier en une seule opération atomique.
+    """
+    from datetime import date as _date
+
+    thesis_json = _normalize_thesis_json(data.thesis_json)
+    one_liner = data.one_liner or thesis_json.get("one_liner") or thesis_json.get("thesis_one_liner")
+
+    # Calendar : données explicites ou extraites du thesis_json
+    calendar_events_input = data.calendar_events or []
+    if not calendar_events_input:
+        for ev in thesis_json.get("calendar_events_suggested", []):
+            if not ev.get("scheduled_date"):
+                continue
+            calendar_events_input.append(CalendarEventInput(
+                event_type=ev.get("event_type", "conviction_review"),
+                label=ev.get("label", ""),
+                scheduled_date=ev["scheduled_date"],
+                peer_ticker=ev.get("peer_ticker"),
+                monitoring_mode=ev.get("monitoring_mode", 2),
+                source="manual",
+                pending_validation=False,
+            ))
+
+    async with get_db_session() as db:
+        t = await db.fetchrow("SELECT id FROM tickers WHERE id=$1", ticker_id)
+        if not t:
+            raise HTTPException(404, f"Ticker '{ticker_id}' introuvable — crée-le d'abord via POST /tickers")
+
+        brief_row = await db.fetchrow(
+            """
+            INSERT INTO opportunity_briefs
+                (ticker_id, source, brief_json, conviction_score, recommendation, status)
+            VALUES ($1, 'legacy_import', $2, $3, $4, 'validated')
+            RETURNING *
+            """,
+            ticker_id, data.brief_json, data.conviction_score, data.recommendation,
+        )
+        brief_id = brief_row["id"]
+
+        thesis_row = await db.fetchrow(
+            """
+            INSERT INTO theses
+                (ticker_id, opportunity_id, status, thesis_json, one_liner, validated_at)
+            VALUES ($1, $2, 'active', $3, $4, NOW())
+            RETURNING *
+            """,
+            ticker_id, brief_id, thesis_json, one_liner,
+        )
+        thesis_id = thesis_row["id"]
+
+        await db.execute(
+            "UPDATE tickers SET status='portfolio', updated_at=NOW() WHERE id=$1",
+            ticker_id,
+        )
+
+        purchase_date_obj = _date.fromisoformat(data.purchase_date)
+        position_row = await db.fetchrow(
+            """
+            INSERT INTO portfolio_positions
+                (ticker_id, shares, purchase_price, purchase_date, thesis_id, status)
+            VALUES ($1, $2, $3, $4, $5, 'open')
+            RETURNING *
+            """,
+            ticker_id, data.shares, data.purchase_price, purchase_date_obj, thesis_id,
+        )
+
+        await db.execute(
+            """
+            INSERT INTO cash_movements (type, amount, label, ticker_id)
+            VALUES ('buy', $1, $2, $3)
+            """,
+            data.shares * data.purchase_price,
+            f"Achat legacy {ticker_id} — {data.shares} titres @ {data.purchase_price}",
+            ticker_id,
+        )
+
+        events_created = []
+        for ev in calendar_events_input:
+            if not ev.scheduled_date:
+                continue
+            try:
+                ev_date = _date.fromisoformat(ev.scheduled_date)
+            except ValueError:
+                continue
+            ev_row = await db.fetchrow(
+                """
+                INSERT INTO calendar_events
+                    (thesis_id, ticker_id, event_type, label, scheduled_date,
+                     peer_ticker, monitoring_mode, source, pending_validation)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                RETURNING *
+                """,
+                thesis_id, ticker_id, ev.event_type, ev.label, ev_date,
+                ev.peer_ticker, ev.monitoring_mode, ev.source, ev.pending_validation,
+            )
+            events_created.append(_serialize(ev_row))
+
+    try:
+        from app.notifications.slack_webhook import SlackWebhook
+        await SlackWebhook().send_thesis_validated(
+            ticker=ticker_id,
+            one_liner=one_liner or "",
+            shares=data.shares,
+            price=data.purchase_price,
+        )
+    except Exception as e:
+        logger.warning(f"Slack notification failed: {e}")
+
+    return {
+        "thesis_id": thesis_id,
+        "brief_id": brief_id,
         "status": "active",
         "position": _serialize(position_row),
         "calendar_events_created": events_created,
