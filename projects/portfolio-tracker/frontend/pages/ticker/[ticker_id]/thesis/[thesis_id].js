@@ -42,16 +42,26 @@ function normalizeAgentThesis(raw) {
   const basePrice = typeof rawStep4 === 'object' && !Array.isArray(rawStep4) ? (rawStep4.base_price || 0) : 0
   if (rawStep4.probability_weighted_target) out.probability_weighted_target = rawStep4.probability_weighted_target
 
+  const defaultHorizon = (typeof rawStep4 === 'object' && !Array.isArray(rawStep4) && rawStep4.thesis_horizon_years)
+    || meta.thesis_horizon_years || 5
+
   const scenarios = {}
   for (const s of scenariosList) {
     const name = (s.scenario_name || '').toLowerCase()
     if (!name) continue
     const midpoint = (s.price_target_5yr || {}).midpoint || 0
-    let cagr = ''
+    const horizon = s.horizon_years || defaultHorizon
+    let cagr = '', cagr_net = ''
     if (basePrice && midpoint) {
-      try { cagr = Math.round((Math.pow(midpoint / basePrice, 0.2) - 1) * 1000) / 10 } catch {}
+      try {
+        cagr = Math.round((Math.pow(midpoint / basePrice, 1 / horizon) - 1) * 1000) / 10
+        const totalReturn = (midpoint / basePrice) - 1
+        const afterTaxTerminal = 1 + 0.70 * totalReturn
+        if (afterTaxTerminal > 0)
+          cagr_net = Math.round((Math.pow(afterTaxTerminal, 1 / horizon) - 1) * 1000) / 10
+      } catch {}
     }
-    scenarios[name] = { probability: s.probability_pct || 0, cagr, description: s.hypothesis_directrice || s.description || '' }
+    scenarios[name] = { probability: s.probability_pct || 0, cagr, cagr_net, horizon_years: horizon, description: s.hypothesis_directrice || s.description || '' }
   }
   if (Object.keys(scenarios).length) out.scenarios = scenarios
 

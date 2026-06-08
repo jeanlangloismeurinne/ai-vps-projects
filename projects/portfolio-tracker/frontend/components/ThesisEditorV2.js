@@ -129,7 +129,7 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
       {/* ── Scénarios ── */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Scénarios 5 ans</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Scénarios</h3>
           {prob_weighted_target != null && (
             <span className="text-xs text-gray-500">
               Cible pondérée : <span className="text-indigo-400 font-medium">${prob_weighted_target}</span>
@@ -137,44 +137,78 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
           )}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          {['bear', 'central', 'bull'].map(s => (
-            <div key={s} className={`rounded-lg p-3 border ${
-              s === 'bear'    ? 'border-red-800 bg-red-950/30' :
-              s === 'bull'    ? 'border-emerald-800 bg-emerald-950/30' :
-                                'border-indigo-800 bg-indigo-950/30'
-            }`}>
-              <p className={`text-xs font-semibold uppercase mb-2 ${
-                s === 'bear' ? 'text-red-400' : s === 'bull' ? 'text-emerald-400' : 'text-indigo-400'
-              }`}>{s}</p>
-              <div className="space-y-1.5">
-                <div>
-                  <label className="text-xs text-gray-600">Proba. (%)</label>
-                  <input type="number" min="0" max="100"
-                    value={scenarios[s]?.probability ?? ''}
-                    onChange={e => update('scenarios', { ...scenarios, [s]: { ...scenarios[s], probability: parseInt(e.target.value) } })}
-                    className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none mt-0.5"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">CAGR (%/an)</label>
-                  <input
-                    value={scenarios[s]?.cagr ?? ''}
-                    onChange={e => update('scenarios', { ...scenarios, [s]: { ...scenarios[s], cagr: e.target.value } })}
-                    className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none mt-0.5"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">Description</label>
-                  <textarea
-                    value={scenarios[s]?.description ?? ''}
-                    onChange={e => update('scenarios', { ...scenarios, [s]: { ...scenarios[s], description: e.target.value } })}
-                    rows={3}
-                    className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none resize-none mt-0.5"
-                  />
+          {['bear', 'central', 'bull'].map(s => {
+            const sc = scenarios[s] || {}
+            const cagrBrut = parseFloat(sc.cagr)
+            const horizonYears = parseInt(sc.horizon_years) || 5
+            let cagrNet = sc.cagr_net
+            if (cagrNet === undefined || cagrNet === '') {
+              if (!isNaN(cagrBrut) && horizonYears > 0) {
+                try {
+                  const r = cagrBrut / 100
+                  const totalReturn = Math.pow(1 + r, horizonYears) - 1
+                  const afterTaxTerminal = 1 + 0.70 * totalReturn
+                  cagrNet = afterTaxTerminal > 0
+                    ? Math.round((Math.pow(afterTaxTerminal, 1 / horizonYears) - 1) * 1000) / 10
+                    : ''
+                } catch { cagrNet = '' }
+              } else { cagrNet = '' }
+            }
+            return (
+              <div key={s} className={`rounded-lg p-3 border ${
+                s === 'bear'    ? 'border-red-800 bg-red-950/30' :
+                s === 'bull'    ? 'border-emerald-800 bg-emerald-950/30' :
+                                  'border-indigo-800 bg-indigo-950/30'
+              }`}>
+                <p className={`text-xs font-semibold uppercase mb-2 ${
+                  s === 'bear' ? 'text-red-400' : s === 'bull' ? 'text-emerald-400' : 'text-indigo-400'
+                }`}>{s}</p>
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs text-gray-600">Horizon (ans)</label>
+                    <input type="number" min="1" max="30"
+                      value={sc.horizon_years ?? ''}
+                      onChange={e => update('scenarios', { ...scenarios, [s]: { ...sc, horizon_years: parseInt(e.target.value) || '', cagr_net: '' } })}
+                      className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Proba. (%)</label>
+                    <input type="number" min="0" max="100"
+                      value={sc.probability ?? ''}
+                      onChange={e => update('scenarios', { ...scenarios, [s]: { ...sc, probability: parseInt(e.target.value) } })}
+                      className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">CAGR brut (%/an)</label>
+                    <input
+                      value={sc.cagr ?? ''}
+                      onChange={e => update('scenarios', { ...scenarios, [s]: { ...sc, cagr: e.target.value, cagr_net: '' } })}
+                      className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none mt-0.5"
+                    />
+                  </div>
+                  {cagrNet !== '' && cagrNet != null && (
+                    <div className="flex items-center justify-between bg-gray-900/60 rounded px-2 py-1">
+                      <span className="text-xs text-gray-500">CAGR net (PFU 30%)</span>
+                      <span className={`text-xs font-semibold ${
+                        s === 'bear' ? 'text-red-400' : s === 'bull' ? 'text-emerald-400' : 'text-indigo-400'
+                      }`}>{cagrNet > 0 ? '+' : ''}{cagrNet}%</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs text-gray-600">Description</label>
+                    <textarea
+                      value={sc.description ?? ''}
+                      onChange={e => update('scenarios', { ...scenarios, [s]: { ...sc, description: e.target.value } })}
+                      rows={3}
+                      className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none resize-none mt-0.5"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 

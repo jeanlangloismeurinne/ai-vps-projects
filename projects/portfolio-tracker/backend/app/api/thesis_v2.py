@@ -149,6 +149,12 @@ def _normalize_thesis_json(parsed: dict) -> dict:
     if isinstance(raw_step4, dict) and raw_step4.get("probability_weighted_target"):
         out["probability_weighted_target"] = raw_step4["probability_weighted_target"]
 
+    default_horizon = (
+        parsed.get("thesis_metadata", {}).get("thesis_horizon_years")
+        or raw_step4.get("thesis_horizon_years")
+        if isinstance(raw_step4, dict) else None
+    ) or 5
+
     scenarios = {}
     for s in scenarios_list:
         name = (s.get("scenario_name") or "").lower()
@@ -157,13 +163,20 @@ def _normalize_thesis_json(parsed: dict) -> dict:
         midpoint = (s.get("price_target_5yr") or {}).get("midpoint", 0)
         prob = s.get("probability_pct", 0)
         desc = s.get("hypothesis_directrice") or s.get("description", "")
+        horizon = s.get("horizon_years") or default_horizon
         cagr = ""
+        cagr_net = ""
         if base_price and midpoint:
             try:
-                cagr = round((_math.pow(midpoint / base_price, 0.2) - 1) * 100, 1)
+                cagr = round((_math.pow(midpoint / base_price, 1 / horizon) - 1) * 100, 1)
+                # CAGR net après flat tax 30% PFU (formule exacte sur le gain total)
+                total_return = (midpoint / base_price) - 1
+                after_tax_terminal = 1 + 0.70 * total_return
+                if after_tax_terminal > 0:
+                    cagr_net = round((_math.pow(after_tax_terminal, 1 / horizon) - 1) * 100, 1)
             except Exception:
                 pass
-        scenarios[name] = {"probability": prob, "cagr": cagr, "description": desc}
+        scenarios[name] = {"probability": prob, "cagr": cagr, "cagr_net": cagr_net, "horizon_years": horizon, "description": desc}
     if scenarios:
         out["scenarios"] = scenarios
 
