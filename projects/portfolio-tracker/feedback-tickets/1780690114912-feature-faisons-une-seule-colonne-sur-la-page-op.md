@@ -1,7 +1,8 @@
 ---
 id: 1780690114912
 type: feature
-status: open
+status: closed
+closed_at: 2026-06-08T19:09:06.000000
 date: 2026-06-05T20:08:34.912381
 project: portfolio-tracker
 url: https://portfolio.jlmvpscode.duckdns.org/ticker/NVDA/opportunity/10

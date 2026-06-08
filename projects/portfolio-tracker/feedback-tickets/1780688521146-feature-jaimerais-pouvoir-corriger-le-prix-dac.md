@@ -1,7 +1,8 @@
 ---
 id: 1780688521146
 type: feature
-status: open
+status: closed
+closed_at: 2026-06-08T19:09:06.000000
 date: 2026-06-05T19:42:01.146727
 project: portfolio-tracker
 url: https://portfolio.jlmvpscode.duckdns.org/portfolio
