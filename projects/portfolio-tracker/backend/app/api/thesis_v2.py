@@ -115,7 +115,7 @@ def _normalize_thesis_json(parsed: dict) -> dict:
             out["ideal_investor_profile"] = meta["ideal_investor_profile"]
 
     # ── Scénarios ──────────────────────────────────────────────────────────────
-    raw_step4 = parsed.get("step_4_scenarios_5yr", {})
+    raw_step4 = parsed.get("step_4_scenarios_lt") or parsed.get("step_4_scenarios_5yr", {})
     scenarios_list = (
         raw_step4.get("scenarios", []) if isinstance(raw_step4, dict)
         else (raw_step4 if isinstance(raw_step4, list) else [])

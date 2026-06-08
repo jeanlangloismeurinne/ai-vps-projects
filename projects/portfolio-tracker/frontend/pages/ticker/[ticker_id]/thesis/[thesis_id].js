@@ -36,7 +36,7 @@ function normalizeAgentThesis(raw) {
   if (meta.ideal_investor_profile) out.ideal_investor_profile = meta.ideal_investor_profile
 
   // ── Scénarios ─────────────────────────────────────────────────────────────
-  const rawStep4 = raw.step_4_scenarios_5yr || {}
+  const rawStep4 = raw.step_4_scenarios_lt || raw.step_4_scenarios_5yr || {}
   const scenariosList = Array.isArray(rawStep4.scenarios) ? rawStep4.scenarios
     : Array.isArray(rawStep4) ? rawStep4 : []
   const basePrice = typeof rawStep4 === 'object' && !Array.isArray(rawStep4) ? (rawStep4.base_price || 0) : 0
