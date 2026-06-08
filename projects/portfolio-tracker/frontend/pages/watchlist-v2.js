@@ -5,6 +5,13 @@ import PriceChart from '../components/PriceChart'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
+const CURRENCY_SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', HKD: 'HK$', CHF: 'CHF ' }
+const fmtPrice = (amount, currency) => {
+  if (amount == null) return '—'
+  const sym = CURRENCY_SYMBOLS[currency] || (currency ? `${currency} ` : '')
+  return `${sym}${Number(amount).toFixed(2)}`
+}
+
 function AlertModal({ ticker, onClose, onSaved }) {
   const [form, setForm] = useState({ price: '', direction: 'below', label: '' })
   const [loading, setLoading] = useState(false)
@@ -87,16 +94,22 @@ function AlertModal({ ticker, onClose, onSaved }) {
   )
 }
 
+const PERIODS = ['1Y', '5Y', 'MAX']
+
 function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
   const [priceHistory, setPriceHistory] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [showAlertModal, setShowAlertModal] = useState(false)
+  const [period, setPeriod] = useState('1Y')
 
   useEffect(() => {
-    fetch(`${API}/tickers/${ticker.id}/price-history?period=1mo`)
+    fetch(`${API}/tickers/${ticker.id}/price-history?period=${period}`)
       .then(r => r.json())
-      .then(data => setPriceHistory(Array.isArray(data) ? data : data.prices || []))
+      .then(data => setPriceHistory(Array.isArray(data) ? data : data.data || []))
       .catch(() => {})
+  }, [ticker.id, period])
+
+  useEffect(() => {
     fetch(`${API}/tickers/${ticker.id}/metrics`)
       .then(r => r.json())
       .then(setMetrics)
@@ -117,7 +130,7 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
         </div>
         <div className="text-right">
           <p className="text-white font-semibold">
-            {currentPrice != null ? `€${Number(currentPrice).toFixed(2)}` : '—'}
+            {fmtPrice(currentPrice, metrics?.currency)}
           </p>
           {priceChange != null && (
             <p className={`text-xs font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -127,9 +140,21 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
         </div>
       </div>
 
-      {/* Sparkline */}
-      <div className="h-16 -mx-1">
-        <PriceChart data={priceHistory} height={64} color="auto" />
+      {/* Chart avec sélecteur de période */}
+      <div>
+        <div className="flex gap-1.5 mb-1.5">
+          {PERIODS.map(p => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                period === p ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
+              }`}>
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="-mx-1">
+          <PriceChart data={priceHistory} height={100} color="auto" showAxes showDates />
+        </div>
       </div>
 
       {/* Alerts */}

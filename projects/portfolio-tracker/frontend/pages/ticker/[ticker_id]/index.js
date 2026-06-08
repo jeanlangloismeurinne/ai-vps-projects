@@ -21,6 +21,13 @@ const HYPOTHESIS_STATUS = {
 
 const PERIODS = ['1Y', '5Y', 'MAX']
 
+const CURRENCY_SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', HKD: 'HK$', CHF: 'CHF ' }
+const fmtPrice = (amount, currency) => {
+  if (amount == null) return '—'
+  const sym = CURRENCY_SYMBOLS[currency] || (currency ? `${currency} ` : '')
+  return `${sym}${Number(amount).toFixed(2)}`
+}
+
 function MonitoringModal({ tickerId, onClose, onCreated }) {
   const router = useRouter()
   const [form, setForm] = useState({ label: '', mode: 2 })
@@ -190,7 +197,7 @@ export default function TickerPage() {
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-white">
-              {currentPrice != null ? `€${Number(currentPrice).toFixed(2)}` : '—'}
+              {fmtPrice(currentPrice, ticker.currency || metrics?.currency)}
             </p>
             {priceChange != null && (
               <p className={`text-sm font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

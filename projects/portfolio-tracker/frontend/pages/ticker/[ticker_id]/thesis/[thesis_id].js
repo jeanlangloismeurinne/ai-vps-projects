@@ -182,6 +182,7 @@ export default function ThesisPage() {
   const [calendarEvents, setCalendarEvents] = useState([])
   const [cashAvailable, setCashAvailable] = useState(null)
   const [currentPrice, setCurrentPrice] = useState(null)
+  const [chatOpen, setChatOpen] = useState(false)
 
   // Validation form
   const [valForm, setValForm] = useState({ shares: '', buy_price: '', date: '' })
@@ -498,83 +499,86 @@ export default function ThesisPage() {
         {error && <span className="ml-2 text-xs text-red-400">{error}</span>}
       </div>
 
-      {/* Main layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        {/* Col 1 — Chat — fixed height, sticky so it stays visible while scrolling thesis */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col sticky top-4" style={{ height: '75vh' }}>
-          <div className="px-4 py-3 border-b border-gray-800">
-            <h2 className="font-semibold text-white text-sm">Chat — Thesis Agent</h2>
-          </div>
-          {!agentSynced && <AgentSyncOverlay agentName="thesis-agent" />}
-          {messages.length === 0 && !isLoading && thesis?.id && (
-            <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
-              <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
-              <button
-                onClick={sendHandoff}
+      {/* 1. Chat — dépliable, replié par défaut */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <button
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors rounded-xl"
+          onClick={() => setChatOpen(o => !o)}
+        >
+          <h2 className="font-semibold text-white text-sm">Chat — Thesis Agent</h2>
+          <span className="text-gray-500 text-xs">{chatOpen ? '▲ Replier' : '▼ Déplier'}</span>
+        </button>
+        {chatOpen && (
+          <div className="relative flex flex-col border-t border-gray-800" style={{ height: '60vh' }}>
+            {!agentSynced && <AgentSyncOverlay agentName="thesis-agent" />}
+            {messages.length === 0 && !isLoading && thesis?.id && (
+              <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
+                <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
+                <button
+                  onClick={sendHandoff}
+                  disabled={!agentSynced}
+                  className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
+                >
+                  Lancer l&apos;analyse
+                </button>
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <AgentChat
+                messages={messages}
+                onSend={sendMessage}
+                isLoading={isLoading}
                 disabled={!agentSynced}
-                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
-              >
-                Lancer l&apos;analyse
-              </button>
+              />
             </div>
-          )}
-          <div className="flex-1 min-h-0">
-            <AgentChat
-              messages={messages}
-              onSend={sendMessage}
-              isLoading={isLoading}
-              disabled={!agentSynced}
-            />
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Col 2 — Thesis Editor — expands naturally, not capped to 75vh */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl" style={{ minHeight: '75vh' }}>
-          <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="font-semibold text-white text-sm">Thèse en cours</h2>
-            <div className="flex items-center gap-2">
-              <input
-                ref={jsonImportRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImportJson}
-              />
-              <button
-                onClick={() => jsonImportRef.current?.click()}
-                disabled={!thesis?.id}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
-              >
-                Importer JSON
-              </button>
-              <button
-                onClick={refreshThesis}
-                disabled={refreshing || !thesis?.id}
-                className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
-              >
-                {refreshing
-                  ? STREAMING
-                    ? `⟳ Génération… ${refreshChars > 0 ? `(${refreshChars} car.)` : ''}`
-                    : '⟳ Actualisation…'
-                  : 'Actualiser la thèse →'}
-              </button>
-            </div>
-          </div>
-          {refreshing && STREAMING && (
-            <div className="h-1 bg-gray-800 overflow-hidden rounded-b">
-              <div
-                className="h-full bg-indigo-500 transition-all duration-500"
-                style={{ width: `${Math.min(95, (refreshChars / 4000) * 100)}%` }}
-              />
-            </div>
-          )}
-          <div>
-            <ThesisEditorV2
-              thesisJson={thesis?.thesis_json}
-              onChange={handleThesisChange}
+      {/* 2. Thesis Editor */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h2 className="font-semibold text-white text-sm">Thèse en cours</h2>
+          <div className="flex items-center gap-2">
+            <input
+              ref={jsonImportRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportJson}
             />
+            <button
+              onClick={() => jsonImportRef.current?.click()}
+              disabled={!thesis?.id}
+              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
+            >
+              Importer JSON
+            </button>
+            <button
+              onClick={refreshThesis}
+              disabled={refreshing || !thesis?.id}
+              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
+            >
+              {refreshing
+                ? STREAMING
+                  ? `⟳ Génération… ${refreshChars > 0 ? `(${refreshChars} car.)` : ''}`
+                  : '⟳ Actualisation…'
+                : 'Actualiser la thèse →'}
+            </button>
           </div>
         </div>
+        {refreshing && STREAMING && (
+          <div className="h-1 bg-gray-800 overflow-hidden rounded-b">
+            <div
+              className="h-full bg-indigo-500 transition-all duration-500"
+              style={{ width: `${Math.min(95, (refreshChars / 4000) * 100)}%` }}
+            />
+          </div>
+        )}
+        <ThesisEditorV2
+          thesisJson={thesis?.thesis_json}
+          onChange={handleThesisChange}
+        />
       </div>
 
       {/* Calendar de monitoring */}
@@ -608,8 +612,8 @@ export default function ThesisPage() {
           </div>
           <div>
             <label className="text-xs text-gray-400 block mb-1">
-              Prix d&apos;achat (€)
-              {currentPrice && <span className="text-gray-600 ml-1">— actuel : €{currentPrice.toFixed(2)}</span>}
+              Prix d&apos;achat (€ — converti dans la devise du ticker à la clôture du jour)
+              {currentPrice && <span className="text-gray-600 ml-1">— actuel : {currentPrice.toFixed(2)}</span>}
             </label>
             <input
               type="number" step="0.01"

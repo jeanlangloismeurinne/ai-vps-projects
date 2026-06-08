@@ -4,6 +4,13 @@ import { useRouter } from 'next/router'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
+const CURRENCY_SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', HKD: 'HK$', CHF: 'CHF ' }
+const fmtCurrency = (amount, currency) => {
+  if (amount == null) return '—'
+  const sym = CURRENCY_SYMBOLS[currency] || (currency ? `${currency} ` : '€')
+  return `${sym}${Number(amount).toFixed(2)}`
+}
+
 const THESIS_STATUS_STYLES = {
   active: { cls: 'bg-emerald-900/50 text-emerald-300 border border-emerald-700', label: 'Active' },
   under_review: { cls: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700', label: 'Révision' },
@@ -22,6 +29,83 @@ function PnlCell({ pct }) {
     <span className={`font-medium ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
       {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
     </span>
+  )
+}
+
+function EditPositionModal({ position, onClose, onSaved }) {
+  const currency = position.purchase_currency || 'EUR'
+  const [price, setPrice] = useState(String(Number(position.purchase_price || 0).toFixed(4)))
+  const [shares, setShares] = useState(String(Number(position.shares || 0)))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async () => {
+    const payload = {}
+    const p = parseFloat(price)
+    const s = parseFloat(shares)
+    if (isNaN(p) || p <= 0) { setError('Prix invalide'); return }
+    if (isNaN(s) || s <= 0) { setError('Quantité invalide'); return }
+    payload.purchase_price = p
+    payload.shares = s
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/portfolio-v2/positions/${position.id}/edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        throw new Error(e.detail || `Erreur ${res.status}`)
+      }
+      onSaved()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={() => !loading && onClose()} />
+      <div className="relative bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+          <h3 className="font-semibold text-white">Modifier — {position.ticker_id}</h3>
+          <button onClick={() => !loading && onClose()} className="text-gray-400 hover:text-white text-xl">×</button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat ({currency})</label>
+            <input
+              type="number" step="0.0001" min="0"
+              value={price}
+              onChange={e => setPrice(e.target.value)}
+              autoFocus
+              className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Quantité (actions)</label>
+            <input
+              type="number" step="0.0001" min="0"
+              value={shares}
+              onChange={e => setShares(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          {error && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded px-3 py-2">{error}</p>}
+        </div>
+        <div className="px-5 py-4 border-t border-gray-700 flex gap-3">
+          <button onClick={submit} disabled={loading}
+            className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded font-medium">
+            {loading ? 'Sauvegarde…' : 'Enregistrer'}
+          </button>
+          <button onClick={() => !loading && onClose()} className="px-4 text-gray-400 hover:text-gray-200 text-sm">Annuler</button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -331,6 +415,7 @@ export default function PortfolioV1() {
   const [cashModal, setCashModal] = useState(null) // 'deposit' | 'withdraw'
   const [addTicker, setAddTicker] = useState(false)
   const [allocateThesis, setAllocateThesis] = useState(null)
+  const [editPosition, setEditPosition] = useState(null)
   const [error, setError] = useState('')
 
   const load = async () => {
@@ -463,6 +548,7 @@ export default function PortfolioV1() {
                   <th className="px-4 py-3 text-right">Perf. %</th>
                   <th className="px-4 py-3 text-right">Perf. ann.</th>
                   <th className="px-4 py-3">Statut thèse</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -478,10 +564,10 @@ export default function PortfolioV1() {
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">{p.shares ?? '—'}</td>
                       <td className="px-4 py-3 text-right text-gray-300">
-                        {p.purchase_price != null ? `€${Number(p.purchase_price).toFixed(2)}` : '—'}
+                        {fmtCurrency(p.purchase_price, p.purchase_currency || 'EUR')}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">
-                        {p.current_price != null ? `€${Number(p.current_price).toFixed(2)}` : '—'}
+                        {fmtCurrency(p.current_price, p.currency)}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">
                         {p.market_value != null ? fmt(p.market_value) : '—'}
@@ -491,10 +577,19 @@ export default function PortfolioV1() {
                       <td className="px-4 py-3">
                         <ThesisStatusBadge status={p.thesis_status} />
                       </td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setEditPosition(p)}
+                          className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+                          title="Modifier prix / quantité"
+                        >
+                          ✎
+                        </button>
+                      </td>
                     </tr>
                     {p.thesis_status === 'under_review' && (
                       <tr className="bg-orange-950/20">
-                        <td colSpan={8} className="px-4 py-2">
+                        <td colSpan={9} className="px-4 py-2">
                           <div className="flex items-center gap-3 text-sm">
                             <span className="text-orange-300 font-medium">Décision requise</span>
                             {p.thesis_id && (
@@ -588,6 +683,13 @@ export default function PortfolioV1() {
         />
       )}
       {addTicker && <AddTickerModal onClose={() => setAddTicker(false)} onCreated={() => setAddTicker(false)} />}
+      {editPosition && (
+        <EditPositionModal
+          position={editPosition}
+          onClose={() => setEditPosition(null)}
+          onSaved={() => { setEditPosition(null); load() }}
+        />
+      )}
       {allocateThesis && (
         <AllocateModal
           thesis={allocateThesis}

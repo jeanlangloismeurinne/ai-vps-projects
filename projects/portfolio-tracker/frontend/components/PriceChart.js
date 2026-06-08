@@ -107,24 +107,6 @@ export default function PriceChart({ data = [], height = 120, color = '#6366f1',
             />
           </>
         )}
-        {showAxes && (
-          <>
-            <text x="4" y="12" fill="#6b7280" fontSize="9">{maxY.toFixed(0)}</text>
-            <text x="4" y={height - PAD_BOTTOM - 2} fill="#6b7280" fontSize="9">{minY.toFixed(0)}</text>
-          </>
-        )}
-        {showDates && dateLabels.map((d, i) => (
-          <text
-            key={i}
-            x={i === 0 ? d.x + 2 : i === dateLabels.length - 1 ? d.x - 2 : d.x}
-            y={height - 4}
-            fill="#4b5563"
-            fontSize="9"
-            textAnchor={i === 0 ? 'start' : i === dateLabels.length - 1 ? 'end' : 'middle'}
-          >
-            {d.label}
-          </text>
-        ))}
         {hover && (
           <>
             <line
@@ -149,6 +131,36 @@ export default function PriceChart({ data = [], height = 120, color = '#6366f1',
           </div>
         </div>
       )}
+      {/* Y-axis labels — HTML pour éviter la déformation SVG sur mobile */}
+      {showAxes && pts.length >= 2 && (
+        <>
+          <div className="absolute left-1 text-gray-500 pointer-events-none select-none leading-none"
+               style={{ top: PAD_TOP - 10, fontSize: 9 }}>
+            {maxY.toFixed(0)}
+          </div>
+          <div className="absolute left-1 text-gray-500 pointer-events-none select-none leading-none"
+               style={{ bottom: PAD_BOTTOM, fontSize: 9 }}>
+            {minY.toFixed(0)}
+          </div>
+        </>
+      )}
+
+      {/* X-axis date labels — HTML pour éviter la déformation SVG sur mobile */}
+      {showDates && dateLabels.map((d, i) => (
+        <div
+          key={i}
+          className="absolute text-gray-600 pointer-events-none select-none leading-none"
+          style={{
+            bottom: 2,
+            left: `${(d.x / W) * 100}%`,
+            fontSize: 9,
+            transform: i === 0 ? 'none' : i === dateLabels.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {d.label}
+        </div>
+      ))}
     </div>
   )
 }

@@ -111,6 +111,7 @@ export default function OpportunityPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
   const debounceRef = useRef(null)
   const jsonImportRef = useRef(null)
 
@@ -359,76 +360,74 @@ export default function OpportunityPage() {
         />
       )}
 
-      {/* Main layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Col 1 — Chat */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl relative flex flex-col" style={{ height: '75vh' }}>
-          <div className="px-4 py-3 border-b border-gray-800">
-            <h2 className="font-semibold text-white text-sm">Chat — Opportunity Agent</h2>
-          </div>
-          {!agentSynced && <AgentSyncOverlay agentName="opportunity-agent" />}
-          {messages.length === 0 && !isLoading && brief?.id && (
-            <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
-              <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
-              <button
-                onClick={() => sendInitialMessage(brief.id)}
+      {/* 1. Chat — dépliable, replié par défaut */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <button
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors rounded-xl"
+          onClick={() => setChatOpen(o => !o)}
+        >
+          <h2 className="font-semibold text-white text-sm">Chat — Opportunity Agent</h2>
+          <span className="text-gray-500 text-xs">{chatOpen ? '▲ Replier' : '▼ Déplier'}</span>
+        </button>
+        {chatOpen && (
+          <div className="relative flex flex-col border-t border-gray-800" style={{ height: '60vh' }}>
+            {!agentSynced && <AgentSyncOverlay agentName="opportunity-agent" />}
+            {messages.length === 0 && !isLoading && brief?.id && (
+              <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 border-b border-gray-800">
+                <p className="text-gray-500 text-sm text-center">L&apos;analyse n&apos;a pas encore démarré.</p>
+                <button
+                  onClick={() => sendInitialMessage(brief.id)}
+                  disabled={!agentSynced}
+                  className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
+                >
+                  Lancer l&apos;analyse
+                </button>
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <AgentChat
+                messages={messages}
+                onSend={sendMessage}
+                isLoading={isLoading}
                 disabled={!agentSynced}
-                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
-              >
-                Lancer l&apos;analyse
-              </button>
-            </div>
-          )}
-          <div className="flex-1 min-h-0">
-            <AgentChat
-              messages={messages}
-              onSend={sendMessage}
-              isLoading={isLoading}
-              disabled={!agentSynced}
-            />
-          </div>
-        </div>
-
-        {/* Center button */}
-        <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          {/* Handled inline below on small screens */}
-        </div>
-
-        {/* Col 2 — Brief Editor */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ height: '75vh' }}>
-          <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="font-semibold text-white text-sm">Investment Brief</h2>
-            <div className="flex items-center gap-2">
-              <input
-                ref={jsonImportRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImportJson}
               />
-              <button
-                onClick={() => jsonImportRef.current?.click()}
-                disabled={!brief?.id}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
-              >
-                Importer JSON
-              </button>
-              <button
-                onClick={refreshBrief}
-                disabled={refreshing || !brief?.id}
-                className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
-              >
-                {refreshing ? '⟳ Actualisation…' : 'Actualiser le brief →'}
-              </button>
             </div>
           </div>
-          <div className="flex-1 min-h-0">
-            <InvestmentBriefEditor
-              briefJson={brief?.brief_json}
-              onChange={handleBriefChange}
+        )}
+      </div>
+
+      {/* 2. Investment Brief Editor */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h2 className="font-semibold text-white text-sm">Investment Brief</h2>
+          <div className="flex items-center gap-2">
+            <input
+              ref={jsonImportRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportJson}
             />
+            <button
+              onClick={() => jsonImportRef.current?.click()}
+              disabled={!brief?.id}
+              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs rounded-lg font-medium transition-colors"
+            >
+              Importer JSON
+            </button>
+            <button
+              onClick={refreshBrief}
+              disabled={refreshing || !brief?.id}
+              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
+            >
+              {refreshing ? '⟳ Actualisation…' : 'Actualiser le brief →'}
+            </button>
           </div>
         </div>
+        <InvestmentBriefEditor
+          briefJson={brief?.brief_json}
+          onChange={handleBriefChange}
+        />
       </div>
 
       {/* Bottom banner */}

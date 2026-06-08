@@ -35,6 +35,12 @@ class PositionReduce(BaseModel):
     sell_date: Optional[str] = None  # ISO date
 
 
+class PositionEdit(BaseModel):
+    purchase_price: Optional[float] = None  # en devise native (purchase_currency)
+    shares: Optional[float] = None
+    purchase_date: Optional[str] = None  # ISO date
+
+
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
 def _serialize(row) -> dict:
@@ -150,9 +156,13 @@ async def list_positions():
     for pos in rows:
         ticker_id = pos["ticker_id"]
         current_price = None
+        ticker_currency = None
         try:
             m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            current_price = (m1.get("price") or {}).get("current_price")
+            current_price = m1.get("current_price") or m1.get("price")
+            if isinstance(current_price, dict):
+                current_price = current_price.get("current_price")
+            ticker_currency = m1.get("currency")
         except Exception:
             pass
 
@@ -164,7 +174,6 @@ async def list_positions():
         perf_annualized = None
         if current_price:
             perf_pct = round((float(current_price) / purchase_price - 1) * 100, 2)
-            # Perf annualisée (approximation simple)
             if pos["purchase_date"]:
                 days = (date.today() - pos["purchase_date"]).days
                 if days > 0:
@@ -176,6 +185,7 @@ async def list_positions():
         result.append({
             **_serialize(pos),
             "current_price": current_price,
+            "currency": ticker_currency,
             "market_value": round(market_value, 2) if market_value else None,
             "perf_pct": perf_pct,
             "perf_annualized": perf_annualized,
@@ -293,6 +303,43 @@ async def reduce_position(position_id: int, data: PositionReduce):
                 pos["ticker_id"],
             )
 
+    return _serialize(row)
+
+
+@router.patch("/positions/{position_id}/edit")
+async def edit_position(position_id: int, data: PositionEdit):
+    """Modifie le prix d'achat et/ou le volume d'une position ouverte."""
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "Aucun champ à mettre à jour")
+
+    async with get_db_session() as db:
+        pos = await db.fetchrow(
+            "SELECT * FROM portfolio_positions WHERE id=$1 AND status='open'", position_id
+        )
+        if not pos:
+            raise HTTPException(404, f"Position #{position_id} introuvable ou déjà clôturée")
+
+        set_parts = ["updated_at=NOW()"]
+        values = [position_id]
+        i = 2
+        if "purchase_price" in updates:
+            set_parts.append(f"purchase_price=${i}")
+            values.append(updates["purchase_price"])
+            i += 1
+        if "shares" in updates:
+            set_parts.append(f"shares=${i}")
+            values.append(updates["shares"])
+            i += 1
+        if "purchase_date" in updates:
+            set_parts.append(f"purchase_date=${i}")
+            values.append(date.fromisoformat(updates["purchase_date"]))
+            i += 1
+
+        row = await db.fetchrow(
+            f"UPDATE portfolio_positions SET {', '.join(set_parts)} WHERE id=$1 RETURNING *",
+            *values,
+        )
     return _serialize(row)
 
 

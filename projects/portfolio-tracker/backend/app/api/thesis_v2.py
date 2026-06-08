@@ -17,6 +17,30 @@ router = APIRouter(tags=["thesis-v1"])
 logger = logging.getLogger(__name__)
 
 
+async def _get_fx_rate(from_currency: str, to_currency: str, purchase_date: str) -> float:
+    """Taux de change historique via yfinance (cours de clôture du jour d'achat)."""
+    if from_currency == to_currency:
+        return 1.0
+    import asyncio
+    import yfinance as yf
+    from datetime import date as _date, timedelta
+
+    fx_ticker = f"{from_currency}{to_currency}=X"
+
+    def _fetch():
+        d = _date.fromisoformat(purchase_date)
+        for offset in range(5):
+            start = d - timedelta(days=offset)
+            end = start + timedelta(days=2)
+            hist = yf.Ticker(fx_ticker).history(start=start.isoformat(), end=end.isoformat())
+            if not hist.empty:
+                return float(hist["Close"].iloc[-1])
+        raise ValueError(f"Taux {fx_ticker} introuvable pour {purchase_date}")
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _fetch)
+
+
 # ─────────────────────────── Pydantic schemas ────────────────────────────────
 
 class ThesisCreate(BaseModel):
@@ -677,9 +701,42 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
     """
     from datetime import date as _date
 
+    # Détermine la devise native du ticker et convertit le prix EUR → devise native
+    ticker_currency = "EUR"
+    try:
+        from app.data_collection.data_service import DataService
+        m1 = await DataService().get_m1(data.ticker_id if hasattr(data, "ticker_id") else thesis_id, settings.FMP_API_KEY)
+        ticker_currency = m1.get("currency", "EUR") or "EUR"
+    except Exception:
+        pass
+
+    purchase_price_native = data.purchase_price
+    if ticker_currency != "EUR":
+        try:
+            fx_rate = await _get_fx_rate("EUR", ticker_currency, data.purchase_date)
+            purchase_price_native = round(data.purchase_price * fx_rate, 4)
+            logger.info(f"FX conversion EUR→{ticker_currency} sur {data.purchase_date}: rate={fx_rate:.4f}, {data.purchase_price}→{purchase_price_native}")
+        except Exception as e:
+            logger.warning(f"FX conversion échouée ({e}), prix stocké tel quel en EUR")
+            ticker_currency = "EUR"
+            purchase_price_native = data.purchase_price
+
     async with get_db_session() as db:
         thesis = await _get_thesis_or_404(db, thesis_id)
         ticker_id = thesis["ticker_id"]
+
+        # Récupère la devise via le ticker si la tentative précédente a échoué
+        if ticker_currency == "EUR":
+            try:
+                from app.data_collection.data_service import DataService
+                m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+                tc = m1.get("currency", "EUR") or "EUR"
+                if tc != "EUR":
+                    fx_rate = await _get_fx_rate("EUR", tc, data.purchase_date)
+                    purchase_price_native = round(data.purchase_price * fx_rate, 4)
+                    ticker_currency = tc
+            except Exception:
+                pass
 
         # Active la thèse
         await db.execute(
@@ -693,27 +750,27 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
             ticker_id,
         )
 
-        # Crée la position
+        # Crée la position avec le prix en devise native
         purchase_date_obj = _date.fromisoformat(data.purchase_date)
         position_row = await db.fetchrow(
             """
             INSERT INTO portfolio_positions
-                (ticker_id, shares, purchase_price, purchase_date, thesis_id, status)
-            VALUES ($1, $2, $3, $4, $5, 'open')
+                (ticker_id, shares, purchase_price, purchase_currency, purchase_date, thesis_id, status)
+            VALUES ($1, $2, $3, $4, $5, $6, 'open')
             RETURNING *
             """,
-            ticker_id, data.shares, data.purchase_price, purchase_date_obj, thesis_id,
+            ticker_id, data.shares, purchase_price_native, ticker_currency, purchase_date_obj, thesis_id,
         )
 
-        # Mouvement de trésorerie (buy)
-        total_amount = data.shares * data.purchase_price
+        # Mouvement de trésorerie (buy) toujours en EUR (cash réel débité)
+        total_amount_eur = data.shares * data.purchase_price
         await db.execute(
             """
             INSERT INTO cash_movements (type, amount, label, ticker_id)
             VALUES ('buy', $1, $2, $3)
             """,
-            total_amount,
-            f"Achat {ticker_id} — {data.shares} titres @ {data.purchase_price}",
+            total_amount_eur,
+            f"Achat {ticker_id} — {data.shares} titres @ {data.purchase_price}€",
             ticker_id,
         )
 
