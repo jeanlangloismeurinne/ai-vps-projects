@@ -159,31 +159,45 @@ async def list_positions():
         ticker_currency = None
         try:
             m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            current_price = m1.get("current_price") or m1.get("price")
-            if isinstance(current_price, dict):
-                current_price = current_price.get("current_price")
-            ticker_currency = m1.get("currency")
+            price_data = m1.get("price") or {}
+            current_price = price_data.get("current_price")
+            ticker_currency = price_data.get("currency", "EUR") or "EUR"
         except Exception:
             pass
 
-        purchase_price = float(pos["purchase_price"])
+        stored_price = float(pos["purchase_price"])
+        stored_currency = pos.get("purchase_currency") or "EUR"
         shares = float(pos["shares"])
+
+        # Convertit le prix d'achat dans la devise native si nécessaire
+        purchase_price_native = stored_price
+        if ticker_currency and stored_currency != ticker_currency:
+            try:
+                from app.api.thesis_v2 import _get_fx_rate
+                purchase_date_str = pos["purchase_date"].isoformat() if pos["purchase_date"] else date.today().isoformat()
+                fx = await _get_fx_rate(stored_currency, ticker_currency, purchase_date_str)
+                purchase_price_native = round(stored_price * fx, 4)
+            except Exception as e:
+                logger.warning(f"FX conversion {stored_currency}→{ticker_currency} pour {ticker_id}: {e}")
+
         market_value = (float(current_price) * shares) if current_price else None
 
         perf_pct = None
         perf_annualized = None
-        if current_price:
-            perf_pct = round((float(current_price) / purchase_price - 1) * 100, 2)
+        if current_price and purchase_price_native:
+            perf_pct = round((float(current_price) / purchase_price_native - 1) * 100, 2)
             if pos["purchase_date"]:
                 days = (date.today() - pos["purchase_date"]).days
                 if days > 0:
                     years = days / 365.25
                     perf_annualized = round(
-                        ((float(current_price) / purchase_price) ** (1 / years) - 1) * 100, 2
+                        ((float(current_price) / purchase_price_native) ** (1 / years) - 1) * 100, 2
                     )
 
         result.append({
             **_serialize(pos),
+            "purchase_price": purchase_price_native,
+            "purchase_currency": ticker_currency or stored_currency,
             "current_price": current_price,
             "currency": ticker_currency,
             "market_value": round(market_value, 2) if market_value else None,

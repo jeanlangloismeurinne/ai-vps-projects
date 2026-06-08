@@ -182,6 +182,7 @@ export default function ThesisPage() {
   const [calendarEvents, setCalendarEvents] = useState([])
   const [cashAvailable, setCashAvailable] = useState(null)
   const [currentPrice, setCurrentPrice] = useState(null)
+  const [tickerCurrency, setTickerCurrency] = useState(null)
   const [chatOpen, setChatOpen] = useState(false)
 
   // Validation form
@@ -229,6 +230,7 @@ export default function ThesisPage() {
         if (mktRes.ok) {
           const m = await mktRes.json()
           setCurrentPrice(m.current_price)
+          setTickerCurrency(m.currency)
           setValForm(f => ({ ...f, buy_price: m.current_price?.toFixed(2) || '' }))
         }
       } catch (e) {
@@ -612,8 +614,8 @@ export default function ThesisPage() {
           </div>
           <div>
             <label className="text-xs text-gray-400 block mb-1">
-              Prix d&apos;achat (€ — converti dans la devise du ticker à la clôture du jour)
-              {currentPrice && <span className="text-gray-600 ml-1">— actuel : {currentPrice.toFixed(2)}</span>}
+              Prix d&apos;achat saisi en € — converti automatiquement en {tickerCurrency || '…'} à la clôture du jour d&apos;achat
+              {currentPrice && tickerCurrency && <span className="text-gray-600 ml-1">— cours actuel : {currentPrice.toFixed(2)} {tickerCurrency}</span>}
             </label>
             <input
               type="number" step="0.01"

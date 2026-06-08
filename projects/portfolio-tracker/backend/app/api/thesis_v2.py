@@ -701,12 +701,16 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
     """
     from datetime import date as _date
 
+    async with get_db_session() as db:
+        thesis = await _get_thesis_or_404(db, thesis_id)
+        ticker_id = thesis["ticker_id"]
+
     # Détermine la devise native du ticker et convertit le prix EUR → devise native
     ticker_currency = "EUR"
     try:
         from app.data_collection.data_service import DataService
-        m1 = await DataService().get_m1(data.ticker_id if hasattr(data, "ticker_id") else thesis_id, settings.FMP_API_KEY)
-        ticker_currency = m1.get("currency", "EUR") or "EUR"
+        m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+        ticker_currency = (m1.get("price") or {}).get("currency", "EUR") or "EUR"
     except Exception:
         pass
 
@@ -722,21 +726,6 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
             purchase_price_native = data.purchase_price
 
     async with get_db_session() as db:
-        thesis = await _get_thesis_or_404(db, thesis_id)
-        ticker_id = thesis["ticker_id"]
-
-        # Récupère la devise via le ticker si la tentative précédente a échoué
-        if ticker_currency == "EUR":
-            try:
-                from app.data_collection.data_service import DataService
-                m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
-                tc = m1.get("currency", "EUR") or "EUR"
-                if tc != "EUR":
-                    fx_rate = await _get_fx_rate("EUR", tc, data.purchase_date)
-                    purchase_price_native = round(data.purchase_price * fx_rate, 4)
-                    ticker_currency = tc
-            except Exception:
-                pass
 
         # Active la thèse
         await db.execute(

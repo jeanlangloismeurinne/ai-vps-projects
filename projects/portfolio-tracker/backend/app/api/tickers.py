@@ -146,9 +146,10 @@ async def get_ticker(ticker_id: str):
     try:
         from app.data_collection.data_service import DataService
         m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
-        ticker_dict["current_price"] = m1.get("price")
-        ticker_dict["currency"] = m1.get("currency")
-        ticker_dict["market_cap"] = m1.get("market_cap")
+        price_data = m1.get("price") or {}
+        ticker_dict["current_price"] = price_data.get("current_price")
+        ticker_dict["currency"] = price_data.get("currency")
+        ticker_dict["market_cap"] = price_data.get("market_cap")
     except Exception as e:
         logger.warning(f"Impossible de récupérer le prix pour {ticker_id}: {e}")
         ticker_dict["current_price"] = None
@@ -234,18 +235,20 @@ async def get_ticker_metrics(ticker_id: str):
     except Exception as e:
         raise HTTPException(502, f"Erreur DataService: {e}")
 
+    price_data = m1.get("price") or {}
+    valuation = m1.get("valuation") or {}
     return {
         "ticker_id": ticker_id,
-        "price": m1.get("price"),
-        "currency": m1.get("currency"),
-        "pe_ntm": m1.get("pe_ntm") or m1.get("forward_pe"),
-        "fcf_yield": m1.get("fcf_yield"),
-        "ev_ebitda": m1.get("ev_ebitda"),
-        "revenue_growth_yoy": m1.get("revenue_growth_yoy"),
-        "net_margin": m1.get("net_margin"),
-        "roe": m1.get("roe"),
-        "debt_to_equity": m1.get("debt_to_equity"),
-        "market_cap": m1.get("market_cap"),
+        "current_price": price_data.get("current_price"),
+        "currency": price_data.get("currency"),
+        "price_change_1d_pct": price_data.get("1d_change_pct"),
+        "pe_ntm": valuation.get("pe_ntm"),
+        "fcf_yield": valuation.get("fcf_yield_pct"),
+        "ev_ebitda": valuation.get("ev_ebitda"),
+        "net_margin": valuation.get("net_margin"),
+        "roe": valuation.get("roe"),
+        "debt_to_equity": valuation.get("debt_to_equity"),
+        "market_cap": price_data.get("market_cap"),
         "raw": m1,
     }
 
