@@ -33,27 +33,23 @@ function PnlCell({ pct }) {
 }
 
 function EditPositionModal({ position, onClose, onSaved }) {
-  const currency = position.purchase_currency || 'EUR'
-  const [price, setPrice] = useState(String(Number(position.purchase_price || 0).toFixed(4)))
+  const [priceEur, setPriceEur] = useState('')
   const [shares, setShares] = useState(String(Number(position.shares || 0)))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const submit = async () => {
-    const payload = {}
-    const p = parseFloat(price)
+    const p = parseFloat(priceEur)
     const s = parseFloat(shares)
     if (isNaN(p) || p <= 0) { setError('Prix invalide'); return }
     if (isNaN(s) || s <= 0) { setError('Quantité invalide'); return }
-    payload.purchase_price = p
-    payload.shares = s
     setLoading(true)
     setError('')
     try {
       const res = await fetch(`${API}/portfolio-v2/positions/${position.id}/edit`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ purchase_price_eur: p, shares: s }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
@@ -77,11 +73,11 @@ function EditPositionModal({ position, onClose, onSaved }) {
         </div>
         <div className="px-5 py-4 space-y-3">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat ({currency})</label>
+            <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat (€) — converti en {position.currency || '…'} à la clôture du jour d&apos;achat</label>
             <input
-              type="number" step="0.0001" min="0"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
+              type="number" step="0.01" min="0"
+              value={priceEur}
+              onChange={e => setPriceEur(e.target.value)}
               autoFocus
               className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
             />

@@ -36,7 +36,7 @@ class PositionReduce(BaseModel):
 
 
 class PositionEdit(BaseModel):
-    purchase_price: Optional[float] = None  # en devise native (purchase_currency)
+    purchase_price_eur: Optional[float] = None  # prix saisi en € — converti en devise native
     shares: Optional[float] = None
     purchase_date: Optional[str] = None  # ISO date
 
@@ -322,9 +322,8 @@ async def reduce_position(position_id: int, data: PositionReduce):
 
 @router.patch("/positions/{position_id}/edit")
 async def edit_position(position_id: int, data: PositionEdit):
-    """Modifie le prix d'achat et/ou le volume d'une position ouverte."""
-    updates = {k: v for k, v in data.model_dump().items() if v is not None}
-    if not updates:
+    """Modifie le prix d'achat (saisi en €, converti en devise native) et/ou le volume."""
+    if data.purchase_price_eur is None and data.shares is None and data.purchase_date is None:
         raise HTTPException(400, "Aucun champ à mettre à jour")
 
     async with get_db_session() as db:
@@ -334,22 +333,51 @@ async def edit_position(position_id: int, data: PositionEdit):
         if not pos:
             raise HTTPException(404, f"Position #{position_id} introuvable ou déjà clôturée")
 
-        set_parts = ["updated_at=NOW()"]
-        values = [position_id]
-        i = 2
-        if "purchase_price" in updates:
-            set_parts.append(f"purchase_price=${i}")
-            values.append(updates["purchase_price"])
-            i += 1
-        if "shares" in updates:
-            set_parts.append(f"shares=${i}")
-            values.append(updates["shares"])
-            i += 1
-        if "purchase_date" in updates:
-            set_parts.append(f"purchase_date=${i}")
-            values.append(date.fromisoformat(updates["purchase_date"]))
-            i += 1
+    set_parts = ["updated_at=NOW()"]
+    values = [position_id]
+    i = 2
 
+    if data.purchase_price_eur is not None:
+        # Convertit le prix EUR vers la devise native du ticker
+        ticker_id = pos["ticker_id"]
+        purchase_date_str = (
+            data.purchase_date or
+            (pos["purchase_date"].isoformat() if pos["purchase_date"] else date.today().isoformat())
+        )
+        ticker_currency = "EUR"
+        try:
+            from app.data_collection.data_service import DataService
+            m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+            ticker_currency = (m1.get("price") or {}).get("currency", "EUR") or "EUR"
+        except Exception:
+            pass
+
+        price_native = data.purchase_price_eur
+        if ticker_currency != "EUR":
+            try:
+                from app.api.thesis_v2 import _get_fx_rate
+                fx = await _get_fx_rate("EUR", ticker_currency, purchase_date_str)
+                price_native = round(data.purchase_price_eur * fx, 4)
+            except Exception as e:
+                logger.warning(f"FX conversion {ticker_currency} pour edit position: {e}")
+
+        set_parts.append(f"purchase_price=${i}")
+        values.append(price_native)
+        i += 1
+        set_parts.append(f"purchase_currency=${i}")
+        values.append(ticker_currency)
+        i += 1
+
+    if data.shares is not None:
+        set_parts.append(f"shares=${i}")
+        values.append(data.shares)
+        i += 1
+    if data.purchase_date is not None:
+        set_parts.append(f"purchase_date=${i}")
+        values.append(date.fromisoformat(data.purchase_date))
+        i += 1
+
+    async with get_db_session() as db:
         row = await db.fetchrow(
             f"UPDATE portfolio_positions SET {', '.join(set_parts)} WHERE id=$1 RETURNING *",
             *values,
