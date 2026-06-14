@@ -805,22 +805,38 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
         )
 
         # Persiste les calendar_events suggérés
+        # Si aucun n'est fourni dans le body, lit thesis_json.calendar_events_suggested
         events_created = []
-        if data.calendar_events:
-            for ev in data.calendar_events:
-                ev_date = _date.fromisoformat(ev.scheduled_date)
-                ev_row = await db.fetchrow(
-                    """
-                    INSERT INTO calendar_events
-                        (thesis_id, ticker_id, event_type, label, scheduled_date,
-                         peer_ticker, monitoring_mode, source, pending_validation)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-                    RETURNING *
-                    """,
-                    thesis_id, ticker_id, ev.event_type, ev.label, ev_date,
-                    ev.peer_ticker, ev.monitoring_mode, ev.source, ev.pending_validation,
-                )
-                events_created.append(_serialize(ev_row))
+        calendar_events_to_create = data.calendar_events or []
+        if not calendar_events_to_create:
+            thesis_json = thesis["thesis_json"] or {}
+            for ev in thesis_json.get("calendar_events_suggested", []):
+                scheduled = ev.get("scheduled_date") or ev.get("event_date") or ev.get("date_estimated")
+                if not scheduled:
+                    continue
+                calendar_events_to_create.append(CalendarEventInput(
+                    event_type=ev.get("event_type", "conviction_review"),
+                    label=ev.get("label") or ev.get("event_name", ""),
+                    scheduled_date=scheduled,
+                    peer_ticker=ev.get("peer_ticker"),
+                    monitoring_mode=ev.get("monitoring_mode", 2),
+                    source="thesis_agent",
+                    pending_validation=False,
+                ))
+        for ev in calendar_events_to_create:
+            ev_date = _date.fromisoformat(ev.scheduled_date)
+            ev_row = await db.fetchrow(
+                """
+                INSERT INTO calendar_events
+                    (thesis_id, ticker_id, event_type, label, scheduled_date,
+                     peer_ticker, monitoring_mode, source, pending_validation)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                RETURNING *
+                """,
+                thesis_id, ticker_id, ev.event_type, ev.label, ev_date,
+                ev.peer_ticker, ev.monitoring_mode, ev.source, ev.pending_validation,
+            )
+            events_created.append(_serialize(ev_row))
 
     # Notification Slack
     try:
