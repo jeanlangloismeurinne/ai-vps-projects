@@ -335,6 +335,27 @@ export default function OpportunityPage() {
     } catch {}
   }
 
+  const launchThesisDirect = async () => {
+    try {
+      if (brief?.id) {
+        await fetch(`${API}/tickers/${ticker_id}/opportunities/${brief.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'dismissed' }),
+        }).catch(() => {})
+      }
+      const res = await fetch(`${API}/tickers/${ticker_id}/theses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        router.push(`/ticker/${ticker_id}/thesis/${data.id}`)
+      }
+    } catch {}
+  }
+
   if (pageLoading) return <div className="text-center py-16 text-gray-500">Chargement…</div>
 
   const recommendation = brief?.brief_json?.verdict?.recommendation
@@ -450,6 +471,10 @@ export default function OpportunityPage() {
               Lancer la thèse approfondie
             </button>
           )}
+          <button onClick={launchThesisDirect}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm rounded-lg font-medium transition-colors">
+            Thèse directe →
+          </button>
           <Link href={`/ticker/${ticker_id}`}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm rounded-lg font-medium transition-colors">
             Sauvegarder et revenir
