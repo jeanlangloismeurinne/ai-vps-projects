@@ -127,16 +127,28 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1 mr-3">
-          <Link href={`/ticker/${ticker.id}`} className="font-bold text-indigo-400 hover:text-indigo-300 text-base leading-tight block truncate">
-            {ticker.name || ticker.id}
-          </Link>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {hasSymbol
-              ? <span className="font-mono text-gray-400">{ticker.ticker_symbol}</span>
-              : <span className="text-amber-500/80">Symbole à renseigner</span>
-            }
-            {ticker.exchange ? <span className="text-gray-600"> · {ticker.exchange}</span> : ''}
-          </p>
+          {hasSymbol ? (
+            <>
+              <Link href={`/ticker/${ticker.id}`} className="font-mono font-bold text-indigo-400 hover:text-indigo-300 text-lg block">
+                {ticker.ticker_symbol}
+              </Link>
+              {ticker.name && ticker.name !== ticker.ticker_symbol && (
+                <p className="text-xs text-gray-500 truncate">
+                  {ticker.name}{ticker.exchange ? ` · ${ticker.exchange}` : ''}
+                </p>
+              )}
+              {ticker.exchange && (!ticker.name || ticker.name === ticker.ticker_symbol) && (
+                <p className="text-xs text-gray-600">{ticker.exchange}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <Link href={`/ticker/${ticker.id}`} className="font-bold text-indigo-400 hover:text-indigo-300 text-base leading-tight block truncate">
+                {ticker.name || ticker.id}
+              </Link>
+              <p className="text-xs text-amber-500/80 mt-0.5">Symbole à renseigner</p>
+            </>
+          )}
         </div>
         {hasSymbol && (
           <div className="text-right flex-shrink-0">

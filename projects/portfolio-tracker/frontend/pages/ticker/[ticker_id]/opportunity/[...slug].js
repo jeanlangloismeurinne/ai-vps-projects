@@ -94,95 +94,6 @@ function ExistingBriefModal({ brief, onResume, onRestart }) {
   )
 }
 
-function IdentifyTickerPanel({ tickerId, onIdentified }) {
-  const [form, setForm] = useState({ ticker_symbol: '', exchange: '', sector: '', reporting_currency: '' })
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-
-  const submit = async () => {
-    if (!form.ticker_symbol.trim()) { setErr('Symbole boursier requis'); return }
-    setSaving(true)
-    setErr('')
-    try {
-      const payload = { ticker_symbol: form.ticker_symbol.trim().toUpperCase() }
-      if (form.exchange.trim()) payload.exchange = form.exchange.trim()
-      if (form.sector.trim()) payload.sector = form.sector.trim()
-      if (form.reporting_currency.trim()) payload.reporting_currency = form.reporting_currency.trim().toUpperCase()
-      const res = await fetch(`${API}/tickers/${tickerId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}))
-        throw new Error(e.detail || `Erreur ${res.status}`)
-      }
-      const updated = await res.json()
-      onIdentified(updated)
-    } catch (e) {
-      setErr(e.message)
-    }
-    setSaving(false)
-  }
-
-  return (
-    <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-5 space-y-4">
-      <div>
-        <h3 className="font-semibold text-amber-300 text-sm mb-1">Identifier la société cotée</h3>
-        <p className="text-xs text-amber-400/70">
-          Renseignez le symbole boursier avant de lancer l&apos;analyse. Les autres champs sont facultatifs.
-        </p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Symbole boursier <span className="text-amber-400">*</span></label>
-          <input
-            value={form.ticker_symbol}
-            onChange={e => setForm(f => ({ ...f, ticker_symbol: e.target.value }))}
-            placeholder="ex. CAP.PA, MSFT, MC.PA"
-            className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 font-mono placeholder-gray-600 focus:border-amber-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Place boursière</label>
-          <input
-            value={form.exchange}
-            onChange={e => setForm(f => ({ ...f, exchange: e.target.value }))}
-            placeholder="ex. Euronext Paris, NASDAQ"
-            className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 placeholder-gray-600 focus:border-amber-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Secteur</label>
-          <input
-            value={form.sector}
-            onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
-            placeholder="ex. IT Services, Luxury"
-            className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 placeholder-gray-600 focus:border-amber-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 block mb-1">Devise de reporting</label>
-          <input
-            value={form.reporting_currency}
-            onChange={e => setForm(f => ({ ...f, reporting_currency: e.target.value }))}
-            placeholder="ex. EUR, USD, GBP"
-            className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 font-mono placeholder-gray-600 focus:border-amber-500 focus:outline-none"
-          />
-        </div>
-      </div>
-      {err && <p className="text-red-400 text-xs bg-red-900/30 border border-red-800 rounded px-3 py-2">{err}</p>}
-      <button
-        onClick={submit}
-        disabled={saving}
-        className="px-5 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
-      >
-        {saving ? 'Enregistrement…' : 'Confirmer et continuer'}
-      </button>
-    </div>
-  )
-}
-
 export default function OpportunityPage() {
   const router = useRouter()
   const { ticker_id, slug } = router.query
@@ -190,7 +101,6 @@ export default function OpportunityPage() {
   const isNew = slugArr[0] === 'new'
   const briefIdFromUrl = isNew ? null : slugArr[0]
 
-  const [ticker, setTicker] = useState(null)
   const [brief, setBrief] = useState(null)
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
@@ -204,15 +114,6 @@ export default function OpportunityPage() {
   const [chatOpen, setChatOpen] = useState(false)
   const debounceRef = useRef(null)
   const jsonImportRef = useRef(null)
-
-  // Charger les infos du ticker
-  useEffect(() => {
-    if (!ticker_id) return
-    fetch(`${API}/tickers/${ticker_id}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setTicker(data) })
-      .catch(() => {})
-  }, [ticker_id])
 
   // Check agent sync status
   useEffect(() => {
@@ -477,14 +378,6 @@ export default function OpportunityPage() {
           brief={existingBrief}
           onResume={handleResume}
           onRestart={handleRestart}
-        />
-      )}
-
-      {/* Identification du symbole boursier — affiché si la société n'a pas encore de symbole */}
-      {ticker && !ticker.ticker_symbol && (
-        <IdentifyTickerPanel
-          tickerId={ticker_id}
-          onIdentified={updated => setTicker(updated)}
         />
       )}
 
