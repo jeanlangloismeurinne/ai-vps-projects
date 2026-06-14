@@ -1,6 +1,7 @@
 """
-SlackWebhook — notifications Slack via Incoming Webhook.
-Plus simple que le Socket Mode pour les alertes V1.
+SlackWebhook — notifications Slack V1 via bot token (chat.postMessage).
+Utilise SLACK_BOT_TOKEN + SLACK_PORTFOLIO_CHANNEL_ID (canal #portfolio-management).
+Fallback sur SLACK_WEBHOOK_URL (incoming webhook) si défini.
 """
 import logging
 from typing import Optional
@@ -11,23 +12,48 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_SLACK_API_POST = "https://slack.com/api/chat.postMessage"
+
 
 class SlackWebhook:
     async def send(self, text: str, blocks=None):
-        """Envoie un message via le webhook. Silencieux si SLACK_WEBHOOK_URL n'est pas configuré."""
-        if not settings.SLACK_WEBHOOK_URL:
-            logger.debug("SLACK_WEBHOOK_URL non configuré — notification ignorée")
+        """Envoie un message vers #portfolio-management via bot token."""
+        if settings.SLACK_WEBHOOK_URL:
+            # Fallback incoming webhook
+            payload = {"text": text}
+            if blocks:
+                payload["blocks"] = blocks
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    r = await client.post(settings.SLACK_WEBHOOK_URL, json=payload)
+                    if r.status_code != 200:
+                        logger.warning(f"Slack webhook non-200: {r.status_code} — {r.text}")
+            except Exception as e:
+                logger.error(f"Slack webhook error: {e}")
             return
-        payload = {"text": text}
+
+        if not settings.SLACK_BOT_TOKEN or not settings.SLACK_PORTFOLIO_CHANNEL_ID:
+            logger.debug("SLACK_BOT_TOKEN ou SLACK_PORTFOLIO_CHANNEL_ID non configuré — notification ignorée")
+            return
+
+        payload = {
+            "channel": settings.SLACK_PORTFOLIO_CHANNEL_ID,
+            "text": text,
+        }
         if blocks:
             payload["blocks"] = blocks
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(settings.SLACK_WEBHOOK_URL, json=payload)
-                if r.status_code != 200:
-                    logger.warning(f"Slack webhook non-200: {r.status_code} — {r.text}")
+                r = await client.post(
+                    _SLACK_API_POST,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {settings.SLACK_BOT_TOKEN}"},
+                )
+                data = r.json()
+                if not data.get("ok"):
+                    logger.warning(f"Slack chat.postMessage error: {data.get('error')}")
         except Exception as e:
-            logger.error(f"Slack webhook error: {e}")
+            logger.error(f"Slack chat.postMessage error: {e}")
 
     async def send_thesis_validated(
         self, ticker: str, one_liner: str, shares: float, price: float
