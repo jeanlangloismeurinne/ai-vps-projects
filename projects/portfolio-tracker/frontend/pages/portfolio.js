@@ -400,6 +400,26 @@ function AllocateModal({ thesis, onClose, onConfirm }) {
   )
 }
 
+const STAGE_LABELS = {
+  'pre-seed': 'Pre-Seed',
+  'seed': 'Seed',
+  'series-a': 'Série A',
+  'series-b': 'Série B',
+  'series-c': 'Série C',
+  'growth': 'Growth',
+  'pre-ipo': 'Pré-IPO',
+  'mature': 'Mature',
+}
+
+function IrrCell({ pct }) {
+  if (pct == null) return <span className="text-gray-600">—</span>
+  return (
+    <span className={`font-medium ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+      {pct > 0 ? '+' : ''}{pct.toFixed(1)}%
+    </span>
+  )
+}
+
 export default function PortfolioV1() {
   const [summary, setSummary] = useState(null)
   const [positions, setPositions] = useState([])
@@ -447,6 +467,9 @@ export default function PortfolioV1() {
   useEffect(() => { load() }, [])
 
   const fmt = v => v != null ? `€${Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'
+
+  const listedPositions = positions.filter(p => p.company_type !== 'private')
+  const privatePositions = positions.filter(p => p.company_type === 'private')
 
   return (
     <div className="space-y-6">
@@ -518,12 +541,12 @@ export default function PortfolioV1() {
         )}
       </div>
 
-      {/* Positions Table */}
+      {/* Positions Table — Listed */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-3">Positions</h2>
         {loading ? (
           <div className="text-center py-12 text-gray-500">Chargement…</div>
-        ) : positions.length === 0 ? (
+        ) : listedPositions.length === 0 && privatePositions.length === 0 ? (
           <div className="text-center py-16 bg-gray-900 border border-gray-800 rounded-xl">
             <p className="text-gray-500 text-lg">Aucune position active</p>
             <button onClick={() => setAddTicker(true)}
@@ -531,7 +554,7 @@ export default function PortfolioV1() {
               + Ajouter un premier titre
             </button>
           </div>
-        ) : (
+        ) : listedPositions.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-gray-800">
             <table className="w-full text-sm">
               <thead className="bg-gray-900">
@@ -548,7 +571,7 @@ export default function PortfolioV1() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {positions.map(p => (
+                {listedPositions.map(p => (
                   <React.Fragment key={p.ticker_id || p.id}>
                     <tr onClick={() => { if (typeof window !== 'undefined') window.location.href = `/ticker/${p.ticker_id || p.id}` }}
                       className="hover:bg-gray-800/50 cursor-pointer transition-colors">
@@ -603,8 +626,131 @@ export default function PortfolioV1() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {/* Private / Non côté positions */}
+      {!loading && privatePositions.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
+            Private / Non côté ({privatePositions.length})
+          </h2>
+          <div className="overflow-x-auto rounded-xl border border-violet-900/30">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-900">
+                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3">Société</th>
+                  <th className="px-4 py-3">Stade</th>
+                  <th className="px-4 py-3 text-right">Parts</th>
+                  <th className="px-4 py-3 text-right">Prix entrée</th>
+                  <th className="px-4 py-3 text-right">Investi</th>
+                  <th className="px-4 py-3 text-right">Derni. Valo</th>
+                  <th className="px-4 py-3 text-right">IRR actuel</th>
+                  <th className="px-4 py-3 text-right">IRR projeté</th>
+                  <th className="px-4 py-3 text-right">Particip.</th>
+                  <th className="px-4 py-3">Prochain événement</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {privatePositions.map(p => {
+                  const invested = p.shares && p.purchase_price
+                    ? p.shares * p.purchase_price
+                    : null
+                  const stageLbl = STAGE_LABELS[p.stage] || p.stage || '—'
+                  return (
+                    <tr key={p.ticker_id || p.id}
+                      onClick={() => { if (typeof window !== 'undefined') window.location.href = `/ticker/${p.ticker_id || p.id}` }}
+                      className="hover:bg-gray-800/50 cursor-pointer transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-violet-400">{p.ticker_name || p.ticker_id}</span>
+                          <span className="text-xs text-gray-500">{p.ticker_id}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {p.stage ? (
+                          <span className="text-xs bg-violet-900/50 border border-violet-700 text-violet-300 px-2 py-0.5 rounded-full">
+                            {stageLbl}
+                          </span>
+                        ) : <span className="text-gray-600">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-300">{p.shares ?? '—'}</td>
+                      <td className="px-4 py-3 text-right text-gray-300">
+                        {fmtCurrency(p.purchase_price, p.purchase_currency || p.currency || 'EUR')}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-300">
+                        {invested != null ? fmt(invested) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-gray-300">
+                            {p.last_valuation_m != null ? `${p.last_valuation_m}M€` : '—'}
+                          </span>
+                          {p.last_valuation_date && (
+                            <span className="text-xs text-gray-600">
+                              {new Date(p.last_valuation_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <IrrCell pct={p.irr_current_pct} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-col items-end">
+                          <IrrCell pct={p.irr_projected_pct} />
+                          {p.next_event_date && (
+                            <span className="text-xs text-gray-600">
+                              {new Date(p.next_event_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-300">
+                        {p.current_ownership_pct != null
+                          ? `${Number(p.current_ownership_pct).toFixed(2)}%`
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {p.next_event_type ? (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-400">{p.next_event_type}</span>
+                            {p.next_event_date && (
+                              <span className="text-xs text-gray-600">
+                                {new Date(p.next_event_date).toLocaleDateString('fr-FR')}
+                              </span>
+                            )}
+                          </div>
+                        ) : <span className="text-gray-600">—</span>}
+                      </td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setEditPosition(p)}
+                            className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+                            title="Modifier"
+                          >
+                            ✎
+                          </button>
+                          <Link
+                            href={`/ticker/${p.ticker_id || p.id}`}
+                            className="text-xs text-violet-500 hover:text-violet-300 px-2 py-1 rounded hover:bg-gray-700 transition-colors"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            Fiche
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* En attente d'allocation */}
       {pendingTheses.length > 0 && (
@@ -664,8 +810,11 @@ export default function PortfolioV1() {
 
       {/* Footer Summary */}
       {!loading && summary && (
-        <div className="border-t border-gray-800 pt-4 flex gap-8 text-sm text-gray-500">
-          <span>{positions.length} position{positions.length > 1 ? 's' : ''}</span>
+        <div className="border-t border-gray-800 pt-4 flex gap-8 text-sm text-gray-500 flex-wrap">
+          <span>{listedPositions.length} position{listedPositions.length !== 1 ? 's' : ''} cotée{listedPositions.length !== 1 ? 's' : ''}</span>
+          {privatePositions.length > 0 && (
+            <span>{privatePositions.length} non coté{privatePositions.length !== 1 ? 'es' : 'e'}</span>
+          )}
           <span>Cash : {fmt(summary.cash_balance)}</span>
           <span>Portefeuille total : <span className="text-gray-300 font-medium">{fmt(summary.total_value)}</span></span>
         </div>

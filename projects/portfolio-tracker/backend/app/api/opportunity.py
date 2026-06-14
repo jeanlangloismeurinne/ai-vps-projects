@@ -193,6 +193,10 @@ async def chat_with_brief(brief_id: int, data: ChatMessage):
 
     async with get_db_session() as db:
         brief = await _get_brief_or_404(db, brief_id)
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", brief["ticker_id"]
+        )
+        company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
 
         # Stocke le message utilisateur
         await db.execute(
@@ -208,7 +212,7 @@ async def chat_with_brief(brief_id: int, data: ChatMessage):
 
     try:
         agent = OpportunityAgent()
-        result = await agent.run(mode=data.mode, message=data.content)
+        result = await agent.run(mode=data.mode, message=data.content, company_type=company_type)
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
@@ -258,6 +262,10 @@ async def refresh_brief_json(brief_id: int):
             "SELECT role, content FROM opportunity_messages WHERE brief_id=$1 ORDER BY created_at",
             brief_id,
         )
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", brief["ticker_id"]
+        )
+        company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
 
     # Construit le message d'historique
     history_parts = []
@@ -271,7 +279,7 @@ async def refresh_brief_json(brief_id: int):
 
     try:
         agent = OpportunityAgent()
-        result = await agent.run(mode="json_generation", message=full_message)
+        result = await agent.run(mode="json_generation", message=full_message, company_type=company_type)
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:

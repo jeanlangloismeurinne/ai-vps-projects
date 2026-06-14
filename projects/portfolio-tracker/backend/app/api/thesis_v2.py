@@ -90,6 +90,18 @@ class ImportLegacyBody(BaseModel):
     purchase_price: float
     purchase_date: str  # ISO date
     calendar_events: Optional[List[CalendarEventInput]] = None
+    company_type: str = "public"
+    # Private company creation fields (used when ticker doesn't exist yet)
+    company_name: Optional[str] = None
+    sector: Optional[str] = None
+    stage: Optional[str] = None
+    country: Optional[str] = None
+    last_valuation_m: Optional[float] = None
+    last_valuation_date: Optional[str] = None
+    last_valuation_basis: Optional[str] = None
+    notable_investors: Optional[List[str]] = None
+    # Private overrides for position
+    ownership_pct_at_entry: Optional[float] = None
 
 
 # ─────────────────────────── Helpers ─────────────────────────────────────────
@@ -446,6 +458,10 @@ async def chat_with_thesis(thesis_id: int, data: ChatMessage):
         prior_count = await db.fetchval(
             "SELECT COUNT(*) FROM thesis_messages WHERE thesis_id=$1", thesis_id
         )
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", thesis["ticker_id"]
+        )
+        company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
         await db.execute(
             """
             INSERT INTO thesis_messages (thesis_id, role, content, mode)
@@ -465,7 +481,7 @@ async def chat_with_thesis(thesis_id: int, data: ChatMessage):
 
     try:
         agent = ThesisAgent()
-        result = await agent.run(mode=data.mode, message=agent_message)
+        result = await agent.run(mode=data.mode, message=agent_message, company_type=company_type)
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
@@ -513,6 +529,10 @@ async def chat_with_thesis_stream(thesis_id: int, data: ChatMessage):
         prior_count = await db.fetchval(
             "SELECT COUNT(*) FROM thesis_messages WHERE thesis_id=$1", thesis_id
         )
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", thesis["ticker_id"]
+        )
+        stream_company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
         await db.execute(
             "INSERT INTO thesis_messages (thesis_id, role, content, mode) VALUES ($1, $2, $3, $4)",
             thesis_id, "user", data.content, data.mode,
@@ -526,7 +546,7 @@ async def chat_with_thesis_stream(thesis_id: int, data: ChatMessage):
     async def event_stream():
         try:
             agent = ThesisAgent()
-            async for event in agent.run_streaming(mode=data.mode, message=agent_message):
+            async for event in agent.run_streaming(mode=data.mode, message=agent_message, company_type=stream_company_type):
                 yield f"data: {_json.dumps(event)}\n\n"
                 if event["type"] == "done":
                     async with get_db_session() as db:
@@ -575,6 +595,10 @@ async def refresh_thesis_json(thesis_id: int):
             "SELECT role, content FROM thesis_messages WHERE thesis_id=$1 ORDER BY created_at",
             thesis_id,
         )
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", thesis["ticker_id"]
+        )
+        company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
 
     history_parts = []
     for msg in messages:
@@ -587,7 +611,7 @@ async def refresh_thesis_json(thesis_id: int):
 
     try:
         agent = ThesisAgent()
-        result = await agent.run(mode="json_generation", message=full_message)
+        result = await agent.run(mode="json_generation", message=full_message, company_type=company_type)
     except AgentNotSyncedError as e:
         raise HTTPException(503, str(e))
     except Exception as e:
@@ -647,6 +671,10 @@ async def refresh_thesis_json_stream(thesis_id: int):
             "SELECT role, content FROM thesis_messages WHERE thesis_id=$1 ORDER BY created_at",
             thesis_id,
         )
+        ticker_row = await db.fetchrow(
+            "SELECT company_type FROM tickers WHERE id=$1", thesis["ticker_id"]
+        )
+        stream_refresh_company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
 
     history_parts = []
     for msg in messages:
@@ -660,7 +688,7 @@ async def refresh_thesis_json_stream(thesis_id: int):
     async def event_stream():
         try:
             agent = ThesisAgent()
-            async for event in agent.run_streaming(mode="json_generation", message=full_message):
+            async for event in agent.run_streaming(mode="json_generation", message=full_message, company_type=stream_refresh_company_type):
                 if event["type"] == "done":
                     content = event.get("content", "")
                     parsed = agent.extract_json(content)
@@ -819,7 +847,10 @@ async def import_legacy_position(ticker_id: str, data: ImportLegacyBody):
     """
     Onboarding d'une position legacy (achetée avant le process V1).
     Crée brief + thèse + position + calendrier en une seule opération atomique.
+    Si company_type='private' et le ticker n'existe pas, le crée automatiquement.
     """
+    import random
+    import string
     from datetime import date as _date
 
     thesis_json = _normalize_thesis_json(data.thesis_json)
@@ -844,7 +875,44 @@ async def import_legacy_position(ticker_id: str, data: ImportLegacyBody):
     async with get_db_session() as db:
         t = await db.fetchrow("SELECT id FROM tickers WHERE id=$1", ticker_id)
         if not t:
-            raise HTTPException(404, f"Ticker '{ticker_id}' introuvable — crée-le d'abord via POST /tickers")
+            if data.company_type == "private" and data.company_name:
+                # Génère un ID PRIV-XXXXXXXX
+                priv_id = "PRIV-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                # Utilise le ticker_id fourni ou le priv_id généré
+                actual_ticker_id = ticker_id if ticker_id.startswith("PRIV-") else priv_id
+                currency = "EUR"
+                await db.execute(
+                    """
+                    INSERT INTO tickers (id, name, sector, reporting_currency, company_type)
+                    VALUES ($1, $2, $3, $4, 'private')
+                    """,
+                    actual_ticker_id, data.company_name, data.sector, currency,
+                )
+                # Crée le profil private
+                last_val_date = None
+                if data.last_valuation_date:
+                    try:
+                        last_val_date = _date.fromisoformat(data.last_valuation_date)
+                    except ValueError:
+                        pass
+                await db.execute(
+                    """
+                    INSERT INTO private_company_profiles
+                        (ticker_id, stage, country, last_valuation_m, last_valuation_date,
+                         last_valuation_basis, notable_investors)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    """,
+                    actual_ticker_id,
+                    data.stage,
+                    data.country or "FR",
+                    data.last_valuation_m,
+                    last_val_date,
+                    data.last_valuation_basis,
+                    data.notable_investors or [],
+                )
+                ticker_id = actual_ticker_id
+            else:
+                raise HTTPException(404, f"Ticker '{ticker_id}' introuvable — crée-le d'abord via POST /tickers")
 
         brief_row = await db.fetchrow(
             """
@@ -877,11 +945,13 @@ async def import_legacy_position(ticker_id: str, data: ImportLegacyBody):
         position_row = await db.fetchrow(
             """
             INSERT INTO portfolio_positions
-                (ticker_id, shares, purchase_price, purchase_date, thesis_id, status)
-            VALUES ($1, $2, $3, $4, $5, 'open')
+                (ticker_id, shares, purchase_price, purchase_date, thesis_id, status,
+                 ownership_pct_at_entry, current_ownership_pct)
+            VALUES ($1, $2, $3, $4, $5, 'open', $6, $7)
             RETURNING *
             """,
             ticker_id, data.shares, data.purchase_price, purchase_date_obj, thesis_id,
+            data.ownership_pct_at_entry, data.ownership_pct_at_entry,
         )
 
         await db.execute(
@@ -929,6 +999,7 @@ async def import_legacy_position(ticker_id: str, data: ImportLegacyBody):
     return {
         "thesis_id": thesis_id,
         "brief_id": brief_id,
+        "ticker_id": ticker_id,
         "status": "active",
         "position": _serialize(position_row),
         "calendar_events_created": events_created,

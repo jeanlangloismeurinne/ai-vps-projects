@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PriceChart from '../../../components/PriceChart'
+import PrivateMetricsModal from '../../../components/PrivateMetricsModal'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -28,14 +29,20 @@ const fmtPrice = (amount, currency) => {
   return `${sym}${Number(amount).toFixed(2)}`
 }
 
-function MonitoringModal({ tickerId, onClose, onCreated }) {
+// onNeedMetrics(form) is called when private company + mode 2 is selected
+function MonitoringModal({ tickerId, isPrivate, onClose, onNeedMetrics }) {
   const router = useRouter()
   const [form, setForm] = useState({ label: '', mode: 2 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const submit = async () => {
+  const handleSubmit = async () => {
     if (!form.label.trim()) { setError('Label requis'); return }
+    // Private + mode 2 → hand off to PrivateMetricsModal via parent
+    if (isPrivate && form.mode === 2) {
+      onNeedMetrics(form)
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`${API}/tickers/${tickerId}/monitoring`, {
@@ -79,18 +86,23 @@ function MonitoringModal({ tickerId, onClose, onCreated }) {
               className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none"
             >
               <option value={1}>Mode 1 — Checklist lecture</option>
-              <option value={2}>Mode 2 — Analyse légère</option>
+              <option value={2}>Mode 2 — Revue trimestrielle{isPrivate ? ' (+ métriques)' : ''}</option>
               <option value={3}>Mode 3 — Analyse approfondie</option>
               <option value={4}>Mode 4 — Analyse complète</option>
               <option value={5}>Mode 5 — Routing</option>
             </select>
           </div>
+          {isPrivate && form.mode === 2 && (
+            <p className="text-xs text-violet-400 bg-violet-950/30 border border-violet-900/50 rounded px-3 py-2">
+              Les métriques opérationnelles seront demandées à l&apos;étape suivante.
+            </p>
+          )}
           {error && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded px-3 py-2">{error}</p>}
         </div>
         <div className="px-5 py-4 border-t border-gray-700 flex gap-3">
-          <button onClick={submit} disabled={loading}
+          <button onClick={handleSubmit} disabled={loading}
             className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded font-medium">
-            {loading ? 'Création…' : 'Lancer le monitoring'}
+            {loading ? 'Création…' : isPrivate && form.mode === 2 ? 'Suivant →' : 'Lancer le monitoring'}
           </button>
           <button onClick={() => !loading && onClose()} className="px-4 text-gray-400 hover:text-gray-200 text-sm">Annuler</button>
         </div>
@@ -114,6 +126,7 @@ export default function TickerPage() {
   const [loading, setLoading] = useState(true)
   const [alerts, setAlerts] = useState([])
   const [showMonitoringModal, setShowMonitoringModal] = useState(false)
+  const [pendingMonitoringForm, setPendingMonitoringForm] = useState(null) // { label, mode } awaiting private metrics
   const [showAlertForm, setShowAlertForm] = useState(false)
   const [alertForm, setAlertForm] = useState({ price: '', direction: 'below', label: '' })
   const [alertLoading, setAlertLoading] = useState(false)
@@ -189,41 +202,101 @@ export default function TickerPage() {
       )}
 
       {/* Section 1 — Carte d'identité */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <div className={`bg-gray-900 border rounded-xl p-5 ${ticker.company_type === 'private' ? 'border-violet-900/40' : 'border-gray-800'}`}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">{ticker.ticker_symbol}</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold text-white">{ticker.ticker_symbol || ticker.name}</h1>
+              {ticker.company_type === 'private' && (
+                <span className="text-xs bg-violet-950/60 border border-violet-800/50 text-violet-400 px-2 py-0.5 rounded font-medium">
+                  Non côté
+                </span>
+              )}
+            </div>
             <p className="text-gray-400">{ticker.company_name || ticker.name} {ticker.exchange ? `· ${ticker.exchange}` : ''}</p>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-white">
-              {fmtPrice(currentPrice, ticker.currency || metrics?.currency)}
-            </p>
-            {priceChange != null && (
-              <p className={`text-sm font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% J-1
+          {ticker.company_type !== 'private' ? (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-white">
+                {fmtPrice(currentPrice, ticker.currency || metrics?.currency)}
               </p>
+              {priceChange != null && (
+                <p className={`text-sm font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}% J-1
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-right">
+              {ticker.last_valuation_m != null && (
+                <>
+                  <p className="text-xs text-gray-500">Dernière valorisation</p>
+                  <p className="text-2xl font-bold text-violet-300">{ticker.last_valuation_m}M€</p>
+                  {ticker.last_valuation_date && (
+                    <p className="text-xs text-gray-500">
+                      {new Date(ticker.last_valuation_date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                    </p>
+                  )}
+                </>
+              )}
+              {ticker.stage && (
+                <span className="inline-block mt-1 text-xs bg-violet-900/50 border border-violet-700 text-violet-300 px-2 py-0.5 rounded-full">
+                  {ticker.stage}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Private company metrics panel */}
+        {ticker.company_type === 'private' && (ticker.arr_m != null || ticker.ebitda_m != null || ticker.sector || ticker.notable_investors?.length > 0) && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            {ticker.sector && (
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500 mb-0.5">Secteur</p>
+                <p className="text-white font-medium text-sm">{ticker.sector}</p>
+              </div>
+            )}
+            {ticker.arr_m != null && (
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500 mb-0.5">ARR / CA</p>
+                <p className="text-white font-semibold">{ticker.arr_m}M€</p>
+              </div>
+            )}
+            {ticker.ebitda_m != null && (
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500 mb-0.5">EBITDA</p>
+                <p className={`font-semibold ${ticker.ebitda_m >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{ticker.ebitda_m}M€</p>
+              </div>
+            )}
+            {ticker.notable_investors?.length > 0 && (
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500 mb-0.5">Investisseurs</p>
+                <p className="text-white font-medium text-sm truncate">{ticker.notable_investors.slice(0, 2).join(', ')}</p>
+              </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Price Chart with period selector */}
-        <div className="mb-4">
-          <div className="flex gap-2 mb-2">
-            {PERIODS.map(p => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`text-xs px-3 py-1 rounded transition-colors ${
-                  period === p ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}>
-                {p}
-              </button>
-            ))}
+        {/* Price Chart with period selector — listed only */}
+        {ticker.company_type !== 'private' && (
+          <div className="mb-4">
+            <div className="flex gap-2 mb-2">
+              {PERIODS.map(p => (
+                <button key={p} onClick={() => setPeriod(p)}
+                  className={`text-xs px-3 py-1 rounded transition-colors ${
+                    period === p ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}>
+                  {p}
+                </button>
+              ))}
+            </div>
+            <PriceChart data={priceHistory} height={180} color="auto" showAxes showDates />
           </div>
-          <PriceChart data={priceHistory} height={180} color="auto" showAxes showDates />
-        </div>
+        )}
 
-        {/* Financial Metrics */}
-        {metrics && (
+        {/* Financial Metrics — listed only */}
+        {ticker.company_type !== 'private' && metrics && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             {[
               { label: 'Capitalisation', value: metrics.market_cap ? `€${(metrics.market_cap / 1e9).toFixed(1)}Md` : '—' },
@@ -528,8 +601,40 @@ export default function TickerPage() {
       {showMonitoringModal && (
         <MonitoringModal
           tickerId={ticker_id}
+          isPrivate={ticker?.company_type === 'private'}
           onClose={() => setShowMonitoringModal(false)}
-          onCreated={() => setShowMonitoringModal(false)}
+          onNeedMetrics={(form) => {
+            setShowMonitoringModal(false)
+            setPendingMonitoringForm(form)
+          }}
+        />
+      )}
+
+      {pendingMonitoringForm && (
+        <PrivateMetricsModal
+          company={ticker}
+          onClose={() => setPendingMonitoringForm(null)}
+          onConfirm={async (metricsData) => {
+            setPendingMonitoringForm(null)
+            try {
+              const body = {
+                ...pendingMonitoringForm,
+                private_metrics: metricsData.private_metrics,
+                private_metrics_text: metricsData.metricsText,
+              }
+              const res = await fetch(`${API}/tickers/${ticker_id}/monitoring`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              })
+              if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Erreur')
+              const data = await res.json()
+              window.location.href = `/ticker/${ticker_id}/monitoring/${data.id || data.session_id}`
+            } catch (e) {
+              // silently fail — user stays on page
+              console.error(e)
+            }
+          }}
         />
       )}
     </div>

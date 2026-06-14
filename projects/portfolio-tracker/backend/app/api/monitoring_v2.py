@@ -20,7 +20,9 @@ class SessionCreate(BaseModel):
     trigger_label: str
     mode: int              # 1..5
     thesis_id: Optional[int] = None
-    message: Optional[str] = None   # contexte libre si fourni directement
+    message: Optional[str] = None          # contexte libre si fourni directement
+    private_metrics: Optional[dict] = None  # métriques opérationnelles (sociétés non cotées)
+    private_metrics_text: Optional[str] = None  # version texte formatée pour l'agent
 
 
 class ChatMessage(BaseModel):
@@ -52,27 +54,50 @@ async def _get_session_or_404(db, session_id: int):
 
 async def _build_monitoring_context(db, ticker_id: str, thesis_id: Optional[int], mode: int, trigger_label: str) -> str:
     """Construit le contexte texte envoyé à l'agent."""
-    parts = [f"Ticker : {ticker_id}", f"Trigger : {trigger_label}", f"Mode demandé : {mode}"]
+    import json
+
+    # Vérifie si la société est cotée ou non
+    ticker_row = await db.fetchrow("SELECT company_type FROM tickers WHERE id=$1", ticker_id)
+    company_type = (ticker_row["company_type"] if ticker_row else "public") or "public"
+
+    parts = [f"Ticker : {ticker_id}", f"Trigger : {trigger_label}", f"Mode demandé : {mode}",
+             f"company_type : {company_type}"]
 
     if thesis_id:
         thesis = await db.fetchrow("SELECT * FROM theses WHERE id=$1", thesis_id)
         if thesis:
             parts.append(f"Thèse — one_liner : {thesis['one_liner'] or '(non renseigné)'}")
             if thesis["thesis_json"]:
-                import json
                 parts.append(f"Thèse JSON :\n```json\n{json.dumps(thesis['thesis_json'], ensure_ascii=False, indent=2)}\n```")
 
-    # Données de marché
-    try:
-        from app.data_collection.data_service import DataService
-        from app.config import settings
-        m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
-        parts.append(
-            f"Données de marché : prix={m1.get('price')}, PER NTM={m1.get('forward_pe')}, "
-            f"market_cap={m1.get('market_cap')}"
+    if company_type == "private":
+        # Ajoute le profil private
+        private_profile = await db.fetchrow(
+            "SELECT * FROM private_company_profiles WHERE ticker_id=$1", ticker_id
         )
-    except Exception:
-        pass
+        if private_profile:
+            profile_dict = dict(private_profile)
+            for k, v in profile_dict.items():
+                if hasattr(v, "isoformat"):
+                    profile_dict[k] = v.isoformat()
+            parts.append(
+                f"### Type d'entreprise: Non cotée (PE/VC)\n"
+                f"### Profil private:\n{json.dumps(profile_dict, ensure_ascii=False, indent=2)}"
+            )
+        else:
+            parts.append("### Type d'entreprise: Non cotée (PE/VC)")
+    else:
+        # Données de marché (uniquement pour sociétés cotées)
+        try:
+            from app.data_collection.data_service import DataService
+            from app.config import settings
+            m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+            parts.append(
+                f"Données de marché : prix={m1.get('price')}, PER NTM={m1.get('forward_pe')}, "
+                f"market_cap={m1.get('market_cap')}"
+            )
+        except Exception:
+            pass
 
     return "\n\n".join(parts)
 
@@ -131,15 +156,26 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
 
     # Crée la session en status 'running'
     async with get_db_session() as db:
-        t = await db.fetchrow("SELECT id FROM tickers WHERE id=$1", ticker_id)
+        t = await db.fetchrow("SELECT id, company_type FROM tickers WHERE id=$1", ticker_id)
         if not t:
             raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
+
+        company_type = (t["company_type"] or "public")
 
         context_message = data.message
         if not context_message:
             context_message = await _build_monitoring_context(
                 db, ticker_id, data.thesis_id, data.mode, data.trigger_label
             )
+
+        # Injecte les métriques opérationnelles fournies via le formulaire (mode 2 private)
+        if data.private_metrics_text:
+            context_message += f"\n\n### Données opérationnelles fournies\n{data.private_metrics_text}"
+
+        # Injecte le delta PE/VC si société non cotée
+        if company_type == "private":
+            from app.agents.monitoring_agent_v1 import PRIVATE_MONITORING_DELTA
+            context_message = f"{PRIVATE_MONITORING_DELTA}{context_message}"
 
         session_row = await db.fetchrow(
             """
@@ -176,6 +212,59 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
     if parsed:
         alert_level = parsed.get("alert_level") or parsed.get("flag")
         routing_suggestion = parsed.get("routing_suggestion") or parsed.get("action")
+
+    # Met à jour le profil private si l'agent a fourni une mise à jour de valorisation
+    if parsed and parsed.get("private_valuation_update"):
+        pvu = parsed["private_valuation_update"]
+        pvu_next_event_date = pvu.get("next_event_date")
+        if pvu_next_event_date and isinstance(pvu_next_event_date, str):
+            from datetime import date as _date
+            try:
+                pvu_next_event_date = _date.fromisoformat(pvu_next_event_date)
+            except ValueError:
+                pvu_next_event_date = None
+        pvu_last_val_date = pvu.get("last_valuation_date")
+        if pvu_last_val_date and isinstance(pvu_last_val_date, str):
+            from datetime import date as _date
+            try:
+                pvu_last_val_date = _date.fromisoformat(pvu_last_val_date)
+            except ValueError:
+                pvu_last_val_date = None
+        try:
+            async with get_db_session() as db:
+                await db.execute(
+                    """
+                    UPDATE private_company_profiles SET
+                        last_valuation_m = COALESCE($1, last_valuation_m),
+                        last_valuation_date = COALESCE($2, last_valuation_date),
+                        last_valuation_basis = COALESCE($3, last_valuation_basis),
+                        current_ownership_pct = COALESCE($4, current_ownership_pct),
+                        projected_valuation_next_event_m = COALESCE($5, projected_valuation_next_event_m),
+                        next_event_date = COALESCE($6, next_event_date),
+                        next_event_type = COALESCE($7, next_event_type),
+                        updated_at = NOW()
+                    WHERE ticker_id = $8
+                    """,
+                    pvu.get("last_valuation_m"),
+                    pvu_last_val_date,
+                    pvu.get("last_valuation_basis"),
+                    pvu.get("current_ownership_pct"),
+                    pvu.get("projected_valuation_next_event_m"),
+                    pvu_next_event_date,
+                    pvu.get("next_event_type"),
+                    ticker_id,
+                )
+                # Met également à jour current_ownership_pct sur la position ouverte
+                if pvu.get("current_ownership_pct"):
+                    await db.execute(
+                        """
+                        UPDATE portfolio_positions SET current_ownership_pct = $1
+                        WHERE ticker_id = $2 AND status = 'open'
+                        """,
+                        pvu["current_ownership_pct"], ticker_id,
+                    )
+        except Exception as e:
+            logger.warning(f"Private valuation update failed for {ticker_id}: {e}")
 
     # Met à jour la session
     async with get_db_session() as db:

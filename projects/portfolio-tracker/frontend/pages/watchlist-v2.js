@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import PriceChart from '../components/PriceChart'
+import AddPrivateCompanyModal from '../components/AddPrivateCompanyModal'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -217,6 +218,95 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
   )
 }
 
+const STAGE_LABELS = {
+  'pre-seed': 'Pre-Seed',
+  'seed': 'Seed',
+  'series-a': 'Série A',
+  'series-b': 'Série B',
+  'series-c': 'Série C',
+  'growth': 'Growth',
+  'pre-ipo': 'Pré-IPO',
+  'mature': 'Mature',
+}
+
+function PrivateTickerCard({ ticker, opportunityAgentSynced }) {
+  const stageLabel = STAGE_LABELS[ticker.stage] || ticker.stage || '—'
+  const investors = Array.isArray(ticker.notable_investors) ? ticker.notable_investors : []
+  const topInvestors = investors.slice(0, 2)
+
+  return (
+    <div className="bg-gray-900 border border-violet-900/40 rounded-xl p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <Link href={`/ticker/${ticker.id}`} className="font-bold text-violet-400 hover:text-violet-300 text-base leading-tight">
+            {ticker.name || ticker.id}
+          </Link>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs bg-violet-900/50 border border-violet-700 text-violet-300 px-2 py-0.5 rounded-full">
+              {stageLabel}
+            </span>
+            {ticker.sector && (
+              <span className="text-xs text-gray-500">{ticker.sector}</span>
+            )}
+          </div>
+        </div>
+        <span className="text-xs bg-violet-950/60 border border-violet-800/50 text-violet-400 px-2 py-0.5 rounded font-medium flex-shrink-0">
+          Non côté
+        </span>
+      </div>
+
+      {/* Valorisation */}
+      <div className="bg-gray-800/60 rounded-lg px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500">Dernière valorisation</p>
+            <p className="text-white font-semibold">
+              {ticker.last_valuation_m != null ? `${ticker.last_valuation_m}M€` : '—'}
+            </p>
+          </div>
+          <div className="text-right">
+            {ticker.last_valuation_date && (
+              <p className="text-xs text-gray-500">
+                {new Date(ticker.last_valuation_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+              </p>
+            )}
+            {ticker.valuation_basis && (
+              <p className="text-xs text-gray-600 capitalize">{ticker.valuation_basis?.replace(/_/g, ' ')}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Investisseurs */}
+      {topInvestors.length > 0 && (
+        <p className="text-xs text-gray-500">
+          {topInvestors.join(' · ')}
+          {investors.length > 2 && <span className="text-gray-600"> +{investors.length - 2}</span>}
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-1">
+        <Link
+          href={opportunityAgentSynced === false ? '#' : `/ticker/${ticker.id}/opportunity/new`}
+          className={`flex-1 text-center text-sm py-1.5 rounded-lg font-medium transition-colors ${
+            opportunityAgentSynced === false
+              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              : 'bg-violet-700 hover:bg-violet-600 text-white'
+          }`}
+          onClick={e => opportunityAgentSynced === false && e.preventDefault()}
+        >
+          Analyser
+        </Link>
+        <Link href={`/ticker/${ticker.id}`}
+          className="flex-1 text-center text-sm py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium transition-colors">
+          Fiche
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function WatchlistV2() {
   const router = useRouter()
   const [tickers, setTickers] = useState([])
@@ -225,6 +315,7 @@ export default function WatchlistV2() {
   const [addTicker, setAddTicker] = useState('')
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
+  const [showAddPrivate, setShowAddPrivate] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -267,6 +358,9 @@ export default function WatchlistV2() {
     }
   }
 
+  const listedTickers = tickers.filter(t => t.company_type !== 'private')
+  const privateTickers = tickers.filter(t => t.company_type === 'private')
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -275,13 +369,13 @@ export default function WatchlistV2() {
       </div>
 
       {/* Add ticker bar */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <input
           value={addTicker}
           onChange={e => setAddTicker(e.target.value.toUpperCase())}
           onKeyDown={e => e.key === 'Enter' && handleAddTicker()}
           placeholder="Ajouter un ticker… ex. CAP.PA, MSFT"
-          className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none font-mono"
+          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none font-mono"
         />
         <button
           onClick={handleAddTicker}
@@ -289,6 +383,12 @@ export default function WatchlistV2() {
           className="px-4 py-2.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
         >
           {addLoading ? '…' : 'Ajouter'}
+        </button>
+        <button
+          onClick={() => setShowAddPrivate(true)}
+          className="px-4 py-2.5 bg-violet-700 hover:bg-violet-600 text-white text-sm rounded-lg font-medium transition-colors"
+        >
+          + Non coté
         </button>
       </div>
       {addError && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded-lg px-3 py-2">{addError}</p>}
@@ -301,16 +401,47 @@ export default function WatchlistV2() {
           <p className="text-gray-600 text-sm">Ajoutez un ticker ci-dessus pour commencer</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {tickers.map(t => (
-            <TickerCard
-              key={t.id}
-              ticker={t}
-              opportunityAgentSynced={opportunityAgentSynced}
-              onAlertCreated={load}
-            />
-          ))}
-        </div>
+        <>
+          {/* Listed tickers */}
+          {listedTickers.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {listedTickers.map(t => (
+                <TickerCard
+                  key={t.id}
+                  ticker={t}
+                  opportunityAgentSynced={opportunityAgentSynced}
+                  onAlertCreated={load}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Private tickers — Non côté section */}
+          {privateTickers.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
+                Non coté — PE / VC ({privateTickers.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {privateTickers.map(ticker => (
+                  <PrivateTickerCard
+                    key={ticker.id}
+                    ticker={ticker}
+                    opportunityAgentSynced={opportunityAgentSynced}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {showAddPrivate && (
+        <AddPrivateCompanyModal
+          onClose={() => setShowAddPrivate(false)}
+          onCreated={() => { setShowAddPrivate(false); load() }}
+        />
       )}
     </div>
   )

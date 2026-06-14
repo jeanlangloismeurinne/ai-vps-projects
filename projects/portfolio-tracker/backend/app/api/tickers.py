@@ -3,7 +3,7 @@ Tickers V1 — gestion des tickers, alertes prix, price history, métriques.
 """
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -18,11 +18,36 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────── Pydantic schemas ────────────────────────────────
 
 class TickerCreate(BaseModel):
-    id: str          # "CAP.PA", "TSLA"
+    id: Optional[str] = None  # "CAP.PA", "TSLA" — auto-généré PRIV-XXXXXXXX si absent et company_type=private
     name: str
     exchange: Optional[str] = None
     sector: Optional[str] = None
     reporting_currency: Optional[str] = None  # EUR, USD, GBP… — déduit du suffixe si absent
+    company_type: str = "public"
+    # Private-specific optional fields
+    stage: Optional[str] = None
+    country: Optional[str] = None
+    last_valuation_m: Optional[float] = None
+    last_valuation_date: Optional[str] = None
+    last_valuation_basis: Optional[str] = None
+    arr_or_revenue_m: Optional[float] = None
+    ebitda_m: Optional[float] = None
+    notable_investors: Optional[List[str]] = None
+
+
+class PrivateProfileUpdate(BaseModel):
+    stage: Optional[str] = None
+    country: Optional[str] = None
+    last_valuation_m: Optional[float] = None
+    last_valuation_date: Optional[str] = None
+    last_valuation_basis: Optional[str] = None
+    arr_or_revenue_m: Optional[float] = None
+    ebitda_m: Optional[float] = None
+    key_metrics_json: Optional[dict] = None
+    notable_investors: Optional[List[str]] = None
+    projected_valuation_next_event_m: Optional[float] = None
+    next_event_date: Optional[str] = None
+    next_event_type: Optional[str] = None
 
 
 class TickerStatusUpdate(BaseModel):
@@ -80,30 +105,76 @@ def _derive_currency(ticker_id: str) -> str:
 @router.get("")
 async def list_tickers(status: Optional[str] = Query(None)):
     async with get_db_session() as db:
+        query = """
+            SELECT t.*,
+                   pcp.stage, pcp.country,
+                   pcp.last_valuation_m, pcp.last_valuation_date
+            FROM tickers t
+            LEFT JOIN private_company_profiles pcp ON pcp.ticker_id = t.id
+        """
         if status:
-            rows = await db.fetch(
-                "SELECT * FROM tickers WHERE status = $1 ORDER BY added_at DESC", status
-            )
+            rows = await db.fetch(query + " WHERE t.status = $1 ORDER BY t.added_at DESC", status)
         else:
-            rows = await db.fetch("SELECT * FROM tickers ORDER BY added_at DESC")
+            rows = await db.fetch(query + " ORDER BY t.added_at DESC")
     return [_serialize(r) for r in rows]
 
 
 @router.post("", status_code=201)
 async def create_ticker(data: TickerCreate):
+    import random
+    import string
+
+    # Auto-génère un PRIV-XXXXXXXX si id absent (private companies seulement)
+    if not data.id:
+        if data.company_type != "private":
+            raise HTTPException(400, "id requis pour les sociétés cotées")
+        ticker_id = "PRIV-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    else:
+        ticker_id = data.id
+
     async with get_db_session() as db:
-        existing = await db.fetchrow("SELECT id FROM tickers WHERE id = $1", data.id)
+        existing = await db.fetchrow("SELECT id FROM tickers WHERE id = $1", ticker_id)
         if existing:
-            raise HTTPException(400, f"Ticker '{data.id}' existe déjà")
-        currency = data.reporting_currency or _derive_currency(data.id)
+            raise HTTPException(400, f"Ticker '{ticker_id}' existe déjà")
+        # Private companies default to EUR, public tickers derive from suffix
+        if data.company_type == "private":
+            currency = data.reporting_currency or "EUR"
+        else:
+            currency = data.reporting_currency or _derive_currency(ticker_id)
         row = await db.fetchrow(
             """
-            INSERT INTO tickers (id, name, exchange, sector, reporting_currency)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO tickers (id, name, exchange, sector, reporting_currency, company_type)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             """,
-            data.id, data.name, data.exchange, data.sector, currency,
+            ticker_id, data.name, data.exchange, data.sector, currency, data.company_type,
         )
+        # Si private, créer le profil dans private_company_profiles
+        if data.company_type == "private":
+            last_val_date = None
+            if data.last_valuation_date:
+                from datetime import date as _date
+                try:
+                    last_val_date = _date.fromisoformat(data.last_valuation_date)
+                except ValueError:
+                    pass
+            await db.execute(
+                """
+                INSERT INTO private_company_profiles
+                    (ticker_id, stage, country, last_valuation_m, last_valuation_date,
+                     last_valuation_basis, arr_or_revenue_m, ebitda_m, notable_investors)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                """,
+                ticker_id,
+                data.stage,
+                data.country or "FR",
+                data.last_valuation_m,
+                last_val_date,
+                data.last_valuation_basis,
+                data.arr_or_revenue_m,
+                data.ebitda_m,
+                data.notable_investors or [],
+            )
     return _serialize(row)
 
 
@@ -137,22 +208,35 @@ async def search_tickers(q: str = Query(..., min_length=2)):
 async def get_ticker(ticker_id: str):
     async with get_db_session() as db:
         row = await db.fetchrow("SELECT * FROM tickers WHERE id = $1", ticker_id)
-    if not row:
-        raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
+        if not row:
+            raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
+        # Fetch private profile if applicable
+        private_profile = None
+        if row["company_type"] == "private":
+            private_profile = await db.fetchrow(
+                "SELECT * FROM private_company_profiles WHERE ticker_id = $1", ticker_id
+            )
 
     ticker_dict = _serialize(row)
 
-    # Ajoute le prix actuel via DataService (best-effort)
-    try:
-        from app.data_collection.data_service import DataService
-        m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
-        price_data = m1.get("price") or {}
-        ticker_dict["current_price"] = price_data.get("current_price")
-        ticker_dict["currency"] = price_data.get("currency")
-        ticker_dict["market_cap"] = price_data.get("market_cap")
-    except Exception as e:
-        logger.warning(f"Impossible de récupérer le prix pour {ticker_id}: {e}")
+    if private_profile:
+        ticker_dict["private_profile"] = _serialize(private_profile)
+        # Also expose key fields at top level for convenience
         ticker_dict["current_price"] = None
+        ticker_dict["currency"] = None
+        ticker_dict["market_cap"] = None
+    else:
+        # Ajoute le prix actuel via DataService (best-effort)
+        try:
+            from app.data_collection.data_service import DataService
+            m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+            price_data = m1.get("price") or {}
+            ticker_dict["current_price"] = price_data.get("current_price")
+            ticker_dict["currency"] = price_data.get("currency")
+            ticker_dict["market_cap"] = price_data.get("market_cap")
+        except Exception as e:
+            logger.warning(f"Impossible de récupérer le prix pour {ticker_id}: {e}")
+            ticker_dict["current_price"] = None
 
     return ticker_dict
 
@@ -174,6 +258,56 @@ async def update_ticker_status(ticker_id: str, data: TickerStatusUpdate):
         )
     if not row:
         raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
+    return _serialize(row)
+
+
+@router.patch("/{ticker_id}/private-profile")
+async def update_private_profile(ticker_id: str, data: PrivateProfileUpdate):
+    """Met à jour le profil d'une société non cotée (upsert)."""
+    async with get_db_session() as db:
+        t = await db.fetchrow("SELECT id, company_type FROM tickers WHERE id = $1", ticker_id)
+        if not t:
+            raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
+        if t["company_type"] != "private":
+            raise HTTPException(400, f"Ticker '{ticker_id}' n'est pas une société privée")
+
+        updates = {k: v for k, v in data.model_dump().items() if v is not None}
+        if not updates:
+            raise HTTPException(400, "Aucun champ à mettre à jour")
+
+        # Convert date strings to date objects
+        if "last_valuation_date" in updates and isinstance(updates["last_valuation_date"], str):
+            from datetime import date as _date
+            try:
+                updates["last_valuation_date"] = _date.fromisoformat(updates["last_valuation_date"])
+            except ValueError:
+                updates.pop("last_valuation_date")
+        if "next_event_date" in updates and isinstance(updates["next_event_date"], str):
+            from datetime import date as _date
+            try:
+                updates["next_event_date"] = _date.fromisoformat(updates["next_event_date"])
+            except ValueError:
+                updates.pop("next_event_date")
+
+        # Upsert into private_company_profiles
+        existing = await db.fetchrow(
+            "SELECT ticker_id FROM private_company_profiles WHERE ticker_id = $1", ticker_id
+        )
+        if not existing:
+            await db.execute(
+                "INSERT INTO private_company_profiles (ticker_id) VALUES ($1)", ticker_id
+            )
+
+        set_parts = ["updated_at=NOW()"]
+        values = [ticker_id]
+        for i, (k, v) in enumerate(updates.items(), start=2):
+            set_parts.append(f"{k}=${i}")
+            values.append(v)
+
+        row = await db.fetchrow(
+            f"UPDATE private_company_profiles SET {', '.join(set_parts)} WHERE ticker_id=$1 RETURNING *",
+            *values,
+        )
     return _serialize(row)
 
 

@@ -53,6 +53,62 @@ def _serialize(row) -> dict:
     return d
 
 
+def compute_private_irr(position: dict, private_profile: dict):
+    """
+    Calcule l'IRR actuel et projeté pour une position private equity.
+
+    Retourne (irr_current_pct, irr_projected_pct) — valeurs en % arrondies à 2 décimales,
+    ou None si données insuffisantes.
+    """
+    total_invested = float(position.get("shares", 0) or 0) * float(position.get("purchase_price", 0) or 0)
+    current_ownership = float(
+        position.get("current_ownership_pct") or position.get("ownership_pct_at_entry") or 0
+    )
+
+    if not current_ownership or not private_profile.get("last_valuation_m") or not total_invested:
+        return None, None
+
+    # IRR actuel (basé sur la dernière valorisation connue)
+    current_value = float(private_profile["last_valuation_m"]) * current_ownership / 100
+    purchase_date = position.get("purchase_date")
+    if isinstance(purchase_date, str):
+        from datetime import date as _date
+        purchase_date = _date.fromisoformat(purchase_date)
+
+    if not purchase_date:
+        return None, None
+
+    years_held = (date.today() - purchase_date).days / 365.25
+    irr_current = None
+    if total_invested > 0:
+        try:
+            irr_current = round(
+                ((current_value / total_invested) ** (1 / max(years_held, 0.01)) - 1) * 100, 2
+            )
+        except Exception:
+            pass
+
+    # IRR projeté (basé sur la valorisation au prochain événement)
+    irr_projected = None
+    if private_profile.get("projected_valuation_next_event_m") and private_profile.get("next_event_date"):
+        projected_value = float(private_profile["projected_valuation_next_event_m"]) * current_ownership / 100
+        next_event = private_profile["next_event_date"]
+        if isinstance(next_event, str):
+            from datetime import date as _date
+            next_event = _date.fromisoformat(next_event)
+        years_to_event = (next_event - date.today()).days / 365.25
+        total_years = years_held + max(years_to_event, 0.01)
+        if total_invested > 0:
+            try:
+                irr_projected = round(
+                    ((projected_value / total_invested) ** (1 / total_years) - 1) * 100, 2
+                )
+            except Exception:
+                pass
+
+    return irr_current, irr_projected
+
+
 async def _get_cash_balance(db) -> float:
     """Calcule la trésorerie nette depuis cash_movements."""
     row = await db.fetchrow(
@@ -84,13 +140,23 @@ async def portfolio_summary():
         cash_balance = await _get_cash_balance(db)
         positions = await db.fetch(
             """
-            SELECT pp.*, t.name AS ticker_name, th.one_liner AS thesis_one_liner
+            SELECT pp.*, t.name AS ticker_name, t.company_type, th.one_liner AS thesis_one_liner
             FROM portfolio_positions pp
             LEFT JOIN tickers t ON t.id = pp.ticker_id
             LEFT JOIN theses th ON th.id = pp.thesis_id
             WHERE pp.status = 'open'
             """,
         )
+        # Profils private pour le calcul de valorisation
+        private_ticker_ids = [r["ticker_id"] for r in positions if r["company_type"] == "private"]
+        private_profiles_map = {}
+        if private_ticker_ids:
+            pcp_rows = await db.fetch(
+                "SELECT * FROM private_company_profiles WHERE ticker_id = ANY($1::text[])",
+                private_ticker_ids,
+            )
+            for pcp in pcp_rows:
+                private_profiles_map[pcp["ticker_id"]] = _serialize(pcp)
 
     ds = DataService()
     positions_value = 0.0
@@ -98,6 +164,27 @@ async def portfolio_summary():
 
     for pos in positions:
         ticker_id = pos["ticker_id"]
+        company_type = pos["company_type"] or "public"
+        pos_dict = _serialize(pos)
+
+        if company_type == "private":
+            # Valorisation basée sur last_valuation_m × ownership_pct
+            private_profile = private_profiles_map.get(ticker_id, {})
+            ownership = float(pos["current_ownership_pct"] or pos["ownership_pct_at_entry"] or 0)
+            last_val = private_profile.get("last_valuation_m")
+            if last_val and ownership:
+                market_value = float(last_val) * ownership / 100 * 1_000_000  # M€ → €
+            else:
+                market_value = float(pos["purchase_price"]) * float(pos["shares"])
+            positions_value += market_value
+            positions_detail.append({
+                **pos_dict,
+                "current_price": None,
+                "market_value": round(market_value, 2),
+                "perf_pct": None,
+            })
+            continue
+
         current_price = None
         try:
             m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
@@ -115,7 +202,7 @@ async def portfolio_summary():
             perf_pct = round((float(current_price) / purchase_price - 1) * 100, 2)
 
         positions_detail.append({
-            **_serialize(pos),
+            **pos_dict,
             "current_price": current_price,
             "market_value": round(market_value, 2),
             "perf_pct": perf_pct,
@@ -140,7 +227,8 @@ async def list_positions():
     async with get_db_session() as db:
         rows = await db.fetch(
             """
-            SELECT pp.*, t.name AS ticker_name, t.sector, th.status AS thesis_status,
+            SELECT pp.*, t.name AS ticker_name, t.sector, t.company_type,
+                   th.status AS thesis_status,
                    th.one_liner AS thesis_one_liner
             FROM portfolio_positions pp
             LEFT JOIN tickers t ON t.id = pp.ticker_id
@@ -149,12 +237,46 @@ async def list_positions():
             ORDER BY pp.created_at DESC
             """
         )
+        # Récupère tous les profils private en une seule requête
+        private_ticker_ids = [r["ticker_id"] for r in rows if r["company_type"] == "private"]
+        private_profiles_map = {}
+        if private_ticker_ids:
+            pcp_rows = await db.fetch(
+                "SELECT * FROM private_company_profiles WHERE ticker_id = ANY($1::text[])",
+                private_ticker_ids,
+            )
+            for pcp in pcp_rows:
+                private_profiles_map[pcp["ticker_id"]] = _serialize(pcp)
 
     ds = DataService()
     result = []
 
     for pos in rows:
         ticker_id = pos["ticker_id"]
+        company_type = pos["company_type"] or "public"
+
+        pos_dict = _serialize(pos)
+
+        if company_type == "private":
+            # Société non cotée : pas de prix de marché, calcul IRR
+            private_profile = private_profiles_map.get(ticker_id, {})
+            irr_current, irr_projected = compute_private_irr(pos_dict, private_profile)
+            result.append({
+                **pos_dict,
+                "current_price": None,
+                "currency": "EUR",
+                "market_value": None,
+                "perf_pct": None,
+                "perf_annualized": None,
+                "irr_current_pct": irr_current,
+                "irr_projected_pct": irr_projected,
+                "last_valuation_m": private_profile.get("last_valuation_m"),
+                "current_ownership_pct": pos_dict.get("current_ownership_pct") or pos_dict.get("ownership_pct_at_entry"),
+                "next_event_date": private_profile.get("next_event_date"),
+                "next_event_type": private_profile.get("next_event_type"),
+            })
+            continue
+
         current_price = None
         ticker_currency = None
         try:
@@ -195,7 +317,7 @@ async def list_positions():
                     )
 
         result.append({
-            **_serialize(pos),
+            **pos_dict,
             "purchase_price": purchase_price_native,
             "purchase_currency": ticker_currency or stored_currency,
             "current_price": current_price,
