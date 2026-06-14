@@ -98,24 +98,27 @@ function AlertModal({ ticker, onClose, onSaved }) {
 const PERIODS = ['1Y', '5Y', 'MAX']
 
 function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
+  const hasSymbol = !!ticker.ticker_symbol
   const [priceHistory, setPriceHistory] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [period, setPeriod] = useState('1Y')
 
   useEffect(() => {
+    if (!hasSymbol) return
     fetch(`${API}/tickers/${ticker.id}/price-history?period=${period}`)
       .then(r => r.json())
       .then(data => setPriceHistory(Array.isArray(data) ? data : data.data || []))
       .catch(() => {})
-  }, [ticker.id, period])
+  }, [ticker.id, hasSymbol, period])
 
   useEffect(() => {
+    if (!hasSymbol) return
     fetch(`${API}/tickers/${ticker.id}/metrics`)
       .then(r => r.json())
       .then(setMetrics)
       .catch(() => {})
-  }, [ticker.id])
+  }, [ticker.id, hasSymbol])
 
   const currentPrice = metrics?.current_price ?? ticker.current_price
   const priceChange = metrics?.price_change_1d_pct
@@ -123,40 +126,57 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
       <div className="flex items-start justify-between">
-        <div>
-          <Link href={`/ticker/${ticker.id}`} className="font-mono font-bold text-indigo-400 hover:text-indigo-300 text-lg">
-            {ticker.id}
+        <div className="min-w-0 flex-1 mr-3">
+          <Link href={`/ticker/${ticker.id}`} className="font-bold text-indigo-400 hover:text-indigo-300 text-base leading-tight block truncate">
+            {ticker.name || ticker.id}
           </Link>
-          <p className="text-xs text-gray-500">{ticker.name || ''} {ticker.exchange ? `· ${ticker.exchange}` : ''}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-white font-semibold">
-            {fmtPrice(currentPrice, metrics?.currency)}
+          <p className="text-xs text-gray-500 mt-0.5">
+            {hasSymbol
+              ? <span className="font-mono text-gray-400">{ticker.ticker_symbol}</span>
+              : <span className="text-amber-500/80">Symbole à renseigner</span>
+            }
+            {ticker.exchange ? <span className="text-gray-600"> · {ticker.exchange}</span> : ''}
           </p>
-          {priceChange != null && (
-            <p className={`text-xs font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
-            </p>
-          )}
         </div>
+        {hasSymbol && (
+          <div className="text-right flex-shrink-0">
+            <p className="text-white font-semibold">
+              {fmtPrice(currentPrice, metrics?.currency)}
+            </p>
+            {priceChange != null && (
+              <p className={`text-xs font-medium ${priceChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Chart avec sélecteur de période */}
-      <div>
-        <div className="flex gap-1.5 mb-1.5">
-          {PERIODS.map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`text-xs px-2 py-0.5 rounded transition-colors ${
-                period === p ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
-              }`}>
-              {p}
-            </button>
-          ))}
+      {/* Chart — uniquement si le symbole boursier est connu */}
+      {hasSymbol && (
+        <div>
+          <div className="flex gap-1.5 mb-1.5">
+            {PERIODS.map(p => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                  period === p ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
+                }`}>
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="-mx-1">
+            <PriceChart data={priceHistory} height={100} color="auto" showAxes showDates />
+          </div>
         </div>
-        <div className="-mx-1">
-          <PriceChart data={priceHistory} height={100} color="auto" showAxes showDates />
+      )}
+
+      {/* Placeholder quand pas de symbole */}
+      {!hasSymbol && (
+        <div className="bg-amber-950/30 border border-amber-800/40 rounded-lg px-3 py-2.5 text-xs text-amber-400/80">
+          Le symbole boursier sera renseigné lors de l&apos;analyse d&apos;opportunité.
         </div>
-      </div>
+      )}
 
       {/* Alerts */}
       {ticker.alerts && ticker.alerts.length > 0 && (
@@ -173,7 +193,6 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
-        {/* Analyser */}
         <div className="relative flex-1">
           <Link
             href={opportunityAgentSynced === false ? '#' : `/ticker/${ticker.id}/opportunity/new`}
@@ -201,10 +220,12 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
           className="flex-1 text-center text-sm py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium transition-colors">
           Fiche
         </Link>
-        <button onClick={() => setShowAlertModal(true)}
-          className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium transition-colors text-sm">
-          +
-        </button>
+        {hasSymbol && (
+          <button onClick={() => setShowAlertModal(true)}
+            className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium transition-colors text-sm">
+            +
+          </button>
+        )}
       </div>
 
       {showAlertModal && (
@@ -344,14 +365,14 @@ export default function WatchlistV2() {
       const res = await fetch(`${API}/tickers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: addTicker.trim().toUpperCase(), name: addTicker.trim().toUpperCase() }),
+        body: JSON.stringify({ name: addTicker.trim() }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
         throw new Error(e.detail || `Erreur ${res.status}`)
       }
       const data = await res.json()
-      router.push(`/ticker/${data.id || data.ticker_id}`)
+      router.push(`/ticker/${data.id}`)
     } catch (e) {
       setAddError(e.message)
       setAddLoading(false)
@@ -372,10 +393,10 @@ export default function WatchlistV2() {
       <div className="flex gap-3 flex-wrap">
         <input
           value={addTicker}
-          onChange={e => setAddTicker(e.target.value.toUpperCase())}
+          onChange={e => setAddTicker(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAddTicker()}
-          placeholder="Ajouter un ticker… ex. CAP.PA, MSFT"
-          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none font-mono"
+          placeholder="Nom de la société cotée… ex. LVMH, Hermès, Capgemini"
+          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
         />
         <button
           onClick={handleAddTicker}

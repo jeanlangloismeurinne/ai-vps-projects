@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────── Pydantic schemas ────────────────────────────────
 
 class TickerCreate(BaseModel):
-    id: Optional[str] = None  # "CAP.PA", "TSLA" — auto-généré PRIV-XXXXXXXX si absent et company_type=private
+    id: Optional[str] = None  # laissé vide → auto-généré PUB-XXXXXXXX (cotées) ou PRIV-XXXXXXXX (privées)
     name: str
+    ticker_symbol: Optional[str] = None  # symbole yfinance ex. "CAP.PA" — peut être fourni plus tard
     exchange: Optional[str] = None
     sector: Optional[str] = None
-    reporting_currency: Optional[str] = None  # EUR, USD, GBP… — déduit du suffixe si absent
+    reporting_currency: Optional[str] = None  # EUR, USD, GBP… — déduit du suffixe du ticker_symbol si absent
     company_type: str = "public"
     # Private-specific optional fields
     stage: Optional[str] = None
@@ -50,9 +51,17 @@ class PrivateProfileUpdate(BaseModel):
     next_event_type: Optional[str] = None
 
 
-class TickerStatusUpdate(BaseModel):
+class TickerUpdate(BaseModel):
+    name: Optional[str] = None
+    ticker_symbol: Optional[str] = None  # symbole yfinance — renseigné à l'étape d'opportunité
+    exchange: Optional[str] = None
+    sector: Optional[str] = None
     status: Optional[str] = None      # 'watchlist' | 'portfolio' | 'archived'
     reporting_currency: Optional[str] = None
+
+
+# Alias pour compatibilité
+TickerStatusUpdate = TickerUpdate
 
 
 class AlertCreate(BaseModel):
@@ -124,30 +133,36 @@ async def create_ticker(data: TickerCreate):
     import random
     import string
 
-    # Auto-génère un PRIV-XXXXXXXX si id absent (private companies seulement)
     if not data.id:
-        if data.company_type != "private":
-            raise HTTPException(400, "id requis pour les sociétés cotées")
-        ticker_id = "PRIV-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        prefix = "PRIV-" if data.company_type == "private" else "PUB-"
+        ticker_id = prefix + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
     else:
         ticker_id = data.id
+
+    # Le ticker_symbol est le symbole yfinance : si fourni, on l'utilise ; sinon on l'infère de l'id
+    # (seulement si l'id n'est pas auto-généré, i.e. ressemble à un vrai symbole boursier)
+    ticker_symbol = data.ticker_symbol
+    if ticker_symbol is None and not ticker_id.startswith(("PUB-", "PRIV-")):
+        ticker_symbol = ticker_id
 
     async with get_db_session() as db:
         existing = await db.fetchrow("SELECT id FROM tickers WHERE id = $1", ticker_id)
         if existing:
             raise HTTPException(400, f"Ticker '{ticker_id}' existe déjà")
-        # Private companies default to EUR, public tickers derive from suffix
         if data.company_type == "private":
             currency = data.reporting_currency or "EUR"
         else:
-            currency = data.reporting_currency or _derive_currency(ticker_id)
+            # Dérive la devise du ticker_symbol s'il est connu, sinon EUR par défaut
+            currency = data.reporting_currency or (
+                _derive_currency(ticker_symbol) if ticker_symbol else "EUR"
+            )
         row = await db.fetchrow(
             """
-            INSERT INTO tickers (id, name, exchange, sector, reporting_currency, company_type)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO tickers (id, name, ticker_symbol, exchange, sector, reporting_currency, company_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
             """,
-            ticker_id, data.name, data.exchange, data.sector, currency, data.company_type,
+            ticker_id, data.name, ticker_symbol, data.exchange, data.sector, currency, data.company_type,
         )
         # Si private, créer le profil dans private_company_profiles
         if data.company_type == "private":
@@ -218,34 +233,49 @@ async def get_ticker(ticker_id: str):
             )
 
     ticker_dict = _serialize(row)
+    symbol_for_data = row.get("ticker_symbol") or None
 
     if private_profile:
         ticker_dict["private_profile"] = _serialize(private_profile)
-        # Also expose key fields at top level for convenience
         ticker_dict["current_price"] = None
         ticker_dict["currency"] = None
         ticker_dict["market_cap"] = None
-    else:
+    elif symbol_for_data:
         # Ajoute le prix actuel via DataService (best-effort)
         try:
             from app.data_collection.data_service import DataService
-            m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+            m1 = await DataService().get_m1(symbol_for_data, settings.FMP_API_KEY)
             price_data = m1.get("price") or {}
             ticker_dict["current_price"] = price_data.get("current_price")
             ticker_dict["currency"] = price_data.get("currency")
             ticker_dict["market_cap"] = price_data.get("market_cap")
         except Exception as e:
-            logger.warning(f"Impossible de récupérer le prix pour {ticker_id}: {e}")
+            logger.warning(f"Impossible de récupérer le prix pour {symbol_for_data}: {e}")
             ticker_dict["current_price"] = None
+    else:
+        ticker_dict["current_price"] = None
+        ticker_dict["currency"] = None
+        ticker_dict["market_cap"] = None
 
     return ticker_dict
 
 
 @router.patch("/{ticker_id}")
-async def update_ticker_status(ticker_id: str, data: TickerStatusUpdate):
+async def update_ticker(ticker_id: str, data: TickerUpdate):
     updates = {k: v for k, v in data.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(400, "Aucun champ à mettre à jour")
+
+    allowed = {"name", "ticker_symbol", "exchange", "sector", "status", "reporting_currency"}
+    updates = {k: v for k, v in updates.items() if k in allowed}
+
+    # Si ticker_symbol fourni et reporting_currency absent, dériver la devise
+    if "ticker_symbol" in updates and "reporting_currency" not in updates:
+        async with get_db_session() as db:
+            row = await db.fetchrow("SELECT reporting_currency FROM tickers WHERE id=$1", ticker_id)
+            if row and not row["reporting_currency"]:
+                updates["reporting_currency"] = _derive_currency(updates["ticker_symbol"])
+
     set_parts = ["updated_at=NOW()"]
     values = [ticker_id]
     for i, (k, v) in enumerate(updates.items(), start=2):
@@ -331,10 +361,17 @@ async def get_price_history(
 ):
     import yfinance as yf
 
+    # Résoudre le symbole yfinance depuis ticker_symbol si disponible
+    async with get_db_session() as db:
+        row = await db.fetchrow("SELECT ticker_symbol FROM tickers WHERE id=$1", ticker_id)
+    yf_symbol = (row["ticker_symbol"] if row else None) or None
+    if not yf_symbol:
+        return {"ticker_id": ticker_id, "period": period, "data": []}
+
     loop = asyncio.get_event_loop()
 
     def _fetch():
-        ticker = yf.Ticker(ticker_id)
+        ticker = yf.Ticker(yf_symbol)
         hist = ticker.history(period=period.lower())
         if hist.empty:
             return []
@@ -363,9 +400,15 @@ async def get_price_history(
 
 @router.get("/{ticker_id}/metrics")
 async def get_ticker_metrics(ticker_id: str):
+    async with get_db_session() as db:
+        row = await db.fetchrow("SELECT ticker_symbol FROM tickers WHERE id=$1", ticker_id)
+    yf_symbol = (row["ticker_symbol"] if row else None) or None
+    if not yf_symbol:
+        return {"ticker_id": ticker_id, "current_price": None, "currency": None}
+
     try:
         from app.data_collection.data_service import DataService
-        m1 = await DataService().get_m1(ticker_id, settings.FMP_API_KEY)
+        m1 = await DataService().get_m1(yf_symbol, settings.FMP_API_KEY)
     except Exception as e:
         raise HTTPException(502, f"Erreur DataService: {e}")
 
