@@ -68,11 +68,15 @@ async def check_objectif_reminders():
         await svc_v2.record_notification(objectif_id, today)
         logger.info(f"Rappel objectif envoyé (Slack Q1): {o['nom']} ({objectif_id})")
 
-    # Rappels de suivi : 3h après le premier message, si non complété
+    # Rappels de suivi : heure_relance fixe ou rappel + 3h
     for o in due:
         objectif_id = str(o["id"])
         rappel_time = o["heure_rappel"]
-        followup_hhmm = (datetime.combine(today, rappel_time) + timedelta(hours=3)).strftime("%H:%M")
+        heure_relance = o.get("heure_relance")
+        if heure_relance:
+            followup_hhmm = str(heure_relance)[:5]
+        else:
+            followup_hhmm = (datetime.combine(today, rappel_time) + timedelta(hours=3)).strftime("%H:%M")
         if followup_hhmm != current_hhmm:
             continue
         notif = await svc_v2.get_notification_today(objectif_id, today)

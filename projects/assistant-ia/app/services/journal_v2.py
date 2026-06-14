@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 import pytz
 from app.db import get_pool
 
@@ -83,27 +83,37 @@ async def get_objectif(id: str):
 async def create_objectif(
     parcours_id: str, nom: str, description: str,
     frequence: str, jours: list, heure_rappel: str,
+    heure_relance: str | None = None,
+    recap_actif: bool = False, recap_jour: int = 0, recap_heure: str = "08:00",
 ) -> str:
     pool = await get_pool()
     row = await pool.fetchrow(
         """INSERT INTO journal_objectifs
-           (parcours_id, nom, description, frequence, jours, heure_rappel)
-           VALUES ($1,$2,$3,$4,$5,$6) RETURNING id""",
+           (parcours_id, nom, description, frequence, jours, heure_rappel,
+            heure_relance, recap_actif, recap_jour, recap_heure)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id""",
         parcours_id, nom, description or None,
         frequence, json.dumps(jours), time.fromisoformat(heure_rappel),
+        time.fromisoformat(heure_relance) if heure_relance else None,
+        recap_actif, recap_jour, time.fromisoformat(recap_heure),
     )
     return str(row["id"])
 
 async def update_objectif(
     id: str, nom: str, description: str,
     frequence: str, jours: list, heure_rappel: str,
+    heure_relance: str | None = None,
+    recap_actif: bool = False, recap_jour: int = 0, recap_heure: str = "08:00",
 ) -> None:
     pool = await get_pool()
     await pool.execute(
         """UPDATE journal_objectifs
-           SET nom=$1, description=$2, frequence=$3, jours=$4, heure_rappel=$5
-           WHERE id=$6""",
-        nom, description or None, frequence, json.dumps(jours), time.fromisoformat(heure_rappel), id,
+           SET nom=$1, description=$2, frequence=$3, jours=$4, heure_rappel=$5,
+               heure_relance=$6, recap_actif=$7, recap_jour=$8, recap_heure=$9
+           WHERE id=$10""",
+        nom, description or None, frequence, json.dumps(jours), time.fromisoformat(heure_rappel),
+        time.fromisoformat(heure_relance) if heure_relance else None,
+        recap_actif, recap_jour, time.fromisoformat(recap_heure), id,
     )
 
 async def toggle_objectif(id: str, is_active: bool) -> None:
@@ -176,7 +186,8 @@ async def get_question(id: str):
     return await pool.fetchrow("SELECT * FROM journal_questions WHERE id=$1", id)
 
 async def create_question(
-    objectif_id: str, texte: str, type_: str, config: dict
+    objectif_id: str, texte: str, type_: str, config: dict,
+    multi_reponses: bool = False,
 ) -> str:
     pool = await get_pool()
     max_order = await pool.fetchval(
@@ -184,17 +195,20 @@ async def create_question(
         objectif_id,
     )
     row = await pool.fetchrow(
-        """INSERT INTO journal_questions (objectif_id, texte, type, config, sort_order)
-           VALUES ($1,$2,$3,$4,$5) RETURNING id""",
-        objectif_id, texte, type_, json.dumps(config), (max_order or 0) + 1,
+        """INSERT INTO journal_questions (objectif_id, texte, type, config, sort_order, multi_reponses)
+           VALUES ($1,$2,$3,$4,$5,$6) RETURNING id""",
+        objectif_id, texte, type_, json.dumps(config), (max_order or 0) + 1, multi_reponses,
     )
     return str(row["id"])
 
-async def update_question(id: str, texte: str, config: dict, is_active: bool) -> None:
+async def update_question(
+    id: str, texte: str, config: dict, is_active: bool,
+    multi_reponses: bool = False,
+) -> None:
     pool = await get_pool()
     await pool.execute(
-        "UPDATE journal_questions SET texte=$1, config=$2, is_active=$3 WHERE id=$4",
-        texte, json.dumps(config), is_active, id,
+        "UPDATE journal_questions SET texte=$1, config=$2, is_active=$3, multi_reponses=$4 WHERE id=$5",
+        texte, json.dumps(config), is_active, multi_reponses, id,
     )
 
 async def deprecate_question(id: str) -> None:
@@ -236,21 +250,35 @@ async def move_question(id: str, direction: str) -> None:
 # ── Réponses ──────────────────────────────────────────────────────────────────
 
 async def store_reponse(
-    question_id: str, objectif_id: str, valeur: dict, session_date: date
+    question_id: str, objectif_id: str, valeur: dict, session_date: date,
+    multi_reponses: bool = False,
 ) -> None:
     pool = await get_pool()
-    await pool.execute(
-        """INSERT INTO journal_reponses (question_id, objectif_id, valeur, session_date)
-           VALUES ($1,$2,$3,$4)
-           ON CONFLICT (question_id, objectif_id, session_date)
-           DO UPDATE SET valeur=EXCLUDED.valeur, answered_at=now()""",
-        question_id, objectif_id, json.dumps(valeur), session_date,
-    )
+    if multi_reponses:
+        next_index = await pool.fetchval(
+            """SELECT COALESCE(MAX(entry_index), -1) + 1
+               FROM journal_reponses
+               WHERE question_id=$1 AND objectif_id=$2 AND session_date=$3""",
+            question_id, objectif_id, session_date,
+        )
+        await pool.execute(
+            """INSERT INTO journal_reponses (question_id, objectif_id, valeur, session_date, entry_index)
+               VALUES ($1,$2,$3,$4,$5)""",
+            question_id, objectif_id, json.dumps(valeur), session_date, next_index,
+        )
+    else:
+        await pool.execute(
+            """INSERT INTO journal_reponses (question_id, objectif_id, valeur, session_date, entry_index)
+               VALUES ($1,$2,$3,$4,0)
+               ON CONFLICT (question_id, objectif_id, session_date, entry_index)
+               DO UPDATE SET valeur=EXCLUDED.valeur, answered_at=now()""",
+            question_id, objectif_id, json.dumps(valeur), session_date,
+        )
 
 async def get_session_answered_ids(objectif_id: str, session_date: date) -> set:
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT question_id FROM journal_reponses WHERE objectif_id=$1 AND session_date=$2",
+        "SELECT DISTINCT question_id FROM journal_reponses WHERE objectif_id=$1 AND session_date=$2",
         objectif_id, session_date,
     )
     return {str(r["question_id"]) for r in rows}
@@ -269,10 +297,11 @@ async def is_objectif_complete(objectif_id: str, session_date: date) -> bool:
     return all(str(q["id"]) in answered for q in required)
 
 async def get_session_reponses(objectif_id: str, session_date: date) -> dict:
-    """Retourne {question_id: valeur} pour préfill du formulaire."""
+    """Retourne {question_id: valeur} pour prefill du formulaire (entry_index=0)."""
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT question_id, valeur FROM journal_reponses WHERE objectif_id=$1 AND session_date=$2",
+        """SELECT question_id, valeur FROM journal_reponses
+           WHERE objectif_id=$1 AND session_date=$2 AND entry_index=0""",
         objectif_id, session_date,
     )
     result = {}
@@ -281,6 +310,29 @@ async def get_session_reponses(objectif_id: str, session_date: date) -> dict:
         result[str(r["question_id"])] = json.loads(v) if isinstance(v, str) else v
     return result
 
+async def get_multi_reponses(question_id: str, objectif_id: str, session_date: date) -> list:
+    """Retourne toutes les entrées pour une question multi-réponses."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT id, entry_index, valeur, answered_at
+           FROM journal_reponses
+           WHERE question_id=$1 AND objectif_id=$2 AND session_date=$3
+           ORDER BY entry_index""",
+        question_id, objectif_id, session_date,
+    )
+    result = []
+    for r in rows:
+        v = r["valeur"]
+        result.append({
+            "id": str(r["id"]),
+            "entry_index": r["entry_index"],
+            "valeur": json.loads(v) if isinstance(v, str) else v,
+        })
+    return result
+
+async def delete_reponse(reponse_id: str) -> None:
+    pool = await get_pool()
+    await pool.execute("DELETE FROM journal_reponses WHERE id=$1", reponse_id)
 
 async def get_questions(objectif_id: str) -> list:
     """Alias de list_active_questions pour usage externe."""
@@ -294,7 +346,7 @@ async def get_reponses(question_id: str, limit: int = 100) -> list:
            FROM journal_reponses r
            JOIN journal_questions q ON q.id = r.question_id
            WHERE r.question_id=$1
-           ORDER BY r.session_date DESC
+           ORDER BY r.session_date DESC, r.entry_index ASC
            LIMIT $2""",
         question_id, limit,
     )
@@ -359,8 +411,10 @@ def is_due_today(objectif) -> bool:
 
     if freq == "daily":
         return True
+    if freq == "weekdays":
+        return today.weekday() < 5  # 0=lundi, 4=vendredi
     if freq == "weekly":
-        return today.weekday() in jours  # 0=lundi
+        return today.weekday() in jours
     if freq == "monthly":
         return today.day in jours
     return False
@@ -398,3 +452,72 @@ async def advance_slack_session(session_id: int, next_index: int) -> None:
         "UPDATE journal_slack_sessions SET question_index=$1 WHERE id=$2",
         next_index, session_id,
     )
+
+# ── Récapitulatif hebdomadaire ────────────────────────────────────────────────
+
+async def get_objectifs_recap_dus(weekday: int, heure_str: str) -> list:
+    """Objectifs avec recap_actif=TRUE, recap_jour=weekday, recap_heure à l'heure courante (±1 min)."""
+    pool = await get_pool()
+    return await pool.fetch(
+        """SELECT o.*, p.nom as parcours_nom
+           FROM journal_objectifs o
+           JOIN journal_parcours p ON p.id = o.parcours_id
+           WHERE o.recap_actif = TRUE
+             AND o.archived_at IS NULL
+             AND o.is_active = TRUE
+             AND p.is_active = TRUE AND p.archived_at IS NULL
+             AND o.recap_jour = $1
+             AND to_char(o.recap_heure, 'HH24:MI') = $2""",
+        weekday, heure_str,
+    )
+
+async def recap_deja_envoye(objectif_id: str, semaine_iso: str) -> bool:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT 1 FROM journal_recap_envois WHERE objectif_id=$1 AND semaine_iso=$2",
+        objectif_id, semaine_iso,
+    )
+    return row is not None
+
+async def marquer_recap_envoye(objectif_id: str, semaine_iso: str) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        """INSERT INTO journal_recap_envois (objectif_id, semaine_iso)
+           VALUES ($1,$2) ON CONFLICT DO NOTHING""",
+        objectif_id, semaine_iso,
+    )
+
+async def get_reponses_semaine(objectif_id: str, semaine_iso: str) -> dict:
+    """Retourne {question_texte: [{session_date, valeur, type}]} pour la semaine ISO."""
+    pool = await get_pool()
+    # Parse semaine_iso "2026-W24" → date range (lundi→dimanche)
+    year_str, week_str = semaine_iso.split("-W")
+    year, week = int(year_str), int(week_str)
+    # ISO week: Monday = day 1
+    lundi = datetime.strptime(f"{year}-W{week:02d}-1", "%G-W%V-%u").date()
+    dimanche = lundi + timedelta(days=6)
+
+    rows = await pool.fetch(
+        """SELECT r.session_date, r.valeur, r.entry_index,
+                  q.texte as question_texte, q.type as question_type,
+                  q.sort_order as question_sort
+           FROM journal_reponses r
+           JOIN journal_questions q ON q.id = r.question_id
+           WHERE r.objectif_id=$1
+             AND r.session_date BETWEEN $2 AND $3
+           ORDER BY q.sort_order, r.session_date, r.entry_index""",
+        objectif_id, lundi, dimanche,
+    )
+
+    result: dict = {}
+    for r in rows:
+        texte = r["question_texte"]
+        if texte not in result:
+            result[texte] = []
+        v = r["valeur"]
+        result[texte].append({
+            "session_date": r["session_date"],
+            "valeur": json.loads(v) if isinstance(v, str) else v,
+            "type": r["question_type"],
+        })
+    return result

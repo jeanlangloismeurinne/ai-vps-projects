@@ -9,10 +9,12 @@ import pytz
 from pathlib import Path
 
 from app.routes import webhooks, journal, kanban, feedback as feedback_route, journal_settings, journal_fill
+from app.routes import journal_recap
 from app.routes.slack_events import router as slack_router
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
 from app.jobs.journal_prompt import check_objectif_reminders
+from app.jobs.journal_recap import send_recap_hebdo
 from app.jobs.task_reminder import check_due_cards
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
@@ -27,6 +29,7 @@ async def lifespan(app: FastAPI):
 
     _scheduler.add_job(check_due_cards, CronTrigger(minute="*"))
     _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
+    _scheduler.add_job(send_recap_hebdo, CronTrigger(minute="*"))
     _scheduler.start()
     logger.info("Scheduler started")
     logger.info("Slack HTTP Events API ready on /slack/events")
@@ -55,6 +58,7 @@ app.include_router(webhooks.router)
 app.include_router(journal.router)
 app.include_router(journal_fill.router)
 app.include_router(journal_settings.router)
+app.include_router(journal_recap.router)
 app.include_router(kanban.router)
 app.include_router(feedback_route.router)
 

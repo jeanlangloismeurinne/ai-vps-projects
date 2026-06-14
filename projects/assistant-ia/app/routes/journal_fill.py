@@ -103,26 +103,54 @@ def _shell(title: str, body: str, back_url: str = "", back_label: str = "") -> s
 </html>"""
 
 
-def _render_question(q, existing: dict = None) -> str:
+def _render_multi_entries(qid: str, entries: list, objectif_id: str) -> str:
+    """Affiche les entrées existantes d'une question multi-réponses avec bouton supprimer."""
+    html = ""
+    for e in entries:
+        val = e["valeur"]
+        text_val = val.get("text", str(val)) if isinstance(val, dict) else str(val)
+        html += f"""
+        <div style="display:flex;align-items:start;gap:.5rem;margin-bottom:.4rem">
+          <span style="flex:1;background:#0f1117;border:1px solid var(--border);border-radius:6px;
+                       padding:.4rem .75rem;font-size:.9rem">{text_val}</span>
+          <form method="post" action="/journal/fill/reponse/{e['id']}/delete" style="flex-shrink:0">
+            <input type="hidden" name="objectif_id" value="{objectif_id}">
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:.75rem"
+                    title="Supprimer">✕</button>
+          </form>
+        </div>"""
+    return html
+
+
+def _render_question(q, existing=None, multi_entries: list = None, objectif_id: str = "") -> str:
     qid = str(q["id"])
     texte = q["texte"]
     type_ = q["type"]
     cfg = q["config"]
     if isinstance(cfg, str):
         cfg = json.loads(cfg)
-    ex = existing or {}
+    multi = bool(q.get("multi_reponses", False))
+
+    # For multi questions, existing holds first entry for compat; multi_entries has all
+    ex = {}
+    if not multi and isinstance(existing, dict):
+        ex = existing
 
     name = f"q_{qid}"
     html = f'<div class="question-block" data-question="{qid}">'
     html += f'<div class="question-label">{texte}</div>'
 
+    if multi and multi_entries:
+        html += _render_multi_entries(qid, multi_entries, objectif_id)
+        html += '<div style="margin-top:.75rem;font-size:.82rem;color:var(--muted);margin-bottom:.3rem">Ajouter une réponse :</div>'
+
     if type_ in ("text",):
         val = ex.get("text", "")
-        html += f'<textarea name="{name}" rows="4" placeholder="Ta réponse…">{val}</textarea>'
+        html += f'<textarea name="{name}" rows="4" placeholder="Ta réponse…">{val if not multi else ""}</textarea>'
 
     elif type_ == "short_text":
         val = ex.get("text", "")
-        html += f'<input type="text" name="{name}" placeholder="Ta réponse…" value="{val}">'
+        html += f'<input type="text" name="{name}" placeholder="Ta réponse…" value="{val if not multi else ""}">'
 
     elif type_ == "note":
         mn, mx = cfg.get("min", 1), cfg.get("max", 5)
@@ -332,7 +360,17 @@ async def fill_objectif(objectif_id: str):
     is_editing = bool(existing)
     is_complete = await svc.is_objectif_complete(objectif_id, today)
 
-    q_blocks = "".join(_render_question(q, existing.get(str(q["id"]))) for q in questions)
+    async def _build_question_block(q) -> str:
+        qid = str(q["id"])
+        if q.get("multi_reponses"):
+            entries = await svc.get_multi_reponses(qid, objectif_id, today)
+            return _render_question(q, None, multi_entries=entries, objectif_id=objectif_id)
+        return _render_question(q, existing.get(qid))
+
+    import asyncio
+    q_blocks = "".join(
+        await asyncio.gather(*[_build_question_block(q) for q in questions])
+    )
 
     banner = ""
     if is_complete:
@@ -369,6 +407,14 @@ async def fill_objectif(objectif_id: str):
     return HTMLResponse(_shell(o["nom"], body, "/journal/fill", "Journal du jour"))
 
 
+@router.post("/journal/fill/reponse/{reponse_id}/delete")
+async def delete_reponse(reponse_id: str, request: Request):
+    form = await request.form()
+    objectif_id = form.get("objectif_id", "")
+    await svc.delete_reponse(reponse_id)
+    return RedirectResponse(f"/journal/fill/{objectif_id}" if objectif_id else "/journal/fill", status_code=303)
+
+
 @router.post("/journal/fill/{objectif_id}")
 async def submit_objectif(objectif_id: str, request: Request):
     today = date.today()
@@ -386,6 +432,7 @@ async def submit_objectif(objectif_id: str, request: Request):
         cfg = q["config"]
         if isinstance(cfg, str):
             cfg = json.loads(cfg)
+        multi = bool(q.get("multi_reponses", False))
 
         valeur: dict = {}
 
@@ -440,10 +487,10 @@ async def submit_objectif(objectif_id: str, request: Request):
                 valeur = {"order": items}
 
         if valeur:
-            await svc.store_reponse(qid, objectif_id, valeur, today)
-            logger.info(f"Réponse stockée: question={qid}, objectif={objectif_id}")
+            await svc.store_reponse(qid, objectif_id, valeur, today, multi_reponses=multi)
+            logger.info(f"Réponse stockée: question={qid}, objectif={objectif_id}, multi={multi}")
 
-    return RedirectResponse("/journal/fill", status_code=303)
+    return RedirectResponse(f"/journal/fill/{objectif_id}", status_code=303)
 
 
 # ── Historique ────────────────────────────────────────────────────────────────

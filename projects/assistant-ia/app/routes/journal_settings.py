@@ -107,7 +107,7 @@ def _type_label(t: str) -> str:
     return labels.get(t, t)
 
 def _freq_label(f: str) -> str:
-    return {"daily": "Quotidien", "weekly": "Hebdomadaire", "monthly": "Mensuel"}.get(f, f)
+    return {"daily": "Quotidien", "weekdays": "Jours de semaine (lun–ven)", "weekly": "Hebdomadaire", "monthly": "Mensuel"}.get(f, f)
 
 _JOURS_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
@@ -277,12 +277,17 @@ async def parcours_detail(id: str):
                 <div class="form-row">
                   <div class="form-group">
                     <label>Fréquence</label>
-                    <select name="frequence" onchange="toggleJoursEdit('{oid}',this.value)">{"".join(f'<option value="{v}"{" selected" if o["frequence"]==v else ""}>{lbl}</option>' for v,lbl in [("daily","Quotidien"),("weekly","Hebdomadaire"),("monthly","Mensuel")])}</select>
+                    <select name="frequence" onchange="toggleJoursEdit('{oid}',this.value)">{"".join(f'<option value="{v}"{" selected" if o["frequence"]==v else ""}>{lbl}</option>' for v,lbl in [("daily","Quotidien"),("weekdays","Jours de semaine (lun–ven)"),("weekly","Hebdomadaire"),("monthly","Mensuel")])}</select>
                   </div>
                   <div class="form-group">
                     <label>Heure du rappel Slack</label>
                     <input type="time" name="heure_rappel" value="{heure}">
                   </div>
+                </div>
+                <div class="form-group">
+                  <label>Heure de la relance (optionnelle)</label>
+                  <input type="time" name="heure_relance" value="{str(o['heure_relance'])[:5] if o.get('heure_relance') else ''}">
+                  <div class="hint">Laisser vide pour une relance automatique 3h après le rappel</div>
                 </div>
                 <div class="form-group" id="weekly-jours-edit-{oid}" style="display:{'block' if o['frequence']=='weekly' else 'none'}">
                   <label>Jours de la semaine</label>
@@ -291,6 +296,26 @@ async def parcours_detail(id: str):
                 <div class="form-group" id="monthly-jours-edit-{oid}" style="display:{'block' if o['frequence']=='monthly' else 'none'}">
                   <label>Jours du mois (ex : 1 15)</label>
                   <input type="text" name="monthly_jours" value="{' '.join(str(j) for j in (o['jours'] if isinstance(o['jours'],list) else json.loads(o['jours'] or '[]'))) if o['frequence']=='monthly' else ''}" placeholder="1 15">
+                </div>
+                <hr>
+                <div class="form-group">
+                  <label style="display:inline-flex;align-items:center;gap:.5rem;color:var(--text);font-size:.88rem">
+                    <input type="checkbox" name="recap_actif" value="on" {"checked" if o.get("recap_actif") else ""}
+                           onchange="document.getElementById('recap-cfg-{oid}').style.display=this.checked?'block':'none'">
+                    Activer le récapitulatif hebdomadaire
+                  </label>
+                </div>
+                <div id="recap-cfg-{oid}" style="display:{'block' if o.get('recap_actif') else 'none'}">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Jour d'envoi</label>
+                      <select name="recap_jour">{"".join(f'<option value="{i}"{" selected" if (o.get("recap_jour") or 0)==i else ""}>{j}</option>' for i,j in enumerate(["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"]))}</select>
+                    </div>
+                    <div class="form-group">
+                      <label>Heure d'envoi</label>
+                      <input type="time" name="recap_heure" value="{str(o['recap_heure'])[:5] if o.get('recap_heure') else '08:00'}">
+                    </div>
+                  </div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
               </form>
@@ -315,7 +340,7 @@ async def parcours_detail(id: str):
       <div style="margin-top:.75rem">{archived_cards}</div>
     </details>"""
 
-    freq_options = '<option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option>'
+    freq_options = '<option value="daily">Quotidien</option><option value="weekdays">Jours de semaine (lun–ven)</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option>'
 
     jours_checks = "".join(
         f'<label style="display:inline-flex;align-items:center;gap:.3rem;margin-right:.75rem;font-size:.85rem;color:var(--text)">'
@@ -355,6 +380,36 @@ async def parcours_detail(id: str):
             <label>Jours du mois (ex : 1 15)</label>
             <input type="text" name="monthly_jours" placeholder="1 15">
             <div class="hint">Séparez les jours par un espace</div>
+          </div>
+          <div class="form-group">
+            <label>Heure de la relance (optionnelle)</label>
+            <input type="time" name="heure_relance">
+            <div class="hint">Laisser vide pour une relance automatique 3h après le rappel</div>
+          </div>
+          <hr>
+          <div class="form-group">
+            <label style="display:inline-flex;align-items:center;gap:.5rem;color:var(--text);font-size:.88rem">
+              <input type="checkbox" name="recap_actif" value="on"
+                     onchange="document.getElementById('recap-cfg-new').style.display=this.checked?'block':'none'">
+              Activer le récapitulatif hebdomadaire
+            </label>
+          </div>
+          <div id="recap-cfg-new" style="display:none">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Jour d'envoi</label>
+                <select name="recap_jour">
+                  <option value="0">Lundi</option><option value="1">Mardi</option>
+                  <option value="2">Mercredi</option><option value="3">Jeudi</option>
+                  <option value="4">Vendredi</option><option value="5">Samedi</option>
+                  <option value="6">Dimanche</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Heure d'envoi</label>
+                <input type="time" name="recap_heure" value="08:00">
+              </div>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary">Créer l'objectif</button>
         </form>
@@ -448,9 +503,16 @@ async def create_objectif(request: Request):
     else:
         jours = []
 
+    heure_relance = form.get("heure_relance", "").strip() or None
+    recap_actif = form.get("recap_actif") == "on"
+    recap_jour = int(form.get("recap_jour", 0))
+    recap_heure = form.get("recap_heure", "08:00") or "08:00"
+
     await svc.create_objectif(
         parcours_id, form["nom"], form.get("description", ""),
         frequence, jours, form.get("heure_rappel", "09:00"),
+        heure_relance=heure_relance,
+        recap_actif=recap_actif, recap_jour=recap_jour, recap_heure=recap_heure,
     )
     return RedirectResponse(f"/journal/settings/parcours/{parcours_id}", status_code=303)
 
@@ -478,9 +540,16 @@ async def update_objectif(id: str, request: Request):
         jours = [int(x) for x in raw.split() if x.isdigit()]
     else:
         jours = []
+    heure_relance = form.get("heure_relance", "").strip() or None
+    recap_actif = form.get("recap_actif") == "on"
+    recap_jour = int(form.get("recap_jour", 0))
+    recap_heure = form.get("recap_heure", "08:00") or "08:00"
+
     await svc.update_objectif(
         id, form["nom"], form.get("description", ""),
         frequence, jours, form.get("heure_rappel", "09:00"),
+        heure_relance=heure_relance,
+        recap_actif=recap_actif, recap_jour=recap_jour, recap_heure=recap_heure,
     )
     return RedirectResponse(f"/journal/settings/parcours/{o['parcours_id']}", status_code=303)
 
@@ -657,6 +726,13 @@ async def objectif_detail(id: str):
             </div>
           </div>
 
+          <div id="cfg-multi" style="display:none;margin-top:.5rem">
+            <label style="display:inline-flex;align-items:center;gap:.5rem;color:var(--text);font-size:.88rem">
+              <input type="checkbox" name="multi_reponses" value="on">
+              Autoriser plusieurs réponses par jour
+            </label>
+          </div>
+
           <button type="submit" class="btn btn-primary" style="margin-top:.5rem">Ajouter la question</button>
         </form>
       </div>
@@ -670,6 +746,7 @@ async def objectif_detail(id: str):
       else if(type==='single_choice'||type==='multiple_choice') document.getElementById('cfg-choices').style.display='block';
       else if(type==='ranking') document.getElementById('cfg-ranking').style.display='block';
       else if(type==='duration') document.getElementById('cfg-duration').style.display='block';
+      document.getElementById('cfg-multi').style.display=(type==='text'||type==='short_text')?'block':'none';
     }}
     function addOption(){{
       const list=document.getElementById('options-list');
@@ -733,7 +810,8 @@ async def create_question(request: Request):
         items = [i.strip() for i in form.getlist("ranking_item") if i.strip()]
         config = {"items": items}
 
-    await svc.create_question(objectif_id, form["texte"], type_, config)
+    multi_reponses = form.get("multi_reponses") == "on" and type_ in ("text", "short_text")
+    await svc.create_question(objectif_id, form["texte"], type_, config, multi_reponses=multi_reponses)
     return RedirectResponse(f"/journal/settings/objectifs/{objectif_id}", status_code=303)
 
 

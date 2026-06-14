@@ -45,7 +45,6 @@ def _question_blocks(question, objectif_id: str, q_index: int) -> list:
     elif type_ == "note":
         mn, mx = cfg.get("min", 1), cfg.get("max", 5)
         if mx - mn > 9:
-            # Trop de valeurs pour des boutons — texte libre
             return [header]
         for v in range(mn, mx + 1):
             elements.append({
@@ -70,12 +69,46 @@ def _question_blocks(question, objectif_id: str, q_index: int) -> list:
     return [header, {"type": "actions", "elements": elements}]
 
 
+def _multi_buttons_blocks(objectif_id: str, q_index: int) -> list:
+    """Blocs Block Kit pour les boutons multi-réponses."""
+    return [{
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "➕ Ajouter une réponse"},
+                "action_id": f"jrn_multi_add_{q_index}",
+                "value": f"{objectif_id}|{q_index}|multi_add",
+            },
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "→ Passer à la suite"},
+                "action_id": f"jrn_multi_next_{q_index}",
+                "value": f"{objectif_id}|{q_index}|multi_next",
+            },
+        ],
+    }]
+
+
+def _is_last_required_or_all_optional_after(q_index: int, questions: list) -> bool:
+    """Vrai si toutes les questions après q_index sont non-requises ou multi_reponses."""
+    for i in range(q_index + 1, len(questions)):
+        q = questions[i]
+        if q.get("is_required") and not q.get("multi_reponses", False):
+            return False
+    return True
+
+
 def _display_value(raw_value: str) -> str:
     """Traduit une valeur brute de bouton en label lisible."""
     if raw_value == "true":
         return "Oui"
     if raw_value == "false":
         return "Non"
+    if raw_value == "multi_add":
+        return "Ajouter une réponse"
+    if raw_value == "multi_next":
+        return "Passer à la suite"
     return raw_value
 
 
@@ -181,7 +214,7 @@ def _question_hint(question) -> str:
         mn, mx = cfg.get("min", 1), cfg.get("max", 5)
         if mx - mn > 9:
             return f"_Envoie un nombre entre {mn} et {mx}._"
-        return ""  # les boutons suffisent
+        return ""
 
     hints = {
         "text": "_Réponds par un message dans ce fil._",
@@ -220,6 +253,8 @@ async def handle_thread_reply(
         return
 
     q = questions[q_index]
+    multi = bool(q.get("multi_reponses", False))
+
     valeur = _parse_text_answer(q, text)
     if valeur is None:
         logger.warning(f"handle_thread_reply: réponse non parsée pour type={q['type']} text={text[:60]!r}")
@@ -230,7 +265,33 @@ async def handle_thread_reply(
         )
         return
 
-    await svc.store_reponse(str(q["id"]), objectif_id, valeur, today)
+    await svc.store_reponse(str(q["id"]), objectif_id, valeur, today, multi_reponses=multi)
+
+    if multi:
+        is_last = _is_last_required_or_all_optional_after(q_index, questions)
+        if is_last:
+            # Cas B : complétion immédiate à la première réponse
+            was_complete_before = len(await svc.get_multi_reponses(str(q["id"]), objectif_id, today)) > 1
+            if not was_complete_before:
+                await post_text(
+                    channel=channel,
+                    text="✅ Objectif atteint ! N'hésite pas à compléter avec d'autres réponses si tu le souhaites.",
+                    thread_ts=thread_ts,
+                )
+            # Garder la session au même index (accepte d'autres entrées silencieusement)
+        else:
+            # Cas A : proposer d'ajouter ou passer à la suite
+            await post_blocks(
+                channel=channel,
+                blocks=_multi_buttons_blocks(objectif_id, q_index),
+                text="Réponse enregistrée. Ajouter une autre ou passer à la suite ?",
+                thread_ts=thread_ts,
+            )
+            # Garder la session au même index
+        logger.info(f"handle_thread_reply: réponse multi stockée (q_id={q['id']} valeur={valeur})")
+        return
+
+    # Question standard : avancer à la suivante
     next_index = q_index + 1
     await svc.advance_slack_session(session["id"], next_index)
     logger.info(f"handle_thread_reply: réponse stockée (q_id={q['id']} valeur={valeur}), avancement à q_index={next_index}")
@@ -251,6 +312,27 @@ async def handle_block_action(
     today = date.today()
 
     questions = await svc.get_questions(objectif_id)
+
+    # Boutons multi-réponses
+    if raw_value == "multi_add":
+        if q_index < len(questions):
+            q = questions[q_index]
+            blocks = _question_blocks(q, objectif_id, q_index)
+            hint = _question_hint(q)
+            await post_blocks(
+                channel=channel, blocks=blocks, text=q["texte"],
+                thread_ts=thread_ts, mrkdwn=hint,
+            )
+        return
+
+    if raw_value == "multi_next":
+        next_index = q_index + 1
+        session = await svc.get_slack_session_by_thread(thread_ts)
+        if session:
+            await svc.advance_slack_session(session["id"], next_index)
+        await _post_next_question(objectif_id, questions, next_index, channel, thread_ts)
+        return
+
     if q_index >= len(questions):
         logger.warning(f"handle_block_action: q_index={q_index} hors limites ({len(questions)} questions) — ignoré")
         return
@@ -272,7 +354,8 @@ async def handle_block_action(
     else:
         valeur = {"choice": raw_value}
 
-    await svc.store_reponse(str(q["id"]), objectif_id, valeur, today)
+    multi = bool(q.get("multi_reponses", False))
+    await svc.store_reponse(str(q["id"]), objectif_id, valeur, today, multi_reponses=multi)
     next_index = q_index + 1
     logger.info(f"handle_block_action: réponse stockée (q_id={q['id']} valeur={valeur}), avancement à q_index={next_index}")
 
