@@ -456,7 +456,7 @@ export default function WatchlistV2() {
                 <span className="w-2 h-2 rounded-full bg-violet-400 inline-block"></span>
                 Non coté — PE / VC ({privateTickers.length})
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {privateTickers.map(ticker => (
                   <PrivateTickerCard
                     key={ticker.id}
