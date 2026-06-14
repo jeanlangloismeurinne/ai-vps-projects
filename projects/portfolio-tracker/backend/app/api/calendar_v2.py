@@ -84,7 +84,9 @@ async def list_events(
 
     where = "WHERE " + " AND ".join(conditions) if conditions else ""
     query = f"""
-        SELECT ce.*, t.name AS ticker_name, th.one_liner AS thesis_one_liner
+        SELECT ce.*, t.name AS ticker_name, t.status AS ticker_status,
+               t.company_type AS ticker_company_type,
+               th.one_liner AS thesis_one_liner
         FROM calendar_events ce
         LEFT JOIN tickers t ON t.id = ce.ticker_id
         LEFT JOIN theses th ON th.id = ce.thesis_id
@@ -158,6 +160,23 @@ async def delete_event(event_id: int):
         )
     if not row:
         raise HTTPException(404, f"Événement #{event_id} introuvable")
+
+
+@router.get("/{event_id}/sessions")
+async def list_event_sessions(event_id: int):
+    """Sessions monitoring liées à cet événement calendrier."""
+    async with get_db_session() as db:
+        rows = await db.fetch(
+            """
+            SELECT ms.*, t.name AS ticker_name
+            FROM monitoring_sessions ms
+            LEFT JOIN tickers t ON t.id = ms.ticker_id
+            WHERE ms.calendar_event_id = $1
+            ORDER BY ms.created_at ASC
+            """,
+            event_id,
+        )
+    return [_serialize(r) for r in rows]
 
 
 @router.post("/{event_id}/validate")

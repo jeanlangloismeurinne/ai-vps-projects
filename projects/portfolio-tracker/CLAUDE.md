@@ -222,6 +222,7 @@ Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 | `calendar_events` | SERIAL | Calendrier V1 — source: `thesis_agent`/`monitoring_agent`/`manual`/`conviction_override` |
 | `conviction_debates` | SERIAL | Débats option C — statuts: `open`/`closed_pass`/`closed_monitor`/`closed_proceed` |
 | `agent_prompts` | SERIAL | Prompts Dust — synced, version, dust_agent_id, dust_agent_url |
+| `private_company_profiles` | ticker_id FK | Profil PE/VC — stage, valuation, ARR, investors, next_event (migration 017) |
 
 ### Tables V0 (conservées, legacy)
 
@@ -236,8 +237,8 @@ Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 | `dust_budget` | Budget mensuel Dust — partagé V0/V1 |
 
 ### Migrations appliquées
-001 → 013. Migration 013 = schéma V1 complet (créé le 2026-05-30).
-Prochaine migration : `014_*.sql`.
+001 → 017. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support sociétés non cotées PE/VC (2026-06-14).
+Prochaine migration : `018_*.sql`.
 
 ---
 
@@ -250,6 +251,7 @@ POST   /tickers                               Créer {id, name, exchange, sector
 GET    /tickers/{ticker_id}                   Détail + prix actuel
 PATCH  /tickers/{ticker_id}                   Mettre à jour (status, etc.)
 GET    /tickers/{ticker_id}/price-history     Historique OHLCV (yfinance direct, ?period=1y|5y|max)
+PATCH  /tickers/{ticker_id}/private-profile   Upsert profil PE/VC {stage, last_valuation_m, arr_or_revenue_m, …}
 GET    /tickers/{ticker_id}/metrics           Métriques financières via DataService
 GET    /tickers/{ticker_id}/alerts            Price alerts actives
 POST   /tickers/{ticker_id}/alerts            Créer alerte {price, direction, label}
@@ -422,6 +424,16 @@ PULSE_ESCALATION_THRESHOLD=-3
 14. **Tables V0 renommées** : `theses` → `v0_theses`, `calendar_events` → `v0_calendar_events`. Le scheduler V0 (`_daily_check`, `_refresh_watchlist_peer_calendars`) écrit dans `v0_calendar_events`.
 15. **Permissions DB** : `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES/SEQUENCES TO portfolio_user` — actif depuis 2026-05-30. Les nouvelles tables créées par `admin` sont automatiquement accessibles.
 16. **Next.js routes imbriquées** : `pages/ticker/[ticker_id]/opportunity/[...slug].js` — `slug[0]` vaut `'new'` (création) ou l'ID numérique du brief.
+19. **Cohérence format JSON — règle des 3 points de synchronisation** : tout changement de structure de données (opportunity, thèse, thèse PE/VC) doit être répercuté simultanément sur les 3 points suivants — en omettre un crée des désynchronisations silencieuses :
+    1. **Prompt Dust** (`agent_prompts` en DB → copié dans Dust) — le schéma JSON attendu en sortie de l'agent
+    2. **Frontend** (`ThesisEditorV2.js`, `InvestmentBriefEditor.js`, pages ticker) — l'affichage et l'édition des champs
+    3. **Import JSON manuel** (`POST /tickers/{id}/theses` via `ImportLegacyBody` dans `thesis_v2.py`) — les champs acceptés à l'import
+17. **Migrations non auto-appliquées** : `startup()` dans `main.py` n'exécute aucune migration — il appelle uniquement `init_pool()` et `init_redis()`. Toute nouvelle migration doit être appliquée manuellement :
+    ```bash
+    docker exec shared-postgres psql -U admin -d db_portfolio -c "$(cat backend/app/db/migrations/0XX_*.sql)"
+    ```
+    Si le heredoc ne produit pas de sortie, passer les instructions SQL une par une.
+18. **Architecture PE/VC (sociétés non cotées)** : `tickers.company_type = 'private'` est le discriminateur principal. Les agents Python injectent `[company_type: private]\n\n` en tête de message Dust — les prompts Dust détectent ce signal et appliquent toute la logique PE/VC (marqueurs "→ Non coté :"). Tables associées : `private_company_profiles` (stage, valuation, ARR, investors, next event) + colonnes `ownership_pct_at_entry` / `current_ownership_pct` sur `portfolio_positions`. La réponse JSON du monitoring mode 2 inclut un bloc `private_valuation_update` automatiquement parsé et appliqué à `private_company_profiles` par `monitoring_v2.py`. DataService (yfinance/FMP) est ignoré pour les tickers privés.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -51,6 +51,7 @@ export default function App({ Component, pageProps }) {
         {/* V1 */}
         <NavLink href="/portfolio">Portefeuille V1</NavLink>
         <NavLink href="/watchlist-v2">Watchlist V1</NavLink>
+        <NavLink href="/calendrier">Calendrier</NavLink>
         <NavLink href="/admin">Admin</NavLink>
         {/* Separator */}
         <span className="text-gray-700 mx-1">|</span>

@@ -68,6 +68,11 @@ async def startup():
         id="daily_check", replace_existing=True,
     )
     scheduler.add_job(
+        _daily_check_v1,
+        CronTrigger(hour=7, minute=5, timezone="Europe/Paris"),
+        id="daily_check_v1", replace_existing=True,
+    )
+    scheduler.add_job(
         _weekly_review,
         CronTrigger(day_of_week="mon", hour=8, minute=0, timezone="Europe/Paris"),
         id="weekly_review", replace_existing=True,
@@ -121,6 +126,11 @@ async def health():
 async def _daily_check():
     from app.calendar.event_router import EventRouter
     await EventRouter().process_daily_events()
+
+
+async def _daily_check_v1():
+    from app.calendar.event_router_v1 import EventRouterV1
+    await EventRouterV1().process_daily_events()
 
 
 async def _weekly_review():

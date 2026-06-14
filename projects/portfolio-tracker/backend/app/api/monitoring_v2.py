@@ -23,6 +23,7 @@ class SessionCreate(BaseModel):
     message: Optional[str] = None          # contexte libre si fourni directement
     private_metrics: Optional[dict] = None  # métriques opérationnelles (sociétés non cotées)
     private_metrics_text: Optional[str] = None  # version texte formatée pour l'agent
+    calendar_event_id: Optional[int] = None  # renseigné pour sessions auto-scheduler
 
 
 class ChatMessage(BaseModel):
@@ -50,6 +51,48 @@ async def _get_session_or_404(db, session_id: int):
     if not row:
         raise HTTPException(404, f"Session #{session_id} introuvable")
     return row
+
+
+def _normalize_monitoring_result(parsed: dict, thesis_json: dict | None) -> dict:
+    """
+    Fusionne hypothesis_reviews[] (agent) avec les hypothèses de la thèse.
+    Produit hypotheses_reviewed[] utilisable directement par la Page 5.
+    """
+    if not parsed:
+        return parsed
+    reviews_raw = parsed.get("hypothesis_reviews", [])
+    if not reviews_raw or not thesis_json:
+        return parsed
+
+    reviews_by_id = {}
+    for r in reviews_raw:
+        if not isinstance(r, dict):
+            continue
+        hid = str(r.get("hypothesis_id") or r.get("id") or "")
+        reviews_by_id[hid] = r
+        reviews_by_id[hid.replace("H", "")] = r  # tolère "H1" et "1"
+
+    thesis_hyps = thesis_json.get("hypotheses", [])
+    hypotheses_reviewed = []
+    for h in thesis_hyps:
+        hid_full = str(h.get("id", ""))         # "H1"
+        hid_num  = hid_full.replace("H", "")    # "1"
+        review = reviews_by_id.get(hid_full) or reviews_by_id.get(hid_num) or {}
+        hypotheses_reviewed.append({
+            "id":                     hid_full,
+            "text":                   h.get("text", ""),
+            "weight":                 h.get("weight", ""),
+            "kpi_metric":             h.get("kpi_metric", ""),
+            "kpi_unit":               h.get("kpi_unit", ""),
+            "alert_threshold":        h.get("alert_threshold", {}),
+            "invalidation_threshold": h.get("invalidation_threshold", {}),
+            "status":                 review.get("status", "unverified"),
+            "observation":            review.get("observation", ""),
+        })
+
+    out = dict(parsed)
+    out["hypotheses_reviewed"] = hypotheses_reviewed
+    return out
 
 
 async def _build_monitoring_context(db, ticker_id: str, thesis_id: Optional[int], mode: int, trigger_label: str) -> str:
@@ -140,11 +183,13 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
                 session_row = await db.fetchrow(
                     """
                     INSERT INTO monitoring_sessions
-                        (ticker_id, thesis_id, trigger_type, trigger_label, mode, status)
-                    VALUES ($1,$2,$3,$4,$5,'blocked_sync')
+                        (ticker_id, thesis_id, trigger_type, trigger_label, mode, status,
+                         calendar_event_id)
+                    VALUES ($1,$2,$3,$4,$5,'blocked_sync',$6)
                     RETURNING *
                     """,
-                    ticker_id, data.thesis_id, data.trigger_type, data.trigger_label, data.mode,
+                    ticker_id, data.thesis_id, data.trigger_type, data.trigger_label,
+                    data.mode, data.calendar_event_id,
                 )
             return {
                 "session": _serialize(session_row),
@@ -175,11 +220,13 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
         session_row = await db.fetchrow(
             """
             INSERT INTO monitoring_sessions
-                (ticker_id, thesis_id, trigger_type, trigger_label, mode, status)
-            VALUES ($1,$2,$3,$4,$5,'running')
+                (ticker_id, thesis_id, trigger_type, trigger_label, mode, status,
+                 calendar_event_id)
+            VALUES ($1,$2,$3,$4,$5,'running',$6)
             RETURNING *
             """,
-            ticker_id, data.thesis_id, data.trigger_type, data.trigger_label, data.mode,
+            ticker_id, data.thesis_id, data.trigger_type, data.trigger_label,
+            data.mode, data.calendar_event_id,
         )
     session_id = session_row["id"]
 
@@ -202,6 +249,17 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
 
     # Parse le JSON de résultat
     parsed = agent.extract_json(result["content"])
+
+    # Normalise hypothesis_reviews[] → hypotheses_reviewed[]
+    thesis_json_for_norm = None
+    if data.thesis_id:
+        async with get_db_session() as db:
+            th = await db.fetchrow("SELECT thesis_json FROM theses WHERE id=$1", data.thesis_id)
+            if th:
+                thesis_json_for_norm = th["thesis_json"]
+    if parsed:
+        parsed = _normalize_monitoring_result(parsed, thesis_json_for_norm)
+
     alert_level = None
     routing_suggestion = None
     if parsed:
