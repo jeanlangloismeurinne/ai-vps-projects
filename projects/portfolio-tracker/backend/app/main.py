@@ -62,11 +62,7 @@ async def startup():
     await init_pool(settings.DATABASE_URL)
     await init_redis(settings.REDIS_URL)
 
-    scheduler.add_job(
-        _daily_check,
-        CronTrigger(hour=7, minute=0, timezone="Europe/Paris"),
-        id="daily_check", replace_existing=True,
-    )
+    # _daily_check V0 désactivé — remplacé par _daily_check_v1
     scheduler.add_job(
         _daily_check_v1,
         CronTrigger(hour=7, minute=5, timezone="Europe/Paris"),
