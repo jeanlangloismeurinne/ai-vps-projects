@@ -615,22 +615,39 @@ async def objectif_detail(id: str):
         active_cls = "badge-on" if q["is_active"] else "badge-off"
         active_lbl = "Active" if q["is_active"] else "Inactive"
         actions = ""
+        edit_panel = ""
+        qid = q['id']
+        texte_escaped = q['texte'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
         if show_actions:
             toggle_lbl = "Désactiver" if q["is_active"] else "Activer"
             actions = f"""
             <div class="flex" style="gap:.4rem;flex-shrink:0">
-              <form method="post" action="/journal/settings/questions/{q['id']}/up" style="display:inline">
+              <form method="post" action="/journal/settings/questions/{qid}/up" style="display:inline">
                 <button class="btn btn-ghost btn-sm" type="submit" title="Monter">↑</button>
               </form>
-              <form method="post" action="/journal/settings/questions/{q['id']}/down" style="display:inline">
+              <form method="post" action="/journal/settings/questions/{qid}/down" style="display:inline">
                 <button class="btn btn-ghost btn-sm" type="submit" title="Descendre">↓</button>
               </form>
-              <form method="post" action="/journal/settings/questions/{q['id']}/toggle" style="display:inline">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="toggleEdit('{qid}')">Modifier</button>
+              <form method="post" action="/journal/settings/questions/{qid}/toggle" style="display:inline">
                 <button class="btn btn-ghost btn-sm" type="submit">{toggle_lbl}</button>
               </form>
-              <form method="post" action="/journal/settings/questions/{q['id']}/deprecate" style="display:inline"
+              <form method="post" action="/journal/settings/questions/{qid}/deprecate" style="display:inline"
                     onsubmit="return confirm('Archiver cette question ? Les réponses passées sont conservées.')">
                 <button class="btn btn-danger btn-sm" type="submit">Archiver</button>
+              </form>
+            </div>"""
+            edit_panel = f"""
+            <div id="edit-{qid}" style="display:none;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--border)">
+              <form method="post" action="/journal/settings/questions/{qid}/edit">
+                <div class="form-group" style="margin-bottom:.5rem">
+                  <label style="font-size:.82rem;color:var(--muted)">Question <span style="font-weight:400">— Markdown : **gras**, *italique*</span></label>
+                  <textarea name="texte" rows="4" required style="margin-top:.3rem">{texte_escaped}</textarea>
+                </div>
+                <div style="display:flex;gap:.5rem">
+                  <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit('{qid}')">Annuler</button>
+                </div>
               </form>
             </div>"""
 
@@ -646,6 +663,7 @@ async def objectif_detail(id: str):
             </div>
             {actions}
           </div>
+          {edit_panel}
         </div>"""
 
     cards = "".join(_q_card(q) for q in active_qs)
@@ -772,6 +790,10 @@ async def objectif_detail(id: str):
       row.innerHTML='<input type="text" name="ranking_item" placeholder="Nouvel élément">';
       list.appendChild(row);
     }}
+    function toggleEdit(id){{
+      const el=document.getElementById('edit-'+id);
+      el.style.display=el.style.display==='none'?'block':'none';
+    }}
     </script>"""
 
     raw = o["jours"]
@@ -823,6 +845,22 @@ async def create_question(request: Request):
     multi_reponses = form.get("multi_reponses") == "on" and type_ in ("text", "short_text")
     await svc.create_question(objectif_id, form["texte"], type_, config, multi_reponses=multi_reponses)
     return RedirectResponse(f"/journal/settings/objectifs/{objectif_id}", status_code=303)
+
+
+@router.post("/journal/settings/questions/{id}/edit")
+async def edit_question(id: str, request: Request):
+    q = await svc.get_question(id)
+    if not q:
+        return RedirectResponse("/journal/settings", status_code=303)
+    form = await request.form()
+    texte = form.get("texte", "").strip()
+    if not texte:
+        return RedirectResponse(f"/journal/settings/objectifs/{q['objectif_id']}", status_code=303)
+    cfg = q["config"]
+    if isinstance(cfg, str):
+        cfg = json.loads(cfg)
+    await svc.update_question(id, texte, cfg, q["is_active"], multi_reponses=bool(q.get("multi_reponses", False)))
+    return RedirectResponse(f"/journal/settings/objectifs/{q['objectif_id']}", status_code=303)
 
 
 @router.post("/journal/settings/questions/{id}/toggle")
