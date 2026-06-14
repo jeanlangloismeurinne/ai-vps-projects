@@ -16,18 +16,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-4-5"
 
-PRIVATE_THESIS_DELTA = """CONTEXTE SOCIÉTÉ NON COTÉE — PE/VC
-Adapte chaque étape comme suit :
-- Étape 1 : utilise les métriques PE/VC (ARR, EBITDA, burn, runway, LTV/CAC).
-- Étape 2 : les pairs sont des sociétés privées ; les multiples sont EV/ARR ou EV/EBITDA.
-- Étape 4 : les scénarios expriment une IRR et une valorisation de sortie (M€). Chaque scénario inclut exit_type parmi : ma_strategique, ipo, cession_secondaire, liquidation, recapitalisation.
-- Étape 6 : remplace le track record analystes par "Références investisseurs & signaux de marché" (cap table, historique des tours, transactions comparables récentes).
-- Étape 7 : les risques incluent obligatoirement le risque de dilution, le risque liquidité (absence de marché secondaire), et le risque clé-homme.
-- price_thresholds → "valuation_thresholds" en M€ (pre-money) : entry_max_pre_money_m, reinforce_below_m, dilution_alert_below_m, exit_target_min_m, exit_target_optimal_m.
-- Ajouter obligatoirement "exit_scenarios" (liste des scénarios de sortie).
-- Ajouter "investor_references" : cap_table_notable, prior_rounds, market_signals.
-
-"""
+# Signal injecté en tête de message pour les sociétés non cotées.
+# Le prompt Dust intègre directement la logique PE/VC déclenchée par ce signal.
+_PRIVATE_SIGNAL = "[company_type: private]\n\n"
 
 
 class AgentNotSyncedError(Exception):
@@ -68,7 +59,7 @@ class ThesisAgent:
         Retourne dict avec : content, tokens_input, tokens_output, cost_usd, conversation_id
         """
         agent_id = await self._check_sync()
-        prefix = PRIVATE_THESIS_DELTA if company_type == "private" else ""
+        prefix = _PRIVATE_SIGNAL if company_type == "private" else ""
         full_message = f"{prefix}[mode: {mode}]\n\n{message}"
         model = model_override or DEFAULT_MODEL
         result = await self.client.run_agent(
@@ -81,7 +72,7 @@ class ThesisAgent:
     async def run_streaming(self, mode: str, message: str, model_override: str = None, company_type: str = "public"):
         """Async generator — yielde les events Dust au fur et à mesure."""
         agent_id = await self._check_sync()
-        prefix = PRIVATE_THESIS_DELTA if company_type == "private" else ""
+        prefix = _PRIVATE_SIGNAL if company_type == "private" else ""
         full_message = f"{prefix}[mode: {mode}]\n\n{message}"
         model = model_override or DEFAULT_MODEL
         async for event in self.client.run_agent_streaming(

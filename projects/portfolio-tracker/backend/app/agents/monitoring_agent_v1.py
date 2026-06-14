@@ -17,14 +17,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-PRIVATE_MONITORING_DELTA = """CONTEXTE SOCIÉTÉ NON COTÉE — PE/VC
-Cette société n'est pas cotée en bourse. Les règles suivantes s'appliquent pour ce monitoring :
-- Pas de cours de marché ni de données boursières. Évalue les signaux sur la base des métriques opérationnelles (ARR, EBITDA, burn rate, runway) et des transactions comparables récentes.
-- Les hypothèses à surveiller portent sur la traction commerciale, la solidité du bilan, et les catalyseurs de liquidité (prochain tour, IPO, M&A).
-- Si private_valuation_update est justifiée, inclure le bloc JSON avec les champs : last_valuation_m, last_valuation_date, last_valuation_basis, current_ownership_pct, projected_valuation_next_event_m, next_event_date, next_event_type.
-- Le flag REVIEW_REQUIRED doit être déclenché si : valorisation dépréciée >20%, burn critique (<6 mois runway), dilution imprévue, ou départ fondateur.
-
-"""
+# Pas de delta séparé — le prompt Dust intègre la logique PE/VC.
+# Le contexte injecté par _build_monitoring_context() inclut déjà "company_type : private".
 
 MODEL_BY_MODE = {
     1: "gpt-4o-mini",
@@ -74,8 +68,7 @@ class MonitoringAgentV1:
         if mode not in MODEL_BY_MODE:
             raise ValueError(f"Mode invalide : {mode} (attendu 1..5)")
         agent_id = await self._check_sync()
-        prefix = PRIVATE_MONITORING_DELTA if company_type == "private" else ""
-        full_message = f"{prefix}[mode: {mode}]\n\n{message}"
+        full_message = f"[mode: {mode}]\n\n{message}"
         model = MODEL_BY_MODE[mode]
         result = await self.client.run_agent(
             agent_id=agent_id,

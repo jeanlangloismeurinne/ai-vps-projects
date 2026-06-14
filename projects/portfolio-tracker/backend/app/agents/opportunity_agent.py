@@ -18,16 +18,9 @@ logger = logging.getLogger(__name__)
 # Modèle par défaut pour l'opportunity agent
 DEFAULT_MODEL = "gemini-2-5-flash-preview"
 
-PRIVATE_COMPANY_DELTA = """CONTEXTE SOCIÉTÉ NON COTÉE — PE/VC
-Cette société n'est pas cotée en bourse. Les règles suivantes s'appliquent :
-- Pas de cours de marché ni de données boursières. Utilise exclusivement les données financières fournies (ARR/CA, EBITDA, valorisation dernière levée, métriques clés).
-- Remplace les critères de screening boursiers par les 5 critères PE/VC : (1) Marché adressable ≥500M€ OU croissance CA >30% YoY ; (2) Modèle économique avec chemin vers rentabilité (unit economics positives ou runway >18 mois) ; (3) Avantage compétitif défendable ; (4) Catalyseur identifiable à 6-24 mois ; (5) Équipe fondatrice trackable.
-- Le diagnostic d'anomalie porte sur l'attractivité des multiples vs comparables privés.
-- Les analogies et peers sont des sociétés privées ou des transactions récentes.
-- Le "downside floor" est la valorisation plancher (book value ou multiple minimal sectoriel).
-- Pas de recommandation de cours cible. Raisonne en valorisation (M€).
-
-"""
+# Signal injecté en tête de message pour les sociétés non cotées.
+# Le prompt Dust intègre directement la logique PE/VC déclenchée par ce signal.
+_PRIVATE_SIGNAL = "[company_type: private]\n\n"
 
 
 class AgentNotSyncedError(Exception):
@@ -68,7 +61,7 @@ class OpportunityAgent:
         Retourne dict avec : content, tokens_input, tokens_output, cost_usd, conversation_id
         """
         agent_id = await self._check_sync()
-        prefix = PRIVATE_COMPANY_DELTA if company_type == "private" else ""
+        prefix = _PRIVATE_SIGNAL if company_type == "private" else ""
         full_message = f"{prefix}[mode: {mode}]\n\n{message}"
         model = model_override or DEFAULT_MODEL
         result = await self.client.run_agent(

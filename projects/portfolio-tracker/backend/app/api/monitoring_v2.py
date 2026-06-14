@@ -172,11 +172,6 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
         if data.private_metrics_text:
             context_message += f"\n\n### Données opérationnelles fournies\n{data.private_metrics_text}"
 
-        # Injecte le delta PE/VC si société non cotée
-        if company_type == "private":
-            from app.agents.monitoring_agent_v1 import PRIVATE_MONITORING_DELTA
-            context_message = f"{PRIVATE_MONITORING_DELTA}{context_message}"
-
         session_row = await db.fetchrow(
             """
             INSERT INTO monitoring_sessions
