@@ -1,9 +1,19 @@
 import json
 import logging
+import mistune
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from app.routes.auth import require_auth
 from app.services import journal_v2 as svc
+
+_md_renderer = mistune.create_markdown(plugins=["strikethrough"])
+
+def _md(text: str) -> str:
+    html = _md_renderer(text or "")
+    s = html.strip()
+    if s.startswith("<p>") and s.endswith("</p>") and s.count("<p>") == 1:
+        s = s[3:-4]
+    return s
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(require_auth)])
@@ -632,7 +642,7 @@ async def objectif_detail(id: str):
                 <span class="type-tag">{_type_label(q['type'])}{config_hint}</span>
                 <span class="badge {active_cls}">{active_lbl}</span>
               </div>
-              <div style="font-size:.92rem">{q['texte']}</div>
+              <div style="font-size:.92rem">{_md(q['texte'])}</div>
             </div>
             {actions}
           </div>
@@ -663,8 +673,8 @@ async def objectif_detail(id: str):
         <form method="post" action="/journal/settings/questions" id="qform">
           <input type="hidden" name="objectif_id" value="{id}">
           <div class="form-group">
-            <label>Question</label>
-            <textarea name="texte" required placeholder="Ex : Comment évalues-tu ton niveau d'écoute aujourd'hui ?"></textarea>
+            <label>Question <span style="font-size:.78rem;color:var(--muted);font-weight:400">— Markdown supporté : **gras**, *italique*, sauts de ligne</span></label>
+            <textarea name="texte" required rows="4" placeholder="Ex : Comment évalues-tu ton niveau d'écoute aujourd'hui ?&#10;&#10;Utilise **gras**, *italique*, ou plusieurs lignes."></textarea>
           </div>
           <div class="form-group">
             <label>Type de réponse</label>

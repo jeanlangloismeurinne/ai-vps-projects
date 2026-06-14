@@ -1,10 +1,20 @@
 import json
 import logging
+import mistune
 from datetime import date
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from app.routes.auth import require_auth
 from app.services import journal_v2 as svc
+
+_md_renderer = mistune.create_markdown(plugins=["strikethrough"])
+
+def _md(text: str) -> str:
+    html = _md_renderer(text or "")
+    s = html.strip()
+    if s.startswith("<p>") and s.endswith("</p>") and s.count("<p>") == 1:
+        s = s[3:-4]
+    return s
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(require_auth)])
@@ -138,7 +148,7 @@ def _render_question(q, existing=None, multi_entries: list = None, objectif_id: 
 
     name = f"q_{qid}"
     html = f'<div class="question-block" data-question="{qid}">'
-    html += f'<div class="question-label">{texte}</div>'
+    html += f'<div class="question-label">{_md(texte)}</div>'
 
     if multi and multi_entries:
         html += _render_multi_entries(qid, multi_entries, objectif_id)
@@ -614,7 +624,7 @@ async def history_question(question_id: str):
     type_lbl = type_labels.get(q["type"], q["type"])
 
     body = f"""
-    <h2 style="line-height:1.35">{q['texte']}</h2>
+    <h2 style="line-height:1.35">{_md(q['texte'])}</h2>
     <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.5rem">{type_lbl} · {len(reponses)} réponse(s)</p>
     <div class="card">{rows}</div>"""
 
