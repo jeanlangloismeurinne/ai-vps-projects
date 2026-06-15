@@ -642,7 +642,7 @@ async def objectif_detail(id: str):
               <form method="post" action="/journal/settings/questions/{qid}/edit">
                 <div class="form-group" style="margin-bottom:.5rem">
                   <label style="font-size:.82rem;color:var(--muted)">Question <span style="font-weight:400">— Markdown : **gras**, *italique*</span></label>
-                  <textarea name="texte" rows="4" required style="margin-top:.3rem">{texte_escaped}</textarea>
+                  <textarea name="texte" rows="4" required maxlength="2999" style="margin-top:.3rem">{texte_escaped}</textarea>
                 </div>
                 <div style="display:flex;gap:.5rem">
                   <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
@@ -692,7 +692,7 @@ async def objectif_detail(id: str):
           <input type="hidden" name="objectif_id" value="{id}">
           <div class="form-group">
             <label>Question <span style="font-size:.78rem;color:var(--muted);font-weight:400">— Markdown supporté : **gras**, *italique*, sauts de ligne</span></label>
-            <textarea name="texte" required rows="4" placeholder="Ex : Comment évalues-tu ton niveau d'écoute aujourd'hui ?&#10;&#10;Utilise **gras**, *italique*, ou plusieurs lignes."></textarea>
+            <textarea name="texte" required rows="4" maxlength="2999" placeholder="Ex : Comment évalues-tu ton niveau d'écoute aujourd'hui ?&#10;&#10;Utilise **gras**, *italique*, ou plusieurs lignes."></textarea>
           </div>
           <div class="form-group">
             <label>Type de réponse</label>

@@ -21,7 +21,7 @@ def _question_blocks(question, objectif_id: str, q_index: int) -> list:
     cfg = question["config"]
     if isinstance(cfg, str):
         cfg = json.loads(cfg)
-    texte = question["texte"]
+    texte = question["texte"][:2998]  # Slack section block limit: 3000 chars (2 reserved for wrapping **)
 
     header = {
         "type": "section",
