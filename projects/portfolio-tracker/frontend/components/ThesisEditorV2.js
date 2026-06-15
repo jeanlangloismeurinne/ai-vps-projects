@@ -312,15 +312,15 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Pairs comparables</h3>
         <div className="space-y-2">
           {pairs.map((p, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="flex flex-wrap gap-2">
               <input value={p.ticker || ''}
                 onChange={e => { const next = [...pairs]; next[i] = { ...next[i], ticker: e.target.value }; update('pairs', next) }}
                 placeholder="Ticker"
-                className="w-28 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none font-mono"
+                className="w-24 shrink-0 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none font-mono"
               />
               <select value={p.tier || 'T1'}
                 onChange={e => { const next = [...pairs]; next[i] = { ...next[i], tier: e.target.value }; update('pairs', next) }}
-                className="bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+                className="shrink-0 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
               >
                 <option value="T1">T1</option>
                 <option value="T2">T2</option>
@@ -329,10 +329,10 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
               <input value={p.note || ''}
                 onChange={e => { const next = [...pairs]; next[i] = { ...next[i], note: e.target.value }; update('pairs', next) }}
                 placeholder="Note…"
-                className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
               />
               <button onClick={() => update('pairs', pairs.filter((_, j) => j !== i))}
-                className="text-red-500 hover:text-red-400 text-sm px-1">✕</button>
+                className="text-red-500 hover:text-red-400 text-sm px-1 shrink-0">✕</button>
             </div>
           ))}
           <button onClick={() => update('pairs', [...pairs, { ticker: '', tier: 'T1', note: '' }])}

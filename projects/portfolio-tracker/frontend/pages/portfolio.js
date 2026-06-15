@@ -485,25 +485,9 @@ export default function PortfolioV1() {
 
       {/* Cash Module */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Module Cash</p>
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-xs text-gray-500">Liquidités</p>
-                <p className="text-2xl font-bold text-white">{loading ? '…' : fmt(summary?.cash_balance)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Positions</p>
-                <p className="text-xl font-semibold text-gray-300">{loading ? '…' : fmt(summary?.positions_value)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Total</p>
-                <p className="text-xl font-semibold text-indigo-300">{loading ? '…' : fmt(summary?.total)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Module Cash</p>
+          <div className="flex gap-2 shrink-0">
             <button onClick={() => setCashModal('deposit')}
               className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-sm rounded-lg font-medium transition-colors">
               Déposer
@@ -512,6 +496,20 @@ export default function PortfolioV1() {
               className="px-3 py-1.5 bg-red-700/80 hover:bg-red-700 text-white text-sm rounded-lg font-medium transition-colors">
               Retirer
             </button>
+          </div>
+        </div>
+        <div className="flex items-end gap-4 flex-wrap mb-4">
+          <div>
+            <p className="text-xs text-gray-500">Liquidités</p>
+            <p className="text-2xl font-bold text-white">{loading ? '…' : fmt(summary?.cash_balance)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Positions</p>
+            <p className="text-xl font-semibold text-gray-300">{loading ? '…' : fmt(summary?.positions_value)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Total</p>
+            <p className="text-xl font-semibold text-indigo-300">{loading ? '…' : fmt(summary?.total)}</p>
           </div>
         </div>
 
