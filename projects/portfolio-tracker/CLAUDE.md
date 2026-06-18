@@ -7,7 +7,7 @@ URL : `portfolio.jlmvpscode.duckdns.org`
 Backend : port 8050 → `/api` | Frontend : port 8051 → `/`
 Workspace Dust : `plm-siege`
 
-**État (2026-05-30) : migration V1 déployée en production. Architecture agents scindée (opportunity / thesis / monitoring). Pages V1 actives. Pages V0 conservées pour les données historiques CAP/TSLA.**
+**État (2026-06-18) : frontend V1 uniquement. Pages et composants V0 supprimés. Données historiques CAP/TSLA conservées dans les tables V0 en DB. Backend V0 (API legacy + schedulers) toujours actif.**
 
 ---
 
@@ -165,17 +165,9 @@ portfolio-tracker/
 │   └── sector_schemas/                 # IT_Services.json (complet), Luxury/Industrial (squelettes)
 └── frontend/
     ├── pages/
-    │   ├── # V0 (legacy)
-    │   ├── index.js                    # Dashboard portfolio V0
-    │   ├── position/[id].js            # Détail position V0 (AIActionsPanel, MonitoringFeed, ExitManagementPanel)
-    │   ├── watchlist.js                # Watchlist V0 (WatchlistAlertBanner, ReadinessWidget, WatchlistItemDrawer, PromoteToPositionDrawer)
-    │   ├── calendar.js                 # Calendrier V0 (v0_calendar_events)
-    │   ├── analysts.js                 # Analystes V0
-    │   ├── market-temperature.js       # FRED V0
-    │   ├── # V1 (nouveau)
     │   ├── portfolio.js                # Page 0 — /portfolio
     │   ├── watchlist-v2.js             # Page 1 — /watchlist-v2
-    │   ├── calendrier.js               # Calendrier V1 — /calendrier (consomme /calendar-v2, tous types d'events)
+    │   ├── calendrier.js               # Calendrier — /calendrier (consomme /calendar-v2, tous types d'events)
     │   ├── admin.js                    # Page Admin — /admin
     │   └── ticker/[ticker_id]/
     │       ├── index.js                # Page 2 — fiche entreprise
@@ -185,32 +177,16 @@ portfolio-tracker/
     │       ├── decision/[thesis_id].js # Page DÉCISION
     │       └── debate/[debate_id].js   # Page DÉBAT
     └── components/
-        ├── # V0 (legacy) — utilisés dans position/[id].js et watchlist.js
-        ├── HypothesisScorecard.js, ThesisTimeline.js, ThesisChat.js, HypothesisDiff.js
-        ├── DustRunViewer.js, SectorPulseLog.js, PeerComparison.js, PostMortemTab.js
-        ├── AIActionsPanel.js           # Panneau actions IA — position/[id].js V0
-        ├── MonitoringFeed.js           # Fil de monitoring — position/[id].js V0
-        ├── ExitManagementPanel.js      # Gestion sortie de position — position/[id].js V0
-        ├── WatchlistAlertBanner.js     # Bandeau alertes watchlist — watchlist.js V0
-        ├── ReadinessWidget.js          # Score de maturité d'une opportunité — watchlist.js V0
-        ├── WatchlistItemDrawer.js      # Drawer détail item watchlist — watchlist.js V0
-        ├── PromoteToPositionDrawer.js  # Drawer promotion watchlist → position — watchlist.js V0
-        ├── ScoutResultPanel.js         # Résultats scout agent — watchlist V0
-        ├── MarketTemperatureBadge.js   # Badge température de marché (FRED)
-        ├── # V1 (nouveau)
+        ├── MarketTemperatureBadge.js   # Badge température de marché — header nav + page portfolio
         ├── AgentChat.js               # Chat générique réutilisé sur Pages 3/4/5/DÉBAT
         ├── AgentSyncOverlay.js        # Overlay non-dismissible si agent hors sync
         ├── PriceChart.js              # SVG pur (sans dépendances), gradient area
         ├── InvestmentBriefEditor.js   # Col 2 Page 3 (screening, anomalie, catalyseurs...)
         ├── ThesisEditorV2.js          # Col 2 Page 4 (scénarios, H1-H7, seuils, pairs...)
         ├── CalendarEditor.js          # Bandeau calendrier Page 4
-        ├── CalendarView.js            # Vue calendrier V1 (utilisée dans calendrier.js)
-        ├── CashManagementWidget.js    # Gestion cash — Page 0 portfolio
-        ├── DataSourcesPanel.js        # Sources données — Page 2 fiche entreprise
         ├── M1DataPanel.js             # Données M1 (fondamentaux) — Page 2
         ├── AddPrivateCompanyModal.js  # Modal ajout société PE/VC non cotée
-        ├── PrivateMetricsModal.js     # Métriques PE/VC — valorisation, ARR, tour
-        └── RecommendationBadge.js     # Badge recommandation agent
+        └── PrivateMetricsModal.js     # Métriques PE/VC — valorisation, ARR, tour
 ```
 
 ---
@@ -244,15 +220,17 @@ Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 | `private_company_profiles` | ticker_id FK | Profil PE/VC — stage, valuation, ARR, investors, next_event (migration 017) |
 | `portfolio_settings` | — | Paramètres globaux — `dust_auto_enabled BOOL DEFAULT TRUE` (migration 020) |
 
-### Tables V0 (conservées, legacy)
+### Tables V0 (conservées en DB, frontend supprimé)
+
+Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et les API legacy backend sont toujours actives (utilisées par les schedulers V0).
 
 | Table | Note |
 |-------|------|
-| `positions` | Positions V0 (CAP, TSLA) — toujours utilisées par les pages V0 |
+| `positions` | Positions V0 (CAP, TSLA) — données historiques, plus de frontend |
 | `v0_theses` | Renommée depuis `theses` lors de la migration 013 |
 | `v0_calendar_events` | Renommée depuis `calendar_events` lors de la migration 013 |
 | `hypotheses`, `reviews`, `sector_pulses`, `peers` | Données V0 intactes |
-| `watchlist` | Watchlist V0 — distincte de `tickers` |
+| `watchlist` | Watchlist V0 — distincte de `tickers`, utilisée par `_refresh_watchlist_prices` |
 | `market_snapshots`, `earnings_calendar_cache` | Partagées V0/V1 |
 | `dust_budget` | Budget mensuel Dust — partagé V0/V1 |
 
@@ -487,7 +465,7 @@ Les fichiers existent déjà comme stubs vides — ne pas les recréer, les comp
 
 ## Données existantes
 
-### Positions V0 (dans tables V0)
+### Positions V0 (dans tables V0 — données historiques, plus de frontend)
 - **Capgemini (CAP)** : entrée 2026-05-01 à 102€, 8.5% allocation, 6 hypothèses H1-H6, peers CTSH (T1) / ACN (T2). Scénarios Bear -5.2% / Central +12.4% / Bull +23.7% CAGR 5 ans.
 - **Tesla (TSLA)** : position active, thèse définie.
 
