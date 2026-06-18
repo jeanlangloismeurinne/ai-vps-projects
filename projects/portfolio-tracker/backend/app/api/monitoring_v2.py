@@ -420,6 +420,58 @@ async def upload_manual_result(ticker_id: str, session_id: int, data: ResultUplo
     alert_level = (parsed.get("alert_level") or parsed.get("flag")) if parsed else None
     routing_suggestion = (parsed.get("routing_suggestion") or parsed.get("action")) if parsed else None
 
+    # Met à jour le profil private si l'agent a fourni une mise à jour de valorisation
+    if parsed and parsed.get("private_valuation_update"):
+        pvu = parsed["private_valuation_update"]
+        pvu_next_event_date = pvu.get("next_event_date")
+        if pvu_next_event_date and isinstance(pvu_next_event_date, str):
+            from datetime import date as _date
+            try:
+                pvu_next_event_date = _date.fromisoformat(pvu_next_event_date)
+            except ValueError:
+                pvu_next_event_date = None
+        pvu_last_val_date = pvu.get("last_valuation_date")
+        if pvu_last_val_date and isinstance(pvu_last_val_date, str):
+            from datetime import date as _date
+            try:
+                pvu_last_val_date = _date.fromisoformat(pvu_last_val_date)
+            except ValueError:
+                pvu_last_val_date = None
+        try:
+            async with get_db_session() as db:
+                await db.execute(
+                    """
+                    UPDATE private_company_profiles SET
+                        last_valuation_m = COALESCE($1, last_valuation_m),
+                        last_valuation_date = COALESCE($2, last_valuation_date),
+                        last_valuation_basis = COALESCE($3, last_valuation_basis),
+                        current_ownership_pct = COALESCE($4, current_ownership_pct),
+                        projected_valuation_next_event_m = COALESCE($5, projected_valuation_next_event_m),
+                        next_event_date = COALESCE($6, next_event_date),
+                        next_event_type = COALESCE($7, next_event_type),
+                        updated_at = NOW()
+                    WHERE ticker_id = $8
+                    """,
+                    pvu.get("last_valuation_m"),
+                    pvu_last_val_date,
+                    pvu.get("last_valuation_basis"),
+                    pvu.get("current_ownership_pct"),
+                    pvu.get("projected_valuation_next_event_m"),
+                    pvu_next_event_date,
+                    pvu.get("next_event_type"),
+                    ticker_id,
+                )
+                if pvu.get("current_ownership_pct"):
+                    await db.execute(
+                        """
+                        UPDATE portfolio_positions SET current_ownership_pct = $1
+                        WHERE ticker_id = $2 AND status = 'open'
+                        """,
+                        pvu["current_ownership_pct"], ticker_id,
+                    )
+        except Exception as e_pvu:
+            logger.warning(f"Private valuation update failed for {ticker_id}: {e_pvu}")
+
     async with get_db_session() as db:
         updated = await db.fetchrow(
             """

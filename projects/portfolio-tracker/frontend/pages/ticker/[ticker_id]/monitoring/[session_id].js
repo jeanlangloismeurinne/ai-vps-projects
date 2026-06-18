@@ -312,6 +312,51 @@ export default function MonitoringSessionPage() {
         </div>
       )}
 
+      {/* ── Valorisation non cotée mise à jour (Mode 2 / company private) ── */}
+      {result.private_valuation_update && (
+        <div className="bg-gray-900 border border-indigo-800 rounded-xl p-5">
+          <h2 className="font-semibold text-indigo-300 text-sm mb-4">Mise à jour valorisation — Société non cotée</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            {result.private_valuation_update.last_valuation_m != null && (
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Valorisation</p>
+                <p className="text-white font-semibold">{result.private_valuation_update.last_valuation_m} M€</p>
+                {result.private_valuation_update.last_valuation_basis && (
+                  <p className="text-gray-500 text-xs">{result.private_valuation_update.last_valuation_basis}</p>
+                )}
+              </div>
+            )}
+            {result.private_valuation_update.last_valuation_date && (
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Date valorisation</p>
+                <p className="text-white">{new Date(result.private_valuation_update.last_valuation_date).toLocaleDateString('fr-FR')}</p>
+              </div>
+            )}
+            {result.private_valuation_update.current_ownership_pct != null && (
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Participation actuelle</p>
+                <p className="text-white font-semibold">{result.private_valuation_update.current_ownership_pct}%</p>
+              </div>
+            )}
+            {result.private_valuation_update.projected_valuation_next_event_m != null && (
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Val. projetée prochain event</p>
+                <p className="text-white font-semibold">{result.private_valuation_update.projected_valuation_next_event_m} M€</p>
+              </div>
+            )}
+            {result.private_valuation_update.next_event_date && (
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Prochain événement</p>
+                <p className="text-white">{new Date(result.private_valuation_update.next_event_date).toLocaleDateString('fr-FR')}</p>
+                {result.private_valuation_update.next_event_type && (
+                  <p className="text-gray-500 text-xs">{result.private_valuation_update.next_event_type}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── MODE 3 — Décision Review ──────────────────────────────────────── */}
       {mode === 3 && (
         <div className="space-y-4">
