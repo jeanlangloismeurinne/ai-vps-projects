@@ -48,18 +48,10 @@ export default function App({ Component, pageProps }) {
       <Script src="/feedback-widget.js" data-api="" data-project="portfolio-tracker" strategy="lazyOnload" />
       <nav className="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-2 sticky top-0 z-40 flex-wrap">
         <span className="text-white font-bold mr-3">📈 PT</span>
-        {/* V1 */}
-        <NavLink href="/portfolio">Portefeuille V1</NavLink>
-        <NavLink href="/watchlist-v2">Watchlist V1</NavLink>
+        <NavLink href="/portfolio">Portefeuille</NavLink>
+        <NavLink href="/watchlist-v2">Watchlist</NavLink>
         <NavLink href="/calendrier">Calendrier</NavLink>
         <NavLink href="/admin">Admin</NavLink>
-        {/* Separator */}
-        <span className="text-gray-700 mx-1">|</span>
-        {/* V0 */}
-        <NavLink href="/" exact>Portfolio (V0)</NavLink>
-        <NavLink href="/watchlist">Watchlist (V0)</NavLink>
-        <NavLink href="/calendar">Calendrier</NavLink>
-        <NavLink href="/analysts">Analystes</NavLink>
         <div className="ml-auto flex items-center gap-3">
           <AgentSyncBadge />
           <MarketTemperatureBadge />
