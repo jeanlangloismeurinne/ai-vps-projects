@@ -143,19 +143,21 @@ portfolio-tracker/
 │   │   │   ├── portfolio_agent.py      # Régimes 2/3 + pré-event
 │   │   │   ├── sector_pulse.py         # Sector pulse V0
 │   │   │   ├── thesis_chat.py          # Chat thèse V0 (streaming)
+│   │   │   ├── scout_agent.py          # Pré-screening watchlist V0 — appelé par trigger.py
 │   │   │   ├── # V1 (nouveau)
 │   │   │   ├── opportunity_agent.py    # 3 modes, gemini-2-5-flash-preview
 │   │   │   ├── thesis_agent.py         # 2 modes, claude-sonnet-4-5
 │   │   │   └── monitoring_agent_v1.py  # 5 modes, modèles distincts
 │   │   ├── calendar/
-│   │   │   ├── event_router.py         # Déclenchements J-2/J+1 (utilise v0_calendar_events)
+│   │   │   ├── event_router.py         # Déclenchements J-2/J+1 (utilise v0_calendar_events) — V0
+│   │   │   ├── event_router_v1.py      # Déclenchements V1 — lit calendar_events, actif en prod (7h05)
 │   │   │   ├── calendar_builder.py     # Refresh dates earnings
 │   │   │   └── watchlist_monitor.py    # Surveillance prix watchlist V0
 │   │   ├── data_collection/            # M1/M2/M3/M4 + assembler + cache + data_service
 │   │   ├── db/
 │   │   │   ├── database.py             # asyncpg pool + codec JSONB
 │   │   │   ├── models.py               # Pydantic request/response models
-│   │   │   └── migrations/             # 001 → 013 (V1 = migration 013)
+│   │   │   └── migrations/             # 001 → 022 (V1 = migration 013, dernière = 022)
 │   │   ├── notifications/
 │   │   │   ├── slack_notifier.py       # V0 — Socket Mode (bot)
 │   │   │   └── slack_webhook.py        # V1 — webhook entrant (plus simple)
@@ -165,32 +167,50 @@ portfolio-tracker/
     ├── pages/
     │   ├── # V0 (legacy)
     │   ├── index.js                    # Dashboard portfolio V0
-    │   ├── position/[id].js            # Détail position V0
-    │   ├── watchlist.js                # Watchlist V0
-    │   ├── calendar.js                 # Calendrier V0
+    │   ├── position/[id].js            # Détail position V0 (AIActionsPanel, MonitoringFeed, ExitManagementPanel)
+    │   ├── watchlist.js                # Watchlist V0 (WatchlistAlertBanner, ReadinessWidget, WatchlistItemDrawer, PromoteToPositionDrawer)
+    │   ├── calendar.js                 # Calendrier V0 (v0_calendar_events)
     │   ├── analysts.js                 # Analystes V0
     │   ├── market-temperature.js       # FRED V0
     │   ├── # V1 (nouveau)
     │   ├── portfolio.js                # Page 0 — /portfolio
     │   ├── watchlist-v2.js             # Page 1 — /watchlist-v2
+    │   ├── calendrier.js               # Calendrier V1 — /calendrier (consomme /calendar-v2, tous types d'events)
     │   ├── admin.js                    # Page Admin — /admin
     │   └── ticker/[ticker_id]/
     │       ├── index.js                # Page 2 — fiche entreprise
     │       ├── opportunity/[...slug].js # Page 3 — analyse opportunité (slug='new' ou brief_id)
     │       ├── thesis/[thesis_id].js   # Page 4 — thèse d'investissement
-    │       ├── monitoring/[session_id].js # Page 5 — session monitoring
+    │       ├── monitoring/[session_id].js # Page 5 — session monitoring (layout par mode 1-5)
     │       ├── decision/[thesis_id].js # Page DÉCISION
     │       └── debate/[debate_id].js   # Page DÉBAT
     └── components/
-        ├── # V0 (legacy)
-        ├── HypothesisScorecard.js, ThesisTimeline.js, ThesisChat.js, ...
+        ├── # V0 (legacy) — utilisés dans position/[id].js et watchlist.js
+        ├── HypothesisScorecard.js, ThesisTimeline.js, ThesisChat.js, HypothesisDiff.js
+        ├── DustRunViewer.js, SectorPulseLog.js, PeerComparison.js, PostMortemTab.js
+        ├── AIActionsPanel.js           # Panneau actions IA — position/[id].js V0
+        ├── MonitoringFeed.js           # Fil de monitoring — position/[id].js V0
+        ├── ExitManagementPanel.js      # Gestion sortie de position — position/[id].js V0
+        ├── WatchlistAlertBanner.js     # Bandeau alertes watchlist — watchlist.js V0
+        ├── ReadinessWidget.js          # Score de maturité d'une opportunité — watchlist.js V0
+        ├── WatchlistItemDrawer.js      # Drawer détail item watchlist — watchlist.js V0
+        ├── PromoteToPositionDrawer.js  # Drawer promotion watchlist → position — watchlist.js V0
+        ├── ScoutResultPanel.js         # Résultats scout agent — watchlist V0
+        ├── MarketTemperatureBadge.js   # Badge température de marché (FRED)
         ├── # V1 (nouveau)
         ├── AgentChat.js               # Chat générique réutilisé sur Pages 3/4/5/DÉBAT
         ├── AgentSyncOverlay.js        # Overlay non-dismissible si agent hors sync
         ├── PriceChart.js              # SVG pur (sans dépendances), gradient area
         ├── InvestmentBriefEditor.js   # Col 2 Page 3 (screening, anomalie, catalyseurs...)
         ├── ThesisEditorV2.js          # Col 2 Page 4 (scénarios, H1-H7, seuils, pairs...)
-        └── CalendarEditor.js          # Bandeau calendrier Page 4
+        ├── CalendarEditor.js          # Bandeau calendrier Page 4
+        ├── CalendarView.js            # Vue calendrier V1 (utilisée dans calendrier.js)
+        ├── CashManagementWidget.js    # Gestion cash — Page 0 portfolio
+        ├── DataSourcesPanel.js        # Sources données — Page 2 fiche entreprise
+        ├── M1DataPanel.js             # Données M1 (fondamentaux) — Page 2
+        ├── AddPrivateCompanyModal.js  # Modal ajout société PE/VC non cotée
+        ├── PrivateMetricsModal.js     # Métriques PE/VC — valorisation, ARR, tour
+        └── RecommendationBadge.js     # Badge recommandation agent
 ```
 
 ---
@@ -208,20 +228,21 @@ Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 
 | Table | PK | Description |
 |-------|-----|-------------|
-| `tickers` | `id TEXT` ("CAP.PA") | Univers de titres — statuts: `watchlist`/`portfolio`/`archived` |
-| `portfolio_positions` | SERIAL | Positions V1 — shares, purchase_price, purchase_date, thesis_id |
+| `tickers` | `id TEXT` | Univers de titres — statuts: `watchlist`/`portfolio`/`archived`. `id` peut être `PUB-XXXXXXXX`, `PRIV-XXXXXXXX` ou le symbole direct. Colonne `ticker_symbol` = symbole yfinance réel (migration 018) |
+| `portfolio_positions` | SERIAL | Positions V1 — shares, purchase_price, purchase_date, thesis_id, ownership_pct_at_entry, current_ownership_pct |
 | `cash_movements` | SERIAL | Flux cash — types: `deposit`/`withdrawal`/`buy`/`sell` |
 | `price_alerts` | SERIAL | Alertes de cours — direction: `above`/`below`, active, triggered_at |
 | `opportunity_briefs` | SERIAL | Briefs d'analyse — statuts: `draft`/`validated`/`passed`/`dismissed` |
 | `opportunity_messages` | SERIAL | Historique chat opportunity-agent (brief_id ou debate_id) |
 | `theses` | SERIAL | Thèses V1 — statuts: `draft`/`active`/`under_review`/`superseded`/`invalidated` |
 | `thesis_messages` | SERIAL | Historique chat thesis-agent |
-| `monitoring_sessions` | SERIAL | Sessions monitoring — modes 1-5, alert_level: `RAS`/`REVIEW_REQUIRED`/`CRITICAL` |
+| `monitoring_sessions` | SERIAL | Sessions monitoring — modes 1-5, alert_level: `RAS`/`REVIEW_REQUIRED`/`CRITICAL`, statuts: `pending`/`running`/`completed`/`blocked_sync`/`pending_manual`/`archived`, colonne `calendar_event_id` (migration 019) |
 | `monitoring_messages` | SERIAL | Messages supplémentaires dans une session |
-| `calendar_events` | SERIAL | Calendrier V1 — source: `thesis_agent`/`monitoring_agent`/`manual`/`conviction_override` |
+| `calendar_events` | SERIAL | Calendrier V1 — source: `thesis_agent`/`monitoring_agent`/`manual`/`conviction_override`. Colonne `brief_triggered BOOL` (migration 019) |
 | `conviction_debates` | SERIAL | Débats option C — statuts: `open`/`closed_pass`/`closed_monitor`/`closed_proceed` |
 | `agent_prompts` | SERIAL | Prompts Dust — synced, version, dust_agent_id, dust_agent_url |
 | `private_company_profiles` | ticker_id FK | Profil PE/VC — stage, valuation, ARR, investors, next_event (migration 017) |
+| `portfolio_settings` | — | Paramètres globaux — `dust_auto_enabled BOOL DEFAULT TRUE` (migration 020) |
 
 ### Tables V0 (conservées, legacy)
 
@@ -236,8 +257,8 @@ Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 | `dust_budget` | Budget mensuel Dust — partagé V0/V1 |
 
 ### Migrations appliquées
-001 → 017. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support sociétés non cotées PE/VC (2026-06-14).
-Prochaine migration : `018_*.sql`.
+001 → 022. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support PE/VC. Migration 018 = `tickers.ticker_symbol`. Migration 019 = `calendar_events.brief_triggered` + `monitoring_sessions.calendar_event_id`. Migration 020 = `portfolio_settings.dust_auto_enabled` + statut `pending_manual`. Migrations 021/022 = mise à jour prompt monitoring-agent en DB.
+Prochaine migration : `023_*.sql`.
 
 ---
 
@@ -300,6 +321,7 @@ POST   /calendar-v2                               Créer événement
 PATCH  /calendar-v2/{id}                          Modifier
 DELETE /calendar-v2/{id}                          Supprimer
 POST   /calendar-v2/{id}/validate                 Valider un event pending_validation
+GET    /calendar-v2/{id}/sessions                 Sessions monitoring liées à cet événement
 
 # Admin
 GET    /admin/agents                              Liste agent_prompts
@@ -340,6 +362,7 @@ GET      /dust-runs/conversation/{id}
 | 18h00 | vendredi | `_refresh_watchlist_peer_calendars` | Peer calendars (écrit dans `v0_calendar_events`) |
 
 **Note** : `_daily_check` V0 (7h00, `v0_calendar_events`) est désactivé depuis 2026-06-14. Ne pas le réactiver — remplacé par `_daily_check_v1`.
+`_daily_check_v1` → `EventRouterV1` dans `calendar/event_router_v1.py` (604 lignes, actif en prod). Spec complète : `specs/scheduler-v1-monitoring-page.md`.
 
 ---
 
@@ -355,13 +378,13 @@ m1 = await DataService().refresh_m1(ticker, settings.FMP_API_KEY, context="regim
 
 TTL Redis : M1 complet → `pt:m1:{ticker}` 4h | Earnings date → `pt:calendar:{ticker}` 7j
 
-### Tickers Euronext
+### Tickers et symboles yfinance
 
 `TICKER_EXCHANGE_MAP` dans `m1_quantitative.py` mappe les tickers sans suffixe vers yfinance :
 ```python
 "CAP": "CAP.PA",  # Euronext Paris
 ```
-**Règle V1** : les `tickers.id` peuvent déjà contenir le suffixe `.PA` — vérifier avant d'appliquer la map.
+**Règle V1 (migration 018)** : ne jamais utiliser `tickers.id` directement pour les appels yfinance/FMP/DataService. Toujours lire `tickers.ticker_symbol` (colonne dédiée, nullable). Si `ticker_symbol IS NULL` → ticker ajouté sans symbole boursier (ex: PRIV- ou PUB-UUID), DataService doit être ignoré. Les `tickers.id` anciens ont été backfillés avec leur symbole, mais les nouveaux tickers cotés sans symbole reçoivent un id `PUB-XXXXXXXX`.
 
 ---
 
@@ -417,7 +440,7 @@ PULSE_ESCALATION_THRESHOLD=-3
 ### Spécifiques V1
 9. **Vérification sync avant appel Dust** : toute classe agent V1 appelle `_check_sync()` qui lève une exception si `agent_prompts.synced = FALSE`. Ne pas bypasser.
 10. **PATCH agent ne change pas synced** : sauf si `prompt_text` est dans le payload. Modifier `dust_agent_id` seul → synced inchangé.
-11. **`tickers.id` = clé lisible** : "CAP.PA", "TSLA" etc. — pas d'UUID. Peut déjà contenir le suffixe exchange.
+11. **`tickers.id` ≠ symbole yfinance** : depuis la migration 018, `tickers.id` est la PK stable mais peut être `PUB-XXXXXXXX` (ticker coté ajouté sans symbole), `PRIV-XXXXXXXX` (privé), ou directement le symbole (anciens tickers backfillés). **Utiliser `tickers.ticker_symbol`** pour tout appel DataService/yfinance/FMP. Si `ticker_symbol IS NULL`, ignorer DataService.
 12. **Handoff opportunity→thesis** : lit le `brief_json` édité en Col 2, pas le JSON brut de l'agent. Construit côté backend dans `POST /tickers/{id}/theses`.
 13. **Validation thèse** : `POST /theses/{id}/validate` fait 4 choses atomiquement — `thesis.status='active'`, `tickers.status='portfolio'`, crée `portfolio_positions`, crée `cash_movements` (type='buy'), persiste `calendar_events`.
 14. **Tables V0 renommées** : `theses` → `v0_theses`, `calendar_events` → `v0_calendar_events`. Le scheduler V0 (`_daily_check`, `_refresh_watchlist_peer_calendars`) écrit dans `v0_calendar_events`.
@@ -433,6 +456,8 @@ PULSE_ESCALATION_THRESHOLD=-3
     docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/migration.sql
     ```
 18. **Architecture PE/VC (sociétés non cotées)** : `tickers.company_type = 'private'` est le discriminateur principal. Les agents Python injectent `[company_type: private]\n\n` en tête de message Dust — les prompts Dust détectent ce signal et appliquent toute la logique PE/VC (marqueurs "→ Non coté :"). Tables associées : `private_company_profiles` (stage, valuation, ARR, investors, next event) + colonnes `ownership_pct_at_entry` / `current_ownership_pct` sur `portfolio_positions`. La réponse JSON du monitoring mode 2 inclut un bloc `private_valuation_update` automatiquement parsé et appliqué à `private_company_profiles` par `monitoring_v2.py`. DataService (yfinance/FMP) est ignoré pour les tickers privés.
+20. **`pending_manual` dans monitoring_sessions** : statut ajouté en migration 020. Indique qu'une session a été planifiée par le scheduler mais non exécutée car `portfolio_settings.dust_auto_enabled = FALSE`. Différent de `blocked_sync` (agent Dust non synchronisé). L'utilisateur peut déclencher manuellement depuis la Page 5.
+21. **`hypotheses_reviewed[]` vs `hypothesis_reviews[]`** : `hypothesis_reviews[]` est la sortie brute de l'agent Dust (modes 2/3/4). `monitoring_v2.py` appelle `_normalize_monitoring_result()` qui fusionne ces reviews avec les hypothèses de la thèse pour produire `hypotheses_reviewed[]` — champ enrichi utilisé par la Page 5 (contient `text`, `weight`, `kpi_metric`, `kpi_unit`, `alert_threshold`, `invalidation_threshold`, `status`, `observation`). Toujours lire `hypotheses_reviewed[]` côté frontend, pas `hypothesis_reviews[]`.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
@@ -441,11 +466,9 @@ Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le c
 
 ## Priorités en attente
 
-### V1 — scheduler monitoring automatique
-Le `event_router.py` (V0) gère les déclenchements J-2/J+1 sur `v0_calendar_events`.
-Il n'existe pas encore d'équivalent V1 qui lirait `calendar_events` (V1) et créerait des `monitoring_sessions` automatiquement. À implémenter dans `calendar/event_router_v1.py`.
+### P3 — après 1ère clôture de position (stubs existants, à compléter)
 
-### P3 — après 1ère clôture de position
+Les fichiers existent déjà comme stubs vides — ne pas les recréer, les compléter :
 
 | Fichier | Fonctionnalité |
 |---------|---------------|
