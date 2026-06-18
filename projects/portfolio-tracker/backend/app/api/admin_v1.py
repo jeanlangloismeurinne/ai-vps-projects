@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 # ─────────────────────────── Pydantic schemas ────────────────────────────────
 
+class SettingsUpdate(BaseModel):
+    dust_auto_enabled: Optional[bool] = None
+
+
 class AgentPromptUpdate(BaseModel):
     prompt_text: Optional[str] = None
     dust_agent_id: Optional[str] = None
@@ -32,6 +36,33 @@ def _serialize(row) -> dict:
         if hasattr(v, "isoformat"):
             d[k] = v.isoformat()
     return d
+
+
+# ─────────────────────────── Paramètres système ──────────────────────────────
+
+@router.get("/settings")
+async def get_settings():
+    async with get_db_session() as db:
+        row = await db.fetchrow("SELECT * FROM portfolio_settings LIMIT 1")
+    return _serialize(row) if row else {}
+
+
+@router.patch("/settings")
+async def update_settings(data: SettingsUpdate):
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "Aucun champ à mettre à jour")
+    set_parts = ["updated_at=NOW()"]
+    values = []
+    for idx, (k, v) in enumerate(updates.items(), start=1):
+        set_parts.append(f"{k}=${idx}")
+        values.append(v)
+    async with get_db_session() as db:
+        row = await db.fetchrow(
+            f"UPDATE portfolio_settings SET {', '.join(set_parts)} RETURNING *",
+            *values,
+        )
+    return _serialize(row) if row else {}
 
 
 # ─────────────────────────── Agent Prompts ───────────────────────────────────

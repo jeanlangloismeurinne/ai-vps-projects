@@ -31,6 +31,69 @@ class EventRouterV1:
             )
         return bool(row and row["synced"])
 
+    async def _is_dust_auto_enabled(self) -> bool:
+        async with get_db_session() as db:
+            row = await db.fetchrow("SELECT dust_auto_enabled FROM portfolio_settings LIMIT 1")
+        return bool(row and row["dust_auto_enabled"])
+
+    async def _handle_manual_mode(
+        self,
+        event: dict,
+        mode: int,
+        context: str,
+        calendar_flag: str,
+    ):
+        """Crée une session pending_manual et envoie 2 notifications Slack."""
+        from app.notifications.slack_webhook import SlackWebhook
+
+        ticker_id = event["ticker_id"]
+        label = event.get("label") or event.get("event_type", "")
+
+        async with get_db_session() as db:
+            session_row = await db.fetchrow(
+                """
+                INSERT INTO monitoring_sessions
+                    (ticker_id, thesis_id, trigger_type, trigger_label, mode, status, calendar_event_id)
+                VALUES ($1,$2,'scheduled',$3,$4,'pending_manual',$5)
+                RETURNING *
+                """,
+                ticker_id, event.get("thesis_id"), label, mode, event["id"],
+            )
+            session_id = session_row["id"]
+            await db.execute(
+                "INSERT INTO monitoring_messages (session_id, role, content) VALUES ($1,'user',$2)",
+                session_id, context,
+            )
+            await db.execute(
+                f"UPDATE calendar_events SET {calendar_flag}=TRUE WHERE id=$1",
+                event["id"],
+            )
+
+        MODE_LABELS = {
+            1: "Pré-event brief",
+            2: "Revue trimestrielle",
+            3: "Révision conviction",
+            4: "Sector Pulse",
+        }
+        mode_label = MODE_LABELS.get(mode, f"Mode {mode}")
+        url = f"{PORTFOLIO_BASE_URL}/ticker/{ticker_id}/monitoring/{session_id}"
+
+        webhook = SlackWebhook()
+
+        await webhook.send(
+            f"🔔 [Manuel] {mode_label} — {ticker_id} | {label}\n"
+            f"Uploader le résultat Dust sur : {url}"
+        )
+
+        # Tronquer si le contexte dépasse la limite Slack (3000 chars par bloc)
+        max_ctx = 2500
+        ctx_display = context if len(context) <= max_ctx else context[:max_ctx] + "\n[…tronqué]"
+        await webhook.send(
+            f"*Contexte à coller dans Dust — Mode {mode} — {ticker_id}:*\n```{ctx_display}```"
+        )
+
+        logger.info(f"EventRouterV1 Mode {mode} manuel — {ticker_id} (session #{session_id})")
+
     # ─────────────────── Mode 1 — J-2 pré-event brief ────────────────────────
 
     async def _trigger_pre_event_briefs(self, today: date):
@@ -58,6 +121,8 @@ class EventRouterV1:
             logger.warning("EventRouterV1 Mode 1 — monitoring-agent non synchronisé, skip")
             return
 
+        auto_enabled = await self._is_dust_auto_enabled()
+
         from app.agents.monitoring_agent_v1 import MonitoringAgentV1
         from app.notifications.slack_webhook import SlackWebhook
 
@@ -69,6 +134,13 @@ class EventRouterV1:
             ticker_id = event["ticker_id"]
             try:
                 context = self._build_pre_event_context(event)
+
+                if not auto_enabled:
+                    await self._handle_manual_mode(
+                        event=event, mode=1, context=context, calendar_flag="brief_triggered"
+                    )
+                    continue
+
                 result = await agent.run(mode=1, message=context)
                 parsed = agent.extract_json(result["content"])
 
@@ -175,6 +247,8 @@ class EventRouterV1:
             logger.warning("EventRouterV1 Mode 2 — monitoring-agent non synchronisé, skip")
             return
 
+        auto_enabled = await self._is_dust_auto_enabled()
+
         from app.agents.monitoring_agent_v1 import MonitoringAgentV1
         from app.notifications.slack_webhook import SlackWebhook
         from app.api.monitoring_v2 import _normalize_monitoring_result
@@ -187,6 +261,13 @@ class EventRouterV1:
             ticker_id = event["ticker_id"]
             try:
                 context = await self._build_thesis_context(event, mode=2)
+
+                if not auto_enabled:
+                    await self._handle_manual_mode(
+                        event=event, mode=2, context=context, calendar_flag="triggered"
+                    )
+                    continue
+
                 result = await agent.run(mode=2, message=context)
                 parsed = agent.extract_json(result["content"])
                 if parsed:
@@ -324,6 +405,8 @@ class EventRouterV1:
             logger.warning("EventRouterV1 Mode 4 — monitoring-agent non synchronisé, skip")
             return
 
+        auto_enabled = await self._is_dust_auto_enabled()
+
         from app.agents.monitoring_agent_v1 import MonitoringAgentV1
         from app.notifications.slack_webhook import SlackWebhook
 
@@ -335,6 +418,13 @@ class EventRouterV1:
             ticker_id = event["ticker_id"]
             try:
                 context = self._build_sector_pulse_context(event)
+
+                if not auto_enabled:
+                    await self._handle_manual_mode(
+                        event=event, mode=4, context=context, calendar_flag="triggered"
+                    )
+                    continue
+
                 result = await agent.run(mode=4, message=context)
                 parsed = agent.extract_json(result["content"])
 
@@ -439,6 +529,8 @@ class EventRouterV1:
             logger.warning("EventRouterV1 Mode 3 — monitoring-agent non synchronisé, skip")
             return
 
+        auto_enabled = await self._is_dust_auto_enabled()
+
         from app.agents.monitoring_agent_v1 import MonitoringAgentV1
         from app.notifications.slack_webhook import SlackWebhook
         from app.api.monitoring_v2 import _normalize_monitoring_result
@@ -451,6 +543,13 @@ class EventRouterV1:
             ticker_id = event["ticker_id"]
             try:
                 context = await self._build_thesis_context(event, mode=3)
+
+                if not auto_enabled:
+                    await self._handle_manual_mode(
+                        event=event, mode=3, context=context, calendar_flag="triggered"
+                    )
+                    continue
+
                 result = await agent.run(mode=3, message=context)
                 parsed = agent.extract_json(result["content"])
                 if parsed:

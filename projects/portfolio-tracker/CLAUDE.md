@@ -34,8 +34,7 @@ Après déploiement initial, faire une fois :
 | Cache | Redis 7 — `shared-redis:6379` |
 | Frontend | Next.js 14 / React 18 / Tailwind CSS 3.4 |
 | Agents IA | Dust.tt API — workspace `plm-siege` |
-| Notifications V0 | Slack bot @ai_vps_jlm (Socket Mode) — `#portfolio-management` `C0B13KANHPD` |
-| Notifications V1 | Slack webhook entrant (`SLACK_WEBHOOK_URL`) |
+| Notifications V0 + V1 | Slack bot @ai_vps_jlm — `SLACK_BOT_TOKEN` + `chat.postMessage` → `#portfolio-management` `C0B13KANHPD` |
 | Données marché | yfinance (EOD) + FMP API (fondamentaux) + FRED (macro) |
 
 ---
@@ -331,8 +330,8 @@ GET      /dust-runs/conversation/{id}
 
 | Heure | Jour | Job | Détail |
 |-------|------|-----|--------|
-| `*/5` | lun-ven 9h-17h | `_check_price_alerts_v1` | Vérifie price_alerts V1, notifie Slack webhook |
-| 7h00 | tous | `_daily_check` | Brief J-2, Régime 2 J+1, sector pulses V0 (utilise `v0_calendar_events`) |
+| `*/5` | lun-ven 9h-17h | `_check_price_alerts_v1` | Vérifie price_alerts V1, notifie Slack |
+| 7h05 | tous | `_daily_check_v1` | EventRouterV1 — mode 1 (J-2), mode 2 (J+1), mode 4 (sector pulse J+1), mode 3 (conviction_review jour J) — lit `calendar_events` V1 |
 | 7h30 | tous | `_refresh_watchlist_prices` | Prix watchlist V0 via `get_m1()` |
 | 8h00 | lundi | `_weekly_review` | Snapshot portfolio V0 → digest Slack |
 | 8h15 | lundi | `_refresh_market_temperature` | FRED — Buffett indicator, CAPE |
@@ -340,7 +339,7 @@ GET      /dust-runs/conversation/{id}
 | 8h45 | lundi | `_weekly_m1_snapshot` | `refresh_m1(context='weekly')` toutes positions V0, 2s entre tickers |
 | 18h00 | vendredi | `_refresh_watchlist_peer_calendars` | Peer calendars (écrit dans `v0_calendar_events`) |
 
-**Note V1** : le scheduler monitoring automatique (J-2/J+1 basé sur `calendar_events` V1) n'est pas encore implémenté — les sessions V1 se créent manuellement ou depuis `event_router.py` (à étendre).
+**Note** : `_daily_check` V0 (7h00, `v0_calendar_events`) est désactivé depuis 2026-06-14. Ne pas le réactiver — remplacé par `_daily_check_v1`.
 
 ---
 
@@ -383,7 +382,7 @@ DUST_MONTHLY_BUDGET_USD=5.0
 SLACK_BOT_TOKEN=xoxb-...              # V0 Socket Mode
 SLACK_APP_TOKEN=xapp-...              # V0 Socket Mode
 SLACK_PORTFOLIO_CHANNEL_ID=C0B13KANHPD
-SLACK_WEBHOOK_URL=                    # V1 webhook entrant (optionnel)
+SLACK_WEBHOOK_URL=                    # fallback incoming webhook (optionnel, non utilisé en prod)
 SLACK_ALERT_CHANNEL=#portfolio-alerts # V1
 
 # Marché
@@ -428,11 +427,11 @@ PULSE_ESCALATION_THRESHOLD=-3
     1. **Prompt Dust** (`agent_prompts` en DB → copié dans Dust) — le schéma JSON attendu en sortie de l'agent
     2. **Frontend** (`ThesisEditorV2.js`, `InvestmentBriefEditor.js`, pages ticker) — l'affichage et l'édition des champs
     3. **Import JSON manuel** (`POST /tickers/{id}/theses` via `ImportLegacyBody` dans `thesis_v2.py`) — les champs acceptés à l'import
-17. **Migrations non auto-appliquées** : `startup()` dans `main.py` n'exécute aucune migration — il appelle uniquement `init_pool()` et `init_redis()`. Toute nouvelle migration doit être appliquée manuellement :
+17. **Migrations non auto-appliquées** : `startup()` dans `main.py` n'exécute aucune migration — il appelle uniquement `init_pool()` et `init_redis()`. Toute nouvelle migration doit être appliquée manuellement via `docker cp` (le heredoc `psql << 'EOF'` via `docker exec` échoue silencieusement — pas d'erreur, pas de changement) :
     ```bash
-    docker exec shared-postgres psql -U admin -d db_portfolio -c "$(cat backend/app/db/migrations/0XX_*.sql)"
+    docker cp /tmp/migration.sql shared-postgres:/tmp/migration.sql
+    docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/migration.sql
     ```
-    Si le heredoc ne produit pas de sortie, passer les instructions SQL une par une.
 18. **Architecture PE/VC (sociétés non cotées)** : `tickers.company_type = 'private'` est le discriminateur principal. Les agents Python injectent `[company_type: private]\n\n` en tête de message Dust — les prompts Dust détectent ce signal et appliquent toute la logique PE/VC (marqueurs "→ Non coté :"). Tables associées : `private_company_profiles` (stage, valuation, ARR, investors, next event) + colonnes `ownership_pct_at_entry` / `current_ownership_pct` sur `portfolio_positions`. La réponse JSON du monitoring mode 2 inclut un bloc `private_valuation_update` automatiquement parsé et appliqué à `private_company_profiles` par `monitoring_v2.py`. DataService (yfinance/FMP) est ignoré pour les tickers privés.
 
 ### yfinance rate limiting

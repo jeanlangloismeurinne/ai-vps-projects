@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import AgentChat from '../../../../components/AgentChat'
@@ -177,6 +177,22 @@ export default function MonitoringSessionPage() {
           {session.created_at ? new Date(session.created_at).toLocaleDateString('fr-FR') : ''}
         </span>
       </div>
+
+      {/* Pending manual upload banner */}
+      {session.status === 'pending_manual' && (
+        <PendingManualUpload
+          tickerId={ticker_id}
+          sessionId={session_id}
+          onSuccess={(updatedSession) => {
+            setSession(updatedSession)
+            setCalendarUpdates(
+              Array.isArray(updatedSession.result_json?.calendar_events_update)
+                ? updatedSession.result_json.calendar_events_update
+                : []
+            )
+          }}
+        />
+      )}
 
       {/* Alert banner */}
       {(alertLevel === 'REVIEW_REQUIRED' || alertLevel === 'CRITICAL') && (
@@ -564,6 +580,112 @@ function HypothesesSummary({ hypotheses, alertLevel }) {
           {alertLevel}
         </span>
       )}
+    </div>
+  )
+}
+
+function PendingManualUpload({ tickerId, sessionId, onSuccess }) {
+  const [jsonText, setJsonText] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const fileInputRef = useRef(null)
+
+  const submitParsed = async (parsed) => {
+    setUploading(true)
+    try {
+      const res = await fetch(
+        `${API}/tickers/${tickerId}/monitoring/${sessionId}/upload-result`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result_json: parsed }),
+        }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        onSuccess(data.session)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setError(err.detail || 'Erreur lors de l\'upload')
+      }
+    } catch {
+      setError('Erreur réseau')
+    }
+    setUploading(false)
+  }
+
+  const parseJsonText = (text) => {
+    const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    return JSON.parse(match ? match[1] : text)
+  }
+
+  const handleFileImport = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setError('')
+    try {
+      const parsed = parseJsonText(await file.text())
+      await submitParsed(parsed)
+    } catch {
+      setError('Fichier JSON invalide')
+    }
+  }
+
+  const handleSubmitText = async () => {
+    setError('')
+    try {
+      const parsed = parseJsonText(jsonText)
+      await submitParsed(parsed)
+    } catch {
+      setError('JSON invalide — vérifiez le format')
+    }
+  }
+
+  return (
+    <div className="bg-amber-950/20 border border-amber-700/50 rounded-xl p-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start gap-3">
+          <span className="text-amber-400 text-lg flex-shrink-0">⏳</span>
+          <div>
+            <h2 className="font-semibold text-amber-300 text-sm">Session en attente — résultat Dust à uploader</h2>
+            <p className="text-xs text-amber-700/80 mt-0.5">
+              Lancez l&apos;analyse dans Dust avec le contexte reçu par Slack, puis importez le JSON résultat.
+            </p>
+          </div>
+        </div>
+        <div className="flex-shrink-0">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleFileImport}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white text-xs rounded-lg font-medium transition-colors"
+          >
+            Importer JSON
+          </button>
+        </div>
+      </div>
+      <textarea
+        value={jsonText}
+        onChange={e => setJsonText(e.target.value)}
+        placeholder={'Ou collez directement le JSON renvoyé par Dust…\n\nAccepte les deux formats :\n  ```json\n  { … }\n  ```\nou le JSON brut.'}
+        rows={8}
+        className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs font-mono rounded-lg px-3 py-2.5 focus:border-amber-600 focus:outline-none resize-y"
+      />
+      {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+      <button
+        onClick={handleSubmitText}
+        disabled={uploading || !jsonText.trim()}
+        className="mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-sm rounded-lg font-medium transition-colors"
+      >
+        {uploading ? 'Upload en cours…' : 'Soumettre le texte collé'}
+      </button>
     </div>
   )
 }

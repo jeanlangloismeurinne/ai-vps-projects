@@ -34,6 +34,10 @@ class SessionUpdate(BaseModel):
     status: str  # 'archived' | 'reviewed'
 
 
+class ResultUpload(BaseModel):
+    result_json: dict
+
+
 # ─────────────────────────── Helpers ─────────────────────────────────────────
 
 def _serialize(row) -> dict:
@@ -384,6 +388,51 @@ async def get_session(ticker_id: str, session_id: int):
     if not row:
         raise HTTPException(404, f"Session #{session_id} introuvable pour ticker '{ticker_id}'")
     return _serialize(row)
+
+
+@router.post("/tickers/{ticker_id}/monitoring/{session_id}/upload-result")
+async def upload_manual_result(ticker_id: str, session_id: int, data: ResultUpload):
+    """Reçoit le JSON résultat collé depuis Dust pour une session pending_manual."""
+    async with get_db_session() as db:
+        session_row = await db.fetchrow(
+            "SELECT * FROM monitoring_sessions WHERE id=$1 AND ticker_id=$2",
+            session_id, ticker_id,
+        )
+    if not session_row:
+        raise HTTPException(404, f"Session #{session_id} introuvable")
+    if session_row["status"] != "pending_manual":
+        raise HTTPException(
+            400,
+            f"Session #{session_id} n'est pas en attente manuelle (statut : {session_row['status']})",
+        )
+
+    parsed = data.result_json
+
+    thesis_json_for_norm = None
+    if session_row["thesis_id"]:
+        async with get_db_session() as db:
+            th = await db.fetchrow("SELECT thesis_json FROM theses WHERE id=$1", session_row["thesis_id"])
+            if th:
+                thesis_json_for_norm = th["thesis_json"]
+    if parsed:
+        parsed = _normalize_monitoring_result(parsed, thesis_json_for_norm)
+
+    alert_level = (parsed.get("alert_level") or parsed.get("flag")) if parsed else None
+    routing_suggestion = (parsed.get("routing_suggestion") or parsed.get("action")) if parsed else None
+
+    async with get_db_session() as db:
+        updated = await db.fetchrow(
+            """
+            UPDATE monitoring_sessions
+            SET status='completed', result_json=$2, alert_level=$3,
+                routing_suggestion=$4, completed_at=NOW()
+            WHERE id=$1
+            RETURNING *
+            """,
+            session_id, parsed, alert_level, routing_suggestion,
+        )
+
+    return {"session": _serialize(updated), "alert_level": alert_level}
 
 
 @router.patch("/tickers/{ticker_id}/monitoring/{session_id}")

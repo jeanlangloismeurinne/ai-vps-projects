@@ -151,6 +151,49 @@ function AgentCard({ agent, onSync, onUpdate }) {
   )
 }
 
+function DustAutoToggle({ enabled, onChange }) {
+  const [loading, setLoading] = useState(false)
+
+  const toggle = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/admin/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dust_auto_enabled: !enabled }),
+      })
+      if (res.ok) onChange(!enabled)
+    } catch {}
+    setLoading(false)
+  }
+
+  return (
+    <div className={`border rounded-xl p-5 flex items-center justify-between ${
+      enabled ? 'bg-gray-900 border-gray-800' : 'bg-amber-950/20 border-amber-700/50'
+    }`}>
+      <div>
+        <h3 className="font-semibold text-white text-sm">Mode automatique Dust</h3>
+        <p className="text-xs text-gray-500 mt-0.5 max-w-lg">
+          {enabled
+            ? 'Les agents Dust sont appelés automatiquement lors des événements de monitoring.'
+            : 'Mode manuel — les événements envoient 2 notifications Slack : le lien vers la session et le contexte à coller dans Dust.'}
+        </p>
+      </div>
+      <button
+        onClick={toggle}
+        disabled={loading}
+        className={`relative ml-6 flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 ${
+          enabled ? 'bg-emerald-600' : 'bg-gray-600'
+        } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+          enabled ? 'translate-x-6' : 'translate-x-0'
+        }`} />
+      </button>
+    </div>
+  )
+}
+
 function PingButton({ label, endpoint }) {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -191,16 +234,22 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('agents')
   const [error, setError] = useState('')
+  const [dustAutoEnabled, setDustAutoEnabled] = useState(true)
 
   const load = async () => {
     setLoading(true)
     try {
-      const [agRes, stRes] = await Promise.all([
+      const [agRes, stRes, settingsRes] = await Promise.all([
         fetch(`${API}/admin/agents`),
         fetch(`${API}/admin/status`),
+        fetch(`${API}/admin/settings`),
       ])
       if (agRes.ok) setAgents(await agRes.json())
       if (stRes.ok) setStatus(await stRes.json())
+      if (settingsRes.ok) {
+        const s = await settingsRes.json()
+        setDustAutoEnabled(s.dust_auto_enabled ?? true)
+      }
     } catch {
       setError('Erreur de chargement')
     }
@@ -288,12 +337,13 @@ export default function AdminPage() {
       {/* Section 1 — Agents */}
       {activeSection === 'agents' && (
         <div>
+          <DustAutoToggle enabled={dustAutoEnabled} onChange={setDustAutoEnabled} />
           {loading ? (
             <div className="text-center py-8 text-gray-500">Chargement…</div>
           ) : agents.length === 0 ? (
             <div className="text-center py-12 text-gray-600">Aucun agent configuré</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               {agents.map(agent => (
                 <AgentCard
                   key={agent.name}
