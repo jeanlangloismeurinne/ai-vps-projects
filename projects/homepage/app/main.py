@@ -6,6 +6,7 @@ from app.auth import (
     COOKIE_NAME, COOKIE_MAX_AGE,
     make_cookie_value, get_session, redirect_to_login,
 )
+from app.tickets import router as tickets_router
 
 
 class Settings(BaseSettings):
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 app = FastAPI(docs_url=None, redoc_url=None)
+app.include_router(tickets_router)
 
 # ── Services ──────────────────────────────────────────────────────────────────
 SERVICES = [
@@ -53,6 +55,14 @@ SERVICES = [
         "desc": "Suivi investissement long terme · Agents IA · 3 régimes d'analyse",
         "url": "https://portfolio.jlmvpscode.duckdns.org/",
         "color": "#7c3aed",
+    },
+    {
+        "id": "tickets",
+        "emoji": "🎫",
+        "name": "Tickets",
+        "desc": "Gestion des bugs, features & suggestions · Upload de specs",
+        "url": "/tickets",
+        "color": "#e11d48",
     },
 ]
 

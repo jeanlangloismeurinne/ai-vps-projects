@@ -4,6 +4,10 @@ services:
     networks:
       - coolify
     restart: unless-stopped
+    volumes:
+      - /root/ai-vps-projects/projects:/projects:rw
+    environment:
+      - PROJECTS_DIR=/projects
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
