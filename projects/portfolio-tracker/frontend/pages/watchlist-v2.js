@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import PriceChart from '../components/PriceChart'
@@ -345,10 +345,14 @@ export default function WatchlistV2() {
   const [tickers, setTickers] = useState([])
   const [loading, setLoading] = useState(true)
   const [opportunityAgentSynced, setOpportunityAgentSynced] = useState(null)
-  const [addTicker, setAddTicker] = useState('')
+  const [addQuery, setAddQuery] = useState('')
+  const [addResults, setAddResults] = useState([])
+  const [addSelected, setAddSelected] = useState(null)
+  const [addSearching, setAddSearching] = useState(false)
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
   const [showAddPrivate, setShowAddPrivate] = useState(false)
+  const addDebounceRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -369,15 +373,34 @@ export default function WatchlistV2() {
 
   useEffect(() => { load() }, [])
 
+  const onAddQueryChange = (val) => {
+    setAddQuery(val)
+    setAddSelected(null)
+    setAddResults([])
+    clearTimeout(addDebounceRef.current)
+    if (val.trim().length < 2) return
+    addDebounceRef.current = setTimeout(async () => {
+      setAddSearching(true)
+      try {
+        const res = await fetch(`${API}/tickers/search?q=${encodeURIComponent(val.trim())}`)
+        if (res.ok) setAddResults(await res.json())
+      } catch {}
+      setAddSearching(false)
+    }, 400)
+  }
+
   const handleAddTicker = async () => {
-    if (!addTicker.trim()) return
+    if (!addQuery.trim() && !addSelected) return
     setAddLoading(true)
     setAddError('')
     try {
+      const body = addSelected
+        ? { id: addSelected.symbol, name: addSelected.name || addSelected.symbol, exchange: addSelected.exchange || '' }
+        : { name: addQuery.trim() }
       const res = await fetch(`${API}/tickers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: addTicker.trim() }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
@@ -402,29 +425,59 @@ export default function WatchlistV2() {
       </div>
 
       {/* Add ticker bar */}
-      <div className="flex gap-3 flex-wrap">
-        <input
-          value={addTicker}
-          onChange={e => setAddTicker(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAddTicker()}
-          placeholder="Nom de la société cotée… ex. LVMH, Hermès, Capgemini"
-          className="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
-        />
-        <button
-          onClick={handleAddTicker}
-          disabled={addLoading || !addTicker.trim()}
-          className="px-4 py-2.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors"
-        >
-          {addLoading ? '…' : 'Ajouter'}
-        </button>
-        <button
-          onClick={() => setShowAddPrivate(true)}
-          className="px-4 py-2.5 bg-violet-700 hover:bg-violet-600 text-white text-sm rounded-lg font-medium transition-colors"
-        >
-          + Non coté
-        </button>
+      <div className="space-y-2">
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex-1 min-w-0 relative">
+            <input
+              value={addQuery}
+              onChange={e => onAddQueryChange(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !addResults.length && handleAddTicker()}
+              placeholder="Nom ou symbole… ex. LVMH, MC.PA, Capgemini"
+              className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2.5 placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
+            />
+            {addSearching && <span className="absolute right-3 top-3 text-gray-500 text-xs">…</span>}
+            {addResults.length > 0 && !addSelected && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden divide-y divide-gray-700 max-h-52 overflow-y-auto">
+                {addResults.map(r => (
+                  <button key={r.symbol}
+                    onClick={() => { setAddSelected(r); setAddQuery(r.symbol); setAddResults([]) }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-700 transition-colors flex items-center justify-between">
+                    <div>
+                      <span className="text-indigo-400 font-mono font-bold text-sm">{r.symbol}</span>
+                      <span className="text-gray-400 text-xs ml-2">{r.exchange}</span>
+                      <p className="text-gray-300 text-xs mt-0.5 truncate max-w-xs">{r.name}</p>
+                    </div>
+                    {r.sector && <span className="text-gray-600 text-xs ml-2 shrink-0">{r.sector}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleAddTicker}
+            disabled={addLoading || (!addQuery.trim() && !addSelected)}
+            className="px-4 py-2.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors shrink-0"
+          >
+            {addLoading ? '…' : addSelected ? `Ajouter ${addSelected.symbol}` : 'Ajouter'}
+          </button>
+          <button
+            onClick={() => setShowAddPrivate(true)}
+            className="px-4 py-2.5 bg-violet-700 hover:bg-violet-600 text-white text-sm rounded-lg font-medium transition-colors shrink-0"
+          >
+            + Non coté
+          </button>
+        </div>
+        {addSelected && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 bg-indigo-900/30 border border-indigo-700 rounded-lg px-3 py-1.5 text-sm">
+              <span className="text-indigo-300 font-mono font-bold">{addSelected.symbol}</span>
+              <span className="text-gray-400 text-xs">{addSelected.name}</span>
+              <button onClick={() => { setAddSelected(null); setAddQuery('') }} className="text-gray-500 hover:text-gray-300 ml-1">×</button>
+            </span>
+          </div>
+        )}
+        {addError && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded-lg px-3 py-2">{addError}</p>}
       </div>
-      {addError && <p className="text-red-400 text-sm bg-red-900/30 border border-red-800 rounded-lg px-3 py-2">{addError}</p>}
 
       {loading ? (
         <div className="text-center py-16 text-gray-500">Chargement…</div>

@@ -780,16 +780,16 @@ async def validate_thesis(thesis_id: int, data: ValidateThesisBody):
             ticker_id,
         )
 
-        # Crée la position avec le prix en devise native
+        # Crée la position avec le prix en devise native + PRU original en €
         purchase_date_obj = _date.fromisoformat(data.purchase_date)
         position_row = await db.fetchrow(
             """
             INSERT INTO portfolio_positions
-                (ticker_id, shares, purchase_price, purchase_currency, purchase_date, thesis_id, status)
-            VALUES ($1, $2, $3, $4, $5, $6, 'open')
+                (ticker_id, shares, purchase_price, purchase_currency, purchase_date, thesis_id, status, purchase_price_eur)
+            VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
             RETURNING *
             """,
-            ticker_id, data.shares, purchase_price_native, ticker_currency, purchase_date_obj, thesis_id,
+            ticker_id, data.shares, purchase_price_native, ticker_currency, purchase_date_obj, thesis_id, data.purchase_price,
         )
 
         # Mouvement de trésorerie (buy) toujours en EUR (cash réel débité)

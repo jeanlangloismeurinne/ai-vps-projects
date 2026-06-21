@@ -73,7 +73,7 @@ function EditPositionModal({ position, onClose, onSaved }) {
         </div>
         <div className="px-5 py-4 space-y-3">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat (€) — converti en {position.currency || '…'} à la clôture du jour d&apos;achat</label>
+            <label className="text-xs text-gray-400 block mb-1">PRU en € — frais inclus, par action</label>
             <input
               type="number" step="0.01" min="0"
               value={priceEur}
@@ -361,7 +361,7 @@ function AllocateModal({ thesis, onClose, onConfirm }) {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Prix d&apos;achat</label>
+              <label className="text-xs text-gray-400 block mb-1">PRU en € — frais inclus</label>
               <input
                 type="number" min="0" step="0.01"
                 value={form.purchase_price}
@@ -559,7 +559,7 @@ export default function PortfolioV1() {
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
                   <th className="px-4 py-3">Ticker / Nom</th>
                   <th className="px-4 py-3 text-right">Qté</th>
-                  <th className="px-4 py-3 text-right">P. Achat</th>
+                  <th className="px-4 py-3 text-right">PRU €</th>
                   <th className="px-4 py-3 text-right">P. Actuel</th>
                   <th className="px-4 py-3 text-right">Valeur</th>
                   <th className="px-4 py-3 text-right">Perf. %</th>
@@ -580,8 +580,13 @@ export default function PortfolioV1() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">{p.shares ?? '—'}</td>
-                      <td className="px-4 py-3 text-right text-gray-300">
-                        {fmtCurrency(p.purchase_price, p.purchase_currency || 'EUR')}
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-gray-300">{fmtCurrency(p.purchase_price_eur ?? p.purchase_price, 'EUR')}</span>
+                          {p.purchase_price_native_today != null && p.currency && p.currency !== 'EUR' && (
+                            <span className="text-xs text-gray-500">= {fmtCurrency(p.purchase_price_native_today, p.currency)} J</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right text-gray-300">
                         {fmtCurrency(p.current_price, p.currency)}
@@ -772,7 +777,9 @@ export default function PortfolioV1() {
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {pendingTheses.map(th => (
-                  <tr key={th.id} className="bg-amber-950/10">
+                  <tr key={th.id}
+                    onClick={() => { if (typeof window !== 'undefined') window.location.href = `/ticker/${th.ticker_id}` }}
+                    className="bg-amber-950/10 hover:bg-gray-800/50 cursor-pointer transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
                         <span className="font-mono font-bold text-amber-400">{th.ticker_id}</span>
@@ -790,7 +797,7 @@ export default function PortfolioV1() {
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {th.updated_at ? new Date(th.updated_at).toLocaleDateString('fr-FR') : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => setAllocateThesis(th)}
                         className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs rounded-lg font-medium transition-colors"

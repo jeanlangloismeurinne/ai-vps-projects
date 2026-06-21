@@ -1,3 +1,5 @@
+import { useRef, useEffect } from 'react'
+
 const EVENT_TYPES = ['earnings', 'conference', 'product_launch', 'dividend', 'macro', 'other']
 
 const REC_STYLES = {
@@ -17,6 +19,18 @@ function ConvictionDots({ score }) {
 }
 
 export default function ThesisEditorV2({ thesisJson, onChange }) {
+  const containerRef = useRef(null)
+
+  const resizeTextarea = (el) => {
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    containerRef.current.querySelectorAll('textarea').forEach(resizeTextarea)
+  }, [thesisJson])
+
   if (!thesisJson) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-600 text-sm text-center px-8">
@@ -48,7 +62,7 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
   const prob_weighted_target = thesisJson.probability_weighted_target ?? null
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6 p-4" ref={containerRef}>
 
       {/* ── Header : conviction + recommandation + résumé ── */}
       {(recommendation || conviction_score != null || one_liner) && (
@@ -201,6 +215,7 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
                     <textarea
                       value={sc.description ?? ''}
                       onChange={e => update('scenarios', { ...scenarios, [s]: { ...sc, description: e.target.value } })}
+                      onInput={e => resizeTextarea(e.target)}
                       rows={3}
                       className="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none resize-none mt-0.5"
                     />
@@ -230,6 +245,7 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
                       const next = [...hypotheses]; if (!next[i]) next[i] = {}
                       next[i] = { ...next[i], text: e.target.value }; update('hypotheses', next)
                     }}
+                    onInput={e => resizeTextarea(e.target)}
                     placeholder="Texte de l'hypothèse…"
                     rows={2}
                     className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none resize-none"
@@ -346,8 +362,9 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
         <textarea
           value={bear_sm}
           onChange={e => update('bear_steel_man', e.target.value)}
+          onInput={e => resizeTextarea(e.target)}
           placeholder="Meilleur argument baissier possible…"
-          rows={6}
+          rows={4}
           className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-3 py-2 focus:border-indigo-500 focus:outline-none resize-none"
         />
       </section>
@@ -357,19 +374,19 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Track record analystes</h3>
         <div className="space-y-2">
           {track_record.map((a, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="flex flex-wrap gap-2">
               <input value={a.analyst || ''}
                 onChange={e => { const next = [...track_record]; next[i] = { ...next[i], analyst: e.target.value }; update('track_record_analysts', next) }}
                 placeholder="Analyste / Firme"
-                className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 min-w-[120px] bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
               />
               <input value={a.accuracy || ''}
                 onChange={e => { const next = [...track_record]; next[i] = { ...next[i], accuracy: e.target.value }; update('track_record_analysts', next) }}
                 placeholder="Précision"
-                className="w-72 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+                className="w-full sm:w-56 bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
               />
               <button onClick={() => update('track_record_analysts', track_record.filter((_, j) => j !== i))}
-                className="text-red-500 hover:text-red-400 text-sm px-1">✕</button>
+                className="text-red-500 hover:text-red-400 text-sm px-1 shrink-0">✕</button>
             </div>
           ))}
           <button onClick={() => update('track_record_analysts', [...track_record, { analyst: '', accuracy: '' }])}

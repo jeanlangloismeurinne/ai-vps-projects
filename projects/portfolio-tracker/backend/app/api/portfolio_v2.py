@@ -291,7 +291,11 @@ async def list_positions():
         stored_currency = pos.get("purchase_currency") or "EUR"
         shares = float(pos["shares"])
 
-        # Convertit le prix d'achat dans la devise native si nécessaire
+        # PRU en € : colonne dédiée, sinon fallback sur le prix stocké si déjà en EUR
+        stored_eur = pos.get("purchase_price_eur")
+        purchase_price_eur = float(stored_eur) if stored_eur is not None else (stored_price if stored_currency == "EUR" else None)
+
+        # Convertit le prix d'achat dans la devise native au cours de la date d'achat (pour la perf)
         purchase_price_native = stored_price
         if ticker_currency and stored_currency != ticker_currency:
             try:
@@ -301,6 +305,16 @@ async def list_positions():
                 purchase_price_native = round(stored_price * fx, 4)
             except Exception as e:
                 logger.warning(f"FX conversion {stored_currency}→{ticker_currency} pour {ticker_id}: {e}")
+
+        # Équivalent du PRU € dans la devise native au cours du jour (pour affichage)
+        purchase_price_native_today = None
+        if purchase_price_eur and ticker_currency and ticker_currency != "EUR":
+            try:
+                from app.api.thesis_v2 import _get_fx_rate
+                fx_today = await _get_fx_rate("EUR", ticker_currency, date.today().isoformat())
+                purchase_price_native_today = round(purchase_price_eur * fx_today, 4)
+            except Exception:
+                pass
 
         market_value = (float(current_price) * shares) if current_price else None
 
@@ -320,6 +334,8 @@ async def list_positions():
             **pos_dict,
             "purchase_price": purchase_price_native,
             "purchase_currency": ticker_currency or stored_currency,
+            "purchase_price_eur": purchase_price_eur,
+            "purchase_price_native_today": purchase_price_native_today,
             "current_price": current_price,
             "currency": ticker_currency,
             "market_value": round(market_value, 2) if market_value else None,
@@ -488,6 +504,9 @@ async def edit_position(position_id: int, data: PositionEdit):
         i += 1
         set_parts.append(f"purchase_currency=${i}")
         values.append(ticker_currency)
+        i += 1
+        set_parts.append(f"purchase_price_eur=${i}")
+        values.append(data.purchase_price_eur)
         i += 1
 
     if data.shares is not None:

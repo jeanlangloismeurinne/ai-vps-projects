@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PriceChart from '../../../components/PriceChart'
@@ -111,6 +111,102 @@ function MonitoringModal({ tickerId, isPrivate, onClose, onNeedMetrics }) {
   )
 }
 
+function AssignSymbolSection({ tickerId, onAssigned }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [searching, setSearching] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const debounceRef = useRef(null)
+
+  const onQueryChange = (val) => {
+    setQuery(val)
+    setSelected(null)
+    setResults([])
+    clearTimeout(debounceRef.current)
+    if (val.trim().length < 2) return
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`${API}/tickers/search?q=${encodeURIComponent(val.trim())}`)
+        if (res.ok) setResults(await res.json())
+      } catch {}
+      setSearching(false)
+    }, 400)
+  }
+
+  const assign = async () => {
+    if (!selected) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/tickers/${tickerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker_symbol: selected.symbol, exchange: selected.exchange || '' }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Erreur')
+      onAssigned()
+    } catch (e) {
+      setError(e.message)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-amber-950/30 border border-amber-700/50 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-amber-400 font-medium text-sm">Symbole boursier non renseigné</span>
+        <span className="text-xs text-amber-600">— Les données de marché ne sont pas disponibles</span>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex-1 min-w-0 relative">
+          <input
+            value={query}
+            onChange={e => onQueryChange(e.target.value)}
+            placeholder="Rechercher le symbole… ex. MC.PA, LVMH"
+            className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 placeholder-gray-600 focus:border-amber-500 focus:outline-none"
+          />
+          {searching && <span className="absolute right-3 top-2.5 text-gray-500 text-xs">…</span>}
+          {results.length > 0 && !selected && (
+            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden divide-y divide-gray-700 max-h-48 overflow-y-auto">
+              {results.map(r => (
+                <button key={r.symbol}
+                  onClick={() => { setSelected(r); setQuery(r.symbol); setResults([]) }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center justify-between">
+                  <div>
+                    <span className="text-indigo-400 font-mono font-bold text-sm">{r.symbol}</span>
+                    <span className="text-gray-400 text-xs ml-2">{r.exchange}</span>
+                    <p className="text-gray-300 text-xs mt-0.5 truncate max-w-xs">{r.name}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={assign}
+          disabled={loading || !selected}
+          className="px-4 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white text-sm rounded-lg font-medium transition-colors shrink-0"
+        >
+          {loading ? '…' : selected ? `Assigner ${selected.symbol}` : 'Rechercher'}
+        </button>
+      </div>
+      {selected && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-2 bg-indigo-900/30 border border-indigo-700 rounded px-3 py-1.5">
+            <span className="text-indigo-300 font-mono font-bold">{selected.symbol}</span>
+            <span className="text-gray-400 text-xs">{selected.name}</span>
+            <button onClick={() => { setSelected(null); setQuery('') }} className="text-gray-500 hover:text-gray-300 ml-1">×</button>
+          </span>
+        </div>
+      )}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+    </div>
+  )
+}
+
 export default function TickerPage() {
   const router = useRouter()
   const { ticker_id } = router.query
@@ -189,6 +285,14 @@ export default function TickerPage() {
         <span>/</span>
         <span className="text-gray-400">{ticker.ticker_symbol}</span>
       </div>
+
+      {/* Assigner symbole boursier — PUB- sans ticker_symbol */}
+      {ticker.company_type !== 'private' && !ticker.ticker_symbol && (
+        <AssignSymbolSection
+          tickerId={ticker_id}
+          onAssigned={() => window.location.reload()}
+        />
+      )}
 
       {/* Bannière DÉCISION REQUISE */}
       {thesis?.status === 'under_review' && (
