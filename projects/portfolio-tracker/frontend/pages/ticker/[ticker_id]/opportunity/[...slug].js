@@ -112,6 +112,7 @@ export default function OpportunityPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [chatOpen, setChatOpen] = useState(false)
+  const [tickerCurrency, setTickerCurrency] = useState(null)
   const debounceRef = useRef(null)
   const jsonImportRef = useRef(null)
 
@@ -125,6 +126,15 @@ export default function OpportunityPage() {
       })
       .catch(() => {})
   }, [])
+
+  // Fetch ticker currency
+  useEffect(() => {
+    if (!ticker_id) return
+    fetch(`${API}/tickers/${ticker_id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(t => { if (t?.currency) setTickerCurrency(t.currency) })
+      .catch(() => {})
+  }, [ticker_id])
 
   // Load or create brief
   useEffect(() => {
@@ -448,6 +458,7 @@ export default function OpportunityPage() {
         <InvestmentBriefEditor
           briefJson={brief?.brief_json}
           onChange={handleBriefChange}
+          tickerCurrency={tickerCurrency}
         />
       </div>
 

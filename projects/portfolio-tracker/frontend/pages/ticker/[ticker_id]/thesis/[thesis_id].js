@@ -218,15 +218,19 @@ export default function ThesisPage() {
     const init = async () => {
       setPageLoading(true)
       try {
-        const [thRes, mRes, sumRes] = await Promise.all([
+        const [thRes, mRes, sumRes, calRes] = await Promise.all([
           fetch(`${API}/tickers/${ticker_id}/theses/${thesis_id}`),
           fetch(`${API}/theses/${thesis_id}/messages`),
           fetch(`${API}/portfolio-v2/summary`),
+          fetch(`${API}/calendar-v2?thesis_id=${thesis_id}`),
         ])
         if (thRes.ok) {
           const th = await thRes.json()
           setThesis(th)
-          if (th.calendar_events_suggested) {
+          const dbCal = calRes.ok ? await calRes.json() : []
+          if (Array.isArray(dbCal) && dbCal.length > 0) {
+            setCalendarEvents(normalizeCalendarEvents(dbCal))
+          } else if (th.calendar_events_suggested) {
             setCalendarEvents(normalizeCalendarEvents(th.calendar_events_suggested))
           }
         }
@@ -590,6 +594,7 @@ export default function ThesisPage() {
         <ThesisEditorV2
           thesisJson={thesis?.thesis_json}
           onChange={handleThesisChange}
+          tickerCurrency={tickerCurrency}
         />
       </div>
 

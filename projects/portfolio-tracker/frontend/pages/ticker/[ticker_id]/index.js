@@ -30,15 +30,15 @@ const fmtPrice = (amount, currency) => {
 }
 
 // onNeedMetrics(form) is called when private company + mode 2 is selected
-function MonitoringModal({ tickerId, isPrivate, onClose, onNeedMetrics }) {
+function MonitoringModal({ tickerId, thesisId, isPrivate, onClose, onNeedMetrics }) {
   const router = useRouter()
-  const [form, setForm] = useState({ label: '', mode: 2 })
+  const [form, setForm] = useState({ trigger_label: '', mode: 2 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [pendingContext, setPendingContext] = useState(null) // { sessionId, context, mode }
 
   const handleSubmit = async () => {
-    if (!form.label.trim()) { setError('Label requis'); return }
-    // Private + mode 2 → hand off to PrivateMetricsModal via parent
+    if (!form.trigger_label.trim()) { setError('Label requis'); return }
     if (isPrivate && form.mode === 2) {
       onNeedMetrics(form)
       return
@@ -48,15 +48,54 @@ function MonitoringModal({ tickerId, isPrivate, onClose, onNeedMetrics }) {
       const res = await fetch(`${API}/tickers/${tickerId}/monitoring`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ trigger_type: 'manual', thesis_id: thesisId || null, ...form }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Erreur')
       const data = await res.json()
+      if (data.status === 'pending_manual' && data.context_message) {
+        setPendingContext({ sessionId: data.id, context: data.context_message, mode: data.mode })
+        setLoading(false)
+        return
+      }
       router.push(`/ticker/${tickerId}/monitoring/${data.id || data.session_id}`)
     } catch (e) {
       setError(e.message)
       setLoading(false)
     }
+  }
+
+  if (pendingContext) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+            <h3 className="font-semibold text-white">Dust désactivé — copier dans l'agent</h3>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-xs text-amber-400 bg-amber-950/30 border border-amber-800/40 rounded px-3 py-2">
+              Dust est désactivé. Copiez ce contexte dans l'agent Monitoring (Mode {pendingContext.mode}) sur Dust, puis collez le résultat JSON dans la session.
+            </p>
+            <textarea
+              readOnly
+              value={`[mode: ${pendingContext.mode}]\n\n${pendingContext.context}`}
+              rows={10}
+              className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-3 py-2 font-mono resize-none focus:outline-none"
+              onFocus={e => e.target.select()}
+            />
+          </div>
+          <div className="px-5 py-4 border-t border-gray-700 flex gap-3">
+            <button
+              onClick={() => router.push(`/ticker/${tickerId}/monitoring/${pendingContext.sessionId}`)}
+              className="flex-1 py-2 bg-indigo-700 hover:bg-indigo-600 text-white text-sm rounded font-medium"
+            >
+              Voir la session →
+            </button>
+            <button onClick={onClose} className="px-4 text-gray-400 hover:text-gray-200 text-sm">Fermer</button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -71,8 +110,8 @@ function MonitoringModal({ tickerId, isPrivate, onClose, onNeedMetrics }) {
           <div>
             <label className="text-xs text-gray-400 block mb-1">Label / Déclencheur</label>
             <input
-              value={form.label}
-              onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+              value={form.trigger_label}
+              onChange={e => setForm(f => ({ ...f, trigger_label: e.target.value }))}
               placeholder="ex. Publication résultats Q1…"
               autoFocus
               className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
@@ -144,7 +183,7 @@ function AssignSymbolSection({ tickerId, onAssigned }) {
       const res = await fetch(`${API}/tickers/${tickerId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker_symbol: selected.symbol, exchange: selected.exchange || '' }),
+        body: JSON.stringify({ ticker_symbol: selected.symbol, exchange: selected.exchange || '', name: selected.name || selected.symbol }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Erreur')
       onAssigned()
@@ -228,6 +267,7 @@ export default function TickerPage() {
   const [alertLoading, setAlertLoading] = useState(false)
   const [alertError, setAlertError] = useState('')
   const [debugOpen, setDebugOpen] = useState(false)
+  const [alertFxRate, setAlertFxRate] = useState(null)
 
   useEffect(() => {
     if (!ticker_id) return
@@ -267,6 +307,16 @@ export default function TickerPage() {
       })
       .catch(() => {})
   }, [period, ticker_id])
+
+  // Fetch FX rate when ticker currency is known and differs from EUR
+  const tickerDisplayCurrency = ticker?.currency || metrics?.currency
+  useEffect(() => {
+    if (!tickerDisplayCurrency || tickerDisplayCurrency === 'EUR') { setAlertFxRate(null); return }
+    fetch(`${API}/tickers/fx-rate?from_currency=${tickerDisplayCurrency}&to_currency=EUR`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rate) setAlertFxRate(d.rate) })
+      .catch(() => {})
+  }, [tickerDisplayCurrency])
 
   if (loading) return <div className="text-center py-16 text-gray-500">Chargement…</div>
   if (!ticker) return <div className="text-center py-16 text-red-400">Ticker introuvable</div>
@@ -543,12 +593,12 @@ export default function TickerPage() {
           <div className="space-y-2">
             {monitoring.map(s => (
               <Link key={s.id} href={`/ticker/${ticker_id}/monitoring/${s.id}`}
-                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 transition-colors">
-                <div>
-                  <span className="text-sm text-white">{s.trigger_label || s.label || `Session #${s.id}`}</span>
-                  <span className="ml-3 text-xs text-gray-500">Mode {s.mode || '—'}</span>
+                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 transition-colors gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-white truncate">{s.trigger_label || s.label || `Session #${s.id}`}</p>
+                  <p className="text-xs text-gray-500">Mode {s.mode || '—'}</p>
                 </div>
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-gray-600 flex-shrink-0">
                   {s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR') : ''}
                 </span>
               </Link>
@@ -588,7 +638,9 @@ export default function TickerPage() {
           <div className="mb-4 bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Prix cible</label>
+                <label className="text-xs text-gray-400 block mb-1">
+                  Prix cible {tickerDisplayCurrency && tickerDisplayCurrency !== 'EUR' ? `(${tickerDisplayCurrency})` : '(EUR)'}
+                </label>
                 <input
                   type="number" step="0.01" min="0"
                   value={alertForm.price}
@@ -596,6 +648,11 @@ export default function TickerPage() {
                   placeholder="ex. 380.00"
                   className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-2 placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
                 />
+                {alertFxRate && alertForm.price && !isNaN(parseFloat(alertForm.price)) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ≈ {(parseFloat(alertForm.price) * alertFxRate).toFixed(2)} EUR
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Direction</label>
@@ -705,6 +762,7 @@ export default function TickerPage() {
       {showMonitoringModal && (
         <MonitoringModal
           tickerId={ticker_id}
+          thesisId={thesis?.id || null}
           isPrivate={ticker?.company_type === 'private'}
           onClose={() => setShowMonitoringModal(false)}
           onNeedMetrics={(form) => {

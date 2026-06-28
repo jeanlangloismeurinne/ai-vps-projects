@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+const ALL_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'DKK', 'SEK', 'NOK', 'HKD', 'CAD', 'AUD', 'SGD', 'CNY']
+
 function ScreeningCriteria({ criteria = [], onChange }) {
   const CRITERIA_LABELS = [
     'Qualité du business',
@@ -107,7 +109,7 @@ function ProtoHypotheses({ items = [], onChange }) {
   )
 }
 
-export default function InvestmentBriefEditor({ briefJson, onChange }) {
+export default function InvestmentBriefEditor({ briefJson, onChange, tickerCurrency }) {
   if (!briefJson) {
     return (
       <div className="flex items-center justify-center h-full text-gray-600 text-sm text-center px-8">
@@ -122,11 +124,24 @@ export default function InvestmentBriefEditor({ briefJson, onChange }) {
 
   const update = (key, value) => onChange({ ...briefJson, [key]: value })
 
+  const analysisCurrency = briefJson.analysis_currency || tickerCurrency || 'EUR'
   const rec = briefJson.verdict?.recommendation
   const screeningFailed = briefJson.screening?.criteria?.filter(c => c.pass === false).length >= 3
 
   return (
     <div className="space-y-5 overflow-y-auto p-4">
+      {/* Currency selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Devise d&apos;analyse :</span>
+        <select
+          value={analysisCurrency}
+          onChange={e => update('analysis_currency', e.target.value)}
+          className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none"
+        >
+          {ALL_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
       {/* Screening Failed State */}
       {screeningFailed && (
         <div className="bg-gray-800 border border-red-700 rounded-lg p-4">

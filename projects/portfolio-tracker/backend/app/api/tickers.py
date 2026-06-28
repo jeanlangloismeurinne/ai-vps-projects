@@ -193,6 +193,35 @@ async def create_ticker(data: TickerCreate):
     return _serialize(row)
 
 
+@router.get("/fx-rate")
+async def get_fx_rate(from_currency: str = Query(...), to_currency: str = Query(...)):
+    """Taux de change live via yfinance (cours du jour)."""
+    if from_currency == to_currency:
+        return {"from": from_currency, "to": to_currency, "rate": 1.0}
+    try:
+        import asyncio
+        import yfinance as yf
+        from datetime import date as _date, timedelta
+
+        fx_ticker = f"{from_currency}{to_currency}=X"
+
+        def _fetch():
+            today = _date.today()
+            for offset in range(7):
+                start = today - timedelta(days=offset)
+                end = start + timedelta(days=2)
+                hist = yf.Ticker(fx_ticker).history(start=start.isoformat(), end=end.isoformat())
+                if not hist.empty:
+                    return float(hist["Close"].iloc[-1])
+            raise ValueError(f"Taux {fx_ticker} introuvable")
+
+        loop = asyncio.get_event_loop()
+        rate = await loop.run_in_executor(None, _fetch)
+        return {"from": from_currency, "to": to_currency, "rate": round(rate, 6)}
+    except Exception as e:
+        raise HTTPException(502, f"Taux de change introuvable : {e}")
+
+
 @router.get("/search")
 async def search_tickers(q: str = Query(..., min_length=2)):
     """Recherche de tickers par nom d'entreprise via yfinance."""

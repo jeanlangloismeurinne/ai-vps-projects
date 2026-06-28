@@ -1,4 +1,29 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
+
+const ALL_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'DKK', 'SEK', 'NOK', 'HKD', 'CAD', 'AUD', 'SGD', 'CNY']
+
+function useFxRate(fromCurrency, toCurrency) {
+  const [rate, setRate] = useState(null)
+  const fetch_ = useCallback(() => {
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) { setRate(1); return }
+    fetch(`${API}/tickers/fx-rate?from_currency=${fromCurrency}&to_currency=${toCurrency}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d ? setRate(d.rate) : null)
+      .catch(() => {})
+  }, [fromCurrency, toCurrency])
+  useEffect(() => { fetch_() }, [fetch_])
+  return rate
+}
+
+function FxHint({ value, rate, toCurrency }) {
+  if (!value || !rate || !toCurrency || rate === 1) return null
+  const num = parseFloat(value)
+  if (isNaN(num)) return null
+  const converted = (num * rate).toFixed(2)
+  return <span className="text-xs text-gray-500 mt-0.5 block">≈ {converted} {toCurrency}</span>
+}
 
 const EVENT_TYPES = ['earnings', 'conference', 'product_launch', 'dividend', 'macro', 'other']
 
@@ -18,7 +43,7 @@ function ConvictionDots({ score }) {
   )
 }
 
-export default function ThesisEditorV2({ thesisJson, onChange }) {
+export default function ThesisEditorV2({ thesisJson, onChange, tickerCurrency }) {
   const containerRef = useRef(null)
 
   const resizeTextarea = (el) => {
@@ -44,6 +69,10 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
   }
 
   const update = (key, value) => onChange({ ...thesisJson, [key]: value })
+
+  const analysisCurrency = thesisJson.analysis_currency || tickerCurrency || 'EUR'
+  const fxRate = useFxRate(analysisCurrency, tickerCurrency)
+  const showConversion = tickerCurrency && analysisCurrency !== tickerCurrency && fxRate
 
   const hypotheses   = thesisJson.hypotheses || []
   const scenarios    = thesisJson.scenarios || {}
@@ -303,7 +332,22 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
 
       {/* ── Seuils de cours ── */}
       <section>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Seuils de cours</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Seuils de cours</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600">Devise d'analyse :</span>
+            <select
+              value={analysisCurrency}
+              onChange={e => update('analysis_currency', e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-indigo-500 focus:outline-none"
+            >
+              {ALL_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {showConversion && (
+              <span className="text-xs text-gray-500">1 {analysisCurrency} = {fxRate?.toFixed(4)} {tickerCurrency}</span>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           {[
             { key: 'stop_loss',    label: 'Stop loss',   color: 'text-red-400' },
@@ -311,13 +355,14 @@ export default function ThesisEditorV2({ thesisJson, onChange }) {
             { key: 'target_price', label: 'Objectif',    color: 'text-emerald-400' },
           ].map(({ key, label, color }) => (
             <div key={key}>
-              <label className={`text-xs block mb-1 ${color}`}>{label}</label>
+              <label className={`text-xs block mb-1 ${color}`}>{label} {analysisCurrency && `(${analysisCurrency})`}</label>
               <input
                 value={price_thr[key] ?? ''}
                 onChange={e => update('price_thresholds', { ...price_thr, [key]: e.target.value })}
-                placeholder="€ ou $"
+                placeholder={analysisCurrency || '€ ou $'}
                 className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
               />
+              {showConversion && <FxHint value={price_thr[key]} rate={fxRate} toCurrency={tickerCurrency} />}
             </div>
           ))}
         </div>

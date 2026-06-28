@@ -97,12 +97,27 @@ function AlertModal({ ticker, onClose, onSaved }) {
 
 const PERIODS = ['1Y', '5Y', 'MAX']
 
-function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
+function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated, onArchive }) {
   const hasSymbol = !!ticker.ticker_symbol
   const [priceHistory, setPriceHistory] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [period, setPeriod] = useState('1Y')
+  const [archiving, setArchiving] = useState(false)
+
+  const handleArchive = async () => {
+    if (!confirm(`Archiver "${ticker.name || ticker.ticker_symbol}" ?`)) return
+    setArchiving(true)
+    try {
+      await fetch(`${API}/tickers/${ticker.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+      })
+      onArchive && onArchive(ticker.id)
+    } catch {}
+    setArchiving(false)
+  }
 
   useEffect(() => {
     if (!hasSymbol) return
@@ -129,17 +144,13 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
         <div className="min-w-0 flex-1 mr-3">
           {hasSymbol ? (
             <>
-              <Link href={`/ticker/${ticker.id}`} className="font-mono font-bold text-indigo-400 hover:text-indigo-300 text-lg block">
-                {ticker.ticker_symbol}
+              <Link href={`/ticker/${ticker.id}`} className="font-bold text-indigo-400 hover:text-indigo-300 text-base leading-tight block truncate">
+                {ticker.name || ticker.ticker_symbol}
               </Link>
-              {ticker.name && ticker.name !== ticker.ticker_symbol && (
-                <p className="text-xs text-gray-500 truncate">
-                  {ticker.name}{ticker.exchange ? ` · ${ticker.exchange}` : ''}
-                </p>
-              )}
-              {ticker.exchange && (!ticker.name || ticker.name === ticker.ticker_symbol) && (
-                <p className="text-xs text-gray-600">{ticker.exchange}</p>
-              )}
+              <p className="text-xs text-gray-500 mt-0.5">
+                <span className="font-mono">{ticker.ticker_symbol}</span>
+                {ticker.exchange ? ` · ${ticker.exchange}` : ''}
+              </p>
             </>
           ) : (
             <>
@@ -238,6 +249,11 @@ function TickerCard({ ticker, opportunityAgentSynced, onAlertCreated }) {
             +
           </button>
         )}
+        <button onClick={handleArchive} disabled={archiving}
+          className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-red-900/40 hover:border-red-800 border border-gray-700 text-gray-500 hover:text-red-400 font-medium transition-colors text-sm disabled:opacity-50"
+          title="Archiver">
+          ✕
+        </button>
       </div>
 
       {showAlertModal && (
@@ -262,10 +278,25 @@ const STAGE_LABELS = {
   'mature': 'Mature',
 }
 
-function PrivateTickerCard({ ticker, opportunityAgentSynced }) {
+function PrivateTickerCard({ ticker, opportunityAgentSynced, onArchive }) {
   const stageLabel = STAGE_LABELS[ticker.stage] || ticker.stage || '—'
   const investors = Array.isArray(ticker.notable_investors) ? ticker.notable_investors : []
   const topInvestors = investors.slice(0, 2)
+  const [archiving, setArchiving] = useState(false)
+
+  const handleArchive = async () => {
+    if (!confirm(`Archiver "${ticker.name || ticker.id}" ?`)) return
+    setArchiving(true)
+    try {
+      await fetch(`${API}/tickers/${ticker.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+      })
+      onArchive && onArchive(ticker.id)
+    } catch {}
+    setArchiving(false)
+  }
 
   return (
     <div className="bg-gray-900 border border-violet-900/40 rounded-xl p-4 space-y-3">
@@ -335,6 +366,11 @@ function PrivateTickerCard({ ticker, opportunityAgentSynced }) {
           className="flex-1 text-center text-sm py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium transition-colors">
           Fiche
         </Link>
+        <button onClick={handleArchive} disabled={archiving}
+          className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-red-900/40 hover:border-red-800 border border-gray-700 text-gray-500 hover:text-red-400 font-medium transition-colors text-sm disabled:opacity-50"
+          title="Archiver">
+          ✕
+        </button>
       </div>
     </div>
   )
@@ -497,6 +533,7 @@ export default function WatchlistV2() {
                   ticker={t}
                   opportunityAgentSynced={opportunityAgentSynced}
                   onAlertCreated={load}
+                  onArchive={id => setTickers(prev => prev.filter(x => x.id !== id))}
                 />
               ))}
             </div>
@@ -515,6 +552,7 @@ export default function WatchlistV2() {
                     key={ticker.id}
                     ticker={ticker}
                     opportunityAgentSynced={opportunityAgentSynced}
+                    onArchive={id => setTickers(prev => prev.filter(x => x.id !== id))}
                   />
                 ))}
               </div>

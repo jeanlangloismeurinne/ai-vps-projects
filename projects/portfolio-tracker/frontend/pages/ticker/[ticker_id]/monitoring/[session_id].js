@@ -168,12 +168,12 @@ export default function MonitoringSessionPage() {
       </div>
 
       {/* Title */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">
-          {session.trigger_label || `Session #${session_id}`}
-          <span className="ml-3 text-sm font-normal text-gray-500">Mode {mode}</span>
-        </h1>
-        <span className="text-xs text-gray-600">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-white truncate">{session.trigger_label || `Session #${session_id}`}</h1>
+          <span className="text-sm text-gray-500">Mode {mode}</span>
+        </div>
+        <span className="text-xs text-gray-600 flex-shrink-0">
           {session.created_at ? new Date(session.created_at).toLocaleDateString('fr-FR') : ''}
         </span>
       </div>
@@ -516,40 +516,42 @@ export default function MonitoringSessionPage() {
           <h3 className="font-semibold text-white mb-4 text-sm">Mises à jour calendrier proposées</h3>
           <div className="space-y-2">
             {calendarUpdates.map((update, i) => (
-              <div key={i} className={`flex items-center justify-between border rounded-lg px-4 py-3 ${
+              <div key={i} className={`flex items-start gap-3 border rounded-lg px-4 py-3 ${
                 validatedUpdates.has(i) ? 'bg-emerald-950/20 border-emerald-800' :
                 ignoredUpdates.has(i) ? 'bg-gray-800/50 border-gray-700 opacity-50' :
                 'bg-gray-800 border-gray-700'
               }`}>
-                <div className="text-sm">
-                  <span className="text-white">{update.label || update.event_type}</span>
+                <div className="text-sm min-w-0 flex-1">
+                  <span className="text-white break-words">{update.label || update.event_type}</span>
                   {(update.scheduled_date || update.event_date) && (
                     <span className="text-gray-500 ml-2 text-xs">
                       {new Date(update.scheduled_date || update.event_date).toLocaleDateString('fr-FR')}
                     </span>
                   )}
                   {update.action && (
-                    <span className="ml-2 text-xs text-indigo-400">[{update.action}]</span>
+                    <span className="ml-1 text-xs text-indigo-400 whitespace-nowrap">[{update.action}]</span>
                   )}
                 </div>
-                {!validatedUpdates.has(i) && !ignoredUpdates.has(i) && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => validateCalendarUpdate(update, i)}
-                      className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded transition-colors"
-                    >
-                      ✓ Valider
-                    </button>
-                    <button
-                      onClick={() => setIgnoredUpdates(prev => new Set([...prev, i]))}
-                      className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded transition-colors"
-                    >
-                      ✗ Ignorer
-                    </button>
-                  </div>
-                )}
-                {validatedUpdates.has(i) && <span className="text-emerald-400 text-xs">Validé</span>}
-                {ignoredUpdates.has(i) && <span className="text-gray-600 text-xs">Ignoré</span>}
+                <div className="flex-shrink-0 flex items-center gap-2 mt-0.5">
+                  {!validatedUpdates.has(i) && !ignoredUpdates.has(i) && (
+                    <>
+                      <button
+                        onClick={() => validateCalendarUpdate(update, i)}
+                        className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded transition-colors"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setIgnoredUpdates(prev => new Set([...prev, i]))}
+                        className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded transition-colors"
+                      >
+                        ✗
+                      </button>
+                    </>
+                  )}
+                  {validatedUpdates.has(i) && <span className="text-emerald-400 text-xs">✓</span>}
+                  {ignoredUpdates.has(i) && <span className="text-gray-600 text-xs">✗</span>}
+                </div>
               </div>
             ))}
           </div>

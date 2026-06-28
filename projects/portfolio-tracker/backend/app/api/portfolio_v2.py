@@ -134,13 +134,15 @@ async def portfolio_summary():
     """
     Résumé global : cash_balance, valeur des positions, total.
     """
+    import asyncio
     from app.data_collection.data_service import DataService
 
     async with get_db_session() as db:
         cash_balance = await _get_cash_balance(db)
         positions = await db.fetch(
             """
-            SELECT pp.*, t.name AS ticker_name, t.company_type, th.one_liner AS thesis_one_liner
+            SELECT pp.*, t.name AS ticker_name, t.company_type, t.ticker_symbol AS ticker_yf_symbol,
+                   th.one_liner AS thesis_one_liner
             FROM portfolio_positions pp
             LEFT JOIN tickers t ON t.id = pp.ticker_id
             LEFT JOIN theses th ON th.id = pp.thesis_id
@@ -159,6 +161,17 @@ async def portfolio_summary():
                 private_profiles_map[pcp["ticker_id"]] = _serialize(pcp)
 
     ds = DataService()
+    public_positions = [p for p in positions if (p["company_type"] or "public") == "public" and p["ticker_yf_symbol"]]
+
+    async def _fetch_m1(pos):
+        try:
+            return await ds.get_m1(pos["ticker_yf_symbol"], settings.FMP_API_KEY)
+        except Exception:
+            return {}
+
+    m1_results = await asyncio.gather(*[_fetch_m1(p) for p in public_positions])
+    m1_map = {p["ticker_id"]: m1 for p, m1 in zip(public_positions, m1_results)}
+
     positions_value = 0.0
     positions_detail = []
 
@@ -168,7 +181,6 @@ async def portfolio_summary():
         pos_dict = _serialize(pos)
 
         if company_type == "private":
-            # Valorisation basée sur last_valuation_m × ownership_pct
             private_profile = private_profiles_map.get(ticker_id, {})
             ownership = float(pos["current_ownership_pct"] or pos["ownership_pct_at_entry"] or 0)
             last_val = private_profile.get("last_valuation_m")
@@ -185,12 +197,8 @@ async def portfolio_summary():
             })
             continue
 
-        current_price = None
-        try:
-            m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            current_price = (m1.get("price") or {}).get("current_price")
-        except Exception:
-            pass
+        m1 = m1_map.get(ticker_id, {})
+        current_price = (m1.get("price") or {}).get("current_price")
 
         purchase_price = float(pos["purchase_price"])
         shares = float(pos["shares"])
@@ -221,6 +229,7 @@ async def portfolio_summary():
 @router.get("/positions")
 async def list_positions():
     """Liste les positions ouvertes avec prix actuel et perf."""
+    import asyncio
     from app.data_collection.data_service import DataService
     from datetime import datetime
 
@@ -228,6 +237,7 @@ async def list_positions():
         rows = await db.fetch(
             """
             SELECT pp.*, t.name AS ticker_name, t.sector, t.company_type,
+                   t.ticker_symbol AS ticker_yf_symbol,
                    th.status AS thesis_status,
                    th.one_liner AS thesis_one_liner
             FROM portfolio_positions pp
@@ -249,16 +259,47 @@ async def list_positions():
                 private_profiles_map[pcp["ticker_id"]] = _serialize(pcp)
 
     ds = DataService()
+    public_rows = [r for r in rows if (r["company_type"] or "public") == "public" and r["ticker_yf_symbol"]]
+
+    async def _fetch_m1_pos(pos):
+        try:
+            return await ds.get_m1(pos["ticker_yf_symbol"], settings.FMP_API_KEY)
+        except Exception:
+            return {}
+
+    m1_results = await asyncio.gather(*[_fetch_m1_pos(p) for p in public_rows])
+    m1_map = {p["ticker_id"]: m1 for p, m1 in zip(public_rows, m1_results)}
+
+    # FX rates — un seul gather pour toutes les conversions nécessaires
+    from app.api.thesis_v2 import _get_fx_rate
+
+    async def _safe_fx(from_c, to_c, d):
+        try:
+            return await _get_fx_rate(from_c, to_c, d)
+        except Exception:
+            return None
+
+    today_str = date.today().isoformat()
+    fx_tasks = []
+    for pos in public_rows:
+        m1 = m1_map.get(pos["ticker_id"], {})
+        tc = (m1.get("price") or {}).get("currency", "EUR") or "EUR"
+        sc = pos.get("purchase_currency") or "EUR"
+        purchase_date_str = pos["purchase_date"].isoformat() if pos["purchase_date"] else today_str
+        fx_tasks.append((pos["ticker_id"], "hist", sc, tc, purchase_date_str))
+        fx_tasks.append((pos["ticker_id"], "today", "EUR", tc, today_str))
+
+    fx_values = await asyncio.gather(*[_safe_fx(t[2], t[3], t[4]) for t in fx_tasks])
+    fx_lookup = {(t[0], t[1]): v for t, v in zip(fx_tasks, fx_values)}
+
     result = []
 
     for pos in rows:
         ticker_id = pos["ticker_id"]
         company_type = pos["company_type"] or "public"
-
         pos_dict = _serialize(pos)
 
         if company_type == "private":
-            # Société non cotée : pas de prix de marché, calcul IRR
             private_profile = private_profiles_map.get(ticker_id, {})
             irr_current, irr_projected = compute_private_irr(pos_dict, private_profile)
             result.append({
@@ -277,44 +318,29 @@ async def list_positions():
             })
             continue
 
-        current_price = None
-        ticker_currency = None
-        try:
-            m1 = await ds.get_m1(ticker_id, settings.FMP_API_KEY)
-            price_data = m1.get("price") or {}
-            current_price = price_data.get("current_price")
-            ticker_currency = price_data.get("currency", "EUR") or "EUR"
-        except Exception:
-            pass
+        m1 = m1_map.get(ticker_id, {})
+        price_data = m1.get("price") or {}
+        current_price = price_data.get("current_price")
+        ticker_currency = price_data.get("currency", "EUR") or "EUR"
 
         stored_price = float(pos["purchase_price"])
         stored_currency = pos.get("purchase_currency") or "EUR"
         shares = float(pos["shares"])
 
-        # PRU en € : colonne dédiée, sinon fallback sur le prix stocké si déjà en EUR
         stored_eur = pos.get("purchase_price_eur")
         purchase_price_eur = float(stored_eur) if stored_eur is not None else (stored_price if stored_currency == "EUR" else None)
 
-        # Convertit le prix d'achat dans la devise native au cours de la date d'achat (pour la perf)
         purchase_price_native = stored_price
         if ticker_currency and stored_currency != ticker_currency:
-            try:
-                from app.api.thesis_v2 import _get_fx_rate
-                purchase_date_str = pos["purchase_date"].isoformat() if pos["purchase_date"] else date.today().isoformat()
-                fx = await _get_fx_rate(stored_currency, ticker_currency, purchase_date_str)
+            fx = fx_lookup.get((ticker_id, "hist"))
+            if fx:
                 purchase_price_native = round(stored_price * fx, 4)
-            except Exception as e:
-                logger.warning(f"FX conversion {stored_currency}→{ticker_currency} pour {ticker_id}: {e}")
 
-        # Équivalent du PRU € dans la devise native au cours du jour (pour affichage)
         purchase_price_native_today = None
         if purchase_price_eur and ticker_currency and ticker_currency != "EUR":
-            try:
-                from app.api.thesis_v2 import _get_fx_rate
-                fx_today = await _get_fx_rate("EUR", ticker_currency, date.today().isoformat())
+            fx_today = fx_lookup.get((ticker_id, "today"))
+            if fx_today:
                 purchase_price_native_today = round(purchase_price_eur * fx_today, 4)
-            except Exception:
-                pass
 
         market_value = (float(current_price) * shares) if current_price else None
 
@@ -342,6 +368,41 @@ async def list_positions():
             "perf_pct": perf_pct,
             "perf_annualized": perf_annualized,
         })
+
+    # Recalcul CAGR agrégé par ticker quand plusieurs lots coexistent (PRU moyen pondéré)
+    from collections import defaultdict
+    ticker_groups: dict[str, list] = defaultdict(list)
+    for r in result:
+        if r.get("company_type") != "private" and r.get("current_price"):
+            ticker_groups[r["ticker_id"]].append(r)
+
+    for tid, group in ticker_groups.items():
+        if len(group) < 2:
+            continue
+        current_price = float(group[0]["current_price"])
+        total_invested = sum(float(r["purchase_price"]) * float(r["shares"]) for r in group)
+        total_shares = sum(float(r["shares"]) for r in group)
+        if total_shares <= 0 or total_invested <= 0:
+            continue
+        pru_moyen = total_invested / total_shares
+        # Date moyenne pondérée par les montants investis
+        weighted_days_sum = 0.0
+        for r in group:
+            if r.get("purchase_date"):
+                d = date.fromisoformat(r["purchase_date"]) if isinstance(r["purchase_date"], str) else r["purchase_date"]
+                days_i = (date.today() - d).days
+                invested_i = float(r["purchase_price"]) * float(r["shares"])
+                weighted_days_sum += days_i * invested_i
+        avg_days = weighted_days_sum / total_invested if total_invested else 0
+        perf_pct_agg = round((current_price / pru_moyen - 1) * 100, 2) if pru_moyen else None
+        perf_ann_agg = None
+        if avg_days > 0 and pru_moyen:
+            years = avg_days / 365.25
+            perf_ann_agg = round(((current_price / pru_moyen) ** (1 / years) - 1) * 100, 2) if years > 0 else None
+        for r in group:
+            r["perf_pct"] = perf_pct_agg
+            r["perf_annualized"] = perf_ann_agg
+            r["pru_moyen_weighted"] = round(pru_moyen, 4)
 
     return result
 

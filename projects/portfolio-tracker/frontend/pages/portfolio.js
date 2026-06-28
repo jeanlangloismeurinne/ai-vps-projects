@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
 const CURRENCY_SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', HKD: 'HK$', CHF: 'CHF ' }
+const ALL_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'DKK', 'SEK', 'NOK', 'HKD', 'CAD', 'AUD', 'SGD', 'CNY']
 const fmtCurrency = (amount, currency) => {
   if (amount == null) return '—'
   const sym = CURRENCY_SYMBOLS[currency] || (currency ? `${currency} ` : '€')
@@ -433,6 +434,8 @@ export default function PortfolioV1() {
   const [allocateThesis, setAllocateThesis] = useState(null)
   const [editPosition, setEditPosition] = useState(null)
   const [error, setError] = useState('')
+  const [displayCurrency, setDisplayCurrency] = useState('EUR')
+  const [displayFxRate, setDisplayFxRate] = useState(1)
 
   const load = async () => {
     setLoading(true)
@@ -465,6 +468,14 @@ export default function PortfolioV1() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (displayCurrency === 'EUR') { setDisplayFxRate(1); return }
+    fetch(`${API}/tickers/fx-rate?from_currency=EUR&to_currency=${displayCurrency}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rate) setDisplayFxRate(d.rate) })
+      .catch(() => {})
+  }, [displayCurrency])
 
   const fmt = v => v != null ? `€${Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'
 
@@ -510,6 +521,21 @@ export default function PortfolioV1() {
           <div>
             <p className="text-xs text-gray-500">Total</p>
             <p className="text-xl font-semibold text-indigo-300">{loading ? '…' : fmt(summary?.total)}</p>
+            {displayCurrency !== 'EUR' && summary?.total != null && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                ≈ {fmtCurrency(summary.total * displayFxRate, displayCurrency)}
+              </p>
+            )}
+          </div>
+          <div className="ml-auto">
+            <p className="text-xs text-gray-500 mb-1">Devise d&apos;affichage</p>
+            <select
+              value={displayCurrency}
+              onChange={e => setDisplayCurrency(e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none"
+            >
+              {ALL_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
         </div>
 

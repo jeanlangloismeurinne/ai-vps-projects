@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────── Pydantic schemas ────────────────────────────────
 
 class SessionCreate(BaseModel):
-    trigger_type: str
-    trigger_label: str
+    trigger_type: str = "manual"
+    trigger_label: str = ""
     mode: int              # 1..5
     thesis_id: Optional[int] = None
     message: Optional[str] = None          # contexte libre si fourni directement
@@ -203,13 +203,14 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
     except Exception:
         pass
 
-    # Crée la session en status 'running'
+    # Vérifie dust_auto_enabled — si désactivé, crée une session pending_manual avec contexte
     async with get_db_session() as db:
         t = await db.fetchrow("SELECT id, company_type FROM tickers WHERE id=$1", ticker_id)
         if not t:
             raise HTTPException(404, f"Ticker '{ticker_id}' introuvable")
 
-        company_type = (t["company_type"] or "public")
+        ps_row = await db.fetchrow("SELECT dust_auto_enabled FROM portfolio_settings LIMIT 1")
+        dust_enabled = bool(ps_row["dust_auto_enabled"]) if ps_row else True
 
         context_message = data.message
         if not context_message:
@@ -221,6 +222,25 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
         if data.private_metrics_text:
             context_message += f"\n\n### Données opérationnelles fournies\n{data.private_metrics_text}"
 
+        if not dust_enabled:
+            # Dust désactivé → session pending_manual, contexte retourné pour copier-coller manuel
+            session_row = await db.fetchrow(
+                """
+                INSERT INTO monitoring_sessions
+                    (ticker_id, thesis_id, trigger_type, trigger_label, mode, status,
+                     calendar_event_id)
+                VALUES ($1,$2,$3,$4,$5,'pending_manual',$6)
+                RETURNING *
+                """,
+                ticker_id, data.thesis_id, data.trigger_type, data.trigger_label,
+                data.mode, data.calendar_event_id,
+            )
+            return {
+                **_serialize(session_row),
+                "context_message": context_message,
+            }
+
+        # Crée la session en status 'running'
         session_row = await db.fetchrow(
             """
             INSERT INTO monitoring_sessions
