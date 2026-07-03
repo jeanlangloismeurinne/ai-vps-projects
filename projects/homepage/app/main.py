@@ -7,6 +7,7 @@ from app.auth import (
     make_cookie_value, get_session, redirect_to_login,
 )
 from app.tickets import router as tickets_router
+from app.roadmap import router as roadmap_router
 
 
 class Settings(BaseSettings):
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
 settings = Settings()
 app = FastAPI(docs_url=None, redoc_url=None)
 app.include_router(tickets_router)
+app.include_router(roadmap_router)
 
 # ── Services ──────────────────────────────────────────────────────────────────
 SERVICES = [

@@ -125,3 +125,9 @@ Avant tout déploiement d'une nouvelle fonctionnalité, mettre à jour :
 Ordre obligatoire :
 1. `git push origin main`
 2. Rebuild Coolify via API (voir CLAUDE.md racine pour le template curl)
+
+## Système de contrôle
+
+Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
+Commande : **"execute le brief session pour assistant-ia"**
+→ Lire `SESSION_BRIEF.md` à la racine de ce projet, puis suivre le protocole.

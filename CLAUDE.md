@@ -116,6 +116,14 @@ La variable `FEEDBACK_CHANNEL_ID` a `C0AUCE6NELT` en valeur par défaut — aucu
 4. Documenter ici
 5. **Ajouter le nom du dossier dans `_KNOWN_PROJECTS`** dans `projects/assistant-ia/app/slack_app.py` — cette liste est la source de vérité pour la commande `/feature` (sélecteur de projet Block Kit)
 
+## Système de contrôle — tickets, roadmap, session brief
+
+Protocole complet dans **`CONTROL_SYSTEM.md`** à la racine du repo. Lire ce fichier au démarrage
+de toute session de travail sur un projet.
+
+Commande de déclenchement : **"execute le brief session pour {projet}"**
+→ Lire `SESSION_BRIEF.md` dans le répertoire du projet, puis suivre le protocole CONTROL_SYSTEM.md.
+
 ## Stack commune
 Node.js 20, TypeScript strict, Fastify, Docker
 

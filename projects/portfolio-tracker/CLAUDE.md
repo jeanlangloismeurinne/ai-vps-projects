@@ -471,3 +471,9 @@ Les fichiers existent déjà comme stubs vides — ne pas les recréer, les comp
 
 ### Note réseau infra-net
 Le `post_deployment_command` Coolify connecte les containers à `infra-net`. Coolify génère `portfolio0tracker000000000_infra-net` au lieu de `infra-net` — la commande post-deploy corrige ça.
+
+## Système de contrôle
+
+Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
+Commande : **"execute le brief session pour portfolio-tracker"**
+→ Lire `SESSION_BRIEF.md` à la racine de ce projet, puis suivre le protocole.
