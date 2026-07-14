@@ -153,9 +153,8 @@ def _list_projects() -> list[dict]:
             return open_c, blocked_c, closed_c
 
         root_md = list(fd.glob("*.md"))
-        if root_md:
-            o, b, c = _count(root_md)
-            projects.append({"name": p.name, "open": o, "blocked": b, "closed": c, "total": len(root_md)})
+        o, b, c = _count(root_md) if root_md else (0, 0, 0)
+        projects.append({"name": p.name, "open": o, "blocked": b, "closed": c, "total": len(root_md)})
 
         for sub in sorted(fd.iterdir()):
             if not sub.is_dir():
