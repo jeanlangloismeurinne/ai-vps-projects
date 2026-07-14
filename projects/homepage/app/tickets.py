@@ -291,6 +291,7 @@ def _generate_session_brief(
     preactions: str,
     ticket_ids: list[str],
     context: str,
+    roadmap_ids: list[str] = None,
 ) -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     lines = [f"# Session Brief — {project} — {today}", ""]
@@ -298,10 +299,24 @@ def _generate_session_brief(
     if scope.strip():
         lines += ["## Scope", scope.strip(), ""]
 
+    all_roadmap_lines = []
+    if roadmap_ids:
+        from app.roadmap import _item_path, _parse_item
+        for rid in roadmap_ids:
+            path = _item_path(project, rid)
+            if path:
+                item = _parse_item(path)
+                title = item.get("body", "").split("\n")[0].lstrip("# ").strip() or rid
+                all_roadmap_lines.append(f"roadmap-{rid} : {title}")
     if roadmap_items.strip():
-        lines += ["## Roadmap — définition (avant implémentation)"]
         for line in roadmap_items.strip().split("\n"):
-            lines.append(f"- [ ] {line.lstrip('- ')}")
+            if line.strip():
+                all_roadmap_lines.append(line.lstrip("- "))
+
+    if all_roadmap_lines:
+        lines += ["## Roadmap — définition (avant implémentation)"]
+        for line in all_roadmap_lines:
+            lines.append(f"- [ ] {line}")
         lines.append("")
 
     if preactions.strip():
@@ -493,9 +508,47 @@ def _page_projects(projects: list) -> str:
     body = f"""
 <div class="page-header">
   <div class="page-title">🎫 Gestion des tickets</div>
+  <a href="/tickets/_new" class="btn btn-primary">+ Nouveau projet</a>
 </div>
 {cards}"""
     return _base("Tickets", body)
+
+
+# ── Page: new project ─────────────────────────────────────────────────────────
+
+def _page_new_project(error: str = "") -> str:
+    err_html = f'<div class="alert alert-error">{_e(error)}</div>' if error else ""
+    body = f"""
+<div class="page-header">
+  <div class="page-title">Nouveau projet</div>
+  <a href="/tickets" class="btn btn-secondary">← Retour</a>
+</div>
+{err_html}
+<form method="POST" action="/tickets/_new">
+  <div class="section">
+    <div class="form-group">
+      <label>Nom du projet</label>
+      <input type="text" name="name" placeholder="ex: mon-nouveau-projet" required autofocus
+        pattern="[a-z0-9][a-z0-9-]*" title="Lettres minuscules, chiffres et tirets uniquement">
+      <div class="hint">Lettres minuscules, chiffres et tirets. Exemple : <code>mon-projet</code></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Créer le projet</button>
+  </div>
+</form>"""
+    return _base("Nouveau projet", body)
+
+
+def _create_project(name: str) -> tuple[bool, str]:
+    name = name.strip().lower()
+    if not re.match(r'^[a-z0-9][a-z0-9-]*$', name):
+        return False, "Nom invalide : lettres minuscules, chiffres et tirets uniquement."
+    fd = PROJECTS_BASE / name / "feedback-tickets"
+    if fd.exists():
+        return False, f"Le projet « {name} » existe déjà."
+    fd.mkdir(parents=True, exist_ok=True)
+    proj_dir = PROJECTS_BASE / name
+    (proj_dir / "TICKETS.md").write_text(f"# TICKETS — {name}\n\n_Aucun ticket pour l'instant._\n")
+    return True, name
 
 
 # ── Page: ticket list ──────────────────────────────────────────────────────────
@@ -507,7 +560,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
         p = p if p is not None else priority_f
         m = m if m is not None else milestone_f
         params = [x for x in [
-            f"status={s}" if s != "all" else "",
+            f"status={s}" if s != "active" else "",  # "active" est le défaut, omis dans l'URL
             f"type={t}" if t != "all" else "",
             f"priority={p}" if p != "all" else "",
             f"milestone={m}" if m else "",
@@ -520,7 +573,9 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
         return f'<a href="{furl(**kw)}" class="{cls}">{label}</a>'
 
     filtered = tickets
-    if status_f != "all":
+    if status_f == "active":
+        filtered = [t for t in filtered if t.get("status") in ("open", "blocked")]
+    elif status_f != "all":
         filtered = [t for t in filtered if t.get("status") == status_f]
     if type_f != "all":
         filtered = [t for t in filtered if t.get("type") == type_f]
@@ -533,11 +588,13 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     n_blocked = sum(1 for t in tickets if t.get("status") == "blocked")
     n_closed  = sum(1 for t in tickets if t.get("status") == "closed")
 
+    n_active = n_open + n_blocked
     status_btns = (
-        fbtn(f"Tout ({len(tickets)})", status_f == "all", s="all", t=type_f, p=priority_f, m=milestone_f) +
+        fbtn(f"Actifs ({n_active})", status_f == "active", s="active", t=type_f, p=priority_f, m=milestone_f) +
         fbtn(f"Ouverts ({n_open})", status_f == "open", s="open", t=type_f, p=priority_f, m=milestone_f) +
         fbtn(f"⏸ Bloqués ({n_blocked})", status_f == "blocked", s="blocked", t=type_f, p=priority_f, m=milestone_f) +
-        fbtn(f"Fermés ({n_closed})", status_f == "closed", s="closed", t=type_f, p=priority_f, m=milestone_f)
+        fbtn(f"Fermés ({n_closed})", status_f == "closed", s="closed", t=type_f, p=priority_f, m=milestone_f) +
+        fbtn(f"Tout ({len(tickets)})", status_f == "all", s="all", t=type_f, p=priority_f, m=milestone_f)
     )
 
     type_counts = {}
@@ -846,7 +903,57 @@ def _page_edit(project: str, ticket: dict, specs: list, flash: str = "") -> str:
 
 # ── Page: brief builder ────────────────────────────────────────────────────────
 
-def _page_brief(project: str, selected_ids: list[str], current_brief: str) -> str:
+_RM_STATUS_LABEL = {"draft": "Brouillon", "spec-ready": "Spec prête", "tickets-created": "Tickets créés"}
+_RM_STATUS_COLOR = {"draft": "#6b7280", "spec-ready": "#ca8a04", "tickets-created": "#4f6ef7"}
+
+
+def _roadmap_picker_html(project: str, preselected: list[str]) -> str:
+    from app.roadmap import _list_items
+    items = [i for i in _list_items(project) if i.get("status") != "done"]
+    if not items:
+        return (
+            f'<p class="empty">Aucun item de roadmap actif. '
+            f'<a href="/roadmap/{_e(project)}" style="color:#4f6ef7">Créer un item →</a></p>'
+            '<div class="form-group" style="margin-top:.75rem">'
+            '<label>Instructions pour Claude (texte libre, une par ligne)</label>'
+            '<textarea name="roadmap_items" rows="4" placeholder="ex: Analyser les tickets ouverts et générer une vision V2"></textarea>'
+            '</div>'
+        )
+
+    checkboxes = ""
+    for item in items:
+        iid = item.get("id", "").replace("roadmap-", "")
+        title = item.get("body", "").split("\n")[0].lstrip("# ").strip() or iid
+        status = item.get("status", "draft")
+        color = _RM_STATUS_COLOR.get(status, "#6b7280")
+        slabel = _RM_STATUS_LABEL.get(status, status)
+        preview = _e(item.get("preview", "")[:90])
+        checked = "checked" if iid in preselected else ""
+        checkboxes += f"""
+<label style="display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .75rem;border-radius:8px;
+  background:#0f1117;border:1px solid #2a2d3a;margin-bottom:.4rem;cursor:pointer">
+  <input type="checkbox" name="rm" value="{_e(iid)}" {checked}
+    style="width:auto;accent-color:#4f6ef7;margin-top:.2rem;flex-shrink:0">
+  <div style="min-width:0">
+    <div style="font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+      {_e(title)}
+      <span style="font-size:.72rem;font-weight:600;padding:.15rem .45rem;border-radius:20px;
+        background:{color}22;color:{color}">{_e(slabel)}</span>
+    </div>
+    {"" if not preview else f'<div style="font-size:.78rem;color:#666;margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{preview}</div>'}
+  </div>
+</label>"""
+
+    return (
+        checkboxes
+        + '<div class="form-group" style="margin-top:.75rem">'
+        + '<label>Instructions supplémentaires (texte libre, une par ligne)</label>'
+        + '<textarea name="roadmap_items" rows="3" placeholder="ex: Créer item roadmap pour : refonte onboarding"></textarea>'
+        + '</div>'
+    )
+
+
+def _page_brief(project: str, selected_ids: list[str], current_brief: str, preselected_roadmap: list[str] = None) -> str:
     display = project.replace("~", " / ")
 
     selected_tickets = []
@@ -913,11 +1020,8 @@ def _page_brief(project: str, selected_ids: list[str], current_brief: str) -> st
   </div>
 
   <div class="section">
-    <div class="section-title">Roadmap — définition (optionnel)</div>
-    <div class="form-group">
-      <label>Instructions pour Claude (une par ligne)</label>
-      <textarea name="roadmap_items" rows="4" placeholder="ex: Analyser les tickets ouverts et générer une vision V2 dans roadmap/V2-budget.md"></textarea>
-    </div>
+    <div class="section-title">Roadmap — items à déléguer à Claude (optionnel)</div>
+    {_roadmap_picker_html(project, preselected_roadmap or [])}
   </div>
 
   <div class="section">
@@ -958,10 +1062,27 @@ async def tickets_index(request: Request):
     return HTMLResponse(_page_projects(_list_projects()))
 
 
+@router.get("/_new", response_class=HTMLResponse)
+async def new_project_get(request: Request):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    return HTMLResponse(_page_new_project())
+
+
+@router.post("/_new")
+async def new_project_post(request: Request, name: str = Form(...)):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    ok, result = _create_project(name)
+    if not ok:
+        return HTMLResponse(_page_new_project(result), status_code=400)
+    return RedirectResponse(f"/tickets/{result}", status_code=303)
+
+
 @router.get("/{project}", response_class=HTMLResponse)
 async def ticket_list(
     request: Request, project: str,
-    status: str = "all", type: str = "all",
+    status: str = "active", type: str = "all",
     priority: str = "all", milestone: str = "",
 ):
     from app.main import settings
@@ -1004,7 +1125,11 @@ async def ticket_new_post(
 
 
 @router.get("/{project}/brief", response_class=HTMLResponse)
-async def ticket_brief_get(request: Request, project: str, t: list[str] = Query(default=[])):
+async def ticket_brief_get(
+    request: Request, project: str,
+    t: list[str] = Query(default=[]),
+    roadmap: list[str] = Query(default=[]),
+):
     from app.main import settings
     if r := _require_auth(request, settings): return r
     if _feedback_dir(project) is None:
@@ -1012,13 +1137,14 @@ async def ticket_brief_get(request: Request, project: str, t: list[str] = Query(
     proj_dir = PROJECTS_BASE / project.split("~")[0]
     brief_path = proj_dir / "SESSION_BRIEF.md"
     current = brief_path.read_text() if brief_path.exists() else ""
-    return HTMLResponse(_page_brief(project, t, current))
+    return HTMLResponse(_page_brief(project, t, current, roadmap))
 
 
 @router.post("/{project}/brief/generate")
 async def ticket_brief_generate(
     request: Request, project: str,
     t: list[str] = Form(default=[]),
+    rm: list[str] = Form(default=[]),
     scope: str = Form(default=""),
     roadmap_items: str = Form(default=""),
     preactions: str = Form(default=""),
@@ -1027,7 +1153,7 @@ async def ticket_brief_generate(
     from app.main import settings
     if r := _require_auth(request, settings): return r
     proj_dir = PROJECTS_BASE / project.split("~")[0]
-    content = _generate_session_brief(project, scope, roadmap_items, preactions, t, context)
+    content = _generate_session_brief(project, scope, roadmap_items, preactions, t, context, rm)
     (proj_dir / "SESSION_BRIEF.md").write_text(content)
     return RedirectResponse(f"/tickets/{project}/brief", status_code=303)
 
