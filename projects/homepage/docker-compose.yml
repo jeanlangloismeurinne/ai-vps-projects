@@ -15,6 +15,7 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.http-homepage.entryPoints=http"
       - "traefik.http.routers.http-homepage.rule=Host(`jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
       - "traefik.http.routers.http-homepage.middlewares=redirect-to-https"
