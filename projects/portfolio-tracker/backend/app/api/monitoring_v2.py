@@ -223,7 +223,7 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
             context_message += f"\n\n### Données opérationnelles fournies\n{data.private_metrics_text}"
 
         if not dust_enabled:
-            # Dust désactivé → session pending_manual, contexte retourné pour copier-coller manuel
+            # Dust désactivé → session pending_manual, contexte sauvegardé en DB pour affichage page
             session_row = await db.fetchrow(
                 """
                 INSERT INTO monitoring_sessions
@@ -234,6 +234,10 @@ async def create_and_run_session(ticker_id: str, data: SessionCreate):
                 """,
                 ticker_id, data.thesis_id, data.trigger_type, data.trigger_label,
                 data.mode, data.calendar_event_id,
+            )
+            await db.execute(
+                "INSERT INTO monitoring_messages (session_id, role, content) VALUES ($1,'user',$2)",
+                session_row["id"], context_message,
             )
             return {
                 **_serialize(session_row),

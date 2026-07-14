@@ -55,6 +55,12 @@ export default function App({ Component, pageProps }) {
         <div className="ml-auto flex items-center gap-3">
           <AgentSyncBadge />
           <MarketTemperatureBadge />
+          <a
+            href="https://jlmvpscode.duckdns.org"
+            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors"
+          >
+            ← Hub
+          </a>
         </div>
       </nav>
       <main className="px-6 py-6 max-w-7xl mx-auto">

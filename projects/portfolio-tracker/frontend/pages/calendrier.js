@@ -159,6 +159,37 @@ function groupByMonth(events) {
   return Object.values(groups)
 }
 
+function groupByCompany(events) {
+  const groups = {}
+  for (const ev of events) {
+    const key = ev.ticker_id
+    const label = ev.ticker_name && ev.ticker_name !== ev.ticker_id
+      ? `${ev.ticker_id} — ${ev.ticker_name}`
+      : ev.ticker_id
+    if (!groups[key]) groups[key] = { label, events: [] }
+    groups[key].events.push(ev)
+  }
+  return Object.values(groups).map(g => ({
+    ...g,
+    events: [...g.events].sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date)),
+  })).sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function groupByEventType(events) {
+  const groups = {}
+  for (const ev of events) {
+    const key = ev.event_type
+    const meta = EVENT_TYPE_META[ev.event_type]
+    const label = meta ? meta.label : ev.event_type
+    if (!groups[key]) groups[key] = { label, events: [] }
+    groups[key].events.push(ev)
+  }
+  return Object.values(groups).map(g => ({
+    ...g,
+    events: [...g.events].sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date)),
+  })).sort((a, b) => a.label.localeCompare(b.label))
+}
+
 const FILTERS = [
   { id: 'all',        label: 'Tout' },
   { id: 'portfolio',  label: 'Portefeuille' },
@@ -166,10 +197,17 @@ const FILTERS = [
   { id: 'pending',    label: 'À valider' },
 ]
 
+const GROUPINGS = [
+  { id: 'month',   label: 'Par mois' },
+  { id: 'company', label: 'Par entreprise' },
+  { id: 'type',    label: 'Par type' },
+]
+
 export default function Calendrier() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [grouping, setGrouping] = useState('month')
   const [error, setError] = useState('')
 
   const load = async () => {
@@ -195,7 +233,11 @@ export default function Calendrier() {
   })
 
   const pendingCount = events.filter(e => e.pending_validation).length
-  const groups = groupByMonth(filtered)
+  const groups = grouping === 'company'
+    ? groupByCompany(filtered)
+    : grouping === 'type'
+      ? groupByEventType(filtered)
+      : groupByMonth(filtered)
 
   return (
     <div className="space-y-6">
@@ -204,24 +246,41 @@ export default function Calendrier() {
         <span className="text-xs text-gray-600">{filtered.length} événement{filtered.length > 1 ? 's' : ''}</span>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.id
-                ? 'bg-indigo-700 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {f.label}
-            {f.id === 'pending' && pendingCount > 0 && (
-              <span className="ml-1.5 bg-amber-600 text-white text-xs rounded-full px-1.5 py-0.5">{pendingCount}</span>
-            )}
-          </button>
-        ))}
+      {/* Filters + grouping */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-2 flex-wrap">
+          {FILTERS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === f.id
+                  ? 'bg-indigo-700 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {f.label}
+              {f.id === 'pending' && pendingCount > 0 && (
+                <span className="ml-1.5 bg-amber-600 text-white text-xs rounded-full px-1.5 py-0.5">{pendingCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 ml-auto">
+          {GROUPINGS.map(g => (
+            <button
+              key={g.id}
+              onClick={() => setGrouping(g.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                grouping === g.id
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-800 text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (
