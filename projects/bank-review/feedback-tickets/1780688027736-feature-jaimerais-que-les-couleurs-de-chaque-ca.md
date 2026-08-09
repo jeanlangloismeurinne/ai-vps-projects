@@ -1,10 +1,12 @@
 ---
 id: 1780688027736
 type: feature
-status: open
+status: closed
 date: 2026-06-05T19:33:47.736593
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget
+priority: medium
+closed_at: 2026-08-09T00:00:00Z
 ---
 
 ## ✨ Feature
@@ -14,7 +16,7 @@ url: https://bank.jlmvpscode.duckdns.org/budget
 
 ### Description
 
-J’aimerais que les couleurs de chaque case soient plus ou moins foncées selon l’écart au budget tout en restant lisible. Par exemple un rouge plus foncé si très fort dépassement. Un vrai très clair si très inférieur au budget.
+J’aimerais que les couleurs de chaque case soient plus ou moins foncées selon l’écart au budget tout en restant lisible. Par exemple un rouge plus foncé si très fort dépassement. Un vrai très foncé si très inférieur au budget.
 
 ### Contexte
 

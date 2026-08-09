@@ -137,8 +137,8 @@
         <td class="col-month
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}
-                   {{ m_status(m, cat.is_income) }}
                    {% if not m.is_future and m.has_tx %}cell-link{% endif %}"
+            {% set cs = m_cell_style(m, cat.is_income) %}{% if cs %}style="{{ cs }}"{% endif %}
             {% if not m.is_future and m.has_tx %}
             data-cat="{{ cat.category|e }}" data-month="{{ m.month }}"
             onclick="openDrillDown(this.dataset.cat, this.dataset.month)"

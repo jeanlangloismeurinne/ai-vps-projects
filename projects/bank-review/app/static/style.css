@@ -19,6 +19,9 @@
   --cell-green-bg:  rgba(74, 222, 128, 0.12);
   --cell-yellow-bg: rgba(251, 191, 36, 0.12);
   --cell-red-bg:    rgba(248, 113, 113, 0.14);
+  --cell-green-rgb: 74, 222, 128;
+  --cell-yellow-rgb: 251, 191, 36;
+  --cell-red-rgb: 248, 113, 113;
 }
 
 [data-theme="light"] {
@@ -40,6 +43,9 @@
   --cell-green-bg:  rgba(22, 163, 74, 0.10);
   --cell-yellow-bg: rgba(180, 83, 9, 0.08);
   --cell-red-bg:    rgba(192, 57, 43, 0.10);
+  --cell-green-rgb: 22, 163, 74;
+  --cell-yellow-rgb: 180, 83, 9;
+  --cell-red-rgb: 192, 57, 43;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
