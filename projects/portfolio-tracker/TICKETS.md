@@ -1,6 +1,6 @@
 # TICKETS — portfolio-tracker
 
-> Généré automatiquement le 18/07/2026 17:58. **Lire au début de chaque session.**
+> Généré automatiquement le 09/08/2026 00:00. **Lire au début de chaque session.**
 
 ## Résumé
 
@@ -8,14 +8,19 @@
 |---|---|---|---|
 | 🐛 Bugs | 1 | 0 | 12 |
 | 🔴 Erreurs | 0 | 0 | 0 |
-| ✨ Features | 0 | 0 | 11 |
-| 💡 Suggestions | 0 | 0 | 0 |
+| ✨ Features | 3 | 0 | 11 |
+| 💡 Suggestions | 1 | 0 | 0 |
 
 ## 🔓 Ouverts
 
 | ID | Date | Priorité | Description |
 |---|---|---|---|
 | `1784185174911` | 16/07/2026 06:59 | medium | Il devait y avoir une session de monitoring le 15 juillet sur radiant nuclear. J |
+| `1784657869734` | 21/07/2026 18:17 | — | J'aimerais pouvoir fixer l'horizon par défaut de tous les graphiques d'action en |
+| `1784657819926` | 21/07/2026 18:16 | — | J'aimerais qu'on travaille sur l'expérience utilisateur d'ajout / retrait d'une |
+| `1786259000000` | 09/08/2026 00:00 | high | Gate d'opportunité obligatoire avant création de thèse (milestone: roadmap-1783146342816) |
+| `1786259100000` | 09/08/2026 00:00 | high | Enrichir brief_json : moat + cercle de compétence + valeur intrinsèque (milestone: roadmap-1783146342816) |
+| `1786259200000` | 09/08/2026 00:00 | medium | Injection du contexte portefeuille dans l'opportunity-agent (milestone: roadmap-1783146342816) |
 
 ## ✅ Fermés (23)
 
