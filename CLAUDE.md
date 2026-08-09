@@ -228,7 +228,7 @@ $app = \App\Models\Application::where('uuid', '{UUID}')->first();
 | bank-review | `ji9jg7ngkva7j4d2uic05d3v` |
 | portfolio-backend | `portfoliobackend00000000` |
 | portfolio-frontend | `portfoliofrontend0000000` |
-| homepage | `h7dyrhas03di7jqq2wl2j72z` |
+| hub (homepage) | `h7dyrhas03di7jqq2wl2j72z` |
 | tool-file-intake | `c57oryka5cw4scy02fi1gfzz` |
 | ev-prices | `ev0prices0000000000000000` |
 
