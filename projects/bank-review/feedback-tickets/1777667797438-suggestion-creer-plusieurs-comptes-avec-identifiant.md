@@ -1,7 +1,7 @@
 ---
 id: 1777667797438
 type: suggestion
-status: blocked
+status: open
 date: 2026-05-01T20:36:37.438586
 project: bank-review
 url: slack://#features-bank-review
@@ -21,7 +21,7 @@ creer plusieurs comptes avec identifiant / mot de passe pour accéder au service
 ### Questions avant implémentation
 
 **Q1** : Combien d’utilisateurs envisages-tu à court terme — 2 à 5 personnes de confiance, ou une vraie plateforme ouverte à des inconnus ? Ça détermine si on fait du multi-tenant dans la même instance (schémas PostgreSQL isolés) ou plusieurs instances Coolify séparées.
-**R1** : *(en attente)*
+**R1** : Commençons par des personnes de confiance. Mais je veux des bases de données isolées par utilisateur.
 
 **Q2** : Veux-tu une session dédiée de design d’architecture avant toute implémentation, ou je peux définir un plan et créer les tickets directement dans le prochain brief ?
-**R2** : *(en attente)*
+**R2** : J’aimerais une session design d’architecture lors du prochain échange pour qu’on valide ensemble les choix techniques et que tu définisses le plan et les tickets ensuite.

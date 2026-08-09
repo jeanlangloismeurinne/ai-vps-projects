@@ -1,10 +1,12 @@
 ---
 id: 1780687939733
 type: bug
-status: open
+status: closed
 date: 2026-06-05T19:32:19.733234
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget
+priority: medium
+closed_at: 2026-07-18T17:59:39.526964+00:00
 ---
 
 ## 🐛 Bug

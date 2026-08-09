@@ -1,10 +1,12 @@
 ---
 id: 1777575513515
 type: feature
-status: open
+status: closed
 date: 2026-04-30T18:58:33.515197
 project: bank-review
 url: https://bank.jlmvpscode.duckdns.org/budget?year_id=2
+priority: medium
+closed_at: 2026-08-09T12:55:27.411048+00:00
 ---
 
 ## ✨ Feature
