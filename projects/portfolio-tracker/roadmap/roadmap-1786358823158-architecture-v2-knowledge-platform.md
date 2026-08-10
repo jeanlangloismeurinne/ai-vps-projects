@@ -840,24 +840,456 @@ Affiche :
 
 ---
 
-## 12. Questions ouvertes et décisions futures
+## 12. Décisions architecturales arrêtées
 
-**Q1 — Modèle d'embedding**
-Pour générer les embeddings pgvector (`vector(1536)`), quel modèle ? Options :
-- `text-embedding-3-small` (OpenAI) : $0.02/1M tokens — très bon
-- `voyage-finance-2` (Voyage AI) : spécialisé finance, meilleur pour notre use case, ~$0.06/1M tokens
-- `nomic-embed-text` (Ollama, local) : gratuit, légèrement moins bon
-Recommandation : `text-embedding-3-small` pour commencer, migrer vers voyage-finance si la qualité du RAG est insuffisante.
+**Q1 — Modèle d'embedding : `nomic-embed-text` via Ollama (local)**
+Dimension : 768 (adapter `vector(768)` en DB). Zéro coût, zéro dépendance externe, tourne sur le VPS Hetzner. Ollama s'installe comme service Docker sur le VPS. Migration possible vers un modèle externe si la qualité RAG est insuffisante — changer la dimension et regénérer les embeddings.
 
-**Q2 — Volume des knowledge_entries**
-Sur 20 entreprises suivies, 3 ans de documents, ~20 entries par document :
-→ ~5000-10000 entries. pgvector tient très bien. Pas de problème de scale pour longtemps.
+**Q2 — Web search : SearXNG self-hosted**
+Déployé comme nouveau container Docker sur le VPS. Agrège plusieurs moteurs (Google, Bing, DuckDuckGo) sans API key. Appel HTTP interne depuis le backend. Évite toute intégration externe et les limites de quota.
 
-**Q3 — Confidentialité des documents startup**
-Les documents marqués `is_confidential = true` sont-ils accessibles aux agents ou uniquement à l'utilisateur ? Recommandation : accessibles aux agents (ils sont sur le même serveur privé), mais non exposés via les API publiques et non inclus dans les exports.
+**Q3 — Modification du bull/bear case par l'utilisateur**
+Oui. Après la génération de chaque cas, l'utilisateur peut modifier le JSON résultant avant de lancer la synthèse — même mécanique que `brief_json` sur la Page 3 actuelle. La version originale de l'agent est conservée dans `result_json_original`, la version modifiée dans `result_json`. Les deux sont tracées.
 
-**Q4 — Validation du bull/bear par l'utilisateur**
-L'utilisateur doit-il pouvoir modifier le bull case ou le bear case manuellement avant la synthèse, ou est-ce que les résultats agents sont figés ? Recommandation : modifier manuellement (comme `brief_json` sur la Page 3 actuelle) — l'utilisateur peut corriger une erreur de l'agent.
+**Q4 — Ticker de validation : NVDA**
+EDGAR disponible, transcripts accessibles, thèse existante en portefeuille. Permettra de valider l'ensemble de la pipeline (ingestion EDGAR → knowledge_entries → bull/bear → risk matrix) sur un cas connu avant d'étendre aux autres tickers.
+
+---
+
+## 13. Parcours utilisateur complet — de la découverte à la clôture
+
+### 13.1 Vue d'ensemble du cycle de vie
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ A. DÉCOUVERTE        B. ANALYSE           C. DÉCISION                  │
+│ Ajout ticker      →  Bull / Bear       →  Risk Matrix     →  Position  │
+│ Build knowledge      Synthèse              Acquittement      Entrée     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                                        ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ D. MONITORING ACTIF                                                     │
+│  Mode 1 (pré-event) → Mode 2 (revue trim) → Mode 4 (sector pulse)      │
+│                    ↓ après chaque session                               │
+│             VALORISATION CHECK                                          │
+│          (prix actuel vs IV range)                                      │
+│         ↙ Attractif          Étiré ↘                                   │
+│    Maintenir/               Alerte valorisation                         │
+│    Renforcer                      ↓                                     │
+└──────────────────────────────────┼──────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ E. SORTIE PROGRESSIVE                                                   │
+│  Réduction 20-30% par tranche → suivi seuils → clôture complète        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ F. POST-MORTEM  (stub existant dans portfolio/post_mortem.py)           │
+│  Analyse de la décision → leçons → pattern library                     │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 13.2 Phase A — Découverte et construction de la knowledge base
+
+**Point d'entrée** : `/watchlist-v2`
+
+**Étape A1 — Ajout du ticker**
+
+L'utilisateur ajoute NVDA à la watchlist (flux existant — `POST /tickers`).
+Le backend déclenche immédiatement le pipeline d'onboarding en background :
+- Lookup EDGAR CIK pour NVDA
+- Fetch EDGAR Company Facts (10 ans de financials XBRL)
+- Fetch derniers 4 filings (10-K + 10-Q)
+- Fetch 4 derniers transcripts earnings (depuis pages IR ou web_search)
+- Lancement ingestion-agent sur chaque document → `knowledge_entries`
+- Génération embeddings Ollama/nomic
+
+La carte NVDA sur la watchlist affiche un indicateur d'état :
+- `⏳ Construction de la base de connaissance...` (avec progression : X documents ingérés)
+- `✅ Base prête — 47 entrées de connaissance` (quand pipeline terminé)
+- `⚠ 3 entrées à vérifier` (si des entrées `requires_human_review = true`)
+
+**Étape A2 — Revue de la knowledge base** (optionnelle, recommandée avant analyse)
+
+Clic sur "Explorer la connaissance" → `/knowledge/NVDA`
+
+L'utilisateur voit :
+- **Onglet Profil** : fiche entreprise synthétique (générée par ingestion-agent depuis les documents)
+- **Onglet Financiers** : historique 10 ans — Revenue, FCF, ROIC estimé, marges. Chaque chiffre sourcé (EDGAR Q4-2025, etc.)
+- **Onglet Concurrence** : ce que les documents disent du positionnement concurrentiel
+- **Onglet À vérifier** : entrées `llm_memory` avec badge ⚠ — l'utilisateur peut les confirmer ou marquer obsolètes
+- **Onglet Documents** : liste des documents ingérés avec statut
+
+L'utilisateur peut ajouter une note manuelle depuis cette page ("J'ai utilisé leurs GPU en 2024, les temps de compilation sont 3x plus rapides que chez AMD").
+
+---
+
+### 13.3 Phase B — Analyse (bull case, bear case, synthèse)
+
+**Point d'entrée** : `/ticker/NVDA/analyse` (bouton "Analyser" sur la watchlist ou la fiche ticker)
+
+**Layout de la page** : 3 panneaux
+
+```
+┌──────────────────┬─────────────────────┬────────────────────┐
+│ BASE DE          │ CHAT AGENT          │ RÉSULTAT EN COURS  │
+│ CONNAISSANCE     │                     │                    │
+│                  │ [Tab: Bull] [Bear]  │ bull_case_json     │
+│ 47 entrées       │                     │ ou bear_case_json  │
+│ Confiance: 0.72  │ Agent: "Pour NVDA,  │ éditable par       │
+│                  │ les forces sont..." │ l'utilisateur      │
+│ [Entrées Tier A] │                     │                    │
+│ [Entrées ⚠ LLM]  │ > Message utilisat. │                    │
+└──────────────────┴─────────────────────┴────────────────────┘
+```
+
+**Étape B1 — Lancement du bull case**
+
+L'utilisateur clique "Lancer le bull case".
+- Le système récupère les knowledge_entries pertinentes via RAG (query: "NVDA strengths competitive advantage growth")
+- Injecte les entries + contexte portefeuille dans bull-agent
+- Le bull-agent peut appeler `web_search` pour compléter — résultats stockés en knowledge_entries
+- L'agent produit `bull_case_json` (forces, valorisation, catalyseurs, prix cible, conviction)
+- Le panneau droit affiche le résultat éditable
+- L'utilisateur peut modifier les champs (ex: ajuster le prix cible), la modification est tracée
+
+**Étape B2 — Lancement du bear case** (onglet séparé, contexte complètement isolé)
+
+Même mécanique, agent différent. Le bear-agent ne voit pas ce qu'a produit le bull-agent.
+Résultat : `bear_case_json` (risques structurels, scénario adverse, failles du bull conventionnel)
+Éditable de la même façon.
+
+**Étape B3 — Synthèse**
+
+Bouton "Synthétiser" visible quand les deux cases sont produits.
+- Le thesis-agent reçoit bull_case_json + bear_case_json + toutes les knowledge_entries utilisées
+- Produit la `risk_matrix_json` : verdict global, risques listés, conditions d'entrée, sizing recommandé, pré-mortem
+- Le panneau droit affiche la Risk Matrix
+
+---
+
+### 13.4 Phase C — Décision d'investissement
+
+**Point d'entrée** : suite de la page `/ticker/NVDA/analyse` après synthèse, ou page dédiée
+
+**Étape C1 — Revue de la Risk Matrix**
+
+La page affiche `RiskMatrixPanel` :
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ RISK MATRIX — NVDA                     Confiance globale: 72%
+ Verdict: PROCEED_AVEC_CONDITIONS       Sources: 18 Tier-A, 8 Tier-B, 3 LLM ⚠
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Risque 1: Concurrence AMD/Intel sur GPU IA
+   Probabilité: 35% | Impact: Fort | Réversible: Non
+   → Si déclenché: sortir si perte PDM > 2pts sur 2 trimestres
+   [ ] J'accepte ce risque
+
+ Risque 2: Valorisation très tendue (P/E 45x)
+   Probabilité: 60% | Impact: Moyen | Réversible: Oui (cyclique)
+   → Si déclenché: maintenir si thèse LT intacte, ne pas renforcer
+   [ ] J'accepte ce risque
+
+ Risque 3: Réglementation export chips vers Chine
+   Probabilité: 40% | Impact: Fort | Réversible: Partiellement
+   → Si déclenché: évaluer impact sur 30% du CA Chine, décision en 30j
+   [ ] J'accepte ce risque
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRÉ-MORTEM (scénarios d'échec)
+ • Un rival open-source égale les performances H100 en 12 mois
+ • Le gouvernement US restreint les ventes à tous les pays asiatiques
+ • Une récession tech comprime les budgets CapEx data center de 40%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ [Valider le pré-mortem]              2/3 risques acquittés
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Étape C2 — Position sizing et conditions d'entrée**
+
+Visible seulement quand tous les risques et le pré-mortem sont acquittés.
+
+```
+POSITION SIZING
+  Recommandé : 4.5% du portefeuille   [━━━━━━━━━━━━━━━━━━━━━━━]
+  Min: 2%  ──────────────────────────────────  Max: 8%
+  Votre choix: [4.5%     ▲▼]   Justification si modifié: [________]
+
+VALEUR INTRINSÈQUE — THERMOMÈTRE DE VALORISATION
+  Fourchette basse : $95    ▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░
+  Fourchette haute : $130   prix actuel: $118 → zone "juste prix"
+  Alerte sortie progressive si prix > $150 (+15% au-dessus IV haute)
+
+CONDITIONS D'ENTRÉE
+  Prix limite : [$120    ] (optionnel — laisser vide pour entrée immédiate)
+  Note : "Attendre consolidation post-earnings Q3"
+
+[Créer la thèse et la position]   ← actif seulement si tout acquitté
+```
+
+**Étape C3 — Création de la thèse et de la position**
+
+`POST /tickers/NVDA/analyses/synthesis` → `POST /tickers/NVDA/theses`
+
+La thèse stocke :
+- `synthesis_analysis_id` → lien vers la risk matrix
+- `pre_mortem_acked = true`
+- `risk_matrix_acked = true`
+- `position_sizing_pct = 4.5`
+- `valuation_range = {low: 95, high: 130, alert_threshold: 150}`
+- Les hypothèses H1-Hn extraites de la risk matrix (chaque risque accepté → hypothèse de monitoring)
+- Le calendrier d'événements (earnings dates → modes 1+2 auto-planifiés)
+
+`POST /theses/{id}/validate` → position créée + cash_movement
+
+---
+
+### 13.5 Phase D — Monitoring actif et vérification valorisation
+
+**Point d'entrée** : `/portfolio` et `/ticker/NVDA/monitoring/:id`
+
+#### Le thermomètre de valorisation (concept central)
+
+Après chaque session de monitoring (tous modes), le système calcule automatiquement le **Valuation Status** :
+
+| Zone | Condition | Badge | Action suggérée |
+|---|---|---|---|
+| 🟢 Attractive | Prix < IV basse | "Sous-valorisé" | Envisager renforcement |
+| 🟡 Juste prix | IV basse ≤ Prix ≤ IV haute | "Zone d'équilibre" | Maintenir |
+| 🟠 Étiré | IV haute < Prix ≤ seuil alerte | "Prime excessive" | Vigilance — pas de renforcement |
+| 🔴 Surévalué | Prix > seuil alerte (IV haute × 1.15) | "Sortie progressive" | Déclencher stratégie de sortie |
+
+Ce badge est affiché sur la page portfolio, sur la fiche ticker, et dans chaque résumé de monitoring.
+
+#### Monitoring périodique — enrichissement continu de la knowledge base
+
+Chaque session de monitoring (modes 1-6) enrichit la knowledge base :
+- Les résultats trimestriels → nouvelles `knowledge_entries` financières
+- Les commentaires management → entrées `fact_qualitative` sourcées "earnings_transcript_official"
+- Les hypothèses mises à jour → enrichissent competitive.md et management.md
+
+**Mode 1 (J-2 earnings)** : pré-event brief — pas de mise à jour knowledge
+**Mode 2 (J+1 earnings)** : mise à jour financials, hypothèses scorées, **Valuation Status recalculé**
+**Mode 3 (Decision Review)** : diagnostic complet — peut déclencher stratégie de sortie
+**Mode 4 (Sector Pulse)** : contexte sectoriel → knowledge entries concurrents
+**Mode 6 (Revue annuelle)** : réévaluation complète IV — met à jour `valuation_range` dans la thèse
+
+**Mode 6 en détail** (nouveau mode, annuel) :
+- Déclenché par `calendar_events` type `annual_review`, créé à `validated_at + 365 jours`
+- Le monitoring-agent reçoit : thèse originale + toutes les knowledge_entries de l'année + historique financier mis à jour
+- Produit : IV réactualisée, hypothèses relues, verdict CONFIRMER / RÉDUIRE / SORTIR / RENFORCER
+- Met à jour `theses.valuation_range` avec la nouvelle fourchette
+- Crée le prochain `calendar_events annual_review` à +365j
+
+#### Visualisation sur la page Portfolio
+
+```
+NVDA — Nvidia Corporation
+Position: 45 actions | Entrée: $89 | Actuel: $118 | Perf: +32.5%
+
+[████████████████████████░░░░░░░░░░░░]  🟠 Étiré
+$95 IV basse        $118 actuel    $130 IV haute    $150 ⚡ Alerte
+
+Prochains events: 📅 Earnings Q3 — dans 23 jours
+Hypothèses: H1 ✅ H2 ✅ H3 ⚠ H4 ✅ H5 ✅
+```
+
+---
+
+### 13.6 Phase E — Stratégie de sortie progressive
+
+**Déclencheur** : Valuation Status passe à 🔴 "Surévalué" (Prix > seuil alerte) OU Mode 3 recommande RÉDUIRE/SORTIR OU Mode 6 révise significativement l'IV à la baisse.
+
+#### E1 — Création du plan de sortie progressive
+
+**Page** : `/ticker/NVDA/decision/{thesis_id}` (page existante, enrichie)
+
+Un nouveau composant `ExitPlanBuilder` s'affiche si le contexte le justifie.
+
+```
+STRATÉGIE DE SORTIE PROGRESSIVE — NVDA
+
+Situation: Prix $148 > Seuil alerte $150 (atteint dans 2% de hausse)
+IV actualisée (Mode 6, Nov 2026): $95 — $125
+Prime actuelle sur IV haute: +18.4%
+
+PLAN DE SORTIE RECOMMANDÉ
+  ┌─ Tranche 1 : vendre 25% si Prix ≥ $150   → 11 actions à ~$150 → +$670
+  ├─ Tranche 2 : vendre 25% si Prix ≥ $175   → 11 actions à ~$175 → +$945  
+  ├─ Tranche 3 : vendre 25% si Prix ≥ $200   → 11 actions à ~$200 → +$1210
+  └─ Tranche 4 : vendre le solde si Prix ≥ $220 OU si H3 invalidée
+
+Condition de sortie accélérée:
+  [ ] Invalidation H3 (perte PDM GPU IA) → sortir les 4 tranches immédiatement
+  [ ] Récession tech sévère (revenus -20% sur 2 trimestres) → sortir 50% immédiatement
+
+[ Modifier les seuils ] [ Valider ce plan de sortie ]
+```
+
+Le plan est stocké dans une nouvelle table `exit_plans` liée à la thèse.
+
+#### E2 — Exécution des tranches
+
+Quand le prix franchit un seuil (détecté par le scheduler `_check_price_alerts_v1` existant, enrichi avec les seuils du plan de sortie) :
+- Notification Slack : "🔴 NVDA a franchi $150 — Tranche 1 du plan de sortie déclenchée (11 actions à vendre)"
+- Alerte visible sur `/portfolio` et `/ticker/NVDA`
+- L'utilisateur va sur la page portfolio → "Enregistrer la vente" → wizard simple
+
+**Wizard de vente par tranche** :
+```
+Enregistrer la vente — Tranche 1/4
+  Actions vendues : [11      ]   Prix de vente : [$151.30 ]
+  Date : [2026-11-14]
+  Motif : "Plan de sortie progressive — seuil $150 atteint"
+  
+  Impact sur la position :
+  Avant : 45 actions (4.5% du portefeuille)
+  Après  : 34 actions (3.4% du portefeuille)
+  Gain réalisé sur cette tranche : +$682
+
+  [ Enregistrer ]
+```
+
+`POST /portfolio-v2/cash` → cash_movement type `sell` + mise à jour `portfolio_positions`
+
+#### E3 — Suivi du plan en cours
+
+Sur la page portfolio, les positions avec un plan de sortie actif affichent un indicateur :
+
+```
+NVDA  [Sortie progressive en cours]
+34 actions restantes (3.4%)   Tranche 1/4 exécutée à $151.30
+
+Plan de sortie:
+  ✅ Tranche 1 vendues à $151.30  (+$682)
+  ⏳ Tranche 2 : vendre si Prix ≥ $175  (actuel: $163, manque +7.4%)
+  ○  Tranche 3 : vendre si Prix ≥ $200
+  ○  Tranche 4 : vendre si Prix ≥ $220 ou H3 invalidée
+```
+
+#### E4 — Conditions de sortie accélérée
+
+Indépendamment des seuils de prix, deux événements déclenchent une alerte de sortie accélérée :
+
+1. **Hypothèse critique invalidée** (Mode 2 ou 3 → `REVIEW_REQUIRED` + hypothèse `status: invalidated`)
+   - Si l'hypothèse est flaggée comme "condition de sortie accélérée" dans le plan
+   - → Alerte immédiate Slack : "⚠ H3 NVDA invalidée — Plan de sortie accéléré recommandé"
+
+2. **Réévaluation IV significative** (Mode 6 → IV révisée à la baisse de plus de 20%)
+   - → Déclenche Mode 3 automatique : "Votre valeur intrinsèque révisée est $95-$105, prix actuel $163 — révision du plan de sortie recommandée"
+
+---
+
+### 13.7 Phase F — Clôture et post-mortem
+
+**Déclencheur** : quand la dernière tranche est vendue (`portfolio_positions.shares = 0` ou position fermée explicitement)
+
+Le système déclenche automatiquement le post-mortem (stub existant `portfolio/post_mortem.py` — à compléter) :
+
+```
+POST-MORTEM — NVDA
+Durée de détention: 18 mois  |  Perf: +89%  |  CAGR: +58%
+
+Analyse des hypothèses:
+  H1 Domination GPU IA  ✅ Confirmée   (moat solide, ROIC a progressé)
+  H2 Expansion data center   ✅ Confirmée
+  H3 Résistance concurrence   ✅ Partiellement — AMD a gagné du terrain en edge
+  H4 Pricing power   ✅ Confirmée
+  H5 Expansion géographique   ⚠ Mitigée — restrictions export ont pesé
+
+Décision de sortie:
+  Sortie progressive sur 6 mois (4 tranches)
+  Prix de sortie moyen: $174
+  Vs IV haute au moment de la sortie: $130 → prime de 34%
+  Décision correcte : oui
+
+Leçons:
+  → "Le moat GPU IA était plus solide qu'anticipé — aurais pu garder les tranches 3 et 4"
+  → "La diversification sectorielle après H3 partiellement invalidée était une bonne précaution"
+  → "Le seuil de sortie à $150 était trop bas — IV basse était à $95, premium de 58% insuffisant"
+
+[ Enregistrer ces leçons dans la Pattern Library ]
+```
+
+Les leçons sont stockées dans `learning/pattern_library.py` (stub existant) comme knowledge_entries de type `lesson_learned` — réutilisables par les futurs bull-agents sur des entreprises comparables.
+
+---
+
+### 13.8 Machine d'états d'une position
+
+```
+WATCHLIST ──────────────────────→ ANALYSE_EN_COURS
+                                        │
+                            ┌───────────┴────────────┐
+                            │ Bull + Bear + Synthesis │
+                            └───────────┬────────────┘
+                                        │
+                                   DECISION ──→ PASSE (archivé)
+                                        │
+                                   POSITION_ACTIVE
+                                        │
+                    ┌───────────────────┼────────────────────┐
+                    ↓                   ↓                    ↓
+              MONITORING          VALUATION_OK          VALUATION_ALERT
+              (modes 1-6)         (Maintenir)           (Étiré/Surévalué)
+                    │                   │                    ↓
+                    └───────────────────┘              EXIT_PLAN_ACTIF
+                                                             │
+                                                    (tranches progressives)
+                                                             │
+                                                     POSITION_PARTIELLE
+                                                      (tranches 2,3,4...)
+                                                             │
+                                                      CLOTUREE
+                                                             │
+                                                      POST_MORTEM
+```
+
+Champ `portfolio_positions.exit_status` :
+`null` | `plan_created` | `partially_exited` | `closed` | `accelerated_exit`
+
+---
+
+### 13.9 Nouvelles tables pour la Phase E
+
+```sql
+-- Migration 024_exit_plans.sql
+
+CREATE TABLE exit_plans (
+    id                  SERIAL PRIMARY KEY,
+    thesis_id           INT REFERENCES theses(id),
+    ticker_id           TEXT REFERENCES tickers(id),
+    status              TEXT DEFAULT 'active',  -- 'active'|'completed'|'cancelled'
+    trigger_reason      TEXT,  -- 'valuation_alert'|'mode3_recommendation'|'annual_review'|'manual'
+    tranches            JSONB NOT NULL DEFAULT '[]',
+    -- [{seuil_prix, pct_position, shares_to_sell, executed_at, execution_price, notes}]
+    accelerated_conditions JSONB DEFAULT '[]',
+    -- [{type: 'hypothesis_invalidated'|'iv_revision', condition, actions_shares_pct}]
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE exit_executions (
+    id                  SERIAL PRIMARY KEY,
+    exit_plan_id        INT REFERENCES exit_plans(id),
+    tranche_index       INT NOT NULL,
+    shares_sold         FLOAT NOT NULL,
+    execution_price     FLOAT NOT NULL,
+    execution_date      DATE NOT NULL,
+    cash_movement_id    INT REFERENCES cash_movements(id),
+    notes               TEXT,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Alertes de seuil pour les plans de sortie (étend le système price_alerts existant)
+-- Pas de nouvelle table — ajouter type 'exit_plan' dans price_alerts avec exit_plan_id
+ALTER TABLE price_alerts
+    ADD COLUMN exit_plan_id INT REFERENCES exit_plans(id),
+    ADD COLUMN alert_type   TEXT DEFAULT 'custom';  -- 'custom'|'exit_plan_tranche'|'exit_plan_accelerated'
+```
 
 ---
 
