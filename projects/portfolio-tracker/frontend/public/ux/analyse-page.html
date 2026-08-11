@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Spec — /ticker/{id}/analyse</title>
+<style>
+  :root {
+    --bg:#0f1117;--bg2:#1a1d27;--bg3:#23273a;--border:#2e3348;--text:#e2e8f0;
+    --muted:#8892a4;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+    --blue:#3b82f6;--purple:#8b5cf6;--orange:#f97316;
+    --font-mono:'Fira Code','Cascadia Code',monospace;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;}
+  .page{max-width:1040px;margin:0 auto;padding:32px 24px;}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+  h2{font-size:15px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:32px 0 12px;}
+  h3{font-size:14px;font-weight:600;margin:20px 0 8px;}
+  p{color:var(--muted);margin-bottom:12px;}
+  .screen{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0 24px;}
+  .screen-header{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .label{font-size:12px;color:var(--muted);margin-left:8px;}
+  .mockup{font-family:var(--font-mono);font-size:12px;line-height:1.75;padding:20px;background:var(--bg2);overflow-x:auto;white-space:pre;color:var(--text);}
+  .dim{color:var(--muted);}
+  .g{color:var(--green);}
+  .y{color:var(--yellow);}
+  .r{color:var(--red);}
+  .b{color:var(--blue);}
+  .o{color:var(--orange);}
+  .pu{color:var(--purple);}
+  hr{border:none;border-top:1px solid var(--border);margin:32px 0;}
+  .note{font-size:12px;color:var(--muted);background:var(--bg3);border-left:3px solid var(--border);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;}
+  .questions{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:20px;margin:24px 0;}
+  .questions h3{color:var(--blue);margin-top:0;margin-bottom:12px;}
+  .questions ol{padding-left:20px;}
+  .questions li{margin-bottom:10px;}
+  .questions li strong{color:var(--text);}
+  .questions li span{color:var(--muted);}
+  .spec-header{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border);}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:4px;}
+  .breadcrumb{font-family:var(--font-mono);font-size:12px;color:var(--blue);margin-bottom:8px;}
+  .toc{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:32px;}
+  .toc h3{margin-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;}
+  .toc a{color:var(--blue);text-decoration:none;display:block;font-size:13px;padding:2px 0;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="spec-header">
+    <div class="breadcrumb">portfolio-tracker / roadmap-1786358823158 / UX Spec</div>
+    <h1>Page Analyse — <code>/ticker/{ticker_id}/analyse</code></h1>
+    <div class="subtitle">Spécification UX V2 · Généré le 11/08/2026 · À commenter et valider avant implémentation</div>
+  </div>
+
+  <div class="toc">
+    <h3>Sommaire</h3>
+    <a href="#overview">1. Vue d'ensemble</a>
+    <a href="#state0">2. État 0 — Avant toute analyse</a>
+    <a href="#state1">3. État 1 — Bull agent en cours</a>
+    <a href="#state2">4. État 2 — Bull terminé, Bear disponible</a>
+    <a href="#state3">5. État 3 — Synthèse et Risk Matrix</a>
+    <a href="#questions">6. Questions ouvertes</a>
+  </div>
+
+  <section id="overview">
+    <h2>1. Vue d'ensemble</h2>
+    <p>Nouvelle page remplaçant <code>/ticker/{id}/opportunity</code>. Layout 3 panneaux fixes (knowledge left · chat center · result right). C'est le cœur du flux d'analyse V2.</p>
+    <p><strong style="color:var(--text)">Principe d'isolation :</strong> les deux contextes bull/bear sont physiquement séparés — le bear-agent ne reçoit jamais le bull case comme input. L'UX doit rendre cette isolation évidente et rassurante.</p>
+    <div class="note">La barre de progression en bas de page montre l'avancement global : Bull → Bear → Synthèse. Chaque étape déverrouille la suivante.</div>
+  </section>
+
+  <hr>
+
+  <section id="state0">
+    <h2>2. État 0 — Avant toute analyse</h2>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Avant lancement</span></div>
+      <div class="mockup"><span class="dim">┌──────────────────┬────────────────────────────┬──────────────────────┐</span>
+<span class="dim">│</span> KNOWLEDGE BASE   <span class="dim">│</span> AGENT                       <span class="dim">│</span> RÉSULTAT             <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span>                             <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> NVDA · 34 entr.  <span class="dim">│</span> <span class="b">[🐂 Bull Case]</span> [🐻 Bear <span class="dim">🔒</span>]  <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> Confiance : 74%  <span class="dim">│</span>                             <span class="dim">│</span>  Lancez le bull case <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> Contextes isolés.            <span class="dim">│</span>  pour commencer.     <span class="dim">│</span>
+<span class="dim">│</span> Tier A  14 ████  <span class="dim">│</span> Le bear-agent démarrera      <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> Tier B   8 ████  <span class="dim">│</span> avec un contexte vierge.     <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> LLM ⚠    3 ░░░  <span class="dim">│</span>                             <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> <span class="g">[Lancer le bull case →]</span>      <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">└──────────────────┴────────────────────────────┴──────────────────────┘</span>
+<span class="dim">│</span>  🐂 Bull <span class="dim">○ En attente</span>   🐻 Bear <span class="dim">🔒 Verrouillé</span>   ⚖ Synthèse <span class="dim">🔒</span>         <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="state1">
+    <h2>3. État 1 — Bull agent en cours de génération</h2>
+    <p>L'onglet Bear est verrouillé. Les appels de tools (<code>web_search</code>, <code>fetch_url</code>) sont affichés dans le chat comme des lignes d'activité. Le résultat se construit en streaming dans le panneau droit.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Bull agent en cours</span></div>
+      <div class="mockup"><span class="dim">┌──────────────────┬────────────────────────────┬──────────────────────┐</span>
+<span class="dim">│</span> KNOWLEDGE BASE   <span class="dim">│</span> <span class="b">[🐂 Bull Case]</span> [🐻 Bear <span class="dim">🔒</span>]  <span class="dim">│</span> RÉSULTAT — live      <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│ ─────────────────────────── │</span>                      <span class="dim">│</span>
+<span class="dim">│</span> NVDA · 34 entr.  <span class="dim">│</span> 💬 "Pour construire le      <span class="dim">│</span> Forces structurelles <span class="dim">│</span>
+<span class="dim">│</span> Confiance : 74%  <span class="dim">│</span> meilleur bull case pour     <span class="dim">│ ─────────────────── │</span>
+<span class="dim">│</span>                  <span class="dim">│</span> NVDA, j'identifie les       <span class="dim">│</span> 1. Switching costs   <span class="dim">│</span>
+<span class="dim">│</span> Tier A  14 ████  <span class="dim">│</span> forces structurelles."      <span class="dim">│</span>    CUDA ecosystem    <span class="dim">│</span>
+<span class="dim">│</span> Tier B   8 ████  <span class="dim">│</span>                             <span class="dim">│</span> 2. ROIC 38% >8 ans   <span class="dim">│</span>
+<span class="dim">│</span> LLM ⚠    3 ░░░  <span class="dim">│</span> <span class="y">🔎 web_search</span>               <span class="dim">│</span> 3. …                 <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> <span class="dim">"NVDA GPU market share</span>       <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> Utilisées :      <span class="dim">│</span>  <span class="dim">2026 datacenter"</span>            <span class="dim">│</span> (streaming en cours) <span class="dim">│</span>
+<span class="dim">│ ─────────────── │</span> <span class="g">↳ 3 résultats → stockés ✓</span>   <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_15  <span class="g">A</span>   <span class="dim">│ ─────────────────────────── │</span>                      <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_42  <span class="b">B</span>   <span class="dim">│</span> [zone message désactivée     <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_67  <span class="g">A</span>   <span class="dim">│</span>  pendant la génération]      <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">└──────────────────┴────────────────────────────┴──────────────────────┘</span>
+<span class="dim">│</span>  🐂 Bull <span class="y">⏳ En cours</span>   🐻 Bear <span class="dim">🔒 Verrouillé</span>   ⚖ Synthèse <span class="dim">🔒</span>          <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="state2">
+    <h2>4. État 2 — Bull terminé, Bear disponible</h2>
+    <p>Le bull case est éditable avant de lancer le bear. Le message dans le chat explique explicitement que le bear-agent ne verra pas ce qui a été produit ici.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Bull terminé</span></div>
+      <div class="mockup"><span class="dim">┌──────────────────┬────────────────────────────┬──────────────────────┐</span>
+<span class="dim">│</span> KNOWLEDGE BASE   <span class="dim">│</span> <span class="g">[🐂 Bull ✅]</span> <span class="b">[🐻 Bear]</span>       <span class="dim">│</span> BULL CASE — éditable <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│ ─────────────────────────── │</span>                      <span class="dim">│</span>
+<span class="dim">│</span> 6 entrées utilis.<span class="dim">│</span> Bull case généré.            <span class="dim">│</span> Forces :             <span class="dim">│</span>
+<span class="dim">│</span> Confiance : 0.71 <span class="dim">│</span> Modifiez-le si besoin,       <span class="dim">│</span> 1. Switching costs   <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> puis lancez le bear.          <span class="dim">│</span> 2. ROIC 38% >8 ans   <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_15  <span class="g">A</span>   <span class="dim">│</span>                             <span class="dim">│</span> 3. Expansion IA      <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_42  <span class="b">B</span>   <span class="dim">│</span> <span class="b">[✎ Modifier le bull case]</span>    <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_67  <span class="g">A</span>   <span class="dim">│</span>                             <span class="dim">│</span> Prix cible : $145    <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_89  <span class="g">A</span>   <span class="dim">│ ─────────────────────────── │</span> Horizon : 36 mois    <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_91  <span class="b">B</span>   <span class="dim">│</span> Le bear-agent démarrera      <span class="dim">│</span> Conviction : 7/10    <span class="dim">│</span>
+<span class="dim">│</span> ▸ entry_3   <span class="g">A</span>   <span class="dim">│</span> avec un contexte vierge.      <span class="dim">│</span> Confiance : 0.71     <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> Il ne verra pas ce bull.     <span class="dim">│ ─────────────────── │</span>
+<span class="dim">│</span>                  <span class="dim">│</span>                             <span class="dim">│</span> <span class="g">[Valider ce bull]</span>    <span class="dim">│</span>
+<span class="dim">│</span>                  <span class="dim">│</span> <span class="g">[Lancer le bear case →]</span>      <span class="dim">│</span>                      <span class="dim">│</span>
+<span class="dim">└──────────────────┴────────────────────────────┴──────────────────────┘</span>
+<span class="dim">│</span>  🐂 Bull <span class="g">✅ Terminé</span>   🐻 Bear <span class="dim">○ En attente</span>   ⚖ Synthèse <span class="dim">🔒</span>            <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="state3">
+    <h2>5. État 3 — Synthèse et Risk Matrix</h2>
+    <p>Quand Bull et Bear sont tous les deux terminés, la synthèse est disponible. Le panneau droit est remplacé par le composant <code>RiskMatrixPanel</code>. L'utilisateur acquitte les risques un par un avant de pouvoir créer la thèse.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Synthèse — Risk Matrix</span></div>
+      <div class="mockup"><span class="dim">┌──────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span> RISK MATRIX — NVDA                         Confiance globale : <span class="g">72%</span>   <span class="dim">│</span>
+<span class="dim">│</span> Verdict : <span class="g">PROCEED_AVEC_CONDITIONS</span>          Sources : 18 A · 8 B · 3 ⚠  <span class="dim">│</span>
+<span class="dim">│ ──────────────────────────────────────────────────────────────────── │</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span> <span class="y">Risque 1</span> : Concurrence AMD/Intel sur GPU IA                          <span class="dim">│</span>
+<span class="dim">│</span> Prob. <span class="y">35%</span>  ·  Impact <span class="r">Fort</span>  ·  Réversible <span class="r">Non</span>                         <span class="dim">│</span>
+<span class="dim">│</span> → Si déclenché : sortir si perte PDM > 2pts sur 2 trimestres         <span class="dim">│</span>
+<span class="dim">│</span> <span class="dim">[ ] J'accepte ce risque</span>                                              <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span> <span class="y">Risque 2</span> : Valorisation très tendue (P/E 45x NTM)                    <span class="dim">│</span>
+<span class="dim">│</span> Prob. <span class="o">60%</span>  ·  Impact <span class="y">Moyen</span>  ·  Réversible <span class="g">Oui</span> (cyclique)             <span class="dim">│</span>
+<span class="dim">│</span> → Si déclenché : maintenir si thèse LT intacte, ne pas renforcer     <span class="dim">│</span>
+<span class="dim">│</span> <span class="dim">[ ] J'accepte ce risque</span>                                              <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│ ──────────────────────────────────────────────────────────────────── │</span>
+<span class="dim">│</span> PRÉ-MORTEM      <span class="dim">[ ] Je valide les scénarios d'échec</span>                  <span class="dim">│</span>
+<span class="dim">│ ──────────────────────────────────────────────────────────────────── │</span>
+<span class="dim">│</span> <span class="muted">[Valider la thèse]</span>  ← actif seulement quand tout est acquitté        <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────┘</span>
+<span class="dim">│</span>  🐂 Bull <span class="g">✅</span>   🐻 Bear <span class="g">✅</span>   ⚖ Synthèse <span class="g">✅</span>   <span class="dim">0/2 risques acquittés</span>          <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="questions" class="questions">
+    <h3>Questions ouvertes — à trancher avant implémentation</h3>
+    <ol>
+      <li><strong>3 colonnes sur mobile :</strong> empilées verticalement (chat en haut, résultat en bas) — ok ? <span>Ou faut-il une vue tabs sur mobile ?</span></li>
+      <li><strong>Isolation visuelle :</strong> le 🔒 sur l'onglet Bear est-il suffisant ? <span>Ou faut-il un bandeau explicite plus visible pendant la génération du bull ?</span></li>
+      <li><strong>Modification du bull case :</strong> champs éditables inline dans le panneau droit (proposé) ou modal/drawer séparé ?</li>
+      <li><strong>Tool calls dans le chat :</strong> visibles comme lignes d'activité (proposé) ou dans un toggle "Voir les recherches effectuées" pour ne pas alourdir le chat ?</li>
+      <li><strong>Barre de progression :</strong> en bas de page (proposé) ou en haut sous le header ticker ?</li>
+      <li><strong>Conversation libre :</strong> peut-on envoyer un message libre à l'agent pour guider l'analyse, ou la session est-elle entièrement automatique (agent → résultat → modification manuelle) ?</li>
+    </ol>
+  </section>
+
+</div>
+</body>
+</html>

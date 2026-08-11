@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Spec — /knowledge/{ticker}</title>
+<style>
+  :root {
+    --bg: #0f1117; --bg2: #1a1d27; --bg3: #23273a;
+    --border: #2e3348; --text: #e2e8f0; --muted: #8892a4;
+    --green: #22c55e; --yellow: #f59e0b; --red: #ef4444;
+    --blue: #3b82f6; --purple: #8b5cf6; --orange: #f97316;
+    --tier-a: #22c55e; --tier-b: #3b82f6; --tier-c: #f59e0b;
+    --font-mono: 'Fira Code', 'Cascadia Code', monospace;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; }
+  .page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 16px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 32px 0 12px; }
+  h3 { font-size: 14px; font-weight: 600; margin: 24px 0 8px; }
+  p { color: var(--muted); margin-bottom: 12px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+  .tag-green { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .tag-yellow { background: rgba(245,158,11,.15); color: var(--yellow); border: 1px solid rgba(245,158,11,.3); }
+  .tag-red { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .tag-blue { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.3); }
+  .tag-muted { background: rgba(136,146,164,.1); color: var(--muted); border: 1px solid var(--border); }
+  .screen { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 16px 0 24px; }
+  .screen-header { background: var(--bg3); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+  .screen-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .screen-label { font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .screen-body { padding: 0; }
+  .mockup { font-family: var(--font-mono); font-size: 12px; line-height: 1.7; padding: 20px; background: var(--bg2); overflow-x: auto; white-space: pre; color: var(--text); }
+  .mockup .dim { color: var(--muted); }
+  .mockup .green { color: var(--green); }
+  .mockup .yellow { color: var(--yellow); }
+  .mockup .red { color: var(--red); }
+  .mockup .blue { color: var(--blue); }
+  .mockup .orange { color: var(--orange); }
+  .mockup .warn { color: var(--yellow); }
+  .component { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 12px 0; }
+  .component-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+  .questions { background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2); border-radius: 8px; padding: 20px; margin: 24px 0; }
+  .questions h3 { color: var(--blue); margin-top: 0; margin-bottom: 12px; }
+  .questions ol { padding-left: 20px; }
+  .questions li { margin-bottom: 10px; color: var(--text); }
+  .questions li strong { color: var(--text); }
+  .questions li span { color: var(--muted); }
+  .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  @media (max-width: 600px) { .state-grid { grid-template-columns: 1fr; } }
+  .state-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-family: var(--font-mono); font-size: 12px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .note { font-size: 12px; color: var(--muted); background: var(--bg3); border-left: 3px solid var(--border); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .spec-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .spec-header .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .breadcrumb { font-family: var(--font-mono); font-size: 12px; color: var(--blue); margin-bottom: 8px; }
+  .toc { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 32px; }
+  .toc h3 { margin-top: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 10px; }
+  .toc a { color: var(--blue); text-decoration: none; display: block; font-size: 13px; padding: 2px 0; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="spec-header">
+    <div class="breadcrumb">portfolio-tracker / roadmap-1786358823158 / UX Spec</div>
+    <h1>Page Connaissance — <code>/knowledge/{ticker_id}</code></h1>
+    <div class="subtitle">Spécification UX V2 · Généré le 11/08/2026 · À commenter et valider avant implémentation</div>
+  </div>
+
+  <div class="toc">
+    <h3>Sommaire</h3>
+    <a href="#overview">1. Vue d'ensemble</a>
+    <a href="#header">2. Header — tous états du badge readiness</a>
+    <a href="#tab-index">3. Onglet Index (défaut)</a>
+    <a href="#tab-verifier">4. Onglet À vérifier</a>
+    <a href="#tab-documents">5. Onglet Documents</a>
+    <a href="#questions">6. Questions ouvertes</a>
+  </div>
+
+  <section id="overview">
+    <h2>1. Vue d'ensemble</h2>
+    <p>Nouvelle page accessible depuis la watchlist ("Explorer la connaissance") ou la fiche ticker. Sert de fenêtre complète sur tout ce que le système sait sur une entreprise : sources, fiabilité, questions ouvertes, documents ingérés.</p>
+    <p>Objectif : l'utilisateur doit pouvoir en 2 minutes comprendre sur quoi reposent les analyses et identifier ce qui manque.</p>
+    <div class="note">Correspond au pattern Karpathy (LLM Wiki) : cette page rend le wiki cumulatif navigable par l'humain. Les onglets correspondent aux fichiers <code>index.md</code>, <code>profile.md</code>, <code>financials.md</code>, <code>competitive.md</code> du repo.</div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="header">
+    <h2>2. Header — badge readiness</h2>
+    <p>Le header est identique quel que soit l'onglet actif. Le badge readiness est le signal central.</p>
+    <div class="screen">
+      <div class="screen-header">
+        <div class="screen-dot" style="background:#ef4444"></div>
+        <div class="screen-dot" style="background:#f59e0b"></div>
+        <div class="screen-dot" style="background:#22c55e"></div>
+        <span class="screen-label">État : Prêt pour l'analyse</span>
+      </div>
+      <div class="mockup"><span class="dim">┌───────────────────────────────────────────────────────────────────────┐
+│</span> ← Retour      <span class="green">NVDA — Nvidia Corporation</span>                  <span class="green">$118.42</span> ↑ +2.3%<span class="dim">│</span>
+<span class="dim">│</span> <span class="dim">─────────────────────────────────────────────────────────────────────</span>  <span class="dim">│</span>
+<span class="dim">│</span> <span class="green">🟢 Prêt pour l'analyse</span>  ·  34 entrées  ·  Confiance 74%  ·  Lint ✅   <span class="dim">│</span>
+<span class="dim">│</span>                                                                        <span class="dim">│</span>
+<span class="dim">│</span> <span class="blue">[Index]</span>  [Profil]  [Financiers]  [Concurrence]  [Documents]  <span class="yellow">[⚠ 3]</span>    <span class="dim">│</span>
+<span class="dim">└───────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+
+    <h3>Variantes du badge</h3>
+    <div class="state-grid">
+      <div class="state-badge"><span style="color:var(--green)">🟢 Prêt pour l'analyse</span>
+  · 34 entrées · Confiance 74%
+  MVDD complet · Lint OK</div>
+      <div class="state-badge"><span style="color:var(--yellow)">🟡 Pipeline en cours</span>
+  · 3/5 items MVDD
+  Estimation : 4 min</div>
+      <div class="state-badge"><span style="color:var(--red)">🔴 MVDD incomplet</span>
+  · 1 item bloquant manquant
+  Analyse bloquée</div>
+      <div class="state-badge"><span style="color:var(--muted)">⚫ Too hard</span>
+  Informations insuffisantes
+  avec sources publiques</div>
+    </div>
+    <div class="note">Le badge <code>[⚠ 3]</code> sur l'onglet "À vérifier" indique le nombre d'entrées en attente de validation humaine (llm_memory non reviewées + conflits détectés par le lint).</div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="tab-index">
+    <h2>3. Onglet Index</h2>
+    <p>Défaut à l'ouverture. Catalogue vivant par catégorie, mis à jour après chaque ingestion ou lint. Équivalent de l'<code>index.md</code> du pattern Karpathy.</p>
+    <div class="screen">
+      <div class="screen-header">
+        <div class="screen-dot" style="background:#ef4444"></div>
+        <div class="screen-dot" style="background:#f59e0b"></div>
+        <div class="screen-dot" style="background:#22c55e"></div>
+        <span class="screen-label">Onglet : Index</span>
+      </div>
+      <div class="mockup">  <span class="dim">Dernière MAJ : 10/08/2026  ·  Prochain lint : 17/08/2026</span>
+
+  <span class="green">📈 Financiers</span>   14 entrées   <span class="tag-green" style="font-size:11px;padding:1px 6px;display:inline;background:rgba(34,197,94,.15);color:#22c55e">Tier A</span>
+  <span class="dim">──────────────────────────────────────────────────────────────</span>
+  Revenue Q4-2025 : $44.1B (+122% YoY)      <span class="dim">EDGAR    2025-01-26</span>
+  FCF margin : 55.3%                         <span class="dim">EDGAR    2025-01-26</span>
+  ROIC estimé FY2025 : ~38%                  <span class="dim">EDGAR    2025-01-26</span>
+  Guidance Q1-2026 : $43.0B ± $2B           <span class="dim">Transcript 2025-02</span>
+                                    → <span class="blue">10 de plus</span>  <span class="blue">[Tout voir]</span>
+
+  <span class="blue">🏢 Business & Concurrence</span>   8 entrées   <span class="tag-blue" style="font-size:11px;padding:1px 6px;display:inline;background:rgba(59,130,246,.15);color:#3b82f6">Tier B</span>
+  <span class="dim">──────────────────────────────────────────────────────────────</span>
+  AMD MI300X vs H100 — positionnement        <span class="dim">web      2025-09-14</span>
+  CUDA moat — switching costs élevés         <span class="warn">llm ⚠    —</span>
+                                    → <span class="blue"> 6 de plus</span>  <span class="blue">[Tout voir]</span>
+
+  <span class="yellow">⚠ Risques</span>   6 entrées   <span class="tag-yellow" style="font-size:11px;padding:1px 6px;display:inline;background:rgba(245,158,11,.15);color:#f59e0b">Tier B/C</span>
+  <span class="dim">──────────────────────────────────────────────────────────────</span>
+  Restrictions export puces vers Chine       <span class="dim">10-K     2025-01-26</span>
+  Concurrence cloud native (AWS Trainium)    <span class="dim">web      2025-10-08</span>
+                                    → <span class="blue"> 4 de plus</span>  <span class="blue">[Tout voir]</span>
+
+  <span class="blue">❓ Questions ouvertes</span>   3 dont <span class="red">1 bloquante</span>
+  <span class="dim">──────────────────────────────────────────────────────────────</span>
+  <span class="red">🔴 AMD MI400 release timing 2026  [BLOQUANT]</span>  Recherche en cours…
+  <span class="yellow">🟡 Part CA Chine post-restrictions</span>             investissable
+  <span class="yellow">🟡 ROIC FY2025 précis (38% ou 41% ?)</span>           investissable</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="tab-verifier">
+    <h2>4. Onglet À vérifier</h2>
+    <p>Workflow de validation des entrées <code>llm_memory</code> et des conflits détectés par le lint. Chaque entrée a deux actions.</p>
+    <div class="screen">
+      <div class="screen-header">
+        <div class="screen-dot" style="background:#ef4444"></div>
+        <div class="screen-dot" style="background:#f59e0b"></div>
+        <div class="screen-dot" style="background:#22c55e"></div>
+        <span class="screen-label">Onglet : À vérifier — 3 entrées</span>
+      </div>
+      <div class="mockup">  <span class="dim">3 entrées nécessitent votre attention</span>
+
+  <span class="dim">┌──────────────────────────────────────────────────────────────┐</span>
+  <span class="dim">│</span> <span class="yellow">⚠ MÉMOIRE MODÈLE — non vérifiée</span>                              <span class="dim">│</span>
+  <span class="dim">│</span>                                                              <span class="dim">│</span>
+  <span class="dim">│</span> "NVDA détient ~80% du marché GPU IA datacenter"              <span class="dim">│</span>
+  <span class="dim">│</span>                                                              <span class="dim">│</span>
+  <span class="dim">│</span> Modèle : claude-sonnet-4-6  ·  Cutoff : août 2025           <span class="dim">│</span>
+  <span class="dim">│</span> Créée le 09/08/2026 — pendant l'analyse bull case            <span class="dim">│</span>
+  <span class="dim">│</span> Fiabilité : <span class="yellow">0.40</span>                                             <span class="dim">│</span>
+  <span class="dim">│</span>                                                              <span class="dim">│</span>
+  <span class="dim">│</span> <span class="green">[✅ Confirmer — toujours exact]</span>  <span class="red">[❌ Obsolète / incorrect]</span>   <span class="dim">│</span>
+  <span class="dim">└──────────────────────────────────────────────────────────────┘</span>
+
+  <span class="dim">┌──────────────────────────────────────────────────────────────┐</span>
+  <span class="dim">│</span> <span class="orange">⚡ CONFLIT DÉTECTÉ — lint du 10/08/2026</span>                      <span class="dim">│</span>
+  <span class="dim">│</span>                                                              <span class="dim">│</span>
+  <span class="dim">│</span> Deux sources contradictoires sur "Part CA Chine" :          <span class="dim">│</span>
+  <span class="dim">│</span>   • entry_42  "~20% du total"   web     mars 2025           <span class="dim">│</span>
+  <span class="dim">│</span>   • entry_91  "~30% du total"   presse  sept. 2025          <span class="dim">│</span>
+  <span class="dim">│</span> La plus récente est considérée prédominante.                 <span class="dim">│</span>
+  <span class="dim">│</span>                                                              <span class="dim">│</span>
+  <span class="dim">│</span> <span class="green">[✅ Accepter entry_91]</span>   <span class="blue">[✎ Saisir la valeur exacte]</span>        <span class="dim">│</span>
+  <span class="dim">└──────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="tab-documents">
+    <h2>5. Onglet Documents</h2>
+    <p>Liste des documents ingérés avec leur statut d'extraction. Permet l'upload manuel et l'ajout d'URL.</p>
+    <div class="screen">
+      <div class="screen-header">
+        <div class="screen-dot" style="background:#ef4444"></div>
+        <div class="screen-dot" style="background:#f59e0b"></div>
+        <div class="screen-dot" style="background:#22c55e"></div>
+        <span class="screen-label">Onglet : Documents</span>
+      </div>
+      <div class="mockup">  4 documents   <span class="blue">[+ Ajouter une URL]</span>   <span class="blue">[+ Upload PDF confidentiel]</span>
+
+  <span class="green">✅</span>  NVDA 10-K FY2025          <span class="dim">EDGAR        12 entrées   09/08/2026</span>
+  <span class="green">✅</span>  NVDA 10-Q Q3-2025         <span class="dim">EDGAR         8 entrées   09/08/2026</span>
+  <span class="green">✅</span>  Earnings call Q4-2025     <span class="dim">Transcript    6 entrées   09/08/2026</span>
+  <span class="yellow">⏳</span>  Earnings call Q3-2025     <span class="dim">Transcript    en cours…</span>
+
+  <span class="dim">Un document marqué 🔒 est confidentiel : visible ici
+  mais non transmis aux agents sauf autorisation explicite.</span></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section id="questions" class="questions">
+    <h3>Questions ouvertes — à trancher avant implémentation</h3>
+    <ol>
+      <li><strong>Navigation :</strong> onglets horizontaux (proposé) ou sidebar verticale à gauche ? <span>Sur mobile les onglets horizontaux peuvent être trop nombreux (6 tabs).</span></li>
+      <li><strong>Densité de l'Index :</strong> 4 items/catégorie + "voir plus" (proposé) ou tout afficher avec barre de recherche/filtre en haut ?</li>
+      <li><strong>Entrées <code>llm ⚠</code> :</strong> badge dans l'Index (proposé) + dans "À vérifier", ou seulement dans "À vérifier" pour ne pas surcharger l'Index ?</li>
+      <li><strong>Ajout d'une entrée manuelle :</strong> formulaire inline dans l'Index ou modal séparé ?</li>
+      <li><strong>Bouton "Analyser" :</strong> présent dans ce header (proposé) ou seulement depuis la watchlist ?</li>
+      <li><strong>Accès depuis la page Thèse :</strong> panneau latéral rétractable pointant vers /knowledge, ou lien simple vers la page ?</li>
+    </ol>
+  </section>
+
+</div>
+</body>
+</html>

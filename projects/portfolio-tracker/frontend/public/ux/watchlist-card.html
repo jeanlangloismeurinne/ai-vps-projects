@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Spec — Watchlist enrichie</title>
+<style>
+  :root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#23273a;--border:#2e3348;--text:#e2e8f0;
+  --muted:#8892a4;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6;--orange:#f97316;
+  --font-mono:'Fira Code','Cascadia Code',monospace;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;}
+  .page{max-width:960px;margin:0 auto;padding:32px 24px;}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+  h2{font-size:15px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:32px 0 12px;}
+  p{color:var(--muted);margin-bottom:12px;}
+  .screen{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:16px 0 24px;}
+  .screen-header{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .label{font-size:12px;color:var(--muted);margin-left:8px;}
+  .mockup{font-family:var(--font-mono);font-size:12px;line-height:1.8;padding:20px;overflow-x:auto;white-space:pre;color:var(--text);}
+  .dim{color:var(--muted);}
+  .g{color:var(--green);}
+  .y{color:var(--yellow);}
+  .r{color:var(--red);}
+  .b{color:var(--blue);}
+  .o{color:var(--orange);}
+  hr{border:none;border-top:1px solid var(--border);margin:32px 0;}
+  .note{font-size:12px;color:var(--muted);background:var(--bg3);border-left:3px solid var(--border);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;}
+  .questions{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:20px;margin:24px 0;}
+  .questions h3{color:var(--blue);margin-top:0;margin-bottom:12px;}
+  .questions ol{padding-left:20px;}
+  .questions li{margin-bottom:10px;}
+  .questions li strong{color:var(--text);}
+  .questions li span{color:var(--muted);}
+  .spec-header{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border);}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:4px;}
+  .breadcrumb{font-family:var(--font-mono);font-size:12px;color:var(--blue);margin-bottom:8px;}
+  .toc{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:32px;}
+  .toc h3{margin-top:0;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;}
+  .toc a{color:var(--blue);text-decoration:none;display:block;font-size:13px;padding:2px 0;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;}
+  @media(max-width:640px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="spec-header">
+    <div class="breadcrumb">portfolio-tracker / roadmap-1786358823158 / UX Spec</div>
+    <h1>Watchlist — Cartes enrichies + Thermomètre</h1>
+    <div class="subtitle">Spécification UX V2 · Généré le 11/08/2026 · À commenter et valider avant implémentation</div>
+  </div>
+
+  <div class="toc">
+    <h3>Sommaire</h3>
+    <a href="#overview">1. Vue d'ensemble</a>
+    <a href="#watchlist-ready">2. Watchlist — État 🟢 Prêt</a>
+    <a href="#watchlist-pending">3. Watchlist — État 🟡 Pipeline en cours</a>
+    <a href="#watchlist-blocked">4. Watchlist — État 🔴 Bloqué</a>
+    <a href="#portfolio-thermo">5. Position active — Thermomètre de valorisation</a>
+    <a href="#portfolio-exit">6. Position active — Plan de sortie en cours</a>
+    <a href="#questions">7. Questions ouvertes</a>
+  </div>
+
+  <section id="overview">
+    <h2>1. Vue d'ensemble</h2>
+    <p>Évolution des cartes existantes sur <code>/watchlist-v2</code>. L'information s'ajoute en couches successives selon le stade de l'entreprise, sans surcharger les cas simples.</p>
+    <p><strong style="color:var(--text)">Principe :</strong> une carte watchlist sans position ouverte n'affiche que le readiness badge. Une carte avec position ouverte affiche le thermomètre. Une carte avec plan de sortie actif affiche les tranches.</p>
+  </section>
+
+  <hr>
+
+  <section id="watchlist-ready">
+    <h2>2. Watchlist — État 🟢 Prêt pour l'analyse</h2>
+    <p>MVDD complet, lint OK. Les deux CTA sont disponibles.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">État : Prêt</span></div>
+      <div class="mockup"><span class="dim">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="g">NVDA</span>   Nvidia Corporation                        $118.42  <span class="g">↑ +2.3%</span>  <span class="dim">│</span>
+<span class="dim">│  ─────────────────────────────────────────────────────────────────  │</span>
+<span class="dim">│</span>  <span class="g">🟢 Prêt pour l'analyse</span>  ·  34 entrées  ·  Confiance 74%           <span class="dim">│</span>
+<span class="dim">│</span>  <span class="g">████████████████████</span>  100%   MVDD complet · Lint OK                <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="g">[Analyser →]</span>          <span class="b">[Explorer la connaissance]</span>                   <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="watchlist-pending">
+    <h2>3. Watchlist — État 🟡 Pipeline en cours</h2>
+    <p>MVDD incomplet, ingestion active en background. Le bouton "Analyser" est absent. Le temps estimé est affiché si calculable.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">État : Pipeline actif</span></div>
+      <div class="mockup"><span class="dim">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="y">CAP</span>    Capgemini                                  €84.20  <span class="r">↓ -0.8%</span>  <span class="dim">│</span>
+<span class="dim">│  ─────────────────────────────────────────────────────────────────  │</span>
+<span class="dim">│</span>  <span class="y">🟡 MVDD en cours</span>  ·  3/5 items couverts  ·  Pipeline actif        <span class="dim">│</span>
+<span class="dim">│</span>  <span class="y">████████████</span><span class="dim">░░░░░░░░</span>  60%                                          <span class="dim">│</span>
+<span class="dim">│</span>  ⏳ En cours : fetch rapport annuel 2025 (IR Capgemini)…             <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="b">[Explorer la connaissance]</span>    <span class="dim">(Analyse disponible dans ~4 min)</span>     <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+    <div class="note">Le texte de progression ("En cours : fetch rapport annuel…") vient du <code>log.md</code> de l'entreprise — dernière ligne du pipeline actif.</div>
+  </section>
+
+  <hr>
+
+  <section id="watchlist-blocked">
+    <h2>4. Watchlist — État 🔴 Bloqué</h2>
+    <p>Un item MVDD bloquant n'a pas pu être résolu automatiquement (scraper EU en échec, EV/FCF introuvable, etc.). L'utilisateur peut compléter manuellement.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">État : Bloqué</span></div>
+      <div class="mockup"><span class="dim">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="r">LVMH</span>   LVMH Moët Hennessy                        €580.00  <span class="dim">→ 0.0%</span>  <span class="dim">│</span>
+<span class="dim">│  ─────────────────────────────────────────────────────────────────  │</span>
+<span class="dim">│</span>  <span class="r">🔴 MVDD incomplet</span>  ·  1 item bloquant  ·  Scraper IR en échec     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="r">██████████████</span><span class="dim">░░░░░░</span>  3/5 items couverts                           <span class="dim">│</span>
+<span class="dim">│</span>  ⚠ Manque : valorisation actuelle (EV/FCF introuvable)             <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="r">[Compléter manuellement →]</span>    <span class="b">[Explorer la connaissance]</span>           <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+    <div class="note">"Compléter manuellement" ouvre le formulaire d'ajout manuel sur <code>/knowledge/LVMH</code> avec le champ manquant pré-sélectionné.</div>
+  </section>
+
+  <hr>
+
+  <section id="portfolio-thermo">
+    <h2>5. Position active — Thermomètre de valorisation</h2>
+    <p>Sur les cartes en statut "portfolio" (position ouverte). La barre de prix montre la position du cours actuel par rapport à la fourchette de valeur intrinsèque.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Position active — Zone étiré</span></div>
+      <div class="mockup"><span class="dim">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="g">NVDA</span>   Nvidia Corporation                          Portfolio active <span class="dim">│</span>
+<span class="dim">│</span>  45 actions  ·  Entrée : $89.00  ·  Actuel : $118.42  ·  <span class="g">+33% +$13k</span> <span class="dim">│</span>
+<span class="dim">│  ─────────────────────────────────────────────────────────────────  │</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="g">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span><span class="o">░░░░░░░░░░░</span><span class="dim">░░░░░░░░</span>  <span class="o">🟠 Étiré</span>             <span class="dim">│</span>
+<span class="dim">│</span>   $95 <span class="dim">IV basse</span>       $118 <span class="o">actuel</span>    $130 <span class="dim">IV haute</span>   $150 <span class="r">⚡ Alerte</span> <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  📅 Earnings Q3 — <span class="b">dans 23 jours</span>                                     <span class="dim">│</span>
+<span class="dim">│</span>  Hypothèses : H1 <span class="g">✅</span>  H2 <span class="g">✅</span>  H3 <span class="y">⚠ à surveiller</span>  H4 <span class="g">✅</span>  H5 <span class="g">✅</span>        <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="b">[→ Suivi de thèse]</span>                <span class="b">[→ Page de décision]</span>             <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+    <p>Les 4 zones du thermomètre :</p>
+    <div class="grid">
+      <div class="screen"><div class="mockup"><span class="g">🟢 Attractif</span>
+Prix &lt; IV basse
+→ suggère renforcement</div></div>
+      <div class="screen"><div class="mockup"><span class="y">🟡 Juste prix</span>
+IV basse ≤ Prix ≤ IV haute
+→ maintenir</div></div>
+      <div class="screen"><div class="mockup"><span class="o">🟠 Étiré</span>
+IV haute &lt; Prix ≤ seuil alerte
+→ vigilance, pas de renforcement</div></div>
+      <div class="screen"><div class="mockup"><span class="r">🔴 Surévalué</span>
+Prix &gt; seuil alerte (IV haute × 1.15)
+→ sortie progressive déclenchée</div></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="portfolio-exit">
+    <h2>6. Position active — Plan de sortie en cours</h2>
+    <p>Quand le cours a franchi le seuil d'alerte et qu'un plan de sortie a été créé. La carte affiche l'avancement des tranches.</p>
+    <div class="screen">
+      <div class="screen-header"><div class="dot" style="background:#ef4444"></div><div class="dot" style="background:#f59e0b"></div><div class="dot" style="background:#22c55e"></div><span class="label">Sortie progressive — Tranche 1/4 exécutée</span></div>
+      <div class="mockup"><span class="dim">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="r">NVDA</span>   Nvidia Corporation           <span class="r">[Sortie progressive en cours]</span>   <span class="dim">│</span>
+<span class="dim">│</span>  34 actions restantes (3.4%)   ·   Tranche 1/4 exécutée à $151.30  <span class="dim">│</span>
+<span class="dim">│  ─────────────────────────────────────────────────────────────────  │</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="r">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>  <span class="r">🔴 Surévalué</span>              <span class="dim">│</span>
+<span class="dim">│</span>   $95 IV   $130 IV haute  <span class="g">$151 ✅T1</span>  $163 <span class="r">actuel</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="g">✅</span>  Tranche 1 vendue à $151.30   <span class="g">(+$682)</span>                           <span class="dim">│</span>
+<span class="dim">│</span>  <span class="y">⏳</span>  Tranche 2 : vendre si Prix ≥ $175   <span class="dim">(actuel $163 · +7.4%)</span>    <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">○   Tranche 3 : Prix ≥ $200</span>                                         <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">○   Tranche 4 : Prix ≥ $220  ou  H3 invalidée</span>                       <span class="dim">│</span>
+<span class="dim">│</span>                                                                     <span class="dim">│</span>
+<span class="dim">│</span>  <span class="b">[→ Gérer le plan de sortie]</span>                                         <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </section>
+
+  <hr>
+
+  <section id="questions" class="questions">
+    <h3>Questions ouvertes — à trancher avant implémentation</h3>
+    <ol>
+      <li><strong>Thermomètre toujours visible</strong> (proposé) ou dépliable via un chevron pour réduire la hauteur de carte ?</li>
+      <li><strong>Tri de la watchlist :</strong> par readiness (🟢 en haut, proposé) ou par ordre d'ajout (comportement actuel) ? <span>Filtre manuel possible ?</span></li>
+      <li><strong>Notification MVDD → 🟢 :</strong> Slack + badge vert mis à jour silencieusement (proposé), ou aussi un toast dans l'UI si la page est ouverte ?</li>
+      <li><strong>Hypothèses sur la carte :</strong> liste courte <code>H1 ✅ H2 ✅ H3 ⚠</code> (proposé) ou seulement un résumé compact <code>4/5 hypothèses ok</code> + lien ?</li>
+      <li><strong>Carte trop chargée ?</strong> La position active avec thermomètre + tranches est dense. Faut-il un mode compact et un mode détaillé au clic ?</li>
+      <li><strong>Alerte seuil franchi :</strong> notification Slack (déjà prévu) + bordure rouge clignotante sur la carte (proposé) ou seulement le badge 🔴 ?</li>
+    </ol>
+  </section>
+
+</div>
+</body>
+</html>

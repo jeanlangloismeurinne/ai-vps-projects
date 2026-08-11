@@ -162,10 +162,45 @@ Les agents Dust existants (opportunity-agent, thesis-agent V1, monitoring-agent 
 
 ## 3. Architecture de la base de connaissance (Knowledge Platform)
 
-### 3.1 Principe général
+### 3.1 Principe général — le LLM Wiki Pattern (Karpathy)
 
-La knowledge base est la **mémoire externe commune à tous les agents**. Elle est :
-- Stockée en base de données (PostgreSQL + pgvector)
+La knowledge base suit le **LLM Wiki Pattern** décrit par Andrej Karpathy : un wiki persistant et cumulatif plutôt qu'un simple RAG ré-exécuté à chaque requête. L'insight central : "the wiki is a persistent, compounding artifact" — chaque source ingérée et chaque analyse produite enrichit le corpus et le rend plus dense pour les analyses suivantes.
+
+Notre design aligne trois couches :
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  SOURCES BRUTES  (immuables)                             │
+│  knowledge_documents — PDFs, HTML, transcripts, uploads  │
+└──────────────────────┬───────────────────────────────────┘
+                       │ ingestion-agent extrait
+┌──────────────────────▼───────────────────────────────────┐
+│  LE WIKI  (artefact cumulatif)                           │
+│  knowledge_entries (DB + pgvector) + fichiers Markdown   │
+│  Pages par entreprise : profile, financials, competitive  │
+│  index.md par entreprise (catalogue des entrées)         │
+│  log.md (historique append-only des ingestions/queries)  │
+└──────────────────────┬───────────────────────────────────┘
+                       │ curator lit + enrichit
+┌──────────────────────▼───────────────────────────────────┐
+│  SCHEMA / CONFIG                                         │
+│  sector_schemas/{sector}.json — ce qui compte par secteur│
+│  (équivalent du CLAUDE.md de Karpathy pour nos agents)   │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Trois opérations fondamentales** (vocabulaire Karpathy, mappées sur notre système) :
+
+| Opération | Description | Notre implémentation |
+|---|---|---|
+| **Ingest** | Traiter une source → extraire → mettre à jour les pages et cross-références | `ingestion-agent` + `store_knowledge` tool |
+| **Query** | Rechercher → synthétiser avec citations → optionnellement archiver les findings | `query_knowledge` tool + `store_knowledge` si finding valuable |
+| **Lint** | Health-check : contradictions, entrées périmées, pages orphelines, références manquantes | Mode Lint du knowledge curator (section 14) |
+
+**Ce que le pattern ajoute par rapport au RAG classique** : le wiki s'enrichit de manière cumulative. Chaque analyse produite par un agent peut enrichir le corpus via `store_knowledge` (`source_type='agent_synthesis'`). La base ne sert pas seulement à répondre aux requêtes — elle devient plus dense et plus fiable à chaque cycle.
+
+La knowledge base est :
+- Stockée en base de données (PostgreSQL + pgvector) pour la requêtabilité
 - Accessible via le tool `query_knowledge` (RAG sémantique)
 - Entièrement auditable via le frontend (`/knowledge`)
 - Indépendante des providers d'agents
@@ -178,6 +213,8 @@ Toute information qui influence une analyse doit exister dans cette base. C'est 
 /knowledge/                              ← dans le repo Git, synchronisé avec la DB
   companies/
     {ticker_id}/
+      index.md                           ← catalogue des entrées par catégorie (auto-maintenu)
+      log.md                             ← historique append-only des ingestions et analyses
       profile.md                         ← profil entreprise (auto-généré + éditable)
       financials.md                      ← historique financier 10 ans (auto-mis à jour)
       competitive.md                     ← analyse concurrentielle (agents + notes user)
@@ -185,9 +222,40 @@ Toute information qui influence une analyse doit exister dans cette base. C'est 
       documents/
         {date}-{type}-{slug}.txt         ← texte extrait des documents sources
   sectors/
-    {sector_slug}.md                     ← connaissance sectorielle (existant: IT_Services.json)
+    {sector_slug}.json                   ← config sectorielle (existant: IT_Services.json)
+                                         ← équivalent du "schema file" Karpathy — définit
+                                            ce qui compte pour ce secteur (KPIs, peers, queries)
   macro/
     market_temperature.md               ← contexte macro (FRED, Buffett indicator, CAPE)
+```
+
+**index.md** : catalogue organisé par catégorie, mis à jour à chaque ingestion. Exemple :
+```markdown
+# NVDA — Index de connaissance — mis à jour le 2026-08-10
+
+## Financiers (14 entrées, Tier A)
+- [EDGAR Q4-2025] Revenue $44.1B (+122% YoY) — fact_financial
+- [EDGAR Q4-2025] FCF margin 55.3% — fact_financial
+- ...
+
+## Concurrence (8 entrées, Tier B)
+- [web_search] AMD MI300X positionnement vs. H100 — fact_qualitative
+- ...
+
+## Risques (6 entrées, Tier B/C)
+- [10-K 2025] Restrictions export — risk
+- ...
+
+## Questions ouvertes (3)
+- 🔴 [bloquant] AMD MI400 release timing 2026 — open
+- 🟡 [investissable] Part revenus Chine post-restrictions — open
+```
+
+**log.md** : historique append-only. Chaque ingestion et chaque analyse y ajoute une ligne :
+```markdown
+2026-08-09 14:32 | INGEST | EDGAR 10-K 2025 | 12 entrées créées | ingestion-agent
+2026-08-09 15:01 | QUERY  | bull-agent web_search "NVDA H100 competitive moat" | 3 entrées créées
+2026-08-10 09:15 | LINT   | curator | 2 contradictions détectées, 1 entrée obsolète | voir rapport
 ```
 
 Les fichiers Markdown sont la version lisible par l'humain. La DB est la version requêtable par les agents. Les deux sont synchronisés par le pipeline d'ingestion.
@@ -605,7 +673,7 @@ CREATE TABLE knowledge_entries (
     reviewed_by_user    BOOL DEFAULT FALSE,
     last_reviewed_at    TIMESTAMPTZ,
     model_cutoff        TEXT,           -- ex: '2025-08' pour les llm_memory
-    embedding           vector(1536),   -- pgvector — dimension selon modèle d'embedding
+    embedding           vector(768),    -- pgvector — nomic-embed-text via Ollama (dimension fixe 768)
     is_outdated         BOOL DEFAULT FALSE,  -- marqué obsolète par mise à jour plus récente
     created_at          TIMESTAMPTZ DEFAULT NOW(),
     updated_at          TIMESTAMPTZ DEFAULT NOW()
@@ -1290,6 +1358,282 @@ ALTER TABLE price_alerts
     ADD COLUMN exit_plan_id INT REFERENCES exit_plans(id),
     ADD COLUMN alert_type   TEXT DEFAULT 'custom';  -- 'custom'|'exit_plan_tranche'|'exit_plan_accelerated'
 ```
+
+---
+
+---
+
+## 14. Agent de curation de la knowledge base (Knowledge Curator)
+
+### 14.1 Problème qu'il résout
+
+Le pipeline d'ingestion (section 4) accumule de la connaissance. Mais accumuler n'est pas suffisant : il faut pouvoir répondre à la question "**est-ce que j'en sais assez pour analyser cette entreprise ?**". Ce n'est pas une question de volume d'entrées, mais de couverture des dimensions critiques et d'identification des incertitudes qui pourraient invalider une thèse.
+
+### 14.2 La distinction fondamentale : deux seuils, pas un
+
+Un fonds d'investissement sérieux n'a pas un seuil "assez d'information" — il en a deux, de natures radicalement différentes :
+
+**Seuil 1 — "Vaut-il la peine qu'on passe 2 heures dessus ?"** (15-20 min)
+
+Filtre express sur 4 questions :
+- Le business model est-il compréhensible en 5 minutes ?
+- Y a-t-il un historique de profitabilité visible ?
+- La valorisation est-elle dans une zone potentiellement intéressante ?
+- Existe-t-il une raison concrète pour que le marché soit en train de se tromper ?
+
+Si une réponse est "non" ou "impossible à savoir", le fonds s'arrête là. Il ne cherche pas plus d'information pour résoudre l'incertitude — **l'incertitude elle-même est le signal d'arrêt**. Ce seuil correspond au MVDD ci-dessous.
+
+**Seuil 2 — "A-t-on assez pour décider ?"** (après 2-4h de due diligence)
+
+Ce n'est pas "avons-nous couvert tous les angles ?" mais "avons-nous résolu les 2-3 questions dont la réponse pourrait inverser la thèse ?". Ce seuil correspond au Readiness Assessment.
+
+### 14.3 Incertitude investissable vs. incertitude bloquante
+
+C'est la distinction centrale que le knowledge curator doit apprendre à faire.
+
+**Incertitude investissable** : tu ne sais pas exactement, mais la fourchette de scénarios possibles ne change pas ta décision. Exemple — tu ne sais pas si le ROIC de NVDA sera 38% ou 45% dans 3 ans, mais dans les deux cas tu investis. Le niveau précis est inconnu, la direction est claire.
+
+**Incertitude bloquante** : un fait inconnu pourrait inverser complètement ta conclusion. Exemple — tu ne sais pas si AMD va sortir un GPU qui rivalise directement avec le H100 dans 12 mois. Si oui, la thèse moat s'effondre. Si non, elle tient.
+
+Un fonds expérimenté identifie les 2-3 incertitudes bloquantes **avant** de construire une thèse, et les résout en priorité. Il ne cherche pas l'exhaustivité — il cherche à éliminer ce qui pourrait tuer l'investissement.
+
+### 14.4 Les rendements marginaux décroissants de la recherche
+
+```
+Heure 1 : business model, ROIC, 2 risques principaux → valeur énorme
+Heure 2 : earnings calls, contexte concurrentiel    → encore très haute
+Heure 3 : comparatifs sectoriels, analyse management → modérée
+Heure 10 : détails comptables additionnels           → marginale
+Heure 50 : n'aurait pas changé la décision
+```
+
+Le point d'arrêt optimal est quand **une heure supplémentaire de recherche est statistiquement peu susceptible de changer la décision d'investissement**. En pratique : 6-8h sur une entreprise dans son domaine de compétence, bien plus sur un secteur inconnu.
+
+### 14.5 Minimum Viable Due Diligence (MVDD)
+
+Checklist minimale sans laquelle l'analyse n'a pas de fondement. Si une case BLOQUANT manque, le curator lance une recherche ciblée avant tout.
+
+```
+BLOQUANT — analyse impossible sans ces éléments :
+  [ ] Business model compris (comment l'entreprise gagne de l'argent, sur quels segments)
+  [ ] 3 ans minimum de financials (revenue, FCF ou résultat net, marges) — tendance visible
+  [ ] Au moins 1 concurrent identifié et profilé sommairement
+  [ ] Risques principaux identifiés (10-K section Risk Factors, AMF, ou web_search)
+  [ ] Valorisation actuelle (au moins P/E NTM ou EV/FCF ou comparatif sectoriel)
+
+IMPORTANT — yellow flag si manquant, non bloquant :
+  [ ] 1 transcript earnings call (entendre le management formuler la stratégie)
+  [ ] 1 vue analyste externe indépendante (Morningstar, Simply Wall St, Seeking Alpha)
+  [ ] Positionnement concurrentiel détaillé (pas juste nommer le concurrent)
+
+NICE-TO-HAVE — enrichit mais ne débloque pas l'analyse :
+  [ ] 4+ transcripts earnings calls
+  [ ] Profils complets de tous les concurrents
+  [ ] 10 ans de données financières
+  [ ] Analyse des rapports de compétiteurs
+```
+
+La checklist MVDD est évaluée automatiquement en Mode MVDD du curator. Elle est affichée sur la fiche ticker pour signaler quand l'analyse peut commencer.
+
+### 14.6 Les trois modes du knowledge curator
+
+Le curator est un agent (ou un pipeline structuré) qui fonctionne dans deux modes distincts.
+
+#### Mode MVDD — déclenchement automatique à l'onboarding
+
+Vérifie les items BLOQUANT de la checklist. Pour chaque item manquant, lance une recherche ciblée (via `web_search` et `fetch_url`). S'arrête quand la checklist est verte. C'est automatique, déclenché après le pipeline d'onboarding de la section 4.3.
+
+Résultat visible sur la watchlist :
+```
+⏳ MVDD en cours — 3/5 items couverts
+✅ MVDD complet — prêt pour l'analyse
+⚠ MVDD partiel — 1 item bloquant manquant [voir détail]
+```
+
+#### Mode Lint — déclenchement périodique (hebdomadaire) ou après ingestion majeure
+
+Inspiré du pattern Karpathy. Le curator fait un health-check du wiki pour détecter :
+
+**Contradictions** : deux entrées affirment des faits incompatibles.
+```
+Exemple : entry_42 dit "NVDA CA Chine = 20% du total" (web_search 2025-03)
+          entry_91 dit "NVDA CA Chine = 30% du total" (financial_press 2025-09)
+→ flag has_conflict sur les deux, créer une question ouverte "part exacte Chine ?",
+  lancer une web_search pour résoudre, noter la version la plus récente comme prédominante
+```
+
+**Entrées périmées** :
+- Données financières > 18 mois sans mise à jour disponible → flag `is_outdated`
+- Entrées `llm_memory` non reviewées depuis > 90 jours → générer alerte utilisateur
+- Données de prix/valorisation > 30 jours → invalider et relancer via yfinance
+
+**Pages orphelines** :
+- Entrée qui mentionne un concurrent (`"AMD"`, `"Intel"`) mais ce ticker n'a pas de page dans `/knowledge/` → créer une page minimale ou flaguer comme candidat à l'onboarding
+- Entrée `question_status='open'` sans recherche associée depuis > 7 jours → relancer
+
+**Cross-références manquantes** :
+- Entrée de type `risk` non référencée dans la risk_matrix d'une thèse active → alerte
+- Entrée `fact_qualitative` sur le management non liée à `management.md` → mettre à jour le fichier
+
+Le lint produit un rapport structuré, ajouté à `log.md`, et génère des notifications Slack si des contradictions bloquantes sont détectées sur un ticker en portefeuille actif.
+
+```
+LINT REPORT — NVDA — 2026-08-10
+  Contradictions détectées : 2
+    🔴 Part CA Chine : entry_42 (20%) vs entry_91 (30%) — résolution en cours
+    🟡 ROIC 2024 : entry_15 (38%) vs entry_67 (41%) — source entry_67 plus récente → prédominante
+  Entrées périmées : 3
+    - entry_22 (llm_memory, non reviewée depuis 95j) → alerte utilisateur
+    - entry_8 (financials Q2-2024, >18 mois) → marquée is_outdated
+  Orphelines : 1
+    - AMD mentionné dans 8 entrées, pas de page knowledge → candidat onboarding
+  Cross-références ajoutées : 4
+  index.md mis à jour ✅ | log.md mis à jour ✅
+```
+
+#### Mode Readiness Assessment — déclenchement manuel avant analyse
+
+Déclenché quand l'utilisateur clique "Analyser" sur la fiche ticker.
+
+Le curator lit l'ensemble des knowledge entries existantes et produit un **document court** (~10 lignes) :
+
+```
+{TICKER} — ÉTAT DE LA KNOWLEDGE BASE — {date}
+
+MVDD : ✅ complet (5/5 items BLOQUANT couverts)
+Entrées totales : 34 (14 Tier-A, 12 Tier-B, 5 Tier-C, 3 LLM ⚠)
+Confiance base actuelle : 74%
+
+INCERTITUDES BLOQUANTES IDENTIFIÉES :
+  🔴 [Titre] : [description du risque informationnel]
+     Impact si non résolu : [explication]
+     Recherche lancée : oui/non | ETA : X minutes
+
+  🟡 [Titre] : [description]
+     Verdict : investissable — la fourchette de résultats possibles ne change pas la thèse
+     Documenter comme incertitude acceptée dans le bull/bear
+
+VERDICT :
+  Ready pour bull/bear APRÈS résolution de {n} incertitude(s) bloquante(s).
+  OU
+  Ready immédiatement — incertitudes résiduelles de type investissable.
+```
+
+**Ce que le curator ne fait pas** : il ne cherche pas à compléter exhaustivement la base de connaissance avant de déclarer "prêt". Il identifie les 2-3 questions dont la réponse pourrait inverser la conclusion — et les résout. Rien de plus.
+
+### 14.7 Logique de décision du curator
+
+```python
+# Pseudo-code de la logique de readiness assessment
+
+def assess_readiness(ticker_id: str) -> ReadinessReport:
+    entries = query_knowledge(ticker_id, min_reliability=0.0, limit=200)
+    
+    # 1. Évaluer MVDD
+    mvdd = evaluate_mvdd_checklist(entries)
+    if not mvdd.blocking_complete:
+        return ReadinessReport(status="not_ready", missing=mvdd.blocking_gaps)
+    
+    # 2. Identifier les incertitudes bloquantes
+    # L'agent LLM analyse le corpus et identifie les questions
+    # dont la réponse pourrait inverser la thèse dans n'importe quel sens
+    blocking_uncertainties = identify_blocking_uncertainties(entries)
+    investable_uncertainties = identify_investable_uncertainties(entries)
+    
+    # 3. Pour chaque incertitude bloquante : peut-on la résoudre ?
+    for uncertainty in blocking_uncertainties:
+        result = web_search(uncertainty.research_query)
+        if result.resolves_uncertainty:
+            store_knowledge(result)
+            uncertainty.status = "resolved"
+        else:
+            uncertainty.status = "unresolvable_public_info"
+            # Incertitude bloquante non résolvable = signal d'arrêt (trop complexe)
+    
+    remaining_blockers = [u for u in blocking_uncertainties if u.status != "resolved"]
+    
+    if remaining_blockers:
+        if all(u.status == "unresolvable_public_info" for u in remaining_blockers):
+            return ReadinessReport(status="too_hard", reason="Incertitudes non résolvables avec info publique")
+        return ReadinessReport(status="researching", blockers=remaining_blockers)
+    
+    return ReadinessReport(
+        status="ready",
+        investable_uncertainties=investable_uncertainties,
+        confidence=compute_confidence(entries)
+    )
+```
+
+### 14.8 Signal "too hard" — pile des investissements impossibles
+
+Si le curator conclut que les incertitudes bloquantes ne peuvent pas être résolues avec l'information publique disponible, il retourne un statut `too_hard`. Ce n'est pas un échec du système — c'est une décision d'investissement valide.
+
+Exemples de cas "too hard" :
+- Business model opaque (holding non consolidée, filiales sans reporting séparé)
+- Incertitude réglementaire binaire imminente (décision FDA, procès anti-trust)
+- Comptabilité agressive non vérifiable sans accès aux données internes
+- Startup privée sans données financières accessibles
+
+Ces entreprises sont archivées avec le tag `status='too_complex'` dans `tickers` et un lien vers le rapport du curator.
+
+### 14.9 Schéma DB — extension pour le curator
+
+```sql
+-- Extension de la table knowledge_entries pour les questions ouvertes
+-- (les questions sont des nodes de première classe, pas juste des entrées génériques)
+
+ALTER TABLE knowledge_entries
+    ADD COLUMN question_status    TEXT,     -- null | 'open' | 'resolved' | 'unresolvable'
+    ADD COLUMN question_priority  TEXT,     -- null | 'blocking' | 'important' | 'nice_to_have'
+    ADD COLUMN resolves_entry_id  INT REFERENCES knowledge_entries(id);
+    -- si cette entrée répond à une question, pointe vers la question
+
+-- Table pour les rapports du curator (readiness + lint)
+CREATE TABLE knowledge_curator_reports (
+    id              SERIAL PRIMARY KEY,
+    ticker_id       TEXT REFERENCES tickers(id),
+    report_type     TEXT NOT NULL,          -- 'mvdd' | 'readiness' | 'lint'
+    -- Champs readiness
+    mvdd_status     TEXT,                   -- 'complete' | 'partial' | 'incomplete'
+    mvdd_details    JSONB DEFAULT '{}',
+    readiness_status TEXT,                  -- 'not_ready' | 'researching' | 'ready' | 'too_hard'
+    blocking_uncertainties JSONB DEFAULT '[]',
+    investable_uncertainties JSONB DEFAULT '[]',
+    confidence_score FLOAT,
+    verdict_text    TEXT,
+    -- Champs lint
+    contradictions_found    INT DEFAULT 0,
+    outdated_entries_found  INT DEFAULT 0,
+    orphans_found           INT DEFAULT 0,
+    crossrefs_added         INT DEFAULT 0,
+    lint_details            JSONB DEFAULT '{}',  -- rapport complet structuré
+    -- Commun
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 14.10 Intégration dans le parcours utilisateur
+
+```
+[A2 - fiche ticker]
+   "Explorer la connaissance" → /knowledge/NVDA
+        ↓
+   Onglet "Readiness" — affiche le dernier ReadinessReport
+   Badge sur la watchlist card :
+     🔴 MVDD incomplet — 2 items manquants
+     🟡 MVDD complet — 1 incertitude bloquante en cours de résolution
+     🟢 Prêt pour l'analyse — confiance 74%
+        ↓
+   Bouton "Analyser" disponible quand status = 'ready'
+   (bloqué si 'not_ready' ou 'researching', avec message explicatif)
+```
+
+### 14.11 Ce que le curator ne remplace pas
+
+- Il ne remplace pas le bull-agent ni le bear-agent — il prépare le terrain
+- Il n'évalue pas si l'entreprise est un bon investissement — il évalue si on en sait assez pour juger
+- Il n'est pas exhaustif — un rapport de 10 lignes vaut mieux qu'une liste de 50 items dont 47 sont des nice-to-have
+- Il ne bloque jamais définitivement l'analyse — il peut passer en mode "proceed with caution" si les incertitudes sont clairement investissables
 
 ---
 
