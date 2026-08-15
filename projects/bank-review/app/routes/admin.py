@@ -63,19 +63,32 @@ async def admin_create_user(
     if not admin_url:
         return _err("POSTGRES_ADMIN_URL non configuré — impossible de créer la base de données.")
 
+    bank_user = _dsn().split("//")[1].split(":")[0]
     try:
         conn = await asyncpg.connect(admin_url)
         try:
             await conn.execute(f'CREATE DATABASE "{db_name}"')
-            # Grant full access to the bank user (same credentials as DATABASE_URL)
-            bank_user = _dsn().split("//")[1].split(":")[0]
             await conn.execute(f'GRANT ALL PRIVILEGES ON DATABASE "{db_name}" TO "{bank_user}"')
+        except asyncpg.DuplicateDatabaseError:
+            pass  # DB already exists — continue
         finally:
             await conn.close()
-    except asyncpg.DuplicateDatabaseError:
-        pass  # DB already exists — continue with migrations
     except Exception as e:
         return _err(f"Erreur lors de la création de la base de données : {e}")
+
+    # Grant schema-level CREATE in the new DB (requires admin connection to that specific DB)
+    admin_new_db_url = admin_url.rsplit("/", 1)[0] + "/" + db_name
+    try:
+        admin_conn = await asyncpg.connect(admin_new_db_url)
+        try:
+            await admin_conn.execute(f'GRANT CREATE ON SCHEMA public TO "{bank_user}"')
+            await admin_conn.execute(f'GRANT ALL ON SCHEMA public TO "{bank_user}"')
+            await admin_conn.execute(f'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "{bank_user}"')
+            await admin_conn.execute(f'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "{bank_user}"')
+        finally:
+            await admin_conn.close()
+    except Exception as e:
+        return _err(f"Erreur lors de la configuration des droits schema : {e}")
 
     # Run all table migrations in the new DB
     try:
