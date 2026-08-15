@@ -1,7 +1,8 @@
 ---
 id: 1786799400000
 type: feature
-status: open
+status: closed
+closed_at: 2026-08-15T00:00:00Z
 priority: high
 date: 2026-08-15T00:00:00Z
 project: bank-review

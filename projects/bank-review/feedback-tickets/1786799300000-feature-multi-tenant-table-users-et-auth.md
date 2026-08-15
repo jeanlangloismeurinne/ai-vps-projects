@@ -1,7 +1,8 @@
 ---
 id: 1786799300000
 type: feature
-status: open
+status: closed
+closed_at: 2026-08-15T00:00:00Z
 priority: high
 date: 2026-08-15T00:00:00Z
 project: bank-review
@@ -40,4 +41,4 @@ CREATE TABLE IF NOT EXISTS users (
 ### Notes d'implémentation
 - Utiliser `bcrypt` (ajouter au requirements.txt) ou `passlib[bcrypt]`
 - La session doit stocker `{"user_id": X, "db_url": "postgresql://bank_jean:pwd@shared-postgres:5432/db_bank_jean"}`
-- L'utilisateur initial (Jean) est créé via `ADMIN_PASSWORD` lors du premier lancement si aucun user n'existe
+- L'utilisateur initial (Jean) est créé en tant qu’administrateur lors du premier lancement si aucun user n'existe

@@ -1,6 +1,6 @@
 # TICKETS — bank-review
 
-> Généré automatiquement le 09/08/2026 13:05. **Lire au début de chaque session.**
+> Généré automatiquement le 15/08/2026 18:37. **Lire au début de chaque session.**
 
 ## Résumé
 
@@ -8,22 +8,19 @@
 |---|---|---|---|
 | 🐛 Bugs | 0 | 0 | 16 |
 | 🔴 Erreurs | 0 | 0 | 0 |
-| ✨ Features | 0 | 0 | 14 |
-| 💡 Suggestions | 1 | 1 | 8 |
+| ✨ Features | 3 | 0 | 14 |
+| 💡 Suggestions | 0 | 0 | 10 |
 
 ## 🔓 Ouverts
 
 | ID | Date | Priorité | Description |
 |---|---|---|---|
-| `1777667797438` | 01/05/2026 20:36 | medium | creer plusieurs comptes avec identifiant / mot de passe pour accéder au service, |
+| `1786799400000` | 15/08/2026 00:00 | high | Modifier la couche d'accès DB pour utiliser la base de l'utilisateur connecté au |
+| `1786799300000` | 15/08/2026 00:00 | high | Remplacer l'authentification mono-utilisateur (`APP_PASSWORD`) par un système mu |
+| `1786799500000` | 15/08/2026 00:00 | medium | Interface admin minimale pour créer/gérer les comptes utilisateurs :
+- Route `/a |
 
-## ⏸ Bloqués (en attente de réponses)
-
-| ID | Date | Priorité | Description |
-|---|---|---|---|
-| `1777667877640` | 01/05/2026 20:37 | medium | gérer plusieurs formats de fichiers d’entrée en fonction des banques. Aujourd’hu |
-
-## ✅ Fermés (38)
+## ✅ Fermés (40)
 
 | ID | Date | Priorité | Description |
 |---|---|---|---|
@@ -38,6 +35,8 @@
 | `1777667887239` | 01/05/2026 20:38 | medium | gérer plusieurs formats de fichiers d'entrée en fonction des banques. Aujourd'hu |
 | `1777667882795` | 01/05/2026 20:38 | medium | gérer plusieurs formats de fichiers d'entrée en fonction des banques. Aujourd'hu |
 | `1777667877648` | 01/05/2026 20:37 | medium | gérer plusieurs formats de fichiers d'entrée en fonction des banques. Aujourd'hu |
+| `1777667877640` | 01/05/2026 20:37 | medium | gérer plusieurs formats de fichiers d’entrée en fonction des banques. Aujourd’hu |
+| `1777667797438` | 01/05/2026 20:36 | medium | creer plusieurs comptes avec identifiant / mot de passe pour accéder au service, |
 | `1777575513515` | 30/04/2026 18:58 | medium | Mets un total revenus - dépenses (toutes catégories) en haut du tableau de la pa |
 | `1776805261102` | 21/04/2026 21:01 |  | J'aimerais que la section "Historique des imports" soit dans une colonne à droit |
 | `1776805174408` | 21/04/2026 20:59 |  | Mets des séparateurs de milliers |
