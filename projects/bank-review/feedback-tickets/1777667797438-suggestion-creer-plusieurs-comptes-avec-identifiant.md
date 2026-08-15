@@ -1,12 +1,13 @@
 ---
 id: 1777667797438
 type: suggestion
-status: open
+status: closed
 date: 2026-05-01T20:36:37.438586
 project: bank-review
 url: slack://#features-bank-review
 priority: medium
 needs_clarification: true
+closed_at: 2026-08-15T00:00:00Z
 ---
 
 ## 💡 Suggestion

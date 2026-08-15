@@ -17,6 +17,10 @@ from app.services.database import (
 )
 from app.routes.budget import _annotate_with_rules
 from app.services.format_checker import check_format, apply_mapping, is_excel, xlsx_to_canonical_csv
+from app.services.format_detector import (
+    extract_csv_headers, find_format_by_headers, detect_mapping_with_claude,
+    save_bank_format, apply_bank_format_mapping, get_all_bank_formats,
+)
 from app.services.budget import (
     get_budget_years, create_next_budget_year, get_budget_lines, get_all_categories_for_year,
 )
@@ -38,12 +42,19 @@ def _year_categories_for_date(years: list[dict], max_date_str: str | None) -> li
     return matching.get("_categories", [])
 
 
+_PENDING_RAW = os.path.join(UPLOAD_DIR, "import_pending_raw.bin")
+_PENDING_META = os.path.join(UPLOAD_DIR, "import_pending_meta.json")
+
+
 @router.get("/import", response_class=HTMLResponse)
 async def import_page(request: Request):
     if not is_authenticated(request):
         return RedirectResponse("/", status_code=302)
     sessions = await get_import_sessions(limit=20)
-    return templates.TemplateResponse(request, "import.html", {"error": None, "sessions": sessions})
+    bank_formats = await get_all_bank_formats()
+    return templates.TemplateResponse(request, "import.html", {
+        "error": None, "sessions": sessions, "bank_formats": bank_formats,
+    })
 
 
 @router.post("/import", response_class=HTMLResponse)
@@ -57,20 +68,56 @@ async def import_upload(
         return RedirectResponse("/", status_code=302)
 
     content = await file.read()
+    format_warnings: list[str] = []
+    format_summary: str | None = None
 
     if is_excel(content):
         content = xlsx_to_canonical_csv(content)
+    else:
+        # CSV: try multi-bank detection before synonym fallback
+        headers = extract_csv_headers(content)
+        stored = await find_format_by_headers(headers)
+        if stored:
+            content = apply_bank_format_mapping(content, stored["headers"], stored["column_mapping"])
+            format_warnings = [f"Format {stored['bank_name']} reconnu et appliqué."]
+        else:
+            fmt = check_format(content)
+            if not fmt.can_proceed:
+                # Unknown format — call Claude Haiku for detection
+                try:
+                    mapping = await detect_mapping_with_claude(headers)
+                except Exception as e:
+                    sessions = await get_import_sessions(limit=20)
+                    bank_formats = await get_all_bank_formats()
+                    return templates.TemplateResponse(
+                        request, "import.html",
+                        {"error": f"Format inconnu et détection automatique échouée : {e}",
+                         "sessions": sessions, "bank_formats": bank_formats}
+                    )
 
-    fmt = check_format(content)
-    if not fmt.can_proceed:
-        sessions = await get_import_sessions(limit=20)
-        return templates.TemplateResponse(
-            request, "import.html",
-            {"error": f"Fichier non reconnu — colonnes obligatoires introuvables : "
-                      f"{', '.join(fmt.missing_required)}", "sessions": sessions}
-        )
-    if not fmt.is_exact_match:
-        content = apply_mapping(content, fmt)
+                # Save raw file + metadata for second-stage confirmation
+                with open(_PENDING_RAW, "wb") as fh:
+                    fh.write(content)
+                with open(_PENDING_META, "w") as fh:
+                    json.dump({"headers": headers, "mapping": mapping,
+                               "has_vacations": has_vacations,
+                               "vacation_ranges": vacation_ranges,
+                               "filename": file.filename}, fh)
+
+                sessions = await get_import_sessions(limit=20)
+                bank_formats = await get_all_bank_formats()
+                return templates.TemplateResponse(request, "import.html", {
+                    "error": None,
+                    "sessions": sessions,
+                    "bank_formats": bank_formats,
+                    "format_unknown": True,
+                    "detected_headers": headers,
+                    "claude_mapping": mapping,
+                })
+            elif not fmt.is_exact_match:
+                content = apply_mapping(content, fmt)
+                format_warnings = fmt.warnings
+                format_summary = fmt.summary()
 
     dest = os.path.join(UPLOAD_DIR, "import_pending.csv")
     with open(dest, "wb") as f:
@@ -127,8 +174,102 @@ async def import_upload(
             "stats": stats,
             "categories": categories,
             "filename": file.filename,
-            "format_warnings": fmt.warnings,
-            "format_summary": fmt.summary() if not fmt.is_exact_match else None,
+            "format_warnings": format_warnings,
+            "format_summary": format_summary,
+        }
+    )
+
+
+@router.post("/import/name-format", response_class=HTMLResponse)
+async def import_name_format(
+    request: Request,
+    bank_name: str = Form(...),
+    has_vacations: str = Form("no"),
+    vacation_ranges: str = Form(""),
+):
+    """Second-stage handler: user has named a newly detected bank format.
+    Saves the format, applies the mapping, then runs the normal import pipeline.
+    """
+    if not is_authenticated(request):
+        return RedirectResponse("/", status_code=302)
+
+    if not os.path.exists(_PENDING_RAW) or not os.path.exists(_PENDING_META):
+        sessions = await get_import_sessions(limit=20)
+        bank_formats = await get_all_bank_formats()
+        return templates.TemplateResponse(
+            request, "import.html",
+            {"error": "Session expirée — veuillez ré-uploader le fichier.",
+             "sessions": sessions, "bank_formats": bank_formats}
+        )
+
+    with open(_PENDING_RAW, "rb") as fh:
+        raw_content = fh.read()
+    with open(_PENDING_META) as fh:
+        meta = json.load(fh)
+
+    headers = meta["headers"]
+    mapping = meta["mapping"]
+    filename = meta.get("filename", "inconnu")
+
+    # Save format to DB
+    await save_bank_format(bank_name.strip(), headers, mapping, "csv")
+
+    # Apply mapping to produce canonical CSV
+    content = apply_bank_format_mapping(raw_content, headers, mapping)
+
+    dest = os.path.join(UPLOAD_DIR, "import_pending.csv")
+    with open(dest, "wb") as fh:
+        fh.write(content)
+
+    # Parse vacation periods (use meta values if form fields are defaults)
+    periods: list[tuple[date, date]] = []
+    if has_vacations == "yes" and vacation_ranges.strip():
+        try:
+            raw = json.loads(vacation_ranges)
+            for item in raw:
+                start = datetime.strptime(item[0], "%Y-%m-%d").date()
+                end = datetime.strptime(item[1], "%Y-%m-%d").date()
+                periods.append((start, end))
+        except Exception:
+            pass
+
+    try:
+        await create_classifier_snapshot("auto-avant-import")
+        classified = await run_import_pipeline(dest, periods)
+    except Exception as e:
+        sessions = await get_import_sessions(limit=20)
+        bank_formats = await get_all_bank_formats()
+        return templates.TemplateResponse(
+            request, "import.html",
+            {"error": f"Erreur pipeline : {e}", "sessions": sessions, "bank_formats": bank_formats}
+        )
+
+    dates = [r["date_op"] for r in classified if isinstance(r.get("date_op"), date)]
+    max_date_str = max((str(d)[:10] for d in dates), default=None)
+    years = await get_budget_years()
+    categories = []
+    if max_date_str and years:
+        matching_year = next(
+            (y for y in years if str(y["start_date"]) <= max_date_str <= str(y["end_date"])),
+            years[0],
+        )
+        lines = await get_budget_lines(matching_year["id"])
+        categories = sorted([l["category"] for l in lines])
+
+    serializable = sorted(_serialize_rows(classified), key=lambda r: r.get("confidence") or 0)
+    rules = await get_classifier_rules_all()
+    _annotate_with_rules(serializable, rules)
+    stats = _compute_stats(serializable)
+
+    return templates.TemplateResponse(
+        request, "review.html",
+        {
+            "rows": serializable,
+            "stats": stats,
+            "categories": categories,
+            "filename": filename,
+            "format_warnings": [f"Nouveau format « {bank_name} » enregistré."],
+            "format_summary": None,
         }
     )
 

@@ -8,6 +8,37 @@
   <p class="subtitle">Le fichier sera dédupliqué et classifié automatiquement.</p>
   {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
 
+  {% if format_unknown %}
+  <div class="card" style="padding:24px;margin-bottom:20px;border-left:4px solid var(--yellow,#f59e0b)">
+    <p style="font-weight:600;font-size:14px;margin-bottom:8px">Format inconnu détecté</p>
+    <p class="subtitle" style="margin-bottom:16px">Claude a analysé les colonnes de votre fichier. Vérifiez le mapping ci-dessous et nommez cette banque pour mémoriser ce format.</p>
+
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">
+      <thead><tr style="text-align:left;border-bottom:1px solid var(--border)">
+        <th style="padding:6px 8px;color:var(--text-muted)">Colonne source</th>
+        <th style="padding:6px 8px;color:var(--text-muted)">Champ standard</th>
+      </tr></thead>
+      <tbody>
+      {% for field, col in claude_mapping.items() %}
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;font-family:monospace">{{ col }}</td>
+        <td style="padding:6px 8px;color:var(--text-muted)">{{ field }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <form method="post" action="/import/name-format">
+      <label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Nom de la banque</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" name="bank_name" placeholder="ex : Société Générale" required
+               style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input,var(--bg));color:var(--text);font-size:13px">
+        <button type="submit" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap">Enregistrer et continuer</button>
+      </div>
+    </form>
+  </div>
+  {% else %}
+
   <form method="post" action="/import" enctype="multipart/form-data" id="importForm">
     <div class="card" style="padding:24px;margin-bottom:20px">
       <label style="font-weight:600;font-size:14px;color:var(--text)">Fichier CSV ou Excel</label>
@@ -37,8 +68,10 @@
 
     <button type="submit" id="submitBtn" disabled>Analyser et classifier</button>
   </form>
+  {% endif %}
 </div>
 <script>
+  {% if not format_unknown %}
   const input = document.getElementById('file');
   const fileName = document.getElementById('fileName');
   const submitBtn = document.getElementById('submitBtn');
@@ -78,6 +111,7 @@
     });
     document.getElementById('vacation_ranges').value = JSON.stringify(periods);
   });
+  {% endif %}
 </script>
 </div>
 
