@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set title = "Administration" %}
+{% set active = "admin" %}
+{% block content %}
+<div class="container" style="max-width:700px">
+  <h2 style="margin-bottom:6px">Gestion des comptes</h2>
+  <p class="subtitle">Créez et gérez les comptes utilisateurs. Chaque compte dispose de sa propre base de données.</p>
+
+  {% if error %}<div class="alert error" style="margin-bottom:20px">{{ error }}</div>{% endif %}
+  {% if success %}<div class="alert" style="margin-bottom:20px;background:var(--green-bg,#d1fae5);color:var(--green,#065f46);border:1px solid var(--green,#065f46)">{{ success }}</div>{% endif %}
+
+  <div class="card" style="padding:24px;margin-bottom:28px">
+    <p style="font-weight:600;font-size:14px;margin-bottom:16px">Créer un compte</p>
+    <form method="post" action="/admin/users">
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">Identifiant</label>
+          <input type="text" name="username" required pattern="[a-z0-9_]{2,30}" placeholder="alice"
+                 style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input,var(--bg));color:var(--text);font-size:13px;box-sizing:border-box">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:3px">Lettres minuscules, chiffres et _ (2–30 caractères)</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">Mot de passe</label>
+            <input type="password" name="password" required minlength="6" placeholder="••••••••"
+                   style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input,var(--bg));color:var(--text);font-size:13px;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">Confirmation</label>
+            <input type="password" name="password_confirm" required minlength="6" placeholder="••••••••"
+                   style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input,var(--bg));color:var(--text);font-size:13px;box-sizing:border-box">
+          </div>
+        </div>
+        <div>
+          <button type="submit" style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500">Créer le compte</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <h3 style="font-size:15px;margin-bottom:12px">Comptes existants</h3>
+  {% if users %}
+  <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:var(--bg-alt,var(--bg));border-bottom:1px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text-muted)">Identifiant</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text-muted)">Base de données</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text-muted)">Rôle</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--text-muted)">Créé le</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 14px;font-weight:500">{{ u.username }}</td>
+        <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:var(--text-muted)">{{ u.db_name }}</td>
+        <td style="padding:10px 14px">
+          {% if u.is_admin %}<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px">Admin</span>
+          {% else %}<span style="color:var(--text-muted)">Utilisateur</span>{% endif %}
+        </td>
+        <td style="padding:10px 14px;color:var(--text-muted)">{{ u.created_at[:10] if u.created_at else "—" }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="subtitle">Aucun compte.</p>
+  {% endif %}
+</div>
+{% endblock %}

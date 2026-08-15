@@ -14,8 +14,10 @@
     <div class="alert error">{{ error }}</div>
     {% endif %}
     <form method="post" action="/login">
+      <label for="username">Identifiant</label>
+      <input type="text" id="username" name="username" autofocus required placeholder="jean" autocomplete="username">
       <label for="password">Mot de passe</label>
-      <input type="password" id="password" name="password" autofocus required placeholder="••••••••">
+      <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
       <button type="submit">Accéder</button>
     </form>
   </div>

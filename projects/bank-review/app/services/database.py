@@ -1,14 +1,20 @@
 """
 PostgreSQL access layer via asyncpg.
-Connection string from env: DATABASE_URL
-Default for local dev: postgresql://bank:bank_secure_pwd@localhost:5432/db_bank
-In Docker (Coolify): postgresql://bank:bank_secure_pwd@shared-postgres:5432/db_bank
+
+Multi-tenant: each authenticated user has their own database.
+- Central DB (db_bank): users table, bank_formats. Always accessed via _dsn().
+- User DBs (db_bank_alice, etc.): all business data.
+
+The current user's db_url is propagated via a contextvars.ContextVar set by
+the DB middleware in main.py. All get_pool() calls without an explicit db_url
+automatically use the active user's database for the current request.
 """
 import asyncpg
 import os
-from typing import Optional
+import contextvars
 
-_pool: Optional[asyncpg.Pool] = None
+_pools: dict[str, asyncpg.Pool] = {}
+_current_db_url: contextvars.ContextVar[str | None] = contextvars.ContextVar("_db_url", default=None)
 
 
 def _dsn() -> str:
@@ -18,24 +24,216 @@ def _dsn() -> str:
     )
 
 
+def db_url_for_user(db_name: str) -> str:
+    """Reconstruct a db_url for a given db_name using the same credentials as DATABASE_URL."""
+    base = _dsn()
+    return base.rsplit("/", 1)[0] + "/" + db_name
+
+
+def set_current_db_url(url: str) -> contextvars.Token:
+    return _current_db_url.set(url)
+
+
+def reset_db_url(token: contextvars.Token) -> None:
+    _current_db_url.reset(token)
+
+
 async def _init_conn(conn):
     import json as _json
     await conn.set_type_codec("jsonb", encoder=_json.dumps, decoder=_json.loads, schema="pg_catalog")
     await conn.set_type_codec("json", encoder=_json.dumps, decoder=_json.loads, schema="pg_catalog")
 
 
-async def get_pool() -> asyncpg.Pool:
-    global _pool
-    if _pool is None:
-        _pool = await asyncpg.create_pool(_dsn(), min_size=1, max_size=5, init=_init_conn)
-    return _pool
+async def get_pool(db_url: str | None = None) -> asyncpg.Pool:
+    """Return (or create) the pool for the given db_url.
+    If db_url is None: use the contextvar (set by middleware per request), or fall back to _dsn().
+    """
+    resolved = db_url or _current_db_url.get() or _dsn()
+    if resolved not in _pools:
+        _pools[resolved] = await asyncpg.create_pool(
+            resolved, min_size=1, max_size=5, init=_init_conn
+        )
+    return _pools[resolved]
 
 
 async def close_pool():
-    global _pool
-    if _pool:
-        await _pool.close()
-        _pool = None
+    for pool in _pools.values():
+        await pool.close()
+    _pools.clear()
+
+
+# ── Users (always in central DB) ─────────────────────────────────────────────
+
+async def create_users_table() -> None:
+    pool = await get_pool(db_url=_dsn())
+    await pool.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id        SERIAL PRIMARY KEY,
+            username  TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            db_name   TEXT NOT NULL,
+            is_admin  BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            is_active  BOOLEAN NOT NULL DEFAULT TRUE
+        )
+    """)
+
+
+async def get_user_by_username(username: str) -> dict | None:
+    pool = await get_pool(db_url=_dsn())
+    row = await pool.fetchrow(
+        "SELECT id, username, password_hash, db_name, is_admin FROM users WHERE username=$1 AND is_active=TRUE",
+        username,
+    )
+    return dict(row) if row else None
+
+
+async def get_all_users() -> list[dict]:
+    pool = await get_pool(db_url=_dsn())
+    rows = await pool.fetch(
+        "SELECT id, username, db_name, is_admin, created_at FROM users ORDER BY created_at"
+    )
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["created_at"] = d["created_at"].isoformat() if d["created_at"] else None
+        result.append(d)
+    return result
+
+
+async def create_user_record(username: str, password_hash: str, db_name: str, is_admin: bool = False) -> int:
+    pool = await get_pool(db_url=_dsn())
+    row = await pool.fetchrow(
+        "INSERT INTO users (username, password_hash, db_name, is_admin) VALUES ($1,$2,$3,$4) RETURNING id",
+        username, password_hash, db_name, is_admin,
+    )
+    return row["id"]
+
+
+async def user_exists() -> bool:
+    pool = await get_pool(db_url=_dsn())
+    count = await pool.fetchval("SELECT COUNT(*) FROM users")
+    return (count or 0) > 0
+
+
+# ── New-user DB provisioning ──────────────────────────────────────────────────
+
+_NEW_USER_DDL = """
+CREATE TABLE IF NOT EXISTS accounts (
+    account_num   VARCHAR(20)  NOT NULL PRIMARY KEY,
+    account_label VARCHAR(100)
+);
+
+CREATE TABLE IF NOT EXISTS budget_years (
+    id                  SERIAL PRIMARY KEY,
+    year_label          VARCHAR(20) NOT NULL UNIQUE,
+    start_date          DATE NOT NULL,
+    end_date            DATE NOT NULL,
+    needs_budget_update BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+    name      VARCHAR(100) NOT NULL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS import_sessions (
+    id         SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    filename   TEXT,
+    row_count  INTEGER,
+    date_min   DATE,
+    date_max   DATE,
+    year_id    INTEGER REFERENCES budget_years(id)
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id                    SERIAL PRIMARY KEY,
+    date_op               DATE NOT NULL,
+    date_val              DATE,
+    real_date             DATE,
+    label                 TEXT NOT NULL,
+    label_clean           TEXT,
+    amount                NUMERIC(12,2) NOT NULL,
+    currency              CHAR(3) DEFAULT 'EUR',
+    account_num           VARCHAR(20) REFERENCES accounts(account_num),
+    account_balance       NUMERIC(12,2),
+    bank_category         TEXT,
+    bank_category_parent  TEXT,
+    supplier              TEXT,
+    comment               TEXT,
+    category              VARCHAR(100),
+    confidence            SMALLINT,
+    classification_method VARCHAR(20),
+    precision_note        TEXT,
+    source                VARCHAR(20) DEFAULT 'export',
+    dedup_key             TEXT NOT NULL UNIQUE,
+    imported_at           TIMESTAMPTZ DEFAULT NOW(),
+    import_session_id     INTEGER REFERENCES import_sessions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_tx_date_op  ON transactions(date_op);
+CREATE INDEX IF NOT EXISTS idx_tx_category ON transactions(category);
+CREATE INDEX IF NOT EXISTS idx_tx_account  ON transactions(account_num);
+
+CREATE TABLE IF NOT EXISTS budget_lines (
+    id             SERIAL PRIMARY KEY,
+    year_id        INTEGER REFERENCES budget_years(id) ON DELETE CASCADE,
+    category       VARCHAR(100) NOT NULL,
+    monthly_budget NUMERIC(10,2) NOT NULL DEFAULT 0,
+    group_name     VARCHAR(60) NOT NULL,
+    sort_order     INTEGER NOT NULL DEFAULT 0,
+    is_income      BOOLEAN DEFAULT FALSE,
+    UNIQUE(year_id, category)
+);
+
+CREATE TABLE IF NOT EXISTS classification_rules (
+    id         SERIAL PRIMARY KEY,
+    keyword    TEXT NOT NULL,
+    category   TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_rules_keyword_lower ON classification_rules(lower(keyword));
+
+CREATE TABLE IF NOT EXISTS classifier_rules (
+    id         SERIAL PRIMARY KEY,
+    stage      SMALLINT NOT NULL DEFAULT 2,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    keywords   JSONB NOT NULL DEFAULT '[]',
+    match_mode VARCHAR(3) NOT NULL DEFAULT 'OR',
+    category   VARCHAR(200) NOT NULL,
+    year_id    INTEGER REFERENCES budget_years(id) ON DELETE SET NULL,
+    source     VARCHAR(20) NOT NULL DEFAULT 'user',
+    is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS classifier_snapshots (
+    id            SERIAL PRIMARY KEY,
+    year_id       INTEGER REFERENCES budget_years(id) ON DELETE SET NULL,
+    snapshot_data JSONB NOT NULL,
+    label         VARCHAR(200),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key   TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+"""
+
+
+async def run_all_migrations(db_url: str) -> None:
+    """Create all application tables in a newly provisioned user database."""
+    token = set_current_db_url(db_url)
+    try:
+        pool = await get_pool(db_url)
+        async with pool.acquire() as conn:
+            await conn.execute(_NEW_USER_DDL)
+        # Seed classifier rules (reuses the contextvar-aware migrate_classifier_tables)
+        await migrate_classifier_tables()
+    finally:
+        reset_db_url(token)
 
 
 # ── Deduplication ─────────────────────────────────────────────────────────────

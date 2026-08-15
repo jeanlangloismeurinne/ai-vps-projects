@@ -36,7 +36,8 @@ def extract_csv_headers(content: bytes) -> list[str]:
 
 async def find_format_by_headers(headers: list[str]) -> dict | None:
     """Return saved bank_format dict if exact header set found, else None."""
-    pool = await get_pool()
+    from app.services.database import _dsn
+    pool = await get_pool(db_url=_dsn())
     rows = await pool.fetch("SELECT id, bank_name, headers, column_mapping, file_type FROM bank_formats")
     target = set(h for h in headers if h)
     for row in rows:
@@ -95,7 +96,8 @@ async def detect_mapping_with_claude(headers: list[str]) -> dict:
 
 async def save_bank_format(bank_name: str, headers: list[str], mapping: dict, file_type: str = "csv") -> int:
     """Insert a new bank format in bank_formats. Returns the new id."""
-    pool = await get_pool()
+    from app.services.database import _dsn
+    pool = await get_pool(db_url=_dsn())
     row = await pool.fetchrow(
         "INSERT INTO bank_formats (bank_name, headers, column_mapping, file_type) VALUES ($1, $2, $3, $4) RETURNING id",
         bank_name, headers, mapping, file_type,
@@ -104,7 +106,8 @@ async def save_bank_format(bank_name: str, headers: list[str], mapping: dict, fi
 
 
 async def get_all_bank_formats() -> list[dict]:
-    pool = await get_pool()
+    from app.services.database import _dsn
+    pool = await get_pool(db_url=_dsn())
     rows = await pool.fetch("SELECT id, bank_name, file_type, created_at FROM bank_formats ORDER BY bank_name")
     return [dict(r) for r in rows]
 
