@@ -41,7 +41,7 @@ Chaque vuln contient : `id`, `package`, `installed_version`, `fixed_version`, `d
 ## Projets actifs
 - projects/assistant-ia/ : orchestrateur Slack — reçoit webhooks de tool-file-intake et déclenche les actions par service (bank-review, etc.) — FastAPI, port 8030
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
-- projects/feature-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
+- projects/feedback-module/ : microservice feedback (port 3333) — widget flottant + API + stockage Markdown
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
 - projects/ev-prices/ : suivi des prix véhicules électriques (14 constructeurs, scraping hebdomadaire) — Python 3.12, FastAPI, Playwright, PostgreSQL (port 8040) · URL : ev.jlmvpscode.duckdns.org
 - projects/portfolio-tracker/ : suivi investissement long terme, agents IA Dust, 3 régimes d'analyse — **deux apps Coolify distinctes** (dockerfile) : portfolio-backend (port 8050) + portfolio-frontend (port 8051) · URL : portfolio.jlmvpscode.duckdns.org
@@ -63,8 +63,8 @@ Le bot doit être **invité explicitement** dans chaque channel pour recevoir se
 Les tickets (bugs, suggestions, features) sont stockés dans le dossier
 `feedback-tickets/` de chaque projet concerné, au format Markdown.
 
-Pour bank-review : `projects/bank-review/feature-tickets/`
-Pour journal/kanban : `projects/assistant-ia/feature-tickets/{project}/`
+Pour bank-review : `projects/bank-review/feedback-tickets/`
+Pour journal/kanban : `projects/assistant-ia/feedback-tickets/{journal|kanban}/`
 
 Chaque fichier = un ticket. Champ `status: open` = en attente de traitement.
 

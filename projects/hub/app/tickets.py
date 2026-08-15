@@ -16,10 +16,10 @@ TYPE_EMOJI  = {"bug": "🐛", "feature": "✨", "suggestion": "💡", "error": "
 TYPE_LABEL  = {"bug": "Bug", "feature": "Feature", "suggestion": "Suggestion", "error": "Erreur JS"}
 STATUS_LABEL = {"open": "Ouvert", "blocked": "Bloqué", "closed": "Fermé"}
 
-PRIORITY_EMOJI = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "⚪"}
-PRIORITY_LABEL = {"critical": "Critique", "high": "Haute", "medium": "Moyenne", "low": "Basse"}
-PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-PRIORITY_COLOR = {"critical": "#dc2626", "high": "#ea580c", "medium": "#ca8a04", "low": "#6b7280"}
+PRIORITY_EMOJI = {"high": "🔴", "medium": "🟡", "low": "⚪"}
+PRIORITY_LABEL = {"high": "Haute", "medium": "Moyenne", "low": "Basse"}
+PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+PRIORITY_COLOR = {"high": "#dc2626", "medium": "#ca8a04", "low": "#6b7280"}
 
 router = APIRouter(prefix="/tickets")
 
@@ -68,34 +68,6 @@ def _build_file(fm: dict, body: str) -> str:
     return "\n".join(lines)
 
 
-def _parse_questions(body: str) -> list[dict]:
-    section = re.search(r"### Questions avant implémentation\n\n([\s\S]*?)(?:\n###|\Z)", body)
-    if not section:
-        return []
-    text = section.group(1)
-    pairs = []
-    for m in re.finditer(r"\*\*Q(\d+)\*\* : ([^\n]+)\n\*\*R\1\*\* : ([^\n]+)", text):
-        answer = m.group(3).strip()
-        pairs.append({
-            "num": int(m.group(1)),
-            "question": m.group(2).strip(),
-            "answer": answer,
-            "pending": answer == "*(en attente)*",
-        })
-    return pairs
-
-
-def _apply_answers(body: str, answers: dict) -> str:
-    for num, text in answers.items():
-        if text.strip():
-            body = re.sub(
-                rf"\*\*R{num}\*\* : \*\(en attente\)\*",
-                f"**R{num}** : {text.strip()}",
-                body,
-            )
-    return body
-
-
 def _parse_ticket(filepath: Path) -> dict:
     raw = filepath.read_text()
     fm, body = _parse_frontmatter(raw)
@@ -104,8 +76,6 @@ def _parse_ticket(filepath: Path) -> dict:
     fm.setdefault("id", filepath.stem.split("-")[0])
     desc_m = re.search(r"### Description\n\n([\s\S]*?)(?:\n###|\Z)", body)
     fm["description"] = desc_m.group(1).strip()[:150] if desc_m else ""
-    fm["questions"] = _parse_questions(body)
-    fm["pending_count"] = sum(1 for q in fm["questions"] if q["pending"])
     return fm
 
 
@@ -220,7 +190,7 @@ def _regenerate_tickets_md(project: str):
     ]
     for label, items in [
         ("## 🔓 Ouverts", sorted(open_t, key=lambda t: PRIORITY_ORDER.get(t.get("priority"), 4))),
-        ("## ⏸ Bloqués (en attente de réponses)", blocked_t),
+        ("## ⏸ Bloqués (en attente utilisateur)", blocked_t),
         (f"## ✅ Fermés ({len(closed_t)})", closed_t),
     ]:
         if items:
@@ -386,7 +356,6 @@ def _base(title: str, body: str, breadcrumbs: str = "") -> str:
   .tag-feature{{background:rgba(139,92,246,.12);color:#a78bfa}}
   .tag-suggestion{{background:rgba(59,130,246,.12);color:#60a5fa}}
   .tag-error{{background:rgba(220,38,38,.12);color:#f87171}}
-  .tag-critical{{background:rgba(220,38,38,.12);color:#dc2626}}
   .tag-high{{background:rgba(234,88,12,.12);color:#ea580c}}
   .tag-medium{{background:rgba(202,138,4,.12);color:#ca8a04}}
   .tag-low{{background:rgba(107,114,128,.12);color:#9ca3af}}
@@ -436,9 +405,6 @@ def _base(title: str, body: str, breadcrumbs: str = "") -> str:
   .alert-error{{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#f87171}}
   .alert-info{{background:rgba(79,110,247,.12);border:1px solid rgba(79,110,247,.3);color:#818cf8}}
   .divider{{border:none;border-top:1px solid #1e2130;margin:1.25rem 0}}
-  .qa-box{{background:#0f1117;border:1px solid #2a2d3a;border-radius:10px;padding:1rem;margin-bottom:.75rem}}
-  .qa-question{{font-size:.85rem;color:#e8e8ea;margin-bottom:.5rem;font-weight:500}}
-  .qa-answer{{font-size:.82rem;color:#2da862;margin-top:.3rem}}
   .brief-bar{{background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;padding:.75rem 1rem;
               margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}}
   .brief-count{{font-size:.85rem;color:#888}}
@@ -608,7 +574,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     for t in tickets:
         prio_counts[t.get("priority", "")] = prio_counts.get(t.get("priority", ""), 0) + 1
     prio_btns = fbtn("Toutes priorités", priority_f == "all", p="all", s=status_f, t=type_f, m=milestone_f)
-    for pr in ["critical", "high", "medium", "low"]:
+    for pr in ["high", "medium", "low"]:
         if pr in prio_counts:
             prio_btns += fbtn(f"{PRIORITY_EMOJI[pr]} {PRIORITY_LABEL[pr]} ({prio_counts[pr]})", priority_f == pr, p=pr, s=status_f, t=type_f, m=milestone_f)
 
@@ -618,11 +584,6 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
         ms_btns = fbtn("Tous milestones", milestone_f == "", p=priority_f, s=status_f, t=type_f, m="")
         for ms in milestones:
             ms_btns += fbtn(ms, milestone_f == ms, p=priority_f, s=status_f, t=type_f, m=ms)
-
-    blocked_with_pending = [t for t in filtered if t.get("status") == "blocked" and t.get("pending_count", 0) > 0]
-    blocked_alert = ""
-    if blocked_with_pending:
-        blocked_alert = f'<div class="alert alert-info">⏸ {len(blocked_with_pending)} ticket{"s" if len(blocked_with_pending)>1 else ""} en attente de tes réponses — <a href="{furl(s="blocked")}" style="color:#818cf8;text-decoration:underline">voir les questions</a></div>'
 
     cards = ""
     if not filtered:
@@ -636,15 +597,13 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
             desc  = _e(t.get("description", "")[:100])
             date  = _fmt_date(t.get("date", ""))
             ms    = t.get("milestone", "")
-            pending = t.get("pending_count", 0)
-            pending_html = f' <span class="tag tag-blocked">⏸ {pending} question{"s" if pending>1 else ""}</span>' if pending else ""
             ms_html = f'<div class="card-milestone">🏁 {_e(ms)}</div>' if ms else ""
             cards += f"""
 <div class="card" style="padding-right:2.5rem">
   <input type="checkbox" class="card-check brief-cb" name="t" value="{_e(tid)}">
   <a href="/tickets/{_e(project)}/{_e(tid)}/edit" class="card-link" style="display:block">
     <div class="card-row">
-      {_type_tag(type_)}{_status_tag(status)}{pending_html}{_priority_tag(prio)}
+      {_type_tag(type_)}{_status_tag(status)}{_priority_tag(prio)}
       <span class="card-meta">{_e(date)}</span>
     </div>
     {"" if not desc else f'<div class="card-desc">{desc}</div>'}
@@ -656,7 +615,6 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     breadcrumbs = f'<span class="sep">/</span> <span class="breadcrumb current">{_e(display)}</span>'
 
     body = f"""
-{blocked_alert}
 <form method="GET" action="/tickets/{_e(project)}/brief" id="brief-form">
 <div class="page-header">
   <div class="page-title">{_e(display)}</div>
@@ -765,14 +723,11 @@ def _page_edit(project: str, ticket: dict, specs: list, flash: str = "") -> str:
     ms      = ticket.get("milestone", "")
     nc      = ticket.get("needs_clarification", "") == "true"
     body_md = ticket.get("body", "")
-    questions = ticket.get("questions", [])
-    pending   = [q for q in questions if q["pending"]]
 
     flash_map = {
         "saved": ("✓ Ticket sauvegardé.", "alert-success"),
         "spec_uploaded": ("✓ Fichier attaché.", "alert-success"),
         "spec_deleted": ("✓ Fichier supprimé.", "alert-success"),
-        "answers_saved": ("✓ Réponses enregistrées.", "alert-success"),
     }
     flash_html = ""
     if flash in flash_map:
@@ -782,35 +737,6 @@ def _page_edit(project: str, ticket: dict, specs: list, flash: str = "") -> str:
     type_opts = "".join(f'<option value="{k}" {"selected" if k==type_ else ""}>{TYPE_EMOJI[k]} {TYPE_LABEL[k]}</option>' for k in TYPE_EMOJI)
     prio_opts = "".join(f'<option value="{k}" {"selected" if k==prio else ""}>{PRIORITY_EMOJI[k]} {PRIORITY_LABEL[k]}</option>' for k in PRIORITY_ORDER)
     status_opts = "".join(f'<option value="{s}" {"selected" if s==status else ""}>{STATUS_LABEL[s]}</option>' for s in ["open", "blocked", "closed"])
-
-    qa_html = ""
-    if questions:
-        qa_items = ""
-        answered = []
-        for q in questions:
-            if q["pending"]:
-                qa_items += f"""
-<div class="qa-box">
-  <div class="qa-question">❓ Q{q['num']} : {_e(q['question'])}</div>
-  <div class="form-group" style="margin:0.5rem 0 0">
-    <input type="text" name="r{q['num']}" placeholder="Ta réponse...">
-  </div>
-</div>"""
-            else:
-                answered.append(f"<div class='qa-box'><div class='qa-question'>Q{q['num']} : {_e(q['question'])}</div><div class='qa-answer'>✓ {_e(q['answer'])}</div></div>")
-
-        all_pending = all(q["pending"] for q in questions)
-        section_title = "⏸ Questions en attente de réponse" if pending else "✅ Questions répondues"
-        save_btn = '<button type="submit" class="btn btn-success">Enregistrer les réponses</button>' if pending else ""
-        qa_html = f"""
-<div class="section">
-  <div class="section-title">{section_title}</div>
-  {"".join(answered)}
-  <form method="POST" action="/tickets/{_e(project)}/{_e(tid)}/answers">
-    {qa_items}
-    {save_btn}
-  </form>
-</div>"""
 
     specs_html = ""
     if specs:
@@ -840,8 +766,6 @@ def _page_edit(project: str, ticket: dict, specs: list, flash: str = "") -> str:
   </div>
   <a href="/tickets/{_e(project)}" class="btn btn-secondary">← Retour</a>
 </div>
-
-{qa_html}
 
 <form method="POST" action="/tickets/{_e(project)}/{_e(tid)}/edit">
   <div class="section">
@@ -1206,31 +1130,6 @@ async def ticket_edit_post(
     path.write_text(_build_file(fm, body.strip()))
     _regenerate_tickets_md(project)
     return RedirectResponse(f"/tickets/{project}/{ticket_id}/edit?flash=saved", status_code=303)
-
-
-@router.post("/{project}/{ticket_id}/answers")
-async def ticket_answers_post(request: Request, project: str, ticket_id: str):
-    from app.main import settings
-    if r := _require_auth(request, settings): return r
-    path = _ticket_path(project, ticket_id)
-    if not path:
-        return HTMLResponse(f"Ticket introuvable : {_e(ticket_id)}", status_code=404)
-
-    form = await request.form()
-    answers = {k[1:]: v for k, v in form.items() if k.startswith("r") and k[1:].isdigit() and v.strip()}
-
-    raw = path.read_text()
-    fm, body = _parse_frontmatter(raw)
-    body = _apply_answers(body, answers)
-
-    questions = _parse_questions(body)
-    all_answered = questions and all(not q["pending"] for q in questions)
-    if all_answered and fm.get("status") == "blocked":
-        fm["status"] = "open"
-
-    path.write_text(_build_file(fm, body))
-    _regenerate_tickets_md(project)
-    return RedirectResponse(f"/tickets/{project}/{ticket_id}/edit?flash=answers_saved", status_code=303)
 
 
 @router.post("/{project}/{ticket_id}/spec")

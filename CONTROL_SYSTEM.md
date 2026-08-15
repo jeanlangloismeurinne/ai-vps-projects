@@ -1,22 +1,83 @@
 # Système de contrôle — Tickets · Roadmap · Session Brief
 
-> Instructions pour Claude Code. Lire ce fichier intégralement avant toute session de travail
+> Instructions pour Claude Code. Lire ce fichier au démarrage de toute session de travail
 > sur un projet qui utilise ce système.
 
 ---
 
-## Architecture
+## Principe
 
-Trois couches hiérarchiques. Ne pas les confondre.
+Trois couches. Ne pas les confondre.
 
 ```
-ROADMAP        → tu définis l'implémentation (l'utilisateur délègue la réflexion)
-TICKETS        → tu implémentes (actionnable, portée limitée)
-SESSION BRIEF  → ce que tu fais maintenant (opérationnel, une session)
+ROADMAP        → espace de réflexion / direction (docs libres). Génère des tickets.
+TICKETS        → unité de travail actionnable, portée limitée.
+SESSION BRIEF  → ce qu'on traite maintenant (une session).
 ```
 
-Un item roadmap génère des tickets. Les tickets alimentent le brief.
-Un ticket ne remonte jamais directement en roadmap sauf escalade explicite (> 2 questions nécessaires).
+L'exécution tourne sous l'abonnement Claude Code : les consignes sont tapées **manuellement**
+dans le terminal. Toute la logique multi-modèle passe par des **sous-agents** (couverts par
+l'abonnement), jamais par des appels API externes.
+
+---
+
+## Modèle d'exécution — Opus orchestrateur + workers Sonnet
+
+La session tourne sur **Opus** (modèle par défaut). Opus n'implémente pas tout lui-même :
+
+```
+Opus (orchestrateur)
+  ├─ lit brief + tickets (descriptions seules — pas de lecture de code pour classer)
+  ├─ ticket COMPLEXE → Opus l'implémente lui-même
+  └─ ticket SIMPLE   → délègue à un sous-agent worker (Sonnet 4.6)
+                         └─ implémente + renvoie un COMPTE-RENDU structuré
+       Opus vérifie le compte-rendu contre la spec du ticket :
+         · conforme      → ferme le ticket
+         · écart détecté → lit le code de CE ticket uniquement, corrige, ferme
+```
+
+**But de la délégation** (on est en abonnement, pas facturé au token) : préserver le contexte
+et le quota d'Opus pour le travail qui le mérite, paralléliser les tickets simples, rester sous
+les limites d'usage. Ce n'est pas une optimisation de coût monétaire.
+
+**Classification simple vs complexe** — décidée par Opus depuis la *description* du ticket, sans
+lire le code :
+
+| Simple → délègue au worker | Complexe → Opus fait lui-même |
+|---|---|
+| Portée locale, 1-2 fichiers | Multi-fichiers couplés, refacto |
+| Description non-ambiguë | Ambiguïté nécessitant du jugement |
+| Aucun choix d'architecture | Choix structurant en jeu |
+| Ex : libellé, champ, petit endpoint clair, bug ciblé | Sécurité / données sensibles, ou `needs_clarification: true` |
+
+Opus peut lancer **plusieurs workers en parallèle** pour des tickets simples indépendants.
+Si deux tickets touchent le même fichier, ne pas les paralléliser (les sérialiser, ou Opus les fait).
+
+---
+
+## Contrat du sous-agent worker
+
+Lancé via l'outil `Agent` avec `model: sonnet`. Accès outils complet (édition, tests, run).
+Entrée : le chemin du fichier ticket + « implémente ce ticket et renvoie le compte-rendu ci-dessous ».
+
+Le worker **doit vérifier son travail** (compiler / lancer les tests / vérifier le comportement)
+avant de rendre la main, puis renvoyer **exactement** ce format :
+
+```
+1. Interprétation : ce que j'ai compris du ticket (1-2 phrases)
+2. Fichiers modifiés : chemin + une ligne de "pourquoi" chacun
+3. Décisions / hypothèses prises
+4. Vérification : ce que j'ai lancé (test / compile / run) et le résultat
+5. Ambiguïtés que j'ai tranchées seul
+```
+
+**Ce que la vérification par compte-rendu attrape** — et ce qu'elle n'attrape pas :
+
+- ✅ **Contre-sens / dérive de spec** : Opus compare les points 1 et 5 à la spec. C'est le risque
+  principal des tickets délégués, et c'est couvert sans relire le code.
+- ❌ **Bugs de correctness** (code juste-de-compréhension mais faux) : aucun compte-rendu en prose
+  ne les révèle. Le filet reste le point 4 (tests / run). Si le point 4 est absent ou faible,
+  Opus lit le code du ticket.
 
 ---
 
@@ -28,10 +89,12 @@ projects/{projet}/
     {id}-{type}-{slug}.md        ← tickets
     {id}-spec-{slug}.md          ← specs attachées à un ticket
   roadmap/
-    roadmap-{id}-{slug}.md       ← items de roadmap
+    *.md                         ← docs libres (directions, specs, audits, notes)
   SESSION_BRIEF.md               ← brief de session courante
-  TICKETS.md                     ← index auto-généré, ne jamais éditer manuellement
+  TICKETS.md                     ← index auto-généré, ne jamais éditer à la main
 ```
+
+> Le dossier `feedback-tickets/` est la convention partout (y compris bank-review et assistant-ia).
 
 ---
 
@@ -43,17 +106,17 @@ Frontmatter :
 id: {timestamp_ms}
 type: bug | feature | suggestion | error
 status: open | blocked | closed
-priority: low | medium | high | critical
+priority: high | medium | low           # ordre de traitement décroissant
 date: {ISO 8601}
 project: {nom_projet}
 url: {url optionnelle}
-milestone: {nom_milestone}           # optionnel — ex: V2-budget
-needs_clarification: true            # optionnel — signal explicite de l'utilisateur
-closed_at: {ISO 8601}                # ajouté à la fermeture uniquement
+milestone: {nom}                        # optionnel
+needs_clarification: true               # optionnel — l'utilisateur veut être questionné avant impl.
+closed_at: {ISO 8601 UTC}               # ajouté à la fermeture uniquement
 ---
 ```
 
-Corps du fichier :
+Corps :
 ```markdown
 ## {emoji} {label}
 
@@ -61,47 +124,21 @@ Corps du fichier :
 **URL** : `{url}`
 
 ### Description
-
 {texte}
 
-### Questions avant implémentation     ← présente uniquement si status: blocked
-
-**Q1** : {question concise}
-**R1** : *(en attente)*
-
-**Q2** : {question concise}
-**R2** : {réponse de l'utilisateur}
-
-### Notes d'implémentation             ← tu ajoutes tes hypothèses ici si tu implémentes avec ambiguïté
+### Notes d'implémentation        ← hypothèses / compte-rendu vérifié ajoutés à la fermeture
 ```
+
+Plus de section `### Questions` dans le fichier : les clarifications se font **en direct dans le
+terminal** (voir Étape 2).
 
 ---
 
 ## Format des items de roadmap
 
-```markdown
----
-id: roadmap-{timestamp}
-status: draft | spec-ready | tickets-created | done
-created: {ISO 8601}
-project: {nom_projet}
----
-
-## {titre de la direction ou feature complexe}
-
-### Direction / Feature (utilisateur)
-{ce que l'utilisateur a écrit — ne pas modifier}
-
-### Contraintes connues
-{optionnel — rempli par l'utilisateur}
-
----
-### Spec générée
-*(Claude Code remplit cette section)*
-
-### Tickets créés
-*(Claude Code liste ici les IDs des tickets créés)*
-```
+Le dossier `roadmap/` est un **espace de docs libre** — pas de gabarit imposé. Un fichier peut être
+une direction, une spec, un audit, une note. Nommer librement (`00-principe-directeur.md`,
+`spec-v2.md`, etc.). Quand une direction est mûre, elle génère des tickets (Étape 4b).
 
 ---
 
@@ -111,213 +148,132 @@ project: {nom_projet}
 # Session Brief — {projet} — {YYYY-MM-DD}
 
 ## Scope
-Milestone actif : {nom}
-Ne pas toucher : {modules hors-scope}
+Milestone actif : {nom}   ·   Ne pas toucher : {modules hors-scope}
 
-## Roadmap — définition (avant implémentation)
-- [ ] roadmap-{id} : {instruction précise pour Claude}
-- [ ] Créer item roadmap pour : "{direction courte}"
-
-## Pré-actions (specs à générer)
-- [ ] Générer spec pour : "{description rapide}" → attacher au ticket #{id}
+## Roadmap à définir (optionnel)
+- [ ] {fichier roadmap ou direction courte} → générer les tickets
 
 ## Tickets à traiter
-- [ ] #{id} — {type} — {résumé court} (priority: critical)
-- [ ] #{id} — {type} — {résumé court} (priority: high)
-- [ ] #{id} — {type} — {résumé court} (priority: low)
+- [ ] #{id} — {type} — {résumé} (priority: {niveau})
 
-## Contexte additionnel
-{optionnel : hypothèses, préférences techniques, décisions déjà prises}
+## Contexte additionnel (optionnel)
+{préférences techniques, décisions déjà prises}
 
 ## Résumé de session
-*(Claude Code remplit cette section à la fin)*
+*(rempli par Claude à la fin)*
 ```
 
 ---
 
 ## Commande de déclenchement
 
-Phrase exacte : **"execute le brief session pour {projet}"**
+**« execute le brief session pour {projet} »**
 
-À cette commande, exécuter les étapes suivantes dans l'ordre strict.
+Exécuter alors les étapes suivantes dans l'ordre.
 
 ---
 
 ## Étape 1 — Lire le contexte
 
-1. Lire `SESSION_BRIEF.md` dans le répertoire du projet
-2. Lire `TICKETS.md` pour la vue globale des tickets ouverts
-3. Pour chaque item roadmap référencé : lire `roadmap/{fichier}.md`
-4. Pour chaque ticket listé dans le brief : lire le fichier `.md` complet dans `feedback-tickets/`
-5. Pour chaque spec attachée pertinente : lire `feedback-tickets/{id}-spec-*.md`
+1. `SESSION_BRIEF.md` du projet
+2. `TICKETS.md` (vue globale)
+3. Chaque ticket listé dans le brief : lire le `.md` complet + sa spec `{id}-spec-*.md` si présente
+4. Chaque direction roadmap référencée : lire le(s) fichier(s)
+
+Puis classer chaque ticket **simple / complexe** depuis sa description (sans lire de code).
 
 ---
 
-## Étape 2 — Traiter les items roadmap
+## Étape 2 — Clarifications (tickets `needs_clarification: true`)
 
-Pour chaque item en section "Roadmap — définition" :
+Pour ces tickets, **Opus** (pas un worker) pose ses questions **directement dans le terminal**,
+attend les réponses de l'utilisateur, puis implémente dans la même passe. Ne rien écrire dans le
+fichier avant d'avoir la réponse — on évite ainsi le double aller-retour et les relectures de code.
 
-1. Analyser le code existant du projet (fichiers pertinents à la direction)
-2. Analyser les tickets existants pour détecter ce qui existe déjà
-3. Rédiger la spec dans la section `### Spec générée` du fichier roadmap
-4. Créer les tickets dérivés dans `feedback-tickets/` au format standard
-   — Assigner `milestone` = nom du roadmap item sur chaque ticket créé
-   — Assigner `priority` selon l'urgence estimée
-5. Lister les IDs créés dans `### Tickets créés`
-6. Passer `status` du roadmap item à `tickets-created`
-7. Cocher l'item dans SESSION_BRIEF.md : `- [x]`
+Si l'utilisateur n'est pas disponible : passer `status: blocked`, noter la question en une ligne
+dans `### Notes d'implémentation`, et passer au ticket suivant.
 
 ---
 
-## Étape 3 — Traiter les pré-actions (specs)
+## Étape 3 — Traiter les tickets (par priorité décroissante)
 
-Pour chaque "Générer spec pour" :
+Pour chaque ticket :
 
-1. Générer le fichier `feedback-tickets/{ticket_id}-spec-{slug}.md`
-2. La spec doit contenir : objectif, comportement attendu (cas nominal + edge cases),
-   contraintes techniques, fichiers à modifier, hors-scope explicite
-3. Cocher dans SESSION_BRIEF.md : `- [x]`
+**Complexe** → Opus l'implémente lui-même, vérifie (tests / run), ferme.
 
----
+**Simple** → déléguer à un worker Sonnet (contrat ci-dessus). Puis :
+1. Lire le compte-rendu.
+2. Comparer points 1 et 5 à la spec du ticket.
+3. Conforme et point 4 crédible → fermer. Écart, ou vérification faible → lire le code de ce
+   ticket, corriger si besoin, fermer.
 
-## Étape 4 — Traiter les tickets
+Lancer les workers de tickets simples **indépendants** en parallèle (fichiers disjoints).
 
-Traiter dans l'ordre de priorité : `critical` → `high` → `medium` → `low`
-
-Pour chaque ticket, appliquer le **premier cas qui correspond** :
-
-**CAS A — status: blocked, au moins une question avec `*(en attente)*`**
-→ SKIP. L'utilisateur n'a pas encore répondu.
-→ Résumé : `⏸ #{id} — en attente de réponses utilisateur`
-
-**CAS B — status: blocked, toutes les réponses sont remplies (plus de `*(en attente)*`)**
-→ Lire les réponses dans `### Questions avant implémentation`
-→ Passer `status: open` dans le frontmatter
-→ Implémenter en tenant compte des réponses
-→ Fermer le ticket (voir règles de fermeture)
-
-**CAS C — `needs_clarification: true` dans le frontmatter, pas encore de section `### Questions`**
-→ Écrire les questions (max 2) dans le corps du ticket
-→ Passer `status: blocked`
-→ SKIP
-→ Résumé : `⏸ #{id} — questions écrites, en attente utilisateur`
-
-**CAS D — status: open, ambiguïté mineure (≤ 2 questions nécessaires)**
-Deux sous-cas :
-- Interprétation évidente → implémenter, documenter l'hypothèse dans `### Notes d'implémentation` :
-  "J'ai supposé X. Si incorrect : modifier Y dans fichier Z."
-- Choix laissé à l'utilisateur → écrire questions, passer à `blocked`, SKIP
-
-**CAS E — status: open, ambiguïté structurelle (> 2 questions nécessaires)**
-→ Ne pas implémenter
-→ Créer un item `roadmap/roadmap-{timestamp}-{slug}.md` avec la description du ticket
-→ Passer `status: blocked` sur le ticket, ajouter note : "Escaladé en roadmap-{id}"
-→ Résumé : `⚠ #{id} — escaladé → roadmap-{id}`
-
-**CAS F — status: open, tout clair**
-→ Implémenter
-→ Fermer le ticket (voir règles de fermeture ci-dessous)
+**Escalade** — si un ticket « simple » se révèle demander un choix d'architecture ou > 2 questions :
+ne pas forcer. Créer une note dans `roadmap/`, passer le ticket `blocked` avec un pointeur dans
+`### Notes d'implémentation`, continuer.
 
 ---
 
-## Règles de fermeture d'un ticket
+## Étape 4 — Roadmap (si le brief le demande)
 
-Modifier le frontmatter :
+**a. Direction déjà mûre → tickets.** Analyser le code pertinent + les tickets existants (éviter
+les doublons), puis créer les tickets dérivés dans `feedback-tickets/` au format standard
+(assigner `milestone` et `priority`). Lister les IDs créés dans le fichier roadmap concerné.
+
+**b. Direction à défricher.** Rédiger / compléter le doc dans `roadmap/`. Ne pas implémenter :
+une direction génère d'abord des tickets.
+
+---
+
+## Fermeture d'un ticket
+
+Frontmatter :
 ```yaml
 status: closed
-closed_at: {datetime ISO 8601 avec timezone UTC}
+closed_at: {datetime ISO 8601 UTC}
 ```
 
-Si le projet a un endpoint API qui régénère `TICKETS.md` automatiquement (ex: bank-review),
-ne pas régénérer manuellement — le prochain appel API le fera.
+Ajouter dans `### Notes d'implémentation` un **compte-rendu vérifié de 2-3 lignes** (ce qui a été
+fait + comment ça a été vérifié) — pour que l'utilisateur suive sans lire le code.
 
-Si le projet n'a pas d'endpoint dédié, régénérer `TICKETS.md` manuellement en suivant
-le format existant (tableau par type, séparation open/closed).
+Régénérer `TICKETS.md` : automatique si le projet a un endpoint qui le régénère (le prochain appel
+API le fera) ; sinon le régénérer à la main au format existant (tableaux par type, open/closed).
 
 ---
 
-## Étape 5 — Mettre à jour le SESSION_BRIEF.md
+## Étape 5 — Résumé de session
 
-Cocher tous les items traités.
-Remplir la section `## Résumé de session` :
+Cocher les items traités dans `SESSION_BRIEF.md` et remplir :
 
 ```markdown
 ## Résumé de session — {YYYY-MM-DD HH:MM}
 
-✅ Implémentés : #{id}, #{id}
-⏸ En attente de réponses : #{id} (Q1), #{id} (Q1, Q2)
-⚠ Escaladés en roadmap : #{id} → roadmap-{id}
-📋 Specs générées : {nom_fichier}.md
+✅ Implémentés (Opus) : #{id}, #{id}
+🤖 Implémentés (worker Sonnet, vérifiés) : #{id}, #{id}
+🔎 Écarts corrigés après vérification : #{id}
+⏸ Bloqués (attente utilisateur) : #{id}
 🗂 Tickets créés depuis roadmap : #{id}, #{id}
 ```
 
-Ne pas supprimer le SESSION_BRIEF.md. L'utilisateur crée le suivant manuellement
-depuis le hub quand il est prêt pour la prochaine session.
+Ne pas supprimer `SESSION_BRIEF.md` — l'utilisateur crée le suivant depuis le hub.
 
 ---
 
-## Règles de décision : quand poser des questions
+## Règles de décision (résumé)
 
-**Implémenter directement :**
-- Comportement attendu non-ambigu
-- Edge cases avec traitement logique évident
-- Aucun choix UX/design laissé ouvert
-
-**Écrire des questions (max 2), passer à `blocked` :**
-- Plusieurs comportements raisonnables existent, l'utilisateur doit choisir
-- Le scope est ambigu (affecte A uniquement ou aussi B ?)
-- Un détail UX est critique et absent de la description
-
-**Implémenter avec hypothèse documentée :**
-- Ambiguïté mineure, interprétation évidente
-- Toujours documenter dans `### Notes d'implémentation`
-- Maximum 1 hypothèse par ticket sans vérification utilisateur
-
-**Escalader en roadmap :**
-- Plus de 2 questions nécessaires pour clarifier
-- Choix d'architecture structurant en jeu
-- L'implémentation nécessite une analyse du code existant pour définir quoi faire
+- **Déléguer à un worker** : portée locale, description claire, pas de choix d'architecture.
+- **Faire soi-même (Opus)** : couplage multi-fichiers, ambiguïté de jugement, `needs_clarification`,
+  sécurité / données sensibles.
+- **Questionner en direct** : `needs_clarification: true`, ou détail bloquant absent de la description.
+- **Escalader en roadmap** : choix d'architecture structurant, ou > 2 questions nécessaires.
+- **Vérifier avant de fermer** : tests / run pour la correctness ; compte-rendu pour le contre-sens.
 
 ---
 
-## Format des questions dans un ticket
+## Effort / modèles
 
-Ajouter EXACTEMENT cette section après `### Description`, avant toute autre section existante :
-
-```markdown
-### Questions avant implémentation
-
-**Q1** : {question concise — une seule chose à la fois}
-**R1** : *(en attente)*
-
-**Q2** : {question concise}
-**R2** : *(en attente)*
-```
-
-Ne pas modifier le reste du fichier. Passer `status: blocked` dans le frontmatter.
-
----
-
-## Génération d'une spec
-
-Une spec est un fichier Markdown autonome contenant :
-- Objectif et contexte
-- Comportement attendu : cas nominal + edge cases
-- Contraintes techniques
-- Liste non-exhaustive des fichiers à modifier
-- Hors-scope explicite
-
-Nommage :
-- Spec attachée à un ticket : `feedback-tickets/{ticket_id}-spec-{slug}.md`
-- Spec d'un item roadmap : dans le fichier roadmap, section `### Spec générée`
-
----
-
-## Règles générales
-
-1. Toujours traiter dans l'ordre : roadmap → pré-actions → tickets par priorité
-2. Maximum 2 questions par ticket, sans exception
-3. Ne jamais sortir du scope défini dans `## Scope` du brief
-4. Un item roadmap n'est jamais implémenté directement — il génère des tickets d'abord
-5. Les specs (`-spec-*.md`) sont permanentes — ne jamais les supprimer
-6. Documenter toute hypothèse dans `### Notes d'implémentation` du ticket concerné
+- Session : **Opus** par défaut.
+- Worker tickets simples : **Sonnet 4.6** (`model: sonnet`). `Haiku` réservé au trivial (libellé, config).
+- Sur un ticket complexe traité par Opus, laisser l'effort par défaut (élevé) ; réserver l'effort
+  maximal aux tickets architecturaux.
