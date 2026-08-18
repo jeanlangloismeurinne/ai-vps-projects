@@ -260,6 +260,14 @@ Ne pas supprimer `SESSION_BRIEF.md` — l'utilisateur crée le suivant depuis le
 
 ---
 
+## Étape 6 — Déploiement
+
+Si la session a produit du code déployable, appliquer **`DEPLOY.md`** : un seul appel
+`infrastructure/deploy.sh <app> -m "<msg>" -f "<fichiers>" [-e KEY=VALUE …]` (option 1
+déterministe), fallback sous-agent Sonnet si échec. Garde les logs de build hors du contexte Opus.
+
+---
+
 ## Règles de décision (résumé)
 
 - **Déléguer à un worker** : portée locale, description claire, pas de choix d'architecture.

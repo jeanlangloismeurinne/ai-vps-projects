@@ -116,6 +116,14 @@ La variable `FEEDBACK_CHANNEL_ID` a `C0AUCE6NELT` en valeur par défaut — aucu
 4. Documenter ici
 5. **Ajouter le nom du dossier dans `_KNOWN_PROJECTS`** dans `projects/assistant-ia/app/slack_app.py` — cette liste est la source de vérité pour la commande `/feature` (sélecteur de projet Block Kit)
 
+## Déploiement — protocole obligatoire
+
+En fin de session, une fois une feature livrée (session en direct **ou** via tickets), suivre
+**`DEPLOY.md`** (racine du repo). Chemin nominal : un seul appel `infrastructure/deploy.sh <app>
+-m "<msg>" -f "<fichiers>" [-e KEY=VALUE …]` (commit index seul → push → env vars auto → rebuild
+PHP → monitor). En cas d'échec (exit ≠ 0), basculer sur le sous-agent Sonnet décrit dans DEPLOY.md.
+But : préserver le contexte/quota Opus en gardant le verbeux (diff, logs de build) hors session.
+
 ## Système de contrôle — tickets, roadmap, session brief
 
 Protocole complet dans **`CONTROL_SYSTEM.md`** à la racine du repo. Lire ce fichier au démarrage
