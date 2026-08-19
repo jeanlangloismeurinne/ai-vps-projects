@@ -277,7 +277,7 @@ Le curator remplit **le rôle du screening-agent** de *Processus fonds* et le r�
 
 - **Mode MVDD** (auto à l'onboarding) : checklist bloquante en **deux blocs de couverture jamais fusionnés** (DÉCISION #1, Q5) :
   - **couverture structurée** — business model compris · ≥3 ans financials · valorisation actuelle (largement remplie par EDGAR/yfinance à l'onboarding) ;
-  - **couverture qualitative/marché** — produits & proposition de valeur · **positionnement concurrentiel** (≥1 concurrent + part de marché relative + dynamique switching) · **structure & état du marché** (croissance, cycle, disruption) · risques principaux.
+  - **couverture qualitative/marché** — produits & proposition de valeur · **positionnement concurrentiel** (≥1 concurrent + part de marché relative + dynamique switching) · **structure & état du marché** (croissance, cycle, disruption) · **management & allocation du capital** (grille Outsiders : M&A · buybacks · dividendes · réinvestissement ; incitations ; skin-in-the-game — *ajout 2026-08-19, finding #1 des cartes de provenance*) · risques principaux.
   Lance des recherches ciblées (ouvriers Haiku) pour combler ; **sous-segmente** le scoring de couverture dimension par dimension. Sortie watchlist : `⏳ struct 4/4 · qual 1/4` / `✅ complet` / `⚠ bloquant manquant`.
 - **Mode Readiness** (au clic « Analyser ») : produit `readiness_report_json` — MVDD, entrées par tier, **3 indicateurs séparés (A3)**, `coverage{structuree, qualitative_marche}`, **incertitudes bloquantes vs investissables**, `gaps[]` **dispatchables**, verdict `not_ready | researching | thin_qualitative | ready | too_hard`. C'est le **GO/NO-GO** (ex-screening). **Le verdict `ready` exige un plancher sur les DEUX couvertures** : un dossier structuré-complet mais mince en qualitatif sort `thin_qualitative`, jamais `ready` (empêche de lancer l'Opus sur un set « qui a l'air complet »). Bouton « Analyser » actif seulement si `ready`.
 
@@ -309,6 +309,8 @@ Contrats **figés** le 2026-08-17 (DÉCISION #1, Partie D du benchmark). Chaque 
 5. La valorisation porte **toujours** le **reverse-DCF** (ce que le prix price déjà — A4).
 6. Le champ **variant perception** (edge) est obligatoire : pas d'edge articulé ⇒ pas de thèse.
 
+> **Amendement 2026-08-19 (passe cartes de provenance).** `research_memo` complété sur 3 findings, chacun répercuté aux 3 points de synchronisation à la construction (règle #19) : **(#1)** ajout de `management.source_entry_refs[]` **et** d'une dimension de couverture MVDD *management & allocation du capital* (§7) — sans elle un dossier passait `ready` sans aucune donnée d'allocation du capital, alors que le contrat exige un bloc `management` ; **(#2)** ajout de `moat.durabilite_ans.base_rate` (règle 2 — c'était une prévision chiffrée sans ancre) ; **(#3)** `industry.croissance_marche_pct` scindé en `croissance_marche_historique_pct` (factual) et `croissance_marche_prospective{taux_pct, base_rate}` (prévision → ancre obligatoire).
+
 ### 8.0 research_memo_json (research-agent — base NEUTRE, étapes 3-8)
 
 Produit après `readiness = ready`, à partir du `context_pack` du curator. **Neutre : pas de recommandation, pas de `verdict_recherche`** (Q2). Livre les faits analysés + les incertitudes.
@@ -318,7 +320,8 @@ Produit après `readiness = ready`, à partir du `context_pack` du curator. **Ne
   "business_model": {"description":"...","drivers_revenus":[],"recurrence_pct":90,
                      "unit_economics":"...","source_entry_refs":[{"entry_id":12,"version":1}]},
   "moat": {"type":["switching_costs","scale_economics_shared"],"score":4,
-           "durabilite_ans":{"forte":5,"incertaine":10},
+           "durabilite_ans":{"forte":5,"incertaine":10,
+              "base_rate":{"reference_class":"moats de type X ayant duré >5 ans","taux":0.5}},
            "trend":"widening|stable|eroding","preuves":[{"fait":"...","source_entry_refs":[]}]},
   "financials": {"roic_pct":18,"wacc_estime_pct":9,"roic_vs_wacc":"spread positif durable",
                  "roic_trend_5y":"stable","fcf_conversion_pct":85,"intensite_capex_pct":6,
@@ -326,9 +329,13 @@ Produit après `readiness = ready`, à partir du `context_pack` du curator. **Ne
                  "levier":{"dette_nette_ebitda":-0.3},"source_entry_refs":[]},
   "management": {"capital_allocation_scorecard":{"ma":"disciplinée","buybacks":"opportunistes sous IV",
                     "dividendes":"modérés","reinvestissement":"fort ROIC","note":"grille Outsiders"},
-                 "incitations":"...","skin_in_game_pct":1.6,"candeur":"...","score":3},
-  "industry": {"structure_5forces":"...","croissance_marche_pct":12,"cyclicite":"faible",
-               "disruption_vectors":[],"position_vs_pairs":"leader mid-market","source_entry_refs":[]},
+                 "incitations":"...","skin_in_game_pct":1.6,"candeur":"...","score":3,
+                 "source_entry_refs":[{"entry_id":0,"version":1}]},
+  "industry": {"structure_5forces":"...","croissance_marche_historique_pct":12,
+               "croissance_marche_prospective":{"taux_pct":15,
+                  "base_rate":{"reference_class":"...","taux_pct":10}},
+               "cyclicite":"faible","disruption_vectors":[],
+               "position_vs_pairs":"leader mid-market","source_entry_refs":[]},
   "valuation": {
      "dcf_scenarios":{"bear":95,"base":130,"bull":165,"drivers":{"croissance":0.10,"marge_fcf":0.28}},
      "epv":{"valeur_rentabilite":105,"note":"croissance payée justifiée par moat: oui/non"},

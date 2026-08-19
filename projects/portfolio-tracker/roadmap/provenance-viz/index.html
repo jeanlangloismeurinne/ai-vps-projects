@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartes de provenance V2 — portfolio-tracker</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--ink:#e7e9ee;--muted:#9aa3b2;--line:#2a2f3a;
+        --fact:#2e7d32;--judg:#e07b00;--der:#1565c0;--gap:#c62828;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.95);
+         border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+  header .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
+  h1{font-size:17px;margin:0;font-weight:650}
+  nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  nav a{font-size:12.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+        padding:4px 9px;border-radius:999px}
+  nav a.on{color:var(--ink);border-color:#3d5afe;background:#1b2340}
+  nav a.todo{opacity:.5}
+  main{max-width:1100px;margin:0 auto;padding:22px 18px 80px}
+  section{margin:34px 0;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  h2{font-size:15px;margin:0 0 4px;color:#bcd0ff;letter-spacing:.2px}
+  h2 .step{color:var(--muted);font-weight:500}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+  .mermaid{background:#0b0d12;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:6px 0 0}
+  .legend b{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .flag{color:#ff8a80}
+  .todo-note{color:var(--muted);font-style:italic}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:24px}
+  code{background:#0b0d12;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Cartes de provenance V2</h1>
+  <span class="lead" style="margin:0">portfolio-tracker · logique métier des JSON d'analyse</span>
+  <nav>
+    <a href="#research">research_memo</a>
+    <a href="#data-nvda">couche données · NVDA</a>
+    <a href="#bull">bull / bear</a>
+    <a href="#risk">risk_matrix</a>
+    <a href="#hyp">hypotheses[]</a>
+    <a class="on" href="#deriv">dérivation</a>
+  </nav>
+</div></header>
+
+<main>
+  <section id="legend">
+    <h2>Légende</h2>
+    <div class="legend">
+      <span><b style="background:var(--fact)"></b>factual — affirmation sourcée (<code>source_entry_refs</code>)</span>
+      <span><b style="background:var(--judg)"></b>judgment — appréciation de l'agent</span>
+      <span><b style="background:var(--der)"></b>derived — calculé depuis d'autres champs</span>
+      <span><b style="background:#888"></b>source / dimension MVDD (couche 3)</span>
+      <span><b style="background:var(--gap)"></b>gap / finding à trancher</span>
+    </div>
+    <p class="lead" style="margin-top:10px">Arête <b style="background:none;width:auto">pleine</b> = grounding / dérivation ·
+      <code>==&gt;</code> = grounding <b style="background:none;width:auto">délégué</b> (jugement adossé à un frère factuel) ·
+      <b style="background:none;width:auto">pointillée</b> = ancre base-rate (règle 2).</p>
+  </section>
+
+  <section id="research">
+    <h2>research_memo <span class="step">— base NEUTRE (Q2 : aucun verdict) · étapes B3–B8</span></h2>
+    <p class="lead">Tête de chaîne : sa neutralité et son grounding conditionnent bull/bear/synthèse. Findings #1-#3 <b>intégrés au contrat le 2026-08-19</b> (spec §8.0 / §7) — les blocs concernés sont désormais fondés.</p>
+
+    <h2 style="margin-top:18px">Vue d'ensemble</h2>
+    <pre class="mermaid">
+flowchart TB
+  S1[(S·business)]:::src
+  S2[(S·financials)]:::src
+  S3[(S·valorisation + prix)]:::src
+  Q1[(Q·positionnement)]:::src
+  Q2[(Q·marché)]:::src
+  Q3[(Q·produits)]:::src
+  QR[(Q·risques)]:::src
+  QM[(Q·management / gouvernance<br/>✓ ajouté §7 · #1)]:::src
+  S1 & Q3 --> BM[business_model]:::blk
+  Q1 --> MO[moat]:::blk
+  S2 --> FI[financials]:::blk
+  QM --> MA[management]:::blk
+  Q2 & Q1 --> IN[industry]:::blk
+  S2 & S3 --> VA[valuation]:::blk
+  QR --> UB[incertitudes_bloquantes]:::blk
+  BM & MO & FI & MA & IN & VA & UB --> MEMO[[research_memo · posture=NEUTRE<br/>AUCUN verdict_recherche]]:::out
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef blk fill:#1b2340,stroke:#3d5afe,color:#dfe6ff;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+
+    <h2 style="margin-top:18px">B3 · business_model</h2>
+    <pre class="mermaid">
+flowchart LR
+  KEbm[(KE business / produits)]:::src
+  KEf[(KE financials · A)]:::src
+  desc([description]):::fact
+  dr([drivers_revenus]):::fact
+  rec([recurrence_pct]):::fact
+  ue[unit_economics]:::der
+  refs>source_entry_refs]:::ref
+  KEbm --> desc & dr & rec
+  KEf --> ue
+  desc & dr & rec --- refs
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+    </pre>
+
+    <h2 style="margin-top:18px">B4 · moat <span class="step">— motif « grounding délégué »</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  KEc[(KE concurrence / moat · B+)]:::src
+  preuve([preuves.fait]):::fact
+  refs>preuves.source_entry_refs]:::ref
+  typ{{type}}:::judg
+  sco{{score}}:::judg
+  tre{{trend}}:::judg
+  dur{{durabilite_ans}}:::judg
+  KEbr[(pattern_library · base-rate)]:::src
+  brm([durabilite_ans.base_rate<br/>✓ ajouté #2]):::fact
+  KEc --> preuve
+  preuve --- refs
+  preuve ==> typ & sco & tre & dur
+  KEbr --> brm
+  brm -. ancre R2 .-> dur
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+    </pre>
+
+    <h2 style="margin-top:18px">B5 · financials <span class="step">— factuel → interprétations dérivées</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  KEf[(KE EDGAR / FMP · Tier A)]:::src
+  roic([roic_pct]):::fact
+  fcf([fcf_conversion_pct]):::fact
+  capex([intensite_capex_pct]):::fact
+  lev([dette_nette_ebitda]):::fact
+  acc[earnings_quality.accruals_flag]:::der
+  wacc[wacc_estime_pct]:::der
+  rvw[roic_vs_wacc]:::der
+  rt5[roic_trend_5y]:::der
+  eqs{{earnings_quality.score}}:::judg
+  KEf --> roic & fcf & capex & lev & acc & wacc & rt5
+  roic & wacc --> rvw
+  acc ==> eqs
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+    </pre>
+
+    <h2 style="margin-top:18px">B6 · management <span class="step">— finding #1 résolu (source_entry_refs + dimension MVDD)</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  D3[(DEF 14A proxy · edgar · A-)]:::src
+  refs>management.source_entry_refs<br/>✓ ajouté #1]:::ref
+  ma{{scorecard.ma}}:::judg
+  bb{{scorecard.buybacks}}:::judg
+  inc([incitations]):::fact
+  skin([skin_in_game_pct]):::fact
+  cand{{candeur}}:::judg
+  sco{{score}}:::judg
+  D3 --> inc & skin
+  inc & skin --- refs
+  inc & skin ==> ma & bb & cand
+  ma & bb & cand ==> sco
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+    </pre>
+
+    <h2 style="margin-top:18px">B7 · industry</h2>
+    <pre class="mermaid">
+flowchart LR
+  KEm[(KE marché · B+)]:::src
+  KEp[(KE pairs · B+)]:::src
+  s5{{structure_5forces}}:::judg
+  crh([croissance_marche_historique_pct]):::fact
+  crp{{croissance_marche_prospective.taux_pct}}:::judg
+  brp([...prospective.base_rate<br/>✓ ajouté #3]):::fact
+  KEb2[(pattern_library)]:::src
+  cyc{{cyclicite}}:::judg
+  dv{{disruption_vectors}}:::judg
+  pos{{position_vs_pairs}}:::judg
+  refs>source_entry_refs]:::ref
+  KEm --> crh
+  KEb2 --> brp
+  brp -. ancre R2 .-> crp
+  crh --> crp
+  KEm ==> s5 & cyc & dv
+  KEp ==> pos
+  crh --- refs
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+    </pre>
+
+    <h2 style="margin-top:18px">B8 · valuation <span class="step">— le sous-graphe le plus riche</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  KEf[(KE financials · A)]:::src
+  KEp[(KE prix marché · A)]:::src
+  KEb[(corpus / pattern_library<br/>base-rate · B+)]:::src
+  KEm[(KE moat · B+)]:::src
+  cro{{drivers.croissance · hypothèse}}:::judg
+  mfcf{{drivers.marge_fcf · hypothèse}}:::judg
+  prix([prix_actuel]):::fact
+  brt([base_rate_anchor.taux_base_pct]):::fact
+  mult([relatif.multiple]):::fact
+  dcf[dcf_scenarios]:::der
+  iv[iv_range]:::der
+  epv[epv.valeur_rentabilite]:::der
+  rdc[reverse_dcf.croissance_implicite]:::der
+  rdv[reverse_dcf.verdict]:::der
+  mos["marge_securite_base_pct · indicateur #3 (A3)"]:::der
+  KEf --> dcf & epv
+  KEp --> prix
+  KEb --> brt
+  cro & mfcf --> dcf
+  dcf --> iv
+  prix & iv --> mos
+  prix --> rdc --> rdv
+  brt --> rdv
+  brt -. ancre R2 .-> cro
+  brt -. ancre R2 .-> dcf
+  KEm --> epvn{{epv.note}}:::judg
+  mult --> rh[relatif.vs_historique]:::der
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+    </pre>
+
+    <h2 style="margin-top:18px">Incertitudes <span class="step">— transverses, moteur Q4/Q5</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  ALL[/tous les blocs/]:::blk
+  ub{{incertitudes_bloquantes<br/>question · impact · statut}}:::judg
+  ui{{incertitudes_investissables}}:::judg
+  ALL --> ub & ui
+  ub -->|statut=non_resolvable ET décisif| ESC[boucle Q5 / escalade Q4 · §8.3]:::out
+  classDef blk fill:#1b2340,stroke:#3d5afe,color:#dfe6ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+  </section>
+
+  <section id="data-nvda">
+    <style>
+      .dl-note{background:#2a1f10;border:1px solid #5a4a1e;color:#f0d9a0;border-radius:8px;
+               padding:10px 12px;font-size:13px;margin:0 0 16px}
+      table.dl{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}
+      table.dl th,table.dl td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+      table.dl th{color:#bcd0ff;background:#141826;position:sticky}
+      table.dl tr.gap td{background:#2a1414;color:#ffd0d0}
+      table.dl tr.mem td{background:#221a10;color:#f0d9a0}
+      .t{display:inline-block;border-radius:4px;padding:0 6px;font-size:11px;font-weight:700}
+      .tA{background:#12301c;color:#8ef0a8;border:1px solid #2e7d32}
+      .tB{background:#2a2412;color:#ffcf8a;border:1px solid #b5842e}
+      .tC{background:#2a1414;color:#ff9a9a;border:1px solid #b53a3a}
+      table.dl code{font-size:11.5px}
+      .fields{color:#9fc0ff}
+    </style>
+    <h2>Couche 3 — corpus illustratif NVDA <span class="step">— ce que la base *devra* contenir</span></h2>
+    <p class="dl-note">⚠ <b>Illustratif.</b> Les tables V2 (<code>knowledge_entries</code>, <code>knowledge_documents</code>) ne sont <b>pas encore créées</b> en DB (migrations arrêtées à la V1). Ces entrées montrent ce que la migration 023 + l'ingestion produiraient pour NVDA — et donc <b>d'où chaque champ du JSON est déduit</b>. Quand on bâtira le lot « fondation données », cette vue affichera de vraies lignes.</p>
+
+    <p class="lead">Chaîne complète <b>document → knowledge_entry (content NL + structured + tier) → champ JSON → refs</b> pour un extrait représentatif :</p>
+    <pre class="mermaid">
+flowchart LR
+  D1[(10-K FY2025 · edgar · A)]:::doc
+  D4[(web_search · CUDA &amp; parts de marché)]:::doc
+  D3[(DEF 14A proxy 2025 · edgar)]:::doc
+  DK[(corpus / pattern_library)]:::doc
+  MK[(yfinance · marché)]:::doc
+  D1 --> E20(["E20 · roic=60 · A"]):::fact
+  D1 --> E21(["E21 · fcf_conv=90 · A"]):::fact
+  D4 --> E10(["E10 · CUDA 5M dev · B+"]):::fact
+  D4 --> E11(["E11 · part GPU datacenter ~90 · B"]):::fact
+  DK --> E42(["E42 · base-rate=15 · B+"]):::fact
+  MK --> E40(["E40 · prix_actuel · A"]):::fact
+  E20 --> F1["financials.roic_pct"]:::field
+  E21 --> F2["financials.fcf_conversion_pct"]:::field
+  E10 &amp; E11 ==> F3["moat.trend / type / score"]:::field
+  E40 --> F4["marge_securite · reverse_dcf"]:::field
+  E42 -. ancre R2 .-> F4
+  D3 --> E12(["E12 · skin-in-game &amp; buybacks · A-"]):::fact
+  E12 --> MGok["management.* — grounded · #1 résolu"]:::field
+  classDef doc fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef docgap fill:#2a1a1a,stroke:#c0554f,color:#f0c8c8,stroke-dasharray:4;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef field fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+    </pre>
+
+    <p class="lead" style="margin-top:18px">Le corpus complet (19 entrées) qui alimente les 7 blocs de <code>research_memo</code>. Colonne « → champs » = ce que l'agent recopie/synthétise et cite dans <code>source_entry_refs</code> :</p>
+    <table class="dl">
+      <thead><tr><th>id</th><th>entry_type</th><th>source · tier</th><th>content (langage naturel)</th><th>content_structured</th><th>→ champs nourris</th></tr></thead>
+      <tbody>
+        <tr><td>E1</td><td>fact_qualitative</td><td>10-K · <span class="t tA">A-</span></td><td>4 segments ; Data Center ~88% du CA FY2025</td><td><code>{data_center_pct:88}</code></td><td class="fields">business_model.description · .drivers_revenus</td></tr>
+        <tr><td>E2</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Part récurrente (soft + networking) ~15%</td><td><code>{recurring_pct:15}</code></td><td class="fields">business_model.recurrence_pct</td></tr>
+        <tr><td>E3</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Marge brute ~75% FY2025</td><td><code>{gross_margin:75}</code></td><td class="fields">business_model.unit_economics <i>(derived)</i></td></tr>
+        <tr><td>E10</td><td>fact_qualitative</td><td>web_search · <span class="t tB">B+</span></td><td>Écosystème CUDA ~5M dev 2025 (vs ~3M 2022) → coûts de bascule</td><td><code>{dev_2025:5e6, dev_2022:3e6}</code></td><td class="fields">moat.preuves[0] · moat.trend · moat.type</td></tr>
+        <tr><td>E11</td><td>fact_qualitative</td><td>web_search · <span class="t tB">B</span></td><td>Part GPU datacenter ~90% en 2025</td><td><code>{gpu_dc_share:90}</code></td><td class="fields">moat.preuves[1] · industry.position_vs_pairs</td></tr>
+        <tr><td>E20</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>ROIC FY2025 ~60% (NOPAT / capital investi)</td><td><code>{metric:"ROIC", value:60, period:"FY-2025"}</code></td><td class="fields">financials.roic_pct</td></tr>
+        <tr><td>E21</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Conversion FCF ~90%</td><td><code>{fcf_conversion:90}</code></td><td class="fields">financials.fcf_conversion_pct</td></tr>
+        <tr><td>E22</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Trésorerie nette ; dette nette / EBITDA ~ -0.5x</td><td><code>{net_debt_ebitda:-0.5}</code></td><td class="fields">financials.levier</td></tr>
+        <tr><td>E23</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Intensité CapEx ~3% du CA</td><td><code>{capex_pct:3}</code></td><td class="fields">financials.intensite_capex_pct</td></tr>
+        <tr><td>E24</td><td>fact_financial</td><td>10-K · <span class="t tA">A</span></td><td>Accruals faibles → qualité des résultats élevée</td><td><code>{accruals_flag:false}</code></td><td class="fields">financials.earnings_quality</td></tr>
+        <tr><td>E30</td><td>fact_qualitative</td><td>web_search · <span class="t tB">B+</span></td><td>Marché accélérateurs IA datacenter ~150 Md$ 2025, +40%/an</td><td><code>{market_bn:150, growth_pct:40}</code></td><td class="fields">industry.croissance_marche_pct <b style="color:#ff8a80">⚠ prospectif → base-rate (#3)</b></td></tr>
+        <tr><td>E31</td><td>fact_qualitative</td><td>web_search · <span class="t tB">B</span></td><td>Concurrents : AMD MI300 · ASIC (Google TPU, AWS Trainium)</td><td><code>{competitors:["AMD","TPU","Trainium"]}</code></td><td class="fields">industry.disruption_vectors · position_vs_pairs</td></tr>
+        <tr><td>E40</td><td>fact_financial</td><td>yfinance · <span class="t tA">A</span></td><td>Prix actuel = cours de clôture du jour</td><td><code>{price:…, ts:…}</code></td><td class="fields">valuation.prix_actuel <i>(→ tout le bloc dérivé)</i></td></tr>
+        <tr><td>E41</td><td>fact_financial</td><td>FMP · <span class="t tA">A</span></td><td>FCF normalisé de base pour le DCF</td><td><code>{fcf_ttm:…}</code></td><td class="fields">valuation.dcf_scenarios <i>(derived)</i> · epv</td></tr>
+        <tr><td>E42</td><td>analysis</td><td>pattern_library · <span class="t tB">B+</span></td><td>Base-rate : ~15% des méga-caps tech maintiennent &gt;30% croissance sur 5 ans</td><td><code>{reference_class:"megacap tech &gt;30% 5y", taux:15}</code></td><td class="fields">valuation.base_rate_anchor <i>(ancre R2)</i></td></tr>
+        <tr><td>E43</td><td>fact_financial</td><td>FMP · <span class="t tA">A</span></td><td>EV/FCF ~40x — prime vs historique</td><td><code>{ev_fcf:40}</code></td><td class="fields">valuation.relatif</td></tr>
+        <tr><td>E50</td><td>risk</td><td>web_search · <span class="t tB">B</span></td><td>Contrôles export Chine : risque ~20-25% du CA datacenter</td><td><code>{impact_pct:22}</code></td><td class="fields">incertitudes_bloquantes[0] · risque lié</td></tr>
+        <tr class="mem"><td>E60</td><td>llm_memory</td><td>modèle · <span class="t tC">0.40</span></td><td>⚠ [mémoire modèle, cutoff 2025-08] estimation non sourcée — <code>requires_human_review=true</code></td><td><code>{note:"à confirmer"}</code></td><td class="fields">filet de secours si aucune entrée (badge « à vérifier »)</td></tr>
+        <tr><td>E12</td><td>fact_management</td><td>DEF 14A · <span class="t tA">A-</span></td><td>Insiders ~4% du capital · buybacks opportunistes · pas de dilution</td><td><code>{skin_in_game_pct:4, buybacks:"opportunistic"}</code></td><td class="fields">management.incitations · skin_in_game_pct · scorecard <i>(#1 résolu)</i></td></tr>
+      </tbody>
+    </table>
+    <p class="lead">Deux leçons : (1) l'agent ne « déduit » rien du néant — il <b>recopie/synthétise</b> le <code>content_structured</code> des entrées et cite leurs <code>id</code> ; (2) le <b>trou management</b> (finding #1) est désormais <b>résolu au contrat</b> — ajout de <code>fact_management</code> + <code>management.source_entry_refs</code> + dimension MVDD §7 → l'entrée E12 (DEF 14A) nourrit le bloc, plus de champ orphelin.</p>
+  </section>
+
+  <section id="bull">
+    <h2>bull_case / bear_case <span class="step">— étape B11 · jugement adversarial</span></h2>
+    <p class="lead">Bascule de nature : là où <code>research_memo</code> était surtout <b style="color:#8ef0a8">factual/derived</b>, le bull/bear est surtout <b style="color:#ffcf8a">judgment</b> — c'est la frontière faits (couche cumulative) / jugement (couche contestée) de la Partie C. Deux garde-fous encodés : <b>règle 2</b> (toute probabilité/prévision porte une ancre base-rate) et <b>règle 6</b> (variant_perception obligatoire : pas d'edge ⇒ pas de thèse).</p>
+
+    <h2 style="margin-top:18px">Architecture adversariale <span class="step">— Q3 isolation · Q4 une passe · A6 divergence</span></h2>
+    <pre class="mermaid">
+flowchart TB
+  MEMO[[research_memo NEUTRE · base grounded]]:::out
+  KE[(knowledge_entries partagées)]:::src
+  MEMO --> BULL & BEAR
+  KE --> BULL & BEAR
+  BULL[bull-agent · contexte isolé]:::blk
+  BEAR[bear-agent · contexte isolé<br/>mandat recherche divergente A6]:::blk
+  BULL --> REF[refutation_du_bull · 1 passe]:::judgblk
+  BEAR -. voit le bull APRÈS production .-> REF
+  REF --> SYNTH[[→ thesis-agent · synthèse]]:::out
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef blk fill:#1b2340,stroke:#3d5afe,color:#dfe6ff;
+  classDef judgblk fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+    </pre>
+
+    <h2 style="margin-top:18px">bull_case — provenance des champs</h2>
+    <pre class="mermaid">
+flowchart LR
+  memo[(research_memo · grounded)]:::src
+  div[(recherche divergente<br/>nouvelles entries)]:::src
+  br[(pattern_library · base-rates)]:::src
+  vp{{variant_perception<br/>type · enonce · catalyseur}}:::judg
+  arg{{arguments.explication}}:::judg
+  prob{{arguments.probabilite}}:::judg
+  bra([arguments.base_rate]):::fact
+  val[valorisation · scenarios · reverse_dcf]:::der
+  mos[indicateurs.marge_securite]:::der
+  conv{{conviction}}:::judg
+  gr[grounding_report<br/>← groundedness-checker A2]:::chk
+  memo ==> vp & arg
+  div ==> arg
+  br --> bra
+  bra -. ancre R2 .-> prob & val
+  memo --> val --> mos
+  arg --> conv
+  arg -. vérifié .-> gr
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef chk fill:#241a2e,stroke:#a06cd5,color:#e5d4f5;
+    </pre>
+
+    <h2 style="margin-top:18px">bear_case + réfutation <span class="step">— A6 divergence · Q3 dévoilement asymétrique</span></h2>
+    <pre class="mermaid">
+flowchart LR
+  memo[(research_memo)]:::src
+  bdiv[(bear divergent search<br/>litiges · red flags · short theses)]:::src
+  fb{{failles_bull_conventionnel}}:::judg
+  sdv[scenario_destruction_valeur<br/>prix_bear · perte_pct]:::der
+  decl{{declencheurs}}:::judg
+  bullargs[/arguments du bull/]:::blk
+  refu{{refutation_du_bull<br/>cible → contre-argument}}:::judg
+  bdiv ==> fb & decl
+  memo --> sdv
+  bullargs -. dévoilé au round .-> refu
+  bdiv ==> refu
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef blk fill:#1b2340,stroke:#3d5afe,color:#dfe6ff;
+    </pre>
+
+    <h2 style="margin-top:18px">Couche données — bull/bear NVDA (illustratif)</h2>
+    <p class="lead">Le bull part des entrées du memo (déjà grounded). Le <b>bear crée ses propres entrées</b> par recherche divergente (A6, marquées ⟂) — c'est son mécanisme de provisioning :</p>
+    <table class="dl">
+      <thead><tr><th>id</th><th>agent</th><th>entry_type · source · tier</th><th>content</th><th>→ champ</th></tr></thead>
+      <tbody>
+        <tr><td>E10/E11/E30</td><td>bull</td><td>fact_qualitative · web_search · <span class="t tB">B+</span></td><td>(réutilise le memo) CUDA 5M dev · part GPU ~90 · marché +40%/an</td><td class="fields">arguments[0] « le marché sous-estime la durabilité de la part »</td></tr>
+        <tr><td>E42</td><td>bull</td><td>analysis · pattern_library · <span class="t tB">B+</span></td><td>base-rate 15% (méga-caps &gt;30% sur 5 ans)</td><td class="fields">arguments[0].base_rate → probabilite ancrée (règle 2)</td></tr>
+        <tr class="mem"><td>E70 ⟂</td><td><b>bear</b></td><td>fact_qualitative · web_search · <span class="t tB">B</span></td><td>Ramp AMD MI300 + ASIC hyperscalers (Trainium, TPU) → érosion de part possible</td><td class="fields">failles_bull_conventionnel · refutation_du_bull → cible « part &gt;80% »</td></tr>
+        <tr class="mem"><td>E71 ⟂</td><td><b>bear</b></td><td>risk · web_search · <span class="t tB">B</span></td><td>Normalisation de la marge brute si la concurrence s'intensifie</td><td class="fields">scenario_destruction_valeur · declencheurs</td></tr>
+        <tr class="mem"><td>E50 ⟂</td><td><b>bear</b></td><td>risk · web_search · <span class="t tB">B</span></td><td>Contrôles export Chine ~20-25% du CA datacenter</td><td class="fields">scenario_destruction_valeur.declencheurs · risque</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">La <b>réfutation asymétrique</b> (Q3/Q4) : le bear, une fois le bull dévoilé, attaque « part &gt;80% maintenue » via E70/E71 — <code>refutation_du_bull[0] = {cible:"arg#0 bull", contre_argument:"…", source_entry_refs:[E70,E71]}</code>. Le bull ne voit jamais le bear (dernier mot à l'avocat du diable). Une seule passe, sauf escalade Q4.</p>
+  </section>
+  <section id="risk">
+    <h2>risk_matrix <span class="step">— étape B12 · synthèse / IC · SEUL verdict du flux (Q2)</span></h2>
+    <p class="lead">Le thesis-agent réconcilie bull + bear + réfutation + memo + <b>contexte portefeuille</b> (A8). Trois invariants encodés : <b>4 axes séparés</b> (A3, jamais fusionnés), <b>sizing Kelly-capé</b> ancré (Q6/A8), <b>override tracé</b> (A7).</p>
+
+    <h2 style="margin-top:18px">Vue IC — entrées → sorties</h2>
+    <pre class="mermaid">
+flowchart TB
+  BULL[(bull_case)]:::src
+  BEAR[(bear_case + refutation)]:::src
+  MEMO[(research_memo)]:::src
+  PF[(contexte portefeuille<br/>positions · corrélations · A8)]:::src
+  BULL --> AX &amp; RISK
+  BEAR --> AX &amp; RISK
+  MEMO --> AX &amp; PM
+  AX[axes · 4 séparés A3]:::der
+  RISK{{risques_acceptes<br/>+ base_rate + hypothese_liee}}:::judg
+  PM{{pre_mortem}}:::judg
+  AX --> SIZE
+  PF --> SIZE
+  SIZE[position_sizing]:::der
+  AX --> VERD
+  RISK --> VERD
+  VERD{{verdict · unique}}:::out
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+
+    <h2 style="margin-top:18px">Les 4 axes — jamais fusionnés (A3 / règle 4)</h2>
+    <pre class="mermaid">
+flowchart LR
+  moatfin[(memo · moat / financials)]:::src
+  srcsum[(sources_summary · tiers)]:::src
+  bb[(bull / bear · convictions)]:::src
+  val[(memo · valuation)]:::src
+  qb{{axes.qualite_business}}:::judg
+  qi[axes.qualite_info]:::der
+  cv{{axes.conviction}}:::judg
+  ms[axes.marge_securite]:::der
+  moatfin --> qb
+  srcsum --> qi
+  bb --> cv
+  val --> ms
+  qb &amp; qi &amp; cv &amp; ms --x FUSED[score global unique — INTERDIT A3]:::gap
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+    </pre>
+
+    <h2 style="margin-top:18px">position_sizing — formule Kelly-capée ancrée (Q6 · A8 · A7)</h2>
+    <pre class="mermaid">
+flowchart LR
+  inp[/conviction · marge_securite · 1÷correlation/]:::src
+  cap[(MAX_SECTOR_CONCENTRATION · cap dur)]:::src
+  pf[(risques corrélés portefeuille · A8)]:::src
+  form[pct_formule · Kelly capé]:::der
+  reco{{pct_recommande<br/>+ ajustement_justification}}:::judg
+  ovr{{override_utilisateur<br/>override_reason · A7}}:::user
+  inp --> form
+  cap -. cap dur .-> form
+  pf -. exposition .-> reco
+  form --> reco --> ovr
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef user fill:#2e2410,stroke:#e0b000,color:#f0d9a0;
+    </pre>
+
+    <p class="lead"><b>Provisioning particulier</b> : le sizing ne se nourrit pas des <code>knowledge_entries</code> du ticker mais du <b>contexte portefeuille</b> (positions existantes — facteur « CapEx datacenter » déjà à ~22% via NVDA/MSFT…). C'est la seule partie du flux dont l'entrée est le portefeuille, pas la KB du titre (A8).</p>
+  </section>
+  <section id="hyp">
+    <h2>thesis.hypotheses[] <span class="step">— étape B10 · falsifiabilité · pont décision → suivi</span></h2>
+    <p class="lead">Chaque <code>risque_accepté</code> du risk_matrix (via <code>hypothese_liee</code>) devient une hypothèse <b>falsifiable</b> : KPI mesurable + <b>seuil d'invalidation chiffré</b> (règle 3) + ancre base-rate (règle 2). Le seuil pilote le monitoring — escalade <b>uniquement</b> sur franchissement (anti-churn, §10 / audit §1.3).</p>
+    <pre class="mermaid">
+flowchart LR
+  risk[(risque accepté<br/>hypothese_liee=H3)]:::src
+  br[(pattern_library · base-rate)]:::src
+  en{{enonce falsifiable}}:::judg
+  kpi{{kpi · unite}}:::judg
+  sa{{seuil_alerte}}:::judg
+  si{{seuil_invalidation · règle 3}}:::judg
+  bra([base_rate]):::fact
+  refs>source_entry_refs]:::ref
+  risk ==> en
+  en --> kpi --> sa &amp; si
+  br --> bra
+  bra -. ancre R2 .-> si
+  en --- refs
+  si --> mon[[monitoring 2/3/6<br/>escalade SI franchi · anti-churn]]:::out
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+    <p class="lead">Exemple NVDA : <code>H3 « conserve &gt;80% PDM GPU IA jusqu'en 2028 » · kpi=part GPU datacenter · seuil_alerte=78 · seuil_invalidation=72 · base_rate=0.45</code>. Le <code>risques_acceptes[i].hypothese_liee=H3</code> du risk_matrix pointe ici — pont entre décision et suivi long terme.</p>
+  </section>
+  <section id="deriv">
+    <h2>Dérivation — la carte est la source unique <span class="step">— G1 : 1 source → 4 consommateurs</span></h2>
+    <p class="lead">Les 4 cartes ne sont pas de la doc : elles se projettent mécaniquement sur les artefacts d'exécution. Le Pydantic est <b>vérifié à l'exécution</b> (pydantic 2.13.4, container backend) — verrou Q2, refs factual obligatoires (#1), edge obligatoire (R6), cap sizing (Q6) rejettent tous l'invalide.</p>
+    <pre class="mermaid">
+flowchart LR
+  CARD[[carte de provenance<br/>champ · nature · grounding · dim MVDD · tier · base-rate]]:::out
+  CARD --> PYD[Pydantic versionné<br/>extra=forbid · Literal · refs ssi factual · validators]:::blk
+  CARD --> RDY[checklist readiness<br/>= champs factual groupés par dim MVDD]:::blk
+  CARD --> GRD[règles groundedness A2<br/>factual→direct · judgment→délégué · derived→hérité]:::blk
+  CARD --> VIZ[cette visualisation]:::blk
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef blk fill:#1b2340,stroke:#3d5afe,color:#dfe6ff;
+    </pre>
+
+    <h2 style="margin-top:18px">Readiness ← champs factuels du research_memo</h2>
+    <p class="lead">Une dimension MVDD atteint son plancher <b>ssi chacun de ses champs factuels est fondable</b> (≥1 knowledge_entry au tier requis) — calculable <b>avant</b> la recherche, car il suffit de vérifier l'existence d'entrées (= colonne « Gap si non-fondable »). <code>ready</code> exige les DEUX blocs ; <code>thin_qualitative</code> si le structuré est complet mais une dimension qualitative reste sous le plancher.</p>
+    <table class="dl">
+      <thead><tr><th>bloc</th><th>dimension MVDD</th><th>champs factuels requis fondables</th><th>tier</th><th>gap si manquant</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">structurée</td><td>business model</td><td><code>business_model.description · drivers_revenus · recurrence_pct</code></td><td>B+/A</td><td>modèle économique non documenté</td></tr>
+        <tr><td>≥3 ans financials</td><td><code>financials.roic_pct · fcf_conversion_pct · intensite_capex_pct · levier</code></td><td>A</td><td>financials insuffisants</td></tr>
+        <tr><td>valorisation actuelle</td><td><code>valuation.prix_actuel · relatif.multiple · base_rate_anchor</code></td><td>A/B+</td><td>prix / multiples indispo</td></tr>
+        <tr><td rowspan="5">qualitative</td><td>produits & proposition</td><td><code>business_model.description · unit_economics</code></td><td>B+</td><td>proposition de valeur non documentée</td></tr>
+        <tr><td>positionnement concurrentiel</td><td><code>moat.preuves[].fait · industry.position_vs_pairs</code></td><td>B+</td><td>dynamique concurrentielle absente</td></tr>
+        <tr><td>structure & état du marché</td><td><code>industry.croissance_marche_historique_pct · structure_5forces</code></td><td>B+</td><td>marché non documenté</td></tr>
+        <tr><td><b>management & allocation (#1)</b></td><td><code>management.incitations · skin_in_game_pct</code> (+ source_entry_refs)</td><td>A-</td><td>allocation du capital non documentée <b style="color:#8ef0a8">← empêche un faux `ready`</b></td></tr>
+        <tr><td>risques principaux</td><td><code>incertitudes_bloquantes[]</code> (+ entries risk)</td><td>B</td><td>risques principaux non identifiés</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">Corollaire : seuls les champs <b>factual</b> créent une exigence de couverture ; les <b>judgment/derived</b> sont produits à l'analyse. Deux provisionings sortent du readiness du titre : le <b>sizing</b> (contexte portefeuille, A8) et la <b>recherche divergente du bear</b> (A6, provisionnée à l'analyse). Artefacts : <code>roadmap/provenance-cards/analysis_v2_schemas.py</code> + <code>readiness_derivation.md</code> + <code>groundedness_rules.md</code> + <code>groundedness_checker.py</code>.</p>
+
+    <h2 style="margin-top:18px">Groundedness-checker (A2) — la carte dit quoi vérifier</h2>
+    <p class="lead">La <code>nature</code> × <code>grounding</code> de chaque champ définit sa vérification. <b>Économie</b> : déterministe d'abord (recompute des <code>derived</code> à formule connue, comptes, existence des refs, planchers de tier — 0 token), LLM-judge (Haiku batché) seulement pour « l'entry soutient-elle le fait ? » et « jugement cohérent avec ses preuves ? ». Partie déterministe <b>vérifiée en container</b> : elle détecte marge de sécurité / perte_pct / sources_summary erronés, tier sous plancher, ref hors snapshot.</p>
+    <pre class="mermaid">
+flowchart LR
+  f([factual]):::fact -->|LLM-judge : l'entry soutient le fait| CHK
+  j{{judgment}}:::judg -->|cohérent avec le frère factuel| CHK
+  d[derived]:::der -->|recompute déterministe si formule| CHK
+  r>ref]:::ref -->|entry_id ∈ snapshot A1| CHK
+  CHK[[grounding_report<br/>statut + score par champ · A2<br/>blocking si bloc décisif non étayé]]:::out
+  classDef fact fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef ref fill:#0b0d12,stroke:#7d8798,color:#9aa3b2,stroke-dasharray:3;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+  </section>
+</main>
+
+<footer>Généré depuis la carte de provenance — validation du chantier V2. Rafraîchi manuellement à chaque JSON validé.</footer>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({startOnLoad:true, theme:"dark", securityLevel:"loose",
+    flowchart:{htmlLabels:true, curve:"basis"}});
+</script>
+</body>
+</html>
