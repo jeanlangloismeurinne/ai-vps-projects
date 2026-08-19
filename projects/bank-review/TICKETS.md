@@ -1,29 +1,36 @@
 # TICKETS — bank-review
 
-> Généré automatiquement le 15/08/2026 18:37. **Lire au début de chaque session.**
+> Mis à jour le 19/08/2026 (fin de session brief). **Lire au début de chaque session.**
 
 ## Résumé
 
 | Type | Ouverts | Bloqués | Fermés |
 |---|---|---|---|
-| 🐛 Bugs | 0 | 0 | 16 |
+| 🐛 Bugs | 0 | 0 | 17 |
 | 🔴 Erreurs | 0 | 0 | 0 |
-| ✨ Features | 3 | 0 | 14 |
+| ✨ Features | 0 | 1 | 18 |
 | 💡 Suggestions | 0 | 0 | 10 |
 
 ## 🔓 Ouverts
 
+_Aucun ticket ouvert._
+
+## 🔒 Bloqués
+
 | ID | Date | Priorité | Description |
 |---|---|---|---|
-| `1786799400000` | 15/08/2026 00:00 | high | Modifier la couche d'accès DB pour utiliser la base de l'utilisateur connecté au |
-| `1786799300000` | 15/08/2026 00:00 | high | Remplacer l'authentification mono-utilisateur (`APP_PASSWORD`) par un système mu |
+| `1786823407348` | 15/08/2026 19:50 |  | Mot de passe oublié — reporté (dépend d'un transport email). Voir `roadmap/roadmap-1786823407348-password-reset.md` |
+
+## ✅ Fermés (45)
+
+| ID | Date | Priorité | Description |
+|---|---|---|---|
+| `1787053214093` | 18/08/2026 11:40 | medium | Badge vert des entrées positives dans les cellules de dépense (somme en haut à droite) |
+| `1786972892297` | 17/08/2026 13:21 | medium | Import Slack : question vacances (boutons + modale) avant import, comme sur le web |
 | `1786799500000` | 15/08/2026 00:00 | medium | Interface admin minimale pour créer/gérer les comptes utilisateurs :
 - Route `/a |
-
-## ✅ Fermés (40)
-
-| ID | Date | Priorité | Description |
-|---|---|---|---|
+| `1786799400000` | 15/08/2026 00:00 | high | Modifier la couche d'accès DB pour utiliser la base de l'utilisateur connecté au |
+| `1786799300000` | 15/08/2026 00:00 | high | Remplacer l'authentification mono-utilisateur (`APP_PASSWORD`) par un système mu |
 | `1780688027736` | 05/06/2026 19:33 | medium | J’aimerais que les couleurs de chaque case soient plus ou moins foncées selon l’ |
 | `1780687939733` | 05/06/2026 19:32 | medium | En fait c’est bon, pas de problème d’affichage sur le non catégorisé |
 | `1780687893194` | 05/06/2026 19:31 | medium | Je vois 894 dans la ligne “non catégorisé” pour septembre 2025 mais quand je cli |

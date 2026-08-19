@@ -98,11 +98,12 @@ async def update_budget_line(year_id: int, category: str, monthly_budget: float)
 
 async def get_monthly_actuals(
     year_id: int,
-) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, int]]]:
+) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, int]], dict[str, dict[str, float]]]:
     """
-    Returns (actuals, tx_counts).
+    Returns (actuals, tx_counts, positives).
     actuals: {category: {YYYY-MM: signed_amount}}
     tx_counts: {category: {YYYY-MM: transaction_count}}
+    positives: {category: {YYYY-MM: sum_of_positive_amounts}}
     """
     pool = await get_pool()
     rows = await pool.fetch(
@@ -111,7 +112,8 @@ async def get_monthly_actuals(
             t.category,
             TO_CHAR(t.date_op, 'YYYY-MM') AS month,
             SUM(t.amount)                 AS total,
-            COUNT(*)                      AS tx_count
+            COUNT(*)                      AS tx_count,
+            SUM(t.amount) FILTER (WHERE t.amount > 0) AS positive
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
         WHERE y.id = $1
@@ -123,10 +125,13 @@ async def get_monthly_actuals(
     )
     result: dict[str, dict[str, float]] = defaultdict(dict)
     counts: dict[str, dict[str, int]] = defaultdict(dict)
+    positives: dict[str, dict[str, float]] = defaultdict(dict)
     for r in rows:
         result[r["category"]][r["month"]] = float(r["total"])
         counts[r["category"]][r["month"]] = int(r["tx_count"])
-    return dict(result), dict(counts)
+        if r["positive"] is not None:
+            positives[r["category"]][r["month"]] = float(r["positive"])
+    return dict(result), dict(counts), dict(positives)
 
 
 # ── Budget view builder ───────────────────────────────────────────────────────
@@ -137,6 +142,7 @@ def build_budget_view(
     actuals: dict[str, dict[str, float]],
     tx_counts: dict[str, dict[str, int]] | None = None,
     today: date | None = None,
+    positives: dict[str, dict[str, float]] | None = None,
 ) -> dict:
     """
     Build the full budget view dict for the template.
@@ -153,6 +159,7 @@ def build_budget_view(
         cat_actuals = actuals.get(cat, {})
 
         cat_counts = (tx_counts or {}).get(cat, {})
+        cat_positives = (positives or {}).get(cat, {})
         monthly = []
         for m in months:
             actual = cat_actuals.get(m, 0.0)
@@ -167,6 +174,7 @@ def build_budget_view(
                 "is_current": m == today.strftime("%Y-%m"),
                 "is_future": m > today.strftime("%Y-%m"),
                 "has_tx": cat_counts.get(m, 0) > 0,
+                "positive": round(cat_positives.get(m, 0.0), 2),
             })
 
         ytd_actual = sum(cat_actuals.get(m, 0.0) for m in months[:elapsed_months])

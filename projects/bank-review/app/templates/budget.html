@@ -134,17 +134,21 @@
           {% endif %}
         </td>
         {% for m in cat.monthly %}
+        {% set cs = m_cell_style(m, cat.is_income) %}
         <td class="col-month
                    {% if m.is_current %}month-current{% endif %}
                    {% if m.is_future %}month-future{% endif %}
                    {% if not m.is_future and m.has_tx %}cell-link{% endif %}"
-            {% set cs = m_cell_style(m, cat.is_income) %}{% if cs %}style="{{ cs }}"{% endif %}
+            style="position:relative{% if cs %};{{ cs }}{% endif %}"
             {% if not m.is_future and m.has_tx %}
             data-cat="{{ cat.category|e }}" data-month="{{ m.month }}"
             onclick="openDrillDown(this.dataset.cat, this.dataset.month)"
             title="Voir les transactions — {{ cat.category }}"
             {% endif %}>
           {% if not m.is_future and m.has_tx %}{{ m.actual|fmtnum }}{% endif %}
+          {% if not cat.is_income and not m.is_future and m.positive and m.positive > 0 %}
+          <span style="position:absolute;top:1px;right:2px;font-size:9px;line-height:1;color:var(--cell-green-text, #16a34a);font-weight:600;pointer-events:none">+{{ m.positive|fmtnum }}</span>
+          {% endif %}
         </td>
         {% endfor %}
       </tr>

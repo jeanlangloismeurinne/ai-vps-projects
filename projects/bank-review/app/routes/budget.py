@@ -66,8 +66,8 @@ async def budget_page(request: Request, year_id: int = Query(default=None)):
     )
     selected = next((y for y in years if y["id"] == year_id), default)
     lines = await get_budget_lines(selected["id"])
-    actuals, tx_counts = await get_monthly_actuals(selected["id"])
-    view = build_budget_view(selected, lines, actuals, tx_counts)
+    actuals, tx_counts, positives = await get_monthly_actuals(selected["id"])
+    view = build_budget_view(selected, lines, actuals, tx_counts, positives=positives)
     uncovered = await get_uncovered_count(selected["id"])
 
     for y in years:

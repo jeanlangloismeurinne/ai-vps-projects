@@ -378,11 +378,29 @@ def _require_internal_api_key(x_internal_api_key: str = Header(default="")):
 async def import_direct(
     request: Request,
     file: UploadFile = File(...),
+    vacation_ranges: str = Form(""),
     _: None = Depends(_require_internal_api_key),
 ):
-    """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review."""
+    """Endpoint machine-to-machine : import complet en une seule requête, sans étape de review.
+
+    `vacation_ranges` (optionnel) : JSON `[["YYYY-MM-DD","YYYY-MM-DD"], ...]` — mêmes périodes
+    de vacances que l'import web, transmises au classifieur.
+    """
 
     content = await file.read()
+
+    periods: list[tuple[date, date]] = []
+    if vacation_ranges.strip():
+        try:
+            raw = json.loads(vacation_ranges)
+            for item in raw:
+                start = datetime.strptime(item[0], "%Y-%m-%d").date()
+                end = datetime.strptime(item[1], "%Y-%m-%d").date()
+                periods.append((start, end))
+        except Exception as e:
+            return JSONResponse(
+                {"error": f"Dates de vacances invalides : {e}"}, status_code=400
+            )
 
     if is_excel(content):
         content = xlsx_to_canonical_csv(content)
@@ -402,7 +420,7 @@ async def import_direct(
         with open(dest, "wb") as f:
             f.write(content)
 
-        classified = await run_import_pipeline(dest, [])
+        classified = await run_import_pipeline(dest, periods)
     except Exception as e:
         return JSONResponse({"error": f"Erreur pipeline : {e}"}, status_code=500)
     finally:
