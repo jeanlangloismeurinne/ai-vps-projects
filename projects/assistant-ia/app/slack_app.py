@@ -3,6 +3,7 @@ Module Slack Bolt (HTTP Events API).
 Gère : messages journal (thread replies) + slash commands kanban.
 HTTP Events API = Slack envoie des POST vers /slack/events (plus fiable que Socket Mode).
 """
+import asyncio
 import logging
 import re
 from datetime import datetime, timezone, timedelta
@@ -380,5 +381,79 @@ async def cmd_vue(ack, body, respond):
         return
     await kanban_svc.activate_grouping(str(g["id"]), board_id)
     await respond(response_type="in_channel", text=f"✅ Vue « {text} » activée.")
+
+
+# ─── bank-review — import avec question vacances ──────────────────────────────
+
+async def _update_bank_question(client, body, note: str) -> None:
+    """Remplace les boutons de la question vacances par une ligne de statut."""
+    msg = body.get("message", {})
+    channel = body.get("channel", {}).get("id") or body.get("container", {}).get("channel_id")
+    ts = msg.get("ts")
+    if not channel or not ts:
+        return
+    blocks = msg.get("blocks", [])
+    section = blocks[0] if blocks else {"type": "section", "text": {"type": "mrkdwn", "text": note}}
+    try:
+        await client.chat_update(
+            channel=channel,
+            ts=ts,
+            text=note,
+            blocks=[section, {"type": "context", "elements": [{"type": "mrkdwn", "text": note}]}],
+        )
+    except Exception:
+        logger.warning("bank vacances: chat_update échoué")
+
+
+# Références aux tâches d'import en cours (évite un GC prématuré des tasks détachées).
+_bank_import_tasks: set = set()
+
+
+def _run_bank_import_bg(payload: dict, vacation_ranges: str) -> None:
+    from app.handlers import bank_review as br
+    task = asyncio.create_task(
+        br.run_import_and_report(
+            channel_id=payload["c"],
+            filename=payload["f"],
+            file_path=payload["p"],
+            mime_type=payload["m"],
+            uploaded_by=payload["u"],
+            vacation_ranges=vacation_ranges,
+        )
+    )
+    _bank_import_tasks.add(task)
+    task.add_done_callback(_bank_import_tasks.discard)
+
+
+@bolt.action("bank_import_novac")
+async def action_bank_import_novac(ack, body, client, **_):
+    await ack()
+    from app.handlers import bank_review as br
+    payload = br.decode_payload(body["actions"][0]["value"])
+    await _update_bank_question(client, body, ":hourglass_flowing_sand: Import lancé (sans vacances)…")
+    _run_bank_import_bg(payload, "")
+
+
+@bolt.action("bank_import_vac")
+async def action_bank_import_vac(ack, body, client, **_):
+    await ack()
+    from app.handlers import bank_review as br
+    value = body["actions"][0]["value"]
+    try:
+        await client.views_open(trigger_id=body["trigger_id"], view=br.vacation_modal_view(value))
+    except Exception:
+        logger.exception("bank vacances: views_open échoué")
+
+
+@bolt.view("bank_vac_modal")
+async def view_bank_vac_modal(ack, body, view, **_):
+    from app.handlers import bank_review as br
+    vacation_ranges, errors = br.parse_modal_vacations(view)
+    if errors:
+        await ack(response_action="errors", errors=errors)
+        return
+    await ack()
+    payload = br.decode_payload(view["private_metadata"])
+    _run_bank_import_bg(payload, vacation_ranges)
 
 

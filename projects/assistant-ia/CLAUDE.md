@@ -41,12 +41,23 @@ app/
 1. Utilisateur dépose un CSV/XLSX dans #bank-review sur Slack
 2. `tool-file-intake` stocke le fichier dans `/storage/Documents/` et POST sur `/webhook/file-stored`
 3. `assistant-ia` vérifie `channel_id == BANK_REVIEW_CHANNEL_ID` et que l'extension est CSV/XLSX
-4. Lit le fichier depuis le chemin reçu dans le payload
-5. POST `/api/import/direct` sur bank-review avec `X-Internal-Api-Key`
-6. Reçoit `{session_id, added, date_min, date_max}`
-7. Envoie un message Block Kit dans le channel avec :
+4. **Ne lance pas l'import tout de suite** : poste une question *« Y a-t-il eu des vacances ? »*
+   avec deux boutons (`bank_import_novac` / `bank_import_vac`). Le chemin du fichier + métadonnées
+   sont encodés dans la `value` du bouton (et la `private_metadata` de la modale).
+5. Selon le clic :
+   - *Non, importer* → import sans période de vacances.
+   - *Oui, préciser* → ouvre une modale (`callback_id: bank_vac_modal`) avec jusqu'à 3 plages de
+     dates (période 1 requise). À la soumission, les plages sont transmises comme `vacation_ranges`.
+6. `run_import_and_report` (dans `handlers/bank_review.py`) lit le fichier et POST
+   `/api/import/direct` sur bank-review avec `X-Internal-Api-Key` + champ `vacation_ranges`
+   (JSON `[["YYYY-MM-DD","YYYY-MM-DD"], ...]`, comme l'import web).
+7. Reçoit `{session_id, added, date_min, date_max}` et envoie un message Block Kit avec :
    - Bouton *"Voir les dépenses"* → `https://bank.jlmvpscode.duckdns.org/import/history/{session_id}`
    - Bouton *"Suivi budget"* → `https://bank.jlmvpscode.duckdns.org/budget`
+
+> L'import réel tourne en tâche de fond (`asyncio.create_task`) après l'`ack()` du bouton/modale
+> (contrainte Slack des 3 s). Les handlers Bolt sont dans `slack_app.py`
+> (`bank_import_novac`, `bank_import_vac`, vue `bank_vac_modal`).
 
 ## Intégrations actives
 
