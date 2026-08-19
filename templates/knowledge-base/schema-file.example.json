@@ -1,0 +1,35 @@
+{
+  "//": "Schema file Karpathy — 'ce qui compte' pour ce domaine de connaissance.",
+  "//_": "Équivalent d'un CLAUDE.md pour les agents du projet. Voir KNOWLEDGE_ARCHITECTURE.md §2.",
+
+  "domain": "<slug-du-domaine>",
+  "description": "Ce que la KB de ce domaine doit couvrir et prioriser.",
+
+  "what_matters": [
+    "Les questions/faits que les agents doivent toujours chercher à documenter.",
+    "Ex. (portfolio-tracker / secteur): KPIs financiers clés, moat, risques, catalyseurs."
+  ],
+
+  "entity_types": ["<type_entité_1>", "<type_entité_2>"],
+
+  "default_source_reliability": {
+    "official_filing": 0.95,
+    "company_official": 0.90,
+    "reputable_press": 0.75,
+    "web_generic": 0.50,
+    "llm_memory": 0.40,
+    "agent_synthesis": 0.60
+  },
+
+  "default_visibility": "public",
+
+  "standard_queries": [
+    "Liste de requêtes de référence exécutées à l'ingestion/monitoring pour ce domaine."
+  ],
+
+  "lint_rules": {
+    "stale_after_days": 365,
+    "flag_contradictions": true,
+    "flag_orphans": true
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jlmvpscode.duckdns.org/schemas/knowledge-envelope-v1.json",
+  "title": "Knowledge Document Envelope",
+  "description": "Contrat commun exporté par toute KB de projet. Voir KNOWLEDGE_ARCHITECTURE.md §3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "doc_id",
+    "project",
+    "source",
+    "uri",
+    "title",
+    "body",
+    "visibility",
+    "created_at",
+    "updated_at",
+    "ingested_at",
+    "content_hash"
+  ],
+  "properties": {
+    "doc_id": {
+      "type": "string",
+      "description": "Identifiant global stable. Format recommandé: {project}:{source}:{local_id}.",
+      "pattern": "^[a-z0-9_-]+:[a-z_]+:.+$"
+    },
+    "project": {
+      "type": "string",
+      "description": "Slug du projet.",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["vps_files", "postgres", "notion", "nextcloud", "mailbox", "web", "agent_synthesis"]
+    },
+    "uri": {
+      "type": "string",
+      "description": "Pointeur canonique vers l'original dans son système de référence."
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "body": {
+      "type": "string",
+      "description": "Contenu Markdown — format pivot lisible humain + LLM."
+    },
+    "lang": { "type": "string", "description": "Code ISO 639-1 (fr, en...)." },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "entities": {
+      "type": "object",
+      "description": "Références normalisées pour le cross-linking (ex. {\"tickers\":[\"NVDA\"]}).",
+      "additionalProperties": true
+    },
+    "reliability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Score de fiabilité. Défaut selon source (charte §6)."
+    },
+    "reliability_tier": {
+      "type": "string",
+      "description": "Tier lisible: A, A-, B+, B, C+, C..."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private", "confidential"],
+      "description": "mailbox et documents privés = private/confidential par défaut."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Posé par le connecteur d'ingestion fédérée."
+    },
+    "content_hash": {
+      "type": "string",
+      "description": "Hash du body (ex. sha256:...) — dédup et détection de changement."
+    },
+    "embedding": {
+      "type": ["array", "null"],
+      "items": { "type": "number" },
+      "description": "Calculé à l'ingestion fédérée, PAS par le projet."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extras spécifiques au projet. N'entre jamais dans le contrat.",
+      "additionalProperties": true
+    }
+  }
+}
