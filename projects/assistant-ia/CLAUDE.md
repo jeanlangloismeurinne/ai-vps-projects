@@ -135,7 +135,7 @@ Avant tout déploiement d'une nouvelle fonctionnalité, mettre à jour :
 
 Ordre obligatoire :
 1. `git push origin main`
-2. Rebuild Coolify via API (voir CLAUDE.md racine pour le template curl)
+2. Rebuild Coolify via API (voir COOLIFY_PLAYBOOK.md racine pour le template curl)
 
 ## Système de contrôle
 

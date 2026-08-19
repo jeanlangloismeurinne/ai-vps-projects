@@ -19,7 +19,7 @@
   ```
 
 **Action à faire en début de session** : déclencher un rebuild Coolify (méthode PHP dans
-`/root/ai-vps-projects/CLAUDE.md` section "Pièges Coolify") pour que le volume soit
+`/root/ai-vps-projects/COOLIFY_PLAYBOOK.md` section "Pièges Coolify") pour que le volume soit
 activement monté sur le nouveau container.
 
 **Vérification post-rebuild** :
