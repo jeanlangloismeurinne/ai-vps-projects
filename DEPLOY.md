@@ -60,13 +60,13 @@ Prompt à passer au sous-agent (adapter les `{…}`) :
 ```
 Tu es en charge de FINIR un déploiement qui a échoué. Contexte minimal :
 - Repo : /root/ai-vps-projects (mono-repo, branche main, remote GitHub origin).
-- App Coolify visée : {app} (UUID dans CLAUDE.md § "UUIDs des applications Coolify").
+- App Coolify visée : {app} (UUID dans COOLIFY_PLAYBOOK.md § "UUIDs des applications Coolify").
 - Commande tentée : infrastructure/deploy.sh {rappel des args}
 - Sortie/erreur observée : {coller la ligne RESULT: + le contexte d'échec}
 - Feature livrée : {1-2 phrases}   Nouvelles variables d'env attendues : {clés ou "aucune"}.
 
-Playbook de référence : CLAUDE.md § "Pièges Coolify" (rebuild PHP sans token, monitoring DB,
-génération de token API, env vars). DEPLOY.md pour le contrat.
+Playbook de référence : COOLIFY_PLAYBOOK.md (rebuild PHP sans token, monitoring DB,
+génération de token API, env vars, labels Traefik). DEPLOY.md pour le contrat.
 
 Objectif : commit/push si pas encore fait, écrire les env vars manquantes, déclencher le rebuild,
 surveiller jusqu'à status 'finished'. Diagnostiquer et corriger la cause de l'échec (push rejeté,
