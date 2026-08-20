@@ -739,7 +739,6 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str,
     sub_filter_row = f'<div class="filter-row">{sub_btns}</div>' if has_subs else ""
 
     body = f"""
-<form method="GET" action="/tickets/{_e(project)}/brief" id="brief-form">
 <div class="page-header">
   <div class="page-title">{_e(display)}</div>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -748,6 +747,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str,
   </div>
 </div>
 {add_sub_html}
+<form method="GET" action="/tickets/{_e(project)}/brief" id="brief-form">
 <div class="brief-bar">
   <span class="brief-count">📋 <strong id="brief-n">0</strong> ticket(s) sélectionné(s)</span>
   <button type="submit" class="btn btn-secondary btn-sm" id="brief-btn" disabled>Construire le brief →</button>
