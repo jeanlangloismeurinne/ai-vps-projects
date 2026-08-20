@@ -27,8 +27,17 @@ def _roadmap_dir(project: str) -> Path:
 
 def _item_path(project: str, item_id: str) -> Optional[Path]:
     rd = _roadmap_dir(project)
+    # Doc libre référencé par son nom de fichier (stem)
+    direct = rd / f"{item_id}.md"
+    if direct.exists():
+        return direct
+    # Legacy : roadmap-{id}-{slug}.md, référencé par l'{id} numérique
     for f in rd.glob(f"roadmap-{item_id}-*.md"):
         return f
+    # Filet : n'importe quel .md dont le stem correspond
+    for f in rd.glob("*.md"):
+        if f.stem == item_id:
+            return f
     return None
 
 
@@ -45,11 +54,25 @@ def _parse_item(filepath: Path) -> dict:
         body = raw[m.end():].strip()
     fm["body"] = body
     fm["file"] = filepath.name
-    fm.setdefault("id", filepath.stem.split("-")[1] if "-" in filepath.stem else filepath.stem)
+    # L'id de routage = TOUJOURS le nom de fichier (stem). Il résout de façon fiable via
+    # _item_path, qu'il y ait ou non un `id:` dans le front-matter (docs libres compris).
+    fm["id"] = filepath.stem
+    # Date de secours pour les docs libres sans front-matter : mtime du fichier.
+    fm.setdefault("created", datetime.fromtimestamp(filepath.stat().st_mtime).isoformat())
 
-    # Extract user description preview
+    # Aperçu : section utilisateur si présente (docs structurés), sinon 1re ligne utile.
     user_m = re.search(r"### Direction / Feature \(utilisateur\)\n([\s\S]*?)(?:\n###|\Z)", body)
-    fm["preview"] = (user_m.group(1).strip()[:120] if user_m else body[:120])
+    if user_m:
+        fm["preview"] = user_m.group(1).strip()[:120]
+    else:
+        preview = ""
+        for ln in body.split("\n"):
+            s = ln.strip()
+            if not s or s.startswith(("#", ">", "---", "```", "|")):
+                continue
+            preview = s
+            break
+        fm["preview"] = (preview or body.strip())[:120]
 
     # Count linked tickets
     tickets_m = re.search(r"### Tickets créés\n([\s\S]*?)(?:\n###|\Z)", body)
@@ -64,7 +87,8 @@ def _parse_item(filepath: Path) -> dict:
 def _list_items(project: str) -> list[dict]:
     rd = _roadmap_dir(project)
     items = []
-    for f in sorted(rd.glob("roadmap-*.md"), reverse=True):
+    # Tout fichier .md du dossier roadmap est un item (docs libres compris), plus récent en tête.
+    for f in sorted(rd.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True):
         try:
             items.append(_parse_item(f))
         except Exception:
@@ -215,7 +239,7 @@ def _page_list(project: str, items: list) -> str:
             continue
         cards = ""
         for item in group:
-            iid = item.get("id", "").replace("roadmap-", "")
+            iid = item.get("id", "")
             preview = _e(item.get("preview", "")[:100])
             date = _fmt_date(item.get("created", ""))
             tc = item.get("tickets_count", 0)
@@ -285,7 +309,7 @@ def _page_new(project: str, error: str = "") -> str:
 
 
 def _page_edit(project: str, item: dict, flash: str = "") -> str:
-    iid    = item.get("id", "").replace("roadmap-", "")
+    iid    = item.get("id", "")
     status = item.get("status", "draft")
     body_md = item.get("body", "")
 
