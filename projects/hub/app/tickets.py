@@ -37,11 +37,25 @@ def _feedback_dir(project: str) -> Optional[Path]:
 
 def _ticket_path(project: str, ticket_id: str) -> Optional[Path]:
     fd = _feedback_dir(project)
-    if not fd:
-        return None
-    for f in fd.glob(f"{ticket_id}-*.md"):
-        return f
+    if fd:
+        for f in fd.glob(f"{ticket_id}-*.md"):
+            return f
+    # Fallback : projet parent (sans « ~ ») → chercher dans les sous-projets.
+    # Les IDs de tickets sont des timestamps uniques, la recherche est donc sûre.
+    if "~" not in project:
+        base = PROJECTS_BASE / project / "feedback-tickets"
+        if base.is_dir():
+            for f in base.glob(f"*/{ticket_id}-*.md"):
+                return f
     return None
+
+
+def _subproject_dirs(project: str) -> list[str]:
+    """Sous-projets (sous-dossiers de feedback-tickets/) d'un projet parent, même vides."""
+    base = PROJECTS_BASE / project.split("~")[0] / "feedback-tickets"
+    if not base.is_dir():
+        return []
+    return sorted(d.name for d in base.iterdir() if d.is_dir())
 
 
 def _parse_frontmatter(raw: str) -> tuple[dict, str]:
@@ -79,16 +93,43 @@ def _parse_ticket(filepath: Path) -> dict:
     return fm
 
 
-def _list_tickets(project: str) -> list[dict]:
-    fd = _feedback_dir(project)
-    if not fd:
-        return []
-    tickets = []
-    for f in sorted(fd.glob("*.md"), reverse=True):
+GENERAL_SUB = "général"  # bucket des tickets au niveau du projet parent (racine feedback-tickets/)
+
+
+def _read_dir_tickets(d: Path, sub: str, addr: str) -> list[dict]:
+    out = []
+    for f in sorted(d.glob("*.md"), reverse=True):
         try:
-            tickets.append(_parse_ticket(f))
+            t = _parse_ticket(f)
+            t["_sub"] = sub
+            t["_addr"] = addr
+            out.append(t)
         except Exception:
             pass
+    return out
+
+
+def _list_tickets(project: str) -> list[dict]:
+    """Tickets d'un projet.
+
+    - Adresse sous-projet (« projet~sous ») → uniquement ce sous-dossier.
+    - Adresse projet parent → agrégation de la racine (bucket « général ») + tous
+      les sous-projets. Chaque ticket est tagué `_sub` (sous-projet) et `_addr`
+      (adresse à utiliser pour les liens d'édition).
+    """
+    if "~" in project:
+        fd = _feedback_dir(project)
+        if not fd:
+            return []
+        sub = project.split("~", 1)[1]
+        tickets = _read_dir_tickets(fd, sub, project)
+    else:
+        base = PROJECTS_BASE / project / "feedback-tickets"
+        if not base.is_dir():
+            return []
+        tickets = _read_dir_tickets(base, GENERAL_SUB, project)
+        for sub in _subproject_dirs(project):
+            tickets += _read_dir_tickets(base / sub, sub, f"{project}~{sub}")
     return sorted(tickets, key=lambda t: PRIORITY_ORDER.get(t.get("priority"), 4))
 
 
@@ -99,7 +140,21 @@ def _list_specs(project: str, ticket_id: str) -> list[str]:
     return sorted(f.name for f in fd.glob(f"{ticket_id}-spec-*"))
 
 
+def _count_status(files) -> tuple[int, int, int]:
+    open_c = blocked_c = closed_c = 0
+    for f in files:
+        txt = f.read_text()
+        if "status: open" in txt:
+            open_c += 1
+        elif "status: blocked" in txt:
+            blocked_c += 1
+        else:
+            closed_c += 1
+    return open_c, blocked_c, closed_c
+
+
 def _list_projects() -> list[dict]:
+    """Une carte par projet parent, compteurs agrégés (racine + tous les sous-projets)."""
     if not PROJECTS_BASE.exists():
         return []
     projects = []
@@ -110,44 +165,29 @@ def _list_projects() -> list[dict]:
         if not fd.is_dir():
             continue
 
-        def _count(files):
-            open_c = blocked_c = closed_c = 0
-            for f in files:
-                txt = f.read_text()
-                if "status: open" in txt:
-                    open_c += 1
-                elif "status: blocked" in txt:
-                    blocked_c += 1
-                else:
-                    closed_c += 1
-            return open_c, blocked_c, closed_c
-
-        root_md = list(fd.glob("*.md"))
-        o, b, c = _count(root_md) if root_md else (0, 0, 0)
-        projects.append({"name": p.name, "open": o, "blocked": b, "closed": c, "total": len(root_md)})
-
-        for sub in sorted(fd.iterdir()):
-            if not sub.is_dir():
-                continue
+        all_md = list(fd.glob("*.md"))          # bucket « général » (racine)
+        subs = []
+        for sub in sorted(d for d in fd.iterdir() if d.is_dir()):
             sub_md = list(sub.glob("*.md"))
-            if not sub_md:
-                continue
-            o, b, c = _count(sub_md)
-            projects.append({"name": f"{p.name}~{sub.name}", "open": o, "blocked": b, "closed": c, "total": len(sub_md)})
+            all_md += sub_md
+            subs.append({"name": sub.name, "total": len(sub_md)})
+
+        o, b, c = _count_status(all_md)
+        projects.append({
+            "name": p.name, "open": o, "blocked": b, "closed": c,
+            "total": len(all_md), "subprojects": subs,
+        })
 
     return projects
 
 
 def _regenerate_tickets_md(project: str):
-    fd = _feedback_dir(project)
-    if not fd:
+    # TICKETS.md est unique par projet parent et agrège tous les sous-projets.
+    top = project.split("~")[0]
+    if not (PROJECTS_BASE / top / "feedback-tickets").is_dir():
         return
-    tickets = []
-    for f in sorted(fd.glob("*.md"), reverse=True):
-        try:
-            tickets.append(_parse_ticket(f))
-        except Exception:
-            pass
+    tickets = _list_tickets(top)
+    has_subs = bool(_subproject_dirs(top))
 
     open_t   = [t for t in tickets if t.get("status") == "open"]
     blocked_t = [t for t in tickets if t.get("status") == "blocked"]
@@ -162,19 +202,25 @@ def _regenerate_tickets_md(project: str):
     def rows(items):
         if not items:
             return "_Aucun_\n"
-        header = "| ID | Date | Priorité | Description |\n|---|---|---|---|\n"
+        if has_subs:
+            header = "| ID | Sous-projet | Date | Priorité | Description |\n|---|---|---|---|---|\n"
+        else:
+            header = "| ID | Date | Priorité | Description |\n|---|---|---|---|\n"
         r = []
         for t in items:
             desc = (t.get("description") or "").replace("|", "\\|")[:80]
             prio = t.get("priority", "")
-            r.append(f"| `{t.get('id','')}` | {fmt_date(t.get('date',''))} | {prio} | {desc} |")
+            if has_subs:
+                r.append(f"| `{t.get('id','')}` | {t.get('_sub','')} | {fmt_date(t.get('date',''))} | {prio} | {desc} |")
+            else:
+                r.append(f"| `{t.get('id','')}` | {fmt_date(t.get('date',''))} | {prio} | {desc} |")
         return header + "\n".join(r) + "\n"
 
     def cnt(lst, typ):
         return sum(1 for t in lst if t.get("type") == typ)
 
     md = [
-        f"# TICKETS — {project}",
+        f"# TICKETS — {top}",
         "",
         f"> Généré automatiquement le {datetime.now().strftime('%d/%m/%Y %H:%M')}. **Lire au début de chaque session.**",
         "",
@@ -198,8 +244,7 @@ def _regenerate_tickets_md(project: str):
     if not tickets:
         md += ["_Aucun ticket pour l'instant._", ""]
 
-    base = PROJECTS_BASE / project.split("~")[0] if "~" in project else PROJECTS_BASE / project
-    (base / "TICKETS.md").write_text("\n".join(md))
+    (PROJECTS_BASE / top / "TICKETS.md").write_text("\n".join(md))
 
 
 def _create_ticket(
@@ -455,9 +500,17 @@ def _page_projects(projects: list) -> str:
     else:
         cards = '<div class="project-grid">'
         for p in projects:
-            display = _e(p["name"].replace("~", " / "))
+            display = _e(p["name"])
             blocked_html = f' <span class="count-blocked">· {p["blocked"]} bloqué{"s" if p["blocked"]!=1 else ""}</span>' if p["blocked"] else ""
-            roadmap_link = f'/roadmap/{_e(p["name"])}'
+            subs = p.get("subprojects", [])
+            subs_html = ""
+            if subs:
+                chips = "".join(
+                    f'<span class="tag" style="background:#0f1117;border:1px solid #2a2d3a;color:#9ca3af">'
+                    f'{_e(s["name"])} · {s["total"]}</span>'
+                    for s in subs
+                )
+                subs_html = f'<div style="margin-top:.55rem;display:flex;gap:.35rem;flex-wrap:wrap">{chips}</div>'
             cards += f"""
       <a href="/tickets/{_e(p['name'])}" class="project-card" style="display:block">
         <div class="project-name">{display}</div>
@@ -466,6 +519,7 @@ def _page_projects(projects: list) -> str:
           {blocked_html}
           <span class="count-closed">· {p['closed']} fermé{"s" if p['closed']!=1 else ""}</span>
         </div>
+        {subs_html}
         <div style="margin-top:.5rem;font-size:.72rem;color:#444">→ Roadmap</div>
       </a>"""
         cards += "</div>"
@@ -516,19 +570,43 @@ def _create_project(name: str) -> tuple[bool, str]:
     return True, name
 
 
+def _create_subproject(project: str, sub: str) -> tuple[bool, str]:
+    top = project.split("~")[0]
+    sub = sub.strip().lower()
+    if not re.match(r'^[a-z0-9][a-z0-9-]*$', sub):
+        return False, "Nom invalide : lettres minuscules, chiffres et tirets uniquement."
+    if sub == GENERAL_SUB:
+        return False, f"« {GENERAL_SUB} » est réservé au niveau projet."
+    base = PROJECTS_BASE / top / "feedback-tickets"
+    if not base.is_dir():
+        return False, f"Projet introuvable : {top}."
+    d = base / sub
+    if d.exists():
+        return False, f"Le sous-projet « {sub} » existe déjà."
+    d.mkdir(parents=True, exist_ok=True)
+    return True, sub
+
+
 # ── Page: ticket list ──────────────────────────────────────────────────────────
 
-def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, priority_f: str, milestone_f: str) -> str:
-    def furl(s=None, t=None, p=None, m=None):
+def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str,
+                      priority_f: str, milestone_f: str, subproject_f: str = "all",
+                      subprojects: list = None) -> str:
+    subprojects = subprojects or []
+    has_subs = bool(subprojects)
+
+    def furl(s=None, t=None, p=None, m=None, sub=None):
         s = s if s is not None else status_f
         t = t if t is not None else type_f
         p = p if p is not None else priority_f
         m = m if m is not None else milestone_f
+        sub = sub if sub is not None else subproject_f
         params = [x for x in [
             f"status={s}" if s != "active" else "",  # "active" est le défaut, omis dans l'URL
             f"type={t}" if t != "all" else "",
             f"priority={p}" if p != "all" else "",
             f"milestone={m}" if m else "",
+            f"sub={sub}" if sub != "all" else "",
         ] if x]
         base = f"/tickets/{project}"
         return base + ("?" + "&".join(params) if params else "")
@@ -536,6 +614,11 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     def fbtn(label, active, **kw):
         cls = "filter-btn active" if active else "filter-btn"
         return f'<a href="{furl(**kw)}" class="{cls}">{label}</a>'
+
+    # Le sous-projet est le scope principal : tous les autres compteurs/filtres s'y limitent.
+    all_tickets = tickets  # non scopé — sert aux compteurs par sous-projet
+    if subproject_f != "all":
+        tickets = [t for t in tickets if t.get("_sub") == subproject_f]
 
     filtered = tickets
     if status_f == "active":
@@ -585,6 +668,19 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
         for ms in milestones:
             ms_btns += fbtn(ms, milestone_f == ms, p=priority_f, s=status_f, t=type_f, m=ms)
 
+    # Filtre par sous-projet (uniquement pour un projet parent qui en a).
+    sub_btns = ""
+    if has_subs:
+        sub_counts = {}
+        for t in all_tickets:
+            sub_counts[t.get("_sub", "")] = sub_counts.get(t.get("_sub", ""), 0) + 1
+        sub_btns = fbtn(f"Tous sous-projets ({len(all_tickets)})", subproject_f == "all", sub="all")
+        # « général » d'abord, puis les sous-projets déclarés (même à 0 ticket).
+        ordered = ([GENERAL_SUB] if GENERAL_SUB in sub_counts else []) + list(subprojects)
+        for sp in ordered:
+            n = sub_counts.get(sp, 0)
+            sub_btns += fbtn(f"{_e(sp)} ({n})", subproject_f == sp, sub=sp)
+
     cards = ""
     if not filtered:
         cards = '<p class="empty">Aucun ticket pour ce filtre.</p>'
@@ -597,13 +693,19 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
             desc  = _e(t.get("description", "")[:100])
             date  = _fmt_date(t.get("date", ""))
             ms    = t.get("milestone", "")
+            addr  = t.get("_addr", project)
+            sub   = t.get("_sub", "")
             ms_html = f'<div class="card-milestone">🏁 {_e(ms)}</div>' if ms else ""
+            sub_badge = (
+                f'<span class="tag" style="background:#0f1117;border:1px solid #2a2d3a;color:#9ca3af">{_e(sub)}</span>'
+                if has_subs and sub else ""
+            )
             cards += f"""
 <div class="card" style="padding-right:2.5rem">
   <input type="checkbox" class="card-check brief-cb" name="t" value="{_e(tid)}">
-  <a href="/tickets/{_e(project)}/{_e(tid)}/edit" class="card-link" style="display:block">
+  <a href="/tickets/{_e(addr)}/{_e(tid)}/edit" class="card-link" style="display:block">
     <div class="card-row">
-      {_type_tag(type_)}{_status_tag(status)}{_priority_tag(prio)}
+      {sub_badge}{_type_tag(type_)}{_status_tag(status)}{_priority_tag(prio)}
       <span class="card-meta">{_e(date)}</span>
     </div>
     {"" if not desc else f'<div class="card-desc">{desc}</div>'}
@@ -614,6 +716,28 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     display = project.replace("~", " / ")
     breadcrumbs = f'<span class="sep">/</span> <span class="breadcrumb current">{_e(display)}</span>'
 
+    add_sub_html = ""
+    if has_subs:
+        add_sub_html = f"""
+<details style="margin-bottom:1rem">
+  <summary style="cursor:pointer;color:#818cf8;font-size:.82rem">+ Ajouter un sous-projet</summary>
+  <form method="POST" action="/tickets/{_e(project)}/_sub"
+        style="display:flex;gap:.5rem;align-items:flex-end;margin-top:.6rem;flex-wrap:wrap">
+    <div class="form-group" style="margin:0;flex:1;min-width:200px">
+      <label>Nom du sous-projet</label>
+      <input type="text" name="sub" placeholder="ex: rappels" required
+        pattern="[a-z0-9][a-z0-9-]*" title="Lettres minuscules, chiffres et tirets uniquement">
+    </div>
+    <button type="submit" class="btn btn-secondary">Créer</button>
+  </form>
+  <div class="alert alert-info" style="margin-top:.6rem">
+    Crée le dossier de tickets. Pour les notifications Slack de déploiement, câbler aussi le
+    sous-projet dans <code>assistant-ia/app/services/registry.py</code>.
+  </div>
+</details>"""
+
+    sub_filter_row = f'<div class="filter-row">{sub_btns}</div>' if has_subs else ""
+
     body = f"""
 <form method="GET" action="/tickets/{_e(project)}/brief" id="brief-form">
 <div class="page-header">
@@ -623,6 +747,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     <a href="/tickets/{_e(project)}/new" class="btn btn-primary">+ Nouveau ticket</a>
   </div>
 </div>
+{add_sub_html}
 <div class="brief-bar">
   <span class="brief-count">📋 <strong id="brief-n">0</strong> ticket(s) sélectionné(s)</span>
   <button type="submit" class="btn btn-secondary btn-sm" id="brief-btn" disabled>Construire le brief →</button>
@@ -630,6 +755,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str, p
     <input type="checkbox" id="select-all"> Tout sélectionner
   </label>
 </div>
+{sub_filter_row}
 <div class="filter-row">{status_btns}</div>
 <div class="filter-row">{type_btns}</div>
 <div class="filter-row">{prio_btns}</div>
@@ -659,7 +785,7 @@ document.addEventListener('change', e => {{
 
 # ── Page: new ticket ───────────────────────────────────────────────────────────
 
-def _page_new(project: str, error: str = "") -> str:
+def _page_new(project: str, error: str = "", subprojects: list = None) -> str:
     display = project.replace("~", " / ")
     err_html = f'<div class="alert alert-error">{_e(error)}</div>' if error else ""
     type_opts = "".join(f'<option value="{k}">{v} {TYPE_LABEL[k]}</option>' for k, v in TYPE_EMOJI.items())
@@ -667,6 +793,16 @@ def _page_new(project: str, error: str = "") -> str:
         f'<option value="{k}" {"selected" if k=="medium" else ""}>{PRIORITY_EMOJI[k]} {PRIORITY_LABEL[k]}</option>'
         for k in PRIORITY_ORDER
     )
+    sub_field = ""
+    if subprojects:
+        sub_opts = f'<option value="{GENERAL_SUB}">{GENERAL_SUB} (niveau projet)</option>' + "".join(
+            f'<option value="{_e(s)}">{_e(s)}</option>' for s in subprojects
+        )
+        sub_field = f"""
+      <div class="form-group">
+        <label>Sous-projet</label>
+        <select name="sub">{sub_opts}</select>
+      </div>"""
     breadcrumbs = (
         f'<span class="sep">/</span> <a href="/tickets/{_e(project)}" class="breadcrumb">{_e(display)}</a>'
         f' <span class="sep">/</span> <span class="breadcrumb current">Nouveau</span>'
@@ -679,6 +815,7 @@ def _page_new(project: str, error: str = "") -> str:
 {err_html}
 <form method="POST" action="/tickets/{_e(project)}/new">
   <div class="section">
+    {sub_field}
     <div class="form-row-3">
       <div class="form-group">
         <label>Type</label>
@@ -1002,18 +1139,32 @@ async def new_project_post(request: Request, name: str = Form(...)):
     return RedirectResponse(f"/tickets/{result}", status_code=303)
 
 
+@router.post("/{project}/_sub")
+async def new_subproject_post(request: Request, project: str, sub: str = Form(...)):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    ok, result = _create_subproject(project, sub)
+    if not ok:
+        return HTMLResponse(result, status_code=400)
+    return RedirectResponse(f"/tickets/{project.split('~')[0]}?sub={result}", status_code=303)
+
+
 @router.get("/{project}", response_class=HTMLResponse)
 async def ticket_list(
     request: Request, project: str,
     status: str = "active", type: str = "all",
-    priority: str = "all", milestone: str = "",
+    priority: str = "all", milestone: str = "", sub: str = "all",
 ):
     from app.main import settings
     if r := _require_auth(request, settings): return r
     if _feedback_dir(project) is None:
         return HTMLResponse(f"Projet introuvable : {_e(project)}", status_code=404)
     tickets = _list_tickets(project)
-    return HTMLResponse(_page_ticket_list(project, tickets, status, type, priority, milestone))
+    # Dimension sous-projet uniquement sur un projet parent (adresse sans « ~ »).
+    subprojects = _subproject_dirs(project) if "~" not in project else []
+    return HTMLResponse(_page_ticket_list(
+        project, tickets, status, type, priority, milestone, sub, subprojects
+    ))
 
 
 @router.get("/{project}/new", response_class=HTMLResponse)
@@ -1022,7 +1173,17 @@ async def ticket_new_get(request: Request, project: str):
     if r := _require_auth(request, settings): return r
     if _feedback_dir(project) is None:
         return HTMLResponse(f"Projet introuvable : {_e(project)}", status_code=404)
-    return HTMLResponse(_page_new(project))
+    subprojects = _subproject_dirs(project) if "~" not in project else []
+    return HTMLResponse(_page_new(project, subprojects=subprojects))
+
+
+def _target_project(project: str, sub: str) -> str:
+    """Adresse cible selon le sous-projet choisi (« général » = niveau projet parent)."""
+    if "~" in project or not sub or sub == GENERAL_SUB:
+        return project
+    if sub in _subproject_dirs(project):
+        return f"{project}~{sub}"
+    return project
 
 
 @router.post("/{project}/new")
@@ -1031,20 +1192,23 @@ async def ticket_new_post(
     type: str = Form(...), message: str = Form(default=""),
     url: str = Form(default=""), priority: str = Form(default="medium"),
     milestone: str = Form(default=""), needs_clarification: str = Form(default=""),
+    sub: str = Form(default=""),
 ):
     from app.main import settings
     if r := _require_auth(request, settings): return r
+    subprojects = _subproject_dirs(project) if "~" not in project else []
     if type not in TYPE_EMOJI:
-        return HTMLResponse(_page_new(project, "Type invalide."), status_code=400)
+        return HTMLResponse(_page_new(project, "Type invalide.", subprojects), status_code=400)
     if not message.strip() and type != "error":
-        return HTMLResponse(_page_new(project, "La description est obligatoire."), status_code=400)
+        return HTMLResponse(_page_new(project, "La description est obligatoire.", subprojects), status_code=400)
+    target = _target_project(project, sub)
     tid = _create_ticket(
-        project, type, message.strip(), url.strip(),
+        target, type, message.strip(), url.strip(),
         priority=priority if priority in PRIORITY_ORDER else "medium",
         milestone=milestone.strip(),
         needs_clarification=bool(needs_clarification),
     )
-    return RedirectResponse(f"/tickets/{project}/{tid}/edit?flash=saved", status_code=303)
+    return RedirectResponse(f"/tickets/{target}/{tid}/edit?flash=saved", status_code=303)
 
 
 @router.get("/{project}/brief", response_class=HTMLResponse)
