@@ -44,6 +44,8 @@
     <a href="#bull">bull / bear</a>
     <a href="#risk">risk_matrix</a>
     <a href="#hyp">hypotheses[]</a>
+    <a href="#debate">conviction challenge</a>
+    <a href="#monitoring">monitoring 1-5</a>
     <a class="on" href="#deriv">dérivation</a>
   </nav>
 </div></header>
@@ -513,6 +515,64 @@ flowchart LR
     </pre>
     <p class="lead">Exemple NVDA : <code>H3 « conserve &gt;80% PDM GPU IA jusqu'en 2028 » · kpi=part GPU datacenter · seuil_alerte=78 · seuil_invalidation=72 · base_rate=0.45</code>. Le <code>risques_acceptes[i].hypothese_liee=H3</code> du risk_matrix pointe ici — pont entre décision et suivi long terme.</p>
   </section>
+  <section id="debate">
+    <h2>conviction challenge <span class="step">— debate-agent · option C « Maintenir » · méta-risque de statu quo</span></h2>
+    <p class="lead">Quand un monitoring soulève un doute et qu'on envisage de <b>maintenir</b>, le debate-agent soumet la conviction au test le plus dur. Il ne rend <b>aucun verdict d'exécution</b> : il produit une <b>résolution suggérée</b> (l'utilisateur tranche). Garde-fou <b>G2 anti-complaisance</b> : le maintien se mérite. Contrat figé <code>debate_conviction_schema.py</code> (12/12 vérifiés, container 2.13.4).</p>
+    <pre class="mermaid">
+flowchart TB
+  MON[(monitoring 2/3/6 → doute<br/>option C « Maintenir »)]:::src
+  HYP[(hypothèses figées H1-Hn<br/>seuil_alerte · seuil_invalidation)]:::src
+  MON --> HST
+  HYP --> HST
+  HST{{hypotheses_sous_tension<br/>seuil_franchi · refs A2}}:::judg
+  CC{{cas_contre_maintien ≥1<br/>base_rate + refs · non décoratif}}:::judg
+  BIAIS{{biais_a_surveiller<br/>ancrage prix · coût irrécupérable}}:::judg
+  CO{{cout_opportunite<br/>vs alternatives portefeuille}}:::judg
+  HST --> GATE{seuil d'invalidation<br/>franchi ?}:::der
+  GATE -->|non| RES
+  GATE -->|oui| DEG[dégradation de thèse]:::gap
+  DEG --x PROC[closed_proceed — INTERDIT G2]:::gap
+  DEG -->|monitor ⇒| ESC[[escalade_recommandee<br/>route mode 5 → synthèse]]:::out
+  CC &amp; BIAIS &amp; CO --> RES
+  RES{{resolution_suggeree<br/>pass · monitor · proceed<br/>SUGGÉRÉE — non contraignante}}:::out
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+  classDef gap fill:#3a1414,stroke:#ff5252,color:#ffd6d6;
+    </pre>
+    <p class="lead"><b>Anti-biais de statu quo</b> : maintenir par inertie (ancrage sur le prix d'entrée, coût irrécupérable, aversion à matérialiser une perte) devient impossible sans l'avoir <b>défendu</b>. Une hypothèse au seuil d'invalidation franchi = dégradation : <code>closed_proceed</code> rejeté, <code>closed_monitor</code> exige une escalade synthèse ; <code>closed_pass</code> (sortir) reste permis. Alimente <code>conviction_debates</code>.</p>
+  </section>
+
+  <section id="monitoring">
+    <h2>monitoring modes 1-5 <span class="step">— tactique · invariant ANTI-CHURN (audit §1.3)</span></h2>
+    <p class="lead">Le mode 6 (revue annuelle) produit toujours un verdict ; les modes 1-5 sont tactiques et gouvernés par un invariant unique : <b>on n'escalade que sur franchissement d'un seuil PRÉ-ENREGISTRÉ</b>. Le statut d'hypothèse <b>est</b> le franchissement. Contrat figé <code>monitoring_modes_1_5_schema.py</code> — union discriminée <code>Mode1..Mode5</code> (20/20 vérifiés).</p>
+    <pre class="mermaid">
+flowchart TB
+  HYP[(hypothèses figées<br/>seuils pré-enregistrés)]:::src
+  M1[[mode 1 · J-2<br/>checklist ≤3 · aucun verdict]]:::out
+  M2{{mode 2 · J+1<br/>hypotheses_reviewed + statuts · refs A2}}:::judg
+  M4{{mode 4 · pair J+1<br/>sector_score -5..+5 · contextuel}}:::judg
+  HYP --> M2
+  M2 --> SF{seuils_franchis<br/>= statuts alerte / invalidee ?}:::der
+  SF -->|∅| RAS[alert_level RAS<br/>pas d'escalade]:::out
+  SF -->|≠ ∅| RR[REVIEW_REQUIRED / CRITICAL]:::judg
+  M4 -.->|jamais seul| RR
+  RR --> M5{{mode 5 · routing pur}}:::judg
+  M5 -->|dégradation| SY[[synthèse]]:::out
+  M5 -->|option C| DB[[debate-agent]]:::out
+  M3{{mode 3 · escalade<br/>diagnostic + inversion Munger + décision}}:::judg
+  M3 --> ET{decision REDUIRE / SORTIR ?}:::der
+  ET -->|oui| EXT[exit_trigger obligatoire<br/>pas de sortie muette]:::out
+  ET -->|MAINTENIR / RE_SYNTHESE| NOP[pas de trigger]:::out
+  classDef src fill:#20242e,stroke:#7d8798,color:#e7e9ee;
+  classDef der fill:#122238,stroke:#4a9eff,color:#d9e8ff;
+  classDef judg fill:#3a2a12,stroke:#ffa94d,color:#ffe6c7;
+  classDef out fill:#12301c,stroke:#57d977,color:#d7f5dd;
+    </pre>
+    <p class="lead">Trois disciplines encodées : <b>anti-churn</b> (mode 2 : <code>alert_level</code> escalade ⇔ <code>seuils_franchis</code> ⇔ statuts alerte/invalidee) · <b>explicabilité</b> (mode 3 : REDUIRE/SORTIR ⇒ <code>exit_trigger</code>, test d'inversion obligatoire) · <b>contextuel</b> (mode 4 : le sector pulse informe, n'escalade jamais seul — même esprit que le <code>ValuationThermometer</code>). Réutilise <code>HypothesisReview</code>/<code>ExitTrigger</code> du mode 6 (G1).</p>
+  </section>
+
   <section id="deriv">
     <h2>Dérivation — la carte est la source unique <span class="step">— G1 : 1 source → 4 consommateurs</span></h2>
     <p class="lead">Les 4 cartes ne sont pas de la doc : elles se projettent mécaniquement sur les artefacts d'exécution. Le Pydantic est <b>vérifié à l'exécution</b> (pydantic 2.13.4, container backend) — verrou Q2, refs factual obligatoires (#1), edge obligatoire (R6), cap sizing (Q6) rejettent tous l'invalide.</p>
