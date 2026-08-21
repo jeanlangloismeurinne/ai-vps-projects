@@ -22,7 +22,7 @@ Colle ceci pour reprendre :
 > (G1 schéma versionné = source unique / G2 décision contrainte par l'analyse / G3 donnée
 > versionnée+scorée+figée, jamais de texte libre). DÉCISION #1 = Option C (base neutre → bull/bear
 > isolés → réfutation bear→bull → synthèse). **Provider = DeepInfra OpenAI-compatible** ; modèle
-> métier défaut = **DeepSeek V4 Flash 0731** ; ouvrier = à choisir dans le catalogue DeepInfra.
+> métier **et** ouvrier = **`deepseek-ai/DeepSeek-V4-Flash-0731`** (unifié — voir « Décision modèles »).
 >
 > LIRE AVANT : `roadmap/00-principe-directeur-v2.md` ; `roadmap/01-spec-v2-unifiee.md` (§5 agents +
 > abstraction provider, §5.2 roster, §7 curator/readiness, §8 contrats analyse, §14 migrations,
@@ -74,19 +74,49 @@ Migration **024** (V2 Knowledge Platform) appliquée à `db_portfolio` : `knowle
 Commit local **`8d8c698`** sur `main` (34 fichiers : tout `provenance-cards/` C1-C8 + `prompts/` +
 viz). **Non poussé** — le push se fait au moment d'un déploiement (protocole DEPLOY.md).
 
+## Décision modèles DeepInfra (arrêtée 2026-08-21)
+
+Catalogue vérifié (WebFetch deepinfra.com, MoE-first ; prix $/1M tokens — **à reconfirmer à la migration**) :
+
+| modèle | model_id | actifs/total | ctx | in | out |
+|---|---|---|---|---|---|
+| **DeepSeek V4 Flash** | `deepseek-ai/DeepSeek-V4-Flash-0731` | 13B/284B | 1M | 0.08 | **0.18** |
+| GLM 4.7 Flash | `zai-org/GLM-4.7-Flash` | 3B/30B | 198k | **0.06** | 0.40 |
+| Gemma 4 26B | `google/gemma-4-26B-A4B-it` | 4B/26B | 256k | 0.07 | 0.34 |
+| Qwen3.6 35B | `Qwen/Qwen3.6-35B-A3B` | 3B/35B | 256k | 0.10 | 0.95 |
+
+**Choix : métier ET ouvrier = `deepseek-ai/DeepSeek-V4-Flash-0731` (unifié).** Les ouvriers émettent
+du JSON → coût **dominé par l'output** ; DeepSeek V4 Flash a l'output le **moins cher** de la liste
+($0.18), le contexte le plus large (1M) et la meilleure capacité (JSON strict + tool-calling pour le
+search-worker). Le réflexe « petit modèle ouvrier » vient de la tarification Anthropic (Haiku≪Opus) et
+**ne se transpose pas** : GLM/Gemma/Qwen ne gagnent que sur des appels input-lourds/output-quasi-nul,
+hors profil ouvrier. Unifier simplifie l'ops (un seul modèle à valider) et le prompt caching.
+
+Le **« tier ouvrier » reste une réalité d'orchestration** (délégation, `execution.tier`,
+sous-segmentation, batch) — pas un modèle distinct : la cheapness vient du task-scoping (prompts
+courts, batch, pas de raisonnement lourd), pas d'un modèle plus petit.
+
+**Overrides documentés** (car `agent_prompts.model` est **par agent**, migration 025) : ingestion de
+masse EDGAR (input-lourd, batch) → tester `google/gemma-4-26B-A4B-it` (256k, $0.07/$0.34) pour
+décharger le primaire ; fallback search-worker si le tool-calling DeepSeek déçoit →
+`zai-org/GLM-4.7-Flash` (lignée agentique).
+
+**À valider au lot provider** : (1) fiabilité du tool-calling DeepSeek V4 Flash via l'endpoint
+OpenAI-compat (loop web_search/fetch_url du search-worker = dépendance la plus risquée) ; (2) respect
+strict du JSON `extra='forbid'` (`response_format`/JSON mode).
+
 ## Prochaine étape — que du code, dans l'ordre de la chaîne (§18)
 
-1. **Choisir le modèle ouvrier DeepInfra** (Llama-3.3-70B / Gemma-4-31B / Qwen — le mieux adapté aux
-   tâches d'ouvrier : ingestion, search, gap, groundedness). Le métier est DeepSeek V4 Flash 0731.
-2. **Abstraction provider** — `backend/app/agents/providers/` (**inexistant**) : interface
+1. **Abstraction provider** — `backend/app/agents/providers/` (**inexistant**) : interface
    `AgentProvider` (`complete`/`stream`), `deepinfra_provider.py` (endpoint OpenAI-compatible,
    `messages[]`/`tools[]`/`response_format`, clé `DEEPINFRA_API_KEY`), factory `get_provider(name)`
    lisant la config DB. **NE PAS calquer sur `dust_client.run_agent`.** + **migration 025**
    (`agent_prompts += provider, model, tools_json` ; inserts des nouveaux agents V2 avec les prompts
-   de `prompts/`). Infra pure, débloque tous les agents. Contrat C1 prêt à câbler.
-3. **Agents 3→6** (migration 026) : ingestion → curator → research → bull/bear/synthèse.
-4. **Agents 7→9** (migrations 027/028) : décision/validate → monitoring m6 → sortie/calibration.
-5. **Passe UX transverse finale** (§16) une fois les champs éprouvés.
+   de `prompts/` — model par défaut `deepseek-ai/DeepSeek-V4-Flash-0731`). Infra pure, débloque tous
+   les agents. Contrat C1 prêt à câbler.
+2. **Agents 3→6** (migration 026) : ingestion → curator → research → bull/bear/synthèse.
+3. **Agents 7→9** (migrations 027/028) : décision/validate → monitoring m6 → sortie/calibration.
+4. **Passe UX transverse finale** (§16) une fois les champs éprouvés.
 
 **Piège migrations (§18)** : écrire chaque migration **juste avant** son lot, jamais en avance ; ne
 jamais commencer un lot par le schéma de table.
