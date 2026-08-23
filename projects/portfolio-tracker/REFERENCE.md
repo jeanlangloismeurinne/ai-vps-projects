@@ -213,7 +213,7 @@ EMBEDDING_DIM=1024                     # DOIT correspondre à vector(N) en DB
 
 # V2 — Recherche web du search-worker
 SEARCH_PROVIDER=exa                    # exa | serper | none
-EXA_API_KEY=                           # à souscrire (10$/mois de crédits, sans carte)
+EXA_API_KEY=                           # déployée dans Coolify (backend) le 2026-08-23, jamais committée
 SERPER_API_KEY=                        # débordement (~$1/1000)
 SEARCH_TIMEOUT_S=20
 FETCH_URL_MAX_CHARS=20000

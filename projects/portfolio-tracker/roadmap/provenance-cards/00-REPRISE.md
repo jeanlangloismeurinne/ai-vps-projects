@@ -24,9 +24,9 @@ la souscription **Exa**, sans laquelle le worker refuse (volontairement) de dém
 > #280). Vérifié dans le container live : `EMBEDDING_MODEL=BAAI/bge-m3`, 15/15 entrées embeddées,
 > `query_knowledge` renvoie `match_mode='vector'`, backfill à 0 candidat. Migration 027 appliquée.
 >
-> **Lot `search-worker` écrit et vérifié le 2026-08-23, committé en local, pas déployé** — et il
-> n'y a rien à déployer tant que `EXA_API_KEY` n'existe pas : le code partirait avec
-> `SEARCH_PROVIDER=exa` sans clé, donc `web_search` en 503. Déployer **après** avoir souscrit.
+> **Lot `search-worker` déployé le 2026-08-23** avec `EXA_API_KEY` posée dans Coolify (backend).
+> Clé validée hors application avant déploiement (`POST https://api.exa.ai/search` → 200 avec
+> résultats). Reste à faire : le **premier run réel** du search-worker.
 
 Colle ceci pour reprendre :
 
