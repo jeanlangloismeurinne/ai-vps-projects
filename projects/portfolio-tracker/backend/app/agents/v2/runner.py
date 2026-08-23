@@ -7,8 +7,12 @@ Deux voies :
     JSON, le valide contre le schéma Pydantic du contrat. En cas d'échec (JSON illisible ou champ
     hors contrat / manquant — `extra='forbid'` verrouille Q2), UNE tentative de réparation en
     réinjectant l'erreur au modèle. Au-delà : RuntimeError claire (l'appelant relance).
-  - **run_tool_agent** : boucle tool-calling (search-worker). Écrite ici mais non exercée tant que
-    web_search n'a pas de backend (SearXNG/API absent) — `tool_executors` fournis par l'appelant.
+  - **run_tool_agent** : boucle tool-calling brute (search-worker) — `tool_executors` fournis par
+    l'appelant. Rend le texte du dernier tour, sans validation.
+  - **run_tool_json_agent** : voie réellement utilisée par le search-worker. Même boucle d'outils,
+    suivie d'un tour de CLÔTURE en JSON strict validé contre le contrat. Ce tour final est émis par
+    un clone de l'agent SANS outils : tant que `tools` est exposé, un modèle peut répondre par un
+    tool_call de plus au lieu du JSON demandé, et on n'aurait alors ni sortie ni erreur claire.
 
 Le runner ne touche PAS la DB : il renvoie la sortie validée + le coût. La persistance
 (investment_analyses / research_memos + snapshot des refs) est à la charge de l'agent appelant.
@@ -18,7 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Awaitable, Callable, Optional, Type, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -125,38 +129,50 @@ async def run_json_agent(
     raise RuntimeError(f"Agent {agent.agent_name} : échec inattendu du runner")  # pragma: no cover
 
 
-# ── Boucle tool-calling (search-worker) — non exercée tant que web_search sans backend ───────────
+# ── Boucle tool-calling (search-worker) ──────────────────────────────────────────────────────────
 ToolExecutor = Callable[[dict[str, Any]], Awaitable[Any]]
 
 
-async def run_tool_agent(
+@dataclass
+class _ToolLoopState:
+    convo: list[dict[str, Any]]
+    tokens_in: int
+    tokens_out: int
+    cost_usd: float
+    last: CompletionResult
+    iterations: int
+    exhausted: bool  # sorti sur max_iterations alors que le modèle appelait encore des outils
+
+
+async def _tool_loop(
     agent: ResolvedAgent,
     messages: list[dict[str, Any]],
     tool_executors: dict[str, ToolExecutor],
     *,
-    max_iterations: int = 6,
-    temperature: float = 0.2,
-    timeout: int = 720,
-) -> AgentRunResult:
-    """Boucle OpenAI tool-calling : tant que le modèle émet des tool_calls, on exécute les outils
-    (via `tool_executors[name]`) et on réinjecte les résultats en messages `role=tool`, jusqu'à une
-    réponse finale sans tool_call ou `max_iterations`. Renvoie la dernière complétion (contenu brut).
+    max_iterations: int,
+    temperature: float,
+    timeout: int,
+) -> _ToolLoopState:
+    """Tant que le modèle émet des tool_calls : exécuter, réinjecter en `role=tool`, reboucler.
 
-    NB : `web_search` requiert SearXNG/API (absent) — cette voie n'est activable qu'une fois l'infra
-    de recherche provisionnée. `fetch_url`/`query_knowledge` sont eux réalisables (httpx / DB).
+    Un exécuteur qui lève ne casse PAS la boucle — l'erreur est rendue au modèle comme résultat
+    d'outil, à lui d'en tirer les conséquences (chercher autrement, ou déclarer non couvert).
     """
     convo = list(messages)
     total_in = total_out = 0
     total_cost = 0.0
     last: Optional[CompletionResult] = None
+    iterations = 0
+    exhausted = True
 
-    for _ in range(max_iterations):
+    for iterations in range(1, max_iterations + 1):
         last = await agent.complete(convo, temperature=temperature, timeout=timeout)
         total_in += last.tokens_in
         total_out += last.tokens_out
         total_cost += last.cost_usd
 
         if not last.tool_calls:
+            exhausted = False
             break
 
         convo.append({"role": "assistant", "content": last.content or "", "tool_calls": last.tool_calls})
@@ -174,6 +190,7 @@ async def run_tool_agent(
                 try:
                     result = await executor(args)
                 except Exception as e:  # noqa: BLE001 — on renvoie l'échec au modèle, pas de crash
+                    logger.warning("outil %s en échec : %s", name, e)
                     result = {"error": str(e)}
             convo.append({
                 "role": "tool",
@@ -184,13 +201,86 @@ async def run_tool_agent(
 
     if last is None:  # pragma: no cover
         raise RuntimeError(f"Agent {agent.agent_name} : boucle tool vide")
+    return _ToolLoopState(convo, total_in, total_out, total_cost, last, iterations, exhausted)
+
+
+async def run_tool_agent(
+    agent: ResolvedAgent,
+    messages: list[dict[str, Any]],
+    tool_executors: dict[str, ToolExecutor],
+    *,
+    max_iterations: int = 6,
+    temperature: float = 0.2,
+    timeout: int = 720,
+) -> AgentRunResult:
+    """Boucle d'outils brute : renvoie le texte du dernier tour, sans validation de contrat.
+    Pour un agent qui doit rendre un JSON contractuel, utiliser `run_tool_json_agent`."""
+    st = await _tool_loop(
+        agent, messages, tool_executors,
+        max_iterations=max_iterations, temperature=temperature, timeout=timeout,
+    )
     return AgentRunResult(
         parsed=None,  # type: ignore[arg-type]  — voie non-JSON, parsing à la charge de l'appelant
         data={},
-        raw_content=last.content or "",
-        completion=last,
-        tokens_in=total_in,
-        tokens_out=total_out,
-        cost_usd=total_cost,
-        attempts=1,
+        raw_content=st.last.content or "",
+        completion=st.last,
+        tokens_in=st.tokens_in,
+        tokens_out=st.tokens_out,
+        cost_usd=st.cost_usd,
+        attempts=st.iterations,
+    )
+
+
+async def run_tool_json_agent(
+    agent: ResolvedAgent,
+    messages: list[dict[str, Any]],
+    tool_executors: dict[str, ToolExecutor],
+    schema: Type[T],
+    *,
+    closing_instruction: str,
+    max_iterations: int = 6,
+    temperature: float = 0.2,
+    max_repair: int = 1,
+    timeout: int = 720,
+) -> AgentRunResult:
+    """Boucle d'outils PUIS tour de clôture en JSON strict validé contre `schema`.
+
+    Le tour de clôture est joué par un clone de l'agent **sans `tools`** : c'est ce qui garantit
+    qu'il ne peut pas repartir en tool_call. On y réutilise l'intégralité de la conversation (donc
+    les résultats d'outils), et la réparation de `run_json_agent` s'applique — mais elle ne redonne
+    jamais accès aux outils : le modèle corrige la FORME de ce qu'il a déjà collecté, il ne relance
+    pas de recherche pour combler un manque, sans quoi le plafond de `max_iterations` ne voudrait
+    plus rien dire.
+
+    Les coûts de la boucle et de la clôture sont cumulés — un run d'ouvrier a un coût unique auditable.
+    """
+    st = await _tool_loop(
+        agent, messages, tool_executors,
+        max_iterations=max_iterations, temperature=temperature, timeout=timeout,
+    )
+    if st.exhausted:
+        logger.warning(
+            "run_tool_json_agent(%s): %d itérations d'outils épuisées — clôture sur ce qui a été "
+            "collecté", agent.agent_name, max_iterations,
+        )
+
+    # `st.convo` contient déjà les tours assistant→outils exécutés. Le dernier message assistant
+    # sans tool_call, lui, n'y est pas : c'est du texte libre que la clôture doit remplacer, pas
+    # prolonger — on ne le réinjecte donc pas.
+    closing = st.convo + [{"role": "user", "content": closing_instruction}]
+
+    closer = replace(agent, tools=None)
+    final = await run_json_agent(
+        closer, closing, schema,
+        temperature=temperature, max_repair=max_repair, timeout=timeout,
+    )
+    return AgentRunResult(
+        parsed=final.parsed,
+        data=final.data,
+        raw_content=final.raw_content,
+        completion=final.completion,
+        tokens_in=st.tokens_in + final.tokens_in,
+        tokens_out=st.tokens_out + final.tokens_out,
+        cost_usd=st.cost_usd + final.cost_usd,
+        attempts=st.iterations + final.attempts,
     )

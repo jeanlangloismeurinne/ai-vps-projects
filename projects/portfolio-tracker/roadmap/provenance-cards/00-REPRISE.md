@@ -11,19 +11,22 @@ role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + co
 
 **État au 2026-08-23** : la **couche contrat est figée** (10 schémas Pydantic v2) ET la **chaîne
 d'analyse runtime est écrite et déployée en production** (provider DeepInfra + curator → research →
-bull/bear → réfutation → synthèse, 7 routes exposées). Migrations 024/025/026/**027** appliquées.
-La **recherche sémantique est opérationnelle** (bge-m3 1024d, 15/15 entrées embeddées).
-**Ce qui manque n'est plus du code de chaîne : c'est de la DONNÉE.** Aucun ticker n'est encore
-`ready`, donc la chaîne n'a jamais tourné de bout en bout sur un cas réel.
+bull/bear → réfutation → synthèse). Migrations 024/025/026/**027** appliquées.
+La **recherche sémantique est opérationnelle** (bge-m3 1024d, 15/15 entrées embeddées) et le
+**`search-worker` est écrit** (recherche web + fetch + entries scorées, 9 routes au total).
+**Ce qui manque n'est plus du code : c'est une clé et un run.** Aucun ticker n'est encore `ready`,
+donc la chaîne n'a jamais tourné de bout en bout sur un cas réel — et le seul obstacle restant est
+la souscription **Exa**, sans laquelle le worker refuse (volontairement) de démarrer.
 
-> ### ✅ État du déploiement — À JOUR, aucune divergence
+> ### ⚠️ État du déploiement — un lot committé localement, NON poussé
 >
 > Lot embeddings **déployé en production le 2026-08-23** (commit `f1e6a94`, deployment Coolify
-> #280). Vérifié dans le container live et non pas seulement au statut du build :
-> `EMBEDDING_MODEL=BAAI/bge-m3`, 15/15 entrées embeddées, `query_knowledge` renvoie
-> `match_mode='vector'`, backfill à 0 candidat. Migration 027 appliquée en base.
+> #280). Vérifié dans le container live : `EMBEDDING_MODEL=BAAI/bge-m3`, 15/15 entrées embeddées,
+> `query_knowledge` renvoie `match_mode='vector'`, backfill à 0 candidat. Migration 027 appliquée.
 >
-> Repo et prod sont alignés — **rien à rattraper avant de commencer l'étape 2**.
+> **Lot `search-worker` écrit et vérifié le 2026-08-23, committé en local, pas déployé** — et il
+> n'y a rien à déployer tant que `EXA_API_KEY` n'existe pas : le code partirait avec
+> `SEARCH_PROVIDER=exa` sans clé, donc `web_search` en 503. Déployer **après** avoir souscrit.
 
 Colle ceci pour reprendre :
 
@@ -34,19 +37,23 @@ Colle ceci pour reprendre :
 > DÉCISION #1 = Option C (base neutre → bull/bear isolés → réfutation bear→bull → synthèse).
 > **Le blocage actuel est l'alimentation de la base de connaissance**, pas la chaîne.
 >
-> **Étape 1 (embeddings) FAITE et déployée** — la recherche sémantique fonctionne (bge-m3 1024d).
-> **Prochaine étape = 2, le `search-worker`** : câbler les exécuteurs `web_search` (Exa) et
-> `fetch_url` dans `run_tool_agent()`, qui n'a **jamais tourné**. C'est ce qui produit la couverture
-> **qualitative** manquante, seul obstacle entre NVDA (`thin_qualitative`) et `ready`.
-> Prérequis à trancher en début de session : **la clé Exa n'est pas encore souscrite ni déployée**.
+> **Étapes 1 (embeddings) et 2 (`search-worker`) FAITES.** L'étape 2 est écrite et vérifiée hors
+> ligne (40 assertions, `backend/checks/`), mais **jamais exercée contre un vrai modèle** :
+> il manque la clé.
+> **Prochaine étape = souscrire Exa** (exa.ai, 10 $/mois de crédits renouvelables, sans carte),
+> poser `EXA_API_KEY` dans Coolify, pousser + rebuild, puis faire le **premier run réel** :
+> `POST /tickers/NVDA/knowledge/search` en `persist=false` d'abord, puis relancer la readiness
+> jusqu'à faire passer NVDA de `thin_qualitative` à `ready`.
 >
 > LIRE AVANT : `roadmap/00-principe-directeur-v2.md` ; `roadmap/01-spec-v2-unifiee.md` (§5 agents,
 > §7 curator/readiness, §8 contrats analyse, §14 migrations, §18 découpage) ;
 > `roadmap/provenance-cards/*_card.md` + `*_schema.py` ; `roadmap/provenance-cards/prompts/` ;
 > côté **code** : `backend/app/agents/providers/`, `backend/app/agents/v2/`,
-> `backend/app/knowledge/` (`service.py` + `embeddings.py`), `backend/app/contracts/`,
-> `backend/app/api/analysis_v2.py`.
-> CLAUDE.md projet = conventions (dont #22 recherche knowledge, #23 piège pgvector).
+> `backend/app/knowledge/` (`service.py` · `embeddings.py` · `websearch.py`),
+> `backend/app/contracts/`, `backend/app/api/analysis_v2.py` + `knowledge_v2.py`,
+> `backend/checks/README.md`.
+> CLAUDE.md projet = conventions (dont #22 recherche knowledge, #23 piège pgvector,
+> **#24 le modèle ne qualifie pas sa source**, **#25 un échec de recherche n'est pas un résultat vide**).
 > Visuel : https://provenance.jlmvpscode.duckdns.org
 
 ## Ce qui est FAIT
@@ -76,7 +83,12 @@ synchro** (règle #19) : schéma de sortie = Pydantic correspondant. Chargés en
 | `backend/app/contracts/` | **copie runtime** des contrats figés (le build context Docker est `./backend` seul → `roadmap/` absent de l'image). + `composites.py` (`SynthesisOutput` + `valider_pont()` §8.5) |
 | `backend/app/knowledge/service.py` | `RELIABILITY_TABLE` · `compute_reliability()` · `store_knowledge()` (append-only A1, **embedde à l'écriture**, échec non fatal) · `query_knowledge()` (**vectoriel + repli strict**) · `snapshot_refs()` (gel entry@version + `reliability_at_use`) · `collect_refs()` |
 | `backend/app/knowledge/embeddings.py` | **(2026-08-23)** client DeepInfra `/v1/openai/embeddings` · `entry_text()` = **source unique** du texte embeddé (backfill et écriture temps réel DOIVENT produire le même texte) · `to_pgvector()` (littéral casté `$n::vector`, pas de dépendance `pgvector` Python) · `backfill_embeddings()` idempotent · `_QUERY_INSTRUCTION` (bge-m3 n'en veut **pas** ; bge-*-en et e5 si) |
-| `backend/app/agents/v2/runner.py` | point de passage unique : `extract_json()` tolérant, `run_json_agent()` (validation Pydantic + **1 tour de réparation**), `run_tool_agent()` (boucle outils OpenAI, **non exercée**) |
+| `backend/app/agents/v2/runner.py` | point de passage unique : `extract_json()` tolérant, `run_json_agent()` (validation Pydantic + **1 tour de réparation**), `run_tool_agent()` (boucle outils brute) et **`run_tool_json_agent()`** = boucle d'outils + **tour de clôture JSON validé**, joué par un clone de l'agent **sans `tools`** (tant que `tools` est exposé, un modèle peut répondre par un tool_call de plus au lieu du contrat : ni sortie, ni erreur claire) |
+| `backend/app/knowledge/websearch.py` | **(2026-08-23)** `SearchBackend` interchangeable (`ExaBackend` nominal · `SerperBackend` débordement) · `web_search()` · `fetch_url()` (httpx + extraction texte **stdlib `html.parser`**, aucune dépendance ajoutée) · `classify_source_type()` = qualification de source **par le domaine** |
+| `backend/app/agents/v2/tools.py` | **(2026-08-23)** exécuteurs des 3 outils du `tools_json` (migration 025) : `web_search`, `fetch_url`, `query_knowledge`. Arguments du modèle traités comme entrées non fiables (`max_results` borné, `ticker_id` forcé au mandat) ; un échec est une **valeur de retour** `{"error": …}`, pas une exception |
+| `backend/app/agents/v2/worker.py` | **(2026-08-23)** `search-worker` (contrat C1) : `run_search_worker()` → `WorkerExchange` validé, `persist_worker_entries()` (append-only A1). `_apply_deterministic_overrides()` recalcule source_type/score/tier/note/covers/status/exécution — cf. conventions #24 et #25 |
+| `backend/app/api/knowledge_v2.py` | **(2026-08-23)** `POST /tickers/{id}/knowledge/search` (avec `persist=false` = dry-run, la base étant append-only) · `GET /knowledge/search/status` (diagnostic : la recherche est-elle réellement câblée ?). `SearchUnavailable` → **503**, distinct d'une recherche infructueuse (200 + `status='not_found'`) |
+| `backend/checks/` | **(2026-08-23)** vérifications exécutables en container jetable : `check_search_worker.py` (40 assertions, hors ligne) · `check_fetch_live.py` (réseau, sans clé) |
 | `backend/app/agents/v2/common.py` | `MVDD_SPEC` (8 dimensions, champs requis + tier plancher) · `count_tiers()` · `format_entries_for_prompt()` (ordre déterministe = discipline de cache §5.3) |
 | `backend/app/agents/v2/curator.py` | gate GO/NO-GO. **Tout ce qui est dérivé est recalculé en Python** (`_apply_deterministic_overrides`) : `entries_par_tier`, `ok` par dimension, `bloc_ok`, verdict. `conviction`/`marge_securite` forcés à `None` (A3). Produit le `context_pack` **uniquement si `ready`** |
 | `backend/app/agents/v2/analysis.py` | `run_research` · `run_bull`/`run_bear` (contextes isolés) · `run_rebuttal` (round 2 supersede round 1) · `run_synthesis`. `_load_ready_context()` lève `NotReadyError` si pas de readiness `ready` |
@@ -166,8 +178,14 @@ plupart des moteurs captcha** (Google 0 résultat parsable, Brave/Startpage susp
 répond). Pour le `search-worker` c'est le pire mode de panne possible : **des résultats vides sans
 erreur explicite**, exactement ce que le garde-fou A2 (groundedness) est censé empêcher.
 
-**Point rassurant** : `run_tool_agent()` et le `tools_json` du `search-worker` sont agnostiques du
-backend → basculer Exa ↔ Serper ↔ SearXNG = réécrire **une seule fonction exécutrice**.
+**Point rassurant, désormais vérifié dans le code** : `knowledge/websearch.py` isole le backend
+derrière `SearchBackend` — basculer Exa ↔ Serper ↔ autre = **une classe**, sans toucher au
+`tools_json` en DB, au prompt du worker, ni à la boucle tool-calling. `SEARCH_PROVIDER` choisit.
+
+⚠️ Le `tools_json` du `search-worker` en DB décrit encore `web_search` comme « recherche web
+(SearXNG/API) ». C'est **cosmétique** (la description est agnostique côté modèle) mais périmé — à
+corriger à la prochaine migration qui touche `agent_prompts`, pas avant (§18 : pas de migration en
+avance).
 
 ## Contrainte infra VPS (mesurée 2026-08-23)
 
@@ -185,9 +203,10 @@ décisions ci-dessus (embeddings API, web search API).
    migration 027 · 15/15 entrées NVDA backfillées en 1024d · `query_knowledge()` bascule sur
    `embedding <=> $vec::vector` avec repli texte strict. Mesuré en conditions réelles à travers
    l'index HNSW : **MRR 0.905, hit@3 7/7**.
-2. **`search-worker`** — câbler l'exécuteur `web_search` (Exa) + `fetch_url` (httpx, déjà faisable)
-   dans `run_tool_agent()` (écrit, jamais exercé). C'est ce qui produit la couverture **qualitative**
-   manquante.
+2. ~~**`search-worker`**~~ — ✅ **CODE FAIT le 2026-08-23**, vérifié hors ligne, **clé Exa manquante**.
+   `websearch.py` + `tools.py` + `worker.py` + `knowledge_v2.py` + `run_tool_json_agent()` + contrat
+   C1 copié dans `app/contracts/`. Reste : souscrire Exa → `EXA_API_KEY` dans Coolify → push+rebuild
+   → **premier appel réel du worker**.
 3. **`ingestion-agent`** — doc → entries (contrat C2), anti-hallucination financière.
 4. **Premier run end-to-end réel** : amener NVDA de `thin_qualitative` à `ready`, puis
    research → bull/bear → réfutation → synthèse. **Jamais fait à ce jour.**
@@ -198,12 +217,30 @@ décisions ci-dessus (embeddings API, web search API).
 
 ## Ce qui n'a JAMAIS été vérifié (à ne pas supposer acquis)
 
-- **Aucun run réel de la chaîne V2.** Les 7 routes sont exposées et importent proprement, mais aucune
+- **Aucun run réel de la chaîne V2.** Les 9 routes sont exposées et importent proprement, mais aucune
   n'a été appelée contre un vrai ticker. Le `_apply_deterministic_overrides` du curator, la boucle de
   réparation JSON du runner et `valider_pont()` n'ont jamais vu de sortie de modèle réelle.
-- **`run_tool_agent()` n'a jamais tourné** (aucun exécuteur d'outil câblé).
+- **La boucle tool-calling n'a jamais tourné contre un modèle.** Les exécuteurs sont câblés et
+  `fetch_url` est exercé pour de vrai, mais `run_tool_json_agent()` n'a jamais été bouclé par
+  DeepSeek : le tour de clôture sans `tools`, la réparation JSON et le respect effectif du contrat
+  `WorkerResponse` par le modèle restent à observer. Point de vigilance identifié : DeepInfra accepte
+  `tools` + `response_format` séparément (smoke-test 2026-08-23), leur **combinaison** n'a pas été
+  testée — d'où le clone sans outils au tour final.
 - La validation faite : `py_compile` + import complet en container jetable + round-trip
   `ReadinessReport` sous pydantic 2.13.4 → `thin_qualitative` cohérent avec `compute_verdict`.
+
+**Exception — les garde-fous déterministes du search-worker SONT vérifiés** (`backend/checks/`,
+40 assertions en container, 0 échec) : sortie de modèle hostile (source surqualifiée, score gonflé,
+mauvais `entry_type`, doublons, dépassement de `max_entries`, `llm_memory` non déclarée) intégralement
+rabattue ; troncature Pareto sur les mieux notées ; `not_found` explicite quand tout est écarté (A6) ;
+`WorkerExchange` valide après correction. Et `fetch_url` est exercé sur des URL réelles.
+
+⚠️ **Trouvé en exerçant `fetch_url`** : `investor.nvidia.com` renvoie **HTTP 200, un `<title>` correct
+et 0 caractère de texte** — la page est rendue en JavaScript. Rendre ce vide comme un succès aurait
+fait conclure au modèle que la page ne dit rien. `fetch_url` lève désormais une erreur explicite
+(page volumineuse → < 200 car. extraits). **Conséquence pour l'ingestion** : beaucoup de pages IR
+seront inaccessibles sans rendu JS ; privilégier communiqués, EDGAR, et le `text` que **Exa** rapporte
+directement (il évite en plus un tour de `fetch_url`).
 
 **Exception — le lot embeddings (027), lui, EST vérifié en conditions réelles** : backfill 15/15,
 recherche vectorielle exercée à travers l'index HNSW via `query_knowledge` (MRR 0.905, hit@3 7/7),

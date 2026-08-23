@@ -47,6 +47,11 @@ RELIABILITY_TABLE: dict[str, tuple[str, float]] = {
     "company_ir_official":          ("A",  0.90),
     "earnings_transcript_official": ("A-", 0.85),
     "regulator_filing_eu":          ("A-", 0.85),
+    # yfinance/fmp : fournisseurs de données de marché structurées (§6.5/§17). Alignés sur
+    # SOURCE_RELIABILITY_BASELINE du contrat C1 — les deux tables doivent coïncider, sinon une
+    # entrée serait scorée ici et plafonnée là-bas selon des baselines différentes.
+    "yfinance":                     ("B+", 0.75),
+    "fmp":                          ("B+", 0.75),
     "financial_press":              ("B+", 0.75),
     "user_provided_confidential":   ("B+", 0.80),
     "web_search_reputable":         ("B",  0.65),

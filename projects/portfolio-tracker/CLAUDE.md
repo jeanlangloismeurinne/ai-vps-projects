@@ -166,6 +166,13 @@ Prochaine migration : `028_v2_theses_flow.sql`.
 
 La V2 tourne **en parallèle** de la V1 tant qu'elle n'est pas validée. **Seul l'univers de tickers est partagé** ; tout le reste est disjoint (agents `flow_version='v2'`, base de connaissance, analyses, routes frontend `/v2`, nav V2). Les 3 agents V1 (dust) restent `flow_version='v1'` et intacts.
 - **Backend** : abstraction provider provider-agnostic dans `backend/app/agents/providers/` (`AgentProvider` + `DeepInfraProvider` OpenAI-compat + `DustProvider` shim + factory `get_agent_provider(agent_name, flow_version)` lisant `agent_prompts`). Var d'env : `DEEPINFRA_API_KEY`. Les classes agent V1 continuent d'appeler `DustClient` directement (inchangées).
+- **Alimentation de la connaissance (2026-08-23)** : `knowledge/websearch.py` (backends de recherche
+  interchangeables Exa/Serper + `fetch_url` + `classify_source_type`), `agents/v2/tools.py` (exécuteurs
+  des 3 outils du `tools_json`), `agents/v2/worker.py` (`search-worker`, contrat C1) et
+  `api/knowledge_v2.py` (`POST /tickers/{id}/knowledge/search`, `GET /knowledge/search/status`).
+  `runner.run_tool_json_agent()` = boucle d'outils + tour de clôture JSON validé, joué par un clone de
+  l'agent **sans outils** (sinon le modèle peut répondre par un tool_call de plus au lieu du contrat).
+  Vérifications exécutables : `backend/checks/` (voir son README).
 - **Frontend** : `/` = page de choix V1/V2 ; espace V1 = routes existantes ; espace V2 = `/v2/**` (shell). `_app.js` choisit la nav selon le préfixe. `GET /admin/agents?flow_version=` filtre par flux ; `PATCH/POST /admin/agents/{name}` prend `?flow_version=` (défaut v1) ; `synced=FALSE` sur édition de prompt uniquement si provider='dust'.
 
 ---
@@ -255,6 +262,25 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
 21. **`hypotheses_reviewed[]` vs `hypothesis_reviews[]`** : `hypothesis_reviews[]` est la sortie brute de l'agent Dust (modes 2/3/4). `monitoring_v2.py` appelle `_normalize_monitoring_result()` qui fusionne ces reviews avec les hypothèses de la thèse pour produire `hypotheses_reviewed[]` — champ enrichi utilisé par la Page 5 (contient `text`, `weight`, `kpi_metric`, `kpi_unit`, `alert_threshold`, `invalidation_threshold`, `status`, `observation`). Toujours lire `hypotheses_reviewed[]` côté frontend, pas `hypothesis_reviews[]`.
 22. **Recherche knowledge (V2)** : `query_knowledge()` est **vectorielle** (`embedding <=> $vec::vector`, bge-m3 1024d). Le chemin texte ILIKE est un **repli strict** — jamais un co-classement. Mesuré sur corpus réel : fusionner les deux (RRF) **dégrade** le résultat (MRR 0.905 → 0.655), le signal lexical français étant trop faible. Ne pas « améliorer » en hybride sans re-mesurer. Les entrées à `embedding IS NULL` sont invisibles au vectoriel : elles sont rattrapées par une passe texte à quota réservé (`_RESCUE_QUOTA`), qui doit tourner **inconditionnellement** — la conditionner au budget restant la rend morte dès que le corpus dépasse `limit`.
 23. **pgvector et `atttypmod`** : la dimension y est stockée **telle quelle**, sans le `+4` (VARHDRSZ) des types natifs. Un `atttypmod - 4` réflexe lit `1020` pour un `vector(1024)`. Dans une migration, cette erreur fait échouer la garde d'idempotence et **efface tout le corpus d'embeddings** au rejeu. Comparer `format_type(atttypid, atttypmod)` à `'vector(N)'`.
+24. **search-worker — le modèle ne qualifie jamais sa propre source (V2)** : dans `agents/v2/worker.py`,
+    `_apply_deterministic_overrides()` recalcule en Python tout ce qui est dérivable, sur le modèle de
+    `curator._apply_deterministic_overrides`. `source_type` est déterminé par le **domaine**
+    (`classify_source_type`), pas par la déclaration de l'agent — dans les **deux sens** : la
+    sur-qualification gonfle le score (`edgar_official` sur un blog), la sous-qualification fait tomber
+    une bonne source sous le plancher `reliability_min` et creuse un **faux trou de couverture**
+    (`ir.nvidia.com` déclaré `web_search_generic`). Seul l'aveu `llm_memory` est honoré tel quel : il
+    porte sur ce que le modèle a fait, pas sur la source. `reliability_score`/`tier`/`note` viennent
+    ensuite de `compute_reliability()`, et l'`ExecutionDeclaration` (tokens/coût) est **mesurée**,
+    jamais déclarée. La validation `WorkerExchange` est un **filet** après correction, pas le mécanisme.
+25. **Un échec de recherche n'est jamais un résultat vide (V2)** : `web_search` sans clé lève
+    `SearchUnavailable` (→ HTTP 503), et `run_search_worker()` refuse de démarrer si aucun backend
+    n'est configuré. Motif : un worker sans recherche rend un `not_found` parfaitement bien formé que
+    le curator lit comme « cette information n'existe pas » alors qu'elle n'a **pas été cherchée** —
+    c'est le mode de panne qui a fait écarter SearXNG. Même règle pour `fetch_url` : une page
+    volumineuse dont on extrait < 200 caractères (SPA rendue en JS — constaté sur
+    `investor.nvidia.com` : HTTP 200, titre correct, **0 caractère**) lève une erreur explicite au lieu
+    de rendre un texte vide. Basculer Exa ↔ Serper ↔ autre = une classe dans `knowledge/websearch.py`,
+    sans toucher au `tools_json` en DB ni au prompt de l'agent.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -8,8 +8,9 @@ synchro (règle #19 CLAUDE.md) — dont ce package. Copie fidèle des schémas f
 croisés sont passés en relatifs).
 
 Ce lot (chaîne d'analyse) expose : ResearchMemo, BullCase, BearCase, RiskMatrix, Hypothese (analyse) ;
-ReadinessReport + compute_verdict (curator gate) ; ContextPack (front-load). Les contrats aval
-(worker/ingestion/decision/monitoring/debate/exit) seront copiés au moment de leurs agents.
+ReadinessReport + compute_verdict (curator gate) ; ContextPack (front-load) ; WorkerRequest/
+WorkerResponse/WorkerExchange + ProducedEntry (C1, frontière orchestrateur↔ouvrier — search-worker).
+Les contrats restants (ingestion/decision/monitoring/debate/exit) seront copiés au moment de leurs agents.
 """
 from .analysis_v2_schemas import (
     SCHEMA_VERSION,
@@ -23,6 +24,15 @@ from .analysis_v2_schemas import (
 )
 from .context_pack_schema import CANONICAL_DIMS, ContextPack, DimensionDigest
 from .readiness_report_schema import ReadinessReport, compute_verdict
+from .worker_delegation_schema import (
+    SOURCE_RELIABILITY_BASELINE,
+    ExecutionDeclaration,
+    OutputSchema,
+    ProducedEntry,
+    WorkerExchange,
+    WorkerRequest,
+    WorkerResponse,
+)
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -38,4 +48,11 @@ __all__ = [
     "ContextPack",
     "DimensionDigest",
     "CANONICAL_DIMS",
+    "WorkerRequest",
+    "WorkerResponse",
+    "WorkerExchange",
+    "ProducedEntry",
+    "OutputSchema",
+    "ExecutionDeclaration",
+    "SOURCE_RELIABILITY_BASELINE",
 ]

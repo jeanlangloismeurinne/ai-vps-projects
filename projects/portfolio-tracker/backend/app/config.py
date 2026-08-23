@@ -40,6 +40,17 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
     EMBEDDING_DIM: int = 1024
 
+    # V2 — Recherche web du search-worker (décision 2026-08-23 : Exa ; Serper en débordement).
+    # Le backend est choisi par SEARCH_PROVIDER et l'exécuteur `web_search` est agnostique — en
+    # changer = changer cette valeur + poser la clé, jamais toucher au tools_json ni au prompt.
+    # Sans clé, le backend 'none' échoue EXPLICITEMENT : un web_search qui renverrait 0 résultat
+    # sans erreur est le mode de panne qui a fait écarter SearXNG (l'agent croit avoir cherché).
+    SEARCH_PROVIDER: str = "exa"          # exa | serper | none
+    EXA_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
+    SEARCH_TIMEOUT_S: int = 20
+    FETCH_URL_MAX_CHARS: int = 20000      # plafond de texte réinjecté au modèle par fetch_url
+
     class Config:
         env_file = None  # Coolify injecte les variables
 

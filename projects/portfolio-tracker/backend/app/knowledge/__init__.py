@@ -8,6 +8,16 @@ from .embeddings import (
     is_configured as embeddings_configured,
     to_pgvector,
 )
+from .websearch import (
+    SearchHit,
+    SearchUnavailable,
+    classify_source_type,
+    fetch_url,
+    get_search_backend,
+    html_to_text,
+    search_is_configured,
+    web_search,
+)
 from .service import (
     RELIABILITY_TABLE,
     collect_refs,
@@ -34,4 +44,13 @@ __all__ = [
     "entry_text",
     "embeddings_configured",
     "to_pgvector",
+    # accès web du search-worker (Exa/Serper interchangeables)
+    "SearchHit",
+    "SearchUnavailable",
+    "classify_source_type",
+    "fetch_url",
+    "get_search_backend",
+    "html_to_text",
+    "search_is_configured",
+    "web_search",
 ]

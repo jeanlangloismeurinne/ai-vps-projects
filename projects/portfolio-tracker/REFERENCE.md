@@ -203,6 +203,21 @@ MARKET_DATA_PROVIDER=yfinance
 DATABASE_URL=postgresql+asyncpg://admin:PASSWORD@shared-postgres:5432/db_portfolio
 REDIS_URL=redis://shared-redis:6379
 
+# V2 — Provider agents (DeepInfra, endpoint OpenAI-compatible)
+DEEPINFRA_API_KEY=                     # déployée dans Coolify (backend), jamais committée
+DEEPINFRA_API_BASE=https://api.deepinfra.com/v1/openai
+
+# V2 — Embeddings (migration 027 : knowledge_entries.embedding vector(1024))
+EMBEDDING_MODEL=BAAI/bge-m3            # multilingue — le corpus est en français
+EMBEDDING_DIM=1024                     # DOIT correspondre à vector(N) en DB
+
+# V2 — Recherche web du search-worker
+SEARCH_PROVIDER=exa                    # exa | serper | none
+EXA_API_KEY=                           # à souscrire (10$/mois de crédits, sans carte)
+SERPER_API_KEY=                        # débordement (~$1/1000)
+SEARCH_TIMEOUT_S=20
+FETCH_URL_MAX_CHARS=20000
+
 # App
 BASE_CURRENCY=EUR
 MAX_SECTOR_CONCENTRATION_PCT=20.0
