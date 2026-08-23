@@ -164,22 +164,43 @@ DEPLOY_ID="$(echo "$PHP_OUT" | sed -n 's/^DEPLOY_ID:\([0-9]\+\).*/\1/p')"
 echo "[deploy] rebuild Coolify déclenché — deployment #$DEPLOY_ID"
 
 # ---- 4. monitor --------------------------------------------------------------
+# On lit le STATUS réel à chaque tour (une seule requête) et on décide sur sa VALEUR.
+# Point clé : un échec de la requête elle-même (docker exec flaky quand dockerd est saturé
+# par le build en cours) NE DOIT PAS être confondu avec « build terminé ». L'ancienne boucle
+# `docker exec … | grep -q 1` sous pipefail sortait dès qu'un poll hoquetait → faux négatif.
 elapsed=0
-while docker exec "$COOLIFY_DB" psql -U coolify -d coolify -t -c \
-  "SELECT 1 FROM application_deployment_queues WHERE id=$DEPLOY_ID AND status IN ('queued','in_progress')" \
-  | grep -q 1; do
-  if [[ $elapsed -ge $TIMEOUT_SECONDS ]]; then
-    fail 7 "timeout ${TIMEOUT_SECONDS}s — deployment #$DEPLOY_ID toujours en cours"
+query_errors=0
+MAX_QUERY_ERRORS=5   # ~75 s de blips DB tolérés avant d'abandonner
+while true; do
+  if STATUS="$(docker exec "$COOLIFY_DB" psql -U coolify -d coolify -tAc \
+        "SELECT status FROM application_deployment_queues WHERE id=$DEPLOY_ID" 2>/dev/null)"; then
+    query_errors=0
+    STATUS="$(printf '%s' "$STATUS" | tr -d ' \n')"
+    case "$STATUS" in
+      finished)
+        echo "RESULT: success — $APP déployé (commit $SHA, deployment #$DEPLOY_ID). Notif Slack auto via post_deployment_command."
+        exit 0 ;;
+      queued|in_progress)
+        : ;;  # build en cours — on continue de sonder
+      "")
+        fail 7 "deployment #$DEPLOY_ID introuvable dans la file" ;;
+      *)
+        fail 7 "build #$DEPLOY_ID terminé en status='$STATUS' (attendu 'finished')" ;;
+    esac
+  else
+    # Requête en échec (blip transitoire de docker exec/psql pendant le build) : on retente,
+    # on ne conclut RIEN. Abandon seulement après plusieurs échecs consécutifs.
+    query_errors=$((query_errors + 1))
+    if [[ $query_errors -ge $MAX_QUERY_ERRORS ]]; then
+      fail 7 "$MAX_QUERY_ERRORS échecs consécutifs d'interrogation de la file (#$DEPLOY_ID) — état indéterminé"
+    fi
+    echo "[deploy] $(date +%H:%M:%S) poll DB en échec (#$DEPLOY_ID), tentative $query_errors/$MAX_QUERY_ERRORS…"
   fi
-  echo "[deploy] $(date +%H:%M:%S) build en cours (#$DEPLOY_ID)…"
+
+  if [[ $elapsed -ge $TIMEOUT_SECONDS ]]; then
+    fail 7 "timeout ${TIMEOUT_SECONDS}s — deployment #$DEPLOY_ID toujours en cours (status='${STATUS:-?}')"
+  fi
+  [[ "${STATUS:-}" == "queued" || "${STATUS:-}" == "in_progress" ]] && \
+    echo "[deploy] $(date +%H:%M:%S) build en cours (#$DEPLOY_ID, status=$STATUS)…"
   sleep "$POLL_SECONDS"; elapsed=$((elapsed + POLL_SECONDS))
 done
-
-STATUS="$(docker exec "$COOLIFY_DB" psql -U coolify -d coolify -t -c \
-  "SELECT status FROM application_deployment_queues WHERE id=$DEPLOY_ID" | tr -d ' \n')"
-
-if [[ "$STATUS" == "finished" ]]; then
-  echo "RESULT: success — $APP déployé (commit $SHA, deployment #$DEPLOY_ID). Notif Slack auto via post_deployment_command."
-  exit 0
-fi
-fail 7 "build #$DEPLOY_ID terminé en status='$STATUS' (attendu 'finished')"

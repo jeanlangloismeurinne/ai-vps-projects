@@ -50,6 +50,19 @@ de déploiement part automatiquement (via `post_deployment_command`, cf. CLAUDE.
 Codes d'échec : `2` rien à committer · `3` app inconnue · `4` push refusé · `5` échec env ·
 `6` rebuild non déclenché · `7` build en erreur/timeout.
 
+> **Cas particulier — code 7 uniquement.** C'est le seul code ambigu : vrai échec de build **ou**
+> faux négatif de monitoring (blip transitoire du poll DB pendant un build lourd). Avant de lancer
+> le sous-agent, faire **une seule** requête de vérification — coût ~1 aller-retour Bash, négligeable
+> devant un sous-agent Sonnet démarré à froid + un rebuild potentiellement redondant. Le `#DEPLOY_ID`
+> figure dans la ligne `RESULT: failure` :
+> ```bash
+> docker exec coolify-db psql -U coolify -d coolify -tAc \
+>   "SELECT status FROM application_deployment_queues WHERE id=<DEPLOY_ID>"
+> ```
+> `finished` → le déploiement est en fait OK : reporter *success*, **ne pas** lancer le fallback.
+> Autre valeur → basculer sur l'option 2. Les codes `2/3/4/5/6` sont sans ambiguïté : fallback direct,
+> aucune vérif.
+
 ## Option 2 — fallback sous-agent Sonnet
 
 Uniquement si l'option 1 sort en échec. Opus **ne débogue pas lui-même** (ça remplirait son
