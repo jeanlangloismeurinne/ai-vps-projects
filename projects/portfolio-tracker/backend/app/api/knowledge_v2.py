@@ -51,6 +51,10 @@ class SearchWorkerBody(BaseModel):
     divergent: bool = False
     check_existing_first: bool = True
     persist: bool = True   # False = dry-run : on voit ce qui entrerait sans l'écrire
+    # Plafond de tours d'outils. Exposé parce qu'il est réellement contraignant : le premier run réel
+    # (NVDA, 2026-08-23) est sorti sur « 6 itérations épuisées » avant d'avoir convergé. Le relever
+    # coûte des tokens à chaque tour — à régler par mesure, pas par générosité de défaut.
+    max_iterations: int = Field(ge=1, le=12, default=6)
 
 
 @router.post("/tickers/{ticker_id}/knowledge/search")
@@ -78,7 +82,7 @@ async def run_worker(ticker_id: str, body: SearchWorkerBody):
     )
 
     try:
-        exchange = await run_search_worker(req)
+        exchange = await run_search_worker(req, max_iterations=body.max_iterations)
     except SearchUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
     except AgentNotFoundError as e:

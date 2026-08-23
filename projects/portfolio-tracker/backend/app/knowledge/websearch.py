@@ -116,6 +116,14 @@ class SearchBackend(abc.ABC):
     async def search(self, query: str, max_results: int) -> list[SearchHit]:
         ...
 
+    async def fetch_contents(self, urls: list[str], *, max_chars: int) -> dict[str, dict[str, Any]]:
+        """Texte de pages déjà crawlées par le backend, `url → {title, text}`.
+
+        Optionnel : un backend qui ne sait pas le faire rend `{}` et le repli de `fetch_url` est
+        simplement inopérant — jamais une erreur. Sert de **second chemin** quand la récupération
+        directe échoue (cf. `fetch_url`)."""
+        return {}
+
 
 class ExaBackend(SearchBackend):
     """Exa (nominal) — `POST /search`, header `x-api-key`. `type=auto` laisse Exa arbitrer entre
@@ -123,6 +131,7 @@ class ExaBackend(SearchBackend):
     texte évite un `fetch_url` derrière, donc un tour de boucle et des tokens."""
     name = "exa"
     endpoint = "https://api.exa.ai/search"
+    contents_endpoint = "https://api.exa.ai/contents"
 
     def __init__(self, api_key: str, *, text_chars: int = 2000) -> None:
         self._key = api_key
@@ -158,6 +167,41 @@ class ExaBackend(SearchBackend):
             for x in results
             if x.get("url")
         ]
+
+    async def fetch_contents(self, urls: list[str], *, max_chars: int) -> dict[str, dict[str, Any]]:
+        """`POST /contents` — le texte que le crawler d'Exa a déjà extrait de ces URL.
+
+        Exa crawle depuis sa propre infrastructure : il rend donc des pages que ce VPS ne peut PAS
+        récupérer en direct. Deux familles, mesurées sur NVDA (2026-08-23) :
+          - **WAF/paywall par réputation d'IP** — `cnbc.com` répond 403 ici quel que soit le
+            User-Agent (vérifié : bot déclaré et Chrome desktop donnent le même 403), Exa en rend
+            12 189 caractères depuis son cache.
+          - **SPA rendue en JavaScript** — `investor.nvidia.com` rend 0 caractère en direct
+            (convention #25) ; Exa en rend 29 909.
+        Ces deux familles sont exactement celles qui portent les `source_type` au-dessus du plancher
+        (`financial_press` 0.75, `company_ir_official` 0.90). Sans ce chemin, le worker ne voyait
+        que des blogs à 0.50 et concluait `not_found` sur des sources qui existaient.
+        """
+        clean = [u for u in urls if u]
+        if not clean:
+            return {}
+        async with httpx.AsyncClient(timeout=settings.SEARCH_TIMEOUT_S * 2) as client:
+            try:
+                r = await client.post(
+                    self.contents_endpoint,
+                    json={"urls": clean, "text": {"maxCharacters": max_chars}},
+                    headers={"x-api-key": self._key, "Content-Type": "application/json"},
+                )
+            except httpx.HTTPError as e:
+                raise SearchUnavailable(f"Exa /contents injoignable : {e}") from e
+        if r.status_code >= 400:
+            raise SearchUnavailable(f"Exa /contents HTTP {r.status_code} : {r.text[:300]}")
+        out: dict[str, dict[str, Any]] = {}
+        for x in (r.json() or {}).get("results") or []:
+            url, text = x.get("url"), (x.get("text") or "").strip()
+            if url and text:
+                out[url] = {"title": (x.get("title") or "").strip(), "text": text}
+        return out
 
 
 class SerperBackend(SearchBackend):
@@ -295,14 +339,18 @@ def html_to_text(html: str) -> tuple[str, str]:
     return parser.title, parser.text()
 
 
-async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, Any]:
-    """Récupère une URL et en extrait le texte. Renvoie {url, final_url, status, title, text,
-    truncated, content_type}. Lève RuntimeError sur échec réseau/HTTP — remontée telle quelle au
-    modèle par la boucle d'outils."""
-    limit = max_chars or settings.FETCH_URL_MAX_CHARS
-    if not re.match(r"^https?://", url or "", re.IGNORECASE):
-        raise ValueError(f"URL invalide (http/https attendu) : {url!r}")
+class _DirectFetchFailed(RuntimeError):
+    """Échec de la récupération directe. `recoverable` dit si le backend de recherche vaut la peine
+    d'être interrogé : un 404 est une absence réelle (aucun cache ne la comblera), un 403/SPA est un
+    problème d'accès depuis ce VPS (Exa, lui, a peut-être la page)."""
 
+    def __init__(self, message: str, *, recoverable: bool) -> None:
+        super().__init__(message)
+        self.recoverable = recoverable
+
+
+async def _fetch_url_direct(url: str, limit: int) -> dict[str, Any]:
+    """Récupération directe depuis ce VPS. Lève `_DirectFetchFailed` en qualifiant l'échec."""
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; portfolio-tracker/2.0; +https://portfolio.jlmvpscode.duckdns.org)",
         "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.8,*/*;q=0.5",
@@ -314,9 +362,14 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
         try:
             r = await client.get(url)
         except httpx.HTTPError as e:
-            raise RuntimeError(f"fetch_url({url}) : {e}") from e
+            raise _DirectFetchFailed(f"fetch_url({url}) : {e}", recoverable=True) from e
     if r.status_code >= 400:
-        raise RuntimeError(f"fetch_url({url}) : HTTP {r.status_code}")
+        # 404/410 = la page n'existe pas : aucun cache ne la fera exister. Le reste (401 paywall,
+        # 403 WAF, 429 quota, 5xx) est un refus opposé à CETTE IP — un autre crawler peut l'avoir.
+        raise _DirectFetchFailed(
+            f"fetch_url({url}) : HTTP {r.status_code}",
+            recoverable=r.status_code not in (404, 410),
+        )
 
     ctype = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
     if "html" in ctype or "xml" in ctype or not ctype:
@@ -326,9 +379,10 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
     else:
         # PDF & binaires : pas d'extraction embarquée (pas de dépendance PDF dans l'image).
         # On le DIT au modèle au lieu de lui rendre du binaire illisible qu'il paraphraserait.
-        raise RuntimeError(
+        raise _DirectFetchFailed(
             f"fetch_url({url}) : type {ctype!r} non extractible côté serveur — "
-            "chercher la version HTML de ce document."
+            "chercher la version HTML de ce document.",
+            recoverable=True,
         )
 
     # Page volumineuse dont on n'extrait presque rien = rendue côté client (SPA). Constaté sur
@@ -336,13 +390,12 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
     # succès ferait conclure au modèle que la page ne dit rien, alors qu'elle n'a pas été lue — le
     # même mode de panne silencieux qui a fait écarter SearXNG. On le DIT.
     if len(r.text) > 2000 and len(text) < 200:
-        raise RuntimeError(
+        raise _DirectFetchFailed(
             f"fetch_url({url}) : page sans texte exploitable ({len(text)} car. extraits de "
-            f"{len(r.text)} car. de HTML) — contenu probablement rendu en JavaScript. "
-            "Chercher une URL alternative : communiqué de presse, PDF converti, ou dépôt EDGAR."
+            f"{len(r.text)} car. de HTML) — contenu probablement rendu en JavaScript.",
+            recoverable=True,
         )
 
-    truncated = len(text) > limit
     return {
         "url": url,
         "final_url": str(r.url),
@@ -350,9 +403,69 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
         "content_type": ctype,
         "title": title,
         "text": text[:limit],
-        "truncated": truncated,
+        "truncated": len(text) > limit,
         "source_type_max": classify_source_type(str(r.url)),
+        "via": "direct",
     }
+
+
+async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, Any]:
+    """Récupère une URL et en extrait le texte. Renvoie {url, final_url, status, title, text,
+    truncated, content_type, via}. Lève RuntimeError sur échec — remontée telle quelle au modèle.
+
+    **Deux chemins, dans cet ordre.** D'abord la récupération directe. Si elle échoue de façon
+    *récupérable* (403 WAF, 401 paywall, SPA vide, PDF), on demande la page au backend de recherche,
+    qui l'a souvent déjà crawlée depuis son infrastructure. Sans ce second chemin, les seules sources
+    lisibles depuis ce VPS étaient les blogs — ceux, précisément, qui plafonnent à 0.50 et tombent
+    sous `reliability_min`. Mesuré sur NVDA : 5 entrées produites, 5 rejetées sous plancher, la seule
+    source qualifiante du run (CNBC, 0.75) perdue sur un 403.
+
+    `via` dit lequel des deux chemins a rendu le texte : le modèle doit pouvoir distinguer une page
+    lue à l'instant d'un extrait de cache, et le champ remonte jusqu'au log du worker.
+    """
+    limit = max_chars or settings.FETCH_URL_MAX_CHARS
+    if not re.match(r"^https?://", url or "", re.IGNORECASE):
+        raise ValueError(f"URL invalide (http/https attendu) : {url!r}")
+
+    try:
+        return await _fetch_url_direct(url, limit)
+    except _DirectFetchFailed as direct_error:
+        if not direct_error.recoverable:
+            raise RuntimeError(str(direct_error)) from direct_error
+
+        try:
+            contents = await get_search_backend().fetch_contents([url], max_chars=limit)
+        except SearchUnavailable as e:
+            logger.info("fetch_url(%s) : repli backend indisponible (%s)", url[:120], e)
+            contents = {}
+        except Exception as e:  # noqa: BLE001
+            logger.warning("fetch_url(%s) : repli backend en échec (%s)", url[:120], e)
+            contents = {}
+
+        hit = contents.get(url) or (next(iter(contents.values())) if len(contents) == 1 else None)
+        if not hit or not hit.get("text"):
+            raise RuntimeError(
+                f"{direct_error} — et le backend de recherche n'a pas cette page en cache. "
+                "Chercher une URL alternative : communiqué de presse, version HTML, ou dépôt EDGAR."
+            ) from direct_error
+
+        text = hit["text"]
+        logger.info(
+            "fetch_url(%s) : direct en échec (%s) → repli backend, %d car.",
+            url[:120], direct_error, len(text),
+        )
+        return {
+            "url": url,
+            "final_url": url,
+            "status": 200,
+            "content_type": "text/plain",
+            "title": hit.get("title") or "",
+            "text": text[:limit],
+            "truncated": len(text) > limit,
+            "source_type_max": classify_source_type(url),
+            "via": "search_backend_cache",
+            "direct_fetch_error": str(direct_error),
+        }
 
 
 def _iso_date(value: Optional[str]) -> Optional[str]:

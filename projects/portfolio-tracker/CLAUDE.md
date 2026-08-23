@@ -281,6 +281,19 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     `investor.nvidia.com` : HTTP 200, titre correct, **0 caractère**) lève une erreur explicite au lieu
     de rendre un texte vide. Basculer Exa ↔ Serper ↔ autre = une classe dans `knowledge/websearch.py`,
     sans toucher au `tools_json` en DB ni au prompt de l'agent.
+26. **`fetch_url` a deux chemins, et le domaine décide de ce qui vaut la peine d'être lu (V2)** :
+    récupération directe d'abord, puis repli sur `SearchBackend.fetch_contents()` (Exa `POST
+    /contents`) si l'échec est **récupérable**. 404/410 = absence réelle → aucun repli, on lève tout
+    de suite ; 401/403/429/5xx/SPA-vide/PDF = refus opposé à **cette IP** → Exa a souvent la page
+    dans son cache de crawl. Le champ `via` (`direct` | `search_backend_cache`) accompagne le retour.
+    Motif, mesuré sur NVDA le 2026-08-23 : le premier run réel a produit 5 entrées, **5 rejetées sous
+    le plancher** `reliability_min=0.60`, parce que les seules pages lisibles depuis le VPS étaient
+    des blogs (`web_search_generic` = 0.50, plafond structurellement sous le plancher). Les sources
+    qualifiantes étaient inaccessibles : CNBC (`financial_press` 0.75) en 403, `investor.nvidia.com`
+    (`company_ir_official` 0.90) en SPA vide. Exa rend 12 189 et 29 909 caractères de ces deux pages.
+    **Ne pas croire qu'un User-Agent règle le 403** : testé le 2026-08-23, bot déclaré et Chrome
+    desktop donnent des codes strictement identiques (CNBC 403, Reuters 401, SeekingAlpha 403,
+    MarketWatch 401) — le filtrage est sur la réputation d'IP, pas sur l'en-tête.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -24,9 +24,17 @@ la souscription **Exa**, sans laquelle le worker refuse (volontairement) de dém
 > #280). Vérifié dans le container live : `EMBEDDING_MODEL=BAAI/bge-m3`, 15/15 entrées embeddées,
 > `query_knowledge` renvoie `match_mode='vector'`, backfill à 0 candidat. Migration 027 appliquée.
 >
-> **Lot `search-worker` déployé le 2026-08-23** avec `EXA_API_KEY` posée dans Coolify (backend).
-> Clé validée hors application avant déploiement (`POST https://api.exa.ai/search` → 200 avec
-> résultats). Reste à faire : le **premier run réel** du search-worker.
+> **Lot `search-worker` déployé le 2026-08-23** avec `EXA_API_KEY` posée dans Coolify (backend),
+> deployment #281. Chaîne vérifiée de bout en bout : Exa répond, la boucle d'outils tourne, les
+> garde-fous déterministes filtrent.
+>
+> **Premier run réel (NVDA, `moat`, dry-run) : `not_found` — 5 entrées produites, 5 rejetées sous le
+> plancher `reliability_min=0.60`.** Diagnostic : les seules pages lisibles depuis le VPS étaient des
+> blogs (`web_search_generic` = 0.50, donc structurellement sous le plancher) ; les sources
+> qualifiantes étaient inaccessibles — CNBC 403 (WAF), `investor.nvidia.com` SPA vide. Corrigé par le
+> second chemin de `fetch_url` (repli Exa `/contents`, convention #26). Coût du run : 99 278 tok in /
+> 3 999 out = 0,0087 $, sorti sur « 6 itérations d'outils épuisées » (d'où `max_iterations` exposé
+> dans le body de `POST /tickers/{id}/knowledge/search`).
 
 Colle ceci pour reprendre :
 
