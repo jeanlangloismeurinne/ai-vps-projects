@@ -11,9 +11,19 @@ role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + co
 
 **État au 2026-08-23** : la **couche contrat est figée** (10 schémas Pydantic v2) ET la **chaîne
 d'analyse runtime est écrite et déployée en production** (provider DeepInfra + curator → research →
-bull/bear → réfutation → synthèse, 7 routes exposées). Migrations 024/025/026 appliquées.
+bull/bear → réfutation → synthèse, 7 routes exposées). Migrations 024/025/026/**027** appliquées.
+La **recherche sémantique est opérationnelle** (bge-m3 1024d, 15/15 entrées embeddées).
 **Ce qui manque n'est plus du code de chaîne : c'est de la DONNÉE.** Aucun ticker n'est encore
 `ready`, donc la chaîne n'a jamais tourné de bout en bout sur un cas réel.
+
+> ### ✅ État du déploiement — À JOUR, aucune divergence
+>
+> Lot embeddings **déployé en production le 2026-08-23** (commit `f1e6a94`, deployment Coolify
+> #280). Vérifié dans le container live et non pas seulement au statut du build :
+> `EMBEDDING_MODEL=BAAI/bge-m3`, 15/15 entrées embeddées, `query_knowledge` renvoie
+> `match_mode='vector'`, backfill à 0 candidat. Migration 027 appliquée en base.
+>
+> Repo et prod sont alignés — **rien à rattraper avant de commencer l'étape 2**.
 
 Colle ceci pour reprendre :
 
@@ -24,12 +34,20 @@ Colle ceci pour reprendre :
 > DÉCISION #1 = Option C (base neutre → bull/bear isolés → réfutation bear→bull → synthèse).
 > **Le blocage actuel est l'alimentation de la base de connaissance**, pas la chaîne.
 >
+> **Étape 1 (embeddings) FAITE et déployée** — la recherche sémantique fonctionne (bge-m3 1024d).
+> **Prochaine étape = 2, le `search-worker`** : câbler les exécuteurs `web_search` (Exa) et
+> `fetch_url` dans `run_tool_agent()`, qui n'a **jamais tourné**. C'est ce qui produit la couverture
+> **qualitative** manquante, seul obstacle entre NVDA (`thin_qualitative`) et `ready`.
+> Prérequis à trancher en début de session : **la clé Exa n'est pas encore souscrite ni déployée**.
+>
 > LIRE AVANT : `roadmap/00-principe-directeur-v2.md` ; `roadmap/01-spec-v2-unifiee.md` (§5 agents,
 > §7 curator/readiness, §8 contrats analyse, §14 migrations, §18 découpage) ;
 > `roadmap/provenance-cards/*_card.md` + `*_schema.py` ; `roadmap/provenance-cards/prompts/` ;
 > côté **code** : `backend/app/agents/providers/`, `backend/app/agents/v2/`,
-> `backend/app/knowledge/service.py`, `backend/app/contracts/`, `backend/app/api/analysis_v2.py`.
-> CLAUDE.md projet = conventions. Visuel : https://provenance.jlmvpscode.duckdns.org
+> `backend/app/knowledge/` (`service.py` + `embeddings.py`), `backend/app/contracts/`,
+> `backend/app/api/analysis_v2.py`.
+> CLAUDE.md projet = conventions (dont #22 recherche knowledge, #23 piège pgvector).
+> Visuel : https://provenance.jlmvpscode.duckdns.org
 
 ## Ce qui est FAIT
 
@@ -56,7 +74,8 @@ synchro** (règle #19) : schéma de sortie = Pydantic correspondant. Chargés en
 |---|---|
 | `backend/app/agents/providers/` | `AgentProvider` · `DeepInfraProvider` (OpenAI-compat) · `DustProvider` (shim V1) · factory `get_agent_provider(agent_name, flow_version)` lisant `agent_prompts` |
 | `backend/app/contracts/` | **copie runtime** des contrats figés (le build context Docker est `./backend` seul → `roadmap/` absent de l'image). + `composites.py` (`SynthesisOutput` + `valider_pont()` §8.5) |
-| `backend/app/knowledge/service.py` | `RELIABILITY_TABLE` · `compute_reliability()` · `store_knowledge()` (append-only A1) · `query_knowledge()` · `snapshot_refs()` (gel entry@version + `reliability_at_use`) · `collect_refs()` |
+| `backend/app/knowledge/service.py` | `RELIABILITY_TABLE` · `compute_reliability()` · `store_knowledge()` (append-only A1, **embedde à l'écriture**, échec non fatal) · `query_knowledge()` (**vectoriel + repli strict**) · `snapshot_refs()` (gel entry@version + `reliability_at_use`) · `collect_refs()` |
+| `backend/app/knowledge/embeddings.py` | **(2026-08-23)** client DeepInfra `/v1/openai/embeddings` · `entry_text()` = **source unique** du texte embeddé (backfill et écriture temps réel DOIVENT produire le même texte) · `to_pgvector()` (littéral casté `$n::vector`, pas de dépendance `pgvector` Python) · `backfill_embeddings()` idempotent · `_QUERY_INSTRUCTION` (bge-m3 n'en veut **pas** ; bge-*-en et e5 si) |
 | `backend/app/agents/v2/runner.py` | point de passage unique : `extract_json()` tolérant, `run_json_agent()` (validation Pydantic + **1 tour de réparation**), `run_tool_agent()` (boucle outils OpenAI, **non exercée**) |
 | `backend/app/agents/v2/common.py` | `MVDD_SPEC` (8 dimensions, champs requis + tier plancher) · `count_tiers()` · `format_entries_for_prompt()` (ordre déterministe = discipline de cache §5.3) |
 | `backend/app/agents/v2/curator.py` | gate GO/NO-GO. **Tout ce qui est dérivé est recalculé en Python** (`_apply_deterministic_overrides`) : `entries_par_tier`, `ok` par dimension, `bloc_ok`, verdict. `conviction`/`marge_securite` forcés à `None` (A3). Produit le `context_pack` **uniquement si `ready`** |
@@ -73,7 +92,15 @@ synchro** (règle #19) : schéma de sortie = Pydantic correspondant. Chargés en
 - **026** Analyses : `research_memos`, `research_messages`, `investment_analyses`.
   ⚠️ **`analysis_knowledge_refs.analysis_id` est POLYMORPHE** (discriminé par `analysis_kind`) — la
   note de 024 « FK ajoutée en 026 » est **amendée** : pas de FK dure vers `investment_analyses` seul.
-- **Collision 023 → séquence décalée +1.** Reste : 027 theses_flow · 028 exit/calibration.
+- **027** Embeddings : `embedding vector(768)` → **`vector(1024)`** + index HNSW reconstruit
+  (`vector_cosine_ops`, donc opérateur `<=>` inchangé) + index **partiel** `..._unembedded` sur
+  `embedding IS NULL` (la passe de rattrapage de `query_knowledge` doit rester bon marché).
+  ⚠️ **Piège pgvector** : `atttypmod` porte la dimension **telle quelle**, sans le `+4` (VARHDRSZ)
+  des types natifs. Un `atttypmod - 4` réflexe lit 1020 pour un `vector(1024)` — la garde
+  d'idempotence ne reconnaît pas l'état cible et la migration rejouée **efface tout le corpus
+  d'embeddings**. Constaté en test. La garde compare désormais `format_type(...)`.
+- **Séquence** : collision 023 → décalage +1, puis 027 pris par les embeddings →
+  reste **028 theses_flow · 029 exit/calibration**.
 
 Seed NVDA (`backend/app/db/seeds/nvda_v2_knowledge_seed.sql`) : 10 `fact_financial` Tier A EDGAR
 + 5 qualitatifs `llm_memory` → readiness **`thin_qualitative`** (struct_ok ∧ ¬qual_ok).
@@ -98,17 +125,31 @@ et **ne se transpose pas**. Le « tier ouvrier » reste une **réalité d'orches
 Overrides possibles (`agent_prompts.model` est par agent) : ingestion de masse EDGAR →
 `google/gemma-4-26B-A4B-it` ($0.07/$0.34, 256k) ; fallback tool-calling → `zai-org/GLM-4.7-Flash`.
 
-### Embeddings (2026-08-23) — DÉCISION #4 RÉVISÉE : API, pas Ollama
+### Embeddings — DÉCISION #4, 3ᵉ révision (2026-08-23) : `BAAI/bge-m3`, 1024d — **FAIT ET VALIDÉ**
 
-**`BAAI/bge-base-en-v1.5` via DeepInfra, $0.005/1M tokens, 768 dimensions** — colle exactement à la
-colonne `embedding vector(768)` et à l'index HNSW de 024. **Zéro changement de schéma.**
+**Ollama abandonné** (~1 Go de RAM sur un VPS 2 vCPU saturé) → API DeepInfra, clé déjà déployée.
+Coût : corpus pilote ≈ **$0,00004**, < **$0,10/an** à pleine échelle. Le coût n'arbitre rien.
 
-Coût réel : corpus pilote (15 entrées) ≈ **$0,00004** ; 50 tickers × 300 entrées ≈ **$0,04** ;
-500 requêtes/jour pendant 1 an ≈ **$0,04**. → **< $0,10/an à pleine échelle.** Un seul appel
-`run_research` coûte ~75× l'embedding de tout le corpus pilote.
+⚠️ **`bge-base-en-v1.5` (768d) a été essayé puis ÉCARTÉ** : ce modèle est entraîné sur l'**anglais
+seul**, or **100 % du corpus est en français** (`lang='fr'` sur 15/15 entrées, et les sources EU le
+resteront). Bench sur le corpus NVDA réel (7 requêtes FR sémantiques, 15 entrées) :
 
-**Ollama est abandonné** : il n'économise rien et coûte ~1 Go de RAM + du CPU sur une machine à
-2 vCPU saturée (cf. contrainte infra ci-dessous). Réutilise la clé DeepInfra déjà déployée.
+| configuration | MRR | hit@1 | hit@3 |
+|---|---|---|---|
+| ILIKE lexical seul (l'ex-implémentation) | 0.352 | 1/7 | 3/7 |
+| bge-base-en-v1.5 768d, vectoriel | 0.644 | 4/7 | 4/7 |
+| **bge-m3 1024d, vectoriel** | **0.905** | **6/7** | **7/7** |
+
+Le 768d anglais échouait précisément sur les requêtes **financières** (rentabilité, cash,
+endettement) — donc sur les entrées **EDGAR Tier A**, les plus fiables : rangs 5, 6, 7 sur 15.
+Mode de panne **silencieux** : l'agent reçoit des entrées pleines mais hors-sujet, le curator conclut
+à une dimension non couverte (readiness faux négatif) et le garde-fou A2 ne voit rien puisque les
+refs citées existent. Aucun modèle multilingue en 768d chez DeepInfra (404 sur
+`multilingual-e5-base`, `gte-multilingual-base`) → la montée en dimension n'était pas évitable.
+
+**Ne PAS « améliorer » en recherche hybride sans re-mesurer** : la fusion RRF du lexical et du
+vectoriel **dégrade** (0.905 → 0.655), le signal lexical français étant trop faible. Le texte est un
+**repli strict**, jamais un co-classement. La normalisation des accents ne change rien.
 
 ### Web search (2026-08-23) — Exa, SearXNG écarté
 
@@ -139,10 +180,11 @@ décisions ci-dessus (embeddings API, web search API).
 
 ## Prochaine étape — alimenter la connaissance (le blocage réel)
 
-1. **Embeddings** — `backend/app/knowledge/embeddings.py` (client DeepInfra `/embeddings`,
-   `bge-base-en-v1.5`) + backfill des 15 entrées NVDA à `embedding IS NULL` + bascule de
-   `query_knowledge()` du ILIKE multi-termes vers `embedding <=> $vec` (index HNSW déjà là).
-   **Débloqué** : ne dépend plus d'aucune infra à monter.
+1. ~~**Embeddings**~~ — ✅ **FAIT le 2026-08-23** (non déployé, voir « État du déploiement » ci-dessous).
+   `backend/app/knowledge/embeddings.py` (client DeepInfra `/v1/openai/embeddings`, `bge-m3`) ·
+   migration 027 · 15/15 entrées NVDA backfillées en 1024d · `query_knowledge()` bascule sur
+   `embedding <=> $vec::vector` avec repli texte strict. Mesuré en conditions réelles à travers
+   l'index HNSW : **MRR 0.905, hit@3 7/7**.
 2. **`search-worker`** — câbler l'exécuteur `web_search` (Exa) + `fetch_url` (httpx, déjà faisable)
    dans `run_tool_agent()` (écrit, jamais exercé). C'est ce qui produit la couverture **qualitative**
    manquante.
@@ -162,6 +204,12 @@ décisions ci-dessus (embeddings API, web search API).
 - **`run_tool_agent()` n'a jamais tourné** (aucun exécuteur d'outil câblé).
 - La validation faite : `py_compile` + import complet en container jetable + round-trip
   `ReadinessReport` sous pydantic 2.13.4 → `thin_qualitative` cohérent avec `compute_verdict`.
+
+**Exception — le lot embeddings (027), lui, EST vérifié en conditions réelles** : backfill 15/15,
+recherche vectorielle exercée à travers l'index HNSW via `query_knowledge` (MRR 0.905, hit@3 7/7),
+rattrapage d'une entrée non embeddée, repli texte clé absente, idempotence du backfill et de la
+migration. Reste non exercé : le comportement sous un corpus de plusieurs milliers d'entrées
+(qualité du rappel HNSW, `ef_search` laissé au défaut).
 
 ## Rappels techniques (CLAUDE.md projet)
 
