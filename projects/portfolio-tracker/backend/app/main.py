@@ -56,6 +56,10 @@ app.include_router(admin_v1.router)
 app.include_router(portfolio_v2.router)
 app.include_router(calendar_v2.router)
 
+# V2 routers (flow_version='v2', espace disjoint — chaîne d'analyse curator→research→bull/bear→synthèse)
+from app.api import analysis_v2
+app.include_router(analysis_v2.router)
+
 
 @app.on_event("startup")
 async def startup():

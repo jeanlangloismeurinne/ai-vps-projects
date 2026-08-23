@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     SLACK_WEBHOOK_URL: str = ""
     SLACK_ALERT_CHANNEL: str = "#portfolio-alerts"
 
+    # V2 — Provider DeepInfra (endpoint OpenAI-compatible, agents flow_version='v2')
+    DEEPINFRA_API_KEY: str = ""
+    DEEPINFRA_API_BASE: str = "https://api.deepinfra.com/v1/openai"
+
     class Config:
         env_file = None  # Coolify injecte les variables
 

@@ -156,8 +156,16 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 | `dust_budget` | Budget mensuel Dust — partagé V0/V1 |
 
 ### Migrations appliquées
-001 → 022. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support PE/VC. Migration 018 = `tickers.ticker_symbol`. Migration 019 = `calendar_events.brief_triggered` + `monitoring_sessions.calendar_event_id`. Migration 020 = `portfolio_settings.dust_auto_enabled` + statut `pending_manual`. Migrations 021/022 = mise à jour prompt monitoring-agent en DB.
-Prochaine migration : `023_*.sql`.
+001 → 024. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support PE/VC. Migration 018 = `tickers.ticker_symbol`. Migration 019 = `calendar_events.brief_triggered` + `monitoring_sessions.calendar_event_id`. Migration 020 = `portfolio_settings.dust_auto_enabled` + statut `pending_manual`. Migrations 021/022 = mise à jour prompt monitoring-agent en DB. Migration 023 = `portfolio_positions.purchase_price_eur`. **Migration 024 = V2 Knowledge Platform (socle couche 3)** : `knowledge_documents`, `knowledge_entries` versionnées/append-only (A1), `analysis_knowledge_refs` (snapshot figé A1/A2), `eu_ir_scrapers`, `knowledge_curator_reports` (mvdd|readiness|lint), extension pgvector + index HNSW, vue `knowledge_federation_export` (enveloppe commune). Seed NVDA cas-pilote : `db/seeds/nvda_v2_knowledge_seed.sql` (10 fact_financial Tier A EDGAR + 5 qualitatifs llm_memory → readiness `thin_qualitative`).
+**Migration 025 = V2 Agents / Provider (socle couche 2)** : `agent_prompts` += `provider` (`dust`|`deepinfra`), `model`, `tools_json` (JSONB), **`flow_version`** (`v1`|`v2`) ; unicité passée à `(agent_name, flow_version)`. Insert des **12 agents V2** (flow_version='v2', provider='deepinfra', modèle unifié `deepseek-ai/DeepSeek-V4-Flash-0731`, prompts = préambule + corps de `roadmap/provenance-cards/prompts/`). Générateur reproductible `db/migrations/_gen_025.py`. `tools_json` (web_search/fetch_url/query_knowledge) sur `search-worker` uniquement.
+**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), **026** investment_analyses + research_memos, **027** theses_flow, **028** exit/calibration.
+Prochaine migration : `026_v2_analyses.sql`.
+
+### Deux espaces disjoints V1 / V2 (2026-08-22)
+
+La V2 tourne **en parallèle** de la V1 tant qu'elle n'est pas validée. **Seul l'univers de tickers est partagé** ; tout le reste est disjoint (agents `flow_version='v2'`, base de connaissance, analyses, routes frontend `/v2`, nav V2). Les 3 agents V1 (dust) restent `flow_version='v1'` et intacts.
+- **Backend** : abstraction provider provider-agnostic dans `backend/app/agents/providers/` (`AgentProvider` + `DeepInfraProvider` OpenAI-compat + `DustProvider` shim + factory `get_agent_provider(agent_name, flow_version)` lisant `agent_prompts`). Var d'env : `DEEPINFRA_API_KEY`. Les classes agent V1 continuent d'appeler `DustClient` directement (inchangées).
+- **Frontend** : `/` = page de choix V1/V2 ; espace V1 = routes existantes ; espace V2 = `/v2/**` (shell). `_app.js` choisit la nav selon le préfixe. `GET /admin/agents?flow_version=` filtre par flux ; `PATCH/POST /admin/agents/{name}` prend `?flow_version=` (défaut v1) ; `synced=FALSE` sur édition de prompt uniquement si provider='dust'.
 
 ---
 

@@ -24,6 +24,9 @@ class AgentPromptUpdate(BaseModel):
     prompt_text: Optional[str] = None
     dust_agent_id: Optional[str] = None
     dust_agent_url: Optional[str] = None
+    provider: Optional[str] = None       # 'dust' (V1) | 'deepinfra' (V2)
+    model: Optional[str] = None
+    tools_json: Optional[list] = None     # schémas d'outils OpenAI (search-worker)
 
 
 # ─────────────────────────── Helpers ─────────────────────────────────────────
@@ -68,58 +71,71 @@ async def update_settings(data: SettingsUpdate):
 # ─────────────────────────── Agent Prompts ───────────────────────────────────
 
 @router.get("/agents")
-async def list_agents():
+async def list_agents(flow_version: Optional[str] = None):
     async with get_db_session() as db:
-        rows = await db.fetch("SELECT * FROM agent_prompts ORDER BY agent_name")
+        if flow_version:
+            rows = await db.fetch(
+                "SELECT * FROM agent_prompts WHERE flow_version=$1 ORDER BY agent_name",
+                flow_version,
+            )
+        else:
+            rows = await db.fetch("SELECT * FROM agent_prompts ORDER BY flow_version, agent_name")
     return [_serialize(r) for r in rows]
 
 
 @router.patch("/agents/{agent_name}")
-async def update_agent(agent_name: str, data: AgentPromptUpdate):
+async def update_agent(agent_name: str, data: AgentPromptUpdate, flow_version: str = "v1"):
     fields = {k: v for k, v in data.model_dump().items() if v is not None}
     if not fields:
         raise HTTPException(400, "Aucun champ à mettre à jour")
 
-    # Marquer hors-sync seulement si le prompt_text change, pas pour dust_agent_id/url
-    prompt_changed = "prompt_text" in fields
-
-    set_parts = ["updated_at=NOW()"]
-    if prompt_changed:
-        set_parts.append("synced=FALSE")
-
-    values = []
-    idx = 2
-    for k, v in fields.items():
-        set_parts.append(f"{k}=${idx}")
-        values.append(v)
-        idx += 1
-    set_clause = ", ".join(set_parts)
-
+    # La bascule hors-sync (overlay UX) est spécifique à Dust : le prompt doit être recopié dans
+    # l'UI Dust. Pour deepinfra le prompt est utilisé directement depuis la DB → pas de sync externe.
     async with get_db_session() as db:
-        row = await db.fetchrow(
-            f"UPDATE agent_prompts SET {set_clause} WHERE agent_name=$1 RETURNING *",
-            agent_name, *values,
+        current = await db.fetchrow(
+            "SELECT provider FROM agent_prompts WHERE agent_name=$1 AND flow_version=$2",
+            agent_name, flow_version,
         )
-    if not row:
-        raise HTTPException(404, f"Agent '{agent_name}' introuvable")
+        if not current:
+            raise HTTPException(404, f"Agent '{agent_name}' (flow {flow_version}) introuvable")
+
+        prompt_changed = "prompt_text" in fields
+        is_dust = (fields.get("provider") or current["provider"]) == "dust"
+
+        set_parts = ["updated_at=NOW()"]
+        if prompt_changed and is_dust:
+            set_parts.append("synced=FALSE")
+
+        values = []
+        idx = 3
+        for k, v in fields.items():
+            set_parts.append(f"{k}=${idx}")
+            values.append(v)
+            idx += 1
+        set_clause = ", ".join(set_parts)
+
+        row = await db.fetchrow(
+            f"UPDATE agent_prompts SET {set_clause} WHERE agent_name=$1 AND flow_version=$2 RETURNING *",
+            agent_name, flow_version, *values,
+        )
     return _serialize(row)
 
 
 @router.post("/agents/{agent_name}/sync")
-async def sync_agent(agent_name: str):
+async def sync_agent(agent_name: str, flow_version: str = "v1"):
     """Marque l'agent comme synchronisé (synced=TRUE) et incrémente la version."""
     async with get_db_session() as db:
         row = await db.fetchrow(
             """
             UPDATE agent_prompts
             SET synced=TRUE, last_synced_at=NOW(), version=version+1, updated_at=NOW()
-            WHERE agent_name=$1
+            WHERE agent_name=$1 AND flow_version=$2
             RETURNING *
             """,
-            agent_name,
+            agent_name, flow_version,
         )
     if not row:
-        raise HTTPException(404, f"Agent '{agent_name}' introuvable")
+        raise HTTPException(404, f"Agent '{agent_name}' (flow {flow_version}) introuvable")
     return _serialize(row)
 
 
@@ -173,9 +189,9 @@ async def system_status():
             pass
     status["fmp"] = "ok" if fmp_ok else "error"
 
-    # DB agents sync status
+    # DB agents sync status — la notion de sync/overlay est spécifique à Dust (flow v1).
     async with get_db_session() as db:
-        agents = await db.fetch("SELECT agent_name, synced FROM agent_prompts")
+        agents = await db.fetch("SELECT agent_name, synced FROM agent_prompts WHERE flow_version='v1'")
     status["agents_sync"] = {r["agent_name"]: r["synced"] for r in agents}
 
     return status
