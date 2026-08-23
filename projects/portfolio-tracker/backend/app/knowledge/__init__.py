@@ -1,4 +1,13 @@
 """Knowledge Platform (couche 3) — service store/query/snapshot des knowledge_entries."""
+from .embeddings import (
+    EmbeddingUnavailable,
+    backfill_embeddings,
+    embed_one,
+    embed_texts,
+    entry_text,
+    is_configured as embeddings_configured,
+    to_pgvector,
+)
 from .service import (
     RELIABILITY_TABLE,
     collect_refs,
@@ -17,4 +26,12 @@ __all__ = [
     "get_current_entries",
     "snapshot_refs",
     "collect_refs",
+    # embeddings (bge-m3 1024d — migration 027)
+    "EmbeddingUnavailable",
+    "backfill_embeddings",
+    "embed_one",
+    "embed_texts",
+    "entry_text",
+    "embeddings_configured",
+    "to_pgvector",
 ]

@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     DEEPINFRA_API_KEY: str = ""
     DEEPINFRA_API_BASE: str = "https://api.deepinfra.com/v1/openai"
 
+    # V2 — Embeddings (DÉCISION #4, 3ᵉ révision — migration 027)
+    # bge-m3 est MULTILINGUE : le corpus est en français, et bge-base-en-v1.5 (anglais seul)
+    # ratait les entrées financières Tier A (hit@3 4/7 contre 7/7). Voir 027_v2_embeddings_1024.sql.
+    # EMBEDDING_DIM doit rester synchronisé avec knowledge_entries.embedding vector(N) : le
+    # changer seul ferait échouer toute écriture. Changer de modèle = migration + backfill complet.
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"
+    EMBEDDING_DIM: int = 1024
+
     class Config:
         env_file = None  # Coolify injecte les variables
 
