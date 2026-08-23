@@ -14,13 +14,19 @@ Trois principes :
   2. **Les arguments du modèle sont des entrées non fiables.** `max_results` est borné, `ticker_id`
      est forcé au ticker de la requête (un ouvrier n'a pas à explorer la connaissance d'un autre
      titre), les URL non http(s) sont rejetées.
-  3. **Volume maîtrisé.** Chaque retour est tronqué : le worker tourne jusqu'à 6 tours et tout ce qui
-     entre ici est repayé en tokens d'entrée à chaque tour suivant.
+  3. **Volume maîtrisé.** Le worker tourne jusqu'à 6 tours et tout ce qui entre ici est repayé en
+     tokens d'entrée à chaque tour suivant. `query_knowledge` tronque ; `fetch_url` ne tronque plus
+     mais **sélectionne** les passages pertinents (cf. `document_search`) — moins de caractères
+     rendus, et tout le document couvert.
+  4. **Ce que les outils ont rapporté est journalisé** (`RetrievalLog`). Le worker s'en sert pour
+     confronter le `source_url` que le modèle déclare à ce qui a effectivement été lu.
 """
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional
+from urllib.parse import urlparse
 
 from app.db.database import get_db_session
 from app.knowledge.service import query_knowledge
@@ -35,7 +41,60 @@ _MAX_KNOWLEDGE_RESULTS = 15
 _KNOWLEDGE_CONTENT_CHARS = 700   # de quoi juger d'un doublon, pas de quoi recopier l'entrée
 
 
-async def exec_web_search(args: dict[str, Any]) -> dict[str, Any]:
+# ── journal de récupération ──────────────────────────────────────────────────
+# Profondeurs, du plus faible au plus fort. L'ordre est signifiant : `_DEPTHS.index()` sert à ne
+# jamais rétrograder une URL déjà vue plus profondément.
+_DEPTHS = ("link", "excerpt", "full")
+
+
+def canonical_url(url: Optional[str]) -> str:
+    """Forme comparable d'une URL : hôte sans `www.`, chemin sans slash final, sans schéma ni ancre.
+
+    On garde la query string : sur EDGAR comme sur bien des sites IR, elle DÉSIGNE le document
+    (`?doc=...`), donc l'ignorer confondrait deux dépôts distincts.
+    """
+    p = urlparse((url or "").strip())
+    host = (p.netloc or "").lower().removeprefix("www.")
+    if not host:
+        return ""
+    path = (p.path or "").rstrip("/")
+    return f"{host}{path}" + (f"?{p.query}" if p.query else "")
+
+
+@dataclass
+class RetrievalLog:
+    """Ce que les outils ont **réellement rapporté** pendant un run, par URL.
+
+    Raison d'être : le `source_url` d'une entry est *déclaré* par le modèle, et c'est ce domaine
+    déclaré qui détermine `source_type`, donc `reliability_score`. Rien ne liait jusqu'ici cette URL
+    à une récupération effective. Mesuré sur NVDA (run C, 2026-08-23) : sur toute la vie du
+    conteneur, deux URL seulement ont été récupérées (cnbc.com, kearney.com) — **aucune sec.gov** —
+    et le run a pourtant produit 5 entrées portant un `source_url` sec.gov, `edgar_official`,
+    score 0.94 tier A. La convention #24 empêche le modèle de choisir son `source_type` ; elle ne
+    l'empêchait pas de le choisir *par l'URL*.
+
+    Ce journal est le fait opposable : le worker y confronte chaque `source_url` avant de laisser le
+    domaine fixer le score.
+    """
+    seen: dict[str, str] = field(default_factory=dict)
+
+    def record(self, url: Optional[str], depth: str) -> None:
+        key = canonical_url(url)
+        if not key or depth not in _DEPTHS:
+            return
+        current = self.seen.get(key)
+        if current is None or _DEPTHS.index(depth) > _DEPTHS.index(current):
+            self.seen[key] = depth
+
+    def depth_of(self, url: Optional[str]) -> Optional[str]:
+        """`full` | `excerpt` | `link`, ou None si cette URL n'a jamais été rapportée par un outil."""
+        key = canonical_url(url)
+        return self.seen.get(key) if key else None
+
+
+async def exec_web_search(
+    args: dict[str, Any], *, log: Optional[RetrievalLog] = None
+) -> dict[str, Any]:
     """`web_search(query, max_results)` → liste de résultats normalisés.
 
     `source_type_max` accompagne chaque résultat : c'est le plafond de qualification que le domaine
@@ -59,23 +118,47 @@ async def exec_web_search(args: dict[str, Any]) -> dict[str, Any]:
         logger.warning("exec_web_search(%r) : %s", query[:80], e)
         return {"error": f"recherche web en échec : {e}", "retryable": True}
 
+    if log is not None:
+        # Un résultat porteur de texte a bien fait passer du contenu sous les yeux du modèle, mais
+        # seulement un extrait de tête (2 000 car. côté Exa). Un résultat sans texte n'est qu'un lien :
+        # titre et URL ne fondent aucune citation.
+        for h in hits:
+            log.record(h.url, "excerpt" if h.text else "link")
+
     if not hits:
         return {"query": query, "results": [], "note": "Aucun résultat — la recherche a bien abouti."}
     return {"query": query, "results": [h.to_dict() for h in hits]}
 
 
-async def exec_fetch_url(args: dict[str, Any]) -> dict[str, Any]:
-    """`fetch_url(url)` → texte extrait de la page (tronqué)."""
+async def exec_fetch_url(
+    args: dict[str, Any],
+    *,
+    query: Optional[str] = None,
+    log: Optional[RetrievalLog] = None,
+) -> dict[str, Any]:
+    """`fetch_url(url)` → passages de la page qui répondent à la question du mandat.
+
+    `query` n'est PAS un argument du modèle : c'est le mandat du worker, injecté par
+    `build_tool_executors`. L'ouvrier sait déjà ce qu'il cherche — le lui redemander à chaque appel
+    ajouterait un argument qu'il peut oublier, sur un outil que le run C montre déjà sous-utilisé.
+    """
     url = (args.get("url") or "").strip()
     if not url:
         return {"error": "fetch_url : argument 'url' vide."}
     try:
-        return await fetch_url(url)
+        result = await fetch_url(url, query=query)
     except ValueError as e:
         return {"error": str(e), "retryable": False}
     except Exception as e:  # noqa: BLE001
         logger.info("exec_fetch_url(%s) : %s", url[:120], e)
         return {"error": str(e), "retryable": True}
+
+    if log is not None:
+        # L'URL demandée ET l'URL finale : une redirection ne doit pas faire perdre la trace, et le
+        # modèle citera parfois l'une, parfois l'autre.
+        log.record(url, "full")
+        log.record(result.get("final_url"), "full")
+    return result
 
 
 def make_query_knowledge_executor(ticker_id: Optional[str]) -> ToolExecutor:
@@ -132,12 +215,28 @@ def make_query_knowledge_executor(ticker_id: Optional[str]) -> ToolExecutor:
     return _exec
 
 
-def build_tool_executors(*, ticker_id: Optional[str]) -> dict[str, ToolExecutor]:
+def build_tool_executors(
+    *,
+    ticker_id: Optional[str],
+    query: Optional[str] = None,
+    log: Optional[RetrievalLog] = None,
+) -> dict[str, ToolExecutor]:
     """Table `nom d'outil → exécuteur` attendue par `run_tool_json_agent`. Les noms DOIVENT
     correspondre au `tools_json` de l'agent en DB (migration 025) — un outil déclaré sans exécuteur
-    se traduit par « outil inconnu » côté modèle."""
+    se traduit par « outil inconnu » côté modèle.
+
+    `query` (le mandat) et `log` (journal de récupération) sont fermés dans les exécuteurs plutôt
+    que passés en arguments d'outil : ce sont des faits du run, pas des décisions du modèle.
+    """
+
+    async def _fetch(args: dict[str, Any]) -> dict[str, Any]:
+        return await exec_fetch_url(args, query=query, log=log)
+
+    async def _search(args: dict[str, Any]) -> dict[str, Any]:
+        return await exec_web_search(args, log=log)
+
     return {
-        "web_search": exec_web_search,
-        "fetch_url": exec_fetch_url,
+        "web_search": _search,
+        "fetch_url": _fetch,
         "query_knowledge": make_query_knowledge_executor(ticker_id),
     }

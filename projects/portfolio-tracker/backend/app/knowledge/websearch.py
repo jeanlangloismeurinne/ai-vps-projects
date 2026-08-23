@@ -6,8 +6,9 @@ Deux primitives, aucune logique d'agent :
     sélectionné par `settings.SEARCH_PROVIDER`. Le contrat de sortie (`SearchHit`) est identique quel
     que soit le backend → basculer Exa ↔ Serper ↔ autre = écrire UNE classe, sans toucher au
     `tools_json` en DB, au prompt du worker, ni à la boucle tool-calling.
-  - **fetch_url** : récupère une page et en extrait le texte (stdlib `html.parser`, aucune dépendance
-    ajoutée à l'image).
+  - **fetch_url** : récupère une page (deux chemins : direct, puis cache du backend) et en rend les
+    passages qui répondent à la question du mandat — extraction texte en stdlib `html.parser`,
+    sélection déléguée à `document_search`. Aucune dépendance ajoutée à l'image.
 
 **Échec explicite, jamais silencieux.** Sans clé, ou si le backend répond mal, on lève
 `SearchUnavailable` — l'erreur remonte au modèle comme `{"error": …}`. C'est délibéré : la raison
@@ -36,8 +37,16 @@ from urllib.parse import urlparse
 import httpx
 
 from app.config import settings
+from app.knowledge.document_search import select_relevant
 
 logger = logging.getLogger(__name__)
+
+# Plafond de **récupération** — distinct du plafond de **restitution** (`FETCH_URL_MAX_CHARS`).
+# On récupère le document entier pour pouvoir y chercher, et on ne rend que les passages utiles.
+# 400 000 caractères couvrent un 10-K complet (NVDA FY2026 : 362 575) et correspondent au budget
+# d'embedding de `document_search` (_MAX_CHUNKS_EMBEDDED × _CHUNK_CHARS ≈ 480 000) : au-delà, la
+# sélection échantillonnerait de toute façon.
+_RETRIEVAL_MAX_CHARS = 400_000
 
 
 class SearchUnavailable(RuntimeError):
@@ -349,8 +358,11 @@ class _DirectFetchFailed(RuntimeError):
         self.recoverable = recoverable
 
 
-async def _fetch_url_direct(url: str, limit: int) -> dict[str, Any]:
-    """Récupération directe depuis ce VPS. Lève `_DirectFetchFailed` en qualifiant l'échec."""
+async def _fetch_url_direct(url: str) -> dict[str, Any]:
+    """Récupération directe depuis ce VPS. Lève `_DirectFetchFailed` en qualifiant l'échec.
+
+    Rend le texte **entier** (borné par `_RETRIEVAL_MAX_CHARS`) : la réduction est décidée plus haut,
+    par `fetch_url`, qui seul connaît la question posée."""
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; portfolio-tracker/2.0; +https://portfolio.jlmvpscode.duckdns.org)",
         "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.8,*/*;q=0.5",
@@ -402,23 +414,84 @@ async def _fetch_url_direct(url: str, limit: int) -> dict[str, Any]:
         "status": r.status_code,
         "content_type": ctype,
         "title": title,
-        "text": text[:limit],
-        "truncated": len(text) > limit,
+        "text": text[:_RETRIEVAL_MAX_CHARS],
         "source_type_max": classify_source_type(str(r.url)),
         "via": "direct",
     }
 
 
-async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, Any]:
-    """Récupère une URL et en extrait le texte. Renvoie {url, final_url, status, title, text,
-    truncated, content_type, via}. Lève RuntimeError sur échec — remontée telle quelle au modèle.
+_EXTRACT_NOTE = {
+    "relevance": (
+        "EXTRAIT — passages sélectionnés par pertinence sémantique sur {chars_total} caractères "
+        "({chunks_selected} passage(s) sur {chunks_total}). Les `[… N caractères omis …]` marquent du "
+        "texte NON lu : ne relie pas deux passages séparés par un marqueur comme s'ils se suivaient."
+    ),
+    "lexical": (
+        "EXTRAIT DÉGRADÉ — l'embedding était indisponible, les passages ont été choisis par simple "
+        "recouvrement de termes sur {chars_total} caractères. Moins fiable qu'une sélection "
+        "sémantique : si l'information attendue manque, elle peut être dans un passage non retenu."
+    ),
+    "head": (
+        "DÉBUT DE DOCUMENT SEULEMENT — {chars_returned} caractères sur {chars_total}. Le reste n'a "
+        "PAS été lu : sur un dépôt réglementaire, le corps utile est typiquement au tiers du document. "
+        "N'en conclus pas que ce qui manque ici est absent du document."
+    ),
+}
 
-    **Deux chemins, dans cet ordre.** D'abord la récupération directe. Si elle échoue de façon
-    *récupérable* (403 WAF, 401 paywall, SPA vide, PDF), on demande la page au backend de recherche,
-    qui l'a souvent déjà crawlée depuis son infrastructure. Sans ce second chemin, les seules sources
-    lisibles depuis ce VPS étaient les blogs — ceux, précisément, qui plafonnent à 0.50 et tombent
-    sous `reliability_min`. Mesuré sur NVDA : 5 entrées produites, 5 rejetées sous plancher, la seule
-    source qualifiante du run (CNBC, 0.75) perdue sur un 403.
+
+async def _finalise(
+    payload: dict[str, Any], *, query: Optional[str], limit: int
+) -> dict[str, Any]:
+    """Réduit le texte récupéré aux passages qui répondent à `query`, et le DIT.
+
+    C'est ici que le plafond arbitraire disparaît : au lieu de couper à `limit` caractères depuis le
+    début, on cherche dans le document et on rend les passages utiles. Cf. `document_search` pour les
+    mesures qui condamnent la troncature en tête (données clés du 10-K NVDA à 37,5 % du texte).
+    """
+    full = payload.get("text") or ""
+    sel = await select_relevant(full, query, max_chars=limit)
+    mode = str(sel["mode"])
+
+    payload["text"] = sel["text"]
+    payload["truncated"] = int(sel["chars_returned"]) < int(sel["chars_total"])
+    payload["extract"] = {
+        "mode": mode,
+        "query": query or None,
+        "chars_total": sel["chars_total"],
+        "chars_returned": sel["chars_returned"],
+        "chunks_total": sel["chunks_total"],
+        "chunks_selected": sel["chunks_selected"],
+        "spans": sel["spans"],
+    }
+    if mode != "whole":
+        # Le modèle doit lire un extrait COMME un extrait. Sans cette phrase, il traite les passages
+        # retenus comme le document entier et en tire des absences (« le 10-K ne mentionne pas X »)
+        # qui ne sont que des effets de la sélection.
+        payload["note"] = _EXTRACT_NOTE[mode].format(**{k: sel[k] for k in (
+            "chars_total", "chars_returned", "chunks_total", "chunks_selected")})
+    return payload
+
+
+async def fetch_url(
+    url: str, *, max_chars: Optional[int] = None, query: Optional[str] = None
+) -> dict[str, Any]:
+    """Récupère une URL et en extrait les passages qui répondent à `query`. Renvoie {url, final_url,
+    status, title, text, truncated, content_type, via, extract, note}. Lève RuntimeError sur échec —
+    remontée telle quelle au modèle.
+
+    **Deux chemins de récupération, dans cet ordre.** D'abord la récupération directe. Si elle échoue
+    de façon *récupérable* (403 WAF, 401 paywall, SPA vide, PDF), on demande la page au backend de
+    recherche, qui l'a souvent déjà crawlée depuis son infrastructure. Sans ce second chemin, les
+    seules sources lisibles depuis ce VPS étaient les blogs — ceux, précisément, qui plafonnent à
+    0.50 et tombent sous `reliability_min`. Mesuré sur NVDA : 5 entrées produites, 5 rejetées sous
+    plancher, la seule source qualifiante du run (CNBC, 0.75) perdue sur un 403.
+
+    **Puis une lecture ciblée, pas une troncature.** Les deux chemins rapportent le document ENTIER
+    (`_RETRIEVAL_MAX_CHARS`) ; `query` sert ensuite à n'en rendre que les passages pertinents. Sans
+    `query`, on retombe sur la tête du document — le seul choix honnête quand il n'y a pas de
+    pertinence à mesurer — et `extract.mode` le dit. `query` n'est pas un argument du modèle mais le
+    mandat du worker (cf. `build_tool_executors`) : l'ouvrier sait déjà ce qu'il cherche, et un
+    argument de plus est un argument qu'il peut oublier de passer.
 
     `via` dit lequel des deux chemins a rendu le texte : le modèle doit pouvoir distinguer une page
     lue à l'instant d'un extrait de cache, et le champ remonte jusqu'au log du worker.
@@ -428,13 +501,15 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
         raise ValueError(f"URL invalide (http/https attendu) : {url!r}")
 
     try:
-        return await _fetch_url_direct(url, limit)
+        return await _finalise(await _fetch_url_direct(url), query=query, limit=limit)
     except _DirectFetchFailed as direct_error:
         if not direct_error.recoverable:
             raise RuntimeError(str(direct_error)) from direct_error
 
         try:
-            contents = await get_search_backend().fetch_contents([url], max_chars=limit)
+            contents = await get_search_backend().fetch_contents(
+                [url], max_chars=_RETRIEVAL_MAX_CHARS
+            )
         except SearchUnavailable as e:
             logger.info("fetch_url(%s) : repli backend indisponible (%s)", url[:120], e)
             contents = {}
@@ -454,18 +529,21 @@ async def fetch_url(url: str, *, max_chars: Optional[int] = None) -> dict[str, A
             "fetch_url(%s) : direct en échec (%s) → repli backend, %d car.",
             url[:120], direct_error, len(text),
         )
-        return {
-            "url": url,
-            "final_url": url,
-            "status": 200,
-            "content_type": "text/plain",
-            "title": hit.get("title") or "",
-            "text": text[:limit],
-            "truncated": len(text) > limit,
-            "source_type_max": classify_source_type(url),
-            "via": "search_backend_cache",
-            "direct_fetch_error": str(direct_error),
-        }
+        return await _finalise(
+            {
+                "url": url,
+                "final_url": url,
+                "status": 200,
+                "content_type": "text/plain",
+                "title": hit.get("title") or "",
+                "text": text,
+                "source_type_max": classify_source_type(url),
+                "via": "search_backend_cache",
+                "direct_fetch_error": str(direct_error),
+            },
+            query=query,
+            limit=limit,
+        )
 
 
 def _iso_date(value: Optional[str]) -> Optional[str]:

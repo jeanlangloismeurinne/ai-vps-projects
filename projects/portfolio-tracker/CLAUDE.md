@@ -294,6 +294,34 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     **Ne pas croire qu'un User-Agent règle le 403** : testé le 2026-08-23, bot déclaré et Chrome
     desktop donnent des codes strictement identiques (CNBC 403, Reuters 401, SeekingAlpha 403,
     MarketWatch 401) — le filtrage est sur la réputation d'IP, pas sur l'en-tête.
+27. **On ne tronque pas un document, on y cherche (V2)** : `fetch_url` récupère la page ENTIÈRE
+    (`_RETRIEVAL_MAX_CHARS` = 400 000) puis `document_search.select_relevant()` n'en rend que les
+    passages qui répondent à la question du mandat, recomposés **dans l'ordre du document** avec des
+    marqueurs `[… N caractères omis …]`. Motif mesuré le 2026-08-23 : dans le 10-K NVDA FY2026
+    (356 990 car.), la concentration client est à **37,6 %** du texte — le plafond de 20 000 en
+    captait 5,5 %, soit la page de garde et le sommaire, et Exa `/contents` tronquait en tête lui
+    aussi. Aucun des deux chemins n'atteignait le corps du dépôt. Le même défaut existe sur un
+    article de presse : dans le comparatif CNBC de 12 189 car., « Maia » est à 71,5 % — **il n'existe
+    pas de taille de troncature défendable a priori**, elle dépend du genre du document. Après
+    sélection : 356 990 → 19 275 car. (17 passages sur 387), et l'article CNBC passe entier
+    (`mode: whole`, aucune coupure). Le mode est **toujours déclaré** dans `extract.mode`
+    (`whole` | `relevance` | `lexical` | `head`) et une phrase l'explicite au modèle : un extrait doit
+    se lire comme un extrait, sans quoi il conclut « le 10-K ne mentionne pas X » là où c'est la
+    sélection qui a coupé. `document_search` ne connaît ni URL ni HTTP (texte + question seulement) :
+    il sert aussi les **documents uploadés à la main**, seul canal pour les sociétés non cotées.
+28. **La provenance est vérifiée, pas déclarée (V2)** : `RetrievalLog` journalise ce que les outils
+    ont réellement rapporté (`full` = `fetch_url` abouti, `excerpt` = texte d'un résultat de
+    recherche, `link` = URL vue sans contenu), et `_verify_provenance()` y confronte chaque
+    `source_url` avant scoring. Jamais rapportée ou simple lien → **rétrogradée en `llm_memory`**
+    (0.40, revue humaine) ; extrait seul → score du domaine conservé mais revue humaine exigée.
+    Motif : la convention #24 retire au modèle le choix de son `source_type`, mais **pas celui de son
+    URL** — or l'URL fixe le domaine, donc le source_type, donc le score. Le contournement était
+    total et involontaire : run C sur NVDA (2026-08-23), 5 entrées `edgar_official` **0.94 tier A**
+    pointant sec.gov, alors qu'aucune URL sec.gov n'avait jamais été récupérée de toute la vie du
+    conteneur. Corollaire, **une entrée = un document** : une entry citant plusieurs dépôts
+    (`_cited_documents` : 10-K, 10-Q, 8-K, 20-F, DEF 14A…) sous un seul `source_url` attribue à l'un
+    les propos de l'autre — elle entre (la base est append-only, G3 interdit de réécrire son contenu)
+    mais marquée `requires_human_review` avec le motif dans `reliability_note`.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

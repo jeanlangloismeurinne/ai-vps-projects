@@ -18,6 +18,12 @@ selon le même principe que `curator._apply_deterministic_overrides` :
     modèle : un billet de blog ne devient pas `financial_press` parce qu'il parle de résultats, et
     une page `ir.nvidia.com` reste de l'IR officiel même si le modèle la sous-qualifie. Seul l'aveu
     `llm_memory` est honoré tel quel (cf. `_resolve_source_type`).
+  - **provenance** ← confrontée au `RetrievalLog` du run (`_verify_provenance`). Interdire au modèle
+    de choisir son `source_type` ne suffisait pas : en choisissant l'URL il choisit le domaine, donc
+    le source_type, donc le score. Une URL jamais rapportée par un outil ne peut pas fonder une
+    citation — elle est ramenée à `llm_memory`.
+  - **une entrée = un document** : une entry qui cite plusieurs dépôts sous un seul `source_url` est
+    marquée pour revue humaine (`_cited_documents`), l'attribution étant fausse pour au moins un.
   - filtre `reliability_min`, plafond `max_entries`, `covers`, cohérence `status`/`uncovered_fields`,
     et la déclaration d'exécution (modèle, tokens, coût) qui est **mesurée**, jamais déclarée.
 
@@ -39,6 +45,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from datetime import date, datetime
 from typing import Any, Optional
 
@@ -55,7 +62,7 @@ from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
 from .runner import run_tool_json_agent
-from .tools import build_tool_executors
+from .tools import RetrievalLog, build_tool_executors
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +76,16 @@ _CLOSING_INSTRUCTION = (
     "`source_date` (ISO) et une `reliability_note` non vide ; n'invente aucune URL — n'utilise que "
     "celles rapportées par les outils. Les champs `reliability_score`/`reliability_tier` sont "
     "recalculés côté serveur d'après la source : donne-les au mieux, mais c'est `source_type` et "
-    "`source_url` qui comptent."
+    "`source_url` qui comptent.\n"
+    "DEUX RÈGLES DE PROVENANCE, vérifiées côté serveur :\n"
+    "1. `source_url` doit être une URL que tu as RÉELLEMENT ouverte avec `fetch_url` pendant ce run. "
+    "Une URL que tu connais de mémoire, même exacte, ne compte pas : le serveur compare à la liste "
+    "des pages effectivement récupérées et rétrograde en `llm_memory` (score 0.40) tout ce qui n'y "
+    "figure pas. Si tu restitues de mémoire, déclare-le : `source_type: llm_memory`, c'est honnête "
+    "et ce n'est pas sanctionné.\n"
+    "2. Une entrée = UN document. Ne fusionne jamais deux dépôts (un 10-K et un 10-Q, un communiqué "
+    "et un article) sous un seul `source_url` : fais-en deux entries, chacune avec son URL et sa "
+    "date."
 )
 
 
@@ -104,6 +120,50 @@ def _resolve_source_type(declared: Any, url: Optional[str]) -> str:
     return classify_source_type(url)
 
 
+def _verify_provenance(url: Optional[str], log: Optional[RetrievalLog]) -> tuple[bool, Optional[str]]:
+    """`(source_non_vérifiée, note)` — l'URL déclarée a-t-elle vraiment été lue pendant le run ?
+
+    `_resolve_source_type` retire au modèle le choix de son `source_type`, mais pas celui de son
+    `source_url` — or l'URL détermine le domaine, donc le source_type, donc le score. Le contournement
+    est involontaire mais total : run C sur NVDA (2026-08-23), 5 entrées à `edgar_official` 0.94
+    tier A pointant sec.gov, alors qu'aucune URL sec.gov n'avait été récupérée du run. Le modèle
+    restituait sa mémoire d'entraînement en l'habillant d'une URL plausible.
+
+    On ne juge pas le contenu — c'est hors de portée d'un contrôle Python. On répond à la seule
+    question vérifiable : **ce document est-il passé sous les yeux du modèle ?** Trois cas :
+      - jamais rapporté, ou simple lien dans une liste de résultats → la citation n'a aucun support :
+        c'est de la mémoire modèle, et P2 (§6.4) s'applique (0.40, revue humaine) ;
+      - extrait de tête seul (2 000 car. d'un résultat de recherche) → la source est réelle mais
+        n'a pas été lue en entier : le score du domaine reste, la revue humaine est exigée ;
+      - document récupéré par `fetch_url` → rien à signaler.
+    """
+    if log is None or not url:
+        return False, None
+    depth = log.depth_of(url)
+    if depth == "full":
+        return False, None
+    if depth == "excerpt":
+        return False, (
+            "source réelle mais lue en extrait seulement (texte de résultat de recherche, "
+            "document jamais récupéré en entier) — revue humaine"
+        )
+    return True, (
+        "URL déclarée jamais récupérée pendant le run "
+        f"({'aucun outil ne l a rapportée' if depth is None else 'vue en lien de résultat, sans contenu'}) "
+        "— provenance non vérifiable, ramenée à llm_memory"
+    )
+
+
+# Désignations de dépôts réglementaires. Une entry qui en cite plusieurs parle de plusieurs
+# documents, alors qu'elle ne porte qu'un `source_url`.
+_FILING_FORMS = re.compile(r"\b(10-K|10-Q|8-K|20-F|40-F|6-K|S-1|DEF\s*14A)\b", re.IGNORECASE)
+
+
+def _cited_documents(content: str) -> list[str]:
+    """Désignations distinctes de dépôts citées dans le contenu (`10-K`, `10-Q`, …)."""
+    return sorted({re.sub(r"\s+", " ", m.group(1)).upper() for m in _FILING_FORMS.finditer(content)})
+
+
 def _parse_iso_date(value: Any) -> Optional[date]:
     """Date ISO stricte. Une date non reconnue est écartée plutôt que devinée : elle pilote la
     décote d'âge du score (§6.3), donc une valeur inventée fausserait la fiabilité en silence."""
@@ -117,7 +177,9 @@ def _parse_iso_date(value: Any) -> Optional[date]:
         return None
 
 
-def _normalise_entry(raw: Any, req: WorkerRequest) -> Optional[dict[str, Any]]:
+def _normalise_entry(
+    raw: Any, req: WorkerRequest, log: Optional[RetrievalLog] = None
+) -> Optional[dict[str, Any]]:
     """Corrige une entry brute du modèle, ou None si elle est irrécupérable (rejet tracé)."""
     if not isinstance(raw, dict):
         return None
@@ -136,12 +198,39 @@ def _normalise_entry(raw: Any, req: WorkerRequest) -> Optional[dict[str, Any]]:
     source_type = _resolve_source_type(raw.get("source_type"), url)
     source_date = _parse_iso_date(raw.get("source_date"))
 
+    caveats: list[str] = []
+    unverified, provenance_note = _verify_provenance(url, log)
+    if provenance_note:
+        caveats.append(provenance_note)
+    if unverified and source_type != "llm_memory":
+        logger.info(
+            "search-worker: provenance non vérifiée pour %s — %s → llm_memory",
+            url, source_type,
+        )
+        source_type = "llm_memory"
+
+    # Une entrée = un document. Une entry qui cite un 10-K ET un 10-Q sous un seul `source_url`
+    # attribue au document cité les propos de l'autre — et lui prête son score. Constaté en run C :
+    # une citation du 10-Q du 20/05/2026 archivée sous l'URL du 10-K, à 0.94 tier A. On ne peut pas
+    # scinder l'entry sans réécrire son contenu (ce que le worker n'a pas le droit de faire, G3),
+    # donc on la laisse entrer en la marquant : la base est append-only, une provenance douteuse
+    # tracée vaut mieux qu'une provenance douteuse muette.
+    cited = _cited_documents(content)
+    if len(cited) > 1:
+        caveats.append(
+            f"contenu adossé à plusieurs documents ({', '.join(cited)}) pour un seul source_url "
+            "— attribution à vérifier, une entrée devrait porter un seul document"
+        )
+        logger.info("search-worker: entry multi-documents (%s) sous %s", ", ".join(cited), url)
+
     score, tier, note = compute_reliability(
         source_type, entry_type=want, source_date=source_date,
     )
     declared_note = (raw.get("reliability_note") or "").strip()
     if declared_note:
         note = f"{note} | agent : {declared_note[:300]}"
+    if caveats:
+        note = f"{note} | provenance : {' ; '.join(caveats)}"
 
     entry: dict[str, Any] = {
         "entry_type": want,
@@ -157,7 +246,7 @@ def _normalise_entry(raw: Any, req: WorkerRequest) -> Optional[dict[str, Any]]:
         "reliability_score": score,
         "reliability_tier": tier,
         "reliability_note": note,
-        "requires_human_review": bool(raw.get("requires_human_review")),
+        "requires_human_review": bool(raw.get("requires_human_review")) or bool(caveats),
         "model_cutoff": raw.get("model_cutoff"),
         "covers": req.output_schema.field_path or raw.get("covers"),
         "question_status": raw.get("question_status"),
@@ -178,6 +267,7 @@ def _apply_deterministic_overrides(
     tokens_in: int,
     tokens_out: int,
     cost_usd: float,
+    log: Optional[RetrievalLog] = None,
 ) -> dict[str, Any]:
     """Recalcule tout ce qui est dérivable de la requête et des sources. Cf. docstring du module."""
     raw_entries = data.get("entries") if isinstance(data.get("entries"), list) else []
@@ -187,7 +277,7 @@ def _apply_deterministic_overrides(
     n_rejected = n_below_floor = n_dup = 0
 
     for raw in raw_entries:
-        entry = _normalise_entry(raw, req)
+        entry = _normalise_entry(raw, req, log)
         if entry is None:
             n_rejected += 1
             continue
@@ -292,7 +382,12 @@ async def run_search_worker(
         )
 
     agent = await get_agent_provider(WORKER_NAME, "v2")
-    executors = build_tool_executors(ticker_id=req.ticker_id)
+    # Le journal est propre à CE run : une URL récupérée lors d'un run précédent ne justifie pas une
+    # citation dans celui-ci, et le worker doit pouvoir tourner en parallèle sans état partagé.
+    retrieval_log = RetrievalLog()
+    executors = build_tool_executors(
+        ticker_id=req.ticker_id, query=req.query, log=retrieval_log
+    )
 
     result = await run_tool_json_agent(
         agent,
@@ -312,6 +407,13 @@ async def run_search_worker(
         tokens_in=result.tokens_in,
         tokens_out=result.tokens_out,
         cost_usd=result.cost_usd,
+        log=retrieval_log,
+    )
+    logger.info(
+        "search-worker[%s]: %d URL rapportée(s) par les outils (%s)",
+        req.output_schema.field_path or req.query[:40],
+        len(retrieval_log.seen),
+        ", ".join(f"{u}:{d}" for u, d in list(retrieval_log.seen.items())[:8]) or "aucune",
     )
     response = WorkerResponse.model_validate(corrected)
     return WorkerExchange(request=req, response=response)
