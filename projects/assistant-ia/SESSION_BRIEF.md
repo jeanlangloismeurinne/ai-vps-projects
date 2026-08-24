@@ -1,0 +1,104 @@
+# Session Brief — assistant-ia — 2026-08-24
+
+## Roadmap — définition (avant implémentation)
+- [x] roadmap-agent-consignes-systeme : Roadmap — Agent conversationnel & consignes système auto-accumulées
+- [x] roadmap-journal-knowledge-base : Roadmap — Base de connaissance du journal (Obsidian + index Postgres)
+
+## Résumé de session — 2026-08-24 08:21
+
+Étape 4a du CONTROL_SYSTEM : les deux roadmaps (`status: spec-ready`) ont été converties en
+tickets. **Aucun code écrit** — conforme au brief (« avant implémentation »).
+
+🗂 **Tickets créés depuis roadmap (15)**
+
+- Prérequis partagé : `1787559677482`
+- `journal-kb` : `1787559677483` · `1787559677484` · `1787559677485` · `1787559677486` ·
+  `1787559677487` · `1787559677488` — hors v1 : `1787559677489`
+- `agent-consignes` : `1787559677492` · `1787559677493` · `1787559677494` · `1787559677495` ·
+  `1787559677496` · `1787559677497` — hors v1 : `1787559677498`
+- `knowledge-federation` : `1787559677490` · `1787559677491`
+
+🔓 **Débloqué** : `1787252691603` (`blocked` → `open`) — modèle de sécurité §5 validé et réparti
+en contraintes vérifiables dans les tickets, décisions §7 tranchées.
+
+🔎 **Trois écarts entre les roadmaps et le réel, corrigés dans les tickets**
+
+1. `app/slack_app.py:42` fait `if not thread_ts: return` → tout message **parent** est ignoré.
+   Les deux chantiers supposaient de capter ces messages (note libre, `@admin`). Prérequis
+   commun extrait en `1787559677482`.
+2. **Aucun Nextcloud sur le VPS** alors que la décision §6 reposait dessus → vault en **dépôt git**
+   (option B). Roadmap journal §6 révisée, §6.1 conservée pour un retour éventuel.
+3. Migration annoncée `003_journal_kb.sql` alors que le dossier va **jusqu'à 008** → renumérotée
+   `009` (et `010` / `011` pour la suite).
+
+💡 **Gain repéré** : le client DeepInfra existe déjà en production dans
+`portfolio-tracker/backend/app/agents/providers/deepinfra_provider.py` → portage, pas écriture.
+
+⚠️ **À trancher avant de démarrer `1787559677490`** : la roadmap journal §5 dit « la fédération
+est construite dès maintenant », `KNOWLEDGE_ARCHITECTURE.md` §4 dit « ne rien construire tant que
+le besoin n'est pas là ». Ticket marqué `needs_clarification`.
+
+📋 **Actions manuelles côté utilisateur, avant `1787559677493`**
+
+- Inviter `@ai_vps_jlm` dans `#assistant` (`C0ATLALRZL3`) et `#feedback-assistant` (`C0BSB9S9HHS`)
+  — channels **privés**, aucun événement reçu sans ça.
+- Provisionner `DEEPINFRA_API_KEY` dans les variables d'env Coolify d'assistant-ia.
+
+## Résumé de session — 2026-08-24 12:05
+
+Deuxième passe : **exécution de la V1 complète** (choix utilisateur : « tous les tickets de la V1
+dans l'ordre optimal »). 13 tickets livrés, l'ombrelle `1787252691603` fermée.
+
+✅ **Implémentés (Opus)** : `1787559677482` · `1787559677485` · `1787559677487` ·
+`1787559677494` · `1787559677495` · `1787559677496` · `1787559677497`
+🤖 **Implémentés (worker Sonnet, vérifiés)** : `1787559677483` · `1787559677484` ·
+`1787559677486` · `1787559677488` · `1787559677492` · `1787559677493`
+🏁 **Ombrelle fermée** : `1787252691603`
+⏭ **Hors V1, restés ouverts** : `1787559677489` · `1787559677498` ·
+`1787559677490` / `1787559677491` (knowledge-federation, `490` toujours `needs_clarification`)
+
+🔎 **Écarts corrigés après vérification**
+
+1. `1787559677485` — le ticket imposait `nature` en `1..n`, la roadmap
+   (`journal-knowledge-base.md:72`) dit `0..n`. Le minimum forcé produisait un vrai défaut observé :
+   une note de week-end en montagne classée `note_de_lecture`. **La roadmap fait foi** → schema,
+   validateur et prompt corrigés ; une liste vide est désormais un signal honnête.
+2. `1787559677486` — `ensure_vault()` levait une exception si `git init` échouait, ce qui tuait
+   toute l'ingestion et **perdait la note de l'utilisateur** pour un problème d'outillage — l'inverse
+   de ce que le vault protège. Aligné sur `_commit` : best-effort, avertissement en log.
+   Découvert parce que l'image de production n'embarquait pas `git` (corrigé dans le `Dockerfile`).
+3. `1787559677495` — un garde-fou refusait **le cas nominal** : le motif attrapait tout backtick
+   Markdown inline, or le doc système cite `` `/feature` ``. Toute proposition préservant le texte
+   d'origine était auto-rejetée. Réduit à `$(`. Assertion de non-régression ajoutée : le doc actif
+   doit passer ses propres bornes.
+4. `1787559677497` — retour d'erreur figé sur `edit/1` (faux dès que la version active change) et
+   messages non encodés dans l'en-tête `Location`.
+
+🔐 **Configuration DeepInfra** — la clé de portfolio-tracker a été **copiée chiffrée** d'app à app
+directement dans la base Coolify (ciphertext Laravel, jamais déchiffré ni affiché), puis
+déchiffrement vérifié côté Coolify. ⚠️ **Clé empruntée : en générer une propre à assistant-ia.**
+`DEEPINFRA_MODEL_CLASSIF` basculé sur la variante `-Turbo` : `Meta-Llama-3.1-8B-Instruct` est
+**déprécié chez DeepInfra depuis le 2026-07-16**.
+
+📋 **Actions manuelles restantes côté utilisateur**
+
+- Inviter `@ai_vps_jlm` dans `#assistant` (`C0ATLALRZL3`) et `#feedback-assistant` (`C0BSB9S9HHS`)
+  — channels privés, **aucun événement reçu sans ça**.
+- Renseigner `AGENT_APPROVERS` (Slack user ID) : sans elle **personne ne peut approuver un diff**.
+  Aucun ID utilisateur n'existe en base, la valeur ne pouvait pas être devinée ; au premier clic le
+  bot affiche l'ID à copier.
+- Générer une clé DeepInfra propre à assistant-ia.
+
+🧪 **Vérification** — 37 assertions pour `497`, 43 pour `495`+`496`, 20 pour `494`, 22 pour `487`,
+12 pour `485`, exécutées dans le container avec restauration de l'état de la base après chaque run.
+Toutes les vérifications passant par un **appel réel à DeepInfra** restent à faire après
+déploiement : le classifieur `0..n`, un tour de conversation dans `#assistant` et un aller-retour
+complet consigne → `@update` → approbation.
+
+## Prochaine session — ordre d'exécution proposé
+
+1. Vérifications réelles post-déploiement ci-dessus (bloquantes : elles valident les seuls chemins
+   jamais exercés contre l'API).
+2. Trancher `1787559677490` (`needs_clarification`) : roadmap journal §5 dit « fédération construite
+   dès maintenant », `KNOWLEDGE_ARCHITECTURE.md` §4 dit « rien tant que le besoin n'est pas là ».
+3. Puis `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`, v2).

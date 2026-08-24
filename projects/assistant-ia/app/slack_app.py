@@ -12,9 +12,11 @@ import httpx
 from slack_bolt.async_app import AsyncApp
 
 from app.config import settings
+from app.handlers import agent_chat, journal_kb
 from app.services import journal as journal_svc
 from app.services import kanban as kanban_svc
 from app.services import slack_client
+from app.services import slack_dedup
 
 logger = logging.getLogger(__name__)
 
@@ -25,27 +27,74 @@ bolt = AsyncApp(token=settings.SLACK_BOT_TOKEN, signing_secret=settings.SLACK_SI
 
 @bolt.event("message")
 async def on_message(event: dict, **_):
+    """Dispatcher explicite. L'ordre des branches est normatif (#1787559677482) : le premier
+    match gagne. Les branches 3 à 5 écrivent en base et passent donc par la garde d'idempotence.
+    """
     bot_id = event.get("bot_id")
     subtype = event.get("subtype")
     thread_ts = event.get("thread_ts")
     user_id = event.get("user", "")
     msg_id = event.get("client_msg_id", "—")
     event_ts = event.get("ts", "—")
-    logger.info(f"on_message reçu: user={user_id} thread={thread_ts} ts={event_ts} msg_id={msg_id} bot_id={bot_id} subtype={subtype}")
+    channel = event.get("channel", settings.JOURNAL_CHANNEL_ID)
+    text = event.get("text", "")
+    logger.info(f"on_message reçu: user={user_id} thread={thread_ts} ts={event_ts} msg_id={msg_id} bot_id={bot_id} subtype={subtype} channel={channel}")
 
+    # ── Branche 1 — messages de bot / à sous-type : jamais traités (anti-boucle) ──
     if bot_id:
         logger.debug(f"on_message: ignoré (bot_id={bot_id})")
         return
     if subtype:
         logger.debug(f"on_message: ignoré (subtype={subtype})")
         return
-    if not thread_ts:
-        logger.debug(f"on_message: ignoré (pas de thread_ts — message parent, ts={event_ts})")
+    # ── Branche 2 — réponse en thread : chaîne journal existante, inchangée ──
+    if thread_ts:
+        await _handle_thread_message(event, thread_ts, user_id, channel, text, msg_id)
         return
 
-    channel = event.get("channel", settings.JOURNAL_CHANNEL_ID)
-    text = event.get("text", "")
+    # ── Branches 3 à 5 — messages parents. Effets de bord ⇒ garde d'idempotence d'abord. ──
+    if not user_id:
+        # Sans auteur humain identifié, on ne peut pas garantir que ce n'est pas notre propre envoi.
+        logger.debug(f"on_message: message parent ignoré (aucun user, ts={event_ts})")
+        return
 
+    directive = agent_chat.detect_directive(text)
+    if directive:
+        target = ("directive", directive)
+    elif channel == settings.JOURNAL_CHANNEL_ID:
+        target = ("journal_kb", None)
+    elif channel == settings.ASSISTANT_CHANNEL_ID:
+        target = ("agent_chat", None)
+    else:
+        # ── Branche 6 — hors périmètre ──
+        logger.debug(f"on_message: message parent hors périmètre (channel={channel} ts={event_ts})")
+        return
+
+    if not await slack_dedup.claim_event(event):
+        return
+
+    # Slack exige un 200 sous 3 s ; classifieur et agent dépassent ce budget.
+    asyncio.create_task(_run_parent_branch(target, event))
+
+
+async def _run_parent_branch(target: tuple, event: dict) -> None:
+    """Exécute la branche retenue en tâche de fond. Toute exception doit être tracée : une
+    tâche asyncio qui meurt en silence est invisible en production."""
+    kind, arg = target
+    try:
+        if kind == "directive":
+            await agent_chat.handle_directive(event, arg)
+        elif kind == "journal_kb":
+            await journal_kb.handle_free_note(event)
+        elif kind == "agent_chat":
+            await agent_chat.handle_conversation_turn(event)
+    except Exception:
+        logger.exception(
+            f"on_message: échec de la branche {kind} (ts={event.get('ts')} channel={event.get('channel')})"
+        )
+
+
+async def _handle_thread_message(event: dict, thread_ts: str, user_id: str, channel: str, text: str, msg_id: str) -> None:
     # Session journal v2 active sur ce fil ?
     try:
         from app.handlers.journal_slack import handle_thread_reply
@@ -443,6 +492,51 @@ async def action_bank_import_vac(ack, body, client, **_):
         await client.views_open(trigger_id=body["trigger_id"], view=br.vacation_modal_view(value))
     except Exception:
         logger.exception("bank vacances: views_open échoué")
+
+
+_agent_decision_tasks: set = set()
+
+
+async def _run_agent_decision(client, body, action: str, proposal_id: str, user_id: str) -> None:
+    """Applique la décision puis réécrit le message : les boutons disparaissent, ce qui rend un
+    second clic impossible côté UI — l'idempotence côté base reste la garantie réelle."""
+    from app.handlers import agent_approval
+    text = await agent_approval.handle_decision(action, proposal_id, user_id)
+    try:
+        await client.chat_update(
+            channel=body["channel"]["id"],
+            ts=body["message"]["ts"],
+            text=text,
+            blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
+        )
+    except Exception:
+        logger.exception("agent_doc: chat_update échoué après décision")
+
+
+def _dispatch_agent_decision(client, body, action: str) -> None:
+    proposal_id = body["actions"][0]["value"]
+    user_id = (body.get("user") or {}).get("id")
+    task = asyncio.create_task(_run_agent_decision(client, body, action, proposal_id, user_id))
+    _agent_decision_tasks.add(task)
+    task.add_done_callback(_agent_decision_tasks.discard)
+
+
+@bolt.action("agent_doc_approve")
+async def action_agent_doc_approve(ack, body, client, **_):
+    await ack()
+    _dispatch_agent_decision(client, body, "approve")
+
+
+@bolt.action("agent_doc_reject")
+async def action_agent_doc_reject(ack, body, client, **_):
+    await ack()
+    _dispatch_agent_decision(client, body, "reject")
+
+
+@bolt.action("agent_doc_edit")
+async def action_agent_doc_edit(ack, **_):
+    # Bouton `url` : Slack ouvre la page lui-même, il faut juste acquitter pour éviter l'alerte.
+    await ack()
 
 
 @bolt.view("bank_vac_modal")

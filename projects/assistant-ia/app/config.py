@@ -24,6 +24,30 @@ class Settings(BaseSettings):
     FEATURES_AI_CHANNEL_ID: str = "C0AUCE6NELT"      # #features-ai-assistant (déprécié)
     FEEDBACK_CHANNEL_ID: str = "C0AUCE6NELT"         # #feedback (canal unifié)
 
+    # Agent conversationnel (channels privés — le bot doit y être invité)
+    ASSISTANT_CHANNEL_ID: str = "C0ATLALRZL3"           # #assistant — conversation agent
+    ASSISTANT_FEEDBACK_CHANNEL_ID: str = "C0BSB9S9HHS"  # #feedback-assistant — approbation des diffs
+
+    # DeepInfra (nommage aligné sur portfolio-tracker)
+    DEEPINFRA_API_KEY: str = ""
+    DEEPINFRA_API_BASE: str = "https://api.deepinfra.com/v1/openai"
+    # Variante -Turbo : `Meta-Llama-3.1-8B-Instruct` est déprécié chez DeepInfra depuis le
+    # 2026-07-16 (les requêtes passent encore, mais le modèle peut disparaître sans préavis).
+    DEEPINFRA_MODEL_CLASSIF: str = "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+    DEEPINFRA_MODEL_CHAT: str = "deepseek-ai/DeepSeek-V4-Flash"
+    DEEPINFRA_MODEL_SYSTEM: str = "deepseek-ai/DeepSeek-V4-Pro"
+
+    # KB journal — vault Obsidian (bind-mount en écriture)
+    JOURNAL_VAULT_PATH: str = "/storage/journal-vault"
+
+    # Agent — bornes de sécurité du doc système (roadmap §5.4)
+    AGENT_DOC_MAX_CHARS: int = 20000          # taille totale plafond du doc système
+    AGENT_DOC_MAX_ADDED_CHARS: int = 4000     # ajout maximal en une seule proposition
+    AGENT_HISTORY_TURNS: int = 20             # fenêtre d'historique renvoyée au modèle (10 échanges)
+    # Slack user IDs autorisés à approuver un diff, séparés par des virgules.
+    # Vide = personne : le channel privé ne suffit pas comme autorisation (#1787559677496).
+    AGENT_APPROVERS: str = ""
+
     # Feature 1 — Journal
     SLACK_CHANNEL_JOURNAL: str = "#journal"
 

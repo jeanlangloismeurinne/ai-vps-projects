@@ -1,10 +1,12 @@
 ---
 id: 1777534359410
 type: suggestion
-status: open
+status: closed
 date: 2026-04-30T07:32:39.410587
 project: journal
 url: slack://#features-ai-assistant
+priority: medium
+closed_at: 2026-08-20T19:06:22.426961+00:00
 ---
 
 ## 💡 Suggestion

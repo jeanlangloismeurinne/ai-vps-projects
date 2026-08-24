@@ -1,0 +1,42 @@
+# categories.schema.yaml — taxonomie de la KB journal
+# Source de vérité pour les axes de classification.
+# Versionné dans le repo ; le prompt du classifieur est construit DEPUIS ce fichier au runtime.
+#
+# Règles de vocabulaire :
+#   - axes.contexte   : vocabulaire FERMÉ — exactement 1 valeur obligatoire
+#   - axes.nature     : vocabulaire FERMÉ — 0..n valeurs (liste vide autorisée)
+#   - tags_libres     : vocabulaire OUVERT — 0..n (le modèle peut proposer de nouveaux tags)
+#
+# Pour modifier le vocabulaire :
+#   1. Éditer ce fichier (PR + review)
+#   2. Le classifieur relit le YAML au prochain redémarrage → aucun autre changement de code requis
+
+axes:
+  contexte:
+    description: "Contexte de vie de l'entrée — exactement une valeur"
+    cardinality: "1"          # obligatoire, mono-valeur
+    values:
+      - personnel
+      - professionnel
+
+  nature:
+    # 0..n et non 1..n (roadmap/journal-knowledge-base.md:72) : forcer au moins une valeur
+    # oblige le modèle à en inventer une quand aucune ne convient — une note de vie devenait
+    # « note_de_lecture ». Liste vide = signal honnête, repris par le curator (#1787559677489).
+    description: "Nature(s) de l'entrée — zéro, une ou plusieurs valeurs"
+    cardinality: "0..n"       # multi-valeurs, liste vide autorisée
+    values:
+      - idee
+      - apprentissage
+      - note_de_lecture
+      - decision
+      - question
+
+tags_libres:
+  description: "Tags libres complémentaires — vocabulaire ouvert, le modèle peut en créer"
+  cardinality: "0..n"         # optionnel, multi-valeurs
+  examples:
+    - management
+    - politique
+    - vacances
+    - restaurant

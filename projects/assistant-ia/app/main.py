@@ -10,12 +10,14 @@ from pathlib import Path
 
 from app.routes import webhooks, journal, kanban, feedback as feedback_route, journal_settings, journal_fill
 from app.routes import journal_recap
+from app.routes import agent_doc as agent_doc_route
 from app.routes.slack_events import router as slack_router
 from app.routes.auth import HubAuthRequired, require_auth, LOGIN_URL
 from app.db import close_pool, run_migrations
 from app.jobs.journal_prompt import check_objectif_reminders
 from app.jobs.journal_recap import send_recap_hebdo
 from app.jobs.task_reminder import check_due_cards
+from app.jobs.agent_weekly_synthesis import run_agent_weekly_synthesis
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,6 +32,7 @@ async def lifespan(app: FastAPI):
     _scheduler.add_job(check_due_cards, CronTrigger(minute="*"))
     _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
     _scheduler.add_job(send_recap_hebdo, CronTrigger(minute="*"))
+    _scheduler.add_job(run_agent_weekly_synthesis, CronTrigger(minute="*"))
     _scheduler.start()
     logger.info("Scheduler started")
     logger.info("Slack HTTP Events API ready on /slack/events")
@@ -61,6 +64,7 @@ app.include_router(journal_settings.router)
 app.include_router(journal_recap.router)
 app.include_router(kanban.router)
 app.include_router(feedback_route.router)
+app.include_router(agent_doc_route.router)
 
 
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_auth)])
@@ -125,7 +129,54 @@ _LANDING_HTML = """<!DOCTYPE html>
 
   <div class="hero">
     <h2>Ton assistant personnel</h2>
-    <p>Journal de progression par parcours, gestion de tâches Kanban — accessibles depuis Slack et le web.</p>
+    <p>Agent conversationnel piloté par consignes, base de connaissance personnelle,
+       journal de progression et tâches Kanban — depuis Slack et le web.</p>
+  </div>
+
+  <!-- Agent -->
+  <div class="section">
+    <div class="section-header">
+      <span class="badge">🧠</span>
+      <h3>Agent</h3>
+      <a href="/agent/system-doc" class="link-btn">Document système →</a>
+    </div>
+    <p class="desc">
+      Discute avec l'assistant dans <code>#assistant</code> : il répond avec l'historique récent du
+      channel et son <strong>document système</strong>, la consigne écrite qui définit son
+      comportement. Tu fais évoluer ce document en lui donnant des consignes en langage naturel —
+      <strong>aucune version ne s'active sans ton approbation d'un diff</strong>.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Commande Slack</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>@admin ta consigne</code></td><td>Met une consigne en file d'attente</td></tr>
+        <tr><td><code>@update</code></td><td>Synthétise les consignes en attente et propose un diff</td></tr>
+      </tbody>
+    </table>
+    <div class="note">Le diff est posté dans <code>#feedback-assistant</code> avec trois boutons :
+      Approuver, Rejeter, Éditer. Chaque version est conservée, chaque décision est tracée dans un
+      journal d'audit, et n'importe quelle version antérieure peut être réactivée depuis la page
+      <a href="/agent/system-doc" style="color:#4f6ef7">Document système</a>.
+      Une synthèse hebdomadaire relance automatiquement les consignes restées en attente.</div>
+  </div>
+
+  <!-- Base de connaissance -->
+  <div class="section">
+    <div class="section-header">
+      <span class="badge">📚</span>
+      <h3>Base de connaissance</h3>
+    </div>
+    <p class="desc">
+      Écris une note libre dans <code>#journal</code> : elle est classée automatiquement
+      (contexte, nature, thèmes, projet), enregistrée en Markdown dans un vault versionné, et
+      indexée pour la recherche. L'assistant confirme le classement en réponse — par exemple
+      <em>Noté · professionnel · decision · #management</em>.
+    </p>
+    <div class="note">Une note identique déjà enregistrée n'est pas dupliquée. Quand aucune
+      catégorie du vocabulaire ne convient, le champ reste vide plutôt que d'être rempli
+      approximativement.</div>
   </div>
 
   <!-- Journal -->
