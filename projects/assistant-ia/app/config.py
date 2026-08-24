@@ -31,9 +31,13 @@ class Settings(BaseSettings):
     # DeepInfra (nommage aligné sur portfolio-tracker)
     DEEPINFRA_API_KEY: str = ""
     DEEPINFRA_API_BASE: str = "https://api.deepinfra.com/v1/openai"
-    # Variante -Turbo : `Meta-Llama-3.1-8B-Instruct` est déprécié chez DeepInfra depuis le
-    # 2026-07-16 (les requêtes passent encore, mais le modèle peut disparaître sans préavis).
-    DEEPINFRA_MODEL_CLASSIF: str = "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+    # Classifieur KB journal. Llama 3.1 8B (-Turbo) a été abandonné après vérification contre
+    # l'API : DeepInfra refuse `json_schema` pour ce modèle (HTTP 405), donc tout appel coûtait
+    # 2 requêtes (405 puis fallback json_object) et le vocabulaire fermé n'était plus qu'une
+    # consigne en prose — le modèle produisait `nature: ["vacances"]` (un tag libre) 1 fois sur 2
+    # et ne renvoyait jamais la liste vide pourtant autorisée en 0..n.
+    # DeepSeek-V4-Flash supporte `json_schema` : 1 seul appel, vocabulaire contraint par `enum`.
+    DEEPINFRA_MODEL_CLASSIF: str = "deepseek-ai/DeepSeek-V4-Flash"
     DEEPINFRA_MODEL_CHAT: str = "deepseek-ai/DeepSeek-V4-Flash"
     DEEPINFRA_MODEL_SYSTEM: str = "deepseek-ai/DeepSeek-V4-Pro"
 

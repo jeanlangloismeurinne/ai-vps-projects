@@ -6,10 +6,13 @@ métadonnées de classification {contexte, nature[], tags[], title}.
 
 Règles invariantes :
 - Le prompt est construit DEPUIS categories.schema.yaml au runtime (jamais recopié en dur).
-- Appel unique DeepInfra (Llama 3.1 8B) : classification + title dans le même call.
+- Appel unique DeepInfra : classification + title dans le même call. Le modèle doit
+  supporter `response_format: json_schema` (le vocabulaire fermé y passe en `enum`).
 - Température ≤ 0.2.
 - Texte utilisateur passé en tant que DONNÉE délimitée, jamais en instruction.
 - Validation stricte contre le vocabulaire du YAML — valeur hors vocab → rejet (pas correction).
+  Conservée même avec l'`enum` : elle reste le seul garde-fou si le modèle retombe sur
+  `json_object` (fallback de `chat_json`).
 - Fallback garanti : JSON invalide / API down / vocab violé → résultat « à classer »,
   aucune exception remontée vers l'appelant (on ne perd jamais une note utilisateur).
 """
@@ -30,32 +33,50 @@ logger = logging.getLogger(__name__)
 # Chemin absolu du schema file (toujours résolu par rapport à ce module).
 _SCHEMA_PATH = Path(__file__).parent.parent / "knowledge" / "categories.schema.yaml"
 
-# Schéma JSON Schema pour la sortie du modèle.
-_OUTPUT_JSON_SCHEMA: dict[str, Any] = {
-    "title": "journal_classification",
-    "type": "object",
-    "properties": {
-        "contexte": {
-            "type": "string",
-            "description": "Axe contexte — exactement une valeur du vocabulaire fermé.",
+def _build_output_schema(
+    contexte_vals: list[str],
+    nature_vals: list[str],
+) -> dict[str, Any]:
+    """Construit le JSON Schema de sortie AVEC le vocabulaire fermé en `enum`.
+
+    Le vocabulaire est une contrainte **structurelle**, pas seulement une consigne en prose :
+    vérifié contre l'API, le prompt seul laissait passer `nature: ["vacances"]` (un tag libre)
+    une fois sur deux, ce que le validateur rejetait — la note finissait « à classer ».
+    L'`enum` rend ce cas impossible côté modèle.
+
+    Suppose un modèle supportant `response_format: json_schema` (cf. DEEPINFRA_MODEL_CLASSIF).
+    Si le modèle ne le supporte pas, `chat_json` retombe sur `json_object` et l'`enum` n'est
+    plus qu'indicatif — la validation Python reste alors le seul garde-fou, d'où son maintien.
+    """
+    return {
+        "title": "journal_classification",
+        "type": "object",
+        "properties": {
+            "contexte": {
+                "type": "string",
+                "enum": contexte_vals,
+                "description": "Axe contexte — exactement une valeur du vocabulaire fermé.",
+            },
+            "nature": {
+                "type": "array",
+                "items": {"type": "string", "enum": nature_vals},
+                "description": (
+                    "Axe nature — zéro, une ou plusieurs valeurs du vocabulaire fermé. "
+                    "Une liste vide est valide."
+                ),
+            },
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Tags libres complémentaires — vocabulaire ouvert.",
+            },
+            "title": {
+                "type": "string",
+                "description": "Titre court (≤ 8 mots) résumant le sujet de l'entrée.",
+            },
         },
-        "nature": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Axe nature — une ou plusieurs valeurs du vocabulaire fermé.",
-        },
-        "tags": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Tags libres complémentaires — vocabulaire ouvert.",
-        },
-        "title": {
-            "type": "string",
-            "description": "Titre court (≤ 8 mots) résumant le sujet de l'entrée.",
-        },
-    },
-    "required": ["contexte", "nature", "tags", "title"],
-}
+        "required": ["contexte", "nature", "tags", "title"],
+    }
 
 # Résultat de fallback « à classer » (aucune exception remontée vers l'appelant).
 _FALLBACK_TAG = "a_classer"
@@ -266,6 +287,7 @@ async def classify(text: str) -> ClassificationResult:
 
     system_prompt = _build_system_prompt(schema)
     user_message = _build_user_message(text)
+    output_schema = _build_output_schema(contexte_vals, nature_vals)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -280,7 +302,7 @@ async def classify(text: str) -> ClassificationResult:
             raw = await deepinfra_client.chat_json(
                 messages=messages,
                 model=settings.DEEPINFRA_MODEL_CLASSIF,
-                schema=_OUTPUT_JSON_SCHEMA,
+                schema=output_schema,
                 temperature=0.15,  # ≤ 0.2 — classification déterministe
             )
             result = _validate_result(raw, contexte_vals, nature_vals)
