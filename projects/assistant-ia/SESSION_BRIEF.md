@@ -95,10 +95,59 @@ Toutes les vérifications passant par un **appel réel à DeepInfra** restent à
 déploiement : le classifieur `0..n`, un tour de conversation dans `#assistant` et un aller-retour
 complet consigne → `@update` → approbation.
 
+## Résumé de session — 2026-08-24 13:12
+
+Troisième passe : **déblocage de la configuration + étape 1 de la prochaine session**
+(vérifications réelles contre DeepInfra). Deux commits : `8d3d3db`, `a574a75`.
+
+🔓 **Bloquants levés**
+
+- `AGENT_APPROVERS=UJ724E07L` (Jean Langlois-Meurinne) provisionnée dans Coolify et vérifiée
+  dans le container. `is_approver` : `True` pour cet ID, `False` pour un ID inconnu et pour `None`.
+- `@ai_vps_jlm` est **déjà membre** de `#assistant` et `#feedback-assistant` (vérifié via
+  `conversations.info`, `is_member=true`) — action utilisateur faite, plus un bloquant.
+
+✅ **Vérifications réelles passées** (les chemins jamais exercés contre l'API)
+
+- Doc système actif en base (version 1), tour de conversation complet contre
+  `DeepSeek-V4-Flash` → réponse cohérente avec le doc (refus d'exécuter, oriente vers `/feature`).
+- Classifieur : 3 cas, aucun fallback, vocabulaire respecté, `0..n` honoré.
+
+🐛 **Défaut réel trouvé — le correctif `0..n` de la passe précédente ne tenait pas**
+
+La vérification a montré que le week-end en montagne était **toujours** classé `note_de_lecture` :
+le schema et le prompt avaient bien été corrigés, mais la contrainte ne s'appliquait jamais.
+Cause : **DeepInfra refuse `response_format: json_schema` pour Llama 3.1 8B-Turbo (HTTP 405)**.
+Trois conséquences, toutes observées :
+
+1. Chaque classification coûtait **2 requêtes** (405 puis fallback `json_object`).
+2. Le vocabulaire fermé n'était plus qu'une consigne en prose → `nature: ["vacances"]`
+   (un **tag libre**) 1 tirage sur 2, rejeté par le validateur → note en « à classer ».
+3. La cardinalité `0..n` n'était jamais honorée (0/4 tirages avec liste vide).
+
+**Correctif** (`a574a75`) : bascule sur `DeepSeek-V4-Flash`, qui supporte `json_schema`, et
+passage du vocabulaire en **`enum`** — toujours dérivé de `categories.schema.yaml`, jamais en dur.
+Mesuré après correctif : 4/4 tirages conformes, 0 hors-vocabulaire, 1 seul appel API.
+La validation Python est **conservée** : elle reste le seul garde-fou si `chat_json` retombe
+sur `json_object`.
+
+🧪 `checks/check_classifier_live.py` fige ces 3 cas contre l'API réelle (à lancer dans le
+container, la clé n'est pas sur l'hôte). ⚠️ `checks/check_kb_export.py` échoue dans le container
+(`parents[3]` suppose l'arborescence du repo) — pré-existant, sans lien avec cette session.
+
+📋 **Reste côté utilisateur** : générer une clé DeepInfra propre à assistant-ia (celle de
+portfolio-tracker est toujours empruntée).
+
 ## Prochaine session — ordre d'exécution proposé
 
-1. Vérifications réelles post-déploiement ci-dessus (bloquantes : elles valident les seuls chemins
-   jamais exercés contre l'API).
+1. ~~Vérifications réelles post-déploiement~~ — **faites** (session 13:12), un défaut trouvé
+   et corrigé. Reste **un** aller-retour non exercé : consigne → `@update` → approbation d'un
+   diff, qui passe par un vrai clic dans Slack et ne peut pas être simulé hors interface.
+   `AGENT_APPROVERS` étant désormais renseignée, c'est faisable dès le prochain message.
 2. Trancher `1787559677490` (`needs_clarification`) : roadmap journal §5 dit « fédération construite
    dès maintenant », `KNOWLEDGE_ARCHITECTURE.md` §4 dit « rien tant que le besoin n'est pas là ».
 3. Puis `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`, v2).
+4. Deux tickets utilisateur arrivés le 24/08 à 12:49 et 12:51, non traités :
+   `1787575776445` (indicateur « en train de réfléchir » pendant l'attente DeepInfra) et
+   `1787575860968` (accès web à l'agent — sans Exa si possible, pour préserver les crédits
+   du projet portfolio-tracker).
