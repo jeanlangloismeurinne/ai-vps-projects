@@ -1,13 +1,14 @@
 ---
 id: 1787559677490
 type: feature
-status: open
+status: closed
+closed_at: 2026-08-24T13:20:00+00:00
+closed_reason: wont-do-for-now
 priority: medium
 date: 2026-08-24T08:21:17+00:00
 project: assistant-ia
 url: 
 milestone: knowledge-federation
-needs_clarification: true
 ---
 
 ## ✨ Feature
@@ -21,13 +22,22 @@ Couche de **recherche fédérée** (`KNOWLEDGE_ARCHITECTURE.md` §4), demandée 
 `journal-knowledge-base.md` §5 (« la fédération est construite dès maintenant ») et §8
 (« il faut créer les tickets liés à la couche fédérée »).
 
-> ⚠️ **Tension à trancher avant de démarrer.** La charte est explicite : *« Tant que le besoin
-> n'est pas là, ne rien construire de la §4 »* — jamais par anticipation. La roadmap journal dit
-> l'inverse. L'argument en faveur de la construction : il existe désormais **deux sources réelles**
-> (la Knowledge Platform de `portfolio-tracker`, déjà en production, et la KB journal) — le besoin
-> multi-source est donc matérialisé, pas anticipé. L'argument contre : personne n'a encore formulé
-> de requête qui traverse les deux. **À confirmer en séance** ; en attendant, ne pas démarrer avant
-> que `milestone: journal-kb` soit livré et utilisé.
+> ✅ **Tranché le 2026-08-24 : on ne construit pas.** La charte
+> `KNOWLEDGE_ARCHITECTURE.md` §4 l'emporte sur la roadmap `journal-knowledge-base.md` §5 —
+> la charte est **transverse à tous les projets**, la roadmap ne couvre que le journal ; en cas
+> de contradiction, le document de plus grande portée fait foi.
+>
+> Le besoin invoqué (« deux sources réelles ») n'en est pas un : **personne n'a encore formulé
+> de requête traversant portfolio-tracker et la KB journal**. Construire maintenant, c'est
+> façonner le schéma fédéré à partir d'une seule source réellement exploitée — précisément
+> l'anticipation que la charte interdit.
+>
+> Ce qui rend la décision réversible à faible coût : l'**enveloppe document commune** est déjà
+> exportable (contrainte « federation-ready », charte §5). Le jour où une requête multi-source
+> apparaît, il ne restera qu'à créer la base et les connecteurs.
+>
+> **Condition de réouverture** : une requête réelle et formulée qui traverse au moins deux
+> sources. Rouvrir alors ce ticket puis `1787559677491`.
 
 Périmètre :
 

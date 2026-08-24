@@ -2,6 +2,7 @@ import httpx
 from app.config import settings
 
 _SLACK_POST = "https://slack.com/api/chat.postMessage"
+_SLACK_UPDATE = "https://slack.com/api/chat.update"
 
 
 def _headers() -> dict:
@@ -33,6 +34,24 @@ async def post_text(channel: str, text: str, thread_ts: str | None = None) -> st
         if not data.get("ok"):
             raise RuntimeError(f"Slack error: {data.get('error')}")
         return data["ts"]
+
+
+async def update_text(channel: str, ts: str, text: str) -> None:
+    """Remplace le texte d'un message déjà posté (`chat.update`).
+
+    Sert à transformer un message d'attente (« réfléchit… ») en réponse finale, plutôt que
+    d'empiler deux messages dans le fil (#1787575776445).
+    """
+    async with httpx.AsyncClient(timeout=10) as http:
+        resp = await http.post(
+            _SLACK_UPDATE,
+            headers=_headers(),
+            json={"channel": channel, "ts": ts, "text": text},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"Slack error: {data.get('error')}")
 
 
 async def post_blocks(

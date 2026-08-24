@@ -164,15 +164,18 @@ Couche fédérée (`milestone: knowledge-federation`, `feedback-tickets/`) :
 
 | ID | Ticket | Note |
 |---|---|---|
-| `1787559677490` | Base `db_knowledge_federation` + pgvector | ⚠️ `needs_clarification` — voir ci-dessous |
-| `1787559677491` | Connecteurs (pull incrémental) | dépend du précédent |
+| `1787559677490` | Base `db_knowledge_federation` + pgvector | ❌ fermé `wont-do-for-now` (2026-08-24) |
+| `1787559677491` | Connecteurs (pull incrémental) | ❌ fermé avec le précédent |
 
-> ⚠️ **Tension à trancher.** Ce doc dit « la fédération est construite dès maintenant » (§5), mais
-> `KNOWLEDGE_ARCHITECTURE.md` §4 dit l'inverse : *« Tant que le besoin n'est pas là, ne rien
-> construire de la §4 »*, jamais par anticipation. Argument pour construire : deux sources réelles
-> existent désormais (Knowledge Platform de portfolio-tracker + KB journal). Argument contre :
-> aucune requête traversant les deux n'a encore été formulée. À arbitrer avant de démarrer
-> `1787559677490`.
+> ✅ **Tranché le 2026-08-24 : la fédération n'est PAS construite.** La §5 de ce document
+> (« la fédération est construite dès maintenant ») est **caduque** : elle contredisait
+> `KNOWLEDGE_ARCHITECTURE.md` §4, charte transverse qui l'emporte sur une roadmap de projet.
+> Motif retenu : aucune requête traversant deux sources n'a encore été formulée — le besoin
+> était supposé, pas constaté. L'export « enveloppe commune » (#1787559677488) étant livré,
+> la décision reste réversible à faible coût.
+>
+> **Ne pas rouvrir ce débat sans une requête multi-source réelle.** Détail de l'arbitrage et
+> condition de réouverture : `feedback-tickets/1787559677490-feature-base-federation-pgvector.md`.
 
 Phase ultérieure (hors v1) :
 

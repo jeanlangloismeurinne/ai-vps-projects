@@ -1,7 +1,9 @@
 ---
 id: 1787559677491
 type: feature
-status: open
+status: closed
+closed_at: 2026-08-24T13:20:00+00:00
+closed_reason: wont-do-for-now
 priority: medium
 date: 2026-08-24T08:21:17+00:00
 project: assistant-ia
@@ -17,6 +19,12 @@ milestone: knowledge-federation
 ### Description
 
 **Connecteurs** alimentant `db_knowledge_federation` (dépend de #1787559677490).
+
+> ✅ **Fermé le 2026-08-24 avec #1787559677490** : la couche fédérée n'est pas construite
+> (charte `KNOWLEDGE_ARCHITECTURE.md` §4 — pas de construction par anticipation). Sans base
+> fédérée, ces connecteurs n'ont rien à alimenter. Le contenu ci-dessous reste valable tel quel
+> le jour de la réouverture : la vue d'export `knowledge_federation_export` (#1787559677488)
+> est déjà livrée, donc le travail préparatoire n'est pas perdu.
 
 Un connecteur par source, en **pull incrémental** via `content_hash` / `updated_at`
 (`KNOWLEDGE_ARCHITECTURE.md` §4) :

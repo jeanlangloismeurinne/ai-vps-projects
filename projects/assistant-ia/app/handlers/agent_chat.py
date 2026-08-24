@@ -9,7 +9,7 @@ import re
 
 from app.services import agent_conversations, agent_doc, deepinfra_client
 from app.services.agent_instructions import enqueue_instruction
-from app.services.slack_client import post_text
+from app.services.slack_client import post_text, update_text
 from app.handlers.agent_synthesis_stub import run_synthesis
 from app.config import settings
 
@@ -26,6 +26,10 @@ _ADMIN_PAYLOAD_RE = re.compile(
     r"(?<![\w<])@admin\b\s*(.*?)(?=(?<![\w<])@(?:admin|update)\b|$)",
     re.IGNORECASE | re.DOTALL,
 )
+
+# Message d'attente posté avant l'appel au modèle, puis remplacé par la réponse (#1787575776445).
+# Sans lui, le fil reste muet plusieurs secondes et rien n'indique que l'agent a reçu le message.
+_THINKING_TEXT = "_:hourglass_flowing_sand: je réfléchis…_"
 
 _HELP_TEXT = (
     "*@admin* — Soumettre une consigne à l'agent\n"
@@ -138,17 +142,37 @@ async def handle_conversation_turn(event: dict) -> None:
     user_id = event.get("user")
     text = event.get("text", "")
 
+    # Accusé de réception immédiat (#1787575776445). Posté avant tout appel réseau : c'est le
+    # seul signe visible que le message a été reçu pendant les secondes d'attente du modèle.
+    # Best-effort — si Slack refuse ce message, le tour se déroule quand même et la réponse
+    # est postée normalement : un indicateur d'attente ne doit jamais faire perdre une réponse.
+    thinking_ts: str | None = None
+    try:
+        thinking_ts = await post_text(channel=channel, text=_THINKING_TEXT, thread_ts=slack_ts)
+    except Exception:
+        logger.warning("agent_chat: indicateur d'attente non posté, on continue", exc_info=True)
+
+    async def respond(message: str) -> None:
+        """Remplace l'indicateur d'attente par `message`, ou poste si l'indicateur manque."""
+        if thinking_ts:
+            try:
+                await update_text(channel=channel, ts=thinking_ts, text=message)
+                return
+            except Exception:
+                # L'édition a échoué (message supprimé, droits…) : on retombe sur un post normal
+                # plutôt que de laisser l'utilisateur sur « je réfléchis… » indéfiniment.
+                logger.warning("agent_chat: chat.update échoué, repli sur post", exc_info=True)
+        await post_text(channel=channel, text=message, thread_ts=slack_ts)
+
     try:
         doc = await agent_doc.get_active_doc()
         if not doc:
             # Sans doc actif, on n'improvise pas un prompt de secours : ce serait un prompt système
             # non versionné et non audité, exactement ce que le chantier interdit.
             logger.error("agent_chat: aucun doc système actif — tour abandonné")
-            await post_text(
-                channel=channel,
-                text="Aucun document système actif : je ne peux pas répondre tant qu'une version "
-                     "n'est pas activée.",
-                thread_ts=slack_ts,
+            await respond(
+                "Aucun document système actif : je ne peux pas répondre tant qu'une version "
+                "n'est pas activée."
             )
             return
 
@@ -178,7 +202,7 @@ async def handle_conversation_turn(event: dict) -> None:
             thread_ts=slack_ts,
         )
 
-        await post_text(channel=channel, text=reply, thread_ts=slack_ts)
+        await respond(reply)
         logger.info(
             "agent_chat: tour traité (ts=%s user=%s doc_version=%s len_reply=%d)",
             slack_ts, user_id, doc.version, len(reply),
@@ -188,10 +212,10 @@ async def handle_conversation_turn(event: dict) -> None:
         # Tâche de fond : une exception non rattrapée serait invisible côté utilisateur.
         logger.exception("agent_chat: échec du tour de conversation")
         try:
-            await post_text(
-                channel=channel,
-                text=f"Je n'ai pas pu répondre ({type(exc).__name__}). Réessaie dans un instant.",
-                thread_ts=slack_ts,
+            # Passe aussi par `respond` : sinon l'indicateur « je réfléchis… » resterait affiché
+            # pour toujours à côté du message d'erreur.
+            await respond(
+                f"Je n'ai pas pu répondre ({type(exc).__name__}). Réessaie dans un instant."
             )
         except Exception:
             logger.exception("agent_chat: impossible de signaler l'échec dans Slack")
