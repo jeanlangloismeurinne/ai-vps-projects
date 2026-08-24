@@ -1,266 +1,255 @@
-# Système de contrôle — Tickets · Roadmap · Session Brief
+# Système de contrôle — Chantiers · Sprints · Tickets
 
-> Instructions pour Claude Code. Lire ce fichier au démarrage de toute session de travail
-> sur un projet qui utilise ce système.
+> Instructions pour Claude Code **et** l'outil de pilotage du Hub (`projects/hub/`).
+> Lire ce fichier au démarrage de toute session de travail sur un projet.
 
 ---
 
-## Principe
+## Principe — un seul document utilisateur, deux vannes indépendantes
 
-Trois couches. Ne pas les confondre.
+L'erreur à ne jamais refaire : mélanger les artefacts destinés à **l'utilisateur** et ceux
+destinés à **l'orchestrateur**. Ils n'ont pas le même public.
 
 ```
-ROADMAP        → espace de réflexion / direction (docs libres). Génère des tickets.
-TICKETS        → unité de travail actionnable, portée limitée.
-SESSION BRIEF  → ce qu'on traite maintenant (une session).
+CHANTIER (doc vivant)  → UTILISATEUR : direction + décisions + statut. Le SEUL qu'il lit.
+SPRINT                 → regroupement nommé DANS le chantier, segmenté par contexte partagé.
+                         C'est l'unité que l'utilisateur choisit d'exécuter en priorité.
+TICKET                 → outil ORCHESTRATEUR ↔ WORKER. Décomposition d'un sprint. L'utilisateur
+                         ne le cure jamais — sauf l'inbox (un bug/idée qu'il remonte).
+ORDRE DE SPRINT        → document de passage Hub → Claude Code. Généré par le Hub, JETABLE,
+                         écrasé à chaque génération. Déclencheur, pas tableau de bord.
+DECISIONS.md           → faits durables (le « pourquoi » d'une décision + les gotchas). Système de
+                         référence, versionné, greppable.
+Mémoire agent          → cache de rappel, pointeurs. PAS un système de référence.
 ```
 
-L'exécution tourne sous l'abonnement Claude Code : les consignes sont tapées **manuellement**
-dans le terminal. Toute la logique multi-modèle passe par des **sous-agents** (couverts par
-l'abonnement), jamais par des appels API externes.
+**Conséquence pratique** : l'utilisateur pointe un **chantier** et choisit un **sprint** par son
+nom. Il ne lit pas `TICKETS.md`, ne sélectionne pas de numéros de tickets, ne peut pas « oublier »
+un ticket : la checklist du sprint (dans le chantier) est la liste exhaustive, et c'est le même
+document qu'il a validé. Le lien chantier↔ticket est porté par **l'orchestrateur**, pas par lui.
+
+---
+
+## Les deux vannes (indépendantes, pas une séquence)
+
+« Roadmap » et « tickets » répondent à deux questions distinctes. Une demande peut ouvrir l'une
+sans l'autre.
+
+- **Vanne direction** — « est-ce que ça engage le jugement de l'utilisateur ? » (ambiguïté, choix
+  structurant, sécurité / données sensibles). Si oui → écrire un **chantier** court et dense en
+  décisions, que l'utilisateur amende/valide. Sinon → sauter cette vanne.
+- **Vanne délégation** — « est-ce assez gros pour que déléguer économise le contexte d'Opus ? »
+  Si oui → décomposer en sprints + tickets. Sinon → Opus exécute inline.
+
+**Trois vitesses** qui en découlent :
+
+| Vitesse | Vanne direction | Vanne délégation | Qui fait |
+|---|---|---|---|
+| **Trivial** (bug d'une ligne, libellé) | fermée | fermée | Opus corrige direct, 1 ligne de trace. Si c'est déjà un ticket d'inbox → le fermer avec une note. |
+| **Moyen** (non-ambigu, mais plusieurs morceaux) | fermée | ouverte | décomposer + exécuter, sans chantier |
+| **Complexe** (ambigu / structurant / sécurité) | ouverte | ouverte | chantier → validation → sprints → exécution |
+
+---
+
+## Segmentation des sprints — par contexte partagé
+
+**Un sprint regroupe le travail qui partage le même contexte** (mêmes fichiers, même modèle mental,
+même contrat de données). Le critère de découpe n'est pas « la taille » ni « le thème » : c'est le
+**contexte que le modèle doit charger**. Exécuter un sprint ne doit pas recharger dix fois du
+contexte qui se recouvre.
+
+Exemple (chantier kb-visualisation, 5 tickets → 3 sprints) :
+- *Substrat* (contexte : écriture du vault, contrat frontmatter) = miroir kanban→vault + notes-schéma.
+- *Viewer* (contexte : Docker / Traefik / KasmVNC) = conteneur Obsidian + Sablier.
+- *Finition* (contexte : doc / UI) = README + landing.
+
+---
+
+## Le plancher de délégation
+
+**On ne délègue un item que si ça coûte moins qu'une exécution inline par Opus.** La délégation a
+une taxe fixe : re-énoncer le contexte au worker + lire son compte-rendu + revérifier. Elle ne
+rapporte que sur des unités **indépendantes, auto-suffisantes, à faible couplage**, lancées en
+parallèle.
+
+- Travail **couplé** (partage un contrat/schéma) → la taxe dépasse le gain → **Opus inline**.
+- On délègue au plus à la granularité du **sprint** (un worker qui tient le contexte partagé du
+  sprint), **jamais par ticket** à l'intérieur d'un sprint couplé.
+- Si un chantier est du design/doc/code fortement couplé et à fort jugement, la bonne réponse est
+  souvent **zéro délégation**. Ce n'est pas un échec du système : c'est le plancher qui joue.
+
+---
+
+## Cycle de vie d'un chantier
+
+1. **Demande** (utilisateur, direct ou via l'inbox).
+2. **Vanne direction** : si elle s'ouvre, Opus écrit le chantier (court, dense en décisions ;
+   contrat exhaustif en annexe, pas dans la surface de validation).
+3. **Validation** : l'utilisateur amende/valide le chantier. Un seul document.
+4. **Vanne délégation** : Opus décompose en **sprints nommés dans le chantier** (segmentés par
+   contexte partagé), et marque, sprint par sprint, ce qui est délégable (test du plancher). Les
+   tickets sous-jacents sont dérivés ici.
+5. **Exécution** : dans le Hub, l'utilisateur choisit **un sprint** par son nom → le Hub génère
+   l'**ordre de sprint** (le Hub ne peut pas lancer Claude Code lui-même). Dans Claude Code,
+   l'utilisateur déclenche ; Opus lit le chantier + l'ordre, exécute (inline ou workers selon le
+   plancher), et met à jour le **statut dans le chantier**.
+6. **Clôture** : ranger l'info durable (section dédiée ci-dessous).
+
+---
+
+## Passage Hub → Claude Code — l'ordre de sprint
+
+Le Hub est une UI de pilotage ; il **ne peut pas exécuter une consigne dans Claude Code**. Le seul
+pont est un **document** que le Hub génère et que l'utilisateur déclenche dans le terminal.
+
+Cet **ordre de sprint** (`SESSION.md` à la racine du projet) est **mince, prospectif, jetable** :
+il est écrasé à chaque génération, ne contient **aucun résumé accumulé**. Son rôle est de déclencher
+l'exécution d'**un** sprint. Contenu :
+
+```markdown
+# Ordre de sprint — {projet}
+Chantier : roadmap/{nom}.md
+Sprint   : {nom du sprint}
+
+## Items
+- [ ] {item} → #{ticket_id si délégué}
+- [ ] …
+
+## Pré-actions utilisateur (si besoin)
+- {action manuelle : inviter un bot, provisionner une variable d'env…}
+```
+
+Déclencheur côté terminal : **« exécute le sprint en cours pour {projet} »** → Opus lit `SESSION.md`
+**et** le chantier pointé (source de vérité), exécute, coche la checklist **dans le chantier**.
+Le statut ne vit **jamais** dans `SESSION.md` (qui sera écrasé) — toujours dans le chantier.
 
 ---
 
 ## Modèle d'exécution — Opus orchestrateur + workers Sonnet
 
-La session tourne sur **Opus** (modèle par défaut). Opus n'implémente pas tout lui-même :
+La session tourne sur **Opus**. Il n'implémente pas tout lui-même :
 
 ```
 Opus (orchestrateur)
-  ├─ lit brief + tickets (descriptions seules — pas de lecture de code pour classer)
-  ├─ ticket COMPLEXE → Opus l'implémente lui-même
-  └─ ticket SIMPLE   → délègue à un sous-agent worker (Sonnet 4.6)
-                         └─ implémente + renvoie un COMPTE-RENDU structuré
-       Opus vérifie le compte-rendu contre la spec du ticket :
-         · conforme      → ferme le ticket
-         · écart détecté → lit le code de CE ticket uniquement, corrige, ferme
+  ├─ lit le chantier + le sprint choisi
+  ├─ item COUPLÉ / à jugement → Opus l'implémente lui-même
+  └─ item DÉLÉGABLE (plancher OK) → worker Sonnet 4.6
+                                      └─ implémente + COMPTE-RENDU structuré
+       Opus vérifie le compte-rendu contre la spec du sprint :
+         · conforme      → coche l'item, avance le statut
+         · écart détecté → lit le code de CET item uniquement, corrige, coche
 ```
 
-**But de la délégation** (on est en abonnement, pas facturé au token) : préserver le contexte
-et le quota d'Opus pour le travail qui le mérite, paralléliser les tickets simples, rester sous
-les limites d'usage. Ce n'est pas une optimisation de coût monétaire.
-
-**Classification simple vs complexe** — décidée par Opus depuis la *description* du ticket, sans
-lire le code :
-
-| Simple → délègue au worker | Complexe → Opus fait lui-même |
-|---|---|
-| Portée locale, 1-2 fichiers | Multi-fichiers couplés, refacto |
-| Description non-ambiguë | Ambiguïté nécessitant du jugement |
-| Aucun choix d'architecture | Choix structurant en jeu |
-| Ex : libellé, champ, petit endpoint clair, bug ciblé | Sécurité / données sensibles, ou `needs_clarification: true` |
-
-Opus peut lancer **plusieurs workers en parallèle** pour des tickets simples indépendants.
-Si deux tickets touchent le même fichier, ne pas les paralléliser (les sérialiser, ou Opus les fait).
+But de la délégation (on est en abonnement, pas facturé au token) : préserver le contexte/quota
+d'Opus et paralléliser — **uniquement quand le plancher est franchi**.
 
 ---
 
 ## Contrat du sous-agent worker
 
-Lancé via l'outil `Agent` avec `model: sonnet`. Accès outils complet (édition, tests, run).
-Entrée : le chemin du fichier ticket + « implémente ce ticket et renvoie le compte-rendu ci-dessous ».
-
-Le worker **doit vérifier son travail** (compiler / lancer les tests / vérifier le comportement)
-avant de rendre la main, puis renvoyer **exactement** ce format :
+Lancé via l'outil `Agent` avec `model: sonnet`. Accès outils complet. Entrée : le périmètre du
+sprint (ou de l'item) + « implémente et renvoie le compte-rendu ci-dessous ». Le worker **vérifie
+son travail** (compile / tests / run) avant de rendre la main, puis renvoie **exactement** :
 
 ```
-1. Interprétation : ce que j'ai compris du ticket (1-2 phrases)
-2. Fichiers modifiés : chemin + une ligne de "pourquoi" chacun
+1. Interprétation : ce que j'ai compris (1-2 phrases)
+2. Fichiers modifiés : chemin + une ligne de « pourquoi »
 3. Décisions / hypothèses prises
 4. Vérification : ce que j'ai lancé (test / compile / run) et le résultat
 5. Ambiguïtés que j'ai tranchées seul
 ```
 
-**Ce que la vérification par compte-rendu attrape** — et ce qu'elle n'attrape pas :
-
-- ✅ **Contre-sens / dérive de spec** : Opus compare les points 1 et 5 à la spec. C'est le risque
-  principal des tickets délégués, et c'est couvert sans relire le code.
-- ❌ **Bugs de correctness** (code juste-de-compréhension mais faux) : aucun compte-rendu en prose
-  ne les révèle. Le filet reste le point 4 (tests / run). Si le point 4 est absent ou faible,
-  Opus lit le code du ticket.
+Ce que ça attrape : ✅ contre-sens / dérive de spec (points 1 et 5). ❌ bugs de correctness — le
+filet reste le point 4 ; s'il est absent ou faible, Opus lit le code de l'item.
 
 ---
 
-## Localisation des fichiers
+## Format du chantier (doc vivant) — `roadmap/{nom}.md`
 
-```
-projects/{projet}/
-  feedback-tickets/
-    {id}-{type}-{slug}.md        ← tickets
-    {id}-spec-{slug}.md          ← specs attachées à un ticket
-  roadmap/
-    *.md                         ← docs libres (directions, specs, audits, notes)
-  SESSION_BRIEF.md               ← brief de session courante
-  TICKETS.md                     ← index auto-généré, ne jamais éditer à la main
+Le chantier est le **tableau de bord** : direction + décisions + statut, tout au même endroit.
+
+```markdown
+---
+status: draft | spec-ready | en-cours | done
+milestone: {nom}
+---
+
+# Chantier — {titre}
+
+## Direction (utilisateur)
+{ce que veut l'utilisateur, verbatim reformulé}
+
+## Décisions
+{ce qui est tranché ET ce qui reste à trancher — la surface de validation, courte et dense}
+
+## Sprints
+### Sprint 1 — {nom} · contexte partagé : {quoi}
+- [ ] {item} → #{ticket_id si délégué}
+- [x] {item fait} · note : {compte-rendu 1 ligne}
+### Sprint 2 — {nom} · contexte partagé : {quoi}
+- [ ] …
+
+## Annexe — contrats / specs détaillés
+{le contrat exhaustif vit ICI, pas dans la surface de validation}
 ```
 
-> Le dossier `feedback-tickets/` est la convention partout (y compris bank-review et assistant-ia).
+La checklist des sprints **est** le statut. Opus la coche au fil de l'exécution. L'utilisateur ne
+regarde que ce document pour savoir où on en est.
 
 ---
 
-## Format des tickets
+## Format des tickets (outil orchestrateur ↔ worker) — `feedback-tickets/`
+
+Le ticket n'est plus un artefact utilisateur (sauf inbox). Il porte le **delta actionnable + les
+critères d'acceptation + un pointeur vers le sprint/annexe** — jamais la re-argumentation des
+décisions (elles sont dans le chantier).
 
 Frontmatter :
 ```yaml
----
 id: {timestamp_ms}
 type: bug | feature | suggestion | error
 status: open | blocked | closed
-priority: high | medium | low           # ordre de traitement décroissant
+priority: high | medium | low
 date: {ISO 8601}
 project: {nom_projet}
-url: {url optionnelle}
-milestone: {nom}                        # optionnel
-needs_clarification: true               # optionnel — l'utilisateur veut être questionné avant impl.
-closed_at: {ISO 8601 UTC}               # ajouté à la fermeture uniquement
----
+milestone: {nom du chantier}          # relie le ticket à son chantier
+closed_at: {ISO 8601 UTC}             # à la fermeture
 ```
 
-Corps :
-```markdown
-## {emoji} {label}
-
-**Date** : {date lisible}
-**URL** : `{url}`
-
-### Description
-{texte}
-
-### Notes d'implémentation        ← hypothèses / compte-rendu vérifié ajoutés à la fermeture
-```
-
-Plus de section `### Questions` dans le fichier : les clarifications se font **en direct dans le
-terminal** (voir Étape 2).
+Corps : `## {label}` · `### Description` (delta + acceptation + pointeur) · `### Notes
+d'implémentation` (compte-rendu vérifié ajouté à la clôture). Un contrat lourd partagé par
+plusieurs tickets → **fichier spec unique** `{id}-spec-*.md` référencé, jamais recopié.
 
 ---
 
-## Format des items de roadmap
+## Inbox — bugs / idées remontés par l'utilisateur
 
-Le dossier `roadmap/` est un **espace de docs libre** — pas de gabarit imposé. Un fichier peut être
-une direction, une spec, un audit, une note. Nommer librement (`00-principe-directeur.md`,
-`spec-v2.md`, etc.). Quand une direction est mûre, elle génère des tickets (Étape 4b).
-
----
-
-## Format du SESSION_BRIEF.md
-
-```markdown
-# Session Brief — {projet} — {YYYY-MM-DD}
-
-## Scope
-Milestone actif : {nom}   ·   Ne pas toucher : {modules hors-scope}
-
-## Roadmap à définir (optionnel)
-- [ ] {fichier roadmap ou direction courte} → générer les tickets
-
-## Tickets à traiter
-- [ ] #{id} — {type} — {résumé} (priority: {niveau})
-
-## Contexte additionnel (optionnel)
-{préférences techniques, décisions déjà prises}
-
-## Résumé de session
-*(rempli par Claude à la fin)*
-```
+Seul cas où l'utilisateur touche un ticket : il **dépose** un one-liner (widget web, `/feature`
+Slack). Il ne cure pas, ne priorise pas, n'ordonne pas. L'orchestrateur **trie** : trivial → corrige
+et ferme ; sinon → rattache à un chantier (existant ou nouveau) via `milestone`.
 
 ---
 
-## Commande de déclenchement
+## Clôture — ranger l'info durable (sinon elle fuit)
 
-**« execute le brief session pour {projet} »**
+À la fin d'un sprint ou d'un chantier :
 
-Exécuter alors les étapes suivantes dans l'ordre.
+1. **Gotchas → `DECISIONS.md`** (racine du projet, versionné) : tout fait durable et réutilisable
+   (une API qui refuse un format, un modèle déprécié, un « pourquoi » d'architecture). C'est le
+   système de référence — pas la mémoire agent (qui n'est qu'un **cache** et ne doit jamais être
+   l'unique domicile d'un fait porteur).
+2. **Statut** : cocher les items dans le chantier ; passer `status: done` quand tout est clos.
+3. **Archivage** : un chantier terminé sort du chemin chaud → `roadmap/archive/` (git en garde
+   l'historique). On ne re-lit pas à chaque session des chantiers finis.
+4. **Mémoire agent** : y écrire au plus un **pointeur** (« gotchas DeepInfra → DECISIONS.md »).
 
----
-
-## Étape 1 — Lire le contexte
-
-1. `SESSION_BRIEF.md` du projet
-2. `TICKETS.md` (vue globale)
-3. Chaque ticket listé dans le brief : lire le `.md` complet + sa spec `{id}-spec-*.md` si présente
-4. Chaque direction roadmap référencée : lire le(s) fichier(s)
-
-Puis classer chaque ticket **simple / complexe** depuis sa description (sans lire de code).
-
----
-
-## Étape 2 — Clarifications (tickets `needs_clarification: true`)
-
-Pour ces tickets, **Opus** (pas un worker) pose ses questions **directement dans le terminal**,
-attend les réponses de l'utilisateur, puis implémente dans la même passe. Ne rien écrire dans le
-fichier avant d'avoir la réponse — on évite ainsi le double aller-retour et les relectures de code.
-
-Si l'utilisateur n'est pas disponible : passer `status: blocked`, noter la question en une ligne
-dans `### Notes d'implémentation`, et passer au ticket suivant.
+> Le `SESSION.md` (ordre de sprint) n'accumule **rien** : il est écrasé à la génération suivante.
+> Le statut vit dans le chantier ; l'historique vit dans git + `DECISIONS.md`. Le chemin chaud
+> d'une session = chantiers **actifs** + tickets **ouverts** seulement.
 
 ---
 
-## Étape 3 — Traiter les tickets (par priorité décroissante)
-
-Pour chaque ticket :
-
-**Complexe** → Opus l'implémente lui-même, vérifie (tests / run), ferme.
-
-**Simple** → déléguer à un worker Sonnet (contrat ci-dessus). Puis :
-1. Lire le compte-rendu.
-2. Comparer points 1 et 5 à la spec du ticket.
-3. Conforme et point 4 crédible → fermer. Écart, ou vérification faible → lire le code de ce
-   ticket, corriger si besoin, fermer.
-
-Lancer les workers de tickets simples **indépendants** en parallèle (fichiers disjoints).
-
-**Escalade** — si un ticket « simple » se révèle demander un choix d'architecture ou > 2 questions :
-ne pas forcer. Créer une note dans `roadmap/`, passer le ticket `blocked` avec un pointeur dans
-`### Notes d'implémentation`, continuer.
-
----
-
-## Étape 4 — Roadmap (si le brief le demande)
-
-**a. Direction déjà mûre → tickets.** Analyser le code pertinent + les tickets existants (éviter
-les doublons), puis créer les tickets dérivés dans `feedback-tickets/` au format standard
-(assigner `milestone` et `priority`). Lister les IDs créés dans le fichier roadmap concerné.
-
-**b. Direction à défricher.** Rédiger / compléter le doc dans `roadmap/`. Ne pas implémenter :
-une direction génère d'abord des tickets.
-
----
-
-## Fermeture d'un ticket
-
-Frontmatter :
-```yaml
-status: closed
-closed_at: {datetime ISO 8601 UTC}
-```
-
-Ajouter dans `### Notes d'implémentation` un **compte-rendu vérifié de 2-3 lignes** (ce qui a été
-fait + comment ça a été vérifié) — pour que l'utilisateur suive sans lire le code.
-
-Régénérer `TICKETS.md` : automatique si le projet a un endpoint qui le régénère (le prochain appel
-API le fera) ; sinon le régénérer à la main au format existant (tableaux par type, open/closed).
-
----
-
-## Étape 5 — Résumé de session
-
-Cocher les items traités dans `SESSION_BRIEF.md` et remplir :
-
-```markdown
-## Résumé de session — {YYYY-MM-DD HH:MM}
-
-✅ Implémentés (Opus) : #{id}, #{id}
-🤖 Implémentés (worker Sonnet, vérifiés) : #{id}, #{id}
-🔎 Écarts corrigés après vérification : #{id}
-⏸ Bloqués (attente utilisateur) : #{id}
-🗂 Tickets créés depuis roadmap : #{id}, #{id}
-```
-
-Ne pas supprimer `SESSION_BRIEF.md` — l'utilisateur crée le suivant depuis le hub.
-
----
-
-## Étape 6 — Déploiement
+## Déploiement
 
 Si la session a produit du code déployable, appliquer **`DEPLOY.md`** : un seul appel
 `infrastructure/deploy.sh <app> -m "<msg>" -f "<fichiers>" [-e KEY=VALUE …]` (option 1
@@ -268,20 +257,20 @@ déterministe), fallback sous-agent Sonnet si échec. Garde les logs de build ho
 
 ---
 
-## Règles de décision (résumé)
-
-- **Déléguer à un worker** : portée locale, description claire, pas de choix d'architecture.
-- **Faire soi-même (Opus)** : couplage multi-fichiers, ambiguïté de jugement, `needs_clarification`,
-  sécurité / données sensibles.
-- **Questionner en direct** : `needs_clarification: true`, ou détail bloquant absent de la description.
-- **Escalader en roadmap** : choix d'architecture structurant, ou > 2 questions nécessaires.
-- **Vérifier avant de fermer** : tests / run pour la correctness ; compte-rendu pour le contre-sens.
-
----
-
 ## Effort / modèles
 
 - Session : **Opus** par défaut.
-- Worker tickets simples : **Sonnet 4.6** (`model: sonnet`). `Haiku` réservé au trivial (libellé, config).
-- Sur un ticket complexe traité par Opus, laisser l'effort par défaut (élevé) ; réserver l'effort
-  maximal aux tickets architecturaux.
+- Worker délégué : **Sonnet 4.6** (`model: sonnet`). `Haiku` réservé au trivial (libellé, config).
+- Ticket complexe traité par Opus : effort par défaut (élevé) ; effort maximal réservé aux choix
+  architecturaux.
+
+---
+
+## Règles de décision (résumé)
+
+- **Ouvrir la vanne direction** : ambiguïté, choix structurant, sécurité → chantier à valider.
+- **Ouvrir la vanne délégation** : plusieurs morceaux ET le plancher est franchi.
+- **Segmenter les sprints** par **contexte partagé**, pas par taille ni thème.
+- **Déléguer** seulement si ça coûte **moins** qu'inline ; au plus à la granularité du sprint.
+- **Vérifier avant de fermer** : tests / run pour la correctness ; compte-rendu pour le contre-sens.
+- **À la clôture** : gotcha → `DECISIONS.md`, chantier fini → `archive/`, mémoire = pointeur.
