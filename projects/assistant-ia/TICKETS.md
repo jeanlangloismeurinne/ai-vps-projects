@@ -1,6 +1,6 @@
 # TICKETS — assistant-ia
 
-> Généré automatiquement le 24/08/2026 11:53. **Lire au début de chaque session.**
+> Généré automatiquement le 24/08/2026 12:51. **Lire au début de chaque session.**
 
 ## Résumé
 
@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 🐛 Bugs | 0 | 0 | 0 |
 | 🔴 Erreurs | 0 | 0 | 0 |
-| ✨ Features | 6 | 0 | 14 |
+| ✨ Features | 8 | 0 | 14 |
 | 💡 Suggestions | 0 | 0 | 11 |
 
 ## 🔓 Ouverts
@@ -16,6 +16,8 @@
 | ID | Sous-projet | Date | Priorité | Description |
 |---|---|---|---|---|
 | `1787211986144` | journal | 20/08/2026 07:46 | high | Je veux pouvoir écrire en langage naturel dans le fil journal des idees ou appre |
+| `1787575860968` | général | 24/08/2026 12:51 | medium | Je veux que l'agent ait accès à internet si ce n'est pas déjà le cas pour répond |
+| `1787575776445` | général | 24/08/2026 12:49 | medium | J'aimerais que l'agent AI VPS JLM sur Slack affiche ... quand il est en attente  |
 | `1787563980743` | général | 24/08/2026 09:33 | medium | Je veux que l'utilisateur puisse programmer l'envoi de rappels ou messages en ut |
 | `1787559677491` | général | 24/08/2026 08:21 | medium | **Connecteurs** alimentant `db_knowledge_federation` (dépend de #1787559677490). |
 | `1787559677490` | général | 24/08/2026 08:21 | medium | Couche de **recherche fédérée** (`KNOWLEDGE_ARCHITECTURE.md` §4), demandée par l |
