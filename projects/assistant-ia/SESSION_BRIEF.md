@@ -135,6 +135,25 @@ sur `json_object`.
 container, la clé n'est pas sur l'hôte). ⚠️ `checks/check_kb_export.py` échoue dans le container
 (`parents[3]` suppose l'arborescence du repo) — pré-existant, sans lien avec cette session.
 
+⚖️ **Arbitrages rendus en séance**
+
+- **Fédération KB : on ne construit pas.** `1787559677490` et `1787559677491` fermés
+  `wont-do-for-now`. La charte `KNOWLEDGE_ARCHITECTURE.md` §4 (transverse) l'emporte sur la
+  roadmap journal §5 (un seul projet) ; aucune requête multi-source n'a été formulée, le besoin
+  était supposé. L'export « enveloppe commune » étant livré, la décision est réversible.
+  Roadmap journal §5 marquée caduque avec la condition de réouverture, pour ne pas rejouer
+  ce débat dans six mois.
+- **Accès web (`1787575860968`)** : la contrainte « éviter Exa pour préserver les crédits »
+  n'a pas à être arbitrée — `websearch.py` de portfolio-tracker est agnostique du fournisseur
+  (`SEARCH_PROVIDER=exa|serper|none`), assistant-ia aura sa propre clé quoi qu'il arrive.
+  SearXNG reste écarté (résultats vides silencieux depuis une IP captchaée, déjà constaté).
+  ⚠️ Le vrai sujet est le **tool-calling** : l'agent n'a aucun outil en v1 *par conception*
+  (modèle de sécurité §5). Ce ticket demande une **roadmap**, pas une implémentation directe.
+
+✨ **Livré aussi** : `1787575776445` — indicateur « je réfléchis… » posté avant l'appel modèle
+puis remplacé par la réponse (`chat.update`), un seul message dans le fil. Vérifié de bout en
+bout contre Slack et DeepInfra, état Slack et base restaurés après le test.
+
 📋 **Reste côté utilisateur** : générer une clé DeepInfra propre à assistant-ia (celle de
 portfolio-tracker est toujours empruntée).
 
@@ -144,10 +163,8 @@ portfolio-tracker est toujours empruntée).
    et corrigé. Reste **un** aller-retour non exercé : consigne → `@update` → approbation d'un
    diff, qui passe par un vrai clic dans Slack et ne peut pas être simulé hors interface.
    `AGENT_APPROVERS` étant désormais renseignée, c'est faisable dès le prochain message.
-2. Trancher `1787559677490` (`needs_clarification`) : roadmap journal §5 dit « fédération construite
-   dès maintenant », `KNOWLEDGE_ARCHITECTURE.md` §4 dit « rien tant que le besoin n'est pas là ».
-3. Puis `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`, v2).
-4. Deux tickets utilisateur arrivés le 24/08 à 12:49 et 12:51, non traités :
-   `1787575776445` (indicateur « en train de réfléchir » pendant l'attente DeepInfra) et
-   `1787575860968` (accès web à l'agent — sans Exa si possible, pour préserver les crédits
-   du projet portfolio-tracker).
+2. ~~Trancher `1787559677490`~~ — **tranché** : fermé `wont-do-for-now` avec `491` (voir ci-dessus).
+3. **Roadmap pour `1787575860968`** (accès web) : c'est le chantier suivant le plus lourd, il
+   touche le modèle de sécurité §5 (donner un premier outil à l'agent). Analyse préalable déjà
+   écrite dans le ticket — partir de là, pas de zéro.
+4. Puis `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`, v2).
