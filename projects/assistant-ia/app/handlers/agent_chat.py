@@ -7,8 +7,10 @@ Branches 3 et 5 du dispatcher Slack : chantier `agent-consignes`.
 import logging
 import re
 
-from app.services import agent_conversations, agent_doc, deepinfra_client
+from app.services import agent_conversations, agent_doc
 from app.services.agent_instructions import enqueue_instruction
+from app.services.agent_tools import loop
+from app.services.agent_tools.manifest import TurnState
 from app.services.slack_client import post_text, update_text
 from app.handlers.agent_synthesis_stub import run_synthesis
 from app.config import settings
@@ -131,11 +133,17 @@ async def handle_conversation_turn(event: dict) -> None:
       n'est concaténé dedans.
     - Le message de l'utilisateur et l'historique partent en rôles `user`/`assistant`, jamais en
       rôle `system` : ce sont des **données**, pas des instructions.
-    - L'agent n'a **aucun outil** en v1. Le refus d'exécuter est porté par le doc système lui-même
-      (il oriente vers `/feature`), pas par du code ici — c'est le doc qui est versionné et audité.
+    - Les outils viennent **exclusivement** de `agent_tools.registry`, jamais du doc système
+      (roadmap agent-outillage §3.1). Le doc peut dire *quand* utiliser un outil ; il ne peut pas
+      en faire exister un.
 
     Le doc actif est relu à **chaque** tour : approuver un diff change le comportement au tour
     suivant, sans redémarrage.
+
+    Depuis le chantier `agent-outillage`, ce tour n'est plus un simple aller-retour : il passe par
+    une boucle bornée qui peut exécuter des outils (`agent_tools.loop`). Ce qui protège n'est plus
+    l'absence d'outil, mais la frontière modèle / code de chaque outil et le régime de confirmation
+    dérivé de son manifeste.
     """
     channel = event.get("channel", settings.ASSISTANT_CHANNEL_ID)
     slack_ts = event.get("ts")
@@ -184,12 +192,15 @@ async def handle_conversation_turn(event: dict) -> None:
         messages.extend(history)
         messages.append({"role": "user", "content": text})
 
-        reply = await deepinfra_client.chat(
-            messages=messages,
-            model=settings.DEEPINFRA_MODEL_CHAT,
-            temperature=0.3,
+        turn = TurnState(
+            channel_id=channel,
+            user_id=user_id,
+            slack_ts=slack_ts,
+            thread_ts=slack_ts,
+            doc_version=doc.version,
         )
-        reply = (reply or "").strip() or "Je n'ai pas de réponse à formuler."
+        outcome = await loop.run_turn(messages, turn)
+        reply = outcome.text.strip() or "Je n'ai pas de réponse à formuler."
 
         # Les deux tours ne sont enregistrés qu'après une réponse obtenue : un appel en échec ne
         # doit pas laisser un tour `user` orphelin qui polluerait l'historique du tour suivant.
@@ -204,8 +215,10 @@ async def handle_conversation_turn(event: dict) -> None:
 
         await respond(reply)
         logger.info(
-            "agent_chat: tour traité (ts=%s user=%s doc_version=%s len_reply=%d)",
+            "agent_chat: tour traité (ts=%s user=%s doc_version=%s len_reply=%d "
+            "iterations=%d outils=%d taint=%s exhausted=%s)",
             slack_ts, user_id, doc.version, len(reply),
+            outcome.iterations, outcome.tool_calls_made, turn.taint_sources, outcome.exhausted,
         )
 
     except Exception as exc:

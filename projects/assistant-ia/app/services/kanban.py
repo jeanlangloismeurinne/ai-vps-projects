@@ -57,6 +57,18 @@ async def get_column_by_name(board_id: str, name: str) -> asyncpg.Record | None:
     )
 
 
+async def ensure_column(board_id: str, name: str) -> asyncpg.Record:
+    """Renvoie la colonne `name` du board, en la créant à la fin si elle n'existe pas."""
+    col = await get_column_by_name(board_id, name)
+    if col:
+        return col
+    pool = await get_pool()
+    pos = await pool.fetchval(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM columns WHERE board_id = $1", board_id
+    )
+    return await create_column(board_id, name, pos)
+
+
 # ─── Cards ───────────────────────────────────────────────────────────────────
 
 async def list_cards(column_id: str) -> list[asyncpg.Record]:
@@ -102,7 +114,10 @@ async def get_card(card_id: str) -> asyncpg.Record | None:
 async def update_card(card_id: str, **fields) -> asyncpg.Record | None:
     if not fields:
         return await get_card(card_id)
-    allowed = {"title", "description", "due_date", "column_id", "position"}
+    # `reminder_sent_at` est modifiable pour permettre de reprogrammer un rappel : le remettre à
+    # NULL en même temps que `due_date` est ce qui fait repartir la notification (édition depuis
+    # Slack, #1787579840505).
+    allowed = {"title", "description", "due_date", "column_id", "position", "reminder_sent_at"}
     fields = {k: v for k, v in fields.items() if k in allowed}
     fields["updated_at"] = datetime.utcnow()
     set_clause = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
@@ -153,17 +168,48 @@ async def mark_reminder_sent(card_id: str) -> None:
     )
 
 
+async def claim_reminder(card_id: str) -> bool:
+    """Réserve l'envoi du rappel d'une carte. True si l'appelant a gagné la réservation.
+
+    Le `reminder_sent_at IS NULL` dans le WHERE rend l'opération atomique : deux ticks qui se
+    chevauchent (job lent, redéploiement) ne peuvent pas envoyer deux fois le même rappel.
+    """
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "UPDATE cards SET reminder_sent_at = now() "
+        "WHERE id = $1 AND reminder_sent_at IS NULL RETURNING id",
+        card_id,
+    )
+    return row is not None
+
+
+async def release_reminder(card_id: str) -> None:
+    """Annule une réservation dont l'envoi a échoué, pour que le tick suivant réessaie."""
+    pool = await get_pool()
+    await pool.execute("UPDATE cards SET reminder_sent_at = NULL WHERE id = $1", card_id)
+
+
 async def get_cards_due_now() -> list[asyncpg.Record]:
-    """Cartes dont due_date est dans la minute courante et reminder_sent_at IS NULL."""
+    """Cartes échues (`due_date <= now()`) dont le rappel n'a pas encore été envoyé.
+
+    La version précédente ne sélectionnait que la minute courante. Un redémarrage de container,
+    un déploiement ou un job lent pendant cette minute et le rappel était perdu définitivement
+    et sans trace (#1787579840500) — or les déploiements sont fréquents sur ce projet.
+
+    Le tri est du plus ancien au plus récent : au redémarrage, l'arriéré part dans l'ordre
+    chronologique. La borne de rattrapage (ne pas réveiller des rappels vieux de plusieurs jours)
+    est appliquée par `reminder.send_due_reminders`, là où la décision d'envoyer se prend.
+    """
     pool = await get_pool()
     return await pool.fetch(
         "SELECT c.*, col.name AS column_name, b.name AS board_name "
         "FROM cards c "
         "JOIN columns col ON col.id = c.column_id "
         "JOIN boards b ON b.id = col.board_id "
-        "WHERE c.due_date >= date_trunc('minute', now()) "
-        "  AND c.due_date < date_trunc('minute', now()) + interval '1 minute' "
-        "  AND c.reminder_sent_at IS NULL"
+        "WHERE c.due_date IS NOT NULL "
+        "  AND c.due_date <= now() "
+        "  AND c.reminder_sent_at IS NULL "
+        "ORDER BY c.due_date"
     )
 
 

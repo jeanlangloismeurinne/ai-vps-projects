@@ -108,6 +108,53 @@ dans l'ordre alphabétique (001, 002, 003…). Toutes les instructions sont idem
 
 Pour ajouter une migration : créer `migrations/003_xxx.sql`, ne pas modifier les fichiers existants.
 
+Dernière en date : `015_agent_tool_calls.sql` — piste d'audit des appels d'outils de l'agent
+(`taint_sources` en tableau JSONB, pas un booléen ; `doc_version` pour joindre à `agent_system_doc`).
+
+## Agent conversationnel — outillage (`app/services/agent_tools/`)
+
+Roadmap : `roadmap/agent-outillage.md` (v1 livrée le 2026-08-24, tickets 0 à 6).
+
+**Règle non négociable** : la liste d'outils exposée au modèle est construite **exclusivement**
+par `agent_tools/registry.py`. Aucun chemin de code ne dérive un outil du `agent_system_doc`. Le
+doc système peut dire *quand* utiliser un outil ; il ne peut pas en faire exister un. Vérifié par
+`checks/check_agent_tools.py` §A (doc empoisonné → liste d'outils inchangée).
+
+| Fichier | Rôle |
+|---|---|
+| `manifest.py` | `ToolManifest` (effect, taints_context, reversible, visibility, rate_limit, egress) + `TurnState` |
+| `policy.py` | **Fonction pure** : manifeste + état du tour → `EXECUTE` / `CONFIRM_FIRST` / `REFUSE` |
+| `base.py` | `ToolSpec`, `ToolContext`, `PreparedCall`, `ToolResult`, `ToolError` |
+| `registry.py` | Seule source des outils. `tools_json()` **ne prend aucun argument**, par construction |
+| `loop.py` | Boucle bornée (8 itérations, budget mur/tokens, troncature, délimiteur de taint) |
+| `audit.py` | Écritures dans `agent_tool_calls` — best-effort, ne fait jamais perdre une réponse |
+| `create_reminder.py` | Outil d'écriture → carte Kanban dans la colonne `Rappels` |
+| `web_search.py` | Outil de lecture (Exa/Serper) — **taintant**. Pas de `fetch_url` (SSRF, §4 roadmap) |
+
+**Pour ajouter un outil** : écrire un module avec `MANIFEST` + `_execute` (+ `_resolve` si le code
+doit décider quelque chose que le modèle propose), exporter un `SPEC`, l'ajouter à `_ALL` dans
+`registry.py`. Le régime de confirmation en découle — ne pas le coder à la main.
+
+**Régime de confirmation** (dérivé, jamais écrit outil par outil) : confirmation **avant** écriture
+si `effect == outbound` **ou** `reversible == false` **ou** `visibility == false` **ou** le contexte
+porte un *taint* (donnée non tapée par l'utilisateur : web, fichier, message tiers). Sinon exécution
+immédiate + confirmation **a posteriori** avec boutons *Annuler* / *Modifier*. Les lectures ne
+passent jamais par une confirmation.
+
+**Un échec d'outil est une erreur explicite en `role=tool`, jamais un résultat vide** — leçon
+SearXNG : un résultat vide silencieux fait conclure le modèle à l'absence de source.
+
+Boutons/modales dans `app/handlers/agent_tool_actions.py`, câblés dans `slack_app.py` :
+`agent_tool_confirm`, `agent_tool_cancel`, `agent_reminder_cancel`, `agent_reminder_edit`.
+Une confirmation en attente **est** la ligne d'audit (`verdict='confirmation_requise'`) ; le payload
+résolu y est figé, TTL 1 h, double-clic inerte.
+
+Variables d'environnement associées :
+- `AGENT_TIMEZONE` — défaut `Europe/Paris`. Résolution **et** affichage des dates de rappel.
+- `SEARCH_PROVIDER` — `exa` | `serper` | `none` (défaut). À `none`, `web_search` **n'est pas
+  exposé** au modèle.
+- `EXA_API_KEY` / `SERPER_API_KEY` — clé propre à assistant-ia, jamais partagée avec un autre projet.
+
 ## Journal — structure des routes
 
 | Fichier | Rôle |

@@ -1,12 +1,12 @@
 # TICKETS — assistant-ia
 
-> Généré automatiquement le 24/08/2026 14:00. **Lire au début de chaque session.**
+> Généré automatiquement le 24/08/2026 18:37. **Lire au début de chaque session.**
 
 ## Résumé
 
 | Type | Ouverts | Bloqués | Fermés |
 |---|---|---|---|
-| 🐛 Bugs | 1 | 0 | 0 |
+| 🐛 Bugs | 2 | 0 | 0 |
 | 🔴 Erreurs | 0 | 0 | 0 |
 | ✨ Features | 10 | 0 | 18 |
 | 💡 Suggestions | 0 | 0 | 11 |
@@ -21,6 +21,7 @@
 | `1787579840502` | général | 24/08/2026 13:57 | high | Ajouter le support du tool-calling à `app/services/deepinfra_client.py` (qui exp |
 | `1787579840501` | général | 24/08/2026 13:57 | high | **Ticket bloquant — à faire en premier.** Vérifier, **par un appel réel à DeepIn |
 | `1787579840500` | général | 24/08/2026 13:57 | high | Deux défauts de la brique de rappel existante, trouvés en préparant `roadmap/age |
+| `1787596637653` | général | 24/08/2026 18:37 | medium | Regarde les dernières conversations sur Slack. Est-ce que l’agent IA a stocké le |
 | `1787579840506` | général | 24/08/2026 13:57 | medium | Outils `web_search` et `fetch_url` de classe `read_external`. C'est le livrable  |
 | `1787575860968` | général | 24/08/2026 12:51 | medium | Je veux que l'agent ait accès à internet si ce n'est pas déjà le cas pour répond |
 | `1787563980743` | général | 24/08/2026 09:33 | medium | Je veux que l'utilisateur puisse programmer l'envoi de rappels ou messages en ut |

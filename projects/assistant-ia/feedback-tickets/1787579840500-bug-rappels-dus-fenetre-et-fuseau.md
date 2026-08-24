@@ -1,12 +1,13 @@
 ---
 id: 1787579840500
 type: bug
-status: open
+status: closed
 priority: high
 date: 2026-08-24T13:57:20+00:00
 project: assistant-ia
 url: 
 milestone: agent-outillage
+closed_at: 2026-08-24T19:12:25+00:00
 ---
 
 ## 🐛 Bug

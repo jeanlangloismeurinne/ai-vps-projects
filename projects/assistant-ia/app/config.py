@@ -52,6 +52,23 @@ class Settings(BaseSettings):
     # Vide = personne : le channel privé ne suffit pas comme autorisation (#1787559677496).
     AGENT_APPROVERS: str = ""
 
+    # Recherche web de l'agent (#1787579840506). Le backend est un réglage d'environnement, pas
+    # une décision d'architecture : le contrat de sortie est identique pour Exa et Serper.
+    # Vérifié le 2026-08-24 : DeepInfra n'héberge **pas** d'outil de recherche côté serveur — leur
+    # documentation renvoie à un outil client (Tavily via LangChain). Donc clé propre à ce projet ;
+    # les crédits ne sont jamais partagés avec portfolio-tracker.
+    # Défaut `none` : sans clé, `web_search` n'est pas exposé au modèle du tout — un outil câblé
+    # sur un backend absent vaut moins que pas d'outil.
+    SEARCH_PROVIDER: str = "none"          # exa | serper | none
+    EXA_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
+    SEARCH_TIMEOUT_S: int = 30
+
+    # Fuseau de l'utilisateur (#1787579840500). Le scheduler tourne en UTC : sans ce réglage,
+    # « demain 9h » est ambigu et tomberait à 11h en heure d'été. Sert à la fois à *résoudre*
+    # les expressions de date et à les *afficher* dans Slack.
+    AGENT_TIMEZONE: str = "Europe/Paris"
+
     # Feature 1 — Journal
     SLACK_CHANNEL_JOURNAL: str = "#journal"
 

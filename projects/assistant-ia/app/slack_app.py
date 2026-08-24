@@ -4,6 +4,7 @@ Gère : messages journal (thread replies) + slash commands kanban.
 HTTP Events API = Slack envoie des POST vers /slack/events (plus fiable que Socket Mode).
 """
 import asyncio
+import json
 import logging
 import re
 from datetime import datetime, timezone, timedelta
@@ -537,6 +538,107 @@ async def action_agent_doc_reject(ack, body, client, **_):
 async def action_agent_doc_edit(ack, **_):
     # Bouton `url` : Slack ouvre la page lui-même, il faut juste acquitter pour éviter l'alerte.
     await ack()
+
+
+_agent_tool_tasks: set = set()
+
+
+async def _run_agent_tool_action(client, body, coro_factory) -> None:
+    """Exécute une décision d'outil puis réécrit le message d'origine.
+
+    Réécrire fait disparaître les boutons : un second clic devient impossible côté UI. La
+    garantie réelle reste côté base (`resolved_at IS NULL` dans `audit.settle`), l'UI n'en est
+    que le reflet.
+    """
+    try:
+        text, blocks = await coro_factory()
+    except Exception:
+        logger.exception("agent_tools: traitement du clic en échec")
+        text, blocks = ":warning: Le traitement de ce clic a échoué.", []
+    try:
+        await client.chat_update(
+            channel=body["channel"]["id"],
+            ts=body["message"]["ts"],
+            text=text,
+            blocks=blocks or [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
+        )
+    except Exception:
+        logger.exception("agent_tools: chat_update échoué après clic")
+
+
+def _dispatch_agent_tool_action(client, body, coro_factory) -> None:
+    task = asyncio.create_task(_run_agent_tool_action(client, body, coro_factory))
+    _agent_tool_tasks.add(task)
+    task.add_done_callback(_agent_tool_tasks.discard)
+
+
+@bolt.action("agent_tool_confirm")
+async def action_agent_tool_confirm(ack, body, client, **_):
+    # Ack immédiat (contrainte Slack des 3 s) : l'exécution part en tâche de fond, comme l'import
+    # bancaire. Un outil qui écrit en base peut dépasser les 3 s.
+    await ack()
+    from app.handlers import agent_tool_actions as ata
+    call_id = body["actions"][0]["value"]
+    user_id = (body.get("user") or {}).get("id")
+    _dispatch_agent_tool_action(client, body, lambda: ata.confirm_pending(call_id, user_id))
+
+
+@bolt.action("agent_tool_cancel")
+async def action_agent_tool_cancel(ack, body, client, **_):
+    await ack()
+    from app.handlers import agent_tool_actions as ata
+    call_id = body["actions"][0]["value"]
+    user_id = (body.get("user") or {}).get("id")
+    _dispatch_agent_tool_action(client, body, lambda: ata.cancel_pending(call_id, user_id))
+
+
+@bolt.action("agent_reminder_cancel")
+async def action_agent_reminder_cancel(ack, body, client, **_):
+    await ack()
+    from app.handlers import agent_tool_actions as ata
+    card_id = body["actions"][0]["value"]
+    user_id = (body.get("user") or {}).get("id")
+    _dispatch_agent_tool_action(client, body, lambda: ata.cancel_reminder(card_id, user_id))
+
+
+@bolt.action("agent_reminder_edit")
+async def action_agent_reminder_edit(ack, body, client, **_):
+    await ack()
+    from app.handlers import agent_tool_actions as ata
+    card_id = body["actions"][0]["value"]
+    card = await kanban_svc.get_card(card_id)
+    if not card:
+        return
+    try:
+        await client.views_open(
+            trigger_id=body["trigger_id"],
+            view=ata.edit_modal_view(card, body["message"]["ts"], body["channel"]["id"]),
+        )
+    except Exception:
+        logger.exception("agent_reminder_edit: views_open échoué")
+
+
+@bolt.view("agent_reminder_edit_modal")
+async def view_agent_reminder_edit(ack, view, client, **_):
+    await ack()
+    from app.handlers import agent_tool_actions as ata
+    meta = json.loads(view["private_metadata"])
+    values = view["state"]["values"]
+    text, blocks = await ata.apply_edit(
+        meta["card_id"],
+        values["title"]["title"]["value"],
+        values["date"]["date"]["selected_date"],
+        values["time"]["time"]["selected_time"],
+    )
+    try:
+        # On réécrit le message d'origine plutôt que d'en poster un nouveau : le fil garde une
+        # seule ligne par rappel, à jour.
+        await client.chat_update(
+            channel=meta["channel"], ts=meta["ts"], text=text,
+            blocks=blocks or [{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
+        )
+    except Exception:
+        logger.exception("agent_reminder_edit: chat_update échoué après édition")
 
 
 @bolt.view("bank_vac_modal")

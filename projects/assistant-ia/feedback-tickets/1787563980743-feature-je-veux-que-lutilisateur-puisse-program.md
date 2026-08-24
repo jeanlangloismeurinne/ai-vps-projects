@@ -1,12 +1,13 @@
 ---
 id: 1787563980743
 type: feature
-status: open
+status: closed
 priority: medium
 date: 2026-08-24T09:33:00.743346
 project: assistant-ia
 url: 
 milestone: agent-outillage
+closed_at: 2026-08-24T19:12:25+00:00
 ---
 
 ## ✨ Feature

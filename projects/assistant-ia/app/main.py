@@ -155,6 +155,15 @@ _LANDING_HTML = """<!DOCTYPE html>
         <tr><td><code>@update</code></td><td>Synthétise les consignes en attente et propose un diff</td></tr>
       </tbody>
     </table>
+    <p class="desc">
+      Depuis le chantier <strong>outillage</strong>, l'agent ne fait plus que répondre : il peut
+      <strong>agir</strong>. Demande-lui « rappelle-moi d'appeler le garage jeudi 18h » et il crée
+      le rappel dans le Kanban, en affichant la date qu'il a comprise avec des boutons
+      <em>Annuler</em> et <em>Modifier</em>. La liste des outils vient <strong>exclusivement du
+      code</strong> : le document système peut dire <em>quand</em> s'en servir, jamais en faire
+      apparaître un nouveau. Toute action déclenchée après lecture d'une source externe passe
+      d'abord par ta confirmation, et chaque appel d'outil est tracé.
+    </p>
     <div class="note">Le diff est posté dans <code>#feedback-assistant</code> avec trois boutons :
       Approuver, Rejeter, Éditer. Chaque version est conservée, chaque décision est tracée dans un
       journal d'audit, et n'importe quelle version antérieure peut être réactivée depuis la page

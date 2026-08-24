@@ -1,12 +1,13 @@
 ---
 id: 1787579840502
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T13:57:20+00:00
 project: assistant-ia
 url: 
 milestone: agent-outillage
+closed_at: 2026-08-24T19:12:25+00:00
 ---
 
 ## ✨ Feature
@@ -34,11 +35,14 @@ Portage, pas écriture — les deux briques existent en production :
 
 Comme pour le client DeepInfra initial : **copie adaptée, pas d'import inter-projets**.
 
-### Bornes obligatoires (roadmap §3.4)
+### Bornes obligatoires (roadmap §3.5)
 
-- `max_iterations` (défaut **4**). À l'épuisement alors que le modèle appelle encore des outils :
+- `max_iterations` (défaut **8**, révisé le 2026-08-24 — 4 était calibré pour deux outils et
+  étrangle la composition dès 5-6). À l'épuisement alors que le modèle appelle encore des outils :
   sortie **explicite et tracée**, jamais un abandon silencieux (`runner.py` a déjà un flag
   `exhausted` — le reprendre).
+- Budget de temps mural et de tokens en plus du compteur d'itérations : c'est ce qui borne
+  réellement une boucle qui part en vrille, le compteur seul ne suffit pas.
 - Plafond de caractères sur tout résultat d'outil réinjecté dans le contexte.
 - Un échec d'outil est réinjecté comme `{"error": …}` en `role=tool` — **jamais** un résultat vide.
   C'est la leçon SearXNG (roadmap §5) et elle vaut pour tous les outils, pas seulement la recherche.

@@ -7,6 +7,7 @@ Porté depuis projects/portfolio-tracker/backend/app/agents/providers/deepinfra_
 Interface publique :
   - chat(messages, model, temperature, max_tokens) → str
   - chat_json(messages, model, schema) → dict
+  - chat_with_tools(messages, model, tools) → ToolCompletion
 
 Règles de robustesse :
   - Timeout explicite (TIMEOUT_S).
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import httpx
@@ -173,6 +175,102 @@ async def chat(
     )
 
     return content
+
+
+@dataclass
+class ToolCompletion:
+    """Un tour de modèle pouvant porter des appels d'outils.
+
+    `content` et `tool_calls` peuvent être renseignés **en même temps** — vérifié contre l'API
+    réelle : DeepSeek-V4-Flash produit « Je vais vérifier la météo à Lyon » *et* un `tool_calls`
+    dans la même réponse (`checks/check_tools_live.py`). Ne jamais supposer l'un exclusif de l'autre.
+    """
+    content: str
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    tokens_in: int = 0
+    tokens_out: int = 0
+    finish_reason: str = ""
+
+    def as_assistant_message(self) -> dict[str, Any]:
+        """Message à réinjecter dans la conversation avant les résultats d'outils.
+
+        Les `tool_calls` doivent être renvoyés **verbatim** : c'est leur `id` qui rattache chaque
+        `role=tool` à sa demande.
+        """
+        msg: dict[str, Any] = {"role": "assistant", "content": self.content or ""}
+        if self.tool_calls:
+            msg["tool_calls"] = self.tool_calls
+        return msg
+
+
+class ToolsUnsupported(RuntimeError):
+    """Le modèle a refusé le paramètre `tools` (4xx).
+
+    Erreur dédiée et jamais rattrapée en silence : le précédent `json_schema` → HTTP 405 sur
+    Llama 3.1 8B-Turbo est passé inaperçu précisément parce que le code retombait tout seul sur
+    un mode dégradé. Ici, un modèle sans `tools` est un changement de roadmap, pas un fallback.
+    """
+
+
+async def chat_with_tools(
+    messages: list[dict[str, Any]],
+    model: str,
+    tools: list[dict[str, Any]],
+    temperature: float = 0.3,
+    max_tokens: Optional[int] = None,
+    timeout: int = TIMEOUT_S,
+    tool_choice: str = "auto",
+) -> ToolCompletion:
+    """Un appel de modèle avec outils déclarés (#1787579840502).
+
+    Args:
+        messages: Conversation OpenAI-compat, `role=tool` compris.
+        model: Identifiant du modèle DeepInfra.
+        tools: `tools_json` — construit **exclusivement** par `agent_tools.registry`, jamais
+            dérivé du doc système (roadmap agent-outillage §3.1).
+        tool_choice: `auto` (défaut), `none`, ou `required`.
+
+    Returns:
+        ToolCompletion — texte et/ou appels d'outils du tour.
+
+    Raises:
+        ToolsUnsupported: le modèle refuse `tools` (4xx).
+        RuntimeError: clé manquante, timeout, ou erreur HTTP non récupérable.
+    """
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+    }
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = tool_choice
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
+
+    try:
+        data = await _post_with_retry(payload, timeout=timeout)
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if 400 <= status < 500 and tools:
+            raise ToolsUnsupported(
+                f"DeepInfra a refusé `tools` pour {model} (HTTP {status}). "
+                f"Relance `checks/check_tools_live.py` dans le container et, si le refus est "
+                f"confirmé, change de modèle — ne contourne pas par un mode dégradé."
+            ) from exc
+        raise RuntimeError(f"DeepInfra chat_with_tools : erreur HTTP {status}.") from exc
+
+    choice = (data.get("choices") or [{}])[0]
+    msg = choice.get("message") or {}
+    usage = data.get("usage") or {}
+
+    return ToolCompletion(
+        content=msg.get("content") or "",
+        tool_calls=list(msg.get("tool_calls") or []),
+        tokens_in=int(usage.get("prompt_tokens") or 0),
+        tokens_out=int(usage.get("completion_tokens") or 0),
+        finish_reason=choice.get("finish_reason") or "",
+    )
 
 
 async def chat_json(

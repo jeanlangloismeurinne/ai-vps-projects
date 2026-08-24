@@ -1,11 +1,12 @@
 ---
 id: 1787575860968
 type: feature
-status: open
+status: closed
 priority: medium
 date: 2026-08-24T12:51:00.968571
 project: assistant-ia
 url: 
+closed_at: 2026-08-24T19:12:25+00:00
 ---
 
 ## ✨ Feature
@@ -55,9 +56,15 @@ tool-calling et son modèle d'autorisation sont le vrai sujet.
 - **Contrainte nouvelle qui sort de l'analyse** : la lecture web et l'écriture en base sont deux
   risques *orthogonaux*, et c'est leur **composition** qui est dangereuse (une page récupérée par
   `fetch_url` peut contenir une instruction d'écriture, que le modèle ne distingue pas d'une demande
-  de l'utilisateur). D'où la **règle de composition** (§2) : un tour qui a lu du contenu externe ne
-  peut plus appeler un outil à effet de bord.
-- **Ordre inversé volontairement** : les rappels passent en premier (aucun contenu hostile dans le
-  contexte), la recherche web ensuite, sur des rails déjà éprouvés — roadmap §7.
-- Dérivé : `1787579840506` (prérequis : `1787579840501` → `1787579840502` → `1787579840503` →
-  `1787579840504`).
+  de l'utilisateur).
+- **2026-08-24 (révision)** — la « règle de composition » qui en découlait (un tour ayant lu du
+  contenu externe ne peut plus écrire) est **abandonnée** : elle sur-bloquait les usages légitimes
+  et laissait passer le risque majeur. Remplacée par un modèle de **taint + confirmation
+  proportionnée** — l'écriture reste possible dans le même tour, mais passe devant l'utilisateur
+  avec son payload résolu et sa source affichée (roadmap §2.4 et §3.2).
+- **Risque dominant identifié à la révision** : le SSRF de `fetch_url` (aucune validation d'adresse
+  dans le code à porter) vers l'API Coolify en `localhost:8000`. D'où la scission du dérivé.
+- **Ordre révisé** : `web_search` remonte en **v1**, parallèle aux rappels. `fetch_url` part seul en
+  v1.1, conditionné à son contrôle d'egress — roadmap §8.
+- Dérivés : `1787579840506` (`web_search`, v1) et `1787600000000` (`fetch_url` + egress, v1.1).
+  Prérequis communs : `1787579840501` → `1787579840502` → `1787579840503` → `1787579840504`.

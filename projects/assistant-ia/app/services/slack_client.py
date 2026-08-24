@@ -54,6 +54,21 @@ async def update_text(channel: str, ts: str, text: str) -> None:
             raise RuntimeError(f"Slack error: {data.get('error')}")
 
 
+async def update_blocks(channel: str, ts: str, blocks: list, text: str) -> None:
+    """Remplace les blocs d'un message déjà posté. Sert à retirer les boutons d'une confirmation
+    une fois la décision prise, pour qu'on ne puisse pas cliquer deux fois."""
+    async with httpx.AsyncClient(timeout=10) as http:
+        resp = await http.post(
+            _SLACK_UPDATE,
+            headers=_headers(),
+            json={"channel": channel, "ts": ts, "blocks": blocks, "text": text},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"Slack error: {data.get('error')}")
+
+
 async def post_blocks(
     channel: str,
     blocks: list,

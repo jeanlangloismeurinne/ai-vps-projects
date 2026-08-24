@@ -1,12 +1,13 @@
 ---
 id: 1787579840504
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T13:57:20+00:00
 project: assistant-ia
 url: 
 milestone: agent-outillage
+closed_at: 2026-08-24T19:12:25+00:00
 ---
 
 ## ✨ Feature
@@ -25,23 +26,31 @@ de doc relues et versionnées (`agent_versioning.py`). Les outils créent un che
 de cette piste : un rappel apparaît en base sans qu'aucune version de doc n'ait changé. Sans
 journalisation dédiée, on ne peut pas répondre après coup à « pourquoi ce rappel existe-t-il ? ».
 
+Évalue l’opportunité de recourir à Logfire plutôt que de tout recoder.
+
 ### Colonnes
 
 | Colonne | Rôle |
 |---|---|
 | `tool_name` | outil appelé |
 | `arguments` | JSONB — arguments produits par le modèle, verbatim |
-| `verdict` | `ok` / `refused` + motif (refus de la règle de composition, schema invalide, borne dépassée…) |
-| `result_excerpt` | résultat tronqué (plafond du §3.4) |
+| `verdict` | `ok` / `confirmation_requise` / `refused` + motif (schema invalide, `rate_limit` dépassé, egress refusé…) |
+| `result_excerpt` | résultat tronqué (plafond du §3.5) |
 | `slack_ts`, `thread_ts`, `channel_id`, `user_id` | rattachement au fil d'origine |
 | `doc_version` | **version du doc système active au moment de l'appel** |
-| `external_content_seen` | booléen — le flag de la règle de composition |
+| `taint_sources` | JSONB — **tableau** des sources non fiables présentes dans le contexte (`["web:exemple.com", "file:rapport.pdf"]`) |
+| `user_confirmed` | booléen — l'utilisateur a-t-il cliqué `Confirmer` avant l'écriture |
 | `created_at` | horodatage |
 
-`doc_version` et `external_content_seen` sont les deux colonnes qui font la valeur de cette table.
-La première rattache l'appel au comportement audité en vigueur ; la seconde répond, en cas
-d'incident, à la seule question qui compte : **est-ce que du contenu web était dans le contexte au
-moment de cette écriture ?**
+`doc_version` et `taint_sources` sont les deux colonnes qui font la valeur de cette table. La
+première rattache l'appel au comportement audité en vigueur ; la seconde répond, en cas d'incident,
+à la seule question qui compte : **quelle source non fiable était dans le contexte au moment de
+cette écriture ?**
+
+> **Révisé le 2026-08-24** : `external_content_seen` (booléen) devient `taint_sources` (tableau).
+> Un booléen ne dit pas *laquelle* des sources était présente — inexploitable en incident dès qu'il
+> y a plus d'un outil taintant — et ne couvrait que le web, alors que fichiers, messages de tiers et
+> payloads de services taintent tout autant (roadmap §2.2). Le tableau se généralise sans migration.
 
 Les appels **refusés** sont journalisés au même titre que les autres : un refus répété est le
 signal d'une tentative d'injection, et c'est précisément ce qu'on veut pouvoir constater.
