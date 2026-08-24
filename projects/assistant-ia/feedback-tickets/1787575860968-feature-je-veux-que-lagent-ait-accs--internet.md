@@ -44,3 +44,20 @@ peut-elle élargir l'accès réseau de l'agent ?
 ➡️ **Ce ticket demande une roadmap** (étape 1 du CONTROL_SYSTEM), pas une implémentation
 directe. Le portage de `websearch.py` en est la partie facile et déjà écrite ; la boucle de
 tool-calling et son modèle d'autorisation sont le vrai sujet.
+
+### Notes d'implémentation
+
+- **2026-08-24 — roadmap écrite, ticket décomposé.** Ce ticket devient l'**ombrelle** du volet
+  « accès web » ; il se ferme quand son dérivé est livré.
+- Roadmap : **`roadmap/agent-outillage.md`**, commune avec `#1787563980743` (rappels). Les deux
+  tickets demandaient la même chose — donner un premier outil à l'agent — et les traiter séparément
+  aurait fait trancher deux fois la question d'autorisation.
+- **Contrainte nouvelle qui sort de l'analyse** : la lecture web et l'écriture en base sont deux
+  risques *orthogonaux*, et c'est leur **composition** qui est dangereuse (une page récupérée par
+  `fetch_url` peut contenir une instruction d'écriture, que le modèle ne distingue pas d'une demande
+  de l'utilisateur). D'où la **règle de composition** (§2) : un tour qui a lu du contenu externe ne
+  peut plus appeler un outil à effet de bord.
+- **Ordre inversé volontairement** : les rappels passent en premier (aucun contenu hostile dans le
+  contexte), la recherche web ensuite, sur des rails déjà éprouvés — roadmap §7.
+- Dérivé : `1787579840506` (prérequis : `1787579840501` → `1787579840502` → `1787579840503` →
+  `1787579840504`).

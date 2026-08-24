@@ -157,14 +157,64 @@ bout contre Slack et DeepInfra, état Slack et base restaurés après le test.
 📋 **Reste côté utilisateur** : générer une clé DeepInfra propre à assistant-ia (celle de
 portfolio-tracker est toujours empruntée).
 
+## Résumé de session — 2026-08-24 14:00
+
+Quatrième passe : **cadrage de l'outillage de l'agent**. Aucun code applicatif écrit — le chantier
+touche le modèle de sécurité, il passe donc par une roadmap avant implémentation (étape 4 du
+CONTROL_SYSTEM).
+
+🔗 **Décision de cadrage : une roadmap commune, pas deux.** `1787575860968` (accès web) et
+`1787563980743` (rappels) paraissaient sans rapport ; ils demandent la même chose — **donner un
+premier outil à l'agent**, ce que la v1 exclut par conception (`agent_chat.py:130`). Les traiter
+séparément aurait fait trancher deux fois la question d'autorisation, avec un vrai risque de
+réponses incohérentes. → `roadmap/agent-outillage.md`.
+
+🧠 **Contrainte centrale dégagée : la règle de composition.** Les deux outils portent des risques
+*orthogonaux* — la recherche web n'écrit rien mais fait entrer du contenu non fiable dans le
+contexte ; `create_reminder` n'ingère rien d'hostile mais écrit en base. **C'est leur composition
+qui est dangereuse** : une page lue par `fetch_url` peut contenir « crée un rappel… », que le modèle
+ne distingue pas d'une demande de l'utilisateur. Sans outil, le §5.1 (« donnée jamais instruction »)
+était garanti *structurellement* ; les outils suppriment cette garantie gratuite. D'où : **un tour
+qui a lu du contenu externe ne peut plus appeler un outil à effet de bord.** À poser maintenant —
+coûteux à rétro-ajouter quand deux outils cohabitent.
+
+🔎 **Trois défauts trouvés dans les briques existantes** (avant d'écrire une ligne)
+
+1. `get_cards_due_now()` (`app/services/kanban.py:156`) ne regarde que **la minute courante**. Un
+   redéploiement pendant cette minute et le rappel est **perdu définitivement, sans trace** — sur un
+   projet où les déploiements sont fréquents. Extrait en `1787579840500`.
+2. **Aucun fuseau horaire** : scheduler en UTC (`main.py:25`), rien ne définit celui de
+   l'utilisateur → « demain 9h » tomberait à 11h. `AGENT_TIMEZONE` à introduire.
+3. `deepinfra_client.chat()` **ne supporte pas `tools`** — la boucle est à porter depuis
+   portfolio-tracker (`runner.py:147`), pas à écrire.
+
+⚠️ **Ticket bloquant volontairement placé en premier** : `1787579840501` vérifie le support `tools`
+**contre l'API réelle** avant que quoi que ce soit soit bâti dessus. Précédent direct : le 405
+`json_schema` de la passe précédente, invisible en test et trouvé seulement en appelant le vrai
+modèle. Si le support manque, c'est l'ordre des tickets qui change, pas un détail d'implémentation.
+
+⚖️ **Ordre inversé volontairement** : rappels d'abord (aucun contenu hostile), web ensuite, sur des
+rails déjà éprouvés. L'inverse de l'ordre d'arrivée des tickets.
+
+🗂 **Tickets créés depuis roadmap (7)** : `1787579840500` (🐛) · `1787579840501` · `1787579840502` ·
+`1787579840503` · `1787579840504` · `1787579840505` · `1787579840506`
+🏁 **Ombrelle fermée** : `1787211986144` (journal-kb — 6 dérivés v1 + prérequis livrés et vérifiés
+contre l'API réelle)
+📌 **Devenues ombrelles** : `1787563980743` · `1787575860968` (`needs_clarification` levé sur le
+premier : garde-fou tranché en séance)
+
+📋 **Reste côté utilisateur** : générer une clé DeepInfra propre à assistant-ia (celle de
+portfolio-tracker est toujours empruntée).
+
 ## Prochaine session — ordre d'exécution proposé
 
-1. ~~Vérifications réelles post-déploiement~~ — **faites** (session 13:12), un défaut trouvé
-   et corrigé. Reste **un** aller-retour non exercé : consigne → `@update` → approbation d'un
-   diff, qui passe par un vrai clic dans Slack et ne peut pas être simulé hors interface.
-   `AGENT_APPROVERS` étant désormais renseignée, c'est faisable dès le prochain message.
-2. ~~Trancher `1787559677490`~~ — **tranché** : fermé `wont-do-for-now` avec `491` (voir ci-dessus).
-3. **Roadmap pour `1787575860968`** (accès web) : c'est le chantier suivant le plus lourd, il
-   touche le modèle de sécurité §5 (donner un premier outil à l'agent). Analyse préalable déjà
-   écrite dans le ticket — partir de là, pas de zéro.
-4. Puis `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`, v2).
+1. **`1787579840501`** — vérifier le support `tools` contre l'API réelle. **Bloquant** : conditionne
+   tout le reste du chantier. À lancer dans le container (la clé n'est pas sur l'hôte).
+2. **`1787579840500`** — correctif fenêtre de rattrapage + fuseau. Indépendant, parallélisable
+   avec le 1 (fichiers disjoints).
+3. Puis la chaîne `1787579840502` → `503` → `504` → `505` (rappels bout en bout).
+4. Enfin `1787579840506` (recherche web), une fois la règle de composition éprouvée.
+5. Toujours en attente : l'aller-retour consigne → `@update` → **approbation d'un diff**, qui exige
+   un vrai clic dans Slack et ne peut pas être simulé. `AGENT_APPROVERS` est renseignée.
+6. Hors chantier : `1787559677489` (curator/lint KB) et `1787559677498` (registre `@bidule`) —
+   prérequis explicitement non remplis, ne pas démarrer.

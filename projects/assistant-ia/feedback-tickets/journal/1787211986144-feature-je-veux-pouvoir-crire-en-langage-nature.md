@@ -1,9 +1,10 @@
 ---
 id: 1787211986144
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-20T07:46:26.144728
+closed_at: 2026-08-24T13:57:20+00:00
 project: assistant-ia
 url: 
 milestone: journal-kb
@@ -43,3 +44,20 @@ Pour l’enregistrement Notion, on doit définir ensemble ou créer la base de c
   - Phase ultérieure : `1787559677489` (Curator / Lint)
 - **Gain de temps repéré** : le client DeepInfra n'est pas à écrire, il existe déjà en production
   dans `projects/portfolio-tracker/backend/app/agents/providers/deepinfra_provider.py` — à porter.
+- **2026-08-24 — fermé.** Les six dérivés v1 sont livrés (`1787559677483` → `1787559677488`), plus
+  le prérequis de routage `1787559677482` sans lequel une note libre — qui est un message *parent* —
+  n'était jamais reçue. Le chantier tourne bout en bout : note écrite dans `#journal` → classée →
+  écrite dans le vault git → indexée en Postgres → exportable en enveloppe commune.
+- **Vérifié contre l'API réelle**, pas seulement en test : `checks/check_classifier_live.py` fige
+  3 cas de classification (aucun fallback, vocabulaire respecté, cardinalité `0..n` honorée,
+  4/4 tirages conformes). C'est cette vérification qui a révélé que le correctif `0..n` de la passe
+  précédente ne tenait pas — DeepInfra renvoyait **HTTP 405 sur `json_schema`** pour Llama 3.1
+  8B-Turbo, d'où un fallback silencieux. Corrigé en basculant sur `DeepSeek-V4-Flash` + vocabulaire
+  en `enum` dérivé de `categories.schema.yaml` (commit `a574a75`).
+- **Écarts au ticket d'origine, assumés** : Notion abandonné au profit d'Obsidian + index Postgres
+  (charte `KNOWLEDGE_ARCHITECTURE.md`) ; vault en dépôt git et non Nextcloud (aucun Nextcloud sur le
+  VPS) ; modèle de classification `DeepSeek-V4-Flash` et non Llama 3.1 8B (405 ci-dessus).
+- **Reste ouvert, hors v1** : `1787559677489` (Curator / Lint) — attend d'avoir assez d'entrées pour
+  que le lint ait du sens. La fédération (`1787559677490` / `1787559677491`) est fermée
+  `wont-do-for-now` : aucune requête multi-source réelle n'a été formulée, et la charte §4 interdit
+  de la construire par anticipation. L'export « enveloppe commune » étant livré, c'est réversible.
