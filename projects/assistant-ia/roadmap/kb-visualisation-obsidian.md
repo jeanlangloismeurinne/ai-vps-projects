@@ -53,7 +53,8 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
 > DECISIONS.md). Livré : **viewer statique Quartz** (`projects/kb-viewer/`), même vault.
 - [x] ~~Conteneur Obsidian RO~~ → **Viewer Quartz** : `nginx:alpine` sert le site statique généré
   depuis le vault RO (build conteneurisé, sandbox). → #1787600247613 (fermé, superseded)
-  · note : `projects/kb-viewer/`, `build.sh` (node:22 éphémère) + timer systemd 10 min.
+  · note : `projects/kb-viewer/`, `build.sh` (node:22 éphémère) + watcher systemd événementiel
+  (`kb-viewer-build.path` sur les commits du vault, non exposé).
 - [x] ~~Sablier scale-to-zero + auth~~ → **Auth + TLS via coolify-proxy** : basic-auth (journal
   `private`), 401 sans auth / 200 avec, cert Let's Encrypt. Scale-to-zero **sans objet** (nginx
   ~10 MB permanent). → #1787600247614 (fermé, superseded) · note : `docker-compose.override.yml`

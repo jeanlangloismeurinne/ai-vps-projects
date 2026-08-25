@@ -17,7 +17,7 @@ graphe, backlinks, recherche, lecture des notes. Détails : `assistant-ia/DECISI
 ```
 vault (RO) ──build.sh (conteneur node éphémère, sandbox)──▶ volume kb_public ──▶ nginx:alpine
                                                                                   ▲ coolify-proxy (TLS LE + basic-auth)
-timer systemd (10 min) ──▶ build.sh    # rafraîchit le site quand l'agent met à jour le vault
+path unit systemd (watch .git/logs/HEAD) ──▶ build.sh   # rebuild à chaque commit du vault (interne, non exposé)
 ```
 
 - `quartz/` (gitignored) : reconstruit par `setup.sh` (clone Quartz v4.5.1 épinglé + notre config).
@@ -35,9 +35,14 @@ cp .env.example .env             # renseigner KB_AUTH_USER / KB_AUTH_PASSWORD
 ./build.sh                       # 1er build (npm install + génération) → volume kb_public
 docker compose up -d             # démarre nginx (routé par coolify-proxy)
 
-# Rafraîchissement automatique (nécessite les droits systemd) :
-systemctl enable --now kb-viewer-build.timer      # unités déjà écrites dans /etc/systemd/system/
-# à défaut, refresh manuel : ./build.sh
+# Rafraîchissement automatique — watcher ÉVÉNEMENTIEL interne (non exposé) :
+#   unités dans /etc/systemd/system/ : kb-viewer-build.{service,path}
+systemctl enable --now kb-viewer-build.path       # rebuild à chaque commit du vault
+# refresh manuel à la demande (côté hôte) : ./build.sh
+#
+# Choix de sécurité : PAS de bouton « rafraîchir » exposé — il exigerait un endpoint web
+# déclenchant `docker run` (surface DoS/RCE). L'utilisateur est lecteur, l'agent écrivain :
+# un déclencheur interne suffit et n'expose rien.
 ```
 
 - URL : https://kb.jlmvpscode.duckdns.org  (401 sans auth, 200 avec).
