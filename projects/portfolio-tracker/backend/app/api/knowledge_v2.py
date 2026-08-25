@@ -20,6 +20,8 @@ from app.agents.v2.worker import persist_worker_entries, run_search_worker
 from app.contracts import OutputSchema, WorkerRequest
 from app.contracts.worker_delegation_schema import EntryType, Requester
 from app.db.database import get_db_session
+from app.knowledge.base_rate_corpus import BaseRateUnavailable, run_base_rate_anchor
+from app.knowledge.valuation_feed import ValuationUnavailable, run_valuation_feed
 from app.knowledge.websearch import SearchUnavailable, get_search_backend
 from app.config import settings
 
@@ -103,3 +105,46 @@ async def run_worker(ticker_id: str, body: SearchWorkerBody):
         "persisted": created,
         "dry_run": not body.persist,
     }
+
+
+class ValuationFeedBody(BaseModel):
+    """Alimentation `valorisation` depuis le quant (yfinance/FMP), pas la recherche web."""
+    persist: bool = True    # False = dry-run (base append-only)
+    refresh: bool = False   # True = force un fetch yfinance/FMP (sinon cache 4h de get_m1)
+
+
+@router.post("/tickers/{ticker_id}/knowledge/valuation-refresh")
+async def valuation_refresh(ticker_id: str, body: ValuationFeedBody):
+    """Fonde `valorisation.prix_actuel` + `valorisation.relatif_multiple` depuis le DataService.
+
+    Ce que la recherche web ne peut pas fonder honnêtement (données de marché) est alimenté ici de
+    façon déterministe. `base_rate_anchor` (le 3ᵉ champ) N'est PAS produit ici — c'est une ancre de
+    base rate (corpus, sprint 2), pas une donnée de marché.
+
+    `ValuationUnavailable` (ticker sans symbole de marché / données absentes) → **422**, distinct
+    d'un succès à couverture partielle.
+    """
+    try:
+        result = await run_valuation_feed(ticker_id, persist=body.persist, refresh=body.refresh)
+    except ValuationUnavailable as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("valuation-refresh %s", ticker_id)
+        raise HTTPException(status_code=502, detail=f"valuation-feed : {e}")
+    return result
+
+
+@router.post("/tickers/{ticker_id}/knowledge/base-rate-anchor")
+async def base_rate_anchor(ticker_id: str, body: ValuationFeedBody):
+    """Fonde `valorisation.base_rate_anchor` : classe de référence (quant) → base rate (corpus Base
+    Rate Book) → entry par-ticker. Seede le corpus transverse au passage (idempotent).
+
+    `BaseRateUnavailable` (ticker non coté / classe indéterminable) → **422**."""
+    try:
+        result = await run_base_rate_anchor(ticker_id, persist=body.persist, refresh=body.refresh)
+    except BaseRateUnavailable as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("base-rate-anchor %s", ticker_id)
+        raise HTTPException(status_code=502, detail=f"base-rate-anchor : {e}")
+    return result
