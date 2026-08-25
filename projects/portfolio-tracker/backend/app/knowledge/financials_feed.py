@@ -1,0 +1,480 @@
+"""
+Alimentateur `financials` (V2) — fonde les RATIOS DÉRIVÉS depuis les faits EDGAR déjà en base.
+
+Motif (00-REPRISE, étape 1 post-valorisation) : la dimension MVDD `financials` exige quatre champs —
+`roic_pct`, `fcf_conversion_pct`, `intensite_capex_pct`, `levier` — au tier plancher **A**. Aucun n'est
+une donnée que la recherche web fonde honnêtement, et le quant (yfinance/FMP) est tier B+, donc SOUS le
+plancher : un ratio quant ne fonderait pas le champ. Ce sont des **ratios**, pas des mesures : ils se
+CALCULENT à partir des postes comptables. Or ces postes sont déjà en base, en tier A, issus du 10-K
+EDGAR (CA, résultat net, cash-flow opérationnel, capitaux propres, dette, trésorerie). Un ratio calculé
+**uniquement** à partir de faits tier A est lui-même un fait tier A : sa provenance est EDGAR, donc
+`source_type='edgar_official'`. Aucun intrant non-EDGAR n'entre — sinon on retomberait à B+.
+
+Le seul poste manquant au seed est le **capex** (nécessaire à `fcf_conversion_pct` et
+`intensite_capex_pct`). Il n'est pas fabriqué ni emprunté au quant : il est **mesuré à la source** via
+`edgar_facts.fetch_annual_value()` (concept us-gaap `PaymentsToAcquirePropertyPlantAndEquipment`), puis
+persisté comme fait EDGAR tier A réutilisable. Si EDGAR est indisponible, les deux champs qui en
+dépendent restent **non fondés** — un trou honnête, jamais un chiffre inventé (#25).
+
+Garde-fous (mêmes que valuation_feed / base_rate_corpus) :
+  • `source_type` connu et mesuré ici, pas déclaré par un modèle (#24) ; score recalculé par
+    `store_knowledge` (tier A fixe, le score décroît un peu avec l'âge du dépôt mais pas le tier).
+  • Append-only avec supersede par tags : re-calculer un ratio supersede l'entrée courante du même champ.
+  • La transformation `build_financials_entries()` est **pure** (facts dict → specs), vérifiable
+    hors-ligne (`backend/checks/check_financials_feed.py`). L'IO (KB + EDGAR + écriture) vit dans
+    `run_financials_feed()`.
+"""
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any, Optional
+
+from app.data_collection.data_service import DataService  # noqa: F401  (parité d'accès quant, non requis ici)
+from app.db.database import get_db_session
+from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annual_value
+from app.knowledge.service import get_current_entries, store_knowledge
+
+logger = logging.getLogger(__name__)
+
+# Ratios dérivés de faits EDGAR seuls → provenance EDGAR → tier A (0.95 dans RELIABILITY_TABLE).
+_SOURCE_TYPE = "edgar_official"
+# On ne consomme QUE des faits tier A pour que le ratio reste tier A (cf. docstring).
+_CONSUMED_SOURCE_TYPES = {"edgar_official"}
+# Concept XBRL du capex — ordre d'essai (NVDA déclare le premier).
+_CAPEX_TAGS = ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"]
+
+# metric du content_structured → poste interne. `cash_and_lt_debt` porte deux nombres.
+_SIMPLE_METRICS = {
+    "revenue": "revenue",
+    "net_income": "net_income",
+    "gross_profit": "gross_profit",
+    "operating_cash_flow": "operating_cash_flow",
+    "stockholders_equity": "stockholders_equity",
+    "total_assets": "total_assets",
+    "capital_expenditure": "capex",
+}
+
+
+class FinancialsUnavailable(Exception):
+    """Les ratios `financials` ne sont pas fondables (ticker sans symbole, ou aucun fait EDGAR en base).
+    Distinct d'un résultat vide : l'appelant DOIT le remonter (#25)."""
+
+
+@dataclass
+class FinancialsEntrySpec:
+    field: str            # 'roic_pct' | 'fcf_conversion_pct' | 'intensite_capex_pct' | 'levier'
+    entry_type: str
+    title: str
+    content: str
+    content_structured: dict[str, Any]
+    fiscal_period: Optional[str] = None
+    source_url: Optional[str] = None
+    tags: list[str] = field(default_factory=list)
+    source_type: str = _SOURCE_TYPE
+
+
+def _pct(v: Optional[float], nd: int = 1) -> str:
+    if v is None:
+        return "n/d"
+    return f"{v:.{nd}f}".replace(".", ",") + " %"
+
+
+def _md(v: Optional[float]) -> str:
+    """Montant en milliards, format FR."""
+    if v is None:
+        return "n/d"
+    return f"{v/1e9:.1f}".replace(".", ",") + " Md"
+
+
+def _as_dict(cs: Any) -> dict[str, Any]:
+    """content_structured est un dict (codec JSONB) — mais tolère une str JSON par sécurité."""
+    if isinstance(cs, dict):
+        return cs
+    if isinstance(cs, str):
+        try:
+            return json.loads(cs)
+        except ValueError:
+            return {}
+    return {}
+
+
+def _parse_end(v: Any) -> Optional[date]:
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str):
+        try:
+            return date.fromisoformat(v[:10])
+        except ValueError:
+            return None
+    return None
+
+
+def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Faits `fact_financial` EDGAR (tier A) → dict plat du dernier exercice complet. Pur, sans IO.
+
+    Ancre = date de bilan (`stockholders_equity`) la plus récente ; les autres postes sont pris à la
+    MÊME date de fin d'exercice (jamais mélangés entre exercices). Postes absents = None (pas de zéro).
+    """
+    by_metric: dict[str, dict[date, dict[str, Any]]] = {}
+    currency = "USD"
+    for e in entries:
+        if e.get("entry_type") != "fact_financial":
+            continue
+        if e.get("source_type") not in _CONSUMED_SOURCE_TYPES:
+            continue
+        cs = _as_dict(e.get("content_structured"))
+        metric = cs.get("metric")
+        end = _parse_end(cs.get("period_end")) or _parse_end(e.get("source_date"))
+        if not metric or end is None:
+            continue
+        currency = cs.get("currency") or currency
+        rec = {"period": cs.get("period") or e.get("fiscal_period"),
+               "source_url": e.get("source_url"), "entry_id": e.get("id"), "cs": cs}
+        by_metric.setdefault(metric, {})[end] = rec
+
+    equity_dates = sorted((by_metric.get("stockholders_equity") or {}).keys())
+    if not equity_dates:
+        # pas d'ancre bilan → dernier exercice où figure le résultat net (au pire)
+        ni_dates = sorted((by_metric.get("net_income") or {}).keys())
+        target = ni_dates[-1] if ni_dates else None
+    else:
+        target = equity_dates[-1]
+
+    facts: dict[str, Any] = {"period_end": target, "currency": currency,
+                             "period": None, "source_url": None}
+    if target is None:
+        return facts
+
+    def _at(metric: str) -> Optional[dict[str, Any]]:
+        return (by_metric.get(metric) or {}).get(target)
+
+    # période lisible + URL de provenance (celle de l'ancre bilan, à défaut du CA)
+    anchor = _at("stockholders_equity") or _at("revenue") or _at("net_income")
+    if anchor:
+        facts["period"] = anchor["period"]
+        facts["source_url"] = anchor["source_url"]
+
+    for metric, key in _SIMPLE_METRICS.items():
+        rec = _at(metric)
+        facts[key] = (rec["cs"].get("value") if rec else None)
+
+    cash_rec = _at("cash_and_lt_debt")
+    if cash_rec:
+        facts["cash"] = cash_rec["cs"].get("cash")
+        facts["long_term_debt"] = cash_rec["cs"].get("long_term_debt")
+    else:
+        facts["cash"] = facts.get("cash")
+        facts["long_term_debt"] = facts.get("long_term_debt")
+    return facts
+
+
+def build_financials_entries(
+    ticker_id: str, symbol: str, facts: dict[str, Any], *, as_of: date
+) -> tuple[list[FinancialsEntrySpec], list[dict[str, str]]]:
+    """facts (sortie d'extract_edgar_facts, capex éventuellement injecté) → specs des ratios fondables.
+
+    Pur, sans IO. Ne produit une entry QUE si tous les intrants du ratio sont présents ; sinon le champ
+    est reporté dans `unfounded` avec la raison — jamais une entrée avec un chiffre fabriqué (#25).
+    Retour : (specs, unfounded=[{field, reason}]).
+    """
+    period = facts.get("period")
+    period_end = facts.get("period_end")
+    cur = facts.get("currency") or "USD"
+    fy = period or (f"FY{period_end.year}" if isinstance(period_end, date) else "dernier exercice")
+    src = facts.get("source_url")
+
+    revenue = facts.get("revenue")
+    net_income = facts.get("net_income")
+    ocf = facts.get("operating_cash_flow")
+    equity = facts.get("stockholders_equity")
+    cash = facts.get("cash")
+    debt = facts.get("long_term_debt")
+    capex = facts.get("capex")
+
+    specs: list[FinancialsEntrySpec] = []
+    unfounded: list[dict[str, str]] = []
+
+    def _tags(f: str) -> list[str]:
+        return ["financials", f, "derived_ratio", "edgar"]
+
+    def _miss(f: str, need: str) -> None:
+        unfounded.append({"field": f, "reason": f"intrant manquant en base EDGAR : {need}"})
+
+    # ── levier : dette / capitaux propres + dette nette (tous EDGAR) ──────────
+    if debt is not None and equity and cash is not None:
+        net_debt = debt - cash
+        d2e = debt / equity * 100
+        nd2e = net_debt / equity * 100
+        net_cash = net_debt < 0
+        structured = {
+            "metric": "levier", "field": "levier",
+            "long_term_debt": debt, "cash": cash, "net_debt": net_debt,
+            "stockholders_equity": equity, "currency": cur,
+            "debt_to_equity_pct": round(d2e, 2), "net_debt_to_equity_pct": round(nd2e, 2),
+            "net_cash_position": net_cash, "period": period,
+            "method": "dette LT (non courante) / capitaux propres ; dette nette = dette LT − trésorerie",
+        }
+        content = (
+            f"Levier de {ticker_id} ({symbol}) — {fy} : dette LT {_md(debt)}{cur}, trésorerie "
+            f"{_md(cash)}{cur} → dette nette {_md(net_debt)}{cur}. Gearing (`levier`, dette/capitaux "
+            f"propres) = {_pct(d2e)} ; dette nette/capitaux propres = {_pct(nd2e)}. "
+        )
+        if net_cash:
+            content += (
+                "Position de trésorerie NETTE POSITIVE : dette nette négative, donc dette nette/EBITDA "
+                "négatif — le gearing (dette/capitaux propres) est ici la lecture pertinente du levier. "
+            )
+        content += "Calculé depuis les postes du 10-K EDGAR (tier A)."
+        specs.append(FinancialsEntrySpec(
+            field="levier", entry_type="fact_financial",
+            title=f"Financials — levier (dette nette / gearing) {fy}",
+            content=content, content_structured=structured,
+            fiscal_period=period, source_url=src, tags=_tags("levier"),
+        ))
+    else:
+        _miss("levier", "dette LT, trésorerie, capitaux propres")
+
+    # ── roic_pct : NOPAT / capital investi (NOPAT ≈ résultat net, société en trésorerie nette) ──
+    if net_income and equity and debt is not None and cash is not None:
+        invested = equity + debt - cash
+        roic = net_income / invested * 100 if invested else None
+        if roic is not None:
+            structured = {
+                "metric": "roic", "field": "roic_pct",
+                "roic_pct": round(roic, 2), "net_income": net_income,
+                "invested_capital": invested, "stockholders_equity": equity,
+                "long_term_debt": debt, "cash": cash, "currency": cur, "period": period,
+                "nopat_approx": "net_income",
+                "method": ("NOPAT ≈ résultat net (charge d'intérêts nette négligeable en position de "
+                           "trésorerie nette) ; capital investi = capitaux propres + dette LT − trésorerie"),
+            }
+            content = (
+                f"ROIC de {ticker_id} ({symbol}) — {fy} : {_pct(roic)} (`roic_pct`). Capital investi "
+                f"{_md(invested)}{cur} (capitaux propres {_md(equity)} + dette LT {_md(debt)} − trésorerie "
+                f"{_md(cash)}), NOPAT approché par le résultat net {_md(net_income)}{cur}. "
+                f"Approximation NOPAT ≈ résultat net justifiée par la position de trésorerie nette "
+                f"(intérêts nets négligeables) — elle peut LÉGÈREMENT majorer le ROIC si le résultat "
+                f"non opérationnel est significatif. Calculé depuis le 10-K EDGAR (tier A)."
+            )
+            specs.append(FinancialsEntrySpec(
+                field="roic_pct", entry_type="fact_financial",
+                title=f"Financials — ROIC {fy}",
+                content=content, content_structured=structured,
+                fiscal_period=period, source_url=src, tags=_tags("roic_pct"),
+            ))
+        else:
+            _miss("roic_pct", "capital investi nul")
+    else:
+        _miss("roic_pct", "résultat net, capitaux propres, dette LT, trésorerie")
+
+    # ── fcf_conversion_pct : FCF / résultat net, FCF = OCF − capex ────────────
+    if ocf is not None and net_income and capex is not None:
+        fcf = ocf - capex
+        conv = fcf / net_income * 100
+        structured = {
+            "metric": "fcf_conversion", "field": "fcf_conversion_pct",
+            "fcf_conversion_pct": round(conv, 2), "free_cash_flow": fcf,
+            "operating_cash_flow": ocf, "capex": capex, "net_income": net_income,
+            "currency": cur, "period": period,
+            "method": "FCF = flux de trésorerie opérationnel − capex ; conversion = FCF / résultat net",
+        }
+        content = (
+            f"Conversion FCF de {ticker_id} ({symbol}) — {fy} : {_pct(conv)} (`fcf_conversion_pct`). "
+            f"FCF {_md(fcf)}{cur} = cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, rapporté au "
+            f"résultat net {_md(net_income)}{cur}. Tous les postes proviennent du 10-K EDGAR (tier A ; "
+            f"capex = us-gaap PaymentsToAcquirePropertyPlantAndEquipment)."
+        )
+        specs.append(FinancialsEntrySpec(
+            field="fcf_conversion_pct", entry_type="fact_financial",
+            title=f"Financials — conversion FCF {fy}",
+            content=content, content_structured=structured,
+            fiscal_period=period, source_url=src, tags=_tags("fcf_conversion_pct"),
+        ))
+    else:
+        need = "capex (EDGAR indisponible)" if capex is None else "cash-flow opérationnel, résultat net"
+        _miss("fcf_conversion_pct", need)
+
+    # ── intensite_capex_pct : capex / CA ─────────────────────────────────────
+    if capex is not None and revenue:
+        inten = capex / revenue * 100
+        structured = {
+            "metric": "intensite_capex", "field": "intensite_capex_pct",
+            "intensite_capex_pct": round(inten, 2), "capex": capex, "revenue": revenue,
+            "currency": cur, "period": period,
+            "method": "capex / chiffre d'affaires",
+        }
+        content = (
+            f"Intensité capitalistique de {ticker_id} ({symbol}) — {fy} : {_pct(inten)} "
+            f"(`intensite_capex_pct`). Capex {_md(capex)}{cur} / CA {_md(revenue)}{cur}. "
+            f"Modèle {'peu' if inten < 10 else 'assez'} capitalistique. Postes du 10-K EDGAR (tier A)."
+        )
+        specs.append(FinancialsEntrySpec(
+            field="intensite_capex_pct", entry_type="fact_financial",
+            title=f"Financials — intensité capex {fy}",
+            content=content, content_structured=structured,
+            fiscal_period=period, source_url=src, tags=_tags("intensite_capex_pct"),
+        ))
+    else:
+        need = "capex (EDGAR indisponible)" if capex is None else "chiffre d'affaires"
+        _miss("intensite_capex_pct", need)
+
+    return specs, unfounded
+
+
+async def _current_tagged_entry_id(conn, ticker_id: str, tags: list[str]) -> Optional[int]:
+    """Id de l'entrée COURANTE portant tous les `tags` (à superseder). Ce feed est le seul producteur
+    de ces tags dérivés → pas de collision avec une entry EDGAR brute ou de recherche."""
+    row = await conn.fetchrow(
+        """
+        SELECT id FROM knowledge_entries
+        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+          AND tags @> $2
+        ORDER BY id DESC LIMIT 1
+        """,
+        ticker_id, tags,
+    )
+    return row["id"] if row else None
+
+
+async def _persist_capex_fact(
+    conn, ticker_id: str, symbol: str, point: dict[str, Any], *, currency: str,
+    fiscal_period: Optional[str], source_url: Optional[str], tag_used: str,
+) -> dict[str, Any]:
+    """Écrit le capex fetché comme fait EDGAR tier A réutilisable (supersede l'ancien s'il existe)."""
+    val = point["val"]
+    period_end = point["end"]
+    structured = {
+        "metric": "capital_expenditure", "value": val, "currency": currency,
+        "period": fiscal_period, "period_end": period_end,
+        "xbrl_tag": f"us-gaap:{tag_used}", "accn": point.get("accn"), "form": point.get("form"),
+    }
+    content = (
+        f"Capex (dépenses d'investissement) de {ticker_id} ({symbol}) — exercice clos le {period_end} : "
+        f"{_md(val)}{currency}. Source : {point.get('form','10-K')} EDGAR, concept XBRL "
+        f"us-gaap:{tag_used} (accession {point.get('accn')})."
+    )
+    prev = await _current_tagged_entry_id(conn, ticker_id, ["financials", "capex", "fact"])
+    return await store_knowledge(
+        conn, ticker_id=ticker_id, entry_type="fact_financial", content=content,
+        source_type=_SOURCE_TYPE, title=f"Capex {fiscal_period or period_end} ({symbol})",
+        content_structured=structured, tags=["financials", "capex", "fact", "edgar"],
+        lang="fr", source_url=source_url, source_date=_parse_end(period_end),
+        fiscal_period=fiscal_period, supersedes_entry_id=prev,
+    )
+
+
+async def run_financials_feed(
+    ticker_id: str, *, persist: bool = True, refresh: bool = False
+) -> dict[str, Any]:
+    """Fonde `financials.{roic_pct,fcf_conversion_pct,intensite_capex_pct,levier}` depuis les faits
+    EDGAR en base, en récupérant le capex manquant à la source (EDGAR).
+
+    `persist=False` = dry-run (base append-only : on regarde avant d'écrire). `refresh` re-tente le
+    fetch capex EDGAR même si un capex figure déjà en base.
+    """
+    async with get_db_session() as conn:
+        row = await conn.fetchrow(
+            "SELECT ticker_symbol, company_type FROM tickers WHERE id = $1", ticker_id
+        )
+        if row is None:
+            raise FinancialsUnavailable(f"ticker inconnu : {ticker_id}")
+        if (row["company_type"] or "") == "private" or not row["ticker_symbol"]:
+            raise FinancialsUnavailable(
+                f"{ticker_id} : pas de symbole de marché (privé/PUB-/PRIV-) — pas de dépôt EDGAR ; "
+                f"financials à fonder depuis des documents uploadés, pas depuis EDGAR"
+            )
+        symbol = row["ticker_symbol"]
+        entries = await get_current_entries(
+            conn, ticker_id, entry_types=["fact_financial"], include_sector=False, limit=500
+        )
+
+    facts = extract_edgar_facts(entries)
+    if facts.get("period_end") is None:
+        raise FinancialsUnavailable(
+            f"{ticker_id} : aucun fait financier EDGAR (tier A) en base — lancer l'ingestion EDGAR "
+            f"(10-K) avant de dériver les ratios `financials`"
+        )
+
+    # CIK depuis la provenance réelle d'un dépôt EDGAR en base (aucune table de correspondance).
+    cik = cik_from_url(facts.get("source_url"))
+    if cik is None:
+        for e in entries:
+            cik = cik_from_url(e.get("source_url"))
+            if cik:
+                break
+
+    # ── Capex : fondation depuis EDGAR si absent de la base (ou refresh) ──────
+    capex_source = "kb" if facts.get("capex") is not None else "absent"
+    capex_point: Optional[dict[str, Any]] = None
+    capex_tag_used: Optional[str] = None
+    if (facts.get("capex") is None or refresh) and cik is not None:
+        for tag in _CAPEX_TAGS:
+            try:
+                capex_point = await fetch_annual_value(cik, tag, period_end=facts["period_end"])
+                capex_tag_used = tag
+                facts["capex"] = capex_point["val"]
+                capex_source = "edgar_fetched"
+                break
+            except EdgarUnavailable as e:
+                logger.info("financials_feed %s : capex %s indisponible (%s)", ticker_id, tag, e)
+        if capex_point is None and facts.get("capex") is None:
+            capex_source = "edgar_unavailable"
+    elif facts.get("capex") is None and cik is None:
+        capex_source = "cik_introuvable"
+
+    as_of = date.today()
+    specs, unfounded = build_financials_entries(ticker_id, symbol, facts, as_of=as_of)
+
+    created: list[dict[str, Any]] = []
+    capex_entry: Optional[dict[str, Any]] = None
+    if persist:
+        async with get_db_session() as conn:
+            async with conn.transaction():
+                if capex_point is not None:
+                    stored = await _persist_capex_fact(
+                        conn, ticker_id, symbol, capex_point, currency=facts.get("currency") or "USD",
+                        fiscal_period=facts.get("period"), source_url=facts.get("source_url"),
+                        tag_used=capex_tag_used or _CAPEX_TAGS[0],
+                    )
+                    capex_entry = dict(stored) | {"metric": "capital_expenditure"}
+                for spec in specs:
+                    prev = await _current_tagged_entry_id(
+                        conn, ticker_id, ["financials", spec.field, "derived_ratio"]
+                    )
+                    stored = await store_knowledge(
+                        conn, ticker_id=ticker_id, entry_type=spec.entry_type, content=spec.content,
+                        source_type=spec.source_type, title=spec.title,
+                        content_structured=spec.content_structured, tags=spec.tags, lang="fr",
+                        source_url=spec.source_url, source_date=facts.get("period_end"),
+                        fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
+                    )
+                    created.append(dict(stored) | {"field": spec.field, "supersedes": prev})
+        logger.info(
+            "financials_feed %s (%s) → %d ratio(s) [%s] · capex=%s · non fondés: %s",
+            ticker_id, symbol, len(created), ", ".join(f"{c['field']}#{c['id']}" for c in created),
+            capex_source, ", ".join(u["field"] for u in unfounded) or "aucun",
+        )
+
+    return {
+        "ticker_id": ticker_id,
+        "symbol": symbol,
+        "period": facts.get("period"),
+        "as_of": as_of.isoformat(),
+        "source_type": _SOURCE_TYPE,
+        "capex_source": capex_source,
+        "entries": [
+            {
+                "field": s.field, "title": s.title, "content": s.content,
+                "content_structured": s.content_structured, "tags": s.tags,
+                "source_type": s.source_type,
+            }
+            for s in specs
+        ],
+        "unfounded": unfounded,
+        "capex_entry": capex_entry,
+        "persisted": created,
+        "dry_run": not persist,
+    }

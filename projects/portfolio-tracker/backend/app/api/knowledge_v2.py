@@ -21,6 +21,7 @@ from app.contracts import OutputSchema, WorkerRequest
 from app.contracts.worker_delegation_schema import EntryType, Requester
 from app.db.database import get_db_session
 from app.knowledge.base_rate_corpus import BaseRateUnavailable, run_base_rate_anchor
+from app.knowledge.financials_feed import FinancialsUnavailable, run_financials_feed
 from app.knowledge.valuation_feed import ValuationUnavailable, run_valuation_feed
 from app.knowledge.websearch import SearchUnavailable, get_search_backend
 from app.config import settings
@@ -147,4 +148,25 @@ async def base_rate_anchor(ticker_id: str, body: ValuationFeedBody):
     except Exception as e:  # noqa: BLE001
         logger.exception("base-rate-anchor %s", ticker_id)
         raise HTTPException(status_code=502, detail=f"base-rate-anchor : {e}")
+    return result
+
+
+@router.post("/tickers/{ticker_id}/knowledge/financials-refresh")
+async def financials_refresh(ticker_id: str, body: ValuationFeedBody):
+    """Fonde `financials.{roic_pct, fcf_conversion_pct, intensite_capex_pct, levier}` en CALCULANT les
+    ratios depuis les faits EDGAR déjà en base (tier A), en récupérant à la source le seul poste
+    manquant — le capex (EDGAR `companyconcept`). Provenance EDGAR ⇒ tier A, condition du plancher.
+
+    Le quant n'est PAS utilisé (tier B+ sous le plancher `financials`=A). Couverture partielle possible :
+    si EDGAR est indisponible pour le capex, `fcf_conversion_pct`/`intensite_capex_pct` restent non
+    fondés (listés dans `unfounded`) plutôt que fabriqués (#25). `refresh=True` re-tente le fetch capex.
+
+    `FinancialsUnavailable` (ticker sans symbole / aucun fait EDGAR en base) → **422**."""
+    try:
+        result = await run_financials_feed(ticker_id, persist=body.persist, refresh=body.refresh)
+    except FinancialsUnavailable as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("financials-refresh %s", ticker_id)
+        raise HTTPException(status_code=502, detail=f"financials-feed : {e}")
     return result
