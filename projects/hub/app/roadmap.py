@@ -10,8 +10,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 PROJECTS_BASE = Path(os.environ.get("PROJECTS_DIR", "/projects"))
 
-STATUS_LABEL = {"draft": "Brouillon", "spec-ready": "Spec prête", "tickets-created": "Tickets créés", "done": "Terminé"}
-STATUS_COLOR = {"draft": "#6b7280", "spec-ready": "#ca8a04", "tickets-created": "#4f6ef7", "done": "#2da862"}
+STATUS_LABEL = {"draft": "Brouillon", "spec-ready": "Spec prête", "tickets-created": "Tickets créés", "en-cours": "En cours", "done": "Terminé"}
+STATUS_COLOR = {"draft": "#6b7280", "spec-ready": "#ca8a04", "tickets-created": "#4f6ef7", "en-cours": "#0ea5e9", "done": "#2da862"}
 
 router = APIRouter(prefix="/roadmap")
 
@@ -60,8 +60,8 @@ def _parse_item(filepath: Path) -> dict:
     # Date de secours pour les docs libres sans front-matter : mtime du fichier.
     fm.setdefault("created", datetime.fromtimestamp(filepath.stat().st_mtime).isoformat())
 
-    # Aperçu : section utilisateur si présente (docs structurés), sinon 1re ligne utile.
-    user_m = re.search(r"### Direction / Feature \(utilisateur\)\n([\s\S]*?)(?:\n###|\Z)", body)
+    # Aperçu : section « Direction (utilisateur) » si présente (## ou ###), sinon 1re ligne utile.
+    user_m = re.search(r"##+ Direction ?(?:/ Feature )?\(utilisateur\)\n([\s\S]*?)(?:\n##|\Z)", body)
     if user_m:
         fm["preview"] = user_m.group(1).strip()[:120]
     else:
@@ -74,14 +74,44 @@ def _parse_item(filepath: Path) -> dict:
             break
         fm["preview"] = (preview or body.strip())[:120]
 
-    # Count linked tickets
-    tickets_m = re.search(r"### Tickets créés\n([\s\S]*?)(?:\n###|\Z)", body)
-    if tickets_m and tickets_m.group(1).strip() not in ("*(Claude Code liste ici les IDs des tickets créés)*", ""):
-        fm["tickets_count"] = len(re.findall(r"#\d+", tickets_m.group(1)))
-    else:
-        fm["tickets_count"] = 0
+    # Tickets liés : compter les références #id où qu'elles soient (sprints inclus), format-agnostique.
+    fm["tickets_count"] = len(set(re.findall(r"#(\d{6,})", body)))
 
     return fm
+
+
+def _parse_sprints(body: str) -> list[dict]:
+    """Extrait les sprints d'un chantier : les `### …` sous la section `## Sprints`, avec leurs
+    items de checklist. C'est la base de l'ordre de sprint généré pour Claude Code."""
+    m = re.search(r"\n##\s+Sprints\s*\n(.*?)(?:\n##\s|\Z)", "\n" + body, re.S)
+    if not m:
+        return []
+    section = m.group(1)
+    sprints = []
+    for part in re.split(r"\n###\s+", "\n" + section)[1:]:
+        head, _, rest = part.partition("\n")
+        items = [ln.rstrip() for ln in rest.split("\n") if re.match(r"\s*-\s*\[[ xX]\]", ln)]
+        sprints.append({"name": head.strip(), "items": items})
+    return sprints
+
+
+def _generate_sprint_order(project: str, chantier_file: str, sprint: dict) -> str:
+    """Ordre de sprint = document de passage Hub → Claude Code. Mince, jetable, écrasé à chaque
+    génération. Le statut ne vit jamais ici : la source de vérité est le chantier."""
+    proj = project.split("~")[0]
+    lines = [
+        f"# Ordre de sprint — {proj}",
+        f"Chantier : roadmap/{chantier_file}",
+        f"Sprint   : {sprint['name']}",
+        "",
+        "## Items",
+        *(sprint["items"] or ["- [ ] (aucun item listé — voir le chantier)"]),
+        "",
+        f"> Déclencheur Claude Code : « exécute le sprint en cours pour {proj} »",
+        "> Source de vérité = le chantier ci-dessus. Ce fichier est jetable (écrasé au prochain ordre).",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def _list_items(project: str) -> list[dict]:
@@ -110,21 +140,26 @@ def _create_item(project: str, title: str, description: str, constraints: str) -
         f"project: {project.split('~')[0]}",
         "---",
         "",
-        f"## {title}",
+        f"# Chantier — {title}",
         "",
-        "### Direction / Feature (utilisateur)",
+        "## Direction (utilisateur)",
         description.strip() or "_Aucune description_",
         "",
     ]
     if constraints.strip():
-        lines += ["### Contraintes connues", constraints.strip(), ""]
+        lines += ["## Contraintes connues", constraints.strip(), ""]
     lines += [
-        "---",
-        "### Spec générée",
-        "*(Claude Code remplit cette section)*",
+        "## Décisions",
+        "*(Claude Code : ce qui est tranché ET ce qui reste à trancher — surface de validation, courte)*",
         "",
-        "### Tickets créés",
-        "*(Claude Code liste ici les IDs des tickets créés)*",
+        "## Sprints",
+        "*(Claude Code : sprints segmentés par contexte partagé ; la checklist EST le statut)*",
+        "",
+        "### Sprint 1 — {nom} · contexte partagé : {quoi}",
+        "- [ ] {item} → #{ticket_id si délégué}",
+        "",
+        "## Annexe — contrats / specs détaillés",
+        "*(le contrat exhaustif vit ici, pas dans la surface de validation)*",
         "",
     ]
     (rd / filename).write_text("\n".join(lines))
@@ -270,8 +305,9 @@ def _page_list(project: str, items: list) -> str:
   </div>
 </div>
 <div class="alert" style="background:rgba(79,110,247,.08);border:1px solid rgba(79,110,247,.2);color:#818cf8;font-size:.82rem;margin-bottom:1.25rem">
-  💡 Pour déléguer la définition à Claude : ajoute une direction ici, puis inclus-la dans le Session Brief.
-  Claude analysera le code et créera les tickets correspondants.
+  💡 Une direction devient un <strong>chantier</strong> : Claude y écrit les décisions puis le
+  découpe en <strong>sprints</strong>. Ouvre un chantier, puis génère l'ordre du sprint à exécuter
+  (écrit <code>SESSION.md</code>, déclenché ensuite dans Claude Code).
 </div>
 {sections}"""
     return _base_road(f"Roadmap — {display}", body, project)
@@ -312,8 +348,39 @@ def _page_edit(project: str, item: dict, flash: str = "") -> str:
     iid    = item.get("id", "")
     status = item.get("status", "draft")
     body_md = item.get("body", "")
+    proj = project.split("~")[0]
 
-    flash_html = '<div class="alert alert-success">✓ Sauvegardé.</div>' if flash == "saved" else ""
+    if flash == "saved":
+        flash_html = '<div class="alert alert-success">✓ Sauvegardé.</div>'
+    elif flash == "order":
+        flash_html = (f'<div class="alert alert-success">✓ <code>SESSION.md</code> généré. '
+                      f'Dans Claude Code : <strong>« exécute le sprint en cours pour {_e(proj)} »</strong></div>')
+    else:
+        flash_html = ""
+
+    sprints = _parse_sprints(body_md)
+    if sprints:
+        rows = ""
+        for s in sprints:
+            n = len(s["items"])
+            rows += f"""
+<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;background:#0f1117;
+     border:1px solid #2a2d3a;border-radius:8px;margin-bottom:.4rem">
+  <div style="flex:1;min-width:0">
+    <div style="font-size:.88rem;font-weight:600">{_e(s['name'])}</div>
+    <div style="font-size:.75rem;color:#666">{n} item{'s' if n!=1 else ''}</div>
+  </div>
+  <form method="POST" action="/roadmap/{_e(project)}/{_e(iid)}/sprint-order" style="margin:0">
+    <input type="hidden" name="sprint" value="{_e(s['name'])}">
+    <button type="submit" class="btn btn-primary btn-sm">⚡ Générer l'ordre</button>
+  </form>
+</div>"""
+        sprints_html = (f'<div class="section"><div class="section-title">'
+                        f"Sprints — générer l'ordre (SESSION.md)</div>{rows}</div>")
+    else:
+        sprints_html = ('<div class="section"><div class="section-title">Sprints</div>'
+                        '<p class="empty">Pas encore de sprints. Claude les ajoute dans la section '
+                        '<code>## Sprints</code> du chantier.</p></div>')
 
     status_opts = "".join(
         f'<option value="{s}" {"selected" if s==status else ""}>{STATUS_LABEL[s]}</option>'
@@ -330,6 +397,8 @@ def _page_edit(project: str, item: dict, flash: str = "") -> str:
   </div>
   <a href="/roadmap/{_e(project)}" class="btn btn-secondary">← Roadmap</a>
 </div>
+
+{sprints_html}
 
 <form method="POST" action="/roadmap/{_e(project)}/{_e(iid)}/edit">
   <div class="section">
@@ -350,7 +419,6 @@ def _page_edit(project: str, item: dict, flash: str = "") -> str:
   </div>
   <div style="display:flex;gap:.75rem;flex-wrap:wrap">
     <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
-    <a href="/tickets/{_e(project)}/brief?roadmap={_e(iid)}" class="btn btn-secondary">📋 Ajouter au brief</a>
   </div>
 </form>
 
@@ -437,6 +505,22 @@ async def roadmap_edit_post(
     fm_lines = ["---"] + [f"{k}: {v}" for k, v in fm.items()] + ["---", "", body.strip()]
     path.write_text("\n".join(fm_lines))
     return RedirectResponse(f"/roadmap/{project}/{item_id}/edit?flash=saved", status_code=303)
+
+
+@router.post("/{project}/{item_id}/sprint-order")
+async def roadmap_sprint_order(request: Request, project: str, item_id: str, sprint: str = Form(...)):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    path = _item_path(project, item_id)
+    if not path:
+        return HTMLResponse(f"Item introuvable : {_e(item_id)}", status_code=404)
+    item = _parse_item(path)
+    match = next((s for s in _parse_sprints(item.get("body", "")) if s["name"] == sprint), None)
+    if not match:
+        return HTMLResponse(f"Sprint introuvable : {_e(sprint)}", status_code=404)
+    content = _generate_sprint_order(project, path.name, match)
+    (PROJECTS_BASE / project.split("~")[0] / "SESSION.md").write_text(content)
+    return RedirectResponse(f"/roadmap/{project}/{item_id}/edit?flash=order", status_code=303)
 
 
 @router.post("/{project}/{item_id}/delete")

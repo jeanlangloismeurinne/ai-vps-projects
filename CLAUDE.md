@@ -132,13 +132,18 @@ En fin de session, une fois une feature livrée (session en direct **ou** via ti
 PHP → monitor). En cas d'échec (exit ≠ 0), basculer sur le sous-agent Sonnet décrit dans DEPLOY.md.
 But : préserver le contexte/quota Opus en gardant le verbeux (diff, logs de build) hors session.
 
-## Système de contrôle — tickets, roadmap, session brief
+## Système de contrôle — chantiers, sprints, tickets
 
 Protocole complet dans **`CONTROL_SYSTEM.md`** à la racine du repo. Lire ce fichier au démarrage
 de toute session de travail sur un projet.
 
-Commande de déclenchement : **"execute le brief session pour {projet}"**
-→ Lire `SESSION_BRIEF.md` dans le répertoire du projet, puis suivre le protocole CONTROL_SYSTEM.md.
+Modèle : un **chantier** (`roadmap/{nom}.md`) = doc vivant que l'utilisateur valide (direction +
+décisions + sprints = statut). Le Hub génère un **ordre de sprint** (`SESSION.md`, jetable) — le
+pont vers Claude Code, car le Hub ne peut pas lancer l'exécution lui-même.
+
+Commande de déclenchement : **"execute le sprint en cours pour {projet}"**
+→ Lire `SESSION.md` **et** le chantier qu'il pointe (source de vérité), exécuter le sprint, cocher
+la checklist dans le chantier. À la clôture : gotchas → `DECISIONS.md`, chantier fini → `roadmap/archive/`.
 
 ## Bases de connaissance — architecture commune
 

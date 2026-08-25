@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Request, Form, UploadFile, File, Query
+from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 PROJECTS_BASE = Path(os.environ.get("PROJECTS_DIR", "/projects"))
@@ -298,69 +298,6 @@ def _create_ticket(
     return str(ticket_id)
 
 
-def _generate_session_brief(
-    project: str,
-    scope: str,
-    roadmap_items: str,
-    preactions: str,
-    ticket_ids: list[str],
-    context: str,
-    roadmap_ids: list[str] = None,
-) -> str:
-    today = datetime.now().strftime("%Y-%m-%d")
-    lines = [f"# Session Brief — {project} — {today}", ""]
-
-    if scope.strip():
-        lines += ["## Scope", scope.strip(), ""]
-
-    all_roadmap_lines = []
-    if roadmap_ids:
-        from app.roadmap import _item_path, _parse_item
-        for rid in roadmap_ids:
-            path = _item_path(project, rid)
-            if path:
-                item = _parse_item(path)
-                title = item.get("body", "").split("\n")[0].lstrip("# ").strip() or rid
-                all_roadmap_lines.append(f"roadmap-{rid} : {title}")
-    if roadmap_items.strip():
-        for line in roadmap_items.strip().split("\n"):
-            if line.strip():
-                all_roadmap_lines.append(line.lstrip("- "))
-
-    if all_roadmap_lines:
-        lines += ["## Roadmap — définition (avant implémentation)"]
-        for line in all_roadmap_lines:
-            lines.append(f"- [ ] {line}")
-        lines.append("")
-
-    if preactions.strip():
-        lines += ["## Pré-actions (specs à générer)"]
-        for line in preactions.strip().split("\n"):
-            lines.append(f"- [ ] {line.lstrip('- ')}")
-        lines.append("")
-
-    if ticket_ids:
-        fd = _feedback_dir(project)
-        lines.append("## Tickets à traiter")
-        for tid in ticket_ids:
-            path = _ticket_path(project, tid)
-            if path:
-                t = _parse_ticket(path)
-                prio = t.get("priority", "medium")
-                type_ = t.get("type", "")
-                desc = (t.get("description") or "")[:80]
-                lines.append(f"- [ ] #{tid} — {type_} — {desc} (priority: {prio})")
-            else:
-                lines.append(f"- [ ] #{tid}")
-        lines.append("")
-
-    if context.strip():
-        lines += ["## Contexte additionnel", context.strip(), ""]
-
-    lines += ["## Résumé de session", "*(Claude Code remplit cette section à la fin)*", ""]
-    return "\n".join(lines)
-
-
 # ── HTML helpers ───────────────────────────────────────────────────────────────
 
 def _e(s: str) -> str:
@@ -450,12 +387,6 @@ def _base(title: str, body: str, breadcrumbs: str = "") -> str:
   .alert-error{{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#f87171}}
   .alert-info{{background:rgba(79,110,247,.12);border:1px solid rgba(79,110,247,.3);color:#818cf8}}
   .divider{{border:none;border-top:1px solid #1e2130;margin:1.25rem 0}}
-  .brief-bar{{background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;padding:.75rem 1rem;
-              margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}}
-  .brief-count{{font-size:.85rem;color:#888}}
-  .brief-count strong{{color:#4f6ef7}}
-  .checkbox-label{{display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:#888}}
-  .checkbox-label input{{width:auto;accent-color:#4f6ef7}}
   pre{{background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:1rem;
        font-size:.78rem;line-height:1.6;overflow-x:auto;white-space:pre-wrap;color:#bbb}}
   @media(max-width:600px){{.form-row,.form-row-3{{grid-template-columns:1fr}}.project-grid{{grid-template-columns:1fr}}}}
@@ -701,8 +632,7 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str,
                 if has_subs and sub else ""
             )
             cards += f"""
-<div class="card" style="padding-right:2.5rem">
-  <input type="checkbox" class="card-check brief-cb" name="t" value="{_e(tid)}">
+<div class="card">
   <a href="/tickets/{_e(addr)}/{_e(tid)}/edit" class="card-link" style="display:block">
     <div class="card-row">
       {sub_badge}{_type_tag(type_)}{_status_tag(status)}{_priority_tag(prio)}
@@ -747,39 +677,12 @@ def _page_ticket_list(project: str, tickets: list, status_f: str, type_f: str,
   </div>
 </div>
 {add_sub_html}
-<form method="GET" action="/tickets/{_e(project)}/brief" id="brief-form">
-<div class="brief-bar">
-  <span class="brief-count">📋 <strong id="brief-n">0</strong> ticket(s) sélectionné(s)</span>
-  <button type="submit" class="btn btn-secondary btn-sm" id="brief-btn" disabled>Construire le brief →</button>
-  <label class="checkbox-label" style="margin-left:auto">
-    <input type="checkbox" id="select-all"> Tout sélectionner
-  </label>
-</div>
 {sub_filter_row}
 <div class="filter-row">{status_btns}</div>
 <div class="filter-row">{type_btns}</div>
 <div class="filter-row">{prio_btns}</div>
 {"" if not ms_btns else f'<div class="filter-row">{ms_btns}</div>'}
-{cards}
-</form>
-<script>
-const cbs = () => document.querySelectorAll('.brief-cb');
-const btn = document.getElementById('brief-btn');
-const counter = document.getElementById('brief-n');
-const all = document.getElementById('select-all');
-function update() {{
-  const n = [...cbs()].filter(c=>c.checked).length;
-  counter.textContent = n;
-  btn.disabled = n === 0;
-}}
-document.addEventListener('change', e => {{
-  if (e.target.classList.contains('brief-cb')) update();
-  if (e.target.id === 'select-all') {{
-    cbs().forEach(c => c.checked = e.target.checked);
-    update();
-  }}
-}});
-</script>"""
+{cards}"""
     return _base(display, body, breadcrumbs)
 
 
@@ -961,149 +864,6 @@ def _page_edit(project: str, ticket: dict, specs: list, flash: str = "") -> str:
     return _base(f"#{tid}", body, breadcrumbs)
 
 
-# ── Page: brief builder ────────────────────────────────────────────────────────
-
-_RM_STATUS_LABEL = {"draft": "Brouillon", "spec-ready": "Spec prête", "tickets-created": "Tickets créés"}
-_RM_STATUS_COLOR = {"draft": "#6b7280", "spec-ready": "#ca8a04", "tickets-created": "#4f6ef7"}
-
-
-def _roadmap_picker_html(project: str, preselected: list[str]) -> str:
-    from app.roadmap import _list_items
-    items = [i for i in _list_items(project) if i.get("status") != "done"]
-    if not items:
-        return (
-            f'<p class="empty">Aucun item de roadmap actif. '
-            f'<a href="/roadmap/{_e(project)}" style="color:#4f6ef7">Créer un item →</a></p>'
-            '<div class="form-group" style="margin-top:.75rem">'
-            '<label>Instructions pour Claude (texte libre, une par ligne)</label>'
-            '<textarea name="roadmap_items" rows="4" placeholder="ex: Analyser les tickets ouverts et générer une vision V2"></textarea>'
-            '</div>'
-        )
-
-    checkboxes = ""
-    for item in items:
-        iid = item.get("id", "").replace("roadmap-", "")
-        title = item.get("body", "").split("\n")[0].lstrip("# ").strip() or iid
-        status = item.get("status", "draft")
-        color = _RM_STATUS_COLOR.get(status, "#6b7280")
-        slabel = _RM_STATUS_LABEL.get(status, status)
-        preview = _e(item.get("preview", "")[:90])
-        checked = "checked" if iid in preselected else ""
-        checkboxes += f"""
-<label style="display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .75rem;border-radius:8px;
-  background:#0f1117;border:1px solid #2a2d3a;margin-bottom:.4rem;cursor:pointer">
-  <input type="checkbox" name="rm" value="{_e(iid)}" {checked}
-    style="width:auto;accent-color:#4f6ef7;margin-top:.2rem;flex-shrink:0">
-  <div style="min-width:0">
-    <div style="font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-      {_e(title)}
-      <span style="font-size:.72rem;font-weight:600;padding:.15rem .45rem;border-radius:20px;
-        background:{color}22;color:{color}">{_e(slabel)}</span>
-    </div>
-    {"" if not preview else f'<div style="font-size:.78rem;color:#666;margin-top:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{preview}</div>'}
-  </div>
-</label>"""
-
-    return (
-        checkboxes
-        + '<div class="form-group" style="margin-top:.75rem">'
-        + '<label>Instructions supplémentaires (texte libre, une par ligne)</label>'
-        + '<textarea name="roadmap_items" rows="3" placeholder="ex: Créer item roadmap pour : refonte onboarding"></textarea>'
-        + '</div>'
-    )
-
-
-def _page_brief(project: str, selected_ids: list[str], current_brief: str, preselected_roadmap: list[str] = None) -> str:
-    display = project.replace("~", " / ")
-
-    selected_tickets = []
-    for tid in selected_ids:
-        path = _ticket_path(project, tid)
-        if path:
-            selected_tickets.append(_parse_ticket(path))
-    selected_tickets.sort(key=lambda t: PRIORITY_ORDER.get(t.get("priority"), 4))
-
-    tickets_html = ""
-    hidden_inputs = ""
-    if selected_tickets:
-        for t in selected_tickets:
-            tid  = t.get("id", "")
-            desc = _e(t.get("description", "")[:80])
-            prio = t.get("priority", "")
-            status = t.get("status", "open")
-            tickets_html += f"""
-<div class="card" style="margin-bottom:.4rem">
-  <div class="card-row">
-    {_type_tag(t.get("type",""))}{_status_tag(status)}{_priority_tag(prio)}
-    <span class="card-meta">#{_e(str(tid))}</span>
-  </div>
-  {"" if not desc else f'<div class="card-desc">{desc}</div>'}
-</div>"""
-            hidden_inputs += f'<input type="hidden" name="t" value="{_e(str(tid))}">'
-    else:
-        tickets_html = '<p class="empty">Aucun ticket sélectionné. <a href="/tickets/{}" style="color:#4f6ef7">← Retour à la liste</a></p>'.format(_e(project))
-
-    current_brief_html = ""
-    if current_brief:
-        current_brief_html = f"""
-<div class="section">
-  <div class="section-title">SESSION_BRIEF.md actuel</div>
-  <pre>{_e(current_brief)}</pre>
-</div>"""
-
-    breadcrumbs = (
-        f'<span class="sep">/</span> <a href="/tickets/{_e(project)}" class="breadcrumb">{_e(display)}</a>'
-        f' <span class="sep">/</span> <span class="breadcrumb current">Brief</span>'
-    )
-    body = f"""
-<div class="page-header">
-  <div class="page-title">📋 Session Brief — {_e(display)}</div>
-  <a href="/tickets/{_e(project)}" class="btn btn-secondary">← Retour</a>
-</div>
-
-{current_brief_html}
-
-<form method="POST" action="/tickets/{_e(project)}/brief/generate">
-  {hidden_inputs}
-
-  <div class="section">
-    <div class="section-title">Tickets sélectionnés ({len(selected_tickets)})</div>
-    {tickets_html}
-  </div>
-
-  <div class="section">
-    <div class="section-title">Scope / Contraintes</div>
-    <div class="form-group">
-      <label>Milestone actif, modules hors-scope...</label>
-      <textarea name="scope" rows="3" placeholder="ex: Milestone actif : V2-budget&#10;Ne pas toucher : module import"></textarea>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Roadmap — items à déléguer à Claude (optionnel)</div>
-    {_roadmap_picker_html(project, preselected_roadmap or [])}
-  </div>
-
-  <div class="section">
-    <div class="section-title">Pré-actions — specs à générer (optionnel)</div>
-    <div class="form-group">
-      <label>Une par ligne — Claude génèrera le fichier spec correspondant</label>
-      <textarea name="preactions" rows="3" placeholder="ex: Générer spec pour : refonte UX page budget → attacher au ticket #1780688"></textarea>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Contexte additionnel (optionnel)</div>
-    <div class="form-group">
-      <textarea name="context" rows="3" placeholder="ex: Préférer CSS-only pour les animations. Pas de nouvelle dépendance npm."></textarea>
-    </div>
-  </div>
-
-  <button type="submit" class="btn btn-primary">⚡ Générer SESSION_BRIEF.md</button>
-</form>"""
-    return _base("Brief", body, breadcrumbs)
-
-
 # ── Auth helper ────────────────────────────────────────────────────────────────
 
 def _require_auth(request: Request, settings):
@@ -1209,40 +969,6 @@ async def ticket_new_post(
         needs_clarification=bool(needs_clarification),
     )
     return RedirectResponse(f"/tickets/{target}/{tid}/edit?flash=saved", status_code=303)
-
-
-@router.get("/{project}/brief", response_class=HTMLResponse)
-async def ticket_brief_get(
-    request: Request, project: str,
-    t: list[str] = Query(default=[]),
-    roadmap: list[str] = Query(default=[]),
-):
-    from app.main import settings
-    if r := _require_auth(request, settings): return r
-    if _feedback_dir(project) is None:
-        return HTMLResponse(f"Projet introuvable : {_e(project)}", status_code=404)
-    proj_dir = PROJECTS_BASE / project.split("~")[0]
-    brief_path = proj_dir / "SESSION_BRIEF.md"
-    current = brief_path.read_text() if brief_path.exists() else ""
-    return HTMLResponse(_page_brief(project, t, current, roadmap))
-
-
-@router.post("/{project}/brief/generate")
-async def ticket_brief_generate(
-    request: Request, project: str,
-    t: list[str] = Form(default=[]),
-    rm: list[str] = Form(default=[]),
-    scope: str = Form(default=""),
-    roadmap_items: str = Form(default=""),
-    preactions: str = Form(default=""),
-    context: str = Form(default=""),
-):
-    from app.main import settings
-    if r := _require_auth(request, settings): return r
-    proj_dir = PROJECTS_BASE / project.split("~")[0]
-    content = _generate_session_brief(project, scope, roadmap_items, preactions, t, context, rm)
-    (proj_dir / "SESSION_BRIEF.md").write_text(content)
-    return RedirectResponse(f"/tickets/{project}/brief", status_code=303)
 
 
 @router.get("/{project}/{ticket_id}/edit", response_class=HTMLResponse)

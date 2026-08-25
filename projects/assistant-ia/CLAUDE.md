@@ -186,6 +186,7 @@ Ordre obligatoire :
 
 ## Système de contrôle
 
-Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
-Commande : **"execute le brief session pour assistant-ia"**
-→ Lire `SESSION_BRIEF.md` à la racine de ce projet, puis suivre le protocole.
+Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet (chantiers · sprints · tickets).
+Commande : **"execute le sprint en cours pour assistant-ia"**
+→ Lire `SESSION.md` **et** le chantier qu'il pointe (source de vérité), exécuter le sprint, cocher
+la checklist dans le chantier.
