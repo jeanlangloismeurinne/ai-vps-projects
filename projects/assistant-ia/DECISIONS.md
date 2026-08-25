@@ -44,5 +44,26 @@
   embarquée : dépendance croisée #612 ↔ #613. Repli documenté = Dataview (mêmes vues en blocs
   ```dataview``` dans des `.md`). Ne pas considérer le format `.base` comme acquis avant Sprint 2.
 
+## Viewer KB (sprint Viewer, 2026-08-25)
+
+- **« Obsidian réel en conteneur » est intenable sur cette box.** L'image KasmVNC
+  `linuxserver/obsidian` pèse **5,18 GB** (bureau distant complet — Obsidian est Electron, aucun
+  « Obsidian réel » plus léger n'existe : le servir au navigateur impose un desktop distant). La
+  tirer a mis `/` à **100 %** (38 GB, ~5,6 GB libres) → **risque de corruption Postgres/Coolify**.
+  RAM aussi tendue (3,7 GB total, ~770 MB libres, 0 swap). **Décision utilisateur** : basculer sur
+  le repli documenté **Quartz** (site statique, même vault). Trade-off accepté : perte du filtrage
+  interactif Bases/Dataview ; conservation graphe/backlinks/recherche. Réversible (substrat intact).
+  **Leçon de pilotage** : front-loader un check `df -h` + taille d'image AVANT de tirer une image
+  lourde sur une box de prod partagée (le même réflexe que « vérifier contre l'API réelle »).
+- **Ne jamais laisser `/` atteindre 100 %** : `docker pull` d'une grosse image peut saturer et
+  faire tomber les bases. Récupération à chaud : `swapoff/rm /swapfile` (2 GB instantanés),
+  `docker rm -f <conteneur>` puis `docker rmi <image>` (l'image reste référencée par son conteneur
+  arrêté). `docker image prune -f` ne libère QUE le dangling (pas les images taguées non utilisées).
+- **Build d'un site statique depuis du code externe (Quartz)** : le faire dans un conteneur
+  `node:22` **éphémère** (scripts npm sandboxés, jamais sur l'hôte), pas `npm install` sur l'hôte.
+  Quartz `rmdir` son dossier de sortie → builder vers un dossier local puis copier le CONTENU dans
+  le volume (jamais le point de montage = EBUSY). Quartz 4.5.1 exige **Node ≥ 22**. Détails et
+  exploitation : `projects/kb-viewer/README.md`.
+
 ---
 _Historique détaillé des sessions : `git log` + `roadmap/archive/`._

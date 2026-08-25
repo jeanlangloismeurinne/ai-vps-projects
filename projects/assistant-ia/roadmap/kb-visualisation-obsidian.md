@@ -19,9 +19,17 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
 ## Décisions
 
 **Tranché :**
-- **Viewer = Obsidian réel en conteneur** (KasmVNC web) **+ Sablier scale-to-zero**. Seul chemin qui
-  rend le kanban interactivement filtrable (Bases/Dataview). Le scale-to-zero neutralise la RAM :
-  conteneur arrêté (~0 RAM) au repos, réveillé à la demande (~15-30 s au 1er accès).
+- ~~**Viewer = Obsidian réel en conteneur** (KasmVNC + Sablier scale-to-zero)~~ → **ABANDONNÉ le
+  2026-08-25 (mur matériel, décidé par l'utilisateur)**. L'image KasmVNC `linuxserver/obsidian` pèse
+  **5,18 GB** (bureau distant complet — Obsidian est Electron, aucun « Obsidian réel » plus léger
+  n'existe) : la tirer a saturé le disque à **100 %** (box 38 GB, ~5,6 GB libres seulement) → risque
+  de corruption Postgres/Coolify. RAM aussi très tendue (3,7 GB, ~770 MB libres). Voir DECISIONS.md.
+- **Viewer = Quartz (site statique, même vault)** — le repli documenté devient le choix. Build du
+  vault → HTML statique servi par un `nginx:alpine` (~15 MB image, RAM/disque quasi nuls, 0 risque
+  prod), derrière coolify-proxy avec **basic-auth** (journal `private`). **Trade-off accepté** : on
+  perd le filtrage **interactif** Bases/Dataview (kanban explorable en direct) ; on garde graphe,
+  backlinks, recherche, lecture des notes. Réversible : le substrat (vault) est intact, on peut
+  revenir à Obsidian réel si la box est upgradée.
 - **Kanban → visu = miroir one-way DB→MD** (1 carte = 1 note `.md`). Postgres `cards` reste la
   vérité ; le vault reçoit une projection dérivée read-only.
 - **Édition = lecture seule** (l'agent écrit, l'utilisateur lit). Conteneur monte le vault en RO.
@@ -32,7 +40,7 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
 - ~~**Mapping `status`** des colonnes kanban~~ → **tranché** (Substrat livré) : `Terminé/Done → done`,
   `Rappels → reminder`, reste → `open`. Table `_STATUS_*` en tête de `kanban_vault.py`, comparaison
   sur nom de colonne slugifié.
-- **Sous-domaine** : `obsidian.jlmvpscode.duckdns.org` par défaut. (sprint *Viewer*)
+- ~~**Sous-domaine**~~ → **tranché** : `kb.jlmvpscode.duckdns.org` (le viewer n'est plus Obsidian).
 
 ## Sprints
 
@@ -40,9 +48,20 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
 - [x] Miroir kanban → vault (writer one-way + réconciliation + trigger) → #1787600247611 · note : `kanban_vault.py`, réconcilié par `card_id`, job périodique `*/10`. **`card_fields` jamais peuplé → `tags` vide en pratique** (voir DECISIONS.md).
 - [x] Notes-schéma + vues Bases/Dataview (taxonomie, MOC, Tâches, Journal) → #1787600247612 · note : `kb_schema_notes.py`, Taxonomie générée depuis le YAML, vues `.base` (format **provisoire** jusqu'au Sprint 2, cf. #612↔#613).
 
-### Sprint 2 — Viewer · contexte partagé : Docker / Traefik / KasmVNC
-- [ ] Conteneur Obsidian read-only (image + plugins + montage vault RO) → #1787600247613
-- [ ] Sablier scale-to-zero + Traefik + auth → #1787600247614
+### Sprint 2 — Viewer · contexte partagé : Docker / Traefik ✅ (pivot Quartz, 2026-08-25)
+> ⚠️ Approche KasmVNC/Obsidian **abandonnée** (image 5,18 GB → disque saturé, cf. Décisions +
+> DECISIONS.md). Livré : **viewer statique Quartz** (`projects/kb-viewer/`), même vault.
+- [x] ~~Conteneur Obsidian RO~~ → **Viewer Quartz** : `nginx:alpine` sert le site statique généré
+  depuis le vault RO (build conteneurisé, sandbox). → #1787600247613 (fermé, superseded)
+  · note : `projects/kb-viewer/`, `build.sh` (node:22 éphémère) + timer systemd 10 min.
+- [x] ~~Sablier scale-to-zero + auth~~ → **Auth + TLS via coolify-proxy** : basic-auth (journal
+  `private`), 401 sans auth / 200 avec, cert Let's Encrypt. Scale-to-zero **sans objet** (nginx
+  ~10 MB permanent). → #1787600247614 (fermé, superseded) · note : `docker-compose.override.yml`
+  (hash gitignored), `kb.jlmvpscode.duckdns.org`.
+
+> Cross-dépendance #612↔#613 **résolue** : sous Quartz les vues `.base` ne sont pas rendues (elles
+> restent le contrat Obsidian, réactivables si retour à Obsidian). Le viewer expose graphe +
+> backlinks + recherche + tags à la place. Voir note #612.
 
 ### Sprint 3 — Finition · contexte partagé : doc / UI
 - [ ] Doc d'accès + landing (README vault, landing page, URL) → #1787600247615

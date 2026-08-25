@@ -88,3 +88,10 @@ vault, commit `sync notes-schéma`.
 **Vérification** : `/tmp/test_kb_sync.py` — présence des 4 fichiers, taxonomie reflétant le YAML,
 `Tâches.base` filtrant `type=="task"` et groupé par colonne, **idempotence** (2ᵉ run = 0 écriture).
 Le rendu visuel dans Obsidian sera confirmé au sprint Viewer.
+
+**MàJ 2026-08-25 (sprint Viewer)** : le viewer a pivoté d'Obsidian réel vers **Quartz statique**
+(mur disque KasmVNC, cf. #613 + DECISIONS.md). Conséquence sur la cross-dépendance #612↔#613 : sous
+Quartz les fichiers `.base` **ne sont pas rendus** (c'est un format de vue Obsidian). Ils restent
+générés et versionnés (contrat Obsidian intact, réactivable si retour à Obsidian après upgrade box).
+Le viewer expose à la place graphe + backlinks + recherche + pages de tags. La question « quels
+plugins embarque l'image Obsidian » devient sans objet côté Quartz.

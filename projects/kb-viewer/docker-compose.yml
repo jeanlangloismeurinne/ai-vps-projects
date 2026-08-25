@@ -1,0 +1,47 @@
+name: kb-viewer
+
+# Viewer STATIQUE de la base de connaissance (chantier kb-visualisation, Sprint 2).
+# Remplace l'approche « Obsidian réel / KasmVNC » (image 5,18 GB, RAM/disque intenables sur
+# cette box — voir DECISIONS.md). Quartz génère un site statique depuis le vault ; nginx le sert
+# derrière le coolify-proxy avec basic-auth (le journal est `private`).
+#
+#   vault (RO) --build.sh (conteneur node éphémère)--> volume kb_public --> nginx:alpine
+#                                                                            ^ coolify-proxy (TLS + auth)
+#
+# L'auth (hash) vit dans docker-compose.override.yml (généré par gen-auth.sh, gitignored).
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  kb_public:
+    external: true          # rempli par build.sh, servi par nginx (créé par gen-auth.sh/setup)
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: kb-viewer
+    restart: unless-stopped
+    volumes:
+      - kb_public:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [coolify]
+    mem_limit: 32m
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.kbgzip.compress=true
+      - traefik.http.middlewares.kbredirect.redirectscheme.scheme=https
+      - traefik.http.routers.kb-http.entryPoints=http
+      - traefik.http.routers.kb-http.middlewares=kbredirect
+      - traefik.http.routers.kb-http.rule=Host(`kb.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.kb-http.service=kb
+      - traefik.http.routers.kb-https.entryPoints=https
+      # kbauth (basic-auth) défini dans docker-compose.override.yml ; AVANT gzip = pas de fuite si 401
+      - traefik.http.routers.kb-https.middlewares=kbauth,kbgzip
+      - traefik.http.routers.kb-https.rule=Host(`kb.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.kb-https.service=kb
+      - traefik.http.routers.kb-https.tls=true
+      - traefik.http.routers.kb-https.tls.certresolver=letsencrypt
+      - traefik.http.services.kb.loadbalancer.server.port=80

@@ -1,9 +1,10 @@
 ---
 id: 1787600247614
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T19:37:27Z
+closed_at: 2026-08-25T07:15:00Z
 project: assistant-ia
 url:
 milestone: kb-visualisation
@@ -59,4 +60,13 @@ nouveau.
 
 ### Notes d'implémentation
 
-_(à compléter à la fermeture)_
+**Fermé le 2026-08-25 — SUPERSEDED par le pivot Quartz.** Le scale-to-zero (Sablier + socket-proxy)
+visait à neutraliser la RAM d'un bureau KasmVNC lourd. Avec le viewer statique Quartz, l'empreinte
+permanente est un `nginx:alpine` (~10 MB RAM) → **scale-to-zero sans objet**.
+
+Ce qui a été conservé de ce ticket (l'exigence réelle) : **auth non négociable + TLS**. Réalisé via
+le **coolify-proxy** (edge) : middleware Traefik `basicauth` (hash dans `docker-compose.override.yml`,
+gitignored) + cert Let's Encrypt. Vérifié : `http→302 https`, `https sans auth → 401`,
+`https avec auth → 200`, cert LE valide. Host : `kb.jlmvpscode.duckdns.org`. Le POC KasmVNC complet
+(Traefik dédié + plugin Sablier + tecnativa socket-proxy restreint `CONTAINERS/POST`) a été monté et
+validé côté plan de contrôle avant l'abandon — réutilisable si retour à Obsidian après upgrade box.

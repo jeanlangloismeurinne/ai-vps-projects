@@ -1,9 +1,10 @@
 ---
 id: 1787600247613
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T19:37:27Z
+closed_at: 2026-08-25T07:15:00Z
 project: assistant-ia
 url:
 milestone: kb-visualisation
@@ -61,4 +62,12 @@ bureau KasmVNC, ne garder qu'Obsidian.
 
 ### Notes d'implémentation
 
-_(à compléter à la fermeture)_
+**Fermé le 2026-08-25 — SUPERSEDED par le pivot Quartz (décision utilisateur).** L'approche
+« Obsidian réel / KasmVNC » a été abandonnée : image `linuxserver/obsidian` = **5,18 GB**, la tirer
+a saturé le disque (box 38 GB, ~5,6 GB libres) → risque prod. Il n'existe pas d'Obsidian réel plus
+léger (Electron ⇒ desktop distant). Voir `DECISIONS.md` §Viewer KB.
+
+Livré à la place : **viewer statique Quartz** dans `projects/kb-viewer/` — `nginx:alpine` sert un
+site généré depuis le vault RO (`build.sh`, conteneur node éphémère). Vault en lecture seule par
+construction (le build lit le vault `:ro`, l'agent host reste seul à écrire). Vues `.base` non
+rendues sous Quartz (contrat Obsidian conservé pour un éventuel retour). Réversible.
