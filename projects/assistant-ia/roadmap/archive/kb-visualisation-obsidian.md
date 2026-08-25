@@ -1,5 +1,5 @@
 ---
-status: en-cours
+status: done
 milestone: kb-visualisation
 ---
 
@@ -64,8 +64,11 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
 > restent le contrat Obsidian, réactivables si retour à Obsidian). Le viewer expose graphe +
 > backlinks + recherche + tags à la place. Voir note #612.
 
-### Sprint 3 — Finition · contexte partagé : doc / UI
-- [ ] Doc d'accès + landing (README vault, landing page, URL) → #1787600247615
+### Sprint 3 — Finition · contexte partagé : doc / UI ✅
+- [x] Doc d'accès + landing (README vault, landing page, URL) → #1787600247615 · note : aligné sur
+  le pivot Quartz (`kb.jlmvpscode.duckdns.org`, nginx permanent = pas de cold start). Landing
+  (`main.py` : bouton + note lecture seule/mdp), `_README` vault (2 voies : web + git clone),
+  `Accueil.md` (pointeur), CLAUDE.md projet (section KB en ligne ; racine déjà faite au pivot).
 
 > Délégation (plancher) : *Substrat* et *Viewer* sont chacun un contexte couplé → au plus **un
 > worker par sprint**, jamais un worker par ticket. *Finition* est trivial → Opus inline.

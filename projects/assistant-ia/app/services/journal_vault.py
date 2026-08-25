@@ -35,7 +35,15 @@ Ce dossier est **écrit par l'agent**. Ne le modifiez pas à la main : l'index P
 Un fichier = une note. Le corps est le verbatim de ce que vous avez écrit dans Slack `#journal` ;
 le front-matter est produit par le classifieur.
 
-## Récupérer le vault sur votre machine
+## Consulter le vault
+
+Deux voies d'accès :
+
+**En ligne** (lecture seule, rien à installer) : <https://kb.jlmvpscode.duckdns.org> — site
+statique généré depuis ce vault (graphe, backlinks, recherche plein texte). Protégé par mot de
+passe.
+
+**En local** (pour l'ouvrir dans Obsidian) :
 
 ```bash
 git clone ssh://root@204.168.250.110/storage/journal-vault ~/journal-vault

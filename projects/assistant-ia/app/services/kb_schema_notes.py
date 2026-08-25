@@ -48,7 +48,7 @@ def _accueil_md() -> str:
 > Ce coffre est **écrit par l'agent** (assistant-ia), en **lecture seule**. Ne l'éditez pas à la
 > main : les notes sont des projections de Postgres (journal `journal_kb_entries`, tâches kanban
 > `cards`) et une modification manuelle serait écrasée à la prochaine synchronisation.
-> Voir aussi `README.md` (récupération du vault en local).
+> Voir aussi `README.md` (accès en ligne <https://kb.jlmvpscode.duckdns.org> ou clone local).
 
 ## Cartes de vue
 

@@ -1,12 +1,13 @@
 ---
 id: 1787600247615
 type: feature
-status: open
+status: closed
 priority: medium
 date: 2026-08-24T19:37:27Z
 project: assistant-ia
 url:
 milestone: kb-visualisation
+closed_at: 2026-08-25T00:00:00Z
 ---
 
 ## ✨ Feature
@@ -41,4 +42,20 @@ existant. Ne pas dupliquer le message « écrit par l'agent, ne pas éditer ».
 
 ### Notes d'implémentation
 
-_(à compléter à la fermeture)_
+Livré **après pivot Quartz** (cf. Sprint 2 / DECISIONS.md) : les hypothèses Obsidian +
+scale-to-zero du ticket sont **caduques**. URL réelle = `kb.jlmvpscode.duckdns.org` (pas
+`obsidian.…`), nginx **permanent** (aucun cold start à documenter), lecture seule + basic-auth.
+
+1. **Landing** (`app/main.py`, section « Base de connaissance ») : bouton `Explorer le vault →` +
+   lien inline vers `kb.jlmvpscode.duckdns.org` + note lecture seule / protégé par mot de passe.
+   Aucune note de latence (nginx permanent, sans objet).
+2. **README vault** (`services/journal_vault.py`, `_README`) : section « Consulter le vault » à deux
+   voies — en ligne (Quartz, lecture seule) **et** `git clone` existant. Message « écrit par
+   l'agent » non dupliqué (déjà en tête).
+3. **Accueil.md** (`services/kb_schema_notes.py`) : pointeur README mis à jour (accès en ligne + clone).
+4. **CLAUDE.md** : racine déjà détaillée (entrée `kb-viewer`, écrite au pivot) ; ajout d'une section
+   « Base de connaissance — visualisation en ligne » dans le CLAUDE.md **projet** (URL + vault
+   partagé + renvoi racine/README).
+
+Vérification : `python -m py_compile` OK sur les 3 modules touchés. Rendu HTML/Markdown = strings
+statiques (pas de logique). Latence/scale-to-zero du ticket : sans objet (nginx permanent).

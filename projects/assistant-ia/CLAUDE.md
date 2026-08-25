@@ -155,6 +155,13 @@ Variables d'environnement associées :
   exposé** au modèle.
 - `EXA_API_KEY` / `SERPER_API_KEY` — clé propre à assistant-ia, jamais partagée avec un autre projet.
 
+## Base de connaissance — visualisation en ligne
+
+Le vault (`/storage/journal-vault` : journal + miroir kanban sous `tasks/`) se consulte en ligne
+sur **`kb.jlmvpscode.duckdns.org`** — site statique Quartz (lecture seule, basic-auth), servi par
+`projects/kb-viewer/` (stack standalone, **pas** une app Coolify). Détails/rebuild : entrée
+`kb-viewer` du CLAUDE.md racine + `projects/kb-viewer/README.md`.
+
 ## Journal — structure des routes
 
 | Fichier | Rôle |

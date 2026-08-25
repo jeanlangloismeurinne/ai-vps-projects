@@ -180,16 +180,20 @@ _LANDING_HTML = """<!DOCTYPE html>
     <div class="section-header">
       <span class="badge">📚</span>
       <h3>Base de connaissance</h3>
+      <a href="https://kb.jlmvpscode.duckdns.org" class="link-btn">Explorer le vault →</a>
     </div>
     <p class="desc">
       Écris une note libre dans <code>#journal</code> : elle est classée automatiquement
       (contexte, nature, thèmes, projet), enregistrée en Markdown dans un vault versionné, et
       indexée pour la recherche. L'assistant confirme le classement en réponse — par exemple
-      <em>Noté · professionnel · decision · #management</em>.
+      <em>Noté · professionnel · decision · #management</em>. Le vault (journal + tâches kanban) se
+      consulte en ligne sur <a href="https://kb.jlmvpscode.duckdns.org" style="color:#4f6ef7">kb.jlmvpscode.duckdns.org</a>
+      — graphe, backlinks, recherche plein texte.
     </p>
     <div class="note">Une note identique déjà enregistrée n'est pas dupliquée. Quand aucune
       catégorie du vocabulaire ne convient, le champ reste vide plutôt que d'être rempli
-      approximativement.</div>
+      approximativement. La vue en ligne est en <strong>lecture seule</strong> (l'agent écrit, vous
+      lisez) et protégée par mot de passe.</div>
   </div>
 
   <!-- Journal -->
