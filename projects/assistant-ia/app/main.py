@@ -18,6 +18,7 @@ from app.jobs.journal_prompt import check_objectif_reminders
 from app.jobs.journal_recap import send_recap_hebdo
 from app.jobs.task_reminder import check_due_cards
 from app.jobs.agent_weekly_synthesis import run_agent_weekly_synthesis
+from app.jobs.kb_sync import run_kb_sync
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
@@ -33,6 +34,9 @@ async def lifespan(app: FastAPI):
     _scheduler.add_job(check_objectif_reminders, CronTrigger(minute="*"))
     _scheduler.add_job(send_recap_hebdo, CronTrigger(minute="*"))
     _scheduler.add_job(run_agent_weekly_synthesis, CronTrigger(minute="*"))
+    # Miroir kanban → vault + notes-schéma (KB visuelle). Réconciliation complète : toutes les
+    # 10 min suffit (le vault n'est lu que par le viewer Obsidian, pas dans un chemin chaud).
+    _scheduler.add_job(run_kb_sync, CronTrigger(minute="*/10"))
     _scheduler.start()
     logger.info("Scheduler started")
     logger.info("Slack HTTP Events API ready on /slack/events")

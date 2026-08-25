@@ -1,9 +1,10 @@
 ---
 id: 1787600247612
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T19:37:27Z
+closed_at: 2026-08-25T00:00:00Z
 project: assistant-ia
 url:
 milestone: kb-visualisation
@@ -64,4 +65,26 @@ commit git best-effort. Peut être déclenché par le même job que le miroir ka
 
 ### Notes d'implémentation
 
-_(à compléter à la fermeture)_
+Livré dans `app/services/kb_schema_notes.py` (`sync_schema_notes()`), déclenché par le même job
+que le miroir (`app/jobs/kb_sync.py`, `*/10`). Génère 4 fichiers à la racine du vault :
+
+- **`Accueil.md`** (MOC) : rappel « écrit par l'agent, lecture seule », liens `[[Tâches]]`,
+  `[[Journal]]`, `[[Taxonomie]]`, tableau des sources. Ne duplique pas `README.md` (le writer
+  journal en reste propriétaire) : Accueil y renvoie.
+- **`Taxonomie.md`** : **générée depuis `categories.schema.yaml`** (axes `contexte`/`nature` +
+  cardinalités + tags libres). Change le YAML → régénère → note à jour (vérifié en test).
+- **`Tâches.base`** / **`Journal.base`** (Obsidian **Bases**, YAML). Tâches : filtre `type=="task"`,
+  vue « À faire » groupée par `column` (rendu kanban) masquant `done`, triée par `due` + vue
+  « Toutes ». Journal : filtre `hasProperty("contexte")`, tri chrono décroissant.
+
+**Décision Bases vs Dataview** : Bases retenu (plugin cœur, pas d'install tierce). **Format `.base`
+provisoire** tant que le conteneur Obsidian (#1787600247613, sprint Viewer) n'a pas figé la version
+embarquée — dépendance croisée #612↔#613 documentée dans `DECISIONS.md`. Repli Dataview prêt à
+substituer si l'image ne fournit pas Bases.
+
+Idempotent (réécrit/committe seulement les fichiers dont le contenu change), atomique, confiné au
+vault, commit `sync notes-schéma`.
+
+**Vérification** : `/tmp/test_kb_sync.py` — présence des 4 fichiers, taxonomie reflétant le YAML,
+`Tâches.base` filtrant `type=="task"` et groupé par colonne, **idempotence** (2ᵉ run = 0 écriture).
+Le rendu visuel dans Obsidian sera confirmé au sprint Viewer.

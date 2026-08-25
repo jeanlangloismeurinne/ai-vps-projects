@@ -1,5 +1,5 @@
 ---
-status: tickets-created
+status: en-cours
 milestone: kb-visualisation
 ---
 
@@ -29,15 +29,16 @@ triable), les tâches devenant des nœuds du graphe reliés aux notes journal pa
   repli documenté (même vault), non retenu.
 
 **Reste à trancher (avant exécution du sprint concerné) :**
-- **Mapping `status`** des colonnes kanban → proposition : `Terminé/Done → done`, `Rappels →
-  reminder`, reste → `open`. (sprint *Substrat*)
+- ~~**Mapping `status`** des colonnes kanban~~ → **tranché** (Substrat livré) : `Terminé/Done → done`,
+  `Rappels → reminder`, reste → `open`. Table `_STATUS_*` en tête de `kanban_vault.py`, comparaison
+  sur nom de colonne slugifié.
 - **Sous-domaine** : `obsidian.jlmvpscode.duckdns.org` par défaut. (sprint *Viewer*)
 
 ## Sprints
 
-### Sprint 1 — Substrat · contexte partagé : écriture du vault, contrat frontmatter
-- [ ] Miroir kanban → vault (writer one-way + réconciliation + trigger) → #1787600247611
-- [ ] Notes-schéma + vues Bases/Dataview (taxonomie, MOC, Tâches, Journal) → #1787600247612
+### Sprint 1 — Substrat · contexte partagé : écriture du vault, contrat frontmatter ✅
+- [x] Miroir kanban → vault (writer one-way + réconciliation + trigger) → #1787600247611 · note : `kanban_vault.py`, réconcilié par `card_id`, job périodique `*/10`. **`card_fields` jamais peuplé → `tags` vide en pratique** (voir DECISIONS.md).
+- [x] Notes-schéma + vues Bases/Dataview (taxonomie, MOC, Tâches, Journal) → #1787600247612 · note : `kb_schema_notes.py`, Taxonomie générée depuis le YAML, vues `.base` (format **provisoire** jusqu'au Sprint 2, cf. #612↔#613).
 
 ### Sprint 2 — Viewer · contexte partagé : Docker / Traefik / KasmVNC
 - [ ] Conteneur Obsidian read-only (image + plugins + montage vault RO) → #1787600247613

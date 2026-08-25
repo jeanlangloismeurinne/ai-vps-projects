@@ -1,9 +1,10 @@
 ---
 id: 1787600247611
 type: feature
-status: open
+status: closed
 priority: high
 date: 2026-08-24T19:37:27Z
+closed_at: 2026-08-25T00:00:00Z
 project: assistant-ia
 url:
 milestone: kb-visualisation
@@ -94,4 +95,25 @@ source: kanban
 
 ### Notes d'implémentation
 
-_(à compléter à la fermeture)_
+Livré dans `app/services/kanban_vault.py` (`sync_kanban_vault()`), déclenché par le job
+`app/jobs/kb_sync.py` (scheduler `CronTrigger(minute="*/10")` dans `main.py`).
+
+**Décisions prises :**
+- **Mapping `status`** : tables `_STATUS_DONE` / `_STATUS_REMINDER` en tête de module, comparaison
+  sur le **nom de colonne slugifié** (insensible aux accents/casse). `Terminé/Done/Fait/Clôturé →
+  done`, `Rappels/Reminder → reminder`, reste → `open`.
+- **`tags`** : lecture de `card_fields WHERE key='tag'`. ⚠️ La table `card_fields` n'est **écrite
+  nulle part** dans le code actuel → `tags` est **vide en pratique**. Implémenté par contrat, noté
+  dans `DECISIONS.md` (à revisiter si les tags de carte deviennent réels).
+- **Réconciliation par `card_id`** (lu dans le frontmatter des notes existantes) : titre/board
+  modifié → la note **migre** (ancien chemin supprimé) sans doublon ; carte supprimée en base →
+  note retirée + dossier board vidé nettoyé. Seule suppression autorisée, confinée à `tasks/`.
+- **Collision de slug** entre cartes distinctes du même board → suffixe court `-<card_id[:8]>`.
+- **Déclenchement** : job périodique uniquement (source de vérité, robuste aux écritures manquées).
+  Le hook best-effort à la mutation de carte est laissé pour plus tard (couplant, non requis en v1).
+- Garde-fous `slugify` + `_resolve_within_vault` + écriture atomique **factorisés** (importés de
+  `journal_vault.py`, pas dupliqués). Commit git best-effort `sync kanban`.
+
+**Vérification** : `/tmp/test_kb_sync.py` (stubs config/db, vault temporaire git) — 26 checks verts
+couvrant create / move / rename / delete / collision / **traversée `../` neutralisée** / commits git.
+Réconciliation réelle contre Postgres vérifiée après déploiement (le vault vit sur le VPS).

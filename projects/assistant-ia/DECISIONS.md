@@ -28,5 +28,21 @@
   livré, la décision est réversible. **Condition de réouverture** : une requête traversant deux
   sources réellement formulée.
 
+## Miroir kanban → vault (KB visuelle, sprint Substrat)
+
+- **`card_fields` n'est écrit nulle part** dans le code (table définie en `001_initial.sql`, jamais
+  peuplée par `kanban.py`/`create_reminder`). Le miroir lit bien `key='tag'` par contrat, mais
+  **`tags` est vide en pratique** tant qu'un chemin d'écriture n'existe pas. Ne pas conclure « le
+  miroir perd les tags » : il n'y a rien à lire. À revisiter si les tags de carte deviennent réels.
+- **Le miroir est une projection réconciliée, pas un writer append-only** (≠ `journal_vault.py`).
+  Réconciliation **par `card_id`** (lu dans le frontmatter), jamais par slug : un titre/board modifié
+  fait *migrer* la note (ancien chemin supprimé), une carte supprimée en base fait disparaître la
+  note. Seule suppression autorisée, strictement confinée à `vault/tasks/` (double barrière
+  `slugify` + `_resolve_within_vault`, réutilisées depuis `journal_vault.py`).
+- **Vues Obsidian = format `.base` (plugin cœur Bases), PROVISOIRE.** Le rendu réel n'est pas
+  vérifiable tant que le conteneur Obsidian (sprint Viewer, #1787600247613) n'a pas figé la version
+  embarquée : dépendance croisée #612 ↔ #613. Repli documenté = Dataview (mêmes vues en blocs
+  ```dataview``` dans des `.md`). Ne pas considérer le format `.base` comme acquis avant Sprint 2.
+
 ---
 _Historique détaillé des sessions : `git log` + `roadmap/archive/`._
