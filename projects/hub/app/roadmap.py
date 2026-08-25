@@ -258,17 +258,25 @@ def _fmt_date(iso: str) -> str:
 def _page_list(project: str, items: list) -> str:
     display = project.replace("~", " / ")
 
-    by_status = {"draft": [], "spec-ready": [], "tickets-created": [], "done": []}
+    by_status: dict = {}
     for item in items:
         by_status.setdefault(item.get("status", "draft"), []).append(item)
 
-    sections = ""
-    for status, label in [
+    # Ordre d'affichage. Tout statut présent dans les items mais absent de cette liste (ex.
+    # `en-cours`, oublié historiquement, ou un futur statut) est rendu EN FIN de liste :
+    # aucun chantier ne doit disparaître silencieusement de la roadmap.
+    ordered = [
         ("draft", "📝 Brouillons"),
         ("spec-ready", "📐 Spec prête"),
         ("tickets-created", "🎫 Tickets créés"),
+        ("en-cours", "🚧 En cours"),
         ("done", "✅ Terminés"),
-    ]:
+    ]
+    _known = {s for s, _ in ordered}
+    ordered += [(s, STATUS_LABEL.get(s, s)) for s in by_status if s not in _known]
+
+    sections = ""
+    for status, label in ordered:
         group = by_status.get(status, [])
         if not group:
             continue
