@@ -44,6 +44,7 @@ Réseau Docker : `infra-net` (+ `coolify`).
 - projects/tool-file-intake/ : réception fichiers Slack → stockage /storage/Documents/ + index SQLite — Python 3.12, FastAPI, Slack Bolt (port 8020)
 - projects/ev-prices/ : suivi des prix véhicules électriques (14 constructeurs, scraping hebdomadaire) — Python 3.12, FastAPI, Playwright, PostgreSQL (port 8040) · URL : ev.jlmvpscode.duckdns.org
 - projects/portfolio-tracker/ : suivi investissement long terme, agents IA Dust, 3 régimes d'analyse — **deux apps Coolify distinctes** (dockerfile) : portfolio-backend (port 8050) + portfolio-frontend (port 8051) · URL : portfolio.jlmvpscode.duckdns.org
+- projects/hub/ : portail interne (page d'accueil + outil de pilotage chantiers/sprints/tickets/roadmap) — FastAPI, port 8000, bind-mount `projects/` en lecture/écriture · URL : jlmvpscode.duckdns.org (app Coolify « homepage »)
 
 ## Slack bot partagé
 
