@@ -114,6 +114,8 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
         ),
         candidate_entry_types=("fact_qualitative", "analysis", "quote", "risk", "fact_financial"),
         min_citations=2,
+        citable_tiers=("A", "A-"),  # preuves du moat = socle A (CUDA, échelle, risques EDGAR A) ; la
+                                    # presse marché B+ (#21/#22) porte des MENACES, pas des preuves
         guidance=(
             "Synthétise les PREUVES du moat (avantage concurrentiel durable) : nature du moat "
             "(écosystème logiciel CUDA / coûts de transition, base installée, effets de réseau "
