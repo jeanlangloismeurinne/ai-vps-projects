@@ -63,12 +63,22 @@ def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) 
     for bloc_name in ("structuree", "qualitative_marche"):
         bloc = coverage.get(bloc_name) or {}
         for d in bloc.get("dimensions") or []:
+            if not isinstance(d, dict):
+                continue
             dim = d.get("dimension")
             dim_plancher = d.get("tier_plancher")
             requis = d.get("champs_requis") or []
-            fond: dict[str, list[int]] = {
-                g.get("champ"): (g.get("entry_ids") or []) for g in (d.get("fondations") or [])
-            }
+            # La sortie LLM est NON fiable (#24) : `fondations` peut arriver malformée (liste de
+            # chaînes, ids non entiers…). On parse défensivement — jamais de crash sur la forme du
+            # modèle ; un élément malformé = champ simplement non fondé.
+            fond: dict[str, list[int]] = {}
+            for g in d.get("fondations") or []:
+                if not isinstance(g, dict):
+                    continue
+                champ = g.get("champ")
+                ids = g.get("entry_ids")
+                if isinstance(champ, str) and isinstance(ids, list):
+                    fond[champ] = [i for i in ids if isinstance(i, int)]
             non_fondables: list[str] = []
             all_cited_tiers: list[str] = []
             for champ in requis:
@@ -96,6 +106,8 @@ def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str
     kept: list[dict[str, Any]] = []
     covered: dict[str, set[str]] = {}
     for g in report.get("gaps") or []:
+        if not isinstance(g, dict):
+            continue
         dim = g.get("dimension")
         if dim not in dims:
             continue
@@ -133,8 +145,10 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
         f"knowledge_entries COURANTES de la KB ({len(entries)}) — cite-les par entry_id :\n"
         f"{listing}\n\n"
         f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict). Pour CHAQUE "
-        f"dimension, remplis `fondations` : la liste des champs requis que la KB fonde, chacun avec "
-        f"les `entry_ids` (#id du listing) qui le fondent — cite UNIQUEMENT des entries réelles du "
+        f"dimension, remplis `fondations` EXACTEMENT sous cette forme (liste d'objets, jamais de "
+        f'chaînes) : "fondations": [{{"champ": "roic_pct", "entry_ids": [50, 52]}}, '
+        f'{{"champ": "levier", "entry_ids": [49]}}] — un objet par champ requis que la KB fonde, avec '
+        f"les `entry_ids` (#id du listing) qui le fondent ; cite UNIQUEMENT des entries réelles du "
         f"listing, celles qui portent VRAIMENT ce champ. Le backend VÉRIFIE ensuite en Python que "
         f"chaque entry citée existe à un tier ≥ plancher du champ, et en DÉRIVE champs_non_fondables, "
         f"tier_atteint, ok, les gaps et le verdict — ne triche pas sur le tier, tu ne peux pas faire "
