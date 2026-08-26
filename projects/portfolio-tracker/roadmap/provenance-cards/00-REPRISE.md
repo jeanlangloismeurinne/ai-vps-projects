@@ -7,6 +7,75 @@ project: portfolio-tracker
 role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'alimentation EXERCÉE en réel + dimension `valorisation` FONDÉE de bout en bout + dimension `financials` — ratios dérivés — CODE DÉPLOYÉ & vérifié contre l'API EDGAR, mais PAS encore persisté en prod → reste : persister financials + recompute readiness, fermer les dimensions qualitatives pour `ready`, puis lancer la chaîne d'analyse jamais exécutée).
 ---
 
+> ## ⚡ MàJ 2026-08-26 (bis) — INGESTION-AGENT mode SYNTHÈSE (C2) CONSTRUIT, DÉPLOYÉ & EXERCÉ EN RÉEL ; run_json_agent a enfin tourné contre le vrai modèle (gotcha json_object trouvé + corrigé)
+>
+> **Déployé** (commits `fda6340`→`059d3a4`, deployments #297→#302, un seul conteneur backend vérifié
+> `docker ps` — orphelin #301 stoppé+supprimé). **Aucune migration.** Même patron que les feeds
+> (`valuation_feed`/`financials_feed`) : transformation pure testable + IO, mais **un tour LLM
+> grounded**.
+>
+> ### Ce qui a été construit
+> - **`backend/app/knowledge/synthesis_feed.py`** : fonde un champ qualitatif NON-fetchable par
+>   SYNTHÈSE grounded des entries tier A/A-/B+ déjà en base. (1) charge le corpus citable pour le
+>   champ ; (2) un tour LLM compose la synthèse ; (3) **grounding VÉRIFIÉ en Python** (chaque
+>   `cited_entry_id` ∈ corpus, sinon `SynthesisUngrounded`, rien n'est écrit) + **tier dérivé
+>   déterministe**. Contrat runtime **`GroundedSynthesis`** (`app/contracts/synthesis_schema.py`),
+>   route **`POST /tickers/{id}/knowledge/synthesize`** (dry-run `persist:false`, `debug_raw` pour
+>   la sortie LLM brute) + `GET /knowledge/synthesis/targets`. `store_knowledge` gagne
+>   `derived_reliability`/`requires_human_review` (override étroit, réservé aux fondations
+>   déterministes). Check **`check_synthesis_feed.py` 31/31** hors-ligne, non-régression OK.
+> - **Prompt** `prompts/10b-ingestion-synthese.md` (distinct du 10-ingestion-agent, mode extraction).
+>   ⚠️ Ce « C2 » est la **synthèse** décrite dans la MàJ du matin, PAS le contrat
+>   `ingestion_extraction_schema.py` (document→entries), qui reste à construire (étape 4).
+>
+> ### 🐛 Gotcha modèle trouvé au 1er run réel (run_json_agent n'avait JAMAIS tourné contre le modèle)
+> DeepSeek-V4-Flash est **NON FIABLE sous `response_format=json_object`** : il collapse sur `{}`
+> (3 tokens out), ou emballe la sortie dans un objet parasite `{"./": "<json échappé>"}`. En
+> **prompt-only** (sans `response_format`) il rend un **JSON propre et correctement cité**. Fix :
+> `run_json_agent` gagne un flag `json_object` (défaut True) ; `synthesize` l'appelle avec
+> `json_object=False`. **À GARDER À L'ESPRIT pour la chaîne d'analyse** (research/bull/bear/synthèse
+> appellent tous `run_json_agent`, jamais exercée) — même piège probable.
+>
+> ### Résultat des dry-runs NVDA (règle de tier CONSERVATRICE, choix utilisateur)
+> Règle validée : **tier = un cran sous la plus faible entry citée** (A→A-, A-→B+, B+→B),
+> `source_type='agent_synthesis'`, `requires_human_review=True`, jamais de surévaluation. **Règle
+> PROVISOIRE, à revoir à l'usage si trop bloquante** (cf. mémoire `project-synthesis-tier-rule`).
+>
+> | champ | cited_tiers | plus faible | tier dérivé | fonde B+ ? |
+> |---|---|---|---|---|
+> | `produits.unit_economics` | 9×A + 2×B+ (#21/#22) | B+ | **B (0.70)** | ❌ |
+> | `marche.structure_5forces` | 8×A + 2×B+ (#21/#22) | B+ | **B (0.70)** | ❌ |
+>
+> ### PERSISTÉ EN PROD + readiness recomputée (choix utilisateur : resserrer unit_economics + persister)
+> `unit_economics` resserré au socle **tier A/A-** (`SynthesisTarget.citable_tiers`, deployment #303) :
+> exclut par PERTINENCE la presse marché B+ (#21/#22, hors-champ) → cité 11 entries **toutes A** →
+> **A- (0.85)**. Persisté :
+> - **entry #53** `produits.unit_economics` tier **A-**, `requires_human_review=True` ;
+> - **entry #54** `marche.structure_5forces` tier **B** (règle conservatrice : cite #21/#22 B+ →
+>   un cran sous = B), `requires_human_review=True`.
+>
+> `POST /curator/readiness` NVDA (report **#8**) → verdict **`thin_qualitative`** (bloc structuré
+> complet). **`produits` : ok=True (tier A)** — la synthèse a FONDÉ le champ, preuve que le C2
+> synthèse fonctionne de bout en bout. Gaps qualitatifs restants : `positionnement.moat_preuves`,
+> `marche.croissance_marche_historique` (champs DIFFÉRENTS, à sourcer autrement — search-worker).
+>
+> ### ⚠️ Observation d'intégrité — le curator ne ré-applique pas strictement le plancher
+> La synthèse `structure_5forces` **tier B** a été comptée par le curator comme **fondant** le champ
+> (plancher B+) : elle n'apparaît plus dans les manques de `marche`. La règle conservatrice est donc
+> respectée à la PRODUCTION de l'entry (tier B honnête) mais **pas ré-appliquée à la LECTURE** —
+> c'est le jugement LLM du curator qui tranche « fondé/non-fondé » par champ, le backend ne
+> recompute que `ok = (manques vides)`. Comportement curator déjà noté (verdict non déterministe,
+> MàJ 2026-08-25). **Point pour le fil « revoir la catégorisation des sources à l'usage »** : si on
+> veut que le plancher morde à la lecture, il faudrait le recomputer en Python (tier_atteint des
+> entries qui couvrent le champ ≥ plancher), pas le laisser au LLM.
+>
+> ### RESTE À FAIRE
+> 1. Sourcer `positionnement.moat_preuves` + `marche.croissance_marche_historique` (search-worker,
+>    ou nouvelle cible de synthèse si non-fetchable).
+> 2. Décider si le plancher doit mordre à la LECTURE (recompute Python côté curator) — cf. observation.
+> 3. Readiness → si `ready` → **lancer la CHAÎNE D'ANALYSE jamais exécutée** (⚠ même gotcha
+>    `json_object` dans run_json_agent : la chaîne devra passer `json_object=False` ou être re-vérifiée).
+>
 > ## ⚡ MàJ 2026-08-26 — `financials` FONDÉE EN PROD (tier A, 4 champs) après correction d'un bug d'intégration ; bloc structuré COMPLET, verdict `thin_qualitative`
 >
 > **Le persist prod de `financials` a révélé que le chemin réel n'avait JAMAIS fonctionné** — et
