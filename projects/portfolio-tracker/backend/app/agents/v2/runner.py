@@ -71,17 +71,25 @@ async def run_json_agent(
     max_tokens: Optional[int] = None,
     max_repair: int = 1,
     timeout: int = 720,
+    json_object: bool = True,
 ) -> AgentRunResult:
-    """Exécute `agent`, valide la sortie contre `schema` (Pydantic). Réparation ≤ max_repair fois."""
+    """Exécute `agent`, valide la sortie contre `schema` (Pydantic). Réparation ≤ max_repair fois.
+
+    `json_object=False` désactive `response_format={"type":"json_object"}` et s'en remet au JSON
+    demandé en prompt + `extract_json` (tolérant fences/texte autour). ⚠️ Mesuré le 2026-08-26 :
+    DeepSeek-V4-Flash est NON FIABLE en mode json_object (il collapse sur `{}`, ou emballe la sortie
+    dans un objet parasite `{"./": "<json échappé>"}`) alors qu'en prompt-only il rend un JSON propre.
+    À garder à l'esprit pour la chaîne d'analyse (qui appelle ce runner)."""
     convo = list(messages)
     total_in = total_out = 0
     total_cost = 0.0
     last: Optional[CompletionResult] = None
+    resp_fmt = {"type": "json_object"} if json_object else None
 
     for attempt in range(1, max_repair + 2):
         last = await agent.complete(
             convo,
-            response_format={"type": "json_object"},
+            response_format=resp_fmt,
             temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout,

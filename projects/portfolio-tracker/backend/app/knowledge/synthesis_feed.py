@@ -316,29 +316,19 @@ async def run_synthesis_feed(
     task = _synthesis_task_message(target, listing)
 
     if debug_raw:
-        # Observabilité de la frontière LLM (run_json_agent n'a jamais tourné contre le vrai modèle) :
-        # renvoie la sortie brute sans validation, pour diagnostiquer un contrat non respecté. On
-        # compare AVEC et SANS response_format=json_object (DeepSeek collapse parfois sur `{}` en mode
-        # json_object mais respecte un JSON demandé en prompt).
-        res_jo = await agent.complete(
-            [{"role": "user", "content": task}],
-            response_format={"type": "json_object"}, temperature=0.2,
-        )
-        res_plain = await agent.complete(
-            [{"role": "user", "content": task}], temperature=0.2,
-        )
+        # Observabilité de la frontière LLM : renvoie la sortie brute sans validation (diagnostic).
+        res = await agent.complete([{"role": "user", "content": task}], temperature=0.2)
         return {
             "ticker_id": ticker_id, "field_path": field_path, "debug_raw": True,
             "citable_count": len(citable), "citable_ids": sorted(citable_ids), "model": agent.model,
-            "json_object": {"finish_reason": res_jo.finish_reason, "tokens_out": res_jo.tokens_out,
-                            "raw_content": res_jo.content[:2500]},
-            "plain": {"finish_reason": res_plain.finish_reason, "tokens_out": res_plain.tokens_out,
-                      "raw_content": res_plain.content[:2500]},
+            "finish_reason": res.finish_reason, "tokens_out": res.tokens_out,
+            "raw_content": res.content[:3000],
         }
 
+    # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).
     run = await run_json_agent(
         agent, [{"role": "user", "content": task}],
-        GroundedSynthesis, temperature=0.2,
+        GroundedSynthesis, temperature=0.2, json_object=False,
     )
     synth: GroundedSynthesis = run.parsed  # type: ignore[assignment]
 
