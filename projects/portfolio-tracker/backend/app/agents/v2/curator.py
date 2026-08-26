@@ -75,13 +75,18 @@ def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[st
 
 
 async def _call_json(agent: ResolvedAgent, task_message: str, *, max_repair: int = 1) -> tuple[dict, int, int, float]:
-    """Appel JSON strict + extraction, avec réparation légère (retourne dict + tokens/coût cumulés)."""
+    """Appel JSON + extraction, avec réparation légère (retourne dict + tokens/coût cumulés).
+
+    ⚠️ PAS de response_format=json_object : mesuré 2026-08-26, DeepSeek-V4-Flash y est NON FIABLE (il
+    collapse sur `{}` ou emballe la sortie dans une clé parasite `{"/mnt/data/…json": "<json échappé>"}`
+    — cette 2ᵉ pathologie a fait échouer la 1ère production réelle du context_pack). En prompt-only +
+    extract_json, le JSON sort propre. Même correctif que run_json_agent(json_object=False)."""
     convo: list[dict[str, Any]] = [{"role": "user", "content": task_message}]
     t_in = t_out = 0
     cost = 0.0
     last_err: Optional[str] = None
     for attempt in range(max_repair + 1):
-        res = await agent.complete(convo, response_format={"type": "json_object"}, temperature=0.2)
+        res = await agent.complete(convo, temperature=0.2)
         t_in += res.tokens_in
         t_out += res.tokens_out
         cost += res.cost_usd
