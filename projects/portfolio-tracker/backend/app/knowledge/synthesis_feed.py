@@ -394,6 +394,7 @@ async def run_synthesis_feed(
                     content_structured=content_structured, tags=_tags(target), lang=synth.lang,
                     supersedes_entry_id=prev, requires_human_review=True,
                     derived_reliability=(score, tier, note),
+                    covers=target.field_path.split(".")[-1],
                 )
                 persisted = dict(stored) | {"supersedes": prev}
         logger.info(

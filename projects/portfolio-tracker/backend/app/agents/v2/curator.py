@@ -34,6 +34,16 @@ FIELD_PLANCHER_OVERRIDES: dict[str, str] = {
     "marche.croissance_marche_historique": "B",
 }
 
+# Champs requis GÉNUINEMENT introuvables (aucune source accessible à aucun tier — ni KB, ni web même
+# dégradé, ni synthèse) : ils NE bloquent PAS `ready` mais sont portés comme LACUNE DÉCLARÉE
+# (incertitude investissable « non quantifiée »). Décision méthodo 2026-08-26 : mieux vaut une thèse
+# ready avec un trou VISIBLE et assumé qu'un blocage indéfini sur une donnée qui n'existe pas.
+DECLARED_NONBLOCKING_GAPS: dict[str, str] = {
+    "marche.croissance_marche_historique":
+        "Croissance historique du marché des accélérateurs IA — non quantifiée (aucune source "
+        "primaire/presse accessible à un tier suffisant). Lacune déclarée, non bloquante.",
+}
+
 
 def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
     return FIELD_PLANCHER_OVERRIDES.get(f"{dimension}.{champ}", dim_plancher)
@@ -60,6 +70,7 @@ def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) 
     passer un champ sous-doté (bug observé : #54 tier B compté pour un champ B+). Pur, sans IO.
     """
     tier_by_id = {e["id"]: e.get("reliability_tier") for e in entries}
+    covers_by_id = {e["id"]: e.get("covers") for e in entries}
     for bloc_name in ("structuree", "qualitative_marche"):
         bloc = coverage.get(bloc_name) or {}
         for d in bloc.get("dimensions") or []:
@@ -82,11 +93,19 @@ def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) 
             non_fondables: list[str] = []
             all_cited_tiers: list[str] = []
             for champ in requis:
+                # Lacune déclarée non-bloquante : ni fondée, ni comptée comme manque (portée en
+                # incertitude investissable par _apply_deterministic_overrides).
+                if f"{dim}.{champ}" in DECLARED_NONBLOCKING_GAPS:
+                    continue
                 plancher = _plancher_for(dim, champ, dim_plancher)
                 ids = fond.get(champ) or []
-                real = [tier_by_id[i] for i in ids if tier_by_id.get(i)]
-                all_cited_tiers.extend(real)
-                if not any(_tier_ge(t, plancher) for t in real):
+                # Une entry ne COMPTE pour ce champ que si (a) elle existe, (b) son tier réel ≥
+                # plancher, ET (c) elle PORTE ce champ : covers==champ, ou covers absent (entry legacy
+                # non taguée → fallback tier-only). Bloque une citation au bon tier mais hors-sujet.
+                relevant = [tier_by_id[i] for i in ids
+                            if tier_by_id.get(i) and covers_by_id.get(i) in (None, champ)]
+                all_cited_tiers.extend(relevant)
+                if not any(_tier_ge(t, plancher) for t in relevant):
                     non_fondables.append(champ)
             d["champs_non_fondables"] = non_fondables
             d["tier_atteint"] = _best_tier(all_cited_tiers)
@@ -157,6 +176,23 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
     )
 
 
+def _declare_nonblocking_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    """Porte chaque lacune déclarée (champ requis introuvable, non bloquant) comme incertitude
+    investissable VISIBLE — jamais un trou caché. Dedup par question. Pur."""
+    requis_par_dim = {d["dimension"]: set(d.get("champs_requis") or [])
+                      for b in (coverage["structuree"], coverage["qualitative_marche"])
+                      for d in b["dimensions"]}
+    existantes = {u.get("question") for u in (report.get("incertitudes_investissables") or [])}
+    ajouts: list[dict[str, str]] = []
+    for full, libelle in DECLARED_NONBLOCKING_GAPS.items():
+        dim, champ = full.split(".", 1)
+        if champ in requis_par_dim.get(dim, set()) and libelle not in existantes:
+            ajouts.append({"question": libelle, "fourchette": "non quantifiée — source indisponible"})
+    if ajouts:
+        report["incertitudes_investissables"] = (report.get("incertitudes_investissables") or []) + ajouts
+    return report
+
+
 def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
     """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict) — jamais
     confié au LLM. Option C : la couverture par champ est recalculée depuis les tiers RÉELS des entries
@@ -167,6 +203,7 @@ def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[st
     coverage = recompute_coverage(report.get("coverage") or {}, entries)
     report["coverage"] = coverage
     reconcile_gaps(report, coverage)
+    _declare_nonblocking_gaps(report, coverage)
 
     # A3 : pas de conviction/marge_securite au readiness
     ind = report.get("indicateurs") or {}

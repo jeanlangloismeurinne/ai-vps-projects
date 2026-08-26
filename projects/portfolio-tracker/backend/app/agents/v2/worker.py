@@ -447,6 +447,7 @@ async def persist_worker_entries(
             source_date=_parse_iso_date(entry.source_date),
             fiscal_period=entry.fiscal_period,
             model_cutoff=entry.model_cutoff,
+            covers=(entry.covers.split(".")[-1] if entry.covers else None),
         )
         created.append(dict(row))
     logger.info(

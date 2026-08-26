@@ -329,6 +329,7 @@ async def run_base_rate_anchor(
                     lang="fr",
                     source_url=spec.source_url,
                     supersedes_entry_id=prev_id,
+                    covers=spec.field,
                 )
                 created = dict(stored) | {"field": spec.field, "supersedes": prev_id}
         logger.info("base_rate_anchor %s (%s) → entry #%s (corpus #%s)",

@@ -9,8 +9,10 @@ import sys
 
 from app.agents.v2.common import MVDD_SPEC
 from app.agents.v2.curator import (
+    DECLARED_NONBLOCKING_GAPS,
     FIELD_PLANCHER_OVERRIDES,
     _apply_deterministic_overrides,
+    _declare_nonblocking_gaps,
     _plancher_for,
     _tier_ge,
     recompute_coverage,
@@ -163,6 +165,44 @@ try:
     check("ReadinessReport valide (thin, gaps reconciliés)", True)
 except Exception as e:  # noqa: BLE001
     check("ReadinessReport valide (thin, gaps reconciliés)", False, str(e)[:200])
+
+print("\n8. recompute — pertinence par `covers` (une entry hors-sujet ne fonde pas, même au bon tier)")
+# positionnement.moat_preuves (plancher B+) : une entry A mais covers='autre_champ' ne compte pas ;
+# une entry A covers='moat_preuves' compte ; une entry A covers=None (legacy) compte (fallback).
+def _pos(entry_id, cov):
+    ents = [{"id": entry_id, "reliability_tier": "A", "source_type": "edgar_official", "covers": cov},
+            {"id": 500, "reliability_tier": "A", "source_type": "edgar_official", "covers": "position_vs_pairs"}]
+    dc = dim_cov("positionnement", [{"champ": "moat_preuves", "entry_ids": [entry_id]},
+                                    {"champ": "position_vs_pairs", "entry_ids": [500]}])
+    c = {"structuree": {"dimensions": [], "bloc_ok": True},
+         "qualitative_marche": {"dimensions": [dc], "bloc_ok": True}}
+    recompute_coverage(c, ents)
+    return c["qualitative_marche"]["dimensions"][0]["champs_non_fondables"]
+
+check("entry A HORS-SUJET (covers=autre) → moat_preuves NON fondé",
+      "moat_preuves" in _pos(600, "autre_champ"))
+check("entry A covers=moat_preuves → fondé", "moat_preuves" not in _pos(601, "moat_preuves"))
+check("entry A covers=None (legacy) → fondé (fallback tier-only)", "moat_preuves" not in _pos(602, None))
+
+print("\n9. Lacune déclarée non-bloquante — croissance_marche_historique")
+check("croissance enregistrée comme lacune déclarée",
+      "marche.croissance_marche_historique" in DECLARED_NONBLOCKING_GAPS)
+# marche avec SEUL structure_5forces fondé (A-), croissance sans fondation → doit rester ok=True
+ents9 = [{"id": 56, "reliability_tier": "A-", "source_type": "agent_synthesis", "covers": "structure_5forces"}]
+m9 = dim_cov("marche", [{"champ": "structure_5forces", "entry_ids": [56]}])  # pas de fondation croissance
+cov9 = {"structuree": {"dimensions": [], "bloc_ok": True},
+        "qualitative_marche": {"dimensions": [m9], "bloc_ok": True}}
+recompute_coverage(cov9, ents9)
+md9 = cov9["qualitative_marche"]["dimensions"][0]
+check("croissance ABSENTE des non-fondables (skippée)",
+      "croissance_marche_historique" not in md9["champs_non_fondables"])
+check("marche ok=True malgré croissance introuvable", md9["ok"] is True, f"→ {md9}")
+rep9 = {"incertitudes_investissables": []}
+_declare_nonblocking_gaps(rep9, cov9)
+check("lacune portée en incertitude investissable VISIBLE",
+      any("croissance" in u["question"].lower() for u in rep9["incertitudes_investissables"]))
+_declare_nonblocking_gaps(rep9, cov9)  # 2e passe
+check("dédup (pas de doublon d'incertitude)", len(rep9["incertitudes_investissables"]) == 1)
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

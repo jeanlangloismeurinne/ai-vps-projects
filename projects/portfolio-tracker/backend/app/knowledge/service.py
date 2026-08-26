@@ -127,6 +127,7 @@ async def store_knowledge(
     embedding: Optional[Sequence[float]] = None,
     requires_human_review: bool = False,
     derived_reliability: Optional[tuple[float, str, str]] = None,
+    covers: Optional[str] = None,
 ) -> dict[str, Any]:
     """Crée une knowledge_entry. Le score/tier sont CALCULÉS (§6.3), jamais fournis par l'appelant.
 
@@ -188,16 +189,16 @@ async def store_knowledge(
             tags, lang, source_type, source_url, source_date, fiscal_period,
             reliability_score, reliability_tier, reliability_note,
             has_conflict, conflict_entry_id, requires_human_review, model_cutoff, version,
-            embedding
+            embedding, covers
         ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::vector
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::vector,$22
         )
         RETURNING id, version, reliability_score, reliability_tier
         """,
         ticker_id, document_id, entry_type, title, content, content_structured,
         list(tags or []), lang, source_type, source_url, source_date, fiscal_period,
         score, tier, note, has_conflict, conflict_entry_id, requires_review, model_cutoff, version,
-        vec_literal,
+        vec_literal, covers,
     )
 
     if supersedes_entry_id is not None:
@@ -241,7 +242,7 @@ async def get_current_entries(
     sql = f"""
         SELECT id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_url, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version
+               requires_human_review, has_conflict, version, covers
         FROM knowledge_entries
         WHERE {' AND '.join(clauses)}
         ORDER BY reliability_score DESC, source_date DESC NULLS LAST, id
@@ -257,7 +258,7 @@ _RESCUE_QUOTA = 3
 
 _SELECT_COLS = """id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version"""
+               requires_human_review, has_conflict, version, covers"""
 
 
 async def _vector_search(

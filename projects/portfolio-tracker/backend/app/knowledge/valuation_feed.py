@@ -218,6 +218,7 @@ async def run_valuation_feed(
                         lang="fr",
                         source_date=as_of,
                         supersedes_entry_id=prev_id,
+                        covers=spec.field,
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev_id})
         logger.info(

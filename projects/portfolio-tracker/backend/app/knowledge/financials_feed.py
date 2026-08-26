@@ -450,6 +450,7 @@ async def run_financials_feed(
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
                         source_url=spec.source_url, source_date=facts.get("period_end"),
                         fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
+                        covers=spec.field,
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev})
         logger.info(
