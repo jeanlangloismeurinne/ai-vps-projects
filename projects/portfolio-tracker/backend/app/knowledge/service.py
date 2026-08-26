@@ -229,7 +229,7 @@ async def get_current_entries(
     params.append(limit)
     sql = f"""
         SELECT id, ticker_id, entry_type, title, content, content_structured, tags,
-               source_type, source_date, fiscal_period, reliability_score, reliability_tier,
+               source_type, source_url, source_date, fiscal_period, reliability_score, reliability_tier,
                requires_human_review, has_conflict, version
         FROM knowledge_entries
         WHERE {' AND '.join(clauses)}
