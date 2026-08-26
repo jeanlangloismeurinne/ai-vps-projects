@@ -16,13 +16,110 @@ import logging
 from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
-from app.agents.v2.common import MVDD_SPEC, count_tiers, format_entries_for_prompt
+from app.agents.v2.common import MVDD_SPEC, TIER_ORDER, count_tiers, format_entries_for_prompt
 from app.agents.v2.runner import extract_json
 from app.contracts import ContextPack, ReadinessReport
 from app.db.database import get_db_session
 from app.knowledge import get_current_entries, store_knowledge
 
 logger = logging.getLogger(__name__)
+
+_TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}  # 0 = meilleur (A) … plus grand = plus faible
+
+# Plancher PAR CHAMP (option C + dégradé Q1) : par défaut le plancher de la dimension (MVDD) ; on
+# ABAISSE explicitement les champs dont aucune source primaire tier A n'existe. `croissance_marche_
+# historique` = taille d'un marché tiers → au mieux une estimation de presse/cabinet (jamais tier A) ;
+# plancher B, exception DÉCLARÉE (pas un compromis caché — l'entry porte son vrai tier + revue humaine).
+FIELD_PLANCHER_OVERRIDES: dict[str, str] = {
+    "marche.croissance_marche_historique": "B",
+}
+
+
+def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
+    return FIELD_PLANCHER_OVERRIDES.get(f"{dimension}.{champ}", dim_plancher)
+
+
+def _tier_ge(tier: Optional[str], plancher: str) -> bool:
+    """tier ≥ plancher (A=meilleur). tier inconnu/None ne satisfait jamais un plancher."""
+    if tier not in _TIER_RANK:
+        return False
+    return _TIER_RANK[tier] <= _TIER_RANK.get(plancher, len(TIER_ORDER))
+
+
+def _best_tier(tiers: list[str]) -> Optional[str]:
+    valides = [t for t in tiers if t in _TIER_RANK]
+    return min(valides, key=lambda t: _TIER_RANK[t]) if valides else None
+
+
+def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Option C — recompute déterministe de la couverture par dimension.
+
+    Le LLM a PROPOSÉ, par champ requis fondé, les `entry_ids` qui le fondent (`fondations`). Ici le
+    backend DISPOSE : pour chaque champ, il ne le tient pour fondé QUE si ≥1 entry citée existe en
+    base à un tier RÉEL ≥ plancher DU CHAMP (dimension, sauf override). Le LLM ne peut donc plus faire
+    passer un champ sous-doté (bug observé : #54 tier B compté pour un champ B+). Pur, sans IO.
+    """
+    tier_by_id = {e["id"]: e.get("reliability_tier") for e in entries}
+    for bloc_name in ("structuree", "qualitative_marche"):
+        bloc = coverage.get(bloc_name) or {}
+        for d in bloc.get("dimensions") or []:
+            dim = d.get("dimension")
+            dim_plancher = d.get("tier_plancher")
+            requis = d.get("champs_requis") or []
+            fond: dict[str, list[int]] = {
+                g.get("champ"): (g.get("entry_ids") or []) for g in (d.get("fondations") or [])
+            }
+            non_fondables: list[str] = []
+            all_cited_tiers: list[str] = []
+            for champ in requis:
+                plancher = _plancher_for(dim, champ, dim_plancher)
+                ids = fond.get(champ) or []
+                real = [tier_by_id[i] for i in ids if tier_by_id.get(i)]
+                all_cited_tiers.extend(real)
+                if not any(_tier_ge(t, plancher) for t in real):
+                    non_fondables.append(champ)
+            d["champs_non_fondables"] = non_fondables
+            d["tier_atteint"] = _best_tier(all_cited_tiers)
+            d["ok"] = len(non_fondables) == 0
+        bloc["bloc_ok"] = bool(bloc.get("dimensions")) and all(x["ok"] for x in bloc["dimensions"])
+        coverage[bloc_name] = bloc
+    return coverage
+
+
+def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    """Rebâtit `gaps` pour la bijection stricte champs_non_fondables ↔ gaps (contrat) après recompute :
+    on garde les gaps LLM en rabotant leurs `champs_cibles` aux non-fondables recalculés, on jette
+    ceux devenus vides, et on synthétise un gap pour tout champ non fondable resté sans gap. Pur."""
+    dims = {d["dimension"]: d
+            for b in (coverage["structuree"], coverage["qualitative_marche"])
+            for d in b["dimensions"]}
+    kept: list[dict[str, Any]] = []
+    covered: dict[str, set[str]] = {}
+    for g in report.get("gaps") or []:
+        dim = g.get("dimension")
+        if dim not in dims:
+            continue
+        nf = set(dims[dim]["champs_non_fondables"])
+        cibles = [c for c in (g.get("champs_cibles") or []) if c in nf]
+        if not cibles:
+            continue
+        g["champs_cibles"] = cibles
+        kept.append(g)
+        covered.setdefault(dim, set()).update(cibles)
+    for dim, d in dims.items():
+        manquants = [c for c in d["champs_non_fondables"] if c not in covered.get(dim, set())]
+        if manquants:
+            kept.append({
+                "dimension": dim,
+                "champs_cibles": manquants,
+                "manque": f"Aucune entry au tier plancher ne fonde : {', '.join(manquants)}.",
+                "queries_suggerees": [],
+                "priorite": "moyenne",
+                "coverage_actuelle": d.get("tier_atteint") or "aucune",
+                "origine": "curator",
+            })
+    report["gaps"] = kept
+    return report
 
 
 def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> str:
@@ -35,28 +132,27 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
         f"{spec}\n\n"
         f"knowledge_entries COURANTES de la KB ({len(entries)}) — cite-les par entry_id :\n"
         f"{listing}\n\n"
-        f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict). Pour chaque "
-        f"dimension : liste les champs_non_fondables (aucune entry au tier plancher ne les fonde), le "
-        f"tier_atteint, et ok=(champs_non_fondables vide). Émets un gap par champ non fondable "
-        f"(bijection stricte). conviction/marge_securite = null. Ne mets pas context_pack_entry_id "
-        f"(assigné par le backend). Le verdict sera recalculé par le backend depuis ta couverture."
+        f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict). Pour CHAQUE "
+        f"dimension, remplis `fondations` : la liste des champs requis que la KB fonde, chacun avec "
+        f"les `entry_ids` (#id du listing) qui le fondent — cite UNIQUEMENT des entries réelles du "
+        f"listing, celles qui portent VRAIMENT ce champ. Le backend VÉRIFIE ensuite en Python que "
+        f"chaque entry citée existe à un tier ≥ plancher du champ, et en DÉRIVE champs_non_fondables, "
+        f"tier_atteint, ok, les gaps et le verdict — ne triche pas sur le tier, tu ne peux pas faire "
+        f"passer un champ sous-doté. Émets quand même un gap par champ que tu sais non fondé, "
+        f"conviction/marge_securite = null, et ne mets pas context_pack_entry_id (backend)."
     )
 
 
 def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
-    """Recompute en Python ce qui est dérivé (comptes, ok/bloc_ok, verdict) — jamais confié au LLM."""
+    """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict) — jamais
+    confié au LLM. Option C : la couverture par champ est recalculée depuis les tiers RÉELS des entries
+    citées dans `fondations` vs le plancher par champ (recompute_coverage), puis les gaps sont
+    reconciliés pour tenir la bijection du contrat (reconcile_gaps)."""
     report["entries_par_tier"] = count_tiers(entries)
 
-    coverage = report.get("coverage") or {}
-    for bloc_name in ("structuree", "qualitative_marche"):
-        bloc = coverage.get(bloc_name) or {}
-        dims = bloc.get("dimensions") or []
-        for d in dims:
-            d["ok"] = len(d.get("champs_non_fondables") or []) == 0
-        bloc["bloc_ok"] = bool(dims) and all(d["ok"] for d in dims)
-        bloc["dimensions"] = dims
-        coverage[bloc_name] = bloc
+    coverage = recompute_coverage(report.get("coverage") or {}, entries)
     report["coverage"] = coverage
+    reconcile_gaps(report, coverage)
 
     # A3 : pas de conviction/marge_securite au readiness
     ind = report.get("indicateurs") or {}

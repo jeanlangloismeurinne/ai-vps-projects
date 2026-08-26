@@ -46,12 +46,22 @@ class Strict(BaseModel):
 
 
 # ─────────────────────────── couverture (derived) ───────────────────────────
+class FieldGrounding(Strict):
+    """Option C (2026-08-26) : le LLM PROPOSE, pour un champ factual requis qu'il juge fondé, les
+    `entry_ids` qui le fondent. Le backend DISPOSE : il vérifie en Python que ≥1 de ces entries existe
+    au tier réel ≥ plancher du champ (le LLM ne peut plus faire passer un champ sous-doté — même
+    patron que #24/#28 : proposé par le modèle, vérifié par le code)."""
+    champ: str
+    entry_ids: list[int] = Field(min_length=1)
+
+
 class DimensionCoverage(Strict):
     """Une dimension MVDD. `ok` est DÉRIVÉ : ∃ entry couvrant chaque champ factual requis au
     tier ≥ plancher ⇔ `champs_non_fondables` est vide. Recompute déterministe (aucun LLM)."""
     dimension: str
     tier_plancher: Tier
     champs_requis: list[str] = Field(min_length=1)
+    fondations: list[FieldGrounding] = Field(default_factory=list)   # option C : mapping champ→entry_ids
     champs_non_fondables: list[str] = Field(default_factory=list)
     tier_atteint: Optional[Tier] = None            # meilleur tier couvrant (None si non couvert)
     ok: bool
@@ -69,6 +79,10 @@ class DimensionCoverage(Strict):
         inconnus = set(self.champs_non_fondables) - set(self.champs_requis)
         if inconnus:
             raise ValueError(f"{self.dimension}: champs non fondables hors requis: {sorted(inconnus)}")
+        # les fondations ne portent que sur des champs requis
+        f_inconnus = {g.champ for g in self.fondations} - set(self.champs_requis)
+        if f_inconnus:
+            raise ValueError(f"{self.dimension}: fondations hors champs requis: {sorted(f_inconnus)}")
         return self
 
 

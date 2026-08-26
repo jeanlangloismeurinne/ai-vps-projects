@@ -135,6 +135,9 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
         ),
         candidate_entry_types=("risk", "fact_qualitative", "analysis", "quote"),
         min_citations=3,
+        citable_tiers=("A", "A-"),  # les 5 forces sont adossables aux facteurs de risque EDGAR tier A
+                                    # (ASIC, AMD/Huawei, TSMC, concentration, export controls) ; la
+                                    # presse B+ portait la même chose en moins fiable → exclue
         guidance=(
             "Structure une analyse des 5 forces de Porter, une par une : (1) intensité de la rivalité "
             "concurrentielle, (2) menace de nouveaux entrants (ASIC maison des hyperscalers, Huawei), "
