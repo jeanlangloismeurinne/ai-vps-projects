@@ -109,14 +109,16 @@ async def run_readiness(ticker_id: str) -> dict[str, Any]:
 
         context_pack_entry_id: Optional[int] = None
 
-        # validation avec réparation Pydantic (une passe) ------------------------------------------
-        validated = _validate_or_repair_readiness(report)
-
-        # Si ready : produire + persister le context_pack, puis re-figer l'id et re-valider.
-        if validated.verdict == "ready":
+        # Si le verdict recomputé est `ready`, produire le context_pack AVANT la validation : le
+        # contrat ReadinessReport exige `context_pack_entry_id` dès que verdict=ready, donc valider
+        # d'abord échouerait (bug jamais atteint tant qu'aucun ticker n'était `ready` — le 1er ready
+        # réel l'a révélé, 2026-08-26). On se fie au verdict déterministe (compute_verdict), pas au LLM.
+        if report.get("verdict") == "ready":
             context_pack_entry_id = await _produce_context_pack(conn, agent, ticker_id, entries)
             report["context_pack_entry_id"] = context_pack_entry_id
-            validated = ReadinessReport.model_validate(report)
+
+        # validation avec réparation Pydantic (une passe) ------------------------------------------
+        validated = _validate_or_repair_readiness(report)
 
         data = validated.model_dump(mode="json")
         row = await conn.fetchrow(
