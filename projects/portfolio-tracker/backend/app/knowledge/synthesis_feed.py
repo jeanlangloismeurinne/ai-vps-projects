@@ -317,17 +317,23 @@ async def run_synthesis_feed(
 
     if debug_raw:
         # Observabilité de la frontière LLM (run_json_agent n'a jamais tourné contre le vrai modèle) :
-        # renvoie la sortie brute sans validation, pour diagnostiquer un contrat non respecté.
-        res = await agent.complete(
+        # renvoie la sortie brute sans validation, pour diagnostiquer un contrat non respecté. On
+        # compare AVEC et SANS response_format=json_object (DeepSeek collapse parfois sur `{}` en mode
+        # json_object mais respecte un JSON demandé en prompt).
+        res_jo = await agent.complete(
             [{"role": "user", "content": task}],
             response_format={"type": "json_object"}, temperature=0.2,
         )
+        res_plain = await agent.complete(
+            [{"role": "user", "content": task}], temperature=0.2,
+        )
         return {
             "ticker_id": ticker_id, "field_path": field_path, "debug_raw": True,
-            "citable_count": len(citable), "citable_ids": sorted(citable_ids),
-            "model": agent.model, "finish_reason": res.finish_reason,
-            "tokens_in": res.tokens_in, "tokens_out": res.tokens_out,
-            "raw_content": res.content, "task_preview": task[:1200],
+            "citable_count": len(citable), "citable_ids": sorted(citable_ids), "model": agent.model,
+            "json_object": {"finish_reason": res_jo.finish_reason, "tokens_out": res_jo.tokens_out,
+                            "raw_content": res_jo.content[:2500]},
+            "plain": {"finish_reason": res_plain.finish_reason, "tokens_out": res_plain.tokens_out,
+                      "raw_content": res_plain.content[:2500]},
         }
 
     run = await run_json_agent(
