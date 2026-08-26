@@ -2,10 +2,222 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-08-23
+updated: 2026-08-25
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE → passage à la couche 3 données).
+role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'alimentation EXERCÉE en réel + dimension `valorisation` FONDÉE de bout en bout + dimension `financials` — ratios dérivés — CODE DÉPLOYÉ & vérifié contre l'API EDGAR, mais PAS encore persisté en prod → reste : persister financials + recompute readiness, fermer les dimensions qualitatives pour `ready`, puis lancer la chaîne d'analyse jamais exécutée).
 ---
+
+> ## ⚡ MàJ 2026-08-26 — `financials` FONDÉE EN PROD (tier A, 4 champs) après correction d'un bug d'intégration ; bloc structuré COMPLET, verdict `thin_qualitative`
+>
+> **Le persist prod de `financials` a révélé que le chemin réel n'avait JAMAIS fonctionné** — et
+> l'a corrigé. Déployé (commit `82208e5`, deployment **#296**, un seul conteneur backend vérifié
+> `docker ps`, pas d'orphelin). **Aucune migration.**
+>
+> ### 🐛 Bug d'intégration trouvé au premier persist réel (le piège « vérifié ≠ vérifié sur le chemin réel »)
+> Le dry-run prod rendait `capex_source: "cik_introuvable"` → `fcf_conversion_pct` et
+> `intensite_capex_pct` restaient non fondés (seuls `levier`/`roic_pct`, purement en base, sortaient).
+> **Cause racine** : `knowledge/service.py::get_current_entries()` **ne sélectionnait pas `source_url`**
+> dans son SELECT. Or `financials_feed` dérive le CIK EDGAR du motif `/data/<cik>/` de l'URL d'un fait
+> en base (aucune table de correspondance). Sans `source_url`, `cik_from_url()` renvoyait
+> **toujours** `None` → capex jamais fetché. **Preuve en base** : les entries dérivées `financials`
+> #40→#47 étaient **4 rounds de persist antérieurs** n'ayant jamais écrit que `levier`+`roic`, avec une
+> `source_url` **vide** — signature exacte du bug. **Pourquoi la MàJ ter a cru que ça marchait** : la
+> « vérification contre l'API EDGAR » testait `fetch_annual_value(1045810, …)` avec le CIK **en dur**,
+> et `check_financials_feed.py` (32/32) construit ses entries **avec** `source_url` (asserte même
+> `facts["source_url"] == URL`) — le check masquait le trou d'intégration. **Fix** : ajout de
+> `source_url` au SELECT de `get_current_entries` (corrige d'un coup la dérivation du CIK **et** la
+> provenance des entries dérivées, jusque-là vide). Leçon renforcée : un feed n'est acquis que quand
+> son **chemin d'IO réel** a tourné en prod, pas seulement ses fonctions pures + un fetch à CIK codé.
+>
+> ### Persisté + vérifié en réel (2026-08-26)
+> `financials-refresh` (persist, refresh) → `capex_source: edgar_fetched`, **`unfounded=[]`** : capex
+> fait EDGAR #48 (réutilisable, tier A) + `levier` #49 (gearing 4,75 %, trésorerie nette positive),
+> `roic_pct` #50 (77,89 %), `fcf_conversion_pct` #51 (80,52 %), `intensite_capex_pct` #52 (2,8 %).
+> `POST /curator/readiness` NVDA (report #7) → **`financials` : ok=True (A)**, **bloc structuré
+> `bloc_ok=true`** (business_model B+, financials A, valorisation B+). 41 entries (30 A / 6 B / 5 llm_memory).
+>
+> ### Verdict `thin_qualitative` — il ne reste que 2 champs qualitatifs pour `ready`
+> Le bloc structuré, bloqueur historique, est **entièrement fondé**. Gaps restants (bloc qual. marché) :
+>
+> | dimension | ok | manque |
+> |---|---|---|
+> | produits | ❌ | `unit_economics` (économie unitaire : coût/GPU, coût/token — **entrée de synthèse**, pas fetch brut) |
+> | marche | ❌ | `structure_5forces` (analyse Porter **structurée** — synthèse) |
+> | positionnement, management_allocation, risques | ✅ | — |
+>
+> **Prochaine étape (sprint suivant)** : fonder ces 2 champs via des entrées de **synthèse** (le
+> search-worker supporte déjà `field_path` pour fiabiliser le jugement par champ ; mais `unit_economics`
+> et `structure_5forces` sont des analyses, pas des fetch bruts). Puis readiness → `ready` → **lancer la
+> CHAÎNE D'ANALYSE jamais exécutée** (research → bull/bear → réfutation → synthèse + `valider_pont`).
+>
+> ## ⚡ MàJ 2026-08-25 (ter) — dimension `financials` : alimentateur de ratios dérivés DÉPLOYÉ + vérifié contre l'API EDGAR (⚠ pas encore persisté en prod)
+>
+> **Déployé** (commit `9c0a818`, deployment **#295**, un seul conteneur backend vérifié `docker ps`
+> — pas d'orphelin). **Aucune migration.** Même patron que `valuation_feed`/`base_rate_corpus` :
+> transformation pure testable + couche IO.
+>
+> - **`backend/app/knowledge/financials_feed.py`** : fonde les 4 champs de `financials` —
+>   `roic_pct`, `fcf_conversion_pct`, `intensite_capex_pct`, `levier`. Ce ne sont PAS des mesures mais
+>   des **ratios**, donc **calculés** depuis les postes comptables. Point clé de conception : le
+>   plancher de `financials` est **tier A** → un ratio issu du quant (yfinance/FMP, **B+**) ne
+>   fonderait PAS le champ. On calcule donc **uniquement** à partir des `fact_financial` **EDGAR** déjà
+>   en base (tier A) : un ratio dérivé de faits tier A seuls est lui-même tier A → `source_type='edgar_official'`.
+>   `build_financials_entries()` (pur) ne produit une entry QUE si tous les intrants existent ; sinon le
+>   champ est reporté dans `unfounded` (jamais un chiffre fabriqué, #25). `levier` = gearing dette/CP +
+>   dette nette (dette nette/EBITDA **négatif** car trésorerie nette positive → le gearing est la lecture
+>   pertinente, noté). `roic_pct` : NOPAT **≈ résultat net** (charge d'intérêts nette négligeable en
+>   trésorerie nette), approximation **déclarée dans le content** (peut légèrement majorer).
+> - **`backend/app/knowledge/edgar_facts.py`** : le seul poste absent du seed est le **capex**
+>   (nécessaire à `fcf_conversion_pct` = FCF/RN avec FCF=OCF−capex, et `intensite_capex_pct` =
+>   capex/CA). Il n'est ni fabriqué ni emprunté au quant : **mesuré à la source** via l'API XBRL
+>   `companyconcept` d'EDGAR. **CIK dérivé de l'URL EDGAR déjà en base** (`/data/<cik>/`) — aucune table
+>   de correspondance. Échec EDGAR → `EdgarUnavailable`, les 2 champs restent non fondés (#25).
+> - **Route** `POST /tickers/{id}/knowledge/financials-refresh` (`persist`/`refresh`,
+>   `FinancialsUnavailable`→422). **Check** `backend/checks/check_financials_feed.py` **32/32** hors-ligne.
+>
+> ### ⚠️ Gotcha capex — tag XBRL NVDA (vérifié contre l'API EDGAR réelle 2026-08-25)
+> NVDA déclare le capex récent sous **`us-gaap:PaymentsToAcquireProductiveAssets`**, PAS sous le
+> `PaymentsToAcquirePropertyPlantAndEquipment` classique (qui **s'arrête à 2012** pour NVDA — 200 mais
+> données périmées). La liste `_CAPEX_TAGS` gère le **fallthrough** : le 1er tag ne matche aucun
+> exercice près de la date de bilan visée → `EdgarUnavailable` → 2e tag retenu. **À garder à l'esprit
+> pour d'autres tickers : le concept capex varie d'un émetteur à l'autre.**
+>
+> ### Vérifié CONTRE L'API EDGAR (transform pur + fetch), pas seulement hors-ligne
+> Fetch réel `companyconcept` CIK 1045810 → **capex FY2026 = 6,042 Md$** (end 2026-01-25, via le 2e tag).
+> Ratios calculés sur les vrais chiffres NVDA FY2026 : **`roic_pct` 77,9 %** · **`fcf_conversion_pct`
+> 80,5 %** · **`intensite_capex_pct` 2,8 %** · **`levier` gearing 4,75 %** (trésorerie nette positive)
+> → **0 champ non fondé**. Exactement ce qu'il faut pour que `financials.ok=True` (tier A).
+>
+> ### ⛔ CE QUI RESTE À FAIRE (non fait — la fondation n'est PAS encore en base)
+> Le run **en prod** (persist + recompute readiness) a été **bloqué par le garde-fou de permission**
+> puis reporté par l'utilisateur. Donc, contrairement aux sprints 1+2, **les entries `financials` NE
+> SONT PAS écrites dans la KB NVDA et la readiness N'A PAS été recomputée**. Reste à faire, en 1er, à
+> la reprise :
+> 1. `POST /tickers/NVDA/knowledge/financials-refresh` (`persist:true`) — écrit le capex EDGAR (fait
+>    tier A réutilisable) + les 4 ratios (supersede par tags). Vérifier `capex_source='edgar_fetched'`,
+>    `unfounded=[]`, `docker ps` = 1 conteneur.
+> 2. `POST /curator/readiness` NVDA — confirmer **`financials` : ok=True (A)** et le nouveau verdict
+>    (attendu : bloc structuré désormais complet ; reste le bloc qualitatif → toujours `not_ready`).
+>
+> Après ça, gaps restants = **qualitatif** (`business_model`, `produits`, `positionnement`, `marche`)
+> via le search-worker taggé `field_path` — étape 2 ci-dessous inchangée.
+>
+> ## ⚡ MàJ 2026-08-25 (bis) — dimension `valorisation` FONDÉE de bout en bout (sprints 1+2 déployés + vérifiés en réel)
+>
+> **Déployé** (commit `8fecdd5`, deployment **#294**, un seul conteneur backend vérifié). Deux
+> alimentateurs déterministes, sur le modèle du search-worker (transformation pure testable + IO),
+> **aucune migration** (`entry_type` est du texte libre, colonne `tags` existante) :
+>
+> - **Sprint 1 — `backend/app/knowledge/valuation_feed.py`** : fonde `valorisation.prix_actuel` et
+>   `valorisation.relatif_multiple` depuis le quant (DataService → yfinance `.info`, `source_type='yfinance'`
+>   tier **B+ 0.75** = pile le plancher). Append-only avec supersede (le prix est volatil). Route
+>   `POST /tickers/{id}/knowledge/valuation-refresh` (`persist`/`refresh`, `ValuationUnavailable`→422).
+>   Ticker sans symbole (privé/`PUB-`) → refus explicite, jamais une entrée vide (#25).
+> - **Sprint 2 — `backend/app/knowledge/base_rate_corpus.py`** : fonde `valorisation.base_rate_anchor`
+>   — qui **n'est PAS une donnée de marché** mais une **ancre de taux de base** (outside view). Une base
+>   rate ne se *génère* pas au LLM (le groundedness-checker la flaggerait `base_rate_fabrique`), elle se
+>   *mesure* : corpus transverse (`ticker_id IS NULL`, `entry_type='base_rate'`) **seedé depuis les
+>   chiffres réels de l'Exhibit 2 du Base Rate Book** (Mauboussin/CS-HOLT 1950-2015, distribution des CAGR
+>   de ventes 1/3/5/10 ans, n=53 266) + **classifieur déterministe** (taille en CA, maille du livre) +
+>   **entry par-ticker** qui cite le corpus. Route `POST /tickers/{id}/knowledge/base-rate-anchor`.
+>   ⚠️ Les chiffres EXACTS ne couvrent que l'univers complet ; pour une méga-cap le `taux_base_pct` est
+>   marqué **borne haute** (Exhibit 4 : la persistance chute avec la taille), jamais une distribution
+>   méga-cap inventée.
+> - **Checks hors-ligne** (`backend/checks/check_valuation_feed.py` 20/20 · `check_base_rate_corpus.py`
+>   27/27, dont l'arithmétique confrontée au livre : P(≥20 %/an sur 3 ans)=11,9 %, colonnes=100 %).
+>
+> **Exercé EN RÉEL sur NVDA (2026-08-25)** — vraies données yfinance servies malgré le 429 (cache
+> DataService) : prix `212,39 $`, P/E TTM `32,5×`, EV/EBITDA `30,2×` → entries #36/#37 (B+) ;
+> ancre méga-cap → corpus #38 + entry #39 (B+, P(≥20 %/an, 5 ans)=`8,5 %`, médiane `5,2 %`, borne haute).
+> **`POST /curator/readiness` NVDA → `valorisation` : `ok=True` (B+), `champs_non_fondables=[]`.**
+> La valorisation, bloqueur structurel de la MàJ précédente, **n'est plus le problème**.
+>
+> ### Verdict toujours `not_ready` — mais les gaps ont bougé aux AUTRES dimensions
+> Couverture readiness NVDA au 2026-08-25 (36 entries : 25 A / 6 B / 5 llm_memory) :
+>
+> | bloc | dimension | ok | manque |
+> |---|---|---|---|
+> | structurée | **valorisation** | ✅ | — (fondée sprints 1+2) |
+> | structurée | management_allocation, risques | ✅ | — |
+> | structurée | `financials` | ❌ | `roic_pct`, `fcf_conversion_pct`, `intensite_capex_pct` (**ratios dérivés** — calculables du quant/EDGAR, comme la valo ; PAS du web) |
+> | structurée | `business_model` | ❌ | `description`, `drivers_revenus`, `recurrence_pct` (qualitatif) |
+> | qual. marché | `produits` | ❌ | `description`, `unit_economics` |
+> | qual. marché | `positionnement` | ❌ | `moat_preuves`, `position_vs_pairs` |
+> | qual. marché | `marche` | ❌ | `croissance_marche_historique`, `structure_5forces` |
+>
+> ### Prochaines étapes concrètes (dans l'ordre pour amener NVDA à `ready`)
+> 1. **`financials` — ratios dérivés** (`roic_pct`, `fcf_conversion_pct`, `intensite_capex_pct`, `levier`) :
+>    même patron que `valuation_feed` — un alimentateur déterministe qui **calcule** ces ratios depuis les
+>    `fact_financial` EDGAR déjà en KB + le quant. C'est le gap structuré le plus proche, non web.
+> 2. **`business_model` + qualitatif (`produits`/`positionnement`/`marche`)** : via le **search-worker**
+>    (déjà exercé) en **taguant `field_path`** sur les entries pour fiabiliser le jugement par champ,
+>    + entrées de **synthèse** pour `unit_economics` / `structure_5forces` (analyses, pas fetch brut).
+> 3. Readiness → `ready` → **lancer la CHAÎNE D'ANALYSE** (`research` → `bull`/`bear` → réfutation →
+>    `synthesis` + `valider_pont`). **Jamais exécutée à ce jour** — c'est le vrai prochain jalon une fois
+>    `ready` atteint. À l'analyse, `run_research` lira `reverse_dcf.croissance_implicite_prix_actuel_pct`
+>    et appellera `base_rate_corpus.base_rate_ge(seuil, horizon)` pour finaliser le `taux_base_pct` précis.
+>
+> **Permission** : `Bash(infrastructure/deploy.sh:*)` ajoutée dans `.claude/settings.json` (racine repo).
+
+> ## ⚡ MàJ 2026-08-25 — premier run end-to-end réel du search-worker (le gros « jamais vérifié » est levé)
+>
+> **Le lot « recherche intra-document + provenance vérifiée » (commit `6ef4fa4`, deploy #283) est en
+> prod et VÉRIFIÉ de bout en bout.** Checks : `check_provenance.py` **42/42** hors-ligne +
+> `check_fetch_relevance.py` **2/2** live (10-K NVDA `22%`/`14%` atteints à 37,6 % du texte, `via=direct
+> mode=relevance` ; CNBC `Maia` via cache Exa, `mode=whole`). La troncature est réglée contre les vraies API.
+>
+> **Bug infra corrigé le même jour** : le rebuild #283 n'avait PAS arrêté le conteneur #282 (`cc665e9`) —
+> les DEUX portaient des labels Traefik identiques, donc Traefik load-balançait `/api` sur l'ancien ET le
+> nouveau code pendant ~40 h (+ double scheduler). Orphelin stoppé+supprimé, `/api/health`→200 sur un seul
+> backend. **Réflexe à garder : après tout `deploy.sh`, `docker ps | grep <app>` ne doit montrer QU'UN conteneur.**
+>
+> **La boucle tool-calling `run_tool_json_agent()` a enfin tourné contre DeepSeek en réel** (elle ne
+> l'avait jamais fait — cf. l'ancienne section « jamais vérifié »). 7 runs `search-worker` sur NVDA,
+> **~$0.10 au total**, cadence ~90–175 s/run. Résultats (provenance RÉELLEMENT vérifiée — plus aucune
+> URL sec.gov fantôme comme au run C) :
+>
+> | dimension | entries persistées | tier | source | plancher | couvre ? |
+> |---|---|---|---|---|---|
+> | produits | 2 + 4 | A 0.89 / A 0.93 | IR press (cache Exa) + 10-Q MD&A | B+ | champ `unit_economics` jugé non fondé |
+> | positionnement | 1 | B+ 0.735 | CNBC (cache Exa) | B+ | ✅ |
+> | marche | 1 | B+ 0.73 | CNBC | B+ | champ `structure_5forces` non fondé |
+> | management_allocation | 5 | A 0.92–0.944 | EDGAR DEF 14A (sec.gov réel) | A- | ✅ |
+> | risques | 4 | A 0.94 | EDGAR 10-K (sec.gov réel) | B | ✅ |
+>
+> KB NVDA passée de **15 → 32 entries** (25 tier A, 2 tier B, 5 llm_memory). `POST /curator/readiness`
+> tourne et rend un rapport cohérent. **Verdict : `not_ready`** (recomputé 3×, déterministe à données
+> fixes : runs #2/#3 identiques au champ près).
+>
+> ### Pourquoi NVDA n'est PAS `ready` — et pourquoi le search-worker seul ne l'y amènera jamais
+> Les 5 gaps restants sont **structurels**, pas un manque de recherche :
+> - **`valorisation` (bloc structuré, bloquant)** : `prix_actuel` (prix marché live), `relatif_multiple`
+>   (P/E, EV/EBITDA), `base_rate_anchor` (multiple historique secteur) — **aucun ne vient du web** ;
+>   ils viennent du **quant/DataService (FMP)**. La recherche ne peut pas les fonder.
+> - **`produits/unit_economics`** : marges consolidées (GM 73,4 %, op. margin) ajoutées via 10-Q, mais
+>   le curator veut l'économie **unitaire** (coût/GPU, coût/token) → besoin d'une entrée de synthèse.
+> - **`marche/structure_5forces`** : besoin d'une analyse Porter **structurée**, pas d'un fetch brut.
+>
+> ⚠️ **Finding sur la stabilité du curator** : le verdict a basculé `thin_qualitative` (#1, 28 entries)
+> → `not_ready` (#2, 32 entries) en n'AJOUTANT que des entries `produits`. Mécanisme : la note de
+> fondation **par champ** est produite par le modèle (le backend ne recompute en Python que le `ok`
+> = tier_atteint≥plancher ∧ champs_requis fondés). Avec plus de contexte, le modèle a **corrigé** son
+> sur-crédit de `valorisation` (#1 la disait fondée B+, à tort, car aucune entry ne porte prix/multiple).
+> Donc `not_ready` est le verdict JUSTE et `thin_qualitative` était un faux positif. À retenir : la
+> readiness n'est fiable que si chaque champ est réellement porté par une entry — ne pas se fier à un
+> `thin_qualitative`/`ready` limite sans vérifier les `gaps`. Le curator charge jusqu'à 500 entries
+> (`limit=500`), donc pas de plafond qui écrase — c'est bien le jugement par champ qui bouge.
+>
+> ### Prochaine étape concrète pour rendre NVDA `ready`
+> 1. **Fonder `valorisation`** : écrire un petit alimentateur `fact_financial` depuis DataService/FMP
+>    (`prix_actuel`, `relatif_multiple` P/E-EV/EBITDA, `base_rate_anchor` = multiple médian historique
+>    semi-conducteurs) → entries tier A/B+ portant `valorisation.*`. C'est le vrai chaînon manquant.
+> 2. **`produits/unit_economics` et `marche/structure_5forces`** : entrées de **synthèse** (ingestion/
+>    curation), pas du fetch brut. Piste : le `search-worker` ne tague pas `field_path` sur ses entries
+>    (constaté : `field=None`), le curator infère la fondation depuis le `content` — taguer `field_path`
+>    fiabiliserait le jugement par champ.
+> 3. Readiness → `ready` → alors seulement lancer research → bull/bear → réfutation → synthèse
+>    (`POST /tickers/NVDA/research` puis `/analyses` …). **Cette chaîne d'analyse n'a toujours jamais
+>    tourné** — c'est le prochain vrai jalon une fois `ready` atteint.
 
 # Prompt de reprise — portfolio-tracker V2 (post-déploiement couche 2)
 
@@ -211,13 +423,22 @@ décisions ci-dessus (embeddings API, web search API).
    migration 027 · 15/15 entrées NVDA backfillées en 1024d · `query_knowledge()` bascule sur
    `embedding <=> $vec::vector` avec repli texte strict. Mesuré en conditions réelles à travers
    l'index HNSW : **MRR 0.905, hit@3 7/7**.
-2. ~~**`search-worker`**~~ — ✅ **CODE FAIT le 2026-08-23**, vérifié hors ligne, **clé Exa manquante**.
-   `websearch.py` + `tools.py` + `worker.py` + `knowledge_v2.py` + `run_tool_json_agent()` + contrat
-   C1 copié dans `app/contracts/`. Reste : souscrire Exa → `EXA_API_KEY` dans Coolify → push+rebuild
-   → **premier appel réel du worker**.
-3. **`ingestion-agent`** — doc → entries (contrat C2), anti-hallucination financière.
-4. **Premier run end-to-end réel** : amener NVDA de `thin_qualitative` à `ready`, puis
-   research → bull/bear → réfutation → synthèse. **Jamais fait à ce jour.**
+2. ~~**`search-worker`**~~ — ✅ **FAIT + EXERCÉ EN RÉEL le 2026-08-25** (Exa déployée, 7 runs NVDA,
+   provenance vérifiée sur sources réelles EDGAR/IR). Voir MàJ 2026-08-25 en tête.
+3. ~~**Fonder `valorisation` depuis le quant (DataService/FMP)**~~ — ✅ **FAIT + VÉRIFIÉ EN RÉEL le
+   2026-08-25** (sprints 1+2, deployment #294). `prix_actuel`/`relatif_multiple` via `valuation_feed.py`
+   (yfinance, B+) ; `base_rate_anchor` via `base_rate_corpus.py` (corpus Base Rate Book + classifieur
+   par taille). `valorisation` → `ok=True` en readiness NVDA. Voir MàJ 2026-08-25 (bis) en tête.
+3bis. **Fonder `financials` (ratios dérivés)** — ⏳ **CODE DÉPLOYÉ le 2026-08-25 (deployment #295,
+   commit `9c0a818`) + vérifié contre l'API EDGAR, mais PAS encore persisté en prod.** `financials_feed.py`
+   calcule `roic_pct`/`fcf_conversion_pct`/`intensite_capex_pct`/`levier` depuis les faits EDGAR tier A
+   (le quant B+ est volontairement écarté : plancher A), capex fetché à la source (`edgar_facts.py`).
+   **Reste à lancer en prod** : `financials-refresh` (persist) + recompute readiness — cf. MàJ (ter) en
+   tête. Puis le qualitatif.
+4. **`ingestion-agent`** — doc → entries (contrat C2), anti-hallucination financière.
+5. **Premier run end-to-end de la CHAÎNE D'ANALYSE** : une fois NVDA `ready`,
+   research → bull/bear → réfutation → synthèse (+ `valider_pont`). **Jamais fait à ce jour** — la
+   partie alimentation (readiness) est désormais exercée, l'analyse reste à lancer.
 5. Agents 7→9 (migrations 027/028) : décision/validate → monitoring m6 → sortie/calibration.
 6. Passe UX transverse finale (§16).
 
@@ -225,15 +446,18 @@ décisions ci-dessus (embeddings API, web search API).
 
 ## Ce qui n'a JAMAIS été vérifié (à ne pas supposer acquis)
 
-- **Aucun run réel de la chaîne V2.** Les 9 routes sont exposées et importent proprement, mais aucune
-  n'a été appelée contre un vrai ticker. Le `_apply_deterministic_overrides` du curator, la boucle de
-  réparation JSON du runner et `valider_pont()` n'ont jamais vu de sortie de modèle réelle.
-- **La boucle tool-calling n'a jamais tourné contre un modèle.** Les exécuteurs sont câblés et
-  `fetch_url` est exercé pour de vrai, mais `run_tool_json_agent()` n'a jamais été bouclé par
-  DeepSeek : le tour de clôture sans `tools`, la réparation JSON et le respect effectif du contrat
-  `WorkerResponse` par le modèle restent à observer. Point de vigilance identifié : DeepInfra accepte
-  `tools` + `response_format` séparément (smoke-test 2026-08-23), leur **combinaison** n'a pas été
-  testée — d'où le clone sans outils au tour final.
+- ~~**La boucle tool-calling n'a jamais tourné contre un modèle.**~~ ✅ **LEVÉ le 2026-08-25** :
+  `run_tool_json_agent()` a bouclé contre DeepSeek sur 7 runs `search-worker` NVDA — tour de clôture
+  sans `tools`, réparation JSON et respect du contrat `WorkerResponse` observés en réel ; la
+  combinaison `tools` + `response_format` (via le clone sans outils) fonctionne. `search-worker`,
+  `persist_worker_entries`, `_apply_deterministic_overrides` (worker) et le curator (`run_readiness`,
+  `_apply_deterministic_overrides`, readiness → rapport `not_ready` cohérent) sont exercés contre un
+  vrai modèle. Voir la MàJ 2026-08-25 en tête.
+- **La chaîne d'ANALYSE, elle, n'a toujours jamais tourné.** `run_research`, `run_bull`/`run_bear`,
+  `run_rebuttal`, `run_synthesis` et surtout `valider_pont()` (§8.5) n'ont jamais vu de sortie de
+  modèle réelle : aucun ticker n'a encore atteint `ready`, et `_load_ready_context()` lève
+  `NotReadyError` tant que la readiness n'est pas `ready`. Bloqué en amont par la fondation de
+  `valorisation` (feed quant, cf. MàJ 2026-08-25), pas par la chaîne elle-même.
 - La validation faite : `py_compile` + import complet en container jetable + round-trip
   `ReadinessReport` sous pydantic 2.13.4 → `thin_qualitative` cohérent avec `compute_verdict`.
 
