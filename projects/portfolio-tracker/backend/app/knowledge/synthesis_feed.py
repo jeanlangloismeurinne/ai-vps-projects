@@ -104,6 +104,24 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "entries. Un aspect sans matériau en base se déclare « non documenté à ce jour »."
         ),
     ),
+    "positionnement.moat_preuves": SynthesisTarget(
+        field_path="positionnement.moat_preuves",
+        dimension="positionnement",
+        entry_type="analysis",
+        query=(
+            "avantage concurrentiel durable moat NVIDIA écosystème logiciel CUDA coûts de transition "
+            "base installée développeurs verrouillage réseau NVLink effets d'échelle barrières"
+        ),
+        candidate_entry_types=("fact_qualitative", "analysis", "quote", "risk", "fact_financial"),
+        min_citations=2,
+        guidance=(
+            "Synthétise les PREUVES du moat (avantage concurrentiel durable) : nature du moat "
+            "(écosystème logiciel CUDA / coûts de transition, base installée, effets de réseau "
+            "NVLink, échelle R&D), preuves chiffrées ou factuelles tirées des entries, et durabilité "
+            "vs menaces (ASIC maison, AMD). Chaque preuve adossée aux entries citées ; un aspect sans "
+            "matériau en base se déclare « non documenté », jamais inventé."
+        ),
+    ),
     "marche.structure_5forces": SynthesisTarget(
         field_path="marche.structure_5forces",
         dimension="marche",
