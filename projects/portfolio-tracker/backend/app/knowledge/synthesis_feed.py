@@ -226,6 +226,23 @@ async def _current_synthesis_entry_id(conn, ticker_id: str, target: SynthesisTar
     return row["id"] if row else None
 
 
+# Squelette JSON explicite injecté au tour : sous response_format=json_object, DeepSeek se rabat sur
+# `{}` (JSON valide mais vide) quand la forme attendue n'est pas montrée noir sur blanc. Le curator
+# évite ce piège parce que son prompt DB détaille le schéma — on fait pareil ici (vérifié : sans ce
+# squelette, le modèle renvoyait `{}` deux fois de suite, 2026-08-26).
+_SYNTHESIS_SKELETON = (
+    '{\n'
+    '  "title": "<titre court du champ synthétisé>",\n'
+    '  "synthesis_markdown": "<synthèse Markdown structurée selon la consigne>",\n'
+    '  "claims": [\n'
+    '    {"text": "<assertion atomique>", "cited_entry_ids": [<#id du corpus>, ...]},\n'
+    '    {"text": "<autre assertion>", "cited_entry_ids": [<#id>]}\n'
+    '  ],\n'
+    '  "lang": "fr"\n'
+    '}'
+)
+
+
 def _synthesis_task_message(target: SynthesisTarget, listing: str) -> str:
     return (
         f"[mode: synthese]\n\n"
@@ -233,9 +250,10 @@ def _synthesis_task_message(target: SynthesisTarget, listing: str) -> str:
         f"Consigne de composition :\n{target.guidance}\n\n"
         f"Corpus citable — entries de connaissance COURANTES, tier A/A-/B+ (cite-les par leur #id, "
         f"et UNIQUEMENT celles-ci) :\n{listing}\n\n"
-        f"Produis l'objet GroundedSynthesis (JSON strict) : `title`, `synthesis_markdown` structurée "
-        f"selon la consigne, et `claims[]` (chaque assertion → cited_entry_ids pris dans le corpus "
-        f"ci-dessus). Aucun fait hors de ce corpus."
+        f"Produis l'objet GroundedSynthesis, en respectant EXACTEMENT cette forme (commence par `{{` "
+        f"et termine par `}}`, aucun texte autour) :\n{_SYNTHESIS_SKELETON}\n\n"
+        f"`claims[]` doit être NON VIDE et chaque assertion porte au moins un `cited_entry_ids` pris "
+        f"dans le corpus ci-dessus. Aucun fait hors de ce corpus."
     )
 
 
