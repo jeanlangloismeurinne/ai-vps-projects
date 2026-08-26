@@ -278,6 +278,7 @@ async def run_synthesis_feed(
     *,
     persist: bool = True,
     max_candidates: int = 20,
+    debug_raw: bool = False,
 ) -> dict[str, Any]:
     """Fonde un champ qualitatif par SYNTHÈSE grounded des entries tier A/A-/B+ déjà en base.
 
@@ -312,8 +313,25 @@ async def run_synthesis_feed(
     # 2) tour LLM grounded --------------------------------------------------------------------------
     agent = await _resolve_synthesis_agent()
     listing = format_entries_for_prompt(citable, content_limit=700)
+    task = _synthesis_task_message(target, listing)
+
+    if debug_raw:
+        # Observabilité de la frontière LLM (run_json_agent n'a jamais tourné contre le vrai modèle) :
+        # renvoie la sortie brute sans validation, pour diagnostiquer un contrat non respecté.
+        res = await agent.complete(
+            [{"role": "user", "content": task}],
+            response_format={"type": "json_object"}, temperature=0.2,
+        )
+        return {
+            "ticker_id": ticker_id, "field_path": field_path, "debug_raw": True,
+            "citable_count": len(citable), "citable_ids": sorted(citable_ids),
+            "model": agent.model, "finish_reason": res.finish_reason,
+            "tokens_in": res.tokens_in, "tokens_out": res.tokens_out,
+            "raw_content": res.content, "task_preview": task[:1200],
+        }
+
     run = await run_json_agent(
-        agent, [{"role": "user", "content": _synthesis_task_message(target, listing)}],
+        agent, [{"role": "user", "content": task}],
         GroundedSynthesis, temperature=0.2,
     )
     synth: GroundedSynthesis = run.parsed  # type: ignore[assignment]

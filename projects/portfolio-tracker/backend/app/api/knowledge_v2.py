@@ -187,6 +187,7 @@ class SynthesisBody(BaseModel):
     field_path: str = Field(min_length=1)
     persist: bool = True             # False = dry-run (base append-only)
     max_candidates: int = Field(ge=1, le=50, default=20)
+    debug_raw: bool = False          # True = renvoie la sortie LLM brute sans validation (diagnostic)
 
 
 @router.get("/knowledge/synthesis/targets")
@@ -216,7 +217,8 @@ async def synthesize(ticker_id: str, body: SynthesisBody):
     """
     try:
         result = await run_synthesis_feed(
-            ticker_id, body.field_path, persist=body.persist, max_candidates=body.max_candidates
+            ticker_id, body.field_path, persist=body.persist,
+            max_candidates=body.max_candidates, debug_raw=body.debug_raw,
         )
     except (SynthesisUnavailable, SynthesisUngrounded) as e:
         raise HTTPException(status_code=422, detail=str(e))
