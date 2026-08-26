@@ -76,6 +76,11 @@ class SynthesisTarget:
     candidate_entry_types: tuple[str, ...]
     min_citations: int               # sous ce seuil de matériau citable → SynthesisUnavailable
     guidance: str                    # ce que la synthèse doit couvrir (injecté au LLM)
+    # Tiers admis dans le corpus citable de CE champ. Par défaut A/A-/B+. Un champ dont le matériau
+    # honnête est purement tier A (ex. unit_economics = marges/coûts EDGAR/IR) restreint à ("A","A-") :
+    # ça exclut par PERTINENCE les entries hors-champ de moindre tier (presse marché) qui, sinon,
+    # tireraient la synthèse sous le plancher via la règle « un cran sous la plus faible citée ».
+    citable_tiers: tuple[str, ...] = CITABLE_TIERS
 
 
 # Cibles connues. Génériques par construction — ajouter une entrée ici suffit à ouvrir un champ.
@@ -88,8 +93,9 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "économie unitaire marge brute marge opérationnelle coût unitaire coût par GPU coût par "
             "token ASP prix de vente moyen pricing power structure de coûts data center"
         ),
-        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote", "risk"),
+        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
         min_citations=2,
+        citable_tiers=("A", "A-"),  # socle marges/coûts tier A ; exclut la presse marché B+ (hors-champ)
         guidance=(
             "Synthétise l'ÉCONOMIE UNITAIRE (unit economics) du produit : structure de marge (marge "
             "brute / opérationnelle disponible dans les entries), levier de prix (ASP / pricing power), "
@@ -299,7 +305,7 @@ async def run_synthesis_feed(
             entry_types=list(target.candidate_entry_types),
             min_reliability=0.70, include_sector=True, limit=max_candidates,
         )
-    citable = [e for e in found if e.get("reliability_tier") in CITABLE_TIERS]
+    citable = [e for e in found if e.get("reliability_tier") in target.citable_tiers]
     if len(citable) < target.min_citations:
         raise SynthesisUnavailable(
             f"{ticker_id}/{field_path} : {len(citable)} entrie(s) citable(s) tier A/A-/B+ en base "
