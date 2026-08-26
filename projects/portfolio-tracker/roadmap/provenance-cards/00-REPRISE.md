@@ -45,10 +45,27 @@ role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + co
 > | marche | ❌ | `structure_5forces` (analyse Porter **structurée** — synthèse) |
 > | positionnement, management_allocation, risques | ✅ | — |
 >
-> **Prochaine étape (sprint suivant)** : fonder ces 2 champs via des entrées de **synthèse** (le
-> search-worker supporte déjà `field_path` pour fiabiliser le jugement par champ ; mais `unit_economics`
-> et `structure_5forces` sont des analyses, pas des fetch bruts). Puis readiness → `ready` → **lancer la
-> CHAÎNE D'ANALYSE jamais exécutée** (research → bull/bear → réfutation → synthèse + `valider_pont`).
+> **Search-worker testé sur `produits.unit_economics` (2026-08-26, dry-run, `field_path` ciblé,
+> `max_iterations=8`) → `not_found`, 0 entrée.** Confirme empiriquement que ces 2 champs ne sont PAS
+> fondables par fetch : l'économie unitaire (ASP/coût par GPU, coût/token) n'est ni dans un dépôt EDGAR
+> (NVDA ne publie pas de volumes unitaires — l'ASP n'est pas calculable des faits disclosés, contrairement
+> aux ratios `financials`) ni lisible en fetch depuis le VPS (notes d'analystes paywallées, 403). Le KB a
+> déjà les matériaux tier A (entries #32-35 marges/coûts consolidés pour unit_economics ; #21,22,28-31
+> menace ASIC / concentration clients / AMD-Huawei / TSMC / export controls pour les 5 forces) — mais
+> **aucune entrée ne les SYNTHÉTISE** au niveau que le curator exige.
+>
+> ### ⛔ Frontière de capacité — le prochain sprint = construire l'INGESTION-AGENT (synthèse grounded, contrat C2)
+> Asymétrie clé : la **chaîne d'analyse** (research/bull/bear) est gated par `ready`, mais la **synthèse
+> d'alimentation du KB** ne l'est PAS. L'outil manquant est donc l'`ingestion-agent` (étape 4 du plan,
+> jamais construit), pas la chaîne. Design proposé, même patron que `valuation_feed`/`financials_feed`
+> (transform testable + IO) mais LLM-composé et **grounded** : (1) charger les entries tier A/B+ citables
+> pour le champ visé ; (2) un tour LLM (DeepInfra) compose la synthèse **strictement** à partir de ces
+> entries, chaque assertion → `source_entry_id` (aucun fait hors-KB) ; (3) persister une entry
+> `entry_type='synthesis'` avec `field_path`, `content_structured.cited_entry_ids`, tier dérivé (synthèse
+> de tier A ⇒ A-/B+ selon règle), `requires_human_review=True` au départ. **NE PAS** injecter d'entrée
+> non fondée pour forcer `ready` (violerait G3/#24/#25/#28 — le cœur du projet). Une fois les 2 champs
+> fondés → readiness → `ready` → **lancer la CHAÎNE D'ANALYSE jamais exécutée** (research → bull/bear →
+> réfutation → synthèse + `valider_pont`).
 >
 > ## ⚡ MàJ 2026-08-25 (ter) — dimension `financials` : alimentateur de ratios dérivés DÉPLOYÉ + vérifié contre l'API EDGAR (⚠ pas encore persisté en prod)
 >
