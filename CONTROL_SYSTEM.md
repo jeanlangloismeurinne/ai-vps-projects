@@ -92,7 +92,8 @@ parallèle.
 5. **Exécution** : dans le Hub, l'utilisateur choisit **un sprint** par son nom → le Hub génère
    l'**ordre de sprint** (le Hub ne peut pas lancer Claude Code lui-même). Dans Claude Code,
    l'utilisateur déclenche ; Opus lit le chantier + l'ordre, exécute (inline ou workers selon le
-   plancher), et met à jour le **statut dans le chantier**.
+   plancher), et met à jour le **statut dans le chantier**. En fin de sprint, Opus **ré-arme
+   `SESSION.md` sur le sprint suivant** : les sprints s'enchaînent sans repasser par le Hub.
 6. **Clôture** : ranger l'info durable (section dédiée ci-dessous).
 
 ---
@@ -122,6 +123,35 @@ Sprint   : {nom du sprint}
 Déclencheur côté terminal : **« exécute le sprint en cours pour {projet} »** → Opus lit `SESSION.md`
 **et** le chantier pointé (source de vérité), exécute, coche la checklist **dans le chantier**.
 Le statut ne vit **jamais** dans `SESSION.md` (qui sera écrasé) — toujours dans le chantier.
+
+### Ré-armement automatique — un seul passage par le Hub
+
+L'utilisateur ne clique « Générer l'ordre » **qu'une fois**, au démarrage du chantier. Ensuite,
+**c'est Opus qui réécrit `SESSION.md` en fin de sprint**, sans repasser par le Hub. Règle par
+défaut, appliquée à la clôture de **chaque** sprint :
+
+1. Cocher les items dans le chantier (source de vérité).
+2. Déterminer le **prochain sprint non terminé** du chantier = le premier `###` de la section
+   `## Sprints` qui garde au moins un `- [ ]`.
+3. **Réécrire `SESSION.md`** (même gabarit, écrasement complet) sur ce sprint.
+   - Sprint courant **incomplet** (items abandonnés/bloqués) → `SESSION.md` reste sur **le sprint
+     courant**, avec les seuls items restants. Le pointeur ne saute pas un travail non fait.
+   - **Plus aucun sprint en attente** → écrire un `SESSION.md` de fin (`Sprint : — (chantier
+     terminé)`, aucun item) pour qu'un « exécute le sprint en cours » lancé par réflexe ne
+     re-déclenche pas le dernier sprint ; puis appliquer la clôture de chantier (`status: done`,
+     `roadmap/archive/`).
+4. **Clore la session par ce message** (format fixe) :
+
+```
+Sprint {N} — {nom} : terminé. SESSION.md est actualisé pour lancer le Sprint {N+1} — {nom}.
+Recommandation : {nouvelle conversation | poursuivre ici} — {une ligne de justification}.
+```
+
+La recommandation n'est jamais implicite : arbitrer **contexte chaud réutilisable** (prochain
+sprint petit et dépendant des gotchas fraîchement découverts → *poursuivre ici*) contre **coût
+tokens** (sprint suivant gros, autonome, état déjà consigné dans le chantier → *nouvelle
+conversation*). Le Hub reste le point d'entrée pour **changer** de sprint ou de chantier hors
+séquence : y retourner écrase le `SESSION.md` ré-armé, ce qui est le comportement voulu.
 
 ---
 
@@ -239,6 +269,8 @@ et ferme ; sinon → rattache à un chantier (existant ou nouveau) via `mileston
    système de référence — pas la mémoire agent (qui n'est qu'un **cache** et ne doit jamais être
    l'unique domicile d'un fait porteur).
 2. **Statut** : cocher les items dans le chantier ; passer `status: done` quand tout est clos.
+   Puis **ré-armer `SESSION.md`** sur le sprint suivant et rendre la main avec le message de fin
+   de sprint (voir § *Ré-armement automatique*) — pas de retour au Hub entre deux sprints.
 3. **Archivage** : un chantier terminé sort du chemin chaud → `roadmap/archive/` (git en garde
    l'historique). On ne re-lit pas à chaque session des chantiers finis.
 4. **Mémoire agent** : y écrire au plus un **pointeur** (« gotchas DeepInfra → DECISIONS.md »).
@@ -273,4 +305,6 @@ déterministe), fallback sous-agent Sonnet si échec. Garde les logs de build ho
 - **Segmenter les sprints** par **contexte partagé**, pas par taille ni thème.
 - **Déléguer** seulement si ça coûte **moins** qu'inline ; au plus à la granularité du sprint.
 - **Vérifier avant de fermer** : tests / run pour la correctness ; compte-rendu pour le contre-sens.
+- **Fin de sprint** : ré-armer `SESSION.md` sur le sprint suivant + message de fin avec la
+  recommandation *nouvelle conversation vs poursuivre ici*.
 - **À la clôture** : gotcha → `DECISIONS.md`, chantier fini → `archive/`, mémoire = pointeur.

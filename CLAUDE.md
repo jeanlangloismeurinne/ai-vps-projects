@@ -147,6 +147,12 @@ Commande de déclenchement : **"execute le sprint en cours pour {projet}"**
 → Lire `SESSION.md` **et** le chantier qu'il pointe (source de vérité), exécuter le sprint, cocher
 la checklist dans le chantier. À la clôture : gotchas → `DECISIONS.md`, chantier fini → `roadmap/archive/`.
 
+**Fin de sprint = ré-armement.** Réécrire `SESSION.md` sur le prochain sprint non terminé du
+chantier (l'utilisateur ne repasse pas par le Hub entre deux sprints), puis conclure par
+« Sprint N terminé, SESSION.md est actualisé pour lancer le Sprint N+1. Recommandation :
+nouvelle conversation / poursuivre ici — {justification} ». Détail : `CONTROL_SYSTEM.md`
+§ *Ré-armement automatique*.
+
 ## Bases de connaissance — architecture commune
 
 Toute KB de projet suit la charte **`KNOWLEDGE_ARCHITECTURE.md`** (racine du repo). À lire avant

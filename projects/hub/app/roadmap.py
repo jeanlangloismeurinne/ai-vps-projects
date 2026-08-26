@@ -110,6 +110,18 @@ def _generate_sprint_order(project: str, chantier_file: str, sprint: dict) -> st
         f"> Déclencheur Claude Code : « exécute le sprint en cours pour {proj} »",
         "> Source de vérité = le chantier ci-dessus. Ce fichier est jetable (écrasé au prochain ordre).",
         "",
+        "## Fin de sprint (Claude Code)",
+        "Une fois les items cochés dans le chantier, **réécris ce fichier** sur le prochain sprint",
+        "non terminé du chantier (même gabarit, **cette section comprise** : c'est elle qui fait",
+        "durer l'enchaînement) — l'utilisateur ne repasse pas par le Hub. S'il reste",
+        "des items sur CE sprint, garde-le en pointant les seuls items restants ; s'il n'y a plus de",
+        "sprint, écris `Sprint : — (chantier terminé)` sans item. Puis conclus par :",
+        "",
+        "> Sprint {N} — {nom} : terminé. SESSION.md est actualisé pour lancer le Sprint {N+1} — {nom}.",
+        "> Recommandation : {nouvelle conversation | poursuivre ici} — {justification en une ligne}.",
+        "",
+        "Détail du protocole : `CONTROL_SYSTEM.md` § Ré-armement automatique.",
+        "",
     ]
     return "\n".join(lines)
 
@@ -362,7 +374,10 @@ def _page_edit(project: str, item: dict, flash: str = "") -> str:
         flash_html = '<div class="alert alert-success">✓ Sauvegardé.</div>'
     elif flash == "order":
         flash_html = (f'<div class="alert alert-success">✓ <code>SESSION.md</code> généré. '
-                      f'Dans Claude Code : <strong>« exécute le sprint en cours pour {_e(proj)} »</strong></div>')
+                      f'Dans Claude Code : <strong>« exécute le sprint en cours pour {_e(proj)} »</strong>'
+                      f'<br><span style="opacity:.8">À la fin du sprint, Claude ré-arme lui-même '
+                      f'l\'ordre sur le sprint suivant : inutile de revenir ici, sauf pour repartir '
+                      f'sur un autre sprint.</span></div>')
     else:
         flash_html = ""
 
@@ -384,7 +399,11 @@ def _page_edit(project: str, item: dict, flash: str = "") -> str:
   </form>
 </div>"""
         sprints_html = (f'<div class="section"><div class="section-title">'
-                        f"Sprints — générer l'ordre (SESSION.md)</div>{rows}</div>")
+                        f"Sprints — générer l'ordre (SESSION.md)</div>{rows}"
+                        f'<div class="hint">Un seul clic suffit pour lancer le chantier : à la fin '
+                        f"de chaque sprint, Claude Code réécrit <code>SESSION.md</code> sur le sprint "
+                        f"suivant. Revenir ici sert à <strong>sortir de la séquence</strong> "
+                        f"(reprendre un sprint antérieur, en sauter un).</div></div>")
     else:
         sprints_html = ('<div class="section"><div class="section-title">Sprints</div>'
                         '<p class="empty">Pas encore de sprints. Claude les ajoute dans la section '
