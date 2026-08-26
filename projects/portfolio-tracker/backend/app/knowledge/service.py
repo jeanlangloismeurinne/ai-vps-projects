@@ -125,11 +125,19 @@ async def store_knowledge(
     supersedes_entry_id: Optional[int] = None,
     embed: bool = True,
     embedding: Optional[Sequence[float]] = None,
+    requires_human_review: bool = False,
+    derived_reliability: Optional[tuple[float, str, str]] = None,
 ) -> dict[str, Any]:
     """Crée une knowledge_entry. Le score/tier sont CALCULÉS (§6.3), jamais fournis par l'appelant.
 
     Versionnement A1 : si `supersedes_entry_id` est donné, l'ancienne entrée est marquée
     `superseded_by = <nouvelle>` (jamais mutée sur le fond) et la nouvelle porte `version+1`.
+
+    `derived_reliability=(score, tier, note)` court-circuite `compute_reliability` — réservé aux
+    fondations DÉTERMINISTES qui dérivent le tier d'intrants déjà scorés en base (ex. synthesis_feed :
+    un cran sous la plus faible entry citée). Ce n'est PAS l'agent qui déclare son score (#24) : c'est
+    un calcul Python à partir de tiers vérifiés en base. Le `note` DOIT expliquer la dérivation.
+    `requires_human_review=True` force le flag (en plus des source_types qui l'exigent d'office, P2).
 
     Embedding : calculé ICI par défaut (`embed=True`) pour qu'une entrée naisse immédiatement
     trouvable — sinon le backlog d'entrées `embedding IS NULL` grossit et l'anti-doublon du
@@ -141,11 +149,14 @@ async def store_knowledge(
     fournit un vecteur déjà calculé en lot, et `embed=False` diffère au backfill. Elles évitent
     N appels HTTP unitaires à l'intérieur d'une transaction.
     """
-    score, tier, note = compute_reliability(
-        source_type, entry_type=entry_type, source_date=source_date,
-        cross_validated=cross_validated, has_conflict=has_conflict,
-    )
-    requires_review = source_type in _REQUIRES_REVIEW_SOURCES
+    if derived_reliability is not None:
+        score, tier, note = derived_reliability
+    else:
+        score, tier, note = compute_reliability(
+            source_type, entry_type=entry_type, source_date=source_date,
+            cross_validated=cross_validated, has_conflict=has_conflict,
+        )
+    requires_review = requires_human_review or source_type in _REQUIRES_REVIEW_SOURCES
 
     version = 1
     if supersedes_entry_id is not None:

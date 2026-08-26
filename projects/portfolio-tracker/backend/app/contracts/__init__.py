@@ -24,6 +24,7 @@ from .analysis_v2_schemas import (
 )
 from .context_pack_schema import CANONICAL_DIMS, ContextPack, DimensionDigest
 from .readiness_report_schema import ReadinessReport, compute_verdict
+from .synthesis_schema import GroundedSynthesis, SynthesisClaim
 from .worker_delegation_schema import (
     SOURCE_RELIABILITY_BASELINE,
     ExecutionDeclaration,
@@ -45,6 +46,8 @@ __all__ = [
     "valider_pont_risques_hypotheses",
     "ReadinessReport",
     "compute_verdict",
+    "GroundedSynthesis",
+    "SynthesisClaim",
     "ContextPack",
     "DimensionDigest",
     "CANONICAL_DIMS",

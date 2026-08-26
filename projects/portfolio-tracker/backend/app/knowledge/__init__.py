@@ -27,6 +27,12 @@ from .service import (
     snapshot_refs,
     store_knowledge,
 )
+from .synthesis_feed import (
+    SYNTHESIS_TARGETS,
+    SynthesisUnavailable,
+    SynthesisUngrounded,
+    run_synthesis_feed,
+)
 
 __all__ = [
     "RELIABILITY_TABLE",
@@ -36,6 +42,11 @@ __all__ = [
     "get_current_entries",
     "snapshot_refs",
     "collect_refs",
+    # synthèse grounded (ingestion-agent mode synthèse)
+    "run_synthesis_feed",
+    "SynthesisUnavailable",
+    "SynthesisUngrounded",
+    "SYNTHESIS_TARGETS",
     # embeddings (bge-m3 1024d — migration 027)
     "EmbeddingUnavailable",
     "backfill_embeddings",

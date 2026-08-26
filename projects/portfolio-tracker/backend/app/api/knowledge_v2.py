@@ -22,6 +22,12 @@ from app.contracts.worker_delegation_schema import EntryType, Requester
 from app.db.database import get_db_session
 from app.knowledge.base_rate_corpus import BaseRateUnavailable, run_base_rate_anchor
 from app.knowledge.financials_feed import FinancialsUnavailable, run_financials_feed
+from app.knowledge.synthesis_feed import (
+    SYNTHESIS_TARGETS,
+    SynthesisUnavailable,
+    SynthesisUngrounded,
+    run_synthesis_feed,
+)
 from app.knowledge.valuation_feed import ValuationUnavailable, run_valuation_feed
 from app.knowledge.websearch import SearchUnavailable, get_search_backend
 from app.config import settings
@@ -169,4 +175,54 @@ async def financials_refresh(ticker_id: str, body: ValuationFeedBody):
     except Exception as e:  # noqa: BLE001
         logger.exception("financials-refresh %s", ticker_id)
         raise HTTPException(status_code=502, detail=f"financials-feed : {e}")
+    return result
+
+
+class SynthesisBody(BaseModel):
+    """Alimentation d'un champ qualitatif par SYNTHÈSE grounded des entries tier A/A-/B+ en base.
+
+    Réservé aux champs que le fetch ne peut PAS fonder (économie unitaire, 5 forces) mais dont le
+    matériau existe déjà, épars, dans le KB. `field_path` doit être une cible connue (voir
+    `GET /knowledge/synthesis/targets`)."""
+    field_path: str = Field(min_length=1)
+    persist: bool = True             # False = dry-run (base append-only)
+    max_candidates: int = Field(ge=1, le=50, default=20)
+
+
+@router.get("/knowledge/synthesis/targets")
+async def synthesis_targets():
+    """Champs synthétisables (diagnostic) : lesquels, avec quelle dimension et combien de citations
+    minimales requises."""
+    return {
+        "targets": [
+            {"field_path": t.field_path, "dimension": t.dimension,
+             "entry_type": t.entry_type, "min_citations": t.min_citations}
+            for t in SYNTHESIS_TARGETS.values()
+        ]
+    }
+
+
+@router.post("/tickers/{ticker_id}/knowledge/synthesize")
+async def synthesize(ticker_id: str, body: SynthesisBody):
+    """Fonde un champ qualitatif (ex. `produits.unit_economics`, `marche.structure_5forces`) par une
+    synthèse GROUNDED : un tour LLM compose la synthèse STRICTEMENT à partir des entries tier A/A-/B+
+    déjà en base ; le backend vérifie que chaque assertion cite une entry du corpus (grounding réel,
+    #24/#28), dérive le tier « un cran sous la plus faible entry citée » et écrit une entry
+    `source_type='agent_synthesis'`, `requires_human_review=True`.
+
+    Jamais un fait fabriqué pour forcer `ready` (G3) : matériau citable insuffisant → **422**
+    (`SynthesisUnavailable`) ; synthèse qui sort du corpus → **422** (`SynthesisUngrounded`, rien
+    n'est écrit). `persist=false` = dry-run.
+    """
+    try:
+        result = await run_synthesis_feed(
+            ticker_id, body.field_path, persist=body.persist, max_candidates=body.max_candidates
+        )
+    except (SynthesisUnavailable, SynthesisUngrounded) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except AgentNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("synthesize %s/%s", ticker_id, body.field_path)
+        raise HTTPException(status_code=502, detail=f"synthesis-feed : {e}")
     return result
