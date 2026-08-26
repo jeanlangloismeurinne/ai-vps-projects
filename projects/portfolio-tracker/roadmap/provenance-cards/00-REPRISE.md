@@ -69,12 +69,40 @@ role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + co
 > veut que le plancher morde à la lecture, il faudrait le recomputer en Python (tier_atteint des
 > entries qui couvrent le champ ≥ plancher), pas le laisser au LLM.
 >
+> ### SUITE (2026-08-26, même session) — `positionnement` fondé par synthèse ; NVDA à UN champ de `ready`
+> - `positionnement.moat_preuves` : search-worker `not_found` (sources sous plancher) → **cible de
+>   synthèse** ajoutée, resserrée A/A- (les preuves du moat = CUDA #20/échelle/risques EDGAR A ; la
+>   presse B+ #21/#22 porte des MENACES, pas des preuves). Persisté **entry #55 tier B+**,
+>   `requires_human_review=True`. `deployment #305`.
+> - `marche.croissance_marche_historique` : **vrai gap laissé ouvert** — search-worker `not_found`,
+>   et NON synthétisable (le KB a la croissance de NVDA, pas du MARCHÉ → erreur de catégorie, #25).
+>   Nécessite une donnée de marché EXTERNE (TAM IDC/Gartner, upload).
+>
+> ### 🐛🐛 Deux bugs curator trouvés au 1er `ready` réel (jamais atteints — aucun ticker n'avait été ready)
+> 1. **Ordre context_pack** : `run_readiness` validait le ReadinessReport (qui exige
+>    `context_pack_entry_id` dès verdict=ready) AVANT de produire le context_pack → échec
+>    systématique de tout `ready`. Fix : produire le context_pack quand verdict recomputé=ready, puis
+>    valider une fois (`deployment #306`).
+> 2. **`json_object` dans `curator._call_json`** (readiness ET context_pack) : même pathologie
+>    DeepSeek (`{}` ou emballage `{"/mnt/data/…json":"…"}`, cette 2ᵉ forme a fait échouer la 1ère
+>    prod du context_pack) → **prompt-only + extract_json** (`deployment #307`). Cohérent avec
+>    `run_json_agent(json_object=False)`.
+>
+> ### ÉTAT readiness NVDA (report **#9**, propre) : `thin_qualitative`, 7/8 dimensions fondées
+> struct (business_model A, financials A, valorisation B+) ✅ · produits A ✅ (synthèse) ·
+> positionnement B+ ✅ (synthèse #55) · management_allocation A ✅ · risques A ✅ ·
+> **marche ❌ — manque `croissance_marche_historique`** (donnée de marché externe).
+>
 > ### RESTE À FAIRE
-> 1. Sourcer `positionnement.moat_preuves` + `marche.croissance_marche_historique` (search-worker,
->    ou nouvelle cible de synthèse si non-fetchable).
-> 2. Décider si le plancher doit mordre à la LECTURE (recompute Python côté curator) — cf. observation.
-> 3. Readiness → si `ready` → **lancer la CHAÎNE D'ANALYSE jamais exécutée** (⚠ même gotcha
->    `json_object` dans run_json_agent : la chaîne devra passer `json_object=False` ou être re-vérifiée).
+> 1. **`marche.croissance_marche_historique`** : fournir une donnée de marché (upload TAM, ou source
+>    quant marché) → dernière brique pour `ready`. C'est le SEUL gap restant.
+> 2. **Décider si le plancher doit mordre à la LECTURE** (recompute Python côté curator) : observé
+>    que le curator (LLM) a compté `structure_5forces` **B** comme fondant un champ B+, et son
+>    jugement par-champ est non déterministe. Pour un gate fiable, recomputer en Python
+>    `tier_atteint(entries couvrant le champ) ≥ plancher` au lieu de le confier au LLM.
+> 3. **Chaîne d'analyse (jamais exécutée)** : une fois `ready`, lancer research→bull/bear→réfutation→
+>    synthèse. ⚠️ `analysis.py` appelle `run_json_agent` en **json_object par défaut** → lui passer
+>    **`json_object=False`** (le param existe) AVANT le 1er run, sinon même collapse `{}` que la synthèse.
 >
 > ## ⚡ MàJ 2026-08-26 — `financials` FONDÉE EN PROD (tier A, 4 champs) après correction d'un bug d'intégration ; bloc structuré COMPLET, verdict `thin_qualitative`
 >
