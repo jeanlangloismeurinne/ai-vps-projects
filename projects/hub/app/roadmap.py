@@ -77,6 +77,16 @@ def _parse_item(filepath: Path) -> dict:
     # Tickets liés : compter les références #id où qu'elles soient (sprints inclus), format-agnostique.
     fm["tickets_count"] = len(set(re.findall(r"#(\d{6,})", body)))
 
+    # Deux niveaux de document cohabitent dans roadmap/ : la ROADMAP (direction macro,
+    # une par axe de développement, plusieurs par projet au fil de l'usage) et le
+    # CHANTIER (décisions + sprints, la maille de pilotage quotidien).
+    # Les fichiers antérieurs à cette distinction sont tous des chantiers : c'est le
+    # défaut, pour qu'aucun document existant ne change de nature en silence.
+    fm.setdefault("type", "chantier")
+    # `roadmap:` porte la filiation chantier → roadmap. Absent = chantier orphelin,
+    # affiché à part plutôt que masqué.
+    fm.setdefault("roadmap", "")
+
     return fm
 
 
@@ -138,7 +148,14 @@ def _list_items(project: str) -> list[dict]:
     return items
 
 
-def _create_item(project: str, title: str, description: str, constraints: str) -> str:
+def _create_roadmap(project: str, title: str, direction: str) -> str:
+    """Crée une ROADMAP : un axe de développement, en amont des chantiers.
+
+    Une roadmap n'a pas de sprints et ne s'exécute pas. Elle porte une direction et,
+    une fois cadrée, la carte des chantiers qui en découlent. On en ouvre une
+    nouvelle quand un axe apparaît à l'usage du produit — elles coexistent, c'est
+    l'utilisateur qui choisit celle sur laquelle il avance.
+    """
     rd = _roadmap_dir(project)
     item_id = int(time.time() * 1000)
     slug = re.sub(r"[^a-z0-9-]", "", re.sub(r"\s+", "-", title[:40].lower()))
@@ -147,9 +164,45 @@ def _create_item(project: str, title: str, description: str, constraints: str) -
     lines = [
         "---",
         f"id: roadmap-{item_id}",
+        "type: roadmap",
         "status: draft",
         f"created: {datetime.now().isoformat()}",
         f"project: {project.split('~')[0]}",
+        "---",
+        "",
+        f"# Roadmap — {title}",
+        "",
+        "## Direction (utilisateur)",
+        direction.strip() or "_Aucune description_",
+        "",
+        "## Carte des chantiers",
+        "*(Généré au cadrage : les chantiers qui découlent de cette direction, leur ordre",
+        "et leurs dépendances. Un chantier par contexte technique cohérent — pas par",
+        "fonctionnalité, sinon ils se chevauchent tous.)*",
+        "",
+        "## Décisions de cadrage",
+        "*(Ce qui a été tranché au niveau de l'axe, et ce qui reste ouvert.)*",
+        "",
+    ]
+    (rd / filename).write_text("\n".join(lines))
+    return str(item_id)
+
+
+def _create_item(project: str, title: str, description: str, constraints: str,
+                 roadmap_id: str = "") -> str:
+    rd = _roadmap_dir(project)
+    item_id = int(time.time() * 1000)
+    slug = re.sub(r"[^a-z0-9-]", "", re.sub(r"\s+", "-", title[:40].lower()))
+    filename = f"roadmap-{item_id}-{slug}.md"
+
+    lines = [
+        "---",
+        f"id: roadmap-{item_id}",
+        "type: chantier",
+        "status: draft",
+        f"created: {datetime.now().isoformat()}",
+        f"project: {project.split('~')[0]}",
+        f"roadmap: {roadmap_id}",
         "---",
         "",
         f"# Chantier — {title}",
@@ -267,77 +320,153 @@ def _fmt_date(iso: str) -> str:
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
-def _page_list(project: str, items: list) -> str:
-    display = project.replace("~", " / ")
-
-    by_status: dict = {}
-    for item in items:
-        by_status.setdefault(item.get("status", "draft"), []).append(item)
-
-    # Ordre d'affichage. Tout statut présent dans les items mais absent de cette liste (ex.
-    # `en-cours`, oublié historiquement, ou un futur statut) est rendu EN FIN de liste :
-    # aucun chantier ne doit disparaître silencieusement de la roadmap.
-    ordered = [
-        ("draft", "📝 Brouillons"),
-        ("spec-ready", "📐 Spec prête"),
-        ("tickets-created", "🎫 Tickets créés"),
-        ("en-cours", "🚧 En cours"),
-        ("done", "✅ Terminés"),
-    ]
-    _known = {s for s, _ in ordered}
-    ordered += [(s, STATUS_LABEL.get(s, s)) for s in by_status if s not in _known]
-
-    sections = ""
-    for status, label in ordered:
-        group = by_status.get(status, [])
-        if not group:
-            continue
-        cards = ""
-        for item in group:
-            iid = item.get("id", "")
-            preview = _e(item.get("preview", "")[:100])
-            date = _fmt_date(item.get("created", ""))
-            tc = item.get("tickets_count", 0)
-            tc_html = f'<span class="tag" style="background:rgba(79,110,247,.12);color:#818cf8">{tc} ticket{"s" if tc!=1 else ""}</span>' if tc else ""
-            cards += f"""
-<a href="/roadmap/{_e(project)}/{_e(iid)}/edit" style="display:block">
+def _card(project: str, item: dict, indent: bool = False) -> str:
+    iid = item.get("id", "")
+    preview = _e(item.get("preview", "")[:100])
+    date = _fmt_date(item.get("created", ""))
+    tc = item.get("tickets_count", 0)
+    tc_html = (f'<span class="tag" style="background:rgba(79,110,247,.12);color:#818cf8">'
+               f'{tc} ticket{"s" if tc != 1 else ""}</span>') if tc else ""
+    title = _e(item.get("body", "").split(chr(10))[0].lstrip("# ") or iid)
+    pad = 'margin-left:1.5rem;border-left:2px solid rgba(129,140,248,.25);padding-left:.75rem' if indent else ""
+    return f"""
+<a href="/roadmap/{_e(project)}/{_e(iid)}/edit" style="display:block;{pad}">
   <div class="item-card">
-    <div class="item-title">{_e(item.get("body","").split(chr(10))[0].lstrip("# ") or iid)}</div>
+    <div class="item-title">{title}</div>
     <div class="item-preview">{preview}</div>
     <div class="item-meta">
-      {_status_badge(status)}
+      {_status_badge(item.get("status", "draft"))}
       {tc_html}
       <span class="item-date">{date}</span>
     </div>
   </div>
 </a>"""
-        sections += f'<h3 style="font-size:.85rem;color:#888;margin:1.25rem 0 .6rem;text-transform:uppercase;letter-spacing:.05em">{label}</h3>{cards}'
+
+
+def _page_list(project: str, items: list) -> str:
+    """Affiche la hiérarchie roadmap → chantiers, et non un tas plat trié par statut.
+
+    Le tri par statut répondait à « qu'est-ce qui est en cours ? » ; la question de
+    pilotage est « sur quel axe suis-je, et quels chantiers en découlent ? ».
+    """
+    display = project.replace("~", " / ")
+
+    roadmaps = [i for i in items if i.get("type") == "roadmap"]
+    chantiers = [i for i in items if i.get("type") != "roadmap"]
+
+    # La filiation `roadmap:` d'un chantier porte le STEM du fichier roadmap, pas
+    # l'`id:` du front-matter : _parse_item force `fm["id"] = filepath.stem`, et
+    # c'est ce stem qui sert aussi de clé de routage dans _item_path. Utiliser
+    # l'autre donnerait des liens morts.
+    # Les chantiers antérieurs à la distinction n'ont pas de filiation : ils sont
+    # affichés à part, jamais masqués — un document qui disparaît de la vue est un
+    # document perdu.
+    known = {r.get("id", "") for r in roadmaps}
+    by_roadmap: dict = {}
+    orphans = []
+    for c in chantiers:
+        key = c.get("roadmap", "")
+        if key in known:
+            by_roadmap.setdefault(key, []).append(c)
+        else:
+            orphans.append(c)
+
+    sections = ""
+    for r in sorted(roadmaps, key=lambda x: x.get("created", ""), reverse=True):
+        kids = by_roadmap.get(r.get("id", ""), [])
+        n = len(kids)
+        sections += (
+            f'<h3 style="font-size:.85rem;color:#818cf8;margin:1.5rem 0 .6rem;'
+            f'text-transform:uppercase;letter-spacing:.05em">🗺 Axe · '
+            f'{n} chantier{"s" if n != 1 else ""}</h3>'
+        )
+        sections += _card(project, r)
+        sections += "".join(_card(project, c, indent=True) for c in
+                            sorted(kids, key=lambda x: x.get("created", "")))
+        if not kids:
+            sections += ('<p style="margin-left:1.5rem;color:#666;font-size:.8rem;'
+                         'padding:.5rem 0">Aucun chantier — la roadmap n\'est pas encore cadrée.</p>')
+
+    if orphans:
+        sections += ('<h3 style="font-size:.85rem;color:#888;margin:1.5rem 0 .6rem;'
+                     'text-transform:uppercase;letter-spacing:.05em">Chantiers hors roadmap</h3>')
+        sections += "".join(_card(project, c) for c in
+                            sorted(orphans, key=lambda x: x.get("created", ""), reverse=True))
 
     if not items:
-        sections = '<p class="empty">Aucun item de roadmap pour ce projet.</p>'
+        sections = '<p class="empty">Aucune roadmap ni chantier pour ce projet.</p>'
 
     body = f"""
 <div class="page-header">
   <div class="page-title">🗺 Roadmap — {_e(display)}</div>
   <div style="display:flex;gap:.5rem">
     <a href="/tickets/{_e(project)}" class="btn btn-secondary">← Tickets</a>
-    <a href="/roadmap/{_e(project)}/new" class="btn btn-primary">+ Nouvelle direction</a>
+    <a href="/roadmap/{_e(project)}/new-roadmap" class="btn btn-secondary">+ Axe</a>
+    <a href="/roadmap/{_e(project)}/new" class="btn btn-primary">+ Chantier</a>
   </div>
 </div>
 <div class="alert" style="background:rgba(79,110,247,.08);border:1px solid rgba(79,110,247,.2);color:#818cf8;font-size:.82rem;margin-bottom:1.25rem">
-  💡 Une direction devient un <strong>chantier</strong> : Claude y écrit les décisions puis le
-  découpe en <strong>sprints</strong>. Ouvre un chantier, puis génère l'ordre du sprint à exécuter
-  (écrit <code>SESSION.md</code>, déclenché ensuite dans Claude Code).
+  💡 Un <strong>axe</strong> (roadmap) porte une direction ; il se cadre en
+  <strong>chantiers</strong>, qui se découpent en <strong>sprints</strong>. Tu interviens sur
+  l'axe et le chantier ; les sprints et les tickets sont de la mécanique.
+  Ouvre un chantier pour générer l'ordre du sprint à exécuter.
 </div>
 {sections}"""
     return _base_road(f"Roadmap — {display}", body, project)
 
 
-def _page_new(project: str, error: str = "") -> str:
-    err_html = f'<div class="alert" style="background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#f87171">{_e(error)}</div>' if error else ""
+def _page_new_roadmap(project: str, error: str = "") -> str:
+    err_html = (f'<div class="alert" style="background:rgba(220,38,38,.12);'
+                f'border:1px solid rgba(220,38,38,.3);color:#f87171">{_e(error)}</div>') if error else ""
     body = f"""
 <div class="page-header">
-  <div class="page-title">Nouvelle direction</div>
+  <div class="page-title">Nouvel axe de développement</div>
+  <a href="/roadmap/{_e(project)}" class="btn btn-secondary">← Retour</a>
+</div>
+{err_html}
+<div class="alert" style="background:rgba(202,138,4,.08);border:1px solid rgba(202,138,4,.25);color:#ca8a04;font-size:.82rem;margin-bottom:1.25rem">
+  Un axe est plus large qu'un chantier : c'est une direction dont découleront
+  <em>plusieurs</em> chantiers. Ouvre-en un nouveau quand l'usage du produit fait
+  apparaître un front de travail qui n'entre dans aucun axe existant. Les axes
+  coexistent — c'est toi qui choisis celui sur lequel tu avances.
+</div>
+<form method="POST" action="/roadmap/{_e(project)}/new-roadmap">
+  <div class="section">
+    <div class="form-group">
+      <label>Titre de l'axe</label>
+      <input type="text" name="title" placeholder="ex: Collecte et synthèse de veille" required>
+    </div>
+    <div class="form-group">
+      <label>Direction</label>
+      <textarea name="direction" rows="8"
+        placeholder="Ce que tu veux obtenir, et pourquoi. Pas comment."></textarea>
+      <div class="hint">Le cadrage (carte des chantiers) est produit ensuite — tu le relis et l'amendes.</div>
+    </div>
+    <button type="submit" class="btn btn-primary">Créer l'axe</button>
+  </div>
+</form>"""
+    return _base_road("Nouvel axe", body, project)
+
+
+def _page_new(project: str, error: str = "", roadmaps: list | None = None) -> str:
+    err_html = f'<div class="alert" style="background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#f87171">{_e(error)}</div>' if error else ""
+    opts = "".join(
+        f'<option value="{_e(r.get("id",""))}">'
+        f'{_e(r.get("body","").split(chr(10))[0].lstrip("# ") or r.get("id",""))}</option>'
+        for r in (roadmaps or [])
+    )
+    roadmap_field = f"""
+    <div class="form-group">
+      <label>Rattacher à un axe</label>
+      <select name="roadmap_id">
+        <option value="">— aucun (chantier isolé) —</option>
+        {opts}
+      </select>
+      <div class="hint">Un chantier sans axe reste visible, dans « Chantiers hors roadmap ».</div>
+    </div>""" if opts else ""
+    body = f"""
+<div class="page-header">
+  <div class="page-title">Nouveau chantier</div>
   <a href="/roadmap/{_e(project)}" class="btn btn-secondary">← Retour</a>
 </div>
 {err_html}
@@ -357,7 +486,7 @@ def _page_new(project: str, error: str = "") -> str:
       <label>Contraintes connues (optionnel)</label>
       <textarea name="constraints" rows="3"
         placeholder="ex: Pas de migration DB. Garder la compatibilité avec l'export Excel."></textarea>
-    </div>
+    </div>{roadmap_field}
     <button type="submit" class="btn btn-primary">Créer</button>
   </div>
 </form>"""
@@ -475,11 +604,17 @@ async def roadmap_list(request: Request, project: str):
     return HTMLResponse(_page_list(project, _list_items(project)))
 
 
+def _roadmaps_of(project: str) -> list[dict]:
+    return [i for i in _list_items(project) if i.get("type") == "roadmap"]
+
+
+# Les routes littérales (`/new`, `/new-roadmap`) doivent précéder `/{item_id}/…`,
+# sinon FastAPI les capture comme un item_id et la page de création devient un 404.
 @router.get("/{project}/new", response_class=HTMLResponse)
 async def roadmap_new_get(request: Request, project: str):
     from app.main import settings
     if r := _require_auth(request, settings): return r
-    return HTMLResponse(_page_new(project))
+    return HTMLResponse(_page_new(project, roadmaps=_roadmaps_of(project)))
 
 
 @router.post("/{project}/new")
@@ -488,12 +623,36 @@ async def roadmap_new_post(
     title: str = Form(...),
     description: str = Form(default=""),
     constraints: str = Form(default=""),
+    roadmap_id: str = Form(default=""),
 ):
     from app.main import settings
     if r := _require_auth(request, settings): return r
     if not title.strip():
-        return HTMLResponse(_page_new(project, "Le titre est obligatoire."), status_code=400)
-    iid = _create_item(project, title.strip(), description.strip(), constraints.strip())
+        return HTMLResponse(_page_new(project, "Le titre est obligatoire.",
+                                      roadmaps=_roadmaps_of(project)), status_code=400)
+    iid = _create_item(project, title.strip(), description.strip(), constraints.strip(),
+                       roadmap_id.strip())
+    return RedirectResponse(f"/roadmap/{project}/{iid}/edit?flash=saved", status_code=303)
+
+
+@router.get("/{project}/new-roadmap", response_class=HTMLResponse)
+async def roadmap_new_axis_get(request: Request, project: str):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    return HTMLResponse(_page_new_roadmap(project))
+
+
+@router.post("/{project}/new-roadmap")
+async def roadmap_new_axis_post(
+    request: Request, project: str,
+    title: str = Form(...),
+    direction: str = Form(default=""),
+):
+    from app.main import settings
+    if r := _require_auth(request, settings): return r
+    if not title.strip():
+        return HTMLResponse(_page_new_roadmap(project, "Le titre est obligatoire."), status_code=400)
+    iid = _create_roadmap(project, title.strip(), direction.strip())
     return RedirectResponse(f"/roadmap/{project}/{iid}/edit?flash=saved", status_code=303)
 
 
@@ -529,7 +688,14 @@ async def roadmap_edit_post(
 
     fm["status"] = status if status in STATUS_LABEL else fm.get("status", "draft")
 
-    fm_lines = ["---"] + [f"{k}: {v}" for k, v in fm.items()] + ["---", "", body.strip()]
+    # Les textarea HTML renvoient des fins de ligne CRLF (spec HTML). Sans cette
+    # normalisation, la moindre sauvegarde réécrit TOUT le fichier en CRLF et
+    # `git diff` affiche le document entier comme modifié : le vrai changement est
+    # noyé, et le lecteur de diff de la boucle nocturne s'ancre sur du bruit.
+    body = body.replace("\r\n", "\n").replace("\r", "\n")
+    # Le "" final garantit la newline de fin de fichier, sinon chaque sauvegarde
+    # produit un « \ No newline at end of file » dans le diff.
+    fm_lines = ["---"] + [f"{k}: {v}" for k, v in fm.items()] + ["---", "", body.strip(), ""]
     path.write_text("\n".join(fm_lines))
     return RedirectResponse(f"/roadmap/{project}/{item_id}/edit?flash=saved", status_code=303)
 
