@@ -401,6 +401,7 @@ def _page_list(project: str, items: list) -> str:
   <div class="page-title">🗺 Roadmap — {_e(display)}</div>
   <div style="display:flex;gap:.5rem">
     <a href="/tickets/{_e(project)}" class="btn btn-secondary">← Tickets</a>
+    <a href="/nuit/{_e(project)}" class="btn btn-secondary">🌙 Nuits</a>
     <a href="/roadmap/{_e(project)}/new-roadmap" class="btn btn-secondary">+ Axe</a>
     <a href="/roadmap/{_e(project)}/new" class="btn btn-primary">+ Chantier</a>
   </div>

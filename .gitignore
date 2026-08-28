@@ -13,3 +13,7 @@ projects/bank-review/uploads/
 
 # Fichiers système
 .DS_Store
+
+# Instantanés publiés par la boucle autonome pour l'onglet « Nuit » du Hub.
+# Vitrine de lecture, pas une source : la vérité est la branche auto/*.
+.nuits/
