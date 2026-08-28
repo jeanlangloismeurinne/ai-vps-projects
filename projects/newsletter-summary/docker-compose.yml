@@ -1,0 +1,38 @@
+# Déploiement standalone (pas une app Coolify) — même approche que kb-viewer :
+# conteneur sur le réseau `coolify`, routé par le coolify-proxy (Traefik) avec TLS.
+# Il atteint `shared-postgres` via le réseau coolify (confirmé : DNS résout 10.0.1.2).
+#
+#   Resend (inbound) --POST /webhook/resend--> mails.jlmvpscode.duckdns.org (Traefik)
+#                                                   --> app:8000 --> shared-postgres
+#
+# Variables réelles dans .env (hors git) ; PAS de env_file dans le build git — .env est gitignored.
+# Déploiement : docker compose up -d --build   (depuis projects/newsletter-summary/)
+
+networks:
+  coolify:
+    external: true
+
+services:
+  newsletter-summary:
+    build: .
+    container_name: newsletter-summary
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks: [coolify]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.nsgzip.compress=true
+      - traefik.http.middlewares.nsredirect.redirectscheme.scheme=https
+      - traefik.http.routers.ns-http.entryPoints=http
+      - traefik.http.routers.ns-http.middlewares=nsredirect
+      - traefik.http.routers.ns-http.rule=Host(`mails.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.ns-http.service=ns
+      - traefik.http.routers.ns-https.entryPoints=https
+      - traefik.http.routers.ns-https.middlewares=nsgzip
+      - traefik.http.routers.ns-https.rule=Host(`mails.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.ns-https.service=ns
+      - traefik.http.routers.ns-https.tls=true
+      - traefik.http.routers.ns-https.tls.certresolver=letsencrypt
+      - traefik.http.services.ns.loadbalancer.server.port=8000
