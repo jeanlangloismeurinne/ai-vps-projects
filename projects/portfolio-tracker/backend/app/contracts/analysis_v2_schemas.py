@@ -261,11 +261,11 @@ class Argument(Strict):
     recherche_divergente: list[RechercheDivergente] = Field(default_factory=list)
 
 
-class Assumptions(Strict):
+class Assumptions(BaseModel):
+    model_config = ConfigDict(extra="ignore")   # modèle ajoute des champs DCF non contractuels
     croissance_revenue: float
     expansion_marge_fcf: float
     multiple_sortie: float
-    taux_actualisation: Optional[float] = None  # modèle ajoute parfois ce champ extra
 
 
 class ValorisationCote(Strict):
