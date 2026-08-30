@@ -84,7 +84,7 @@ class Scenarios(Strict):
 
 
 class ReverseDcf(Strict):
-    croissance_implicite_prix_actuel_pct: Optional[float] = None  # modèle omet parfois le numérique
+    croissance_implicite_prix_actuel_pct: float  # reverse-DCF : croissance impliquée par le prix (OBLIGATOIRE, jamais null)
     verdict: str
 
 
@@ -261,8 +261,8 @@ class Argument(Strict):
     recherche_divergente: list[RechercheDivergente] = Field(default_factory=list)
 
 
-class Assumptions(BaseModel):
-    model_config = ConfigDict(extra="ignore")   # modèle ajoute des champs DCF non contractuels
+class Assumptions(Strict):
+    # extra='forbid' (via Strict) : le taux d'actualisation / détail de méthode va en prose dans `methode`
     croissance_revenue: float
     expansion_marge_fcf: float
     multiple_sortie: float
