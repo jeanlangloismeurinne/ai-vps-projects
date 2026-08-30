@@ -10,6 +10,7 @@ from app.models import Email
 from app.database import AsyncSessionLocal
 from app.config import settings
 from app import resend, summarizer
+from app import comms_client
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +55,8 @@ async def run_daily_digest(trigger: str = "scheduled") -> dict:
             lines.append("")
         body = "\n".join(lines)
 
-        # 3) Envoyer
-        await resend.send_email(
+        # 3) Envoyer — via le comms-gateway (le projet ne détient plus de clé Resend)
+        await comms_client.get_client().send_email(
             to=settings.RECIPIENT_EMAIL,
             subject=f"📬 Résumé hebdo-news — {len(blocks)} newsletter(s) — {today}",
             body=body,

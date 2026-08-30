@@ -1,0 +1,26 @@
+{
+  "name": "comms-gateway",
+  "version": "0.1.0",
+  "description": "Gateway central multi-tenant de communication externe (email, Slack, SMS, WhatsApp, Signal)",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "pg": "^8.13.1",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2"
+  }
+}

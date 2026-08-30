@@ -37,6 +37,35 @@ Réseau Docker : `infra-net` (+ `coolify`).
   — Header : `X-Internal-Api-Key`
   — Endpoint protégé : `POST /api/import/direct` sur bank-review
 
+## Secrets — comms-gateway (état 2026-08-30)
+
+Chantier gateway de communication multi-tenant (email Resend / Slack / SMS / WhatsApp / Signal).
+Décision actée : **les secrets des providers et la config sensible du gateway vivent en
+secrets Coolify (spec) — jamais dans un `.env` en clair dans le repo.**
+
+- Le `.env` local de `projects/comms-gateway/` a été **retiré du repo** ; une copie de
+  référence (chmod 600) est conservée dans **`/root/secrets/comms-gateway.env`** : à n'utiliser
+  que pour alimenter les secrets Coolify (`DATABASE_URL`, `REDIS_URL`, `MASTER_KEY`,
+  `ADMIN_TOKEN`, `RESEND_API_KEY`, `RESEND_DEFAULT_FROM`, `SLACK_BOT_TOKEN`,
+  `SLACK_SIGNING_SECRET`, `PUBLIC_BASE_URL`, `WEBHOOK_TOKEN`), puis à régénérer/supprimer.
+- `docker-compose.yml` du gateway n'a **plus de `env_file`** : l'environnement sera injecté
+  par Coolify.
+- **PENDING (prochaine session)** : convertir `comms-gateway` en app Coolify (build_pack
+  `dockercompose`, Base Directory `projects/comms-gateway`), y déposer les secrets ci-dessus,
+  déployer, puis retirer l'**ancien conteneur standalone** `comms-gateway` (sinon double
+  routage Traefik / conteneur orphelin). Ensuite `git commit + push` du source.
+- ⚠️ Le conteneur standalone actuel tourne avec l'env issu de l'ancien `.env` : au prochain
+  restart il perd ses secrets → faire la conversion Coolify avant toute relance.
+- Blocages actés hors code : compte Resend du projet = **compte de test, aucun domaine
+  d'envoi vérifié** (→ livraison réelle impossible tant qu'un domaine n'est pas vérifié dans
+  resend.com/domains, avec DNS ; le gateway journalise bien l'échec 403) ; app Slack
+  `comms-gateway` à créer (envoi+reception, bot dédié — ne pas toucher à assistant-ia) ;
+  connecteurs SMS/WhatsApp/Signal en **mock** tant que le téléphone Free+eSIM+Tailscale
+  n'est pas prêt.
+- Détaillé dans : `projects/comms-gateway/README.md`, `projects/comms-gateway/docs/SLACK_WIRING.md`,
+  `projects/comms-gateway/docs/PHONE_PART2_CHECKLIST.md`, SDK `templates/comms-client/` (un
+  projet = env `GATEWAY_URL` + `GATEWAY_TOKEN`, sans détenir de secret provider).
+
 ## Projets actifs
 - projects/assistant-ia/ : orchestrateur Slack — reçoit webhooks de tool-file-intake et déclenche les actions par service (bank-review, etc.) — FastAPI, port 8030
 - projects/bank-review/ : analyse de relevés bancaires (upload Excel/CSV + analyse Claude) — Python 3.12, FastAPI, pandas
@@ -46,6 +75,7 @@ Réseau Docker : `infra-net` (+ `coolify`).
 - projects/portfolio-tracker/ : suivi investissement long terme, agents IA Dust, 3 régimes d'analyse — **deux apps Coolify distinctes** (dockerfile) : portfolio-backend (port 8050) + portfolio-frontend (port 8051) · URL : portfolio.jlmvpscode.duckdns.org
 - projects/hub/ : portail interne (page d'accueil + outil de pilotage chantiers/sprints/tickets/roadmap) — FastAPI, port 8000, bind-mount `projects/` en lecture/écriture · URL : jlmvpscode.duckdns.org (app Coolify « homepage »)
 - projects/kb-viewer/ : viewer statique de la base de connaissance (Quartz build depuis `/storage/journal-vault` → nginx:alpine) — **stack standalone `docker compose`, PAS une app Coolify** ; basic-auth + TLS via coolify-proxy · URL : kb.jlmvpscode.duckdns.org · rebuild événementiel par path unit systemd `kb-viewer-build.path` (watch `.git/logs/HEAD` du vault, non exposé)
+- projects/comms-gateway/ : **gateway central multi-tenant de communication externe** — email (Resend), Slack, puis SMS/WhatsApp/Signal — Node 20/TS/Fastify, standalone `docker compose` sur réseau `coolify` (pattern newsletter-summary/kb-viewer) · base `db_comms_gateway` sur shared-postgres, rate-limit sur shared-redis · API interne `/v1` (Bearer token scoped), seuls `/webhooks/*` exposés (Traefik PathPrefix, `comms.jlmvpscode.duckdns.org`) · les projets consommateurs embarquent le SDK `templates/comms-client/` (GATEWAY_URL + GATEWAY_TOKEN) · câbler les connecteurs réels SMS/WhatsApp/Signal une fois le téléphone prêt (`docs/PHONE_PART2_CHECKLIST.md`) · doc : `projects/comms-gateway/README.md`
 
 ## Slack bot partagé
 

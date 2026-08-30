@@ -1,0 +1,49 @@
+# Déploiement standalone (pas une app Coolify) — même approche que newsletter-summary / kb-viewer :
+# conteneur sur le réseau `coolify`, routé par le coolify-proxy (Traefik) avec TLS.
+# Il atteint `shared-postgres` et `shared-redis` via le réseau coolify.
+#
+#   Resend/Slack (entrant) --POST /webhooks/*--> comms.jlmvpscode.duckdns.org (Traefik)
+#                                                   --> comms-gateway:8000
+#   Services internes (nouveau projet) --> http://comms-gateway:8000/v1/... (réseau coolify)
+#
+# SÉCURITÉ : seuls /webhooks/* sont exposés publiquement (label PathPrefix). L'API /v1/* reste
+# accessible sur le réseau interne coolify uniquement — conforme à la spec « le reste reste
+# sur le réseau interne Coolify ».
+#
+# Les variables (secrets providers, DATABASE_URL, MASTER_KEY, ADMIN_TOKEN) sont injectées
+# en env par COOLIFY (secrets Coolify) — PAS de .env local ni de env_file (gitignored/absent
+# du build). Voir projects/comms-gateway/README.md § Déploiement.
+# Déploiement : app Coolify (build_pack=dockercompose) — cf. README.
+
+networks:
+  coolify:
+    external: true
+
+services:
+  comms-gateway:
+    build: .
+    container_name: comms-gateway
+    restart: unless-stopped
+    volumes:
+      - comms_data:/data
+    networks: [coolify]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      # Middlewares
+      - traefik.http.middlewares.comms-redir.redirectscheme.scheme=https
+      # Routers — exposer UNIQUEMENT /webhooks/* publiquement
+      - traefik.http.routers.comms-http.entryPoints=http
+      - traefik.http.routers.comms-http.middlewares=comms-redir
+      - traefik.http.routers.comms-http.rule=Host(`comms.jlmvpscode.duckdns.org`) && PathPrefix(`/webhooks`)
+      - traefik.http.routers.comms-http.service=comms-svc
+      - traefik.http.routers.comms-https.entryPoints=https
+      - traefik.http.routers.comms-https.rule=Host(`comms.jlmvpscode.duckdns.org`) && PathPrefix(`/webhooks`)
+      - traefik.http.routers.comms-https.tls=true
+      - traefik.http.routers.comms-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.comms-https.service=comms-svc
+      # Service
+      - traefik.http.services.comms-svc.loadbalancer.server.port=8000
+
+volumes:
+  comms_data:

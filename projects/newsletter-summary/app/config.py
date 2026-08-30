@@ -5,9 +5,10 @@ class Settings(BaseSettings):
     # Base PostgreSQL partagée (shared-postgres) — postgresql+asyncpg://user:pass@shared-postgres:5432/db_newsletter_summary
     DATABASE_URL: str
 
-    # Resend — envoi du digest (API) et inbound (réception)
-    RESEND_API_KEY: str
-    SENDER_EMAIL: str = "newsletter@oozeenaru.resend.app"
+    # COMMS-GATEWAY — l'envoi du digest passe par le gateway (le projet ne détient
+    # plus de clé Resend ; seul le gateway possède les secrets des providers).
+    GATEWAY_URL: str = "http://comms-gateway:8000"
+    GATEWAY_TOKEN: str
     RECIPIENT_EMAIL: str = "jean.langlois-meurinne@mailbox.org"
 
     # LLM (DeepInfra, pattern réutilisé d'assistant-ia)
