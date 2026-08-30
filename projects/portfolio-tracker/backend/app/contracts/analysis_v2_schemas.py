@@ -299,6 +299,16 @@ class BullCase(Strict):
     indicateurs: Indicateurs
     grounding_report: GroundingReport
 
+    @field_validator("conviction", mode="before")
+    @classmethod
+    def coerce_conviction(cls, v: object) -> object:
+        # Le modèle renvoie parfois 0.6 (scale 0-1) au lieu de 6 (scale 1-10)
+        if isinstance(v, float):
+            if v <= 1.0:
+                return max(1, round(v * 10))
+            return round(v)
+        return v
+
 
 class ScenarioDestructionValeur(Strict):
     prix_bear: float
