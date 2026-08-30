@@ -18,6 +18,7 @@ import sys
 from app.agents.v2.common import MVDD_FIELD_PATHS, MVDD_SPEC, format_entries_for_prompt
 from app.agents.v2.curator import (
     DECLARED_NONBLOCKING_GAPS,
+    nonblocking_gaps_for,
     FIELD_PLANCHER_OVERRIDES,
     _apply_deterministic_overrides,
     _covers_index,
@@ -58,10 +59,10 @@ def dim_cov(dimension, fondations=None):
             "champs_non_fondables": [], "tier_atteint": None, "ok": True}
 
 
-def run(dims_qual, entries, dims_struct=None):
+def run(dims_qual, entries, dims_struct=None, ticker_id="NVDA"):
     cov = {"structuree": {"dimensions": dims_struct or [], "bloc_ok": True},
            "qualitative_marche": {"dimensions": dims_qual, "bloc_ok": True}}
-    recompute_coverage(cov, entries)
+    recompute_coverage(cov, entries, ticker_id=ticker_id)
     return cov
 
 
@@ -170,15 +171,15 @@ check("gap synthétisé pour un non-fondable orphelin",
       any("structure_5forces" in x["champs_cibles"] for x in report2["gaps"]))
 
 print("\n10. Lacune déclarée non-bloquante — croissance_marche_historique")
-check("croissance enregistrée comme lacune déclarée",
-      "marche.croissance_marche_historique" in DECLARED_NONBLOCKING_GAPS)
+check("croissance enregistrée comme lacune déclarée pour NVDA",
+      "marche.croissance_marche_historique" in nonblocking_gaps_for("NVDA"))
 cov9 = run([dim_cov("marche")], [entry(56, "A-", ["marche.structure_5forces"], "agent_synthesis")])
 md9 = cov9["qualitative_marche"]["dimensions"][0]
 check("croissance ABSENTE des non-fondables (skippée)",
       "croissance_marche_historique" not in md9["champs_non_fondables"])
 check("marche ok=True malgré croissance introuvable", md9["ok"] is True, f"→ {md9}")
 rep9 = {"incertitudes_investissables": []}
-_declare_nonblocking_gaps(rep9, cov9)
+_declare_nonblocking_gaps(rep9, cov9, "NVDA")
 check("lacune portée en incertitude investissable VISIBLE",
       any("croissance" in u["question"].lower() for u in rep9["incertitudes_investissables"]))
 _declare_nonblocking_gaps(rep9, cov9)
@@ -211,7 +212,7 @@ def corpus_complet():
     for s in MVDD_SPEC:
         for champ in s["champs_requis"]:
             path = f"{s['dimension']}.{champ}"
-            if path in DECLARED_NONBLOCKING_GAPS:
+            if path in nonblocking_gaps_for("NVDA"):
                 continue
             ents.append(entry(eid, "A", [path]))
             eid += 1
@@ -225,7 +226,7 @@ cov_ready = {"structuree": {"dimensions": [dim_cov(d) for d in
                                                    ("produits", "positionnement", "marche",
                                                     "management_allocation", "risques")], "bloc_ok": True}}
 rep = full_report(cov_ready)
-_apply_deterministic_overrides(rep, ents)
+_apply_deterministic_overrides(rep, ents, ticker_id="NVDA")
 check("verdict recalculé = ready", rep["verdict"] == "ready", f"→ {rep['verdict']}")
 rep["context_pack_entry_id"] = 999  # posé par run_readiness quand ready
 try:
@@ -247,8 +248,8 @@ cov_b = {"structuree": {"dimensions": [dim_cov(d, [{"champ": "description", "ent
                                                ("produits", "positionnement", "marche",
                                                 "management_allocation", "risques")], "bloc_ok": True}}
 ra, rb = full_report(cov_a), full_report(cov_b, verdict="too_hard")
-_apply_deterministic_overrides(ra, ents)
-_apply_deterministic_overrides(rb, ents)
+_apply_deterministic_overrides(ra, ents, ticker_id="NVDA")
+_apply_deterministic_overrides(rb, ents, ticker_id="NVDA")
 check("verdict indépendant des citations LLM", ra["verdict"] == "ready")
 check("couverture identique à corpus figé", ra["coverage"] == rb["coverage"])
 
@@ -260,7 +261,7 @@ cov_thin = {"structuree": {"dimensions": [dim_cov(d) for d in
                                                   ("produits", "positionnement", "marche",
                                                    "management_allocation", "risques")], "bloc_ok": True}}
 rep2 = full_report(cov_thin)
-_apply_deterministic_overrides(rep2, ents_thin)
+_apply_deterministic_overrides(rep2, ents_thin, ticker_id="NVDA")
 check("verdict recalculé = thin_qualitative (5forces retiré du corpus)",
       rep2["verdict"] == "thin_qualitative", f"→ {rep2['verdict']}")
 try:
@@ -268,6 +269,42 @@ try:
     check("ReadinessReport valide (thin, gaps reconciliés)", True)
 except Exception as e:  # noqa: BLE001
     check("ReadinessReport valide (thin, gaps reconciliés)", False, str(e)[:200])
+
+print("\n13. Dispense PAR EMETTEUR - aucun heritage silencieux (regression MSFT 2026-08-30)")
+# Le trou : les dispenses etaient GLOBALES. Tout nouveau ticker heritait du passe-droit NVDA sur
+# `business_model.recurrence_pct` - champ alors ni fonde, ni compte comme manque, avec un libelle
+# parlant de NVIDIA injecte dans SES incertitudes. Une dispense enonce un fait sur un emetteur.
+check("aucune dispense pour un ticker inconnu", nonblocking_gaps_for("MSFT") == {})
+check("aucune dispense sans ticker (defaut sur)", nonblocking_gaps_for(None) == {})
+check("dispense NVDA insensible a la casse", nonblocking_gaps_for("nvda") == nonblocking_gaps_for("NVDA"))
+
+bm_nvda = run([], [], [dim_cov("business_model")], ticker_id="NVDA")["structuree"]["dimensions"][0]
+bm_msft = run([], [], [dim_cov("business_model")], ticker_id="MSFT")["structuree"]["dimensions"][0]
+check("NVDA : recurrence_pct dispense (absent des non-fondables)",
+      "recurrence_pct" not in bm_nvda["champs_non_fondables"])
+check("MSFT : recurrence_pct BLOQUE (aucun heritage)",
+      "recurrence_pct" in bm_msft["champs_non_fondables"], f"-> {bm_msft['champs_non_fondables']}")
+check("MSFT : marche.croissance_marche_historique bloque aussi",
+      "croissance_marche_historique" in
+      run([dim_cov("marche")], [], ticker_id="MSFT")["qualitative_marche"]["dimensions"][0]["champs_non_fondables"])
+
+# Le libelle NVDA ne doit jamais atterrir dans les incertitudes d'un autre emetteur.
+rep_msft = {"incertitudes_investissables": []}
+_declare_nonblocking_gaps(rep_msft, run([dim_cov("marche")], [], [dim_cov("business_model")],
+                                        ticker_id="MSFT"), "MSFT")
+check("aucune incertitude NVDA injectee chez MSFT",
+      rep_msft["incertitudes_investissables"] == [], f"-> {rep_msft['incertitudes_investissables']}")
+
+# Un corpus complet SANS les champs dispenses ne peut plus etre `ready` pour un ticker sans dispense.
+rep_msft_ready = full_report({"structuree": {"dimensions": [dim_cov(d) for d in
+                                             ("business_model", "financials", "valorisation")], "bloc_ok": True},
+                              "qualitative_marche": {"dimensions": [dim_cov(d) for d in
+                                                     ("produits", "positionnement", "marche",
+                                                      "management_allocation", "risques")], "bloc_ok": True}})
+_apply_deterministic_overrides(rep_msft_ready, ents, ticker_id="MSFT")
+check("corpus 'ready NVDA' n'est PAS ready pour MSFT (2 champs non fondes)",
+      rep_msft_ready["verdict"] == "not_ready", f"-> {rep_msft_ready['verdict']}")
+
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

@@ -38,17 +38,33 @@ FIELD_PLANCHER_OVERRIDES: dict[str, str] = {
 # dégradé, ni synthèse) : ils NE bloquent PAS `ready` mais sont portés comme LACUNE DÉCLARÉE
 # (incertitude investissable « non quantifiée »). Décision méthodo 2026-08-26 : mieux vaut une thèse
 # ready avec un trou VISIBLE et assumé qu'un blocage indéfini sur une donnée qui n'existe pas.
-DECLARED_NONBLOCKING_GAPS: dict[str, str] = {
-    "marche.croissance_marche_historique":
-        "Croissance historique du marché des accélérateurs IA — non quantifiée (aucune source "
-        "primaire/presse accessible à un tier suffisant). Lacune déclarée, non bloquante.",
-    "business_model.recurrence_pct":
-        "Part des revenus récurrents (logiciels/abonnements) — non chiffrée dans les sources "
-        "primaires disponibles. NVIDIA est un business hardware-dominant (quasi-totalité du CA "
-        "= vente de GPU/plateformes, one-time) ; NVIDIA AI Enterprise est en croissance mais sa "
-        "contribution relative n'est pas disclosée séparément à un tier accessible. "
-        "Lacune déclarée, non bloquante.",
+#
+# ⚠️ Une dispense est PAR ÉMETTEUR, jamais globale. Constaté sur le 2ᵉ ticker (MSFT, 2026-08-30) :
+# les deux dispenses ci-dessous étaient des constantes globales, donc MSFT héritait en silence d'un
+# passe-droit sur `business_model.recurrence_pct` justifié par « NVIDIA est un business hardware-
+# dominant » — alors que Microsoft publie précisément cette donnée (Microsoft Cloud, RPO). Pire, le
+# libellé NVDA partait tel quel dans les `incertitudes_investissables` de MSFT. Une dispense énonce
+# un fait sur UN émetteur : elle se clef sur lui. Défaut = AUCUNE dispense, donc le champ BLOQUE —
+# le sens sûr : on refuse un `ready` de trop, on n'en accorde pas un par héritage.
+DECLARED_NONBLOCKING_GAPS: dict[str, dict[str, str]] = {
+    "NVDA": {
+        "marche.croissance_marche_historique":
+            "Croissance historique du marché des accélérateurs IA — non quantifiée (aucune source "
+            "primaire/presse accessible à un tier suffisant). Lacune déclarée, non bloquante.",
+        "business_model.recurrence_pct":
+            "Part des revenus récurrents (logiciels/abonnements) — non chiffrée dans les sources "
+            "primaires disponibles. NVIDIA est un business hardware-dominant (quasi-totalité du CA "
+            "= vente de GPU/plateformes, one-time) ; NVIDIA AI Enterprise est en croissance mais sa "
+            "contribution relative n'est pas disclosée séparément à un tier accessible. "
+            "Lacune déclarée, non bloquante.",
+    },
 }
+
+
+def nonblocking_gaps_for(ticker_id: Optional[str]) -> dict[str, str]:
+    """Dispenses applicables à CET émetteur. Ticker inconnu → dict vide : tous les champs requis
+    bloquent tant qu'une dispense n'a pas été écrite pour lui, en connaissance de son cas."""
+    return DECLARED_NONBLOCKING_GAPS.get((ticker_id or "").strip().upper(), {})
 
 
 def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
@@ -108,7 +124,12 @@ def _covers_index(entries: list[dict[str, Any]]) -> dict[str, list[tuple[int, st
     return index
 
 
-def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+def recompute_coverage(
+    coverage: dict[str, Any],
+    entries: list[dict[str, Any]],
+    *,
+    ticker_id: Optional[str] = None,
+) -> dict[str, Any]:
     """Recompute déterministe de la couverture — depuis l'INDEX `covers`, pas depuis le LLM (029).
 
     Chaque champ requis est fondé si et seulement si la BASE contient ≥1 entry courante qui le PORTE
@@ -125,6 +146,7 @@ def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) 
     et non ce que le modèle a bien voulu citer. Pur, sans IO.
     """
     index = _covers_index(entries)
+    dispenses = nonblocking_gaps_for(ticker_id)
     for bloc_name in ("structuree", "qualitative_marche"):
         bloc = coverage.get(bloc_name) or {}
         for d in bloc.get("dimensions") or []:
@@ -140,7 +162,7 @@ def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) 
             for champ in requis:
                 # Lacune déclarée non-bloquante : ni fondée, ni comptée comme manque (portée en
                 # incertitude investissable par _apply_deterministic_overrides).
-                if f"{dim}.{champ}" in DECLARED_NONBLOCKING_GAPS:
+                if f"{dim}.{champ}" in dispenses:
                     continue
                 plancher = _plancher_for(dim, champ, dim_plancher)
                 # Seules comptent les entries qui PORTENT le champ ET tiennent son plancher. Une
@@ -226,15 +248,20 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
     )
 
 
-def _declare_nonblocking_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+def _declare_nonblocking_gaps(
+    report: dict[str, Any], coverage: dict[str, Any], ticker_id: Optional[str] = None
+) -> dict[str, Any]:
     """Porte chaque lacune déclarée (champ requis introuvable, non bloquant) comme incertitude
-    investissable VISIBLE — jamais un trou caché. Dedup par question. Pur."""
+    investissable VISIBLE — jamais un trou caché. Dedup par question. Pur.
+
+    Les dispenses sont celles de CET émetteur : un libellé qui parle de NVIDIA n'a rien à faire dans
+    les incertitudes de Microsoft."""
     requis_par_dim = {d["dimension"]: set(d.get("champs_requis") or [])
                       for b in (coverage["structuree"], coverage["qualitative_marche"])
                       for d in b["dimensions"]}
     existantes = {u.get("question") for u in (report.get("incertitudes_investissables") or [])}
     ajouts: list[dict[str, str]] = []
-    for full, libelle in DECLARED_NONBLOCKING_GAPS.items():
+    for full, libelle in nonblocking_gaps_for(ticker_id).items():
         dim, champ = full.split(".", 1)
         if champ in requis_par_dim.get(dim, set()) and libelle not in existantes:
             ajouts.append({"question": libelle, "fourchette": "non quantifiée — source indisponible"})
@@ -243,17 +270,22 @@ def _declare_nonblocking_gaps(report: dict[str, Any], coverage: dict[str, Any]) 
     return report
 
 
-def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+def _apply_deterministic_overrides(
+    report: dict[str, Any],
+    entries: list[dict[str, Any]],
+    *,
+    ticker_id: Optional[str] = None,
+) -> dict[str, Any]:
     """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict) — jamais
     confié au LLM. La couverture par champ est recalculée depuis l'INDEX `covers` de la base
     (recompute_coverage, 029), puis les gaps sont reconciliés pour tenir la bijection du contrat
     (reconcile_gaps). Le verdict devient donc une FONCTION du corpus : à corpus figé, il ne bouge plus."""
     report["entries_par_tier"] = count_tiers(entries)
 
-    coverage = recompute_coverage(report.get("coverage") or {}, entries)
+    coverage = recompute_coverage(report.get("coverage") or {}, entries, ticker_id=ticker_id)
     report["coverage"] = coverage
     reconcile_gaps(report, coverage)
-    _declare_nonblocking_gaps(report, coverage)
+    _declare_nonblocking_gaps(report, coverage, ticker_id)
 
     # A3 : pas de conviction/marge_securite au readiness
     ind = report.get("indicateurs") or {}
@@ -307,7 +339,7 @@ async def run_readiness(ticker_id: str) -> dict[str, Any]:
 
         raw, t_in, t_out, cost = await _call_json(agent, _readiness_task_message(ticker_id, entries))
         raw.pop("context_pack_entry_id", None)
-        report = _apply_deterministic_overrides(raw, entries)
+        report = _apply_deterministic_overrides(raw, entries, ticker_id=ticker_id)
 
         context_pack_entry_id: Optional[int] = None
 
