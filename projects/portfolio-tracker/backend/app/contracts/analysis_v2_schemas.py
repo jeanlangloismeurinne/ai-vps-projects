@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 SCHEMA_VERSION = "v2.0.0"  # bump à tout changement de contrat (3 points de synchro)
 
@@ -53,11 +53,28 @@ class BaseRate(Strict):
     taux: float = Field(ge=0.0, le=1.0)
     ajustement: Optional[str] = None
 
+    @field_validator("taux", mode="before")
+    @classmethod
+    def coerce_pct_to_fraction(cls, v: object) -> object:
+        # Le modèle renvoie parfois 70 (%) au lieu de 0.70 (fraction)
+        if isinstance(v, (int, float)) and v > 1:
+            return float(v) / 100
+        return v
+
 
 class BaseRatePct(Strict):
     """Ancre base-rate en pourcentage (industry / valuation)."""
     reference_class: str = Field(min_length=1)
     taux_pct: float
+
+    @model_validator(mode="before")
+    @classmethod
+    def alias_taux(cls, v: object) -> object:
+        # Le modèle renvoie parfois `taux` au lieu de `taux_pct` (confusion BaseRate/BaseRatePct)
+        if isinstance(v, dict) and "taux" in v and "taux_pct" not in v:
+            v = dict(v)
+            v["taux_pct"] = v.pop("taux")
+        return v
 
 
 class Scenarios(Strict):
