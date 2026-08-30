@@ -85,6 +85,28 @@ class SynthesisTarget:
 
 # Cibles connues. Génériques par construction — ajouter une entrée ici suffit à ouvrir un champ.
 SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
+    "business_model.description": SynthesisTarget(
+        field_path="business_model.description",
+        dimension="business_model",
+        entry_type="analysis",
+        query=(
+            "modèle économique NVIDIA segments Data Center Gaming Professional Visualization "
+            "produits GPU accélérateurs IA plateformes Blackwell Rubin revenus chiffre d'affaires "
+            "activité principale clients hyperscalers structure du groupe"
+        ),
+        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
+        min_citations=2,
+        citable_tiers=("A", "A-"),
+        guidance=(
+            "Synthétise la DESCRIPTION du modèle économique de NVIDIA : (1) activité principale "
+            "(conception et vente de GPU/plateformes d'accélération), (2) segments opérationnels "
+            "(Data Center = segment dominant, Gaming, Professional Visualization, OEM&Other), "
+            "(3) clients cibles (hyperscalers, entreprises IA, chercheurs, gaming), (4) profil de "
+            "revenus (chiffres clés disponibles dans les entries, sans inventer de chiffres absents). "
+            "Chaque affirmation doit citer les entries qui la fondent ; tout aspect non documenté "
+            "en base se déclare « non documenté à ce jour » plutôt qu'inventé."
+        ),
+    ),
     "produits.unit_economics": SynthesisTarget(
         field_path="produits.unit_economics",
         dimension="produits",

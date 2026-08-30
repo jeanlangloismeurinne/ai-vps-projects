@@ -115,7 +115,7 @@ async def run_research(ticker_id: str) -> dict[str, Any]:
             f"toute prévision porte une ancre base_rate. Livre aussi les incertitudes bloquantes/"
             f"investissables."
         )
-        run = await run_json_agent(agent, [{"role": "user", "content": msg}], ResearchMemo)
+        run = await run_json_agent(agent, [{"role": "user", "content": msg}], ResearchMemo, json_object=False)
         row = await conn.fetchrow(
             """
             INSERT INTO research_memos
@@ -159,7 +159,7 @@ async def _run_case(ticker_id: str, research_memo_id: int, *, side: str) -> dict
                " Ajoute failles_bull_conventionnel, scenario_destruction_valeur, conviction_negative. "
                "Laisse refutation_du_bull VIDE (rempli au round de réfutation).")
         )
-        run = await run_json_agent(agent, [{"role": "user", "content": msg}], schema)
+        run = await run_json_agent(agent, [{"role": "user", "content": msg}], schema, json_object=False)
         aid = await _persist_analysis(
             conn, ticker_id=ticker_id, analysis_type=side, result=run.data, agent=agent,
             tokens_in=run.tokens_in, tokens_out=run.tokens_out, cost=run.cost_usd, ctx=ctx,
@@ -199,7 +199,7 @@ async def run_rebuttal(ticker_id: str, bull_analysis_id: int, bear_analysis_id: 
             f"BearCase) avec refutation_du_bull[] rempli (une passe, chaque item cible un argument bull "
             f"+ contre_argument + source_entry_refs). Ne modifie pas le reste sans raison."
         )
-        run = await run_json_agent(agent, [{"role": "user", "content": msg}], BearCase)
+        run = await run_json_agent(agent, [{"role": "user", "content": msg}], BearCase, json_object=False)
         # marque l'ancien bear superseded, insère la v2 (round 2)
         await conn.execute(
             "UPDATE investment_analyses SET status='superseded', updated_at=NOW() WHERE id=$1",
@@ -240,7 +240,7 @@ async def run_synthesis(
             f"accepté a une hypothèse falsifiable correspondante (seuil_invalidation chiffré) dans "
             f"hypotheses[] — le champ hypothese_liee DOIT matcher un id d'hypothèse."
         )
-        run = await run_json_agent(agent, [{"role": "user", "content": msg}], SynthesisOutput)
+        run = await run_json_agent(agent, [{"role": "user", "content": msg}], SynthesisOutput, json_object=False)
         run.parsed.valider_pont()  # type: ignore[attr-defined]  — pont risques↔hypothèses (§8.5)
         aid = await _persist_analysis(
             conn, ticker_id=ticker_id, analysis_type="synthesis", result=run.data, agent=agent,

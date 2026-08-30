@@ -42,6 +42,12 @@ DECLARED_NONBLOCKING_GAPS: dict[str, str] = {
     "marche.croissance_marche_historique":
         "Croissance historique du marché des accélérateurs IA — non quantifiée (aucune source "
         "primaire/presse accessible à un tier suffisant). Lacune déclarée, non bloquante.",
+    "business_model.recurrence_pct":
+        "Part des revenus récurrents (logiciels/abonnements) — non chiffrée dans les sources "
+        "primaires disponibles. NVIDIA est un business hardware-dominant (quasi-totalité du CA "
+        "= vente de GPU/plateformes, one-time) ; NVIDIA AI Enterprise est en croissance mais sa "
+        "contribution relative n'est pas disclosée séparément à un tier accessible. "
+        "Lacune déclarée, non bloquante.",
 }
 
 
