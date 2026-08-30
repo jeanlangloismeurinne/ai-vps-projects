@@ -4,8 +4,45 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-08-30
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'alimentation EXERCÉE en réel + readiness gate DÉTERMINISTE — la couverture se lit dans l'index `covers` (029), plus dans les citations LLM → reste : fermer les 2 derniers champs de `business_model` pour atteindre `ready`, puis lancer la chaîne d'analyse jamais exécutée).
+role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'analyse EXERCÉE EN RÉEL pour la première fois — verdict NVDA = PROCEED_AVEC_CONDITIONS → reste : agents 7-9, UX transverse, second ticker).
 ---
+
+> ## ⚡ MàJ 2026-08-30 (bis) — CHAÎNE D'ANALYSE COMPLÈTE EXERCÉE EN RÉEL (première fois)
+>
+> **Chaîne research→bull→bear→réfutation→synthèse complète pour NVDA.** Coût total < $0,015.
+>
+> | étape | ID | résultat | coût |
+> |---|---|---|---|
+> | Research memo | #1 | posture NEUTRE, memo structuré complet | $0.003 |
+> | Bull case | #1 | conviction 7/10, variant_perception analytique | — |
+> | Bear case | #2 | conviction 6/10, ASIC risk comme thèse centrale | $0.003 |
+> | Réfutation (bear v2) | #3 | `refutation_du_bull` : 3 items, round 2 | $0.002 |
+> | **Synthèse** | **#4** | **PROCEED_AVEC_CONDITIONS** | **$0.004** |
+>
+> **Verdict final** `PROCEED_AVEC_CONDITIONS` — seuil d'entrée `< 180$` (marge sécurité > 25%). Position
+> sizing 3% (Kelly fractionnaire réduit de 3,9% pour marge de sécurité faible). 5 hypothèses de
+> monitoring (H1-H5) avec seuils d'invalidation chiffrés (H1 = part de marché inférence IA > 70%,
+> seuil invalidation 60%). **Pont `valider_pont()` validé** : chaque risque accepté pointe une hypothèse existante.
+>
+> ### Corrections de schéma nécessaires au fil de la chaîne (builds #318-#323)
+>
+> | problème | fix | fichier |
+> |---|---|---|
+> | `BaseRate.taux=70` (modèle renvoie %) | coerce ÷100 si > 1 | `analysis_v2_schemas.py` |
+> | `BaseRatePct.taux_pct` absent (modèle envoie `taux`) | alias `taux`→`taux_pct` | idem |
+> | `BullCase.conviction=0.6` (modèle scale 0-1) | coerce ×10 si ≤ 1 | idem |
+> | `ReverseDcf.croissance_implicite_prix_actuel_pct` manquant | `Optional[float] = None` | idem |
+> | `Assumptions.taux_actualisation*` (champs inventés) | `extra="ignore"` sur `Assumptions` | idem |
+> | `curator.readiness_report_id=None` (setdefault ne remplace pas None) | `or 0` pattern | `curator.py` |
+>
+> ### RESTE À FAIRE
+> 1. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction
+>    (migrations 028/029 à écrire juste avant chaque lot).
+> 2. **Second ticker** : exercer la chaîne complète sur un ticker différent de NVDA pour valider la
+>    généralité (notamment readiness gate, synthesis_feed, context_pack).
+> 3. **UX transverse finale** (§16) : affichage du verdict dans le frontend, suivi des hypothèses H1-H5.
+> 4. **`ingestion-agent`** (contrat C2, doc→entries) : non construit, non bloquant tant que le search-worker
+>    + synthesis_feed couvrent les champs requis.
 
 > ## ⚡ MàJ 2026-08-30 — le gate de readiness est DÉTERMINISTE : la couverture se LIT dans l'index `covers` (migration 029, `TEXT[]` + chemins complets + GIN), elle ne se demande plus au modèle. L'oscillation à corpus figé est fermée.
 >
