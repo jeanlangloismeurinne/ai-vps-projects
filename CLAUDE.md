@@ -50,12 +50,15 @@ secrets Coolify (spec) — jamais dans un `.env` en clair dans le repo.**
   `SLACK_SIGNING_SECRET`, `PUBLIC_BASE_URL`, `WEBHOOK_TOKEN`), puis à régénérer/supprimer.
 - `docker-compose.yml` du gateway n'a **plus de `env_file`** : l'environnement sera injecté
   par Coolify.
-- **PENDING (prochaine session)** : convertir `comms-gateway` en app Coolify (build_pack
-  `dockercompose`, Base Directory `projects/comms-gateway`), y déposer les secrets ci-dessus,
-  déployer, puis retirer l'**ancien conteneur standalone** `comms-gateway` (sinon double
-  routage Traefik / conteneur orphelin). Ensuite `git commit + push` du source.
-- ⚠️ Le conteneur standalone actuel tourne avec l'env issu de l'ancien `.env` : au prochain
-  restart il perd ses secrets → faire la conversion Coolify avant toute relance.
+- **FAIT (2026-08-30)** : `comms-gateway` converti en app Coolify (build_pack `dockercompose`,
+  Base Directory `projects/comms-gateway`, compose `/docker-compose.yml`, UUID
+  `commsgateway00000000000`, fqdn `https://comms.jlmvpscode.duckdns.org`). Les 10 secrets
+  ci-dessus sont déposés (chiffrés) dans l'env Coolify de l'app. L'**ancien conteneur
+  standalone** `comms-gateway` a été supprimé (plus de double routage Traefik) ; le conteneur
+  géré repose sur le réseau `coolify` (reachable en interne via le nom `comms-gateway`).
+  Vérification post-déploiement OK : `/health`, refus `rejected_policy` (canal non autorisé +
+  client sans policy), `rejected_rate_limit` (audit en base confirmé). Il reste les blocages
+  hors code listés ci-dessous.
 - Blocages actés hors code : compte Resend du projet = **compte de test, aucun domaine
   d'envoi vérifié** (→ livraison réelle impossible tant qu'un domaine n'est pas vérifié dans
   resend.com/domains, avec DNS ; le gateway journalise bien l'échec 403) ; app Slack

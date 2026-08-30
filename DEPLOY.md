@@ -30,7 +30,8 @@ infrastructure/deploy.sh <app> -m "<message de commit>" -f "<fichiers de la feat
 ```
 
 - `<app>` : clé Coolify — `bank-review`, `assistant-ia`, `ev-prices`, `tool-file-intake`, `hub`,
-  `portfolio-backend`, `portfolio-frontend`. Pour portfolio-tracker (2 apps), **deux appels**.
+  `comms-gateway`, `portfolio-backend`, `portfolio-frontend`. Pour portfolio-tracker (2 apps), **deux appels**.
+  (`newsletter-summary` n'est **pas** une app Coolify gérée par deploy.sh : conteneur standalone.)
 - `-f` : chemins relatifs à la racine du repo, séparés par des espaces. Le script `git add` ces
   chemins puis **commite l'index seul** ; il **refuse si rien n'est à committer**.
   Variante : `--staged` (Opus a déjà fait `git add`) au lieu de `-f`.

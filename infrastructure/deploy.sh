@@ -39,6 +39,7 @@ declare -A UUID_MAP=(
   [hub]="h7dyrhas03di7jqq2wl2j72z"
   [tool-file-intake]="c57oryka5cw4scy02fi1gfzz"
   [ev-prices]="ev0prices0000000000000000"
+  [comms-gateway]="commsgateway00000000000"
 )
 
 fail() { echo "RESULT: failure — $2"; exit "$1"; }
