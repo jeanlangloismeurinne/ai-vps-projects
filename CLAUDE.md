@@ -5,6 +5,22 @@ Repo multi-projets sur VPS Hetzner (204.168.250.110).
 Domaine : jlmvpscode.duckdns.org
 Déploiement : Coolify — chaque projet est une application séparée.
 
+## Règle — fichier `00-REPRISE.md` (obligatoire en fin de conversation)
+
+Après avoir **implémenté une nouvelle version / un nouveau sprint** d'un projet, je dois
+**actualiser le `00-REPRISE.md` de ce projet** (à la racine du dossier du projet) avant de
+clôturer la conversation : maj de l'état atteint, du prochain jalon, des blocages et des
+commandes de reprise. Toute nouvelle session du projet démarre en **relisant ce fichier**
+(bouton « reprendre là où on s'était arrêté »).
+
+## Règle — fichier `00-REPRISE.md` par projet
+Chaque projet garde un `00-REPRISE.md` (racine du projet) qui sert de **prompt de reprise**
+pour retrouver l'état exact. **RÈGLE : l'actualiser OBLIGATOIREMENT en fin de conversation,
+dès qu'une nouvelle version/état a été implémenté** (préfixer un bloc `> ## ⚡ MàJ <date>` en
+haut du fichier avec ce qui a changé, ce qui a été vérifié, et ce qui reste). Ne jamais laisser
+un « fin de session » sans `00-REPRISE.md` à jour : c'est lui qui permet de reprendre sans
+ré-explorer.
+
 ## Accès Coolify — autonomie obligatoire
 
 **J'ai accès direct à Coolify via son API (localhost:8000). Je dois l'utiliser sans demander à l'utilisateur.**
