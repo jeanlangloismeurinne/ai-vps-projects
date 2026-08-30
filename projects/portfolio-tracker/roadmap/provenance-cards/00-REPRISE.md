@@ -2,11 +2,127 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-08-25
+updated: 2026-08-30
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'alimentation EXERCÉE en réel + dimension `valorisation` FONDÉE de bout en bout + dimension `financials` — ratios dérivés — CODE DÉPLOYÉ & vérifié contre l'API EDGAR, mais PAS encore persisté en prod → reste : persister financials + recompute readiness, fermer les dimensions qualitatives pour `ready`, puis lancer la chaîne d'analyse jamais exécutée).
+role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'alimentation EXERCÉE en réel + readiness gate DÉTERMINISTE — la couverture se lit dans l'index `covers` (029), plus dans les citations LLM → reste : fermer les 2 derniers champs de `business_model` pour atteindre `ready`, puis lancer la chaîne d'analyse jamais exécutée).
 ---
 
+> ## ⚡ MàJ 2026-08-30 — le gate de readiness est DÉTERMINISTE : la couverture se LIT dans l'index `covers` (migration 029, `TEXT[]` + chemins complets + GIN), elle ne se demande plus au modèle. L'oscillation à corpus figé est fermée.
+>
+> **Décision utilisateur : option A** (`covers TEXT[]` + backfill explicite des entries legacy), contre
+> l'option « une entry de synthèse par champ ». Motif retenu : une entry porte ce qu'elle porte — #19
+> ou #35 fondent réellement plusieurs champs, et fabriquer une entry de synthèse par champ aurait
+> multiplié les tours LLM pour ré-écrire ce que le corpus disait déjà.
+>
+> ### Ce qui change (convention #29 dans `CLAUDE.md`)
+> `recompute_coverage` ne **filtre** plus les `entry_ids` cités par le LLM : il **bâtit un index**
+> `dimension.champ → [(entry_id, tier)]` depuis la base (`_covers_index`, pur Python — `get_current_entries`
+> SELECTait déjà `covers`, aucune requête supplémentaire), puis, pour chaque champ requis, retient les
+> entries au-dessus du plancher. Le LLM n'écrit plus que la **prose** (`rationale`, `gaps`,
+> `incertitudes_investissables`, `qualite_info`) ; ses `fondations` sont écrasées. Trois leviers fermés
+> d'un coup :
+> 1. **couverture par citation → index** : une entry adéquate non citée ne crée plus de faux creux ;
+> 2. **tag libre → vocabulaire FERMÉ** (`MVDD_FIELD_PATHS`) : depuis que le tag pilote le verdict, c'est
+>    un vote — donc seules les voies déterministes l'écrivent, dans l'esprit de #24 ;
+> 3. **`_exigences()`** : le modèle peut **RESSERRER** `champs_requis`/`tier_plancher`, jamais desserrer.
+>
+> ### Migration 029 (appliquée en prod AVANT le déploiement, docker cp + psql, #17)
+> `covers` TEXT → **TEXT[]**, valeurs re-qualifiées en **chemins COMPLETS** `dimension.champ` (sans quoi
+> `produits.description` fonderait `business_model.description` — homonymie), btree → **GIN**, et
+> **backfill relu à la main des 17 entries qualitatives legacy NVDA** (#19-#35). Sortie : `UPDATE 19`
+> (re-qualification) puis `UPDATE 12` (backfill). Volontairement **non taguées**, et c'est documenté
+> dans la migration : #25/#27 (retours au capital — aucun champ requis), #32/#33/#34 (marges
+> consolidées — ce sont les *intrants* de la synthèse #53, pas le champ), #1-10/#48 (faits EDGAR bruts),
+> #11-15 (`llm_memory` tier C).
+>
+> ### Déviation assumée par rapport au chiffrage annoncé
+> J'avais chiffré l'option A comme rouvrant le contrat **C1 figé** (donc règle #19, 3 points de synchro).
+> **Je ne l'ai pas fait** : `worker_delegation_schema.py:129` garde `covers: Optional[str]`. Le mandat
+> d'un search-worker porte **un seul champ** ; lui laisser déclarer une liste lui rendrait précisément
+> le levier sur le gate qu'on vient de lui retirer. Le worker écrit donc un chemin complet unique, via
+> `_resolve_covers()` qui **préfère le mandat** et ne retient une proposition du modèle que si elle est
+> dans `MVDD_FIELD_PATHS`. **Coût réel du sprint : 0 point de synchro #19.**
+>
+> ### État de la couverture NVDA après backfill (22 entries taguées, lu en base)
+> Tous les champs requis sont couverts **au-dessus du plancher** — sauf trois, dont un déjà déclaré :
+>
+> | champ non couvert | statut |
+> |---|---|
+> | `business_model.description` | **vrai gap** — synthétisable depuis #19/#20/#35 (tier A) via `synthesis_feed` |
+> | `business_model.recurrence_pct` | **vrai gap** — à synthétiser ou à déclarer non bloquant |
+> | `marche.croissance_marche_historique` | déjà **déclaré non bloquant** (donnée de marché EXTERNE, #25) |
+>
+> ### Déterminisme vérifié en prod — 4 tirs consécutifs (reports #16-#19, 2026-08-30)
+> ```
+> [GAP] business_model: gaps=['description', 'recurrence_pct']
+> [OK]  financials, valorisation, produits, positionnement, marche, management_allocation, risques
+> verdict: not_ready  (4/4)
+> ```
+> Corpus strictement identique, verdict strictement identique. L'oscillation est fermée.
+>
+> ### RESTE À FAIRE
+> 1. **Fermer les 2 champs `business_model`** (synthèse grounded #53-style, ou déclaration honnête pour
+>    `recurrence_pct` si le corpus ne le porte pas) → NVDA `ready`.
+> 2. Puis la **chaîne d'analyse jamais exécutée** (research → bull/bear → réfutation → synthèse +
+>    `valider_pont()`). ⚠️ `analysis.py` appelle `run_json_agent` avec `json_object` au défaut (True) :
+>    **passer `json_object=False` AVANT le premier run** (même piège DeepSeek que l'ingestion-agent).
+>
+> ## ⚡ MàJ 2026-08-26 (ter) — couche COVERS DÉPLOYÉE (migration 028 + curator option B) : le gate est resserré, MAIS la readiness NVDA OSCILLE sur données FIXES → c'est du bruit de citation LLM, pas un creux. Finding archi : le recompute Python VÉTOTE les citations du LLM, il ne les DÉCOUVRE pas.
+>
+> **Déployé** (commit `3776d74`, un seul conteneur backend vérifié `docker ps` — pas d'orphelin,
+> HEAD == origin/main). **Migration 028 appliquée** au DB prod AVANT déploiement (docker cp + psql,
+> #17) : colonne `knowledge_entries.covers` (champ MVDD nu porté par l'entry) + backfill (32 entries
+> depuis `content_structured.field_path`/`field`/`metric`) + index partiel. Les producteurs (synthèse,
+> feeds, search-worker) la remplissent désormais à l'écriture.
+>
+> ### Ce qui a été construit et VÉRIFIÉ en prod
+> Le curator (option C tier-plancher) vérifiait le TIER des entries citées mais pas la PERTINENCE de
+> leur contenu — une entry tier A **hors-sujet** pouvait « fonder » un champ (constaté : la croissance
+> de NVDA #19 « fondait » `croissance_marche_historique`). La couche covers exige **`covers == champ`**
+> quand renseigné ; **fallback tier-only quand `covers IS NULL`** (entries legacy non taguées → pas de
+> régression). Effet mesuré : readiness NVDA **#10 `ready` (avant covers, 13:43) → #11 `not_ready`
+> (après, 14:28)**. Le gate est plus honnête.
+>
+> ### 🔬 Déterminisme TRANCHÉ (3 tirs, données STRICTEMENT fixes)
+> Le seul champ qui bloque est `business_model.description`. Sur données identiques :
+>
+> | report | verdict | `description` fondée par | ok ? |
+> |---|---|---|---|
+> | #11 | `not_ready` | [11, 57] (C 0.4 + context_pack B-) | ❌ |
+> | #13 | `thin_qualitative` | [11, **19**] (#19 = tier A) | ✅ |
+> | #14 | `not_ready` | [11] seul | ❌ |
+>
+> **Verdict : bruit de citation LLM, PAS un vrai creux.** L'entry **#19** (« Data Center segment
+> FY2026 », tier A 0.89) fonde réellement `description` — mais elle est **legacy `covers=NULL`**, donc
+> c'est le **LLM du curator** qui décide par-champ à quelle dimension la rattacher (tantôt `description`,
+> tantôt seulement `drivers_revenus`/`recurrence_pct`). Ce rattachement n'est **pas déterministe** → le
+> verdict oscille `not_ready` ↔ `thin_qualitative` à corpus figé.
+>
+> ### 🐛 Finding architectural (la vraie cause, `curator.py:67-108`)
+> `recompute_coverage` **filtre les `entry_ids` que le LLM a CITÉS** par champ (garde ceux dont
+> `covers ∈ {None, champ}` **et** tier ≥ plancher) : c'est un **véto sur la citation LLM, pas un index
+> indépendant**. Une citation manquée = **faux creux**, même si une entry adéquate existe en base. Le
+> même mécanisme frappe `produits.unit_economics` : l'entry **#53** (`covers='unit_economics'`, tier
+> **A-** 0.85) existe et est au-dessus du plancher, mais le run où le LLM ne la cite pas la déclare
+> « non fondée, sous plancher » (prose LLM erronée qui la dit « B- » — cosmétique). Le covers **ferme
+> le trou de sur-crédit** (tier A hors-sujet) mais **pas le trou de sous-crédit** (entry adéquate non
+> citée).
+>
+> ### RESTE À FAIRE — rendre le gate DÉTERMINISTE (= prochain sprint)
+> 1. **Recompute la couverture par champ en Python à partir de l'INDEX `covers`**, pas des citations
+>    LLM : pour chaque champ requis, `SELECT` des entries non superseded avec `covers==champ` **et**
+>    tier ≥ plancher — le LLM ne sert plus qu'à la **synthèse narrative**, plus au gate. Supprime
+>    l'oscillation d'un coup (business_model ET produits).
+> 2. **`covers` est mono-valué (TEXT)** mais #19 porte **3 champs** (`description`/`drivers_revenus`/
+>    `recurrence_pct`) → trancher : `covers[]` (array + index GIN) **ou** entries de synthèse par-champ
+>    (le patron déjà éprouvé pour unit_economics/moat/structure_5forces). **Décision utilisateur requise.**
+> 3. Une fois le modèle multi-champ tranché : **backfill `covers`** sur les tier-A qualitatives legacy
+>    (#19, #20, #23-#35).
+> 4. **Seul vrai gap de CONTENU restant** (inchangé) : `marche.croissance_marche_historique` — donnée
+>    de marché EXTERNE (TAM IDC/Gartner, upload), non synthétisable depuis le KB (#25).
+> 5. Puis readiness déterministe → `ready` → **chaîne d'analyse jamais exécutée** (research→bull/bear→
+>    réfutation→synthèse), `run_json_agent(json_object=False)` obligatoire (même piège DeepSeek).
+>
 > ## ⚡ MàJ 2026-08-26 (bis) — INGESTION-AGENT mode SYNTHÈSE (C2) CONSTRUIT, DÉPLOYÉ & EXERCÉ EN RÉEL ; run_json_agent a enfin tourné contre le vrai modèle (gotcha json_object trouvé + corrigé)
 >
 > **Déployé** (commits `fda6340`→`059d3a4`, deployments #297→#302, un seul conteneur backend vérifié
