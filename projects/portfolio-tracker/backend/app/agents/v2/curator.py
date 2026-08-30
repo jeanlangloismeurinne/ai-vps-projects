@@ -375,7 +375,7 @@ async def _produce_context_pack(
     raw.setdefault("schema_version", "v2.0.0")
     raw["ticker_id"] = ticker_id
     raw["readiness_verdict"] = "ready"
-    raw.setdefault("readiness_report_id", 0)  # rétro-rempli après insertion du report si besoin
+    raw["readiness_report_id"] = raw.get("readiness_report_id") or 0  # rétro-rempli après insertion du report si besoin
     pack = ContextPack.model_validate(raw)
     data = pack.model_dump(mode="json")
 
