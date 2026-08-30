@@ -7,6 +7,52 @@ project: portfolio-tracker
 role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'analyse EXERCÉE EN RÉEL pour la première fois — verdict NVDA = PROCEED_AVEC_CONDITIONS → reste : agents 7-9, UX transverse, second ticker).
 ---
 
+> ## ⚡ MàJ 2026-08-30 (ter) — AUDIT des desserrages de contrat faits à chaud pendant la chaîne : le `Optional` du reverse-DCF cachait un VRAI trou silencieux (bear), corrigé par durcissement prompt PUIS re-serrage du schéma (déployé #324)
+>
+> **Contexte** : les builds #318-#323 avaient rendu 6 champs plus permissifs pour faire passer le 1er
+> run. Audit demandé (« certains paramètres rendus optionnels me semblent significatifs »). Verdict :
+> **1 desserrage significatif (#4), 1 modéré (#5), les 4 autres bénins.**
+>
+> ### 🔬 Le finding : `reverse_dcf.croissance_implicite_prix_actuel_pct` (rendu `Optional=None`)
+> C'est le **cœur de l'expectations investing** (« quelle croissance le prix price-t-il ? »). Preuve en
+> base sur le 1er run NVDA : le **bull le remplit (15.0)**, le **bear le laisse `null` aux rounds 1 ET 2**
+> — alors que le bear **écrit « ~15% » dans sa prose `verdict`**. Le modèle CONNAÎT le chiffre mais
+> n'alimente pas le champ machine ; `Optional=None` l'a laissé passer en silence. **Pas de crash
+> aujourd'hui** (le consommateur `base_rate_ge` n'est PAS encore câblé dans `analysis.py` — vérifié),
+> mais **bombe à retardement** : au câblage, un `null` du bear entrerait sans bruit. Cohérent avec
+> #24/#25/#28 : un manque ne doit jamais ressembler à une valeur.
+>
+> ### Décision utilisateur : « durcir le prompt d'abord » + « contrat d'abord » (avant agents 7-9)
+> 1. **Prompts durcis** (commit `4c34367`, source de vérité règle #19) : `30-research` garde-fou 5,
+>    `40-bull` garde-fou 4, `41-bear` garde-fou 2 → `croissance_implicite` = **nombre %/an OBLIGATOIRE,
+>    jamais null/omis** (obtenu en inversant le DCF) ; `assumptions` **fermé aux 3 clés** contractuelles
+>    (taux d'actualisation en prose dans `methode`, pas en champ inventé).
+> 2. **Propagé en prod** : `agent_prompts` (research/bull/bear, flow v2) mis à jour via
+>    `_gen_prompt_refresh_20260830.py` (réutilise l'assemblage de `_gen_025.py`, DB = commit) +
+>    `docker cp`/`psql -f` (#17). **Pas de rebuild** : `get_agent_provider` relit la DB à chaque appel.
+> 3. **Re-testé en réel** (NVDA) : research **22.0/18.0**, bull **18.0**, **bear #1 ET #2 = 18.0**
+>    (contre `null` avant), `assumptions` = 3 clés partout. **L'omission a disparu en pratique.**
+> 4. **Schéma re-serré** (commit `9bebd1c`, **deployment #324**, 1 seul conteneur backend vérifié,
+>    HEAD==origin/main) : la copie **runtime** `analysis_v2_schemas.py` re-alignée sur le **contrat figé
+>    qui, lui, n'avait JAMAIS été desserré** → `ReverseDcf.croissance_implicite_prix_actuel_pct: float`
+>    (requis) + `Assumptions(Strict)` (`extra='forbid'`). Validé sous pydantic 2.13.5 (champ manquant
+>    rejeté, champ inventé rejeté) ; run de contrôle post-déploiement OK (croissance 22.0).
+>
+> ### Les 4 autres desserrages — laissés tels quels (jugés acceptables)
+> `BaseRate.taux ÷100 si>1` (bénin) · `BaseRatePct alias taux→taux_pct` (faible) · `curator
+> readiness_report_id or 0` (cosmétique) · `BullCase.conviction ×10 si≤1` : **coercition gardée comme
+> filet** (risque de polarité théorique sur le float `1.0` → note pour plus tard, pas corrigé). Le
+> desserrage `Assumptions extra=ignore` (#5) ne masquait rien en base (invention `taux_actualisation`
+> transitoire) mais re-serré par principe.
+>
+> ### RESTE À FAIRE (inchangé, « contrat d'abord » désormais satisfait)
+> 1. **Agents 7-9** (décision/validate M6 → sortie/calibration → débat), migrations 030/031 juste avant.
+> 2. **Second ticker** (généralité de la chaîne).
+> 3. **UX transverse** (§16). 4. **`ingestion-agent`** (C2, non bloquant).
+> ⚠️ **Dette connue** : `reverse_dcf.croissance_implicite` est désormais TOUJOURS chiffré, mais son
+> consommateur `base_rate_ge` n'est **toujours pas câblé** dans `run_research` — à faire quand on
+> finalisera le `taux_base_pct` précis (le champ est maintenant fiable pour ça).
+
 > ## ⚡ MàJ 2026-08-30 (bis) — CHAÎNE D'ANALYSE COMPLÈTE EXERCÉE EN RÉEL (première fois)
 >
 > **Chaîne research→bull→bear→réfutation→synthèse complète pour NVDA.** Coût total < $0,015.
