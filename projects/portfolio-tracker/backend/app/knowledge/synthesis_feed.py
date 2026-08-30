@@ -72,6 +72,8 @@ class SynthesisTarget:
     field_path: str
     dimension: str
     entry_type: str
+    # `query` et `guidance` sont des GABARITS : elles décrivent ce qu'est le champ, jamais un
+    # émetteur en particulier. Seul `{company}` les spécialise (cf. `resolve`).
     query: str                       # requête sémantique de chargement des entries citables
     candidate_entry_types: tuple[str, ...]
     min_citations: int               # sous ce seuil de matériau citable → SynthesisUnavailable
@@ -82,29 +84,42 @@ class SynthesisTarget:
     # tireraient la synthèse sous le plancher via la règle « un cran sous la plus faible citée ».
     citable_tiers: tuple[str, ...] = CITABLE_TIERS
 
+    def resolve(self, company: str) -> tuple[str, str]:
+        """`(query, guidance)` spécialisées pour CET émetteur. Pur."""
+        return self.query.format(company=company), self.guidance.format(company=company)
 
-# Cibles connues. Génériques par construction — ajouter une entrée ici suffit à ouvrir un champ.
+
+# Cibles connues. Le descripteur porte la définition du CHAMP, jamais la connaissance d'un émetteur.
+#
+# ⚠️ Constaté sur le 2ᵉ ticker (MSFT, 2026-08-30) : ces cibles se disaient « génériques par
+# construction » alors que seul le MÉCANISME l'était. Les `query`/`guidance` étaient rédigées pour
+# NVIDIA (« segments Data Center Gaming », « coût par GPU », « écosystème CUDA », « TSMC/HBM »).
+# Sur un autre émetteur, la requête sémantique cherchait le mauvais vocabulaire et la consigne
+# demandait au modèle de synthétiser une entreprise qui n'est pas celle analysée — une invitation
+# directe à sortir du corpus, dans le seul agent dont toute la valeur est de n'en pas sortir.
+# Règle : ce qui décrit le champ vit ici ; ce qui décrit l'émetteur vient des entries citées.
 SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
     "business_model.description": SynthesisTarget(
         field_path="business_model.description",
         dimension="business_model",
         entry_type="analysis",
         query=(
-            "modèle économique NVIDIA segments Data Center Gaming Professional Visualization "
-            "produits GPU accélérateurs IA plateformes Blackwell Rubin revenus chiffre d'affaires "
-            "activité principale clients hyperscalers structure du groupe"
+            "modèle économique {company} activité principale segments opérationnels publiables "
+            "produits et services vendus chiffre d'affaires par segment clients cibles "
+            "canaux de monétisation structure du groupe"
         ),
         candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
         min_citations=2,
         citable_tiers=("A", "A-"),
         guidance=(
-            "Synthétise la DESCRIPTION du modèle économique de NVIDIA : (1) activité principale "
-            "(conception et vente de GPU/plateformes d'accélération), (2) segments opérationnels "
-            "(Data Center = segment dominant, Gaming, Professional Visualization, OEM&Other), "
-            "(3) clients cibles (hyperscalers, entreprises IA, chercheurs, gaming), (4) profil de "
-            "revenus (chiffres clés disponibles dans les entries, sans inventer de chiffres absents). "
-            "Chaque affirmation doit citer les entries qui la fondent ; tout aspect non documenté "
-            "en base se déclare « non documenté à ce jour » plutôt qu'inventé."
+            "Synthétise la DESCRIPTION du modèle économique de {company}, telle qu'elle ressort des "
+            "entries : (1) activité principale — ce que l'entreprise vend réellement, (2) segments "
+            "opérationnels publiables et poids relatif de chacun, (3) clients cibles et canaux de "
+            "distribution, (4) mode de monétisation (vente unitaire, licence, abonnement, usage, "
+            "publicité) et profil de revenus chiffré. N'introduis AUCUN segment, produit ou client "
+            "qui ne figure pas dans les entries citées : la structure de l'entreprise se lit dans le "
+            "corpus, elle ne se suppose pas. Chaque affirmation cite les entries qui la fondent ; "
+            "tout aspect non documenté se déclare « non documenté à ce jour » plutôt qu'inventé."
         ),
     ),
     "produits.unit_economics": SynthesisTarget(
@@ -112,18 +127,22 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
         dimension="produits",
         entry_type="analysis",
         query=(
-            "économie unitaire marge brute marge opérationnelle coût unitaire coût par GPU coût par "
-            "token ASP prix de vente moyen pricing power structure de coûts data center"
+            "économie unitaire {company} marge brute marge opérationnelle structure de coûts "
+            "coût unitaire prix de vente moyen pouvoir de fixation des prix rentabilité par "
+            "produit ou par client"
         ),
         candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
         min_citations=2,
         citable_tiers=("A", "A-"),  # socle marges/coûts tier A ; exclut la presse marché B+ (hors-champ)
         guidance=(
-            "Synthétise l'ÉCONOMIE UNITAIRE (unit economics) du produit : structure de marge (marge "
-            "brute / opérationnelle disponible dans les entries), levier de prix (ASP / pricing power), "
-            "coûts unitaires SEULEMENT s'ils sont dérivables des entries citées (coût par GPU / par "
-            "token), et ce qui reste NON OBSERVABLE en l'état. N'invente aucun chiffre absent des "
-            "entries. Un aspect sans matériau en base se déclare « non documenté à ce jour »."
+            "Synthétise l'ÉCONOMIE UNITAIRE (unit economics) de l'offre de {company} : structure de "
+            "marge (marge brute / opérationnelle présentes dans les entries), levier de prix (prix de "
+            "vente moyen, pouvoir de fixation des prix), coûts unitaires SEULEMENT s'ils sont "
+            "dérivables des entries citées, et ce qui reste NON OBSERVABLE en l'état. L'unité "
+            "pertinente dépend du métier (unité vendue, siège, utilisateur, contrat, unité de "
+            "consommation) : retiens celle que les entries documentent, n'en invente pas. N'invente "
+            "aucun chiffre absent des entries. Un aspect sans matériau en base se déclare « non "
+            "documenté à ce jour »."
         ),
     ),
     "positionnement.moat_preuves": SynthesisTarget(
@@ -131,18 +150,22 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
         dimension="positionnement",
         entry_type="analysis",
         query=(
-            "avantage concurrentiel durable moat NVIDIA écosystème logiciel CUDA coûts de transition "
-            "base installée développeurs verrouillage réseau NVLink effets d'échelle barrières"
+            "avantage concurrentiel durable moat {company} coûts de transition base installée "
+            "effets de réseau économies d'échelle actifs incorporels marque brevets "
+            "rétention des clients barrières à l'entrée durabilité"
         ),
         candidate_entry_types=("fact_qualitative", "analysis", "quote", "risk", "fact_financial"),
         min_citations=2,
-        citable_tiers=("A", "A-"),  # preuves du moat = socle A (CUDA, échelle, risques EDGAR A) ; la
-                                    # presse marché B+ (#21/#22) porte des MENACES, pas des preuves
+        citable_tiers=("A", "A-"),  # preuves du moat = socle A (dépôts, échelle, risques EDGAR A) ; la
+                                    # presse marché B+ porte des MENACES, pas des preuves
         guidance=(
-            "Synthétise les PREUVES du moat (avantage concurrentiel durable) : nature du moat "
-            "(écosystème logiciel CUDA / coûts de transition, base installée, effets de réseau "
-            "NVLink, échelle R&D), preuves chiffrées ou factuelles tirées des entries, et durabilité "
-            "vs menaces (ASIC maison, AMD). Chaque preuve adossée aux entries citées ; un aspect sans "
+            "Synthétise les PREUVES du moat (avantage concurrentiel durable) de {company} : d'abord "
+            "la NATURE du moat telle qu'elle ressort des entries — parmi coûts de transition, effets "
+            "de réseau, économies d'échelle, actifs incorporels (marque, brevets, licences), avantage "
+            "de coût — puis, pour chacune retenue, les preuves CHIFFRÉES ou factuelles tirées des "
+            "entries, et enfin sa durabilité face aux menaces documentées. Ne postule aucun type de "
+            "moat que les entries n'étayent pas : une nature de moat est une conclusion, pas une "
+            "hypothèse de départ. Chaque preuve est adossée aux entries citées ; un aspect sans "
             "matériau en base se déclare « non documenté », jamais inventé."
         ),
     ),
@@ -151,22 +174,24 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
         dimension="marche",
         entry_type="analysis",
         query=(
-            "cinq forces de Porter rivalité concurrentielle nouveaux entrants ASIC hyperscalers "
-            "concentration clients pouvoir fournisseur TSMC substituts AMD Huawei barrières à l'entrée "
-            "export controls"
+            "cinq forces de Porter {company} rivalité concurrentielle concurrents directs "
+            "menace de nouveaux entrants barrières à l'entrée pouvoir de négociation des clients "
+            "concentration de la clientèle pouvoir de négociation des fournisseurs dépendance "
+            "produits de substitution réglementation"
         ),
         candidate_entry_types=("risk", "fact_qualitative", "analysis", "quote"),
         min_citations=3,
-        citable_tiers=("A", "A-"),  # les 5 forces sont adossables aux facteurs de risque EDGAR tier A
-                                    # (ASIC, AMD/Huawei, TSMC, concentration, export controls) ; la
-                                    # presse B+ portait la même chose en moins fiable → exclue
+        citable_tiers=("A", "A-"),  # les 5 forces s'adossent aux facteurs de risque EDGAR tier A ; la
+                                    # presse B+ porte la même chose en moins fiable → exclue
         guidance=(
-            "Structure une analyse des 5 forces de Porter, une par une : (1) intensité de la rivalité "
-            "concurrentielle, (2) menace de nouveaux entrants (ASIC maison des hyperscalers, Huawei), "
-            "(3) pouvoir de négociation des clients (concentration hyperscalers), (4) pouvoir de "
-            "négociation des fournisseurs (TSMC, HBM), (5) menace de produits de substitution. Chaque "
-            "force est adossée aux entries citées et qualifiée (faible / modérée / élevée) avec la "
-            "preuve. Une force sans matériau en base se déclare « non documentée », jamais inventée."
+            "Structure une analyse des 5 forces de Porter pour {company}, une par une : (1) intensité "
+            "de la rivalité concurrentielle, (2) menace de nouveaux entrants, (3) pouvoir de "
+            "négociation des clients, (4) pouvoir de négociation des fournisseurs, (5) menace de "
+            "produits de substitution. Pour chaque force, nomme les acteurs et les mécanismes que les "
+            "entries documentent RÉELLEMENT — n'importe aucun concurrent, fournisseur ou substitut "
+            "qui n'y figure pas. Chaque force est adossée aux entries citées et qualifiée (faible / "
+            "modérée / élevée) avec la preuve. Une force sans matériau en base se déclare « non "
+            "documentée », jamais inventée."
         ),
     ),
 }
@@ -294,11 +319,11 @@ _SYNTHESIS_SKELETON = (
 )
 
 
-def _synthesis_task_message(target: SynthesisTarget, listing: str) -> str:
+def _synthesis_task_message(target: SynthesisTarget, listing: str, guidance: str) -> str:
     return (
         f"[mode: synthese]\n\n"
         f"Champ à synthétiser : `{target.field_path}` (dimension {target.dimension}).\n\n"
-        f"Consigne de composition :\n{target.guidance}\n\n"
+        f"Consigne de composition :\n{guidance}\n\n"
         f"Corpus citable — entries de connaissance COURANTES, tier A/A-/B+ (cite-les par leur #id, "
         f"et UNIQUEMENT celles-ci) :\n{listing}\n\n"
         f"Produis l'objet GroundedSynthesis, en respectant EXACTEMENT cette forme (commence par `{{` "
@@ -345,8 +370,12 @@ async def run_synthesis_feed(
 
     # 1) charger le corpus citable (tier A/A-/B+ pertinent pour le champ) --------------------------
     async with get_db_session() as conn:
+        # L'émetteur ne vient jamais du descripteur de champ : il est résolu ici, pour CE run.
+        row = await conn.fetchrow("SELECT name FROM tickers WHERE id = $1", ticker_id)
+        company = ((row["name"] if row else None) or ticker_id).strip()
+        query, guidance = target.resolve(company)
         found = await query_knowledge(
-            conn, ticker_id=ticker_id, query=target.query,
+            conn, ticker_id=ticker_id, query=query,
             entry_types=list(target.candidate_entry_types),
             min_reliability=0.70, include_sector=True, limit=max_candidates,
         )
@@ -364,7 +393,7 @@ async def run_synthesis_feed(
     # 2) tour LLM grounded --------------------------------------------------------------------------
     agent = await _resolve_synthesis_agent()
     listing = format_entries_for_prompt(citable, content_limit=700)
-    task = _synthesis_task_message(target, listing)
+    task = _synthesis_task_message(target, listing, guidance)
 
     if debug_raw:
         # Observabilité de la frontière LLM : renvoie la sortie brute sans validation (diagnostic).

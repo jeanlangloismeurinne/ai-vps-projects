@@ -11,10 +11,13 @@ import sys
 
 sys.path.insert(0, ".")
 
+from app.agents.v2.curator import FIELD_PLANCHER_OVERRIDES, _tier_ge  # noqa: E402
 from app.agents.v2.tools import RetrievalLog, canonical_url  # noqa: E402
 from app.agents.v2.worker import _cited_documents, _normalise_entry, _verify_provenance  # noqa: E402
 from app.contracts import WorkerRequest  # noqa: E402
 from app.knowledge import document_search  # noqa: E402
+from app.knowledge.service import compute_reliability  # noqa: E402
+from app.knowledge.websearch import classify_source_type  # noqa: E402
 
 ok = fail = 0
 
@@ -170,6 +173,23 @@ check("aucun chunk au-delà de la cible + marge",
       all(len(c.text) <= 1400 for c in chunks), f"→ max {max(len(c.text) for c in chunks)}")
 check("positions croissantes", [c.start for c in chunks] == sorted(c.start for c in chunks))
 check("fin du document couverte", chunks[-1].end >= len(doc) - 5)
+
+print("\n8. classify_source_type — un cabinet d'études atteint le plancher de son champ (MSFT 2026-08-30)")
+# Régression : `marche.croissance_marche_historique` a un plancher abaissé à B, mais AUCUNE source ne
+# pouvait l'atteindre — les cabinets d'études tombaient en `web_search_generic` (C+/0.50). Le plancher
+# et la table de domaines doivent se rejoindre, sinon le champ est infondable quel que soit l'émetteur.
+_PLANCHER_MARCHE = FIELD_PLANCHER_OVERRIDES["marche.croissance_marche_historique"]
+for dom in ("srgresearch.com", "canalys.com", "gartner.com", "idc.com", "techinsights.com"):
+    st = classify_source_type(f"https://www.{dom}/articles/cloud-market-q2-2026")
+    score, tier, _ = compute_reliability(st, entry_type="fact_qualitative")
+    check(f"{dom} → {st} ({tier}) ≥ plancher {_PLANCHER_MARCHE}",
+          st == "web_search_reputable" and _tier_ge(tier, _PLANCHER_MARCHE),
+          f"→ {st}/{tier}/{score}")
+check("un blog quelconque reste generic (la liste n'est pas un passe-droit)",
+      classify_source_type("https://cloudblogexample.io/2026/cloud-market") == "web_search_generic")
+check("la presse financière garde la priorité sur la liste réputée",
+      classify_source_type("https://www.reuters.com/technology/cloud") == "financial_press")
+check("un dépôt EDGAR reste au-dessus de tout", classify_source_type(EDGAR) == "edgar_official")
 
 print(f"\n{'='*60}\n{ok} OK / {fail} KO")
 sys.exit(1 if fail else 0)

@@ -13,6 +13,7 @@ from app.contracts import GroundedSynthesis, SynthesisClaim
 from app.knowledge.synthesis_feed import (
     CITABLE_TIERS,
     SYNTHESIS_TARGETS,
+    _synthesis_task_message,
     build_content_structured,
     derive_synthesis_reliability,
     validate_grounding,
@@ -111,6 +112,31 @@ check("CITABLE_TIERS = A/A-/B+ (≥ plancher B+)", set(CITABLE_TIERS) == {"A", "
 for fp, tgt in SYNTHESIS_TARGETS.items():
     check(f"{fp} : entry_type=analysis, min_citations≥2", tgt.entry_type == "analysis" and tgt.min_citations >= 2)
     check(f"{fp} : field_path cohérent avec la clé", tgt.field_path == fp)
+
+print("\n7. Descripteurs AGNOSTIQUES de l'emetteur (regression MSFT 2026-08-30)")
+# Le trou : les cibles se disaient generiques mais leurs query/guidance etaient redigees pour
+# NVIDIA. Sur un autre emetteur, la requete semantique cherchait le mauvais vocabulaire et la
+# consigne demandait de synthetiser une AUTRE entreprise que celle analysee.
+_EMETTEURS = ("nvidia", "nvda", "cuda", "nvlink", "blackwell", "rubin", "tsmc", "huawei",
+              "hyperscaler", "microsoft", "msft", "azure", "amd")
+for fp, tgt in SYNTHESIS_TARGETS.items():
+    for texte, quoi in ((tgt.query, "query"), (tgt.guidance, "guidance")):
+        fautes = [m for m in _EMETTEURS if m in texte.lower()]
+        check(f"{fp} : {quoi} sans nom d'emetteur code en dur", not fautes, f"-> {fautes}")
+    check(f"{fp} : query parametree par {{company}}", "{company}" in tgt.query)
+    check(f"{fp} : guidance parametree par {{company}}", "{company}" in tgt.guidance)
+
+# resolve() specialise sans laisser fuiter de placeholder.
+tgt = SYNTHESIS_TARGETS["business_model.description"]
+q_msft, g_msft = tgt.resolve("MSFT")
+q_nvda, g_nvda = tgt.resolve("NVDA")
+check("resolve injecte l'emetteur dans la query", "MSFT" in q_msft and "NVDA" in q_nvda)
+check("resolve injecte l'emetteur dans la guidance", "MSFT" in g_msft and "NVDA" in g_nvda)
+check("aucun placeholder residuel", "{company}" not in q_msft and "{company}" not in g_msft)
+check("deux emetteurs -> deux consignes distinctes", g_msft != g_nvda)
+check("le message de tache porte la guidance resolue",
+      "MSFT" in _synthesis_task_message(tgt, "#1 v1 [A] fact — x", g_msft))
+
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

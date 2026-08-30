@@ -113,6 +113,7 @@ _TICKER_MAP = {
     "google": "GOOGL", "alphabet": "GOOGL", "gcp": "GOOGL",
     "apple": "AAPL",
     "meta": "META", "facebook": "META",
+    "microsoft": "MSFT", "azure": "MSFT",
     "nvidia": "NVDA",
     "salesforce": "CRM",
     "oracle": "ORCL",

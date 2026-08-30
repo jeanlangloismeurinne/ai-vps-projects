@@ -342,6 +342,56 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     les RESSERRER (ajouter un champ, relever un plancher) mais jamais les desserrer. Une entry non
     taguée ne fonde plus rien — elle reste dans le corpus narratif et le context_pack.
 
+30. **Le concept XBRL se choisit par FRAÎCHEUR, jamais par convention (V2, `knowledge/edgar_feed.py`)** :
+    un concept us-gaap répond `200` avec un historique qui s'est **arrêté il y a quinze ans** — la
+    requête réussit, la donnée est périmée, et rien ne le signale. Mesuré : `Revenues` pour MSFT a
+    pour dernier point **2010-06-30** quand `RevenueFromContractWithCustomerExcludingAssessedTax`
+    va jusqu'à 2026-06-30 ; `PaymentsToAcquirePropertyPlantAndEquipment` s'arrête en **2012-01-29**
+    pour NVDA quand `PaymentsToAcquireProductiveAssets` est à jour. Le « piège capex NVDA » qui
+    était documenté comme un cas particulier était en fait cette règle générale. Donc : chaque poste
+    porte une LISTE de concepts candidats et `select_concept()` retient celui dont le point est le
+    plus proche de l'ancre du bilan — « le premier tag qui répond » est un bug silencieux. Corollaire
+    d'amorçage : `resolve_cik()` (registre `company_tickers.json` de la SEC) rend le socle EDGAR
+    atteignable pour **tout** ticker, là où `financials` n'était fondable que via le seed NVDA écrit
+    à la main. Les faits EDGAR bruts ne sont délibérément PAS tagués `covers` : ce sont les intrants
+    des ratios, pas les champs MVDD eux-mêmes (cf. #29).
+
+31. **Ce qui décrit UN émetteur ne vit jamais dans une constante globale (V2)** : trouvé en exerçant
+    la chaîne sur un 2ᵉ ticker (MSFT, 2026-08-30) — deux mécanismes se croyaient génériques alors que
+    seule leur *mécanique* l'était. (a) `curator.DECLARED_NONBLOCKING_GAPS` dispensait
+    `business_model.recurrence_pct` pour *tout* ticker au motif que « NVIDIA est un business
+    hardware-dominant » : MSFT héritait donc en silence d'un passe-droit sur un champ qu'il publie
+    précisément (Microsoft Cloud, RPO), le champ n'était **ni fondé ni compté comme manque**, et le
+    libellé parlant de NVIDIA partait dans les `incertitudes_investissables` de MSFT. (b) Les
+    `SYNTHESIS_TARGETS` annonçaient « génériques par construction » avec des `query`/`guidance`
+    rédigées pour NVIDIA (« segments Data Center Gaming », « coût par GPU », « écosystème CUDA »,
+    « TSMC/HBM ») : sur un autre émetteur, la requête sémantique cherchait le mauvais vocabulaire et
+    la consigne demandait de synthétiser une entreprise qui n'est pas celle analysée — dans le seul
+    agent dont toute la valeur est de ne pas sortir de son corpus. Règle : une dispense se clef sur
+    l'émetteur (`nonblocking_gaps_for(ticker_id)`, défaut = **aucune**, donc le champ BLOQUE — on
+    refuse un `ready` de trop, on n'en accorde pas un par héritage) ; un descripteur de champ est un
+    gabarit paramétré par `{company}` et ne nomme aucun acteur, l'émetteur venant des entries citées.
+    Test de non-régression dans `check_readiness_recompute.py` §13 et `check_synthesis_feed.py` §7.
+    Plus largement : **une constante globale qui contient un fait sur un émetteur est un bug qui
+    attend le 2ᵉ ticker.**
+
+32. **Un plancher qu'aucun domaine ne peut atteindre est un champ infondable déguisé en lacune (V2)** :
+    `marche.croissance_marche_historique` avait DEUX aménagements construits pour lui —
+    `FIELD_PLANCHER_OVERRIDES` abaissant son plancher à `B` (une taille de marché n'est jamais une
+    donnée d'émetteur) et une dispense `DECLARED_NONBLOCKING_GAPS` sur NVDA. Aucun des deux ne pouvait
+    marcher : les cabinets qui produisent ces chiffres (Synergy, Canalys, Omdia, Gartner, IDC)
+    tombaient tous dans `web_search_generic` (C+/0.50), donc **sous** le plancher B (0.65) qu'on venait
+    d'abaisser pour eux. Mesuré sur MSFT le 2026-08-30 : deux mandats, 35 puis 15 URL rapportées,
+    recherche réelle, provenance vérifiée, `sous-plancher:5` puis `sous-plancher:3` — et un `not_found`
+    que le curator lit comme « ce chiffre n'existe pas » alors qu'il avait été trouvé cinq fois.
+    Le trou se bouche dans la **table de domaines** (`websearch._REPUTABLE_SUFFIXES`, plafond B : un
+    organisme qui publie SES PROPRES chiffres est primaire pour ce chiffre-là sans être une source
+    d'émetteur ni de presse), pas par une dispense de plus. Corollaire de méthode : quand on abaisse un
+    plancher, **vérifier dans la foulée qu'au moins un `source_type` l'atteint** — deux garde-fous
+    réglés séparément peuvent rendre un champ inatteignable, et l'échec se présente alors comme une
+    absence de donnée. Test : `check_provenance.py` §8, qui confronte la table de domaines au plancher
+    effectif du champ au lieu de les tester chacun de son côté.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

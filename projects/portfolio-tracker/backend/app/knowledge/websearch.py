@@ -91,7 +91,21 @@ _PRESS_DOMAINS = {
     "marketwatch.com", "morningstar.com", "seekingalpha.com", "fool.com",
 }
 # Un domaine « réputé » sans être de la presse financière primaire : plafond B (0.65).
-_REPUTABLE_SUFFIXES = ("nvidia.com", "arxiv.org", "iea.org", "oecd.org", "worldbank.org")
+# Deux familles y cohabitent, pour la même raison : un organisme qui publie SES PROPRES chiffres est
+# primaire pour ce chiffre-là, sans être pour autant une source d'émetteur ni de presse financière.
+# Les cabinets d'études de marché (2ᵉ ligne) sont ajoutés le 2026-08-30 : sans eux,
+# `marche.croissance_marche_historique` était structurellement infondable. Son plancher avait déjà été
+# abaissé à B (`curator.FIELD_PLANCHER_OVERRIDES`), reconnaissant qu'une taille de marché n'est jamais
+# une donnée d'émetteur — mais AUCUNE source ne pouvait atteindre ce B, faute d'être classée ici : sur
+# MSFT, deux mandats ont rapporté 35 puis 15 URL (Synergy, Canalys, Omdia) et tout est tombé
+# sous-plancher en `web_search_generic` (0.50). Le plancher B était la bonne idée appliquée à une table
+# incapable de produire un B ; c'est ici que le trou se bouche, pas par une dispense par émetteur.
+# B est le bon plafond et pas davantage : ce sont des ESTIMATIONS, l'analyste doit le lire dans le tier.
+_REPUTABLE_SUFFIXES = (
+    "nvidia.com", "arxiv.org", "iea.org", "oecd.org", "worldbank.org",
+    "srgresearch.com", "canalys.com", "gartner.com", "idc.com",
+    "omdia.tech.informa.com", "counterpointresearch.com", "techinsights.com",
+)
 _IR_HOST_PATTERN = re.compile(r"^(ir|investor|investors|investorrelations)\.", re.IGNORECASE)
 
 
