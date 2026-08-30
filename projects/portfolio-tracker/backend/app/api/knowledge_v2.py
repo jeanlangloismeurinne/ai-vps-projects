@@ -21,6 +21,7 @@ from app.contracts import OutputSchema, WorkerRequest
 from app.contracts.worker_delegation_schema import EntryType, Requester
 from app.db.database import get_db_session
 from app.knowledge.base_rate_corpus import BaseRateUnavailable, run_base_rate_anchor
+from app.knowledge.edgar_feed import EdgarFeedUnavailable, run_edgar_feed
 from app.knowledge.financials_feed import FinancialsUnavailable, run_financials_feed
 from app.knowledge.synthesis_feed import (
     SYNTHESIS_TARGETS,
@@ -154,6 +155,38 @@ async def base_rate_anchor(ticker_id: str, body: ValuationFeedBody):
     except Exception as e:  # noqa: BLE001
         logger.exception("base-rate-anchor %s", ticker_id)
         raise HTTPException(status_code=502, detail=f"base-rate-anchor : {e}")
+    return result
+
+
+class EdgarFeedBody(BaseModel):
+    """Amorçage du socle EDGAR. Pas de `refresh` : le feed re-mesure toujours chez EDGAR et
+    supersede le fait de même poste/exercice s'il existe (idempotent par construction)."""
+    persist: bool = True
+
+
+@router.post("/tickers/{ticker_id}/knowledge/edgar-refresh")
+async def edgar_refresh(ticker_id: str, body: EdgarFeedBody):
+    """Amorce le SOCLE EDGAR : 8 postes comptables bruts (CA, résultat net, marge brute, OCF,
+    capitaux propres, total actif, capex, trésorerie/dette LT) mesurés chez EDGAR → entries
+    `fact_financial` tier A.
+
+    **À lancer AVANT `financials-refresh`** sur tout ticker au corpus vide : les ratios y sont
+    DÉRIVÉS de ces faits, et le CIK du capex est relu depuis leur `source_url`. Sans ce socle, la
+    dimension `financials` (plancher tier A) reste non fondable et le ticker ne peut jamais devenir
+    `ready` — c'était le cas de tous les tickers sauf NVDA, dont le socle venait d'un seed manuel.
+
+    Couverture partielle possible : un poste qu'EDGAR ne porte pas reste **absent** (listé dans
+    `unfounded`), jamais estimé (#25).
+
+    `EdgarFeedUnavailable` (ticker sans symbole, symbole absent du registre SEC, pas d'ancrage de
+    bilan) → **422**."""
+    try:
+        result = await run_edgar_feed(ticker_id, persist=body.persist)
+    except EdgarFeedUnavailable as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("edgar-refresh %s", ticker_id)
+        raise HTTPException(status_code=502, detail=f"edgar-feed : {e}")
     return result
 
 
