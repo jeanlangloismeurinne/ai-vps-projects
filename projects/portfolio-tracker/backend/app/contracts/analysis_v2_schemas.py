@@ -84,7 +84,7 @@ class Scenarios(Strict):
 
 
 class ReverseDcf(Strict):
-    croissance_implicite_prix_actuel_pct: float
+    croissance_implicite_prix_actuel_pct: Optional[float] = None  # modèle omet parfois le numérique
     verdict: str
 
 
@@ -265,6 +265,7 @@ class Assumptions(Strict):
     croissance_revenue: float
     expansion_marge_fcf: float
     multiple_sortie: float
+    taux_actualisation: Optional[float] = None  # modèle ajoute parfois ce champ extra
 
 
 class ValorisationCote(Strict):
