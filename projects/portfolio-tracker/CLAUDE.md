@@ -159,8 +159,10 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 001 → 024. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support PE/VC. Migration 018 = `tickers.ticker_symbol`. Migration 019 = `calendar_events.brief_triggered` + `monitoring_sessions.calendar_event_id`. Migration 020 = `portfolio_settings.dust_auto_enabled` + statut `pending_manual`. Migrations 021/022 = mise à jour prompt monitoring-agent en DB. Migration 023 = `portfolio_positions.purchase_price_eur`. **Migration 024 = V2 Knowledge Platform (socle couche 3)** : `knowledge_documents`, `knowledge_entries` versionnées/append-only (A1), `analysis_knowledge_refs` (snapshot figé A1/A2), `eu_ir_scrapers`, `knowledge_curator_reports` (mvdd|readiness|lint), extension pgvector + index HNSW, vue `knowledge_federation_export` (enveloppe commune). Seed NVDA cas-pilote : `db/seeds/nvda_v2_knowledge_seed.sql` (10 fact_financial Tier A EDGAR + 5 qualitatifs llm_memory → readiness `thin_qualitative`).
 **Migration 025 = V2 Agents / Provider (socle couche 2)** : `agent_prompts` += `provider` (`dust`|`deepinfra`), `model`, `tools_json` (JSONB), **`flow_version`** (`v1`|`v2`) ; unicité passée à `(agent_name, flow_version)`. Insert des **12 agents V2** (flow_version='v2', provider='deepinfra', modèle unifié `deepseek-ai/DeepSeek-V4-Flash-0731`, prompts = préambule + corps de `roadmap/provenance-cards/prompts/`). Générateur reproductible `db/migrations/_gen_025.py`. `tools_json` (web_search/fetch_url/query_knowledge) sur `search-worker` uniquement.
 **Migration 027 = V2 Embeddings** : `knowledge_entries.embedding` passe de `vector(768)` à **`vector(1024)`** (modèle `BAAI/bge-m3`, multilingue, via DeepInfra `/v1/openai/embeddings`), index HNSW reconstruit en `vector_cosine_ops` (opérateur `<=>` inchangé) + index **partiel** `idx_knowledge_entries_unembedded` sur `embedding IS NULL`. Motif : le corpus est en **français** et `bge-base-en-v1.5` (anglais seul) ratait les entrées financières EDGAR Tier A — bench sur corpus réel, hit@3 4/7 contre 7/7. Justification chiffrée dans l'en-tête de la migration et dans `roadmap/provenance-cards/00-REPRISE.md`.
-**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait) → **028** theses_flow, **029** exit/calibration.
-Prochaine migration : `028_v2_theses_flow.sql`.
+**Migration 028 = `knowledge_entries.covers`** : le champ MVDD que l'entry fonde (pertinence du contenu au gate, pas seulement le tier).
+**Migration 029 = `covers` en `TEXT[]` + chemins COMPLETS + index GIN** : une entry fonde plusieurs champs (#19 en porte 3), et `description` étant requis par `business_model` ET `produits`, un nom nu ferait passer l'autre. Backfill relu des 17 entries qualitatives legacy NVDA (#19-#35), que le search-worker n'avait jamais taguées. C'est l'index que le curator interroge désormais pour rendre son verdict — cf. convention #29.
+**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait) → **030** theses_flow, **031** exit/calibration.
+Prochaine migration : `030_v2_theses_flow.sql`.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -322,6 +324,23 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     (`_cited_documents` : 10-K, 10-Q, 8-K, 20-F, DEF 14A…) sous un seul `source_url` attribue à l'un
     les propos de l'autre — elle entre (la base est append-only, G3 interdit de réécrire son contenu)
     mais marquée `requires_human_review` avec le motif dans `reliability_note`.
+29. **La couverture se LIT dans un index, elle ne se demande pas au modèle (V2, migration 029)** :
+    `curator.recompute_coverage` interroge `knowledge_entries.covers` (`TEXT[]`, chemins COMPLETS
+    `dimension.champ`) — pour chaque champ requis, ∃ une entry courante qui le porte à un tier ≥
+    plancher. Le LLM ne produit plus que le narratif (`rationale`, `gaps`, incertitudes) ;
+    `fondations` est RÉÉCRIT depuis l'index. Motif : la version précédente filtrait les `entry_ids`
+    que le LLM avait CITÉS — un véto sur la citation, pas un index. Elle fermait le sur-crédit (entry
+    hors-sujet) mais pas le sous-crédit : une entry adéquate non citée creusait un **faux creux**, et
+    le rattachement par-champ n'étant pas déterministe, le verdict oscillait `not_ready` ↔
+    `thin_qualitative` **à corpus strictement figé** (NVDA, rapports #11/#13/#14, données
+    identiques). Trois corollaires : (a) le chemin est COMPLET parce que `description` est requis par
+    `business_model` ET `produits` — un nom nu ferait passer l'autre ; (b) poser un tag, c'est voter
+    sur le verdict, donc `covers` n'est écrit que par des chemins déterministes (feeds, `field_path`
+    du mandat du worker, backfill relu en migration) et la déclaration spontanée d'un modèle est
+    filtrée par le vocabulaire fermé `MVDD_FIELD_PATHS` (même esprit que #24) ; (c) `champs_requis`
+    et `tier_plancher` étant le dernier levier du modèle sur le verdict, `_exigences()` lui laisse
+    les RESSERRER (ajouter un champ, relever un plancher) mais jamais les desserrer. Une entry non
+    taguée ne fonde plus rien — elle reste dans le corpus narratif et le context_pack.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -33,6 +33,14 @@ MVDD_SPEC: list[dict[str, Any]] = [
      "champs_requis": ["risques_cles"], "tier_plancher": "B"},
 ]
 
+# Chemins complets `dimension.champ` de tous les champs requis — vocabulaire FERMÉ de l'index
+# `covers` (migration 029). Sert à filtrer ce qu'un modèle propose comme tag : depuis que la
+# couverture est pilotée par l'index, un tag est un vote sur le verdict (cf. #24, même esprit que
+# source_type). Un tag hors vocabulaire ne fonde rien — il est écarté, pas inventé.
+MVDD_FIELD_PATHS: frozenset[str] = frozenset(
+    f"{s['dimension']}.{champ}" for s in MVDD_SPEC for champ in s["champs_requis"]
+)
+
 # ordre de tri des tiers (meilleur → moins bon) pour comparaisons de plancher
 TIER_ORDER = ["A", "A-", "B+", "B", "B-", "C+", "C"]
 _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}
@@ -76,6 +84,13 @@ def format_entries_for_prompt(entries: Sequence[dict[str, Any]], *, content_limi
         if e.get("fiscal_period"):
             meta += f" · {e['fiscal_period']}"
         flag = " ⚠review" if e.get("requires_human_review") else ""
+        covers = e.get("covers")
+        if isinstance(covers, str):
+            covers = [covers]
+        if covers:
+            # Rend l'index VISIBLE au modèle : il n'en dérive plus la couverture (c'est le backend),
+            # mais il écrit les gaps — voir quels champs sont déjà tenus lui évite d'en réclamer.
+            meta += " · couvre " + ",".join(sorted(covers))
         title = f"{e['title']} — " if e.get("title") else ""
         body = _truncate(e.get("content", ""), content_limit)
         lines.append(f"#{e['id']} v{e.get('version',1)} [{meta}]{flag} {e.get('entry_type','')}: {title}{body}")

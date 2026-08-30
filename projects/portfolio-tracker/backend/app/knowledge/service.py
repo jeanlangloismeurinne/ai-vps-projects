@@ -127,7 +127,7 @@ async def store_knowledge(
     embedding: Optional[Sequence[float]] = None,
     requires_human_review: bool = False,
     derived_reliability: Optional[tuple[float, str, str]] = None,
-    covers: Optional[str] = None,
+    covers: Optional[Sequence[str]] = None,
 ) -> dict[str, Any]:
     """Crée une knowledge_entry. Le score/tier sont CALCULÉS (§6.3), jamais fournis par l'appelant.
 
@@ -139,6 +139,12 @@ async def store_knowledge(
     un cran sous la plus faible entry citée). Ce n'est PAS l'agent qui déclare son score (#24) : c'est
     un calcul Python à partir de tiers vérifiés en base. Le `note` DOIT expliquer la dérivation.
     `requires_human_review=True` force le flag (en plus des source_types qui l'exigent d'office, P2).
+
+    `covers` = les champs MVDD que l'entry fonde, en CHEMINS COMPLETS (`business_model.drivers_revenus`) :
+    `description` est un champ requis de deux dimensions, un nom nu ferait passer l'autre. C'est l'INDEX
+    de couverture que le curator interroge pour rendre son verdict (029) — il doit donc venir d'un
+    chemin déterministe (feed, mandat du worker, backfill relu), jamais d'une déclaration libre du
+    modèle (#24). `None` = l'entry ne fonde aucun champ requis ; elle reste dans le corpus narratif.
 
     Embedding : calculé ICI par défaut (`embed=True`) pour qu'une entrée naisse immédiatement
     trouvable — sinon le backlog d'entrées `embedding IS NULL` grossit et l'anti-doublon du
@@ -198,7 +204,7 @@ async def store_knowledge(
         ticker_id, document_id, entry_type, title, content, content_structured,
         list(tags or []), lang, source_type, source_url, source_date, fiscal_period,
         score, tier, note, has_conflict, conflict_entry_id, requires_review, model_cutoff, version,
-        vec_literal, covers,
+        vec_literal, list(covers) if covers else None,
     )
 
     if supersedes_entry_id is not None:

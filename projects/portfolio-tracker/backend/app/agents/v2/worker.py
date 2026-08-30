@@ -61,6 +61,7 @@ from app.contracts import (
 from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
+from .common import MVDD_FIELD_PATHS
 from .runner import run_tool_json_agent
 from .tools import RetrievalLog, build_tool_executors
 
@@ -118,6 +119,23 @@ def _resolve_source_type(declared: Any, url: Optional[str]) -> str:
     if declared == "llm_memory":
         return "llm_memory"
     return classify_source_type(url)
+
+
+def _resolve_covers(mandat: Optional[str], declare: Any) -> Optional[str]:
+    """Champ MVDD couvert par l'entry : le MANDAT fait foi, la déclaration du modèle est filtrée.
+
+    Depuis la 029, `covers` est l'index que le curator interroge pour rendre son verdict — poser un
+    tag, c'est voter sur la readiness. Même raisonnement que `_resolve_source_type` (#24) : ce qui
+    vient d'un chemin déterministe (le `field_path` du mandat, décidé par l'appelant) est retenu tel
+    quel ; ce que le modèle propose spontanément n'est retenu que s'il appartient au vocabulaire
+    FERMÉ des champs requis. Un tag hors vocabulaire ne fonde aucun champ : on l'écarte plutôt que
+    de laisser une chaîne libre s'installer dans un index dont dépend le gate.
+    """
+    if mandat:
+        return mandat
+    if isinstance(declare, str) and declare.strip() in MVDD_FIELD_PATHS:
+        return declare.strip()
+    return None
 
 
 def _verify_provenance(url: Optional[str], log: Optional[RetrievalLog]) -> tuple[bool, Optional[str]]:
@@ -248,7 +266,7 @@ def _normalise_entry(
         "reliability_note": note,
         "requires_human_review": bool(raw.get("requires_human_review")) or bool(caveats),
         "model_cutoff": raw.get("model_cutoff"),
-        "covers": req.output_schema.field_path or raw.get("covers"),
+        "covers": _resolve_covers(req.output_schema.field_path, raw.get("covers")),
         "question_status": raw.get("question_status"),
     }
 
@@ -447,7 +465,9 @@ async def persist_worker_entries(
             source_date=_parse_iso_date(entry.source_date),
             fiscal_period=entry.fiscal_period,
             model_cutoff=entry.model_cutoff,
-            covers=(entry.covers.split(".")[-1] if entry.covers else None),
+            # 029 : l'index porte le CHEMIN COMPLET (`produits.description`), plus le nom nu —
+            # `description` est requis par deux dimensions, un nom nu ferait passer l'autre.
+            covers=([entry.covers] if entry.covers else None),
         )
         created.append(dict(row))
     logger.info(

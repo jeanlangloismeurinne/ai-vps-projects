@@ -61,54 +61,96 @@ def _best_tier(tiers: list[str]) -> Optional[str]:
     return min(valides, key=lambda t: _TIER_RANK[t]) if valides else None
 
 
-def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
-    """Option C — recompute déterministe de la couverture par dimension.
+_MVDD_BY_DIM = {s["dimension"]: s for s in MVDD_SPEC}
 
-    Le LLM a PROPOSÉ, par champ requis fondé, les `entry_ids` qui le fondent (`fondations`). Ici le
-    backend DISPOSE : pour chaque champ, il ne le tient pour fondé QUE si ≥1 entry citée existe en
-    base à un tier RÉEL ≥ plancher DU CHAMP (dimension, sauf override). Le LLM ne peut donc plus faire
-    passer un champ sous-doté (bug observé : #54 tier B compté pour un champ B+). Pur, sans IO.
+
+def _exigences(dimension: Optional[str], d: dict[str, Any]) -> tuple[list[str], str]:
+    """Champs requis + tier plancher d'une dimension : le LLM peut RESSERRER, jamais DESSERRER.
+
+    Le cadre MVDD est le plancher d'exigence (`common.MVDD_SPEC`) ; l'agent peut l'affiner au cas
+    d'espèce — ajouter un champ requis, relever le plancher. Mais une fois la couverture pilotée par
+    l'index, `champs_requis` et `tier_plancher` sont le DERNIER levier du modèle sur le verdict :
+    retirer `recurrence_pct` des requis, ou passer un plancher de A à B, ferait passer la dimension
+    sans qu'aucune entry ne bouge. On prend donc l'union des champs et le plus STRICT des planchers.
     """
-    tier_by_id = {e["id"]: e.get("reliability_tier") for e in entries}
-    covers_by_id = {e["id"]: e.get("covers") for e in entries}
+    spec = _MVDD_BY_DIM.get(dimension or "", {})
+    socle: list[str] = list(spec.get("champs_requis") or [])
+    proposes = [c for c in (d.get("champs_requis") or []) if isinstance(c, str)]
+    requis = socle + sorted(set(proposes) - set(socle))   # ordre stable : socle MVDD, puis ajouts
+
+    candidats = [t for t in (spec.get("tier_plancher"), d.get("tier_plancher")) if t in _TIER_RANK]
+    plancher = min(candidats, key=lambda t: _TIER_RANK[t]) if candidats else "B"
+    return (requis or ["description"]), plancher
+
+
+def _covers_index(entries: list[dict[str, Any]]) -> dict[str, list[tuple[int, str]]]:
+    """`dimension.champ` → [(entry_id, tier)] — l'INDEX de couverture, bâti depuis la BASE.
+
+    Une entry annonce ses champs via `covers` (chemins complets, migration 029), écrit par les
+    chemins déterministes (feeds, mandat du worker, backfill relu). Trié par id pour un rapport
+    stable. Tolérant à la forme : une entry pré-029 peut encore porter une chaîne nue.
+    """
+    index: dict[str, list[tuple[int, str]]] = {}
+    for e in sorted(entries, key=lambda x: x["id"]):
+        covers = e.get("covers")
+        if isinstance(covers, str):          # tolérance pré-029 (colonne encore TEXT)
+            covers = [covers]
+        tier = e.get("reliability_tier")
+        for path in covers or []:
+            if isinstance(path, str) and tier:
+                index.setdefault(path, []).append((e["id"], tier))
+    return index
+
+
+def recompute_coverage(coverage: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Recompute déterministe de la couverture — depuis l'INDEX `covers`, pas depuis le LLM (029).
+
+    Chaque champ requis est fondé si et seulement si la BASE contient ≥1 entry courante qui le PORTE
+    (`covers` contient `dimension.champ`) à un tier RÉEL ≥ plancher DU CHAMP. Le LLM n'intervient plus
+    du tout : ni pour proposer, ni pour omettre.
+
+    Ce que ça corrige (mesuré sur NVDA, corpus STRICTEMENT figé) : l'ancienne version filtrait les
+    `entry_ids` que le LLM avait CITÉS — un véto sur la citation, pas un index. Elle fermait le trou
+    de SUR-crédit (entry hors-sujet) mais pas celui de SOUS-crédit : une entry adéquate NON citée
+    créait un faux creux, et le rattachement par-champ n'étant pas déterministe, le verdict oscillait
+    `not_ready` ↔ `thin_qualitative` sur des données identiques (rapports #11/#13/#14).
+
+    `fondations` est RÉÉCRIT depuis l'index : le rapport montre ce qui fonde réellement chaque champ,
+    et non ce que le modèle a bien voulu citer. Pur, sans IO.
+    """
+    index = _covers_index(entries)
     for bloc_name in ("structuree", "qualitative_marche"):
         bloc = coverage.get(bloc_name) or {}
         for d in bloc.get("dimensions") or []:
             if not isinstance(d, dict):
                 continue
             dim = d.get("dimension")
-            dim_plancher = d.get("tier_plancher")
-            requis = d.get("champs_requis") or []
-            # La sortie LLM est NON fiable (#24) : `fondations` peut arriver malformée (liste de
-            # chaînes, ids non entiers…). On parse défensivement — jamais de crash sur la forme du
-            # modèle ; un élément malformé = champ simplement non fondé.
-            fond: dict[str, list[int]] = {}
-            for g in d.get("fondations") or []:
-                if not isinstance(g, dict):
-                    continue
-                champ = g.get("champ")
-                ids = g.get("entry_ids")
-                if isinstance(champ, str) and isinstance(ids, list):
-                    fond[champ] = [i for i in ids if isinstance(i, int)]
+            requis, dim_plancher = _exigences(dim, d)
+            d["champs_requis"] = requis
+            d["tier_plancher"] = dim_plancher
             non_fondables: list[str] = []
-            all_cited_tiers: list[str] = []
+            fondations: list[dict[str, Any]] = []
+            tiers_retenus: list[str] = []
             for champ in requis:
                 # Lacune déclarée non-bloquante : ni fondée, ni comptée comme manque (portée en
                 # incertitude investissable par _apply_deterministic_overrides).
                 if f"{dim}.{champ}" in DECLARED_NONBLOCKING_GAPS:
                     continue
                 plancher = _plancher_for(dim, champ, dim_plancher)
-                ids = fond.get(champ) or []
-                # Une entry ne COMPTE pour ce champ que si (a) elle existe, (b) son tier réel ≥
-                # plancher, ET (c) elle PORTE ce champ : covers==champ, ou covers absent (entry legacy
-                # non taguée → fallback tier-only). Bloque une citation au bon tier mais hors-sujet.
-                relevant = [tier_by_id[i] for i in ids
-                            if tier_by_id.get(i) and covers_by_id.get(i) in (None, champ)]
-                all_cited_tiers.extend(relevant)
-                if not any(_tier_ge(t, plancher) for t in relevant):
+                # Seules comptent les entries qui PORTENT le champ ET tiennent son plancher. Une
+                # entry sous plancher n'est pas une fondation partielle : elle ne compte pas du tout.
+                retenues = [(i, t) for i, t in index.get(f"{dim}.{champ}", [])
+                            if _tier_ge(t, plancher)]
+                if retenues:
+                    fondations.append({"champ": champ, "entry_ids": [i for i, _ in retenues]})
+                    tiers_retenus.extend(t for _, t in retenues)
+                else:
                     non_fondables.append(champ)
+            d["fondations"] = fondations
             d["champs_non_fondables"] = non_fondables
-            d["tier_atteint"] = _best_tier(all_cited_tiers)
+            # tier_atteint = le meilleur tier parmi ce qui fonde VRAIMENT la dimension (une entry
+            # écartée ne peut pas rehausser le tier affiché : ce serait un tier de façade).
+            d["tier_atteint"] = _best_tier(tiers_retenus)
             d["ok"] = len(non_fondables) == 0
         bloc["bloc_ok"] = bool(bloc.get("dimensions")) and all(x["ok"] for x in bloc["dimensions"])
         coverage[bloc_name] = bloc
@@ -163,16 +205,18 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
         f"{spec}\n\n"
         f"knowledge_entries COURANTES de la KB ({len(entries)}) — cite-les par entry_id :\n"
         f"{listing}\n\n"
-        f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict). Pour CHAQUE "
-        f"dimension, remplis `fondations` EXACTEMENT sous cette forme (liste d'objets, jamais de "
-        f'chaînes) : "fondations": [{{"champ": "roic_pct", "entry_ids": [50, 52]}}, '
-        f'{{"champ": "levier", "entry_ids": [49]}}] — un objet par champ requis que la KB fonde, avec '
-        f"les `entry_ids` (#id du listing) qui le fondent ; cite UNIQUEMENT des entries réelles du "
-        f"listing, celles qui portent VRAIMENT ce champ. Le backend VÉRIFIE ensuite en Python que "
-        f"chaque entry citée existe à un tier ≥ plancher du champ, et en DÉRIVE champs_non_fondables, "
-        f"tier_atteint, ok, les gaps et le verdict — ne triche pas sur le tier, tu ne peux pas faire "
-        f"passer un champ sous-doté. Émets quand même un gap par champ que tu sais non fondé, "
-        f"conviction/marge_securite = null, et ne mets pas context_pack_entry_id (backend)."
+        f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict).\n\n"
+        f"⚠️ La COUVERTURE ne t'appartient pas. Le backend la recompute en Python depuis l'index "
+        f"`covers` de la base (quelles entries portent quel champ, à quel tier réel) : `fondations`, "
+        f"`champs_non_fondables`, `tier_atteint`, `ok`, `bloc_ok`, les gaps et le verdict sont "
+        f"DÉRIVÉS et écraseront ce que tu écris. Tu ne peux ni faire passer un champ, ni en creuser "
+        f"un : laisse `fondations` à [] et ne cherche pas à deviner ce qui est fondé.\n\n"
+        f"Ce qui est VRAIMENT attendu de toi, et que le code ne sait pas produire : le `rationale` "
+        f"(lecture d'ensemble du dossier), les `gaps` (ce qui manque, avec des `queries_suggerees` "
+        f"actionnables), les `incertitudes_investissables` et `qualite_info`. Reprends les 8 "
+        f"dimensions du cadre MVDD ci-dessus avec leurs `champs_requis` et `tier_plancher` (tu peux "
+        f"les RESSERRER si le cas d'espèce l'exige — ajouter un champ requis, relever un plancher — "
+        f"jamais les assouplir). conviction/marge_securite = null, pas de context_pack_entry_id."
     )
 
 
@@ -195,9 +239,9 @@ def _declare_nonblocking_gaps(report: dict[str, Any], coverage: dict[str, Any]) 
 
 def _apply_deterministic_overrides(report: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
     """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict) — jamais
-    confié au LLM. Option C : la couverture par champ est recalculée depuis les tiers RÉELS des entries
-    citées dans `fondations` vs le plancher par champ (recompute_coverage), puis les gaps sont
-    reconciliés pour tenir la bijection du contrat (reconcile_gaps)."""
+    confié au LLM. La couverture par champ est recalculée depuis l'INDEX `covers` de la base
+    (recompute_coverage, 029), puis les gaps sont reconciliés pour tenir la bijection du contrat
+    (reconcile_gaps). Le verdict devient donc une FONCTION du corpus : à corpus figé, il ne bouge plus."""
     report["entries_par_tier"] = count_tiers(entries)
 
     coverage = recompute_coverage(report.get("coverage") or {}, entries)
