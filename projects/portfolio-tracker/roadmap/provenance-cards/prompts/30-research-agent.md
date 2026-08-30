@@ -66,7 +66,7 @@ Structure attendue (voir §8.0 pour un exemple rempli) :
   "financials": { roic_pct, wacc_estime_pct, roic_vs_wacc, roic_trend_5y, fcf_conversion_pct, intensite_capex_pct, earnings_quality{score, accruals_flag, note}, levier{dette_nette_ebitda}, source_entry_refs[≥1] },
   "management": { capital_allocation_scorecard{ma, buybacks, dividendes, reinvestissement, note}, incitations, skin_in_game_pct, candeur, score(1-5), source_entry_refs[≥1] },
   "industry": { structure_5forces, croissance_marche_historique_pct, croissance_marche_prospective{taux_pct, base_rate}, cyclicite, disruption_vectors[], position_vs_pairs, source_entry_refs[≥1] },
-  "valuation": { dcf_scenarios{bear, base, bull, drivers{}}, epv{valeur_rentabilite, note}, reverse_dcf{croissance_implicite_prix_actuel_pct, verdict}, relatif{multiple, vs_historique, vs_pairs}, base_rate_anchor{reference_class, taux_base_pct, note?}, prix_actuel, iv_range[min,max], marge_securite_base_pct },
+  "valuation": { dcf_scenarios{bear, base, bull, drivers{}}, epv{valeur_rentabilite, note}, reverse_dcf{croissance_implicite_prix_actuel_pct(nombre %/an, OBLIGATOIRE), verdict}, relatif{multiple, vs_historique, vs_pairs}, base_rate_anchor{reference_class, taux_base_pct, note?}, prix_actuel, iv_range[min,max], marge_securite_base_pct },
   "incertitudes_bloquantes": [ { question, impact_si_non_resolu, statut, source_entry_refs[] } ],
   "incertitudes_investissables": [ { question, fourchette } ],
   "posture": "NEUTRE"
@@ -80,7 +80,13 @@ Structure attendue (voir §8.0 pour un exemple rempli) :
 3. **Grounding** : chaque bloc factuel a des `source_entry_refs` non vides ; les jugements (moat)
    sont adossés à des preuves sourcées.
 4. **Base-rates** partout où il y a une prévision chiffrée.
-5. **reverse_dcf toujours présent** ; horizon d'analyse long terme (la valorisation projette).
+5. **reverse_dcf toujours présent ET chiffré.** `croissance_implicite_prix_actuel_pct` est le
+   **taux de croissance (%/an) que le prix actuel price déjà** : tu l'obtiens en **inversant** le DCF
+   (la croissance qui rend `iv_base = prix_actuel`). C'est un **nombre obligatoire — jamais `null`,
+   jamais omis** : c'est *la* question du reverse-DCF (« que price le marché ? »), un objet
+   `reverse_dcf` sans ce chiffre ne répond à rien. Si tu ne peux pas la résoudre exactement, donne ta
+   **meilleure estimation chiffrée** et porte la réserve dans `verdict` — jamais un champ vide.
+   Horizon d'analyse long terme (la valorisation projette).
 6. **Filet mémoire** : si tu utilises une connaissance non sourcée, tu crées une entry `llm_memory`
    (0.40, `requires_human_review`, `model_cutoff`) via le mécanisme prévu — jamais un fait « nu ».
 7. **JSON strict uniquement.**

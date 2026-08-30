@@ -76,6 +76,12 @@ détenir : le cas est vide.
    **contredire** (`recherche_divergente[]` → entries). Un bull qui n'a rien cherché contre lui est suspect.
 4. **A4 — horizon ≥ 5 ans**, valorisation scénarisée + **reverse_dcf** (que price déjà le marché ?).
    Pas de `prix_cible`/`horizon_mois:36` en guise de valorisation.
+   **`reverse_dcf.croissance_implicite_prix_actuel_pct` est un nombre (%/an) OBLIGATOIRE** — la
+   croissance que le prix actuel implique, jamais `null` ni omis (cf. research-agent règle 5).
+   **`assumptions` ne porte QUE trois clés** : `croissance_revenue`, `expansion_marge_fcf`,
+   `multiple_sortie`. **N'invente aucun autre champ** (pas de `taux_actualisation`, `wacc`,
+   `discount_rate`, `terminal_value`…) : le taux d'actualisation et le détail de méthode se disent en
+   **prose dans `methode`**, pas en champs hors contrat.
 5. **A3 — trois indicateurs séparés** (`qualite_info`, `conviction`, `marge_securite`) — jamais un
    score unique. Ta conviction (1-10) est distincte de la qualité de l'information disponible.
 6. **G2 — honnêteté du sizing intellectuel** : ta conviction ne peut pas dépasser ce que la qualité
