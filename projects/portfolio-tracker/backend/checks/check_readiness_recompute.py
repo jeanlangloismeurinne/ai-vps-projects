@@ -107,14 +107,22 @@ check("entry non taguée absente de l'index",
 check("entry sans tier écartée", all(5 not in [i for i, _ in v] for v in idx.values()))
 
 print("\n5. recompute_coverage — le plancher mord")
-# structure_5forces fondé par une entry tier B (plancher B+) → DÉMOTÉ ;
-# croissance_marche_historique = lacune déclarée → ni fondée, ni comptée comme manque.
-cov = run([dim_cov("marche")], [entry(54, "B", ["marche.structure_5forces"], "agent_synthesis")])
+# Les DEUX champs de `marche` sont portés par une entry tier B, mais leurs planchers diffèrent :
+# structure_5forces est au plancher de dimension (B+) → DÉMOTÉ ; croissance bénéficie de l'override
+# à B → fondée. Même tier, deux sorts : c'est le plancher PAR CHAMP qu'on éprouve ici.
+cov = run([dim_cov("marche")], [
+    entry(54, "B", ["marche.structure_5forces"], "agent_synthesis"),
+    entry(55, "B", ["marche.croissance_marche_historique"], "web_search_reputable"),
+])
 md = cov["qualitative_marche"]["dimensions"][0]
-check("structure_5forces (B) DÉMOTÉ sous plancher B+", md["champs_non_fondables"] == ["structure_5forces"])
+check("structure_5forces (B) DÉMOTÉ sous plancher B+",
+      md["champs_non_fondables"] == ["structure_5forces"], f"→ {md['champs_non_fondables']}")
 check("dimension marche ok=False", md["ok"] is False)
-check("tier_atteint=None (rien ne fonde vraiment)", md["tier_atteint"] is None, f"→ {md['tier_atteint']}")
-check("fondations vides quand rien ne tient le plancher", md["fondations"] == [])
+check("tier_atteint reflète la seule fondation qui tient (B)",
+      md["tier_atteint"] == "B", f"→ {md['tier_atteint']}")
+check("seule la fondation au-dessus du plancher est retenue",
+      [f["champ"] for f in md["fondations"]] == ["croissance_marche_historique"],
+      f"→ {md['fondations']}")
 
 print("\n6. recompute_coverage — l'index DÉCOUVRE, il ne filtre plus des citations")
 # LE cas qui faisait osciller le verdict : le LLM ne cite RIEN (fondations=[]), mais une entry
@@ -158,34 +166,64 @@ r3, p3 = _exigences("risques", {})
 check("dimension sans proposition → socle MVDD", r3 == _SPEC["risques"]["champs_requis"] and p3 == "B")
 
 print("\n9. reconcile_gaps — bijection champs_non_fondables ↔ gaps")
-cov = run([dim_cov("marche")], [entry(54, "B", ["marche.structure_5forces"], "agent_synthesis")])
+# croissance est fondée à son plancher B (override) ; structure_5forces ne l'est pas (tier B < B+,
+# plancher de la dimension). Le gap proposé par le modèle vise les deux : il doit être raboté.
+cov = run([dim_cov("marche")], [
+    entry(54, "B", ["marche.structure_5forces"], "agent_synthesis"),
+    entry(55, "B", ["marche.croissance_marche_historique"], "web_search_reputable"),
+])
 report = {"gaps": [
     {"dimension": "marche", "champs_cibles": ["structure_5forces", "croissance_marche_historique"],
      "manque": "x", "queries_suggerees": [], "priorite": "haute", "coverage_actuelle": "B",
      "origine": "curator"}]}
 reconcile_gaps(report, cov)
 g = report["gaps"]
-check("gap raboté aux non-fondables réels (croissance = lacune déclarée, retirée)",
+check("gap raboté aux non-fondables réels (croissance est fondée à son plancher B)",
       len(g) == 1 and g[0]["champs_cibles"] == ["structure_5forces"], f"→ {g}")
 report2 = {"gaps": []}
 reconcile_gaps(report2, cov)
 check("gap synthétisé pour un non-fondable orphelin",
       any("structure_5forces" in x["champs_cibles"] for x in report2["gaps"]))
 
-print("\n10. Lacune déclarée non-bloquante — croissance_marche_historique")
-check("croissance enregistrée comme lacune déclarée pour NVDA",
-      "marche.croissance_marche_historique" in nonblocking_gaps_for("NVDA"))
+print("\n10. Dispense RETIRÉE — croissance_marche_historique se fonde désormais (2026-08-31)")
+# La dispense disait « aucune source accessible à un tier suffisant ». C'était vrai de la table de
+# domaines, pas du monde : depuis #32 les cabinets d'études sont `web_search_reputable` (plafond B),
+# soit exactement le plancher dégradé du champ. Le retrait ne DESSERRE rien — il rend le champ
+# bloquant, et c'est une entry réelle qui le fonde (NVDA 117-119 : Omdia, IDC, TechInsights).
+check("croissance n'est PLUS une lacune déclarée pour NVDA",
+      "marche.croissance_marche_historique" not in nonblocking_gaps_for("NVDA"))
+check("business_model.recurrence_pct reste dispensé (fait NVIDIA, lui, toujours vrai)",
+      "business_model.recurrence_pct" in nonblocking_gaps_for("NVDA"))
+
 cov9 = run([dim_cov("marche")], [entry(56, "A-", ["marche.structure_5forces"], "agent_synthesis")])
 md9 = cov9["qualitative_marche"]["dimensions"][0]
-check("croissance ABSENTE des non-fondables (skippée)",
-      "croissance_marche_historique" not in md9["champs_non_fondables"])
-check("marche ok=True malgré croissance introuvable", md9["ok"] is True, f"→ {md9}")
+check("croissance non portée → comptée comme non fondable (elle BLOQUE)",
+      "croissance_marche_historique" in md9["champs_non_fondables"], f"→ {md9}")
+check("marche ok=False tant qu'elle manque", md9["ok"] is False, f"→ {md9}")
+
+cov10 = run([dim_cov("marche")], [
+    entry(57, "A-", ["marche.structure_5forces"], "agent_synthesis"),
+    entry(58, "B", ["marche.croissance_marche_historique"], "web_search_reputable"),
+])
+md10 = cov10["qualitative_marche"]["dimensions"][0]
+check("un cabinet d'études tier B fonde croissance (plancher B par override)",
+      "croissance_marche_historique" not in md10["champs_non_fondables"], f"→ {md10}")
+check("marche ok=True une fois les deux champs fondés", md10["ok"] is True, f"→ {md10}")
+
+# Le plancher mord toujours : si C+ passait, le retrait de la dispense aurait desserré le gate au
+# lieu de le rendre exigeant.
+cov11 = run([dim_cov("marche")], [
+    entry(59, "A-", ["marche.structure_5forces"], "agent_synthesis"),
+    entry(60, "C+", ["marche.croissance_marche_historique"], "web_search_generic"),
+])
+check("une entry C+ ne fonde PAS croissance (le plancher B tient)",
+      "croissance_marche_historique"
+      in cov11["qualitative_marche"]["dimensions"][0]["champs_non_fondables"])
+
 rep9 = {"incertitudes_investissables": []}
 _declare_nonblocking_gaps(rep9, cov9, "NVDA")
-check("lacune portée en incertitude investissable VISIBLE",
-      any("croissance" in u["question"].lower() for u in rep9["incertitudes_investissables"]))
-_declare_nonblocking_gaps(rep9, cov9)
-check("dédup (pas de doublon d'incertitude)", len(rep9["incertitudes_investissables"]) == 1)
+check("plus aucune incertitude « croissance » déclarée (la dispense n'existe plus)",
+      not any("croissance" in u["question"].lower() for u in rep9["incertitudes_investissables"]))
 
 print("\n11. format_entries_for_prompt — l'index est visible au modèle")
 listing = format_entries_for_prompt([

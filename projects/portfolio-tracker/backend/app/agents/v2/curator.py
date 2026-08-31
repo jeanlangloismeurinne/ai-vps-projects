@@ -47,11 +47,17 @@ FIELD_PLANCHER_OVERRIDES: dict[str, str] = {
 # libellé NVDA partait tel quel dans les `incertitudes_investissables` de MSFT. Une dispense énonce
 # un fait sur UN émetteur : elle se clef sur lui. Défaut = AUCUNE dispense, donc le champ BLOQUE —
 # le sens sûr : on refuse un `ready` de trop, on n'en accorde pas un par héritage.
+#
+# RETRAIT 2026-08-31 — `NVDA / marche.croissance_marche_historique`. La dispense affirmait « aucune
+# source primaire/presse accessible à un tier suffisant » : c'était vrai de la TABLE DE DOMAINES, pas
+# du monde. La convention #32 a classé les cabinets d'études en `web_search_reputable` (plafond B),
+# ce qui rend enfin le champ atteignable à son plancher B (`FIELD_PLANCHER_OVERRIDES`) — les deux
+# garde-fous, réglés séparément, se contredisaient. Retiré sur PREUVE et non sur intuition : un
+# mandat NVDA a rendu 3 entries tier B (Omdia 0.630, IDC 0.605, TechInsights 0.602 — entries
+# 117-119), là où MSFT en avait déjà 3 (Synergy/Canalys, 109-111). Une dispense se retire quand on a
+# montré que le champ se fonde, jamais quand on estime qu'il devrait se fonder.
 DECLARED_NONBLOCKING_GAPS: dict[str, dict[str, str]] = {
     "NVDA": {
-        "marche.croissance_marche_historique":
-            "Croissance historique du marché des accélérateurs IA — non quantifiée (aucune source "
-            "primaire/presse accessible à un tier suffisant). Lacune déclarée, non bloquante.",
         "business_model.recurrence_pct":
             "Part des revenus récurrents (logiciels/abonnements) — non chiffrée dans les sources "
             "primaires disponibles. NVIDIA est un business hardware-dominant (quasi-totalité du CA "
