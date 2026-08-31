@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # LLM (DeepInfra, pattern réutilisé d'assistant-ia)
     DEEPINFRA_API_KEY: str = ""
     DEEPINFRA_API_BASE: str = "https://api.deepinfra.com/v1/openai"
-    DEEPINFRA_MODEL: str = "deepseek-ai/DeepSeek-V4-Flash"
+    DEEPINFRA_MODEL: str = "deepseek-ai/DeepSeek-V4-Flash-0731"
 
     # Prompts (configurables en variable d'env)
     SUMMARIZATION_PROMPT: str = (
