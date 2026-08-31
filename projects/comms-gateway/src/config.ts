@@ -19,6 +19,13 @@ export const config = {
   RESEND_WEBHOOK_SECRET: env.RESEND_WEBHOOK_SECRET ?? "",
   WEBHOOK_TOKEN: env.WEBHOOK_TOKEN ?? "",
 
+  // --- Mode développement Resend (TEMPORAIRE, à retirer une fois un domaine vérifié) ---
+  // Tant que `resend.com/domains` n'a pas de domaine d'envoi vérifié, tout envoi échoue
+  // (403). `resend.dev` est livrable UNIQUEMENT sur l'adresse du compte Resend :
+  //   RESEND_DEV_MODE=1 force from=onboarding@resend.dev et to=RESEND_DEV_TO.
+  RESEND_DEV_MODE: env.RESEND_DEV_MODE ?? "",
+  RESEND_DEV_TO: env.RESEND_DEV_TO ?? "",
+
   // --- Slack (bot PROPRE au gateway, distinct d'assistant-ia) ---
   SLACK_BOT_TOKEN: env.SLACK_BOT_TOKEN ?? "",
   SLACK_SIGNING_SECRET: env.SLACK_SIGNING_SECRET ?? "",

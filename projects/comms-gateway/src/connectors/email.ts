@@ -28,12 +28,23 @@ export class EmailConnector implements Connector {
     if (!apiKey) {
       return { ok: false, error: "RESEND_API_KEY absente (gateway non configuré)" };
     }
-    if (!opts.to || !from) {
+
+    // Mode développement Resend (TEMPORAIRE) : tant qu'aucun domaine d'envoi n'est
+    // vérifié, resend.dev n'est livrable que sur l'adresse du compte Resend. On écrase
+    // `from` et `to` quoi que demande le client. Retirer dès qu'un domaine est vérifié.
+    const devMode = config.RESEND_DEV_MODE === "1" || config.RESEND_DEV_MODE === "true";
+    let toAddr = opts.to;
+    if (devMode) {
+      from = "onboarding@resend.dev";
+      toAddr = config.RESEND_DEV_TO || opts.to;
+    }
+
+    if (!toAddr || !from) {
       return { ok: false, error: "`to` et `from` requis pour l'email" };
     }
     const payload: Record<string, unknown> = {
       from,
-      to: [opts.to],
+      to: [toAddr],
       subject: opts.subject ?? "",
     };
     if (opts.body) payload.text = opts.body;
