@@ -2,7 +2,7 @@
 id: reprise-comms-gateway
 status: prompt-de-reprise
 created: 2026-08-30
-updated: 2026-08-30
+updated: 2026-08-31
 project: comms-gateway
 role: Prompt à coller pour reprendre le chantier du gateway de communication externe. État : gateway multi-tenant DÉPLOYÉ en prod Coolify (app `dockercompose`, UUID `commsgateway00000000000`), secrets chiffrés hors repo, /webhooks/* seuls exposés publiquement ; reste les 3 blocages utilisateur (domaine Resend, app Slack, téléphone SMS/WhatsApp/Signal) avant envois réels.
 ---
@@ -45,6 +45,28 @@ RESTE À FAIRE côté utilisateur (bloquant pour la prod réelle, cf. sections c
 **(a)** domaine d'envoi Resend (compte de test → envoi réel impossible) ; **(b)** app Slack
 `comms-gateway` à créer (`SLACK_WIRING.md`) ; **(c)** téléphone Free+eSIM+Tailscale
 (`PHONE_PART2_CHECKLIST.md`) pour SMS/WhatsApp/Signal.
+
+---
+
+# ⚡ MàJ 2026-08-31 — MODE DEV RESEND ACTIF (envoi email réel OK)
+
+✅ Le mode développement Resend est activé sur l'app Coolify (lignes **preview + production**,
+chiffrées Laravel, méthode `deploy.sh`) :
+`RESEND_API_KEY` = clé réelle `re_…` fournie par l'utilisateur (jamais affichée/committée),
+`RESEND_DEV_MODE=1`, `RESEND_DEV_TO=jean.langlois.meurinne@gmail.com`.
+
+- Rebuild **#332 → `finished`**, mono-conteneur (pas d'orphelin Traefik).
+- Mode dev (TEMPORAIRE) : force `from=onboarding@resend.dev` et `to=RESEND_DEV_TO` — seule
+  adresse livrable de `resend.dev` tant qu'aucun domaine d'envoi n'est vérifié.
+- **Test réel réussi** : `POST /v1/send` (client `newsletter-summary`, canal `email`) →
+  `{"status":"sent","provider_message_id":"260cf699-bc41-4eed-8253-49558f4fd26e"}` ; audit
+  `success`. Les 2 entrées `failure` antérieures = essais avant injection (clé absente, 403).
+- Fichier secrets off-repo `/root/secrets/comms-gateway.env` aligné (clé réelle + dev vars),
+  backup `.bak.<ts>`.
+
+🔻 **Prochain blocage utilisateur** : vérifier/ajouter un **domaine d'envoi réel** dans
+resend.com/domains (+ DNS) → ensuite retirer `RESEND_DEV_MODE` pour envoyer vers les
+destinataires réels (avec `RESEND_DEFAULT_FROM=newsletter@oozeenaru.resend.app`).
 
 ---
 
@@ -120,14 +142,16 @@ cp templates/comms-client/comms_client.py <projet>/app/
 
 | Canal | Statut | Blocage pour la prod réelle |
 |---|---|---|
-| email (Resend) | ⚠️ réel mais non livrable | **domaine d'envoi non vérifié** dans resend.com/domains (compte de test → 403) |
+| email (Resend) | ✅ réel + livrable en **mode dev** | **domaine d'envoi réel non vérifié** (le mode dev `resend.dev` force vers `RESEND_DEV_TO` ; à retirer dès domaine vérifié) |
 | slack | ⏳ prêt côté gateway, app à créer | **app Slack `comms-gateway` à créer** (`docs/SLACK_WIRING.md`) + secrets + invitation du bot |
 | sms / whatsapp / signal | 🧪 mock | **téléphone Free + eSIM + Tailscale** (`docs/PHONE_PART2_CHECKLIST.md`) |
 
 ## RESTE À FAIRE
 
 ### Bloquants utilisateur 🔧 (aucun code nécessaire)
-**(a)** Vérifier/ajouter un **domaine d'envoi Resend** (resend.com/domains + DNS) → envoi email réel.
+**(a)** Vérifier/ajouter un **domaine d'envoi Resend** (resend.com/domains + DNS) → **sortir du
+      mode dev** (retirer `RESEND_DEV_MODE`, réel `to`/`from`) pour les envois vers les
+      destinataires réels. Le mode dev actuel livra déjà vers `RESEND_DEV_TO` (test du 2026-08-31 ok).
 **(b)** Créer l'**app Slack `comms-gateway`** (bot dédié, envoi+reception ; `docs/SLACK_WIRING.md`) →
       renseigner `SLACK_BOT_TOKEN`/`SLACK_SIGNING_SECRET` en secrets Coolify, inviter le bot,
       déclarer une policy `slack` `receive`/`send` pour les clients via l'API admin.
