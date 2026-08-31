@@ -4,7 +4,7 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-08-31
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées. Reste : généralité #3 (avant le 3ᵉ ticker), re-run NVDA, agents 7-9, UX transverse.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée et dispense NVDA retirée (le 3ᵉ ticker n'est plus bloqué). Reste : agents 7-9, UX transverse, ingestion-agent.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -13,6 +13,48 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > diagnostics de bugs déjà réglés, décisions et leurs mesures) est conservé **intégralement** dans
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
+
+> ## ⚡ MàJ 2026-08-31 (bis) — généralité #3 fermée + dispense NVDA retirée
+>
+> **Les deux premiers items du reste-à-faire sont clos.** Deux déploiements : **#329** (`1b8497f`,
+> domaines IR) et **#330** (`90fc6d3`, dispense). Un seul conteneur vérifié après chacun. Suite
+> hors-ligne : **382 assertions / 0 échec** (367 avant, +15).
+>
+> **Généralité #3 — domaines IR par émetteur.** `nvidia.com` était en dur dans
+> `_REPUTABLE_SUFFIXES` (fait d'émetteur dans une constante globale, #31) et Microsoft n'avait rien.
+> Effet réel, plus grave qu'annoncé : `microsoft.com/en-us/investor/…` sortait en
+> `web_search_generic` **0.50**, donc **sous `reliability_min=0.60`** — l'entry était **rejetée**, pas
+> seulement mal notée. Le champ paraissait infondable alors que la source était la meilleure possible.
+> Cause : Microsoft publie son IR sur un **chemin**, pas un sous-domaine `ir.`.
+> → `classify_source_type(url, ticker_id)` + `issuer_domains_for(ticker_id)` (défaut **vide**), à deux
+> niveaux : domaine émetteur **+ chemin IR** → `company_ir_official` 0.90 ; domaine émetteur hors IR →
+> `web_search_reputable` B. `_IR_HOST_PATTERN` reste **générique à dessein** (le restreindre ferait
+> tomber `ir.<concurrent>.com` de 0.90 à 0.50 — un faux trou créé par le correctif, cf. #32).
+> *Vérifié contre le vrai modèle* (dry-run MSFT) : `microsoft.com/en-us/investor/earnings/FY-2026-…`
+> → **`company_ir_official`, tier A, 0.895**. Convention **#33** écrite dans le `CLAUDE.md`.
+>
+> **Le « 4 sites d'appel » redouté n'existait pas** : `build_tool_executors` recevait déjà `ticker_id`.
+> Il est fermé dans `web_search`/`fetch_url` comme `query` et `log` — un fait du run, pas un argument
+> du modèle (#28). `check_search_worker.py` **§2bis teste le CÂBLAGE** (backend bouchonné, on lit le
+> `source_type_max` réellement annoncé) : une table juste ne sert à rien si le ticker n'arrive pas.
+>
+> **Piste morte, à ne pas re-tenter** : EDGAR `submissions` expose `website` et `investorWebsite`,
+> **les deux vides** — vérifié sur NVDA, AAPL, MSFT, GOOGL, AMZN. Le registre est écrit à la main.
+> ⚠️ **Ajouter l'entrée `_ISSUER_DOMAINS` en même temps que le ticker.**
+>
+> **Dispense NVDA `marche.croissance_marche_historique` — retirée.** Elle disait « aucune source
+> accessible à un tier suffisant » : vrai de la **table de domaines**, pas du monde. Depuis #32 les
+> cabinets sont `web_search_reputable` (plafond B) = exactement le plancher dégradé du champ ; les
+> deux garde-fous se contredisaient. Retirée **sur preuve** : un mandat NVDA a rendu **3 entries
+> tier B** (Omdia 0.630, IDC 0.605, TechInsights 0.602 → **117-119**), comme MSFT en avait 3
+> (Synergy/Canalys, 109-111). *Vérifié contre le vrai modèle* — rapport **#27**, NVDA :
+> **`ready`, 0 gap, 0 dérogation sur ce champ**, `marche` fondée par `{croissance: [117,118,119],
+> structure_5forces: [21,22,30,56]}`. Une vraie fondation, pas un saut. Coût $0.0013.
+> `business_model.recurrence_pct` **reste** dispensé (fait NVIDIA toujours vrai).
+> Le retrait **resserre** le gate : `check_readiness_recompute.py` §10 vérifie qu'une entry **C+ ne
+> fonde pas** le champ.
+>
+> **Le 3ᵉ ticker n'est plus bloqué.**
 
 > ## ⚡ MàJ 2026-08-31 — sprint dettes B + A (un seul déploiement)
 >
@@ -65,33 +107,26 @@ c'est un système exercé, dont on connaît les modes de panne.
 
 | | NVDA (cas-pilote) | MSFT (2ᵉ ticker, preuve de généralité) |
 |---|---|---|
-| Socle | 55+ entries | **51 entries**, 19/19 champs MVDD fondés, 44 A / 9 B, **0 `llm_memory`**, ≈ $0,19 |
-| Readiness | `ready` — **1 dérogation** (`marche.croissance_marche_historique`) | **`ready`, 0 dérogation**, 0 gap |
+| Socle | **52 entries** (32 A / 15 B / 5 llm_memory) | **51 entries**, 19/19 champs MVDD fondés, 44 A / 9 B, **0 `llm_memory`**, ≈ $0,19 |
+| Readiness | **`ready`, 0 gap** (rapport #27) — dispense `croissance_marche_historique` **retirée**, champ réellement fondé (117-119) | **`ready`, 0 dérogation**, 0 gap |
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `4be04ed`, deployment **#328**, un seul conteneur backend vérifié.
-- **Suite hors-ligne** : **367 assertions / 0 échec** sur 9 scripts (`backend/checks/`).
+- **Code déployé** : commit `90fc6d3`, deployment **#330**, un seul conteneur backend vérifié.
+- **Suite hors-ligne** : **382 assertions / 0 échec** sur 9 scripts (`backend/checks/`).
 - **Migrations appliquées** jusqu'à **029**. Prochaines : **030** theses_flow · **031** exit/calibration
   — à écrire **juste avant** leur lot, jamais en avance (§18).
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **Défaut de généralité #3 — les domaines IR d'émetteur sont en dur pour NVDA.**
-   `nvidia.com` est dans `_REPUTABLE_SUFFIXES`, rien pour Microsoft :
-   `microsoft.com/en-us/investor/…` est classé `web_search_generic` **0.50** au lieu de
-   `company_ir_official` **0.90**. Impact mesuré **nul** sur le sprint MSFT (0 entry retenue depuis
-   microsoft.com — le modèle a préféré sec.gov). Différé sciemment : le correctif propre demande de
-   faire descendre `ticker_id` dans `classify_source_type()` (**4 sites d'appel**).
-   ⚠️ **À faire avant le 3ᵉ ticker.**
-2. **Re-run de contrôle NVDA**, puis **retrait de la dispense** `marche.croissance_marche_historique`
-   — probablement obsolète depuis la convention #32 (les cabinets d'études sont désormais classés
-   `web_search_reputable`, plafond B, donc le champ est fondable).
-3. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction.
-   Migrations 030/031 écrites juste avant chaque lot.
-4. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
-5. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
+1. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction.
+   Migrations 030/031 écrites juste avant chaque lot. **C'est le prochain jalon.**
+2. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
+3. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
+4. **3ᵉ ticker** — plus aucun blocage technique. ⚠️ Penser à ajouter son entrée dans
+   `websearch._ISSUER_DOMAINS` **en même temps que le ticker** (cf. convention #33) : sans elle, son
+   IR sur chemin (à la Microsoft) retombe en `web_search_generic` 0.50, donc sous plancher.
 
 ### Dettes techniques connues, assumées
 
@@ -144,11 +179,12 @@ c'est un système exercé, dont on connaît les modes de panne.
 
 ## À lire avant de reprendre
 
-- **`CLAUDE.md` du projet** — conventions **#22 à #32** (recherche knowledge, piège pgvector, le
+- **`CLAUDE.md` du projet** — conventions **#22 à #33** (recherche knowledge, piège pgvector, le
   modèle ne qualifie pas sa source, un échec de recherche n'est pas un résultat vide, deux chemins de
   `fetch_url`, on ne tronque pas un document, provenance vérifiée, la couverture se lit dans un
   index, concept XBRL choisi par fraîcheur, pas de fait d'émetteur dans une constante globale,
-  plancher inatteignable = champ infondable déguisé).
+  plancher inatteignable = champ infondable déguisé, **#33 domaines d'émetteur à deux niveaux —
+  et on ne resserre pas la règle générique en ajoutant la spécifique**).
 - **Specs** : `roadmap/00-principe-directeur-v2.md` · `roadmap/01-spec-v2-unifiee.md`
   (§5 agents, §7 curator/readiness, §8 contrats, §14 migrations, §16 UX, §18 découpage).
 - **Cartes de contrat** : `roadmap/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
@@ -167,8 +203,12 @@ c'est un système exercé, dont on connaît les modes de panne.
 > garde-fous : G1 schéma versionné = source unique · G2 décision contrainte par l'analyse · G3 donnée
 > versionnée + scorée + figée, jamais de texte libre. DÉCISION #1 = Option C (base neutre → bull/bear
 > isolés → réfutation bear→bull → synthèse).
-> Dettes A et B **fermées** le 2026-08-31 (déploiement #328, vérifiées contre le vrai modèle).
-> **Prochain jalon** : la généralité #3 (domaines IR par émetteur) — **avant tout 3ᵉ ticker** —,
-> puis le re-run NVDA + retrait de la dispense, puis agents 7-9.
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-#32), `00-REPRISE-ARCHIVE.md`
-> si le *pourquoi* d'une décision manque.
+> Dettes A et B **fermées** le 2026-08-31 (déploiement #328). Le même jour : **généralité #3
+> fermée** (domaines IR clefés par émetteur, convention #33 — MSFT IR vérifié à 0.895 tier A,
+> déploiement #329) et **dispense NVDA `croissance_marche_historique` retirée sur preuve**
+> (entries 117-119 tier B ; rapport #27 `ready`, 0 gap, déploiement #330). Tout est vérifié contre
+> le vrai modèle. **Le 3ᵉ ticker n'est plus bloqué.**
+> **Prochain jalon** : **agents 7-9** (décision/validate → sortie/calibration → débat conviction),
+> avec les migrations **030** theses_flow / **031** exit-calibration écrites juste avant leur lot.
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#33**),
+> `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

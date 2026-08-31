@@ -392,6 +392,35 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     absence de donnée. Test : `check_provenance.py` §8, qui confronte la table de domaines au plancher
     effectif du champ au lieu de les tester chacun de son côté.
 
+33. **Le site d'un émetteur se reconnaît PAR ÉMETTEUR, et sur deux niveaux (V2, 2026-08-31)** :
+    application directe de #31, trouvée là où elle était annoncée. `nvidia.com` vivait en dur dans
+    `websearch._REPUTABLE_SUFFIXES` et Microsoft n'avait rien, si bien que
+    `microsoft.com/en-us/investor/…` — de l'IR officiel — était classé `web_search_generic` (0.50),
+    **sous le plancher `reliability_min=0.60`** : l'entry était rejetée et le champ paraissait
+    infondable alors que la source était la meilleure possible. Cause : Microsoft publie son IR sur
+    un **chemin**, pas sur un sous-domaine `ir.`, que `_IR_HOST_PATTERN` était seul à savoir lire.
+    Donc `classify_source_type(url, ticker_id)` et un registre `issuer_domains_for(ticker_id)`
+    (défaut **vide** — aucune promotion par héritage, comme `nonblocking_gaps_for`), à **deux
+    niveaux** : domaine de l'émetteur **+ chemin IR** → `company_ir_official` (0.90) ; domaine de
+    l'émetteur **hors** section IR (page produit, salle de presse) → `web_search_reputable` (B, le
+    plafond qu'avait `nvidia.com`, rendu au seul NVDA). Le niveau bas existe parce qu'une page
+    marketing n'est pas de l'information réglementée ; le registre parce que `microsoft.com` n'est un
+    site d'émetteur **que d'une analyse MSFT** — sur une analyse NVDA, c'est le site d'un concurrent.
+    **Corollaire de méthode, le plus transposable** : quand on ajoute une règle spécifique, on ne
+    resserre PAS la règle générique au passage. `_IR_HOST_PATTERN` reste volontairement générique —
+    le restreindre au registre ferait tomber `ir.<concurrent>.com` de 0.90 à 0.50 sur toute analyse,
+    soit un faux trou de couverture creusé par le correctif censé en boucher un (#32). Le changement
+    ne peut donc que promouvoir, jamais démoter, hormis le retrait délibéré de `nvidia.com` du global.
+    **Pourquoi un registre écrit à la main** : EDGAR `submissions` expose `website` et
+    `investorWebsite`, mais les deux sont **vides** — vérifié sur NVDA, AAPL, MSFT, GOOGL, AMZN,
+    cinq fois la chaîne vide. Deviner le domaine depuis la raison sociale promouvrait un homonyme à
+    0.90, soit la sur-qualification que #24 retire au modèle. ⚠️ **Ajouter l'entrée du registre en
+    même temps que le ticker.** Enfin, `ticker_id` est **fermé dans `build_tool_executors`** au même
+    titre que `query` et `log` : il décide du score, donc il ne peut pas être un argument du modèle
+    (#28). Tests : `check_search_worker.py` §1bis (la table) et **§2bis (le câblage** — une table
+    juste ne sert à rien si le ticker n'arrive pas jusqu'à l'appel, et c'est le seul défaut que
+    §1bis ne peut pas voir).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
