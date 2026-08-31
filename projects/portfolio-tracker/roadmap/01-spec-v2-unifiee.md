@@ -370,7 +370,7 @@ Contexte **isolé** (ne voit jamais le bear). Reçoit : `knowledge_entries` du t
     "reverse_dcf": {"croissance_implicite_prix_actuel_pct": 14, "note": "ce que le prix price déjà"},
     "scenarios": {"bear": 95, "base": 130, "bull": 165},
     "methode": "FCF normalisé + croissance conservatrice + exit multiple",
-    "assumptions": {"croissance_revenue": 0.10, "expansion_marge_fcf": 0.02, "multiple_sortie": 18}
+    "assumptions": {"croissance_revenue_pct": 10.0, "expansion_marge_fcf_pct": 2.0, "multiple_sortie": 18}
   },
   "catalyseurs": ["..."],
   "conviction": 7,

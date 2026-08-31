@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
@@ -223,6 +224,83 @@ def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str
     return report
 
 
+# Vocabulaire FERMÉ des verdicts (ReadinessVerdict). Motifs ordonnés du plus long au plus court :
+# `ready` est une sous-chaîne de `not_ready`, il ne se cherche qu'après masquage des composés.
+_VERDICT_MOTIFS: tuple[tuple[str, str], ...] = (
+    ("not_ready", r"not[_\s]ready"),
+    ("thin_qualitative", r"thin[_\s]qualitative"),
+    ("too_hard", r"too[_\s]hard"),
+    ("researching", r"researching"),
+    ("ready", r"\bready\b"),
+)
+# Fins de phrase ET sauts de ligne : le rationale est souvent une prose à puces.
+_DECOUPE_PHRASE = re.compile(r"(?<=[.!?…])\s+|\n+")
+
+
+def verdicts_nommes(fragment: str) -> set[str]:
+    """Verdicts du vocabulaire fermé cités dans un fragment de prose. Pur.
+
+    Chaque motif trouvé est masqué avant d'essayer les suivants, sinon `not_ready` compterait
+    aussi comme une mention de `ready`."""
+    reste = fragment.lower()
+    trouves: set[str] = set()
+    for nom, motif in _VERDICT_MOTIFS:
+        reste, n = re.subn(motif, " ", reste)
+        if n:
+            trouves.add(nom)
+    return trouves
+
+
+def constrain_rationale(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    """Empêche la NARRATION de contredire le verdict — c'est elle que l'humain lit. Pur.
+
+    `_verdict_contraint` protège le GO/NO-GO machine, mais rien ne tenait la prose : rapport NVDA
+    #24, verdict `ready`, rationale écrivant « bloc qualitatif-marché incomplet … (tier A-), sous le
+    plancher B+ requis … → thin_qualitative » — un autre verdict narré, sur un ordre de tiers inversé
+    (A- 0.85 est AU-DESSUS de B+ 0.75). Le tir suivant, à corpus identique, rendait une prose
+    correcte : le récit varie là où le verdict ne varie pas.
+
+    Deux mesures, dans l'esprit de #24/#29 (ce qui est dérivable est écrit par le code) :
+      1. une ligne d'en-tête FACTUELLE, dérivée des booléens recomputés — l'humain lit le verdict et
+         son motif avant toute prose ;
+      2. toute phrase du curator nommant un verdict AUTRE que celui recomputé est retirée, et le
+         retrait est déclaré (jamais silencieux). On retire à la phrase, pas au rapport : le reste
+         de la lecture d'ensemble a de la valeur.
+    """
+    verdict = report.get("verdict")
+    s_ok = coverage["structuree"]["bloc_ok"]
+    q_ok = coverage["qualitative_marche"]["bloc_ok"]
+    non_fondes = [f"{d['dimension']}.{c}"
+                  for b in (coverage["structuree"], coverage["qualitative_marche"])
+                  for d in b["dimensions"] for c in d["champs_non_fondables"]]
+
+    gardees: list[str] = []
+    retirees = 0
+    for phrase in _DECOUPE_PHRASE.split(report.get("rationale") or ""):
+        phrase = phrase.strip()
+        if not phrase:
+            continue
+        if verdicts_nommes(phrase) - {verdict}:
+            retirees += 1
+            continue
+        gardees.append(phrase)
+
+    manque = f"{len(non_fondes)} champ(s) non fondé(s)"
+    if non_fondes:
+        manque += " : " + ", ".join(non_fondes)
+    entete = (f"[Verdict recomputé : {verdict} — bloc structuré "
+              f"{'fondé' if s_ok else 'incomplet'}, bloc qualitatif-marché "
+              f"{'fondé' if q_ok else 'incomplet'} ; {manque}. Ligne écrite par le code depuis "
+              f"l'index `covers` ; la lecture ci-dessous est celle du curator.")
+    if retirees:
+        entete += (f" {retirees} phrase(s) du curator retirée(s) : elles nommaient un autre "
+                   f"verdict que {verdict}.")
+    entete += "]"
+
+    report["rationale"] = entete + ("\n\n" + " ".join(gardees) if gardees else "")
+    return report
+
+
 def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> str:
     spec = json.dumps(MVDD_SPEC, ensure_ascii=False, indent=2)
     listing = format_entries_for_prompt(entries)
@@ -244,7 +322,12 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
         f"actionnables), les `incertitudes_investissables` et `qualite_info`. Reprends les 8 "
         f"dimensions du cadre MVDD ci-dessus avec leurs `champs_requis` et `tier_plancher` (tu peux "
         f"les RESSERRER si le cas d'espèce l'exige — ajouter un champ requis, relever un plancher — "
-        f"jamais les assouplir). conviction/marge_securite = null, pas de context_pack_entry_id."
+        f"jamais les assouplir). conviction/marge_securite = null, pas de context_pack_entry_id.\n\n"
+        f"⚠️ Dans le `rationale`, ne NOMME aucun verdict (`ready`, `not_ready`, `thin_qualitative`, "
+        f"`too_hard`, `researching`) : il est recomputé et affiché par le code, et toute phrase qui "
+        f"en nomme un autre sera RETIRÉE. Décris ce que le dossier contient et ce qui lui manque, "
+        f"pas la décision. Rappel de l'ordre des tiers, du meilleur au moins bon : "
+        f"A > A- > B+ > B > C+ > C — un tier A- (0,85) est AU-DESSUS d'un plancher B+ (0,75)."
     )
 
 
@@ -300,6 +383,9 @@ def _apply_deterministic_overrides(
         s_ok = coverage["structuree"]["bloc_ok"]
         q_ok = coverage["qualitative_marche"]["bloc_ok"]
         report["verdict"] = "ready" if (s_ok and q_ok) else ("thin_qualitative" if s_ok else "not_ready")
+
+    # APRÈS le verdict : la narration se contraint sur le verdict FINAL, pas sur celui du LLM.
+    constrain_rationale(report, coverage)
     return report
 
 

@@ -263,9 +263,12 @@ class Argument(Strict):
 
 class Assumptions(Strict):
     # extra='forbid' (via Strict) : le taux d'actualisation / détail de méthode va en prose dans `methode`
-    croissance_revenue: float
-    expansion_marge_fcf: float
-    multiple_sortie: float
+    # unités dans le NOM (cf. recurrence_pct, taux_base_pct, croissance_implicite_prix_actuel_pct) :
+    # bull et bear ont rendu 0.15 (fraction) et 8.0 (pourcent) pour la même grandeur — facteur ~53,
+    # muet parce que les deux sont des `float` valides.
+    croissance_revenue_pct: float       # %/an, ex. 12.0 (pas 0.12). Négatif = décroissance.
+    expansion_marge_fcf_pct: float      # points de marge sur l'horizon, ex. 2.0. Négatif = compression.
+    multiple_sortie: float              # multiple (×), sans unité de pourcentage
 
 
 class ValorisationCote(Strict):

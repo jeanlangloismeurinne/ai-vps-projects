@@ -24,6 +24,8 @@ from app.agents.v2.curator import (
     _covers_index,
     _declare_nonblocking_gaps,
     _exigences,
+    constrain_rationale,
+    verdicts_nommes,
     _plancher_for,
     _tier_ge,
     recompute_coverage,
@@ -305,6 +307,60 @@ _apply_deterministic_overrides(rep_msft_ready, ents, ticker_id="MSFT")
 check("corpus 'ready NVDA' n'est PAS ready pour MSFT (2 champs non fondes)",
       rep_msft_ready["verdict"] == "not_ready", f"-> {rep_msft_ready['verdict']}")
 
+
+print("\n14. Narration contrainte — le rationale ne contredit plus son verdict (dette A, rapport #24)")
+
+# Vocabulaire ferme : `ready` est une sous-chaine de `not_ready` et de `already`.
+check("`not_ready` n'est pas lu comme `ready`",
+      verdicts_nommes("le dossier est not_ready") == {"not_ready"})
+check("`not ready` (espace) reconnu aussi",
+      verdicts_nommes("le dossier est not ready") == {"not_ready"})
+check("`already` ne declenche pas `ready`", verdicts_nommes("deja couvert, already vu") == set())
+check("`ready` seul reconnu", verdicts_nommes("le dossier est ready") == {"ready"})
+check("`thin_qualitative` reconnu",
+      verdicts_nommes("=> thin_qualitative") == {"thin_qualitative"})
+check("prose sans verdict = aucun", verdicts_nommes("bloc qualitatif incomplet (tier A-)") == set())
+
+# Reproduction du rapport #24 : verdict `ready`, prose narrant `thin_qualitative`.
+rep24 = full_report(cov_ready, verdict="ready")
+rep24["rationale"] = ("Le socle EDGAR est complet et recent. Le bloc qualitatif-marche est "
+                      "incomplet (tier A-), sous le plancher B+ requis => thin_qualitative. "
+                      "Les 51 entries sont majoritairement tier A.")
+_apply_deterministic_overrides(rep24, ents, ticker_id="NVDA")
+r24 = rep24["rationale"]
+check("la phrase narrant un autre verdict est RETIREE", "thin_qualitative." not in r24, f"-> {r24}")
+check("le retrait est DECLARE, jamais silencieux", "1 phrase(s) du curator retiree(s)" in r24
+      or "retirée(s)" in r24, f"-> {r24}")
+check("l'en-tete porte le verdict recompute", r24.startswith("[Verdict recomputé : ready"), f"-> {r24[:60]}")
+check("les phrases compatibles sont gardees", "Le socle EDGAR est complet" in r24)
+check("la derniere phrase neutre est gardee", "51 entries" in r24)
+
+# Le cas nominal ne doit pas etre mutile.
+rep_ok = full_report(cov_ready, verdict="ready")
+rep_ok["rationale"] = "Dossier complet, 44 entries tier A, aucune incertitude bloquante."
+_apply_deterministic_overrides(rep_ok, ents, ticker_id="NVDA")
+check("prose neutre integralement conservee",
+      rep_ok["rationale"].endswith("Dossier complet, 44 entries tier A, aucune incertitude bloquante."))
+check("mentionner SON PROPRE verdict reste permis",
+      "ready" in constrain_rationale({"verdict": "ready", "rationale": "le dossier est ready."},
+                                     cov_ready)["rationale"].split("]")[1])
+
+# Contrat : rationale a min_length=1 — l'en-tete garantit un texte non vide meme si tout est retire.
+vide = constrain_rationale({"verdict": "not_ready", "rationale": "thin_qualitative partout. ready ?"},
+                           cov_ready)
+check("rationale non vide meme si toute la prose est retiree", len(vide["rationale"]) > 1)
+check("les 2 retraits sont comptes", "2 phrase(s)" in vide["rationale"], f"-> {vide['rationale']}")
+
+# L'en-tete NOMME les champs non fondes : l'humain lit le motif, pas seulement le verdict.
+cov_gap = {"structuree": {"dimensions": [dim_cov(d) for d in
+                                         ("business_model", "financials", "valorisation")], "bloc_ok": True},
+           "qualitative_marche": {"dimensions": [dim_cov(d) for d in
+                                                 ("produits", "positionnement", "marche",
+                                                  "management_allocation", "risques")], "bloc_ok": False}}
+cov_gap["qualitative_marche"]["dimensions"][0]["champs_non_fondables"] = ["unit_economics"]
+tete = constrain_rationale({"verdict": "thin_qualitative", "rationale": "RAS."}, cov_gap)["rationale"]
+check("l'en-tete nomme le champ non fonde", "produits.unit_economics" in tete, f"-> {tete[:120]}")
+check("l'en-tete dit quel bloc est incomplet", "qualitatif-marché incomplet" in tete, f"-> {tete[:120]}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

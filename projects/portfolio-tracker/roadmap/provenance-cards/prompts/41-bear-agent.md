@@ -82,9 +82,13 @@ l'escalade (un unique tour de plus) est décidée par l'orchestrateur (Q4), pas 
 2. **Mêmes 6 règles transverses que le bull** : edge (règle 6), `base_rate` par argument (règle 2),
    horizon ≥ 5 ans + reverse_dcf (A4/règle 5), 3 indicateurs séparés (A3), grounding.
    En particulier : **`reverse_dcf.croissance_implicite_prix_actuel_pct` est un nombre (%/an)
-   OBLIGATOIRE** (jamais `null`/omis), et **`assumptions` ne porte QUE** `croissance_revenue`,
-   `expansion_marge_fcf`, `multiple_sortie` — pas de `taux_actualisation`/`wacc` inventé (méthode et
+   OBLIGATOIRE** (jamais `null`/omis), et **`assumptions` ne porte QUE** `croissance_revenue_pct`,
+   `expansion_marge_fcf_pct`, `multiple_sortie` — pas de `taux_actualisation`/`wacc` inventé (méthode et
    taux d'actualisation en prose dans `methode`).
+   ⚠️ **Les deux premières sont en POURCENT, pas en fraction** — le suffixe `_pct` le dit :
+   8 %/an s'écrit `8.0` et **jamais** `0.08` ; −2 points de marge FCF s'écrivent `-2.0` et jamais
+   `-0.02`. Une valeur négative est licite (décroissance, compression de marge). `multiple_sortie`
+   est un multiple (`18` = 18×), il ne prend pas de suffixe.
 3. **`scenario_destruction_valeur`** obligatoire : chiffre la perte et nomme ses `declencheurs`
    (≥1) — un bear sans scénario de destruction de valeur est décoratif.
 4. **`failles_bull_conventionnel`** ≥ 1 en production.

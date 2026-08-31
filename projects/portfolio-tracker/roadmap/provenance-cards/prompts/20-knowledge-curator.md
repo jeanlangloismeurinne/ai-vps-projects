@@ -114,7 +114,7 @@ sécurité avant la valorisation.
   ],
   "arret_pareto_recommande": false,
   "context_pack_entry_id": null,
-  "rationale": "Structuré complet (EDGAR Tier A) ; qualitatif sous plancher sur différenciation produit et croissance de marché → thin_qualitative. 2 gaps prioritaires avant de lancer l'analyse."
+  "rationale": "Structuré complet (EDGAR Tier A) ; qualitatif sous plancher sur différenciation produit et croissance de marché. 2 gaps prioritaires avant de lancer l'analyse."
 }
 ```
 
@@ -127,6 +127,12 @@ sécurité avant la valorisation.
 4. **Bijection gaps ↔ champs non fondables** (option B), `too_hard` exempté.
 5. **A3** : `conviction`/`marge_securite` = `null` au readiness.
 6. **`ready` ⇒ `context_pack_entry_id`** renseigné (tu produis le pack, voir ci-dessous).
+7. **Le `rationale` ne NOMME aucun verdict** (`ready`, `not_ready`, `thin_qualitative`, `too_hard`,
+   `researching`). Le verdict est recomputé en Python et écrit en tête du rationale par le code :
+   une phrase qui en nomme un autre est **retirée**, et le retrait est déclaré. Décris ce que le
+   dossier porte et ce qui lui manque — pas la décision. Rappel de l'ordre des tiers, du meilleur au
+   moins bon : **A > A- > B+ > B > C+ > C** (un tier A- 0,85 est AU-DESSUS d'un plancher B+ 0,75 —
+   erreur constatée, rapport #24).
 
 ---
 

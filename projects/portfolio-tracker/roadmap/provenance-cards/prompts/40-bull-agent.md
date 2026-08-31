@@ -58,7 +58,7 @@ détenir : le cas est vide.
      reverse_dcf{croissance_implicite_prix_actuel_pct, verdict},   // règle 5
      scenarios{bear, base, bull},
      methode,
-     assumptions{croissance_revenue, expansion_marge_fcf, multiple_sortie}
+     assumptions{croissance_revenue_pct, expansion_marge_fcf_pct, multiple_sortie}
   },
   "catalyseurs": [ ... ],
   "conviction": 7,                               // 1-10
@@ -78,10 +78,14 @@ détenir : le cas est vide.
    Pas de `prix_cible`/`horizon_mois:36` en guise de valorisation.
    **`reverse_dcf.croissance_implicite_prix_actuel_pct` est un nombre (%/an) OBLIGATOIRE** — la
    croissance que le prix actuel implique, jamais `null` ni omis (cf. research-agent règle 5).
-   **`assumptions` ne porte QUE trois clés** : `croissance_revenue`, `expansion_marge_fcf`,
+   **`assumptions` ne porte QUE trois clés** : `croissance_revenue_pct`, `expansion_marge_fcf_pct`,
    `multiple_sortie`. **N'invente aucun autre champ** (pas de `taux_actualisation`, `wacc`,
    `discount_rate`, `terminal_value`…) : le taux d'actualisation et le détail de méthode se disent en
    **prose dans `methode`**, pas en champs hors contrat.
+   ⚠️ **Les deux premières sont en POURCENT, pas en fraction** — le suffixe `_pct` le dit :
+   12 %/an s'écrit `12.0` et **jamais** `0.12` ; +2 points de marge FCF s'écrivent `2.0` et jamais
+   `0.02`. Une valeur négative est licite (décroissance, compression de marge). `multiple_sortie`
+   est un multiple (`18` = 18×), il ne prend pas de suffixe.
 5. **A3 — trois indicateurs séparés** (`qualite_info`, `conviction`, `marge_securite`) — jamais un
    score unique. Ta conviction (1-10) est distincte de la qualité de l'information disponible.
 6. **G2 — honnêteté du sizing intellectuel** : ta conviction ne peut pas dépasser ce que la qualité
