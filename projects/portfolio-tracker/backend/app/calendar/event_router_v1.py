@@ -109,6 +109,13 @@ class EventRouterV1:
                   AND ce.brief_triggered = FALSE
                   AND ce.triggered = FALSE
                   AND ce.pending_validation = FALSE
+                  AND ce.thesis_v2_id IS NULL   -- migration 030 : les événements du flux V2 ne
+                                                -- sont PAS routés par le scheduler V1. Le LEFT JOIN
+                                                -- ci-dessus les ramènerait sinon avec thesis_json
+                                                -- NULL, et aucune garde en aval ne le teste :
+                                                -- l'agent Dust V1 serait appelé sur une thèse
+                                                -- inexistante. Additif pour V1 (toutes ses lignes
+                                                -- ont thesis_v2_id NULL).
                   AND ce.event_type IN ('quarterly_results', 'cmd', 'agm')
                 """,
                 today,
@@ -235,6 +242,13 @@ class EventRouterV1:
                 WHERE ce.scheduled_date = $1::date - INTERVAL '1 day'
                   AND ce.triggered = FALSE
                   AND ce.pending_validation = FALSE
+                  AND ce.thesis_v2_id IS NULL   -- migration 030 : les événements du flux V2 ne
+                                                -- sont PAS routés par le scheduler V1. Le LEFT JOIN
+                                                -- ci-dessus les ramènerait sinon avec thesis_json
+                                                -- NULL, et aucune garde en aval ne le teste :
+                                                -- l'agent Dust V1 serait appelé sur une thèse
+                                                -- inexistante. Additif pour V1 (toutes ses lignes
+                                                -- ont thesis_v2_id NULL).
                   AND ce.event_type IN ('quarterly_results', 'cmd')
                 """,
                 today,
@@ -393,6 +407,13 @@ class EventRouterV1:
                 WHERE ce.scheduled_date = $1::date - INTERVAL '1 day'
                   AND ce.triggered = FALSE
                   AND ce.pending_validation = FALSE
+                  AND ce.thesis_v2_id IS NULL   -- migration 030 : les événements du flux V2 ne
+                                                -- sont PAS routés par le scheduler V1. Le LEFT JOIN
+                                                -- ci-dessus les ramènerait sinon avec thesis_json
+                                                -- NULL, et aucune garde en aval ne le teste :
+                                                -- l'agent Dust V1 serait appelé sur une thèse
+                                                -- inexistante. Additif pour V1 (toutes ses lignes
+                                                -- ont thesis_v2_id NULL).
                   AND ce.event_type = 'sector_pulse_peer'
                 """,
                 today,
@@ -517,6 +538,13 @@ class EventRouterV1:
                 WHERE ce.scheduled_date = $1
                   AND ce.triggered = FALSE
                   AND ce.pending_validation = FALSE
+                  AND ce.thesis_v2_id IS NULL   -- migration 030 : les événements du flux V2 ne
+                                                -- sont PAS routés par le scheduler V1. Le LEFT JOIN
+                                                -- ci-dessus les ramènerait sinon avec thesis_json
+                                                -- NULL, et aucune garde en aval ne le teste :
+                                                -- l'agent Dust V1 serait appelé sur une thèse
+                                                -- inexistante. Additif pour V1 (toutes ses lignes
+                                                -- ont thesis_v2_id NULL).
                   AND ce.event_type = 'conviction_review'
                 """,
                 today,

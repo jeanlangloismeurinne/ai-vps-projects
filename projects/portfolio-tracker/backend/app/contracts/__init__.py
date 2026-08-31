@@ -9,8 +9,10 @@ croisés sont passés en relatifs).
 
 Ce lot (chaîne d'analyse) expose : ResearchMemo, BullCase, BearCase, RiskMatrix, Hypothese (analyse) ;
 ReadinessReport + compute_verdict (curator gate) ; ContextPack (front-load) ; WorkerRequest/
-WorkerResponse/WorkerExchange + ProducedEntry (C1, frontière orchestrateur↔ouvrier — search-worker).
-Les contrats restants (ingestion/decision/monitoring/debate/exit) seront copiés au moment de leurs agents.
+WorkerResponse/WorkerExchange + ProducedEntry (C1, frontière orchestrateur↔ouvrier — search-worker) ;
+ThesisValidation + RiskAck/ValuationRange (§9 décision — G2 s'y exerce le plus fort : la décision est
+contrainte par l'analyse, pas par l'UX ; lot 7, migration 030).
+Les contrats restants (ingestion/monitoring/debate/exit) seront copiés au moment de leurs agents.
 """
 from .analysis_v2_schemas import (
     SCHEMA_VERSION,
@@ -23,6 +25,7 @@ from .analysis_v2_schemas import (
     valider_pont_risques_hypotheses,
 )
 from .context_pack_schema import CANONICAL_DIMS, ContextPack, DimensionDigest
+from .decision_validate_schema import RiskAck, ThesisValidation, ValuationRange
 from .readiness_report_schema import ReadinessReport, compute_verdict
 from .synthesis_schema import GroundedSynthesis, SynthesisClaim
 from .worker_delegation_schema import (
@@ -51,6 +54,9 @@ __all__ = [
     "ContextPack",
     "DimensionDigest",
     "CANONICAL_DIMS",
+    "ThesisValidation",
+    "RiskAck",
+    "ValuationRange",
     "WorkerRequest",
     "WorkerResponse",
     "WorkerExchange",

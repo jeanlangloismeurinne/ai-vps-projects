@@ -16,8 +16,10 @@ from pydantic import BaseModel
 
 from app.agents.providers import AgentNotFoundError
 from app.agents.v2 import analysis as A
+from app.agents.v2 import decision as D
 from app.agents.v2.analysis import NotReadyError
 from app.agents.v2.curator import run_readiness
+from app.agents.v2.decision import AlreadyValidated, DecisionRefused, ThesisNotFound
 from app.db.database import get_db_session
 
 router = APIRouter(tags=["analysis-v2"])
@@ -27,9 +29,16 @@ logger = logging.getLogger(__name__)
 def _agent_error(e: Exception) -> HTTPException:
     if isinstance(e, NotReadyError):
         return HTTPException(status_code=409, detail=str(e))
+    if isinstance(e, ThesisNotFound):
+        return HTTPException(status_code=404, detail=str(e))
+    if isinstance(e, AlreadyValidated):
+        # 409 et non 400 : la requête est bien formée, c'est l'état qui l'interdit (non rejouable).
+        return HTTPException(status_code=409, detail=str(e))
     if isinstance(e, AgentNotFoundError):
         return HTTPException(status_code=404, detail=str(e))
-    if isinstance(e, (ValueError,)):
+    # DecisionRefused hérite de ValueError : refus MÉTIER du contrat, rendu tel quel à l'UX (400)
+    # pour qu'elle affiche le motif du contrat au lieu de le reformuler.
+    if isinstance(e, (DecisionRefused, ValueError)):
         return HTTPException(status_code=400, detail=str(e))
     return HTTPException(status_code=502, detail=f"Agent V2 : {e}")
 
@@ -152,6 +161,69 @@ async def list_analyses(ticker_id: str, analysis_type: Optional[str] = None):
                 ticker_id,
             )
     return [dict(r) for r in rows]
+
+
+# ── Décision & validation de thèse (§9, lot 7) ───────────────────────────────
+# Route PRÉFIXÉE /v2 : `POST /theses/{id}/validate` existe déjà côté V1 (api/thesis_v2.py — où « v2 »
+# désigne la 2ᵉ version du fichier V1, pas le flux V2) avec un corps dépourvu des garde-fous G2.
+class DraftThesisBody(BaseModel):
+    research_memo_id: int
+    synthesis_analysis_id: int
+
+
+@router.post("/v2/tickers/{ticker_id}/theses")
+async def create_thesis_v2(ticker_id: str, body: DraftThesisBody):
+    """Ouvre une thèse V2 en `draft` sur une synthèse — l'objet que le validate acquittera."""
+    try:
+        return await D.create_thesis_draft(ticker_id, body.research_memo_id, body.synthesis_analysis_id)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("thesis draft v2 %s", ticker_id)
+        raise _agent_error(e)
+
+
+class RiskAckBody(BaseModel):
+    risk_index: int
+    accepted: bool
+
+
+class ValidateV2Body(BaseModel):
+    """Ce que l'UTILISATEUR fournit — et rien de plus (G2).
+
+    Ni la synthèse, ni le sizing, ni les conditions d'entrée : ils sont lus en base depuis l'analyse.
+    Un sizing autre que le recommandé se trace en amont dans la synthèse (override A7), pas ici.
+    `risk_matrix_acked` n'est pas demandé : la bijection des acquittements en tient lieu.
+    """
+    risk_acks: list[RiskAckBody]
+    pre_mortem_acked: bool
+    shares: float
+    purchase_price: float        # en EUR (cash réellement débité)
+    purchase_date: str           # ISO 'YYYY-MM-DD'
+
+
+@router.post("/v2/theses/{thesis_id}/validate")
+async def validate_thesis_v2(thesis_id: int, body: ValidateV2Body):
+    """Fige la décision (contrat ThesisValidation) puis exécute l'entrée en position, atomiquement."""
+    try:
+        return await D.validate_thesis(
+            thesis_id,
+            risk_acks=[a.model_dump() for a in body.risk_acks],
+            pre_mortem_acked=body.pre_mortem_acked,
+            shares=body.shares,
+            purchase_price=body.purchase_price,
+            purchase_date=body.purchase_date,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception("validate thesis v2 #%s", thesis_id)
+        raise _agent_error(e)
+
+
+@router.get("/v2/theses/{thesis_id}")
+async def get_thesis_v2(thesis_id: int):
+    async with get_db_session() as conn:
+        row = await conn.fetchrow("SELECT * FROM theses_v2 WHERE id=$1", thesis_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Thèse V2 introuvable.")
+    return dict(row)
 
 
 @router.get("/analyses/{analysis_id}")
