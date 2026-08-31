@@ -93,7 +93,10 @@ class RetrievalLog:
 
 
 async def exec_web_search(
-    args: dict[str, Any], *, log: Optional[RetrievalLog] = None
+    args: dict[str, Any],
+    *,
+    log: Optional[RetrievalLog] = None,
+    ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """`web_search(query, max_results)` → liste de résultats normalisés.
 
@@ -127,7 +130,7 @@ async def exec_web_search(
 
     if not hits:
         return {"query": query, "results": [], "note": "Aucun résultat — la recherche a bien abouti."}
-    return {"query": query, "results": [h.to_dict() for h in hits]}
+    return {"query": query, "results": [h.to_dict(ticker_id) for h in hits]}
 
 
 async def exec_fetch_url(
@@ -135,6 +138,7 @@ async def exec_fetch_url(
     *,
     query: Optional[str] = None,
     log: Optional[RetrievalLog] = None,
+    ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """`fetch_url(url)` → passages de la page qui répondent à la question du mandat.
 
@@ -146,7 +150,7 @@ async def exec_fetch_url(
     if not url:
         return {"error": "fetch_url : argument 'url' vide."}
     try:
-        result = await fetch_url(url, query=query)
+        result = await fetch_url(url, query=query, ticker_id=ticker_id)
     except ValueError as e:
         return {"error": str(e), "retryable": False}
     except Exception as e:  # noqa: BLE001
@@ -225,15 +229,18 @@ def build_tool_executors(
     correspondre au `tools_json` de l'agent en DB (migration 025) — un outil déclaré sans exécuteur
     se traduit par « outil inconnu » côté modèle.
 
-    `query` (le mandat) et `log` (journal de récupération) sont fermés dans les exécuteurs plutôt
-    que passés en arguments d'outil : ce sont des faits du run, pas des décisions du modèle.
+    `query` (le mandat), `log` (journal de récupération) et `ticker_id` (l'émetteur analysé) sont
+    fermés dans les exécuteurs plutôt que passés en arguments d'outil : ce sont des faits du run, pas
+    des décisions du modèle. `ticker_id` sert désormais à `web_search` et `fetch_url` autant qu'à
+    `query_knowledge` — il décide quel domaine est celui de l'émetteur, donc quel `source_type_max`
+    le modèle se voit annoncer (#31).
     """
 
     async def _fetch(args: dict[str, Any]) -> dict[str, Any]:
-        return await exec_fetch_url(args, query=query, log=log)
+        return await exec_fetch_url(args, query=query, log=log, ticker_id=ticker_id)
 
     async def _search(args: dict[str, Any]) -> dict[str, Any]:
-        return await exec_web_search(args, log=log)
+        return await exec_web_search(args, log=log, ticker_id=ticker_id)
 
     return {
         "web_search": _search,

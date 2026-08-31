@@ -102,7 +102,9 @@ def _baseline(source_type: str) -> float:
     return SOURCE_RELIABILITY_BASELINE.get(source_type, (None, 0.0))[1]
 
 
-def _resolve_source_type(declared: Any, url: Optional[str]) -> str:
+def _resolve_source_type(
+    declared: Any, url: Optional[str], ticker_id: Optional[str] = None
+) -> str:
     """Qualification finale de la source : le **domaine** tranche, sauf aveu de mémoire modèle.
 
     `source_type` n'est pas un jugement mais un **fait sur la source**, que le domaine détermine
@@ -118,7 +120,7 @@ def _resolve_source_type(declared: Any, url: Optional[str]) -> str:
     """
     if declared == "llm_memory":
         return "llm_memory"
-    return classify_source_type(url)
+    return classify_source_type(url, ticker_id)
 
 
 def _resolve_covers(mandat: Optional[str], declare: Any) -> Optional[str]:
@@ -213,7 +215,7 @@ def _normalise_entry(
         return None
 
     url = (raw.get("source_url") or "").strip() or None
-    source_type = _resolve_source_type(raw.get("source_type"), url)
+    source_type = _resolve_source_type(raw.get("source_type"), url, req.ticker_id)
     source_date = _parse_iso_date(raw.get("source_date"))
 
     caveats: list[str] = []

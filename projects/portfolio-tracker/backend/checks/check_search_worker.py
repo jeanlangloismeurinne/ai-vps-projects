@@ -10,6 +10,7 @@ from app.agents.v2.worker import _apply_deterministic_overrides, _resolve_source
 from app.contracts import OutputSchema, WorkerExchange, WorkerRequest, WorkerResponse
 from app.knowledge.websearch import (
     SearchUnavailable, classify_source_type, get_search_backend, html_to_text,
+    issuer_domains_for,
 )
 
 ok = fail = 0
@@ -34,12 +35,55 @@ cases = {
     "https://lesechos.fr/x": "financial_press",
     "https://www.amf-france.org/x": "regulator_filing_eu",
     "https://blog.random-guy.dev/nvidia-moat": "web_search_generic",
-    "https://nvidia.com/fr-fr/data-center/": "web_search_reputable",
+    # Sans ticker, le site d'un émetteur n'est plus « réputé » : ce plafond se mérite désormais
+    # émetteur par émetteur (#31), pas depuis une constante globale. Cf. §1bis.
+    "https://nvidia.com/fr-fr/data-center/": "web_search_generic",
     None: "llm_memory",
 }
 for url, expected in cases.items():
     got = classify_source_type(url)
     check(f"{str(url)[:52]:<54} → {got}", got == expected, f"attendu {expected}")
+
+print("\n1bis. Domaines d'émetteur — clefés par ticker, jamais globaux (#31)")
+# Le défaut de généralité corrigé le 2026-08-31 : `nvidia.com` était en dur dans
+# `_REPUTABLE_SUFFIXES` et Microsoft n'avait rien, si bien que microsoft.com/en-us/investor/ — de
+# l'IR officiel — tombait en `web_search_generic` (0.50) au lieu de `company_ir_official` (0.90).
+check("chemin IR de l'émetteur analysé → company_ir_official (cas Microsoft)",
+      classify_source_type("https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4", "MSFT")
+      == "company_ir_official")
+check("site de l'émetteur hors section IR → web_search_reputable",
+      classify_source_type("https://nvidia.com/fr-fr/data-center/", "NVDA")
+      == "web_search_reputable")
+check("registre insensible à la casse du ticker",
+      classify_source_type("https://nvidia.com/x", "nvda") == "web_search_reputable")
+
+# Le point qui compte : le privilège ne FUIT PAS d'un émetteur à l'autre. Sur une analyse MSFT,
+# nvidia.com est le site marketing d'un concurrent, pas une source primaire.
+check("le domaine d'un émetteur ne vaut rien pour un AUTRE émetteur",
+      classify_source_type("https://nvidia.com/fr-fr/data-center/", "MSFT")
+      == "web_search_generic")
+check("chemin IR sur un domaine tiers → aucune promotion (pas de /investor/ magique)",
+      classify_source_type("https://unblogquelconque.com/investor/msft-analyse", "MSFT")
+      == "web_search_generic")
+check("ticker inconnu → aucun domaine d'émetteur, donc aucune promotion héritée",
+      classify_source_type("https://microsoft.com/en-us/investor/", "AAPL")
+      == "web_search_generic")
+check("issuer_domains_for rend un tuple vide pour un ticker non enregistré",
+      issuer_domains_for("AAPL") == () and issuer_domains_for(None) == ())
+
+# Non-régression : le sous-domaine `ir.` reste GÉNÉRIQUE. Le restreindre au registre ferait tomber
+# l'IR d'un concurrent de 0.90 à 0.50 sur toute analyse — un faux trou de couverture creusé par le
+# correctif censé en boucher un (#32).
+check("ir.<concurrent>.com reste company_ir_official sur une analyse MSFT",
+      classify_source_type("https://ir.nvidia.com/news/press-release", "MSFT")
+      == "company_ir_official")
+check("sec.gov prime sur le registre d'émetteur",
+      classify_source_type("https://www.sec.gov/Archives/edgar/data/789019/x.htm", "MSFT")
+      == "edgar_official")
+check("le mandat porte l'émetteur jusqu'à _resolve_source_type",
+      _resolve_source_type("web_search_generic",
+                           "https://www.microsoft.com/en-us/investor/", "MSFT")
+      == "company_ir_official")
 
 print("\n2. _resolve_source_type — le domaine tranche, sauf aveu llm_memory")
 check("edgar sur-déclaré sur un blog → web_search_generic",
@@ -50,6 +94,41 @@ check("llm_memory déclaré sur sec.gov → llm_memory (l'aveu prime sur le doma
       _resolve_source_type("llm_memory", "https://www.sec.gov/x") == "llm_memory")
 check("source_type inventé → qualification du domaine",
       _resolve_source_type("mon_source_type", "https://www.reuters.com/x") == "financial_press")
+
+print("\n2bis. Câblage réel : le ticker du mandat atteint-il les outils ?")
+# Une table de domaines correcte ne sert à rien si `ticker_id` n'arrive pas jusqu'à l'appel. C'est
+# LE défaut que §1bis ne peut pas voir : on remplace le backend de recherche par un bouchon et on
+# regarde ce que l'exécuteur annonce réellement au modèle dans `source_type_max`.
+import asyncio  # noqa: E402
+
+from app.agents.v2 import tools as _tools  # noqa: E402
+from app.knowledge.websearch import SearchHit  # noqa: E402
+
+_IR_MSFT = "https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4"
+
+
+async def _stub_web_search(query, max_results=5):
+    return [SearchHit(title="Earnings", url=_IR_MSFT, snippet="…")]
+
+
+_reel = _tools.web_search
+_tools.web_search = _stub_web_search
+try:
+    execs = _tools.build_tool_executors(ticker_id="MSFT", query="revenus Microsoft Cloud")
+    res = asyncio.run(execs["web_search"]({"query": "microsoft investor relations revenus"}))
+    annonce = (res.get("results") or [{}])[0].get("source_type_max")
+    check(f"web_search annonce {annonce!r} sur l'IR de l'émetteur analysé",
+          annonce == "company_ir_official",
+          "le ticker du mandat ne descend pas jusqu'à classify_source_type")
+
+    # Même bouchon, même URL, mais le mandat porte sur un AUTRE émetteur.
+    execs_autre = _tools.build_tool_executors(ticker_id="NVDA", query="marché des GPU")
+    res_autre = asyncio.run(execs_autre["web_search"]({"query": "microsoft investor relations"}))
+    annonce_autre = (res_autre.get("results") or [{}])[0].get("source_type_max")
+    check(f"le même lien vaut {annonce_autre!r} quand le mandat porte sur un autre émetteur",
+          annonce_autre == "web_search_generic")
+finally:
+    _tools.web_search = _reel
 
 print("\n3. _apply_deterministic_overrides — sortie de modèle hostile")
 req = WorkerRequest(

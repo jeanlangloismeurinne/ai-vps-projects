@@ -15,6 +15,7 @@ from .websearch import (
     fetch_url,
     get_search_backend,
     html_to_text,
+    issuer_domains_for,
     search_is_configured,
     web_search,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "fetch_url",
     "get_search_backend",
     "html_to_text",
+    "issuer_domains_for",
     "search_is_configured",
     "web_search",
 ]
