@@ -161,8 +161,9 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 **Migration 027 = V2 Embeddings** : `knowledge_entries.embedding` passe de `vector(768)` à **`vector(1024)`** (modèle `BAAI/bge-m3`, multilingue, via DeepInfra `/v1/openai/embeddings`), index HNSW reconstruit en `vector_cosine_ops` (opérateur `<=>` inchangé) + index **partiel** `idx_knowledge_entries_unembedded` sur `embedding IS NULL`. Motif : le corpus est en **français** et `bge-base-en-v1.5` (anglais seul) ratait les entrées financières EDGAR Tier A — bench sur corpus réel, hit@3 4/7 contre 7/7. Justification chiffrée dans l'en-tête de la migration et dans `roadmap/provenance-cards/00-REPRISE.md`.
 **Migration 028 = `knowledge_entries.covers`** : le champ MVDD que l'entry fonde (pertinence du contenu au gate, pas seulement le tier).
 **Migration 029 = `covers` en `TEXT[]` + chemins COMPLETS + index GIN** : une entry fonde plusieurs champs (#19 en porte 3), et `description` étant requis par `business_model` ET `produits`, un nom nu ferait passer l'autre. Backfill relu des 17 entries qualitatives legacy NVDA (#19-#35), que le search-worker n'avait jamais taguées. C'est l'index que le curator interroge désormais pour rendre son verdict — cf. convention #29.
-**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait) → **030** theses_flow, **031** exit/calibration.
-Prochaine migration : `030_v2_theses_flow.sql`.
+**Migration 030 = V2 theses_flow (lot 7, acte de décision)** : table **`theses_v2`** (jugement V2, disjoint de `theses` qui reste le pivot V1) portant la décision figée — `validation_json`, `verdict` (CHECK `PROCEED`|`PROCEED_AVEC_CONDITIONS`), `position_sizing_pct`, `valuation_range`, `conditions_entree TEXT[]`, `hypotheses`, `risk_acks`, `pre_mortem_acked`, `risk_matrix_acked`, lignée `research_memo_id`/`synthesis_analysis_id`. CHECK `theses_v2_active_complete` : une thèse `active` doit avoir tous ses champs de décision, les deux acquittements à TRUE, et des conditions non vides si `PROCEED_AVEC_CONDITIONS` (le CHECK ne mord que sur `active` — un `draft` reste libre). Côté **faits du monde** (cf. convention #34) : `portfolio_positions` et `calendar_events` reçoivent une colonne **`thesis_v2_id`** nullable + CHECK d'exclusivité `thesis_id IS NULL OR thesis_v2_id IS NULL`, et `event_router_v1.py` filtre `AND ce.thesis_v2_id IS NULL` sur ses 4 requêtes. Route : **`POST /v2/theses/{id}/validate`** — préfixée `/v2` parce que `POST /theses/{id}/validate` existe **déjà** en V1 (`api/thesis_v2.py`, où « v2 » désigne la 2ᵉ version du fichier V1). Contrat `ThesisValidation` dans `app/contracts/decision_validate_schema.py`.
+**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait), 030 theses_flow (fait) → **031** exit/calibration.
+Prochaine migration : `031_v2_exit_calibration.sql` (lot 9). Le lot 8 (monitoring V2) n'en demande pas a priori.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -420,6 +421,47 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     (#28). Tests : `check_search_worker.py` §1bis (la table) et **§2bis (le câblage** — une table
     juste ne sert à rien si le ticker n'arrive pas jusqu'à l'appel, et c'est le seul défaut que
     §1bis ne peut pas voir).
+
+34. **Les jugements sont disjoints, les faits du monde sont PARTAGÉS (V2, migration 030)** : la règle
+    qui tranche « nouvelle table ou colonnes en plus ? » quand deux flux cohabitent. Un **jugement**
+    (`theses` | `theses_v2`) est l'opinion d'un flux : le dupliquer est sain, chaque flux a la
+    sienne. Un **fait du monde** (`tickers`, `portfolio_positions`, `cash_movements`,
+    `calendar_events`) décrit ce qui s'est réellement passé : le dupliquer donnerait **deux soldes de
+    trésorerie sur de l'argent réel**. Donc table séparée pour le jugement, **colonne discriminante**
+    (`thesis_v2_id`, sœur nullable de `thesis_id`) + CHECK d'exclusivité pour le fait. Corollaire à ne
+    pas rater : le CHECK d'exclusivité est **par ligne**, pas par ticker — un même titre peut porter
+    une position V1 **et** une position V2, et toute vue qui agrège sans filtrer le flux double-compte
+    (constaté sur MSFT : `portfolio_v2.py` lit toutes les positions ouvertes, la page V1 affiche donc
+    la position V2). ⚠️ **Le partage crée une obligation de filtrage dans les DEUX sens** :
+    `_daily_check_v1` faisait un `LEFT JOIN theses … AND th.status='active'` — un LEFT JOIN **rend la
+    ligne même sans thèse jointe** — sans aucun garde `thesis_json IS NULL` en aval : le scheduler V1
+    aurait appelé l'**agent Dust V1 sur une thèse inexistante**, silencieusement et avec dépense
+    réelle. Vérifier le JOIN, ne pas le supposer : `AND ce.thesis_v2_id IS NULL` sur les 4 requêtes.
+
+35. **`get_db_session()` n'ouvre AUCUNE transaction** : il *acquiert* une connexion du pool
+    (`async with _pool.acquire() as conn: yield conn`) et chaque `execute` part en **autocommit**. La
+    validation V1 documentée « 4 écritures atomiques » (convention #13) **ne l'est donc pas** : une
+    panne au milieu laisse une thèse `active` sans position, ou une position sans mouvement de
+    trésorerie. L'atomicité doit être **explicite** — `async with conn.transaction():` — comme le fait
+    `agents/v2/decision.py`. Corollaire : les appels réseau (FX, calendrier) se font **avant**
+    l'ouverture de la transaction, on ne tient pas de verrou pendant un aller-retour yfinance. V1 est
+    délibérément laissée telle quelle (hors périmètre, risque de régression) : ne pas lire #13 comme
+    une garantie.
+
+36. **Un contrat de décision ne vaut que par ce que le corps HTTP n'expose PAS (V2, G2)** : le
+    `ValidateV2Body` du validate V2 n'accepte que les **acquittements** (`risk_acks`,
+    `pre_mortem_acked`) et les **faits d'exécution** (titres, prix, date). `verdict`,
+    `position_sizing_pct`, `conditions_entree`, `hypotheses`, `valuation_range` et la synthèse sont
+    **lus en base** : les accepter du client rendrait les 17 garde-fous décoratifs — il suffirait
+    d'envoyer une synthèse complaisante pour valider n'importe quoi. `risk_matrix_acked` est
+    **dérivé** (la bijection `risk_acks` ↔ `risques_acceptes` vaut acquittement), jamais demandé :
+    on ne fait pas déclarer ce qui est calculable (même esprit que #24). Un sizing autre que le
+    recommandé n'est **pas** un paramètre du validate — il se trace en amont dans la synthèse
+    (`position_sizing.override_utilisateur`, A7), ce qui le rend auditable au lieu d'être un argument
+    qu'on passe en douce. La `valuation_range` est **dérivée** du research memo (`iv_range` +
+    `dcf_scenarios.base`) et jamais reconstituée par moyenne des bornes : ce serait inventer une
+    donnée que l'analyse n'a pas produite. Test : `check_decision_validate.py` **§8**, qui inspecte
+    `model_fields` — la seule vérification qui tienne, parce qu'un commentaire ne contraint rien.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

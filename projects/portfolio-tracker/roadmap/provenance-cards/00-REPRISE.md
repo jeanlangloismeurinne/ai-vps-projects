@@ -4,7 +4,7 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-08-31
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée et dispense NVDA retirée (le 3ᵉ ticker n'est plus bloqué). Reste : agents 7-9, UX transverse, ingestion-agent.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030, dry-run réel MSFT). Reste : lot 8 (monitoring V2), lot 9 (sortie/débat), UX transverse, ingestion-agent.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -13,6 +13,74 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > diagnostics de bugs déjà réglés, décisions et leurs mesures) est conservé **intégralement** dans
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
+
+> ## ⚡ MàJ 2026-08-31 (ter) — LOT 7 : l'acte de décision (`theses_v2`, migration 030)
+>
+> **Le flux V2 sait maintenant conclure.** Déploiement **#331** (`a128005`), un seul conteneur
+> vérifié. Suite hors-ligne : **436 assertions / 0 échec** (382 avant, **+54** —
+> `check_decision_validate.py`). Dry-run réel joué de bout en bout sur MSFT : **12 vérifications
+> supplémentaires, 0 échec.**
+>
+> **Décision d'architecture (tranchée par l'utilisateur) : `theses_v2` + route `/v2/…`.** La carte
+> figée `decision_validate_card.md` disait « `theses += colonnes` » et `POST /theses/{id}/validate` —
+> elle **précède d'un jour** le principe de disjonction V1/V2. Deux raisons dirimantes : `theses` est
+> le pivot V1 (scheduler, monitoring, débat), et la route **existe déjà** en V1
+> (`api/thesis_v2.py:733`, où « v2 » désigne la 2ᵉ version du fichier V1). La carte est **amendée
+> avec un bloc daté** ; **le contrat JSON lui-même (`ThesisValidation`, 17 garde-fous) est
+> INCHANGÉ** — seuls le support de persistance et le chemin bougent.
+>
+> **Principe dégagé, plus général que ce lot — et c'est lui qu'il faut retenir :**
+> **les JUGEMENTS sont disjoints, les FAITS DU MONDE sont partagés.** `theses` | `theses_v2` sont
+> deux espaces de jugement séparés ; `tickers`, `portfolio_positions`, `cash_movements`,
+> `calendar_events` décrivent le monde réel — dupliquer le portefeuille signifierait **deux soldes de
+> trésorerie sur de l'argent réel**. D'où une colonne discriminante `thesis_v2_id` (sœur nullable de
+> `thesis_id`) + CHECK d'exclusivité `thesis_id IS NULL OR thesis_v2_id IS NULL`.
+>
+> **⚠ Danger silencieux trouvé en le vérifiant, pas en le supposant.** J'avais écrit dans la
+> migration que le scheduler V1 « filtre sur `thesis_id`, donc ignore nativement les lignes V2 ».
+> **Faux.** Les 4 requêtes de `_daily_check_v1` font `LEFT JOIN theses … AND th.status='active'` —
+> un LEFT JOIN **rend la ligne même sans thèse jointe**, et aucun garde `thesis_json IS NULL` en
+> aval. Le routeur V1 aurait donc appelé l'**agent Dust V1 sur une thèse inexistante**, en silence et
+> avec **dépense réelle**. Corrigé : `AND ce.thesis_v2_id IS NULL` sur les 4 requêtes. **Mesuré sur
+> les vrais événements du dry-run : 2 lignes vues sans le filtre, 0 avec.**
+>
+> **G2 s'exerce structurellement, pas par convention.** `ValidateV2Body` n'expose QUE `risk_acks`,
+> `pre_mortem_acked` et les faits d'exécution (titres, prix, date). `verdict`, `position_sizing_pct`,
+> `conditions_entree`, `hypotheses`, `valuation_range`, `synthesis` sont **lus en base** — les
+> accepter du client rendrait le contrat décoratif (il suffirait d'envoyer une synthèse complaisante).
+> `risk_matrix_acked` est **dérivé** (la bijection des acquittements en tient lieu), jamais demandé.
+> Un sizing autre que le recommandé ne se passe pas au validate : il se trace **en amont** dans la
+> synthèse (`position_sizing.override_utilisateur`, A7). `check_decision_validate.py` **§8 inspecte
+> `model_fields`** pour l'assurer — c'est la vérification la plus importante du fichier.
+>
+> **Atomicité réelle.** `get_db_session()` n'ouvre **aucune** transaction (il *acquiert* une
+> connexion, chaque `execute` est en autocommit) : la validation V1, documentée « atomique »
+> (convention #13), **ne l'est pas**. La V2 ouvre un `conn.transaction()` explicite, appels réseau
+> (FX, calendrier) faits **avant** pour ne pas tenir de verrou pendant un aller-retour yfinance. V1
+> délibérément non touchée (hors périmètre, risque de régression).
+>
+> **Dry-run réel MSFT (thèse V2 #4, synthèse #11, memo #4)** — refus d'abord, tous sans écriture :
+> acquittement incomplet 3/4 → **400**, pré-mortem non acquitté → **400**, acquittement fantôme
+> index 9 → **400**, thèse inexistante → **404**, et la thèse **toujours en `draft`** après les
+> quatre. Puis validation : verdict `PROCEED_AVEC_CONDITIONS` et sizing **3,0 %** repris de
+> l'analyse, fourchette **250 / 450 / 700 dérivée du memo** (`iv_range` + `dcf_scenarios.base`,
+> jamais une moyenne inventée), 4 hypothèses figées, rejeu → **409**. Chemin réseau réellement
+> exercé : FX **400 € → 464,79 $** et date de résultats **2026-10-28** obtenue de DataService.
+>
+> **⚠ Ligne de test conservée sur décision de l'utilisateur.** Le dry-run a créé de vraies lignes :
+> `theses_v2` **#4**, `portfolio_positions` **#8** (1 MSFT), `cash_movements` **#9** (400 €),
+> `calendar_events` **#65** (quarterly 2026-10-28) et **#66** (annual_review 2027-08-31). Elles sont
+> **gardées** comme premier cas V2 de bout en bout. **Conséquence à connaître** : la page portefeuille
+> V1 (`portfolio_v2.py:142`) lit **toutes** les positions ouvertes et **tous** les mouvements de cash,
+> sans filtre de flux — MSFT y apparaît donc **deux fois** (position V1 #1 + position V2 #8) et le
+> solde de trésorerie est **400 € plus bas**. Ce n'est pas un bug de la migration (le CHECK
+> d'exclusivité est **par ligne**, pas par ticker, à dessein) mais **une question pour la passe UX** :
+> filtrer sur `thesis_v2_id IS NULL` côté V1, ou afficher les deux avec un marqueur de flux.
+>
+> **Les événements de calendrier V2 sont posés mais PAS routés** — le scheduler V1 les exclut
+> volontairement et le routeur V2 arrive au **lot 8**. C'est **annoncé** dans la réponse de l'API
+> (champ `note`) pour ne pas se lire comme un bug. L'événement #65 tombe le **2026-10-28** : le lot 8
+> aura un vrai événement à router.
 
 > ## ⚡ MàJ 2026-08-31 (bis) — généralité #3 fermée + dispense NVDA retirée
 >
@@ -112,16 +180,24 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `90fc6d3`, deployment **#330**, un seul conteneur backend vérifié.
-- **Suite hors-ligne** : **382 assertions / 0 échec** sur 9 scripts (`backend/checks/`).
-- **Migrations appliquées** jusqu'à **029**. Prochaines : **030** theses_flow · **031** exit/calibration
-  — à écrire **juste avant** leur lot, jamais en avance (§18).
+- **Code déployé** : commit `a128005`, deployment **#331**, un seul conteneur backend vérifié.
+- **Suite hors-ligne** : **436 assertions / 0 échec** sur 10 scripts (`backend/checks/`).
+- **Migrations appliquées** jusqu'à **030** (theses_flow). Prochaine : **031** exit/calibration
+  — à écrire **juste avant** son lot, jamais en avance (§18).
+- **L'acte de décision est livré et exercé en réel** (lot 7) : la chaîne va désormais de la recherche
+  jusqu'à l'entrée en position.
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction.
-   Migrations 030/031 écrites juste avant chaque lot. **C'est le prochain jalon.**
-2. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
+1. **Lot 8 — monitoring V2 (mode 6 + routeur)**. **C'est le prochain jalon.** Les événements posés
+   par le lot 7 sont **planifiés mais non routés** : `calendar_events` #65 (2026-10-28) et #66
+   (2027-08-31) attendent un routeur V2. Contexte largement partagé avec le lot 7 (même migration
+   030, mêmes tables `theses_v2`/`hypotheses`).
+2. **Lot 9 — sortie/calibration + débat conviction** (migration 031, nouvelles tables, autre agent) :
+   périmètre quasi disjoint du lot 7-8 → **à faire dans une conversation neuve**.
+3. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
+   ⚠️ **Y traiter le double comptage MSFT** signalé dans la MàJ (ter) — la page portefeuille V1
+   ne filtre pas les positions du flux V2.
 3. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
 4. **3ᵉ ticker** — plus aucun blocage technique. ⚠️ Penser à ajouter son entrée dans
