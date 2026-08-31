@@ -4,7 +4,7 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-08-31
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT). Reste : dettes A/B, généralité #3, agents 7-9, UX transverse.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées. Reste : généralité #3 (avant le 3ᵉ ticker), re-run NVDA, agents 7-9, UX transverse.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -13,6 +13,50 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > diagnostics de bugs déjà réglés, décisions et leurs mesures) est conservé **intégralement** dans
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
+
+> ## ⚡ MàJ 2026-08-31 — sprint dettes B + A (un seul déploiement)
+>
+> **Les deux dettes sont fermées, vérifiées contre le vrai modèle.** Commit `4be04ed`,
+> deployment **#328**, un seul conteneur backend. Suite hors-ligne : **367 assertions / 0 échec**
+> (329 + 17 curator + **21 d'un check neuf**).
+>
+> **Dette B — unités de `assumptions`.** Les trois clés portent l'unité dans le nom
+> (`croissance_revenue_pct`, `expansion_marge_fcf_pct`, `multiple_sortie`), dans le contrat figé
+> **et** la copie runtime, avec la consigne explicite « 12 %/an s'écrit `12.0`, jamais `0.12` » dans
+> les prompts bull/bear rafraîchis en DB. **Origine trouvée** : `roadmap/01-spec-v2-unifiee.md`
+> l.373 juxtaposait, dans le même objet d'exemple, `croissance_implicite_prix_actuel_pct: 14` (en
+> pourcent) et `croissance_revenue: 0.10` (en fraction) — le modèle recopiait fidèlement une spec
+> incohérente. Exemple corrigé. **Pas de coercition ×100** délibérément : le nom + le prompt + le
+> contrat strict suffisent, et un filet de plus serait un 2ᵉ risque de polarité (cf. `conviction ×10`).
+> *Vérifié contre le modèle* (MSFT, memo #4) : bull `12.0` / bear `5.0` %/an, **même échelle** —
+> là où le run précédent donnait `0.15` contre `8.0`, facteur ~53. `expansion_marge_fcf_pct` bear
+> à `-8.0` (compression, négatif licite).
+>
+> **Dette A — narration du curator.** Traitée à **trois** niveaux, parce que la cause n'était pas
+> celle décrite : l'exemple de `rationale` **du prompt lui-même** se terminait par « … →
+> thin_qualitative ». *Le prompt enseignait le défaut du rapport #24.* (1) exemple corrigé,
+> (2) garde-fou 7 interdisant de nommer un verdict + rappel de l'ordre des tiers
+> (**A > A- > B+ > B > C+ > C**), (3) `constrain_rationale()` en Python : en-tête factuel dérivé des
+> booléens recomputés, et toute phrase nommant un verdict **autre** que le recomputé est retirée,
+> **le retrait étant déclaré** dans le texte (jamais de coupe muette).
+> *Vérifié contre le modèle* — rapport **#26**, MSFT : verdict `ready`, en-tête
+> `[Verdict recomputé : ready — bloc structuré fondé, bloc qualitatif-marché fondé ; 0 champ(s) non
+> fondé(s). …]`, **aucune phrase à retirer** — le garde-fou de prompt a tenu en amont, le filet
+> Python n'a servi à rien. C'est le résultat voulu.
+>
+> **Check neuf `check_analysis_contract.py` (21 assertions)** — celui qui manquait le jour où le
+> reverse-DCF a été desserré à chaud : les anciens noms nus sont désormais **rejetés** (pas ignorés),
+> `croissance_implicite_prix_actuel_pct` est requis, `Assumptions` est fermé (`extra='forbid'`), et
+> §6 compare **contrat figé ↔ copie runtime** (règle #19) — l'absence du montage `/contract_frozen`
+> est **annoncée**, jamais silencieuse.
+>
+> **Résidu observé, non bloquant** : le rationale #26 écrit encore « seule une synthèse agent (A-)
+> existe, sans source primaire de tier B+ ou supérieur » — l'ordre des tiers reste mal lu par le
+> modèle sur une phrase qui **ne nomme aucun verdict**, donc que `constrain_rationale` laisse passer.
+> Le verdict, lui, est juste. À revoir si ça se répète : la contrainte porte sur les verdicts nommés,
+> pas sur les comparaisons de tiers.
+>
+> **Ce fichier a été allégé le même jour** → `00-REPRISE-ARCHIVE.md` (821 lignes, rien de résumé).
 
 ## Où on en est (2026-08-31)
 
@@ -26,39 +70,27 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `990c8f8`, deployment **#327**, un seul conteneur backend vérifié.
-- **Suite hors-ligne** : **329 assertions / 0 échec** sur 8 scripts (`backend/checks/`).
+- **Code déployé** : commit `4be04ed`, deployment **#328**, un seul conteneur backend vérifié.
+- **Suite hors-ligne** : **367 assertions / 0 échec** sur 9 scripts (`backend/checks/`).
 - **Migrations appliquées** jusqu'à **029**. Prochaines : **030** theses_flow · **031** exit/calibration
   — à écrire **juste avant** leur lot, jamais en avance (§18).
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **Dette B — unités de `assumptions`** (mécanique, ferme une bombe latente).
-   Bull a produit `croissance_revenue: 0.15` (fraction) là où bear rendait `8.0` (pourcent) —
-   facteur ~53 ; `expansion_marge_fcf` 0.0 vs -2.0. Déclarés `float` au contrat, **consommés nulle
-   part en Python** aujourd'hui : donc aucun crash, et exactement le motif du `Optional` du
-   reverse-DCF (cf. archive, MàJ ter). Le dépôt encode l'unité dans le nom partout (`_pct`) ; ces
-   deux champs sont les seuls à l'omettre. → suffixe `_pct`, en respectant la **règle #19**.
-2. **Dette A — le rationale du curator peut contredire son propre verdict.**
-   Rapport #24 : verdict `ready`, mais le rationale écrit « … (tier A-), sous le plancher B+ requis
-   → thin_qualitative ». Deux erreurs : l'ordre des tiers est **inversé** (A- 0.85 est *au-dessus*
-   de B+ 0.75) et **un autre verdict est narré**. `_verdict_contraint` protège le GO/NO-GO, mais la
-   narration n'est contrainte par rien — **et c'est elle que l'humain lit**. Le tir 2 a produit un
-   rationale correct : la qualité du récit varie là où le verdict ne varie pas.
-3. **Défaut de généralité #3 — les domaines IR d'émetteur sont en dur pour NVDA.**
+1. **Défaut de généralité #3 — les domaines IR d'émetteur sont en dur pour NVDA.**
    `nvidia.com` est dans `_REPUTABLE_SUFFIXES`, rien pour Microsoft :
    `microsoft.com/en-us/investor/…` est classé `web_search_generic` **0.50** au lieu de
    `company_ir_official` **0.90**. Impact mesuré **nul** sur le sprint MSFT (0 entry retenue depuis
    microsoft.com — le modèle a préféré sec.gov). Différé sciemment : le correctif propre demande de
    faire descendre `ticker_id` dans `classify_source_type()` (**4 sites d'appel**).
    ⚠️ **À faire avant le 3ᵉ ticker.**
-4. **Re-run de contrôle NVDA**, puis **retrait de la dispense** `marche.croissance_marche_historique`
+2. **Re-run de contrôle NVDA**, puis **retrait de la dispense** `marche.croissance_marche_historique`
    — probablement obsolète depuis la convention #32 (les cabinets d'études sont désormais classés
    `web_search_reputable`, plafond B, donc le champ est fondable).
-5. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction.
+3. **Agents 7-9** : décision/validate (monitoring M6) → sortie/calibration → débat conviction.
    Migrations 030/031 écrites juste avant chaque lot.
-6. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
-7. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
+4. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
+5. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
 
 ### Dettes techniques connues, assumées
@@ -135,7 +167,8 @@ c'est un système exercé, dont on connaît les modes de panne.
 > garde-fous : G1 schéma versionné = source unique · G2 décision contrainte par l'analyse · G3 donnée
 > versionnée + scorée + figée, jamais de texte libre. DÉCISION #1 = Option C (base neutre → bull/bear
 > isolés → réfutation bear→bull → synthèse).
-> **Prochain jalon** : dettes B (`assumptions` en `_pct`) puis A (narration du curator contrainte),
-> puis la généralité #3 (domaines IR par émetteur) avant tout 3ᵉ ticker, puis agents 7-9.
+> Dettes A et B **fermées** le 2026-08-31 (déploiement #328, vérifiées contre le vrai modèle).
+> **Prochain jalon** : la généralité #3 (domaines IR par émetteur) — **avant tout 3ᵉ ticker** —,
+> puis le re-run NVDA + retrait de la dispense, puis agents 7-9.
 > LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-#32), `00-REPRISE-ARCHIVE.md`
 > si le *pourquoi* d'une décision manque.
