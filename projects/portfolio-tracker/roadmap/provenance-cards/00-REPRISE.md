@@ -4,8 +4,106 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-08-30
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'analyse EXERCÉE EN RÉEL pour la première fois — verdict NVDA = PROCEED_AVEC_CONDITIONS → reste : agents 7-9, UX transverse, second ticker).
+role: Prompt à coller pour reprendre le chantier V2 (couche contrat FIGÉE + couche 2 code DÉPLOYÉE + chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS — NVDA PROCEED_AVEC_CONDITIONS, MSFT readiness `ready` sans dérogation puis PROCEED_AVEC_CONDITIONS → reste : agents 7-9, UX transverse, dettes A/B ci-dessous).
 ---
+
+> ## ⚡ MàJ 2026-08-30 (quater) — SECOND TICKER (MSFT) de bout en bout : 3 défauts de généralité trouvés, 2 corrigés ; readiness `ready` atteinte SANS dérogation ; chaîne complète rejouée
+>
+> **But du sprint** (choix utilisateur « second ticker d'abord ») : ne pas ajouter d'agents, mais
+> **exercer la chaîne entière sur un émetteur ≠ NVDA** pour vérifier que ce qui vient d'être resserré
+> (#324) est générique et pas taillé pour le cas-pilote. Le sprint a rendu ce qu'on lui demandait :
+> **trois choses qui se croyaient génériques ne l'étaient pas.** Aucune n'aurait été visible sur NVDA.
+>
+> ### Prérequis levé : `knowledge/edgar_feed.py` (au lieu de semer MSFT à la main)
+> `resolve_cik()` via le registre `company_tickers.json` de la SEC → le socle EDGAR devient
+> atteignable pour **tout** ticker, là où `financials` n'était fondable que par le seed NVDA écrit à
+> la main. Découverte au passage → **convention #30** : le concept XBRL se choisit **par fraîcheur**,
+> jamais par convention. `Revenues` pour MSFT s'arrête au **2010-06-30** (HTTP 200, donnée périmée,
+> rien ne le signale) quand `RevenueFromContractWithCustomerExcludingAssessedTax` va à 2026-06-30.
+> Le « piège capex NVDA » documenté comme cas particulier était en fait cette règle générale.
+> Chaque poste porte donc une LISTE de candidats et `select_concept()` retient le plus frais.
+>
+> ### Les 3 défauts de généralité
+> 1. **✅ corrigé (#326, `6979f13`)** — `curator.DECLARED_NONBLOCKING_GAPS` était une constante
+>    GLOBALE dispensant `business_model.recurrence_pct` pour *tout* ticker au motif que « NVIDIA est
+>    hardware-dominant ». MSFT héritait en silence d'un passe-droit sur un champ qu'il publie
+>    précisément (Microsoft Cloud, RPO) : ni fondé, ni compté comme manque, et le libellé parlant de
+>    NVIDIA partait dans les incertitudes de MSFT. → `nonblocking_gaps_for(ticker_id)`, **défaut =
+>    aucune dispense** (on refuse un `ready` de trop, on n'en accorde pas un par héritage).
+> 2. **✅ corrigé (#327, `990c8f8`)** — `SYNTHESIS_TARGETS` s'annonçait « générique par
+>    construction » avec des `query`/`guidance` écrites pour NVIDIA (« Data Center/Gaming »,
+>    « coût par GPU », « CUDA », « TSMC/HBM »). Sur un autre émetteur la requête sémantique cherchait
+>    le mauvais vocabulaire et la consigne demandait de synthétiser une **autre entreprise** — dans le
+>    seul agent dont toute la valeur est de ne pas sortir de son corpus. → gabarits `{company}`, aucun
+>    acteur nommé, l'émetteur vient des entries citées.
+> 3. **⚠️ NON corrigé, à faire avant le 3ᵉ ticker** — les domaines IR d'émetteur sont en dur pour
+>    NVDA (`nvidia.com` dans `_REPUTABLE_SUFFIXES`, rien pour Microsoft) :
+>    `microsoft.com/en-us/investor/...` est classé `web_search_generic` **0.50** au lieu de
+>    `company_ir_official` **0.90**. Impact mesuré **nul sur ce sprint** (0 entry MSFT retenue depuis
+>    microsoft.com — le modèle a préféré sec.gov, 38 entries tier A). Différé sciemment : le correctif
+>    propre demande de faire descendre `ticker_id` dans `classify_source_type()` (4 sites d'appel).
+>    → Les deux premiers sont figés en **convention #31** (« une constante globale qui contient un
+>    fait sur un émetteur est un bug qui attend le 2ᵉ ticker »), tests de non-régression
+>    `check_readiness_recompute.py` §13 et `check_synthesis_feed.py` §7.
+>
+> ### 🔬 Le finding du sprint → convention #32 : deux garde-fous réglés séparément = champ INFONDABLE
+> `marche.croissance_marche_historique` avait **deux** aménagements construits pour lui
+> (`FIELD_PLANCHER_OVERRIDES` abaissant son plancher à `B`, + une dispense NVDA). **Aucun ne pouvait
+> marcher** : les cabinets qui produisent ces chiffres (Synergy, Canalys, Omdia, Gartner, IDC)
+> tombaient tous en `web_search_generic` **C+/0.50**, donc *sous* le plancher B (0.65) qu'on venait
+> d'abaisser pour eux. Mesuré sur MSFT : 2 mandats, 35 puis 15 URL rapportées, recherche réelle,
+> provenance vérifiée → `sous-plancher:5` puis `sous-plancher:3`, et un `not_found` que le curator lit
+> comme « ce chiffre n'existe pas » **alors qu'il avait été trouvé cinq fois**. Bouché dans la table
+> de domaines (`websearch._REPUTABLE_SUFFIXES`, plafond B), pas par une dispense de plus ; champ fondé
+> au 1ᵉʳ réessai. **Maxime : quand on abaisse un plancher, vérifier dans la foulée qu'au moins un
+> `source_type` l'atteint.** Test `check_provenance.py` §8 (42 → 50 assertions) : il confronte la
+> table de domaines au plancher **effectif du champ**, au lieu de les tester chacun de son côté.
+>
+> ### Ce que les garde-fous ont intercepté pendant le run (ils ont servi)
+> - **#28 (provenance vérifiée)** : le run `produits.description` a rendu 0 entry en 49 s / $0.0028
+>   **sans un seul appel d'outil** — réponse de mémoire, correctement refusée. Le réessai en
+>   récupération forcée : 243 s / $0.0089 / **4 entries tier A**. Ma première hypothèse (« bail
+>   précoce ») était **fausse** : les logs conteneur montrent deux causes *différentes* pour les deux
+>   `not_found` (mémoire d'un côté, sous-plancher de l'autre) — corrigé après lecture des logs.
+> - **#24/#25** : aucun `llm_memory` dans le socle final.
+>
+> ### État MSFT atteint (tout vérifié en base, pas sur la foi des scripts)
+> | Étape | Résultat |
+> |---|---|
+> | Socle | **51 entries**, **19/19 champs MVDD fondés**, 44 tier A / 9 tier B, **0 `llm_memory`**, ≈ $0,19 |
+> | Synthèses grounded | #112 `produits.unit_economics`, #113 `marche.structure_5forces` — A-/0.85, entries citées toutes MSFT tier A |
+> | Readiness | **`ready`** (rapports #24/#25), 0 gap, 0 incertitude bloquante, **0 dérogation** (NVDA en demande 2) ; context_pack #114/#115 |
+> | Déterminisme | 2 tirs à corpus figé → couverture **strictement identique**, verdicts identiques |
+> | Chaîne | research #4 → bull #8 / bear #9 → rebuttal bear v2 #10 → synthèse #11 = **PROCEED_AVEC_CONDITIONS**, ≈ $0,018 |
+> | Pont | 8 entries citées par les hypothèses de la synthèse : toutes MSFT, toutes version 1 concordante, toutes tier A |
+> | Resserrages #324 | confirmés sur un 2ᵉ émetteur : `croissance_implicite_prix_actuel_pct = 13.5` **partout, y compris bear round 2** (exactement le cas null de NVDA) ; `assumptions` = exactement les 3 clés contractuelles, WACC en prose |
+>
+> ### 🧾 Deux dettes NOUVELLES, documentées et NON corrigées
+> - **A — le rationale du curator peut contredire son propre verdict.** Rapport #24 : verdict
+>   `ready`, mais le rationale écrit « bloc qualitatif-marché incomplet … (tier A-), sous le plancher
+>   B+ requis … → thin_qualitative ». **Deux erreurs** : l'ordre des tiers est inversé (A- 0.85 est
+>   *au-dessus* de B+ 0.75) et un autre verdict est narré. `_verdict_contraint` protège le GO/NO-GO,
+>   mais la narration n'est contrainte par rien — **et c'est elle que l'humain lit**. Le tir 2 a
+>   produit un rationale correct : la qualité du récit varie là où le verdict ne varie pas.
+> - **B — incohérence d'unités dans `assumptions`.** Même run : bull #8 `croissance_revenue: 0.15`
+>   (fraction) vs bear #9/#10 `8.0` (pourcent) — facteur ~53 ; `expansion_marge_fcf` 0.0 vs -2.0.
+>   Déclarés `float` au contrat, consommés **nulle part** en Python → bombe à retardement, **même
+>   motif que le `Optional` du reverse-DCF** (MàJ ter). Le dépôt encode l'unité dans le nom partout
+>   (`_pct`) : ces deux champs sont les seuls à omettre le suffixe. Correctif = suffixe `_pct`, en
+>   respectant la **règle #19** (prompt en DB + frontend + import simultanément).
+>
+> ### Ordre suggéré à la reprise
+> 1. Dette **B** (`_pct`) — mécanique, règle #19, ferme une bombe latente.
+> 2. Dette **A** (rationale vs verdict) — contraindre la narration, ou la dériver du verdict.
+> 3. Défaut de généralité **#3** (domaines IR par émetteur) — **avant** le 3ᵉ ticker.
+> 4. Re-run de contrôle NVDA puis **retrait de la dispense** `marche.croissance_marche_historique`,
+>    probablement obsolète depuis #32.
+> 5. Alors seulement **agents 7-9** + migrations 030/031.
+>
+> ### Vérifications
+> Suite hors-ligne **329 assertions / 0 échec** sur 8 scripts (`backend/checks/`). Déploiements
+> **#326** (`6979f13`) et **#327** (`990c8f8`), un seul conteneur actif vérifié après chaque rebuild
+> (pas d'orphelin Traefik).
 
 > ## ⚡ MàJ 2026-08-30 (ter) — AUDIT des desserrages de contrat faits à chaud pendant la chaîne : le `Optional` du reverse-DCF cachait un VRAI trou silencieux (bear), corrigé par durcissement prompt PUIS re-serrage du schéma (déployé #324)
 >
