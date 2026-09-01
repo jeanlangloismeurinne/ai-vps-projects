@@ -51,6 +51,7 @@ class CommsClient:
         *,
         subject: str | None = None,
         body: str | None = None,
+        html: str | None = None,
         attachments: list[dict] | None = None,
     ) -> dict:
         """POST /v1/send — lève CommsError si rejeté (policy/rate-limit) ou en échec."""
@@ -59,6 +60,8 @@ class CommsClient:
             payload["subject"] = subject
         if body:
             payload["body"] = body
+        if html:
+            payload["html"] = html
         if attachments:
             payload["attachments"] = attachments
 
@@ -80,8 +83,8 @@ class CommsClient:
         reason = data.get("reason") or data.get("error") or f"HTTP {r.status_code}"
         raise CommsError(reason)
 
-    async def send_email(self, to: str, subject: str, body: str, **kw) -> dict:
-        return await self.send("email", to, subject=subject, body=body, **kw)
+    async def send_email(self, to: str, subject: str, body: str, html: str | None = None, **kw) -> dict:
+        return await self.send("email", to, subject=subject, body=body, html=html, **kw)
 
     async def send_slack(self, to: str, body: str, **kw) -> dict:
         return await self.send("slack", to, body=body, **kw)

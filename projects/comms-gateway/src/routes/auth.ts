@@ -19,5 +19,7 @@ export type SendBody = {
   to: string;
   subject?: string | null;
   body?: string | null;
+  /** Corps HTML (email) — transmis au provider en plus du `text` (fallback). */
+  html?: string | null;
   attachments?: Array<{ filename?: string; contentType?: string; data?: string }>;
 };

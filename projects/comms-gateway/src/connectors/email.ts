@@ -48,6 +48,7 @@ export class EmailConnector implements Connector {
       subject: opts.subject ?? "",
     };
     if (opts.body) payload.text = opts.body;
+    if (opts.html) payload.html = opts.html;
     if (opts.attachments?.length) {
       payload.attachments = opts.attachments
         .filter((a) => a.data)

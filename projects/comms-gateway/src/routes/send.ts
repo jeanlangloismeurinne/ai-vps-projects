@@ -19,7 +19,11 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: "authentification requise (client inconnu ou désactivé)" }) as unknown as SendReply;
     }
 
-    const { channel, to, subject, body, attachments } = request.body ?? {};
+    const { channel, to, subject, body, html, attachments } = request.body ?? {};
+
+    // L'audit conserve le corps (texte si présent, sinon le HTML) — traçable sans exposer
+    // la mise en page. Le HTML complet part au connecteur via `html`.
+    const audited = body ?? html;
     if (!channel || !to) {
       return reply.code(400).send({ error: "`channel` et `to` requis" }) as unknown as SendReply;
     }
@@ -32,7 +36,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
         direction: "out",
         to,
         subject,
-        body,
+        body: audited,
         status: "rejected_policy",
         reason: "aucune policy active sur ce canal",
       });
@@ -45,7 +49,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
         direction: "out",
         to,
         subject,
-        body,
+        body: audited,
         status: "rejected_policy",
         reason: "action d'envoi non autorisée",
       });
@@ -61,7 +65,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
         direction: "out",
         to,
         subject,
-        body,
+        body: audited,
         status: "rejected_rate_limit",
         reason: `quota quotidien dépassé (${policy.rate_limit_per_day}/jour)`,
       });
@@ -73,7 +77,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
 
     // Envoi effectif via le connecteur du canal
     const { connector, creds, from } = await resolveChannel(policy);
-    const result = await connector.send({ to, subject, body, attachments }, creds, from);
+    const result = await connector.send({ to, subject, body, html, attachments }, creds, from);
 
     if (!result.ok) {
       await logMessage({
@@ -82,7 +86,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
         direction: "out",
         to,
         subject,
-        body,
+        body: audited,
         status: "failure",
         reason: result.error ?? "échec inconnu",
       });
@@ -97,7 +101,7 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
       direction: "out",
       to,
       subject,
-      body,
+      body: audited,
       status: "success",
       providerMessageId: result.providerMessageId,
     });

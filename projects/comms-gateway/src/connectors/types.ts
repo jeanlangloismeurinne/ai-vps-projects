@@ -11,7 +11,10 @@ export interface Attachment {
 export interface SendOptions {
   to: string;
   subject?: string | null;
+  /** Corps texte brut — utilisé comme `text`/fallback chez le provider. */
   body?: string | null;
+  /** Corps HTML (email) — envoyé tel quel chez Resend, `text` reste le fallback. */
+  html?: string | null;
   attachments?: Attachment[];
 }
 
