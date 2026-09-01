@@ -162,8 +162,10 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 **Migration 028 = `knowledge_entries.covers`** : le champ MVDD que l'entry fonde (pertinence du contenu au gate, pas seulement le tier).
 **Migration 029 = `covers` en `TEXT[]` + chemins COMPLETS + index GIN** : une entry fonde plusieurs champs (#19 en porte 3), et `description` étant requis par `business_model` ET `produits`, un nom nu ferait passer l'autre. Backfill relu des 17 entries qualitatives legacy NVDA (#19-#35), que le search-worker n'avait jamais taguées. C'est l'index que le curator interroge désormais pour rendre son verdict — cf. convention #29.
 **Migration 030 = V2 theses_flow (lot 7, acte de décision)** : table **`theses_v2`** (jugement V2, disjoint de `theses` qui reste le pivot V1) portant la décision figée — `validation_json`, `verdict` (CHECK `PROCEED`|`PROCEED_AVEC_CONDITIONS`), `position_sizing_pct`, `valuation_range`, `conditions_entree TEXT[]`, `hypotheses`, `risk_acks`, `pre_mortem_acked`, `risk_matrix_acked`, lignée `research_memo_id`/`synthesis_analysis_id`. CHECK `theses_v2_active_complete` : une thèse `active` doit avoir tous ses champs de décision, les deux acquittements à TRUE, et des conditions non vides si `PROCEED_AVEC_CONDITIONS` (le CHECK ne mord que sur `active` — un `draft` reste libre). Côté **faits du monde** (cf. convention #34) : `portfolio_positions` et `calendar_events` reçoivent une colonne **`thesis_v2_id`** nullable + CHECK d'exclusivité `thesis_id IS NULL OR thesis_v2_id IS NULL`, et `event_router_v1.py` filtre `AND ce.thesis_v2_id IS NULL` sur ses 4 requêtes. Route : **`POST /v2/theses/{id}/validate`** — préfixée `/v2` parce que `POST /theses/{id}/validate` existe **déjà** en V1 (`api/thesis_v2.py`, où « v2 » désigne la 2ᵉ version du fichier V1). Contrat `ThesisValidation` dans `app/contracts/decision_validate_schema.py`.
-**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait), 030 theses_flow (fait) → **031** exit/calibration.
-Prochaine migration : `031_v2_exit_calibration.sql` (lot 9). Le lot 8 (monitoring V2) n'en demande pas a priori.
+**Migration 031 = V2 monitoring_flow (lot 8, la surveillance)** : table **`monitoring_sessions_v2`** (session de suivi V2, disjointe de `monitoring_sessions` qui reste le pivot V1) — `thesis_v2_id`, `mode` (1-6), `trigger_type`, `calendar_event_id`, `result_json`, `context_sent`, `raw_content`, colonnes de routage `alert_level` / `verdict` / `routing_suggestion`, télémétrie `provider_used` / `model_used` / `tokens_in` / `tokens_out` / `cost_usd`. Les **CHECK contraignent les domaines par mode** : `alert_level` n'existe qu'au **mode 2**, `verdict` qu'aux modes **3 et 6**, avec des vocabulaires distincts (`RE_SYNTHESE` n'existe qu'au mode 3). Ajoute `calendar_events.session_v2_id` et `portfolio_settings.v2_auto_enabled` (**FALSE par défaut** — pas de dépense automatique non supervisée). Routes : `POST|GET /v2/theses/{id}/monitoring`, `GET /v2/monitoring/{session_id}`. Contrats `app/contracts/monitoring_modes_1_5_schema.py` + `monitoring_mode6_schema.py`. Routeur calendaire `calendar/event_router_v2.py` (job scheduler **séparé** à 7h15, 10 min après le V1).
+⚠️ **Ce CLAUDE.md a longtemps affirmé « le lot 8 n'en demande pas a priori » — c'était FAUX**, et c'est le genre d'affirmation qui se vérifie au lieu de se supposer : `monitoring_sessions.thesis_id` porte une FK vers `theses`, la table **V1**. Une session V2 n'a littéralement pas de ligne où pointer. Même schéma que le `LEFT JOIN` du lot 7 : l'énoncé « ça marche nativement » n'a pas résisté à une lecture du schéma.
+**Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait), 030 theses_flow (fait), 031 monitoring_flow (fait) → **032** exit/calibration.
+Prochaine migration : `032_v2_exit_calibration.sql` (lot 9).
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -190,7 +192,8 @@ Les routers sont dans `backend/app/api/` — `grep` fait foi si divergence.
 | Heure | Jour | Job | Détail |
 |-------|------|-----|--------|
 | `*/5` | lun-ven 9h-17h | `_check_price_alerts_v1` | Vérifie price_alerts V1, notifie Slack |
-| 7h05 | tous | `_daily_check_v1` | EventRouterV1 — mode 1 (J-2), mode 2 (J+1), mode 4 (sector pulse J+1), mode 3 (conviction_review jour J) — lit `calendar_events` V1 |
+| 7h05 | tous | `_daily_check_v1` | EventRouterV1 — mode 1 (J-2), mode 2 (J+1), mode 4 (sector pulse J+1), mode 3 (conviction_review jour J) — lit `calendar_events` V1 (`thesis_v2_id IS NULL`) |
+| 7h15 | tous | `_daily_check_v2` | EventRouterV2 — modes 1/2/4/3 aux mêmes échéances + **mode 6** (revue annuelle, **avec rattrapage** `scheduled_date <= today`, cf. #38) — lit `calendar_events` du flux V2 (`thesis_v2_id IS NOT NULL`, INNER JOIN `theses_v2` active). Job **séparé** du V1 à dessein : les enchaîner ferait qu'une exception d'un flux empêcherait l'autre de tourner. Gouverné par `portfolio_settings.v2_auto_enabled` (**FALSE** par défaut → session `pending_manual` avec contexte, notifiée, au lieu d'une dépense) |
 | 7h30 | tous | `_refresh_watchlist_prices` | Prix watchlist V0 via `get_m1()` |
 | 8h00 | lundi | `_weekly_review` | Snapshot portfolio V0 → digest Slack |
 | 8h15 | lundi | `_refresh_market_temperature` | FRED — Buffett indicator, CAPE |
@@ -462,6 +465,41 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     `dcf_scenarios.base`) et jamais reconstituée par moyenne des bornes : ce serait inventer une
     donnée que l'analyse n'a pas produite. Test : `check_decision_validate.py` **§8**, qui inspecte
     `model_fields` — la seule vérification qui tienne, parce qu'un commentaire ne contraint rien.
+
+37. **Un contrat valide un objet, JAMAIS la cohérence entre deux (V2, lot 8)** : c'est la limite
+    structurelle de Pydantic, et elle est invisible depuis le schéma — d'où un garde-fou qui paraît
+    tenir alors qu'il est contournable. Mesuré : `Mode2QuarterlyReview` **accepte parfaitement** une
+    escalade motivée par une hypothèse **`H7` qui n'existe pas dans la thèse**. Contrat satisfait,
+    `extra='forbid'` satisfait — et pourtant l'**anti-churn est mort**, puisqu'il dit « n'escalader
+    que sur un seuil PRÉ-ENREGISTRÉ » et que rien, dans le schéma, ne relie la sortie du modèle à la
+    liste figée au validate. Un invariant qui porte sur une **relation** entre deux objets se vérifie
+    donc en code, jamais dans le contrat : `_valider_pont_hypotheses` fait trois vérifications
+    distinctes — **référentiel** (ids cités ⊆ ids figés, tous modes citant des hypothèses),
+    **exhaustivité** (ids figés ⊆ ids cités, **mode 6 seul**), **citations** (tout `entry_id` cité
+    appartient aux entries réellement envoyées). L'asymétrie est délibérée : le référentiel protège
+    tous les modes, l'exhaustivité n'est exigée que là où la carte figée la demande. Refus →
+    `MonitoringRefused` → **HTTP 422** (la requête est valide, c'est la *sortie du modèle* qui est
+    incohérente ; un 400 accuserait l'appelant) + session `failed` persistée, pour qu'un refus reste
+    visible au lieu de disparaître. **Corollaire, le plus important** : les seuils figés sont en
+    **lecture seule**. `_reporter_statuts` fusionne **par id** et n'écrit que `statut`,
+    `derniere_revue`, `derniere_observation` — `seuil_alerte`, `seuil_invalidation`, `base_rate`,
+    `source_entry_refs` ne sont jamais repris du modèle, sinon une revue pourrait **abaisser le seuil
+    qu'elle vient de franchir**. Vérifié en réel : le modèle a rendu `seuil_invalidation: 5.0` là où
+    la thèse portait `25.0` ; c'est `25.0` qui est resté. Test : `check_monitoring_v2.py` **§3**, qui
+    prouve les **deux moitiés** — le contrat accepte le `H7`, le pont le refuse. Une vérification qui
+    ne montrerait que le refus ne prouverait pas que le trou existait.
+
+38. **Le rattrapage d'une échéance dépend de ce qu'elle commente, pas d'une règle uniforme (V2)** :
+    dans `EventRouterV2`, seul le **mode 6** se rattrape (`scheduled_date <= today`) ; les modes
+    calendaires restent sur une date **exacte**. Un brief J-2 ou une revue J+1 joués trois semaines
+    plus tard commentent une publication déjà digérée — les rejouer coûte un appel modèle pour
+    produire un commentaire périmé. Une revue **annuelle** en retard est au contraire **plus** urgente,
+    pas moins : c'est la colonne vertébrale du suivi LT, et une journée d'indisponibilité du scheduler
+    ne doit pas coûter une année de surveillance. Corollaire côté dépense : à `v2_auto_enabled=FALSE`
+    l'échéance n'est **pas perdue** — session `pending_manual` persistée **avec son contexte exact**
+    (`build_monitoring_context`) + notification. Et le drapeau calendaire est **consommé** dans le même
+    temps, sinon le routeur recréerait la même attente chaque jour. En revanche un **échec** ne
+    consomme rien : `_persister_echec` ne marque pas l'événement.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -11,6 +11,33 @@ role: >
 
 # Carte de provenance — Monitoring modes 1-5
 
+> ## ⚠ Amendement 2026-09-01 — support de persistance, PAS le contrat
+>
+> Carte figée le **2026-08-21**, soit un jour avant l'acte des **deux espaces disjoints V1/V2**
+> (2026-08-22). La mention « `monitoring_sessions` (migration existante) » est devenue fausse :
+> `monitoring_sessions.thesis_id` est une FK vers `theses`, la table V1 — une session V2 n'a pas de
+> place où pointer. Lire désormais **`monitoring_sessions_v2` (migration 031)**, avec
+> `thesis_v2_id`. Le déclenchement calendaire passe par **`EventRouterV2`** (job scheduler séparé),
+> pas par `EventRouterV1`.
+>
+> **Ce qui ne change pas : les contrats.** `Mode1PreEvent` … `Mode5Routing`, l'union discriminée sur
+> `mode`, `extra='forbid'` et surtout l'**anti-churn** (escalade seulement sur franchissement d'un
+> seuil pré-enregistré) sont **strictement identiques**.
+>
+> **Ce que l'implémentation du lot 8 a ajouté, et que le contrat ne pouvait pas porter** — le **pont
+> inter-objets**. Mesuré : `Mode2QuarterlyReview` accepte parfaitement une escalade motivée par une
+> hypothèse `H7` **qui n'existe pas dans la thèse**. Le contrat est satisfait, l'anti-churn est
+> contourné — parce qu'un schéma valide un objet isolé, jamais sa cohérence avec un autre objet. D'où
+> trois vérifications en code, hors contrat :
+>
+> 1. **Référentiel** (tous modes citant des hypothèses) — les ids cités ⊆ ids figés de la thèse.
+> 2. **Exhaustivité** (mode 6 seul) — les ids figés ⊆ ids cités, comme l'exige la carte C5.
+> 3. **Citations** — tout `entry_id` cité doit appartenir aux entries réellement envoyées.
+>
+> Un refus lève `MonitoringRefused` → **HTTP 422** (la requête est valide, c'est la *sortie du
+> modèle* qui est incohérente) et persiste une session `failed` : un refus reste visible, il ne
+> disparaît pas en silence. Test : `checks/check_monitoring_v2.py` §3.
+
 ## Ce qui distingue cette carte
 
 Le mode 6 (revue annuelle) est la **colonne vertébrale** de la revue LT et produit toujours un
@@ -68,8 +95,11 @@ flowchart TB
 
 ## Stockage
 
-`monitoring_sessions` (migration existante : `mode`, `alert_level`, statuts, `calendar_event_id`) ;
-`result_json` = le contrat du mode. Les statuts d'hypothèses des modes 2/3 alimentent
+`monitoring_sessions_v2` (**migration 031** — cf. amendement en tête : `mode`, `alert_level`,
+`verdict`, `routing_suggestion`, `calendar_event_id`, `thesis_v2_id`) ; `result_json` = le contrat
+du mode. Les colonnes de routage sont **dérivées en code**, avec des domaines que la migration
+contraint par CHECK : `alert_level` n'existe qu'au **mode 2**, `verdict` qu'aux modes **3 et 6**
+(vocabulaires distincts — `RE_SYNTHESE` n'existe qu'au mode 3). Les statuts d'hypothèses des modes 2/3 alimentent
 `hypotheses_reviewed[]` (frontend Page 5 — champ enrichi). Toute donnée nouvelle (résultats,
 commentaires management) est **stockée en `knowledge_entries` scorées**, jamais gardée en prose.
 

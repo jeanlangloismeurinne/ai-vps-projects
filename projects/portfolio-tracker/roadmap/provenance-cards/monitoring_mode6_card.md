@@ -11,6 +11,28 @@ role: >
 
 # Carte de provenance — Monitoring mode 6 + valuation thermometer
 
+> ## ⚠ Amendement 2026-09-01 — support de persistance, PAS le contrat
+>
+> Même cas que la carte décision : figée le **2026-08-21**, soit un jour avant l'acte des **deux
+> espaces disjoints V1/V2** (2026-08-22). Elle portait donc trois références devenues fausses.
+>
+> | Écrit dans la carte | Corrigé en | Pourquoi |
+> |---|---|---|
+> | `monitoring_sessions` (mode=6, « migration existante ») | **`monitoring_sessions_v2`** (migration **031**) | `monitoring_sessions.thesis_id` est une FK vers `theses` — la table V1. Une session V2 n'a littéralement pas de place où pointer. Le « pas de migration a priori » annoncé dans CLAUDE.md était donc faux, et c'est la vérification du FK qui l'a montré. |
+> | met à jour `theses.valuation_range` | **`theses_v2.valuation_range`** | `theses` est le pivot V1 (convention #34 : un **jugement** est disjoint). Écrire la revue V2 dans la thèse V1 mélangerait deux opinions sur le même titre. |
+> | replanifie via `calendar_events` (+365j) | inchangé, mais via **`thesis_v2_id`** + `source='monitoring_agent_v2'` | Un `calendar_event` est un **fait du monde**, donc PARTAGÉ (#34) : colonne discriminante nullable + CHECK d'exclusivité par ligne, pas une table jumelle. |
+>
+> **Ce qui ne change pas : le contrat.** `Mode6Review`, `ValuationThermometer`
+> (`contraignant: Literal[False]`), `RendementProspectif`, l'anti-seuil-mécanique (DÉCISION #5, §11)
+> et l'exhaustivité des hypothèses revues sont **strictement identiques**. L'amendement porte sur le
+> support de persistance, jamais sur l'invariant.
+>
+> **Précision d'implémentation (lot 8)** : `next_review_date` est **dérivé** en code (`jour + 365j`),
+> jamais lu depuis la sortie du modèle. La valeur rendue par l'agent est conservée dans `result_json`
+> et journalisée, mais ne pilote aucun planning — on ne fait pas calculer une date à un modèle quand
+> le code la connaît (même esprit que la convention #24). Vérifié en dry-run réel le 2026-09-01 : le
+> modèle proposait `2027-08-31`, l'événement a été posé au `2027-09-01`.
+
 ## Ce qui distingue cette carte
 
 Le mode 6 est **la colonne vertébrale de la revue long terme** (audit §1.3). Là où les modes
@@ -73,9 +95,15 @@ plein droit** — c'est la revue LT qui empêche la thèse de dériver silencieu
 
 ## Stockage
 
-`monitoring_sessions` (mode=6, migration existante) ; `result_json` = ce contrat ; met à jour
-`theses.valuation_range` et les statuts d'hypothèses ; replanifie via `calendar_events` (+365j).
+`monitoring_sessions_v2` (mode=6, **migration 031** — cf. amendement en tête) ; `result_json` = ce
+contrat ; met à jour `theses_v2.valuation_range` et les statuts d'hypothèses ; replanifie via
+`calendar_events` (`thesis_v2_id`, `source='monitoring_agent_v2'`, +365j **dérivés en code**).
 SORTIR/REDUIRE → alimente l'`exit_plan` (carte C6).
+
+Le report des statuts se fait **par id**, en fusion sur la liste figée : seuls `statut`,
+`derniere_revue` et `derniere_observation` sont écrits. `seuil_alerte`, `seuil_invalidation`,
+`base_rate` et `source_entry_refs` restent ceux du validate — sans quoi une revue pourrait abaisser
+le seuil qu'elle vient de franchir, et l'anti-churn deviendrait décoratif.
 
 ## Les 3 points de synchronisation (G1, règle #19)
 

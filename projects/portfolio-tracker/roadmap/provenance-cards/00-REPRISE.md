@@ -2,9 +2,9 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-08-31
+updated: 2026-09-01
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030, dry-run réel MSFT). Reste : lot 8 (monitoring V2), lot 9 (sortie/débat), UX transverse, ingestion-agent.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6). Reste : lot 9 (sortie/calibration + débat, migration **032**), UX transverse, ingestion-agent.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -13,6 +13,88 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > diagnostics de bugs déjà réglés, décisions et leurs mesures) est conservé **intégralement** dans
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
+
+> ## ⚡ MàJ 2026-09-01 — LOT 8 : le monitoring V2 (modes 1-6, `monitoring_sessions_v2`, migration 031)
+>
+> **Le flux V2 sait maintenant se surveiller.** Déploiement **#335** (`062e459`), un seul conteneur
+> vérifié. Suite hors-ligne : **532 assertions / 0 échec** sur 10 scripts (416 avant, **+116** —
+> `check_monitoring_v2.py`). Dry-run réel joué contre le vrai DeepSeek sur les **deux** modes qui
+> comptent (2 et 6), thèse V2 #4 MSFT.
+>
+> **Le lot 8 demandait bien une migration — CLAUDE.md disait le contraire.** La phrase « le lot 8
+> n'en demande pas a priori » était **fausse** : `monitoring_sessions.thesis_id` est une FK vers
+> `theses`, la table V1. Une session V2 n'a littéralement **pas de place où pointer**. Trouvé en
+> vérifiant le FK, pas en le supposant — même schéma que le `LEFT JOIN` du lot 7. D'où la
+> **migration 031** : `monitoring_sessions_v2`, `calendar_events.session_v2_id`,
+> `portfolio_settings.v2_auto_enabled`, et des CHECK qui contraignent les domaines de routage.
+> **La numérotation du lot 9 décale donc à 032.**
+>
+> **Le principe à retenir de ce lot — un contrat valide un objet, jamais la cohérence entre deux.**
+> C'est le trou que le lot 8 ferme, et il était invisible depuis le schéma. Mesuré :
+> `Mode2QuarterlyReview` **accepte parfaitement** une escalade motivée par une hypothèse `H7` qui
+> **n'existe pas dans la thèse**. Contrat satisfait, `extra='forbid'` satisfait, anti-churn
+> **contourné** — puisque l'anti-churn dit « n'escalader que sur un seuil PRÉ-ENREGISTRÉ » et que
+> rien, dans le schéma, ne relie la sortie du modèle à la liste figée. D'où un **pont inter-objets**
+> en code (`_valider_pont_hypotheses`), en trois vérifications distinctes :
+> **(1) référentiel** — ids cités ⊆ ids figés (tous modes citant des hypothèses) ;
+> **(2) exhaustivité** — ids figés ⊆ ids cités (**mode 6 seul**, comme l'exige la carte C5) ;
+> **(3) citations** — tout `entry_id` cité appartient aux entries réellement envoyées.
+> Refus → `MonitoringRefused` → **HTTP 422** (la requête est valide, c'est la *sortie du modèle* qui
+> est incohérente) + session `failed` persistée : un refus reste visible. `check_monitoring_v2.py`
+> **§3** prouve les deux moitiés — le contrat accepte le `H7`, le pont le refuse.
+>
+> **Corollaire, tout aussi structurel : les seuils figés sont en LECTURE SEULE.** `_reporter_statuts`
+> fusionne **par id** sur la liste du validate et n'écrit que `statut`, `derniere_revue`,
+> `derniere_observation`. `seuil_alerte`, `seuil_invalidation`, `base_rate`, `source_entry_refs` ne
+> sont **jamais** repris de la sortie du modèle — sinon une revue pourrait **abaisser le seuil
+> qu'elle vient de franchir**, et l'anti-churn deviendrait décoratif. Vérifié : le modèle a rendu
+> `seuil_invalidation: 5.0` là où la thèse portait `25.0` ; c'est `25.0` qui est resté.
+>
+> **Ce que le code dérive et ne demande jamais au modèle** (#24 appliqué au monitoring) :
+> `mode`, `thesis_id`, `pair_ticker` (mode 4), `source_mode` (mode 5), `schema_version`, et surtout
+> **`next_review_date`** — `jour + 365j` en Python. La valeur du modèle est journalisée et conservée
+> dans `result_json`, mais ne pilote aucun planning. *Vérifié en dry-run* : le modèle proposait
+> `2027-08-31`, l'événement a été posé au **`2027-09-01`**.
+>
+> **`EventRouterV2` — le défaut V1 n'est pas reconduit.** INNER JOIN sur `theses_v2 … status='active'`
+> (pas de LEFT JOIN, cf. lot 7), `ce.thesis_v2_id IS NOT NULL` explicite, **aucune garde `synced`**
+> (notion Dust : le prompt en base EST celui envoyé, une garde ici ne vérifierait rien et bloquerait
+> au premier PATCH), interrupteur **`v2_auto_enabled`** (FALSE par défaut — pas de dépense
+> automatique non supervisée). Job scheduler **séparé** à 7h15, 10 min après le V1 : les enchaîner
+> ferait qu'une exception d'un flux empêcherait l'autre de tourner, alors qu'ils sont censés être
+> indépendants. **Seul le mode 6 se rattrape** (`scheduled_date <= today`) : un brief J-2 ou une revue
+> J+1 joués trois semaines plus tard commentent une publication déjà digérée, alors qu'une revue
+> annuelle en retard est **plus** urgente, pas moins. À `v2_auto_enabled=FALSE`, l'échéance n'est pas
+> perdue : session `pending_manual` **avec son contexte exact**, et notifiée. Non-choix assumé : le
+> mode 5 **n'est pas** enchaîné automatiquement après une escalade mode 2 — `routing_suggestion` +
+> Slack, déclenchement humain (comme en V1 ; l'automatiser doublerait la dépense du jour et rendrait
+> invisible la décision d'aiguillage).
+>
+> **Dry-run réel MSFT (thèse V2 #4, 4 hypothèses figées).**
+> *Mode 2* → session **#8**, `alert_level=RAS`, `verdict`/`routing` **NULL** (corrects : pas
+> d'escalade), 13 827/637 tokens, **$0,001221**, 6 refs snapshotées, H1-H4 cités avec de vrais
+> `entry_id`. Le commentaire de valorisation **refuse de mécaniser** : prix 513,53 $ au-dessus de la
+> VI base 450 $, marge négative -12,4 %, et pourtant « *cela reste contextuel et ne constitue pas un
+> ordre de vente* » — DÉCISION #5 tenue par le modèle lui-même.
+> *Mode 6* → session **#9**, verdict **CONFIRMER**, 13 818/1 192 tokens, **$0,00132**, **exhaustivité
+> respectée** (H1-H4 tous revus), `thermometer.contraignant=False`, `rendement_prospectif.suffisant=True`
+> en zone « étirée » (donc **aucune sortie de valorisation** — l'anti-seuil-mécanique fonctionne),
+> `exit_trigger=None`.
+>
+> **⚠ Effets du mode 6 conservés sur décision de l'utilisateur.** La revue a réactualisé
+> `theses_v2.valuation_range` **250/450/700 → 280/480/750** : gardée comme ré-appréciation légitime
+> sur données actuelles. En revanche l'événement **#67** (`annual_review` 2027-09-01, source
+> `monitoring_agent_v2`) a été **supprimé** — il doublonnait le vrai **#66** (2027-08-31) à un jour
+> près et aurait déclenché **deux** revues annuelles. Les sessions #8 et #9 sont **gardées** comme
+> trace du dry-run. Les événements #65/#66 n'ont **pas** été consommés (dry-runs joués sans
+> `calendar_event_id`, délibérément) : le lot 8 aura donc bien un vrai événement à router le
+> **2026-10-28**.
+>
+> **Dette connue, à traiter au lot 9 ou avant.** `run_json_agent` **perd le texte brut fautif et la
+> comptabilité de tokens** quand il abandonne après échec de validation (il lève un `RuntimeError` nu).
+> On persiste le motif pour que l'échec reste visible, mais **la dépense de cette tentative n'est pas
+> comptabilisée**. Limite du runner, **commune à tous les agents V2** — pas propre au monitoring. Ne
+> pas la corriger à chaud sans re-tester les autres agents.
 
 > ## ⚡ MàJ 2026-08-31 (ter) — LOT 7 : l'acte de décision (`theses_v2`, migration 030)
 >
@@ -180,21 +262,20 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `a128005`, deployment **#331**, un seul conteneur backend vérifié.
-- **Suite hors-ligne** : **436 assertions / 0 échec** sur 10 scripts (`backend/checks/`).
-- **Migrations appliquées** jusqu'à **030** (theses_flow). Prochaine : **031** exit/calibration
-  — à écrire **juste avant** son lot, jamais en avance (§18).
-- **L'acte de décision est livré et exercé en réel** (lot 7) : la chaîne va désormais de la recherche
-  jusqu'à l'entrée en position.
+- **Code déployé** : commit `062e459`, deployment **#335**, un seul conteneur backend vérifié.
+- **Suite hors-ligne** : **532 assertions / 0 échec** sur 10 scripts (`backend/checks/`).
+- **Migrations appliquées** jusqu'à **031** (v2_monitoring_flow). Prochaine : **032**
+  exit/calibration — à écrire **juste avant** son lot, jamais en avance (§18).
+- **La boucle de vie d'une thèse V2 est fermée** (lots 7 + 8) : de la recherche à l'entrée en
+  position, puis surveillance calendaire et revue annuelle. Il manque la **sortie** (lot 9).
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **Lot 8 — monitoring V2 (mode 6 + routeur)**. **C'est le prochain jalon.** Les événements posés
-   par le lot 7 sont **planifiés mais non routés** : `calendar_events` #65 (2026-10-28) et #66
-   (2027-08-31) attendent un routeur V2. Contexte largement partagé avec le lot 7 (même migration
-   030, mêmes tables `theses_v2`/`hypotheses`).
-2. **Lot 9 — sortie/calibration + débat conviction** (migration 031, nouvelles tables, autre agent) :
-   périmètre quasi disjoint du lot 7-8 → **à faire dans une conversation neuve**.
+1. **Lot 9 — sortie/calibration + débat conviction** (migration **032**, nouvelles tables, autre
+   agent). **C'est le prochain jalon**, et son périmètre est quasi disjoint des lots 7-8 → **à faire
+   dans une conversation neuve**. Point d'entrée déjà posé par le lot 8 : un verdict `REDUIRE` ou
+   `SORTIR` (modes 3/6) écrit `routing_suggestion='exit_plan'` — c'est ce que le lot 9 doit
+   consommer.
 3. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
    ⚠️ **Y traiter le double comptage MSFT** signalé dans la MàJ (ter) — la page portefeuille V1
    ne filtre pas les positions du flux V2.
@@ -214,6 +295,12 @@ c'est un système exercé, dont on connaît les modes de panne.
 - Le `tools_json` du `search-worker` en DB décrit encore `web_search` comme « SearXNG/API » :
   **cosmétique** (la description est agnostique côté modèle) mais périmé — à corriger à la prochaine
   migration qui touche `agent_prompts`, pas avant.
+- **`run_json_agent` perd le brut et les tokens sur abandon** (trouvé au lot 8, **commun à TOUS les
+  agents V2**) : quand la validation échoue après `max_repair`, il lève un `RuntimeError` nu — ni
+  texte fautif, ni comptabilité. On persiste le motif (session `failed`) pour que l'échec reste
+  visible, mais **la dépense de cette tentative n'est pas comptabilisée** et le brut qui aurait servi
+  à diagnostiquer est perdu. Ne pas corriger à chaud sans re-tester les autres agents : c'est de
+  l'infra partagée.
 
 ## Décisions structurantes (toujours actives)
 
