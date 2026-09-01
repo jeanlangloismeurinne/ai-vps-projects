@@ -51,7 +51,14 @@ async def run_daily_digest(trigger: str = "scheduled") -> dict:
             lines.append("─" * 40)
             lines.append(f"■ {email.from_addr} — {email.subject}")
             lines.append("")
-            lines.append(email.summary or "(vide)")
+            if email.summary:
+                lines.append(email.summary)
+            elif not email.text_body and not email.html_body:
+                # Corps jamais reçu : l'enveloppe Resend `email.received` ne transmet que
+                # les métadonnées. Distinct d'un mail réellement vide.
+                lines.append("⚠ Corps non reçu — Resend n'a transmis que les métadonnées (pas de text/html).")
+            else:
+                lines.append("(vide)")
             lines.append("")
         body = "\n".join(lines)
 
