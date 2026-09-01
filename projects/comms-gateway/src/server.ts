@@ -6,6 +6,7 @@ import { ensureSchema } from "./schema.js";
 import { registerSendRoute } from "./routes/send.js";
 import { registerMessagesRoute } from "./routes/messages.js";
 import { registerAdminRoutes } from "./routes/admin.js";
+import { registerInboundRoute } from "./routes/inbound.js";
 import { registerWebhooks } from "./routes/webhooks.js";
 
 async function main(): Promise<void> {
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   await registerSendRoute(app);
   await registerMessagesRoute(app);
   await registerAdminRoutes(app);
+  await registerInboundRoute(app);
   await registerWebhooks(app);
 
   await app.listen({ host: config.HOST, port: config.PORT });
