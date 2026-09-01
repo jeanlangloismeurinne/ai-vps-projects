@@ -11,8 +11,9 @@ Ce lot (chaîne d'analyse) expose : ResearchMemo, BullCase, BearCase, RiskMatrix
 ReadinessReport + compute_verdict (curator gate) ; ContextPack (front-load) ; WorkerRequest/
 WorkerResponse/WorkerExchange + ProducedEntry (C1, frontière orchestrateur↔ouvrier — search-worker) ;
 ThesisValidation + RiskAck/ValuationRange (§9 décision — G2 s'y exerce le plus fort : la décision est
-contrainte par l'analyse, pas par l'UX ; lot 7, migration 030).
-Les contrats restants (ingestion/monitoring/debate/exit) seront copiés au moment de leurs agents.
+contrainte par l'analyse, pas par l'UX ; lot 7, migration 030) ; Mode1..Mode5 + Mode6Review (§10/§11
+monitoring — anti-churn et anti-seuil-mécanique ; lot 8, migration 031).
+Les contrats restants (ingestion/debate/exit) seront copiés au moment de leurs agents.
 """
 from .analysis_v2_schemas import (
     SCHEMA_VERSION,
@@ -26,6 +27,20 @@ from .analysis_v2_schemas import (
 )
 from .context_pack_schema import CANONICAL_DIMS, ContextPack, DimensionDigest
 from .decision_validate_schema import RiskAck, ThesisValidation, ValuationRange
+from .monitoring_mode6_schema import (
+    HypothesisReview,
+    Mode6Review,
+    RendementProspectif,
+    ValuationThermometer,
+)
+from .monitoring_modes_1_5_schema import (
+    Mode1PreEvent,
+    Mode2QuarterlyReview,
+    Mode3DecisionReview,
+    Mode4SectorPulse,
+    Mode5Routing,
+    MonitoringSession,
+)
 from .readiness_report_schema import ReadinessReport, compute_verdict
 from .synthesis_schema import GroundedSynthesis, SynthesisClaim
 from .worker_delegation_schema import (
@@ -57,6 +72,16 @@ __all__ = [
     "ThesisValidation",
     "RiskAck",
     "ValuationRange",
+    "Mode1PreEvent",
+    "Mode2QuarterlyReview",
+    "Mode3DecisionReview",
+    "Mode4SectorPulse",
+    "Mode5Routing",
+    "Mode6Review",
+    "MonitoringSession",
+    "HypothesisReview",
+    "ValuationThermometer",
+    "RendementProspectif",
     "WorkerRequest",
     "WorkerResponse",
     "WorkerExchange",

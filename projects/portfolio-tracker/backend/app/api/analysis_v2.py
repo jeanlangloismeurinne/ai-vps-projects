@@ -20,6 +20,7 @@ from app.agents.v2 import decision as D
 from app.agents.v2.analysis import NotReadyError
 from app.agents.v2.curator import run_readiness
 from app.agents.v2.decision import AlreadyValidated, DecisionRefused, ThesisNotFound
+from app.agents.v2.monitoring import MonitoringRefused, ThesisNotActive, run_monitoring
 from app.db.database import get_db_session
 
 router = APIRouter(tags=["analysis-v2"])
@@ -36,6 +37,12 @@ def _agent_error(e: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail=str(e))
     if isinstance(e, AgentNotFoundError):
         return HTTPException(status_code=404, detail=str(e))
+    if isinstance(e, ThesisNotActive):
+        return HTTPException(status_code=409, detail=str(e))
+    # 422 et non 400 : la requête est valide, c'est la SORTIE DU MODÈLE qui est incohérente avec la
+    # thèse figée (hypothèse inventée, revue incomplète). Rien à corriger côté client — on relance.
+    if isinstance(e, MonitoringRefused):
+        return HTTPException(status_code=422, detail=str(e))
     # DecisionRefused hérite de ValueError : refus MÉTIER du contrat, rendu tel quel à l'UX (400)
     # pour qu'elle affiche le motif du contrat au lieu de le reformuler.
     if isinstance(e, (DecisionRefused, ValueError)):
@@ -224,6 +231,70 @@ async def get_thesis_v2(thesis_id: int):
     if row is None:
         raise HTTPException(status_code=404, detail="Thèse V2 introuvable.")
     return dict(row)
+
+
+# ── Monitoring V2 (§10/§11, lot 8) ───────────────────────────────────────────
+class MonitoringRunBody(BaseModel):
+    """Ce que l'appelant peut fournir : le mode et le CONTEXTE de déclenchement — rien du jugement.
+
+    Même règle qu'au validate (convention #36) : ni `alert_level`, ni `verdict`, ni statut
+    d'hypothèse n'est acceptable en entrée. Ils sont produits par l'agent, contraints par le contrat
+    du mode, puis bornés en base par les CHECKs de la migration 031.
+    """
+    mode: Literal[1, 2, 3, 4, 5, 6]
+    trigger_label: str = ""
+    calendar_event_id: Optional[int] = None
+    peer_ticker: Optional[str] = None     # mode 4 : le pair dont les résultats déclenchent le pulse
+    source_mode: Optional[Literal[2, 4]] = None   # mode 5 : d'où vient l'alerte à router
+
+
+@router.post("/v2/theses/{thesis_id}/monitoring")
+async def run_monitoring_v2(thesis_id: int, body: MonitoringRunBody):
+    """Exécute une session de monitoring V2 (modes 1-6) sur une thèse ACTIVE."""
+    try:
+        return await run_monitoring(
+            thesis_id, body.mode,
+            trigger_type="manual",
+            trigger_label=body.trigger_label,
+            calendar_event_id=body.calendar_event_id,
+            peer_ticker=body.peer_ticker,
+            source_mode=body.source_mode,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception("monitoring v2 mode %s thèse #%s", body.mode, thesis_id)
+        raise _agent_error(e)
+
+
+@router.get("/v2/theses/{thesis_id}/monitoring")
+async def list_monitoring_v2(thesis_id: int):
+    """Historique de suivi d'une thèse V2 — sans `context_sent`/`raw_content` (volumineux)."""
+    async with get_db_session() as conn:
+        rows = await conn.fetch(
+            "SELECT id, mode, trigger_type, trigger_label, calendar_event_id, alert_level, verdict, "
+            "routing_suggestion, status, model_used, tokens_in, tokens_out, cost_usd, "
+            "created_at, completed_at FROM monitoring_sessions_v2 "
+            "WHERE thesis_v2_id = $1 ORDER BY created_at DESC",
+            thesis_id,
+        )
+    return [dict(r) for r in rows]
+
+
+@router.get("/v2/monitoring/{session_id}")
+async def get_monitoring_v2(session_id: int):
+    """Session complète + refs figées : ce qui a été envoyé, ce qui a été rendu, sur quoi ça s'appuie."""
+    async with get_db_session() as conn:
+        row = await conn.fetchrow("SELECT * FROM monitoring_sessions_v2 WHERE id = $1", session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Session de monitoring V2 introuvable.")
+        refs = await conn.fetch(
+            "SELECT entry_id, entry_version, reliability_at_use, field_path, content_snapshot "
+            "FROM analysis_knowledge_refs WHERE analysis_id = $1 AND analysis_kind = 'monitoring' "
+            "ORDER BY entry_id",
+            session_id,
+        )
+    out = dict(row)
+    out["knowledge_refs"] = [dict(r) for r in refs]
+    return out
 
 
 @router.get("/analyses/{analysis_id}")

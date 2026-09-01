@@ -73,6 +73,14 @@ async def startup():
         CronTrigger(hour=7, minute=5, timezone="Europe/Paris"),
         id="daily_check_v1", replace_existing=True,
     )
+    # Flux V2, disjoint du V1 (migration 030/031) : job SÉPARÉ, 10 minutes plus tard. Les enchaîner
+    # dans le même job ferait qu'une exception du routeur V1 empêcherait le V2 de tourner, et
+    # réciproquement — or les deux espaces sont censés être indépendants.
+    scheduler.add_job(
+        _daily_check_v2,
+        CronTrigger(hour=7, minute=15, timezone="Europe/Paris"),
+        id="daily_check_v2", replace_existing=True,
+    )
     scheduler.add_job(
         _weekly_review,
         CronTrigger(day_of_week="mon", hour=8, minute=0, timezone="Europe/Paris"),
@@ -132,6 +140,11 @@ async def _daily_check():
 async def _daily_check_v1():
     from app.calendar.event_router_v1 import EventRouterV1
     await EventRouterV1().process_daily_events()
+
+
+async def _daily_check_v2():
+    from app.calendar.event_router_v2 import EventRouterV2
+    await EventRouterV2().process_daily_events()
 
 
 async def _weekly_review():
