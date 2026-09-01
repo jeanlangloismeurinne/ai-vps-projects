@@ -623,6 +623,18 @@ def _verifier_etat(mode: str, inputs: dict[str, Any]) -> None:
                 f"Post-mortem #{inputs['post_mortem']['id']} déjà établi pour cette thèse. Un "
                 "second bilan dupliquerait ses paires dans le registre de calibration."
             )
+        # La position soldée est une pré-condition d'ÉTAT, pas un jugement sur la sortie du modèle :
+        # elle se lit dans `inputs`, donc elle se vérifie ici. `_valider_pont_postmortem` la reteste
+        # (invariant du pont, défense en profondeur), mais l'y laisser SEULE faisait payer un appel
+        # complet pour apprendre ce qu'on savait avant de le passer — mesuré au dry-run du lot 9 :
+        # le modèle avait déjà rendu duree_jours/performance_pct quand le refus est tombé.
+        if not _position_soldee(inputs):
+            pos = inputs["position"]
+            restant = float(pos["shares"]) if pos is not None else 0
+            raise ThesisNotExitable(
+                f"Position non soldée ({restant:g} titre(s) restant(s)) : le post-mortem juge une "
+                "histoire terminée. Solde les tranches restantes du plan de sortie d'abord."
+            )
     elif mode == "calibration" and inputs["post_mortem"] is None:
         raise ThesisNotExitable(
             "Calibration demandée sans post-mortem abouti : le réalisé n'est pas encore établi."

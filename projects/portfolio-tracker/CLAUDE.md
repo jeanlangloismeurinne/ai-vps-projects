@@ -165,7 +165,19 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 **Migration 031 = V2 monitoring_flow (lot 8, la surveillance)** : table **`monitoring_sessions_v2`** (session de suivi V2, disjointe de `monitoring_sessions` qui reste le pivot V1) — `thesis_v2_id`, `mode` (1-6), `trigger_type`, `calendar_event_id`, `result_json`, `context_sent`, `raw_content`, colonnes de routage `alert_level` / `verdict` / `routing_suggestion`, télémétrie `provider_used` / `model_used` / `tokens_in` / `tokens_out` / `cost_usd`. Les **CHECK contraignent les domaines par mode** : `alert_level` n'existe qu'au **mode 2**, `verdict` qu'aux modes **3 et 6**, avec des vocabulaires distincts (`RE_SYNTHESE` n'existe qu'au mode 3). Ajoute `calendar_events.session_v2_id` et `portfolio_settings.v2_auto_enabled` (**FALSE par défaut** — pas de dépense automatique non supervisée). Routes : `POST|GET /v2/theses/{id}/monitoring`, `GET /v2/monitoring/{session_id}`. Contrats `app/contracts/monitoring_modes_1_5_schema.py` + `monitoring_mode6_schema.py`. Routeur calendaire `calendar/event_router_v2.py` (job scheduler **séparé** à 7h15, 10 min après le V1).
 ⚠️ **Ce CLAUDE.md a longtemps affirmé « le lot 8 n'en demande pas a priori » — c'était FAUX**, et c'est le genre d'affirmation qui se vérifie au lieu de se supposer : `monitoring_sessions.thesis_id` porte une FK vers `theses`, la table **V1**. Une session V2 n'a littéralement pas de ligne où pointer. Même schéma que le `LEFT JOIN` du lot 7 : l'énoncé « ça marche nativement » n'a pas résisté à une lecture du schéma.
 **Collision 023 résolue** : la spec V2 §14 nommait `023_v2_knowledge_platform.sql`, mais 023 était pris par `purchase_price_eur`. Toute la séquence V2 décale de +1 → 024 knowledge platform (fait), 025 agents/provider (fait), 026 investment_analyses + research_memos (fait), 027 embeddings 1024d (fait), 028 covers (fait), 029 covers[] (fait), 030 theses_flow (fait), 031 monitoring_flow (fait) → **032** exit/calibration.
-Prochaine migration : `032_v2_exit_calibration.sql` (lot 9).
+**Migration 032 = V2 exit / calibration / débat (lot 9, le dernier maillon)** : `exit_plans` (plan de
+sortie **thèse-driven** — `origine` contrainte au domaine §11, `plan_json`, `exit_status`, index unique
+partiel `uq_exit_plan_actif` interdisant deux plans ouverts sur la même thèse), `exit_executions` (une
+ligne par tranche vendue, `cash_movement_id` vers le fait de trésorerie), `post_mortems_v2` (bilan
+unique par thèse, `duree_jours`/`performance_pct` **calculés**, `lesson_entry_ids` vers les
+`knowledge_entries` type `lesson_learned`, + colonnes `calibration_*` portant l'acte A5),
+`calibration_registry` (le registre prédit/réalisé, grain = une paire par ligne),
+`conviction_debates_v2` (débat V2 disjoint de `conviction_debates` V1 — `challenge_json`,
+`resolution_suggeree`, `invalidation_franchie`, CHECK anti-complaisance interdisant
+`resolution_suggeree='closed_proceed'` quand `invalidation_franchie`). `price_alerts` reçoit
+`exit_plan_id` + `alert_type` (une alerte de tranche est adossée au plan, pas flottante).
+**Migration 033 = resynchro du prompt `debate-agent`** (générateur `_gen_prompt_refresh_20260901.py`,
+cf. convention #39). Prochaine migration : **034**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -500,6 +512,39 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
     (`build_monitoring_context`) + notification. Et le drapeau calendaire est **consommé** dans le même
     temps, sinon le routeur recréerait la même attente chaque jour. En revanche un **échec** ne
     consomme rien : `_persister_echec` ne marque pas l'événement.
+
+39. **L'EXEMPLE JSON d'un prompt est une pièce du contrat, et la DB est le 3ᵉ point de synchro (V2,
+    migration 033)** : la règle #19 est habituellement lue comme « prompt ↔ frontend ↔ import ». Le lot 9
+    a montré qu'elle mord aussi **à l'intérieur** du prompt. Le corps de `60-debate-agent.md` montrait
+    `"franchi": false` (booléen), `"observation_courante"` et **aucun `valeur_observee"`** : cet exemple
+    datait d'avant le figeage du Pydantic `ConvictionChallenge`, écrit seulement au lot 9. Le modèle a
+    fait ce qu'on lui demandait — il a recopié l'exemple — et les 3 hypothèses sont parties en
+    `seuil_franchi=True/False`, 2 tentatives refusées, HTTP 502 au **premier appel réel** du lot.
+    **Le 502 n'était pas le problème** : il est bruyant, donc bénin. Le problème est ce qu'il masquait.
+    `_forcer_seuils_figes` ne redérive `seuil_franchi` que si `valeur_observee is not None` ; un prompt
+    qui n'enseigne jamais ce champ aurait rendu la dérivation **no-op silencieuse** et tué le garde-fou
+    central du lot (seuils figés en lecture seule, franchissement recalculé) — **invisible à toutes les
+    vérifications hors ligne**, puisqu'elles alimentent les ponts avec des fixtures déjà conformes. Un
+    check hors ligne prouve qu'une fonction refuse ce qu'on lui donne ; il ne prouve jamais que le
+    modèle produira de quoi la déclencher. Corollaires : (a) tout figeage de contrat Pydantic se
+    répercute le jour même dans l'exemple du prompt **et** dans `agent_prompts` (migration générée par
+    `_gen_prompt_refresh_*.py`, jamais un UPDATE écrit à la main — le `prompt_text` en DB doit être
+    l'assemblage exact « préambule + corps » du commit) ; (b) quand un champ dérivé conditionne son
+    calcul à la présence d'un champ du modèle, le prompt doit dire que ce champ est **obligatoire ET
+    réécrit ensuite**, pour que sous-déclarer n'achète rien ; (c) conformément à la règle
+    « desserrage de schéma = trou silencieux », on **durcit le prompt**, on ne desserre pas le contrat.
+
+40. **Une pré-condition d'ÉTAT se refuse avant l'appel, pas dans le pont (V2, lot 9)** : `_verifier_etat`
+    porte la consigne « pré-conditions d'état, AVANT toute dépense de tokens » — et la condition
+    « position réellement soldée » ne vivait pourtant que dans `_valider_pont_postmortem`, donc **après**
+    l'appel. Mesuré au dry-run : le modèle avait déjà rendu `duree_jours` et `performance_pct` (les
+    WARNING d'écrasement sont dans les logs) quand le refus est tombé. On payait un appel complet pour
+    apprendre ce qu'on savait avant de le passer. Le partage : un **pont** juge la sortie du modèle
+    (→ `ExitRefused`/**422**) ; un **état** dit que la question n'avait pas lieu d'être posée
+    (→ `ThesisNotExitable`/**409**), se lit dans `inputs`, et ne laisse pas de ligne `failed` — au même
+    titre que ses frères (thèse non active, plan déjà ouvert, bilan déjà établi). Le pont garde la
+    vérification en défense en profondeur, mais il n'en est plus le seul porteur. Ce défaut n'était
+    visible que d'un run réel : hors ligne, chaque fonction était juste **prise séparément**.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

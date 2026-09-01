@@ -542,6 +542,15 @@ check("post-mortem déjà établi → second bilan REFUSÉ (il dupliquerait les 
 check("post-mortem sur thèse 'closed' accepté (le bilan vient APRÈS la clôture)",
       passe(_verifier_etat, "post_mortem",
             inputs(position=POSITION_SOLDEE, thesis={"status": "closed"})))
+# Trouvé au dry-run réel du lot 9 : la position non soldée n'était testée QUE dans
+# `_valider_pont_postmortem`, donc APRÈS l'appel — le modèle avait déjà rendu duree_jours et
+# performance_pct quand le refus tombait. C'est un état lisible dans `inputs`, il se refuse ici.
+check("post-mortem sur position NON SOLDÉE refusé AVANT l'appel (état, pas jugement de sortie)",
+      refuse(_verifier_etat, "post_mortem",
+             inputs(position={**POSITION_OUVERTE, "shares": 2.0}), exc=ThesisNotExitable))
+check("le pont post-mortem reteste la position soldée (défense en profondeur, invariant conservé)",
+      refuse(_valider_pont_postmortem, pm_ok,
+             inputs(position={**POSITION_OUVERTE, "shares": 2.0}), exc=ExitRefused))
 check("calibration sans post-mortem REFUSÉE avant tout appel",
       refuse(_verifier_etat, "calibration", inputs(), exc=ThesisNotExitable))
 

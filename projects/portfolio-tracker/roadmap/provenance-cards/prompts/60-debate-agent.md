@@ -61,7 +61,8 @@ produis un **challenge structuré** + une **résolution suggérée** non contrai
   "thesis_id": 128,
   "hypotheses_sous_tension": [
     { "hypothese_id": "H3", "seuil_alerte": 78, "seuil_invalidation": 72,
-      "observation_courante": "PDM à 79% (source: entry 512)", "franchi": false,
+      "valeur_observee": 79, "seuil_franchi": "aucun",
+      "observation": "PDM à 79% (source: entry 512)",
       "source_entry_refs": [ {"entry_id": 512, "version": 1} ] }
   ],
   "cas_contre_maintien": [
@@ -77,6 +78,26 @@ produis un **challenge structuré** + une **résolution suggérée** non contrai
   "escalade_recommandee": false
 }
 ```
+### Champs de `hypotheses_sous_tension[]` — forme exacte (ne pas improviser)
+
+| champ | type | règle |
+|---|---|---|
+| `hypothese_id` | string | l'id **figé** de la thèse (`"H1"`, `"H2"`…), jamais un id inventé |
+| `seuil_alerte` | nombre | recopié de l'hypothèse figée |
+| `seuil_invalidation` | nombre | recopié de l'hypothèse figée |
+| `valeur_observee` | **nombre — obligatoire** | la valeur mesurée aujourd'hui, chiffrée et nue (`18`, pas `"18 %"`, pas `null`) |
+| `seuil_franchi` | **enum** `"aucun"` \| `"alerte"` \| `"invalidation"` | **jamais un booléen** : ni `true`, ni `false` |
+| `observation` | string | la phrase d'observation sourcée (le champ s'appelle `observation`, pas `observation_courante`) |
+| `source_entry_refs` | liste de `{entry_id, version}` | les entries qui portent la valeur |
+
+⚠️ **Le système réécrit ces champs après toi.** `seuil_alerte` et `seuil_invalidation` sont
+**réimposés** depuis l'hypothèse figée de la thèse, et `seuil_franchi` est **redérivé** de
+`valeur_observee` face à ces seuils (dans le sens de l'hypothèse : décroissante ou croissante).
+Conséquence pratique : mentir sur un seuil ou minorer un franchissement **ne t'achète rien** — la
+seule chose que tu contrôles vraiment est `valeur_observee`, et **une `valeur_observee` absente
+désarme le contrôle**. Elle est donc non négociable : si tu n'as pas de mesure chiffrée pour une
+hypothèse, tu ne la mets **pas** dans `hypotheses_sous_tension`.
+
 - `resolution_suggeree` ∈ `closed_pass` (ne pas entrer/renoncer) · `closed_monitor` (maintenir sous
   surveillance) · `closed_proceed` (maintenir/renforcer avec conviction) — **suggérée**, l'utilisateur
   tranche.

@@ -4,7 +4,7 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-01
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6). Reste : lot 9 (sortie/calibration + débat, migration **032**), UX transverse, ingestion-agent.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · **LOT 9 LIVRÉ** (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** Reste : UX transverse (pages V2 du lot 9), ingestion-agent, dette du runner (tokens non comptés sur abandon).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -14,6 +14,64 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
 
+> ## ⚡ MàJ 2026-09-01 — LOT 9 : la sortie, la calibration et le débat (migrations 032 + 033)
+>
+> **La boucle V2 est fermée** : décider (lot 7) → surveiller (lot 8) → **sortir et apprendre** (lot 9).
+> Suite hors-ligne : **707 assertions / 0 échec** sur 11 scripts (532 avant, **+175** —
+> `check_exit_debate.py`). Migration 032 appliquée (`exit_plans`, `exit_executions`,
+> `post_mortems_v2`, `calibration_registry`, `conviction_debates_v2`, + `price_alerts.exit_plan_id`),
+> puis **033** (resynchro du prompt `debate-agent`, voir plus bas). 13 routes exposées dans
+> `api/analysis_v2.py`. Détail des tables et des CHECK : `CLAUDE.md` § Migrations.
+>
+> **Dry-run réel de bout en bout, joué contre le vrai DeepSeek**, sur une thèse V2 **jetable #5**
+> (NVDA, 2ᵉ ticker) créée pour l'exercice puis **intégralement supprimée** — la thèse MSFT #4 et sa
+> position #8 (argent réel) n'ont jamais été touchées. La chaîne complète a tourné : débat →
+> clôture → plan de sortie → 3 tranches → post-mortem → calibration → `GET /v2/calibration/summary`.
+> Ce que le run a **prouvé en réel**, et qu'aucun check hors ligne ne pouvait établir :
+> • `seuil_franchi` **redérivé** des seuils figés dans les **deux sens** — H1 `invalidation` (18 < 25,
+>   décroissante), H2 `alerte`, H3 `aucun` (39 < 40, **croissante**) ;
+> • **anti-complaisance** tenue : H1 invalidée → l'agent a suggéré `closed_monitor`, jamais
+>   `closed_proceed` ;
+> • **souveraineté de l'utilisateur** préservée et tracée : une clôture en `closed_proceed` contre
+>   l'avis du débat est **acceptée** (le CHECK 032 ne contraint que `resolution_suggeree`), avec la
+>   divergence conservée en ligne (`resolution_suggeree` ≠ `status`, `invalidation_franchie=t`) et un
+>   WARNING — c'est la matière du post-mortem, pas un bug ;
+> • `duree_jours`=202 et `performance_pct`=18,00 **calculés** (1 180 € encaissés / 1 000 € de revient)
+>   là où le modèle rendait `0` et `0.0` ;
+> • **le cœur de l'exercice** — la calibration a lu la fourchette **FIGÉE au validate**
+>   (`validation_json` : 90/**120**/150) et non la `valuation_range` réactualisée (100/140/180). C'est
+>   pour ça que le seed les avait délibérément rendues différentes : mesurer son erreur contre sa
+>   dernière opinion ne mesure rien ;
+> • `summary` à n=1 se déclare **`lisible: false`** — le registre A5 refuse de généraliser d'un cas.
+>
+> **Ce que seul le run réel a trouvé — la désynchro de prompt (→ convention #39, migration 033).**
+> Premier appel réel du lot : **HTTP 502**, `seuil_franchi` reçu en booléen sur les 3 hypothèses.
+> L'exemple JSON de `60-debate-agent.md` datait d'**avant** le figeage du Pydantic
+> `ConvictionChallenge` (écrit seulement au lot 9) et montrait `"franchi": false`,
+> `"observation_courante"`, **aucun `valeur_observee`**. Le modèle a recopié l'exemple. **Le 502 est
+> bénin — ce qu'il masquait ne l'est pas** : `_forcer_seuils_figes` ne redérive que si
+> `valeur_observee is not None`, donc un prompt qui n'enseigne jamais ce champ rend la dérivation
+> **no-op silencieuse** et tue le garde-fou central du lot, **sans qu'aucun check hors ligne ne le
+> voie** (ils alimentent tous les ponts avec des fixtures déjà conformes). Un check prouve qu'une
+> fonction refuse ce qu'on lui donne ; jamais que le modèle produira de quoi la déclencher.
+> Correctif conforme à la règle « desserrage de schéma = trou silencieux » : **prompt durci**
+> (table des champs + mention explicite que le système réécrit les seuils et redérive le
+> franchissement, donc sous-déclarer n'achète rien), **contrat inchangé**, et DB resynchronisée par
+> la **migration 033** générée (`_gen_prompt_refresh_20260901.py`) — jamais un UPDATE à la main.
+> Re-testé contre le vrai modèle : **200**, les 3 hypothèses conformes.
+>
+> **Second défaut trouvé par le run (→ convention #40)** : le post-mortem sur position non soldée
+> était refusé **après** l'appel (dans `_valider_pont_postmortem`), alors que `_verifier_etat` porte
+> justement la consigne « AVANT toute dépense de tokens ». Un appel complet payé pour apprendre un
+> état lisible dans `inputs`. Déplacé en pré-condition (`ThesisNotExitable` → **409**), le pont le
+> reteste en défense en profondeur. **Deux assertions ajoutées** (173 → 175).
+>
+> **Reste ouvert** : les **pages V2** du lot 9 (plan de sortie, post-mortem, `CalibrationPanel`) —
+> tout est côté API, rien côté UI ; la dette du runner (tokens d'une tentative abandonnée non
+> comptabilisés, commune à tous les agents V2, ouverte depuis le lot 8) ; l'ingestion-agent.
+>
+> ---
+>
 > ## ⚡ MàJ 2026-09-01 — LOT 8 : le monitoring V2 (modes 1-6, `monitoring_sessions_v2`, migration 031)
 >
 > **Le flux V2 sait maintenant se surveiller.** Déploiement **#335** (`062e459`), un seul conteneur
