@@ -401,15 +401,48 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `34ab6ec` (UX-1), backend deployment **#338**, un seul conteneur vérifié.
+- **Code déployé** : commit `e3ac3b5`, backend deployment **#340**, frontend deployment **#339**
+  (commit `7f0c02a`), **un seul conteneur par app vérifié**. UX-1 est en ligne et **vérifié contre
+  l'API réelle** : `GET /api/v2/theses` renvoie la thèse #4 MSFT avec ses **deux** fourchettes
+  distinctes (`valuation_range` 280/480/750 vs `valuation_range_figee` 250/450/700),
+  `hypotheses_par_statut = {"confirmee": 4}`, `position.id = 8` ; `?ticker_id=NVDA` renvoie `[]`.
+  ⚠️ **Ce qui n'est PAS prouvé** : les pages `/v2/theses` et `/v2/theses/4` renvoient 200, mais
+  Next.js sert la coquille et charge les données **côté client** — un 200 ne prouve donc rien sur
+  l'affichage. Le rendu réel dans le navigateur reste à contrôler à l'œil.
   ⚠️ **Limite d'outillage rencontrée** : `deploy.sh` fusionne « committer » et « reconstruire » et
   refuse un index vide (`fail 2`). Quand **un seul commit couvre les deux apps** (backend + frontend),
   la seconde ne peut donc pas être reconstruite par la voie normale. Contournement propre : joindre au
   commit suivant une modification réelle (ex. ce fichier) et appeler `deploy.sh <la seconde app>`.
   À corriger un jour dans le script : un mode « rebuild seul, sans commit ».
-- **Suite hors-ligne** : **759 assertions / 0 échec** sur 12 scripts (`backend/checks/`).
+- **Suite hors-ligne** : **779 assertions / 0 échec** sur 13 scripts (`backend/checks/`).
   ⚠️ Lancer avec l'env **documenté dans `checks/README.md`** (sans `EXA_API_KEY`) : une clé factice
   fait échouer à tort l'assertion « sans clé de recherche, le worker doit lever ».
+
+> ### 🐛 Le bug qui a survécu à 759 assertions vertes — accolades dans une f-string SQL
+>
+> Livré au #338, `GET /v2/theses` renvoyait **500 à chaque appel** en production. Cause : un
+> **commentaire SQL** à l'intérieur de la f-string qui construit la requête —
+> `-- hypotheses_par_statut : {statut: count}`. Python y a lu un champ de remplacement (expression
+> `statut`, format spec ` count`) → `NameError: name 'statut' is not defined`.
+>
+> **Pourquoi rien ne l'a attrapé**, et c'est là tout l'intérêt du cas :
+> - une f-string n'est évaluée qu'**à l'exécution de sa ligne** → le module **s'importe très bien**,
+>   et le contrôle d'import est passé au vert ;
+> - les 52 assertions de `check_theses_v2_listing.py` valident des **formes** sur fixtures, sans
+>   jamais exécuter la fonction de route ;
+> - la vérification SQL contre la vraie base avait été faite depuis un fichier `.sql` séparé, **d'où
+>   le commentaire fautif était absent** — on a donc prouvé que le SQL tourne, jamais que Python
+>   sait le fabriquer.
+>
+> C'est la **convention #39 dans sa forme la plus pure** : trois vérifications vertes, aucune ne
+> touchant le chemin réel. Rappel de la règle transverse : **un correctif n'est acquis que testé
+> contre l'API réelle**.
+>
+> **Garde-fou installé** : `backend/checks/check_fstring_sql.py` (20 assertions) parcourt en `ast`
+> tous les `.py` de `backend/app/` et échoue sur tout nom référencé dans une f-string qui n'est pas
+> résoluble dans sa portée (args, locales, `except ... as e`, compréhensions, englobantes, imports,
+> builtins). Il a été **validé par test négatif** : bug réintroduit → exit 1 pointant `statut`, puis
+> restauré → vert.
 - **Migrations appliquées** jusqu'à **033** (resynchro prompt `debate-agent`). Prochaine : **034**
   — à écrire **juste avant** son lot, jamais en avance (§18).
 - **La boucle de vie d'une thèse V2 est fermée** (lots 7 à 9) : décider → surveiller → sortir →
