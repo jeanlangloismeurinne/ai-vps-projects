@@ -60,12 +60,20 @@ docker run --rm --network none -v "$PWD:/app:ro" \
   -v "$PWD/../roadmap/provenance-cards:/contract_frozen:ro" \
   -w /app -e PYTHONPATH=/app $ENV $IMG \
   python checks/check_monitoring_v2.py
+
+# sortie / calibration / débat V2 (§11-§12/A5 + §9-C, lot 9) : les PONTS inter-objets, et surtout
+# le trou H7 transposé — le contrat accepte un seuil d'invalidation falsifié, le rétablissement
+# depuis la thèse figée le refuse. Même montage /contract_frozen. Hors ligne, aucun appel modèle.
+docker run --rm --network none -v "$PWD:/app:ro" \
+  -v "$PWD/../roadmap/provenance-cards:/contract_frozen:ro" \
+  -w /app -e PYTHONPATH=/app $ENV $IMG \
+  python checks/check_exit_debate.py
 ```
 
-> **Base de référence au 2026-09-01 : 532 assertions / 0 échec** sur les 10 scripts hors-ligne
+> **Base de référence au 2026-09-01 : 705 assertions / 0 échec** sur les 11 scripts hors-ligne
 > (`search_worker` 52, `provenance` 50, `edgar_feed` 47, `financials_feed` 32, `synthesis_feed` 56,
 > `readiness_recompute` 77, `analysis_contract` 21, `decision_validate` 54, `base_rate_corpus` 27,
-> `monitoring_v2` 116). ⚠️ Trois scripts n'écrivent **pas** la même ligne de résumé
+> `monitoring_v2` 116, `exit_debate` 173). ⚠️ Trois scripts n'écrivent **pas** la même ligne de résumé
 > (`50 OK / 0 KO`, `47 ok / 0 FAIL`) : un `grep` sur « vérifications OK » les rend **silencieux**, ce
 > qui se lit comme un succès. Lire le code de sortie ou la dernière ligne, pas un motif unique.
 

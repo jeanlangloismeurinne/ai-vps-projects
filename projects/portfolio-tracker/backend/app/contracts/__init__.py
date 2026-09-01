@@ -12,8 +12,16 @@ ReadinessReport + compute_verdict (curator gate) ; ContextPack (front-load) ; Wo
 WorkerResponse/WorkerExchange + ProducedEntry (C1, frontière orchestrateur↔ouvrier — search-worker) ;
 ThesisValidation + RiskAck/ValuationRange (§9 décision — G2 s'y exerce le plus fort : la décision est
 contrainte par l'analyse, pas par l'UX ; lot 7, migration 030) ; Mode1..Mode5 + Mode6Review (§10/§11
-monitoring — anti-churn et anti-seuil-mécanique ; lot 8, migration 031).
-Les contrats restants (ingestion/debate/exit) seront copiés au moment de leurs agents.
+monitoring — anti-churn et anti-seuil-mécanique ; lot 8, migration 031) ; ExitPlan/PostMortem/
+CalibrationEntry (§11/§12/A5 — sortie thèse-driven et boucle d'apprentissage LT) + ConvictionChallenge
+(debate-agent, G2 anti-complaisance ; lot 9, migration 032).
+Le contrat restant (ingestion) sera copié au moment de son agent.
+
+⚠️ Ces contrats valident UN objet, jamais la cohérence entre deux (convention #37). Les invariants
+qui portent sur une RELATION — post-mortem ↔ hypothèses figées, origine de sortie ↔ statuts réels,
+seuils déclarés ↔ seuils figés — se vérifient en code dans `agents/v2/` ; les seules exceptions sont
+les helpers explicites `valider_pont_risques_hypotheses` et `valider_postmortem_couvre`, à qui l'on
+PASSE le second objet.
 """
 from .analysis_v2_schemas import (
     SCHEMA_VERSION,
@@ -26,7 +34,25 @@ from .analysis_v2_schemas import (
     valider_pont_risques_hypotheses,
 )
 from .context_pack_schema import CANONICAL_DIMS, ContextPack, DimensionDigest
+from .debate_conviction_schema import (
+    ContreArgument,
+    ConvictionChallenge,
+    HypotheseSousTension,
+    ResolutionDebat,
+    SeuilFranchi,
+)
 from .decision_validate_schema import RiskAck, ThesisValidation, ValuationRange
+from .exit_calibration_schema import (
+    CalibrationEntry,
+    CalibrationPair,
+    ConditionAcceleree,
+    ExitPlan,
+    ExitTranche,
+    HypothesisOutcome,
+    Lecon,
+    PostMortem,
+    valider_postmortem_couvre,
+)
 from .monitoring_mode6_schema import (
     HypothesisReview,
     Mode6Review,
@@ -82,6 +108,20 @@ __all__ = [
     "HypothesisReview",
     "ValuationThermometer",
     "RendementProspectif",
+    "ExitPlan",
+    "ExitTranche",
+    "ConditionAcceleree",
+    "PostMortem",
+    "HypothesisOutcome",
+    "Lecon",
+    "valider_postmortem_couvre",
+    "CalibrationEntry",
+    "CalibrationPair",
+    "ConvictionChallenge",
+    "HypotheseSousTension",
+    "ContreArgument",
+    "SeuilFranchi",
+    "ResolutionDebat",
     "WorkerRequest",
     "WorkerResponse",
     "WorkerExchange",
