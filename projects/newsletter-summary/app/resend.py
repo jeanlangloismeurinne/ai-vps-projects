@@ -53,6 +53,9 @@ def parse_inbound(payload: dict[str, Any]) -> dict[str, Any]:
         src.get("id"), src.get("email_id"),
         headers.get("Message-ID"), headers.get("message-id"),
     )
+    # email_id : identifiant Resend du mail reçu ; sert à rapatrier le corps via l'API
+    # (le webhook ne livre ni text/html). Stocké pour traçabilité / re-fetch.
+    email_id = src.get("email_id") or ""
     subject = _first(src.get("subject"), headers.get("Subject"), headers.get("subject"))
     from_addr = _first(src.get("from"), headers.get("From"), headers.get("from"))
     to_val = src.get("to") or src.get("received_for") or headers.get("To") or headers.get("to")
@@ -75,6 +78,7 @@ def parse_inbound(payload: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "message_id": message_id,
+        "email_id": email_id,
         "from_addr": from_addr,
         "to_addr": to_addr,
         "subject": subject,

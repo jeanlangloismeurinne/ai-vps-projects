@@ -100,6 +100,23 @@ class CommsClient:
         r.raise_for_status()
         return r.json().get("rows", [])
 
+    async def fetch_inbound_email(self, email_id: str) -> dict:
+        """GET /v1/inbound/email/:id — récupère le mail reçu (corps text/html + métadonnées)
+        via le gateway, qui le rapatrie depuis l'API Resend Received emails (la clé reste
+        au gateway). Lève CommsError si absent (404) ou en échec. 404 = mail pas encore
+        indexé côté Resend → l'appelant peut retenter.
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            r = await client.get(
+                f"{self.base_url}/v1/inbound/email/{email_id}",
+                headers={"Authorization": f"Bearer {self.token}"},
+            )
+        if r.status_code == 404:
+            raise CommsError("email entrant introuvable sur Resend (pas encore indexé ?)")
+        if r.status_code >= 400:
+            raise CommsError(f"Récupération email entrant — HTTP {r.status_code}")
+        return r.json()
+
 
 # Client par défaut, configuré depuis l'environnement.
 default: CommsClient | None = None
