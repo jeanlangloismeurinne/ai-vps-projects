@@ -70,6 +70,18 @@ destinataires réels (avec `RESEND_DEFAULT_FROM=newsletter@oozeenaru.resend.app`
 
 ---
 
+# ⚡ MàJ 2026-09-01 — Endpoint inbound `GET /v1/inbound/email/:id`
+
+✅ Ajout d'un endpoint authentifié qui **proxy l'API Resend « Received emails »** :
+`GET https://api.resend.com/emails/inbound/{email_id}` → renvoie `text`/`html` + métadonnées.
+Motif : le webhook Resend `email.received` ne délivre **que des métadonnées** (jamais le
+corps) ; `newsletter-summary` rapatrie désormais le corps via cet endpoint à la réception.
+Clé Resend **restée au gateway** (aucun secret en clair dans les projets clients).
+- Déployé via `infrastructure/deploy.sh comms-gateway` — build **#333** (commit `82272d6`).
+- Vérifié en prod : HTTP 200 sur le vrai `email_id` avec `text` 48 KB / `html` 59 KB.
+
+---
+
 # ⚡ MàJ 2026-08-30 — MIS EN PRODUCTION (Coolify)
 
 ✅ **Le gateway est déployé et vérifié en prod.** Cette MàJ clôt le chantier « mise en
