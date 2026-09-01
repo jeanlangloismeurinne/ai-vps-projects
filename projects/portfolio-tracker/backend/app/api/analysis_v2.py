@@ -254,13 +254,142 @@ async def validate_thesis_v2(thesis_id: int, body: ValidateV2Body):
         raise _agent_error(e)
 
 
+@router.get("/v2/theses")
+async def list_theses_v2(ticker_id: Optional[str] = None):
+    """Listing des thèses V2 avec agrégats (position, monitoring, exit_plan, post_mortem).
+
+    Paramètre optionnel `?ticker_id=` pour filtrer sur un ticker.
+    Tri par id DESC (thèse la plus récente en tête).
+
+    `valuation_range_figee` est la fourchette telle qu'elle a été figée au validate
+    (lue depuis `validation_json->'valuation_range'`) — elle peut différer de `valuation_range`
+    (colonne réactualisée par les revues annuelles). C'est ce champ que la calibration A5 doit relire.
+    """
+    where = "WHERE t.ticker_id = $1" if ticker_id else ""
+    params = [ticker_id] if ticker_id else []
+    sql = f"""
+        SELECT
+            t.id,
+            t.ticker_id,
+            tk.ticker_symbol,
+            t.status,
+            t.verdict,
+            t.position_sizing_pct,
+            t.valuation_range,
+            t.validation_json -> 'valuation_range' AS valuation_range_figee,
+            t.validated_at,
+            t.created_at,
+            -- nb_hypotheses : longueur du tableau JSONB ou 0 si null
+            CASE WHEN t.hypotheses IS NULL THEN 0
+                 ELSE jsonb_array_length(t.hypotheses)
+            END AS nb_hypotheses,
+            -- hypotheses_par_statut : {statut: count}
+            (
+                SELECT jsonb_object_agg(statut, cnt)
+                FROM (
+                    SELECT h->>'statut' AS statut, count(*) AS cnt
+                    FROM jsonb_array_elements(COALESCE(t.hypotheses, '[]'::jsonb)) h
+                    GROUP BY h->>'statut'
+                ) sub
+            ) AS hypotheses_par_statut,
+            -- position V2 (au plus une, discriminant thesis_v2_id)
+            (
+                SELECT jsonb_build_object(
+                    'id', pp.id,
+                    'shares', pp.shares,
+                    'purchase_price_eur', pp.purchase_price_eur,
+                    'purchase_date', pp.purchase_date,
+                    'status', pp.status
+                )
+                FROM portfolio_positions pp
+                WHERE pp.thesis_v2_id = t.id
+                LIMIT 1
+            ) AS position,
+            -- nb de sessions de monitoring
+            (
+                SELECT count(*)
+                FROM monitoring_sessions_v2 ms
+                WHERE ms.thesis_v2_id = t.id
+            ) AS nb_monitoring_sessions,
+            -- dernière session
+            (
+                SELECT jsonb_build_object(
+                    'id', ms.id,
+                    'mode', ms.mode,
+                    'status', ms.status,
+                    'alert_level', ms.alert_level,
+                    'verdict', ms.verdict,
+                    'created_at', ms.created_at
+                )
+                FROM monitoring_sessions_v2 ms
+                WHERE ms.thesis_v2_id = t.id
+                ORDER BY ms.created_at DESC
+                LIMIT 1
+            ) AS derniere_session,
+            -- exit_plan actif (au plus un ouvert par garde-fou uq_exit_plan_actif)
+            (
+                SELECT jsonb_build_object('id', ep.id, 'exit_status', ep.exit_status)
+                FROM exit_plans ep
+                WHERE ep.thesis_v2_id = t.id
+                  AND ep.status = 'completed'
+                ORDER BY ep.created_at DESC
+                LIMIT 1
+            ) AS exit_plan,
+            -- post_mortem_id
+            (
+                SELECT pm.id
+                FROM post_mortems_v2 pm
+                WHERE pm.thesis_v2_id = t.id
+                  AND pm.status = 'completed'
+                LIMIT 1
+            ) AS post_mortem_id
+        FROM theses_v2 t
+        JOIN tickers tk ON tk.id = t.ticker_id
+        {where}
+        ORDER BY t.id DESC
+    """
+    async with get_db_session() as conn:
+        rows = await conn.fetch(sql, *params)
+    return [dict(r) for r in rows]
+
+
 @router.get("/v2/theses/{thesis_id}")
 async def get_thesis_v2(thesis_id: int):
+    """Thèse V2 complète — enrichie de façon strictement additive : ticker_symbol, position,
+    exit_plan, post_mortem_id, valuation_range_figee.
+    """
     async with get_db_session() as conn:
         row = await conn.fetchrow("SELECT * FROM theses_v2 WHERE id=$1", thesis_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Thèse V2 introuvable.")
-    return dict(row)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Thèse V2 introuvable.")
+        out = dict(row)
+        # ticker_symbol
+        tk = await conn.fetchrow("SELECT ticker_symbol FROM tickers WHERE id=$1", out["ticker_id"])
+        out["ticker_symbol"] = tk["ticker_symbol"] if tk else None
+        # position V2
+        pos = await conn.fetchrow(
+            "SELECT id, shares, purchase_price_eur, purchase_date, status "
+            "FROM portfolio_positions WHERE thesis_v2_id=$1 LIMIT 1",
+            thesis_id,
+        )
+        out["position"] = dict(pos) if pos else None
+        # exit_plan
+        ep = await conn.fetchrow(
+            "SELECT id, exit_status FROM exit_plans "
+            "WHERE thesis_v2_id=$1 AND status='completed' ORDER BY created_at DESC LIMIT 1",
+            thesis_id,
+        )
+        out["exit_plan"] = dict(ep) if ep else None
+        # post_mortem_id
+        pm = await conn.fetchrow(
+            "SELECT id FROM post_mortems_v2 WHERE thesis_v2_id=$1 AND status='completed' LIMIT 1",
+            thesis_id,
+        )
+        out["post_mortem_id"] = pm["id"] if pm else None
+        # valuation_range_figee : lu depuis validation_json, pas depuis la colonne réactualisée
+        vj = out.get("validation_json")
+        out["valuation_range_figee"] = vj.get("valuation_range") if isinstance(vj, dict) else None
+    return out
 
 
 # ── Monitoring V2 (§10/§11, lot 8) ───────────────────────────────────────────

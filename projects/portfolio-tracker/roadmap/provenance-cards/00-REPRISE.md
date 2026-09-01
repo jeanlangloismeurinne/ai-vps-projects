@@ -4,7 +4,7 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-01
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · **LOT 9 LIVRÉ** (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** Reste : UX transverse (pages V2 du lot 9), ingestion-agent, dette du runner (tokens non comptés sur abandon).
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`). Reste : écrans du lot 9 (sortie/post-mortem/calibration/débat), double comptage MSFT, ingestion-agent, dette du runner.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -14,6 +14,87 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
 
+> ## ⚡ MàJ 2026-09-01 (bis) — UX-1 : le fil conducteur V2 (l'espace V2 avait un backend complet et AUCUN écran)
+>
+> **Le constat qui a défini le sprint.** Le reste-à-faire annonçait une « passe UX transverse : verdict
+> dans le frontend, suivi des hypothèses H1-H5 » — formulation qui laissait croire à des retouches.
+> Inventaire fait : `frontend/pages/v2/` contenait **un seul fichier** (la liste des 12 agents), aucun
+> dossier `components/v2/`, **une** entrée dans `V2Nav`, et **aucune** page ne lisait `theses_v2` ni
+> `monitoring_sessions_v2`. Neuf lots de backend, zéro écran. Ce n'est pas une passe, c'est un chantier
+> de plusieurs sprints — et le §16 de la spec est **muet** sur le lot 9 (ni sortie, ni post-mortem, ni
+> calibration ; le §4 nomme `ExitPlanBuilder` et `CalibrationPanel` sans dire où ils vivent). Sept
+> points d'UX sont donc à trancher au fil de l'eau, pas à lire dans la spec.
+>
+> **Pourquoi le fil conducteur AVANT les écrans du lot 9, et pas l'inverse.** Trois raisons, la
+> première étant décisive et mesurée : `exit_plans`, `exit_executions`, `post_mortems_v2`,
+> `calibration_registry`, `conviction_debates_v2` sont **toutes vides** (la thèse jetable #5 du dry-run
+> a été supprimée). Construire ces écrans d'abord, c'est les construire contre des données **inventées**
+> — et une donnée inventée est toujours conforme. C'est la convention #39 d'un cran plus haut. Le fil
+> conducteur, lui, avait de quoi s'afficher : thèse #4 MSFT et ses 2 sessions. Ensuite, G2 interdit
+> l'ordre inverse (« la logique de décision contraint l'UX ») : un écran dessiné avant sa donnée invente
+> des affordances que le backend refuse — ici les seuils, en lecture seule par #37. Enfin les trous
+> d'API se trouvent en câblant : `GET /v2/theses` **n'existait pas**, donc aucune thèse V2 n'était
+> listable et aucun écran du lot 9 n'était atteignable.
+>
+> **Livré.** Backend : `GET /v2/theses` (agrégats position / sessions / exit_plan / post-mortem,
+> filtre `?ticker_id=`) + enrichissement **strictement additif** de `GET /v2/theses/{id}`.
+> Frontend : primitives `components/v2/`, `/v2/theses` (liste), `/v2/theses/[id]` (page pivot),
+> entrée « Thèses » dans `V2Nav`. Suite hors-ligne : **759 assertions / 0 échec** sur 12 scripts
+> (707 avant, **+52** — `check_theses_v2_listing.py`).
+>
+> **La page thèse affiche DEUX fourchettes de valorisation, et c'est structurel.** MSFT #4 porte
+> `validation_json` **250/450/700** (figée au validate) et `valuation_range` **280/480/750**
+> (réactualisée par la revue mode 6). N'en afficher qu'une masquerait l'écart — or c'est **contre la
+> figée** que la calibration A5 mesure l'erreur de prévision. Les deux sont donc étiquetées
+> séparément, l'écart est explicite, et aucune moyenne n'est calculée.
+>
+> **⚠ Ce que ce sprint a trouvé et qui vaut pour tout le frontend : `node --check` est un NO-OP sur
+> ces fichiers.** Node 20 détecte le `import` en tête, bascule en analyse ESM et **rend 0 sans rien
+> vérifier** — y compris sur du JSX volontairement cassé. Vérifié dans les deux sens : le même JSX
+> **sans** `import` échoue en `exit=1`, **avec** `import` passe en `exit=0`. Un sous-agent avait
+> rapporté « `node --check` OK » de bonne foi ; ça ne prouvait strictement rien. **La seule
+> vérification frontend qui ait du sens est `docker build`** (npm ci + next build) — faite, les deux
+> pages compilent (`/v2/theses` 2,88 kB, `/v2/theses/[id]` 4,93 kB). Corollaire général : un contrôle
+> qui réussit **toujours** est pire qu'aucun contrôle, parce qu'il se rapporte comme une preuve.
+>
+> **⚠ Un check à fixtures ne prouve jamais qu'une requête SQL s'exécute.** Les 52 assertions neuves
+> travaillent sur des dicts Python : elles ne touchent pas la base. Or la requête référence
+> `exit_plans.status` et `post_mortems_v2.status`, colonnes dont la migration 032 ne parle pas (elle
+> décrit `exit_status`). Elles existent bien (défaut `'completed'`) — mais **vérifié en jouant le SQL
+> exact contre `db_portfolio`**, pas en le supposant. Le `JOIN tickers` a été contrôlé de même : FK
+> `theses_v2_ticker_id_fkey` présente, donc l'INNER JOIN ne peut pas escamoter une thèse (le mode de
+> panne du LEFT JOIN du lot 7 n'est pas reconduit).
+>
+> **⚠ Les replis sur variantes de noms de champs sont un trou silencieux.** La page thèse avait
+> d'abord été écrite avec des `h.hypothese || h.text || '—'`, `h.base_rate_taux`, `h.classe_reference`
+> — noms devinés. Structure réelle relevée en base : `id`, `enonce`, `kpi`, `unite`, `horizon`,
+> `statut`, `seuil_alerte`, `seuil_invalidation`, `base_rate{taux, reference_class, ajustement}`,
+> `source_entry_refs[{entry_id, version}]`, `derniere_revue`, `derniere_observation`. Un nom faux
+> n'aurait pas levé d'erreur : il aurait affiché **du vide**, qui se lit comme « cette donnée n'existe
+> pas ». Corrigé aux noms exacts, avec un marqueur **visible** « — champ absent » (et `ajustement:
+> null` nommé comme tel, pour distinguer « vide à dessein » de « donnée manquante »).
+>
+> **Faux positif à ne pas re-chasser** : `check_search_worker.py` rend `50 OK / 1 FAIL` **si on lui
+> passe `EXA_API_KEY=x`** — l'assertion « sans clé de recherche, le worker doit lever » ne peut alors
+> pas se déclencher. Avec l'environnement documenté dans `checks/README.md` (sans clé), il rend bien
+> **52 OK / 0 échec**. Le script est correct ; c'est l'env du runner qui doit l'être.
+>
+> **⚠ Le « double comptage » MSFT : une des deux options proposées est nuisible.** Positions ouvertes
+> réelles : **#1** MSFT V1 (1 titre, 100 €) et **#8** MSFT V2 (1 titre, 400 €, ligne de dry-run
+> conservée). Le fichier proposait « filtrer sur `thesis_v2_id IS NULL` côté V1 **ou** afficher les
+> deux avec un marqueur ». **Filtrer les positions sans filtrer la trésorerie aggrave le mensonge** :
+> le `cash_movements` #9 de 400 € resterait débité sans contrepartie visible, la page afficherait
+> 400 € évaporés. Positions et trésorerie sont des **faits du monde** (#34) et la page portefeuille
+> décrit le monde : le **marqueur de flux** est la seule des deux options qui ne fasse pas mentir la
+> page. Non traité dans ce sprint, à faire dans la tranche UX suivante.
+>
+> **Reste ouvert côté UX** : les écrans du lot 9 (sortie, post-mortem, calibration, débat) — ils
+> demandent d'abord de **fabriquer une thèse jetable** pour avoir des données réelles à afficher,
+> sinon on retombe dans le piège des fixtures conformes ; le marqueur de flux sur `/portfolio` ;
+> les écrans amont (knowledge, readiness, research, analyse) toujours absents de l'espace V2.
+>
+> ---
+>
 > ## ⚡ MàJ 2026-09-01 — LOT 9 : la sortie, la calibration et le débat (migrations 032 + 033)
 >
 > **La boucle V2 est fermée** : décider (lot 7) → surveiller (lot 8) → **sortir et apprendre** (lot 9).
@@ -321,22 +402,30 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
 - **Code déployé** : commit `062e459`, deployment **#335**, un seul conteneur backend vérifié.
-- **Suite hors-ligne** : **532 assertions / 0 échec** sur 10 scripts (`backend/checks/`).
-- **Migrations appliquées** jusqu'à **031** (v2_monitoring_flow). Prochaine : **032**
-  exit/calibration — à écrire **juste avant** son lot, jamais en avance (§18).
-- **La boucle de vie d'une thèse V2 est fermée** (lots 7 + 8) : de la recherche à l'entrée en
-  position, puis surveillance calendaire et revue annuelle. Il manque la **sortie** (lot 9).
+- **Suite hors-ligne** : **759 assertions / 0 échec** sur 12 scripts (`backend/checks/`).
+  ⚠️ Lancer avec l'env **documenté dans `checks/README.md`** (sans `EXA_API_KEY`) : une clé factice
+  fait échouer à tort l'assertion « sans clé de recherche, le worker doit lever ».
+- **Migrations appliquées** jusqu'à **033** (resynchro prompt `debate-agent`). Prochaine : **034**
+  — à écrire **juste avant** son lot, jamais en avance (§18).
+- **La boucle de vie d'une thèse V2 est fermée** (lots 7 à 9) : décider → surveiller → sortir →
+  apprendre. Le manque n'est plus dans le backend, il est **dans les écrans**.
+- **Vérifier le frontend avec `docker build`, jamais avec `node --check`** (no-op sur fichiers ESM,
+  cf. MàJ bis).
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **Lot 9 — sortie/calibration + débat conviction** (migration **032**, nouvelles tables, autre
-   agent). **C'est le prochain jalon**, et son périmètre est quasi disjoint des lots 7-8 → **à faire
-   dans une conversation neuve**. Point d'entrée déjà posé par le lot 8 : un verdict `REDUIRE` ou
-   `SORTIR` (modes 3/6) écrit `routing_suggestion='exit_plan'` — c'est ce que le lot 9 doit
-   consommer.
-3. **Passe UX transverse** (§16) : verdict dans le frontend, suivi des hypothèses H1-H5.
-   ⚠️ **Y traiter le double comptage MSFT** signalé dans la MàJ (ter) — la page portefeuille V1
-   ne filtre pas les positions du flux V2.
+1. **UX-2 — les écrans du lot 9** : plan de sortie (`ExitPlanBuilder`), post-mortem,
+   `CalibrationPanel`, page Débat. **C'est le prochain jalon.** ⚠️ **Prérequis non négociable** :
+   les 5 tables du lot 9 sont **vides**, donc il faut d'abord **fabriquer une thèse V2 jetable**
+   (comme au dry-run du lot 9, sur un 2ᵉ ticker, puis la supprimer) pour disposer de données
+   réelles — sans quoi on code contre des fixtures conformes, exactement le piège de #39.
+   La spec est **muette** sur ces écrans (§16 ne les mentionne pas) : les 7 arbitrages UX listés
+   dans la MàJ (bis) sont à trancher, pas à chercher.
+2. **Marqueur de flux sur `/portfolio`** — ⚠️ **ne PAS filtrer sur `thesis_v2_id IS NULL`** :
+   sans filtrer aussi `cash_movements`, la page afficherait 400 € débités sans contrepartie.
+   Afficher les deux positions MSFT avec un marqueur V1/V2 (cf. MàJ bis).
+3. **Écrans V2 amont, toujours absents** : knowledge, readiness (le gate `ready`), research memo,
+   analyse 3 colonnes bull/bear/synthèse, décision. Le backend existe pour tous.
 3. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
 4. **3ᵉ ticker** — plus aucun blocage technique. ⚠️ Penser à ajouter son entrée dans
