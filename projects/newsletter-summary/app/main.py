@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 from contextlib import asynccontextmanager
 
@@ -12,6 +14,23 @@ from app import resend, digest
 from app.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def _derive_message_id(payload: dict, fields: dict) -> str:
+    """Génère un identifiant de dédup STABLE et UNIQUE pour un payload sans Message-ID.
+
+    Corrige un bug de perte de données : l'ancien fallback constant
+    `from|subject|received_at` (qui valait "||" quand le payload était mal parsé)
+    faisait COLLABER toutes les newsletters distinctes → la 1ère était stockée,
+    les suivantes silencieusement rejetées en "duplicate".
+
+    Désormais on hashe le payload complet : deux RETRAITS du MÊME webhook produisent
+    le même hash (donc toujours dédupliqués), mais deux mails différents ne se
+    collisionnent plus.
+    """
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    return "derived:" + hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
 @asynccontextmanager
@@ -39,14 +58,21 @@ async def webhook_resend(request: Request):
         raise HTTPException(status_code=401, detail="unauthorized")
 
     payload = await request.json()
+    # Diagnostic : loguer le payload brut sur chaque réception — indispensable pour
+    # confirmer le vrai format Resend (les champs arrivent actuellement à vide).
+    logger.info("Webhook Resend reçu — clés: %s", list(payload.keys()))
+    logger.info("Payload brut: %s", json.dumps(payload, default=str, ensure_ascii=False)[:8000])
+
     fields = resend.parse_inbound(payload)
+    logger.info(
+        "Parsed — from=%r subject=%r message_id=%r text_len=%d",
+        fields["from_addr"], fields["subject"], fields["message_id"], len(fields["text_body"]),
+    )
 
     if not fields["message_id"]:
-        # Resend peut ne pas peupler Message-ID sur certains mails ; génère une clé de
-        # dédup stable si nécessaire.
-        fields["message_id"] = (
-            f"{fields['from_addr']}|{fields['subject']}|{fields['received_at'] or ''}"
-        )
+        # Resend peut ne pas peupler Message-ID au niveau attendu ; génère une clé de
+        # dédup stable ET unique (cf. _derive_message_id) pour ne jamais perdre de mail.
+        fields["message_id"] = _derive_message_id(payload, fields)
 
     async with AsyncSessionLocal() as db:
         existing = await db.execute(

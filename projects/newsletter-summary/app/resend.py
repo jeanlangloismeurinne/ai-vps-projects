@@ -15,16 +15,35 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _first(*values):
+    """Renvoie la première valeur non vide (gère les champs à la racine ET dans `headers`)."""
+    for v in values:
+        if v:
+            return v
+    return ""
+
+
 def parse_inbound(payload: dict[str, Any]) -> dict[str, Any]:
-    """Normalise le payload inbound Resend en champs pour la table `emails`."""
-    message_id = payload.get("Message-ID") or payload.get("message_id") or payload.get("id") or ""
-    subject = payload.get("subject") or ""
-    from_addr = payload.get("from") or ""
-    to_addr = ", ".join(payload.get("to") or []) if isinstance(payload.get("to"), list) else (payload.get("to") or "")
+    """Normalise le payload inbound Resend en champs pour la table `emails`.
+
+    Tolérant : lit d'abord les clés de premier niveau, puis retombe sur `headers`
+    (Resend peut n'y placer que Message-ID / From / Subject / Date selon le mail).
+    """
+    headers = payload.get("headers") or {}
+
+    message_id = _first(
+        payload.get("Message-ID"), payload.get("message_id"),
+        payload.get("id"),
+        headers.get("Message-ID"), headers.get("message-id"),
+    )
+    subject = _first(payload.get("subject"), headers.get("Subject"), headers.get("subject"))
+    from_addr = _first(payload.get("from"), headers.get("From"), headers.get("from"))
+    to_val = payload.get("to") or headers.get("To") or headers.get("to")
+    to_addr = ", ".join(to_val) if isinstance(to_val, list) else (to_val or "")
     text = payload.get("text") or ""
     html = payload.get("html") or ""
 
-    received_at = payload.get("date")
+    received_at = payload.get("date") or headers.get("Date") or headers.get("date")
     if isinstance(received_at, str):
         try:
             received_at = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
