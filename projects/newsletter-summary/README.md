@@ -7,6 +7,12 @@ les mails reçues depuis la veille, à `jean.langlois-meurinne@mailbox.org`.
 Le résumé de chaque mail est généré par DeepInfra (DeepSeek-V4) depuis un prompt configurable
 (`SUMMARIZATION_PROMPT`) qui demande de **suivre la structure du mail d'origine**.
 
+Le digest est envoyé en **email HTML lisible** : chaque newsletter est rendue par DeepSeek sous
+forme d'un **bloc HTML autonome** (styles inline, cf. `SUMMARIZE_HTML_PROMPT`), assemblé dans
+une enveloppe HTML minimale côté code. Un corps **texte brut** reste envoyé en parallèle comme
+fallback (clients non-HTML / lisibilité). Le gateway accepte désormais un champ `html` en plus
+du `text` (`resend` recoit `text` + `html`).
+
 ## Flux
 
 ```

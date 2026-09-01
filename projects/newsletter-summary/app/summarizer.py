@@ -47,3 +47,30 @@ async def summarize(email: Email) -> str:
         max_tokens=1500,
     )
     return result.strip()
+
+
+async def summarize_html(email: Email) -> str:
+    """Résume le mail en un BLOC HTML autonome (styles inline) via DeepInfra.
+
+    Ce bloc est destiné à être inséré tel quel dans l'email HTML assemblé par digest.py.
+    Le prompt exige du HTML self-contained : pas de <html>/<head>/<body>/<style>, CSS inline,
+    échappement correct — de sorte que le rendu final soit robuste dans les clients mail.
+    """
+    plain = _to_plain(email)
+    if not plain:
+        logger.warning("Email %s sans contenu texte — résumé HTML vide.", email.message_id)
+        return ""
+
+    prompt = settings.SUMMARIZE_HTML_PROMPT.format(email=plain)
+    messages = [
+        {"role": "system",
+         "content": "Tu rédiges des blocs HTML de résumé d'emails, propres, lisibles, fidèles et aux styles inline."},
+        {"role": "user", "content": prompt},
+    ]
+    result = await deepinfra_client.chat(
+        messages,
+        model=settings.DEEPINFRA_MODEL,
+        temperature=0.2,
+        max_tokens=2500,
+    )
+    return result.strip()
