@@ -283,7 +283,7 @@ async def list_theses_v2(ticker_id: Optional[str] = None):
             CASE WHEN t.hypotheses IS NULL THEN 0
                  ELSE jsonb_array_length(t.hypotheses)
             END AS nb_hypotheses,
-            -- hypotheses_par_statut : {statut: count}
+            -- hypotheses_par_statut : un compteur par statut (pas d'accolades ici : f-string)
             (
                 SELECT jsonb_object_agg(statut, cnt)
                 FROM (

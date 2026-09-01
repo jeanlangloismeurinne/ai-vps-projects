@@ -72,12 +72,17 @@ docker run --rm --network none -v "$PWD:/app:ro" \
 # route GET /v2/theses (listing + détail enrichi) — hors ligne, aucun appel modèle.
 docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV $IMG \
   python checks/check_theses_v2_listing.py
+
+# analyse statique f-strings : noms non résolus dans backend/app/ — hors ligne, aucun appel modèle.
+# Vise le NameError silencieux en prod (commentaire SQL avec accolades, Convention #39).
+docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV $IMG \
+  python checks/check_fstring_sql.py
 ```
 
-> **Base de référence au 2026-09-01 : 759 assertions / 0 échec** sur les 12 scripts hors-ligne
+> **Base de référence au 2026-09-01 : 779 assertions / 0 échec** sur les 13 scripts hors-ligne
 > (`search_worker` 52, `provenance` 50, `edgar_feed` 47, `financials_feed` 32, `synthesis_feed` 56,
 > `readiness_recompute` 77, `analysis_contract` 21, `decision_validate` 54, `base_rate_corpus` 27,
-> `monitoring_v2` 116, `exit_debate` 175, `theses_v2_listing` 52). ⚠️ Trois scripts n'écrivent **pas** la même ligne de résumé
+> `monitoring_v2` 116, `exit_debate` 175, `theses_v2_listing` 52, `fstring_sql` 20). ⚠️ Trois scripts n'écrivent **pas** la même ligne de résumé
 > (`50 OK / 0 KO`, `47 ok / 0 FAIL`) : un `grep` sur « vérifications OK » les rend **silencieux**, ce
 > qui se lit comme un succès. Lire le code de sortie ou la dernière ligne, pas un motif unique.
 
@@ -104,6 +109,7 @@ docker exec "$CT" rm -f /tmp/check_fetch_relevance.py
 | `check_decision_validate.py` | **Acte de décision V2** (§9, lot 7) — le contrat `ThesisValidation`, là où G2 s'exerce le plus fort : verdict actionnable (`PASS`/`WATCH` refusés), **bijection** `risk_acks` ↔ `risques_acceptes` (manquant / fantôme / doublon / `accepted=False`), pré-mortem, pont risques → hypothèses (falsifiabilité), cap Kelly et **override tracé A7** (un override sans motif, ou perçant `pct_max`, est rejeté ; un sizing « prudent » non tracé aussi — ce n'est pas de la prudence, c'est du hors-contrat), `valuation_range` ordonnée, contrat fermé (`extra='forbid'`). **§8 = la vérification la plus importante du fichier** : elle inspecte `ValidateV2Body.model_fields` pour prouver que le corps HTTP **n'expose aucun champ de jugement** (`verdict`, sizing, conditions, hypothèses, valuation, synthèse) — un contrat de décision ne vaut que par ce qu'il refuse de recevoir (#36). §9 la dérivation de la fourchette depuis le research memo (jamais une moyenne inventée), §10 la synchro contrat figé ↔ copie runtime (#19). 54 assertions. | aucun (`--network none`) |
 | `check_monitoring_v2.py` | **Monitoring V2** (modes 1-6, lot 8) — et surtout **§3, le pont inter-objets**, qui est la raison d'être du fichier : il prouve d'abord que `Mode2QuarterlyReview` **ACCEPTE** une escalade sur une hypothèse `H7` inexistante (contrat pleinement satisfait, anti-churn contourné), puis que `_valider_pont_hypotheses` la **REFUSE** — montrer le refus seul ne prouverait pas que le trou existait (#37). Plus : §1/§2 contrats mode 6 et anti-churn 1-5, §4 champs dérivés forcés côté code (`mode`, `thesis_id`, `pair_ticker`, `source_mode`, `next_review_date`), §5 colonnes de routage ↔ domaines des CHECK de la migration 031, **§6 les seuils figés en lecture seule** (une revue ne peut pas abaisser le seuil qu'elle vient de franchir), §7 `MonitoringRunBody` n'expose aucun champ de jugement (#36), §8 `EventRouterV2` inspecté en source — INNER JOIN, pas de garde `synced`, `v2_auto_enabled`, rattrapage du seul mode 6 (#38) ; la docstring du module est **retirée avant grep**, sinon l'explication des défauts V1 se lirait comme les défauts eux-mêmes. §9 migration ↔ code, §10 synchro contrat figé (#19). 116 assertions. | aucun (`--network none`) |
 | `check_theses_v2_listing.py` | **Route GET /v2/theses** (listing + détail enrichi) — shape null nominaux (position/session/exit_plan/post_mortem absents = null, pas {}), `valuation_range_figee` lu depuis `validation_json` et **délibérément différente** de `valuation_range` (fixtures distinctes, sinon le test est aveugle), agrégats `nb_hypotheses`/`hypotheses_par_statut`, enrichissements additifs de `GET /v2/theses/{id}` (SELECT * conservé, 5 clés ajoutées), isolation V1/V2 prouvée par inspection de la table source, filtre `?ticker_id=`, surface HTTP (#36). 52 assertions. | aucun (`--network none`) |
+| `check_fstring_sql.py` | **Analyse statique f-strings** — parcourt les 104 fichiers de `backend/app/` par `ast`, vérifie que chaque nom référencé dans un champ de remplacement `{expr}` est résolvable dans sa portée (args, variables locales, cibles de `for`/`with`/`except` async inclus, compréhensions, imports, builtins). Vise le `NameError` silencieux en prod de Convention #39 : un commentaire SQL `{statut: count}` dans une f-string → 500 en prod, 0 échec hors-ligne. 20 assertions. | aucun (`--network none`) |
 | `check_fetch_live.py` | `fetch_url` sur des URL réelles (IR client-rendu, EDGAR, page statique) et ses erreurs attendues (URL vide, non-http, 404, `web_search` sans clé). | réseau, pas de clé |
 | `check_fetch_relevance.py` | Fin de la troncature : `fetch_url(url, query=…)` rapporte l'info même quand elle est loin dans le document — 10-K NVDA (`22%`/`14%` à 37,6 %, `via=direct mode=relevance`) et article CNBC (`Maia` à 71,5 %, `via=search_backend_cache mode=whole`). | réseau **+ Exa + DeepInfra** → run in-container |
 
