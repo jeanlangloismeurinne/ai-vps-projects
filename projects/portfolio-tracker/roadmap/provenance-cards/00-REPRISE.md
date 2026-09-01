@@ -401,7 +401,12 @@ c'est un système exercé, dont on connaît les modes de panne.
 | Chaîne | research → bull/bear → réfutation → synthèse = **PROCEED_AVEC_CONDITIONS** | idem, ≈ $0,018 |
 | Déterminisme | verdict stable à corpus figé (4 tirs) | couverture **strictement identique** sur 2 tirs |
 
-- **Code déployé** : commit `062e459`, deployment **#335**, un seul conteneur backend vérifié.
+- **Code déployé** : commit `34ab6ec` (UX-1), backend deployment **#338**, un seul conteneur vérifié.
+  ⚠️ **Limite d'outillage rencontrée** : `deploy.sh` fusionne « committer » et « reconstruire » et
+  refuse un index vide (`fail 2`). Quand **un seul commit couvre les deux apps** (backend + frontend),
+  la seconde ne peut donc pas être reconstruite par la voie normale. Contournement propre : joindre au
+  commit suivant une modification réelle (ex. ce fichier) et appeler `deploy.sh <la seconde app>`.
+  À corriger un jour dans le script : un mode « rebuild seul, sans commit ».
 - **Suite hors-ligne** : **759 assertions / 0 échec** sur 12 scripts (`backend/checks/`).
   ⚠️ Lancer avec l'env **documenté dans `checks/README.md`** (sans `EXA_API_KEY`) : une clé factice
   fait échouer à tort l'assertion « sans clé de recherche, le worker doit lever ».
