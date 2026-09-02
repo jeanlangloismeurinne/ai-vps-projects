@@ -398,6 +398,25 @@ function MonitoringBlock({ thesisId }) {
   )
 }
 
+// ── Bloc : lien vers un écran du lot 9 ────────────────────────────────────────
+// `actif` dit qu'une donnée EXISTE derrière le lien, pas que l'écran est accessible :
+// les trois écrans le sont toujours, et expliquent leur vide quand il y en a un.
+function LotNeufLink({ href, titre, etat, actif }) {
+  return (
+    <Link
+      href={href}
+      className={`block rounded-xl border px-4 py-3 transition-colors ${
+        actif
+          ? 'border-emerald-800 bg-emerald-950/20 hover:border-emerald-600'
+          : 'border-gray-800 bg-gray-900/50 hover:border-gray-600'
+      }`}
+    >
+      <div className="text-sm font-semibold text-gray-200">{titre}</div>
+      <div className={`text-xs mt-0.5 ${actif ? 'text-emerald-400' : 'text-gray-500'}`}>{etat}</div>
+    </Link>
+  )
+}
+
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function ThesisV2Detail() {
   const router = useRouter()
@@ -492,19 +511,37 @@ export default function ThesisV2Detail() {
         </Section>
       )}
 
-      {/* ── Section 5 : Plan de sortie ────────────────────────────────────── */}
-      {thesis.exit_plan && (
-        <Section title="Plan de sortie">
-          <Card>
-            <CardBody>
-              <Dl cols={2}>
-                <KeyValue label="ID du plan" value={thesis.exit_plan.id} />
-                <KeyValue label="Statut du plan" value={thesis.exit_plan.exit_status} />
-              </Dl>
-            </CardBody>
-          </Card>
-        </Section>
-      )}
+      {/* ── Section 5 : Sortie · bilan · débat ────────────────────────────── */}
+      {/* Les trois écrans du lot 9 vivent SOUS la thèse, parce que les routes API le sont.
+          L'état affiché ici ne vient que de ce que le payload de la thèse porte réellement :
+          `exit_plan` et `post_mortem_id`. Le nombre de débats n'y figure pas — on n'écrit donc
+          rien à son sujet plutôt que d'afficher un « 0 » qu'on n'a jamais mesuré. */}
+      <Section title="Sortie, bilan et débat">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <LotNeufLink
+            href={`/v2/theses/${id}/sortie`}
+            titre="Plan de sortie"
+            etat={thesis.exit_plan
+              ? `Plan #${thesis.exit_plan.id} · ${thesis.exit_plan.exit_status}`
+              : 'Aucun plan'}
+            actif={!!thesis.exit_plan}
+          />
+          <LotNeufLink
+            href={`/v2/theses/${id}/post-mortem`}
+            titre="Post-mortem"
+            etat={thesis.post_mortem_id
+              ? `Bilan #${thesis.post_mortem_id}`
+              : 'Aucun bilan — suppose une position soldée'}
+            actif={!!thesis.post_mortem_id}
+          />
+          <LotNeufLink
+            href={`/v2/theses/${id}/debat`}
+            titre="Débat de conviction"
+            etat="Historique des débats"
+            actif={false}
+          />
+        </div>
+      </Section>
 
       {/* ── Section 6 : Sessions de monitoring ────────────────────────────── */}
       {id && <MonitoringBlock thesisId={id} />}

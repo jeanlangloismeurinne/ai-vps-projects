@@ -74,6 +74,7 @@ function V2Nav() {
       <span className="px-2 py-0.5 rounded bg-emerald-800/60 text-emerald-200 text-[11px] font-semibold mr-2">V2</span>
       <NavLink href="/v2" exact>Tableau de bord</NavLink>
       <NavLink href="/v2/theses">Thèses</NavLink>
+      <NavLink href="/v2/calibration">Calibration</NavLink>
       <div className="ml-auto flex items-center gap-3">
         <Link href="/" className="px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors">
           V1 / V2

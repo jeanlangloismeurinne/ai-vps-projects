@@ -24,6 +24,29 @@ function ThesisStatusBadge({ status }) {
   return <span className={`text-xs px-2 py-0.5 rounded font-medium ${s.cls}`}>{s.label}</span>
 }
 
+// Marqueur de flux. Le badge V2 est toujours posé (c'est le flux minoritaire, celui qu'on ne
+// s'attend pas à voir ici) ; le badge V1 n'apparaît que sur un ticker détenu dans les DEUX flux,
+// là où l'absence de marque se lirait comme une ligne dupliquée par erreur.
+function FluxBadge({ position, enDoublon }) {
+  if (position.thesis_v2_id) {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-900/60 text-emerald-300 border border-emerald-700"
+        title="Position du flux V2 — jugement porté par une thèse theses_v2">
+        V2
+      </span>
+    )
+  }
+  if (enDoublon) {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-800 text-gray-400 border border-gray-700"
+        title="Position du flux V1 — ce titre est aussi détenu dans le flux V2">
+        V1
+      </span>
+    )
+  }
+  return null
+}
+
 function PnlCell({ pct }) {
   if (pct == null) return <span className="text-gray-600">—</span>
   return (
@@ -480,6 +503,23 @@ export default function PortfolioV1() {
   const fmt = v => v != null ? `€${Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'
 
   const listedPositions = positions.filter(p => p.company_type !== 'private')
+
+  // ── Marqueur de flux V1 / V2 ────────────────────────────────────────────────
+  // Les JUGEMENTS sont disjoints (`theses` | `theses_v2`), les FAITS DU MONDE sont partagés :
+  // un même titre peut donc porter légitimement une position V1 ET une position V2, et le
+  // CHECK d'exclusivité en base est par LIGNE, pas par ticker.
+  // On N'A PAS filtré les positions V2 de cette page, et c'est délibéré : sans filtrer aussi
+  // `cash_movements` — qui est le même solde de trésorerie réelle — la page afficherait de
+  // l'argent débité sans contrepartie visible. Un marqueur ne fait pas mentir la page ; un
+  // filtre à moitié posé, si.
+  const tickersEnDoublon = new Set(
+    Object.entries(
+      listedPositions.reduce((acc, p) => {
+        acc[p.ticker_id] = (acc[p.ticker_id] || 0) + 1
+        return acc
+      }, {})
+    ).filter(([, n]) => n > 1).map(([t]) => t)
+  )
   const privatePositions = positions.filter(p => p.company_type === 'private')
 
   return (
@@ -579,6 +619,18 @@ export default function PortfolioV1() {
             </button>
           </div>
         ) : listedPositions.length > 0 ? (
+          <>
+          {tickersEnDoublon.size > 0 && (
+            <div className="mb-3 rounded-lg border border-emerald-900/60 bg-emerald-950/20 px-3 py-2 text-xs text-gray-400">
+              <span className="text-emerald-300 font-medium">
+                {[...tickersEnDoublon].join(', ')} apparaî{tickersEnDoublon.size > 1 ? 'ssent' : 't'} deux fois
+              </span>{' '}
+              — une ligne par flux d'analyse (V1 et V2), et ce n'est pas un doublon : ce sont deux
+              positions réelles, distinctes en base, sur le même titre. Le total et le solde de
+              trésorerie les comptent toutes les deux parce qu'ils décrivent l'argent réellement
+              engagé.
+            </div>
+          )}
           <div className="overflow-x-auto rounded-xl border border-gray-800">
             <table className="w-full text-sm">
               <thead className="bg-gray-900">
@@ -596,12 +648,23 @@ export default function PortfolioV1() {
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {listedPositions.map(p => (
-                  <React.Fragment key={p.ticker_id || p.id}>
-                    <tr onClick={() => { if (typeof window !== 'undefined') window.location.href = `/ticker/${p.ticker_id || p.id}` }}
+                  // La clé est l'id de POSITION : deux lignes du même ticker (une par flux) sont
+                  // deux positions distinctes, et `ticker_id` en clé les ferait entrer en collision.
+                  <React.Fragment key={p.id ?? p.ticker_id}>
+                    <tr onClick={() => {
+                      if (typeof window === 'undefined') return
+                      // Une position V2 mène à sa thèse V2 : la page ticker est l'espace V1.
+                      window.location.href = p.thesis_v2_id
+                        ? `/v2/theses/${p.thesis_v2_id}`
+                        : `/ticker/${p.ticker_id || p.id}`
+                    }}
                       className="hover:bg-gray-800/50 cursor-pointer transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
-                          <span className="font-mono font-bold text-indigo-400">{p.ticker_id}</span>
+                          <span className="font-mono font-bold text-indigo-400 flex items-center gap-2">
+                            {p.ticker_id}
+                            <FluxBadge position={p} enDoublon={tickersEnDoublon.has(p.ticker_id)} />
+                          </span>
                           <span className="text-xs text-gray-500">{p.ticker_name || ''}</span>
                         </div>
                       </td>
@@ -655,6 +718,7 @@ export default function PortfolioV1() {
               </tbody>
             </table>
           </div>
+          </>
         ) : null}
       </div>
 
