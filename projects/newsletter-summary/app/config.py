@@ -28,8 +28,13 @@ class Settings(BaseSettings):
         "EMAIL À RÉSUMER :\n{email}"
     )
     # Prompt du résumé en HTML (bloc autonome, styles inline) — sert au rendu de l'email.
+    # C'est LE prompt actif que le digest envoie à DeepInfra, éditable via le Hub
+    # (/newsletter/prompt). Les exigences « français » et « pas de pub » sont DOUBLÉES
+    # côté code (message système dans summarizer.summarize_html) pour qu'elles restent
+    # garanties même si ce texte est librement réédité.
     SUMMARIZE_HTML_PROMPT: str = (
         "Génère le contenu HTML d'un bloc de résumé de newsletter destiné à un email. "
+        "Rédige TOUT en français. "
         "Produis UN SEUL bloc HTML autonome (qui commence par <div>) présentant la newsletter : "
         "un en-tête avec l'expéditeur et le sujet, puis un résumé structuré qui repose sur la STRUCTURE "
         "du mail d'origine (mêmes sections et sous-titres, dans leur ordre).\n"
@@ -39,6 +44,8 @@ class Settings(BaseSettings):
         "- Privilégie la lisibilité : sous-titres <h3>, listes <ul>/<li>, passages <strong>, liens <a>.\n"
         "- Carte sobre : fond léger (#f6f8fa), bordure arrondie, marges internes confortables.\n"
         "- Échappe correctement les caractères HTML ; conserve chiffres, noms, dates, statistiques et liens importants.\n"
+        "- EXCLUS toute publicité, bandeau promo, offre sponsorisée, encart commercial, lien de parrainage ou contenu promotionnel : "
+        "ne garde que le contenu ÉDITORIAL.\n"
         "- Ne rien inventer ni extrapoler.\n"
         "- Rends UNIQUEMENT le HTML du bloc (aucun texte avant/après, aucun bloc de code).\n\n"
         "EMAIL À RÉSUMER :\n{email}"
@@ -50,6 +57,10 @@ class Settings(BaseSettings):
 
     # Sécurité du webhook inbound : si défini, requis en ?token= sur POST /webhook/resend
     WEBHOOK_TOKEN: str = ""
+
+    # Jeton partagé avec le Hub (app « homepage ») : le Hub appelle /api/* de ce service
+    # sur le réseau Docker. Si défini, le header `X-Hub-Token` doit correspondre.
+    HUB_API_TOKEN: str = ""
 
     class Config:
         env_file = ".env"

@@ -49,23 +49,36 @@ async def summarize(email: Email) -> str:
     return result.strip()
 
 
-async def summarize_html(email: Email) -> str:
+async def summarize_html(email: Email, *, prompt: str | None = None) -> str:
     """Résume le mail en un BLOC HTML autonome (styles inline) via DeepInfra.
 
     Ce bloc est destiné à être inséré tel quel dans l'email HTML assemblé par digest.py.
-    Le prompt exige du HTML self-contained : pas de <html>/<head>/<body>/<style>, CSS inline,
-    échappement correct — de sorte que le rendu final soit robuste dans les clients mail.
+    `prompt` est le prompt actif (éditable via le Hub) ; s'il est absent, on retombe sur
+    le défaut `SUMMARIZE_HTML_PROMPT`. Le message système porte — côté code, donc toujours
+    garanties même si le prompt est librement réédité — les exigences « en français » et
+    « exclure les publicités ».
     """
     plain = _to_plain(email)
     if not plain:
         logger.warning("Email %s sans contenu texte — résumé HTML vide.", email.message_id)
         return ""
 
-    prompt = settings.SUMMARIZE_HTML_PROMPT.format(email=plain)
+    template = prompt or settings.SUMMARIZE_HTML_PROMPT
+    # Garde : même si un prompt édité retire le marqueur {email}, on injecte toujours le
+    # contenu du mail — sinon le résumé n'aurait aucune matière à résumer.
+    if "{email}" in template:
+        prompt_final = template.format(email=plain)
+    else:
+        prompt_final = template.rstrip() + "\n\nEMAIL À RÉSUMER :\n" + plain
+    system = (
+        "Tu rédiges des blocs HTML de résumé d'emails, propres, lisibles, fidèles, aux styles inline. "
+        "Rédige TOUJOURS en français. "
+        "EXCLUS TOUJOURS toute publicité, bandeau promo, offre sponsorisée, encart commercial ou lien "
+        "de parrainage : ne garde que le contenu éditorial du mail."
+    )
     messages = [
-        {"role": "system",
-         "content": "Tu rédiges des blocs HTML de résumé d'emails, propres, lisibles, fidèles et aux styles inline."},
-        {"role": "user", "content": prompt},
+        {"role": "system", "content": system},
+        {"role": "user", "content": prompt_final},
     ]
     result = await deepinfra_client.chat(
         messages,

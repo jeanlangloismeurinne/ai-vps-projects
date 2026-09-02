@@ -12,6 +12,8 @@ from app.database import AsyncSessionLocal
 from app.config import settings
 from app import resend, summarizer
 from app import comms_client
+from app.prompts import get_active_html_prompt
+from app.kb import store_email_summary
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +78,22 @@ def _fallback_card(email: Email, error: str = "") -> str:
 
 
 def _card_html(email: Email) -> str:
-    """Bloc de la newsletter : le résumé HTML du LLM, sinon une carte de secours échappée."""
+    """Bloc de la newsletter : le résumé HTML du LLM, sinon une carte de secours échappée.
+
+    Chaque bloc est enveloppé dans un conteneur CONTROLLÉ PAR LE CODE : celui-ci garantit
+    une séparation lisible et constante entre deux newsletters, quel que soit le styling
+    inline produit par DeepSeek dans `inner` (corrige la mise en forme étrange où deux
+    cartes — ou la dernière — pouvaient se coller/border mal formé). `inner` ne fournit
+    que le contenu, jamais l'espacement inter-cartes.
+    """
     s = email.summary or ""
     if s.strip().startswith("<"):
-        return s.strip()
-    error = getattr(email, "_summary_error", "") or ""
-    return _fallback_card(email, error=error)
+        inner = s.strip()
+    else:
+        error = getattr(email, "_summary_error", "") or ""
+        inner = _fallback_card(email, error=error)
+    sep = '<div style="margin:0 0 22px;padding:0 0 22px;border-bottom:1px solid #e5e7eb;">'
+    return f"{sep}{inner}</div>"
 
 
 async def run_daily_digest(trigger: str = "scheduled") -> dict:
@@ -96,17 +108,28 @@ async def run_daily_digest(trigger: str = "scheduled") -> dict:
             logger.info("Digest : aucun email en attente — rien à envoyer.")
             return {"sent": False, "count": 0}
 
-        # 1) Résumer chaque mail en HTML
+        # 1) Résumer chaque mail en HTML — un appel DeepInfra PAR MAIL (bloc HTML autonome
+        #    distinct), avec le prompt actif (éditable via le Hub) relu à chaque exécution.
+        prompt = await get_active_html_prompt(db)
         blocks = []
         for email in emails:
             try:
-                email.summary = await summarizer.summarize_html(email)
+                email.summary = await summarizer.summarize_html(email, prompt=prompt)
             except Exception as exc:  # ne bloque pas le digest sur un mail
                 logger.exception("Résumé HTML échoué pour email %s", email.message_id)
                 email.summary = None
                 email._summary_error = str(exc)  # type: ignore[attr-defined]
             blocks.append(email)
         await db.commit()
+
+        # 1b) Persister chaque résumé dans la KB (enveloppe KNOWLEDGE_ARCHITECTURE §3).
+        #     Un échec d'écriture ne bloque pas l'envoi du digest.
+        for email in blocks:
+            if email.summary:
+                try:
+                    await store_email_summary(email)
+                except Exception as exc:
+                    logger.exception("Écriture KB échouée pour email %s", email.message_id)
 
         # 2) Composer les corps
         today = datetime.now(PARIS_TZ).strftime("%A %d %B %Y")

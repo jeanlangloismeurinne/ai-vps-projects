@@ -4,14 +4,35 @@ Reçoit les newsletters transférées vers `*@oozeenaru.resend.app` (inbound Res
 dans PostgreSQL, et envoie chaque matin à **8h (Europe/Paris)** un digest récapitulant toutes
 les mails reçues depuis la veille, à `jean.langlois-meurinne@mailbox.org`.
 
-Le résumé de chaque mail est généré par DeepInfra (DeepSeek-V4) depuis un prompt configurable
-(`SUMMARIZATION_PROMPT`) qui demande de **suivre la structure du mail d'origine**.
+Le résumé de chaque mail est généré par DeepInfra (DeepSeek-V4), **un appel par mail** avec un
+prompt unique et **éditable** depuis le Hub (voir ci-dessous). Le **système** (côté code, appliqué
+à chaque appel) garantit : **rédaction en français** et **exclusion des publicités** — quelles que
+soient les éditions du prompt.
 
 Le digest est envoyé en **email HTML lisible** : chaque newsletter est rendue par DeepSeek sous
 forme d'un **bloc HTML autonome** (styles inline, cf. `SUMMARIZE_HTML_PROMPT`), assemblé dans
-une enveloppe HTML minimale côté code. Un corps **texte brut** reste envoyé en parallèle comme
-fallback (clients non-HTML / lisibilité). Le gateway accepte désormais un champ `html` en plus
-du `text` (`resend` recoit `text` + `html`).
+une enveloppe HTML minimale côté code. Chaque bloc est enveloppé dans un **conteneur contrôle par
+le code** qui garantit une séparation lisible entre les mails (corrige la mise en forme où deux
+cartes pouvaient se coller). Un corps **texte brut** reste envoyé en parallèle comme fallback. Le
+gateway accepte un champ `html` en plus du `text`.
+
+## KB + éditeur de prompt (via le Hub)
+
+Deux nouveautés intégrées à l'app « homepage » (Hub) :
+
+- **Base de connaissance (résumés)** : chaque nouveau résumé est persisté dans la table
+  `kb_documents`, au format **enveloppe KNOWLEDGE_ARCHITECTURE.md §3** (pivot Markdown +
+  métadonnées), `visibility=private`. Exportable en JSON via `GET /api/kb` — prêt pour la future
+  fédération pgvector. Affichage dans le Hub : `/newsletter`.
+- **Éditeur de prompt versionné** : le prompt actif (`SUMMARIZE_HTML_PROMPT`) est éditable dans le
+  Hub (`/newsletter/prompt`), **chaque enregistrement crée une nouvelle version** (append-only) et
+  un **menu déroulant** permet de revenir à une version antérieure. Le digest relit le prompt actif
+  **à chaque exécution** → une édition s'applique sans redémarrage. Endpoints : `GET /api/prompt`,
+  `POST /api/prompt/versions`, `POST /api/prompt/activate`.
+
+Sécurité : les endpoints `/api/*` sont protégés par le header `X-Hub-Token` (= `HUB_API_TOKEN`,
+identique à `NEWSLETTER_API_TOKEN` du Hub), car ils sont aussi atteignables publiquement via le
+sous-domaine `mails.*`.
 
 ## Flux
 
@@ -51,7 +72,8 @@ Puis configurer le webhook inbound Resend : mails vers `*@oozeenaru.resend.app`
 | `RECIPIENT_EMAIL` | `jean.langlois-meurinne@mailbox.org` |
 | `DEEPINFRA_API_KEY` | Clé DeepInfra pour les résumés |
 | `DEEPINFRA_MODEL` | `deepseek-ai/DeepSeek-V4-Flash` |
-| `SUMMARIZATION_PROMPT` | Prompt du résumé (suit la structure du mail) — configurable |
+| `SUMMARIZE_HTML_PROMPT` | Défaut du prompt de résumé (HTML) — la **version active** est éditée via le Hub |
+| `HUB_API_TOKEN` | Jeton partagé avec le Hub (header `X-Hub-Token` sur `/api/*`) |
 | `SUMMARY_HOUR` / `SUMMARY_MINUTE` | Horaire du digest (défaut 8h00) |
 | `WEBHOOK_TOKEN` | Secret requis en `?token=` sur `/webhook/resend` |
 
@@ -60,3 +82,7 @@ Puis configurer le webhook inbound Resend : mails vers `*@oozeenaru.resend.app`
 - `GET /health` — liveness
 - `POST /webhook/resend?token=…` — réception inbound Resend
 - `POST /webhook/resend/test` — test de routage (no auth, liste les clés du payload)
+- `GET /api/prompt` — version active + historique du prompt (header `X-Hub-Token`)
+- `POST /api/prompt/versions` — enregistrer une nouvelle version (header `X-Hub-Token`)
+- `POST /api/prompt/activate` — revenir à une version antérieure (header `X-Hub-Token`)
+- `GET /api/kb` — enveloppes KB §3 des résumés (header `X-Hub-Token`)

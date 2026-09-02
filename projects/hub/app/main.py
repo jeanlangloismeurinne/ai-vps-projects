@@ -9,12 +9,17 @@ from app.auth import (
 from app.tickets import router as tickets_router
 from app.roadmap import router as roadmap_router
 from app.nuit import router as nuit_router
+from app.newsletter import router as newsletter_router
 
 
 class Settings(BaseSettings):
     WEB_USERNAME: str
     WEB_PASSWORD: str
     SESSION_SECRET: str
+
+    # Newsletter — le Hub appelle le service newsletter-summary /api/* sur le réseau Docker.
+    NEWSLETTER_URL: str = "http://newsletter-summary:8000"
+    NEWSLETTER_API_TOKEN: str = ""   # = HUB_API_TOKEN du service newsletter-summary
 
     class Config:
         env_file = ".env"
@@ -25,6 +30,7 @@ app = FastAPI(docs_url=None, redoc_url=None)
 app.include_router(tickets_router)
 app.include_router(roadmap_router)
 app.include_router(nuit_router)
+app.include_router(newsletter_router)
 
 # ── Services ──────────────────────────────────────────────────────────────────
 SERVICES = [
@@ -59,6 +65,14 @@ SERVICES = [
         "desc": "Suivi investissement long terme · Agents IA · 3 régimes d'analyse",
         "url": "https://portfolio.jlmvpscode.duckdns.org/",
         "color": "#7c3aed",
+    },
+    {
+        "id": "newsletter",
+        "emoji": "📬",
+        "name": "Newsletter Summary",
+        "desc": "Résumés des newsletters (KB) · Éditeur de prompt de résumé",
+        "url": "/newsletter",
+        "color": "#0ea5e9",
     },
     {
         "id": "tickets",

@@ -4,14 +4,16 @@ import json
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.database import init_db, get_db, AsyncSessionLocal
-from app.models import Email
+from app.models import Email, KbDocument
 from app import resend, digest, comms_client
+from app.prompts import get_active_html_prompt, list_versions, create_version, activate_version, seed_default
+from app.kb import envelope_to_dict
 from app.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
@@ -78,9 +80,27 @@ def _derive_message_id(payload: dict, fields: dict) -> str:
     return "derived:" + hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
+def require_hub_token(x_hub_token: str | None = Header(default=None)):
+    """Garde des endpoints /api/* appelés par le Hub sur le réseau Docker.
+
+    Lit le header `x-hub-token`. Si HUB_API_TOKEN n'est pas défini, l'accès reste ouvert
+    (réseau interne de confiance).
+    """
+    if settings.HUB_API_TOKEN and x_hub_token != settings.HUB_API_TOKEN:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    return True
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Seed une v1 du prompt (défaut d'env) si l'éditeur du Hub n'a jamais rien enregistré :
+    # l'éditeur n'est pas vide et le digest dispose toujours d'une version persistée.
+    async with AsyncSessionLocal() as db:
+        try:
+            await seed_default(db)
+        except Exception:
+            logger.exception("Seeding du prompt initial en échec")
     start_scheduler()
     yield
     stop_scheduler()
@@ -155,3 +175,64 @@ async def webhook_resend_test(request: Request):
     """Endpoint de test (sans contrainte de token) pour vérifier le routage Traefik réel."""
     payload = await request.json()
     return {"status": "ok", "received": True, "keys": list(payload.keys())}
+
+
+# ── API des versions de prompt + KB (appelées par le Hub sur le réseau Docker) ──
+
+@app.get("/api/prompt")
+async def api_prompt(_auth: bool = Depends(require_hub_token)):
+    """État du prompt : version active + historique (menu déroulant du Hub)."""
+    async with AsyncSessionLocal() as db:
+        active_prompt = await get_active_html_prompt(db)
+        versions = await list_versions(db)
+    active_id = next((v.id for v in versions if v.is_active), None)
+    return {
+        "active_id": active_id,
+        "active_prompt": active_prompt,
+        "versions": [
+            {
+                "id": v.id,
+                "created_at": v.created_at,
+                "note": v.note,
+                "prompt": v.prompt,
+                "is_active": v.is_active,
+            }
+            for v in versions
+        ],
+    }
+
+
+@app.post("/api/prompt/versions")
+async def api_prompt_create(payload: dict, _auth: bool = Depends(require_hub_token)):
+    """Enregistre une NOUVELLE version du prompt (append-only) et la rend active."""
+    prompt = (payload.get("prompt") or "").strip()
+    note = (payload.get("note") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt vide")
+    async with AsyncSessionLocal() as db:
+        row = await create_version(db, prompt=prompt, note=note)
+    return {"ok": True, "id": row.id}
+
+
+@app.post("/api/prompt/activate")
+async def api_prompt_activate(payload: dict, _auth: bool = Depends(require_hub_token)):
+    """Rend active une version antérieure (menu déroulant « Restaurer »)."""
+    version_id = payload.get("version_id")
+    if version_id is None:
+        raise HTTPException(status_code=400, detail="version_id manquant")
+    async with AsyncSessionLocal() as db:
+        row = await activate_version(db, int(version_id))
+    if row is None:
+        raise HTTPException(status_code=404, detail="version introuvable")
+    return {"ok": True, "id": row.id}
+
+
+@app.get("/api/kb")
+async def api_kb(_auth: bool = Depends(require_hub_token)):
+    """Export des enveloppes KB (KNOWLEDGE_ARCHITECTURE §3), federation-ready JSON."""
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(KbDocument).order_by(KbDocument.ingested_at.desc())
+        )
+        docs = list(result.scalars().all())
+    return {"documents": [envelope_to_dict(d) for d in docs]}
