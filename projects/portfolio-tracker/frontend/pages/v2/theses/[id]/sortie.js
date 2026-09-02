@@ -713,7 +713,7 @@ export default function SortiePage() {
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-bold text-white">Plan de sortie</h1>
           {thesis?.status && (
-            <Badge variant={thesis.status === 'active' ? 'active' : 'gray'}>{thesis.status}</Badge>
+            <Badge variant={thesis.status === 'active' ? 'active' : 'gray'}>Thèse : {thesis.status}</Badge>
           )}
         </div>
 
@@ -757,11 +757,13 @@ export default function SortiePage() {
       {/* Titre */}
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-white">Plan de sortie</h1>
+        {/* Les deux statuts valent « closed » une fois la position soldée : sans préfixe, deux
+            badges identiques côte à côte ne disent plus lequel parle de la thèse et lequel du plan. */}
         {thesis?.status && (
-          <Badge variant={thesis.status === 'active' ? 'active' : 'gray'}>{thesis.status}</Badge>
+          <Badge variant={thesis.status === 'active' ? 'active' : 'gray'}>Thèse : {thesis.status}</Badge>
         )}
         <Badge variant={plan.exit_status === 'closed' ? 'gray' : 'emerald'}>
-          {plan.exit_status ?? '—'}
+          Plan : {plan.exit_status ?? '—'}
         </Badge>
       </div>
 

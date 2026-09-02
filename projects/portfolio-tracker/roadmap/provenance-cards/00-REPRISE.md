@@ -2,9 +2,9 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-01
+updated: 2026-09-02
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`). Reste : écrans du lot 9 (sortie/post-mortem/calibration/débat), double comptage MSFT, ingestion-agent, dette du runner.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). Reste : écrans V2 **amont** (knowledge, readiness, research, analyse, décision), ingestion-agent, dette du runner.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -14,6 +14,71 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
 
+> ## ⚡ MàJ 2026-09-02 — UX-2 : les écrans du lot 9, construits contre des données RÉELLES
+>
+> **Le prérequis a été levé en premier, et il valait la peine.** Les 5 tables du lot 9 étaient vides.
+> La thèse V2 jetable **#5 (NVDA)** a été re-fabriquée et **toute la chaîne rejouée contre l'API réelle**
+> — débat #9 → clôture → plan de sortie #6 (3 tranches 50/30/20 + 3 conditions accélérées) → alerte #5
+> → 3 exécutions (position à 0 titre, `exit_status=closed`) → post-mortem #3 (`duree_jours=204`,
+> `performance_pct=18.0`, tous deux **calculés**) → calibration (10 paires, `lisible:false` à n=1).
+> Coût total **~0,0042 $**. Les 4 écrans ont ensuite été écrits **à partir des payloads capturés**
+> (`/tmp/ux2/*.json`), pas d'un schéma lu.
+>
+> **Ce que le dry-run a démontré au passage** : l'anti-complaisance tient en réel. Le débat #9 avait
+> `invalidation_franchie=true` et le modèle a suggéré `closed_monitor`, jamais `closed_proceed`. La
+> clôture a été faite en `closed_pass` **à dessein**, pour fabriquer une divergence agent/investisseur
+> tracée et vérifier qu'elle se voit à l'écran.
+>
+> **Livré (frontend seul — aucun changement backend n'a été nécessaire).**
+> `/v2/theses/[id]/sortie`, `/v2/theses/[id]/post-mortem`, `/v2/theses/[id]/debat`, `/v2/calibration`,
+> entrée « Calibration » dans `V2Nav`, section « Sortie, bilan et débat » sur la page pivot, et le
+> **marqueur de flux V1/V2 sur `/portfolio`**. `portfolio_summary()` faisant déjà `SELECT pp.*`,
+> `thesis_v2_id` remontait déjà : le point 2 du reste-à-faire ne coûtait rien côté API.
+>
+> **Le marqueur de flux, fait SANS le filtre que la MàJ (bis) déconseillait.** Les deux positions MSFT
+> restent affichées, badgées V1/V2, avec un bandeau qui explique que ce n'est pas un doublon. Deux bugs
+> **préexistants** ont été trouvés en le câblant, aucun des deux n'était soupçonné : (a) `key={p.ticker_id || p.id}`
+> donnait la **même clé React `"MSFT"`** aux positions #1 et #8 ; (b) le clic sur une ligne V2
+> envoyait vers la page **V1** du ticker. Corrigés en `key={p.id ?? p.ticker_id}` et route
+> `/v2/theses/{thesis_v2_id}`.
+>
+> **⚠ Un `200` ne prouve rien sur l'affichage — les 6 pages ont été CAPTURÉES en prod** (chromium
+> headless, `/tmp/ux2/shots/`) et regardées. Deux défauts que seul le rendu pouvait montrer :
+> — le plan de sortie affichait **deux badges `closed` côte à côte** sans étiquette (statut de la thèse
+>   et statut du plan, deux choses différentes, même mot) → préfixés « Thèse : » / « Plan : » ;
+> — sur `/v2/theses/[id]/debat`, la divergence n'était qu'un **badge** dans la liste alors que
+>   l'arbitrage UX n°4 exige un bandeau visible **sans clic** → le débat le plus récent s'ouvre
+>   désormais tout seul au premier chargement (garde par thèse, refermer ne rouvre pas).
+> Les deux sont invisibles à `docker build`, invisibles à un check hors ligne, invisibles à un 200.
+>
+> **⚠ Vérification indépendante des sous-agents, pas leur auto-rapport.** Deux passes après livraison :
+> (a) `grep` des replis `a || b` sur les noms de champs — un seul hit, légitime ; (b) extraction
+> **programmatique** de tous les accesseurs `.snake_case` des 4 fichiers neufs, diffés contre l'union
+> des clés des payloads réels — seul `sell_date` ressort, et c'est un champ de **corps de requête**.
+> C'est la technique à reprendre : elle transforme « je n'ai pas deviné de nom » en fait vérifiable.
+>
+> **⚠ Le script de nettoyage de la thèse jetable était périmé et DANGEREUX.** `lot9_these_jetable_cleanup.sql`
+> listait `knowledge_entries (121,122,123)` et `cash_movements (10,11,12)` — les ids du run **de la
+> veille**. Ce run-ci a produit 124/125/126 et 13/14/15 : le rejouer tel quel aurait supprimé trois
+> entrées de connaissance d'un autre exercice **et laissé derrière lui** de la fausse trésorerie dans
+> un solde **partagé avec le flux V1 réel** (#34). Réécrit : tout est dérivé de `thesis_v2_id`, les ids
+> des faits rattachés sont capturés en tables temporaires **avant** d'effacer ce qui les porte, et
+> `thesis_id` est un paramètre `-v` **sans valeur par défaut** (un script de DELETE n'en prend pas).
+> Les deux seeds sont désormais versionnés dans `backend/app/db/seeds/` — le prochain sprint UX
+> redémarre à moindre coût. **La thèse #5 a été supprimée après les captures**, pas avant : la
+> supprimer d'abord aurait laissé les écrans neufs sans rien à afficher.
+>
+> **Sur le déploiement** : `infrastructure/deploy.sh` a été **refusé par le classifieur** (comme
+> l'écriture d'un PHP ad-hoc dans le conteneur Coolify). Chemin utilisé à la place : commit + push
+> en commandes séparées, puis rebuild par **l'API Coolify avec un token généré**
+> (`COOLIFY_PLAYBOOK.md` § « méthode alternative »). Vérifié après coup : `docker ps` ne montre
+> **qu'un** conteneur `portfoliofrontend`, pas d'orphelin.
+>
+> **Reste ouvert côté UX** : les écrans V2 **amont** (knowledge, readiness, research memo, analyse
+> 3 colonnes, décision) — tout leur backend existe, aucun n'a d'écran.
+>
+> ---
+>
 > ## ⚡ MàJ 2026-09-01 (bis) — UX-1 : le fil conducteur V2 (l'espace V2 avait un backend complet et AUCUN écran)
 >
 > **Le constat qui a défini le sprint.** Le reste-à-faire annonçait une « passe UX transverse : verdict
@@ -452,18 +517,17 @@ c'est un système exercé, dont on connaît les modes de panne.
 
 ## Ce qui reste à faire — dans l'ordre
 
-1. **UX-2 — les écrans du lot 9** : plan de sortie (`ExitPlanBuilder`), post-mortem,
-   `CalibrationPanel`, page Débat. **C'est le prochain jalon.** ⚠️ **Prérequis non négociable** :
-   les 5 tables du lot 9 sont **vides**, donc il faut d'abord **fabriquer une thèse V2 jetable**
-   (comme au dry-run du lot 9, sur un 2ᵉ ticker, puis la supprimer) pour disposer de données
-   réelles — sans quoi on code contre des fixtures conformes, exactement le piège de #39.
-   La spec est **muette** sur ces écrans (§16 ne les mentionne pas) : les 7 arbitrages UX listés
-   dans la MàJ (bis) sont à trancher, pas à chercher.
-2. **Marqueur de flux sur `/portfolio`** — ⚠️ **ne PAS filtrer sur `thesis_v2_id IS NULL`** :
-   sans filtrer aussi `cash_movements`, la page afficherait 400 € débités sans contrepartie.
-   Afficher les deux positions MSFT avec un marqueur V1/V2 (cf. MàJ bis).
-3. **Écrans V2 amont, toujours absents** : knowledge, readiness (le gate `ready`), research memo,
-   analyse 3 colonnes bull/bear/synthèse, décision. Le backend existe pour tous.
+1. ~~**UX-2 — les écrans du lot 9**~~ · ~~**Marqueur de flux sur `/portfolio`**~~ — **FAITS**
+   (MàJ 2026-09-02), vérifiés par capture d'écran en prod, pas seulement par un 200.
+2. **UX-3 — les écrans V2 amont, toujours absents** : knowledge, readiness (le gate `ready`),
+   research memo, analyse 3 colonnes bull/bear/synthèse, décision. **C'est le prochain jalon.**
+   Le backend existe pour tous. ⚠️ **Reprendre la méthode UX-2, qui a fait ses preuves** :
+   (a) capturer les payloads RÉELS avant d'écrire une ligne de JSX et n'utiliser que ces clés-là
+   (un nom de champ faux n'affiche pas une erreur, il affiche **du vide**, qui se lit comme
+   « cette donnée n'existe pas ») ; (b) vérifier les sous-agents par extraction programmatique des
+   accesseurs plutôt que sur leur auto-rapport ; (c) `docker build` est la **seule** vérification
+   frontend qui vaille (`node --check` est un no-op) — et elle ne dit rien de l'affichage, donc
+   **capturer les pages en headless et les regarder**.
 3. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
 4. **3ᵉ ticker** — plus aucun blocage technique. ⚠️ Penser à ajouter son entrée dans

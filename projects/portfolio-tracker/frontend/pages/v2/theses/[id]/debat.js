@@ -671,6 +671,7 @@ export default function DebatPage() {
 
   // Débat sélectionné (détail)
   const [selectedDebate, setSelectedDebate] = useState(null)
+  const [autoOpened, setAutoOpened] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailErr, setDetailErr] = useState(null)
 
@@ -700,9 +701,20 @@ export default function DebatPage() {
   }
 
   useEffect(() => {
+    setAutoOpened(false)
     loadThesis()
     loadDebates()
   }, [id])
+
+  // Le débat le plus récent s'ouvre TOUT SEUL au premier chargement. La divergence
+  // agent / investisseur doit se voir sans clic (arbitrage UX n°4) : dans la liste elle
+  // n'est qu'un badge, et le bandeau qui énonce les deux résolutions côte à côte vit dans
+  // le détail. Un garde par thèse, sinon refermer le détail le rouvrirait aussitôt.
+  useEffect(() => {
+    if (autoOpened || !debates || debates.length === 0) return
+    setAutoOpened(true)
+    loadDebateDetail(debates[0])
+  }, [debates, autoOpened])
 
   async function loadDebateDetail(debate) {
     setDetailLoading(true)
