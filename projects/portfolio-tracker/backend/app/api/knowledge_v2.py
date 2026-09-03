@@ -261,3 +261,172 @@ async def synthesize(ticker_id: str, body: SynthesisBody):
         logger.exception("synthesize %s/%s", ticker_id, body.field_path)
         raise HTTPException(status_code=502, detail=f"synthesis-feed : {e}")
     return result
+
+
+# ── Lecture de la base de connaissance ───────────────────────────────────────
+
+# Colonnes retournées par les deux routes de lecture — embedding (vector(1024)) est
+# délibérément ABSENT : illisible et lourd (1024 floats par entrée).
+_ENTRY_COLUMNS = (
+    "id", "ticker_id", "document_id", "entry_type", "title", "content",
+    "content_structured", "tags", "lang", "source_type", "source_url", "source_date",
+    "fiscal_period", "reliability_score", "reliability_tier", "reliability_note",
+    "has_conflict", "conflict_entry_id", "requires_human_review", "reviewed_by_user",
+    "last_reviewed_at", "model_cutoff", "version", "valid_from", "superseded_by",
+    "question_status", "question_priority", "resolves_entry_id",
+    "is_outdated", "is_deleted", "created_at", "updated_at", "covers",
+)
+_ENTRY_SELECT = ", ".join(_ENTRY_COLUMNS)
+
+# Tiers valides (même domaine que le CHECK de la migration 024).
+_ALL_TIERS = ("A", "A-", "B+", "B", "B-", "C+", "C")
+
+
+def _build_entries_query(
+    ticker_id: str,
+    entry_type: Optional[str],
+    reliability_tier: Optional[str],
+    covers: Optional[str],
+    include_inactive: bool,
+    limit: int,
+    offset: int,
+) -> tuple[str, str, str, list]:
+    """Construit la requête de listing sans f-string contenant des accolades littérales.
+
+    Les fragments sont concaténés ; les paramètres sont positionnels ($1, $2…).
+    Pas de commentaire SQL avec accolades ici — cf. convention #39 / check_fstring_sql.
+    """
+    conditions = ["ke.ticker_id = $1"]
+    params: list = [ticker_id]
+
+    if not include_inactive:
+        conditions.append("ke.is_deleted = false")
+        conditions.append("ke.superseded_by IS NULL")
+
+    # idx = nombre de paramètres déjà dans params ; incrémenté AVANT chaque ajout.
+    idx = 1  # $1 = ticker_id
+
+    if entry_type is not None:
+        idx += 1
+        conditions.append("ke.entry_type = $" + str(idx))
+        params.append(entry_type)
+
+    if reliability_tier is not None:
+        idx += 1
+        conditions.append("ke.reliability_tier = $" + str(idx))
+        params.append(reliability_tier)
+
+    if covers is not None:
+        idx += 1
+        conditions.append("$" + str(idx) + " = ANY(ke.covers)")
+        params.append(covers)
+
+    where = " AND ".join(conditions)
+
+    idx_limit = idx + 1
+    idx_offset = idx + 2
+    params.append(limit)
+    params.append(offset)
+
+    # Compteurs agrégés par tier — calculés en une passe sur les lignes filtrées.
+    # Pas de f-string ici : les fragments sont concaténés ou construits par jointure.
+    tier_subquery = (
+        "SELECT jsonb_build_object("
+        + ", ".join(
+            "'" + t + "', "
+            + "COUNT(*) FILTER (WHERE reliability_tier = '" + t + "')"
+            for t in _ALL_TIERS
+        )
+        + ") AS par_tier FROM knowledge_entries ke WHERE " + where
+    )
+
+    sql_count = "SELECT COUNT(*) AS total FROM knowledge_entries ke WHERE " + where
+
+    sql_page = (
+        "SELECT " + _ENTRY_SELECT
+        + " FROM knowledge_entries ke WHERE " + where
+        + " ORDER BY ke.id DESC"
+        + " LIMIT $" + str(idx_limit) + " OFFSET $" + str(idx_offset)
+    )
+
+    return sql_count, sql_page, tier_subquery, params
+
+
+@router.get("/tickers/{ticker_id}/knowledge/entries")
+async def list_knowledge_entries(
+    ticker_id: str,
+    entry_type: Optional[str] = None,
+    reliability_tier: Optional[str] = None,
+    covers: Optional[str] = None,
+    include_inactive: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Liste les entries de connaissance d'un ticker avec filtres et compteurs agrégés.
+
+    Par défaut n'expose PAS les entries supprimées (`is_deleted=true`) ni les versions
+    supersédées (`superseded_by IS NOT NULL`) — la table est append-only versionnée,
+    les versions mortes doubleraient la taille du corpus sans apporter d'information utile.
+
+    Filtres :
+    - `entry_type` : type d'entry (ex. `fact_financial`, `fact_qualitative`, `agent_synthesis`…).
+    - `reliability_tier` : tier exact (A, A-, B+, B, B-, C+, C).
+    - `covers` : chemin MVDD exact (ex. `financials.roic_pct`) — filtre via l'index GIN.
+    - `include_inactive` : si true, renvoie AUSSI les entries supprimées (`is_deleted`)
+      et les versions supersédées. Le nom couvre les deux : ce sont les deux façons
+      qu'a une entry d'être hors du corpus vivant.
+    - `limit` / `offset` : pagination (défaut 50/0).
+
+    La colonne `embedding` (vector 1024) n'est jamais renvoyée.
+
+    Réponse :
+    - `total` : nombre total de lignes correspondant aux filtres (avant pagination).
+    - `par_tier` : dict clefé par le tier TEL QU'IL EST STOCKÉ (`"A"`, `"A-"`, `"B+"`,
+      `"B"`, `"B-"`, `"C+"`, `"C"`) — pas de nom maquillé, le frontend n'a aucune
+      table de correspondance à tenir.
+    - `entries` : liste paginée.
+    """
+    if reliability_tier is not None and reliability_tier not in _ALL_TIERS:
+        raise HTTPException(status_code=422, detail="reliability_tier invalide.")
+    if limit < 1 or limit > 200:
+        raise HTTPException(status_code=422, detail="limit doit être entre 1 et 200.")
+    if offset < 0:
+        raise HTTPException(status_code=422, detail="offset ne peut pas être négatif.")
+
+    sql_count, sql_page, sql_tier, params = _build_entries_query(
+        ticker_id, entry_type, reliability_tier, covers, include_inactive, limit, offset,
+    )
+
+    # params contient [ticker_id, ...filtres..., limit, offset]
+    # Pour sql_count et sql_tier, on n'a pas besoin de limit/offset (les 2 derniers params).
+    params_filter = params[:-2]
+
+    async with get_db_session() as conn:
+        total_row = await conn.fetchrow(sql_count, *params_filter)
+        total = total_row["total"]
+
+        tier_row = await conn.fetchrow(sql_tier, *params_filter)
+        par_tier = dict(tier_row["par_tier"]) if tier_row and tier_row["par_tier"] else {}
+
+        rows = await conn.fetch(sql_page, *params)
+
+    return {
+        "total": total,
+        "par_tier": par_tier,
+        "entries": [dict(r) for r in rows],
+    }
+
+
+@router.get("/knowledge/entries/{entry_id}")
+async def get_knowledge_entry(entry_id: int):
+    """Détail d'une entry de connaissance.
+
+    La colonne `embedding` (vector 1024) n'est jamais renvoyée.
+    Renvoie 404 si l'entry est introuvable (quelle que soit sa valeur `is_deleted`).
+    """
+    sql = "SELECT " + _ENTRY_SELECT + " FROM knowledge_entries ke WHERE ke.id = $1"
+    async with get_db_session() as conn:
+        row = await conn.fetchrow(sql, entry_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Entry introuvable.")
+    return dict(row)
