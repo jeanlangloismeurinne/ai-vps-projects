@@ -2,6 +2,7 @@
 id: reprise-newsletter-summary
 status: prompt-de-reprise
 created: 2026-09-02
+updated: 2026-09-03
 project: newsletter-summary
 role: Prompt à coller pour reprendre le chantier du digest matinal de newsletters. État : HTML (Option B) + garanties français/anti-pub côté code + séparation des cartes garantie + **KB des résumés (enveloppe KNOWLEDGE §3)** + **éditeur de prompt versionné dans le Hub**.
 ---
@@ -12,6 +13,26 @@ role: Prompt à coller pour reprendre le chantier du digest matinal de newslette
 > sprint, ACTUALISER ce fichier** : état atteint, prochain jalon, blocages, commandes de
 > reprise. La session suivante démarre en relisant ce fichier — ne jamais repartir d'un
 > état périmé.
+
+> ## ⚡ MàJ 2026-09-03 — Coolify est arrêté : le Hub aussi est en `docker compose`
+>
+> **Rien n'a changé dans ce projet** : il était déjà une stack `docker compose` standalone, c'est
+> l'une des raisons pour lesquelles il n'a rien coûté à la migration. Ce qui change est **en face** :
+> le **Hub n'est plus une app Coolify**. La consigne « puis rebuild Coolify (pas restart) » qui
+> figurait plus bas est donc **périmée** — corrigée dans la section Déploiement.
+>
+> Conséquences concrètes pour ce chantier :
+> - `NEWSLETTER_URL` / `NEWSLETTER_API_TOKEN` se posent désormais dans le **`.env` du Hub**
+>   (`projects/hub/.env`, chmod 600, hors git), plus dans l'UI Coolify.
+> - Le réseau `coolify` et le proxy `coolify-proxy` (Traefik) **ont survécu** à la migration et
+>   gardent leur nom : le routage `mails.jlmvpscode.duckdns.org` et l'appel Hub → service par le
+>   réseau interne sont **inchangés**. Ne pas renommer le réseau pour « faire propre » : tous les
+>   labels Traefik du VPS y font référence.
+> - Le déploiement du Hub passe maintenant par `infrastructure/compose-deploy.sh hub` (voir
+>   `DEPLOY.md`) ; `infrastructure/deploy.sh` est neutralisé.
+>
+> Ce projet reste **hors** de `compose-deploy.sh` (comme `kb-viewer` et `provenance-viz`) : son
+> déploiement est le `docker compose up -d --build` ci-dessous, à la main.
 
 # Prompt de reprise
 
@@ -51,16 +72,26 @@ Ne jamais laisser ces valeurs vides en prod.
 
 ## Déploiement
 
-Stack **standalone docker compose** (pas une app Coolify), réseau `coolify`, routée par le
-coolify-proxy (Traefik, `mails.jlmvpscode.duckdns.org`) :
+Stack **standalone docker compose**, réseau `coolify`, routée par le coolify-proxy
+(Traefik, `mails.jlmvpscode.duckdns.org`) :
 
 ```bash
 cd projects/newsletter-summary
 docker compose up -d --build
 ```
 
-Le Hub (app Coolify) doit avoir en env `NEWSLETTER_URL` et `NEWSLETTER_API_TOKEN` (même valeur
-que `HUB_API_TOKEN` du service), puis **rebuild Coolify** (pas restart).
+Depuis le 2026-09-03, **tout le VPS est en `docker compose`** : ce projet n'est plus l'exception,
+mais il reste **hors** de `infrastructure/compose-deploy.sh` (déploiement à la main, ci-dessus).
+
+Le Hub doit avoir `NEWSLETTER_URL` et `NEWSLETTER_API_TOKEN` (même valeur que le `HUB_API_TOKEN` du
+service) dans **`projects/hub/.env`** — plus dans l'UI Coolify — puis être **reconstruit** :
+
+```bash
+infrastructure/compose-deploy.sh hub -e NEWSLETTER_API_TOKEN=<valeur> --rebuild-only
+```
+
+**Rebuild, jamais restart** : le Hub est un Next.js, les variables lues au build y sont figées dans
+le bundle. Après coup, `docker ps | grep hub` doit montrer **un seul** conteneur.
 
 ## Blocages / jalons
 

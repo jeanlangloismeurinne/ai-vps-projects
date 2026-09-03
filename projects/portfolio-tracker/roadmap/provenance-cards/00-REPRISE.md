@@ -14,6 +14,38 @@ role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 
 > **`00-REPRISE-ARCHIVE.md`**, à côté. Les **conventions durables #22 à #32** vivent dans le
 > **`CLAUDE.md` du projet** — c'est là qu'il faut les lire, pas ici.
 
+> ## ⚡ MàJ 2026-09-03 (bis) — Coolify est arrêté : le déploiement passe en `docker compose`
+>
+> **Aucune ligne de code du chantier V2 n'a bougé.** Ce qui change est la façon de livrer, et deux
+> réflexes de ce fichier sont désormais **périmés** :
+>
+> - **`infrastructure/deploy.sh` est neutralisé** (conservé, pas supprimé : il refuse de tourner tant
+>   que le conteneur `coolify` n'est pas debout). Le script est **`infrastructure/compose-deploy.sh`**,
+>   même contrat d'appel, mêmes codes 2-7, **plus un code 8 = build OK mais l'app ne répond pas**.
+>   Voir `DEPLOY.md`. Retour à Coolify : `infrastructure/coolify-restore.sh`.
+> - **La limite d'outillage notée plus bas est levée** : `--rebuild-only` existe, donc le cas « un
+>   seul commit couvre backend + frontend » ne demande plus de fabriquer une modification bidon.
+>   Et `portfolio-tracker` (toute la stack) suffit en un appel ; `portfolio-backend` /
+>   `portfolio-frontend` restent valides pour ne rebuilder qu'un service.
+> - **Il n'y a plus de numéro de déploiement.** Les `#328`…`#349` de ce fichier étaient des ids
+>   Coolify ; la traçabilité est désormais le **SHA du commit** rendu par la ligne `RESULT:`.
+>
+> **Ce que la migration a changé pour le mieux, et qui touche ce chantier précisément.** Le
+> `docker ps | grep <app>` « doit montrer UN SEUL conteneur » n'est plus une vérification qu'on peut
+> oublier : le script **compte les conteneurs portant `Host(<domaine>)`** et échoue en code 8 s'il y
+> en a deux. Portfolio est l'exception explicitement tolérée (backend et frontend partagent le
+> domaine via `PathPrefix`, donc **2 attendus**). Et le script **attend la santé du conteneur avant
+> de sonder** : un premier jet acceptait « tout sauf 5xx » et a validé un **404 sur `/api/health`** —
+> pendant la recréation du backend, Traefik n'a plus de route `/api` et c'est le catch-all Next.js
+> qui répond. Exactement le mode de panne de la convention #39, transposé au déploiement : une
+> vérification qui ne regarde que la classe du code ne mesure rien.
+>
+> Le reste de l'infra est **inchangé et volontairement non renommé** : le proxy s'appelle toujours
+> `coolify-proxy`, le réseau toujours `coolify` — tous les labels Traefik du VPS en dépendent.
+> Les conventions de compose du projet sont à relire dans le **`CLAUDE.md`** : `env_file` est
+> désormais **requis** (c'était « interdit, Coolify injecte ») et les `NEXT_PUBLIC_*` sont inlinés au
+> build, un oubli n'échouant **que dans le navigateur**.
+
 > ## ⚡ MàJ 2026-09-03 — UX-3 : les écrans V2 AMONT (knowledge → readiness → research → analyses → décision)
 >
 > **UX-3 est livré.** 9 routes frontend + 1 route backend, déployées et vérifiées par capture d'écran
@@ -562,11 +594,10 @@ c'est un système exercé, dont on connaît les modes de panne.
   ⚠️ **Ce qui n'est PAS prouvé** : les pages `/v2/theses` et `/v2/theses/4` renvoient 200, mais
   Next.js sert la coquille et charge les données **côté client** — un 200 ne prouve donc rien sur
   l'affichage. Le rendu réel dans le navigateur reste à contrôler à l'œil.
-  ⚠️ **Limite d'outillage rencontrée** : `deploy.sh` fusionne « committer » et « reconstruire » et
-  refuse un index vide (`fail 2`). Quand **un seul commit couvre les deux apps** (backend + frontend),
-  la seconde ne peut donc pas être reconstruite par la voie normale. Contournement propre : joindre au
-  commit suivant une modification réelle (ex. ce fichier) et appeler `deploy.sh <la seconde app>`.
-  À corriger un jour dans le script : un mode « rebuild seul, sans commit ».
+  ~~⚠️ **Limite d'outillage rencontrée** : `deploy.sh` fusionne « committer » et « reconstruire » et
+  refuse un index vide (`fail 2`).~~ **Corrigé le 2026-09-03** : `compose-deploy.sh` a un mode
+  `--rebuild-only` (rebuild du HEAD déjà poussé, sans commit ni push), et `portfolio-tracker`
+  reconstruit les deux services en un appel. Plus besoin de fabriquer une modification bidon.
 - **Suite hors-ligne** : **779 assertions / 0 échec** sur 13 scripts (`backend/checks/`).
   ⚠️ Lancer avec l'env **documenté dans `checks/README.md`** (sans `EXA_API_KEY`) : une clé factice
   fait échouer à tort l'assertion « sans clé de recherche, le worker doit lever ».
@@ -666,10 +697,15 @@ c'est un système exercé, dont on connaît les modes de panne.
 - **Migrations non auto-appliquées** : `docker cp` + `psql -f`. Le heredoc `psql << EOF` via
   `docker exec` échoue **silencieusement** — pas d'erreur, pas de changement.
 - **asyncpg** : `$1`/`$2` (jamais `%s`) ; JSONB auto-décodé (jamais de `json.dumps` avant INSERT).
-- **Déploiement** : `infrastructure/deploy.sh <app> -m … -f …`. **Rebuild, jamais restart** ;
-  commit + push **AVANT** (Coolify build depuis GitHub : un commit local non poussé n'est jamais
-  déployé). Après chaque deploy, `docker ps | grep <app>` doit montrer **UN SEUL** conteneur —
-  un orphelin fait load-balancer Traefik sur l'ancien code, silencieusement.
+- **Déploiement** : `infrastructure/compose-deploy.sh <app> -m … -f …` (depuis le 2026-09-03 ;
+  `deploy.sh` est neutralisé). **Rebuild, jamais restart.** Le build se fait maintenant depuis le
+  **répertoire local**, pas depuis GitHub — un commit non poussé serait donc quand même déployé,
+  ce qui est un **piège inverse** : le push reste obligatoire, sinon prod et `origin/main`
+  divergent en silence. Le script le fait, ne pas le court-circuiter.
+  L'unicité du domaine est désormais **vérifiée par le script** (échec en code 8), mais la règle
+  reste bonne à connaître : un conteneur orphelin fait load-balancer Traefik sur l'ancien code,
+  silencieusement. Pour portfolio, **2 conteneurs sur le domaine sont normaux** (backend + frontend
+  se partagent `portfolio.jlmvpscode.duckdns.org` via `PathPrefix`) — c'est l'exception codée en dur.
 - **Règle #19** : tout changement de contrat = 3 points de synchro (prompt agent en DB · frontend ·
   import). Rafraîchir les prompts en DB ne demande **pas** de rebuild (`get_agent_provider` relit la
   DB à chaque appel) ; modèle de script : `db/migrations/_gen_prompt_refresh_20260830.py`.

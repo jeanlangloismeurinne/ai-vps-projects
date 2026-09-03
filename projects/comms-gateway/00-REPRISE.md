@@ -2,9 +2,9 @@
 id: reprise-comms-gateway
 status: prompt-de-reprise
 created: 2026-08-30
-updated: 2026-08-31
+updated: 2026-09-03
 project: comms-gateway
-role: Prompt à coller pour reprendre le chantier du gateway de communication externe. État : gateway multi-tenant DÉPLOYÉ en prod Coolify (app `dockercompose`, UUID `commsgateway00000000000`), secrets chiffrés hors repo, /webhooks/* seuls exposés publiquement ; reste les 3 blocages utilisateur (domaine Resend, app Slack, téléphone SMS/WhatsApp/Signal) avant envois réels.
+role: Prompt à coller pour reprendre le chantier du gateway de communication externe. État : gateway multi-tenant DÉPLOYÉ en prod, désormais en `docker compose` standalone (migration Coolify -> compose du 2026-09-03), secrets dans un `.env` local 600 hors repo, /webhooks/* seuls exposés publiquement ; reste les 3 blocages utilisateur (domaine Resend, app Slack, téléphone SMS/WhatsApp/Signal) avant envois réels.
 ---
 
 # 🚦 RÈGLE (s'applique à chaque session)
@@ -13,6 +13,30 @@ role: Prompt à coller pour reprendre le chantier du gateway de communication ex
 > sprint, ACTUALISER ce fichier** : état atteint, prochain jalon, blocages, commandes de
 > reprise. La session suivante démarre en relisant ce fichier — ne jamais repartir d'un
 > état périmé.
+
+---
+
+> ## ⚡ MàJ 2026-09-03 — le gateway ne dépend plus de Coolify
+>
+> **Ce qui a changé** : Coolify a été arrêté sur le VPS ; toutes les apps, dont ce gateway,
+> tournent en `docker compose` standalone. Le code du gateway n'a pas bougé d'une ligne — seule
+> la façon de le déployer et de lui injecter ses secrets a changé.
+>
+> - Déploiement : `infrastructure/compose-deploy.sh comms-gateway -m "…" -f "…"`
+>   (remplace `deploy.sh`, neutralisé). Plus de rebuild via l'API Coolify.
+> - Secrets : `projects/comms-gateway/.env` (chmod 600, gitignored) au lieu des secrets chiffrés
+>   de Coolify. Les 10 valeurs ont été rapatriées **à l'identique** (aucune régénérée). Copie de
+>   référence : `/root/secrets/coolify-env-backup/comms-gateway.env`.
+> - `docker-compose.yml` a de nouveau un `env_file: [.env]` (la consigne inverse « env_file
+>   interdit » datait de Coolify et ne vaut plus).
+> - L'UUID `commsgateway00000000000` ne désigne plus rien d'actif.
+>
+> **Ce qui a été vérifié** : `/health` répond 200 (sonde interne, le service n'expose pas `/health`
+> publiquement) ; `/webhooks/*` toujours routé par Traefik ; `/v1` toujours NON routé publiquement
+> — la frontière de sécurité du chantier est intacte. Les deux volumes étaient vides : aucun risque
+> de perte de données à la bascule.
+>
+> **Ce qui NE change pas** : les 3 blocages utilisateur ci-dessous sont inchangés.
 
 ---
 
