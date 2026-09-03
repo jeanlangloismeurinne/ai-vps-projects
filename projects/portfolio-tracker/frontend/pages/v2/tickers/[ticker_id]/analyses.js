@@ -305,9 +305,24 @@ export default function TickerAnalyses() {
           ? [...data].sort((a, b) => b.round - a.round || new Date(b.created_at) - new Date(a.created_at))
           : []
         setAnalyses(sorted)
-        // Sélection du tour le plus récent par défaut
+        // Tour affiché par défaut : celui qui porte la synthèse « final ».
+        // Prendre bêtement le tour le plus récent ouvre l'écran sur un tour de
+        // réfutation partiel (souvent un seul bear), soit 2 colonnes vides sur 3 —
+        // la vue la moins informative. À défaut de synthèse final, on retombe sur
+        // le tour le plus complet, puis sur le plus récent.
         const rounds = [...new Set(sorted.map(a => a.round))].sort((a, b) => b - a)
-        if (rounds.length > 0) setSelectedRound(rounds[0])
+        if (rounds.length > 0) {
+          const tourFinal = sorted.find(a => a.analysis_type === 'synthesis' && a.status === 'final')
+          if (tourFinal) {
+            setSelectedRound(tourFinal.round)
+          } else {
+            const complet = [...rounds].sort((x, y) => {
+              const n = r => new Set(sorted.filter(a => a.round === r).map(a => a.analysis_type)).size
+              return n(y) - n(x) || y - x
+            })[0]
+            setSelectedRound(complet)
+          }
+        }
         setLoading(false)
       })
       .catch(e => { setErr(String(e)); setLoading(false) })
