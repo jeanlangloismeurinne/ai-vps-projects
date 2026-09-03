@@ -73,6 +73,7 @@ function V2Nav() {
       <Link href="/v2" className="text-white font-bold mr-2">🧪 PT</Link>
       <span className="px-2 py-0.5 rounded bg-emerald-800/60 text-emerald-200 text-[11px] font-semibold mr-2">V2</span>
       <NavLink href="/v2" exact>Tableau de bord</NavLink>
+      <NavLink href="/v2/tickers">Tickers</NavLink>
       <NavLink href="/v2/theses">Thèses</NavLink>
       <NavLink href="/v2/calibration">Calibration</NavLink>
       <div className="ml-auto flex items-center gap-3">

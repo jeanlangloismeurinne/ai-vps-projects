@@ -254,6 +254,127 @@ async def validate_thesis_v2(thesis_id: int, body: ValidateV2Body):
         raise _agent_error(e)
 
 
+@router.get("/v2/tickers")
+async def list_tickers_v2(include_all: bool = False):
+    """Listing des tickers avec avancement de la chaîne V2 amont (knowledge → readiness → research → analyses → décision).
+
+    Sans paramètre, n'expose que les tickers AYANT de la matière V2 (au moins une knowledge_entry
+    vivante). Avec `?include_all=true`, renvoie AUSSI les tickers sans matière — pour démarrer un
+    nouveau ticker depuis l'écran de liste.
+
+    Tri : tickers avec matière en tête (nb_entries_vivantes DESC), puis alphabétique.
+
+    Agrégats :
+    - `nb_entries_vivantes` + `par_tier` : ventilation par tier TEL QU'IL EST STOCKÉ
+      (A, A-, B+, B, B-, C+, C) — même convention que GET /tickers/{id}/knowledge/entries.
+    - `readiness` : rapport readiness le plus récent (id, verdict, created_at) ou null.
+    - `nb_research_memos` + `dernier_research_memo_id` : memos au total + id du plus récent.
+    - `nb_analyses_par_type` : compteur par analysis_type (bull/bear/synthesis).
+    - `id_synthese_final` : id de la synthèse final la plus récente (null si aucune).
+    - `these_v2` : id et status de la thèse V2 du ticker, si elle existe (null sinon).
+
+    Clés JSON garanties à tous les niveaux d'imbrication — un null est explicite, jamais absent.
+    """
+    # Tiers dont on veut la ventilation — identiques à knowledge_v2._ALL_TIERS.
+    # Concaténation de fragments SQL pour éviter les f-strings avec accolades littérales (convention #39).
+    _TIERS = ("A", "A-", "B+", "B", "B-", "C+", "C")
+
+    # Sous-requête : ventilation par tier en JSONB.
+    # Chaque fragment "tier, COUNT FILTER" est construit par concaténation pure.
+    _tier_agg = (
+        "jsonb_build_object("
+        + ", ".join(
+            "'" + t + "', COUNT(ke2.id) FILTER (WHERE ke2.reliability_tier = '" + t + "')"
+            for t in _TIERS
+        )
+        + ")"
+    )
+
+    # Filtre principal : tickers avec au moins une entry vivante (HAVING > 0) ou tous.
+    # Le HAVING s'applique après GROUP BY — seul moyen propre de filtrer sur un agrégat.
+    # Quand include_all=True, on supprime le HAVING pour retourner tous les tickers.
+    _having = "" if include_all else "HAVING COUNT(ke.id) FILTER (WHERE ke.is_deleted = false AND ke.superseded_by IS NULL) > 0"
+
+    sql = (
+        "SELECT"
+        "  tk.id AS ticker_id,"
+        "  tk.name,"
+        "  tk.ticker_symbol,"
+        "  tk.sector,"
+        "  tk.status,"
+        "  tk.company_type,"
+        # ── Connaissance ──────────────────────────────────────────────────────
+        # Entries vivantes : is_deleted = false AND superseded_by IS NULL
+        "  COUNT(ke.id) FILTER (WHERE ke.is_deleted = false AND ke.superseded_by IS NULL)"
+        "    AS nb_entries_vivantes,"
+        # Ventilation par tier sur les entries VIVANTES uniquement.
+        # Sous-requête corrélée pour ne pas mélanger les filtres du GROUP BY principal.
+        "  ("
+        "    SELECT " + _tier_agg +
+        "    FROM knowledge_entries ke2"
+        "    WHERE ke2.ticker_id = tk.id AND ke2.is_deleted = false AND ke2.superseded_by IS NULL"
+        "  ) AS par_tier,"
+        # ── Readiness ─────────────────────────────────────────────────────────
+        # Rapport readiness le plus récent — sous-requête scalaire JSONB (null si aucun).
+        "  ("
+        "    SELECT jsonb_build_object("
+        "      'id', kcr.id,"
+        "      'verdict', kcr.verdict,"
+        "      'created_at', kcr.created_at"
+        "    )"
+        "    FROM knowledge_curator_reports kcr"
+        "    WHERE kcr.ticker_id = tk.id AND kcr.report_type = 'readiness'"
+        "    ORDER BY kcr.created_at DESC LIMIT 1"
+        "  ) AS readiness,"
+        # ── Research ──────────────────────────────────────────────────────────
+        # Nombre total de memos + id du plus récent.
+        "  ("
+        "    SELECT COUNT(*) FROM research_memos rm WHERE rm.ticker_id = tk.id"
+        "  ) AS nb_research_memos,"
+        "  ("
+        "    SELECT rm.id FROM research_memos rm WHERE rm.ticker_id = tk.id"
+        "    ORDER BY rm.created_at DESC LIMIT 1"
+        "  ) AS dernier_research_memo_id,"
+        # ── Analyses ──────────────────────────────────────────────────────────
+        # Compteur par analysis_type (bull/bear/synthesis) en JSONB.
+        "  ("
+        "    SELECT jsonb_build_object("
+        "      'bull',      COUNT(*) FILTER (WHERE ia2.analysis_type = 'bull'),"
+        "      'bear',      COUNT(*) FILTER (WHERE ia2.analysis_type = 'bear'),"
+        "      'synthesis', COUNT(*) FILTER (WHERE ia2.analysis_type = 'synthesis')"
+        "    )"
+        "    FROM investment_analyses ia2 WHERE ia2.ticker_id = tk.id"
+        "  ) AS nb_analyses_par_type,"
+        # Synthèse final la plus récente.
+        "  ("
+        "    SELECT ia3.id FROM investment_analyses ia3"
+        "    WHERE ia3.ticker_id = tk.id AND ia3.analysis_type = 'synthesis' AND ia3.status = 'final'"
+        "    ORDER BY ia3.created_at DESC LIMIT 1"
+        "  ) AS id_synthese_final,"
+        # ── Décision ──────────────────────────────────────────────────────────
+        # La thèse V2 du ticker (au plus une active, mais on prend la plus récente).
+        # LEFT JOIN intentionnel : on veut la ligne ticker même sans thèse.
+        "  CASE WHEN tv.id IS NULL THEN NULL"
+        "       ELSE jsonb_build_object('id', tv.id, 'status', tv.status)"
+        "  END AS these_v2"
+        " FROM tickers tk"
+        " LEFT JOIN knowledge_entries ke ON ke.ticker_id = tk.id"
+        " LEFT JOIN LATERAL ("
+        "   SELECT id, status FROM theses_v2"
+        "   WHERE ticker_id = tk.id"
+        "   ORDER BY created_at DESC LIMIT 1"
+        " ) tv ON true"
+        " GROUP BY tk.id, tk.name, tk.ticker_symbol, tk.sector, tk.status, tk.company_type,"
+        "          tv.id, tv.status"
+        " " + _having +
+        " ORDER BY nb_entries_vivantes DESC, tk.id ASC"
+    )
+
+    async with get_db_session() as conn:
+        rows = await conn.fetch(sql)
+    return [dict(r) for r in rows]
+
+
 @router.get("/v2/theses")
 async def list_theses_v2(ticker_id: Optional[str] = None):
     """Listing des thèses V2 avec agrégats (position, monitoring, exit_plan, post_mortem).
