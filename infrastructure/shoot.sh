@@ -12,6 +12,12 @@
 #
 # Sortie : une capture PNG par chemin dans /tmp/shoot_<horodatage>/<chemin-normalisé>.png
 # Les chemins des fichiers écrits sont imprimés sur stdout, un par ligne.
+#
+# ⚠️ LIMITE — la capture est NON AUTHENTIFIÉE. Sur une app protégée (hub, bank-review,
+# kb-viewer en basic-auth) le script rend l'écran de connexion, pas la page visée, et le PNG
+# obtenu paraît parfaitement valide : bonne taille, vrai rendu, exit 0. Un succès de shoot.sh
+# ne prouve donc PAS qu'on a vu la bonne page — il faut REGARDER l'image. Pour les pages
+# derrière login il faudrait passer un cookie ou des identifiants : non implémenté à ce jour.
 
 set -euo pipefail
 

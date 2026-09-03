@@ -183,9 +183,10 @@ En fin de session, une fois une feature livrée (session en direct **ou** via ti
 PHP → monitor). En cas d'échec (exit ≠ 0), basculer sur le sous-agent Sonnet décrit dans DEPLOY.md.
 But : préserver le contexte/quota Opus en gardant le verbeux (diff, logs de build) hors session.
 
-Frictions connues de ce chemin (permissions manquantes, rebuild sans commit, captures de
-vérification) : **`CHANTIER_OUTILLAGE_DEV.md`** — diagnostiquées, **non appliquées**, à traiter
-dans une conversation dédiée. À lire seulement si un déploiement se heurte à un refus.
+Les frictions de ce chemin relevées jusqu'au 2026-09-03 (permissions manquantes, rebuild sans
+commit, captures de vérification) sont **traitées** — inutile de rouvrir le sujet. En cas de
+nouvelle friction, la noter dans **`CHANTIER_OUTILLAGE_DEV.md`** (tampon : on y écrit le constat,
+on supprime la section une fois appliquée). Ne le lire que pour y ajouter un point.
 
 ## Système de contrôle — chantiers, sprints, tickets
 
