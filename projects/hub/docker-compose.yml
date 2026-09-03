@@ -1,34 +1,55 @@
+# hub (app « homepage ») — déploiement standalone `docker compose`
+# (migré depuis Coolify le 2026-09-03).
+#
+#   Internet --443--> coolify-proxy (TLS) --> homepage:8000
+#
+# Le hub monte `projects/` en écriture : c'est lui qui lit les chantiers/sprints/tickets et
+# écrit les SESSION.md (cf. CONTROL_SYSTEM.md). Il appelle newsletter-summary par son nom de
+# conteneur sur le réseau `coolify` (NEWSLETTER_URL).
+#
+# Déploiement : infrastructure/compose-deploy.sh hub -m "..." -f "..."
+# Variables dans `.env` (chmod 600, gitignored) ; copie de référence dans
+# /root/secrets/coolify-env-backup/homepage.env.
+
+name: hub
+
+networks:
+  coolify:
+    external: true
+
 services:
   homepage:
     build: .
-    networks:
-      - coolify
+    container_name: homepage
     restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PROJECTS_DIR: /projects
     volumes:
       - /root/ai-vps-projects/projects:/projects:rw
-    environment:
-      - PROJECTS_DIR=/projects
+    networks: [coolify]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
-      - "traefik.http.routers.http-homepage.entryPoints=http"
-      - "traefik.http.routers.http-homepage.rule=Host(`jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.http-homepage.middlewares=redirect-to-https"
-      - "traefik.http.routers.http-homepage.service=http-homepage"
-      - "traefik.http.routers.https-homepage.entryPoints=https"
-      - "traefik.http.routers.https-homepage.rule=Host(`jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.https-homepage.middlewares=gzip"
-      - "traefik.http.routers.https-homepage.tls=true"
-      - "traefik.http.routers.https-homepage.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.https-homepage.service=https-homepage"
-      - "traefik.http.services.http-homepage.loadbalancer.server.port=8000"
-      - "traefik.http.services.https-homepage.loadbalancer.server.port=8000"
-
-networks:
-  coolify:
-    external: true
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      # Ces deux middlewares étaient déclarés par D'AUTRES conteneurs Coolify et seulement
+      # RÉFÉRENCÉS ici : ils disparaissaient avec eux. Ils sont désormais définis localement,
+      # sous des noms propres à l'app.
+      - traefik.http.middlewares.hubgzip.compress=true
+      - traefik.http.middlewares.hubredirect.redirectscheme.scheme=https
+      - traefik.http.routers.hub-http.entryPoints=http
+      - traefik.http.routers.hub-http.middlewares=hubredirect
+      - traefik.http.routers.hub-http.rule=Host(`jlmvpscode.duckdns.org`)
+      - traefik.http.routers.hub-http.service=hub
+      - traefik.http.routers.hub-https.entryPoints=https
+      - traefik.http.routers.hub-https.middlewares=hubgzip
+      - traefik.http.routers.hub-https.rule=Host(`jlmvpscode.duckdns.org`)
+      - traefik.http.routers.hub-https.service=hub
+      - traefik.http.routers.hub-https.tls=true
+      - traefik.http.routers.hub-https.tls.certresolver=letsencrypt
+      - traefik.http.services.hub.loadbalancer.server.port=8000

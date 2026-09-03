@@ -10,10 +10,13 @@
 # accessible sur le réseau interne coolify uniquement — conforme à la spec « le reste reste
 # sur le réseau interne Coolify ».
 #
-# Les variables (secrets providers, DATABASE_URL, MASTER_KEY, ADMIN_TOKEN) sont injectées
-# en env par COOLIFY (secrets Coolify) — PAS de .env local ni de env_file (gitignored/absent
-# du build). Voir projects/comms-gateway/README.md § Déploiement.
-# Déploiement : app Coolify (build_pack=dockercompose) — cf. README.
+# Les variables (secrets providers, DATABASE_URL, MASTER_KEY, ADMIN_TOKEN) vivent dans un `.env`
+# local (chmod 600, gitignored — jamais committé, jamais dans l'image). Copie de référence :
+# /root/secrets/coolify-env-backup/comms-gateway.env. Elles étaient auparavant injectées par
+# Coolify ; la migration du 2026-09-03 les a rapatriées sans changer une valeur.
+# Déploiement : infrastructure/compose-deploy.sh comms-gateway -m "..." -f "..."
+
+name: comms-gateway
 
 networks:
   coolify:
@@ -24,6 +27,8 @@ services:
     build: .
     container_name: comms-gateway
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - comms_data:/data
     networks: [coolify]

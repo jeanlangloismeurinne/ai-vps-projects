@@ -1,0 +1,17 @@
+# Fragment de surcharge appliqué par `coolify-restore.sh` — ne pas lancer seul.
+#
+# `/data/coolify/source/docker-compose.prod.yml` épingle soketi sur l'image UPSTREAM
+# `coolify-realtime:1.0.17`. Or le conteneur qui tournait au moment de la migration
+# (2026-09-03) utilisait `1.0.13-patched`, une image committée à la main le 2026-04-23 pour
+# corriger des vulnérabilités npm (mysql2, basic-ftp, form-data, systeminformation) —
+# cf. COOLIFY_PLAYBOOK.md § « coolify-realtime — image patchée manuellement ».
+#
+# Ce tag n'existe PAS sur ghcr.io (manifest 404 vérifié) : l'image locale est le seul
+# exemplaire. Elle est donc conservée, et ce fragment la ré-épingle au restore pour que le
+# retour à Coolify redémarre sur ce qui tournait réellement, et non sur une image différente.
+#
+# Le script n'applique ce fragment QUE si l'image est encore présente localement.
+
+services:
+  soketi:
+    image: ghcr.io/coollabsio/coolify-realtime:1.0.13-patched

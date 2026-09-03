@@ -1,0 +1,46 @@
+# bank-review — déploiement standalone `docker compose` (migré depuis Coolify le 2026-09-03).
+#
+# Auparavant app Coolify de type « dockerfile » : Coolify générait lui-même le compose et les
+# labels Traefik. Ce fichier les rend explicites et versionnés.
+#
+#   Internet --443--> coolify-proxy (TLS) --> bank-review:8000
+#
+# Déploiement : infrastructure/compose-deploy.sh bank-review -m "..." -f "..."
+# Variables dans `.env` (chmod 600, gitignored) ; copie de référence dans
+# /root/secrets/coolify-env-backup/bank-review.env.
+
+name: bank-review
+
+networks:
+  coolify:
+    external: true
+
+services:
+  bank-review:
+    build: .
+    container_name: bank-review
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Tickets de feedback lus/écrits depuis le repo hôte (cf. CLAUDE.md § Feedback).
+      - /root/ai-vps-projects/projects/bank-review/feedback-tickets:/app/feedback-tickets
+    networks: [coolify]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      # Middlewares nommés par app : les middlewares globaux `gzip` / `redirect-to-https`
+      # étaient déclarés par les conteneurs Coolify et n'existent plus.
+      - traefik.http.middlewares.brgzip.compress=true
+      - traefik.http.middlewares.brredirect.redirectscheme.scheme=https
+      - traefik.http.routers.br-http.entryPoints=http
+      - traefik.http.routers.br-http.middlewares=brredirect
+      - traefik.http.routers.br-http.rule=Host(`bank.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.br-http.service=br
+      - traefik.http.routers.br-https.entryPoints=https
+      - traefik.http.routers.br-https.middlewares=brgzip
+      - traefik.http.routers.br-https.rule=Host(`bank.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.br-https.service=br
+      - traefik.http.routers.br-https.tls=true
+      - traefik.http.routers.br-https.tls.certresolver=letsencrypt
+      - traefik.http.services.br.loadbalancer.server.port=8000

@@ -1,38 +1,61 @@
-services:
-  assistant-ia:
-    build: .
-    volumes:
-      - /storage/Documents:/storage/Documents:ro
-      - /root/ai-vps-projects/projects/assistant-ia/feedback-tickets:/app/feedback-tickets
-      # Vault Obsidian du journal — en écriture (contrairement à /storage/Documents)
-      - /storage/journal-vault:/storage/journal-vault
-    networks:
-      - infra-net
-      - coolify
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.http-assistant.entryPoints=http"
-      - "traefik.http.routers.http-assistant.rule=Host(`assistant.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.http-assistant.middlewares=redirect-to-https"
-      - "traefik.http.routers.http-assistant.service=http-assistant"
-      - "traefik.http.routers.https-assistant.entryPoints=https"
-      - "traefik.http.routers.https-assistant.rule=Host(`assistant.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.https-assistant.middlewares=gzip"
-      - "traefik.http.routers.https-assistant.tls=true"
-      - "traefik.http.routers.https-assistant.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.https-assistant.service=https-assistant"
-      - "traefik.http.services.http-assistant.loadbalancer.server.port=8000"
-      - "traefik.http.services.https-assistant.loadbalancer.server.port=8000"
-      - "traefik.docker.network=coolify"
+# assistant-ia — déploiement standalone `docker compose` (migré depuis Coolify le 2026-09-03).
+#
+# Orchestrateur central : bot Slack (HTTP Events API), journal, kanban, agent outillé.
+#
+#   Slack / Resend --443--> coolify-proxy (TLS) --> assistant-ia:8000
+#   tool-file-intake --POST /webhook/file-stored--> assistant-ia:8000   (via infra-net)
+#
+# Le service est joint par le nom `assistant-ia` depuis tool-file-intake (AGENT_WEBHOOK_URL) :
+# `container_name` ET nom de service valent `assistant-ia`, ce qui préserve l'alias DNS sur les
+# deux réseaux. Ne pas les renommer sans corriger AGENT_WEBHOOK_URL côté tool-file-intake.
+#
+# Déploiement : infrastructure/compose-deploy.sh assistant-ia -m "..." -f "..."
+# Variables dans `.env` (chmod 600, gitignored) ; copie de référence dans
+# /root/secrets/coolify-env-backup/assistant-ia.env.
+
+name: assistant-ia
 
 networks:
   infra-net:
     external: true
   coolify:
     external: true
+
+services:
+  assistant-ia:
+    build: .
+    container_name: assistant-ia
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /storage/Documents:/storage/Documents:ro
+      - /root/ai-vps-projects/projects/assistant-ia/feedback-tickets:/app/feedback-tickets
+      # Vault Obsidian du journal — en écriture (contrairement à /storage/Documents)
+      - /storage/journal-vault:/storage/journal-vault
+    networks: [infra-net, coolify]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      # OBLIGATOIRE : conteneur sur 2 réseaux. Sans ceci Traefik peut choisir infra-net,
+      # qu'il ne joint pas, et renvoyer un gateway timeout intermittent.
+      - traefik.docker.network=coolify
+      # Ces deux middlewares étaient déclarés par D'AUTRES conteneurs Coolify et seulement
+      # RÉFÉRENCÉS ici : ils disparaissaient avec eux. Définis localement désormais.
+      - traefik.http.middlewares.asgzip.compress=true
+      - traefik.http.middlewares.asredirect.redirectscheme.scheme=https
+      - traefik.http.routers.as-http.entryPoints=http
+      - traefik.http.routers.as-http.middlewares=asredirect
+      - traefik.http.routers.as-http.rule=Host(`assistant.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.as-http.service=as
+      - traefik.http.routers.as-https.entryPoints=https
+      - traefik.http.routers.as-https.middlewares=asgzip
+      - traefik.http.routers.as-https.rule=Host(`assistant.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.as-https.service=as
+      - traefik.http.routers.as-https.tls=true
+      - traefik.http.routers.as-https.tls.certresolver=letsencrypt
+      - traefik.http.services.as.loadbalancer.server.port=8000

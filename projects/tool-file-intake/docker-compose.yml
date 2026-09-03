@@ -1,20 +1,38 @@
+# tool-file-intake — déploiement standalone `docker compose`
+# (migré depuis Coolify le 2026-09-03).
+#
+# Service INTERNE : aucun label Traefik, donc aucune exposition publique. Il était déclaré dans
+# Coolify avec un domaine sslip.io de remplissage qui ne routait rien — on ne le reproduit pas.
+#
+#   Slack --(fichier)--> tool-file-intake --POST /webhook/file-stored--> assistant-ia:8000
+#
+# La jointure avec assistant-ia se fait par nom de conteneur sur `infra-net` (AGENT_WEBHOOK_URL).
+#
+# Déploiement : infrastructure/compose-deploy.sh tool-file-intake -m "..." -f "..."
+# Variables dans `.env` (chmod 600, gitignored) ; copie de référence dans
+# /root/secrets/coolify-env-backup/tool-file-intake.env.
+
+name: tool-file-intake
+
+networks:
+  infra-net:
+    external: true
+
 services:
   tool-file-intake:
     build: .
+    container_name: tool-file-intake
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "127.0.0.1:8020:8000"
+      - "127.0.0.1:8020:8000"   # accès local/debug ; jamais 0.0.0.0 (cf. CLAUDE.md § Sécurité)
     volumes:
       - /storage/Documents:/storage/Documents
       - /data/intake-db:/data/intake-db
-    networks:
-      - infra-net
+    networks: [infra-net]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-networks:
-  infra-net:
-    external: true

@@ -1,5 +1,21 @@
 # COOLIFY_PLAYBOOK.md — Pièges Coolify & sécurité infra
 
+> ## ⚠️ DORMANT depuis le 2026-09-03 — Coolify n'est plus le plan de contrôle de ce VPS
+>
+> Les projets sont déployés en `docker compose` standalone (`infrastructure/compose-deploy.sh`,
+> protocole dans `DEPLOY.md`). **Ne pas appliquer ce playbook au fonctionnement courant** : les
+> conteneurs `coolify` / `coolify-db` qu'il pilote n'existent plus, et les UUIDs d'applications
+> ne servent plus à rien tant que Coolify n'est pas remonté.
+>
+> Ce document redevient valable après `infrastructure/coolify-restore.sh`. Il reste utile entre
+> temps pour comprendre **comment une app était configurée avant la migration**.
+>
+> Deux sections restent vraies indépendamment de Coolify et servent au quotidien :
+> § *Playwright Trixie* et § *Checklist avant déploiement d'un service réseau*.
+>
+> **Le proxy `coolify-proxy` (Traefik), lui, tourne toujours** : il n'a jamais été arrêté et sert
+> tous les domaines. Le nom et le réseau `coolify` sont historiques, pas fonctionnels.
+
 > Playbook de déploiement et de dépannage Coolify. Chargé **à la demande** (déploiement,
 > diagnostic infra) — référencé depuis `CLAUDE.md` et `DEPLOY.md`. Ne pas charger en permanence.
 
@@ -268,6 +284,26 @@ grep "coolify-realtime" /data/coolify/source/docker-compose.prod.yml
 ```
 Si l'image est repassée à `1.0.13` (sans `-patched`), relancer le patch ou attendre
 une image upstream corrigée.
+
+#### ⚠️ Ce risque s'est RÉALISÉ — constaté le 2026-09-03
+
+`docker-compose.prod.yml` référence désormais **`coolify-realtime:1.0.17`** (upstream), plus
+`1.0.13-patched`. Le conteneur qui tournait, lui, utilisait toujours l'image patchée : il avait
+été créé avant l'update et n'avait jamais été recréé. Le `grep` ci-dessus aurait échoué depuis
+un moment sans que rien ne le signale — un conteneur qui n'est pas recréé masque indéfiniment
+une dérive de son fichier de déploiement.
+
+Conséquences pratiques :
+- L'image `1.0.13-patched` a été **conservée** à la migration (les autres images Coolify ont été
+  supprimées). Elle est **irremplaçable** : le tag n'existe pas sur ghcr.io (manifest **404**
+  vérifié), c'est un `docker commit` local, et la procédure exacte du patch n'a jamais été
+  écrite ici — l'image EST l'artefact.
+- `infrastructure/coolify-restore.sh` applique `coolify-restore.override.yml` pour ré-épingler
+  cette image au restore, **si elle est encore présente localement**. Sinon il le dit et repart
+  sur `1.0.17`.
+- **À trancher** : `1.0.17` est postérieure à `1.0.13` et corrige peut-être déjà ces npm. Si un
+  scan le confirme, l'image patchée (1,55 Go) peut être supprimée sans perte. Tant que ce n'est
+  pas vérifié, elle reste.
 
 ### Modifier `post_deployment_command` via l'API
 

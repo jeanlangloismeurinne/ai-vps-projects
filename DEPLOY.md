@@ -1,18 +1,22 @@
-# DEPLOY.md — Protocole de livraison (commit → push → rebuild Coolify)
+# DEPLOY.md — Protocole de livraison (commit → push → build → vérification)
 
 > Instructions pour Claude Code. À appliquer **en fin de session**, une fois une ou plusieurs
 > features livrées — que la session ait été menée en direct dans le terminal ou via le
 > système de tickets (`CONTROL_SYSTEM.md`).
 
+> **Depuis le 2026-09-03, le déploiement se fait en `docker compose`, plus par Coolify.**
+> Le script est `infrastructure/compose-deploy.sh` ; `infrastructure/deploy.sh` (Coolify) est
+> neutralisé mais conservé pour le jour où Coolify serait remonté
+> (`infrastructure/coolify-restore.sh`).
+
 ## Objectif
 
-Économiser le **contexte et le quota d'Opus**. La séquence commit/push/rebuild est verbeuse
+Économiser le **contexte et le quota d'Opus**. La séquence commit/push/build est verbeuse
 (diff, logs de push, logs de build) mais mécanique : on la sort du contexte Opus. Deux niveaux :
 
-- **Option 1 — script déterministe** (`infrastructure/deploy.sh`) : le chemin nominal. Un seul
-  appel Bash, tout le verbeux est absorbé, seule une ligne `RESULT:` revient à Opus.
+- **Option 1 — script déterministe** (`infrastructure/compose-deploy.sh`) : le chemin nominal.
+  Un seul appel Bash, tout le verbeux est absorbé, seule une ligne `RESULT:` revient à Opus.
 - **Option 2 — sous-agent Sonnet** : le filet. Uniquement **si l'option 1 échoue** (exit ≠ 0).
-  Le sous-agent diagnostique et récupère avec le playbook Coolify, et ne renvoie qu'un statut court.
 
 ## Quand déclencher
 
@@ -26,43 +30,56 @@ Opus connaît déjà les fichiers qu'il a modifiés dans la session : **pas d'ex
 construction — pas de mélange inter-projets dans le repo mono-repo).
 
 ```bash
-infrastructure/deploy.sh <app> -m "<message de commit>" -f "<fichiers de la feature>" [-e KEY=VALUE ...]
+infrastructure/compose-deploy.sh <app> -m "<message de commit>" -f "<fichiers de la feature>" [-e KEY=VALUE ...]
 ```
 
-- `<app>` : clé Coolify — `bank-review`, `assistant-ia`, `ev-prices`, `tool-file-intake`, `hub`,
-  `comms-gateway`, `portfolio-backend`, `portfolio-frontend`. Pour portfolio-tracker (2 apps), **deux appels**.
-  (`newsletter-summary` n'est **pas** une app Coolify gérée par deploy.sh : conteneur standalone.)
+- `<app>` : `bank-review`, `assistant-ia`, `ev-prices`, `tool-file-intake`, `hub`,
+  `comms-gateway`, `portfolio-tracker`, `portfolio-backend`, `portfolio-frontend`.
+  `portfolio-tracker` = toute la stack ; `portfolio-backend` / `portfolio-frontend` = un seul
+  service de cette stack (les deux clés Coolify historiques restent valides, un seul appel suffit
+  désormais si les deux ont changé).
+  (`newsletter-summary`, `kb-viewer`, `provenance-viz` ne sont pas gérés par ce script.)
 - `-f` : chemins relatifs à la racine du repo, séparés par des espaces. Le script `git add` ces
   chemins puis **commite l'index seul** ; il **refuse si rien n'est à committer**.
   Variante : `--staged` (Opus a déjà fait `git add`) au lieu de `-f`.
-- `-e KEY=VALUE` (répétable) : nouvelles variables d'env Coolify, écrites **automatiquement**
-  avant le rebuild (elles doivent exister au build). La valeur n'est jamais loggée ; seule la clé
-  l'est. À utiliser quand la feature introduit une nouvelle variable d'environnement.
+- `-e KEY=VALUE` (répétable) : écrit la variable dans le **`.env` du projet** avant le build.
+  La valeur n'est jamais loggée ; seule la clé l'est. Le `.env` reste en `600` et hors git.
+  Pour portfolio, viser `portfolio-backend` ou `portfolio-frontend` (deux `.env` distincts) —
+  le script refuse `portfolio-tracker -e …` plutôt que de deviner la cible.
+- `--rebuild-only` : rebuild du HEAD déjà poussé, sans commit ni push.
 
-Ce que le script fait, dans l'ordre : stage → commit (avec `Co-Authored-By`) → `git push origin main`
-→ écrit les env vars via Eloquent dans le container `coolify` → déclenche le rebuild (méthode PHP
-vérifiée, sans token) → surveille la file de déploiement jusqu'à `finished`. La notification Slack
-de déploiement part automatiquement (via `post_deployment_command`, cf. CLAUDE.md).
+Ce que le script fait, dans l'ordre : stage → commit (`Co-Authored-By`) → `git push origin main`
+→ écrit les `-e` dans le `.env` → `docker compose config -q` → `docker compose up -d --build`
+→ **attend que le conteneur soit `running` (et `healthy` s'il déclare un healthcheck)** →
+**sonde l'app et exige le code HTTP attendu** → envoie la notification Slack de déploiement
+(bank-review, assistant-ia).
+
+### Ce que la vérification attrape et que Coolify ne voyait pas
+
+`deploy.sh` concluait au succès dès que Coolify disait `finished` : un conteneur qui démarre puis
+meurt en boucle passait. `compose-deploy.sh` refuse de conclure tant que l'app n'a pas répondu.
+
+Deux gardes valent d'être connues :
+- **Code attendu, pas « code non catastrophique ».** Un premier jet acceptait « tout sauf 5xx » ;
+  il a validé un **404 sur `/api/health`**. Pendant la recréation du backend, Traefik n'a plus de
+  route `/api` et c'est le catch-all frontend qui répond — un 404 de Next.js, indiscernable d'un
+  succès si on ne regarde que la classe du code. D'où l'attente de santé **avant** la sonde, et un
+  code exact par app.
+- **Unicité du domaine.** Le script compte les conteneurs portant `Host(<domaine>)` et échoue s'il
+  y en a deux (sauf portfolio, où backend et frontend partagent le domaine via `PathPrefix`).
+  C'est le garde-fou contre le double routage : deux conteneurs aux mêmes labels, et le proxy
+  alterne entre ancien et nouveau code sans rien signaler.
 
 **Lecture du résultat par Opus** — dernière ligne :
-- `RESULT: success — …` → terminé. Reporter à l'utilisateur (app, SHA court, #deployment).
+- `RESULT: success — …` → terminé. Reporter à l'utilisateur (app, SHA court, code HTTP).
 - `RESULT: failure — …` (exit ≠ 0) → **basculer sur l'option 2**.
 
-Codes d'échec : `2` rien à committer · `3` app inconnue · `4` push refusé · `5` échec env ·
-`6` rebuild non déclenché · `7` build en erreur/timeout.
+Codes d'échec : `2` rien à committer · `3` app inconnue · `4` push refusé · `5` échec écriture env ·
+`6` compose invalide · `7` build en erreur/timeout · `8` build OK mais l'app ne répond pas.
 
-> **Cas particulier — code 7 uniquement.** C'est le seul code ambigu : vrai échec de build **ou**
-> faux négatif de monitoring (blip transitoire du poll DB pendant un build lourd). Avant de lancer
-> le sous-agent, faire **une seule** requête de vérification — coût ~1 aller-retour Bash, négligeable
-> devant un sous-agent Sonnet démarré à froid + un rebuild potentiellement redondant. Le `#DEPLOY_ID`
-> figure dans la ligne `RESULT: failure` :
-> ```bash
-> docker exec coolify-db psql -U coolify -d coolify -tAc \
->   "SELECT status FROM application_deployment_queues WHERE id=<DEPLOY_ID>"
-> ```
-> `finished` → le déploiement est en fait OK : reporter *success*, **ne pas** lancer le fallback.
-> Autre valeur → basculer sur l'option 2. Les codes `2/3/4/5/6` sont sans ambiguïté : fallback direct,
-> aucune vérif.
+> **Code 8 : ne pas relancer un build.** Le code est construit et poussé ; c'est le démarrage ou
+> le routage qui cloche. Regarder `docker compose logs` et `docker ps` avant toute chose —
+> rebuilder ne corrigera pas une variable d'env manquante ni un port qui ne correspond pas.
 
 ## Option 2 — fallback sous-agent Sonnet
 
@@ -74,26 +91,30 @@ Prompt à passer au sous-agent (adapter les `{…}`) :
 ```
 Tu es en charge de FINIR un déploiement qui a échoué. Contexte minimal :
 - Repo : /root/ai-vps-projects (mono-repo, branche main, remote GitHub origin).
-- App Coolify visée : {app} (UUID dans COOLIFY_PLAYBOOK.md § "UUIDs des applications Coolify").
-- Commande tentée : infrastructure/deploy.sh {rappel des args}
+- Déploiement en docker compose standalone (PAS Coolify — arrêté depuis le 2026-09-03).
+  La stack de l'app est projects/{app}/docker-compose.yml ; ses variables sont dans son .env
+  local (chmod 600, hors git). Le proxy est `coolify-proxy` (Traefik), qui a survécu à la
+  migration et route par labels Docker sur le réseau `coolify`.
+- App visée : {app}
+- Commande tentée : infrastructure/compose-deploy.sh {rappel des args}
 - Sortie/erreur observée : {coller la ligne RESULT: + le contexte d'échec}
 - Feature livrée : {1-2 phrases}   Nouvelles variables d'env attendues : {clés ou "aucune"}.
 
-Playbook de référence : COOLIFY_PLAYBOOK.md (rebuild PHP sans token, monitoring DB,
-génération de token API, env vars, labels Traefik). DEPLOY.md pour le contrat.
+Objectif : commit/push si pas encore fait, écrire les variables manquantes dans le .env,
+rebuilder (`docker compose up -d --build`), et VÉRIFIER que l'app répond réellement sur son
+domaine. Diagnostiquer et corriger la cause de l'échec.
 
-Objectif : commit/push si pas encore fait, écrire les env vars manquantes, déclencher le rebuild,
-surveiller jusqu'à status 'finished'. Diagnostiquer et corriger la cause de l'échec (push rejeté,
-conflit, label Traefik, source_type, etc.).
-
-RÈGLE : ne réécris pas le code applicatif de la feature et ne modifie pas d'autres projets. Si la
-cause dépasse le déploiement (bug de code, choix d'architecture, secret manquant côté utilisateur),
-NE DEVINE PAS : rends la main avec un statut clair pour qu'Opus tranche.
+RÈGLES :
+- Ne réécris pas le code applicatif de la feature, ne modifie pas d'autres projets.
+- Ne conclus JAMAIS au succès sur la seule fin du build : montre la réponse HTTP obtenue.
+- Vérifie qu'un SEUL conteneur porte les labels Traefik du domaine (double routage silencieux).
+- Si la cause dépasse le déploiement (bug de code, choix d'architecture, secret manquant côté
+  utilisateur), NE DEVINE PAS : rends la main avec un statut clair pour qu'Opus tranche.
 
 Renvoie EXACTEMENT :
 1. Cause de l'échec initial (1 phrase)
 2. Actions correctives menées
-3. Statut final du déploiement (#id + status) et URL/app concernée
+3. Statut final : code HTTP obtenu sur quelle URL, et nom du conteneur qui sert
 4. Points restant à la charge de l'utilisateur (secrets, DNS, décision) — ou "aucun"
 ```
 
@@ -102,5 +123,14 @@ point 4 l'exige.
 
 ## Choix Sonnet vs Haiku (fallback)
 
-**Sonnet.** La récupération d'échec (push rejeté, conflit, label Traefik cassé, `source_type` nul)
-demande du jugement ; Haiku tend à improviser au lieu d'escalader. Réserver Haiku au trivial.
+**Sonnet.** La récupération d'échec (push rejeté, conflit, label Traefik cassé, variable
+manquante) demande du jugement ; Haiku tend à improviser au lieu d'escalader. Réserver Haiku au
+trivial.
+
+## Revenir à Coolify
+
+`infrastructure/coolify-restore.sh` — voir son en-tête. Rien n'a été détruit côté Coolify : la
+base (`coolify-db`), `/data/coolify` et les sauvegardes sont intacts. Le retour est un
+`docker compose up -d` sur les fichiers d'installation, avec les images épinglées sur ce qui
+tournait. `deploy.sh` redevient alors utilisable (`COOLIFY_DEPLOY_FORCE=1` pour lever son
+garde-fou, ou simplement une fois le conteneur `coolify` de nouveau debout).

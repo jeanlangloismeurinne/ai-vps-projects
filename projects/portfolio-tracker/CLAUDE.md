@@ -17,7 +17,8 @@ Après déploiement initial, faire une fois :
 1. Aller sur `/admin` → créer les 3 agents dans l'UI Dust (`plm-siege`) en copiant les prompts affichés
 2. Renseigner le `dust_agent_id` de chaque agent dans la Page Admin (zone mise en avant)
 3. Cliquer "✓ Marquer synchronisé" pour chaque agent
-4. Ajouter dans Coolify (backend) : `DUST_OPPORTUNITY_AGENT_ID`, `DUST_THESIS_AGENT_ID`, `DUST_MONITORING_AGENT_ID`
+4. Ajouter dans `backend/.env` : `DUST_OPPORTUNITY_AGENT_ID`, `DUST_THESIS_AGENT_ID`, `DUST_MONITORING_AGENT_ID`
+   (ou `compose-deploy.sh portfolio-backend -e DUST_…=… --rebuild-only`)
 5. Optionnel : `SLACK_WEBHOOK_URL` pour les notifications V1 (webhook entrant Slack, distinct du bot Socket Mode V0)
 
 **Tables V0 préservées** : `v0_theses` et `v0_calendar_events` — données historiques CAP/TSLA intactes.
@@ -118,7 +119,7 @@ Driver : **asyncpg** (direct, pas SQLAlchemy).
 Paramètres SQL : `$1`, `$2`… (jamais `%s`).
 Codec JSONB configuré dans `db/database.py` → les champs JSONB sont des dicts Python nativement. **Ne jamais faire `json.dumps()` pour écrire en DB.**
 
-`DATABASE_URL` format Coolify : `postgresql+asyncpg://admin:PASSWORD@shared-postgres:5432/db_portfolio`
+`DATABASE_URL` : `postgresql+asyncpg://admin:PASSWORD@shared-postgres:5432/db_portfolio`
 Le préfixe `+asyncpg` est strippé automatiquement dans `database.py`.
 
 ### Tables V1 (migration 013 — 2026-05-30)
@@ -243,17 +244,30 @@ TTL Redis : M1 complet → `pt:m1:{ticker}` 4h | Earnings date → `pt:calendar:
 ## Variables d'environnement
 
 Liste complète (Dust, Slack, Marché, DB/Cache, App) : **`REFERENCE.md`** § Variables d'environnement.
-Les valeurs réelles vivent dans Coolify — jamais committées.
+Les valeurs réelles vivent dans `backend/.env` et `frontend/.env` (chmod 600, gitignored) — jamais
+committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio-{backend,frontend}.env`.
 
 ## Conventions et pièges
 
 ### Généraux (V0 + V1)
 1. **asyncpg** : paramètres `$1, $2`… pas `%s`. JSONB auto-décodé — ne pas `json.dumps()` avant INSERT.
-2. **Labels Traefik** : explicites dans `docker-compose.yml` — pas d'auto-injection Coolify.
-3. **env_file interdit** : Coolify injecte les variables directement.
-4. **Rebuild ≠ Restart** : toujours déclencher un rebuild complet (PHP script), jamais restart.
-5. **Commit + push AVANT** tout déclenchement de rebuild Coolify.
-6. **Traefik + multi-réseaux** : `portfolio-frontend` a le custom label `traefik.docker.network=coolify`.
+2. **Labels Traefik** : explicites dans `docker-compose.yml`. Backend et frontend partagent le
+   domaine : `/api` (avec middleware `stripprefix`) l'emporte sur le catch-all frontend, Traefik
+   routant sur la règle la plus spécifique. Le backend expose ses routes **sans** le préfixe `/api`.
+3. **`env_file` requis** (depuis la migration du 2026-09-03) : `backend/.env` et `frontend/.env`,
+   deux fichiers distincts, `chmod 600`, gitignored. C'est l'inverse de la règle Coolify qui
+   valait ici jusqu'au 2026-09-03 (« env_file interdit, Coolify injecte »).
+4. **`NEXT_PUBLIC_*` est inliné AU BUILD**, pas lu au runtime. `NEXT_PUBLIC_API_URL` et
+   `NEXT_PUBLIC_DUST_STREAMING` passent en `args:` du service frontend et en `ARG`/`ENV` dans
+   `frontend/Dockerfile` **avant** `npm run build`. Les oublier ne casse rien au démarrage : le
+   bundle part avec le défaut `http://localhost:8050` et c'est le navigateur qui échoue.
+   Ils sont écrits en clair dans le compose à dessein — `NEXT_PUBLIC_` signifie « expédié au
+   navigateur », ce ne sont pas des secrets.
+5. **Commit + push AVANT** tout rebuild — `infrastructure/compose-deploy.sh` s'en charge dans le
+   bon ordre. Clés : `portfolio-tracker` (les deux services), `portfolio-backend`,
+   `portfolio-frontend` (un seul). Pour `-e KEY=VALUE`, viser le service : la stack a deux `.env`.
+6. **Traefik + multi-réseaux** : `traefik.docker.network=coolify` sur tout conteneur attaché à
+   plusieurs réseaux, sinon gateway timeout intermittent.
 7. **yfinance `.calendar`** : retourne un dict, pas un DataFrame — tester `if cal:`, pas `if not cal.empty:`.
 8. **DataService** : seul point d'accès données marché — ne pas appeler `collect_quantitative()` directement.
 
@@ -338,8 +352,11 @@ Les fichiers existent déjà comme stubs vides — ne pas les recréer, les comp
 - **Capgemini (CAP)** : entrée 2026-05-01 à 102€, 8.5% allocation, 6 hypothèses H1-H6, peers CTSH (T1) / ACN (T2). Scénarios Bear -5.2% / Central +12.4% / Bull +23.7% CAGR 5 ans.
 - **Tesla (TSLA)** : position active, thèse définie.
 
-### Note réseau infra-net
-Le `post_deployment_command` Coolify connecte les containers à `infra-net`. Coolify génère `portfolio0tracker000000000_infra-net` au lieu de `infra-net` — la commande post-deploy corrige ça.
+### Note réseau — obsolète depuis le 2026-09-03
+Coolify créait un réseau par app (`portfolio0tracker000000000_infra-net` au lieu de `infra-net`),
+qu'un `post_deployment_command` devait corriger après chaque déploiement. Cette bricole n'existe
+plus : la stack déclare `networks: [coolify]` en réseau **externe**, donc les conteneurs
+rejoignent directement le bon réseau à la création. Le réseau parasite a été supprimé.
 
 ## Base de connaissance (Knowledge Platform)
 

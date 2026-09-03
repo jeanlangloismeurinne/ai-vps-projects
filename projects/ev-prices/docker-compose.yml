@@ -1,33 +1,53 @@
+# ev-prices — déploiement standalone `docker compose` (migré depuis Coolify le 2026-09-03).
+#
+# Pattern commun à tous les projets du repo (cf. DEPLOY.md) : le conteneur rejoint le réseau
+# `coolify` où vit le reverse-proxy Traefik (`coolify-proxy`), qui assure TLS + routage à partir
+# des labels ci-dessous. Traefik reste en place ; seul le panneau de contrôle Coolify a disparu.
+#
+#   Internet --443--> coolify-proxy (TLS Let's Encrypt) --> ev-prices:8000 --> shared-postgres
+#
+# Déploiement : infrastructure/compose-deploy.sh ev-prices -m "..." -f "..."
+#               (ou, à la main, depuis ce dossier : docker compose up -d --build)
+#
+# Variables réelles dans `.env` (chmod 600, gitignored). Copie de référence :
+# /root/secrets/coolify-env-backup/ev-prices.env — cf. infrastructure/coolify-export-env.sh.
+
+name: ev-prices
+
+networks:
+  coolify:
+    external: true      # réseau du reverse-proxy — indispensable pour être routé
+  infra-net:
+    external: true      # réseau historique de shared-postgres / shared-redis
+
 services:
   ev-prices:
     build: .
+    container_name: ev-prices
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8040:8000"
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_ALERT_CHANNEL=${SLACK_ALERT_CHANNEL:-C0AUFGZNBGT}
-    networks:
-      - infra-net
+      # Repli si la clé est absente du .env (le channel Slack n'est pas un secret).
+      SLACK_ALERT_CHANNEL: ${SLACK_ALERT_CHANNEL:-C0AUFGZNBGT}
+    ports:
+      - "127.0.0.1:8040:8000"     # accès local/debug ; jamais 0.0.0.0 (cf. CLAUDE.md § Sécurité)
+    networks: [coolify, infra-net]
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.gzip.compress=true"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.http-0-ev0prices0000000000000000.entryPoints=http"
-      - "traefik.http.routers.http-0-ev0prices0000000000000000.middlewares=redirect-to-https"
-      - "traefik.http.routers.http-0-ev0prices0000000000000000.rule=Host(`ev.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.http-0-ev0prices0000000000000000.service=http-0-ev0prices0000000000000000"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.entryPoints=https"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.middlewares=gzip"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.rule=Host(`ev.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.service=https-0-ev0prices0000000000000000"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.tls=true"
-      - "traefik.http.routers.https-0-ev0prices0000000000000000.tls.certresolver=letsencrypt"
-      - "traefik.http.services.http-0-ev0prices0000000000000000.loadbalancer.server.port=8000"
-      - "traefik.http.services.https-0-ev0prices0000000000000000.loadbalancer.server.port=8000"
-
-networks:
-  infra-net:
-    external: true
+      - traefik.enable=true
+      # OBLIGATOIRE : le conteneur est sur 2 réseaux. Sans ceci Traefik peut choisir infra-net,
+      # qu'il ne joint pas, et renvoyer un gateway timeout intermittent.
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.evgzip.compress=true
+      - traefik.http.middlewares.evredirect.redirectscheme.scheme=https
+      - traefik.http.routers.ev-http.entryPoints=http
+      - traefik.http.routers.ev-http.middlewares=evredirect
+      - traefik.http.routers.ev-http.rule=Host(`ev.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.ev-http.service=ev
+      - traefik.http.routers.ev-https.entryPoints=https
+      - traefik.http.routers.ev-https.middlewares=evgzip
+      - traefik.http.routers.ev-https.rule=Host(`ev.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.ev-https.service=ev
+      - traefik.http.routers.ev-https.tls=true
+      - traefik.http.routers.ev-https.tls.certresolver=letsencrypt
+      - traefik.http.services.ev.loadbalancer.server.port=8000

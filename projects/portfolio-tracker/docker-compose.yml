@@ -1,76 +1,93 @@
-# IMPORTANT :
-# - Labels Traefik explicites (pas d'auto-injection mode dockercompose)
-# - Pas de env_file : Coolify injecte les variables directement
-# - Rebuild via /deploy, jamais /restart
+# portfolio-tracker — déploiement standalone `docker compose` (migré depuis Coolify le 2026-09-03).
+#
+# Ce fichier remplace une version périmée qui décrivait un découpage antérieur (UUID
+# `portfolio0tracker000000000`, réseau infra-net, sans stripprefix) et ne correspondait plus à ce
+# qui tournait réellement. La configuration ci-dessous est relevée sur les conteneurs en service.
+#
+# Les deux services étaient DEUX apps Coolify distinctes (portfolio-backend / portfolio-frontend)
+# alors qu'ils forment un seul produit derrière un seul domaine. Ils sont réunis ici : le routage
+# par chemin, qui n'a de sens qu'à deux, vit dans un seul fichier.
+#
+#   portfolio.jlmvpscode.duckdns.org/api/*  --> backend:8050   (préfixe /api retiré)
+#   portfolio.jlmvpscode.duckdns.org/*      --> frontend:8051
+#
+# Traefik route sur la règle la plus spécifique : `/api` l'emporte sur le catch-all.
+#
+# Déploiement : infrastructure/compose-deploy.sh portfolio-tracker -m "..." -f "..."
+# Variables : backend/.env et frontend/.env (chmod 600, gitignored) ; copies de référence dans
+# /root/secrets/coolify-env-backup/portfolio-{backend,frontend}.env.
+
+name: portfolio-tracker
+
+networks:
+  coolify:
+    external: true
 
 services:
-  portfolio-backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+  backend:
+    build: ./backend
     container_name: portfolio-backend
-    networks:
-      - infra-net
-    expose:
-      - "8050"
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /root/ai-vps-projects/projects/portfolio-tracker/feedback-tickets:/app/feedback-tickets
+    networks: [coolify]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
       interval: 30s
       timeout: 5s
       retries: 3
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.gzip.compress=true"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.entryPoints=http"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.middlewares=redirect-to-https"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000-api.service=http-0-portfolio0tracker000000000-api"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.entryPoints=https"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.middlewares=gzip"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.service=https-0-portfolio0tracker000000000-api"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.tls=true"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000-api.priority=10"
-      - "traefik.http.services.http-0-portfolio0tracker000000000-api.loadbalancer.server.port=8050"
-      - "traefik.http.services.https-0-portfolio0tracker000000000-api.loadbalancer.server.port=8050"
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      # Middlewares nommés par app : les middlewares globaux `gzip` / `redirect-to-https`
+      # étaient déclarés par les conteneurs Coolify et n'existent plus.
+      - traefik.http.middlewares.pfredirect.redirectscheme.scheme=https
+      # Le backend expose ses routes SANS le préfixe /api : Traefik le retire avant de router.
+      - traefik.http.middlewares.pfapistrip.stripprefix.prefixes=/api
+      - traefik.http.routers.pf-api-http.entryPoints=http
+      - traefik.http.routers.pf-api-http.middlewares=pfredirect
+      - traefik.http.routers.pf-api-http.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)
+      - traefik.http.routers.pf-api-http.service=pf-api
+      - traefik.http.routers.pf-api-https.entryPoints=https
+      - traefik.http.routers.pf-api-https.middlewares=pfapistrip
+      - traefik.http.routers.pf-api-https.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/api`)
+      - traefik.http.routers.pf-api-https.service=pf-api
+      - traefik.http.routers.pf-api-https.tls=true
+      - traefik.http.routers.pf-api-https.tls.certresolver=letsencrypt
+      - traefik.http.services.pf-api.loadbalancer.server.port=8050
+      # Réponses streamées des agents (SSE) : sans flush court, le navigateur attend la fin.
+      - traefik.http.services.pf-api.loadbalancer.responseForwarding.flushInterval=100ms
 
-  portfolio-frontend:
+  frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      args:
+        # Inlinées dans le bundle AU BUILD (cf. commentaire dans frontend/Dockerfile) : sans
+        # elles, tout le frontend appellerait le défaut `http://localhost:8050`.
+        # Écrites en clair à dessein — le préfixe NEXT_PUBLIC_ signifie « expédié au navigateur » :
+        # ce ne sont pas des secrets, et les mettre ici évite de dépendre d'un .env gitignored
+        # que personne ne verrait manquer.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://portfolio.jlmvpscode.duckdns.org/api}
+        NEXT_PUBLIC_DUST_STREAMING: ${NEXT_PUBLIC_DUST_STREAMING:-true}
     container_name: portfolio-frontend
-    networks:
-      - infra-net
-    expose:
-      - "8051"
     restart: unless-stopped
-    environment:
-      - NEXT_PUBLIC_API_URL=https://portfolio.jlmvpscode.duckdns.org/api
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8051"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    env_file:
+      - ./frontend/.env
+    networks: [coolify]
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.gzip.compress=true"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000.entryPoints=http"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000.middlewares=redirect-to-https"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.http-0-portfolio0tracker000000000.service=http-0-portfolio0tracker000000000"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.entryPoints=https"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.middlewares=gzip"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.rule=Host(`portfolio.jlmvpscode.duckdns.org`) && PathPrefix(`/`)"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.service=https-0-portfolio0tracker000000000"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.tls=true"
-      - "traefik.http.routers.https-0-portfolio0tracker000000000.tls.certresolver=letsencrypt"
-      - "traefik.http.services.http-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
-      - "traefik.http.services.https-0-portfolio0tracker000000000.loadbalancer.server.port=8051"
-
-networks:
-  infra-net:
-    external: true
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.pfgzip.compress=true
+      - traefik.http.routers.pf-http.entryPoints=http
+      - traefik.http.routers.pf-http.middlewares=pfredirect
+      - traefik.http.routers.pf-http.rule=Host(`portfolio.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.pf-http.service=pf
+      - traefik.http.routers.pf-https.entryPoints=https
+      - traefik.http.routers.pf-https.middlewares=pfgzip
+      - traefik.http.routers.pf-https.rule=Host(`portfolio.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.pf-https.service=pf
+      - traefik.http.routers.pf-https.tls=true
+      - traefik.http.routers.pf-https.tls.certresolver=letsencrypt
+      - traefik.http.services.pf.loadbalancer.server.port=8051

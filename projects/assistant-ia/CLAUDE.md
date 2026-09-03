@@ -7,19 +7,36 @@ Reçoit des webhooks de `tool-file-intake` et déclenche les actions appropriée
 
 ## Déploiement
 
-- Plateforme : Coolify
-- Base Directory : `projects/assistant-ia`
-- docker-compose : `/docker-compose.yml`
-- Port interne : 8030 → 8000
-- Domaine : `assistant.jlmvpscode.duckdns.org`
-- Réseau Docker : `infra-net`
-- Volume monté : `/storage/Documents` (lecture seule)
+**`docker compose` standalone depuis le 2026-09-03** (Coolify est arrêté — cf. CLAUDE.md racine).
 
-Variables d'environnement Coolify :
+```bash
+infrastructure/compose-deploy.sh assistant-ia -m "<message>" -f "<fichiers>"
+```
+
+- Stack : `projects/assistant-ia/docker-compose.yml`
+- Port interne : 8000 (pas de port publié — tout passe par Traefik)
+- Domaine : `assistant.jlmvpscode.duckdns.org`
+- Réseaux : **`infra-net` ET `coolify`** → d'où le label obligatoire
+  `traefik.docker.network=coolify` (sans lui, Traefik peut choisir `infra-net`, qu'il ne joint
+  pas, et renvoyer un gateway timeout intermittent)
+- ⚠️ **Ne pas renommer le service ni le conteneur** : `tool-file-intake` joint cette app par le
+  nom `assistant-ia` (`AGENT_WEBHOOK_URL` → `http://assistant-ia:8000/webhook/file-stored`).
+  Le nom de service **et** `container_name` valent `assistant-ia` pour préserver l'alias DNS sur
+  les deux réseaux.
+- Volumes : `/storage/Documents` (**ro**), `/storage/journal-vault` (rw — vault Obsidian du
+  journal), `feedback-tickets/` (rw)
+- Le déploiement notifie automatiquement Slack pour `journal` et `kanban` (table `NOTIFY` de
+  `compose-deploy.sh`) — c'était le `post_deployment_command` de Coolify.
+
+Variables d'environnement — `projects/assistant-ia/.env` (chmod 600, gitignored ; copie de
+référence dans `/root/secrets/coolify-env-backup/assistant-ia.env`) :
 - `SLACK_BOT_TOKEN` — token bot Slack (xoxb-...)
 - `BANK_REVIEW_CHANNEL_ID` — ID du channel Slack #bank-review
 - `BANK_REVIEW_BASE_URL` — URL de bank-review (défaut : https://bank.jlmvpscode.duckdns.org)
 - `BANK_REVIEW_API_KEY` — clé API partagée avec bank-review
+
+Pour ajouter une variable : `compose-deploy.sh assistant-ia -e KEY=VALUE …` (écrit dans le `.env`,
+la valeur n'est jamais journalisée) — ne pas éditer le `.env` à la main pendant un déploiement.
 
 ## Architecture
 
@@ -72,25 +89,33 @@ app/
 Le fichier central est `app/services/registry.py`.
 C'est le seul endroit à modifier pour brancher un nouveau service sur le système feedback/déploiement.
 
-### Ajouter un service externe (sa propre app Coolify)
+### Ajouter un service externe (sa propre stack compose)
 1. Implémenter sur le service : `GET /api/feedback/closed-since?since=` (protégé par `X-Internal-Api-Key`) et `POST /api/feedback`
 2. Ajouter une entrée dans `_build_registry()` (voir modèle commenté dans le fichier)
 3. Ajouter les variables d'env dans `config.py`
-4. Configurer `post_deployment_command` dans Coolify (voir CLAUDE.md racine)
+4. Ajouter le service à la table `NOTIFY` de `infrastructure/compose-deploy.sh` pour que le
+   déploiement notifie Slack (c'était le `post_deployment_command` de Coolify)
 5. Ajouter le nom dans `_KNOWN_PROJECTS` dans `app/slack_app.py` (liste des projets proposés par `/feature`)
 
 ### Ajouter un service interne (hébergé dans assistant-ia)
 1. Ajouter une entrée dans `_build_registry()` avec `base_url = ASSISTANT_BASE_URL` et `coolify_uuid = "gayg5mw9jikbio2le75olq8b"`
 2. Ajouter le nom dans `_KNOWN_PROJECTS` dans `app/slack_app.py` (liste des projets proposés par `/feature`)
 
-### UUID Coolify des apps
+### UUID Coolify des apps — champ conservé, plus alimenté
+
+`registry.py` porte encore un `coolify_uuid` par service, et `POST /webhook/deploy-complete`
+accepte toujours `{"application_uuid": "…"}` en plus de `{"service": "…"}`. Depuis le 2026-09-03,
+**plus personne n'emprunte ce chemin** : `compose-deploy.sh` poste `{"service": "…"}`. Le code est
+laissé en place (il redevient utile si Coolify est remonté) mais ne pas s'y fier pour router une
+notification.
+
 - `bank-review` : `ji9jg7ngkva7j4d2uic05d3v`
 - `assistant-ia` : `gayg5mw9jikbio2le75olq8b`
 
 ### Endpoints feedback (cette session)
 | Endpoint | Rôle |
 |---|---|
-| `POST /webhook/deploy-complete` | Notification déploiement (Coolify ou manuel) |
+| `POST /webhook/deploy-complete` | Notification déploiement (`compose-deploy.sh` ou manuel) |
 | `POST /api/feedback/{project}` | Soumettre un ticket (journal, kanban) |
 | `GET /api/feedback/{project}/closed-since?since=` | Tickets fermés depuis une date |
 
@@ -159,7 +184,7 @@ Variables d'environnement associées :
 
 Le vault (`/storage/journal-vault` : journal + miroir kanban sous `tasks/`) se consulte en ligne
 sur **`kb.jlmvpscode.duckdns.org`** — site statique Quartz (lecture seule, basic-auth), servi par
-`projects/kb-viewer/` (stack standalone, **pas** une app Coolify). Détails/rebuild : entrée
+`projects/kb-viewer/` (rebuild événementiel par unit systemd, hors `compose-deploy.sh`). Détails : entrée
 `kb-viewer` du CLAUDE.md racine + `projects/kb-viewer/README.md`.
 
 ## Journal — structure des routes
@@ -187,9 +212,12 @@ Avant tout déploiement d'une nouvelle fonctionnalité, mettre à jour :
 1. La **landing page** (`_LANDING_HTML` dans `app/main.py`) : hero subtitle, liens, description de la section concernée.
 2. La **page dédiée du service** si elle existe (ex : `routes/journal.py` pour `/journal`) : titre, liens, description des fonctionnalités.
 
-Ordre obligatoire :
-1. `git push origin main`
-2. Rebuild Coolify via API (voir COOLIFY_PLAYBOOK.md racine pour le template curl)
+Ordre obligatoire — un seul appel s'en charge :
+```bash
+infrastructure/compose-deploy.sh assistant-ia -m "<message>" -f "<fichiers>"
+```
+(commit → push → build → attente de santé → sonde `/health` → notif Slack journal + kanban).
+Voir `DEPLOY.md` à la racine.
 
 ## Système de contrôle
 

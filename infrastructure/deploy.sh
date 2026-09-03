@@ -1,5 +1,29 @@
 #!/usr/bin/env bash
 #
+# ╔════════════════════════════════════════════════════════════════════════════════════════════╗
+# ║  SCRIPT NEUTRALISÉ LE 2026-09-03 — Coolify n'est plus le plan de contrôle de ce VPS.       ║
+# ║                                                                                            ║
+# ║  → Utiliser :  infrastructure/compose-deploy.sh <app> -m "…" -f "…"                        ║
+# ║     (même contrat d'appel, mêmes codes de sortie, une ligne RESULT: finale)                ║
+# ║                                                                                            ║
+# ║  Ce fichier est CONSERVÉ à dessein, pas supprimé : il redevient le bon outil si Coolify    ║
+# ║  est remonté (infrastructure/coolify-restore.sh), par exemple pour un serveur de prod.     ║
+# ║  Il reste juste, mais il ne peut plus fonctionner en l'état : les conteneurs `coolify` et  ║
+# ║  `coolify-db` qu'il pilote n'existent plus. Sans ce garde-fou, il échouerait sur un        ║
+# ║  `docker cp` obscur au lieu de dire pourquoi.                                              ║
+# ║                                                                                            ║
+# ║  Pour le réutiliser après un restore : relancer coolify-restore.sh, vérifier que les 5     ║
+# ║  conteneurs Coolify tournent, puis exporter COOLIFY_DEPLOY_FORCE=1.                        ║
+# ╚════════════════════════════════════════════════════════════════════════════════════════════╝
+if [[ "${COOLIFY_DEPLOY_FORCE:-0}" != "1" ]]; then
+  if ! docker ps --format '{{.Names}}' | grep -qx coolify; then
+    echo "RESULT: failure — deploy.sh est hors service depuis la migration du 2026-09-03 (Coolify arrêté)."
+    echo "                  Utiliser : infrastructure/compose-deploy.sh $* "
+    echo "                  Pour revenir à Coolify : infrastructure/coolify-restore.sh"
+    exit 3
+  fi
+fi
+#
 # deploy.sh — Option 1 : livraison déterministe d'un projet (commit → push → rebuild Coolify → monitor)
 #
 # Conçu pour être appelé en UN SEUL appel depuis l'orchestrateur Opus, en fin de session,
