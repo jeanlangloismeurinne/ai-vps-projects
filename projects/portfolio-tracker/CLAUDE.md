@@ -266,285 +266,45 @@ Les valeurs réelles vivent dans Coolify — jamais committées.
 14. **Tables V0 renommées** : `theses` → `v0_theses`, `calendar_events` → `v0_calendar_events`. Le scheduler V0 (`_daily_check`, `_refresh_watchlist_peer_calendars`) écrit dans `v0_calendar_events`.
 15. **Permissions DB** : `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES/SEQUENCES TO portfolio_user` — actif depuis 2026-05-30. Les nouvelles tables créées par `admin` sont automatiquement accessibles.
 16. **Next.js routes imbriquées** : `pages/ticker/[ticker_id]/opportunity/[...slug].js` — `slug[0]` vaut `'new'` (création) ou l'ID numérique du brief.
-19. **Cohérence format JSON — règle des 3 points de synchronisation** : tout changement de structure de données (opportunity, thèse, thèse PE/VC) doit être répercuté simultanément sur les 3 points suivants — en omettre un crée des désynchronisations silencieuses :
-    1. **Prompt Dust** (`agent_prompts` en DB → copié dans Dust) — le schéma JSON attendu en sortie de l'agent
-    2. **Frontend** (`ThesisEditorV2.js`, `InvestmentBriefEditor.js`, pages ticker) — l'affichage et l'édition des champs
-    3. **Import JSON manuel** (`POST /tickers/{id}/theses` via `ImportLegacyBody` dans `thesis_v2.py`) — les champs acceptés à l'import
+19. **Cohérence format JSON — règle des 3 points de synchronisation** : tout changement de structure de données (opportunity, thèse, thèse PE/VC) doit être répercuté simultanément sur Prompt Dust / Frontend / Import JSON manuel — en omettre un crée des désynchronisations silencieuses. Détail + garde : `check_analysis_contract.py`, `check_decision_validate.py`, `check_exit_debate.py`, `check_monitoring_v2.py`.
 17. **Migrations non auto-appliquées** : `startup()` dans `main.py` n'exécute aucune migration — il appelle uniquement `init_pool()` et `init_redis()`. Toute nouvelle migration doit être appliquée manuellement via `docker cp` (le heredoc `psql << 'EOF'` via `docker exec` échoue silencieusement — pas d'erreur, pas de changement) :
     ```bash
     docker cp /tmp/migration.sql shared-postgres:/tmp/migration.sql
     docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/migration.sql
     ```
 18. **Architecture PE/VC (sociétés non cotées)** : `tickers.company_type = 'private'` est le discriminateur principal. Les agents Python injectent `[company_type: private]\n\n` en tête de message Dust — les prompts Dust détectent ce signal et appliquent toute la logique PE/VC (marqueurs "→ Non coté :"). Tables associées : `private_company_profiles` (stage, valuation, ARR, investors, next event) + colonnes `ownership_pct_at_entry` / `current_ownership_pct` sur `portfolio_positions`. La réponse JSON du monitoring mode 2 inclut un bloc `private_valuation_update` automatiquement parsé et appliqué à `private_company_profiles` par `monitoring_v2.py`. DataService (yfinance/FMP) est ignoré pour les tickers privés.
-20. **`pending_manual` dans monitoring_sessions** : statut ajouté en migration 020. Indique qu'une session a été planifiée par le scheduler mais non exécutée car `portfolio_settings.dust_auto_enabled = FALSE`. Différent de `blocked_sync` (agent Dust non synchronisé). L'utilisateur peut déclencher manuellement depuis la Page 5.
-21. **`hypotheses_reviewed[]` vs `hypothesis_reviews[]`** : `hypothesis_reviews[]` est la sortie brute de l'agent Dust (modes 2/3/4). `monitoring_v2.py` appelle `_normalize_monitoring_result()` qui fusionne ces reviews avec les hypothèses de la thèse pour produire `hypotheses_reviewed[]` — champ enrichi utilisé par la Page 5 (contient `text`, `weight`, `kpi_metric`, `kpi_unit`, `alert_threshold`, `invalidation_threshold`, `status`, `observation`). Toujours lire `hypotheses_reviewed[]` côté frontend, pas `hypothesis_reviews[]`.
-22. **Recherche knowledge (V2)** : `query_knowledge()` est **vectorielle** (`embedding <=> $vec::vector`, bge-m3 1024d). Le chemin texte ILIKE est un **repli strict** — jamais un co-classement. Mesuré sur corpus réel : fusionner les deux (RRF) **dégrade** le résultat (MRR 0.905 → 0.655), le signal lexical français étant trop faible. Ne pas « améliorer » en hybride sans re-mesurer. Les entrées à `embedding IS NULL` sont invisibles au vectoriel : elles sont rattrapées par une passe texte à quota réservé (`_RESCUE_QUOTA`), qui doit tourner **inconditionnellement** — la conditionner au budget restant la rend morte dès que le corpus dépasse `limit`.
-23. **pgvector et `atttypmod`** : la dimension y est stockée **telle quelle**, sans le `+4` (VARHDRSZ) des types natifs. Un `atttypmod - 4` réflexe lit `1020` pour un `vector(1024)`. Dans une migration, cette erreur fait échouer la garde d'idempotence et **efface tout le corpus d'embeddings** au rejeu. Comparer `format_type(atttypid, atttypmod)` à `'vector(N)'`.
-24. **search-worker — le modèle ne qualifie jamais sa propre source (V2)** : dans `agents/v2/worker.py`,
-    `_apply_deterministic_overrides()` recalcule en Python tout ce qui est dérivable, sur le modèle de
-    `curator._apply_deterministic_overrides`. `source_type` est déterminé par le **domaine**
-    (`classify_source_type`), pas par la déclaration de l'agent — dans les **deux sens** : la
-    sur-qualification gonfle le score (`edgar_official` sur un blog), la sous-qualification fait tomber
-    une bonne source sous le plancher `reliability_min` et creuse un **faux trou de couverture**
-    (`ir.nvidia.com` déclaré `web_search_generic`). Seul l'aveu `llm_memory` est honoré tel quel : il
-    porte sur ce que le modèle a fait, pas sur la source. `reliability_score`/`tier`/`note` viennent
-    ensuite de `compute_reliability()`, et l'`ExecutionDeclaration` (tokens/coût) est **mesurée**,
-    jamais déclarée. La validation `WorkerExchange` est un **filet** après correction, pas le mécanisme.
-25. **Un échec de recherche n'est jamais un résultat vide (V2)** : `web_search` sans clé lève
-    `SearchUnavailable` (→ HTTP 503), et `run_search_worker()` refuse de démarrer si aucun backend
-    n'est configuré. Motif : un worker sans recherche rend un `not_found` parfaitement bien formé que
-    le curator lit comme « cette information n'existe pas » alors qu'elle n'a **pas été cherchée** —
-    c'est le mode de panne qui a fait écarter SearXNG. Même règle pour `fetch_url` : une page
-    volumineuse dont on extrait < 200 caractères (SPA rendue en JS — constaté sur
-    `investor.nvidia.com` : HTTP 200, titre correct, **0 caractère**) lève une erreur explicite au lieu
-    de rendre un texte vide. Basculer Exa ↔ Serper ↔ autre = une classe dans `knowledge/websearch.py`,
-    sans toucher au `tools_json` en DB ni au prompt de l'agent.
-26. **`fetch_url` a deux chemins, et le domaine décide de ce qui vaut la peine d'être lu (V2)** :
-    récupération directe d'abord, puis repli sur `SearchBackend.fetch_contents()` (Exa `POST
-    /contents`) si l'échec est **récupérable**. 404/410 = absence réelle → aucun repli, on lève tout
-    de suite ; 401/403/429/5xx/SPA-vide/PDF = refus opposé à **cette IP** → Exa a souvent la page
-    dans son cache de crawl. Le champ `via` (`direct` | `search_backend_cache`) accompagne le retour.
-    Motif, mesuré sur NVDA le 2026-08-23 : le premier run réel a produit 5 entrées, **5 rejetées sous
-    le plancher** `reliability_min=0.60`, parce que les seules pages lisibles depuis le VPS étaient
-    des blogs (`web_search_generic` = 0.50, plafond structurellement sous le plancher). Les sources
-    qualifiantes étaient inaccessibles : CNBC (`financial_press` 0.75) en 403, `investor.nvidia.com`
-    (`company_ir_official` 0.90) en SPA vide. Exa rend 12 189 et 29 909 caractères de ces deux pages.
-    **Ne pas croire qu'un User-Agent règle le 403** : testé le 2026-08-23, bot déclaré et Chrome
-    desktop donnent des codes strictement identiques (CNBC 403, Reuters 401, SeekingAlpha 403,
-    MarketWatch 401) — le filtrage est sur la réputation d'IP, pas sur l'en-tête.
-27. **On ne tronque pas un document, on y cherche (V2)** : `fetch_url` récupère la page ENTIÈRE
-    (`_RETRIEVAL_MAX_CHARS` = 400 000) puis `document_search.select_relevant()` n'en rend que les
-    passages qui répondent à la question du mandat, recomposés **dans l'ordre du document** avec des
-    marqueurs `[… N caractères omis …]`. Motif mesuré le 2026-08-23 : dans le 10-K NVDA FY2026
-    (356 990 car.), la concentration client est à **37,6 %** du texte — le plafond de 20 000 en
-    captait 5,5 %, soit la page de garde et le sommaire, et Exa `/contents` tronquait en tête lui
-    aussi. Aucun des deux chemins n'atteignait le corps du dépôt. Le même défaut existe sur un
-    article de presse : dans le comparatif CNBC de 12 189 car., « Maia » est à 71,5 % — **il n'existe
-    pas de taille de troncature défendable a priori**, elle dépend du genre du document. Après
-    sélection : 356 990 → 19 275 car. (17 passages sur 387), et l'article CNBC passe entier
-    (`mode: whole`, aucune coupure). Le mode est **toujours déclaré** dans `extract.mode`
-    (`whole` | `relevance` | `lexical` | `head`) et une phrase l'explicite au modèle : un extrait doit
-    se lire comme un extrait, sans quoi il conclut « le 10-K ne mentionne pas X » là où c'est la
-    sélection qui a coupé. `document_search` ne connaît ni URL ni HTTP (texte + question seulement) :
-    il sert aussi les **documents uploadés à la main**, seul canal pour les sociétés non cotées.
-28. **La provenance est vérifiée, pas déclarée (V2)** : `RetrievalLog` journalise ce que les outils
-    ont réellement rapporté (`full` = `fetch_url` abouti, `excerpt` = texte d'un résultat de
-    recherche, `link` = URL vue sans contenu), et `_verify_provenance()` y confronte chaque
-    `source_url` avant scoring. Jamais rapportée ou simple lien → **rétrogradée en `llm_memory`**
-    (0.40, revue humaine) ; extrait seul → score du domaine conservé mais revue humaine exigée.
-    Motif : la convention #24 retire au modèle le choix de son `source_type`, mais **pas celui de son
-    URL** — or l'URL fixe le domaine, donc le source_type, donc le score. Le contournement était
-    total et involontaire : run C sur NVDA (2026-08-23), 5 entrées `edgar_official` **0.94 tier A**
-    pointant sec.gov, alors qu'aucune URL sec.gov n'avait jamais été récupérée de toute la vie du
-    conteneur. Corollaire, **une entrée = un document** : une entry citant plusieurs dépôts
-    (`_cited_documents` : 10-K, 10-Q, 8-K, 20-F, DEF 14A…) sous un seul `source_url` attribue à l'un
-    les propos de l'autre — elle entre (la base est append-only, G3 interdit de réécrire son contenu)
-    mais marquée `requires_human_review` avec le motif dans `reliability_note`.
-29. **La couverture se LIT dans un index, elle ne se demande pas au modèle (V2, migration 029)** :
-    `curator.recompute_coverage` interroge `knowledge_entries.covers` (`TEXT[]`, chemins COMPLETS
-    `dimension.champ`) — pour chaque champ requis, ∃ une entry courante qui le porte à un tier ≥
-    plancher. Le LLM ne produit plus que le narratif (`rationale`, `gaps`, incertitudes) ;
-    `fondations` est RÉÉCRIT depuis l'index. Motif : la version précédente filtrait les `entry_ids`
-    que le LLM avait CITÉS — un véto sur la citation, pas un index. Elle fermait le sur-crédit (entry
-    hors-sujet) mais pas le sous-crédit : une entry adéquate non citée creusait un **faux creux**, et
-    le rattachement par-champ n'étant pas déterministe, le verdict oscillait `not_ready` ↔
-    `thin_qualitative` **à corpus strictement figé** (NVDA, rapports #11/#13/#14, données
-    identiques). Trois corollaires : (a) le chemin est COMPLET parce que `description` est requis par
-    `business_model` ET `produits` — un nom nu ferait passer l'autre ; (b) poser un tag, c'est voter
-    sur le verdict, donc `covers` n'est écrit que par des chemins déterministes (feeds, `field_path`
-    du mandat du worker, backfill relu en migration) et la déclaration spontanée d'un modèle est
-    filtrée par le vocabulaire fermé `MVDD_FIELD_PATHS` (même esprit que #24) ; (c) `champs_requis`
-    et `tier_plancher` étant le dernier levier du modèle sur le verdict, `_exigences()` lui laisse
-    les RESSERRER (ajouter un champ, relever un plancher) mais jamais les desserrer. Une entry non
-    taguée ne fonde plus rien — elle reste dans le corpus narratif et le context_pack.
+20. **`pending_manual` dans monitoring_sessions** : statut ajouté en migration 020, distinct de `blocked_sync`. Détail + garde : `check_monitoring_v2.py` §8.
+21. ⚠️ **Non couvert par check — vigilance manuelle.** **`hypotheses_reviewed[]` vs `hypothesis_reviews[]`** : `hypothesis_reviews[]` est la sortie brute de l'agent Dust (modes 2/3/4). `monitoring_v2.py` appelle `_normalize_monitoring_result()` qui fusionne ces reviews avec les hypothèses de la thèse pour produire `hypotheses_reviewed[]` — champ enrichi utilisé par la Page 5 (contient `text`, `weight`, `kpi_metric`, `kpi_unit`, `alert_threshold`, `invalidation_threshold`, `status`, `observation`). Toujours lire `hypotheses_reviewed[]` côté frontend, pas `hypothesis_reviews[]`.
+22. ⚠️ **Non couvert par check — vigilance manuelle.** **Recherche knowledge (V2)** : `query_knowledge()` est **vectorielle** (`embedding <=> $vec::vector`, bge-m3 1024d). Le chemin texte ILIKE est un **repli strict** — jamais un co-classement. Mesuré sur corpus réel : fusionner les deux (RRF) **dégrade** le résultat (MRR 0.905 → 0.655), le signal lexical français étant trop faible. Ne pas « améliorer » en hybride sans re-mesurer. Les entrées à `embedding IS NULL` sont invisibles au vectoriel : elles sont rattrapées par une passe texte à quota réservé (`_RESCUE_QUOTA`), qui doit tourner **inconditionnellement** — la conditionner au budget restant la rend morte dès que le corpus dépasse `limit`.
+23. ⚠️ **Non couvert par check — vigilance manuelle.** **pgvector et `atttypmod`** : la dimension y est stockée **telle quelle**, sans le `+4` (VARHDRSZ) des types natifs. Un `atttypmod - 4` réflexe lit `1020` pour un `vector(1024)`. Dans une migration, cette erreur fait échouer la garde d'idempotence et **efface tout le corpus d'embeddings** au rejeu. Comparer `format_type(atttypid, atttypmod)` à `'vector(N)'`.
+24. **search-worker — le modèle ne qualifie jamais sa propre source (V2)** : `source_type` est déterminé par le **domaine** (`classify_source_type`), jamais par la déclaration de l'agent — la sur-qualification gonfle le score, la sous-qualification creuse un **faux trou de couverture**. Détail + garde : `check_search_worker.py`, `check_readiness_recompute.py`, `check_synthesis_feed.py`, `check_exit_debate.py`, `check_monitoring_v2.py`.
+25. **Un échec de recherche n'est jamais un résultat vide (V2)** : `web_search` sans clé lève `SearchUnavailable` (503) plutôt qu'un `not_found` fabriqué — un worker sans recherche ne doit jamais ressembler à une recherche qui n'a rien trouvé. Même règle pour `fetch_url` (page vide/SPA). Détail + garde : `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_fetch_live.py`.
+26. **`fetch_url` a deux chemins, et le domaine décide de ce qui vaut la peine d'être lu (V2)** : récupération directe d'abord, puis repli `SearchBackend.fetch_contents()` si l'échec est **récupérable** (401/403/429/5xx/SPA-vide) ; 404/410 = absence réelle, aucun repli. Champ `via` (`direct` | `search_backend_cache`) sur le retour. Détail + garde : `check_fetch_live.py`, `check_fetch_relevance.py`.
+27. **On ne tronque pas un document, on y cherche (V2)** : `fetch_url` récupère la page ENTIÈRE puis `document_search.select_relevant()` n'en rend que les passages pertinents à la question du mandat — pas de taille de troncature défendable a priori, ça dépend du genre du document. Mode toujours déclaré (`whole`|`relevance`|`lexical`|`head`). Détail + garde : `check_provenance.py`.
+28. **La provenance est vérifiée, pas déclarée (V2)** : `RetrievalLog` journalise ce que les outils ont réellement rapporté, et `_verify_provenance()` y confronte chaque `source_url` avant scoring — jamais rapportée ou simple lien → rétrogradée `llm_memory`. Corollaire : une entrée = un document (une entry citant plusieurs dépôts sous un seul `source_url` est marquée `requires_human_review`). Détail + garde : `check_synthesis_feed.py`, `check_provenance.py`.
+29. **La couverture se LIT dans un index, elle ne se demande pas au modèle (V2, migration 029)** : `curator.recompute_coverage` interroge `knowledge_entries.covers` pour chaque champ requis — le LLM ne produit plus que le narratif, `fondations` est RÉÉCRIT depuis l'index (un véto sur citation laissait passer un faux creux). `champs_requis`/`tier_plancher` : le modèle peut RESSERRER, jamais desserrer. Détail + garde : `check_readiness_recompute.py` §13, `check_synthesis_feed.py` §7.
 
-30. **Le concept XBRL se choisit par FRAÎCHEUR, jamais par convention (V2, `knowledge/edgar_feed.py`)** :
-    un concept us-gaap répond `200` avec un historique qui s'est **arrêté il y a quinze ans** — la
-    requête réussit, la donnée est périmée, et rien ne le signale. Mesuré : `Revenues` pour MSFT a
-    pour dernier point **2010-06-30** quand `RevenueFromContractWithCustomerExcludingAssessedTax`
-    va jusqu'à 2026-06-30 ; `PaymentsToAcquirePropertyPlantAndEquipment` s'arrête en **2012-01-29**
-    pour NVDA quand `PaymentsToAcquireProductiveAssets` est à jour. Le « piège capex NVDA » qui
-    était documenté comme un cas particulier était en fait cette règle générale. Donc : chaque poste
-    porte une LISTE de concepts candidats et `select_concept()` retient celui dont le point est le
-    plus proche de l'ancre du bilan — « le premier tag qui répond » est un bug silencieux. Corollaire
-    d'amorçage : `resolve_cik()` (registre `company_tickers.json` de la SEC) rend le socle EDGAR
-    atteignable pour **tout** ticker, là où `financials` n'était fondable que via le seed NVDA écrit
-    à la main. Les faits EDGAR bruts ne sont délibérément PAS tagués `covers` : ce sont les intrants
-    des ratios, pas les champs MVDD eux-mêmes (cf. #29).
+30. **Le concept XBRL se choisit par FRAÎCHEUR, jamais par convention (V2, `knowledge/edgar_feed.py`)** : un concept us-gaap peut répondre `200` avec un historique arrêté depuis 15 ans sans rien signaler — `select_concept()` retient le point le plus proche de l'ancre du bilan parmi une LISTE de concepts candidats, jamais « le premier qui répond ». Détail + garde : `check_edgar_feed.py`.
 
-31. **Ce qui décrit UN émetteur ne vit jamais dans une constante globale (V2)** : trouvé en exerçant
-    la chaîne sur un 2ᵉ ticker (MSFT, 2026-08-30) — deux mécanismes se croyaient génériques alors que
-    seule leur *mécanique* l'était. (a) `curator.DECLARED_NONBLOCKING_GAPS` dispensait
-    `business_model.recurrence_pct` pour *tout* ticker au motif que « NVIDIA est un business
-    hardware-dominant » : MSFT héritait donc en silence d'un passe-droit sur un champ qu'il publie
-    précisément (Microsoft Cloud, RPO), le champ n'était **ni fondé ni compté comme manque**, et le
-    libellé parlant de NVIDIA partait dans les `incertitudes_investissables` de MSFT. (b) Les
-    `SYNTHESIS_TARGETS` annonçaient « génériques par construction » avec des `query`/`guidance`
-    rédigées pour NVIDIA (« segments Data Center Gaming », « coût par GPU », « écosystème CUDA »,
-    « TSMC/HBM ») : sur un autre émetteur, la requête sémantique cherchait le mauvais vocabulaire et
-    la consigne demandait de synthétiser une entreprise qui n'est pas celle analysée — dans le seul
-    agent dont toute la valeur est de ne pas sortir de son corpus. Règle : une dispense se clef sur
-    l'émetteur (`nonblocking_gaps_for(ticker_id)`, défaut = **aucune**, donc le champ BLOQUE — on
-    refuse un `ready` de trop, on n'en accorde pas un par héritage) ; un descripteur de champ est un
-    gabarit paramétré par `{company}` et ne nomme aucun acteur, l'émetteur venant des entries citées.
-    Test de non-régression dans `check_readiness_recompute.py` §13 et `check_synthesis_feed.py` §7.
-    Plus largement : **une constante globale qui contient un fait sur un émetteur est un bug qui
-    attend le 2ᵉ ticker.**
+31. **Ce qui décrit UN émetteur ne vit jamais dans une constante globale (V2)** : trouvé sur un 2ᵉ ticker (MSFT) — dispenses et gabarits de synthèse rédigés pour NVIDIA s'appliquaient en silence à tout émetteur. Règle : une dispense se clef sur `ticker_id` (défaut = aucune, le champ BLOQUE) ; un descripteur de champ est un gabarit paramétré, jamais un texte nommant un acteur. Détail + garde : `check_readiness_recompute.py` §13, `check_synthesis_feed.py` §7, `check_search_worker.py`.
 
-32. **Un plancher qu'aucun domaine ne peut atteindre est un champ infondable déguisé en lacune (V2)** :
-    `marche.croissance_marche_historique` avait DEUX aménagements construits pour lui —
-    `FIELD_PLANCHER_OVERRIDES` abaissant son plancher à `B` (une taille de marché n'est jamais une
-    donnée d'émetteur) et une dispense `DECLARED_NONBLOCKING_GAPS` sur NVDA. Aucun des deux ne pouvait
-    marcher : les cabinets qui produisent ces chiffres (Synergy, Canalys, Omdia, Gartner, IDC)
-    tombaient tous dans `web_search_generic` (C+/0.50), donc **sous** le plancher B (0.65) qu'on venait
-    d'abaisser pour eux. Mesuré sur MSFT le 2026-08-30 : deux mandats, 35 puis 15 URL rapportées,
-    recherche réelle, provenance vérifiée, `sous-plancher:5` puis `sous-plancher:3` — et un `not_found`
-    que le curator lit comme « ce chiffre n'existe pas » alors qu'il avait été trouvé cinq fois.
-    Le trou se bouche dans la **table de domaines** (`websearch._REPUTABLE_SUFFIXES`, plafond B : un
-    organisme qui publie SES PROPRES chiffres est primaire pour ce chiffre-là sans être une source
-    d'émetteur ni de presse), pas par une dispense de plus. Corollaire de méthode : quand on abaisse un
-    plancher, **vérifier dans la foulée qu'au moins un `source_type` l'atteint** — deux garde-fous
-    réglés séparément peuvent rendre un champ inatteignable, et l'échec se présente alors comme une
-    absence de donnée. Test : `check_provenance.py` §8, qui confronte la table de domaines au plancher
-    effectif du champ au lieu de les tester chacun de son côté.
+32. **Un plancher qu'aucun domaine ne peut atteindre est un champ infondable déguisé en lacune (V2)** : abaisser un plancher pour un champ ne sert à rien si aucun `source_type` réel ne l'atteint — le trou se bouche dans la **table de domaines**, pas par une dispense de plus. Détail + garde : `check_provenance.py` §8.
 
-33. **Le site d'un émetteur se reconnaît PAR ÉMETTEUR, et sur deux niveaux (V2, 2026-08-31)** :
-    application directe de #31, trouvée là où elle était annoncée. `nvidia.com` vivait en dur dans
-    `websearch._REPUTABLE_SUFFIXES` et Microsoft n'avait rien, si bien que
-    `microsoft.com/en-us/investor/…` — de l'IR officiel — était classé `web_search_generic` (0.50),
-    **sous le plancher `reliability_min=0.60`** : l'entry était rejetée et le champ paraissait
-    infondable alors que la source était la meilleure possible. Cause : Microsoft publie son IR sur
-    un **chemin**, pas sur un sous-domaine `ir.`, que `_IR_HOST_PATTERN` était seul à savoir lire.
-    Donc `classify_source_type(url, ticker_id)` et un registre `issuer_domains_for(ticker_id)`
-    (défaut **vide** — aucune promotion par héritage, comme `nonblocking_gaps_for`), à **deux
-    niveaux** : domaine de l'émetteur **+ chemin IR** → `company_ir_official` (0.90) ; domaine de
-    l'émetteur **hors** section IR (page produit, salle de presse) → `web_search_reputable` (B, le
-    plafond qu'avait `nvidia.com`, rendu au seul NVDA). Le niveau bas existe parce qu'une page
-    marketing n'est pas de l'information réglementée ; le registre parce que `microsoft.com` n'est un
-    site d'émetteur **que d'une analyse MSFT** — sur une analyse NVDA, c'est le site d'un concurrent.
-    **Corollaire de méthode, le plus transposable** : quand on ajoute une règle spécifique, on ne
-    resserre PAS la règle générique au passage. `_IR_HOST_PATTERN` reste volontairement générique —
-    le restreindre au registre ferait tomber `ir.<concurrent>.com` de 0.90 à 0.50 sur toute analyse,
-    soit un faux trou de couverture creusé par le correctif censé en boucher un (#32). Le changement
-    ne peut donc que promouvoir, jamais démoter, hormis le retrait délibéré de `nvidia.com` du global.
-    **Pourquoi un registre écrit à la main** : EDGAR `submissions` expose `website` et
-    `investorWebsite`, mais les deux sont **vides** — vérifié sur NVDA, AAPL, MSFT, GOOGL, AMZN,
-    cinq fois la chaîne vide. Deviner le domaine depuis la raison sociale promouvrait un homonyme à
-    0.90, soit la sur-qualification que #24 retire au modèle. ⚠️ **Ajouter l'entrée du registre en
-    même temps que le ticker.** Enfin, `ticker_id` est **fermé dans `build_tool_executors`** au même
-    titre que `query` et `log` : il décide du score, donc il ne peut pas être un argument du modèle
-    (#28). Tests : `check_search_worker.py` §1bis (la table) et **§2bis (le câblage** — une table
-    juste ne sert à rien si le ticker n'arrive pas jusqu'à l'appel, et c'est le seul défaut que
-    §1bis ne peut pas voir).
+33. **Le site d'un émetteur se reconnaît PAR ÉMETTEUR, et sur deux niveaux (V2)** : application de #31 — `nvidia.com` en dur dans la table globale, Microsoft n'avait rien, donc son IR officiel tombait sous le plancher. Registre `issuer_domains_for(ticker_id)` (défaut vide) à deux niveaux : domaine+chemin IR → `company_ir_official` ; domaine hors IR → `web_search_reputable`. Une règle spécifique ne resserre jamais la règle générique au passage. Détail + garde : `check_search_worker.py` §1bis/§2bis.
 
-34. **Les jugements sont disjoints, les faits du monde sont PARTAGÉS (V2, migration 030)** : la règle
-    qui tranche « nouvelle table ou colonnes en plus ? » quand deux flux cohabitent. Un **jugement**
-    (`theses` | `theses_v2`) est l'opinion d'un flux : le dupliquer est sain, chaque flux a la
-    sienne. Un **fait du monde** (`tickers`, `portfolio_positions`, `cash_movements`,
-    `calendar_events`) décrit ce qui s'est réellement passé : le dupliquer donnerait **deux soldes de
-    trésorerie sur de l'argent réel**. Donc table séparée pour le jugement, **colonne discriminante**
-    (`thesis_v2_id`, sœur nullable de `thesis_id`) + CHECK d'exclusivité pour le fait. Corollaire à ne
-    pas rater : le CHECK d'exclusivité est **par ligne**, pas par ticker — un même titre peut porter
-    une position V1 **et** une position V2, et toute vue qui agrège sans filtrer le flux double-compte
-    (constaté sur MSFT : `portfolio_v2.py` lit toutes les positions ouvertes, la page V1 affiche donc
-    la position V2). ⚠️ **Le partage crée une obligation de filtrage dans les DEUX sens** :
-    `_daily_check_v1` faisait un `LEFT JOIN theses … AND th.status='active'` — un LEFT JOIN **rend la
-    ligne même sans thèse jointe** — sans aucun garde `thesis_json IS NULL` en aval : le scheduler V1
-    aurait appelé l'**agent Dust V1 sur une thèse inexistante**, silencieusement et avec dépense
-    réelle. Vérifier le JOIN, ne pas le supposer : `AND ce.thesis_v2_id IS NULL` sur les 4 requêtes.
+34. **Les jugements sont disjoints, les faits du monde sont PARTAGÉS (V2, migration 030)** : un **jugement** (`theses`|`theses_v2`) se duplique sainement par flux ; un **fait du monde** (positions, cash, calendrier) ne se duplique jamais — colonne discriminante + CHECK d'exclusivité **par ligne**. Le partage crée une obligation de filtrage dans les DEUX sens (un LEFT JOIN sans garde peut appeler un agent sur une thèse inexistante). Détail + garde : `check_monitoring_v2.py`.
 
-35. **`get_db_session()` n'ouvre AUCUNE transaction** : il *acquiert* une connexion du pool
-    (`async with _pool.acquire() as conn: yield conn`) et chaque `execute` part en **autocommit**. La
-    validation V1 documentée « 4 écritures atomiques » (convention #13) **ne l'est donc pas** : une
-    panne au milieu laisse une thèse `active` sans position, ou une position sans mouvement de
-    trésorerie. L'atomicité doit être **explicite** — `async with conn.transaction():` — comme le fait
-    `agents/v2/decision.py`. Corollaire : les appels réseau (FX, calendrier) se font **avant**
-    l'ouverture de la transaction, on ne tient pas de verrou pendant un aller-retour yfinance. V1 est
-    délibérément laissée telle quelle (hors périmètre, risque de régression) : ne pas lire #13 comme
-    une garantie.
+35. ⚠️ **Non couvert par check — vigilance manuelle.** **`get_db_session()` n'ouvre AUCUNE transaction** : il *acquiert* une connexion du pool et chaque `execute` part en **autocommit**. La validation V1 documentée « 4 écritures atomiques » (convention #13) **ne l'est donc pas** : une panne au milieu laisse une thèse `active` sans position, ou une position sans mouvement de trésorerie. L'atomicité doit être **explicite** — `async with conn.transaction():` — comme le fait `agents/v2/decision.py`. Corollaire : les appels réseau (FX, calendrier) se font **avant** l'ouverture de la transaction. V1 est délibérément laissée telle quelle (hors périmètre, risque de régression) : ne pas lire #13 comme une garantie.
 
-36. **Un contrat de décision ne vaut que par ce que le corps HTTP n'expose PAS (V2, G2)** : le
-    `ValidateV2Body` du validate V2 n'accepte que les **acquittements** (`risk_acks`,
-    `pre_mortem_acked`) et les **faits d'exécution** (titres, prix, date). `verdict`,
-    `position_sizing_pct`, `conditions_entree`, `hypotheses`, `valuation_range` et la synthèse sont
-    **lus en base** : les accepter du client rendrait les 17 garde-fous décoratifs — il suffirait
-    d'envoyer une synthèse complaisante pour valider n'importe quoi. `risk_matrix_acked` est
-    **dérivé** (la bijection `risk_acks` ↔ `risques_acceptes` vaut acquittement), jamais demandé :
-    on ne fait pas déclarer ce qui est calculable (même esprit que #24). Un sizing autre que le
-    recommandé n'est **pas** un paramètre du validate — il se trace en amont dans la synthèse
-    (`position_sizing.override_utilisateur`, A7), ce qui le rend auditable au lieu d'être un argument
-    qu'on passe en douce. La `valuation_range` est **dérivée** du research memo (`iv_range` +
-    `dcf_scenarios.base`) et jamais reconstituée par moyenne des bornes : ce serait inventer une
-    donnée que l'analyse n'a pas produite. Test : `check_decision_validate.py` **§8**, qui inspecte
-    `model_fields` — la seule vérification qui tienne, parce qu'un commentaire ne contraint rien.
+36. **Un contrat de décision ne vaut que par ce que le corps HTTP n'expose PAS (V2, G2)** : `ValidateV2Body` n'accepte que les **acquittements** et les **faits d'exécution** — `verdict`, `position_sizing_pct`, `conditions_entree`, `hypotheses`, `valuation_range` sont **lus en base**, jamais acceptés du client (sinon les garde-fous deviennent décoratifs). Champs dérivés (`risk_matrix_acked`, `valuation_range`) jamais redemandés. Détail + garde : `check_decision_validate.py` §8 (`model_fields`).
 
-37. **Un contrat valide un objet, JAMAIS la cohérence entre deux (V2, lot 8)** : c'est la limite
-    structurelle de Pydantic, et elle est invisible depuis le schéma — d'où un garde-fou qui paraît
-    tenir alors qu'il est contournable. Mesuré : `Mode2QuarterlyReview` **accepte parfaitement** une
-    escalade motivée par une hypothèse **`H7` qui n'existe pas dans la thèse**. Contrat satisfait,
-    `extra='forbid'` satisfait — et pourtant l'**anti-churn est mort**, puisqu'il dit « n'escalader
-    que sur un seuil PRÉ-ENREGISTRÉ » et que rien, dans le schéma, ne relie la sortie du modèle à la
-    liste figée au validate. Un invariant qui porte sur une **relation** entre deux objets se vérifie
-    donc en code, jamais dans le contrat : `_valider_pont_hypotheses` fait trois vérifications
-    distinctes — **référentiel** (ids cités ⊆ ids figés, tous modes citant des hypothèses),
-    **exhaustivité** (ids figés ⊆ ids cités, **mode 6 seul**), **citations** (tout `entry_id` cité
-    appartient aux entries réellement envoyées). L'asymétrie est délibérée : le référentiel protège
-    tous les modes, l'exhaustivité n'est exigée que là où la carte figée la demande. Refus →
-    `MonitoringRefused` → **HTTP 422** (la requête est valide, c'est la *sortie du modèle* qui est
-    incohérente ; un 400 accuserait l'appelant) + session `failed` persistée, pour qu'un refus reste
-    visible au lieu de disparaître. **Corollaire, le plus important** : les seuils figés sont en
-    **lecture seule**. `_reporter_statuts` fusionne **par id** et n'écrit que `statut`,
-    `derniere_revue`, `derniere_observation` — `seuil_alerte`, `seuil_invalidation`, `base_rate`,
-    `source_entry_refs` ne sont jamais repris du modèle, sinon une revue pourrait **abaisser le seuil
-    qu'elle vient de franchir**. Vérifié en réel : le modèle a rendu `seuil_invalidation: 5.0` là où
-    la thèse portait `25.0` ; c'est `25.0` qui est resté. Test : `check_monitoring_v2.py` **§3**, qui
-    prouve les **deux moitiés** — le contrat accepte le `H7`, le pont le refuse. Une vérification qui
-    ne montrerait que le refus ne prouverait pas que le trou existait.
+37. **Un contrat valide un objet, JAMAIS la cohérence entre deux (V2, lot 8)** : limite structurelle de Pydantic — `Mode2QuarterlyReview` accepte parfaitement une escalade sur une hypothèse `H7` inexistante dans la thèse, contrat satisfait mais anti-churn mort. Un invariant **relationnel** se vérifie en code (`_valider_pont_hypotheses` : référentiel/exhaustivité/citations), jamais dans le schéma. Seuils figés en **lecture seule** — une revue ne peut jamais abaisser le seuil qu'elle vient de franchir. Détail + garde : `check_monitoring_v2.py` §3.
 
-38. **Le rattrapage d'une échéance dépend de ce qu'elle commente, pas d'une règle uniforme (V2)** :
-    dans `EventRouterV2`, seul le **mode 6** se rattrape (`scheduled_date <= today`) ; les modes
-    calendaires restent sur une date **exacte**. Un brief J-2 ou une revue J+1 joués trois semaines
-    plus tard commentent une publication déjà digérée — les rejouer coûte un appel modèle pour
-    produire un commentaire périmé. Une revue **annuelle** en retard est au contraire **plus** urgente,
-    pas moins : c'est la colonne vertébrale du suivi LT, et une journée d'indisponibilité du scheduler
-    ne doit pas coûter une année de surveillance. Corollaire côté dépense : à `v2_auto_enabled=FALSE`
-    l'échéance n'est **pas perdue** — session `pending_manual` persistée **avec son contexte exact**
-    (`build_monitoring_context`) + notification. Et le drapeau calendaire est **consommé** dans le même
-    temps, sinon le routeur recréerait la même attente chaque jour. En revanche un **échec** ne
-    consomme rien : `_persister_echec` ne marque pas l'événement.
+38. **Le rattrapage d'une échéance dépend de ce qu'elle commente, pas d'une règle uniforme (V2)** : dans `EventRouterV2`, seul le **mode 6** se rattrape (`scheduled_date <= today`) ; les modes calendaires restent sur une date **exacte** (rejouer un brief périmé ne sert à rien, une revue annuelle en retard est au contraire plus urgente). À `v2_auto_enabled=FALSE`, session `pending_manual` persistée avec contexte exact, jamais perdue ; un **échec** en revanche ne consomme rien. Détail + garde : `check_monitoring_v2.py` §8.
 
-39. **L'EXEMPLE JSON d'un prompt est une pièce du contrat, et la DB est le 3ᵉ point de synchro (V2,
-    migration 033)** : la règle #19 est habituellement lue comme « prompt ↔ frontend ↔ import ». Le lot 9
-    a montré qu'elle mord aussi **à l'intérieur** du prompt. Le corps de `60-debate-agent.md` montrait
-    `"franchi": false` (booléen), `"observation_courante"` et **aucun `valeur_observee"`** : cet exemple
-    datait d'avant le figeage du Pydantic `ConvictionChallenge`, écrit seulement au lot 9. Le modèle a
-    fait ce qu'on lui demandait — il a recopié l'exemple — et les 3 hypothèses sont parties en
-    `seuil_franchi=True/False`, 2 tentatives refusées, HTTP 502 au **premier appel réel** du lot.
-    **Le 502 n'était pas le problème** : il est bruyant, donc bénin. Le problème est ce qu'il masquait.
-    `_forcer_seuils_figes` ne redérive `seuil_franchi` que si `valeur_observee is not None` ; un prompt
-    qui n'enseigne jamais ce champ aurait rendu la dérivation **no-op silencieuse** et tué le garde-fou
-    central du lot (seuils figés en lecture seule, franchissement recalculé) — **invisible à toutes les
-    vérifications hors ligne**, puisqu'elles alimentent les ponts avec des fixtures déjà conformes. Un
-    check hors ligne prouve qu'une fonction refuse ce qu'on lui donne ; il ne prouve jamais que le
-    modèle produira de quoi la déclencher. Corollaires : (a) tout figeage de contrat Pydantic se
-    répercute le jour même dans l'exemple du prompt **et** dans `agent_prompts` (migration générée par
-    `_gen_prompt_refresh_*.py`, jamais un UPDATE écrit à la main — le `prompt_text` en DB doit être
-    l'assemblage exact « préambule + corps » du commit) ; (b) quand un champ dérivé conditionne son
-    calcul à la présence d'un champ du modèle, le prompt doit dire que ce champ est **obligatoire ET
-    réécrit ensuite**, pour que sous-déclarer n'achète rien ; (c) conformément à la règle
-    « desserrage de schéma = trou silencieux », on **durcit le prompt**, on ne desserre pas le contrat.
+39. **L'EXEMPLE JSON d'un prompt est une pièce du contrat, et la DB est le 3ᵉ point de synchro (V2, migration 033)** : la règle #19 mord aussi à l'intérieur du prompt — un exemple JSON périmé dans `agent_prompts` fait recopier au modèle un format obsolète, ce qui peut rendre une dérivation en aval **no-op silencieuse**, invisible à tout check hors ligne (les fixtures sont déjà conformes). Tout figeage de contrat Pydantic se répercute le jour même dans l'exemple du prompt et en DB. Détail + garde : `check_fstring_sql.py`.
 
-40. **Une pré-condition d'ÉTAT se refuse avant l'appel, pas dans le pont (V2, lot 9)** : `_verifier_etat`
-    porte la consigne « pré-conditions d'état, AVANT toute dépense de tokens » — et la condition
-    « position réellement soldée » ne vivait pourtant que dans `_valider_pont_postmortem`, donc **après**
-    l'appel. Mesuré au dry-run : le modèle avait déjà rendu `duree_jours` et `performance_pct` (les
-    WARNING d'écrasement sont dans les logs) quand le refus est tombé. On payait un appel complet pour
-    apprendre ce qu'on savait avant de le passer. Le partage : un **pont** juge la sortie du modèle
-    (→ `ExitRefused`/**422**) ; un **état** dit que la question n'avait pas lieu d'être posée
-    (→ `ThesisNotExitable`/**409**), se lit dans `inputs`, et ne laisse pas de ligne `failed` — au même
-    titre que ses frères (thèse non active, plan déjà ouvert, bilan déjà établi). Le pont garde la
-    vérification en défense en profondeur, mais il n'en est plus le seul porteur. Ce défaut n'était
-    visible que d'un run réel : hors ligne, chaque fonction était juste **prise séparément**.
+40. **Une pré-condition d'ÉTAT se refuse avant l'appel, pas dans le pont (V2, lot 9)** : `_verifier_etat` doit refuser AVANT toute dépense de tokens — une condition d'état vivant seulement dans le pont (après l'appel) fait payer un appel modèle complet pour apprendre ce qu'on savait déjà. Un **pont** juge la sortie du modèle (→ 422) ; un **état** dit que la question n'avait pas lieu d'être posée (→ 409), sans ligne `failed`. Détail + garde : `check_exit_debate.py`.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
