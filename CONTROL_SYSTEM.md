@@ -192,6 +192,19 @@ son travail** (compile / tests / run) avant de rendre la main, puis renvoie **ex
 Ce que ça attrape : ✅ contre-sens / dérive de spec (points 1 et 5). ❌ bugs de correctness — le
 filet reste le point 4 ; s'il est absent ou faible, Opus lit le code de l'item.
 
+**Un sous-agent ne négocie jamais de permissions.** Le travail à privilège (déploiement, base,
+secrets) reste chez l'orchestrateur **dès la répartition** — ne pas déléguer une tâche qui
+nécessiterait des permissions élargies pour voir le worker se faire bloquer par le bac à sable
+et répondre avec un `settings.json` à approuver. Si un item délégué se heurte à ce mur, c'est
+qu'il n'était pas délégable : Opus le reprend.
+
+**Les sous-agents écrivent, l'orchestrateur vérifie mécaniquement — jamais sur la seule foi du
+compte-rendu.** Un rapport « vérifié, `node --check` OK » peut être de bonne foi et ne rien
+prouver (`node --check` est un no-op sur du JSX avec `import` : Node bascule en analyse ESM et
+rend 0 sans avoir rien exécuté). Le point 4 du compte-rendu n'est un filet que si la commande
+qu'il décrit exécute vraiment le code changé — pas seulement une commande qui termine avec un
+exit 0 sans le toucher.
+
 ---
 
 ## Format du chantier (doc vivant) — `roadmap/{nom}.md`

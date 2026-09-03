@@ -11,10 +11,12 @@
 # Usage :
 #   infrastructure/deploy.sh <app> -m "<message de commit>" -f "chemin1 chemin2 ..." [-e KEY=VALUE ...]
 #   infrastructure/deploy.sh <app> -m "<message>" --staged           # commite l'index déjà en place
+#   infrastructure/deploy.sh <app> --rebuild-only [-e KEY=VALUE ...]  # rebuild du commit déjà poussé, sans committer
 #
 #   <app>  : clé connue (voir UUID_MAP ci-dessous), ex. bank-review, portfolio-backend
 #   -f     : fichiers à stager (relatifs à la racine du repo). Le script commite l'index SEUL.
 #   --staged : ne stage rien, commite ce qui est déjà stagé (l'appelant a fait git add).
+#   --rebuild-only : saute staging/commit/push, va droit au rebuild du HEAD actuel (déjà poussé).
 #   -e     : variable d'env Coolify à écrire AVANT le rebuild (répétable). Écriture AUTOMATIQUE.
 #            La valeur n'est jamais affichée (secret-safe) ; seule la clé est loggée.
 #
@@ -47,13 +49,14 @@ fail() { echo "RESULT: failure — $2"; exit "$1"; }
 # ---- parse args ---------------------------------------------------------------
 [[ $# -ge 1 ]] || fail 3 "app manquante (usage: deploy.sh <app> -m ... -f ...)"
 APP="$1"; shift
-MSG=""; FILES=""; STAGED=0; ENVS=()
+MSG=""; FILES=""; STAGED=0; REBUILD_ONLY=0; ENVS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -m) MSG="${2:-}"; shift 2 ;;
     -f) FILES="${2:-}"; shift 2 ;;
     --staged) STAGED=1; shift ;;
+    --rebuild-only) REBUILD_ONLY=1; shift ;;
     -e) ENVS+=("${2:-}"); shift 2 ;;
     *) fail 3 "argument inconnu: $1" ;;
   esac
@@ -61,34 +64,39 @@ done
 
 UUID="${UUID_MAP[$APP]:-}"
 [[ -n "$UUID" ]] || fail 3 "app inconnue: '$APP' (clés: ${!UUID_MAP[*]})"
-[[ -n "$MSG" ]] || fail 2 "message de commit manquant (-m)"
+[[ "$REBUILD_ONLY" -eq 1 || -n "$MSG" ]] || fail 2 "message de commit manquant (-m)"
 
 cd "$REPO"
 
-# ---- 1. staging + commit (index seul) ----------------------------------------
-if [[ "$STAGED" -eq 0 ]]; then
-  [[ -n "$FILES" ]] || fail 2 "aucun fichier fourni (-f) et pas de --staged"
-  # shellcheck disable=SC2086
-  git add -- $FILES
+if [[ "$REBUILD_ONLY" -eq 1 ]]; then
+  SHA="$(git rev-parse --short HEAD)"
+  echo "[deploy] --rebuild-only — pas de commit/push, rebuild du HEAD actuel ($SHA)"
+else
+  # ---- 1. staging + commit (index seul) ---------------------------------------
+  if [[ "$STAGED" -eq 0 ]]; then
+    [[ -n "$FILES" ]] || fail 2 "aucun fichier fourni (-f) et pas de --staged"
+    # shellcheck disable=SC2086
+    git add -- $FILES
+  fi
+
+  if git diff --cached --quiet; then
+    fail 2 "index vide — rien à committer pour $APP"
+  fi
+
+  echo "[deploy] $APP — fichiers committés :"
+  git diff --cached --stat
+
+  git commit -m "$MSG" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>" >/dev/null
+  SHA="$(git rev-parse --short HEAD)"
+  echo "[deploy] commit $SHA créé"
+
+  # ---- 2. push ------------------------------------------------------------------
+  if ! git push origin main >/tmp/deploy_push.log 2>&1; then
+    echo "[deploy] --- git push stderr ---"; cat /tmp/deploy_push.log
+    fail 4 "push refusé (voir sortie ci-dessus) — le commit $SHA est local"
+  fi
+  echo "[deploy] push origin main OK"
 fi
-
-if git diff --cached --quiet; then
-  fail 2 "index vide — rien à committer pour $APP"
-fi
-
-echo "[deploy] $APP — fichiers committés :"
-git diff --cached --stat
-
-git commit -m "$MSG" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>" >/dev/null
-SHA="$(git rev-parse --short HEAD)"
-echo "[deploy] commit $SHA créé"
-
-# ---- 2. push -----------------------------------------------------------------
-if ! git push origin main >/tmp/deploy_push.log 2>&1; then
-  echo "[deploy] --- git push stderr ---"; cat /tmp/deploy_push.log
-  fail 4 "push refusé (voir sortie ci-dessus) — le commit $SHA est local"
-fi
-echo "[deploy] push origin main OK"
 
 # ---- 3. env vars (automatique) + rebuild, via PHP Eloquent dans le container --
 PAYLOAD="/tmp/coolify_deploy_$$.json"
