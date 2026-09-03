@@ -48,6 +48,20 @@ RESTE À FAIRE côté utilisateur (bloquant pour la prod réelle, cf. sections c
 
 ---
 
+# ⚡ MàJ 2026-09-01 — DÉPLOIEMENT : /v1/send accepte `html` (digest HTML newsletter)
+
+✅ Merge du support du champ `html` dans `/v1/send` (en plus du fallback `text`) :
+`send.ts` déstructure `html` (audit conserve `body ?? html` pour la traçabilité,
+le HTML complet part au connecteur), `connectors/email.ts` l'envoie tel quel à Resend
+via `payload.html`. Voir [[project-newsletter-roadmap-optiona]] (Option B).
+- Rebuild **#334 → `finished`**, mono-conteneur (pas d'orphelin Traefik). Commit `1d994ae`.
+- Vérif prod : `POST /webhooks/resend` répond `400` applicatif (service vivant),
+  seul conteneur `comms-gateway-commsgateway00000000000-085814*` sur l'image `1d994ae`.
+- Le champ `html` est donc **actif** : `newsletter-summary` peut envoyer son digest HTML.
+  Avant ce déploiement, Resend ne recevait que le `text` (email partant en texte).
+
+---
+
 # ⚡ MàJ 2026-08-31 — MODE DEV RESEND ACTIF (envoi email réel OK)
 
 ✅ Le mode développement Resend est activé sur l'app Coolify (lignes **preview + production**,
