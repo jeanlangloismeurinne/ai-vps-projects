@@ -17,3 +17,10 @@ projects/bank-review/uploads/
 # Instantanés publiés par la boucle autonome pour l'onglet « Nuit » du Hub.
 # Vitrine de lecture, pas une source : la vérité est la branche auto/*.
 .nuits/
+
+# Ordres de sprint — jetables, écrasés au prochain ordre (cf. CONTROL_SYSTEM.md).
+# La source de vérité est le chantier `roadmap/{nom}.md` que SESSION.md pointe.
+# NE PAS versionner : `autoloop.sh` dépose son propre ordre dans le clone et
+# suppose le fichier absent (l. 170), l'exclut de sa détection de changements
+# (l. 276) et le tient hors des commits de nuit (l. 293).
+projects/*/SESSION.md
