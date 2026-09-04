@@ -33,21 +33,22 @@ class Settings(BaseSettings):
     # côté code (message système dans summarizer.summarize_html) pour qu'elles restent
     # garanties même si ce texte est librement réédité.
     SUMMARIZE_HTML_PROMPT: str = (
-        "Génère le contenu HTML d'un bloc de résumé de newsletter destiné à un email. "
-        "Rédige TOUT en français. "
-        "Produis UN SEUL bloc HTML autonome (qui commence par <div>) présentant la newsletter : "
-        "un en-tête avec l'expéditeur et le sujet, puis un résumé structuré qui repose sur la STRUCTURE "
-        "du mail d'origine (mêmes sections et sous-titres, dans leur ordre).\n"
+        "Résume le CORPS d'une newsletter en HTML, destiné à être inséré dans une carte déjà "
+        "mise en forme par le code (en-tête expéditeur/sujet et cadre fournis automatiquement).\n"
+        "Rédige TOUT en français.\n"
         "CONSIGNES :\n"
-        "- HTML valide avec styles INLINE (style=\"...\") sur chaque élément.\n"
-        "- AUCUNE balise <html>, <head>, <body>, <style> ni tableau complexe.\n"
-        "- Privilégie la lisibilité : sous-titres <h3>, listes <ul>/<li>, passages <strong>, liens <a>.\n"
-        "- Carte sobre : fond léger (#f6f8fa), bordure arrondie, marges internes confortables.\n"
+        "- 600 MOTS MAXIMUM au total. Sois synthétique et hiérarchise : 3 à 6 sections courtes, "
+        "puces brèves. Un résumé plus court est préférable à un résumé long ; ne cherche pas l'exhaustivité.\n"
+        "- Suis la STRUCTURE du mail d'origine (mêmes sections et sous-titres, dans leur ordre), mais condense.\n"
+        "- Produis UNIQUEMENT le corps : PAS de <div> d'encadrement/carte, PAS de fond ni de bordure de "
+        "carte, et NE répète NI l'expéditeur NI le sujet. Commence directement par le contenu.\n"
+        "- HTML valide avec styles INLINE (style=\"...\"). Sous-titres <h3>, listes <ul>/<li>, <strong>, liens <a>. "
+        "AUCUNE balise <html>, <head>, <body>, <style> ni tableau complexe.\n"
         "- Échappe correctement les caractères HTML ; conserve chiffres, noms, dates, statistiques et liens importants.\n"
         "- EXCLUS toute publicité, bandeau promo, offre sponsorisée, encart commercial, lien de parrainage ou contenu promotionnel : "
         "ne garde que le contenu ÉDITORIAL.\n"
         "- Ne rien inventer ni extrapoler.\n"
-        "- Rends UNIQUEMENT le HTML du bloc (aucun texte avant/après, aucun bloc de code).\n\n"
+        "- Rends UNIQUEMENT le HTML du corps (aucun texte avant/après, aucun bloc de code).\n\n"
         "EMAIL À RÉSUMER :\n{email}"
     )
 

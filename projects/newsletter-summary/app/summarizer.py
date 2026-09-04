@@ -71,8 +71,12 @@ async def summarize_html(email: Email, *, prompt: str | None = None) -> str:
     else:
         prompt_final = template.rstrip() + "\n\nEMAIL À RÉSUMER :\n" + plain
     system = (
-        "Tu rédiges des blocs HTML de résumé d'emails, propres, lisibles, fidèles, aux styles inline. "
+        "Tu rédiges le CORPS HTML d'un résumé d'email, propre, lisible, fidèle, aux styles inline. "
         "Rédige TOUJOURS en français. "
+        "600 MOTS MAXIMUM, sois synthétique — un résumé plus court est préférable à un résumé long. "
+        "Ne produis QUE le corps du résumé : PAS de <div> d'encadrement/carte, PAS de fond ni de "
+        "bordure de carte, et NE répète NI l'expéditeur NI le sujet (l'en-tête et le cadre de la carte "
+        "sont ajoutés automatiquement par le code). Commence directement par le contenu (h3/p/ul). "
         "EXCLUS TOUJOURS toute publicité, bandeau promo, offre sponsorisée, encart commercial ou lien "
         "de parrainage : ne garde que le contenu éditorial du mail."
     )
@@ -84,6 +88,6 @@ async def summarize_html(email: Email, *, prompt: str | None = None) -> str:
         messages,
         model=settings.DEEPINFRA_MODEL,
         temperature=0.2,
-        max_tokens=2500,
+        max_tokens=4000,
     )
     return result.strip()

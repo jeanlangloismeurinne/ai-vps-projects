@@ -128,4 +128,13 @@ async def chat(
         usage.get("completion_tokens", "?"),
     )
 
+    # Troncature : le modèle a atteint max_tokens → sortie coupée. Le corps est de toute
+    # façon rendu déterministe/équilibré côté digest, mais on le signale pour ajuster
+    # max_tokens ou le prompt si ça se reproduit.
+    if choice.get("finish_reason") == "length":
+        logger.warning(
+            "DeepInfra : sortie tronquée (finish_reason=length, max_tokens=%s, tokens_out=%s).",
+            max_tokens, usage.get("completion_tokens", "?"),
+        )
+
     return content

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html as html_mod
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import select
@@ -51,12 +52,12 @@ _ENVELOPPE_HTML = """<!DOCTYPE html>
 <title>Résumé quotidien des newsletters</title>
 </head>
 <body style="margin:0;padding:0;background-color:#eef1f5;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
-  <div style="max-width:640px;margin:0 auto;padding:24px 16px;">
-    <div style="background:#1f2937;color:#ffffff;border-radius:12px 12px 0 0;padding:20px 24px;">
+  <div style="max-width:640px;margin:0 auto;padding:0;">
+    <div style="background:#1f2937;color:#ffffff;padding:18px 16px;">
       <h1 style="margin:0;font-size:20px;line-height:1.3;">📬 Résumé quotidien des newsletters</h1>
       <p style="margin:8px 0 0;font-size:13px;opacity:.85;">{date} — {count} newsletter(s)</p>
     </div>
-    <div style="background:#ffffff;border-radius:0 0 12px 12px;padding:20px 24px;">
+    <div style="background:#ffffff;padding:12px 0;">
 {cards}
     </div>
     <p style="text-align:center;color:#9ca3af;font-size:11px;margin:16px 0 0;">
@@ -67,33 +68,82 @@ _ENVELOPPE_HTML = """<!DOCTYPE html>
 </html>"""
 
 
-def _fallback_card(email: Email, error: str = "") -> str:
-    """Carte de secours quand le résumé HTML est absent ou invalide."""
+# --- Carte : ouverture/fermeture DÉTERMINISTES côté code (le modèle ne produit
+# --- QUE le corps du résumé). L'en-tête expéditeur/sujet est lui aussi rendu par le
+# --- code — le modèle n'a donc plus à émettre le moindre <div> d'encadrement.
+# --- Conséquence : une carte ne peut JAMAIS en avaler une autre, même si la sortie du
+# --- modèle est malformée ou incomplète. Marges latérales nulles (plein écran mobile),
+# --- padding interne conservé pour que le texte ne colle pas au bord.
+_CARD_OPEN = (
+    '<div style="background:#f6f8fa;border:1px solid #e5e7eb;border-radius:8px;'
+    'padding:16px 18px;margin:0 0 16px;">'
+)
+_CARD_CLOSE = "</div>"
+
+
+def _card_header(email: Email) -> str:
+    """En-tête de carte (expéditeur + sujet), rendu par le code — pas par le modèle."""
+    return (
+        f'<div style="font-size:12px;color:#6b7280;margin:0 0 2px;word-break:break-word;">'
+        f'{_esc(email.from_addr or "")}</div>'
+        f'<div style="font-weight:bold;font-size:16px;color:#111827;line-height:1.35;'
+        f'margin:0 0 10px;">{_esc(email.subject or "(sans objet)")}</div>'
+    )
+
+
+def _fallback_inner(email: Email, error: str = "") -> str:
+    """Corps de secours (sans carte ni en-tête : ajoutés par le code) si le résumé manque."""
     msg = "⚠ Résumé indisponible." if not error else f"⚠ Résumé en échec — {_esc(error)}"
-    return f"""<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin:0 0 18px;background:#fafafa;">
-  <div style="font-size:13px;color:#6b7280;margin-bottom:4px;">{_esc(email.from_addr or '')}</div>
-  <div style="font-weight:bold;font-size:15px;color:#111827;margin-bottom:10px;">{_esc(email.subject or '(sans objet)')}</div>
-  <p style="margin:0;font-size:14px;color:#374151;">{msg}</p>
-</div>"""
+    return f'<p style="margin:0;font-size:14px;color:#374151;">{msg}</p>'
+
+
+def _sanitize_inner(raw: str) -> str:
+    """Neutralise le corps produit par le modèle pour qu'il ne puisse PAS casser la carte.
+
+    - retire un éventuel bloc de code Markdown (```html … ```) ;
+    - si le modèle a malgré tout enveloppé son corps dans un <div> de carte, on le
+      déballe (le cadre est fourni par le code) ;
+    - coupe une balise finale non terminée (sortie tronquée) ;
+    - ÉQUILIBRE les <div> : ajoute les fermetures manquantes / retire les fermetures en
+      trop, pour que le corps soit strictement neutre et ne déborde jamais de la carte.
+    """
+    s = (raw or "").strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```[a-zA-Z]*\s*", "", s)
+        s = re.sub(r"\s*```$", "", s).strip()
+    # Déballe un unique <div>…</div> enveloppant tout le corps (le modèle désobéit).
+    m = re.match(r"^<div\b[^>]*>(.*)</div>\s*$", s, re.IGNORECASE | re.DOTALL)
+    if m:
+        s = m.group(1).strip()
+    # Coupe une balise ouverte non terminée en fin de chaîne (troncature).
+    lt, gt = s.rfind("<"), s.rfind(">")
+    if lt > gt:
+        s = s[:lt].rstrip()
+    # Équilibre les <div>.
+    opens = len(re.findall(r"<div\b", s, re.IGNORECASE))
+    closes = len(re.findall(r"</div\s*>", s, re.IGNORECASE))
+    if opens > closes:
+        s += "</div>" * (opens - closes)
+    elif closes > opens:
+        for _ in range(closes - opens):
+            s = re.sub(r"</div\s*>\s*$", "", s, count=1).rstrip()
+    return s
 
 
 def _card_html(email: Email) -> str:
-    """Bloc de la newsletter : le résumé HTML du LLM, sinon une carte de secours échappée.
+    """Carte d'une newsletter : ouverture + en-tête + corps + fermeture, tout côté code.
 
-    Chaque bloc est enveloppé dans un conteneur CONTROLLÉ PAR LE CODE : celui-ci garantit
-    une séparation lisible et constante entre deux newsletters, quel que soit le styling
-    inline produit par DeepSeek dans `inner` (corrige la mise en forme étrange où deux
-    cartes — ou la dernière — pouvaient se coller/border mal formé). `inner` ne fournit
-    que le contenu, jamais l'espacement inter-cartes.
+    Le modèle ne fournit que le corps (`email.summary`), passé au sanitizer. Les balises de
+    carte (`_CARD_OPEN`/`_CARD_CLOSE`) et l'en-tête sont déterministes : aucune sortie du
+    modèle, même tronquée, ne peut faire déborder une carte sur la suivante.
     """
     s = email.summary or ""
-    if s.strip().startswith("<"):
-        inner = s.strip()
+    if s.strip():
+        body = _sanitize_inner(s)
     else:
         error = getattr(email, "_summary_error", "") or ""
-        inner = _fallback_card(email, error=error)
-    sep = '<div style="margin:0 0 22px;padding:0 0 22px;border-bottom:1px solid #e5e7eb;">'
-    return f"{sep}{inner}</div>"
+        body = _fallback_inner(email, error=error)
+    return f"{_CARD_OPEN}{_card_header(email)}{body}{_CARD_CLOSE}"
 
 
 async def run_daily_digest(trigger: str = "scheduled") -> dict:
