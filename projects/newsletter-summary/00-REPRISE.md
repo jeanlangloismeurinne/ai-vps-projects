@@ -14,6 +14,33 @@ role: Prompt à coller pour reprendre le chantier du digest matinal de newslette
 > reprise. La session suivante démarre en relisant ce fichier — ne jamais repartir d'un
 > état périmé.
 
+> ## ⚡ MàJ 2026-09-04 — Cartes déterministes + anti-troncature + plein écran mobile
+>
+> **Cause racine trouvée sur le digest du 04/09** (7 newsletters) : le modèle dépassait « 600 mots »
+> (~1200) et la sortie était **coupée à `max_tokens=2500`** → 5 blocs sur 7 tronqués (ex. Euractiv
+> « Le Rapporteur » coupé net) ET `<div>` non fermé → **la carte suivante s'imbriquait dans la
+> précédente** (Geopolitechs id21 dans Euractiv id20). Un seul bug expliquait les trois symptômes.
+>
+> **Corrigé et déployé** (`docker compose up -d --build`, health OK, 1 seul conteneur) :
+> - `digest.py` : ouverture/fermeture de carte **+ en-tête (expéditeur/sujet) rendus DÉTERMINISTES
+>   côté code**. Le modèle ne produit plus QUE le corps. `_sanitize_inner` déballe un `<div>`
+>   enveloppant éventuel, coupe une balise finale tronquée et **équilibre les `<div>`** →
+>   imbrication **impossible par construction** (vérifié : les 5 blocs cassés du 04/09 re-wrappés
+>   sont tous équilibrés ; doc global 45/45).
+> - **Marges latérales de l'enveloppe et du bloc blanc = 0** (plein écran mobile), padding interne
+>   des cartes conservé (texte non collé au bord).
+> - `summarizer.py` : `max_tokens` 2500→**4000** (plus de troncature) ; invariants « corps seul » et
+>   « 600 mots » **doublés dans le message système** (garantis même si le prompt est réédité).
+> - `deepinfra_client.py` : WARNING si `finish_reason=length`.
+> - **Prompt actif V4** (id=5, `prompt_versions`, append-only) : « corps seul, 600 mots strict ».
+>   Rollback possible via le dropdown du Hub. `config.py` (défaut) aligné.
+> - **Vérif live contre le vrai modèle** (email id27, 73k car. en entrée, sans envoi ni changement
+>   de statut) : sortie = **520 mots**, 0 `<div>` du modèle, carte code équilibrée 3/3. ✔
+>
+> Reste à confirmer : le rendu réel du **prochain digest de 8h** (surtout la séparation sur un lot
+> de 5–8 mails et le respect des 600 mots sur des mails variés). Surveiller les WARNING
+> `finish_reason=length` (ne devrait plus apparaître).
+
 > ## ⚡ MàJ 2026-09-03 — Coolify est arrêté : le Hub aussi est en `docker compose`
 >
 > **Rien n'a changé dans ce projet** : il était déjà une stack `docker compose` standalone, c'est
