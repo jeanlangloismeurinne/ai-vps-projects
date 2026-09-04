@@ -2,12 +2,70 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-03
+updated: 2026-09-04
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). Reste : ingestion-agent, dette du runner, et le blocage `~/.netrc` sur `git push` (décision utilisateur).
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. Reste : **ingestion-agent** et le **3ᵉ ticker** — aucun des deux n'est bloquant, le prochain jalon est à choisir.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
+
+> ## ⚡ MàJ 2026-09-04 — DETTE DU RUNNER FERMÉE : un abandon est désormais comptabilisé
+>
+> **Commit `8b8efef`, backend déployé et vérifié (HTTP 200, 2 conteneurs sur le domaine =
+> l'exception attendue).** Suite hors-ligne : **19 scripts, 0 échec**, dont **1 010 assertions** sur
+> les 15 qui affichent un total (+49 — `check_runner_telemetry.py`). Aucun changement frontend,
+> aucune migration : la prochaine reste **034**.
+>
+> ### Le périmètre réel était 4× plus large que la description de la dette
+>
+> Ce fichier et les commentaires `⚠️` de `monitoring.py`, `exit.py`, `debate.py` disaient tous la
+> même chose — « la dépense de **cette tentative** n'est pas comptabilisée ». Trois sources
+> d'accord, donc crédibles. **La lecture de `runner.py` a montré autre chose** : quand la
+> **clôture** de `run_tool_json_agent` échoue, c'est le coût de **toute la boucle d'outils** qui
+> disparaît — plusieurs tours à gros contexte, contre un seul pour la clôture. Mesuré par test
+> négatif : **3 850 tokens réellement facturés contre 850 comptabilisés, soit 78 % de la facture.**
+> Les trois mentions décrivaient le symptôme **vu depuis le site d'appel**, pas la cause. Leçon
+> transverse : un fichier de reprise dit **où regarder**, jamais **jusqu'où va le trou** ; et
+> plusieurs commentaires concordants ne sont pas des preuves indépendantes — ils sont souvent
+> copiés les uns des autres.
+>
+> ### Livré
+>
+> `AgentOutputInvalid`, **sous-classe de `RuntimeError`** (les 6 sites d'appel font
+> `except RuntimeError` — aucun n'a eu à changer de forme), porte `raw_content`, `tokens_in`,
+> `tokens_out`, `cost_usd`, `attempts`, `agent_name`, `schema_name`, `last_error`.
+> `add_upstream()` reporte la dépense de la boucle d'outils sur un échec de clôture, et `__str__`
+> est **recalculé** (un message figé à la construction annoncerait le coût d'avant report).
+> `monitoring.py` / `exit.py` / `debate.py` la passent en `run=` **telle quelle** : leurs
+> `_persister_echec` lisaient déjà `getattr(run, "tokens_in", 0)`, d'où un diff minimal. Chacun
+> garde un `except RuntimeError` **en second** pour les échecs sans télémétrie (panne réseau,
+> provider indisponible) — un échec non tracé resterait un trou de suivi.
+>
+> ### Ce qui est prouvé, et ce qui ne l'est pas
+>
+> **Prouvé.** Les 49 assertions **exécutent le vrai runner** contre un `AgentProvider` bouchonné à
+> réponses scriptées — du code réellement joué, pas des fixtures relues. Le check a été **éprouvé
+> par test négatif** (report du coût supprimé → 3 échecs en §7, exit 1) : sans ça, il n'aurait rien
+> valu de plus que le `node --check` de la MàJ du 01-09. Les colonnes cibles ont été relues en base
+> (`tokens_in`/`tokens_out` INTEGER, `cost_usd` NUMERIC) et §6 verrouille désormais les **types**
+> autant que les noms — `_persister_echec` avale toute `DataError` dans un `except Exception`, donc
+> une erreur de binding perdrait la trace **une seconde fois, en silence**.
+>
+> ⚠️ **Non prouvé, à assumer** : aucun **échec réel de modèle** n'a été provoqué de bout en bout.
+> Le chemin d'écriture est établi **par identité de types** avec le chemin de succès, lui-même
+> exercé en production (sessions **#8** et **#9** portent des `cost_usd` écrits depuis des floats
+> Python). Forcer un vrai échec DeepSeek coûterait un appel payant et écrirait une session `failed`
+> sur la thèse MSFT #4 : jugé disproportionné. Si un `failed` apparaît un jour à 0 token, c'est ici
+> qu'il faut revenir.
+>
+> ### Friction relevée, non corrigée (→ `CHANTIER_OUTILLAGE_DEV.md` §9)
+>
+> `Settings` exige `DUST_*`, `SLACK_*` et `FMP_API_KEY` **sans défaut** : un check **100 % V2**,
+> sans réseau ni DB, ne s'importe pas sans sept variables V1 bidons. La disjonction V1/V2 est vraie
+> au niveau des agents et des tables, **fausse au niveau de `Settings`**. La commande de check *a
+> l'air fausse* et se fait légitimement refuser. ⚠️ **Ne pas « corriger » en mettant des défauts
+> `""`** : la prod démarrerait alors sans clés Dust en silence (cf. « desserrage de schéma = trou
+> silencieux »). Correctif proposé : un `checks/env.checks` versionné, valeurs factices.
 
 > **Ce fichier a été allégé le 2026-08-31.** Tout l'historique (journaux de sprint détaillés,
 > diagnostics de bugs déjà réglés, décisions et leurs mesures) est conservé **intégralement** dans
@@ -638,9 +696,11 @@ c'est un système exercé, dont on connaît les modes de panne.
 
 1. ~~**UX-2 — les écrans du lot 9**~~ · ~~**Marqueur de flux sur `/portfolio`**~~ — **FAITS**
    (MàJ 2026-09-02), vérifiés par capture d'écran en prod, pas seulement par un 200.
-2. **UX-3 — les écrans V2 amont, toujours absents** : knowledge, readiness (le gate `ready`),
-   research memo, analyse 3 colonnes bull/bear/synthèse, décision. **C'est le prochain jalon.**
-   Le backend existe pour tous. ⚠️ **Reprendre la méthode UX-2, qui a fait ses preuves** :
+2. ~~**UX-3 — les écrans V2 amont**~~ (knowledge, readiness, research, analyses 3 colonnes,
+   décision, + les pages pivots par ticker) — **FAIT** (MàJ 2026-09-03), vérifié par capture
+   d'écran en prod. ~~**Dette du runner**~~ — **FERMÉE** (MàJ 2026-09-04, commit `8b8efef`).
+   **Le prochain jalon est donc à choisir entre `ingestion-agent` (3) et le 3ᵉ ticker (4).**
+   ⚠️ **La méthode UX-2/UX-3 reste la référence pour tout écran neuf** :
    (a) capturer les payloads RÉELS avant d'écrire une ligne de JSX et n'utiliser que ces clés-là
    (un nom de champ faux n'affiche pas une erreur, il affiche **du vide**, qui se lit comme
    « cette donnée n'existe pas ») ; (b) vérifier les sous-agents par extraction programmatique des
@@ -663,12 +723,9 @@ c'est un système exercé, dont on connaît les modes de panne.
 - Le `tools_json` du `search-worker` en DB décrit encore `web_search` comme « SearXNG/API » :
   **cosmétique** (la description est agnostique côté modèle) mais périmé — à corriger à la prochaine
   migration qui touche `agent_prompts`, pas avant.
-- **`run_json_agent` perd le brut et les tokens sur abandon** (trouvé au lot 8, **commun à TOUS les
-  agents V2**) : quand la validation échoue après `max_repair`, il lève un `RuntimeError` nu — ni
-  texte fautif, ni comptabilité. On persiste le motif (session `failed`) pour que l'échec reste
-  visible, mais **la dépense de cette tentative n'est pas comptabilisée** et le brut qui aurait servi
-  à diagnostiquer est perdu. Ne pas corriger à chaud sans re-tester les autres agents : c'est de
-  l'infra partagée.
+- ~~**`run_json_agent` perd le brut et les tokens sur abandon**~~ — **FERMÉE le 2026-09-04**
+  (commit `8b8efef`, convention **#41**). `AgentOutputInvalid` porte la télémétrie ; le trou réel
+  était la boucle d'outils, pas la dernière tentative (78 % de la facture). Voir la MàJ en tête.
 
 ## Décisions structurantes (toujours actives)
 

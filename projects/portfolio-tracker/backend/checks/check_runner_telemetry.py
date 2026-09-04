@@ -368,6 +368,26 @@ if exc_s3 is not None:
         "getattr(e, 'schema_name') accessible",
         getattr(exc_s3, "schema_name", None) == "ContratOk",
     )
+    # Les TYPES comptent autant que les noms : `tokens_in`/`tokens_out` sont bindés sur des colonnes
+    # INTEGER et `cost_usd` sur une NUMERIC. asyncpg est strict, et `_persister_echec` enveloppe son
+    # INSERT dans un `except Exception` — une DataError y serait AVALÉE, et la trace d'échec perdue
+    # une seconde fois, en silence. Le chemin de succès écrit des int/float (les sessions #8 et #9 en
+    # production le prouvent) : l'exception doit fournir exactement les mêmes types.
+    check(
+        "tokens_in est un int (colonne INTEGER)",
+        type(getattr(exc_s3, "tokens_in", None)) is int,
+        f"— reçu {type(getattr(exc_s3, 'tokens_in', None)).__name__}",
+    )
+    check(
+        "tokens_out est un int (colonne INTEGER)",
+        type(getattr(exc_s3, "tokens_out", None)) is int,
+        f"— reçu {type(getattr(exc_s3, 'tokens_out', None)).__name__}",
+    )
+    check(
+        "cost_usd est un float (colonne NUMERIC, comme le chemin de succès)",
+        type(getattr(exc_s3, "cost_usd", None)) is float,
+        f"— reçu {type(getattr(exc_s3, 'cost_usd', None)).__name__}",
+    )
 else:
     for lbl in ("tokens_in", "tokens_out", "cost_usd", "raw_content", "agent_name", "schema_name"):
         check(f"getattr(e, '{lbl}')", False, "— exception non capturée en §3")

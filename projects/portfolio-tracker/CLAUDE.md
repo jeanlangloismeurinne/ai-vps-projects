@@ -320,6 +320,22 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
 
 40. **Une pré-condition d'ÉTAT se refuse avant l'appel, pas dans le pont (V2, lot 9)** : `_verifier_etat` doit refuser AVANT toute dépense de tokens — une condition d'état vivant seulement dans le pont (après l'appel) fait payer un appel modèle complet pour apprendre ce qu'on savait déjà. Un **pont** juge la sortie du modèle (→ 422) ; un **état** dit que la question n'avait pas lieu d'être posée (→ 409), sans ligne `failed`. Détail + garde : `check_exit_debate.py`.
 
+41. **Un abandon est facturé comme un succès — il doit être comptabilisé comme tel (V2, runner)** :
+    `run_json_agent` levait un `RuntimeError` nu, donc l'appelant persistait une session `failed`
+    chiffrée à **0 token / $0** et jetait le texte fautif, seule pièce permettant de diagnostiquer
+    la sortie hors contrat. Un échec gratuit dans les comptes est un échec qu'on ne cherche pas à
+    réduire. → `AgentOutputInvalid` (sous-classe de `RuntimeError`, pour ne casser aucun
+    `except RuntimeError` existant) porte `raw_content` / `tokens_in` / `tokens_out` / `cost_usd`
+    sous **exactement** les noms lus par les `_persister_echec`, et se passe donc en `run=` telle
+    quelle. ⚠️ Le trou principal n'était pas la dernière tentative mais la **boucle d'outils** :
+    quand la clôture de `run_tool_json_agent` échoue, `add_upstream()` doit reporter le coût des
+    tours d'outils déjà payés — mesuré en test négatif à **78 % de la facture** (3 850 tokens réels
+    contre 850 comptabilisés). Les types comptent autant que les noms (`int`/`int`/`float` : les
+    colonnes sont INTEGER/NUMERIC et `_persister_echec` avale toute `DataError` dans un
+    `except Exception`, donc une erreur de binding perdrait la trace **une seconde fois**, en
+    silence). Détail + garde : `check_runner_telemetry.py` (§3 somme exacte, §6 noms **et** types,
+    §7 report de la boucle) — éprouvé par test négatif.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
