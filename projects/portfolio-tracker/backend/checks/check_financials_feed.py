@@ -206,5 +206,83 @@ check("dette LT à zéro → gearing 0 %, et la position de trésorerie nette es
       by_field["levier"].content_structured["debt_to_equity_pct"] == 0.0
       and by_field["levier"].content_structured["net_cash_position"] is True)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+print("\n7. DEUX ANCRES — un flux vient de l'exercice, un bilan du dernier trimestre (F4)")
+# Le risque de ce correctif n'est pas dans `edgar_feed` mais ICI : `extract_edgar_facts` appariait
+# TOUT sur une seule date. Dès que le bilan cesse d'être à la clôture, un appariement unique vide
+# silencieusement les flux — chaque ratio deviendrait « non fondé » sans qu'aucune erreur ne sorte.
+# Un socle où le bilan est plus récent que la clôture est le cas NORMAL dès qu'un 10-Q est déposé.
+
+
+def _e(metric, *, end, kind, value=None, eid=100, **extra):
+    cs = {"metric": metric, "currency": "USD", "period": end, "period_end": end,
+          "poste_kind": kind}
+    if value is not None:
+        cs["value"] = value
+    cs.update(extra)
+    return {"id": eid, "entry_type": "fact_financial", "source_type": "edgar_official",
+            "content_structured": cs, "source_url": URL, "source_date": end, "fiscal_period": end}
+
+
+MIXTE = [
+    _e("revenue", end="2025-12-31", kind="flow", value=0.0, eid=101),
+    _e("net_income", end="2025-12-31", kind="flow", value=-1_131_301_000.0, eid=102),
+    _e("operating_cash_flow", end="2025-12-31", kind="flow", value=-897_741_000.0, eid=103),
+    _e("capital_expenditure", end="2025-12-31", kind="flow", value=15_990_000.0, eid=104),
+    _e("stockholders_equity", end="2026-06-30", kind="stock", value=2_606_238_000.0, eid=105),
+    _e("total_assets", end="2026-06-30", kind="stock", value=4_323_270_000.0, eid=106),
+    _e("cash_and_lt_debt", end="2026-06-30", kind="stock", eid=107,
+       cash=815_435_000.0, long_term_debt=487_434_000.0),
+]
+f_mix = extract_edgar_facts(MIXTE)
+check("les flux ne sont PAS vidés par un bilan plus récent",
+      f_mix["net_income"] == -1_131_301_000.0 and f_mix["revenue"] == 0.0,
+      f"→ ni={f_mix['net_income']} rev={f_mix['revenue']}")
+check("le bilan retenu est le trimestre, pas la clôture",
+      f_mix["stockholders_equity"] == 2_606_238_000.0, f"→ {f_mix['stockholders_equity']}")
+check("la dette convertible du trimestre est vue (elle était invisible avant le correctif)",
+      f_mix["long_term_debt"] == 487_434_000.0, f"→ {f_mix['long_term_debt']}")
+check("les deux ancres sont exposées séparément",
+      f_mix["period_end"] == date(2025, 12, 31) and f_mix["balance_end"] == date(2026, 6, 30),
+      f"→ {f_mix['period_end']} / {f_mix['balance_end']}")
+check("le mélange d'ancres est DÉCLARÉ, pas tu",
+      f_mix["periods_mixed"] is True and f_mix["jours_entre_ancres"] == 181,
+      f"→ {f_mix['periods_mixed']} / {f_mix['jours_entre_ancres']}")
+
+specs_mix, _ = build_financials_entries("RVMD", "RVMD", f_mix, as_of=AS_OF)
+by_mix = {s.field: s for s in specs_mix}
+check("le ROIC reste fondé malgré les deux ancres (il n'est pas devenu un trou)",
+      "roic_pct" in by_mix and by_mix["roic_pct"].content_structured.get("roic_pct") is not None)
+check("le levier est calculé sur le bilan RÉCENT (dette convertible incluse)",
+      approx(by_mix["levier"].content_structured["debt_to_equity_pct"], 18.7, tol=0.2),
+      f"→ {by_mix['levier'].content_structured['debt_to_equity_pct']}")
+# La trésorerie nette reste POSITIVE (RVMD a levé plus de cash que de dette) — l'enjeu n'est pas
+# le signe mais l'assiette : sur l'ancre périmée la dette était NON DÉTERMINÉE, donc `levier` était
+# non fondé. Le bilan frais le rend calculable, et la dette nette porte les deux jambes réelles.
+check("la dette nette est calculée sur les deux jambes du bilan frais",
+      approx(by_mix["levier"].content_structured["net_debt"], -328_001_000.0, 1e6),
+      f"→ {by_mix['levier'].content_structured['net_debt']}")
+
+# Non-régression : ancres confondues (aucun trimestre déposé) → comportement strictement ancien.
+UNIQUE = [dict(e, content_structured=dict(e["content_structured"], period_end="2025-12-31"))
+          for e in MIXTE]
+f_uni = extract_edgar_facts(UNIQUE)
+check("ancres confondues → aucun mélange déclaré",
+      f_uni["periods_mixed"] is False and f_uni["jours_entre_ancres"] == 0,
+      f"→ {f_uni['periods_mixed']} / {f_uni['jours_entre_ancres']}")
+check("ancres confondues → tous les postes restent lus",
+      f_uni["stockholders_equity"] == 2_606_238_000.0 and f_uni["net_income"] == -1_131_301_000.0)
+
+# Entries LEGACY (seed NVDA) : pas de `poste_kind`. Le repli doit les classer correctement, sinon
+# le corpus historique devient illisible du jour au lendemain.
+LEGACY = [dict(e, content_structured={k: v for k, v in e["content_structured"].items()
+                                      if k != "poste_kind"}) for e in MIXTE]
+f_leg = extract_edgar_facts(LEGACY)
+check("entries sans `poste_kind` : le repli reclasse bilan et flux à l'identique",
+      f_leg["stockholders_equity"] == 2_606_238_000.0 and f_leg["net_income"] == -1_131_301_000.0
+      and f_leg["long_term_debt"] == 487_434_000.0,
+      f"→ eq={f_leg['stockholders_equity']} ni={f_leg['net_income']} ltd={f_leg['long_term_debt']}")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

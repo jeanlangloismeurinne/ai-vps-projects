@@ -52,7 +52,7 @@ import httpx
 from app.config import settings
 from app.db.database import get_db_session
 from app.knowledge.edgar_facts import (
-    EdgarUnavailable, _UA, fetch_concept_annual, _pick_for_period,
+    EdgarUnavailable, _UA, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
 )
 from app.knowledge.service import store_knowledge
 
@@ -210,7 +210,8 @@ class EdgarEntrySpec:
 
 
 def build_edgar_entries(
-    ticker_id: str, symbol: str, cik: int, resolved: dict[str, dict[str, Any]]
+    ticker_id: str, symbol: str, cik: int, resolved: dict[str, dict[str, Any]],
+    *, fiscal_end: Optional[date] = None,
 ) -> tuple[list[EdgarEntrySpec], list[dict[str, str]]]:
     """`resolved` (metric → {concept, point, unit, …}) → specs d'entries. Pur, sans IO ni DB.
 
@@ -229,7 +230,14 @@ def build_edgar_entries(
             continue
         point, concept, unit = got["point"], got["concept"], got["unit"]
         period_end = date.fromisoformat(point["end"])
-        period = fiscal_label(point)
+        # Un flux porte un libellé d'exercice (`FY2025`) ; un poste de bilan porte une DATE, parce
+        # qu'il n'appartient à aucun exercice. Le libellé n'est jamais tiré de `fp`, incohérent sur
+        # les comparatifs de 10-Q (RVMD tague `fp=Q2` un point au 2026-03-31).
+        period = fiscal_label(point) if poste.flow else f"AU {point['end']}"
+        # `datation` nomme ce que la date VEUT dire ; sans lui, un consommateur devrait deviner la
+        # nature du poste depuis une liste de `metric` en dur — exactement le genre de convention
+        # tacite que #30 proscrit.
+        datation = "exercice clos le" if poste.flow else "bilan au"
         url = filing_url(cik, point.get("accn"))
 
         structured: dict[str, Any] = {
@@ -237,10 +245,16 @@ def build_edgar_entries(
             "currency": unit,
             "period": period,
             "period_end": point["end"],
+            "poste_kind": "flow" if poste.flow else "stock",
             "xbrl_tag": f"us-gaap:{concept}",
             "accn": point.get("accn"),
             "form": point.get("form"),
         }
+        # Un bilan plus récent que la clôture annuelle est le cas NORMAL dès qu'un 10-Q est déposé.
+        # On l'écrit dans le fait pour que l'écart soit lisible en aval au lieu d'être supposé nul.
+        if not poste.flow and fiscal_end is not None:
+            structured["fiscal_end"] = fiscal_end.isoformat()
+            structured["jours_apres_cloture"] = (period_end - fiscal_end).days
 
         if poste.composite_with:
             second = got.get("second")
@@ -261,7 +275,7 @@ def build_edgar_entries(
                                f"— trésorerie publiée seule, dette NON DÉTERMINÉE (pas nulle)"),
                 })
                 content = (
-                    f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
+                    f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
                     f"trésorerie {_md(point['val'])}{unit}. Dette long terme **non déterminée** : "
                     f"aucun des concepts XBRL candidats n'est déposé par cet émetteur. "
                     f"⚠️ Absence de dépôt ≠ absence de dette — ne pas lire ce poste comme une "
@@ -273,7 +287,7 @@ def build_edgar_entries(
                 structured[poste.composite_with] = second["point"]["val"]
                 structured["xbrl_tag_2"] = f"us-gaap:{second['concept']}"
                 content = (
-                    f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
+                    f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
                     f"trésorerie {_md(point['val'])}{unit}, dette long terme "
                     f"{_md(second['point']['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, "
                     f"concepts XBRL us-gaap:{concept} et us-gaap:{second['concept']} "
@@ -282,7 +296,7 @@ def build_edgar_entries(
         else:
             structured["value"] = point["val"]
             content = (
-                f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
+                f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
                 f"{_md(point['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, concept "
                 f"XBRL us-gaap:{concept} (accession {point.get('accn')})."
             )
@@ -340,15 +354,23 @@ async def resolve_cik(symbol: str) -> int:
     return _cik_cache[key]
 
 
-async def _points_for(cik: int, concepts: list[str]) -> tuple[dict[str, list[dict[str, Any]]], str]:
-    """Historique annuel de chaque concept candidat. Un concept absent (404) est simplement ignoré :
-    c'est le cas NOMINAL (les émetteurs ne déclarent pas tous les mêmes concepts)."""
+async def _points_for(
+    cik: int, concepts: list[str], *, flow: bool
+) -> tuple[dict[str, list[dict[str, Any]]], str]:
+    """Historique de chaque concept candidat. Un concept absent (404) est simplement ignoré :
+    c'est le cas NOMINAL (les émetteurs ne déclarent pas tous les mêmes concepts).
+
+    `flow=True` → points annuels (10-K/20-F, `fp=FY`) : un flux appartient à un exercice.
+    `flow=False` → points instantanés, toutes formes : un poste de BILAN date d'un instant, et le
+    dernier instant publié vaut mieux que la dernière clôture annuelle (cf. `_parse_instant_points`).
+    """
+    fetch = fetch_concept_annual if flow else fetch_concept_instant
     out: dict[str, list[dict[str, Any]]] = {}
     unit_used = _UNITS[0]
     for concept in concepts:
         for unit in _UNITS:
             try:
-                out[concept] = await fetch_concept_annual(cik, concept, unit=unit)
+                out[concept] = await fetch(cik, concept, unit=unit)
                 unit_used = unit
                 break
             except EdgarUnavailable:
@@ -356,23 +378,41 @@ async def _points_for(cik: int, concepts: list[str]) -> tuple[dict[str, list[dic
     return out, unit_used
 
 
-async def collect_postes(cik: int) -> tuple[dict[str, dict[str, Any]], Optional[date]]:
-    """Récupère tous les postes chez EDGAR et les aligne sur la MÊME date de clôture.
+async def collect_postes(cik: int) -> tuple[dict[str, dict[str, Any]], Optional[date], Optional[date]]:
+    """Récupère tous les postes chez EDGAR sur DEUX ancres, une par nature de poste.
 
-    L'ancrage est la dernière clôture des capitaux propres : c'est une date de BILAN, donc la borne
-    de l'exercice. Chaque autre poste doit avoir un point à cette date (±20 j) — sans quoi il est
-    laissé absent plutôt que pris à un autre exercice (mélanger deux exercices fabriquerait des
-    ratios faux tout en restant « tier A »).
+    Il n'y a pas une date, il y en a deux, et les confondre est un défaut de sens :
+      • **ancre de flux** (`fiscal_end`) — la dernière clôture ANNUELLE. Un chiffre d'affaires, un
+        résultat, un cash-flow appartiennent à un exercice ; les prendre à deux exercices
+        différents fabriquerait des ratios faux tout en restant « tier A ».
+      • **ancre de bilan** (`balance_end`) — le dernier INSTANT publié, 10-Q compris. Un poste de
+        bilan ne « couvre » pas une période, il date d'un jour ; le figer sur la clôture annuelle
+        rendait le socle aveugle à tout trimestre depuis le dernier 10-K. Sur RVMD au 2026-09-04,
+        c'était un bilan de 8 mois : trésorerie ×2,1, capitaux propres ×1,6 et 487,4 M$ de dette
+        convertible entièrement invisibles, sur une position réellement détenue.
+
+    Les deux ancres sont dérivées des capitaux propres (`_ANCHOR_METRIC`), présent sous les deux
+    formes. Chaque poste s'aligne sur SON ancre à ±20 j, ou reste absent (#25). Quand l'émetteur n'a
+    déposé aucun trimestre depuis son 10-K, `balance_end == fiscal_end` et le comportement est
+    exactement l'ancien.
     """
     anchor_poste = next(p for p in POSTES if p.metric == _ANCHOR_METRIC)
-    anchor_points, anchor_unit = await _points_for(cik, anchor_poste.concepts)
-    concept, point = select_concept(anchor_points, None, flow=False)
-    if point is None:
+
+    annual_points, _ = await _points_for(cik, anchor_poste.concepts, flow=True)
+    _, annual_point = select_concept(annual_points, None, flow=False)
+    if annual_point is None:
         raise EdgarFeedUnavailable(
             f"CIK {cik} : aucun point annuel pour {'/'.join(anchor_poste.concepts)} — "
-            f"pas d'ancrage de bilan, socle EDGAR non constructible"
+            f"pas d'ancrage d'exercice, socle EDGAR non constructible"
         )
-    period_end = date.fromisoformat(point["end"])
+    fiscal_end = date.fromisoformat(annual_point["end"])
+
+    instant_points, anchor_unit = await _points_for(cik, anchor_poste.concepts, flow=False)
+    concept, point = select_concept(instant_points, None, flow=False)
+    if point is None:                       # aucun instantané : on retombe sur la clôture annuelle
+        concept, point, anchor_unit = _concept_of(annual_points, annual_point), annual_point, "USD"
+    balance_end = date.fromisoformat(point["end"])
+
     resolved: dict[str, dict[str, Any]] = {
         _ANCHOR_METRIC: {"concept": concept, "point": point, "unit": anchor_unit}
     }
@@ -380,19 +420,32 @@ async def collect_postes(cik: int) -> tuple[dict[str, dict[str, Any]], Optional[
     for poste in POSTES:
         if poste.metric == _ANCHOR_METRIC:
             continue
-        points, unit = await _points_for(cik, poste.concepts)
-        concept, point = select_concept(points, period_end, flow=poste.flow)
+        target = fiscal_end if poste.flow else balance_end
+        points, unit = await _points_for(cik, poste.concepts, flow=poste.flow)
+        concept, point = select_concept(points, target, flow=poste.flow)
         if point is None:
             continue
         got: dict[str, Any] = {"concept": concept, "point": point, "unit": unit}
         if poste.composite_with:
-            pts2, unit2 = await _points_for(cik, poste.composite_concepts)
-            c2, p2 = select_concept(pts2, period_end, flow=False)
+            # La 2ᵉ jambe d'un composite de bilan suit l'ancre de BILAN, comme la 1ʳᵉ : c'est
+            # exactement là que se jouait la dette convertible de RVMD, déposée en 10-Q seulement.
+            pts2, unit2 = await _points_for(cik, poste.composite_concepts, flow=False)
+            c2, p2 = select_concept(pts2, balance_end, flow=False)
             if p2 is not None:
                 got["second"] = {"concept": c2, "point": p2, "unit": unit2}
         resolved[poste.metric] = got
 
-    return resolved, period_end
+    return resolved, fiscal_end, balance_end
+
+
+def _concept_of(
+    points_by_concept: dict[str, list[dict[str, Any]]], point: dict[str, Any]
+) -> Optional[str]:
+    """Retrouve le concept dont provient un point retenu (repli sans instantané)."""
+    for concept, pts in points_by_concept.items():
+        if any(p is point for p in pts):
+            return concept
+    return None
 
 
 async def _current_fact_id(conn, ticker_id: str, metric: str, period_end: str) -> Optional[int]:
@@ -438,8 +491,10 @@ async def run_edgar_feed(
     symbol = row["ticker_symbol"]
 
     cik = await resolve_cik(symbol)
-    resolved, period_end = await collect_postes(cik)
-    specs, unfounded = build_edgar_entries(ticker_id, symbol, cik, resolved)
+    resolved, fiscal_end, balance_end = await collect_postes(cik)
+    specs, unfounded = build_edgar_entries(
+        ticker_id, symbol, cik, resolved, fiscal_end=fiscal_end
+    )
 
     created: list[dict[str, Any]] = []
     if persist:
@@ -460,17 +515,23 @@ async def run_edgar_feed(
                     )
                     created.append(dict(stored) | {"metric": spec.metric, "supersedes": prev})
         logger.info(
-            "edgar_feed %s (%s, CIK %d) → %d poste(s) au %s · non fondés: %s",
-            ticker_id, symbol, cik, len(created), period_end,
+            "edgar_feed %s (%s, CIK %d) → %d poste(s) · flux %s, bilan %s (+%d j) · non fondés: %s",
+            ticker_id, symbol, cik, len(created), fiscal_end, balance_end,
+            (balance_end - fiscal_end).days,
             ", ".join(u["metric"] for u in unfounded) or "aucun",
         )
 
     return {
         "ticker_id": ticker_id, "symbol": symbol, "cik": cik,
-        "period_end": period_end.isoformat(), "persisted": persist,
+        # `period_end` conservé (ancre de FLUX) : c'est le contrat de lecture existant. `balance_end`
+        # est la nouveauté — la date du bilan retenu, qui n'est plus supposée égale à la clôture.
+        "period_end": fiscal_end.isoformat(), "balance_end": balance_end.isoformat(),
+        "jours_apres_cloture": (balance_end - fiscal_end).days,
+        "persisted": persist,
         "postes": [
             {
                 "metric": s.metric, "xbrl_tag": s.content_structured["xbrl_tag"],
+                "kind": s.content_structured.get("poste_kind"),
                 "value": s.content_structured.get("value"),
                 "cash": s.content_structured.get("cash"),
                 "long_term_debt": s.content_structured.get("long_term_debt"),

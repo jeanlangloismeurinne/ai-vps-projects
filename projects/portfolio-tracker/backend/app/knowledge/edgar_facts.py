@@ -85,6 +85,71 @@ def _parse_annual_points(payload: dict[str, Any], *, unit: str) -> list[dict[str
     return sorted(by_end.values(), key=lambda p: p["end"])
 
 
+def _parse_instant_points(payload: dict[str, Any], *, unit: str) -> list[dict[str, Any]]:
+    """Extrait les points INSTANTANÉS (postes de bilan) de la réponse companyconcept.
+
+    Différence essentielle avec `_parse_annual_points` : **aucun filtre sur la forme du dépôt**. Un
+    poste de bilan n'appartient pas à un exercice, il date d'un instant ; le restreindre aux 10-K
+    rendait le socle aveugle à tout trimestre depuis le dernier annuel. Mesuré sur RVMD au
+    2026-09-04 : bilan retenu au 2025-12-31 (trésorerie 383,7 M$, capitaux propres 1 631,3 M$,
+    dette absente) alors que le 10-Q du 2026-06-30, public et déposé, porte 815,4 M$, 2 606,2 M$
+    et **487,4 M$ d'obligations convertibles**. Rien ne signalait l'écart : le fait restait tier A,
+    exact, et faux de fraîcheur.
+
+    Un point instantané se reconnaît à l'ABSENCE de `start` (pas de durée). On ne se fie jamais à
+    `fp` : EDGAR le rend incohérent sur les comparatifs (RVMD tague `fp=Q2` un point au 2026-03-31).
+    À `end` égal, on préfère le dépôt annuel non amendé — le 10-K fait foi sur sa propre clôture,
+    le comparatif d'un 10-Q ultérieur ne fait que la recopier.
+    """
+    units = (payload.get("units") or {}).get(unit) or []
+    by_end: dict[str, dict[str, Any]] = {}
+    for it in units:
+        if it.get("start") is not None:      # flux : a une durée, ce n'est pas un poste de bilan
+            continue
+        end, val = it.get("end"), it.get("val")
+        if end is None or val is None:
+            continue
+        point = {
+            "end": end,
+            "val": float(val),
+            "start": None,
+            "fy": it.get("fy"),
+            "form": it.get("form"),
+            "accn": it.get("accn"),
+            "filed": it.get("filed"),
+        }
+        prev = by_end.get(end)
+        if prev is None or _instant_rank(point) < _instant_rank(prev):
+            by_end[end] = point
+    return sorted(by_end.values(), key=lambda p: p["end"])
+
+
+def _instant_rank(point: dict[str, Any]) -> tuple[int, str]:
+    """Ordre de préférence à `end` égal : annuel non amendé, puis annuel amendé, puis le reste ;
+    à égalité, le dépôt le plus ancien (déterministe, et c'est l'affirmation d'origine)."""
+    form = point.get("form") or ""
+    rank = 0 if form in _ANNUAL_FORMS and not form.endswith("/A") else (
+        1 if form in _ANNUAL_FORMS else 2
+    )
+    return rank, str(point.get("filed") or "")
+
+
+async def fetch_concept_instant(
+    cik: int, tag: str, *, unit: str = "USD"
+) -> list[dict[str, Any]]:
+    """Historique INSTANTANÉ d'un concept de bilan. Lève `EdgarUnavailable` si indisponible.
+
+    Même contrat d'erreur que `fetch_concept_annual` : une absence se remonte, elle ne se comble pas.
+    """
+    payload = await _companyconcept(cik, tag)
+    points = _parse_instant_points(payload, unit=unit)
+    if not points:
+        raise EdgarUnavailable(
+            f"aucun point instantané ({unit}) pour {tag} (CIK {cik})"
+        )
+    return points
+
+
 def _pick_for_period(points: list[dict[str, Any]], period_end: Optional[date], *, tol_days: int = 20
                      ) -> Optional[dict[str, Any]]:
     """Point annuel dont la date de fin colle au `period_end` visé (tolérance : l'exercice fiscal ne
@@ -104,13 +169,9 @@ def _pick_for_period(points: list[dict[str, Any]], period_end: Optional[date], *
     return best
 
 
-async def fetch_concept_annual(
-    cik: int, tag: str, *, unit: str = "USD"
-) -> list[dict[str, Any]]:
-    """Historique ANNUEL d'un concept us-gaap pour un émetteur. Lève `EdgarUnavailable` si indisponible.
-
-    Retour : liste de points `{end, val, start, fy, form, accn, filed}` triés par `end` croissant.
-    """
+async def _companyconcept(cik: int, tag: str) -> dict[str, Any]:
+    """Réponse brute de `companyconcept` pour un concept us-gaap. Un échec lève `EdgarUnavailable`
+    — jamais un dict vide, qui se lirait comme « l'émetteur ne déclare rien » (#25)."""
     url = _COMPANYCONCEPT.format(cik=cik, tag=tag)
     try:
         async with httpx.AsyncClient(
@@ -125,9 +186,19 @@ async def fetch_concept_annual(
     if r.status_code != 200:
         raise EdgarUnavailable(f"EDGAR {r.status_code} pour {tag} (CIK {cik})")
     try:
-        payload = r.json()
+        return r.json()
     except ValueError as e:
         raise EdgarUnavailable(f"réponse EDGAR non-JSON pour {tag} (CIK {cik}) : {e}") from e
+
+
+async def fetch_concept_annual(
+    cik: int, tag: str, *, unit: str = "USD"
+) -> list[dict[str, Any]]:
+    """Historique ANNUEL d'un concept us-gaap pour un émetteur. Lève `EdgarUnavailable` si indisponible.
+
+    Retour : liste de points `{end, val, start, fy, form, accn, filed}` triés par `end` croissant.
+    """
+    payload = await _companyconcept(cik, tag)
     points = _parse_annual_points(payload, unit=unit)
     if not points:
         raise EdgarUnavailable(

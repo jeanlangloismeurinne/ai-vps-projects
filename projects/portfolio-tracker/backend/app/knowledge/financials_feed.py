@@ -112,11 +112,29 @@ def _parse_end(v: Any) -> Optional[date]:
     return None
 
 
-def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
-    """Faits `fact_financial` EDGAR (tier A) → dict plat du dernier exercice complet. Pur, sans IO.
+# Postes de BILAN, pour les entries LEGACY qui ne portent pas encore `poste_kind` (seed NVDA écrit
+# à la main, entries antérieures au split flux/bilan). Repli explicite et borné — la nature d'un
+# poste se lit dans le fait lui-même dès qu'elle y est écrite.
+_STOCK_METRICS_LEGACY = {"stockholders_equity", "total_assets", "cash_and_lt_debt"}
 
-    Ancre = date de bilan (`stockholders_equity`) la plus récente ; les autres postes sont pris à la
-    MÊME date de fin d'exercice (jamais mélangés entre exercices). Postes absents = None (pas de zéro).
+
+def _poste_kind(metric: str, cs: dict[str, Any]) -> str:
+    return cs.get("poste_kind") or ("stock" if metric in _STOCK_METRICS_LEGACY else "flow")
+
+
+def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Faits `fact_financial` EDGAR (tier A) → dict plat. Pur, sans IO.
+
+    DEUX ancres, parce qu'il y a deux natures de poste et que les confondre est un défaut de sens :
+      • **flux** (CA, résultat, OCF, capex) → dernière clôture d'exercice ; les mélanger entre
+        exercices fabriquerait des ratios faux tout en restant « tier A » ;
+      • **bilan** (capitaux propres, actif, trésorerie/dette) → dernier INSTANT publié, qui est
+        typiquement un trimestre PLUS RÉCENT que la clôture. Les forcer sur la clôture annuelle
+        rendait le levier d'un émetteur aveugle à toute levée de fonds postérieure — mesuré sur
+        RVMD : 487,4 M$ de convertibles invisibles, capitaux propres sous-évalués de 60 %.
+
+    `periods_mixed` dit si les deux ancres diffèrent, pour que les ratios qui croisent un flux et un
+    stock (ROIC) le DÉCLARENT au lieu de le taire. Postes absents = None (jamais un zéro, #25).
     """
     by_metric: dict[str, dict[date, dict[str, Any]]] = {}
     currency = "USD"
@@ -132,27 +150,39 @@ def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         currency = cs.get("currency") or currency
         rec = {"period": cs.get("period") or e.get("fiscal_period"),
-               "source_url": e.get("source_url"), "entry_id": e.get("id"), "cs": cs}
+               "source_url": e.get("source_url"), "entry_id": e.get("id"),
+               "kind": _poste_kind(metric, cs), "cs": cs}
         by_metric.setdefault(metric, {})[end] = rec
 
-    equity_dates = sorted((by_metric.get("stockholders_equity") or {}).keys())
-    if not equity_dates:
-        # pas d'ancre bilan → dernier exercice où figure le résultat net (au pire)
-        ni_dates = sorted((by_metric.get("net_income") or {}).keys())
-        target = ni_dates[-1] if ni_dates else None
-    else:
-        target = equity_dates[-1]
+    def _latest(metric: str) -> Optional[date]:
+        dates = sorted((by_metric.get(metric) or {}).keys())
+        return dates[-1] if dates else None
 
-    facts: dict[str, Any] = {"period_end": target, "currency": currency,
-                             "period": None, "source_url": None}
-    if target is None:
+    stock_target = _latest("stockholders_equity") or _latest("total_assets")
+    # L'ancre de flux ne peut pas être celle du bilan : sur un socle post-split elles diffèrent, et
+    # y apparier les flux les viderait tous silencieusement (chaque ratio deviendrait non fondé).
+    flow_target = _latest("net_income") or _latest("revenue") or _latest("operating_cash_flow")
+
+    facts: dict[str, Any] = {
+        "period_end": flow_target or stock_target, "balance_end": stock_target,
+        "currency": currency, "period": None, "source_url": None,
+        "periods_mixed": bool(stock_target and flow_target and stock_target != flow_target),
+        "jours_entre_ancres": ((stock_target - flow_target).days
+                               if stock_target and flow_target else None),
+    }
+    if flow_target is None and stock_target is None:
         return facts
 
     def _at(metric: str) -> Optional[dict[str, Any]]:
-        return (by_metric.get(metric) or {}).get(target)
+        at_date = by_metric.get(metric) or {}
+        kind = next((r["kind"] for r in at_date.values()), None)
+        target = stock_target if kind == "stock" else flow_target
+        if target is None:
+            return None
+        return at_date.get(target)
 
-    # période lisible + URL de provenance (celle de l'ancre bilan, à défaut du CA)
-    anchor = _at("stockholders_equity") or _at("revenue") or _at("net_income")
+    # période lisible + URL de provenance (celle du CA, à défaut de l'ancre bilan)
+    anchor = _at("revenue") or _at("net_income") or _at("stockholders_equity")
     if anchor:
         facts["period"] = anchor["period"]
         facts["source_url"] = anchor["source_url"]

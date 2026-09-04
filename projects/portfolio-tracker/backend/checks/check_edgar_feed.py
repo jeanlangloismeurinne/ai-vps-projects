@@ -19,7 +19,9 @@ Ce que ce check protège, dans l'ordre d'importance :
 import sys
 from datetime import date
 
-from app.knowledge.edgar_facts import _parse_annual_points, cik_from_url
+from app.knowledge.edgar_facts import (
+    _parse_annual_points, _parse_instant_points, cik_from_url,
+)
 from app.knowledge.edgar_feed import (
     POSTES, build_edgar_entries, fiscal_label, filing_url, is_annual_flow, select_concept,
 )
@@ -134,7 +136,17 @@ check("8 postes produits", len(specs) == 8, f"→ {len(specs)}")
 check("aucun poste non fondé quand EDGAR les porte tous", unfounded == [], f"→ {unfounded}")
 check("tous les postes sur le MÊME exercice",
       {s.content_structured["period_end"] for s in specs} == {"2026-06-30"})
-check("période fiscale lisible", {s.fiscal_period for s in specs} == {"FY2026"})
+# Le libellé n'est plus uniforme, et c'est le correctif : un FLUX porte un exercice (`FY2026`), un
+# poste de BILAN porte une DATE, parce qu'il n'appartient à aucun exercice. Ici les deux ancres
+# coïncident (fixture au même jour), donc seul le libellé les distingue — c'est bien le but.
+_flux = {s.fiscal_period for s in specs if s.content_structured["poste_kind"] == "flow"}
+_bilan = {s.fiscal_period for s in specs if s.content_structured["poste_kind"] == "stock"}
+check("période fiscale lisible pour les flux", _flux == {"FY2026"}, f"→ {_flux}")
+check("les postes de bilan portent une DATE, pas un exercice",
+      _bilan == {"AU 2026-06-30"}, f"→ {_bilan}")
+check("les trois postes de bilan sont bien typés `stock`",
+      {s.metric for s in specs if s.content_structured["poste_kind"] == "stock"}
+      == {"stockholders_equity", "total_assets", "cash_and_lt_debt"})
 check("le concept XBRL réellement utilisé est tracé dans chaque entry",
       all(s.content_structured["xbrl_tag"].startswith("us-gaap:") for s in specs))
 check("l'accession du dépôt est tracée", all(s.content_structured["accn"] == ACCN for s in specs))
@@ -281,6 +293,67 @@ check("dette déposée en convertibles : les deux montants sont publiés (pas de
       and comp2.content_structured.get("long_term_debt") == 487_434_000)
 check("le cas nominal ne porte pas le drapeau d'absence",
       comp2.content_structured.get("long_term_debt_status") is None)
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────
+print("\n[9] un poste de BILAN date d'un instant, pas d'un exercice (F4)")
+# Le socle ne lisait que les dépôts annuels, donc il était aveugle à tout trimestre depuis le
+# dernier 10-K. Ce n'est pas un détail de fraîcheur : sur RVMD au 2026-09-04, le bilan retenu
+# (2025-12-31) portait 383,7 M$ de trésorerie et aucune dette, quand le 10-Q du 2026-06-30 — déposé,
+# public — porte 815,4 M$ et 487,4 M$ de convertibles. Exact, tier A, et faux.
+
+points_mixtes = [
+    {"end": "2025-12-31", "val": 1_631_297_000, "form": "10-K", "fp": "FY", "accn": "a-1"},
+    {"end": "2026-03-31", "val": 1_499_917_000, "form": "10-Q", "fp": "Q2", "accn": "a-2"},
+    {"end": "2026-06-30", "val": 2_606_238_000, "form": "10-Q", "fp": "Q2", "accn": "a-3"},
+]
+inst = _parse_instant_points({"units": {"USD": points_mixtes}}, unit="USD")
+check("les points instantanés ne sont PAS filtrés sur la forme du dépôt",
+      [p["end"] for p in inst] == ["2025-12-31", "2026-03-31", "2026-06-30"],
+      f"→ {[p['end'] for p in inst]}")
+check("le dernier instant publié est bien le trimestre, pas la clôture annuelle",
+      inst[-1]["val"] == 2_606_238_000)
+
+# Un flux ne doit PAS profiter de cet élargissement : un point de 10-Q pris pour un flux annuel
+# diviserait le CA par ~4 sans aucun signal (c'est le piège que `_ANNUAL_FORMS` désamorce).
+annuels = _parse_annual_points({"units": {"USD": points_mixtes}}, unit="USD")
+check("les flux restent réservés aux dépôts annuels",
+      [p["end"] for p in annuels] == ["2025-12-31"], f"→ {[p['end'] for p in annuels]}")
+
+# `fp` est INUTILISABLE comme discriminant : EDGAR tague `fp=Q2` un point au 2026-03-31 chez RVMD.
+check("un instantané se reconnaît à l'absence de `start`, jamais à `fp`",
+      all(p["start"] is None for p in inst))
+dupe = _parse_instant_points({"units": {"USD": [
+    {"end": "2025-12-31", "val": 1_631_297_000, "form": "10-Q", "fp": "Q2", "accn": "q", "filed": "2026-08-01"},
+    {"end": "2025-12-31", "val": 1_631_297_000, "form": "10-K", "fp": "FY", "accn": "k", "filed": "2026-02-25"},
+]}}, unit="USD")
+check("à date égale, le 10-K fait foi sur sa propre clôture (pas le comparatif d'un 10-Q)",
+      len(dupe) == 1 and dupe[0]["form"] == "10-K", f"→ {dupe}")
+
+# Les entries produites doivent DÉCLARER l'écart entre les deux ancres, sinon il se lit comme nul.
+resolved_f4 = {
+    "stockholders_equity": {"concept": "StockholdersEquity", "unit": "USD",
+                            "point": pt("2026-06-30", 2_606_238_000, accn="a-3")},
+    "revenue": {"concept": "Revenues", "unit": "USD",
+                "point": pt("2025-12-31", 0, start="2025-01-01", accn="a-1")},
+}
+specs_f4, _ = build_edgar_entries("RVMD", "RVMD", 1628171, resolved_f4,
+                                  fiscal_end=date(2025, 12, 31))
+eq = next(s for s in specs_f4 if s.metric == "stockholders_equity")
+rv = next(s for s in specs_f4 if s.metric == "revenue")
+check("le poste de bilan est daté du trimestre, pas de la clôture",
+      eq.content_structured["period_end"] == "2026-06-30")
+check("le flux reste daté de la clôture annuelle",
+      rv.content_structured["period_end"] == "2025-12-31")
+check("l'écart aux deux ancres est CHIFFRÉ dans le fait de bilan",
+      eq.content_structured.get("jours_apres_cloture") == 181,
+      f"→ {eq.content_structured.get('jours_apres_cloture')}")
+check("le fait de bilan rappelle la clôture de référence",
+      eq.content_structured.get("fiscal_end") == "2025-12-31")
+check("un flux ne porte pas d'écart d'ancre (il EST à la clôture)",
+      "jours_apres_cloture" not in rv.content_structured)
+check("le texte d'un poste de bilan dit « bilan au », pas « exercice clos »",
+      "bilan au 2026-06-30" in eq.content and "exercice clos" not in eq.content,
+      f"→ {eq.content[:90]}")
 
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)
