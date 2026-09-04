@@ -513,6 +513,14 @@ async def persist_worker_entries(
     et peut inspecter, voire refuser, un échange avant de le rendre persistant. Le score écrit est
     **recalculé une seconde fois** par `store_knowledge` à partir du `source_type` — c'est la même
     fonction, donc le même résultat, et c'est cette table-là qui fait foi en base.
+
+    ⚠️ **F13.** `requires_human_review` était calculé par `_verify_provenance` (#28), renvoyé dans
+    la réponse HTTP… et **jamais passé ici**. La rétrogradation en `llm_memory` survivait — elle
+    transite par `source_type` — mais le cas « source réelle lue en EXTRAIT seulement » ne change
+    ni le score ni le type : en base, une entry tier A 0.94 dont le document n'a jamais été ouvert
+    était **indiscernable** d'une entry lue en entier. Mesuré sur RVMD le 2026-09-04 : 26 entrées
+    actives, `requires_human_review` à `false` partout, alors que la réponse HTTP en signalait une.
+    Un drapeau qui n'atteint pas le stockage n'est pas un garde-fou, c'est un affichage.
     """
     created: list[dict[str, Any]] = []
     for entry in exchange.response.entries:
@@ -533,6 +541,9 @@ async def persist_worker_entries(
             # 029 : l'index porte le CHEMIN COMPLET (`produits.description`), plus le nom nu —
             # `description` est requis par deux dimensions, un nom nu ferait passer l'autre.
             covers=([entry.covers] if entry.covers else None),
+            # `store_knowledge` fait un OU avec ses propres source_types à revue d'office (P2) :
+            # passer False ne peut jamais DÉSARMER un drapeau, seulement en ajouter un.
+            requires_human_review=bool(entry.requires_human_review),
         )
         created.append(dict(row))
     logger.info(

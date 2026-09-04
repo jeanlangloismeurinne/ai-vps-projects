@@ -318,5 +318,33 @@ check("le WorkerRequest part toujours en JSON dans le message",
       '"field_path": "business_model.description"' in msg_ancre,
       "→ le mandat n'est plus transmis intégralement")
 
+print("\n10. Le drapeau de provenance ATTEINT le stockage (F13)")
+# `_verify_provenance` calculait `requires_human_review`, l'API le renvoyait, et
+# `persist_worker_entries` ne le passait pas à `store_knowledge` : le drapeau mourait entre la
+# réponse HTTP et la base. On ne vérifie donc pas qu'il est CALCULÉ (§5 le fait déjà) mais qu'il
+# est TRANSMIS — c'est-à-dire l'appel réellement émis vers la couche de stockage.
+import inspect
+
+import app.agents.v2.worker as _w
+
+_src_persist = inspect.getsource(_w.persist_worker_entries)
+check("persist_worker_entries transmet requires_human_review",
+      "requires_human_review=" in _src_persist,
+      "→ le drapeau est calculé puis perdu à l'écriture")
+# Le paramètre doit exister côté stockage, sinon la transmission serait un TypeError en prod —
+# et un check qui ne lit que l'appelant validerait un appel impossible.
+_params_store = inspect.signature(_w.store_knowledge).parameters
+check("store_knowledge expose bien ce paramètre",
+      "requires_human_review" in _params_store,
+      f"→ paramètres : {list(_params_store)}")
+check("le défaut côté stockage reste False (le drapeau s'ajoute, ne s'impose pas)",
+      _params_store["requires_human_review"].default is False,
+      f"→ défaut = {_params_store['requires_human_review'].default!r}")
+# Les autres champs décidés par les overrides déterministes doivent suivre le même chemin :
+# un seul oubli de ce genre suffit à vider un garde-fou de sa portée (#28, #29).
+for _champ in ("covers", "source_type", "source_url", "fiscal_period"):
+    check(f"{_champ} transmis au stockage", f"{_champ}=" in _src_persist,
+          f"→ {_champ} décidé côté Python mais jamais écrit")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
