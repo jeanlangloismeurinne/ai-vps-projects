@@ -404,6 +404,45 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     « 1000,0 k$ ») ; `None` → « n/d » et un vrai zéro → « 0 $ », qui ne se confond avec aucun
     arrondi. Détail + garde : `check_base_rate_corpus.py` §7 à §10.
 
+46. **Une règle de FORMAT recopiée dans trois producteurs n'est corrigée dans aucun (V2,
+    `knowledge/units.py`)** : le correctif #45 (« un montant choisit son unité par ordre de
+    grandeur ») avait été écrit dans `base_rate_corpus._mds`, et **seulement là**. `edgar_feed._md`
+    et `financials_feed._md` divisaient toujours par `1e9` en dur. Sur RVMD : capex FY2025
+    = 15,99 M$ (vérifié contre l'API EDGAR `companyconcept`, CIK 0001628171) publié
+    « 0,02 MdUSD » côté socle et « 0,0 Md » côté ratios — un agent y lit *aucun investissement*.
+    Pire, `fcf_conversion_pct` publiait « FCF -0,9 Md = cash-flow opérationnel -0,9 Md − capex
+    0,0 Md » : une soustraction dont l'arithmétique **paraît juste** précisément parce que ses
+    deux termes sont écrasés à la même unité — donc invisible à tout contrôle de cohérence, comme
+    #42 et #45. C'est le **corollaire de méthode de #43 appliqué à un format** : la règle vit dans
+    `knowledge/units.py`, les trois producteurs l'importent, aucun ne la ré-implémente.
+    ⚠️ **Corollaire d'appelant** : une fois l'unité choisie par ordre de grandeur, deux termes
+    d'une **même phrase** peuvent légitimement porter des paliers différents (M et Md).
+    Factoriser la devise sur le dernier terme — `f"{_md(x)}{cur}"`, ce que faisaient les deux
+    modules — laisserait alors deux ordres de grandeur se lire comme un seul : la devise est
+    passée **à chaque appel**, et un vrai zéro s'écrit « 0 USD » (sans mantisse ni palier, sinon
+    la concaténation produirait « 0USD »). Détail + garde : `check_edgar_feed.py` §11,
+    `check_financials_feed.py` §9 — éprouvés par test négatif (4 FAIL chacun).
+
+47. **Un zéro est une VALEUR mesurée, et `if x:` ne sait pas le distinguer d'une absence (V2,
+    `knowledge/base_rate_corpus.py`)** : `_latest_revenue_usd()` parcourait les exercices avec
+    `if rev:` — un CA légitime de `0.0` était donc sauté comme s'il n'avait pas été déposé, et la
+    boucle continuait de reculer dans le temps. Sur RVMD (2023 : 11,58 M$ · 2024 : 0 · 2025 : 0),
+    `base-rate-anchor` publiait « pour 11,6 M$ de ventes » — **deux exercices de retard**, dans le
+    paragraphe même que #45 venait d'ajouter, et **en contradiction directe** avec l'entry EDGAR
+    tier A qui dit 0 : deux réponses actives à une seule question (famille de #43). C'est #44
+    transposé au filtre booléen — *calculé / non calculable / absent* sont trois états, et `0.0`
+    appartient au premier. Test à faire partout où une valeur financière peut valoir zéro :
+    `is not None`, jamais la véracité. ⚠️ **Un flux se date par son exercice** (#42) : la mention
+    « (FY2023) » rend la péremption visible **même sans le correctif** — c'est la datation qui
+    transforme un chiffre faux et muet en chiffre faux et détectable. ⚠️ **Corollaire de fond** :
+    une base de ventes nulle ne retire pas l'ancre de taux de base, elle en **déclare la limite**
+    (un CAGR ne se calcule pas depuis zéro — le premier dollar vendu est une croissance infinie) ;
+    le zéro est une propriété **mesurée** de l'émetteur, pas un trou de collecte, et la mention
+    n'est portée **qu'en cas de base nulle** (la mettre partout la rendrait invisible).
+    Détail + garde : `check_base_rate_corpus.py` §11/§12 — éprouvé par test négatif (9 FAIL).
+    ⚠️ La fixture du check portait 11,58 M$ en 2025, chiffres **plus favorables que la
+    production** : une fixture qui embellit le réel est un check qui ne peut pas voir le défaut.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

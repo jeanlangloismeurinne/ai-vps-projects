@@ -38,6 +38,7 @@ from app.config import settings
 from app.data_collection.data_service import DataService
 from app.db.database import get_db_session
 from app.knowledge.service import store_knowledge
+from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
 
@@ -93,32 +94,19 @@ _DEFAULT_HORIZON = "5Y"   # horizon LT de la thèse (ValorisationCote impose hor
 
 
 def _mds(v: Optional[float]) -> str:
-    """Montant en dollars, format FR, **unité choisie par l'ordre de grandeur** (F9).
+    """Montant en dollars, format FR, unité choisie par l'ordre de grandeur (F9).
 
-    Une unité fixe en milliards écrase tout ce qui vit en dessous : RVMD, 11,58 M$ de ventes,
-    s'écrivait « 0,0 Md$ de ventes » — un texte que l'agent lit comme AUCUNE vente, alors que
-    l'écart de mailles que F8 vient de déclarer repose précisément sur ce chiffre. Un montant
-    arrondi à zéro n'est pas un montant imprécis, c'est un fait faux.
-
-    `None` → 'n/d' (une absence n'est jamais un zéro) ; un vrai zéro s'écrit « 0 $ », qui ne se
-    confond avec aucun arrondi.
+    La règle elle-même vit dans `knowledge/units.py` — elle était recopiée dans trois producteurs
+    et F9 n'en avait corrigé qu'un (F10). Cette fonction n'est plus que la notation « $ » collée.
     """
-    if v is None:
-        return "n/d"
-    v = float(v)
-    if v == 0:
-        return "0 $"
-    # Paliers du plus petit au plus grand : on PROMEUT tant que l'arrondi ferait franchir le
-    # palier suivant. Choisir l'unité avant d'arrondir écrit 999 999 $ « 1000,0 k$ » — l'arrondi
-    # fait changer d'ordre de grandeur à la valeur sans que l'unité suive.
-    paliers = ((1e3, "k$"), (1e6, "M$"), (1e9, "Md$"))
-    seuil, unite = 1.0, "$"
-    for s, u in paliers:
-        if round(abs(v) / s, 1) >= 1.0:
-            seuil, unite = s, u
-    if unite == "$":
-        return f"{v:.0f} $"
-    return f"{v / seuil:.1f} {unite}".replace(".", ",")
+    return montant(v, "$")
+
+
+def _exercice(rc: dict[str, Any]) -> str:
+    """« (FY2025) » — un CA est un FLUX, il se date (#42). Sans l'exercice, « 0 $ de ventes » n'est
+    pas réfutable contre le fait EDGAR correspondant, et un chiffre périmé passe inaperçu (F11)."""
+    fy = rc.get("sales_fiscal_year")
+    return f" (FY{fy})" if fy else ""
 
 
 class BaseRateUnavailable(Exception):
@@ -154,15 +142,31 @@ def size_bucket(sales_usd: Optional[float], market_cap_usd: Optional[float]) -> 
     return key, f"{prefixe} ({basis} {tranche})", basis
 
 
-def _latest_revenue_usd(m1: dict[str, Any]) -> Optional[float]:
-    """CA le plus récent depuis financials_3y (clé = année). None si absent."""
+def _latest_revenue_usd(m1: dict[str, Any]) -> tuple[Optional[float], Optional[str]]:
+    """(CA le plus récent, son exercice) depuis financials_3y. `(None, None)` si le CA est absent.
+
+    ⚠️ **Un CA nul est une valeur, pas une absence** (F11, trouvé sur RVMD). Le test était
+    `if rev:` — donc `0.0`, falsy, faisait passer à l'exercice précédent **en silence**. RVMD est
+    une biotech clinique : 0 $ de ventes en FY2024 comme en FY2025 (EDGAR le confirme sous
+    `RevenueFromContractWithCustomerExcludingAssessedTax`), et 11,58 M$ en FY2023, reste d'une
+    collaboration éteinte. L'ancre publiait donc « 11,6 M$ de ventes » — un chiffre vieux de deux
+    exercices — dans le paragraphe même où F8 déclare l'écart entre capitalisation et CA, et en
+    **contradiction avec l'entry EDGAR tier A** du corpus, qui dit 0. Deux réponses actives à la
+    même question, comme F5 : c'est le corpus narratif lu par les agents qui portait le conflit.
+
+    Même famille que #44 : *absent* et *nul* sont deux états distincts, et les confondre fait lire
+    une propriété de l'émetteur (il ne vend rien encore) comme un trou de collecte.
+
+    L'exercice est rendu avec la valeur parce qu'un CA est un **flux** : le dater est exigé par
+    #42, et c'est ce qui rend l'affirmation réfutable contre le fait EDGAR correspondant.
+    """
     fin = m1.get("financials_3y") or {}
     years = sorted((y for y in fin if str(y).isdigit()), reverse=True)
     for y in years:
         rev = (fin.get(y) or {}).get("revenue")
-        if rev:
-            return float(rev)
-    return None
+        if rev is not None:
+            return float(rev), str(y)
+    return None, None
 
 
 @dataclass
@@ -179,7 +183,7 @@ class BaseRateAnchorSpec:
 
 def classify_reference_class(m1: dict[str, Any]) -> dict[str, Any]:
     """Ticker (via m1) → classe de référence déterministe. Aucun LLM."""
-    sales = _latest_revenue_usd(m1)
+    sales, sales_fy = _latest_revenue_usd(m1)
     mcap = (m1.get("price") or {}).get("market_cap")
     key, label, basis = size_bucket(sales, mcap)
     return {
@@ -188,6 +192,7 @@ def classify_reference_class(m1: dict[str, Any]) -> dict[str, Any]:
         "size_label": label,
         "size_basis": basis,
         "sales_usd": sales,
+        "sales_fiscal_year": sales_fy,   # un flux se date (#42) — et c'est ce qui le rend réfutable
         "market_cap_usd": mcap,
         "horizon": _DEFAULT_HORIZON,
     }
@@ -224,6 +229,7 @@ def build_base_rate_anchor_spec(
         # Les deux mesures qui fondent la classe, exposées : sans elles, « small-cap » n'est pas
         # réfutable par le lecteur de l'entry.
         "sales_usd": rc.get("sales_usd"),
+        "sales_fiscal_year": rc.get("sales_fiscal_year"),
         "market_cap_usd": rc.get("market_cap_usd"),
         "size_bucket_par_capitalisation": mcap_bucket,
         "mailles_divergentes": mailles_divergentes,
@@ -234,6 +240,12 @@ def build_base_rate_anchor_spec(
         "distribution": {str(int(lo)) if lo > -100 else "<-25": freq[horizon]
                          for lo, freq in SALES_GROWTH_DISTRIBUTION},
         "upper_bound_for_size": is_mega,          # True = borne haute, persistance moindre à cette taille
+        # Un CAGR de ventes ne se calcule pas depuis une base nulle : le premier dollar vendu est
+        # une croissance infinie. La distribution reste l'outside view légitime sur la PERSISTANCE
+        # d'une trajectoire, mais l'ancre ne doit pas être lue comme applicable telle quelle à un
+        # émetteur sans ventes. On ne retire pas l'ancre (la classe est juste, cf. F8) : on
+        # DÉCLARE la limite, sinon un reverse-DCF en aval la franchit sans le savoir.
+        "base_ventes_nulle": rc.get("sales_usd") == 0,
         "source": BASE_RATE_BOOK["source"],
         "sample": BASE_RATE_BOOK["sample"],
         "corpus_entry_id": corpus_entry_id,
@@ -253,10 +265,20 @@ def build_base_rate_anchor_spec(
             f"⚠ La classe est établie sur le CHIFFRE D'AFFAIRES, pas sur la capitalisation : "
             f"{symbol} pèse {_mds(rc['market_cap_usd'])} de capitalisation "
             f"(maille capitalisation : {size_bucket(None, rc['market_cap_usd'])[1].split(' (')[0]}) "
-            f"pour {_mds(rc['sales_usd'])} de ventes. Le libellé « {rc['size_label'].split(' (')[0]} » "
+            f"pour {_mds(rc['sales_usd'])} de ventes{_exercice(rc)}. "
+            f"Le libellé « {rc['size_label'].split(' (')[0]} » "
             f"qualifie donc le CA, jamais la taille boursière — ne pas le lire comme une petite "
             f"capitalisation. Cet écart est l'information distinctive de l'émetteur (valorisation "
             f"portée par un actif futur, pas par des ventes existantes), pas un défaut de classement. "
+        )
+    if structured["base_ventes_nulle"]:
+        content += (
+            f"⚠ Base de ventes NULLE{_exercice(rc)} : un CAGR de ventes ne se calcule pas depuis "
+            f"zéro (le premier dollar vendu est une croissance infinie). La distribution ci-dessus "
+            f"reste l'outside view sur la PERSISTANCE d'une trajectoire de croissance, mais elle "
+            f"n'est pas applicable telle quelle en taux — l'analyse doit ancrer sur autre chose que "
+            f"la croissance du CA (pipeline, marché adressable, jalons). Ce zéro est une propriété "
+            f"mesurée de l'émetteur, pas un trou de collecte. "
         )
     if is_mega:
         content += (

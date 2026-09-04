@@ -40,6 +40,7 @@ from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annu
 # son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
 from app.knowledge.edgar_feed import _current_fact_ids
 from app.knowledge.service import get_current_entries, store_knowledge
+from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +87,16 @@ def _pct(v: Optional[float], nd: int = 1) -> str:
     return f"{v:.{nd}f}".replace(".", ",") + " %"
 
 
-def _md(v: Optional[float]) -> str:
-    """Montant en milliards, format FR."""
-    if v is None:
-        return "n/d"
-    return f"{v/1e9:.1f}".replace(".", ",") + " Md"
+def _md(v: Optional[float], devise: str = "") -> str:
+    """Montant en format FR, unité choisie par l'ordre de grandeur (règle : `knowledge/units.py`).
+
+    ⚠️ La devise est passée ICI, plus concaténée par l'appelant : un vrai zéro s'écrit « 0 » sans
+    palier (#45), donc `f"{_md(v, cur)}"` produirait « 0USD ». Ce module écrivait `/1e9` en dur —
+    le capex FY2025 de RVMD (15,99 M$) sortait « 0,0 MdUSD », et l'entry `fcf_conversion_pct`
+    publiait « FCF -0,9 Md = CFO -0,9 Md − capex 0,0 Md » : une soustraction qui paraît juste
+    seulement parce que ses deux termes sont écrasés à la même unité (F10).
+    """
+    return montant(v, devise)
 
 
 def _as_dict(cs: Any) -> dict[str, Any]:
@@ -287,8 +293,8 @@ def build_financials_entries(
             "method": "dette LT (non courante) / capitaux propres ; dette nette = dette LT − trésorerie",
         }
         content = (
-            f"Levier de {ticker_id} ({symbol}) — {au_bilan} : dette LT {_md(debt)}{cur}, trésorerie "
-            f"{_md(cash)}{cur} → dette nette {_md(net_debt)}{cur}. Gearing (`levier`, dette/capitaux "
+            f"Levier de {ticker_id} ({symbol}) — {au_bilan} : dette LT {_md(debt, cur)}, trésorerie "
+            f"{_md(cash, cur)} → dette nette {_md(net_debt, cur)}. Gearing (`levier`, dette/capitaux "
             f"propres) = {_pct(d2e)} ; dette nette/capitaux propres = {_pct(nd2e)}. "
         )
         if net_cash:
@@ -323,8 +329,8 @@ def build_financials_entries(
             }, mixte=True)
             content = (
                 f"ROIC de {ticker_id} ({symbol}) — {fy} : {_pct(roic)} (`roic_pct`). Capital investi "
-                f"{_md(invested)}{cur} (capitaux propres {_md(equity)} + dette LT {_md(debt)} − trésorerie "
-                f"{_md(cash)}), NOPAT approché par le résultat net {_md(net_income)}{cur}. "
+                f"{_md(invested, cur)} (capitaux propres {_md(equity, cur)} + dette LT {_md(debt, cur)} − trésorerie "
+                f"{_md(cash, cur)}), NOPAT approché par le résultat net {_md(net_income, cur)}. "
                 f"Approximation NOPAT ≈ résultat net justifiée par la position de trésorerie nette "
                 f"(intérêts nets négligeables) — elle peut LÉGÈREMENT majorer le ROIC si le résultat "
                 f"non opérationnel est significatif.{mention_mixte} Calculé depuis les dépôts EDGAR "
@@ -367,8 +373,8 @@ def build_financials_entries(
         if significatif:
             content = (
                 f"Conversion FCF de {ticker_id} ({symbol}) — {fy} : {_pct(conv)} (`fcf_conversion_pct`). "
-                f"FCF {_md(fcf)}{cur} = cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, rapporté au "
-                f"résultat net {_md(net_income)}{cur}. Tous les postes proviennent du 10-K EDGAR (tier A ; "
+                f"FCF {_md(fcf, cur)} = cash-flow opérationnel {_md(ocf, cur)} − capex {_md(capex, cur)}, rapporté au "
+                f"résultat net {_md(net_income, cur)}. Tous les postes proviennent du 10-K EDGAR (tier A ; "
                 f"capex = us-gaap PaymentsToAcquirePropertyPlantAndEquipment)."
             )
             titre = f"Financials — conversion FCF {fy}"
@@ -381,9 +387,9 @@ def build_financials_entries(
                 "consommation de trésorerie, qui est le fait pertinent"
             )
             content = (
-                f"Trésorerie consommée par {ticker_id} ({symbol}) — {fy} : FCF {_md(fcf)}{cur} "
-                f"= cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, pour un résultat net "
-                f"{_md(net_income)}{cur}. ⚠️ `fcf_conversion_pct` est **non défini** ici et vaut None : "
+                f"Trésorerie consommée par {ticker_id} ({symbol}) — {fy} : FCF {_md(fcf, cur)} "
+                f"= cash-flow opérationnel {_md(ocf, cur)} − capex {_md(capex, cur)}, pour un résultat net "
+                f"{_md(net_income, cur)}. ⚠️ `fcf_conversion_pct` est **non défini** ici et vaut None : "
                 f"le résultat net étant négatif, le quotient FCF/résultat net serait POSITIF "
                 f"({_pct(fcf / net_income * 100)}) et se lirait à tort comme une bonne conversion du "
                 f"résultat en cash. L'émetteur ne convertit pas un bénéfice en trésorerie, il "
@@ -412,7 +418,7 @@ def build_financials_entries(
         }
         content = (
             f"Intensité capitalistique de {ticker_id} ({symbol}) — {fy} : {_pct(inten)} "
-            f"(`intensite_capex_pct`). Capex {_md(capex)}{cur} / CA {_md(revenue)}{cur}. "
+            f"(`intensite_capex_pct`). Capex {_md(capex, cur)} / CA {_md(revenue, cur)}. "
             f"Modèle {'peu' if inten < 10 else 'assez'} capitalistique. Postes du 10-K EDGAR (tier A)."
         )
         specs.append(FinancialsEntrySpec(
@@ -475,7 +481,7 @@ async def _persist_capex_fact(
     }
     content = (
         f"Capex (dépenses d'investissement) de {ticker_id} ({symbol}) — exercice clos le {period_end} : "
-        f"{_md(val)}{currency}. Source : {point.get('form','10-K')} EDGAR, concept XBRL "
+        f"{_md(val, currency)}. Source : {point.get('form','10-K')} EDGAR, concept XBRL "
         f"us-gaap:{tag_used} (accession {point.get('accn')})."
     )
     prevs = await _current_fact_ids(

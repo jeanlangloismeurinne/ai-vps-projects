@@ -55,6 +55,7 @@ from app.knowledge.edgar_facts import (
     EdgarUnavailable, _UA, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
 )
 from app.knowledge.service import store_knowledge
+from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
 
@@ -180,10 +181,14 @@ def filing_url(cik: int, accn: Optional[str]) -> Optional[str]:
     return _FILING_URL.format(cik=cik, accn_nodash=accn.replace("-", ""), accn=accn)
 
 
-def _md(v: Optional[float]) -> str:
-    if v is None:
-        return "n/d"
-    return f"{v/1e9:.2f}".replace(".", ",") + " Md"
+def _md(v: Optional[float], devise: str = "") -> str:
+    """Montant EDGAR, 2 décimales (un poste de bilan à 2,61 Md n'est pas 2,6 Md).
+
+    ⚠️ La devise est passée ICI, plus concaténée par l'appelant : un vrai zéro s'écrit « 0 »
+    sans mantisse ni palier (#45), donc `f"{_md(v)}{unit}"` produirait « 0USD ». Règle d'unité :
+    `knowledge/units.py` (F10 — elle était recopiée en dur `/1e9` dans ce module).
+    """
+    return montant(v, devise, nd=2)
 
 
 def fiscal_label(point: dict[str, Any]) -> Optional[str]:
@@ -276,7 +281,7 @@ def build_edgar_entries(
                 })
                 content = (
                     f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
-                    f"trésorerie {_md(point['val'])}{unit}. Dette long terme **non déterminée** : "
+                    f"trésorerie {_md(point['val'], unit)}. Dette long terme **non déterminée** : "
                     f"aucun des concepts XBRL candidats n'est déposé par cet émetteur. "
                     f"⚠️ Absence de dépôt ≠ absence de dette — ne pas lire ce poste comme une "
                     f"position sans dette, et ne pas en dériver de dette nette. "
@@ -288,8 +293,8 @@ def build_edgar_entries(
                 structured["xbrl_tag_2"] = f"us-gaap:{second['concept']}"
                 content = (
                     f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
-                    f"trésorerie {_md(point['val'])}{unit}, dette long terme "
-                    f"{_md(second['point']['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, "
+                    f"trésorerie {_md(point['val'], unit)}, dette long terme "
+                    f"{_md(second['point']['val'], unit)}. Source : {point.get('form', '10-K')} EDGAR, "
                     f"concepts XBRL us-gaap:{concept} et us-gaap:{second['concept']} "
                     f"(accession {point.get('accn')})."
                 )
@@ -297,7 +302,7 @@ def build_edgar_entries(
             structured["value"] = point["val"]
             content = (
                 f"{poste.label} de {ticker_id} ({symbol}) — {datation} {point['end']} : "
-                f"{_md(point['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, concept "
+                f"{_md(point['val'], unit)}. Source : {point.get('form', '10-K')} EDGAR, concept "
                 f"XBRL us-gaap:{concept} (accession {point.get('accn')})."
             )
 

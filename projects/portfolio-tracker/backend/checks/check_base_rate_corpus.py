@@ -8,7 +8,7 @@ jamais fondée sur une classe inventée (lève si ni CA ni capitalisation).
 import sys
 
 from app.knowledge.base_rate_corpus import (
-    BaseRateUnavailable, SALES_GROWTH_DISTRIBUTION, _mds, base_rate_ge,
+    BaseRateUnavailable, SALES_GROWTH_DISTRIBUTION, _latest_revenue_usd, _mds, base_rate_ge,
     build_base_rate_anchor_spec, classify_reference_class, size_bucket,
 )
 
@@ -139,10 +139,63 @@ check("l'arrondi PROMEUT l'unité (999 999 $ ≠ « 1000,0 k$ »)", _mds(1e6 - 1
 check("aucun montant n'affiche 4 chiffres devant la virgule",
       all(len(_mds(v).split(",")[0].lstrip("-")) <= 3 for v in (999.0, 1e6 - 1, 1e9 - 1, 999.9e9)),
       f"→ {[_mds(v) for v in (999.0, 1e6 - 1, 1e9 - 1, 999.9e9)]}")
-RVMD_REEL = {"price": {"market_cap": 44.86e9}, "financials_3y": {"2025": {"revenue": 11_580_000}}}
-reel = build_base_rate_anchor_spec("RVMD", "RVMD", RVMD_REEL)
-check("sur les chiffres RÉELS de prod, le texte porte 11,6 M$",
-      "11,6 M$" in reel.content and "0,0 Md$" not in reel.content, f"→ {reel.content}")
+check("un montant de 11,58 M$ ne s'écrit pas « 0,0 Md$ »",
+      _mds(11_580_000.0) == "11,6 M$" and _mds(11_580_000.0) != "0,0 Md$")
+
+print("\n11. Un CA NUL est une valeur, pas une absence (F11)")
+# ⚠️ La fixture de §10 disait `{"2025": {"revenue": 11_580_000}}`. C'est ce que la PROD ne dit pas :
+# `financials_3y` porte 2023=11,58 M$, 2024=0,0, 2025=0,0 (vérifié dans market_snapshots, et EDGAR
+# concorde sous `RevenueFromContractWithCustomerExcludingAssessedTax`). La fixture était plus
+# aimable que le réel — donc verte pour toujours sur un cas qui n'existe pas. Corrigée ici.
+RVMD_PROD = {
+    "price": {"market_cap": 44.86e9},
+    "financials_3y": {"2023": {"revenue": 11_580_000.0},
+                      "2024": {"revenue": 0.0},
+                      "2025": {"revenue": 0.0}},
+}
+val, fy = _latest_revenue_usd(RVMD_PROD)
+check("un 0,0 n'est PAS sauté au profit d'un exercice antérieur", val == 0.0, f"→ {val}")
+check("l'exercice retenu est le plus récent, pas le dernier non nul", fy == "2025", f"→ {fy}")
+check("un CA réellement absent reste None (une absence n'est pas un zéro)",
+      _latest_revenue_usd({"financials_3y": {"2025": {}}}) == (None, None))
+check("un CA non nul est toujours rendu avec son exercice",
+      _latest_revenue_usd({"financials_3y": {"2026": {"revenue": 216e9}}}) == (216e9, "2026"))
+
+prod = build_base_rate_anchor_spec("RVMD", "RVMD", RVMD_PROD)
+ps = prod.content_structured
+check("le structuré porte le CA de l'exercice courant, pas celui d'il y a deux ans",
+      ps["sales_usd"] == 0.0, f"→ {ps['sales_usd']}")
+check("le flux est daté (#42) — sans exercice, le chiffre n'est pas réfutable",
+      ps["sales_fiscal_year"] == "2025", f"→ {ps['sales_fiscal_year']}")
+check("le texte n'annonce PLUS un chiffre vieux de deux exercices",
+      "11,6 M$" not in prod.content, f"→ {prod.content}")
+check("le texte dit 0 $ de ventes, daté", "0 $ de ventes (FY2025)" in prod.content,
+      f"→ {prod.content}")
+check("la classe reste calculée sur le CA (un zéro ne change pas la maille du livre)",
+      ps["size_bucket"] == "small" and ps["size_basis"] == "CA")
+check("la divergence des mailles tient toujours", ps["mailles_divergentes"] is True)
+
+print("\n12. Base de ventes nulle : la limite de l'ancre est DÉCLARÉE, l'ancre n'est pas retirée")
+# Un CAGR de ventes depuis zéro est indéfini (le premier dollar vendu est une croissance infinie).
+# On ne supprime pas l'ancre — la classe est juste et l'outside view sur la persistance reste
+# valable ; on refuse seulement qu'un reverse-DCF en aval la prenne pour un taux applicable.
+check("le drapeau est levé", ps["base_ventes_nulle"] is True)
+check("le texte dit qu'un CAGR ne se calcule pas depuis zéro",
+      "ne se calcule pas depuis" in prod.content, f"→ {prod.content}")
+check("le texte qualifie ce zéro de propriété mesurée, pas de trou de collecte",
+      "pas un trou de collecte" in prod.content)
+check("l'ancre est CONSERVÉE (distribution et seuils toujours portés)",
+      len(ps["distribution"]) == 16 and set(ps["thresholds_pct_ge"]) == {"15", "20", "25"})
+# Contrepartie du #45 : une mention portée par tous les cas ne distingue plus le cas qui compte.
+check("un émetteur qui vend ne porte pas le drapeau",
+      spec.content_structured["base_ventes_nulle"] is False
+      and mid_spec.content_structured["base_ventes_nulle"] is False)
+check("ni le paragraphe", "ne se calcule pas depuis" not in spec.content
+      and "ne se calcule pas depuis" not in mid_spec.content)
+check("un CA ABSENT n'est pas un CA nul (repli capitalisation, pas de drapeau)",
+      build_base_rate_anchor_spec(
+          "X", "X", {"price": {"market_cap": 300e9}, "financials_3y": {}}
+      ).content_structured["base_ventes_nulle"] is False)
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

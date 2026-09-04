@@ -25,7 +25,7 @@ from app.knowledge.edgar_facts import (
     _parse_annual_points, _parse_instant_points, cik_from_url,
 )
 from app.knowledge.edgar_feed import (
-    POSTES, _current_fact_ids, build_edgar_entries, fiscal_label, filing_url, is_annual_flow,
+    POSTES, _current_fact_ids, _md, build_edgar_entries, fiscal_label, filing_url, is_annual_flow,
     run_edgar_feed, select_concept,
 )
 from app.knowledge.financials_feed import extract_edgar_facts
@@ -434,6 +434,59 @@ check("le rattrapage vise la NOUVELLE entrée comme remplaçante",
       "SET superseded_by = $1" in _src and 'stored["id"]' in _src)
 check("la réponse expose la LISTE des faits retirés, pas un seul id",
       '"supersedes": prevs' in _src, "→ un appelant ne peut pas voir un balayage multiple")
+
+
+# ── 11. Un montant arrondi à zéro est FAUX, pas imprécis (F10) ───────────────────────────────────
+print("\n[11] l'unité d'un montant suit son ordre de grandeur, et un vrai zéro se distingue (F10)")
+# La règle #45 a été écrite au correctif F9 dans `base_rate_corpus`, et SEULEMENT là : ce module
+# divisait toujours par 1e9 en dur. Chiffres RÉELS de RVMD (EDGAR `companyconcept` CIK0001628171,
+# FY2025) : capex 15 990 000 $ publié « 0,02 MdUSD » — un ordre de grandeur illisible — et un CA
+# véritablement NUL publié « 0,00 MdUSD », indiscernable d'un montant simplement écrasé par
+# l'arrondi. C'est le cas limite qui rend la règle non négociable : ce zéro-là n'est pas une perte
+# de précision, c'est une collision entre deux états distincts (#44 : absent ≠ nul).
+_ACCN_R = "0001628171-26-000045"
+resolved_r = {
+    "revenue": {"concept": "RevenueFromContractWithCustomerExcludingAssessedTax", "unit": "USD",
+                "point": annual("2025-12-31", 0.0, accn=_ACCN_R, fy=2025)},
+    "capital_expenditure": {"concept": "PaymentsToAcquirePropertyPlantAndEquipment", "unit": "USD",
+                            "point": annual("2025-12-31", 15_990_000.0, accn=_ACCN_R, fy=2025)},
+    "cash_and_lt_debt": {
+        "concept": "CashAndCashEquivalentsAtCarryingValue", "unit": "USD",
+        "point": pt("2026-06-30", 815_435_000.0, accn=_ACCN_R, fy=2026),
+        "second": {"concept": "LongTermDebtNoncurrent", "unit": "USD",
+                   "point": pt("2026-06-30", 487_434_000.0, accn=_ACCN_R, fy=2026)},
+    },
+}
+specs_r, _ = build_edgar_entries("RVMD", "RVMD", 1_628_171, resolved_r)
+by_r = {s.metric: s for s in specs_r}
+
+check("un capex de 15,99 M$ s'écrit dans SON ordre de grandeur",
+      "15,99 MUSD" in by_r["capital_expenditure"].content,
+      f"→ {by_r['capital_expenditure'].content[:120]}")
+check("un vrai zéro s'écrit sans mantisse ni palier (il ne peut plus se confondre avec un arrondi)",
+      "0 USD" in by_r["revenue"].content and "0,00 Md" not in by_r["revenue"].content,
+      f"→ {by_r['revenue'].content[:120]}")
+# La valeur exacte reste dans le structuré : le format ne décide de rien, il RAPPORTE. Un lecteur
+# (agent ou humain) qui doute du texte doit pouvoir retrouver le nombre non transformé.
+check("le nombre brut reste intact dans le structuré (le format ne remplace pas le fait)",
+      by_r["capital_expenditure"].content_structured["value"] == 15_990_000.0
+      and by_r["revenue"].content_structured["value"] == 0.0)
+# Poste composite : deux nombres dans une seule phrase. C'est là que factoriser la devise sur le
+# dernier terme mordrait — depuis F10 deux termes d'une même phrase peuvent porter des paliers
+# différents, donc chacun porte sa devise.
+_cash_c = by_r["cash_and_lt_debt"].content
+check("chaque nombre d'un poste composite porte sa propre unité",
+      _cash_c.count("USD") >= 2 and "815,43 MUSD" in _cash_c and "487,43 MUSD" in _cash_c,
+      f"→ {_cash_c[:160]}")
+# Non-régression : les montants réellement en milliards restent en milliards (le correctif ne
+# rétrograde pas tout à l'unité inférieure — l'unité SUIT la valeur).
+check("un poste réellement en milliards reste en milliards",
+      "442,39 MdUSD" in next(s for s in specs if s.metric == "stockholders_equity").content,
+      f"→ {next(s for s in specs if s.metric == 'stockholders_equity').content[:120]}")
+check("la règle d'unité est DÉLÉGUÉE à `app.knowledge.units`, pas re-codée ici",
+      "from app.knowledge.units import montant" in inspect.getsource(sys.modules[_md.__module__])
+      and "return montant(" in inspect.getsource(_md),
+      "→ `_md` calcule son palier lui-même : il re-divergera au prochain correctif")
 
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)

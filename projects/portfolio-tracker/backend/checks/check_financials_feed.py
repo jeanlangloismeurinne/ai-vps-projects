@@ -16,7 +16,7 @@ from app.knowledge.edgar_facts import (
     _parse_annual_points, _pick_for_period, cik_from_url,
 )
 from app.knowledge.financials_feed import (
-    _persist_capex_fact, build_financials_entries, extract_edgar_facts,
+    _md, _persist_capex_fact, build_financials_entries, extract_edgar_facts,
 )
 
 ok = fail = 0
@@ -34,6 +34,11 @@ def check(label, cond, detail=""):
 
 def approx(a, b, tol=0.05):
     return a is not None and abs(a - b) <= tol
+
+
+def _n_units(texte):
+    """Nombre de montants portant leur devise. Sert à prouver qu'aucun terme ne l'a perdue (F10)."""
+    return texte.count("USD")
 
 
 AS_OF = date(2026, 8, 25)
@@ -346,6 +351,50 @@ check("le capex balaie lui aussi les entrées orphelines (même règle que le so
       "prevs[1:]" in _capex_src and "superseded_by" in _capex_src)
 check("le capex écrit se déclare comme un FLUX (il ne peut pas s'ancrer au bilan)",
       '"poste_kind": "flow"' in _capex_src)
+
+print("\n9. UN MONTANT ARRONDI À ZÉRO EST FAUX, PAS IMPRÉCIS (F10)")
+# Le correctif F9 a écrit la règle d'unité dans `base_rate_corpus._mds` — et SEULEMENT là. Ce
+# module divisait toujours par 1e9 en dur. Sur les chiffres RÉELS de RVMD ci-dessus (capex FY2025
+# = 15,99 M$, vérifié contre EDGAR `companyconcept` CIK0001628171), l'entry publiée en prod
+# disait : « FCF -0,9 Md = cash-flow opérationnel -0,9 Md − capex 0,0 Md ». Un agent y lit
+# *aucun investissement*, et l'arithmétique de la soustraction PARAÎT juste précisément parce que
+# les deux termes sont écrasés à la même unité — donc invisible à tout contrôle de cohérence.
+fcf_e = by_f6["fcf_conversion_pct"]
+
+check("un capex de 15,99 M$ ne s'écrit pas « 0,0 Md »",
+      "16,0 MUSD" in fcf_e.content and "0,0 Md" not in fcf_e.content,
+      f"→ {fcf_e.content[:160]}")
+check("la soustraction du FCF est VÉRIFIABLE (les 3 termes dans une unité qui les distingue)",
+      "-913,7 MUSD" in fcf_e.content and "-897,7 MUSD" in fcf_e.content,
+      f"→ {fcf_e.content[:200]}")
+# Le corollaire du correctif : une fois l'unité choisie par ordre de grandeur, deux termes d'une
+# MÊME expression peuvent légitimement porter des paliers différents (M et Md). Factoriser la
+# devise sur le seul dernier terme — ce que faisait `f"{_md(x)}{cur}"` — laisserait alors deux
+# ordres de grandeur se lire comme un seul.
+check("chaque terme d'une expression composée porte sa propre unité",
+      _n_units(roic.content) == 5 and "Md " not in roic.content,
+      f"→ {_n_units(roic.content)} unités dans le ROIC : {roic.content[:200]}")
+check("le levier, dont les trois postes sont du même ordre, reste homogène",
+      _n_units(lev.content) == 3, f"→ {_n_units(lev.content)}")
+
+# Un VRAI zéro (RVMD ne vend rien) n'est pas un arrondi écrasé : #45 impose « 0 USD », qui ne peut
+# se confondre avec aucun palier. « 0,00 MdUSD » se lirait comme « moins de 5 M$ de ventes ».
+# Ici la vérification est sur le formateur : avec un CA nul, `intensite_capex_pct` n'est pas fondé
+# (division par zéro), donc aucun texte de ce module ne porte le cas — il est tenu côté
+# `check_edgar_feed.py` §11, où le poste `revenue` à zéro est bien publié.
+check("un vrai zéro s'écrit sans mantisse ni palier",
+      _md(0.0, "USD") == "0 USD", f"→ {_md(0.0, 'USD')}")
+check("un CA nul retire l'intensité capex plutôt que d'inventer un dénominateur",
+      "intensite_capex_pct" not in by_f6, f"→ {sorted(by_f6)}")
+check("une ABSENCE n'est pas un zéro (elle ne s'écrit pas en montant du tout)",
+      _md(None, "USD") == "n/d", f"→ {_md(None, 'USD')}")
+# La règle vit à un seul endroit : c'est tout l'objet de F10 (corollaire de méthode de #43 appliqué
+# à un format). Un module qui la ré-implémente re-diverge au prochain correctif.
+_src = inspect.getsource(sys.modules[_md.__module__])
+check("le module n'a pas re-codé la règle d'unité (il DÉLÈGUE à `app.knowledge.units`)",
+      "from app.knowledge.units import montant" in _src
+      and "return montant(" in inspect.getsource(_md),
+      "→ `_md` calcule son palier lui-même : il re-divergera au prochain correctif")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
