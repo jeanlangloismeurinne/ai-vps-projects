@@ -41,7 +41,7 @@ from typing import Any, Optional
 
 from app.agents.providers import get_agent_provider
 from app.agents.v2.common import format_entries_for_prompt
-from app.agents.v2.runner import run_json_agent
+from app.agents.v2.runner import AgentOutputInvalid, run_json_agent
 from app.contracts import (
     CalibrationEntry,
     ExitPlan,
@@ -565,10 +565,14 @@ async def run_exit_agent(thesis_v2_id: int, mode: str) -> dict[str, Any]:
             agent, [{"role": "user", "content": contexte}], MODE_SCHEMAS[mode],
             json_object=False, temperature=0.2,
         )
+    except AgentOutputInvalid as e:
+        # L'exception porte la dépense et le texte fautif : passée en `run=`, elle rend l'échec
+        # aussi auditable qu'un succès (cf. `AgentOutputInvalid`).
+        await _persister_echec(mode, inputs, contexte, agent, str(e),
+                               raw_content=e.raw_content or None, run=e)
+        raise
     except RuntimeError as e:
-        # ⚠️ `run_json_agent` ne remonte ni le texte brut fautif ni les tokens quand il abandonne :
-        # l'échec est tracé mais la dépense de cette tentative n'est PAS comptabilisée. Limite
-        # connue du runner, commune à tous les agents V2 (dette du lot 8, toujours ouverte).
+        # Échec sans télémétrie exploitable (panne réseau, provider indisponible) : tracé quand même.
         await _persister_echec(mode, inputs, contexte, agent, str(e))
         raise
 

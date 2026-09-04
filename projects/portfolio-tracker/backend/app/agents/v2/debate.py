@@ -41,7 +41,7 @@ from typing import Any, Optional
 
 from app.agents.providers import get_agent_provider
 from app.agents.v2.common import format_entries_for_prompt
-from app.agents.v2.runner import run_json_agent
+from app.agents.v2.runner import AgentOutputInvalid, run_json_agent
 from app.contracts import ConvictionChallenge
 from app.db.database import get_db_session
 from app.knowledge import collect_refs, get_current_entries, snapshot_refs
@@ -283,8 +283,14 @@ async def run_debate(
             agent, [{"role": "user", "content": contexte}], ConvictionChallenge,
             json_object=False, temperature=0.2,
         )
+    except AgentOutputInvalid as e:
+        # L'exception porte la dépense et le texte fautif (cf. `AgentOutputInvalid`) — un débat
+        # `failed` doit rester chiffré, c'est la trace d'une complaisance qui a coûté des tokens.
+        await _persister_echec(inputs, contexte, agent, str(e), monitoring_session_v2_id,
+                               raw_content=e.raw_content or None, run=e)
+        raise
     except RuntimeError as e:
-        # ⚠️ Comme partout en V2 : `run_json_agent` perd le brut et les tokens quand il abandonne.
+        # Échec sans télémétrie exploitable (panne réseau, provider indisponible) : tracé quand même.
         await _persister_echec(inputs, contexte, agent, str(e), monitoring_session_v2_id)
         raise
 

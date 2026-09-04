@@ -6,7 +6,9 @@ Deux voies :
   - **run_json_agent** : voie nominale. Appelle `.complete(response_format=json_object)`, extrait le
     JSON, le valide contre le schéma Pydantic du contrat. En cas d'échec (JSON illisible ou champ
     hors contrat / manquant — `extra='forbid'` verrouille Q2), UNE tentative de réparation en
-    réinjectant l'erreur au modèle. Au-delà : RuntimeError claire (l'appelant relance).
+    réinjectant l'erreur au modèle. Au-delà : `AgentOutputInvalid` (sous-classe de RuntimeError)
+    qui PORTE la dépense réellement engagée et le texte fautif — un abandon est facturé comme un
+    succès, il doit être comptabilisé comme tel.
   - **run_tool_agent** : boucle tool-calling brute (search-worker) — `tool_executors` fournis par
     l'appelant. Rend le texte du dernier tour, sans validation.
   - **run_tool_json_agent** : voie réellement utilisée par le search-worker. Même boucle d'outils,
@@ -47,6 +49,63 @@ def extract_json(content: str) -> dict[str, Any]:
         if start != -1 and end > start:
             return json.loads(s[start : end + 1])
         raise
+
+
+class AgentOutputInvalid(RuntimeError):
+    """Sortie non conforme au contrat après épuisement des réparations — AVEC la télémétrie.
+
+    Le runner levait auparavant un `RuntimeError` nu. Les tours étaient pourtant bel et bien
+    facturés : l'appelant persistait donc un échec à **0 token / $0**, et le texte fautif — la
+    seule pièce qui permette de diagnostiquer *pourquoi* le modèle est sorti du contrat — était
+    jeté. Un échec qui ne coûte rien dans les comptes est un échec qu'on ne cherche pas à réduire.
+
+    Sous-classe de `RuntimeError` **à dessein** : les appelants existants font `except RuntimeError`
+    et continuent de fonctionner sans modification. Les attributs portent exactement les noms lus
+    par les `_persister_echec` (`tokens_in`, `tokens_out`, `cost_usd`, `raw_content`), si bien que
+    l'exception peut être passée telle quelle en `run=`.
+    """
+
+    def __init__(
+        self,
+        *,
+        agent_name: str,
+        schema_name: str,
+        attempts: int,
+        last_error: Optional[str],
+        raw_content: str,
+        tokens_in: int,
+        tokens_out: int,
+        cost_usd: float,
+    ) -> None:
+        super().__init__()
+        self.agent_name = agent_name
+        self.schema_name = schema_name
+        self.attempts = attempts
+        self.last_error = last_error
+        self.raw_content = raw_content
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        self.cost_usd = cost_usd
+
+    def add_upstream(self, tokens_in: int, tokens_out: int, cost_usd: float, iterations: int) -> "AgentOutputInvalid":
+        """Ajoute la dépense d'une phase AMONT (boucle d'outils) à l'échec de la clôture.
+
+        Sans ce report, `run_tool_json_agent` perd la part la PLUS grosse de la facture : la boucle
+        d'outils compte plusieurs tours à gros contexte, la clôture un seul. Ne touche pas
+        `raw_content`, qui doit rester le texte du tour fautif — celui de la clôture.
+        """
+        self.tokens_in += tokens_in
+        self.tokens_out += tokens_out
+        self.cost_usd += cost_usd
+        self.attempts += iterations
+        return self
+
+    def __str__(self) -> str:  # recalculé : `add_upstream` peut avoir bougé les compteurs
+        return (
+            f"Agent {self.agent_name} : sortie non conforme à {self.schema_name} après "
+            f"{self.attempts} tentative(s), {self.tokens_in} tokens in / {self.tokens_out} out "
+            f"facturés (${self.cost_usd:.6f}). Dernière erreur : {self.last_error}"
+        )
 
 
 @dataclass
@@ -123,10 +182,19 @@ async def run_json_agent(
                 )
 
         if attempt >= max_repair + 1:
-            logger.error("run_json_agent(%s): échec validation après %d essais", agent.agent_name, attempt)
-            raise RuntimeError(
-                f"Agent {agent.agent_name} : sortie non conforme à {schema.__name__} "
-                f"après {attempt} tentative(s). Dernière erreur : {err}"
+            logger.error(
+                "run_json_agent(%s): échec validation après %d essais — %d/%d tokens facturés ($%.6f)",
+                agent.agent_name, attempt, total_in, total_out, total_cost,
+            )
+            raise AgentOutputInvalid(
+                agent_name=agent.agent_name,
+                schema_name=schema.__name__,
+                attempts=attempt,
+                last_error=err,
+                raw_content=last.content or "",
+                tokens_in=total_in,
+                tokens_out=total_out,
+                cost_usd=total_cost,
             )
         # feedback de réparation : on montre la sortie fautive puis l'erreur (tour utilisateur)
         convo = convo + [
@@ -278,10 +346,16 @@ async def run_tool_json_agent(
     closing = st.convo + [{"role": "user", "content": closing_instruction}]
 
     closer = replace(agent, tools=None)
-    final = await run_json_agent(
-        closer, closing, schema,
-        temperature=temperature, max_repair=max_repair, timeout=timeout,
-    )
+    try:
+        final = await run_json_agent(
+            closer, closing, schema,
+            temperature=temperature, max_repair=max_repair, timeout=timeout,
+        )
+    except AgentOutputInvalid as e:
+        # La boucle d'outils a été payée AVANT que la clôture n'échoue. Ne pas la reporter ici
+        # revient à déclarer gratuit un run d'ouvrier qui a pu coûter plusieurs tours à gros
+        # contexte — c'est la part dominante de la facture, pas un arrondi.
+        raise e.add_upstream(st.tokens_in, st.tokens_out, st.cost_usd, st.iterations)
     return AgentRunResult(
         parsed=final.parsed,
         data=final.data,

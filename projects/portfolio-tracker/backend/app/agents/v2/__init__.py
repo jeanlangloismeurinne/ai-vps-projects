@@ -1,5 +1,6 @@
 """Agents V2 (flow_version='v2') — runner JSON/tool + agents de la chaîne d'analyse."""
 from .runner import (
+    AgentOutputInvalid,
     AgentRunResult,
     extract_json,
     run_json_agent,
@@ -8,6 +9,7 @@ from .runner import (
 )
 
 __all__ = [
+    "AgentOutputInvalid",
     "AgentRunResult",
     "extract_json",
     "run_json_agent",

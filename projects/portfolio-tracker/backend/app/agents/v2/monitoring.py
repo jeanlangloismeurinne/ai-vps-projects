@@ -43,7 +43,7 @@ from typing import Any, Optional
 
 from app.agents.providers import get_agent_provider
 from app.agents.v2.common import format_entries_for_prompt
-from app.agents.v2.runner import run_json_agent
+from app.agents.v2.runner import AgentOutputInvalid, run_json_agent
 from app.contracts import (
     Mode1PreEvent,
     Mode2QuarterlyReview,
@@ -452,10 +452,16 @@ async def run_monitoring(
             # veut pas de créativité sur ces reports-là.
             temperature=0.2,
         )
+    except AgentOutputInvalid as e:
+        # L'exception PORTE la télémétrie de la tentative abandonnée (tokens, coût, texte fautif) :
+        # elle est passée en `run=` telle quelle, ses attributs ayant les noms attendus. Une session
+        # `failed` chiffrée à 0 laisserait croire qu'un échec ne coûte rien.
+        await _persister_echec(thesis_v2_id, ticker_id, mode, trigger_type, trigger_label,
+                               calendar_event_id, contexte, agent, str(e),
+                               raw_content=e.raw_content or None, run=e)
+        raise
     except RuntimeError as e:
-        # ⚠️ `run_json_agent` ne remonte ni le texte brut fautif ni les tokens consommés quand il
-        # abandonne : on persiste le motif pour que l'échec reste visible, mais la dépense de cette
-        # tentative n'est PAS comptabilisée. Limite connue du runner, commune à tous les agents V2.
+        # Échec sans télémétrie exploitable (panne réseau, provider indisponible) : tracé quand même.
         await _persister_echec(thesis_v2_id, ticker_id, mode, trigger_type, trigger_label,
                                calendar_event_id, contexte, agent, str(e))
         raise
