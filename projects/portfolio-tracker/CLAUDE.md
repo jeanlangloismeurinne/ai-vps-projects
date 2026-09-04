@@ -370,6 +370,40 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     actives sur cette clef maintenant ?** ». Détail + garde : `check_edgar_feed.py` §10,
     `check_financials_feed.py` §8.
 
+44. **Un ratio à dénominateur négatif n'est pas un niveau, c'est une perte — et « non calculable »
+    n'est pas « absent » (V2, `knowledge/valuation_feed.py`)** : yfinance rend `pe_ntm=-35,95×` et
+    `ev_ebitda=-26,23×` sur RVMD, que le feed publiait tels quels dans le corpus narratif. Un P/E
+    négatif n'ordonne rien et n'est même pas monotone — une perte plus lourde le rapproche de zéro
+    par le bas, donc fait paraître l'émetteur « moins cher ». Même famille que `fcf_conversion_pct`
+    calculé sur deux négatifs. `_trier_multiples()` sépare **trois** états, jamais deux confondus :
+    **calculé** (dénominateur > 0) · **non calculable** (≤ 0, écarté à `None` **avec son motif**) ·
+    **absent** (le fournisseur ne rend rien). Confondre les deux derniers ferait lire une propriété
+    de l'émetteur (il perd de l'argent) comme un trou de collecte. ⚠️ Les clefs restent **présentes
+    à `None`** (une clef manquante se lirait comme un oubli du producteur), le contenu le dit **en
+    toutes lettres** (#42 : c'est le texte que l'agent lit), et `fcf_yield_pct` **traverse le tri
+    sans être écarté** — c'est un RENDEMENT, monotone et vrai même négatif ; uniformiser la règle
+    supprimerait une information juste. Zéro multiple calculable ne crée pas un faux trou :
+    l'entrée est produite et l'annonce (symétrique de #32). Détail + garde :
+    `check_valuation_feed.py` §4/§6/§7.
+
+45. **Un libellé qualifie la maille RÉELLEMENT mesurée, et un montant choisit son unité (V2,
+    `knowledge/base_rate_corpus.py`)** : `base-rate-anchor` annonçait « small-cap (CA < 1 Md$) »
+    pour RVMD, capitalisée 44,8 Md$. La classe est juste — le Base Rate Book raisonne en chiffre
+    d'affaires — mais son libellé empruntait le vocabulaire de la capitalisation. Tous les nombres
+    justes, le fait faux : famille de #42. Deux règles, aucune ne change la maille du livre :
+    (a) le libellé est **composé avec la base effectivement utilisée** (le repli capitalisation
+    écrivait « large-cap (CA 10-50 Md$) » sans qu'aucun CA soit connu) ; (b) quand les deux mailles
+    **divergent**, l'entry le DÉCLARE — `sales_usd`, `market_cap_usd`,
+    `size_bucket_par_capitalisation`, `mailles_divergentes` en structuré **et** un paragraphe ⚠ en
+    clair, l'écart étant présenté comme l'information distinctive de l'émetteur, pas comme un
+    défaut de classement. ⚠️ Mention portée **uniquement** en cas de divergence — la mettre partout
+    la rendrait invisible là où elle compte. ⚠️ **Corollaire de format** : un montant arrondi à zéro
+    n'est pas imprécis, il est **faux** — 11,58 M$ de ventes écrits « 0,0 Md$ » se lisent comme
+    *aucune vente*, et c'est le chiffre même sur lequel repose la divergence déclarée. `_mds()`
+    choisit son unité par ordre de grandeur, **après** l'arrondi (sinon 999 999 $ s'écrit
+    « 1000,0 k$ ») ; `None` → « n/d » et un vrai zéro → « 0 $ », qui ne se confond avec aucun
+    arrondi. Détail + garde : `check_base_rate_corpus.py` §7 à §10.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

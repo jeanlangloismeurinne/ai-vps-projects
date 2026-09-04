@@ -126,6 +126,13 @@ Traefik, l'écriture des variables dans le `.env`, l'exigence du code HTTP atten
 Slack de déploiement. Le seul de ces quatre qui a mordu dans cette session est l'attente de santé
 (cf. §14). **Trois déploiements** (`957ffbb`, `a3d604e`, `019fe4b`) ont été livrés par ce repli.
 
+> **Re-vérifié le 2026-09-04 (session suivante) : refus identique**, sur `--rebuild-only`, dans
+> cette forme exacte. Le repli a livré **trois déploiements de plus** (`fc1fab2` F7, `76e9385` F8,
+> `5c38a13` F9) sans friction. Le constat n'est donc ni un accident ni lié au contenu de la
+> commande : il est stable d'une session à l'autre, ce qui **renforce** le correctif proposé
+> ci-dessous plutôt qu'il ne le périme. Coût mesuré du refus : un aller-retour par session, plus
+> les quatre garde-fous perdus à chaque déploiement.
+
 **Correctif proposé** (arbitrage utilisateur requis — l'assistant ne s'octroie pas ses droits) :
 ajouter à `~/.claude/settings.json` une règle `Bash(infrastructure/compose-deploy.sh:*)` **et** sa
 variante préfixée si le script est appelé en chemin absolu. Sans ça, le protocole écrit dans
@@ -231,6 +238,22 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 | Écrire une section de check neuve | Le travail n'est pas la frappe, c'est le **choix de ce qui doit être faux**. Non délégable sans transmettre le raisonnement entier. |
 | Déployer + vérifier | Enchaînement de 5 commandes déjà scriptées. |
 
+> **Relevé de la session du 2026-09-04 (2) : zéro sous-agent, à nouveau** — 3 correctifs (F7, F8,
+> F9), 3 déploiements, 39 assertions neuves. Deux arbitrages nouveaux, qui ajoutent une règle :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Faire tourner les 17 scripts et rapporter les échecs | **Non.** C'est le candidat le plus tentant du lot : ~1500 lignes de sortie brute, exactement le profil « volumineux en sortie, pauvre en jugement ». Mais `/tmp/run_checks.sh` les réduit à **18 lignes** — un `tail -1` par script et une somme. Le filtre coûte zéro token. |
+> | Rédiger les sections §17/§16 de ce fichier | **Non.** Le contenu *est* le jugement porté en session ; un agent aurait dû se le faire raconter d'abord. |
+>
+> **Règle qui manquait : un filtre shell bat un sous-agent.** Une commande verbeuse n'est un
+> candidat à la délégation que si sa sortie ne peut **pas** être réduite au niveau du shell.
+> Quand je contrôle le filtre (`tail`, `grep`, `--format`, un script de 15 lignes), la réduction
+> est gratuite, déterministe et sans amorçage — trois propriétés qu'un sous-agent n'a jamais. Le
+> réflexe correct devant un mur de sortie n'est donc pas « je délègue » mais **« quel est le
+> `tail -1` de cette sortie ? »**. Écrire le script de filtrage une fois se rentabilise dès la
+> deuxième exécution, et il survit à la session ; un sous-agent, non.
+
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
 digérer des logs de build). Il est déficitaire quand le travail est **court en commandes et riche
@@ -250,6 +273,68 @@ artefact vérifiable par une commande unique (un build qui passe, un test qui vi
 fichier qui existe), et que son exécution demande de lire beaucoup plus que ce que le rapport
 rendra.* Sinon, faire soi-même. Destination durable : `CONTROL_SYSTEM.md` § « Contrat du sous-agent
 worker », à côté des deux règles du §5 soldé.
+
+### §17 — Le refus d'une commande composée n'est pas reproductible : ne pas chercher la règle, scinder
+
+**Constat (2026-09-04).** Refusé :
+
+```bash
+curl -s -X POST <url> -o /tmp/bra.json -w '%{http_code}\n' ; python3 -c "…"
+```
+
+alors que dans la **même session**, quelques minutes plus tôt, un `cd /tmp && curl … ; python3 -c "…"`
+de forme comparable était passé. Les deux commandes sont individuellement autorisées ; c'est leur
+**composition** qui a été refusée, et pas systématiquement.
+
+**Repli, immédiat et sans coût :** deux appels `Bash` séparés. Le `curl` seul passe (HTTP 200), le
+`python3` seul passe. Aucune information n'est perdue — seul le nombre d'allers-retours augmente
+de un.
+
+**L'enseignement est une règle de conduite, pas une règle de permission.** Le piège n'est pas le
+refus : c'est le temps qu'on peut perdre à **modéliser le classifieur** (« est-ce le `;` ? le `-w` ?
+les quotes ? »). Cette modélisation est un mauvais investissement — le verdict dépend d'un jugement
+qu'on n'observe pas, il n'est pas stable d'un appel à l'autre, et la connaissance qu'on en tirerait
+serait périmée à la prochaine mise à jour. **Devant un refus sur une commande composée, on scinde
+et on avance** ; on ne note que le fait, et seulement s'il se répète. Corollaire du piège déjà
+connu (`feedback_permission_prefix_trap`, où un préfixe neutralise une règle `Bash(x:*)`) : la
+**forme atomique est toujours le chemin le plus court**, et elle a l'avantage secondaire de rendre
+chaque sortie lisible séparément.
+
+**Destination durable.** Complète la mémoire `feedback_permission_prefix_trap` (même famille : la
+règle porte sur la forme de la commande, pas sur ce qu'elle fait). Aucune modification de
+`settings.json` à demander — il n'y a pas de règle à écrire pour « autoriser les `;` ».
+
+### §18 — Le contrôle le moins cher est celui qu'on fait **avant** de dépenser des tokens de modèle
+
+**Constat (2026-09-04).** Trois défauts livrés cette session — F7 (un P/E négatif publié comme un
+multiple), F8 (« small-cap » écrit pour une société à 44,8 Md$ de capitalisation), F9 (« 0,0 Md$ de
+ventes » pour 11,58 M$) — ont tous été trouvés **sans qu'un seul token de modèle soit dépensé**, en
+faisant tourner des alimentations **déterministes** (`valuation-refresh`, `base-rate-anchor`) et en
+**lisant leur sortie**. Le jalon déclaré du projet était pourtant « constituer le socle de
+connaissance via le search-worker », c'est-à-dire la première étape *payante*.
+
+**Enseignement réplicable, tous projets à agents.** Dans une chaîne où un LLM lit un corpus produit
+par du code, il existe presque toujours une **frontière gratuite** : tout ce qui est en amont du
+premier appel modèle peut être exécuté et inspecté pour le prix d'un `curl`. Repousser cette
+inspection après la première dépense revient à payer des tokens pour lire un corpus faux — puis à
+les repayer après correctif. Les trois défauts ci-dessus auraient contaminé **chaque** appel
+d'agent lisant `valorisation.*`, et aucun n'aurait été détectable dans la sortie du modèle
+(les nombres sont justes ; c'est la **phrase** qui est fausse — cf. §15 et convention #42).
+
+**Règle opératoire, en une ligne.** *Avant le premier appel modèle d'une chaîne, exécuter tous ses
+producteurs déterministes en dry-run et lire leur sortie EN TEXTE — pas leur schéma, pas leur code
+de retour.* Le coût est d'une commande par producteur ; le gain est tout ce qui ne sera pas
+répercuté sur chaque appel payant en aval.
+
+**Corollaire, trouvé par F9 :** ce contrôle **se refait après chaque correctif**. F9 vit dans le
+paragraphe que F8 venait d'ajouter — le correctif publiait sa propre justification en la rendant
+illisible. Une relecture du diff ne l'a pas vu ; lire l'entry en production l'a vu immédiatement.
+
+**Destination durable.** Conventions projet #44 (F7 — un ratio à dénominateur négatif n'ordonne
+rien : calculé / non calculable / absent sont trois états distincts) et #45 (F8/F9 — un libellé
+qualifie la maille réellement mesurée, et un montant choisit son unité) →
+`projects/portfolio-tracker/CLAUDE.md`. Le principe générique « inspecter la frontière gratuite
+avant la première dépense modèle » → mémoire auto.
 
 ---
 

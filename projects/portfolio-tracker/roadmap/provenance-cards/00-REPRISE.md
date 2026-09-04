@@ -4,10 +4,72 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-04
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`, déployés et vérifiés) **avant toute dépense de modèle** ; corpus RVMD propre à 10 entrées, suite hors-ligne à **1 177 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`), puis les feeds de **valorisation** en **trois de plus** (F7→F9, commits `fc1fab2`/`76e9385`/`5c38a13`) — les neuf déployés et vérifiés **avant toute dépense de modèle** ; corpus RVMD propre à **13 entrées, une seule active par champ**, dimension `valorisation` fondée sur ses 3 champs, suite hors-ligne à **1 216 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** sur les 6 dimensions qualitatives (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
+
+> ## ⚡ MàJ 2026-09-04 (3) — la dimension `valorisation` fondée sur RVMD, et trois défauts de plus (F7/F8/F9) — toujours zéro token de modèle
+>
+> **Suite directe de la MàJ (2).** Le jalon déclaré était « socle de connaissance RVMD via le
+> search-worker, 1ʳᵉ dépense réelle de tokens ». Il n'a **pas** été atteint, et c'est délibéré : la
+> pré-condition (« réparer le déterministe avant toute dépense de modèle ») a de nouveau rendu trois
+> défauts, sur les feeds de **valorisation** cette fois. Ils auraient contaminé chaque appel d'agent
+> lisant `valorisation.*`.
+>
+> ### État livré, déployé, vérifié en prod
+>
+> Trois commits, trois déploiements, sonde publique 200 après `healthy` à chaque fois :
+> `fc1fab2` (F7), `76e9385` (F8), `5c38a13` (F9). **Aucune migration : la prochaine reste 034.**
+> Suite hors-ligne complète : **1 216 assertions, 0 échec, 17 scripts** (1 177 → 1 216, avec le
+> montage `/contract_frozen`). Les trois correctifs sont **éprouvés par test négatif** (8, 5 puis
+> 6 échecs / exit 1 sur code neutralisé, restaurés au vert).
+>
+> | # | Défaut trouvé sur RVMD | Correctif |
+> |---|---|---|
+> | F7 | `pe_ntm = −35,95×` et `ev_ebitda = −26,23×` publiés **tels quels** dans le corpus narratif — un P/E négatif n'ordonne rien et n'est pas monotone (une perte plus lourde le rapproche de zéro *par le bas*, donc paraît « moins cher ») | `_trier_multiples()` sépare **calculé / non calculable / absent** — jamais deux confondus (#44) |
+> | F8 | « small-cap (CA < 1 Md$) » écrit pour une société capitalisée **44,9 Md$** : classe juste (le Base Rate Book raisonne en CA), **libellé emprunté à une autre maille** | libellé composé avec la base réellement mesurée + déclaration explicite quand les deux mailles divergent (#45) |
+> | F9 | le paragraphe que F8 venait d'ajouter annonçait « **0,0 Md$ de ventes** » pour **11,58 M$** — l'agent lit *aucune vente*, sur le chiffre même qui fonde la divergence | `_mds()` choisit son unité par ordre de grandeur, **après** l'arrondi (#45) |
+>
+> ### La leçon de cette itération : F9 vivait dans le correctif F8
+>
+> La MàJ (2) disait « un correctif juste dans ce qu'il écrit peut être faux dans ce qu'il omet de
+> retirer ». F9 en donne la variante : **un correctif peut publier sa propre justification en la
+> rendant illisible**. Il n'était visible ni dans le diff, ni dans la suite de checks — seulement en
+> **lisant en texte l'entry produite en production**. D'où la règle, désormais en mémoire
+> (`feedback_frontiere_gratuite_avant_depense_modele`) : *avant le premier appel modèle d'une
+> chaîne, exécuter tous ses producteurs déterministes en dry-run et lire leur sortie EN TEXTE — et
+> refaire ce contrôle après chaque correctif.* Le coût est d'un `curl` par producteur ; le gain est
+> tout ce qui n'est pas répercuté sur chaque appel payant en aval.
+>
+> Détail secondaire mais réutilisable : l'assertion « aucun montant non nul ne s'arrondit à zéro »
+> a **viré au rouge d'elle-même** sur `999 999 $` → « 1000,0 k$ » (unité choisie avant l'arrondi).
+> Le check a trouvé un défaut que la relecture n'avait pas vu — son seul motif d'existence.
+>
+> ### Corpus RVMD en prod — 13 entrées actives, **une seule par champ**
+>
+> ```
+> financials.roic_pct 1 · financials.fcf_conversion_pct 1 · financials.levier 1
+> valorisation.prix_actuel 1 · valorisation.relatif_multiple 1 · valorisation.base_rate_anchor 1
+> ```
+> (entrées 141-155 EDGAR + 156, 157, **160**). Le réflexe §15 a été rejoué après **chaque** écriture :
+> `SELECT unnest(covers), count(*) … WHERE superseded_by IS NULL GROUP BY 1` → exactement 1 ligne
+> active par champ, aucune vérité en double. La dimension `valorisation` est donc **fondée sur ses
+> trois champs**, et les 6 dimensions qualitatives restent vides — c'est le jalon suivant.
+>
+> ### Prochain jalon — **inchangé**, et sa pré-condition est maintenant réellement remplie
+>
+> **Constituer le socle de connaissance RVMD via le search-worker** (~50 entrées attendues) sur
+> `business_model`, `produits`, `positionnement`, `marche`, `management_allocation`, `risques` —
+> c'est la **première dépense réelle de tokens de modèle**. Puis readiness (distinguer champ
+> **infondable** et **lacune**), puis la chaîne research → bull/bear → réfutation → synthèse.
+>
+> ⚠️ Avant de lancer le search-worker, **relire une entry produite** par chacun des feeds encore
+> non inspectés en texte sur RVMD, pas seulement leur code de retour. Trois passages sur les feeds
+> déterministes ont rendu 9 défauts (F1→F9) ; le taux n'est pas encore retombé à zéro.
+>
+> Frictions d'outillage et arbitrages de délégation de cette session (zéro sous-agent lancé, à
+> nouveau, et pourquoi) : `CHANTIER_OUTILLAGE_DEV.md` §12 (re-vérifié), §16, **§17** et **§18**.
 
 > ## ⚡ MàJ 2026-09-04 (2) — 3ᵉ TICKER **RVMD** : le socle financier réparé en six points, avant toute dépense de modèle
 >
