@@ -16,6 +16,8 @@ Ce que ce check protège, dans l'ordre d'importance :
      faisant relire les specs produites par le consommateur réel.
   5. **Un poste absent reste absent** (`unfounded`), jamais estimé (#25).
 """
+import asyncio
+import inspect
 import sys
 from datetime import date
 
@@ -23,7 +25,8 @@ from app.knowledge.edgar_facts import (
     _parse_annual_points, _parse_instant_points, cik_from_url,
 )
 from app.knowledge.edgar_feed import (
-    POSTES, build_edgar_entries, fiscal_label, filing_url, is_annual_flow, select_concept,
+    POSTES, _current_fact_ids, build_edgar_entries, fiscal_label, filing_url, is_annual_flow,
+    run_edgar_feed, select_concept,
 )
 from app.knowledge.financials_feed import extract_edgar_facts
 
@@ -354,6 +357,83 @@ check("un flux ne porte pas d'écart d'ancre (il EST à la clôture)",
 check("le texte d'un poste de bilan dit « bilan au », pas « exercice clos »",
       "bilan au 2026-06-30" in eq.content and "exercice clos" not in eq.content,
       f"→ {eq.content[:90]}")
+
+print("\n[10] corriger l'ancre sans retirer le périmé, c'est AJOUTER une contradiction (F5)")
+# Constaté en prod le 2026-09-04, juste après le déploiement de F4 : les 3 postes de bilan sont
+# nés avec `supersedes: null` et les faits FY2025 correspondants sont restés `superseded_by IS
+# NULL`. Deux capitaux propres actifs pour RVMD — 1,63 MdUSD « exercice clos le 2025-12-31 » et
+# 2,61 MdUSD « bilan au 2026-06-30 ». `extract_edgar_facts` s'en sort (il prend le plus récent),
+# donc AUCUN ratio n'était faux : c'est le corpus narratif lu par les agents qui portait deux
+# réponses à la même question, sans que rien ne le signale.
+
+
+class _FakeConn:
+    """Connexion factice qui INTERPRÈTE la clause de datation au lieu de la relire.
+
+    Une assertion sur le texte du SQL passerait aussi bien avec `=` qu'avec `<=` mal placé ; ici
+    c'est le comportement qui est éprouvé — quelles lignes reviennent réellement.
+    """
+
+    def __init__(self, rows):
+        self.rows = rows
+        self.updates = []
+
+    async def fetch(self, sql, ticker_id, source_type, metric, period_end):
+        exact = "period_end' = $4" in sql
+        upto = "period_end' <= $4" in sql
+        assert exact ^ upto, "clause de datation ni exacte ni bornée"
+        hits = [
+            r for r in self.rows
+            if r["metric"] == metric
+            and (r["period_end"] == period_end if exact else r["period_end"] <= period_end)
+        ]
+        return [{"id": r["id"]} for r in sorted(hits, key=lambda r: -r["id"])]
+
+    async def execute(self, sql, *args):
+        self.updates.append((sql, args))
+
+
+# L'état RVMD réel au lendemain de F4 : le fait FY2025 et le fait du trimestre, tous deux courants.
+_RVMD = [
+    {"id": 127, "metric": "stockholders_equity", "period_end": "2025-12-31"},
+    {"id": 134, "metric": "stockholders_equity", "period_end": "2026-06-30"},
+    {"id": 135, "metric": "revenue", "period_end": "2025-12-31"},
+    {"id": 141, "metric": "revenue", "period_end": "2024-12-31"},
+]
+
+_conn = _FakeConn(_RVMD)
+stock_prevs = asyncio.run(
+    _current_fact_ids(_conn, "RVMD", "stockholders_equity", "2026-06-30", flow=False)
+)
+flow_prevs = asyncio.run(
+    _current_fact_ids(_conn, "RVMD", "revenue", "2025-12-31", flow=True)
+)
+check("un poste de BILAN balaie TOUTES ses versions courantes, pas la plus récente",
+      set(stock_prevs) == {127, 134}, f"→ {stock_prevs}")
+check("l'ordre rend d'abord l'id le plus récent (lignée de version)",
+      stock_prevs and stock_prevs[0] == 134, f"→ {stock_prevs}")
+check("un FLUX reste apparié sur son exercice — FY2024 n'est pas périmé par FY2025",
+      flow_prevs == [135], f"→ {flow_prevs}")
+
+# Le cas inverse : la base porte déjà un instant PLUS RÉCENT. Le remplacer par un plus ancien
+# serait une régression silencieuse, pas une mise à jour.
+_recul = asyncio.run(
+    _current_fact_ids(_FakeConn(_RVMD), "RVMD", "stockholders_equity", "2025-12-31", flow=False)
+)
+check("un instant plus récent en base n'est jamais supersedé par un plus ancien",
+      134 not in _recul and _recul == [127], f"→ {_recul}")
+
+_src = inspect.getsource(run_edgar_feed)
+check("le type de poste est LU sur la spec, pas supposé (le même axe que l'ancre F4)",
+      'poste_kind") == "flow"' in _src or "poste_kind') == 'flow'" in _src)
+check("la lignée de version part de la plus récente",
+      "supersedes_entry_id=prevs[0] if prevs else None" in _src)
+check("les entrées orphelines (au-delà de la lignée) sont explicitement retirées",
+      "prevs[1:]" in _src and "superseded_by" in _src, "→ pas d'UPDATE de rattrapage")
+check("le rattrapage vise la NOUVELLE entrée comme remplaçante",
+      "SET superseded_by = $1" in _src and 'stored["id"]' in _src)
+check("la réponse expose la LISTE des faits retirés, pas un seul id",
+      '"supersedes": prevs' in _src, "→ un appelant ne peut pas voir un balayage multiple")
 
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)

@@ -448,26 +448,46 @@ def _concept_of(
     return None
 
 
-async def _current_fact_id(conn, ticker_id: str, metric: str, period_end: str) -> Optional[int]:
-    """Id de l'entrée COURANTE portant le même poste au même exercice (à superseder).
+async def _current_fact_ids(
+    conn, ticker_id: str, metric: str, period_end: str, *, flow: bool
+) -> list[int]:
+    """Ids des entrées COURANTES que ce fait remplace — TOUTES, pas la plus récente.
 
-    Apparie sur `metric` + `period_end` du `content_structured`, pas sur les tags : cela rend le feed
+    Apparie sur `metric` + la datation du `content_structured`, pas sur les tags : cela rend le feed
     idempotent **y compris face au seed NVDA écrit à la main**, dont les tags diffèrent de ceux
     produits ici. Re-mesurer un poste remplace donc le fait seedé par le fait mesuré, au lieu d'en
     créer un doublon que `extract_edgar_facts` trancherait par ordre d'itération.
+
+    ⚠️ **La clé d'identité dépend du type de poste, exactement comme l'ancre (F4).** Un FLUX est
+    identifié par `(metric, period_end)` : le CA de FY2024 et celui de FY2025 sont deux faits
+    légitimes qui coexistent. Un poste de BILAN, lui, est identifié par `metric` SEUL — il n'y a
+    qu'un bilan courant, et un instant plus ancien est *périmé*, pas *historique*. Apparier un
+    stock sur l'égalité des dates faisait qu'un changement d'ancre **ajoutait** la vérité sans
+    retirer le périmé : mesuré sur RVMD au déploiement de F4, les capitaux propres au 2025-12-31
+    (1,63 MdUSD) et au 2026-06-30 (2,61 MdUSD) sont restés tous deux `superseded_by IS NULL`.
+    `extract_edgar_facts` s'en sortait (il prend le point le plus récent), mais le corpus narratif
+    lu par les agents portait deux réponses contradictoires à la même question.
+
+    Un instant **strictement plus récent** déjà en base n'est jamais supersedé par un plus ancien
+    (`<= $4`) : si EDGAR reculait, ce serait une régression silencieuse, pas une mise à jour.
     """
-    row = await conn.fetchrow(
-        """
+    scope = (
+        "AND content_structured->>'period_end' = $4"
+        if flow
+        else "AND content_structured->>'period_end' <= $4"
+    )
+    rows = await conn.fetch(
+        f"""
         SELECT id FROM knowledge_entries
         WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
           AND entry_type = 'fact_financial' AND source_type = $2
           AND content_structured->>'metric' = $3
-          AND content_structured->>'period_end' = $4
-        ORDER BY id DESC LIMIT 1
+          {scope}
+        ORDER BY id DESC
         """,
         ticker_id, _SOURCE_TYPE, metric, period_end,
     )
-    return row["id"] if row else None
+    return [r["id"] for r in rows]
 
 
 async def run_edgar_feed(
@@ -501,19 +521,32 @@ async def run_edgar_feed(
         async with get_db_session() as conn:
             async with conn.transaction():
                 for spec in specs:
-                    prev = await _current_fact_id(
-                        conn, ticker_id, spec.metric, spec.content_structured["period_end"]
+                    prevs = await _current_fact_ids(
+                        conn, ticker_id, spec.metric, spec.content_structured["period_end"],
+                        flow=spec.content_structured.get("poste_kind") == "flow",
                     )
                     stored = await store_knowledge(
                         conn, ticker_id=ticker_id, entry_type="fact_financial",
                         content=spec.content, source_type=_SOURCE_TYPE, title=spec.title,
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
                         source_url=spec.source_url, source_date=spec.period_end,
-                        fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
+                        fiscal_period=spec.fiscal_period,
+                        supersedes_entry_id=prevs[0] if prevs else None,
                         # PAS de `covers` : ce sont les INTRANTS des ratios, pas les champs MVDD
                         # eux-mêmes (cf. migration 029, qui laisse les faits EDGAR bruts non tagués).
                     )
-                    created.append(dict(stored) | {"metric": spec.metric, "supersedes": prev})
+                    # `store_knowledge` ne referme que la lignée de version (prevs[0]). Les autres
+                    # entrées courantes du même poste — celles laissées orphelines par un changement
+                    # d'ancre — sont retirées ici : les oublier, c'est laisser le corpus répondre
+                    # deux choses différentes à la même question.
+                    if len(prevs) > 1:
+                        await conn.execute(
+                            "UPDATE knowledge_entries SET superseded_by = $1 WHERE id = ANY($2::int[])",
+                            stored["id"], prevs[1:],
+                        )
+                    created.append(
+                        dict(stored) | {"metric": spec.metric, "supersedes": prevs}
+                    )
         logger.info(
             "edgar_feed %s (%s, CIK %d) → %d poste(s) · flux %s, bilan %s (+%d j) · non fondés: %s",
             ticker_id, symbol, cik, len(created), fiscal_end, balance_end,
