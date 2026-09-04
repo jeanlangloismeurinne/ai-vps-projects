@@ -203,6 +203,16 @@ def build_financials_entries(
     def _miss(f: str, need: str) -> None:
         unfounded.append({"field": f, "reason": f"intrant manquant en base EDGAR : {need}"})
 
+    def _absents(**intrants: Any) -> str:
+        """Nomme les intrants RÉELLEMENT absents, jamais la liste entière de la formule.
+
+        Énumérer les quatre intrants quand un seul manque envoie chercher trois données déjà
+        présentes — et masque lequel bloque. `0` compte comme présent : c'est une valeur, pas un
+        trou (cf. le CA nul de RVMD).
+        """
+        manquants = [nom for nom, v in intrants.items() if v is None]
+        return ", ".join(manquants) if manquants else "aucun (valeur nulle rendant le ratio indéfini)"
+
     # ── levier : dette / capitaux propres + dette nette (tous EDGAR) ──────────
     if debt is not None and equity and cash is not None:
         net_debt = debt - cash
@@ -235,7 +245,8 @@ def build_financials_entries(
             fiscal_period=period, source_url=src, tags=_tags("levier"),
         ))
     else:
-        _miss("levier", "dette LT, trésorerie, capitaux propres")
+        _miss("levier", _absents(**{"dette LT": debt, "trésorerie": cash,
+                                    "capitaux propres": equity}))
 
     # ── roic_pct : NOPAT / capital investi (NOPAT ≈ résultat net, société en trésorerie nette) ──
     if net_income and equity and debt is not None and cash is not None:
@@ -268,28 +279,61 @@ def build_financials_entries(
         else:
             _miss("roic_pct", "capital investi nul")
     else:
-        _miss("roic_pct", "résultat net, capitaux propres, dette LT, trésorerie")
+        _miss("roic_pct", _absents(**{"résultat net": net_income, "capitaux propres": equity,
+                                      "dette LT": debt, "trésorerie": cash}))
 
     # ── fcf_conversion_pct : FCF / résultat net, FCF = OCF − capex ────────────
     if ocf is not None and net_income and capex is not None:
         fcf = ocf - capex
-        conv = fcf / net_income * 100
+        # ⚠️ LE PIÈGE : un quotient de deux négatifs est POSITIF. Mesuré sur RVMD FY2025 —
+        # FCF −913,7 M$ / résultat net −1 131,3 M$ = **+80,8 %**, publié tier A comme une
+        # « conversion FCF de 80,8 % » par une société qui brûle 914 M$ par an. Arithmétique exacte,
+        # contrat satisfait, fondation légitime, sens inversé : c'est #37 d'un cran plus haut — un
+        # ratio valide un CALCUL, jamais sa signification. La conversion du résultat en cash n'a de
+        # sens que si le résultat est un profit ; sinon on publie le fait qui compte vraiment, la
+        # consommation de trésorerie, et on laisse `fcf_conversion_pct` à None plutôt qu'à un
+        # nombre flatteur.
+        significatif = net_income > 0
+        conv = (fcf / net_income * 100) if significatif else None
         structured = {
             "metric": "fcf_conversion", "field": "fcf_conversion_pct",
-            "fcf_conversion_pct": round(conv, 2), "free_cash_flow": fcf,
+            "fcf_conversion_pct": round(conv, 2) if conv is not None else None,
+            "free_cash_flow": fcf,
             "operating_cash_flow": ocf, "capex": capex, "net_income": net_income,
             "currency": cur, "period": period,
+            "significatif": significatif,
             "method": "FCF = flux de trésorerie opérationnel − capex ; conversion = FCF / résultat net",
         }
-        content = (
-            f"Conversion FCF de {ticker_id} ({symbol}) — {fy} : {_pct(conv)} (`fcf_conversion_pct`). "
-            f"FCF {_md(fcf)}{cur} = cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, rapporté au "
-            f"résultat net {_md(net_income)}{cur}. Tous les postes proviennent du 10-K EDGAR (tier A ; "
-            f"capex = us-gaap PaymentsToAcquirePropertyPlantAndEquipment)."
-        )
+        if significatif:
+            content = (
+                f"Conversion FCF de {ticker_id} ({symbol}) — {fy} : {_pct(conv)} (`fcf_conversion_pct`). "
+                f"FCF {_md(fcf)}{cur} = cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, rapporté au "
+                f"résultat net {_md(net_income)}{cur}. Tous les postes proviennent du 10-K EDGAR (tier A ; "
+                f"capex = us-gaap PaymentsToAcquirePropertyPlantAndEquipment)."
+            )
+            titre = f"Financials — conversion FCF {fy}"
+        else:
+            structured["metric"] = "cash_burn"
+            structured["cash_burn_annuel"] = -fcf if fcf < 0 else 0
+            structured["method"] = (
+                "résultat net négatif → la conversion FCF n'est pas définie (un quotient de deux "
+                "négatifs serait positif et se lirait comme une bonne conversion) ; on publie la "
+                "consommation de trésorerie, qui est le fait pertinent"
+            )
+            content = (
+                f"Trésorerie consommée par {ticker_id} ({symbol}) — {fy} : FCF {_md(fcf)}{cur} "
+                f"= cash-flow opérationnel {_md(ocf)} − capex {_md(capex)}, pour un résultat net "
+                f"{_md(net_income)}{cur}. ⚠️ `fcf_conversion_pct` est **non défini** ici et vaut None : "
+                f"le résultat net étant négatif, le quotient FCF/résultat net serait POSITIF "
+                f"({_pct(fcf / net_income * 100)}) et se lirait à tort comme une bonne conversion du "
+                f"résultat en cash. L'émetteur ne convertit pas un bénéfice en trésorerie, il "
+                f"consomme de la trésorerie. Postes du 10-K EDGAR (tier A ; capex = us-gaap "
+                f"PaymentsToAcquirePropertyPlantAndEquipment)."
+            )
+            titre = f"Financials — consommation de trésorerie {fy} (conversion FCF non définie)"
         specs.append(FinancialsEntrySpec(
             field="fcf_conversion_pct", entry_type="fact_financial",
-            title=f"Financials — conversion FCF {fy}",
+            title=titre,
             content=content, content_structured=structured,
             fiscal_period=period, source_url=src, tags=_tags("fcf_conversion_pct"),
         ))
@@ -318,7 +362,18 @@ def build_financials_entries(
             fiscal_period=period, source_url=src, tags=_tags("intensite_capex_pct"),
         ))
     else:
-        need = "capex (EDGAR indisponible)" if capex is None else "chiffre d'affaires"
+        # « CA absent » et « CA nul » ne sont PAS le même monde. RVMD dépose
+        # `RevenueFromContractWithCustomerExcludingAssessedTax = 0` : la donnée est là, c'est le
+        # ratio qui n'existe pas. Écrire « intrant manquant » sur une donnée présente envoie la
+        # chaîne chercher une source qu'elle ne trouvera jamais, et fait passer pour une lacune de
+        # collecte ce qui est un fait d'entreprise (pré-commercialisation).
+        if capex is None:
+            need = "capex (EDGAR indisponible)"
+        elif revenue == 0:
+            need = ("chiffre d'affaires NUL (déposé, pas manquant) — l'intensité capitalistique "
+                    "n'est pas définie sans base de CA ; émetteur en pré-commercialisation")
+        else:
+            need = "chiffre d'affaires"
         _miss("intensite_capex_pct", need)
 
     return specs, unfounded

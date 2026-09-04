@@ -207,11 +207,15 @@ check("aucun zéro fabriqué pour le capex",
           "source_date": s.period_end, "fiscal_period": s.fiscal_period,
       } for i, s in enumerate(specs_p)]).get("capex") is None)
 
-# composite dont la 2ᵉ jambe manque → le fait entier est non fondé (pas de demi-fait trompeur)
+# Composite dont la 2ᵉ jambe manque. ⚠️ Cette assertion disait « non fondé PLUTÔT QU'à moitié écrit »
+# jusqu'au 2026-09-04 : le poste entier était jeté. C'était trop cher — la trésorerie, elle, est bien
+# déposée, et la perdre faisait tomber `levier` et `roic_pct`. Le fait est désormais écrit à moitié
+# À DESSEIN, avec la moitié manquante marquée `None` + `long_term_debt_status`, et il RESTE listé
+# dans `unfounded` : c'est cette dernière moitié de l'invariant que la ligne ci-dessous garde.
 half = dict(resolved)
 half["cash_and_lt_debt"] = {k: v for k, v in resolved["cash_and_lt_debt"].items() if k != "second"}
 _, unf_half = build_edgar_entries("MSFT", "MSFT", CIK, half)
-check("composite incomplet → non fondé plutôt qu'à moitié écrit",
+check("composite incomplet → toujours signalé dans `unfounded` (l'absence ne devient pas muette)",
       any(u["metric"] == "cash_and_lt_debt" for u in unf_half), f"→ {unf_half}")
 
 # ── 7. Helpers ───────────────────────────────────────────────────────────────────────────────────
@@ -232,6 +236,51 @@ check("les 8 postes attendus sont déclarés",
           "total_assets", "capital_expenditure", "cash_and_lt_debt"})
 check("aucun poste ne porte de `covers` (ce sont des intrants, cf. migration 029)",
       all("covers" not in s.content_structured for s in specs))
+
+print("\n[8] poste composite — une dette NON DÉPOSÉE n'est ni un zéro, ni une raison de perdre le cash")
+# Cas réel RVMD (CIK 1628171, relevé le 2026-09-04) : aucun `LongTermDebt*` n'est déposé, mais
+# 383,7 M$ de trésorerie le sont. Le piège symétrique est le plus dangereux — « absence de tag = 0 »
+# aurait publié « aucune dette, position de trésorerie nette » alors que RVMD porte 487,4 M$ de
+# convertibles au 2026-06-30 : la dette nette change de SIGNE (−383,7 M$ → +103,7 M$).
+_P = {"end": "2025-12-31", "accn": "acc-rvmd", "form": "10-K", "fp": "FY"}
+sans_dette = {
+    "stockholders_equity": {"concept": "StockholdersEquity",
+                            "point": pt("2025-12-31", 1_631_297_000), "unit": "USD"},
+    "cash_and_lt_debt": {"concept": "CashAndCashEquivalentsAtCarryingValue",
+                         "point": pt("2025-12-31", 383_745_000), "unit": "USD"},
+}
+specs_nd, unf_nd = build_edgar_entries("RVMD", "RVMD", 1628171, sans_dette)
+comp = next((s for s in specs_nd if s.metric == "cash_and_lt_debt"), None)
+check("co-poste absent : l'entry composite est tout de même produite", comp is not None)
+if comp:
+    check("la trésorerie n'est plus perdue",
+          comp.content_structured.get("cash") == 383_745_000,
+          f"→ {comp.content_structured.get('cash')}")
+    check("la dette reste None — JAMAIS 0",
+          comp.content_structured.get("long_term_debt") is None,
+          f"→ {comp.content_structured.get('long_term_debt')!r}")
+    check("le statut d'absence est explicite",
+          comp.content_structured.get("long_term_debt_status") == "aucun_concept_depose")
+    check("le texte interdit de lire une position sans dette",
+          "non déterminée" in comp.content and "≠" in comp.content)
+
+check("la famille de concepts de dette couvre les OBLIGATIONS CONVERTIBLES "
+      "(#30 : ce que l'émetteur DÉPOSE, pas ce que sa catégorie est censée déposer)",
+      "ConvertibleLongTermNotesPayable"
+      in next(p for p in POSTES if p.metric == "cash_and_lt_debt").composite_concepts)
+
+avec_conv = dict(sans_dette)
+avec_conv["cash_and_lt_debt"] = dict(
+    sans_dette["cash_and_lt_debt"],
+    second={"concept": "ConvertibleLongTermNotesPayable",
+            "point": pt("2025-12-31", 487_434_000), "unit": "USD"})
+comp2 = next(s for s in build_edgar_entries("RVMD", "RVMD", 1628171, avec_conv)[0]
+             if s.metric == "cash_and_lt_debt")
+check("dette déposée en convertibles : les deux montants sont publiés (pas de régression)",
+      comp2.content_structured.get("cash") == 383_745_000
+      and comp2.content_structured.get("long_term_debt") == 487_434_000)
+check("le cas nominal ne porte pas le drapeau d'absence",
+      comp2.content_structured.get("long_term_debt_status") is None)
 
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)

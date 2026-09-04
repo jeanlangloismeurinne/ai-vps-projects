@@ -140,5 +140,71 @@ picked = _pick_for_period(pts, date(2026, 1, 25))
 check("appariement au period_end visé (2026-01-25)", picked and picked["val"] == 3236000000)
 check("hors tolérance → aucun point", _pick_for_period(pts, date(2030, 1, 1)) is None)
 
+print("\n6. ÉMETTEUR DÉFICITAIRE (RVMD) — un ratio valide un calcul, jamais son sens")
+# Chiffres RÉELS lus sur data.sec.gov le 2026-09-04 (CIK 1628171, exercice clos 2025-12-31).
+# NVDA et MSFT sont deux mega-caps rentables : aucune des 5 sections ci-dessus n'exerce le cas où
+# le dénominateur d'un ratio est négatif ou nul. C'est ce que le 3ᵉ ticker a ouvert.
+RVMD = {
+    "period": "FY2025", "period_end": date(2025, 12, 31), "currency": "USD", "source_url": URL,
+    "stockholders_equity": 1_631_297_000,
+    "revenue": 0,                      # DÉPOSÉ à zéro (pré-commercialisation), pas absent
+    "net_income": -1_131_301_000,
+    "operating_cash_flow": -897_741_000,
+    "total_assets": 2_354_508_000,
+    "capex": 15_990_000,
+    "cash": 383_745_000,
+    "long_term_debt": 0,
+}
+specs_r, unf_r = build_financials_entries("RVMD", "RVMD", RVMD, as_of=AS_OF)
+by_field = {s.field: s for s in specs_r}
+unf_by = {u["field"]: u["reason"] for u in unf_r}
+
+# — le cœur du sujet : FCF/résultat net vaut +80,77 % ici, et ce nombre ne doit JAMAIS être publié.
+conv = by_field.get("fcf_conversion_pct")
+check("émetteur déficitaire : une entry est tout de même produite (le champ reste couvert)",
+      conv is not None)
+if conv:
+    cs = conv.content_structured
+    check("fcf_conversion_pct est None, pas le quotient de deux négatifs",
+          cs.get("fcf_conversion_pct") is None, f"→ {cs.get('fcf_conversion_pct')}")
+    check("le drapeau `significatif` est False", cs.get("significatif") is False)
+    check("la consommation de trésorerie est chiffrée à la place",
+          cs.get("cash_burn_annuel") == 913_731_000, f"→ {cs.get('cash_burn_annuel')}")
+    check("le FCF publié reste négatif (aucun signe perdu)",
+          cs.get("free_cash_flow") == -913_731_000, f"→ {cs.get('free_cash_flow')}")
+    check("le texte dit explicitement que le ratio serait trompeur",
+          "non défini" in conv.content and "80,8" in conv.content)
+    check("le nombre flatteur n'est jamais dans le structuré",
+          80.77 not in [v for v in cs.values() if isinstance(v, float)])
+
+# — un profit reste traité comme avant : le resserrement ne mord que sur le cas négatif.
+BENEF = dict(RVMD, net_income=+1_131_301_000, operating_cash_flow=+897_741_000)
+conv_b = {s.field: s for s in build_financials_entries("RVMD", "RVMD", BENEF, as_of=AS_OF)[0]}
+check("résultat net POSITIF → le ratio est publié normalement (pas de régression)",
+      conv_b["fcf_conversion_pct"].content_structured.get("fcf_conversion_pct") is not None)
+
+# — « CA nul » et « CA absent » ne sont pas le même monde.
+check("CA nul : le motif dit `NUL (déposé, pas manquant)`, pas « intrant manquant »",
+      "NUL" in unf_by.get("intensite_capex_pct", ""), f"→ {unf_by.get('intensite_capex_pct')}")
+SANS_CA = dict(RVMD, revenue=None)
+unf_sans = {u["field"]: u["reason"] for u in build_financials_entries("RVMD", "RVMD", SANS_CA, as_of=AS_OF)[1]}
+check("CA réellement absent : le motif ne dit PAS `NUL`",
+      "NUL" not in unf_sans.get("intensite_capex_pct", ""), f"→ {unf_sans.get('intensite_capex_pct')}")
+
+# — un motif d'absence nomme ce qui manque, pas la formule entière.
+PARTIEL = dict(RVMD, cash=None)
+unf_p = {u["field"]: u["reason"] for u in build_financials_entries("RVMD", "RVMD", PARTIEL, as_of=AS_OF)[1]}
+check("motif ciblé : seule la trésorerie est nommée",
+      "trésorerie" in unf_p.get("levier", "") and "capitaux propres" not in unf_p.get("levier", ""),
+      f"→ {unf_p.get('levier')}")
+
+# — les faits centraux de cette thèse sont bien produits, avec le bon signe.
+check("ROIC négatif publié tel quel (−90,7 %)",
+      approx(by_field["roic_pct"].content_structured["roic_pct"], -90.68, tol=0.1),
+      f"→ {by_field.get('roic_pct') and by_field['roic_pct'].content_structured.get('roic_pct')}")
+check("dette LT à zéro → gearing 0 %, et la position de trésorerie nette est signalée",
+      by_field["levier"].content_structured["debt_to_equity_pct"] == 0.0
+      and by_field["levier"].content_structured["net_cash_position"] is True)
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

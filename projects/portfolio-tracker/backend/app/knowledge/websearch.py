@@ -126,6 +126,12 @@ _REPUTABLE_SUFFIXES = (
 _ISSUER_DOMAINS: dict[str, tuple[str, ...]] = {
     "NVDA": ("nvidia.com",),
     "MSFT": ("microsoft.com",),
+    # Revolution Medicines : IR servi À LA FOIS en sous-domaine (`ir.revmed.com`, que
+    # `_IR_HOST_PATTERN` couvre déjà sans registre) et en CHEMIN (`revmed.com/investors`, vérifié
+    # 200 le 2026-09-04). C'est ce second cas — le motif Microsoft de #33 — qui rend l'entrée
+    # nécessaire : sans elle il tombe en `web_search_generic` 0.50, donc sous plancher, et le champ
+    # paraît infondable alors que la source est la meilleure possible.
+    "RVMD": ("revmed.com",),
 }
 
 _IR_HOST_PATTERN = re.compile(r"^(ir|investor|investors|investorrelations)\.", re.IGNORECASE)

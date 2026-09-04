@@ -122,7 +122,17 @@ POSTES: list[Poste] = [
           ["financials", "balance_sheet", "leverage", "edgar"], "Trésorerie et dette long terme",
           flow=False,
           composite_with="long_term_debt",
-          composite_concepts=["LongTermDebtNoncurrent", "LongTermDebt"]),
+          # ⚠️ Cette liste décrit une FAMILLE de financements, pas un concept canonique. Elle ne
+          # portait que le prêt à terme — le mode de financement des sociétés matures. Un émetteur
+          # en développement se finance en OBLIGATIONS CONVERTIBLES : RVMD dépose
+          # `ConvertibleLongTermNotesPayable` (487,4 M$ au 2026-06-30) et AUCUN des deux premiers.
+          # Le manque ne se voyait pas comme une erreur, seulement comme un poste non fondé — et
+          # « inférer zéro » aurait publié « aucune dette, trésorerie nette » sur 487 M$ de dette,
+          # en inversant le signe de la dette nette. C'est #30 transposé : le concept se choisit sur
+          # ce que l'émetteur DÉPOSE, jamais sur ce que sa catégorie est censée déposer.
+          composite_concepts=["LongTermDebtNoncurrent", "LongTermDebt",
+                              "ConvertibleLongTermNotesPayable", "ConvertibleDebtNoncurrent",
+                              "ConvertibleNotesPayableNoncurrent"]),
 ]
 
 # Le poste qui fixe la date d'ancrage : tous les autres sont pris au MÊME exercice (jamais mélangés).
@@ -234,20 +244,41 @@ def build_edgar_entries(
 
         if poste.composite_with:
             second = got.get("second")
-            if second is None:
-                unfounded.append({"metric": poste.metric,
-                                  "reason": f"{poste.composite_with} introuvable"})
-                continue
             structured["cash"] = point["val"]
-            structured[poste.composite_with] = second["point"]["val"]
-            structured["xbrl_tag_2"] = f"us-gaap:{second['concept']}"
-            content = (
-                f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
-                f"trésorerie {_md(point['val'])}{unit}, dette long terme "
-                f"{_md(second['point']['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, "
-                f"concepts XBRL us-gaap:{concept} et us-gaap:{second['concept']} "
-                f"(accession {point.get('accn')})."
-            )
+            if second is None:
+                # Le second concept manque. On ne perd PAS le premier pour autant : la trésorerie
+                # est déposée, sourcée, tier A — la jeter parce que son co-poste manque faisait
+                # tomber `levier` ET `roic_pct` d'un émetteur dont le ROIC (−90,7 % chez RVMD) est
+                # précisément le fait central. Mais on n'écrit pas zéro non plus : `long_term_debt`
+                # reste None et le texte dit « non déterminée », pas « nulle ». Confondre les deux
+                # inverse le signe de la dette nette (#32 : un trou de la table n'est pas un trou
+                # du monde ; et son inverse — un trou du monde n'est pas un zéro).
+                structured[poste.composite_with] = None
+                structured["long_term_debt_status"] = "aucun_concept_depose"
+                unfounded.append({
+                    "metric": poste.metric,
+                    "reason": (f"{poste.composite_with} : aucun des concepts candidats n'est déposé "
+                               f"— trésorerie publiée seule, dette NON DÉTERMINÉE (pas nulle)"),
+                })
+                content = (
+                    f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
+                    f"trésorerie {_md(point['val'])}{unit}. Dette long terme **non déterminée** : "
+                    f"aucun des concepts XBRL candidats n'est déposé par cet émetteur. "
+                    f"⚠️ Absence de dépôt ≠ absence de dette — ne pas lire ce poste comme une "
+                    f"position sans dette, et ne pas en dériver de dette nette. "
+                    f"Source : {point.get('form', '10-K')} EDGAR, concept XBRL us-gaap:{concept} "
+                    f"(accession {point.get('accn')})."
+                )
+            else:
+                structured[poste.composite_with] = second["point"]["val"]
+                structured["xbrl_tag_2"] = f"us-gaap:{second['concept']}"
+                content = (
+                    f"{poste.label} de {ticker_id} ({symbol}) — exercice clos le {point['end']} : "
+                    f"trésorerie {_md(point['val'])}{unit}, dette long terme "
+                    f"{_md(second['point']['val'])}{unit}. Source : {point.get('form', '10-K')} EDGAR, "
+                    f"concepts XBRL us-gaap:{concept} et us-gaap:{second['concept']} "
+                    f"(accession {point.get('accn')})."
+                )
         else:
             structured["value"] = point["val"]
             content = (
