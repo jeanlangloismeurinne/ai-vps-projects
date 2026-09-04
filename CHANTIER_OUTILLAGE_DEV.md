@@ -254,6 +254,23 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 > `tail -1` de cette sortie ? »**. Écrire le script de filtrage une fois se rentabilise dès la
 > deuxième exécution, et il survit à la session ; un sous-agent, non.
 
+> **Relevé de la session du 2026-09-04 (3) : zéro sous-agent, une troisième fois** — 2 correctifs
+> (F10, F11), 1 déploiement, 31 assertions neuves (1216 → 1247). Un seul candidat a réellement
+> tenté, et c'est celui qui éclaire le mieux la règle :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Relire les 13 entries RVMD produites par les feeds et rapporter les anomalies | **Non — et c'est le cœur du sujet.** La sortie fait ~120 lignes de prose française : profil « volumineux », donc tentant. Mais la tâche demandée n'est pas *repérer une erreur*, c'est **juger qu'une phrase est fausse alors que tous ses nombres sont justes** (F10 : « FCF -0,9 Md = CFO -0,9 Md − capex 0,0 Md » est arithmétiquement cohérent ; F11 : « 11,6 M$ de ventes » est un chiffre réel, simplement d'un autre exercice). Le critère n'existe nulle part sous forme énonçable — il tient dans les conventions #42/#43/#44/#45 et dans ce que le corpus a déjà dit ailleurs. Transmettre ce critère à un agent coûte plus que lire les 120 lignes. |
+> | Écrire les tests négatifs (casser le code, relancer, restaurer) | **Non.** 3 commandes par correctif, et la seule décision — *quelle régression exacte réintroduire* — est le contenu même du correctif. |
+>
+> **Ce que ce relevé ajoute.** Le §16 opposait jusqu'ici « volumineux en sortie » à « riche en
+> jugement » comme si le volume était observable d'avance. Il ne l'est pas toujours : ici la sortie
+> était volumineuse **et** riche en jugement. Le discriminant n'est donc pas le volume mais
+> l'**énonçabilité du critère de succès** — si je ne peux pas écrire en trois lignes ce qui compte
+> comme « anomalie », l'agent ne le peut pas non plus, et son rapport devra être re-vérifié
+> intégralement (donc `coût(vérifier) = coût(faire)`, cf. le coût caché ci-dessous). Formulation
+> courte : **on délègue une recherche, jamais un jugement.**
+
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
 digérer des logs de build). Il est déficitaire quand le travail est **court en commandes et riche
@@ -304,6 +321,28 @@ chaque sortie lisible séparément.
 règle porte sur la forme de la commande, pas sur ce qu'elle fait). Aucune modification de
 `settings.json` à demander — il n'y a pas de règle à écrire pour « autoriser les `;` ».
 
+> **Trois refus de plus le 2026-09-04 (3), et un enseignement qui n'était pas dans le §17.**
+>
+> | Commande refusée | Repli |
+> |---|---|
+> | `docker exec shared-redis redis-cli … GET pt:m1:RVMD \| python3 -c "…"` | — |
+> | `docker exec shared-redis redis-cli -a '<mdp>' GET … > /tmp/x ; wc -c` | lire `market_snapshots.raw_json` en Postgres |
+> | `cat > /tmp/probe.py <<'PY' … PY` puis `docker cp … && docker exec …` | `Write` du fichier, puis `docker cp`, puis `docker exec` — trois appels |
+>
+> **Ce que le §17 ne disait pas : un refus sur une commande composée est parfois un bon signal.**
+> Le deuxième refus portait sur une commande qui mettait **un mot de passe Redis en clair dans
+> `argv`** — visible dans `ps`, dans l'historique du shell et dans la journalisation de la session.
+> En cherchant un contournement de forme, j'aurais gardé le défaut. En cherchant une autre **source**
+> pour la même donnée, j'ai trouvé `market_snapshots.raw_json` : plus court, sans secret, et
+> persistant (le cache Redis a un TTL de 4 h — la table, non). Le repli était **strictement
+> meilleur**, pas équivalent.
+>
+> **Règle ajoutée.** Devant un refus, la première question n'est pas « comment reformuler ? » mais
+> **« la donnée que je cherche est-elle atteignable autrement ? »**. Un chemin refusé est souvent le
+> plus mauvais des chemins disponibles — c'est ce qui le rend suspect. Le §17 reste vrai pour les
+> refus de pure forme (le heredoc ci-dessus n'apprend rien : on scinde, on avance) ; la nuance ne
+> vaut que lorsque la commande refusée manipule un secret, un volume monté ou un état partagé.
+
 ### §18 — Le contrôle le moins cher est celui qu'on fait **avant** de dépenser des tokens de modèle
 
 **Constat (2026-09-04).** Trois défauts livrés cette session — F7 (un P/E négatif publié comme un
@@ -335,6 +374,84 @@ rien : calculé / non calculable / absent sont trois états distincts) et #45 (F
 qualifie la maille réellement mesurée, et un montant choisit son unité) →
 `projects/portfolio-tracker/CLAUDE.md`. Le principe générique « inspecter la frontière gratuite
 avant la première dépense modèle » → mémoire auto.
+
+> **Quatrième passage le 2026-09-04 (3) : deux défauts de plus (F10, F11), toujours à zéro token
+> de modèle.** Le compteur du 00-REPRISE passe à **11 défauts trouvés sur les seuls producteurs
+> déterministes** (F1→F11), et le taux n'est **toujours** pas retombé à zéro. C'est en soi la
+> mesure la plus utile de la session : le corollaire « ce contrôle se refait après chaque
+> correctif » n'est pas une précaution de principe, il a payé **quatre fois de suite**.
+>
+> **Ce que la répétition apprend, et qui est nouveau.** F9 vivait dans le paragraphe que F8 venait
+> d'ajouter (déjà noté). F10 et F11 vivent, eux, dans la **portée du correctif F9** : F9 avait
+> écrit la bonne règle d'unité, mais dans **un seul des trois modules qui la portaient**. Le défaut
+> n'est plus « le correctif a introduit une régression », c'est « le correctif s'est arrêté au
+> premier exemplaire du défaut ». Voir §19 : c'est une règle à part entière.
+
+### §19 — Un correctif de RÈGLE ne se termine pas au fichier où le symptôme est apparu
+
+**Constat (2026-09-04).** F9 avait fixé « un montant choisit son unité par ordre de grandeur » dans
+`base_rate_corpus._mds`, là où le symptôme avait été observé. Deux autres modules portaient la même
+règle recopiée (`edgar_feed._md`, `financials_feed._md`, tous deux `/1e9` en dur) et sont restés
+faux. Le corpus publié disait donc « capex 0,0 Md » pour 15,99 M$ d'investissement réel, et
+« FCF -0,9 Md = CFO -0,9 Md − capex 0,0 Md » — une soustraction dont l'arithmétique **paraît juste**
+parce que ses deux termes sont écrasés à la même unité. La suite de checks passait à 1216/0.
+
+**Enseignement réplicable, tous projets.** Un défaut a deux périmètres, qu'on confond
+systématiquement : le **lieu où il s'est manifesté** et l'**ensemble des lieux où la règle vit**.
+Corriger le premier donne toutes les satisfactions d'un correctif (le symptôme disparaît, le test
+passe, le diff est propre) sans traiter le second. C'est le même motif que la mémoire
+`feedback_dette_perimetre_relire_code` (« le 00-REPRISE dit où regarder, pas jusqu'où va le trou »),
+appliqué non plus à une dette documentée mais à un correctif qu'on vient soi-même d'écrire.
+
+**Règle opératoire, en une ligne.** *Un correctif portant sur une **règle** (un format, une clef
+d'identité, un seuil, une conversion) n'est pas terminé tant qu'on n'a pas cherché ses jumeaux —
+un `grep` sur la constante ou l'opération caractéristique (`1e9`, `/ 1000`, `.strftime`, le nom du
+seuil) — et **déplacé la règle dans un détenteur unique** que les autres importent.* Le grep coûte
+une commande ; il a rendu ici deux modules faux sur trois. Corollaire : le bon livrable d'un
+correctif de règle n'est pas un `if` corrigé, c'est un **module** (`knowledge/units.py`) — parce
+qu'une règle recopiée re-divergera au correctif suivant, exactement comme celle-ci.
+
+**Précédent dans le même projet.** Convention #43 disait déjà cela pour la clef de supersedage
+(`_current_fact_ids` détenteur unique, `financials_feed` l'importe). F10 est la **même règle
+appliquée à un format** — ce qui suggère qu'elle est générale et pas propre aux identités de faits.
+
+**Destination durable.** Convention projet #46 (faite) ; principe générique « un correctif de règle
+se termine par un grep de ses jumeaux et un détenteur unique » → mémoire auto.
+
+### §20 — Une fixture plus favorable que la production est un check aveugle, et il passe au vert
+
+**Constat (2026-09-04).** `check_base_rate_corpus.py` faisait tourner ses 48 assertions sur une
+fixture RVMD dont le CA 2025 valait **11 580 000 $**. La production, elle, portait
+`{2023: 11 580 000, 2024: 0.0, 2025: 0.0}` — la fixture avait été écrite en recopiant *le chiffre
+que le code affichait*, pas *les chiffres que la source contenait*. Conséquence : F11 (`if rev:`
+sautant un CA légitime de `0.0`) était **structurellement invisible** à ce check, qui n'a jamais
+présenté au code le cas qui le fait échouer. 48 assertions vertes, un défaut publié en production.
+
+**Enseignement réplicable, tous projets.** Une suite de tests ne mesure pas la correction du code,
+elle mesure la correction du code **sur les cas qu'on lui soumet**. Une fixture « propre » est le
+mode de panne le plus discret de tout l'outillage : elle ne casse rien, elle ne signale rien, elle
+**réduit silencieusement le domaine testé** — et elle est d'autant plus tentante qu'un jeu de
+données réel est laid (des zéros, des `None`, des unités mélangées, des exercices en retard). Même
+famille que le §13 (« un check peut se dégrader en sortant à 0 ») : ici il ne se dégrade pas, il
+naît déjà partiel.
+
+**Règle opératoire, en une ligne.** *Une fixture se copie depuis l'état réel observé en production
+(requête en base, réponse d'API archivée), jamais retapée « à la main dans le même esprit » ; et
+quand on l'écrit après un incident, on y met **le cas qui a échoué**, pas sa version présentable.*
+Signal d'alerte concret : si les nombres d'une fixture sont tous du même ordre de grandeur, tous
+non nuls et tous du même exercice, elle est probablement inventée.
+
+**Corollaire, et il change l'ordre des opérations.** Le §10 exige qu'un check neuf vire au rouge une
+fois. Ce qu'ajoute F11 : **le test négatif doit être joué contre la fixture réelle**. Avec la
+fixture embellie, réintroduire `if rev:` n'aurait produit **aucun** échec — le test négatif aurait
+« passé » en confirmant un check aveugle. Une fixture fausse ne rend donc pas seulement le check
+inefficace, elle rend le **rituel de validation du check** inefficace lui aussi. La fixture a été
+remplacée par les chiffres de production (avec le commentaire disant d'où ils viennent) et le test
+négatif a alors rendu **9 FAIL**.
+
+**Destination durable.** Convention projet #47 (faite, avec la note sur la fixture) ; principe
+générique « une fixture se copie du réel, et le test négatif se joue contre elle » → mémoire auto,
+en complément de `feedback_test_negatif_obligatoire`.
 
 ---
 

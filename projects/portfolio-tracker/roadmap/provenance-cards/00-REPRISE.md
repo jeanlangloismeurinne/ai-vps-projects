@@ -4,10 +4,78 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-04
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`), puis les feeds de **valorisation** en **trois de plus** (F7→F9, commits `fc1fab2`/`76e9385`/`5c38a13`) — les neuf déployés et vérifiés **avant toute dépense de modèle** ; corpus RVMD propre à **13 entrées, une seule active par champ**, dimension `valorisation` fondée sur ses 3 champs, suite hors-ligne à **1 216 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** sur les 6 dimensions qualitatives (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`), puis les feeds de **valorisation** en **trois de plus** (F7→F9, commits `fc1fab2`/`76e9385`/`5c38a13`), puis **deux de plus au 4ᵉ passage** (F10 unité des montants / F11 un CA nul est une valeur, commit `4382dd9`) — les **onze** déployés et vérifiés **avant toute dépense de modèle** ; corpus RVMD propre à **13 entrées, une seule active par champ** (recomptée en base après déploiement), dimension `valorisation` fondée sur ses 3 champs, suite hors-ligne à **1 247 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** sur les 6 dimensions qualitatives (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
+
+> ## ⚡ MàJ 2026-09-04 (4) — quatrième passage sur les feeds déterministes : F10 et F11, toujours zéro token de modèle
+>
+> **Le jalon « search-worker » n'est toujours pas atteint, et c'est encore délibéré.** La
+> pré-condition écrite en MàJ (3) — *relire en texte une entry de chaque feed encore non inspecté
+> sur RVMD, pas seulement son code de retour* — a rendu **deux défauts de plus**. Compteur cumulé
+> sur les seuls producteurs déterministes : **F1 → F11**, en quatre passages. Le taux n'est **pas**
+> retombé à zéro ; c'est le fait le plus important de cette mise à jour.
+>
+> ### État livré, déployé, vérifié en prod
+>
+> Un commit, un déploiement, sonde publique 200 après `healthy` : **`4382dd9`**.
+> **Aucune migration : la prochaine reste 034.** Suite hors-ligne complète :
+> **1 247 assertions, 0 échec, 17 scripts** (1 216 → 1 247, avec le montage `/contract_frozen`).
+> Les trois blocs de checks neufs sont **éprouvés par test négatif** (9, 4 puis 4 échecs sur code
+> neutralisé, restaurés au vert).
+>
+> | # | Défaut trouvé sur RVMD | Correctif |
+> |---|---|---|
+> | F10 | la règle d'unité de F9 vivait dans `base_rate_corpus._mds` et **seulement là** ; `edgar_feed._md` et `financials_feed._md` divisaient toujours par `1e9` en dur. Capex FY2025 = **15,99 M$** (vérifié contre l'API EDGAR `companyconcept`, CIK 0001628171) publié « 0,02 MdUSD » / « 0,0 Md », et `fcf_conversion_pct` disait « FCF -0,9 Md = CFO -0,9 Md − **capex 0,0 Md** » — une soustraction dont l'arithmétique **paraît juste** parce que ses deux termes sont écrasés à la même unité | nouveau module **`knowledge/units.py`**, détenteur **unique** de la règle ; les trois producteurs l'importent. La devise est passée **à chaque appel** : deux termes d'une même phrase peuvent désormais porter des paliers différents (M et Md), la factoriser ferait lire deux ordres de grandeur comme un seul (#46) |
+> | F11 | `_latest_revenue_usd` testait `if rev:` → un CA légitime de **`0.0`** était sauté et la boucle reculait dans le temps. `base-rate-anchor` publiait « pour **11,6 M$ de ventes** » (FY2023) **en contradiction directe** avec l'entry EDGAR tier A qui dit 0 : deux réponses actives à une même question | `is not None`, + datation du flux par son exercice (#42), + **limite déclarée** : une base de ventes nulle ne retire pas l'ancre de taux de base, elle en déclare l'inapplicabilité en taux (un CAGR ne se calcule pas depuis zéro). Le zéro est une propriété **mesurée** de l'émetteur, pas un trou de collecte (#47) |
+>
+> Conventions **#46** et **#47** ajoutées au `CLAUDE.md` du projet.
+>
+> ### Les deux leçons de cette itération
+>
+> **(a) Un correctif de règle s'arrête au premier exemplaire du défaut.** F9 avait écrit la *bonne*
+> règle, dans *un seul* des trois modules qui la portaient. Ce n'est plus « le correctif a introduit
+> une régression » (leçon de F9) mais « le correctif n'est pas allé au bout de la règle ». Livrable
+> correct d'un correctif de règle : un **module détenteur**, pas un `if` corrigé — une règle
+> recopiée re-diverge au correctif suivant, par construction. C'est la convention #43 (clef de
+> supersedage, détenteur unique) transposée à un **format**, donc probablement générale.
+>
+> **(b) La fixture de `check_base_rate_corpus.py` était plus favorable que la production** (CA 2025
+> à 11,58 M$ au lieu de 0). F11 lui était **structurellement invisible** : 48 assertions vertes sur
+> un défaut publié. Pire, le test négatif lui-même aurait « passé » — réintroduire `if rev:` sur
+> cette fixture ne produit aucun échec. Une fixture fausse ne rend pas seulement le check
+> inefficace, elle rend le **rituel de validation du check** inefficace. Fixture remplacée par les
+> chiffres de production (commentaire disant d'où ils viennent) → le test négatif rend alors 9 FAIL.
+>
+> Les deux leçons sont en mémoire (`feedback_correctif_regle_jumeaux`,
+> `feedback_fixture_copiee_du_reel`) et détaillées dans `CHANTIER_OUTILLAGE_DEV.md` §19 et §20.
+>
+> ### Vérifications faites APRÈS déploiement (le diff ne suffit pas — #43)
+>
+> Les 3 feeds rejoués (`edgar-refresh`, `financials-refresh`, `base-rate-anchor`, HTTP 200), puis
+> les **13 entries actives relues en texte**. Extraits qui étaient faux et ne le sont plus :
+> - `#162` — « Chiffre d'affaires FY2025 : **0 USD** » (était « 0,00 MdUSD », indiscernable d'un arrondi)
+> - `#168` — « Capex FY2025 : **16,0 MUSD** » (était « 0,02 MdUSD »)
+> - `#171` — « FCF **-913,7 MUSD** = cash-flow opérationnel **-897,7 MUSD** − capex **16,0 MUSD** » — la soustraction est désormais **vérifiable**
+> - `#172` — « **0 $ de ventes (FY2025)** » + paragraphe ⚠ sur la base de ventes nulle (était « 11,6 M$ »)
+>
+> Comptage par clef (convention #43) : **exactement 1 ligne active** pour chacun des 6 champs MVDD
+> couverts et pour chacun des 10 `metric` EDGAR. Aucune contradiction résiduelle.
+>
+> ### Prochaine étape — inchangée, et maintenant réellement débloquée
+>
+> **Socle de connaissance RVMD via le search-worker** sur les 6 dimensions qualitatives
+> (`business_model`, `produits`, `positionnement`, `marche`, `management_allocation`, `risques`),
+> ~50 entrées attendues — **1ʳᵉ dépense réelle de tokens de modèle**.
+>
+> ⚠️ **Avant de lancer** : les 4 feeds déterministes ont maintenant été inspectés en texte
+> (`edgar`, `financials`, `valuation`, `base_rate`) et leurs 13 entries sont propres. La frontière
+> gratuite est donc épuisée pour la partie quantitative — il n'y a plus de raison de reporter la
+> dépense. En revanche le taux de défaut par passage (11 en 4 passages) justifie de **relire en
+> texte les premières entries du search-worker** avant de lancer les 6 dimensions en série.
+>
+> Reste aussi, non bloquant : **ingestion-agent**.
 
 > ## ⚡ MàJ 2026-09-04 (3) — la dimension `valorisation` fondée sur RVMD, et trois défauts de plus (F7/F8/F9) — toujours zéro token de modèle
 >
