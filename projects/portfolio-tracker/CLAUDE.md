@@ -336,6 +336,40 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     silence). Détail + garde : `check_runner_telemetry.py` (§3 somme exacte, §6 noms **et** types,
     §7 report de la boucle) — éprouvé par test négatif.
 
+42. **Un poste de bilan se date à un INSTANT, un flux à un EXERCICE — et un ratio se date par les
+    postes qui le composent (V2, `knowledge/financials_feed.py`)** : trouvé sur RVMD, où le socle
+    ne lisait que les dépôts annuels et ignorait six mois de trimestriels (trésorerie 383,7 →
+    815,4 M$, convertibles 0 → 487,4 M$). Une fois l'ancre de bilan corrigée, `levier` — bâti à
+    100 % de postes au 2026-06-30 — sortait toujours étiqueté « FY2025 » en titre, en texte et en
+    `fiscal_period` : **tous ses nombres justes, le fait faux**, donc invisible à tout contrôle
+    arithmétique et à tout contrat. Un ratio mono-ancre porte l'ancre de ses postes (`AU
+    <date>`, `poste_kind='stock'`) ; un ratio **mixte** (ROIC : flux au numérateur, bilan au
+    dénominateur) reste licite mais le **DÉCLARE** — `periods_mixed` / `balance_end` /
+    `jours_entre_ancres` en structuré **et en toutes lettres dans le contenu**, qui est ce que
+    l'agent lit. ⚠️ Ne pas porter la mention sur les ratios mono-ancre : la mettre partout la rend
+    invisible là où elle compte. ⚠️ Les libellés `fp` d'EDGAR ne sont **pas** fiables (RVMD tague
+    `fp=Q2` sur un point au 2026-03-31) — discriminer sur la présence/absence de `start`, jamais
+    sur `fp`. Détail + garde : `check_financials_feed.py` §8, `check_edgar_feed.py` §8/§9.
+
+43. **L'identité d'un fait est ce qu'il MESURE, et cette règle vit à un seul endroit (V2,
+    `knowledge/edgar_feed.py`)** : sur un stockage append-only, la clef de supersedage décide de ce
+    qui est **retiré**. Elle incluait la période, donc corriger l'ancre du bilan **ajoutait** la
+    vérité sans retirer le fait périmé — deux valeurs de capitaux propres actives simultanément.
+    Aucun ratio n'était faux (`extract_edgar_facts` prend la plus récente) : c'est le **corpus
+    narratif lu par les agents** qui portait deux réponses. Règle : un **flux** s'identifie par
+    `(metric, period_end)`, un **poste de bilan** par `metric` **seul** (borné `<= period_end`,
+    pour qu'un EDGAR qui reculerait ne supersede jamais un instant plus récent) ; le supersedage
+    balaie **TOUTES** les entrées courantes, pas la plus récente. `_current_fact_ids` est le
+    **seul** détenteur de cette règle — `financials_feed` l'importe au lieu de la ré-implémenter
+    (il l'avait ré-implémentée par tags `{financials,capex,fact}` contre `{financials,capex,edgar}`
+    du socle : un mot d'écart, deux `capital_expenditure` courants pour le même exercice, invisible
+    sur NVDA dont le seed portait déjà le bon tag). ⚠️ **Corollaire de méthode** : ces défauts ne se
+    voient **ni dans le diff, ni dans la suite de checks** — seulement en inspectant l'état
+    persisté **après déploiement**. Sur toute écriture qui remplace une vérité antérieure, la
+    question n'est pas « la nouvelle valeur est-elle bonne ? » mais « **combien de lignes sont
+    actives sur cette clef maintenant ?** ». Détail + garde : `check_edgar_feed.py` §10,
+    `check_financials_feed.py` §8.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

@@ -4,10 +4,82 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-04
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. Reste : **ingestion-agent** et le **3ᵉ ticker** — aucun des deux n'est bloquant, le prochain jalon est à choisir.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`, déployés et vérifiés) **avant toute dépense de modèle** ; corpus RVMD propre à 10 entrées, suite hors-ligne à **1 177 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
+
+> ## ⚡ MàJ 2026-09-04 (2) — 3ᵉ TICKER **RVMD** : le socle financier réparé en six points, avant toute dépense de modèle
+>
+> **Jalon choisi : 3ᵉ ticker = RVMD (Revolution Medicines, biotech clinique, position réellement
+> détenue).** L'exercice a servi ce qu'on lui demandait — sortir du confort NVDA/MSFT — mais **pas
+> là où on l'attendait** : il n'a encore consommé **aucun token de modèle** et a déjà trouvé
+> **six défauts structurels du socle EDGAR**, dont trois n'existaient que sur un émetteur au profil
+> différent (pertes, trésorerie massive, convertibles récentes).
+>
+> ### État livré, déployé, vérifié en prod
+>
+> Trois commits, trois déploiements, sonde publique 200 après `healthy` à chaque fois :
+> `957ffbb` (F4), `a3d604e` (F5), `019fe4b` (F6). **Aucune migration : la prochaine reste 034.**
+> Suite hors-ligne complète : **1 177 assertions, 0 échec, 17 scripts** (mesurée **avec** le
+> montage `/contract_frozen` — cf. l'avertissement de `backend/checks/README.md`).
+>
+> | # | Défaut | Correctif |
+> |---|---|---|
+> | F1 | `fcf_conversion_pct = +80,77 %` calculé sur **deux négatifs** — un ratio flatteur né de deux mauvaises nouvelles | `None` + champ `cash_burn` |
+> | F2 | le composite `cash_and_lt_debt` **laissait tomber la trésorerie** quand la 2ᵉ jambe manquait | `None` + `long_term_debt_status`, jamais un zéro |
+> | F3 | `_miss` confondait *absent*, *nul* et *non calculable* | `_absents()` |
+> | F4 | le socle ne lisait que les dépôts **annuels** — aveugle à tous les trimestres depuis le dernier 10-K | ancre de bilan sur le dépôt le plus récent |
+> | F5 | la clef de supersedage incluait la période : changer l'ancre **ajoutait** la vérité sans retirer le fait périmé | identité = ce que le fait mesure (#43) |
+> | F6 | (a) un ratio 100 % bilan étiqueté « FY2025 » ; (b) appariement capex sur `{…,fact}` vs `{…,edgar}` | datation par les postes (#42) + règle d'identité unique |
+>
+> **Ce que F4 déplaçait sur RVMD** (mesures réelles) : trésorerie 383,7 → **815,4 M$**, capitaux
+> propres 1 631,3 → **2 606,2 M$**, actifs 2 354,5 → **4 323,3 M$**, dette convertible 0 →
+> **487,4 M$**. Le socle affichait donc un bilan vieux de six mois sur une biotech qui lève.
+>
+> ### La leçon centrale : un correctif juste **dans ce qu'il écrit** peut être faux **dans ce qu'il omet de retirer**
+>
+> **F5 et F6 n'ont été trouvés qu'en déployant le correctif précédent puis en RELISANT la base.**
+> Ni la suite de checks, ni les contrats Pydantic, ni l'arithmétique ne pouvaient les voir : F5
+> laissait **deux valeurs de capitaux propres actives en même temps** (aucun ratio faux —
+> l'extraction prend la plus récente — mais le **corpus narratif lu par les agents** portait deux
+> réponses) ; F6(a) était un fait dont **tous les nombres étaient justes et l'étiquette fausse**.
+> Réflexe à garder sur tout stockage append-only : après le premier déploiement réel, ne pas
+> demander « la nouvelle valeur est-elle bonne ? » mais **« combien de lignes sont actives sur
+> cette clef maintenant ? »**. Un `GROUP BY` sur `superseded_by IS NULL` aurait trouvé F5 et F6(b)
+> d'un coup. → conventions **#42** et **#43** de `CLAUDE.md`, et `CHANTIER_OUTILLAGE_DEV.md` §15.
+>
+> ### ⚠️ Correction factuelle du message de commit `2eff706`
+>
+> Ce message affirme que déduire une dette nulle « faisait basculer la dette nette de −383,7 à
+> +103,7 M$ ». **C'est faux et l'histoire n'a pas été réécrite** — la correction vit ici et dans
+> `checks/README.md` : à l'ancre FY2025, RVMD n'avait **pas** de dette long terme déposée (le seul
+> point au 2025-12-31, issu d'un 10-Q, vaut 0) ; les 487,4 M$ de convertibles datent du 2026-06-30.
+> L'enjeu du composite n'était donc pas un signe inversé mais **l'assiette**.
+>
+> ### Corpus RVMD en prod — 10 entrées actives, une par poste, zéro contradiction
+>
+> `152` capital_expenditure FY2025 (v2) · `147` cash_and_lt_debt AU 2026-06-30 · `155`
+> fcf_conversion_pct FY2025 · `153` levier AU 2026-06-30 · `143` net_income FY2025 · `144`
+> operating_cash_flow FY2025 · `142` revenue FY2025 · `154` roic_pct FY2025 (mixte déclaré, 181 j
+> d'écart) · `141` stockholders_equity AU 2026-06-30 · `145` total_assets AU 2026-06-30.
+> **Infondables assumés** : `gross_profit` (aucun concept XBRL exploitable) et
+> `intensite_capex_pct` (revenu déposé à 0).
+>
+> ### Prochaine étape
+>
+> **Constituer le socle de connaissance RVMD via le search-worker** (~50 entrées attendues) — c'est
+> la première étape qui dépense de vrais tokens de modèle, et sa pré-condition (un socle financier
+> sain) est désormais remplie. Puis readiness (distinguer champ **infondable** et **lacune**), puis
+> la chaîne research → bull/bear → réfutation → synthèse.
+>
+> ### Frictions d'outillage relevées → `CHANTIER_OUTILLAGE_DEV.md` §12 à §16
+>
+> `compose-deploy.sh` refusé par le classifieur **dans toutes ses formes** (repli documenté) · le
+> montage `/contract_frozen` manquant fait **sous-compter 4 scripts en sortant à 0** (et cette
+> mesure incomplète a failli écraser des chiffres corrects dans le README) · la sonde publique rend
+> le **404 du frontend** pendant `health: starting` · **registre de délégation** : zéro sous-agent
+> lancé sur cette session, avec le test de décision qui l'explique.
 
 > ## ⚡ MàJ 2026-09-04 — DETTE DU RUNNER FERMÉE : un abandon est désormais comptabilisé
 >
