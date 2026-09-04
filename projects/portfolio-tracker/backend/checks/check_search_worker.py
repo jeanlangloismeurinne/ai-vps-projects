@@ -6,7 +6,9 @@ doublons, dépassement de plafond, mémoire modèle non déclarée. Tout doit ê
 import sys
 from datetime import date
 
-from app.agents.v2.worker import _apply_deterministic_overrides, _resolve_source_type, request_hash
+from app.agents.v2.worker import (
+    _apply_deterministic_overrides, _build_user_message, _resolve_source_type, request_hash,
+)
 from app.contracts import OutputSchema, WorkerExchange, WorkerRequest, WorkerResponse
 from app.knowledge.websearch import (
     SearchUnavailable, classify_source_type, get_search_backend, html_to_text,
@@ -277,6 +279,44 @@ except SearchUnavailable as e:
     check("SearchUnavailable levée sans EXA_API_KEY", True)
     check("message actionnable (nomme la clé et où la poser)",
           "EXA_API_KEY" in str(e) and "Coolify" in str(e), f"→ {e}")
+
+print("\n9. Ancrage temporel du mandat (F12) — le modèle doit connaître le PRÉSENT")
+# Le message ne portait aucune date : le modèle datait donc le présent à sa coupure
+# d'entraînement et citait un 10-K vieux d'un cycle annuel en le croyant le plus récent
+# (RVMD, 2026-09-04). Ce qui se vérifie ici est ce qui PART vers le modèle — pas ce qu'il
+# en fait, qui n'est mesurable que par un run réel.
+_req_f12 = WorkerRequest(
+    requester="knowledge-curator", worker="search-worker", ticker_id="RVMD",
+    query="modèle d'affaires", output_schema=OutputSchema(
+        entry_type="fact_qualitative", dimension="business_model",
+        field_path="business_model.description"),
+    reliability_min=0.60,
+)
+
+msg_sans_ancre = _build_user_message(_req_f12, None)
+aujourdhui = date.today().isoformat()
+check("la date du jour est dans le message", aujourdhui in msg_sans_ancre,
+      f"→ {aujourdhui!r} absent")
+check("la date est présentée comme le présent, pas comme une donnée de plus",
+      "coupure" in msg_sans_ancre.lower(), "→ mention de la coupure d'entraînement absente")
+# Un ticker sans dépôt connu ne doit pas produire un message SILENCIEUX sur l'ancre : une ancre
+# absente et une ancre tue se lisent pareil côté modèle (cf. « un check qui dégrade en sortant à 0 »).
+check("ancre absente = DITE, jamais tue",
+      "INCONNUE" in msg_sans_ancre, "→ l'absence d'ancre ne s'annonce pas")
+
+msg_ancre = _build_user_message(
+    _req_f12, {"source_date": date(2026, 6, 30), "fiscal_period": "FY2025",
+               "source_url": "https://www.sec.gov/x"})
+check("l'ancre de dépôt connue est transmise", "2026-06-30" in msg_ancre, f"→ absente")
+check("l'exercice de l'ancre est transmis", "FY2025" in msg_ancre)
+check("une source antérieure à l'ancre est explicitement disqualifiée",
+      "ANTÉRIEURE" in msg_ancre, "→ aucune consigne sur les sources périmées")
+check("les deux branches restent distinctes",
+      "INCONNUE" not in msg_ancre, "→ le message avec ancre annonce aussi une ancre inconnue")
+# Le contrat lui-même ne doit pas avoir bougé : l'ancrage s'AJOUTE au mandat, il ne le remplace pas.
+check("le WorkerRequest part toujours en JSON dans le message",
+      '"field_path": "business_model.description"' in msg_ancre,
+      "→ le mandat n'est plus transmis intégralement")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

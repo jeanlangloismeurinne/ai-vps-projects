@@ -58,6 +58,7 @@ from app.contracts import (
     WorkerRequest,
     WorkerResponse,
 )
+from app.db.database import get_db_session
 from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
@@ -358,9 +359,66 @@ def _apply_deterministic_overrides(
 
 
 # ── exécution ────────────────────────────────────────────────────────────────
-def _build_user_message(req: WorkerRequest) -> str:
-    """La requête part telle quelle (JSON) : le prompt du worker est écrit contre ce contrat."""
+async def ancre_temporelle(conn: asyncpg.Connection, ticker_id: Optional[str]) -> Optional[dict]:
+    """Dépôt réglementaire le plus récent DÉJÀ connu du corpus pour cet émetteur.
+
+    Le socle déterministe (`edgar_feed`) a écrit ses entries avec leur `source_date` et leur
+    `fiscal_period` réels. On relit cet état plutôt que d'interroger EDGAR : la donnée est déjà
+    payée, elle ne coûte ni appel réseau ni token, et c'est exactement ce que le corpus affirme —
+    donc ce à quoi une entry qualitative ne doit pas contredire.
+
+    `None` = aucun dépôt connu (ticker neuf). L'appelant doit alors le DIRE au modèle, pas sauter
+    la mention : une ancre absente et une ancre silencieuse se lisent pareil côté modèle.
+    """
+    row = await conn.fetchrow(
+        """
+        SELECT source_date, fiscal_period, source_url
+          FROM knowledge_entries
+         WHERE ticker_id = $1
+           AND superseded_by IS NULL
+           AND source_type IN ('edgar_official', 'regulator_filing_eu')
+           AND source_date IS NOT NULL
+         ORDER BY source_date DESC
+         LIMIT 1
+        """,
+        ticker_id,
+    )
+    return dict(row) if row else None
+
+
+def _build_user_message(req: WorkerRequest, ancre: Optional[dict] = None) -> str:
+    """La requête part telle quelle (JSON) : le prompt du worker est écrit contre ce contrat.
+
+    ⚠️ **Ancrage temporel (F12).** Le message ne portait AUCUNE date : le modèle datait donc le
+    « présent » à sa coupure d'entraînement. Trouvé sur RVMD le 2026-09-04 — il a cité le 10-K
+    FY2024 (déposé 2025-02-26) comme source la plus récente en ignorant le 10-K FY2025 (déposé
+    2026-02-25) et deux 10-Q postérieurs, et a publié une trésorerie de 2,3 Md$ au 2024-12-31 en
+    concurrence directe avec l'entry tier A du socle (815,4 M$ au 2026-06-30). Tous ses nombres
+    étaient justes : le fait était périmé (famille de #42/#43). La date ne peut pas vivre dans
+    `agent_prompts` — un prompt est versionné et hashé, y injecter du volatil le ferait diverger à
+    chaque run — elle vit donc ICI, seul détenteur, plutôt que recopiée dans chaque `query` (#46).
+    """
     lignes = [
+        f"Date du jour : {date.today().isoformat()}. C'est le PRÉSENT — pas ta date de coupure "
+        "d'entraînement. Un document que tu crois récent de mémoire peut avoir été remplacé "
+        "depuis : vérifie toujours qu'il n'existe pas de dépôt plus récent avant de citer.",
+    ]
+    if ancre:
+        lignes.append(
+            f"Dépôt réglementaire le plus récent déjà présent dans le corpus de cet émetteur : "
+            f"{ancre['source_date'].isoformat()}"
+            + (f" ({ancre['fiscal_period']})" if ancre.get("fiscal_period") else "")
+            + ". Une source ANTÉRIEURE à cette date n'est pas la meilleure disponible : soit tu "
+            "trouves le dépôt plus récent, soit tu déclares explicitement dans `content` que "
+            "l'information provient d'un exercice antérieur et pourquoi elle reste valable."
+        )
+    else:
+        lignes.append(
+            "Aucun dépôt réglementaire n'est encore connu du corpus pour cet émetteur : "
+            "l'ancre est INCONNUE, pas récente. Cherche le dépôt le plus récent avant de citer."
+        )
+    lignes += [
+        "",
         "WorkerRequest à traiter :",
         "```json",
         json.dumps(req.model_dump(mode="json"), ensure_ascii=False, indent=2),
@@ -409,9 +467,14 @@ async def run_search_worker(
         ticker_id=req.ticker_id, query=req.query, log=retrieval_log
     )
 
+    # L'ancre est lue AVANT l'appel : elle conditionne le message, donc la dépense. La lire après
+    # coûterait un appel complet pour apprendre ce qu'on savait déjà (#40, transposé à l'amont).
+    async with get_db_session() as conn:
+        ancre = await ancre_temporelle(conn, req.ticker_id)
+
     result = await run_tool_json_agent(
         agent,
-        [{"role": "user", "content": _build_user_message(req)}],
+        [{"role": "user", "content": _build_user_message(req, ancre)}],
         executors,
         WorkerResponse,
         closing_instruction=_CLOSING_INSTRUCTION,
