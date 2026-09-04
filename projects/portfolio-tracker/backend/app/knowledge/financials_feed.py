@@ -35,6 +35,10 @@ from typing import Any, Optional
 from app.data_collection.data_service import DataService  # noqa: F401  (parité d'accès quant, non requis ici)
 from app.db.database import get_db_session
 from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annual_value
+# L'identité d'un fait EDGAR (quelle entrée courante un nouveau fait remplace) est une règle
+# UNIQUE, tenue par edgar_feed. Ce module écrit lui aussi un `capital_expenditure` : lui donner
+# son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
+from app.knowledge.edgar_feed import _current_fact_ids
 from app.knowledge.service import get_current_entries, store_knowledge
 
 logger = logging.getLogger(__name__)
@@ -216,6 +220,29 @@ def build_financials_entries(
     fy = period or (f"FY{period_end.year}" if isinstance(period_end, date) else "dernier exercice")
     src = facts.get("source_url")
 
+    # ── Datation : un ratio se date par les POSTES qui le composent (F6) ──────
+    # `levier` n'est fait que de postes de bilan ; l'annoncer « FY2025 » alors que ses trois
+    # chiffres datent du 2026-06-30 produit un fait FAUX dont tous les nombres sont justes — le
+    # pire genre, puisque aucun contrôle arithmétique ne peut le voir. Un ratio MIXTE (ROIC : un
+    # flux au numérateur, un bilan au dénominateur) est licite, mais il doit le DIRE.
+    balance_end = facts.get("balance_end")
+    au_bilan = f"AU {balance_end}" if balance_end else fy
+    ancres_mixtes = bool(facts.get("periods_mixed"))
+    ecart_ancres = facts.get("jours_entre_ancres")
+    mention_mixte = (
+        f" ⚠️ Ancres MIXTES : numérateur de l'exercice clos le {period_end}, dénominateur du bilan "
+        f"au {balance_end} — {ecart_ancres} jours d'écart. "
+        if ancres_mixtes else ""
+    )
+
+    def _dater(structured: dict[str, Any], *, mixte: bool) -> dict[str, Any]:
+        """Ajoute la traçabilité des ancres à un ratio mixte. Un ratio mono-ancre n'en porte pas :
+        la déclarer partout la rendrait invisible là où elle compte."""
+        if mixte and ancres_mixtes:
+            structured |= {"periods_mixed": True, "balance_end": str(balance_end),
+                           "jours_entre_ancres": ecart_ancres}
+        return structured
+
     revenue = facts.get("revenue")
     net_income = facts.get("net_income")
     ocf = facts.get("operating_cash_flow")
@@ -254,11 +281,13 @@ def build_financials_entries(
             "long_term_debt": debt, "cash": cash, "net_debt": net_debt,
             "stockholders_equity": equity, "currency": cur,
             "debt_to_equity_pct": round(d2e, 2), "net_debt_to_equity_pct": round(nd2e, 2),
-            "net_cash_position": net_cash, "period": period,
+            "net_cash_position": net_cash, "period": au_bilan,
+            "period_end": str(balance_end) if balance_end else None,
+            "poste_kind": "stock",
             "method": "dette LT (non courante) / capitaux propres ; dette nette = dette LT − trésorerie",
         }
         content = (
-            f"Levier de {ticker_id} ({symbol}) — {fy} : dette LT {_md(debt)}{cur}, trésorerie "
+            f"Levier de {ticker_id} ({symbol}) — {au_bilan} : dette LT {_md(debt)}{cur}, trésorerie "
             f"{_md(cash)}{cur} → dette nette {_md(net_debt)}{cur}. Gearing (`levier`, dette/capitaux "
             f"propres) = {_pct(d2e)} ; dette nette/capitaux propres = {_pct(nd2e)}. "
         )
@@ -267,12 +296,12 @@ def build_financials_entries(
                 "Position de trésorerie NETTE POSITIVE : dette nette négative, donc dette nette/EBITDA "
                 "négatif — le gearing (dette/capitaux propres) est ici la lecture pertinente du levier. "
             )
-        content += "Calculé depuis les postes du 10-K EDGAR (tier A)."
+        content += "Calculé depuis les postes de bilan déposés chez EDGAR (tier A)."
         specs.append(FinancialsEntrySpec(
             field="levier", entry_type="fact_financial",
-            title=f"Financials — levier (dette nette / gearing) {fy}",
+            title=f"Financials — levier (dette nette / gearing) {au_bilan}",
             content=content, content_structured=structured,
-            fiscal_period=period, source_url=src, tags=_tags("levier"),
+            fiscal_period=au_bilan, source_url=src, tags=_tags("levier"),
         ))
     else:
         _miss("levier", _absents(**{"dette LT": debt, "trésorerie": cash,
@@ -283,7 +312,7 @@ def build_financials_entries(
         invested = equity + debt - cash
         roic = net_income / invested * 100 if invested else None
         if roic is not None:
-            structured = {
+            structured = _dater({
                 "metric": "roic", "field": "roic_pct",
                 "roic_pct": round(roic, 2), "net_income": net_income,
                 "invested_capital": invested, "stockholders_equity": equity,
@@ -291,14 +320,15 @@ def build_financials_entries(
                 "nopat_approx": "net_income",
                 "method": ("NOPAT ≈ résultat net (charge d'intérêts nette négligeable en position de "
                            "trésorerie nette) ; capital investi = capitaux propres + dette LT − trésorerie"),
-            }
+            }, mixte=True)
             content = (
                 f"ROIC de {ticker_id} ({symbol}) — {fy} : {_pct(roic)} (`roic_pct`). Capital investi "
                 f"{_md(invested)}{cur} (capitaux propres {_md(equity)} + dette LT {_md(debt)} − trésorerie "
                 f"{_md(cash)}), NOPAT approché par le résultat net {_md(net_income)}{cur}. "
                 f"Approximation NOPAT ≈ résultat net justifiée par la position de trésorerie nette "
                 f"(intérêts nets négligeables) — elle peut LÉGÈREMENT majorer le ROIC si le résultat "
-                f"non opérationnel est significatif. Calculé depuis le 10-K EDGAR (tier A)."
+                f"non opérationnel est significatif.{mention_mixte} Calculé depuis les dépôts EDGAR "
+                f"(tier A)."
             )
             specs.append(FinancialsEntrySpec(
                 field="roic_pct", entry_type="fact_financial",
@@ -428,12 +458,19 @@ async def _persist_capex_fact(
     conn, ticker_id: str, symbol: str, point: dict[str, Any], *, currency: str,
     fiscal_period: Optional[str], source_url: Optional[str], tag_used: str,
 ) -> dict[str, Any]:
-    """Écrit le capex fetché comme fait EDGAR tier A réutilisable (supersede l'ancien s'il existe)."""
+    """Écrit le capex fetché comme fait EDGAR tier A réutilisable (supersede l'ancien s'il existe).
+
+    ⚠️ L'appariement se fait sur le POSTE (`metric` + exercice), jamais sur les tags. Le tag `fact`
+    séparait ce capex de celui du socle (`{financials, capex, edgar}` contre
+    `{financials, capex, fact, edgar}`) : deux entrées `capital_expenditure` FY2025 courantes en
+    même temps pour RVMD, un seul mot d'écart, aucun signal. Un fait vaut par ce qu'il mesure, pas
+    par le vocabulaire du module qui l'a écrit.
+    """
     val = point["val"]
     period_end = point["end"]
     structured = {
         "metric": "capital_expenditure", "value": val, "currency": currency,
-        "period": fiscal_period, "period_end": period_end,
+        "period": fiscal_period, "period_end": period_end, "poste_kind": "flow",
         "xbrl_tag": f"us-gaap:{tag_used}", "accn": point.get("accn"), "form": point.get("form"),
     }
     content = (
@@ -441,14 +478,22 @@ async def _persist_capex_fact(
         f"{_md(val)}{currency}. Source : {point.get('form','10-K')} EDGAR, concept XBRL "
         f"us-gaap:{tag_used} (accession {point.get('accn')})."
     )
-    prev = await _current_tagged_entry_id(conn, ticker_id, ["financials", "capex", "fact"])
-    return await store_knowledge(
+    prevs = await _current_fact_ids(
+        conn, ticker_id, "capital_expenditure", period_end, flow=True
+    )
+    stored = await store_knowledge(
         conn, ticker_id=ticker_id, entry_type="fact_financial", content=content,
         source_type=_SOURCE_TYPE, title=f"Capex {fiscal_period or period_end} ({symbol})",
         content_structured=structured, tags=["financials", "capex", "fact", "edgar"],
         lang="fr", source_url=source_url, source_date=_parse_end(period_end),
-        fiscal_period=fiscal_period, supersedes_entry_id=prev,
+        fiscal_period=fiscal_period, supersedes_entry_id=prevs[0] if prevs else None,
     )
+    if len(prevs) > 1:
+        await conn.execute(
+            "UPDATE knowledge_entries SET superseded_by = $1 WHERE id = ANY($2::int[])",
+            stored["id"], prevs[1:],
+        )
+    return stored
 
 
 async def run_financials_feed(

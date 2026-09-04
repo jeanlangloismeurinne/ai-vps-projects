@@ -8,6 +8,7 @@ On confronte :
     (4 champs), en vérifiant que tout sort en `edgar_official` (condition du tier A du plancher) ;
   • les helpers purs d'EDGAR (`cik_from_url`, parsing/appariement des points annuels).
 """
+import inspect
 import sys
 from datetime import date
 
@@ -15,7 +16,7 @@ from app.knowledge.edgar_facts import (
     _parse_annual_points, _pick_for_period, cik_from_url,
 )
 from app.knowledge.financials_feed import (
-    build_financials_entries, extract_edgar_facts,
+    _persist_capex_fact, build_financials_entries, extract_edgar_facts,
 )
 
 ok = fail = 0
@@ -283,6 +284,68 @@ check("entries sans `poste_kind` : le repli reclasse bilan et flux à l'identiqu
       f_leg["stockholders_equity"] == 2_606_238_000.0 and f_leg["net_income"] == -1_131_301_000.0
       and f_leg["long_term_debt"] == 487_434_000.0,
       f"→ eq={f_leg['stockholders_equity']} ni={f_leg['net_income']} ltd={f_leg['long_term_debt']}")
+
+print("\n8. UN RATIO SE DATE PAR SES POSTES, et un fait vaut par ce qu'il mesure (F6)")
+# Deux défauts constatés EN PROD sur la sortie du refresh RVMD, après F4/F5 — tous deux
+# invisibles à l'arithmétique, donc au contrat :
+#   (a) `levier` n'est fait QUE de postes de bilan datés du 2026-06-30, et sortait étiqueté
+#       « FY2025 ». Tous ses nombres justes, le fait faux.
+#   (b) le capex écrit par ce module portait le tag `fact`, celui du socle EDGAR ne le portait
+#       pas : deux entrées `capital_expenditure` FY2025 courantes en même temps pour RVMD, un
+#       seul mot d'écart.
+specs_f6, _ = build_financials_entries("RVMD", "RVMD", dict(f_mix, capex=15_990_000.0),
+                                       as_of=date(2026, 9, 4))
+by_f6 = {s.field: s for s in specs_f6}
+lev, roic = by_f6["levier"], by_f6["roic_pct"]
+
+check("un ratio 100 % bilan est daté du BILAN, pas de l'exercice",
+      lev.content_structured["period"] == "AU 2026-06-30"
+      and lev.fiscal_period == "AU 2026-06-30",
+      f"→ {lev.content_structured['period']} / {lev.fiscal_period}")
+check("le texte du levier ne prétend plus parler d'un exercice",
+      "AU 2026-06-30" in lev.content and "FY2025" not in lev.content,
+      f"→ {lev.content[:80]}")
+check("le titre du levier porte la même datation que son contenu",
+      "AU 2026-06-30" in lev.title, f"→ {lev.title}")
+check("le levier est marqué comme poste de bilan (lisible sans relire le texte)",
+      lev.content_structured.get("poste_kind") == "stock")
+check("un ratio 100 % bilan ne se déclare PAS mixte (il n'a qu'une ancre)",
+      "periods_mixed" not in lev.content_structured)
+
+check("un ratio MIXTE reste daté de son flux (le numérateur commande)",
+      roic.content_structured["period"] == f_mix["period"]
+      and roic.content_structured["period"] != lev.content_structured["period"],
+      f"→ {roic.content_structured['period']} vs flux {f_mix['period']}")
+check("un ratio MIXTE DÉCLARE ses deux ancres dans le structuré",
+      roic.content_structured.get("periods_mixed") is True
+      and roic.content_structured.get("balance_end") == "2026-06-30"
+      and roic.content_structured.get("jours_entre_ancres") == 181,
+      f"→ {roic.content_structured.get('balance_end')} / "
+      f"{roic.content_structured.get('jours_entre_ancres')}")
+check("un ratio MIXTE le dit AUSSI en toutes lettres (c'est le texte que l'agent lit)",
+      "Ancres MIXTES" in roic.content and "181 jours" in roic.content,
+      f"→ {roic.content[-160:]}")
+
+# Non-régression : ancres confondues → aucune mention de mixité, et le levier redevient FY.
+specs_uni, _ = build_financials_entries("RVMD", "RVMD", dict(f_uni, capex=15_990_000.0),
+                                        as_of=date(2026, 9, 4))
+by_uni = {s.field: s for s in specs_uni}
+check("ancres confondues → le ROIC ne déclare aucune mixité",
+      "periods_mixed" not in by_uni["roic_pct"].content_structured
+      and "Ancres MIXTES" not in by_uni["roic_pct"].content)
+check("ancres confondues → le levier reste daté du bilan, qui EST la clôture",
+      by_uni["levier"].content_structured["period"] == "AU 2025-12-31",
+      f"→ {by_uni['levier'].content_structured['period']}")
+
+_capex_src = inspect.getsource(_persist_capex_fact)
+check("le capex s'apparie sur le POSTE, jamais sur le vocabulaire de tags du module",
+      '_current_fact_ids(' in _capex_src and '"capital_expenditure"' in _capex_src
+      and '["financials", "capex", "fact"]' not in _capex_src,
+      "→ appariement par tags, le capex du socle reste invisible")
+check("le capex balaie lui aussi les entrées orphelines (même règle que le socle)",
+      "prevs[1:]" in _capex_src and "superseded_by" in _capex_src)
+check("le capex écrit se déclare comme un FLUX (il ne peut pas s'ancrer au bilan)",
+      '"poste_kind": "flow"' in _capex_src)
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
