@@ -56,6 +56,57 @@ class ValuationEntrySpec:
     source_type: str = _SOURCE_TYPE
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Multiples : nom lisible + dénominateur, pour DIRE pourquoi un multiple n'est pas calculable.
+# Un multiple est un rapport prix/résultat : son dénominateur doit être strictement positif. Un
+# « multiple » négatif ne mesure aucun niveau de valorisation — il signale une PERTE, et son
+# classement n'est même pas monotone (une perte deux fois plus lourde rapproche le P/E de zéro par
+# le bas, donc le fait paraître « moins cher »). Trouvé sur RVMD, biotech clinique : yfinance rend
+# `pe_ntm=-35,95×` et `ev_ebitda=-26,23×`, publiés tels quels dans le corpus lu par les agents.
+# Même famille que F1 (`fcf_conversion_pct=+80,77 %` calculé sur deux négatifs) : un ratio flatteur
+# né d'une mauvaise nouvelle. Cf. conventions #25 (on n'estime pas) et #42 (on le déclare EN TOUTES
+# LETTRES dans le contenu, qui est ce que l'agent lit).
+_MULTIPLES: dict[str, tuple[str, str]] = {
+    "pe_ttm": ("P/E TTM", "bénéfice net des 12 derniers mois"),
+    "pe_ntm": ("P/E forward", "bénéfice net attendu"),
+    "ev_ebitda": ("EV/EBITDA", "EBITDA"),
+    "ev_revenue": ("EV/CA", "chiffre d'affaires (ou la valeur d'entreprise)"),
+    "price_to_book": ("P/B", "capitaux propres comptables"),
+}
+
+
+def _trier_multiples(val: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str], list[str]]:
+    """Sépare les multiples en trois états DISTINCTS — jamais deux confondus (cf. F3, `_absents()`).
+
+    Rend `(calcules, non_calculables, absents)` :
+      • `calcules`        — dénominateur positif, le multiple est un niveau de valorisation ;
+      • `non_calculables` — valeur ≤ 0 : {clef: motif}. La valeur est ÉCARTÉE, pas corrigée ;
+      • `absents`         — yfinance ne rend rien (clefs, pour les nommer sans les inventer).
+
+    Confondre « non calculable » et « absent » est le défaut à éviter : le premier est un FAIT sur
+    l'émetteur (il perd de l'argent), le second un trou de donnée. Les rendre tous deux en `n/d`
+    ferait lire une propriété de l'entreprise comme une lacune de la collecte.
+    """
+    calcules: dict[str, Any] = {}
+    non_calculables: dict[str, str] = {}
+    absents: list[str] = []
+    for key, (nom, denominateur) in _MULTIPLES.items():
+        raw = val.get(key)
+        if raw is None:
+            absents.append(key)
+            continue
+        try:
+            f = float(raw)
+        except (TypeError, ValueError):
+            absents.append(key)
+            continue
+        if f <= 0:
+            non_calculables[key] = f"{denominateur} négatif ou nul"
+        else:
+            calcules[key] = raw
+    return calcules, non_calculables, absents
+
+
 def _num(v: Any, *, suffix: str = "", nd: int = 2) -> str:
     """Formatage FR tolérant au None (les multiples manquent parfois : KO n'a pas de FCF yield)."""
     if v is None:
@@ -119,25 +170,53 @@ def build_valuation_entries(
     )
 
     # ── relatif_multiple ──────────────────────────────────────────────────────
-    mult_struct = {
+    calcules, non_calculables, absents = _trier_multiples(val)
+    # `fcf_yield_pct` n'est PAS un multiple mais un RENDEMENT (FCF / capitalisation) : négatif, il
+    # reste monotone et parfaitement interprétable — c'est la consommation de trésorerie rapportée à
+    # la capitalisation. Il traverse donc le tri sans être écarté. Ne pas uniformiser la règle « ≤ 0
+    # = non calculable » : appliquée ici, elle supprimerait une information vraie.
+    fcf_yield = val.get("fcf_yield_pct")
+
+    mult_struct: dict[str, Any] = {
         "metric": "relatif_multiple",
-        "pe_ttm": val.get("pe_ttm"),
-        "pe_ntm": val.get("pe_ntm"),
-        "ev_ebitda": val.get("ev_ebitda"),
-        "ev_revenue": val.get("ev_revenue"),
-        "price_to_book": val.get("price_to_book"),
-        "fcf_yield_pct": val.get("fcf_yield_pct"),
+        # Les clefs restent TOUTES présentes : un consommateur qui lit `pe_ntm` doit trouver `None`
+        # (non calculable), pas une clef absente qui se lirait comme un oubli du producteur.
+        **{k: calcules.get(k) for k in _MULTIPLES},
+        "fcf_yield_pct": fcf_yield,
+        "multiples_calculables": len(calcules),
+        "multiples_non_calculables": non_calculables,   # {clef: motif} — jamais un simple None muet
+        "multiples_absents": absents,
         "as_of": iso,
         "symbol": symbol,
     }
-    mult_content = (
-        f"Multiples de valorisation de {ticker_id} ({symbol}) au {iso} : "
-        f"P/E TTM {_num(val.get('pe_ttm'), suffix='×')}, "
-        f"P/E forward {_num(val.get('pe_ntm'), suffix='×')}, "
-        f"EV/EBITDA {_num(val.get('ev_ebitda'), suffix='×')}, "
-        f"EV/CA {_num(val.get('ev_revenue'), suffix='×')}, "
-        f"P/B {_num(val.get('price_to_book'), suffix='×')}, "
-        f"rendement FCF {_num(val.get('fcf_yield_pct'), suffix=' %')}. "
+
+    if calcules:
+        listing = ", ".join(
+            f"{_MULTIPLES[k][0]} {_num(v, suffix='×')}" for k, v in calcules.items()
+        )
+        mult_content = f"Multiples de valorisation de {ticker_id} ({symbol}) au {iso} : {listing}. "
+    else:
+        mult_content = (
+            f"Valorisation de {ticker_id} ({symbol}) au {iso} : AUCUN multiple de résultat n'est "
+            f"calculable. "
+        )
+    if fcf_yield is not None:
+        sens = " (négatif = consommation de trésorerie)" if float(fcf_yield) < 0 else ""
+        mult_content += f"Rendement FCF {_num(fcf_yield, suffix=' %')}{sens}. "
+    if non_calculables:
+        detail = ", ".join(f"{_MULTIPLES[k][0]} ({motif})" for k, motif in non_calculables.items())
+        mult_content += (
+            f"NON CALCULABLES — {detail}. Un multiple négatif n'est pas un niveau de valorisation : "
+            f"il signale une perte, et son classement n'est pas monotone (une perte plus lourde "
+            f"rapproche le ratio de zéro par le bas, donc le fait paraître « moins cher »). Ces "
+            f"multiples sont donc ÉCARTÉS, jamais publiés tels quels. "
+        )
+    if absents:
+        mult_content += (
+            f"ABSENTS des données de marché (à distinguer des précédents : lacune de collecte, pas "
+            f"propriété de l'émetteur) — {', '.join(_MULTIPLES[k][0] for k in absents)}. "
+        )
+    mult_content += (
         f"Ce sont les multiples ACTUELS (le champ `relatif_multiple`) ; l'ancre de comparaison "
         f"historique/sectorielle (`base_rate_anchor`) relève d'un corpus de base rates distinct. "
         f"Source : yfinance."

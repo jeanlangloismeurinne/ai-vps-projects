@@ -75,11 +75,22 @@ check("le content distingue multiples actuels et base_rate_anchor",
       "base_rate_anchor" in mult.content and "relatif_multiple" in mult.content, f"→ {mult.content}")
 check("tags ciblent relatif_multiple", "relatif_multiple" in mult.tags, f"→ {mult.tags}")
 
-print("\n4. KO — multiples partiels : None → 'n/d', jamais une valeur inventée")
+print("\n4. KO — multiples partiels : l'ABSENT est nommé comme absent, jamais inventé ni requalifié")
 ko = build_valuation_entries("KO", "KO", KO_M1, as_of=AS_OF)
 ko_mult = ko[1]
 check("fcf_yield None conservé en structuré (pas 0)", ko_mult.content_structured["fcf_yield_pct"] is None)
-check("None rendu 'n/d' dans le texte", "n/d" in ko_mult.content, f"→ {ko_mult.content}")
+check("P/B absent listé dans multiples_absents",
+      ko_mult.content_structured["multiples_absents"] == ["price_to_book"],
+      f"→ {ko_mult.content_structured['multiples_absents']}")
+check("un absent n'est JAMAIS compté non calculable",
+      ko_mult.content_structured["multiples_non_calculables"] == {},
+      f"→ {ko_mult.content_structured['multiples_non_calculables']}")
+check("le texte range P/B en ABSENT, pas en non calculable",
+      "ABSENTS" in ko_mult.content and "NON CALCULABLES" not in ko_mult.content,
+      f"→ {ko_mult.content}")
+check("les 4 multiples positifs restent publiés",
+      ko_mult.content_structured["multiples_calculables"] == 4,
+      f"→ {ko_mult.content_structured['multiples_calculables']}")
 check("_num(None) = n/d", _num(None) == "n/d")
 check("_num formate en FR (virgule)", _num(31.93, suffix='×') == "31,93×", f"→ {_num(31.93, suffix='×')}")
 
@@ -90,6 +101,54 @@ try:
 except ValuationUnavailable as e:
     check("ValuationUnavailable levée si prix absent", True)
     check("message nomme le ticker/symbole", "X" in str(e), f"→ {e}")
+
+print("\n6. RVMD — un multiple NÉGATIF n'est pas un multiple (F7, même famille que F1)")
+# m1 réel RVMD au 2026-09-04 (biotech clinique, en perte) : yfinance rend des « multiples »
+# négatifs. Publiés tels quels, ils entraient dans le corpus lu par les agents comme des niveaux de
+# valorisation — un P/E de -35,95× n'ordonne rien (une perte plus lourde le RAPPROCHE de zéro).
+RVMD_M1 = {
+    "price": {"current_price": 209.065, "currency": "USD", "market_cap": 44_810_244_096,
+              "enterprise_value": 42_449_620_992, "distance_from_52w_high_pct": -6.8},
+    "valuation": {"pe_ttm": None, "pe_ntm": -35.95265, "ev_ebitda": -26.233,
+                  "ev_revenue": None, "price_to_book": 27.901375, "fcf_yield_pct": -0.8},
+}
+rv_mult = build_valuation_entries("RVMD", "RVMD", RVMD_M1, as_of=AS_OF)[1]
+s = rv_mult.content_structured
+check("pe_ntm négatif ÉCARTÉ du structuré", s["pe_ntm"] is None, f"→ {s['pe_ntm']}")
+check("ev_ebitda négatif ÉCARTÉ du structuré", s["ev_ebitda"] is None, f"→ {s['ev_ebitda']}")
+check("la clef reste présente (None explicite, pas une clef absente)", "pe_ntm" in s)
+check("motif déclaré, pas un None muet",
+      set(s["multiples_non_calculables"]) == {"pe_ntm", "ev_ebitda"}
+      and "négatif" in s["multiples_non_calculables"]["pe_ntm"],
+      f"→ {s['multiples_non_calculables']}")
+check("non calculable ≠ absent (pe_ttm/ev_revenue absents, eux)",
+      set(s["multiples_absents"]) == {"pe_ttm", "ev_revenue"}, f"→ {s['multiples_absents']}")
+check("P/B positif conservé", s["price_to_book"] == 27.901375)
+check("multiples_calculables compte 1 (le seul P/B)", s["multiples_calculables"] == 1,
+      f"→ {s['multiples_calculables']}")
+check("aucun nombre négatif suivi de '×' dans le texte (le fond du défaut)",
+      "-35" not in rv_mult.content and "-26" not in rv_mult.content, f"→ {rv_mult.content}")
+check("le texte DIT pourquoi (c'est ce que l'agent lit, #42)",
+      "NON CALCULABLES" in rv_mult.content and "P/E forward" in rv_mult.content
+      and "EV/EBITDA" in rv_mult.content, f"→ {rv_mult.content}")
+# Le rendement FCF est un RENDEMENT, pas un multiple : négatif, il reste monotone et vrai.
+check("fcf_yield négatif CONSERVÉ (une règle uniforme supprimerait une vérité)",
+      s["fcf_yield_pct"] == -0.8 and "-0,80 %" in rv_mult.content, f"→ {rv_mult.content}")
+check("et son sens est explicité", "consommation de trésorerie" in rv_mult.content)
+
+print("\n7. Cas dégénéré — zéro multiple calculable : on le DIT, on ne fabrique pas un trou")
+# Sans ça, le champ paraîtrait « non collecté » alors que la vérité est « il n'y en a pas » (#32,
+# le symétrique : un plancher inatteignable est un champ infondable déguisé en lacune).
+ZERO_M1 = {"price": {"current_price": 10.0, "currency": "USD"},
+           "valuation": {"pe_ttm": -5.0, "pe_ntm": -4.0, "ev_ebitda": -3.0,
+                         "ev_revenue": None, "price_to_book": -2.0, "fcf_yield_pct": None}}
+z = build_valuation_entries("Z", "Z", ZERO_M1, as_of=AS_OF)[1]
+check("entrée quand même produite (le champ reste fondé)", z.field == "relatif_multiple")
+check("multiples_calculables = 0", z.content_structured["multiples_calculables"] == 0)
+check("le texte l'annonce en toutes lettres",
+      "AUCUN multiple de résultat n'est calculable" in z.content, f"→ {z.content}")
+check("capitaux propres négatifs déclarés comme tels",
+      "capitaux propres" in z.content_structured["multiples_non_calculables"]["price_to_book"])
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
