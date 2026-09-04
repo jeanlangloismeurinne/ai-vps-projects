@@ -84,9 +84,10 @@ docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV
   python checks/check_fstring_sql.py
 ```
 
-> **Base de référence au 2026-09-04 (2) : 1195 assertions / 0 échec** sur les 17 scripts hors-ligne
+> **Base de référence au 2026-09-04 (2) : 1207 assertions / 0 échec** sur les 17 scripts hors-ligne
 > (`search_worker` 52, `provenance` 50, `edgar_feed` 77, `financials_feed` 69, `synthesis_feed` 56,
-> `readiness_recompute` 77, `analysis_contract` 21, `decision_validate` 54, `base_rate_corpus` 27,
+> `readiness_recompute` 77, `analysis_contract` 21, `decision_validate` 54, `base_rate_corpus` **39**
+> (+12 : F8, le libellé de classe qualifie le CA et jamais la taille boursière — §7 à §9),
 > `monitoring_v2` 116, `exit_debate` 175, `theses_v2_listing` 52, `tickers_v2_listing` 162,
 > `knowledge_entries_listing` 100, `runner_telemetry` 49, `valuation_feed` **38** (+18 : F7, un
 > multiple négatif n'est pas un multiple — §6/§7), `fstring_sql` 20).

@@ -79,5 +79,45 @@ try:
 except BaseRateUnavailable:
     check("BaseRateUnavailable si ni CA ni capitalisation", True)
 
+print("\n7. RVMD — le libellé de classe qualifie le CA, jamais la taille boursière (F8)")
+# Cas réel : biotech clinique à 44,8 Md$ de capitalisation pour < 1 Md$ de ventes. La classe est
+# calculée sur le CA (c'est la maille du Base Rate Book, et c'est juste) mais son libellé emprunte
+# le vocabulaire de la capitalisation — l'entry annonçait « small-cap » à un agent qui lit du texte.
+# Tous les nombres justes, le fait faux : même famille que F6(a).
+RVMD_M1 = {"price": {"market_cap": 44.8e9}, "financials_3y": {"2025": {"revenue": 0.12e9}}}
+rv = build_base_rate_anchor_spec("RVMD", "RVMD", RVMD_M1)
+s = rv.content_structured
+check("classe toujours calculée sur le CA (on ne change pas la maille du livre)",
+      s["size_bucket"] == "small" and s["size_basis"] == "CA", f"→ {s['size_bucket']}/{s['size_basis']}")
+check("divergence des deux mailles DÉTECTÉE", s["mailles_divergentes"] is True)
+check("maille capitalisation exposée à côté", s["size_bucket_par_capitalisation"] == "large",
+      f"→ {s['size_bucket_par_capitalisation']}")
+check("les deux mesures sont exposées (sinon le libellé n'est pas réfutable)",
+      s["sales_usd"] == 0.12e9 and s["market_cap_usd"] == 44.8e9)
+check("le texte AVERTIT de ne pas lire une petite capitalisation",
+      "ne pas le lire comme une petite" in rv.content, f"→ {rv.content}")
+check("le texte chiffre les deux mailles", "44,8 Md$" in rv.content and "0,1 Md$" in rv.content,
+      f"→ {rv.content}")
+check("l'écart est présenté comme l'information, pas comme un défaut",
+      "pas un défaut de classement" in rv.content)
+
+print("\n8. Mailles concordantes : AUCUN avertissement (le mettre partout le rendrait invisible)")
+# Contrepartie du #42 : une mention portée par tous les cas ne distingue plus le cas qui compte.
+check("NVDA (méga sur les deux mailles) ne porte pas la mention",
+      spec.content_structured["mailles_divergentes"] is False
+      and "ne pas le lire comme une petite" not in spec.content)
+check("MID (mid sur CA, large sur cap) la porte, elle", mid_spec.content_structured["mailles_divergentes"] is True)
+
+print("\n9. Repli capitalisation : le libellé annonce la maille RÉELLEMENT mesurée")
+# Avant F8, `size_bucket(None, 300e9)` rendait « large-cap (CA 10-50 Md$) » : une tranche de CA
+# affichée alors qu'aucun CA n'est connu — le repli était noté dans `basis` et démenti dans le texte.
+check("maille CA inchangée mot pour mot", size_bucket(216e9, 5.1e12)[1] == "méga-cap (CA > 50 Md$)",
+      f"→ {size_bucket(216e9, 5.1e12)[1]}")
+check("repli capitalisation : le libellé le dit",
+      size_bucket(None, 300e9)[1] == "méga-cap (capitalisation > 50 Md$)",
+      f"→ {size_bucket(None, 300e9)[1]}")
+check("aucune tranche de CA annoncée sans CA", "CA" not in size_bucket(None, 20e9)[1],
+      f"→ {size_bucket(None, 20e9)[1]}")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

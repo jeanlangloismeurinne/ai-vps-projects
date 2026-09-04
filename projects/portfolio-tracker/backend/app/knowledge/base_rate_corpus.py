@@ -75,16 +75,28 @@ SALES_GROWTH_MEAN = {"1Y": 14.8, "3Y": 8.1, "5Y": 6.9, "10Y": 5.8}
 
 # Repère de taille du livre : la maille des base rates de ventes est le CA (décile), pas le secteur ;
 # la tranche « méga » est CA > 50 Md$ (Exhibit 4). Buckets en USD.
+# (borne basse, clef, préfixe de libellé, tranche). Le libellé est composé AVEC la maille réellement
+# utilisée : quand le CA manque et qu'on retombe sur la capitalisation, écrire « (CA 10-50 Md$) »
+# annoncerait une mesure qu'on n'a pas faite. Le rendu reste mot pour mot l'ancien sur la maille CA.
 _SIZE_BUCKETS = [
-    (50e9, "mega", "méga-cap (CA > 50 Md$)"),
-    (10e9, "large", "large-cap (CA 10-50 Md$)"),
-    (1e9, "mid", "mid-cap (CA 1-10 Md$)"),
-    (0.0, "small", "small-cap (CA < 1 Md$)"),
+    (50e9, "mega", "méga-cap", "> 50 Md$"),
+    (10e9, "large", "large-cap", "10-50 Md$"),
+    (1e9, "mid", "mid-cap", "1-10 Md$"),
+    (0.0, "small", "small-cap", "< 1 Md$"),
 ]
+
+
 # Seuils de croissance « représentatifs » portés par l'entry de readiness (l'implicite précis est
 # recalculé à l'analyse depuis le reverse-DCF).
 _REPRESENTATIVE_THRESHOLDS = (15.0, 20.0, 25.0)
 _DEFAULT_HORIZON = "5Y"   # horizon LT de la thèse (ValorisationCote impose horizon_ans >= 5)
+
+
+def _mds(v: Optional[float]) -> str:
+    """Montant en milliards de dollars, format FR. `None` → 'n/d' (jamais 0)."""
+    if v is None:
+        return "n/d"
+    return f"{float(v)/1e9:.1f} Md$".replace(".", ",")
 
 
 class BaseRateUnavailable(Exception):
@@ -113,10 +125,11 @@ def size_bucket(sales_usd: Optional[float], market_cap_usd: Optional[float]) -> 
         basis, val = "capitalisation", market_cap_usd
     if val is None:
         raise BaseRateUnavailable("ni chiffre d'affaires ni capitalisation — classe de référence indéterminable")
-    for lo, key, label in _SIZE_BUCKETS:
+    for lo, key, prefixe, tranche in _SIZE_BUCKETS:
         if val >= lo:
-            return key, label, basis
-    return _SIZE_BUCKETS[-1][1], _SIZE_BUCKETS[-1][2], basis
+            return key, f"{prefixe} ({basis} {tranche})", basis
+    _, key, prefixe, tranche = _SIZE_BUCKETS[-1]
+    return key, f"{prefixe} ({basis} {tranche})", basis
 
 
 def _latest_revenue_usd(m1: dict[str, Any]) -> Optional[float]:
@@ -170,11 +183,28 @@ def build_base_rate_anchor_spec(
     thresholds = {f"{int(t)}": base_rate_ge(t, horizon) for t in _REPRESENTATIVE_THRESHOLDS}
     is_mega = rc["size_bucket"] == "mega"
 
+    # Divergence de maille (F8, trouvé sur RVMD) : le bucket est calculé sur le CA, mais son libellé
+    # emprunte le vocabulaire de la CAPITALISATION (« small-cap »). Sur une biotech clinique à
+    # 44,8 Md$ de capitalisation et moins d'1 Md$ de CA, l'entry annonçait « small-cap » à un agent
+    # qui lit du texte — tous les nombres justes, le fait faux (même famille que F6(a)). On ne
+    # change pas la classe (le Base Rate Book classe bien par CA) : on DÉCLARE l'écart, puisque
+    # c'est précisément l'information distinctive de ce profil d'émetteur.
+    mcap_bucket = size_bucket(None, rc.get("market_cap_usd"))[0] if rc.get("market_cap_usd") else None
+    mailles_divergentes = (
+        rc["size_basis"] == "CA" and mcap_bucket is not None and mcap_bucket != rc["size_bucket"]
+    )
+
     structured = {
         "metric": "base_rate_anchor",
         "reference_class": rc["size_label"],
         "size_bucket": rc["size_bucket"],
         "size_basis": rc["size_basis"],
+        # Les deux mesures qui fondent la classe, exposées : sans elles, « small-cap » n'est pas
+        # réfutable par le lecteur de l'entry.
+        "sales_usd": rc.get("sales_usd"),
+        "market_cap_usd": rc.get("market_cap_usd"),
+        "size_bucket_par_capitalisation": mcap_bucket,
+        "mailles_divergentes": mailles_divergentes,
         "horizon": horizon,
         "thresholds_pct_ge": thresholds,          # {"15": .., "20": .., "25": ..} = P(CAGR ≥ seuil)
         "median_growth_pct": SALES_GROWTH_MEDIAN[horizon],
@@ -196,6 +226,16 @@ def build_base_rate_anchor_spec(
         f"empirique, pas un multiple ni une prévision ; le taux exact pour la croissance impliquée par "
         f"le prix se calcule à l'analyse (reverse-DCF). "
     )
+    if mailles_divergentes:
+        content += (
+            f"⚠ La classe est établie sur le CHIFFRE D'AFFAIRES, pas sur la capitalisation : "
+            f"{symbol} pèse {_mds(rc['market_cap_usd'])} de capitalisation "
+            f"(maille capitalisation : {size_bucket(None, rc['market_cap_usd'])[1].split(' (')[0]}) "
+            f"pour {_mds(rc['sales_usd'])} de ventes. Le libellé « {rc['size_label'].split(' (')[0]} » "
+            f"qualifie donc le CA, jamais la taille boursière — ne pas le lire comme une petite "
+            f"capitalisation. Cet écart est l'information distinctive de l'émetteur (valorisation "
+            f"portée par un actif futur, pas par des ventes existantes), pas un défaut de classement. "
+        )
     if is_mega:
         content += (
             "⚠ Borne HAUTE : à cette taille (méga-cap), la persistance de forte croissance est nettement "
