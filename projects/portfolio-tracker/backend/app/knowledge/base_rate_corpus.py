@@ -93,10 +93,32 @@ _DEFAULT_HORIZON = "5Y"   # horizon LT de la thèse (ValorisationCote impose hor
 
 
 def _mds(v: Optional[float]) -> str:
-    """Montant en milliards de dollars, format FR. `None` → 'n/d' (jamais 0)."""
+    """Montant en dollars, format FR, **unité choisie par l'ordre de grandeur** (F9).
+
+    Une unité fixe en milliards écrase tout ce qui vit en dessous : RVMD, 11,58 M$ de ventes,
+    s'écrivait « 0,0 Md$ de ventes » — un texte que l'agent lit comme AUCUNE vente, alors que
+    l'écart de mailles que F8 vient de déclarer repose précisément sur ce chiffre. Un montant
+    arrondi à zéro n'est pas un montant imprécis, c'est un fait faux.
+
+    `None` → 'n/d' (une absence n'est jamais un zéro) ; un vrai zéro s'écrit « 0 $ », qui ne se
+    confond avec aucun arrondi.
+    """
     if v is None:
         return "n/d"
-    return f"{float(v)/1e9:.1f} Md$".replace(".", ",")
+    v = float(v)
+    if v == 0:
+        return "0 $"
+    # Paliers du plus petit au plus grand : on PROMEUT tant que l'arrondi ferait franchir le
+    # palier suivant. Choisir l'unité avant d'arrondir écrit 999 999 $ « 1000,0 k$ » — l'arrondi
+    # fait changer d'ordre de grandeur à la valeur sans que l'unité suive.
+    paliers = ((1e3, "k$"), (1e6, "M$"), (1e9, "Md$"))
+    seuil, unite = 1.0, "$"
+    for s, u in paliers:
+        if round(abs(v) / s, 1) >= 1.0:
+            seuil, unite = s, u
+    if unite == "$":
+        return f"{v:.0f} $"
+    return f"{v / seuil:.1f} {unite}".replace(".", ",")
 
 
 class BaseRateUnavailable(Exception):

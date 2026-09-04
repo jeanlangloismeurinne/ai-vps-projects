@@ -8,7 +8,7 @@ jamais fondée sur une classe inventée (lève si ni CA ni capitalisation).
 import sys
 
 from app.knowledge.base_rate_corpus import (
-    BaseRateUnavailable, SALES_GROWTH_DISTRIBUTION, base_rate_ge,
+    BaseRateUnavailable, SALES_GROWTH_DISTRIBUTION, _mds, base_rate_ge,
     build_base_rate_anchor_spec, classify_reference_class, size_bucket,
 )
 
@@ -96,7 +96,7 @@ check("les deux mesures sont exposées (sinon le libellé n'est pas réfutable)"
       s["sales_usd"] == 0.12e9 and s["market_cap_usd"] == 44.8e9)
 check("le texte AVERTIT de ne pas lire une petite capitalisation",
       "ne pas le lire comme une petite" in rv.content, f"→ {rv.content}")
-check("le texte chiffre les deux mailles", "44,8 Md$" in rv.content and "0,1 Md$" in rv.content,
+check("le texte chiffre les deux mailles", "44,8 Md$" in rv.content and "120,0 M$" in rv.content,
       f"→ {rv.content}")
 check("l'écart est présenté comme l'information, pas comme un défaut",
       "pas un défaut de classement" in rv.content)
@@ -118,6 +118,31 @@ check("repli capitalisation : le libellé le dit",
       f"→ {size_bucket(None, 300e9)[1]}")
 check("aucune tranche de CA annoncée sans CA", "CA" not in size_bucket(None, 20e9)[1],
       f"→ {size_bucket(None, 20e9)[1]}")
+
+print("\n10. Le montant choisit son unité — un arrondi à zéro serait un fait faux (F9)")
+# Cas réel : RVMD fait 11,58 M$ de ventes. En unité fixe « Md$ », le texte de la divergence
+# annonçait « 0,0 Md$ de ventes » — l'agent lit AUCUNE vente, et c'est justement ce chiffre qui
+# fonde l'écart de mailles que §7 vient de déclarer. Même famille que F8 : le nombre est juste,
+# la phrase est fausse.
+check("11,58 M$ ne s'écrit pas « 0,0 Md$ »", _mds(11_580_000.0) == "11,6 M$", f"→ {_mds(11_580_000.0)}")
+check("les milliards restent en Md$", _mds(44.86e9) == "44,9 Md$", f"→ {_mds(44.86e9)}")
+check("l'unité descend jusqu'aux milliers", _mds(45_000.0) == "45,0 k$", f"→ {_mds(45_000.0)}")
+check("une ABSENCE reste 'n/d', jamais un zéro", _mds(None) == "n/d")
+check("un VRAI zéro se distingue d'un arrondi", _mds(0.0) == "0 $", f"→ {_mds(0.0)}")
+check("aucun montant non nul ne s'arrondit à zéro",
+      all(not _mds(v).startswith("0,0 ") for v in (1.0, 999.0, 1e3, 1e6 - 1, 11.58e6, 1e9 - 1)),
+      f"→ {[_mds(v) for v in (1.0, 999.0, 1e3, 1e6 - 1, 11.58e6, 1e9 - 1)]}")
+# Trouvé PAR le check ci-dessus, qui a viré au rouge sur 999 999 $ : l'unité était choisie avant
+# l'arrondi, donc l'arrondi faisait franchir le palier à la valeur sans que l'unité suive.
+check("l'arrondi PROMEUT l'unité (999 999 $ ≠ « 1000,0 k$ »)", _mds(1e6 - 1) == "1,0 M$",
+      f"→ {_mds(1e6 - 1)}")
+check("aucun montant n'affiche 4 chiffres devant la virgule",
+      all(len(_mds(v).split(",")[0].lstrip("-")) <= 3 for v in (999.0, 1e6 - 1, 1e9 - 1, 999.9e9)),
+      f"→ {[_mds(v) for v in (999.0, 1e6 - 1, 1e9 - 1, 999.9e9)]}")
+RVMD_REEL = {"price": {"market_cap": 44.86e9}, "financials_3y": {"2025": {"revenue": 11_580_000}}}
+reel = build_base_rate_anchor_spec("RVMD", "RVMD", RVMD_REEL)
+check("sur les chiffres RÉELS de prod, le texte porte 11,6 M$",
+      "11,6 M$" in reel.content and "0,0 Md$" not in reel.content, f"→ {reel.content}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
