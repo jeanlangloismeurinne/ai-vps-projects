@@ -111,10 +111,11 @@ def _sanitize_inner(raw: str) -> str:
     if s.startswith("```"):
         s = re.sub(r"^```[a-zA-Z]*\s*", "", s)
         s = re.sub(r"\s*```$", "", s).strip()
-    # Déballe un unique <div>…</div> enveloppant tout le corps (le modèle désobéit).
-    m = re.match(r"^<div\b[^>]*>(.*)</div>\s*$", s, re.IGNORECASE | re.DOTALL)
-    if m:
-        s = m.group(1).strip()
+    # Retire un <div> d'encadrement/carte en TÊTE (le cadre est fourni par le code) — même si
+    # le bloc a été tronqué et n'a jamais refermé ce div (cas des anciens résumés « carte
+    # autonome »). Le rééquilibrage plus bas retire alors la fermeture surnuméraire d'un
+    # wrapper complet.
+    s = re.sub(r"^<div\b[^>]*>\s*", "", s, count=1, flags=re.IGNORECASE).strip()
     # Coupe une balise ouverte non terminée en fin de chaîne (troncature).
     lt, gt = s.rfind("<"), s.rfind(">")
     if lt > gt:
