@@ -132,6 +132,13 @@ Slack de déploiement. Le seul de ces quatre qui a mordu dans cette session est 
 > commande : il est stable d'une session à l'autre, ce qui **renforce** le correctif proposé
 > ci-dessous plutôt qu'il ne le périme. Coût mesuré du refus : un aller-retour par session, plus
 > les quatre garde-fous perdus à chaque déploiement.
+>
+> **Re-vérifié le 2026-09-04 (4ᵉ session consécutive) : refus identique.** Repli inchangé, deux
+> déploiements de plus (`b496354` F12, `7f91733` F13). Le compteur est désormais assez long pour
+> qu'on cesse de le lire comme une friction : c'est un **écart permanent entre le protocole écrit
+> et le protocole exécutable**. Tant qu'il dure, `DEPLOY.md` décrit un chemin fictif — ce qui a un
+> coût caché au-delà de l'aller-retour : une session qui suivrait la doc à la lettre sans connaître
+> le repli conclurait à une panne d'infrastructure.
 
 **Correctif proposé** (arbitrage utilisateur requis — l'assistant ne s'octroie pas ses droits) :
 ajouter à `~/.claude/settings.json` une règle `Bash(infrastructure/compose-deploy.sh:*)` **et** sa
@@ -169,6 +176,17 @@ se présentant comme une correction.**
 où on lit la commande, et la ligne de base y est à 1177 assertions / 0 échec / 17 scripts. (b) Non
 fait, ~20 min : faire **échouer** ces quatre scripts quand `/contract_frozen` est absent (`sys.exit(2)`
 avec un message explicite) plutôt que sauter la section. Destination durable : l'en-tête des scripts.
+
+> **Ajout 2026-09-04 — le tuyau ment sur le code de sortie, et c'est la même famille.** J'ai lu
+> `EXIT=0` sur un check qui **échouait**. Cause : la commande était de la forme
+> `python check.py | tail -30 ; echo "EXIT=$?"` — en bash, `$?` après un pipeline rend le statut du
+> **dernier** maillon, ici `tail`, qui réussit toujours. Le vrai code était 1. Le §16 recommande de
+> filtrer la sortie au shell plutôt que de déléguer (« un filtre shell bat un sous-agent ») : ce
+> constat en est la contrepartie — **le filtre qui réduit la sortie détruit aussi le signal
+> d'échec**. Parade, au choix : rediriger vers un fichier puis lire (`python check.py > /tmp/o.txt
+> 2>&1 ; echo "EXIT=$?"` — c'est aussi ce que fait `/tmp/run_checks.sh`), ou `set -o pipefail`, ou
+> lire `${PIPESTATUS[0]}`. **Règle : ne jamais lire un code de sortie derrière un `|`.** Même
+> famille que le reste du §13 — une mesure dégradée qui se présente comme un succès.
 
 ### §14 — Après un rebuild, la sonde publique rend le 404 du **frontend**, pas une erreur de routage
 
@@ -270,6 +288,24 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 > comme « anomalie », l'agent ne le peut pas non plus, et son rapport devra être re-vérifié
 > intégralement (donc `coût(vérifier) = coût(faire)`, cf. le coût caché ci-dessous). Formulation
 > courte : **on délègue une recherche, jamais un jugement.**
+
+> **Relevé de la session du 2026-09-04 (4) : zéro sous-agent, une quatrième fois** — 2 correctifs
+> (F12, F13), 2 déploiements, 15 assertions neuves (1247 → 1262), et la **première dépense réelle
+> de tokens de modèle** du chantier (~0,01 $ par mandat search-worker). Cette session apporte le
+> candidat le plus solide vu jusqu'ici — et il a quand même été écarté :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Vérifier contre EDGAR que le dépôt cité par le modèle est bien le plus récent | **Non, et l'écart est instructif.** C'est en apparence *la* recherche déléguable : critère énonçable en une ligne (« le 10-K cité est-il le dernier ? »), sortie volumineuse (l'API `submissions` rend des centaines de lignes). Mais le critère énonçable donne une réponse **binaire de 1 ligne** — et une tâche dont le rapport tient en 1 ligne ne rembourse jamais l'amorçage d'un agent. Fait en 2 `curl` + un `python3 -c` de 5 lignes. |
+> | Lire les 6 entries `risques.risques_cles` produites par le modèle | **Non**, même motif qu'en session (3) : juger qu'un risque est *périmé* et non *faux* n'est pas énonçable. |
+>
+> **Ce que ce relevé ajoute — la borne basse, qui manquait.** Les relevés précédents ont construit
+> la borne haute (ne pas déléguer un jugement). Celui-ci donne l'autre côté : **une recherche dont
+> le résultat tient en une ligne n'est pas non plus déléguable**, quel que soit le volume qu'il
+> faut traverser pour l'obtenir. L'amorçage d'un agent est un **coût fixe** ; il ne s'amortit que
+> sur un livrable substantiel. La zone rentable est donc étroite des deux côtés : *critère
+> énonçable* **et** *livrable volumineux*. Un seul des deux ne suffit pas — et sur 4 sessions
+> consécutives de ce chantier, aucune tâche n'a satisfait les deux.
 
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
@@ -375,6 +411,18 @@ qualifie la maille réellement mesurée, et un montant choisit son unité) →
 `projects/portfolio-tracker/CLAUDE.md`. Le principe générique « inspecter la frontière gratuite
 avant la première dépense modèle » → mémoire auto.
 
+> **Extension 2026-09-04 — quand la frontière gratuite est franchie, le contrôle le moins cher est
+> le `dry_run`.** Le §18 suppose qu'il existe de l'amont gratuit. Une fois la première dépense
+> engagée, il n'y en a plus : contrôler un producteur LLM coûte **un appel modèle**. Le bon réflexe
+> devient alors de séparer *appeler* de *persister* — ici `persist=false`, qui rend l'échange
+> complet sans écrire une ligne. Chiffres mesurés : ~0,0105 $ par mandat search-worker (103 927
+> tokens en entrée), 0,0066 $ pour un mandat rendant `not_found`. À ce prix, **un mandat sacrifié en
+> dry-run avant d'en enchaîner six coûte moins qu'un seul correctif** — et surtout moins que le
+> nettoyage d'un corpus append-only, où une écriture fausse ne se supprime pas, elle se superpose.
+> C'est ce dry-run qui a livré F12 ; F13, lui, a demandé l'étape d'après (§22 : lire la **base**,
+> pas la réponse). Règle : *sur un producteur payant, la première exécution est toujours un
+> dry-run dont on lit la sortie en texte ; le droit d'écrire s'acquiert à la deuxième.*
+
 > **Quatrième passage le 2026-09-04 (3) : deux défauts de plus (F10, F11), toujours à zéro token
 > de modèle.** Le compteur du 00-REPRISE passe à **11 défauts trouvés sur les seuls producteurs
 > déterministes** (F1→F11), et le taux n'est **toujours** pas retombé à zéro. C'est en soi la
@@ -452,6 +500,146 @@ négatif a alors rendu **9 FAIL**.
 **Destination durable.** Convention projet #47 (faite, avec la note sur la fixture) ; principe
 générique « une fixture se copie du réel, et le test négatif se joue contre elle » → mémoire auto,
 en complément de `feedback_test_negatif_obligatoire`.
+
+### §21 — Un agent n'a pas d'horloge : sans date fournie, il date le présent à sa coupure
+
+**Constat (2026-09-04, F12).** Le message envoyé au search-worker ne portait **aucune date**. Le
+modèle a donc situé « aujourd'hui » à sa coupure d'entraînement et cité le 10-K FY2024 de RVMD
+(déposé 2025-02-26) comme source la plus récente — en ignorant le 10-K FY2025
+(`rvmd-20251231.htm`, 2026-02-25) et deux 10-Q postérieurs, vérifiés existants contre l'API EDGAR
+`submissions` (CIK 0001628171). Il a publié une trésorerie de 2,3 Md$ au 31/12/2024, en
+concurrence directe avec une entry déterministe tier A donnant 815,4 M$ au 30/06/2026.
+
+**Pourquoi c'est le mode de panne le plus discret de tout le chantier.** Aucun symptôme n'existe :
+la réponse est un 200, le JSON valide, le `source_type` correct, le score correct, l'URL réelle,
+et **tous les nombres sont exacts** — ils sont simplement ceux d'un autre exercice. Ni un check
+hors ligne, ni un contrôle de provenance (#28 : l'URL a bien été ouverte), ni une relecture rapide
+ne le voient. Seule une confrontation à la source *réelle* le révèle (cf. mémoire
+`feedback_verifier_contre_api_reelle`). C'est la famille #42/#43 — « un fait est daté » — mais
+appliquée au **producteur** plutôt qu'au stockage.
+
+**Enseignement réplicable, tous projets à base de LLM.** Un modèle n'a pas accès à l'heure. Tout ce
+qu'il sait du temps vient de deux endroits : sa coupure d'entraînement (silencieuse, fausse, et
+qu'il traite comme le présent) et ce que le runtime lui dit explicitement. **Ne rien dire n'est pas
+neutre** : c'est laisser la coupure gagner par défaut. Tout prompt qui demande « la donnée la plus
+récente », « l'état actuel », « le dernier dépôt » doit porter la date du jour, et le dire en toutes
+lettres (« c'est le PRÉSENT, pas ta date de coupure »).
+
+**Deux corollaires de conception, tirés du correctif.**
+
+1. **La date ne peut pas vivre dans un prompt versionné.** Les prompts de ce projet sont stockés et
+   hashés (`agent_prompts`) ; y injecter du volatil ferait diverger le hash à chaque run. La date
+   vit donc dans le **constructeur de message** — un détenteur unique (#46), pas recopiée dans
+   chaque `query` d'appelant.
+2. **Une ancre absente et une ancre silencieuse se lisent pareil côté modèle.** Le correctif fournit
+   en plus l'« ancre temporelle » : le dépôt réglementaire le plus récent *déjà connu du corpus*,
+   avec la consigne qu'une source antérieure n'est pas la meilleure disponible. Quand le corpus est
+   vide, le message dit explicitement « l'ancre est INCONNUE, pas récente » — sauter la mention
+   aurait laissé le modèle conclure qu'il n'y a rien de plus récent. Le check §9 assert donc les
+   **deux branches** (présence de « INCONNUE » sans ancre, absence avec).
+
+**Preuve.** Test négatif joué en restaurant `_build_user_message` dans son état exact d'avant F12 :
+6 FAIL / exit 1. Puis vérification contre le **vrai modèle** après déploiement : le même mandat
+cite `rvmd-20251231.htm`, et un second mandat atteint le communiqué du 2026-08-05.
+
+**Limite connue, et elle est structurelle.** L'ancre est **relative au corpus** : elle ne peut être
+plus fraîche que ce qui est déjà stocké, et elle ne regarde que les dépôts *périodiques*. Un
+événement matériel arrivé entre deux dépôts (8-K, communiqué) reste hors de sa portée — et une
+ancre au 30/06/2026 **rassure** alors le modèle sur sa fraîcheur. Cas rencontré le jour même
+(cf. §23).
+
+**Destination durable.** Mémoire auto (`feedback_agent_sans_horloge`), transverse : elle vaut pour
+newsletter-summary, assistant-ia et tout futur projet à producteur LLM, pas seulement pour
+portfolio-tracker.
+
+### §22 — Un drapeau calculé et renvoyé mais non persisté est un affichage, pas un garde-fou
+
+**Constat (2026-09-04, F13).** `_verify_provenance` calcule `requires_human_review` (#28), l'API le
+renvoie dans la réponse HTTP… et `persist_worker_entries` ne le passait **jamais** à
+`store_knowledge`. Trouvé par le réflexe #43 — *compter l'état persisté après écriture* : 26 entrées
+actives RVMD, `requires_human_review` à `false` partout, alors que la réponse HTTP en signalait une.
+En base, une entry tier A 0,94 dont le 10-K n'a jamais été ouvert était **indiscernable** d'une
+entry lue en entier.
+
+**Pourquoi ça survit à la relecture.** Le drapeau *existe* partout où on le cherche naturellement :
+il est calculé, il est typé au contrat, il apparaît dans la réponse, il est testé (§5 du check
+vérifie qu'il est bien **calculé**). Le seul maillon manquant est un argument absent d'un appel —
+la forme de défaut la moins visible qui soit, parce qu'un argument manquant ne produit pas
+d'erreur : il produit la **valeur par défaut**, qui est ici précisément la valeur rassurante.
+
+**Enseignement réplicable.** *Un contrôle n'est acquis qu'au point où il est **lu**, pas au point où
+il est calculé.* Pour tout drapeau, score ou verdict destiné à protéger un usage aval, la question
+de recette n'est pas « est-il correct ? » mais « **quel code le relira, et depuis où ?** ». S'il est
+relu depuis la base, alors le test doit interroger la **base** — pas la réponse HTTP, pas la valeur
+de retour de la fonction qui le calcule. Généralisation du §13 (« un total d'assertions est une
+mesure, pas un document ») au cas d'un booléen : ici la mesure était juste et le stockage vide.
+
+**Ce que le correctif a ajouté d'autre, et qui compte.** Le check §10 (+7 assertions) ne vérifie pas
+le calcul (§5 le fait) : il vérifie la **transmission**, par `inspect.getsource`, et l'étend aux
+autres champs décidés par les overrides déterministes (`covers`, `source_type`, `source_url`,
+`fiscal_period`) — parce qu'un argument oublié est un mode de panne de **famille**, pas un accident
+isolé (même logique que le §19 sur les jumeaux d'un correctif de règle).
+
+**Une garde par inspection de source ne prouve pas la valeur — le compléter coûte zéro token.**
+`inspect.getsource` prouve que l'argument est écrit, pas que `True` traverse jusqu'à la colonne. La
+vérification en production a d'abord été tentée par un mandat réel : **elle est revenue vide**
+(aucune entry drapeautée), donc **vacue** — il fallait le dire plutôt que de la présenter comme une
+preuve. Elle a été remplacée par un échange **synthétique** persisté par le vrai chemin
+`persist_worker_entries` (aucun appel modèle, `ticker_id=None` pour ne pas polluer le corpus, lignes
+supprimées après lecture), portant **deux** entries — une à `True`, une à `False`. Résultat :
+`id=187 review=True`, `id=188 review=False`. Le contrôle négatif est dans le même échange : si la
+colonne était constante, les deux vaudraient pareil. **Règle : quand une preuve en production dépend
+d'un aléa de production, fabriquer l'état à prouver plutôt qu'attendre qu'il survienne.**
+
+**Destination durable.** Convention projet #48 ; principe générique « un contrôle se teste au point
+de lecture » → mémoire auto.
+
+### §23 — Le corpus n'a pas d'horloge non plus : un fait daté juste peut décrire un monde révolu
+
+**Constat (2026-09-04, découvert en fin de session — non corrigé, à arbitrer).** Le corpus RVMD
+porte, toutes **actives** et toutes **tier A**, des entries mutuellement incompatibles :
+
+| id | `covers` | source | dit |
+|---|---|---|---|
+| 176 | `business_model.description` | 10-K FY2025 (2026-02-25) | « aucun produit approuvé pour la vente commerciale » |
+| 177 | `business_model.drivers_revenus` | 10-K FY2025 (2026-02-25) | « les seules entrées de trésorerie proviennent de financements » |
+| 182 | `risques.risques_cles` | 10-Q (2026-08-05) | « la société ne peut être certaine d'obtenir une approbation » |
+| 186 | `marche.croissance_marche_historique` | communiqué IR (2026-08-26) | « la FDA a approuvé RASONQUE le 2026-08-26 » |
+
+Vérifié contre EDGAR (8-K du 2026-08-26, Item 8.01) : l'approbation est réelle, le produit est
+prescriptible aux USA, prix catalogue 39 800 $ / 30 jours. Les entries 176/177/182 ne sont pas
+**fausses** — elles sont correctement attribuées et datées, et fidèles à leur source. Elles sont
+**périmées**. Le champ `business_model.recurrence_pct`, déclaré *infondable* dans cette même session
+au motif « aucun revenu », redevient d'ailleurs fondable au prochain trimestre.
+
+**Ce que ça révèle, et pourquoi ça dépasse F12.** Le §21 a donné une horloge au *modèle*. Le corpus,
+lui, n'en a toujours pas : `superseded_by` existe et est filtré par toutes les requêtes, mais **rien
+ne le peuple** quand un événement postérieur contredit un fait antérieur. Pire, l'ancre temporelle
+de F12 ne regarde que les dépôts **périodiques** (10-K/10-Q) : au 2026-09-04 elle annonce
+« 2026-06-30 » et **rassure** le modèle, alors que le monde a changé le 2026-08-26. Une garde peut
+donc être correcte et néanmoins produire un faux sentiment de fraîcheur.
+
+**Enseignement réplicable, toute base de connaissance.** *L'horodatage d'un fait garantit son
+exactitude historique, jamais sa validité présente.* Une base append-only résout la traçabilité et
+**crée** le problème inverse : la vérité d'hier y reste indéfiniment lisible comme la vérité
+d'aujourd'hui. Deux conséquences concrètes :
+
+1. Un « gate » de complétude qui compte les champs couverts (ici #29, lecture de l'index `covers`)
+   est **aveugle à la péremption** : il voit un `business_model.description` couvert, tier A, et
+   conclut à un socle prêt.
+2. La fraîcheur ne se mesure pas au champ le plus récent mais au champ le **plus ancien encore
+   opposable** — exactement l'inverse de ce qu'une requête `ORDER BY source_date DESC` rend.
+
+**Pistes, à arbitrer — délibérément non implémentées.** (a) Étendre l'ancre aux événements matériels
+(8-K, communiqués), pas seulement aux dépôts périodiques. (b) Un balayage de péremption : lister les
+entries actives dont la `source_date` précède le dernier événement matériel connu de l'émetteur, et
+les proposer à re-vérification — un **rapport**, pas un `superseded_by` automatique. (c) Une
+politique de supersedage sémantique reste hors de portée sans jugement : c'est un desserrage qui
+donnerait au modèle une voix sur la porte de complétude (cf. mémoire
+`feedback_optional_schema_gate`). Rien ne doit être livré ici sans décision explicite.
+
+**Destination durable.** Chantier `provenance-cards` (prochain jalon, cf. `00-REPRISE.md`) ; principe
+générique « un fait daté juste peut décrire un monde révolu » → mémoire auto.
 
 ---
 

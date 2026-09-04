@@ -4,10 +4,121 @@ status: prompt-de-reprise
 created: 2026-08-19
 updated: 2026-09-04
 project: portfolio-tracker
-role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`), puis les feeds de **valorisation** en **trois de plus** (F7→F9, commits `fc1fab2`/`76e9385`/`5c38a13`), puis **deux de plus au 4ᵉ passage** (F10 unité des montants / F11 un CA nul est une valeur, commit `4382dd9`) — les **onze** déployés et vérifiés **avant toute dépense de modèle** ; corpus RVMD propre à **13 entrées, une seule active par champ** (recomptée en base après déploiement), dimension `valorisation` fondée sur ses 3 champs, suite hors-ligne à **1 247 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. Prochaine étape : **socle de connaissance RVMD via le search-worker** sur les 6 dimensions qualitatives (1ʳᵉ dépense réelle de tokens). Reste aussi : **ingestion-agent**, non bloquant.
+role: Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · chaîne d'analyse VALIDÉE SUR DEUX ÉMETTEURS (NVDA, MSFT) · dettes A/B fermées · généralité #3 fermée · LOT 7 LIVRÉ (acte de décision, `theses_v2`, migration 030) · LOT 8 LIVRÉ (monitoring V2 modes 1-6, `monitoring_sessions_v2`, migration 031, EventRouterV2, dry-run réel modes 2 et 6) · LOT 9 LIVRÉ (sortie/calibration/débat, migrations 032+033, dry-run réel de bout en bout sur thèse jetable puis supprimée). **La boucle V2 est complète : décider → surveiller → sortir → apprendre.** · **UX-1 LIVRÉ** (fil conducteur V2 : `GET /v2/theses`, pages liste + thèse, primitives `components/v2/`) · **UX-2 LIVRÉ** (écrans du lot 9 : sortie/post-mortem/calibration/débat + marqueur de flux V1/V2 sur `/portfolio`, construits contre une thèse jetable réelle puis vérifiés par capture d'écran en prod). · **UX-3 LIVRÉ** (écrans V2 **amont** : knowledge, readiness, research, analyses 3 colonnes, décision — plus le point d'entrée par ticker qui manquait : `GET /v2/tickers` + pages pivots + entrée `V2Nav`). · **DETTE DU RUNNER FERMÉE** (2026-09-04, commit `8b8efef`, convention #41 : un abandon est facturé, donc comptabilisé — le trou réel était la boucle d'outils, 78 % de la facture). Le blocage `~/.netrc` est **résolu** depuis le 2026-09-03. · **3ᵉ TICKER EN COURS — RVMD** (biotech clinique) : le socle financier EDGAR a été réparé en **six points** (F1→F6, commits `957ffbb`/`a3d604e`/`019fe4b`), puis les feeds de **valorisation** en **trois de plus** (F7→F9, commits `fc1fab2`/`76e9385`/`5c38a13`), puis **deux de plus au 4ᵉ passage** (F10 unité des montants / F11 un CA nul est une valeur, commit `4382dd9`) — les **onze** déployés et vérifiés **avant toute dépense de modèle** ; corpus RVMD propre à **13 entrées, une seule active par champ** (recomptée en base après déploiement), dimension `valorisation` fondée sur ses 3 champs. · **SEUIL FRANCHI — le search-worker a tourné contre le vrai modèle** (~0,0105 $ / mandat) : **deux défauts de plus, F12** (le message ne portait aucune date → le modèle datait le présent à sa coupure et citait un 10-K vieux d'un an) et **F13** (`requires_human_review` calculé et renvoyé mais **jamais persisté**), commits `b496354` et `7f91733`, F13 prouvé bout-en-bout par échange synthétique. Corpus qualitatif RVMD à **14 entrées actives** (`business_model` ×7, `risques` ×6, `marche` ×1), `business_model.recurrence_pct` déclaré **infondable**. Suite hors-ligne à **1 262 assertions / 0 échec / 17 scripts**, prochaine migration toujours **034**. · ⚠️ **DÉCOUVERTE QUI COMMANDE LE PROCHAIN JALON** : la FDA a approuvé RASONQUE le **2026-08-26** (vérifié 8-K Item 8.01) — quatre entries actives tier A décrivent donc un monde révolu sans être fausses, et **rien ne peuple `superseded_by`**. Le corpus n'a pas d'horloge : arbitrer **(a)** ancre étendue aux événements matériels puis **(b)** balayage de péremption **avant** d'enchaîner les 7 mandats qualitatifs restants. Reste aussi : **ingestion-agent**, non bloquant.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
+
+> ## ⚡ MàJ 2026-09-04 (5) — LE SEUIL EST FRANCHI : première dépense réelle de tokens, F12 et F13, et une découverte de fin de session qui commande le prochain jalon
+>
+> **Le search-worker a tourné en production contre le vrai modèle.** Coût mesuré :
+> **~0,0105 $ par mandat** (103 927 tokens en entrée), 0,0066 $ pour un mandat rendant `not_found`.
+> Le taux de défaut ne retombe toujours pas à zéro : **deux défauts de plus (F12, F13)**, trouvés
+> exactement là où la MàJ (4) disait de regarder — en **lisant les entries en texte** avant
+> d'enchaîner les six dimensions.
+>
+> ### État livré, déployé, vérifié en prod
+>
+> Deux commits, deux déploiements, sonde publique 200 après `healthy` : **`b496354`** (F12) et
+> **`7f91733`** (F13). **Aucune migration : la prochaine reste 034.** Suite hors-ligne :
+> **1 262 assertions, 0 échec, 17 scripts** (1 247 → 1 255 → 1 262). Les deux blocs de checks neufs
+> sont **éprouvés par test négatif** (6 puis 1 échec sur code neutralisé, restaurés au vert).
+>
+> | # | Défaut | Correctif |
+> |---|---|---|
+> | F12 | le message envoyé au worker ne portait **aucune date** : le modèle datait « le présent » à sa coupure d'entraînement. Il a cité le **10-K FY2024** (déposé 2025-02-26) comme source la plus récente, en ignorant le 10-K FY2025 (`rvmd-20251231.htm`, 2026-02-25) et deux 10-Q postérieurs — vérifié contre l'API EDGAR `submissions`. Trésorerie publiée à 2,3 Md$ au 31/12/2024, **en concurrence** avec l'entry déterministe tier A (815,4 M$ au 30/06/2026). Tous les nombres justes, le fait périmé (#42/#43) | date du jour + consigne explicite (« c'est le PRÉSENT, pas ta coupure ») dans **`_build_user_message`**, détenteur unique (#46) — pas dans `agent_prompts`, qui est versionné et hashé. Plus une **ancre temporelle** : le dépôt réglementaire le plus récent déjà connu du corpus, avec le cas « ancre INCONNUE » **dit explicitement** (une ancre absente et une ancre muette se lisent pareil côté modèle). §9 du check assert les **deux branches** |
+> | F13 | `requires_human_review` était calculé par `_verify_provenance` (#28), renvoyé dans la réponse HTTP… et **jamais passé** à `store_knowledge`. En base : 26 entrées actives, drapeau à `false` partout, alors que la réponse HTTP en signalait une. Une entry tier A 0,94 dont le 10-K n'a jamais été ouvert était **indiscernable** d'une entry lue en entier | argument transmis (passer `False` ne peut jamais **désarmer** un drapeau : `store_knowledge` fait un OU avec ses source_types à revue d'office). §10 vérifie la **transmission** (`inspect.getsource`) et l'étend à `covers`/`source_type`/`source_url`/`fiscal_period` — un argument oublié est un mode de panne de famille |
+>
+> **F13 prouvé bout-en-bout, sans appel modèle.** La vérification par mandat réel est revenue
+> **vide** (aucune entry drapeautée) : elle était donc **vacue**, pas concluante. Remplacée par un
+> échange **synthétique** persisté par le vrai chemin `persist_worker_entries` (`ticker_id=None`,
+> lignes supprimées après lecture), portant **deux** entries — `id=187 review=True`,
+> `id=188 review=False`. Le contrôle négatif est dans le même échange : si la colonne était
+> constante, les deux vaudraient pareil.
+>
+> ### Corpus RVMD — 14 entrées actives (recomptées en base après déploiement)
+>
+> | champ | actives | tier |
+> |---|---|---|
+> | `business_model.description` | 4 (ids 173-176) | A |
+> | `business_model.drivers_revenus` | 3 (ids 177-179) | A |
+> | `risques.risques_cles` | 6 (ids 180-185) | A, toutes du 10-Q au 30/06/2026 |
+> | `marche.croissance_marche_historique` | 1 (id 186) | A |
+>
+> Plus les 9 entrées déterministes des MàJ précédentes (`financials.*`, `valorisation.*`).
+> **`business_model.recurrence_pct` a été déclaré INFONDABLE** par le worker (`status=not_found`,
+> avec explication : sans aucun revenu, il n'existe pas de proportion qui pourrait être qualifiée
+> de récurrente) — 3ᵉ champ infondable de RVMD après `gross_profit` et `intensite_capex_pct`, tous
+> enracinés dans le même fait. **⚠️ Ce verdict est déjà caduc, voir ci-dessous.**
+>
+> ### ⚠️ Découverte de fin de session — c'est elle qui commande le prochain jalon
+>
+> **La FDA a approuvé RASONQUE (daraxonrasib) le 2026-08-26.** Vérifié contre EDGAR (8-K
+> Item 8.01) : produit prescriptible aux USA, prix catalogue 39 800 $ / 30 jours. Le corpus porte
+> donc, **toutes actives et toutes tier A**, des entries incompatibles entre elles :
+>
+> | id | dit | daté du |
+> |---|---|---|
+> | 176 | « aucun produit approuvé pour la vente commerciale » | 10-K, 2026-02-25 |
+> | 177 | « les seules entrées de trésorerie proviennent de financements » | 10-K, 2026-02-25 |
+> | 182 | « la société ne peut être certaine d'obtenir une approbation » | 10-Q, 2026-08-05 |
+> | 186 | « la FDA a approuvé RASONQUE le 2026-08-26 » | communiqué IR, 2026-08-26 |
+>
+> Ces entries ne sont **pas fausses** : elles sont correctement datées et fidèles à leur source.
+> Elles sont **périmées**. Et `recurrence_pct` redevient fondable au prochain trimestre.
+>
+> **Ce que ça révèle.** F12 a donné une horloge au *modèle* ; le **corpus** n'en a toujours pas.
+> `superseded_by` existe et est filtré par toutes les requêtes, mais **rien ne le peuple** quand un
+> événement postérieur contredit un fait antérieur. Pire : l'ancre temporelle de F12 ne regarde que
+> les dépôts **périodiques** (10-K/10-Q) — au 2026-09-04 elle annonce « 2026-06-30 » et **rassure**
+> le modèle, alors que le monde a changé le 2026-08-26. Une garde peut être correcte et produire
+> quand même un faux sentiment de fraîcheur. Corollaire pour la porte de complétude : #29 compte
+> les champs **couverts** ; il est **aveugle à la péremption** et conclurait ici à un socle prêt.
+>
+> ### Prochain jalon — à arbitrer AVANT d'enchaîner les dimensions restantes
+>
+> Trois options, **délibérément non implémentées** (toucher au supersedage ou au gate donnerait au
+> modèle une voix sur la complétude — cf. `feedback_optional_schema_gate`) :
+>
+> - **(a)** étendre l'ancre temporelle aux **événements matériels** (8-K, communiqués), pas
+>   seulement aux dépôts périodiques ;
+> - **(b)** un **balayage de péremption** : lister les entries actives dont la `source_date` précède
+>   le dernier événement matériel connu de l'émetteur, et les proposer à re-vérification — un
+>   **rapport**, jamais un `superseded_by` automatique ;
+> - **(c)** une politique de supersedage sémantique : hors de portée sans jugement humain.
+>
+> Recommandation : **(a) puis (b)**, avant de dépenser sur les dimensions restantes — sinon chaque
+> mandat payant s'ancre sur un corpus qui se croit à jour.
+>
+> ### Reste à faire sur le socle qualitatif RVMD
+>
+> Fondées : `business_model` (2 champs sur 3, le 3ᵉ infondable), `risques`, `marche` (1 champ).
+> **À faire : `marche.structure_5forces`, `produits.description`, `produits.unit_economics`,
+> `positionnement.moat_preuves`, `positionnement.position_vs_pairs`,
+> `management_allocation.incitations`, `management_allocation.skin_in_game_pct`.**
+> Budget prévisionnel : ~0,08 $ pour les 7 mandats.
+>
+> ### Blocages et outillage
+>
+> `compose-deploy.sh` **refusé par le classifieur pour la 4ᵉ session consécutive** — repli §12 de
+> `CHANTIER_OUTILLAGE_DEV.md`, inchangé, deux déploiements livrés par lui. **Zéro sous-agent lancé**
+> (4ᵉ session consécutive). Les enseignements réplicables de cette session sont écrits dans
+> `CHANTIER_OUTILLAGE_DEV.md` : **§21** (un agent n'a pas d'horloge), **§22** (un drapeau non
+> persisté est un affichage), **§23** (le corpus n'a pas d'horloge non plus), plus les ajouts au
+> **§13** (ne jamais lire un code de sortie derrière un `|`), au **§16** (borne basse de la
+> délégation : une recherche dont le rapport tient en une ligne ne rembourse pas l'amorçage) et au
+> **§18** (une fois la frontière gratuite franchie, le contrôle le moins cher est le `dry_run`).
+>
+> **Défaut mineur non corrigé :** `uncovered_fields` peut contenir un champ **deux fois** (une fois
+> avec explication, une fois nu) — pas dédupliqué. Impact faible : la porte de complétude lit
+> l'index `covers` (#29), pas `uncovered_fields`.
+>
+> **Limite de conception, à arbitrer, non modifiée :** `_resolve_covers` estampille **toutes** les
+> entries d'un mandat avec l'unique `field_path` du mandat, et `persist_worker_entries` écrit
+> `covers=([entry.covers] if entry.covers else None)` — le worker ne peut donc **jamais** produire
+> un `covers` multi-champs, alors que la migration 029 a fait la colonne `TEXT[]` précisément pour
+> ça. Desserrer donnerait au modèle une voix sur la porte de complétude (#24/#29) : à arbitrer, pas
+> à changer unilatéralement.
 
 > ## ⚡ MàJ 2026-09-04 (4) — quatrième passage sur les feeds déterministes : F10 et F11, toujours zéro token de modèle
 >
