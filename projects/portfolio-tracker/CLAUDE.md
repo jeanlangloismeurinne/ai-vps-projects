@@ -178,7 +178,16 @@ unique par thèse, `duree_jours`/`performance_pct` **calculés**, `lesson_entry_
 `resolution_suggeree='closed_proceed'` quand `invalidation_franchie`). `price_alerts` reçoit
 `exit_plan_id` + `alert_type` (une alerte de tranche est adossée au plan, pas flottante).
 **Migration 033 = resynchro du prompt `debate-agent`** (générateur `_gen_prompt_refresh_20260901.py`,
-cf. convention #39). Prochaine migration : **034**.
+cf. convention #39).
+**Migration 034 = l'axe `nature` d'une knowledge_entry (capacité 1 de la roadmap 02)** : colonne
+`knowledge_entries.nature` (`mesure`|`evenement`|`interpretation`), CHECK nommé
+`knowledge_entries_nature_check`, index PARTIEL `(ticker_id, nature)` sur les entrées courantes,
+`NOT NULL` posé dans la même migration parce que le backfill couvre **les 180 lignes** (y compris
+les superseded, qu'`analysis_knowledge_refs` continue de lire). Générateur `_gen_034.py` : il
+n'écrit **aucune règle en SQL**, il appelle `derive_nature` sur un instantané `psql` et n'émet que
+des listes d'ids — un `UPDATE … CASE WHEN` aurait ré-implémenté la règle dans un second langage
+(#46). Répartition obtenue : **66 `mesure` / 68 `interpretation` / 0 `evenement`** sur les entrées
+actives. Prochaine migration : **035**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -514,6 +523,41 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     schema_gate`). Détail + garde : `check_field_profiles.py` §1 (un champ retiré est nommé, pas un
     KeyError), §3 (#32 atteignabilité), §5 (desserrage déclaré), §6 (gabarit), §7 (pas de
     composite) — éprouvé par test négatif (5 cas, chacun rouge sur son assert nommé).
+
+51. **La nature d'une ENTRY et la nature dominante d'un CHAMP sont deux vocabulaires, et le second
+    ne dérive jamais le premier (V2, migration 034, `agents/v2/common.py: derive_nature`)** :
+    `FIELD_PROFILES[…]["nature"]` dit ce qui doit AVOIR AUTORITÉ pour fonder un champ — c'est une
+    exigence co-écrite, elle ne décrit aucune donnée. `knowledge_entries.nature` dit ce que
+    l'assertion PRÉTEND ÊTRE — c'est un fait sur la ligne. Dériver la seconde de la première aurait
+    trois conséquences, toutes fausses : `evenement` deviendrait **inatteignable** (aucun des 19
+    champs ne l'a pour nature dominante — c'est le résultat de la capacité 0, pas un oubli) ; une
+    donnée se mettrait à dire ce qu'on **attend** d'elle plutôt que ce qu'elle est ; et la
+    confrontation des deux, qui est tout le travail de la porte (capacité 4), n'aurait plus lieu
+    puisqu'elles coïncideraient par construction. Cas d'école en base : `valorisation.base_rate_anchor`
+    est un champ d'**interprétation** (ce qui devrait le fonder est un raisonnement de classe de
+    référence) alors que l'entry qui le remplit est une **fréquence empirique**, donc une `mesure` ;
+    et deux entries `analysis` couvrent `produits.unit_economics`, champ de nature `mesure`, en
+    restant des interprétations. ⚠️ Corollaires : `mesure` est la nature FORTE (elle donne autorité à
+    la fiabilité et soustrait le fait à l'horloge matérielle) donc elle ne s'accorde **jamais par
+    défaut** — entry_type inconnu, `covers` vide ou **hétérogène** retombent sur `interpretation`
+    (#44 : « non qualifiable » n'est pas « mesure au rabais ») ; le `source_type` **l'emporte sur**
+    l'entry_type (`llm_memory` / `agent_synthesis` ne mesurent jamais, sinon un `fact_financial`
+    restitué de mémoire hériterait de l'autorité d'un dépôt) ; le modèle ne peut que **promouvoir
+    vers `evenement`**, seule nature qui SOUMET l'assertion à l'horloge — toute autre proposition
+    est écartée **en le disant** (garde symétrique de #29). ⚠️ La règle est un **détenteur unique**
+    (#46) appelé par `store_knowledge`, seul passage obligé des 8 producteurs : aucun feed ne la
+    ré-implémente, et `store_knowledge` n'accepte **pas** de paramètre `nature` (seulement
+    `nature_declaree`, qui est arbitrée). Le motif de dérivation n'est **pas** persisté — la règle
+    est une fonction pure de trois colonnes déjà stockées, donc rejouable ; et il n'entre pas dans
+    `reliability_note`, car on ne mélange pas deux axes, fût-ce en prose (#50). ⚠️ **Aucune entry
+    n'est `evenement` après backfill** et c'est déclaré dans la migration : aucun producteur n'écrit
+    encore d'entry adossée à un 8-K/6-K (`material_events` signale et n'écrit rien, #49), donc le
+    canal de déclaration n'a **aucun émetteur** aujourd'hui — état volontaire et nommé, à ne pas
+    confondre avec le défaut de #50 (`cross_validated` câblé et jamais passé) : ici l'absence de
+    déclarant rend la nature 100 % déterministe, donc plus stricte, jamais plus permissive.
+    Détail + garde : `check_entry_nature.py` §1 (atteignabilité #32), §2 (les deux vocabulaires),
+    §3 (unanimité de `covers`), §4 (la source l'emporte), §5 (resserrer/desserrer), §6 (détenteur
+    unique), §7 (l'ÉTAT persisté, pas seulement la règle — #43) — éprouvé par test négatif (5 cas).
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

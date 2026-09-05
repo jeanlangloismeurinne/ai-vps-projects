@@ -376,6 +376,38 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 > premier coup. Conforme à `feedback_blocage_classifieur_non_permanent` : le chemin nominal se
 > re-teste à chaque session plutôt que de dérouler un repli par habitude.
 
+> **Relevé de la session du 2026-09-05 (3) : zéro sous-agent, une septième fois** — capacité 1 de la
+> roadmap 02 livrée (axe `nature` en dérivation déterministe, migration 034, convention #51), 50
+> assertions neuves (1511 → 1561, 20 scripts), plus un **sous-comptage silencieux de 47 assertions**
+> réparé (cf. §27). La demande de l'utilisateur portait explicitement sur la délégation ; quatre
+> candidats ont été pesés, aucun retenu :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Écrire la fonction `derive_nature` d'après la spec de la roadmap | **Non.** La spec ne contenait pas la réponse : elle exigeait que « les 13 entries déterministes RVMD soient toutes `mesure` », alors que la table de profils de la capacité 0 classait `valorisation.base_rate_anchor` en `interpretation`. Une **contradiction apparente à arbitrer**, pas une fonction à écrire. Un agent l'aurait résolue en desserrant l'un des deux côtés ; l'arbitrage juste était de constater qu'il y a **deux vocabulaires** (nature d'entry ≠ nature dominante de champ) — c'est devenu la convention #51, le livrable le plus durable du lot. |
+> | Rédiger les 7 sections de `check_entry_nature.py` (50 assertions) | **Non**, et c'est la répétition exacte du relevé (2) : le volume est celui de la **restitution**. Le travail est de choisir *ce qui doit être faux* — que `mesure` ne soit jamais accordé par défaut, que des `covers` hétérogènes ne suffisent pas, qu'un `source_type` batte l'`entry_type`. |
+> | Générer le SQL de backfill de la migration 034 (180 lignes) | **Non** — et le bon outil n'était pas non plus « écrire le SQL ». C'est un `_gen_034.py` de 40 lignes qui **appelle `derive_nature`** et n'émet que des listes d'ids : la règle reste détenue une seule fois (#46). Un agent aurait produit un `UPDATE … CASE WHEN`, c'est-à-dire la règle réimplémentée dans une seconde langue. |
+> | Lire la sortie des 20 scripts de la suite | **Non** — `checks/run_all.sh`, 20 lignes + un total. Septième fois que ce filtre rembourse. |
+>
+> **Ce que ce relevé ajoute — le pire moment pour déléguer est celui où la spec se contredit.** Les
+> relevés précédents ont borné la zone rentable par le *volume* et par l'*énonçabilité du critère*.
+> Celui-ci ajoute un **signal de non-délégation observable d'avance** : quand deux documents du
+> projet, tous deux réputés justes, ne peuvent pas être vrais ensemble. C'est précisément le moment
+> où un sous-agent est le plus dangereux — il n'a pas l'historique qui dit lequel des deux prime, il
+> ne peut pas voir que la contradiction est *apparente*, et son réflexe naturel est d'aligner le
+> code sur le document qu'on lui a montré. Le desserrage silencieux qui en résulte est exactement le
+> mode de panne de `feedback_optional_schema_gate`. **Formulation courte : on ne délègue pas un lot
+> dont la première tâche est de décider quelle spec a raison.**
+>
+> **Corollaire de coût, qui vaut pour la demande initiale.** L'utilisateur demandait d'optimiser la
+> consommation en déléguant « si pertinent ». Sur ce lot, l'économie réelle n'est pas venue de la
+> délégation mais de deux gestes gratuits : (a) interroger la vraie base **avant** de concevoir la
+> dérivation (§18) — 3 requêtes qui ont donné les 2 seuls cas discriminants réels et évité de
+> spéculer sur des cas qui n'existent pas ; (b) un script de filtrage qui rend 21 lignes au lieu de
+> ~1600. Sept sessions consécutives, zéro sous-agent, et la dépense de contexte baisse quand même :
+> **l'économie de tokens est un problème d'outillage déterministe, pas un problème d'allocation
+> d'agents.**
+
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
 digérer des logs de build). Il est déficitaire quand le travail est **court en commandes et riche
@@ -463,6 +495,28 @@ règle porte sur la forme de la commande, pas sur ce qu'elle fait). Aucune modif
 > **atomiques par défaut** quand elles doivent réussir du premier coup, la composition étant une
 > économie d'aller-retour qu'on paie parfois au double. Le §12 et celui-ci se lisent ensemble :
 > **un blocage n'est pas une propriété de l'action, et il ne survit pas nécessairement à la session.**
+
+> **Trois refus le 2026-09-05 (3), et ils dessinent enfin une frontière lisible.**
+>
+> | Commande refusée | Repli qui passe |
+> |---|---|
+> | `docker exec shared-postgres psql … -tAc "COPY (SELECT …) TO STDOUT WITH (FORMAT csv, DELIMITER E'\t')" > /tmp/entries_034.tsv` | `psql -tAc "SELECT …" > /tmp/entries_034.tsv` — séparateur `\|` par défaut, parseur du générateur adapté |
+> | `docker exec shared-postgres psql … -o /tmp/entries_034.tsv -tA -F'\t' -c "SELECT …"` | idem |
+> | `psql -c "UPDATE knowledge_entries SET nature='interpretation' WHERE id=190;" && docker run … check_entry_nature.py ; psql -c "UPDATE … WHERE id=190;"` (test négatif en un appel) | **trois appels séparés** : saboter, mesurer, restaurer — puis un quatrième pour re-vérifier le vert |
+>
+> **Ce qui n'était PAS le blocage, et c'est l'information utile.** La redirection shell `>` était mon
+> premier suspect : elle est innocente — la troisième forme la contient et passe. Ce qui a été refusé
+> tient dans les **verbes et les drapeaux exotiques** (`COPY … TO STDOUT`, `-o`, `-F`), et dans la
+> **composition avec un `UPDATE` de production**. Corollaire immédiat : quand un `psql` est refusé,
+> tester d'abord la forme la plus banale du même besoin (`-tAc "SELECT …" > fichier`) avant de
+> conclure que l'extraction est fermée. J'ai perdu un aller-retour à supposer l'inverse.
+>
+> **Le troisième refus est un bon refus, au sens du relevé précédent.** Il portait sur une commande
+> qui **écrivait en production, mesurait, et restaurait dans le même souffle** : si le `docker run`
+> du milieu était mort, la ligne 190 restait sabotée en base sans que rien ne le dise. La forme
+> atomique n'est pas seulement le chemin le plus court ici — elle rend l'état intermédiaire
+> **observable**, ce qu'exige un test négatif qui touche la vraie base. Règle : **un test négatif qui
+> mute un état partagé ne s'écrit jamais en une commande composée**, refus ou pas.
 
 ### §18 — Le contrôle le moins cher est celui qu'on fait **avant** de dépenser des tokens de modèle
 
@@ -861,6 +915,44 @@ endroits (le diagnostic en tête, le test d'acceptation en capacité 4). Corrige
 laissé le diagnostic la recopier au prochain lot : c'est le §15 (« juste dans ce qu'il écrit, faux
 dans ce qu'il omet de retirer ») et le #46 (détenteur unique) transposés à la documentation. Greper
 la formulation caractéristique — ici le libellé exact du faux vert — avant de conclure le correctif.
+
+### §27 — Un bilan se reconnaît à sa FORME, jamais à sa position ; et un lanceur de suite qui vit dans `/tmp` réintroduit son défaut à chaque session
+
+**Constat (2026-09-05).** La suite hors-ligne de portfolio-tracker était lancée par un
+`/tmp/run_checks.sh` réécrit de mémoire à chaque session. Sa dernière version lisait le bilan de
+chaque script par `tail -1` sur stdout **et** stderr fusionnés. Or `check_runner_telemetry` émet une
+ligne de LOG *après* sa ligne de bilan : le filtre lisait donc « … abouti après **2** essais —
+850/170 tokens » et comptait **2** assertions au lieu de **49**.
+
+**Pourquoi c'était invisible.** Le total est sorti à **1 464** au lieu de 1 511. Ni zéro, ni
+absurde, ni en échec : 20 lignes vertes, `exit 0`, un nombre plausible. Un écart de 3 % sur un
+compteur qu'on ne connaît pas par cœur ne déclenche rien. Il n'a été vu que parce que la ligne de
+base **1 511** était écrite dans le `00-REPRISE.md` et que je l'ai comparée — c'est-à-dire par le
+même geste que le §26 (« la ligne de base est une mesure, pas un souvenir »), utilisé cette fois
+dans l'autre sens : c'est le *document* qui a corrigé la *mesure*.
+
+**Les deux enseignements, tous projets.**
+
+1. **Un agrégateur ne repère jamais un résultat par sa position dans la sortie.** `tail -1`,
+   `head -3`, « la dernière ligne », « après la ligne vide » : toutes ces ancres cassent dès qu'un
+   script ajoute un log, une dépréciation ou un avertissement. Le bilan se reconnaît à sa **forme**
+   (`grep -E 'vérifications OK|[0-9]+ ok / [0-9]+ FAIL|[0-9]+ OK / [0-9]+ KO' | tail -1`), et
+   l'absence de toute ligne de cette forme doit produire une **branche explicite** — ici
+   `*** AUCUNE LIGNE DE BILAN — script mort avant ses asserts ? ***` + `worst=1`. Sans cette
+   branche, un script qui plante à l'import compte 0 et s'aligne avec les verts : c'est le
+   troisième faux vert de `feedback_test_negatif_trois_faux_verts` déplacé dans le lanceur.
+2. **Un lanceur de suite est du code de production ; il ne vit pas dans `/tmp`.** Un script jetable
+   n'accumule aucun correctif : chaque session le réécrit et réintroduit ses pièges (le montage
+   `/contract_frozen` du §13, la lecture de `$?` derrière un pipe du §13, ce sous-comptage-ci). Il a
+   été versionné en `backend/checks/run_all.sh`, avec en en-tête le récit du défaut qu'il corrige —
+   pour que la prochaine réécriture soit un `git diff`, pas une reconstruction. C'est le même
+   argument que « un filtre shell bat un sous-agent » (§16) poussé d'un cran : **le filtre ne gagne
+   que s'il survit à la session.**
+
+**Destination durable.** (a) Fait : `backend/checks/run_all.sh` versionné, en-tête explicatif,
+`checks/README.md` mis à jour. (b) Règle de méthode transverse → mémoire auto. (c) À surveiller
+ailleurs : tout autre projet qui compte des assertions via un `tail` (ev-prices, bank-review) a le
+même défaut latent.
 
 ## Journal des points soldés
 

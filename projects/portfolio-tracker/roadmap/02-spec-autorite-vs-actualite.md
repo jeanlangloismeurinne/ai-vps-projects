@@ -134,15 +134,44 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
 
 ### 1. L'axe `nature`, dérivé déterministe · contexte partagé : `knowledge/service.py`, `agents/v2/worker.py`, migration 034
 
-- [ ] Migration **034** : colonne `nature` (`mesure`|`evenement`|`interpretation`), index, backfill
-      des ~130 entries actives NVDA/MSFT/RVMD
-- [ ] Détenteur **unique** de la dérivation (#46), importé par les feeds et le worker — jamais
-      ré-implémenté par producteur
-- [ ] Le modèle peut resserrer, jamais desserrer (garde symétrique de #29)
-- **Acceptation** : après backfill, `SELECT nature, count(*)` ne rend **aucun** `NULL` sur les
-  entries actives, et les 13 entries déterministes RVMD sont toutes `mesure`. Test négatif : forcer
-  la dérivation à rendre `interpretation` sur un fait EDGAR doit faire rougir un assert **nommé**.
-- ⚠️ Vérifier après déploiement le comptage par clef (#43), pas seulement le diff.
+- [x] Migration **034** : colonne `nature` (`mesure`|`evenement`|`interpretation`), CHECK nommé,
+      index partiel `(ticker_id, nature)`, `NOT NULL`. Backfill de **180 lignes** — pas seulement
+      les ~134 actives : une entry superseded reste lue par `analysis_knowledge_refs` (snapshot figé
+      A1/A2), et c'est ce qui permet de poser le `NOT NULL` dans la même migration.
+- [x] Détenteur **unique** (#46) : `agents/v2/common.py: derive_nature`, appelé par
+      `store_knowledge` — **seul passage obligé des 8 producteurs**, donc aucun feed n'a d'endroit
+      où la ré-implémenter. `store_knowledge` n'accepte pas de paramètre `nature`.
+      ⚠️ Le backfill lui-même passe par la règle : `_gen_034.py` l'appelle sur un instantané `psql`
+      et n'émet que des listes d'ids. Un `UPDATE … CASE WHEN` aurait écrit la règle une seconde
+      fois, en SQL — exactement le défaut de `_current_fact_ids` ré-implémenté par tags (#43).
+- [x] Le modèle peut resserrer, jamais desserrer : `declared` n'est honoré que pour **promouvoir
+      vers `evenement`**, seule nature qui SOUMET l'assertion à l'horloge matérielle. Tout autre
+      mouvement est écarté **en le disant** dans le motif.
+- 📌 **Résultat de dérivation, load-bearing pour la capacité 4** : la nature d'une ENTRY ne se dérive
+  **pas** de la nature dominante du CHAMP (convention **#51**). Les deux vocabulaires diffèrent —
+  `valorisation.base_rate_anchor` est un champ d'*interprétation* rempli par une *fréquence
+  empirique*, donc une entry `mesure`. Les faire coïncider par construction supprimerait la
+  confrontation que la porte doit opérer, et rendrait `evenement` inatteignable.
+- 📌 **`evenement` est une classe VIDE après backfill, et c'est déclaré dans la migration** : aucun
+  producteur n'écrit encore d'entry adossée à un 8-K/6-K (`material_events` signale et n'écrit rien,
+  #49). Le canal `nature_declaree` n'a donc **aucun émetteur** — état volontaire, à ne pas confondre
+  avec le défaut de #50 : l'absence de déclarant rend la nature 100 % déterministe, donc plus
+  stricte. Il se remplira avec la capacité 3, qui introduit l'événement de bout en bout ; c'est là,
+  et pas avant, que l'ajout d'un champ au contrat C1 (règle #19, 3 points de synchro) se justifie.
+- **Acceptation TENUE** : `check_entry_nature.py`, **50 assertions / 0 échec**. §7 lit l'**état
+  persisté** (#43, pas le diff) : 0 `NULL` sur les entries actives, 0 nature hors vocabulaire, et
+  les 13 entries déterministes RVMD **nommées une par une** sont toutes `mesure` — le compte 13 est
+  lui-même asserté, sans quoi « toutes `mesure` » serait vrai sur zéro ligne. Répartition :
+  **66 `mesure` / 68 `interpretation` / 0 `evenement`**.
+- **Test négatif 5/5 concluants**, chacun rouge sur un assert **nommé**, script allant jusqu'à son
+  bilan : (1) la source ne démote plus → 6 FAIL ; (2) la déclaration de l'agent honorée sans
+  arbitrage → 3 FAIL, dont le cas exigé par cette spec (fait EDGAR requalifié `interpretation`) ;
+  (3) la nature de l'entry dérivée du champ → 4 FAIL ; (4) unanimité de `covers` remplacée par « au
+  moins un » → 2 FAIL ; (5) **état persisté corrompu en base** (une entry déterministe reclassée)
+  → 1 FAIL nommant l'id. ⚠️ Le cas (5) est indispensable et **séparé** : §7 lit la base, donc aucun
+  sabotage de la RÈGLE ne peut le faire rougir — un test négatif portant seulement sur le code
+  aurait laissé §7 non éprouvé.
+- **Suite** : 1 561 assertions / 0 échec / 20 scripts (`bash checks/run_all.sh`).
 
 ### 2. Le registre des sources admissibles, curé à la main · contexte partagé : `knowledge/websearch.py` (`_ISSUER_DOMAINS`, `classify_source_type`), convention #33
 

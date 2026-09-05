@@ -23,6 +23,89 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 
 <!-- Versés depuis 00-REPRISE.md le 2026-09-05 : 14 blocs de MàJ du 2026-08-31 au
      2026-09-04 (5). Copie conforme, rien de résumé. -->
+<!-- Versés le 2026-09-05 (3) : les blocs des capacités 0 et 1 de la roadmap 02. -->
+
+> ## ⚡ MàJ 2026-09-05 (3) — capacité 1 : l'axe `nature`, et la découverte des DEUX vocabulaires
+>
+> **Aucune dépense de modèle.** Livré : `derive_nature()` (détenteur unique dans
+> `agents/v2/common.py`), son câblage au seul chemin d'écriture `knowledge/service.py:store_knowledge`,
+> la **migration 034** (colonne `nature` + backfill 180 lignes + CHECK nommé + `NOT NULL` + index
+> partiel), `checks/check_entry_nature.py` (**50 assertions**), la convention **#51**, et
+> `checks/run_all.sh` versionné. Suite : **1 561 / 0 / 20**.
+>
+> - **La dérivation est déterministe et sans déclarant.** Ordre de décision : le `source_type`
+>   d'abord (`llm_memory` / `agent_synthesis` ne relèvent rien, quoi qu'ils couvrent), puis
+>   l'`entry_type` (`fact_financial`/`base_rate` = producteur déterministe → `mesure` ;
+>   `analysis`/`risk`/`lesson_learned`/`agent_synthesis` → `interpretation`), puis l'unanimité des
+>   `covers`, puis un **défaut prudent** à `interpretation`. `mesure` n'est **jamais** accordée par
+>   défaut : c'est la nature forte, celle sur laquelle la capacité 4 s'appuiera pour périmer.
+> - 📌 **Le résultat structurant : il y a DEUX vocabulaires**, et le second ne dérive pas le premier.
+>   La spec exigeait que les 13 entries déterministes RVMD soient toutes `mesure`, alors que la table
+>   de profils de la capacité 0 classe `valorisation.base_rate_anchor` en `interpretation` — deux
+>   documents justes, incompatibles en apparence. Ils ne parlent pas de la même chose : la nature
+>   **dominante d'un CHAMP** dit ce qu'il faut pour le fonder ; la nature **d'une ENTRY** dit comment
+>   *cet énoncé-là* a été produit. Un champ d'interprétation peut être rempli par une mesure (l'entry
+>   #172 est une **fréquence empirique**, relevée), et une entry `analysis` qui couvre le champ de
+>   `mesure` `produits.unit_economics` reste une interprétation. C'est la convention **#51**, et elle
+>   est **load-bearing pour la capacité 4** : la porte lira la nature de l'entry, pas celle du champ.
+> - 📌 **`evenement` est une classe déclarée VIDE.** Après backfill : **66 `mesure` / 68
+>   `interpretation` / 0 `evenement`** sur les actives (180 lignes touchées au total, versions
+>   supersédées comprises — `analysis_knowledge_refs` les relit encore et `NOT NULL` ne tolère aucune
+>   exception). Aucun producteur actuel n'écrit d'événement ; la classe existe pour la capacité 3.
+> - **Le champ `nature` n'est PAS ajouté au contrat C1.** `ProducedEntry` est `extra='forbid'`,
+>   `SCHEMA_VERSION` figé, et l'ajouter coûterait les 3 points de synchro de #19. L'absence de
+>   déclarant rend la dérivation **100 % déterministe — donc plus stricte, pas plus lâche** : ce
+>   n'est pas le défaut de #50 (un `cross_validated` câblé de bout en bout que personne ne passe).
+>   Le kwarg `nature_declaree` existe côté service et n'admet qu'un **resserrement** vers
+>   `evenement` ; il attend la capacité 3, qui introduit l'événement de bout en bout.
+> - **Le générateur de migration appelle la règle, il ne la recopie pas.** `_gen_034.py` lit un
+>   instantané `psql -tA`, appelle `derive_nature()` et n'émet que des **listes d'ids**. Un
+>   `UPDATE … CASE WHEN` aurait réimplémenté la règle dans une seconde langue (#46), et elle aurait
+>   divergé au premier correctif.
+> - **Le motif de dérivation n'est PAS persisté** : il est une fonction pure de trois colonnes déjà
+>   stockées, et l'écrire dans `reliability_note` mélangerait deux axes jusque dans la prose (#50).
+> - **Test négatif 5/5**, et le 5ᵉ cas est **séparé** : §7 lit la vraie base, donc aucun sabotage du
+>   *code* ne peut le faire rougir. Il a fallu muter la ligne 190 en base (`nature='interpretation'`),
+>   mesurer, restaurer, puis re-vérifier le vert — en **quatre appels distincts**, jamais en une
+>   commande composée (un `docker run` mort au milieu laisserait la prod sabotée en silence).
+> - ⚠️ **Sous-comptage de 47 assertions réparé.** `/tmp/run_checks.sh` lisait `tail -1` sur
+>   stdout+stderr fusionnés ; `check_runner_telemetry` émet un LOG *après* son bilan → **2** comptées
+>   au lieu de 49, total **1 464** au lieu de 1 511, `exit 0`, 20 lignes vertes. Invisible. Détecté
+>   par comparaison avec la ligne de base écrite dans ce fichier. Le lanceur est désormais versionné
+>   (`checks/run_all.sh`), reconnaît le bilan par sa **forme** et traite l'absence de bilan comme un
+>   échec. → `CHANTIER_OUTILLAGE_DEV.md` §27.
+> - **Classifieur** : 3 refus (`COPY … TO STDOUT`, `psql -o`/`-F`, la commande composée du test
+>   négatif). La redirection `>` n'était **pas** le blocage — la forme banale
+>   `psql -tAc "SELECT …" > fichier` passe. → §17.
+> - **Zéro sous-agent, septième session consécutive**, et c'était le bon arbitrage : la première
+>   tâche du lot était de décider **quelle spec avait raison**. → §16.
+
+> ## ⚡ MàJ 2026-09-05 (2) — capacité 0 close, et la spec corrigée sur sa pièce à conviction
+>
+> **Aucune dépense de modèle. Aucune migration.** Le livrable est de la **doctrine** : elle n'est
+> câblée nulle part (les capacités 1-5 la consommeront), donc son check est son seul garde-fou.
+>
+> - **`agents/v2/common.py: FIELD_PROFILES`** — les 19 champs MVDD, chacun avec *nature · plancher ·
+>   actualité bloquante* + un `motif` écrit. Détenteur **unique**, placé contre `MVDD_SPEC` pour que
+>   les chemins et leurs profils ne puissent pas diverger. Convention **#50**.
+> - **`checks/check_field_profiles.py`** — 174 assertions, **test négatif 5/5** (ligne retirée ·
+>   desserrage tacite · motif nommant un émetteur · profil orphelin · score composite), chacun rouge
+>   sur un assert **nommé** et le script allant jusqu'à sa ligne de bilan. Suite : **1 511 / 0 / 19**.
+> - **Trois champs desserrés B+ → B** (`positionnement.moat_preuves`, `positionnement.position_vs_pairs`,
+>   `marche.structure_5forces`) : sur un champ d'*interprétation*, un dépôt réglementaire est du
+>   boilerplate malgré son tier A. ⚠️ **Ce desserrage n'admet personne tant que la capacité 2 (registre
+>   nominatif) n'est pas livrée** — c'est ce qui le distingue d'un `Optional` posé à chaud.
+> - 📌 **Résultat de rédaction** : **aucun** des 19 champs n'a `evenement` pour nature dominante. Un
+>   événement ne *fonde* aucun champ, il *périme* les autres natures — d'où la troisième colonne.
+>
+> ⚠️ **La spec 02 visait le mauvais émetteur, corrigé aux DEUX endroits.** Vérifié en base avant tout
+> code : RVMD n'a **jamais eu de rapport `readiness`**, ne couvre que **10 des 19 champs** et n'a
+> **aucune dispense** — il sort `not_ready` **pour lacune**. Le faux vert `ready, 0 gap` est persisté
+> sur **NVDA et MSFT** (rapports #26/#27 du 2026-08-31). Le test central de la capacité 4 aurait donc
+> viré au **vert sans rien prouver** (fixture non discriminante) ; il vise désormais NVDA/MSFT, avec
+> RVMD en test de **séparation** des deux causes. Le diagnostic en tête de spec portait la même
+> affirmation — corriger le seul test l'aurait laissée se recopier (§15/#46).
+> → Enseignement transverse : **`CHANTIER_OUTILLAGE_DEV.md` §26**.
 
 > ## ⚡ MàJ 2026-09-05 — le corpus a enfin une horloge (versé le 2026-09-05 (2))
 >

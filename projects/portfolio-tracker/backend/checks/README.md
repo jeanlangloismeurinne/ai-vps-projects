@@ -4,6 +4,23 @@ Scripts autonomes, hors image de production (le build ne copie que `app/`). Ils 
 container jetable bâti sur l'image backend, seul endroit où pydantic est en **v2** (le python hôte
 est en v1).
 
+## Tout jouer d'un coup
+
+```bash
+cd projects/portfolio-tracker/backend
+bash checks/run_all.sh          # une ligne par script + « TOTAL assertions = … », exit ≠ 0 si un échec
+```
+
+C'est le **chemin recommandé** : il porte les invocations correctes (montage `/contract_frozen`,
+réseau et `CHECK_DB_URL` pour `check_entry_nature`) et il reconnaît le bilan de chaque script à sa
+**forme**, pas à sa position. ⚠️ Ce lanceur a longtemps vécu dans `/tmp`, réécrit de mémoire à
+chaque session : sa dernière version sous-comptait **47 assertions** en silence (elle lisait
+`tail -1` sur stdout+stderr fusionnés, or `check_runner_telemetry` émet un LOG *après* son bilan →
+2 comptées au lieu de 49, total 1 464 au lieu de 1 511, `exit 0`). Il est versionné pour que ce
+défaut ne revienne pas ; **ne pas le réécrire ailleurs**. Détail dans son en-tête.
+
+## Un script à la fois
+
 ```bash
 cd projects/portfolio-tracker/backend
 # ⚠️ Le conteneur s'appelle `portfolio-backend` depuis la migration Coolify → compose du
@@ -82,17 +99,26 @@ docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV
 # Vise le NameError silencieux en prod (commentaire SQL avec accolades, Convention #39).
 docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV $IMG \
   python checks/check_fstring_sql.py
+
+# axe `nature` d'une entry (capacité 1 de la roadmap 02, convention #51) : dérivation déterministe
+# + ÉTAT PERSISTÉ. §7 lit la vraie base → réseau `coolify` ET `CHECK_DB_URL` obligatoires. Sans eux
+# le script SORT EN ÉCHEC (il ne saute pas la section) : une mesure incomplète ne doit jamais
+# passer pour un 0. La variable vient du `.env` du projet — ne pas la recopier en clair ici.
+docker run --rm --network coolify -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV \
+  -e "CHECK_DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)" $IMG \
+  python checks/check_entry_nature.py
 ```
 
-> **Base de référence au 2026-09-04 (3) : 1216 assertions / 0 échec** sur les 17 scripts hors-ligne
-> (`search_worker` 52, `provenance` 50, `edgar_feed` 77, `financials_feed` 69, `synthesis_feed` 56,
-> `readiness_recompute` 77, `analysis_contract` 21, `decision_validate` 54, `base_rate_corpus` **48**
-> (+12 : F8, le libellé de classe qualifie le CA et jamais la taille boursière — §7 à §9 ;
-> +9 : F9, le montant choisit son unité, 11,58 M$ ne s'écrit jamais « 0,0 Md$ » — §10),
-> `monitoring_v2` 116, `exit_debate` 175, `theses_v2_listing` 52, `tickers_v2_listing` 162,
-> `knowledge_entries_listing` 100, `runner_telemetry` 49, `valuation_feed` **38** (+18 : F7, un
-> multiple négatif n'est pas un multiple — §6/§7), `fstring_sql` 20).
-> Les deux scripts réseau (`fetch_live`, `fetch_relevance`) portent le total à **19 scripts**.
+> **Base de référence au 2026-09-05 (3) : 1 561 assertions / 0 échec / 20 scripts**, mesurées par
+> `bash checks/run_all.sh`. Détail des apports depuis 1216 : `field_profiles` **174** (capacité 0,
+> table de profils des 19 champs — #50), `entry_nature` **50** (capacité 1, axe `nature` — #51),
+> plus les 3 correctifs F12→F14 sur les scripts existants. Les deux scripts réseau (`fetch_live`,
+> `fetch_relevance`) sont **exclus** du lanceur et ne sont pas dans ce total.
+>
+> ⚠️ **Ce total ne se recopie pas** : il se re-mesure par `run_all.sh`, jamais par une boucle
+> improvisée. Et quand une re-mesure diverge du chiffre écrit ici, l'hypothèse à tester **en
+> premier** est « ma mesure est incomplète », pas « le README a dérivé » — c'est vrai plus souvent,
+> et c'est moins cher à vérifier (les deux pièges ci-dessous l'ont chacun démontré une fois).
 >
 > ⚠️ **Quatre scripts comptent MOINS si on oublie le montage `/contract_frozen`.** Sans
 > `-v "$PWD/../roadmap/provenance-cards:/contract_frozen:ro"`, `analysis_contract`,
@@ -102,9 +128,12 @@ docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app $ENV
 > couverture partielle comme une couverture pleine. Constaté en direct : la mesure incomplète a
 > failli écraser des chiffres corrects dans ce README. Un total ne se recopie pas — mais il ne se
 > re-mesure valablement qu'avec l'invocation complète documentée ci-dessus.
-> ⚠️ Trois scripts n'écrivent **pas** la même ligne de résumé
-> (`50 OK / 0 KO`, `47 ok / 0 FAIL`) : un `grep` sur « vérifications OK » les rend **silencieux**, ce
-> qui se lit comme un succès. Lire le code de sortie ou la dernière ligne, pas un motif unique.
+> ⚠️ **Trois dialectes de ligne de bilan cohabitent** (`… vérifications OK`, `47 ok / 0 FAIL`,
+> `50 OK / 0 KO`) : un `grep` sur un seul motif rend les autres **silencieux**, ce qui se lit comme
+> un succès. Et un `tail -1` ne marche pas non plus — `check_runner_telemetry` émet une ligne de LOG
+> *après* son bilan. La règle : reconnaître le bilan par sa **forme** (les trois motifs), puis
+> prendre le dernier de **ces** lignes-là ; et traiter l'absence totale de bilan comme un **échec**
+> (script mort avant ses asserts), jamais comme un zéro. `run_all.sh` fait exactement ça.
 
 Le seul check qui exige des **clés réelles** (Exa + embeddings DeepInfra) est `check_fetch_relevance.py` :
 il n'est donc pas jouable dans un conteneur jetable sans exposer les secrets. On le lance **dans le
@@ -133,6 +162,7 @@ porte la clé, pas seulement par commodité réseau.
 | `check_synthesis_feed.py` | Alimentateur de **synthèse grounded** (ingestion-agent mode synthèse) : `derive_synthesis_reliability` (règle « un cran sous la plus faible entry citée » — jamais de surévaluation), `validate_grounding` (citation hors corpus / assertion non sourcée = violation), contrat `GroundedSynthesis` (≥1 citation/claim, union des ids), `build_content_structured` (traçabilité), registre des cibles + `citable_tiers`, et les **descripteurs agnostiques de l'émetteur** (#31) : aucune `query`/`guidance` ne nomme un acteur en dur, toutes sont paramétrées par `{company}` et `resolve()` les spécialise sans laisser de placeholder. 56 assertions. | aucun (`--network none`) |
 | `check_readiness_recompute.py` | **Curator — couverture pilotée par l'index `covers`** (029) : `_tier_ge`/`_plancher_for` (plancher par champ, dégradé `croissance=B`), `_covers_index` (multi-champ, entry non taguée absente), `recompute_coverage` (le plancher MORD ; l'index DÉCOUVRE une entry que le LLM n'a pas citée ; une citation LLM sans tag ne fonde plus rien ; `produits.description` ne fonde pas `business_model.description`), `_exigences` (le LLM peut resserrer les champs requis / le plancher, jamais les desserrer), `reconcile_gaps` (bijection), et le **déterminisme** : même corpus + `fondations` LLM différentes → couverture strictement identique. Plus la **dispense par émetteur** (#31) : un ticker sans dispense écrite n'hérite d'aucun passe-droit — `recurrence_pct` bloque pour MSFT là où il est dispensé pour NVDA, et le libellé NVDA ne fuit pas dans les incertitudes d'un autre émetteur. Plus la **narration contrainte** (dette A) : une phrase du `rationale` qui nomme un verdict autre que celui recomputé est retirée et le retrait déclaré, l'en-tête factuel porte verdict + blocs + champs non fondés, et `already`/`not_ready` ne sont pas lus comme `ready`. 77 assertions. | aucun (`--network none`) |
 | `check_field_profiles.py` | **Table de profils par champ** (capacité 0 de `02-spec-autorite-vs-actualite.md`, convention #50) — la doctrine des trois axes *nature · plancher · actualité bloquante* sur les 19 champs MVDD. Elle n'est **câblée nulle part** (les capacités 1-5 la consommeront) : ce check est donc son seul garde-fou. §1 couverture, où chaque champ est vérifié **par son nom** avec un `.get()` — retirer une ligne doit produire un FAIL qui **nomme** le champ, jamais un `KeyError` qui tuerait le script avant ses autres sections ; §3 atteignabilité (#32) — un plancher qu'aucun `source_type` n'atteint est un champ infondable déguisé en lacune ; §4 pas de contradiction tacite avec `FIELD_PLANCHER_OVERRIDES` (#46) ; **§5 tout desserrage est DÉCLARÉ** — trois champs d'interprétation passent B+ → B, et un desserrage tacite est exactement le trou de `feedback_optional_schema_gate` ; §6 un `motif` est un **gabarit** qui ne nomme ni émetteur ni juridiction (#31), sans quoi la doctrine casse au premier émetteur non américain ; §7 aucun scalaire agrégé — la porte lira un **triplet**, trois nombres recombinés reproduiraient le défaut au premier arrondi. **Éprouvé par test négatif, 5/5** : ligne retirée · desserrage tacite · motif nommant un émetteur · profil orphelin · score composite, chacun rouge sur son assert nommé **et** le script allant jusqu'à sa ligne de bilan. 174 assertions. | aucun (`--network none`) |
+| `check_entry_nature.py` | **Axe `nature` d'une entry** (capacité 1 de `02-spec-autorite-vs-actualite.md`, convention #51) — `derive_nature()` est le **détenteur unique** de la règle (#46), câblé au seul chemin d'écriture `store_knowledge`. §1 vocabulaire fermé **et atteignable** (#32) ; **§2 les deux vocabulaires**, qui sont la raison d'être du fichier : la nature d'une *entry* n'est pas la nature dominante d'un *champ* — `valorisation.base_rate_anchor` est un champ d'`interpretation` rempli par une entry `base_rate` de `mesure` (une fréquence empirique **est** relevée), et symétriquement une entry `analysis` qui couvre le champ de `mesure` `produits.unit_economics` reste une `interpretation` ; §3 `mesure` n'est **jamais** accordée par défaut (entry_type inconnu, `covers` vide, `covers` **hétérogènes**, ordre indifférent, chemin hors vocabulaire) ; §4 le `source_type` bat l'`entry_type` (`llm_memory`/`agent_synthesis` ne relèvent rien, quoi qu'ils couvrent) ; §5 l'agent peut **resserrer** vers `evenement`, jamais desserrer (#29) ; §6 détenteur unique par inspection de signature ; **§7 l'ÉTAT PERSISTÉ** (#43, pas le diff) — 0 `NULL`, 0 nature hors vocabulaire, le compte 13 lui-même asserté, puis les 13 entries déterministes RVMD **nommées une par une**. Sans `CHECK_DB_URL` le script **échoue** au lieu de sauter §7. **Éprouvé par test négatif, 5/5** ; le 5ᵉ cas est **séparé** parce qu'aucun sabotage de la *règle* ne peut rougir §7 (il lit la base) — un test négatif purement code aurait laissé §7 non prouvé. 50 assertions. | `--network coolify` + `CHECK_DB_URL` |
 | `check_analysis_contract.py` | **Contrat d'analyse** (bull/bear) — le check qui manquait quand le reverse-DCF a été desserré à chaud : `croissance_implicite_prix_actuel_pct` REQUIS (jamais `null`), `Assumptions` fermé aux 3 clés (`extra='forbid'`, pas de `taux_actualisation` inventé), et surtout les **unités dans le nom** — les anciens `croissance_revenue`/`expansion_marge_fcf` nus sont désormais REJETÉS, pas ignorés (bull rendait `0.15`, bear `8.0` pour la même grandeur). Négatifs licites (décroissance, compression de marge), `horizon_ans ≥ 5` (A4), et §6 la synchro contrat figé ↔ copie runtime (#19). 21 assertions. | aucun (`--network none`) |
 | `check_decision_validate.py` | **Acte de décision V2** (§9, lot 7) — le contrat `ThesisValidation`, là où G2 s'exerce le plus fort : verdict actionnable (`PASS`/`WATCH` refusés), **bijection** `risk_acks` ↔ `risques_acceptes` (manquant / fantôme / doublon / `accepted=False`), pré-mortem, pont risques → hypothèses (falsifiabilité), cap Kelly et **override tracé A7** (un override sans motif, ou perçant `pct_max`, est rejeté ; un sizing « prudent » non tracé aussi — ce n'est pas de la prudence, c'est du hors-contrat), `valuation_range` ordonnée, contrat fermé (`extra='forbid'`). **§8 = la vérification la plus importante du fichier** : elle inspecte `ValidateV2Body.model_fields` pour prouver que le corps HTTP **n'expose aucun champ de jugement** (`verdict`, sizing, conditions, hypothèses, valuation, synthèse) — un contrat de décision ne vaut que par ce qu'il refuse de recevoir (#36). §9 la dérivation de la fourchette depuis le research memo (jamais une moyenne inventée), §10 la synchro contrat figé ↔ copie runtime (#19). 54 assertions. | aucun (`--network none`) |
 | `check_monitoring_v2.py` | **Monitoring V2** (modes 1-6, lot 8) — et surtout **§3, le pont inter-objets**, qui est la raison d'être du fichier : il prouve d'abord que `Mode2QuarterlyReview` **ACCEPTE** une escalade sur une hypothèse `H7` inexistante (contrat pleinement satisfait, anti-churn contourné), puis que `_valider_pont_hypotheses` la **REFUSE** — montrer le refus seul ne prouverait pas que le trou existait (#37). Plus : §1/§2 contrats mode 6 et anti-churn 1-5, §4 champs dérivés forcés côté code (`mode`, `thesis_id`, `pair_ticker`, `source_mode`, `next_review_date`), §5 colonnes de routage ↔ domaines des CHECK de la migration 031, **§6 les seuils figés en lecture seule** (une revue ne peut pas abaisser le seuil qu'elle vient de franchir), §7 `MonitoringRunBody` n'expose aucun champ de jugement (#36), §8 `EventRouterV2` inspecté en source — INNER JOIN, pas de garde `synced`, `v2_auto_enabled`, rattrapage du seul mode 6 (#38) ; la docstring du module est **retirée avant grep**, sinon l'explication des défauts V1 se lirait comme les défauts eux-mêmes. §9 migration ↔ code, §10 synchro contrat figé (#19). 116 assertions. | aucun (`--network none`) |

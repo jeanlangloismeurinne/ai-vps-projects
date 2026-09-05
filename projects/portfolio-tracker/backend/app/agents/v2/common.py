@@ -7,7 +7,7 @@ de prompt (discipline de cache §5.3 : tri stable, aucun champ volatil), et le c
 """
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any, Optional, Sequence
 
 # ── Spec MVDD (readiness_derivation.md) — guidage injecté au curator ──────────
 # Chaque dimension : (bloc, champs factuels requis fondables, tier plancher). Ce sont les MÊMES noms
@@ -186,6 +186,98 @@ FIELD_PROFILES: dict[str, dict[str, Any]] = {
 }
 
 NATURES: frozenset[str] = frozenset({"mesure", "evenement", "interpretation"})
+
+# ── L'axe `nature` d'une ENTRY (capacité 1 · migration 034) ───────────────────
+# ⚠️ DEUX VOCABULAIRES DISTINCTS, et les confondre casse la doctrine :
+#
+#   FIELD_PROFILES[...]["nature"] — nature DOMINANTE d'un CHAMP : quel axe fait autorité pour le
+#       fonder. C'est une exigence, co-écrite, qui ne décrit aucune donnée existante.
+#   `knowledge_entries.nature`    — ce que l'ASSERTION prétend être. C'est un fait sur l'entry.
+#
+# Le vocabulaire des entries est STRICTEMENT PLUS LARGE : `evenement` n'est la nature dominante
+# d'aucun des 19 champs (résultat de la capacité 0 — un événement ne FONDE rien, il PÉRIME), mais
+# une entry peut parfaitement en être un. Dériver la nature d'une entry depuis celle de son champ
+# rendrait donc `evenement` inatteignable, et surtout : ça ferait dire à une donnée ce qu'on
+# ATTEND d'elle. La confrontation des deux est le travail de la porte (capacité 4), pas celui de
+# l'écriture.
+#
+# ⚠️ `mesure` est la nature FORTE : elle donne autorité à la fiabilité de la source et soustrait le
+# fait à l'horloge matérielle. On ne l'accorde donc jamais par défaut — toute incertitude retombe
+# sur `interpretation` (transposition de #44 : « non qualifiable » n'est pas « mesure au rabais »).
+
+# Une source qui ne MESURE jamais, quoi qu'elle couvre : une mémoire de modèle et une synthèse
+# d'agent produisent un énoncé, pas un relevé. Filtre appliqué EN PREMIER — il l'emporte sur
+# l'entry_type, sinon un `fact_financial` restitué de mémoire hériterait de l'autorité d'un dépôt.
+_NON_MEASURING_SOURCES: frozenset[str] = frozenset({"llm_memory", "agent_synthesis"})
+
+# Producteurs déterministes : le contenu est un relevé (dépôt XBRL, fournisseur de marché) ou une
+# fréquence empirique tirée d'un corpus (`base_rate` — « P(≥20 %/an)=8,5 % » est une mesure sur une
+# classe de référence, pas une prévision ; le CHAMP qu'elle fonde est d'interprétation, l'entry
+# non).
+_MEASURING_ENTRY_TYPES: frozenset[str] = frozenset({"fact_financial", "base_rate"})
+
+# Producteurs de jugement : quel que soit le champ visé, la sortie est un énoncé du modèle.
+_INTERPRETING_ENTRY_TYPES: frozenset[str] = frozenset(
+    {"analysis", "agent_synthesis", "risk", "lesson_learned"}
+)
+
+
+def _covers_all_mesure(covers: Optional[Sequence[str]]) -> bool:
+    """Unanimité : TOUS les champs couverts sont de nature dominante `mesure`.
+
+    L'unanimité est exigée dans le sens PRUDENT (cf. #44) : une entry qui fonde à la fois un
+    pourcentage publié et un driver d'interprétation fait deux choses, et la plus forte des deux
+    revendications ne doit pas emporter l'autre. Un chemin hors vocabulaire ne vote pas `mesure` —
+    il ne peut pas non plus lever un KeyError (#50 §1 : un champ inconnu est nommé, pas fatal).
+    """
+    paths = [c for c in (covers or []) if c]
+    if not paths:
+        return False
+    return all(FIELD_PROFILES.get(p, {}).get("nature") == "mesure" for p in paths)
+
+
+def derive_nature(
+    *,
+    entry_type: str,
+    source_type: str,
+    covers: Optional[Sequence[str]] = None,
+    declared: Optional[str] = None,
+) -> tuple[str, str]:
+    """Nature d'une entry — DÉTENTEUR UNIQUE de la règle (#46). Rend `(nature, motif)`.
+
+    Dérivation déterministe depuis les trois entrées prévues par la spec (`source_type` ·
+    `entry_type` · champ couvert), dans cet ordre de priorité. Aucun producteur ne la
+    ré-implémente : `store_knowledge` l'appelle pour TOUS les sites d'écriture, c'est le seul
+    passage obligé des 8 producteurs.
+
+    `declared` = la nature proposée par le modèle. **Elle n'est honorée que pour promouvoir vers
+    `evenement`** — la seule nature qui SOUMET l'assertion à l'horloge matérielle, donc le seul
+    mouvement qui resserre (garde symétrique de #29/#24). Toute autre proposition est écartée en le
+    disant : laisser un modèle requalifier un fait EDGAR en `interpretation` le sortirait du
+    plancher A, et le requalifier en `mesure` lui accorderait l'autorité de la fiabilité sans
+    qu'aucune source ne la porte.
+    """
+    if source_type in _NON_MEASURING_SOURCES:
+        nature, motif = "interpretation", f"source `{source_type}` : énoncé produit, jamais relevé"
+    elif entry_type in _MEASURING_ENTRY_TYPES:
+        nature, motif = "mesure", f"entry_type `{entry_type}` : producteur déterministe"
+    elif entry_type in _INTERPRETING_ENTRY_TYPES:
+        nature, motif = "interpretation", f"entry_type `{entry_type}` : jugement produit"
+    elif _covers_all_mesure(covers):
+        nature = "mesure"
+        motif = "champs couverts tous de nature dominante `mesure` : " + ",".join(sorted(covers or []))
+    else:
+        nature = "interpretation"
+        motif = (
+            "défaut prudent : ni producteur déterministe, ni couverture unanimement `mesure`"
+            + (f" (couvre {','.join(sorted(covers or []))})" if covers else " (ne couvre aucun champ)")
+        )
+
+    if declared and declared != nature:
+        if declared == "evenement" and declared in NATURES:
+            return "evenement", f"{motif} → promu `evenement` par l'agent (resserrement admis)"
+        motif += f" ; proposition `{declared}` écartée (desserrage : seul `evenement` peut être promu)"
+    return nature, motif
 
 
 def profile_for(field_path: str) -> dict[str, Any]:

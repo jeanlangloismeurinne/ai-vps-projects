@@ -27,6 +27,7 @@ from typing import Any, Optional, Sequence
 
 import asyncpg
 
+from app.agents.v2.common import derive_nature
 from .embeddings import (
     EmbeddingUnavailable,
     embed_one,
@@ -128,6 +129,7 @@ async def store_knowledge(
     requires_human_review: bool = False,
     derived_reliability: Optional[tuple[float, str, str]] = None,
     covers: Optional[Sequence[str]] = None,
+    nature_declaree: Optional[str] = None,
 ) -> dict[str, Any]:
     """Crée une knowledge_entry. Le score/tier sont CALCULÉS (§6.3), jamais fournis par l'appelant.
 
@@ -155,6 +157,15 @@ async def store_knowledge(
     Deux échappatoires pour l'ingestion de masse (ingestion-agent, Batch API) : `embedding=[...]`
     fournit un vecteur déjà calculé en lot, et `embed=False` diffère au backfill. Elles évitent
     N appels HTTP unitaires à l'intérieur d'une transaction.
+
+    `nature` (migration 034) est DÉRIVÉE ici, jamais reçue : c'est le seul passage obligé des huit
+    producteurs, donc le seul endroit où la règle ne peut pas se recopier (#46). `nature_declaree`
+    est la proposition du modèle — `derive_nature` ne l'honore que pour promouvoir vers
+    `evenement`. Le MOTIF n'est pas persisté : la dérivation est une fonction pure de trois
+    colonnes déjà stockées (`entry_type`, `source_type`, `covers`), donc rejouable à tout instant
+    sur n'importe quelle ligne — une colonne de plus se contenterait de vieillir à côté de la règle.
+    Il n'entre pas non plus dans `reliability_note` : ce sont deux axes, et on ne les mélange pas,
+    fût-ce en prose (#50).
     """
     if derived_reliability is not None:
         score, tier, note = derived_reliability
@@ -164,6 +175,10 @@ async def store_knowledge(
             cross_validated=cross_validated, has_conflict=has_conflict,
         )
     requires_review = requires_human_review or source_type in _REQUIRES_REVIEW_SOURCES
+    nature, nature_motif = derive_nature(
+        entry_type=entry_type, source_type=source_type, covers=covers, declared=nature_declaree,
+    )
+    logger.debug("store_knowledge: nature=%s (%s)", nature, nature_motif)
 
     version = 1
     if supersedes_entry_id is not None:
@@ -195,16 +210,16 @@ async def store_knowledge(
             tags, lang, source_type, source_url, source_date, fiscal_period,
             reliability_score, reliability_tier, reliability_note,
             has_conflict, conflict_entry_id, requires_human_review, model_cutoff, version,
-            embedding, covers
+            embedding, covers, nature
         ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::vector,$22
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::vector,$22,$23
         )
-        RETURNING id, version, reliability_score, reliability_tier
+        RETURNING id, version, reliability_score, reliability_tier, nature
         """,
         ticker_id, document_id, entry_type, title, content, content_structured,
         list(tags or []), lang, source_type, source_url, source_date, fiscal_period,
         score, tier, note, has_conflict, conflict_entry_id, requires_review, model_cutoff, version,
-        vec_literal, list(covers) if covers else None,
+        vec_literal, list(covers) if covers else None, nature,
     )
 
     if supersedes_entry_id is not None:
@@ -248,7 +263,7 @@ async def get_current_entries(
     sql = f"""
         SELECT id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_url, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version, covers
+               requires_human_review, has_conflict, version, covers, nature
         FROM knowledge_entries
         WHERE {' AND '.join(clauses)}
         ORDER BY reliability_score DESC, source_date DESC NULLS LAST, id
@@ -264,7 +279,7 @@ _RESCUE_QUOTA = 3
 
 _SELECT_COLS = """id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version, covers"""
+               requires_human_review, has_conflict, version, covers, nature"""
 
 
 async def _vector_search(
