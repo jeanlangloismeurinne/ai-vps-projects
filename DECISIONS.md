@@ -23,3 +23,26 @@ les apps FastAPI du repo qui ont des formulaires (hub, assistant-ia, bank-review
 ⚠️ Ce défaut est **invisible au check statique** : il ne se voit qu'en postant réellement le
 formulaire. Un test qui n'observe que l'état du fichier après coup le lit comme un succès — le
 fichier est bien intact, mais parce que la requête a été rejetée en entier.
+
+---
+
+## #2 — Faire produire les balises structurantes par un LLM : la troncature devient une imbrication
+
+Un modèle à qui on demande d'émettre lui-même l'enveloppe (`<div>` ouvrant/fermant, en-tête) rend
+du HTML **déséquilibré dès que la sortie est coupée** par `max_tokens`. Le fragment suivant ne se
+juxtapose pas : il **s'imbrique** dans le précédent, et le rendu part en cascade.
+
+**Mesuré** (newsletter-summary, digest du 2026-09-04, 7 newsletters) : le modèle produisait ~1200
+mots pour une consigne de 600, la sortie était coupée à `max_tokens=2500` → **5 blocs sur 7
+tronqués** et un `<div>` non fermé → la carte Geopolitechs rendue *à l'intérieur* de la carte
+Euractiv. **Une seule cause racine expliquait trois symptômes** qu'on lisait comme trois bugs
+(texte coupé, mise en forme cassée, cartes collées).
+
+**Conséquence** — deux règles, la seconde étant la seule qui protège vraiment :
+1. Journaliser `finish_reason=length` en WARNING : sans ça la troncature est **silencieuse**.
+2. **Le LLM ne renvoie que le contenu ; l'enveloppe est émise par le code.** Un sanitizer déballe
+   un wrapper éventuel, coupe une balise finale tronquée et **équilibre les balises** → l'imbrication
+   devient impossible *par construction*, pas « improbable si le prompt est bien suivi ». Durcir le
+   prompt seul ne fait que déplacer le seuil.
+
+Vaut pour tout rendu structuré produit par un modèle (HTML, XML, JSON en concaténation).

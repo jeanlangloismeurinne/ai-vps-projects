@@ -139,6 +139,40 @@ chantier tient dans ce fichier`.
 **Résolution du chemin** (côté Hub comme côté agent) : `00-REPRISE.md` à la racine du projet
 d'abord, sinon chercher dans `roadmap/**`. Certains projets historiques ont le leur ailleurs.
 
+### Gabarit — à la génération, et à elle seule
+
+Le format est libre : ce gabarit est un **point de départ**, pas un moule. Deux éléments seulement
+sont *load-bearing*, et ils sont signalés comme tels — le reste, un projet le réorganise à sa guise.
+
+```markdown
+---
+project: {nom du dossier}
+updated: {AAAA-MM-JJ}
+role: >
+  Une phrase : quel chantier ce fichier permet de reprendre, et à quel état il en est.
+---
+
+# Prompt de reprise — {projet}
+
+> **Roadmap active : aucune.**          ← LOAD-BEARING (§2). Toujours présente, jamais inférée.
+
+## État
+{3 à 10 lignes : ce qui tourne en prod, ce qui vient d'être livré. Pas le récit — l'état.}
+
+## Reste à faire / dettes ouvertes      ← LOAD-BEARING (§5.3). Ne bouge pas à l'archivage.
+- {dette nommée + où regarder + pourquoi elle n'a pas été traitée}
+
+## Où démarrer
+{une phrase, impérative}
+```
+
+**Ce que le gabarit ne contient pas, volontairement** : pas de bloc « MàJ {date} », pas de section
+« Historique ». C'est le mode de panne mesuré (§5) — le fichier de reprise gonfle par empilement de
+MàJ, jamais par écriture d'état. Le récit va dans `00-REPRISE-ARCHIVE.md` **dès le lot suivant**.
+
+⚠️ Ne pas générer ce fichier sur un projet qui n'a rien en cours (§2, « à la première
+utilisation ») : un fichier de reprise vide se lit comme un projet à l'arrêt.
+
 ---
 
 ## 3. Le lot de conversation
@@ -168,24 +202,44 @@ corriger, pas l'honorer.
 
 Si le fichier de reprise ne pointe aucune roadmap, l'agent **propose** un diagnostic 360°. Il ne le
 lance **jamais** de lui-même : sinon « reprends le projet X » produit une analyse non demandée et
-l'utilisateur perd le point de choix.
+l'utilisateur perd le point de choix. Ce qui suit est la **consigne elle-même**, à appliquer telle
+quelle une fois l'utilisateur d'accord — pas une description de ce qu'elle devrait dire.
 
-**Entrée (bornée — s'y tenir) :**
-- les **principes fondateurs / la constitution** du projet — le cadre métier ;
+**Entrée (bornée — s'y tenir, et la lire *avant* de formuler quoi que ce soit) :**
+- les **principes fondateurs / la constitution** du projet — le cadre métier (à défaut : son
+  `README.md` et son `CLAUDE.md`) ;
 - les **roadmaps avec leur avancement** — décidé vs livré vs restant ;
-- les **tickets ouverts** — le seul canal où la friction utilisateur remonte non filtrée, et le
-  meilleur rapport signal/coût de la liste (~1 Ko).
+- les **tickets ouverts** (`feedback-tickets/`) — le seul canal où la friction utilisateur remonte
+  non filtrée, et le meilleur rapport signal/coût de la liste (~1 Ko) ;
+- la section **« Reste à faire / dettes ouvertes »** du fichier de reprise — pas le reste.
 
 **Exclu : l'historique des MàJ du fichier de reprise.** C'est de la mémoire d'implémentation
 (unités d'arrondi, clefs de supersedage, regex) : indispensable pour reprendre le code, sans valeur
 pour décider quoi construire.
 
-**Sortie : N axes candidats, ~5 lignes chacun, puis STOP.** La conversation de raffinement qui
-produit la roadmap est une seconde étape, déclenchée par le choix de l'utilisateur.
+⚠️ **Annoncer l'entrée réellement lue avant les axes**, en une ligne par source, avec ce qui
+manquait. Un projet sans roadmap et sans ticket ne donne à lire que sa constitution : le diagnostic
+est alors *structurellement* pauvre en signal utilisateur, et il doit le dire au lieu de compenser
+en inventant. Une entrée maigre annoncée vaut mieux qu'un 360° d'apparence complète.
 
-⚠️ **Biais à contrer explicitement** : nourri de la seule constitution, un agent proposera toujours
-des axes *à l'intérieur* du cadre. La consigne doit lui donner le droit de dire que **le cadre
-lui-même** est l'axe à revoir, plutôt que de produire une proposition conforme.
+**Sortie : N axes candidats, ~5 lignes chacun, puis STOP.** La conversation de raffinement qui
+produit la roadmap est une seconde étape, déclenchée par le choix de l'utilisateur. Chaque axe
+porte : ce qu'on gagne, ce que ça coûte, et **sur quelle pièce de l'entrée il s'appuie** — un axe
+qui ne cite rien est une intuition de modèle, à marquer comme telle.
+
+### Le biais, et la fente obligatoire qui le contre
+
+Nourri de la seule constitution, un agent propose toujours des axes *à l'intérieur* du cadre :
+c'est le texte qu'on lui a donné qui devient l'espace des solutions. L'autorisation ne suffit
+pas — « tu as le droit de remettre le cadre en cause » produit des axes conformes quand même.
+
+**Mécanisme : un des N axes est réservé au cadre lui-même.** L'axe 0 ne parle pas de ce qu'on
+pourrait construire dans le projet, mais de ce que le projet tient pour acquis : le périmètre, la
+métaphore fondatrice, le choix de brique, l'utilité même du chantier. Il est **obligatoire**.
+
+La seule sortie autorisée est de le remplacer par : *« le cadre tient, et voici ce qui l'a
+éprouvé : {fait observé} »* — un fait, pas une appréciation. Si rien ne vient, c'est que le cadre
+n'a jamais été mis à l'épreuve, et **ça, c'est l'axe 0**.
 
 ---
 
@@ -321,7 +375,8 @@ réponse HTTP qui fait foi.
   Nulle part ailleurs.
 - **Lot de conversation** auto-planifié, découpé par **contexte partagé**, annoncé en une ligne.
 - **Déclencheur unique** : « reprends le projet {X} à partir du fichier de reprise ».
-- **Pas de roadmap inscrite** → proposer le 360°, sortir N axes, puis **stop**.
+- **Pas de roadmap inscrite** → proposer le 360°, annoncer l'entrée réellement lue, sortir N axes
+  dont **l'axe 0 sur le cadre lui-même**, puis **stop**.
 - **Archiver quand une capacité est cochée** — jamais sur une impression ; sortir le durable
   d'abord, remonter les dettes ouvertes avant d'évincer.
 - **Committer la doc** en fin de conversation même sans déploiement.

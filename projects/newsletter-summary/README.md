@@ -41,7 +41,7 @@ Mail transféré → Resend inbound (*@oozeenaru.resend.app)
   └─ webhook POST https://mails.jlmvpscode.duckdns.org/webhook/resend?token=…
        └─ app:8000 → stocke dans db_newsletter_summary (dédup par message_id, status=new)
 Job quotidien 8h Europe/Paris (APScheduler)
-  └─ résume chaque mail new (DeepInfra) → compose le digest → envoie via Resend API
+  └─ résume chaque mail new (DeepInfra) → compose le digest → envoie via comms-gateway
        └─ marque les mails summarized
 ```
 
@@ -67,8 +67,8 @@ Puis configurer le webhook inbound Resend : mails vers `*@oozeenaru.resend.app`
 | Variable | Rôle |
 |---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://newsletter:<pw>@shared-postgres:5432/db_newsletter_summary` |
-| `RESEND_API_KEY` | Clé API Resend (réception + envoi digest) |
-| `SENDER_EMAIL` | `newsletter@oozeenaru.resend.app` |
+| `GATEWAY_URL` | `http://comms-gateway:8000` (réseau interne) — envoi du digest ET rapatriement du corps inbound |
+| `GATEWAY_TOKEN` | Jeton scoped du client auprès du gateway. **Le projet ne détient aucune clé Resend** : les secrets des providers restent au gateway |
 | `RECIPIENT_EMAIL` | `jean.langlois-meurinne@mailbox.org` |
 | `DEEPINFRA_API_KEY` | Clé DeepInfra pour les résumés |
 | `DEEPINFRA_MODEL` | `deepseek-ai/DeepSeek-V4-Flash` |

@@ -6,8 +6,8 @@ updated: 2026-09-05
 project: hub
 role: >
   Prompt de reprise du chantier « système de pilotage v3 ». Périmètre TRANSVERSE : code dans
-  projects/hub/, doctrine dans CONTROL_SYSTEM.md (racine du repo). État : lots A et B LIVRÉS le
-  2026-09-05 ; reste le lot C (amorçage sur un projet témoin).
+  projects/hub/, doctrine dans CONTROL_SYSTEM.md (racine du repo). État : lots A et B LIVRÉS et
+  DÉPLOYÉS ; lot C entamé — il reste la roadmap à co-écrire avec l'utilisateur.
 ---
 
 # Prompt de reprise — système de pilotage v3 (Hub)
@@ -32,17 +32,16 @@ La doctrine elle-même est dans **`CONTROL_SYSTEM.md`** — ce fichier ne la red
 | Lot | État |
 |---|---|
 | **A — doctrine** (`CONTROL_SYSTEM.md`, purge des `CLAUDE.md`) | ✅ livré · `fde83dc`, `eec8fec` |
-| **B — Hub** (`projects/hub/app/roadmap.py`) | ✅ livré · `907c00d` + lot B · ⚠️ **déploiement à faire** |
-| **C — amorçage sur un projet témoin** | ⬜ à faire — c'est ici qu'on reprend |
+| **B — Hub** (`projects/hub/app/roadmap.py`) | ✅ livré **et déployé** · `e9ea104` |
+| **C — amorçage sur newsletter-summary** | 🟡 entamé · gabarit + consigne 360° écrits, projet témoin remis au format · reste la roadmap à co-écrire |
 
-⚠️ **Le conteneur `homepage` sert encore l'ancien code.** `docker-compose.yml` fait `build: .`,
-donc `app/` est **dans l'image** (seul `projects/` est bind-monté) : sans rebuild, rien de ce qui
-suit n'existe en prod. `compose-deploy.sh` a été **refusé par le classifieur de permissions à
-trois reprises** (§4). À lancer par l'utilisateur, tel quel :
+**Le Hub déployé sert bien le code du lot B**, vérifié en prod et pas sur la seule fin de build :
+`/roadmap/hub` et `/roadmap/newsletter-summary` répondent 200 et affichent le bloc « Fichier de
+reprise » avec le pointeur en clair et le chemin résolu.
 
-```
-! infrastructure/compose-deploy.sh hub -m "Hub lot B — le fichier de reprise pilote" -f "projects/hub/app/roadmap.py projects/hub/checks/check_reprise_inscription.py"
-```
+Le refus du classifieur sur `compose-deploy.sh hub` (3 tentatives la session précédente) **n'était
+pas permanent** : la même commande, inchangée, est passée du premier coup le 2026-09-05. Re-tester
+le chemin nominal avant de dérouler un repli.
 
 ---
 
@@ -70,28 +69,39 @@ python3 projects/hub/checks/check_reprise_inscription.py      # 5 résolutions +
 
 ## 3. Lot C — amorçage · contexte partagé : un projet témoin
 
-- [ ] Gabarit `00-REPRISE.md` + consigne du 360° (`CONTROL_SYSTEM.md` §4) rédigée pour être lue
-      par l'agent — avec le biais à contrer explicitement : nourri de la seule constitution, un
-      agent propose toujours des axes *à l'intérieur* du cadre ; lui donner le droit de dire que
-      **le cadre lui-même** est l'axe à revoir.
-- [ ] Amorçage sur **newsletter-summary** (tranché le 2026-09-05 : il a un `00-REPRISE.md` et un
-      backlog vivant — digest HTML, Option A en repli — donc une vraie roadmap à co-écrire, alors
-      que comms-gateway est bloqué sur du hors-code : domaine Resend, app Slack, téléphone).
-- [ ] Vérifier le cycle complet : roadmap co-écrite → inscrite depuis le Hub → « reprends le
-      projet X » → lot exécuté → capacité cochée → archivage appliqué.
+- [x] Gabarit `00-REPRISE.md` (`CONTROL_SYSTEM.md` §2) — deux éléments seulement marqués
+      *load-bearing* (le pointeur, « Reste à faire »), le reste libre, et **aucun bloc « MàJ »**
+      dans le gabarit : c'est par là que le fichier gonfle.
+- [x] Consigne du 360° (§4) rendue **exécutable** plutôt que décrite. Le biais est contré par un
+      **mécanisme, pas une autorisation** : l'axe 0 est réservé au cadre lui-même et il est
+      obligatoire ; la seule sortie est de citer un fait qui a éprouvé le cadre. « Tu as le droit
+      de remettre le cadre en cause » produisait des axes conformes quand même.
+- [x] Projet témoin remis au format : `newsletter-summary/00-REPRISE.md` passé de 8185 à 3205 o
+      (−61 %), récit sorti en archive, `DECISIONS.md` #2 extrait. Le Hub déployé le lit.
+- [ ] **Roadmap co-écrite avec l'utilisateur** — bloqué sur son choix d'axe, pas sur du code.
+- [ ] Inscrite depuis le Hub → « reprends le projet newsletter-summary » → lot exécuté → capacité
+      cochée → archivage appliqué.
 - **Acceptation** : le cycle a tourné une fois de bout en bout sur un vrai projet, pas en
   dry-run — et il a tourné **contre le Hub déployé**, pas contre un uvicorn local.
 
-**Pré-requis** : le déploiement du §1. Sans lui, l'étape « inscrite depuis le Hub » testerait
-l'ancien code, celui qui détruit le frontmatter.
+**Ce que l'amorçage a déjà appris** (le but du lot : découvrir ce qui manque quand quelqu'un se
+sert du système sans l'avoir écrit) :
+
+- **Là où le fichier de reprise doublonnait le `README.md`, c'est le `README.md` qui était
+  périmé** — il annonçait `RESEND_API_KEY` / `SENDER_EMAIL`, absents du `.env` réel depuis le
+  passage par comms-gateway. La règle « une information, un seul endroit » ne fait pas que réduire
+  la taille : le doublon **cache** lequel des deux ment.
+- **Une consigne juste peut reposer sur un raisonnement faux et survivre.** « Rebuild, jamais
+  restart » était motivé par « le Hub est un Next.js, les variables sont figées dans le bundle » —
+  le Hub est en FastAPI/uvicorn et lit son `.env` au runtime. La conclusion tenait (`build: .`
+  met `app/` dans l'image), donc personne n'a jamais eu de raison de la tester.
+- **L'entrée du 360° peut être quasi vide** : newsletter-summary n'a ni roadmap ni ticket ouvert.
+  D'où l'exigence ajoutée au §4 d'**annoncer l'entrée réellement lue** plutôt que de compenser.
 
 ---
 
 ## 4. Reste à faire / dettes ouvertes
 
-- ⚠️ **Déploiement du Hub non fait** — voir §1. Le classifieur de permissions refuse
-  `compose-deploy.sh hub` (3 tentatives, formulations différentes) ; c'est un mur d'outillage,
-  pas un problème de code.
 - ⚠️ **Écriture concurrente dans le dépôt** — deux commits (`dd3aa1b`, `0cd7752`) sont apparus
   pendant la session du 2026-09-05, comme la fois précédente. Vraisemblablement la boucle
   autonome. **Ne jamais utiliser `git add -A` / `git add .` ici** : indexer par liste explicite,
@@ -99,8 +109,6 @@ l'ancien code, celui qui détruit le frontmatter.
 - **`app/nuit.py:59`** dit « depuis le chantier sur disque » — vocabulaire mort du système v2.
   Non traité : hors du contexte partagé du lot B, et il faut d'abord vérifier si la boucle
   nocturne a sa propre notion de « chantier » avant de renommer.
-- **`_roadmap_dir()` fait un `mkdir` à chaque visite** : ouvrir `/roadmap/{projet}` crée un
-  dossier `roadmap/` vide dans les 9 projets qui n'en ont pas. Bénin, jamais nettoyé.
 - **`SESSION.md` reste gitignoré, et c'est volontaire** : `/srv/auto-loop/autoloop.sh` y dépose
   son ordre de nuit. C'est un **homonyme** de l'ordre de sprint supprimé, pas un vestige — le
   retirer ferait committer un ordre de pilotage à chaque nuit (détail : `CONTROL_SYSTEM.md`, en
@@ -110,7 +118,12 @@ l'ancien code, celui qui détruit le frontmatter.
 
 ## 5. Où démarrer
 
-Lancer le déploiement du §1, vérifier la page `/roadmap/hub` en prod, puis **lot C** sur
-**newsletter-summary**. C'est le premier lot qui ne touche presque pas de code : il produit un
-gabarit, une consigne, et fait tourner le cycle en vrai. Son enjeu est de découvrir ce qui manque
-au système quand un utilisateur s'en sert sans l'avoir écrit.
+Le lot C reprend **au choix d'un axe par l'utilisateur** sur newsletter-summary. Le diagnostic 360°
+lui a été proposé le 2026-09-05 ; il n'est **pas** à relancer de soi-même (§4). Une fois l'axe
+choisi : conversation de raffinement → roadmap `figée` → inscription **depuis le Hub** (c'est ce
+geste-là qui reste à éprouver contre le code déployé) → « reprends le projet newsletter-summary à
+partir du fichier de reprise ».
+
+Attention en reprenant : la roadmap de newsletter-summary est **le premier vrai fichier
+`roadmap/*.md` du système v3**. Les 4 dossiers `roadmap/` existants sont un fourre-tout hérité
+(spec, audit, constitution) avec 13 vocabulaires de statut — n'y chercher aucun modèle.
