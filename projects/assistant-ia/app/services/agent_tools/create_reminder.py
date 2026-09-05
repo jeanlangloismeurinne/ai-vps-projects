@@ -93,8 +93,10 @@ SCHEMA = {
             "description": "Ce que l'utilisateur doit avoir sous les yeux au moment du rappel : "
                            "les articles à acheter, les références, le lien concerné. Markdown "
                            "libre, un élément par ligne. Reprends ses mots. "
-                           "N'y mets que ce qu'il demande de lui rappeler — ce qu'il dit déjà "
-                           "avoir, faire ou prendre lui-même n'entre pas dans le rappel.",
+                           "N'y mets que ce qu'il demande de lui rappeler. Ce dont il dit "
+                           "s'occuper lui-même, ou qu'il a déjà, ne figure **nulle part** dans "
+                           "le rappel — ni en liste, ni en aparté, ni entre parenthèses. "
+                           "Un rappel ne redit pas à l'utilisateur ce qu'il vient de te dire.",
         },
         "date_mode": {
             "type": "string",

@@ -706,9 +706,12 @@ async def test_fidelite_rappel() -> None:
     check("la description du titre annonce la borne",
           str(create_reminder.TITLE_MAX) in props["title"]["description"],
           props["title"]["description"])
+    # L'exclusion **et** sa forme : « nulle part » seul laissait le modèle ranger la phrase exclue
+    # dans un aparté entre parenthèses — mesuré au rejeu, corps de carte à l'appui. Interdire
+    # explicitement l'aparté est ce qui a fait passer C7 au vert.
+    desc_details = props["details"]["description"]
     check("la description de `details` exclut ce que l'utilisateur fait déjà lui-même",
-          "n'entre pas dans le rappel" in props["details"]["description"],
-          props["details"]["description"])
+          "nulle part" in desc_details and "parenthèses" in desc_details, desc_details)
     check("le schéma dit au modèle de ne pas inventer d'année",
           "n'invente jamais une année" in props["date"]["description"].lower(),
           props["date"]["description"])
