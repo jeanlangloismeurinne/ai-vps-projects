@@ -9,10 +9,10 @@ role: >
   DÉPLOYÉE · boucle V2 complète (décider → surveiller → sortir → apprendre, lots 7-9) · écrans
   UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est la **révision du
   modèle de fiabilité** (autorité contre actualité) ; RVMD reste le banc d'essai des modes de panne
-  du socle (14 défauts F1→F14). État au 2026-09-05 (3) : **1 561 assertions / 0 échec / 20 scripts**,
+  du socle (14 défauts F1→F14). État au 2026-09-05 (4) : **1 638 assertions / 0 échec / 21 scripts**,
   migrations appliquées jusqu'à **034**, prochaine 035. Roadmap active :
-  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0 et 1 CLOSES**, prochain jalon
-  **capacité 2** (le registre nominatif des sources).
+  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1 et 2 CLOSES**, prochain jalon
+  **capacité 3** (l'axe `actualité`, calculé à la lecture).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -27,13 +27,13 @@ role: >
 
 **`roadmap/02-spec-autorite-vs-actualite.md`** (statut `figée`, ouverte le 2026-09-05) — révision du
 modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé.
-**Capacité 0 CLOSE** (table de profils co-écrite, convention #50, 174 assertions) et
-**capacité 1 CLOSE** (axe `nature` dérivé, migration 034, convention #51, 50 assertions), toutes
-deux le 2026-09-05.
-**Prochain jalon : capacité 2** — le **registre nominatif des sources**, co-écrit avec
-l'utilisateur (il n'est pas générable : il nomme des émetteurs et des éditeurs). C'est lui qui
-admettra les trois champs desserrés B+ → B de la capacité 0, aujourd'hui desserrés **sans
-bénéficiaire**. Migration à écrire *juste avant* son lot, jamais en avance — la prochaine est **035**.
+**Capacités 0, 1 et 2 CLOSES**, toutes le 2026-09-05 : table de profils co-écrite (#50, 174
+assertions) · axe `nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des
+sources (#52, 75 assertions).
+**Prochain jalon : capacité 3** — l'axe **actualité**, calculé à la lecture et **jamais persisté**
+(le persister reproduirait par construction le défaut n°2 : un corpus qui ne vieillit pas). Son
+`contexte partagé` est déjà livré : `knowledge/material_events.py` + `knowledge/staleness.py`.
+Migration à écrire *juste avant* son lot, jamais en avance — la prochaine est **035**.
 
 ⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) doit précéder le
 durcissement de la porte (4), sinon tout champ devient `couvert_perime` sans remède disponible.
@@ -59,7 +59,7 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | Readiness | `ready`, 0 gap | `ready`, 0 dérogation | dimension `valorisation` fondée sur ses 3 champs |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 561 assertions / 0 échec / 20 scripts** — une seule commande,
+- **Suite hors-ligne : 1 638 assertions / 0 échec / 21 scripts** — une seule commande,
   **`bash checks/run_all.sh`** (versionné depuis le 2026-09-05 (3)). Il porte les invocations
   correctes : montage `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) et
   réseau `coolify` + `CHECK_DB_URL` pour `check_entry_nature`. ⚠️ **Ne pas le réécrire dans
@@ -86,26 +86,39 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Premier vrai modèle (F12, F13) | pas de date dans le message (le modèle datait le présent à sa coupure) ; drapeau calculé mais jamais persisté | ~0,0105 $/mandat | — |
 | Péremption (F14) | `source_date` datée du flux sur un ratio de bilan | 0 token | **#48** |
 
-### Livré cette session (2026-09-05, 3) — capacité 1 close : l'axe `nature`, migration 034
+### Livré cette session (2026-09-05, 4) — capacité 2 close : le registre nominatif des sources
 
-**Aucune dépense de modèle.** Récit complet dans `00-REPRISE-ARCHIVE.md`. Ce qui doit rester ici :
+**Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`. Ce qui
+doit rester ici :
 
-- **`derive_nature()` est le détenteur unique** (dans `agents/v2/common.py`), câblé au **seul**
-  chemin d'écriture `knowledge/service.py:store_knowledge` — les 8 producteurs y passent tous.
-  Migration **034** appliquée (colonne + backfill 180 lignes + CHECK nommé + `NOT NULL` + index
-  partiel). `checks/check_entry_nature.py` : **50 assertions**, §7 lisant l'**état persisté** (#43),
-  test négatif **5/5**. Convention **#51**.
-- 📌 **Deux vocabulaires, et le second ne dérive pas le premier** — la découverte structurante du
-  lot, et elle est **load-bearing pour la capacité 4** : la porte lira la nature de l'**entry**, pas
-  la nature dominante du **champ**. Un champ d'interprétation peut être rempli par une mesure
-  (`base_rate_anchor` ← une *fréquence empirique*, relevée), et une entry `analysis` couvrant un
-  champ de `mesure` reste une interprétation.
-- 📌 **`evenement` est une classe déclarée VIDE** : 66 `mesure` / 68 `interpretation` / **0
-  `evenement`** sur les actives. Aucun producteur n'en écrit ; la classe attend la capacité 3.
-- ⚠️ **Le contrat C1 n'a délibérément PAS de champ `nature`.** L'absence de déclarant rend la
-  dérivation 100 % déterministe — **plus stricte, pas plus lâche**, donc ce n'est pas le défaut de
-  #50. Le kwarg `nature_declaree` existe côté service, n'admet qu'un **resserrement** vers
-  `evenement`, et attend la capacité 3. Ne pas l'ajouter au contrat « pour compléter ».
+- **`knowledge/source_registry.py` est le détenteur unique** de la règle d'admission. Quatre sources
+  admises pour RVMD, co-choisies avec l'utilisateur : `endpts.com`, `statnews.com`,
+  `fiercebiotech.com`, `biopharmadive.com` — portée `secteur:biotech_clinique`, natures
+  `{interpretation}`, tier **B**, motif écrit. `checks/check_source_registry.py` : **75
+  assertions**, test négatif **5/5**. Convention **#52**.
+- 📌 **L'ordre `nature` PUIS `registre` est load-bearing.** `qualify()` dérive la nature depuis le
+  source_type **générique**, et n'applique le registre que si celui-ci vaut encore
+  `web_search_generic`. Replier la promotion dans `classify_source_type` (premier câblage, corrigé
+  avant exécution) faisait sortir `endpts.com` en `web_search_reputable` **avant** toute question de
+  nature : une source admise pour l'interprétation gagnait du standing sur une **mesure**.
+- 📌 **Deux sites de câblage, et le second est celui qui compte** : `store_knowledge` qualifie avant
+  de scorer, mais c'est l'appel dans `worker.py` **avant le filtre `reliability_min`** qui fait que
+  le registre admet réellement quelqu'un — le worker rejette sous plancher avant d'atteindre
+  `store_knowledge`.
+- ⚠️ **Le secteur est déclaré en CODE, et c'est une mesure qui l'a décidé** : `tickers.sector` est
+  **NULL sur les 17 tickers**. Un registre clefé dessus n'aurait admis personne, silencieusement.
+- ⚠️ **Le desserrage B+ → B n'a TOUJOURS pas de bénéficiaire effectif au gate**, et c'est nommé dans
+  `_DESSERRAGE_NON_CABLE` (§1bis du check). La doctrine vit dans `FIELD_PROFILES`, la porte lit
+  `FIELD_PLANCHER_OVERRIDES` (qui ne porte que `marche.croissance_marche_historique`) ; les
+  planchers de dimension `positionnement` et `marche` valent B+. Une entry `endpts.com` à 0,65 est
+  admise par le registre et **encore refusée** par la porte. Le câblage appartient à la **capacité
+  4** : le faire maintenant perturberait la ligne de base que son test central doit mesurer AVANT
+  le lot. L'assert vire au vert de lui-même ce jour-là.
+- 📌 **Rappel load-bearing de la capacité 1** : la nature d'une **entry** et la nature dominante d'un
+  **champ** sont deux vocabulaires (#51) — la porte lira la première. `evenement` reste une classe
+  **vide déclarée** (66 `mesure` / 68 `interpretation` / 0), sans émetteur ; elle se remplit à la
+  capacité 3. Le contrat C1 n'a délibérément **pas** de champ `nature` : ne pas l'ajouter « pour
+  compléter ».
 
 ⚠️ **Toujours vrai** : le balayage de péremption *signale*, il ne *décide* pas. Les 24 entries
 suspectes de RVMD restent actives et la porte (#29) les compte comme couvrantes. **Un corpus complet
@@ -127,12 +140,26 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
    faut-il qu'un `readiness` compte comme *non couvert* un champ dont toutes les entries sont
    antérieures au dernier événement matériel ? Le risque symétrique est de bloquer un socle sain à
    chaque 8-K de routine (un item 9.01 « pièces jointes » n'a rien périmé).
-3. **Les 7 mandats qualitatifs RVMD restants** (~0,08 $) — désormais sans risque connu : le worker
+3. **FDA/EMA en régulateur A- (0,85)** — *décidé avec l'utilisateur, non commencé*. Mesuré :
+   `fda.gov` n'est dans **aucune** table, et `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu`
+   (titres) mais pas `ema.europa.eu` (médicaments). L'approbation FDA du 2026-08-26 — l'événement
+   même qui a ouvert la roadmap 02 — classe aujourd'hui `web_search_generic` **0,50**. Un
+   `regulator_filing_us` touche `SOURCE_RELIABILITY_BASELINE`, le `Literal SourceType`, le frontend
+   **et les 12 prompts v2 en base** (tous énumèrent les source_types) → **migration 035** + règle
+   #19. Lot séparé à dessein : il n'a rien à voir avec le registre, il élargit le vocabulaire.
+4. **File de propositions de sources** — *demandée par l'utilisateur, non conçue*. Le système
+   observe les domaines `web_search_generic` réellement rencontrés, **recommande** un classement
+   (portée secteur/ticker, natures, tier), l'utilisateur **valide**. ⚠️ L'admission reste un **acte
+   humain** : rien ne se promeut tout seul, pas même par corroboration (#50 — N sources recopiant
+   un communiqué ne sont pas N sources indépendantes).
+5. **Les 7 mandats qualitatifs RVMD restants** (~0,08 $) — désormais sans risque connu : le worker
    porte la date du jour, l'ancre documentaire **et** l'ancre matérielle.
-4. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
+6. **`ingestion-agent`** (contrat C2, document → entries) : jamais construit, **non bloquant** tant
    que search-worker + `synthesis_feed` couvrent les champs requis.
-5. **4ᵉ ticker** — aucun blocage technique. ⚠️ Ajouter son entrée dans `websearch._ISSUER_DOMAINS`
-   **en même temps que le ticker** (#33) : sans elle, son IR retombe sous le plancher.
+7. **4ᵉ ticker** — aucun blocage technique. ⚠️ Ajouter son entrée dans `websearch._ISSUER_DOMAINS`
+   **en même temps que le ticker** (#33) : sans elle, son IR retombe sous le plancher. ⚠️ Et son
+   **secteur** dans `source_registry._TICKER_SECTEURS` s'il doit hériter d'un registre sectoriel —
+   `tickers.sector` est NULL en base et n'est lu par rien (#52).
 
 ### Dettes techniques connues, assumées
 
@@ -203,21 +230,23 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 
 ## À lire avant de reprendre
 
-- **`CLAUDE.md` du projet** — conventions **#22 à #51**. Les plus structurantes du chantier
+- **`CLAUDE.md` du projet** — conventions **#22 à #52**. Les plus structurantes du chantier
   courant : #29 (la couverture se lit dans un index), #42/#43 (datation et identité d'un fait),
   #44 (calculé / non calculable / absent), #46 (détenteur unique d'une règle), #47 (un zéro est une
   valeur), **#48** (la colonne `source_date` est un porteur de la date), **#49** (la péremption est
   une seconde horloge, et elle produit un rapport), **#50** (trois axes jamais recombinés ; le
   standing est une propriété du COUPLE source × nature), **#51** (nature d'une ENTRY ≠ nature
   dominante d'un CHAMP : deux vocabulaires, le second ne dérive jamais le premier ; `mesure`
-  n'est jamais accordée par défaut).
+  n'est jamais accordée par défaut), **#52** (une source est admise pour un COUPLE source × nature,
+  et l'ordre `nature` puis `registre` est ce qui rend cette phrase vraie ; plafond ≠ qualification).
 - **Specs** : `roadmap/00-principe-directeur-v2.md` · `roadmap/01-spec-v2-unifiee.md`
   (§5 agents, §7 curator/readiness, §8 contrats, §14 migrations, §16 UX, §18 découpage).
 - **Cartes de contrat** : `roadmap/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
 - **Code** : `backend/app/agents/v2/` (`worker.py` · `curator.py` · `analysis.py` · `runner.py`) ·
-  `backend/app/knowledge/` (`service.py` · `websearch.py` · `edgar_feed.py` · `synthesis_feed.py` ·
-  `financials_feed.py` · `valuation_feed.py` · `units.py` · **`material_events.py`** ·
-  **`staleness.py`**) · `backend/app/contracts/` · `backend/checks/README.md`.
+  `backend/app/knowledge/` (`service.py` · `websearch.py` · **`source_registry.py`** ·
+  `edgar_feed.py` · `synthesis_feed.py` · `financials_feed.py` · `valuation_feed.py` · `units.py` ·
+  **`material_events.py`** · **`staleness.py`**) · `backend/app/contracts/` ·
+  `backend/checks/README.md`.
 - **Historique complet** : `00-REPRISE-ARCHIVE.md`. **Outillage transverse** :
   `../../../CHANTIER_OUTILLAGE_DEV.md` (§16 délégation, §24 tests négatifs, §25 porteurs d'un fait,
   §26 la ligne de base est une mesure, **§27 un bilan se reconnaît à sa forme**).
@@ -240,13 +269,18 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > même `ready` : un scalaire unique porte deux propriétés orthogonales et les confond. La révision
 > les sépare en **trois axes jamais recombinés** (fiabilité *stockée* · actualité *calculée à la
 > lecture* · nature *stockée*), et le standing devient une propriété du **couple (source × nature)**.
-> **Capacités 0 et 1 CLOSES** : la table de profils des 19 champs (#50, 174 assertions) puis l'axe
-> `nature` en dérivé déterministe (#51, migration 034, 50 assertions, test négatif 5/5). #51 dit
-> que la nature d'une **entry** et la nature dominante d'un **champ** sont deux vocabulaires — c'est
-> ce que la capacité 4 consommera. **Prochain jalon = capacité 2** : le **registre nominatif des
-> sources**, à **co-écrire** (il nomme des émetteurs et des éditeurs, il n'est pas générable) ; il
-> admettra les trois champs desserrés B+ → B, aujourd'hui desserrés sans bénéficiaire.
+> **Capacités 0, 1 et 2 CLOSES** : la table de profils des 19 champs (#50, 174 assertions) · l'axe
+> `nature` en dérivé déterministe (#51, migration 034, 52 assertions) · le **registre nominatif des
+> sources** (#52, 75 assertions, 4 sources biotech co-choisies pour RVMD). Deux résultats sont
+> load-bearing pour la suite : la nature d'une **entry** ≠ la nature dominante d'un **champ** (c'est
+> ce que la porte confrontera), et le standing s'accorde au **couple** (source × nature) — d'où
+> l'ordre `nature` PUIS `registre` dans `qualify()`.
+> **Prochain jalon = capacité 3** : l'axe **actualité**, calculé à la lecture et **jamais persisté**
+> (le persister reproduirait le défaut d'origine — un corpus qui ne vieillit pas). Son contexte
+> partagé est déjà livré : `material_events.py` + `staleness.py`.
 > ⚠️ Ne pas réordonner les capacités : le registre des sources (2) DOIT précéder le durcissement
-> de la porte (4).
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#51**),
+> de la porte (4). ⚠️ Le desserrage B+ → B n'a toujours pas de bénéficiaire **au gate** : c'est la
+> capacité 4 qui câble `FIELD_PROFILES` dans `curator.recompute_coverage`, pas avant (sa ligne de
+> base doit être mesurée d'abord).
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#52**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

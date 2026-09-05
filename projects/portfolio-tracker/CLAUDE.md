@@ -559,6 +559,37 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     §3 (unanimité de `covers`), §4 (la source l'emporte), §5 (resserrer/desserrer), §6 (détenteur
     unique), §7 (l'ÉTAT persisté, pas seulement la règle — #43) — éprouvé par test négatif (5 cas).
 
+52. **Une source est admise pour un COUPLE (source × nature), et l'ordre `nature` PUIS `registre`
+    est ce qui rend cette phrase vraie (V2, `knowledge/source_registry.py`)** : application de #50
+    à un registre nominatif. Le premier câblage repliait la promotion dans `classify_source_type` —
+    `endpts.com` sortait alors `web_search_reputable` **avant** que la nature soit dérivée, donc la
+    condition « admise pour l'interprétation » ne s'appliquait plus jamais et la source gagnait du
+    standing sur une **mesure**. Règle : `qualify()` dérive la nature depuis le `source_type`
+    **générique**, et n'applique le registre **que si** ce source_type vaut encore
+    `web_search_generic` (#33 : une règle spécifique ne resserre ni ne démote la générique — un
+    `sec.gov` traverse `qualify` intact). Le refus est **dit** (« aucun standing sur `<nature>` »
+    ajouté au motif), jamais muet. ⚠️ **Plafond ≠ qualification** : le plafond montré au modèle dans
+    les résultats de recherche est une **seconde** fonction (`websearch.source_type_max`), pas une
+    modification de `classify_source_type`, qui reste générique. ⚠️ **Deux sites de câblage, et le
+    second est celui qui compte** : `store_knowledge` qualifie **avant** de scorer (scorer d'abord
+    écrirait une ligne se contredisant elle-même, mode de panne de #48), mais c'est l'appel dans
+    `worker.py` **avant le filtre `reliability_min`** qui fait que le registre admet réellement
+    quelqu'un — le worker rejette sous plancher avant que `store_knowledge` soit atteint. ⚠️ **Le
+    secteur est déclaré en code, pas lu en base, et c'est une MESURE qui l'a décidé** :
+    `tickers.sector` est NULL sur les 17 tickers ; un registre clefé dessus n'aurait admis
+    personne, silencieusement (#32 transposé à une clef de jointure). ⚠️ **L'admission reste un
+    acte humain** — pas de promotion automatique, pas même par corroboration (#50). ⚠️ **Écart
+    connu, nommé dans `_DESSERRAGE_NON_CABLE`** : le desserrage B+ → B de #50 vit dans
+    `FIELD_PROFILES` (doctrine) tandis que la porte lit `FIELD_PLANCHER_OVERRIDES` — une entry B
+    admise par le registre est **encore refusée** au gate tant que la capacité 4 ne l'a pas câblé ;
+    l'assert « la liste des écarts ne survit pas à leur câblage » vire au vert de lui-même ce
+    jour-là. Détail + garde : `check_source_registry.py` §1 (atteignabilité #32), §1bis (portée
+    réelle du desserrage), §2 (**l'assert central du couple**), §3 (hors registre → 0,50), §4
+    (jamais de démotion), §5 (portée), §6 (détenteur unique #46), §7 (plafond ≠ qualification), §8
+    (métadonnées d'admission), §9 (gabarit, pas d'acteur nommé — #31) — éprouvé par test négatif
+    (5 cas). ⚠️ **Pas de section « état persisté »**, et c'est écrit dans la docstring du check : la
+    capacité n'écrit rien en base, une section SQL serait verte sur zéro ligne (#47/#49).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

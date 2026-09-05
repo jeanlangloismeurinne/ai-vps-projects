@@ -24,6 +24,92 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 <!-- Versés depuis 00-REPRISE.md le 2026-09-05 : 14 blocs de MàJ du 2026-08-31 au
      2026-09-04 (5). Copie conforme, rien de résumé. -->
 <!-- Versés le 2026-09-05 (3) : les blocs des capacités 0 et 1 de la roadmap 02. -->
+<!-- Versé le 2026-09-05 (4) : le bloc de la capacité 2 (registre nominatif des sources). -->
+
+> ## ⚡ MàJ 2026-09-05 (4) — capacité 2 : le registre nominatif des sources
+>
+> **Aucune dépense de modèle. Aucune migration.** Livré : `knowledge/source_registry.py` (détenteur
+> unique de la règle d'admission), son câblage en **deux** sites (`store_knowledge` et
+> `worker.py`), `websearch.source_type_max()`, `checks/check_source_registry.py` (**75
+> assertions**), la convention **#52**. Suite : **1 638 / 0 / 21**.
+>
+> ### Ce que l'utilisateur a tranché (le registre n'est pas générable)
+>
+> Trois décisions prises dans le terminal, parce que le registre **nomme des éditeurs** :
+> - **Clef hybride secteur ET ticker**, sur le même pied — plus une **file de propositions** où le
+>   système recommande un classement que l'utilisateur valide (demande neuve, non conçue, versée
+>   dans « Reste à faire »).
+> - **Plafond du registre = B**, et **FDA/EMA en régulateur A- (0,85)** dans un lot séparé : une
+>   presse spécialisée interprète, elle ne mesure pas ; un régulateur, si.
+> - **Quatre sources biotech clinique** pour RVMD : `endpts.com`, `statnews.com`,
+>   `fiercebiotech.com`, `biopharmadive.com`.
+>
+> ### Ce que la frontière gratuite a mesuré AVANT de demander quoi que ce soit
+>
+> - **`tickers.sector` est NULL sur les 17 tickers.** Un registre clefé sur cette colonne n'aurait
+>   admis **personne**, silencieusement — #32 transposé à une clef de jointure. D'où
+>   `_TICKER_SECTEURS` déclaré en code.
+> - **Le corpus actif de RVMD n'a aucune source non-EDGAR/non-IR** : 21 `edgar_official` + 3
+>   `company_ir_official` + 1 `financial_press` (sorfis.com, le Base Rate Book, câblé en dur dans
+>   `base_rate_corpus.py` — vérifié : pas une violation de #24) + 2 `yfinance`. Les trois champs
+>   desserrés B+ → B de la capacité 0 n'avaient donc **littéralement aucun bénéficiaire possible**.
+> - **`fda.gov` n'est dans aucune table**, et `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu`
+>   (titres) mais pas `ema.europa.eu` (médicaments). L'approbation FDA du 2026-08-26 — l'événement
+>   qui a ouvert la roadmap 02 — classe `web_search_generic` **0,50**. Chiffré : un
+>   `regulator_filing_us` touche le contrat C1, le frontend **et les 12 prompts v2 en base**
+>   → migration 035 + #19. Sorti du périmètre à dessein.
+>
+> ### Le défaut de câblage, rattrapé avant exécution puis gardé
+>
+> Le premier câblage repliait la promotion **dans** `classify_source_type`. `endpts.com` serait
+> alors sorti `web_search_reputable` **avant** que la nature soit dérivée : `qualify()` (qui ne
+> promeut que depuis `web_search_generic`) court-circuitait, la condition de nature ne s'appliquait
+> plus jamais, et une source admise pour l'*interprétation* gagnait du standing sur une **mesure** —
+> c'est-à-dire exactement ce que la capacité 2 existe pour empêcher. Corrigé en séparant
+> `source_type_max()` (le plafond montré au modèle) de `classify_source_type` (générique, sans
+> registre). **Le cas négatif 2 garde cette régression précise.**
+>
+> Second point de câblage, découvert en relisant le chemin réel : `worker.py` **rejette sous
+> `reliability_min` avant que `store_knowledge` soit atteint**. Sans l'appel à `qualify()` à cet
+> endroit-là, le registre aurait paru câblé et n'aurait admis personne.
+>
+> ### La découverte qu'un check a faite, et qu'on a choisi de ne PAS corriger
+>
+> Le premier run de `check_source_registry` a sorti **6 FAIL** — pas un bug de check, une mesure :
+> le desserrage B+ → B vit dans `FIELD_PROFILES` (la doctrine) alors que la porte de production lit
+> `FIELD_PLANCHER_OVERRIDES`, qui ne contient que `marche.croissance_marche_historique`. Les
+> planchers de dimension `positionnement` et `marche` valent **B+**. Donc une entry `endpts.com` à
+> 0,65 est admise par le registre et **encore refusée au gate**.
+>
+> Câbler les planchers maintenant aurait déplacé la **ligne de base** que le test central de la
+> capacité 4 doit mesurer AVANT son lot (`feedback_ligne_de_base_est_une_mesure`). L'écart est donc
+> **nommé** dans `_DESSERRAGE_NON_CABLE` (§1bis), avec un assert « la liste des écarts ne survit
+> pas à leur câblage » qui vire au vert de lui-même le jour où la capacité 4 le fait.
+>
+> ### Pas de section « état persisté », et c'est écrit
+>
+> La capacité 2 n'écrit **rien** en base. Une section SQL aurait été verte sur zéro ligne —
+> **fixture non discriminante**, le premier des trois faux verts. La docstring du check porte la
+> justification, pour que l'absence ne se lise pas comme un oubli.
+>
+> ### Test négatif 5/5
+>
+> Chacun rouge sur un assert **nommé**, script allant jusqu'à son bilan, fichiers sauvegardés dans
+> `/tmp/negreg/` et restaurés entre chaque cas (quatre appels séparés, jamais une commande
+> composée), restauration re-vérifiée au vert : (1) condition de nature retirée → **4 FAIL** ;
+> (2) registre replié dans `classify_source_type` → **5 FAIL** ; (3) admission élargie à `mesure`
+> → **5 FAIL** ; (4) portée ignorée → **2 FAIL** ; (5) plafond de tier élargi en silence →
+> **2 FAIL**.
+>
+> ### La régression de suite, et c'était la bonne
+>
+> `check_entry_nature` §6 asserte le **détenteur unique** (#46) et vérifiait que `store_knowledge`
+> appelle `derive_nature` **en direct**. La chaîne gagne un maillon (`qualify`), la règle garde son
+> détenteur unique : l'assert devait vérifier la **chaîne**, pas l'appel direct. Réécrit en trois
+> asserts (`store_knowledge` appelle `qualify` · `qualify` appelle `derive_nature` ·
+> `store_knowledge` ne dérive **pas** une seconde fois). 50 → **52 assertions**.
+
+---
 
 > ## ⚡ MàJ 2026-09-05 (3) — capacité 1 : l'axe `nature`, et la découverte des DEUX vocabulaires
 >

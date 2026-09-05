@@ -43,6 +43,7 @@ from app.agents.v2.common import (
     derive_nature,
 )
 from app.knowledge.service import store_knowledge
+from app.knowledge.source_registry import qualify
 
 ok = fail = 0
 
@@ -164,7 +165,19 @@ check("`store_knowledge` n'accepte AUCUN paramètre `nature`", "nature" not in s
 check("`store_knowledge` accepte `nature_declaree` (proposition arbitrée)",
       "nature_declaree" in sig)
 src = inspect.getsource(store_knowledge)
-check("`store_knowledge` appelle `derive_nature`", "derive_nature(" in src)
+# Depuis la capacité 2, `store_knowledge` n'appelle plus `derive_nature` en direct : il passe par
+# `source_registry.qualify`, qui dérive la nature PUIS applique le registre nominatif. La chaîne
+# gagne un maillon, la règle garde un détenteur unique — et c'est l'ORDRE qui est load-bearing (la
+# nature se dérive du source_type générique, le registre s'applique après). On vérifie donc la
+# chaîne complète, pas l'appel direct : un `qualify` qui cesserait d'appeler `derive_nature`
+# rendrait ce check vert sur un chemin mort.
+check("`store_knowledge` appelle `qualify`", "qualify(" in src)
+check("`qualify` est bien le maillon qui appelle `derive_nature`",
+      "derive_nature(" in inspect.getsource(qualify),
+      "→ la chaîne store_knowledge → qualify → derive_nature est rompue")
+check("`store_knowledge` ne dérive pas la nature une seconde fois",
+      "derive_nature(" not in src,
+      "→ deux chemins de dérivation coexistent, ils divergeront au prochain correctif")
 # Le grep de source est un PROXY : il dit que l'appel existe, pas que sa valeur atteint l'INSERT.
 # Le point de lecture réel est la colonne — c'est §7 qui l'éprouve.
 check("… et insère la valeur dérivée (colonne présente dans l'INSERT)",

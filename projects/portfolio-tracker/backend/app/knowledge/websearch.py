@@ -69,7 +69,7 @@ class SearchHit:
             "snippet": self.snippet,
             "published_date": self.published_date,
             "domain": urlparse(self.url).netloc.lower().removeprefix("www."),
-            "source_type_max": classify_source_type(self.url, ticker_id),
+            "source_type_max": source_type_max(self.url, ticker_id),
         }
         if self.text:
             d["text"] = self.text
@@ -190,6 +190,27 @@ def classify_source_type(url: Optional[str], ticker_id: Optional[str] = None) ->
     if any(bare == s or bare.endswith("." + s) for s in _REPUTABLE_SUFFIXES):
         return "web_search_reputable"
     return "web_search_generic"
+
+
+def source_type_max(url: Optional[str], ticker_id: Optional[str] = None) -> str:
+    """Plafond affiché au modèle : qualification par domaine, PLUS le registre nominatif.
+
+    ⚠️ Distincte de `classify_source_type`, et la séparation est load-bearing. Le registre accorde
+    un standing au couple (source × nature) ; ici la nature n'existe pas encore — une URL dans une
+    liste de résultats n'a pas de nature, seule l'entry qu'on en tirera en aura une. On rend donc le
+    MEILLEUR cas, ce qui est la définition d'un plafond.
+
+    Replier cette promotion dans `classify_source_type` casserait la règle : le chemin d'écriture
+    appelle `classify_source_type` PUIS `source_registry.qualify`, et `qualify` ne promeut que
+    depuis `web_search_generic`. Une source déjà promue en amont traverserait `qualify` sans que la
+    condition de nature s'applique — une source admise pour l'interprétation gagnerait un standing
+    sur la mesure chiffrée, exactement ce que la capacité 2 refuse.
+    """
+    generique = classify_source_type(url, ticker_id)
+    if generique != "web_search_generic":
+        return generique  # #33 : une règle spécifique ne resserre jamais la générique au passage
+    from .source_registry import plafond_registre  # import tardif : le registre importe common.py
+    return plafond_registre(url, ticker_id) or generique
 
 
 # ── Backends ─────────────────────────────────────────────────────────────────

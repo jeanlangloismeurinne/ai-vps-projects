@@ -27,7 +27,7 @@ from typing import Any, Optional, Sequence
 
 import asyncpg
 
-from app.agents.v2.common import derive_nature
+from .source_registry import qualify
 from .embeddings import (
     EmbeddingUnavailable,
     embed_one,
@@ -166,7 +166,20 @@ async def store_knowledge(
     sur n'importe quelle ligne — une colonne de plus se contenterait de vieillir à côté de la règle.
     Il n'entre pas non plus dans `reliability_note` : ce sont deux axes, et on ne les mélange pas,
     fût-ce en prose (#50).
+
+    `source_type` peut être PROMU ici par le registre nominatif (`source_registry.qualify`, capacité
+    2) : une source admise pour une nature donnée passe de `web_search_generic` à
+    `web_search_reputable` **pour cette nature seulement**. Le paramètre reçu est donc la
+    qualification générique par domaine, pas nécessairement celle qui sera stockée.
     """
+    # Qualification AVANT scoring : le registre nominatif (capacité 2) peut promouvoir le
+    # `source_type` d'une source admise, et c'est le source_type promu qui doit être scoré et
+    # stocké — scorer d'abord écrirait une ligne qui se contredit elle-même (tier B+ sur un
+    # source_type C+), le mode de panne de #48.
+    source_type, nature, nature_motif = qualify(
+        source_type=source_type, url=source_url, ticker_id=ticker_id,
+        entry_type=entry_type, covers=covers, nature_declaree=nature_declaree,
+    )
     if derived_reliability is not None:
         score, tier, note = derived_reliability
     else:
@@ -175,9 +188,6 @@ async def store_knowledge(
             cross_validated=cross_validated, has_conflict=has_conflict,
         )
     requires_review = requires_human_review or source_type in _REQUIRES_REVIEW_SOURCES
-    nature, nature_motif = derive_nature(
-        entry_type=entry_type, source_type=source_type, covers=covers, declared=nature_declaree,
-    )
     logger.debug("store_knowledge: nature=%s (%s)", nature, nature_motif)
 
     version = 1

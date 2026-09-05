@@ -61,6 +61,7 @@ from app.contracts import (
 from app.db.database import get_db_session
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
+from app.knowledge.source_registry import qualify
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
 from .common import MVDD_FIELD_PATHS
@@ -219,6 +220,7 @@ def _normalise_entry(
     url = (raw.get("source_url") or "").strip() or None
     source_type = _resolve_source_type(raw.get("source_type"), url, req.ticker_id)
     source_date = _parse_iso_date(raw.get("source_date"))
+    covers = _resolve_covers(req.output_schema.field_path, raw.get("covers"))
 
     caveats: list[str] = []
     unverified, provenance_note = _verify_provenance(url, log)
@@ -230,6 +232,21 @@ def _normalise_entry(
             url, source_type,
         )
         source_type = "llm_memory"
+
+    # Registre nominatif (capacité 2) — APRÈS la rétrogradation de provenance : une source dont
+    # l'URL n'a jamais été rapportée par un outil ne doit pas être promue parce que son domaine
+    # figure au registre. L'admission qualifie une rédaction, pas une citation invérifiée.
+    # C'est ICI que le registre doit mordre, et pas seulement à l'écriture : le filtre
+    # `reliability_min` ci-dessous rejette l'entry avant qu'elle n'atteigne `store_knowledge`.
+    # Le motif est JOURNALISÉ, jamais versé dans `reliability_note` : il porte à la fois la
+    # dérivation de nature et l'arbitrage du registre, soit deux axes — et on ne les mélange pas,
+    # fût-ce en prose (#50). Ce que la note doit dire, `compute_reliability` le dit déjà
+    # (« base web_search_reputable=0.65 (tier B) »).
+    source_type, _nature, motif_qualif = qualify(
+        source_type=source_type, url=url, ticker_id=req.ticker_id,
+        entry_type=want, covers=[covers] if covers else None,
+    )
+    logger.debug("search-worker: qualification %s → %s (%s)", url, source_type, motif_qualif)
 
     # Une entrée = un document. Une entry qui cite un 10-K ET un 10-Q sous un seul `source_url`
     # attribue au document cité les propos de l'autre — et lui prête son score. Constaté en run C :
@@ -270,7 +287,7 @@ def _normalise_entry(
         "reliability_note": note,
         "requires_human_review": bool(raw.get("requires_human_review")) or bool(caveats),
         "model_cutoff": raw.get("model_cutoff"),
-        "covers": _resolve_covers(req.output_schema.field_path, raw.get("covers")),
+        "covers": covers,
         "question_status": raw.get("question_status"),
     }
 

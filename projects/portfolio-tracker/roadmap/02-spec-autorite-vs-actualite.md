@@ -175,15 +175,69 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
 
 ### 2. Le registre des sources admissibles, curé à la main · contexte partagé : `knowledge/websearch.py` (`_ISSUER_DOMAINS`, `classify_source_type`), convention #33
 
-- [ ] Registre clefé par **secteur** et/ou **ticker**, sur le modèle à deux niveaux de #33, portant
+- [x] Registre clefé par **secteur** et/ou **ticker**, sur le modèle à deux niveaux de #33, portant
       pour chaque source : domaine, nature(s) pour lesquelles elle a standing, tier accordé, **date
-      d'admission** et **motif** écrit
-- [ ] Amorçage biotech clinique pour RVMD (≥ 2 sources non-EDGAR), validé par l'utilisateur
-- [ ] Un domaine inconnu reste `web_search_generic` 0,50 — inchangé
-- **Acceptation** : une source admise pour `interpretation` ne gagne **aucun** standing sur une
-  `mesure` (assert dédié) ; un domaine hors registre reste à 0,50 ; RVMD dispose d'au moins deux
-  sources admissibles capables de fonder un champ d'interprétation.
-- ⚠️ Piège #33 : une règle spécifique ne resserre jamais la règle générique au passage.
+      d'admission** et **motif** écrit → `knowledge/source_registry.py`, `SourceAdmise` (frozen
+      dataclass, `__post_init__` refusant un tier non supporté, des natures vides ou hors
+      vocabulaire, un motif vide). Portée = `"secteur:<nom>"` **ou** `"ticker:<id>"`, sur le même
+      pied ; `_TICKER_SECTEURS` rattache le ticker à son secteur.
+      ⚠️ **Le secteur est déclaré en code, pas lu en base, et c'est une mesure qui l'a décidé** :
+      `tickers.sector` est **NULL sur les 17 tickers**. Un registre clefé sur cette colonne
+      n'aurait admis personne, **silencieusement** — exactement #32 (un plancher qu'aucun domaine
+      ne peut atteindre) transposé à une clef de jointure.
+- [x] Amorçage biotech clinique pour RVMD (≥ 2 sources non-EDGAR), validé par l'utilisateur :
+      **`endpts.com`, `statnews.com`, `fiercebiotech.com`, `biopharmadive.com`** — portée
+      `secteur:biotech_clinique`, natures `{interpretation}`, tier **B**, admises le 2026-09-05
+      avec motif écrit. Plafond du registre arrêté à **B** par l'utilisateur : une source de presse
+      spécialisée interprète, elle ne mesure pas.
+- [x] Un domaine inconnu reste `web_search_generic` 0,50 — inchangé (assert §3)
+- **Acceptation TENUE** : `check_source_registry.py`, **75 assertions / 0 échec**. §2 est l'assert
+  central du couple (source × nature) : `endpts.com` **promu** sur une `interpretation`, **refusé**
+  sur une `mesure` — et le refus est **dit** (« aucun standing sur `mesure` » ajouté au motif),
+  jamais muet. §3 : un domaine hors registre reste `web_search_generic`. §5 : NVDA, hors secteur,
+  n'hérite de rien.
+- 📌 **L'ordre `nature` PUIS `registre` est load-bearing** : `qualify()` dérive la nature depuis le
+  `source_type` **générique**, et n'applique le registre que si ce source_type vaut encore
+  `web_search_generic`. Le premier câblage repliait la promotion dans `classify_source_type` —
+  `endpts.com` sortait alors `web_search_reputable` **avant** toute question de nature, la
+  condition ne s'appliquait plus, et une source admise pour l'interprétation gagnait du standing
+  sur une mesure. Défaut rattrapé avant exécution, puis **gardé** par le cas négatif 2.
+- 📌 **Plafond ≠ qualification** : `websearch.source_type_max()` (le plafond montré au modèle dans
+  les résultats de recherche) est une **seconde** fonction, pas une modification de
+  `classify_source_type`, qui reste générique et sans registre. §7 asserte la distinction.
+- [x] Qualification **avant** scoring dans `store_knowledge`, et appel dans `worker.py` **avant**
+      le filtre `reliability_min` : le worker rejette sous plancher avant que `store_knowledge`
+      soit atteint — sans ce second site, le registre n'aurait admis personne tout en paraissant
+      câblé.
+- **Test négatif 5/5 concluants**, chacun rouge sur un assert **nommé**, script allant jusqu'à son
+  bilan : (1) condition de nature retirée → 4 FAIL ; (2) registre replié dans `classify_source_type`
+  → 5 FAIL ; (3) admission élargie à `mesure` → 5 FAIL ; (4) portée ignorée → 2 FAIL ; (5) plafond
+  de tier élargi en silence → 2 FAIL.
+- ⚠️ **Aucune section « état persisté » dans le check, et c'est écrit dans sa docstring** : la
+  capacité 2 n'écrit rien en base. Une section SQL aujourd'hui serait verte sur zéro ligne —
+  **fixture non discriminante**, le premier des trois faux verts (#47/#49).
+- ⚠️ **Écart mesuré et laissé ouvert — `_DESSERRAGE_NON_CABLE` (§1bis)** : le desserrage B+ → B de la
+  capacité 0 vit dans `FIELD_PROFILES` (la doctrine), alors que la porte de production lit
+  `FIELD_PLANCHER_OVERRIDES`, qui ne contient que `marche.croissance_marche_historique`. Mesuré :
+  les planchers de dimension `positionnement` et `marche` valent **B+**. Donc une entry `endpts.com`
+  à B (0,65) est admise par le registre et **encore refusée par la porte**. Le câblage appartient à
+  la **capacité 4** (`curator.recompute_coverage`, son `contexte partagé`) : déplacer les planchers
+  maintenant perturberait la ligne de base que son test central doit mesurer AVANT le lot. L'assert
+  « la liste des écarts ne survit pas à leur câblage » vire au vert de lui-même le jour du câblage.
+- ⚠️ Piège #33 : une règle spécifique ne resserre jamais la règle générique au passage (assert §4 :
+  le registre ne **démote** jamais — `sec.gov` traverse `qualify` intact).
+- 📌 **Deux suites du lot, décidées avec l'utilisateur, non commencées** :
+  1. **FDA/EMA en régulateur A- (0,85)** — mesuré : `fda.gov` n'est dans **aucune** table, et
+     `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu` (titres) mais pas `ema.europa.eu`
+     (médicaments). L'approbation FDA du 2026-08-26, l'événement même qui a ouvert cette spec,
+     classe aujourd'hui `web_search_generic` 0,50. Un `regulator_filing_us` touche
+     `SOURCE_RELIABILITY_BASELINE`, le `Literal SourceType`, le frontend **et les 12 prompts v2 en
+     base** (tous énumèrent les source_types) → **migration 035** + règle #19. Lot séparé à dessein.
+  2. **File de propositions** — le système observe les domaines `web_search_generic` réellement
+     rencontrés, **recommande** un classement (portée, natures, tier), l'utilisateur **valide**.
+     L'admission reste un acte humain : rien ne se promeut tout seul (#50, pas de promotion
+     automatique fût-ce par corroboration).
+- **Suite** : 1 638 assertions / 0 échec / 21 scripts (`bash checks/run_all.sh`).
 
 ### 3. L'axe `actualité`, calculé à la lecture · contexte partagé : `knowledge/material_events.py`, `knowledge/staleness.py` (livrés le 2026-09-05)
 
