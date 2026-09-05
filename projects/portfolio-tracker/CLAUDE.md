@@ -496,8 +496,14 @@ append-only versionnées, `reliability_score` par source).
 - Ne monter **aucune** couche fédérée (`db_knowledge_federation`) tant qu'un besoin multi-source
   réel n'existe pas — seul l'export est requis dès maintenant.
 
-## Système de contrôle
+## Système de pilotage
 
 Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
-Commande : **"execute le brief session pour portfolio-tracker"**
-→ Lire `SESSION_BRIEF.md` à la racine de ce projet, puis suivre le protocole.
+Déclencheur : **« reprends le projet portfolio-tracker à partir du fichier de reprise »**
+→ Lire **`roadmap/provenance-cards/00-REPRISE.md`** (⚠️ pas à la racine du projet, contrairement à
+la convention — chemin historique conservé), puis la roadmap qu'il déclare active, annoncer le lot
+de conversation, exécuter, cocher les capacités livrées.
+
+Roadmap de référence du projet : `roadmap/01-spec-v2-unifiee.md` **§18** (liste ordonnée de
+capacités) sous `roadmap/00-principe-directeur-v2.md` (constitution). Les autres fichiers de
+`roadmap/` sont de la documentation, pas des roadmaps actives.

@@ -1,185 +1,236 @@
-# Système de contrôle — Chantiers · Sprints · Tickets
+# Système de pilotage — roadmap · fichier de reprise · lot de conversation
 
-> Instructions pour Claude Code **et** l'outil de pilotage du Hub (`projects/hub/`).
+> Instructions pour Claude Code **et** pour l'outil de pilotage du Hub (`projects/hub/`).
 > Lire ce fichier au démarrage de toute session de travail sur un projet.
 
 ---
 
-## Principe — un seul document utilisateur, deux vannes indépendantes
-
-L'erreur à ne jamais refaire : mélanger les artefacts destinés à **l'utilisateur** et ceux
-destinés à **l'orchestrateur**. Ils n'ont pas le même public.
+## Principe — trois artefacts, pas un de plus
 
 ```
-CHANTIER (doc vivant)  → UTILISATEUR : direction + décisions + statut. Le SEUL qu'il lit.
-SPRINT                 → regroupement nommé DANS le chantier, segmenté par contexte partagé.
-                         C'est l'unité que l'utilisateur choisit d'exécuter en priorité.
-TICKET                 → outil ORCHESTRATEUR ↔ WORKER. Décomposition d'un sprint. L'utilisateur
-                         ne le cure jamais — sauf l'inbox (un bug/idée qu'il remonte).
-ORDRE DE SPRINT        → document de passage Hub → Claude Code. Généré par le Hub, JETABLE,
-                         écrasé à chaque génération. Déclencheur, pas tableau de bord.
-DECISIONS.md           → faits durables (le « pourquoi » d'une décision + les gotchas). Système de
-                         référence, versionné, greppable.
-Mémoire agent          → cache de rappel, pointeurs. PAS un système de référence.
+ROADMAP (roadmap/{nom}.md)  → CE QU'ON VEUT CONSTRUIRE. Liste ORDONNÉE de capacités, chacune
+                              avec son test d'acceptation et sa case à cocher. Co-écrite avec
+                              l'utilisateur dans le terminal, puis figée. Porte son avancement.
+00-REPRISE.md (racine)      → OÙ ON EN EST. Pointeur vers la roadmap active + ce qu'on a appris
+                              en chemin (dettes, gotchas d'implémentation). Format LIBRE.
+                              C'est le fichier qu'on relit pour reprendre. Un par projet.
+LOT DE CONVERSATION         → CE QU'ON FAIT MAINTENANT. Auto-planifié par l'agent au démarrage,
+                              annoncé en UNE ligne. Jamais écrit dans un fichier.
+DECISIONS.md                → faits durables, réutilisables ailleurs. Versionné, greppable.
+Inbox (feedback-tickets/)   → ce que l'utilisateur remonte. Entrée seulement, pas planification.
+Mémoire agent               → cache de rappel, pointeurs. JAMAIS l'unique domicile d'un fait.
 ```
 
-**Conséquence pratique** : l'utilisateur pointe un **chantier** et choisit un **sprint** par son
-nom. Il ne lit pas `TICKETS.md`, ne sélectionne pas de numéros de tickets, ne peut pas « oublier »
-un ticket : la checklist du sprint (dans le chantier) est la liste exhaustive, et c'est le même
-document qu'il a validé. Le lien chantier↔ticket est porté par **l'orchestrateur**, pas par lui.
+**La règle qui tient tout** : une information vit à **un seul endroit**. Le fichier de reprise ne
+redit jamais ce que le `CLAUDE.md` du projet porte déjà — ces deux fichiers sont le coût
+d'ouverture réel de toute session (sur portfolio-tracker : 47 Ko + 75 Ko ≈ **30 000 tokens** avant
+d'avoir lu une ligne de code).
+
+**Ce qui a été retiré, et pourquoi** : le sprint, l'ordre de sprint (`SESSION.md`), le ré-armement
+et le ticket-comme-unité-de-découpage ont été supprimés le 2026-09-05. Ils n'étaient pas appliqués :
+sur 12 projets, **un seul** fichier avec `## Sprints`, **un seul** `SESSION.md` — non suivi par git,
+resté figé sur un chantier livré et archivé depuis. Sur la même période, portfolio-tracker a produit
+**~90 commits** sans toucher un sprint ni un ticket. Ne pas les réintroduire sous un autre nom.
 
 ---
 
-## Les deux vannes (indépendantes, pas une séquence)
+## 1. La roadmap — co-écrite, puis figée
 
-« Roadmap » et « tickets » répondent à deux questions distinctes. Une demande peut ouvrir l'une
-sans l'autre.
+**La roadmap naît dans le terminal, avec l'utilisateur.** Il décrit un besoin, on raffine, on fige.
+Ni le Hub ni l'agent ne créent une roadmap tout seuls : le Hub la **visualise**, permet des
+**micro-éditions finales**, puis l'**inscrit** dans le fichier de reprise.
 
-- **Vanne direction** — « est-ce que ça engage le jugement de l'utilisateur ? » (ambiguïté, choix
-  structurant, sécurité / données sensibles). Si oui → écrire un **chantier** court et dense en
-  décisions, que l'utilisateur amende/valide. Sinon → sauter cette vanne.
-- **Vanne délégation** — « est-ce assez gros pour que déléguer économise le contexte d'Opus ? »
-  Si oui → décomposer en sprints + tickets. Sinon → Opus exécute inline.
-
-**Trois vitesses** qui en découlent :
-
-| Vitesse | Vanne direction | Vanne délégation | Qui fait |
-|---|---|---|---|
-| **Trivial** (bug d'une ligne, libellé) | fermée | fermée | Opus corrige direct, 1 ligne de trace. Si c'est déjà un ticket d'inbox → le fermer avec une note. |
-| **Moyen** (non-ambigu, mais plusieurs morceaux) | fermée | ouverte | décomposer + exécuter, sans chantier |
-| **Complexe** (ambigu / structurant / sécurité) | ouverte | ouverte | chantier → validation → sprints → exécution |
-
----
-
-## Segmentation des sprints — par contexte partagé
-
-**Un sprint regroupe le travail qui partage le même contexte** (mêmes fichiers, même modèle mental,
-même contrat de données). Le critère de découpe n'est pas « la taille » ni « le thème » : c'est le
-**contexte que le modèle doit charger**. Exécuter un sprint ne doit pas recharger dix fois du
-contexte qui se recouvre.
-
-Exemple (chantier kb-visualisation, 5 tickets → 3 sprints) :
-- *Substrat* (contexte : écriture du vault, contrat frontmatter) = miroir kanban→vault + notes-schéma.
-- *Viewer* (contexte : Docker / Traefik / KasmVNC) = conteneur Obsidian + Sablier.
-- *Finition* (contexte : doc / UI) = README + landing.
-
----
-
-## Le plancher de délégation
-
-**On ne délègue un item que si ça coûte moins qu'une exécution inline par Opus.** La délégation a
-une taxe fixe : re-énoncer le contexte au worker + lire son compte-rendu + revérifier. Elle ne
-rapporte que sur des unités **indépendantes, auto-suffisantes, à faible couplage**, lancées en
-parallèle.
-
-- Travail **couplé** (partage un contrat/schéma) → la taxe dépasse le gain → **Opus inline**.
-- On délègue au plus à la granularité du **sprint** (un worker qui tient le contexte partagé du
-  sprint), **jamais par ticket** à l'intérieur d'un sprint couplé.
-- Si un chantier est du design/doc/code fortement couplé et à fort jugement, la bonne réponse est
-  souvent **zéro délégation**. Ce n'est pas un échec du système : c'est le plancher qui joue.
-
----
-
-## Cycle de vie d'un chantier
-
-1. **Demande** (utilisateur, direct ou via l'inbox).
-2. **Vanne direction** : si elle s'ouvre, Opus écrit le chantier (court, dense en décisions ;
-   contrat exhaustif en annexe, pas dans la surface de validation).
-3. **Validation** : l'utilisateur amende/valide le chantier. Un seul document.
-4. **Vanne délégation** : Opus décompose en **sprints nommés dans le chantier** (segmentés par
-   contexte partagé), et marque, sprint par sprint, ce qui est délégable (test du plancher). Les
-   tickets sous-jacents sont dérivés ici.
-5. **Exécution** : dans le Hub, l'utilisateur choisit **un sprint** par son nom → le Hub génère
-   l'**ordre de sprint** (le Hub ne peut pas lancer Claude Code lui-même). Dans Claude Code,
-   l'utilisateur déclenche ; Opus lit le chantier + l'ordre, exécute (inline ou workers selon le
-   plancher), et met à jour le **statut dans le chantier**. En fin de sprint, Opus **ré-arme
-   `SESSION.md` sur le sprint suivant** : les sprints s'enchaînent sans repasser par le Hub.
-6. **Clôture** : ranger l'info durable (section dédiée ci-dessous).
-
----
-
-## Passage Hub → Claude Code — l'ordre de sprint
-
-Le Hub est une UI de pilotage ; il **ne peut pas exécuter une consigne dans Claude Code**. Le seul
-pont est un **document** que le Hub génère et que l'utilisateur déclenche dans le terminal.
-
-Cet **ordre de sprint** (`SESSION.md` à la racine du projet) est **mince, prospectif, jetable** :
-il est écrasé à chaque génération, ne contient **aucun résumé accumulé**. Son rôle est de déclencher
-l'exécution d'**un** sprint. Contenu :
+Le mécanisme qui marche n'est pas le format, c'est le triplet **liste ordonnée + test d'acceptation
+par item + agent qui planifie lui-même son découpage**. Gabarit minimal :
 
 ```markdown
-# Ordre de sprint — {projet}
-Chantier : roadmap/{nom}.md
-Sprint   : {nom du sprint}
+---
+status: {libre}
+role: >
+  Une phrase : ce que ce document décide.
+---
 
-## Items
-- [ ] {item} → #{ticket_id si délégué}
-- [ ] …
+# {Titre}
 
-## Pré-actions utilisateur (si besoin)
-- {action manuelle : inviter un bot, provisionner une variable d'env…}
+## Principe directeur
+{le cadre : ce qui est vrai quoi qu'il arrive, et ce qu'on refuse de faire}
+
+## Capacités (ordre imposé)
+### 1. {capacité} · contexte partagé : {fichiers / modèle mental}
+- [ ] {ce qu'il faut faire}
+- [ ] {…}
+- **Acceptation** : {fait observable qui prouve que c'est livré — pas « ça marche »}
+
+### 2. {capacité suivante}
+…
 ```
 
-Déclencheur côté terminal : **« exécute le sprint en cours pour {projet} »** → Opus lit `SESSION.md`
-**et** le chantier pointé (source de vérité), exécute, coche la checklist **dans le chantier**.
-Le statut ne vit **jamais** dans `SESSION.md` (qui sera écrasé) — toujours dans le chantier.
+Trois exigences non négociables :
 
-### Ré-armement automatique — un seul passage par le Hub
+1. **L'ordre est imposé et justifié.** « UX avant agent avant données », « la doctrine avant le
+   code » — sinon on implémente une cible qui bouge encore. L'ordre est une décision, pas une mise
+   en page.
+2. **Chaque capacité porte un test d'acceptation observable.** Un critère qu'on peut faire virer au
+   rouge. Corollaire : le vérifier **avant** le correctif, il doit échouer (test négatif).
+3. **Chaque capacité porte sa checklist `- [ ]` / `- [x]`.** Elle est load-bearing pour trois
+   mécanismes : l'avancement lu par le Hub, le déclencheur d'archivage (§5), et l'entrée du
+   diagnostic 360° (§4). Une roadmap sans cases cochables est illisible pour tout le reste.
 
-L'utilisateur ne clique « Générer l'ordre » **qu'une fois**, au démarrage du chantier. Ensuite,
-**c'est Opus qui réécrit `SESSION.md` en fin de sprint**, sans repasser par le Hub. Règle par
-défaut, appliquée à la clôture de **chaque** sprint :
+---
 
-1. Cocher les items dans le chantier (source de vérité).
-2. Déterminer le **prochain sprint non terminé** du chantier = le premier `###` de la section
-   `## Sprints` qui garde au moins un `- [ ]`.
-3. **Réécrire `SESSION.md`** (même gabarit, écrasement complet) sur ce sprint.
-   - Sprint courant **incomplet** (items abandonnés/bloqués) → `SESSION.md` reste sur **le sprint
-     courant**, avec les seuls items restants. Le pointeur ne saute pas un travail non fait.
-   - **Plus aucun sprint en attente** → écrire un `SESSION.md` de fin (`Sprint : — (chantier
-     terminé)`, aucun item) pour qu'un « exécute le sprint en cours » lancé par réflexe ne
-     re-déclenche pas le dernier sprint ; puis appliquer la clôture de chantier (`status: done`,
-     `roadmap/archive/`).
-4. **Clore la session par ce message** (format fixe) :
+## 2. Le fichier de reprise — `00-REPRISE.md`
+
+Un par projet, **à la racine du projet**, **format libre**. Sa souplesse est ce qui lui permet de
+porter aussi bien une dette de code qu'un jalon fonctionnel : ne pas sur-spécifier son contenu.
+
+Il est **généré à la première utilisation**, jamais par décret sur tous les projets : un fichier de
+reprise vide se lit comme un projet à l'arrêt.
+
+**L'activation EST l'inscription.** Le pointeur « roadmap active » écrit dans ce fichier est le
+**seul** endroit où l'information vit. On n'infère jamais la roadmap active en scannant les
+`status:` des fichiers de `roadmap/` — c'est un fourre-tout hétérogène (spec, audit, benchmark,
+constitution) et aucun vocabulaire de statut n'y est stable.
+
+En tête du fichier, une ligne explicite, toujours présente :
+
+```markdown
+> **Roadmap active : `roadmap/{nom}.md`** — capacité en cours : §{n}.
+```
+
+ou, quand il n'y en a pas :
+
+```markdown
+> **Roadmap active : aucune.**
+```
+
+Un chantier assez petit pour tenir **entièrement** dans le fichier de reprise n'a pas besoin d'un
+fichier de roadmap séparé : lui en fabriquer un est de la cérémonie. Dans ce cas la liste ordonnée
+de capacités vit directement ici, checklist comprise, et la ligne dit `Roadmap active : aucune — le
+chantier tient dans ce fichier`.
+
+**Résolution du chemin** (côté Hub comme côté agent) : `00-REPRISE.md` à la racine du projet
+d'abord, sinon chercher dans `roadmap/**`. Certains projets historiques ont le leur ailleurs.
+
+---
+
+## 3. Le lot de conversation
+
+L'unité de travail est le **lot de conversation** : ce que l'agent décide de traiter dans la
+conversation courante. Il est **auto-planifié**, pas prescrit par un document.
+
+Au démarrage, l'agent lit le fichier de reprise, puis la roadmap active, puis **annonce son lot en
+une ligne** avant de commencer. Un lot peut couvrir plusieurs capacités contiguës si elles partagent
+le même contexte.
+
+**Critère de découpe : le contexte partagé** — mêmes fichiers, même modèle mental, même contrat de
+données. Pas la taille, pas le thème. Exécuter un lot ne doit pas recharger dix fois du contexte qui
+se recouvre. C'est pour ça que le gabarit de roadmap fait écrire `· contexte partagé : {quoi}` sur
+chaque capacité : c'est ce champ qui rend le lot planifiable sans relire tout le code.
+
+**Déclencheur unique, côté terminal :**
+
+> **« reprends le projet {X} à partir du fichier de reprise »**
+
+Il n'y en a pas d'autre. Toute autre formulation trouvée dans un `CLAUDE.md` est morte : la
+corriger, pas l'honorer.
+
+---
+
+## 4. Diagnostic 360° — quand aucune roadmap n'est inscrite
+
+Si le fichier de reprise ne pointe aucune roadmap, l'agent **propose** un diagnostic 360°. Il ne le
+lance **jamais** de lui-même : sinon « reprends le projet X » produit une analyse non demandée et
+l'utilisateur perd le point de choix.
+
+**Entrée (bornée — s'y tenir) :**
+- les **principes fondateurs / la constitution** du projet — le cadre métier ;
+- les **roadmaps avec leur avancement** — décidé vs livré vs restant ;
+- les **tickets ouverts** — le seul canal où la friction utilisateur remonte non filtrée, et le
+  meilleur rapport signal/coût de la liste (~1 Ko).
+
+**Exclu : l'historique des MàJ du fichier de reprise.** C'est de la mémoire d'implémentation
+(unités d'arrondi, clefs de supersedage, regex) : indispensable pour reprendre le code, sans valeur
+pour décider quoi construire.
+
+**Sortie : N axes candidats, ~5 lignes chacun, puis STOP.** La conversation de raffinement qui
+produit la roadmap est une seconde étape, déclenchée par le choix de l'utilisateur.
+
+⚠️ **Biais à contrer explicitement** : nourri de la seule constitution, un agent proposera toujours
+des axes *à l'intérieur* du cadre. La consigne doit lui donner le droit de dire que **le cadre
+lui-même** est l'axe à revoir, plutôt que de produire une proposition conforme.
+
+---
+
+## 5. Fin de conversation — le protocole d'archivage
+
+**Déclencheur = un fait, pas une impression : l'éviction a lieu quand une capacité de la roadmap est
+cochée.** Preuve que le critère subjectif ne tient pas : portfolio-tracker a été allégé le
+2026-08-31 (65 Ko sortis vers `00-REPRISE-ARCHIVE.md`) et **quatre jours plus tard son fichier
+faisait 75 Ko — plus que son archive**. La consigne d'alléger existait déjà.
+
+Dans l'ordre :
+
+1. **Cocher la capacité livrée** dans la roadmap (ou dans le fichier de reprise s'il la porte).
+2. **Rien n'est évincé avant que le durable en soit sorti.** Test : *ce fait changerait-il ce qu'un
+   agent fait sur un autre fichier, ou sur un autre projet ?* Oui → `CLAUDE.md` (convention) ou
+   `DECISIONS.md` (gotcha). La convention emporte **une** mesure en preuve — c'est ce qui la rend
+   crédible plutôt que sentencieuse. Pas le récit complet.
+3. ⚠️ **Une dette ne s'archive jamais avec le bloc qui la mentionne.** Mode de panne réel : les
+   dettes sont disséminées dans des blocs `MàJ` de capacités **livrées**. Évincer par capacité close
+   les emporterait en silence. **Avant d'évincer, tout item ouvert nommé remonte dans « Reste à
+   faire »**, section qui ne bouge pas.
+4. **Le récit du travail livré** part dans `00-REPRISE-ARCHIVE.md` — jamais chargé, greppable.
+5. **L'archive garde une carte** : une ligne dans le fichier de reprise disant où les choses sont
+   parties. Sans elle, l'archive devient un fichier que personne ne saura interroger.
+6. **Une roadmap dont toutes les capacités sont cochées** sort du chemin chaud → `roadmap/archive/`,
+   et la ligne « Roadmap active » repasse à `aucune`.
+
+### Persistance — ce qui n'est pas commité n'existe pas
+
+`infrastructure/compose-deploy.sh` ne commite que les fichiers passés en `-f`. Sur une conversation
+**sans déploiement** (doc, cadrage, roadmap), **rien ne commite le fichier de reprise** : la mémoire
+du système ne vivrait alors que sur le disque du VPS. Donc, en fin de conversation :
+
+```bash
+git add <fichiers de doc touchés> && git commit -m "…" && git push
+```
+
+C'est explicitement à faire même — surtout — quand il n'y a rien à déployer.
+
+### Message de clôture
+
+Conclure par une recommandation explicite, jamais implicite :
 
 ```
-Sprint {N} — {nom} : terminé. SESSION.md est actualisé pour lancer le Sprint {N+1} — {nom}.
+{capacité} : livrée. {état du fichier de reprise}.
 Recommandation : {nouvelle conversation | poursuivre ici} — {une ligne de justification}.
 ```
 
-La recommandation n'est jamais implicite : arbitrer **contexte chaud réutilisable** (prochain
-sprint petit et dépendant des gotchas fraîchement découverts → *poursuivre ici*) contre **coût
-tokens** (sprint suivant gros, autonome, état déjà consigné dans le chantier → *nouvelle
-conversation*). Le Hub reste le point d'entrée pour **changer** de sprint ou de chantier hors
-séquence : y retourner écrase le `SESSION.md` ré-armé, ce qui est le comportement voulu.
+Arbitrer **contexte chaud réutilisable** (lot suivant petit et dépendant des gotchas fraîchement
+découverts → *poursuivre ici*) contre **coût tokens** (lot suivant gros, autonome, état déjà
+consigné → *nouvelle conversation*).
 
 ---
 
-## Modèle d'exécution — Opus orchestrateur + workers Sonnet
+## 6. Délégation — le plancher
 
-La session tourne sur **Opus**. Il n'implémente pas tout lui-même :
+**On ne délègue que si ça coûte moins qu'une exécution inline.** La délégation a une taxe fixe :
+re-énoncer le contexte au worker + lire son compte-rendu + revérifier. Elle ne rapporte que sur des
+unités **indépendantes, auto-suffisantes, à faible couplage**, lancées en parallèle.
 
-```
-Opus (orchestrateur)
-  ├─ lit le chantier + le sprint choisi
-  ├─ item COUPLÉ / à jugement → Opus l'implémente lui-même
-  └─ item DÉLÉGABLE (plancher OK) → worker Sonnet 4.6
-                                      └─ implémente + COMPTE-RENDU structuré
-       Opus vérifie le compte-rendu contre la spec du sprint :
-         · conforme      → coche l'item, avance le statut
-         · écart détecté → lit le code de CET item uniquement, corrige, coche
-```
+- Le discriminant réel est **l'énonçabilité du critère de succès en trois lignes**, pas le volume de
+  sortie attendu. On délègue une **recherche** (« trouve où X est défini »), jamais un **jugement**.
+- Travail **couplé** (partage un contrat/schéma) → la taxe dépasse le gain → **inline**.
+- Devant un mur de sortie, le réflexe est « quel est le `tail -1` ? », pas « je délègue » : un
+  filtre shell bat un sous-agent sur tout ce qui est mécanique.
+- Sur un chantier de design/doc/code fortement couplé et à fort jugement, la bonne réponse est
+  souvent **zéro délégation**. Ce n'est pas un échec : c'est le plancher qui joue.
 
-But de la délégation (on est en abonnement, pas facturé au token) : préserver le contexte/quota
-d'Opus et paralléliser — **uniquement quand le plancher est franchi**.
+### Contrat du sous-agent worker
 
----
-
-## Contrat du sous-agent worker
-
-Lancé via l'outil `Agent` avec `model: sonnet`. Accès outils complet. Entrée : le périmètre du
-sprint (ou de l'item) + « implémente et renvoie le compte-rendu ci-dessous ». Le worker **vérifie
-son travail** (compile / tests / run) avant de rendre la main, puis renvoie **exactement** :
+Lancé via l'outil `Agent` avec `model: sonnet`. Entrée : le périmètre + « implémente et renvoie le
+compte-rendu ci-dessous ». Le worker **vérifie son travail** (compile / tests / run) avant de rendre
+la main, puis renvoie **exactement** :
 
 ```
 1. Interprétation : ce que j'ai compris (1-2 phrases)
@@ -189,135 +240,62 @@ son travail** (compile / tests / run) avant de rendre la main, puis renvoie **ex
 5. Ambiguïtés que j'ai tranchées seul
 ```
 
-Ce que ça attrape : ✅ contre-sens / dérive de spec (points 1 et 5). ❌ bugs de correctness — le
-filet reste le point 4 ; s'il est absent ou faible, Opus lit le code de l'item.
+Ce que ça attrape : ✅ contre-sens / dérive de spec (points 1 et 5). ❌ bugs de correctness.
 
-**Un sous-agent ne négocie jamais de permissions.** Le travail à privilège (déploiement, base,
-secrets) reste chez l'orchestrateur **dès la répartition** — ne pas déléguer une tâche qui
-nécessiterait des permissions élargies pour voir le worker se faire bloquer par le bac à sable
-et répondre avec un `settings.json` à approuver. Si un item délégué se heurte à ce mur, c'est
-qu'il n'était pas délégable : Opus le reprend.
+⚠️ **Les sous-agents écrivent, l'orchestrateur vérifie mécaniquement — jamais sur la seule foi du
+compte-rendu.** Mode de panne avéré : du code **jamais exécuté** présenté comme terminé. Un rapport
+« vérifié, `node --check` OK » peut être de bonne foi et ne rien prouver (`node --check` est un
+no-op sur du JSX avec `import`). Le point 4 n'est un filet que si la commande qu'il décrit exécute
+vraiment le code changé.
 
-**Les sous-agents écrivent, l'orchestrateur vérifie mécaniquement — jamais sur la seule foi du
-compte-rendu.** Un rapport « vérifié, `node --check` OK » peut être de bonne foi et ne rien
-prouver (`node --check` est un no-op sur du JSX avec `import` : Node bascule en analyse ESM et
-rend 0 sans avoir rien exécuté). Le point 4 du compte-rendu n'est un filet que si la commande
-qu'il décrit exécute vraiment le code changé — pas seulement une commande qui termine avec un
-exit 0 sans le toucher.
+⚠️ **Un sous-agent ne négocie jamais de permissions.** Le travail à privilège (déploiement, base,
+secrets) reste chez l'orchestrateur **dès la répartition**. Si un item délégué se heurte à ce mur,
+c'est qu'il n'était pas délégable.
 
 ---
 
-## Format du chantier (doc vivant) — `roadmap/{nom}.md`
+## 7. Inbox — ce que l'utilisateur remonte
 
-Le chantier est le **tableau de bord** : direction + décisions + statut, tout au même endroit.
+Le ticket survit **comme inbox uniquement** (widget web, `/feature` Slack → `#feedback`
+`C0AUCE6NELT`). L'utilisateur **dépose** un one-liner ; il ne cure pas, ne priorise pas, n'ordonne
+pas. L'agent **trie** : trivial → corrige et ferme ; sinon → l'item devient une entrée du prochain
+diagnostic 360° ou une capacité de la roadmap active.
 
-```markdown
----
-status: draft | spec-ready | en-cours | done
-milestone: {nom}
----
+Fermeture : `status: open` → `status: closed` **et** ajouter `closed_at: {ISO 8601 UTC}`.
 
-# Chantier — {titre}
-
-## Direction (utilisateur)
-{ce que veut l'utilisateur, verbatim reformulé}
-
-## Décisions
-{ce qui est tranché ET ce qui reste à trancher — la surface de validation, courte et dense}
-
-## Sprints
-### Sprint 1 — {nom} · contexte partagé : {quoi}
-- [ ] {item} → #{ticket_id si délégué}
-- [x] {item fait} · note : {compte-rendu 1 ligne}
-### Sprint 2 — {nom} · contexte partagé : {quoi}
-- [ ] …
-
-## Annexe — contrats / specs détaillés
-{le contrat exhaustif vit ICI, pas dans la surface de validation}
-```
-
-La checklist des sprints **est** le statut. Opus la coche au fil de l'exécution. L'utilisateur ne
-regarde que ce document pour savoir où on en est.
+Le ticket n'est **plus** une unité de découpage du travail. Ne pas dériver de tickets depuis une
+roadmap : la checklist de la roadmap est la seule liste exhaustive.
 
 ---
 
-## Format des tickets (outil orchestrateur ↔ worker) — `feedback-tickets/`
-
-Le ticket n'est plus un artefact utilisateur (sauf inbox). Il porte le **delta actionnable + les
-critères d'acceptation + un pointeur vers le sprint/annexe** — jamais la re-argumentation des
-décisions (elles sont dans le chantier).
-
-Frontmatter :
-```yaml
-id: {timestamp_ms}
-type: bug | feature | suggestion | error
-status: open | blocked | closed
-priority: high | medium | low
-date: {ISO 8601}
-project: {nom_projet}
-milestone: {nom du chantier}          # relie le ticket à son chantier
-closed_at: {ISO 8601 UTC}             # à la fermeture
-```
-
-Corps : `## {label}` · `### Description` (delta + acceptation + pointeur) · `### Notes
-d'implémentation` (compte-rendu vérifié ajouté à la clôture). Un contrat lourd partagé par
-plusieurs tickets → **fichier spec unique** `{id}-spec-*.md` référencé, jamais recopié.
-
----
-
-## Inbox — bugs / idées remontés par l'utilisateur
-
-Seul cas où l'utilisateur touche un ticket : il **dépose** un one-liner (widget web, `/feature`
-Slack). Il ne cure pas, ne priorise pas, n'ordonne pas. L'orchestrateur **trie** : trivial → corrige
-et ferme ; sinon → rattache à un chantier (existant ou nouveau) via `milestone`.
-
----
-
-## Clôture — ranger l'info durable (sinon elle fuit)
-
-À la fin d'un sprint ou d'un chantier :
-
-1. **Gotchas → `DECISIONS.md`** (racine du projet, versionné) : tout fait durable et réutilisable
-   (une API qui refuse un format, un modèle déprécié, un « pourquoi » d'architecture). C'est le
-   système de référence — pas la mémoire agent (qui n'est qu'un **cache** et ne doit jamais être
-   l'unique domicile d'un fait porteur).
-2. **Statut** : cocher les items dans le chantier ; passer `status: done` quand tout est clos.
-   Puis **ré-armer `SESSION.md`** sur le sprint suivant et rendre la main avec le message de fin
-   de sprint (voir § *Ré-armement automatique*) — pas de retour au Hub entre deux sprints.
-3. **Archivage** : un chantier terminé sort du chemin chaud → `roadmap/archive/` (git en garde
-   l'historique). On ne re-lit pas à chaque session des chantiers finis.
-4. **Mémoire agent** : y écrire au plus un **pointeur** (« gotchas DeepInfra → DECISIONS.md »).
-
-> Le `SESSION.md` (ordre de sprint) n'accumule **rien** : il est écrasé à la génération suivante.
-> Le statut vit dans le chantier ; l'historique vit dans git + `DECISIONS.md`. Le chemin chaud
-> d'une session = chantiers **actifs** + tickets **ouverts** seulement.
-
----
-
-## Déploiement
-
-Si la session a produit du code déployable, appliquer **`DEPLOY.md`** : un seul appel
-`infrastructure/deploy.sh <app> -m "<msg>" -f "<fichiers>" [-e KEY=VALUE …]` (option 1
-déterministe), fallback sous-agent Sonnet si échec. Garde les logs de build hors du contexte Opus.
-
----
-
-## Effort / modèles
+## 8. Effort / modèles
 
 - Session : **Opus** par défaut.
 - Worker délégué : **Sonnet 4.6** (`model: sonnet`). `Haiku` réservé au trivial (libellé, config).
-- Ticket complexe traité par Opus : effort par défaut (élevé) ; effort maximal réservé aux choix
-  architecturaux.
+- Effort par défaut (élevé) ; effort maximal réservé aux choix architecturaux.
 
 ---
 
-## Règles de décision (résumé)
+## 9. Déploiement
 
-- **Ouvrir la vanne direction** : ambiguïté, choix structurant, sécurité → chantier à valider.
-- **Ouvrir la vanne délégation** : plusieurs morceaux ET le plancher est franchi.
-- **Segmenter les sprints** par **contexte partagé**, pas par taille ni thème.
-- **Déléguer** seulement si ça coûte **moins** qu'inline ; au plus à la granularité du sprint.
-- **Vérifier avant de fermer** : tests / run pour la correctness ; compte-rendu pour le contre-sens.
-- **Fin de sprint** : ré-armer `SESSION.md` sur le sprint suivant + message de fin avec la
-  recommandation *nouvelle conversation vs poursuivre ici*.
-- **À la clôture** : gotcha → `DECISIONS.md`, chantier fini → `archive/`, mémoire = pointeur.
+Si la conversation a produit du code déployable, appliquer **`DEPLOY.md`** : un seul appel
+`infrastructure/compose-deploy.sh <app> -m "<msg>" -f "<fichiers>" [-e KEY=VALUE …]`, fallback
+sous-agent Sonnet si échec. Ne jamais conclure au succès sur la seule fin du build : c'est la
+réponse HTTP qui fait foi.
+
+---
+
+## 10. Résumé des règles
+
+- **Roadmap** : co-écrite dans le terminal, ordre imposé, un test d'acceptation observable et une
+  checklist par capacité.
+- **Activation = inscription** dans le `00-REPRISE.md`. Nulle part ailleurs.
+- **Lot de conversation** auto-planifié, découpé par **contexte partagé**, annoncé en une ligne.
+- **Déclencheur unique** : « reprends le projet {X} à partir du fichier de reprise ».
+- **Pas de roadmap inscrite** → proposer le 360°, sortir N axes, puis **stop**.
+- **Archiver quand une capacité est cochée** — jamais sur une impression ; sortir le durable
+  d'abord, remonter les dettes ouvertes avant d'évincer.
+- **Committer la doc** en fin de conversation même sans déploiement.
+- **Déléguer** une recherche, jamais un jugement ; vérifier mécaniquement ce que rend un worker.
+- **Ajouter sans retirer est le mode de panne de ce repo** : un lot qui n'a rien supprimé n'est pas
+  terminé.

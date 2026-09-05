@@ -8,19 +8,17 @@ Déploiement : **`docker compose` standalone** — chaque projet a son `docker-c
 
 ## Règle — fichier `00-REPRISE.md` (obligatoire en fin de conversation)
 
-Après avoir **implémenté une nouvelle version / un nouveau sprint** d'un projet, je dois
-**actualiser le `00-REPRISE.md` de ce projet** (à la racine du dossier du projet) avant de
-clôturer la conversation : maj de l'état atteint, du prochain jalon, des blocages et des
-commandes de reprise. Toute nouvelle session du projet démarre en **relisant ce fichier**
-(bouton « reprendre là où on s'était arrêté »).
+Chaque projet garde un `00-REPRISE.md` **à la racine du projet** : c'est son prompt de reprise, et
+le seul endroit où vit le pointeur « roadmap active ». Toute conversation sur un projet démarre en
+**relisant ce fichier**, et se termine en l'**actualisant** dès qu'une capacité a été livrée : état
+atteint, prochain jalon, blocages, ce qu'on a appris.
 
-## Règle — fichier `00-REPRISE.md` par projet
-Chaque projet garde un `00-REPRISE.md` (racine du projet) qui sert de **prompt de reprise**
-pour retrouver l'état exact. **RÈGLE : l'actualiser OBLIGATOIREMENT en fin de conversation,
-dès qu'une nouvelle version/état a été implémenté** (préfixer un bloc `> ## ⚡ MàJ <date>` en
-haut du fichier avec ce qui a changé, ce qui a été vérifié, et ce qui reste). Ne jamais laisser
-un « fin de session » sans `00-REPRISE.md` à jour : c'est lui qui permet de reprendre sans
-ré-explorer.
+⚠️ **Actualiser, ce n'est pas empiler.** Ne pas préfixer indéfiniment des blocs `MàJ` : le récit du
+travail livré part dans `00-REPRISE-ARCHIVE.md`, le durable dans `CLAUDE.md`/`DECISIONS.md`, et les
+dettes ouvertes remontent dans « Reste à faire ». Sans ça le fichier gonfle jusqu'à coûter plus cher
+que le code qu'il décrit (mesuré sur portfolio-tracker : 75 Ko, soit plus que sa propre archive).
+
+Protocole complet — quand évincer, quoi sortir d'abord, quoi committer : **`CONTROL_SYSTEM.md` §5**.
 
 ## Déploiement — autonomie obligatoire
 
@@ -229,24 +227,25 @@ commit, captures de vérification) sont **traitées** — inutile de rouvrir le 
 nouvelle friction, la noter dans **`CHANTIER_OUTILLAGE_DEV.md`** (tampon : on y écrit le constat,
 on supprime la section une fois appliquée). Ne le lire que pour y ajouter un point.
 
-## Système de contrôle — chantiers, sprints, tickets
+## Système de pilotage — roadmap, fichier de reprise, lot de conversation
 
 Protocole complet dans **`CONTROL_SYSTEM.md`** à la racine du repo. Lire ce fichier au démarrage
-de toute session de travail sur un projet.
+de toute conversation de travail sur un projet.
 
-Modèle : un **chantier** (`roadmap/{nom}.md`) = doc vivant que l'utilisateur valide (direction +
-décisions + sprints = statut). Le Hub génère un **ordre de sprint** (`SESSION.md`, jetable) — le
-pont vers Claude Code, car le Hub ne peut pas lancer l'exécution lui-même.
+Modèle : une **roadmap** (`roadmap/{nom}.md`, ou inline dans le fichier de reprise si le chantier y
+tient) = liste **ordonnée** de capacités, chacune avec son test d'acceptation et sa checklist. Elle
+est co-écrite avec l'utilisateur dans le terminal, jamais générée par le Hub. Le **`00-REPRISE.md`**
+du projet porte le pointeur « roadmap active » — l'activation EST l'inscription. L'unité d'exécution
+est le **lot de conversation**, auto-planifié par l'agent et annoncé en une ligne.
 
-Commande de déclenchement : **"execute le sprint en cours pour {projet}"**
-→ Lire `SESSION.md` **et** le chantier qu'il pointe (source de vérité), exécuter le sprint, cocher
-la checklist dans le chantier. À la clôture : gotchas → `DECISIONS.md`, chantier fini → `roadmap/archive/`.
+Déclencheur unique : **« reprends le projet {X} à partir du fichier de reprise »**
+→ lire le `00-REPRISE.md`, puis la roadmap active, annoncer le lot, exécuter, cocher les capacités.
+Si aucune roadmap n'est inscrite : **proposer** un diagnostic 360° (`CONTROL_SYSTEM.md` §4) — ne
+jamais le lancer de soi-même.
 
-**Fin de sprint = ré-armement.** Réécrire `SESSION.md` sur le prochain sprint non terminé du
-chantier (l'utilisateur ne repasse pas par le Hub entre deux sprints), puis conclure par
-« Sprint N terminé, SESSION.md est actualisé pour lancer le Sprint N+1. Recommandation :
-nouvelle conversation / poursuivre ici — {justification} ». Détail : `CONTROL_SYSTEM.md`
-§ *Ré-armement automatique*.
+À la clôture : durable → `CLAUDE.md`/`DECISIONS.md`, récit → `00-REPRISE-ARCHIVE.md`, roadmap
+terminée → `roadmap/archive/`. **Committer la doc même sans déploiement** (`compose-deploy.sh` ne
+commite que les fichiers passés en `-f`).
 
 ## Bases de connaissance — architecture commune
 

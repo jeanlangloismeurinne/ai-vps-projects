@@ -246,8 +246,10 @@ Utilisation : `curl -H "Authorization: Bearer {id}|{token}" http://localhost:800
 
 `scripts/migrate_historical.py` a déjà été exécuté (4 413 lignes → 4 366 insérées, 47 doublons ignorés). **Ne pas le relancer** — provoquerait des tentatives d'insertion dupliquées (bloquées par ON CONFLICT, mais inutile).
 
-## Système de contrôle
+## Système de pilotage
 
 Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
-Commande : **"execute le brief session pour bank-review"**
-→ Lire `SESSION_BRIEF.md` à la racine de ce projet, puis suivre le protocole.
+Déclencheur : **« reprends le projet bank-review à partir du fichier de reprise »**
+→ Lire `00-REPRISE.md` (racine du projet), puis la roadmap qu'il déclare active, annoncer le lot de
+conversation, exécuter, cocher les capacités livrées. Ce projet n'a pas encore de `00-REPRISE.md` :
+le créer à la première conversation qui livre quelque chose, pas avant.

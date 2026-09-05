@@ -219,9 +219,9 @@ infrastructure/compose-deploy.sh assistant-ia -m "<message>" -f "<fichiers>"
 (commit → push → build → attente de santé → sonde `/health` → notif Slack journal + kanban).
 Voir `DEPLOY.md` à la racine.
 
-## Système de contrôle
+## Système de pilotage
 
-Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet (chantiers · sprints · tickets).
-Commande : **"execute le sprint en cours pour assistant-ia"**
-→ Lire `SESSION.md` **et** le chantier qu'il pointe (source de vérité), exécuter le sprint, cocher
-la checklist dans le chantier.
+Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
+Déclencheur : **« reprends le projet assistant-ia à partir du fichier de reprise »**
+→ Lire `00-REPRISE.md` (racine du projet), puis la roadmap qu'il déclare active, annoncer le lot de
+conversation, exécuter, cocher les capacités livrées.
