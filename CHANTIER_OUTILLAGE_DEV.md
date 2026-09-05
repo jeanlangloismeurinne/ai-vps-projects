@@ -352,6 +352,30 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 > dernière ligne ? »** — si oui, il gagne toujours (gratuit, reproductible, sans amorçage, et il
 > survit à la session).
 
+> **Relevé de la session du 2026-09-05 (2) : zéro sous-agent, une sixième fois** — capacité 0 de la
+> roadmap 02 livrée (table de profils des 19 champs + convention #50), 1 défaut de **spécification**
+> trouvé, 174 assertions neuves (1337 → 1511, 19 scripts). Trois candidats pesés :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Recenser les 19 champs MVDD et leur couverture réelle par émetteur | **Non** — 3 `grep` et 2 requêtes `psql`, dont l'une (`unnest(covers) … GROUP BY`) rend **10 lignes** qui sont l'intégralité de la matière. Borne basse du relevé (4) : le volume traversé est nul, le livrable tient à l'écran. |
+> | Rédiger les 19 profils (nature · plancher · actualité bloquante) | **Non, et c'est le cas le plus net du chantier.** Profil trompeur : 19 lignes × 4 colonnes, ça *ressemble* à du remplissage mécanique. Mais chaque cellule est un arbitrage métier — pourquoi `levier` bloque quand les trois autres ratios financiers ne bloquent pas (#42 : seul ratio bâti sur des postes de bilan), pourquoi `base_rate_anchor` ne bloque **jamais** (son entry n'a pas de `source_date`, la rendre bloquante bloquerait tout émetteur). La spec le dit d'ailleurs elle-même : « il se co-écrit — l'agent ne le remplit pas seul ». |
+> | Rejouer les 19 scripts de la suite | **Non** — `/tmp/run_checks.sh`, 19 lignes + un total. Le filtre écrit en session (2) rembourse encore. |
+>
+> **Ce que ce relevé ajoute — un livrable volumineux n'est pas un livrable délégable.** Les relevés
+> précédents avaient établi les deux bornes (*critère énonçable* **et** *livrable volumineux*). La
+> table de profils satisfait la seconde de façon spectaculaire — 19 entrées, ~150 lignes de code
+> produites — et échoue quand même, parce que le volume est celui de la **restitution**, pas celui de
+> la **recherche**. Un agent aurait rendu 19 lignes plausibles qu'il aurait fallu arbitrer une par
+> une : `coût(vérifier) = coût(faire)`, le coût caché du §16 dans sa forme la plus pure. **Corollaire
+> à retenir : mesurer le volume du livrable ATTENDU, pas celui du fichier produit.** Un tableau de
+> doctrine est long à écrire et court à décider ; c'est l'inverse du profil rentable.
+>
+> **Classifieur : aucun blocage cette session.** `docker run`, `docker exec … psql`,
+> `bash /tmp/run_checks.sh` et un `docker run` à double montage (`-v … :ro` × 2) sont tous passés du
+> premier coup. Conforme à `feedback_blocage_classifieur_non_permanent` : le chemin nominal se
+> re-teste à chaque session plutôt que de dérouler un repli par habitude.
+
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
 digérer des logs de build). Il est déficitaire quand le travail est **court en commandes et riche
@@ -800,6 +824,43 @@ lecture en texte de sa sortie sur la production**, avant toute dépense de modè
 moment le moins cher où un défaut ancien devient visible.
 
 ---
+
+### §26 — La pièce à conviction d'une spec se vérifie avant d'écrire le code qu'elle commande
+
+**Constat (portfolio-tracker, 2026-09-05).** Une roadmap figée la veille posait comme test central :
+« le `readiness` de l'émetteur X doit passer de `ready, 0 gap` — le faux vert observé aujourd'hui —
+à `not_ready` avec cause péremption ». Deux requêtes de 10 secondes, avant toute ligne de code :
+
+- la table des rapports ne contenait **aucun** rapport pour X — le `ready, 0 gap` n'avait jamais été
+  prononcé sur lui ;
+- X ne couvrait que **10 des 19 champs** requis et n'avait **aucune dispense** — il sortait donc
+  `not_ready` **pour lacune** ;
+- le faux vert existait bel et bien, mais **sur deux autres émetteurs**, dont les corpus sont complets.
+
+**Ce que ça aurait coûté sans la vérification.** Le test d'acceptation aurait viré au **vert** —
+l'émetteur est effectivement `not_ready` — en ne prouvant strictement **rien** sur la péremption. Le
+premier des trois faux verts du §20/§24 (*fixture non discriminante*), mais placé plus haut que
+d'habitude : pas dans la fixture d'un check, dans la **ligne de base d'une spécification**. Tous les
+chiffres du tableau de diagnostic étaient justes ; c'est le fait énoncé qui était faux — la famille
+de #42, appliquée cette fois au document qui commande le travail.
+
+**Pourquoi c'est structurel et pas une étourderie.** Une spec se rédige à partir du *récit* d'une
+session précédente (« on a vu que… »), et le récit fusionne les émetteurs : ce qui a été observé sur
+l'un devient, en trois paragraphes, une propriété du chantier. Le fichier de reprise fait la même
+fusion — celui-ci annonçait le troisième émetteur comme « banc d'essai », ce qui rendait naturel de
+lui attribuer tous les symptômes. **Aucun relecteur ne pouvait voir l'erreur dans le texte** : elle
+n'est visible qu'en base.
+
+**Règle, réplicable à tout projet.** *Un test d'acceptation nomme un sujet, un état de départ et un
+état d'arrivée. **L'état de départ est une mesure, pas un souvenir** — le produire par une requête
+avant d'écrire la première ligne du lot.* Le coût est de l'ordre de la minute ; l'erreur qu'il évite
+est un lot entier construit sur une preuve qui n'existe pas, et qui se termine par un vert.
+
+**Corollaire — un correctif de spec retire aussi la source.** L'affirmation fautive vivait à **deux**
+endroits (le diagnostic en tête, le test d'acceptation en capacité 4). Corriger le seul test aurait
+laissé le diagnostic la recopier au prochain lot : c'est le §15 (« juste dans ce qu'il écrit, faux
+dans ce qu'il omet de retirer ») et le #46 (détenteur unique) transposés à la documentation. Greper
+la formulation caractéristique — ici le libellé exact du faux vert — avant de conclure le correctif.
 
 ## Journal des points soldés
 

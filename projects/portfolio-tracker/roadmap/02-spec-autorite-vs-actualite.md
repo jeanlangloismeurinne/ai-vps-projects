@@ -23,8 +23,16 @@ Sur RVMD, au 2026-09-05, corpus actif :
 
 **L'information la plus fraîche du corpus est la moins bien classée.** Quatre entries tier A
 affirment « aucun produit approuvé pour la vente commerciale » alors que la FDA a approuvé RASONQUE
-le 2026-08-26. Aucune n'est fausse : chacune est fidèle à sa source et correctement datée. Le
-`readiness` prononce néanmoins **`ready`, 0 gap**.
+le 2026-08-26. Aucune n'est fausse : chacune est fidèle à sa source et correctement datée.
+
+⚠️ **Correction du 2026-09-05.** Ce paragraphe affirmait « le `readiness` prononce néanmoins
+`ready`, 0 gap » **sur RVMD** : c'est FAUX, et vérifié comme tel en base. RVMD n'a jamais eu de
+rapport `readiness`, ne couvre que 10 des 19 champs et n'a aucune dispense — il sortirait
+`not_ready` pour **lacune**. Le faux vert `ready, 0 gap` est réel mais il est **persisté sur NVDA et
+MSFT** (rapports #26/#27 du 2026-08-31), dont les corpus, eux, sont complets. Le diagnostic ci-dessous
+est inchangé — c'est la **pièce à conviction** qui changeait d'émetteur, et avec elle le test
+d'acceptation de la capacité 4. Famille de #42 appliquée à la spec elle-même : *tous les nombres du
+tableau justes, le fait énoncé faux*.
 
 Trois causes structurelles, vérifiées dans le code (2026-09-05) :
 
@@ -103,15 +111,26 @@ Aucun code. Le livrable est la **table des 19 champs MVDD** : pour chacun, sa na
 plancher de fiabilité, et si l'actualité est bloquante. C'est le seul endroit où le jugement métier
 s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
 
-- [ ] Statuer champ par champ : nature dominante · plancher fiabilité · actualité bloquante O/N
-- [ ] Nommer les champs où un 10-K est **insuffisant** malgré son tier A (candidats : `risques.*`,
-      `marche.dynamique`, `business_model.drivers_revenus`)
-- [ ] Nommer les champs où une source non-EDGAR ne doit **jamais** suffire (candidats :
-      `financials.*`, tout ce qui est chiffré)
-- [ ] Convention **#50** dans le `CLAUDE.md` du projet
-- **Acceptation** : un check échoue si un seul des 19 champs requis n'a pas d'entrée dans la table.
-  Test négatif : retirer une ligne de la table doit faire virer le check au rouge en **nommant** le
-  champ manquant — pas en sortant à 0 (§13/§24 de `CHANTIER_OUTILLAGE_DEV.md`).
+- [x] Statuer champ par champ : nature dominante · plancher fiabilité · actualité bloquante O/N
+      → `agents/v2/common.py: FIELD_PROFILES`, détenteur **unique**, adjacent à `MVDD_SPEC` pour que
+      les 19 chemins et leurs profils ne puissent pas diverger.
+- [x] Nommer les champs où un 10-K est **insuffisant** malgré son tier A → `risques.risques_cles`,
+      `marche.structure_5forces`, `positionnement.moat_preuves`, `positionnement.position_vs_pairs`
+      (desserrés B+ → B, **effet conditionné à la capacité 2**). ⚠️ `business_model.drivers_revenus`
+      était candidat mais reste à **B+** : le dépôt y est légitime, c'est son *actualité* qui manque
+      — d'où `actualite_bloquante=True` plutôt qu'un desserrage. Confondre les deux ouvrirait
+      l'admission là où le remède est un rafraîchissement.
+- [x] Nommer les champs où une source non-EDGAR ne doit **jamais** suffire → les 4 `financials.*`
+      (plancher **A**, seuls `edgar_official` et `company_ir_official` l'atteignent).
+- [x] Convention **#50** dans le `CLAUDE.md` du projet
+- [x] **Acceptation tenue** : `check_field_profiles.py`, **174 assertions / 0 échec**. Test négatif
+      **5/5 concluants**, chacun rouge sur un assert **nommé** et le script allant jusqu'au bout :
+      ligne retirée · desserrage tacite · motif nommant un émetteur · profil orphelin · score
+      composite réintroduit.
+- 📌 **Résultat de rédaction, load-bearing pour la capacité 1** : **aucun** des 19 champs n'a
+  `evenement` pour nature dominante. Un événement ne *fonde* aucun champ, il *périme* les autres
+  natures — c'est ce qui justifie que l'actualité soit une **troisième colonne** et non une
+  conséquence de la nature. `evenement` reste au vocabulaire des **entries** (migration 034).
 
 ### 1. L'axe `nature`, dérivé déterministe · contexte partagé : `knowledge/service.py`, `agents/v2/worker.py`, migration 034
 
@@ -154,9 +173,21 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
       sont datées) contre mandat de **collecte** (le champ n'a rien). Les confondre fait payer une
       recherche complète là où un rafraîchissement suffisait
 - [ ] Le verdict global distingue `not_ready (péremption)` de `not_ready (lacune)`
-- **Acceptation, et c'est le test central de toute la révision** : le `readiness` RVMD doit passer
-  de `ready, 0 gap` — le faux vert observé aujourd'hui — à **`not_ready` avec cause `péremption`**,
-  en nommant les champs concernés, **sans** les compter comme des lacunes de collecte.
+- **Acceptation, et c'est le test central de toute la révision** — ⚠️ **ligne de base corrigée le
+  2026-09-05, la rédaction initiale visait le mauvais émetteur.** Vérifié en base : RVMD n'a **jamais
+  eu de rapport `readiness`** (`knowledge_curator_reports` ne porte que NVDA et MSFT), ne couvre que
+  **10 des 19 champs** et n'a **aucune dispense** — il sortirait donc `not_ready` **pour lacune**
+  aujourd'hui. Le test « RVMD passe de `ready` à `not_ready` » aurait viré au vert sans rien prouver :
+  **fixture non discriminante**, le premier des trois faux verts (§24). Le faux vert `ready, 0 gap`
+  est persisté sur **NVDA et MSFT** (rapports #26/#27, 2026-08-31) — ce sont eux les porteurs.
+  - **Test central** : **NVDA et MSFT** doivent passer de `ready, 0 gap` à **`not_ready` avec cause
+    `péremption`**, en nommant les champs concernés, **sans** les compter comme lacunes de collecte.
+  - **Test de séparation** (RVMD) : le verdict doit distinguer ses **9 lacunes de collecte** de ses
+    champs périmés — les deux causes ne se confondent jamais, et les deux remèdes non plus.
+  - Les 9 champs non couverts de RVMD, pour mémoire : `business_model.recurrence_pct`,
+    `financials.intensite_capex_pct`, `produits.description`, `produits.unit_economics`,
+    `positionnement.moat_preuves`, `positionnement.position_vs_pairs`, `marche.structure_5forces`,
+    `management_allocation.incitations`, `management_allocation.skin_in_game_pct`.
 - ⚠️ Risque assumé : un 8-K de routine (item 9.01, pièces jointes) ne doit périmer personne. Le
   filtre `items_substantiels` de `material_events.py` existe déjà — le brancher, et **le prouver par
   un cas négatif** (un 8-K purement formel laisse le corpus `courant`).

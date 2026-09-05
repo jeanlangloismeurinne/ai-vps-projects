@@ -45,6 +45,154 @@ MVDD_FIELD_PATHS: frozenset[str] = frozenset(
 TIER_ORDER = ["A", "A-", "B+", "B", "B-", "C+", "C"]
 _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}
 
+# ── Table de profils par champ (capacité 0 de `roadmap/02-spec-autorite-vs-actualite.md`) ────
+# Trois propriétés indépendantes par champ, JAMAIS recombinées en un nombre (cf. convention #50) :
+#
+#   nature    — ce que l'assertion prétend être. Décide quel axe fait AUTORITÉ sur le champ :
+#               `mesure` → la fiabilité domine · `interpretation` → l'expertise domine.
+#   plancher  — tier minimal d'une entry pour FONDER le champ (borne basse d'admissibilité).
+#   actualite_bloquante — un fait antérieur au dernier événement matériel cesse-t-il de fonder
+#               le champ ? C'est une propriété du CHAMP, pas de la source.
+#
+# ⚠️ Aucun champ n'a `evenement` pour nature dominante, et ce n'est pas un oubli : un événement ne
+# FONDE aucun des 19 champs, il PÉRIME les deux autres natures. Si la nature suffisait à décider de
+# la péremption, cette colonne n'existerait pas — c'est exactement pourquoi elle existe. La nature
+# `evenement` reste au vocabulaire des ENTRIES (migration 034), où elle qualifie une assertion.
+#
+# ⚠️ Le `motif` est un GABARIT et ne nomme jamais un émetteur (#31) : il énonce une propriété du
+# champ, valable pour tout émetteur. Un motif qui nomme un acteur est une dispense déguisée.
+FIELD_PROFILES: dict[str, dict[str, Any]] = {
+    # ── structuree · business_model ──────────────────────────────────────────
+    "business_model.description": {
+        "nature": "interpretation", "plancher": "B+", "actualite_bloquante": True,
+        "motif": "Ce que fait l'entreprise se réécrit à chaque événement structurant (première "
+                 "approbation, cession d'un segment). Un dépôt périodique antérieur reste FIDÈLE à "
+                 "sa source tout en décrivant un monde révolu.",
+    },
+    "business_model.drivers_revenus": {
+        "nature": "interpretation", "plancher": "B+", "actualite_bloquante": True,
+        "motif": "Les moteurs du chiffre d'affaires basculent avec le passage d'un stade au "
+                 "suivant ; l'énoncé périmé ne devient pas faux, il devient hors sujet.",
+    },
+    "business_model.recurrence_pct": {
+        "nature": "mesure", "plancher": "B+", "actualite_bloquante": False,
+        "motif": "Part chiffrée, publiée par exercice quand elle l'est. Sa péremption est traitée "
+                 "par le supersedage de l'identité du fait (#43), pas par l'ancre matérielle.",
+    },
+    # ── structuree · financials ──────────────────────────────────────────────
+    "financials.roic_pct": {
+        "nature": "mesure", "plancher": "A", "actualite_bloquante": False,
+        "motif": "Ratio à composante de FLUX, donc daté par un exercice (#42) et remplacé au dépôt "
+                 "suivant. L'ancre matérielle n'a rien à y ajouter.",
+    },
+    "financials.fcf_conversion_pct": {
+        "nature": "mesure", "plancher": "A", "actualite_bloquante": False,
+        "motif": "Ratio de flux sur flux, daté par son exercice (#42). Supersedage par (metric, "
+                 "period_end) suffit à retirer le périmé.",
+    },
+    "financials.intensite_capex_pct": {
+        "nature": "mesure", "plancher": "A", "actualite_bloquante": False,
+        "motif": "Ratio de flux sur flux, daté par son exercice (#42).",
+    },
+    "financials.levier": {
+        "nature": "mesure", "plancher": "A", "actualite_bloquante": True,
+        "motif": "SEUL ratio bâti sur des postes de BILAN, donc daté à un instant (#42/#48) : une "
+                 "levée de dette ou une émission de convertibles le change du jour au lendemain, "
+                 "entre deux dépôts périodiques. La mention n'est portée QUE là où elle compte "
+                 "(#42/#45) — l'étendre aux trois ratios de flux la rendrait invisible ici.",
+    },
+    # ── structuree · valorisation ────────────────────────────────────────────
+    "valorisation.prix_actuel": {
+        "nature": "mesure", "plancher": "B+", "actualite_bloquante": True,
+        "motif": "Un cours se périme en jours. C'est le champ où l'actualité prime le plus "
+                 "nettement sur l'autorité de la source.",
+    },
+    "valorisation.relatif_multiple": {
+        "nature": "mesure", "plancher": "B+", "actualite_bloquante": True,
+        "motif": "Multiples adossés au cours : ils héritent de sa péremption. ⚠️ Un multiple à "
+                 "dénominateur négatif est NON CALCULABLE, pas absent (#44) — état distinct d'une "
+                 "péremption, jamais confondu avec elle.",
+    },
+    "valorisation.base_rate_anchor": {
+        "nature": "interpretation", "plancher": "B+", "actualite_bloquante": False,
+        "motif": "Ancre de taux de base : un corpus historique long, délibérément insensible à "
+                 "l'actualité — c'est sa fonction même. ⚠️ Son entry est transverse aux émetteurs "
+                 "et peut n'avoir AUCUNE `source_date` : la rendre bloquante la classerait "
+                 "`indeterminable` (#44) et bloquerait tout émetteur d'emblée.",
+    },
+    # ── qualitative_marche · produits ────────────────────────────────────────
+    "produits.description": {
+        "nature": "interpretation", "plancher": "B+", "actualite_bloquante": True,
+        "motif": "Le portefeuille de produits est ce qu'une autorisation de mise sur le marché ou "
+                 "un retrait modifie en premier. Champ le plus exposé à la péremption silencieuse.",
+    },
+    "produits.unit_economics": {
+        "nature": "mesure", "plancher": "B+", "actualite_bloquante": False,
+        "motif": "Économie unitaire chiffrée, à évolution lente et publiée par exercice.",
+    },
+    # ── qualitative_marche · positionnement ──────────────────────────────────
+    "positionnement.moat_preuves": {
+        "nature": "interpretation", "plancher": "B", "actualite_bloquante": False,
+        "desserrage": "B+ → B : champ d'INTERPRÉTATION où un observateur sectoriel suivi vaut "
+                      "mieux qu'un dépôt réglementaire. Ne prend effet qu'avec la capacité 2 "
+                      "(registre nominatif) — sans elle, ce plancher n'admet personne de nouveau.",
+        "motif": "Les preuves d'avantage concurrentiel s'établissent sur plusieurs exercices ; un "
+                 "événement isolé ne les périme pas.",
+    },
+    "positionnement.position_vs_pairs": {
+        "nature": "interpretation", "plancher": "B", "actualite_bloquante": True,
+        "desserrage": "B+ → B : voir `positionnement.moat_preuves`. Effet conditionné à la "
+                      "capacité 2.",
+        "motif": "La position relative bascule quand un pair OU l'émetteur franchit une étape "
+                 "structurante : c'est une comparaison, donc datée par le plus récent des deux.",
+    },
+    # ── qualitative_marche · marche ──────────────────────────────────────────
+    "marche.croissance_marche_historique": {
+        "nature": "mesure", "plancher": "B", "actualite_bloquante": False,
+        "motif": "Série historique chiffrée. Plancher B DÉJÀ en vigueur "
+                 "(`FIELD_PLANCHER_OVERRIDES`) : les cabinets d'études plafonnent à "
+                 "`web_search_reputable` (#32), un plancher plus haut rendrait le champ "
+                 "infondable au lieu de le rendre exigeant.",
+    },
+    "marche.structure_5forces": {
+        "nature": "interpretation", "plancher": "B", "actualite_bloquante": False,
+        "desserrage": "B+ → B : cas d'école de la doctrine — un dépôt réglementaire est ici du "
+                      "boilerplate juridique malgré son tier A, un analyste sectoriel est "
+                      "STRICTEMENT meilleur. Effet conditionné à la capacité 2.",
+        "motif": "Structure concurrentielle d'un marché : elle bouge à l'échelle des années.",
+    },
+    # ── qualitative_marche · management_allocation ───────────────────────────
+    "management_allocation.incitations": {
+        "nature": "mesure", "plancher": "A-", "actualite_bloquante": False,
+        "motif": "Structure de rémunération, publiée annuellement dans un document de "
+                 "sollicitation de procurations. Périodique, donc traitée par supersedage.",
+    },
+    "management_allocation.skin_in_game_pct": {
+        "nature": "mesure", "plancher": "A-", "actualite_bloquante": True,
+        "motif": "La détention des dirigeants change par déclarations d'initiés ponctuelles, pas "
+                 "au rythme des dépôts périodiques : un chiffre d'il y a un an peut décrire une "
+                 "position soldée depuis.",
+    },
+    # ── qualitative_marche · risques ─────────────────────────────────────────
+    "risques.risques_cles": {
+        "nature": "interpretation", "plancher": "B", "actualite_bloquante": True,
+        "desserrage": "B+ → B (plancher de dimension B, donc ALIGNÉ, pas desserré) — mentionné "
+                      "pour mémoire : c'est le second champ où le tier A d'un dépôt ne vaut pas "
+                      "son autorité apparente.",
+        "motif": "Une section « facteurs de risque » énumère des risques juridiquement exhaustifs "
+                 "sans les hiérarchiser ; et le risque le plus vif est celui qu'un événement "
+                 "récent vient de matérialiser ou d'éteindre.",
+    },
+}
+
+NATURES: frozenset[str] = frozenset({"mesure", "evenement", "interpretation"})
+
+
+def profile_for(field_path: str) -> dict[str, Any]:
+    """Profil d'un champ MVDD. Champ hors vocabulaire → KeyError : il n'y a pas de profil par
+    défaut, un champ sans doctrine écrite ne se traite pas « au mieux » (#31)."""
+    return FIELD_PROFILES[field_path]
+
 
 def count_tiers(entries: Sequence[dict[str, Any]]) -> dict[str, int]:
     """entries_par_tier DÉTERMINISTE (recompute depuis la KB, aucun token — readiness §7).

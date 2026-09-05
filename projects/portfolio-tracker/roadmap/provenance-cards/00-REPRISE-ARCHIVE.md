@@ -24,6 +24,28 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 <!-- Versés depuis 00-REPRISE.md le 2026-09-05 : 14 blocs de MàJ du 2026-08-31 au
      2026-09-04 (5). Copie conforme, rien de résumé. -->
 
+> ## ⚡ MàJ 2026-09-05 — le corpus a enfin une horloge (versé le 2026-09-05 (2))
+>
+> Deux commits, chemin nominal, sonde publique 200 : **`ae02af3`** (ancre matérielle + balayage) et
+> **`45379ee`** (F14). Aucune migration.
+>
+> - **`knowledge/material_events.py` — la seconde horloge.** Les dépôts périodiques (10-K/10-Q) ne
+>   datent pas le monde ; un **8-K/6-K** le fait. Le search-worker reçoit désormais l'événement
+>   matériel le plus récent, et un avertissement explicite quand il est **postérieur** à l'ancre
+>   documentaire (« ce fait peut décrire un monde révolu SANS ÊTRE FAUX »).
+> - **`knowledge/staleness.py` — un RAPPORT, jamais un `superseded_by`.** Route
+>   `GET /tickers/{id}/knowledge/staleness`, **toujours 200**, `ecrit_en_base: false` (garde de check
+>   qui grep l'absence d'`UPDATE`/`INSERT`/`DELETE`). Sur RVMD : seuil **2026-08-27**, 27 actives →
+>   **24 suspectes / 2 postérieures / 1 non datée**, 7 champs touchés.
+> - **F14, trouvé par le balayage lui-même** dès sa première lecture en prod : l'entry #169 disait
+>   `fiscal_period='AU 2026-06-30'` et `source_date=2025-12-31` — **la même ligne se contredisait**.
+>   Corrigé par détenteur unique ; vérifié après déploiement par le comptage #43 (une seule ligne
+>   active par clef, #169 → #189 daté 2026-06-30, les ratios de flux inchangés à 2025-12-31).
+>
+> ⚠️ **Ce qui reste vrai et inconfortable** : le balayage *signale*, il ne *décide* pas. Les 24
+> entries suspectes de RVMD sont toujours actives, et la porte de complétude (#29) les compte comme
+> couvrantes. **Un corpus complet peut être périmé.**
+
 > ## ⚡ MàJ 2026-09-04 (5) — LE SEUIL EST FRANCHI : première dépense réelle de tokens, F12 et F13, et une découverte de fin de session qui commande le prochain jalon
 >
 > **Le search-worker a tourné en production contre le vrai modèle.** Coût mesuré :

@@ -484,6 +484,37 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     donne le **même gagnant** avec les deux tris : une fixture peut être aveugle en étant *non
     discriminante*, pas seulement en étant plus favorable (#47).
 
+50. **Un champ a TROIS propriétés indépendantes, et le standing est une propriété du COUPLE
+    (source × nature) — jamais de la source seule (V2, `agents/v2/common.py: FIELD_PROFILES`)** :
+    le `reliability_score` confondait *à quel point je fais confiance à cette source* et *ce fait
+    décrit-il encore le monde*. Mesuré : sur un émetteur dont un produit vient d'être approuvé,
+    l'information la plus fraîche du corpus est la moins bien classée (tier A moyen 0,931 sur des
+    faits antérieurs · tier B+ 0,750 sur l'information du jour) et la porte prononce quand même
+    `ready`. Trois causes, toutes structurelles : la porte ne lit que le `tier`, qui « NE change pas
+    à la modulation » ; le score est **figé à l'écriture** (les seuls `UPDATE` du code touchent
+    `superseded_by` et `embedding`), donc le corpus ne vieillit jamais ; `cross_validated` /
+    `has_conflict` sont câblés de bout en bout mais **aucun appelant de production ne les passe**.
+    D'où la table `FIELD_PROFILES` — **nature** (stockée : l'autorité qu'elle commande) · **plancher**
+    de fiabilité · **actualité bloquante** (calculée à la LECTURE, jamais persistée : la stocker
+    reproduirait la cause n°2). ⚠️ **Aucun des 19 champs n'a `evenement` pour nature dominante, et
+    c'est le résultat** : un événement ne *fonde* aucun champ, il *périme* les deux autres natures.
+    Si la nature suffisait à décider de la péremption, la troisième colonne n'existerait pas.
+    ⚠️ Corollaires : **jamais de score composite** (trois nombres recombinés redeviennent un
+    scalaire et reproduisent le défaut au premier arrondi — la porte lit un **triplet**) ; **jamais
+    de promotion automatique** d'un domaine, pas même par corroboration (N sources recopiant un
+    communiqué ne sont pas N sources indépendantes : la corroboration deviendrait un amplificateur
+    de rumeur) ; l'actualité se mesure sur la date du **FAIT**, jamais de la publication (#42,
+    `material_events` trie sur `reportDate`) ; un `motif` de profil est un **gabarit** qui ne nomme
+    aucun émetteur ni juridiction (#31), sans quoi la doctrine casse au premier émetteur non
+    américain. ⚠️ Trois champs sont **desserrés** B+ → B (`positionnement.moat_preuves`,
+    `positionnement.position_vs_pairs`, `marche.structure_5forces`) : sur un champ
+    d'*interprétation*, un dépôt réglementaire est du boilerplate juridique malgré son tier A. Ce
+    desserrage **ne prend effet qu'avec le registre nominatif** (capacité 2) — sans lui il n'admet
+    personne de nouveau — et tout desserrage tacite fait rougir un assert (`feedback_optional_
+    schema_gate`). Détail + garde : `check_field_profiles.py` §1 (un champ retiré est nommé, pas un
+    KeyError), §3 (#32 atteignabilité), §5 (desserrage déclaré), §6 (gabarit), §7 (pas de
+    composite) — éprouvé par test négatif (5 cas, chacun rouge sur son assert nommé).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

@@ -7,10 +7,11 @@ project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2 (cartes de provenance). Contrat FIGÉ · couche 2
   DÉPLOYÉE · boucle V2 complète (décider → surveiller → sortir → apprendre, lots 7-9) · écrans
-  UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est le **3ᵉ ticker
-  RVMD**, qui sert de banc d'essai aux modes de panne du socle : 14 défauts trouvés et corrigés
-  (F1→F14). État au 2026-09-05 : 1 337 assertions / 0 échec / 18 scripts, prochaine migration 034.
-  Roadmap active : `roadmap/02-spec-autorite-vs-actualite.md` (autorité contre actualité).
+  UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est la **révision du
+  modèle de fiabilité** (autorité contre actualité) ; RVMD reste le banc d'essai des modes de panne
+  du socle (14 défauts F1→F14). État au 2026-09-05 (2) : **1 511 assertions / 0 échec / 19 scripts**,
+  prochaine migration 034. Roadmap active : `roadmap/02-spec-autorite-vs-actualite.md` —
+  **capacité 0 CLOSE**, prochain jalon **capacité 1** (l'axe `nature`, migration 034).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -24,15 +25,20 @@ role: >
 ## 🎯 Roadmap active
 
 **`roadmap/02-spec-autorite-vs-actualite.md`** (statut `figée`, ouverte le 2026-09-05) — révision du
-modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé, capacité 0
-en cours (co-écriture de la table de profils par champ). **Rien n'est implémenté tant que la
-capacité 0 n'est pas close.**
+modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé.
+**Capacité 0 CLOSE le 2026-09-05** (table de profils co-écrite, convention #50, 174 assertions).
+**Prochain jalon : capacité 1** — l'axe `nature` en dérivé déterministe, **migration 034** (à écrire
+juste avant son lot, jamais en avance).
 
-Motif d'ouverture : sur RVMD, l'information la plus fraîche du corpus est la moins bien classée
-(tier A moyen 0,931 sur des faits d'avant l'approbation FDA du 2026-08-26 · tier B+ 0,750 sur
-l'information du jour), et le `readiness` prononce quand même `ready, 0 gap`. La roadmap
-**absorbe** les points 1 et 2 de « Reste à faire » ci-dessous — ils y sont traités comme des
-symptômes, pas comme des tâches indépendantes.
+⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) doit précéder le
+durcissement de la porte (4), sinon tout champ devient `couvert_perime` sans remède disponible.
+
+Motif d'ouverture : l'information la plus fraîche du corpus est la moins bien classée (sur RVMD,
+tier A moyen 0,931 sur des faits d'avant l'approbation FDA du 2026-08-26 · tier B+ 0,750 sur
+l'information du jour), et le `readiness` prononce quand même `ready, 0 gap` — ⚠️ **ce faux vert est
+persisté sur NVDA et MSFT, pas sur RVMD** (voir « Livré cette session »). La roadmap **absorbe** les
+points 1 et 2 de « Reste à faire » ci-dessous — ils y sont traités comme des symptômes, pas comme des
+tâches indépendantes.
 
 `roadmap/01-spec-v2-unifiee.md` §18 reste la roadmap de **référence** du projet (découpage en lots),
 mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qui s'exécute.
@@ -48,7 +54,7 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | Readiness | `ready`, 0 gap | `ready`, 0 dérogation | dimension `valorisation` fondée sur ses 3 champs |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 337 assertions / 0 échec / 18 scripts** (`backend/checks/`, lancer avec
+- **Suite hors-ligne : 1 511 assertions / 0 échec / 19 scripts** (`backend/checks/`, lancer avec
   l'env de `checks/README.md` **et** le montage `/contract_frozen` — sans lui, 4 scripts
   sous-comptent en sortant quand même à 0). Filtre : `/tmp/run_checks.sh` (une ligne par script).
 - **Migrations appliquées jusqu'à 033. Prochaine : 034** — à écrire *juste avant* son lot, jamais
@@ -72,27 +78,36 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Premier vrai modèle (F12, F13) | pas de date dans le message (le modèle datait le présent à sa coupure) ; drapeau calculé mais jamais persisté | ~0,0105 $/mandat | — |
 | Péremption (F14) | `source_date` datée du flux sur un ratio de bilan | 0 token | **#48** |
 
-### Livré cette session (2026-09-05) — le corpus a enfin une horloge
+### Livré cette session (2026-09-05, 2) — capacité 0 close, et la spec corrigée sur sa pièce à conviction
 
-Deux commits, chemin nominal, sonde publique 200 : **`ae02af3`** (ancre matérielle + balayage) et
-**`45379ee`** (F14). Aucune migration.
+**Aucune dépense de modèle. Aucune migration.** Le livrable est de la **doctrine** : elle n'est
+câblée nulle part (les capacités 1-5 la consommeront), donc son check est son seul garde-fou.
 
-- **`knowledge/material_events.py` — la seconde horloge.** Les dépôts périodiques (10-K/10-Q) ne
-  datent pas le monde ; un **8-K/6-K** le fait. Le search-worker reçoit désormais l'événement
-  matériel le plus récent, et un avertissement explicite quand il est **postérieur** à l'ancre
-  documentaire (« ce fait peut décrire un monde révolu SANS ÊTRE FAUX »).
-- **`knowledge/staleness.py` — un RAPPORT, jamais un `superseded_by`.** Route
-  `GET /tickers/{id}/knowledge/staleness`, **toujours 200**, `ecrit_en_base: false` (garde de check
-  qui grep l'absence d'`UPDATE`/`INSERT`/`DELETE`). Sur RVMD : seuil **2026-08-27**, 27 actives →
-  **24 suspectes / 2 postérieures / 1 non datée**, 7 champs touchés.
-- **F14, trouvé par le balayage lui-même** dès sa première lecture en prod : l'entry #169 disait
-  `fiscal_period='AU 2026-06-30'` et `source_date=2025-12-31` — **la même ligne se contredisait**.
-  Corrigé par détenteur unique ; vérifié après déploiement par le comptage #43 (une seule ligne
-  active par clef, #169 → #189 daté 2026-06-30, les ratios de flux inchangés à 2025-12-31).
+- **`agents/v2/common.py: FIELD_PROFILES`** — les 19 champs MVDD, chacun avec *nature · plancher ·
+  actualité bloquante* + un `motif` écrit. Détenteur **unique**, placé contre `MVDD_SPEC` pour que
+  les chemins et leurs profils ne puissent pas diverger. Convention **#50**.
+- **`checks/check_field_profiles.py`** — 174 assertions, **test négatif 5/5** (ligne retirée ·
+  desserrage tacite · motif nommant un émetteur · profil orphelin · score composite), chacun rouge
+  sur un assert **nommé** et le script allant jusqu'à sa ligne de bilan. Suite : **1 511 / 0 / 19**.
+- **Trois champs desserrés B+ → B** (`positionnement.moat_preuves`, `positionnement.position_vs_pairs`,
+  `marche.structure_5forces`) : sur un champ d'*interprétation*, un dépôt réglementaire est du
+  boilerplate malgré son tier A. ⚠️ **Ce desserrage n'admet personne tant que la capacité 2 (registre
+  nominatif) n'est pas livrée** — c'est ce qui le distingue d'un `Optional` posé à chaud.
+- 📌 **Résultat de rédaction** : **aucun** des 19 champs n'a `evenement` pour nature dominante. Un
+  événement ne *fonde* aucun champ, il *périme* les autres natures — d'où la troisième colonne.
 
-⚠️ **Ce qui reste vrai et inconfortable** : le balayage *signale*, il ne *décide* pas. Les 24
-entries suspectes de RVMD sont toujours actives, et la porte de complétude (#29) les compte comme
-couvrantes. **Un corpus complet peut être périmé** — voir « Reste à faire » n°1.
+⚠️ **La spec 02 visait le mauvais émetteur, corrigé aux DEUX endroits.** Vérifié en base avant tout
+code : RVMD n'a **jamais eu de rapport `readiness`**, ne couvre que **10 des 19 champs** et n'a
+**aucune dispense** — il sort `not_ready` **pour lacune**. Le faux vert `ready, 0 gap` est persisté
+sur **NVDA et MSFT** (rapports #26/#27 du 2026-08-31). Le test central de la capacité 4 aurait donc
+viré au **vert sans rien prouver** (fixture non discriminante) ; il vise désormais NVDA/MSFT, avec
+RVMD en test de **séparation** des deux causes. Le diagnostic en tête de spec portait la même
+affirmation — corriger le seul test l'aurait laissée se recopier (§15/#46).
+→ Enseignement transverse : **`CHANTIER_OUTILLAGE_DEV.md` §26**.
+
+⚠️ **Toujours vrai** : le balayage de péremption *signale*, il ne *décide* pas. Les 24 entries
+suspectes de RVMD restent actives et la porte (#29) les compte comme couvrantes. **Un corpus complet
+peut être périmé** — c'est ce que la capacité 4 ferme.
 
 ## Ce qui reste à faire — dans l'ordre
 
@@ -173,11 +188,12 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 
 ## À lire avant de reprendre
 
-- **`CLAUDE.md` du projet** — conventions **#22 à #49**. Les plus structurantes du chantier
+- **`CLAUDE.md` du projet** — conventions **#22 à #50**. Les plus structurantes du chantier
   courant : #29 (la couverture se lit dans un index), #42/#43 (datation et identité d'un fait),
   #44 (calculé / non calculable / absent), #46 (détenteur unique d'une règle), #47 (un zéro est une
   valeur), **#48** (la colonne `source_date` est un porteur de la date), **#49** (la péremption est
-  une seconde horloge, et elle produit un rapport).
+  une seconde horloge, et elle produit un rapport), **#50** (trois axes jamais recombinés ; le
+  standing est une propriété du COUPLE source × nature).
 - **Specs** : `roadmap/00-principe-directeur-v2.md` · `roadmap/01-spec-v2-unifiee.md`
   (§5 agents, §7 curator/readiness, §8 contrats, §14 migrations, §16 UX, §18 découpage).
 - **Cartes de contrat** : `roadmap/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
@@ -206,7 +222,9 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > même `ready` : un scalaire unique porte deux propriétés orthogonales et les confond. La révision
 > les sépare en **trois axes jamais recombinés** (fiabilité *stockée* · actualité *calculée à la
 > lecture* · nature *stockée*), et le standing devient une propriété du **couple (source × nature)**.
-> **Prochain jalon = capacité 0** : la table de profils des 19 champs MVDD, à **co-écrire** —
-> aucun code avant qu'elle soit close.
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#49**),
+> **Capacité 0 CLOSE** (table de profils des 19 champs, convention #50, 174 assertions, test
+> négatif 5/5). **Prochain jalon = capacité 1** : l'axe `nature` en dérivé déterministe, avec la
+> **migration 034** et le backfill des ~130 entries actives. ⚠️ Ne pas réordonner les capacités :
+> le registre des sources (2) DOIT précéder le durcissement de la porte (4).
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#50**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
