@@ -153,7 +153,7 @@ doc système peut dire *quand* utiliser un outil ; il ne peut pas en faire exist
 | `registry.py` | Seule source des outils. `tools_json()` **ne prend aucun argument**, par construction |
 | `loop.py` | Boucle bornée (8 itérations, budget mur/tokens, troncature, délimiteur de taint) |
 | `audit.py` | Écritures dans `agent_tool_calls` — best-effort, ne fait jamais perdre une réponse |
-| `create_reminder.py` | Outil d'écriture → carte Kanban dans la colonne `Rappels` |
+| `create_reminder.py` | Outil d'écriture → carte Kanban dans la colonne `Rappels`. `title` (borné à **60** par le code) + `details` → `description` de la carte. `date` accepte `MM-JJ` **et** `AAAA-MM-JJ` |
 | `web_search.py` | Outil de lecture (Exa/Serper) — **taintant**. Pas de `fetch_url` (SSRF, §4 roadmap) |
 | `capture_note.py` | Outil d'écriture → vault Obsidian. Deux modes = deux **adressages** : `note` (daté, `notes/{année}/{date}-{slug}.md`, classé + indexé) et `document` (par nom, `documents/{slug}.md`, ajout en fin de fichier). Contenu = **Markdown libre** |
 | `list_documents.py` | Outil de lecture → noms des documents existants, **sans leur contenu**. Non taintant (contenu écrit par l'utilisateur lui-même). À appeler avant d'écrire dans un document |
@@ -162,6 +162,18 @@ doc système peut dire *quand* utiliser un outil ; il ne peut pas en faire exist
 le nom à chaque tour : deux rejeux de la même demande ont produit `startups-spatial.md` puis
 `startups-spatial-a-creuser.md`, deux fichiers pour une seule liste, sans aucune erreur levée.
 Toute future primitive adressée par un libellé humain doit livrer son outil de lecture avec elle.
+
+⚠️ **Un schéma qui exige une information que le modèle n'a pas est un piège.** `create_reminder`
+n'acceptait que `AAAA-MM-JJ` : « le 1er décembre » n'ayant pas d'année, le modèle en inventait une
+— **la sienne, celle de sa coupure** — et le code refusait la date passée. Le rappel était perdu,
+le refus était pourtant juste. Avant de durcir une consigne, vérifier que le **schéma permet de la
+respecter** : ici le modèle rapporte `MM-JJ` et le code fait l'arithmétique d'année.
+
+⚠️ **Le modèle range mal ce qu'on ne lui a pas donné où ranger.** Tant que `create_reminder` n'avait
+qu'un champ de texte, une liste de courses entière atterrissait dans le titre — 165 caractères,
+phrases hors-sujet comprises. Un champ dédié n'est pas de l'ergonomie, c'est ce qui rend le tri
+possible. Corollaire mesuré : interdire un rangement ne suffit pas si on n'interdit pas aussi
+**ses formes de contournement** (« ni en aparté, ni entre parenthèses »).
 
 ⚠️ **`journal_vault.append_to_document` ne relit ni ne réécrit jamais le fichier** : création par
 `O_CREAT|O_EXCL`, ajout par `O_APPEND` (+ un octet lu en fin de fichier pour savoir s'il finit par

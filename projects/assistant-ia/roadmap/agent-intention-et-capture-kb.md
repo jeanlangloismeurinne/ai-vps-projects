@@ -98,10 +98,33 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   `note_lecture` · `stockage_source` · `rappel` · `question` · `conversation`. Le pré-classifieur
   renvoie une **liste** d'intentions, pas une valeur unique. Vocabulaire fermé, aligné sur
   `journal_kb_classifier`.
-- **D2 — La classification est du CODE, pas une consigne au modèle.** Pré-classifieur déterministe
-  (DeepSeek `response_format: json_schema`, T ≤ 0.2, texte utilisateur en **donnée délimitée**,
-  fallback `["conversation"]`) qui **oriente** la sélection d'outil. Le doc dit *quand* capter ; il
-  ne décide pas *si* on écrit — c'est le code + le régime de confirmation.
+- **D2 — ~~La classification est du CODE~~ → périmé par la mesure du 2026-09-05 (soir).** La
+  décision présumait que l'agent ne classait pas l'intention. Le rejeu de C6 et C7 contre le
+  modèle réel montre l'inverse : **4 appels d'outil sur 4, deux intentions correctement séparées
+  dans chacun des deux tours**, sans une ligne de code de classification. La taxonomie D1 est déjà
+  appliquée — en prose, par le paragraphe « Avant de répondre, classe l'intention du message » du
+  doc v4. Construire le pré-classifieur aurait été le miroir exact de l'erreur D0 : du code qui ne
+  change pas le comportement, parce que le comportement se joue ailleurs.
+  *Ce qui échouait vraiment était ailleurs — voir D8 et D9.*
+- **D8 — Un contrat d'outil qui exige une information que le modèle n'a pas est un piège**
+  *(2026-09-05, mesuré)*. `date_mode=absolute` n'acceptait que `AAAA-MM-JJ` : « le 1er décembre »
+  n'a pas d'année, le modèle en a donc inventé une — **2025, son année de coupure** — et le code
+  a refusé la date passée. Le refus était juste, la question posée au modèle était impossible.
+  `date` accepte désormais `MM-JJ` et le **code** choisit la prochaine occurrence : c'est la même
+  frontière que partout ailleurs dans ce module. *Règle générale : avant de durcir une consigne,
+  vérifier que le schéma permet de la respecter.*
+- **D9 — Le modèle range mal ce qu'on ne lui a pas donné où ranger** *(2026-09-05, mesuré)*.
+  `create_reminder` n'avait qu'un champ de texte : toute la liste de courses s'est déversée dans
+  le titre (165 caractères), seconde phrase de l'utilisateur comprise. Un champ `details` alimente
+  le corps de carte, et le titre est **borné par le code à 60 caractères** — erreur explicite, pas
+  troncature : tronquer amputerait la charge utile en silence.
+- **D10 — Le classifieur, s'il revient, choisira une *posture*, pas un outil** *(tranché avec
+  l'utilisateur, 2026-09-05)*. Le besoin réel n'est pas de router vers un outil (ça marche) mais
+  d'adapter la **manière de répondre** à la situation : explorer/brainstormer sur une question,
+  exécuter avec le strict minimum de mots sur une action, identifier le thème et les documents
+  existants sur une capture. Les postures vivent **dans le doc système**, en blocs nommés ; le code
+  sélectionne le bloc en vigueur. L'invariant A3 est préservé : la surface de comportement reste
+  versionnée, relue et éditable depuis Slack. → **capacité 5**.
 - **D3 — La capture réutilise l'existant.** Outil `capture_note` appelant `journal_kb_classifier`
   (métadonnées) puis le writer `journal_vault` (enveloppe federation-ready). Les deux modules
   existent — vérifié : `app/services/journal_kb_classifier.py`, `app/services/journal_vault.py`.
@@ -130,7 +153,9 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   La capacité 1 ne référence que les outils **réellement exposés** (`create_reminder`, `web_search`).
   Un addendum suit en capacité 4. Un doc qui nomme un outil absent recrée le défaut en miroir.
 
-*(Plus aucune décision ouverte : c'est ce qui autorise `status: figée`.)*
+*(Plus aucune décision ouverte. `status: figée` s'entend au sens « aucune décision ne bloque
+l'exécution » — pas « aucune décision ne sera révisée » : D2 a été périmée par sa propre mesure de
+ligne de base, ce qui est le fonctionnement attendu et non un accident.)*
 
 ---
 
@@ -229,24 +254,46 @@ ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas re
   du fichier avec `updated_at` + fuite du contenu par `list_documents` → 24 asserts rouges (dont
   « le front-matter du fichier est intact » et « list_documents ne rend pas le contenu »).
 
-### 3. Intention multi-étiquette câblée au tour · contexte partagé : `handlers/agent_chat.py` (`handle_conversation_turn`) + `agent_tools/loop` + contrat du classifieur
-> Branche le pré-classifieur en amont du tour et oriente la boucle. Couplé au chat handler et à
-> fort jugement → **non délégable**.
+### 3. ~~Intention multi-étiquette câblée au tour~~ → Le contrat d'outil rend l'action possible · contexte partagé : `agent_tools/create_reminder.py`
+> ⚠️ **Capacité réécrite le 2026-09-05 (soir) par sa propre mesure de ligne de base.** Le titre
+> d'origine désignait un pré-classifieur ; la mesure a montré que la classification fonctionnait
+> déjà et que l'échec était dans le contrat de `create_reminder` (D2, D8, D9).
+>
+> **La ligne de base a été requêtée avant le lot, et c'est ce qui a sauvé la capacité.** Les valeurs
+> rouges inscrites plus haut dataient d'*avant* la capacité 2 : les rejouer telles quelles aurait
+> fait construire un routeur pour un routage qui marche.
 
-- [ ] Pré-classifieur (D2) : `json_schema` fermé, sortie `{intents: [enum], confidence?}` —
-  **liste**, pas valeur unique ; fallback `["conversation"]` sur JSON invalide ou API indisponible
-  (aucune exception remontée : on ne perd jamais un tour).
-- [ ] Router : `note_lecture`/`stockage_source` → `capture_note` ; `rappel` → `create_reminder` ;
-  `question` → réponse + `web_search` ; `conversation` → tour normal. **Plusieurs intentions dans un
-  tour déclenchent plusieurs outils.** La classification *oriente*, la policy *décide*.
-- [ ] Fidélité de capture (C7) : le titre d'un rappel reste court, la charge utile va dans le corps
-  de la carte ; une phrase qui n'appartient pas à la demande n'y est pas fusionnée.
+- [x] ~~Pré-classifieur~~ — retiré du périmètre (D2). Le doc v4 classe déjà, mesuré 4/4.
+- [x] ~~Router~~ — retiré du périmètre. Mesuré : C6 et C7 enchaînent **3 outils chacun**
+  (`list_documents` → `capture_note` → `create_reminder`) dans un seul tour.
+- [x] **L'année manquante** (D8) : `date` accepte `MM-JJ`, le code résout la prochaine occurrence
+  (y compris le 29 février, par balayage d'années plutôt que `+1`). L'année explicite de
+  l'utilisateur reste souveraine ; une année passée reste refusée.
+- [x] **Fidélité de capture** (D9, C7) : champ `details` → `description` de la carte, titre borné
+  à 60 par le code avec une erreur qui **nomme le champ où mettre le reste**.
+- [x] Ce dont l'utilisateur dit s'occuper lui-même ne figure **nulle part** dans le rappel — ni en
+  liste, ni en aparté, ni entre parenthèses. *La mention « ni entre parenthèses » n'est pas du
+  zèle : sans elle, le modèle rangeait la phrase exclue dans un aparté étiqueté et l'assertion
+  restait rouge.*
+- [x] `checks/replay_intent_corpus.py` (rejeu réel) + `check_agent_tools.py` §D et §H (hors-ligne).
 
-- **Acceptation** : rejeu de **C6** → **deux** effets pour un seul message : une ligne dans
-  `listes/*.md` **et** une carte `Rappels` datée du **2026-12-01**. Rejeu de **C7** → titre de carte
-  < 60 caractères, items en corps, et « madame Loïc, hummus et concombre » **absent** du rappel.
-  *Test négatif (mesuré le 09-05) : C6 a produit zéro effet, C7 un titre de 130 caractères
-  incluant la phrase à exclure → rouge sur les deux.*
+- **Acceptation** : rejeu de **C6** → **deux** effets pour un seul message : un document touché
+  sous `documents/` **et** une carte `Rappels` datée du **2026-12-01**. Rejeu de **C7** → titre de
+  carte < 60 caractères, items en corps, et « madame Loïc, hummus et concombre » **absent** du
+  rappel.
+  *Test négatif (mesuré le 09-05 au soir, contre la capacité 2 déjà en ligne — pas remémoré) :
+  5 assertions rouges sur 9. C6 : `create_reminder` refusé sur `{"date": "2025-12-01"}`, aucune
+  carte créée. C7 : titre de 165 caractères, `description` vide, les trois termes à exclure
+  fusionnés dedans.*
+
+  ✅ **Vert le 2026-09-05** (commits `3004ef1` puis `802b180`, HTTP 200, un seul conteneur).
+  **9/9 au rejeu réel, deux fois de suite contre l'image construite.** C6 : le modèle écrit
+  `12-01`, le code résout `2026-12-01`, trois outils enchaînés dans le tour. C7 : titre
+  `'Acheter les courses'` (19 car.), corps à 83 car. contenant les cinq articles, zéro terme exclu.
+  Hors-ligne : **145 assertions vertes** (23 neuves), **éprouvées par deux passes négatives** —
+  retrait du support `MM-JJ` → 5 asserts rouges ; retour au champ unique tronqué à 200 → 5 asserts
+  rouges, dont « la borne du titre tient le critère d'acceptation (≤ 60) » et « le corps part en
+  base dans `description` ».
 
 ### 4. Restitution vérifiable et fin des dénis résiduels · contexte partagé : `handlers/agent_tool_actions.py` + rendu Slack + addendum au doc système
 > Consomme les sorties de 2 et 3. Les boutons *Annuler* / *Modifier* existent déjà — il manque le
@@ -263,6 +310,40 @@ ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas re
   l'objet créé, et le rejeu de **C5** ne contient plus la formule « je ne peux pas accéder ».
   *Test négatif (mesuré le 09-05) : « C'est noté, rappel programmé pour demain à 9h » — aucun lien,
   aucun référent → rouge.*
+
+### 5. Postures situées · contexte partagé : `agent_system_doc` (v5 en blocs) + `handlers/agent_chat.py` + nouveau `services/agent_posture.py`
+> **Ajoutée le 2026-09-05 (soir), à la demande de l'utilisateur.** Ce qui remplace D2 : le
+> classifieur ne choisit pas un outil — ça marche déjà — il choisit **comment répondre**.
+>
+> Le doc v4 est un compromis unique pour toutes les situations : il ordonne à la fois « agis, ne
+> demande pas la permission » et « rends compte de façon vérifiable », ce qui sert mal une question
+> ouverte comme une exécution. Une posture n'est pas un ton, c'est un **budget de mots et un ordre
+> d'opérations différents**.
+
+| Mode | Ce que l'utilisateur attend |
+|---|---|
+| `exploration` | une question ouverte : développer, proposer des pistes, chercher sur le web, ne rien écrire |
+| `action` | exécuter, puis le strict minimum de mots ; ne demander une précision que si elle bloque réellement |
+| `capture` | identifier le thème, regarder les documents existants, ranger l'information au bon endroit sans reformuler |
+
+- [ ] `agent_system_doc` **v5 découpé en blocs nommés** (`socle`, `exploration`, `action`,
+  `capture`) — un seul document versionné, relu, éditable depuis Slack. Le socle porte ce qui vaut
+  toujours (identité, non-déni, mémoire, outils) ; chaque bloc ne porte que ce qui lui est propre.
+- [ ] `services/agent_posture.py` : `json_schema` fermé, sortie `{modes: [enum]}` **multi-étiquette**
+  (C6 = `capture` + `action`), T ≤ 0.2, texte utilisateur en **donnée délimitée**, fallback
+  `["exploration"]` sur JSON invalide ou API indisponible — on ne perd jamais un tour.
+- [ ] `agent_chat` compose le prompt = socle + blocs des modes retenus. **Tous les fragments
+  viennent du doc actif** : le code sélectionne, il ne rédige pas (invariant A3 préservé).
+- [ ] La posture retenue est journalisée (nouvelle colonne sur `agent_conversations`) : sans ça, on
+  ne saura pas *a posteriori* si une réponse décevante vient du bloc ou du choix du bloc.
+
+- **Acceptation** : trois tours rejoués contre le modèle réel, avec la posture mesurée en base.
+  Une question ouverte (« que penses-tu de X ? ») → mode `exploration`, réponse développée, **zéro
+  écriture**. Une demande d'action (« rappelle-moi… ») → mode `action`, outil appelé, **réponse
+  d'acquittement sous 300 caractères**. Une capture (« note que… ») → mode `capture`,
+  `list_documents` appelé **avant** `capture_note`.
+  ⚠️ *Le test négatif se mesure d'abord : longueur de réponse et ordre d'appel actuels, sous doc
+  v4, avant d'écrire la v5. Sans quoi on ne saura pas si la v5 a changé quoi que ce soit.*
 
 ---
 

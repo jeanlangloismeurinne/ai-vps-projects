@@ -3,93 +3,88 @@ project: assistant-ia
 updated: 2026-09-05
 role: >
   Permet de reprendre le chantier « l'agent classe l'intention et capte la donnée ». Le doc système
-  est réaligné et le chemin d'écriture vers le vault existe (capacités 1 et 2 livrées) ; il reste à
-  câbler la classification d'intention au tour de conversation.
+  est réaligné, le chemin d'écriture vers le vault existe et les contrats d'outil laissent enfin
+  l'action aboutir (capacités 1, 2 et 3 livrées). Restent la restitution vérifiable et les postures.
 ---
 
 # Prompt de reprise — assistant-ia
 
-> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — capacité en cours : §3.
+> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — prochaines capacités : §4 et §5.
 
 ## État
 
 L'orchestrateur tourne en prod (`assistant.jlmvpscode.duckdns.org`) : import bancaire depuis Slack,
 journal v2, kanban, système de feedback, miroir du vault. Rien de tout cela n'est en cause.
 
-**Capacité 1 livrée le 2026-09-05.** `agent_system_doc` était en v1 « je n'ai pas de mémoire » ; la
-migration 016 a semé une v2 qui nomme les outils réellement exposés. Rejeu de C4 contre le modèle
-réel : **2 lignes `web_search` en `doc_version=2`**, là où la v1 n'en avait produit aucune en huit
-jours, pour **zéro ligne de code applicatif**. C'était bien le doc, et rien d'autre.
+**Capacités 1, 2 et 3 livrées le 2026-09-05.** L'agent nomme ses outils (doc système v4), écrit
+dans le vault (`capture_note` + `list_documents`, documents Markdown adressés par nom), et ses
+actions aboutissent : `create_reminder` accepte une date sans année et range la charge utile dans
+le corps de la carte.
 
-**Capacité 2 livrée le 2026-09-05** (commit `3493d55`, HTTP 200, un seul conteneur). L'agent écrit
-désormais dans le vault :
-
-- `capture_note` — deux modes, qui sont deux **adressages** et non deux formes de contenu :
-  `note` (daté, `notes/{année}/{date}-{slug}.md`, classé et indexé dans `journal_kb_entries`) et
-  `document` (par nom, `documents/{slug}.md`, ajout d'un **bloc Markdown libre** en fin de fichier).
-- `list_documents` — outil de **lecture** rendant les noms des documents existants, sans leur
-  contenu. Il n'était pas au périmètre : le rejeu a montré qu'il est indispensable (voir dettes).
-- `journal_vault.append_to_document` — création par `O_CREAT|O_EXCL`, ajout par `O_APPEND`. Le
-  fichier n'est **jamais réécrit** ; l'entête n'a aucun champ mutable.
-- Doc système en **v4 active** (`migration_018`, 3 233 car.) : vocabulaire « document », Markdown
-  libre, et consigne d'ordre « regarder les documents existants avant d'écrire, reprendre le nom
-  exact ».
-
-Acceptation : **16/16** au rejeu contre le modèle réel (`checks/replay_capture_corpus.py`), **59
-assertions vertes** hors-ligne (`checks/check_agent_tools.py`), éprouvées par deux passes négatives.
-`git diff` du vault sur un ajout : `1 file changed, 1 insertion(+)` — le critère `+n / -0` de D5.
+Le résultat qui compte, mesuré au rejeu réel : **un seul message produit trois outils enchaînés**
+(`list_documents` → `capture_note` → `create_reminder`) et **deux effets durables** — un document
+dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contre l'image construite
+(`checks/replay_intent_corpus.py`), **145 assertions vertes** hors-ligne
+(`checks/check_agent_tools.py`), éprouvées par deux passes négatives par capacité.
 
 ## Reste à faire / dettes ouvertes
 
-- **Capacité 3 — l'intention n'est pas encore classée au tour.** Le pré-classifieur (D2, sortie
-  `{intents: [enum]}` en `json_schema` fermé) n'existe pas : c'est aujourd'hui le modèle qui décide
-  seul, à partir du doc et des descriptions d'outils. C'est le prochain jalon.
-- **Fidélité de capture non traitée (C7).** Un titre de rappel de 130 caractères absorbe la charge
-  utile et une phrase qui n'appartenait pas à la demande. `create_reminder` appelle toujours
-  `create_card(..., description=None)` : le corps de carte n'est pas alimenté.
-- **`documents/sources-utiles.md` contient des doublons de rejeu.** Huit lignes dont plusieurs
-  répétitions, produites par mes propres passes de test du 09-05 — l'utilisateur n'y a rien écrit.
-  À vider ou supprimer d'un clic dans Obsidian ; `startups-spatial.md` et
-  `startups-spatial-a-creuser.md` sont dans le même cas (c'est le doublon historique).
-- **Le format d'accusé de réception reste minimal** (chemin écrit, pas d'URL kb-viewer cliquable) :
-  c'est la capacité 4, et son test d'acceptation doit rester rouge jusque-là.
+- **Capacité 4 — la restitution n'est pas vérifiable.** L'accusé de réception nomme le fichier
+  écrit mais ne donne **aucune URL cliquable** (carte kanban ou page kb-viewer). Son test
+  d'acceptation doit rester rouge jusque-là.
+- **Capacité 5 — les postures situées** (le vrai remplaçant de D2, cf. roadmap §5). Le doc v4 est
+  un compromis unique : il ordonne à la fois « agis sans demander » et « rends compte », ce qui
+  sert mal une question ouverte comme une exécution. Cible : doc v5 en **blocs nommés**
+  (`socle`/`exploration`/`action`/`capture`), un classifieur de **posture** (pas d'outil), et une
+  composition du prompt qui ne fait que **sélectionner** des fragments du doc actif.
+  ⚠️ *Mesurer d'abord la ligne de base : longueur de réponse et ordre d'appel sous doc v4.*
+- **Le vault porte des doublons de rejeu.** `documents/sources-utiles.md`, `startups-spatial*.md`,
+  `courses.md`, `climatisation-r*.md` — produits par mes passes de test des 09-05, l'utilisateur
+  n'y a rien écrit. À vider ou supprimer d'un clic dans Obsidian.
 - Les tickets de `feedback-tickets/` couvrant l'agent (`1787596637653`, `1787575860968`,
   `1787575776445`) sont **absorbés par cette roadmap** — ne pas les redécouper en unités de travail.
 
 ## Gotchas d'implémentation appris en chemin
 
-- **Un adressage par nom exige son outil de lecture, livré en même temps.** Deux rejeux de la même
-  demande ont produit `startups-spatial.md` puis `startups-spatial-a-creuser.md` : deux fichiers
-  pour une liste, aucune erreur levée, la moitié des entrées introuvable. Le modèle n'a pas l'état
-  du coffre et repart de zéro à chaque tour. Aucune consigne de prose ne corrige ça — ce n'est pas
-  un problème de comportement mais d'information manquante.
+- **La ligne de base d'un test d'acceptation se requête AVANT le lot, jamais après.** C'est ce qui
+  a sauvé la capacité 3 : la roadmap la donnait pour rouge (« C6 a produit zéro effet »), mais ces
+  valeurs dataient d'*avant* la capacité 2. Le rejeu du soir a montré que le modèle classait déjà
+  les intentions et enchaînait déjà les outils. Le pré-classifieur D2, pourtant « tranché » dans
+  une roadmap « figée », **n'a jamais été écrit** — il aurait été du code jamais appelé.
+- **Un schéma qui exige une information que le modèle n'a pas est un piège** : « le 1er décembre »
+  sans année → le modèle écrit son année de coupure → le code refuse à juste titre → l'action est
+  perdue. Avant de durcir une consigne, vérifier que le schéma permet de la respecter.
+- **Interdire un rangement ne suffit pas sans interdire ses contournements.** « n'entre pas dans le
+  rappel » a laissé le modèle produire un aparté `(À prendre chez toi : …)`. C'est « ni en aparté,
+  ni entre parenthèses » qui a fait passer l'assertion au vert.
+- **Une passe négative qui produit une trace de pile ne prouve rien** : mon check mourait sur la
+  première `ToolError` au lieu de rougir ses assertions, emportant les sections suivantes. Rattraper
+  le refus et le traiter comme un **résultat mesuré** — sinon on ignore ce que le check gardait.
+- **Une borne écrite en fonction d'elle-même ne borne rien** : les tests de frontière `TITLE_MAX` /
+  `TITLE_MAX + 1` restaient verts avec `TITLE_MAX = 200`. Le critère d'acceptation s'énonce en
+  **valeur absolue** (`TITLE_MAX <= 60`), sans quoi la passe négative ne le voit pas.
+- **Un adressage par nom exige son outil de lecture, livré en même temps** (leçon de la capacité 2 :
+  deux rejeux ont produit `startups-spatial.md` puis `startups-spatial-a-creuser.md`).
 - **`journal_vault._one_line` contient deux caractères U+2028/U+2029 littéraux**, invisibles dans le
-  source. L'outil `Edit` ne peut pas les matcher : ancrer toute édition de cette fonction sur du
-  texte strictement ASCII, jamais sur la ligne `collapsed = re.sub(...)`.
-- **Un doc système qui nie une capacité livrée est aussi grave qu'un doc qui en invente une.** La
-  migration 017 a été avancée de la capacité 4 à la capacité 2 pour cette raison : la v2 ordonnait
-  de dire que la capture « n'est pas encore branchée ». Le rejeu réussissait *malgré* elle (la
-  description d'outil emportait la décision) — un succès par chance, pas par conception.
-- **Un script de rejeu qui prédit un chemin teste le script, pas le code.** Ma correction de
-  rejouabilité (suffixe de session dans le nom demandé) a viré au rouge parce que le modèle a fait
-  exactement ce qu'on lui demande : réutiliser le nom du document existant. La bonne forme est de
-  **relever l'état avant et après le tour et de déduire la cible du delta**.
-- **`@admin`/`@update` n'est pas un canal de livraison** — c'est l'outil par lequel *l'utilisateur*
-  coache l'agent depuis Slack. Le contenu livré du doc système passe par une migration.
-- **Une migration qui sème du contenu se garde contre les décisions humaines postérieures** : garde
-  « aucune version ≥ N n'existe », jamais « la version N n'existe pas ». Le runner rejoue tous les
-  `.sql` à chaque démarrage.
-- **`E'…' '\n' '…'` en SQL est un piège** : le préfixe `E` ne vaut que pour le littéral qui le porte.
+  source : ancrer toute édition de cette fonction sur du texte strictement ASCII.
+- **Un doc système qui nie une capacité livrée est aussi grave qu'un doc qui en invente une.**
+- **`@admin`/`@update` n'est pas un canal de livraison** — le contenu livré du doc passe par une
+  migration, avec une garde « aucune version ≥ N n'existe » (jamais « la version N n'existe pas »).
+- **`E'…' '\n' '…'` en SQL est un piège** : le préfixe `E` ne vaut que pour son propre littéral.
   Utiliser le dollar-quoting.
-- **Rejouer un tour hors Slack** : copier le script dans `/app` puis `docker exec -w /app assistant-ia
-  python <script>`. Depuis `/tmp`, `sys.path[0]` vaut `/tmp` et `import app` échoue.
-- **`compose-deploy.sh` sans `-f`** quand le commit est déjà poussé : `--rebuild-only`. Sinon le
-  script sort en code 2 (« index vide »).
+- **Rejouer un tour hors Slack** : `docker cp` le script dans `/app/checks/`, puis
+  `docker exec -w /app -e PYTHONPATH=/app assistant-ia python checks/<script>`. Depuis `/tmp`,
+  `sys.path[0]` vaut `/tmp` et `import app` échoue.
+- **`compose-deploy.sh` sans `-f`** quand le commit est déjà poussé : `--rebuild-only`.
 
 ## Où démarrer
 
-Ouvrir la capacité 3 : le pré-classifieur d'intention (D2) dans `handlers/agent_chat.py`, en amont
-de `agent_tools/loop`, avec le texte utilisateur en **donnée délimitée** et un fallback
-`["conversation"]` qui ne perd jamais un tour ; puis la fidélité C7 (titre court, charge utile en
-corps de carte). Les deux tests négatifs sont mesurés et rouges : C6 a produit zéro effet, C7 un
-titre de 130 caractères incluant la phrase à exclure.
+Deux capacités indépendantes, dans l'ordre de valeur :
+
+**§5 (postures situées)** — c'est la demande explicite de l'utilisateur : que l'agent adapte sa
+manière de répondre à la situation (exploration ≠ action ≠ capture). Commencer par **mesurer** la
+ligne de base sous doc v4 (longueur de réponse et ordre d'appel sur trois tours types), puis écrire
+la v5 en blocs nommés.
+
+**§4 (restitution vérifiable)** — plus petite : ajouter l'URL de la carte kanban et de la page
+kb-viewer dans l'accusé de réception. Les boutons *Annuler* / *Modifier* existent déjà.
