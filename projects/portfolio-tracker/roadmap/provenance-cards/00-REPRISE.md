@@ -10,6 +10,7 @@ role: >
   UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est le **3ᵉ ticker
   RVMD**, qui sert de banc d'essai aux modes de panne du socle : 14 défauts trouvés et corrigés
   (F1→F14). État au 2026-09-05 : 1 337 assertions / 0 échec / 18 scripts, prochaine migration 034.
+  Roadmap active : `roadmap/02-spec-autorite-vs-actualite.md` (autorité contre actualité).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -19,6 +20,22 @@ role: >
 > numérotées), les enseignements d'outillage transverses dans `../../../CHANTIER_OUTILLAGE_DEV.md`.
 > Ici : **l'état atteint, ce qui reste, et les pièges à ne pas re-découvrir.** Protocole
 > d'éviction : `CONTROL_SYSTEM.md` §5.
+
+## 🎯 Roadmap active
+
+**`roadmap/02-spec-autorite-vs-actualite.md`** (statut `figée`, ouverte le 2026-09-05) — révision du
+modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé, capacité 0
+en cours (co-écriture de la table de profils par champ). **Rien n'est implémenté tant que la
+capacité 0 n'est pas close.**
+
+Motif d'ouverture : sur RVMD, l'information la plus fraîche du corpus est la moins bien classée
+(tier A moyen 0,931 sur des faits d'avant l'approbation FDA du 2026-08-26 · tier B+ 0,750 sur
+l'information du jour), et le `readiness` prononce quand même `ready, 0 gap`. La roadmap
+**absorbe** les points 1 et 2 de « Reste à faire » ci-dessous — ils y sont traités comme des
+symptômes, pas comme des tâches indépendantes.
+
+`roadmap/01-spec-v2-unifiee.md` §18 reste la roadmap de **référence** du projet (découpage en lots),
+mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qui s'exécute.
 
 ## Où on en est (2026-09-05)
 
@@ -78,6 +95,10 @@ entries suspectes de RVMD sont toujours actives, et la porte de complétude (#29
 couvrantes. **Un corpus complet peut être périmé** — voir « Reste à faire » n°1.
 
 ## Ce qui reste à faire — dans l'ordre
+
+⚠️ **Les points 1 et 2 sont désormais instruits par la roadmap 02** (voir en tête) : ce sont les
+symptômes qui l'ont ouverte, et les traiter isolément recréerait le défaut. Ils restent listés ici
+pour le contexte, pas comme des tâches à prendre telles quelles.
 
 1. **Statuer sur les 24 entries suspectes de RVMD** (le balayage rend la liste, motivée et
    ordonnée). C'est un **jugement humain** par construction : décider qu'un fait est remplacé n'est
@@ -180,8 +201,12 @@ couvrantes. **Un corpus complet peut être périmé** — voir « Reste à faire
 > **14 défauts (F1→F14)** trouvés et corrigés, onze à coût de modèle nul en lisant les sorties en
 > texte. Le corpus a désormais **une horloge** (ancre d'événements matériels 8-K/6-K + balayage de
 > péremption qui rend un rapport, jamais un `superseded_by`).
-> **Prochain jalon** : statuer sur les **24 entries RVMD signalées périmées** (jugement humain), puis
-> arbitrer si la péremption doit entrer dans la porte de complétude, avant d'enchaîner les 7 mandats
-> qualitatifs restants (~0,08 $).
+> **Roadmap active** : `roadmap/02-spec-autorite-vs-actualite.md` (figée le 2026-09-05) — *autorité
+> contre actualité*. Le corpus classe son information la plus fraîche au plus bas et prononce quand
+> même `ready` : un scalaire unique porte deux propriétés orthogonales et les confond. La révision
+> les sépare en **trois axes jamais recombinés** (fiabilité *stockée* · actualité *calculée à la
+> lecture* · nature *stockée*), et le standing devient une propriété du **couple (source × nature)**.
+> **Prochain jalon = capacité 0** : la table de profils des 19 champs MVDD, à **co-écrire** —
+> aucun code avant qu'elle soit close.
 > LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#49**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
