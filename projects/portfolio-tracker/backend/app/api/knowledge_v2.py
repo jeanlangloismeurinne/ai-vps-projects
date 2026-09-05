@@ -29,6 +29,7 @@ from app.knowledge.synthesis_feed import (
     SynthesisUngrounded,
     run_synthesis_feed,
 )
+from app.knowledge.staleness import balayage_peremption
 from app.knowledge.valuation_feed import ValuationUnavailable, run_valuation_feed
 from app.knowledge.websearch import SearchUnavailable, get_search_backend
 from app.config import settings
@@ -415,6 +416,23 @@ async def list_knowledge_entries(
         "par_tier": par_tier,
         "entries": [dict(r) for r in rows],
     }
+
+
+@router.get("/tickers/{ticker_id}/knowledge/staleness")
+async def knowledge_staleness(ticker_id: str):
+    """Balayage de péremption : entries actives ANTÉRIEURES au dernier événement matériel (8-K/6-K).
+
+    **En lecture seule, à dessein.** Décider qu'un fait est remplacé est un jugement sémantique :
+    la route propose une liste à re-vérifier, elle n'écrit jamais `superseded_by` (cf. #29 et
+    `feedback_optional_schema_gate` — ne pas donner à une heuristique de dates une voix sur ce que
+    le corpus affirme).
+
+    ⚠️ **Toujours 200, jamais 503 sur flux injoignable** : le rapport rend alors
+    `statut='indeterminable'` avec son avertissement. Un 503 ferait disparaître le rapport, donc
+    lire comme « rien à signaler » depuis l'appelant — la panne exacte qu'on ferme ici.
+    """
+    async with get_db_session() as conn:
+        return await balayage_peremption(conn, ticker_id)
 
 
 @router.get("/knowledge/entries/{entry_id}")

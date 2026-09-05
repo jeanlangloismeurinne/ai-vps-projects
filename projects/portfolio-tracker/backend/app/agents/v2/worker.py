@@ -59,6 +59,7 @@ from app.contracts import (
     WorkerResponse,
 )
 from app.db.database import get_db_session
+from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
@@ -386,7 +387,60 @@ async def ancre_temporelle(conn: asyncpg.Connection, ticker_id: Optional[str]) -
     return dict(row) if row else None
 
 
-def _build_user_message(req: WorkerRequest, ancre: Optional[dict] = None) -> str:
+def _formuler_ancre_materielle(materiel: Optional["MaterialEventLookup"],
+                               ancre: Optional[dict]) -> str:
+    """Formule l'ancre d'ÉVÉNEMENT MATÉRIEL — la seconde horloge du corpus (2026-09-05).
+
+    ⚠️ Le défaut fermé ici n'est pas une garde absente mais une garde **correcte qui rassure à
+    tort** : l'ancre de F12 ne regarde que les dépôts PÉRIODIQUES. Sur RVMD au 2026-09-04 elle
+    annonçait « 2026-06-30 » — exact — alors que la FDA avait approuvé RASONQUE le 2026-08-26
+    (8-K item 8.01) et qu'un second 8-K (événement du 2026-08-27, items 1.01/2.03) créait une
+    obligation financière. Le modèle recevait donc une ancre juste et un faux sentiment de
+    fraîcheur.
+
+    Les trois états sont formulés distinctement (#25/#44) : `found` / `none` / `unavailable`.
+    ⚠️ `materiel=None` (non consulté) tombe **délibérément** dans la branche « inconnu », jamais
+    dans le silence : un appelant qui oublierait de consulter le flux produirait sinon le message
+    le plus rassurant possible pour la pire des raisons.
+    """
+    if materiel is None or materiel.status == "unavailable":
+        motif = (materiel.raison if materiel and materiel.raison else "flux non consulté")
+        return (
+            "Événements matériels (8-K / 6-K) : le flux n'a PAS pu être consulté "
+            f"({motif}). Tu ne peux donc PAS conclure qu'il ne s'est rien passé depuis le dernier "
+            "dépôt périodique — cherche activement une annonce postérieure avant de décrire "
+            "l'émetteur au présent."
+        )
+    if materiel.status == "none":
+        return (
+            "Événements matériels (8-K / 6-K) : cet émetteur n'en a publié AUCUN. Le dernier "
+            "dépôt périodique est donc bien l'état le plus récent connu d'EDGAR."
+        )
+
+    evt = materiel.event
+    assert evt is not None  # garanti par status == 'found'
+    lignes = [f"Dernier ÉVÉNEMENT MATÉRIEL publié par l'émetteur : {evt.resume()}."]
+    if evt.url:
+        lignes.append(f"Source : {evt.url}")
+    ancre_date = ancre.get("source_date") if ancre else None
+    if ancre_date is not None and evt.event_date > ancre_date:
+        lignes.append(
+            f"⚠️ CET ÉVÉNEMENT EST POSTÉRIEUR au dernier dépôt périodique "
+            f"({ancre_date.isoformat()}). Tout ce que le corpus affirme de l'émetteur peut donc "
+            "décrire un monde révolu SANS ÊTRE FAUX : les faits antérieurs restent exacts à leur "
+            "date. Avant d'écrire une affirmation au présent (ce que la société vend, approuve, "
+            "doit ou perçoit), vérifie qu'elle survit à cet événement, et DIS-LE dans `content`."
+        )
+    else:
+        lignes.append(
+            "Cet événement est antérieur ou contemporain du dernier dépôt périodique : ce dernier "
+            "reste l'état le plus récent."
+        )
+    return " ".join(lignes)
+
+
+def _build_user_message(req: WorkerRequest, ancre: Optional[dict] = None,
+                        materiel: Optional["MaterialEventLookup"] = None) -> str:
     """La requête part telle quelle (JSON) : le prompt du worker est écrit contre ce contrat.
 
     ⚠️ **Ancrage temporel (F12).** Le message ne portait AUCUNE date : le modèle datait donc le
@@ -417,6 +471,7 @@ def _build_user_message(req: WorkerRequest, ancre: Optional[dict] = None) -> str
             "Aucun dépôt réglementaire n'est encore connu du corpus pour cet émetteur : "
             "l'ancre est INCONNUE, pas récente. Cherche le dépôt le plus récent avant de citer."
         )
+    lignes.append(_formuler_ancre_materielle(materiel, ancre))
     lignes += [
         "",
         "WorkerRequest à traiter :",
@@ -471,10 +526,14 @@ async def run_search_worker(
     # coûterait un appel complet pour apprendre ce qu'on savait déjà (#40, transposé à l'amont).
     async with get_db_session() as conn:
         ancre = await ancre_temporelle(conn, req.ticker_id)
+        # Seconde horloge : le dernier ÉVÉNEMENT matériel (8-K/6-K). Elle ne se lit PAS dans le
+        # corpus — un émetteur dont aucun mandat n'a encore vu l'annonce n'en porte aucune trace,
+        # et c'est précisément le cas qu'on veut couvrir. Un appel EDGAR, zéro token de modèle.
+        materiel = await material_anchor_for_ticker(conn, req.ticker_id)
 
     result = await run_tool_json_agent(
         agent,
-        [{"role": "user", "content": _build_user_message(req, ancre)}],
+        [{"role": "user", "content": _build_user_message(req, ancre, materiel)}],
         executors,
         WorkerResponse,
         closing_instruction=_CLOSING_INSTRUCTION,
