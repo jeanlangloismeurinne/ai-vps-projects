@@ -65,5 +65,29 @@
   le volume (jamais le point de montage = EBUSY). Quartz 4.5.1 exige **Node ≥ 22**. Détails et
   exploitation : `projects/kb-viewer/README.md`.
 
+## Doc système et capture KB (chantier intention/capture, 2026-09-05)
+
+- **`@admin`/`@update` est l'outil de l'utilisateur, pas le canal de livraison.** Ce cycle existe
+  pour que l'utilisateur *coache* l'agent depuis Slack, sans ouvrir autre chose — « adopte
+  durablement tel comportement ». Le **contenu livré** du doc système, lui, passe par une migration,
+  comme la v1 semée par `011_agent_consignes.sql`. Ne pas confondre les deux : faire passer une
+  livraison par `@update`, c'est faire réécrire son propre texte par DeepSeek et demander à
+  l'utilisateur d'approuver un diff qu'il n'a pas commandé. *(Tranché par l'utilisateur.)*
+- **Une migration qui sème du contenu doit se garder contre les décisions humaines postérieures.**
+  Le runner rejoue tous les `.sql` à chaque démarrage. Garde correcte : « aucune version ≥ N
+  n'existe » — jamais « la version N n'existe pas », qui ressusciterait le contenu semé par-dessus
+  un rollback ou une version approuvée dans Slack. Vérifié par test négatif sur base jetable :
+  rollback simulé vers v1, ré-application, v1 reste active.
+- **Piège SQL : `E'…' '\n' '…'` ne fait pas ce qu'on croit.** Le préfixe `E` ne s'applique qu'au
+  littéral qui le porte ; les fragments concaténés suivants insèrent un antislash-n **littéral**.
+  Pour du texte multi-ligne, dollar-quoting (`$doc$…$doc$`) — vérifié par
+  `position('\n' in content) = 0`.
+- **`journal_vault.py` ne sait pas ajouter une ligne à un fichier existant.** `write_entry` est
+  « append-only » au sens *ne jamais écraser* : elle crée `{année}/{AAAA-MM-JJ}-{slug}.md` et
+  suffixe en cas de collision. Le mode `append` des listes nommées (D5) exige donc une **fonction
+  neuve**, pas une réutilisation — et l'arborescence `notes/{slug}.md` de la roadmap ne correspond
+  pas à ce que le writer produit aujourd'hui. La roadmap annonçait « zéro brique neuve » : c'est
+  faux, et ça recalibre la capacité 2.
+
 ---
 _Historique détaillé des sessions : `git log` + `roadmap/archive/`._

@@ -111,7 +111,11 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   — elle a seulement attendu la capacité 1.*
 - **D5 — Une liste nommée = une note KB append-only dans le vault** *(tranché avec l'utilisateur, 09-05)*.
   Un fichier par liste sous `listes/{slug}.md`, l'agent y **ajoute une ligne** sans réécrire le
-  fichier. Zéro brique neuve, relisible dans Obsidian et sur kb-viewer.
+  fichier. Relisible dans Obsidian et sur kb-viewer.
+  ⚠️ *Corrigé le 09-05 : « zéro brique neuve » était faux.* `journal_vault.write_entry` ne sait
+  **pas** ajouter une ligne à un fichier existant — elle crée `{année}/{AAAA-MM-JJ}-{slug}.md` et
+  suffixe en cas de collision. L'append demande une fonction neuve dans `journal_vault.py`, avec
+  les mêmes barrières (`slugify` + `_resolve_within_vault` + écriture atomique + commit git).
   *Ceci renverse la reco de la version 08-27* (« on ne crée une liste dédiée que si un besoin de
   relecture agrégée apparaît ») : trois demandes en huit jours **sont** ce besoin.
 - **D6 — Écrire d'abord, confirmer a posteriori** *(tranché avec l'utilisateur, 09-05)*. C'est le
@@ -135,22 +139,39 @@ n'existe pas est un no-op. 4 en dernier parce qu'elle consomme les sorties de 2 
 ⚠️ **Chaque test d'acceptation se vérifie AVANT le correctif : il doit échouer.** La ligne de base
 ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas remémorées.
 
-### 1. Doc système réaligné · contexte partagé : `agent_system_doc` + cycle `@admin`/`@update`
-> Le plus rentable, sans une ligne de code. Passe par la **revue de diff humaine** — jamais
-> d'auto-activation (invariant A3). **Non délégable** (jugement + sécurité de prose).
+### 1. Doc système réaligné · contexte partagé : `agent_system_doc` + migration de contenu
+> Le plus rentable, sans une ligne de code applicatif. **Non délégable** (jugement + sécurité de
+> prose).
+>
+> ⚠️ **Amendement du 2026-09-05 (utilisateur).** La version figée disait « soumettre le diff via
+> `@update` ». C'est le mauvais canal : `@admin`/`@update` appartient à l'**utilisateur**, pour
+> coacher l'agent depuis Slack sans ouvrir autre chose. Le contenu livré passe par une **migration**,
+> comme la v1 semée par `011_agent_consignes.sql`. L'invariant A3 (aucune auto-modification sans
+> revue humaine) est préservé : le texte est relu dans le terminal, versionné en git, et le garde
+> d'idempotence interdit à la migration d'écraser une décision prise ensuite dans Slack.
 
-- [ ] Rédiger la version 2 du doc : rôle réel (assistant personnel **avec mémoire et outils**),
+- [x] Rédiger la version 2 du doc : rôle réel (assistant personnel **avec mémoire et outils**),
   posture « classer l'intention avant de répondre », suppression des formules « je n'ai pas de
   mémoire » / « je ne peux rien stocker » / « je ne peux pas rechercher ».
-- [ ] Y nommer les outils **réellement exposés** — `create_reminder`, `web_search` — en disant
+- [x] Y nommer les outils **réellement exposés** — `create_reminder`, `web_search` — en disant
   *quand* les mobiliser, jamais *comment* (le doc ne crée pas d'outil).
-- [ ] Y écrire la règle de non-déni : face à une limite réelle (PDF, lien externe), **orienter**
+- [x] Y écrire la règle de non-déni : face à une limite réelle (PDF, lien externe), **orienter**
   vers ce qui est possible ; ne jamais nier un apport qui existe.
-- [ ] Soumettre le diff via `@update` et le faire **approuver** par l'utilisateur.
+- [x] Livrer par `migrations/016_agent_system_doc_v2.sql`, avec garde d'idempotence « aucune
+  version ≥ 2 n'existe » — une migration ne rejoue jamais par-dessus une décision humaine
+  postérieure (rollback, ou v3 approuvée dans Slack).
 
 - **Acceptation** : `SELECT version, active FROM agent_system_doc` renvoie une **v2 active**, et le
   rejeu de **C4** produit au moins une ligne `web_search` dans `agent_tool_calls`.
   *Test négatif (mesuré le 09-05) : v1 seule, `web_search` à 0 appel → rouge.*
+
+  ✅ **Vert le 2026-09-05.** v2 active (`created_by=migration_016`, `parent_version=1`, 2 175 car.)
+  après rebuild vérifié (HTTP 200, un seul conteneur). Rejeu de C4 contre le modèle réel :
+  2 itérations, 2 appels d'outil, **2 lignes `web_search` en `verdict=ok` avec `doc_version=2`**,
+  8 sources taintées (bfmtv, lesechos, lcp, lefigaro, rfi, france24, rtl, franceinfo), et une
+  réponse sourcée au lieu de « Je ne peux pas consulter l'actualité en temps réel ».
+  La colonne `doc_version` sépare l'avant/après sans ambiguïté : tout ce qui porte `v1` est du
+  `create_reminder`, les `web_search` portent tous `v2`. **Zéro ligne de code applicatif.**
 
 ### 2. `capture_note` et listes nommées · contexte partagé : `agent_tools/` (manifest·policy·registry) + `journal_kb_classifier` + `journal_vault`
 > Construit le chemin d'écriture manquant. Fortement couplé (contrat de manifeste + classifieur +
