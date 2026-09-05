@@ -10,11 +10,12 @@ Couverture, dans l'ordre des tickets :
   A. isolation du registre — un doc système empoisonné ne fait pas exister d'outil ;
   B. `policy` en table — les 4 conditions de confirmation préalable, une par une, + le cas nominal ;
   C. taint — accumulation, sens inverse sans effet rétroactif ;
-  D. résolution de date — les 4 modes, les bornes, les refus ;
+  D. résolution de date — les 4 modes, les bornes, les refus, **l'année manquante** ;
   E. bornes de la boucle — épuisement explicite, troncature, erreurs jamais vides ;
   F. web_search sans backend — échec explicite, jamais un résultat vide ;
   G. capture_note / list_documents — confinement au vault, Markdown libre écrit verbatim, ajout
-     sans réécriture (« +n / -0 »), régime **dérivé** du manifeste.
+     sans réécriture (« +n / -0 »), régime **dérivé** du manifeste ;
+  H. create_reminder — titre court borné par le code, charge utile en corps de carte (C7).
 """
 import asyncio
 import json
@@ -202,6 +203,54 @@ async def test_dates() -> None:
 
     d = r({"date_mode": "absolute", "date": "2026-09-12", "time": "08:15"}, now)
     check("date absolue", (d.month, d.day, d.hour) == (9, 12, 8), str(d))
+
+    # ── L'année manquante (capacité 3, mesuré sur C6 le 2026-09-05) ──────────
+    # « le 1er décembre » ne porte pas d'année. Tant que le schéma en exigeait une, le modèle en
+    # inventait une — la sienne, 2025 — et le code refusait à juste titre une date passée : le
+    # rappel était perdu. Le modèle ne rapporte plus que ce qui a été dit ; le code fait l'année.
+    def _ou_none(args: dict, moment: datetime) -> datetime | None:
+        """Résout, ou `None` si l'outil refuse.
+
+        Le refus est ici un **résultat mesuré**, pas une exception à laisser filer : sans ce
+        rattrapage, une régression du support `MM-JJ` tuait la suite au premier cas et emportait
+        les sections E à H avec elle. Une passe négative doit rougir des assertions nommées, pas
+        produire une trace de pile — sinon on ne sait pas ce que le check gardait vraiment.
+        """
+        try:
+            return r(args, moment)
+        except ToolError:
+            return None
+
+    d = _ou_none({"date_mode": "absolute", "date": "12-01", "time": "09:00"}, now)
+    check("« le 1er décembre » sans année → 2026-12-01 (année déduite par le code)",
+          d is not None and (d.year, d.month, d.day, d.hour) == (2026, 12, 1, 9),
+          "date sans année refusée" if d is None else str(d))
+
+    # Même demande, formulée après le 1er décembre : la prochaine occurrence est l'an prochain.
+    d = _ou_none({"date_mode": "absolute", "date": "12-01", "time": "09:00"},
+                 datetime(2026, 12, 15, 10, 0, tzinfo=TZ))
+    check("« le 1er décembre » demandé le 15 décembre → 2027",
+          d is not None and d.year == 2027, "refusée" if d is None else str(d))
+
+    # Le jour même, mais à une heure déjà passée : c'est l'an prochain, comme pour `weekday`.
+    d = _ou_none({"date_mode": "absolute", "date": "08-25", "time": "10:00"}, now)
+    check("« le 25 août » à 10h, un 25 août à 14h30 → l'an prochain",
+          d is not None and d.year == 2027, "refusée" if d is None else str(d))
+    d = _ou_none({"date_mode": "absolute", "date": "08-25", "time": "18:00"}, now)
+    check("« le 25 août » à 18h, un 25 août à 14h30 → aujourd'hui",
+          d is not None and (d.year, d.day) == (2026, 25),
+          "refusée" if d is None else str(d))
+
+    # 29 février : une date valide une année sur quatre, pas une date illisible.
+    d = _ou_none({"date_mode": "absolute", "date": "02-29"}, now)
+    check("« le 29 février » → prochaine année bissextile (2028)",
+          d is not None and (d.year, d.month, d.day) == (2028, 2, 29),
+          "refusée" if d is None else str(d))
+
+    # L'année explicite reste souveraine : si l'utilisateur l'a dite, on ne la corrige pas.
+    d = _ou_none({"date_mode": "absolute", "date": "2027-12-01"}, now)
+    check("année donnée par l'utilisateur → respectée telle quelle",
+          d is not None and d.year == 2027, "refusée" if d is None else str(d))
 
     for label, args in [
         ("mode inconnu refusé", {"date_mode": "bientot"}),
@@ -621,6 +670,127 @@ async def test_capture_note() -> None:
         shutil.rmtree(racine, ignore_errors=True)
 
 
+# ── H. create_reminder : fidélité de capture (capacité 3, C7) ────────────────
+#
+# Ce que ce bloc protège n'est pas une préférence d'affichage. Tant que l'outil n'avait qu'un champ
+# de texte, le modèle y déversait tout : 165 caractères mesurés sur C7, avec dedans une phrase que
+# l'utilisateur n'avait pas demandé de lui rappeler. **Le modèle range mal ce qu'on ne lui a pas
+# donné où ranger** — d'où un champ dédié, et une erreur explicite quand le titre déborde.
+
+class _FauxKanban:
+    """Capture l'appel réellement passé à `create_card`. Le point de lecture du contrat est la
+    base, pas le payload résolu : un `details` résolu mais jamais transmis serait un affichage."""
+
+    def __init__(self) -> None:
+        self.appels: list[dict] = []
+
+    async def create_card(self, column_id, title, description=None, due_date=None):
+        self.appels.append({"column_id": column_id, "title": title,
+                            "description": description, "due_date": due_date})
+        return {"id": "card-test"}
+
+
+async def test_fidelite_rappel() -> None:
+    print("\n--- H. create_reminder : titre court, charge utile en corps (C7) ---")
+    ctx = ToolContext(turn=TurnState(channel_id="C1"))
+
+    # 1. Le schéma expose le champ, et le dit au modèle. Sans ça, rien de ce qui suit n'a de prise :
+    #    un champ que le contrat ne nomme pas n'est jamais rempli.
+    props = create_reminder.SCHEMA["properties"]
+    check("le schéma expose `details`", "details" in props, str(sorted(props)))
+    # La borne est **absolue**, pas relative à elle-même : les deux tests de frontière ci-dessous
+    # sont écrits en fonction de `TITLE_MAX` et resteraient verts si la constante remontait à 200.
+    # 60 est le critère d'acceptation de la capacité 3 — il s'énonce ici, en clair.
+    check("la borne du titre tient le critère d'acceptation (≤ 60)",
+          create_reminder.TITLE_MAX <= 60, f"TITLE_MAX = {create_reminder.TITLE_MAX}")
+    check("la description du titre annonce la borne",
+          str(create_reminder.TITLE_MAX) in props["title"]["description"],
+          props["title"]["description"])
+    check("la description de `details` exclut ce que l'utilisateur fait déjà lui-même",
+          "n'entre pas dans le rappel" in props["details"]["description"],
+          props["details"]["description"])
+    check("le schéma dit au modèle de ne pas inventer d'année",
+          "n'invente jamais une année" in props["date"]["description"].lower(),
+          props["date"]["description"])
+
+    # 2. Le titre mesuré sur C7 — 165 caractères — est refusé, avec un motif qui dit où mettre
+    #    le reste. Refus et non troncature : tronquer amputerait la charge utile en silence.
+    titre_c7 = ("Acheter la liste de courses : pain, chips de légumes et Pringles, tomates "
+                "cerises, abricot, tranche de rôti. Prendre aussi madame Loïc, hummus et "
+                "concombre chez toi.")
+    check("le titre mesuré sur C7 fait bien plus que la borne",
+          len(titre_c7) > create_reminder.TITLE_MAX, f"{len(titre_c7)} caractères")
+    try:
+        await create_reminder._resolve(
+            {"title": titre_c7, "date_mode": "offset_days", "offset_days": 1}, ctx)
+        check("titre de 165 caractères refusé", False, "aucune ToolError levée")
+    except ToolError as exc:
+        check("titre de 165 caractères refusé", True)
+        check("le motif du refus nomme le champ où mettre le reste",
+              "`details`" in str(exc), str(exc))
+
+    # 3. Les bornes exactes — un test qui ne passe pas au rouge à 61 caractères ne borne rien.
+    async def _accepte(n: int) -> bool:
+        try:
+            await create_reminder._resolve(
+                {"title": "x" * n, "date_mode": "offset_days", "offset_days": 1}, ctx)
+            return True
+        except ToolError:
+            return False
+
+    check(f"titre de {create_reminder.TITLE_MAX} caractères accepté",
+          await _accepte(create_reminder.TITLE_MAX))
+    check(f"titre de {create_reminder.TITLE_MAX + 1} caractères refusé",
+          not await _accepte(create_reminder.TITLE_MAX + 1))
+
+    # 4. `details` traverse la résolution **et** l'exécution jusqu'au champ `description`.
+    details = "- pain\n- tomates cerises\n- abricot"
+    prep = await create_reminder._resolve(
+        {"title": "acheter les courses", "details": details,
+         "date_mode": "offset_days", "offset_days": 1}, ctx)
+    check("`details` est dans le payload résolu", prep.resolved.get("details") == details,
+          str(prep.resolved))
+    check("le résumé de confirmation montre aussi le corps, pas seulement le titre",
+          "tomates cerises" in prep.summary, prep.summary)
+
+    faux = _FauxKanban()
+    orig_kanban, orig_col = create_reminder.kanban_svc, create_reminder._target_column
+
+    async def _col() -> str:
+        return "col-test"
+
+    create_reminder.kanban_svc, create_reminder._target_column = faux, _col
+    try:
+        res = await create_reminder._execute(prep.resolved, ctx)
+        appel = faux.appels[0] if faux.appels else {}
+        check("le corps part en base dans `description`", appel.get("description") == details,
+              str(appel.get("description")))
+        check("le titre en base reste le titre court", appel.get("title") == "acheter les courses",
+              str(appel.get("title")))
+        blocs = json.dumps(res.slack_blocks, ensure_ascii=False)
+        check("la confirmation a posteriori affiche le corps", "tomates cerises" in blocs,
+              blocs[:200])
+
+        # 5. Sans `details`, la colonne reste NULL — pas une chaîne vide, qui ferait apparaître un
+        #    corps de carte vide dans le kanban.
+        faux.appels.clear()
+        prep2 = await create_reminder._resolve(
+            {"title": "appeler le garage", "date_mode": "offset_days", "offset_days": 1}, ctx)
+        await create_reminder._execute(prep2.resolved, ctx)
+        check("sans détail, `description` vaut NULL et non une chaîne vide",
+              faux.appels[0]["description"] is None, str(faux.appels[0]["description"]))
+
+        # 6. Une confirmation figée **avant** ce déploiement porte un payload sans `details` : le
+        #    clic « Confirmer » doit encore écrire la carte, pas mourir d'un KeyError.
+        faux.appels.clear()
+        ancien = {"title": "rappel d'avant", "due_at": prep2.resolved["due_at"]}
+        await create_reminder._execute(ancien, ctx)
+        check("un payload résolu d'avant la migration s'exécute encore",
+              faux.appels and faux.appels[0]["title"] == "rappel d'avant", str(faux.appels))
+    finally:
+        create_reminder.kanban_svc, create_reminder._target_column = orig_kanban, orig_col
+
+
 async def main() -> int:
     await test_isolation_registre()
     test_policy()
@@ -629,6 +799,7 @@ async def main() -> int:
     await test_boucle()
     await test_web_search_indisponible()
     await test_capture_note()
+    await test_fidelite_rappel()
 
     print("\n" + "=" * 60)
     if ECHECS:

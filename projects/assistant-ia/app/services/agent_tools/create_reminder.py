@@ -21,6 +21,27 @@ La décomposition est la troisième voie : le modèle fait ce qu'il sait faire �
 formulation en `mode` + composants, sans connaître la date du jour — et le code fait de
 l'arithmétique de calendrier, testable et lisible. Un mode inconnu est refusé, il n'existe pas de
 chemin par défaut silencieux.
+
+## L'année manquante (mesuré le 2026-09-05, rejeu de C6)
+
+« Crée un rappel pour le 1er décembre » ne porte **pas** d'année. Le schéma n'exigeait qu'un
+`AAAA-MM-JJ` : le modèle devait donc en inventer une, et il a écrit `2025-12-01` — son année de
+coupure. Le code a refusé la date passée, à juste titre, le modèle a demandé une précision, et
+l'action a été perdue. Le refus était bon ; **c'est la question posée au modèle qui était
+impossible**, puisqu'elle lui demandait une information qu'il n'a pas et qu'on lui interdit par
+ailleurs de deviner.
+
+`date` accepte donc aussi `MM-JJ`. Le modèle n'écrit l'année que si l'utilisateur l'a dite ; sinon
+le **code** choisit la prochaine occurrence. C'est la même frontière qu'ailleurs dans ce module :
+le modèle rapporte ce qui a été dit, le code fait le calendrier.
+
+## Le titre et le corps
+
+Un rappel a deux parties de nature différente : *ce qu'il faut faire* (le titre, lu dans la
+notification Slack) et *ce qu'il faut avoir sous les yeux à ce moment-là* (la liste de courses, les
+références). Tant qu'il n'existait qu'un champ, tout se déversait dans le titre — 165 caractères
+mesurés sur C7, seconde phrase de l'utilisateur comprise. Un champ n'est pas une préférence
+d'affichage : **le modèle range mal ce qu'on ne lui a pas donné où ranger.**
 """
 from __future__ import annotations
 
@@ -40,7 +61,11 @@ REMINDER_COLUMN = "Rappels"
 DEFAULT_BOARD_NAME = "Personnel"
 DEFAULT_TIME = "09:00"
 
-TITLE_MAX = 200
+# Le titre est ce que l'utilisateur lit dans sa notification Slack : il doit tenir d'un coup d'œil.
+# Dépassement = erreur explicite et non troncature — tronquer perdrait la fin de la charge utile
+# sans que personne ne le voie, alors que l'erreur dit au modèle où mettre le reste (`details`).
+TITLE_MAX = 60
+DETAILS_MAX = 2_000
 # Un rappel dans plus de deux ans n'est jamais une intention réelle — c'est une erreur de
 # résolution. Refusé explicitement plutôt que corrigé en silence.
 HORIZON_MAX = timedelta(days=730)
@@ -58,8 +83,18 @@ SCHEMA = {
     "properties": {
         "title": {
             "type": "string",
-            "description": "Ce qu'il faut rappeler, en quelques mots, à la première personne "
-                           "de l'utilisateur. Ex. « appeler le garage ».",
+            "description": f"Ce qu'il faut faire, en quelques mots — {TITLE_MAX} caractères "
+                           f"maximum. C'est le texte de la notification Slack. "
+                           f"Ex. « acheter les courses », « appeler le garage ». "
+                           f"N'y mets jamais une liste ni un détail : ils vont dans `details`.",
+        },
+        "details": {
+            "type": "string",
+            "description": "Ce que l'utilisateur doit avoir sous les yeux au moment du rappel : "
+                           "les articles à acheter, les références, le lien concerné. Markdown "
+                           "libre, un élément par ligne. Reprends ses mots. "
+                           "N'y mets que ce qu'il demande de lui rappeler — ce qu'il dit déjà "
+                           "avoir, faire ou prendre lui-même n'entre pas dans le rappel.",
         },
         "date_mode": {
             "type": "string",
@@ -81,7 +116,15 @@ SCHEMA = {
             "enum": list(_JOURS),
             "description": "Si date_mode = weekday.",
         },
-        "date": {"type": "string", "description": "Si date_mode = absolute, au format AAAA-MM-JJ."},
+        "date": {
+            "type": "string",
+            "description": (
+                "Si date_mode = absolute. `MM-JJ` quand l'utilisateur n'a pas dit l'année "
+                "(« le 1er décembre » → `12-01`) : le code choisira la prochaine occurrence. "
+                "`AAAA-MM-JJ` **uniquement** si l'utilisateur a donné l'année lui-même. "
+                "N'invente jamais une année : tu ne sais pas en quelle année on est."
+            ),
+        },
         "time": {
             "type": "string",
             "description": f"Heure locale HH:MM. Omise si date_mode = in_minutes. "
@@ -160,11 +203,35 @@ def resolve_due_at(args: dict, now: datetime) -> datetime:
         target = candidate
 
     elif mode == "absolute":
-        raw = str(args.get("date") or "")
+        raw = str(args.get("date") or "").strip()
         try:
             d = datetime.strptime(raw, "%Y-%m-%d")
         except ValueError:
-            raise ToolError(f"date illisible : {raw!r} (format attendu AAAA-MM-JJ)")
+            # Pas d'année : c'est le cas nominal quand l'utilisateur n'en a pas donné. Le code
+            # choisit la prochaine occurrence — la même arithmétique que `weekday`, appliquée à
+            # l'année au lieu de la semaine. Le modèle n'a jamais à savoir en quelle année on est.
+            try:
+                # Ancré sur une année bissextile : sans quoi `02-29` serait « illisible », ce qui
+                # est faux — c'est une date valide une année sur quatre.
+                sans_annee = datetime.strptime(f"2024-{raw}", "%Y-%m-%d")
+            except ValueError:
+                raise ToolError(
+                    f"date illisible : {raw!r} (attendu `MM-JJ`, ou `AAAA-MM-JJ` si "
+                    f"l'utilisateur a donné l'année)"
+                )
+            # La prochaine occurrence réelle. La boucle, plutôt qu'un `+1`, gère le 29 février :
+            # la prochaine occurrence peut être à trois ans, et `replace(year=…)` lèverait sur
+            # une année commune.
+            for annee in range(now.year, now.year + 9):
+                try:
+                    candidate = sans_annee.replace(
+                        year=annee, hour=h, minute=m, second=0, microsecond=0, tzinfo=TZ
+                    )
+                except ValueError:
+                    continue  # 29 février d'une année commune
+                if candidate > now:
+                    return candidate
+            raise ToolError(f"aucune occurrence à venir pour {raw!r}")
         target = d.replace(hour=h, minute=m, tzinfo=TZ)
 
     else:
@@ -178,7 +245,16 @@ async def _resolve(args: dict, ctx: ToolContext) -> PreparedCall:
     if not title:
         raise ToolError("titre vide : précise ce qu'il faut rappeler")
     if len(title) > TITLE_MAX:
-        title = title[:TITLE_MAX].rstrip() + "…"
+        # Erreur explicite plutôt que troncature : tronquer amputerait la charge utile en silence,
+        # alors que l'erreur indique au modèle le champ où elle doit aller.
+        raise ToolError(
+            f"titre trop long ({len(title)} caractères, {TITLE_MAX} maximum). Garde un titre "
+            f"d'action court et mets la liste, les articles ou les références dans `details`."
+        )
+
+    details = str(args.get("details") or "").strip()
+    if len(details) > DETAILS_MAX:
+        details = details[:DETAILS_MAX].rstrip() + "…"
 
     now = now_local()
     due_at = resolve_due_at(args, now)
@@ -197,9 +273,15 @@ async def _resolve(args: dict, ctx: ToolContext) -> PreparedCall:
             f"probablement une erreur d'interprétation."
         )
 
+    # `details` figure dans le résumé : une confirmation préalable doit montrer **tout** ce qui
+    # sera écrit, sinon elle fait approuver autre chose que ce qui part en base.
+    summary = f"*{title}* — {format_local(due_at)}"
+    if details:
+        summary += f"\n{details}"
+
     return PreparedCall(
-        resolved={"title": title, "due_at": due_at.isoformat()},
-        summary=f"*{title}* — {format_local(due_at)}",
+        resolved={"title": title, "details": details, "due_at": due_at.isoformat()},
+        summary=summary,
     )
 
 
@@ -219,19 +301,23 @@ async def _target_column() -> str:
     return str(col["id"])
 
 
-def build_posterior_blocks(card_id: str, title: str, due_at: datetime) -> list[dict]:
+def build_posterior_blocks(
+    card_id: str, title: str, due_at: datetime, details: str | None = None
+) -> list[dict]:
     """Confirmation *a posteriori* : le rappel existe déjà, on montre quoi et quand.
 
     Régime réservé au contexte propre (roadmap §3.3) : la portée est d'un message, l'erreur est
     visible immédiatement, et l'annulation tient en un clic — profil de risque sans commune
     mesure avec un diff de doc système, qui reste lui en approbation *préalable*.
     """
+    corps = f"\n\n{details.strip()}" if (details or "").strip() else ""
     return [
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f":alarm_clock: Rappel programmé : *{title}*\n{format_local(due_at)}",
+                "text": f":alarm_clock: Rappel programmé : *{title}*\n"
+                        f"{format_local(due_at)}{corps}",
             },
         },
         {
@@ -263,25 +349,34 @@ async def _execute(resolved: dict, ctx: ToolContext) -> ToolResult:
     donc avec exactement la date qui a été affichée à l'utilisateur.
     """
     title = resolved["title"]
+    # `.get` et non `[...]` : une confirmation figée avant ce déploiement porte un payload résolu
+    # sans `details`, et un rappel en attente ne doit pas mourir d'un `KeyError` au clic.
+    details = (resolved.get("details") or "").strip()
     due_at = datetime.fromisoformat(resolved["due_at"])
 
     column_id = await _target_column()
-    card = await kanban_svc.create_card(column_id, title, description=None, due_date=due_at)
+    card = await kanban_svc.create_card(
+        column_id, title, description=details or None, due_date=due_at
+    )
     card_id = str(card["id"])
 
-    logger.info("create_reminder: carte %s créée — %r à %s", card_id, title, due_at.isoformat())
+    logger.info(
+        "create_reminder: carte %s créée — %r (%d car. de détail) à %s",
+        card_id, title, len(details), due_at.isoformat(),
+    )
 
     return ToolResult(
         payload={
             "status": "créé",
             "card_id": card_id,
             "title": title,
+            "details": details,
             "due_at_local": format_local(due_at),
             "note": "Le rappel est programmé et confirmé à l'utilisateur dans le fil, "
                     "avec un bouton pour l'annuler ou l'éditer. Ne répète pas la date, "
                     "contente-toi d'un acquittement bref.",
         },
-        slack_blocks=build_posterior_blocks(card_id, title, due_at),
+        slack_blocks=build_posterior_blocks(card_id, title, due_at, details),
         slack_text=f"Rappel programmé : {title} — {format_local(due_at)}",
     )
 

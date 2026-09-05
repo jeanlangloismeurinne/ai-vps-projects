@@ -185,5 +185,7 @@ async def apply_edit(card_id: str, title: str, date_str: str, time_str: str) -> 
     logger.info("agent_tool_actions: rappel %s modifié → %r %s", card_id, title, due.isoformat())
     return (
         f"Rappel mis à jour : {card['title']} — {format_local(due)}",
-        build_posterior_blocks(card_id, card["title"], due),
+        # Le corps de la carte est réaffiché tel quel : l'édition ne porte que sur le titre et la
+        # date, et une confirmation qui perdrait la liste laisserait croire qu'elle a été effacée.
+        build_posterior_blocks(card_id, card["title"], due, card["description"]),
     )
