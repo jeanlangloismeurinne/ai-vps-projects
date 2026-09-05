@@ -37,10 +37,15 @@ router = APIRouter(prefix="/roadmap")
 
 # ── Filesystem helpers ─────────────────────────────────────────────────────────
 
-def _roadmap_dir(project: str) -> Path:
+def _roadmap_dir(project: str, *, create: bool = False) -> Path:
+    """`create=True` est réservé à l'écriture. Une simple visite de `/roadmap/{projet}` créait
+    sinon un dossier `roadmap/` vide dans chaque projet qui n'en a pas — un GET avec un effet de
+    bord d'écriture. Les lecteurs s'en passent : `Path.glob` et `.exists()` sur un dossier absent
+    ne lèvent pas, ils ne trouvent rien, ce qui est exactement la réponse voulue."""
     base = project.split("~")[0]
     d = PROJECTS_BASE / base / "roadmap"
-    d.mkdir(exist_ok=True)
+    if create:
+        d.mkdir(exist_ok=True)
     return d
 
 
@@ -229,7 +234,7 @@ def _create_roadmap(project: str, title: str, direction: str) -> str:
     d'acceptation par capacité, checklist — pour que la conversation de raffinement remplisse
     une structure au lieu d'en inventer une à chaque fois.
     """
-    rd = _roadmap_dir(project)
+    rd = _roadmap_dir(project, create=True)
     item_id = int(time.time() * 1000)
     slug = re.sub(r"[^a-z0-9-]", "", re.sub(r"\s+", "-", title[:40].lower()))
     filename = f"roadmap-{item_id}-{slug}.md"
