@@ -22,18 +22,32 @@ En production. Newsletters transférées → inbound Resend → PostgreSQL ; dig
 détient aucune clé de provider). Le rendu HTML des cartes a son enveloppe produite **côté code**
 depuis le 2026-09-04 : l'imbrication de cartes est impossible par construction.
 
-Dernier lot livré le 2026-09-04, vérifié contre le vrai modèle mais **pas encore contre un digest
-réel de 5 à 8 mails** — voir la première dette ci-dessous.
+**Corrigé le 2026-09-05 — le digest se mangeait lui-même.** Une seule URL de webhook reçoit tous
+les événements Resend, entrants comme sortants : les `email.sent` / `delivered` / `opened` du
+digest qu'on venait d'envoyer étaient stockés comme des newsletters à résumer. Une ligne fantôme
+par jour, corps vide, ressortie le lendemain en carte vide dont l'en-tête affichait le sujet de la
+veille. C'est ce qu'on voyait le 05/09 : objet « 2 newsletter(s) », en-tête de première carte
+« 8 newsletter(s) — Friday 04 », un seul vrai bloc. `resend.is_inbound_event` trie désormais sur
+liste blanche, gardé par `checks/check_webhook_event_filter.py`. Les 4 lignes fantômes déjà en
+base sont passées en `status='ignored'` (marquées, pas supprimées).
+
+Ce n'était **pas** une régression du correctif d'imbrication du 2026-09-04, qui tient.
 
 Déploiement : ce projet reste **hors** de `infrastructure/compose-deploy.sh` (comme `kb-viewer`).
 La commande est dans le `README.md` § Déploiement.
 
 ## Reste à faire / dettes ouvertes
 
-- **Le rendu d'un vrai digest multi-mails n'a jamais été observé** depuis le correctif du
-  2026-09-04. La vérification a porté sur un seul mail rejoué (id27). Ce qui reste à constater sur
-  un lot de 5 à 8 : la séparation entre cartes, et le respect des 600 mots sur des mails variés.
-  Surveiller les WARNING `finish_reason=length` — ils ne devraient plus apparaître.
+- **Le rendu d'un digest de 5 à 8 mails n'a toujours pas été observé.** Celui du 05/09 n'avait
+  qu'un seul vrai bloc (l'autre était le fantôme), et la file de demain n'en contient qu'un
+  (Euractiv, id 29). Restent à constater sur un vrai lot : la séparation entre cartes et le
+  respect des 600 mots sur des mails variés. Surveiller les WARNING `finish_reason=length`.
+  ⚠️ **La cause du non-observé, jusqu'ici, était le fantôme lui-même** : il gonflait le compte
+  annoncé, ce qui donnait l'illusion d'un digest fourni.
+- **Le corps d'un mail arrivé trop tôt n'est pas rapatriable** : le 05/09 à 08:00, trois tentatives
+  `GET /v1/inbound/email/{id}` ont rendu 404 (« pas encore indexé »). La ligne reste alors
+  metadata-only et produit une carte « Corps non reçu ». Aucun re-essai différé n'existe — à
+  traiter si le cas se répète sur un vrai mail (le 05/09, c'était le fantôme).
 - **Domaine d'envoi Resend non vérifié** → le gateway tourne en `RESEND_DEV_MODE=1`, tous les
   envois sont forcés vers `RESEND_DEV_TO`. **Le digest ne part donc pas à son vrai destinataire.**
   Sortir du mode dev une fois un domaine vérifié dans resend.com/domains (avec DNS). Blocage

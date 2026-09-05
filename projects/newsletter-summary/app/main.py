@@ -128,6 +128,13 @@ async def webhook_resend(request: Request):
     logger.info("Webhook Resend reçu — clés: %s", list(payload.keys()))
     logger.info("Payload brut: %s", json.dumps(payload, default=str, ensure_ascii=False)[:8000])
 
+    # Trier entrant / sortant AVANT toute écriture (cf. resend.is_inbound_event : le digest
+    # se mangeait lui-même via les événements de son propre envoi).
+    if not resend.is_inbound_event(payload):
+        event_type = payload.get("type")
+        logger.info("Événement Resend ignoré (sortant) — type=%s", event_type)
+        return {"status": "ignored", "type": event_type}
+
     fields = resend.parse_inbound(payload)
     logger.info(
         "Parsed — from=%r subject=%r message_id=%r text_len=%d",

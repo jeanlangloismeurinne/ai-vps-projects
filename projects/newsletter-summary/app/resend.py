@@ -39,6 +39,24 @@ def _unwrap(payload: dict) -> dict:
     return payload
 
 
+def is_inbound_event(payload: dict[str, Any]) -> bool:
+    """Vrai si le payload est un mail REÇU, et non un événement de notre propre envoi.
+
+    Une seule URL de webhook reçoit TOUS les événements Resend, entrants comme sortants. Sans
+    ce tri, les `email.sent` / `email.delivered` / `email.opened` du digest qu'on vient
+    d'envoyer étaient stockés comme des newsletters à résumer : le digest se mangeait lui-même,
+    une ligne fantôme par jour (corps vide), ressortie le lendemain en carte vide dont l'en-tête
+    affichait le sujet de la veille. Constaté sur le digest du 2026-09-05.
+
+    Liste BLANCHE, pas liste noire : Resend ajoute des types (`bounced`, `clicked`,
+    `complained`, `delivery_delayed`…) et chaque nouveau serait ingéré par défaut.
+    Un payload SANS `type` reste accepté — c'est la forme « plano » que `parse_inbound`
+    tolère déjà, et la refuser perdrait des mails.
+    """
+    event_type = payload.get("type")
+    return event_type is None or event_type == "email.received"
+
+
 def parse_inbound(payload: dict[str, Any]) -> dict[str, Any]:
     """Normalise le payload inbound Resend en champs pour la table `emails`.
 
