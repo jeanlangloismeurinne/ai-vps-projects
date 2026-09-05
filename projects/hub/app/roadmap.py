@@ -41,6 +41,51 @@ def _item_path(project: str, item_id: str) -> Optional[Path]:
     return None
 
 
+def _render_saved_document(raw: str, *, body: str, status: str) -> str:
+    """Rend le contenu complet d'un document après une sauvegarde depuis le Hub.
+
+    Isolé du handler HTTP pour être vérifiable : `checks/check_frontmatter_preserved.py`
+    rejoue une sauvegarde à vide sur tous les documents du repo et exige un fichier
+    identique octet pour octet.
+    """
+    # Le frontmatter n'est JAMAIS reconstruit : il est repris octet pour octet, et seule la
+    # ligne `status:` y est substituée. Le reconstruire à plat en `clé: valeur` détruisait les
+    # scalaires de bloc YAML (`role: >`, `downstream: >`) et promouvait toute ligne de
+    # continuation contenant un « : » en clef parasite — silencieusement, sur 31 des 46
+    # documents du repo. Le Hub n'édite que le corps ; il n'a aucune raison de savoir parser
+    # du YAML. Gardé par `checks/check_frontmatter_preserved.py`.
+    m = re.match(r"^---\n([\s\S]*?)\n---\n?", raw)
+    fm_raw = m.group(1) if m else ""
+    if status in STATUS_LABEL:
+        fm_raw = _set_fm_status(fm_raw, status)
+
+    # Les textarea HTML renvoient des fins de ligne CRLF (spec HTML). Sans cette
+    # normalisation, la moindre sauvegarde réécrit TOUT le fichier en CRLF et
+    # `git diff` affiche le document entier comme modifié : le vrai changement est
+    # noyé, et le lecteur de diff de la boucle nocturne s'ancre sur du bruit.
+    body = body.replace("\r\n", "\n").replace("\r", "\n").strip()
+    # Le "\n" final garantit la newline de fin de fichier, sinon chaque sauvegarde
+    # produit un « \ No newline at end of file » dans le diff.
+    if not m:
+        return body + "\n"
+    return f"---\n{fm_raw}\n---\n\n{body}\n"
+
+
+def _set_fm_status(fm_raw: str, status: str) -> str:
+    """Substitue la valeur de `status:` dans un frontmatter brut, sans toucher au reste.
+
+    Ne considère que les clefs de PREMIER NIVEAU : une ligne indentée `  status: …` appartient
+    à une structure imbriquée et ne doit pas être capturée. Si la clef est absente, elle est
+    ajoutée en fin de frontmatter plutôt qu'en tête, pour ne pas déplacer les lignes existantes.
+    """
+    lines = fm_raw.split("\n")
+    for i, line in enumerate(lines):
+        if re.match(r"^status\s*:", line):
+            lines[i] = f"status: {status}"
+            return "\n".join(lines)
+    return "\n".join(lines + [f"status: {status}"]) if fm_raw else f"status: {status}"
+
+
 def _parse_item(filepath: Path) -> dict:
     raw = filepath.read_text()
     fm: dict = {}
@@ -678,26 +723,7 @@ async def roadmap_edit_post(
     if not path:
         return HTMLResponse(f"Item introuvable : {_e(item_id)}", status_code=404)
 
-    raw = path.read_text()
-    fm: dict = {}
-    m = re.match(r"^---\n([\s\S]*?)\n---\n?", raw)
-    if m:
-        for line in m.group(1).split("\n"):
-            if ": " in line:
-                k, _, v = line.partition(": ")
-                fm[k.strip()] = v.strip()
-
-    fm["status"] = status if status in STATUS_LABEL else fm.get("status", "draft")
-
-    # Les textarea HTML renvoient des fins de ligne CRLF (spec HTML). Sans cette
-    # normalisation, la moindre sauvegarde réécrit TOUT le fichier en CRLF et
-    # `git diff` affiche le document entier comme modifié : le vrai changement est
-    # noyé, et le lecteur de diff de la boucle nocturne s'ancre sur du bruit.
-    body = body.replace("\r\n", "\n").replace("\r", "\n")
-    # Le "" final garantit la newline de fin de fichier, sinon chaque sauvegarde
-    # produit un « \ No newline at end of file » dans le diff.
-    fm_lines = ["---"] + [f"{k}: {v}" for k, v in fm.items()] + ["---", "", body.strip(), ""]
-    path.write_text("\n".join(fm_lines))
+    path.write_text(_render_saved_document(path.read_text(), body=body, status=status))
     return RedirectResponse(f"/roadmap/{project}/{item_id}/edit?flash=saved", status_code=303)
 
 

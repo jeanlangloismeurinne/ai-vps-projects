@@ -4,7 +4,12 @@ status: prompt-de-reprise
 created: 2026-08-30
 updated: 2026-09-03
 project: comms-gateway
-role: Prompt à coller pour reprendre le chantier du gateway de communication externe. État : gateway multi-tenant DÉPLOYÉ en prod, désormais en `docker compose` standalone (migration Coolify -> compose du 2026-09-03), secrets dans un `.env` local 600 hors repo, /webhooks/* seuls exposés publiquement ; reste les 3 blocages utilisateur (domaine Resend, app Slack, téléphone SMS/WhatsApp/Signal) avant envois réels.
+role: >
+  Prompt à coller pour reprendre le chantier du gateway de communication externe. État : gateway
+  multi-tenant DÉPLOYÉ en prod, désormais en `docker compose` standalone (migration Coolify ->
+  compose du 2026-09-03), secrets dans un `.env` local 600 hors repo, /webhooks/* seuls exposés
+  publiquement ; reste les 3 blocages utilisateur (domaine Resend, app Slack, téléphone
+  SMS/WhatsApp/Signal) avant envois réels.
 ---
 
 # 🚦 RÈGLE (s'applique à chaque session)

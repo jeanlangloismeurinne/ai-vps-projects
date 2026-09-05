@@ -4,7 +4,10 @@ status: prompt-de-reprise
 created: 2026-09-02
 updated: 2026-09-03
 project: newsletter-summary
-role: Prompt à coller pour reprendre le chantier du digest matinal de newsletters. État : HTML (Option B) + garanties français/anti-pub côté code + séparation des cartes garantie + **KB des résumés (enveloppe KNOWLEDGE §3)** + **éditeur de prompt versionné dans le Hub**.
+role: >
+  Prompt à coller pour reprendre le chantier du digest matinal de newsletters. État : HTML (Option
+  B) + garanties français/anti-pub côté code + séparation des cartes garantie + **KB des résumés
+  (enveloppe KNOWLEDGE §3)** + **éditeur de prompt versionné dans le Hub**.
 ---
 
 # 🚦 RÈGLE (s'applique à chaque session)
