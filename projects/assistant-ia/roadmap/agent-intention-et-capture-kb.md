@@ -109,9 +109,14 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   2026-08-24 19:25. Il n'y a **rien à activer** : il reste à faire en sorte que le doc système le
   nomme, pour que le modèle le mobilise. *Cette décision ne coûte plus rien et n'a jamais rien coûté
   — elle a seulement attendu la capacité 1.*
-- **D5 — Une liste nommée = une note KB append-only dans le vault** *(tranché avec l'utilisateur, 09-05)*.
-  Un fichier par liste sous `listes/{slug}.md`, l'agent y **ajoute une ligne** sans réécrire le
-  fichier. Relisible dans Obsidian et sur kb-viewer.
+- **D5 — Un document nommé = une note KB append-only dans le vault** *(tranché avec l'utilisateur,
+  09-05 ; **généralisé le même jour**, cf. l'amendement de la capacité 2)*.
+  Un fichier par document sous `documents/{slug}.md`, l'agent y **ajoute un bloc Markdown libre**
+  sans réécrire le fichier. Relisible dans Obsidian et sur kb-viewer.
+  ⚠️ *Corollaire découvert au rejeu : un adressage par nom ne vaut rien sans son outil de lecture.*
+  Le modèle repart de zéro à chaque tour et n'a pas l'état du coffre ; sans `list_documents` il
+  réinvente un nom voisin et fabrique un doublon silencieux. **Toute future primitive adressée par
+  un libellé humain doit livrer son outil de lecture avec elle.**
   ⚠️ *Corrigé le 09-05 : « zéro brique neuve » était faux.* `journal_vault.write_entry` ne sait
   **pas** ajouter une ligne à un fichier existant — elle crée `{année}/{AAAA-MM-JJ}-{slug}.md` et
   suffixe en cas de collision. L'append demande une fonction neuve dans `journal_vault.py`, avec
@@ -173,27 +178,56 @@ ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas re
   La colonne `doc_version` sépare l'avant/après sans ambiguïté : tout ce qui porte `v1` est du
   `create_reminder`, les `web_search` portent tous `v2`. **Zéro ligne de code applicatif.**
 
-### 2. `capture_note` et listes nommées · contexte partagé : `agent_tools/` (manifest·policy·registry) + `journal_kb_classifier` + `journal_vault`
+### 2. `capture_note` et documents nommés · contexte partagé : `agent_tools/` (manifest·policy·registry) + `journal_kb_classifier` + `journal_vault`
 > Construit le chemin d'écriture manquant. Fortement couplé (contrat de manifeste + classifieur +
 > writer) → **inline**, ou **un** worker Sonnet sur la capacité entière, jamais par item.
+>
+> ⚠️ **Amendement du 2026-09-05 (utilisateur), en cours de livraison.** La version figée parlait de
+> « listes nommées » et d'un mode `append` qui ajoute *une ligne*. L'objection : un Markdown porte
+> déjà les puces, les tableaux, les cases à cocher et les titres — coder une primitive par forme de
+> contenu, c'est coder une primitive par idée que l'utilisateur pourrait avoir. Ce qui distingue
+> réellement les deux modes n'est pas la forme mais l'**adressage** : daté (`note`) contre nommé
+> (`document`). `listes/` est donc devenu `documents/`, le contenu est du Markdown libre, et les
+> deux invariants de sécurité sont inchangés : **chemin dérivé par le code**, **ajout qui ne
+> réécrit jamais**.
 
-- [ ] `agent_tools/capture_note.py` : `MANIFEST` (`effect=write`, `taints_context=false`,
+- [x] `agent_tools/capture_note.py` : `MANIFEST` (`effect=write`, `taints_context=false`,
   `reversible=true`, `visibility=true` (D6), `egress=none`) + `_execute` appelant le classifieur
   puis le writer ; exporter `SPEC`, l'ajouter à `_ALL` dans `registry.py`.
-- [ ] Deux modes : `note` (fichier neuf) et `append` (ajoute une ligne à `listes/{slug}.md` **sans
-  réécrire le fichier**) ; création implicite de la liste si le slug est inconnu.
-- [ ] Écriture au format **enveloppe document commune** (federation-ready), métadonnées issues de
+- [x] Deux modes : `note` (fichier daté neuf) et `document` (ajoute un **bloc Markdown libre** à
+  `documents/{slug}.md` **sans réécrire le fichier**) ; création implicite si le slug est inconnu.
+- [x] `agent_tools/list_documents.py` (**hors périmètre initial, ajouté le 09-05**) : outil de
+  **lecture** rendant les noms des documents existants, sans leur contenu. L'adressage par nom est
+  inutilisable sans lui — mesuré : deux rejeux de C8 ont produit `startups-spatial.md` puis
+  `startups-spatial-a-creuser.md`, deux fichiers pour une liste, sans qu'aucune erreur ne soit levée.
+- [x] Écriture au format **enveloppe document commune** (federation-ready), métadonnées issues de
   `journal_kb_classifier`, vocabulaire construit au runtime depuis `categories.schema.yaml` — jamais
   recopié en dur.
-- [ ] Échec d'outil = erreur explicite en `role=tool`, jamais résultat vide (leçon SearXNG) ; le
+- [x] Échec d'outil = erreur explicite en `role=tool`, jamais résultat vide (leçon SearXNG) ; le
   fallback « à classer » du classifieur ne perd jamais la note.
-- [ ] Étendre `checks/check_agent_tools.py` : doc empoisonné → `capture_note` n'écrit toujours que
-  dans le vault, régime de confirmation **dérivé** du manifeste et non codé à la main.
+- [x] Étendre `checks/check_agent_tools.py` (§G) : doc empoisonné → `capture_note` n'écrit toujours
+  que dans le vault, régime de confirmation **dérivé** du manifeste et non codé à la main, et
+  chaque forme Markdown (puce, case à cocher, ligne de tableau, paragraphe, titre, séparateur)
+  écrite **verbatim** avec le front-matter intact.
+- [x] `migrations/017` (v3, la capture existe) puis `migrations/018` (v4, vocabulaire « document »
+  + consigne d'ordre « lire les documents existants avant d'écrire »). La 017 a été avancée depuis
+  la capacité 4 : laisser en ligne un doc qui *ordonne* de nier une capacité livrée reproduit D0.
 
 - **Acceptation** : rejeu de **C1** → un `.md` neuf dans `/storage/journal-vault`. Rejeu de **C2**
-  puis **C8** → deux fichiers sous `listes/`. Un **second** append sur `sources-utiles.md` ajoute
-  une ligne et laisse les précédentes intactes (`git diff` du vault = `+1` ligne, `-0`).
-  *Test négatif (mesuré le 09-05) : 6 `.md` au total, aucun répertoire `listes/` → rouge.*
+  puis **C8** → un document touché sous `documents/` et un document neuf. Un **second** ajout
+  laisse le contenu antérieur intact (`git diff` du vault = `+n` lignes, `-0`). **C8bis** (même
+  demande, autre formulation) → *aucun* document supplémentaire.
+  *Test négatif (mesuré le 09-05) : 6 `.md` au total, aucun répertoire de documents → rouge.*
+
+  ✅ **Vert le 2026-09-05**, doc v4 active, 16/16 assertions du rejeu contre le modèle réel.
+  Les 5 cas ont appelé `capture_note`, et 4 sur 5 ont appelé `list_documents` **avant** d'écrire.
+  `git diff` du vault : `document sources utiles complété (+1)` → `1 file changed, 1 insertion(+)`,
+  soit exactement le critère `+n / -0`. C8bis a bien complété `startups-spatial-r29251.md` au lieu
+  d'en forger un second — le doublon mesuré le matin ne se reproduit plus.
+  Checks hors-ligne : 59 assertions vertes, **éprouvées par deux passes négatives** — repli du bloc
+  sur une ligne → 4 asserts rouges (dont « paragraphe multi-ligne : écrit verbatim ») ; réécriture
+  du fichier avec `updated_at` + fuite du contenu par `list_documents` → 24 asserts rouges (dont
+  « le front-matter du fichier est intact » et « list_documents ne rend pas le contenu »).
 
 ### 3. Intention multi-étiquette câblée au tour · contexte partagé : `handlers/agent_chat.py` (`handle_conversation_turn`) + `agent_tools/loop` + contrat du classifieur
 > Branche le pré-classifieur en amont du tour et oriente la boucle. Couplé au chat handler et à

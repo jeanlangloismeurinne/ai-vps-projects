@@ -3,63 +3,84 @@ project: assistant-ia
 updated: 2026-09-05
 role: >
   Permet de reprendre le chantier « l'agent classe l'intention et capte la donnée ». Le doc système
-  est réaligné (capacité 1 livrée) ; il reste à construire le chemin d'écriture vers le vault.
+  est réaligné et le chemin d'écriture vers le vault existe (capacités 1 et 2 livrées) ; il reste à
+  câbler la classification d'intention au tour de conversation.
 ---
 
 # Prompt de reprise — assistant-ia
 
-> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — capacité en cours : §2.
+> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — capacité en cours : §3.
 
 ## État
 
 L'orchestrateur tourne en prod (`assistant.jlmvpscode.duckdns.org`) : import bancaire depuis Slack,
 journal v2, kanban, système de feedback, miroir du vault. Rien de tout cela n'est en cause.
 
-**Capacité 1 livrée et vérifiée le 2026-09-05.** `agent_system_doc` est en **v2 active** (2 175 car.,
-`created_by=migration_016`), semée par `migrations/016_agent_system_doc_v2.sql`. Les dénis sont
-supprimés, `create_reminder` et `web_search` sont nommés, la règle « agir sans demander » (D6) et la
-règle de non-déni sont écrites. Le rejeu de C4 contre le modèle réel produit **2 lignes `web_search`
-en `doc_version=2`** dans `agent_tool_calls` — là où la v1 n'en avait produit aucune en huit jours.
-Zéro ligne de code applicatif : c'était bien le doc, et rien d'autre.
+**Capacité 1 livrée le 2026-09-05.** `agent_system_doc` était en v1 « je n'ai pas de mémoire » ; la
+migration 016 a semé une v2 qui nomme les outils réellement exposés. Rejeu de C4 contre le modèle
+réel : **2 lignes `web_search` en `doc_version=2`**, là où la v1 n'en avait produit aucune en huit
+jours, pour **zéro ligne de code applicatif**. C'était bien le doc, et rien d'autre.
 
-Le chantier ouvert est désormais le **chemin d'écriture vers le vault** (capacité 2). L'utilisateur
-l'a désigné comme prioritaire : « la capture de note, c'est un rôle clef pour un assistant ».
+**Capacité 2 livrée le 2026-09-05** (commit `3493d55`, HTTP 200, un seul conteneur). L'agent écrit
+désormais dans le vault :
+
+- `capture_note` — deux modes, qui sont deux **adressages** et non deux formes de contenu :
+  `note` (daté, `notes/{année}/{date}-{slug}.md`, classé et indexé dans `journal_kb_entries`) et
+  `document` (par nom, `documents/{slug}.md`, ajout d'un **bloc Markdown libre** en fin de fichier).
+- `list_documents` — outil de **lecture** rendant les noms des documents existants, sans leur
+  contenu. Il n'était pas au périmètre : le rejeu a montré qu'il est indispensable (voir dettes).
+- `journal_vault.append_to_document` — création par `O_CREAT|O_EXCL`, ajout par `O_APPEND`. Le
+  fichier n'est **jamais réécrit** ; l'entête n'a aucun champ mutable.
+- Doc système en **v4 active** (`migration_018`, 3 233 car.) : vocabulaire « document », Markdown
+  libre, et consigne d'ordre « regarder les documents existants avant d'écrire, reprendre le nom
+  exact ».
+
+Acceptation : **16/16** au rejeu contre le modèle réel (`checks/replay_capture_corpus.py`), **59
+assertions vertes** hors-ligne (`checks/check_agent_tools.py`), éprouvées par deux passes négatives.
+`git diff` du vault sur un ajout : `1 file changed, 1 insertion(+)` — le critère `+n / -0` de D5.
 
 ## Reste à faire / dettes ouvertes
 
-- **`journal_vault.py` ne sait pas ajouter une ligne à un fichier existant.** `write_entry` est
-  append-only au sens *ne jamais écraser* : elle crée `{année}/{AAAA-MM-JJ}-{slug}.md` et suffixe en
-  cas de collision. Le mode `append` des listes nommées (D5) exige une **fonction neuve**, avec les
-  mêmes barrières (`slugify` + `_resolve_within_vault` + écriture atomique + commit git best-effort).
-  La roadmap annonçait « zéro brique neuve » — c'était faux, elle est corrigée.
-- **`write_entry` n'a jamais servi.** Le vault contient 6 `.md` : 3 de structure (`Accueil`,
-  `Taxonomie`, `README`) et 3 du miroir kanban sous `tasks/`. Aucun répertoire d'année, aucun
-  `notes/`, aucun `listes/`. Il n'existe donc **aucune convention établie** à respecter — la
-  capacité 2 la pose.
-- **Contrainte utilisateur du 09-05 : capter dans ce que kb-viewer indexe.** Vérifié :
-  `projects/kb-viewer/build.sh` fait `npx quartz build -d /vault`, donc **tout** le vault est indexé
-  et servi, quel que soit le répertoire. La contrainte exclut de capter ailleurs que dans le vault ;
-  elle ne tranche pas le choix `{année}/…` vs `notes/…`, qui reste à arbitrer en ouvrant la
-  capacité 2.
-- **Le doc système v2 porte un paragraphe volontairement daté** : « enregistrer une note ou une
-  liste durable dans la base de connaissance n'est pas encore branché ». Il devient **faux** dès que
-  `capture_note` existe. C'est l'addendum de la capacité 4 qui le remplace — par une migration 017,
-  jamais en modifiant la 016.
-- **Fidélité de capture non traitée** (C7) : un titre de rappel de 130 caractères absorbe la charge
-  utile et une phrase qui n'appartenait pas à la demande. Capacité 3. Noter que `create_reminder`
-  appelle aujourd'hui `create_card(..., description=None)` : le corps de carte n'est pas alimenté.
+- **Capacité 3 — l'intention n'est pas encore classée au tour.** Le pré-classifieur (D2, sortie
+  `{intents: [enum]}` en `json_schema` fermé) n'existe pas : c'est aujourd'hui le modèle qui décide
+  seul, à partir du doc et des descriptions d'outils. C'est le prochain jalon.
+- **Fidélité de capture non traitée (C7).** Un titre de rappel de 130 caractères absorbe la charge
+  utile et une phrase qui n'appartenait pas à la demande. `create_reminder` appelle toujours
+  `create_card(..., description=None)` : le corps de carte n'est pas alimenté.
+- **`documents/sources-utiles.md` contient des doublons de rejeu.** Huit lignes dont plusieurs
+  répétitions, produites par mes propres passes de test du 09-05 — l'utilisateur n'y a rien écrit.
+  À vider ou supprimer d'un clic dans Obsidian ; `startups-spatial.md` et
+  `startups-spatial-a-creuser.md` sont dans le même cas (c'est le doublon historique).
+- **Le format d'accusé de réception reste minimal** (chemin écrit, pas d'URL kb-viewer cliquable) :
+  c'est la capacité 4, et son test d'acceptation doit rester rouge jusque-là.
 - Les tickets de `feedback-tickets/` couvrant l'agent (`1787596637653`, `1787575860968`,
   `1787575776445`) sont **absorbés par cette roadmap** — ne pas les redécouper en unités de travail.
 
 ## Gotchas d'implémentation appris en chemin
 
+- **Un adressage par nom exige son outil de lecture, livré en même temps.** Deux rejeux de la même
+  demande ont produit `startups-spatial.md` puis `startups-spatial-a-creuser.md` : deux fichiers
+  pour une liste, aucune erreur levée, la moitié des entrées introuvable. Le modèle n'a pas l'état
+  du coffre et repart de zéro à chaque tour. Aucune consigne de prose ne corrige ça — ce n'est pas
+  un problème de comportement mais d'information manquante.
+- **`journal_vault._one_line` contient deux caractères U+2028/U+2029 littéraux**, invisibles dans le
+  source. L'outil `Edit` ne peut pas les matcher : ancrer toute édition de cette fonction sur du
+  texte strictement ASCII, jamais sur la ligne `collapsed = re.sub(...)`.
+- **Un doc système qui nie une capacité livrée est aussi grave qu'un doc qui en invente une.** La
+  migration 017 a été avancée de la capacité 4 à la capacité 2 pour cette raison : la v2 ordonnait
+  de dire que la capture « n'est pas encore branchée ». Le rejeu réussissait *malgré* elle (la
+  description d'outil emportait la décision) — un succès par chance, pas par conception.
+- **Un script de rejeu qui prédit un chemin teste le script, pas le code.** Ma correction de
+  rejouabilité (suffixe de session dans le nom demandé) a viré au rouge parce que le modèle a fait
+  exactement ce qu'on lui demande : réutiliser le nom du document existant. La bonne forme est de
+  **relever l'état avant et après le tour et de déduire la cible du delta**.
 - **`@admin`/`@update` n'est pas un canal de livraison** — c'est l'outil par lequel *l'utilisateur*
-  coache l'agent depuis Slack. Le contenu livré du doc système passe par une migration, comme la v1.
-- **Une migration qui sème du contenu doit se garder contre les décisions humaines postérieures** :
-  garde « aucune version ≥ N n'existe », jamais « la version N n'existe pas ». Le runner rejoue tous
-  les `.sql` à chaque démarrage.
-- **`E'…' '\n' '…'` en SQL est un piège** : le préfixe `E` ne vaut que pour le littéral qui le porte,
-  les fragments suivants insèrent un antislash-n littéral. Utiliser le dollar-quoting.
+  coache l'agent depuis Slack. Le contenu livré du doc système passe par une migration.
+- **Une migration qui sème du contenu se garde contre les décisions humaines postérieures** : garde
+  « aucune version ≥ N n'existe », jamais « la version N n'existe pas ». Le runner rejoue tous les
+  `.sql` à chaque démarrage.
+- **`E'…' '\n' '…'` en SQL est un piège** : le préfixe `E` ne vaut que pour le littéral qui le porte.
+  Utiliser le dollar-quoting.
 - **Rejouer un tour hors Slack** : copier le script dans `/app` puis `docker exec -w /app assistant-ia
   python <script>`. Depuis `/tmp`, `sys.path[0]` vaut `/tmp` et `import app` échoue.
 - **`compose-deploy.sh` sans `-f`** quand le commit est déjà poussé : `--rebuild-only`. Sinon le
@@ -67,7 +88,8 @@ l'a désigné comme prioritaire : « la capture de note, c'est un rôle clef pou
 
 ## Où démarrer
 
-Ouvrir la capacité 2 : trancher l'arborescence de capture (`{année}/{date}-{slug}.md` produit par
-`write_entry`, contre `notes/{slug}.md` annoncé par la roadmap §A2), écrire `append_to_list` dans
-`journal_vault.py`, puis `agent_tools/capture_note.py`. Le test négatif est déjà rouge et mesuré :
-aucun `listes/`, aucune note captée dans le vault.
+Ouvrir la capacité 3 : le pré-classifieur d'intention (D2) dans `handlers/agent_chat.py`, en amont
+de `agent_tools/loop`, avec le texte utilisateur en **donnée délimitée** et un fallback
+`["conversation"]` qui ne perd jamais un tour ; puis la fidélité C7 (titre court, charge utile en
+corps de carte). Les deux tests négatifs sont mesurés et rouges : C6 a produit zéro effet, C7 un
+titre de 130 caractères incluant la phrase à exclure.
