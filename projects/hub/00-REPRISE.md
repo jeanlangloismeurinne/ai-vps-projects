@@ -33,7 +33,11 @@ La doctrine elle-même est dans **`CONTROL_SYSTEM.md`** — ce fichier ne la red
 |---|---|
 | **A — doctrine** (`CONTROL_SYSTEM.md`, purge des `CLAUDE.md`) | ✅ livré · `fde83dc`, `eec8fec` |
 | **B — Hub** (`projects/hub/app/roadmap.py`) | ✅ livré **et déployé** · `e9ea104` |
-| **C — amorçage sur newsletter-summary** | 🟡 entamé · gabarit + consigne 360° écrits, projet témoin remis au format · reste la roadmap à co-écrire |
+| **C — amorçage sur newsletter-summary** | 🟡 entamé · **le code est fini et éprouvé en prod** ; reste la moitié humaine (roadmap à co-écrire, cycle à faire tourner) |
+
+**Le développement du Hub est terminé.** Il n'y a pas de code identifié restant sur le système de
+pilotage : la lecture et l'écriture sont toutes deux vérifiées contre le conteneur déployé (§3).
+Ce qui reste au lot C ne se code pas — ça se joue avec l'utilisateur.
 
 **Le Hub déployé sert bien le code du lot B**, vérifié en prod et pas sur la seule fin de build :
 `/roadmap/hub` et `/roadmap/newsletter-summary` répondent 200 et affichent le bloc « Fichier de
@@ -78,9 +82,16 @@ python3 projects/hub/checks/check_reprise_inscription.py      # 5 résolutions +
       de remettre le cadre en cause » produisait des axes conformes quand même.
 - [x] Projet témoin remis au format : `newsletter-summary/00-REPRISE.md` passé de 8185 à 3205 o
       (−61 %), récit sorti en archive, `DECISIONS.md` #2 extrait. Le Hub déployé le lit.
-- [ ] **Roadmap co-écrite avec l'utilisateur** — bloqué sur son choix d'axe, pas sur du code.
-- [ ] Inscrite depuis le Hub → « reprends le projet newsletter-summary » → lot exécuté → capacité
-      cochée → archivage appliqué.
+- [x] **Mécanique du Hub éprouvée de bout en bout contre le code déployé** (2026-09-05, sur
+      `hello-world`, artefacts supprimés après coup) : création en `brouillon` → `POST inscrire`
+      **refusé en 400** sur le brouillon (la vanne tient côté serveur, pas seulement en HTML) →
+      passage en `figée` → inscription → **fichier de reprise créé** avec le pointeur (chemin de
+      première utilisation) → relecture par le Hub : pointeur affiché, badge « ★ inscrite »,
+      avancement « 0/1 capacité ». Le `mkdir` déplacé côté écriture n'a pas cassé la création.
+- [ ] **Roadmap réelle co-écrite avec l'utilisateur** — bloqué sur son choix d'axe, pas sur du
+      code. C'est la moitié humaine, la seule qui reste.
+- [ ] Le cycle complet sur un vrai projet : « reprends le projet newsletter-summary » → lot
+      exécuté → capacité cochée → archivage appliqué.
 - **Acceptation** : le cycle a tourné une fois de bout en bout sur un vrai projet, pas en
   dry-run — et il a tourné **contre le Hub déployé**, pas contre un uvicorn local.
 
@@ -120,9 +131,12 @@ sert du système sans l'avoir écrit) :
 
 Le lot C reprend **au choix d'un axe par l'utilisateur** sur newsletter-summary. Le diagnostic 360°
 lui a été proposé le 2026-09-05 ; il n'est **pas** à relancer de soi-même (§4). Une fois l'axe
-choisi : conversation de raffinement → roadmap `figée` → inscription **depuis le Hub** (c'est ce
-geste-là qui reste à éprouver contre le code déployé) → « reprends le projet newsletter-summary à
-partir du fichier de reprise ».
+choisi : conversation de raffinement → roadmap `figée` → inscription depuis le Hub → « reprends le
+projet newsletter-summary à partir du fichier de reprise ».
+
+⚠️ **Ne pas rouvrir le code du Hub pour « finir » le lot C.** Tout ce qui s'y code est fait et
+vérifié en prod. Le risque, à ce stade, est de fabriquer de la fonctionnalité en attendant que le
+cycle tourne : le système ne manque de rien tant qu'il n'a pas servi une fois pour de vrai.
 
 Attention en reprenant : la roadmap de newsletter-summary est **le premier vrai fichier
 `roadmap/*.md` du système v3**. Les 4 dossiers `roadmap/` existants sont un fourre-tout hérité
