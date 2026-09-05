@@ -34,18 +34,40 @@ resté figé sur un chantier livré et archivé depuis. Sur la même période, p
 
 ---
 
-## 1. La roadmap — co-écrite, puis figée
+## 1. La roadmap — deux états : brouillon, puis figée
 
-**La roadmap naît dans le terminal, avec l'utilisateur.** Il décrit un besoin, on raffine, on fige.
-Ni le Hub ni l'agent ne créent une roadmap tout seuls : le Hub la **visualise**, permet des
-**micro-éditions finales**, puis l'**inscrit** dans le fichier de reprise.
+Une roadmap peut **naître** n'importe où : l'utilisateur peut la déposer depuis le Hub, en jetant
+une intention brute. Mais elle n'est **jamais implémentable en l'état** — une intention déposée
+sans raffinement produit des capacités qu'aucun agent ne peut exécuter.
+
+D'où **deux états, et une vanne entre les deux** :
+
+```
+BROUILLON  ── conversation de raffinement (terminal, avec l'utilisateur) ──▶  FIGÉE
+créé au Hub          on découpe, on ordonne, on écrit les tests             inscriptible
+ou au terminal       d'acceptation, on tranche les ambiguïtés               dans le 00-REPRISE
+```
+
+**La vanne est mécanique, pas déclarative.** Une roadmap passe à `figée` quand — et seulement
+quand — les trois exigences ci-dessous sont vérifiées, capacité par capacité. C'est l'agent qui
+constate le passage à la fin de la conversation de raffinement ; il ne se décrète pas depuis le Hub.
+
+**Tant qu'une roadmap est en brouillon, elle ne peut pas être inscrite comme roadmap active** :
+le bouton d'inscription du Hub reste fermé. Un brouillon inscrit serait un « reprends le projet X »
+qui lance un agent sur une liste de vœux.
+
+Marqueur, dans le frontmatter de la roadmap :
+
+```yaml
+status: brouillon | figée
+```
 
 Le mécanisme qui marche n'est pas le format, c'est le triplet **liste ordonnée + test d'acceptation
 par item + agent qui planifie lui-même son découpage**. Gabarit minimal :
 
 ```markdown
 ---
-status: {libre}
+status: brouillon | figée
 role: >
   Une phrase : ce que ce document décide.
 ---
@@ -65,7 +87,8 @@ role: >
 …
 ```
 
-Trois exigences non négociables :
+**Les trois exigences qui font passer un brouillon à `figée`** — ce sont elles, et rien d'autre, qui
+définissent « implémentable » :
 
 1. **L'ordre est imposé et justifié.** « UX avant agent avant données », « la doctrine avant le
    code » — sinon on implémente une cible qui bouge encore. L'ordre est une décision, pas une mise
@@ -86,8 +109,8 @@ porter aussi bien une dette de code qu'un jalon fonctionnel : ne pas sur-spécif
 Il est **généré à la première utilisation**, jamais par décret sur tous les projets : un fichier de
 reprise vide se lit comme un projet à l'arrêt.
 
-**L'activation EST l'inscription.** Le pointeur « roadmap active » écrit dans ce fichier est le
-**seul** endroit où l'information vit. On n'infère jamais la roadmap active en scannant les
+**L'activation EST l'inscription** — et elle est réservée aux roadmaps `figée` (§1). Le pointeur
+« roadmap active » écrit dans ce fichier est le **seul** endroit où l'information vit. On n'infère jamais la roadmap active en scannant les
 `status:` des fichiers de `roadmap/` — c'est un fourre-tout hétérogène (spec, audit, benchmark,
 constitution) et aucun vocabulaire de statut n'y est stable.
 
@@ -287,9 +310,10 @@ réponse HTTP qui fait foi.
 
 ## 10. Résumé des règles
 
-- **Roadmap** : co-écrite dans le terminal, ordre imposé, un test d'acceptation observable et une
-  checklist par capacité.
-- **Activation = inscription** dans le `00-REPRISE.md`. Nulle part ailleurs.
+- **Roadmap** : `brouillon` tant qu'elle n'a pas été raffinée au terminal ; `figée` quand chaque
+  capacité a un ordre justifié, un test d'acceptation observable et une checklist.
+- **Activation = inscription** dans le `00-REPRISE.md`, et **seulement** pour une roadmap `figée`.
+  Nulle part ailleurs.
 - **Lot de conversation** auto-planifié, découpé par **contexte partagé**, annoncé en une ligne.
 - **Déclencheur unique** : « reprends le projet {X} à partir du fichier de reprise ».
 - **Pas de roadmap inscrite** → proposer le 360°, sortir N axes, puis **stop**.

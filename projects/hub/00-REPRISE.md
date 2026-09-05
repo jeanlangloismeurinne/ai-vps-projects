@@ -73,9 +73,13 @@ d'acceptation + agent qui planifie lui-même le découpage**.
    contenu : sa souplesse est ce qui lui permet de porter aussi bien une dette de code qu'un
    jalon fonctionnel. **portfolio-tracker n'est pas touché** (son fichier reste dans
    `roadmap/provenance-cards/`) — le Hub doit donc résoudre : racine d'abord, sinon `roadmap/**`.
-2. **La roadmap est co-écrite avec Opus dans le terminal.** L'utilisateur décrit un besoin, on
-   raffine, on fige. Le Hub ne crée plus de roadmap : il **visualise**, permet des
-   **micro-éditions finales**, puis **bascule** la roadmap dans le fichier de reprise.
+2. **La roadmap a deux états — `brouillon` et `figée`** (tranché le 2026-09-05, amende la version
+   initiale « le Hub ne crée plus de roadmap »). Le Hub **garde** la création : l'utilisateur peut
+   y déposer une intention brute. Mais elle reste `brouillon`, donc **non inscriptible**, tant
+   qu'elle n'est pas passée par une conversation de raffinement au terminal — sinon les fichiers
+   déposés seraient très loin d'être implémentables. Le passage à `figée` est **mécanique** : ordre
+   justifié + test d'acceptation observable + checklist, capacité par capacité. Doctrine :
+   `CONTROL_SYSTEM.md` §1.
 3. **L'activation EST l'inscription.** Le pointeur « roadmap active » du fichier de reprise est
    le seul endroit où l'information vit. Pas de prédicat inféré en scannant les `status:` —
    `roadmap/` est un fourre-tout hétérogène (spec, audit, benchmark, constitution) et
@@ -170,11 +174,14 @@ supprimé n'est pas terminé.
 ### Lot B — Hub · contexte partagé : `projects/hub/app/roadmap.py`
 - [ ] **Correctif frontmatter (bloquant, §8)**
 - [ ] Affichage du `00-REPRISE.md` par projet (résolution racine → `roadmap/**`)
-- [ ] Bouton « inscrire cette roadmap dans le fichier de reprise »
+- [ ] Bouton « inscrire cette roadmap dans le fichier de reprise » — **fermé si `status: brouillon`**
+      (§3.2), avec le motif affiché : « à raffiner au terminal avant inscription »
 - [ ] Retrait de la mécanique de sprint : `_generate_sprint_order` (`:108-136`), route
       `/sprint-order` (`:704-717`), écriture de `SESSION.md` (`:716`), bloc UI sprints (`:514-540`)
-- [ ] Retrait des formulaires de création (`/new`, `/new-roadmap`, `_page_new`,
-      `_page_new_roadmap`, `_create_roadmap`, `_create_item`) — la roadmap naît dans le terminal
+- [ ] ~~Retrait des formulaires de création~~ → **arbitrage tranché : on GARDE** `/new-roadmap` /
+      `_create_roadmap`, qui doit désormais écrire `status: brouillon` dans le frontmatter. Retirer
+      en revanche `_create_item` (`/new`, `_page_new`) : le ticket n'est plus une unité de découpage
+      (§3.6), et une capacité s'écrit dans la roadmap, pas via un formulaire.
 - [ ] `_parse_item` : défaut `type: chantier` (`:85`) → concept mort, remplacer par un défaut honnête
 - **Acceptation** : une sauvegarde depuis le Hub sur `01-spec-v2-unifiee.md` rend un fichier
       **identique** hors le champ édité (test négatif : le vérifier AVANT correctif, il doit échouer).
@@ -232,10 +239,12 @@ suffisant — le Hub ne touche **que le corps** et réécrit le frontmatter **oc
 
 ## 9. Reste à faire / à trancher
 
-- **Arbitrage ouvert (bloquant pour le lot B)** : retirer les formulaires de création du Hub
-  découle de la décision §3.2, mais n'a jamais été confirmé explicitement. À valider **avant** de
-  supprimer du code.
-- **Projet témoin du lot C** non choisi (newsletter-summary vs comms-gateway).
+- ~~Arbitrage formulaires de création~~ ✅ tranché le 2026-09-05 : **gardés**, avec l'état
+  `brouillon`/`figée` comme vanne (§3.2 réécrit). `_create_item` part quand même.
+- ~~Projet témoin du lot C~~ ✅ **newsletter-summary** (choisi le 2026-09-05 : il a un
+  `00-REPRISE.md` et un backlog vivant — digest HTML, Option A en repli — donc une vraie roadmap à
+  co-écrire, alors que comms-gateway est bloqué sur du hors-code : domaine Resend, app Slack,
+  téléphone).
 - ~~Persistance~~ ✅ traité au lot A : l'obligation de committer la doc même sans déploiement est
   écrite dans `CONTROL_SYSTEM.md` §5 (*Persistance*) et rappelée dans le `CLAUDE.md` racine.
 - ⚠️ **Écriture concurrente dans le dépôt** — constatée le 2026-09-05 vers 06:02 UTC pendant cette
