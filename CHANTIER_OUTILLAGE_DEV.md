@@ -424,6 +424,22 @@ règle porte sur la forme de la commande, pas sur ce qu'elle fait). Aucune modif
 > refus de pure forme (le heredoc ci-dessus n'apprend rien : on scinde, on avance) ; la nuance ne
 > vaut que lorsque la commande refusée manipule un secret, un volume monté ou un état partagé.
 
+> **Un refus de plus le 2026-09-05, et il tombe le jour où le §12 est soldé.**
+>
+> Refusé : `cat > /tmp/msg.txt <<'EOF' … EOF` **puis** `git commit -F … && git push origin main`,
+> en une seule commande composée. Repli en trois temps, sans perte : `Write` du fichier de message,
+> `git commit -F` seul, `git push` seul — les trois passent. C'est le §17 dans sa forme la plus
+> banale (composition refusée, parties autorisées), et il n'y a **rien à modéliser**.
+>
+> **Ce que la coïncidence de date apporte.** Quelques minutes plus tôt, `compose-deploy.sh` — une
+> commande bien plus puissante — était **accepté** (§12 soldé), tandis qu'un `git commit && git push`
+> sur des fichiers Markdown était **refusé**. Le verdict ne suit donc ni la portée de la commande ni
+> son risque réel : il suit sa **forme**. Deux conséquences pratiques : (a) ne jamais inférer d'un
+> refus que l'opération est interdite — seule cette *écriture-là* l'est ; (b) écrire les commandes
+> **atomiques par défaut** quand elles doivent réussir du premier coup, la composition étant une
+> économie d'aller-retour qu'on paie parfois au double. Le §12 et celui-ci se lisent ensemble :
+> **un blocage n'est pas une propriété de l'action, et il ne survit pas nécessairement à la session.**
+
 ### §18 — Le contrôle le moins cher est celui qu'on fait **avant** de dépenser des tokens de modèle
 
 **Constat (2026-09-04).** Trois défauts livrés cette session — F7 (un P/E négatif publié comme un
