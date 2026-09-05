@@ -146,6 +146,29 @@ variante préfixée si le script est appelé en chemin absolu. Sans ça, le prot
 `CLAUDE.md` et `DEPLOY.md` décrit un chemin que l'assistant ne peut pas emprunter — la doc et le
 réel divergent, ce qui coûte un aller-retour de refus à chaque session. Effort : ~5 min.
 
+> ### ✅ SOLDÉ le 2026-09-05 — le correctif a été appliqué, le chemin nominal repasse
+>
+> **`infrastructure/compose-deploy.sh` est accepté.** Deux déploiements de cette session livrés par
+> le chemin **nominal**, en un seul appel, avec message multiligne en argv (`-m "…"` sur plusieurs
+> lignes) : `ae02af3` (ancre matérielle + balayage de péremption) et `45379ee` (F14). Les quatre
+> garde-fous perdus par le repli sont **revenus** : anti-doublon de labels Traefik (« 2 conteneur(s)
+> sert portfolio… — pas de double routage »), attente `running:healthy`, exigence du code HTTP
+> (`sonde OK (HTTP 200)`), notif Slack. Sortie finale `RESULT: success`.
+>
+> **Ce que l'épisode enseigne, et qui est réplicable.** Un refus du classifieur **stable sur quatre
+> sessions** avait acquis le statut de fait d'environnement : la 4ᵉ entrée ci-dessus écrivait « le
+> compteur est assez long pour qu'on cesse de le lire comme une friction ». C'était vrai comme
+> constat et faux comme prédiction — la stabilité d'un blocage ne dit rien de sa permanence, elle
+> dit seulement que **rien n'avait encore changé en face**. Corollaire de méthode : **re-tester le
+> chemin nominal en premier**, une fois par session, avant de dérouler le repli. Le test coûte un
+> appel ; le repli coûte cinq commandes et quatre garde-fous à chaque déploiement. Un contournement
+> qu'on n'éprouve plus devient une superstition d'agent — la version « outillage » de
+> `feedback_verifier_contre_api_reelle`.
+>
+> **Section conservée** (contrairement au protocole d'éviction du fichier) : c'est le seul endroit
+> qui documente le repli, encore utile si la règle de permission disparaît, et la trajectoire
+> refus → refus stable → levée est elle-même l'enseignement.
+
 ### §13 — Un check peut se dégrader en silence **en sortant à 0**, et un total d'assertions est une mesure, pas un document
 
 **Constat, vécu de bout en bout dans cette session.** Quatre des 17 scripts hors-ligne de
@@ -306,6 +329,28 @@ arbitrage refait à chaque candidat. Les candidats écartés, et pourquoi :
 > sur un livrable substantiel. La zone rentable est donc étroite des deux côtés : *critère
 > énonçable* **et** *livrable volumineux*. Un seul des deux ne suffit pas — et sur 4 sessions
 > consécutives de ce chantier, aucune tâche n'a satisfait les deux.
+
+> **Relevé de la session du 2026-09-05 : zéro sous-agent, une cinquième fois** — 2 capacités
+> livrées (ancre d'événements matériels + balayage de péremption), 1 correctif (F14), 2
+> déploiements, 75 assertions neuves (1262 → 1337). Trois candidats pesés :
+>
+> | Tâche candidate | Verdict |
+> |---|---|
+> | Sonder EDGAR pour l'événement matériel le plus récent de RVMD | **Non** — borne basse de la session (4) : 2 `curl` + 5 lignes de python, réponse en une ligne (« 8-K du 2026-08-27, items 1.01+2.03 »). Le volume traversé est grand, le livrable minuscule. |
+> | Lire en texte les 24 entries déclarées suspectes par le balayage | **Non** — borne haute : distinguer *périmé* de *faux* est exactement le jugement non énonçable des sessions (3) et (4). |
+> | **Déployer via le repli du §12** | **Candidat le plus fort de tout le chantier — et devenu sans objet.** `DEPLOY.md` *prescrit* un sous-agent Sonnet en repli ; le profil est idéal (logs de build verbeux, critère de succès énonçable en une ligne, artefact vérifiable par un HTTP 200 unique). Mais le chemin nominal est repassé (§12) : le script rend **une seule ligne** `RESULT: success`. |
+>
+> **Ce que ce relevé ajoute — un outil déterministe déclasse un candidat, il ne le perd pas.** Le
+> déploiement satisfaisait les *deux* bornes (critère énonçable **et** sortie volumineuse) : c'est
+> la première tâche du chantier à passer le test de décision du §16. Elle n'a pourtant pas été
+> déléguée, parce qu'entre-temps un **script** a réduit sa sortie à une ligne. C'est le §16 et la
+> règle « un filtre shell bat un sous-agent » qui se rejoignent : la zone rentable de la délégation
+> n'est pas une propriété de la tâche, elle est une propriété de **l'outillage disponible au moment
+> où on la pose**. Chaque script de filtrage écrit rétrécit définitivement cette zone. Conséquence
+> pratique : avant de déléguer, la question n'est pas « cette tâche est-elle déléguable ? » mais
+> **« existe-t-il, ou puis-je écrire en 15 lignes, un producteur déterministe dont je lirai la
+> dernière ligne ? »** — si oui, il gagne toujours (gratuit, reproductible, sans amorçage, et il
+> survit à la session).
 
 **La règle qui se dégage, et elle est réplicable.** Un sous-agent est rentable quand le travail est
 **volumineux en sortie et pauvre en jugement** (balayer 200 fichiers, produire un diff mécanique,
@@ -641,6 +686,103 @@ donnerait au modèle une voix sur la porte de complétude (cf. mémoire
 **Destination durable.** Chantier `provenance-cards` (prochain jalon, cf. `00-REPRISE.md`) ; principe
 générique « un fait daté juste peut décrire un monde révolu » → mémoire auto.
 
+### §24 — Un test négatif peut ne pas rougir pour trois raisons, et une seule est bonne
+
+**Constat (2026-09-05).** Le §10 pose la règle : *un check neuf n'est pas livrable tant qu'il n'a
+pas viré au rouge une fois*. Cette session a produit **trois** tests négatifs qui n'ont pas rougi
+— aucun parce que le code était juste. Les trois modes de panne sont distincts, et aucun n'est
+visible dans la sortie : dans les trois cas on lit « 0 échec », qui est **exactement** ce qu'on
+espérait voir.
+
+| Mode | Ce qu'on lit | Ce que c'est |
+|---|---|---|
+| **Fixture non discriminante** | 0 FAIL | Le bug réintroduit produit le **même résultat** sur ces données-là |
+| **Check mort avant ses asserts** | 0 FAIL | Le script a planté (ou sauté) avant d'exécuter la vérification |
+| **Assert à côté du point de lecture** | 0 FAIL | On éprouve un helper que le site fautif n'appelle plus |
+
+**(a) Non discriminante ≠ favorable — le §20 avait une seule moitié.** Le §20 dit qu'une fixture
+*plus favorable que la production* est un check aveugle. Cas neuf ici : la fixture était une copie
+**fidèle** du flux EDGAR réel de RVMD, donc irréprochable au regard du §20 — et pourtant aveugle.
+Le correctif portait sur la **clef de tri** des événements matériels (trier par date d'événement,
+non par date de dépôt) ; sur ce flux réel, les deux tris désignent le même gagnant. Le test négatif
+a rendu 0 FAIL. J'avais même écrit le commentaire « un tri par dépôt donnerait le bon gagnant ICI
+par accident » sans en tirer la conséquence. Fermé par une fixture **construite** et documentée
+comme telle : deux 8-K dont l'ordre s'inverse selon la clef (42 jours d'écart). **Règle : une
+fixture doit être fidèle au réel *ou* plus dure que lui — jamais plus douce, jamais indifférente au
+correctif.** Un correctif qui change un *ordre*, un *choix parmi n*, une *priorité* n'est pas
+éprouvé par des données où le choix ne se pose pas : il faut fabriquer le cas où les deux règles
+divergent, et le dire dans le commentaire.
+
+**(b) « 0 FAIL » et « 0 assert exécuté » s'écrivent pareil.** Le check F14 bouclait sur une liste
+de ratios **écrite en dur**, dont un que la fixture ne produit pas légitimement (CA nul → ratio
+infondé, ce qu'un autre §&nbsp;du même fichier vérifie par ailleurs). `KeyError`, script mort, aucune
+ligne `FAIL` imprimée — la passe de neutralisation a donc paru propre. C'est le **§13 déplacé d'un
+cran** : là il s'agissait d'un check qui sortait à 0 en ayant sauté une section, ici d'un test
+négatif qui ne prouve rien en ayant sauté *tous* ses asserts. Deux gardes, réutilisables tels
+quels : itérer sur **ce que le producteur a réellement produit** plutôt que sur une liste en dur
+(un cas légitimement absent ne doit jamais tuer le script), et poser un **assert de non-vacuité**
+(« la fixture construit bien ≥ 2 ratios de flux, sinon la boucle ne prouve rien ») — la seule
+manière de faire dire à la sortie la différence entre *vert* et *mort*.
+
+**(c) Un helper juste n'est pas un correctif livré.** Version fermée du §22. Le correctif F14 vit
+dans une fonction unique `_spec_source_date()` (#46 : un seul détenteur de la règle). Le check
+l'éprouvait **en isolation** — verte quoi qu'il arrive, puisque la fonction reste correcte même si
+plus personne ne l'appelle. Test négatif : remettre le bug au site d'écriture n'a fait rougir que
+l'`assert` de *grep de source* (« la chaîne `source_date=_spec_source_date(...)` figure dans le
+module ») — un proxy syntaxique, qui tombe au premier renommage et ne dit rien de la sémantique.
+Réparé en pilotant la fonction d'écriture **hors ligne** derrière des doublures (`get_db_session`,
+`get_current_entries`, `store_knowledge` remplacés), et en vérifiant la valeur **effectivement
+reçue** par l'écriture. Le test négatif rend alors 3 FAIL, dont la reproduction exacte du symptôme
+de production. **Règle : un correctif s'éprouve là où sa valeur est CONSOMMÉE — pas là où elle est
+calculée.** Un grep de source est un complément acceptable (il défend l'architecture « détenteur
+unique »), jamais la preuve principale. Stubber trois fonctions coûte ~30 lignes ; c'est le prix
+d'un check qui peut échouer.
+
+**Le fil commun, et il est réplicable.** Un test négatif ne se lit pas « rouge / vert » mais
+**« a-t-il pu rougir ? »**. Avant de conclure d'une neutralisation, exiger trois réponses : quel
+assert précis a rougi (nommé, pas compté) · a-t-il rougi pour la raison visée · le script est-il
+allé jusqu'au bout. Sans ces trois-là, « 0 échec » mesure le silence, pas la justesse — même
+famille que le §13 (« une mesure incomplète écrase de la vérité »).
+
+**Destination durable.** §10 (règle du test négatif) à amender avec ce triptyque ;
+`feedback_test_negatif_obligatoire` et `feedback_fixture_copiee_du_reel` en mémoire auto.
+
+### §25 — Une règle de datation appliquée au TEXTE et oubliée sur la COLONNE
+
+**Constat (2026-09-05), défaut F14.** La convention #42 du projet (« un poste de bilan se date à un
+instant, un flux à un exercice ») avait été appliquée au **titre**, au `fiscal_period`, au
+**contenu narratif** et au **JSON structuré** d'une entry — quatre porteurs, tous corrigés. Le
+cinquième, la **colonne `source_date`**, continuait de recevoir l'ancre de flux, identique pour les
+quatre ratios. Résultat : une ligne qui **se contredit elle-même** (`fiscal_period = 'AU
+2026-06-30'`, `source_date = 2025-12-31`), et le ratio paraissait vieux de 239 jours au lieu de 58.
+
+**Pourquoi c'est le pire des porteurs à oublier.** Les quatre porteurs corrigés sont du texte, lu
+par un agent. Celui oublié est celui sur lequel **trient les machines** : l'ancre temporelle, le
+balayage de péremption, et toute requête « la plus récente ». Corriger l'affichage en laissant
+l'index faux fabrique une base qui *dit* juste et *se classe* faux.
+
+**C'est le #46 transposé à l'intérieur d'une seule ligne.** Le #46 disait : une règle de format
+recopiée dans trois producteurs n'est corrigée dans aucun. Ici il n'y a qu'un producteur, mais
+**cinq porteurs du même fait** dans un seul enregistrement. La règle générique : *quand un fait est
+représenté à plusieurs endroits — texte, structuré, colonne indexée, titre — un correctif doit
+énumérer ses porteurs avant de s'estimer fini, et les colonnes indexées se traitent en premier
+parce qu'elles sont les seules qui ne se relisent pas.*
+
+**Comment il a été trouvé — et c'est le vrai enseignement.** Par un **outil neuf tourné sur la
+production** : le balayage de péremption, écrit ce jour pour une tout autre raison, a listé les
+entries triées par `source_date` et l'incohérence a sauté aux yeux **en texte**. Ni le diff ni les
+1 337 assertions hors ligne ne pouvaient le voir (les fixtures portaient déjà la bonne date). C'est
+le corollaire de méthode du #43, vérifié une fois de plus : sur toute écriture qui remplace une
+vérité antérieure, la question n'est pas « la nouvelle valeur est-elle bonne ? » mais **« combien
+de lignes sont actives sur cette clef, et disent-elles la même chose ? »** — question qui ne se
+pose qu'**après déploiement**, sur l'état persisté. Vérifié ici : une seule ligne active par clef,
+et la contradiction éteinte (#169 → #189).
+
+**Corollaire réplicable, gratuit.** Un outil de diagnostic écrit pour la capacité *n* trouve
+souvent le défaut de la capacité *n−1*. Le premier usage d'un nouvel outil doit donc être **une
+lecture en texte de sa sortie sur la production**, avant toute dépense de modèle (§18) — c'est le
+moment le moins cher où un défaut ancien devient visible.
+
 ---
 
 ## Journal des points soldés
@@ -664,6 +806,10 @@ Une ligne par point traité, pour ne pas le re-diagnostiquer. Le détail vit à 
 - **2026-09-03 — §8 `~/.netrc` cassait tous les `git push`.** Réglé ; push vérifié sans
   contournement le 2026-09-03. Diagnostic et faux-ami en mémoire :
   `reference_netrc_bloque_git_push`.
+- **2026-09-05 — §12 `compose-deploy.sh` accepté par le classifieur.** Chemin nominal repassé
+  après 4 sessions de refus stable (`ae02af3`, `45379ee`, `RESULT: success`, 4 garde-fous
+  revenus). Section §12 **conservée** : elle documente le repli et la trajectoire du blocage.
+  Enseignement : re-tester le chemin nominal une fois par session avant de dérouler un repli.
 
 ## Voir aussi
 

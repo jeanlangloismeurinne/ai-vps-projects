@@ -443,6 +443,47 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     ⚠️ La fixture du check portait 11,58 M$ en 2025, chiffres **plus favorables que la
     production** : une fixture qui embellit le réel est un check qui ne peut pas voir le défaut.
 
+48. **La COLONNE `source_date` est un porteur de la date au même titre que le texte — et c'est le
+    seul sur lequel trient les machines (V2, `knowledge/financials_feed.py`)** : #42 avait daté le
+    titre, le `fiscal_period`, le contenu narratif et le `content_structured` du `levier` ; le site
+    d'écriture passait quand même `source_date=facts['period_end']`, l'ancre de FLUX, identique
+    pour les quatre ratios. La ligne #169 de RVMD **se contredisait elle-même** (`fiscal_period='AU
+    2026-06-30'` contre `source_date=2025-12-31`) et le levier paraissait vieux de 239 jours au
+    lieu de 58. Les quatre porteurs corrigés sont lus par un **agent** ; celui-ci est lu par
+    l'**ancre temporelle**, le **balayage de péremption** et toute requête « la plus récente » —
+    corriger l'affichage en laissant l'index faux fabrique une base qui *dit* juste et *se classe*
+    faux. Détenteur unique `_spec_source_date(spec, facts)` (#46 transposé aux porteurs d'un même
+    fait **à l'intérieur d'une ligne**), jamais un `if` par site de construction. ⚠️ **Trouvé en
+    PROD par un outil écrit le même jour pour autre chose** (le balayage) : ni le diff ni les
+    assertions hors ligne ne pouvaient le voir, les fixtures portant déjà la bonne date — corollaire
+    de méthode du #43. ⚠️ **Le check doit éprouver la valeur REÇUE par `store_knowledge`**, pas le
+    helper en isolation : le premier test négatif ne faisait rougir que le grep de source, un proxy
+    syntaxique. Détail + garde : `check_financials_feed.py` §10 — éprouvé par test négatif (3 FAIL,
+    dont la reproduction exacte du symptôme de prod).
+
+49. **La péremption est une SECONDE horloge, et elle produit un rapport — jamais un `superseded_by`
+    (V2, `knowledge/material_events.py` + `knowledge/staleness.py`)** : la porte de complétude (#29)
+    compte les champs *couverts* et est structurellement **aveugle à la péremption** — sur RVMD,
+    quatre entries tier A actives disaient « aucun produit approuvé pour la vente commerciale »
+    après l'approbation FDA du 2026-08-26, aucune fausse (chacune fidèle à sa source et
+    correctement datée), toutes périmées ; le gate aurait conclu à un socle prêt. Les dépôts
+    **périodiques** (10-K/10-Q) ne datent pas le monde : un 8-K/6-K le fait. Trois règles :
+    (a) le seuil est la date de l'**ÉVÉNEMENT** (`reportDate`), pas du dépôt — le monde change quand
+    le fait se produit, et sur EDGAR les deux peuvent différer de plusieurs semaines ;
+    (b) **trois états jamais confondus** (#25/#44) — `found` / `none` (l'émetteur n'a rien publié) /
+    `unavailable` (flux injoignable) : confondre les deux derniers ferait lire une panne réseau
+    comme « il ne s'est rien passé », la phrase la plus rassurante produite par la pire raison ; le
+    rapport lui-même sort `indeterminable` **en le disant**, et l'absence d'ancre route le prompt
+    vers la branche PRUDENTE, jamais vers le silence ;
+    (c) le module **n'écrit rien** — décider qu'un fait est remplacé est un jugement sémantique,
+    l'automatiser donnerait à une heuristique de dates une voix sur ce que le corpus affirme
+    (desserrage refusé en #29). Route `GET /tickers/{id}/knowledge/staleness`, **toujours 200** :
+    un 503 ferait disparaître le rapport, ce qui se lit « rien à signaler ». Détail + garde :
+    `check_material_events.py` — ⚠️ sa §2bis utilise une fixture **construite** (deux 8-K dont
+    l'ordre s'inverse selon la clef de tri) parce que le flux RVMD réel, pourtant copié fidèlement,
+    donne le **même gagnant** avec les deux tris : une fixture peut être aveugle en étant *non
+    discriminante*, pas seulement en étant plus favorable (#47).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
