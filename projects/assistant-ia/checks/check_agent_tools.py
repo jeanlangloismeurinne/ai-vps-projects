@@ -13,7 +13,8 @@ Couverture, dans l'ordre des tickets :
   D. résolution de date — les 4 modes, les bornes, les refus ;
   E. bornes de la boucle — épuisement explicite, troncature, erreurs jamais vides ;
   F. web_search sans backend — échec explicite, jamais un résultat vide ;
-  G. capture_note — confinement au vault, ajout sans réécriture, régime **dérivé** du manifeste.
+  G. capture_note / list_documents — confinement au vault, Markdown libre écrit verbatim, ajout
+     sans réécriture (« +n / -0 »), régime **dérivé** du manifeste.
 """
 import asyncio
 import json
@@ -444,7 +445,7 @@ async def test_web_search_indisponible() -> None:
 # Ce que le §A empoisonne au niveau du catalogue, on l'empoisonne ici au niveau des *arguments* :
 # un contenu hostile n'a pas besoin de faire exister un outil s'il peut détourner la destination
 # d'un outil qui existe. Chaque entrée doit sortir slugifiée, sans séparateur de chemin.
-NOMS_DE_LISTE_HOSTILES = [
+NOMS_DE_DOCUMENT_HOSTILES = [
     "../../etc/passwd",
     "/etc/cron.d/pwn",
     "..\\..\\windows",
@@ -452,11 +453,23 @@ NOMS_DE_LISTE_HOSTILES = [
     "…",                       # ne produit aucun caractère ASCII → doit retomber sur un défaut
 ]
 
+# Blocs Markdown que l'outil doit écrire **tels quels**. Ce tableau est la contrepartie du
+# renoncement au repli sur une ligne : ce qui n'est plus interdit doit être explicitement prouvé
+# comme préservé, sinon on a juste supprimé une barrière sans la remplacer par une garantie.
+BLOCS_MARKDOWN = [
+    ("puce", "- payloadspace.com"),
+    ("case à cocher", "- [ ] relancer Safran"),
+    ("ligne de tableau", "| Isembard | UK | forge |"),
+    ("paragraphe multi-ligne", "Premier jet du plan.\nÀ relire avant vendredi."),
+    ("titre + lignes", "## Sources 2026\n\n- spacenews.com\n- payloadspace.com"),
+    ("séparateur", "---"),      # légitime en Markdown, et sans danger hors de la tête du fichier
+]
+
 
 async def test_capture_note() -> None:
-    print("\n--- G. capture_note ---")
+    print("\n--- G. capture_note + list_documents ---")
     from app.services import journal_vault
-    from app.services.agent_tools import capture_note
+    from app.services.agent_tools import capture_note, list_documents
 
     # 1. Le régime est **dérivé** du manifeste, pas écrit dans l'outil.
     propre = TurnState(channel_id="C1")
@@ -469,6 +482,14 @@ async def test_capture_note() -> None:
           "CONFIRM_FIRST" not in Path(capture_note.__file__).read_text(encoding="utf-8"))
     check("capture_note est exposé au modèle",
           "capture_note" in {s.manifest.name for s in registry.available_specs()})
+    # La lecture ne confirme jamais, même en contexte tainté : c'est la règle du §B appliquée au
+    # nouvel outil, et c'est ce qui permet au modèle de vérifier les noms avant d'écrire.
+    check("list_documents est exposé au modèle",
+          "list_documents" in {s.manifest.name for s in registry.available_specs()})
+    check("list_documents : lecture, exécutée sans confirmation même tainté",
+          policy(list_documents.MANIFEST, tainte).verdict == Verdict.EXECUTE)
+    check("list_documents ne prend aucun argument",
+          list_documents.SCHEMA["properties"] == {}, str(list_documents.SCHEMA["properties"]))
 
     ctx = ToolContext(turn=propre)
 
@@ -477,9 +498,9 @@ async def test_capture_note() -> None:
     orig_root = journal_vault._vault_root
     journal_vault._vault_root = lambda: racine
     try:
-        for hostile in NOMS_DE_LISTE_HOSTILES:
+        for hostile in NOMS_DE_DOCUMENT_HOSTILES:
             prepared = await capture_note._resolve(
-                {"mode": "append", "list_name": hostile, "items": ["x"]}, ctx,
+                {"mode": "document", "name": hostile, "content": "- x"}, ctx,
             )
             slug = prepared.resolved["slug"]
             check(f"slug confiné pour {hostile!r} → {slug!r}",
@@ -487,60 +508,98 @@ async def test_capture_note() -> None:
 
         # 3. Une exécution réelle sous un nom hostile n'écrit rien hors du vault.
         r_hostile = await capture_note._execute(
-            {"mode": "append", "list_name": "../../etc/passwd",
-             "slug": journal_vault.slugify("../../etc/passwd"), "items": ["x"]}, ctx,
+            {"mode": "document", "name": "../../etc/passwd",
+             "slug": journal_vault.slugify("../../etc/passwd"), "content": "- x"}, ctx,
         )
         ecrits = sorted(
             str(p.relative_to(racine)) for p in racine.rglob("*.md") if ".git" not in p.parts
         )
-        check("nom hostile : le fichier écrit reste sous listes/",
-              r_hostile.payload["uri"].startswith("listes/"), r_hostile.payload["uri"])
+        check("nom hostile : le fichier écrit reste sous documents/",
+              r_hostile.payload["uri"].startswith("documents/"), r_hostile.payload["uri"])
         check("nom hostile : rien d'écrit ailleurs que dans le vault",
-              all(f == "README.md" or f.startswith("listes/") for f in ecrits), str(ecrits))
+              all(f == "README.md" or f.startswith("documents/") for f in ecrits), str(ecrits))
 
-        # 4. Création, puis second ajout **sans réécriture** des lignes précédentes.
+        # 4. Création, puis second ajout **sans réécriture** de ce qui précède.
         r1 = await capture_note._execute(
-            {"mode": "append", "list_name": "Sources utiles",
-             "slug": "sources-utiles", "items": ["https://payloadspace.com"]}, ctx,
+            {"mode": "document", "name": "Sources utiles",
+             "slug": "sources-utiles", "content": "- https://payloadspace.com"}, ctx,
         )
-        fichier = racine / "listes" / "sources-utiles.md"
+        fichier = racine / "documents" / "sources-utiles.md"
         avant = fichier.read_text(encoding="utf-8")
-        check("la liste est créée sous listes/sources-utiles.md",
-              r1.payload["uri"] == "listes/sources-utiles.md", r1.payload["uri"])
+        check("le document est créé sous documents/sources-utiles.md",
+              r1.payload["uri"] == "documents/sources-utiles.md", r1.payload["uri"])
         check("la 1re écriture est annoncée comme une création",
-              r1.payload["status"] == "liste créée", r1.payload["status"])
+              r1.payload["status"] == "document créé", r1.payload["status"])
         check("l'entête ne porte pas de champ mutable",
               "updated_at" not in avant, "un champ à rafraîchir ferait de l'ajout une réécriture")
         check("pas de clef `contexte` → hors de la vue Journal", "contexte:" not in avant)
 
         r2 = await capture_note._execute(
-            {"mode": "append", "list_name": "Sources utiles",
-             "slug": "sources-utiles", "items": ["https://exemple.org"]}, ctx,
+            {"mode": "document", "name": "Sources utiles",
+             "slug": "sources-utiles", "content": "- https://exemple.org"}, ctx,
         )
         apres = fichier.read_text(encoding="utf-8")
         check("la 2e écriture est annoncée comme un ajout, pas une création",
-              r2.payload["status"] == "éléments ajoutés", r2.payload["status"])
+              r2.payload["status"] == "contenu ajouté", r2.payload["status"])
         check("l'ajout n'a rien réécrit (préfixe strictement conservé)", apres.startswith(avant),
               "le contenu antérieur a bougé")
-        check("exactement une ligne ajoutée",
+        check("exactement une ligne ajoutée, -0",
               apres.count("\n") == avant.count("\n") + 1,
               f"{avant.count(chr(10))} → {apres.count(chr(10))} lignes")
-        check("les deux éléments sont présents",
-              "- https://payloadspace.com\n" in apres and "- https://exemple.org\n" in apres)
+        check("les deux puces sont présentes et collées (liste non cassée)",
+              "- https://payloadspace.com\n- https://exemple.org\n" in apres,
+              repr(apres[-90:]))
+        check("le nombre de lignes annoncé est celui réellement écrit",
+              r2.payload["lignes_ajoutées"] == apres.count("\n") - avant.count("\n"),
+              str(r2.payload["lignes_ajoutées"]))
 
-        # 4. Un élément multi-ligne est replié : sinon il pourrait forger un front-matter.
+        # 5. Le Markdown libre est écrit **verbatim**. C'est la capacité neuve : elle se prouve
+        #    forme par forme, et l'entête du fichier doit rester intacte à chaque fois.
+        entete = avant[:avant.index("---\n", 4) + 4]
+        for libelle, bloc in BLOCS_MARKDOWN:
+            precedent = fichier.read_text(encoding="utf-8")
+            r = await capture_note._execute(
+                {"mode": "document", "name": "Sources utiles", "slug": "sources-utiles",
+                 "content": bloc}, ctx,
+            )
+            courant = fichier.read_text(encoding="utf-8")
+            check(f"{libelle} : écrit verbatim, sans repli ni préfixe ajouté",
+                  bloc in courant, repr(courant[-120:]))
+            check(f"{libelle} : rien de réécrit en amont",
+                  courant.startswith(precedent), "le contenu antérieur a bougé")
+            check(f"{libelle} : lignes ajoutées annoncées = lignes ajoutées",
+                  r.payload["lignes_ajoutées"] == courant.count("\n") - precedent.count("\n"),
+                  f"{r.payload['lignes_ajoutées']} annoncées")
+            check(f"{libelle} : le front-matter du fichier est intact",
+                  courant.startswith(entete), "l'entête a bougé")
+
+        # 6. Un bloc ajouté ne peut pas devenir un front-matter : celui-ci est en tête, écrit une
+        #    fois, et un ajout arrive toujours après. On le vérifie sur le pire cas.
+        final = fichier.read_text(encoding="utf-8")
         await capture_note._execute(
-            {"mode": "append", "list_name": "Sources utiles", "slug": "sources-utiles",
-             "items": ["ligne un\n---\ndoc_id: forge\n---\nligne deux"]}, ctx,
+            {"mode": "document", "name": "Sources utiles", "slug": "sources-utiles",
+             "content": "---\ndoc_id: forge\ntype: task\n---"}, ctx,
         )
         forge = fichier.read_text(encoding="utf-8")
-        check("un item multi-ligne est replié sur une ligne",
-              forge.count("\n") == apres.count("\n") + 1,
-              f"{apres.count(chr(10))} → {forge.count(chr(10))} lignes")
-        check("aucun délimiteur de front-matter forgé dans le corps",
-              forge.count("---\n") == 2, f"{forge.count('---' + chr(10))} délimiteurs")
+        check("un bloc en forme de front-matter n'écrase pas l'entête réelle",
+              forge.startswith(entete) and forge.startswith(final), "l'entête a bougé")
+        check("le doc_id du fichier reste celui calculé par le code",
+              forge.index("doc_id: assistant-ia:vps_files:documents/sources-utiles")
+              < forge.index("doc_id: forge"), "un doc_id forgé passe avant le vrai")
 
-        # 5. Un mode ou un argument invalide est une erreur explicite, jamais un succès vide.
+        # 7. list_documents voit ce qui a été écrit, et rien d'autre.
+        docs = await list_documents._execute({}, ctx)
+        noms = {d["nom"] for d in docs.payload["documents"]}
+        chemins = {d["chemin"] for d in docs.payload["documents"]}
+        check("list_documents retrouve le document par son nom humain",
+              "Sources utiles" in noms, str(noms))
+        check("list_documents ne rend que des chemins sous documents/",
+              all(c.startswith("documents/") for c in chemins), str(chemins))
+        check("list_documents ne rend pas le contenu des documents",
+              all(set(d) == {"nom", "chemin", "lignes"} for d in docs.payload["documents"]),
+              str(docs.payload["documents"][:1]))
+
+        # 8. Un mode ou un argument invalide est une erreur explicite, jamais un succès vide.
         async def _erreur(args) -> str | None:
             try:
                 await capture_note._resolve(args, ctx)
@@ -550,10 +609,10 @@ async def test_capture_note() -> None:
 
         check("mode inconnu refusé", await _erreur({"mode": "supprime"}) is not None)
         check("note sans content refusée", await _erreur({"mode": "note"}) is not None)
-        check("append sans list_name refusé",
-              await _erreur({"mode": "append", "items": ["x"]}) is not None)
-        check("append sans élément refusé",
-              await _erreur({"mode": "append", "list_name": "vide", "items": []}) is not None)
+        check("document sans name refusé",
+              await _erreur({"mode": "document", "content": "- x"}) is not None)
+        check("document sans contenu refusé",
+              await _erreur({"mode": "document", "name": "vide", "content": "  \n "}) is not None)
         motif = await _erreur({"mode": "note", "content": "x" * (capture_note.CONTENT_MAX + 1)})
         check("note trop longue refusée avec un motif actionnable",
               motif is not None and "trop long" in motif, str(motif))

@@ -27,10 +27,23 @@ _SLUG_MAX = 60
 _COLLISION_MAX = 50          # au-delà, on refuse plutôt que de boucler
 _GIT_AUTHOR = "assistant-ia <assistant@jlmvpscode.duckdns.org>"
 
-# Répertoire des listes nommées (D5). Un fichier par liste, alimenté **en ajout pur**.
-_LISTS_SUBDIR = "listes"
-# Un élément de liste tient sur une ligne : au-delà ce n'est plus un élément, c'est une note.
-_LIST_ITEM_MAX = 300
+# Répertoire des documents nommés (D5). Un fichier par document, alimenté **en ajout pur**.
+#
+# Il s'est appelé `listes/` le temps d'une capacité. Le nom était faux : ce qu'on adresse par un
+# nom humain (« sources utiles ») n'est pas une liste, c'est un document Markdown — il peut porter
+# des puces, un tableau, des cases à cocher, des paragraphes. La liste n'était qu'une des formes.
+_DOCS_SUBDIR = "documents"
+# Un titre de document tient sur une ligne : au-delà, ce n'est plus un nom, c'est une phrase.
+_TITLE_MAX = 120
+# Un bloc plus gros que ça n'est pas un ajout, c'est un import. On refuse plutôt que de tronquer.
+_BLOCK_MAX = 20_000
+
+# Premiers caractères d'une ligne qui *continue* une structure Markdown déjà ouverte : puce,
+# item numéroté, ligne de tableau, citation. Un bloc qui commence ainsi est collé au contenu
+# existant ; tout le reste (paragraphe, titre, bloc de code) en est séparé par une ligne vide.
+# Sans cette distinction, un paragraphe ajouté après une puce serait avalé par la puce
+# (continuation paresseuse) — et une puce ajoutée après une ligne vide casserait la liste en deux.
+_TIGHT_PREFIXES = ("- ", "* ", "+ ", "|", "> ", "  ", "\t")
 
 _README = """# Journal — vault Obsidian
 
@@ -74,20 +87,39 @@ class VaultEntry:
 
 
 @dataclass
-class VaultListEntry:
-    """Résultat d'un ajout à une liste nommée.
+class VaultDocumentEntry:
+    """Résultat d'un ajout à un document nommé.
 
-    `created` distingue « j'ai créé la liste » de « j'ai ajouté à une liste existante » : c'est la
-    seule chose que l'accusé de réception doit dire différemment, et le code appelant ne peut pas
-    la redéduire (le fichier existe dans les deux cas au retour).
+    `created` distingue « j'ai créé le document » de « j'ai ajouté à un document existant » :
+    c'est la seule chose que l'accusé de réception doit dire différemment, et le code appelant ne
+    peut pas la redéduire (le fichier existe dans les deux cas au retour).
+
+    `added_lines` est le nombre de lignes réellement écrites, séparateur compris. C'est le nombre
+    que le `git diff` du vault doit afficher en `+`, avec `-0` en face : le critère d'acceptation
+    de D5 se lit sur le dépôt, pas sur la réponse du modèle.
     """
     doc_id: str
     slug: str
-    relative_path: str      # ex. "listes/sources-utiles.md"
+    relative_path: str      # ex. "documents/sources-utiles.md"
     absolute_path: str
     title: str
     created: bool
-    added: list[str]        # lignes réellement ajoutées, après nettoyage
+    block: str              # le bloc Markdown tel qu'écrit, après normalisation
+    added_lines: int
+
+
+@dataclass
+class VaultDocument:
+    """Un document nommé, vu de l'extérieur. Ce que `list_documents()` rend au modèle.
+
+    Volontairement sans le contenu : l'outil de lecture sert à *savoir qu'un document existe et
+    sous quel nom*, pour ne pas en créer un second sous une formulation voisine. Rapatrier les
+    corps entiers dans le contexte serait un autre outil, avec une autre politique de taint.
+    """
+    slug: str
+    title: str
+    relative_path: str
+    lines: int
 
 
 def _vault_root() -> Path:
@@ -251,19 +283,19 @@ async def write_entry(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Listes nommées (D5) — ajout pur, jamais de réécriture
+# Documents nommés (D5) — ajout pur, jamais de réécriture
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _one_line(text: str, limit: int = _LIST_ITEM_MAX) -> str:
+def _one_line(text: str, limit: int = _TITLE_MAX) -> str:
     """Replie un texte sur **exactement une ligne**, borné.
 
-    Ce n'est pas de la cosmétique, c'est une barrière. Un élément multi-ligne casserait la
-    garantie « +n lignes, -0 » de l'ajout (l'acceptation de la capacité 2 se lit en `git diff`),
-    et surtout il permettrait à du contenu tiers d'insérer un délimiteur de front-matter (`---`)
-    ou une entête au milieu d'un fichier déjà écrit.
+    Sert au **titre** d'un document, pas à son contenu : un titre multi-ligne casserait le YAML de
+    l'entête (`title:` en clef de front-matter) et le `# ` du corps. Le contenu, lui, est du
+    Markdown libre — le replier serait exactement l'erreur de conception que ce module vient de
+    corriger : une puce, une ligne de tableau et un paragraphe n'ont pas la même forme.
     Les deux `replace` portent sur U+2028 et U+2029 — les séparateurs de ligne Unicode, donc
     invisibles dans ce source. Ils sont déjà couverts par `\\s` en Python : ils sont explicités
-    parce que l'invariant « un élément = une ligne » ne doit pas reposer sur un détail
+    parce que l'invariant « un titre = une ligne » ne doit pas reposer sur un détail
     d'implémentation de `re`, et parce qu'Obsidian les rend, lui, comme des retours à la ligne.
     """
     collapsed = re.sub(r"\s+", " ", (text or "").replace(" ", " ").replace(" ", " ")).strip()
@@ -272,18 +304,18 @@ def _one_line(text: str, limit: int = _LIST_ITEM_MAX) -> str:
     return collapsed
 
 
-def _list_header(doc_id: str, title: str, created_at: datetime) -> str:
-    """Entête écrite **une seule fois**, à la création de la liste.
+def _document_header(doc_id: str, title: str, created_at: datetime) -> str:
+    """Entête écrite **une seule fois**, à la création du document.
 
     Volontairement sans champ mutable (pas d'`updated_at`, pas de compteur) : le moindre champ à
     rafraîchir transformerait chaque ajout en réécriture du fichier, et l'ajout ne serait plus un
-    ajout. Pas de clef `contexte` non plus — c'est ce qui tient les listes hors de la vue
-    `Journal.base` (filtre `file.hasProperty("contexte")`), et `type: list` les tient hors de
+    ajout. Pas de clef `contexte` non plus — c'est ce qui tient ces documents hors de la vue
+    `Journal.base` (filtre `file.hasProperty("contexte")`), et `type: document` les tient hors de
     `Tâches.base` (filtre `type == "task"`).
     """
     data = {
         "doc_id": doc_id,
-        "type": "list",
+        "type": "document",
         "title": title,
         "created_at": created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -291,75 +323,186 @@ def _list_header(doc_id: str, title: str, created_at: datetime) -> str:
     return f"---\n{body}---\n\n# {title}\n\n"
 
 
-async def append_to_list(
+def _normalize_block(block: str) -> str:
+    """Normalise un bloc Markdown libre pour l'ajout. Ne change **jamais** sa forme interne.
+
+    Trois gestes seulement, tous nécessaires à l'invariant « +n lignes, -0 » :
+      - CRLF → LF, pour que le compte de lignes du `git diff` corresponde au compte annoncé ;
+      - suppression des lignes vides de tête et de queue, qui feraient dériver ce compte sans
+        rien apporter ;
+      - garantie d'un `\\n` final unique, sans lequel le prochain ajout se collerait à celui-ci.
+
+    Ce qui n'est **pas** fait, délibérément : aucun repli sur une ligne, aucun préfixe `- `,
+    aucune échappement de `---`. Un `---` ajouté ici ne peut pas forger un front-matter : le
+    front-matter est écrit à la création du fichier, en tête, et un bloc ajouté arrive toujours
+    après lui. Neutraliser les `---` reviendrait à interdire les séparateurs et les tableaux
+    Markdown — c'est-à-dire à retomber sur la contrainte « une ligne = un élément » qu'on vient
+    d'abandonner.
+    """
+    text = (block or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = text.strip("\n")
+    # `strip("\n")` laisse une éventuelle ligne blanche « à espaces » : on la retire aussi, sinon
+    # elle compte comme une ligne ajoutée invisible.
+    lines = text.split("\n")
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return "\n".join(lines) + "\n" if lines else ""
+
+
+def _needs_blank_line(block: str) -> bool:
+    """Faut-il une ligne vide entre le contenu existant et ce bloc ?
+
+    Non si le bloc *continue* une structure ouverte (puce, item numéroté, ligne de tableau,
+    citation, ligne indentée) ; oui sinon. Table déterministe et courte, cf. `_TIGHT_PREFIXES` :
+    c'est le seul endroit du module où la forme du Markdown entre en jeu, et il est testable.
+    """
+    first = block.split("\n", 1)[0]
+    if first.startswith(_TIGHT_PREFIXES):
+        return False
+    return not re.match(r"^\d+[.)]\s", first)
+
+
+async def append_to_document(
     *,
-    list_name: str,
-    items: list[str],
+    name: str,
+    block: str,
     created_at: datetime | None = None,
-) -> VaultListEntry:
-    """Ajoute des éléments à `listes/{slug}.md`, en créant la liste si elle n'existe pas.
+) -> VaultDocumentEntry:
+    """Ajoute un bloc Markdown à `documents/{slug}.md`, en créant le document s'il n'existe pas.
+
+    Adressage **par nom** : c'est ce qui distingue ces documents des notes datées de
+    `write_entry`. « ajoute payloadspace.com à mes sources utiles » doit retomber sur le fichier
+    d'hier ; « note de lecture sur le EU Space Act » doit créer un fichier neuf. Le nom est donc
+    la clef, et `slugify` la fonction de hachage — d'où l'outil de lecture `list_documents` : sans
+    lui, le modèle réinvente le nom à chaque tour et fabrique un doublon (observé :
+    `startups-spatial` puis `startups-spatial-a-creuser`).
 
     `write_entry` ne sait pas faire ça : elle est append-only au sens *ne jamais écraser un
     fichier*, ce qui n'est pas la même chose que *ajouter à un fichier existant*. D'où cette
     fonction, avec les mêmes barrières (`slugify`, `_resolve_within_vault`, commit best-effort).
 
-    Le fichier existant n'est **jamais relu ni réécrit** : la création passe par un
-    `O_CREAT|O_EXCL` (atomique — deux appels concurrents ne peuvent pas écrire deux entêtes) et
-    l'ajout par un `O_APPEND` (le noyau replace l'offset en fin de fichier à chaque écriture).
-    C'est plus sûr ici qu'un tmp + `os.replace` : celui-ci imposerait de relire tout le fichier
-    et perdrait silencieusement un ajout concurrent.
+    Le fichier existant n'est **jamais réécrit** : la création passe par un `O_CREAT|O_EXCL`
+    (atomique — deux appels concurrents ne peuvent pas écrire deux entêtes) et l'ajout par un
+    `O_APPEND` (le noyau replace l'offset en fin de fichier à chaque écriture). C'est plus sûr
+    ici qu'un tmp + `os.replace` : celui-ci imposerait de relire tout le fichier et perdrait
+    silencieusement un ajout concurrent.
     """
     root = await ensure_vault()
     created_at = created_at or datetime.utcnow()
 
-    clean = [line for line in (_one_line(i) for i in (items or [])) if line]
-    if not clean:
-        raise VaultError("aucun élément à ajouter (liste vide après nettoyage)")
+    if len(block or "") > _BLOCK_MAX:
+        raise VaultError(f"bloc trop long ({len(block)} caractères, max {_BLOCK_MAX})")
+    payload = _normalize_block(block)
+    if not payload:
+        raise VaultError("rien à ajouter (bloc vide après normalisation)")
 
-    slug = slugify(list_name)
-    title = _one_line(list_name, limit=120) or slug
-    doc_id = f"assistant-ia:vps_files:listes/{slug}"
+    slug = slugify(name)
+    title = _one_line(name) or slug
+    doc_id = f"assistant-ia:vps_files:{_DOCS_SUBDIR}/{slug}"
 
-    lists_dir = _resolve_within_vault(root, _LISTS_SUBDIR)
-    lists_dir.mkdir(parents=True, exist_ok=True)
-    target = _resolve_within_vault(root, _LISTS_SUBDIR, f"{slug}.md")
+    docs_dir = _resolve_within_vault(root, _DOCS_SUBDIR)
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    target = _resolve_within_vault(root, _DOCS_SUBDIR, f"{slug}.md")
 
     created = False
     try:
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
     except FileExistsError:
-        pass                                    # la liste existe déjà : on ajoutera à la suite
+        pass                                # le document existe déjà : on ajoutera à la suite
     except OSError as exc:
         raise VaultError(f"création impossible dans le vault : {exc}") from exc
     else:
         created = True
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write(_list_header(doc_id, title, created_at))
+                fh.write(_document_header(doc_id, title, created_at))
         except OSError as exc:
             raise VaultError(f"écriture impossible dans le vault : {exc}") from exc
 
-    payload = "".join(f"- {line}\n" for line in clean)
+    # Séparation d'avec le contenu existant. Deux questions distinctes :
+    #   1. le fichier finit-il par un `\n` ? Garanti par ce module, pas par une édition manuelle
+    #      dans Obsidian — on lit **un octet** en fin de fichier pour le savoir. Une lecture d'un
+    #      octet n'est pas une relecture du fichier : l'invariant « ne jamais réécrire » tient.
+    #   2. le bloc continue-t-il la structure ouverte, ou en ouvre-t-il une nouvelle ?
+    prefix = ""
+    if not created:
+        try:
+            with open(target, "rb") as fh:
+                taille = fh.seek(0, os.SEEK_END)
+                if taille:
+                    fh.seek(-1, os.SEEK_END)
+                    if fh.read(1) != b"\n":
+                        prefix = "\n"
+        except OSError as exc:
+            raise VaultError(f"lecture impossible dans le vault : {exc}") from exc
+        if _needs_blank_line(payload):
+            prefix += "\n"
+
     try:
         with open(target, "a", encoding="utf-8") as fh:
-            fh.write(payload)
+            fh.write(prefix + payload)
     except OSError as exc:
         raise VaultError(f"ajout impossible dans le vault : {exc}") from exc
 
-    relative_path = f"{_LISTS_SUBDIR}/{slug}.md"
-    verbe = "crée" if created else "complète"
-    await _commit(root, relative_path, f"liste {title} {verbe} (+{len(clean)})")
+    added_lines = (prefix + payload).count("\n")
+    relative_path = f"{_DOCS_SUBDIR}/{slug}.md"
+    verbe = "créé" if created else "complété"
+    await _commit(root, relative_path, f"document {title} {verbe} (+{added_lines})")
     logger.info(
         "journal_vault: %d ligne(s) ajoutée(s) à %s (création=%s)",
-        len(clean), relative_path, created,
+        added_lines, relative_path, created,
     )
 
-    return VaultListEntry(
+    return VaultDocumentEntry(
         doc_id=doc_id,
         slug=slug,
         relative_path=relative_path,
         absolute_path=str(target),
         title=title,
         created=created,
-        added=clean,
+        block=payload,
+        added_lines=added_lines,
     )
+
+
+async def list_documents() -> list[VaultDocument]:
+    """Les documents nommés existants, triés par nom. Lecture seule, jamais d'écriture.
+
+    Sert au modèle **avant** d'écrire : c'est la seule façon pour lui de réutiliser un nom
+    existant plutôt que d'en inventer un voisin. Le titre est lu dans le front-matter ; à défaut
+    (fichier créé à la main dans Obsidian), on retombe sur le slug — un document non écrit par
+    l'agent doit rester visible, pas disparaître de la liste.
+    """
+    root = await ensure_vault()
+    docs_dir = _resolve_within_vault(root, _DOCS_SUBDIR)
+    if not docs_dir.is_dir():
+        return []
+
+    out: list[VaultDocument] = []
+    for path in sorted(docs_dir.glob("*.md")):
+        slug = path.stem
+        title, lignes = slug, 0
+        try:
+            texte = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            logger.warning("journal_vault: document illisible %s (%s)", path.name, exc)
+            continue
+        lignes = texte.count("\n")
+        if texte.startswith("---\n"):
+            fin = texte.find("\n---\n", 3)
+            if fin != -1:
+                try:
+                    meta = yaml.safe_load(texte[4:fin + 1]) or {}
+                    if isinstance(meta, dict) and meta.get("title"):
+                        title = _one_line(str(meta["title"])) or slug
+                except yaml.YAMLError:
+                    pass                    # entête abîmée : le slug reste un nom utilisable
+        out.append(VaultDocument(
+            slug=slug,
+            title=title,
+            relative_path=f"{_DOCS_SUBDIR}/{path.name}",
+            lines=lignes,
+        ))
+    return out

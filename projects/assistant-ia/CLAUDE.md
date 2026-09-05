@@ -155,6 +155,18 @@ doc système peut dire *quand* utiliser un outil ; il ne peut pas en faire exist
 | `audit.py` | Écritures dans `agent_tool_calls` — best-effort, ne fait jamais perdre une réponse |
 | `create_reminder.py` | Outil d'écriture → carte Kanban dans la colonne `Rappels` |
 | `web_search.py` | Outil de lecture (Exa/Serper) — **taintant**. Pas de `fetch_url` (SSRF, §4 roadmap) |
+| `capture_note.py` | Outil d'écriture → vault Obsidian. Deux modes = deux **adressages** : `note` (daté, `notes/{année}/{date}-{slug}.md`, classé + indexé) et `document` (par nom, `documents/{slug}.md`, ajout en fin de fichier). Contenu = **Markdown libre** |
+| `list_documents.py` | Outil de lecture → noms des documents existants, **sans leur contenu**. Non taintant (contenu écrit par l'utilisateur lui-même). À appeler avant d'écrire dans un document |
+
+⚠️ **L'adressage par nom exige l'outil de lecture.** Sans `list_documents`, le modèle réinvente
+le nom à chaque tour : deux rejeux de la même demande ont produit `startups-spatial.md` puis
+`startups-spatial-a-creuser.md`, deux fichiers pour une seule liste, sans aucune erreur levée.
+Toute future primitive adressée par un libellé humain doit livrer son outil de lecture avec elle.
+
+⚠️ **`journal_vault.append_to_document` ne relit ni ne réécrit jamais le fichier** : création par
+`O_CREAT|O_EXCL`, ajout par `O_APPEND` (+ un octet lu en fin de fichier pour savoir s'il finit par
+un saut de ligne). L'entête n'a **aucun champ mutable** — un `updated_at` transformerait chaque
+ajout en réécriture. Le critère d'acceptation est un `git diff` du vault en `+n / -0`.
 
 **Pour ajouter un outil** : écrire un module avec `MANIFEST` + `_execute` (+ `_resolve` si le code
 doit décider quelque chose que le modèle propose), exporter un `SPEC`, l'ajouter à `_ALL` dans

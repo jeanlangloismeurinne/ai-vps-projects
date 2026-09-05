@@ -24,11 +24,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.agent_tools import capture_note, create_reminder, web_search
+from app.services.agent_tools import capture_note, create_reminder, list_documents, web_search
 from app.services.agent_tools.base import ToolSpec
 
 # Ordre = ordre d'exposition au modèle. Tous les outils du catalogue, configurés ou non.
+# `list_documents` précède `capture_note` : c'est l'ordre dans lequel il faut les appeler pour
+# écrire dans un document existant plutôt que d'en forger un doublon.
 _ALL: tuple[ToolSpec, ...] = (
+    list_documents.SPEC,
     capture_note.SPEC,
     create_reminder.SPEC,
     web_search.SPEC,
