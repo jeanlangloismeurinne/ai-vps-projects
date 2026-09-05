@@ -2,12 +2,12 @@
 id: reprise-hub-pilotage
 status: prompt-de-reprise
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 project: hub
 role: >
   Prompt de reprise du chantier « système de pilotage v3 ». Périmètre TRANSVERSE :
   code dans projects/hub/, doctrine dans CONTROL_SYSTEM.md (racine du repo), plus une
-  purge dans plusieurs CLAUDE.md. État : cadrage TERMINÉ et figé, ZÉRO ligne écrite.
+  purge dans plusieurs CLAUDE.md. État : Lot A (doctrine) LIVRÉ le 2026-09-05 ; lots B et C à faire.
 ---
 
 # Prompt de reprise — système de pilotage v3 (Hub)
@@ -25,11 +25,20 @@ role: >
 
 ---
 
-## 1. État — rien n'est commencé
+## 1. État — Lot A livré (2026-09-05, `fde83dc`)
 
-**Aucun code écrit, aucun fichier de doc modifié, aucune migration.** Ce qui existe est le
-cadrage ci-dessous, issu d'une conversation de conception du 2026-09-04. Le point de départ
-de demain est un dépôt intact.
+**Lot A terminé et poussé.** `CONTROL_SYSTEM.md` réécrit (323 → 301 lignes), les 4 `CLAUDE.md`
+purgés, `projects/assistant-ia/SESSION.md` supprimé. Solde **262 ajoutées / 277 supprimées** — le
+test d'acceptation commun (« le lot retire autant qu'il ajoute ») est satisfait.
+
+**Lots B et C : zéro ligne.** Le Hub (`app/roadmap.py`) est intact, y compris le bug du §8.
+
+Deux nuances honnêtes sur l'acceptation du lot A :
+- `CONTROL_SYSTEM.md` **cite encore** « ordre de sprint » et `SESSION.md` (l.29-31), dans un
+  paragraphe *Ce qui a été retiré, et pourquoi*. C'est délibéré : sans cette épitaphe chiffrée, un
+  agent futur réintroduit le sprint en croyant innover. Exception assumée, pas un oubli.
+- `projects/hub/app/roadmap.py` porte 11 occurrences restantes — c'est **le lot B**, par
+  construction.
 
 ---
 
@@ -40,7 +49,7 @@ de demain est un dépôt intact.
 | Artefact prescrit | Adoption réelle (12 projets) |
 |---|---|
 | chantier avec `## Sprints` | **1 fichier** : `projects/assistant-ia/roadmap/agent-intention-et-capture-kb.md` |
-| `SESSION.md` | **1 fichier** — pointe sur `roadmap/kb-visualisation-obsidian.md`, **qui n'existe pas**. Non suivi par git. |
+| `SESSION.md` | **1 fichier** — non suivi par git, figé sur `Sprint 3` d'un chantier **livré, `status: done` et déplacé dans `roadmap/archive/`** (son ticket `1787600247615` est `closed`). Le ré-armement du §5 de l'ancienne doctrine n'a donc jamais tourné une seule fois. ✅ supprimé au lot A. |
 | ticket comme unité de planification | portfolio-tracker : 30 tickets, 6 ouverts, **dernière fermeture 2026-07-14**, 3/30 avec `milestone:` |
 
 Sur la même période, portfolio-tracker a produit **~90 commits** (lots 7/8/9, UX-1/2/3, RVMD
@@ -148,14 +157,15 @@ code. D'où la règle de non-recouvrement : **le fichier de reprise ne redit jam
 **Test d'acceptation commun** : le lot retire autant qu'il ajoute (cf. §7) — un lot qui n'a rien
 supprimé n'est pas terminé.
 
-### Lot A — doctrine · contexte partagé : documentation transverse
-- [ ] Réécrire `CONTROL_SYSTEM.md` sur le modèle §3 (roadmap → fichier de reprise → lot de
+### Lot A — doctrine · contexte partagé : documentation transverse ✅ LIVRÉ (`fde83dc`)
+- [x] Réécrire `CONTROL_SYSTEM.md` sur le modèle §3 (roadmap → fichier de reprise → lot de
       conversation ; ticket = inbox seule)
-- [ ] Y intégrer le gabarit de roadmap (liste ordonnée + test d'acceptation + checklist §3.4)
-- [ ] Y intégrer les règles d'archivage (§5) dans le protocole de fin de conversation
-- [ ] Purge des `CLAUDE.md` (§7)
-- **Acceptation** : plus aucune occurrence de « ordre de sprint », « ré-armement »,
-      « exécute le sprint en cours », `SESSION.md`, `SESSION_BRIEF.md` dans le repo.
+- [x] Y intégrer le gabarit de roadmap (liste ordonnée + test d'acceptation + checklist §3.4)
+- [x] Y intégrer les règles d'archivage (§5) dans le protocole de fin de conversation
+      — **plus** la persistance git du §9.3, qui y manquait
+- [x] Purge des `CLAUDE.md` (§7)
+- **Acceptation** : ✅ hors les deux exceptions documentées au §1 (l'épitaphe volontaire de
+      `CONTROL_SYSTEM.md`, et `app/roadmap.py` qui est le lot B).
 
 ### Lot B — Hub · contexte partagé : `projects/hub/app/roadmap.py`
 - [ ] **Correctif frontmatter (bloquant, §8)**
@@ -185,13 +195,15 @@ La dérive de nommage a **déjà eu lieu** : `projects/portfolio-tracker/CLAUDE.
 règle `00-REPRISE` est écrite **deux fois** dans le `CLAUDE.md` racine, en deux versions
 divergentes. Ajouter sans retirer est le mode de panne avéré de cet écosystème.
 
-- `projects/assistant-ia/SESSION.md` (non suivi par git, pointe dans le vide)
-- `CONTROL_SYSTEM.md` : §§ *Passage Hub → Claude Code*, *Ré-armement automatique*, *Format des
-  tickets* (comme outil de planification — garder l'inbox)
-- `CLAUDE.md` racine : la règle `00-REPRISE` dupliquée
-- `projects/portfolio-tracker/CLAUDE.md` : dernière section, `SESSION_BRIEF.md` / « execute le
-  brief session » → remplacer par le déclencheur §3.7
-- Hub : voir lot B
+- [x] `projects/assistant-ia/SESSION.md` — supprimé après vérification qu'il ne portait aucune
+      dette (ticket `closed`, chantier `done` + archivé)
+- [x] `CONTROL_SYSTEM.md` : §§ *Passage Hub → Claude Code*, *Ré-armement automatique*, *Format des
+      tickets* (comme outil de planification — l'inbox est gardée, §7 du nouveau fichier)
+- [x] `CLAUDE.md` racine : la règle `00-REPRISE` dupliquée → fusionnée en une seule, qui interdit
+      désormais explicitement l'empilement de blocs `MàJ` (la cause mesurée du gonflement à 75 Ko)
+- [x] `projects/portfolio-tracker/CLAUDE.md` **et `projects/bank-review/CLAUDE.md`** (celui-ci
+      n'était pas dans le cadrage : il portait le même `SESSION_BRIEF.md` mort)
+- [ ] Hub : voir lot B
 
 ---
 
@@ -220,22 +232,31 @@ suffisant — le Hub ne touche **que le corps** et réécrit le frontmatter **oc
 
 ## 9. Reste à faire / à trancher
 
-- **Arbitrage ouvert** : retirer les formulaires de création du Hub (lot B) découle de la décision
-  §3.2, mais n'a pas été confirmé explicitement. À valider avant de supprimer du code.
+- **Arbitrage ouvert (bloquant pour le lot B)** : retirer les formulaires de création du Hub
+  découle de la décision §3.2, mais n'a jamais été confirmé explicitement. À valider **avant** de
+  supprimer du code.
 - **Projet témoin du lot C** non choisi (newsletter-summary vs comms-gateway).
-- **Persistance** : `compose-deploy.sh` ne commite que la liste `-f` fournie. Sur une conversation
-  sans déploiement (doc, cadrage, roadmap), **rien ne commite le fichier de reprise**. À rendre
-  explicite dans le protocole de fin de conversation du lot A, sinon la mémoire du système ne vit
-  que sur le disque du VPS. (État constaté : les trois `00-REPRISE.md` existants **sont** suivis,
-  arbre propre.)
+- ~~Persistance~~ ✅ traité au lot A : l'obligation de committer la doc même sans déploiement est
+  écrite dans `CONTROL_SYSTEM.md` §5 (*Persistance*) et rappelée dans le `CLAUDE.md` racine.
+- ⚠️ **Écriture concurrente dans le dépôt** — constatée le 2026-09-05 vers 06:02 UTC pendant cette
+  conversation : `backend/app/agents/v2/worker.py` (modifié) et `backend/app/knowledge/
+  material_events.py` (nouveau, 289 lignes) sont apparus dans l'arbre de portfolio-tracker alors
+  qu'il était propre au démarrage. Vraisemblablement la boucle autonome. **Conséquence pour ce
+  chantier : ne jamais utiliser `git add -A` / `git add .` ici** — indexer les fichiers du lot par
+  liste explicite, sinon un lot de doc emporte du code non validé dans son commit.
 
 ---
 
-## 10. Où démarrer demain
+## 10. Où démarrer
 
-**Lot A**, et dans cet ordre : le Hub du lot B implémente une doctrine qui doit être figée d'abord.
-Point d'entrée : relire `CONTROL_SYSTEM.md` (racine du repo, 323 lignes) en regard du §3 ci-dessus,
-puis le réécrire — il n'y a pas de conception restante à faire, seulement de la rédaction et de la
-purge.
+**Lot B** — le Hub, `projects/hub/app/roadmap.py`. La doctrine est figée : ce fichier a maintenant
+une cible stable à implémenter.
 
-Si tu préfères attaquer par le code, le **§8** est autonome et se traite sans dépendre du lot A.
+Ordre recommandé à l'intérieur du lot B :
+1. **§8 d'abord** (frontmatter détruit à la sauvegarde) — autonome, bloquant, et son test
+   d'acceptation est un vrai test négatif : le vérifier **avant** correctif, il doit échouer.
+2. Affichage du `00-REPRISE.md` + bouton d'inscription de la roadmap.
+3. Retraits (mécanique de sprint, puis formulaires de création **une fois l'arbitrage §9 tranché**).
+
+Le lot A a fixé le vocabulaire que le Hub doit parler : `Roadmap active :` en tête du fichier de
+reprise, capacités `- [ ]`/`- [x]`, résolution racine → `roadmap/**`. Voir `CONTROL_SYSTEM.md` §2.
