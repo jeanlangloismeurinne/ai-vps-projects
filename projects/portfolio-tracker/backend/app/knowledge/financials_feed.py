@@ -111,6 +111,31 @@ def _as_dict(cs: Any) -> dict[str, Any]:
     return {}
 
 
+def _spec_source_date(spec: "FinancialsEntrySpec", facts: dict[str, Any]) -> Optional[date]:
+    """Date de la COLONNE `source_date` d'un ratio — l'ancre de ses postes, pas celle du feed.
+
+    ⚠️ **F14 (2026-09-05).** #42 avait bien daté `levier` « AU 2026-06-30 » dans son titre, son
+    `fiscal_period`, son `content` et son `content_structured`… et l'écriture passait quand même
+    `source_date=facts['period_end']`, c'est-à-dire l'ancre de FLUX (2025-12-31), **identique pour
+    les quatre ratios**. Une seule ligne portait donc `fiscal_period='AU 2026-06-30'` et
+    `source_date=2025-12-31` : le fait se contredisait lui-même, et c'est la colonne — pas le
+    texte — que trient et filtrent l'ancre temporelle de F12, le balayage de péremption et toute
+    requête « la plus récente ». Le ratio paraissait vieux de 239 jours au lieu de 58.
+
+    C'est #46 transposé aux PORTEURS d'une même date à l'intérieur d'une entry : la règle avait été
+    appliquée à trois d'entre eux et oubliée sur le quatrième. D'où un détenteur unique plutôt
+    qu'un `source_date=` explicite à chacun des quatre sites de construction — quatre sites, c'est
+    la garantie de re-diverger au correctif suivant.
+
+    Règle : un ratio se date par `content_structured['period_end']` quand il en pose un (`levier`
+    y met son ancre de bilan) ; à défaut, par l'ancre de flux du feed. Un ratio **mixte** (ROIC :
+    flux au numérateur, bilan au dénominateur) n'en pose pas et retombe donc sur l'ancre de flux,
+    la plus ANCIENNE des deux — c'est le choix conservateur : au-delà d'elle, le ratio n'est plus
+    garanti frais, et un balayage de péremption doit sur-signaler plutôt que rassurer.
+    """
+    return _parse_end(spec.content_structured.get("period_end")) or facts.get("period_end")
+
+
 def _parse_end(v: Any) -> Optional[date]:
     if isinstance(v, date):
         return v
@@ -584,7 +609,7 @@ async def run_financials_feed(
                         conn, ticker_id=ticker_id, entry_type=spec.entry_type, content=spec.content,
                         source_type=spec.source_type, title=spec.title,
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
-                        source_url=spec.source_url, source_date=facts.get("period_end"),
+                        source_url=spec.source_url, source_date=_spec_source_date(spec, facts),
                         fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
                         covers=[f"financials.{spec.field}"],   # index 029 : chemin complet
                     )

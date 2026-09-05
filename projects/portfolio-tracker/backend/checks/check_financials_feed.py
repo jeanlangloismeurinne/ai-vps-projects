@@ -8,6 +8,7 @@ On confronte :
     (4 champs), en vérifiant que tout sort en `edgar_official` (condition du tier A du plancher) ;
   • les helpers purs d'EDGAR (`cik_from_url`, parsing/appariement des points annuels).
 """
+import asyncio
 import inspect
 import sys
 from datetime import date
@@ -16,10 +17,17 @@ from app.knowledge.edgar_facts import (
     _parse_annual_points, _pick_for_period, cik_from_url,
 )
 from app.knowledge.financials_feed import (
-    _md, _persist_capex_fact, build_financials_entries, extract_edgar_facts,
+    _md, _persist_capex_fact, _spec_source_date, build_financials_entries, extract_edgar_facts,
 )
 
 ok = fail = 0
+
+
+def _aw(valeur):
+    """Doublure asynchrone rendant toujours `valeur` (pour neutraliser les accès DB)."""
+    async def _f(*a, **k):
+        return valeur
+    return _f
 
 
 def check(label, cond, detail=""):
@@ -395,6 +403,105 @@ check("le module n'a pas re-codé la règle d'unité (il DÉLÈGUE à `app.knowl
       "from app.knowledge.units import montant" in _src
       and "return montant(" in inspect.getsource(_md),
       "→ `_md` calcule son palier lui-même : il re-divergera au prochain correctif")
+
+print("\n10. LA COLONNE `source_date` EST LE 4ᵉ PORTEUR DE LA DATE, et il avait été oublié (F14)")
+# Trouvé EN PROD par le balayage de péremption, sur l'entry #169 de RVMD : `fiscal_period` disait
+# « AU 2026-06-30 », `source_date` disait 2025-12-31 — **la même ligne se contredisait**. #42 avait
+# daté le titre, le `fiscal_period`, le `content` et le `content_structured` ; l'écriture passait
+# quand même `source_date=facts['period_end']`, identique pour les quatre ratios.
+# C'est la colonne, pas le texte, que trient l'ancre temporelle (F12), le balayage et tout
+# « la plus récente » : le levier paraissait vieux de 239 jours au lieu de 58.
+_facts_f14 = dict(f_mix, capex=15_990_000.0)
+_by14 = {s.field: s for s in build_financials_entries("RVMD", "RVMD", _facts_f14,
+                                                      as_of=date(2026, 9, 4))[0]}
+check("un ratio 100 % bilan porte la date du BILAN en `source_date`",
+      _spec_source_date(_by14["levier"], _facts_f14) == date(2026, 6, 30),
+      f"→ {_spec_source_date(_by14['levier'], _facts_f14)}")
+check("la colonne ne contredit plus le `fiscal_period` de la MÊME ligne",
+      _spec_source_date(_by14["levier"], _facts_f14).isoformat()
+      in _by14["levier"].fiscal_period,
+      f"→ {_by14['levier'].fiscal_period} vs {_spec_source_date(_by14['levier'], _facts_f14)}")
+# Un ratio de FLUX ne doit surtout pas se mettre à suivre le bilan : le correctif serait alors
+# juste sur le levier et faux partout ailleurs — le mode de panne symétrique.
+# ⚠️ On itère sur les specs RÉELLEMENT construits, pas sur une liste en dur : `intensite_capex_pct`
+# est légitimement absent de cette fixture (CA nul → ratio infondé, cf. §5 plus haut), et la liste
+# en dur faisait planter le script AVANT ses asserts — un test négatif qui ne rougit pas parce
+# qu'il ne s'exécute pas est un check vert par abandon (leçon §13 du CHANTIER_OUTILLAGE_DEV).
+_flux14 = sorted(f for f, s in _by14.items()
+                 if s.content_structured.get("period_end") is None)
+check("la fixture construit bien des ratios de flux (sinon la boucle ne prouve rien)",
+      len(_flux14) >= 2, f"→ {_flux14}")
+for _f in _flux14:
+    check(f"{_f} reste daté de l'ancre de FLUX (la plus ancienne, conservateur)",
+          _spec_source_date(_by14[_f], _facts_f14) == date(2025, 12, 31),
+          f"→ {_spec_source_date(_by14[_f], _facts_f14)}")
+# ⚠️ Les asserts ci-dessus éprouvent `_spec_source_date` EN ISOLATION : ils restent verts même si
+# le site d'écriture ne l'appelle pas. Testé en négatif, remettre le bug ne faisait rougir que le
+# grep de source plus bas — un contrôle se teste AU POINT DE LECTURE, ici la valeur réellement
+# passée à `store_knowledge`. On pilote donc `run_financials_feed` hors ligne, avec des doublures.
+_ff = sys.modules[_md.__module__]
+_ecrit: list[dict] = []
+
+
+class _FakeConn:
+    async def fetchrow(self, *a, **k):
+        return {"ticker_symbol": "RVMD", "company_type": "public"}
+
+    def transaction(self):
+        return _Ctx(None)
+
+
+class _Ctx:
+    def __init__(self, v):
+        self._v = v
+
+    async def __aenter__(self):
+        return self._v
+
+    async def __aexit__(self, *a):
+        return False
+
+
+async def _fake_store(conn, **kw):
+    _ecrit.append(kw)
+    return {"id": 900 + len(_ecrit), "source_date": kw.get("source_date")}
+
+
+_orig = (_ff.get_db_session, _ff.get_current_entries, _ff.store_knowledge,
+         _ff._current_tagged_entry_id)
+_ff.get_db_session = lambda *a, **k: _Ctx(_FakeConn())
+_ff.get_current_entries = _aw(MIXTE)
+_ff.store_knowledge = _fake_store
+_ff._current_tagged_entry_id = _aw(None)
+try:
+    _res = asyncio.run(_ff.run_financials_feed("RVMD", persist=True))
+finally:
+    (_ff.get_db_session, _ff.get_current_entries, _ff.store_knowledge,
+     _ff._current_tagged_entry_id) = _orig
+
+_ecrit_by = {k["covers"][0].split(".")[-1]: k for k in _ecrit}
+check("le chemin d'écriture a bien tourné hors ligne (sinon les asserts suivants sont vides)",
+      len(_ecrit_by) >= 3, f"→ {sorted(_ecrit_by)}")
+check("`store_knowledge` REÇOIT la date du bilan pour le levier (pas celle du flux)",
+      _ecrit_by["levier"]["source_date"] == date(2026, 6, 30),
+      f"→ {_ecrit_by['levier']['source_date']}")
+for _f in _flux14:
+    check(f"`store_knowledge` reçoit l'ancre de flux pour {_f}",
+          _ecrit_by[_f]["source_date"] == date(2025, 12, 31),
+          f"→ {_ecrit_by[_f]['source_date']}")
+check("la ligne écrite ne se contredit pas : `source_date` ⊂ `fiscal_period`",
+      _ecrit_by["levier"]["source_date"].isoformat() in _ecrit_by["levier"]["fiscal_period"],
+      f"→ {_ecrit_by['levier']['fiscal_period']}")
+
+# La règle a UN détenteur : la répéter sur les 4 sites de construction garantit de re-diverger.
+_src_ff = inspect.getsource(sys.modules[_md.__module__])
+check("l'écriture délègue la datation au détenteur unique",
+      "source_date=_spec_source_date(spec, facts)" in _src_ff,
+      "→ la date est recalculée au site d'écriture : elle re-divergera")
+check("aucun site de construction ne pose sa propre `source_date`",
+      "source_date=" not in _src_ff.split("def build_financials_entries")[1].split("def ")[0],
+      "→ un spec pose sa date lui-même : quatre détenteurs, donc zéro")
+
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)
