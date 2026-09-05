@@ -213,6 +213,18 @@ cp templates/comms-client/comms_client.py <projet>/app/
 **(c)** Préparer le **téléphone Free + eSIM + Tailscale** (`docs/PHONE_PART2_CHECKLIST.md`) →
       puis demander à l'utilisateur son feu vert avant de câbler SMS/WhatsApp/Signal.
 
+### Dette de code — à traiter AVANT de router de l'inbound réel sur le gateway
+- ⚠️ **`POST /webhooks/resend` (`src/routes/webhooks.ts`) ne trie pas les types d'événements.**
+  Une seule URL Resend reçoit `email.received` mais aussi `email.sent` / `delivered` / `opened` /
+  `bounced` : sans liste blanche, le gateway livrera aux clients des « entrants » fabriqués à
+  partir des notifications de ses propres envois, champs vides (il lit `data.from` à plat alors
+  que ces événements sont enveloppés dans `{type, created_at, data}`).
+  **Sans effet aujourd'hui** : zéro trafic sur cette route en 72 h le 2026-09-05 — Resend pointe
+  sur newsletter-summary. Le jour où l'inbound passe par le gateway, ça devient actif.
+  Le même bug a été corrigé dans newsletter-summary le 2026-09-05 (`resend.is_inbound_event` +
+  `checks/check_webhook_event_filter.py`) — voir `DECISIONS.md` #3 ; recopier la liste blanche,
+  pas la liste noire.
+
 ### Une fois les blocages levés
 1. Remplacer les connecteurs mock par les vrais (interface `send`/`receive` inchangée).
 2. Déclarer les policies des clients (canaux + quotas + destinataires autorisés).

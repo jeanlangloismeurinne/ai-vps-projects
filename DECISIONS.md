@@ -46,3 +46,30 @@ Euractiv. **Une seule cause racine expliquait trois symptômes** qu'on lisait co
    prompt seul ne fait que déplacer le seuil.
 
 Vaut pour tout rendu structuré produit par un modèle (HTML, XML, JSON en concaténation).
+
+---
+
+## #3 — Une URL de webhook reçoit AUSSI les événements de votre propre trafic sortant
+
+Chez Resend (et le motif vaut pour Twilio, SendGrid, Stripe…), **une seule URL** reçoit tous les
+types d'événements : `email.received` mais aussi `email.sent`, `email.delivered`, `email.opened`,
+`bounced`, `complained`… Un handler qui ne trie pas sur le type ingère donc **les notifications de
+ses propres envois** — et si le produit de l'app est lui-même un email, la boucle se referme.
+
+**Mesuré** (newsletter-summary, digest du 2026-09-05) : le digest quotidien s'ingérait lui-même,
+créant **une ligne fantôme par jour** (corps vide, sujet = le sujet du digest de la veille),
+resservie le lendemain en carte vide. Symptôme vu par l'utilisateur : objet « 2 newsletter(s) »,
+en-tête de première carte « 8 newsletter(s) — Friday 04 », **un seul vrai bloc**. Trois
+observations contradictoires, un seul bug. Auto-entretenu : 4 fantômes accumulés depuis le 03/09.
+
+**Conséquence** : trier sur **liste blanche** (`type === "email.received"`), jamais sur liste
+noire — le provider ajoute des types, et chaque nouveau serait ingéré par défaut. Tolérer
+l'absence de `type` seulement si un format « plano » sans enveloppe est réellement supporté.
+
+⚠️ **Le symptôme ressemble à s'y méprendre à une régression du rendu.** Ici il a d'abord été lu
+comme un retour du bug d'imbrication (#2), corrigé la veille — alors que la carte fautive était
+*vide*, pas imbriquée. Vérifier **ce qui est en base** avant d'accuser la couche de rendu.
+
+⚠️ **Jumeau connu, dormant** : `comms-gateway` (`src/routes/webhooks.ts`, `POST /webhooks/resend`)
+ne trie pas non plus. Sans effet aujourd'hui — zéro trafic en 72 h, Resend pointe sur
+newsletter-summary — mais à corriger avant de lui router de l'inbound réel.
