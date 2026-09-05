@@ -3,9 +3,9 @@
 #
 #   Internet --443--> coolify-proxy (TLS) --> homepage:8000
 #
-# Le hub monte `projects/` en écriture : c'est lui qui lit les chantiers/sprints/tickets et
-# écrit les SESSION.md (cf. CONTROL_SYSTEM.md). Il appelle newsletter-summary par son nom de
-# conteneur sur le réseau `coolify` (NEWSLETTER_URL).
+# Le hub monte `projects/` en écriture : c'est lui qui lit les roadmaps, les fichiers de reprise
+# et les tickets, et qui les édite (cf. CONTROL_SYSTEM.md). Il appelle newsletter-summary par son
+# nom de conteneur sur le réseau `coolify` (NEWSLETTER_URL).
 #
 # Déploiement : infrastructure/compose-deploy.sh hub -m "..." -f "..."
 # Variables dans `.env` (chmod 600, gitignored) ; copie de référence dans

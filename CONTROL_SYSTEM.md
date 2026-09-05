@@ -26,6 +26,11 @@ redit jamais ce que le `CLAUDE.md` du projet porte déjà — ces deux fichiers 
 d'ouverture réel de toute session (sur portfolio-tracker : 47 Ko + 75 Ko ≈ **30 000 tokens** avant
 d'avoir lu une ligne de code).
 
+> ⚠️ **Un `SESSION.md` subsiste, et c'est un homonyme.** `/srv/auto-loop/autoloop.sh` dépose son
+> ordre de nuit dans `projects/{projet}/SESSION.md` : c'est la tuyauterie interne de la boucle
+> autonome, gitignorée, sans rapport avec la doctrine ci-dessous. Ne pas la supprimer en croyant
+> achever la purge — il faudrait d'abord modifier `autoloop.sh`.
+
 **Ce qui a été retiré, et pourquoi** : le sprint, l'ordre de sprint (`SESSION.md`), le ré-armement
 et le ticket-comme-unité-de-découpage ont été supprimés le 2026-09-05. Ils n'étaient pas appliqués :
 sur 12 projets, **un seul** fichier avec `## Sprints`, **un seul** `SESSION.md` — non suivi par git,

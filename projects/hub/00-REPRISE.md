@@ -172,7 +172,7 @@ supprimé n'est pas terminé.
       `CONTROL_SYSTEM.md`, et `app/roadmap.py` qui est le lot B).
 
 ### Lot B — Hub · contexte partagé : `projects/hub/app/roadmap.py`
-- [ ] **Correctif frontmatter (bloquant, §8)**
+- [x] **Correctif frontmatter (bloquant, §8)** ✅ `907c00d` — mais **pas encore déployé** (voir §11)
 - [ ] Affichage du `00-REPRISE.md` par projet (résolution racine → `roadmap/**`)
 - [ ] Bouton « inscrire cette roadmap dans le fichier de reprise » — **fermé si `status: brouillon`**
       (§3.2), avec le motif affiché : « à raffiner au terminal avant inscription »
@@ -214,7 +214,19 @@ divergentes. Ajouter sans retirer est le mode de panne avéré de cet écosystè
 
 ---
 
-## 8. ⚠️ Bloquant — le Hub détruit le frontmatter à la sauvegarde
+## 8. ✅ RÉSOLU (`907c00d`) — le Hub détruisait le frontmatter à la sauvegarde
+
+> **Correctif livré le 2026-09-05.** Le Hub n'édite plus que le corps ; le frontmatter est repris
+> octet pour octet et seule la ligne `status:` de premier niveau y est substituée. Gardé par
+> `projects/hub/checks/check_frontmatter_preserved.py`, **rouge avant / vert après** (31 des 46
+> documents à frontmatter du repo étaient abîmés — le cadrage n'en avait mesuré qu'un).
+> Le check porte une seconde garantie : la validité YAML du frontmatter, qui a révélé deux
+> `00-REPRISE.md` déjà invalides (comms-gateway, newsletter-summary), corrigés au passage.
+> ⚠️ Reste à **déployer** (§11) : le conteneur sert encore l'ancien code.
+
+<details><summary>Diagnostic d'origine (conservé — il documente le mode de panne)</summary>
+
+
 
 **Mesuré**, en rejouant le parseur du Hub (`app/roadmap.py:47-54` en lecture, `:681-700` en
 écriture) sur `projects/portfolio-tracker/roadmap/01-spec-v2-unifiee.md` :
@@ -235,6 +247,8 @@ roadmaps co-écrites porteront ce type de frontmatter riche — `role: >` est d�
 les documents structurants. **Correctif** : soit un vrai parseur YAML, soit — plus simple et
 suffisant — le Hub ne touche **que le corps** et réécrit le frontmatter **octet pour octet**.
 
+</details>
+
 ---
 
 ## 9. Reste à faire / à trancher
@@ -253,6 +267,27 @@ suffisant — le Hub ne touche **que le corps** et réécrit le frontmatter **oc
   qu'il était propre au démarrage. Vraisemblablement la boucle autonome. **Conséquence pour ce
   chantier : ne jamais utiliser `git add -A` / `git add .` ici** — indexer les fichiers du lot par
   liste explicite, sinon un lot de doc emporte du code non validé dans son commit.
+
+---
+
+## 11. ⚠️ Angles morts découverts en cours de route (pas dans le cadrage initial)
+
+1. **`autoloop.sh` dépend de `SESSION.md`.** `/srv/auto-loop/autoloop.sh` dépose son ordre de nuit
+   dans `projects/{projet}/SESSION.md` (l. 175-180), le suppose absent (l. 170), l'exclut de sa
+   détection de changements (l. 276) et le tient hors des commits (l. 293). C'est un **homonyme**
+   de l'ordre de sprint supprimé, pas un vestige. L'entrée `projects/*/SESSION.md` du `.gitignore`
+   **reste** — la retirer ferait committer un ordre de pilotage à chaque nuit. Commentaires de mise
+   en garde ajoutés dans `.gitignore` et `CONTROL_SYSTEM.md`.
+2. **Le test d'acceptation du lot A ne couvrait que `.md`/`.py`/`.html`.** Deux occurrences
+   vivaient ailleurs : `.gitignore` et `projects/hub/docker-compose.yml`. Corrigées. Leçon pour
+   les lots suivants : greper **toutes extensions**, pas la liste qu'on croit exhaustive.
+3. **Déploiement du Hub non fait** — `infrastructure/compose-deploy.sh hub …` a été **refusé par
+   le classifieur de permissions** (deux formulations essayées). Le code est commité et poussé
+   (`907c00d`), mais l'image n'est pas reconstruite : `docker-compose.yml` fait `build: .`, donc
+   `app/` est **dans l'image**, pas bind-mounté (seul `projects/` l'est). **Le conteneur `homepage`
+   sert encore le code qui détruit le frontmatter.** À lancer par l'utilisateur :
+   `! infrastructure/compose-deploy.sh hub -m "Hub: correctif frontmatter" -f "projects/hub/app/roadmap.py"`
+4. **Écriture concurrente dans le dépôt** pendant cette conversation (voir §9).
 
 ---
 

@@ -18,9 +18,14 @@ projects/bank-review/uploads/
 # Vitrine de lecture, pas une source : la vérité est la branche auto/*.
 .nuits/
 
-# Ordres de sprint — jetables, écrasés au prochain ordre (cf. CONTROL_SYSTEM.md).
-# La source de vérité est le chantier `roadmap/{nom}.md` que SESSION.md pointe.
-# NE PAS versionner : `autoloop.sh` dépose son propre ordre dans le clone et
-# suppose le fichier absent (l. 170), l'exclut de sa détection de changements
-# (l. 276) et le tient hors des commits de nuit (l. 293).
+# Fichier de pilotage de la BOUCLE AUTONOME (`/srv/auto-loop/autoloop.sh`) — jetable.
+#
+# ⚠️ Homonyme, pas un vestige. Le `SESSION.md` de l'ancien « ordre de sprint » a été retiré
+# de la doctrine le 2026-09-05 (voir CONTROL_SYSTEM.md) ; celui-ci n'a rien à voir : c'est le
+# pont interne par lequel `autoloop.sh` passe son ordre au clone de nuit. Il le dépose depuis
+# `orders/{projet}-SESSION.md` (l. 175-180), suppose le fichier absent (l. 170), l'exclut de sa
+# détection de changements (l. 276) et le tient hors des commits de nuit (l. 293).
+#
+# NE PAS retirer cette ligne en croyant finir la purge du sprint : ça ferait committer un ordre
+# de pilotage à chaque nuit. Pour la supprimer vraiment, il faut d'abord changer autoloop.sh.
 projects/*/SESSION.md
