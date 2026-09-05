@@ -27,6 +27,11 @@ _SLUG_MAX = 60
 _COLLISION_MAX = 50          # au-delà, on refuse plutôt que de boucler
 _GIT_AUTHOR = "assistant-ia <assistant@jlmvpscode.duckdns.org>"
 
+# Répertoire des listes nommées (D5). Un fichier par liste, alimenté **en ajout pur**.
+_LISTS_SUBDIR = "listes"
+# Un élément de liste tient sur une ligne : au-delà ce n'est plus un élément, c'est une note.
+_LIST_ITEM_MAX = 300
+
 _README = """# Journal — vault Obsidian
 
 Ce dossier est **écrit par l'agent**. Ne le modifiez pas à la main : l'index Postgres
@@ -66,6 +71,23 @@ class VaultEntry:
     slug: str
     relative_path: str      # ex. "2026/2026-08-24-reunion-equipe-produit.md"
     absolute_path: str
+
+
+@dataclass
+class VaultListEntry:
+    """Résultat d'un ajout à une liste nommée.
+
+    `created` distingue « j'ai créé la liste » de « j'ai ajouté à une liste existante » : c'est la
+    seule chose que l'accusé de réception doit dire différemment, et le code appelant ne peut pas
+    la redéduire (le fichier existe dans les deux cas au retour).
+    """
+    doc_id: str
+    slug: str
+    relative_path: str      # ex. "listes/sources-utiles.md"
+    absolute_path: str
+    title: str
+    created: bool
+    added: list[str]        # lignes réellement ajoutées, après nettoyage
 
 
 def _vault_root() -> Path:
@@ -166,9 +188,18 @@ async def write_entry(
     tags: list[str] | None = None,
     created_at: datetime | None = None,
     slack_ts: str | None = None,
+    subdir: str | None = None,
 ) -> VaultEntry:
     """Écrit une note dans le vault et la committe. Append-only : ne remplace jamais un fichier
-    existant, ne supprime jamais rien."""
+    existant, ne supprime jamais rien.
+
+    `subdir` sépare les producteurs sans changer la convention de nommage : `None` (défaut) écrit
+    `{année}/{AAAA-MM-JJ}-{slug}.md`, c'est l'ingestion `#journal` ; `"notes"` écrit
+    `notes/{année}/{AAAA-MM-JJ}-{slug}.md`, ce sont les captures faites par l'agent depuis une
+    conversation. Le nommage reste daté dans les deux cas — c'est ce qui permet à cinq notes sur
+    le même sujet de coexister lisiblement, là où un `notes/{slug}.md` aurait donné `-2`, `-3`…
+    Le `subdir` est **slugifié** comme tout autre segment : il ne vient jamais d'une entrée brute.
+    """
     root = await ensure_vault()
     created_at = created_at or datetime.utcnow()
 
@@ -176,20 +207,25 @@ async def write_entry(
     year = created_at.strftime("%Y")
     base_slug = f"{day}-{slugify(title)}"
 
-    year_dir = _resolve_within_vault(root, year)
-    year_dir.mkdir(parents=True, exist_ok=True)
+    # Segments de chemin, dans l'ordre. Le namespace du `doc_id` suit le répertoire : deux
+    # producteurs ne doivent pas pouvoir se collisionner sur la clef primaire de l'index.
+    prefix: tuple[str, ...] = (slugify(subdir),) if subdir else ()
+    namespace = prefix[0] if prefix else "journal"
+
+    parent_dir = _resolve_within_vault(root, *prefix, year)
+    parent_dir.mkdir(parents=True, exist_ok=True)
 
     # Collision de slug le même jour → suffixe -2, -3… On n'écrase jamais.
     slug = base_slug
     for attempt in range(1, _COLLISION_MAX + 1):
         slug = base_slug if attempt == 1 else f"{base_slug}-{attempt}"
-        target = _resolve_within_vault(root, year, f"{slug}.md")
+        target = _resolve_within_vault(root, *prefix, year, f"{slug}.md")
         if not target.exists():
             break
     else:
         raise VaultError(f"trop de collisions de slug pour « {base_slug} »")
 
-    doc_id = f"assistant-ia:vps_files:journal/{slug}"
+    doc_id = f"assistant-ia:vps_files:{namespace}/{slug}"
     content = _frontmatter(doc_id, contexte, nature, tags, created_at, slack_ts) + "\n" + (body or "")
 
     # Écriture atomique : un lecteur (Obsidian, git) ne doit jamais voir un fichier à moitié écrit.
@@ -202,7 +238,7 @@ async def write_entry(
             tmp.unlink()          # fichier temporaire de ce module uniquement
         raise VaultError(f"écriture impossible dans le vault : {exc}") from exc
 
-    relative_path = f"{year}/{slug}.md"
+    relative_path = "/".join([*prefix, year, f"{slug}.md"])
     await _commit(root, relative_path, title or slug)
     logger.info(f"journal_vault: note écrite ({relative_path})")
 
@@ -211,4 +247,119 @@ async def write_entry(
         slug=slug,
         relative_path=relative_path,
         absolute_path=str(target),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Listes nommées (D5) — ajout pur, jamais de réécriture
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _one_line(text: str, limit: int = _LIST_ITEM_MAX) -> str:
+    """Replie un texte sur **exactement une ligne**, borné.
+
+    Ce n'est pas de la cosmétique, c'est une barrière. Un élément multi-ligne casserait la
+    garantie « +n lignes, -0 » de l'ajout (l'acceptation de la capacité 2 se lit en `git diff`),
+    et surtout il permettrait à du contenu tiers d'insérer un délimiteur de front-matter (`---`)
+    ou une entête au milieu d'un fichier déjà écrit.
+    Les deux `replace` portent sur U+2028 et U+2029 — les séparateurs de ligne Unicode, donc
+    invisibles dans ce source. Ils sont déjà couverts par `\\s` en Python : ils sont explicités
+    parce que l'invariant « un élément = une ligne » ne doit pas reposer sur un détail
+    d'implémentation de `re`, et parce qu'Obsidian les rend, lui, comme des retours à la ligne.
+    """
+    collapsed = re.sub(r"\s+", " ", (text or "").replace(" ", " ").replace(" ", " ")).strip()
+    if len(collapsed) > limit:
+        collapsed = collapsed[:limit].rstrip() + "…"
+    return collapsed
+
+
+def _list_header(doc_id: str, title: str, created_at: datetime) -> str:
+    """Entête écrite **une seule fois**, à la création de la liste.
+
+    Volontairement sans champ mutable (pas d'`updated_at`, pas de compteur) : le moindre champ à
+    rafraîchir transformerait chaque ajout en réécriture du fichier, et l'ajout ne serait plus un
+    ajout. Pas de clef `contexte` non plus — c'est ce qui tient les listes hors de la vue
+    `Journal.base` (filtre `file.hasProperty("contexte")`), et `type: list` les tient hors de
+    `Tâches.base` (filtre `type == "task"`).
+    """
+    data = {
+        "doc_id": doc_id,
+        "type": "list",
+        "title": title,
+        "created_at": created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    body = yaml.safe_dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
+    return f"---\n{body}---\n\n# {title}\n\n"
+
+
+async def append_to_list(
+    *,
+    list_name: str,
+    items: list[str],
+    created_at: datetime | None = None,
+) -> VaultListEntry:
+    """Ajoute des éléments à `listes/{slug}.md`, en créant la liste si elle n'existe pas.
+
+    `write_entry` ne sait pas faire ça : elle est append-only au sens *ne jamais écraser un
+    fichier*, ce qui n'est pas la même chose que *ajouter à un fichier existant*. D'où cette
+    fonction, avec les mêmes barrières (`slugify`, `_resolve_within_vault`, commit best-effort).
+
+    Le fichier existant n'est **jamais relu ni réécrit** : la création passe par un
+    `O_CREAT|O_EXCL` (atomique — deux appels concurrents ne peuvent pas écrire deux entêtes) et
+    l'ajout par un `O_APPEND` (le noyau replace l'offset en fin de fichier à chaque écriture).
+    C'est plus sûr ici qu'un tmp + `os.replace` : celui-ci imposerait de relire tout le fichier
+    et perdrait silencieusement un ajout concurrent.
+    """
+    root = await ensure_vault()
+    created_at = created_at or datetime.utcnow()
+
+    clean = [line for line in (_one_line(i) for i in (items or [])) if line]
+    if not clean:
+        raise VaultError("aucun élément à ajouter (liste vide après nettoyage)")
+
+    slug = slugify(list_name)
+    title = _one_line(list_name, limit=120) or slug
+    doc_id = f"assistant-ia:vps_files:listes/{slug}"
+
+    lists_dir = _resolve_within_vault(root, _LISTS_SUBDIR)
+    lists_dir.mkdir(parents=True, exist_ok=True)
+    target = _resolve_within_vault(root, _LISTS_SUBDIR, f"{slug}.md")
+
+    created = False
+    try:
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        pass                                    # la liste existe déjà : on ajoutera à la suite
+    except OSError as exc:
+        raise VaultError(f"création impossible dans le vault : {exc}") from exc
+    else:
+        created = True
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(_list_header(doc_id, title, created_at))
+        except OSError as exc:
+            raise VaultError(f"écriture impossible dans le vault : {exc}") from exc
+
+    payload = "".join(f"- {line}\n" for line in clean)
+    try:
+        with open(target, "a", encoding="utf-8") as fh:
+            fh.write(payload)
+    except OSError as exc:
+        raise VaultError(f"ajout impossible dans le vault : {exc}") from exc
+
+    relative_path = f"{_LISTS_SUBDIR}/{slug}.md"
+    verbe = "crée" if created else "complète"
+    await _commit(root, relative_path, f"liste {title} {verbe} (+{len(clean)})")
+    logger.info(
+        "journal_vault: %d ligne(s) ajoutée(s) à %s (création=%s)",
+        len(clean), relative_path, created,
+    )
+
+    return VaultListEntry(
+        doc_id=doc_id,
+        slug=slug,
+        relative_path=relative_path,
+        absolute_path=str(target),
+        title=title,
+        created=created,
+        added=clean,
     )

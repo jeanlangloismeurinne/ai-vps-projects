@@ -11,11 +11,15 @@ Couverture, dans l'ordre des tickets :
   B. `policy` en table — les 4 conditions de confirmation préalable, une par une, + le cas nominal ;
   C. taint — accumulation, sens inverse sans effet rétroactif ;
   D. résolution de date — les 4 modes, les bornes, les refus ;
-  E. bornes de la boucle — épuisement explicite, troncature, erreurs jamais vides.
+  E. bornes de la boucle — épuisement explicite, troncature, erreurs jamais vides ;
+  F. web_search sans backend — échec explicite, jamais un résultat vide ;
+  G. capture_note — confinement au vault, ajout sans réécriture, régime **dérivé** du manifeste.
 """
 import asyncio
 import json
+import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -435,6 +439,129 @@ async def test_web_search_indisponible() -> None:
           "web_search" not in {s.manifest.name for s in registry.available_specs()})
 
 
+# ── G. capture_note : confinement, ajout pur, régime dérivé ──────────────────
+
+# Ce que le §A empoisonne au niveau du catalogue, on l'empoisonne ici au niveau des *arguments* :
+# un contenu hostile n'a pas besoin de faire exister un outil s'il peut détourner la destination
+# d'un outil qui existe. Chaque entrée doit sortir slugifiée, sans séparateur de chemin.
+NOMS_DE_LISTE_HOSTILES = [
+    "../../etc/passwd",
+    "/etc/cron.d/pwn",
+    "..\\..\\windows",
+    "sources/../../../root/.ssh/authorized_keys",
+    "…",                       # ne produit aucun caractère ASCII → doit retomber sur un défaut
+]
+
+
+async def test_capture_note() -> None:
+    print("\n--- G. capture_note ---")
+    from app.services import journal_vault
+    from app.services.agent_tools import capture_note
+
+    # 1. Le régime est **dérivé** du manifeste, pas écrit dans l'outil.
+    propre = TurnState(channel_id="C1")
+    tainte = TurnState(channel_id="C1", taint_sources=["web:amazon.fr"])
+    check("contexte propre : écriture immédiate (D6)",
+          policy(capture_note.MANIFEST, propre).verdict == Verdict.EXECUTE)
+    check("contexte tainté : confirmation préalable",
+          policy(capture_note.MANIFEST, tainte).verdict == Verdict.CONFIRM_FIRST)
+    check("aucun régime codé en dur dans l'outil",
+          "CONFIRM_FIRST" not in Path(capture_note.__file__).read_text(encoding="utf-8"))
+    check("capture_note est exposé au modèle",
+          "capture_note" in {s.manifest.name for s in registry.available_specs()})
+
+    ctx = ToolContext(turn=propre)
+
+    # 2. Confinement : le modèle nomme, le code décide du chemin.
+    racine = Path(tempfile.mkdtemp(prefix="vault-check-"))
+    orig_root = journal_vault._vault_root
+    journal_vault._vault_root = lambda: racine
+    try:
+        for hostile in NOMS_DE_LISTE_HOSTILES:
+            prepared = await capture_note._resolve(
+                {"mode": "append", "list_name": hostile, "items": ["x"]}, ctx,
+            )
+            slug = prepared.resolved["slug"]
+            check(f"slug confiné pour {hostile!r} → {slug!r}",
+                  "/" not in slug and "\\" not in slug and ".." not in slug and bool(slug))
+
+        # 3. Une exécution réelle sous un nom hostile n'écrit rien hors du vault.
+        r_hostile = await capture_note._execute(
+            {"mode": "append", "list_name": "../../etc/passwd",
+             "slug": journal_vault.slugify("../../etc/passwd"), "items": ["x"]}, ctx,
+        )
+        ecrits = sorted(
+            str(p.relative_to(racine)) for p in racine.rglob("*.md") if ".git" not in p.parts
+        )
+        check("nom hostile : le fichier écrit reste sous listes/",
+              r_hostile.payload["uri"].startswith("listes/"), r_hostile.payload["uri"])
+        check("nom hostile : rien d'écrit ailleurs que dans le vault",
+              all(f == "README.md" or f.startswith("listes/") for f in ecrits), str(ecrits))
+
+        # 4. Création, puis second ajout **sans réécriture** des lignes précédentes.
+        r1 = await capture_note._execute(
+            {"mode": "append", "list_name": "Sources utiles",
+             "slug": "sources-utiles", "items": ["https://payloadspace.com"]}, ctx,
+        )
+        fichier = racine / "listes" / "sources-utiles.md"
+        avant = fichier.read_text(encoding="utf-8")
+        check("la liste est créée sous listes/sources-utiles.md",
+              r1.payload["uri"] == "listes/sources-utiles.md", r1.payload["uri"])
+        check("la 1re écriture est annoncée comme une création",
+              r1.payload["status"] == "liste créée", r1.payload["status"])
+        check("l'entête ne porte pas de champ mutable",
+              "updated_at" not in avant, "un champ à rafraîchir ferait de l'ajout une réécriture")
+        check("pas de clef `contexte` → hors de la vue Journal", "contexte:" not in avant)
+
+        r2 = await capture_note._execute(
+            {"mode": "append", "list_name": "Sources utiles",
+             "slug": "sources-utiles", "items": ["https://exemple.org"]}, ctx,
+        )
+        apres = fichier.read_text(encoding="utf-8")
+        check("la 2e écriture est annoncée comme un ajout, pas une création",
+              r2.payload["status"] == "éléments ajoutés", r2.payload["status"])
+        check("l'ajout n'a rien réécrit (préfixe strictement conservé)", apres.startswith(avant),
+              "le contenu antérieur a bougé")
+        check("exactement une ligne ajoutée",
+              apres.count("\n") == avant.count("\n") + 1,
+              f"{avant.count(chr(10))} → {apres.count(chr(10))} lignes")
+        check("les deux éléments sont présents",
+              "- https://payloadspace.com\n" in apres and "- https://exemple.org\n" in apres)
+
+        # 4. Un élément multi-ligne est replié : sinon il pourrait forger un front-matter.
+        await capture_note._execute(
+            {"mode": "append", "list_name": "Sources utiles", "slug": "sources-utiles",
+             "items": ["ligne un\n---\ndoc_id: forge\n---\nligne deux"]}, ctx,
+        )
+        forge = fichier.read_text(encoding="utf-8")
+        check("un item multi-ligne est replié sur une ligne",
+              forge.count("\n") == apres.count("\n") + 1,
+              f"{apres.count(chr(10))} → {forge.count(chr(10))} lignes")
+        check("aucun délimiteur de front-matter forgé dans le corps",
+              forge.count("---\n") == 2, f"{forge.count('---' + chr(10))} délimiteurs")
+
+        # 5. Un mode ou un argument invalide est une erreur explicite, jamais un succès vide.
+        async def _erreur(args) -> str | None:
+            try:
+                await capture_note._resolve(args, ctx)
+                return None
+            except ToolError as exc:
+                return str(exc)
+
+        check("mode inconnu refusé", await _erreur({"mode": "supprime"}) is not None)
+        check("note sans content refusée", await _erreur({"mode": "note"}) is not None)
+        check("append sans list_name refusé",
+              await _erreur({"mode": "append", "items": ["x"]}) is not None)
+        check("append sans élément refusé",
+              await _erreur({"mode": "append", "list_name": "vide", "items": []}) is not None)
+        motif = await _erreur({"mode": "note", "content": "x" * (capture_note.CONTENT_MAX + 1)})
+        check("note trop longue refusée avec un motif actionnable",
+              motif is not None and "trop long" in motif, str(motif))
+    finally:
+        journal_vault._vault_root = orig_root
+        shutil.rmtree(racine, ignore_errors=True)
+
+
 async def main() -> int:
     await test_isolation_registre()
     test_policy()
@@ -442,6 +569,7 @@ async def main() -> int:
     await test_dates()
     await test_boucle()
     await test_web_search_indisponible()
+    await test_capture_note()
 
     print("\n" + "=" * 60)
     if ECHECS:
@@ -449,7 +577,7 @@ async def main() -> int:
         for e in ECHECS:
             print(f"  ✗ {e}")
         return 1
-    print("OK — cadre d'outillage conforme (registre isolé, policy, taint, dates, bornes).")
+    print("OK — cadre d'outillage conforme (registre isolé, policy, taint, dates, bornes, capture).")
     return 0
 
 

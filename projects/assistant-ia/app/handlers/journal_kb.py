@@ -13,63 +13,18 @@ Ce module tourne dans une tâche de fond (`asyncio.create_task` posé par le dis
 Slack des 3 s). Une tâche de fond qui meurt est invisible en production : toute exception doit donc
 produire un message en thread, jamais seulement une ligne de log.
 """
-import hashlib
 import logging
 
 from app.config import settings
-from app.db import get_pool
-from app.services import journal_kb_classifier, journal_vault
+from app.services import journal_kb_classifier, journal_kb_index, journal_vault
 from app.services.journal_vault import VaultError
 from app.services.slack_client import post_text
 
 logger = logging.getLogger(__name__)
 
-
-def content_hash(body: str) -> str:
-    """Hash du verbatim — clef de déduplication. Le body est hashé tel quel : deux notes
-    identiques au caractère près sont le même contenu, une reformulation ne l'est pas."""
-    return hashlib.sha256((body or "").encode("utf-8")).hexdigest()
-
-
-async def _find_duplicate(hash_: str) -> str | None:
-    """Renvoie le `uri` de l'entrée existante ayant ce hash, ou None."""
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        return await conn.fetchval(
-            "SELECT uri FROM journal_kb_entries WHERE content_hash = $1 LIMIT 1",
-            hash_,
-        )
-
-
-async def _upsert_entry(entry: journal_vault.VaultEntry, body: str, hash_: str, result, slack_ts):
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO journal_kb_entries
-                (doc_id, uri, title, body, contexte, nature, tags, content_hash, slack_ts)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (doc_id) DO UPDATE SET
-                uri          = EXCLUDED.uri,
-                title        = EXCLUDED.title,
-                body         = EXCLUDED.body,
-                contexte     = EXCLUDED.contexte,
-                nature       = EXCLUDED.nature,
-                tags         = EXCLUDED.tags,
-                content_hash = EXCLUDED.content_hash,
-                slack_ts     = EXCLUDED.slack_ts,
-                updated_at   = now()
-            """,
-            entry.doc_id,
-            entry.relative_path,
-            result.title,
-            body,
-            result.contexte,
-            list(result.nature or []),
-            list(result.tags or []),
-            hash_,
-            slack_ts,
-        )
+# L'écriture dans `journal_kb_entries` vit dans `journal_kb_index` : ce handler n'est plus le seul
+# producteur de l'index depuis que l'agent capte des notes (`agent_tools/capture_note.py`).
+content_hash = journal_kb_index.content_hash
 
 
 def _ack_text(result, entry: journal_vault.VaultEntry) -> str:
@@ -99,7 +54,7 @@ async def handle_free_note(event: dict) -> None:
         hash_ = content_hash(body)
 
         # Dédup avant tout : évite un appel DeepInfra et un fichier orphelin dans le vault.
-        existing_uri = await _find_duplicate(hash_)
+        existing_uri = await journal_kb_index.find_duplicate(hash_)
         if existing_uri:
             logger.info("journal_kb: note déjà présente (hash=%s uri=%s)", hash_[:12], existing_uri)
             await post_text(
@@ -125,7 +80,17 @@ async def handle_free_note(event: dict) -> None:
         # 2. Index Postgres. Un échec ici ne perd pas la note (elle est sur disque), mais doit
         #    être signalé : l'entrée serait absente des recherches jusqu'à reconstruction.
         try:
-            await _upsert_entry(entry, body, hash_, result, slack_ts)
+            await journal_kb_index.upsert(
+                doc_id=entry.doc_id,
+                uri=entry.relative_path,
+                title=result.title,
+                body=body,
+                contexte=result.contexte,
+                nature=result.nature,
+                tags=result.tags,
+                hash_=hash_,
+                slack_ts=slack_ts,
+            )
         except Exception:
             logger.exception("journal_kb: UPSERT échoué pour %s", entry.doc_id)
             await post_text(
