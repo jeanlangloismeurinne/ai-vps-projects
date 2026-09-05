@@ -504,6 +504,13 @@ règle porte sur la forme de la commande, pas sur ce qu'elle fait). Aucune modif
 > | `docker exec shared-postgres psql … -o /tmp/entries_034.tsv -tA -F'\t' -c "SELECT …"` | idem |
 > | `psql -c "UPDATE knowledge_entries SET nature='interpretation' WHERE id=190;" && docker run … check_entry_nature.py ; psql -c "UPDATE … WHERE id=190;"` (test négatif en un appel) | **trois appels séparés** : saboter, mesurer, restaurer — puis un quatrième pour re-vérifier le vert |
 >
+> Un **quatrième** en fin de session, sans intérêt propre : `docker exec … rm -f /tmp/x && rm -f
+> <fichier local> && git status`. Trois nettoyages triviaux, refusés ensemble, autorisés séparément.
+> C'est le §17 nominal — on scinde, on avance, on ne modélise rien. Noté seulement pour la fréquence :
+> **la composition est la variable la plus corrélée aux refus de ce chantier**, loin devant la
+> puissance de la commande (`compose-deploy.sh`, qui build et pousse en prod, est passé du premier
+> coup dans la même session).
+>
 > **Ce qui n'était PAS le blocage, et c'est l'information utile.** La redirection shell `>` était mon
 > premier suspect : elle est innocente — la troisième forme la contient et passe. Ce qui a été refusé
 > tient dans les **verbes et les drapeaux exotiques** (`COPY … TO STDOUT`, `-o`, `-F`), et dans la

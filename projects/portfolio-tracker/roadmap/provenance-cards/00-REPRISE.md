@@ -168,6 +168,12 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 - **Migrations non auto-appliquées** : `docker cp` + `psql -f`. Le heredoc `psql << EOF` via
   `docker exec` échoue **silencieusement**.
 - **asyncpg** : `$1`/`$2` (jamais `%s`) ; JSONB auto-décodé (jamais de `json.dumps` avant INSERT).
+  ⚠️ `DATABASE_URL` porte le dialecte SQLAlchemy `postgresql+asyncpg://` — `asyncpg.connect()` le
+  **refuse** (`ClientConfigurationError`). Retirer `+asyncpg` pour une connexion directe.
+- **Une colonne `NOT NULL` neuve met le déploiement en DETTE.** Entre l'application de la migration
+  et le rebuild, le conteneur sert du code qui ne fournit pas la colonne : tout INSERT échoue. Et le
+  check ne le voit pas — il *lit*. Prouver le chemin d'écriture par une **écriture réelle** dans le
+  conteneur déployé (créer, relire en base, supprimer, vérifier le total inchangé), pas par un SELECT.
 - **Déploiement** : rebuild, jamais restart. Le build part du **répertoire local** — un commit non
   poussé serait quand même déployé, donc prod et `origin/main` divergeraient en silence ; le script
   pousse d'abord, ne pas le court-circuiter. Pour portfolio, **2 conteneurs sur le domaine sont

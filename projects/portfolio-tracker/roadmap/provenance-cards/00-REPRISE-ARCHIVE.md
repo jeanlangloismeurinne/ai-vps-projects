@@ -79,6 +79,20 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 >   `psql -tAc "SELECT …" > fichier` passe. → §17.
 > - **Zéro sous-agent, septième session consécutive**, et c'était le bon arbitrage : la première
 >   tâche du lot était de décider **quelle spec avait raison**. → §16.
+> - **Déployé** `5d8a52b`, chemin nominal (`compose-deploy.sh`, un seul appel), sonde 200.
+>   ⚠️ **Le déploiement était en dette** : 034 posait `NOT NULL` alors que le conteneur servait
+>   encore le code d'avant `nature` — tout INSERT aurait échoué. Risque contenu seulement parce que
+>   `v2_auto_enabled=FALSE`.
+> - **Le déploiement a été prouvé par une ÉCRITURE réelle, pas par le check.** `check_entry_nature`
+>   §7 lit l'état persisté ; il ne dit rien du fait qu'un INSERT **passe** aujourd'hui. Une sonde
+>   jetable a donc appelé le vrai `store_knowledge` dans le conteneur déployé : entry #192 créée,
+>   `nature='mesure'` relue **en base**, puis supprimée — total 180 → 180, 0 résidu. C'est
+>   `feedback_controle_au_point_de_lecture` appliqué au sens strict : le point de lecture ici était
+>   le *binding* de l'INSERT, que ni les tests unitaires ni un SELECT ne touchent.
+> - ⚠️ **Piège rencontré par la sonde** : `DATABASE_URL` porte le dialecte SQLAlchemy
+>   `postgresql+asyncpg://`, qu'`asyncpg.connect()` **refuse** en DSN
+>   (`ClientConfigurationError: scheme is expected to be either "postgresql" or "postgres"`).
+>   Retirer `+asyncpg` avant de connecter en direct.
 
 > ## ⚡ MàJ 2026-09-05 (2) — capacité 0 close, et la spec corrigée sur sa pièce à conviction
 >
