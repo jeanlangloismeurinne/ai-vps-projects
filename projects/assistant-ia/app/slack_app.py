@@ -122,8 +122,22 @@ async def _handle_thread_message(event: dict, thread_ts: str, user_id: str, chan
     if is_old_journal:
         await journal_svc.store_entry(text, event["ts"])
         logger.info(f"on_message: entrée ancien journal enregistrée (thread={thread_ts})")
-    else:
-        logger.warning(f"on_message: message non traité — ni session v2 ni fil journal connu (user={user_id} thread={thread_ts} msg_id={msg_id})")
+        return
+
+    # ── Suite de conversation avec l'agent (roadmap §5, B1) ──
+    # Un fil de `#assistant` qu'aucune branche journal ne revendique est la **suite** du tour que
+    # l'agent a posté au-dessus. Sans cette branche, répondre dans le fil perdait le message en
+    # silence : mesuré le 2026-09-06 à 07:05 — aucune réponse, aucune ligne en base, rien dans le
+    # vault. L'ordre reste normatif : le journal a été interrogé d'abord et garde la priorité.
+    if channel == settings.ASSISTANT_CHANNEL_ID and user_id:
+        if not await slack_dedup.claim_event(event):
+            return
+        # Comme les branches parentes : l'agent dépasse le budget Slack de 3 s, on rend la main
+        # tout de suite et on traite en tâche de fond (exceptions tracées par `_run_parent_branch`).
+        asyncio.create_task(_run_parent_branch(("agent_chat", None), event))
+        return
+
+    logger.warning(f"on_message: message non traité — ni session v2 ni fil journal connu (user={user_id} thread={thread_ts} msg_id={msg_id})")
 
 
 @bolt.action(re.compile(r"^jrn_"))

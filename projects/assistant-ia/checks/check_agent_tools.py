@@ -15,7 +15,9 @@ Couverture, dans l'ordre des tickets :
   F. web_search sans backend — échec explicite, jamais un résultat vide ;
   G. capture_note / list_documents — confinement au vault, Markdown libre écrit verbatim, ajout
      sans réécriture (« +n / -0 »), régime **dérivé** du manifeste ;
-  H. create_reminder — titre court borné par le code, charge utile en corps de carte (C7).
+  H. create_reminder — titre court borné par le code, charge utile en corps de carte (C7) ;
+  I. dispatcher — une réponse en fil d'#assistant atteint l'agent, sans déclasser le journal (B1) ;
+  J. agent_chat — réponse, historique et audit rattachés à la **racine** du fil (D11).
 """
 import asyncio
 import json
@@ -794,6 +796,170 @@ async def test_fidelite_rappel() -> None:
         create_reminder.kanban_svc, create_reminder._target_column = orig_kanban, orig_col
 
 
+# ── I. dispatcher : une réponse en fil atteint l'agent (roadmap §5, B1) ──────
+#
+# Mesuré en production le 2026-09-06 à 07:05 : l'utilisateur répond dans le fil d'une note, le
+# message part vers `_handle_thread_message`, aucune branche journal ne le revendique, et il est
+# **perdu** — aucune réponse, aucune ligne en base, rien dans le vault. Le test s'écrit donc au
+# point de lecture réel (`slack_app._handle_thread_message`), pas sur une fonction de routage
+# recopiée à côté : c'est la branche exécutée par Slack qui doit rougir.
+async def test_dispatch_fil() -> None:
+    print("\n[I] dispatcher — la suite d'une conversation en fil")
+    import app.slack_app as slack_app                                     # noqa: PLC0415
+    from app.handlers import journal_slack                                # noqa: PLC0415
+    from app.services import journal_v2                                   # noqa: PLC0415
+
+    assistant = slack_app.settings.ASSISTANT_CHANNEL_ID
+    orig = (
+        journal_v2.get_slack_session_by_thread, journal_slack.handle_thread_reply,
+        slack_app.journal_svc.is_journal_thread, slack_app.journal_svc.store_entry,
+        slack_app.slack_dedup.claim_event, slack_app._run_parent_branch,
+    )
+    trace: dict[str, list] = {}
+
+    def _rec(nom):
+        async def _f(*a, **kw):
+            trace.setdefault(nom, []).append((a, kw))
+            return None
+        return _f
+
+    async def _configure(*, session, old_journal, claim=True):
+        trace.clear()
+        journal_v2.get_slack_session_by_thread = _async_ret(session)
+        journal_slack.handle_thread_reply = _rec("journal_v2")
+        slack_app.journal_svc.is_journal_thread = _async_ret(old_journal)
+        slack_app.journal_svc.store_entry = _rec("journal_ancien")
+        slack_app.slack_dedup.claim_event = _async_ret(claim)
+        slack_app._run_parent_branch = _rec("agent")
+
+    def _event(channel=assistant, user="UJ724E07L", ts="1788678308.153779"):
+        return {"channel": channel, "ts": ts, "thread_ts": "1788677480.225329",
+                "user": user, "text": "et il ajoute que…"}
+
+    async def _dispatch(event):
+        await slack_app._handle_thread_message(
+            event, event["thread_ts"], event.get("user", ""), event["channel"],
+            event.get("text", ""), "msg-1",
+        )
+        await asyncio.sleep(0)  # laisse partir la tâche de fond créée par la branche
+
+    try:
+        # 1. Le cas mesuré le 09-06 : fil d'#assistant qu'aucune branche journal ne revendique.
+        await _configure(session=None, old_journal=False)
+        ev = _event()
+        await _dispatch(ev)
+        appels = trace.get("agent", [])
+        check("une réponse en fil d'#assistant atteint l'agent",
+              len(appels) == 1, f"appels={len(appels)}")
+        check("l'agent reçoit l'événement tel quel, `thread_ts` compris",
+              bool(appels) and appels[0][0][1] is ev and appels[0][0][0] == ("agent_chat", None),
+              str(appels))
+
+        # 2. et 3. — l'ordre des branches reste normatif : le journal garde la priorité.
+        await _configure(session={"id": 1, "question_index": 0}, old_journal=False)
+        await _dispatch(_event())
+        check("une session journal v2 garde la priorité sur l'agent",
+              "journal_v2" in trace and "agent" not in trace, str(sorted(trace)))
+
+        await _configure(session=None, old_journal=True)
+        await _dispatch(_event())
+        check("un fil de l'ancien journal garde la priorité sur l'agent",
+              "journal_ancien" in trace and "agent" not in trace, str(sorted(trace)))
+
+        # 4. Le correctif n'élargit pas le périmètre : un fil inconnu d'un autre channel reste
+        #    non traité, comme avant. Sans cette borne, l'agent répondrait dans #bank-review.
+        await _configure(session=None, old_journal=False)
+        await _dispatch(_event(channel="C0AV2EJHR5H"))
+        check("un fil inconnu hors #assistant ne réveille pas l'agent",
+              "agent" not in trace, str(sorted(trace)))
+
+        # 5. et 6. — les gardes des branches parentes s'appliquent aussi ici : la branche écrit
+        #    dans le vault, un doublon d'événement Slack y écrirait deux fois.
+        await _configure(session=None, old_journal=False, claim=False)
+        await _dispatch(_event())
+        check("un événement déjà réclamé ne rejoue pas le tour",
+              "agent" not in trace, str(sorted(trace)))
+
+        await _configure(session=None, old_journal=False)
+        await _dispatch(_event(user=""))
+        check("un fil sans auteur humain ne réveille pas l'agent",
+              "agent" not in trace, str(sorted(trace)))
+    finally:
+        (journal_v2.get_slack_session_by_thread, journal_slack.handle_thread_reply,
+         slack_app.journal_svc.is_journal_thread, slack_app.journal_svc.store_entry,
+         slack_app.slack_dedup.claim_event, slack_app._run_parent_branch) = orig
+
+
+def _async_ret(value):
+    async def _f(*a, **kw):
+        return value
+    return _f
+
+
+# ── J. le tour se rattache à la racine du fil, pas à lui-même ────────────────
+async def test_racine_du_fil() -> None:
+    print("\n[J] agent_chat — la conversation est le fil (D11)")
+    from app.handlers import agent_chat                                   # noqa: PLC0415
+    from app.services.agent_tools.loop import TurnOutcome                 # noqa: PLC0415
+
+    @dataclass
+    class _Doc:
+        version: int
+        content: str
+
+    orig = (agent_chat.agent_doc.get_active_doc, agent_chat.agent_conversations.load_recent_turns,
+            agent_chat.agent_conversations.save_turn, agent_chat.loop.run_turn,
+            agent_chat.post_text, agent_chat.update_text)
+    vus: dict[str, Any] = {}
+
+    async def _fake_run_turn(messages, turn):
+        vus["turn"] = turn
+        return TurnOutcome(text="Noté.", turn=turn)
+
+    async def _fake_post(*, channel, text, thread_ts=None):
+        vus.setdefault("post", []).append(thread_ts)
+        return "posted.1"
+
+    async def _fake_save(*, role, content, channel_id, user_id=None, slack_ts=None, thread_ts=None):
+        vus.setdefault("save", []).append((role, slack_ts, thread_ts))
+
+    async def _run(event):
+        vus.clear()
+        await agent_chat.handle_conversation_turn(event)
+
+    try:
+        agent_chat.agent_doc.get_active_doc = _async_ret(_Doc(version=4, content="doc"))
+        agent_chat.agent_conversations.load_recent_turns = _async_ret([])
+        agent_chat.agent_conversations.save_turn = _fake_save
+        agent_chat.loop.run_turn = _fake_run_turn
+        agent_chat.post_text = _fake_post
+        agent_chat.update_text = _async_ret(None)
+
+        # Suite de conversation : `ts` est celui de la réponse, la racine est le parent.
+        await _run({"channel": "C0ATLALRZL3", "ts": "222.2", "thread_ts": "111.1",
+                    "user": "U1", "text": "et il ajoute que…"})
+        check("la réponse est postée sous la racine du fil, pas sous elle-même",
+              vus.get("post") == ["111.1"], str(vus.get("post")))
+        check("les deux tours sont enregistrés sur la racine du fil",
+              [t for _, _, t in vus.get("save", [])] == ["111.1", "111.1"], str(vus.get("save")))
+        check("le tour garde son propre `slack_ts` (l'audit distingue les messages)",
+              [s for r, s, _ in vus.get("save", []) if r == "user"] == ["222.2"],
+              str(vus.get("save")))
+        check("l'état du tour porte la racine du fil",
+              vus["turn"].thread_ts == "111.1" and vus["turn"].slack_ts == "222.2",
+              f"{vus['turn'].thread_ts} / {vus['turn'].slack_ts}")
+
+        # Ouverture de conversation : sans `thread_ts`, la racine est le message lui-même.
+        await _run({"channel": "C0ATLALRZL3", "ts": "333.3", "user": "U1", "text": "Note que…"})
+        check("un message parent ouvre un fil sur lui-même",
+              vus.get("post") == ["333.3"] and vus["turn"].thread_ts == "333.3",
+              f"{vus.get('post')} / {vus['turn'].thread_ts}")
+    finally:
+        (agent_chat.agent_doc.get_active_doc, agent_chat.agent_conversations.load_recent_turns,
+         agent_chat.agent_conversations.save_turn, agent_chat.loop.run_turn,
+         agent_chat.post_text, agent_chat.update_text) = orig
+
+
 async def main() -> int:
     await test_isolation_registre()
     test_policy()
@@ -803,6 +969,8 @@ async def main() -> int:
     await test_web_search_indisponible()
     await test_capture_note()
     await test_fidelite_rappel()
+    await test_dispatch_fil()
+    await test_racine_du_fil()
 
     print("\n" + "=" * 60)
     if ECHECS:

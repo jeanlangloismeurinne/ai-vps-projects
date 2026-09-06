@@ -149,6 +149,10 @@ async def handle_conversation_turn(event: dict) -> None:
     slack_ts = event.get("ts")
     user_id = event.get("user")
     text = event.get("text", "")
+    # Racine du fil : le message lui-même quand il ouvre la conversation, le parent quand il la
+    # continue. C'est cette valeur qui rattache la réponse, l'historique et l'audit — `ts` seul
+    # accrocherait la suite d'un fil sous elle-même. `thread_ts` est donc lu, pas seulement écrit.
+    thread_root = event.get("thread_ts") or slack_ts
 
     # Accusé de réception immédiat (#1787575776445). Posté avant tout appel réseau : c'est le
     # seul signe visible que le message a été reçu pendant les secondes d'attente du modèle.
@@ -156,7 +160,7 @@ async def handle_conversation_turn(event: dict) -> None:
     # est postée normalement : un indicateur d'attente ne doit jamais faire perdre une réponse.
     thinking_ts: str | None = None
     try:
-        thinking_ts = await post_text(channel=channel, text=_THINKING_TEXT, thread_ts=slack_ts)
+        thinking_ts = await post_text(channel=channel, text=_THINKING_TEXT, thread_ts=thread_root)
     except Exception:
         logger.warning("agent_chat: indicateur d'attente non posté, on continue", exc_info=True)
 
@@ -170,7 +174,7 @@ async def handle_conversation_turn(event: dict) -> None:
                 # L'édition a échoué (message supprimé, droits…) : on retombe sur un post normal
                 # plutôt que de laisser l'utilisateur sur « je réfléchis… » indéfiniment.
                 logger.warning("agent_chat: chat.update échoué, repli sur post", exc_info=True)
-        await post_text(channel=channel, text=message, thread_ts=slack_ts)
+        await post_text(channel=channel, text=message, thread_ts=thread_root)
 
     try:
         doc = await agent_doc.get_active_doc()
@@ -196,7 +200,7 @@ async def handle_conversation_turn(event: dict) -> None:
             channel_id=channel,
             user_id=user_id,
             slack_ts=slack_ts,
-            thread_ts=slack_ts,
+            thread_ts=thread_root,
             doc_version=doc.version,
         )
         outcome = await loop.run_turn(messages, turn)
@@ -206,11 +210,11 @@ async def handle_conversation_turn(event: dict) -> None:
         # doit pas laisser un tour `user` orphelin qui polluerait l'historique du tour suivant.
         await agent_conversations.save_turn(
             role="user", content=text, channel_id=channel,
-            user_id=user_id, slack_ts=slack_ts, thread_ts=slack_ts,
+            user_id=user_id, slack_ts=slack_ts, thread_ts=thread_root,
         )
         await agent_conversations.save_turn(
             role="assistant", content=reply, channel_id=channel,
-            thread_ts=slack_ts,
+            thread_ts=thread_root,
         )
 
         await respond(reply)

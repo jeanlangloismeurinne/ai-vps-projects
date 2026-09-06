@@ -125,6 +125,16 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   existants sur une capture. Les postures vivent **dans le doc système**, en blocs nommés ; le code
   sélectionne le bloc en vigueur. L'invariant A3 est préservé : la surface de comportement reste
   versionnée, relue et éditable depuis Slack. → **capacité 5**.
+- **D11 — La conversation est le fil Slack** *(tranché avec l'utilisateur, 2026-09-06)*.
+  L'amendement du 09-06 exige une frontière : « même
+  conversation » doit être une valeur, pas une intuition. Le fil (`thread_ts`) est la seule
+  frontière que l'utilisateur **voit et choisit** — il a d'ailleurs répondu dans le fil, c'est
+  l'origine de la demande. Un message parent ouvre donc une conversation neuve, ce qui donne
+  gratuitement la seconde moitié de l'amendement : aucun état à effacer, `list_documents` redevient
+  obligatoire parce qu'il n'y a rien d'autre. *Conséquence à assumer : l'historique se lit alors par
+  fil, et non plus sur les 20 derniers tours du channel (B2). Un message parent ne verrait plus les
+  tours d'une autre conversation — c'est le but, mais c'est un changement de ce dont l'agent se
+  souvient, pas un détail d'implémentation.*
 - **D3 — La capture réutilise l'existant.** Outil `capture_note` appelant `journal_kb_classifier`
   (métadonnées) puis le writer `journal_vault` (enveloppe federation-ready). Les deux modules
   existent — vérifié : `app/services/journal_kb_classifier.py`, `app/services/journal_vault.py`.
@@ -326,6 +336,46 @@ ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas re
 | `action` | exécuter, puis le strict minimum de mots ; ne demander une précision que si elle bloque réellement |
 | `capture` | identifier le thème, regarder les documents existants, ranger l'information au bon endroit sans reformuler |
 
+> ⚠️ **Amendement du 2026-09-06 (utilisateur) — la posture tient sur la conversation, pas sur le
+> message.** Quand l'utilisateur répond à l'agent dans une **même conversation**, l'agent garde la
+> posture en cours : une chaîne de notes de lecture reste en `capture`, et les réponses suivantes
+> vont dans **la note du même thème**, pas dans un fichier neuf ni dans une autre posture.
+>
+> **Et la moitié qui compte autant : cette continuité s'arrête à la conversation.** Une **nouvelle**
+> conversation sur le même thème ne rejoue aucun état mémorisé — elle repasse par `list_documents`
+> pour retrouver le bon document. Un agent qui « se souvient » du fichier d'hier reconstruit le
+> doublon silencieux de la capacité 2 par l'autre bout : au lieu d'inventer un nom voisin, il écrit
+> avec confiance dans un nom périmé. **La continuité est une portée, pas une mémoire.**
+
+#### Ligne de base de l'amendement — mesurée le 2026-09-06, avant toute écriture
+
+Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent pas : ils sont datés.
+
+| # | Fait mesuré | Conséquence |
+|---|---|---|
+| **B1** | Le **2026-09-06 à 07:05**, l'utilisateur répond dans le fil de la note de 06:51 → `slack_app.py:52` route tout message porteur d'un `thread_ts` vers `_handle_thread_message`, qui ne connaît que les fils du journal → `WARNING message non traité`. **Aucune réponse, aucune ligne en base, rien dans le vault.** | La continuité n'est pas *mal* faite : le tour de suite **n'atteint jamais l'agent**. Rien de §5 n'est testable avant ça. |
+| **B2** | `agent_conversations.load_recent_turns` filtre sur `channel_id` **seul** et rend les 20 derniers tours du channel, `thread_ts` ignoré à la lecture (il n'est écrit que pour l'audit, et vaut toujours `slack_ts`). | **La « conversation » n'existe pas dans le code.** L'historique est une fenêtre glissante qui colle un tour du 09-06 à côté d'un tour du 08-24 : impossible d'y accrocher une posture ou un document courant. |
+| **B3** | Le vault porte `2026-09-06-memoires-de-charles-de-gaulle.md` (réel) et **trois** fichiers `eu-space-act-*` datés du 09-05 pour un même thème. Le tour de 06:51 a appelé `capture_note` **seul** — pas de `list_documents` avant. | Une note de lecture part en mode `note` (fichier daté neuf) à chaque tour. Le thème se fragmente **par construction** : c'est le symptôme que l'amendement nomme. |
+
+- [ ] **B1 d'abord — router la réponse en fil vers l'agent.** `_handle_thread_message` retombe sur
+  `handle_conversation_turn` quand le fil n'est ni une session journal v2 ni un fil de l'ancien
+  journal, et que le channel est `ASSISTANT_CHANNEL_ID`. L'ordre des branches reste normatif : le
+  journal garde la priorité. *C'est un correctif de routage, pas une posture — il se livre et se
+  vérifie séparément, sinon son échec sera lu comme un échec de la v5.*
+- [ ] **B2 — donner une portée à la conversation.** `load_recent_turns` prend le fil comme borne
+  (cf. **D11**), et c'est cette même borne qui porte l'état de posture et le document courant.
+- [ ] La posture **et** le document courant sont portés par la conversation, jamais par le
+  processus ni par une mémoire globale : deux conversations simultanées ne se contaminent pas, et
+  un redémarrage ne perd rien d'autre que ce que la base porte déjà.
+- [ ] **Le tour de suite n'est pas reclassé à zéro** : la posture de la conversation est l'état par
+  défaut du tour suivant. Elle **change** quand le tour porte une demande d'une autre nature
+  (« et rappelle-moi d'en reparler lundi » dans une chaîne `capture` ⇒ `capture` + `action`), jamais
+  parce que le message est court ou elliptique. *Un « oui, et aussi ceci » ne retombe pas en
+  `conversation`.*
+- [ ] **Une nouvelle conversation ne réutilise aucun document mémorisé** : `list_documents` est
+  rappelé. Le doc v5 dit *pourquoi* (le nom exact est ce qui retrouve le fichier), pas seulement
+  *quoi faire*.
+
 - [ ] `agent_system_doc` **v5 découpé en blocs nommés** (`socle`, `exploration`, `action`,
   `capture`) — un seul document versionné, relu, éditable depuis Slack. Le socle porte ce qui vaut
   toujours (identité, non-déni, mémoire, outils) ; chaque bloc ne porte que ce qui lui est propre.
@@ -335,15 +385,34 @@ ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas re
 - [ ] `agent_chat` compose le prompt = socle + blocs des modes retenus. **Tous les fragments
   viennent du doc actif** : le code sélectionne, il ne rédige pas (invariant A3 préservé).
 - [ ] La posture retenue est journalisée (nouvelle colonne sur `agent_conversations`) : sans ça, on
-  ne saura pas *a posteriori* si une réponse décevante vient du bloc ou du choix du bloc.
+  ne saura pas *a posteriori* si une réponse décevante vient du bloc ou du choix du bloc. La
+  journalisation dit aussi **si la posture a été classée ou héritée** du tour précédent — sinon on
+  ne pourra pas distinguer « le classifieur a bien retrouvé `capture` » de « la continuité a
+  fonctionné », et les deux se réparent à des endroits différents.
 
-- **Acceptation** : trois tours rejoués contre le modèle réel, avec la posture mesurée en base.
+- **Acceptation** : **cinq** tours rejoués contre le modèle réel, avec la posture mesurée en base.
   Une question ouverte (« que penses-tu de X ? ») → mode `exploration`, réponse développée, **zéro
   écriture**. Une demande d'action (« rappelle-moi… ») → mode `action`, outil appelé, **réponse
   d'acquittement sous 300 caractères**. Une capture (« note que… ») → mode `capture`,
   `list_documents` appelé **avant** `capture_note`.
+  Puis les deux tours de l'amendement du 09-06, qui ne se mesurent qu'**enchaînés** :
+  - **P4 — la suite dans le même fil.** Une réponse en fil sous la capture précédente
+    (« et il ajoute que … ») → le tour **atteint l'agent** (B1), la posture reste `capture`, et
+    l'écriture atterrit **dans le même fichier** que P3. Critère : `git diff` du vault = `+n / -0`
+    sur ce fichier, et **aucun `.md` supplémentaire** créé par le tour.
+  - **P5 — le même thème, une conversation neuve.** Un message parent (hors fil) portant le même
+    thème → `list_documents` **est appelé** avant l'écriture, et l'écriture retombe sur le même
+    fichier **par son nom**, pas par un état gardé. Critère : la ligne `list_documents` existe dans
+    `agent_tool_calls` pour ce tour, et le compte de `.md` du vault est inchangé.
+
   ⚠️ *Le test négatif se mesure d'abord : longueur de réponse et ordre d'appel actuels, sous doc
   v4, avant d'écrire la v5. Sans quoi on ne saura pas si la v5 a changé quoi que ce soit.*
+  ⚠️ **P4 et P5 se rougissent l'un l'autre — c'est le seul couple qui prouve quelque chose.** Une
+  implémentation qui mémorise le document globalement passe P4 et **doit** rater P5 (elle écrira
+  sans appeler `list_documents`). Une implémentation qui ne porte aucun état passe P5 et rate P4
+  (fichier neuf, ou tour perdu). Les mesurer séparément laisserait passer les deux erreurs.
+  *Test négatif déjà acquis pour P4, mesuré le 2026-09-06 : le tour de 07:05 n'a produit ni réponse,
+  ni ligne en base, ni octet dans le vault (B1).*
 
 ---
 

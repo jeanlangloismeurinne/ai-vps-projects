@@ -38,6 +38,20 @@ dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contr
   (`socle`/`exploration`/`action`/`capture`), un classifieur de **posture** (pas d'outil), et une
   composition du prompt qui ne fait que **sélectionner** des fragments du doc actif.
   ⚠️ *Mesurer d'abord la ligne de base : longueur de réponse et ordre d'appel sous doc v4.*
+- **La posture doit tenir sur la conversation** *(amendement utilisateur du 2026-09-06, inscrit
+  dans §5)*. Une réponse dans le même fil garde la posture en cours et va **dans la note du même
+  thème** ; une **nouvelle** conversation sur ce thème repasse par `list_documents`. La continuité
+  est une **portée**, pas une mémoire — un agent qui retient le fichier d'hier écrira avec confiance
+  dans un nom périmé, ce qui est le doublon de la capacité 2 par l'autre bout. **D11 tranché : la
+  conversation est le fil Slack.**
+- 🔴 **B1 — une réponse en fil n'atteint jamais l'agent.** Mesuré le **2026-09-06 à 07:05** :
+  `slack_app.py:52` route tout message porteur d'un `thread_ts` vers `_handle_thread_message`, qui
+  ne connaît que les fils du journal → `WARNING message non traité`, **aucune réponse, aucune ligne
+  en base, rien dans le vault**. Rien de la capacité 5 n'est testable avant ce correctif de
+  routage, et il se livre **séparément** : sinon son échec sera lu comme un échec de la v5.
+- **B2 — la « conversation » n'existe pas dans le code.** `load_recent_turns` filtre sur
+  `channel_id` seul et rend les 20 derniers tours du channel ; `thread_ts` est écrit mais **jamais
+  lu**. La fenêtre colle un tour du 09-06 à côté d'un tour du 08-24.
 - **Le vault porte des doublons de rejeu.** `documents/sources-utiles.md`, `startups-spatial*.md`,
   `courses.md`, `climatisation-r*.md` — produits par mes passes de test des 09-05, l'utilisateur
   n'y a rien écrit. À vider ou supprimer d'un clic dans Obsidian.
@@ -79,12 +93,21 @@ dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contr
 
 ## Où démarrer
 
-Deux capacités indépendantes, dans l'ordre de valeur :
+**B1 en premier, et seul.** Le correctif de routage : une réponse en fil dans `#assistant`, qui
+n'est ni une session journal v2 ni un fil de l'ancien journal, retombe sur
+`handle_conversation_turn`. L'ordre des branches reste normatif (le journal garde la priorité).
+Se livre et se vérifie **avant** d'ouvrir la v5 — c'est un tour perdu en production, pas une
+question de posture, et le confondre avec §5 rendrait les deux illisibles. *Le test négatif est
+déjà acquis et daté : le tour de 07:05 le 2026-09-06.*
+
+Puis deux capacités indépendantes, dans l'ordre de valeur :
 
 **§5 (postures situées)** — c'est la demande explicite de l'utilisateur : que l'agent adapte sa
-manière de répondre à la situation (exploration ≠ action ≠ capture). Commencer par **mesurer** la
-ligne de base sous doc v4 (longueur de réponse et ordre d'appel sur trois tours types), puis écrire
-la v5 en blocs nommés.
+manière de répondre à la situation (exploration ≠ action ≠ capture), **et qu'il garde cette posture
+quand l'utilisateur répond dans le même fil**. Commencer par **mesurer** la ligne de base sous doc
+v4 (longueur de réponse et ordre d'appel sur trois tours types), puis écrire la v5 en blocs nommés.
+Les tours P4/P5 de l'acceptation **se rougissent l'un l'autre** : une implémentation qui mémorise
+le document globalement passe P4 et rate P5, une qui ne porte aucun état passe P5 et rate P4.
 
 **§4 (restitution vérifiable)** — plus petite : ajouter l'URL de la carte kanban et de la page
 kb-viewer dans l'accusé de réception. Les boutons *Annuler* / *Modifier* existent déjà.
