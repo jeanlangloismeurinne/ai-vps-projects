@@ -5,7 +5,8 @@ role: >
   Permet de reprendre le chantier « l'agent classe l'intention et capte la donnée ». Le doc système
   est réaligné, le chemin d'écriture vers le vault existe et les contrats d'outil laissent enfin
   l'action aboutir (capacités 1, 2 et 3 livrées) ; répondre dans le fil atteint enfin l'agent.
-  Restent la restitution vérifiable et les postures, qui doivent tenir sur la conversation entière.
+  Reste la restitution vérifiable, et surtout : faire tenir la posture ET la cible d'écriture sur
+  trois portées de temps — la conversation, la conversation suivante, puis le corpus entier.
 ---
 
 # Prompt de reprise — assistant-ia
@@ -42,6 +43,11 @@ réponse, aucune ligne en base, rien dans le vault. `agent_chat` rattache mainte
 historique et audit à la **racine** du fil. C'est le préalable de la capacité 5 : on ne peut pas
 faire tenir une posture sur une conversation dont la moitié des tours n'arrive pas.
 
+⚠️ **B1 n'a pas encore été éprouvé par un vrai message.** Il est couvert par les checks §I et §J
+et la sonde de déploiement, mais `agent_conversations` ne porte **aucun tour après 07:00** le
+09-06 : personne n'a encore répondu dans un fil depuis le correctif. La première vraie réponse en
+fil est la vérification qui manque — la regarder arriver, ou constater son absence.
+
 ## Reste à faire / dettes ouvertes
 
 - **Capacité 4 — la restitution n'est pas vérifiable.** L'accusé de réception nomme le fichier
@@ -55,14 +61,14 @@ faire tenir une posture sur une conversation dont la moitié des tours n'arrive 
   ⚠️ *Mesurer d'abord la ligne de base : longueur de réponse et ordre d'appel sous doc v4.*
 - **La posture doit tenir sur la conversation** *(amendement utilisateur du 2026-09-06, inscrit
   dans §5)*. Une réponse dans le même fil garde la posture en cours et va **dans la note du même
-  thème** ; une **nouvelle** conversation sur ce thème repasse par `list_documents`. La continuité
-  est une **portée**, pas une mémoire — un agent qui retient le fichier d'hier écrira avec confiance
-  dans un nom périmé, ce qui est le doublon de la capacité 2 par l'autre bout. **D11 tranché : la
-  conversation est le fil Slack.**
+  thème**. La continuité est une **portée**, pas une mémoire : un agent qui retient le fichier
+  d'hier écrira avec confiance dans un nom périmé — le doublon de la capacité 2 par l'autre bout.
+  **D11 tranché : la conversation est le fil Slack.** Ce qui se passe à la conversation *suivante*
+  n'est pas de son ressort : c'est la capacité 6.
 - **B2 — la « conversation » n'existe pas encore dans le code.** `load_recent_turns` filtre sur
   `channel_id` seul et rend les 20 derniers tours du channel : la fenêtre colle un tour du 09-06 à
-  côté d'un tour du 08-24. C'est ce qui reste à faire pour que la posture et le document courant
-  aient où se poser. *(B1, le correctif de routage, est livré — voir ci-dessous.)*
+  côté d'un tour du 08-24. C'est le premier morceau de la capacité 5 — la posture et la cible
+  d'écriture n'ont aujourd'hui **où se poser**. *(B1, le correctif de routage, est livré : cf. §État.)*
 - **Capacité 6 — retrouver le thème à l'écriture** *(ajoutée le 2026-09-06)*. `list_documents` fait
   `glob("documents/*.md")` : il est **structurellement aveugle à `notes/`**. Une note de lecture
   n'est donc pas retrouvable — quel que soit le comportement du modèle. Ce n'est pas une consigne à
@@ -72,14 +78,22 @@ faire tenir une posture sur une conversation dont la moitié des tours n'arrive 
   (« EU Space Act et équipementiers »), deux fichiers. Le doublon de la capacité 2, refait côté
   `notes/`, avec la même cause qu'en D5.*
 - **Capacité 7 — agent d'organisation hebdomadaire** *(ajoutée le 2026-09-06)*. Regroupe les
-  entrées voisines, tisse les liens, assemble une **note globale par thème**. ⚠️ **Premier
-  composant qui écrira dans le vault sans témoin** : il n'écrit que du **dérivé** (D13), ne touche
-  aucun octet de `notes/` ni `documents/`, et une seconde passe immédiate doit produire un **diff
-  vide**. Une entrée que rien n'apparente reste **orpheline** — un regroupeur qui ne laisse jamais
-  d'orphelin ne mesure rien, il range tout.
+  entrées voisines, tisse les liens, assemble une **note globale par thème**. Liens **typés** :
+  `enfant` (appartenance — c'est lui qui permet d'assembler) vs `voisin` (proximité sémantique),
+  D12. ⚠️ **Premier composant qui écrira dans le vault sans témoin** : il n'écrit que du **dérivé**
+  (D13), ne touche aucun octet de `notes/` ni `documents/`, et une seconde passe immédiate doit
+  produire un **diff vide**. Une entrée que rien n'apparente reste **orpheline** — un regroupeur qui
+  ne laisse jamais d'orphelin ne mesure rien, il range tout.
+- **Le message du 2026-09-06 07:05 n'est toujours pas capté.** Perdu par B1, récupéré depuis Slack
+  (fil `1788677480.225329`, canal `C0ATLALRZL3`) : *« Tout le système politique et militaire s'est
+  battu contre l'idée de CDG… »*. Il n'a jamais atteint le vault. Le renvoyer dans le fil serait à
+  la fois sa capture et la vérification bout-en-bout de B1.
 - **Le vault porte des doublons de rejeu.** `documents/sources-utiles.md`, `startups-spatial*.md`,
-  `courses.md`, `climatisation-r*.md` — produits par mes passes de test des 09-05, l'utilisateur
+  `courses.md`, `climatisation-r*.md` — produits par mes passes de test du 09-05, l'utilisateur
   n'y a rien écrit. À vider ou supprimer d'un clic dans Obsidian.
+  ⚠️ **Ne pas supprimer `notes/2026/*eu-space-act*` avant la capacité 6** : ces trois fichiers (dont
+  deux de titre strictement identique) sont la **ligne de base mesurée** de son test négatif. Les
+  nettoyer d'abord effacerait la preuve du défaut qu'elle doit corriger.
 - Les tickets de `feedback-tickets/` couvrant l'agent (`1787596637653`, `1787575860968`,
   `1787575776445`) sont **absorbés par cette roadmap** — ne pas les redécouper en unités de travail.
 
@@ -114,6 +128,12 @@ faire tenir une posture sur une conversation dont la moitié des tours n'arrive 
   **valeur absolue** (`TITLE_MAX <= 60`), sans quoi la passe négative ne le voit pas.
 - **Un adressage par nom exige son outil de lecture, livré en même temps** (leçon de la capacité 2 :
   deux rejeux ont produit `startups-spatial.md` puis `startups-spatial-a-creuser.md`).
+  **Et le piège suivant : un outil de lecture qui ne couvre qu'une partie du corpus.**
+  `list_documents` existe, il est appelé, il rend `verdict=ok` — et il ne voit que `documents/`,
+  jamais `notes/`. Le doublon revient à l'identique, mais cette fois *avec* l'outil, donc invisible
+  à l'audit : la ligne verte ressemble à une vérification faite. Vérifier que la **couverture** de
+  `list_*` égale l'espace adressable de `write_*` — un répertoire ajouté plus tard n'entre dans
+  aucun index de lui-même.
 - **`journal_vault._one_line` contient deux caractères U+2028/U+2029 littéraux**, invisibles dans le
   source : ancrer toute édition de cette fonction sur du texte strictement ASCII.
 - **Un doc système qui nie une capacité livrée est aussi grave qu'un doc qui en invente une.**
@@ -128,14 +148,24 @@ faire tenir une posture sur une conversation dont la moitié des tours n'arrive 
 
 ## Où démarrer
 
-Deux capacités indépendantes, dans l'ordre de valeur :
+Quatre capacités ouvertes. **§5 → §6 → §7 forment une chaîne** (trois portées de temps, cf. l'entête)
+et se font dans cet ordre ; **§4 est indépendante** et peut s'intercaler.
 
-**§5 (postures situées)** — c'est la demande explicite de l'utilisateur : que l'agent adapte sa
-manière de répondre à la situation (exploration ≠ action ≠ capture), **et qu'il garde cette posture
-quand l'utilisateur répond dans le même fil**. Commencer par **mesurer** la ligne de base sous doc
-v4 (longueur de réponse et ordre d'appel sur trois tours types), puis écrire la v5 en blocs nommés.
-Les tours P4/P5 de l'acceptation **se rougissent l'un l'autre** : une implémentation qui mémorise
-le document globalement passe P4 et rate P5, une qui ne porte aucun état passe P5 et rate P4.
+**§5 (postures situées)** — la demande explicite de l'utilisateur : que l'agent adapte sa manière
+de répondre à la situation (exploration ≠ action ≠ capture), **et qu'il garde cette posture quand
+l'utilisateur répond dans le même fil**. Attaquer par **B2** (donner une portée à la conversation,
+D11 = le fil), puis **mesurer** la ligne de base sous doc v4 (longueur de réponse et ordre d'appel
+sur trois tours types), puis écrire la v5 en blocs nommés. Les tours P4/P5 de l'acceptation **se
+rougissent l'un l'autre** : une implémentation qui mémorise le document globalement passe P4 et
+rate P5, une qui ne porte aucun état passe P5 et rate P4.
+
+**§6 (retrouver le thème à l'écriture)** — la plus mécanique des trois, et celle dont le défaut est
+déjà prouvé dans l'index : livrer `search_notes` sur `journal_kb_entries`, faire porter à la note
+neuve un lien `enfant` vers son thème, sans toucher la note pré-existante. *Requêter la ligne de
+base avant le lot* — §5 aura pu la déplacer, comme la capacité 2 l'avait fait pour la 3.
+
+**§7 (agent d'organisation)** — la plus lourde et la plus risquée : premier écrivain sans témoin.
+Ne l'ouvrir qu'une fois §6 en ligne, sinon elle a chaque semaine plus à recoller.
 
 **§4 (restitution vérifiable)** — plus petite : ajouter l'URL de la carte kanban et de la page
 kb-viewer dans l'accusé de réception. Les boutons *Annuler* / *Modifier* existent déjà.
