@@ -63,7 +63,7 @@ observable en base ou dans le vault. Les 5 premières lignes viennent de la revu
 
 | # | Message utilisateur (verbatim) | Réponse actuelle | Cible |
 |---|---|---|---|
-| C1 | « Note de lecture Safran : le EU Space Act… » (×5) | répond en conversation, ne capte **rien** | `capture_note` → fichier dans le vault, puis réaction |
+| C1 | « Note de lecture Safran : le EU Space Act… » (×5) | répond en conversation, ne capte **rien** | ✅ `capture_note` livré (cap. 2). Les 4 tours du 08-24, antérieurs à l'outil, ont été **rattrapés le 09-06** par `checks/recover_lost_captures.py` — rejeu par le chemin réel de l'agent, pas par écriture de fichiers à la main |
 | C2 | « Stocke ce lien dans une liste de sources utiles : payloadspace.com » | « Je ne peux pas stocker d'informations… je n'ai pas de mémoire persistante » | append dans `listes/sources-utiles.md` + accusé |
 | C3 | « Rappelle-moi samedi 9h… IKEA » | « C'est noté, je vous rappellerai » | ✅ carte créée — reste la restitution vérifiable (C4) |
 | C4 | « Revue de l'actualité politique publiée hier/aujourd'hui » | « Je ne peux pas consulter l'actualité en temps réel » | `web_search` (Exa, **déjà actif**) → réponse sourcée |
@@ -393,7 +393,7 @@ Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent p
 |---|---|---|
 | **B1** | Le **2026-09-06 à 07:05**, l'utilisateur répond dans le fil de la note de 06:51 → `slack_app.py:52` route tout message porteur d'un `thread_ts` vers `_handle_thread_message`, qui ne connaît que les fils du journal → `WARNING message non traité`. **Aucune réponse, aucune ligne en base, rien dans le vault.** | La continuité n'est pas *mal* faite : le tour de suite **n'atteint jamais l'agent**. Rien de §5 n'est testable avant ça. |
 | **B2** | `agent_conversations.load_recent_turns` filtre sur `channel_id` **seul** et rend les 20 derniers tours du channel, `thread_ts` ignoré à la lecture (il n'est écrit que pour l'audit, et vaut toujours `slack_ts`). | **La « conversation » n'existe pas dans le code.** L'historique est une fenêtre glissante qui colle un tour du 09-06 à côté d'un tour du 08-24 : impossible d'y accrocher une posture ou un document courant. |
-| **B3** | Le vault porte `2026-09-06-memoires-de-charles-de-gaulle.md` (réel) et **trois** fichiers `eu-space-act-*` datés du 09-05 pour un même thème. Le tour de 06:51 a appelé `capture_note` **seul** — pas de `list_documents` avant. | Une note de lecture part en mode `note` (fichier daté neuf) à chaque tour. Le thème se fragmente **par construction** : c'est le symptôme que l'amendement nomme. |
+| **B3** | Le tour de 06:51 a appelé `capture_note` **seul** — pas de `list_documents` avant. Sa suite de 11:03, dans le **même fil**, a produit une seconde note sous un tag disjoint (`De Gaulle` vs `Charles de Gaulle`). | Une note de lecture part en mode `note` (fichier daté neuf) à chaque tour. Le thème se fragmente **par construction** : c'est le symptôme que l'amendement nomme. ⚠️ *Fait requêté à nouveau le 2026-09-06 : les trois `eu-space-act-*` que citait la version précédente étaient produits par ma fixture de rejeu, pas par l'utilisateur — supprimés. Le symptôme, lui, tient sans eux.* |
 
 - [x] **B1 d'abord — router la réponse en fil vers l'agent.** `_handle_thread_message` retombe sur
   `handle_conversation_turn` quand le fil n'est ni une session journal v2 ni un fil de l'ancien
@@ -481,18 +481,35 @@ que D0 et D8 : le modèle ne peut pas respecter une consigne que son outillage r
 
 Ce qui manque n'est pas à construire : `journal_kb_entries` (migration `009`) porte déjà
 `title`, `tags[]`, `nature[]`, `uri`, `created_at`, avec index GIN sur les tags. Il lui manque un
-outil de lecture. **Preuve que l'index suffit et que le défaut est réel**, les 4 entrées présentes :
+outil de lecture. **Preuve que l'index suffit et que le défaut est réel**, les 6 entrées présentes :
 
-| titre | nature | tags | fichier |
-|---|---|---|---|
-| Mémoires de Charles de Gaulle | `note_de_lecture` | histoire, militaire, Charles de Gaulle | `notes/2026/2026-09-06-…` |
-| EU Space Act et équipementiers | `note_de_lecture` | Safran, EU Space Act, constellations, Airbus | `…-equipementiers.md` |
-| EU Space Act et autorisation unique | `note_de_lecture` | espace, réglementation, EU Space Act, … | `…-autorisation-unique.md` |
-| **EU Space Act et équipementiers** | `note_de_lecture` | espace, réglementation, EU Space Act, … | `…-equipementiers-2.md` |
+> ⚠️ **Ligne de base remesurée le 2026-09-06** (amendement à une roadmap figée). La version
+> précédente citait quatre entrées dont **trois `eu-space-act-*` fabriquées par ma propre fixture de
+> rejeu** : elles portaient une thèse *réglementaire* (« régime d'autorisation unique », « position
+> d'Airbus ») que l'utilisateur n'a jamais écrite — la sienne était *commerciale*. Elles ont été
+> supprimées, et avec elles la paire de titres identiques qui servait de preuve. Le corpus ci-dessous
+> est celui des messages réellement envoyés.
 
-**Deux entrées de titre strictement identique, deux fichiers.** C'est le doublon de la capacité 2,
-reproduit à l'identique du côté `notes/` — et il a la même cause : un adressage sans son outil de
-lecture (D5).
+| titre | tags | fichier |
+|---|---|---|
+| Mémoires de Charles de Gaulle | histoire, militaire, **Charles de Gaulle** | `…-09-06-memoires-de-charles-de-gaulle.md` |
+| Résistance au projet de De Gaulle | politique, défense, budget, **De Gaulle** | `…-09-06-resistance-au-projet-de-de-gaulle.md` |
+| Fournisseurs de services de station sol | **Safran**, station sol, antennes | `…-08-24-fournisseurs-…-station-sol.md` |
+| Différences satellite optique vs radar | **Safran**, satellite, optique, radar | `…-08-24-differences-satellite-optique-vs-radar.md` |
+| Opportunité du EU Space Act pour Safran | **Safran**, EU Space Act, satellites | `…-08-24-opportunite-du-eu-space-act-pour-safran.md` |
+| Positionnement sur propulsion électrique satellite | **Safran**, propulsion électrique, satellite | `…-08-24-positionnement-sur-propulsion-electrique-satellite.md` |
+
+**Le défaut se lit sur les deux premières lignes, et il est plus net que l'ancien.** Ces deux notes
+sont **le même fil Slack** (`thread_ts = 1788677480.225329`, tours de 06:51 et 11:03) : impossible
+de plaider que l'agent ne pouvait pas savoir qu'elles vont ensemble. Il les a pourtant rangées sous
+deux vocabulaires disjoints — `Charles de Gaulle` d'un côté, `De Gaulle` de l'autre — et rien ne les
+relie. La fragmentation ne vient plus d'un titre dupliqué mais d'un **tag voisin non reconnu** :
+même cause (D5, un adressage sans outil de lecture), symptôme plus difficile, car `search_notes`
+devra rapprocher deux libellés qui ne s'égalent pas.
+
+*Effet de bord utile : cette fragmentation est visible en haut de `Accueil.md`, où les deux notes
+tombent dans « Notes isolées ». La page d'accueil du coffre affiche donc en permanence la ligne de
+base de cette capacité.*
 
 - [ ] Outil de **lecture** `search_notes` sur `journal_kb_entries` : rend `titre`, `tags`,
   `nature`, `uri`, `date` — **jamais le corps**, même règle et même raison que `list_documents`
@@ -513,9 +530,10 @@ lecture (D5).
   `2026-09-06-memoires-de-charles-de-gaulle.md` **inchangé au bit près** (`git diff` = vide sur ce
   fichier, pas `+n / -0` : zéro).
   ⚠️ *Le test négatif se mesure d'abord, et il est déjà à moitié acquis* : `search_notes` n'existe
-  pas → 0 appel, et la paire `EU Space Act et équipementiers` / `…-2` est la trace de ce que
-  produit son absence. **À requêter avant le lot**, pas à recopier d'ici : la capacité 5 aura pu
-  déplacer la ligne de base, comme elle l'a fait pour la capacité 3.
+  pas → 0 appel, et la paire `Charles de Gaulle` / `De Gaulle` — deux notes du **même fil**, deux
+  tags disjoints, aucun lien — est la trace de ce que produit son absence. **À requêter avant le
+  lot**, pas à recopier d'ici : la capacité 5 aura pu déplacer la ligne de base, comme elle l'a fait
+  pour la capacité 3.
 
 ### 7. Agent d'organisation de la base de connaissance · contexte partagé : `journal_kb_entries` + table de liens + notes globales dérivées + planificateur
 > **Ajoutée le 2026-09-06 (utilisateur).** L'option 2 : une passe **hebdomadaire** qui regroupe les
@@ -545,10 +563,15 @@ rend cette capacité acceptable, et elles ne se négocient pas en cours de route
   quoi elle travaille dans le dos de l'utilisateur — ce qui est précisément le reproche fait aux
   systèmes de rangement automatique.
 
-- **Acceptation**, sur le corpus réel (les 4 entrées ci-dessus, dont la paire *EU Space Act et
-  équipementiers*) :
-  1. Après une passe, les entrées `EU Space Act` sont **enfants d'un même thème**, et il existe une
-     note globale qui les assemble toutes.
+- **Acceptation**, sur le corpus réel (les 6 entrées de §6) :
+  1. Après une passe, les **4 notes Safran** sont enfants d'un même thème, et il existe une note
+     globale qui les assemble toutes. ⚠️ *Le regroupement doit inclure `Positionnement sur
+     propulsion électrique satellite`, qui ne porte ni « EU Space Act » ni aucun mot-clef commun aux
+     trois autres hors `Safran` et `satellite`. C'est ce qui fait de ce test un test de regroupement
+     et non un `grep` : un assembleur par occurrence de chaîne la laisse dehors.*
+  1bis. Les **2 notes De Gaulle** sont enfants d'un même thème malgré `Charles de Gaulle` ≠
+     `De Gaulle`. Si la capacité 6 les a déjà reliées à l'écriture, cette assertion est acquise et
+     la passe doit se contenter de **ne rien défaire** — pas de la recompter comme un succès à elle.
   2. `git diff` de la passe : **aucune ligne retirée ni modifiée** sous `notes/` et `documents/`.
      Une seule ligne `-` sur un fichier source fait échouer la capacité.
   3. **Une seconde passe immédiate produit un diff vide.** C'est le critère qui distingue un
