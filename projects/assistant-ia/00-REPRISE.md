@@ -10,7 +10,14 @@ role: >
 
 # Prompt de reprise — assistant-ia
 
-> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — prochaines capacités : §4 et §5.
+> **Roadmap active : `roadmap/agent-intention-et-capture-kb.md`** — prochaines capacités : §4, §5,
+> puis §6 et §7 (ajoutées le 2026-09-06).
+
+**Le fil conducteur des capacités 5 à 7 : trois portées de temps du même problème** — retrouver où
+une information doit aller. §5 = le tour d'après, dans le fil (la conversation *porte* la cible,
+rien à chercher) · §6 = une conversation neuve, utilisateur présent (un outil de lecture, à
+l'écriture) · §7 = à froid, tout le corpus, chaque semaine. Elles se cumulent, ne se remplacent
+pas, et **6 vient avant 7** : 6 relie pendant que l'utilisateur peut corriger d'un mot.
 
 ## État
 
@@ -56,6 +63,20 @@ faire tenir une posture sur une conversation dont la moitié des tours n'arrive 
   `channel_id` seul et rend les 20 derniers tours du channel : la fenêtre colle un tour du 09-06 à
   côté d'un tour du 08-24. C'est ce qui reste à faire pour que la posture et le document courant
   aient où se poser. *(B1, le correctif de routage, est livré — voir ci-dessous.)*
+- **Capacité 6 — retrouver le thème à l'écriture** *(ajoutée le 2026-09-06)*. `list_documents` fait
+  `glob("documents/*.md")` : il est **structurellement aveugle à `notes/`**. Une note de lecture
+  n'est donc pas retrouvable — quel que soit le comportement du modèle. Ce n'est pas une consigne à
+  durcir, c'est une information hors de portée. L'index `journal_kb_entries` porte déjà
+  `title`/`tags[]`/`nature[]`/`uri` ; il lui manque son **outil de lecture** (`search_notes`).
+  *Preuve du défaut, dans l'index : deux entrées de titre strictement identique
+  (« EU Space Act et équipementiers »), deux fichiers. Le doublon de la capacité 2, refait côté
+  `notes/`, avec la même cause qu'en D5.*
+- **Capacité 7 — agent d'organisation hebdomadaire** *(ajoutée le 2026-09-06)*. Regroupe les
+  entrées voisines, tisse les liens, assemble une **note globale par thème**. ⚠️ **Premier
+  composant qui écrira dans le vault sans témoin** : il n'écrit que du **dérivé** (D13), ne touche
+  aucun octet de `notes/` ni `documents/`, et une seconde passe immédiate doit produire un **diff
+  vide**. Une entrée que rien n'apparente reste **orpheline** — un regroupeur qui ne laisse jamais
+  d'orphelin ne mesure rien, il range tout.
 - **Le vault porte des doublons de rejeu.** `documents/sources-utiles.md`, `startups-spatial*.md`,
   `courses.md`, `climatisation-r*.md` — produits par mes passes de test des 09-05, l'utilisateur
   n'y a rien écrit. À vider ou supprimer d'un clic dans Obsidian.

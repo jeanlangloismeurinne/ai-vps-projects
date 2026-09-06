@@ -135,6 +135,31 @@ Trois défauts que la version du 08-27 ne voyait pas, parce qu'ils n'étaient pa
   fil, et non plus sur les 20 derniers tours du channel (B2). Un message parent ne verrait plus les
   tours d'une autre conversation — c'est le but, mais c'est un changement de ce dont l'agent se
   souvient, pas un détail d'implémentation.*
+- **D12 — Deux types de liens, et c'est la distinction qui porte tout** *(tranché avec
+  l'utilisateur, 2026-09-06)*. Une note neuve ne réécrit pas la note du même thème : elle s'y
+  **relie**. Mais un lien indifférencié ne sert à rien — il faut séparer :
+  - **`enfant`** — *appartenance* : cette entrée fait partie du thème X. C'est ce lien, et lui
+    seul, qui permet d'assembler une **note globale** du thème.
+  - **`voisin`** — *proximité sémantique ou conceptuelle*, sans appartenance. Deux notes qui
+    s'éclairent, rangées sous des thèmes différents.
+
+  Sans ce typage, assembler « tout ce qui parle des Mémoires de De Gaulle » ramènerait aussi tout
+  ce qui parle vaguement d'histoire militaire, et la note globale deviendrait illisible — donc
+  inutile, donc non relue.
+- **D13 — La note globale est *dérivée*, jamais détentrice** *(2026-09-06)*. Elle assemble des
+  entrées qui vivent ailleurs : elle ne contient **aucun contenu unique**, et peut donc être
+  **régénérée** sans rien risquer. C'est ce qui rend un agent d'organisation acceptable dans un
+  coffre dont tout le reste est append-only : il réécrit uniquement du dérivé. La règle inchangée
+  et non négociable reste que `notes/` et `documents/` sont la source, et qu'on n'y **réécrit
+  jamais** — le critère `git diff` = `+n / -0` de la capacité 2 vaut toujours, et devient `-0` tout
+  court sur les fichiers sources touchés par une passe d'organisation.
+  *Même architecture que partout ici : Markdown = pivot, le reste = index dérivé (`KNOWLEDGE_ARCHITECTURE.md`).*
+- **D14 — Les liens s'écrivent dans un seul sens : du parent vers l'enfant** *(2026-09-06,
+  vérifié)*. Écrire le lien retour dans chaque note source obligerait à **rééditer** des fichiers
+  sources à chaque nouvelle entrée — exactement ce que D13 interdit. Inutile de toute façon : le
+  viewer rend déjà les liens entrants (`projects/kb-viewer/quartz/quartz.layout.ts:46` →
+  `Component.Backlinks()`, plus `Component.Graph()`), et Obsidian fait de même nativement.
+  *La réciprocité est un problème d'affichage, pas de stockage.*
 - **D3 — La capture réutilise l'existant.** Outil `capture_note` appelant `journal_kb_classifier`
   (métadonnées) puis le writer `journal_vault` (enveloppe federation-ready). Les deux modules
   existent — vérifié : `app/services/journal_kb_classifier.py`, `app/services/journal_vault.py`.
@@ -175,6 +200,19 @@ ligne de base, ce qui est le fonctionnement attendu et non un accident.)*
 le doc nie les outils, mesurer quoi que ce soit revient à mesurer le doc, pas le code (D4 en est la
 démonstration, à huit jours de coût). 2 avant 3 parce que router une intention vers un outil qui
 n'existe pas est un no-op. 4 en dernier parce qu'elle consomme les sorties de 2 et 3.
+
+*Ajout du 2026-09-06.* Les capacités 5, 6 et 7 traitent trois **portées de temps** distinctes du
+même problème — retrouver où une information doit aller :
+
+| Capacité | Portée | Ce qui retrouve la cible |
+|---|---|---|
+| **5** | le tour d'après, dans le fil | rien à chercher : la conversation **porte** la cible |
+| **6** | une conversation neuve, utilisateur présent | un outil de lecture, à l'écriture |
+| **7** | à froid, tout le corpus, chaque semaine | une passe d'organisation, sur du dérivé |
+
+Elles se cumulent et ne se remplacent pas. **6 avant 7** : 6 relie pendant que l'utilisateur peut
+corriger d'un mot, 7 rattrape ce qui a échappé — et 7 sans 6 aurait chaque semaine plus à recoller.
+L'ordre est aussi celui du risque : 7 est le premier composant qui écrit dans le coffre sans témoin.
 
 ⚠️ **Chaque test d'acceptation se vérifie AVANT le correctif : il doit échouer.** La ligne de base
 ci-dessus fournit les valeurs de départ — elles ont été requêtées, pas remémorées.
@@ -410,10 +448,15 @@ Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent p
     (« et il ajoute que … ») → le tour **atteint l'agent** (B1), la posture reste `capture`, et
     l'écriture atterrit **dans le même fichier** que P3. Critère : `git diff` du vault = `+n / -0`
     sur ce fichier, et **aucun `.md` supplémentaire** créé par le tour.
-  - **P5 — le même thème, une conversation neuve.** Un message parent (hors fil) portant le même
-    thème → `list_documents` **est appelé** avant l'écriture, et l'écriture retombe sur le même
-    fichier **par son nom**, pas par un état gardé. Critère : la ligne `list_documents` existe dans
-    `agent_tool_calls` pour ce tour, et le compte de `.md` du vault est inchangé.
+  - **P5 — le même document, une conversation neuve.** Un message parent (hors fil) reprenant un
+    **document nommé** (« mes sources utiles ») → `list_documents` **est appelé** avant l'écriture,
+    et l'écriture retombe sur le même fichier **par son nom**, pas par un état gardé. Critère : la
+    ligne `list_documents` existe dans `agent_tool_calls` pour ce tour, et le compte de `.md` du
+    vault est inchangé.
+    *P5 ne couvre que les documents nommés.* Le même scénario sur une **note de lecture** est hors
+    de portée du modèle tant que la capacité 6 n'est pas livrée : `list_documents` ne voit pas
+    `notes/`. Ne pas l'écrire comme une exigence de §5 — ce serait un test qu'aucun comportement ne
+    peut satisfaire.
 
   ⚠️ *Le test négatif se mesure d'abord : longueur de réponse et ordre d'appel actuels, sous doc
   v4, avant d'écrire la v5. Sans quoi on ne saura pas si la v5 a changé quoi que ce soit.*
@@ -424,6 +467,98 @@ Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent p
   *Test négatif déjà acquis pour P4, mesuré le 2026-09-06 : le tour de 07:05 n'a produit ni réponse,
   ni ligne en base, ni octet dans le vault (B1).*
 
+### 6. Retrouver le thème à l'écriture · contexte partagé : nouvel outil de lecture sur `journal_kb_entries` + `capture_note` + doc système
+> **Ajoutée le 2026-09-06 (utilisateur).** La capacité 5 fait tenir la conversation ; celle-ci
+> traite le tour d'après : **une conversation neuve sur un thème déjà noté**. C'est l'option 1 des
+> deux que l'utilisateur a posées — les deux se cumulent, celle-ci agit *au moment de l'écriture*,
+> pendant que l'utilisateur est là pour corriger.
+
+**Le fait qui commande cette capacité — mesuré le 2026-09-06.** `list_documents` fait
+`documents_dir.glob("*.md")` (`journal_vault.py:479-484`) : il est **structurellement aveugle** à
+`notes/`. Une note de lecture n'est donc pas retrouvable, quel que soit le comportement du modèle
+— ce n'est pas une consigne à durcir, c'est une information hors de portée. *Même nature d'erreur
+que D0 et D8 : le modèle ne peut pas respecter une consigne que son outillage rend impossible.*
+
+Ce qui manque n'est pas à construire : `journal_kb_entries` (migration `009`) porte déjà
+`title`, `tags[]`, `nature[]`, `uri`, `created_at`, avec index GIN sur les tags. Il lui manque un
+outil de lecture. **Preuve que l'index suffit et que le défaut est réel**, les 4 entrées présentes :
+
+| titre | nature | tags | fichier |
+|---|---|---|---|
+| Mémoires de Charles de Gaulle | `note_de_lecture` | histoire, militaire, Charles de Gaulle | `notes/2026/2026-09-06-…` |
+| EU Space Act et équipementiers | `note_de_lecture` | Safran, EU Space Act, constellations, Airbus | `…-equipementiers.md` |
+| EU Space Act et autorisation unique | `note_de_lecture` | espace, réglementation, EU Space Act, … | `…-autorisation-unique.md` |
+| **EU Space Act et équipementiers** | `note_de_lecture` | espace, réglementation, EU Space Act, … | `…-equipementiers-2.md` |
+
+**Deux entrées de titre strictement identique, deux fichiers.** C'est le doublon de la capacité 2,
+reproduit à l'identique du côté `notes/` — et il a la même cause : un adressage sans son outil de
+lecture (D5).
+
+- [ ] Outil de **lecture** `search_notes` sur `journal_kb_entries` : rend `titre`, `tags`,
+  `nature`, `uri`, `date` — **jamais le corps**, même règle et même raison que `list_documents`
+  (la question est « ce thème existe-t-il déjà ? », pas « que disait-il ? »). `effect=READ`,
+  `taints_context=false` (contenu de l'utilisateur, cf. la docstring de `list_documents`).
+- [ ] Le doc système dit **quand** l'appeler — avant d'écrire une note, quand l'utilisateur reprend
+  un sujet — jamais *comment*. L'outil vient de `registry.py`, comme les autres (invariant A3).
+- [ ] La capture reste une **note neuve** (D12, choix utilisateur) : rien n'est réécrit. Elle porte
+  un lien `enfant` vers le thème. La note pré-existante n'est **pas touchée**.
+- [ ] Amender la docstring de `capture_note` : elle justifie aujourd'hui le mode `note` par
+  « cinq notes sur le même sujet coexistent lisiblement ». C'était vrai comme *contrat d'écriture*,
+  c'est faux comme *contrat de relecture* — et un correctif qui n'enlève pas la justification
+  périmée laisse la prochaine session la rétablir de bonne foi.
+
+- **Acceptation** : rejeu de **C10** — une conversation neuve reprenant les *Mémoires de Charles de
+  Gaulle*. Attendu : une ligne `search_notes` dans `agent_tool_calls` **avant** la ligne
+  `capture_note` ; un `.md` neuf portant un lien `enfant` vers le thème ; et
+  `2026-09-06-memoires-de-charles-de-gaulle.md` **inchangé au bit près** (`git diff` = vide sur ce
+  fichier, pas `+n / -0` : zéro).
+  ⚠️ *Le test négatif se mesure d'abord, et il est déjà à moitié acquis* : `search_notes` n'existe
+  pas → 0 appel, et la paire `EU Space Act et équipementiers` / `…-2` est la trace de ce que
+  produit son absence. **À requêter avant le lot**, pas à recopier d'ici : la capacité 5 aura pu
+  déplacer la ligne de base, comme elle l'a fait pour la capacité 3.
+
+### 7. Agent d'organisation de la base de connaissance · contexte partagé : `journal_kb_entries` + table de liens + notes globales dérivées + planificateur
+> **Ajoutée le 2026-09-06 (utilisateur).** L'option 2 : une passe **hebdomadaire** qui regroupe les
+> entrées voisines, pose les tags et tisse les liens — dans l'esprit du *LLM wiki* de Karpathy qui
+> inspire déjà `KNOWLEDGE_ARCHITECTURE.md`. Elle ne remplace pas la capacité 6 : celle-ci relie au
+> moment où l'utilisateur est présent, celle-là rattrape le reste, à froid, sur tout le corpus.
+
+⚠️ **C'est le premier composant autorisé à écrire dans le vault sans que l'utilisateur soit là.**
+Tout le reste du chantier tient sur « on ajoute, on ne réécrit jamais ». D13 et D14 sont ce qui
+rend cette capacité acceptable, et elles ne se négocient pas en cours de route :
+**la passe n'écrit que du dérivé** (notes globales, table de liens) et **ne touche aucun octet** de
+`notes/` ni de `documents/`.
+
+- [ ] Table `journal_kb_links` : `(from_doc_id, to_doc_id, type, created_by, created_at)`, `type ∈
+  {enfant, voisin}` (D12), contrainte d'unicité sur le triplet. Le graphe vit en base — dérivé,
+  reconstructible, jamais l'unique domicile d'un fait.
+- [ ] **Notes globales dérivées**, une par thème : elles assemblent les entrées liées en `enfant`,
+  portent en tête un avertissement « note assemblée, ne pas éditer à la main », et un lien vers
+  chaque enfant (D14 — le retour est rendu par `Backlinks()`, rien à écrire). Régénérées à chaque
+  passe.
+- [ ] La passe **ne propose pas, elle applique** — mais uniquement sur du dérivé, et le vault est
+  versionné en git : chaque passe est un commit, donc annulable d'un `git revert`. *C'est cette
+  réversibilité qui remplace la confirmation, exactement comme D6 pour `capture_note`.*
+- [ ] Cadence hebdomadaire. Le planificateur existe déjà (`check_objectif_reminders` tourne chaque
+  minute) — **ne pas introduire un second mécanisme de planification** pour une passe par semaine.
+- [ ] Le résultat est **rendu compte** : un message Slack listant ce que la passe a regroupé, sans
+  quoi elle travaille dans le dos de l'utilisateur — ce qui est précisément le reproche fait aux
+  systèmes de rangement automatique.
+
+- **Acceptation**, sur le corpus réel (les 4 entrées ci-dessus, dont la paire *EU Space Act et
+  équipementiers*) :
+  1. Après une passe, les entrées `EU Space Act` sont **enfants d'un même thème**, et il existe une
+     note globale qui les assemble toutes.
+  2. `git diff` de la passe : **aucune ligne retirée ni modifiée** sous `notes/` et `documents/`.
+     Une seule ligne `-` sur un fichier source fait échouer la capacité.
+  3. **Une seconde passe immédiate produit un diff vide.** C'est le critère qui distingue un
+     assembleur d'un générateur qui bavarde ; sans lui, chaque semaine réécrit tout et l'historique
+     git du vault devient illisible.
+  4. Une entrée que rien n'apparente reste **sans parent** — elle n'est pas rattachée de force au
+     thème le moins éloigné. *Le test négatif s'écrit là : injecter une note hors-sujet et vérifier
+     qu'elle reste orpheline. Un agent de regroupement qui ne laisse jamais d'orphelin ne mesure
+     rien, il range tout.*
+
 ---
 
 ## Annexe — contrats détaillés
@@ -433,7 +568,7 @@ Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent p
 | Classe | Déclencheur verbatim observé | Traitement cible |
 |---|---|---|
 | `note_lecture` | « Note de lecture Safran : … » (C1) | `capture_note` mode `note` → vault |
-| `stockage_source` | « Stocke ce lien dans une liste… » (C2, C6, C8) | `capture_note` mode `append` → `listes/{slug}.md` |
+| `stockage_source` | « Stocke ce lien dans une liste… » (C2, C6, C8) | `capture_note` mode `document` → `documents/{slug}.md` |
 | `rappel` | « Rappelle-moi samedi 9h… » (C3, C6, C7) | `create_reminder` → carte colonne `Rappels` |
 | `question` | « Revue de l'actualité… » (C4) | réponse + `web_search` (Exa, actif) |
 | `conversation` | « Bonjour » | tour normal |
@@ -454,14 +589,20 @@ egress         = none      # pas de sortie réseau
 Le régime de confirmation **découle** de ce manifeste (`agent_tools/policy.py`, fonction pure) — il
 n'est jamais écrit à la main.
 
-Arborescence cible du vault (les deux premiers répertoires n'existent pas encore) :
+Arborescence du vault — **état réel au 2026-09-06**, corrigée : la version figée décrivait
+`listes/` et un mode `append`, tous deux abandonnés par l'amendement de la capacité 2 (l'adressage,
+pas la forme). *Une annexe périmée est le défaut D0 en miniature — elle finit par être lue comme
+une spécification.*
 
 ```
 /storage/journal-vault/
-  notes/{slug}.md      ← capture_note mode "note"    (C1)
-  listes/{slug}.md     ← capture_note mode "append"  (C2, C6, C8)
-  tasks/…              ← miroir kanban, déjà livré
+  notes/{année}/{AAAA-MM-JJ}-{slug}.md   ← capture_note mode "note"      (C1)  — adressage daté
+  documents/{slug}.md                    ← capture_note mode "document"  (C2, C6, C8) — par nom
+  tasks/…                                ← miroir kanban, déjà livré
 ```
+
+À venir, capacité 7 : une note globale **dérivée** par thème (D13), assemblant les entrées liées en
+`enfant` — hors des deux répertoires sources, qui restent en écriture par ajout seul.
 
 ### A3 — Invariants de sécurité (non négociables)
 
