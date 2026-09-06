@@ -357,11 +357,21 @@ Trois faits, requêtés dans les logs, la base et le vault. Ils ne se rejouent p
 | **B2** | `agent_conversations.load_recent_turns` filtre sur `channel_id` **seul** et rend les 20 derniers tours du channel, `thread_ts` ignoré à la lecture (il n'est écrit que pour l'audit, et vaut toujours `slack_ts`). | **La « conversation » n'existe pas dans le code.** L'historique est une fenêtre glissante qui colle un tour du 09-06 à côté d'un tour du 08-24 : impossible d'y accrocher une posture ou un document courant. |
 | **B3** | Le vault porte `2026-09-06-memoires-de-charles-de-gaulle.md` (réel) et **trois** fichiers `eu-space-act-*` datés du 09-05 pour un même thème. Le tour de 06:51 a appelé `capture_note` **seul** — pas de `list_documents` avant. | Une note de lecture part en mode `note` (fichier daté neuf) à chaque tour. Le thème se fragmente **par construction** : c'est le symptôme que l'amendement nomme. |
 
-- [ ] **B1 d'abord — router la réponse en fil vers l'agent.** `_handle_thread_message` retombe sur
+- [x] **B1 d'abord — router la réponse en fil vers l'agent.** `_handle_thread_message` retombe sur
   `handle_conversation_turn` quand le fil n'est ni une session journal v2 ni un fil de l'ancien
   journal, et que le channel est `ASSISTANT_CHANNEL_ID`. L'ordre des branches reste normatif : le
   journal garde la priorité. *C'est un correctif de routage, pas une posture — il se livre et se
   vérifie séparément, sinon son échec sera lu comme un échec de la v5.*
+  ✅ **Livré le 2026-09-06** (commit `1970700`, HTTP 200, un seul conteneur). La branche reprend les
+  deux gardes des branches parentes — dédup d'événement (elle écrit dans le vault) et auteur humain
+  — et `agent_chat` rattache désormais réponse, historique et audit à la **racine** du fil
+  (`thread_ts` était écrit mais jamais lu). Checks §I et §J : **12 assertions neuves, 157 au total**,
+  écrites au point de lecture réel (`_handle_thread_message`, `handle_conversation_turn`) et
+  **éprouvées par deux passes négatives** — branche retirée → *« une réponse en fil d'#assistant
+  atteint l'agent — appels=0 »* ; racine remise à `slack_ts` → *« la réponse est postée sous la
+  racine du fil, pas sous elle-même — ['222.2'] »*.
+  ⚠️ *Ce que B1 ne fait pas* : le tour de suite part avec l'historique **du channel** (B2 intact).
+  Ça répond, ça ne tient pas encore la posture ni le document courant.
 - [ ] **B2 — donner une portée à la conversation.** `load_recent_turns` prend le fil comme borne
   (cf. **D11**), et c'est cette même borne qui porte l'état de posture et le document courant.
 - [ ] La posture **et** le document courant sont portés par la conversation, jamais par le

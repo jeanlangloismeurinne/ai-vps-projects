@@ -1,10 +1,11 @@
 ---
 project: assistant-ia
-updated: 2026-09-05
+updated: 2026-09-06
 role: >
   Permet de reprendre le chantier « l'agent classe l'intention et capte la donnée ». Le doc système
   est réaligné, le chemin d'écriture vers le vault existe et les contrats d'outil laissent enfin
-  l'action aboutir (capacités 1, 2 et 3 livrées). Restent la restitution vérifiable et les postures.
+  l'action aboutir (capacités 1, 2 et 3 livrées) ; répondre dans le fil atteint enfin l'agent.
+  Restent la restitution vérifiable et les postures, qui doivent tenir sur la conversation entière.
 ---
 
 # Prompt de reprise — assistant-ia
@@ -24,8 +25,15 @@ le corps de la carte.
 Le résultat qui compte, mesuré au rejeu réel : **un seul message produit trois outils enchaînés**
 (`list_documents` → `capture_note` → `create_reminder`) et **deux effets durables** — un document
 dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contre l'image construite
-(`checks/replay_intent_corpus.py`), **145 assertions vertes** hors-ligne
+(`checks/replay_intent_corpus.py`), **157 assertions vertes** hors-ligne
 (`checks/check_agent_tools.py`), éprouvées par deux passes négatives par capacité.
+
+**B1 livré le 2026-09-06** (commit `1970700`) : **répondre dans le fil atteint enfin l'agent.**
+Jusque-là, tout message porteur d'un `thread_ts` partait vers les seules branches du journal et se
+perdait en silence — mesuré le matin même à 07:05, sur la suite d'une note de lecture : aucune
+réponse, aucune ligne en base, rien dans le vault. `agent_chat` rattache maintenant réponse,
+historique et audit à la **racine** du fil. C'est le préalable de la capacité 5 : on ne peut pas
+faire tenir une posture sur une conversation dont la moitié des tours n'arrive pas.
 
 ## Reste à faire / dettes ouvertes
 
@@ -44,14 +52,10 @@ dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contr
   est une **portée**, pas une mémoire — un agent qui retient le fichier d'hier écrira avec confiance
   dans un nom périmé, ce qui est le doublon de la capacité 2 par l'autre bout. **D11 tranché : la
   conversation est le fil Slack.**
-- 🔴 **B1 — une réponse en fil n'atteint jamais l'agent.** Mesuré le **2026-09-06 à 07:05** :
-  `slack_app.py:52` route tout message porteur d'un `thread_ts` vers `_handle_thread_message`, qui
-  ne connaît que les fils du journal → `WARNING message non traité`, **aucune réponse, aucune ligne
-  en base, rien dans le vault**. Rien de la capacité 5 n'est testable avant ce correctif de
-  routage, et il se livre **séparément** : sinon son échec sera lu comme un échec de la v5.
-- **B2 — la « conversation » n'existe pas dans le code.** `load_recent_turns` filtre sur
-  `channel_id` seul et rend les 20 derniers tours du channel ; `thread_ts` est écrit mais **jamais
-  lu**. La fenêtre colle un tour du 09-06 à côté d'un tour du 08-24.
+- **B2 — la « conversation » n'existe pas encore dans le code.** `load_recent_turns` filtre sur
+  `channel_id` seul et rend les 20 derniers tours du channel : la fenêtre colle un tour du 09-06 à
+  côté d'un tour du 08-24. C'est ce qui reste à faire pour que la posture et le document courant
+  aient où se poser. *(B1, le correctif de routage, est livré — voir ci-dessous.)*
 - **Le vault porte des doublons de rejeu.** `documents/sources-utiles.md`, `startups-spatial*.md`,
   `courses.md`, `climatisation-r*.md` — produits par mes passes de test des 09-05, l'utilisateur
   n'y a rien écrit. À vider ou supprimer d'un clic dans Obsidian.
@@ -71,6 +75,16 @@ dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contr
 - **Interdire un rangement ne suffit pas sans interdire ses contournements.** « n'entre pas dans le
   rappel » a laissé le modèle produire un aparté `(À prendre chez toi : …)`. C'est « ni en aparté,
   ni entre parenthèses » qui a fait passer l'assertion au vert.
+- **Un champ écrit mais jamais lu est un faux ami.** `agent_conversations.thread_ts` était rempli
+  depuis le premier jour — il valait toujours `slack_ts`, et aucune requête ne le lisait. Vu de la
+  base, la conversation *semblait* modélisée ; en réalité elle ne l'était pas. Avant de bâtir sur
+  une colonne, chercher qui la **lit**, pas qui l'écrit.
+- **Le dernier `else` d'un dispatcher est l'endroit où les messages meurent.** La branche « fil »
+  interrogeait deux propriétaires possibles (journal v2, ancien journal) et **journalisait un
+  WARNING** quand aucun ne revendiquait — un `logger.warning` n'est pas un traitement. Le message
+  était perdu sans erreur, sans réponse et sans trace côté utilisateur. Pour toute branche
+  terminale : ou bien c'est hors périmètre *et le périmètre est borné explicitement*, ou bien il
+  manque un propriétaire.
 - **Une passe négative qui produit une trace de pile ne prouve rien** : mon check mourait sur la
   première `ToolError` au lieu de rougir ses assertions, emportant les sections suivantes. Rattraper
   le refus et le traiter comme un **résultat mesuré** — sinon on ignore ce que le check gardait.
@@ -93,14 +107,7 @@ dans le vault et une carte datée. Acceptation **9/9, deux fois de suite** contr
 
 ## Où démarrer
 
-**B1 en premier, et seul.** Le correctif de routage : une réponse en fil dans `#assistant`, qui
-n'est ni une session journal v2 ni un fil de l'ancien journal, retombe sur
-`handle_conversation_turn`. L'ordre des branches reste normatif (le journal garde la priorité).
-Se livre et se vérifie **avant** d'ouvrir la v5 — c'est un tour perdu en production, pas une
-question de posture, et le confondre avec §5 rendrait les deux illisibles. *Le test négatif est
-déjà acquis et daté : le tour de 07:05 le 2026-09-06.*
-
-Puis deux capacités indépendantes, dans l'ordre de valeur :
+Deux capacités indépendantes, dans l'ordre de valeur :
 
 **§5 (postures situées)** — c'est la demande explicite de l'utilisateur : que l'agent adapte sa
 manière de répondre à la situation (exploration ≠ action ≠ capture), **et qu'il garde cette posture
