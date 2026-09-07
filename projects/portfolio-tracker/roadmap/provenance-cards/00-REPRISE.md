@@ -2,17 +2,17 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-05
+updated: 2026-09-07
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2 (cartes de provenance). Contrat FIGÉ · couche 2
   DÉPLOYÉE · boucle V2 complète (décider → surveiller → sortir → apprendre, lots 7-9) · écrans
   UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est la **révision du
   modèle de fiabilité** (autorité contre actualité) ; RVMD reste le banc d'essai des modes de panne
-  du socle (14 défauts F1→F14). État au 2026-09-05 (4) : **1 638 assertions / 0 échec / 21 scripts**,
+  du socle (15 défauts F1→F15). État au 2026-09-07 : **1 704 assertions / 0 échec / 22 scripts**,
   migrations appliquées jusqu'à **034**, prochaine 035. Roadmap active :
-  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1 et 2 CLOSES**, prochain jalon
-  **capacité 3** (l'axe `actualité`, calculé à la lecture).
+  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1, 2 et 3 CLOSES**, prochain jalon
+  **capacité 4** (la porte de complétude à trois états).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -27,13 +27,19 @@ role: >
 
 **`roadmap/02-spec-autorite-vs-actualite.md`** (statut `figée`, ouverte le 2026-09-05) — révision du
 modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé.
-**Capacités 0, 1 et 2 CLOSES**, toutes le 2026-09-05 : table de profils co-écrite (#50, 174
-assertions) · axe `nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des
-sources (#52, 75 assertions).
-**Prochain jalon : capacité 3** — l'axe **actualité**, calculé à la lecture et **jamais persisté**
-(le persister reproduirait par construction le défaut n°2 : un corpus qui ne vieillit pas). Son
-`contexte partagé` est déjà livré : `knowledge/material_events.py` + `knowledge/staleness.py`.
-Migration à écrire *juste avant* son lot, jamais en avance — la prochaine est **035**.
+**Capacités 0, 1, 2 et 3 CLOSES** : table de profils co-écrite (#50, 174 assertions) · axe
+`nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 75
+assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07).
+**Prochain jalon : capacité 4** — la **porte de complétude à trois états** (`couvert` ·
+`couvert_perime` · `non_couvert`), avec **deux remèdes distincts** : un mandat de *rafraîchissement*
+quand le champ a des entries mais périmées, un mandat de *collecte* quand il n'en a pas. C'est le
+lot qui rend enfin agissant tout ce qui précède — jusqu'ici le système *sait* qu'un fait est périmé
+et la porte le compte quand même comme couvrant.
+⚠️ **Son test central mesure une LIGNE DE BASE, qui se requête AVANT le lot** — combien de champs
+passent de `couvert` à `couvert_perime` sur RVMD. C'est pour la préserver que la capacité 3 s'est
+interdit de lire `FIELD_PROFILES` (assert §10 de `check_actualite.py`), et c'est aussi là que
+`_DESSERRAGE_NON_CABLE` se solde. Migration à écrire *juste avant* son lot, jamais en avance — la
+prochaine est **035**.
 
 ⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) doit précéder le
 durcissement de la porte (4), sinon tout champ devient `couvert_perime` sans remède disponible.
@@ -48,7 +54,7 @@ tâches indépendantes.
 `roadmap/01-spec-v2-unifiee.md` §18 reste la roadmap de **référence** du projet (découpage en lots),
 mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qui s'exécute.
 
-## Où on en est (2026-09-05)
+## Où on en est (2026-09-07)
 
 **Le système est exercé, pas prototypé.** La chaîne complète a tourné de bout en bout sur trois
 émetteurs, et on connaît désormais ses modes de panne — c'est le principal actif du chantier.
@@ -59,7 +65,7 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | Readiness | `ready`, 0 gap | `ready`, 0 dérogation | dimension `valorisation` fondée sur ses 3 champs |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 638 assertions / 0 échec / 21 scripts** — une seule commande,
+- **Suite hors-ligne : 1 704 assertions / 0 échec / 22 scripts** — une seule commande,
   **`bash checks/run_all.sh`** (versionné depuis le 2026-09-05 (3)). Il porte les invocations
   correctes : montage `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) et
   réseau `coolify` + `CHECK_DB_URL` pour `check_entry_nature`. ⚠️ **Ne pas le réécrire dans
@@ -71,7 +77,7 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
 
-### RVMD — 14 défauts du socle, tous trouvés avant ou après dépense, jamais par le contrat
+### RVMD — 15 défauts du socle, tous trouvés avant ou après dépense, jamais par le contrat
 
 C'est le résultat le plus réutilisable du chantier : **onze défauts sur douze ont été trouvés à
 coût de modèle nul**, en exécutant les producteurs déterministes et en **lisant leur sortie en
@@ -85,40 +91,61 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Format (F10, F11) | montants écrasés à « 0,0 Md » ; un CA nul sauté par `if x:` | 0 token | #45, #46, #47 |
 | Premier vrai modèle (F12, F13) | pas de date dans le message (le modèle datait le présent à sa coupure) ; drapeau calculé mais jamais persisté | ~0,0105 $/mandat | — |
 | Péremption (F14) | `source_date` datée du flux sur un ratio de bilan | 0 token | **#48** |
+| Partition (F15) | une entry **non datée** rangée à la fois dans `posterieures` et dans `non_datees` — 4 classes pour 3 entries, et une date *inconnue* comptée parmi les fraîches | 0 token | **#53** |
 
-### Livré cette session (2026-09-05, 4) — capacité 2 close : le registre nominatif des sources
+### Livré cette session (2026-09-07) — capacité 3 close : l'axe `actualité`
 
 **Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`. Ce qui
 doit rester ici :
 
-- **`knowledge/source_registry.py` est le détenteur unique** de la règle d'admission. Quatre sources
-  admises pour RVMD, co-choisies avec l'utilisateur : `endpts.com`, `statnews.com`,
-  `fiercebiotech.com`, `biopharmadive.com` — portée `secteur:biotech_clinique`, natures
-  `{interpretation}`, tier **B**, motif écrit. `checks/check_source_registry.py` : **75
-  assertions**, test négatif **5/5**. Convention **#52**.
-- 📌 **L'ordre `nature` PUIS `registre` est load-bearing.** `qualify()` dérive la nature depuis le
-  source_type **générique**, et n'applique le registre que si celui-ci vaut encore
-  `web_search_generic`. Replier la promotion dans `classify_source_type` (premier câblage, corrigé
-  avant exécution) faisait sortir `endpts.com` en `web_search_reputable` **avant** toute question de
-  nature : une source admise pour l'interprétation gagnait du standing sur une **mesure**.
-- 📌 **Deux sites de câblage, et le second est celui qui compte** : `store_knowledge` qualifie avant
-  de scorer, mais c'est l'appel dans `worker.py` **avant le filtre `reliability_min`** qui fait que
-  le registre admet réellement quelqu'un — le worker rejette sous plancher avant d'atteindre
-  `store_knowledge`.
-- ⚠️ **Le secteur est déclaré en CODE, et c'est une mesure qui l'a décidé** : `tickers.sector` est
-  **NULL sur les 17 tickers**. Un registre clefé dessus n'aurait admis personne, silencieusement.
-- ⚠️ **Le desserrage B+ → B n'a TOUJOURS pas de bénéficiaire effectif au gate**, et c'est nommé dans
-  `_DESSERRAGE_NON_CABLE` (§1bis du check). La doctrine vit dans `FIELD_PROFILES`, la porte lit
-  `FIELD_PLANCHER_OVERRIDES` (qui ne porte que `marche.croissance_marche_historique`) ; les
-  planchers de dimension `positionnement` et `marche` valent B+. Une entry `endpts.com` à 0,65 est
-  admise par le registre et **encore refusée** par la porte. Le câblage appartient à la **capacité
-  4** : le faire maintenant perturberait la ligne de base que son test central doit mesurer AVANT
-  le lot. L'assert vire au vert de lui-même ce jour-là.
-- 📌 **Rappel load-bearing de la capacité 1** : la nature d'une **entry** et la nature dominante d'un
-  **champ** sont deux vocabulaires (#51) — la porte lira la première. `evenement` reste une classe
-  **vide déclarée** (66 `mesure` / 68 `interpretation` / 0), sans émetteur ; elle se remplit à la
-  capacité 3. Le contrat C1 n'a délibérément **pas** de champ `nature` : ne pas l'ajouter « pour
-  compléter ».
+- **`knowledge/actualite.py` est le détenteur unique** de la question « ce fait est-il antérieur à
+  l'ancre ? ». Trois états jamais recombinés en un nombre : `courante` / `perimee` /
+  `indeterminable`. `staleness.py` **traduit** vers le vocabulaire du rapport (`posterieures` /
+  `suspectes` / `non_datees`) via `classe_rapport()` — il ne recalcule rien (#46).
+  `checks/check_actualite.py` : **66 assertions**, test négatif **5/5**. Convention **#53**.
+- 📌 **L'axe ne sera JAMAIS une colonne.** C'est une propriété de la *relation* entre une entry et
+  une ancre, calculée **à la lecture**. La stocker la figerait — c'est littéralement la cause n°2 du
+  diagnostic : un corpus dont le score est fixé à l'écriture ne vieillit jamais, donc ne peut jamais
+  signaler qu'il a vieilli.
+- 🔴 **F15, trouvé à coût de modèle nul** — le douzième défaut sur quinze. Tant que la partition
+  vivait dans `staleness`, la branche « aucun événement matériel » évaluait **deux prédicats
+  indépendants** : l'entry non datée sortait dans `posterieures` **et** dans `non_datees` — somme des
+  trois classes = 4 pour 3 entries actives, et une date *inconnue* comptée parmi les fraîches, soit
+  exactement ce que la docstring du module interdisait. Invisible au diff et à la suite de checks ;
+  sorti en **exécutant le producteur et en lisant sa sortie en texte**. Fermé par construction : le
+  passage par un état unique rend la double appartenance non représentable.
+- ⚠️ **Un test négatif peut faire rougir le CHECK et non le module.** Le premier cas de sabotage
+  tuait le script *avant son bilan* (2ᵉ des trois faux verts, §24). Correctif dans le **check**, pas
+  dans le module : `axe()` et `_balayage()` transforment une exception en **FAIL nommé**, avec un
+  état de repli hors vocabulaire pour qu'aucun assert ne puisse être satisfait par accident.
+- ⚠️ **Un grep d'interdit lit sa propre énonciation.** §10 cherchait `superseded_by`, `FIELD_PROFILES`,
+  `actualite_bloquante` dans `actualite.py` — et les trouvait dans sa **docstring**, qui les nomme
+  précisément pour les interdire : 4 FAIL sur du code conforme. Le check dépouille désormais la
+  docstring avant de greper, et vérifie **en positif** qu'elle porte bien les interdits.
+- 📌 **`evenement` reste une classe VIDE DÉCLARÉE — la capacité 3 ne l'a pas remplie**, contrairement
+  à ce que ce fichier annonçait. Re-mesuré en base le 2026-09-07 : **66 `mesure` / 68
+  `interpretation` / 0 `evenement`**, inchangé. C'est une erreur de *prédiction*, pas une omission
+  d'exécution : l'axe ne fabrique aucune entry, et `material_events` *signale* sans jamais écrire
+  (#49). ⚠️ Ne pas le « corriger » en ajoutant un champ `nature` au contrat C1.
+
+### Reste ouvert des capacités précédentes (à ne pas re-découvrir)
+
+- **`knowledge/source_registry.py`** (#52, capacité 2) : l'ordre **`nature` PUIS `registre`** est
+  load-bearing — `qualify()` n'applique le registre que si le source_type vaut encore
+  `web_search_generic`, sinon une source admise pour l'*interprétation* gagnerait du standing sur une
+  **mesure**. Et le site de câblage qui compte est l'appel dans **`worker.py` avant le filtre
+  `reliability_min`** : le worker rejette sous plancher avant d'atteindre `store_knowledge`.
+- ⚠️ **Le desserrage B+ → B n'a toujours pas de bénéficiaire effectif au gate**, nommé dans
+  `_DESSERRAGE_NON_CABLE` (§1bis de `check_source_registry.py`). La doctrine vit dans
+  `FIELD_PROFILES`, la porte lit `FIELD_PLANCHER_OVERRIDES` (qui ne porte que
+  `marche.croissance_marche_historique`). Une entry `endpts.com` à 0,65 est admise par le registre et
+  **encore refusée** par la porte. Le câblage appartient à la **capacité 4** — le faire d'avance
+  perturberait la ligne de base que son test central doit mesurer AVANT le lot. L'assert vire au vert
+  de lui-même ce jour-là.
+- ⚠️ **`tickers.sector` est NULL sur les 17 tickers** : un registre (ou une règle) clefé dessus
+  n'admettrait personne, silencieusement. C'est pourquoi le secteur est déclaré en CODE.
+- 📌 **#51 — deux vocabulaires** : la nature d'une **entry** et la nature dominante d'un **champ**.
+  La porte lira la première.
 
 ⚠️ **Toujours vrai** : le balayage de péremption *signale*, il ne *décide* pas. Les 24 entries
 suspectes de RVMD restent actives et la porte (#29) les compte comme couvrantes. **Un corpus complet
@@ -238,14 +265,17 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
   standing est une propriété du COUPLE source × nature), **#51** (nature d'une ENTRY ≠ nature
   dominante d'un CHAMP : deux vocabulaires, le second ne dérive jamais le premier ; `mesure`
   n'est jamais accordée par défaut), **#52** (une source est admise pour un COUPLE source × nature,
-  et l'ordre `nature` puis `registre` est ce qui rend cette phrase vraie ; plafond ≠ qualification).
+  et l'ordre `nature` puis `registre` est ce qui rend cette phrase vraie ; plafond ≠ qualification),
+  **#53** (l'axe `actualité` est une propriété de la RELATION entry × ancre, calculée à la lecture et
+  jamais stockée ; `indeterminable` n'est pas `courante` ; le seuil est le `reportDate`, jamais le
+  `filingDate`).
 - **Specs** : `roadmap/00-principe-directeur-v2.md` · `roadmap/01-spec-v2-unifiee.md`
   (§5 agents, §7 curator/readiness, §8 contrats, §14 migrations, §16 UX, §18 découpage).
 - **Cartes de contrat** : `roadmap/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
 - **Code** : `backend/app/agents/v2/` (`worker.py` · `curator.py` · `analysis.py` · `runner.py`) ·
   `backend/app/knowledge/` (`service.py` · `websearch.py` · **`source_registry.py`** ·
   `edgar_feed.py` · `synthesis_feed.py` · `financials_feed.py` · `valuation_feed.py` · `units.py` ·
-  **`material_events.py`** · **`staleness.py`**) · `backend/app/contracts/` ·
+  **`material_events.py`** · **`staleness.py`** · **`actualite.py`**) · `backend/app/contracts/` ·
   `backend/checks/README.md`.
 - **Historique complet** : `00-REPRISE-ARCHIVE.md`. **Outillage transverse** :
   `../../../CHANTIER_OUTILLAGE_DEV.md` (§16 délégation, §24 tests négatifs, §25 porteurs d'un fait,
@@ -261,7 +291,7 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > + scorée + figée, jamais de texte libre. DÉCISION #1 = Option C (base neutre → bull/bear isolés →
 > réfutation bear→bull → synthèse).
 > Le chantier courant est le **3ᵉ ticker RVMD**, banc d'essai des modes de panne du socle :
-> **14 défauts (F1→F14)** trouvés et corrigés, onze à coût de modèle nul en lisant les sorties en
+> **15 défauts (F1→F15)** trouvés et corrigés, douze à coût de modèle nul en lisant les sorties en
 > texte. Le corpus a désormais **une horloge** (ancre d'événements matériels 8-K/6-K + balayage de
 > péremption qui rend un rapport, jamais un `superseded_by`).
 > **Roadmap active** : `roadmap/02-spec-autorite-vs-actualite.md` (figée le 2026-09-05) — *autorité
@@ -269,18 +299,20 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > même `ready` : un scalaire unique porte deux propriétés orthogonales et les confond. La révision
 > les sépare en **trois axes jamais recombinés** (fiabilité *stockée* · actualité *calculée à la
 > lecture* · nature *stockée*), et le standing devient une propriété du **couple (source × nature)**.
-> **Capacités 0, 1 et 2 CLOSES** : la table de profils des 19 champs (#50, 174 assertions) · l'axe
+> **Capacités 0, 1, 2 et 3 CLOSES** : la table de profils des 19 champs (#50, 174 assertions) · l'axe
 > `nature` en dérivé déterministe (#51, migration 034, 52 assertions) · le **registre nominatif des
-> sources** (#52, 75 assertions, 4 sources biotech co-choisies pour RVMD). Deux résultats sont
+> sources** (#52, 75 assertions, 4 sources biotech co-choisies pour RVMD) · l'axe **`actualité`**
+> (#53, `knowledge/actualite.py`, 66 assertions), calculé **à la lecture** et jamais persisté — le
+> persister reproduirait le défaut d'origine, un corpus qui ne vieillit pas. Trois résultats sont
 > load-bearing pour la suite : la nature d'une **entry** ≠ la nature dominante d'un **champ** (c'est
-> ce que la porte confrontera), et le standing s'accorde au **couple** (source × nature) — d'où
-> l'ordre `nature` PUIS `registre` dans `qualify()`.
-> **Prochain jalon = capacité 3** : l'axe **actualité**, calculé à la lecture et **jamais persisté**
-> (le persister reproduirait le défaut d'origine — un corpus qui ne vieillit pas). Son contexte
-> partagé est déjà livré : `material_events.py` + `staleness.py`.
+> ce que la porte confrontera) ; le standing s'accorde au **couple** (source × nature) — d'où l'ordre
+> `nature` PUIS `registre` dans `qualify()` ; et `staleness.py` **traduit** l'axe vers le vocabulaire
+> du rapport sans jamais le recalculer (#46 — c'était F15).
+> **Prochain jalon = capacité 4** : la porte de complétude à **trois états** (`couvert` / `couvert
+> mais périmé` / `non couvert`), qui consomme les trois axes sans les recombiner.
 > ⚠️ Ne pas réordonner les capacités : le registre des sources (2) DOIT précéder le durcissement
 > de la porte (4). ⚠️ Le desserrage B+ → B n'a toujours pas de bénéficiaire **au gate** : c'est la
-> capacité 4 qui câble `FIELD_PROFILES` dans `curator.recompute_coverage`, pas avant (sa ligne de
-> base doit être mesurée d'abord).
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#52**),
+> capacité 4 qui câble `FIELD_PROFILES` dans `curator.recompute_coverage`, pas avant — **sa ligne de
+> base se requête AVANT le lot**, pas après.
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#53**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

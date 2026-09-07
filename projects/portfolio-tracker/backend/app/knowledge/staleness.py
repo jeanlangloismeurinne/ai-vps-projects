@@ -31,6 +31,19 @@ Et le rapport lui-même a un état : si le flux des événements est injoignable
 ``indeterminable`` avec **zéro suspecte**, en le DISANT. Un rapport vide pour cause de panne se
 lirait « rien à re-vérifier » — une mesure incomplète qui écrase de la vérité (leçon §13 du
 `CHANTIER_OUTILLAGE_DEV.md`).
+
+La règle de classement ne vit PAS ici (F15, 2026-09-05)
+-------------------------------------------------------
+Ces trois classes sont le vocabulaire du RAPPORT ; la règle qui décide laquelle s'applique est
+l'axe `actualité` (`knowledge/actualite.py`), détenteur unique depuis la capacité 3. Ce module
+traduit, il ne recalcule pas.
+
+Le motif est une mesure, pas une préférence de style. Tant que la partition était écrite ici, la
+branche « aucun événement matériel » rangeait l'entry non datée dans `posterieures` **et** dans
+`non_datees` : trois classes totalisant 4 entries pour 3 actives, et l'entry sans date comptée
+parmi les fraîches — c'est-à-dire exactement ce que la docstring ci-dessus interdit. Le défaut
+n'était visible ni au diff ni dans la suite de checks ; il est sorti en exécutant le producteur et
+en lisant sa sortie en texte. Une règle recopiée re-diverge de sa doctrine au premier branchement.
 """
 
 from __future__ import annotations
@@ -38,6 +51,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
+from app.knowledge.actualite import classe_rapport, etat_actualite
 from app.knowledge.material_events import (
     ITEM_LABELS,
     MaterialEventLookup,
@@ -67,11 +81,11 @@ async def _entries_actives(conn, ticker_id: str) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def _resume_entry(row: dict[str, Any], seuil) -> dict[str, Any]:
+def _resume_entry(row: dict[str, Any], act) -> dict[str, Any]:
+    """Résumé d'une entry pour le rapport. L'écart au seuil est LU sur l'axe, jamais recalculé ici :
+    c'est la même soustraction, et deux sites qui la font sont deux sites à corriger (#46)."""
     contenu = (row.get("content") or "").strip().replace("\n", " ")
-    ecart = None
-    if row.get("source_date") is not None and seuil is not None:
-        ecart = (seuil - row["source_date"]).days
+    ecart = act.jours_avant_evenement if act is not None else None
     return {
         "id": row["id"],
         "titre": row.get("title"),
@@ -84,8 +98,29 @@ def _resume_entry(row: dict[str, Any], seuil) -> dict[str, Any]:
         "entry_type": row.get("entry_type"),
         "requires_human_review": row.get("requires_human_review"),
         "jours_avant_evenement": ecart,
+        # L'axe est reporté TEL QUEL à côté du vocabulaire du rapport : le lecteur voit sur quelle
+        # règle la classe repose, et un futur consommateur (capacité 4) n'a pas à la redériver.
+        "actualite": act.etat if act is not None else None,
+        "motif_actualite": act.motif if act is not None else None,
         "extrait": contenu[:_EXTRAIT] + ("…" if len(contenu) > _EXTRAIT else ""),
     }
+
+
+def _partition(entries: list[dict[str, Any]], lookup: MaterialEventLookup
+               ) -> dict[str, list[dict[str, Any]]]:
+    """Range les entries dans les trois classes du rapport, via l'axe `actualité`.
+
+    Une entry tombe dans EXACTEMENT une classe — c'est ce que garantit le passage par un état
+    unique. La version précédente évaluait deux prédicats indépendants et pouvait donc en placer
+    une dans deux classes (F15).
+    """
+    classes: dict[str, list[dict[str, Any]]] = {
+        "suspectes": [], "posterieures": [], "non_datees": [],
+    }
+    for r in entries:
+        act = etat_actualite(source_date=r.get("source_date"), ancre=lookup)
+        classes[classe_rapport(act.etat)].append(_resume_entry(r, act))
+    return classes
 
 
 def _motif(lookup: MaterialEventLookup) -> str:
@@ -144,10 +179,11 @@ async def balayage_peremption(conn, ticker_id: str) -> dict[str, Any]:
             "entries_actives": total,
             "seuil": None,
             "evenement": None,
-            "suspectes": [],
-            "posterieures": [_resume_entry(r, None) for r in entries],
-            "non_datees": [_resume_entry(r, None) for r in entries
-                           if r.get("source_date") is None],
+            # ⚠️ Partition par l'AXE, pas par deux prédicats indépendants : une entry non datée
+            # reste `non_datee` même quand aucun événement n'existe. La classer `posterieure`
+            # (« elle a pu en tenir compte ») serait un silence — il n'y a rien dont elle aurait
+            # pu tenir compte, et surtout on ignore de quand elle date. C'était F15.
+            **_partition(entries, lookup),
             "avertissement": (
                 "Cet émetteur n'a publié aucun 8-K/6-K : aucun événement matériel ne peut périmer "
                 "le corpus. Les dépôts périodiques restent couverts par l'ancre du search-worker."
@@ -158,15 +194,10 @@ async def balayage_peremption(conn, ticker_id: str) -> dict[str, Any]:
     assert evt is not None
     seuil = evt.event_date
 
-    suspectes, posterieures, non_datees = [], [], []
-    for r in entries:
-        sd = r.get("source_date")
-        if sd is None:
-            non_datees.append(_resume_entry(r, seuil))
-        elif sd < seuil:
-            suspectes.append(_resume_entry(r, seuil))
-        else:
-            posterieures.append(_resume_entry(r, seuil))
+    classes = _partition(entries, lookup)
+    suspectes = classes["suspectes"]
+    posterieures = classes["posterieures"]
+    non_datees = classes["non_datees"]
 
     # Le plus ancien d'abord : l'écart au seuil est l'ordre de suspicion le plus honnête dont on
     # dispose sans juger le CONTENU (ce que ce module s'interdit).

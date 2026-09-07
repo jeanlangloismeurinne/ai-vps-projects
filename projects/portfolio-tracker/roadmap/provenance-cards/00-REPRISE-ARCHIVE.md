@@ -25,6 +25,107 @@ car il décrit l'état atteint et les deux dettes ouvertes.
      2026-09-04 (5). Copie conforme, rien de résumé. -->
 <!-- Versés le 2026-09-05 (3) : les blocs des capacités 0 et 1 de la roadmap 02. -->
 <!-- Versé le 2026-09-05 (4) : le bloc de la capacité 2 (registre nominatif des sources). -->
+<!-- Versé le 2026-09-07 : le bloc de la capacité 3 (axe `actualité`) + le défaut F15. -->
+
+> ## ⚡ MàJ 2026-09-07 — capacité 3 : l'axe `actualité`, et le défaut F15
+>
+> **Aucune dépense de modèle. Aucune migration.** Livré : `knowledge/actualite.py` (l'axe, détenteur
+> unique de la règle), le refactor de `knowledge/staleness.py` qui le **traduit** au lieu de le
+> ré-implémenter, `checks/check_actualite.py` (**66 assertions**), la convention **#53**. Suite :
+> **1 704 / 0 / 22**.
+>
+> ### Pourquoi cet axe n'est pas une colonne
+>
+> C'est la seule des trois propriétés de #50 qui ne se stocke pas, et le refus est structurel, pas
+> esthétique. La fiabilité est une propriété de la **source**, la nature une propriété de
+> l'**assertion** : ce sont des faits sur la ligne. L'actualité est une propriété de la **relation**
+> entre le fait et l'ancre matérielle du moment — « ce fait décrit-il encore le monde ? » n'a pas de
+> réponse en soi. La persister la figerait, et **ce serait littéralement la cause n°2 du
+> diagnostic** : un corpus dont le score est arrêté à l'écriture ne vieillit jamais, donc il ne peut
+> pas signaler qu'il a vieilli. D'où des fonctions **pures**, sans IO, rejouées à chaque lecture.
+>
+> L'acceptation de la capacité est cette phrase rendue exécutable, et c'est §2 du check : la même
+> entry (ligne 186, datée du 2026-08-26), **inchangée en base**, est `courante` face au 8-K FDA du
+> 26/08 puis `perimee` face au 8-K accord du 27/08 — **sans qu'aucun `UPDATE` soit émis**, l'objet
+> rendu étant `frozen` et la ligne lue n'étant pas mutée (un axe calculé à la lecture n'écrit pas,
+> fût-ce en mémoire).
+>
+> ### F15 — trouvé à coût nul, fermé par construction, et non par un correctif
+>
+> Soupçonné en **lisant** la branche `none` de `staleness`, puis **prouvé en exécutant le
+> producteur et en lisant sa sortie en texte** — pas en faisant confiance à la lecture. Le script de
+> mesure (jetable, supprimé) imprimait la partition sans aucune assertion :
+>
+> ```
+> --- branche none (aucun 8-K publié) → statut=aucun_evenement
+>     entries_actives = 3
+>     posterieures = [1, 2, 999]
+>     non_datees   = [999]
+>     somme des trois classes = 4   (attendu 3)
+>     entries présentes dans DEUX classes = [999]
+> ```
+>
+> Deux prédicats **indépendants**, chacun juste séparément : « faute d'événement, tout est
+> postérieur » et « sans date, non datée ». L'entry 999 tombait dans les deux. Or `posterieure` se
+> lit « elle a pu tenir compte de l'événement » — une entry de date **inconnue** était donc comptée
+> parmi les fraîches, c'est-à-dire exactement ce que la docstring du module interdisait trois
+> paragraphes plus haut. Invisible au diff, invisible à la suite de checks (aucun ne regardait cette
+> branche), et aucun nombre faux pour l'annoncer.
+>
+> Fermé **par la forme** : une entry passe par un **état unique**, puis une table de traduction
+> (`CLASSE_RAPPORT`) la range. Une classe, jamais deux. §9 du check **reproduit d'abord** l'ancienne
+> partition à deux prédicats pour prouver qu'il y avait quelque chose à corriger, avant de montrer
+> la nouvelle correcte — montrer le seul état correct n'aurait rien établi (#37 transposé).
+>
+> ### Le test négatif a d'abord fait rougir MON CHECK, pas le module
+>
+> Cas n°1 (propagation de la panne retirée) : `etat_actualite` tombe sur son
+> `assert ancre.event is not None`. Le module **échoue fermé**, ce qui est le bon comportement — mais
+> le check mourait alors sur la traceback, **sans ligne de bilan**, donc sans pouvoir nommer l'assert
+> qui aurait dû rougir. C'est le **deuxième des trois faux verts** (§24 du `CHANTIER_OUTILLAGE_DEV`) :
+> un script mort avant ses asserts ne prouve rien, il se contente de ne pas contredire.
+>
+> Deux filets ajoutés — `axe()` et `_balayage()` — qui transforment une exception en **FAIL nommé**.
+> L'état de repli porte un nom **hors vocabulaire** (`(exception)`) : il ne peut donc satisfaire
+> aucun assert d'état par accident, et les sections suivantes rougissent elles aussi au lieu de
+> passer au vert sur un objet complaisant. Les cinq cas, chacun rouge sur son assert nommé et le
+> script atteignant son bilan à chaque fois :
+>
+> | Cas | Bilan | Assert nommé qui a rougi |
+> |---|---|---|
+> | propagation de la panne retirée | 63 OK / 4 FAIL | §4 « fait parfaitement daté + flux HS → indeterminable » |
+> | entry non datée rendue `courante` | 57 / 14 | §1 « l'état `indeterminable` est atteint par une entrée réelle » + §9 « l'entry non datée n'est PAS rangée avec les fraîches » |
+> | seuil pris sur le `filing_date` | 61 / 5 | §6 « un fait daté ENTRE l'événement et son dépôt est courant » |
+> | frontière inversée `<` → `<=` | 61 / 5 | §2 « AVANT le 8-K suivant : la même entry est `courante` » (l'acceptation elle-même) |
+> | partition ré-implémentée dans `staleness` | 62 / 4 | §9, qui **réaffiche le symptôme de prod** : `4 vs 3`, 999 dans deux classes |
+>
+> ### Le grep d'un interdit lit sa propre énonciation
+>
+> Première exécution du check : **4 FAIL sur du code parfaitement conforme**. §8 cherchait `conn` en
+> sous-chaîne et le trouvait dans « inconnue » ; §10 cherchait `superseded_by`, `FIELD_PROFILES` et
+> `actualite_bloquante`… dans un module dont la **docstring énonce précisément ces interdits**. Même
+> piège qu'au §8 de `check_monitoring_v2`. Corrigé **dans le check, pas dans le module** : la
+> docstring est retirée avant tout grep (`_src.split('"""', 2)[-1]`), `conn` est cherché en mot
+> entier, et un assert **positif** garde l'inverse — la docstring DOIT porter ces interdits, un
+> garde-fou dont la raison n'est écrite nulle part se fait desserrer à la première gêne.
+>
+> ### Dette de doc soldée au passage
+>
+> Le tableau de `checks/README.md` décrivait **14 scripts sur 22**. Sept livraisons antérieures
+> (`base_rate_corpus`, `exit_debate`, `knowledge_entries_listing`, `material_events`,
+> `source_registry`, `tickers_v2_listing`, `valuation_feed`) avaient mis à jour la ligne de total
+> **sans** ajouter leur ligne de tableau — et un tableau incomplet se lit comme un inventaire
+> complet, sans rien signaler. C'est `feedback_check_degrade_en_sortant_a_zero` transposé à la doc.
+> Les huit lignes sont écrites, et la garde est une boucle d'une ligne à passer avant de clore tout
+> lot qui ajoute un script :
+> `for f in checks/check_*.py; do grep -q "\`$(basename $f)\`" checks/README.md || echo ABSENT; done`
+>
+> ### La capacité 4 n'a PAS été anticipée, et c'est gardé activement
+>
+> §10 assert que l'axe ne lit ni `FIELD_PROFILES` ni `actualite_bloquante`, et ne prononce aucun
+> verdict de couverture. La tentation était réelle (le câblage tenait en trois lignes) : confronter
+> l'état au profil du champ perturberait la **ligne de base** que le test central de la capacité 4
+> doit mesurer AVANT son lot (`feedback_ligne_de_base_est_une_mesure`).
 
 > ## ⚡ MàJ 2026-09-05 (4) — capacité 2 : le registre nominatif des sources
 >

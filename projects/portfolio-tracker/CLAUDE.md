@@ -590,6 +590,52 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     (5 cas). ⚠️ **Pas de section « état persisté »**, et c'est écrit dans la docstring du check : la
     capacité n'écrit rien en base, une section SQL serait verte sur zéro ligne (#47/#49).
 
+53. **L'actualité est une propriété de la RELATION entre un fait et l'ancre du moment — donc elle se
+    calcule à la LECTURE, et la stocker serait littéralement la cause n°2 du diagnostic (V2,
+    `knowledge/actualite.py`)** : troisième axe de la révision #50, et le seul qui ne soit pas une
+    colonne. La fiabilité est une propriété de la **source**, la nature une propriété de
+    l'**assertion** (migration 034) : toutes deux sont des faits sur la ligne, elles se stockent.
+    L'actualité, non — « ce fait décrit-il encore le monde ? » n'a de réponse que face à une ancre
+    matérielle qui bouge. La persister la figerait, et un corpus dont le score est arrêté à
+    l'écriture ne vieillit jamais, donc **il ne peut pas signaler qu'il a vieilli**. D'où la forme du
+    module : des fonctions **pures**, sans IO, rejouées à chaque lecture. Le test d'acceptation est
+    exactement cette phrase rendue exécutable — la même entry, **inchangée en base**, passe de
+    `courante` à `perimee` à l'arrivée d'un 8-K postérieur, **sans qu'aucun `UPDATE` soit émis**.
+    Trois états jamais confondus (#25/#44) : `courante` (daté à/après l'ancre : il a pu en tenir
+    compte) · `perimee` (strictement antérieur — **périmé n'est pas faux**, le fait reste exact à sa
+    date) · `indeterminable` (on ne SAIT pas, deux causes cumulables et chacune **nommée** dans le
+    motif : pas de `source_date`, ou flux injoignable). ⚠️ `indeterminable` **n'est pas** `courante`
+    — les confondre ferait lire une panne réseau « rien n'a changé », la phrase la plus rassurante
+    produite par la pire des raisons (#49) ; et `none` (l'émetteur n'a rien publié) reste un état
+    **connu**, distinct de la panne. ⚠️ Le seuil est le `reportDate`, jamais le `filingDate` : sur
+    EDGAR les deux peuvent différer de semaines, et le cas **discriminant** est un fait daté *entre*
+    les deux — seul intervalle où les deux règles divergent, donc le seul qui prouve quoi que ce
+    soit. ⚠️ **Détenteur unique (#46)** : la comparaison vivait déjà en clair dans
+    `staleness.balayage_peremption` ; `staleness` **traduit** désormais l'axe vers le vocabulaire de
+    son rapport (`CLASSE_RAPPORT`, traduction explicite et non devinée) au lieu d'en tenir un
+    jumeau. ⚠️ **La capacité 4 n'est pas anticipée** : l'axe ignore `FIELD_PROFILES` et
+    `actualite_bloquante` — confronter l'état au profil du champ est le travail de la porte, et le
+    faire ici perturberait la ligne de base que son test central doit mesurer **avant** son lot
+    (`feedback_ligne_de_base_est_une_mesure`). Un assert le garde activement.
+    **F15, trouvé à coût nul et fermé par construction** : tant que la partition vivait dans
+    `staleness`, la branche « aucun événement matériel » évaluait **deux prédicats indépendants** et
+    rangeait l'entry non datée dans `posterieures` **et** dans `non_datees` — trois classes
+    totalisant 4 pour 3 entries actives, et une entry de date **inconnue** comptée parmi les
+    fraîches, c'est-à-dire exactement ce que la docstring du module interdisait. Invisible au diff
+    comme à la suite de checks ; sorti en **exécutant le producteur déterministe et en lisant sa
+    sortie en texte** (`feedback_frontiere_gratuite_avant_depense_modele`). Fermé non par un
+    correctif mais par la forme : un état unique par entry, une table de traduction, donc
+    exactement une classe. Détail + garde : `check_actualite.py` §1 (atteignabilité #32), **§2
+    (l'acceptation)**, §3, §4, §5, §6 (le cas « entre »), §7 (détenteur unique), §8 (jamais
+    persisté), **§9 (F15, où le défaut est d'abord REPRODUIT avant d'être montré fermé — #37)**,
+    §10 — éprouvé par test négatif (5 cas, chacun rouge sur son assert nommé, script atteignant son
+    bilan à chaque fois). ⚠️ Deux enseignements de méthode y sont **câblés**, pas seulement notés :
+    les filets `axe()` / `_balayage()` transforment une exception du module en **FAIL nommé**, sans
+    quoi le premier cas négatif tuait le script avant son bilan (2ᵉ des trois faux verts) ; et le
+    grep de §8/§10 **retire la docstring** du module avant de chercher, faute de quoi chaque
+    interdit *énoncé* se lit comme sa propre violation — 4 FAIL sur du code parfaitement conforme à
+    la première exécution.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

@@ -241,13 +241,66 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
 
 ### 3. L'axe `actualité`, calculé à la lecture · contexte partagé : `knowledge/material_events.py`, `knowledge/staleness.py` (livrés le 2026-09-05)
 
-- [ ] Trois états relatifs à l'ancre matérielle : `courante` · `perimee` · `indeterminable`
-      (`source_date IS NULL` — indéterminable n'est pas fraîche, #44)
-- [ ] **Jamais persisté** : recalculé à chaque lecture, ce qui dissout le défaut n°2 par construction
-- [ ] Propager l'état `indeterminable` du balayage quand le flux d'événements est injoignable — une
-      panne réseau ne doit jamais se lire « rien n'a changé »
+- [x] Trois états relatifs à l'ancre matérielle : `courante` · `perimee` · `indeterminable`
+      (`source_date IS NULL` — indéterminable n'est pas fraîche, #44). `knowledge/actualite.py`,
+      vocabulaire **fermé** (`ETATS`) et les trois **atteignables** depuis une entrée réelle (#32).
+- [x] **Jamais persisté** : recalculé à chaque lecture, ce qui dissout le défaut n°2 par
+      construction. Fonctions **pures**, aucune IO, aucune connexion — gardé par grep de source
+      (§8) et par l'assert « ses fonctions sont synchrones, donc sans IO possible ».
+- [x] Propager l'état `indeterminable` du balayage quand le flux d'événements est injoignable — une
+      panne réseau ne doit jamais se lire « rien n'a changé ». Les deux causes d'ignorance sont
+      **cumulables et chacune nommée** dans le motif : un motif qui n'en nomme qu'une laisse
+      corriger la mauvaise.
+- [x] Détenteur unique (#46) : `staleness` **traduit** l'axe (`CLASSE_RAPPORT`) au lieu d'en tenir
+      un jumeau — asserts « ne compare plus lui-même une date à un seuil » / « ne recalcule pas
+      l'écart en jours ».
+- [x] Convention **#53** dans le `CLAUDE.md` du projet.
 - **Acceptation** : la **même** entry, lue avant et après l'arrivée d'un 8-K postérieur, change
   d'état **sans qu'aucun `UPDATE` ne soit émis** (garde par grep de source, comme `staleness.py`).
+- ✅ **Acceptation tenue** : `check_actualite.py`, **66 assertions / 0 échec**. §2 est l'acceptation
+  littérale — la ligne 186 datée du 2026-08-26 est `courante` face au 8-K FDA du 26/08 puis
+  `perimee` face au 8-K accord du 27/08, l'objet rendu est `frozen`, et **la ligne lue n'est pas
+  mutée** (un axe calculé à la lecture n'écrit pas, fût-ce en mémoire).
+- ✅ **Test négatif, 5 cas, chacun rouge sur son assert nommé et le script atteignant son bilan** :
+  propagation de la panne retirée (63 OK / 4 FAIL) · entry non datée rendue `courante` (57/14) ·
+  seuil pris sur le `filing_date` (61/5) · frontière inversée `<` → `<=` (61/5) · partition
+  ré-implémentée dans `staleness` (62/4).
+- 🔴 **F15, trouvé à coût nul, fermé par construction.** Tant que la partition vivait dans
+  `staleness`, la branche « aucun événement matériel » évaluait **deux prédicats indépendants** :
+  l'entry non datée tombait dans `posterieures` **et** dans `non_datees` — trois classes totalisant
+  **4 pour 3 entries actives**, et une entry de date *inconnue* comptée parmi les fraîches, soit
+  exactement ce que la docstring du module interdisait. Invisible au diff comme à la suite de
+  checks ; sorti en **exécutant le producteur et en lisant sa sortie en texte**
+  (`feedback_frontiere_gratuite_avant_depense_modele`). Fermé non par un correctif mais par la
+  forme : un état unique par entry, une table de traduction, donc exactement une classe. §9 le
+  **reproduit d'abord** avant de le montrer fermé — montrer le seul état correct ne prouverait pas
+  qu'il y avait quelque chose à corriger (#37).
+- ⚠️ **Deux enseignements de méthode câblés dans le check, pas seulement notés** :
+  1. Les filets `axe()` / `_balayage()` transforment une exception du module en **FAIL nommé**. Le
+     cas négatif n°1 fait tomber `etat_actualite` sur son `assert ancre.event is not None` — le
+     module échoue **fermé**, ce qui est correct ; c'est le **check** qui mourait avant son bilan,
+     sans pouvoir nommer l'assert qui aurait dû rougir. Deuxième des trois faux verts (§24 du
+     `CHANTIER_OUTILLAGE_DEV.md`). L'état de repli porte un nom **hors vocabulaire**
+     (`(exception)`), donc il ne peut satisfaire aucun assert d'état par accident.
+  2. Le grep de §8/§10 **retire la docstring** du module avant de chercher : elle *énonce* les
+     interdits (`superseded_by`, `FIELD_PROFILES`, `actualite_bloquante`), donc la laisser fait lire
+     chaque prohibition comme sa propre violation — **4 FAIL sur du code parfaitement conforme** à
+     la première exécution. Un assert **positif** garde l'inverse : la docstring DOIT porter ces
+     interdits, un garde-fou sans motif écrit se desserre à la première gêne.
+- ⚠️ **La capacité 4 n'est pas anticipée, et c'est gardé activement (§10)** : l'axe ne lit ni
+  `FIELD_PROFILES` ni `actualite_bloquante`, et ne prononce aucun verdict de couverture. Confronter
+  l'état au profil du champ est le travail de la porte ; le faire ici perturberait la ligne de base
+  que son test central doit mesurer **AVANT** son lot (`feedback_ligne_de_base_est_une_mesure`).
+- ⚠️ **Le seuil est le `reportDate`, jamais le `filingDate`**, et le cas **discriminant** est un
+  fait daté *entre* les deux (29/08, entre l'événement du 27/08 et son dépôt du 01/09) — seul
+  intervalle où les deux règles divergent. La fixture est copiée du flux RVMD réel : l'écart de
+  6 jours est celui d'EDGAR, pas une valeur choisie pour que le test passe
+  (`feedback_fixture_copiee_du_reel`).
+- 📌 **Dette de doc soldée au passage** : le tableau de `checks/README.md` décrivait **14 scripts
+  sur 22** — sept livraisons antérieures avaient mis à jour le total sans ajouter leur ligne, et un
+  tableau incomplet se lit comme un inventaire complet. Les huit lignes manquantes sont écrites, et
+  la garde est une boucle d'une ligne à passer avant de clore tout lot qui ajoute un script.
+- **Suite** : 1 704 assertions / 0 échec / 22 scripts (`bash checks/run_all.sh`).
 
 ### 4. La porte de complétude à trois états · contexte partagé : `agents/v2/curator.py` (`recompute_coverage`), convention #29
 
