@@ -2,17 +2,18 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-07
+updated: 2026-09-08
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2 (cartes de provenance). Contrat FIGÉ · couche 2
   DÉPLOYÉE · boucle V2 complète (décider → surveiller → sortir → apprendre, lots 7-9) · écrans
   UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est la **révision du
   modèle de fiabilité** (autorité contre actualité) ; RVMD reste le banc d'essai des modes de panne
-  du socle (15 défauts F1→F15). État au 2026-09-07 : **1 704 assertions / 0 échec / 22 scripts**,
-  migrations appliquées jusqu'à **034**, prochaine 035. Roadmap active :
-  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1, 2 et 3 CLOSES**, prochain jalon
-  **capacité 4** (la porte de complétude à trois états).
+  du socle (16 défauts F1→F16). État au 2026-09-08 : **1 815 assertions / 0 échec / 22 scripts**,
+  migrations appliquées jusqu'à **035**, prochaine 036. Roadmap active :
+  `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1, 2, 3 et 4 CLOSES**, prochain jalon
+  **capacité 5**, RÉÉCRITE le 2026-09-08 (les chiffres ne se discutent pas, les textes s'arbitrent
+  et l'arbitrage se trace) — sa rédaction initiale a été réfutée par sa propre mesure.
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -31,12 +32,46 @@ modèle de fiabilité : **autorité contre actualité**. Six capacités dans un 
 `nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 78
 assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07) · **porte de
 complétude à trois états** (#54, 131 assertions, le 2026-09-08).
-**Prochain jalon : capacité 5** — *la contradiction, signalée jamais tranchée* (`knowledge/service.py`,
-`has_conflict` / `conflict_entry_id`, convention #43). ⚠️ **Relire sa ligne de base AVANT le lot** :
-la capacité 4 a montré qu'une spec peut viser le mauvais émetteur (elle annonçait RVMD comme porteur
-du faux vert ; les porteurs étaient NVDA et MSFT). Migration à écrire *juste avant* son lot, jamais
-en avance — la prochaine est **035**, toujours non écrite (la capacité 4 a **mesuré** qu'elle n'en
-avait pas besoin).
+**Prochain jalon : capacité 5**, **RÉÉCRITE le 2026-09-08** — *un chiffre ne se discute pas, un texte
+s'arbitre, et l'arbitrage se trace*. Elle se lit en deux moitiés, **5a (les chiffres)** et **5b (les
+textes)**, et son prérequis F16 est **fermé** (migration 035 + `check_edgar_feed.py` §12/§12bis).
+
+⚠️ **La rédaction initiale de la capacité 5 a été RÉFUTÉE par sa propre mesure** — c'est le
+précédent le plus utile du chantier, et il confirme la consigne « relire sa ligne de base AVANT le
+lot » héritée de la capacité 4. Elle prévoyait « la contradiction signalée jamais tranchée » + une
+**file d'arbitrage humain**. Mesuré (`bash tools/mesure_conflits.sh`, coût modèle nul) : `has_conflict`
+sur **0/180** · **0** collision de clef #43 · **92 paires** `covers` presque toutes des *facettes* ·
+et surtout **le cas d'acceptation nommé donne 0 paire**, ses entries couvrant des champs disjoints —
+le **test négatif de la capacité interdisait son propre test d'acceptation**. Le cas est en réalité
+**déjà servi par la capacité 4** (péremption, remède `rafraichissement`), vérifié par exécution. La
+file aurait été du code appelé 0 fois sur le corpus qui l'a motivée.
+
+**Doctrine arbitrée par l'utilisateur** (verbatim dans la roadmap) : sur les **chiffres**, une seule
+vérité à un instant donné — EDGAR reste la base réglementaire, actualisée à la prochaine publication
+officielle ; la donnée d'actualité ne la remplace jamais, elle sert à **apprécier** s'il y a une
+alerte à lever ou un changement significatif de thèse. Sur les **textes**, deux sources peuvent se
+contredire : **c'est à l'agent de trancher**, et la recommandation finale doit laisser l'utilisateur
+**tracer sur quelle base elle se fonde** — quelle source retenue, ou comment deux signaux
+contradictoires ont été pondérés. **Pas de file d'arbitrage humain.**
+
+Deux mesures faites le 2026-09-08 avant d'écrire, et elles cadrent le lot :
+- **5a est à moitié déjà tenue** — `_current_fact_ids` filtre `source_type='edgar_official'`
+  (`edgar_feed.py:488`), donc un chiffre d'actualité **ne peut pas** superseder un fait EDGAR. Ce
+  qui manque n'est pas un garde-fou mais l'**appréciation** (confirme / diverge / non comparable) et
+  son routage vers la machinerie d'alerte **existante** (mode 2 `alert_level`, mode 3 `RE_SYNTHESE`),
+  jamais vers un second mécanisme parallèle. Cas réel unique en base : MSFT
+  `business_model.recurrence_pct` porte #97 (EDGAR, A) **et** #98 (`financial_press`, B+), côte à
+  côte en silence.
+- **5b n'a aujourd'hui AUCUN porteur** — `GroundedSynthesis.claims[]` = `text` + `cited_entry_ids`
+  (ce qui est cité, jamais ce qui est écarté) ; `RiskMatrix`, seul verdict du flux, n'offre que
+  `rationale`, 4 scalaires et des comptes par tier. `IncertitudeBloquante` dit « je ne sais pas »,
+  `RechercheDivergente` est le mandat de falsification A6 : chacun répond à une **autre** question.
+  Et tous ces contrats sont `extra="forbid"` — l'agent **ne peut pas** ajouter la trace.
+
+⚠️ **Ligne de base à re-mesurer AVANT le lot** : combien de couples sont *réellement* divergents
+plutôt que facettes ? Si le nombre est nul, 5b est du code sans matière et c'est **5a** qui porte la
+valeur. Migration à écrire *juste avant* son lot, jamais en avance — la prochaine est **036**, non
+écrite (mesurer d'abord si elle est nécessaire, comme l'a fait la capacité 4).
 
 ⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) devait précéder
 le durcissement de la porte (4), sinon tout champ devenait `couvert_perime` sans remède disponible.
@@ -63,21 +98,24 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats | **`not_ready (peremption)`**, 9 champs périmés | aucun rapport en base — 9 lacunes de **collecte** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 798 assertions / 0 échec / 22 scripts** — une seule commande,
+- **Suite hors-ligne : 1 815 assertions / 0 échec / 22 scripts** — une seule commande,
   **`bash checks/run_all.sh`** (versionné depuis le 2026-09-05 (3)). Il porte les invocations
   correctes : montage `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) et
   réseau `coolify` + `CHECK_DB_URL` pour `check_entry_nature`. ⚠️ **Ne pas le réécrire dans
   `/tmp`** : la version jetable sous-comptait 47 assertions en silence (`CHANTIER_OUTILLAGE_DEV.md`
   §27).
-- **Migrations appliquées jusqu'à 034. Prochaine : 035** — à écrire *juste avant* son lot, jamais
+- **Migrations appliquées jusqu'à 035. Prochaine : 036** — à écrire *juste avant* son lot, jamais
   en avance (§18 de la spec).
+- ⚠️ **`run_all.sh` passe `CHECK_DB_URL` + réseau `coolify` à DEUX checks** désormais :
+  `check_entry_nature` (§7) et `check_edgar_feed` (§12bis). Tous deux **sortent en échec** si le
+  pré-requis manque — jamais un saut de section.
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
 
-### RVMD — 15 défauts du socle, tous trouvés avant ou après dépense, jamais par le contrat
+### RVMD — 16 défauts du socle, tous trouvés avant ou après dépense, jamais par le contrat
 
-C'est le résultat le plus réutilisable du chantier : **onze défauts sur douze ont été trouvés à
+C'est le résultat le plus réutilisable du chantier : **quatorze défauts sur seize ont été trouvés à
 coût de modèle nul**, en exécutant les producteurs déterministes et en **lisant leur sortie en
 texte**. Aucun n'était visible dans un diff, et aucun n'a fait rougir un contrat Pydantic — leurs
 nombres étaient justes, c'est le *fait énoncé* qui était faux.
@@ -90,8 +128,40 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Premier vrai modèle (F12, F13) | pas de date dans le message (le modèle datait le présent à sa coupure) ; drapeau calculé mais jamais persisté | ~0,0105 $/mandat | — |
 | Péremption (F14) | `source_date` datée du flux sur un ratio de bilan | 0 token | **#48** |
 | Partition (F15) | une entry **non datée** rangée à la fois dans `posterieures` et dans `non_datees` — 4 classes pour 3 entries, et une date *inconnue* comptée parmi les fraîches | 0 token | **#53** |
+| Lisibilité de la clef (F16) | `poste_kind`, discriminant de la clef #43, **absent de tout le socle NVDA et MSFT** (19 des 43 faits courants) : la règle juste dans le producteur, son porteur absent de la ligne — toute garantie « une seule vérité chiffrée » y était aveugle sur 2 émetteurs sur 3 | 0 token | **#55** |
 
-### Livré cette session (2026-09-08) — capacité 4 close : la porte à trois états
+### Livré cette session (2026-09-08, 2ᵉ lot) — F16 fermé, capacité 5 réécrite
+
+**Aucune dépense de modèle.** Migration **035** appliquée. Suite : **1 815 / 0 / 22**
+(+17 : `check_edgar_feed.py` §12 et §12bis). Déploiement `4b8cc74`, HTTP 200.
+
+- 🔴 **F16 — le porteur d'une règle doit être DANS la ligne.** `_current_fact_ids` appliquait #43
+  correctement parce qu'il tient le discriminant de la **spec du producteur** ; un **lecteur** du
+  corpus n'a que la ligne, et `poste_kind` y était absent sur 19 des 43 faits courants. Migration
+  035 (générateur `_gen_035.py` important `POSTES`, garde `RAISE EXCEPTION` **éprouvée en négatif
+  avant application** : elle rendait 27). Après : **0 fait non keyable** sur les trois émetteurs.
+  Convention **#55**.
+- 📌 **Le défaut a été trouvé par un faux ROUGE que je fabriquais moi-même** : mon mesureur coerçait
+  `poste_kind` absent en `stock` et sortait 2 collisions imaginaires sur NVDA (trois exercices de CA
+  lus comme trois réponses à une question). En cherchant *pourquoi* il rougissait, le vrai défaut est
+  apparu dessous. **L'indécidable est un troisième état, compté à part et nommé** (#44/#53).
+- ⚠️ **Jumeau supprimé** : `financials_feed._STOCK_METRICS_LEGACY` recopiait `POSTES[].flow` à la
+  main. Il était **d'accord** avec son modèle — deux tables d'accord restent deux tables (#46).
+- ⚠️ **ABSENT n'est pas CONTRADICTOIRE, et c'est le test négatif qui l'a montré** : retirer un
+  `poste_kind` faisait aussi rougir l'assert « contredit POSTES » (motif `→ None`), qui envoie
+  chercher une divergence producteur/table là où il n'y a qu'un backfill à rejouer. Deux causes,
+  deux remèdes, deux asserts — #54 transposé aux garde-fous. Corrigé **dans le check**.
+- ✅ **Test négatif 6/6**, chacun rouge sur un assert nommé : `poste_kind` retiré · ligne contredisant
+  `POSTES` · deux faits de bilan courants · fixture rétrécie 50 → 33 lignes · `CHECK_DB_URL` absente
+  (**exit 1**, pas un saut de section) · jumeau réintroduit dans le **code** — tandis que le même
+  token laissé dans la seule **docstring** reste **vert** (le grep dépouille les docstrings, sinon il
+  lit son propre interdit). ⚠️ Fixture = base scratch **copiée du réel** (`COPY` des 84
+  `fact_financial` de prod), 100 ok / 0 FAIL avant mutation : fidèle **et** discriminante, et
+  **aucune ligne de production touchée**.
+- 🔄 **Capacité 5 réécrite** d'après la doctrine utilisateur (5a les chiffres / 5b les textes), après
+  que sa mesure l'a réfutée. Détail au § « Roadmap active » ci-dessus.
+
+### Livré cette session (2026-09-08, 1ᵉʳ lot) — capacité 4 close : la porte à trois états
 
 **Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`.
 Suite : **1 798 / 0 / 22**. Ce qui doit rester ici :
@@ -314,7 +384,7 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > + scorée + figée, jamais de texte libre. DÉCISION #1 = Option C (base neutre → bull/bear isolés →
 > réfutation bear→bull → synthèse).
 > Le chantier courant est le **3ᵉ ticker RVMD**, banc d'essai des modes de panne du socle :
-> **15 défauts (F1→F15)** trouvés et corrigés, douze à coût de modèle nul en lisant les sorties en
+> **16 défauts (F1→F16)** trouvés et corrigés, quatorze à coût de modèle nul en lisant les sorties en
 > texte. Le corpus a désormais **une horloge** (ancre d'événements matériels 8-K/6-K + balayage de
 > péremption qui rend un rapport, jamais un `superseded_by`).
 > **Roadmap active** : `roadmap/02-spec-autorite-vs-actualite.md` (figée le 2026-09-05) — *autorité
@@ -335,10 +405,18 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > readiness rejoue la moitié déterministe de la porte à la lecture, sans écrire.
 > **Le faux vert d'origine est tombé, mesuré en production** : NVDA et MSFT passent de `ready, 0 gap`
 > à `not_ready (peremption)`, 9 champs périmés nommés, avec un mandat de *rafraîchissement* et non
-> de collecte. Suite hors-ligne : **1 798 / 0 / 22**.
-> **Prochain jalon = capacité 5** : *la contradiction, signalée jamais tranchée* (#43).
-> ⚠️ Ne pas réordonner les capacités. ⚠️ **Une ligne de base se requête AVANT le lot** : la spec de
-> la capacité 4 visait RVMD comme porteur du faux vert, alors qu'il n'a jamais eu de rapport
-> readiness — le test aurait viré au vert sans rien prouver.
+> de collecte. Suite hors-ligne : **1 815 / 0 / 22**, migrations jusqu'à **035**.
+> **F16 fermé** (migration 035, convention **#55**) : `poste_kind`, le discriminant de la clef #43,
+> était absent de tout le socle NVDA et MSFT — la règle juste dans le producteur, son porteur absent
+> de la ligne, donc **illisible pour un lecteur**. Il a été trouvé par un **faux rouge** que
+> fabriquait mon propre mesureur (absence coercée en `stock`).
+> **Prochain jalon = capacité 5, RÉÉCRITE le 2026-09-08** : *un chiffre ne se discute pas (5a), un
+> texte s'arbitre et l'arbitrage se trace (5b)*. Sa rédaction initiale — « signalée jamais tranchée »
+> + file d'arbitrage humain — a été **réfutée par sa propre mesure** : 0 conflit en base, 0 collision
+> de clef, et son cas d'acceptation nommé donne **0 paire** (champs disjoints), c'est-à-dire que son
+> test négatif interdisait son test d'acceptation. Le cas était déjà servi par la capacité 4
+> (péremption). ⚠️ Ne pas réordonner les capacités. ⚠️ **Une ligne de base se requête AVANT le lot** —
+> deux fois de suite maintenant, elle a changé le lot : la spec de la capacité 4 visait le mauvais
+> émetteur, celle de la capacité 5 visait un mécanisme sans matière.
 > LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#54**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

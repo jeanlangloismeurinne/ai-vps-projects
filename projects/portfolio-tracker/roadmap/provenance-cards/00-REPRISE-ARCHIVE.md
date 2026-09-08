@@ -28,6 +28,134 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 <!-- Versé le 2026-09-07 : le bloc de la capacité 3 (axe `actualité`) + le défaut F15. -->
 <!-- Versé le 2026-09-08 : le bloc de la capacité 4 (porte à trois états) + la réévaluation à la
      lecture. Copie conforme, rien de résumé. -->
+<!-- Versé le 2026-09-08 (2) : le bloc du 2ᵉ lot — F16 (migration 035 + garde §12/§12bis), les
+     deux mesures de la capacité 5 et sa réécriture. Copie conforme, rien de résumé. -->
+
+> ## ⚡ MàJ 2026-09-08 (2ᵉ lot) — F16 fermé, capacité 5 réfutée puis réécrite
+>
+> **Aucune dépense de modèle.** Migration **035** appliquée. Suite : **1 815 / 0 / 22**
+> (1 798 avant le lot, +17 exactement : 13 en §12 et 4 en §12bis). Déploiement `4b8cc74`, HTTP 200.
+>
+> ### Le lot annoncé
+>
+> Trois pièces : (1) fermer **F16**, préalable de « une seule vérité chiffrée » ; (2) **mesurer** si
+> la base réglementaire est aujourd'hui substituable et si la synthèse a une place pour rendre
+> compte d'une divergence ; (3) **réécrire la capacité 5** d'après la doctrine que l'utilisateur a
+> énoncée en cours de lot — et qui **renverse** la spec écrite.
+>
+> ### F16 — le porteur d'une règle doit être DANS la ligne
+>
+> `_current_fact_ids` (`edgar_feed.py`) applique la convention #43 correctement : un **flux** est
+> keyé par `(metric, period_end)`, un **poste de bilan** par `metric` seul, borné `<= period_end`.
+> Il y arrive parce qu'il tient le discriminant dans la **spec du producteur** (`POSTES[].flow`).
+> Mais un **lecteur** du corpus n'a que la ligne, et `content_structured.poste_kind` était **absent
+> de 19 des 43 faits courants** — tout le socle NVDA et MSFT. Toute garantie « une seule vérité
+> chiffrée » adossée à la ligne était donc aveugle sur deux émetteurs sur trois.
+>
+> C'est la convention **#55** : *une règle juste dans le PRODUCTEUR est aveugle pour un LECTEUR
+> tant que son discriminant n'est pas dans la ligne.* Elle est le pendant, côté écriture, de
+> `feedback_controle_au_point_de_lecture` : là, un drapeau calculé et non persisté ; ici, une clef
+> d'identité correcte mais non portée.
+>
+> **Migration 035** (`035_v2_poste_kind_backfill.sql`, 54 lignes) : générateur `_gen_035.py`
+> important `POSTES` (`KIND_PAR_METRIC = {p.metric: "flow" if p.flow else "stock"}`), lisant un
+> snapshot `psql -tA`, et **refusant d'émettre** si le producteur et `POSTES` divergent — la SQL
+> ne contient que des listes d'`id`. En-tête de la migration : *lignes écrites 27 (flow=18,
+> stock=9) · déjà conformes 23 · hors périmètre 34*. Un `DO $$ … RAISE EXCEPTION '035 : % poste(s)
+> du socle EDGAR sans poste_kind après backfill'` **dans la même transaction**, éprouvé en négatif
+> **avant** application (il rendait 27). Après : **0 fait non keyable** sur les trois émetteurs.
+>
+> ### Le défaut a été trouvé par un faux ROUGE que je fabriquais moi-même
+>
+> Le mesureur de ligne de base de la capacité 5 coerçait `poste_kind` absent en `stock`, et sortait
+> **2 collisions imaginaires** sur NVDA : trois exercices de chiffre d'affaires lus comme trois
+> réponses concurrentes à une même question. En cherchant *pourquoi* il rougissait — au lieu de
+> croire le rouge — le vrai défaut est apparu dessous. **L'indécidable est un troisième état, compté
+> à part et nommé** (#44/#53), y compris dans un outil de mesure jetable.
+>
+> ### Jumeau supprimé
+>
+> `financials_feed._STOCK_METRICS_LEGACY` recopiait `POSTES[].flow` à la main. Il était **d'accord**
+> avec son modèle — et deux tables d'accord restent deux tables (#46) : c'est au correctif suivant
+> qu'elles divergent. `_poste_kind(metric, cs)` interroge désormais `POSTES` en repli, la **ligne**
+> l'emportant sur la table quand elle porte une valeur du vocabulaire.
+>
+> ### ABSENT n'est pas CONTRADICTOIRE — et c'est le test négatif qui l'a montré
+>
+> Ma propre §12 reproduisait, dans son garde-fou, le piège à trois états que le chantier corrige :
+> retirer un `poste_kind` faisait rougir **deux** asserts, le second affichant
+> `→ [(1, 'revenue', None)]` — c'est-à-dire envoyer un lecteur chercher une divergence
+> producteur/table là où il n'y a **qu'un backfill à rejouer**. Deux causes, deux remèdes, deux
+> asserts : `_contra` ne retient désormais que `r["kind"] is not None and r["kind"] != attendu`,
+> avec un commentaire ⚠️ qui dit pourquoi. Le cas A est retombé à **1** FAIL.
+>
+> ### Test négatif 6/6, chacun rouge sur un assert nommé
+>
+> | Cas | Mutation | Assert rouge |
+> |---|---|---|
+> | A | `poste_kind` retiré de #1 | `aucun fait du socle n'est illisible pour un lecteur` |
+> | B | #8 déclaré `flow` contre `POSTES` | `aucune ligne ne CONTREDIT POSTES` |
+> | C | 2ᵉ `stockholders_equity` courant (id 99001) | `aucun poste de bilan ne porte deux faits courants` |
+> | D | socle rétréci 50 → 33 | `le socle EDGAR est bien peuplé` |
+> | E | `CHECK_DB_URL` absente | `§12bis non exécutée`, **exit 1** |
+> | F | jumeau réintroduit dans le **code** | `le jumeau a disparu` **+** `le repli interroge POSTES` |
+>
+> Plus une **garde de faux rouge** : le même token laissé dans la seule **docstring** garde l'assert
+> **vert** (`grep -c` = 1 confirmé) — `_sans_docstrings()` dépouille la prose avant de chercher
+> l'interdit, sinon le check lit sa propre énonciation.
+>
+> ⚠️ **La fixture est copiée du réel** : base scratch `db_check_neg`, `COPY` des 84 `fact_financial`
+> de production, **100 ok / 0 FAIL avant mutation** — donc fidèle *et* discriminante. **Aucune ligne
+> de production n'a été touchée.** Le cas E a d'abord semblé sortir à 0 : `… | tail -4; echo $?`
+> lisait le code de `tail`. Relancé en redirigeant vers un fichier, le vrai code est **1**.
+>
+> `run_all.sh` : le cas spécial est passé d'un `if` à un `case` — `check_entry_nature` **et**
+> `check_edgar_feed` reçoivent maintenant `--network coolify` + `CHECK_DB_URL`.
+>
+> ### Mesure (a) — la base réglementaire est-elle substituable ? Non, déjà tenu par construction
+>
+> `_current_fact_ids` filtre `AND source_type = $2` lié à `_SOURCE_TYPE = 'edgar_official'`
+> (`edgar_feed.py:488`). Un chiffre de presse **n'est pas sur la même clef d'identité** : il ne peut
+> pas se substituer à un fait EDGAR. Le « la donnée réglementaire reste celle d'EDGAR » de la
+> doctrine ne demande **aucun code**. Aucun `superseded_by` à écrire.
+>
+> Mais rien ne les **compare** non plus. Exactement **un** champ de tout le corpus porte les deux :
+> MSFT `business_model.recurrence_pct` — #97 (`edgar_official`, tier A, 2026-07-29, note 1 du 10-K
+> sur la reconnaissance du revenu) et #98 (`financial_press`, tier B+, 2026-08-07, « commercial
+> bookings +18 % »), côte à côte **en silence**.
+>
+> ### Mesure (b) — la recommandation a-t-elle une place pour rendre une divergence ? Non
+>
+> - `GroundedSynthesis.claims[]` = `text` + `cited_entry_ids` : ce qui est **cité**, jamais ce qui a
+>   été **écarté**.
+> - `RiskMatrix`, seul verdict du flux, offre `rationale`, 4 scalaires d'`axes` (dont `qualite_info`)
+>   et des comptes par tier (`sources_summary`) — **un nombre n'est pas une trace**.
+> - `IncertitudeBloquante` dit « je ne sais pas » ; `RechercheDivergente` est le mandat de
+>   falsification A6 ; `HypothesisReview.source_entry_refs` adosse un statut sans dire ce qu'il écarte.
+> - Et **tous** les contrats héritent de `Strict` (`extra="forbid"`) : l'agent **ne peut pas** ajouter
+>   la trace même s'il la produisait.
+>
+> ### Capacité 5 réécrite (bloc « RÉÉCRITE le 2026-09-08 » dans la roadmap 02)
+>
+> La spec écrite prévoyait une **file d'arbitrage humain** et une substitution de chiffres. La
+> doctrine utilisateur la renverse : sur les chiffres, **une seule vérité à un instant donné**,
+> EDGAR reste la base réglementaire actualisée à la prochaine publication officielle, l'actualité
+> ne sert qu'à **apprécier** (alerte / changement de thèse) ; sur les textes, deux sources peuvent
+> légitimement se contredire et **c'est à l'agent de trancher**, éventuellement en notant une
+> incertitude ; à la fin, l'utilisateur doit pouvoir **tracer sur quelle base** repose la
+> recommandation. **Pas de file d'arbitrage humain.**
+>
+> - **§5a Les chiffres** — la non-substitution est déjà tenue (`edgar_feed.py:488`). Ce qui manque
+>   est l'**appréciation** `confirme` / `diverge` / `non comparable`, routée vers la machinerie
+>   d'alerte **existante** (modes 2 et 3). Acceptation sur MSFT #97/#98. Test négatif : une entry
+>   couvrant un champ **non fondé** par le socle ne doit produire **aucune** appréciation.
+> - **§5b Les textes** — un porteur d'arbitrage à trois issues **jamais confondues** : `retenue` /
+>   `equilibrees` / `incertitude_notee`, chacune citant **les deux** entries, **y compris celle qui
+>   n'a pas été retenue**. Pas de score composite : `covers` propose, l'agent qualifie. Acceptation :
+>   la recommandation expose la source qui a fondé la conclusion, **lisible à l'écran**. Test
+>   négatif : un arbitrage ne citant qu'une des deux entries est **refusé par le contrat**.
+>   ⚠️ Ligne de base à **remesurer** avant le lot (`tools/mesure_conflits.sh`) — une ligne de base
+>   est une mesure, pas un souvenir.
 
 > ## ⚡ MàJ 2026-09-08 — capacité 4 : la porte de complétude à trois états
 >
