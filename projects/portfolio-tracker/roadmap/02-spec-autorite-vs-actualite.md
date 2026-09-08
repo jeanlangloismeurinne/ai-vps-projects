@@ -344,8 +344,30 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
       **discriminance** montrant que la même date non filtrée périmerait bien — une copie du flux
       réel serait verte sans rien éprouver (`feedback_fixture_copiee_du_reel`).
 - [x] Convention **#54** dans le `CLAUDE.md` du projet.
-- **Suite** : 1 780 assertions / 0 échec / 22 scripts (`bash checks/run_all.sh`), dont
-  `check_readiness_recompute.py` à **131** et `check_field_profiles.py` à **193**.
+- [x] **Le point de lecture fait partie de la capacité** — mesuré, pas supposé. La porte corrigée
+      déployée, l'écran servait **encore** `ready, 0 gap` : le `GET /tickers/{id}/curator/readiness`
+      renvoyait la ligne stockée telle quelle. Un rapport est persisté, mais son verdict dépend de
+      l'actualité, qui n'est **pas** stockée (#53) — le stock ne pouvait donc pas le porter. Choix
+      de l'utilisateur : **recalculer à la lecture**. Le GET rejoue la moitié **déterministe**
+      (`_apply_deterministic_overrides`, la fonction de production, pas une copie) sur une
+      `deepcopy` du rapport, **sans modèle et sans écriture** — persister refigerait ce qu'on
+      mesure. Il renvoie un bloc `reevaluation` (verdict persisté vs recalculé, cause, statut et
+      libellé de l'ancre, entries lues) que l'écran affiche, en distinguant « périmé » de « on n'a
+      pas pu vérifier » (#49). Coût assumé : un appel EDGAR par lecture, amorti par un cache TTL
+      1 h posé au **seul** point de sortie réseau (`_submissions`) qui mémorise la **réponse brute**
+      — jamais un état d'actualité, sinon l'actualité redevient persistante à l'échelle du TTL — et
+      **jamais un échec** (la mise en cache est la dernière instruction nominale).
+  - **Vérifié en production après rebuild** : `GET /api/tickers/NVDA/curator/readiness` renvoie
+    `verdict: not_ready`, `reevaluation.verdict_persiste: ready`, `cause_non_ready: peremption`,
+    ancre `8-K du 2026-09-02 (items 8.01)`, 53 entries lues, 7 gaps. Idem MSFT (items 7.01/9.01).
+    La page `/v2/tickers/NVDA/readiness` répond 200, un conteneur par app.
+  - **Gardé par `check_material_events.py` §13/§14**, éprouvé par test négatif **2/2** : cache
+    déplacé avant le `raise` → l'échec mémorisé cache `{}`, qui se parse en « aucun événement
+    matériel », donc ancre `none`, donc `ready` rendu une heure durant sur **tous** les émetteurs ;
+    `UPDATE` ajouté dans le GET → les 9 champs périmés se figent dans la ligne.
+- **Suite** : 1 798 assertions / 0 échec / 22 scripts (`bash checks/run_all.sh`), dont
+  `check_readiness_recompute.py` à **131**, `check_field_profiles.py` à **193** et
+  `check_material_events.py` à **81**.
 - ⚠️ **Ce que la capacité a révélé en passant** : la table de planchers `FIELD_PLANCHER_OVERRIDES`
   du curator doublait `FIELD_PROFILES`. Deux tables d'accord restent deux tables — c'est la seconde
   qui empêchait le desserrage de #50 d'atteindre la porte, et qui rendait circulaire l'assert de

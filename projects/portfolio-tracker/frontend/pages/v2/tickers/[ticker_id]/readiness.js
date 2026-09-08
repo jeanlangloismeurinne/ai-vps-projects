@@ -62,6 +62,71 @@ function verdictLabel(verdict, cause) {
   return base
 }
 
+// ── Bloc : réévaluation à la lecture ──────────────────────────────────────────
+// Le rapport est PERSISTÉ, son verdict ne l'est plus : le backend rejoue la moitié déterministe
+// de la porte à chaque GET, contre l'ancre matérielle du jour (#53). Trois choses doivent se lire
+// ici, et surtout pas se confondre :
+//   • le verdict a changé depuis la production du rapport → dire lequel était écrit ;
+//   • l'ancre est `found` → nommer le dépôt qui périme, c'est lui qui explique le basculement ;
+//   • l'ancre est `unavailable` → « on n'a pas pu vérifier » n'est PAS « rien n'a changé » (#49).
+//     C'est le cas le plus important à distinguer : un dossier qui tombe pour panne réseau ne se
+//     répare pas en cherchant des sources, il se re-lit quand EDGAR répond.
+
+function ReevaluationBanner({ reevaluation }) {
+  if (!reevaluation) {
+    // Un backend antérieur au 2026-09-08 ne renvoie pas ce bloc. Le dire, plutôt que de laisser
+    // croire que le verdict affiché a été confronté à l'ancre du jour.
+    return (
+      <div className="rounded-xl border border-amber-900/40 bg-amber-950/10 px-4 py-3">
+        <p className="text-xs text-amber-500">
+          — bloc <span className="font-mono">reevaluation</span> absent : le verdict affiché est
+          celui qui a été écrit en base, il n'a pas été confronté à l'actualité du jour.
+        </p>
+      </div>
+    )
+  }
+
+  const { ancre_statut, ancre_libelle, verdict_persiste, verdict_recalcule, entries_lues } = reevaluation
+  const aChange = verdict_persiste !== verdict_recalcule
+  const panne = ancre_statut === 'unavailable'
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 space-y-1 ${
+      panne
+        ? 'border-amber-900/60 bg-amber-950/20'
+        : aChange
+          ? 'border-sky-900/60 bg-sky-950/20'
+          : 'border-gray-800 bg-gray-900/30'
+    }`}>
+      <div className="text-[10px] uppercase tracking-wide font-semibold text-gray-500">
+        Réévalué à la lecture — le corpus n'a pas bougé, l'ancre si
+      </div>
+      {panne ? (
+        <p className="text-xs text-amber-300 leading-relaxed">
+          <span className="font-semibold">Flux d'événements injoignable.</span> {ancre_libelle}.
+          L'actualité du corpus est <span className="font-mono">indéterminable</span> — ce qui n'est
+          pas « rien n'a changé ». Les champs tombés ici ne se réparent pas en cherchant des
+          sources : relire quand le flux répond.
+        </p>
+      ) : (
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Ancre matérielle : <span className="font-mono text-gray-200">{ancre_libelle}</span>
+          {entries_lues != null && <> · {entries_lues} entrées relues</>}
+        </p>
+      )}
+      {aChange && (
+        <p className="text-xs text-sky-300 leading-relaxed">
+          Le rapport avait été écrit avec le verdict{' '}
+          <span className="font-mono font-semibold">{verdict_persiste}</span> ; confronté à l'ancre
+          ci-dessus, il vaut aujourd'hui{' '}
+          <span className="font-mono font-semibold">{verdict_recalcule}</span>. Rien n'a été
+          réécrit en base — le verdict est une fonction du corpus <em>et</em> du moment.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function VerdictBanner({ verdict, cause, rationale, createdAt, schemaVersion }) {
   if (!verdict) {
     return (
@@ -898,6 +963,7 @@ export default function ReadinessPage() {
       </div>
 
       {/* ── Section 1 : Verdict ──────────────────────────────────────────────── */}
+      <ReevaluationBanner reevaluation={data.reevaluation} />
       <VerdictBanner
         verdict={topVerdict}
         cause={reportCauseNonReady}

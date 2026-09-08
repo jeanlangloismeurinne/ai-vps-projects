@@ -14,6 +14,8 @@ part en **422** comme les refus du monitoring : la requête est valide, c'est la
 ne l'est pas. Un état qui interdit l'acte (thèse sans verdict de sortie, tranche déjà exécutée, ordre
 hors séquence) part en **409**.
 """
+import copy
+import json
 import logging
 from typing import Literal, Optional
 
@@ -24,7 +26,7 @@ from app.agents.providers import AgentNotFoundError
 from app.agents.v2 import analysis as A
 from app.agents.v2 import decision as D
 from app.agents.v2.analysis import NotReadyError
-from app.agents.v2.curator import run_readiness
+from app.agents.v2.curator import _apply_deterministic_overrides, run_readiness
 from app.agents.v2.debate import (
     DebateNotFound,
     DebateRefused,
@@ -45,6 +47,8 @@ from app.agents.v2.exit import (
 )
 from app.agents.v2.monitoring import MonitoringRefused, ThesisNotActive, run_monitoring
 from app.db.database import get_db_session
+from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
+from app.knowledge.service import get_current_entries
 
 router = APIRouter(tags=["analysis-v2"])
 logger = logging.getLogger(__name__)
@@ -93,6 +97,30 @@ async def curator_readiness(ticker_id: str):
 
 @router.get("/tickers/{ticker_id}/curator/readiness")
 async def latest_readiness(ticker_id: str):
+    """Le dernier rapport readiness, **réévalué à la lecture** contre l'ancre matérielle du jour.
+
+    La readiness est un rapport PERSISTÉ, mais son verdict dépend de l'actualité, qui est une
+    propriété de la relation entre le corpus et l'instant (#53) : servir la ligne telle qu'elle a
+    été écrite ferait afficher indéfiniment le `ready, 0 gap` du jour de sa production. Mesuré le
+    2026-09-08 : NVDA (#27) et MSFT (#26) affichaient encore `ready, 0 gap` alors que la porte,
+    rejouée sur le même corpus, sortait `not_ready (peremption)` avec 9 champs périmés chacun — le
+    faux vert que la capacité 4 existe pour tuer survivait dans l'écran qui devait l'annoncer.
+
+    On rejoue donc ici la moitié DÉTERMINISTE de `run_readiness` : `_apply_deterministic_overrides`,
+    la fonction de production elle-même (#46, jamais une seconde porte). Ce qui n'est PAS rejoué est
+    l'appel au modèle — la prose du curator est celle de l'époque, et c'est correct : elle décrit ce
+    que le dossier contient, ce qui n'a pas changé. Ce qui change est le verdict, qui est dérivé.
+
+    ⚠️ **Aucune écriture.** Le rapport rejoué ne remplace pas la ligne : persister le résultat
+    figerait l'actualité, soit exactement la cause n°2 du diagnostic #50. La ligne stockée reste la
+    trace de ce qui a été produit ; `reevaluation` dit ce qu'elle vaut aujourd'hui.
+
+    ⚠️ **Une panne EDGAR n'est pas « rien n'a changé » (#49).** Si le flux est injoignable, l'ancre
+    sort `unavailable`, les champs à actualité bloquante deviennent `indeterminable` et le dossier
+    tombe — avec un motif qui NOMME l'injoignabilité. C'est voulu : l'inverse afficherait un vert
+    rassurant produit par la pire des raisons. Le bloc `reevaluation` porte le statut de l'ancre
+    pour que l'écran distingue « périmé » de « pas pu vérifier ».
+    """
     async with get_db_session() as conn:
         row = await conn.fetchrow(
             "SELECT id, verdict, report_json, context_pack_entry_id, created_at "
@@ -100,9 +128,38 @@ async def latest_readiness(ticker_id: str):
             "ORDER BY created_at DESC LIMIT 1",
             ticker_id,
         )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Aucune readiness pour ce ticker.")
-    return dict(row)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Aucune readiness pour ce ticker.")
+
+        out = dict(row)
+        stocke = out.get("report_json")
+        if isinstance(stocke, str):
+            stocke = json.loads(stocke)
+
+        entries = await get_current_entries(conn, ticker_id, min_reliability=0.0, limit=500)
+        ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+
+    verdict_persiste = out.get("verdict")
+    rejoue = _apply_deterministic_overrides(copy.deepcopy(stocke), entries,
+                                            ancre=ancre, ticker_id=ticker_id)
+    out["report_json"] = rejoue
+    out["verdict"] = rejoue.get("verdict")
+    out["reevaluation"] = {
+        "faite": True,
+        "verdict_persiste": verdict_persiste,
+        "verdict_recalcule": rejoue.get("verdict"),
+        "cause_non_ready": rejoue.get("cause_non_ready"),
+        "ancre_statut": ancre.status,
+        "ancre_libelle": (
+            f"{ancre.event.form} du {ancre.event.event_date}"
+            + (f" (items {'/'.join(ancre.event.items)})" if ancre.event.items else " (sans item)")
+            if ancre.status == "found" and ancre.event is not None
+            else ("aucun événement matériel publié" if ancre.status == "none"
+                  else f"flux injoignable — {ancre.raison or 'raison non précisée'}")
+        ),
+        "entries_lues": len(entries),
+    }
+    return out
 
 
 # ── Research (base neutre) ───────────────────────────────────────────────────

@@ -658,7 +658,21 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     lecture fait partie de la capacité** : les trois états ont vécu une journée corrects en Python
     et invisibles à l'écran, `/v2/tickers/[id]/readiness` les rendant tous du même amber « lacune
     déclarée » et les `GapItem` en `JSON.stringify` — un `remede` présent dans un blob JSON n'est
-    pas un remède lu (`feedback_controle_au_point_de_lecture`). ⚠️ **Le prompt DB n'a PAS eu besoin
+    pas un remède lu (`feedback_controle_au_point_de_lecture`). Et l'écran corrigé **servait encore
+    le faux vert** : le `GET /tickers/{id}/curator/readiness` renvoyait la ligne stockée telle
+    quelle. Un rapport se persiste, mais son verdict dépend de l'actualité, qui ne se persiste pas
+    (#53) — le stock ne pouvait donc pas le porter. **Le GET rejoue donc la moitié déterministe**
+    (`_apply_deterministic_overrides`, la fonction de production) sur une `deepcopy` du rapport :
+    aucun modèle, **aucune écriture** (persister refigerait ce qu'on mesure, cause n°2 du #50), et
+    un bloc `reevaluation` (verdict persisté vs recalculé, cause, statut et libellé de l'ancre) que
+    l'écran affiche en distinguant « périmé » de « on n'a pas pu vérifier » (#49). Le coût — un
+    appel EDGAR par lecture — est amorti par un cache TTL 1 h au **seul** point de sortie réseau
+    (`_submissions`), qui mémorise la **réponse brute** : y mettre un état d'actualité la rendrait
+    persistante à l'échelle du TTL, et y mettre un **échec** serait pire — un `{}` mémorisé se parse
+    en « aucun événement matériel », donc ancre `none`, donc `ready` rendu une heure durant sur tous
+    les émetteurs. La mise en cache est pour cela la **dernière instruction nominale**, et
+    `check_material_events.py` §13/§14 le tient par découpe de la source (test négatif 2/2).
+    ⚠️ **Le prompt DB n'a PAS eu besoin
     de migration, et c'est une mesure** : la doctrine de péremption vit dans le message de tâche
     (code), et tous les champs concernés sont écrasés par le Python — le vérifier a évité une
     migration 035 de confort (`feedback_decision_figee_a_remesurer`).

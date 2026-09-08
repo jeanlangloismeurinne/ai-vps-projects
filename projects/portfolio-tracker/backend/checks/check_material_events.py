@@ -15,6 +15,7 @@ Ce qui est mis à l'épreuve :
 import asyncio
 import inspect
 import sys
+import time as _time
 from datetime import date
 
 from app.agents.v2.worker import _build_user_message, _formuler_ancre_materielle
@@ -27,6 +28,8 @@ from app.knowledge.material_events import (
     MaterialEventLookup,
     parse_material_events,
 )
+from app.knowledge import material_events as _me
+from app.api import analysis_v2 as _api
 
 ok = fail = 0
 
@@ -314,6 +317,61 @@ _src_st = inspect.getsource(_st)
 for _verbe in ("UPDATE ", "INSERT ", "DELETE ", "execute("):
     check(f"aucun `{_verbe.strip()}` dans staleness.py", _verbe not in _src_st,
           f"→ le balayage doit rester un rapport (#29)")
+
+print("\n13. cache d'ancre — il mémorise la RÉPONSE, jamais l'actualité, et jamais un échec")
+# Depuis la capacité 4, la readiness est réévaluée à CHAQUE lecture d'écran : sans cache, chaque
+# rafraîchissement taperait EDGAR. Le cache est donc une condition de la réévaluation à la lecture,
+# pas une optimisation — mais c'est aussi l'endroit exact où l'actualité pourrait redevenir
+# persistante par la bande (cause n°2 du diagnostic #50). Ces asserts tiennent la frontière.
+_me.vider_cache_ancre()
+check("le cache part vide", _me._ancre_cache == {}, f"→ {list(_me._ancre_cache)}")
+
+# Ce qui est mémorisé est la charge utile EDGAR — un dict de dépôts, pas un état calculé.
+_me._ancre_cache[1] = (_time.monotonic(), {"filings": {"recent": {}}})
+_memorise = _me._ancre_cache[1][1]
+check("le cache porte la réponse BRUTE (un payload de dépôts)",
+      isinstance(_memorise, dict) and "filings" in _memorise, f"→ {_memorise}")
+for _etat in ("courante", "perimee", "indeterminable"):
+    check(f"le cache ne mémorise pas l'état `{_etat}`", _etat not in repr(_memorise),
+          "→ l'actualité redeviendrait persistante à l'échelle du TTL (#53)")
+
+# Le TTL est fini ET non nul : à 0 le cache ne sert à rien (EDGAR tapé à chaque lecture),
+# infini il ferait rater un 8-K pour toujours. On borne les deux côtés plutôt que de citer 3600.
+check("le TTL est strictement positif", _me._ANCRE_TTL_S > 0, f"→ {_me._ANCRE_TTL_S}")
+check("le TTL ne dépasse pas la journée", _me._ANCRE_TTL_S <= 86400, f"→ {_me._ANCRE_TTL_S}")
+
+_me.vider_cache_ancre()
+check("la purge vide réellement", _me._ancre_cache == {}, f"→ {list(_me._ancre_cache)}")
+
+# Un échec ne se mémorise pas : la mise en cache est la DERNIÈRE instruction du chemin nominal,
+# après les deux `raise`. Une coupure de 30 s figerait sinon le dossier une heure en
+# `indeterminable` — une panne transitoire promue en panne longue (#49).
+_src_sub = inspect.getsource(_me._submissions)
+_avant_cache, _, _apres_cache = _src_sub.partition("_ancre_cache[cik] =")
+check("la mise en cache existe dans `_submissions`", bool(_apres_cache),
+      "→ le cache n'est pas posé au point de sortie réseau (#46)")
+check("aucun `raise` APRÈS la mise en cache",
+      "raise" not in _apres_cache,
+      "→ un chemin d'erreur passe par le cache : un échec serait mémorisé")
+check("les deux `raise` d'indisponibilité sont AVANT",
+      _avant_cache.count("raise MaterialEventsUnavailable") >= 2,
+      f"→ {_avant_cache.count('raise MaterialEventsUnavailable')} vus avant la mise en cache")
+
+print("\n14. la réévaluation à la lecture n'ÉCRIT pas — sinon elle fige ce qu'elle mesure")
+# Le GET readiness rejoue la porte à chaque lecture (#53). C'est le seul endroit du code où une
+# lecture produit un verdict : si elle le persistait, l'actualité redeviendrait une colonne.
+_src_api = inspect.getsource(_api.latest_readiness)
+for _verbe in ("UPDATE", "INSERT", "DELETE", "execute("):
+    check(f"aucun `{_verbe.strip('(')}` dans le GET readiness", _verbe not in _src_api,
+          "→ la réévaluation à la lecture persisterait son résultat (cause n°2 du diagnostic #50)")
+check("le GET rejoue la fonction de PRODUCTION, pas une copie",
+      "_apply_deterministic_overrides" in _src_api,
+      "→ une seconde porte, qui divergera (#46)")
+check("le rejeu travaille sur une COPIE du rapport stocké",
+      "deepcopy" in _src_api, "→ la ligne lue serait mutée en mémoire")
+check("le statut de l'ancre est exposé à l'écran",
+      "ancre_statut" in _src_api,
+      "→ l'écran ne pourrait pas distinguer « périmé » de « pas pu vérifier » (#49)")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

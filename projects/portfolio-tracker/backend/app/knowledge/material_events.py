@@ -39,6 +39,7 @@ transportée à côté pour que le délai de publication reste lisible, jamais p
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Optional
@@ -164,7 +165,33 @@ def _filing_url(cik: int, accn: Optional[str]) -> Optional[str]:
     )
 
 
+# Cache TTL de l'ancre, posé au SEUL point de sortie réseau (#46). Il existe pour une raison
+# précise : depuis la capacité 4, la readiness est **réévaluée à chaque lecture** d'écran (#53), et
+# chaque lecture demanderait sinon un aller-retour EDGAR. Un émetteur ne dépose pas deux 8-K dans
+# l'heure ; en revanche un écran rafraîchi en boucle taperait EDGAR en boucle, ce que sa politique
+# d'accès équitable n'autorise pas.
+#
+# ⚠️ Ce cache porte la RÉPONSE BRUTE, jamais l'état d'actualité. Mémoriser `perimee`/`courante`
+# rendrait l'actualité persistante à l'échelle du TTL — c'est-à-dire exactement la cause n°2 du
+# diagnostic #50, réintroduite par la porte de sortie. La comparaison, elle, est refaite à chaque
+# lecture sur une ancre éventuellement mémorisée.
+#
+# ⚠️ Les échecs ne sont PAS mémorisés : une panne EDGAR doit se re-tenter à la lecture suivante,
+# sinon une coupure de 30 s figerait le dossier en `indeterminable` pour une heure (#49).
+_ANCRE_TTL_S = 3600.0
+_ancre_cache: dict[int, tuple[float, dict[str, Any]]] = {}
+
+
+def vider_cache_ancre() -> None:
+    """Purge le cache d'ancres. Pour les vérifications, et pour un rafraîchissement forcé."""
+    _ancre_cache.clear()
+
+
 async def _submissions(cik: int) -> dict[str, Any]:
+    fige = _ancre_cache.get(cik)
+    if fige is not None and (time.monotonic() - fige[0]) < _ANCRE_TTL_S:
+        return fige[1]
+
     url = _SUBMISSIONS.format(cik=cik)
     try:
         async with httpx.AsyncClient(
@@ -178,9 +205,11 @@ async def _submissions(cik: int) -> dict[str, Any]:
     if r.status_code != 200:
         raise MaterialEventsUnavailable(f"EDGAR {r.status_code} sur submissions (CIK {cik})")
     try:
-        return r.json()
+        payload = r.json()
     except ValueError as e:
         raise MaterialEventsUnavailable(f"réponse EDGAR non-JSON (CIK {cik}) : {e}") from e
+    _ancre_cache[cik] = (time.monotonic(), payload)
+    return payload
 
 
 def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
