@@ -488,5 +488,127 @@ check("la règle d'unité est DÉLÉGUÉE à `app.knowledge.units`, pas re-codé
       and "return montant(" in inspect.getsource(_md),
       "→ `_md` calcule son palier lui-même : il re-divergera au prochain correctif")
 
+# ── 12. Un fait porte LUI-MÊME sa nature de poste — règle ET état persisté (F16) ─────────────────
+print("\n[12] `poste_kind` : la règle vit dans POSTES, et la LIGNE la porte (F16)")
+# Le défaut. La clef d'identité #43 dépend du type de poste : un FLUX s'identifie par
+# `(metric, period_end)`, un poste de BILAN par `metric` seul. `_current_fact_ids` applique la règle
+# correctement — mais il tient le discriminant de la spec du PRODUCTEUR, qui le connaît. Un LECTEUR
+# du corpus n'a que la ligne stockée, et `content_structured.poste_kind` était absent de TOUT le
+# socle NVDA et MSFT (écrit avant F4) : 19 des 43 faits financiers courants n'étaient pas keyables.
+# C'est le mode de panne de #48 transposé — la règle juste dans le producteur, son porteur absent de
+# la ligne. Toute garantie « une seule vérité chiffrée à un instant donné » y était SILENCIEUSEMENT
+# aveugle sur deux émetteurs sur trois, et une garantie aveugle rassure plus qu'elle ne protège.
+# Migration 035 a écrit les 27 lignes manquantes ; §12 tient les deux moitiés du travail : la règle
+# n'a plus qu'un détenteur, et la base ne peut plus reperdre le porteur sans virer au rouge.
+import os  # noqa: E402
+import re  # noqa: E402
+
+from app.knowledge.financials_feed import _poste_kind  # noqa: E402
+
+
+def _sans_docstrings(src: str) -> str:
+    """Retire les docstrings avant de chercher un interdit — sinon le check lit sa PROPRE énonciation.
+
+    Le jumeau supprimé est NOMMÉ dans la docstring de `_poste_kind`, qui explique pourquoi il ne
+    doit pas revenir. Un `in src` nu y trouverait donc le token et FAIL sur du code parfaitement
+    conforme (`feedback_grep_interdit_lit_sa_propre_enonciation`, déjà payé en §8/§10 de
+    `check_actualite.py`). On dépouille, puis on asserte AUSSI en positif : « la table est absente »
+    et « `POSTES` est consulté » sont deux affirmations différentes, et seule la seconde dit que le
+    repli fait quelque chose de juste.
+    """
+    return re.sub(r'("""|\'\'\')(?:.|\n)*?\1', '""', src)
+
+
+_ff_src = _sans_docstrings(inspect.getsource(sys.modules[_poste_kind.__module__]))
+check("le jumeau `_STOCK_METRICS_LEGACY` a disparu de `financials_feed` (code, hors docstrings)",
+      "_STOCK_METRICS_LEGACY" not in _ff_src,
+      "→ une seconde table flux/bilan, d'accord avec POSTES aujourd'hui, divergente au prochain "
+      "poste de bilan ajouté (#46)")
+check("… et le repli interroge le détenteur unique `POSTES`",
+      "for p in POSTES" in _sans_docstrings(inspect.getsource(_poste_kind)),
+      "→ la table est partie sans que rien ne la remplace : le repli répondrait au hasard")
+
+# Assertions de COMPORTEMENT, poste par poste : un grep dit que l'appel existe, pas qu'il rend la
+# bonne valeur. `cs={}` reproduit exactement le cas du lecteur aveugle (ligne sans `poste_kind`).
+for _p in POSTES:
+    _attendu = "flow" if _p.flow else "stock"
+    check(f"`{_p.metric}` sans `poste_kind` en ligne → `{_attendu}` (lu sur POSTES)",
+          _poste_kind(_p.metric, {}) == _attendu, f"→ {_poste_kind(_p.metric, {})}")
+check("la LIGNE l'emporte sur la table (un producteur peut poser son propre `poste_kind`)",
+      _poste_kind("revenue", {"poste_kind": "stock"}) == "stock",
+      f"→ {_poste_kind('revenue', {'poste_kind': 'stock'})}")
+check("une valeur de ligne hors vocabulaire retombe sur POSTES, jamais telle quelle",
+      _poste_kind("revenue", {"poste_kind": "bidule"}) == "flow",
+      f"→ {_poste_kind('revenue', {'poste_kind': 'bidule'})}")
+check("une métrique hors socle (ratio dérivé) n'invente pas d'identité réglementaire",
+      _poste_kind("roic", {}) == "flow", f"→ {_poste_kind('roic', {})}")
+
+print("\n[12bis] état persisté : aucun fait du socle n'est illisible pour un LECTEUR (F16)")
+# ⚠️ La règle et l'état sont deux moitiés distinctes (#43) : le backfill 035 pouvait être juste dans
+# le SQL et n'avoir touché aucune ligne. Le point de lecture est la COLONNE, donc on l'interroge.
+_db_url = os.environ.get("CHECK_DB_URL", "")
+if not _db_url or _db_url.startswith("postgresql://u:p@h"):
+    # Un pré-requis manquant SORT EN ÉCHEC — il ne saute pas la section. Une mesure incomplète qui
+    # sort à 0 écrase de la vérité (`feedback_check_degrade_en_sortant_a_zero`).
+    print("  FAIL §12bis non exécutée — CHECK_DB_URL absente ou factice ; "
+          "la moitié « état persisté » de F16 n'a PAS été mesurée")
+    print(f"\n=== {ok} ok / {fail + 1} FAIL ===")
+    sys.exit(1)
+
+import asyncpg  # noqa: E402
+
+_SOCLE = sorted(p.metric for p in POSTES)
+
+
+async def _etat_poste_kind():
+    conn = await asyncpg.connect(_db_url.replace("postgresql+asyncpg://", "postgresql://"))
+    try:
+        sans = await conn.fetch(
+            "SELECT id, ticker_id, content_structured->>'metric' AS metric FROM knowledge_entries "
+            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
+            "   AND content_structured->>'metric' = ANY($1) "
+            "   AND NOT (content_structured ? 'poste_kind') ORDER BY id", _SOCLE)
+        stockes = await conn.fetch(
+            "SELECT id, content_structured->>'metric' AS metric, "
+            "       content_structured->>'poste_kind' AS kind FROM knowledge_entries "
+            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
+            "   AND content_structured->>'metric' = ANY($1) ORDER BY id", _SOCLE)
+        doubles = await conn.fetch(
+            "SELECT ticker_id, content_structured->>'metric' AS metric, count(*) AS n, "
+            "       array_agg(id ORDER BY id) AS ids FROM knowledge_entries "
+            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
+            "   AND content_structured->>'poste_kind' = 'stock' "
+            "   AND superseded_by IS NULL AND is_deleted = FALSE "
+            " GROUP BY 1, 2 HAVING count(*) > 1")
+        return sans, stockes, doubles
+    finally:
+        await conn.close()
+
+
+_sans, _stockes, _doubles = asyncio.run(_etat_poste_kind())
+# Le compte est ASSERTÉ, pas seulement affiché : « aucun sans `poste_kind` » serait vrai sur zéro
+# ligne, donc vert le jour où un producteur cesse d'écrire (1ᵉʳ des faux verts, `feedback_test_
+# negatif_trois_faux_verts`). La borne basse vient de la mesure du 2026-09-08 : 50 lignes du socle.
+check("le socle EDGAR est bien peuplé (la mesure porte sur des lignes réelles)",
+      len(_stockes) >= 50, f"→ {len(_stockes)} lignes")
+check("aucun fait du socle n'est illisible pour un lecteur (`poste_kind` absent)",
+      not _sans, f"→ {[(r['id'], r['ticker_id'], r['metric']) for r in _sans]}")
+_kind_attendu = {p.metric: ("flow" if p.flow else "stock") for p in POSTES}
+# ⚠️ ABSENT n'est pas CONTRADICTOIRE (#44) — l'assert précédent tient l'absence, celui-ci tient le
+# désaccord, et les deux ne doivent pas rougir ensemble. Le test négatif l'a montré : retirer un
+# `poste_kind` faisait aussi FAIL ici avec un motif « contredit POSTES → None », qui envoie chercher
+# une divergence producteur/table là où il n'y a qu'un backfill à rejouer. Deux causes, deux remèdes.
+_contra = [(r["id"], r["metric"], r["kind"]) for r in _stockes
+           if r["kind"] is not None and r["kind"] != _kind_attendu.get(r["metric"])]
+check("aucune ligne ne CONTREDIT `POSTES` (la base et le détenteur unique disent la même chose)",
+      not _contra, f"→ {_contra}")
+# La conséquence, et la seule qui intéresse l'utilisateur : « une seule vérité chiffrée à un instant
+# donné ». Un poste de BILAN s'identifiant par `metric` seul, deux lignes courantes = deux réponses.
+check("aucun poste de bilan ne porte deux faits courants (clef #43 respectée en base)",
+      not _doubles, f"→ {[(r['ticker_id'], r['metric'], list(r['ids'])) for r in _doubles]}")
+print(f"  — socle EDGAR : {len(_stockes)} ligne(s), toutes keyables "
+      f"({sum(1 for r in _stockes if r['kind'] == 'flow')} flow / "
+      f"{sum(1 for r in _stockes if r['kind'] == 'stock')} stock)")
+
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)

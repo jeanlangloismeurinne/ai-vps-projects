@@ -393,15 +393,108 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
   filtre `items_substantiels` de `material_events.py` existe déjà — le brancher, et **le prouver par
   un cas négatif** (un 8-K purement formel laisse le corpus `courant`).
 
-### 5. La contradiction, signalée jamais tranchée · contexte partagé : `knowledge/service.py` (`has_conflict`, `conflict_entry_id`), convention #43
+### 5. La contradiction : un chiffre ne se discute pas, un texte s'arbitre — et l'arbitrage se trace
 
-- [ ] Activer les leviers morts : deux entries qui répondent à la **même question** (clef d'identité
-      #43 + index `covers`) et divergent sont **mutuellement** marquées
-- [ ] File d'arbitrage humain exposée en lecture, avec le motif et les deux extraits
-- [ ] **Aucune écriture de `superseded_by`** par le système (garde par grep, comme `staleness.py`)
-- **Acceptation** : sur RVMD, l'entry du communiqué FDA (2026-08-26) et les quatre entries « aucun
-  produit approuvé » sont mutuellement marquées et remontent dans la file. Test négatif : deux
-  entries qui couvrent des champs **différents** ne doivent **pas** être appariées.
+> ⚠️ **Cette capacité a été RÉÉCRITE le 2026-09-08.** Sa rédaction initiale — « la contradiction,
+> signalée jamais tranchée », deux entries mutuellement marquées et une **file d'arbitrage humain** —
+> a été mesurée avant d'être écrite (`tools/mesure_conflits_capacite5.py`, `bash
+> tools/mesure_conflits.sh`), et la mesure l'a **contredite sur son propre corpus** :
+>
+> - le levier annoncé mort l'est bien : `has_conflict = TRUE` sur **0 / 180** entries, aucun
+>   `conflict_entry_id` ;
+> - collisions de la clef d'identité #43 : **0** sur les trois émetteurs ;
+> - l'appariement par `covers` proposerait **92 paires** (NVDA 24 · MSFT 44 · RVMD 24), presque
+>   toutes des **facettes** d'un même champ et non des divergences — les 6 risques distincts de
+>   `risques.risques_cles` sur RVMD produisent à eux seuls 15 paires ;
+> - **le cas d'acceptation nommé donne 0 paire** : l'entry du communiqué FDA (#186) couvre
+>   `{marche.croissance_marche_historique}`, les quatre entries « aucun produit approuvé » couvrent
+>   `{business_model.description}` / `{drivers_revenus}` / `{risques.risques_cles}` — **disjoints**.
+>   Le test négatif de la capacité **interdisait son propre test d'acceptation.**
+> - et ce cas est **déjà servi** par la capacité 4, vérifié par exécution (`tools/mesure_gate.sh`) :
+>   `business_model.description → couvert_perime [#173,#174,#175,#176 = perimee/183j]`, ancre = 8-K
+>   du 2026-08-27, remède `rafraichissement`. C'est une **péremption**, pas une contradiction.
+>
+> La file d'arbitrage humain aurait donc été du code appelé 0 fois sur le corpus qui l'a motivée
+> (`feedback_decision_figee_a_remesurer`).
+
+**La doctrine, telle qu'arbitrée par l'utilisateur le 2026-09-08.** Elle sépare les chiffres des
+textes, et c'est cette séparation qui fait tout le travail :
+
+> « Sur les chiffres, il ne peut y avoir qu'**une seule vérité à un instant donné**. […] la donnée
+> "réglementaire" reste celle d'EDGAR et elle sera actualisée lors de la prochaine publication
+> officielle. Le système utilise la nouvelle information pour **apprécier s'il y a une alerte à
+> lever** ou bien si elle change significativement la définition de la thèse. Concernant les
+> informations textuelles, deux sources peuvent se contredire. **C'est à l'agent d'apprécier
+> laquelle retenir**, peut-être en notant qu'il y a une incertitude. À la fin, l'agent doit faire une
+> recommandation dont **l'utilisateur peut tracer sur quelle base elle se fonde** : cela veut dire
+> que l'agent aura retenu l'une ou l'autre des sources contradictoires, ou qu'il aura pondéré dans
+> son analyse le fait que deux signaux contradictoires s'équilibrent. »
+
+Il n'y a donc **pas de file d'arbitrage humain**. L'utilisateur ne veut pas trancher à la place de
+l'agent ; il veut pouvoir **remonter** ce que l'agent a tranché.
+
+#### 5a. Les chiffres — le socle ne se discute pas, la nouvelle donnée l'apprécie
+
+⚠️ **Mesuré avant d'écrire (2026-09-08) : la moitié « non-substitution » est DÉJÀ TENUE.**
+`_current_fact_ids` filtre `source_type = 'edgar_official'` (`edgar_feed.py:488`) — un chiffre issu
+d'une actualité n'est pas sur la même clef d'identité qu'un fait EDGAR, il ne peut donc littéralement
+pas le remplacer. **Rien à écrire pour ça** ; un `[ ]` de plus aurait été du code jamais appelé.
+
+Ce qui manque n'est pas un garde-fou, c'est **l'appréciation** :
+
+- [ ] Un chiffre non réglementaire qui **couvre un champ déjà fondé par le socle** produit une
+      **appréciation**, jamais une écriture sur le socle : *confirme* · *diverge* · *non comparable*
+      (trois états, jamais deux — #44). Cas réel en base, seul du corpus : MSFT
+      `business_model.recurrence_pct` porte #97 (EDGAR, tier A, 2026-07-29) **et** #98
+      (`financial_press`, tier B+, 2026-08-07, « bookings +18 % »), aujourd'hui **côte à côte en
+      silence**.
+- [ ] Une divergence chiffrée est routée vers la machinerie d'alerte **qui existe déjà** —
+      `hypotheses_reviewed` / `seuils_franchis` / `alert_level` du mode 2, `RE_SYNTHESE` du mode 3 —
+      et **non** vers un second mécanisme parallèle (#46 : deux chemins d'alerte divergeront).
+      ⚠️ Cette machinerie est aujourd'hui déclenchée **calendairement** (J+1 publication) ; c'est
+      son déclencheur qu'il faut ouvrir, pas son vocabulaire.
+- [ ] **Aucune écriture de `superseded_by`** par ce chemin (garde par grep, comme `staleness.py`) :
+      le socle s'actualise à la **prochaine publication officielle**, et par elle seule.
+- **Acceptation** : sur MSFT, #98 est apprécié contre #97 et rendu comme *confirme* ou *diverge*
+  **avec son écart**, `source_date` du socle inchangé et #97 toujours `superseded_by IS NULL`.
+  **Test négatif** : une entry qui couvre un champ **non fondé par le socle** ne produit **aucune**
+  appréciation (sinon tout chiffre de presse se met à commenter le vide).
+
+#### 5b. Les textes — l'agent tranche, et sa recommandation porte sa base
+
+⚠️ **Mesuré avant d'écrire (2026-09-08) : il n'existe aujourd'hui AUCUN endroit où l'écrire.**
+`GroundedSynthesis.claims[]` ne porte que `text` + `cited_entry_ids` — ce qui est cité, jamais ce qui
+a été **écarté**. `RiskMatrix`, seul verdict du flux, porte `rationale`, `axes` (4 scalaires dont
+`qualite_info`) et `sources_summary` (comptes par tier) : **un nombre n'est pas une trace**. Les trois
+voisins répondent chacun à une **autre** question — `IncertitudeBloquante` dit « je ne sais pas », pas
+« j'avais deux réponses et j'ai tranché » ; `RechercheDivergente` est le mandat de falsification A6 ;
+`HypothesisReview.source_entry_refs` étaye un statut sans dire ce qu'il écarte. Et tous ces contrats
+sont `extra="forbid"` : **l'agent ne peut pas ajouter la trace même s'il la produisait.**
+
+- [ ] Un porteur d'**arbitrage** sur le chemin de la recommandation, avec **trois issues jamais
+      confondues** (#44/#53) : `retenue` (l'agent choisit une source et **dit laquelle et
+      pourquoi**) · `equilibrees` (deux signaux se compensent, et la recommandation en **tient
+      compte** — c'est un résultat, pas une abstention) · `incertitude_notee` (l'agent ne tranche
+      pas et le **déclare**). Chaque issue cite **les deux** entries, **y compris celle qui n'a pas
+      été retenue** — c'est tout l'objet de la traçabilité demandée.
+- [ ] **Aucun score composite** (#50) : l'arbitrage se rend en **entries citées + motif**, jamais en
+      un scalaire de confiance qui redeviendrait le `reliability_score` du diagnostic.
+- [ ] La détection reste **au service du jugement**, jamais l'inverse : `covers` propose des
+      candidats, l'agent seul qualifie. ⚠️ La mesure dit que `covers` seul rendrait **92 paires** de
+      **facettes** — un appariement qui ne discrimine pas la facette de la divergence noierait
+      l'arbitrage sous du bruit, et l'agent apprendrait à répondre « non comparable » par défaut.
+- [ ] **Aucune écriture de `superseded_by`** ici non plus : décider qu'un texte en remplace un autre
+      reste un jugement, et il est **rendu**, pas persisté comme une vérité (#49).
+- **Acceptation** : sur un couple réellement divergent du corpus, la recommandation finale expose
+  **laquelle des deux sources a fondé la conclusion** et laquelle a été écartée, avec le motif —
+  lisible **à l'écran**, pas seulement présent dans un blob JSON
+  (`feedback_controle_au_point_de_lecture` : la capacité 4 a vécu une journée correcte en Python et
+  invisible à l'écran). **Test négatif** : un arbitrage qui ne cite **qu'une** des deux entries est
+  refusé par le contrat — une trace qui ne montre pas l'écarté ne trace rien.
+- ⚠️ **Ligne de base à mesurer AVANT le lot** (`feedback_ligne_de_base_est_une_mesure`) : combien de
+  couples du corpus sont **réellement** divergents plutôt que facettes ? La mesure du 2026-09-08 dit
+  **0 collision déterministe** et **92 paires `covers`** non qualifiées. Si le nombre de vraies
+  divergences est nul, 5b est du code sans matière — et c'est **5a** qui porte la valeur.
 
 ---
 

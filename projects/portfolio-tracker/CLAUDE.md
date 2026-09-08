@@ -187,7 +187,18 @@ les superseded, qu'`analysis_knowledge_refs` continue de lire). Générateur `_g
 n'écrit **aucune règle en SQL**, il appelle `derive_nature` sur un instantané `psql` et n'émet que
 des listes d'ids — un `UPDATE … CASE WHEN` aurait ré-implémenté la règle dans un second langage
 (#46). Répartition obtenue : **66 `mesure` / 68 `interpretation` / 0 `evenement`** sur les entrées
-actives. Prochaine migration : **035**.
+actives.
+**Migration 035 = `content_structured.poste_kind` sur le socle EDGAR (F16)** : la clef d'identité
+#43 dépend du type de poste, mais son discriminant n'était **pas dans la ligne** — absent de tout le
+socle NVDA et MSFT (écrit avant F4), soit **19 des 43 faits financiers courants** non keyables par un
+LECTEUR. Générateur `_gen_035.py` : il importe `edgar_feed.POSTES` (détenteur unique de la règle
+flux/bilan, #46), refuse d'émettre si une ligne stockée contredit `POSTES`, et n'écrit que des listes
+d'ids — un `UPDATE … CASE WHEN metric IN (…)` aurait ré-implémenté `POSTES[].flow` en SQL. Périmètre
+délibérément borné aux 8 postes du socle : les métriques dérivées (`roic`, `levier`,
+`fcf_conversion`…) et les données de marché (`yfinance`) n'ont **aucune identité réglementaire** au
+sens de #43, leur en inventer une serait un faux. Appliquée : `UPDATE 18` (flow) + `UPDATE 9` (stock),
+garde `DO $$ … RAISE EXCEPTION` nommée et **éprouvée en négatif avant application** (elle rendait 27).
+Prochaine migration : **036**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -705,6 +716,48 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     au socle `MVDD_SPEC`. Corollaire mesuré au passage : `_DESSERRAGE_NON_CABLE` de
     `check_source_registry.py` §1bis **a viré au vert de lui-même** le jour du câblage — un écart
     connu qui se referme sans qu'on y touche est le signe qu'il était écrit au bon endroit.
+
+55. **Une règle juste dans le PRODUCTEUR est aveugle pour un LECTEUR tant que son discriminant n'est
+    pas dans la ligne (V2, migration 035 — F16)** : #43 dit que l'identité d'un fait est ce qu'il
+    mesure, et que la clef dépend du type de poste — `(metric, period_end)` pour un flux, `metric`
+    seul pour un bilan. `_current_fact_ids` applique cette règle correctement **parce qu'il tient le
+    discriminant de la spec du producteur, qui le connaît**. Un lecteur du corpus, lui, n'a que la
+    ligne : `content_structured.poste_kind` était absent de **tout le socle NVDA et MSFT** (écrit
+    avant F4), soit **19 des 43 faits financiers courants**. Toute garantie du type « une seule
+    vérité chiffrée à un instant donné » y était donc **silencieusement aveugle sur deux émetteurs
+    sur trois** — et une garantie aveugle est pire qu'une garantie absente, parce qu'elle rassure.
+    C'est le mode de panne de **#48 transposé** : là, la date était juste dans quatre porteurs et
+    fausse dans la colonne sur laquelle trient les machines ; ici, la règle est juste dans le code et
+    son porteur est absent de la donnée. **Question à poser sur toute règle qui dépend d'un
+    discriminant : ce discriminant est-il DANS la ligne, ou seulement dans la tête du producteur ?**
+    ⚠️ **Le défaut a été trouvé par un FAUX ROUGE que je fabriquais moi-même** : le premier
+    `mesure_conflits_capacite5.py` écrivait `flow = cs.get("poste_kind") == "flow"`, coerçant
+    l'**absence** en `stock`, et sortait deux collisions imaginaires sur NVDA (trois exercices de CA
+    légitimes lus comme trois réponses à une même question). Un rouge fabriqué coûte aussi cher qu'un
+    vert fabriqué — mais celui-ci, en cherchant *pourquoi* il rougissait, a fait apparaître le vrai
+    défaut sous lui. L'indécidable est un **troisième état** (#44/#53), compté à part et **nommé**,
+    jamais un repli sur l'un des deux autres. ⚠️ Corollaire de jumeau (#46) : `financials_feed`
+    tenait un `_STOCK_METRICS_LEGACY = {stockholders_equity, total_assets, cash_and_lt_debt}` recopié
+    à la main depuis `POSTES[].flow`. Il était **d'accord** avec son modèle — ce qui ne le rend pas
+    moins dangereux : il aurait divergé au premier poste de bilan ajouté à `POSTES`, en silence, en
+    datant un stock sur l'ancre de flux (#42). Supprimé ; le repli interroge le détenteur unique.
+    Détail + garde : `check_edgar_feed.py` **§12** (le jumeau absent — grep **dépouillé des
+    docstrings**, sans quoi il lit son propre interdit dans la docstring qui l'énonce
+    (`feedback_grep_interdit_lit_sa_propre_enonciation`) — l'assert **positif** que `POSTES` est bien
+    consulté, et le comportement poste par poste) et **§12bis** (l'ÉTAT persisté, qui est l'autre
+    moitié du travail : aucun fait illisible, aucune ligne contredisant `POSTES`, aucun poste de
+    bilan à deux faits courants). ⚠️ **ABSENT n'est pas CONTRADICTOIRE**, et c'est le test négatif
+    qui l'a montré : retirer un `poste_kind` faisait aussi rougir l'assert « contredit POSTES » avec
+    un motif `→ None`, qui envoie chercher une divergence producteur/table là où il n'y a qu'un
+    backfill à rejouer. Deux causes, deux remèdes, deux asserts (#54 transposé aux garde-fous).
+    Éprouvé par test négatif **6/6**, chacun rouge sur un assert nommé, dont : pré-requis
+    `CHECK_DB_URL` absent → **exit 1**, jamais un saut de section ; fixture rétrécie 50 → 33 lignes →
+    rouge (sans quoi « aucun fait illisible » serait vrai sur zéro ligne) ; et le jumeau réintroduit
+    dans le **code** rouge, tandis que le même token laissé dans la seule **docstring** reste vert.
+    ⚠️ La fixture du test négatif est une base scratch **copiée du réel** (`COPY` des 84
+    `fact_financial` de prod), jamais écrite à la main : elle rend 100 ok / 0 FAIL avant mutation, ce
+    qui prouve qu'elle est fidèle **et** discriminante (#47, `feedback_fixture_copiee_du_reel`) — et
+    aucune ligne de production n'a été touchée pour la produire.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

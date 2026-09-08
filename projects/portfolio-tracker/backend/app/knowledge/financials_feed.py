@@ -38,7 +38,7 @@ from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annu
 # L'identité d'un fait EDGAR (quelle entrée courante un nouveau fait remplace) est une règle
 # UNIQUE, tenue par edgar_feed. Ce module écrit lui aussi un `capital_expenditure` : lui donner
 # son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
-from app.knowledge.edgar_feed import _current_fact_ids
+from app.knowledge.edgar_feed import POSTES, _current_fact_ids
 from app.knowledge.service import get_current_entries, store_knowledge
 from app.knowledge.units import montant
 
@@ -147,14 +147,30 @@ def _parse_end(v: Any) -> Optional[date]:
     return None
 
 
-# Postes de BILAN, pour les entries LEGACY qui ne portent pas encore `poste_kind` (seed NVDA écrit
-# à la main, entries antérieures au split flux/bilan). Repli explicite et borné — la nature d'un
-# poste se lit dans le fait lui-même dès qu'elle y est écrite.
-_STOCK_METRICS_LEGACY = {"stockholders_equity", "total_assets", "cash_and_lt_debt"}
-
-
 def _poste_kind(metric: str, cs: dict[str, Any]) -> str:
-    return cs.get("poste_kind") or ("stock" if metric in _STOCK_METRICS_LEGACY else "flow")
+    """Flux ou bilan ? La ligne d'abord, `POSTES` ensuite — jamais une table locale.
+
+    ⚠️ Ce repli était une SECONDE TABLE (`_STOCK_METRICS_LEGACY = {stockholders_equity,
+    total_assets, cash_and_lt_debt}`), recopiée à la main depuis `POSTES[].flow`. Elle était
+    d'accord avec son modèle, ce qui ne la rend pas moins dangereuse : deux tables d'accord restent
+    deux tables (#46), et c'est au premier poste de bilan ajouté à `POSTES` qu'elles auraient
+    divergé — en silence, en datant un stock sur l'ancre de flux, soit exactement le défaut #42.
+
+    Le repli lui-même n'a plus de matière depuis la migration 035, qui a écrit `poste_kind` sur les
+    27 lignes du socle qui ne le portaient pas (F16). On le garde parce qu'un producteur peut
+    écrire une entry avant que la migration correspondante ne tourne — mais il interroge désormais
+    le détenteur unique.
+    """
+    kind = cs.get("poste_kind")
+    if kind in ("flow", "stock"):
+        return kind
+    poste = next((p for p in POSTES if p.metric == metric), None)
+    if poste is not None:
+        return "flow" if poste.flow else "stock"
+    # Métrique hors socle (ratio dérivé, donnée de marché) : elle n'a pas d'identité réglementaire
+    # au sens de #43, et son producteur pose son `poste_kind` lui-même quand il en a un (#42).
+    # `flow` est le repli historique, conservé pour ne rien changer au comportement des ratios.
+    return "flow"
 
 
 def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:

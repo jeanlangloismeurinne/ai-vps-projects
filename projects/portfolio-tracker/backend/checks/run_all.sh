@@ -21,14 +21,18 @@ for f in checks/check_*.py; do
   # Les deux checks « live » sortent du périmètre hors-ligne : ils appellent le réseau ouvert.
   case "$n" in check_fetch_live|check_fetch_relevance) continue ;; esac
 
-  # `check_entry_nature` §7 lit l'ÉTAT persisté (acceptation de la capacité 1) : réseau `coolify`
-  # + vraie URL de base. Sans elles il SORT EN ÉCHEC au lieu de sauter la section — une mesure
-  # incomplète ne doit jamais passer pour un 0 (`feedback_check_degrade_en_sortant_a_zero`).
+  # Deux checks lisent l'ÉTAT persisté, pas seulement la règle : `check_entry_nature` §7
+  # (acceptation de la capacité 1) et `check_edgar_feed` §12bis (F16 — un fait porte lui-même sa
+  # nature de poste). Ils exigent le réseau `coolify` + la vraie URL de base. Sans elles ils
+  # SORTENT EN ÉCHEC au lieu de sauter la section — une mesure incomplète ne doit jamais passer
+  # pour un 0 (`feedback_check_degrade_en_sortant_a_zero`).
   net=none; extra=()
-  if [ "$n" = check_entry_nature ]; then
-    net=coolify
-    extra=(-e "CHECK_DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)")
-  fi
+  case "$n" in
+    check_entry_nature|check_edgar_feed)
+      net=coolify
+      extra=(-e "CHECK_DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)")
+      ;;
+  esac
 
   out=$(docker run --rm --network "$net" -v "$PWD:/app:ro" \
         -v "$PWD/../roadmap/provenance-cards:/contract_frozen:ro" \
