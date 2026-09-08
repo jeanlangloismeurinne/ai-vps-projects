@@ -2,12 +2,17 @@
 id: spec-autorite-vs-actualite
 status: figée
 created: 2026-09-05
+updated: 2026-09-09
 project: portfolio-tracker
 role: >
   Décide comment le corpus V2 arbitre entre l'AUTORITÉ d'une source (EDGAR, dépôts réglementaires)
   et l'ACTUALITÉ d'un fait (communiqués, presse, experts sectoriels suivis). Remplace le scalaire
   `reliability_score` par trois axes jamais recombinés, ouvre l'admission des sources par un
   registre curé à la main, et donne des dents à la péremption sans donner de voix à une heuristique.
+  Capacités 0 à 4 CLOSES. La capacité 5 a été RÉÉCRITE deux fois par sa propre mesure : elle ne
+  traite plus la contradiction (mesurée sans matière : 0 divergence réelle sur 92 paires candidates)
+  mais la DÉGRADATION DÉCLARÉE — on cherche, on n'obtient pas, on propose une méthode d'approche, on
+  estime en déclarant ses hypothèses, et on avance.
 ---
 
 # Autorité contre actualité — révision du modèle de fiabilité
@@ -393,108 +398,141 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
   filtre `items_substantiels` de `material_events.py` existe déjà — le brancher, et **le prouver par
   un cas négatif** (un 8-K purement formel laisse le corpus `courant`).
 
-### 5. La contradiction : un chiffre ne se discute pas, un texte s'arbitre — et l'arbitrage se trace
+### 5. La dégradation déclarée : on cherche, on n'obtient pas, on approche — et on dit comment
 
-> ⚠️ **Cette capacité a été RÉÉCRITE le 2026-09-08.** Sa rédaction initiale — « la contradiction,
-> signalée jamais tranchée », deux entries mutuellement marquées et une **file d'arbitrage humain** —
-> a été mesurée avant d'être écrite (`tools/mesure_conflits_capacite5.py`, `bash
-> tools/mesure_conflits.sh`), et la mesure l'a **contredite sur son propre corpus** :
+> ⚠️ **Cette capacité a été réfutée par sa propre mesure DEUX FOIS, les 2026-09-08 et 2026-09-09.**
+> C'est le précédent le plus utile du chantier, et il vaut au-delà de lui : *une capacité dont on n'a
+> pas mesuré la matière est une hypothèse, quel que soit le soin mis à l'écrire.*
 >
-> - le levier annoncé mort l'est bien : `has_conflict = TRUE` sur **0 / 180** entries, aucun
->   `conflict_entry_id` ;
-> - collisions de la clef d'identité #43 : **0** sur les trois émetteurs ;
-> - l'appariement par `covers` proposerait **92 paires** (NVDA 24 · MSFT 44 · RVMD 24), presque
->   toutes des **facettes** d'un même champ et non des divergences — les 6 risques distincts de
->   `risques.risques_cles` sur RVMD produisent à eux seuls 15 paires ;
-> - **le cas d'acceptation nommé donne 0 paire** : l'entry du communiqué FDA (#186) couvre
->   `{marche.croissance_marche_historique}`, les quatre entries « aucun produit approuvé » couvrent
->   `{business_model.description}` / `{drivers_revenus}` / `{risques.risques_cles}` — **disjoints**.
->   Le test négatif de la capacité **interdisait son propre test d'acceptation.**
-> - et ce cas est **déjà servi** par la capacité 4, vérifié par exécution (`tools/mesure_gate.sh`) :
->   `business_model.description → couvert_perime [#173,#174,#175,#176 = perimee/183j]`, ancre = 8-K
->   du 2026-08-27, remède `rafraichissement`. C'est une **péremption**, pas une contradiction.
+> **1ᵉʳ refus (2026-09-08).** Rédaction initiale : « la contradiction, signalée jamais tranchée »,
+> deux entries mutuellement marquées, une **file d'arbitrage humain**. Mesuré à coût nul
+> (`bash tools/mesure_conflits.sh`) : `has_conflict` sur **0/180** · **0** collision de clef #43 ·
+> **92 paires** `covers` · et **le cas d'acceptation nommé donne 0 paire utile** — l'entry du
+> communiqué FDA (#186) couvre `marche.croissance_marche_historique`, les entries « aucun produit
+> approuvé » couvrent des champs **disjoints**. Le test négatif de la capacité interdisait son propre
+> test d'acceptation, et le cas était **déjà servi** par la capacité 4 (péremption, remède
+> `rafraichissement`). La file aurait été du code appelé 0 fois sur le corpus qui l'a motivée.
 >
-> La file d'arbitrage humain aurait donc été du code appelé 0 fois sur le corpus qui l'a motivée
-> (`feedback_decision_figee_a_remesurer`).
+> ⚠️ **Correction du 2026-09-09, à ne pas relire de travers** : la mesure imprime en réalité **3
+> paires** sur le cas d'acceptation, pas 0 — le motif `%approbation FDA%` attrape aussi #183, un
+> risque de **concurrence** du 10-Q (« les concurrents pourraient obtenir une approbation FDA plus
+> rapidement »). Ces 3 paires opposent quatre facteurs de risque **du même 10-Q, du même jour** : des
+> facettes. La conclusion tient, sa consignation était approximative. *Un compte lu de mémoire n'est
+> pas un compte mesuré, même quand il conclut juste.*
+>
+> **2ᵉ refus (2026-09-09).** La moitié 5b (« les textes s'arbitrent ») a été mesurée avant d'être
+> écrite, en deux étages — le filtre gratuit d'abord, la dépense ensuite :
+>
+> | étage | reste | ce qui est écarté |
+> |---|---|---|
+> | 92 paires `covers` brutes | 92 | — |
+> | mêmes `source_url` | 33 | **59** paires internes à un seul document : quatre facteurs de risque d'un même 10-Q ne sont pas deux sources qui se contredisent |
+> | même type **et** même jour | **29** | **4** paires de la même publication |
+> | jugées par un modèle (`bash tools/qualif_couples.sh`, **0,003 $**) | **0 divergence réelle** | 15 `non_comparable` · 9 `facettes` · 4 `meme_fait_deux_dates` · 1 « divergence » qui est une **prévision de févr. 2025 contre le chiffre constaté de févr. 2026** sur la taille du marché cloud |
+>
+> Et le résultat qui **ferme** la question : ce couple était classé `meme_fait_deux_dates` au passage
+> précédent, à **température 0, sur le même corpus**. La détection de contradiction textuelle n'est
+> pas stable d'une lecture à l'autre — un mécanisme d'arbitrage bâti dessus servirait à l'analyste un
+> jeu de « contradictions » différent à chaque ouverture du dossier. La règle que cette spec avait
+> écrite d'avance s'applique donc : **5b est du code sans matière, elle est CLOSE sans être
+> construite.**
+>
+> ⚠️ **Un piège de mesure à ne pas refaire** : le premier passage a rendu `0 divergence / 1 erreur`,
+> et l'erreur était le contrat de la mesure elle-même refusant un `motif` de plus de 400 caractères —
+> dont le texte tronqué portait les mots « contradiction directe ». **La réponse la plus longue est
+> la plus susceptible d'être le cas intéressant** : une contrainte de forme sur la sortie d'un
+> mesureur peut écarter précisément ce qu'il mesure, et rendre un zéro rassurant produit par la pire
+> des raisons (#49). Le plafond a été porté à 900 et **la mesure entière rejouée**, jamais le seul
+> couple fautif.
 
-**La doctrine, telle qu'arbitrée par l'utilisateur le 2026-09-08.** Elle sépare les chiffres des
-textes, et c'est cette séparation qui fait tout le travail :
+**La doctrine, telle qu'arbitrée par l'utilisateur les 2026-09-08 et 2026-09-09.** Deux moitiés, et
+c'est la seconde qui porte désormais toute la capacité :
 
 > « Sur les chiffres, il ne peut y avoir qu'**une seule vérité à un instant donné**. […] la donnée
 > "réglementaire" reste celle d'EDGAR et elle sera actualisée lors de la prochaine publication
 > officielle. Le système utilise la nouvelle information pour **apprécier s'il y a une alerte à
-> lever** ou bien si elle change significativement la définition de la thèse. Concernant les
-> informations textuelles, deux sources peuvent se contredire. **C'est à l'agent d'apprécier
-> laquelle retenir**, peut-être en notant qu'il y a une incertitude. À la fin, l'agent doit faire une
-> recommandation dont **l'utilisateur peut tracer sur quelle base elle se fonde** : cela veut dire
-> que l'agent aura retenu l'une ou l'autre des sources contradictoires, ou qu'il aura pondéré dans
-> son analyse le fait que deux signaux contradictoires s'équilibrent. »
+> lever** ou bien si elle change significativement la définition de la thèse. »
 
-Il n'y a donc **pas de file d'arbitrage humain**. L'utilisateur ne veut pas trancher à la place de
-l'agent ; il veut pouvoir **remonter** ce que l'agent a tranché.
+> « Le système / les agents indique quelle information il recherche. L'agent de recherche essaie de
+> l'obtenir. S'il n'y arrive pas, **l'agent propose une méthode pour approcher ce chiffre**. On
+> travaille exactement comme dans un fonds : on cherche à modéliser, si on n'a pas l'info **on
+> dégrade en signalant les hypothèses et on avance**. »
 
-#### 5a. Les chiffres — le socle ne se discute pas, la nouvelle donnée l'apprécie
+Pas de file d'arbitrage humain, et pas de mécanisme de contradiction : une **échelle d'escalade**.
 
-⚠️ **Mesuré avant d'écrire (2026-09-08) : la moitié « non-substitution » est DÉJÀ TENUE.**
-`_current_fact_ids` filtre `source_type = 'edgar_official'` (`edgar_feed.py:488`) — un chiffre issu
-d'une actualité n'est pas sur la même clef d'identité qu'un fait EDGAR, il ne peut donc littéralement
-pas le remplacer. **Rien à écrire pour ça** ; un `[ ]` de plus aurait été du code jamais appelé.
+#### Le défaut que la mesure a trouvé au passage, et qui est le vrai sujet
 
-Ce qui manque n'est pas un garde-fou, c'est **l'appréciation** :
+⚠️ **Une pièce qui documente une ABSENCE est comptée comme une FONDATION.** Sur MSFT,
+`business_model.recurrence_pct` est rendu `couvert` par la porte, sur la foi de deux entries qui ne
+donnent pas le chiffre :
 
-- [ ] Un chiffre non réglementaire qui **couvre un champ déjà fondé par le socle** produit une
-      **appréciation**, jamais une écriture sur le socle : *confirme* · *diverge* · *non comparable*
-      (trois états, jamais deux — #44). Cas réel en base, seul du corpus : MSFT
-      `business_model.recurrence_pct` porte #97 (EDGAR, tier A, 2026-07-29) **et** #98
-      (`financial_press`, tier B+, 2026-08-07, « bookings +18 % »), aujourd'hui **côte à côte en
-      silence**.
-- [ ] Une divergence chiffrée est routée vers la machinerie d'alerte **qui existe déjà** —
-      `hypotheses_reviewed` / `seuils_franchis` / `alert_level` du mode 2, `RE_SYNTHESE` du mode 3 —
-      et **non** vers un second mécanisme parallèle (#46 : deux chemins d'alerte divergeront).
-      ⚠️ Cette machinerie est aujourd'hui déclenchée **calendairement** (J+1 publication) ; c'est
-      son déclencheur qu'il faut ouvrir, pas son vocabulaire.
+- **#97** (`edgar_official`, A, 2026-07-29) — dont le contenu dit *« Microsoft ne publie PAS de
+  ventilation quantitative entre revenus over time et point in time »* ;
+- **#98** (`financial_press`, B+, 2026-08-07) — prises de commandes +18 %, RPO 678 Md$ : un
+  indicateur **voisin**, sans rapport de proportion avec le chiffre d'affaires.
+
+Le même champ, sur la même réalité (« ce chiffre n'est pas publié »), reçoit **trois traitements
+différents** selon l'émetteur — et c'est la mesure du défaut :
+
+| émetteur | verdict rendu | ce que l'analyste lit |
+|---|---|---|
+| NVDA | **dispensé** | le champ ne bloque pas (décision explicite) |
+| MSFT | **couvert** | ✅ fondé — *alors que personne ne connaît le chiffre* |
+| RVMD | **non couvert** | lacune → un mandat repart chercher un chiffre qui n'existe pas |
+
+C'est le mode de panne du chantier, une fois de plus : tous les éléments justes, le fait faux — et
+une garantie qui **rassure en étant aveugle** (#55).
+
+⚠️ **Et le substitut existe, mais pas là où 5a le cherchait.** #97 nomme lui-même la ventilation
+publiée : Produits **64 696 M$** / Services et autres **267 143 M$**, et le corpus porte déjà le CA
+total en tier A (**#64**, 331 839 M$ — dont `64 696 + 267 143 = 331 839`, la vérification est
+interne au corpus). La règle de trois donne **80,5 %**, et #97 énonce lui-même le sens de l'erreur
+(une part des « Produits » est reconnue *over time*) : **80,5 % est un plancher**. Le couple
+presse/réglementaire qui motivait 5a n'était donc pas la matière ; la matière était **dans le même
+document**, entre deux pièces que personne n'avait rapprochées.
+
+#### Ce qui est à construire — l'échelle d'escalade
+
+- [ ] **Une absence déclarée ne fonde plus.** Une entry dont l'assertion est *« cette donnée n'est
+      pas publiée »* cesse de compter comme couvrante pour le champ qu'elle `covers`. Elle n'est pas
+      supprimée et ne devient pas une lacune ordinaire : elle **qualifie** le champ comme
+      *non publié à la source*, ce qui est une information sur l'émetteur, pas un trou de collecte
+      (#44 : *calculé / non calculable / absent* — trois états, jamais deux).
+- [ ] **L'échelle, dans l'ordre, et chaque barreau est déclaré** : (1) le dossier nomme
+      l'information cherchée → (2) la recherche tente de l'obtenir → (3) échec ou absence déclarée à
+      la source → (4) l'agent **propose une méthode d'approche** à partir des pièces **déjà au
+      dossier** → (5) si aucune méthode n'est tenable, lacune déclarée avec son motif.
+- [ ] **L'estimation porte sa base DANS sa propre ligne** (#55 — le discriminant d'une règle doit
+      être lisible par un lecteur, pas seulement connu du producteur) : la question posée · les
+      pièces utilisées, citées par leur id · le calcul en toutes lettres · **le sens de l'erreur**
+      (plancher / plafond / indéterminé — trois états) · les hypothèses retenues.
+- [ ] **Elle est une `interpretation`, jamais une `mesure`** (#51) : elle n'hérite pas de l'autorité
+      d'un dépôt réglementaire, même quand tous ses ingrédients en viennent. Et elle vaut **un cran
+      sous sa pièce la plus faible** — la règle déjà retenue pour les synthèses grounded, dont c'est
+      ici le second emploi. Sur MSFT : deux pièces A → estimation **A-**, au-dessus du plancher
+      **B+** du champ, donc le dossier passe **en disant ce qu'il fait**.
 - [ ] **Aucune écriture de `superseded_by`** par ce chemin (garde par grep, comme `staleness.py`) :
-      le socle s'actualise à la **prochaine publication officielle**, et par elle seule.
-- **Acceptation** : sur MSFT, #98 est apprécié contre #97 et rendu comme *confirme* ou *diverge*
-  **avec son écart**, `source_date` du socle inchangé et #97 toujours `superseded_by IS NULL`.
-  **Test négatif** : une entry qui couvre un champ **non fondé par le socle** ne produit **aucune**
-  appréciation (sinon tout chiffre de presse se met à commenter le vide).
-
-#### 5b. Les textes — l'agent tranche, et sa recommandation porte sa base
-
-⚠️ **Mesuré avant d'écrire (2026-09-08) : il n'existe aujourd'hui AUCUN endroit où l'écrire.**
-`GroundedSynthesis.claims[]` ne porte que `text` + `cited_entry_ids` — ce qui est cité, jamais ce qui
-a été **écarté**. `RiskMatrix`, seul verdict du flux, porte `rationale`, `axes` (4 scalaires dont
-`qualite_info`) et `sources_summary` (comptes par tier) : **un nombre n'est pas une trace**. Les trois
-voisins répondent chacun à une **autre** question — `IncertitudeBloquante` dit « je ne sais pas », pas
-« j'avais deux réponses et j'ai tranché » ; `RechercheDivergente` est le mandat de falsification A6 ;
-`HypothesisReview.source_entry_refs` étaye un statut sans dire ce qu'il écarte. Et tous ces contrats
-sont `extra="forbid"` : **l'agent ne peut pas ajouter la trace même s'il la produisait.**
-
-- [ ] Un porteur d'**arbitrage** sur le chemin de la recommandation, avec **trois issues jamais
-      confondues** (#44/#53) : `retenue` (l'agent choisit une source et **dit laquelle et
-      pourquoi**) · `equilibrees` (deux signaux se compensent, et la recommandation en **tient
-      compte** — c'est un résultat, pas une abstention) · `incertitude_notee` (l'agent ne tranche
-      pas et le **déclare**). Chaque issue cite **les deux** entries, **y compris celle qui n'a pas
-      été retenue** — c'est tout l'objet de la traçabilité demandée.
-- [ ] **Aucun score composite** (#50) : l'arbitrage se rend en **entries citées + motif**, jamais en
-      un scalaire de confiance qui redeviendrait le `reliability_score` du diagnostic.
-- [ ] La détection reste **au service du jugement**, jamais l'inverse : `covers` propose des
-      candidats, l'agent seul qualifie. ⚠️ La mesure dit que `covers` seul rendrait **92 paires** de
-      **facettes** — un appariement qui ne discrimine pas la facette de la divergence noierait
-      l'arbitrage sous du bruit, et l'agent apprendrait à répondre « non comparable » par défaut.
-- [ ] **Aucune écriture de `superseded_by`** ici non plus : décider qu'un texte en remplace un autre
-      reste un jugement, et il est **rendu**, pas persisté comme une vérité (#49).
-- **Acceptation** : sur un couple réellement divergent du corpus, la recommandation finale expose
-  **laquelle des deux sources a fondé la conclusion** et laquelle a été écartée, avec le motif —
-  lisible **à l'écran**, pas seulement présent dans un blob JSON
-  (`feedback_controle_au_point_de_lecture` : la capacité 4 a vécu une journée correcte en Python et
-  invisible à l'écran). **Test négatif** : un arbitrage qui ne cite **qu'une** des deux entries est
-  refusé par le contrat — une trace qui ne montre pas l'écarté ne trace rien.
-- ⚠️ **Ligne de base à mesurer AVANT le lot** (`feedback_ligne_de_base_est_une_mesure`) : combien de
-  couples du corpus sont **réellement** divergents plutôt que facettes ? La mesure du 2026-09-08 dit
-  **0 collision déterministe** et **92 paires `covers`** non qualifiées. Si le nombre de vraies
-  divergences est nul, 5b est du code sans matière — et c'est **5a** qui porte la valeur.
+      une estimation ne retire jamais un fait du corpus, et le socle ne s'actualise qu'à la
+      **prochaine publication officielle**.
+- [ ] **Le point de lecture fait partie de la capacité** (`feedback_controle_au_point_de_lecture`,
+      leçon payée par la capacité 4) : l'écran distingue *fondé par une source* · *estimé, avec sa
+      base* · *non publié à la source* · *lacune*. Une estimation dont la base n'est lisible que dans
+      un blob JSON n'est pas une estimation tracée.
+- **Acceptation, sur corpus réel** : MSFT `business_model.recurrence_pct` cesse d'être `couvert` en
+  silence ; le dossier rend **80,5 % (plancher)**, cite **#97 et #64**, nomme la ventilation
+  Produits/Services comme base, déclare l'hypothèse (« une part des Produits est reconnue over
+  time »), et le champ passe au rang **A-**. `source_date` du socle inchangé, **#97 et #64 toujours
+  `superseded_by IS NULL`**.
+- **Tests négatifs** (chacun doit rougir sur un assert **nommé**) : (a) une entry « non publié »
+  laissée couvrante → rouge ; (b) une estimation sans sa base citée → refusée par le contrat ;
+  (c) une estimation au rang de ses ingrédients (sans le cran) → rouge ; (d) une estimation sur un
+  champ que **rien** ne permet d'approcher → aucune estimation produite, lacune déclarée (sinon
+  l'agent modélise le vide) ; (e) `superseded_by` écrit par ce chemin → rouge.
+- ⚠️ **Ligne de base à requêter AVANT le lot** (`feedback_ligne_de_base_est_une_mesure` — elle a
+  changé le lot **trois fois de suite** maintenant) : combien d'entries du corpus documentent une
+  **absence** plutôt qu'un fait, et sur combien de champs sont-elles aujourd'hui comptées comme
+  couvrantes ? #97 est le cas connu ; il n'est probablement pas le seul, et le nombre décide de
+  l'ampleur du lot. Cette mesure est **gratuite**.
 
 ---
 
@@ -502,8 +540,16 @@ sont `extra="forbid"` : **l'agent ne peut pas ajouter la trace même s'il la pro
 
 **Coût.** Capacités 0-1 et 3-4 sont du travail déterministe, hors ligne, à coût de modèle nul — la
 frontière gratuite avant toute dépense, qui a trouvé onze défauts sur quatorze dans ce chantier. La
-capacité 2 demande du jugement humain (curation) et la 5 est la plus lourde en code. Une migration
-(034), aucune autre prévue.
+capacité 2 demande du jugement humain (curation) et la 5 est la plus lourde en code. Migrations
+appliquées : 034 (axe `nature`) et 035 (`poste_kind`, F16). La 5 réécrite n'en demande pas
+a priori — ⚠️ à VÉRIFIER par lecture du schéma avant de l'affirmer, l'affirmation « le lot 8 n'en
+demande pas » ayant déjà été fausse une fois (`CLAUDE.md`, migration 031).
+
+**Ce que la mesure a coûté, et ce qu'elle a évité.** Les deux réfutations de la capacité 5 ont
+coûté **0,003 $** au total (une seule des deux mesures appelle un modèle). Elles ont évité d'écrire
+une file d'arbitrage humain appelée 0 fois, puis un mécanisme de détection de contradiction bâti
+sur un signal **instable entre deux passages à température 0**. C'est le meilleur rapport du
+chantier après la frontière gratuite.
 
 **Risque principal — le desserrage déguisé.** Ouvrir l'admission des sources *est* un desserrage.
 Ce qui le rend acceptable ici, et qu'il faut tenir : rien n'est promu automatiquement, l'admission

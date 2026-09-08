@@ -2,18 +2,20 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-08
+updated: 2026-09-09
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2 (cartes de provenance). Contrat FIGÉ · couche 2
   DÉPLOYÉE · boucle V2 complète (décider → surveiller → sortir → apprendre, lots 7-9) · écrans
   UX-1/2/3 livrés · chaîne exercée sur NVDA, MSFT et RVMD. Le chantier courant est la **révision du
   modèle de fiabilité** (autorité contre actualité) ; RVMD reste le banc d'essai des modes de panne
-  du socle (16 défauts F1→F16). État au 2026-09-08 : **1 815 assertions / 0 échec / 22 scripts**,
+  du socle (16 défauts F1→F16). État au 2026-09-09 : **1 815 assertions / 0 échec / 22 scripts**,
   migrations appliquées jusqu'à **035**, prochaine 036. Roadmap active :
   `roadmap/02-spec-autorite-vs-actualite.md` — **capacités 0, 1, 2, 3 et 4 CLOSES**, prochain jalon
-  **capacité 5**, RÉÉCRITE le 2026-09-08 (les chiffres ne se discutent pas, les textes s'arbitrent
-  et l'arbitrage se trace) — sa rédaction initiale a été réfutée par sa propre mesure.
+  **capacité 5**, RÉÉCRITE UNE SECONDE FOIS le 2026-09-09 en **« la dégradation déclarée »** : on
+  cherche, on n'obtient pas, on approche — et on dit comment. Ses deux rédactions précédentes ont
+  été réfutées par leur propre mesure ; la moitié « arbitrage de textes » est CLOSE sans avoir été
+  construite (0 divergence réelle sur 29 couples, et un jugement instable d'un passage à l'autre).
 ---
 
 # Prompt de reprise — portfolio-tracker V2 (cartes de provenance)
@@ -32,46 +34,83 @@ modèle de fiabilité : **autorité contre actualité**. Six capacités dans un 
 `nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 78
 assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07) · **porte de
 complétude à trois états** (#54, 131 assertions, le 2026-09-08).
-**Prochain jalon : capacité 5**, **RÉÉCRITE le 2026-09-08** — *un chiffre ne se discute pas, un texte
-s'arbitre, et l'arbitrage se trace*. Elle se lit en deux moitiés, **5a (les chiffres)** et **5b (les
-textes)**, et son prérequis F16 est **fermé** (migration 035 + `check_edgar_feed.py` §12/§12bis).
+**Prochain jalon : capacité 5**, **RÉÉCRITE UNE SECONDE FOIS le 2026-09-09** — *la dégradation
+déclarée : on cherche, on n'obtient pas, on approche, et on dit comment.* Son prérequis F16 est
+**fermé** (migration 035 + `check_edgar_feed.py` §12/§12bis).
 
-⚠️ **La rédaction initiale de la capacité 5 a été RÉFUTÉE par sa propre mesure** — c'est le
-précédent le plus utile du chantier, et il confirme la consigne « relire sa ligne de base AVANT le
-lot » héritée de la capacité 4. Elle prévoyait « la contradiction signalée jamais tranchée » + une
-**file d'arbitrage humain**. Mesuré (`bash tools/mesure_conflits.sh`, coût modèle nul) : `has_conflict`
-sur **0/180** · **0** collision de clef #43 · **92 paires** `covers` presque toutes des *facettes* ·
-et surtout **le cas d'acceptation nommé donne 0 paire**, ses entries couvrant des champs disjoints —
-le **test négatif de la capacité interdisait son propre test d'acceptation**. Le cas est en réalité
-**déjà servi par la capacité 4** (péremption, remède `rafraichissement`), vérifié par exécution. La
-file aurait été du code appelé 0 fois sur le corpus qui l'a motivée.
+⚠️ **Cette capacité a été RÉFUTÉE par sa propre mesure DEUX FOIS** (2026-09-08 puis 2026-09-09).
+C'est le précédent le plus utile du chantier : *une capacité dont on n'a pas mesuré la matière est
+une hypothèse, quel que soit le soin mis à l'écrire.*
 
-**Doctrine arbitrée par l'utilisateur** (verbatim dans la roadmap) : sur les **chiffres**, une seule
+- **1ᵉʳ refus** — « la contradiction signalée jamais tranchée » + une **file d'arbitrage humain**.
+  Mesuré à coût nul (`bash tools/mesure_conflits.sh`) : `has_conflict` **0/180** · **0** collision de
+  clef #43 · **92 paires** `covers` · et le cas d'acceptation nommé sans matière utile. Le **test
+  négatif de la capacité interdisait son propre test d'acceptation**, et le cas était **déjà servi
+  par la capacité 4** (péremption, remède `rafraichissement`).
+  ⚠️ **Correction du 2026-09-09** : la mesure imprime **3 paires** sur ce cas, pas 0 — le motif
+  attrape aussi #183 (risque de concurrence du 10-Q). Ces 3 paires opposent des facteurs de risque
+  **du même 10-Q, du même jour** : la conclusion tient, sa consignation était fausse. *Une
+  consignation n'est pas une mesure, même quand elle conclut juste.*
+- **2ᵉ refus** — la moitié « les textes s'arbitrent » (5b), mesurée en deux étages : **92** paires
+  brutes → **33** après retrait des paires internes à un seul document (59) → **29** après retrait
+  des paires de la même publication le même jour (4) → jugées par un modèle
+  (`bash tools/qualif_couples.sh`, **0,003 $**) : **0 divergence réelle** (15 `non_comparable`,
+  9 `facettes`, 4 `meme_fait_deux_dates`, 1 « divergence » qui est une **prévision de févr. 2025
+  contre le chiffre constaté de févr. 2026**). Et le résultat qui ferme la question : ce couple était
+  classé autrement au passage précédent, **à température 0, sur le même corpus** — le jugement de
+  contradiction textuelle **n'est pas stable d'une lecture à l'autre**. **5b est CLOSE sans avoir été
+  construite.**
+
+⚠️ **Un piège de mesure à ne pas refaire** : le 1ᵉʳ passage a rendu `0 divergence / 1 erreur`, et
+l'erreur était **le contrat de la mesure elle-même** refusant un motif de plus de 400 caractères —
+dont le texte tronqué portait les mots « contradiction directe ». **La réponse la plus longue est la
+plus susceptible d'être le cas intéressant** : une contrainte de forme sur la sortie d'un mesureur
+peut écarter précisément ce qu'il mesure, et rendre un zéro rassurant produit par la pire des
+raisons. Plafond porté à 900 et **mesure entière rejouée**, jamais le seul couple fautif.
+
+**Doctrine arbitrée par l'utilisateur** (verbatim dans la roadmap). Sur les **chiffres** : une seule
 vérité à un instant donné — EDGAR reste la base réglementaire, actualisée à la prochaine publication
 officielle ; la donnée d'actualité ne la remplace jamais, elle sert à **apprécier** s'il y a une
-alerte à lever ou un changement significatif de thèse. Sur les **textes**, deux sources peuvent se
-contredire : **c'est à l'agent de trancher**, et la recommandation finale doit laisser l'utilisateur
-**tracer sur quelle base elle se fonde** — quelle source retenue, ou comment deux signaux
-contradictoires ont été pondérés. **Pas de file d'arbitrage humain.**
+alerte à lever ou un changement de thèse. Et la doctrine qui porte désormais toute la capacité :
+« le système indique quelle information il recherche · l'agent tente de l'obtenir · s'il n'y arrive
+pas, **il propose une méthode pour approcher ce chiffre** · on travaille exactement comme dans un
+fonds : on cherche à modéliser, si on n'a pas l'info **on dégrade en signalant les hypothèses et on
+avance** ». Pas de file d'arbitrage humain, pas de mécanisme de contradiction : une **échelle
+d'escalade**.
 
-Deux mesures faites le 2026-09-08 avant d'écrire, et elles cadrent le lot :
-- **5a est à moitié déjà tenue** — `_current_fact_ids` filtre `source_type='edgar_official'`
-  (`edgar_feed.py:488`), donc un chiffre d'actualité **ne peut pas** superseder un fait EDGAR. Ce
-  qui manque n'est pas un garde-fou mais l'**appréciation** (confirme / diverge / non comparable) et
-  son routage vers la machinerie d'alerte **existante** (mode 2 `alert_level`, mode 3 `RE_SYNTHESE`),
-  jamais vers un second mécanisme parallèle. Cas réel unique en base : MSFT
-  `business_model.recurrence_pct` porte #97 (EDGAR, A) **et** #98 (`financial_press`, B+), côte à
-  côte en silence.
-- **5b n'a aujourd'hui AUCUN porteur** — `GroundedSynthesis.claims[]` = `text` + `cited_entry_ids`
-  (ce qui est cité, jamais ce qui est écarté) ; `RiskMatrix`, seul verdict du flux, n'offre que
-  `rationale`, 4 scalaires et des comptes par tier. `IncertitudeBloquante` dit « je ne sais pas »,
-  `RechercheDivergente` est le mandat de falsification A6 : chacun répond à une **autre** question.
-  Et tous ces contrats sont `extra="forbid"` — l'agent **ne peut pas** ajouter la trace.
+⚠️ **Le défaut que la mesure a trouvé au passage, et qui est le vrai sujet du lot : une pièce qui
+documente une ABSENCE est comptée comme une FONDATION.** Sur MSFT,
+`business_model.recurrence_pct` est rendu `couvert` par la porte sur la foi de #97
+(`edgar_official`, A) — dont le contenu dit *« Microsoft ne publie PAS de ventilation
+quantitative »* — et de #98 (presse, B+), un indicateur voisin. La même réalité (« ce chiffre n'est
+pas publié ») reçoit **trois traitements** selon l'émetteur : NVDA **dispensé** · MSFT **couvert**
+(✅ fondé, alors que personne ne connaît le chiffre) · RVMD **non couvert** (un mandat repart
+chercher un chiffre qui n'existe pas). Mode de panne habituel du chantier : tous les éléments
+justes, le fait faux, et une garantie qui **rassure en étant aveugle** (#55).
 
-⚠️ **Ligne de base à re-mesurer AVANT le lot** : combien de couples sont *réellement* divergents
-plutôt que facettes ? Si le nombre est nul, 5b est du code sans matière et c'est **5a** qui porte la
-valeur. Migration à écrire *juste avant* son lot, jamais en avance — la prochaine est **036**, non
-écrite (mesurer d'abord si elle est nécessaire, comme l'a fait la capacité 4).
+⚠️ **Et le substitut est dans le même document.** #97 nomme lui-même la ventilation publiée :
+Produits **64 696 M$** / Services **267 143 M$** ; le corpus porte le CA total en tier A (**#64**,
+331 839 M$) et `64 696 + 267 143 = 331 839` — la vérification est **interne au corpus**. Règle de
+trois → **80,5 %**, et #97 énonce le sens de l'erreur (une part des Produits est reconnue *over
+time*) : **80,5 % est un plancher**. La matière n'était pas le couple presse/réglementaire, elle
+était entre deux pièces que personne n'avait rapprochées.
+
+**Règle de rang arbitrée** : une estimation vaut **un cran sous sa pièce la plus faible** (second
+emploi de la règle des synthèses grounded). Sur MSFT : deux pièces A → **A-**, au-dessus du plancher
+**B+** du champ, donc le dossier passe **en disant ce qu'il fait**.
+
+⚠️ **Périmètre du prochain lot, arbitré : la chaîne entière d'un coup** — absence détectée (elle
+cesse de fonder) → proposition de méthode → estimation déclarée (question · pièces citées · calcul ·
+sens de l'erreur · hypothèses) → un cran sous le plus faible → **affichage à l'écran** (une
+estimation dont la base n'est lisible que dans un blob JSON n'est pas tracée —
+`feedback_controle_au_point_de_lecture`). Cinq tests négatifs nommés dans la roadmap.
+
+⚠️ **Ligne de base à requêter AVANT d'écrire une ligne** (elle a changé le lot **trois fois de
+suite**) : **combien d'entries du corpus documentent une absence plutôt qu'un fait, et sur combien
+de champs sont-elles aujourd'hui comptées comme couvrantes ?** #97 est le cas connu, probablement
+pas le seul, et le nombre décide de l'ampleur du lot. **Cette mesure est gratuite.** Migration à
+écrire *juste avant* son lot, jamais en avance — la prochaine est **036**, non écrite (vérifier en
+lisant le schéma qu'elle est nécessaire, comme l'a fait la capacité 4).
 
 ⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) devait précéder
 le durcissement de la porte (4), sinon tout champ devenait `couvert_perime` sans remède disponible.
@@ -87,7 +126,7 @@ tâches indépendantes.
 `roadmap/01-spec-v2-unifiee.md` §18 reste la roadmap de **référence** du projet (découpage en lots),
 mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qui s'exécute.
 
-## Où on en est (2026-09-08)
+## Où on en est (2026-09-09)
 
 **Le système est exercé, pas prototypé.** La chaîne complète a tourné de bout en bout sur trois
 émetteurs, et on connaît désormais ses modes de panne — c'est le principal actif du chantier.
@@ -130,7 +169,38 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Partition (F15) | une entry **non datée** rangée à la fois dans `posterieures` et dans `non_datees` — 4 classes pour 3 entries, et une date *inconnue* comptée parmi les fraîches | 0 token | **#53** |
 | Lisibilité de la clef (F16) | `poste_kind`, discriminant de la clef #43, **absent de tout le socle NVDA et MSFT** (19 des 43 faits courants) : la règle juste dans le producteur, son porteur absent de la ligne — toute garantie « une seule vérité chiffrée » y était aveugle sur 2 émetteurs sur 3 | 0 token | **#55** |
 
-### Livré cette session (2026-09-08, 2ᵉ lot) — F16 fermé, capacité 5 réécrite
+### Livré cette session (2026-09-09) — lot de MESURE : 5b réfutée, capacité 5 réécrite en « dégradation déclarée »
+
+**Aucun code de production.** C'était voulu : le lot devait dire **s'il y avait quelque chose à
+construire** avant d'écrire quoi que ce soit. Dépense totale **0,003 $**. Deux outils versionnés :
+`tools/qualif_couples_capacite5.py` + `tools/qualif_couples.sh`.
+
+- 🔴 **5b n'a pas de matière, et elle est CLOSE sans avoir été construite.** L'entonnoir :
+  **92** paires `covers` → **33** (retrait de 59 paires internes à un seul document : quatre facteurs
+  de risque d'un même 10-Q ne sont pas deux sources) → **29** (retrait de 4 paires de la même
+  publication le même jour) → jugées : **0 divergence réelle**. La seule « divergence » rendue est
+  une prévision de févr. 2025 opposée au chiffre constaté de févr. 2026.
+- 🔴 **Le jugement de contradiction textuelle n'est pas stable.** Le même couple était classé
+  autrement au passage précédent, **à température 0 sur le même corpus**. Un mécanisme d'arbitrage
+  bâti dessus servirait à l'analyste un jeu de « contradictions » différent à chaque ouverture du
+  dossier. La règle que la spec avait écrite d'avance s'est appliquée à elle-même.
+- 🔴 **Le vrai défaut, trouvé en lisant : une pièce qui documente une ABSENCE est comptée comme une
+  FONDATION.** MSFT #97 (`edgar_official`, A) dit *« Microsoft ne publie PAS de ventilation
+  quantitative »* et rend pourtant `business_model.recurrence_pct` **`couvert`**. Trois traitements
+  pour une même réalité : NVDA **dispensé** · MSFT **couvert** · RVMD **non couvert** (mandat lancé
+  sur un chiffre qui n'existe pas). C'est le sujet du prochain lot.
+- 📌 **Le substitut était dans le même document** : #97 nomme Produits 64 696 M$ / Services
+  267 143 M$, le corpus porte le CA total tier A (#64, 331 839 M$), et la somme **vérifie**. Règle de
+  trois → **80,5 %**, plancher (le sens de l'erreur est énoncé par #97 lui-même).
+- 📌 **Un piège de mesure** : le 1ᵉʳ passage a rendu `0 divergence / 1 erreur`, et l'erreur était mon
+  propre contrat refusant un motif > 400 caractères — dont le texte tronqué portait « contradiction
+  directe ». **La réponse la plus longue est la plus susceptible d'être le cas intéressant.** Mesure
+  entière rejouée après desserrage, jamais le seul couple fautif.
+- 📌 **Une consignation n'est pas une mesure** : la reprise et la roadmap disaient toutes deux « 0
+  paire » sur le cas d'acceptation de la 1ᵉʳ rédaction ; le mesureur, inchangé depuis son unique
+  commit, en imprime **3**. La conclusion tenait, le compte était faux.
+
+### Livré la session précédente (2026-09-08, 2ᵉ lot) — F16 fermé, capacité 5 réécrite
 
 **Aucune dépense de modèle.** Migration **035** appliquée. Suite : **1 815 / 0 / 22**
 (+17 : `check_edgar_feed.py` §12 et §12bis). Déploiement `4b8cc74`, HTTP 200.
@@ -410,13 +480,20 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > était absent de tout le socle NVDA et MSFT — la règle juste dans le producteur, son porteur absent
 > de la ligne, donc **illisible pour un lecteur**. Il a été trouvé par un **faux rouge** que
 > fabriquait mon propre mesureur (absence coercée en `stock`).
-> **Prochain jalon = capacité 5, RÉÉCRITE le 2026-09-08** : *un chiffre ne se discute pas (5a), un
-> texte s'arbitre et l'arbitrage se trace (5b)*. Sa rédaction initiale — « signalée jamais tranchée »
-> + file d'arbitrage humain — a été **réfutée par sa propre mesure** : 0 conflit en base, 0 collision
-> de clef, et son cas d'acceptation nommé donne **0 paire** (champs disjoints), c'est-à-dire que son
-> test négatif interdisait son test d'acceptation. Le cas était déjà servi par la capacité 4
-> (péremption). ⚠️ Ne pas réordonner les capacités. ⚠️ **Une ligne de base se requête AVANT le lot** —
-> deux fois de suite maintenant, elle a changé le lot : la spec de la capacité 4 visait le mauvais
-> émetteur, celle de la capacité 5 visait un mécanisme sans matière.
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#54**),
+> **Prochain jalon = capacité 5, RÉÉCRITE UNE SECONDE FOIS le 2026-09-09 en « la dégradation
+> déclarée »** : on cherche, on n'obtient pas, on approche — et on dit comment. Ses deux rédactions
+> précédentes ont été **réfutées par leur propre mesure** : la file d'arbitrage humain (0 conflit,
+> 0 collision de clef), puis l'arbitrage de textes — **29 couples de sources réellement distinctes,
+> 0 divergence réelle**, et un jugement **instable d'un passage à l'autre à température 0** : 5b est
+> CLOSE sans avoir été construite. Le lot porte le défaut trouvé au passage : **une pièce qui
+> documente une absence est comptée comme une fondation** (MSFT `business_model.recurrence_pct`
+> rendu `couvert` par #97, qui dit que le chiffre n'est pas publié), alors que le substitut se
+> dérive dans le même document (**80,5 % plancher**, #97 + #64). Périmètre arbitré : **la chaîne
+> entière d'un coup**, affichage compris ; une estimation vaut **un cran sous sa pièce la plus
+> faible**. ⚠️ Ne pas réordonner les capacités. ⚠️ **Une ligne de base se requête AVANT le lot** —
+> **trois fois de suite** maintenant, elle a changé le lot : la capacité 4 visait le mauvais
+> émetteur, la capacité 5 a visé deux fois un mécanisme sans matière. La prochaine est gratuite :
+> combien d'entries documentent une **absence**, et sur combien de champs comptent-elles comme
+> couvrantes ?
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#55**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

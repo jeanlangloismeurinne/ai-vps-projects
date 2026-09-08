@@ -8,6 +8,111 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## MàJ 2026-09-09 — lot de MESURE : la capacité 5 réfutée une seconde fois, et remplacée
+
+**Aucune écriture de code produit. Aucune migration. Dépense de modèle : 0,003 $.** Ce lot n'a rien
+livré en production et c'est son résultat : il a empêché d'écrire une capacité sans matière, pour la
+deuxième fois consécutive sur la même capacité.
+
+### Ce qui a été mesuré, dans l'ordre
+
+1. **`bash tools/mesure_conflits.sh` rejoué (coût nul).** Sortie : `0 entry marquée en conflit · 0
+   collision déterministe · 0 fait non keyable · 92 paires candidates · 3 paires du cas
+   d'acceptation effectivement appariées`. ⚠️ **Le `00-REPRISE.md` et la roadmap disaient « 0 paire »
+   — c'était une lecture, pas la sortie.** Vérifié : le mesureur n'a qu'un seul commit (`4b8cc74`),
+   il n'a pas changé. Les 3 paires sont #183 apparié à #180/#182/#184, quatre facteurs de risque du
+   **même 10-Q du même jour** ; #183 est un risque de **concurrence** capté par accident par le motif
+   `%approbation FDA%` (« les concurrents pourraient obtenir une approbation FDA plus rapidement »).
+   La conclusion tenait, sa consignation était fausse.
+2. **Qualification des 92 paires par filtre gratuit (SQL, coût nul).** 59 paires internes à un même
+   `source_url` · 4 paires de même type et même jour · **29 couples opposant des sources réellement
+   distinctes**. Ce filtre est **fidèle à la doctrine** (« deux sources peuvent se contredire »), ce
+   n'est pas une heuristique de commodité : deux extraits d'un même document ne sont qu'une source.
+3. **Lecture des 29 couples par un modèle** — outil neuf `tools/qualif_couples_capacite5.py` +
+   lanceur versionné `tools/qualif_couples.sh` (mêmes invocations que `mesure_conflits.sh` : image du
+   backend, source locale montée en lecture seule, `--env-file` dans l'ordre load-bearing).
+   Verdict en **quatre états** : `divergence` / `facettes` / `meme_fait_deux_dates` /
+   `non_comparable`.
+   - **1ᵉʳ passage** : `0 divergence · 8 facettes · 5 péremptions · 15 non comparables · 1 ERREUR`,
+     exit 1.
+   - **2ᵉ passage** (après correctif du mesureur, mesure rejouée **en entier**) :
+     `1 divergence · 9 facettes · 4 péremptions · 15 non comparables · 0 erreur`, 0,0031 $.
+
+### 🔴 Le piège de mesure — un contrat de forme peut écarter ce qu'on mesure
+
+L'unique erreur du 1ᵉʳ passage était **mon propre contrat** : `motif` plafonné à 400 caractères, et
+le modèle avait produit plus long. Le texte tronqué visible dans le message d'erreur contenait les
+mots **« contradiction directe »** — c'est-à-dire que la contrainte de forme écartait précisément le
+couple le plus susceptible d'être le cas cherché. **La réponse la plus longue est la plus
+susceptible d'être la réponse intéressante.** Un mesureur qui rend `0 divergence / 1 erreur` ne rend
+pas zéro : il rend *inconnu*. Le plafond a été porté à 900 **et la mesure entière rejouée**, jamais
+le seul couple fautif (rejouer le fautif seul aurait mélangé deux versions du mesureur, §27).
+La sortie en échec sur erreur ≠ 0 a fonctionné comme prévu (`feedback_check_degrade_en_sortant_a_zero`).
+
+### 🔴 Le résultat qui ferme 5b — le jugement n'est pas stable
+
+Comparaison arithmétique des deux passages : `facettes` 8 → 9 (l'erreur résolue) et
+`meme_fait_deux_dates` 5 → 4 avec `divergence` 0 → 1. **Exactement un couple a changé de verdict**,
+à **température 0, sur le même corpus, avec le même prompt** : MSFT #109/#110
+(`marche.croissance_marche_historique`), passé de « même fait à deux dates » à « divergence ».
+
+Et à la relecture à la main, la « divergence » n'en est pas une : #109 = **Synergy, 419 Md$ constatés
+pour 2025** (publié févr. 2026) · #110 = **Canalys, ~382 Md$ prévus pour 2025** (publié févr. 2025).
+Une **prévision contre son résultat**, à un an d'écart, entre deux cabinets aux périmètres différents
+— #110 dit lui-même que l'écart avec Synergy est « ~2-3 %, cohérent pour deux méthodologies
+différentes ». Le corpus se documentait déjà tout seul.
+
+→ **0 divergence réelle sur 92 paires candidates.** La règle que la spec avait écrite d'avance
+s'applique : 5b est du code sans matière, **close sans être construite**. Bâtir un arbitrage sur un
+signal instable servirait à l'analyste un jeu de contradictions différent à chaque ouverture.
+
+### 🔴 Le vrai défaut, trouvé en passant — une absence déclarée compte comme une fondation
+
+En lisant le seul couple nommé par 5a (MSFT #97/#98), le défaut est apparu dessous :
+
+- **#97** (`edgar_official`, A) dit littéralement *« Microsoft ne publie PAS de ventilation
+  quantitative entre revenus over time et point in time »* ;
+- **#98** (`financial_press`, B+) donne les prises de commandes (+18 %) et le RPO — un indicateur
+  **voisin**, sans rapport de proportion au chiffre d'affaires ;
+- et la porte rend `business_model.recurrence_pct` = **`couvert`** sur MSFT (vérifié par arithmétique
+  sur `bash tools/mesure_gate.sh` : 10 couverts + 9 périmés + 0 non couverts = 19 champs, le champ
+  n'est dans aucune des deux listes nommées).
+
+Le même champ, sur la même réalité (« ce chiffre n'est pas publié »), reçoit **trois traitements
+selon l'émetteur** : NVDA **dispensé** · MSFT **couvert** · RVMD **non couvert** (donc un mandat qui
+repartira chercher un chiffre inexistant). Famille de #55 : une garantie aveugle rassure.
+
+### 📌 Le substitut existe, et il est dans le même document
+
+Arbitrage utilisateur : *« pourquoi ne pas chercher un substitut… un consultant en stratégie ferait
+une règle de trois »*. Vérifié en base, et c'est vrai — mais pas là où 5a regardait :
+
+- #97 **nomme lui-même** la ventilation publiée : Produits **64 696 M$** / Services et autres
+  **267 143 M$** ;
+- le corpus porte déjà le CA total en tier A (**#64**, **331 839 M$**), et `64 696 + 267 143 =
+  331 839` — la vérification est **interne au corpus** ;
+- **267 143 / 331 839 = 80,5 %**, et #97 énonce le **sens de l'erreur** (une part des « Produits »
+  est reconnue *over time*) : **80,5 % est un plancher**, le vrai chiffre est au-dessus.
+
+La presse (#98) ne permet **aucune** dérivation : passer de « bookings +18 % » à un pourcentage de
+récurrence demanderait d'inventer un pont. Le couple qui motivait toute la moitié « chiffres »
+n'était donc pas la matière ; la matière était **entre deux pièces du même dépôt réglementaire**,
+que personne n'avait rapprochées.
+
+### Doctrine arbitrée par l'utilisateur (verbatim, 2026-09-09)
+
+> « Le système / les agents indique quelle information il recherche. L'agent de recherche essaie de
+> l'obtenir. S'il n'y arrive pas, l'agent propose une méthode pour approcher ce chiffre. On travaille
+> exactement comme dans un fonds : on cherche à modéliser, si on n'a pas l'info on dégrade en
+> signalant les hypothèses et on avance. »
+
+Et sur le poids de l'estimation : **un cran sous sa pièce la plus faible** (second emploi de la règle
+de tier des synthèses grounded). Sur MSFT : deux pièces A → **A-**, au-dessus du plancher **B+** du
+champ, donc le dossier passe **en disant ce qu'il fait**.
+
+Périmètre du lot suivant arbitré : **la chaîne entière d'un coup** (absence détectée → proposition de
+méthode → estimation déclarée → affichage), dans une **nouvelle conversation**.
+
 Ce fichier contient **l'intégralité** des blocs de MàJ et des sections de contexte qui figuraient
 dans `00-REPRISE.md` jusqu'au 2026-08-31, du plus récent au plus ancien. Rien n'a été réécrit ni
 résumé ici : c'est la copie conforme, conservée pour retrouver le *pourquoi* d'une décision, le
