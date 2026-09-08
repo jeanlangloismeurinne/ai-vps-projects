@@ -26,6 +26,71 @@ car il décrit l'état atteint et les deux dettes ouvertes.
 <!-- Versés le 2026-09-05 (3) : les blocs des capacités 0 et 1 de la roadmap 02. -->
 <!-- Versé le 2026-09-05 (4) : le bloc de la capacité 2 (registre nominatif des sources). -->
 <!-- Versé le 2026-09-07 : le bloc de la capacité 3 (axe `actualité`) + le défaut F15. -->
+<!-- Versé le 2026-09-08 : le bloc de la capacité 4 (porte à trois états) + la réévaluation à la
+     lecture. Copie conforme, rien de résumé. -->
+
+> ## ⚡ MàJ 2026-09-08 — capacité 4 : la porte de complétude à trois états
+>
+> **Aucune dépense de modèle. Aucune migration** (mesuré, pas supposé). Suite : **1 798 / 0 / 22**.
+> Commits `3de2852` (la porte) et `21f077e` (la réévaluation à la lecture).
+>
+> ### La ligne de base s'est requêtée AVANT le lot, et elle a corrigé le test
+>
+> La roadmap annonçait « RVMD passe de `ready` à `not_ready` ». Vérifié en base :
+> `knowledge_curator_reports` ne porte **que** NVDA (#27) et MSFT (#26) ; **RVMD n'a jamais eu de
+> rapport readiness**, ne couvre que 10 des 19 champs et n'a aucune dispense — il sortirait
+> `not_ready` **pour lacune** de toute façon. Le test rédigé aurait viré au vert sans rien prouver :
+> fixture non discriminante. Les porteurs du faux vert `ready, 0 gap` sont NVDA et MSFT ; RVMD
+> devient le **témoin de séparation** (lacune ≠ péremption). Aucun rapport stocké ne portait
+> `cause_non_ready` — d'où la branche « champ absent » explicite au frontend.
+>
+> ### Ce qui a été livré
+>
+> - `agents/v2/curator.py` : `recompute_coverage` rend trois états (`couvert` / `couvert_perime` /
+>   `non_couvert`), `champs_perimes` **se retranche** de `champs_non_fondables`, `GapItem.remede` ∈
+>   {`collecte`, `rafraichissement`}, `cause_non_ready` **dérivée** et revérifiée par le validateur.
+> - `FIELD_PLANCHER_OVERRIDES` **supprimée** : elle doublait `FIELD_PROFILES`, empêchait le
+>   desserrage de #50 d'atteindre la porte, et rendait circulaire l'assert de
+>   `check_field_profiles.py` §5. Sa suppression a fait apparaître un desserrage B+ → B **non
+>   déclaré** sur `marche.croissance_marche_historique`, tacite depuis trois jours et invisible à
+>   l'assert écrit pour le voir. Corollaire : `_DESSERRAGE_NON_CABLE` de `check_source_registry.py`
+>   §1bis a viré au vert **de lui-même**.
+> - `check_readiness_recompute.py` §15-19 (→ **131**), `check_field_profiles.py` (→ **193**),
+>   `tools/acceptation_capacite4.py` + `tools/acceptation_gate.sh` (**13/0** sur corpus réel).
+> - Convention **#54**.
+>
+> ### Le point de lecture faisait partie de la capacité, et il a fallu deux passes
+>
+> Première passe : les trois états étaient corrects en Python et **invisibles à l'écran** —
+> `/v2/tickers/[id]/readiness` rendait tout du même amber « lacune déclarée » et les `GapItem` en
+> `JSON.stringify`. Réécrit : quatre décors (✓ / ⟳ / ✗ / ?), pied de dimension scindé « À
+> rafraîchir » / « À collecter », `GapCard` rendant les champs.
+>
+> Seconde passe, après déploiement : **l'écran servait encore `ready, 0 gap`**. Le
+> `GET /tickers/{id}/curator/readiness` renvoyait la ligne persistée telle quelle. Un rapport se
+> persiste, mais son verdict dépend de l'actualité, qui ne se persiste pas (#53) — le stock ne
+> pouvait pas le porter. Arbitrage utilisateur : **recalculer à la lecture**. Le GET rejoue
+> `_apply_deterministic_overrides` (la fonction de production) sur une `deepcopy` : aucun modèle,
+> **aucune écriture**, et un bloc `reevaluation` que l'écran affiche en distinguant « périmé » de
+> « on n'a pas pu vérifier » (#49). Cache TTL 1 h au seul point de sortie réseau, sur la réponse
+> **brute**, la mise en cache étant la **dernière instruction nominale** — un échec mémorisé cache
+> `{}`, qui se parse en « aucun événement matériel », donc ancre `none`, donc `ready` rendu une
+> heure sur tous les émetteurs.
+>
+> Vérifié en prod : NVDA et MSFT rendent `not_ready`, `verdict_persiste: ready`, cause
+> `peremption`, ancre `8-K du 2026-09-02`, 7 gaps, page 200, un conteneur par app.
+>
+> ### Frictions de la session
+>
+> - `get_db_session()` n'ouvre rien : il puise dans le pool d'`init_pool`, **et c'est ce pool qui
+>   installe les codecs JSONB**. S'ouvrir un `asyncpg.connect()` nu pour contourner l'`AttributeError`
+>   aurait fait revenir `content_structured` en **chaîne** — aucune citation vue, synthèses
+>   `indeterminable` là où la porte lit `perimee`. La mesure aurait changé, en silence.
+> - Le classifieur a refusé `compose-deploy.sh --rebuild-only` (6ᵉ constat) et un préfixe
+>   `VAR=$(...) && docker run` (piège des préfixes de permission). Repli : `docker compose build` +
+>   `up -d`, qui passe.
+> - Un 404 HTML transitoire sur `/api/…` juste après `up -d` : Traefik n'avait pas encore
+>   ré-enregistré le backend recréé. Ce n'est pas un échec de déploiement — re-sonder.
 
 > ## ⚡ MàJ 2026-09-07 — capacité 3 : l'axe `actualité`, et le défaut F15
 >

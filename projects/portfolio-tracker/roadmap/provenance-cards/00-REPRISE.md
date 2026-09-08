@@ -27,34 +27,32 @@ role: >
 
 **`roadmap/02-spec-autorite-vs-actualite.md`** (statut `figée`, ouverte le 2026-09-05) — révision du
 modèle de fiabilité : **autorité contre actualité**. Six capacités dans un ordre imposé.
-**Capacités 0, 1, 2 et 3 CLOSES** : table de profils co-écrite (#50, 174 assertions) · axe
-`nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 75
-assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07).
-**Prochain jalon : capacité 4** — la **porte de complétude à trois états** (`couvert` ·
-`couvert_perime` · `non_couvert`), avec **deux remèdes distincts** : un mandat de *rafraîchissement*
-quand le champ a des entries mais périmées, un mandat de *collecte* quand il n'en a pas. C'est le
-lot qui rend enfin agissant tout ce qui précède — jusqu'ici le système *sait* qu'un fait est périmé
-et la porte le compte quand même comme couvrant.
-⚠️ **Son test central mesure une LIGNE DE BASE, qui se requête AVANT le lot** — combien de champs
-passent de `couvert` à `couvert_perime` sur RVMD. C'est pour la préserver que la capacité 3 s'est
-interdit de lire `FIELD_PROFILES` (assert §10 de `check_actualite.py`), et c'est aussi là que
-`_DESSERRAGE_NON_CABLE` se solde. Migration à écrire *juste avant* son lot, jamais en avance — la
-prochaine est **035**.
+**Capacités 0, 1, 2, 3 et 4 CLOSES** : table de profils co-écrite (#50, 193 assertions) · axe
+`nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 78
+assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07) · **porte de
+complétude à trois états** (#54, 131 assertions, le 2026-09-08).
+**Prochain jalon : capacité 5** — *la contradiction, signalée jamais tranchée* (`knowledge/service.py`,
+`has_conflict` / `conflict_entry_id`, convention #43). ⚠️ **Relire sa ligne de base AVANT le lot** :
+la capacité 4 a montré qu'une spec peut viser le mauvais émetteur (elle annonçait RVMD comme porteur
+du faux vert ; les porteurs étaient NVDA et MSFT). Migration à écrire *juste avant* son lot, jamais
+en avance — la prochaine est **035**, toujours non écrite (la capacité 4 a **mesuré** qu'elle n'en
+avait pas besoin).
 
-⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) doit précéder le
-durcissement de la porte (4), sinon tout champ devient `couvert_perime` sans remède disponible.
+⚠️ **L'ordre est load-bearing, ne pas le réordonner** : le registre des sources (2) devait précéder
+le durcissement de la porte (4), sinon tout champ devenait `couvert_perime` sans remède disponible.
 
 Motif d'ouverture : l'information la plus fraîche du corpus est la moins bien classée (sur RVMD,
 tier A moyen 0,931 sur des faits d'avant l'approbation FDA du 2026-08-26 · tier B+ 0,750 sur
 l'information du jour), et le `readiness` prononce quand même `ready, 0 gap` — ⚠️ **ce faux vert est
-persisté sur NVDA et MSFT, pas sur RVMD** (voir « Livré cette session »). La roadmap **absorbe** les
+persisté sur NVDA et MSFT, pas sur RVMD** — **fermé le 2026-09-08** par la capacité 4 : le même
+corpus, lu par la porte, rend désormais `not_ready (peremption)`. La roadmap **absorbe** les
 points 1 et 2 de « Reste à faire » ci-dessous — ils y sont traités comme des symptômes, pas comme des
 tâches indépendantes.
 
 `roadmap/01-spec-v2-unifiee.md` §18 reste la roadmap de **référence** du projet (découpage en lots),
 mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qui s'exécute.
 
-## Où on en est (2026-09-07)
+## Où on en est (2026-09-08)
 
 **Le système est exercé, pas prototypé.** La chaîne complète a tourné de bout en bout sur trois
 émetteurs, et on connaît désormais ses modes de panne — c'est le principal actif du chantier.
@@ -62,10 +60,10 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | | NVDA (cas-pilote) | MSFT (généralité) | RVMD (banc d'essai) |
 |---|---|---|---|
 | Socle | 52 entries (32 A / 15 B) | 51 entries, 19/19 champs, 0 `llm_memory`, ≈ $0,19 | 27 actives (13 déterministes + 14 qualitatives) |
-| Readiness | `ready`, 0 gap | `ready`, 0 dérogation | dimension `valorisation` fondée sur ses 3 champs |
+| Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats | **`not_ready (peremption)`**, 9 champs périmés | aucun rapport en base — 9 lacunes de **collecte** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 704 assertions / 0 échec / 22 scripts** — une seule commande,
+- **Suite hors-ligne : 1 798 assertions / 0 échec / 22 scripts** — une seule commande,
   **`bash checks/run_all.sh`** (versionné depuis le 2026-09-05 (3)). Il porte les invocations
   correctes : montage `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) et
   réseau `coolify` + `CHECK_DB_URL` pour `check_entry_nature`. ⚠️ **Ne pas le réécrire dans
@@ -93,10 +91,37 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Péremption (F14) | `source_date` datée du flux sur un ratio de bilan | 0 token | **#48** |
 | Partition (F15) | une entry **non datée** rangée à la fois dans `posterieures` et dans `non_datees` — 4 classes pour 3 entries, et une date *inconnue* comptée parmi les fraîches | 0 token | **#53** |
 
-### Livré cette session (2026-09-07) — capacité 3 close : l'axe `actualité`
+### Livré cette session (2026-09-08) — capacité 4 close : la porte à trois états
 
-**Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`. Ce qui
-doit rester ici :
+**Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`.
+Suite : **1 798 / 0 / 22**. Ce qui doit rester ici :
+
+- **La porte consomme le triplet de #50 sans le recombiner** : `couvert` / `couvert_perime` /
+  `non_couvert`, `champs_perimes` **retranché** de `champs_non_fondables`, deux remèdes
+  (`rafraichissement` ≠ `collecte`), `cause_non_ready` **dérivée** puis revérifiée par le
+  validateur. Convention **#54**. Gardes : `check_readiness_recompute.py` §15-19 (**131**, test
+  négatif 6/6) et l'acceptation sur corpus réel `tools/acceptation_gate.sh` (**13/0**).
+- 🔴 **Le faux vert est tombé, mesuré en production** : NVDA et MSFT passent de `ready, 0 gap` à
+  `not_ready (peremption)`, 9 champs périmés nommés chacun, aucun envoyé en collecte. Les 9 sont
+  exactement les `actualite_bloquante: True` du profil — **c'est le profil qui périme, pas l'âge**.
+- 📌 **Un verdict persisté n'est pas un verdict servi.** La porte corrigée et déployée, l'écran
+  rendait *encore* `ready, 0 gap` : le GET renvoyait la ligne stockée. Le rapport se persiste, son
+  verdict dépend de l'actualité, qui ne se persiste pas (#53). Le GET **rejoue** donc la moitié
+  déterministe sur une `deepcopy` — aucun modèle, **aucune écriture** — et renvoie un bloc
+  `reevaluation` que l'écran affiche. ⚠️ Le cache d'ancre (TTL 1 h) mémorise la réponse **brute** et
+  **jamais un échec** : un `{}` mémorisé se parse en « aucun événement matériel », donc ancre
+  `none`, donc `ready` rendu une heure sur tous les émetteurs. `check_material_events.py` §13/§14
+  (**81**, test négatif 2/2).
+- ⚠️ **Une seconde table d'accord reste une seconde table.** `FIELD_PLANCHER_OVERRIDES` doublait
+  `FIELD_PROFILES` : elle empêchait le desserrage de #50 d'atteindre la porte **et** rendait
+  circulaire l'assert de `check_field_profiles.py` §5 écrit pour attraper les desserrages tacites —
+  le champ abaissé s'y comparait à sa propre valeur abaissée. Sa suppression a révélé un desserrage
+  B+ → B non déclaré, invisible depuis trois jours. §5 se compare désormais au socle `MVDD_SPEC`.
+- 📌 **La ligne de base a corrigé la spec** : celle-ci désignait RVMD comme porteur du faux vert.
+  En base, RVMD n'a **jamais** eu de rapport readiness — le test aurait viré au vert sans rien
+  prouver. Les porteurs étaient NVDA et MSFT ; RVMD est le **témoin de séparation**.
+
+### Acquis de la capacité 3 (2026-09-07) — l'axe `actualité`
 
 - **`knowledge/actualite.py` est le détenteur unique** de la question « ce fait est-il antérieur à
   l'ancre ? ». Trois états jamais recombinés en un nombre : `courante` / `perimee` /
@@ -135,21 +160,19 @@ doit rester ici :
   `web_search_generic`, sinon une source admise pour l'*interprétation* gagnerait du standing sur une
   **mesure**. Et le site de câblage qui compte est l'appel dans **`worker.py` avant le filtre
   `reliability_min`** : le worker rejette sous plancher avant d'atteindre `store_knowledge`.
-- ⚠️ **Le desserrage B+ → B n'a toujours pas de bénéficiaire effectif au gate**, nommé dans
-  `_DESSERRAGE_NON_CABLE` (§1bis de `check_source_registry.py`). La doctrine vit dans
-  `FIELD_PROFILES`, la porte lit `FIELD_PLANCHER_OVERRIDES` (qui ne porte que
-  `marche.croissance_marche_historique`). Une entry `endpts.com` à 0,65 est admise par le registre et
-  **encore refusée** par la porte. Le câblage appartient à la **capacité 4** — le faire d'avance
-  perturberait la ligne de base que son test central doit mesurer AVANT le lot. L'assert vire au vert
-  de lui-même ce jour-là.
+- ✅ **Le desserrage B+ → B est câblé** depuis le 2026-09-08 : `FIELD_PLANCHER_OVERRIDES` supprimée,
+  `_plancher_for` lit `FIELD_PROFILES` champ par champ. `_DESSERRAGE_NON_CABLE` est **vide** et
+  §1bis de `check_source_registry.py` a viré au vert de lui-même — un écart connu qui se referme
+  sans qu'on y touche est le signe qu'il était écrit au bon endroit.
 - ⚠️ **`tickers.sector` est NULL sur les 17 tickers** : un registre (ou une règle) clefé dessus
   n'admettrait personne, silencieusement. C'est pourquoi le secteur est déclaré en CODE.
 - 📌 **#51 — deux vocabulaires** : la nature d'une **entry** et la nature dominante d'un **champ**.
   La porte lira la première.
 
-⚠️ **Toujours vrai** : le balayage de péremption *signale*, il ne *décide* pas. Les 24 entries
-suspectes de RVMD restent actives et la porte (#29) les compte comme couvrantes. **Un corpus complet
-peut être périmé** — c'est ce que la capacité 4 ferme.
+⚠️ **Toujours vrai** : le balayage de péremption *signale*, il ne *décide* pas — les 24 entries
+suspectes de RVMD restent **actives**, rien n'est retiré du corpus (#49). Ce qui a changé le
+2026-09-08 : la porte ne les compte plus comme couvrantes sur les champs à `actualite_bloquante`.
+**Un corpus complet peut être périmé** — c'est désormais dit, et avec le bon remède.
 
 ## Ce qui reste à faire — dans l'ordre
 
@@ -163,10 +186,10 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
    (#29, `feedback_optional_schema_gate`). Point d'atterrissage : `superseded_by` écrit à la main.
    ⚠️ Quatre entries tier A affirment « aucun produit approuvé pour la vente commerciale » alors que
    **la FDA a approuvé RASONQUE le 2026-08-26** — aucune n'est fausse, toutes sont périmées.
-2. **Brancher le balayage sur la porte de complétude** — arbitrage ouvert, à ne pas trancher seul :
-   faut-il qu'un `readiness` compte comme *non couvert* un champ dont toutes les entries sont
-   antérieures au dernier événement matériel ? Le risque symétrique est de bloquer un socle sain à
-   chaque 8-K de routine (un item 9.01 « pièces jointes » n'a rien périmé).
+2. ✅ **Brancher le balayage sur la porte** — **fait le 2026-09-08** (capacité 4, #54). L'arbitrage a
+   été tranché en trois états plutôt qu'en oui/non, et le risque symétrique est fermé :
+   `ancre_substantielle` écarte les 8-K purement formels (items tous 9.01) mais garde les dépôts
+   **sans item** — « sans item » n'est pas « sans substance » (un 6-K).
 3. **FDA/EMA en régulateur A- (0,85)** — *décidé avec l'utilisateur, non commencé*. Mesuré :
    `fda.gov` n'est dans **aucune** table, et `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu`
    (titres) mais pas `ema.europa.eu` (médicaments). L'approbation FDA du 2026-08-26 — l'événement
@@ -299,20 +322,23 @@ pour le contexte, pas comme des tâches à prendre telles quelles.
 > même `ready` : un scalaire unique porte deux propriétés orthogonales et les confond. La révision
 > les sépare en **trois axes jamais recombinés** (fiabilité *stockée* · actualité *calculée à la
 > lecture* · nature *stockée*), et le standing devient une propriété du **couple (source × nature)**.
-> **Capacités 0, 1, 2 et 3 CLOSES** : la table de profils des 19 champs (#50, 174 assertions) · l'axe
-> `nature` en dérivé déterministe (#51, migration 034, 52 assertions) · le **registre nominatif des
-> sources** (#52, 75 assertions, 4 sources biotech co-choisies pour RVMD) · l'axe **`actualité`**
+> **Capacités 0, 1, 2, 3 et 4 CLOSES** : la table de profils des 19 champs (#50, 193 assertions) ·
+> l'axe `nature` en dérivé déterministe (#51, migration 034, 52 assertions) · le **registre nominatif
+> des sources** (#52, 78 assertions, 4 sources biotech co-choisies pour RVMD) · l'axe **`actualité`**
 > (#53, `knowledge/actualite.py`, 66 assertions), calculé **à la lecture** et jamais persisté — le
-> persister reproduirait le défaut d'origine, un corpus qui ne vieillit pas. Trois résultats sont
-> load-bearing pour la suite : la nature d'une **entry** ≠ la nature dominante d'un **champ** (c'est
-> ce que la porte confrontera) ; le standing s'accorde au **couple** (source × nature) — d'où l'ordre
-> `nature` PUIS `registre` dans `qualify()` ; et `staleness.py` **traduit** l'axe vers le vocabulaire
-> du rapport sans jamais le recalculer (#46 — c'était F15).
-> **Prochain jalon = capacité 4** : la porte de complétude à **trois états** (`couvert` / `couvert
-> mais périmé` / `non couvert`), qui consomme les trois axes sans les recombiner.
-> ⚠️ Ne pas réordonner les capacités : le registre des sources (2) DOIT précéder le durcissement
-> de la porte (4). ⚠️ Le desserrage B+ → B n'a toujours pas de bénéficiaire **au gate** : c'est la
-> capacité 4 qui câble `FIELD_PROFILES` dans `curator.recompute_coverage`, pas avant — **sa ligne de
-> base se requête AVANT le lot**, pas après.
-> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#53**),
+> persister reproduirait le défaut d'origine, un corpus qui ne vieillit pas · la **porte de
+> complétude à trois états** (#54, 131 assertions, le 2026-09-08), qui consomme les trois axes sans
+> les recombiner. Quatre résultats sont load-bearing pour la suite : la nature d'une **entry** ≠ la
+> nature dominante d'un **champ** ; le standing s'accorde au **couple** (source × nature) — d'où
+> l'ordre `nature` PUIS `registre` dans `qualify()` ; `staleness.py` **traduit** l'axe sans jamais le
+> recalculer (#46 — c'était F15) ; et **un verdict persisté n'est pas un verdict servi** — le GET
+> readiness rejoue la moitié déterministe de la porte à la lecture, sans écrire.
+> **Le faux vert d'origine est tombé, mesuré en production** : NVDA et MSFT passent de `ready, 0 gap`
+> à `not_ready (peremption)`, 9 champs périmés nommés, avec un mandat de *rafraîchissement* et non
+> de collecte. Suite hors-ligne : **1 798 / 0 / 22**.
+> **Prochain jalon = capacité 5** : *la contradiction, signalée jamais tranchée* (#43).
+> ⚠️ Ne pas réordonner les capacités. ⚠️ **Une ligne de base se requête AVANT le lot** : la spec de
+> la capacité 4 visait RVMD comme porteur du faux vert, alors qu'il n'a jamais eu de rapport
+> readiness — le test aurait viré au vert sans rien prouver.
+> LIRE D'ABORD : ce fichier, le `CLAUDE.md` du projet (conventions #22-**#54**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
