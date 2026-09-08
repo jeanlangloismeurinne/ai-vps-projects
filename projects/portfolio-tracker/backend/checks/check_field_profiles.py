@@ -12,14 +12,16 @@ porte sur ce qui la rendrait inexploitable plus tard :
   • §3  ATTEIGNABILITÉ (#32) — un plancher qu'aucun `source_type` ne peut atteindre est un champ
         infondable déguisé en lacune. Forme faible mais réelle : on ne sait pas quelles sources
         savent nourrir quel champ, on sait qu'aucune ne doit être exclue par le barème seul.
-  • §4  DÉTENTEUR UNIQUE (#46) — la table ne contredit ni `FIELD_PLANCHER_OVERRIDES` ni les
-        planchers de dimension de `MVDD_SPEC` sans le DÉCLARER.
+  • §4  DÉTENTEUR UNIQUE (#46) — la table EST le plancher que `curator._plancher_for` applique, et
+        aucune SECONDE table de planchers ne subsiste dans le curator. C'est la seconde table qui
+        empêchait le desserrage de #50 d'atteindre la porte, et qui rendait §5 circulaire.
   • §5  DESSERRAGE EXPLICITE — tout plancher plus permissif que celui de sa dimension porte une clef
         `desserrage` écrite. Un desserrage tacite est le trou silencieux de
         `feedback_optional_schema_gate`.
   • §6  GABARIT, PAS ACTEUR (#31) — aucun motif ne nomme un émetteur ni une juridiction.
   • §7  PAS DE COMPOSITE — la table ne porte aucun scalaire agrégé : la porte lira un TRIPLET.
 """
+import inspect
 import re
 import sys
 
@@ -31,7 +33,8 @@ from app.agents.v2.common import (
     TIER_ORDER,
     profile_for,
 )
-from app.agents.v2.curator import FIELD_PLANCHER_OVERRIDES
+from app.agents.v2 import curator as curator_mod
+from app.agents.v2.curator import _plancher_for
 from app.knowledge.service import RELIABILITY_TABLE
 
 ok = fail = 0
@@ -51,10 +54,16 @@ _RANK = {t: i for i, t in enumerate(TIER_ORDER)}
 _DIM_PLANCHER = {s["dimension"]: s["tier_plancher"] for s in MVDD_SPEC}
 
 
-def _plancher_attendu(path: str) -> str:
-    """Plancher en vigueur AUJOURD'HUI pour ce champ (override de champ, sinon dimension)."""
-    if path in FIELD_PLANCHER_OVERRIDES:
-        return FIELD_PLANCHER_OVERRIDES[path]
+def _plancher_socle(path: str) -> str:
+    """Le plancher de RÉFÉRENCE contre lequel un desserrage se mesure : celui de la dimension MVDD.
+
+    ⚠️ Il lisait `FIELD_PLANCHER_OVERRIDES` en priorité jusqu'au 2026-09-08. C'était une comparaison
+    circulaire : un champ abaissé dans cette seconde table se comparait à sa propre valeur abaissée,
+    donc §5 le voyait « ne desserre pas » et n'exigeait aucune déclaration. Le seul champ concerné,
+    `marche.croissance_marche_historique`, était bel et bien un desserrage B+ → B non déclaré — un
+    desserrage tacite invisible à l'assert écrit pour les attraper. La suppression de la seconde
+    table (#46, capacité 4) l'a fait apparaître. Le socle MVDD est la seule référence qui ne puisse
+    pas être bougée par le fichier qu'elle contrôle."""
     return _DIM_PLANCHER[path.split(".", 1)[0]]
 
 
@@ -91,17 +100,31 @@ for path in sorted(FIELD_PROFILES):
     check(f"`{path}` ({plancher}) est atteignable par ≥1 source_type", bool(atteignables),
           "→ aucun source_type de RELIABILITY_TABLE n'atteint ce plancher")
 
-print("\n4. détenteur unique (#46) — pas de contradiction tacite avec les planchers en vigueur")
-for path, tier in sorted(FIELD_PLANCHER_OVERRIDES.items()):
-    prof = FIELD_PROFILES.get(path)
-    check(f"`{path}` : la table s'accorde avec FIELD_PLANCHER_OVERRIDES ({tier})",
-          prof is not None and prof.get("plancher") == tier,
-          f"→ table={prof.get('plancher') if prof else None}, override={tier}")
+print("\n4. détenteur unique (#46) — la table EST le plancher que la porte applique")
+# Jusqu'au 2026-09-08 cette section vérifiait l'ACCORD entre deux tables de planchers. Deux tables
+# d'accord restent deux tables : c'est la seconde qui a empêché le desserrage de #50 d'atteindre la
+# porte pendant trois jours, et qui a rendu §5 circulaire. La capacité 4 a supprimé
+# `curator.FIELD_PLANCHER_OVERRIDES` ; ce qui se vérifie désormais est qu'elle ne revienne pas, et
+# que la fonction de production lise bien CETTE table — pas qu'elle s'accorde avec une jumelle.
+_SRC_CURATOR = inspect.getsource(curator_mod)
+check("aucune seconde table de planchers dans le curator",
+      "FIELD_PLANCHER_OVERRIDES: dict" not in _SRC_CURATOR
+      and "FIELD_PLANCHER_OVERRIDES = {" not in _SRC_CURATOR,
+      "→ table réintroduite : le desserrage de FIELD_PROFILES cessera d'atteindre la porte")
+for path in sorted(FIELD_PROFILES):
+    dim, champ = path.split(".", 1)
+    attendu = FIELD_PROFILES[path].get("plancher")
+    # Plancher de dimension volontairement ABSURDE : si `_plancher_for` retombait dessus, la valeur
+    # rendue serait « C » et l'assert rougirait. Passer le vrai plancher de dimension rendrait le
+    # test non discriminant sur tout champ que la table ne desserre pas.
+    check(f"`{path}` : la porte applique le plancher de la table ({attendu})",
+          _plancher_for(dim, champ, "C") == attendu,
+          f"→ la porte applique {_plancher_for(dim, champ, 'C')}")
 
 print("\n5. tout desserrage est DÉCLARÉ, jamais tacite")
 for path in sorted(FIELD_PROFILES):
     p = FIELD_PROFILES[path]
-    courant, propose = _plancher_attendu(path), p.get("plancher")
+    courant, propose = _plancher_socle(path), p.get("plancher")
     if propose not in _RANK or courant not in _RANK:
         continue
     if _RANK[propose] > _RANK[courant]:  # rang plus grand = tier moins bon = desserrage

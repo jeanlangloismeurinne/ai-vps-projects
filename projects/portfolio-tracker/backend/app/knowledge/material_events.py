@@ -237,6 +237,33 @@ async def latest_material_event(cik: int, *, limit: int = 10) -> MaterialEventLo
     return MaterialEventLookup(status="found", event=evts[0], cik=cik, recents=tuple(evts))
 
 
+def ancre_substantielle(lookup: MaterialEventLookup) -> MaterialEventLookup:
+    """Restreint l'ancre aux dépôts qui PÈSENT — détenteur unique de « quel événement périme ».
+
+    `latest_material_event` rend le dernier dépôt matériel, quel qu'il soit. Ce n'est pas la bonne
+    ancre pour la porte de complétude : un 8-K ne portant que l'item 9.01 (« états financiers et
+    pièces jointes ») est un acte purement formel, et le laisser périmer un corpus rendrait tout
+    émetteur `not_ready` au premier dépôt de routine — le risque assumé nommé par la roadmap 02 §4.
+
+    ⚠️ « Sans item » ≠ « sans substance ». EDGAR n'attribue **aucun** item aux 6-K (émetteurs
+    étrangers) : ne garder que les dépôts à `items_substantiels` non vide les écarterait tous, en
+    silence, et rendrait leurs corpus éternellement `courants`. Le filtre écarte donc uniquement les
+    dépôts **dont tous les items déclarés sont formels** — un dépôt qui n'en déclare aucun passe.
+
+    Fonction **pure** : elle trie ce que le flux a déjà rapporté, sans nouvel appel réseau. Les
+    statuts `none` et `unavailable` traversent inchangés — ce sont des états, pas des listes à
+    filtrer, et les confondre est le mode de panne central du chantier (#49).
+    """
+    if lookup.status != "found":
+        return lookup
+    gardes = tuple(e for e in lookup.recents if (not e.items) or e.items_substantiels)
+    if not gardes:
+        # Tous les dépôts récents sont formels : l'émetteur a bien déposé, mais rien qui périme.
+        # C'est `none` (état CONNU), pas `unavailable` (panne) — la distinction porte tout #49.
+        return MaterialEventLookup(status="none", cik=lookup.cik, recents=())
+    return MaterialEventLookup(status="found", event=gardes[0], cik=lookup.cik, recents=gardes)
+
+
 async def resolve_cik_for_ticker(conn, ticker_id: str) -> Optional[int]:
     """CIK de l'émetteur, au coût le plus bas d'abord.
 

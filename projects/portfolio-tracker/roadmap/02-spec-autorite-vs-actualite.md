@@ -304,11 +304,54 @@ s'exprime, et il se co-écrit — l'agent ne le remplit pas seul.
 
 ### 4. La porte de complétude à trois états · contexte partagé : `agents/v2/curator.py` (`recompute_coverage`), convention #29
 
-- [ ] `couvert` · `couvert_perime` · `non_couvert` — jamais deux confondus
-- [ ] Deux remèdes **distincts** : mandat de **rafraîchissement** (le champ a des entries, elles
-      sont datées) contre mandat de **collecte** (le champ n'a rien). Les confondre fait payer une
-      recherche complète là où un rafraîchissement suffisait
-- [ ] Le verdict global distingue `not_ready (péremption)` de `not_ready (lacune)`
+- [x] `couvert` · `couvert_perime` · `non_couvert` — jamais deux confondus. `champs_perimes` est un
+      **sous-ensemble déclaré** de `champs_non_fondables` (il s'en retranche, il ne s'y ajoute pas),
+      et le contrat interdit qu'un champ périmé figure aussi dans `fondations` : pas de fondation de
+      façade. Lus aux trois points : `curator.recompute_coverage`, le contrat `ReadinessReport`, et
+      l'écran `/v2/tickers/[id]/readiness` — qui les affichait tous du même amber « lacune déclarée »
+      jusqu'au 2026-09-08. Un état calculé et jamais lu n'est pas un état.
+- [x] Deux remèdes **distincts** : `GapItem.remede` ∈ {`collecte`, `rafraichissement`}, défaut
+      `collecte` (un gap venu du langage naturel décrit un manque, pas une péremption).
+      `reconcile_gaps` **retranche** les champs périmés de `a_collecter` et **synthétise** le gap de
+      rafraîchissement avec le motif qui nomme l'entry — le LLM ne peut donc pas écrire « aucune
+      source ne documente X » sur un champ que la base couvre depuis six mois.
+- [x] Le verdict global distingue `not_ready (péremption)` de `not_ready (lacune)` :
+      `compute_cause_non_ready` rend `peremption` | `lacune` | `mixte` | `None`, **dérivée** de la
+      coverage et revérifiée par le validateur Pydantic — jamais racontée par le modèle.
+- [x] **Acceptation TENUE, mesurée sur le corpus réel sans dépense de modèle** — `bash
+      tools/acceptation_gate.sh`, **13 vérifications OK / 0 échec** (2026-09-08). Le script rejoue
+      `curator._apply_deterministic_overrides` (la fonction de production, pas une seconde porte)
+      sur le `report_json` **persisté** de chaque émetteur :
+  - **Test central tenu** : NVDA (rapport #27) et MSFT (#26) passent de `ready, 0 gap` **lu en
+    base** à **`not_ready` cause `peremption`**, sous une ancre 8-K du 2026-09-02 — 9 champs
+    périmés nommés chacun, 7 mandats, et **aucun champ périmé envoyé en collecte**. Les 9 champs
+    sont exactement les `actualite_bloquante: True` du profil : c'est le PROFIL qui périme, pas
+    l'âge.
+  - **Test de séparation tenu** : RVMD n'a toujours **aucun** rapport readiness en base — il n'est
+    pas porteur du delta, et le script l'asserte plutôt que de le supposer. Ses 9 lacunes de
+    collecte restent des lacunes : `check_readiness_recompute.py` §17-18 tient la séparation sur
+    fixture (`mixte` ≠ `peremption` ≠ `lacune`).
+  - **Contre-calcul indépendant concordant** : `bash tools/mesure_gate.sh`, qui croise index /
+    planchers / actualité **sans passer par la porte**, annonce les mêmes 9 champs par émetteur.
+  - **Test négatif, 6/6 sur le check + 1/1 sur l'acceptation** : `champs_perimes` forcé à `[]` →
+    19 FAIL nommés sur `check_readiness_recompute.py`, et 4 sur l'acceptation, qui chiffre alors
+    l'enjeu — le dossier sort `not_ready (lacune)`, soit 9 champs par émetteur envoyés en recherche
+    complète là où un rafraîchissement suffisait.
+- [x] Risque du 8-K de routine **levé et prouvé par cas négatif** : `ancre_substantielle` filtre les
+      dépôts purement formels (items tous 9.01 → `status="none"`, ne périme personne) mais garde les
+      dépôts **sans item** (un 6-K sans item n'est pas un 6-K sans substance).
+      `check_readiness_recompute.py` §19 le tient sur une fixture **construite**, avec un assert de
+      **discriminance** montrant que la même date non filtrée périmerait bien — une copie du flux
+      réel serait verte sans rien éprouver (`feedback_fixture_copiee_du_reel`).
+- [x] Convention **#54** dans le `CLAUDE.md` du projet.
+- **Suite** : 1 780 assertions / 0 échec / 22 scripts (`bash checks/run_all.sh`), dont
+  `check_readiness_recompute.py` à **131** et `check_field_profiles.py` à **193**.
+- ⚠️ **Ce que la capacité a révélé en passant** : la table de planchers `FIELD_PLANCHER_OVERRIDES`
+  du curator doublait `FIELD_PROFILES`. Deux tables d'accord restent deux tables — c'est la seconde
+  qui empêchait le desserrage de #50 d'atteindre la porte, et qui rendait circulaire l'assert de
+  `check_field_profiles.py` §5 écrit précisément pour attraper les desserrages tacites : le champ
+  abaissé s'y comparait à sa propre valeur abaissée. Sa suppression a fait apparaître un desserrage
+  B+ → B non déclaré sur `marche.croissance_marche_historique`, invisible depuis trois jours.
 - **Acceptation, et c'est le test central de toute la révision** — ⚠️ **ligne de base corrigée le
   2026-09-05, la rédaction initiale visait le mauvais émetteur.** Vérifié en base : RVMD n'a **jamais
   eu de rapport `readiness`** (`knowledge_curator_reports` ne porte que NVDA et MSFT), ne couvre que

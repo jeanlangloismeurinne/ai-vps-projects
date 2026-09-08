@@ -11,7 +11,8 @@ import sys
 
 sys.path.insert(0, ".")
 
-from app.agents.v2.curator import FIELD_PLANCHER_OVERRIDES, _tier_ge  # noqa: E402
+from app.agents.v2.common import FIELD_PROFILES  # noqa: E402
+from app.agents.v2.curator import _tier_ge  # noqa: E402
 from app.agents.v2.tools import RetrievalLog, canonical_url  # noqa: E402
 from app.agents.v2.worker import _cited_documents, _normalise_entry, _verify_provenance  # noqa: E402
 from app.contracts import WorkerRequest  # noqa: E402
@@ -178,7 +179,9 @@ print("\n8. classify_source_type — un cabinet d'études atteint le plancher de
 # Régression : `marche.croissance_marche_historique` a un plancher abaissé à B, mais AUCUNE source ne
 # pouvait l'atteindre — les cabinets d'études tombaient en `web_search_generic` (C+/0.50). Le plancher
 # et la table de domaines doivent se rejoindre, sinon le champ est infondable quel que soit l'émetteur.
-_PLANCHER_MARCHE = FIELD_PLANCHER_OVERRIDES["marche.croissance_marche_historique"]
+# Lu dans `FIELD_PROFILES`, détenteur unique du plancher par champ depuis la capacité 4
+# (`curator.FIELD_PLANCHER_OVERRIDES`, la seconde table, a été supprimée — #46).
+_PLANCHER_MARCHE = FIELD_PROFILES["marche.croissance_marche_historique"]["plancher"]
 for dom in ("srgresearch.com", "canalys.com", "gartner.com", "idc.com", "techinsights.com"):
     st = classify_source_type(f"https://www.{dom}/articles/cloud-market-q2-2026")
     score, tier, _ = compute_reliability(st, entry_type="fact_qualitative")

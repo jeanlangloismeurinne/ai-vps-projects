@@ -579,11 +579,13 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     `tickers.sector` est NULL sur les 17 tickers ; un registre clefé dessus n'aurait admis
     personne, silencieusement (#32 transposé à une clef de jointure). ⚠️ **L'admission reste un
     acte humain** — pas de promotion automatique, pas même par corroboration (#50). ⚠️ **Écart
-    connu, nommé dans `_DESSERRAGE_NON_CABLE`** : le desserrage B+ → B de #50 vit dans
-    `FIELD_PROFILES` (doctrine) tandis que la porte lit `FIELD_PLANCHER_OVERRIDES` — une entry B
-    admise par le registre est **encore refusée** au gate tant que la capacité 4 ne l'a pas câblé ;
-    l'assert « la liste des écarts ne survit pas à leur câblage » vire au vert de lui-même ce
-    jour-là. Détail + garde : `check_source_registry.py` §1 (atteignabilité #32), §1bis (portée
+    connu, nommé dans `_DESSERRAGE_NON_CABLE` — RÉSORBÉ le 2026-09-08 par la capacité 4 (#54)** :
+    le desserrage B+ → B de #50 vivait dans `FIELD_PROFILES` (doctrine) tandis que la porte lisait
+    une seconde table, `FIELD_PLANCHER_OVERRIDES` — une entry B admise par le registre était encore
+    **refusée** au gate. La suppression de cette seconde table a fait virer §1bis au vert **de
+    lui-même**, sans qu'on touche au check : la liste des écarts est désormais vide. C'est la forme
+    d'assert à réutiliser — un écart déclaré dans le check du lot qui l'a créé, et qui se referme
+    tout seul le jour du câblage, plutôt qu'un `TODO` que personne ne relit. Détail + garde : `check_source_registry.py` §1 (atteignabilité #32), §1bis (portée
     réelle du desserrage), §2 (**l'assert central du couple**), §3 (hors registre → 0,50), §4
     (jamais de démotion), §5 (portée), §6 (détenteur unique #46), §7 (plafond ≠ qualification), §8
     (métadonnées d'admission), §9 (gabarit, pas d'acteur nommé — #31) — éprouvé par test négatif
@@ -635,6 +637,60 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     grep de §8/§10 **retire la docstring** du module avant de chercher, faute de quoi chaque
     interdit *énoncé* se lit comme sa propre violation — 4 FAIL sur du code parfaitement conforme à
     la première exécution.
+
+54. **La complétude a TROIS états, parce qu'elle a deux causes d'échec et donc deux remèdes — et un
+    état calculé que personne ne lit n'est pas un état (V2, `agents/v2/curator.py`)** : la porte
+    consomme le triplet de #50 sans jamais le recombiner en scalaire. `couvert` (des entries au
+    plancher, dont au moins une `courante`) · `couvert_perime` (des entries au plancher, aucune
+    `courante`) · `non_couvert` (rien au plancher). `champs_perimes` est un **sous-ensemble** de
+    `champs_non_fondables` : il s'en **retranche**, il ne s'y ajoute pas, et le contrat interdit
+    qu'un champ y figure en même temps que dans `fondations` — pas de fondation de façade. De là
+    `GapItem.remede` ∈ {`collecte`, `rafraichissement`} et `cause_non_ready` ∈ {`peremption`,
+    `lacune`, `mixte`, `None`}, **dérivée** de la coverage et revérifiée par le validateur : le
+    modèle ne raconte pas pourquoi son dossier est bloqué. ⚠️ **C'est le profil qui périme, pas
+    l'âge** : seuls les champs `actualite_bloquante: True` basculent, la MÊME entry sous la MÊME
+    ancre laissant intact un champ non bloquant — un prix se périme, un `moat` non. ⚠️
+    `indeterminable` fait tomber le champ comme `perimee`, mais son motif nomme la **vraie** cause
+    (non datable, ou flux injoignable) : les confondre ferait chercher une source plus **récente**
+    là où il faut une source **datable** (#53). ⚠️ **Un 8-K de routine ne périme personne** —
+    `ancre_substantielle` écarte les dépôts dont tous les items sont formels (9.01), mais garde les
+    dépôts **sans item** : « sans item » n'est pas « sans substance » (un 6-K). ⚠️ **Le point de
+    lecture fait partie de la capacité** : les trois états ont vécu une journée corrects en Python
+    et invisibles à l'écran, `/v2/tickers/[id]/readiness` les rendant tous du même amber « lacune
+    déclarée » et les `GapItem` en `JSON.stringify` — un `remede` présent dans un blob JSON n'est
+    pas un remède lu (`feedback_controle_au_point_de_lecture`). ⚠️ **Le prompt DB n'a PAS eu besoin
+    de migration, et c'est une mesure** : la doctrine de péremption vit dans le message de tâche
+    (code), et tous les champs concernés sont écrasés par le Python — le vérifier a évité une
+    migration 035 de confort (`feedback_decision_figee_a_remesurer`).
+    **Une synthèse hérite de l'actualité de ses sources, et la CHAÎNE est fermée aux trois maillons**
+    (arbitrage utilisateur du 2026-09-08) : une entry `agent_synthesis` n'a pas de date propre, donc
+    `date_effective()` lui donne celle de la **plus ancienne** entry qu'elle cite. Prendre la plus
+    récente rajeunirait du contenu périmé — un blanchiment de péremption. La confiance faite à
+    l'agent était **conditionnée** à ce que la consigne de fidélité soit réellement dans son prompt :
+    elle l'est (`_SYNTHESIS_SYSTEM_PROMPT`, « STRICTEMENT à partir de ce corpus », chaque `claim`
+    citant ses `cited_entry_ids`), et elle est en plus **vérifiée en Python** — `validate_grounding`
+    rejette la synthèse qui cite hors du corpus citable, le grounding est vérifié et non déclaré
+    (#24/#28). Ce prompt vit dans le **code**, pas dans `agent_prompts` : là non plus, pas de
+    migration. On ne fait donc pas confiance à l'agent sur parole, on hérite d'une date qu'un
+    contrôle exécutable garantit adossée à des entries réelles. Détail + garde :
+    `check_readiness_recompute.py` §15-19 (131 assertions, test négatif 6/6) et **l'acceptation sur
+    corpus réel** `tools/acceptation_capacite4.py` (`bash tools/acceptation_gate.sh`, 13/0), qui
+    rejoue `_apply_deterministic_overrides` — la fonction de production, jamais une seconde porte —
+    sur les `report_json` **persistés** : NVDA et MSFT tombent de `ready, 0 gap` à
+    `not_ready (peremption)`, 9 champs nommés chacun, **aucun en collecte**. ⚠️ **Ne pas jouer ces
+    outils dans `portfolio-backend`** : il porte le code déployé, qui peut être antérieur à la
+    capacité vérifiée.
+    **Ce que la capacité a révélé en passant, et qui vaut au-delà d'elle** : `curator` tenait une
+    seconde table de planchers (`FIELD_PLANCHER_OVERRIDES`) doublant `FIELD_PROFILES`. Deux tables
+    **d'accord** restent deux tables (#46) : c'est la seconde qui empêchait le desserrage de #50
+    d'atteindre la porte, et surtout qui rendait **circulaire** l'assert de `check_field_profiles.py`
+    §5 écrit précisément pour attraper les desserrages tacites — le champ abaissé s'y comparait à sa
+    propre valeur abaissée, donc « ne desserre pas ». Sa suppression a fait apparaître un desserrage
+    B+ → B non déclaré, invisible depuis trois jours à l'assert censé le voir. La référence d'un
+    contrôle ne doit pas pouvoir être bougée par le fichier qu'il contrôle : §5 se compare désormais
+    au socle `MVDD_SPEC`. Corollaire mesuré au passage : `_DESSERRAGE_NON_CABLE` de
+    `check_source_registry.py` §1bis **a viré au vert de lui-même** le jour du câblage — un écart
+    connu qui se referme sans qu'on y touche est le signe qu'il était écrit au bon endroit.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

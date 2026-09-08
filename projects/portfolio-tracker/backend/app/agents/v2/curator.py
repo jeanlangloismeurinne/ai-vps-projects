@@ -17,23 +17,33 @@ import re
 from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
-from app.agents.v2.common import MVDD_SPEC, TIER_ORDER, count_tiers, format_entries_for_prompt
+from app.agents.v2.common import (
+    FIELD_PROFILES, MVDD_SPEC, TIER_ORDER, count_tiers, format_entries_for_prompt,
+)
 from app.agents.v2.runner import extract_json
-from app.contracts import ContextPack, ReadinessReport
+from app.contracts import ContextPack, ReadinessReport, compute_cause_non_ready
 from app.db.database import get_db_session
 from app.knowledge import get_current_entries, store_knowledge
+from app.knowledge.actualite import etat_actualite_entry
+from app.knowledge.material_events import (
+    MaterialEventLookup, ancre_substantielle, material_anchor_for_ticker,
+)
 
 logger = logging.getLogger(__name__)
 
 _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}  # 0 = meilleur (A) … plus grand = plus faible
 
-# Plancher PAR CHAMP (option C + dégradé Q1) : par défaut le plancher de la dimension (MVDD) ; on
-# ABAISSE explicitement les champs dont aucune source primaire tier A n'existe. `croissance_marche_
-# historique` = taille d'un marché tiers → au mieux une estimation de presse/cabinet (jamais tier A) ;
-# plancher B, exception DÉCLARÉE (pas un compromis caché — l'entry porte son vrai tier + revue humaine).
-FIELD_PLANCHER_OVERRIDES: dict[str, str] = {
-    "marche.croissance_marche_historique": "B",
-}
+# ⚠️ `FIELD_PLANCHER_OVERRIDES` A ÉTÉ RETIRÉ (capacité 4, 2026-09-08) — ne pas le réintroduire.
+#
+# Il portait un seul champ (`marche.croissance_marche_historique: B`) et vivait à côté de
+# `FIELD_PROFILES`, qui porte le plancher des 19 champs depuis la capacité 0. Deux tables pour une
+# seule règle : c'est le motif de #46, et l'écart était déjà nommé dans `_DESSERRAGE_NON_CABLE`
+# (`check_source_registry.py` §1bis). Sa conséquence était mesurable — le desserrage B+ → B de #50
+# sur `positionnement.moat_preuves`, `positionnement.position_vs_pairs` et
+# `marche.structure_5forces` vivait dans la doctrine sans jamais atteindre la porte : une entry B
+# admise par le registre nominatif (#52) était **encore refusée** ici. La porte lit désormais
+# `FIELD_PROFILES`, détenteur unique, et le desserrage prend effet — ce que la capacité 2 avait
+# préparé et que seule la capacité 4 pouvait câbler.
 
 # Champs requis GÉNUINEMENT introuvables (aucune source accessible à aucun tier — ni KB, ni web même
 # dégradé, ni synthèse) : ils NE bloquent PAS `ready` mais sont portés comme LACUNE DÉCLARÉE
@@ -75,7 +85,14 @@ def nonblocking_gaps_for(ticker_id: Optional[str]) -> dict[str, str]:
 
 
 def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
-    return FIELD_PLANCHER_OVERRIDES.get(f"{dimension}.{champ}", dim_plancher)
+    """Plancher effectif d'un champ : celui de `FIELD_PROFILES` (#50), sinon celui de la dimension.
+
+    Un champ hors table retombe sur le plancher de dimension plutôt que de lever : le modèle peut
+    RESSERRER `champs_requis` en ajoutant un champ (cf. `_exigences`), et un ajout légitime ne doit
+    pas faire tomber le rapport. Il n'obtient aucune faveur pour autant — il hérite du plancher le
+    plus strict qui lui soit applicable.
+    """
+    return FIELD_PROFILES.get(f"{dimension}.{champ}", {}).get("plancher") or dim_plancher
 
 
 def _tier_ge(tier: Optional[str], plancher: str) -> bool:
@@ -135,13 +152,16 @@ def recompute_coverage(
     coverage: dict[str, Any],
     entries: list[dict[str, Any]],
     *,
+    ancre: MaterialEventLookup,
     ticker_id: Optional[str] = None,
+    motifs_out: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """Recompute déterministe de la couverture — depuis l'INDEX `covers`, pas depuis le LLM (029).
 
     Chaque champ requis est fondé si et seulement si la BASE contient ≥1 entry courante qui le PORTE
-    (`covers` contient `dimension.champ`) à un tier RÉEL ≥ plancher DU CHAMP. Le LLM n'intervient plus
-    du tout : ni pour proposer, ni pour omettre.
+    (`covers` contient `dimension.champ`) à un tier RÉEL ≥ plancher DU CHAMP **et** qui tient
+    l'actualité que le champ exige. Le LLM n'intervient plus du tout : ni pour proposer, ni pour
+    omettre.
 
     Ce que ça corrige (mesuré sur NVDA, corpus STRICTEMENT figé) : l'ancienne version filtrait les
     `entry_ids` que le LLM avait CITÉS — un véto sur la citation, pas un index. Elle fermait le trou
@@ -149,10 +169,43 @@ def recompute_coverage(
     créait un faux creux, et le rattachement par-champ n'étant pas déterministe, le verdict oscillait
     `not_ready` ↔ `thin_qualitative` sur des données identiques (rapports #11/#13/#14).
 
+    LES TROIS AXES, CONSOMMÉS SANS ÊTRE RECOMBINÉS (capacité 4, #50)
+    ----------------------------------------------------------------
+    La porte lit un TRIPLET, jamais un score : la **fiabilité** (le tier stocké, contre le plancher
+    du champ), la **nature** (stockée, migration 034 — elle décide quel axe fait autorité) et
+    l'**actualité** (calculée ICI, à la lecture, jamais persistée — #53). Trois états en sortent, et
+    la valeur de la capacité tient à ce qu'ils ne se confondent jamais :
+
+      couvert         ≥1 entry au plancher ET (le champ ne bloque pas sur l'actualité OU ≥1 entry
+                      est `courante`). Seules les entries fondantes entrent dans `fondations` ;
+      couvert_perime  des entries au plancher, mais aucune `courante`. Le champ A de la matière —
+                      elle est datée d'avant le dernier événement matériel. Remède : RAFRAÎCHIR ;
+      non_couvert     aucune entry au plancher. Remède : COLLECTER.
+
+    ⚠️ `ancre` est un argument REQUIS, sans défaut, et c'est délibéré. Un défaut à « aucun
+    événement » rendrait la porte silencieusement laxiste sur tout appelant qui l'oublie, et un
+    défaut à « flux injoignable » la rendrait silencieusement bloquante. Une porte de complétude ne
+    doit pas pouvoir être appelée sans qu'on ait dit contre quoi elle mesure : l'oubli est une
+    `TypeError` au site d'appel, jamais un verdict.
+
+    ⚠️ Une entry `indeterminable` ne fonde PAS un champ où l'actualité bloque — elle n'est pas
+    `courante` (#53). Le champ tombe alors en `couvert_perime` et le motif nomme la cause réelle
+    (non datable, ou flux injoignable), qui n'est pas la péremption. Conséquence assumée : une panne
+    EDGAR fait basculer tous les champs bloquants. C'est bruyant, et c'est le sens sûr — l'inverse
+    ferait lire une panne réseau « rien n'a changé », la phrase la plus rassurante produite par la
+    pire des raisons (#49).
+
     `fondations` est RÉÉCRIT depuis l'index : le rapport montre ce qui fonde réellement chaque champ,
-    et non ce que le modèle a bien voulu citer. Pur, sans IO.
+    et non ce que le modèle a bien voulu citer. Pur, sans IO — l'ancre est passée par l'appelant.
+
+    `motifs_out`, si fourni, reçoit `dimension.champ` → motif de péremption (la cause nommée entry
+    par entry). Il sort par ce canal et non dans `coverage`, qui est un contrat `extra='forbid'` :
+    y ajouter une clef de prose le ferait échouer à la validation. Un accumulateur passé par
+    l'appelant plutôt qu'un cache de module — un état global survivrait d'un ticker au suivant et
+    ferait lire les motifs de NVDA dans le rapport de MSFT (#31 transposé à la mémoire du process).
     """
     index = _covers_index(entries)
+    corpus = {e["id"]: e for e in entries}
     dispenses = nonblocking_gaps_for(ticker_id)
     for bloc_name in ("structuree", "qualitative_marche"):
         bloc = coverage.get(bloc_name) or {}
@@ -164,27 +217,38 @@ def recompute_coverage(
             d["champs_requis"] = requis
             d["tier_plancher"] = dim_plancher
             non_fondables: list[str] = []
+            perimes: list[str] = []
             fondations: list[dict[str, Any]] = []
             tiers_retenus: list[str] = []
             for champ in requis:
                 # Lacune déclarée non-bloquante : ni fondée, ni comptée comme manque (portée en
                 # incertitude investissable par _apply_deterministic_overrides).
-                if f"{dim}.{champ}" in dispenses:
+                path = f"{dim}.{champ}"
+                if path in dispenses:
                     continue
                 plancher = _plancher_for(dim, champ, dim_plancher)
                 # Seules comptent les entries qui PORTENT le champ ET tiennent son plancher. Une
                 # entry sous plancher n'est pas une fondation partielle : elle ne compte pas du tout.
-                retenues = [(i, t) for i, t in index.get(f"{dim}.{champ}", [])
-                            if _tier_ge(t, plancher)]
-                if retenues:
-                    fondations.append({"champ": champ, "entry_ids": [i for i, _ in retenues]})
-                    tiers_retenus.extend(t for _, t in retenues)
+                retenues = [(i, t) for i, t in index.get(path, []) if _tier_ge(t, plancher)]
+                if not retenues:
+                    non_fondables.append(champ)
+                    continue
+
+                fondantes, motif = _fondantes_apres_actualite(path, retenues, corpus, ancre)
+                if fondantes:
+                    fondations.append({"champ": champ, "entry_ids": [i for i, _ in fondantes]})
+                    tiers_retenus.extend(t for _, t in fondantes)
                 else:
                     non_fondables.append(champ)
+                    perimes.append(champ)
+                    if motifs_out is not None:
+                        motifs_out[path] = motif
             d["fondations"] = fondations
             d["champs_non_fondables"] = non_fondables
+            d["champs_perimes"] = perimes
             # tier_atteint = le meilleur tier parmi ce qui fonde VRAIMENT la dimension (une entry
-            # écartée ne peut pas rehausser le tier affiché : ce serait un tier de façade).
+            # écartée — sous plancher OU périmée — ne peut pas rehausser le tier affiché : ce serait
+            # un tier de façade).
             d["tier_atteint"] = _best_tier(tiers_retenus)
             d["ok"] = len(non_fondables) == 0
         bloc["bloc_ok"] = bool(bloc.get("dimensions")) and all(x["ok"] for x in bloc["dimensions"])
@@ -192,10 +256,55 @@ def recompute_coverage(
     return coverage
 
 
-def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
-    """Rebâtit `gaps` pour la bijection stricte champs_non_fondables ↔ gaps (contrat) après recompute :
-    on garde les gaps LLM en rabotant leurs `champs_cibles` aux non-fondables recalculés, on jette
-    ceux devenus vides, et on synthétise un gap pour tout champ non fondable resté sans gap. Pur."""
+def _fondantes_apres_actualite(
+    path: str,
+    retenues: list[tuple[int, str]],
+    corpus: dict[int, dict[str, Any]],
+    ancre: MaterialEventLookup,
+) -> tuple[list[tuple[int, str]], str]:
+    """Parmi les entries au plancher, celles qui fondent VRAIMENT le champ. Rend aussi le motif.
+
+    Le profil du champ décide si l'actualité bloque (#50, capacité 0) — c'est une propriété du
+    CHAMP, pas de la source : un cours se périme en jours, une structure concurrentielle en années.
+    Un champ hors profil ne bloque pas : la doctrine ne s'invente pas pour un champ que le modèle
+    vient d'ajouter aux requis (#31 — pas de traitement « au mieux » sans règle écrite).
+    """
+    if not FIELD_PROFILES.get(path, {}).get("actualite_bloquante"):
+        return retenues, ""
+
+    etats = {i: etat_actualite_entry(corpus.get(i, {}), ancre=ancre, corpus=corpus)
+             for i, _ in retenues}
+    fondantes = [(i, t) for i, t in retenues if etats[i].etat == "courante"]
+    if fondantes:
+        return fondantes, ""
+
+    # Aucune ne fonde : le motif nomme la CAUSE entry par entry. `perimee` et `indeterminable` sont
+    # deux ignorances différentes et le remède ne se pilote bien qu'en les distinguant.
+    detail = " · ".join(f"#{i} {etats[i].etat} — {etats[i].motif}" for i, _ in retenues)
+    return [], detail
+
+
+def reconcile_gaps(
+    report: dict[str, Any],
+    coverage: dict[str, Any],
+    *,
+    motifs: Optional[dict[str, str]] = None,
+) -> dict[str, Any]:
+    """Rebâtit `gaps` pour la bijection stricte champs_non_fondables ↔ gaps (contrat) après recompute,
+    et porte sur chacun son REMÈDE. Pur.
+
+    Deux manques, deux gestes (capacité 4) : un champ que rien ne fonde se **collecte** ; un champ
+    fondé par une matière antérieure au dernier événement matériel se **rafraîchit**. Les confondre
+    enverrait un mandat de recherche chercher ce que la base contient déjà, et laisserait le vrai
+    défaut — l'âge — non traité.
+
+    ⚠️ Les gaps du LLM sont rabotés aux champs à **collecter** uniquement. Le modèle décrit une
+    absence : il a énuméré ses `queries_suggerees` en croyant le champ vide. Lui laisser porter un
+    champ périmé ferait passer un libellé « aucune source ne documente X » sur un champ dont la base
+    a trois entries au plancher — juste dans sa forme, faux dans ce qu'il affirme (#42/#45). Les gaps
+    de rafraîchissement sont donc TOUJOURS synthétisés par le code, avec le motif nommant l'entry et
+    sa cause, qui est ce qu'un humain lira.
+    """
     dims = {d["dimension"]: d
             for b in (coverage["structuree"], coverage["qualitative_marche"])
             for d in b["dimensions"]}
@@ -207,15 +316,18 @@ def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str
         dim = g.get("dimension")
         if dim not in dims:
             continue
-        nf = set(dims[dim]["champs_non_fondables"])
-        cibles = [c for c in (g.get("champs_cibles") or []) if c in nf]
+        a_collecter = set(dims[dim]["champs_non_fondables"]) - set(dims[dim].get("champs_perimes") or [])
+        cibles = [c for c in (g.get("champs_cibles") or []) if c in a_collecter]
         if not cibles:
             continue
         g["champs_cibles"] = cibles
+        g["remede"] = "collecte"
         kept.append(g)
         covered.setdefault(dim, set()).update(cibles)
     for dim, d in dims.items():
-        manquants = [c for c in d["champs_non_fondables"] if c not in covered.get(dim, set())]
+        perimes = set(d.get("champs_perimes") or [])
+        manquants = [c for c in d["champs_non_fondables"]
+                     if c not in covered.get(dim, set()) and c not in perimes]
         if manquants:
             kept.append({
                 "dimension": dim,
@@ -225,6 +337,26 @@ def reconcile_gaps(report: dict[str, Any], coverage: dict[str, Any]) -> dict[str
                 "priorite": "moyenne",
                 "coverage_actuelle": d.get("tier_atteint") or "aucune",
                 "origine": "curator",
+                "remede": "collecte",
+            })
+        a_rafraichir = [c for c in d["champs_non_fondables"] if c in perimes]
+        if a_rafraichir:
+            detail = " ; ".join(f"{c} — {(motifs or {}).get(f'{dim}.{c}', 'cause non relevée')}"
+                                for c in a_rafraichir)
+            kept.append({
+                "dimension": dim,
+                "champs_cibles": a_rafraichir,
+                "manque": (f"La base FONDE ces champs au tier plancher, mais aucune entry ne tient "
+                           f"l'actualité exigée : {detail}. À RAFRAÎCHIR — la matière existe, elle "
+                           f"est antérieure au dernier événement matériel de l'émetteur."),
+                "queries_suggerees": [],
+                "priorite": "haute",
+                # PAS `tier_atteint` : il ne compte que ce qui fonde vraiment, donc il vaudrait
+                # « aucune » sur une dimension entièrement périmée — un gap de rafraîchissement
+                # annonçant une couverture nulle se lirait comme un gap de collecte.
+                "coverage_actuelle": "matière au tier plancher, hors actualité",
+                "origine": "curator",
+                "remede": "rafraichissement",
             })
     report["gaps"] = kept
     return report
@@ -279,6 +411,9 @@ def constrain_rationale(report: dict[str, Any], coverage: dict[str, Any]) -> dic
     non_fondes = [f"{d['dimension']}.{c}"
                   for b in (coverage["structuree"], coverage["qualitative_marche"])
                   for d in b["dimensions"] for c in d["champs_non_fondables"]]
+    perimes = [f"{d['dimension']}.{c}"
+               for b in (coverage["structuree"], coverage["qualitative_marche"])
+               for d in b["dimensions"] for c in (d.get("champs_perimes") or [])]
 
     gardees: list[str] = []
     retirees = 0
@@ -291,10 +426,18 @@ def constrain_rationale(report: dict[str, Any], coverage: dict[str, Any]) -> dic
             continue
         gardees.append(phrase)
 
+    # La CAUSE est nommée dans l'en-tête, et elle décide du geste : « 9 champs non fondés » envoie
+    # chercher de la donnée que la base contient déjà quand ces 9 champs sont en réalité périmés.
+    # Elle est dérivée par le détenteur unique du contrat, jamais recomptée ici (#46).
+    cause = compute_cause_non_ready(coverage) if isinstance(coverage, dict) else None
     manque = f"{len(non_fondes)} champ(s) non fondé(s)"
     if non_fondes:
         manque += " : " + ", ".join(non_fondes)
-    entete = (f"[Verdict recomputé : {verdict} — bloc structuré "
+    if perimes:
+        manque += (f" — dont {len(perimes)} PÉRIMÉ(S) (matière présente au plancher, antérieure au "
+                   f"dernier événement matériel ; remède : rafraîchir) : " + ", ".join(perimes))
+    entete = (f"[Verdict recomputé : {verdict}"
+              f"{f' (cause : {cause})' if cause else ''} — bloc structuré "
               f"{'fondé' if s_ok else 'incomplet'}, bloc qualitatif-marché "
               f"{'fondé' if q_ok else 'incomplet'} ; {manque}. Ligne écrite par le code depuis "
               f"l'index `covers` ; la lecture ci-dessous est celle du curator.")
@@ -307,7 +450,23 @@ def constrain_rationale(report: dict[str, Any], coverage: dict[str, Any]) -> dic
     return report
 
 
-def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> str:
+def _libelle_ancre(ancre: MaterialEventLookup) -> str:
+    """L'ancre matérielle en une phrase, pour le prompt. Les trois états sont DITS, jamais confondus
+    (#49/#53) : une panne de flux ne doit pas se lire « il ne s'est rien passé »."""
+    if ancre.status == "found" and ancre.event is not None:
+        e = ancre.event
+        items = f", items {'/'.join(e.items)}" if e.items else ""
+        return (f"dernier événement matériel : {e.form} du {e.event_date} (date de l'ÉVÉNEMENT"
+                f"{items}). Toute assertion antérieure à cette date est présumée périmée.")
+    if ancre.status == "none":
+        return ("aucun événement matériel publié par l'émetteur — état CONNU, rien ne périme le "
+                "corpus aujourd'hui.")
+    return (f"flux d'événements matériels INJOIGNABLE ({ancre.raison or 'raison non précisée'}) — "
+            f"l'actualité du corpus est indéterminable, ce qui n'est pas « rien n'a changé ».")
+
+
+def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]], *,
+                            ancre: MaterialEventLookup) -> str:
     spec = json.dumps(MVDD_SPEC, ensure_ascii=False, indent=2)
     listing = format_entries_for_prompt(entries)
     return (
@@ -318,11 +477,19 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]]) -> st
         f"knowledge_entries COURANTES de la KB ({len(entries)}) — cite-les par entry_id :\n"
         f"{listing}\n\n"
         f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict).\n\n"
+        f"Ancre temporelle du dossier — {_libelle_ancre(ancre)}\n\n"
         f"⚠️ La COUVERTURE ne t'appartient pas. Le backend la recompute en Python depuis l'index "
         f"`covers` de la base (quelles entries portent quel champ, à quel tier réel) : `fondations`, "
-        f"`champs_non_fondables`, `tier_atteint`, `ok`, `bloc_ok`, les gaps et le verdict sont "
-        f"DÉRIVÉS et écraseront ce que tu écris. Tu ne peux ni faire passer un champ, ni en creuser "
-        f"un : laisse `fondations` à [] et ne cherche pas à deviner ce qui est fondé.\n\n"
+        f"`champs_non_fondables`, `champs_perimes`, `tier_atteint`, `ok`, `bloc_ok`, les gaps, le "
+        f"verdict et sa `cause_non_ready` sont DÉRIVÉS et écraseront ce que tu écris. Tu ne peux ni "
+        f"faire passer un champ, ni en creuser un : laisse `fondations` à [] et ne cherche pas à "
+        f"deviner ce qui est fondé.\n\n"
+        f"⚠️ La PÉREMPTION ne t'appartient pas non plus. Un champ dont la base porte de la matière "
+        f"au tier plancher mais ANTÉRIEURE à l'ancre ci-dessus est classé `couvert_perime` par le "
+        f"code, et son remède est un RAFRAÎCHISSEMENT, pas une collecte. N'écris donc pas de gap "
+        f"disant qu'une donnée « manque » ou qu'« aucune source ne la documente » sans avoir lu les "
+        f"entries : si elle existe et qu'elle est vieille, ton libellé serait faux et il sera "
+        f"écarté. Tes gaps ne portent que ce que la base ne contient PAS.\n\n"
         f"Ce qui est VRAIMENT attendu de toi, et que le code ne sait pas produire : le `rationale` "
         f"(lecture d'ensemble du dossier), les `gaps` (ce qui manque, avec des `queries_suggerees` "
         f"actionnables), les `incertitudes_investissables` et `qualite_info`. Reprends les 8 "
@@ -363,17 +530,25 @@ def _apply_deterministic_overrides(
     report: dict[str, Any],
     entries: list[dict[str, Any]],
     *,
+    ancre: MaterialEventLookup,
     ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict) — jamais
-    confié au LLM. La couverture par champ est recalculée depuis l'INDEX `covers` de la base
-    (recompute_coverage, 029), puis les gaps sont reconciliés pour tenir la bijection du contrat
-    (reconcile_gaps). Le verdict devient donc une FONCTION du corpus : à corpus figé, il ne bouge plus."""
+    """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict, cause)
+    — jamais confié au LLM. La couverture par champ est recalculée depuis l'INDEX `covers` de la base
+    (recompute_coverage, 029) confronté à l'ancre matérielle (capacité 4), puis les gaps sont
+    reconciliés pour tenir la bijection du contrat (reconcile_gaps). Le verdict devient donc une
+    FONCTION du corpus ET du moment : à corpus figé, il ne bouge plus tant que l'ancre ne bouge pas.
+
+    ⚠️ `ancre` est requis ici pour la même raison que dans `recompute_coverage` : un défaut ferait
+    d'un oubli d'appelant un verdict silencieux au lieu d'une `TypeError`."""
     report["entries_par_tier"] = count_tiers(entries)
 
-    coverage = recompute_coverage(report.get("coverage") or {}, entries, ticker_id=ticker_id)
+    motifs: dict[str, str] = {}
+    coverage = recompute_coverage(report.get("coverage") or {}, entries,
+                                  ancre=ancre, ticker_id=ticker_id, motifs_out=motifs)
     report["coverage"] = coverage
-    reconcile_gaps(report, coverage)
+    report["cause_non_ready"] = compute_cause_non_ready(coverage)
+    reconcile_gaps(report, coverage, motifs=motifs)
     _declare_nonblocking_gaps(report, coverage, ticker_id)
 
     # A3 : pas de conviction/marge_securite au readiness
@@ -427,11 +602,18 @@ async def run_readiness(ticker_id: str) -> dict[str, Any]:
     Renvoie {report_id, verdict, report_json, context_pack_entry_id}."""
     async with get_db_session() as conn:
         entries = await get_current_entries(conn, ticker_id, min_reliability=0.0, limit=500)
+
+        # L'ancre matérielle est lue AVANT toute dépense de tokens (#40) : elle fait partie de la
+        # question posée, pas de la mise en forme de la réponse. `ancre_substantielle` écarte les
+        # dépôts purement formels (item 9.01 seul) — détenteur unique de « quel événement périme »
+        # (#46), le même que celui de l'outil de mesure.
+        ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
         agent = await get_agent_provider("knowledge-curator", "v2")
 
-        raw, t_in, t_out, cost = await _call_json(agent, _readiness_task_message(ticker_id, entries))
+        raw, t_in, t_out, cost = await _call_json(
+            agent, _readiness_task_message(ticker_id, entries, ancre=ancre))
         raw.pop("context_pack_entry_id", None)
-        report = _apply_deterministic_overrides(raw, entries, ticker_id=ticker_id)
+        report = _apply_deterministic_overrides(raw, entries, ancre=ancre, ticker_id=ticker_id)
 
         context_pack_entry_id: Optional[int] = None
 

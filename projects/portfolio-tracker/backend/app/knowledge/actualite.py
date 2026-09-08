@@ -162,6 +162,101 @@ def etat_actualite(
     )
 
 
+def date_effective(
+    entry: dict, *, corpus: Optional[dict[int, dict]] = None
+) -> tuple[Optional[date], str]:
+    """Date à laquelle un fait doit être confronté à l'ancre. Fonction **pure**.
+
+    Une entry porte normalement sa propre `source_date` (#48 en a fait un porteur fiable). Deux
+    producteurs n'en écrivent pas : les synthèses et les analyses d'agent, qui ne relèvent rien du
+    monde mais **distillent** des entries de la base. Les traiter comme non datables les rendrait
+    `indeterminable` à perpétuité, donc non fondantes sur tout champ où l'actualité bloque — alors
+    que leur fraîcheur est parfaitement connue : c'est celle de ce qu'elles citent.
+
+    ⚠️ **La plus ANCIENNE des sources citées, jamais la plus récente.** Une synthèse affirme ses
+    énoncés conjointement : si un seul de ses ingrédients décrit un monde révolu, la synthèse le
+    décrit aussi. Prendre la plus récente ferait rajeunir un contenu périmé en le recopiant dans une
+    synthèse — un blanchiment de péremption, et le mode de panne le plus probable de tout ce
+    chantier (le biais de récence, roadmap 02 « risque secondaire »).
+
+    Résolution sur **un seul niveau**, et une citation elle-même non datée est ignorée plutôt que
+    résolue en cascade : une chaîne de synthèses citant des synthèses ferait dépendre la date d'un
+    parcours de graphe, là où la question posée est simplement « de quand datent les faits ? ».
+    Aucune source citée résoluble → `None`, et l'appelant rendra `indeterminable` — l'ignorance
+    reste dite, jamais comblée par un défaut (#25/#44).
+    """
+    propre = entry.get("source_date")
+    if propre is not None:
+        return propre, "date propre de l'entry (`source_date`)"
+
+    cites = _entries_citees(entry)
+    if not cites:
+        return None, "aucune `source_date` et aucune entry citée : la fraîcheur n'est pas datable"
+
+    datees = {i: (corpus or {}).get(i, {}).get("source_date") for i in cites}
+    connues = {i: d for i, d in datees.items() if d is not None}
+    if not connues:
+        return None, (
+            "aucune `source_date` ; les "
+            f"{len(cites)} entry(s) citée(s) n'en portent pas non plus"
+        )
+
+    plus_ancienne = min(connues.values())
+    porteuses = sorted(i for i, d in connues.items() if d == plus_ancienne)
+    return plus_ancienne, (
+        f"date héritée de la plus ANCIENNE des {len(connues)} entry(s) citée(s) datée(s) : "
+        f"{plus_ancienne.isoformat()} (#{', #'.join(str(i) for i in porteuses)}). Une synthèse "
+        "n'est pas plus fraîche que son ingrédient le plus vieux."
+    )
+
+
+def _entries_citees(entry: dict) -> list[int]:
+    """Ids des entries qu'une synthèse/analyse distille, lus dans `content_structured`.
+
+    Deux formes coexistent en base : `claims[].cited_entry_ids` (analyses) et `source_entry_refs`
+    (context packs). Les deux sont lues — n'en lire qu'une rendrait l'autre famille indatable sans
+    que rien ne le signale. Tolérante à la forme : ce qui n'est pas un entier est ignoré, jamais
+    fatal (#50 §1 — une donnée hors forme est écartée, elle ne fait pas tomber la lecture).
+    """
+    cs = entry.get("content_structured")
+    if not isinstance(cs, dict):
+        return []
+    ids: list[int] = []
+    for claim in cs.get("claims") or []:
+        if isinstance(claim, dict):
+            ids += [i for i in (claim.get("cited_entry_ids") or []) if isinstance(i, int)]
+    for ref in cs.get("source_entry_refs") or []:
+        if isinstance(ref, int):
+            ids.append(ref)
+        elif isinstance(ref, dict) and isinstance(ref.get("entry_id"), int):
+            ids.append(ref["entry_id"])
+    return sorted(set(ids))
+
+
+def etat_actualite_entry(
+    entry: dict, *, ancre: MaterialEventLookup, corpus: Optional[dict[int, dict]] = None
+) -> Actualite:
+    """État d'actualité d'une entry complète — `date_effective` puis `etat_actualite`. Pure.
+
+    C'est la porte d'entrée que les consommateurs doivent appeler : elle est la seule à connaître
+    la règle de datation des entries dérivées. Appeler `etat_actualite(source_date=e["source_date"])`
+    directement court-circuite cette règle et reclasse toutes les synthèses en `indeterminable`.
+    """
+    eff, motif_date = date_effective(entry, corpus=corpus)
+    act = etat_actualite(source_date=eff, ancre=ancre)
+    if eff is not None and entry.get("source_date") is None:
+        # La date est héritée : le motif doit le DIRE, sinon le rapport affirme une date que la
+        # ligne ne porte pas — exactement le défaut que #48 a corrigé sur `source_date`.
+        return Actualite(
+            etat=act.etat,
+            motif=f"{act.motif} [{motif_date}]",
+            seuil=act.seuil,
+            source_date=act.source_date,
+            jours_avant_evenement=act.jours_avant_evenement,
+        )
+    return act
+
+
 def classe_rapport(etat: str) -> str:
     """Nom de classe du rapport de péremption pour un état de l'axe. Un état inconnu lève plutôt que
     de retomber sur une classe « par défaut » : ranger un état non prévu avec les faits courants

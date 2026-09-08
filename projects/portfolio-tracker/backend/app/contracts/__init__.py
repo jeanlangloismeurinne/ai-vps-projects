@@ -67,7 +67,11 @@ from .monitoring_modes_1_5_schema import (
     Mode5Routing,
     MonitoringSession,
 )
-from .readiness_report_schema import ReadinessReport, compute_verdict
+from .readiness_report_schema import (
+    ReadinessReport,
+    compute_cause_non_ready,
+    compute_verdict,
+)
 from .synthesis_schema import GroundedSynthesis, SynthesisClaim
 from .worker_delegation_schema import (
     SOURCE_RELIABILITY_BASELINE,
@@ -90,6 +94,7 @@ __all__ = [
     "valider_pont_risques_hypotheses",
     "ReadinessReport",
     "compute_verdict",
+    "compute_cause_non_ready",
     "GroundedSynthesis",
     "SynthesisClaim",
     "ContextPack",

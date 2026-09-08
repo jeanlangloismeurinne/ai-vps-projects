@@ -33,13 +33,36 @@ function fmtPct(val) {
 const VERDICT_VARIANT = {
   ready:            'emerald',
   thin_qualitative: 'amber',
+  not_ready:        'red',
 }
 const VERDICT_LABEL = {
   ready:            'Ready — analyse possible',
   thin_qualitative: 'Thin qualitative — couverture insuffisante',
+  not_ready:        'Not ready',
 }
 
-function VerdictBanner({ verdict, rationale, createdAt, schemaVersion }) {
+// `cause_non_ready` est DÉRIVÉE de la coverage par le code (`compute_cause_non_ready`), jamais
+// racontée par le modèle. Elle porte la distinction que toute la capacité 4 existe pour tenir :
+// un dossier bloqué parce qu'il a VIEILLI ne demande pas le même travail qu'un dossier VIDE.
+// Afficher `not_ready` nu redonnerait au lecteur l'ambiguïté que le calcul vient de lever.
+const CAUSE_LABEL = {
+  peremption: 'péremption',
+  lacune:     'lacune',
+  mixte:      'péremption + lacune',
+}
+const CAUSE_EXPLICATION = {
+  peremption: "Le dossier n'est pas vide : il a vieilli. Des champs requis sont couverts au tier plancher, mais aucune de leurs entrées n'est postérieure au dernier événement matériel de l'émetteur. Le remède est un rafraîchissement ciblé, pas une collecte.",
+  lacune:     "La base ne porte rien au tier plancher sur des champs requis. Le remède est une collecte.",
+  mixte:      "Les deux causes coexistent : certains champs ont vieilli (à rafraîchir), d'autres n'ont jamais rien eu (à collecter). Les mandats correspondants sont listés séparément plus bas.",
+}
+
+function verdictLabel(verdict, cause) {
+  const base = VERDICT_LABEL[verdict] || verdict
+  if (verdict === 'not_ready' && CAUSE_LABEL[cause]) return `${base} — ${CAUSE_LABEL[cause]}`
+  return base
+}
+
+function VerdictBanner({ verdict, cause, rationale, createdAt, schemaVersion }) {
   if (!verdict) {
     return (
       <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 px-4 py-4">
@@ -63,7 +86,7 @@ function VerdictBanner({ verdict, rationale, createdAt, schemaVersion }) {
   }
 
   const variant = VERDICT_VARIANT[verdict] || 'gray'
-  const label = VERDICT_LABEL[verdict] || verdict
+  const label = verdictLabel(verdict, cause)
 
   return (
     <Card>
@@ -99,6 +122,33 @@ function VerdictBanner({ verdict, rationale, createdAt, schemaVersion }) {
           </div>
         )}
 
+        {/* Cause du non-readiness — dérivée, jamais racontée */}
+        {verdict !== 'ready' && (
+          cause ? (
+            <div className={`rounded-md border px-3 py-2 ${
+              cause === 'peremption'
+                ? 'border-sky-900/50 bg-sky-950/20'
+                : cause === 'mixte'
+                  ? 'border-amber-900/50 bg-amber-950/20'
+                  : 'border-red-900/50 bg-red-950/20'
+            }`}>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-semibold">
+                Cause — calculée depuis la couverture, pas écrite par le modèle
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                <span className="font-mono font-semibold">{CAUSE_LABEL[cause] || cause}</span>
+                {CAUSE_EXPLICATION[cause] ? ` — ${CAUSE_EXPLICATION[cause]}` : null}
+              </p>
+            </div>
+          ) : (
+            // Absente ≠ « aucune cause ». Un rapport antérieur à la capacité 4 ne portait pas ce
+            // champ : le dire, plutôt que d'afficher un silence qui se lirait « rien à signaler ».
+            <p className="text-xs text-amber-600 italic">
+              — cause_non_ready absente : rapport antérieur à la porte à trois états, ou champ non produit.
+            </p>
+          )
+        )}
+
         {/* Corps LLM — lecture du curator */}
         {bodyLlm ? (
           <div className="space-y-1">
@@ -116,8 +166,18 @@ function VerdictBanner({ verdict, rationale, createdAt, schemaVersion }) {
 // ── Bloc : Couverture par bloc ─────────────────────────────────────────────────
 // Chaque bloc (`structuree`, `qualitative_marche`) a un `bloc_ok` et une liste de dimensions.
 // Chaque dimension a : ok, dimension, tier_atteint, tier_plancher, champs_requis[],
-// champs_non_fondables[], fondations[{ champ, entry_ids[] }].
-// Ce qui est fondé vs non fondé doit se voir d'un coup d'œil.
+// champs_non_fondables[], champs_perimes[], fondations[{ champ, entry_ids[] }].
+//
+// TROIS états, jamais deux confondus (capacité 4) — et c'est ICI qu'ils se lisent :
+//   couvert         → le champ figure dans `fondations`
+//   couvert_perime  → il figure dans `champs_perimes` : la base porte de la matière au tier
+//                     plancher, mais aucune entry n'est postérieure au dernier événement matériel.
+//                     Remède = RAFRAÎCHIR. `champs_perimes` est un sous-ensemble déclaré de
+//                     `champs_non_fondables` : il ne s'ajoute pas à eux, il s'en retranche.
+//   non_couvert     → `champs_non_fondables` PRIVÉ de `champs_perimes` : la base n'a rien.
+//                     Remède = COLLECTER.
+// Les afficher du même amber « lacune déclarée » — ce que faisait cet écran jusqu'au 2026-09-08 —
+// fait payer une recherche complète là où un rafraîchissement suffisait.
 
 const BLOC_LABELS = {
   structuree:          'Bloc structuré',
@@ -163,9 +223,12 @@ function DimensionRow({ dim }) {
   const fondations = Array.isArray(dim.fondations) ? dim.fondations : []
   const champsFoundes = new Set(fondations.map(f => f.champ))
 
-  // Calcul des champs fondés vs non fondés parmi les requis
-  const fondes = [...champsReqSet].filter(c => champsFoundes.has(c))
-  const nonFondes = [...champsReqSet].filter(c => !champsFoundes.has(c) && !champsNonFondables.includes(c))
+  // `champs_perimes` est absent des rapports produits AVANT la capacité 4. Un rapport d'archive doit
+  // se lire tel qu'il a été écrit : pas de périmé, donc tout non-fondable y reste une lacune — et non
+  // un « périmé » rétroactif que le code de l'époque n'avait jamais calculé.
+  const champsPerimes = Array.isArray(dim.champs_perimes) ? dim.champs_perimes : []
+  const perimesSet = new Set(champsPerimes)
+  const lacunes = champsNonFondables.filter(c => !perimesSet.has(c))
 
   return (
     <div className={`rounded-lg border px-4 py-3 space-y-3 ${
@@ -190,26 +253,33 @@ function DimensionRow({ dim }) {
         </div>
       </div>
 
-      {/* Champs requis : fondés en vert, manquants en rouge */}
+      {/* Champs requis, un pastille par champ : couvert (vert) · périmé (bleu) · manquant (rouge) */}
       <div className="flex flex-wrap gap-1.5">
         {[...champsReqSet].map(champ => {
           const fonde = champsFoundes.has(champ)
-          const nonFondable = champsNonFondables.includes(champ)
+          const perime = perimesSet.has(champ)
+          const lacune = lacunes.includes(champ)
           const fondation = fondations.find(f => f.champ === champ)
           const nEntries = fondation ? fondation.entry_ids?.length ?? 0 : 0
+
+          // L'ordre des tests EST la doctrine : `perime` avant `lacune`, parce que les périmés sont
+          // un sous-ensemble des non fondables. Tester la lacune d'abord absorberait les périmés.
+          const etat = fonde ? 'couvert' : perime ? 'couvert_perime' : lacune ? 'non_couvert' : 'indetermine'
+          const DECOR = {
+            couvert:        ['✓', 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/60',
+                             `Couvert — ${nEntries} entrée${nEntries !== 1 ? 's' : ''} de connaissance`],
+            couvert_perime: ['⟳', 'bg-sky-900/30 text-sky-300 border border-sky-800/60',
+                             'Couvert mais PÉRIMÉ — la base porte de la matière au tier plancher, mais rien depuis le dernier événement matériel. Remède : rafraîchir, pas collecter.'],
+            non_couvert:    ['✗', 'bg-red-900/30 text-red-400 border border-red-800/60',
+                             'Non couvert — la base ne porte rien au tier plancher. Remède : collecter.'],
+            indetermine:    ['?', 'bg-amber-900/30 text-amber-400 border border-amber-800/60',
+                             "Ni fondé ni déclaré non fondable : le rapport n'est pas bijectif, ce qui ne devrait pas arriver."],
+          }
+          const [glyphe, classes, titre] = DECOR[etat]
           return (
-            <span
-              key={champ}
-              title={fonde ? `${nEntries} entrée${nEntries !== 1 ? 's' : ''} de connaissance` : nonFondable ? 'Non fondable — lacune déclarée' : 'Non fondé'}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono ${
-                fonde
-                  ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/60'
-                  : nonFondable
-                    ? 'bg-amber-900/30 text-amber-400 border border-amber-800/60'
-                    : 'bg-red-900/30 text-red-400 border border-red-800/60'
-              }`}
-            >
-              {fonde ? '✓' : nonFondable ? '~' : '✗'} {champ}
+            <span key={champ} title={titre}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono ${classes}`}>
+              {glyphe} {champ}
               {fonde && nEntries > 0 && (
                 <span className="text-emerald-600 text-[10px]">({nEntries})</span>
               )}
@@ -221,10 +291,17 @@ function DimensionRow({ dim }) {
         )}
       </div>
 
-      {/* Champs non fondables (lacune déclarée) */}
-      {champsNonFondables.length > 0 && (
-        <p className="text-xs text-amber-400">
-          Lacune déclarée (non fondable) : {champsNonFondables.join(', ')}
+      {/* Les deux causes, et donc les deux remèdes, énoncés séparément */}
+      {champsPerimes.length > 0 && (
+        <p className="text-xs text-sky-300">
+          <span className="font-semibold">À rafraîchir</span> (couvert mais périmé) :{' '}
+          {champsPerimes.join(', ')}
+        </p>
+      )}
+      {lacunes.length > 0 && (
+        <p className="text-xs text-red-400">
+          <span className="font-semibold">À collecter</span> (lacune, rien en base) :{' '}
+          {lacunes.join(', ')}
         </p>
       )}
     </div>
@@ -412,6 +489,90 @@ function IndicateursBloc({ indicateurs }) {
 // ── Bloc : Gaps ───────────────────────────────────────────────────────────────
 // Une liste vide ici est une BONNE nouvelle. Un EmptyState neutre se lirait comme
 // « pas d'information » — on le dit explicitement.
+//
+// Un `GapItem` est un OBJET (dimension, champs_cibles[], manque, remede, priorite,
+// coverage_actuelle, queries_suggerees[], origine). Il était rendu en `JSON.stringify` : le
+// `remede` de la capacité 4 y aurait été techniquement présent et pratiquement illisible — un
+// champ affiché dans un blob JSON n'est pas un champ lu. On le rend donc explicitement, et les
+// deux mandats sont SÉPARÉS : le coût d'un rafraîchissement n'est pas celui d'une collecte.
+
+const REMEDE_DECOR = {
+  rafraichissement: {
+    titre:  'À rafraîchir — le champ a de la matière, elle est antérieure au dernier événement matériel',
+    badge:  'sky',
+    puce:   '⟳',
+    classe: 'text-sky-400',
+  },
+  collecte: {
+    titre:  'À collecter — la base ne porte rien sur ces champs',
+    badge:  'amber',
+    puce:   '✗',
+    classe: 'text-red-500',
+  },
+}
+
+function GapCard({ gap }) {
+  // Un gap qui ne serait pas un objet (contrat cassé) reste affichable plutôt que muet.
+  if (typeof gap === 'string') {
+    return <li className="flex gap-2 text-sm text-gray-300"><span className="text-red-500 shrink-0 mt-0.5">✗</span><span>{gap}</span></li>
+  }
+  if (!gap || typeof gap !== 'object') {
+    return <li className="text-xs text-amber-600 italic">— gap illisible : {JSON.stringify(gap)}</li>
+  }
+
+  const decor = REMEDE_DECOR[gap.remede] || REMEDE_DECOR.collecte
+  const cibles = Array.isArray(gap.champs_cibles) ? gap.champs_cibles : []
+  const queries = Array.isArray(gap.queries_suggerees) ? gap.queries_suggerees : []
+
+  return (
+    <li className="rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5 space-y-1.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className={`${decor.classe} text-sm`}>{decor.puce}</span>
+          <span className="text-sm text-gray-200">
+            {DIMENSION_LABELS[gap.dimension] || gap.dimension || '— dimension absente'}
+          </span>
+          {gap.priorite && (
+            <span className="text-[10px] text-gray-500 uppercase tracking-wide">
+              priorité {gap.priorite}
+            </span>
+          )}
+        </div>
+        <span title={decor.titre}>
+          <Badge variant={decor.badge}>
+            {gap.remede === 'rafraichissement' ? 'Rafraîchissement' : 'Collecte'}
+          </Badge>
+        </span>
+      </div>
+
+      {cibles.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {cibles.map(c => (
+            <span key={c} className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 text-[11px] font-mono">
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {gap.manque && <p className="text-xs text-gray-400 leading-relaxed">{gap.manque}</p>}
+
+      {gap.coverage_actuelle && (
+        <p className="text-[11px] text-gray-600">
+          Couverture actuelle : <span className="text-gray-500">{gap.coverage_actuelle}</span>
+        </p>
+      )}
+
+      {queries.length > 0 && (
+        <ul className="space-y-0.5">
+          {queries.map((q, i) => (
+            <li key={i} className="text-[11px] text-gray-500 font-mono">→ {q}</li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
 
 function GapsBloc({ gaps }) {
   const list = Array.isArray(gaps) ? gaps : null
@@ -427,33 +588,58 @@ function GapsBloc({ gaps }) {
     )
   }
 
+  const aRafraichir = list.filter(g => g && g.remede === 'rafraichissement')
+  const aCollecter  = list.filter(g => !(g && g.remede === 'rafraichissement'))
+
   return (
     <Card>
       <CardHeader
-        title={`Lacunes (gaps) — ${list.length === 0 ? 'aucune' : list.length}`}
+        title={`Mandats de travail — ${list.length === 0 ? 'aucun' : list.length}`}
+        subtitle="Deux mandats distincts : rafraîchir ce qui a vieilli, collecter ce qui manque."
         action={
           list.length === 0 ? (
             <Badge variant="emerald">Aucun trou</Badge>
           ) : (
-            <Badge variant="amber">{list.length} lacune{list.length > 1 ? 's' : ''}</Badge>
+            <div className="flex items-center gap-1.5">
+              {aRafraichir.length > 0 && (
+                <Badge variant="sky">{aRafraichir.length} à rafraîchir</Badge>
+              )}
+              {aCollecter.length > 0 && (
+                <Badge variant="amber">{aCollecter.length} à collecter</Badge>
+              )}
+            </div>
           )
         }
       />
-      <CardBody>
+      <CardBody className="space-y-4">
         {list.length === 0 ? (
           <div className="rounded-md bg-emerald-950/20 border border-emerald-900/30 px-3 py-3 text-sm text-emerald-300">
-            Aucun trou de couverture identifié — tous les champs requis sont fondés au tier plancher.
-            Une liste vide ici est un signal positif, pas une absence de données.
+            Aucun trou de couverture identifié — tous les champs requis sont fondés au tier plancher,
+            et aucun n'est périmé. Une liste vide ici est un signal positif, pas une absence de données.
           </div>
         ) : (
-          <ul className="space-y-2">
-            {list.map((gap, i) => (
-              <li key={i} className="flex gap-2 text-sm text-gray-300">
-                <span className="text-red-500 shrink-0 mt-0.5">✗</span>
-                <span>{typeof gap === 'string' ? gap : JSON.stringify(gap)}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            {aRafraichir.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] text-sky-500 uppercase tracking-wide font-semibold">
+                  Rafraîchissement — la matière existe, elle a vieilli
+                </div>
+                <ul className="space-y-2">
+                  {aRafraichir.map((gap, i) => <GapCard key={`r${i}`} gap={gap} />)}
+                </ul>
+              </div>
+            )}
+            {aCollecter.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] text-amber-500 uppercase tracking-wide font-semibold">
+                  Collecte — la base ne porte rien
+                </div>
+                <ul className="space-y-2">
+                  {aCollecter.map((gap, i) => <GapCard key={`c${i}`} gap={gap} />)}
+                </ul>
+              </div>
+            )}
+          </>
         )}
       </CardBody>
     </Card>
@@ -643,6 +829,7 @@ export default function ReadinessPage() {
   const reportVerdict              = report?.verdict
   const reportSchemaVersion        = report?.schema_version
   const reportRationale            = report?.rationale
+  const reportCauseNonReady        = report?.cause_non_ready
   const reportGaps                 = report?.gaps
   const reportCoverage             = report?.coverage
   const reportIndicateurs          = report?.indicateurs
@@ -677,7 +864,7 @@ export default function ReadinessPage() {
           {ticker_id} — Gate readiness
         </h1>
         <Badge variant={VERDICT_VARIANT[titreVerdict] || 'gray'}>
-          {VERDICT_LABEL[titreVerdict] || titreVerdict}
+          {verdictLabel(titreVerdict, reportCauseNonReady)}
         </Badge>
         {topContextPackEntryId != null && (
           <span className="text-xs text-gray-600 font-mono">
@@ -696,11 +883,24 @@ export default function ReadinessPage() {
           insuffisante sur la partie qualitative-marché. Les incertitudes bloquantes empêchent d'aller
           plus loin ; les incertitudes investissables sont à quantifier dans l'analyse.
         </p>
+        <p className="text-xs text-gray-400 leading-relaxed mt-2">
+          Un champ requis se lit en <span className="font-semibold">trois états</span>, jamais deux
+          confondus : <span className="text-emerald-400 font-mono">✓ couvert</span> ·{' '}
+          <span className="text-sky-300 font-mono">⟳ couvert mais périmé</span> (la base porte de la
+          matière au tier plancher, mais rien depuis le dernier événement matériel de l'émetteur —
+          il faut <span className="text-sky-300 font-semibold">rafraîchir</span>) ·{' '}
+          <span className="text-red-400 font-mono">✗ non couvert</span> (la base n'a rien — il faut{' '}
+          <span className="text-red-400 font-semibold">collecter</span>). L'actualité n'est jamais
+          stockée : elle est recalculée à chaque lecture contre l'événement matériel du jour, si bien
+          qu'un même corpus peut être suffisant aujourd'hui et périmé demain sans qu'une ligne
+          n'ait bougé en base.
+        </p>
       </div>
 
       {/* ── Section 1 : Verdict ──────────────────────────────────────────────── */}
       <VerdictBanner
         verdict={topVerdict}
+        cause={reportCauseNonReady}
         rationale={reportRationale}
         createdAt={topCreatedAt}
         schemaVersion={reportSchemaVersion}

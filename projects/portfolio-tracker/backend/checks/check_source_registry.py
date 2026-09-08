@@ -40,7 +40,7 @@ from datetime import date
 
 from app.agents.v2 import worker as worker_mod
 from app.agents.v2.common import FIELD_PROFILES, MVDD_SPEC, NATURES
-from app.agents.v2.curator import FIELD_PLANCHER_OVERRIDES
+from app.agents.v2.curator import _plancher_for
 from app.knowledge import service as service_mod
 from app.knowledge.service import RELIABILITY_TABLE, compute_reliability
 from app.knowledge.source_registry import (
@@ -104,29 +104,41 @@ for champ in _CHAMPS_DESSERRES:
           "→ desserrage sans bénéficiaire, l'état que la capacité 2 corrige")
 
 
-print("1bis. portée RÉELLE du desserrage — la doctrine et la porte ne coïncident pas encore")
-# Mesuré le 2026-09-05 : `FIELD_PROFILES` porte le desserrage B+ → B décidé en capacité 0, mais la
-# porte de complétude lit encore `FIELD_PLANCHER_OVERRIDES`, qui ne contient QUE
-# `marche.croissance_marche_historique`. Les trois champs desserrés sont donc toujours jugés à B+ au
-# gate : une entry admise par le registre à B y serait rejetée, et le registre serait un desserrage
-# SANS EFFET — précisément ce que la capacité 2 est censée corriger.
+print("1bis. portée RÉELLE du desserrage — la doctrine et la porte coïncident (câblé en capacité 4)")
+# Historique, gardé parce qu'il explique la forme de l'assert. Mesuré le 2026-09-05 :
+# `FIELD_PROFILES` portait le desserrage B+ → B décidé en capacité 0, mais la porte de complétude
+# lisait `curator.FIELD_PLANCHER_OVERRIDES`, une SECONDE table qui ne contenait que
+# `marche.croissance_marche_historique`. Les trois champs desserrés étaient donc toujours jugés à B+
+# au gate : une entry admise par le registre à B y était rejetée, et le registre était un desserrage
+# SANS EFFET — précisément ce que la capacité 2 était censée corriger. On n'avait pas corrigé, on
+# avait NOMMÉ, pour ne pas déplacer la ligne de base que la capacité 4 devait mesurer avant son lot.
 #
-# Le câblage appartient à la capacité 4 (`curator.recompute_coverage` est son contexte partagé), et
-# le faire ici déplacerait la ligne de base que son test central doit mesurer AVANT son lot. On ne
-# corrige donc pas : on NOMME. La liste ci-dessous est l'écart connu ; quand la capacité 4 fera lire
-# `FIELD_PROFILES` à la porte, elle se videra et les asserts resteront verts sans être touchés.
-_DESSERRAGE_NON_CABLE = frozenset(_CHAMPS_DESSERRES)
+# 2026-09-08, capacité 4 : `FIELD_PLANCHER_OVERRIDES` est SUPPRIMÉ et `_plancher_for` lit
+# `FIELD_PROFILES`, détenteur unique (#46). La liste des écarts est donc vide, et l'assert du bas —
+# écrit à l'avance pour ça — est ce qui a exigé de la vider le jour du câblage.
+_DESSERRAGE_NON_CABLE: frozenset[str] = frozenset()
 _DIM_PLANCHER = {s["dimension"]: s["tier_plancher"] for s in MVDD_SPEC}
+
+
+def _porte(champ: str) -> str:
+    """Le plancher que la PORTE applique — lu via `_plancher_for`, la fonction de production.
+    Le recopier ici ferait de ce check un jumeau de la règle : il resterait vert le jour où la
+    porte diverge, ce qui est exactement le défaut mesuré le 2026-09-05."""
+    dim, nom = champ.split(".", 1)
+    return _plancher_for(dim, nom, _DIM_PLANCHER[dim])
+
+
 for champ in _CHAMPS_DESSERRES:
     doctrine = FIELD_PROFILES[champ]["plancher"]
-    porte = FIELD_PLANCHER_OVERRIDES.get(champ, _DIM_PLANCHER[champ.split(".", 1)[0]])
+    porte = _porte(champ)
     ecart = _RANK[porte] > _RANK[doctrine]
     check(f"`{champ}` : écart doctrine({doctrine})/porte({porte}) déclaré s'il existe",
           (not ecart) or champ in _DESSERRAGE_NON_CABLE,
           "→ écart non déclaré : le registre admet une source que la porte rejettera en silence")
+    check(f"`{champ}` : la porte applique bien le desserrage", not ecart,
+          f"→ la porte juge encore à {porte} alors que la doctrine dit {doctrine}")
 non_cables_resolus = {c for c in _DESSERRAGE_NON_CABLE
-                      if _RANK[FIELD_PLANCHER_OVERRIDES.get(c, _DIM_PLANCHER[c.split('.', 1)[0]])]
-                      <= _RANK[FIELD_PROFILES[c]["plancher"]]}
+                      if _RANK[_porte(c)] <= _RANK[FIELD_PROFILES[c]["plancher"]]}
 check("la liste des écarts ne survit pas à leur câblage",
       not non_cables_resolus,
       f"→ {sorted(non_cables_resolus)} sont câblés : les retirer de `_DESSERRAGE_NON_CABLE`")

@@ -149,10 +149,20 @@ FIELD_PROFILES: dict[str, dict[str, Any]] = {
     # ── qualitative_marche · marche ──────────────────────────────────────────
     "marche.croissance_marche_historique": {
         "nature": "mesure", "plancher": "B", "actualite_bloquante": False,
-        "motif": "Série historique chiffrée. Plancher B DÉJÀ en vigueur "
-                 "(`FIELD_PLANCHER_OVERRIDES`) : les cabinets d'études plafonnent à "
+        "motif": "Série historique chiffrée. Les cabinets d'études plafonnent à "
                  "`web_search_reputable` (#32), un plancher plus haut rendrait le champ "
                  "infondable au lieu de le rendre exigeant.",
+        # Déclaré le 2026-09-08 (capacité 4). Ce desserrage existait DEPUIS le 2026-08-31, mais il
+        # vivait dans une seconde table de planchers, et §5 de `check_field_profiles` comparait la
+        # doctrine à cette table plutôt qu'au socle MVDD : le desserrage se justifiait donc
+        # lui-même, et restait tacite pour le seul assert écrit pour l'attraper. Supprimer la
+        # seconde table (#46) l'a rendu visible d'un coup. Le desserrage est bon ; c'est sa
+        # DÉCLARATION qui manquait.
+        "desserrage": "B+ → B : une taille de marché n'est jamais publiée par une source primaire "
+                      "d'émetteur. À B+ le champ serait infondable quel que soit l'effort de "
+                      "recherche (#32) — un plancher inatteignable est une lacune déguisée, pas "
+                      "une exigence. B est aussi le PLAFOND de ces sources : ce sont des "
+                      "estimations, et l'analyste doit le lire dans le tier.",
     },
     "marche.structure_5forces": {
         "nature": "interpretation", "plancher": "B", "actualite_bloquante": False,
