@@ -491,13 +491,64 @@ interne au corpus). La règle de trois donne **80,5 %**, et #97 énonce lui-mêm
 presse/réglementaire qui motivait 5a n'était donc pas la matière ; la matière était **dans le même
 document**, entre deux pièces que personne n'avait rapprochées.
 
+#### ⚠️ 3ᵉ correction de l'énoncé (2026-09-09, ligne de base) — l'unité est la QUESTION
+
+La ligne de base exigée ci-dessous a été prise (`bash tools/mesure_absences.sh`) et elle a, une
+troisième fois, changé le lot. **10 entries** portent un marqueur d'absence, **5** sont comptées
+comme fondation, **3** sont la SEULE fondation de leur critère. Mais à la lecture des extraits :
+
+- **une seule** (#97, MSFT) documente une absence **coextensive** au critère qu'elle couvre ;
+- **quatre** (#53, #55, #112, #113) sont des synthèses substantielles qui signalent un trou sur un
+  **sous-point**. Leur appliquer la règle « une absence ne fonde plus » au niveau de la PIÈCE
+  fabriquerait **3 fausses lacunes** (NVDA/MSFT `produits.unit_economics`, MSFT
+  `marche.structure_5forces`), chacune déclenchant une recherche payante sur du matériau déjà
+  partiellement détenu — pour corriger **1** vrai défaut.
+
+**Arbitrage utilisateur (2026-09-09)** : *« Fondé, le trou est nommé à l'écran et il est approximé si
+possible. »* Donc **l'unité de travail n'est pas le critère, c'est la question posée.** Un trou
+déclaré à l'intérieur d'un critère par ailleurs fondé est un appelant de l'échelle d'escalade, au
+même titre qu'un critère entièrement non fondé. Le critère reste `fondé`.
+
+**Et la matière est là** : **~20 questions** déclarées ouvertes sur NVDA+MSFT, toutes dans des
+synthèses grounded, toutes **en prose**. Le comportement est PRESCRIT par le prompt de synthèse
+(`synthesis_feed.py`, « si l'information manque, écris-le explicitement ») — mais son porteur était
+absent du contrat. Forme exacte de #55 : *une règle juste chez le producteur reste aveugle au lecteur
+tant que son discriminant n'est pas DANS la ligne.*
+
+⚠️ **Un troisième défaut, invisible à tout filtre, et qui n'est PAS celui-ci** : #98 fonde
+`business_model.recurrence_pct` en répondant à une question **voisine** (prises de commandes, RPO).
+Aucun filet lexical ne peut le voir. Le défaut réel est plus large que « une absence fonde » :
+**`covers` est déclaré par le producteur et personne ne vérifie que la pièce porte la réponse du
+critère.** À traiter séparément — voir le test d'acceptation réécrit plus bas.
+
 #### Ce qui est à construire — l'échelle d'escalade
 
-- [ ] **Une absence déclarée ne fonde plus.** Une entry dont l'assertion est *« cette donnée n'est
-      pas publiée »* cesse de compter comme couvrante pour le champ qu'elle `covers`. Elle n'est pas
-      supprimée et ne devient pas une lacune ordinaire : elle **qualifie** le champ comme
-      *non publié à la source*, ce qui est une information sur l'émetteur, pas un trou de collecte
-      (#44 : *calculé / non calculable / absent* — trois états, jamais deux).
+- [x] **La question ouverte devient une donnée nommée** (fait le 2026-09-09). Contrat
+      `GroundedSynthesis` v2.1.0 : `lacunes[]` **requis, possiblement vide** — un défaut `= []`
+      rendrait « pas demandé » et « rien à signaler » indiscernables, soit le trou silencieux qu'on
+      ferme. Chaque `LacuneDeclaree` porte la question en toutes lettres et **deux causes nommées**
+      (`non_publie_source` = information sur l'émetteur, aucune collecte ne la trouvera ·
+      `non_documente_base` = vrai trou de collecte), plus son `barreau` atteint. La consigne a **un
+      détenteur unique** (`_CONSIGNE_LACUNES`) : elle existait en quatre exemplaires divergents, et
+      le premier mesureur n'en attrapait qu'une forme sur trois. Les quatre formulations en prose ont
+      été **retirées**, pas seulement doublées (#52).
+- [x] **L'estimation porte sa base DANS sa propre ligne** (fait) : `valeur` · `methode` (le calcul
+      refaisable, nombres inclus) · `sens_erreur` (**3 états**) · `hypotheses` (`min_length=1` — une
+      estimation sans hypothèse est une mesure déguisée) · `cited_entry_ids` (`min_length=1`).
+- [x] **Elle vaut un cran sous sa pièce la plus faible, et c'est DÉRIVÉ** (fait) : `qualify_lacunes`
+      appelle `derive_synthesis_reliability` — la même fonction que les synthèses, pas une seconde
+      copie (#46/#48). Le modèle ne s'auto-note pas, même sur une estimation. `nature` forcée à
+      `interpretation` (#51).
+- [x] **Le grounding d'une estimation passe par la MÊME fonction que celui d'une assertion** (fait) :
+      `validate_grounding(..., approximations=...)`, appelée **avant** la dérivation du rang — sans
+      quoi on noterait A- un chiffre bâti sur un ingrédient venu de nulle part.
+- [x] **Aucune écriture de `superseded_by` sur une pièce citée** (fait) : garde au point d'écriture —
+      si la synthèse précédente est un ingrédient de son propre grounding, l'écriture est **refusée**.
+      ⚠️ Garde de RUNTIME, pas couverte hors-ligne (la transaction est de l'IO) : à ne pas compter
+      comme éprouvée par la suite.
+- [ ] **Le point de lecture côté écran** reste à faire : `content_structured['lacunes']` est peuplé
+      et compté (`lacunes_n`, `lacunes_approximees_n`), un rendu Markdown accompagne le texte de
+      l'entry — mais la porte de couverture et le dossier readiness ne les remontent pas encore.
 - [ ] **L'échelle, dans l'ordre, et chaque barreau est déclaré** : (1) le dossier nomme
       l'information cherchée → (2) la recherche tente de l'obtenir → (3) échec ou absence déclarée à
       la source → (4) l'agent **propose une méthode d'approche** à partir des pièces **déjà au
@@ -518,21 +569,67 @@ document**, entre deux pièces que personne n'avait rapprochées.
       leçon payée par la capacité 4) : l'écran distingue *fondé par une source* · *estimé, avec sa
       base* · *non publié à la source* · *lacune*. Une estimation dont la base n'est lisible que dans
       un blob JSON n'est pas une estimation tracée.
-- **Acceptation, sur corpus réel** : MSFT `business_model.recurrence_pct` cesse d'être `couvert` en
-  silence ; le dossier rend **80,5 % (plancher)**, cite **#97 et #64**, nomme la ventilation
-  Produits/Services comme base, déclare l'hypothèse (« une part des Produits est reconnue over
-  time »), et le champ passe au rang **A-**. `source_date` du socle inchangé, **#97 et #64 toujours
-  `superseded_by IS NULL`**.
-- **Tests négatifs** (chacun doit rougir sur un assert **nommé**) : (a) une entry « non publié »
-  laissée couvrante → rouge ; (b) une estimation sans sa base citée → refusée par le contrat ;
-  (c) une estimation au rang de ses ingrédients (sans le cran) → rouge ; (d) une estimation sur un
-  champ que **rien** ne permet d'approcher → aucune estimation produite, lacune déclarée (sinon
-  l'agent modélise le vide) ; (e) `superseded_by` écrit par ce chemin → rouge.
-- ⚠️ **Ligne de base à requêter AVANT le lot** (`feedback_ligne_de_base_est_une_mesure` — elle a
-  changé le lot **trois fois de suite** maintenant) : combien d'entries du corpus documentent une
-  **absence** plutôt qu'un fait, et sur combien de champs sont-elles aujourd'hui comptées comme
-  couvrantes ? #97 est le cas connu ; il n'est probablement pas le seul, et le nombre décide de
-  l'ampleur du lot. Cette mesure est **gratuite**.
+- ⚠️ **L'acceptation initiale est INATTEIGNABLE telle qu'écrite, et ce n'est pas un détail de
+  rédaction.** Elle disait : « MSFT `business_model.recurrence_pct` cesse d'être `couvert` ; le
+  dossier rend 80,5 % (plancher), cite #97 et #64 ». Deux obstacles mesurés :
+  1. #98 a été **lu en entier** : il porte prises de commandes +18 % et RPO 678 Md$, pas le taux de
+     récurrence. Retirer #97 de la fondation **laisse #98 fonder le champ** — le critère reste
+     `couvert`, sans que personne connaisse le chiffre. Le verdict visé ne peut pas apparaître.
+  2. `recurrence_pct` est un champ **numérique fondé par `covers`**, sans producteur. Il n'est pas
+     une cible de `SYNTHESIS_TARGETS` : l'échelle bâtie ci-dessus ne l'atteint pas. Son cas relève
+     du **3ᵉ défaut** (une pièce `covers` un critère dont elle ne porte pas la réponse), qui est un
+     autre chantier.
+- **Acceptation RÉELLE, atteinte le 2026-09-09** (dry-run MSFT `produits.unit_economics`, 0,00077 $,
+  corpus réel, sortie lue en texte) : la marge opérationnelle par segment — qui sortait au tour
+  précédent en prose comme « calcul dérivé », sans base ni sens d'erreur, héritant du rang de la
+  synthèse — sort désormais comme **estimation gouvernée** : `59,9 % / 41,3 % / 26,6 %`, méthode
+  `83 879 / 139 996 = 0,599 …`, hypothèse énoncée (« sans allocation des frais généraux non
+  attribués »), rang **dérivé A-**, base **#89**. Et 5 autres questions sont nommées à l'écran au
+  lieu de rester dans le texte.
+- **Tests négatifs** — état réel, à ne pas lire comme tous acquis :
+  - (b) estimation sans base citée → **refusée par le contrat** ✅ ; idem sans hypothèse, sens
+    d'erreur hors des 3 états, méthode ou valeur vide, id négatif.
+  - (c) estimation au rang de ses ingrédients → **éprouvé par casse volontaire** ✅ : `tier =
+    tiers[0]` fait rougir **3 asserts nommés**, dont « 2 pièces A → estimation A- (un cran sous),
+    pas A → A ». Le rouge a été constaté avant d'être retiré.
+  - (d) question qu'aucun ingrédient ne permet d'approcher → `approximation: null`, aucune
+    estimation fabriquée ✅ (contrat + corpus réel : 5 des 6 questions).
+  - (a) « une entry non-publié laissée couvrante → rouge » : **abandonné**, la mesure l'a réfuté
+    (il fabriquerait 3 fausses lacunes). Remplacé par l'unité-question.
+  - (e) `superseded_by` par ce chemin : garde de runtime posée, **pas de test hors-ligne** — la
+    transaction est de l'IO. À ne pas compter comme couvert.
+- ✅ **Ligne de base requêtée AVANT le lot** (`bash tools/mesure_absences.sh`, gratuite) : elle a
+  changé le lot une **troisième** fois, cf. la section ci-dessus. Le mesureur lui-même a d'abord
+  SOUS-compté (il ne cherchait que « non documenté » et ratait « n'est pas documentée ») : un
+  mesureur qui rate ce qu'il cherche rend un zéro rassurant produit par la pire des raisons (#49).
+
+#### ⚠️ Ce que le corpus réel a réfuté du barreau 4 — et le lot suivant qu'il désigne
+
+Premier passage : **0 approximation sur 4 questions**. Diagnostic posé, puis **vérifié au lieu d'être
+supposé** — et ma première hypothèse était fausse. La cause n'est ni le modèle ni le prompt :
+
+- le dénominateur nécessaire (**« >450 millions de sièges payants »**) existe en base, en **tier A**,
+  dans **#102** ;
+- **#102 n'est pas dans le corpus chargé** pour `produits.unit_economics` (ids 63→113, sans 102). Le
+  modèle disait donc **vrai** : la donnée était absente *du corpus qu'on lui a donné*.
+
+Et la mesure qui désigne le lot suivant (gratuite, 5 requêtes sémantiques) : une recherche formulée
+sur **la question** ramène #102 dans **4 cas sur 5**, là où la recherche sur **le champ** ne le
+ramène jamais. C'est structurel, pas accidentel : *les ingrédients d'une approximation vivent par
+nature dans un champ VOISIN* — un dénombrement de sièges appartient au vocabulaire du positionnement,
+pas à celui de l'économie unitaire.
+
+**Lot suivant, avec sa matière déjà mesurée** : le barreau 4 a besoin de **sa propre recherche, sur
+la question nommée**, pas sur le champ. C'est la doctrine au pied de la lettre — *« le système
+indique quelle information il recherche, l'agent essaie de l'obtenir »* : on ne peut chercher la
+bonne chose qu'après avoir nommé la question, ce que le lot présent vient précisément de rendre
+possible. Ligne de base à requêter avant : sur les ~20 questions déclarées, combien ont leurs
+ingrédients en base **hors** du corpus de leur champ ?
+
+⚠️ **Rien n'a été persisté**, délibérément. Tant que le barreau 4 échoue faute de corpus, persister
+une synthèse où 5 questions sur 6 portent « aucune méthode tenable » graverait dans le corpus réel un
+verdict que la mesure sait faux — et un lecteur ultérieur le prendrait pour une vérité mesurée
+(`feedback_fixture_pollue_le_reel`).
 
 ---
 

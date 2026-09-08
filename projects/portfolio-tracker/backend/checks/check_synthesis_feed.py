@@ -5,21 +5,39 @@ Couvre les trois garde-fous déterministes du feed (tout ce que le LLM ne décid
     2026-08-26), y compris les 4 cas de la décision (tableau AskUserQuestion) ;
   • `validate_grounding` : une citation hors du corpus citable, ou une assertion sans citation, est
     une VIOLATION (le grounding est vérifié, pas déclaré — #24/#28) ;
-  • `build_content_structured` + le contrat `GroundedSynthesis` (union des ids, min 1 citation/claim).
+  • `build_content_structured` + le contrat `GroundedSynthesis` (union des ids, min 1 citation/claim) ;
+  • § 8-10 (capacité 5, 2026-09-09) : la LACUNE DÉCLARÉE et son approximation — le trou cesse d'être
+    de la prose et devient une donnée nommée, dont le rang est DÉRIVÉ et le grounding VÉRIFIÉ.
 """
 import sys
 
-from app.contracts import GroundedSynthesis, SynthesisClaim
+from app.contracts import Approximation, GroundedSynthesis, LacuneDeclaree, SynthesisClaim
 from app.knowledge.synthesis_feed import (
     CITABLE_TIERS,
     SYNTHESIS_TARGETS,
+    _CONSIGNE_LACUNES,
+    _SYNTHESIS_SKELETON,
+    _SYNTHESIS_SYSTEM_PROMPT,
     _synthesis_task_message,
     build_content_structured,
     derive_synthesis_reliability,
+    qualify_lacunes,
+    render_lacunes_markdown,
     validate_grounding,
 )
 
 ok = fail = 0
+
+
+def _accepte(fabrique) -> bool:
+    """True si la construction PASSE. Sert aux tests négatifs de contrat : on veut affirmer qu'une
+    forme interdite est REFUSÉE, et ce helper évite d'écrire `try/except: check(True)` — motif où
+    l'exception attrapée peut venir d'ailleurs que de la validation visée."""
+    try:
+        fabrique()
+        return True
+    except Exception:
+        return False
 
 
 def check(label, cond, detail=""):
@@ -80,6 +98,7 @@ synth = GroundedSynthesis(
         SynthesisClaim(text="marge brute ~73%", cited_entry_ids=[32, 33]),
         SynthesisClaim(text="pricing power fort", cited_entry_ids=[33, 34]),
     ],
+    lacunes=[],
 )
 check("cited_entry_ids() = union triée dédupliquée", synth.cited_entry_ids() == [32, 33, 34],
       f"→ {synth.cited_entry_ids()}")
@@ -89,7 +108,10 @@ try:
 except Exception:
     check("claim sans citation rejeté par le contrat", True)
 try:
-    GroundedSynthesis(title="t", synthesis_markdown="m", claims=[])
+    # ⚠️ `lacunes=[]` est fourni EXPRÈS : sans lui, ce test rougirait pour le mauvais motif (champ
+    # requis manquant) et n'éprouverait plus `claims` du tout. Un test négatif qui rougit à côté de
+    # sa cible est un faux rouge, aussi trompeur qu'un faux vert.
+    GroundedSynthesis(title="t", synthesis_markdown="m", claims=[], lacunes=[])
     check("synthèse sans aucun claim rejetée", False, "acceptée !")
 except Exception:
     check("synthèse sans aucun claim rejetée", True)
@@ -104,6 +126,8 @@ check("cited_entry_ids portés", cs["cited_entry_ids"] == [32, 33, 34])
 check("tiers d'origine tracés", cs["derived_from_tiers"] == {"32": "A", "33": "A", "34": "B+"})
 check("claims sérialisés", len(cs["claims"]) == 2 and cs["claims"][0]["cited_entry_ids"] == [32, 33])
 check("review_status pending", cs["review_status"] == "pending")
+check("aucune lacune → compte AFFIRMÉ à 0, pas clef absente",
+      cs["lacunes"] == [] and cs["lacunes_n"] == 0 and cs["lacunes_approximees_n"] == 0)
 
 print("\n6. Registre des cibles — les 2 champs bloquants sont couverts")
 check("produits.unit_economics enregistré", "produits.unit_economics" in SYNTHESIS_TARGETS)
@@ -136,6 +160,118 @@ check("aucun placeholder residuel", "{company}" not in q_msft and "{company}" no
 check("deux emetteurs -> deux consignes distinctes", g_msft != g_nvda)
 check("le message de tache porte la guidance resolue",
       "MSFT" in _synthesis_task_message(tgt, "#1 v1 [A] fact — x", g_msft))
+
+# La consigne de lacune a UN detenteur (_CONSIGNE_LACUNES) et passe par resolve(). Si quelqu'un la
+# recopie dans un descripteur, ou debranche la concatenation, ces deux asserts le disent.
+for fp, t2 in SYNTHESIS_TARGETS.items():
+    check(f"{fp} : la guidance ne recopie PAS la consigne de lacune",
+          "lacunes[]" not in t2.guidance)
+    check(f"{fp} : resolve() y adjoint la consigne unique",
+          _CONSIGNE_LACUNES.strip()[:40] in t2.resolve("ACME")[1])
+# Le trou ne se declare plus en prose : aucune guidance ne doit encore le demander (le correctif
+# doit RETIRER l'ancienne formulation, pas seulement ajouter la nouvelle).
+for fp, t2 in SYNTHESIS_TARGETS.items():
+    bas = t2.guidance.lower()
+    check(f"{fp} : plus de consigne de trou EN PROSE",
+          "non document" not in bas and "non observable" not in bas)
+
+
+print("\n8. Contrat de la LACUNE — une estimation sans base n'existe pas (capacité 5)")
+approx_ok = Approximation(
+    valeur="80,5 %", methode="267 143 / 331 839 = 80,5 %",
+    sens_erreur="plancher", hypotheses=["une part des Produits est reconnue over time"],
+    cited_entry_ids=[32, 33],
+)
+check("approximation complète acceptée", approx_ok.sens_erreur == "plancher")
+for label, kw in [
+    ("sans ingrédient cité → refusée par le contrat", dict(cited_entry_ids=[])),
+    ("sans hypothèse énoncée → refusée par le contrat", dict(hypotheses=[])),
+    ("sens d'erreur hors des 3 états → refusé", dict(sens_erreur="peut-etre")),
+    ("méthode vide → refusée (un chiffre sans chemin)", dict(methode="")),
+    ("valeur vide → refusée", dict(valeur="")),
+    ("ingrédient d'id négatif → refusé", dict(cited_entry_ids=[-1])),
+]:
+    base = dict(valeur="80,5 %", methode="a/b", sens_erreur="plancher",
+                hypotheses=["h"], cited_entry_ids=[32])
+    try:
+        Approximation(**(base | kw))
+        check(label, False, "accepté !")
+    except Exception:
+        check(label, True)
+check("statut hors des 2 causes nommées → refusé",
+      not _accepte(lambda: LacuneDeclaree(question="q", statut="bof")))
+lac_sans = LacuneDeclaree(question="prix de vente moyen unitaire", statut="non_publie_source")
+check("une lacune SANS approximation est valide (5ᵉ barreau)", lac_sans.approximation is None)
+
+print("\n9. qualify_lacunes — le rang de l'estimation est DÉRIVÉ, jamais déclaré")
+lacs = [
+    LacuneDeclaree(question="taux de récurrence", statut="non_publie_source", approximation=approx_ok),
+    LacuneDeclaree(question="coût unitaire par siège", statut="non_documente_base"),
+]
+q = qualify_lacunes(lacs, {32: "A", 33: "A"})
+check("2 pièces A → estimation A- (un cran sous), pas A",
+      q[0]["approximation"]["derived_tier"] == "A-", f"→ {q[0]['approximation']['derived_tier']}")
+check("l'estimation n'hérite JAMAIS du rang de ses ingrédients",
+      q[0]["approximation"]["derived_tier"] != "A")
+check("le maillon faible pilote (A + B+ → B)",
+      qualify_lacunes(lacs, {32: "A", 33: "B+"})[0]["approximation"]["derived_tier"] == "B")
+check("une estimation est une INTERPRÉTATION, pas une mesure (#51)",
+      q[0]["approximation"]["nature"] == "interpretation")
+check("le barreau atteint est DANS la ligne",
+      [x["barreau"] for x in q] == ["approximee", "declaree"])
+check("la lacune non approchée n'invente pas d'estimation", q[1]["approximation"] is None)
+check("les tiers des ingrédients sont tracés",
+      q[0]["approximation"]["cited_tiers"] == {"32": "A", "33": "A"})
+check("hypothèses et méthode conservées mot pour mot",
+      q[0]["approximation"]["methode"] == "267 143 / 331 839 = 80,5 %"
+      and q[0]["approximation"]["hypotheses"] == ["une part des Produits est reconnue over time"])
+
+synth_lac = GroundedSynthesis(
+    title="t", synthesis_markdown="m",
+    claims=[SynthesisClaim(text="x", cited_entry_ids=[32])], lacunes=lacs,
+)
+check("approximation_entry_ids() ≠ cited_entry_ids() (une pièce peut ne servir qu'au calcul)",
+      synth_lac.approximation_entry_ids() == [32, 33] and synth_lac.cited_entry_ids() == [32])
+cs2 = build_content_structured(SYNTHESIS_TARGETS["produits.unit_economics"], synth_lac, [32],
+                               {32: "A", 33: "A"})
+check("content_structured compte les lacunes et les approchées",
+      cs2["lacunes_n"] == 2 and cs2["lacunes_approximees_n"] == 1)
+
+print("\n10. Le grounding d'une ESTIMATION obéit à la même règle que celui d'une assertion")
+citable2 = {32, 33}
+claims2 = [{"text": "x", "cited_entry_ids": [32]}]
+check("estimation dans le corpus → aucune violation",
+      validate_grounding(claims2, citable2,
+                         approximations=[{"question": "q", "cited_entry_ids": [32, 33]}]) == [])
+errs2 = validate_grounding(claims2, citable2,
+                           approximations=[{"question": "taux de récurrence",
+                                            "cited_entry_ids": [32, 4242]}])
+check("ingrédient hors corpus → violation NOMMANT la question",
+      len(errs2) == 1 and "4242" in errs2[0] and "taux de récurrence" in errs2[0], f"→ {errs2}")
+check("estimation sans ingrédient → violation",
+      validate_grounding(claims2, citable2,
+                         approximations=[{"question": "q", "cited_entry_ids": []}]) != [])
+check("les claims restent vérifiés quand des approximations sont passées",
+      len(validate_grounding([{"text": "x", "cited_entry_ids": [999]}], citable2,
+                             approximations=[{"question": "q", "cited_entry_ids": [32]}])) == 1)
+
+md = render_lacunes_markdown(q)
+check("le rendu nomme la question, la valeur, le sens de l'erreur et la base",
+      all(s in md for s in ("taux de récurrence", "80,5 %", "plancher", "#32", "#33")), f"→ {md}")
+check("le rendu dit qu'aucune méthode n'est tenable pour l'autre",
+      "aucune méthode d'approche tenable" in md)
+check("aucune lacune → le rendu l'AFFIRME (pas un silence)",
+      "aucune" in render_lacunes_markdown([]).lower())
+
+check("le prompt système décrit les 2 causes nommées",
+      "non_publie_source" in _SYNTHESIS_SYSTEM_PROMPT
+      and "non_documente_base" in _SYNTHESIS_SYSTEM_PROMPT)
+check("le prompt système enseigne les 3 sens d'erreur",
+      all(s in _SYNTHESIS_SYSTEM_PROMPT for s in ("plancher", "plafond", "indetermine")))
+check("le prompt système n'envoie plus le trou en prose",
+      "non documenté en base" not in _SYNTHESIS_SYSTEM_PROMPT)
+check("le squelette montre AUSSI la forme sans approximation (null est une réponse normale)",
+      '"approximation": null' in _SYNTHESIS_SKELETON)
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

@@ -181,12 +181,51 @@ async def main() -> int:
               f"→ périmés sans mandat, cibles collecte vues : {sorted(cibles_collecte)}")
 
     # ── Témoin de séparation ────────────────────────────────────────────────────
+    # ⚠️ REFORMULÉ LE 2026-09-09, parce que le fil-piège a tiré comme il devait.
+    # Cet assert exigeait « RVMD n'a AUCUN rapport readiness persisté », et son message disait
+    # lui-même quoi faire le jour où ce serait faux : « il devient un porteur, la ligne de base est
+    # à refaire ». La ligne de base de la capacité 5 a demandé de produire ce dossier (rapport #28,
+    # 0,0012 $) pour savoir si la méthode d'approche aurait des appelants réels.
+    #
+    # Le témoin ne disparaît pas : il passe d'un témoin PAR ABSENCE à un témoin MESURÉ, et ce
+    # qu'il prouve est strictement plus fort. Un assert vrai sur zéro ligne ne prouve rien (#47,
+    # #49) — « RVMD n'envoie personne en collecte » était trivialement vrai tant qu'il n'avait
+    # aucun gap. Désormais les deux remèdes se lisent sur des gaps réels des DEUX côtés :
+    # RVMD porte 9 lacunes de collecte et 4 péremptions, NVDA et MSFT 0 collecte et 9 péremptions.
     t = rejeux[TEMOIN]
     print(f"\n=== {TEMOIN} — témoin de séparation ===")
-    check(f"[{TEMOIN}] n'a aucun rapport readiness persisté", t is None,
-          "→ il en a un : il devient un porteur, et la ligne de base ci-dessus est à refaire")
+    check(f"[{TEMOIN}] porte un rapport readiness (témoin MESURÉ, plus par absence)",
+          t is not None,
+          "→ aucun rapport : la séparation ci-dessous serait vraie sur zéro ligne, donc muette")
     if t is not None:
-        print(f"  ⚠️ {TEMOIN} porte désormais le rapport #{t['report_id']} — relire la spec.")
+        collecte = {f"{g.get('dimension')}.{c}" for g in t["gaps"]
+                    if g.get("remede") == "collecte" for c in (g.get("champs_cibles") or [])}
+        rafraich = {f"{g.get('dimension')}.{c}" for g in t["gaps"]
+                    if g.get("remede") == "rafraichissement" for c in (g.get("champs_cibles") or [])}
+        print(f"  rapport #{t['report_id']} — {t['verdict_apres']}, "
+              f"{len(collecte)} collecte / {len(rafraich)} rafraîchissement")
+        for c in sorted(collecte):
+            print(f"      collecte        {c}")
+        for c in sorted(rafraich):
+            print(f"      rafraîchissement {c}")
+
+        # Ce que le témoin doit prouver : les deux remèdes existent pour de vrai, et ils ne se
+        # confondent pas. Un champ qui serait dans les deux serait une lacune facturée deux fois.
+        check(f"[{TEMOIN}] porte de vraies lacunes de COLLECTE", bool(collecte),
+              "→ aucune : il ne sépare plus rien des péremptions de NVDA/MSFT")
+        check(f"[{TEMOIN}] aucun champ n'est à la fois collecte ET rafraîchissement",
+              not (collecte & rafraich), f"→ {sorted(collecte & rafraich)}")
+        check(f"[{TEMOIN}] ses champs périmés ne partent pas en collecte",
+              not (collecte & set(t["perimes"])),
+              f"→ {sorted(collecte & set(t['perimes']))} paieraient une recherche complète")
+        # Et la séparation entre émetteurs, qui est la phrase que le témoin porte : la péremption
+        # est le mode de panne des dossiers MÛRS, la lacune celui d'un dossier JEUNE.
+        collecte_porteurs = {f"{g.get('dimension')}.{c}" for tk in PORTEURS
+                             for g in rejeux[tk]["gaps"] if g.get("remede") == "collecte"
+                             for c in (g.get("champs_cibles") or [])}
+        check("les porteurs n'ont AUCUNE lacune de collecte, le témoin en a",
+              not collecte_porteurs and bool(collecte),
+              f"→ porteurs : {sorted(collecte_porteurs)}")
 
     print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
     return 1 if fail else 0

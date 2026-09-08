@@ -72,7 +72,12 @@ from .readiness_report_schema import (
     compute_cause_non_ready,
     compute_verdict,
 )
-from .synthesis_schema import GroundedSynthesis, SynthesisClaim
+from .synthesis_schema import (
+    Approximation,
+    GroundedSynthesis,
+    LacuneDeclaree,
+    SynthesisClaim,
+)
 from .worker_delegation_schema import (
     SOURCE_RELIABILITY_BASELINE,
     ExecutionDeclaration,
@@ -95,7 +100,9 @@ __all__ = [
     "ReadinessReport",
     "compute_verdict",
     "compute_cause_non_ready",
+    "Approximation",
     "GroundedSynthesis",
+    "LacuneDeclaree",
     "SynthesisClaim",
     "ContextPack",
     "DimensionDigest",

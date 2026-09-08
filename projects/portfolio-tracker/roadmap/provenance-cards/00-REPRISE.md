@@ -34,11 +34,27 @@ modèle de fiabilité : **autorité contre actualité**. Six capacités dans un 
 `nature` dérivé (migration 034, #51, 52 assertions) · registre nominatif des sources (#52, 78
 assertions) · axe `actualité` calculé à la lecture (#53, 66 assertions, le 2026-09-07) · **porte de
 complétude à trois états** (#54, 131 assertions, le 2026-09-08).
-**Prochain jalon : capacité 5**, **RÉÉCRITE UNE SECONDE FOIS le 2026-09-09** — *la dégradation
-déclarée : on cherche, on n'obtient pas, on approche, et on dit comment.* Son prérequis F16 est
-**fermé** (migration 035 + `check_edgar_feed.py` §12/§12bis).
+**Capacité 5 EN COURS** — *la dégradation déclarée : on cherche, on n'obtient pas, on approche, et on
+dit comment.* Son prérequis F16 est **fermé** (migration 035 + `check_edgar_feed.py` §12/§12bis).
 
-⚠️ **Cette capacité a été RÉFUTÉE par sa propre mesure DEUX FOIS** (2026-09-08 puis 2026-09-09).
+**Premier lot livré le 2026-09-09** (contrat `GroundedSynthesis` v2.1.0, +43 assertions) : la
+question restée ouverte **quitte la prose** et devient une donnée nommée, comptée, dont
+l'approximation porte sa méthode, son sens d'erreur, ses hypothèses, sa base citée et un rang
+**dérivé** — jamais déclaré. Vérifié contre le vrai modèle, pas seulement hors-ligne.
+
+🎯 **PROCHAIN PAS — le barreau 4 a besoin de sa propre recherche.** Mesuré sur corpus réel : le
+dénominateur d'une approximation (« >450 M sièges payants », **tier A, #102**) est **en base** mais
+**pas dans le corpus chargé** pour le champ. Une requête sémantique formulée sur **la question**
+ramène #102 dans **4 cas sur 5** ; la requête sur **le champ**, jamais. C'est structurel : *les
+ingrédients d'une approximation vivent par nature dans un champ voisin.* La doctrine au pied de la
+lettre — on ne peut chercher la bonne chose qu'**après** avoir nommé la question, ce que le lot
+précédent vient de rendre possible.
+⚠️ **Ligne de base à requêter AVANT ce lot** (elle a changé la capacité 5 **trois fois** déjà, à
+chaque fois pour de bon) : sur les ~20 questions déclarées, combien ont leurs ingrédients en base
+**hors** du corpus de leur champ ? Le nombre décide de l'ampleur — et peut encore réfuter le lot.
+
+⚠️ **Cette capacité a été RÉFUTÉE par sa propre mesure DEUX FOIS** (2026-09-08 puis 2026-09-09), puis
+son énoncé **corrigé une troisième fois** par sa ligne de base (2026-09-09, voir plus bas).
 C'est le précédent le plus utile du chantier : *une capacité dont on n'a pas mesuré la matière est
 une hypothèse, quel que soit le soin mis à l'écrire.*
 
@@ -78,15 +94,26 @@ fonds : on cherche à modéliser, si on n'a pas l'info **on dégrade en signalan
 avance** ». Pas de file d'arbitrage humain, pas de mécanisme de contradiction : une **échelle
 d'escalade**.
 
-⚠️ **Le défaut que la mesure a trouvé au passage, et qui est le vrai sujet du lot : une pièce qui
-documente une ABSENCE est comptée comme une FONDATION.** Sur MSFT,
-`business_model.recurrence_pct` est rendu `couvert` par la porte sur la foi de #97
-(`edgar_official`, A) — dont le contenu dit *« Microsoft ne publie PAS de ventilation
-quantitative »* — et de #98 (presse, B+), un indicateur voisin. La même réalité (« ce chiffre n'est
-pas publié ») reçoit **trois traitements** selon l'émetteur : NVDA **dispensé** · MSFT **couvert**
-(✅ fondé, alors que personne ne connaît le chiffre) · RVMD **non couvert** (un mandat repart
-chercher un chiffre qui n'existe pas). Mode de panne habituel du chantier : tous les éléments
-justes, le fait faux, et une garantie qui **rassure en étant aveugle** (#55).
+⚠️ **Le défaut trouvé au passage : une pièce qui documente une ABSENCE est comptée comme une
+FONDATION.** Sur MSFT, `business_model.recurrence_pct` est rendu `couvert` sur la foi de #97
+(`edgar_official`, A) — dont le contenu dit *« Microsoft ne publie PAS de ventilation quantitative »*
+— et de #98 (presse, B+), un indicateur voisin. La même réalité (« ce chiffre n'est pas publié »)
+reçoit **trois traitements** selon l'émetteur : NVDA **dispensé** · MSFT **couvert** (✅ fondé, alors
+que personne ne connaît le chiffre) · RVMD **non couvert** (un mandat repart chercher un chiffre qui
+n'existe pas). Mode de panne habituel : tous les éléments justes, le fait faux, une garantie qui
+**rassure en étant aveugle** (#55).
+
+⚠️ **Mais ce défaut n'est PAS celui que la capacité 5 traite, et la ligne de base l'a établi.** Sur
+les 5 entries comptées comme fondation qui portent un marqueur d'absence, **une seule** (#97) est
+coextensive à son critère ; les 4 autres signalent un trou sur un **sous-point** d'une analyse par
+ailleurs solide. « Une absence ne fonde plus », appliqué à la PIÈCE, fabriquerait **3 fausses
+lacunes** pour en corriger 1. → **Arbitrage utilisateur : l'unité est la QUESTION, pas le critère.**
+Le critère reste `fondé`, le trou est **nommé** et **approché si possible**.
+Et un **3ᵉ défaut, invisible à tout filtre lexical**, reste ouvert et distinct : #98 fonde le champ
+en répondant à une question **voisine**. Le vrai énoncé est plus large — **`covers` est déclaré par
+le producteur et personne ne vérifie que la pièce porte la réponse du critère.** Chantier séparé ;
+c'est aussi pourquoi le test d'acceptation d'origine de la capacité 5 était **inatteignable** (voir
+la roadmap 02, section réécrite).
 
 ⚠️ **Et le substitut est dans le même document.** #97 nomme lui-même la ventilation publiée :
 Produits **64 696 M$** / Services **267 143 M$** ; le corpus porte le CA total en tier A (**#64**,
@@ -134,10 +161,10 @@ mais elle est terminée sur son périmètre courant ; la roadmap 02 est celle qu
 | | NVDA (cas-pilote) | MSFT (généralité) | RVMD (banc d'essai) |
 |---|---|---|---|
 | Socle | 52 entries (32 A / 15 B) | 51 entries, 19/19 champs, 0 `llm_memory`, ≈ $0,19 | 27 actives (13 déterministes + 14 qualitatives) |
-| Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats | **`not_ready (peremption)`**, 9 champs périmés | aucun rapport en base — 9 lacunes de **collecte** |
+| Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | 7 mandats qualitatifs restants (~0,08 $) |
 
-- **Suite hors-ligne : 1 815 assertions / 0 échec / 22 scripts** — une seule commande,
+- **Suite hors-ligne : 1 858 assertions / 0 échec / 22 scripts** — une seule commande,
   **`bash checks/run_all.sh`** (versionné depuis le 2026-09-05 (3)). Il porte les invocations
   correctes : montage `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) et
   réseau `coolify` + `CHECK_DB_URL` pour `check_entry_nature`. ⚠️ **Ne pas le réécrire dans
@@ -169,7 +196,55 @@ nombres étaient justes, c'est le *fait énoncé* qui était faux.
 | Partition (F15) | une entry **non datée** rangée à la fois dans `posterieures` et dans `non_datees` — 4 classes pour 3 entries, et une date *inconnue* comptée parmi les fraîches | 0 token | **#53** |
 | Lisibilité de la clef (F16) | `poste_kind`, discriminant de la clef #43, **absent de tout le socle NVDA et MSFT** (19 des 43 faits courants) : la règle juste dans le producteur, son porteur absent de la ligne — toute garantie « une seule vérité chiffrée » y était aveugle sur 2 émetteurs sur 3 | 0 token | **#55** |
 
-### Livré cette session (2026-09-09) — lot de MESURE : 5b réfutée, capacité 5 réécrite en « dégradation déclarée »
+### Livré cette session (2026-09-09, 2ᵉ lot) — capacité 5 : la question ouverte devient une donnée
+
+**Suite : 1 858 / 0 / 22** (+43). Dépense **0,0015 $** (deux dry-runs). **Pas de migration** —
+`content_structured` est du `jsonb`, vérifié en base avant de l'affirmer. **Rien n'a été persisté**,
+délibérément (voir le dernier point). Contrat `GroundedSynthesis` **v2.1.0**.
+
+- 🔴 **La ligne de base a changé le lot une TROISIÈME fois.** « Une absence ne fonde plus » était
+  faux **au niveau de la pièce** : sur les 5 entries comptées comme fondation, **une seule** (#97)
+  documente une absence coextensive à son critère ; les 4 autres sont des synthèses substantielles
+  qui signalent un trou sur un **sous-point**. La règle naïve aurait fabriqué **3 fausses lacunes**
+  (et 3 recherches payantes) pour en corriger **1**. → Arbitrage utilisateur : **l'unité est la
+  QUESTION, pas le critère.** Le critère reste `fondé`, le trou est nommé, et approché si possible.
+- ✅ **~20 questions déclarées quittent la prose.** Elles étaient PRESCRITES par le prompt de
+  synthèse et atterrissaient dans `synthesis_markdown` : invisibles à la porte, à l'écran, à tout
+  compteur. Forme exacte de **#55**. Elles vivent maintenant dans `lacunes[]` — question en toutes
+  lettres, **2 causes nommées** (`non_publie_source` ≠ `non_documente_base`, elles n'appellent pas le
+  même remède), barreau atteint, et comptées (`lacunes_n`, `lacunes_approximees_n`).
+- ✅ **L'estimation est gouvernée** : `methode` refaisable · `sens_erreur` (**3 états**) ·
+  `hypotheses` **min 1** (sans hypothèse, c'est une mesure déguisée) · base citée **min 1** · rang
+  **DÉRIVÉ** « un cran sous la pièce la plus faible » par la **même** fonction que les synthèses
+  (#46) · `nature = interpretation` (#51). Le grounding des ingrédients passe par la **même**
+  `validate_grounding` que les assertions, et **avant** la dérivation du rang.
+- 📌 **`lacunes` est requis mais peut être vide** — et la nuance est le lot. Avec un défaut `= []`,
+  « pas demandé » et « rien à signaler » se liraient **identiquement** : le trou silencieux qu'on
+  ferme. Requis, l'omission devient une erreur de contrat, donc bruyante.
+- 📌 **Le modèle approximait DÉJÀ, en prose, sans gouvernance.** Le 1ᵉʳ dry-run sortait « ROIC 29,6 %
+  (**NOPAT approché par le résultat net**) » et des marges de segment en « calcul dérivé » —
+  présentés comme des faits, sans sens d'erreur ni base, héritant du rang de la synthèse. Après
+  correctif du barreau 4, la marge par segment sort comme **estimation A-**, méthode
+  `83 879 / 139 996 = 0,599`, hypothèse « sans allocation des frais généraux non attribués ».
+- 🔴 **Barreau 4 réfuté par le corpus réel — et ma première explication était fausse.** 0 approximation
+  sur 4 au premier passage. J'ai supposé un défaut d'assemblage du corpus, **vérifié**, et #113 était
+  bien chargé. Le vrai fait : le dénominateur (**« >450 M sièges payants »**) est en base, **tier A,
+  dans #102**, et **#102 n'est pas chargé** pour `produits.unit_economics`. Le modèle disait vrai.
+  Mesure gratuite qui désigne le lot suivant : une requête sur **la question** ramène #102 dans
+  **4 cas sur 5**, la requête sur **le champ** jamais — *les ingrédients d'une approximation vivent
+  par nature dans un champ voisin.*
+- 📌 **Test négatif éprouvé, pas supposé** : `tier = tiers[0]` fait rougir **3 asserts nommés** dont
+  « 2 pièces A → estimation A- (un cran sous), pas A → A ». Rouge constaté, puis retiré.
+- 📌 **Le fil-piège de la capacité 4 a tiré comme prévu.** Produire RVMD a fait rougir
+  `« RVMD n'a aucun rapport readiness »` — un assert écrit exprès, dont le message annonçait sa
+  propre péremption. Reformulé : RVMD passe de témoin **par absence** à témoin **mesuré** (9 collecte
+  / 4 rafraîchissement), face à NVDA et MSFT à **0 collecte**. La séparation des deux remèdes ne
+  repose plus sur un vide — *un assert vrai sur zéro ligne ne prouve rien* (#47/#49).
+- ⚠️ **Rien n'a été persisté, et c'est le choix.** Tant que le barreau 4 échoue faute de corpus,
+  graver une synthèse où 5 questions sur 6 portent « aucune méthode tenable » ferait passer pour une
+  vérité mesurée un verdict que la mesure sait faux (`feedback_fixture_pollue_le_reel`).
+
+### Livré cette session (2026-09-09, 1ᵉʳ lot) — lot de MESURE : 5b réfutée, capacité 5 réécrite en « dégradation déclarée »
 
 **Aucun code de production.** C'était voulu : le lot devait dire **s'il y avait quelque chose à
 construire** avant d'écrire quoi que ce soit. Dépense totale **0,003 $**. Deux outils versionnés :
