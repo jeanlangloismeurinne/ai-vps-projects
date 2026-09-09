@@ -35,11 +35,32 @@ import os
 import sys
 from typing import Any, Optional
 
+from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES
 from app.db.database import close_pool, get_db_session, init_pool
 
 from tools.reconcilier_vocabulaires import ALIAS, DERIVES, feuilles_memo
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
+
+# ── Adressage des colonnes PAR LEUR CHEMIN DE CONTRAT ──────────────────────────────────────────
+# Ce script a été écrit au lot 0, AVANT le contrat, avec sa propre nomenclature devinée
+# (`framework`, `rang_degrade`, `methode_approximation`, `ingredients`, `motif`). Le lot 1 a fixé le
+# contrat, qui NICHE ces champs (`fondation.rang_derive`, `approximation.methode`, …). Deux
+# nomenclatures d'accord restent deux nomenclatures (#46) : le jour où la migration 036 nommerait
+# ses colonnes d'après le contrat, T3 et T4 liraient `None` pour toujours — donc resteraient rouges
+# pour la MAUVAISE raison, ou pire virerait au vert sur zéro ligne (1ᵉʳ faux vert).
+# Le détenteur unique de la correspondance est `COLONNES_DENORMALISEES`, dans le contrat ; ici on ne
+# fait que l'inverser. `check_framework_contract.py` §6 vérifie que chaque chemin y résout.
+_COLONNE_DE = {chemin: colonne for colonne, chemin in COLONNES_DENORMALISEES.items()}
+
+
+def col(ligne: Any, chemin: str) -> Any:
+    """Lit une colonne dénormalisée par le CHEMIN DU CONTRAT dont elle est la projection.
+
+    Un chemin inconnu lève : mieux vaut un script qui meurt en nommant le chemin absent qu'un
+    `None` silencieux qui ferait rougir T3/T4 pour la mauvaise raison.
+    """
+    return dict(ligne).get(_COLONNE_DE[chemin])
 
 # Les 13 questions des deux pilotes (spec §4.1.1 et §4.2.1). Elles sont écrites ici parce que ce
 # script est l'EXIGENCE : c'est la spec qui les fixe, pas le code qui les révélera. Le jour où le
@@ -159,10 +180,10 @@ async def main() -> int:
         out: dict[int, str] = {}
         for r in reponses:
             d = dict(r)
-            if d.get("ticker_id") != ticker or d.get("framework") != framework:
+            if col(d, "ticker_id") != ticker or col(d, "framework_id") != framework:
                 continue
-            for eid in (d.get("cited_entry_ids") or []):
-                out[int(eid)] = str(d.get("question_id"))
+            for eid in (col(d, "fondation.cited_entry_ids") or []):
+                out[int(eid)] = str(col(d, "question_id"))
         return out
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -212,11 +233,12 @@ async def main() -> int:
               f"→ {motif_rep} : rien à contrôler, donc RIEN N'EST PROUVÉ. "
               f"Un « 0 violation » sur zéro ligne est le 1er des quatre faux verts.")
     else:
-        approx = [dict(r) for r in reponses if dict(r).get("statut") == "approxime"]
+        approx = [dict(r) for r in reponses if col(r, "statut") == "approxime"]
         viols = [r for r in approx
-                 if not r.get("methode_approximation")
-                 or not (r.get("ingredients") or r.get("cited_entry_ids"))
-                 or not r.get("rang_degrade")]
+                 if not col(r, "approximation.methode")
+                 or not (col(r, "approximation.ingredients_entry_ids")
+                         or col(r, "fondation.cited_entry_ids"))
+                 or not col(r, "fondation.rang_derive")]
         print(f"  réponses `approxime` : {len(approx)} · violations : {len(viols)}")
         check("T3 — zéro approximation non déclarée",
               bool(approx) and not viols,
@@ -232,29 +254,30 @@ async def main() -> int:
             print(f"      #{e['id']:<4} {(e['title'] or '')[:64]}")
             print("            ↑ un ROIC pour une société sans chiffre d'affaires (spec §0.2)")
     r_qf1 = next((dict(r) for r in (reponses or [])
-                  if dict(r).get("ticker_id") == "RVMD" and dict(r).get("question_id") == "qf_1"),
+                  if col(r, "ticker_id") == "RVMD" and col(r, "question_id") == "qf_1"),
                  None)
     if r_qf1 is None:
         check("T4 — `qf_1` sur RVMD est `sans_objet` et motivé", False,
               f"→ aucune réponse `qf_1` pour RVMD ({motif_rep or 'question jamais posée'})")
     else:
         check("T4 — `qf_1` sur RVMD est `sans_objet` et motivé",
-              r_qf1.get("statut") == "sans_objet" and bool(r_qf1.get("motif")),
-              f"→ statut={r_qf1.get('statut')}, motif={'oui' if r_qf1.get('motif') else 'NON'}")
+              col(r_qf1, "statut") == "sans_objet" and bool(col(r_qf1, "sans_objet.motif")),
+              f"→ statut={col(r_qf1, 'statut')}, "
+              f"motif={'oui' if col(r_qf1, 'sans_objet.motif') else 'NON'}")
 
     # ══════════════════════════════════════════════════════════════════════════
     _t("T5", "RVMD — `qf_7` (le runway) sort `repondu`")
     print("  `qf_7` (« combien de temps sans accès au marché des capitaux ? ») n'existait dans la")
     print("  grille de 19 sous AUCUNE forme — c'est la question qui manquait totalement à RVMD.")
     r_qf7 = next((dict(r) for r in (reponses or [])
-                  if dict(r).get("ticker_id") == "RVMD" and dict(r).get("question_id") == "qf_7"),
+                  if col(r, "ticker_id") == "RVMD" and col(r, "question_id") == "qf_7"),
                  None)
     if r_qf7 is None:
         check("T5 — `qf_7` sur RVMD est `repondu`", False,
               f"→ aucune réponse `qf_7` pour RVMD ({motif_rep or 'question jamais posée'})")
     else:
-        check("T5 — `qf_7` sur RVMD est `repondu`", r_qf7.get("statut") == "repondu",
-              f"→ statut={r_qf7.get('statut')}")
+        check("T5 — `qf_7` sur RVMD est `repondu`", col(r_qf7, "statut") == "repondu",
+              f"→ statut={col(r_qf7, 'statut')}")
 
     # ══════════════════════════════════════════════════════════════════════════
     _t("T6/T7", "un seul vocabulaire — zéro feuille de mémo sans question, zéro question "

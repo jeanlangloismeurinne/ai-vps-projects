@@ -1,0 +1,171 @@
+"""Le PONT relationnel du contrat de framework (chantier v3, lot 1) — et rien d'autre.
+
+Un contrat valide un **objet**, jamais la cohérence entre deux (convention #37). Tout ce qui exige
+de connaître le corpus, la question ou les autres réponses vit ici, en Python, et lève
+`FrameworkAnswerRefused` — comme `monitoring._valider_pont_hypotheses` le fait déjà pour les
+hypothèses figées. Le partage exact est écrit dans l'en-tête de `contracts/framework_answer_schema`.
+
+CE QUE LE PONT VÉRIFIE, ET POURQUOI CHACUN EXISTE
+--------------------------------------------------
+  A. la question existe dans le framework — sinon la réponse s'indexe sur une question voisine, et
+     T4/T5 passeraient sur une question qui n'est pas celle qu'on croit ;
+  B. les entries citées ont été RÉELLEMENT fournies (A2) — un id hors corpus, c'est le modèle qui
+     apporte une source que personne n'a lue. Même mode de panne que `validate_grounding`, et c'est
+     LUI qui le prononce, pas une seconde implémentation (#46) ;
+  C. le rang est celui que les tiers RÉELS commandent — un `rang_derive` est dérivé, jamais déclaré
+     (règle transverse 7, §3.5). Un rang auto-déclaré est un rang faux ;
+  D. le rang atteint le plancher de la question — une réponse fondée sur du C ne vaut pas une
+     réponse, quel que soit son aplomb ;
+  E. la nature attendue est portée par une entry citée — l'axe `nature` est une propriété de
+     l'assertion (#51), il ne se déduit pas du statut ;
+  F. un substitut pointe la réponse d'une AUTRE question — un `sans_objet` qui se cite lui-même
+     comme substitut est le contrôle ④ retourné contre lui-même.
+
+`servir_answer()` est le POINT DE LECTURE : il ajoute l'axe actualité, recalculé, sans rien écrire.
+Un GET qui servirait la ligne stockée telle quelle servirait le verdict d'avant l'événement
+matériel — le faux vert que la capacité 4 a mis une journée à voir (#54).
+
+⚠️ `load_frameworks()` n'est PAS ici : les 13 questions sont des DONNÉES du lot 2. Les écrire
+maintenant induirait le contrat de ce que le code fera, et ferait passer le test d'acceptation §A
+sur des identifiants que le lot 2 n'a pas encore arbitrés (arbitrage T1 de §9.2, ouvert).
+"""
+from __future__ import annotations
+
+from typing import Any, Optional
+
+from app.agents.v2.common import TIER_ORDER, _TIER_RANK
+from app.contracts.framework_answer_schema import (
+    FrameworkAnswer,
+    FrameworkAnswerServie,
+)
+from app.knowledge.actualite import MaterialEventLookup, etat_actualite_entry
+from app.knowledge.synthesis_feed import derive_synthesis_reliability
+
+
+class FrameworkAnswerRefused(Exception):
+    """Refus du pont — une réponse formellement valide, mais incohérente avec le corpus.
+
+    Levée, jamais rendue en valeur : un refus qui se lit comme un résultat finit par être ignoré.
+    """
+
+
+def _plus_faible(tiers: list[str]) -> str:
+    """Le tier le plus faible d'une liste — rang le plus GRAND dans `TIER_ORDER` (A=0 … C=6).
+
+    Même convention d'ordre que `derive_synthesis_reliability` (elle-même détenteur de la règle du
+    cran) : un tier inconnu compte pour le pire, jamais pour le meilleur.
+    """
+    return max(tiers, key=lambda t: _TIER_RANK.get(t, len(TIER_ORDER)))
+
+
+def valider_pont_framework_answer(
+    answer: FrameworkAnswer,
+    *,
+    questions: dict[str, dict[str, Any]],
+    entries: dict[int, dict[str, Any]],
+    autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
+) -> None:
+    """Vérifie A→F. Ne rend rien : le seul résultat possible est « pas de refus ».
+
+    `questions` : `{question_id: {plancher_tier, nature_attendue, ...}}` — les DONNÉES du lot 2.
+    `entries`   : le corpus RÉELLEMENT fourni, `{id: {reliability_tier, entry_type, ...}}`.
+    """
+    # A. la question existe. Vérifié AVANT tout le reste : les contrôles D et E lisent son profil,
+    #    et un profil absent les rendrait muets — un contrôle qui ne s'exécute pas est un vert.
+    if answer.question_id not in questions:
+        raise FrameworkAnswerRefused(
+            f"question `{answer.question_id}` inconnue du framework `{answer.framework_id}` "
+            f"({len(questions)} questions chargées) : une réponse qui ne s'indexe sur aucune "
+            "question s'indexerait sur une question voisine")
+    profil = questions[answer.question_id]
+
+    if answer.fondation is not None:
+        cites = list(answer.fondation.cited_entry_ids)
+
+        # B. citations RÉELLEMENT fournies (A2).
+        hors_corpus = [i for i in cites if i not in entries]
+        if hors_corpus:
+            raise FrameworkAnswerRefused(
+                f"entries citées hors du corpus fourni : {hors_corpus}. Une source que personne n'a "
+                "chargée n'est pas une source — c'est le modèle qui l'apporte de mémoire")
+
+        tiers_reels = [str(entries[i].get("reliability_tier")) for i in cites]
+
+        # C. LE RANG EST DÉRIVÉ. Deux règles distinctes, jamais confondues :
+        #    • `repondu`   → le rang de la plus faible entry citée ;
+        #    • `approxime` → UN CRAN SOUS, via le détenteur unique de la règle du cran. Le recopier
+        #      ici le ferait diverger au prochain ajustement de seuil (#46).
+        if answer.statut == "approxime":
+            _, attendu, _ = derive_synthesis_reliability(tiers_reels)
+            regle = "un cran sous la plus faible citée (estimation)"
+        else:
+            attendu = _plus_faible(tiers_reels)
+            regle = "le rang de la plus faible citée"
+        if answer.fondation.rang_derive != attendu:
+            raise FrameworkAnswerRefused(
+                f"`rang_derive` = {answer.fondation.rang_derive} alors que les tiers réels "
+                f"{tiers_reels} commandent {attendu} ({regle}). Un rang auto-déclaré est un rang "
+                "faux : il se dérive, il ne s'annonce pas (règle transverse 7)")
+
+        # D. le rang atteint le PLANCHER de la question.
+        plancher = profil.get("plancher_tier")
+        if plancher is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(
+                plancher, len(TIER_ORDER)):
+            raise FrameworkAnswerRefused(
+                f"rang {attendu} sous le plancher {plancher} de `{answer.question_id}` : une "
+                "réponse qui n'atteint pas son plancher est un `non_fondable`, pas une réponse "
+                "faible — la nuance est ce qui déclenche une collecte au lieu d'un affichage")
+
+        # E. la nature attendue est PORTÉE par une entry citée, pas déduite du statut (#51).
+        attendue = profil.get("nature_attendue")
+        if attendue is not None:
+            portees = {entries[i].get("nature") for i in cites}
+            if attendue not in portees and answer.statut != "approxime":
+                raise FrameworkAnswerRefused(
+                    f"`{answer.question_id}` attend une assertion de nature `{attendue}`, mais les "
+                    f"entries citées portent {sorted(str(p) for p in portees)}. La nature est une "
+                    "propriété de l'assertion : elle se lit sur la source, elle ne se déduit pas "
+                    "du statut de la réponse")
+
+    # F. un substitut pointe la réponse d'une AUTRE question.
+    if answer.sans_objet is not None and answer.sans_objet.substitut_answer_id is not None:
+        cible = (autres_reponses or {}).get(answer.sans_objet.substitut_answer_id)
+        if cible is None:
+            raise FrameworkAnswerRefused(
+                f"`substitut_answer_id` = {answer.sans_objet.substitut_answer_id} ne désigne "
+                "aucune réponse fournie : un substitut qu'on ne peut pas ouvrir n'est pas un "
+                "substitut, c'est une promesse")
+        if cible.question_id == answer.question_id:
+            raise FrameworkAnswerRefused(
+                f"le substitut de `{answer.question_id}` est une réponse à `{answer.question_id}` "
+                "elle-même : un hors-sujet qui se cite en substitut republie la question qu'il "
+                "vient de déclarer sans objet (contrôle ④, §3.2)")
+
+
+def servir_answer(
+    answer: FrameworkAnswer,
+    *,
+    ancre: MaterialEventLookup,
+    entries: dict[int, dict[str, Any]],
+) -> FrameworkAnswerServie:
+    """LE POINT DE LECTURE : la réponse persistée + l'axe actualité RECALCULÉ. N'écrit rien.
+
+    L'actualité d'une réponse est celle de sa fondation, et la fondation se date par **la plus
+    ancienne** de ses entries citées — jamais la plus récente, qui blanchirait la péremption en
+    citant un communiqué frais à côté d'un chiffre de 2019. Cette règle a déjà un détenteur
+    (`actualite.date_effective`) : plutôt que de la ré-implémenter, on présente la réponse dans la
+    forme que ce détenteur sait lire (#46).
+    """
+    if answer.fondation is None:
+        return FrameworkAnswerServie(**answer.model_dump())
+
+    pseudo_entry = {
+        "source_date": None,  # aucune date propre : la fondation se date par ses citations
+        "content_structured": {"source_entry_refs": list(answer.fondation.cited_entry_ids)},
+    }
+    act = etat_actualite_entry(pseudo_entry, ancre=ancre, corpus=entries)
+
+    donnees = answer.model_dump()
+    donnees["fondation"] = {**donnees["fondation"], "actualite": act.etat,
+                            "motif_actualite": act.motif}
+    return FrameworkAnswerServie(**donnees)

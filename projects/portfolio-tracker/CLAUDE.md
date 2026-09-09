@@ -759,6 +759,34 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     qui prouve qu'elle est fidèle **et** discriminante (#47, `feedback_fixture_copiee_du_reel`) — et
     aucune ligne de production n'a été touchée pour la produire.
 
+56. **Un garde-fou écrit en `grep` de token se trompe DANS LES DEUX SENS, et le sens « faux vert »
+    est le plus coûteux (V3, lot 1)** : #55 note déjà le faux ROUGE — un grep d'interdit lit sa
+    propre énonciation, le token étant dans la docstring qui l'interdit. Le lot 1 a rencontré le
+    **symétrique**, plus discret. La garde « `tools/acceptation_frameworks.py` importe bien
+    `COLONNES_DENORMALISEES` » était écrite `"COLONNES_DENORMALISEES" in source`. Le test négatif a
+    **retiré l'import** : la garde est restée **VERTE**, parce que le nom survit dans le commentaire
+    qui l'explique et dans le `_COLONNE_DE` qui l'inverse. Un grep de *présence* est satisfait par la
+    prose ; un grep d'*absence* est mis en défaut par elle. **Les deux échouent pour la même raison :
+    le texte d'un fichier n'est pas sa structure.** Remèdes, un par sens : pour l'absence,
+    **dépouiller** (commentaires + docstrings retirés par `tokenize`, jamais un `split('\"\"\"')` qui
+    ne coupe que la docstring de module — la 1ʳᵉ version rougissait sur `etat_actualite`, cité dans
+    la docstring de `FondationServie` qui dit précisément que l'axe vit ailleurs), puis asserter
+    l'interdit **en positif** (« la prose NOMME le détenteur »). Pour la présence, asserter la
+    **structure** : `ast.walk` + `ImportFrom`, qu'aucun commentaire ne peut satisfaire. ⚠️ **Ce
+    défaut n'était pas trouvable en lisant le check** — il n'est apparu que parce que la mutation
+    « retirer l'import » a été jouée. Un critère qu'aucune mutation n'atteint n'est pas éprouvé,
+    **même vert** : c'est aussi pourquoi `negatif_framework_contract.sh` copie les documents figés en
+    plus du backend, sans quoi la bijection champ ↔ pixel (§9) n'aurait jamais pu rougir.
+    ⚠️ Corollaire sur le test négatif lui-même : un cas négatif doit nommer **la règle** qui a rougi,
+    pas se contenter d'un refus. Les premières fixtures de `check_framework_contract` passaient au
+    vert en étant rejetées par un `Field required` sur un champ oublié — jamais par l'invariant visé
+    (4ᵉ faux vert). D'où `rejete(label, fn, motif)` : un refus prononcé par une **autre** règle est un
+    FAIL. Même exigence côté harnais : la mutation `[E]` visait une entry tier C, dont le rang faisait
+    rougir le contrôle **[D]** avant que **[E]** ne soit atteint — le contrôle passait pour gardé sans
+    avoir jamais tourné. Une fixture qui déclenche deux contrôles ne dit pas lequel discrimine.
+    Détail : `checks/check_framework_contract.py` §6/§7/§9 et `checks/negatif_framework_contract.sh`
+    (**20 mutations, 20 détectées**, chacune rouge sur son assert nommé et atteignant son bilan).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

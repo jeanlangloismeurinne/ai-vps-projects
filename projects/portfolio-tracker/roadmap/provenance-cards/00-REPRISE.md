@@ -7,7 +7,7 @@ project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-09 : **1 858 assertions / 0 échec / 22 scripts**,
+  sur NVDA, MSFT et RVMD. État au 2026-09-09 : **1 949 assertions / 0 échec / 23 scripts**,
   migrations appliquées jusqu'à **035**, prochaine **036**.
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
@@ -73,26 +73,57 @@ rendent un bilan `N vérifications OK, M échec(s)` reconnaissable à sa **forme
 | `ligne_de_base_frameworks.{py,sh}` | **2 ok / 0 FAIL** — les 6 valeurs de §9.1 confirmées | (mesure, pas un test) |
 | `acceptation_frameworks.{py,sh}` | **1 ok / 8 FAIL** — les 8 critères T1-T8 rouges | par lots, les 8 au lot 7 |
 
+⚠️ Depuis le lot 1, cet outil **importe** `COLONNES_DENORMALISEES` du contrat au lieu de deviner
+ses noms de colonnes. Verdict inchangé après recâblage (mêmes 8 motifs) : un changement de verdict
+aurait signifié qu'on avait modifié l'exigence en croyant corriger son adressage.
+
 Les 6 valeurs sont consignées **dans la spec §9.1** avec les trois constats que la mesure ajoute
 (l'étape 8 a un champ indexable ; `produits.unit_economics` n'a **aucune** entry primaire ; NVDA
 produit 4 synthèses grounded sur des cibles sans matière indexée — *ce que le lot 3 doit rendre
 reproductible, le système le fait aujourd'hui par accident*).
 
-### 🚦 Prochain pas — **lot 1 : le contrat**
+### ✅ Lot 1 — le contrat **acquis le 2026-09-09**
 
-**Ordre imposé : UX (contrat) → agent → données.** Le contrat est asserté avant d'être implémenté —
-c'est déjà le cas : `acceptation_frameworks.py` déclare l'API que le lot 2 doit fournir
-(`app.agents.v2.frameworks.load_frameworks`) et les tables que les lots 3-4 doivent créer
-(`framework_answers`, `framework_mandates`), chaque absence produisant un **FAIL nommé**.
+**Ordre imposé respecté : UX (contrat) → agent → données.** Le contrat existe et est éprouvé ; les
+13 questions restent des **données du lot 2**, délibérément non écrites.
 
-1. `FrameworkAnswer` + `FrameworkMandate` en **Pydantic strict** (spec §2.4).
-2. Les invariants **relationnels en Python**, jamais dans le schéma (#37) — un contrat valide un
-   objet, jamais la cohérence entre deux.
-3. La carte de provenance champ par champ · l'écran niveau 3 en maquette.
+| Livrable | Fichier |
+|---|---|
+| Le contrat, Pydantic strict | `backend/app/contracts/framework_answer_schema.py` |
+| Le **pont relationnel** (#37) | `backend/app/agents/v2/frameworks.py` |
+| Le check | `backend/checks/check_framework_contract.py` — **91 assertions** |
+| Son **test négatif** | `backend/checks/negatif_framework_contract.sh` — **20 mutations, 20 détectées** |
+| Carte de provenance champ par champ | `roadmap/provenance-cards/framework_answer_card.md` |
+| Écran niveau 3 en maquette | `roadmap/provenance-cards/framework_screen_niveau3.md` |
 
-⚠️ **Trancher l'arbitrage T1 avant le lot 2** (spec §9.2, options A/B/C) : l'énoncé « les 26
-orphelines tier A … ≥ 24/26 » fusionne **26 orphelines au total** et **16 tier A**. Option **A**
-(16/16 tier A, le reste nommé) est celle câblée par défaut dans l'outil.
+**Deux écarts assumés avec le JSON de la spec §2.4**, tous deux plus stricts, documentés en tête du
+contrat et dans la carte : (1) `honnetete_approximation` a **trois** valeurs (`ok|ko|sans_objet`) —
+sur une réponse qui n'approxime pas, `ok` serait un vert vrai sur zéro ligne ; l'**équivalence**
+`sans_objet ⟺ statut ≠ approxime` empêche le 3ᵉ état de servir d'échappatoire. (2) `analyste` est
+ajouté — §3.4 écrit le contrat pour N > 1, et sans porteur d'identité le correctif naturel serait de
+**moyenner** deux réponses divergentes, ce que §3.4 interdit.
+
+**L'actualité n'est pas un champ de `FrameworkAnswer`** (#53) : `FrameworkAnswer` est ce qui s'émet
+et se persiste, `FrameworkAnswerServie` ce que le GET rend. `extra='forbid'` rend la persistance de
+l'axe **impossible par construction**, plutôt que gardée par un `if`.
+
+**Ce que le lot 1 a corrigé au passage** : l'outil d'acceptation du lot 0 devinait ses noms de
+colonnes (`framework`, `rang_degrade`, `methode_approximation`, `ingredients`, `motif`) — le contrat
+les niche. `COLONNES_DENORMALISEES` est désormais le **détenteur unique** de la correspondance, et
+l'outil l'importe. Vérifié après recâblage : l'acceptation rend **exactement le même verdict
+qu'avant** (1 ok / 8 FAIL, mêmes motifs) — seul l'adressage a changé, pas l'exigence.
+
+### 🚦 Prochain pas — **lot 2 : les 2 pilotes et leurs 13 questions, comme DONNÉES**
+
+⚠️ **Trancher l'arbitrage T1 AVANT d'écrire quoi que ce soit** (spec §9.2, options A/B/C) :
+l'énoncé « les 26 orphelines tier A … ≥ 24/26 » fusionne **26 orphelines au total** et **16 tier A**.
+Option **A** (16/16 tier A, le reste nommé) est celle câblée par défaut dans l'outil. Tant qu'il
+n'est pas tranché, écrire les 13 questions le trancherait **par accident** — c'est pourquoi
+`load_frameworks()` n'a délibérément pas été écrit au lot 1 (un assert nommé le vérifie).
+
+Ce que le lot 2 doit fournir, et que le contrat attend déjà :
+`load_frameworks()` → `{framework_id: {"questions": [...]}}`, chaque question portant au minimum
+`plancher_tier` et `nature_attendue` (lus par les contrôles D et E du pont).
 
 ⚠️ Mesureurs **versionnés**, jamais `/tmp` · bilan reconnaissable à sa **forme** (`grep -E` sur le
 motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés dans
@@ -103,7 +134,7 @@ motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés 
 | Lot | Contenu | Migration |
 |---|---|---|
 | 0 | ✅ **Ligne de base** (ci-dessus) — 2026-09-09 | — |
-| 1 | ⏳ Contrat `FrameworkAnswer` + `FrameworkMandate`, invariants relationnels **en Python** (#37), écran niveau 3 en maquette | — |
+| 1 | ✅ **Contrat** `FrameworkAnswer` + `FrameworkMandate`, pont relationnel **en Python** (#37), carte de provenance, écran niveau 3 en maquette — 2026-09-09 | — |
 | 2 | Les 2 pilotes et leurs 13 questions écrits **comme données** · analyste + manager sur `qualite_financiere` | — |
 | 3 | Le **vocabulaire unique** en base · FK depuis `covers` · backfill relu · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` | **036** |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par `search-worker` | 037 |
@@ -144,7 +175,7 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite hors-ligne : 1 858 assertions / 0 échec / 22 scripts** — une seule commande,
+- **Suite hors-ligne : 1 949 assertions / 0 échec / 23 scripts** — une seule commande,
   **`bash checks/run_all.sh`**. Il porte les invocations correctes : montage `/contract_frozen`
   (sans lui 4 scripts sous-comptent en sortant à 0) et réseau `coolify` + `CHECK_DB_URL` pour
   `check_entry_nature` (§7) **et** `check_edgar_feed` (§12bis) — tous deux **sortent en échec** si
@@ -382,7 +413,7 @@ justes, c'est le *fait énoncé* qui était faux.
 > modèle. ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se
 > **requête**, elle ne se souvient pas. ⚠️ Mesureurs versionnés, jamais `/tmp` ; bilan reconnaissable
 > à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **1 858 / 0 / 22**, migrations jusqu'à **035**, prochaine **036** (à écrire
+> État : suite hors-ligne **1 949 / 0 / 23**, migrations jusqu'à **035**, prochaine **036** (à écrire
 > juste avant son lot).
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
 > le `CLAUDE.md` du projet (conventions #22-**#55**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une

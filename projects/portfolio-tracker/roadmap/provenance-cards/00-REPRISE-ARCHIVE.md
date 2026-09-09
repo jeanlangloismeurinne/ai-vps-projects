@@ -8,6 +8,101 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-09 (4ᵉ lot) — spec v3, **lot 1 : le contrat**
+
+**Ordre imposé respecté : UX (contrat) → agent → données.** Aucune table, aucune migration, aucune
+donnée : les 13 questions restent le travail du lot 2, et `load_frameworks()` n'a **délibérément
+pas** été écrit — l'écrire aurait tranché l'arbitrage T1 par accident. Un assert nommé le vérifie.
+
+### Ce qui a été livré
+
+| Livrable | Fichier |
+|---|---|
+| Le contrat, Pydantic v2 strict | `app/contracts/framework_answer_schema.py` |
+| Le pont relationnel (#37) | `app/agents/v2/frameworks.py` |
+| Le check | `checks/check_framework_contract.py` — 91 assertions |
+| Son test négatif | `checks/negatif_framework_contract.sh` — 20 mutations / 20 détectées |
+| Carte de provenance | `roadmap/provenance-cards/framework_answer_card.md` |
+| Maquette niveau 3 | `roadmap/provenance-cards/framework_screen_niveau3.md` |
+
+Suite hors-ligne : **1 858 → 1 949 assertions, 0 échec, 23 scripts**.
+
+### La ligne de base a été REMESURÉE, pas rappelée
+
+Avant d'écrire une ligne : `bash tools/acceptation_frameworks.sh` → **1 ok / 8 FAIL**, motifs
+identiques à ceux du lot 0. Le fichier de reprise disait la même chose, mais un état de départ se
+requête, il ne se relit pas.
+
+### Le défaut trouvé en chemin : deux nomenclatures pour la même colonne
+
+`tools/acceptation_frameworks.py` a été écrit au lot 0, **avant** le contrat, avec sa nomenclature
+devinée (`framework`, `rang_degrade`, `methode_approximation`, `ingredients`, `motif`). Le contrat
+niche ces champs (`fondation.rang_derive`, `approximation.methode`, …). Laissé tel quel, le lot 3
+aurait nommé ses colonnes d'après le contrat et **T3/T4 auraient lu `None` pour toujours** — donc
+seraient restés rouges pour la **mauvaise raison**, ou pire, T3 aurait viré au vert sur zéro ligne.
+
+Remède : `COLONNES_DENORMALISEES` dans le contrat, **détenteur unique** de la correspondance,
+importée par l'outil. **Filet de sécurité** : après recâblage, l'acceptation rend **exactement le
+même verdict** (1 ok / 8 FAIL, mêmes 8 motifs). Un verdict qui aurait bougé aurait signifié qu'on
+avait modifié l'exigence en croyant corriger son adressage.
+
+### Trois faux verts / faux rouges rencontrés, tous par la mesure
+
+1. **Faux vert — le refus prononcé par la mauvaise règle.** Les premières fixtures oubliaient
+   `motif` sur `ManagerVerdict` : les objets étaient bien rejetés, mais par le `Field required` du
+   champ absent, jamais par l'invariant testé. D'où `rejete(label, fn, motif)` — un refus prononcé
+   par une autre règle est désormais un FAIL.
+2. **Faux rouge — le grep qui lit sa propre énonciation.** L'assert « l'axe actualité n'est pas
+   ré-implémenté » rougissait sur `etat_actualite`… présent dans la docstring de `FondationServie`
+   qui dit précisément que l'axe vit ailleurs. Couper au `"""` du module ne retire que la docstring
+   de module ; il faut **dépouiller** par `tokenize`, puis asserter l'interdit **en positif**.
+3. **Faux vert — le grep de présence satisfait par la prose.** La garde « l'outil importe bien la
+   table » était `"COLONNES_DENORMALISEES" in source`. La mutation « retirer l'import » l'a laissée
+   **verte** : le nom survit dans le commentaire et dans le `_COLONNE_DE` qui l'inverse. Remplacé
+   par un `ast.walk` + `ImportFrom`, qu'aucun commentaire ne peut satisfaire. **Ce défaut n'était
+   pas visible en relisant le check** — seule la mutation l'a fait apparaître. → convention **#56**.
+
+Un quatrième, côté harnais : la mutation `[E]` visait une entry tier C, dont le rang faisait rougir
+`[D]` **avant** que `[E]` ne soit atteint. Le contrôle passait pour gardé sans avoir jamais tourné ;
+fixture corrigée en tier A- de nature `interpretation`.
+
+### Deux écarts assumés avec le JSON de la spec §2.4, tous deux plus stricts
+
+1. `manager.controles.honnetete_approximation` a **trois** valeurs (`ok|ko|sans_objet`) là où la spec
+   en écrit deux. Sur une réponse qui n'approxime pas, la question n'a pas d'objet : `ok` serait un
+   vert vrai sur zéro ligne. L'**équivalence** `sans_objet ⟺ statut ≠ approxime` empêche le
+   troisième état de servir d'échappatoire.
+2. `analyste` est ajouté. §3.4 écrit le contrat pour N > 1 analystes ; sans porteur d'identité, deux
+   réponses divergentes sont indiscernables, et le correctif naturel le jour venu serait de les
+   **moyenner** — ce que §3.4 interdit explicitement.
+
+### L'actualité, et pourquoi elle n'est pas un champ
+
+La spec §2.4 la montre dans `fondation` ; la convention #53 interdit de la persister. Résolu **par
+la forme** plutôt que par un `if` : `FrameworkAnswer` (émise, persistée) n'a pas le champ, et
+`extra='forbid'` fait que le lui passer **lève**. `FondationServie` / `FrameworkAnswerServie` le
+portent, produits par `servir_answer()` au point de lecture. Le vocabulaire des trois états n'est
+pas recopié : un assert vérifie l'**égalité** avec `knowledge.actualite.ETATS`.
+
+`servir_answer()` ne ré-implémente pas « la plus ancienne citée » : il présente la réponse dans la
+forme que `etat_actualite_entry` sait déjà lire. De même, la règle du cran est demandée à
+`synthesis_feed.derive_synthesis_reliability`, jamais recopiée (#46).
+
+### « Chaque champ a son pixel » rendu exécutable
+
+§8.1 l'exige en prose. Une exigence en prose se vérifie à l'œil, donc se perd au premier champ
+ajouté. La maquette annote chaque zone par son chemin de contrat entre `⟦ ⟧`, et §9 du check assert
+la **bijection** avec les 38 feuilles de `FrameworkAnswerServie` — dans les deux sens : un champ
+sans pixel rougit, un pixel sans champ aussi. Éprouvé par deux mutations dédiées.
+
+### Ce qui reste ouvert pour le lot 2
+
+⚠️ **L'arbitrage T1 (spec §9.2) n'est pas tranché** et bloque le lot 2 : « les 26 orphelines
+tier A … ≥ 24/26 » fusionne 26 orphelines au total et 16 tier A. Option **A** (16/16 tier A, le
+reste nommé) est celle câblée par défaut dans l'outil d'acceptation.
+
+---
+
 ## 2026-09-09 (3ᵉ lot) — spec v3, **lot 0 : la ligne de base**
 
 **Trois mesureurs versionnés, zéro appel modèle, zéro écriture en base de production.**
