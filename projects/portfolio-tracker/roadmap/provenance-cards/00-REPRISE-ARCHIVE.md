@@ -8,6 +8,82 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-09 (3ᵉ lot) — spec v3, **lot 0 : la ligne de base**
+
+**Trois mesureurs versionnés, zéro appel modèle, zéro écriture en base de production.**
+
+### `tools/reconcilier_vocabulaires.{py,sh}` — 5 ok / 2 FAIL, exit 1
+
+Successeur de `/tmp/vocab.py`, qui re-parsait `common.py` et `analysis_v2_schemas.py` à coups de
+regex. **Une regex qui cesse de mordre rend un ensemble vide, donc « 0 orpheline », donc un vert
+parfait sur un système inchangé** — et le défaut grandit avec le refactoring qu'il est censé
+surveiller. Le successeur **importe** les deux vocabulaires de leurs détenteurs uniques (#46) :
+`MVDD_FIELD_PATHS` d'un côté, les `model_fields` Pydantic de l'autre.
+
+Cinq asserts §A gardent le mesureur lui-même (index non vide · mémo non vide · chaque clef d'ALIAS
+encore une feuille · chaque cible d'ALIAS un chemin réel · chaque `DERIVES` encore une feuille),
+puis deux asserts §B qui sont l'objet du script (T6 : 14 orphelins · T7 : 3 inutilisés).
+
+**Test négatif 2/2**, et le cas décisif est le second : vider l'ensemble des feuilles de mémo fait
+virer **T6 au VERT** (« 0 orpheline ») pendant que trois asserts §A rougissent. C'est exactement le
+faux vert que l'ancêtre aurait imprimé en silence — et la preuve que §A n'est pas décoratif.
+
+### `tools/ligne_de_base_frameworks.{py,sh}` — 2 ok / 0 FAIL
+
+Requête les 6 valeurs de §9.1 sur le corpus réel, **parse** la matrice de traçabilité du benchmark
+(Partie E) au lieu de la recopier, et sort en **2** si `DATABASE_URL` ou le montage `/roadmap`
+manque — jamais un saut de section. Les 6 valeurs de la spec sont **confirmées**. Trois constats
+qu'elle ajoute, consignés en §9.1 :
+
+1. **L'étape 8 a un champ indexable** (`valuation.base_rate_anchor`), omis par le mermaid §0.3 →
+   deux comptes publiés (strict 0 / permissif 1) avec le champ séparateur **nommé**.
+2. **`produits.unit_economics` n'a aucune entry primaire** : ses 2 entries (#53, #112) sont des
+   synthèses **de lui-même**. Strictement pire que « 2 entries ».
+3. **NVDA a produit 4 synthèses grounded sur 4 cibles dont la matière indexée est insuffisante**
+   (0/2, 0/2, 1/2, 1/3), MSFT 2 sur 4. Non inventées : fondées sur des entries que l'index
+   n'attache pas au champ synthétisé — le mécanisme de l'orpheline #33 (§0.4) généralisé. *Ce que
+   le lot 3 doit rendre reproductible, le système le fait aujourd'hui par accident.*
+
+⚠️ Un libellé a été corrigé en cours de route : « CIBLE VIDE » se lisait « aucune synthèse
+possible » alors que NVDA en avait produit 4 sur ces cibles mêmes. Devenu « matière indexée
+insuffisante », plus « ⚠ synthétisée SANS matière indexée » — le constat 3 ci-dessus n'existe que
+parce que le libellé a cessé de mentir.
+
+### `tools/acceptation_frameworks.{py,sh}` — 1 ok / 8 FAIL, exit 1
+
+Écrit **avant la première ligne de code de la capacité**, il rougit sur les 8. Il déclare l'API que
+le lot 2 doit fournir (`app.agents.v2.frameworks.load_frameworks`) et les tables que les lots 3-4
+doivent créer (`framework_answers`, `framework_mandates`) : **l'adresse de ce qui n'existe pas
+encore est un contrat**. Chaque absence est rattrapée et **comptée en échec**, jamais un `skip` —
+sans quoi le script mourrait avant son bilan (2ᵉ des quatre faux verts).
+
+🔴 **Un rouge total ne prouve rien tant qu'on n'a pas montré qu'il peut virer au vert.** Le test
+négatif d'une acceptation est **bidirectionnel**, et il se joue sur une base **scratch copiée du
+réel** (`db_pf_scratch_v3`, `pg_dump` des `knowledge_entries` → 133 courantes / 180 totales, soit
+exactement la prod) :
+
+- **Satisfiabilité 5/5** — en fabriquant l'état que les lots 3-4 doivent produire, **T1, T3, T4,
+  T5, T8 virent au vert** (1 ok / 8 FAIL → 6 ok / 3 FAIL). T2/T6/T7 restent rouges parce qu'ils
+  dépendent du **vocabulaire** (lot 3), pas des tables : c'est le résultat attendu, pas un défaut.
+- **Discrimination 4/4** — une mutation par assert (retirer une entry citée · une approximation
+  sans ingrédients · `qf_1` repassé en `repondu` sans motif · un mandat dont le statut ne change
+  pas) fait rougir **chacun sur son propre assert nommé, avec le bon motif**, et T5 non muté reste
+  vert : aucun dommage collatéral.
+
+Deux choses vérifiées au passage, gratuitement : le filet de `lire()` a transformé un
+`InsufficientPrivilegeError` (la base scratch n'avait pas les `ALTER DEFAULT PRIVILEGES` de la
+prod) en **FAIL nommé** au lieu d'un crash ; et la base de production est restée intacte —
+`framework_answers` et `framework_mandates` y sont toujours absentes, vérifié après coup.
+
+### Arbitrage ouvert, bloquant pour le lot 2
+
+**T1 fusionne deux ensembles.** La spec écrivait « les **26** orphelines **tier A** de NVDA …
+≥ 24/26 » ; la mesure sépare **26 orphelines au total** et **16 tier A**. Le seuil 24/26 n'est
+applicable ni à l'un (10 des 26 sont des `Context pack` et des `llm_memory` « à vérifier », qui
+n'ont rien à faire dans un framework de qualité financière) ni à l'autre (16 < 24). Mode de panne
+de `feedback_ligne_de_base_est_une_mesure` : une spec qui fusionne deux sujets attribue au mauvais
+le symptôme observé. Trois options en §9.2 ; l'outil câble **A** (16/16 tier A, le reste nommé).
+
 ## MàJ 2026-09-09 (clôture) — récit des lots des 2026-09-08 et 2026-09-09, évincé du prompt de reprise
 
 > Bloc déplacé tel quel depuis `00-REPRISE.md` le 2026-09-09, à l ouverture de la spec v3

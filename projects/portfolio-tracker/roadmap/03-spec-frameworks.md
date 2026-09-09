@@ -782,16 +782,35 @@ inchangé (spec v2 §5.3, §7).
 ### 9.1 Ce qu'on mesure AVANT le lot
 
 **La ligne de base est une mesure, pas un souvenir** (`feedback_ligne_de_base_est_une_mesure`).
-À requêter et à consigner **avant** d'écrire une ligne de code :
+Elle se **requête** — outil versionné `tools/ligne_de_base_frameworks.py` (+ son `.sh`), qui parse
+la matrice de traçabilité du benchmark (Partie E) au lieu de la recopier, et sort en **2** si la
+base ou le montage `/roadmap` manque, jamais en saut de section.
 
-| Mesure | Valeur attendue aujourd'hui |
-|---|---|
-| Orphelines par ticker | MSFT 20 % · **NVDA 50 %** · RVMD 26 % |
-| Feuilles de mémo sans chemin d'indexation | **14** |
-| Chemins jamais consommés | **3** |
-| Synthèses grounded sur RVMD | **0** |
-| Entries sur `produits.unit_economics` | **2**, toute base confondue |
-| Étapes benchmark 4/5/6/8 avec preuve indexable | **0** |
+**Mesurée le 2026-09-09** (`bash tools/ligne_de_base_frameworks.sh` — 2 vérifications OK, 0 échec) :
+
+| Mesure | Attendu spec | **Mesuré 2026-09-09** |
+|---|---|---|
+| Orphelines par ticker | MSFT 20 % · **NVDA 50 %** · RVMD 26 % | NVDA 26/52 = **50 %** (dont 16 tier A) · MSFT 11/54 = **20 %** (8 tier A) · RVMD 7/27 = **26 %** (7 tier A) |
+| Feuilles de mémo sans chemin d'indexation | **14** | **14** |
+| Chemins jamais consommés | **3** | **3** |
+| Synthèses grounded sur RVMD | **0** | **0** |
+| Entries sur `produits.unit_economics` | **2**, toute base confondue | **2**, dont **0 primaires** |
+| Étapes benchmark 4/5/6/8 avec preuve indexable | **0** | **0** strict · **1** permissif |
+
+**Les six valeurs de la spec sont confirmées.** Trois constats que la mesure ajoute, et qu'aucun
+n'était dans la spec :
+
+1. **L'étape 8 a un champ indexable** — `valuation.base_rate_anchor`, omis par le mermaid §0.3.
+   D'où les deux comptes (strict 0 / permissif 1) : le champ séparateur est **nommé** plutôt
+   qu'absorbé dans l'un des deux chiffres.
+2. **`produits.unit_economics` n'a aucune entry primaire.** Ses 2 entries (#53 NVDA, #112 MSFT)
+   sont des `analysis`/`agent_synthesis` — le champ n'est alimenté que par des synthèses **de
+   lui-même**. C'est strictement pire que « 2 entries ».
+3. **NVDA a produit 4 synthèses grounded sur 4 cibles dont la matière indexée est insuffisante**
+   (0/2, 0/2, 1/2, 1/3) ; MSFT 2 sur 4. Elles ne sont pas inventées : elles sont fondées sur des
+   entries que l'index n'attache pas au champ synthétisé — le mécanisme de l'orpheline #33 (§0.4)
+   généralisé. **Ce que le lot 3 doit rendre reproductible, le système le fait aujourd'hui par
+   accident**, via le rattrapage sémantique de la recherche vectorielle.
 
 ### 9.2 Le test d'acceptation, falsifiable
 
@@ -806,7 +825,7 @@ absence de bilan = **échec** — `feedback_bilan_par_sa_forme`).
 
 | # | Critère | Seuil |
 |---|---|---|
-| T1 | Les 26 orphelines tier A de NVDA sont rattachées à une question de `qualite_financiere` | **≥ 24 / 26**, le reste **nommé** |
+| T1 | Les orphelines **tier A** de NVDA sont rattachées à une question de `qualite_financiere` | **16 / 16**, le reste **nommé** — ⚠️ voir l'arbitrage ci-dessous |
 | T2 | Les 4 champs de moat ont au moins une entry citable | **4 / 4** |
 | T3 | Aucune réponse `approxime` sans méthode, ingrédients et rang **dégradé** | **0 violation** |
 | T4 | RVMD : `qf_1` sort `sans_objet` **motivé**, jamais un ROIC fabriqué | **exigé** |
@@ -814,6 +833,23 @@ absence de bilan = **échec** — `feedback_bilan_par_sa_forme`).
 | T6 | Feuilles de mémo sans question | **0** |
 | T7 | Questions jamais consommées | **0** |
 | T8 | Un renvoi manager crée un mandat consommable, et le re-run change le statut | **≥ 1 cas de bout en bout** |
+
+⚠️ **Arbitrage ouvert sur T1 — l'énoncé fusionne deux ensembles** (ouvert le 2026-09-09, bloquant
+pour le lot 2). La spec écrivait « les **26** orphelines **tier A** … ≥ 24/26 ». La mesure sépare
+deux choses : **26 orphelines au total** et **16 tier A**. Le seuil 24/26 n'est applicable ni à
+l'un ni à l'autre — 10 des 26 sont des `Context pack` (`agent_synthesis`) et des `llm_memory`
+« (à vérifier) », qui n'ont rien à faire dans un framework de qualité financière ; et 16 < 24.
+C'est exactement le mode de panne de `feedback_ligne_de_base_est_une_mesure` : une spec qui fusionne
+deux sujets attribue au mauvais le symptôme observé.
+
+La lecture retenue **par défaut** dans l'outil est la plus stricte des deux défendables — **toutes**
+les tier A rattachées (16/16), le reste **nommé** sans seuil. Trois options si elle est trop dure :
+
+| Option | Seuil | Ce qu'elle dit |
+|---|---|---|
+| **A** (retenue) | 16 / 16 tier A | un fait tier A non rattaché est un défaut du framework, pas une tolérance |
+| **B** | ≥ 24 / 26 toutes natures | oblige `qualite_financiere` à absorber des `llm_memory` non vérifiées — contredit §6 |
+| **C** | 16/16 tier A **et** ≥ 20/26 total | ajoute une exigence de couverture sur le corpus mou, à quantifier au lot 2 |
 
 **Ce qui ferait échouer le pilote** (à écrire pour pouvoir perdre) : si T4 échoue — c'est-à-dire si
 le système continue de fabriquer une réponse plausible là où la question n'a pas de sens — alors
@@ -835,7 +871,7 @@ suffisent, et un framework de plus serait un jumeau qui divergera au premier cor
 
 | Lot | Contenu | Migration |
 |---|---|---|
-| **0 — Ligne de base** | Versionner `tools/reconcilier_vocabulaires.py` · mesurer et consigner les 6 valeurs de §9.1 · écrire `tools/acceptation_frameworks.py` **qui rougit** | — |
+| **0 — Ligne de base** ✅ **2026-09-09** | Versionner `tools/reconcilier_vocabulaires.py` (5 ok / 2 FAIL, test négatif 2/2) · mesurer et consigner les 6 valeurs de §9.1 (`tools/ligne_de_base_frameworks.py`, 2 ok / 0 FAIL, +3 constats) · écrire `tools/acceptation_frameworks.py` **qui rougit sur les 8** (1 ok / 8 FAIL, satisfiabilité 5/5 et discrimination 4/4 éprouvées sur base scratch) | — |
 | **1 — Contrat** | `FrameworkAnswer` + `FrameworkMandate` en Pydantic strict · carte de provenance · les invariants relationnels **en Python** (#37) · l'écran niveau 3 en maquette | — |
 | **2 — Les deux pilotes, en dur** | Les 2 frameworks et leurs 13 questions écrits comme **données**, chargés depuis un fichier versionné · analyste + manager sur `qualite_financiere` uniquement | — |
 | **3 — Le vocabulaire unique** | `frameworks` / `framework_questions` / `framework_variables` en base · FK depuis `covers` · backfill relu · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` | **036** |

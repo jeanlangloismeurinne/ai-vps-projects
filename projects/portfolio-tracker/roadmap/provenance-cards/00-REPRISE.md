@@ -62,21 +62,37 @@ absente.
   sont 100 % orphelins d'indexation aujourd'hui*. Il prouve qu'on sait **faire chercher** ce qui
   n'existe pas.
 
-### 🚦 Prochain pas — **lot 0 : la ligne de base**
+### ✅ Lot 0 — ligne de base **acquise le 2026-09-09**
 
-**Rien d'autre ne commence avant.** `feedback_ligne_de_base_est_une_mesure` : l'état de départ d'un
-test d'acceptation se **requête AVANT** le lot. Sur ce chantier, la ligne de base a déjà changé le
-lot **trois fois de suite** (capacité 4 visait le mauvais émetteur ; capacité 5 a visé deux fois un
-mécanisme sans matière).
+Trois mesureurs versionnés dans `backend/tools/` (jamais `/tmp`), aucun n'appelle un modèle, tous
+rendent un bilan `N vérifications OK, M échec(s)` reconnaissable à sa **forme** :
 
-Trois livrables, aucun n'appelle un modèle :
+| Outil | Aujourd'hui | Vire au vert |
+|---|---|---|
+| `reconcilier_vocabulaires.{py,sh}` | **5 ok / 2 FAIL** — 14 orphelins + 3 inutilisés | lot 3 |
+| `ligne_de_base_frameworks.{py,sh}` | **2 ok / 0 FAIL** — les 6 valeurs de §9.1 confirmées | (mesure, pas un test) |
+| `acceptation_frameworks.{py,sh}` | **1 ok / 8 FAIL** — les 8 critères T1-T8 rouges | par lots, les 8 au lot 7 |
 
-1. **Versionner** `/tmp/vocab.py` → `tools/reconcilier_vocabulaires.py`. Il **doit rougir
-   aujourd'hui** (14 orphelins + 3 inutilisés) et virer au vert au lot 3 : c'est un test négatif
-   déjà éprouvé.
-2. **Consigner** les 6 valeurs du tableau ci-dessus, requêtées et non recopiées.
-3. **Écrire** `tools/acceptation_frameworks.py` + son `.sh`, avec ses 8 critères T1-T8
-   (spec v3 §9.2), **qui rougit sur les 8**.
+Les 6 valeurs sont consignées **dans la spec §9.1** avec les trois constats que la mesure ajoute
+(l'étape 8 a un champ indexable ; `produits.unit_economics` n'a **aucune** entry primaire ; NVDA
+produit 4 synthèses grounded sur des cibles sans matière indexée — *ce que le lot 3 doit rendre
+reproductible, le système le fait aujourd'hui par accident*).
+
+### 🚦 Prochain pas — **lot 1 : le contrat**
+
+**Ordre imposé : UX (contrat) → agent → données.** Le contrat est asserté avant d'être implémenté —
+c'est déjà le cas : `acceptation_frameworks.py` déclare l'API que le lot 2 doit fournir
+(`app.agents.v2.frameworks.load_frameworks`) et les tables que les lots 3-4 doivent créer
+(`framework_answers`, `framework_mandates`), chaque absence produisant un **FAIL nommé**.
+
+1. `FrameworkAnswer` + `FrameworkMandate` en **Pydantic strict** (spec §2.4).
+2. Les invariants **relationnels en Python**, jamais dans le schéma (#37) — un contrat valide un
+   objet, jamais la cohérence entre deux.
+3. La carte de provenance champ par champ · l'écran niveau 3 en maquette.
+
+⚠️ **Trancher l'arbitrage T1 avant le lot 2** (spec §9.2, options A/B/C) : l'énoncé « les 26
+orphelines tier A … ≥ 24/26 » fusionne **26 orphelines au total** et **16 tier A**. Option **A**
+(16/16 tier A, le reste nommé) est celle câblée par défaut dans l'outil.
 
 ⚠️ Mesureurs **versionnés**, jamais `/tmp` · bilan reconnaissable à sa **forme** (`grep -E` sur le
 motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés dans
@@ -86,8 +102,8 @@ motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés 
 
 | Lot | Contenu | Migration |
 |---|---|---|
-| 0 | **Ligne de base** (ci-dessus) | — |
-| 1 | Contrat `FrameworkAnswer` + `FrameworkMandate`, invariants relationnels **en Python** (#37), écran niveau 3 en maquette | — |
+| 0 | ✅ **Ligne de base** (ci-dessus) — 2026-09-09 | — |
+| 1 | ⏳ Contrat `FrameworkAnswer` + `FrameworkMandate`, invariants relationnels **en Python** (#37), écran niveau 3 en maquette | — |
 | 2 | Les 2 pilotes et leurs 13 questions écrits **comme données** · analyste + manager sur `qualite_financiere` | — |
 | 3 | Le **vocabulaire unique** en base · FK depuis `covers` · backfill relu · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` | **036** |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par `search-worker` | 037 |
