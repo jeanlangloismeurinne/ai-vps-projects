@@ -631,6 +631,63 @@ une synthèse où 5 questions sur 6 portent « aucune méthode tenable » graver
 verdict que la mesure sait faux — et un lecteur ultérieur le prendrait pour une vérité mesurée
 (`feedback_fixture_pollue_le_reel`).
 
+#### ⚠️ Quatrième réfutation — la ligne de base tue « chercher sur la question nommée »
+
+Mesureur versionné : `tools/mesure_ingredients_capacite5.py` + `tools/mesure_ingredients.sh`. Aucune
+écriture, aucun appel de modèle de génération, corpus assemblé par le `query_knowledge` **de
+production** (`min_reliability=0.70`, `limit=20`, `citable_tiers`) — la mesure devra être rejouable à
+l'identique après le lot.
+
+**Ce qui a été mesuré.** 23 questions déclarées ouvertes, vivant dans la prose de 6 synthèses
+grounded persistées (NVDA #53/#55/#56/#59, MSFT #112/#113). RVMD : **0 synthèse persistée**, donc
+0 question. NVDA/`marche.structure_5forces` : **0 question** là où MSFT/`marche.structure_5forces`
+en porte 4 — le filet lexical des absences ne se déclenche pas uniformément.
+
+**Le chiffre brut flatte : 15 questions sur 23 ramènent une entry citable hors du corpus de leur
+champ dans le top-5.** Il ne veut rien dire. L'étalon le démontre.
+
+**L'étalon réfute le critère, pas l'inverse.** #102 (tier A, `edgar_official`, le dénombrement
+« >450 M de sièges payants ») est l'ingrédient **connu** des 5 questions de
+MSFT/`produits.unit_economics`. Ses rangs dans une recherche sémantique nue sur la question :
+
+| formulation de la requête | rangs de #102 | dans le top-5 |
+|---|---|---|
+| la question **en prose**, telle qu'elle vit | `[6, 10, —, 9, —]` | **0 / 5** |
+| la même, **négation retirée** (contre-épreuve) | `[5, 15, —, 9, 16]` | **1 / 5** |
+
+La contre-épreuve était l'hypothèse concurrente : les questions en prose portent leur propre clause
+d'absence (« … : non documenté en base »), qui pollue l'embedding en mélangeant *le sujet cherché* et
+*le fait qu'il manque*. **Elle est écartée.** Retirer la négation ne déplace rien (un rang gagné, deux
+perdus, un inchangé). Le défaut n'est donc pas la **formulation** — c'est la **méthode**.
+
+**Écart nommé avec la mesure précédente.** L'ancienne mesure annonçait « #102 dans 4 cas sur 5 » ;
+elle comptait la **présence dans une liste de 20** tirée d'une base d'une cinquantaine d'entries —
+une présence à ce taux de rappel n'est pas un signal. Le discriminant ajouté ici est le **rang**. Sur
+ce discriminant, l'ingrédient connu ne franchit jamais le seuil. Quatrième fois que la ligne de base
+change ce lot (`feedback_ligne_de_base_est_une_mesure`).
+
+**Ce que la recherche ramène vraiment, à sa place.** Sur les 33 entries hors corpus remontées dans
+un top-5, **16 sont structurellement incapables d'être l'ingrédient d'une approximation chiffrée** :
+9 entries de gouvernance (`management_allocation.skin_in_game_pct` ×5, `.incitations` ×4) et 7 de
+narratif de risque (`risques.risques_cles`). La rémunération du CEO arrive **r3** sur « coût par
+GPU » et **r3/r4** sur « coût unitaire par GPU ou par token » ; les tables de détention d'actions
+d'Amy Hood arrivent **r3** sur « menace de nouveaux entrants ». Nourrir le barreau 4 de ces résultats
+ne produirait pas une approximation dégradée mais **une approximation fabriquée à partir de bruit** —
+exactement ce que la capacité 5 existe pour empêcher.
+
+**Ce que la mesure ne réfute pas, et qui désigne le lot.** Il existe une classe où la recherche
+trouve juste : NVDA/`positionnement.moat_preuves`, « l'ampleur exacte des dépenses R&D n'est pas
+documentée » → r1 #1 *Chiffre d'affaires FY2026*, r4 #27 *capital return* ; « investissements R&D
+massifs » → r2 #7 *Flux de trésorerie opérationnel*, r3 #9 *Total actif*. Le point commun de ces
+entries : `covers=[]` — ce sont les **agrégats financiers de base**, un vocabulaire fermé et stable.
+La recherche sémantique sait retrouver un agrégat financier ; elle ne sait pas retrouver une
+**métrique opérationnelle spécifique** (un dénombrement de sièges, un coût unitaire).
+
+**Conséquence pour la spécification.** Le barreau 4 ne peut pas s'appuyer sur une recherche libre qui
+*découvre* ses ingrédients. Le choix qui reste ouvert relève de l'utilisateur — il porte sur ce qu'un
+dossier a le droit de faire face à un trou, pas sur une technique. **Aucun code n'a été écrit pour ce
+lot** : la ligne de base l'a réfuté avant la dépense, ce qui est son unique fonction.
+
 ---
 
 ## Coût, risques, et ce qui pourrait invalider cette révision
