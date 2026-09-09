@@ -8,6 +8,185 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## MàJ 2026-09-09 (clôture) — récit des lots des 2026-09-08 et 2026-09-09, évincé du prompt de reprise
+
+> Bloc déplacé tel quel depuis `00-REPRISE.md` le 2026-09-09, à l ouverture de la spec v3
+> (`roadmap/03-spec-frameworks.md`). Copie conforme, rien de résumé.
+
+### Livré cette session (2026-09-09, 2ᵉ lot) — capacité 5 : la question ouverte devient une donnée
+
+**Suite : 1 858 / 0 / 22** (+43). Dépense **0,0015 $** (deux dry-runs). **Pas de migration** —
+`content_structured` est du `jsonb`, vérifié en base avant de l'affirmer. **Rien n'a été persisté**,
+délibérément (voir le dernier point). Contrat `GroundedSynthesis` **v2.1.0**.
+
+- 🔴 **La ligne de base a changé le lot une TROISIÈME fois.** « Une absence ne fonde plus » était
+  faux **au niveau de la pièce** : sur les 5 entries comptées comme fondation, **une seule** (#97)
+  documente une absence coextensive à son critère ; les 4 autres sont des synthèses substantielles
+  qui signalent un trou sur un **sous-point**. La règle naïve aurait fabriqué **3 fausses lacunes**
+  (et 3 recherches payantes) pour en corriger **1**. → Arbitrage utilisateur : **l'unité est la
+  QUESTION, pas le critère.** Le critère reste `fondé`, le trou est nommé, et approché si possible.
+- ✅ **~20 questions déclarées quittent la prose.** Elles étaient PRESCRITES par le prompt de
+  synthèse et atterrissaient dans `synthesis_markdown` : invisibles à la porte, à l'écran, à tout
+  compteur. Forme exacte de **#55**. Elles vivent maintenant dans `lacunes[]` — question en toutes
+  lettres, **2 causes nommées** (`non_publie_source` ≠ `non_documente_base`, elles n'appellent pas le
+  même remède), barreau atteint, et comptées (`lacunes_n`, `lacunes_approximees_n`).
+- ✅ **L'estimation est gouvernée** : `methode` refaisable · `sens_erreur` (**3 états**) ·
+  `hypotheses` **min 1** (sans hypothèse, c'est une mesure déguisée) · base citée **min 1** · rang
+  **DÉRIVÉ** « un cran sous la pièce la plus faible » par la **même** fonction que les synthèses
+  (#46) · `nature = interpretation` (#51). Le grounding des ingrédients passe par la **même**
+  `validate_grounding` que les assertions, et **avant** la dérivation du rang.
+- 📌 **`lacunes` est requis mais peut être vide** — et la nuance est le lot. Avec un défaut `= []`,
+  « pas demandé » et « rien à signaler » se liraient **identiquement** : le trou silencieux qu'on
+  ferme. Requis, l'omission devient une erreur de contrat, donc bruyante.
+- 📌 **Le modèle approximait DÉJÀ, en prose, sans gouvernance.** Le 1ᵉʳ dry-run sortait « ROIC 29,6 %
+  (**NOPAT approché par le résultat net**) » et des marges de segment en « calcul dérivé » —
+  présentés comme des faits, sans sens d'erreur ni base, héritant du rang de la synthèse. Après
+  correctif du barreau 4, la marge par segment sort comme **estimation A-**, méthode
+  `83 879 / 139 996 = 0,599`, hypothèse « sans allocation des frais généraux non attribués ».
+- 🔴 **Barreau 4 réfuté par le corpus réel — et ma première explication était fausse.** 0 approximation
+  sur 4 au premier passage. J'ai supposé un défaut d'assemblage du corpus, **vérifié**, et #113 était
+  bien chargé. Le vrai fait : le dénominateur (**« >450 M sièges payants »**) est en base, **tier A,
+  dans #102**, et **#102 n'est pas chargé** pour `produits.unit_economics`. Le modèle disait vrai.
+  Mesure gratuite qui désigne le lot suivant : une requête sur **la question** ramène #102 dans
+  **4 cas sur 5**, la requête sur **le champ** jamais — *les ingrédients d'une approximation vivent
+  par nature dans un champ voisin.*
+- 📌 **Test négatif éprouvé, pas supposé** : `tier = tiers[0]` fait rougir **3 asserts nommés** dont
+  « 2 pièces A → estimation A- (un cran sous), pas A → A ». Rouge constaté, puis retiré.
+- 📌 **Le fil-piège de la capacité 4 a tiré comme prévu.** Produire RVMD a fait rougir
+  `« RVMD n'a aucun rapport readiness »` — un assert écrit exprès, dont le message annonçait sa
+  propre péremption. Reformulé : RVMD passe de témoin **par absence** à témoin **mesuré** (9 collecte
+  / 4 rafraîchissement), face à NVDA et MSFT à **0 collecte**. La séparation des deux remèdes ne
+  repose plus sur un vide — *un assert vrai sur zéro ligne ne prouve rien* (#47/#49).
+- ⚠️ **Rien n'a été persisté, et c'est le choix.** Tant que le barreau 4 échoue faute de corpus,
+  graver une synthèse où 5 questions sur 6 portent « aucune méthode tenable » ferait passer pour une
+  vérité mesurée un verdict que la mesure sait faux (`feedback_fixture_pollue_le_reel`).
+
+### Livré cette session (2026-09-09, 1ᵉʳ lot) — lot de MESURE : 5b réfutée, capacité 5 réécrite en « dégradation déclarée »
+
+**Aucun code de production.** C'était voulu : le lot devait dire **s'il y avait quelque chose à
+construire** avant d'écrire quoi que ce soit. Dépense totale **0,003 $**. Deux outils versionnés :
+`tools/qualif_couples_capacite5.py` + `tools/qualif_couples.sh`.
+
+- 🔴 **5b n'a pas de matière, et elle est CLOSE sans avoir été construite.** L'entonnoir :
+  **92** paires `covers` → **33** (retrait de 59 paires internes à un seul document : quatre facteurs
+  de risque d'un même 10-Q ne sont pas deux sources) → **29** (retrait de 4 paires de la même
+  publication le même jour) → jugées : **0 divergence réelle**. La seule « divergence » rendue est
+  une prévision de févr. 2025 opposée au chiffre constaté de févr. 2026.
+- 🔴 **Le jugement de contradiction textuelle n'est pas stable.** Le même couple était classé
+  autrement au passage précédent, **à température 0 sur le même corpus**. Un mécanisme d'arbitrage
+  bâti dessus servirait à l'analyste un jeu de « contradictions » différent à chaque ouverture du
+  dossier. La règle que la spec avait écrite d'avance s'est appliquée à elle-même.
+- 🔴 **Le vrai défaut, trouvé en lisant : une pièce qui documente une ABSENCE est comptée comme une
+  FONDATION.** MSFT #97 (`edgar_official`, A) dit *« Microsoft ne publie PAS de ventilation
+  quantitative »* et rend pourtant `business_model.recurrence_pct` **`couvert`**. Trois traitements
+  pour une même réalité : NVDA **dispensé** · MSFT **couvert** · RVMD **non couvert** (mandat lancé
+  sur un chiffre qui n'existe pas). C'est le sujet du prochain lot.
+- 📌 **Le substitut était dans le même document** : #97 nomme Produits 64 696 M$ / Services
+  267 143 M$, le corpus porte le CA total tier A (#64, 331 839 M$), et la somme **vérifie**. Règle de
+  trois → **80,5 %**, plancher (le sens de l'erreur est énoncé par #97 lui-même).
+- 📌 **Un piège de mesure** : le 1ᵉʳ passage a rendu `0 divergence / 1 erreur`, et l'erreur était mon
+  propre contrat refusant un motif > 400 caractères — dont le texte tronqué portait « contradiction
+  directe ». **La réponse la plus longue est la plus susceptible d'être le cas intéressant.** Mesure
+  entière rejouée après desserrage, jamais le seul couple fautif.
+- 📌 **Une consignation n'est pas une mesure** : la reprise et la roadmap disaient toutes deux « 0
+  paire » sur le cas d'acceptation de la 1ᵉʳ rédaction ; le mesureur, inchangé depuis son unique
+  commit, en imprime **3**. La conclusion tenait, le compte était faux.
+
+### Livré la session précédente (2026-09-08, 2ᵉ lot) — F16 fermé, capacité 5 réécrite
+
+**Aucune dépense de modèle.** Migration **035** appliquée. Suite : **1 815 / 0 / 22**
+(+17 : `check_edgar_feed.py` §12 et §12bis). Déploiement `4b8cc74`, HTTP 200.
+
+- 🔴 **F16 — le porteur d'une règle doit être DANS la ligne.** `_current_fact_ids` appliquait #43
+  correctement parce qu'il tient le discriminant de la **spec du producteur** ; un **lecteur** du
+  corpus n'a que la ligne, et `poste_kind` y était absent sur 19 des 43 faits courants. Migration
+  035 (générateur `_gen_035.py` important `POSTES`, garde `RAISE EXCEPTION` **éprouvée en négatif
+  avant application** : elle rendait 27). Après : **0 fait non keyable** sur les trois émetteurs.
+  Convention **#55**.
+- 📌 **Le défaut a été trouvé par un faux ROUGE que je fabriquais moi-même** : mon mesureur coerçait
+  `poste_kind` absent en `stock` et sortait 2 collisions imaginaires sur NVDA (trois exercices de CA
+  lus comme trois réponses à une question). En cherchant *pourquoi* il rougissait, le vrai défaut est
+  apparu dessous. **L'indécidable est un troisième état, compté à part et nommé** (#44/#53).
+- ⚠️ **Jumeau supprimé** : `financials_feed._STOCK_METRICS_LEGACY` recopiait `POSTES[].flow` à la
+  main. Il était **d'accord** avec son modèle — deux tables d'accord restent deux tables (#46).
+- ⚠️ **ABSENT n'est pas CONTRADICTOIRE, et c'est le test négatif qui l'a montré** : retirer un
+  `poste_kind` faisait aussi rougir l'assert « contredit POSTES » (motif `→ None`), qui envoie
+  chercher une divergence producteur/table là où il n'y a qu'un backfill à rejouer. Deux causes,
+  deux remèdes, deux asserts — #54 transposé aux garde-fous. Corrigé **dans le check**.
+- ✅ **Test négatif 6/6**, chacun rouge sur un assert nommé : `poste_kind` retiré · ligne contredisant
+  `POSTES` · deux faits de bilan courants · fixture rétrécie 50 → 33 lignes · `CHECK_DB_URL` absente
+  (**exit 1**, pas un saut de section) · jumeau réintroduit dans le **code** — tandis que le même
+  token laissé dans la seule **docstring** reste **vert** (le grep dépouille les docstrings, sinon il
+  lit son propre interdit). ⚠️ Fixture = base scratch **copiée du réel** (`COPY` des 84
+  `fact_financial` de prod), 100 ok / 0 FAIL avant mutation : fidèle **et** discriminante, et
+  **aucune ligne de production touchée**.
+- 🔄 **Capacité 5 réécrite** d'après la doctrine utilisateur (5a les chiffres / 5b les textes), après
+  que sa mesure l'a réfutée. Détail au § « Roadmap active » ci-dessus.
+
+### Livré cette session (2026-09-08, 1ᵉʳ lot) — capacité 4 close : la porte à trois états
+
+**Aucune dépense de modèle. Aucune migration.** Récit complet dans `00-REPRISE-ARCHIVE.md`.
+Suite : **1 798 / 0 / 22**. Ce qui doit rester ici :
+
+- **La porte consomme le triplet de #50 sans le recombiner** : `couvert` / `couvert_perime` /
+  `non_couvert`, `champs_perimes` **retranché** de `champs_non_fondables`, deux remèdes
+  (`rafraichissement` ≠ `collecte`), `cause_non_ready` **dérivée** puis revérifiée par le
+  validateur. Convention **#54**. Gardes : `check_readiness_recompute.py` §15-19 (**131**, test
+  négatif 6/6) et l'acceptation sur corpus réel `tools/acceptation_gate.sh` (**13/0**).
+- 🔴 **Le faux vert est tombé, mesuré en production** : NVDA et MSFT passent de `ready, 0 gap` à
+  `not_ready (peremption)`, 9 champs périmés nommés chacun, aucun envoyé en collecte. Les 9 sont
+  exactement les `actualite_bloquante: True` du profil — **c'est le profil qui périme, pas l'âge**.
+- 📌 **Un verdict persisté n'est pas un verdict servi.** La porte corrigée et déployée, l'écran
+  rendait *encore* `ready, 0 gap` : le GET renvoyait la ligne stockée. Le rapport se persiste, son
+  verdict dépend de l'actualité, qui ne se persiste pas (#53). Le GET **rejoue** donc la moitié
+  déterministe sur une `deepcopy` — aucun modèle, **aucune écriture** — et renvoie un bloc
+  `reevaluation` que l'écran affiche. ⚠️ Le cache d'ancre (TTL 1 h) mémorise la réponse **brute** et
+  **jamais un échec** : un `{}` mémorisé se parse en « aucun événement matériel », donc ancre
+  `none`, donc `ready` rendu une heure sur tous les émetteurs. `check_material_events.py` §13/§14
+  (**81**, test négatif 2/2).
+- ⚠️ **Une seconde table d'accord reste une seconde table.** `FIELD_PLANCHER_OVERRIDES` doublait
+  `FIELD_PROFILES` : elle empêchait le desserrage de #50 d'atteindre la porte **et** rendait
+  circulaire l'assert de `check_field_profiles.py` §5 écrit pour attraper les desserrages tacites —
+  le champ abaissé s'y comparait à sa propre valeur abaissée. Sa suppression a révélé un desserrage
+  B+ → B non déclaré, invisible depuis trois jours. §5 se compare désormais au socle `MVDD_SPEC`.
+- 📌 **La ligne de base a corrigé la spec** : celle-ci désignait RVMD comme porteur du faux vert.
+  En base, RVMD n'a **jamais** eu de rapport readiness — le test aurait viré au vert sans rien
+  prouver. Les porteurs étaient NVDA et MSFT ; RVMD est le **témoin de séparation**.
+
+### Acquis de la capacité 3 (2026-09-07) — l'axe `actualité`
+
+- **`knowledge/actualite.py` est le détenteur unique** de la question « ce fait est-il antérieur à
+  l'ancre ? ». Trois états jamais recombinés en un nombre : `courante` / `perimee` /
+  `indeterminable`. `staleness.py` **traduit** vers le vocabulaire du rapport (`posterieures` /
+  `suspectes` / `non_datees`) via `classe_rapport()` — il ne recalcule rien (#46).
+  `checks/check_actualite.py` : **66 assertions**, test négatif **5/5**. Convention **#53**.
+- 📌 **L'axe ne sera JAMAIS une colonne.** C'est une propriété de la *relation* entre une entry et
+  une ancre, calculée **à la lecture**. La stocker la figerait — c'est littéralement la cause n°2 du
+  diagnostic : un corpus dont le score est fixé à l'écriture ne vieillit jamais, donc ne peut jamais
+  signaler qu'il a vieilli.
+- 🔴 **F15, trouvé à coût de modèle nul** — le douzième défaut sur quinze. Tant que la partition
+  vivait dans `staleness`, la branche « aucun événement matériel » évaluait **deux prédicats
+  indépendants** : l'entry non datée sortait dans `posterieures` **et** dans `non_datees` — somme des
+  trois classes = 4 pour 3 entries actives, et une date *inconnue* comptée parmi les fraîches, soit
+  exactement ce que la docstring du module interdisait. Invisible au diff et à la suite de checks ;
+  sorti en **exécutant le producteur et en lisant sa sortie en texte**. Fermé par construction : le
+  passage par un état unique rend la double appartenance non représentable.
+- ⚠️ **Un test négatif peut faire rougir le CHECK et non le module.** Le premier cas de sabotage
+  tuait le script *avant son bilan* (2ᵉ des trois faux verts, §24). Correctif dans le **check**, pas
+  dans le module : `axe()` et `_balayage()` transforment une exception en **FAIL nommé**, avec un
+  état de repli hors vocabulaire pour qu'aucun assert ne puisse être satisfait par accident.
+- ⚠️ **Un grep d'interdit lit sa propre énonciation.** §10 cherchait `superseded_by`, `FIELD_PROFILES`,
+  `actualite_bloquante` dans `actualite.py` — et les trouvait dans sa **docstring**, qui les nomme
+  précisément pour les interdire : 4 FAIL sur du code conforme. Le check dépouille désormais la
+  docstring avant de greper, et vérifie **en positif** qu'elle porte bien les interdits.
+- 📌 **`evenement` reste une classe VIDE DÉCLARÉE — la capacité 3 ne l'a pas remplie**, contrairement
+  à ce que ce fichier annonçait. Re-mesuré en base le 2026-09-07 : **66 `mesure` / 68
+  `interpretation` / 0 `evenement`**, inchangé. C'est une erreur de *prédiction*, pas une omission
+  d'exécution : l'axe ne fabrique aucune entry, et `material_events` *signale* sans jamais écrire
+  (#49). ⚠️ Ne pas le « corriger » en ajoutant un champ `nature` au contrat C1.
+
+---
+
 ## MàJ 2026-09-09 — lot de MESURE : la capacité 5 réfutée une seconde fois, et remplacée
 
 **Aucune écriture de code produit. Aucune migration. Dépense de modèle : 0,003 $.** Ce lot n'a rien
