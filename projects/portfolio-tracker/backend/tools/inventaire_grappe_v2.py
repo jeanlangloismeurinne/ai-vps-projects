@@ -90,14 +90,26 @@ def check(label: str, cond: bool, detail: str = "") -> None:
         print(f"  FAIL {label} {detail}")
 
 
-def _titre(n: int, texte: str) -> None:
+def _titre(n: int | str, texte: str) -> None:
     print(f"\n{'─' * 78}\n§{n} — {texte}\n")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # §1 — la grappe, DÉRIVÉE des migrations qui la produisent
 # ══════════════════════════════════════════════════════════════════════════════
-_CREATE = re.compile(r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)", re.I)
+# ⚠️ Le schéma est CAPTURÉ, pas ignoré. La 1ʳᵉ version s'arrêtait au 1ᵉʳ identifiant, donc
+# `CREATE TABLE archive_v2.liens_entrants` rendait la table « archive_v2 » et
+# `CREATE TABLE public.question_coverage` rendait la table « public » — deux noms de schéma pris
+# pour des tables, qui partaient ensuite en options `-t` de `pg_dump`.
+_CREATE = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"
+    r"(?:(?P<schema>[a-z_][a-z0-9_]*)\.)?(?P<table>[a-z_][a-z0-9_]*)", re.I)
+
+# Une migration qui ARCHIVE la grappe n'est pas une migration qui la CRÉE. Sans ce filtre, la 036
+# — qui recrée les 15 tables depuis un dump et s'appelle `036_v2_…` — se donnait en entrée à la
+# dérivation qui la produit : le générateur fabriquait la liste qu'il lisait. Le discriminant est
+# le CONTENU (« cette migration déplace-t-elle vers l'archive ? »), pas un numéro écrit à la main.
+_ARCHIVE = re.compile(r"SET\s+SCHEMA\s+archive_v2", re.I)
 
 
 def grappe_v2() -> tuple[list[str], dict[str, str]]:
@@ -105,11 +117,18 @@ def grappe_v2() -> tuple[list[str], dict[str, str]]:
 
     Le nom du fichier est le discriminant, pas son contenu : c'est ce qui rend la dérivation
     stable quand une migration V2 se contente d'ALTER une table existante (027-029, 034, 035).
+    Deux exclusions, toutes deux dérivées : les tables d'un autre schéma que `public` (l'archive
+    n'est pas la grappe) et les migrations d'archivage (elles recréent, elles n'introduisent pas).
     """
     tables: dict[str, str] = {}
     for f in sorted(MIGRATIONS.glob("*_v2_*.sql")):
-        for nom in _CREATE.findall(f.read_text(encoding="utf-8")):
-            tables.setdefault(nom.lower(), f.name)
+        source = f.read_text(encoding="utf-8")
+        if _ARCHIVE.search(source):
+            continue
+        for m in _CREATE.finditer(source):
+            if (m["schema"] or "public").lower() != "public":
+                continue
+            tables.setdefault(m["table"].lower(), f.name)
     return sorted(tables), tables
 
 
@@ -369,6 +388,41 @@ async def main() -> int:
                   f"archivage ne serait pas comparable")
             check("[8] RVMD porte bien ses 13 entries déterministes AVANT archivage",
                   rvmd == 13, f"→ {rvmd}")
+
+            # ── §8bis — les VUES adossées à la grappe ───────────────────────────
+            # ⚠️ AJOUTÉE le 2026-09-10, après coup : §3 ne mesurait que les arêtes de clef
+            # étrangère, et une vue n'en est pas une. Elle dépend de la table par OID — donc
+            # `ALTER TABLE … SET SCHEMA` la laisse dans `public` en la faisant pointer, en
+            # SILENCE, sur la table archivée. La vue continue de répondre, sur un corpus gelé
+            # pour toujours. C'est `feedback_controle_au_point_de_lecture` : le point de
+            # lecture n'est pas celui qu'on a migré.
+            _titre("8bis", "vues adossées à la grappe — la dépendance que §3 ne voit pas")
+            vues = await conn.fetch("""
+                SELECT DISTINCT v.relname AS vue, t.relname AS source
+                  FROM pg_depend d
+                  JOIN pg_rewrite r ON r.oid = d.objid
+                  JOIN pg_class v ON v.oid = r.ev_class
+                  JOIN pg_class t ON t.oid = d.refobjid
+                 WHERE d.classid = 'pg_rewrite'::regclass
+                   AND d.refclassid = 'pg_class'::regclass
+                   AND v.relkind = 'v' AND t.relkind = 'r' AND v.relname <> t.relname
+                   AND t.relname = ANY($1)
+                 ORDER BY 1, 2
+            """, tables)
+            a_recreer = []
+            for v in vues:
+                corps = await conn.fetchval("SELECT pg_get_viewdef($1::regclass, true)", v["vue"])
+                nommees = sorted(c for c in COLONNES_MORTES + ["covers"]
+                                 if re.search(rf"\b{c}\b", corps))
+                a_recreer.append(v["vue"])
+                print(f"  {v['vue']} → {v['source']}")
+                if nommees:
+                    print(f"      ⚠ nomme {nommees} — la vue doit être RECRÉÉE par la 036, sinon\n"
+                          f"        le DROP COLUMN échoue (dépendance) ou la vue sert l'archive.")
+            check("[8bis] aucune vue n'est adossée à la grappe sans être recréée par la 036",
+                  not a_recreer,
+                  f"→ {a_recreer} — ROUGE ATTENDU avant la 036 : elle doit les DROP puis les "
+                  f"recréer sur les tables neuves")
 
             # ── §9 — la surface de code que la 036 oblige à toucher ─────────────
             _titre(9, "surface de code nommant une colonne supprimée — le vrai coût du lot")
