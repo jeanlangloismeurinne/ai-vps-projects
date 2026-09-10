@@ -1,0 +1,477 @@
+# Les deux frameworks pilotes et leurs 13 questions — DÉTENTEUR UNIQUE (chantier v3, lot 2).
+#
+# POURQUOI CE FICHIER N'EST PAS DU PYTHON. L'ordre imposé du chantier est UX → agent → données :
+# les questions se dérivent d'une méthodologie (Greenwald, Porter), jamais de ce que la base
+# contient déjà. En Python, rien n'empêcherait d'écrire `ingredients_requis` par compréhension sur
+# `MVDD_SPEC` ou sur les postes EDGAR — et le test de couverture mesurerait alors sa propre
+# constante (4ᵉ faux vert, `feedback_test_negatif_trois_faux_verts`). En YAML, les questions sont
+# du texte inerte : la seule façon de les faire coïncider avec le corpus est de les écrire à la
+# main, ce qui se lit dans le diff.
+#
+# RÈGLE D'ÉNONCÉ (§2.3) — une question se pose en SUBSTANCE ÉCONOMIQUE, jamais en artefact
+# comptable. « Le capital employé rapporte-t-il plus que son coût ? » traverse les secteurs ;
+# « quel est le ROIC ? » ne traverse pas une biotech. La même règle s'applique aux
+# `ingredients_requis` : ils nomment ce dont la question a BESOIN, jamais une entry du corpus.
+# Un ingrédient qui nommerait une entry (« #33 », « notes annexes NVDA ») écrirait le corrigé.
+#
+# ⚠️ Ce fichier ne contient AUCUN seuil de couverture et AUCUN compte d'orphelines. La couverture
+# est un RÉSULTAT mesuré par `tools/couverture_frameworks.py`, pas un objectif inscrit ici.
+#
+# Contrat qui le valide : `app/contracts/framework_definition_schema.py` (strict, extra interdit).
+# Gardé par `checks/check_frameworks_definitions.py` + `checks/negatif_frameworks_definitions.sh`.
+
+schema_version: "v3.0.0"
+
+archetypes:
+  - rentable
+  - pre_revenus
+  - financiere
+
+frameworks:
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  - id: qualite_financiere
+    libelle: Qualité financière
+    etape_benchmark: 5
+    methodologie: >-
+      Greenwald — earnings quality et Earnings Power Value. La qualité d'un business se lit à la
+      relation entre le capital qu'il immobilise, le rendement qu'il en tire, et la part de ce
+      rendement qui devient du cash disponible. Les niveaux comptables ne disent rien seuls ; ce
+      sont les relations et leur persistance qui informent.
+    nature_dominante: mesure
+    questions:
+
+      - id: qf_1
+        enonce: Le capital employé rapporte-t-il durablement plus que son coût ?
+        chemin_indexation: qualite_financiere.rendement_du_capital
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [cree_de_la_valeur, a_l_equilibre, detruit_de_la_valeur]
+        ingredients_requis:
+          - id: resultat_operationnel_apres_impot
+            libelle: Résultat d'exploitation après impôt, normalisé des éléments non récurrents
+            essentiel: true
+          - id: capital_employe
+            libelle: Capital immobilisé dans l'exploitation — actifs productifs et besoin en fonds de roulement, hors trésorerie excédentaire
+            essentiel: true
+          - id: taux_imposition_effectif
+            libelle: Taux d'imposition réellement supporté sur le résultat d'exploitation
+            essentiel: false
+          - id: cout_du_capital
+            libelle: Coût moyen des ressources qui financent ce capital — rémunération exigée par les créanciers et par les actionnaires
+            essentiel: true
+          - id: historique_cinq_exercices
+            libelle: La même relation observée sur au moins cinq exercices consécutifs
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Rendement du capital employé comparé au coût moyen pondéré des ressources, sur 5 ans
+          pre_revenus:
+            mode: sans_objet
+            motif_gabarit: >-
+              Sans exploitation qui immobilise du capital productif, la question n'a pas d'objet.
+              Le capital levé finance un programme, il ne tourne pas.
+            aucun_substitut: true
+          financiere:
+            mode: variable
+            variable: Rendement des fonds propres réglementaires comparé au coût des fonds propres
+
+      - id: qf_2
+        enonce: Le résultat comptable se transforme-t-il en cash ?
+        chemin_indexation: qualite_financiere.conversion_en_cash
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [conversion_forte, conversion_partielle, conversion_absente]
+        ingredients_requis:
+          - id: resultat_net
+            libelle: Résultat net de l'exercice
+            essentiel: true
+          - id: tresorerie_generee_par_exploitation
+            libelle: Trésorerie effectivement générée par l'exploitation sur le même exercice
+            essentiel: true
+          - id: variation_besoin_fonds_roulement
+            libelle: Variation du besoin en fonds de roulement — ce que la croissance immobilise en stocks et en créances
+            essentiel: false
+          - id: charges_sans_decaissement
+            libelle: Charges qui n'ont donné lieu à aucune sortie de trésorerie — amortissements, rémunération en actions, provisions
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Part du résultat net retrouvée en trésorerie d'exploitation, moyenne sur 3 ans
+          pre_revenus:
+            mode: sans_objet
+            motif_gabarit: >-
+              Un résultat structurellement négatif ne se « convertit » pas. La question devient
+              celle de la consommation de trésorerie, portée par une autre question.
+            substitut_question_id: qf_7
+          financiere:
+            mode: variable
+            variable: Part du résultat retrouvée en trésorerie, retraitée des variations de provisions techniques
+
+      - id: qf_3
+        enonce: La croissance coûte-t-elle du capital, et combien par point de croissance ?
+        chemin_indexation: qualite_financiere.cout_de_la_croissance
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [croissance_peu_capitalistique, croissance_capitalistique, croissance_destructrice]
+        ingredients_requis:
+          - id: croissance_activite_par_exercice
+            libelle: Progression de l'activité, exercice par exercice
+            essentiel: true
+          - id: investissement_de_maintien
+            libelle: Part de l'investissement nécessaire au seul maintien de la capacité existante
+            essentiel: true
+          - id: investissement_de_croissance
+            libelle: Part de l'investissement engagée pour accroître la capacité
+            essentiel: true
+          - id: variation_capital_employe
+            libelle: Variation du capital immobilisé dans l'exploitation sur la période de croissance
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Capital supplémentaire immobilisé par point de croissance de l'activité
+          pre_revenus:
+            mode: sans_objet
+            motif_gabarit: >-
+              Sans base d'activité, le rapport entre capital engagé et croissance n'est pas
+              défini : tout le capital est de la croissance.
+            aucun_substitut: true
+          financiere:
+            mode: variable
+            variable: Fonds propres réglementaires supplémentaires exigés par point de croissance des encours
+
+      - id: qf_4
+        enonce: La structure de financement contraint-elle les décisions d'exploitation ?
+        chemin_indexation: qualite_financiere.contrainte_de_financement
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [aucune_contrainte, contrainte_moderee, contrainte_forte]
+        ingredients_requis:
+          - id: endettement_brut_et_net
+            libelle: Endettement financier, brut et net de trésorerie
+            essentiel: true
+          - id: echeancier_de_la_dette
+            libelle: Répartition dans le temps des remboursements exigibles
+            essentiel: true
+          - id: clauses_de_sauvegarde
+            libelle: Engagements contractuels pris envers les prêteurs, et les seuils qui les déclenchent
+            essentiel: true
+          - id: lignes_de_credit_non_tirees
+            libelle: Capacité de financement disponible mais non utilisée
+            essentiel: false
+          - id: couverture_des_interets
+            libelle: Rapport entre le résultat d'exploitation et la charge d'intérêts
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Endettement net rapporté à la capacité bénéficiaire, et marge disponible avant déclenchement des clauses
+          pre_revenus:
+            mode: variable
+            variable: Dilution attendue et clauses attachées aux instruments convertibles
+          financiere:
+            mode: variable
+            variable: Ratios prudentiels et marge au-dessus des exigences réglementaires
+
+      - id: qf_5
+        enonce: Le rendement observé est-il stable, en amélioration, ou en érosion sur cinq ans ou plus ?
+        chemin_indexation: qualite_financiere.trajectoire_du_rendement
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [en_amelioration, stable, en_erosion]
+        ingredients_requis:
+          - id: serie_longue_du_rendement
+            libelle: Le rendement du capital observé sur au moins cinq exercices consécutifs
+            essentiel: true
+          - id: decomposition_marge_rotation
+            libelle: Décomposition du rendement entre marge dégagée et rotation du capital
+            essentiel: true
+          - id: comparaison_sectorielle
+            libelle: Le même rendement chez des entreprises comparables, sur la même période
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Pente du rendement du capital sur 5 ans, décomposée marge × rotation
+          pre_revenus:
+            mode: sans_objet
+            motif_gabarit: >-
+              Aucune série de rendement n'existe : la trajectoire à observer est celle de
+              l'avancement du programme, pas celle d'un rendement.
+            aucun_substitut: true
+          financiere:
+            mode: variable
+            variable: Pente du rendement des fonds propres sur 5 ans, retraitée du levier réglementaire
+
+      - id: qf_6
+        enonce: Quelle part du résultat relève de choix discrétionnaires plutôt que de la performance économique ?
+        chemin_indexation: qualite_financiere.discretion_comptable
+        nature_attendue: interpretation
+        plancher_tier: B+
+        actualite_bloquante: false
+        sens_admis: [part_faible, part_significative, part_dominante]
+        ingredients_requis:
+          - id: provisions_et_depreciations
+            libelle: Provisions constituées ou reprises, et dépréciations d'actifs, avec leur justification
+            essentiel: true
+          - id: politique_de_capitalisation
+            libelle: Dépenses portées à l'actif plutôt qu'en charges, et la règle qui décide du partage
+            essentiel: true
+          - id: ecart_publie_ajuste
+            libelle: Écart entre le résultat publié et le résultat présenté comme ajusté, poste par poste
+            essentiel: true
+          - id: elements_non_recurrents
+            libelle: Éléments présentés comme exceptionnels, et leur récurrence effective
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Part du résultat expliquée par des reprises de provisions, des capitalisations et des retraitements
+          pre_revenus:
+            mode: variable
+            variable: Traitement des dépenses de développement et des paiements d'étape
+          financiere:
+            mode: variable
+            variable: Part du résultat expliquée par la dotation ou la reprise du coût du risque
+
+      - id: qf_7
+        enonce: Combien de temps l'entreprise peut-elle tenir sans accès au marché des capitaux ?
+        chemin_indexation: qualite_financiere.autonomie_de_financement
+        nature_attendue: mesure
+        plancher_tier: A
+        actualite_bloquante: true
+        sens_admis: [autonomie_longue, autonomie_limitee, autonomie_critique]
+        ingredients_requis:
+          - id: tresorerie_disponible
+            libelle: Trésorerie et placements immédiatement mobilisables
+            essentiel: true
+          - id: consommation_de_tresorerie_recente
+            libelle: Trésorerie consommée ou générée sur les quatre derniers trimestres
+            essentiel: true
+          - id: charges_fixes_decaissables
+            libelle: Charges qui devront être décaissées quoi qu'il arrive sur les douze prochains mois
+            essentiel: true
+          - id: echeances_a_douze_mois
+            libelle: Dettes exigibles dans les douze prochains mois
+            essentiel: true
+          - id: lignes_de_credit_non_tirees
+            libelle: Capacité de financement disponible mais non utilisée
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Nombre de mois de charges couverts par la trésorerie nette augmentée du cash généré
+          pre_revenus:
+            mode: variable
+            variable: Trésorerie rapportée à la consommation mensuelle, et positionnée par rapport au prochain jalon clinique
+          financiere:
+            mode: sans_objet
+            motif_gabarit: >-
+              L'accès au marché des capitaux fait partie du modèle d'exploitation lui-même ; la
+              question se pose en termes de liquidité réglementaire, pas d'autonomie.
+            substitut_question_id: qf_4
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  - id: defendabilite
+    libelle: Défendabilité / moat
+    etape_benchmark: 4
+    methodologie: >-
+      Porter / Morningstar. Un avantage concurrentiel n'existe que s'il a une source nommée, une
+      preuve observable et une trajectoire. Un moat affirmé sans preuve est une opinion.
+    nature_dominante: interpretation
+    questions:
+
+      - id: mo_1
+        enonce: Qu'est-ce qui empêche concrètement un concurrent de capter ce profit ?
+        chemin_indexation: defendabilite.source_de_la_barriere
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Sur un champ d'interprétation, un dépôt réglementaire est du boilerplate juridique malgré
+          son tier A (convention #50). Le desserrage est DÉCLARÉ, jamais tacite, et n'admet
+          personne de nouveau sans passage par le registre nominatif des sources (#52).
+        actualite_bloquante: false
+        sens_admis: [barriere_structurelle, barriere_contestable, aucune_barriere]
+        ingredients_requis:
+          - id: mecanisme_de_captation
+            libelle: Le mécanisme précis par lequel le profit est retenu — ce qu'un concurrent devrait reproduire pour le capter
+            essentiel: true
+          - id: cout_de_replication
+            libelle: Ce qu'il en coûterait à un entrant pour reproduire ce mécanisme, en argent et en temps
+            essentiel: true
+          - id: tentatives_de_contournement_observees
+            libelle: Tentatives réelles de concurrents pour contourner la barrière, et leur issue
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Nature de la barrière — coûts de transfert, effets de réseau, avantage de coût, actif incorporel
+          pre_revenus:
+            mode: variable
+            variable: Exclusivité réglementaire et portefeuille de brevets, avec leur durée résiduelle
+          financiere:
+            mode: variable
+            variable: Coût de collecte des ressources et coûts de transfert des clients
+
+      - id: mo_2
+        enonce: Quelle preuve observable soutient cette barrière ?
+        chemin_indexation: defendabilite.preuve_observable
+        nature_attendue: mesure
+        plancher_tier: B+
+        actualite_bloquante: false
+        sens_admis: [preuve_directe, preuve_indirecte, aucune_preuve]
+        ingredients_requis:
+          - id: marges_relatives_aux_pairs
+            libelle: Niveau de marge comparé à celui d'entreprises comparables, à activité équivalente
+            essentiel: true
+          - id: evolution_des_parts_de_marche
+            libelle: Évolution de la part de marché sur plusieurs périodes
+            essentiel: true
+          - id: retention_de_la_clientele
+            libelle: Part de la clientèle conservée d'une période à l'autre, et valeur conservée
+            essentiel: false
+          - id: cout_d_acquisition_compare
+            libelle: Coût d'acquisition d'un client comparé à celui des concurrents
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Rétention nette, part de marché relative et prime de marge face aux pairs
+          pre_revenus:
+            mode: variable
+            variable: Durée de vie résiduelle des brevets et barrière de réplication clinique
+          financiere:
+            mode: variable
+            variable: Coût des ressources collectées comparé aux pairs et attrition de la clientèle
+
+      - id: mo_3
+        enonce: La barrière s'élargit-elle ou s'érode-t-elle, et sur quel signal le voit-on ?
+        chemin_indexation: defendabilite.trajectoire_de_la_barriere
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Même desserrage déclaré que mo_1 : la trajectoire d'une barrière se lit dans des
+          observations de terrain qu'aucun dépôt réglementaire ne porte.
+        actualite_bloquante: true
+        sens_admis: [en_elargissement, stable, en_erosion]
+        ingredients_requis:
+          - id: signal_de_trajectoire_nomme
+            libelle: L'indicateur précis sur lequel l'élargissement ou l'érosion se lirait en premier
+            essentiel: true
+          - id: serie_du_signal
+            libelle: Ce même indicateur observé sur plusieurs périodes successives
+            essentiel: true
+          - id: mouvements_concurrents_recents
+            libelle: Entrées, sorties et repositionnements de concurrents sur la période récente
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Pente du signal retenu, et son écart avec la pente sectorielle
+          pre_revenus:
+            mode: variable
+            variable: Avancement des programmes concurrents vers le même usage thérapeutique
+          financiere:
+            mode: variable
+            variable: Évolution de l'écart de coût des ressources face aux pairs
+
+      - id: mo_4
+        enonce: Combien de temps la barrière tient-elle si rien ne change, et quelle classe de référence l'ancre ?
+        chemin_indexation: defendabilite.duree_de_la_barriere
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Même desserrage déclaré que mo_1. La durée d'une barrière est un jugement ancré, pas une
+          donnée déposée.
+        actualite_bloquante: false
+        sens_admis: [duree_longue, duree_moyenne, duree_courte]
+        ingredients_requis:
+          - id: classe_de_reference
+            libelle: La population d'entreprises comparables dont la durée observée sert d'ancre — obligatoire, une durée sans ancre est une opinion chiffrée
+            essentiel: true
+          - id: duree_observee_dans_la_classe
+            libelle: Durée pendant laquelle des barrières de même nature ont tenu dans cette population
+            essentiel: true
+          - id: echeances_contractuelles_ou_legales
+            libelle: Dates auxquelles une protection contractuelle ou légale s'éteint
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Durée retenue, ancrée sur la persistance observée des rendements excédentaires dans la classe de référence
+          pre_revenus:
+            mode: variable
+            variable: Durée résiduelle de l'exclusivité, ancrée sur les taux d'érosion observés après perte d'exclusivité
+          financiere:
+            mode: variable
+            variable: Durée retenue, ancrée sur la stabilité observée des positions de dépôts
+
+      - id: mo_5
+        enonce: Qu'est-ce qui détruirait cette barrière, et ce vecteur est-il déjà en mouvement ?
+        chemin_indexation: defendabilite.vecteur_de_destruction
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Même desserrage déclaré que mo_1. Une pré-mortem se nourrit d'observations de terrain,
+          jamais du document où l'entreprise décrit ses propres risques.
+        actualite_bloquante: true
+        sens_admis: [vecteur_en_mouvement, vecteur_latent, aucun_vecteur_identifie]
+        ingredients_requis:
+          - id: vecteur_nomme
+            libelle: Le scénario précis qui ferait disparaître la barrière — nommé, pas une liste de risques génériques
+            essentiel: true
+          - id: signal_precurseur
+            libelle: Ce qu'on observerait en premier si ce scénario était déjà en train de se réaliser
+            essentiel: true
+          - id: etat_du_signal_precurseur
+            libelle: L'état actuel de ce signal, mesuré et daté
+            essentiel: true
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Vecteur dominant — rupture technologique, intégration verticale d'un client, changement réglementaire
+          pre_revenus:
+            mode: variable
+            variable: Échec d'un essai, arrivée d'une modalité concurrente, décision réglementaire défavorable
+          financiere:
+            mode: variable
+            variable: Changement d'exigence prudentielle ou désintermédiation de la relation client
+
+      - id: mo_6
+        enonce: Le pouvoir de fixation des prix est-il exercé, et supporté par le client ?
+        chemin_indexation: defendabilite.pouvoir_de_prix
+        nature_attendue: mesure
+        plancher_tier: B+
+        actualite_bloquante: false
+        sens_admis: [pouvoir_exerce_et_absorbe, pouvoir_exerce_avec_resistance, pouvoir_absent]
+        ingredients_requis:
+          - id: evolution_des_prix_pratiques
+            libelle: Évolution des prix effectivement pratiqués sur plusieurs périodes
+            essentiel: true
+          - id: reaction_des_volumes
+            libelle: Comment les volumes ont réagi à ces mouvements de prix
+            essentiel: true
+          - id: prime_de_prix_face_aux_alternatives
+            libelle: Écart de prix soutenu face aux solutions alternatives disponibles
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Hausse de prix passée sans perte de volume, et prime soutenue face aux alternatives
+          pre_revenus:
+            mode: sans_objet
+            motif_gabarit: >-
+              Aucun prix n'est encore pratiqué. Le pouvoir de prix futur est une hypothèse de
+              valorisation, pas une observation de défendabilité.
+            aucun_substitut: true
+          financiere:
+            mode: variable
+            variable: Écart soutenu entre le taux servi et le taux de marché, sans fuite des encours

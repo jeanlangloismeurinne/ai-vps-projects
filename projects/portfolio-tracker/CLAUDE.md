@@ -787,6 +787,56 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     Détail : `checks/check_framework_contract.py` §6/§7/§9 et `checks/negatif_framework_contract.sh`
     (**20 mutations, 20 détectées**, chacune rouge sur son assert nommé et atteignant son bilan).
 
+57. **Re-vocabulariser une rigidité ne la retire pas : elle se déplace avec son nouveau nom (V3,
+    audit du 2026-09-10)** — `covers TEXT[]` sur `knowledge_entries` énumérait 19 chemins MVDD ; le
+    correctif écrit la veille remplaçait ce vocabulaire par `question_id.ingredient_id`. **Même
+    maladie, vocabulaire neuf** : une colonne du corpus qui nomme des concepts appartenant à une
+    méthodologie signifie qu'**en changer invalide le corpus**. Le diagnostic « c'est le VOCABULAIRE
+    qui est mauvais, pas le mécanisme » était le piège : il rend le remède plausible et laisse le
+    défaut en place. Le bon discriminant n'est pas *quels mots* la colonne contient, c'est **de quoi
+    la valeur est une propriété** — et la réponse est déjà dans #50/#53 : la couverture est une
+    propriété de la **RELATION** entry ↔ question, exactement comme l'actualité est une propriété de
+    la relation fait ↔ ancre. Un axe relationnel ne se stocke pas sur l'un des deux termes. D'où
+    `question_coverage(framework_id, framework_version, question_id, ingredient_id, entry_id)` :
+    l'entry redevient sans vocabulaire, une FK réelle devient possible sur `entry_id`, retirer un
+    framework = supprimer ses lignes de lien, et « aucune couverture » cesse d'être un cas
+    particulier pour devenir le défaut. ⚠️ **La version n'est pas décorative** : sans elle, réécrire
+    l'énoncé d'une question rend rétroactivement « couvertes » des entries collectées pour une autre
+    — le mode de panne de `feedback_controle_au_point_de_lecture`. ⚠️ Corollaire de méthode : ce
+    défaut a été trouvé en auditant **son propre correctif de la veille** contre un principe énoncé
+    à voix haute (« la base accepte n'importe quel framework »). Un principe qu'on n'a pas confronté
+    au diff qu'on vient d'écrire ne garde rien.
+
+58. **Ce qu'on collecte se dérive de ce qu'on demande, jamais l'inverse — et l'ordre du COÛT n'est
+    pas l'ordre de l'AUTORITÉ (V3, audit du 2026-09-10)** : `edgar_feed.POSTES` est une liste de
+    **8** métriques écrites à la main, et le flux gravait `feeds déterministes → frameworks lancés`.
+    Mesuré : ces 8 postes servent **4** des **33** ingrédients essentiels des 13 questions, **3** ne
+    répondent à aucune, et les **12** ingrédients des questions `mo_*` n'ont aucune source **sans que
+    rien ne le dise**. La collecte précédait la question. ⚠️ Le piège en corrigeant : croire que
+    `feedback_frontiere_gratuite_avant_depense_modele` (« le déterministe gratuit d'abord ») impose
+    cet ordre — **il n'impose que l'ordre du coût**. Un **traducteur** peut passer devant sans rien
+    dépenser de plus, parce qu'il ne collecte pas : il **planifie**. D'où la chaîne à deux agents
+    (spec §3.6) : traducteur (questions → plan par ticker : métrique, source, **ancre**) puis
+    collecteur (une ligne de plan → EDGAR / web / autre). ⚠️ Deux agents et non un, parce qu'une
+    question sans réponse doit rester diagnosticable : « mauvais plan ou mauvaise collecte ? » n'a de
+    sens que si le **plan est persisté**. ⚠️ Le collecteur **ne connaît pas la question** : c'est ce
+    qui rend #57 vrai par construction du flux, et c'est aussi ce qui fait de la couverture un
+    **sous-produit déterministe du dispatch** plutôt qu'une prétention de modèle. ⚠️ Un ingrédient
+    que nulle source ne produit sort en **mandat nommé**, jamais en rien — trois états, pas deux
+    (#44/#54) ; un plan qui **omet** un ingrédient essentiel est refusé.
+
+59. **La valeur inégale d'une même source selon l'émetteur est de l'ACTUALITÉ, pas de la fiabilité
+    (V3, 2026-09-10)** — « le 10-K de RVMD vaut moins que celui de MSFT » est vrai et le remède
+    naturel est faux : dégrader le tier de la source aurait inscrit une propriété d'**émetteur** dans
+    un axe de **source** (#50), et l'aurait figée hors de portée du recalcul (#53). Ce qui diffère
+    n'est pas la fiabilité du document, c'est **l'ancre** : RVMD a des actualités récentes qui la
+    déplacent, donc le même document est plus **périmé** relativement à elle. Le traducteur **nomme
+    l'ancre** par ingrédient ; l'actualité reste calculée à la lecture. ⚠️ Corollaire : ni le
+    traducteur ni le curateur n'ont de levier sur `plancher_tier` / `nature_attendue` / `essentiel`.
+    `curator.py` autorise aujourd'hui le modèle à **RESSERRER** `champs_requis` / `tier_plancher`
+    (commenté « le DERNIER levier du modèle sur le verdict ») — à retirer : un resserrement
+    discrétionnaire est **une question posée par le modèle**, pas par le framework.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

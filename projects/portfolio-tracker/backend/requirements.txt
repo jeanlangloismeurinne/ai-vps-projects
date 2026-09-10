@@ -10,3 +10,8 @@ requests==2.32.3
 slack-sdk==3.33.0
 aiohttp==3.13.3
 redis==5.0.8
+# Le référentiel de frameworks est un fichier de DONNÉES INERTES (`app/frameworks/frameworks.yaml`).
+# PyYAML était déjà dans l'image comme dépendance transitive de yfinance ; l'épingler
+# explicitement, parce qu'un chargeur load-bearing adossé à une transitive casse le jour où la
+# transitive s'en va, et l'erreur se lit alors comme un bug du référentiel.
+PyYAML==6.0.3

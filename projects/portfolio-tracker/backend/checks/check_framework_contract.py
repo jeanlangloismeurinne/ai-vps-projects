@@ -570,10 +570,15 @@ check("le pont ne recopie pas la table des crans (il interroge son détenteur)",
 check("le pont ne ré-implémente pas « la plus ancienne citée » (il la délègue)",
       "etat_actualite_entry" in _src_pont and "min(" not in code_seul(_src_pont),
       "→ prendre la plus récente blanchirait la péremption")
-check("`load_frameworks` n'est PAS écrit au lot 1 (les 13 questions sont des données du lot 2)",
-      "def load_frameworks" not in _src_pont,
-      "→ les écrire ici induirait le contrat de ce que le code fera, et trancherait l'arbitrage T1 "
-      "par accident")
+# Cet assert était inversé au lot 1 (« `load_frameworks` n'est PAS écrit ») : c'était une vanne, et
+# elle a tenu — les 13 questions n'ont été écrites qu'au lot 2, comme données. Elle se retourne ici
+# plutôt que de disparaître, parce que le mode de panne suivant est l'inverse du précédent : des
+# questions codées EN DUR dans le pont se dériveraient de ce que la base contient déjà.
+check("`load_frameworks` charge les questions depuis un fichier de DONNÉES, jamais du Python",
+      "def load_frameworks" in _src_pont and "yaml.safe_load" in _src_pont
+      and "MVDD_SPEC" not in code_seul(_src_pont),
+      "→ des questions écrites en Python pourraient se dériver de la grille de 19 ou des postes "
+      "EDGAR, et le test de couverture mesurerait alors sa propre constante")
 
 
 print("\n9. « chaque champ du contrat a SON PIXEL » (§8.1) — rendu EXÉCUTABLE")

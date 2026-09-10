@@ -25,21 +25,40 @@ CE QUE LE PONT VÉRIFIE, ET POURQUOI CHACUN EXISTE
 Un GET qui servirait la ligne stockée telle quelle servirait le verdict d'avant l'événement
 matériel — le faux vert que la capacité 4 a mis une journée à voir (#54).
 
-⚠️ `load_frameworks()` n'est PAS ici : les 13 questions sont des DONNÉES du lot 2. Les écrire
-maintenant induirait le contrat de ce que le code fera, et ferait passer le test d'acceptation §A
-sur des identifiants que le lot 2 n'a pas encore arbitrés (arbitrage T1 de §9.2, ouvert).
+`load_frameworks()` (lot 2) charge les 13 questions depuis `app/frameworks/frameworks.yaml`. Elles
+sont des DONNÉES INERTES, jamais du code : voir l'en-tête du YAML pour la raison — écrites en
+Python, elles pourraient se dériver de `MVDD_SPEC` ou des postes EDGAR, et le test de couverture
+mesurerait alors sa propre constante.
 """
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Optional
 
-from app.agents.v2.common import TIER_ORDER, _TIER_RANK
+import yaml
+from pydantic import ValidationError
+
+from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
 from app.contracts.framework_answer_schema import (
     FrameworkAnswer,
     FrameworkAnswerServie,
 )
+from app.contracts.framework_definition_schema import (
+    FRAMEWORK_DEFINITION_SCHEMA_VERSION,
+    FrameworksFile,
+)
 from app.knowledge.actualite import MaterialEventLookup, etat_actualite_entry
 from app.knowledge.synthesis_feed import derive_synthesis_reliability
+
+FRAMEWORKS_YAML = Path(__file__).resolve().parents[2] / "frameworks" / "frameworks.yaml"
+
+# Les clefs que le pont LIT dans un profil de question. Détenteur unique : `valider_pont_…` les
+# consomme par `profil.get(...)`, et un `.get` sur une clef mal orthographiée rend `None`, ce qui
+# SAUTE le contrôle au lieu de le faire échouer. Un contrôle qui ne s'exécute pas est un vert
+# (`feedback_check_degrade_en_sortant_a_zero`). `check_frameworks_definitions.py` vérifie que les
+# profils produits portent exactement ces clefs.
+CLEFS_PROFIL_LUES = ("plancher_tier", "nature_attendue")
 
 
 class FrameworkAnswerRefused(Exception):
@@ -47,6 +66,139 @@ class FrameworkAnswerRefused(Exception):
 
     Levée, jamais rendue en valeur : un refus qui se lit comme un résultat finit par être ignoré.
     """
+
+
+class FrameworkDefinitionRefused(Exception):
+    """Refus au CHARGEMENT — le fichier de définitions est formellement valide mais incohérent.
+
+    Distincte de `FrameworkAnswerRefused` : celle-ci dit que le référentiel est cassé, pas qu'une
+    réponse l'est. Elle doit faire échouer le démarrage, jamais dégrader silencieusement vers un
+    référentiel partiel — un framework à demi chargé rendrait `sans_objet` des questions qui
+    existent (#54, la complétude à trois états).
+    """
+
+
+def _valider_pont_definitions(fichier: FrameworksFile) -> None:
+    """Les invariants RELATIONNELS des définitions — ceux qu'un contrat d'objet ne peut pas voir.
+
+    Chacun garde un mode de panne qui se lit comme un succès :
+
+      G. deux questions de frameworks DIFFÉRENTS partageant un id. §6 fait des `framework_questions`
+         LE vocabulaire unique — deux `qf_1` et l'index désigne l'un pour l'autre ;
+      H. deux chemins d'indexation identiques entre frameworks. Même panne, côté `covers` ;
+      I. une question qui ne couvre pas exactement les archétypes déclarés. En trop : un archétype
+         inventé n'est jamais interrogé. En moins : la question est MUETTE sur cet archétype, et
+         l'agent tranchera seul — l'expérience du chantier dit qu'il fabrique une réponse plutôt
+         que de se taire (entry #190, §0.2) ;
+      J. un substitut qui ne résout pas, ou qui pointe sa propre question. Un hors-sujet qui se
+         cite lui-même republie la question qu'il vient de déclarer sans objet ;
+      K/L. `nature_attendue` et `plancher_tier` hors des vocabulaires DÉTENUS ailleurs
+         (`common.NATURES`, `common.TIER_ORDER`). Le contrat les répète en `Literal` pour
+         l'ergonomie ; c'est ici qu'on vérifie qu'ils n'ont pas divergé de leur détenteur (#46) ;
+      M. une version de schéma qui ne correspond pas au contrat qui vient de valider le fichier.
+    """
+    if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:
+        raise FrameworkDefinitionRefused(
+            f"[M] fichier en {fichier.schema_version}, contrat en "
+            f"{FRAMEWORK_DEFINITION_SCHEMA_VERSION}"
+        )
+
+    toutes = [(f, q) for f in fichier.frameworks for q in f.questions]
+
+    vus: dict[str, str] = {}
+    for f, q in toutes:
+        if q.id in vus:
+            raise FrameworkDefinitionRefused(
+                f"[G] la question `{q.id}` est déclarée par `{vus[q.id]}` ET par `{f.id}` — "
+                f"les question_id sont LE vocabulaire unique (§6), ils ne peuvent pas collisionner"
+            )
+        vus[q.id] = f.id
+
+    chemins: dict[str, str] = {}
+    for _f, q in toutes:
+        if q.chemin_indexation in chemins:
+            raise FrameworkDefinitionRefused(
+                f"[H] le chemin `{q.chemin_indexation}` est partagé par `{chemins[q.chemin_indexation]}` "
+                f"et `{q.id}` — l'index ne saurait plus laquelle des deux il fonde"
+            )
+        chemins[q.chemin_indexation] = q.id
+
+    attendus = set(fichier.archetypes)
+    for _f, q in toutes:
+        couverts = set(q.variables_par_archetype)
+        if couverts != attendus:
+            raise FrameworkDefinitionRefused(
+                f"[I] `{q.id}` couvre {sorted(couverts)} au lieu de {sorted(attendus)} — "
+                f"manquants : {sorted(attendus - couverts)}, inventés : {sorted(couverts - attendus)}"
+            )
+
+    for _f, q in toutes:
+        for archetype, va in q.variables_par_archetype.items():
+            cible = va.substitut_question_id
+            if cible is None:
+                continue
+            if cible == q.id:
+                raise FrameworkDefinitionRefused(
+                    f"[J] `{q.id}` ({archetype}) se cite elle-même comme substitut"
+                )
+            if cible not in vus:
+                raise FrameworkDefinitionRefused(
+                    f"[J] `{q.id}` ({archetype}) renvoie au substitut `{cible}`, qui n'existe pas"
+                )
+
+    for _f, q in toutes:
+        if q.nature_attendue not in NATURES:
+            raise FrameworkDefinitionRefused(
+                f"[K] `{q.id}` : nature `{q.nature_attendue}` hors du vocabulaire détenu par "
+                f"`common.NATURES` ({sorted(NATURES)})"
+            )
+        if q.plancher_tier not in TIER_ORDER:
+            raise FrameworkDefinitionRefused(
+                f"[L] `{q.id}` : plancher `{q.plancher_tier}` hors de `common.TIER_ORDER`"
+            )
+
+
+@lru_cache(maxsize=1)
+def load_frameworks(chemin: Optional[str] = None) -> FrameworksFile:
+    """Charge et VALIDE le référentiel. Lève plutôt que de rendre un référentiel partiel.
+
+    Le YAML est lu en `safe_load` : un fichier de données ne doit pas pouvoir instancier d'objet
+    Python. C'est la contrepartie du choix « données inertes » — l'inertie doit tenir au chargement,
+    pas seulement à l'écriture.
+    """
+    p = Path(chemin) if chemin else FRAMEWORKS_YAML
+    if not p.exists():
+        raise FrameworkDefinitionRefused(f"référentiel introuvable : {p}")
+    brut = yaml.safe_load(p.read_text(encoding="utf-8"))
+    try:
+        fichier = FrameworksFile.model_validate(brut)
+    except ValidationError as exc:
+        raise FrameworkDefinitionRefused(f"référentiel invalide ({p}) : {exc}") from exc
+    _valider_pont_definitions(fichier)
+    return fichier
+
+
+def question_profiles(fichier: Optional[FrameworksFile] = None) -> dict[str, dict[str, Any]]:
+    """Les profils à plat, dans la forme que `valider_pont_framework_answer` consomme.
+
+    ⚠️ Les clefs sont produites depuis `CLEFS_PROFIL_LUES` et depuis les attributs du contrat, pas
+    réécrites à la main : une clef mal orthographiée ici ferait sauter le contrôle D ou E côté pont
+    sans qu'aucun test ne rougisse.
+    """
+    fichier = fichier or load_frameworks()
+    profils: dict[str, dict[str, Any]] = {}
+    for f in fichier.frameworks:
+        for q in f.questions:
+            profil = {clef: getattr(q, clef) for clef in CLEFS_PROFIL_LUES}
+            profil.update({
+                "framework_id": f.id,
+                "chemin_indexation": q.chemin_indexation,
+                "actualite_bloquante": q.actualite_bloquante,
+                "sens_admis": list(q.sens_admis),
+                "ingredients_essentiels": [i.id for i in q.ingredients_requis if i.essentiel],
+            })
+            profils[q.id] = profil
+    return profils
 
 
 def _plus_faible(tiers: list[str]) -> str:

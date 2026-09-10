@@ -10,8 +10,12 @@
 #
 #   bash checks/run_all.sh
 #
-# ⚠️ Le montage `/contract_frozen` n'est pas optionnel : sans lui, 4 scripts sous-comptent en
-# sortant quand même à 0 (cf. checks/README.md).
+# ⚠️ Les deux montages ne sont pas optionnels :
+#   · `/contract_frozen` (= `roadmap/provenance-cards`) — sans lui, 4 scripts sous-comptent en
+#     sortant quand même à 0 (cf. checks/README.md) ;
+#   · `/roadmap` — `check_frameworks_definitions` §7 y confronte le référentiel aux tables §4.1.1 /
+#     §4.2.1 de la spec. La spec est PARSÉE, jamais recopiée dans le check : sans le montage, la
+#     section sort en ÉCHEC plutôt que de se sauter.
 cd "$(dirname "$0")/.." || exit 1
 IMG=$(docker inspect portfolio-backend --format '{{.Config.Image}}')
 total=0
@@ -36,6 +40,7 @@ for f in checks/check_*.py; do
 
   out=$(docker run --rm --network "$net" -v "$PWD:/app:ro" \
         -v "$PWD/../roadmap/provenance-cards:/contract_frozen:ro" \
+        -v "$PWD/../roadmap:/roadmap:ro" \
         -w /app -e PYTHONPATH=/app --env-file checks/env.checks "${extra[@]}" "$IMG" python "$f" 2>&1)
   rc=$?
 

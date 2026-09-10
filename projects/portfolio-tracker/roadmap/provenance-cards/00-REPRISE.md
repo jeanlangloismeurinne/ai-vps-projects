@@ -2,12 +2,12 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-09
+updated: 2026-09-10
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-09 : **1 949 assertions / 0 échec / 23 scripts**,
+  sur NVDA, MSFT et RVMD. État au 2026-09-10 : **1 988 assertions / 0 échec / 24 scripts**,
   migrations appliquées jusqu'à **035**, prochaine **036**.
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
@@ -45,13 +45,26 @@ Les faits mesurés qui l'ont ouverte (aucun n'est une opinion) :
 | Synthèses grounded sur RVMD | **0** (3 des 4 cibles vides) |
 | Entries sur `produits.unit_economics`, toute base confondue | **2** |
 
-**Ce que la v3 change** : `frameworks` + `framework_questions` en **base** (le vocabulaire cesse
-d'être une constante Python), `covers` devient une **clef étrangère** vers une question existante
-(l'écart « tag hors vocabulaire → écarté » devient impossible **par construction**), et chaque
-framework est **garanti par un manager** dont l'autorité s'exerce par 4 contrôles vérifiables
-(complétude · fondation · honnêteté de l'approximation · non-substitution). Son **renvoi** produit
-un **mandat de recherche exécutable** — ce qui ferme la boucle comité → collecte, aujourd'hui
-absente.
+**Ce que la v3 change** — ⚠️ **révisé le 2026-09-10, la version précédente de ce paragraphe est
+périmée sur deux points** (elle annonçait « `frameworks` + `framework_questions` en base » et
+« `covers` devient une clef étrangère ») :
+
+- le référentiel est un **fichier inerte versionné** (`app/frameworks/frameworks.yaml`), **pas des
+  tables** — une question dérivable par requête depuis le corpus ferait mesurer au test de
+  couverture sa propre constante (spec §5.2) ;
+- **`covers` ne devient pas une FK : elle DISPARAÎT de `knowledge_entries`** (audit du 2026-09-10,
+  écart V5). La couverture est une propriété de la **relation** entry ↔ question, comme l'actualité :
+  elle vit dans `question_coverage(framework_id, framework_version, question_id, ingredient_id,
+  entry_id)`. L'entry ne porte plus aucun mot de framework, donc changer de framework n'invalide
+  plus le corpus ;
+- **deux agents entre la question et l'entry** (spec §3.6) : un **traducteur** transforme les
+  questions universelles en un **plan de collecte** par ticker (métrique, source, ancre — RVMD et
+  MSFT ne cherchent pas la même chose au même endroit), un **collecteur** exécute chaque ligne via
+  EDGAR / web / futur connecteur. Le collecteur **ne connaît pas la question** ;
+- chaque framework est **garanti par un manager** dont l'autorité s'exerce par 4 contrôles
+  vérifiables (complétude · fondation · honnêteté de l'approximation · non-substitution). Son
+  **renvoi** produit un **mandat de recherche exécutable** — ce qui ferme la boucle comité →
+  collecte, aujourd'hui absente.
 
 **Deux pilotes**, choisis pour un contraste maximal de matière disponible :
 
@@ -113,17 +126,40 @@ les niche. `COLONNES_DENORMALISEES` est désormais le **détenteur unique** de l
 l'outil l'importe. Vérifié après recâblage : l'acceptation rend **exactement le même verdict
 qu'avant** (1 ok / 8 FAIL, mêmes motifs) — seul l'adressage a changé, pas l'exigence.
 
-### 🚦 Prochain pas — **lot 2 : les 2 pilotes et leurs 13 questions, comme DONNÉES**
+### ✅ Lot 2a — le référentiel **acquis le 2026-09-10**
 
-⚠️ **Trancher l'arbitrage T1 AVANT d'écrire quoi que ce soit** (spec §9.2, options A/B/C) :
-l'énoncé « les 26 orphelines tier A … ≥ 24/26 » fusionne **26 orphelines au total** et **16 tier A**.
-Option **A** (16/16 tier A, le reste nommé) est celle câblée par défaut dans l'outil. Tant qu'il
-n'est pas tranché, écrire les 13 questions le trancherait **par accident** — c'est pourquoi
-`load_frameworks()` n'a délibérément pas été écrit au lot 1 (un assert nommé le vérifie).
+Les 2 pilotes et leurs **13 questions** en **données inertes** (`app/frameworks/frameworks.yaml`),
+contrat strict `framework_definition_schema.py`, invariants relationnels G–M dans le pont (#37).
+`check_frameworks_definitions.py` **39 / 0** — dont **§5, la garde de l'ordre questions → données**
+(aucun énoncé, ingrédient ou gabarit ne nomme un ticker, une entry ou un poste EDGAR) et **§7, la
+confrontation spec ↔ référentiel** (la spec est **parsée**, jamais recopiée). Test négatif
+**22 / 22**, chaque mutation rouge sur son **assert nommé** et atteignant quand même son bilan.
+Suite **1 988 / 0**.
 
-Ce que le lot 2 doit fournir, et que le contrat attend déjà :
-`load_frameworks()` → `{framework_id: {"questions": [...]}}`, chaque question portant au minimum
-`plancher_tier` et `nature_attendue` (lus par les contrôles D et E du pont).
+**L'arbitrage T1 n'a pas été tranché : il a été DISSOUS** (spec §9.2). Il demandait « quel seuil
+d'orphelines rattacher ? » alors que la vraie question était « de quel droit le corpus est-il la
+cible ? ». Réponse : d'aucun (§0.6). Remplacé par **T1** (aucun ingrédient essentiel ni servi ni
+mandaté) + **T1bis** (il DOIT en manquer au moins un, **nommé** — `qf_1.cout_du_capital`) : une
+couverture à 100 % **fait échouer** le pilote, parce qu'elle prouverait la rétro-conception.
+
+### 🚦 Prochain pas — **lot 2b puis 2c** (audit des 2 principes rendu le 2026-09-10)
+
+L'audit de la spec complète a produit **10 écarts (V1–V10)**, dont deux structurants, tous deux
+consignés dans la spec :
+
+- **V5** — `covers` restait une rigidité de niveau framework, et la réécriture du 2026-09-10 l'avait
+  **aggravée** en la re-vocabularisant (`business_model.description` → `qf_1.capital_employe`) :
+  même maladie, vocabulaire neuf. → table de liaison versionnée (ci-dessus).
+- **V1** — le socle EDGAR collectait **avant et indépendamment de toute question** : `POSTES` est
+  une liste de **8** métriques écrites à la main qui servent **4** des **33** ingrédients essentiels,
+  3 postes ne répondent à rien, et les 12 ingrédients `mo_*` n'ont aucune source sans que rien ne le
+  dise. → `POSTES` devient **dérivé du plan de collecte** (spec §3.6).
+
+⚠️ **Piège de séquencement déjà identifié, à ne pas re-trouver à ses dépens** : l'archivage vide les
+tables que `check_edgar_feed` §12bis (`>= 50` faits socle) et `check_entry_nature` §7 (`== 13`
+entries déterministes RVMD) **lisent**. La tentation sera de baisser les planchers
+(`feedback_optional_schema_gate`). **Interdit.** Rejouer les **producteurs déterministes** juste
+après l'archivage — coût modèle nul, et ils repeuplent exactement ce que ces planchers mesurent.
 
 ⚠️ Mesureurs **versionnés**, jamais `/tmp` · bilan reconnaissable à sa **forme** (`grep -E` sur le
 motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés dans
@@ -135,10 +171,12 @@ motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés 
 |---|---|---|
 | 0 | ✅ **Ligne de base** (ci-dessus) — 2026-09-09 | — |
 | 1 | ✅ **Contrat** `FrameworkAnswer` + `FrameworkMandate`, pont relationnel **en Python** (#37), carte de provenance, écran niveau 3 en maquette — 2026-09-09 | — |
-| 2 | Les 2 pilotes et leurs 13 questions écrits **comme données** · analyste + manager sur `qualite_financiere` | — |
-| 3 | Le **vocabulaire unique** en base · FK depuis `covers` · backfill relu · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` | **036** |
-| 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par `search-worker` | 037 |
-| 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 038 |
+| 2a | ✅ **Le référentiel** — 13 questions en données inertes, 39/0, négatif 22/22 — 2026-09-10 | — |
+| 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
+| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (spec §3.6) · `POSTES` dérivé du plan · retrait du levier `RESSERRER` de `curator.py` | 036bis |
+| 3 | Analyste + manager sur `qualite_financiere` · `framework_answers` / `_mandates` / `_dispenses` en base · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **037** |
+| 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 038 |
+| 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 039 |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 
@@ -158,9 +196,23 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
   À rouvrir **seulement** si, le rangement fait, une approximation reste bloquée faute de méthode.
 - **Grille MVDD de 19 champs** · **`SYNTHESIS_TARGETS`** (sacs de mots-clefs français en dur) →
   supprimés au lot 3. **`DECLARED_NONBLOCKING_GAPS`** → devient une table clefée
-  `(ticker_id, question_id)` (violation #31 aujourd'hui : une dispense en source Python exige un
-  redéploiement pour adapter la grille à une entreprise).
+  `(ticker_id, framework_id, framework_version, question_id)` (violation #31 aujourd'hui : une
+  dispense en source Python exige un redéploiement pour adapter la grille à une entreprise ; et sans
+  la version, une dispense survit à la question qu'elle dispensait — écart V10).
 - **Hybridation RRF de la recherche** — reste **interdite** (mesurée dégradante, MRR 0,905 → 0,655).
+- **Le corpus en base comme point de départ** — **interdit** (spec §0.6, posé le 2026-09-10). Les
+  données en base sont l'**historique de recette** d'un système inachevé : utilisables pour
+  **éprouver**, jamais pour **concevoir**. Le système n'est en usage réel sur aucun périmètre, donc
+  **rien en base n'est un fait à préserver** — ni V0/V1, qui ne contraignent plus aucune décision
+  de modèle v3.
+- **Le modèle n'a aucun levier sur l'exigence** — `curator.py` peut aujourd'hui **RESSERRER**
+  `champs_requis` / `tier_plancher` (« le DERNIER levier du modèle sur le verdict »). Retiré au
+  lot 2c : sous le principe « c'est le framework qui dicte les questions », un resserrement
+  discrétionnaire est une question posée par le **modèle**.
+- **Dégrader le tier d'une source selon l'émetteur** (le 10-K de RVMD « vaut moins » que celui de
+  MSFT) — **refusé**. C'est de l'**actualité**, pas de la fiabilité : l'ancre de RVMD bouge, la
+  source ne devient pas moins fiable. Le traducteur **nomme l'ancre** ; l'actualité reste calculée
+  à la lecture (#53).
 
 ---
 
@@ -175,9 +227,11 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite hors-ligne : 1 949 assertions / 0 échec / 23 scripts** — une seule commande,
-  **`bash checks/run_all.sh`**. Il porte les invocations correctes : montage `/contract_frozen`
-  (sans lui 4 scripts sous-comptent en sortant à 0) et réseau `coolify` + `CHECK_DB_URL` pour
+- **Suite hors-ligne : 1 988 assertions / 0 échec / 24 scripts** — une seule commande,
+  **`bash checks/run_all.sh`**. Il porte les invocations correctes : montages `/contract_frozen`
+  (sans lui 4 scripts sous-comptent en sortant à 0) **et `/roadmap`** (sans lui
+  `check_frameworks_definitions` §7 ne peut plus confronter la spec au référentiel, et **sort en
+  échec** au lieu de se sauter), plus réseau `coolify` + `CHECK_DB_URL` pour
   `check_entry_nature` (§7) **et** `check_edgar_feed` (§12bis) — tous deux **sortent en échec** si
   le pré-requis manque, jamais un saut de section. ⚠️ **Ne pas le réécrire dans `/tmp`** : la
   version jetable sous-comptait 47 assertions en silence (`CHANTIER_OUTILLAGE_DEV.md` §27).
@@ -395,9 +449,14 @@ justes, c'est le *fait énoncé* qui était faux.
 > les étapes 4/5/6/8 du benchmark sont produites avec **zéro preuve indexable**) ; **3 chemins
 > jamais consommés**, dont le plus peuplé de la base ; RVMD (biotech pré-revenus) produit un ROIC
 > fabriqué, une « conversion FCF non définie », et **0 synthèse grounded**.
-> La v3 remplace la grille par des **frameworks stables à variables par entreprise** : le vocabulaire
-> passe en base (`frameworks` + `framework_questions`), `covers` devient une **clef étrangère** — le
-> tag hors vocabulaire devient impossible **par construction** — et chaque framework est garanti par
+> La v3 remplace la grille par des **frameworks stables à variables par entreprise** : le
+> référentiel est un **fichier inerte versionné** (`app/frameworks/frameworks.yaml`, **pas des
+> tables**), **`covers` DISPARAÎT de `knowledge_entries`** au profit d'une table de liaison
+> `question_coverage` portée par framework **et version** — l'entry ne porte plus aucun mot de
+> framework, donc en changer n'invalide plus le corpus. Entre la question et l'entry, **deux
+> agents** : un **traducteur** qui transforme les questions universelles en un **plan de collecte**
+> par ticker (métrique, source, ancre), un **collecteur** qui l'exécute sans jamais connaître la
+> question. Chaque framework est garanti par
 > un **manager** aux 4 contrôles vérifiables (complétude · fondation · **honnêteté de
 > l'approximation** · **non-substitution**), dont le **renvoi produit un mandat de recherche
 > exécutable**, ce qui ferme la boucle comité → collecte aujourd'hui absente. Deux pilotes :
@@ -407,14 +466,19 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **PROCHAIN PAS = lot 0, la ligne de base, et rien d'autre avant.** Versionner
-> `tools/reconcilier_vocabulaires.py` (il **doit rougir** : 14 + 3), consigner les 6 mesures,
-> écrire `tools/acceptation_frameworks.py` avec ses 8 critères T1-T8 **qui rougissent**. Aucun appel
-> modèle. ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se
-> **requête**, elle ne se souvient pas. ⚠️ Mesureurs versionnés, jamais `/tmp` ; bilan reconnaissable
-> à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **1 949 / 0 / 23**, migrations jusqu'à **035**, prochaine **036** (à écrire
-> juste avant son lot).
+> 🚦 **PROCHAIN PAS = lot 2b (migration 036), puis 2c.** Lots 0, 1 et **2a acquis**. L'audit des
+> deux principes (rendu le 2026-09-10) a produit **10 écarts V1–V10**, tous consignés dans la spec ;
+> **V5** (`covers` = rigidité de framework, aggravée avant d'être vue) et **V1** (le socle EDGAR
+> collectait avant la question : **8** postes écrits à la main servant **4** des **33** ingrédients
+> essentiels) sont les deux structurants. ⚠️ L'archivage vide les tables que `check_edgar_feed`
+> §12bis (`>= 50`) et `check_entry_nature` §7 (`== 13`) **lisent** : **ne pas baisser les planchers**
+> (`feedback_optional_schema_gate`) — rejouer les producteurs déterministes, coût modèle nul.
+> ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se **requête**, elle
+> ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
+> jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
+> État : suite hors-ligne **1 988 / 0 / 24**, négatif frameworks **22/22**, migrations jusqu'à
+> **035**, prochaine **036** (à écrire juste avant son lot).
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
-> le `CLAUDE.md` du projet (conventions #22-**#55**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
+> le `CLAUDE.md` du projet (conventions #22-**#59**, dont **#57/#58/#59 issues de l'audit du
+> 2026-09-10**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
 > décision manque.
