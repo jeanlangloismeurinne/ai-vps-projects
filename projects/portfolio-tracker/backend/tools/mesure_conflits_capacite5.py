@@ -46,6 +46,7 @@ import asyncpg
 
 from app.agents.v2.common import FIELD_PROFILES
 from app.knowledge.edgar_feed import _current_fact_ids
+from tools._corpus_archive import ENTRIES, bandeau
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 
@@ -56,10 +57,10 @@ _MOTIF_APPROBATION = "%approbation FDA%"
 _MOTIFS_PERIMES = ("%aucun produit%", "%n'a jamais généré de revenus%",
                    "%approbation non garantie%")
 
-_SQL_ACTIVES = """
+_SQL_ACTIVES = f"""
     SELECT id, ticker_id, entry_type, source_type, source_date, covers, nature,
            reliability_tier, title, content_structured
-      FROM knowledge_entries
+      FROM {ENTRIES}
      WHERE superseded_by IS NULL AND is_deleted = FALSE AND ticker_id = $1
      ORDER BY id
 """
@@ -147,7 +148,7 @@ async def mesurer(conn, ticker_id: str) -> dict[str, Any]:
     rows = [dict(r) for r in await conn.fetch(_SQL_ACTIVES, ticker_id)]
     # `content` n'est pas dans le SELECT (volumineux) : on le charge à part pour le repérage textuel.
     textes = dict(await conn.fetch(
-        "SELECT id, content FROM knowledge_entries WHERE ticker_id = $1 "
+        f"SELECT id, content FROM {ENTRIES} WHERE ticker_id = $1 "
         "AND superseded_by IS NULL AND is_deleted = FALSE", ticker_id))
     for r in rows:
         r["content"] = textes.get(r["id"], "")
@@ -164,6 +165,7 @@ async def mesurer(conn, ticker_id: str) -> dict[str, Any]:
 
 
 async def main() -> int:
+    print(bandeau())
     conn = await asyncpg.connect(_db_url())
     await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
     await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
@@ -171,7 +173,7 @@ async def main() -> int:
         drapeaux = await conn.fetchrow(
             "SELECT count(*) FILTER (WHERE has_conflict) AS flag,"
             "       count(*) FILTER (WHERE conflict_entry_id IS NOT NULL) AS ref,"
-            "       count(*) AS total FROM knowledge_entries")
+            f"       count(*) AS total FROM {ENTRIES}")
         resultats = [await mesurer(conn, t) for t in TICKERS]
     finally:
         await conn.close()

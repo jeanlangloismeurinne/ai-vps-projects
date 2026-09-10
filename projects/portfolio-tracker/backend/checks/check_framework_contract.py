@@ -387,24 +387,12 @@ print("\n7. détenteur unique — le contrat ne ré-implémente aucune règle qu
 _src = inspect.getsource(fw)
 
 
-def code_seul(source: str) -> str:
-    """Le source DÉPOUILLÉ de ses commentaires et de ses docstrings.
-
-    Mesuré, pas prévu : la 1ʳᵉ version coupait au `\"\"\"` du module et rougissait sur
-    `etat_actualite` — qui n'est pas dans le code, mais dans la docstring de `FondationServie` qui
-    DIT que l'axe vit ailleurs. Un grep d'interdit qui lit sa propre énonciation est un faux ROUGE,
-    et un faux rouge fait « corriger » de la prose juste. La prose doit pouvoir nommer ce que le
-    code n'a pas le droit de faire ; on la retire ici, et on l'assert en POSITIF juste après.
-    """
-    import io
-    import tokenize
-    morceaux = []
-    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
-        if tok.type in (tokenize.COMMENT, tokenize.STRING):
-            continue
-        morceaux.append(tok.string)
-    return " ".join(morceaux)
-
+# Le dépouillement vivait ICI. Le lot 2b en a eu besoin dans `check_search_worker` : une seconde
+# copie serait deux implémentations d'accord aujourd'hui et divergentes au prochain correctif (#46).
+# Elle vit désormais dans `checks/_code_seul.py`, avec le raisonnement qui l'a fait naître —
+# `tokenize` et non un `split('\"\"\"')`, qui ne coupait que la docstring de module et rougissait sur
+# `etat_actualite`, cité dans la docstring de `FondationServie` qui DIT que l'axe vit ailleurs.
+from checks._code_seul import code_seul  # noqa: E402
 
 _corps = code_seul(_src)
 check("la règle du cran n'est pas recopiée (elle vit dans `synthesis_feed`)",

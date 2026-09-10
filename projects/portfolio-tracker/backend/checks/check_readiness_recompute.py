@@ -1,8 +1,19 @@
 """Vérification du recompute déterministe du curator — pur, sans réseau ni DB ni LLM.
 
 Depuis la 029, la couverture est DÉRIVÉE DE LA BASE, plus des citations du LLM : pour chaque champ
-requis, le backend cherche dans l'index `covers` une entry qui PORTE ce champ (chemin complet
-`dimension.champ`) à un tier ≥ plancher. Ce qu'on éprouve ici :
+requis, le backend cherche dans un INDEX de couverture une entry qui PORTE ce champ (chemin complet
+`dimension.champ`) à un tier ≥ plancher.
+
+⚠️ **D'où vient cet index a changé le 2026-09-10 (migration 036).** Il se construisait ici même,
+depuis `knowledge_entries.covers` (`_covers_index`). La colonne est archivée : ce qu'une entry
+couvre est une propriété de la RELATION entry ↔ question, pas de l'entry (#57). L'index est
+désormais un **argument requis** de `recompute_coverage`, et `None` y déclare « aucun émetteur ».
+Les fixtures de ce fichier le construisent donc elles-mêmes (`_index_fixture`) : ce que le lot 2c
+lira dans `question_coverage`, elles le fournissent à la main, ce qui laisse intactes les 19
+sections qui éprouvent la PORTE. L'écart entre les deux lots — la porte n'a réellement aucun
+émetteur aujourd'hui — est déclaré en §4 et virera au vert de lui-même le jour du câblage (#52).
+
+Ce qu'on éprouve ici :
 
   • le plancher mord (une entry sous plancher ne fonde pas — bug #54 : tier B compté pour un B+) ;
   • le plancher PAR CHAMP (dégradé `croissance_marche_historique=B`) est respecté ;
@@ -24,9 +35,12 @@ from app.agents.v2.common import (
 )
 from app.agents.v2.curator import (
     DECLARED_NONBLOCKING_GAPS,
+    CouvertureSansEmetteur,
+    MOTIF_SANS_EMETTEUR,
     nonblocking_gaps_for,
+    index_couverture_pour,
+    exiger_index_couverture,
     _apply_deterministic_overrides,
-    _covers_index,
     _declare_nonblocking_gaps,
     _exigences,
     constrain_rationale,
@@ -65,15 +79,52 @@ _SPEC = {s["dimension"]: s for s in MVDD_SPEC}
 _JADIS = date(2026, 1, 1)
 
 
+# Clef de FIXTURE, jamais une colonne. Elle porte les chemins que cette entry couvre, pour que
+# `_index_fixture` en bâtisse l'index. Le préfixe `_` et le suffixe `_fixture` sont là pour qu'une
+# relecture ne la confonde pas avec l'ancienne colonne `covers` : la ligne rendue par `entry()` est
+# une ligne de `knowledge_entries` telle que la 036 la laisse, et `_index_fixture` la retire avant
+# de la passer à la porte — une entry ne doit pas pouvoir se fonder elle-même.
+_LIENS = "_liens_fixture"
+
+
 def entry(eid, tier, covers, source_type="edgar_official", source_date=_JADIS, cites=None):
     """Une entry de fixture, datée par défaut. `source_date`/`cites` portent l'axe actualité
     (capacité 4) : sous `_NEANT` toute date vaut `courante`, sous `_ancre(j)` une date antérieure à
-    `j` vaut `perimee`."""
-    e = {"id": eid, "reliability_tier": tier, "source_type": source_type, "covers": covers,
-         "source_date": source_date}
+    `j` vaut `perimee`.
+
+    ⚠️ `covers` reste le nom du PARAMÈTRE — c'est ce que la fixture déclare — mais il ne va plus
+    dans la ligne : il alimente l'index de couverture, qui est l'argument que la porte reçoit
+    désormais (#57). Le garder dans la ligne rendrait ce fichier vert le jour où quelqu'un
+    réintroduirait une lecture de colonne dans `recompute_coverage`.
+    """
+    e = {"id": eid, "reliability_tier": tier, "source_type": source_type,
+         "source_date": source_date, _LIENS: covers}
     if cites is not None:
         e["content_structured"] = {"claims": [{"text": "x", "cited_entry_ids": list(cites)}]}
     return e
+
+
+def _index_fixture(entries):
+    """`(index, lignes)` — l'index que le dispatch du lot 2c produira, et les lignes sans la clef.
+
+    Reprend les règles que `_covers_index` tenait jusqu'à la 036, parce qu'elles ne dépendaient pas
+    de la colonne : une entry sans tier n'entre pas dans l'index (la porte n'aurait rien à comparer
+    au plancher), une entry sans lien n'y entre pas non plus, et une chaîne nue vaut un chemin.
+    Trié par id pour que `fondations` soit stable d'une exécution à l'autre.
+    """
+    index: dict[str, list[tuple[int, str]]] = {}
+    lignes = []
+    for e in entries:
+        ligne = {k: v for k, v in e.items() if k != _LIENS}
+        lignes.append(ligne)
+        liens, tier = e.get(_LIENS), e.get("reliability_tier")
+        if not liens or not tier:
+            continue
+        for path in ([liens] if isinstance(liens, str) else liens):
+            index.setdefault(path, []).append((e["id"], tier))
+    for path in index:
+        index[path].sort()
+    return index, lignes
 
 
 # ── Ancres matérielles de fixture ────────────────────────────────────────────────────────────────
@@ -105,8 +156,21 @@ def dim_cov(dimension, fondations=None):
 def run(dims_qual, entries, dims_struct=None, ticker_id="NVDA", ancre=_NEANT, motifs=None):
     cov = {"structuree": {"dimensions": dims_struct or [], "bloc_ok": True},
            "qualitative_marche": {"dimensions": dims_qual, "bloc_ok": True}}
-    recompute_coverage(cov, entries, ancre=ancre, ticker_id=ticker_id, motifs_out=motifs)
+    index, lignes = _index_fixture(entries)
+    recompute_coverage(cov, lignes, ancre=ancre, index_couverture=index,
+                       ticker_id=ticker_id, motifs_out=motifs)
     return cov
+
+
+def appliquer(rep, entries, *, ancre=_NEANT, ticker_id="NVDA"):
+    """`_apply_deterministic_overrides` — la fonction de PRODUCTION — avec l'index de fixture.
+
+    Un seul point de passage (#46) : l'index est un argument requis depuis la 036, et le poser sur
+    les huit sites d'appel garantirait d'en oublier un au prochain changement de signature.
+    """
+    index, lignes = _index_fixture(entries)
+    _apply_deterministic_overrides(rep, lignes, ancre=ancre, index_couverture=index,
+                                   ticker_id=ticker_id)
 
 
 print("\n1. _tier_ge — comparaison de plancher (A meilleur)")
@@ -144,21 +208,66 @@ check("nom nu absent", "description" not in MVDD_FIELD_PATHS)
 check("un chemin par champ requis",
       len(MVDD_FIELD_PATHS) == sum(len(s["champs_requis"]) for s in MVDD_SPEC))
 
-print("\n4. _covers_index — construction depuis la base")
-idx = _covers_index([
+print("\n4. L'index n'a AUCUN ÉMETTEUR entre le lot 2b et le lot 2c — et la porte refuse de prononcer")
+# _INDEX_SANS_EMETTEUR — écart déclaré, sur la forme de #52 : il vit dans le check du lot qui l'a
+# créé et virera au vert de lui-même le jour du câblage, plutôt que dans un `TODO` que personne ne
+# relit. Ce qui se garde ici n'est pas « l'index est vide » mais la DISTINCTION entre deux états qui
+# se ressemblent et se lisent à l'opposé : « personne n'écrit les liens » (on ne SAIT pas ce que le
+# corpus fonde) et « l'émetteur rend zéro lien » (on sait qu'il ne fonde rien). Confondre les deux
+# ferait tomber les 19 champs en `non_couvert`, donc dériver `lacune`, donc prescrire 19 mandats de
+# COLLECTE sur une base qui contient déjà la matière — un verdict faux se corrige, un REMÈDE faux
+# fait dépenser.
+_INDEX_SANS_EMETTEUR = index_couverture_pour("NVDA")
+check("aujourd'hui, l'index n'a aucun émetteur (le dispatch du lot 2c n'existe pas)",
+      _INDEX_SANS_EMETTEUR is None,
+      "→ si ce n'est plus None, le câblage est fait : cette section doit être RETIRÉE, pas adaptée")
+check("le détenteur du motif le NOMME (`covers` archivée, dispatch absent)",
+      "aucun émetteur" in MOTIF_SANS_EMETTEUR and "question_coverage" in MOTIF_SANS_EMETTEUR,
+      f"→ {MOTIF_SANS_EMETTEUR[:80]}")
+try:
+    exiger_index_couverture(None)
+    check("sans émetteur, la porte LÈVE au lieu de prononcer", False, "→ aucune exception")
+except CouvertureSansEmetteur:
+    check("sans émetteur, la porte LÈVE au lieu de prononcer", True)
+# … et le refus est prononcé AVANT toute dépense (#40) : c'est `recompute_coverage` elle-même qui
+# exige, pas un appelant qui aurait pu l'oublier.
+try:
+    recompute_coverage({"structuree": {"dimensions": [], "bloc_ok": True},
+                        "qualitative_marche": {"dimensions": [dim_cov("risques")], "bloc_ok": True}},
+                       [entry(1, "A", ["risques.risques_cles"])],
+                       ancre=_NEANT, index_couverture=None, ticker_id="NVDA")
+    check("`recompute_coverage(index_couverture=None)` refuse", False, "→ elle a prononcé")
+except CouvertureSansEmetteur:
+    check("`recompute_coverage(index_couverture=None)` refuse", True)
+# ZÉRO LIEN N'EST PAS L'ABSENCE D'ÉMETTEUR — l'autre moitié de la distinction. Un index vide mais
+# PRÉSENT est un verdict légitime : le corpus ne fonde rien, et la porte le dit sans lever.
+_vide = run([dim_cov("risques")], [entry(1, "A", None)])["qualitative_marche"]["dimensions"][0]
+check("un émetteur qui rend zéro lien fait PRONONCER `non_couvert`, il ne fait pas lever",
+      _vide["champs_non_fondables"] == list(_SPEC["risques"]["champs_requis"]),
+      f"→ {_vide['champs_non_fondables']}")
+
+# Les règles de construction de l'index, éprouvées AU POINT DE LECTURE (la porte), jamais sur le
+# constructeur de fixture — ce dernier n'est pas du code de production, l'asserter serait tester le
+# test. Ce qui compte est ce que la porte FAIT de chaque cas.
+_cov4 = run([dim_cov("risques"), dim_cov("marche")], [
     entry(1, "A", ["risques.risques_cles", "marche.structure_5forces"]),
     entry(2, "B+", ["risques.risques_cles"]),
-    entry(3, "A", None),                       # non taguée : ne fonde rien
-    entry(4, "A", "risques.risques_cles"),     # tolérance pré-029 (chaîne nue)
-    entry(5, None, ["risques.risques_cles"]),  # sans tier : ignorée
+    entry(3, "A", None),                       # aucun lien : ne fonde rien
+    entry(4, "A", "risques.risques_cles"),     # chaîne nue : un lien quand même
+    entry(5, None, ["risques.risques_cles"]),  # sans tier : rien à comparer au plancher
+    entry(6, "B", ["marche.croissance_marche_historique"], "web_search_reputable"),
 ])
-check("multi-champ : une entry alimente 2 clés",
-      idx["marche.structure_5forces"] == [(1, "A")])
-check("agrégation par champ, triée par id",
-      idx["risques.risques_cles"] == [(1, "A"), (2, "B+"), (4, "A")], f"→ {idx.get('risques.risques_cles')}")
-check("entry non taguée absente de l'index",
-      all(3 not in [i for i, _ in v] for v in idx.values()))
-check("entry sans tier écartée", all(5 not in [i for i, _ in v] for v in idx.values()))
+_rq4 = _cov4["qualitative_marche"]["dimensions"][0]
+_fond4 = {f["champ"]: f["entry_ids"] for f in _rq4["fondations"]}
+check("multi-champ : la MÊME entry fonde deux dimensions",
+      _rq4["ok"] is True and _cov4["qualitative_marche"]["dimensions"][1]["ok"] is True,
+      f"→ {_rq4['champs_non_fondables']}")
+check("agrégation par champ, triée par id, et rien d'autre",
+      _fond4.get("risques_cles") == [1, 2, 4], f"→ {_fond4.get('risques_cles')}")
+check("une entry sans lien ne fonde rien (fin du fallback tier-only de la 028)",
+      3 not in _fond4.get("risques_cles", []))
+check("une entry sans tier est écartée (aucun terme à comparer au plancher)",
+      5 not in _fond4.get("risques_cles", []))
 
 print("\n5. recompute_coverage — le plancher mord, et il est PAR CHAMP")
 # MÊME TIER, DEUX SORTS. Une entry tier B fonde `marche.structure_5forces` (plancher de champ B,
@@ -296,15 +405,32 @@ _declare_nonblocking_gaps(rep9, cov9, "NVDA")
 check("plus aucune incertitude « croissance » déclarée (la dispense n'existe plus)",
       not any("croissance" in u["question"].lower() for u in rep9["incertitudes_investissables"]))
 
-print("\n11. format_entries_for_prompt — l'index est visible au modèle")
+print("\n11. format_entries_for_prompt — le listing ne montre QUE la ligne")
+# ⚠️ Cette section éprouvait « l'index est visible au modèle » : chaque ligne annonçait « · couvre
+# business_model.drivers_revenus », lu sur `e["covers"]`. La mention est partie avec la colonne
+# (036). Ce qui la remplace n'est PAS un grep d'absence — il se met en défaut sur la prose (#56) —
+# mais l'assert POSITIF que le listing est une fonction des seules colonnes de la ligne : deux
+# entries identiques à la couverture près y sont indiscernables, ce qui est exactement ce que « la
+# couverture n'est pas une propriété de l'entry » veut dire (#57). Le jour où le lot 2c la rendra
+# visible, elle viendra par JOINTURE au site qui construit le contexte, et cet assert devra être
+# retiré sciemment plutôt que contourné.
+_ligne_19 = {"id": 19, "title": "Data Center", "content": "x", "reliability_tier": "A",
+             "source_type": "company_ir_official", "version": 1}
 listing = format_entries_for_prompt([
-    {"id": 19, "title": "Data Center", "content": "x", "reliability_tier": "A",
-     "source_type": "company_ir_official", "covers": ["business_model.drivers_revenus"], "version": 1},
+    dict(_ligne_19),
     {"id": 25, "title": "Buybacks", "content": "y", "reliability_tier": "A",
-     "source_type": "edgar_official", "covers": None, "version": 1},
+     "source_type": "edgar_official", "version": 1},
 ])
-check("entry taguée annonce ce qu'elle couvre", "couvre business_model.drivers_revenus" in listing)
-check("entry non taguée n'annonce rien", "couvre" not in listing.split("\n")[1])
+check("le listing rend une ligne par entry, triée par id",
+      [l.split()[0] for l in listing.split("\n")] == ["#19", "#25"], f"→ {listing}")
+check("il porte les trois axes lisibles sur la ligne (tier, source, contenu)",
+      "A · company_ir_official" in listing and "Data Center" in listing, f"→ {listing}")
+# La preuve par indiscernabilité : la MÊME entry, à qui l'on ajoute un lien de couverture, produit
+# le MÊME texte. Un `not in` seul serait vert sur un listing vide.
+_avec_lien = dict(_ligne_19, **{_LIENS: ["business_model.drivers_revenus"]})
+check("deux entries qui ne diffèrent que par leur couverture sont indiscernables au modèle",
+      format_entries_for_prompt([_avec_lien]) == format_entries_for_prompt([dict(_ligne_19)]),
+      "→ le listing lit encore un champ de couverture sur la ligne")
 
 print("\n12. Intégration — ReadinessReport valide, verdict = fonction du corpus")
 
@@ -337,7 +463,7 @@ cov_ready = {"structuree": {"dimensions": [dim_cov(d) for d in
                                                    ("produits", "positionnement", "marche",
                                                     "management_allocation", "risques")], "bloc_ok": True}}
 rep = full_report(cov_ready)
-_apply_deterministic_overrides(rep, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rep, ents, ancre=_NEANT, ticker_id="NVDA")
 check("verdict recalculé = ready", rep["verdict"] == "ready", f"→ {rep['verdict']}")
 rep["context_pack_entry_id"] = 999  # posé par run_readiness quand ready
 try:
@@ -359,20 +485,22 @@ cov_b = {"structuree": {"dimensions": [dim_cov(d, [{"champ": "description", "ent
                                                ("produits", "positionnement", "marche",
                                                 "management_allocation", "risques")], "bloc_ok": True}}
 ra, rb = full_report(cov_a), full_report(cov_b, verdict="too_hard")
-_apply_deterministic_overrides(ra, ents, ancre=_NEANT, ticker_id="NVDA")
-_apply_deterministic_overrides(rb, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(ra, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rb, ents, ancre=_NEANT, ticker_id="NVDA")
 check("verdict indépendant des citations LLM", ra["verdict"] == "ready")
 check("couverture identique à corpus figé", ra["coverage"] == rb["coverage"])
 
 # THIN : on retire l'entry qui fonde structure_5forces → bloc qualitatif tombe, structuré intact
-ents_thin = [e for e in ents if e["covers"] != ["marche.structure_5forces"]]
+ents_thin = [e for e in ents if e[_LIENS] != ["marche.structure_5forces"]]
+check("le corpus THIN diffère bien du corpus complet (sinon la section ne prouve rien)",
+      len(ents_thin) == len(ents) - 1, f"→ {len(ents_thin)} vs {len(ents)}")
 cov_thin = {"structuree": {"dimensions": [dim_cov(d) for d in
                                           ("business_model", "financials", "valorisation")], "bloc_ok": True},
             "qualitative_marche": {"dimensions": [dim_cov(d) for d in
                                                   ("produits", "positionnement", "marche",
                                                    "management_allocation", "risques")], "bloc_ok": True}}
 rep2 = full_report(cov_thin)
-_apply_deterministic_overrides(rep2, ents_thin, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rep2, ents_thin, ancre=_NEANT, ticker_id="NVDA")
 check("verdict recalculé = thin_qualitative (5forces retiré du corpus)",
       rep2["verdict"] == "thin_qualitative", f"→ {rep2['verdict']}")
 try:
@@ -412,7 +540,7 @@ rep_msft_ready = full_report({"structuree": {"dimensions": [dim_cov(d) for d in
                               "qualitative_marche": {"dimensions": [dim_cov(d) for d in
                                                      ("produits", "positionnement", "marche",
                                                       "management_allocation", "risques")], "bloc_ok": True}})
-_apply_deterministic_overrides(rep_msft_ready, ents, ancre=_NEANT, ticker_id="MSFT")
+appliquer(rep_msft_ready, ents, ancre=_NEANT, ticker_id="MSFT")
 check("corpus 'ready NVDA' n'est PAS ready pour MSFT (2 champs non fondes)",
       rep_msft_ready["verdict"] == "not_ready", f"-> {rep_msft_ready['verdict']}")
 
@@ -435,7 +563,7 @@ rep24 = full_report(cov_ready, verdict="ready")
 rep24["rationale"] = ("Le socle EDGAR est complet et recent. Le bloc qualitatif-marche est "
                       "incomplet (tier A-), sous le plancher B+ requis => thin_qualitative. "
                       "Les 51 entries sont majoritairement tier A.")
-_apply_deterministic_overrides(rep24, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rep24, ents, ancre=_NEANT, ticker_id="NVDA")
 r24 = rep24["rationale"]
 check("la phrase narrant un autre verdict est RETIREE", "thin_qualitative." not in r24, f"-> {r24}")
 check("le retrait est DECLARE, jamais silencieux", "1 phrase(s) du curator retiree(s)" in r24
@@ -447,7 +575,7 @@ check("la derniere phrase neutre est gardee", "51 entries" in r24)
 # Le cas nominal ne doit pas etre mutile.
 rep_ok = full_report(cov_ready, verdict="ready")
 rep_ok["rationale"] = "Dossier complet, 44 entries tier A, aucune incertitude bloquante."
-_apply_deterministic_overrides(rep_ok, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rep_ok, ents, ancre=_NEANT, ticker_id="NVDA")
 check("prose neutre integralement conservee",
       rep_ok["rationale"].endswith("Dossier complet, 44 entries tier A, aucune incertitude bloquante."))
 check("mentionner SON PROPRE verdict reste permis",
@@ -560,14 +688,14 @@ print("\n16. ACCEPTATION — le même corpus vieillit sans qu'une seule ligne so
 # événement, pas à une modification du corpus. Les entries sont comparées avant/après.
 _avant = copy.deepcopy(ents)
 rep_a = full_report(copy.deepcopy(cov_ready))
-_apply_deterministic_overrides(rep_a, ents, ancre=_NEANT, ticker_id="NVDA")
+appliquer(rep_a, ents, ancre=_NEANT, ticker_id="NVDA")
 check("ligne de base : ce corpus est `ready` sans événement matériel",
       rep_a["verdict"] == "ready", f"→ {rep_a['verdict']}")
 check("ligne de base : aucune cause de non-readiness", rep_a["cause_non_ready"] is None,
       f"→ {rep_a['cause_non_ready']}")
 
 rep_b = full_report(copy.deepcopy(cov_ready))
-_apply_deterministic_overrides(rep_b, ents, ancre=_ANCRE_JUIN, ticker_id="NVDA")
+appliquer(rep_b, ents, ancre=_ANCRE_JUIN, ticker_id="NVDA")
 check("ACCEPTATION : le même corpus devient `not_ready` à l'arrivée d'un 8-K postérieur",
       rep_b["verdict"] == "not_ready", f"→ {rep_b['verdict']}")
 check("ACCEPTATION : et la cause est la PÉREMPTION, pas la lacune",
@@ -697,13 +825,27 @@ check("un 6-K SANS item reste une ancre (sans item ≠ sans substance)", _6K.sta
 d_6k = run([dim_cov("risques")], _E_RISQUE, ancre=_6K)["qualitative_marche"]["dimensions"][0]
 check("… et il périme comme les autres", d_6k["champs_perimes"] == ["risques_cles"], f"→ {d_6k}")
 
-# L'oubli de l'ancre est une TypeError au site d'appel, jamais un verdict laxiste par défaut.
-try:
-    recompute_coverage({"structuree": {"dimensions": [], "bloc_ok": True},
-                        "qualitative_marche": {"dimensions": [], "bloc_ok": True}}, [])
-    check("appeler la porte SANS ancre lève", False, "→ un défaut silencieux a été appliqué")
-except TypeError:
-    check("appeler la porte SANS ancre lève", True)
+# L'oubli d'un argument REQUIS est une TypeError au site d'appel, jamais un verdict laxiste par
+# défaut. ⚠️ Deux arguments sont désormais requis (`ancre` depuis la capacité 4, `index_couverture`
+# depuis la 036) : les omettre tous les deux d'un coup rendrait l'assert vert quel que soit celui
+# qui a repris un défaut — il ne saurait plus lequel il garde. Un oubli à la fois, chacun nommé.
+def _sans(**kw):
+    _vide = {"structuree": {"dimensions": [], "bloc_ok": True},
+             "qualitative_marche": {"dimensions": [], "bloc_ok": True}}
+    try:
+        recompute_coverage(_vide, [], **kw)
+        return False
+    except TypeError:
+        return True
+
+
+check("appeler la porte SANS ancre lève", _sans(index_couverture={}),
+      "→ un défaut silencieux a été appliqué à `ancre`")
+check("appeler la porte SANS index de couverture lève", _sans(ancre=_NEANT),
+      "→ un défaut silencieux a été appliqué à `index_couverture` : l'absence d'émetteur "
+      "se lirait « le corpus ne fonde rien »")
+check("… et avec les deux, elle prononce (les asserts ci-dessus ne sont pas verts par accident)",
+      not _sans(ancre=_NEANT, index_couverture={}))
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

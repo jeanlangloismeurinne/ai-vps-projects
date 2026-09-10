@@ -338,8 +338,13 @@ JETONS_INTERDITS = [
     # des émetteurs — un référentiel universel ne nomme aucun acteur (#31)
     "nvda", "nvidia", "msft", "microsoft", "rvmd", "revolution medicines", "aapl", "apple",
     # des références au corpus stocké
-    "entry", "entrée #", "covers", "mvdd", "agent_synthesis", "llm_memory", "context pack",
-    "orphelin", "knowledge_entries", "synthesis_targets",
+    # ⚠️ `covers` reste interdit bien que la colonne soit archivée (036) : ce qui est proscrit est
+    # qu'un énoncé nomme un mécanisme de stockage, et un nom retiré du schéma reste un nom de
+    # stockage sous la plume d'un rédacteur. `question_coverage` le rejoint pour la même raison —
+    # re-vocabulariser une rigidité ne la retire pas (#57), et l'interdit doit suivre le nouveau
+    # vocabulaire le jour même, sinon il ne garde plus que l'ancien.
+    "entry", "entrée #", "covers", "question_coverage", "mvdd", "agent_synthesis", "llm_memory",
+    "context pack", "orphelin", "knowledge_entries", "synthesis_targets",
     # des artefacts de dépôt : nommer le document, c'est présumer qu'il existe déjà en base
     "10-k", "10-q", "8-k", "edgar", "xbrl", "sec.gov",
 ]

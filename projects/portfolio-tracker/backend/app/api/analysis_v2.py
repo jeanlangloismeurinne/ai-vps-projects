@@ -26,7 +26,13 @@ from app.agents.providers import AgentNotFoundError
 from app.agents.v2 import analysis as A
 from app.agents.v2 import decision as D
 from app.agents.v2.analysis import NotReadyError
-from app.agents.v2.curator import _apply_deterministic_overrides, run_readiness
+from app.agents.v2.curator import (
+    MOTIF_SANS_EMETTEUR,
+    CouvertureSansEmetteur,
+    _apply_deterministic_overrides,
+    index_couverture_pour,
+    run_readiness,
+)
 from app.agents.v2.debate import (
     DebateNotFound,
     DebateRefused,
@@ -48,7 +54,7 @@ from app.agents.v2.exit import (
 from app.agents.v2.monitoring import MonitoringRefused, ThesisNotActive, run_monitoring
 from app.db.database import get_db_session
 from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
-from app.knowledge.service import get_current_entries
+from app.knowledge.service import entries_courantes, get_current_entries
 
 router = APIRouter(tags=["analysis-v2"])
 logger = logging.getLogger(__name__)
@@ -90,9 +96,23 @@ async def curator_readiness(ticker_id: str):
     """Recompute la readiness (MVDD 2 couvertures) + context_pack si ready. Persiste le rapport."""
     try:
         return await run_readiness(ticker_id)
+    except CouvertureSansEmetteur as e:
+        # 409 et non 502 : la requête est valide, c'est l'ÉTAT du système qui interdit l'acte (#40).
+        # Aucun token n'a été dépensé — le refus est prononcé avant l'appel au modèle.
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:  # noqa: BLE001
         logger.exception("curator.readiness %s", ticker_id)
         raise _agent_error(e)
+
+
+# Le motif est COMPOSÉ à partir de celui du curator, jamais réécrit (#46) : la cause est la même, ce
+# qui change est la conséquence au point de lecture. Le POST refuse ; le GET, lui, a quelque chose à
+# servir — d'où la phrase qui suit, qui est la seule chose que cet écran ajoute.
+_MOTIF_REEVALUATION_IMPOSSIBLE = (
+    "rapport NON réévalué contre l'ancre du jour — " + MOTIF_SANS_EMETTEUR + " Le verdict affiché "
+    "est celui du jour de sa production : il n'a pas été confronté au corpus d'aujourd'hui et peut "
+    "être périmé."
+)
 
 
 @router.get("/tickers/{ticker_id}/curator/readiness")
@@ -140,8 +160,40 @@ async def latest_readiness(ticker_id: str):
         ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
 
     verdict_persiste = out.get("verdict")
-    rejoue = _apply_deterministic_overrides(copy.deepcopy(stocke), entries,
-                                            ancre=ancre, ticker_id=ticker_id)
+    # Le libellé de l'ancre est formé AVANT la branche : les deux réponses portent exactement les
+    # mêmes clefs, `faite` étant la seule à dire ce qui les sépare. Une clef absente d'un cas se lit
+    # comme un oubli du producteur, jamais comme une information (#44).
+    ancre_libelle = (
+        f"{ancre.event.form} du {ancre.event.event_date}"
+        + (f" (items {'/'.join(ancre.event.items)})" if ancre.event.items else " (sans item)")
+        if ancre.status == "found" and ancre.event is not None
+        else ("aucun événement matériel publié" if ancre.status == "none"
+              else f"flux injoignable — {ancre.raison or 'raison non précisée'}")
+    )
+
+    index = index_couverture_pour(ticker_id)
+    if index is None:
+        # ⚠️ La réévaluation est IMPOSSIBLE, et c'est le cas le plus dangereux de cette route : la
+        # ligne persistée porte peut-être le `ready, 0 gap` que la capacité 4 existe pour tuer. On
+        # sert donc la ligne telle quelle — c'est ce que la base dit — mais `faite: False` et le
+        # motif disent qu'elle n'a PAS été confrontée au jour. Trois états, jamais deux (#44/#54) :
+        # réévalué ready · réévalué non-ready · **pas réévaluable**. Rendre le troisième comme le
+        # premier serait la phrase rassurante produite par la pire des raisons (#49) ; le rendre
+        # comme le second inventerait un verdict que personne n'a calculé.
+        out["reevaluation"] = {
+            "faite": False,
+            "motif": _MOTIF_REEVALUATION_IMPOSSIBLE,
+            "verdict_persiste": verdict_persiste,
+            "verdict_recalcule": None,
+            "cause_non_ready": None,
+            "ancre_statut": ancre.status,
+            "ancre_libelle": ancre_libelle,
+            "entries_lues": len(entries),
+        }
+        return out
+
+    rejoue = _apply_deterministic_overrides(copy.deepcopy(stocke), entries, ancre=ancre,
+                                            index_couverture=index, ticker_id=ticker_id)
     out["report_json"] = rejoue
     out["verdict"] = rejoue.get("verdict")
     out["reevaluation"] = {
@@ -150,14 +202,9 @@ async def latest_readiness(ticker_id: str):
         "verdict_recalcule": rejoue.get("verdict"),
         "cause_non_ready": rejoue.get("cause_non_ready"),
         "ancre_statut": ancre.status,
-        "ancre_libelle": (
-            f"{ancre.event.form} du {ancre.event.event_date}"
-            + (f" (items {'/'.join(ancre.event.items)})" if ancre.event.items else " (sans item)")
-            if ancre.status == "found" and ancre.event is not None
-            else ("aucun événement matériel publié" if ancre.status == "none"
-                  else f"flux injoignable — {ancre.raison or 'raison non précisée'}")
-        ),
+        "ancre_libelle": ancre_libelle,
         "entries_lues": len(entries),
+        "motif": None,
     }
     return out
 
@@ -350,7 +397,15 @@ async def list_tickers_v2(include_all: bool = False):
     # Filtre principal : tickers avec au moins une entry vivante (HAVING > 0) ou tous.
     # Le HAVING s'applique après GROUP BY — seul moyen propre de filtrer sur un agrégat.
     # Quand include_all=True, on supprime le HAVING pour retourner tous les tickers.
-    _having = "" if include_all else "HAVING COUNT(ke.id) FILTER (WHERE ke.is_deleted = false AND ke.superseded_by IS NULL) > 0"
+    # ⚠️ `ke.is_deleted = false` retiré des TROIS prédicats ci-dessous le 2026-09-10 (migration 036 :
+    # la colonne est archivée). Elle valait FALSE sur les 180 lignes — le conjoint n'a jamais rien
+    # filtré. Et la phrase n'est plus recopiée : elle vient du détenteur unique (#46), qualifié par
+    # l'alias de la requête. C'est ce fichier qui a fait apparaître le besoin — quatre occurrences
+    # d'un même prédicat dans une seule fonction, plus six dans les producteurs.
+    _vivantes = entries_courantes("ke")
+    _vivantes2 = entries_courantes("ke2")
+
+    _having = "" if include_all else "HAVING COUNT(ke.id) FILTER (WHERE " + _vivantes + ") > 0"
 
     sql = (
         "SELECT"
@@ -361,15 +416,15 @@ async def list_tickers_v2(include_all: bool = False):
         "  tk.status,"
         "  tk.company_type,"
         # ── Connaissance ──────────────────────────────────────────────────────
-        # Entries vivantes : is_deleted = false AND superseded_by IS NULL
-        "  COUNT(ke.id) FILTER (WHERE ke.is_deleted = false AND ke.superseded_by IS NULL)"
+        # Entries vivantes : le prédicat vient de `knowledge.entries_courantes`, jamais réécrit ici.
+        "  COUNT(ke.id) FILTER (WHERE " + _vivantes + ")"
         "    AS nb_entries_vivantes,"
         # Ventilation par tier sur les entries VIVANTES uniquement.
         # Sous-requête corrélée pour ne pas mélanger les filtres du GROUP BY principal.
         "  ("
         "    SELECT " + _tier_agg +
         "    FROM knowledge_entries ke2"
-        "    WHERE ke2.ticker_id = tk.id AND ke2.is_deleted = false AND ke2.superseded_by IS NULL"
+        "    WHERE ke2.ticker_id = tk.id AND " + _vivantes2 +
         "  ) AS par_tier,"
         # ── Readiness ─────────────────────────────────────────────────────────
         # Rapport readiness le plus récent — sous-requête scalaire JSONB (null si aucun).

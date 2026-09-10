@@ -20,9 +20,11 @@ from .websearch import (
     web_search,
 )
 from .service import (
+    ENTRIES_COURANTES,
     RELIABILITY_TABLE,
     collect_refs,
     compute_reliability,
+    entries_courantes,
     get_current_entries,
     query_knowledge,
     snapshot_refs,
@@ -37,6 +39,9 @@ from .synthesis_feed import (
 
 __all__ = [
     "RELIABILITY_TABLE",
+    # détenteur unique de « cette entry est la vérité en vigueur » (#46) — nu, ou qualifié par alias
+    "ENTRIES_COURANTES",
+    "entries_courantes",
     "compute_reliability",
     "store_knowledge",
     "query_knowledge",

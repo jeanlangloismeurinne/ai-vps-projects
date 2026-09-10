@@ -181,7 +181,11 @@ async def backfill_embeddings(
 
     Renvoie un compte-rendu {candidats, embeddees, echecs, tokens_estimes}.
     """
-    where = ["embedding IS NULL", "is_deleted = FALSE"]
+    # ⚠️ `AND is_deleted = FALSE` retiré le 2026-09-10 (migration 036 : la colonne est archivée). Le
+    # conjoint n'a jamais rien filtré — mesuré à FALSE sur les 180 lignes. Et ce filtre n'est PAS
+    # `ENTRIES_COURANTES` : ce backfill porte délibérément sur les superseded aussi (cf. ci-dessus),
+    # importer la constante ici élargirait un interdit là où il n'y en a pas.
+    where = ["embedding IS NULL"]
     params: list[Any] = []
     if ticker_id is not None:
         params.append(ticker_id)

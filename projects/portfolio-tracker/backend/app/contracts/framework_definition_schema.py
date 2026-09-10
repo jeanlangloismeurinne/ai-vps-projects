@@ -173,8 +173,9 @@ class FrameworkDefinition(Strict):
         if len(set(chemins)) != len(chemins):
             raise ValueError(
                 f"{self.id} : deux questions partagent un chemin d'indexation. Le chemin est ce "
-                f"que `covers` désignera (§6) : partagé, il rend deux questions indiscernables "
-                f"pour l'index, et la porte de complétude en comptera une pour deux"
+                f"qu'un lien de `question_coverage` désignera (§6, #57) : partagé, il rend deux "
+                f"questions indiscernables pour l'index, et la porte de complétude en comptera "
+                f"une pour deux"
             )
         return self
 

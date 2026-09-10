@@ -245,8 +245,17 @@ class _FakeConn:
         return None
 
 
-def _row(i, d):
-    return {"id": i, "title": f"e{i}", "content": "x", "covers": ["produits.description"],
+def _row(i, d, questions=()):
+    """Une ligne telle que `_entries_actives` la rend depuis la 036.
+
+    ⚠️ La clef était `covers` — une LISTE DE CHAMPS portée par l'entry — jusqu'au 2026-09-10. Elle
+    est devenue `questions_couvertes`, une liste de couples `framework/question` obtenue par
+    jointure sur `question_coverage` : ce qu'une entry couvre est une propriété de la RELATION, pas
+    de la ligne (#57). Le défaut par défaut est la liste VIDE, et c'est l'état réel du corpus tant
+    que le dispatch du lot 2c n'écrit rien — une fixture qui pré-remplirait les liens partout
+    serait plus favorable que la production, donc aveugle (`feedback_fixture_copiee_du_reel`).
+    """
+    return {"id": i, "title": f"e{i}", "content": "x", "questions_couvertes": list(questions),
             "source_type": "edgar_official", "source_url": "https://sec.gov/x",
             "source_date": d, "fiscal_period": "FY2025", "reliability_tier": "A",
             "entry_type": "fact_qualitative", "requires_human_review": False}
@@ -254,8 +263,14 @@ def _row(i, d):
 
 ROWS = [_row(1, date(2026, 2, 25)), _row(2, date(2026, 8, 26)), _row(999, None)]
 
+# Le MÊME corpus, mais avec des liens de couverture — le seul écart entre les deux jeux est la
+# présence des liens, donc c'est bien eux que §9bis mesure et rien d'autre.
+ROWS_LIEES = [_row(1, date(2026, 2, 25), ["mo_scale/qf_1"]),
+              _row(2, date(2026, 8, 26), ["mo_scale/qf_1", "mo_moat/qf_3"]),
+              _row(999, None, ["mo_moat/qf_9"])]
 
-def _balayage(lookup):
+
+def _balayage(lookup, rows=None):
     """Rapport de péremption sur fixture — une exception devient un FAIL nommé, comme pour `axe`.
 
     Le balayage traverse l'axe : un axe qui lève tuerait §9 avant son bilan, donc au milieu du
@@ -270,7 +285,8 @@ def _balayage(lookup):
         orig = _st.material_anchor_for_ticker
         _st.material_anchor_for_ticker = _fake_anchor
         try:
-            return await _st.balayage_peremption(_FakeConn(ROWS), "RVMD")
+            return await _st.balayage_peremption(_FakeConn(rows if rows is not None else ROWS),
+                                                 "RVMD")
         finally:
             _st.material_anchor_for_ticker = orig
 
@@ -279,8 +295,12 @@ def _balayage(lookup):
     except Exception as e:  # noqa: BLE001 — le filet, pas un masque
         fail += 1
         print(f"  FAIL le balayage a LEVÉ ({type(e).__name__}: {e}) — statut={lookup.status}")
+        # `couverture_connue=None` et non `False` : §9bis asserte le booléen dans LES DEUX SENS,
+        # donc un repli à `False` satisferait la moitié des asserts sans qu'aucun balayage n'ait
+        # tourné. `None` n'est ni l'un ni l'autre — le repli ne peut rendre aucun assert vert.
         return {"statut": "(exception)", "entries_actives": -1, "suspectes": [],
-                "posterieures": [], "non_datees": [], "avertissement": ""}
+                "posterieures": [], "non_datees": [], "avertissement": "",
+                "questions_touchees": ["(exception)"], "couverture_connue": None}
 
 
 print("\n9. F15 — une entry tombe dans EXACTEMENT une classe, sur les trois branches")
@@ -330,6 +350,36 @@ check("le rapport porte l'axe à côté de son propre vocabulaire",
       f"→ {[(e['id'], e['actualite']) for e in rap['suspectes'] + rap['non_datees']]}")
 check("et le motif de l'axe voyage avec",
       all(e["motif_actualite"] for e in rap["suspectes"]))
+
+
+print("\n9bis. « aucune question touchée » n'est pas « on ne sait pas » (migration 036)")
+# Ex-`champs_touches`, agrégé depuis `covers`. Le rapport en tient désormais DEUX clefs, parce
+# qu'il y a trois états (#44/#54) : des questions touchées · aucune · **on ne sait pas encore**.
+# Une seule clef les écraserait en une liste vide, qui se lit « ce périmé ne fonde rien » — la
+# phrase rassurante produite par la pire des raisons (#49), et elle est FAUSSE aujourd'hui :
+# `question_coverage` est vide faute d'émetteur, pas faute d'impact.
+rap_sans = _balayage(ANCRE_ACCORD)
+check("corpus SANS lien : `couverture_connue` est FALSE",
+      rap_sans["couverture_connue"] is False,
+      f"→ {rap_sans['couverture_connue']} : la table de liens est vide, ce n'est pas une absence d'impact")
+check("corpus SANS lien : `questions_touchees` est vide, et c'est la clef qui l'accompagne qui le qualifie",
+      rap_sans["questions_touchees"] == [], f"→ {rap_sans['questions_touchees']}")
+
+rap_liee = _balayage(ANCRE_ACCORD, ROWS_LIEES)
+check("corpus AVEC liens : `couverture_connue` est TRUE",
+      rap_liee["couverture_connue"] is True, f"→ {rap_liee['couverture_connue']}")
+check("… et `questions_touchees` n'agrège que les entries SUSPECTES, pas tout le corpus",
+      rap_liee["questions_touchees"] == ["mo_moat/qf_3", "mo_scale/qf_1"],
+      f"→ {rap_liee['questions_touchees']} : `mo_moat/qf_9` porte l'entry NON DATÉE (#999), qui est "
+      "`indeterminable` et non `perimee` — l'inclure ferait chercher une source plus récente là où "
+      "il faut une source datable (#53)")
+check("… le couple est bien `framework/question`, jamais un chemin MVDD",
+      all("/" in q and "." not in q for q in rap_liee["questions_touchees"]),
+      f"→ {rap_liee['questions_touchees']} : un `dimension.champ` ici serait #57 réintroduit")
+check("les deux jeux ne diffèrent QUE par les liens (sinon §9bis ne mesure pas les liens)",
+      [(r["id"], r["source_date"]) for r in ROWS] == [(r["id"], r["source_date"]) for r in ROWS_LIEES]
+      and {e["id"] for e in rap_sans["suspectes"]} == {e["id"] for e in rap_liee["suspectes"]},
+      "→ une fixture qui déplace deux variables ne dit pas laquelle discrimine")
 
 
 print("\n10. la capacité 4 n'est PAS faite ici — l'axe ignore le profil du champ")

@@ -479,7 +479,23 @@ finally:
     (_ff.get_db_session, _ff.get_current_entries, _ff.store_knowledge,
      _ff._current_tagged_entry_id) = _orig
 
-_ecrit_by = {k["covers"][0].split(".")[-1]: k for k in _ecrit}
+# ⚠️ La clef était `k["covers"][0].split(".")[-1]` — le champ MVDD que l'entry fondait. `covers`
+# est partie avec la 036 (#57 : la couverture est une propriété de la RELATION entry ↔ question,
+# pas de l'entry). Le champ n'a pas quitté la ligne pour autant : il vit dans les TAGS, et c'est
+# déjà par eux que la PRODUCTION identifie l'entry à superseder (`_current_tagged_entry_id`, tag
+# triple `financials/<field>/derived_ratio`). On reprend donc la clef de production au lieu d'en
+# inventer une seconde (#46). ⚠️ Par intersection avec les champs réellement construits, jamais
+# par `tags[1]` : un indice positionnel se décale en silence au premier tag ajouté, et une liste
+# de champs en dur redeviendrait le jumeau que §10 vient d'éviter.
+_CHAMPS_CONSTRUITS = set(_by14)
+_ecrit_by: dict[str, dict] = {}
+for _k in _ecrit:
+    _f_tags = _CHAMPS_CONSTRUITS & set(_k.get("tags") or [])
+    if len(_f_tags) == 1:
+        _ecrit_by[_f_tags.pop()] = _k
+check("chaque entry écrite porte son champ dans ses tags, et un seul",
+      len(_ecrit_by) == len(_ecrit),
+      f"→ {len(_ecrit_by)} clefs pour {len(_ecrit)} écritures : un tag ambigu, ou aucun")
 check("le chemin d'écriture a bien tourné hors ligne (sinon les asserts suivants sont vides)",
       len(_ecrit_by) >= 3, f"→ {sorted(_ecrit_by)}")
 check("`store_knowledge` REÇOIT la date du bilan pour le levier (pas celle du flux)",

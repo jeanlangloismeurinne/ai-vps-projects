@@ -268,14 +268,26 @@ async def synthesize(ticker_id: str, body: SynthesisBody):
 
 # Colonnes retournées par les deux routes de lecture — embedding (vector(1024)) est
 # délibérément ABSENT : illisible et lourd (1024 floats par entrée).
+#
+# ⚠️ HUIT colonnes retirées le 2026-09-10 (migration 036) : `has_conflict`, `conflict_entry_id`,
+# `reviewed_by_user`, `question_status`, `question_priority`, `resolves_entry_id`, `is_deleted`,
+# `covers`. Les sept premières étaient à **zéro écriture** — mesuré par `tools/inventaire_grappe_v2.py`
+# avant de les retirer, jamais supposé. La huitième (`covers`) n'était pas morte mais MAL PLACÉE : la
+# couverture est une propriété de la RELATION entry ↔ question, elle vit dans `question_coverage` (#57).
+# Une colonne servie à l'écran que rien n'écrit est pire qu'une colonne absente : elle se lit comme un
+# fait sur l'entry, alors qu'elle ne dit rien du tout (#54).
+#
+# ⚠️ Et UNE colonne AJOUTÉE : `nature`. Elle est `NOT NULL` depuis la migration 034 et n'était servie
+# nulle part — le lecteur du corpus voyait donc huit axes que rien n'écrit et pas celui qui commande
+# l'autorité de l'assertion (#51). Un axe stocké mais absent du point de lecture n'est pas un axe
+# (`feedback_controle_au_point_de_lecture`) ; le retrait des huit était l'occasion de le mesurer.
 _ENTRY_COLUMNS = (
     "id", "ticker_id", "document_id", "entry_type", "title", "content",
     "content_structured", "tags", "lang", "source_type", "source_url", "source_date",
     "fiscal_period", "reliability_score", "reliability_tier", "reliability_note",
-    "has_conflict", "conflict_entry_id", "requires_human_review", "reviewed_by_user",
+    "requires_human_review", "nature",
     "last_reviewed_at", "model_cutoff", "version", "valid_from", "superseded_by",
-    "question_status", "question_priority", "resolves_entry_id",
-    "is_outdated", "is_deleted", "created_at", "updated_at", "covers",
+    "is_outdated", "created_at", "updated_at",
 )
 _ENTRY_SELECT = ", ".join(_ENTRY_COLUMNS)
 
@@ -287,7 +299,6 @@ def _build_entries_query(
     ticker_id: str,
     entry_type: Optional[str],
     reliability_tier: Optional[str],
-    covers: Optional[str],
     include_inactive: bool,
     limit: int,
     offset: int,
@@ -296,12 +307,21 @@ def _build_entries_query(
 
     Les fragments sont concaténés ; les paramètres sont positionnels ($1, $2…).
     Pas de commentaire SQL avec accolades ici — cf. convention #39 / check_fstring_sql.
+
+    ⚠️ Le paramètre `covers` a été RETIRÉ le 2026-09-10 (migration 036). Il filtrait par
+    `$n = ANY(ke.covers)` sur l'index GIN. Le remplacer tout de suite par un `EXISTS` sur
+    `question_coverage` aurait produit un filtre **câblé de bout en bout et jamais satisfait** : la
+    table est vide tant que le dispatch du lot 2c ne l'écrit pas, donc chaque appel rendrait zéro
+    ligne sans que rien ne dise pourquoi — le défaut de #50 réintroduit le jour même où on le retire.
+    Le filtre par question revient AVEC son émetteur, pas avant.
     """
     conditions = ["ke.ticker_id = $1"]
     params: list = [ticker_id]
 
     if not include_inactive:
-        conditions.append("ke.is_deleted = false")
+        # ⚠️ `ke.is_deleted = false` retiré (036) : la colonne est archivée, et elle valait FALSE sur
+        # les 180 lignes — le conjoint n'a jamais rien filtré. Un stockage append-only n'a pas de
+        # suppression logique, il supersede.
         conditions.append("ke.superseded_by IS NULL")
 
     # idx = nombre de paramètres déjà dans params ; incrémenté AVANT chaque ajout.
@@ -316,11 +336,6 @@ def _build_entries_query(
         idx += 1
         conditions.append("ke.reliability_tier = $" + str(idx))
         params.append(reliability_tier)
-
-    if covers is not None:
-        idx += 1
-        conditions.append("$" + str(idx) + " = ANY(ke.covers)")
-        params.append(covers)
 
     where = " AND ".join(conditions)
 
@@ -358,24 +373,23 @@ async def list_knowledge_entries(
     ticker_id: str,
     entry_type: Optional[str] = None,
     reliability_tier: Optional[str] = None,
-    covers: Optional[str] = None,
     include_inactive: bool = False,
     limit: int = 50,
     offset: int = 0,
 ):
     """Liste les entries de connaissance d'un ticker avec filtres et compteurs agrégés.
 
-    Par défaut n'expose PAS les entries supprimées (`is_deleted=true`) ni les versions
-    supersédées (`superseded_by IS NOT NULL`) — la table est append-only versionnée,
-    les versions mortes doubleraient la taille du corpus sans apporter d'information utile.
+    Par défaut n'expose PAS les versions supersédées (`superseded_by IS NOT NULL`) — la table est
+    append-only versionnée, les versions mortes doubleraient la taille du corpus sans apporter
+    d'information utile.
 
     Filtres :
-    - `entry_type` : type d'entry (ex. `fact_financial`, `fact_qualitative`, `agent_synthesis`…).
+    - `entry_type` : type d'entry — vocabulaire FERMÉ depuis la 036 (`fact_financial`,
+      `fact_qualitative`, `fact_statistical`, `analysis`, `agent_synthesis`).
     - `reliability_tier` : tier exact (A, A-, B+, B, B-, C+, C).
-    - `covers` : chemin MVDD exact (ex. `financials.roic_pct`) — filtre via l'index GIN.
-    - `include_inactive` : si true, renvoie AUSSI les entries supprimées (`is_deleted`)
-      et les versions supersédées. Le nom couvre les deux : ce sont les deux façons
-      qu'a une entry d'être hors du corpus vivant.
+    - `include_inactive` : si true, renvoie AUSSI les versions supersédées. ⚠️ Il couvrait DEUX
+      façons d'être hors du corpus vivant (`is_deleted` et `superseded_by`) ; depuis la 036 il n'y
+      en a plus qu'une, la première n'ayant jamais eu la moindre ligne.
     - `limit` / `offset` : pagination (défaut 50/0).
 
     La colonne `embedding` (vector 1024) n'est jamais renvoyée.
@@ -395,7 +409,7 @@ async def list_knowledge_entries(
         raise HTTPException(status_code=422, detail="offset ne peut pas être négatif.")
 
     sql_count, sql_page, sql_tier, params = _build_entries_query(
-        ticker_id, entry_type, reliability_tier, covers, include_inactive, limit, offset,
+        ticker_id, entry_type, reliability_tier, include_inactive, limit, offset,
     )
 
     # params contient [ticker_id, ...filtres..., limit, offset]
@@ -440,7 +454,9 @@ async def get_knowledge_entry(entry_id: int):
     """Détail d'une entry de connaissance.
 
     La colonne `embedding` (vector 1024) n'est jamais renvoyée.
-    Renvoie 404 si l'entry est introuvable (quelle que soit sa valeur `is_deleted`).
+    Renvoie 404 si l'entry est introuvable — y compris une version supersédée, qui reste lisible par
+    son id : `analysis_knowledge_refs` la cite, et une citation qui ne se résout plus vaut moins
+    qu'une citation périmée.
     """
     sql = "SELECT " + _ENTRY_SELECT + " FROM knowledge_entries ke WHERE ke.id = $1"
     async with get_db_session() as conn:

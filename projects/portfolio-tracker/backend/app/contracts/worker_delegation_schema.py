@@ -35,10 +35,22 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_VERSION = "v2.0.0"  # même famille que analysis_v2_schemas.py / readiness_report_schema.py
 
-# ── entry_type : cf. commentaire de la table knowledge_entries (migration 024) ──
+# ── entry_type : le vocabulaire FERMÉ de `knowledge_entries` (migration 036) ──
+# ⚠️ Il ne l'était pas : jusqu'au 2026-09-10 la colonne n'avait AUCUN CHECK et ce Literal listait
+# **9** jetons, dont 5 qu'aucun producteur n'a jamais écrits. La 036 ferme le vocabulaire sur ce que
+# les producteurs ÉMETTENT, jamais sur ce que du code LIT — admettre `quote` / `event` /
+# `lesson_learned` « au cas où » rouvrirait une option que personne n'exerce, c'est-à-dire le défaut
+# de #50 pris à l'envers. `risk` → `fact_qualitative` et `base_rate` → `fact_statistical` : un
+# `entry_type` nomme ce que l'assertion EST, jamais un thème ni une méthodologie (#57).
+#
+# ⚠️ Ce Literal est le SECOND point de synchro d'un contrat qui en a trois (#39) : le CHECK SQL, ce
+# schéma, et **l'exemple JSON du prompt en base**. Mesuré le 2026-09-10 : `ingestion-agent` disait
+# encore « tes entry_type autorisés sont uniquement fact_qualitative, event, quote, risk » et son
+# exemple portait `"entry_type": "risk"`. Le resserrer ici sans toucher au prompt ferait rejeter à
+# la validation **tout** ce que cet agent produit — panne totale, invisible hors ligne (les fixtures
+# des checks sont déjà conformes). D'où la migration 037.
 EntryType = Literal[
-    "fact_financial", "fact_qualitative", "event", "quote",
-    "analysis", "risk", "llm_memory", "agent_synthesis", "lesson_learned",
+    "agent_synthesis", "analysis", "fact_financial", "fact_qualitative", "fact_statistical",
 ]
 
 Tier = Literal["A", "A-", "B+", "B", "B-", "C+", "C"]
@@ -76,7 +88,11 @@ Requester = Literal[
     "knowledge-curator", "research-agent", "bull-agent", "bear-agent",
     "thesis-agent", "monitoring-agent", "postmortem-agent",
 ]
-QuestionStatus = Literal["open", "researching", "resolved", "unresolvable"]
+# ⚠️ `QuestionStatus` a été RETIRÉ le 2026-09-10 (migration 036). Il typait `ProducedEntry.
+# question_status`, champ que le modèle remplissait et que `store_knowledge` n'a **jamais** accepté :
+# la valeur mourait dans le dict normalisé du worker. Un vocabulaire qui n'atteint aucun stockage
+# n'est pas un contrat, c'est un affichage (#54). Une question ouverte est de toute façon une
+# propriété du PLAN (§3.6, lot 2c), pas de l'entry qui y répond.
 
 
 class Strict(BaseModel):
@@ -126,8 +142,13 @@ class ProducedEntry(Strict):
     reliability_note: str = Field(min_length=1)  # pourquoi ce score — jamais muet
     requires_human_review: bool = False
     model_cutoff: Optional[str] = None        # ex '2026-01' pour llm_memory
-    covers: Optional[str] = None              # field_path que cette entry comble (grounding aval)
-    question_status: Optional[QuestionStatus] = None  # si l'entry EST une question ouverte (curator)
+    # ⚠️ `covers` et `question_status` RETIRÉS le 2026-09-10 (migration 036). `covers` portait un
+    # chemin MVDD **sur l'entry** : ce qu'une entry couvre est une propriété de la RELATION entry ↔
+    # question, elle vit en table de liaison versionnée `question_coverage` (#57), écrite comme
+    # sous-produit déterministe du dispatch (#58) — pas déclarée par le modèle qui rédige. La classe
+    # étant `extra="forbid"`, leur retrait **rejette** désormais un modèle qui les émettrait encore :
+    # c'est voulu (une clef silencieusement ignorée serait le mode de panne de #54), et c'est
+    # précisément ce qui rend la migration 037 non optionnelle.
 
     @model_validator(mode="after")
     def _regles_structurelles(self):

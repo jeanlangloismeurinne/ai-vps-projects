@@ -54,7 +54,7 @@ from app.db.database import get_db_session
 from app.knowledge.edgar_facts import (
     EdgarUnavailable, _UA, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
 )
-from app.knowledge.service import store_knowledge
+from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
@@ -484,7 +484,7 @@ async def _current_fact_ids(
     rows = await conn.fetch(
         f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id = $1 AND {ENTRIES_COURANTES}
           AND entry_type = 'fact_financial' AND source_type = $2
           AND content_structured->>'metric' = $3
           {scope}
@@ -537,8 +537,6 @@ async def run_edgar_feed(
                         source_url=spec.source_url, source_date=spec.period_end,
                         fiscal_period=spec.fiscal_period,
                         supersedes_entry_id=prevs[0] if prevs else None,
-                        # PAS de `covers` : ce sont les INTRANTS des ratios, pas les champs MVDD
-                        # eux-mêmes (cf. migration 029, qui laisse les faits EDGAR bruts non tagués).
                     )
                     # `store_knowledge` ne referme que la lignée de version (prevs[0]). Les autres
                     # entrées courantes du même poste — celles laissées orphelines par un changement

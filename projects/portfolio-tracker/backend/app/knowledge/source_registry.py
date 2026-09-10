@@ -37,7 +37,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Sequence
+from typing import Optional
 from urllib.parse import urlparse
 
 from app.agents.v2.common import NATURES, derive_nature
@@ -197,7 +197,6 @@ def qualify(
     url: Optional[str],
     ticker_id: Optional[str],
     entry_type: str,
-    covers: Optional[Sequence[str]] = None,
     nature_declaree: Optional[str] = None,
 ) -> tuple[str, str, str]:
     """`(source_type, nature, motif)` — le passage unique des deux sites de qualification.
@@ -210,7 +209,7 @@ def qualify(
     tête de module. Le registre ne s'applique qu'ensuite, et seulement à `web_search_generic`.
     """
     nature, motif = derive_nature(
-        entry_type=entry_type, source_type=source_type, covers=covers, declared=nature_declaree,
+        entry_type=entry_type, source_type=source_type, declared=nature_declaree,
     )
     if source_type != _PROMOUVABLE:
         return source_type, nature, motif

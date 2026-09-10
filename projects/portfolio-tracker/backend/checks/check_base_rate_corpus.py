@@ -6,11 +6,16 @@ mid-cap correctement ; (3) l'ancre méga-cap est marquée « borne haute » ; (4
 jamais fondée sur une classe inventée (lève si ni CA ni capitalisation).
 """
 import sys
+import typing
 
+from app.contracts.worker_delegation_schema import EntryType
 from app.knowledge.base_rate_corpus import (
     BaseRateUnavailable, SALES_GROWTH_DISTRIBUTION, _latest_revenue_usd, _mds, base_rate_ge,
     build_base_rate_anchor_spec, classify_reference_class, size_bucket,
 )
+
+# Le vocabulaire fermé, LU sur son détenteur (#46) au lieu d'en tenir une copie ici.
+_ENTRY_TYPES_FERMES = frozenset(typing.get_args(EntryType))
 
 ok = fail = 0
 
@@ -53,7 +58,17 @@ rc = classify_reference_class(NVDA_M1)
 check("classe NVDA = méga-cap sur base CA", rc["size_bucket"] == "mega" and rc["size_basis"] == "CA", f"→ {rc}")
 spec = build_base_rate_anchor_spec("NVDA", "NVDA", NVDA_M1)
 check("field = base_rate_anchor", spec.field == "base_rate_anchor")
-check("entry_type = base_rate", spec.entry_type == "base_rate")
+# ⚠️ Migration 036 : `base_rate` n'est plus un `entry_type`. Un `entry_type` nomme ce que
+# l'assertion EST — une fréquence empirique tirée d'un corpus est une `fact_statistical` ; le nom
+# du livre de méthode qui la produit n'a rien à faire dans ce vocabulaire (#57). L'assertion se
+# fait contre le DÉTENTEUR du vocabulaire fermé (#46) : figer `"fact_statistical"` en dur ici
+# rendrait le check vert le jour où le contrat changerait sans que le producteur suive.
+check("entry_type appartient au vocabulaire FERMÉ du contrat",
+      spec.entry_type in _ENTRY_TYPES_FERMES, f"→ {spec.entry_type} ∉ {sorted(_ENTRY_TYPES_FERMES)}")
+check("entry_type = fact_statistical (une nature, pas un livre de méthode)",
+      spec.entry_type == "fact_statistical", f"→ {spec.entry_type}")
+check("`base_rate` survit en TAG, jamais en entry_type",
+      "base_rate" in spec.tags and "base_rate" not in _ENTRY_TYPES_FERMES, f"→ {spec.tags}")
 check("tags fondent valorisation.base_rate_anchor",
       "valorisation" in spec.tags and "base_rate_anchor" in spec.tags, f"→ {spec.tags}")
 check("distribution complète portée en structuré",

@@ -24,8 +24,26 @@ selon le même principe que `curator._apply_deterministic_overrides` :
     citation — elle est ramenée à `llm_memory`.
   - **une entrée = un document** : une entry qui cite plusieurs dépôts sous un seul `source_url` est
     marquée pour revue humaine (`_cited_documents`), l'attribution étant fausse pour au moins un.
-  - filtre `reliability_min`, plafond `max_entries`, `covers`, cohérence `status`/`uncovered_fields`,
-    et la déclaration d'exécution (modèle, tokens, coût) qui est **mesurée**, jamais déclarée.
+  - filtre `reliability_min`, plafond `max_entries`, cohérence `status`/`uncovered_fields`, et la
+    déclaration d'exécution (modèle, tokens, coût) qui est **mesurée**, jamais déclarée.
+
+## Ce que ce worker n'écrit PLUS, et l'écart que ça ouvre (2026-09-10, migration 036)
+
+`_resolve_covers` retenait le `field_path` du mandat pour l'inscrire dans `knowledge_entries.covers`
+— c'était le seul émetteur de l'index que le gate interrogeait (#29). La 036 archive la colonne : ce
+qu'une entry couvre est une propriété de la RELATION entry ↔ question, elle vit dans
+`question_coverage` (#57), et ce lien s'écrit comme **sous-produit déterministe du dispatch** (#58),
+pas au retour d'un agent qui rédige.
+
+⚠️ **L'écart est réel entre le lot 2b et le lot 2c, et il est DÉCLARÉ plutôt que tu** — dans
+`checks/check_search_worker.py` (`_COUVERTURE_NON_CABLEE`), sur la forme de #52 : un écart inscrit
+dans le check du lot qui l'a créé, et qui vire au vert de lui-même le jour du câblage, plutôt qu'un
+`TODO` que personne ne relit. Aucune entry produite par ce worker n'est reliée à une question tant
+que le dispatch n'existe pas. Ce n'est pas une régression déguisée en simplification — la couverture
+qui disparaît ici est celle d'un vocabulaire MVDD que le lot 3 retire, et `staleness` rend déjà
+`couverture_connue: False` plutôt qu'une liste vide muette (#49). Câbler un lien provisoire depuis le
+`field_path` MVDD serait un backfill « construit pour tomber juste sur les données d'hier », que la
+036 refuse explicitement en en-tête.
 
 Le résultat corrigé est ensuite validé par `WorkerExchange` (invariants croisés requête×réponse). La
 validation est donc un **filet**, pas le mécanisme : on ne compte pas sur elle pour faire respecter
@@ -64,7 +82,6 @@ from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.source_registry import qualify
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
-from .common import MVDD_FIELD_PATHS
 from .runner import run_tool_json_agent
 from .tools import RetrievalLog, build_tool_executors
 
@@ -126,21 +143,13 @@ def _resolve_source_type(
     return classify_source_type(url, ticker_id)
 
 
-def _resolve_covers(mandat: Optional[str], declare: Any) -> Optional[str]:
-    """Champ MVDD couvert par l'entry : le MANDAT fait foi, la déclaration du modèle est filtrée.
-
-    Depuis la 029, `covers` est l'index que le curator interroge pour rendre son verdict — poser un
-    tag, c'est voter sur la readiness. Même raisonnement que `_resolve_source_type` (#24) : ce qui
-    vient d'un chemin déterministe (le `field_path` du mandat, décidé par l'appelant) est retenu tel
-    quel ; ce que le modèle propose spontanément n'est retenu que s'il appartient au vocabulaire
-    FERMÉ des champs requis. Un tag hors vocabulaire ne fonde aucun champ : on l'écarte plutôt que
-    de laisser une chaîne libre s'installer dans un index dont dépend le gate.
-    """
-    if mandat:
-        return mandat
-    if isinstance(declare, str) and declare.strip() in MVDD_FIELD_PATHS:
-        return declare.strip()
-    return None
+# ⚠️ `_resolve_covers()` a été SUPPRIMÉ le 2026-09-10 (migration 036) — cf. le paragraphe « ce que ce
+# worker n'écrit plus » en tête de module. Son raisonnement reste vrai et il vaut pour le dispatch du
+# lot 2c : ce qui vient d'un chemin déterministe fait foi, ce que le modèle propose spontanément est
+# filtré sur un vocabulaire fermé (#24). Ce qui était faux, c'est le PORTEUR — l'entry, alors que la
+# couverture est une propriété de la relation (#57). Le laisser en place « au cas où » aurait produit
+# une branche morte : `MVDD_FIELD_PATHS` survit au lot 2b (la grille ne se retire qu'au lot 3), donc
+# le filtre aurait continué de dire vrai en n'alimentant plus rien — le mode de panne exact de #50.
 
 
 def _verify_provenance(url: Optional[str], log: Optional[RetrievalLog]) -> tuple[bool, Optional[str]]:
@@ -220,7 +229,6 @@ def _normalise_entry(
     url = (raw.get("source_url") or "").strip() or None
     source_type = _resolve_source_type(raw.get("source_type"), url, req.ticker_id)
     source_date = _parse_iso_date(raw.get("source_date"))
-    covers = _resolve_covers(req.output_schema.field_path, raw.get("covers"))
 
     caveats: list[str] = []
     unverified, provenance_note = _verify_provenance(url, log)
@@ -243,8 +251,7 @@ def _normalise_entry(
     # fût-ce en prose (#50). Ce que la note doit dire, `compute_reliability` le dit déjà
     # (« base web_search_reputable=0.65 (tier B) »).
     source_type, _nature, motif_qualif = qualify(
-        source_type=source_type, url=url, ticker_id=req.ticker_id,
-        entry_type=want, covers=[covers] if covers else None,
+        source_type=source_type, url=url, ticker_id=req.ticker_id, entry_type=want,
     )
     logger.debug("search-worker: qualification %s → %s (%s)", url, source_type, motif_qualif)
 
@@ -287,8 +294,8 @@ def _normalise_entry(
         "reliability_note": note,
         "requires_human_review": bool(raw.get("requires_human_review")) or bool(caveats),
         "model_cutoff": raw.get("model_cutoff"),
-        "covers": covers,
-        "question_status": raw.get("question_status"),
+        # ⚠️ `covers` et `question_status` ne sont plus recopiés ici (migration 036) : `ProducedEntry`
+        # est `extra="forbid"`, les remettre ferait rejeter TOUTE entry par le filet de validation.
     }
 
     if source_type == "llm_memory":
@@ -614,9 +621,9 @@ async def persist_worker_entries(
             source_date=_parse_iso_date(entry.source_date),
             fiscal_period=entry.fiscal_period,
             model_cutoff=entry.model_cutoff,
-            # 029 : l'index porte le CHEMIN COMPLET (`produits.description`), plus le nom nu —
-            # `description` est requis par deux dimensions, un nom nu ferait passer l'autre.
-            covers=([entry.covers] if entry.covers else None),
+            # ⚠️ Plus de `covers=` (migration 036) : `store_knowledge` ne l'accepte plus, et le lien
+            # entry ↔ question s'écrira au dispatch (#57/#58), pas ici. Écart déclaré en tête de
+            # module et gardé par `check_search_worker.py`.
             # `store_knowledge` fait un OU avec ses propres source_types à revue d'office (P2) :
             # passer False ne peut jamais DÉSARMER un drapeau, seulement en ajouter un.
             requires_human_review=bool(entry.requires_human_review),

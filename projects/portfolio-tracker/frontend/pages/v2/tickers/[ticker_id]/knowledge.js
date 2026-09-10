@@ -144,16 +144,11 @@ function QualitySignals({ entry }) {
     )
   }
 
-  if (entry.has_conflict) {
-    signals.push(
-      <span key="conflict" className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-900/60 text-orange-300 border border-orange-700">
-        Conflit détecté
-        {entry.conflict_entry_id != null
-          ? ` (entry #${entry.conflict_entry_id})`
-          : ''}
-      </span>
-    )
-  }
+  // ⚠️ Le signal « Conflit détecté » a été RETIRÉ le 2026-09-10 (migration 036). Il lisait
+  // `has_conflict` / `conflict_entry_id`, deux colonnes à ZÉRO écriture — mesuré sur les 180 lignes
+  // avant de les archiver, jamais supposé. Un badge que rien n'allume ne dit pas « pas de conflit »,
+  // il dit « on ne cherche pas les conflits » : son absence de la carte est plus honnête que sa
+  // présence permanente en sourdine. La détection de contradictions reviendra avec son émetteur.
 
   if (entry.requires_human_review) {
     signals.push(
@@ -290,6 +285,20 @@ function EntryCard({ entry }) {
                 : <span className="text-gray-600 italic">non renseigné</span>
             }
           />
+          {/* ⚠️ `nature` est SERVI ICI depuis le 2026-09-10, et c'est la contrepartie du retrait des
+              huit colonnes mortes. Il est NOT NULL depuis la migration 034 et n'apparaissait sur
+              aucun écran : le lecteur du corpus voyait huit axes que rien n'écrivait, et pas celui
+              qui commande l'autorité de l'assertion (#51). Un axe stocké mais absent du point de
+              lecture n'est pas un axe. Il ne se recombine avec le tier ni ici ni ailleurs (#50) :
+              deux valeurs côte à côte, jamais un score. */}
+          <KeyValue
+            label="Nature de l'assertion"
+            value={
+              entry.nature != null
+                ? <span className="font-mono text-gray-300">{entry.nature}</span>
+                : <span className="text-amber-600 italic">— champ absent</span>
+            }
+          />
           <KeyValue
             label="Version"
             value={entry.version != null ? `v${entry.version}` : <span className="text-amber-600 italic">— champ absent</span>}
@@ -321,23 +330,12 @@ function EntryCard({ entry }) {
           <p className="text-xs text-amber-600 italic">— reliability_note absente</p>
         )}
 
-        {/* Champs covers (MVDD) */}
-        <div>
-          <p className="text-[10px] text-gray-600 uppercase tracking-wide mb-1">Champs MVDD couverts (covers)</p>
-          {Array.isArray(entry.covers) && entry.covers.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {entry.covers.map((c, i) => (
-                <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700 text-[10px] text-gray-300 font-mono">
-                  {c}
-                </span>
-              ))}
-            </div>
-          ) : entry.covers === null ? (
-            <span className="text-xs text-gray-600 italic">non renseigné (null)</span>
-          ) : (
-            <span className="text-xs text-amber-600 italic">— champ absent</span>
-          )}
-        </div>
+        {/* ⚠️ Le bloc « Champs MVDD couverts (covers) » a été RETIRÉ le 2026-09-10 (migration 036).
+            Ce qu'une entry couvre est une propriété de la RELATION entry ↔ question : ça vit dans
+            `question_coverage`, pas sur la ligne (#57). Le rendu sera rétabli quand le dispatch du
+            lot 2c écrira ces liens — et il montrera alors un COUPLE `framework/question`, pas un
+            chemin MVDD. Afficher entre-temps une liste toujours vide ferait lire « cette entry ne
+            fonde rien », alors que la bonne phrase est « on ne le sait pas encore » (#44/#49). */}
 
         {/* Tags */}
         {Array.isArray(entry.tags) && entry.tags.length > 0 && (
@@ -408,17 +406,12 @@ function Filters({ filters, onChange }) {
             </select>
           </div>
 
-          {/* covers (filtre sur chemin MVDD) */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Champ MVDD (covers)</label>
-            <input
-              type="text"
-              value={filters.covers}
-              onChange={e => onChange({ ...filters, covers: e.target.value, offset: 0 })}
-              placeholder="ex: financials.roic_pct"
-              className="text-sm bg-gray-800 border border-gray-700 text-gray-200 rounded px-2 py-1 placeholder-gray-600"
-            />
-          </div>
+          {/* ⚠️ Le filtre « Champ MVDD (covers) » a été RETIRÉ le 2026-09-10 (migration 036) : le
+              paramètre n'existe plus côté API. Le remplacer tout de suite par un filtre sur
+              `question_coverage` aurait donné un champ de saisie qui rend ZÉRO ligne quoi qu'on y
+              tape, la table étant vide tant que le dispatch du lot 2c ne l'écrit pas — un contrôle
+              câblé de bout en bout que rien n'exerce (#50), réintroduit le jour même où on le
+              retire. Le filtre par question revient AVEC son émetteur. */}
 
           {/* include_inactive */}
           <div className="flex flex-col gap-1">
@@ -508,7 +501,6 @@ export default function KnowledgeV2() {
   const [filters, setFilters] = useState({
     entry_type:      '',
     reliability_tier: '',
-    covers:          '',
     include_inactive: false,
     limit:           50,
     offset:          0,
@@ -523,7 +515,6 @@ export default function KnowledgeV2() {
     const params = new URLSearchParams()
     if (filters.entry_type)       params.set('entry_type',       filters.entry_type)
     if (filters.reliability_tier) params.set('reliability_tier', filters.reliability_tier)
-    if (filters.covers)           params.set('covers',           filters.covers)
     if (filters.include_inactive) params.set('include_inactive', 'true')
     params.set('limit',  String(filters.limit))
     params.set('offset', String(filters.offset))
@@ -599,7 +590,7 @@ export default function KnowledgeV2() {
               {data.total === 0
                 ? 'Aucune entry'
                 : `${data.total} entry${data.total > 1 ? 's' : ''} — page ${Math.floor(filters.offset / filters.limit) + 1}`}
-              {filters.entry_type || filters.reliability_tier || filters.covers || filters.include_inactive
+              {filters.entry_type || filters.reliability_tier || filters.include_inactive
                 ? ' (filtres actifs)'
                 : ''}
             </p>

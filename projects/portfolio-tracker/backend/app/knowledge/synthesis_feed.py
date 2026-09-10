@@ -40,7 +40,7 @@ from app.agents.v2.common import TIER_ORDER, format_entries_for_prompt
 from app.agents.v2.runner import run_json_agent
 from app.contracts import GroundedSynthesis
 from app.db.database import get_db_session
-from app.knowledge.service import query_knowledge, store_knowledge
+from app.knowledge.service import ENTRIES_COURANTES, query_knowledge, store_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,12 @@ class SynthesisTarget:
     # `query` et `guidance` sont des GABARITS : elles décrivent ce qu'est le champ, jamais un
     # émetteur en particulier. Seul `{company}` les spécialise (cf. `resolve`).
     query: str                       # requête sémantique de chargement des entries citables
+    # ⚠️ Un filtre de LECTURE, donc borné au vocabulaire FERMÉ de la 036 — pas à un vocabulaire
+    # d'intention. Les quatre listes portaient `quote` (que **zéro** producteur a jamais écrit :
+    # mesuré, 0 ligne sur 180) et `risk` (1 ligne, devenue `fact_qualitative`, déjà présente dans
+    # les deux listes concernées — rien n'est perdu). Un jeton qu'aucune ligne ne peut porter ne
+    # rétrécit pas le filtre : il le fait paraître plus large qu'il n'est, et cette largeur-là ne
+    # se voit jamais échouer. C'est le mode de panne de #50, appliqué à un `IN`.
     candidate_entry_types: tuple[str, ...]
     min_citations: int               # sous ce seuil de matériau citable → SynthesisUnavailable
     guidance: str                    # ce que la synthèse doit couvrir (injecté au LLM)
@@ -152,7 +158,7 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "produits et services vendus chiffre d'affaires par segment clients cibles "
             "canaux de monétisation structure du groupe"
         ),
-        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
+        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis"),
         min_citations=2,
         citable_tiers=("A", "A-"),
         guidance=(
@@ -174,7 +180,7 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "coût unitaire prix de vente moyen pouvoir de fixation des prix rentabilité par "
             "produit ou par client"
         ),
-        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis", "quote"),
+        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis"),
         min_citations=2,
         citable_tiers=("A", "A-"),  # socle marges/coûts tier A ; exclut la presse marché B+ (hors-champ)
         guidance=(
@@ -195,7 +201,7 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "effets de réseau économies d'échelle actifs incorporels marque brevets "
             "rétention des clients barrières à l'entrée durabilité"
         ),
-        candidate_entry_types=("fact_qualitative", "analysis", "quote", "risk", "fact_financial"),
+        candidate_entry_types=("fact_qualitative", "analysis", "fact_financial"),
         min_citations=2,
         citable_tiers=("A", "A-"),  # preuves du moat = socle A (dépôts, échelle, risques EDGAR A) ; la
                                     # presse marché B+ porte des MENACES, pas des preuves
@@ -219,7 +225,7 @@ SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
             "concentration de la clientèle pouvoir de négociation des fournisseurs dépendance "
             "produits de substitution réglementation"
         ),
-        candidate_entry_types=("risk", "fact_qualitative", "analysis", "quote"),
+        candidate_entry_types=("fact_qualitative", "analysis"),
         min_citations=3,
         citable_tiers=("A", "A-"),  # les 5 forces s'adossent aux facteurs de risque EDGAR tier A ; la
                                     # presse B+ porte la même chose en moins fiable → exclue
@@ -473,9 +479,9 @@ async def _current_synthesis_entry_id(conn, ticker_id: str, target: SynthesisTar
     """Id de la synthèse COURANTE pour ce champ (à superseder). Ce feed est le seul producteur du
     triplet de tags → pas de collision avec une entry de recherche."""
     row = await conn.fetchrow(
-        """
+        f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id = $1 AND {ENTRIES_COURANTES}
           AND tags @> $2
         ORDER BY id DESC LIMIT 1
         """,
@@ -667,7 +673,6 @@ async def run_synthesis_feed(
                     content_structured=content_structured, tags=_tags(target), lang=synth.lang,
                     supersedes_entry_id=prev, requires_human_review=True,
                     derived_reliability=(score, tier, note),
-                    covers=[target.field_path],   # index 029 : chemin complet, plus le nom nu
                 )
                 persisted = dict(stored) | {"supersedes": prev}
         logger.info(

@@ -66,9 +66,7 @@ scorée ou n'entre pas**.
       "reliability_tier": "B",
       "reliability_note": "Source réputée (media/site technique identifié) mais interprétation — non document primaire.",
       "requires_human_review": false,
-      "model_cutoff": null,
-      "covers": "moat.preuves",
-      "question_status": null
+      "model_cutoff": null
     }
   ],
   "uncovered_fields": [],
@@ -86,11 +84,19 @@ scorée ou n'entre pas**.
    `uncovered_fields`. (Le filet `llm_memory` à 0.40 ne passe **que** si le métier a explicitement
    ouvert `reliability_min ≤ 0.40`.)
 3. **Type de sortie respecté.** Toutes les entries ont l'`entry_type` demandé
-   (`output_schema.entry_type`) — la délégation est typée.
+   (`output_schema.entry_type`) — la délégation est typée. Le vocabulaire est **fermé** à cinq
+   jetons : `fact_financial`, `fact_qualitative`, `fact_statistical`, `analysis`, `agent_synthesis`.
+   Un `entry_type` nomme ce que l'assertion **est**, jamais son thème ni sa méthode : un risque est
+   un `fact_qualitative` avec `risk` dans les `tags`, un taux de base est un `fact_statistical`.
+   Tout autre jeton fait rejeter l'entry.
 4. **Plafond de source + score jamais muet.** `reliability_score` ≤ baseline(source)+0.10 ;
    `reliability_note` justifie systématiquement.
 5. **`max_entries` respecté.** Arrêt de Pareto : ne dépasse pas le plafond, garde les meilleures.
-6. **`covers`** = `output_schema.field_path` sur chaque entry (grounding aval).
+6. **Aucune clef hors de l'exemple** — en particulier **plus de `covers` ni de `question_status`**.
+   Le champ visé reste dans `output_schema.field_path` de la requête ; ce qu'une entry couvre est
+   une propriété du LIEN entre elle et la question, établi en aval à partir du mandat, pas déclaré
+   par toi. Le contrat refuse tout champ inconnu : une clef en trop rejette **l'entry entière**.
+   Ce que tu ne combles pas se dit dans `uncovered_fields`, comme avant.
 7. **`status` cohérent.** `found` ⇒ au moins une entry. `not_found` ⇒ zéro entry + `uncovered_fields`
    non vide. `partial` si tu combles une partie seulement.
 8. **Anti-doublon.** Si `check_existing_first=true`, interroge `query_knowledge` d'abord ; ne

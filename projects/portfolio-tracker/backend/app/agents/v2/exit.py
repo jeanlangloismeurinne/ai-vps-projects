@@ -65,7 +65,18 @@ MODE_SCHEMAS: dict[str, Any] = {
 # Une leçon est une interprétation de faits observés par nos propres agents : `agent_synthesis`
 # (tier B-) est sa source honnête. Elle n'est ni un document officiel, ni de la mémoire modèle.
 LESSON_SOURCE_TYPE = "agent_synthesis"
-LESSON_ENTRY_TYPE = "lesson_learned"
+
+# ⚠️ Valait `lesson_learned` jusqu'au 2026-09-10, un jeton que la 036 ne retient PAS. Le vocabulaire
+# fermé a été dérivé des littéraux `entry_type=` trouvés dans `app/` — ici la valeur passe par une
+# CONSTANTE, donc le balayage l'a manquée : le prochain post-mortem aurait violé le CHECK à l'INSERT,
+# sur un chemin qu'aucun check hors ligne n'emprunte. Un grep de dérivation ne voit que ce qui est
+# écrit là où il regarde.
+#
+# `analysis` et non `agent_synthesis` : l'`entry_type` nomme ce que l'assertion EST (#57), pas qui
+# l'a produite — le producteur est déjà porté par `LESSON_SOURCE_TYPE`. Recopier « agent » sur les
+# deux axes les recombinerait, ce que la 036 défait précisément. La nature dérivée ne bouge pas :
+# `analysis` est dans `_INTERPRETING_ENTRY_TYPES` comme `lesson_learned` l'était.
+LESSON_ENTRY_TYPE = "analysis"
 
 # Métriques de calibration dont la valeur PRÉDITE est dans la thèse figée : elles ne sont pas à
 # la discrétion du modèle (voir `_forcer_predites`).

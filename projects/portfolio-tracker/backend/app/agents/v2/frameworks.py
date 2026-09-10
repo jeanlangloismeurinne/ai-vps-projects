@@ -85,7 +85,7 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
 
       G. deux questions de frameworks DIFFÉRENTS partageant un id. §6 fait des `framework_questions`
          LE vocabulaire unique — deux `qf_1` et l'index désigne l'un pour l'autre ;
-      H. deux chemins d'indexation identiques entre frameworks. Même panne, côté `covers` ;
+      H. deux chemins d'indexation identiques entre frameworks. Même panne, côté lien de couverture ;
       I. une question qui ne couvre pas exactement les archétypes déclarés. En trop : un archétype
          inventé n'est jamais interrogé. En moins : la question est MUETTE sur cet archétype, et
          l'agent tranchera seul — l'expérience du chantier dit qu'il fabrique une réponse plutôt

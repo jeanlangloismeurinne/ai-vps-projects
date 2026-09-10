@@ -230,33 +230,41 @@ class _FakeConn:
         return None
 
 
-def _row(i, d, covers, txt, tier="A"):
-    return {"id": i, "title": f"e{i}", "content": txt, "covers": covers,
+# ⚠️ `covers` → `questions_couvertes` (migration 036). La clef porte désormais des couples
+# `framework/question` issus de `question_coverage`, pas des chemins MVDD posés sur l'entry : ce
+# qu'une entry couvre est une propriété de la RELATION (#57). La fixture les fournit déjà agrégés,
+# comme le fait le `LEFT JOIN` de `_entries_actives` — `_balayage` reste ainsi une fonction pure
+# de ses lignes, et le check n'a pas besoin d'une base.
+def _row(i, d, questions, txt, tier="A"):
+    return {"id": i, "title": f"e{i}", "content": txt, "questions_couvertes": questions,
             "source_type": "edgar_official", "source_url": "https://sec.gov/x",
             "source_date": d, "fiscal_period": "FY2025", "reliability_tier": tier,
             "entry_type": "fact_qualitative", "requires_human_review": False}
 
 
 ROWS = [
-    _row(176, date(2026, 2, 25), ["business_model.description"],
+    _row(176, date(2026, 2, 25), ["defendabilite/df_1"],
          "aucun produit approuvé pour la vente commerciale"),
-    _row(177, date(2026, 2, 25), ["business_model.drivers_revenus"],
+    _row(177, date(2026, 2, 25), ["qualite_financiere/qf_2"],
          "les seules entrées de trésorerie proviennent de financements"),
-    _row(182, date(2026, 8, 5), ["risques.risques_cles"],
+    _row(182, date(2026, 8, 5), ["qualite_financiere/qf_4"],
          "la société ne peut être certaine d'obtenir une approbation"),
-    _row(186, date(2026, 8, 26), ["marche.croissance_marche_historique"],
+    _row(186, date(2026, 8, 26), ["defendabilite/df_2"],
          "la FDA a approuvé RASONQUE le 2026-08-26"),
-    _row(999, None, ["produits.description"], "entry sans date de source"),
+    # Entry sans lien de couverture : elle DOIT rester dans le balayage (sa péremption ne dépend
+    # pas de ce qu'elle fonde), et ne rien ajouter aux questions touchées.
+    _row(999, None, [], "entry sans date de source"),
 ]
 
 
-async def _balayage(lookup):
+async def _balayage(lookup, rows=None):
     async def _fake_anchor(_conn, _tid):
         return lookup
     orig = _st.material_anchor_for_ticker
     _st.material_anchor_for_ticker = _fake_anchor
     try:
-        return await _st.balayage_peremption(_FakeConn(ROWS), "RVMD")
+        return await _st.balayage_peremption(
+            _FakeConn(ROWS if rows is None else rows), "RVMD")
     finally:
         _st.material_anchor_for_ticker = orig
 
@@ -285,14 +293,34 @@ check("les trois classes couvrent exactement les entries actives",
 check("la plus ancienne vient en tête",
       rap["suspectes"][0]["jours_avant_evenement"] == 183,
       f"→ {rap['suspectes'][0]['jours_avant_evenement']}")
-check("les champs MVDD touchés sont agrégés",
-      "business_model.description" in rap["champs_touches"]
-      and "risques.risques_cles" in rap["champs_touches"], f"→ {rap['champs_touches']}")
+# ⚠️ Ex-« les champs MVDD touchés sont agrégés ». Ce que les suspectes touchent se lit désormais en
+# couples `framework/question` (migration 036, #57). Égalité EXACTE et non appartenance : l'entry 999
+# n'a aucun lien de couverture, et un `in` la laisserait passer inaperçue si elle en ajoutait un.
+check("les questions couvertes par les suspectes sont agrégées",
+      rap["questions_touchees"] == ["defendabilite/df_1", "defendabilite/df_2",
+                                    "qualite_financiere/qf_2", "qualite_financiere/qf_4"],
+      f"→ {rap['questions_touchees']}")
+check("sur ce corpus, la couverture est CONNUE", rap["couverture_connue"] is True)
 check("le motif nomme l'événement et ses items",
       "2026-08-27" in rap["motif"] and "obligation financière" in rap["motif"], f"→ {rap['motif']}")
 check("le rapport dit qu'il n'écrit rien", rap["ecrit_en_base"] is False)
 check("le motif dit « re-vérifier », jamais « supprimer »",
       "re-vérifier" in rap["motif"] and "pas à supprimer" in rap["motif"])
+
+print("\n9bis. balayage — « aucune question touchée » n'est PAS « on ne sait pas encore »")
+# Le troisième état (#44/#54). Tant que le dispatch du lot 2c n'écrit pas `question_coverage`, la
+# table est vide : `questions_touchees == []` est alors vrai mais ne dit RIEN de l'impact. C'est
+# `couverture_connue: False` qui le dit. Les fondre en une seule clef ferait lire « ces périmés ne
+# fondent rien » — la phrase rassurante produite par la pire raison (#49). Cas discriminant : mêmes
+# lignes, mêmes dates, couverture retirée ; seule la seconde clef doit bouger.
+ROWS_SANS_COUVERTURE = [dict(r, questions_couvertes=[]) for r in ROWS]
+rap_nc = asyncio.run(_balayage(found, ROWS_SANS_COUVERTURE))
+check("sans aucun lien, la liste est vide ET le rapport déclare la couverture INCONNUE",
+      rap_nc["questions_touchees"] == [] and rap_nc["couverture_connue"] is False,
+      f"→ {rap_nc['questions_touchees']} / couverture_connue={rap_nc['couverture_connue']}")
+check("les mêmes entries restent suspectes (la péremption ne dépend pas de ce qu'elles fondent)",
+      {e["id"] for e in rap_nc["suspectes"]} == ids_susp,
+      f"→ {sorted(e['id'] for e in rap_nc['suspectes'])}")
 
 print("\n10. balayage — une panne rend ZÉRO suspecte, et le DIT (leçon §13)")
 rap_ko = asyncio.run(_balayage(MaterialEventLookup(status="unavailable", raison="EDGAR 503")))

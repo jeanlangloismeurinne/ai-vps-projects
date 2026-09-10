@@ -4,9 +4,14 @@ CE QU'IL PROUVE
 ---------------
 Le système parle deux langues qui ne se rencontrent jamais :
 
-  · le vocabulaire d'INDEXATION — `MVDD_FIELD_PATHS`, ce que `covers` a le droit de désigner.
-    `worker._resolve_covers` retourne `None` sur tout tag hors de cette liste : l'entry est stockée
-    et ne fonde rien. Elle devient orpheline, en silence.
+  · le vocabulaire d'INDEXATION — `MVDD_FIELD_PATHS`, ce qu'un lien de couverture a le droit de
+    désigner. Un tag hors de cette liste ne fonde rien : l'entry est stockée et devient orpheline,
+    en silence.
+    ⚠️ Ce mesureur porte sur les deux VOCABULAIRES, pas sur leur porteur, et c'est pourquoi la 036
+    ne l'a pas touché. Le porteur, lui, a changé : `worker._resolve_covers` écrivait le chemin dans
+    `knowledge_entries.covers` — supprimé le 2026-09-10, la couverture étant une propriété de la
+    relation entry ↔ question (#57), à écrire dans `question_coverage` par le dispatch du lot 2c.
+    L'écart mesuré ci-dessous est le même avant et après ce déménagement.
   · le vocabulaire de SORTIE — les feuilles du `ResearchMemo`, ce que les analystes doivent remplir.
 
 Un champ du mémo sans chemin d'indexation est un champ qu'AUCUNE entry ne peut fonder : il sera
@@ -138,7 +143,7 @@ def main() -> int:
     check("[A] chaque champ déclaré DÉRIVÉ est encore une feuille du mémo", not derives_morts,
           f"→ {derives_morts} : une dispense qui ne dispense plus rien")
 
-    print(f"\nvocabulaire d'INDEXATION (covers, MVDD_FIELD_PATHS) : {len(index)} chemins")
+    print(f"\nvocabulaire d'INDEXATION (MVDD_FIELD_PATHS) : {len(index)} chemins")
     print(f"champs FEUILLES du ResearchMemo (hors refs)         : {len(memo)}")
     print(f"   dont dérivés d'autres champs (pas à fonder)      : {len(DERIVES & memo)}")
 

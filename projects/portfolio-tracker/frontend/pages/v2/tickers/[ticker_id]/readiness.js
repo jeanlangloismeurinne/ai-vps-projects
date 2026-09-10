@@ -26,7 +26,7 @@ function fmtPct(val) {
 
 // ── Bloc : Verdict en manchette ───────────────────────────────────────────────
 // Le `rationale` commence toujours par un en-tête entre crochets écrit par le CODE
-// (pas par le LLM) : "[Verdict recomputé : … — ligne écrite par le code depuis l'index `covers`]".
+// (pas par le LLM) : "[Verdict recomputé : … — ligne écrite par le code depuis l'index de couverture]".
 // On le sépare du corps narratif pour le mettre en valeur — c'est la garantie que le
 // verdict est recalculé algorithmiquement, pas généré par le modèle.
 
@@ -87,6 +87,30 @@ function ReevaluationBanner({ reevaluation }) {
   }
 
   const { ancre_statut, ancre_libelle, verdict_persiste, verdict_recalcule, entries_lues } = reevaluation
+
+  // ⚠️ QUATRIÈME état, ajouté avec la migration 036 : la réévaluation n'a pas pu être FAITE.
+  // L'index de couverture n'a plus d'émetteur (`covers` archivée, dispatch du lot 2c pas écrit),
+  // donc la porte refuse de prononcer plutôt que de rendre « lacune » sur une base pleine. Il est
+  // vital de ne pas le laisser tomber dans la branche ordinaire : `verdict_recalcule` y vaut null,
+  // `aChange` serait vrai, et l'écran afficherait « il vaut aujourd'hui null » — un verdict
+  // fabriqué par un rendu. On montre donc le verdict PERSISTÉ en disant qu'il n'est pas vérifié.
+  if (reevaluation.faite === false) {
+    return (
+      <div className="rounded-xl border border-amber-900/60 bg-amber-950/20 px-4 py-3 space-y-1">
+        <div className="text-[10px] uppercase tracking-wide font-semibold text-amber-600">
+          Non réévalué — le verdict ci-dessous n'a pas été confronté au jour
+        </div>
+        <p className="text-xs text-amber-300 leading-relaxed">{reevaluation.motif}</p>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Verdict écrit en base :{' '}
+          <span className="font-mono font-semibold text-gray-200">{verdict_persiste}</span>
+          {ancre_libelle && <> · ancre matérielle du jour : <span className="font-mono">{ancre_libelle}</span></>}
+          {entries_lues != null && <> · {entries_lues} entrées en base</>}
+        </p>
+      </div>
+    )
+  }
+
   const aChange = verdict_persiste !== verdict_recalcule
   const panne = ancre_statut === 'unavailable'
 

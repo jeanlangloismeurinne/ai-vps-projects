@@ -60,6 +60,7 @@ from app.db.database import close_pool, get_db_session, init_pool
 from app.knowledge.embeddings import is_configured as embeddings_configured
 from app.knowledge.service import query_knowledge
 from app.knowledge.synthesis_feed import SYNTHESIS_TARGETS
+from tools._corpus_archive import ENTRIES, bandeau
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 
@@ -170,6 +171,7 @@ def _fmt(e: dict[str, Any], rang: int) -> str:
 
 
 async def main() -> int:
+    print(bandeau())
     if not embeddings_configured():
         # Pré-requis manquant → échec bruyant. Un repli texte mesurerait autre chose que la
         # production (chemin nominal vectoriel) et rendrait un chiffre qu'on croirait comparable.
@@ -198,7 +200,7 @@ async def main() -> int:
             porteurs = [
                 r for r in await conn.fetch(
                     "SELECT id, title, source_type, reliability_tier, content "
-                    "FROM knowledge_entries WHERE ticker_id = $1 AND superseded_by IS NULL "
+                    f"FROM {ENTRIES} WHERE ticker_id = $1 AND superseded_by IS NULL "
                     "ORDER BY id", ETALON[0],
                 )
                 if ETALON[2].search(f"{r['title'] or ''}\n{r['content'] or ''}")
@@ -228,9 +230,9 @@ async def main() -> int:
                 # rassurant produit par la pire des raisons (#49). Le discriminant est dans la
                 # ligne, et c'est précisément ce que #55 exige.
                 syntheses = await conn.fetch(
-                    """
+                    f"""
                     SELECT id, title, content, covers, reliability_tier, content_structured
-                      FROM knowledge_entries
+                      FROM {ENTRIES}
                      WHERE ticker_id = $1 AND superseded_by IS NULL
                        AND content_structured->>'synthesis_kind' = 'grounded_synthesis'
                      ORDER BY id

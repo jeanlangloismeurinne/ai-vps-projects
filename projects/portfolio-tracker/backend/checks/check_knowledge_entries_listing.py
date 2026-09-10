@@ -7,15 +7,16 @@ Sans elles, la base de connaissance existe en DB mais est invisible à l'utilisa
 Ce qu'on éprouve (hors ligne — aucun appel réseau, aucune DB) :
 
   §1  Colonnes exportées — `embedding` ABSENT de _ENTRY_SELECT et de _ENTRY_COLUMNS ;
-      toutes les autres colonnes de la spec sont présentes.
+      les colonnes de la spec sont présentes, et les 8 colonnes retirées par la 036 —
+      lues sur leur détenteur, `_gen_036.COLONNES_RETIREES` — n'y sont plus.
   §2  _build_entries_query — numérotation des paramètres positionnels ($1, $2…) :
       chaque filtre optionnel reçoit le bon indice en fonction des filtres activés avant
       lui. Un décalage d'un cran (le bug d'origine : idx=2 au lieu de idx=1) ferait
       pointer $3 sur un paramètre inexistant → asyncpg lèverait en prod.
-  §3  Filtre `include_inactive=False` (défaut) — `is_deleted = false` ET
-      `superseded_by IS NULL` dans le WHERE ; `include_inactive=True` — ces deux
-      conditions sont absentes.
-  §4  Filtre `covers` — génère `$N = ANY(ke.covers)` avec le bon indice.
+  §3  Filtre `include_inactive=False` (défaut) — `superseded_by IS NULL` est le SEUL
+      prédicat de vivacité (`is_deleted` est archivée) ; `include_inactive=True` — il
+      est absent.
+  §4  Aucun filtre de couverture — la structure de la fonction, pas un grep d'interdit.
   §5  Filtre `entry_type` + `reliability_tier` combinés — indices consécutifs corrects.
   §6  SQL TIER — la requête de comptage par tier ne contient aucune accolade littérale
       susceptible de casser une f-string (convention #39) ; toutes les clés attendues
@@ -27,6 +28,7 @@ Ce qu'on éprouve (hors ligne — aucun appel réseau, aucune DB) :
   §10 Embedding absent du SELECT — le SQL généré ne contient pas le mot `embedding`.
 """
 import ast
+import inspect
 import sys
 from pathlib import Path
 
@@ -52,6 +54,10 @@ from app.api.knowledge_v2 import (
     list_knowledge_entries,
     get_knowledge_entry,
 )
+# Les 8 colonnes que la 036 retire, LUES sur leur détenteur (#46) plutôt que recopiées ici. Une
+# liste jumelle serait d'accord avec son modèle aujourd'hui et divergerait au prochain retrait,
+# en silence — c'est précisément le mode de panne que #46 décrit.
+from app.db.migrations._gen_036 import COLONNES_RETIREES
 
 # ── §1 — Colonnes exportées ───────────────────────────────────────────────────
 print("§1 — Colonnes exportées : embedding absent, colonnes spec présentes")
@@ -65,118 +71,121 @@ COLONNES_REQUISES = (
     "id", "ticker_id", "entry_type", "title", "content", "content_structured",
     "tags", "lang", "source_type", "source_url", "source_date", "fiscal_period",
     "reliability_score", "reliability_tier", "reliability_note",
-    "has_conflict", "conflict_entry_id", "requires_human_review", "reviewed_by_user",
+    "requires_human_review", "nature",
     "last_reviewed_at", "model_cutoff", "version", "valid_from", "superseded_by",
-    "question_status", "question_priority", "resolves_entry_id",
-    "is_outdated", "is_deleted", "created_at", "updated_at", "covers",
+    "is_outdated", "created_at", "updated_at",
 )
 for col in COLONNES_REQUISES:
     check(f"colonne '{col}' présente dans _ENTRY_COLUMNS", col in _ENTRY_COLUMNS)
+
+# `nature` est l'axe de la 034 (#51), et c'est ICI qu'il compte : un axe dérivé à l'écriture mais
+# absent du point de LECTURE ne serait qu'un calcul (`feedback_controle_au_point_de_lecture`).
+check("`nature` est servie au lecteur, pas seulement dérivée à l'écriture",
+      "nature" in _ENTRY_COLUMNS)
+_encore_la = sorted(set(COLONNES_RETIREES) & set(_ENTRY_COLUMNS))
+check("aucune des colonnes retirées par la 036 n'est encore SELECTée",
+      not _encore_la,
+      f"→ {_encore_la} — la requête lèverait en prod (colonnes passées en archive_v2)")
 
 # ── §2 — Numérotation des paramètres ─────────────────────────────────────────
 print("\n§2 — Numérotation des paramètres positionnels")
 
 # Cas de base : uniquement ticker_id → $1
-sql_count, sql_page, sql_tier, params = _build_entries_query(
-    "NVDA", None, None, None, False, 50, 0,
-)
+sql_count, sql_page, sql_tier, params = _build_entries_query("NVDA", None, None, False, 50, 0)
 check("sans filtre : WHERE ticker_id = $1", "$1" in sql_count and "$2" not in sql_count.split("$1")[1].split("WHERE")[0])
 check("sans filtre : params_filter = [ticker_id]", params[:-2] == ["NVDA"])
 check("sans filtre : params = [ticker_id, limit, offset]", params == ["NVDA", 50, 0])
 
 # entry_type seul : doit être $2
-sql_count2, sql_page2, sql_tier2, params2 = _build_entries_query(
-    "NVDA", "fact_qualitative", None, None, False, 50, 0,
-)
+sql_count2, sql_page2, sql_tier2, params2 = _build_entries_query("NVDA", "fact_qualitative", None, False, 50, 0)
 check("entry_type seul : entry_type = $2 dans WHERE", "ke.entry_type = $2" in sql_count2,
       f"— WHERE={sql_count2}")
 check("entry_type seul : params_filter = [ticker, type]",
       params2[:-2] == ["NVDA", "fact_qualitative"])
 
 # reliability_tier seul : doit être $2
-sql_count3, _, _, params3 = _build_entries_query(
-    "NVDA", None, "A", None, False, 50, 0,
-)
+sql_count3, _, _, params3 = _build_entries_query("NVDA", None, "A", False, 50, 0)
 check("reliability_tier seul : reliability_tier = $2 dans WHERE",
       "ke.reliability_tier = $2" in sql_count3, f"— WHERE={sql_count3}")
 check("reliability_tier seul : params_filter = [ticker, tier]",
       params3[:-2] == ["NVDA", "A"])
 
-# covers seul : doit être $2
-sql_count4, _, _, params4 = _build_entries_query(
-    "NVDA", None, None, "financials.roic_pct", False, 50, 0,
-)
-check("covers seul : $2 = ANY(ke.covers) dans WHERE",
-      "$2 = ANY(ke.covers)" in sql_count4, f"— WHERE={sql_count4}")
-check("covers seul : params_filter = [ticker, covers]",
-      params4[:-2] == ["NVDA", "financials.roic_pct"])
-
 # entry_type + reliability_tier : $2 et $3
-sql_count5, _, _, params5 = _build_entries_query(
-    "NVDA", "fact_qualitative", "A", None, False, 50, 0,
-)
+sql_count5, _, _, params5 = _build_entries_query("NVDA", "fact_qualitative", "A", False, 50, 0)
 check("entry_type+tier : entry_type = $2 ET tier = $3",
       "ke.entry_type = $2" in sql_count5 and "ke.reliability_tier = $3" in sql_count5,
       f"— WHERE={sql_count5}")
 check("entry_type+tier : params_filter = [ticker, type, tier]",
       params5[:-2] == ["NVDA", "fact_qualitative", "A"])
 
-# Tous filtres : $2, $3, $4 ; limit=$5, offset=$6
+# Tous filtres : $2, $3 ; limit=$4, offset=$5
 sql_count6, sql_page6, _, params6 = _build_entries_query(
-    "NVDA", "fact_qualitative", "A", "financials.roic_pct", False, 20, 10,
+    "NVDA", "fact_qualitative", "A", False, 20, 10,
 )
-check("tous filtres : entry_type=$2, tier=$3, covers=$4",
+check("tous filtres : entry_type=$2, tier=$3",
       "ke.entry_type = $2" in sql_count6
-      and "ke.reliability_tier = $3" in sql_count6
-      and "$4 = ANY(ke.covers)" in sql_count6,
+      and "ke.reliability_tier = $3" in sql_count6,
       f"— WHERE={sql_count6}")
-check("tous filtres : LIMIT $5 OFFSET $6 dans sql_page",
-      "LIMIT $5 OFFSET $6" in sql_page6, f"— PAGE={sql_page6[-50:]}")
-check("tous filtres : params = [ticker, type, tier, covers, 20, 10]",
-      params6 == ["NVDA", "fact_qualitative", "A", "financials.roic_pct", 20, 10])
+check("tous filtres : LIMIT $4 OFFSET $5 dans sql_page",
+      "LIMIT $4 OFFSET $5" in sql_page6, f"— PAGE={sql_page6[-50:]}")
+check("tous filtres : params = [ticker, type, tier, 20, 10]",
+      params6 == ["NVDA", "fact_qualitative", "A", 20, 10])
 
 # ── §3 — Filtre include_inactive ───────────────────────────────────────────────
 print("\n§3 — Filtre include_inactive")
 
-sql_active, _, _, _ = _build_entries_query("NVDA", None, None, None, False, 50, 0)
-sql_all, _, _, _ = _build_entries_query("NVDA", None, None, None, True, 50, 0)
+sql_active, _, _, _ = _build_entries_query("NVDA", None, None, False, 50, 0)
+sql_all, _, _, _ = _build_entries_query("NVDA", None, None, True, 50, 0)
 
-check("include_inactive=False : is_deleted = false dans WHERE",
-      "ke.is_deleted = false" in sql_active)
+# ⚠️ `is_deleted` a disparu des DEUX branches (036). Le mode de panne à garder est asymétrique :
+# le laisser dans le WHERE `False` casserait la requête (colonne archivée), donc bruyamment. Le
+# laisser dans la branche `True` ne casserait rien mais RÉTRÉCIRAIT silencieusement le « tout
+# afficher » — c'est ce sens-là qui vaut deux asserts.
+check("include_inactive=False : `is_deleted` ne figure plus dans le WHERE",
+      "is_deleted" not in sql_active,
+      "→ la colonne est archivée : la requête lèverait en prod")
 check("include_inactive=False : superseded_by IS NULL dans WHERE",
       "ke.superseded_by IS NULL" in sql_active)
-check("include_inactive=True : is_deleted absent du WHERE",
-      "is_deleted" not in sql_all)
+check("include_inactive=False : `superseded_by IS NULL` est le SEUL prédicat de vivacité",
+      sql_active.count("superseded_by") == 1 and "is_deleted" not in sql_active,
+      f"— WHERE={sql_active}")
+check("include_inactive=True : `is_deleted` absent du WHERE", "is_deleted" not in sql_all)
 check("include_inactive=True : superseded_by IS NULL absent du WHERE",
       "superseded_by IS NULL" not in sql_all)
 
-# ── §4 — Filtre covers ────────────────────────────────────────────────────────
-print("\n§4 — Filtre covers (index GIN)")
-
-_, _, sql_tier_covers, params_covers = _build_entries_query(
-    "NVDA", None, None, "financials.roic_pct", False, 50, 0,
-)
-check("covers : ANY(ke.covers) dans le WHERE du tier",
-      "ANY(ke.covers)" in sql_tier_covers)
-# Le paramètre covers est le 2ème dans la liste filtrée
-check("covers : params_filter[1] = chemin covers",
-      params_covers[:-2][1] == "financials.roic_pct")
+# ── §4 — Le filtre `covers` a été retiré, pas remplacé ────────────────────────
+print("\n§4 — Aucun filtre de couverture tant qu'aucun émetteur ne l'alimente")
+# ⚠️ §4 éprouvait `$N = ANY(ke.covers)` sur l'index GIN. Le filtre est parti avec la colonne (036).
+# Ce qui est gardé ici n'est PAS son absence textuelle — un `grep` d'interdit se satisfait de la
+# prose et se met en défaut sur elle (#56) — mais la STRUCTURE de la fonction : elle n'a que deux
+# filtres arbitrables, et la table de liens n'est pas encore interrogée. Le remplacer tout de suite
+# par un `EXISTS (SELECT 1 FROM question_coverage …)` produirait un filtre câblé de bout en bout que
+# rien ne peut satisfaire — `question_coverage` est vide tant que le dispatch du lot 2c n'écrit pas —
+# donc zéro ligne rendue sans que rien ne dise pourquoi : #50 réintroduit le jour où on le retire.
+_PARAMS_BUILD = list(inspect.signature(_build_entries_query).parameters)
+check("`_build_entries_query` n'expose que ticker + 2 filtres + pagination",
+      _PARAMS_BUILD == ["ticker_id", "entry_type", "reliability_tier",
+                        "include_inactive", "limit", "offset"],
+      f"→ {_PARAMS_BUILD}")
+check("aucun filtre de couverture n'est câblé au SQL généré",
+      "question_coverage" not in sql_count6 and "covers" not in sql_count6,
+      "→ le filtre par question revient AVEC son émetteur, pas avant")
 
 # ── §5 — Filtres combinés — indices consécutifs ───────────────────────────────
 print("\n§5 — Filtres combinés : indices consécutifs sans trou")
 
 _, sql_page_all, _, params_all = _build_entries_query(
-    "MSFT", "fact_financial", "A", "financials.levier", False, 10, 5,
+    "MSFT", "fact_financial", "A", False, 10, 5,
 )
-check("filtres combinés : $1=ticker, $2=type, $3=tier, $4=covers, $5=limit, $6=offset",
-      params_all == ["MSFT", "fact_financial", "A", "financials.levier", 10, 5])
+check("filtres combinés : $1=ticker, $2=type, $3=tier, $4=limit, $5=offset",
+      params_all == ["MSFT", "fact_financial", "A", 10, 5])
 check("filtres combinés : ORDER BY ke.id DESC dans PAGE",
       "ORDER BY ke.id DESC" in sql_page_all)
 
 # ── §6 — SQL TIER sans accolades littérales ───────────────────────────────────
 print("\n§6 — SQL TIER : pas d'accolades susceptibles de casser une f-string")
 
-_, _, sql_tier_base, _ = _build_entries_query("NVDA", None, None, None, False, 50, 0)
+_, _, sql_tier_base, _ = _build_entries_query("NVDA", None, None, False, 50, 0)
 
 # Toutes les clés par tier doivent être présentes
 CLES_ATTENDUES = (
@@ -191,7 +200,7 @@ check("sql_tier ne contient aucune accolade littérale { }",
       f"— trouvé dans : {[c for c in sql_tier_base if c in '{}'][:5]}")
 
 # Même vérification sur sql_count et sql_page
-_, sql_page_base, _, _ = _build_entries_query("NVDA", None, None, None, False, 50, 0)
+_, sql_page_base, _, _ = _build_entries_query("NVDA", None, None, False, 50, 0)
 check("sql_count ne contient aucune accolade littérale",
       "{" not in sql_count and "}" not in sql_count)
 check("sql_page ne contient aucune accolade littérale",
@@ -200,7 +209,6 @@ check("sql_page ne contient aucune accolade littérale",
 # ── §7 — Signature list_knowledge_entries ────────────────────────────────────
 print("\n§7 — Signature et defaults de list_knowledge_entries")
 
-import inspect
 sig = inspect.signature(list_knowledge_entries)
 params_sig = sig.parameters
 
@@ -209,8 +217,13 @@ check("list_knowledge_entries : paramètre entry_type (optionnel)",
       "entry_type" in params_sig and params_sig["entry_type"].default is None)
 check("list_knowledge_entries : paramètre reliability_tier (optionnel)",
       "reliability_tier" in params_sig and params_sig["reliability_tier"].default is None)
-check("list_knowledge_entries : paramètre covers (optionnel)",
-      "covers" in params_sig and params_sig["covers"].default is None)
+# La route n'expose plus de filtre de couverture : elle ne peut pas en exposer un que le SQL
+# généré ne sait pas honorer (§4). Assert en POSITIF sur la liste des paramètres — un `not in`
+# seul serait satisfait par n'importe quelle signature, y compris une signature vide.
+check("la route expose exactement les filtres que le SQL sait honorer",
+      set(params_sig) == {"ticker_id", "entry_type", "reliability_tier",
+                          "include_inactive", "limit", "offset"},
+      f"→ {sorted(params_sig)}")
 check("list_knowledge_entries : include_inactive défaut False",
       "include_inactive" in params_sig and params_sig["include_inactive"].default is False)
 check("list_knowledge_entries : limit défaut 50",
@@ -286,17 +299,14 @@ for key in ("total", "par_tier", "entries"):
 # ── §10 — embedding jamais dans le SELECT ────────────────────────────────────
 print("\n§10 — embedding absent de tout SQL généré")
 
-for include_del in (False, True):
+for include_inactive in (False, True):
     for et in (None, "fact_qualitative"):
         for t in (None, "A"):
-            for cov in (None, "financials.roic_pct"):
-                sc, sp, st, _ = _build_entries_query(
-                    "NVDA", et, t, cov, include_del, 50, 0,
-                )
-                check(
-                    f"embedding absent du SELECT (del={include_del}, type={et}, tier={t}, covers={cov})",
-                    "embedding" not in sp and "embedding" not in sc and "embedding" not in st,
-                )
+            sc, sp, st, _ = _build_entries_query("NVDA", et, t, include_inactive, 50, 0)
+            check(
+                f"embedding absent du SELECT (inactive={include_inactive}, type={et}, tier={t})",
+                "embedding" not in sp and "embedding" not in sc and "embedding" not in st,
+            )
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

@@ -4,8 +4,8 @@ Service Knowledge Platform (couche 3) — store / query / snapshot des `knowledg
 Substrat commun de tous les agents V2. Trois opérations du LLM Wiki Pattern (§6.1) :
   - **store_knowledge** : crée une entrée APPEND-ONLY versionnée (A1) — on ne mute JAMAIS, on
     supersede. Le score de fiabilité est calculé ici (§6.3), pas déclaré par l'agent.
-  - **query_knowledge** : recherche sur la version COURANTE des entrées (superseded_by IS NULL AND
-    NOT is_deleted). Recherche VECTORIELLE (`embedding <=> $vec`, bge-m3 1024d, index HNSW
+  - **query_knowledge** : recherche sur la version COURANTE des entrées (`superseded_by IS NULL`,
+    et rien d'autre depuis la 036 — cf. `ENTRIES_COURANTES`). Recherche VECTORIELLE (`embedding <=> $vec`, bge-m3 1024d, index HNSW
     vector_cosine_ops), avec repli TEXTE (ILIKE multi-termes) dans deux cas seulement : embeddings
     indisponibles (clé absente / API en erreur), et entrées pas encore embeddées.
 
@@ -77,9 +77,20 @@ def compute_reliability(
     source_date: Optional[date] = None,
     today: Optional[date] = None,
     cross_validated: bool = False,
-    has_conflict: bool = False,
 ) -> tuple[float, str, str]:
-    """Renvoie (score, tier, note explicative). Modulations §6.3 : âge, cross-validation, conflit."""
+    """Renvoie (score, tier, note explicative). Modulations §6.3 : âge, cross-validation.
+
+    ⚠️ La modulation `has_conflict` (−0.20) a été RETIRÉE le 2026-09-10 (migration 036, qui archive
+    la colonne). Elle relevait des DEUX défauts nommés en #50 : câblée de bout en bout et jamais
+    passée par un appelant de production, et — depuis l'archivage — dépendante d'un ingrédient qui
+    n'est plus dans la ligne, donc **non rejouable** (#48). Le conflit entre deux assertions est un
+    axe RELATIONNEL, comme la couverture (#57) et l'actualité (#53) : il ne se stocke pas sur l'une
+    des deux entries, et il ne se fond pas dans un scalaire (#50 : la porte lit un triplet).
+
+    `cross_validated` reste, DÉLIBÉRÉMENT : sa colonne n'a jamais existé, il est donc hors du
+    périmètre de la 036 et demeure l'écart déjà déclaré en #50 — le refermer ici mêlerait deux
+    lots. Il est toujours vrai qu'aucun appelant de production ne le passe.
+    """
     tier, base = RELIABILITY_TABLE.get(source_type, _FALLBACK_RELIABILITY)
     score = base
     notes: list[str] = [f"base {source_type}={base:.2f} (tier {tier})"]
@@ -95,9 +106,6 @@ def compute_reliability(
     if cross_validated:
         score += 0.10
         notes.append("cross-validé +0.10")
-    if has_conflict:
-        score -= 0.20
-        notes.append("contradiction −0.20")
 
     score = round(min(1.0, max(0.0, score)), 3)
     return score, tier, " ; ".join(notes)
@@ -121,14 +129,11 @@ async def store_knowledge(
     document_id: Optional[int] = None,
     model_cutoff: Optional[str] = None,
     cross_validated: bool = False,
-    has_conflict: bool = False,
-    conflict_entry_id: Optional[int] = None,
     supersedes_entry_id: Optional[int] = None,
     embed: bool = True,
     embedding: Optional[Sequence[float]] = None,
     requires_human_review: bool = False,
     derived_reliability: Optional[tuple[float, str, str]] = None,
-    covers: Optional[Sequence[str]] = None,
     nature_declaree: Optional[str] = None,
 ) -> dict[str, Any]:
     """Crée une knowledge_entry. Le score/tier sont CALCULÉS (§6.3), jamais fournis par l'appelant.
@@ -142,11 +147,16 @@ async def store_knowledge(
     un calcul Python à partir de tiers vérifiés en base. Le `note` DOIT expliquer la dérivation.
     `requires_human_review=True` force le flag (en plus des source_types qui l'exigent d'office, P2).
 
-    `covers` = les champs MVDD que l'entry fonde, en CHEMINS COMPLETS (`business_model.drivers_revenus`) :
-    `description` est un champ requis de deux dimensions, un nom nu ferait passer l'autre. C'est l'INDEX
-    de couverture que le curator interroge pour rendre son verdict (029) — il doit donc venir d'un
-    chemin déterministe (feed, mandat du worker, backfill relu), jamais d'une déclaration libre du
-    modèle (#24). `None` = l'entry ne fonde aucun champ requis ; elle reste dans le corpus narratif.
+    ⚠️ **Le paramètre `covers` a été RETIRÉ le 2026-09-10 (migration 036).** Il énumérait les champs
+    MVDD que l'entry fonde, donc il inscrivait sur le CORPUS le vocabulaire d'une méthodologie — en
+    changer invalidait le corpus (#57). La couverture est une propriété de la RELATION entry ↔
+    question, exactement comme l'actualité est une propriété de la relation fait ↔ ancre (#53) : un
+    axe relationnel ne se stocke pas sur l'un de ses deux termes. Elle vit désormais dans
+    `question_coverage(framework_id, framework_version, question_id, ingredient_id, entry_id)`,
+    écrite comme **sous-produit déterministe du dispatch** (#58) : le collecteur ne connaît pas la
+    question, donc il ne peut pas prétendre y répondre. Écrire ce lien n'est PAS le travail de
+    `store_knowledge` — l'écriture d'une entry et l'écriture d'un lien sont deux actes, et les
+    fusionner ferait de nouveau porter à l'entry le vocabulaire du framework.
 
     Embedding : calculé ICI par défaut (`embed=True`) pour qu'une entrée naisse immédiatement
     trouvable — sinon le backlog d'entrées `embedding IS NULL` grossit et l'anti-doublon du
@@ -161,9 +171,10 @@ async def store_knowledge(
     `nature` (migration 034) est DÉRIVÉE ici, jamais reçue : c'est le seul passage obligé des huit
     producteurs, donc le seul endroit où la règle ne peut pas se recopier (#46). `nature_declaree`
     est la proposition du modèle — `derive_nature` ne l'honore que pour promouvoir vers
-    `evenement`. Le MOTIF n'est pas persisté : la dérivation est une fonction pure de trois
-    colonnes déjà stockées (`entry_type`, `source_type`, `covers`), donc rejouable à tout instant
-    sur n'importe quelle ligne — une colonne de plus se contenterait de vieillir à côté de la règle.
+    `evenement`. Le MOTIF n'est pas persisté : la dérivation est une fonction pure de DEUX colonnes
+    déjà stockées (`entry_type`, `source_type` — `covers` en était la troisième jusqu'à la 036),
+    donc rejouable à tout instant sur n'importe quelle ligne — une colonne de plus se contenterait
+    de vieillir à côté de la règle.
     Il n'entre pas non plus dans `reliability_note` : ce sont deux axes, et on ne les mélange pas,
     fût-ce en prose (#50).
 
@@ -178,14 +189,14 @@ async def store_knowledge(
     # source_type C+), le mode de panne de #48.
     source_type, nature, nature_motif = qualify(
         source_type=source_type, url=source_url, ticker_id=ticker_id,
-        entry_type=entry_type, covers=covers, nature_declaree=nature_declaree,
+        entry_type=entry_type, nature_declaree=nature_declaree,
     )
     if derived_reliability is not None:
         score, tier, note = derived_reliability
     else:
         score, tier, note = compute_reliability(
             source_type, entry_type=entry_type, source_date=source_date,
-            cross_validated=cross_validated, has_conflict=has_conflict,
+            cross_validated=cross_validated,
         )
     requires_review = requires_human_review or source_type in _REQUIRES_REVIEW_SOURCES
     logger.debug("store_knowledge: nature=%s (%s)", nature, nature_motif)
@@ -219,17 +230,17 @@ async def store_knowledge(
             ticker_id, document_id, entry_type, title, content, content_structured,
             tags, lang, source_type, source_url, source_date, fiscal_period,
             reliability_score, reliability_tier, reliability_note,
-            has_conflict, conflict_entry_id, requires_human_review, model_cutoff, version,
-            embedding, covers, nature
+            requires_human_review, model_cutoff, version,
+            embedding, nature
         ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::vector,$22,$23
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::vector,$20
         )
         RETURNING id, version, reliability_score, reliability_tier, nature
         """,
         ticker_id, document_id, entry_type, title, content, content_structured,
         list(tags or []), lang, source_type, source_url, source_date, fiscal_period,
-        score, tier, note, has_conflict, conflict_entry_id, requires_review, model_cutoff, version,
-        vec_literal, list(covers) if covers else None, nature,
+        score, tier, note, requires_review, model_cutoff, version,
+        vec_literal, nature,
     )
 
     if supersedes_entry_id is not None:
@@ -243,7 +254,35 @@ async def store_knowledge(
 
 
 # ── QUERY (version courante) ─────────────────────────────────────────────────
-_CURRENT = "superseded_by IS NULL AND is_deleted = FALSE"
+# DÉTENTEUR UNIQUE du prédicat « cette entry est la vérité en vigueur » (#46).
+#
+# ⚠️ `AND is_deleted = FALSE` retiré le 2026-09-10 (migration 036 : la colonne est archivée). Mesuré
+# avant de l'écrire : elle valait FALSE sur les **180 lignes**, donc le conjoint n'a jamais rien
+# filtré — un stockage append-only n'a pas de suppression logique, il supersede.
+#
+# ⚠️ Et c'est POURQUOI la constante est publique. La même phrase était recopiée à la main dans les
+# cinq producteurs déterministes (`edgar_feed`, `financials_feed`, `valuation_feed`,
+# `base_rate_corpus`, `synthesis_feed`) et dans `staleness` — six jumeaux d'accord entre eux, donc
+# invisibles, jusqu'au jour où on corrige la règle et où il faut la corriger six fois
+# (`feedback_correctif_regle_jumeaux`). Le signe qui l'a fait apparaître est exactement celui-là :
+# le balayage de la 036 devait éditer la même conjonction dans six fichiers. Les appelants
+# l'INTERPOLENT (`f"... WHERE ... AND {ENTRIES_COURANTES}"`) au lieu de la réécrire.
+ENTRIES_COURANTES = "superseded_by IS NULL"
+
+
+def entries_courantes(alias: str = "") -> str:
+    """Le même prédicat, QUALIFIÉ par un alias de table — pour les requêtes qui en joignent deux.
+
+    `knowledge_v2` et `analysis_v2` écrivent `ke.` / `ke2.` ; sans ce point d'entrée ils auraient
+    recopié la conjonction à la main (six jumeaux, cf. ci-dessus) ou préfixé la constante par
+    `f"ke.{ENTRIES_COURANTES}"` — ce qui marche tant qu'elle tient en UN prédicat et devient un SQL
+    faux le jour où elle en compte deux (`ke.a IS NULL AND b IS NULL`), sans que rien ne le signale.
+    La qualification est donc faite ICI, par le détenteur, qui sait de combien de prédicats il parle.
+    """
+    if not alias:
+        return ENTRIES_COURANTES
+    return " AND ".join(f"{alias}.{p}" for p in ENTRIES_COURANTES.split(" AND "))
+
 
 
 async def get_current_entries(
@@ -260,7 +299,7 @@ async def get_current_entries(
     `include_sector` ajoute les entrées transverses (ticker_id IS NULL = sectoriel/macro) réutilisables
     entre titres d'un même secteur (§6.6, wiki cumulatif).
     """
-    clauses = [_CURRENT, "reliability_score >= $2"]
+    clauses = [ENTRIES_COURANTES, "reliability_score >= $2"]
     params: list[Any] = [ticker_id, min_reliability]
     if include_sector:
         clauses.append("(ticker_id = $1 OR ticker_id IS NULL)")
@@ -273,7 +312,7 @@ async def get_current_entries(
     sql = f"""
         SELECT id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_url, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version, covers, nature
+               requires_human_review, version, nature
         FROM knowledge_entries
         WHERE {' AND '.join(clauses)}
         ORDER BY reliability_score DESC, source_date DESC NULLS LAST, id
@@ -289,7 +328,7 @@ _RESCUE_QUOTA = 3
 
 _SELECT_COLS = """id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, has_conflict, version, covers, nature"""
+               requires_human_review, version, nature"""
 
 
 async def _vector_search(
@@ -319,7 +358,7 @@ async def _vector_search(
         SELECT {_SELECT_COLS},
                1 - (embedding <=> $3::vector) AS similarity
         FROM knowledge_entries
-        WHERE {_CURRENT} AND {scope} AND reliability_score >= $2
+        WHERE {ENTRIES_COURANTES} AND {scope} AND reliability_score >= $2
               AND embedding IS NOT NULL{type_clause}
         ORDER BY embedding <=> $3::vector
         LIMIT ${len(params)}
@@ -372,7 +411,7 @@ async def _text_search(
         SELECT {_SELECT_COLS},
                ({relevance}) AS relevance
         FROM knowledge_entries
-        WHERE {_CURRENT} AND {scope} AND reliability_score >= $2{type_clause}{emb_clause}
+        WHERE {ENTRIES_COURANTES} AND {scope} AND reliability_score >= $2{type_clause}{emb_clause}
         ORDER BY relevance DESC, reliability_score DESC, source_date DESC NULLS LAST
         LIMIT ${len(params)}
     """

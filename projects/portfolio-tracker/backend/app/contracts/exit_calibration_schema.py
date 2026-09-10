@@ -9,7 +9,9 @@ Trois contrats liés :
   • ExitPlan       — sortie thèse-driven en tranches (§11, DÉCISION #5). L'origine est un déclencheur
                      de thèse, jamais un pur seuil de prix ; les tranches ne sont que l'exécution.
   • PostMortem     — au dernier lot vendu : durée, perf, statut FINAL de CHAQUE hypothèse, leçons →
-                     pattern_library (`lesson_learned`, réutilisables par les bull-agents comparables).
+                     pattern_library (entries `analysis` / source `agent_synthesis` depuis la 036 —
+                     `lesson_learned` nommait la PROVENANCE, pas ce que l'assertion est (#57) ;
+                     réutilisables par les bull-agents comparables).
   • CalibrationEntry — registre A5 : prédit (à l'entrée) vs réalisé (à la sortie). Après 15-20 positions,
                      révèle le biais systématique (« vos IV hautes sont 20 % trop basses »).
 

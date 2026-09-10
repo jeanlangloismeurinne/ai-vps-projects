@@ -214,7 +214,7 @@ export default function TickerPivot() {
       <Card>
         <CardHeader
           title="Connaissance — ventilation par tier"
-          subtitle="Entrées vivantes uniquement (is_deleted = false, superseded_by IS NULL)"
+          subtitle="Entrées vivantes uniquement (superseded_by IS NULL)"
           action={<Badge variant="gray">{t.nb_entries_vivantes} vivantes</Badge>}
         />
         <CardBody>

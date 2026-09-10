@@ -12,12 +12,20 @@ des données. On la **cherche dans un corpus empirique**, ici seedé depuis :
     1950-2015, sociétés mortes incluses (n=53 266 sur l'horizon 3 ans).
 
 Architecture (parallèle au search-worker / valuation_feed) :
-  • un **corpus transverse** (`ticker_id IS NULL`, `entry_type='base_rate'`) porte la distribution
+  • un **corpus transverse** (`ticker_id IS NULL`, `entry_type='fact_statistical'`) porte la distribution
     empirique — seedé une fois, réutilisable par TOUS les tickers (tiré par `include_sector=True`) ;
   • un **classifieur déterministe** range un ticker dans sa classe de référence depuis le quant
     (taille en CA, la maille du livre) — aucun LLM ;
-  • un **écrivain par-ticker** émet une entry `base_rate` qui fonde `valorisation.base_rate_anchor`
-    pour CE ticker, en citant le corpus.
+  • un **écrivain par-ticker** émet une entry `fact_statistical` qui fonde
+    `valorisation.base_rate_anchor` pour CE ticker, en citant le corpus.
+
+⚠️ `entry_type` valait `base_rate` jusqu'à la **migration 036**. Le nom d'un livre de méthode n'est
+pas ce que l'assertion EST (#57) : une fréquence empirique sur une classe de référence est un
+**fait statistique**, quel que soit le livre d'où sort la distribution. Le renommage est purement
+un renommage — la maille du Base Rate Book (le CA, #45) et la distribution ne bougent pas. Il DOIT
+être répercuté dans `_MEASURING_ENTRY_TYPES` (`agents/v2/common.py`), sinon ces entries retombent
+en `interpretation` sans que rien ne le dise. Les **tags** gardent `base_rate` : ce sont des mots
+de recherche, pas un vocabulaire d'identité, et c'est la clef d'idempotence de ce feed.
 
 Le `taux_base_pct` final pour la croissance *précise* impliquée par le prix est recalculé à l'analyse
 (`run_research` lira `reverse_dcf.croissance_implicite_prix_actuel_pct` et appellera `base_rate_ge`).
@@ -37,7 +45,7 @@ from typing import Any, Optional
 from app.config import settings
 from app.data_collection.data_service import DataService
 from app.db.database import get_db_session
-from app.knowledge.service import store_knowledge
+from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
@@ -290,7 +298,7 @@ def build_base_rate_anchor_spec(
 
     return BaseRateAnchorSpec(
         field="base_rate_anchor",
-        entry_type="base_rate",
+        entry_type="fact_statistical",   # ex-`base_rate` (036) : une nature, pas un livre de méthode
         title=f"Valorisation — ancre base rate de croissance ({rc['size_label']})",
         content=content,
         content_structured=structured,
@@ -326,9 +334,9 @@ async def seed_base_rate_corpus(conn) -> int:
 
     Idempotence : recherche une entry courante `ticker_id IS NULL` taguée `sales_growth_base_rate`."""
     row = await conn.fetchrow(
-        """
+        f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id IS NULL AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id IS NULL AND {ENTRIES_COURANTES}
           AND tags @> $1
         ORDER BY id DESC LIMIT 1
         """,
@@ -340,7 +348,7 @@ async def seed_base_rate_corpus(conn) -> int:
     stored = await store_knowledge(
         conn,
         ticker_id=None,
-        entry_type="base_rate",
+        entry_type="fact_statistical",   # ex-`base_rate` (036) : une nature, pas un livre de méthode
         content=content,
         source_type="financial_press",
         title="Corpus base rates — croissance des ventes (Base Rate Book)",
@@ -357,9 +365,9 @@ async def seed_base_rate_corpus(conn) -> int:
 
 async def _current_anchor_entry_id(conn, ticker_id: str) -> Optional[int]:
     row = await conn.fetchrow(
-        """
+        f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id = $1 AND {ENTRIES_COURANTES}
           AND tags @> $2
         ORDER BY id DESC LIMIT 1
         """,
@@ -413,7 +421,6 @@ async def run_base_rate_anchor(
                     lang="fr",
                     source_url=spec.source_url,
                     supersedes_entry_id=prev_id,
-                    covers=[f"valorisation.{spec.field}"],   # index 029 : chemin complet
                 )
                 created = dict(stored) | {"field": spec.field, "supersedes": prev_id}
         logger.info("base_rate_anchor %s (%s) → entry #%s (corpus #%s)",

@@ -71,8 +71,16 @@ QUESTIONS_ATTENDUES: dict[str, tuple[str, ...]] = {
     "defendabilite": ("mo_1", "mo_2", "mo_3", "mo_4", "mo_5", "mo_6"),
 }
 
-# Les 4 champs de sortie du framework moat (contrat `Moat`, hors `score` qui est dérivé).
-CHAMPS_MOAT = ("moat.type", "moat.trend", "moat.durabilite_ans", "moat.preuves")
+# L'ingrédient que T1bis exige de voir sortir NON SERVI et MANDATÉ. Il est nommé, et pas seulement
+# compté : un critère qui exige qu'il MANQUE quelque chose est le plus facile à satisfaire par
+# accident — n'importe quelle collecte incomplète rendrait « ≥ 1 » vrai (§9.2). Aucun poste EDGAR
+# ne contient un coût du capital ; c'est le cas d'école de la ligne de plan `inobtenable` (§3.6).
+INGREDIENT_TEMOIN = ("qualite_financiere", "qf_1", "cout_du_capital")
+
+# Les natures d'entry qui ne FONDENT rien par elles-mêmes : une question dont tous les ingrédients
+# servis viennent de là est fondée par des synthèses d'elle-même (T2). Lu sur le vocabulaire fermé
+# de la 036 plutôt que recopié (#46) — `analysis` et `agent_synthesis` en sont deux jetons.
+NATURES_NON_PRIMAIRES = frozenset({"agent_synthesis", "analysis"})
 
 ok = fail = 0
 
@@ -96,15 +104,24 @@ def _t(n: str, titre: str) -> None:
 # plutôt que de lever : l'absence est une MESURE de l'avancement, pas un crash.
 # ══════════════════════════════════════════════════════════════════════════════
 def charger_frameworks() -> tuple[Optional[dict[str, Any]], str]:
-    """`(frameworks, motif)` — le chargeur du lot 2, ou son absence, NOMMÉE."""
+    """`({framework_id: FrameworkDefinition}, motif)` — le référentiel du lot 2a, ou son absence.
+
+    ⚠️ Le lot 0 avait SUPPOSÉ un dict de dicts et lisait `.get("questions")`. Le lot 2a rend un
+    `FrameworksFile` Pydantic : l'accès par `.get` levait un `AttributeError` qui tuait le script
+    APRÈS §A et AVANT son bilan — un lanceur qui cherche une ligne de bilan n'aurait vu qu'un
+    script mort (`feedback_bilan_par_sa_forme`). L'indexation par id se fait donc ici, une fois, et
+    les critères lisent des ATTRIBUTS : un champ renommé LÈVE au lieu de rendre `None`, ce qui
+    ferait rougir T1 pour la mauvaise raison — ou pire, le rendrait vert sur zéro ingrédient.
+    """
     try:
         from app.agents.v2.frameworks import load_frameworks  # type: ignore[attr-defined]
     except Exception as exc:                                   # noqa: BLE001
         return None, f"`app.agents.v2.frameworks.load_frameworks` absent ({type(exc).__name__})"
     try:
-        return load_frameworks(), ""
+        fichier = load_frameworks()
     except Exception as exc:                                   # noqa: BLE001
         return None, f"`load_frameworks()` a levé {type(exc).__name__}: {exc}"
+    return {f.id: f for f in fichier.frameworks}, ""
 
 
 async def table_existe(conn, nom: str) -> bool:
@@ -133,10 +150,22 @@ async def main() -> int:
     await init_pool(url)
     try:
         async with get_db_session() as conn:
+            # ⚠️ Ni `covers` ni `is_deleted` : la 036 les a retirées. `covers` n'est pas remplacée
+            # par une autre colonne — la couverture est une propriété de la RELATION entry ↔
+            # ingrédient (#57), elle se lit dans `question_coverage` ci-dessous. `tags` entre au
+            # SELECT parce que T4 doit montrer ce que le système produit aujourd'hui, et que c'est
+            # par les tags que la production identifie un ratio dérivé (#43).
             entries = await conn.fetch("""
-                SELECT id, ticker_id, entry_type, source_type, reliability_tier, covers, title
+                SELECT id, ticker_id, entry_type, source_type, reliability_tier, tags, title
                   FROM knowledge_entries
-                 WHERE superseded_by IS NULL AND is_deleted = false AND ticker_id = ANY($1::text[])
+                 WHERE superseded_by IS NULL AND ticker_id = ANY($1::text[])
+            """, TICKERS)
+            couverture, motif_cov = await lire(conn, "question_coverage", """
+                SELECT qc.framework_id, qc.framework_version, qc.question_id, qc.ingredient_id,
+                       qc.entry_id, e.ticker_id, e.entry_type
+                  FROM question_coverage qc
+                  JOIN knowledge_entries e ON e.id = qc.entry_id
+                 WHERE e.superseded_by IS NULL AND e.ticker_id = ANY($1::text[])
             """, TICKERS)
             reponses, motif_rep = await lire(conn, "framework_answers", """
                 SELECT * FROM framework_answers WHERE ticker_id = ANY($1::text[])
@@ -165,67 +194,148 @@ async def main() -> int:
         # Ne mord qu'une fois le lot 2 livré — mais il est écrit AVANT, sans quoi T4/T5 pourraient
         # passer sur une question voisine de `qf_1` / `qf_7` sans que personne ne le voie.
         for nom, attendues in QUESTIONS_ATTENDUES.items():
-            recues = tuple((frameworks.get(nom) or {}).get("questions") or ())
-            ids = tuple(q.get("id") if isinstance(q, dict) else getattr(q, "id", None)
-                        for q in recues)
+            fw = frameworks.get(nom)
+            ids = tuple(q.id for q in (fw.questions if fw else ()))
             check(f"[A] framework `{nom}` porte exactement ses questions de spec",
                   set(ids) == set(attendues),
                   f"→ manquantes {sorted(set(attendues) - set(ids))}, "
                   f"en trop {sorted(set(ids) - set(attendues))}")
 
-    def _rattachements(ticker: str, framework: str) -> dict[int, str]:
-        """`{entry_id: question_id}` pour ce couple. Vide tant que le lot 2 n'a rien produit."""
-        if reponses is None:
-            return {}
-        out: dict[int, str] = {}
-        for r in reponses:
-            d = dict(r)
-            if col(d, "ticker_id") != ticker or col(d, "framework_id") != framework:
-                continue
-            for eid in (col(d, "fondation.cited_entry_ids") or []):
-                out[int(eid)] = str(col(d, "question_id"))
+    # ══════════════════════════════════════════════════════════════════════════
+    # T1 / T1bis / T2 — RÉÉCRITS AU LOT 2b sur le §9.2 révisé du 2026-09-10.
+    #
+    # L'ancien T1 (« les orphelines tier A de NVDA sont rattachées ») n'a pas été re-seuillé : il a
+    # été DISSOUS. Il faisait du corpus de test l'objectif de conception — le framework aurait été
+    # déclaré bon parce qu'il absorbe ce que les recettes d'hier ont ramassé, et le seuil aurait été
+    # imperdable (il suffisait d'élargir une question jusqu'à ce que les 16 entrent). La bonne
+    # question n'était pas « quel seuil ? » mais « de quel droit le corpus est-il la cible ? ».
+    # Le critère ne compte donc plus aucune orpheline : il part des INGRÉDIENTS que les questions
+    # réclament, et regarde si chacun est servi ou nommé. L'ancien T2 (les 4 champs de moat
+    # citables) lisait `covers`, colonne archivée par la 036 : il est remplacé par le critère
+    # d'auto-fondation, qui est ce que la mesure du 2026-09-09 a réellement trouvé de fautif
+    # (`produits.unit_economics` : 2 entries, 0 primaire).
+    # ══════════════════════════════════════════════════════════════════════════
+    def _essentiels() -> list[tuple[str, str, str]]:
+        """`(framework_id, question_id, ingredient_id)` des ingrédients ESSENTIELS du référentiel.
+
+        Lu sur `frameworks.yaml` via son chargeur, jamais recopié : c'est le référentiel qui dit ce
+        dont une question a besoin, et un jumeau ici resterait vert le jour où il s'enrichit (#46).
+        """
+        out: list[tuple[str, str, str]] = []
+        for fid, f in (frameworks or {}).items():
+            for q in f.questions:
+                for ing in q.ingredients_requis:
+                    if ing.essentiel:
+                        out.append((fid, q.id, ing.id))
         return out
 
-    # ══════════════════════════════════════════════════════════════════════════
-    _t("T1", "les orphelines tier A de NVDA sont rattachées à une question de "
-             "`qualite_financiere`")
-    orph_nvda = [e for e in par_ticker["NVDA"] if not e["covers"]]
-    orph_tierA = [e for e in orph_nvda if e["reliability_tier"] == "A"]
-    rattachees = _rattachements("NVDA", "qualite_financiere")
-    couvertes = [e for e in orph_tierA if e["id"] in rattachees]
-    non_couvertes = [e for e in orph_tierA if e["id"] not in rattachees]
-    print(f"  orphelines NVDA : {len(orph_nvda)} au total, dont {len(orph_tierA)} tier A")
-    print(f"  rattachées à une question de `qualite_financiere` : {len(couvertes)}"
-          f"/{len(orph_tierA)}")
-    for e in non_couvertes:
-        print(f"      NON RATTACHÉE  #{e['id']:<4} {(e['title'] or '')[:60]}")
-    # ⚠️ SEUIL À ARBITRER — la spec §9.2 écrit « les 26 orphelines tier A … ≥ 24/26 », mais la
-    # mesure sépare deux ensembles : 26 orphelines AU TOTAL et 16 tier A. Le seuil 24/26 n'est
-    # applicable ni à l'un (10 des 26 sont des `Context pack` et des `llm_memory` « à vérifier »,
-    # qui n'ont rien à faire dans un framework de qualité financière) ni à l'autre (16 < 24).
-    # L'exigence retenue ici est la plus stricte des deux lectures défendables — TOUTES les tier A,
-    # le reste NOMMÉ — et la divergence est remontée pour arbitrage avant le lot 2.
-    check("T1 — toutes les orphelines tier A de NVDA sont rattachées, le reste nommé",
-          bool(orph_tierA) and not non_couvertes,
-          f"→ {len(non_couvertes)}/{len(orph_tierA)} non rattachées "
-          f"(⚠️ seuil §9.2 « ≥24/26 » à arbitrer : 26 orphelines ≠ 16 tier A)")
+    def _statut_question(ticker: str, framework: str, question: str) -> Optional[str]:
+        """Le statut de la réponse, ou `None` si la question n'a pas encore été posée."""
+        for r in (reponses or []):
+            if (col(r, "ticker_id") == ticker and col(r, "framework_id") == framework
+                    and col(r, "question_id") == question):
+                return str(col(r, "statut"))
+        return None
 
-    # ══════════════════════════════════════════════════════════════════════════
-    _t("T2", "les 4 champs de moat ont au moins une entry citable, sur les trois tickers")
-    for champ in CHAMPS_MOAT:
-        chemin = ALIAS.get(champ)
+    essentiels = _essentiels()
+    servis: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
+    for c in (couverture or []):
+        d = dict(c)
+        cle = (d["ticker_id"], d["framework_id"], d["question_id"], d["ingredient_id"])
+        servis.setdefault(cle, []).append(d)
+
+    def _mandate_ouvert(ticker: str, question: str, ingredient: str) -> bool:
+        """Un mandat OUVERT qui NOMME l'ingrédient. « Un mandat sur la question » ne suffit pas :
+        il faut savoir lequel des ingrédients il va chercher, sinon il ne ferme rien."""
+        for m in (mandats or []):
+            d = dict(m)
+            if (d.get("ticker_id") == ticker and d.get("question_id") == question
+                    and d.get("ingredient_id") == ingredient
+                    and d.get("statut") == "ouvert"):
+                return True
+        return False
+
+    _t("T1", "tout ingrédient essentiel d'une question applicable est SERVI ou MANDATÉ")
+    if not essentiels:
+        check("T1 — zéro ingrédient essentiel ni servi ni mandaté", False,
+              f"→ le référentiel ne rend aucun ingrédient essentiel ({motif_fw or 'liste vide'}) : "
+              f"« 0 manquant » serait vrai sur zéro ligne, le 1ᵉʳ des faux verts")
+    elif couverture is None:
+        check("T1 — zéro ingrédient essentiel ni servi ni mandaté", False,
+              f"→ {motif_cov} : rien ne peut être SERVI, donc rien n'est prouvé. La 036 crée "
+              f"`question_coverage` ; son dispatch est le lot 2c")
+    else:
+        trous: list[str] = []
+        applicables = 0
         for t in TICKERS:
-            n = len([e for e in par_ticker[t] if chemin and chemin in (e["covers"] or [])])
-            statut = f"{n} entry(ies) via {chemin}" if chemin else "AUCUN chemin d'indexation"
-            print(f"  {champ:24} {t:5} {statut}")
-    manquants = [(champ, t) for champ in CHAMPS_MOAT for t in TICKERS
-                 if not ALIAS.get(champ)
-                 or not any(ALIAS[champ] in (e["covers"] or []) for e in par_ticker[t])]
-    check("T2 — les 4 champs de moat sont citables sur les 3 tickers",
-          not manquants,
-          f"→ {len(manquants)}/{len(CHAMPS_MOAT)*len(TICKERS)} couples sans entry citable : "
-          f"{[f'{c}@{t}' for c, t in manquants][:6]}…")
+            for fid, qid, ing in essentiels:
+                # `sans_objet` retire la question du périmètre : T4 exige précisément que RVMD
+                # puisse dire « cette question n'a pas de sens ici » sans que ça compte comme un
+                # trou. Une question jamais posée reste APPLICABLE — l'absence de réponse n'est pas
+                # une dispense (#54 : trois états, et « pas encore posée » n'est pas « sans objet »).
+                if _statut_question(t, fid, qid) == "sans_objet":
+                    continue
+                applicables += 1
+                if servis.get((t, fid, qid, ing)) or _mandate_ouvert(t, qid, ing):
+                    continue
+                trous.append(f"{t}/{fid}.{qid}.{ing}")
+        print(f"  ingrédients essentiels × tickers applicables : {applicables}")
+        print(f"  ni servis ni mandatés : {len(trous)}")
+        for x in trous[:8]:
+            print(f"      TROU  {x}")
+        check("T1 — zéro ingrédient essentiel ni servi ni mandaté", not trous,
+              f"→ {len(trous)}/{applicables} : {trous[:4]}…")
 
+    # ══════════════════════════════════════════════════════════════════════════
+    _t("T1bis", "au moins un ingrédient essentiel sort NON SERVI et MANDATÉ, "
+                f"dont `{INGREDIENT_TEMOIN[1]}.{INGREDIENT_TEMOIN[2]}`")
+    print("  Une couverture à 100 % FAIT ÉCHOUER le pilote : elle signerait un référentiel")
+    print("  rétro-conçu depuis ce que la collecte sait déjà produire. Un framework qui ne")
+    print("  réclame jamais rien qu'on n'ait pas ne challenge rien.")
+    if couverture is None or mandats is None:
+        check("T1bis — au moins un essentiel non servi ET mandaté, dont le témoin nommé", False,
+              f"→ {motif_cov or motif_man} : ni la couverture ni les mandats n'ont d'émetteur, "
+              f"l'absence de couverture ne prouve donc pas qu'un mandat la NOMME")
+    else:
+        fid_t, qid_t, ing_t = INGREDIENT_TEMOIN
+        reclames = [f"{t}/{fid}.{qid}.{ing}" for t in TICKERS for fid, qid, ing in essentiels
+                    if not servis.get((t, fid, qid, ing)) and _mandate_ouvert(t, qid, ing)]
+        temoin = [t for t in TICKERS
+                  if not servis.get((t, fid_t, qid_t, ing_t))
+                  and _mandate_ouvert(t, qid_t, ing_t)]
+        print(f"  essentiels non servis mais MANDATÉS : {len(reclames)}")
+        print(f"  dont `{qid_t}.{ing_t}` : {temoin or 'AUCUN ticker'}")
+        check("T1bis — au moins un essentiel non servi ET mandaté", bool(reclames),
+              "→ 0 : couverture complète, ou des trous que personne ne réclame")
+        check(f"T1bis — le témoin `{qid_t}.{ing_t}` est de ceux-là", bool(temoin),
+              f"→ aucun ticker : « ≥ 1 » serait satisfait par n'importe quelle collecte "
+              f"incomplète, sans que ce soit le manque qui compte")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    _t("T2", "toute question `repondu` a au moins un ingrédient servi par une source PRIMAIRE")
+    if reponses is None or couverture is None:
+        check("T2 — zéro question auto-fondée", False,
+              f"→ {motif_rep or motif_cov} : aucune question `repondu` à contrôler, "
+              f"donc « 0 auto-fondée » serait vrai sur zéro ligne")
+    else:
+        repondues = [dict(r) for r in reponses if col(r, "statut") == "repondu"]
+        auto_fondees: list[str] = []
+        for r in repondues:
+            t, fid, qid = col(r, "ticker_id"), col(r, "framework_id"), col(r, "question_id")
+            liens = [d for cle, ds in servis.items() if cle[:3] == (t, fid, qid) for d in ds]
+            primaires = [d for d in liens if d["entry_type"] not in NATURES_NON_PRIMAIRES]
+            if not primaires:
+                auto_fondees.append(f"{t}/{fid}.{qid} ({len(liens)} lien(s), 0 primaire)")
+        print(f"  questions `repondu` : {len(repondues)} · auto-fondées : {len(auto_fondees)}")
+        for x in auto_fondees[:6]:
+            print(f"      AUTO-FONDÉE  {x}")
+        check("T2 — zéro question auto-fondée",
+              bool(repondues) and not auto_fondees,
+              f"→ {len(auto_fondees)} sur {len(repondues)}"
+              if repondues else "→ aucune question `repondu` : l'assert serait vrai sur zéro "
+                                "ligne, il ne prouve rien")
+
+    # ══════════════════════════════════════════════════════════════════════════
     # ══════════════════════════════════════════════════════════════════════════
     _t("T3", "aucune réponse `approxime` sans méthode, sans ingrédients, ou sans rang DÉGRADÉ")
     if reponses is None:
@@ -250,7 +360,10 @@ async def main() -> int:
     _t("T4", "RVMD — `qf_1` sort `sans_objet` MOTIVÉ, jamais un ROIC fabriqué")
     print("  Ce que fait le système AUJOURD'HUI, et que T4 doit rendre impossible :")
     for e in par_ticker["RVMD"]:
-        if "financials.roic_pct" in (e["covers"] or []):
+        # Par les TAGS et non par `covers` (archivée par la 036) : c'est déjà par eux que la
+        # production identifie un ratio dérivé (`_current_tagged_entry_id`, #43), donc ce n'est pas
+        # un pis-aller — c'est le porteur qui faisait foi de toute façon.
+        if "roic" in (e["tags"] or []):
             print(f"      #{e['id']:<4} {(e['title'] or '')[:64]}")
             print("            ↑ un ROIC pour une société sans chiffre d'affaires (spec §0.2)")
     r_qf1 = next((dict(r) for r in (reponses or [])
@@ -292,9 +405,11 @@ async def main() -> int:
         vocabulaire = set(MVDD_FIELD_PATHS)
         origine = "MVDD_FIELD_PATHS (le vocabulaire que le lot 3 remplace)"
     else:
-        vocabulaire = {q.get("id") if isinstance(q, dict) else getattr(q, "id", None)
-                       for f in frameworks.values() for q in (f.get("questions") or ())}
-        origine = "framework_questions"
+        # `chemin_indexation` et non `id` : c'est LUI que le mémo consomme, et ALIAS projette
+        # des chemins. Comparer des `qf_1` à des `business_model.description` rendrait T6/T7
+        # rouges par mésappariement de vocabulaire, pas par l'écart qu'ils mesurent.
+        vocabulaire = {q.chemin_indexation for f in frameworks.values() for q in f.questions}
+        origine = "framework_questions (chemin_indexation)"
     sans_question = sorted(f for f in memo - DERIVES if ALIAS.get(f) not in vocabulaire)
     jamais_consommees = sorted(vocabulaire - {ALIAS[k] for k in ALIAS if k in memo})
     print(f"  vocabulaire de référence : {origine} ({len(vocabulaire)} entrées)")

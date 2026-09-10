@@ -30,7 +30,7 @@ from typing import Any, Optional
 from app.config import settings
 from app.data_collection.data_service import DataService
 from app.db.database import get_db_session
-from app.knowledge.service import store_knowledge
+from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -237,9 +237,9 @@ async def _current_field_entry_id(conn, ticker_id: str, field_tag: str) -> Optio
     """Id de l'entrée COURANTE du même champ de valorisation (à superseder). Ciblée par tags —
     le feed est le seul producteur de ces tags, donc pas de collision avec une entrée EDGAR/recherche."""
     row = await conn.fetchrow(
-        """
+        f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id = $1 AND {ENTRIES_COURANTES}
           AND tags @> $2
         ORDER BY id DESC LIMIT 1
         """,
@@ -297,7 +297,6 @@ async def run_valuation_feed(
                         lang="fr",
                         source_date=as_of,
                         supersedes_entry_id=prev_id,
-                        covers=[f"valorisation.{spec.field}"],   # index 029 : chemin complet
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev_id})
         logger.info(

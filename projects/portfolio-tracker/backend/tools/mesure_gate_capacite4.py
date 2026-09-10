@@ -20,6 +20,21 @@ qu'il ajoute est la seule chose que personne ne fait encore — **croiser** les 
 précisément le travail de la porte. Si ce croisement diverge un jour de celui de la porte, c'est
 que la porte a cessé d'être le détenteur unique.
 
+CE QUE LE LOT 2b LUI A RETIRÉ, ET CE QU'IL LUI LAISSE
+------------------------------------------------------
+Il fabriquait son index lui-même, en dépliant `knowledge_entries.covers` (`_covers_index`). Ce
+n'est plus possible, et ce n'est plus juste : #57 a établi que la couverture est une propriété de
+la RELATION entry ↔ question, pas de l'entry — la reconstruire depuis la ligne serait re-tenir le
+défaut que la 036 vient de retirer. Il lit donc l'index chez son émetteur, `index_couverture_pour`.
+
+Son indépendance vis-à-vis de la porte n'en perd rien : elle n'a jamais porté sur la FABRICATION
+de l'index, mais sur le **croisement** planchers × actualité, qu'il continue de faire à part.
+
+Tant que le dispatch du lot 2c n'écrit pas `question_coverage`, l'index n'a aucun émetteur : la
+mesure sort alors **2** (« pas pu mesurer »), jamais un zéro — un zéro de champs périmés se lirait
+comme « rien ne se périme », la conclusion la plus rassurante produite par la pire des raisons
+(#49). Elle reprend d'elle-même au lot 2c.
+
 Usage (réseau `coolify` pour la base, sortie internet pour EDGAR) :
 
     docker run --rm --network coolify -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app \
@@ -37,7 +52,13 @@ from typing import Any, Optional
 import asyncpg
 
 from app.agents.v2.common import FIELD_PROFILES, MVDD_SPEC
-from app.agents.v2.curator import _covers_index, _plancher_for, _tier_ge, nonblocking_gaps_for
+from app.agents.v2.curator import (
+    MOTIF_SANS_EMETTEUR,
+    _plancher_for,
+    _tier_ge,
+    index_couverture_pour,
+    nonblocking_gaps_for,
+)
 from app.knowledge.actualite import etat_actualite_entry
 from app.knowledge.material_events import (
     MaterialEventLookup, ancre_substantielle, material_anchor_for_ticker,
@@ -49,7 +70,7 @@ _SQL_ENTRIES = """
     -- `content_structured` est requis : c'est lui qui porte `claims[].cited_entry_ids` et
     -- `source_entry_refs`, d'où une entry sans `source_date` propre hérite sa date.
     SELECT id, ticker_id, entry_type, source_type, source_date, fiscal_period,
-           reliability_score, reliability_tier, covers, nature, content_structured
+           reliability_score, reliability_tier, nature, content_structured
       FROM knowledge_entries
      WHERE superseded_by IS NULL
        AND (ticker_id = $1 OR ticker_id IS NULL)
@@ -85,7 +106,7 @@ def _note_ancre(brute: MaterialEventLookup, ancre: MaterialEventLookup) -> str:
 
 async def mesurer(conn, ticker_id: str) -> dict[str, Any]:
     rows = [dict(r) for r in await conn.fetch(_SQL_ENTRIES, ticker_id)]
-    index = _covers_index(rows)
+    index = index_couverture_pour(ticker_id) or {}   # `main` a déjà refusé le cas `None`
     par_id = {r["id"]: r for r in rows}
     dispenses = nonblocking_gaps_for(ticker_id)
 
@@ -143,6 +164,16 @@ async def mesurer(conn, ticker_id: str) -> dict[str, Any]:
 
 
 async def main() -> int:
+    # ⚠️ Sondé AVANT la connexion : sans émetteur d'index, tout champ sortirait « lacune » et la
+    # ligne « 0 champ périmé » se lirait comme une mesure. Voir la docstring — sortie 2.
+    if index_couverture_pour(TICKERS[0]) is None:
+        print("MESURE SUSPENDUE — la ligne de base n'est pas mesurable en l'état.\n",
+              file=sys.stderr)
+        print(MOTIF_SANS_EMETTEUR, file=sys.stderr)
+        print("\nAvec un index vide, les 19 champs sortiraient en lacune et « 0 périmé » se lirait "
+              "« rien ne se périme ». La mesure reprend seule au lot 2c.", file=sys.stderr)
+        return 2
+
     conn = await asyncpg.connect(_db_url())
     # ⚠️ Le codec JSONB n'est PAS optionnel ici. `asyncpg.connect()` nu rend `content_structured`
     # comme une CHAÎNE, alors que la production passe par `get_db_session()`, qui l'enregistre et

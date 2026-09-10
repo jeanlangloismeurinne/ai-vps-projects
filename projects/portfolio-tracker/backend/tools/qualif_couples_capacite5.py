@@ -58,13 +58,14 @@ from pydantic import BaseModel, Field
 from app.agents.providers import ResolvedAgent, get_agent_provider
 from app.agents.v2.runner import run_json_agent
 from app.db.database import close_pool, get_db_session, init_pool
+from tools._corpus_archive import ENTRIES, bandeau
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 
-_SQL_ACTIVES = """
+_SQL_ACTIVES = f"""
     SELECT id, ticker_id, source_type, source_date, source_url, reliability_tier, nature,
            covers, title, content
-      FROM knowledge_entries
+      FROM {ENTRIES}
      WHERE superseded_by IS NULL AND is_deleted = FALSE AND ticker_id = ANY($1::text[])
      ORDER BY id
 """
@@ -145,6 +146,7 @@ async def _resoudre_agent() -> ResolvedAgent:
 
 
 async def main() -> int:
+    print(bandeau())
     # ⚠️ `get_agent_provider` lit sa config par `get_db_session()`, qui puise dans le pool créé par
     # `init_pool` — un `asyncpg.connect()` nu ne le remplirait pas, et la résolution de l'agent
     # mourrait sur un pool à None. On ouvre donc la connexion comme la production le fait.

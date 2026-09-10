@@ -32,6 +32,24 @@ CE QU'IL N'ÉCRIT PAS
 Rien. Aucun UPDATE, aucun INSERT : le rapport rejoué reste en mémoire. L'actualité ne se persiste
 pas (#53) — un outil d'acceptation qui la figerait en base contredirait la capacité qu'il vérifie.
 
+SUSPENSION DÉCLARÉE PAR LE LOT 2b (2026-09-10) — ELLE SE REFERME D'ELLE-MÊME
+----------------------------------------------------------------------------
+La porte lit désormais un index de COUVERTURE passé en paramètre (#57 : la couverture est une
+propriété de la relation entry ↔ question, elle ne vit plus sur la ligne). La 036 a archivé
+`knowledge_entries.covers` et le dispatch qui écrira `question_coverage` est le lot 2c : l'index
+n'a donc **aucun émetteur** aujourd'hui, et `index_couverture_pour()` rend `None` en le disant.
+
+Ce script REFUSE alors de se mesurer, et sort **2** — le code « je n'ai pas pu mesurer », déjà
+utilisé pour une `DATABASE_URL` absente, distinct du **1** d'un assert nommé qui a rougi. Lui
+passer un index vide `{}` serait un faux ROUGE bien pire qu'un silence : tous les champs
+tomberaient `non_couvert`, NVDA et MSFT basculeraient `not_ready` avec cause **`lacune`**, et le
+delta de la capacité 4 se lirait comme sa régression. « Zéro lien » et « aucun émetteur » sont
+deux états distincts, et les confondre enverrait 19 mandats de collecte contre un corpus qui
+détient déjà la matière.
+
+Le jour où le lot 2c donne un corps à `index_couverture_pour`, ce script reprend **sans qu'on y
+touche** — forme d'écart déclaré de #52, plutôt qu'un `TODO` que personne ne relit.
+
 Usage (réseau `coolify` pour la base, sortie internet pour EDGAR) :
 
     docker run --rm --network coolify -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app \
@@ -48,7 +66,12 @@ from typing import Any, Optional
 
 import os
 
-from app.agents.v2.curator import _apply_deterministic_overrides
+from app.agents.v2.curator import (
+    MOTIF_SANS_EMETTEUR,
+    _apply_deterministic_overrides,
+    exiger_index_couverture,
+    index_couverture_pour,
+)
 from app.db.database import close_pool, get_db_session, init_pool
 from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
 from app.knowledge.service import get_current_entries
@@ -100,10 +123,13 @@ async def rejouer(conn, ticker_id: str) -> Optional[dict[str, Any]]:
     # Mêmes appels que `run_readiness`, dans le même ordre, avec les mêmes paramètres.
     entries = await get_current_entries(conn, ticker_id, min_reliability=0.0, limit=500)
     ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+    index = index_couverture_pour(ticker_id)
+    exiger_index_couverture(index)          # ceinture : `main` a déjà sondé, mais un émetteur qui
+                                            # rendrait `None` sur CE ticker seul doit être dit ici.
 
     avant = copy.deepcopy(stocke)
-    apres = _apply_deterministic_overrides(copy.deepcopy(stocke), entries,
-                                           ancre=ancre, ticker_id=ticker_id)
+    apres = _apply_deterministic_overrides(copy.deepcopy(stocke), entries, ancre=ancre,
+                                           index_couverture=index, ticker_id=ticker_id)
     return {
         "report_id": ligne_de_base["id"],
         "verdict_avant": ligne_de_base["verdict"],
@@ -129,6 +155,18 @@ async def main() -> int:
     url = os.environ.get("DATABASE_URL") or ""
     if not url:
         print("DATABASE_URL manquant — l'acceptation se MESURE sur le corpus réel.", file=sys.stderr)
+        return 2
+
+    # ⚠️ Sondé AVANT le pool : si l'index n'a pas d'émetteur, il n'y a rien à mesurer, et ouvrir la
+    # base donnerait l'illusion d'une tentative. Voir la docstring — sortie 2 (« pas pu mesurer »),
+    # jamais 1 (« un assert a rougi ») ni 0 (« mesuré, tout va bien »).
+    if index_couverture_pour(PORTEURS[0]) is None:
+        print("ACCEPTATION SUSPENDUE — la capacité 4 n'est pas mesurable en l'état.\n",
+              file=sys.stderr)
+        print(MOTIF_SANS_EMETTEUR, file=sys.stderr)
+        print("\nLui passer un index vide ferait tomber les porteurs en cause `lacune` : ce serait "
+              "un faux ROUGE, lu comme une régression de la capacité 4. Ce script reprendra seul "
+              "le jour où le dispatch du lot 2c écrira `question_coverage`.", file=sys.stderr)
         return 2
     await init_pool(url)
     try:

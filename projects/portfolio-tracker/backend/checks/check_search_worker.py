@@ -3,12 +3,16 @@
 On simule une sortie de modèle HOSTILE : source surqualifiée, score gonflé, mauvais entry_type,
 doublons, dépassement de plafond, mémoire modèle non déclarée. Tout doit être rabattu côté Python.
 """
+import ast
 import sys
+import textwrap
 from datetime import date
 
 from app.agents.v2.worker import (
     _apply_deterministic_overrides, _build_user_message, _resolve_source_type, request_hash,
 )
+# Les 8 colonnes archivées par la 036, lues sur leur détenteur (#46).
+from app.db.migrations._gen_036 import COLONNES_RETIREES
 from app.contracts import OutputSchema, WorkerExchange, WorkerRequest, WorkerResponse
 from app.knowledge.websearch import (
     SearchUnavailable, classify_source_type, get_search_backend, html_to_text,
@@ -212,8 +216,21 @@ check("score Reuters gonflé 0.99 → recalculé à la baseline presse, décote 
 check("aucun score conservé du modèle dans la sortie élargie",
       all(e["reliability_score"] <= 0.90 for e in large["entries"]),
       f"→ {[e['reliability_score'] for e in large['entries']]}")
-check("covers forcé au field_path de la requête",
-      all(e["covers"] == "moat.preuves" for e in entries))
+# _COUVERTURE_NON_CABLEE — écart déclaré, sur la forme de #52 : il vit dans le check du lot qui l'a
+# créé et virera au vert de lui-même le jour du câblage. `_resolve_covers` forçait ici le
+# `field_path` du mandat dans `entry["covers"]` ; la 036 archive la colonne, parce que la couverture
+# est une propriété de la RELATION entry ↔ question (#57) et que ce lien s'écrit au DISPATCH, comme
+# sous-produit déterministe (#58) — pas au retour d'un agent qui rédige.
+# ⚠️ Ce qui se garde ici n'est pas l'absence d'un mot : un grep d'interdit se satisfait de la prose
+# et se met en défaut sur elle (#56). C'est la STRUCTURE de l'entry produite — le worker rend une
+# ligne de `knowledge_entries` telle que la 036 la laisse, et le contrat `ProducedEntry` est
+# `extra="forbid"`, donc y remettre une clef ferait rejeter TOUTE entry par le filet de validation.
+_COUVERTURE_NON_CABLEE = sorted(set(COLONNES_RETIREES) & set().union(*(set(e) for e in entries)))
+check("aucune entry produite ne porte une colonne archivée par la 036",
+      _COUVERTURE_NON_CABLEE == [], f"→ {_COUVERTURE_NON_CABLEE}")
+check("le mandat porte toujours son champ (le worker SAIT ce qu'il couvre, il ne l'écrit plus)",
+      req.output_schema.field_path == "moat.preuves",
+      "→ si le dispatch du lot 2c est câblé, c'est ce champ qu'il relie, et cette section change")
 check("note de fiabilité jamais muette et traçant le calcul",
       all("base " in e["reliability_note"] for e in entries))
 check("exécution mesurée, pas déclarée (le modèle disait 42 $)",
@@ -342,9 +359,29 @@ check("le défaut côté stockage reste False (le drapeau s'ajoute, ne s'impose 
       f"→ défaut = {_params_store['requires_human_review'].default!r}")
 # Les autres champs décidés par les overrides déterministes doivent suivre le même chemin :
 # un seul oubli de ce genre suffit à vider un garde-fou de sa portée (#28, #29).
-for _champ in ("covers", "source_type", "source_url", "fiscal_period"):
-    check(f"{_champ} transmis au stockage", f"{_champ}=" in _src_persist,
-          f"→ {_champ} décidé côté Python mais jamais écrit")
+# ⚠️ `covers` a quitté cette liste avec la 036 : le transmettre lèverait, `store_knowledge` ne
+# l'accepte plus. Les trois autres restent, mais l'assert change de nature. `f"{champ}=" in source`
+# est un grep de PRÉSENCE, donc satisfait par la prose (#56) — et ce module contient précisément un
+# commentaire qui écrit « Plus de `covers=` ». On lit donc la STRUCTURE : les mots-clefs réellement
+# passés à `store_knowledge`, extraits par `ast`, qu'aucun commentaire ne peut fabriquer.
+_appel_store = next(
+    (n for n in ast.walk(ast.parse(textwrap.dedent(_src_persist)))
+     if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "store_knowledge"),
+    None)
+check("l'appel à `store_knowledge` est trouvé dans `persist_worker_entries`",
+      _appel_store is not None, "→ sans lui les asserts suivants seraient verts sur rien")
+_kw_store = {k.arg for k in (_appel_store.keywords if _appel_store else []) if k.arg}
+for _champ in ("source_type", "source_url", "fiscal_period", "requires_human_review"):
+    check(f"{_champ} transmis au stockage (mot-clef réel, pas une mention en commentaire)",
+          _champ in _kw_store, f"→ décidé côté Python mais jamais écrit — vus : {sorted(_kw_store)}")
+    check(f"… et `store_knowledge` expose bien `{_champ}`", _champ in _params_store,
+          "→ transmis à un paramètre inexistant : TypeError en prod")
+# Les colonnes archivées, dans les DEUX sens : ni transmises par l'appelant, ni acceptées par le
+# stockage. Un seul des deux laisserait passer la moitié du défaut.
+_kw_mortes = sorted(set(COLONNES_RETIREES) & _kw_store)
+_params_morts = sorted(set(COLONNES_RETIREES) & set(_params_store))
+check("aucune colonne archivée n'est transmise au stockage", _kw_mortes == [], f"→ {_kw_mortes}")
+check("… et `store_knowledge` n'en accepte plus aucune", _params_morts == [], f"→ {_params_morts}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

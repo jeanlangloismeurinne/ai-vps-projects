@@ -221,44 +221,62 @@ NATURES: frozenset[str] = frozenset({"mesure", "evenement", "interpretation"})
 _NON_MEASURING_SOURCES: frozenset[str] = frozenset({"llm_memory", "agent_synthesis"})
 
 # Producteurs déterministes : le contenu est un relevé (dépôt XBRL, fournisseur de marché) ou une
-# fréquence empirique tirée d'un corpus (`base_rate` — « P(≥20 %/an)=8,5 % » est une mesure sur une
-# classe de référence, pas une prévision ; le CHAMP qu'elle fonde est d'interprétation, l'entry
-# non).
-_MEASURING_ENTRY_TYPES: frozenset[str] = frozenset({"fact_financial", "base_rate"})
+# fréquence empirique tirée d'un corpus (`fact_statistical` — « P(≥20 %/an)=8,5 % » est une mesure
+# sur une classe de référence, pas une prévision ; le CHAMP qu'elle fonde est d'interprétation,
+# l'entry non).
+#
+# ⚠️ `base_rate` → `fact_statistical` (migration 036) : le vocabulaire d'`entry_type` ne nomme plus
+# de méthodologie (#57). Le renommage DOIT être répercuté ICI, sinon les entries de taux de base
+# retombent en `interpretation` sans que rien ne le dise — leur autorité changerait par effet de
+# bord d'un renommage SQL.
+_MEASURING_ENTRY_TYPES: frozenset[str] = frozenset({"fact_financial", "fact_statistical"})
 
 # Producteurs de jugement : quel que soit le champ visé, la sortie est un énoncé du modèle.
-_INTERPRETING_ENTRY_TYPES: frozenset[str] = frozenset(
-    {"analysis", "agent_synthesis", "risk", "lesson_learned"}
-)
-
-
-def _covers_all_mesure(covers: Optional[Sequence[str]]) -> bool:
-    """Unanimité : TOUS les champs couverts sont de nature dominante `mesure`.
-
-    L'unanimité est exigée dans le sens PRUDENT (cf. #44) : une entry qui fonde à la fois un
-    pourcentage publié et un driver d'interprétation fait deux choses, et la plus forte des deux
-    revendications ne doit pas emporter l'autre. Un chemin hors vocabulaire ne vote pas `mesure` —
-    il ne peut pas non plus lever un KeyError (#50 §1 : un champ inconnu est nommé, pas fatal).
-    """
-    paths = [c for c in (covers or []) if c]
-    if not paths:
-        return False
-    return all(FIELD_PROFILES.get(p, {}).get("nature") == "mesure" for p in paths)
+# ⚠️ `risk` → `fact_qualitative` (migration 036), qui n'est PAS listé ici : un constat qualitatif
+# n'est pas un producteur de jugement par construction, il retombe sur le défaut prudent
+# `interpretation` (#44). Même résultat, mais par la règle générale et non par une énumération.
+#
+# ⚠️ `lesson_learned` RETIRÉ (2026-09-10) : la 036 ne le retient pas, et son unique site d'écriture
+# (`exit.LESSON_ENTRY_TYPE`) écrit désormais `analysis` — déjà listé, donc la nature d'une leçon est
+# inchangée. Le laisser aurait été un jeton mort dans un filtre de lecture, c'est-à-dire la trace
+# qui fait croire au prochain lecteur que le vocabulaire est encore ouvert.
+_INTERPRETING_ENTRY_TYPES: frozenset[str] = frozenset({"analysis", "agent_synthesis"})
 
 
 def derive_nature(
     *,
     entry_type: str,
     source_type: str,
-    covers: Optional[Sequence[str]] = None,
     declared: Optional[str] = None,
 ) -> tuple[str, str]:
     """Nature d'une entry — DÉTENTEUR UNIQUE de la règle (#46). Rend `(nature, motif)`.
 
-    Dérivation déterministe depuis les trois entrées prévues par la spec (`source_type` ·
-    `entry_type` · champ couvert), dans cet ordre de priorité. Aucun producteur ne la
+    Dérivation déterministe depuis les DEUX entrées qui sont des propriétés de l'entry elle-même
+    (`source_type` · `entry_type`), dans cet ordre de priorité. Aucun producteur ne la
     ré-implémente : `store_knowledge` l'appelle pour TOUS les sites d'écriture, c'est le seul
     passage obligé des 8 producteurs.
+
+    ⚠️ **La branche `covers` a été RETIRÉE le 2026-09-10 (lot 2b, migration 036).** Elle disait :
+    « une entry dont TOUS les champs couverts sont de nature dominante `mesure` est une mesure ».
+    Deux raisons, et la seconde est la vraie :
+
+      1. `covers` n'existe plus sur l'entry. La garder en paramètre d'appel aurait rendu `nature`
+         NON REJOUABLE — c'est la propriété pour laquelle le motif n'est justement pas persisté
+         (« fonction pure de colonnes déjà stockées »), et celle sur laquelle le backfill 034 s'est
+         appuyé. Une règle dont un ingrédient n'est pas dans la ligne est le mode de panne de #48.
+      2. Et surtout : c'était une **erreur de catégorie**, #57 en miniature. La nature est une
+         propriété de l'ASSERTION ; la couverture est une propriété de la RELATION entry ↔
+         question. Faire dépendre la première de la seconde, c'est faire dire à l'entry ce qu'on
+         ATTEND d'elle plutôt que ce qu'elle est — le défaut que le commentaire au-dessus de
+         `_MEASURING_ENTRY_TYPES` interdit déjà par ailleurs.
+
+    CE QUE ÇA COÛTE, MESURÉ AVANT DE TRANCHER, PAS SUPPOSÉ : sur le corpus archivé, **19 entries
+    sur 180** tenaient leur `mesure` de cette seule branche (des `fact_qualitative` de source
+    `edgar_official` 11, `web_search_reputable` 6, `company_ir_official` 1, `financial_press` 1).
+    Elles seraient désormais `interpretation`. Le mouvement va dans le sens PRUDENT (#44 : toute
+    incertitude retombe sur `interpretation`), donc il ne fabrique aucune autorité — il en retire.
+    La capacité revient par le bon axe en lot 2c/3 : c'est `nature_attendue` de la question, dans
+    `frameworks.yaml`, confrontée à la nature de l'entry par la PORTE — pas fusionnée dedans.
 
     `declared` = la nature proposée par le modèle. **Elle n'est honorée que pour promouvoir vers
     `evenement`** — la seule nature qui SOUMET l'assertion à l'horloge matérielle, donc le seul
@@ -273,15 +291,9 @@ def derive_nature(
         nature, motif = "mesure", f"entry_type `{entry_type}` : producteur déterministe"
     elif entry_type in _INTERPRETING_ENTRY_TYPES:
         nature, motif = "interpretation", f"entry_type `{entry_type}` : jugement produit"
-    elif _covers_all_mesure(covers):
-        nature = "mesure"
-        motif = "champs couverts tous de nature dominante `mesure` : " + ",".join(sorted(covers or []))
     else:
         nature = "interpretation"
-        motif = (
-            "défaut prudent : ni producteur déterministe, ni couverture unanimement `mesure`"
-            + (f" (couvre {','.join(sorted(covers or []))})" if covers else " (ne couvre aucun champ)")
-        )
+        motif = "défaut prudent : producteur non déterministe"
 
     if declared and declared != nature:
         if declared == "evenement" and declared in NATURES:
@@ -334,13 +346,13 @@ def format_entries_for_prompt(entries: Sequence[dict[str, Any]], *, content_limi
         if e.get("fiscal_period"):
             meta += f" · {e['fiscal_period']}"
         flag = " ⚠review" if e.get("requires_human_review") else ""
-        covers = e.get("covers")
-        if isinstance(covers, str):
-            covers = [covers]
-        if covers:
-            # Rend l'index VISIBLE au modèle : il n'en dérive plus la couverture (c'est le backend),
-            # mais il écrit les gaps — voir quels champs sont déjà tenus lui évite d'en réclamer.
-            meta += " · couvre " + ",".join(sorted(covers))
+        # ⚠️ La mention « · couvre … », lue depuis `e["covers"]`, a été RETIRÉE le 2026-09-10
+        # (migration 036). La couverture est une propriété de la RELATION entry ↔ question (#57) :
+        # elle vit dans `question_coverage`, pas sur l'entry. La rendre visible au modèle reste
+        # utile (voir ce qui est déjà tenu lui évite d'en réclamer) — mais ça se lit par jointure,
+        # au site qui construit le contexte, pas ici où l'on ne dispose que de la ligne. Laisser
+        # un `e.get("covers")` aurait produit une branche MORTE, silencieusement vraie pour
+        # personne (mode de panne de #50 : câblé de bout en bout, jamais passé).
         title = f"{e['title']} — " if e.get("title") else ""
         body = _truncate(e.get("content", ""), content_limit)
         lines.append(f"#{e['id']} v{e.get('version',1)} [{meta}]{flag} {e.get('entry_type','')}: {title}{body}")

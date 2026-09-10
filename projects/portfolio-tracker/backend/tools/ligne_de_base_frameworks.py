@@ -39,6 +39,7 @@ from app.agents.v2.common import MVDD_FIELD_PATHS
 from app.db.database import close_pool, get_db_session, init_pool
 from app.knowledge.synthesis_feed import SYNTHESIS_TARGETS
 
+from tools._corpus_archive import ENTRIES, bandeau
 from tools.reconcilier_vocabulaires import ALIAS, DERIVES, feuilles_memo
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
@@ -123,6 +124,7 @@ def matrice_tracabilite() -> tuple[dict[str, set[str]], list[str]]:
 
 # ══════════════════════════════════════════════════════════════════════════════
 async def main() -> int:
+    print(bandeau())
     url = os.environ.get("DATABASE_URL") or ""
     if not url:
         # Un pré-requis manquant sort en ERREUR, jamais en saut de section : une mesure incomplète
@@ -138,14 +140,14 @@ async def main() -> int:
     await init_pool(url)
     try:
         async with get_db_session() as conn:
-            entries = await conn.fetch("""
+            entries = await conn.fetch(f"""
                 SELECT id, ticker_id, entry_type, source_type, reliability_tier, covers, title
-                  FROM knowledge_entries
+                  FROM {ENTRIES}
                  WHERE superseded_by IS NULL AND is_deleted = false AND ticker_id = ANY($1::text[])
                  ORDER BY ticker_id, id
             """, TICKERS)
-            total_base = await conn.fetchval("""
-                SELECT count(*) FROM knowledge_entries
+            total_base = await conn.fetchval(f"""
+                SELECT count(*) FROM {ENTRIES}
                  WHERE superseded_by IS NULL AND is_deleted = false
             """)
     finally:

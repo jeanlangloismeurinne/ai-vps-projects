@@ -129,23 +129,59 @@ def _exigences(dimension: Optional[str], d: dict[str, Any]) -> tuple[list[str], 
     return (requis or ["description"]), plancher
 
 
-def _covers_index(entries: list[dict[str, Any]]) -> dict[str, list[tuple[int, str]]]:
-    """`dimension.champ` → [(entry_id, tier)] — l'INDEX de couverture, bâti depuis la BASE.
+class CouvertureSansEmetteur(RuntimeError):
+    """L'index de couverture n'a AUCUN émetteur — la porte ne peut pas prononcer.
 
-    Une entry annonce ses champs via `covers` (chemins complets, migration 029), écrit par les
-    chemins déterministes (feeds, mandat du worker, backfill relu). Trié par id pour un rapport
-    stable. Tolérant à la forme : une entry pré-029 peut encore porter une chaîne nue.
+    Levée, jamais rattrapée en verdict. C'est la forme de #40 appliquée à la porte : une
+    pré-condition d'ÉTAT se refuse AVANT l'appel au modèle, elle ne se déguise pas en résultat.
     """
-    index: dict[str, list[tuple[int, str]]] = {}
-    for e in sorted(entries, key=lambda x: x["id"]):
-        covers = e.get("covers")
-        if isinstance(covers, str):          # tolérance pré-029 (colonne encore TEXT)
-            covers = [covers]
-        tier = e.get("reliability_tier")
-        for path in covers or []:
-            if isinstance(path, str) and tier:
-                index.setdefault(path, []).append((e["id"], tier))
-    return index
+
+
+# ⚠️ `_covers_index()` A ÉTÉ SUPPRIMÉ le 2026-09-10 (migration 036) — ne pas le réintroduire.
+#
+# Il bâtissait `dimension.champ` → [(entry_id, tier)] depuis `knowledge_entries.covers`. La colonne
+# est archivée : ce qu'une entry couvre est une propriété de la RELATION entry ↔ question, elle vit
+# dans `question_coverage` (#57). Le laisser en place aurait produit le pire des trois états — il
+# aurait rendu `{}` sans erreur, donc TOUS les champs seraient tombés en `non_couvert`, donc la cause
+# dérivée aurait été `lacune` et le remède `collecte` : la porte aurait prescrit d'aller chercher
+# 19 champs que la base contient déjà. Un verdict faux se corrige ; un REMÈDE faux fait dépenser.
+#
+# L'index n'a plus d'émetteur tant que le dispatch du lot 2c n'écrit pas `question_coverage`, et il
+# n'est pas reconstructible ici : aucune correspondance ne relie les 19 chemins MVDD aux couples
+# `question/ingredient`, et en relire une à la main serait « une correspondance construite pour
+# tomber juste sur les données d'hier » — ce que l'en-tête de la 036 refuse explicitement, parce
+# qu'elle rendrait T1 bon PAR CONSTRUCTION et le défaut indétectable (spec §5.3).
+#
+# D'où la forme retenue : l'index est un ARGUMENT REQUIS de `recompute_coverage`, et `None` y déclare
+# « aucun émetteur » — la porte lève alors au lieu de prononcer. L'écart est réel entre le lot 2b et
+# le lot 2c, il est DÉCLARÉ (`check_readiness_recompute.py`, `_INDEX_SANS_EMETTEUR`) sur la forme de
+# #52 : un écart inscrit dans le check du lot qui l'a créé, et qui vire au vert de lui-même le jour
+# du câblage, plutôt qu'un `TODO` que personne ne relit.
+
+MOTIF_SANS_EMETTEUR = (
+    "l'index de couverture n'a aucun émetteur : `knowledge_entries.covers` est archivée "
+    "(migration 036) et le dispatch qui écrit `question_coverage` n'existe pas encore (lot 2c). "
+    "La porte ne peut pas dire ce que le corpus fonde — elle refuse de prononcer plutôt que de "
+    "rendre `lacune` sur des champs dont la matière est déjà en base."
+)
+
+
+def index_couverture_pour(ticker_id: Optional[str]) -> Optional[dict[str, list[tuple[int, str]]]]:
+    """L'index de couverture de cet émetteur, ou `None` s'il n'a **aucun émetteur**.
+
+    Détenteur unique de cette réponse (#46) : la porte, l'écran et les outils de mesure la posent au
+    même endroit, sinon le jour du câblage il faudrait se souvenir des trois. Rend `None` aujourd'hui,
+    pour tous les tickers — ce n'est pas « ce ticker n'a rien », c'est « personne n'écrit encore les
+    liens ». Le lot 2c remplacera ce corps par la lecture de `question_coverage`, et ce sera la seule
+    ligne à changer.
+    """
+    return None
+
+
+def exiger_index_couverture(index: Optional[dict[str, list[tuple[int, str]]]]) -> None:
+    """Refuse AVANT toute dépense si l'index n'a pas d'émetteur (#40). Détenteur unique du motif."""
+    if index is None:
+        raise CouvertureSansEmetteur(MOTIF_SANS_EMETTEUR)
 
 
 def recompute_coverage(
@@ -153,15 +189,25 @@ def recompute_coverage(
     entries: list[dict[str, Any]],
     *,
     ancre: MaterialEventLookup,
+    index_couverture: Optional[dict[str, list[tuple[int, str]]]],
     ticker_id: Optional[str] = None,
     motifs_out: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
-    """Recompute déterministe de la couverture — depuis l'INDEX `covers`, pas depuis le LLM (029).
+    """Recompute déterministe de la couverture — depuis un INDEX, pas depuis le LLM (029).
 
-    Chaque champ requis est fondé si et seulement si la BASE contient ≥1 entry courante qui le PORTE
-    (`covers` contient `dimension.champ`) à un tier RÉEL ≥ plancher DU CHAMP **et** qui tient
-    l'actualité que le champ exige. Le LLM n'intervient plus du tout : ni pour proposer, ni pour
-    omettre.
+    Chaque champ requis est fondé si et seulement si l'INDEX rattache au chemin `dimension.champ`
+    ≥1 entry courante à un tier RÉEL ≥ plancher DU CHAMP **et** qui tient l'actualité que le champ
+    exige. Le LLM n'intervient plus du tout : ni pour proposer, ni pour omettre.
+
+    ⚠️ `index_couverture` est un argument REQUIS, et `None` y signifie « **aucun émetteur** » — pas
+    « aucun lien ». Les deux se ressemblent et se lisent à l'opposé : sans émetteur, on ne SAIT pas
+    ce que le corpus fonde ; avec un émetteur qui rend zéro lien, on sait qu'il ne fonde rien. Rendre
+    le premier cas comme le second ferait tomber les 19 champs en `non_couvert`, donc dériver la
+    cause `lacune`, donc envoyer 19 mandats de COLLECTE sur une base qui contient déjà la matière —
+    la phrase rassurante (« il suffit de collecter ») produite par la pire des raisons (#49), et un
+    remède faux se paie en tokens. D'où `CouvertureSansEmetteur` : la porte lève au lieu de
+    prononcer. Même raison que pour `ancre` ci-dessous, un cran plus haut — là, l'oubli d'un appelant
+    est une `TypeError` ; ici, l'absence d'émetteur est une exception NOMMÉE.
 
     Ce que ça corrige (mesuré sur NVDA, corpus STRICTEMENT figé) : l'ancienne version filtrait les
     `entry_ids` que le LLM avait CITÉS — un véto sur la citation, pas un index. Elle fermait le trou
@@ -204,7 +250,8 @@ def recompute_coverage(
     l'appelant plutôt qu'un cache de module — un état global survivrait d'un ticker au suivant et
     ferait lire les motifs de NVDA dans le rapport de MSFT (#31 transposé à la mémoire du process).
     """
-    index = _covers_index(entries)
+    exiger_index_couverture(index_couverture)
+    index = index_couverture or {}
     corpus = {e["id"]: e for e in entries}
     dispenses = nonblocking_gaps_for(ticker_id)
     for bloc_name in ("structuree", "qualitative_marche"):
@@ -440,7 +487,7 @@ def constrain_rationale(report: dict[str, Any], coverage: dict[str, Any]) -> dic
               f"{f' (cause : {cause})' if cause else ''} — bloc structuré "
               f"{'fondé' if s_ok else 'incomplet'}, bloc qualitatif-marché "
               f"{'fondé' if q_ok else 'incomplet'} ; {manque}. Ligne écrite par le code depuis "
-              f"l'index `covers` ; la lecture ci-dessous est celle du curator.")
+              f"l'index de couverture ; la lecture ci-dessous est celle du curator.")
     if retirees:
         entete += (f" {retirees} phrase(s) du curator retirée(s) : elles nommaient un autre "
                    f"verdict que {verdict}.")
@@ -479,7 +526,7 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]], *,
         f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict).\n\n"
         f"Ancre temporelle du dossier — {_libelle_ancre(ancre)}\n\n"
         f"⚠️ La COUVERTURE ne t'appartient pas. Le backend la recompute en Python depuis l'index "
-        f"`covers` de la base (quelles entries portent quel champ, à quel tier réel) : `fondations`, "
+        f"de couverture de la base (quelles entries fondent quel champ, à quel tier réel) : `fondations`, "
         f"`champs_non_fondables`, `champs_perimes`, `tier_atteint`, `ok`, `bloc_ok`, les gaps, le "
         f"verdict et sa `cause_non_ready` sont DÉRIVÉS et écraseront ce que tu écris. Tu ne peux ni "
         f"faire passer un champ, ni en creuser un : laisse `fondations` à [] et ne cherche pas à "
@@ -531,21 +578,26 @@ def _apply_deterministic_overrides(
     entries: list[dict[str, Any]],
     *,
     ancre: MaterialEventLookup,
+    index_couverture: Optional[dict[str, list[tuple[int, str]]]],
     ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Recompute en Python ce qui est dérivé (comptes, couverture, gaps, ok/bloc_ok, verdict, cause)
-    — jamais confié au LLM. La couverture par champ est recalculée depuis l'INDEX `covers` de la base
-    (recompute_coverage, 029) confronté à l'ancre matérielle (capacité 4), puis les gaps sont
-    reconciliés pour tenir la bijection du contrat (reconcile_gaps). Le verdict devient donc une
-    FONCTION du corpus ET du moment : à corpus figé, il ne bouge plus tant que l'ancre ne bouge pas.
+    — jamais confié au LLM. La couverture par champ est recalculée depuis l'INDEX de couverture
+    (recompute_coverage) confronté à l'ancre matérielle (capacité 4), puis les gaps sont reconciliés
+    pour tenir la bijection du contrat (reconcile_gaps). Le verdict devient donc une FONCTION du
+    corpus ET du moment : à corpus figé, il ne bouge plus tant que l'ancre ne bouge pas.
 
-    ⚠️ `ancre` est requis ici pour la même raison que dans `recompute_coverage` : un défaut ferait
-    d'un oubli d'appelant un verdict silencieux au lieu d'une `TypeError`."""
+    ⚠️ `ancre` et `index_couverture` sont requis ici pour la même raison : un défaut ferait d'un
+    oubli d'appelant un verdict silencieux au lieu d'une `TypeError`. `index_couverture=None` fait
+    lever `CouvertureSansEmetteur` — cette fonction ne rattrape pas : elle est la moitié déterministe
+    de la porte, pas sa politique d'erreur, et chaque appelant a la sienne (le POST refuse avant
+    toute dépense, le GET sert la ligne persistée en DÉCLARANT qu'elle n'a pas été réévaluée)."""
     report["entries_par_tier"] = count_tiers(entries)
 
     motifs: dict[str, str] = {}
-    coverage = recompute_coverage(report.get("coverage") or {}, entries,
-                                  ancre=ancre, ticker_id=ticker_id, motifs_out=motifs)
+    coverage = recompute_coverage(report.get("coverage") or {}, entries, ancre=ancre,
+                                  index_couverture=index_couverture, ticker_id=ticker_id,
+                                  motifs_out=motifs)
     report["coverage"] = coverage
     report["cause_non_ready"] = compute_cause_non_ready(coverage)
     reconcile_gaps(report, coverage, motifs=motifs)
@@ -603,6 +655,14 @@ async def run_readiness(ticker_id: str) -> dict[str, Any]:
     async with get_db_session() as conn:
         entries = await get_current_entries(conn, ticker_id, min_reliability=0.0, limit=500)
 
+        # ⚠️ Le refus vient AVANT l'appel au modèle, et c'est tout l'intérêt (#40) : une pré-condition
+        # d'ÉTAT dit que la question n'avait pas lieu d'être posée. La placer après ferait payer un
+        # readiness complet pour apprendre ce qu'on savait avant de commencer. Depuis la 036, l'index
+        # n'a aucun émetteur (cf. le commentaire en tête de module) : on passe `None` explicitement
+        # plutôt que de laisser un défaut le décider, et `recompute_coverage` lève.
+        index_couverture = index_couverture_pour(ticker_id)
+        exiger_index_couverture(index_couverture)
+
         # L'ancre matérielle est lue AVANT toute dépense de tokens (#40) : elle fait partie de la
         # question posée, pas de la mise en forme de la réponse. `ancre_substantielle` écarte les
         # dépôts purement formels (item 9.01 seul) — détenteur unique de « quel événement périme »
@@ -613,7 +673,9 @@ async def run_readiness(ticker_id: str) -> dict[str, Any]:
         raw, t_in, t_out, cost = await _call_json(
             agent, _readiness_task_message(ticker_id, entries, ancre=ancre))
         raw.pop("context_pack_entry_id", None)
-        report = _apply_deterministic_overrides(raw, entries, ancre=ancre, ticker_id=ticker_id)
+        report = _apply_deterministic_overrides(raw, entries, ancre=ancre,
+                                                index_couverture=index_couverture,
+                                                ticker_id=ticker_id)
 
         context_pack_entry_id: Optional[int] = None
 

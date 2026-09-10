@@ -81,11 +81,19 @@ def _generique(url, ticker):
     return classify_source_type(url, ticker)
 
 
-def _q(url, ticker, entry_type, covers, declaree=None):
-    """Reproduit le chemin de PRODUCTION : qualification générique par domaine, puis registre."""
+def _q(url, ticker, entry_type, declaree=None):
+    """Reproduit le chemin de PRODUCTION : qualification générique par domaine, puis registre.
+
+    ⚠️ Le paramètre `covers` a été RETIRÉ le 2026-09-10 (migration 036). Il ne servait qu'à
+    alimenter la branche `covers` de `derive_nature`, elle-même supprimée : faire dépendre la
+    nature de l'ASSERTION de ce qu'elle est censée COUVRIR était #57 en miniature. Ce qui décide de
+    la nature dans chaque appel ci-dessous est donc l'`entry_type` seul — et c'est plus fort, pas
+    moins : le couple testé en §2 ne peut plus être obtenu par un ingrédient qui n'est pas dans la
+    ligne, mode de panne de #48.
+    """
     return qualify(
         source_type=_generique(url, ticker), url=url, ticker_id=ticker,
-        entry_type=entry_type, covers=covers, nature_declaree=declaree,
+        entry_type=entry_type, nature_declaree=declaree,
     )
 
 
@@ -150,12 +158,12 @@ check(f"{_TICKER_TEST} dispose d'au moins 2 sources admissibles (acceptation roa
 
 
 print("\n2. standing par COUPLE (source × nature) — l'assert central de la capacité")
-st_interp, nat_interp, _ = _q(_URL_ADMISE, _TICKER_TEST, "analysis", ["positionnement.moat_preuves"])
+st_interp, nat_interp, _ = _q(_URL_ADMISE, _TICKER_TEST, "analysis")
 check("source admise + interprétation → promue", st_interp == "web_search_reputable",
       f"→ {st_interp}")
 check("  et la nature reste `interpretation`", nat_interp == "interpretation", f"→ {nat_interp}")
 
-st_mes, nat_mes, motif_mes = _q(_URL_ADMISE, _TICKER_TEST, "fact_financial", ["financials.levier"])
+st_mes, nat_mes, motif_mes = _q(_URL_ADMISE, _TICKER_TEST, "fact_financial")
 check("MÊME source + mesure → AUCUN standing gagné", st_mes == "web_search_generic",
       f"→ {st_mes} : une source admise pour l'interprétation fonde une mesure chiffrée")
 check("  et la nature est bien `mesure` (l'assert ci-dessus n'est pas vide)", nat_mes == "mesure",
@@ -168,8 +176,7 @@ check("  la mesure reste chiffrée à 0,50 / C+", (score_mes, tier_mes) == (0.50
 
 # Le modèle ne peut pas contourner par une nature déclarée : seul `evenement` est promouvable, et
 # une promotion vers `evenement` ne donne aucun standing sur `mesure` non plus.
-st_decl, nat_decl, _ = _q(_URL_ADMISE, _TICKER_TEST, "fact_financial", ["financials.levier"],
-                          declaree="interpretation")
+st_decl, nat_decl, _ = _q(_URL_ADMISE, _TICKER_TEST, "fact_financial", declaree="interpretation")
 check("déclaration `interpretation` par le modèle ignorée sur un fait", nat_decl == "mesure",
       f"→ {nat_decl}")
 check("  et le source_type ne monte pas par ce chemin", st_decl == "web_search_generic",
@@ -177,8 +184,7 @@ check("  et le source_type ne monte pas par ce chemin", st_decl == "web_search_g
 
 
 print("\n3. domaine hors registre — inchangé")
-st_inc, _, _ = _q("https://un-blog-quelconque.example/analyse", _TICKER_TEST, "analysis",
-                  ["positionnement.moat_preuves"])
+st_inc, _, _ = _q("https://un-blog-quelconque.example/analyse", _TICKER_TEST, "analysis")
 check("domaine inconnu reste `web_search_generic`", st_inc == "web_search_generic", f"→ {st_inc}")
 check("  soit 0,50 / C+", RELIABILITY_TABLE[st_inc] == ("C+", 0.50), f"→ {RELIABILITY_TABLE[st_inc]}")
 
@@ -190,17 +196,17 @@ for url, attendu, quoi in (
     ("https://www.reuters.com/business/x", "financial_press", "presse financière"),
     ("https://revmed.com/investors/x", "company_ir_official", "IR par chemin (#33)"),
 ):
-    st, _, _ = _q(url, _TICKER_TEST, "fact_financial", ["financials.levier"])
+    st, _, _ = _q(url, _TICKER_TEST, "fact_financial")
     check(f"{quoi} : {attendu} conservé", st == attendu, f"→ {st}")
     check(f"  {quoi} : plafond affiché identique", source_type_max(url, _TICKER_TEST) == attendu,
           f"→ {source_type_max(url, _TICKER_TEST)}")
 
 
 print("\n5. portée — aucune admission héritée par défaut")
-st_nvda, _, _ = _q(_URL_ADMISE, "NVDA", "analysis", ["positionnement.moat_preuves"])
+st_nvda, _, _ = _q(_URL_ADMISE, "NVDA", "analysis")
 check("émetteur hors secteur admis n'hérite de rien", st_nvda == "web_search_generic",
       f"→ {st_nvda}")
-st_none, _, _ = _q(_URL_ADMISE, None, "analysis", ["positionnement.moat_preuves"])
+st_none, _, _ = _q(_URL_ADMISE, None, "analysis")
 check("émetteur absent (None) n'hérite de rien", st_none == "web_search_generic", f"→ {st_none}")
 check("secteur d'un ticker inconnu = None", secteur_de("ZZZZ") is None, f"→ {secteur_de('ZZZZ')}")
 check("un ticker déclaré au registre a bien un secteur",
@@ -227,8 +233,7 @@ check("`service` n'appelle plus `derive_nature` en direct (il passe par `qualify
 # après. Le prouver par le comportement, pas par un grep : si l'ordre s'inversait, la promotion
 # précéderait la dérivation et §2 ne pourrait plus refuser la mesure.
 st_ordre, _, _ = qualify(source_type="web_search_reputable", url=_URL_ADMISE,
-                         ticker_id=_TICKER_TEST, entry_type="analysis",
-                         covers=["positionnement.moat_preuves"])
+                         ticker_id=_TICKER_TEST, entry_type="analysis")
 check("`qualify` ne promeut QUE depuis `web_search_generic`", st_ordre == "web_search_reputable",
       f"→ {st_ordre}")
 

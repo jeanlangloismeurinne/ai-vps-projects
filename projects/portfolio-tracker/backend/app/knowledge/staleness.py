@@ -52,6 +52,7 @@ import logging
 from typing import Any, Optional
 
 from app.knowledge.actualite import classe_rapport, etat_actualite
+from app.knowledge.service import ENTRIES_COURANTES
 from app.knowledge.material_events import (
     ITEM_LABELS,
     MaterialEventLookup,
@@ -66,15 +67,29 @@ _EXTRAIT = 240
 
 
 async def _entries_actives(conn, ticker_id: str) -> list[dict[str, Any]]:
+    """Entries courantes du ticker, chacune avec les QUESTIONS qu'elle couvre.
+
+    ⚠️ La colonne `covers` a été archivée le 2026-09-10 (migration 036). Ce qu'une entry couvre
+    n'est pas une propriété de l'entry — c'est une propriété de la RELATION entry ↔ question (#57),
+    et elle se lit donc par jointure sur `question_coverage`, jamais sur la ligne. Un
+    `LEFT JOIN` : une entry sans lien reste dans le balayage (sa péremption ne dépend pas de ce
+    qu'elle fonde), avec une liste vide.
+    """
     rows = await conn.fetch(
-        """
-        SELECT id, title, content, covers, source_type, source_url, source_date,
-               fiscal_period, reliability_tier, entry_type, requires_human_review
-          FROM knowledge_entries
-         WHERE ticker_id = $1
-           AND superseded_by IS NULL
-           AND COALESCE(is_deleted, FALSE) = FALSE
-         ORDER BY source_date DESC NULLS LAST, id
+        f"""
+        SELECT e.id, e.title, e.content, e.source_type, e.source_url, e.source_date,
+               e.fiscal_period, e.reliability_tier, e.entry_type, e.requires_human_review,
+               COALESCE(
+                   array_agg(DISTINCT qc.framework_id || '/' || qc.question_id)
+                     FILTER (WHERE qc.entry_id IS NOT NULL),
+                   '{{}}'
+               ) AS questions_couvertes
+          FROM knowledge_entries e
+          LEFT JOIN question_coverage qc ON qc.entry_id = e.id
+         WHERE e.ticker_id = $1
+           AND {ENTRIES_COURANTES}
+         GROUP BY e.id
+         ORDER BY e.source_date DESC NULLS LAST, e.id
         """,
         ticker_id,
     )
@@ -89,7 +104,7 @@ def _resume_entry(row: dict[str, Any], act) -> dict[str, Any]:
     return {
         "id": row["id"],
         "titre": row.get("title"),
-        "covers": list(row.get("covers") or []),
+        "questions_couvertes": list(row.get("questions_couvertes") or []),
         "source_type": row.get("source_type"),
         "source_url": row.get("source_url"),
         "source_date": row["source_date"].isoformat() if row.get("source_date") else None,
@@ -227,7 +242,15 @@ async def balayage_peremption(conn, ticker_id: str) -> dict[str, Any]:
         "suspectes": suspectes,
         "posterieures": posterieures,
         "non_datees": non_datees,
-        "champs_touches": sorted(
-            {c for e in suspectes for c in e["covers"]}
+        # ⚠️ Ex-`champs_touches`, agrégé depuis `covers` jusqu'à la migration 036. Deux clefs et non
+        # une, parce qu'il y a TROIS états et pas deux (#44/#54) : des questions touchées · aucune
+        # question touchée · **on ne sait pas encore**, faute de lien de couverture dans le corpus.
+        # Rendre le troisième cas comme une liste vide le ferait lire « ce périmé ne fonde rien »,
+        # la phrase rassurante produite par la pire raison (#49). Tant que le dispatch du lot 2c
+        # n'écrit pas `question_coverage`, la table est vide et c'est `couverture_connue: False`
+        # qui est vrai — pas une absence d'impact.
+        "questions_touchees": sorted(
+            {q for e in suspectes for q in e["questions_couvertes"]}
         ),
+        "couverture_connue": any(e["questions_couvertes"] for e in entries),
     }

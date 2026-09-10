@@ -39,7 +39,7 @@ from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annu
 # UNIQUE, tenue par edgar_feed. Ce module écrit lui aussi un `capital_expenditure` : lui donner
 # son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
 from app.knowledge.edgar_feed import POSTES, _current_fact_ids
-from app.knowledge.service import get_current_entries, store_knowledge
+from app.knowledge.service import ENTRIES_COURANTES, get_current_entries, store_knowledge
 from app.knowledge.units import montant
 
 logger = logging.getLogger(__name__)
@@ -490,9 +490,9 @@ async def _current_tagged_entry_id(conn, ticker_id: str, tags: list[str]) -> Opt
     """Id de l'entrée COURANTE portant tous les `tags` (à superseder). Ce feed est le seul producteur
     de ces tags dérivés → pas de collision avec une entry EDGAR brute ou de recherche."""
     row = await conn.fetchrow(
-        """
+        f"""
         SELECT id FROM knowledge_entries
-        WHERE ticker_id = $1 AND superseded_by IS NULL AND is_deleted = FALSE
+        WHERE ticker_id = $1 AND {ENTRIES_COURANTES}
           AND tags @> $2
         ORDER BY id DESC LIMIT 1
         """,
@@ -627,7 +627,6 @@ async def run_financials_feed(
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
                         source_url=spec.source_url, source_date=_spec_source_date(spec, facts),
                         fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
-                        covers=[f"financials.{spec.field}"],   # index 029 : chemin complet
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev})
         logger.info(
