@@ -142,28 +142,65 @@ cible ? ». Réponse : d'aucun (§0.6). Remplacé par **T1** (aucun ingrédient 
 mandaté) + **T1bis** (il DOIT en manquer au moins un, **nommé** — `qf_1.cout_du_capital`) : une
 couverture à 100 % **fait échouer** le pilote, parce qu'elle prouverait la rétro-conception.
 
-### 🚦 Prochain pas — **lot 2b puis 2c** (audit des 2 principes rendu le 2026-09-10)
+### 🟡 Lot 2b — **livré le 2026-09-10, deux gestes d'exploitation restant à jouer**
 
-L'audit de la spec complète a produit **10 écarts (V1–V10)**, dont deux structurants, tous deux
-consignés dans la spec :
+Les trois migrations sont **appliquées en production** : **036** (archivage `archive_v2`, 8 colonnes
+retirées, `entry_type` fermé à 5 jetons), **037** (resynchro des prompts `ingestion-agent` /
+`search-worker`, #39), **038** (`archive_v2` en lecture seule). Détail dans `CLAUDE.md`.
+Suite **1 993 assertions**, tout au vert **sauf les deux planchers** que le rejeu doit restaurer.
 
-- **V5** — `covers` restait une rigidité de niveau framework, et la réécriture du 2026-09-10 l'avait
-  **aggravée** en la re-vocabularisant (`business_model.description` → `qf_1.capital_employe`) :
-  même maladie, vocabulaire neuf. → table de liaison versionnée (ci-dessus).
-- **V1** — le socle EDGAR collectait **avant et indépendamment de toute question** : `POSTES` est
-  une liste de **8** métriques écrites à la main qui servent **4** des **33** ingrédients essentiels,
-  3 postes ne répondent à rien, et les 12 ingrédients `mo_*` n'ont aucune source sans que rien ne le
-  dise. → `POSTES` devient **dérivé du plan de collecte** (spec §3.6).
+**Ce qui reste, et c'est de l'exploitation, pas du code** — les deux commandes sont refusées par le
+classifieur en mode auto, elles doivent être lancées à la main (`! …`) :
 
-⚠️ **Piège de séquencement déjà identifié, à ne pas re-trouver à ses dépens** : l'archivage vide les
-tables que `check_edgar_feed` §12bis (`>= 50` faits socle) et `check_entry_nature` §7 (`== 13`
-entries déterministes RVMD) **lisent**. La tentation sera de baisser les planchers
-(`feedback_optional_schema_gate`). **Interdit.** Rejouer les **producteurs déterministes** juste
-après l'archivage — coût modèle nul, et ils repeuplent exactement ce que ces planchers mesurent.
+```bash
+bash tools/rejeu_producteurs.sh                                  # restaure les planchers 50 et 13
+bash infrastructure/compose-deploy.sh portfolio-backend --rebuild-only
+```
+
+⚠️ **Le rebuild n'est PAS optionnel, et ce n'est pas une supposition** : le conteneur déployé porte
+le code d'avant la 036 contre le schéma d'après. Mesuré —
+`GET /tickers/NVDA/knowledge/entries` rend **500**, `asyncpg.exceptions.UndefinedColumnError:
+column ke.is_deleted does not exist`. L'arbre de travail, lui, ne référence plus aucune des 8
+colonnes en SQL actif (les occurrences restantes sont toutes en commentaire ou docstring) : le
+rebuild suffit. Après, `docker ps | grep portfolio` doit montrer **exactement un** conteneur
+(`feedback_coolify_orphan_container`).
+
+**Deux enseignements du lot, tous deux de la même famille — un balayage par `grep` ne voit que ce
+qui est écrit là où il regarde :**
+
+- `exit.LESSON_ENTRY_TYPE` valait `lesson_learned`, jeton que la 036 ne retient pas. Le vocabulaire
+  fermé avait été dérivé des littéraux `entry_type=` trouvés dans `app/` — ici la valeur passe par
+  une **constante**, donc le balayage l'a manquée. Le prochain post-mortem aurait violé le CHECK à
+  l'INSERT, sur un chemin qu'aucun check hors ligne n'emprunte. Corrigé en `analysis` : l'`entry_type`
+  nomme ce que l'assertion **est** (#57), pas qui l'a produite — le producteur est déjà porté par
+  `LESSON_SOURCE_TYPE`.
+- `check_edgar_feed.py` §12bis portait encore `AND is_deleted = FALSE` dans une **f-string SQL**
+  d'une section qui ne s'exécute qu'avec une vraie `CHECK_DB_URL` : hors ligne, le check passait au
+  vert **sans jamais compiler ce SQL**.
+
+⚠️ **Piège de séquencement, tenu** : l'archivage vide les tables que `check_edgar_feed` §12bis
+(`>= 50` faits socle) et `check_entry_nature` §7 (`== 13` entries déterministes RVMD) **lisent**. La
+tentation était de baisser les planchers (`feedback_optional_schema_gate`) — **refusée**. Les
+producteurs concernés sont déterministes : les rejouer coûte des appels réseau et **zéro token**, et
+ils repeuplent exactement ce que ces planchers mesurent. `tools/rejeu_producteurs.py` **lit dans
+`archive_v2` qui avait un socle**, il ne retape aucune liste de tickers.
 
 ⚠️ Mesureurs **versionnés**, jamais `/tmp` · bilan reconnaissable à sa **forme** (`grep -E` sur le
 motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés dans
 `portfolio-backend`** (il porte le code déployé, qui peut précéder ce qu'on mesure).
+
+### 🚦 Prochain pas — **lot 2c** (audit des 2 principes rendu le 2026-09-10)
+
+L'audit de la spec complète a produit **10 écarts (V1–V10)**, dont deux structurants, tous deux
+consignés dans la spec. **V5** (`covers` re-vocabularisée) est traité par la 036 + `question_coverage`.
+Reste **V1**, qui est le cœur du lot 2c :
+
+- **V1** — le socle EDGAR collecte **avant et indépendamment de toute question** : `POSTES` est
+  une liste de **8** métriques écrites à la main qui servent **4** des **33** ingrédients essentiels,
+  3 postes ne répondent à rien, et les 12 ingrédients `mo_*` n'ont aucune source sans que rien ne le
+  dise. → `POSTES` devient **dérivé du plan de collecte** (spec §3.6), par la chaîne à deux agents
+  traducteur → plan persisté → collecteur. Retrait du levier `RESSERRER` de `curator.py` dans le
+  même lot.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -277,6 +314,26 @@ justes, c'est le *fait énoncé* qui était faux.
 ---
 
 ## Ce qui reste ouvert — hors roadmap active
+
+0. **Deux arbitrages posés par l'utilisateur le 2026-09-10**, à honorer quand leur lot arrive :
+
+   **(a) L'existence d'entries étiquetées « pairs » ne PROUVE PAS qu'une analyse concurrentielle a
+   eu lieu.** Un futur framework « analyse concurrentielle » apportera des éléments sur les pairs ;
+   mais une analyse de concurrence peut aussi se faire en faisant passer le concurrent dans le
+   **système complet** sans ouvrir de position — coûteux, exhaustif, et produisant un tout autre
+   corpus. L'étiquette peut être distincte ; la **règle** qui fonde le verdict « analyse
+   concurrentielle faite » sera plus compliquée que la présence de l'étiquette. ⚠️ C'est le mode de
+   panne de `feedback_controle_au_point_de_lecture` : compter des lignes portant un tag est un
+   **affichage**, pas un contrôle. Ne pas câbler le raccourci « `tags @> {pairs}` ⇒ couvert ».
+
+   **(b) Une affirmation en fiabilité basse se range dans les constats de l'entreprise, mais le
+   système doit chercher à la vérifier quand elle PÈSE.** Décidé : le risque déclaré dans un dépôt
+   est un `fact_qualitative` (constat), pas un `fact_financial` — il n'a pas l'autorité d'une
+   mesure. Backlog qui en découle : quand une assertion est à la fois **de fiabilité basse** et
+   **déterminante pour le jugement final**, le système va chercher des sources pour la **confirmer
+   ou l'infirmer**. ⚠️ Le déclencheur est le **couple** (fiabilité basse × poids dans la décision),
+   jamais la fiabilité seule — sinon on relance une collecte sur tout le bruit du corpus. Le poids
+   n'est pas encore une grandeur lisible : c'est ce qu'il faudra définir en premier.
 
 1. **24 entries suspectes de RVMD** à statuer à la main (le balayage rend la liste, motivée et
    ordonnée). **Jugement humain par construction** : décider qu'un fait est remplacé n'est pas

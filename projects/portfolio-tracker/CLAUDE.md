@@ -198,7 +198,33 @@ délibérément borné aux 8 postes du socle : les métriques dérivées (`roic`
 `fcf_conversion`…) et les données de marché (`yfinance`) n'ont **aucune identité réglementaire** au
 sens de #43, leur en inventer une serait un faux. Appliquée : `UPDATE 18` (flow) + `UPDATE 9` (stock),
 garde `DO $$ … RAISE EXCEPTION` nommée et **éprouvée en négatif avant application** (elle rendait 27).
-Prochaine migration : **036**.
+**Migration 036 = archivage de la grappe V2 et dévocabularisation (lot 2b, 2026-09-10)** : les 15
+tables V2 passent en schéma **`archive_v2`** par `SET SCHEMA` (**rien n'est détruit** — 180 entries
+restent lisibles), `public.knowledge_entries` est recréée **amaigrie de 8 colonnes**
+(`conflict_entry_id`, `covers`, `has_conflict`, `is_deleted`, `question_priority`,
+`question_status`, `resolves_entry_id`, `reviewed_by_user` — les 7 premières mesurées à **zéro
+écriture** par `tools/inventaire_grappe_v2.py` avant retrait, jamais supposé), et `entry_type` est
+ramené à un vocabulaire **fermé de 5 jetons** (`agent_synthesis`, `analysis`, `fact_financial`,
+`fact_qualitative`, `fact_statistical`) par CHECK. `covers` n'était pas morte mais **mal placée**
+(#57) → table de liaison versionnée `question_coverage`.
+**Migration 037 = resynchro des prompts `ingestion-agent` et `search-worker`** : #39 rendu
+non-optionnel — `ProducedEntry` étant `extra="forbid"`, un exemple JSON portant encore `covers` ou
+`"entry_type": "risk"` fait rejeter **l'entry entière**, soit une panne **totale et muette**
+qu'aucun check hors ligne ne voit (leurs fixtures sont déjà conformes). Générateur `_gen_037.py`
+avec garde de génération sur les **formes d'émission** (`"covers":` avec guillemets et deux-points,
+jamais le mot nu — `feedback_grep_interdit_lit_sa_propre_enonciation`). Test négatif
+`checks/negatif_037.sh` **bidirectionnel** (satisfiabilité 5/0 puis une mutation par garde).
+⚠️ Elle ne touche **pas** `base_rate` dans les 10 autres prompts : c'est un **champ de contrat**
+(règle 2), homonyme de l'`entry_type` renommé — un assert le dit **en positif**.
+**Migration 038 = `archive_v2` en lecture seule pour `portfolio_user`** : `SET SCHEMA` déplace la
+table avec ses privilèges de TABLE mais **pas** l'`USAGE` sur le schéma neuf — toute lecture
+échouait en `InsufficientPrivilegeError`, et les 15 tables archivées arrivaient au contraire
+**écrivables** (K2 a rougi au premier passage). GRANT USAGE+SELECT, REVOKE du reste. ⚠️ Les gardes
+interrogent `pg_class` **par OID** : `has_table_privilege(role, 'archive_v2.'||nom, …)` a reçu
+`archive_v2.positions` — un nom de `public` recollé au mauvais schéma, le filtre n'étant pas
+garanti évalué avant la fonction. Un faux ROUGE ici, un faux VERT si le nom avait existé des deux
+côtés. **Un OID ne se résout pas : il désigne.**
+Prochaine migration : **039**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 

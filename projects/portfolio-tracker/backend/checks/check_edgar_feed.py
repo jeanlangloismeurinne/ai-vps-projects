@@ -578,7 +578,11 @@ async def _etat_poste_kind():
             "       array_agg(id ORDER BY id) AS ids FROM knowledge_entries "
             " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
             "   AND content_structured->>'poste_kind' = 'stock' "
-            "   AND superseded_by IS NULL AND is_deleted = FALSE "
+            # ⚠️ `AND is_deleted = FALSE` RETIRÉ (migration 036) : la vivacité d'une entry est
+            # portée par le seul `superseded_by`. Ce site avait échappé au balayage parce qu'il
+            # vit dans une f-string de §12bis, une section qui ne s'exécute QUE avec une vraie
+            # `CHECK_DB_URL` — hors ligne, le check passait au vert sans jamais compiler ce SQL.
+            "   AND superseded_by IS NULL "
             " GROUP BY 1, 2 HAVING count(*) > 1")
         return sans, stockes, doubles
     finally:
