@@ -40,6 +40,7 @@ import yaml
 from pydantic import ValidationError
 
 from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
+from app.contracts.collection_plan_schema import CollectionPlan
 from app.contracts.framework_answer_schema import (
     FrameworkAnswer,
     FrameworkAnswerServie,
@@ -75,6 +76,17 @@ class FrameworkDefinitionRefused(Exception):
     réponse l'est. Elle doit faire échouer le démarrage, jamais dégrader silencieusement vers un
     référentiel partiel — un framework à demi chargé rendrait `sans_objet` des questions qui
     existent (#54, la complétude à trois états).
+    """
+
+
+class CollectionPlanRefused(Exception):
+    """Refus d'un PLAN DE COLLECTE — formellement valide (le contrat l'accepte), mais incohérent
+    avec le référentiel. Sortie du traducteur (§3.6), vérifiée AVANT que le collecteur ne dépense.
+
+    Levée, jamais rendue en valeur : un refus qui se lit comme un résultat finit par être ignoré.
+    Distincte des deux autres — elle ne dit ni que le référentiel est cassé
+    (`FrameworkDefinitionRefused`), ni qu'une réponse l'est (`FrameworkAnswerRefused`), mais que le
+    PLAN l'est.
     """
 
 
@@ -321,3 +333,91 @@ def servir_answer(
     donnees["fondation"] = {**donnees["fondation"], "actualite": act.etat,
                             "motif_actualite": act.motif}
     return FrameworkAnswerServie(**donnees)
+
+
+def valider_pont_collection_plan(
+    plan: CollectionPlan,
+    *,
+    fichier: Optional[FrameworksFile] = None,
+) -> None:
+    """Vérifie qu'un plan de collecte est cohérent avec le RÉFÉRENTIEL. Ne rend rien : le seul
+    résultat possible est « pas de refus ».
+
+    Ce que le contrat d'objet (`collection_plan_schema`) ne peut pas voir, parce qu'il exige de
+    connaître les questions et leurs ingrédients (#37). Chaque invariant garde un mode de panne qui
+    se lit comme un succès :
+
+      N. le framework existe, ET à la version du plan. Un plan daté d'une autre version décrit un
+         framework qui a pu changer de questions — le mode de panne de la couverture rétroactive
+         (#57) ;
+      O. l'archétype est l'un des archétypes DÉCLARÉS (§4.1.3). Un archétype inventé n'est jamais
+         interrogé, et le plan paraîtrait complet en ayant sauté la moitié des questions ;
+      P. chaque ligne RÉSOUT — la question appartient au framework, l'ingrédient à la question. Un
+         ingrédient inventé écrirait le corrigé (le §0.2, entry #190, est né d'exactement ça) ;
+      Q. une ligne ne planifie pas une question SANS OBJET pour cet archétype. Collecter pour une
+         question que le framework déclare hors-sujet, c'est fabriquer une réponse là où il n'y a
+         pas de question — l'inverse du signal que `sans_objet` porte ;
+      R. LE CŒUR — T1bis (§9.2). Chaque ingrédient ESSENTIEL d'une question APPLICABLE a une ligne
+         (`traduit` ou `inobtenable motivé`). Une omission n'est pas un trou : c'est un plan
+         REFUSÉ. Un essentiel qui disparaît en silence produit un VERT (couverture à 100 % sur ce
+         qui reste) — le mode de panne que toute la v3 combat.
+
+    Ce que ce pont NE fait PAS : émettre le mandat d'une ligne `inobtenable` (c'est le flux
+    traducteur → `framework_mandates`), ni écrire `question_coverage` (c'est l'aiguilleur du
+    collecteur). Il VALIDE, il ne collecte pas.
+    """
+    fichier = fichier or load_frameworks()
+
+    # N. le framework existe, à la bonne version.
+    frameworks = {f.id: f for f in fichier.frameworks}
+    fw = frameworks.get(plan.framework_id)
+    if fw is None:
+        raise CollectionPlanRefused(
+            f"[N] framework `{plan.framework_id}` inconnu du référentiel ({sorted(frameworks)}) : "
+            "un plan pour un framework qui n'existe pas ne collecte sur rien")
+    if plan.framework_version != fichier.schema_version:
+        raise CollectionPlanRefused(
+            f"[N] plan en `{plan.framework_version}`, référentiel en `{fichier.schema_version}` : "
+            "un plan daté d'une autre version décrit un framework qui a pu changer de questions")
+
+    # O. l'archétype est déclaré. Vérifié AVANT de lire `variables_par_archetype[plan.archetype]` —
+    #    le chargement garantit que chaque question couvre exactement les archétypes déclarés
+    #    (invariant [I]), donc l'indexation qui suit est sûre une fois O franchi.
+    if plan.archetype not in set(fichier.archetypes):
+        raise CollectionPlanRefused(
+            f"[O] archétype `{plan.archetype}` hors des archétypes déclarés "
+            f"{sorted(fichier.archetypes)} : une question ne s'instancie que sur un archétype connu")
+
+    questions = {q.id: q for q in fw.questions}
+
+    # P + Q. chaque ligne résout, et ne vise pas une question sans objet pour cet archétype.
+    for it in plan.items:
+        q = questions.get(it.question_id)
+        if q is None:
+            raise CollectionPlanRefused(
+                f"[P] la ligne vise la question `{it.question_id}`, absente de "
+                f"`{plan.framework_id}` : une collecte qui ne s'indexe sur aucune question relie "
+                "un fait à rien")
+        ingredients = {i.id for i in q.ingredients_requis}
+        if it.ingredient_id not in ingredients:
+            raise CollectionPlanRefused(
+                f"[P] `{it.question_id}` n'a pas d'ingrédient `{it.ingredient_id}` "
+                f"({sorted(ingredients)}) : un ingrédient inventé écrirait le corrigé")
+        if q.variables_par_archetype[plan.archetype].mode == "sans_objet":
+            raise CollectionPlanRefused(
+                f"[Q] `{it.question_id}` est SANS OBJET pour l'archétype `{plan.archetype}` : "
+                "planifier sa collecte, c'est fabriquer une réponse là où le framework dit qu'il "
+                "n'y a pas de question (§0.2)")
+
+    # R. T1bis — chaque ingrédient essentiel d'une question APPLICABLE a une ligne. `sans_objet`
+    #    n'a aucun ingrédient à collecter : on ne l'exige pas, mais on ne le tolère pas non plus (Q).
+    couples = {(it.question_id, it.ingredient_id) for it in plan.items}
+    for q in fw.questions:
+        if q.variables_par_archetype[plan.archetype].mode != "variable":
+            continue
+        for i in q.ingredients_requis:
+            if i.essentiel and (q.id, i.id) not in couples:
+                raise CollectionPlanRefused(
+                    f"[R] l'ingrédient essentiel `{q.id}.{i.id}` n'a AUCUNE ligne dans le plan : "
+                    "un essentiel omis n'est pas un trou, c'est un plan REFUSÉ (T1bis). Il doit "
+                    "sortir en `traduit` ou en `inobtenable motivé`, jamais en rien")

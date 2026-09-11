@@ -2,13 +2,17 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-10
+updated: 2026-09-11
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-10 : **1 988 assertions / 0 échec / 24 scripts**,
-  migrations appliquées jusqu'à **035**, prochaine **036**.
+  sur NVDA, MSFT et RVMD. État au 2026-09-11 : **2 069 assertions / 27 scripts**, un seul FAIL, le
+  §12bis HÉRITÉ (socle EDGAR data-first, en voie de retrait au lot 2c — cf. lot 2b). Migrations
+  appliquées jusqu'à **038**, prochaine **039** (les tables du plan de collecte, à écrire en fin de
+  lot 2c). **Lot 2c en cours** : contrat du plan + pont (T1bis) + traducteur (acceptation modèle
+  passée) + collecteur (cœur déterministe) livrés ; reste le câblage des exécuteurs réels du
+  collecteur + persistance (migration 039), puis `POSTES` dérivé.
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -142,28 +146,30 @@ cible ? ». Réponse : d'aucun (§0.6). Remplacé par **T1** (aucun ingrédient 
 mandaté) + **T1bis** (il DOIT en manquer au moins un, **nommé** — `qf_1.cout_du_capital`) : une
 couverture à 100 % **fait échouer** le pilote, parce qu'elle prouverait la rétro-conception.
 
-### 🟡 Lot 2b — **livré le 2026-09-10, deux gestes d'exploitation restant à jouer**
+### ✅ Lot 2b — **acquis** (migrations 036/037/038 le 2026-09-10, exploitation le 2026-09-11)
 
 Les trois migrations sont **appliquées en production** : **036** (archivage `archive_v2`, 8 colonnes
 retirées, `entry_type` fermé à 5 jetons), **037** (resynchro des prompts `ingestion-agent` /
 `search-worker`, #39), **038** (`archive_v2` en lecture seule). Détail dans `CLAUDE.md`.
-Suite **1 993 assertions**, tout au vert **sauf les deux planchers** que le rejeu doit restaurer.
 
-**Ce qui reste, et c'est de l'exploitation, pas du code** — les deux commandes sont refusées par le
-classifieur en mode auto, elles doivent être lancées à la main (`! …`) :
+**Les deux gestes d'exploitation sont joués (2026-09-11).** Le **rebuild** est fait —
+`GET /tickers/NVDA/knowledge/entries` rend **200** (rendait 500 : `column ke.is_deleted does not
+exist`), `docker ps | grep portfolio` montre **exactement un** backend. Le **rejeu déterministe** a
+tourné (`bash tools/rejeu_producteurs.sh`, 3 tickers, 0 erreur) — ⚠️ **le classifieur N'A PAS
+bloqué le chemin nominal** (`feedback_blocage_classifieur_non_permanent` confirmé : refus levé). Le
+plancher §7 (13 déterministes RVMD) est **restauré**.
 
-```bash
-bash tools/rejeu_producteurs.sh                                  # restaure les planchers 50 et 13
-bash infrastructure/compose-deploy.sh portfolio-backend --rebuild-only
-```
-
-⚠️ **Le rebuild n'est PAS optionnel, et ce n'est pas une supposition** : le conteneur déployé porte
-le code d'avant la 036 contre le schéma d'après. Mesuré —
-`GET /tickers/NVDA/knowledge/entries` rend **500**, `asyncpg.exceptions.UndefinedColumnError:
-column ke.is_deleted does not exist`. L'arbre de travail, lui, ne référence plus aucune des 8
-colonnes en SQL actif (les occurrences restantes sont toutes en commentaire ou docstring) : le
-rebuild suffit. Après, `docker ps | grep portfolio` doit montrer **exactement un** conteneur
-(`feedback_coolify_orphan_container`).
+⚠️ **Le §12bis reste ROUGE (46 < 50), et c'est diagnostiqué, pas à colmater.** Le seuil « 50 » n'est
+pas une couverture : c'est le **compteur de générations accumulées** le 2026-09-08 (archive : MSFT 8
++ NVDA 11 + RVMD **31** = 50, dominé par les 31 rejeux de RVMD pendant la saga des 16 défauts). Après
+recréation propre par la 036, le socle courant est **complet** (MSFT 8/8 · NVDA 8/8 · RVMD 7/8 = 23
+faits) mais ne porte que 2 générations = 46 lignes. Atteindre 50 exigerait de rejouer EDGAR une 3ᵉ
+fois **juste pour ajouter des générations** — le gonflage que ce chantier proscrit
+(`feedback_fixture_pollue_le_reel`). **Le §12bis meurt au lot 2c**, quand `POSTES` cesse d'être une
+liste en dur et devient dérivé du plan de collecte : le socle data-first qu'il gardait disparaît.
+Ne pas le recalibrer, ne pas rejouer pour le verdir. ⚠️ Au passage : le proxy `PLANCHERS[0]` de
+`rejeu_producteurs.py` est un **faux vert** (il compte `edgar_official` toutes métriques = 68, pas
+les 8 postes socle que §12bis lit = 46) — à corriger ou retirer avec §12bis au lot 2c.
 
 **Deux enseignements du lot, tous deux de la même famille — un balayage par `grep` ne voit que ce
 qui est écrit là où il regarde :**
@@ -201,6 +207,56 @@ Reste **V1**, qui est le cœur du lot 2c :
   dise. → `POSTES` devient **dérivé du plan de collecte** (spec §3.6), par la chaîne à deux agents
   traducteur → plan persisté → collecteur. Retrait du levier `RESSERRER` de `curator.py` dans le
   même lot.
+
+**Découpe du lot 2c, ordre imposé `contrat → agent → données` :**
+
+1. ✅ **Le contrat du plan de collecte** (2026-09-11) — `app/contracts/collection_plan_schema.py`
+   (`CollectionPlan` / `CollectionPlanItem`, strict). Le statut d'une ligne porte **exactement** sa
+   charge (`traduit` ⟺ métrique+source+ancre · `inobtenable` ⟺ motif seul → mandat) ; le 3ᵉ état
+   `omis` **n'est pas un statut** (absence de ligne, constatée au pont) ; ce que le traducteur n'a
+   pas le droit de porter (`plancher_tier`/`nature_attendue`/`essentiel`, #59) est **absent du
+   contrat**, donc rejeté par `extra='forbid'`, pas gardé par un `if`. Check
+   `check_collection_plan_contract.py` **22/0**, négatif bidirectionnel
+   `negatif_collection_plan_contract.sh` **satisfiabilité + 9 mutations / 9**, carte
+   `provenance-cards/collection_plan_card.md`. Suite **2 030**.
+2. ✅ **Le pont `valider_pont_collection_plan`** (2026-09-11, `agents/v2/frameworks.py`, lève
+   `CollectionPlanRefused`) : invariants relationnels `[N]` framework+version · `[O]` archétype
+   déclaré · `[P]` chaque `(question_id, ingredient_id)` résout · `[Q]` pas de collecte sur une
+   question sans objet · **`[R]` chaque ingrédient essentiel d'une question applicable a une
+   ligne — omission = plan REFUSÉ (c'est T1bis, §9.2)**. Check §6 (fixture construite depuis le
+   référentiel réel, complète par construction), négatif 7 mutations de pont. Suite **2 039**.
+3. ✅ **L'agent 1, le traducteur** (2026-09-11, `agents/v2/traducteur.py`). Moitié déterministe :
+   `questions_applicables` (filtre par archétype), `contexte_traducteur` (**lever-free : ni
+   `plancher_tier` ni `nature_attendue`**, #59), orchestration `traduire` où **l'en-tête du plan est
+   posé par le CODE** (le modèle ne produit que `TraducteurSortie.items`), sortie validée contrat +
+   pont. Prompt en **code** (`_TRADUCTEUR_SYSTEM_PROMPT`, comme la synthèse #54). Check
+   `check_traducteur.py` **15/0**, négatif **satisfiabilité + 6 mutations**.
+   **Acceptation contre le vrai modèle PASSÉE** (`tools/acceptation_traducteur.{py,sh}`, ne persiste
+   rien, ~$0.0012) : NVDA (rentable) → 30 lignes, 20 essentiels couverts, `cout_du_capital` sorti en
+   **traduit-vers-web** (WACC via données de marché — l'une des deux issues licites de §3.6) ; RVMD
+   (pre_revenus) → seules qf_4/6/7 (qf_1/2/3/5 correctement exclues), 13 traduits + **1 inobtenable
+   honnête** (`qf_4.couverture_des_interets` : biotech sans dette → mandat).
+   **RÈGLE D'ANCRAGE resserrée** (2026-09-11, re-testée) — améliore réellement : NVDA ancre « clôture
+   fin janvier » (émetteur-conscient) ; RVMD raisonne désormais sur le **jalon clinique** (une ligne
+   explicite). ⚠️ **Reste partiel** : la ligne phare *cash burn* de RVMD retombe encore sur « clôture
+   du trimestre ». **Non sur-optimisé sur 1 ticker à dessein** → à traquer par l'**éval multi-tickers**
+   (backlog #9), pas par du tuning sur RVMD seul. Resynchro du prompt en `agent_prompts` (#19/#39) au
+   câblage runtime.
+4. 🟡 **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe livré** (2026-09-11,
+   `agents/v2/collecteur.py`) : `LigneAveugle` (le collecteur **ne voit ni question ni ingrédient**
+   → l'entry ne peut porter aucun vocabulaire de framework, principe 2 structurel), `aiguiller_plan`
+   (orchestration PURE, exécuteur `collecter` **injecté**) où **la couverture est un sous-produit
+   déterministe du dispatch** (`LienCouverture` = colonnes exactes de `question_coverage`, écrites
+   par l'aiguilleur qui tient le plan, jamais par le modèle, #57). **Trois états, aucune ligne ne
+   s'évapore** : traduit-collecté → lien ; inobtenable → mandat (jamais exécuté) ; collecte échouée
+   → mandat `echec_collecte` (jamais un silence, #25). Check `check_collecteur.py` **15/0**, négatif
+   **6 mutations**. **Reste** : câbler l'exécuteur réel (adaptateurs `collecter` → `edgar_feed` /
+   `search-worker` selon la source), et la **persistance** (écrire `question_coverage` + créer/écrire
+   `framework_mandates`, **migration 039** avec `collection_plans`/`collection_plan_items`).
+5. ⬜ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** de `curator.py`. C'est ici que
+   le §12bis hérité disparaît avec le socle data-first.
+6. ⬜ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
+   écrite **en dernier**, juste avant son application, jamais en avance.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -363,6 +419,21 @@ justes, c'est le *fait énoncé* qui était faux.
    (`tickers.sector` est NULL en base et n'est lu par rien, #52).
 7. **Nombre d'analystes par framework** : N = 1 au démarrage, contrat écrit pour N > 1. Deux
    réponses divergentes ne se moyennent **jamais**.
+8. **Interface visuelle d'audit des agents** (demandée le 2026-09-11) — une page web rendant le
+   système auditable **en termes non techniques** : pour chaque agent, ce qu'il fait et comment il
+   est paramétré, avec la distinction **règles en dur** (déterministe, sans modèle : `edgar_feed`,
+   `financials_feed`, `valuation_feed`, `base_rate_corpus`, ponts `valider_pont_*`, porte `curator`)
+   **vs prompt système + variables** (LLM : `search-worker`, chaîne d'analyse, **traducteur** et
+   **collecteur** à venir — modèle/provider/prompt/variables visibles). Prolongement visuel des
+   cartes de provenance. `agent_prompts` (`provider`/`model`/`tools_json`/`flow_version`) porte déjà
+   la moitié LLM. À cadrer quand la liste d'agents du lot 2c/3 est stable.
+9. **Évaluation des plans par modèle ad hoc, sur BEAUCOUP de tickers** (demandée le 2026-09-11) —
+   faire juger par un modèle (éventuellement autre que le producteur) les plans du traducteur sur un
+   large échantillon, pour débusquer les modes de panne qu'un test à 2-3 tickers rate (cas d'origine :
+   ancres génériques sur RVMD, #59). **Signal, pas porte** : le juge trie et motive, il ne décide ni
+   n'écrit. Garde-fous : critère énonçable en 3 lignes ([[feedback_deleguer_recherche_pas_jugement]]),
+   lire le décompte par catégorie, jamais un cas isolé ([[feedback_jugement_modele_instable_entre_passages]]).
+   Réutilise le patron `tools/acceptation_traducteur.py`. À outiller après le collecteur.
 
 ### Dettes techniques connues, assumées
 
