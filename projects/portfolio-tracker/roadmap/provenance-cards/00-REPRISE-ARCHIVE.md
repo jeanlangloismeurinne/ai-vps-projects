@@ -8,6 +8,55 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-12 — lot 2c, **maillon 4 : l'exécuteur réel + la chaîne runtime**
+
+Mandat utilisateur : avancer sur l'exécuteur réel sans demander de confirmation (dépense réseau +
+écritures prod assumées). Livré `agents/v2/collecte_executor.py` (exécuteur réel du collecteur) et la
+chaîne runtime `executer_collecte_framework` (traduire → `persist_plan` → `executer_plan_reel` →
+`persist_aiguillage`) — qui **n'existait pas** : aucun code ne chaînait traduire/aiguiller/persister
+au runtime.
+
+### Design
+- **Dispatch question-AVEUGLE** (`router_source`, `poste_pour_metrique`, `entry_type_pour_metrique`,
+  `construire_requete_web`) — fonctions PURES, éprouvées hors réseau. EDGAR ssi dépôt réglementaire
+  ET métrique = poste du socle ; sinon web. `reliability_min=0.40` et aucun `field_path` (#59 : le
+  collecteur ne juge pas la valeur, ne ré-ancre pas la question).
+- `aiguiller_plan` **laissé intact** (pur, sync, son check+négatif inchangés) : l'exécuteur
+  pré-exécute chaque ligne aveugle DISTINCTE (passe async, réseau) puis injecte un **lookup sync** —
+  toute l'IO est dans le nouveau module, la logique d'aiguillage éprouvée ne bouge pas. La dédup par
+  ligne aveugle (deux ingrédients identiques → une collecte → une entry, deux liens) est gratuite.
+- Tool versionné `tools/collecter_framework.py` (`--plan-only` lit plan+dispatch sans écrire).
+- Check `check_collecte_executor.py` **31/0**, négatif `negatif_collecte_executor.sh` **7/7** (chaque
+  mutation rouge sur son assert nommé). Suite **2 107 / 1 (§12bis) / 29**. Convention projet **#60**.
+
+### Deux défauts trouvés par la MÉTHODE, pas par un diff
+1. **La frontière gratuite a payé** (`feedback_frontiere_gratuite_avant_depense_modele`) : en lisant
+   le plan NVDA traduit en TEXTE avant toute écriture (`--plan-only`, ~$0.0008), **5 des 6 lignes
+   routées EDGAR étaient des DÉRIVÉES** qui ne faisaient que *contenir* un alias de poste — capital
+   employé (« Total assets − cash − … »), croissance du CA, maintenance/growth capex, rapprochement
+   GAAP/non-GAAP. Les lier au nombre brut = corruption #43. Corrigé par détection structurelle
+   (opérateurs `−`/`/` par substring ; mots `ratio`/`croissance`/`maintenance`/… à la **frontière de
+   mot** — `ratio` matchait « opé**ratio**nnel »). Après correctif : seul le niveau brut
+   `qf_2.resultat_net` va au socle — ce qui **confirme empiriquement #58** (les 8 postes servent peu
+   d'ingrédients).
+2. **Résilience #25** : le 1ᵉʳ run réel RVMD a crashé tout le lot sur un `httpx.ReadTimeout`
+   DeepInfra d'UNE ligne (13 appels modèle séquentiels → un timeout est probable). Corrigé : toute
+   collecte qui échoue (pour quelque raison que ce soit) → mandat `echec_collecte` motivé, jamais un
+   crash qui perd le lot et empêche de persister les liens acquis. Catch scopé au SEUL
+   `run_search_worker` (un bug de dispatch en amont remonte encore, jamais masqué). Assert + mutation
+   ajoutés.
+
+### Exercé contre le vrai monde (`feedback_verifier_contre_api_reelle`)
+- **RVMD** (pre_revenus, qf_4/6/7) : plan #12, 14 lignes → **11 liens + 3 mandats** (1 `inobtenable`
+  = `qf_4.couverture_des_interets`, le T1bis nommé ; 2 `echec_collecte` sur `not_found`). Dédup
+  vérifiée : `qf_4.lignes_de_credit_non_tirees` et `qf_7.lignes_de_credit_non_tirees` → même entry
+  #300.
+- **NVDA ciblé** (1 ligne EDGAR `qf_2.resultat_net`) : chemin EDGAR → socle → entry #318, 0 mandat.
+
+### Reste — maillon 5
+`POSTES` dérivé du plan + retrait du levier `RESSERRER` de `curator.py`, **où meurt le §12bis
+hérité**. Travail de code, sans dépense réseau.
+
 ## 2026-09-09 (4ᵉ lot) — spec v3, **lot 1 : le contrat**
 
 **Ordre imposé respecté : UX (contrat) → agent → données.** Aucune table, aucune migration, aucune

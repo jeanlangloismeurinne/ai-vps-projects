@@ -863,6 +863,33 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     (commenté « le DERNIER levier du modèle sur le verdict ») — à retirer : un resserrement
     discrétionnaire est **une question posée par le modèle**, pas par le framework.
 
+60. **Un exécuteur AVEUGLE route sur du texte libre, et une métrique qui CONTIENT le nom d'un poste
+    peut en être une dérivée (V3, lot 2c — `agents/v2/collecte_executor.py`)** : l'exécuteur réel du
+    collecteur ne voit qu'une `LigneAveugle` (métrique, source, ancre — jamais la question, #58). Il
+    route sur la `source_pressentie` : dépôt réglementaire (10-K/10-Q/…) **ET** métrique = l'un des 8
+    `POSTES` du socle → EDGAR (déterministe, tier A) ; tout le reste → search-worker (web). Le piège
+    est la correspondance métrique→poste : mesurée sur le plan RÉEL NVDA, **5 des 6 lignes routées
+    EDGAR étaient des dérivées** qui ne faisaient que *contenir* un alias de poste — « Total assets −
+    cash − … » (capital employé), « croissance du CA », « maintenance capex », « reconciliation
+    GAAP/non-GAAP ». Les lier au nombre brut est la corruption de #43 (« tous les nombres justes, le
+    fait faux »). Règle : `poste_pour_metrique` est CONSERVATEUR — des marqueurs de dérivation
+    (opérateurs `−`/`/` par substring ; mots `ratio`/`croissance`/`maintenance`/`reconciliation`/… à
+    la **frontière de mot**, sinon `ratio` matche « opé**ratio**nnel ») forcent `None`→web. Les deux
+    modes d'erreur ne sont pas symétriques : **une manque (niveau brut parti au web) est sûre, un faux
+    match EDGAR est une corruption silencieuse** — au moindre doute, `None`. ⚠️ Ce défaut a été trouvé
+    **avant toute écriture** en lisant le plan traduit en TEXTE (`--plan-only`, ~$0.0008), exactement
+    `feedback_frontiere_gratuite_avant_depense_modele`. ⚠️ **Trois états, jamais un silence (#25)** :
+    une collecte qui ne rend rien est un `echec` motivé → mandat `echec_collecte` ; un `entry_type`
+    mal deviné fait REJETER l'entry par le worker (mauvais type = autre question) → `echec` → mandat,
+    **jamais une donnée hors mandat**. ⚠️ `aiguiller_plan` est laissé **intact** (pur, sync, sans IO,
+    #détenteur-unique de la logique d'aiguillage) : l'exécuteur réel pré-exécute chaque ligne aveugle
+    DISTINCTE (une passe async, réseau) puis lui injecte un **lookup sync** — toute l'IO vit dans
+    `collecte_executor`, la logique éprouvée hors réseau ne bouge pas. ⚠️ Le collecteur **ne juge pas
+    la valeur d'une source** (#59) : la requête web part avec `reliability_min=0.40` (permissif) et
+    **aucun `field_path`** (qui ré-ancrerait la question) ; la suffisance est jugée plus tard par le
+    manager. Détail + garde : `check_collecte_executor.py` (30 assertions, négatif **6/6**, chaque
+    mutation rouge sur son assert nommé dont les 5 faux matchs réels).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

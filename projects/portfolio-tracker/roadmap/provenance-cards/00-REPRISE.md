@@ -7,15 +7,17 @@ project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-12 : **2 077 assertions / 28 scripts**, un seul FAIL, le
-  §12bis HÉRITÉ (socle EDGAR data-first, en voie de retrait au lot 2c — cf. lot 2b). Migrations
+  sur NVDA, MSFT et RVMD. État au 2026-09-12 : **2 107 assertions / 29 scripts**, un seul FAIL, le
+  §12bis HÉRITÉ (socle EDGAR data-first, en voie de retrait au maillon 5 du lot 2c). Migrations
   appliquées jusqu'à **039** (les tables du plan de collecte : `collection_plans`,
-  `collection_plan_items`, `framework_mandates`). **Lot 2c en cours** : contrat du plan + pont
-  (T1bis) + traducteur (acceptation modèle passée) + collecteur (cœur déterministe) + **persistance
-  (migration 039 appliquée, `persist_plan`/`persist_aiguillage`, check contre la vraie base en
-  transaction ROLLBACK, négatif 5/5)** livrés ; reste **UNIQUEMENT** le câblage des exécuteurs
-  réels du collecteur (EDGAR/web — ⚠️ dépense réseau + écritures prod, à CONFIRMER avant),
-  puis `POSTES` dérivé du plan + retrait du levier `RESSERRER`.
+  `collection_plan_items`, `framework_mandates`). **Lot 2c aux 6/6 maillons sur 6 pour la COLLECTE** :
+  contrat du plan + pont (T1bis) + traducteur + collecteur (cœur déterministe) + persistance + **l'EXÉCUTEUR
+  RÉEL câblé et exercé contre le vrai monde (2026-09-12, `agents/v2/collecte_executor.py`)** —
+  dispatch question-aveugle EDGAR/web, chaîne runtime `executer_collecte_framework`, check 31/0 +
+  négatif 7/7, suite 2 107/1. Run réel RVMD : **11 liens + 3 mandats** (1 inobtenable T1bis + 2
+  echec_collecte), run ciblé NVDA : le seul niveau brut (`qf_2.resultat_net`) lié au socle EDGAR.
+  **Reste le maillon 5** : `POSTES` dérivé du plan + retrait du levier `RESSERRER` de `curator.py`,
+  **où meurt le §12bis hérité**.
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -245,7 +247,7 @@ Reste **V1**, qui est le cœur du lot 2c :
    du trimestre ». **Non sur-optimisé sur 1 ticker à dessein** → à traquer par l'**éval multi-tickers**
    (backlog #9), pas par du tuning sur RVMD seul. Resynchro du prompt en `agent_prompts` (#19/#39) au
    câblage runtime.
-4. 🟡 **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe + persistance livrés**
+4. ✅ **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe + persistance livrés**
    (2026-09-11/12, `agents/v2/collecteur.py`) : `LigneAveugle` (le collecteur **ne voit ni question
    ni ingrédient** → l'entry ne peut porter aucun vocabulaire de framework, principe 2 structurel),
    `aiguiller_plan` (orchestration PURE, exécuteur `collecter` **injecté**) où **la couverture est un
@@ -261,10 +263,27 @@ Reste **V1**, qui est le cœur du lot 2c :
    résidu, #47) — plan relu, liens et mandats relus, et §3 le **dernier rempart** : les CHECK SQL de
    la 039 refusent une ligne `traduit` sans métrique / un mandat d'origine inconnue. Négatif
    `negatif_collecte_persist.sh` **satisfiabilité + 5 mutations / 5** (réseau `coolify` + ROLLBACK).
-   Câblé dans `run_all.sh` (bloc `coolify` + `CHECK_DB_URL`). **Reste UNIQUEMENT** : câbler
-   l'exécuteur réel (adaptateurs `collecter` → `edgar_feed` / `search-worker` selon la source).
-   ⚠️ **À CONFIRMER avec l'utilisateur avant** : dépense réseau (web search) + écritures prod dans
-   `knowledge_entries`.
+   Câblé dans `run_all.sh` (bloc `coolify` + `CHECK_DB_URL`).
+   ✅ **L'EXÉCUTEUR RÉEL + la chaîne runtime (2026-09-12, `agents/v2/collecte_executor.py`, mandat
+   utilisateur)** : dispatch question-AVEUGLE sur `source_pressentie` (+ métrique) — dépôt
+   réglementaire ET poste du socle → EDGAR (déterministe, tier A) ; tout le reste → search-worker.
+   `aiguiller_plan` laissé **intact** (pur, sync, son check+négatif inchangés) : l'exécuteur
+   pré-exécute chaque ligne aveugle DISTINCTE (passe async) puis injecte un **lookup sync** — toute
+   l'IO est dans `collecte_executor`. `executer_collecte_framework` = la chaîne runtime qui n'existait
+   pas (traduire → `persist_plan` → `executer_plan_reel` → `persist_aiguillage`). Tool versionné
+   `tools/collecter_framework.py` (`--plan-only` lit le plan+dispatch sans écrire, ~$0.0008).
+   Check `check_collecte_executor.py` **31/0**, négatif `negatif_collecte_executor.sh` **7/7**.
+   ⚠️ **Deux défauts trouvés par la méthode, pas par un diff** : (a) en lisant le plan NVDA en TEXTE
+   avant toute écriture, **5 des 6 lignes routées EDGAR étaient des dérivées** (capital employé,
+   croissance du CA, maintenance capex, rapprochement GAAP) qui ne faisaient que *contenir* un alias
+   de poste → corruption #43 ; corrigé par détection structurelle de dérivation (opérateurs + mots à
+   la **frontière de mot** — `ratio` matchait « opé**ratio**nnel ») ; après correctif, seul le niveau
+   brut `qf_2.resultat_net` va au socle (confirme #58 : les 8 postes servent peu d'ingrédients).
+   (b) le 1ᵉʳ run réel a **crashé tout le lot** sur un timeout fournisseur d'UNE ligne ; corrigé :
+   toute collecte qui échoue → mandat `echec_collecte` motivé (#25), jamais un crash. Convention
+   **#60** (CLAUDE.md projet). Exercé en réel : **RVMD** (11 liens + 1 inobtenable T1bis + 2
+   echec_collecte ; et la dédup par ligne aveugle vérifiée — deux ingrédients « lignes de crédit non
+   tirées » sur l'unique entry #300) + **NVDA ciblé** (chemin EDGAR → entry #318).
 5. ⬜ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** de `curator.py`. C'est ici que
    le §12bis hérité disparaît avec le socle data-first.
 6. ✅ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
@@ -273,13 +292,13 @@ Reste **V1**, qui est le cœur du lot 2c :
    plan (dernier rempart, #37) — éprouvés en négatif dans `check_collecte_persist.py` §3.
 
 > **▶ Reprise conseillée : NOUVELLE conversation** (arbitrage 2026-09-12,
-> [[feedback_fin_sprint_reco_conversation]]). Trois raisons : (1) celle-ci a déjà traversé un
-> `/compact`, son contexte est lourd et en partie résumé ; (2) le seul maillon restant — câbler
-> l'exécuteur réel — est une **frontière naturelle** qui **exige de toute façon une confirmation
-> utilisateur** avant la moindre dépense réseau / écriture prod, donc rien ne se perd à repartir du
-> fichier ; (3) le contexte partagé de la persistance n'aide pas à écrire des adaptateurs
-> EDGAR/web — c'est une tâche d'intégration neuve, guidée par ce fichier + #58/#59, pas par
-> l'historique de ce sprint. Commit du jalon : `e1cb9ca`.
+> [[feedback_fin_sprint_reco_conversation]]). La COLLECTE est bouclée (6/6 maillons) ; le **maillon 5**
+> qui reste — `POSTES` dérivé du plan + retrait du levier `RESSERRER` de `curator.py` — est une tâche
+> de **nature différente** (restructurer un producteur déterministe et un levier de `curator`, pas
+> écrire un exécuteur réseau), et c'est là que **meurt le §12bis hérité**. Le contexte de l'exécuteur
+> ne l'aide pas ; mieux vaut repartir du fichier. ⚠️ Maillon 5 = travail de code sans dépense réseau,
+> mais il touche `edgar_feed.POSTES` (4 sites) et `curator.py` (leviers RESSERRER, lignes ~114-127,
+> 264-265, 543-544) — relire #58/#59 avant.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -289,7 +308,7 @@ Reste **V1**, qui est le cœur du lot 2c :
 | 1 | ✅ **Contrat** `FrameworkAnswer` + `FrameworkMandate`, pont relationnel **en Python** (#37), carte de provenance, écran niveau 3 en maquette — 2026-09-09 | — |
 | 2a | ✅ **Le référentiel** — 13 questions en données inertes, 39/0, négatif 22/22 — 2026-09-10 | — |
 | 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
-| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (spec §3.6) · **persistance (plan/liens/mandats)** · `POSTES` dérivé du plan · retrait du levier `RESSERRER` de `curator.py` | **039** ✅ |
+| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (§3.6) · **persistance** · **exécuteur réel + chaîne runtime (2026-09-12) ✅** · reste : `POSTES` dérivé du plan + retrait du levier `RESSERRER` (maillon 5) | **039** ✅ |
 | 3 | Analyste + manager sur `qualite_financiere` · `framework_answers` / `_mandates` / `_dispenses` en base · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **037** |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 038 |
 | 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 039 |
@@ -343,8 +362,8 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite hors-ligne : 1 988 assertions / 0 échec / 24 scripts** — une seule commande,
-  **`bash checks/run_all.sh`**. Il porte les invocations correctes : montages `/contract_frozen`
+- **Suite hors-ligne : 2 107 assertions / 1 FAIL (§12bis hérité, à dessein) / 29 scripts** — une
+  seule commande, **`bash checks/run_all.sh`**. Il porte les invocations correctes : montages `/contract_frozen`
   (sans lui 4 scripts sous-comptent en sortant à 0) **et `/roadmap`** (sans lui
   `check_frameworks_definitions` §7 ne peut plus confronter la spec au référentiel, et **sort en
   échec** au lieu de se sauter), plus réseau `coolify` + `CHECK_DB_URL` pour
@@ -617,19 +636,20 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **PROCHAIN PAS = fin du lot 2c.** Lots 0, 1, 2a, 2b **acquis** ; lot 2c aux **5/6 maillons** :
-> contrat du plan + pont (T1bis) + traducteur (acceptation modèle passée) + collecteur + **persistance
-> (migration 039 appliquée)** livrés et verts. **Reste UNIQUEMENT** (a) câbler l'exécuteur réel du
-> collecteur (`collecter` → `edgar_feed` / `search-worker`) — ⚠️ **dépense réseau + écritures prod
-> `knowledge_entries`, à CONFIRMER avec l'utilisateur avant de lancer** ; puis (b) `POSTES` dérivé
-> du plan + retrait du levier `RESSERRER` de `curator.py`, **où meurt le §12bis hérité**.
+> 🚦 **PROCHAIN PAS = maillon 5 du lot 2c.** Lots 0, 1, 2a, 2b **acquis** ; lot 2c : contrat du plan
+> + pont (T1bis) + traducteur + collecteur + persistance + **l'EXÉCUTEUR RÉEL câblé et exercé contre
+> le vrai monde (2026-09-12)** — dispatch question-aveugle EDGAR/web, chaîne runtime
+> `executer_collecte_framework`, check 31/0 + négatif 7/7 ; run réel RVMD (11 liens + 3 mandats, les
+> trois états) + NVDA ciblé (chemin EDGAR → socle). **Reste le maillon 5** : `POSTES` dérivé du plan
+> + retrait du levier `RESSERRER` de `curator.py`, **où meurt le §12bis hérité** — travail de code,
+> sans dépense réseau.
 > ⚠️ Le §12bis reste ROUGE (46 < 50) à dessein : c'est un socle data-first qui disparaît au maillon 5,
 > **ne pas le recalibrer ni rejouer pour le verdir** (`feedback_fixture_pollue_le_reel`).
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se **requête**, elle
 > ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **2 077 / 1 (§12bis hérité) / 28**, négatif collecte-persist **5/5**,
-> migrations appliquées jusqu'à **039**.
+> État : suite hors-ligne **2 107 / 1 (§12bis hérité) / 29**, négatif collecte-persist **5/5** et
+> collecte-executor **7/7**, migrations appliquées jusqu'à **039**.
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
 > le `CLAUDE.md` du projet (conventions #22-**#59**, dont **#57/#58/#59 issues de l'audit du
 > 2026-09-10**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
