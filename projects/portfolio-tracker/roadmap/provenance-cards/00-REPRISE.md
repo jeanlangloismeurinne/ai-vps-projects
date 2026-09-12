@@ -7,17 +7,21 @@ project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-12 : **2 107 assertions / 29 scripts**, un seul FAIL, le
-  §12bis HÉRITÉ (socle EDGAR data-first, en voie de retrait au maillon 5 du lot 2c). Migrations
-  appliquées jusqu'à **039** (les tables du plan de collecte : `collection_plans`,
-  `collection_plan_items`, `framework_mandates`). **Lot 2c aux 6/6 maillons sur 6 pour la COLLECTE** :
-  contrat du plan + pont (T1bis) + traducteur + collecteur (cœur déterministe) + persistance + **l'EXÉCUTEUR
-  RÉEL câblé et exercé contre le vrai monde (2026-09-12, `agents/v2/collecte_executor.py`)** —
-  dispatch question-aveugle EDGAR/web, chaîne runtime `executer_collecte_framework`, check 31/0 +
-  négatif 7/7, suite 2 107/1. Run réel RVMD : **11 liens + 3 mandats** (1 inobtenable T1bis + 2
-  echec_collecte), run ciblé NVDA : le seul niveau brut (`qf_2.resultat_net`) lié au socle EDGAR.
-  **Reste le maillon 5** : `POSTES` dérivé du plan + retrait du levier `RESSERRER` de `curator.py`,
-  **où meurt le §12bis hérité**.
+  sur NVDA, MSFT et RVMD. **LOT 2c TERMINÉ le 2026-09-12** — le maillon 5 est livré : `POSTES` est
+  devenu un CATALOGUE de recettes (`edgar_feed`), le socle EDGAR ne collecte plus que les postes
+  réclamés par le plan (`run_edgar_feed(metrics=…)` câblé par `collecte_executor.postes_edgar_du_plan`),
+  le levier `RESSERRER` de `curator.py` est RETIRÉ (`_exigences` lit `MVDD_SPEC` tel quel), et **le
+  §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
+  jusqu'à **039** ; maillon 5 = **code seul, aucune migration, aucun réseau**.
+  ⚠️ **État de la suite au 2026-09-12 (mesuré, pas un souvenir) : `check_edgar_feed` 98/0 (le FAIL
+  §12bis a disparu) ; TOUT vert SAUF UN — `check_entry_nature §7` FAIL (`== 13` → lit **43**
+  déterministes RVMD).** Ce n'est PAS le maillon 5 (check non touché, code non déployé, lecture seule) :
+  les **runs réels RVMD du maillon 4** (ancien socle 8-postes + collecte web pointant sec.gov) ont
+  écrit ~30 entries, dont **25 `edgar_official` fact_financial SANS `metric`** — les mêmes que les
+  « 24 entries suspectes RVMD à statuer à la main » du backlog. Aucune violation #43 (vérifié). Le
+  plancher `== 13` est PÉRIMÉ PAR UN RUN RÉEL : **décision utilisateur** (réconcilier les entries
+  parasites, ou re-mesurer §7) — ne PAS re-fonder `== 13` en silence (`ligne_de_base_est_un_souvenir`,
+  `fixture_pollue_le_reel`).
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -164,7 +168,10 @@ tourné (`bash tools/rejeu_producteurs.sh`, 3 tickers, 0 erreur) — ⚠️ **le
 bloqué le chemin nominal** (`feedback_blocage_classifieur_non_permanent` confirmé : refus levé). Le
 plancher §7 (13 déterministes RVMD) est **restauré**.
 
-⚠️ **Le §12bis reste ROUGE (46 < 50), et c'est diagnostiqué, pas à colmater.** Le seuil « 50 » n'est
+> ✅ **RÉSOLU au maillon 5 (2026-09-12) : §12bis est MORT, le proxy `PLANCHERS[0]` du rejeu retiré**
+> (conventions #61/#62). Le paragraphe ci-dessous est le diagnostic d'origine, conservé pour le *pourquoi*.
+
+⚠️ **Le §12bis restait ROUGE (46 < 50), et c'était diagnostiqué, pas à colmater.** Le seuil « 50 » n'est
 pas une couverture : c'est le **compteur de générations accumulées** le 2026-09-08 (archive : MSFT 8
 + NVDA 11 + RVMD **31** = 50, dominé par les 31 rejeux de RVMD pendant la saga des 16 défauts). Après
 recréation propre par la 036, le socle courant est **complet** (MSFT 8/8 · NVDA 8/8 · RVMD 7/8 = 23
@@ -200,7 +207,7 @@ ils repeuplent exactement ce que ces planchers mesurent. `tools/rejeu_producteur
 motif, jamais `tail -1` ; absence de bilan = **échec**) · **jamais exécutés dans
 `portfolio-backend`** (il porte le code déployé, qui peut précéder ce qu'on mesure).
 
-### 🚦 Prochain pas — **lot 2c** (audit des 2 principes rendu le 2026-09-10)
+### ✅ Lot 2c — **TERMINÉ le 2026-09-12** (audit des 2 principes rendu le 2026-09-10)
 
 L'audit de la spec complète a produit **10 écarts (V1–V10)**, dont deux structurants, tous deux
 consignés dans la spec. **V5** (`covers` re-vocabularisée) est traité par la 036 + `question_coverage`.
@@ -284,21 +291,31 @@ Reste **V1**, qui est le cœur du lot 2c :
    **#60** (CLAUDE.md projet). Exercé en réel : **RVMD** (11 liens + 1 inobtenable T1bis + 2
    echec_collecte ; et la dédup par ligne aveugle vérifiée — deux ingrédients « lignes de crédit non
    tirées » sur l'unique entry #300) + **NVDA ciblé** (chemin EDGAR → entry #318).
-5. ⬜ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** de `curator.py`. C'est ici que
-   le §12bis hérité disparaît avec le socle data-first.
+5. ✅ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** (2026-09-12, conventions
+   #61/#62). `edgar_feed.POSTES` est un CATALOGUE de recettes ; `run_edgar_feed(..., metrics=…)` ne
+   collecte que les postes réclamés, `collecte_executor.postes_edgar_du_plan` les calcule (union des
+   lignes traduites routées EDGAR). `curator._exigences(dim)` lit `MVDD_SPEC` tel quel, prompt nettoyé.
+   **§12bis (état persisté data-first, plancher ≥50) MORT** — l'identité #43/F16 reste tenue hors ligne
+   (§3/§10/§12), `check_edgar_feed` ne requiert plus `CHECK_DB_URL`, proxy `PLANCHERS[0]` du rejeu
+   retiré. Nouveaux asserts éprouvés par mutation : `check_edgar_feed §3` (build ne bâtit que le
+   sous-ensemble), `check_collecte_executor §5bis` (`postes_edgar_du_plan`), `check_readiness §8`
+   (proposition du modèle ignorée). **Code seul, aucune migration, aucun réseau, aucun déploiement.**
 6. ✅ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
    **appliquée en prod le 2026-09-11** (`BEGIN…COMMIT`, 3 tables + 2 index + GRANT `portfolio_user`).
    ADDITIVE (rien de détruit, réversible par `DROP TABLE`). Les CHECK SQL **redisent le contrat** du
    plan (dernier rempart, #37) — éprouvés en négatif dans `check_collecte_persist.py` §3.
 
-> **▶ Reprise conseillée : NOUVELLE conversation** (arbitrage 2026-09-12,
-> [[feedback_fin_sprint_reco_conversation]]). La COLLECTE est bouclée (6/6 maillons) ; le **maillon 5**
-> qui reste — `POSTES` dérivé du plan + retrait du levier `RESSERRER` de `curator.py` — est une tâche
-> de **nature différente** (restructurer un producteur déterministe et un levier de `curator`, pas
-> écrire un exécuteur réseau), et c'est là que **meurt le §12bis hérité**. Le contexte de l'exécuteur
-> ne l'aide pas ; mieux vaut repartir du fichier. ⚠️ Maillon 5 = travail de code sans dépense réseau,
-> mais il touche `edgar_feed.POSTES` (4 sites) et `curator.py` (leviers RESSERRER, lignes ~114-127,
-> 264-265, 543-544) — relire #58/#59 avant.
+> **▶ LOT 2c TERMINÉ (7/7 maillons + migration 039). Prochain jalon = LOT 3** (analyste + manager sur
+> `qualite_financiere` ; `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de
+> `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan
+> sur NVDA/MSFT/RVMD ; migration **037**). Reprise conseillée : **NOUVELLE conversation**
+> ([[feedback_fin_sprint_reco_conversation]]).
+> ⚠️ **PRÉ-REQUIS DU LOT 3, à trancher AVANT** : `check_entry_nature §7` FAIL (`== 13` → **43**
+> déterministes RVMD). Cause = **runs réels RVMD du maillon 4** (2026-09-12), dont **25 entries
+> `edgar_official` fact_financial SANS `metric`** — les mêmes que les « 24 entries suspectes RVMD ».
+> Décider : réconcilier/superseder ces parasites, OU re-mesurer §7 délibérément (jamais bumper `== 13`
+> en silence — `ligne_de_base_est_un_souvenir`). Le lot 3 rejoue de toute façon une collecte neuve
+> pilotée par le plan : c'est le bon moment pour nettoyer le corpus RVMD hérité.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -308,7 +325,7 @@ Reste **V1**, qui est le cœur du lot 2c :
 | 1 | ✅ **Contrat** `FrameworkAnswer` + `FrameworkMandate`, pont relationnel **en Python** (#37), carte de provenance, écran niveau 3 en maquette — 2026-09-09 | — |
 | 2a | ✅ **Le référentiel** — 13 questions en données inertes, 39/0, négatif 22/22 — 2026-09-10 | — |
 | 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
-| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (§3.6) · **persistance** · **exécuteur réel + chaîne runtime (2026-09-12) ✅** · reste : `POSTES` dérivé du plan + retrait du levier `RESSERRER` (maillon 5) | **039** ✅ |
+| 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | Analyste + manager sur `qualite_financiere` · `framework_answers` / `_mandates` / `_dispenses` en base · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **037** |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 038 |
 | 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 039 |
@@ -362,14 +379,14 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite hors-ligne : 2 107 assertions / 1 FAIL (§12bis hérité, à dessein) / 29 scripts** — une
-  seule commande, **`bash checks/run_all.sh`**. Il porte les invocations correctes : montages `/contract_frozen`
-  (sans lui 4 scripts sous-comptent en sortant à 0) **et `/roadmap`** (sans lui
-  `check_frameworks_definitions` §7 ne peut plus confronter la spec au référentiel, et **sort en
-  échec** au lieu de se sauter), plus réseau `coolify` + `CHECK_DB_URL` pour
-  `check_entry_nature` (§7) **et** `check_edgar_feed` (§12bis) — tous deux **sortent en échec** si
-  le pré-requis manque, jamais un saut de section. ⚠️ **Ne pas le réécrire dans `/tmp`** : la
-  version jetable sous-comptait 47 assertions en silence (`CHANTIER_OUTILLAGE_DEV.md` §27).
+- **Suite hors-ligne : `bash checks/run_all.sh` = TOUT vert SAUF `check_entry_nature §7`** (état de
+  base, cf. frontmatter — runs réels RVMD du maillon 4, PAS le maillon 5). `check_edgar_feed` est
+  passé **98/0** et **hors ligne** (§12bis mort → ne requiert plus `CHECK_DB_URL`). Seul
+  `check_entry_nature` (§7) garde encore le montage réseau `coolify` + `CHECK_DB_URL`. `run_all.sh`
+  porte les montages `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) **et
+  `/roadmap`** (sans lui `check_frameworks_definitions` §7 sort en échec au lieu de se sauter).
+  ⚠️ **Ne pas le réécrire dans `/tmp`** : la version jetable sous-comptait 47 assertions en silence
+  (`CHANTIER_OUTILLAGE_DEV.md` §27).
 - **Migrations appliquées jusqu'à 039** (036/037/038 lot 2b, **039** lot 2c — tables du plan de collecte).
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
@@ -442,6 +459,11 @@ justes, c'est le *fait énoncé* qui était faux.
    ROIC pour une société sans revenus, #191 s'intitule « conversion FCF **non définie** », #186
    range l'incidence du cancer du pancréas sous `marche.croissance_marche_historique`. Le lot 3 les
    rendra visibles comme orphelines **nommées** ; l'arbitrage reste humain.
+   ⚠️ **Mesuré le 2026-09-12** : RVMD porte désormais **43** entries déterministes actives (vs 13 au
+   banc d'essai) — dont **25 `edgar_official` fact_financial SANS `metric`**, écrites par les runs
+   réels du maillon 4 (ancien socle + collecte web pointant sec.gov). C'est ce qui fait échouer
+   `check_entry_nature §7` (`== 13`). **Ces 25 rejoignent cette liste** : à réconcilier avant/pendant
+   le lot 3, et §7 se re-mesure ensuite (jamais un bump silencieux du plancher).
 2. **FDA / EMA en régulateur A- (0,85)** — décidé, non commencé. `fda.gov` n'est dans **aucune**
    table ; `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu` (titres) mais pas `ema.europa.eu`
    (médicaments). L'approbation FDA du 2026-08-26 classe aujourd'hui `web_search_generic` **0,50**.
@@ -636,21 +658,24 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **PROCHAIN PAS = maillon 5 du lot 2c.** Lots 0, 1, 2a, 2b **acquis** ; lot 2c : contrat du plan
-> + pont (T1bis) + traducteur + collecteur + persistance + **l'EXÉCUTEUR RÉEL câblé et exercé contre
-> le vrai monde (2026-09-12)** — dispatch question-aveugle EDGAR/web, chaîne runtime
-> `executer_collecte_framework`, check 31/0 + négatif 7/7 ; run réel RVMD (11 liens + 3 mandats, les
-> trois états) + NVDA ciblé (chemin EDGAR → socle). **Reste le maillon 5** : `POSTES` dérivé du plan
-> + retrait du levier `RESSERRER` de `curator.py`, **où meurt le §12bis hérité** — travail de code,
-> sans dépense réseau.
-> ⚠️ Le §12bis reste ROUGE (46 < 50) à dessein : c'est un socle data-first qui disparaît au maillon 5,
-> **ne pas le recalibrer ni rejouer pour le verdir** (`feedback_fixture_pollue_le_reel`).
-> ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se **requête**, elle
-> ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
+> 🚦 **LOT 2c TERMINÉ (2026-09-12). PROCHAIN PAS = LOT 3.** Tout le lot 2c est livré : contrat du plan
+> + pont (T1bis) + traducteur + collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES`
+> devenu CATALOGUE de recettes (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ,
+> §12bis MORT** (conventions #61/#62). Le lot 3 = analyste + manager sur `qualite_financiere` ;
+> `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de `MVDD_SPEC`,
+> `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan sur
+> NVDA/MSFT/RVMD ; migration **037**.
+> ⚠️ **PRÉ-REQUIS DU LOT 3** : `check_entry_nature §7` FAIL (`== 13` → **43** déterministes RVMD) —
+> **état de base**, pas le maillon 5 (check non touché, code non déployé). Cause : runs réels RVMD du
+> maillon 4, dont **25 `edgar_official` fact_financial SANS `metric`** (= les « 24 entries suspectes
+> RVMD »). Aucune violation #43 (vérifié). Trancher : réconcilier ces parasites OU re-mesurer §7 —
+> **jamais bumper `== 13` en silence** (`feedback_ligne_de_base_est_une_mesure`,
+> `feedback_fixture_pollue_le_reel`).
+> ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot plusieurs fois** — elle se **requête**,
+> elle ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **2 107 / 1 (§12bis hérité) / 29**, négatif collecte-persist **5/5** et
-> collecte-executor **7/7**, migrations appliquées jusqu'à **039**.
+> État : suite hors-ligne **TOUT vert sauf `check_entry_nature §7`** (ci-dessus) ; `check_edgar_feed`
+> 98/0 et hors ligne ; migrations appliquées jusqu'à **039**.
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
-> le `CLAUDE.md` du projet (conventions #22-**#59**, dont **#57/#58/#59 issues de l'audit du
-> 2026-09-10**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
-> décision manque.
+> le `CLAUDE.md` du projet (conventions #22-**#62**, dont **#61/#62 = maillon 5 du lot 2c**),
+> `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

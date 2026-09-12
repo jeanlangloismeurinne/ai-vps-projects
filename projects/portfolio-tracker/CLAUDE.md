@@ -890,6 +890,45 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     manager. Détail + garde : `check_collecte_executor.py` (30 assertions, négatif **6/6**, chaque
     mutation rouge sur son assert nommé dont les 5 faux matchs réels).
 
+61. **Un producteur qui collecte « tout » avant la question est un socle data-first ; le rendre
+    plan-dérivé en fait un CATALOGUE de recettes, et ça TUE le check-plancher qui le gardait (V3, lot
+    2c maillon 5)** : `edgar_feed.POSTES` était une liste de 8 postes que `run_edgar_feed` collectait
+    EN BLOC, avant toute question (écart V1). Le maillon 5 le retourne : `POSTES` reste le **détenteur
+    unique** des recettes XBRL (flux/bilan, concepts candidats), mais un poste ne se collecte QUE si un
+    plan réclame sa métrique — `run_edgar_feed(..., metrics=…)`, câblé par `collecte_executor`
+    (`postes_edgar_du_plan` = union des postes des lignes traduites routées EDGAR, via le détenteur
+    unique `router_source`+`poste_pour_metrique`, jamais une 2ᵉ liste — #46). L'ancre
+    (`stockholders_equity`) est toujours résolue pour dater les autres, mais n'entre au corpus que si
+    le plan la réclame. `metrics=None` = tout le catalogue, réservé à l'amorçage MANUEL (endpoint
+    `edgar-refresh`, `rejeu_producteurs.py`), hors du chemin nominal. ⚠️ **`check_edgar_feed §12bis`
+    (état persisté du socle, dont le plancher `≥ 50 lignes`) est MORT avec ce maillon** : il n'y a plus
+    de socle de taille garantie — le recalibrer (46) ou rejouer EDGAR pour le verdir serait le
+    gonflage que `feedback_fixture_pollue_le_reel` proscrit. Ses garanties d'IDENTITÉ #43/F16 ne sont
+    pas perdues : elles vivent HORS LIGNE, au point d'écriture — §3 (`build_edgar_entries` pose
+    toujours `poste_kind`), §10 (supersedage de TOUTES les entrées courantes d'un poste de bilan, sur
+    `_FakeConn`), §12 (la règle dans `POSTES`, un seul détenteur). `check_edgar_feed` ne requiert donc
+    plus `CHECK_DB_URL`. Le proxy `PLANCHERS[0]` de `rejeu_producteurs.py` (faux vert : il comptait
+    `edgar_official` toutes métriques ≈ 68, pas les 8 postes que §12bis lisait = 46) est retiré avec
+    §12bis. **Corollaire** : sur toute règle qui dépend d'un discriminant venu du plan, se demander « ce
+    producteur collecte-t-il ce que le plan demande, ou tout ce qu'il SAIT faire ? ». Détail + garde :
+    `check_edgar_feed.py §3` (build ne bâtit que le sous-ensemble réclamé), `check_collecte_executor.py
+    §5bis` (`postes_edgar_du_plan` exclut dérivées/marché/inobtenable et le cas discriminant du routing
+    — poste depuis un communiqué → web) — éprouvés par mutation, chacun rouge sur son assert nommé.
+
+62. **Un levier du modèle sur l'exigence est une question posée par le MODÈLE, pas par le framework
+    (V3, lot 2c maillon 5, écart V2)** : `curator._exigences` laissait l'agent RESSERRER
+    `champs_requis` / `tier_plancher` (« le DERNIER levier du modèle sur le verdict » — union des
+    champs, plus strict des planchers). Sous le principe 1 (« c'est le framework qui dicte les
+    questions »), même un resserrement est une question que le modèle s'autorise à poser : le
+    traducteur dit *où chercher*, jamais *combien de preuve suffit* (spec §3.6/§11). `_exigences(dim)`
+    lit désormais `MVDD_SPEC` TELLE QUELLE, ignore la proposition du modèle ; le prompt le dit («
+    TELS QUELS … toute valeur que tu proposerais serait ignorée »). Le rapport MONTRE l'exigence du
+    cadre appliquée, jamais celle que le modèle aurait souhaitée. ⚠️ Testé au **point de lecture** (le
+    rapport après `recompute_coverage`), là où le levier vivait : une dimension où le modèle a inventé
+    un champ + baissé le plancher rend exactement `MVDD_SPEC`. Détail + garde :
+    `check_readiness_recompute.py §8` — éprouvé par mutation (le modèle regagne le levier → 3 asserts
+    rouges, chacun sur son nom).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
