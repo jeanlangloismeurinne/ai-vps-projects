@@ -25,14 +25,15 @@ for f in checks/check_*.py; do
   # Les deux checks « live » sortent du périmètre hors-ligne : ils appellent le réseau ouvert.
   case "$n" in check_fetch_live|check_fetch_relevance) continue ;; esac
 
-  # Deux checks lisent l'ÉTAT persisté, pas seulement la règle : `check_entry_nature` §7
-  # (acceptation de la capacité 1) et `check_edgar_feed` §12bis (F16 — un fait porte lui-même sa
-  # nature de poste). Ils exigent le réseau `coolify` + la vraie URL de base. Sans elles ils
-  # SORTENT EN ÉCHEC au lieu de sauter la section — une mesure incomplète ne doit jamais passer
-  # pour un 0 (`feedback_check_degrade_en_sortant_a_zero`).
+  # Trois checks lisent l'ÉTAT persisté, pas seulement la règle : `check_entry_nature` §7
+  # (acceptation de la capacité 1), `check_edgar_feed` §12bis (F16 — un fait porte lui-même sa
+  # nature de poste) et `check_collecte_persist` (lot 2c — le plan/les liens/les mandats s'écrivent
+  # vraiment, dans une transaction ROLLBACK, sans résidu). Ils exigent le réseau `coolify` + la
+  # vraie URL de base. Sans elles ils SORTENT EN ÉCHEC au lieu de sauter la section — une mesure
+  # incomplète ne doit jamais passer pour un 0 (`feedback_check_degrade_en_sortant_a_zero`).
   net=none; extra=()
   case "$n" in
-    check_entry_nature|check_edgar_feed)
+    check_entry_nature|check_edgar_feed|check_collecte_persist)
       net=coolify
       extra=(-e "CHECK_DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)")
       ;;
