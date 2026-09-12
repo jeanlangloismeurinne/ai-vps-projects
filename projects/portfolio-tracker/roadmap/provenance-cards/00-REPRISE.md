@@ -2,17 +2,20 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-11
+updated: 2026-09-12
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
   complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. État au 2026-09-11 : **2 069 assertions / 27 scripts**, un seul FAIL, le
+  sur NVDA, MSFT et RVMD. État au 2026-09-12 : **2 077 assertions / 28 scripts**, un seul FAIL, le
   §12bis HÉRITÉ (socle EDGAR data-first, en voie de retrait au lot 2c — cf. lot 2b). Migrations
-  appliquées jusqu'à **038**, prochaine **039** (les tables du plan de collecte, à écrire en fin de
-  lot 2c). **Lot 2c en cours** : contrat du plan + pont (T1bis) + traducteur (acceptation modèle
-  passée) + collecteur (cœur déterministe) livrés ; reste le câblage des exécuteurs réels du
-  collecteur + persistance (migration 039), puis `POSTES` dérivé.
+  appliquées jusqu'à **039** (les tables du plan de collecte : `collection_plans`,
+  `collection_plan_items`, `framework_mandates`). **Lot 2c en cours** : contrat du plan + pont
+  (T1bis) + traducteur (acceptation modèle passée) + collecteur (cœur déterministe) + **persistance
+  (migration 039 appliquée, `persist_plan`/`persist_aiguillage`, check contre la vraie base en
+  transaction ROLLBACK, négatif 5/5)** livrés ; reste **UNIQUEMENT** le câblage des exécuteurs
+  réels du collecteur (EDGAR/web — ⚠️ dépense réseau + écritures prod, à CONFIRMER avant),
+  puis `POSTES` dérivé du plan + retrait du levier `RESSERRER`.
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -242,21 +245,41 @@ Reste **V1**, qui est le cœur du lot 2c :
    du trimestre ». **Non sur-optimisé sur 1 ticker à dessein** → à traquer par l'**éval multi-tickers**
    (backlog #9), pas par du tuning sur RVMD seul. Resynchro du prompt en `agent_prompts` (#19/#39) au
    câblage runtime.
-4. 🟡 **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe livré** (2026-09-11,
-   `agents/v2/collecteur.py`) : `LigneAveugle` (le collecteur **ne voit ni question ni ingrédient**
-   → l'entry ne peut porter aucun vocabulaire de framework, principe 2 structurel), `aiguiller_plan`
-   (orchestration PURE, exécuteur `collecter` **injecté**) où **la couverture est un sous-produit
-   déterministe du dispatch** (`LienCouverture` = colonnes exactes de `question_coverage`, écrites
-   par l'aiguilleur qui tient le plan, jamais par le modèle, #57). **Trois états, aucune ligne ne
-   s'évapore** : traduit-collecté → lien ; inobtenable → mandat (jamais exécuté) ; collecte échouée
-   → mandat `echec_collecte` (jamais un silence, #25). Check `check_collecteur.py` **15/0**, négatif
-   **6 mutations**. **Reste** : câbler l'exécuteur réel (adaptateurs `collecter` → `edgar_feed` /
-   `search-worker` selon la source), et la **persistance** (écrire `question_coverage` + créer/écrire
-   `framework_mandates`, **migration 039** avec `collection_plans`/`collection_plan_items`).
+4. 🟡 **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe + persistance livrés**
+   (2026-09-11/12, `agents/v2/collecteur.py`) : `LigneAveugle` (le collecteur **ne voit ni question
+   ni ingrédient** → l'entry ne peut porter aucun vocabulaire de framework, principe 2 structurel),
+   `aiguiller_plan` (orchestration PURE, exécuteur `collecter` **injecté**) où **la couverture est un
+   sous-produit déterministe du dispatch** (`LienCouverture` = colonnes exactes de
+   `question_coverage`, écrites par l'aiguilleur qui tient le plan, jamais par le modèle, #57).
+   **Trois états, aucune ligne ne s'évapore** : traduit-collecté → lien ; inobtenable → mandat
+   (jamais exécuté) ; collecte échouée → mandat `echec_collecte` (jamais un silence, #25). Check
+   `check_collecteur.py` **15/0**, négatif **6 mutations**.
+   ✅ **Persistance (2026-09-12)** : `agents/v2/collecte_persist.py` (`persist_plan` écrit le plan +
+   ses lignes, `persist_aiguillage` écrit `question_coverage` **et** `framework_mandates` dans la
+   MÊME transaction, #35/#58, à appeler `async with conn.transaction()`). `check_collecte_persist.py`
+   **8/0** vérifie l'**ÉTAT persisté** contre la vraie base en transaction **ROLLBACK** (aucun
+   résidu, #47) — plan relu, liens et mandats relus, et §3 le **dernier rempart** : les CHECK SQL de
+   la 039 refusent une ligne `traduit` sans métrique / un mandat d'origine inconnue. Négatif
+   `negatif_collecte_persist.sh` **satisfiabilité + 5 mutations / 5** (réseau `coolify` + ROLLBACK).
+   Câblé dans `run_all.sh` (bloc `coolify` + `CHECK_DB_URL`). **Reste UNIQUEMENT** : câbler
+   l'exécuteur réel (adaptateurs `collecter` → `edgar_feed` / `search-worker` selon la source).
+   ⚠️ **À CONFIRMER avec l'utilisateur avant** : dépense réseau (web search) + écritures prod dans
+   `knowledge_entries`.
 5. ⬜ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** de `curator.py`. C'est ici que
    le §12bis hérité disparaît avec le socle data-first.
-6. ⬜ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
-   écrite **en dernier**, juste avant son application, jamais en avance.
+6. ✅ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
+   **appliquée en prod le 2026-09-11** (`BEGIN…COMMIT`, 3 tables + 2 index + GRANT `portfolio_user`).
+   ADDITIVE (rien de détruit, réversible par `DROP TABLE`). Les CHECK SQL **redisent le contrat** du
+   plan (dernier rempart, #37) — éprouvés en négatif dans `check_collecte_persist.py` §3.
+
+> **▶ Reprise conseillée : NOUVELLE conversation** (arbitrage 2026-09-12,
+> [[feedback_fin_sprint_reco_conversation]]). Trois raisons : (1) celle-ci a déjà traversé un
+> `/compact`, son contexte est lourd et en partie résumé ; (2) le seul maillon restant — câbler
+> l'exécuteur réel — est une **frontière naturelle** qui **exige de toute façon une confirmation
+> utilisateur** avant la moindre dépense réseau / écriture prod, donc rien ne se perd à repartir du
+> fichier ; (3) le contexte partagé de la persistance n'aide pas à écrire des adaptateurs
+> EDGAR/web — c'est une tâche d'intégration neuve, guidée par ce fichier + #58/#59, pas par
+> l'historique de ce sprint. Commit du jalon : `e1cb9ca`.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -266,7 +289,7 @@ Reste **V1**, qui est le cœur du lot 2c :
 | 1 | ✅ **Contrat** `FrameworkAnswer` + `FrameworkMandate`, pont relationnel **en Python** (#37), carte de provenance, écran niveau 3 en maquette — 2026-09-09 | — |
 | 2a | ✅ **Le référentiel** — 13 questions en données inertes, 39/0, négatif 22/22 — 2026-09-10 | — |
 | 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
-| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (spec §3.6) · `POSTES` dérivé du plan · retrait du levier `RESSERRER` de `curator.py` | 036bis |
+| 2c | **La chaîne de collecte** : traducteur → plan → collecteur (spec §3.6) · **persistance (plan/liens/mandats)** · `POSTES` dérivé du plan · retrait du levier `RESSERRER` de `curator.py` | **039** ✅ |
 | 3 | Analyste + manager sur `qualite_financiere` · `framework_answers` / `_mandates` / `_dispenses` en base · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **037** |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 038 |
 | 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 039 |
@@ -328,7 +351,7 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
   `check_entry_nature` (§7) **et** `check_edgar_feed` (§12bis) — tous deux **sortent en échec** si
   le pré-requis manque, jamais un saut de section. ⚠️ **Ne pas le réécrire dans `/tmp`** : la
   version jetable sous-comptait 47 assertions en silence (`CHANTIER_OUTILLAGE_DEV.md` §27).
-- **Migrations appliquées jusqu'à 035. Prochaine : 036.**
+- **Migrations appliquées jusqu'à 039** (036/037/038 lot 2b, **039** lot 2c — tables du plan de collecte).
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
@@ -594,18 +617,19 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **PROCHAIN PAS = lot 2b (migration 036), puis 2c.** Lots 0, 1 et **2a acquis**. L'audit des
-> deux principes (rendu le 2026-09-10) a produit **10 écarts V1–V10**, tous consignés dans la spec ;
-> **V5** (`covers` = rigidité de framework, aggravée avant d'être vue) et **V1** (le socle EDGAR
-> collectait avant la question : **8** postes écrits à la main servant **4** des **33** ingrédients
-> essentiels) sont les deux structurants. ⚠️ L'archivage vide les tables que `check_edgar_feed`
-> §12bis (`>= 50`) et `check_entry_nature` §7 (`== 13`) **lisent** : **ne pas baisser les planchers**
-> (`feedback_optional_schema_gate`) — rejouer les producteurs déterministes, coût modèle nul.
+> 🚦 **PROCHAIN PAS = fin du lot 2c.** Lots 0, 1, 2a, 2b **acquis** ; lot 2c aux **5/6 maillons** :
+> contrat du plan + pont (T1bis) + traducteur (acceptation modèle passée) + collecteur + **persistance
+> (migration 039 appliquée)** livrés et verts. **Reste UNIQUEMENT** (a) câbler l'exécuteur réel du
+> collecteur (`collecter` → `edgar_feed` / `search-worker`) — ⚠️ **dépense réseau + écritures prod
+> `knowledge_entries`, à CONFIRMER avec l'utilisateur avant de lancer** ; puis (b) `POSTES` dérivé
+> du plan + retrait du levier `RESSERRER` de `curator.py`, **où meurt le §12bis hérité**.
+> ⚠️ Le §12bis reste ROUGE (46 < 50) à dessein : c'est un socle data-first qui disparaît au maillon 5,
+> **ne pas le recalibrer ni rejouer pour le verdir** (`feedback_fixture_pollue_le_reel`).
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot trois fois** — elle se **requête**, elle
 > ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **1 988 / 0 / 24**, négatif frameworks **22/22**, migrations jusqu'à
-> **035**, prochaine **036** (à écrire juste avant son lot).
+> État : suite hors-ligne **2 077 / 1 (§12bis hérité) / 28**, négatif collecte-persist **5/5**,
+> migrations appliquées jusqu'à **039**.
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
 > le `CLAUDE.md` du projet (conventions #22-**#59**, dont **#57/#58/#59 issues de l'audit du
 > 2026-09-10**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
