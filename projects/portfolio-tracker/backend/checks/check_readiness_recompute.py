@@ -21,7 +21,8 @@ Ce qu'on éprouve ici :
     verdict à corpus figé — rapports NVDA #11/#13/#14) ;
   • le chemin complet discrimine `business_model.description` de `produits.description` ;
   • une entry non taguée ne fonde plus rien (fin du fallback tier-only de la 028) ;
-  • le LLM ne peut plus DESSERRER champs_requis / tier_plancher, seulement les resserrer ;
+  • le LLM n'a AUCUN levier sur champs_requis / tier_plancher (RESSERRER retiré, maillon 5) : ils
+    viennent du framework seul, toute proposition du modèle est écrasée ;
   • les gaps restent en bijection avec les non-fondables, et le ReadinessReport final valide.
 """
 import copy
@@ -331,19 +332,37 @@ check("produits ok (description + unit_economics)", pr["ok"] is True, f"→ {pr[
 check("business_model.description NON fondé par le tag produits",
       "description" in bm["champs_non_fondables"], f"→ {bm['champs_non_fondables']}")
 
-print("\n8. _exigences — le LLM peut RESSERRER, jamais DESSERRER")
-r, p = _exigences("business_model", {"champs_requis": ["description"], "tier_plancher": "C"})
-check("champ requis retiré par le LLM → réintroduit",
-      set(r) >= set(_SPEC["business_model"]["champs_requis"]), f"→ {r}")
-check("plancher assoupli (C) → ramené au socle B+", p == "B+", f"→ {p}")
-r2, p2 = _exigences("business_model",
-                    {"champs_requis": ["description", "part_recurrente_cloud"], "tier_plancher": "A"})
-check("champ ajouté par le LLM → conservé", "part_recurrente_cloud" in r2)
-check("socle en tête, ajouts ensuite (ordre stable)",
-      r2[:3] == _SPEC["business_model"]["champs_requis"], f"→ {r2}")
-check("plancher resserré (A) → conservé", p2 == "A", f"→ {p2}")
-r3, p3 = _exigences("risques", {})
-check("dimension sans proposition → socle MVDD", r3 == _SPEC["risques"]["champs_requis"] and p3 == "B")
+print("\n8. _exigences — l'exigence vient du FRAMEWORK SEUL (levier RESSERRER retiré, maillon 5, V2)")
+# `_exigences` ne reçoit plus la proposition du modèle : elle lit `MVDD_SPEC` telle quelle. Le modèle
+# n'a plus AUCUN levier — ni pour resserrer (ajouter un champ, relever un plancher) ni pour desserrer.
+r, p = _exigences("business_model")
+check("champs_requis = ceux de MVDD_SPEC, tels quels",
+      r == _SPEC["business_model"]["champs_requis"], f"→ {r}")
+check("tier_plancher = celui de MVDD_SPEC, tel quel",
+      p == _SPEC["business_model"]["tier_plancher"], f"→ {p}")
+r3, p3 = _exigences("risques")
+check("autre dimension → son socle MVDD, sans altération",
+      r3 == _SPEC["risques"]["champs_requis"] and p3 == _SPEC["risques"]["tier_plancher"],
+      f"→ {r3} / {p3}")
+
+# LE POINT DE LECTURE, là où le levier vivait : au niveau du RAPPORT, une proposition du modèle est
+# écrasée par le cadre. On fabrique une dimension où le modèle a (a) retiré des champs, (b) inventé un
+# champ hors cadre, (c) baissé le plancher B+ → C. Le rapport doit rendre EXACTEMENT MVDD_SPEC — sinon
+# le modèle aurait rouvert un levier sur le verdict. Un `_exigences` qui ré-accepterait `d` ferait
+# rougir au moins l'un de ces trois asserts.
+_triche = {"dimension": "business_model", "tier_plancher": "C",
+           "champs_requis": ["description", "champ_invente_par_le_modele"],
+           "fondations": [], "champs_non_fondables": [], "champs_perimes": [],
+           "tier_atteint": None, "ok": True}
+cov = run([dim_cov("risques")], [entry(28, "A", ["risques.risques_cles"])],
+          dims_struct=[_triche])
+bmt = cov["structuree"]["dimensions"][0]
+check("champ inventé par le modèle → ABSENT du rapport (aucun RESSERRER par ajout)",
+      "champ_invente_par_le_modele" not in bmt["champs_requis"], f"→ {bmt['champs_requis']}")
+check("champs_requis du rapport = ceux du cadre (retrait du modèle ignoré)",
+      bmt["champs_requis"] == _SPEC["business_model"]["champs_requis"], f"→ {bmt['champs_requis']}")
+check("plancher baissé par le modèle (C) → ÉCRASÉ par le cadre (aucun DESSERRER)",
+      bmt["tier_plancher"] == _SPEC["business_model"]["tier_plancher"], f"→ {bmt['tier_plancher']}")
 
 print("\n9. reconcile_gaps — bijection champs_non_fondables ↔ gaps")
 # croissance est fondée à son plancher B (desserrage déclaré) ; structure_5forces ne l'est pas (C+

@@ -41,6 +41,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
+from collections.abc import Collection
 from typing import Any, Literal, Optional
 
 import asyncpg
@@ -70,6 +71,7 @@ __all__ = [
     "entry_type_pour_metrique",
     "construire_requete_web",
     "collecter_un",
+    "postes_edgar_du_plan",
     "executer_plan_reel",
     "executer_collecte_framework",
 ]
@@ -223,11 +225,16 @@ def construire_requete_web(ligne: LigneAveugle) -> WorkerRequest:
 # ─────────────────────────────── exécuteur RÉEL (async, réseau + DB) ───────────────────────────────
 
 class _SocleEdgar:
-    """Mémoïse le socle EDGAR d'un ticker sur la durée d'UN aiguillage : on ne rejoue pas les 8 postes
+    """Mémoïse le socle EDGAR d'un ticker sur la durée d'UN aiguillage : on ne rejoue pas la collecte
     à chaque ligne EDGAR. Trois états possibles par ticker (jamais deux confondus, #25) : un dict
-    {metric → entry_id} des postes fondés, OU un motif d'indisponibilité (ticker sans symbole)."""
+    {metric → entry_id} des postes fondés, OU un motif d'indisponibilité (ticker sans symbole).
 
-    def __init__(self) -> None:
+    ⚠️ On ne collecte QUE les postes RÉCLAMÉS par le plan (`metrics`, maillon 5 / §3.6) — la collecte
+    data-first des 8 postes en bloc a disparu. Un poste que nul plan ne réclame n'est jamais interrogé
+    chez EDGAR."""
+
+    def __init__(self, metrics: Collection[str]) -> None:
+        self._metrics = frozenset(metrics)
         self._par_ticker: dict[str, dict[str, int]] = {}
         self._indispo: dict[str, str] = {}
 
@@ -246,7 +253,7 @@ class _SocleEdgar:
 
     async def _collecter(self, ticker_id: str) -> None:
         try:
-            res = await run_edgar_feed(ticker_id, persist=True)
+            res = await run_edgar_feed(ticker_id, persist=True, metrics=self._metrics)
         except EdgarFeedUnavailable as e:
             self._indispo[ticker_id] = f"socle EDGAR indisponible pour {ticker_id} : {e}"
             return
@@ -292,12 +299,32 @@ async def collecter_un(
     return ResultatCollecte(entry_id=created[0]["id"])
 
 
+def postes_edgar_du_plan(plan: CollectionPlan) -> frozenset[str]:
+    """Les postes du socle EDGAR que CE plan réclame (maillon 5 / §3.6) : l'union des postes canoniques
+    des lignes traduites routées vers EDGAR. C'est exactement ce que le socle collectera — « un poste
+    que nul plan ne réclame ne se collecte plus ». Détenteur unique du dispatch : `router_source` +
+    `poste_pour_metrique`, jamais une seconde liste (#46)."""
+    postes: set[str] = set()
+    for item in plan.items:
+        if item.statut != "traduit":
+            continue
+        ligne = ligne_aveugle(item, plan.ticker_id)
+        if router_source(ligne.source_pressentie, ligne.metrique) == "edgar":
+            poste = poste_pour_metrique(ligne.metrique)
+            assert poste is not None  # garanti par router_source
+            postes.add(poste)
+    return frozenset(postes)
+
+
 async def executer_plan_reel(
     plan: CollectionPlan, *, conn: asyncpg.Connection
 ) -> ResultatAiguillage:
     """Exécute un plan RÉELLEMENT (EDGAR + web), puis aiguille. `aiguiller_plan` reste intact : on
-    pré-exécute chaque ligne aveugle distincte, puis on lui injecte un lookup sync."""
-    socle = _SocleEdgar()
+    pré-exécute chaque ligne aveugle distincte, puis on lui injecte un lookup sync.
+
+    Le socle EDGAR ne collecte que les postes RÉCLAMÉS par ce plan (`postes_edgar_du_plan`) : la
+    collecte data-first des 8 postes en bloc a disparu avec le maillon 5 (§3.6)."""
+    socle = _SocleEdgar(postes_edgar_du_plan(plan))
     resultats: dict[tuple[str, str, str, str], ResultatCollecte] = {}
     for item in plan.items:
         if item.statut != "traduit":

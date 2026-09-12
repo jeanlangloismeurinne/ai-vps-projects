@@ -2,9 +2,15 @@
 
 POURQUOI CE FICHIER EXISTE
 ---------------------------
-La 036 archive les 15 tables V2 par `SET SCHEMA` et recrée `public.knowledge_entries` VIDE. Deux
-checks portent un plancher sur le corpus courant — `check_edgar_feed` §12bis (≥ 50 lignes du socle)
-et `check_entry_nature` §7 (13 entries déterministes sur RVMD). Sur une base vide, ils rougissent.
+La 036 archive les 15 tables V2 par `SET SCHEMA` et recrée `public.knowledge_entries` VIDE.
+`check_entry_nature` §7 porte un plancher sur le corpus courant (13 entries déterministes sur RVMD) :
+sur une base vide, il rougit.
+
+⚠️ Le second plancher historique — `check_edgar_feed` §12bis (≥ 50 lignes du socle) — a DISPARU au
+maillon 5 (lot 2c) : `POSTES` est devenu un catalogue de recettes, EDGAR ne collecte plus 8 postes
+en bloc data-first, il n'y a donc plus de socle de taille garantie à restaurer. Son proxy ici était
+au surplus un FAUX VERT (il comptait `edgar_official` toutes métriques ≈ 68, pas les 8 postes socle
+que §12bis lisait = 46) — retiré avec §12bis.
 
 La tentation est d'abaisser le plancher « le temps de la migration ». C'est le mode de panne de
 `feedback_optional_schema_gate` : un desserrage posé à chaud ne se resserre jamais, et un plancher
@@ -54,12 +60,10 @@ ETAPES: list[tuple[str, object, type[Exception]]] = [
     ("base_rate",  run_base_rate_anchor, BaseRateUnavailable),
 ]
 
-# Les deux planchers que le rejeu doit restaurer, chacun avec le check qui le porte — pour que le
-# message dise QUOI relancer, pas seulement qu'un nombre est trop petit.
+# Le plancher que le rejeu doit restaurer, avec le check qui le porte — pour que le message dise QUOI
+# relancer, pas seulement qu'un nombre est trop petit. (Le plancher socle §12bis a été retiré au
+# maillon 5 : cf. docstring — il n'y a plus de socle data-first de taille garantie.)
 PLANCHERS = [
-    ("socle EDGAR (check_edgar_feed §12bis)", 50,
-     "SELECT count(*) FROM knowledge_entries "
-     " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official'"),
     ("RVMD déterministes actives (check_entry_nature §7)", 13,
      "SELECT count(*) FROM knowledge_entries "
      " WHERE ticker_id = 'RVMD' AND superseded_by IS NULL "

@@ -87,10 +87,10 @@ def nonblocking_gaps_for(ticker_id: Optional[str]) -> dict[str, str]:
 def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
     """Plancher effectif d'un champ : celui de `FIELD_PROFILES` (#50), sinon celui de la dimension.
 
-    Un champ hors table retombe sur le plancher de dimension plutôt que de lever : le modèle peut
-    RESSERRER `champs_requis` en ajoutant un champ (cf. `_exigences`), et un ajout légitime ne doit
-    pas faire tomber le rapport. Il n'obtient aucune faveur pour autant — il hérite du plancher le
-    plus strict qui lui soit applicable.
+    Un champ requis par `MVDD_SPEC` mais absent de `FIELD_PROFILES` retombe sur le plancher de sa
+    dimension plutôt que de lever — il hérite du plancher le plus strict qui lui soit applicable, sans
+    faveur. (Le modèle n'ajoute plus de champ requis depuis le retrait du levier RESSERRER — maillon 5
+    ; ce repli ne couvre donc plus que l'écart possible entre `MVDD_SPEC` et `FIELD_PROFILES`.)
     """
     return FIELD_PROFILES.get(f"{dimension}.{champ}", {}).get("plancher") or dim_plancher
 
@@ -110,22 +110,23 @@ def _best_tier(tiers: list[str]) -> Optional[str]:
 _MVDD_BY_DIM = {s["dimension"]: s for s in MVDD_SPEC}
 
 
-def _exigences(dimension: Optional[str], d: dict[str, Any]) -> tuple[list[str], str]:
-    """Champs requis + tier plancher d'une dimension : le LLM peut RESSERRER, jamais DESSERRER.
+def _exigences(dimension: Optional[str]) -> tuple[list[str], str]:
+    """Champs requis + tier plancher d'une dimension : ils viennent du FRAMEWORK, du framework SEUL.
 
-    Le cadre MVDD est le plancher d'exigence (`common.MVDD_SPEC`) ; l'agent peut l'affiner au cas
-    d'espèce — ajouter un champ requis, relever le plancher. Mais une fois la couverture pilotée par
-    l'index, `champs_requis` et `tier_plancher` sont le DERNIER levier du modèle sur le verdict :
-    retirer `recurrence_pct` des requis, ou passer un plancher de A à B, ferait passer la dimension
-    sans qu'aucune entry ne bouge. On prend donc l'union des champs et le plus STRICT des planchers.
+    ⚠️ **Le levier RESSERRER du modèle a été RETIRÉ (lot 2c, maillon 5, écart V2 de l'audit).**
+    Jusqu'ici l'agent pouvait affiner l'exigence — ajouter un champ requis, relever le plancher — et
+    l'on prenait l'union des champs / le plus strict des planchers. Sous le principe 1 (« c'est le
+    framework qui dicte les questions »), un resserrement discrétionnaire est **une question posée par
+    le modèle**, pas par le framework : le traducteur dit *où chercher*, jamais *combien de preuve
+    suffit* (spec §3.6/§11). L'exigence est donc désormais lue TELLE QUELLE dans `MVDD_SPEC`, et la
+    proposition du modèle est ignorée. Ce n'est plus « le DERNIER levier du modèle sur le verdict » —
+    il n'y en a plus.
     """
     spec = _MVDD_BY_DIM.get(dimension or "", {})
-    socle: list[str] = list(spec.get("champs_requis") or [])
-    proposes = [c for c in (d.get("champs_requis") or []) if isinstance(c, str)]
-    requis = socle + sorted(set(proposes) - set(socle))   # ordre stable : socle MVDD, puis ajouts
-
-    candidats = [t for t in (spec.get("tier_plancher"), d.get("tier_plancher")) if t in _TIER_RANK]
-    plancher = min(candidats, key=lambda t: _TIER_RANK[t]) if candidats else "B"
+    requis: list[str] = list(spec.get("champs_requis") or [])
+    plancher = spec.get("tier_plancher")
+    if plancher not in _TIER_RANK:
+        plancher = "B"
     return (requis or ["description"]), plancher
 
 
@@ -260,7 +261,10 @@ def recompute_coverage(
             if not isinstance(d, dict):
                 continue
             dim = d.get("dimension")
-            requis, dim_plancher = _exigences(dim, d)
+            requis, dim_plancher = _exigences(dim)
+            # L'exigence du framework écrase ce que le modèle a proposé : `champs_requis` /
+            # `tier_plancher` ne sont plus un levier du modèle (maillon 5, écart V2). Le rapport
+            # MONTRE l'exigence appliquée, jamais celle que le modèle aurait souhaitée.
             d["champs_requis"] = requis
             d["tier_plancher"] = dim_plancher
             non_fondables: list[str] = []
@@ -540,9 +544,11 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]], *,
         f"Ce qui est VRAIMENT attendu de toi, et que le code ne sait pas produire : le `rationale` "
         f"(lecture d'ensemble du dossier), les `gaps` (ce qui manque, avec des `queries_suggerees` "
         f"actionnables), les `incertitudes_investissables` et `qualite_info`. Reprends les 8 "
-        f"dimensions du cadre MVDD ci-dessus avec leurs `champs_requis` et `tier_plancher` (tu peux "
-        f"les RESSERRER si le cas d'espèce l'exige — ajouter un champ requis, relever un plancher — "
-        f"jamais les assouplir). conviction/marge_securite = null, pas de context_pack_entry_id.\n\n"
+        f"dimensions du cadre MVDD ci-dessus avec leurs `champs_requis` et `tier_plancher` TELS "
+        f"QUELS : ils sont dictés par le cadre, tu n'as aucun levier dessus — ni pour ajouter un "
+        f"champ, ni pour relever ou abaisser un plancher. Toute valeur que tu proposerais serait "
+        f"ignorée et remplacée par celle du cadre. conviction/marge_securite = null, pas de "
+        f"context_pack_entry_id.\n\n"
         f"⚠️ Dans le `rationale`, ne NOMME aucun verdict (`ready`, `not_ready`, `thin_qualitative`, "
         f"`too_hard`, `researching`) : il est recomputé et affiché par le code, et toute phrase qui "
         f"en nomme un autre sera RETIRÉE. Décris ce que le dossier contient et ce qui lui manque, "

@@ -43,6 +43,7 @@ Aucune dépendance nouvelle : `httpx` (déjà utilisé) + stdlib.
 from __future__ import annotations
 
 import logging
+from collections.abc import Collection
 from dataclasses import dataclass, field as dc_field
 from datetime import date
 from typing import Any, Optional
@@ -93,6 +94,14 @@ class Poste:
 # L'ordre des concepts n'arbitre qu'à fraîcheur ÉGALE (la fraîcheur prime — cf. docstring).
 # `RevenueFromContractWithCustomerExcludingAssessedTax` d'abord : c'est le concept ASC 606, en
 # vigueur depuis 2018 ; `Revenues` est l'ancien, encore utilisé par certains émetteurs.
+#
+# ⚠️ **DEPUIS le lot 2c (maillon 5, écart V1 de l'audit), `POSTES` est un CATALOGUE de RECETTES, pas
+# une liste de ce qu'on collecte.** Un poste ne se collecte que si un plan de collecte réclame sa
+# métrique (`run_edgar_feed(..., metrics=…)`, câblé par `collecte_executor`) : « un poste que nul
+# plan ne réclame ne se collecte plus » (spec §3.6). La collecte data-first des 8 postes en bloc — le
+# socle que gardait `check_edgar_feed §12bis` — a disparu avec ce maillon. Le défaut par défaut
+# (`metrics=None`) reste « tout le catalogue », réservé à l'amorçage MANUEL (endpoint `edgar-refresh`,
+# `tools/rejeu_producteurs.py`), hors du chemin nominal plan-dérivé.
 POSTES: list[Poste] = [
     Poste("stockholders_equity",
           ["StockholdersEquity",
@@ -138,6 +147,9 @@ POSTES: list[Poste] = [
 
 # Le poste qui fixe la date d'ancrage : tous les autres sont pris au MÊME exercice (jamais mélangés).
 _ANCHOR_METRIC = "stockholders_equity"
+
+# Tout le catalogue — le défaut de `metrics=None` (amorçage manuel, hors chemin nominal plan-dérivé).
+_TOUS_POSTES = frozenset(p.metric for p in POSTES)
 
 
 # ─────────────────────────────── partie PURE (testable hors ligne) ───────────────────────────────
@@ -216,19 +228,28 @@ class EdgarEntrySpec:
 
 def build_edgar_entries(
     ticker_id: str, symbol: str, cik: int, resolved: dict[str, dict[str, Any]],
-    *, fiscal_end: Optional[date] = None,
+    *, fiscal_end: Optional[date] = None, metrics: Optional[Collection[str]] = None,
 ) -> tuple[list[EdgarEntrySpec], list[dict[str, str]]]:
     """`resolved` (metric → {concept, point, unit, …}) → specs d'entries. Pur, sans IO ni DB.
 
-    Un poste absent de `resolved` n'est PAS inventé : il ressort dans `unfounded` avec son motif.
+    On ne bâtit d'entry QUE pour les postes de `metrics` — les postes réclamés par le plan (§3.6).
+    `metrics=None` = tout le catalogue (amorçage manuel). `resolved` peut contenir davantage que
+    `metrics` : l'ancre (`stockholders_equity`) y est toujours résolue pour dater les autres postes,
+    mais elle n'entre au corpus que si le plan l'a réclamée elle aussi.
+
+    Un poste réclamé mais absent de `resolved` n'est PAS inventé : il ressort dans `unfounded` avec son
+    motif. Un poste NON réclamé ne ressort ni en entry ni en `unfounded` (il n'a pas été cherché).
     Le format de `content_structured` reproduit celui du seed NVDA — c'est le contrat de lecture de
     `financials_feed.extract_edgar_facts()` (clés `metric`, `value`, `currency`, `period`,
     `period_end`, et `cash`/`long_term_debt` pour le poste composite).
     """
+    demandes = _TOUS_POSTES if metrics is None else frozenset(metrics)
     specs: list[EdgarEntrySpec] = []
     unfounded: list[dict[str, str]] = []
 
     for poste in POSTES:
+        if poste.metric not in demandes:
+            continue
         got = resolved.get(poste.metric)
         if got is None:
             unfounded.append({"metric": poste.metric, "reason": "aucun concept XBRL exploitable"})
@@ -383,8 +404,15 @@ async def _points_for(
     return out, unit_used
 
 
-async def collect_postes(cik: int) -> tuple[dict[str, dict[str, Any]], Optional[date], Optional[date]]:
-    """Récupère tous les postes chez EDGAR sur DEUX ancres, une par nature de poste.
+async def collect_postes(
+    cik: int, metrics: Collection[str]
+) -> tuple[dict[str, dict[str, Any]], Optional[date], Optional[date]]:
+    """Récupère les postes RÉCLAMÉS (`metrics`) chez EDGAR sur DEUX ancres, une par nature de poste.
+
+    ⚠️ L'ancre (`_ANCHOR_METRIC`) est TOUJOURS résolue, même hors de `metrics` : elle date tous les
+    autres postes (sans point annuel d'ancrage, le socle n'est pas constructible). Elle n'entre au
+    corpus que si `build_edgar_entries` la trouve dans `metrics`. Les autres postes ne sont interrogés
+    chez EDGAR que s'ils sont réclamés — un poste que nul plan ne réclame ne coûte aucun appel (§3.6).
 
     Il n'y a pas une date, il y en a deux, et les confondre est un défaut de sens :
       • **ancre de flux** (`fiscal_end`) — la dernière clôture ANNUELLE. Un chiffre d'affaires, un
@@ -425,6 +453,8 @@ async def collect_postes(cik: int) -> tuple[dict[str, dict[str, Any]], Optional[
     for poste in POSTES:
         if poste.metric == _ANCHOR_METRIC:
             continue
+        if poste.metric not in metrics:
+            continue  # non réclamé par le plan → pas d'appel EDGAR (§3.6)
         target = fiscal_end if poste.flow else balance_end
         points, unit = await _points_for(cik, poste.concepts, flow=poste.flow)
         concept, point = select_concept(points, target, flow=poste.flow)
@@ -496,13 +526,32 @@ async def _current_fact_ids(
 
 
 async def run_edgar_feed(
-    ticker_id: str, *, persist: bool = True
+    ticker_id: str, *, persist: bool = True, metrics: Optional[Collection[str]] = None
 ) -> dict[str, Any]:
-    """Amorce (ou rafraîchit) le socle EDGAR d'un ticker : 8 postes comptables → entries tier A.
+    """Collecte chez EDGAR les postes RÉCLAMÉS d'un ticker (→ entries `fact_financial` tier A).
+
+    `metrics` = les postes du catalogue `POSTES` à collecter (dérivés d'un plan de collecte, §3.6).
+    `metrics=None` = tout le catalogue — réservé à l'amorçage MANUEL (endpoint `edgar-refresh`,
+    `tools/rejeu_producteurs.py`), hors du chemin nominal. Un `metrics` nommant une métrique hors
+    catalogue est un bug d'aiguillage, pas un poste vide : on lève, on ne le collecte pas en silence
+    (#25). `metrics` vide = rien à faire (aucun poste EDGAR réclamé par ce plan).
 
     `persist=False` = dry-run — la base est append-only, on regarde avant d'écrire. À lancer AVANT
     `financials-refresh`, qui dérive ses ratios de ces faits.
     """
+    requested = _TOUS_POSTES if metrics is None else frozenset(metrics)
+    hors_catalogue = requested - _TOUS_POSTES
+    if hors_catalogue:
+        raise EdgarFeedUnavailable(
+            f"metrics hors du catalogue POSTES : {sorted(hors_catalogue)} — "
+            "ces métriques ne sont pas des postes EDGAR (bug d'aiguillage, pas un poste non fondé)"
+        )
+    if not requested:
+        # Aucun poste réclamé : aucun appel réseau. Le chemin nominal (collecteur) ne devrait pas
+        # atteindre ce cas (il ne collecte le socle que sur au moins une ligne EDGAR), mais un plan
+        # sans ligne EDGAR ne doit rien coûter plutôt que de résoudre un CIK pour rien.
+        return {"ticker_id": ticker_id, "cik": None, "persisted": persist,
+                "postes": [], "unfounded": [], "created": []}
     async with get_db_session() as conn:
         row = await conn.fetchrow(
             "SELECT ticker_symbol, company_type FROM tickers WHERE id = $1", ticker_id
@@ -516,9 +565,9 @@ async def run_edgar_feed(
     symbol = row["ticker_symbol"]
 
     cik = await resolve_cik(symbol)
-    resolved, fiscal_end, balance_end = await collect_postes(cik)
+    resolved, fiscal_end, balance_end = await collect_postes(cik, requested)
     specs, unfounded = build_edgar_entries(
-        ticker_id, symbol, cik, resolved, fiscal_end=fiscal_end
+        ticker_id, symbol, cik, resolved, fiscal_end=fiscal_end, metrics=requested
     )
 
     created: list[dict[str, Any]] = []

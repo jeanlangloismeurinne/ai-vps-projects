@@ -133,10 +133,22 @@ resolved = {
                    "point": pt("2026-06-30", 39_700_000_000, accn=ACCN, fy=2026)},
     },
 }
-specs, unfounded = build_edgar_entries("MSFT", "MSFT", CIK, resolved)
+_TOUS = {p.metric for p in POSTES}
+specs, unfounded = build_edgar_entries("MSFT", "MSFT", CIK, resolved, metrics=_TOUS)
 
 check("8 postes produits", len(specs) == 8, f"→ {len(specs)}")
 check("aucun poste non fondé quand EDGAR les porte tous", unfounded == [], f"→ {unfounded}")
+
+# maillon 5 (§3.6) : `POSTES` est un CATALOGUE, pas une liste à collecter. `build_edgar_entries` ne
+# bâtit d'entry QUE pour les postes RÉCLAMÉS — un poste que nul plan ne réclame ne se collecte plus.
+# `resolved` porte pourtant les 8 (l'ancre y est toujours résolue) : c'est bien `metrics` qui filtre,
+# pas la disponibilité de la donnée. Sans le filtre, cet assert rougirait (8 specs au lieu de 2).
+_reclames = {"revenue", "net_income"}
+_specs_sub, _unf_sub = build_edgar_entries("MSFT", "MSFT", CIK, resolved, metrics=_reclames)
+check("un poste NON réclamé ne se collecte plus (POSTES dérivé du plan, §3.6)",
+      {s.metric for s in _specs_sub} == _reclames, f"→ {[s.metric for s in _specs_sub]}")
+check("un poste non réclamé n'est ni en entry ni en `unfounded` (il n'a pas été cherché)",
+      _unf_sub == [], f"→ {_unf_sub}")
 check("tous les postes sur le MÊME exercice",
       {s.content_structured["period_end"] for s in specs} == {"2026-06-30"})
 # Le libellé n'est plus uniforme, et c'est le correctif : un FLUX porte un exercice (`FY2026`), un
@@ -498,9 +510,9 @@ print("\n[12] `poste_kind` : la règle vit dans POSTES, et la LIGNE la porte (F1
 # C'est le mode de panne de #48 transposé — la règle juste dans le producteur, son porteur absent de
 # la ligne. Toute garantie « une seule vérité chiffrée à un instant donné » y était SILENCIEUSEMENT
 # aveugle sur deux émetteurs sur trois, et une garantie aveugle rassure plus qu'elle ne protège.
-# Migration 035 a écrit les 27 lignes manquantes ; §12 tient les deux moitiés du travail : la règle
-# n'a plus qu'un détenteur, et la base ne peut plus reperdre le porteur sans virer au rouge.
-import os  # noqa: E402
+# Migration 035 a écrit les lignes manquantes ; §12 tient la RÈGLE (un seul détenteur) et le
+# COMPORTEMENT d'écriture (`build_edgar_entries` pose toujours `poste_kind`, §3). Le volet « état
+# persisté » (ex-§12bis) est mort avec le socle data-first (maillon 5, cf. pierre tombale plus bas).
 import re  # noqa: E402
 
 from app.knowledge.financials_feed import _poste_kind  # noqa: E402
@@ -543,76 +555,21 @@ check("une valeur de ligne hors vocabulaire retombe sur POSTES, jamais telle que
 check("une métrique hors socle (ratio dérivé) n'invente pas d'identité réglementaire",
       _poste_kind("roic", {}) == "flow", f"→ {_poste_kind('roic', {})}")
 
-print("\n[12bis] état persisté : aucun fait du socle n'est illisible pour un LECTEUR (F16)")
-# ⚠️ La règle et l'état sont deux moitiés distinctes (#43) : le backfill 035 pouvait être juste dans
-# le SQL et n'avoir touché aucune ligne. Le point de lecture est la COLONNE, donc on l'interroge.
-_db_url = os.environ.get("CHECK_DB_URL", "")
-if not _db_url or _db_url.startswith("postgresql://u:p@h"):
-    # Un pré-requis manquant SORT EN ÉCHEC — il ne saute pas la section. Une mesure incomplète qui
-    # sort à 0 écrase de la vérité (`feedback_check_degrade_en_sortant_a_zero`).
-    print("  FAIL §12bis non exécutée — CHECK_DB_URL absente ou factice ; "
-          "la moitié « état persisté » de F16 n'a PAS été mesurée")
-    print(f"\n=== {ok} ok / {fail + 1} FAIL ===")
-    sys.exit(1)
-
-import asyncpg  # noqa: E402
-
-_SOCLE = sorted(p.metric for p in POSTES)
-
-
-async def _etat_poste_kind():
-    conn = await asyncpg.connect(_db_url.replace("postgresql+asyncpg://", "postgresql://"))
-    try:
-        sans = await conn.fetch(
-            "SELECT id, ticker_id, content_structured->>'metric' AS metric FROM knowledge_entries "
-            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
-            "   AND content_structured->>'metric' = ANY($1) "
-            "   AND NOT (content_structured ? 'poste_kind') ORDER BY id", _SOCLE)
-        stockes = await conn.fetch(
-            "SELECT id, content_structured->>'metric' AS metric, "
-            "       content_structured->>'poste_kind' AS kind FROM knowledge_entries "
-            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
-            "   AND content_structured->>'metric' = ANY($1) ORDER BY id", _SOCLE)
-        doubles = await conn.fetch(
-            "SELECT ticker_id, content_structured->>'metric' AS metric, count(*) AS n, "
-            "       array_agg(id ORDER BY id) AS ids FROM knowledge_entries "
-            " WHERE entry_type = 'fact_financial' AND source_type = 'edgar_official' "
-            "   AND content_structured->>'poste_kind' = 'stock' "
-            # ⚠️ `AND is_deleted = FALSE` RETIRÉ (migration 036) : la vivacité d'une entry est
-            # portée par le seul `superseded_by`. Ce site avait échappé au balayage parce qu'il
-            # vit dans une f-string de §12bis, une section qui ne s'exécute QUE avec une vraie
-            # `CHECK_DB_URL` — hors ligne, le check passait au vert sans jamais compiler ce SQL.
-            "   AND superseded_by IS NULL "
-            " GROUP BY 1, 2 HAVING count(*) > 1")
-        return sans, stockes, doubles
-    finally:
-        await conn.close()
-
-
-_sans, _stockes, _doubles = asyncio.run(_etat_poste_kind())
-# Le compte est ASSERTÉ, pas seulement affiché : « aucun sans `poste_kind` » serait vrai sur zéro
-# ligne, donc vert le jour où un producteur cesse d'écrire (1ᵉʳ des faux verts, `feedback_test_
-# negatif_trois_faux_verts`). La borne basse vient de la mesure du 2026-09-08 : 50 lignes du socle.
-check("le socle EDGAR est bien peuplé (la mesure porte sur des lignes réelles)",
-      len(_stockes) >= 50, f"→ {len(_stockes)} lignes")
-check("aucun fait du socle n'est illisible pour un lecteur (`poste_kind` absent)",
-      not _sans, f"→ {[(r['id'], r['ticker_id'], r['metric']) for r in _sans]}")
-_kind_attendu = {p.metric: ("flow" if p.flow else "stock") for p in POSTES}
-# ⚠️ ABSENT n'est pas CONTRADICTOIRE (#44) — l'assert précédent tient l'absence, celui-ci tient le
-# désaccord, et les deux ne doivent pas rougir ensemble. Le test négatif l'a montré : retirer un
-# `poste_kind` faisait aussi FAIL ici avec un motif « contredit POSTES → None », qui envoie chercher
-# une divergence producteur/table là où il n'y a qu'un backfill à rejouer. Deux causes, deux remèdes.
-_contra = [(r["id"], r["metric"], r["kind"]) for r in _stockes
-           if r["kind"] is not None and r["kind"] != _kind_attendu.get(r["metric"])]
-check("aucune ligne ne CONTREDIT `POSTES` (la base et le détenteur unique disent la même chose)",
-      not _contra, f"→ {_contra}")
-# La conséquence, et la seule qui intéresse l'utilisateur : « une seule vérité chiffrée à un instant
-# donné ». Un poste de BILAN s'identifiant par `metric` seul, deux lignes courantes = deux réponses.
-check("aucun poste de bilan ne porte deux faits courants (clef #43 respectée en base)",
-      not _doubles, f"→ {[(r['ticker_id'], r['metric'], list(r['ids'])) for r in _doubles]}")
-print(f"  — socle EDGAR : {len(_stockes)} ligne(s), toutes keyables "
-      f"({sum(1 for r in _stockes if r['kind'] == 'flow')} flow / "
-      f"{sum(1 for r in _stockes if r['kind'] == 'stock')} stock)")
+# ── 12bis SUPPRIMÉ (lot 2c, maillon 5) : le socle EDGAR data-first a DISPARU ─────────────────────
+# §12bis vérifiait l'ÉTAT PERSISTÉ du socle avec, en premier assert, un PLANCHER « ≥ 50 lignes du
+# socle » — la garantie qu'EDGAR collectait ses 8 postes EN BLOC, avant toute question (le socle
+# data-first). Le maillon 5 (§3.6, écart V1) fait de `POSTES` un CATALOGUE de recettes : un poste ne
+# se collecte que si un plan le réclame. Il n'existe donc plus de socle de taille garantie à mesurer,
+# et le plancher `≥ 50` (resté ROUGE à 46 depuis la 036) n'a plus d'objet — le recalibrer ou rejouer
+# EDGAR pour le verdir serait exactement le gonflage que ce chantier proscrit (fixture_pollue_le_reel).
+#
+# Les garanties d'IDENTITÉ #43/F16 qu'il portait ne sont PAS perdues : elles sont éprouvées HORS LIGNE,
+# au point d'écriture, indépendamment de tout socle data-first —
+#   • un fait porte son `poste_kind` (lisible par un LECTEUR) : §3 (build_edgar_entries l'écrit) + §12 ;
+#   • la clef d'identité d'un poste de bilan (`metric` seul) et le supersedage de TOUTES les entrées
+#     courantes : §10, sur `_FakeConn` — donc « aucun poste de bilan à deux faits courants » est tenu
+#     au niveau du COMPORTEMENT, pas seulement constaté a posteriori dans une base data-first.
+# `check_edgar_feed` ne requiert donc plus `CHECK_DB_URL` (retiré de `run_all.sh`).
 
 print(f"\n=== {ok} ok / {fail} FAIL ===")
 sys.exit(1 if fail else 0)

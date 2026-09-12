@@ -25,9 +25,11 @@ from app.agents.v2.collecte_executor import (
     construire_requete_web,
     entry_type_pour_metrique,
     poste_pour_metrique,
+    postes_edgar_du_plan,
     router_source,
     _ALIAS_POSTE,
 )
+from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
 from app.knowledge.edgar_feed import POSTES
 
 ok = fail = 0
@@ -133,6 +135,50 @@ check("le type d'entry de la requête suit la déduction (#4) : 'free cash flow'
       req.output_schema.entry_type == entry_type_pour_metrique(_ligne.metrique))
 
 
+# ── §5bis POSTES dérivé du plan : le socle ne collecte QUE les postes réclamés (maillon 5, §3.6) ──
+print("\n[5bis] `postes_edgar_du_plan` : un poste que nul plan ne réclame ne se collecte plus (§3.6)")
+# Le socle EDGAR data-first (8 postes en bloc) a disparu : `_SocleEdgar` ne collecte que l'union des
+# postes des lignes traduites routées EDGAR. Détenteur unique du dispatch (`router_source` +
+# `poste_pour_metrique`), jamais une seconde liste (#46).
+_it_rev = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net", statut="traduit",
+                             metrique="chiffre d'affaires", source_pressentie="10-K",
+                             ancre="clôture de l'exercice")
+_it_ni = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net_2", statut="traduit",
+                            metrique="Net income (GAAP)", source_pressentie="10-K (Income Statement)",
+                            ancre="clôture de l'exercice")
+_it_web_derivee = CollectionPlanItem(question_id="qf_7", ingredient_id="fcf", statut="traduit",
+                                     metrique="free cash flow", source_pressentie="10-K",
+                                     ancre="clôture du trimestre")  # dépôt SEC mais DÉRIVÉE → web
+_it_web_marche = CollectionPlanItem(question_id="qf_1", ingredient_id="cout_du_capital",
+                                    statut="traduit", metrique="coût du capital (WACC)",
+                                    source_pressentie="données de marché", ancre="aujourd'hui")
+# ⚠️ Le cas DISCRIMINANT du routing : une métrique qui EST un poste (`marge brute` → gross_profit),
+# mais annoncée depuis un COMMUNIQUÉ (pas un dépôt SEC) → router = web. Correctement routée, elle ne
+# réclame PAS le poste EDGAR ; ignorer le routing ajouterait `gross_profit` (qui n'apparaît nulle part
+# ailleurs) et ferait rougir l'assert. Sans ce cas, un `postes_edgar_du_plan` aveugle au routing
+# passerait au vert (les autres lignes web portent des métriques dérivées, déjà exclues par le poste).
+_it_web_poste = CollectionPlanItem(question_id="qf_4", ingredient_id="marge", statut="traduit",
+                                   metrique="marge brute", source_pressentie="communiqué de presse",
+                                   ancre="clôture du trimestre")
+_it_rev_bis = CollectionPlanItem(question_id="qf_3", ingredient_id="croissance", statut="traduit",
+                                 metrique="chiffre d'affaires", source_pressentie="10-Q",
+                                 ancre="clôture du trimestre")  # même poste 'revenue' → dédup
+_it_inob = CollectionPlanItem(question_id="qf_1", ingredient_id="autre", statut="inobtenable",
+                              motif="aucune source connue")
+_plan_mix = CollectionPlan(ticker_id="NVDA", framework_id="qualite_financiere",
+                           framework_version="v3.0.0", archetype="rentable",
+                           items=[_it_rev, _it_ni, _it_web_derivee, _it_web_marche,
+                                  _it_web_poste, _it_rev_bis, _it_inob])
+_reclames = postes_edgar_du_plan(_plan_mix)
+check("seuls les postes des lignes EDGAR traduites sont réclamés (dérivées/marché/inobtenable exclus)",
+      _reclames == frozenset({"revenue", "net_income"}), f"→ {sorted(_reclames)}")
+check("un plan SANS ligne EDGAR ne réclame aucun poste (rien à collecter, aucun appel réseau)",
+      postes_edgar_du_plan(CollectionPlan(
+          ticker_id="RVMD", framework_id="qualite_financiere", framework_version="v3.0.0",
+          archetype="pre_revenus", items=[_it_web_marche, _it_inob])) == frozenset(),
+      "→ un plan tout-web/inobtenable déclencherait quand même le socle data-first")
+
+
 # ── §6 une collecte web qui LÈVE devient un echec, jamais une exception qui tue le lot (#25) ───────
 print("\n[6] une collecte web qui LÈVE → echec motivé, jamais une exception qui tue le lot (#25)")
 import asyncio
@@ -147,7 +193,7 @@ _mod.run_search_worker = _failing  # monkeypatch : le modèle/réseau échoue
 _ligne_web = LigneAveugle(ticker_id="RVMD", metrique="analyse qualitative du moat",
                           source_pressentie="communiqué", ancre="dernière lecture clinique")
 try:
-    _rc = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar()))
+    _rc = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())))
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           _rc.echec is not None and "provider timeout simulé" in _rc.echec, f"→ {_rc!r}")
 except Exception as e:
