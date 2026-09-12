@@ -299,7 +299,9 @@ Reste **V1**, qui est le cœur du lot 2c :
    (§3/§10/§12), `check_edgar_feed` ne requiert plus `CHECK_DB_URL`, proxy `PLANCHERS[0]` du rejeu
    retiré. Nouveaux asserts éprouvés par mutation : `check_edgar_feed §3` (build ne bâtit que le
    sous-ensemble), `check_collecte_executor §5bis` (`postes_edgar_du_plan`), `check_readiness §8`
-   (proposition du modèle ignorée). **Code seul, aucune migration, aucun réseau, aucun déploiement.**
+   (proposition du modèle ignorée). Code seul, aucune migration, aucun réseau. **DÉPLOYÉ le
+   2026-09-12 (commit `6cb1714`, `compose-deploy.sh`, HTTP 200)** — le prod porte donc la collecte
+   plan-dérivée et le gate sans levier modèle.
 6. ✅ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
    **appliquée en prod le 2026-09-11** (`BEGIN…COMMIT`, 3 tables + 2 index + GRANT `portfolio_user`).
    ADDITIVE (rien de détruit, réversible par `DROP TABLE`). Les CHECK SQL **redisent le contrat** du
