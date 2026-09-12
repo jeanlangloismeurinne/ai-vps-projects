@@ -13,15 +13,18 @@ role: >
   le levier `RESSERRER` de `curator.py` est RETIRÉ (`_exigences` lit `MVDD_SPEC` tel quel), et **le
   §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
   jusqu'à **039** ; maillon 5 = **code seul, aucune migration, aucun réseau**.
-  ⚠️ **État de la suite au 2026-09-12 (mesuré, pas un souvenir) : `check_edgar_feed` 98/0 (le FAIL
-  §12bis a disparu) ; TOUT vert SAUF UN — `check_entry_nature §7` FAIL (`== 13` → lit **43**
-  déterministes RVMD).** Ce n'est PAS le maillon 5 (check non touché, code non déployé, lecture seule) :
-  les **runs réels RVMD du maillon 4** (ancien socle 8-postes + collecte web pointant sec.gov) ont
-  écrit ~30 entries, dont **25 `edgar_official` fact_financial SANS `metric`** — les mêmes que les
-  « 24 entries suspectes RVMD à statuer à la main » du backlog. Aucune violation #43 (vérifié). Le
-  plancher `== 13` est PÉRIMÉ PAR UN RUN RÉEL : **décision utilisateur** (réconcilier les entries
-  parasites, ou re-mesurer §7) — ne PAS re-fonder `== 13` en silence (`ligne_de_base_est_un_souvenir`,
-  `fixture_pollue_le_reel`).
+  ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ le 2026-09-12 : `check_entry_nature §7` re-mesuré en INVARIANT, la
+  suite est TOUT VERT (`bash checks/run_all.sh` = 2139 assertions, 0 échec).** L'ancien `== 13` était
+  un **décompte du banc d'essai promu en cible**, interdit par §0.6 (« les données en base ne dictent
+  jamais la roadmap ») : il confondait `entry_type=fact_financial` avec « sortie déterministe » et a
+  rougi (lecture **43**) dès que le collecteur du maillon 4 a écrit 30 faits web `edgar_official`/
+  `company_ir_official` SANS `metric` — **compatibles et frais** (10-Q 2026-06-30, tous `mesure`),
+  pas des parasites. §7 revérifie désormais l'invariant #51 sur l'état : **tout fait à recette
+  déterministe (un `metric` structuré, écrit par les 8 producteurs, jamais par le search-worker) est
+  `mesure`**, sur TOUS les tickers, avec garde de non-vacuité — jamais un décompte. Test négatif
+  versionné `checks/negatif_entry_nature_etat.sh` (satisfiabilité + 4 mutations/4, chacune rouge sur
+  son assert nommé). Le corpus RVMD hérité sera de toute façon re-collecté propre au lot 3 (§5.3).
+  Voir [[project_entry_nature_gate_invariant]].
   Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -307,17 +310,19 @@ Reste **V1**, qui est le cœur du lot 2c :
    ADDITIVE (rien de détruit, réversible par `DROP TABLE`). Les CHECK SQL **redisent le contrat** du
    plan (dernier rempart, #37) — éprouvés en négatif dans `check_collecte_persist.py` §3.
 
-> **▶ LOT 2c TERMINÉ (7/7 maillons + migration 039). Prochain jalon = LOT 3** (analyste + manager sur
-> `qualite_financiere` ; `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de
-> `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan
-> sur NVDA/MSFT/RVMD ; migration **037**). Reprise conseillée : **NOUVELLE conversation**
+> **▶ LOT 2c TERMINÉ (7/7 maillons + migration 039) · PRÉ-REQUIS DU LOT 3 LEVÉ (§7 re-mesuré,
+> 2026-09-12). Prochain jalon = LOT 3** (analyste + manager sur `qualite_financiere` ;
+> `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de `MVDD_SPEC`,
+> `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan sur
+> NVDA/MSFT/RVMD ; migration **037**). Reprise conseillée : **NOUVELLE conversation**
 > ([[feedback_fin_sprint_reco_conversation]]).
-> ⚠️ **PRÉ-REQUIS DU LOT 3, à trancher AVANT** : `check_entry_nature §7` FAIL (`== 13` → **43**
-> déterministes RVMD). Cause = **runs réels RVMD du maillon 4** (2026-09-12), dont **25 entries
-> `edgar_official` fact_financial SANS `metric`** — les mêmes que les « 24 entries suspectes RVMD ».
-> Décider : réconcilier/superseder ces parasites, OU re-mesurer §7 délibérément (jamais bumper `== 13`
-> en silence — `ligne_de_base_est_un_souvenir`). Le lot 3 rejoue de toute façon une collecte neuve
-> pilotée par le plan : c'est le bon moment pour nettoyer le corpus RVMD hérité.
+> ✅ **Le pré-requis §7 a été tranché par le principe §0.6** (« les données en base ne dictent jamais
+> la roadmap ; elles sont soit compatibles, soit périmées ») : les 30 faits web du maillon 4 sont
+> **compatibles**, pas des parasites à réconcilier ; l'ancien `== 13` était une **cible-corpus**
+> interdite. §7 revérifie l'invariant #51 (metric structuré ⟹ `mesure`, garde de non-vacuité, tous
+> tickers) — jamais un décompte. Détail + test négatif : voir frontmatter et
+> [[project_entry_nature_gate_invariant]]. Le corpus RVMD hérité (43 déterministes actifs) sera
+> re-collecté propre par le lot 3 (§5.3) — inutile de le nettoyer à la main d'ici là.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -381,10 +386,11 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite hors-ligne : `bash checks/run_all.sh` = TOUT vert SAUF `check_entry_nature §7`** (état de
-  base, cf. frontmatter — runs réels RVMD du maillon 4, PAS le maillon 5). `check_edgar_feed` est
-  passé **98/0** et **hors ligne** (§12bis mort → ne requiert plus `CHECK_DB_URL`). Seul
-  `check_entry_nature` (§7) garde encore le montage réseau `coolify` + `CHECK_DB_URL`. `run_all.sh`
+- **Suite : `bash checks/run_all.sh` = TOUT VERT (2139 assertions, 0 échec, mesuré le 2026-09-12
+  après le re-mesurage de §7).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
+  requiert plus `CHECK_DB_URL`) ; `check_entry_nature` **88/0** (§7 = invariant #51, cf. frontmatter).
+  Seuls `check_entry_nature §7` et `check_collecte_persist` gardent le montage réseau `coolify` +
+  `CHECK_DB_URL`. `run_all.sh`
   porte les montages `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) **et
   `/roadmap`** (sans lui `check_frameworks_definitions` §7 sort en échec au lieu de se sauter).
   ⚠️ **Ne pas le réécrire dans `/tmp`** : la version jetable sous-comptait 47 assertions en silence
@@ -461,11 +467,14 @@ justes, c'est le *fait énoncé* qui était faux.
    ROIC pour une société sans revenus, #191 s'intitule « conversion FCF **non définie** », #186
    range l'incidence du cancer du pancréas sous `marche.croissance_marche_historique`. Le lot 3 les
    rendra visibles comme orphelines **nommées** ; l'arbitrage reste humain.
-   ⚠️ **Mesuré le 2026-09-12** : RVMD porte désormais **43** entries déterministes actives (vs 13 au
-   banc d'essai) — dont **25 `edgar_official` fact_financial SANS `metric`**, écrites par les runs
-   réels du maillon 4 (ancien socle + collecte web pointant sec.gov). C'est ce qui fait échouer
-   `check_entry_nature §7` (`== 13`). **Ces 25 rejoignent cette liste** : à réconcilier avant/pendant
-   le lot 3, et §7 se re-mesure ensuite (jamais un bump silencieux du plancher).
+   ⚠️ **Mesuré le 2026-09-12** : RVMD porte **43** entries déterministes actives (vs 13 au banc
+   d'essai) — dont **30 faits web SANS `metric`** (25 `edgar_official` + 5 `company_ir_official`),
+   écrits par le collecteur du maillon 4 (search-worker sur sec.gov / IR). ✅ **Ces 30 ne sont PAS des
+   parasites — §0.6 les qualifie de compatibles** (frais, cités, tous `mesure`) : on ne les
+   réconcilie donc pas ici, et §7 a été re-mesuré en invariant plutôt que de compter le corpus (cf.
+   frontmatter, [[project_entry_nature_gate_invariant]]). Restent seulement les **faux au sens v3**
+   (#190 ROIC fabriqué, #191 « conversion FCF non définie », #186 mal rangé) — jugement humain, que le
+   lot 3 rendra visibles comme orphelines nommées, et que sa collecte neuve (§5.3) superséder a.
 2. **FDA / EMA en régulateur A- (0,85)** — décidé, non commencé. `fda.gov` n'est dans **aucune**
    table ; `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu` (titres) mais pas `ema.europa.eu`
    (médicaments). L'approbation FDA du 2026-08-26 classe aujourd'hui `web_search_generic` **0,50**.
@@ -667,17 +676,17 @@ justes, c'est le *fait énoncé* qui était faux.
 > `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de `MVDD_SPEC`,
 > `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan sur
 > NVDA/MSFT/RVMD ; migration **037**.
-> ⚠️ **PRÉ-REQUIS DU LOT 3** : `check_entry_nature §7` FAIL (`== 13` → **43** déterministes RVMD) —
-> **état de base**, pas le maillon 5 (check non touché, code non déployé). Cause : runs réels RVMD du
-> maillon 4, dont **25 `edgar_official` fact_financial SANS `metric`** (= les « 24 entries suspectes
-> RVMD »). Aucune violation #43 (vérifié). Trancher : réconcilier ces parasites OU re-mesurer §7 —
-> **jamais bumper `== 13` en silence** (`feedback_ligne_de_base_est_une_mesure`,
-> `feedback_fixture_pollue_le_reel`).
+> ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ (2026-09-12)** : `check_entry_nature §7` re-mesuré en **invariant #51**
+> (metric structuré ⟹ `mesure`, garde de non-vacuité, tous tickers) au lieu du décompte `== 13`, qui
+> était une **cible-corpus interdite par §0.6**. Les 30 faits web du maillon 4 (`edgar_official`/
+> `company_ir_official` SANS `metric`) sont **compatibles**, pas des parasites (§0.6 : soit
+> compatibles, soit périmés — jamais un tiers « à réconcilier »). Test négatif versionné
+> `checks/negatif_entry_nature_etat.sh` (satisfiabilité + 4/4). Voir [[project_entry_nature_gate_invariant]].
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot plusieurs fois** — elle se **requête**,
 > elle ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite hors-ligne **TOUT vert sauf `check_entry_nature §7`** (ci-dessus) ; `check_edgar_feed`
-> 98/0 et hors ligne ; migrations appliquées jusqu'à **039**.
+> État : suite **TOUT VERT** (`run_all.sh` = 2139 assertions, 0 échec) ; `check_edgar_feed` 98/0 et
+> hors ligne ; `check_entry_nature` 88/0 ; migrations appliquées jusqu'à **039**.
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
 > le `CLAUDE.md` du projet (conventions #22-**#62**, dont **#61/#62 = maillon 5 du lot 2c**),
 > `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

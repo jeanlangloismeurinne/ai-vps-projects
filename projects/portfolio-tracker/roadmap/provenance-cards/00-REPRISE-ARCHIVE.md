@@ -8,6 +8,51 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-12 — **pré-requis du lot 3 : `check_entry_nature §7` re-mesuré en invariant**
+
+Consigne d'ouverture : « continue le lot ; rappelle-toi que les données en base ne dictent jamais la
+roadmap — elles sont soit compatibles, soit périmées ». C'est exactement le principe §0.6, et il
+tranche le pré-requis laissé ouvert : `check_entry_nature §7` FAIL (`== 13` → lisait **43**).
+
+### Mesure d'abord (jamais le souvenir)
+Interrogé l'état persisté réel (`docker exec shared-postgres psql`, méthode #43 « combien de lignes
+actives par clef ») : RVMD porte **43** entries déterministes actives = **13** à recette
+déterministe (metric structuré : 10 `edgar_feed` + 2 yfinance + 1 base_rate) **+ 30 faits web SANS
+`metric`** (25 `edgar_official` + 5 `company_ir_official`), écrits par le search-worker du collecteur
+au maillon 4. Les 30 sont **frais** (10-Q 2026-06-30), cités, **tous `nature=mesure`**, `content_
+structured` vide → aucune violation #43 (l'identité socle est clefée sur `metric`, qu'ils n'ont pas).
+Invariant vérifié sur les 3 tickers : **43 faits à metric structuré, 0 hors `mesure`**.
+
+### Le diagnostic
+`== 13` était un **décompte du banc d'essai promu en cible** — précisément ce que §0.6 interdit. Il
+**confondait** `entry_type=fact_financial` avec « sortie d'un producteur déterministe » : vrai au
+banc d'essai, faux depuis que le collecteur produit des faits web `edgar_official`. Les 30 faits sont
+**compatibles**, pas des parasites à réconcilier ; on ne re-fonde pas `== 13` en silence non plus
+(les deux options que le frontmatter listait sont écartées par le principe, qui en désigne une
+troisième : re-mesurer l'invariant, pas le compte).
+
+### Le correctif
+§7 revérifie l'**invariant #51** sur l'état : tout fait à **recette déterministe** (discriminant
+STRUCTUREL `content_structured->>'metric' IS NOT NULL`, que les 8 feeds écrivent et que le
+search-worker n'écrit jamais) est `mesure`, **sur tous les tickers**, avec une garde de
+**non-vacuité** `len(det) > 0` (jamais un décompte — le nombre est un résultat de la collecte, pas un
+but). Docstring §7 réécrite, import mort `SUBSTITUTIONS_ENTRY_TYPE` retiré, scaffold de
+satisfiabilité `base_rate` (moot depuis la 036) supprimé.
+
+### Preuve bidirectionnelle
+- **Vert pour la bonne raison** : `check_entry_nature` **88/0** contre la vraie base.
+- **Rouge pour la bonne raison** : test négatif versionné `checks/negatif_entry_nature_etat.sh`
+  (fixture `pg_dump` du réel, `feedback_fixture_copiee_du_reel`) — **satisfiabilité** (base non mutée
+  verte) **+ 4 mutations / 4**, une par assert (nature NULL · nature hors vocab · vacuité
+  déterministe · invariant #51), chacune rouge sur son **assert nommé**. Bug de portée corrigé au
+  passage : `RC=$?` dans un `$(...)` ne remonte pas → sortie écrite dans un fichier temporaire.
+- **Suite complète : `bash checks/run_all.sh` = 2139 assertions, 0 échec.** Le pré-requis est levé,
+  le lot 3 est débloqué.
+
+Le corpus RVMD hérité (43 déterministes + les faux au sens v3 : #190/#191/#186) sera de toute façon
+**re-collecté propre** par le lot 3 (§5.3, collecte neuve pilotée par le plan) — inutile de le
+nettoyer à la main d'ici là.
+
 ## 2026-09-12 — lot 2c, **maillon 4 : l'exécuteur réel + la chaîne runtime**
 
 Mandat utilisateur : avancer sur l'exécuteur réel sans demander de confirmation (dépense réseau +

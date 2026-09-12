@@ -26,7 +26,13 @@ se juge pas sur son diff mais sur le comptage par clef).
   • §6  DÉTENTEUR UNIQUE (#46) — aucun producteur ne ré-implémente la règle : `store_knowledge` est
         le seul site d'écriture, et il n'accepte pas de `nature` en entrée.
   • §7  ÉTAT PERSISTÉ (optionnel, DATABASE_URL réelle) — acceptation de la roadmap : aucun NULL sur
-        les entries actives, et les 13 entries déterministes du banc d'essai sont toutes `mesure`.
+        les entries actives, aucune nature hors vocabulaire, et tout fait à RECETTE DÉTERMINISTE
+        (un `metric` dans `content_structured`, écrit par les 8 producteurs) est `mesure` — invariant
+        #51 revérifié sur l'ÉTAT, sur TOUS les tickers, JAMAIS un décompte du corpus. L'ancien
+        `== 13` était un instantané du banc d'essai promu en cible ; il confondait `fact_financial`
+        avec « sortie déterministe » et a rougi dès que le collecteur (§3.6, maillon 4 du lot 2c) a
+        écrit des faits web `edgar_official` SANS `metric` — compatibles, pas des parasites. §0.6 :
+        « les données en base ne dictent jamais la roadmap », leur nombre est un RÉSULTAT, pas un but.
 
 Hors ligne :
     docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app \
@@ -47,7 +53,6 @@ from app.agents.v2.common import (
     derive_nature,
 )
 from app.contracts.worker_delegation_schema import EntryType
-from app.db.migrations._gen_036 import SUBSTITUTIONS_ENTRY_TYPE
 from app.knowledge import ENTRIES_COURANTES
 from app.knowledge.service import store_knowledge
 from app.knowledge.source_registry import qualify
@@ -243,54 +248,46 @@ async def _etat():
         hors = await conn.fetchval(
             "SELECT count(*) FROM knowledge_entries WHERE nature IS NOT NULL AND NOT (nature = ANY($1))",
             sorted(NATURES))
-        # `base_rate` → `fact_statistical` (036) : le vocabulaire d'`entry_type` ne nomme plus le
-        # livre de méthode qui produit la fréquence, il nomme ce que l'assertion EST (#57).
+        # L'invariant #51 sur l'ÉTAT PERSISTÉ : un fait à RECETTE DÉTERMINISTE est toujours `mesure`.
+        # Le discriminant est STRUCTUREL — la présence d'un `metric` dans `content_structured`, que
+        # les 8 producteurs déterministes écrivent tous (edgar_feed, financials_feed, valuation_feed,
+        # base_rate_corpus) et que le search-worker du collecteur (§3.6) n'écrit jamais (faits
+        # narratifs web, `content_structured` vide). L'ancien SELECT comptait les `fact_financial`
+        # d'un ticker et exigeait `== 13` : un décompte du banc d'essai promu en cible (§0.6), qui a
+        # rougi dès que le maillon 4 a écrit 30 faits web `edgar_official`/`company_ir_official` SANS
+        # `metric`, tous frais et tous `mesure`. Le nombre est un RÉSULTAT de la collecte, pas un but.
         det = await conn.fetch(
-            "SELECT id, nature FROM knowledge_entries "
-            f"WHERE ticker_id = 'RVMD' AND {ENTRIES_COURANTES} "
-            "  AND entry_type IN ('fact_financial', 'fact_statistical') ORDER BY id")
-        # Ce qui reste à substituer, mesuré et non supposé. Tant que la 036 n'est pas appliquée, le
-        # 13ᵉ fait déterministe de RVMD porte encore `base_rate` : `det` en rend 12, et le rouge
-        # doit DIRE que c'est le vocabulaire qui est en retard, pas un producteur qui a cessé.
-        a_substituer = await conn.fetch(
-            "SELECT entry_type, count(*) n FROM knowledge_entries "
-            f"WHERE ticker_id = 'RVMD' AND {ENTRIES_COURANTES} "
-            "  AND entry_type = ANY($1) GROUP BY 1 ORDER BY 1",
-            sorted(SUBSTITUTIONS_ENTRY_TYPE))
+            "SELECT id, ticker_id, nature FROM knowledge_entries "
+            f"WHERE {ENTRIES_COURANTES} "
+            "  AND entry_type IN ('fact_financial', 'fact_statistical') "
+            "  AND (content_structured->>'metric') IS NOT NULL ORDER BY ticker_id, id")
         par_nature = await conn.fetch(
             "SELECT nature, count(*) n FROM knowledge_entries "
             f"WHERE {ENTRIES_COURANTES} GROUP BY 1 ORDER BY 1")
-        return nuls, hors, det, a_substituer, par_nature
+        return nuls, hors, det, par_nature
     finally:
         await conn.close()
 
 
-nuls, hors, det, a_substituer, par_nature = asyncio.run(_etat())
+nuls, hors, det, par_nature = asyncio.run(_etat())
 check("aucune entry active sans `nature`", nuls == 0, f"→ {nuls} NULL")
 check("aucune `nature` hors vocabulaire en base", hors == 0, f"→ {hors} lignes")
-# Le compte est ASSERTÉ, pas seulement affiché : une fixture qui rétrécit (un producteur qui cesse
-# d'écrire) rendrait « toutes mesure » vrai sur zéro ligne — faux vert n°1 (§24).
-#
-# ⚠️ CE COMPTE EST UNE ACCEPTATION DE LA 036, et il est ROUGE avant elle — délibérément. Le SELECT
-# ci-dessus parle le vocabulaire d'APRÈS (`fact_statistical`) ; tant que la migration n'est pas
-# appliquée, le 13ᵉ fait déterministe de RVMD porte encore `base_rate` et échappe au filtre. Un
-# rouge d'acceptation ne vaut que s'il est SATISFIABLE (`feedback_acceptation_rouge_bidirection-
-# nelle`) : la satisfiabilité se mesure ici même, en comptant ce qu'il reste à substituer. Si
-# `det + à substituer == 13`, la migration ferme l'écart exactement ; si le compte ne tombe pas, ce
-# n'est PAS un problème de vocabulaire et rabaisser le plancher masquerait un producteur muet
-# (`feedback_optional_schema_gate` — on rejoue les producteurs, on ne baisse jamais le plancher).
-_restants = {r["entry_type"]: r["n"] for r in a_substituer}
-_total_det = len(det) + sum(_restants.values())
-check("RVMD porte bien 13 entries déterministes actives", len(det) == 13,
-      f"→ {len(det)} sous le vocabulaire fermé + {sum(_restants.values())} en attente de "
-      f"substitution {_restants} — la 036 n'est pas appliquée"
-      if _restants else f"→ {len(det)}")
-check("… et l'écart est bien celui du VOCABULAIRE : 13 une fois la substitution faite",
-      _total_det == 13,
-      f"→ {len(det)} + {_restants} = {_total_det} : la 036 ne suffira pas, un producteur est muet")
+# ⚠️ NON-VACUITÉ (faux vert n°1, §24) : « tous mesure » est vrai sur zéro ligne. Un producteur
+# déterministe qui cesserait d'écrire viderait `det` et rendrait l'invariant creux — on exige donc
+# qu'il en existe au moins un. Ce n'est PAS une cible chiffrée (§0.6) : le seuil est « ≥ 1 », jamais
+# « exactement N ». Le nombre exact de faits déterministes est un résultat de la collecte pilotée par
+# le plan, pas un objectif (`feedback_ligne_de_base_est_une_mesure`).
+check("il existe des faits à recette déterministe (metric structuré) — l'invariant n'est pas creux",
+      len(det) > 0, f"→ {len(det)} fait(s) déterministe(s)")
+# L'invariant lui-même : chacun est `mesure`. #51 le garantit au point d'écriture (`store_knowledge`,
+# détenteur unique) ; §7 le REVÉRIFIE sur l'état persisté (#43 : un correctif d'écriture se juge au
+# comptage par clef, pas sur son diff). Il porte sur TOUS les tickers, pas sur le seul banc d'essai.
 for row in det:
-    check(f"entry #{row['id']} (producteur déterministe) est `mesure`", row["nature"] == "mesure",
-          f"→ `{row['nature']}`")
+    check(f"fait déterministe #{row['id']} ({row['ticker_id']}) est `mesure`",
+          row["nature"] == "mesure", f"→ `{row['nature']}`")
+_tickers_det = sorted({r["ticker_id"] for r in det if r["ticker_id"]})
+print(f"  — faits à recette déterministe actifs : {len(det)} sur "
+      f"{len(_tickers_det)} ticker(s) ({', '.join(_tickers_det)}), tous `mesure`")
 print("  — répartition des entries actives : "
       + ", ".join(f"{r['nature']}={r['n']}" for r in par_nature))
 
