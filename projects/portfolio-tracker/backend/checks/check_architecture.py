@@ -27,11 +27,17 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _harness import Bilan  # noqa: E402
 
-# Montages de run_all.sh : /app = backend, /roadmap = le dossier roadmap.
-BACKEND = Path("/app")
+# Chemins résolus depuis __file__ → tourne À L'IDENTIQUE en conteneur (run_all.sh : /app + /roadmap
+# montés) et sur l'HÔTE (hook pré-commit, sans docker). Aucune liste en dur, aucune dépendance app.
+_HERE = Path(__file__).resolve()
+BACKEND = _HERE.parent.parent          # conteneur : /app · hôte : <repo>/…/backend
 APP = BACKEND / "app"
 CHECKS = BACKEND / "checks"
-ROADMAP = Path("/roadmap")
+# roadmap : monté en /roadmap dans le conteneur, sinon frère du backend (<…>/roadmap).
+ROADMAP = next(
+    (c for c in (Path("/roadmap"), BACKEND.parent / "roadmap") if (c / "V3").is_dir()),
+    BACKEND.parent / "roadmap",
+)
 V3 = ROADMAP / "V3"
 CIBLE = V3 / "ARCHITECTURE-CIBLE.md"
 

@@ -74,3 +74,14 @@ Garde-fous côté check (dans **`checks/_harness.py`**) :
 `check_architecture.py` (+ `negatif_architecture.sh`) tient l'organisation : bijection registre
 `ARCHITECTURE-CIBLE.md` ↔ docs sur disque, pointeurs de checks vivants, **aucune garde orpheline**
 (tout `check_*.py` adossé à une cible), discipline de dossier `roadmap/`, autonomie de `/V3`.
+
+Il tourne en conteneur (via `run_all.sh`) **et sur l'hôte** (`python3 checks/check_architecture.py`,
+stdlib seule). Un **hook pré-commit** host (sans docker, instant) le joue à chaque commit touchant
+portfolio-tracker — `checks/pre-commit.sh`. Installation (le contenu de `.git/hooks` n'est pas
+versionné, à refaire après un clone) :
+
+```bash
+ln -sf ../../projects/portfolio-tracker/backend/checks/pre-commit.sh "$(git rev-parse --git-dir)/hooks/pre-commit"
+```
+
+Contournement ponctuel : `git commit --no-verify`.
