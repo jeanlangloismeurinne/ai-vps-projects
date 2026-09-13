@@ -303,19 +303,19 @@ lot 1 ; les tables viennent en dernier.
    framework_persist` rejoint la case `CHECK_DB_URL` (comme `check_entry_nature`/`check_collecte_
    persist`). Les deux checks + leurs négatifs sont revenus verts (**check_framework_contract
    96/0, check_frameworks_definitions 39/0, négatif 22/22**) ; suite entière **2238/0**.
-3. ⬜ **Suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` — la table qui
-   remplace cette dernière existe déjà (maillon 2 ci-dessus) ; ce qui reste ici, c'est retirer les
-   trois constantes du code et brancher `persist_dispense`/la lecture de `framework_dispenses`
-   partout où `DECLARED_NONBLOCKING_GAPS` est encore lu.
+3. ✅ **Suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS`
+   (2026-09-13, commit `203fe65`) — 15 fichiers ; `nonblocking_gaps_for()` retourne `{}` ;
+   `read_dispenses()` branché dans `framework_persist.py` ; `run_all.sh` **2172/0** (29 scripts,
+   −66 assertions vs 2238 : sections testant les symboles supprimés retirées comme prévu).
 4. ⬜ **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3).
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 3** (suppression de `MVDD_SPEC` / `SYNTHESIS_TARGETS` /
-> `DECLARED_NONBLOCKING_GAPS` — la table de la dispense existe déjà, il reste le retrait des trois
-> constantes et le branchement des lectures).
-> Reprise conseillée : **NOUVELLE conversation**, et **Sonnet suffit** — retrait de constantes +
-> câblage, pas de décision de conception neuve.
-> **Session du 2026-09-13 terminée** — commit `f79c278`. Maillons 1-2 livrés, suite 31/2238 verte.
+> **▶ PROCHAIN JALON = lot 3, maillon 4** (collecte neuve pilotée par le plan sur NVDA / MSFT /
+> RVMD — §5.3 : rejouer la chaîne traducteur → collecteur sur les 3 émetteurs, corpus re-collecté
+> propre pour RVMD). Prochaine migration : **041** (inchangé — maillon 3 était code seul).
+> Reprise conseillée : **NOUVELLE conversation**, **Sonnet** pour conduire les appels — si des
+> décisions de plan sont à trancher (ancrage, source, ingrédient non obtenable), préférer **Opus**.
+> **Session du 2026-09-13 terminée** — commit `203fe65`. Maillons 1-3 livrés, suite **2172/0** verte.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -666,8 +666,8 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13), 2 maillons sur 5 livrés.
-> PROCHAIN PAS = LOT 3, MAILLON 3.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13), 3 maillons sur 5 livrés.
+> PROCHAIN PAS = LOT 3, MAILLON 4.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
 > #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,
@@ -675,11 +675,11 @@ justes, c'est le *fait énoncé* qui était faux.
 > `framework_dispenses` en base + persistance** (migration **040 appliquée**, append-only
 > versionnée A1, lignée `ticker_id+framework+version+question_id+analyste` — §3.4, `framework_id`
 > manquait sa version sur le contrat, fix + invariant `[V]`, convention #64 ;
-> `check_framework_persist.py` 13/0, `negatif_framework_persist.sh` 6 mutations/0, zéro résidu).
-> **Reste au lot 3** : maillon 3 = **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`,
-> `DECLARED_NONBLOCKING_GAPS` (la table qui remplace la dernière existe déjà — retirer les trois
-> constantes du code et brancher les lectures) ; maillon 4 = collecte neuve pilotée par le plan sur
-> NVDA/MSFT/RVMD ; maillon 5 = réconciliation à 0/0. Prochaine migration : **041**.
+> `check_framework_persist.py` 13/0, `negatif_framework_persist.sh` 6 mutations/0, zéro résidu) ;
+> ✅ **maillon 3 = suppression** de `MVDD_SPEC` / `SYNTHESIS_TARGETS` / `DECLARED_NONBLOCKING_GAPS`
+> (commit `203fe65`, 15 fichiers, `nonblocking_gaps_for()` → `{}`, `read_dispenses()` branché).
+> **Reste au lot 3** : maillon 4 = collecte neuve pilotée par le plan sur NVDA/MSFT/RVMD (§5.3) ;
+> maillon 5 = réconciliation à 0/0. Prochaine migration : **041**.
 > ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ (2026-09-12)** : `check_entry_nature §7` re-mesuré en **invariant #51**
 > (metric structuré ⟹ `mesure`, garde de non-vacuité, tous tickers) au lieu du décompte `== 13`, qui
 > était une **cible-corpus interdite par §0.6**. Les 30 faits web du maillon 4 (`edgar_official`/
@@ -689,10 +689,10 @@ justes, c'est le *fait énoncé* qui était faux.
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot plusieurs fois** — elle se **requête**,
 > elle ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite **TOUT VERT** (`run_all.sh` = 31 scripts, **2238 assertions, 0 échec** — `check_
-> framework_persist` désormais dans la boucle `CHECK_DB_URL`, comme `check_entry_nature`/`check_
-> collecte_persist`) ; `check_edgar_feed` 98/0 hors ligne ; `check_entry_nature` 88/0 ; `check_
-> analyste` 81/0 ; `check_framework_persist` 13/0 ; migrations appliquées jusqu'à **040**.
+> État : suite **TOUT VERT** (`run_all.sh` = **2172 assertions, 0 échec** — −66 vs 2238 : sections
+> testant les 3 constantes supprimées au maillon 3 retirées comme prévu) ; `check_edgar_feed` 98/0
+> hors ligne ; `check_entry_nature` 88/0 ; `check_analyste` 81/0 ; `check_framework_persist` 13/0 ;
+> migrations appliquées jusqu'à **040** (maillon 3 = code seul, aucune migration).
 > ⚠️ **Ajouter `framework_version` au contrat (maillon 2) a rougi deux checks qui n'avaient pas
 > tourné depuis son ajout** (`check_framework_contract` §9 — pixel manquant dans la maquette ;
 > `check_frameworks_definitions` §4 — le pont lit une clef que `CLEFS_PROFIL_LUES` ne déclarait
