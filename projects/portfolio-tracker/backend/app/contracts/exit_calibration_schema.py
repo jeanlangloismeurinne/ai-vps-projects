@@ -2,7 +2,7 @@
 Schéma Pydantic versionné de la SORTIE / POST-MORTEM / CALIBRATION (§11, §12, migration 032) —
 DÉRIVÉ des cartes de provenance. Dernier maillon : la boucle d'apprentissage long terme (A5).
 
-Copie runtime FIDÈLE de `roadmap/provenance-cards/exit_calibration_schema.py` (seuls les imports
+Copie runtime FIDÈLE de `roadmap/V3/provenance-cards/exit_calibration_schema.py` (seuls les imports
 croisés passent en relatifs — règle #19, 3 points de synchro).
 
 Trois contrats liés :

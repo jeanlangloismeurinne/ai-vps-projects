@@ -16,7 +16,7 @@
 -- sur search-worker (seul agent en tool-calling natif ; les métier délèguent via WorkerRequest en Python).
 --
 -- Les INSERT ci-dessous sont GÉNÉRÉS par _gen_025.py (préambule commun + corps de chaque prompt figé
--- de roadmap/provenance-cards/prompts/) : la DB est le 3ᵉ point de synchro (règle #19). Régénérer via
+-- de roadmap/V3/provenance-cards/prompts/) : la DB est le 3ᵉ point de synchro (règle #19). Régénérer via
 --   python _gen_025.py > /tmp/inserts.sql   puis recoller sous le DDL.
 --
 -- Rappels DB projet : asyncpg $1 (pas %s) ; JSONB auto-décodé (pas de json.dumps) ; migration

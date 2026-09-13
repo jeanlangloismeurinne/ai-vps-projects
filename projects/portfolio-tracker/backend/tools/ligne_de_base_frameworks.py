@@ -20,7 +20,7 @@ DÉTENTEURS UNIQUES (#46) — aucune règle n'est ré-implémentée ici :
   · les deux vocabulaires et leur écart      → `tools.reconcilier_vocabulaires`
   · les cibles de synthèse et leurs planchers → frameworks YAML (SYNTHESIS_TARGETS supprimé lot 3)
   · la matrice de traçabilité benchmark → étape → champ → le benchmark lui-même, PARSÉ
-    (`/roadmap/benchmark-methodologies-decision-investissement.md`, Partie E)
+    (`/roadmap/V3/benchmark-methodologies.md`, Partie E)
 
 Usage (réseau `coolify` pour la base, `/roadmap` monté en lecture seule) :
 
@@ -49,7 +49,7 @@ ETAPES_VISEES = ("4", "5", "6", "8")
 
 # Le benchmark est monté en lecture seule par le lanceur. On le PARSE au lieu de recopier sa
 # matrice : recopiée, elle divergerait au premier amendement du benchmark, en silence.
-BENCHMARK = pathlib.Path("/roadmap/benchmark-methodologies-decision-investissement.md")
+BENCHMARK = pathlib.Path("/roadmap/V3/benchmark-methodologies.md")
 
 ok = fail = 0
 

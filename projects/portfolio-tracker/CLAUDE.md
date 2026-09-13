@@ -158,8 +158,8 @@ Les pages V0 ont été supprimées le 2026-06-18. Les données restent en DB et 
 
 ### Migrations appliquées
 001 → 024. Migration 013 = schéma V1 complet (2026-05-30). Migration 017 = support PE/VC. Migration 018 = `tickers.ticker_symbol`. Migration 019 = `calendar_events.brief_triggered` + `monitoring_sessions.calendar_event_id`. Migration 020 = `portfolio_settings.dust_auto_enabled` + statut `pending_manual`. Migrations 021/022 = mise à jour prompt monitoring-agent en DB. Migration 023 = `portfolio_positions.purchase_price_eur`. **Migration 024 = V2 Knowledge Platform (socle couche 3)** : `knowledge_documents`, `knowledge_entries` versionnées/append-only (A1), `analysis_knowledge_refs` (snapshot figé A1/A2), `eu_ir_scrapers`, `knowledge_curator_reports` (mvdd|readiness|lint), extension pgvector + index HNSW, vue `knowledge_federation_export` (enveloppe commune). Seed NVDA cas-pilote : `db/seeds/nvda_v2_knowledge_seed.sql` (10 fact_financial Tier A EDGAR + 5 qualitatifs llm_memory → readiness `thin_qualitative`).
-**Migration 025 = V2 Agents / Provider (socle couche 2)** : `agent_prompts` += `provider` (`dust`|`deepinfra`), `model`, `tools_json` (JSONB), **`flow_version`** (`v1`|`v2`) ; unicité passée à `(agent_name, flow_version)`. Insert des **12 agents V2** (flow_version='v2', provider='deepinfra', modèle unifié `deepseek-ai/DeepSeek-V4-Flash-0731`, prompts = préambule + corps de `roadmap/provenance-cards/prompts/`). Générateur reproductible `db/migrations/_gen_025.py`. `tools_json` (web_search/fetch_url/query_knowledge) sur `search-worker` uniquement.
-**Migration 027 = V2 Embeddings** : `knowledge_entries.embedding` passe de `vector(768)` à **`vector(1024)`** (modèle `BAAI/bge-m3`, multilingue, via DeepInfra `/v1/openai/embeddings`), index HNSW reconstruit en `vector_cosine_ops` (opérateur `<=>` inchangé) + index **partiel** `idx_knowledge_entries_unembedded` sur `embedding IS NULL`. Motif : le corpus est en **français** et `bge-base-en-v1.5` (anglais seul) ratait les entrées financières EDGAR Tier A — bench sur corpus réel, hit@3 4/7 contre 7/7. Justification chiffrée dans l'en-tête de la migration et dans `roadmap/provenance-cards/00-REPRISE.md`.
+**Migration 025 = V2 Agents / Provider (socle couche 2)** : `agent_prompts` += `provider` (`dust`|`deepinfra`), `model`, `tools_json` (JSONB), **`flow_version`** (`v1`|`v2`) ; unicité passée à `(agent_name, flow_version)`. Insert des **12 agents V2** (flow_version='v2', provider='deepinfra', modèle unifié `deepseek-ai/DeepSeek-V4-Flash-0731`, prompts = préambule + corps de `roadmap/V3/provenance-cards/prompts/`). Générateur reproductible `db/migrations/_gen_025.py`. `tools_json` (web_search/fetch_url/query_knowledge) sur `search-worker` uniquement.
+**Migration 027 = V2 Embeddings** : `knowledge_entries.embedding` passe de `vector(768)` à **`vector(1024)`** (modèle `BAAI/bge-m3`, multilingue, via DeepInfra `/v1/openai/embeddings`), index HNSW reconstruit en `vector_cosine_ops` (opérateur `<=>` inchangé) + index **partiel** `idx_knowledge_entries_unembedded` sur `embedding IS NULL`. Motif : le corpus est en **français** et `bge-base-en-v1.5` (anglais seul) ratait les entrées financières EDGAR Tier A — bench sur corpus réel, hit@3 4/7 contre 7/7. Justification chiffrée dans l'en-tête de la migration et dans `roadmap/V3/00-REPRISE.md`.
 **Migration 028 = `knowledge_entries.covers`** : le champ MVDD que l'entry fonde (pertinence du contenu au gate, pas seulement le tier).
 **Migration 029 = `covers` en `TEXT[]` + chemins COMPLETS + index GIN** : une entry fonde plusieurs champs (#19 en porte 3), et `description` étant requis par `business_model` ET `produits`, un nom nu ferait passer l'autre. Backfill relu des 17 entries qualitatives legacy NVDA (#19-#35), que le search-worker n'avait jamais taguées. C'est l'index que le curator interroge désormais pour rendre son verdict — cf. convention #29.
 **Migration 030 = V2 theses_flow (lot 7, acte de décision)** : table **`theses_v2`** (jugement V2, disjoint de `theses` qui reste le pivot V1) portant la décision figée — `validation_json`, `verdict` (CHECK `PROCEED`|`PROCEED_AVEC_CONDITIONS`), `position_sizing_pct`, `valuation_range`, `conditions_entree TEXT[]`, `hypotheses`, `risk_acks`, `pre_mortem_acked`, `risk_matrix_acked`, lignée `research_memo_id`/`synthesis_analysis_id`. CHECK `theses_v2_active_complete` : une thèse `active` doit avoir tous ses champs de décision, les deux acquittements à TRUE, et des conditions non vides si `PROCEED_AVEC_CONDITIONS` (le CHECK ne mord que sur `active` — un `draft` reste libre). Côté **faits du monde** (cf. convention #34) : `portfolio_positions` et `calendar_events` reçoivent une colonne **`thesis_v2_id`** nullable + CHECK d'exclusivité `thesis_id IS NULL OR thesis_v2_id IS NULL`, et `event_router_v1.py` filtre `AND ce.thesis_v2_id IS NULL` sur ses 4 requêtes. Route : **`POST /v2/theses/{id}/validate`** — préfixée `/v2` parce que `POST /theses/{id}/validate` existe **déjà** en V1 (`api/thesis_v2.py`, où « v2 » désigne la 2ᵉ version du fichier V1). Contrat `ThesisValidation` dans `app/contracts/decision_validate_schema.py`.
@@ -282,7 +282,7 @@ Les routers sont dans `backend/app/api/` — `grep` fait foi si divergence.
 | 18h00 | vendredi | `_refresh_watchlist_peer_calendars` | Peer calendars (écrit dans `v0_calendar_events`) |
 
 **Note** : `_daily_check` V0 (7h00, `v0_calendar_events`) est désactivé depuis 2026-06-14. Ne pas le réactiver — remplacé par `_daily_check_v1`.
-`_daily_check_v1` → `EventRouterV1` dans `calendar/event_router_v1.py` (604 lignes, actif en prod). Spec complète : `specs/scheduler-v1-monitoring-page.md`.
+`_daily_check_v1` → `EventRouterV1` dans `calendar/event_router_v1.py` (604 lignes, actif en prod). Spec complète : `roadmap/archive/v1/scheduler-v1-monitoring-page.md`.
 
 ---
 
@@ -1079,9 +1079,11 @@ rejoignent directement le bon réseau à la création. Le réseau parasite a ét
 
 ## Base de connaissance (Knowledge Platform)
 
-Spec : `roadmap/roadmap-1786358823158-architecture-v2-knowledge-platform.md` (LLM Wiki Pattern
-Karpathy — Ingest/Query/Lint, Postgres+pgvector, pivot Markdown `/knowledge/`, entrées
-append-only versionnées, `reliability_score` par source).
+Invariants vivants : `roadmap/V3/03-spec-frameworks.md` §1.7 (feeds déterministes, `query_knowledge`
+vectoriel bge-m3 1024d, migrations 024→035) et `roadmap/V3/doctrine-trois-axes.md` (les trois axes).
+Architecture d'origine (historique, supersédée) : `roadmap/archive/v2/roadmap-1786358823158-architecture-v2-knowledge-platform.md`
+(LLM Wiki Pattern Karpathy — Ingest/Query/Lint, Postgres+pgvector, pivot Markdown `/knowledge/`,
+entrées append-only versionnées, `reliability_score` par source).
 
 **Ce projet est l'implémentation de référence** de la charte transverse
 `../../KNOWLEDGE_ARCHITECTURE.md`. Contrainte à respecter lors de l'implémentation :
@@ -1096,10 +1098,16 @@ append-only versionnées, `reliability_score` par source).
 
 Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
 Déclencheur : **« reprends le projet portfolio-tracker à partir du fichier de reprise »**
-→ Lire **`roadmap/provenance-cards/00-REPRISE.md`** (⚠️ pas à la racine du projet, contrairement à
-la convention — chemin historique conservé), puis la roadmap qu'il déclare active, annoncer le lot
-de conversation, exécuter, cocher les capacités livrées.
+→ Lire **`roadmap/V3/00-REPRISE.md`** (le fichier de reprise, au sommet du dossier `/V3`), puis la
+roadmap qu'il déclare active, annoncer le lot de conversation, exécuter, cocher les capacités livrées.
 
-Roadmap de référence du projet : `roadmap/01-spec-v2-unifiee.md` **§18** (liste ordonnée de
-capacités) sous `roadmap/00-principe-directeur-v2.md` (constitution). Les autres fichiers de
-`roadmap/` sont de la documentation, pas des roadmaps actives.
+**Tout le pilotage vit dans `roadmap/V3/`, dossier autonome et point d'entrée unique :**
+- `03-spec-frameworks.md` — **la roadmap active** (§1 = ce qui n'est PAS défait, à relire à chaque lot) ;
+- `principe-directeur.md` — la **constitution**, prime sur toute spec ;
+- `doctrine-trois-axes.md` — doctrine fiabilité/nature/actualité (close, en production) ;
+- `benchmark-methodologies.md` — la matière descendante des frameworks (Partie B/D3/E) ;
+- `provenance-cards/` — cartes de contrat figées + `prompts/` ;
+- `ARCHITECTURE-CIBLE.md` — vue d'ensemble de l'architecture V3 (+ un `ARCHITECTURE.md` par module backend).
+
+L'historique supersédé (V0/V1/V2) est archivé sous `roadmap/archive/{v0,v1,v2}/` — documentation, jamais
+une roadmap active.

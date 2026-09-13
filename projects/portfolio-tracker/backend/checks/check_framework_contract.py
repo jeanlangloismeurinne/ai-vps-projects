@@ -26,7 +26,7 @@ contrat n'est éprouvé que par ce qu'il REFUSE — accepter les objets valides 
        toujours et resteraient rouges pour la MAUVAISE raison.
   • §7 DÉTENTEUR UNIQUE (#46) — le contrat ne ré-implémente ni la règle du cran (`synthesis_feed`),
        ni l'axe actualité (`knowledge.actualite`), ni `GapItem` ; et il n'a pas de jumeau figé sous
-       `roadmap/provenance-cards/`.
+       `roadmap/V3/provenance-cards/`.
 
 POURQUOI `rejete()` EXIGE UN MOTIF, ET PAS SEULEMENT UN REFUS
 ------------------------------------------------------------
@@ -415,14 +415,14 @@ check("le contrat n'invente pas un score composite des trois axes (#50, cause n�
 _doc = _src.split('"""')[1]
 check("… et la docstring DIT pourquoi (le grep ci-dessus la retire à dessein)",
       "#53" in _doc and "actualité" in _doc.lower())
-# Pas de jumeau figé : les copies sous `roadmap/provenance-cards/` ont dérivé de leurs originaux.
+# Pas de jumeau figé : les copies sous `roadmap/V3/provenance-cards/` ont dérivé de leurs originaux.
 _jumeaux = sorted(Path("/contract_frozen").glob("*framework*schema*.py")) \
     if Path("/contract_frozen").is_dir() else None
 if _jumeaux is None:
     fail += 1
     print("  FAIL `/contract_frozen` non monté → section non mesurée (cf. checks/README.md)")
 else:
-    check("aucune copie figée du contrat sous `roadmap/provenance-cards/` (#46)",
+    check("aucune copie figée du contrat sous `roadmap/V3/provenance-cards/` (#46)",
           not _jumeaux, f"→ {[p.name for p in _jumeaux]} : la carte POINTE le contrat, ne le duplique pas")
 check("le contrat est versionné avec son chantier, sans bousculer `SCHEMA_VERSION` v2",
       FRAMEWORK_SCHEMA_VERSION == "v3.0.0"

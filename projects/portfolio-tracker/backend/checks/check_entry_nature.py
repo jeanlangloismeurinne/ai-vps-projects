@@ -1,4 +1,4 @@
-"""Vérification de l'AXE `nature` d'une entry (capacité 1, `02-spec-autorite-vs-actualite.md`).
+"""Vérification de l'AXE `nature` d'une entry (capacité 1, `doctrine-trois-axes.md`).
 
 Sans réseau ni modèle, sauf §7 qui a besoin de la base (montage explicite, cf. README) — les six
 premières sections tournent hors ligne et sont celles qui gardent la RÈGLE ; la septième vérifie

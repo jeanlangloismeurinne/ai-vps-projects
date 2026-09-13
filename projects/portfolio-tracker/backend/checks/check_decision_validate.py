@@ -22,7 +22,7 @@ Ce qu'on éprouve ici :
     le sizing et les conditions viennent de la BASE. S'ils devenaient des champs d'entrée, le
     contrat resterait vert tout en étant décoratif — il suffirait d'envoyer une synthèse
     complaisante. On teste donc la SURFACE, pas seulement les validateurs.
-  • **règle #19** — copie runtime `app/contracts/` ↔ contrat figé `roadmap/provenance-cards/`.
+  • **règle #19** — copie runtime `app/contracts/` ↔ contrat figé `roadmap/V3/provenance-cards/`.
     Le contrat figé n'est pas dans l'image (build context = ./backend) : il n'est comparé que s'il
     est monté sur /contract_frozen, et son absence est ANNONCÉE, jamais silencieuse.
 """
@@ -230,7 +230,7 @@ if FROZEN.exists():
           f"— écart : {sorted(set(ThesisValidation.model_fields) - {'schema_version'} - frozen_champs)}")
 else:
     print("  ---- contrat figé non monté (/contract_frozen) : comparaison NON faite.")
-    print("       monter avec -v <repo>/roadmap/provenance-cards:/contract_frozen:ro")
+    print("       monter avec -v <repo>/roadmap/V3/provenance-cards:/contract_frozen:ro")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

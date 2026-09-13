@@ -1,4 +1,4 @@
-"""Registre NOMINATIF des sources admises — capacité 2 de `roadmap/02-spec-autorite-vs-actualite.md`.
+"""Registre NOMINATIF des sources admises — capacité 2 de `roadmap/V3/doctrine-trois-axes.md`.
 
 **Le standing n'est pas une propriété de la source, c'est une propriété du couple
 (source × nature)** (convention #50). Une rédaction spécialisée peut valoir B sur une

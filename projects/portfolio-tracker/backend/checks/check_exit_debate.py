@@ -43,7 +43,7 @@ Ce qu'on éprouve :
   §13    surface HTTP — aucun corps n'expose de champ de jugement (#36), sauf la clôture de débat,
          qui est l'acte souverain de l'utilisateur.
   §14    migration 032 ↔ code — les valeurs que le code écrit passent les CHECKs de la base.
-  §15    règle #19 — copie runtime `app/contracts/` ↔ contrat figé `roadmap/provenance-cards/`.
+  §15    règle #19 — copie runtime `app/contracts/` ↔ contrat figé `roadmap/V3/provenance-cards/`.
 """
 import sys
 from datetime import date
@@ -642,7 +642,7 @@ if (FROZEN / "exit_calibration_schema.py").exists():
               f"— écart : {sorted(ecart)}")
 else:
     print("  ---- contrat figé non monté (/contract_frozen) : comparaison NON faite.")
-    print("       monter avec -v <repo>/roadmap/provenance-cards:/contract_frozen:ro")
+    print("       monter avec -v <repo>/roadmap/V3/provenance-cards:/contract_frozen:ro")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

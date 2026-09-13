@@ -1,5 +1,5 @@
 -- 034 — V2 : l'axe `nature` d'une knowledge_entry (capacité 1 de
---       roadmap/02-spec-autorite-vs-actualite.md). GÉNÉRÉ par `_gen_034.py`, ne pas éditer
+--       roadmap/V3/doctrine-trois-axes.md). GÉNÉRÉ par `_gen_034.py`, ne pas éditer
 --       à la main : le backfill est calculé par `derive_nature`, détenteur unique (#46).
 --
 -- Un fait a TROIS propriétés indépendantes qu'on ne recombine jamais (#50) : fiabilité

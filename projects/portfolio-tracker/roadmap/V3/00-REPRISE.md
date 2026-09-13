@@ -28,10 +28,10 @@ role: >
   versionné `checks/negatif_entry_nature_etat.sh` (satisfiabilité + 4 mutations/4, chacune rouge sur
   son assert nommé). Le corpus RVMD hérité sera de toute façon re-collecté propre au lot 3 (§5.3).
   Voir [[project_entry_nature_gate_invariant]].
-  Roadmap active : **`roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
+  Roadmap active : **`roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
-  `roadmap/02-spec-autorite-vs-actualite.md` est **close** : capacités 0 à 4 livrées, capacité 5
+  `roadmap/V3/doctrine-trois-axes.md` est **close** : capacités 0 à 4 livrées, capacité 5
   fermée sur son barreau 4 (« le défaut est en dessous »).
 ---
 
@@ -43,11 +43,21 @@ role: >
 > Ici : **l'état atteint, ce qui reste, et les pièges à ne pas re-découvrir.** Protocole
 > d'éviction : `CONTROL_SYSTEM.md` §5.
 
+> 🗂️ **Réorganisation d'architecture — 2026-09-13.** Toutes les specs actives vivent désormais dans
+> `roadmap/V3/` (dossier **autonome**, aucune dépendance sortante) ; l'historique V0/V1/V2 est sous
+> `roadmap/archive/{v0,v1,v2}/`. Renommages : `02-spec-autorite-vs-actualite.md` → `doctrine-trois-axes.md`,
+> `00-principe-directeur-v2.md` → `principe-directeur.md`, `benchmark-…` → `benchmark-methodologies.md` ;
+> `provenance-cards/` et ce fichier ont migré sous `roadmap/V3/`. Les chemins load-bearing du code
+> (générateur de migration 025, montages de `run_all.sh`, `check_frameworks_definitions`,
+> `ligne_de_base_frameworks`) ont été mis à jour et **la suite est TOUT VERT (2172/0)** après migration.
+> `01-spec-v2-unifiee.md` est archivé (ses parties valides sont inlinées dans `03-spec` §1). Nouvelle
+> doc d'architecture : `ARCHITECTURE-CIBLE.md` + un `ARCHITECTURE.md` par module (cible ; réalisé = les checks).
+
 ---
 
 ## 🎯 Roadmap active
 
-### **`roadmap/03-spec-frameworks.md`** — ouverte le 2026-09-09
+### **`roadmap/V3/03-spec-frameworks.md`** — ouverte le 2026-09-09
 
 **Le diagnostic, en une phrase** : le système range la connaissance dans une **grille fermée de
 19 champs, identique pour tout émetteur**, et tout ce qui n'y entre pas est **écarté en silence**.
@@ -125,8 +135,8 @@ reproductible, le système le fait aujourd'hui par accident*).
 | Le **pont relationnel** (#37) | `backend/app/agents/v2/frameworks.py` |
 | Le check | `backend/checks/check_framework_contract.py` — **91 assertions** |
 | Son **test négatif** | `backend/checks/negatif_framework_contract.sh` — **20 mutations, 20 détectées** |
-| Carte de provenance champ par champ | `roadmap/provenance-cards/framework_answer_card.md` |
-| Écran niveau 3 en maquette | `roadmap/provenance-cards/framework_screen_niveau3.md` |
+| Carte de provenance champ par champ | `roadmap/V3/provenance-cards/framework_answer_card.md` |
+| Écran niveau 3 en maquette | `roadmap/V3/provenance-cards/framework_screen_niveau3.md` |
 
 **Deux écarts assumés avec le JSON de la spec §2.4**, tous deux plus stricts, documentés en tête du
 contrat et dans la carte : (1) `honnetete_approximation` a **trois** valeurs (`ok|ko|sans_objet`) —
@@ -399,7 +409,7 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 
 ### Roadmap 02 — close, et ce qu'elle laisse acquis
 
-`roadmap/02-spec-autorite-vs-actualite.md` : **capacités 0 à 4 CLOSES**, capacité 5 fermée (§ ci-dessus).
+`roadmap/V3/doctrine-trois-axes.md` : **capacités 0 à 4 CLOSES**, capacité 5 fermée (§ ci-dessus).
 Les trois axes **jamais recombinés en scalaire** sont en production et restent la doctrine de la v3 :
 
 - **fiabilité** — propriété de la **source**, stockée (#50).
@@ -598,22 +608,25 @@ justes, c'est le *fait énoncé* qui était faux.
 
 ## À lire avant de reprendre
 
-- **`roadmap/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
+- **`roadmap/V3/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
   PAS défait** (à relire à chaque lot) · §2 l'objet framework · §3 le manager · §4 les deux pilotes
   rédigés en entier · §5 le stockage · §9 le test d'acceptation · §10 les lots.
-- **`CLAUDE.md` du projet** — conventions **#22 à #55**. Les plus structurantes ici : #29 (la
+- **`CLAUDE.md` du projet** — conventions **#22 à #64**. Les plus structurantes ici : #29 (la
   couverture se **lit** dans un index), #31 (ce qui décrit un émetteur ne vit jamais dans une
   constante globale), #37 (un contrat valide un objet, jamais la cohérence entre deux), #42/#43
   (datation et **identité** d'un fait), #44 (calculé / non calculable / absent), #46 (**détenteur
   unique** d'une règle), #48, #49, **#50** (trois axes jamais recombinés), **#51**, **#52**,
   **#53**, **#54** (la porte à trois états), **#55**.
-- **Specs** : `roadmap/00-principe-directeur-v2.md` (constitution) ·
-  `roadmap/01-spec-v2-unifiee.md` (§5 agents, §7 curator, §8 contrats, §14 migrations, §16 UX,
-  §18 découpage) · `roadmap/02-spec-autorite-vs-actualite.md` (**close**, doctrine des 3 axes) ·
-  `roadmap/benchmark-methodologies-decision-investissement.md` (**Partie B** le processus canonique
+- **Specs** : `roadmap/V3/principe-directeur.md` (constitution) ·
+  `roadmap/archive/v2/01-spec-v2-unifiee.md` (§5 agents, §7 curator, §8 contrats, §14 migrations, §16 UX,
+  §18 découpage) · `roadmap/V3/doctrine-trois-axes.md` (**close**, doctrine des 3 axes) ·
+  `roadmap/V3/benchmark-methodologies.md` (**Partie B** le processus canonique
   en 15 étapes, **Partie D3** le contrat `RiskMatrix`, **Partie E** la matrice de traçabilité — c'est
   la matière **descendante** des frameworks).
-- **Cartes de contrat** : `roadmap/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
+- **Cartes de contrat** : `roadmap/V3/provenance-cards/*_card.md` + `*_schema.py` + `prompts/`.
+- **Architecture** : `roadmap/V3/ARCHITECTURE-CIBLE.md` (vue d'ensemble + carte des modules) et un
+  `ARCHITECTURE.md` par module backend (`knowledge/`, `frameworks/`, `agents/v2/`, `contracts/`,
+  `api/`) = **cible** ; l'**état réalisé** se lit en exécutant `backend/checks/` (`run_all.sh`).
 - **Code** : `backend/app/agents/v2/` (`common.py` — **`MVDD_SPEC`, la grille à remplacer** ·
   `worker.py:141` `_resolve_covers` · `curator.py:69` `DECLARED_NONBLOCKING_GAPS` · `analysis.py` ·
   `runner.py`) · `backend/app/knowledge/` (`synthesis_feed.py:145` **`SYNTHESIS_TARGETS`** ·
@@ -642,7 +655,7 @@ justes, c'est le *fait énoncé* qui était faux.
 > avec deux remèdes distincts (`rafraichissement` ≠ `collecte`) ; règle de rang (une estimation vaut
 > **un cran sous sa pièce la plus faible**, dérivée jamais déclarée). Le faux vert d'origine est
 > tombé en production : NVDA et MSFT passent de `ready, 0 gap` à `not_ready (peremption)`.
-> **Roadmap active : `roadmap/03-spec-frameworks.md`** (ouverte le 2026-09-09). Diagnostic mesuré :
+> **Roadmap active : `roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09). Diagnostic mesuré :
 > le système range la connaissance dans une **grille fermée de 19 champs identique pour tout
 > émetteur**, et écarte en silence tout ce qui n'y entre pas — **50 % d'orphelines sur NVDA** dont
 > **16 faits SEC tier A** ; **14 feuilles du `research_memo` sans aucun chemin d'indexation** (donc
@@ -698,7 +711,7 @@ justes, c'est le *fait énoncé* qui était faux.
 > `check_frameworks_definitions` §4 — le pont lit une clef que `CLEFS_PROFIL_LUES` ne déclarait
 > pas). Corrigés dans la foulée. Voir #64 : **rejouer `run_all.sh` en entier après tout ajout de
 > champ à un contrat partagé**, jamais seulement le check du module qu'on vient de toucher.
-> LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
+> LIRE D'ABORD : ce fichier, puis `roadmap/V3/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
 > le `CLAUDE.md` du projet (conventions #22-**#64**, dont **#63 = l'analyste** et **#64 =
 > `framework_version` sur `FrameworkAnswer`**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
 > décision manque.

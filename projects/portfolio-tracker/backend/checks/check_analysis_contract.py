@@ -17,7 +17,7 @@ Ce qu'on éprouve ici :
     parce que les deux sont des `float` valides. Les anciens noms nus doivent désormais être
     REJETÉS, pas ignorés — sans quoi le renommage serait cosmétique ;
   • `multiple_sortie` reste sans suffixe : c'est un multiple (18 = 18×), pas un pourcentage ;
-  • la copie runtime `app/contracts/` et le contrat figé `roadmap/provenance-cards/` déclarent les
+  • la copie runtime `app/contracts/` et le contrat figé `roadmap/V3/provenance-cards/` déclarent les
     mêmes champs (règle #19). Le contrat figé n'est pas dans l'image (build context = ./backend) :
     il n'est comparé que s'il est monté sur /contract_frozen, et son absence est ANNONCÉE, jamais
     silencieuse.
@@ -115,7 +115,7 @@ if FROZEN.exists():
         check(f"contrat figé ne porte plus `{ancien.rstrip(':')}` nu", ancien not in src)
 else:
     print("  ---- contrat figé non monté (/contract_frozen) : comparaison NON faite.")
-    print("       monter avec -v <repo>/roadmap/provenance-cards:/contract_frozen:ro")
+    print("       monter avec -v <repo>/roadmap/V3/provenance-cards:/contract_frozen:ro")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

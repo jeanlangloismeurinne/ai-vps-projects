@@ -1,4 +1,4 @@
-"""Vérification de la TABLE DE PROFILS PAR CHAMP (capacité 0, `02-spec-autorite-vs-actualite.md`).
+"""Vérification de la TABLE DE PROFILS PAR CHAMP (capacité 0, `doctrine-trois-axes.md`).
 
 Sans réseau ni modèle. La table est de la DOCTRINE : elle n'est encore câblée nulle part (les
 capacités 1 à 5 la consommeront). Ce check est donc le seul garde-fou qui existe sur elle, et il

@@ -395,7 +395,7 @@ print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1)")
 # confrontée, jamais recopiée à la main. Sans cette confrontation, les deux nomenclatures
 # divergeraient au premier correctif — c'est exactement ce qui est arrivé aux cartes de provenance
 # du lot 1 (#46).
-_spec = Path("/roadmap/03-spec-frameworks.md")
+_spec = Path("/roadmap/V3/03-spec-frameworks.md")
 if not _spec.exists():
     fail += 1
     print(f"  FAIL spec absente ({_spec}) → section non mesurée ; un prérequis manquant ne doit "

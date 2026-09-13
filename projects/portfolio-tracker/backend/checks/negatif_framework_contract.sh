@@ -60,7 +60,7 @@ for m in "${mutations[@]}"; do
   # Les documents figés sont copiés EUX AUSSI : sans cela la maquette serait immuable, et §9 (« tout
   # pixel rend un champ réel ») ne pourrait jamais rougir — un critère qu'aucune mutation n'atteint
   # est un critère non éprouvé, même s'il est vert.
-  cp -r ../roadmap/provenance-cards "$tmp/frozen" 2>/dev/null
+  cp -r ../roadmap/V3/provenance-cards "$tmp/frozen" 2>/dev/null
   cible="$tmp/backend/$fichier"
   case "$fichier" in FROZEN:*) cible="$tmp/frozen/${fichier#FROZEN:}" ;; esac
 

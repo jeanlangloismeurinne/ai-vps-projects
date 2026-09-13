@@ -1,4 +1,4 @@
-"""Vérification du REGISTRE NOMINATIF DES SOURCES (capacité 2, `02-spec-autorite-vs-actualite.md`).
+"""Vérification du REGISTRE NOMINATIF DES SOURCES (capacité 2, `doctrine-trois-axes.md`).
 
 Sans réseau ni modèle. Le registre est un **desserrage** — il ouvre l'admission de sources qui
 valaient 0,50. Ce qui le rend acceptable tient à trois conditions, et ce check existe pour qu'aucune

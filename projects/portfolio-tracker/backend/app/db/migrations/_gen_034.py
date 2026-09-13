@@ -56,7 +56,7 @@ def main(path: str) -> None:
     out = sys.stdout.write
 
     out("-- 034 — V2 : l'axe `nature` d'une knowledge_entry (capacité 1 de\n")
-    out("--       roadmap/02-spec-autorite-vs-actualite.md). GÉNÉRÉ par `_gen_034.py`, ne pas éditer\n")
+    out("--       roadmap/V3/doctrine-trois-axes.md). GÉNÉRÉ par `_gen_034.py`, ne pas éditer\n")
     out("--       à la main : le backfill est calculé par `derive_nature`, détenteur unique (#46).\n")
     out("--\n")
     out("-- Un fait a TROIS propriétés indépendantes qu'on ne recombine jamais (#50) : fiabilité\n")

@@ -2,7 +2,7 @@
 Schéma Pydantic versionné du CONVICTION CHALLENGE (debate-agent, option C « Maintenir », §9-§11) —
 DÉRIVÉ de la carte de provenance debate_conviction_card.md.
 
-Copie runtime FIDÈLE de `roadmap/provenance-cards/debate_conviction_schema.py` (seuls les imports
+Copie runtime FIDÈLE de `roadmap/V3/provenance-cards/debate_conviction_schema.py` (seuls les imports
 croisés passent en relatifs — règle #19, 3 points de synchro).
 
 Le debate-agent (renommage de l'opportunity-agent V1) intervient quand un monitoring (mode 2/3/6) a

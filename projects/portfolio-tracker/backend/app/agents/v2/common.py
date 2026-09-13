@@ -18,7 +18,7 @@ from typing import Any, Optional, Sequence
 TIER_ORDER = ["A", "A-", "B+", "B", "B-", "C+", "C"]
 _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}
 
-# ── Table de profils par champ (capacité 0 de `roadmap/02-spec-autorite-vs-actualite.md`) ────
+# ── Table de profils par champ (capacité 0 de `roadmap/V3/doctrine-trois-axes.md`) ────
 # Trois propriétés indépendantes par champ, JAMAIS recombinées en un nombre (cf. convention #50) :
 #
 #   nature    — ce que l'assertion prétend être. Décide quel axe fait AUTORITÉ sur le champ :

@@ -2,7 +2,7 @@
 """
 Générateur reproductible de la migration 025 (agents V2 / provider).
 
-Lit les prompts figés (`roadmap/provenance-cards/prompts/`), assemble « préambule commun + corps »
+Lit les prompts figés (`roadmap/V3/provenance-cards/prompts/`), assemble « préambule commun + corps »
 pour chaque agent, et émet le SQL des INSERT dans `agent_prompts` (flow_version='v2'). Évite le
 copier-coller manuel de 12 gros prompts et garantit que la DB = 3ᵉ point de synchro (règle #19) des
 prompts committés.
@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 # backend/app/db/migrations -> remonte à la racine projet portfolio-tracker
 PROJECT_ROOT = HERE.parents[3]
-PROMPTS = PROJECT_ROOT / "roadmap" / "provenance-cards" / "prompts"
+PROMPTS = PROJECT_ROOT / "roadmap" / "V3" / "provenance-cards" / "prompts"
 
 MODEL_V2 = "deepseek-ai/DeepSeek-V4-Flash-0731"
 

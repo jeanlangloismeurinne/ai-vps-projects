@@ -1,4 +1,4 @@
-"""Vérification de l'axe ACTUALITÉ (capacité 3, `02-spec-autorite-vs-actualite.md`).
+"""Vérification de l'axe ACTUALITÉ (capacité 3, `doctrine-trois-axes.md`).
 
 Sans réseau ni modèle. L'axe est le seul des trois qui ne soit **pas** stocké, et c'est tout son
 intérêt : le persister reproduirait la cause n°2 du diagnostic (un score figé à l'écriture, donc un

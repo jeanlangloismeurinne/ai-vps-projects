@@ -4,7 +4,7 @@
 -- la séquence V2 de +1 → cette migration est la 026). Matérialise le stockage des sorties de la
 -- chaîne d'analyse : research_memo (base neutre §8.0), bull/bear (§8.1-8.3), synthèse = risk_matrix
 -- + hypotheses[] (§8.4-8.5). Les result_json/memo_json portent EXACTEMENT les contrats Pydantic
--- figés (roadmap/provenance-cards/analysis_v2_schemas.py, SCHEMA_VERSION v2.0.0).
+-- figés (roadmap/V3/provenance-cards/analysis_v2_schemas.py, SCHEMA_VERSION v2.0.0).
 --
 -- AUDITABILITÉ (P0) : chaque ligne fige provider_used/model_used/prompt_snapshot + grounding_report
 -- (A2) + coût/tokens. Les entries citées sont figées à part dans analysis_knowledge_refs (024, A1/A2)

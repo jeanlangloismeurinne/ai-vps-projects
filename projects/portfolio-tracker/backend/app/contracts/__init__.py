@@ -1,7 +1,7 @@
 """
 Contrats Pydantic V2 — HOME RUNTIME des schémas d'analyse (SCHEMA_VERSION = v2.0.0).
 
-Origine de conception : `roadmap/provenance-cards/*_schema.py` (dérivés des cartes de provenance).
+Origine de conception : `roadmap/V3/provenance-cards/*_schema.py` (dérivés des cartes de provenance).
 Le contexte de build du backend est `./backend` seul → roadmap/ est hors image : les contrats
 consommés à l'exécution vivent donc ICI. Toute évolution de contrat se répercute sur les 3 points de
 synchro (règle #19 CLAUDE.md) — dont ce package. Copie fidèle des schémas figés (seuls les imports

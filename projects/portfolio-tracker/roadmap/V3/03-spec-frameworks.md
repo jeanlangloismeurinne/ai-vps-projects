@@ -1,17 +1,24 @@
 # Spec v3 — Frameworks d'analyse, managers, et base de connaissance dictée par le framework
 
-> **Statut** : spec d'architecture, écrite le 2026-09-09. Elle **s'ajoute** à
-> `01-spec-v2-unifiee.md` (qui reste la constitution du flux) et à
-> `02-spec-autorite-vs-actualite.md` (qui reste la doctrine des trois axes). Elle ne défait
-> ni l'une ni l'autre — §1 liste explicitement ce qui est préservé.
+> **Statut** : spec d'architecture, écrite le 2026-09-09, **roadmap active** du projet. C'est le
+> point d'entrée du dossier `/V3`, qui est **autonome** — tout le nécessaire y vit, sans dépendance
+> sortante :
+> - `principe-directeur.md` — la **constitution**, prime sur toute spec (y compris celle-ci) ;
+> - `doctrine-trois-axes.md` — la doctrine **fiabilité / nature / actualité**, close et en production ;
+> - `benchmark-methodologies.md` — le processus canonique (Partie B), la matrice de traçabilité
+>   (Partie E), le contrat `RiskMatrix` (Partie D3) dont **dérivent** les frameworks ;
+> - `provenance-cards/` — les cartes de contrat figées (`*_card.md` + `*_schema.py` + `prompts/`) ;
+> - `00-REPRISE.md` — le fichier de reprise du pilotage.
+>
+> **Ce qu'elle préserve** : la v3 **ne défait rien** de la V2 — elle en absorbe les invariants et ne
+> change QUE le référentiel d'indexation de la connaissance. §1 liste explicitement ce qui reste en
+> vigueur mot pour mot (constitution, décisions #1-#5, 6 règles transverses, corrections d'audit
+> A1-A10, doctrine des trois axes). L'historique V1/V2 supersédé vit dans `roadmap/archive/`.
 >
 > **Ce qu'elle tranche** : le référentiel d'indexation de la connaissance passe d'une **grille
 > fermée de 19 champs identique pour tous les émetteurs** à un jeu de **frameworks stables à
 > variables par entreprise**, dont chacun **dicte ce qu'il faut aller chercher** et est **garanti
 > par un manager**.
->
-> **Roadmap active** : cette spec devient la roadmap active du projet à sa validation
-> (pointeur dans `roadmap/provenance-cards/00-REPRISE.md`).
 
 ---
 
@@ -84,7 +91,7 @@ chemins indexables jamais consommés par le mémo (3) :
 ```
 
 Conséquence directe, à confronter à la **matrice de traçabilité** du benchmark
-(`benchmark-methodologies-decision-investissement.md`, Partie E) :
+(`benchmark-methodologies.md`, Partie E) :
 
 ```mermaid
 graph LR
@@ -118,7 +125,7 @@ Symétriquement, `risques.risques_cles` est le chemin **le plus peuplé** de la 
 
 La capacité 5 (« la dégradation déclarée ») prévoyait un barreau 4 : l'agent propose une méthode
 pour approximer une donnée manquante **à partir de pièces déjà présentes dans le dossier**. Sa
-ligne de base l'a réfuté **quatre fois** (détail dans `02-spec-autorite-vs-actualite.md`).
+ligne de base l'a réfuté **quatre fois** (détail dans `doctrine-trois-axes.md`).
 
 Le contre-test décisif : sur l'étalon, dépouiller la question de sa négation fait passer les rangs
 de `[6, 10, —, 9, —]` à `[5, 15, —, 9, 16]`. **Aucune amélioration** — le défaut n'est pas la
@@ -218,7 +225,7 @@ Liste de préservation, à relire à chaque lot. **Tout ce qui suit reste en vig
 
 ### 1.1 Constitution et garde-fous
 
-- `00-principe-directeur-v2.md` prime sur toute spec.
+- `principe-directeur.md` prime sur toute spec.
 - **G1** — le contrat JSON encode la méthodologie : l'agent ne peut pas sauter une étape.
 - **G2** — un contrat de décision ne vaut que par ce que le corps HTTP **n'expose pas**
   (convention #36).
@@ -1315,7 +1322,9 @@ Chacun a déjà coûté, sur ce projet ou un voisin.
 
 ---
 
-## 14. Fichiers à supprimer une fois cette spec validée
+## 14. Fichiers sortis de la roadmap active
 
-- `roadmap/ARBITRAGES-EN-DISCUSSION.md` — support de discussion temporaire, entièrement replié
-  ici (arbitrages 1 à 5) et dans `02-spec-autorite-vs-actualite.md` (quatrième réfutation).
+- `ARBITRAGES-EN-DISCUSSION.md` — support de discussion temporaire, entièrement replié ici
+  (arbitrages 1 à 5, cf. §11) et dans `doctrine-trois-axes.md` (quatrième réfutation du barreau 4).
+  Les arbitrages sont **tranchés** ; **archivé** dans `roadmap/archive/v2/` le 2026-09-13 plutôt que
+  supprimé, pour préserver le *pourquoi* (arbres de décision) hors de la roadmap active.
