@@ -436,6 +436,13 @@ print("\n8. le PONT relationnel — ce qu'un contrat ne peut PAS vérifier (#37)
 QUESTIONS = {
     "qf_1": {"plancher_tier": "B", "nature_attendue": "mesure"},
     "qf_7": {"plancher_tier": "B+", "nature_attendue": "mesure"},
+    # ⚠️ Une SEULE question porte `sens_admis` ici, et c'est délibéré : [S] se saute quand le profil
+    # n'en déclare pas, donc les deux profils ci-dessus servent à éprouver A→F sans que [S] ne
+    # rougisse d'abord et masque le contrôle visé (le 1ᵉʳ faux vert — une fixture qui déclenche deux
+    # contrôles ne dit pas lequel discrimine). Le RÉEL, lui, en porte toujours un (`min_length=2`),
+    # et c'est `check_analyste.py` qui éprouve [S] contre les profils réels.
+    "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure",
+                "sens_admis": ["cree_de_la_valeur", "detruit_de_la_valeur"]},
 }
 ENTRIES = {
     190: {"reliability_tier": "A-", "nature": "mesure"},
@@ -521,6 +528,14 @@ pont("[E] la nature attendue n'est portée par aucune entry citée (#51)",
      rep(blocs={"fondation": {**FOND, "cited_entry_ids": [193], "rang_derive": "A-",
                               "nature_effective": "mesure"}}),
      "propriété de l'assertion")
+pont("[S] un `sens` hors du vocabulaire fermé de la question",
+     rep(question_id="qf_sens", blocs={"reponse": {"verbatim": "12,4 %", "sens": "plutot_bon"}}),
+     "hors du vocabulaire")
+pont("[S] … et le silence n'est pas une échappatoire : pas de `sens` du tout non plus",
+     rep(question_id="qf_sens"), "hors du vocabulaire")
+pont_ok("[S] … un sens admis passe (sinon rien au-dessus ne discrimine)",
+        rep(question_id="qf_sens",
+            blocs={"reponse": {"verbatim": "12,4 %", "sens": "cree_de_la_valeur"}}))
 _so = dict(sans_objet={"motif": "société sans stocks", "substitut_applique": "rotation",
                        "substitut_answer_id": 7, "aucun_substitut": False})
 pont("[F] un substitut qui pointe une réponse à LA MÊME question (contrôle ④)",

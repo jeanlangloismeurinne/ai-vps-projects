@@ -42,6 +42,8 @@ mutations=(
 "$PONT¦        if plancher is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦        if False and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦[D] un rang sous le plancher"
 "$PONT¦            if attendue not in portees and answer.statut != \"approxime\":¦            if False:¦[E] la nature attendue n'est portée par aucune entry citée"
 "$PONT¦        if cible.question_id == answer.question_id:¦        if False:¦[F] un substitut qui pointe une réponse à LA MÊME question"
+"$PONT¦        if answer.reponse.sens not in admis:¦        if False:¦[S] un \`sens\` hors du vocabulaire fermé"
+"$PONT¦    if admis and answer.reponse is not None:¦    if admis and answer.reponse is not None and answer.reponse.sens:¦[S] … et le silence n'est pas une échappatoire"
 "$PONT¦    donnees[\"fondation\"] = {**donnees[\"fondation\"], \"actualite\": act.etat,¦    donnees[\"fondation\"] = {**donnees[\"fondation\"], \"actualite\": \"courante\",¦une panne de flux ne se lit JAMAIS"
 # ── §9 la bijection champ ↔ pixel, éprouvée DANS LES DEUX SENS ────────────────────────────────
 "$SRC¦    analyste: str = Field(min_length=1)¦    analyste: str = Field(min_length=1)\n    champ_fantome: Optional[str] = None¦tout champ du contrat a son pixel"

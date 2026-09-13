@@ -19,7 +19,11 @@ CE QUE LE PONT VÉRIFIE, ET POURQUOI CHACUN EXISTE
   E. la nature attendue est portée par une entry citée — l'axe `nature` est une propriété de
      l'assertion (#51), il ne se déduit pas du statut ;
   F. un substitut pointe la réponse d'une AUTRE question — un `sans_objet` qui se cite lui-même
-     comme substitut est le contrôle ④ retourné contre lui-même.
+     comme substitut est le contrôle ④ retourné contre lui-même ;
+  S. le `sens` de la réponse appartient au vocabulaire FERMÉ de la question (`sens_admis`) — le
+     contrat laisse `sens` libre parce qu'un contrat d'objet ne connaît pas la question (#37), et
+     c'est ici qu'il se ferme. Un sens hors vocabulaire (ou absent) rend la réponse incomparable à
+     toutes les autres réponses de la même question : l'écran la montre, et rien ne la range.
 
 `servir_answer()` est le POINT DE LECTURE : il ajoute l'axe actualité, recalculé, sans rien écrire.
 Un GET qui servirait la ligne stockée telle quelle servirait le verdict d'avant l'événement
@@ -59,7 +63,7 @@ FRAMEWORKS_YAML = Path(__file__).resolve().parents[2] / "frameworks" / "framewor
 # SAUTE le contrôle au lieu de le faire échouer. Un contrôle qui ne s'exécute pas est un vert
 # (`feedback_check_degrade_en_sortant_a_zero`). `check_frameworks_definitions.py` vérifie que les
 # profils produits portent exactement ces clefs.
-CLEFS_PROFIL_LUES = ("plancher_tier", "nature_attendue")
+CLEFS_PROFIL_LUES = ("plancher_tier", "nature_attendue", "sens_admis")
 
 
 class FrameworkAnswerRefused(Exception):
@@ -194,19 +198,25 @@ def question_profiles(fichier: Optional[FrameworksFile] = None) -> dict[str, dic
     """Les profils à plat, dans la forme que `valider_pont_framework_answer` consomme.
 
     ⚠️ Les clefs sont produites depuis `CLEFS_PROFIL_LUES` et depuis les attributs du contrat, pas
-    réécrites à la main : une clef mal orthographiée ici ferait sauter le contrôle D ou E côté pont
-    sans qu'aucun test ne rougisse.
+    réécrites à la main : une clef mal orthographiée ici ferait sauter le contrôle D, E ou S côté
+    pont sans qu'aucun test ne rougisse.
+
+    Les valeurs de type liste sont COPIÉES : le référentiel est mis en cache (`lru_cache`), et un
+    appelant qui muterait `profil["sens_admis"]` élargirait le vocabulaire de la question pour tout
+    le processus — un contrôle qui s'assouplit tout seul, en silence.
     """
     fichier = fichier or load_frameworks()
     profils: dict[str, dict[str, Any]] = {}
     for f in fichier.frameworks:
         for q in f.questions:
-            profil = {clef: getattr(q, clef) for clef in CLEFS_PROFIL_LUES}
+            profil: dict[str, Any] = {}
+            for clef in CLEFS_PROFIL_LUES:
+                valeur = getattr(q, clef)
+                profil[clef] = list(valeur) if isinstance(valeur, list) else valeur
             profil.update({
                 "framework_id": f.id,
                 "chemin_indexation": q.chemin_indexation,
                 "actualite_bloquante": q.actualite_bloquante,
-                "sens_admis": list(q.sens_admis),
                 "ingredients_essentiels": [i.id for i in q.ingredients_requis if i.essentiel],
             })
             profils[q.id] = profil
@@ -229,9 +239,10 @@ def valider_pont_framework_answer(
     entries: dict[int, dict[str, Any]],
     autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
 ) -> None:
-    """Vérifie A→F. Ne rend rien : le seul résultat possible est « pas de refus ».
+    """Vérifie A→F et S. Ne rend rien : le seul résultat possible est « pas de refus ».
 
-    `questions` : `{question_id: {plancher_tier, nature_attendue, ...}}` — les DONNÉES du lot 2.
+    `questions` : `{question_id: {plancher_tier, nature_attendue, sens_admis, ...}}` — les DONNÉES
+    du lot 2, telles que `question_profiles()` les produit.
     `entries`   : le corpus RÉELLEMENT fourni, `{id: {reliability_tier, entry_type, ...}}`.
     """
     # A. la question existe. Vérifié AVANT tout le reste : les contrôles D et E lisent son profil,
@@ -290,6 +301,19 @@ def valider_pont_framework_answer(
                     f"entries citées portent {sorted(str(p) for p in portees)}. La nature est une "
                     "propriété de l'assertion : elle se lit sur la source, elle ne se déduit pas "
                     "du statut de la réponse")
+
+    # S. le `sens` appartient au vocabulaire FERMÉ de la question. Le contrat le laisse libre (il ne
+    #    connaît pas la question, #37) ; il se ferme ici, au seul endroit qui voit les deux.
+    #    ⚠️ `sens_admis` absent du profil ⟹ contrôle SAUTÉ : le référentiel en garantit toujours un
+    #    (`Field(min_length=2)`), donc un profil qui n'en porte pas vient d'ailleurs et on ne lui
+    #    impose pas un vocabulaire qu'il n'a pas déclaré.
+    admis = profil.get("sens_admis")
+    if admis and answer.reponse is not None:
+        if answer.reponse.sens not in admis:
+            raise FrameworkAnswerRefused(
+                f"`sens` = {answer.reponse.sens!r} hors du vocabulaire de `{answer.question_id}` "
+                f"({sorted(admis)}) : un sens libre rend la réponse incomparable à toutes les "
+                "autres réponses de la même question — l'écran la montre, et rien ne la range")
 
     # F. un substitut pointe la réponse d'une AUTRE question.
     if answer.sans_objet is not None and answer.sans_objet.substitut_answer_id is not None:
