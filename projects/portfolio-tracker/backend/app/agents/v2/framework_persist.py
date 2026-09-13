@@ -24,7 +24,7 @@ import asyncpg
 
 from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES, FrameworkAnswer
 
-__all__ = ["persist_answer", "persist_dispense"]
+__all__ = ["persist_answer", "persist_dispense", "read_dispenses"]
 
 
 def _lire_chemin(answer: FrameworkAnswer, chemin: str) -> Any:
@@ -71,6 +71,24 @@ async def persist_answer(conn: asyncpg.Connection, answer: FrameworkAnswer) -> i
             nouveau_id, ancien_id)
 
     return nouveau_id
+
+
+async def read_dispenses(
+    conn: asyncpg.Connection,
+    *,
+    ticker_id: str,
+    framework_id: str,
+    framework_version: str,
+) -> dict[str, str]:
+    """Dispenses actives pour un émetteur + version de framework donnés.
+
+    Rend `{question_id: motif}` — même forme que l'ancienne `nonblocking_gaps_for`, mais keyé
+    par question_id (not MVDD field path). Consommé par le manager en lot 4."""
+    rows = await conn.fetch(
+        "SELECT question_id, motif FROM framework_dispenses "
+        "WHERE ticker_id = $1 AND framework_id = $2 AND framework_version = $3",
+        ticker_id, framework_id, framework_version)
+    return {row["question_id"]: row["motif"] for row in rows}
 
 
 async def persist_dispense(

@@ -24,7 +24,6 @@ from app.knowledge.base_rate_corpus import BaseRateUnavailable, run_base_rate_an
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, run_edgar_feed
 from app.knowledge.financials_feed import FinancialsUnavailable, run_financials_feed
 from app.knowledge.synthesis_feed import (
-    SYNTHESIS_TARGETS,
     SynthesisUnavailable,
     SynthesisUngrounded,
     run_synthesis_feed,
@@ -226,15 +225,9 @@ class SynthesisBody(BaseModel):
 
 @router.get("/knowledge/synthesis/targets")
 async def synthesis_targets():
-    """Champs synthétisables (diagnostic) : lesquels, avec quelle dimension et combien de citations
-    minimales requises."""
-    return {
-        "targets": [
-            {"field_path": t.field_path, "dimension": t.dimension,
-             "entry_type": t.entry_type, "min_citations": t.min_citations}
-            for t in SYNTHESIS_TARGETS.values()
-        ]
-    }
+    """Champs synthétisables (diagnostic). SYNTHESIS_TARGETS supprimé au lot 3 — retourne
+    liste vide jusqu'au câblage des mandats de questions framework en lot 4."""
+    return {"targets": []}
 
 
 @router.post("/tickers/{ticker_id}/knowledge/synthesize")

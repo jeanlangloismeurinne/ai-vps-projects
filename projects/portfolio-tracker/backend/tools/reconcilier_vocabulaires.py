@@ -4,7 +4,7 @@ CE QU'IL PROUVE
 ---------------
 Le système parle deux langues qui ne se rencontrent jamais :
 
-  · le vocabulaire d'INDEXATION — `MVDD_FIELD_PATHS`, ce qu'un lien de couverture a le droit de
+  · le vocabulaire d'INDEXATION — `FIELD_PROFILES`, ce qu'un lien de couverture a le droit de
     désigner. Un tag hors de cette liste ne fonde rien : l'entry est stockée et devient orpheline,
     en silence.
     ⚠️ Ce mesureur porte sur les deux VOCABULAIRES, pas sur leur porteur, et c'est pourquoi la 036
@@ -30,7 +30,7 @@ Son ancêtre `/tmp/vocab.py` re-parsait `common.py` et `analysis_v2_schemas.py` 
 regex qui cesse de mordre ne se plaint pas : elle rend un ensemble VIDE, donc « 0 orpheline », donc
 un vert parfait sur un système inchangé — le premier des quatre faux verts, en pire, puisqu'il
 grandit avec le refactoring qu'il est censé surveiller. Ici les deux vocabulaires sont IMPORTÉS de
-leurs détenteurs uniques (#46) : `MVDD_FIELD_PATHS` d'un côté, les `model_fields` Pydantic de
+leurs détenteurs uniques (#46) : `FIELD_PROFILES` d'un côté, les `model_fields` Pydantic de
 l'autre. Un renommage de champ change le résultat au lieu de le vider.
 
 Les §A asserts existent pour la même raison : un ensemble vide ou une table d'alias qui ne pointe
@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import sys
 
-from app.agents.v2.common import MVDD_FIELD_PATHS
+from app.agents.v2.common import FIELD_PROFILES
 from app.contracts import analysis_v2_schemas as S
 
 ok = fail = 0
@@ -123,12 +123,12 @@ def feuilles_memo() -> set[str]:
 
 def main() -> int:
     memo = feuilles_memo()
-    index = set(MVDD_FIELD_PATHS)
+    index = set(FIELD_PROFILES.keys())
 
     # ── §A — le mesureur mesure-t-il quelque chose ? ─────────────────────────────
     # Sans ces quatre asserts, toute panne de lecture se lit « 0 orpheline ».
     check("[A] le vocabulaire d'INDEXATION est non vide", bool(index),
-          "→ MVDD_FIELD_PATHS vide : tout champ du mémo paraîtrait orphelin")
+          "→ FIELD_PROFILES vide : tout champ du mémo paraîtrait orphelin")
     check("[A] le vocabulaire de SORTIE est non vide", bool(memo),
           "→ aucune feuille lue : 'zéro orpheline' serait vrai sur zéro ligne")
     aliases_morts = sorted(k for k in ALIAS if k not in memo)
@@ -137,13 +137,13 @@ def main() -> int:
           f"et masquerait le jour où un champ homonyme réapparaît")
     cibles_mortes = sorted(v for v in ALIAS.values() if v not in index)
     check("[A] chaque cible d'ALIAS est un chemin indexable réel", not cibles_mortes,
-          f"→ {cibles_mortes} : la cible n'existe pas dans MVDD_FIELD_PATHS, "
+          f"→ {cibles_mortes} : la cible n'existe pas dans FIELD_PROFILES, "
           f"le champ serait compté orphelin à tort")
     derives_morts = sorted(d for d in DERIVES if d not in memo)
     check("[A] chaque champ déclaré DÉRIVÉ est encore une feuille du mémo", not derives_morts,
           f"→ {derives_morts} : une dispense qui ne dispense plus rien")
 
-    print(f"\nvocabulaire d'INDEXATION (MVDD_FIELD_PATHS) : {len(index)} chemins")
+    print(f"\nvocabulaire d'INDEXATION (FIELD_PROFILES) : {len(index)} chemins")
     print(f"champs FEUILLES du ResearchMemo (hors refs)         : {len(memo)}")
     print(f"   dont dérivés d'autres champs (pas à fonder)      : {len(DERIVES & memo)}")
 

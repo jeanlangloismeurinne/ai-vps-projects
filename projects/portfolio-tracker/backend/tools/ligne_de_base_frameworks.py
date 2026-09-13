@@ -18,7 +18,7 @@ Rien. Aucun UPDATE, aucun INSERT. Il lit le corpus courant et deux contrats.
 
 DÉTENTEURS UNIQUES (#46) — aucune règle n'est ré-implémentée ici :
   · les deux vocabulaires et leur écart      → `tools.reconcilier_vocabulaires`
-  · les cibles de synthèse et leurs planchers → `knowledge.synthesis_feed.SYNTHESIS_TARGETS`
+  · les cibles de synthèse et leurs planchers → frameworks YAML (SYNTHESIS_TARGETS supprimé lot 3)
   · la matrice de traçabilité benchmark → étape → champ → le benchmark lui-même, PARSÉ
     (`/roadmap/benchmark-methodologies-decision-investissement.md`, Partie E)
 
@@ -35,9 +35,9 @@ import re
 import sys
 from typing import Any
 
-from app.agents.v2.common import MVDD_FIELD_PATHS
+from app.agents.v2.common import FIELD_PROFILES
 from app.db.database import close_pool, get_db_session, init_pool
-from app.knowledge.synthesis_feed import SYNTHESIS_TARGETS
+# SYNTHESIS_TARGETS supprimé au lot 3 — mesure 5 devient partielle (lot 4)
 
 from tools._corpus_archive import ENTRIES, bandeau
 from tools.reconcilier_vocabulaires import ALIAS, DERIVES, feuilles_memo
@@ -185,7 +185,7 @@ async def main() -> int:
     # ── MESURES 2 et 3 — les deux vocabulaires ──────────────────────────────────
     _titre(2, "feuilles du research_memo SANS chemin d'indexation  /  chemins jamais consommés")
     memo = feuilles_memo()
-    index = set(MVDD_FIELD_PATHS)
+    index = set(FIELD_PROFILES.keys())
     sans_index = sorted(f for f in memo - DERIVES if ALIAS.get(f) not in index)
     jamais_consommes = sorted(index - {ALIAS[k] for k in ALIAS if k in memo})
     print(f"  feuilles du mémo (hors refs, hors dérivés) : {len(memo - DERIVES)}")
@@ -235,25 +235,8 @@ async def main() -> int:
         couvertes = {c for e in produites for c in (e["covers"] or [])}
         vides = []
         print(f"  {t} — {len(produites)} synthèse(s) grounded")
-        for chemin, cible in SYNTHESIS_TARGETS.items():
-            citables = [e for e in lignes
-                        if chemin in (e["covers"] or [])
-                        and e["reliability_tier"] in cible.citable_tiers
-                        and not (e["entry_type"] == "analysis"
-                                 and e["source_type"] == "agent_synthesis")]
-            assez = len(citables) >= cible.min_citations
-            if not assez:
-                vides.append(chemin)
-            # « synthèse SANS matière indexée » : le cas qui compte. La synthèse existe, donc elle
-            # a été fondée — mais sur des entries que l'index n'attache PAS à ce champ.
-            ecart = "  ⚠ synthétisée SANS matière indexée" if (chemin in couvertes and not assez) \
-                else ("  → matière indexée insuffisante" if not assez else "")
-            print(f"      {'✓' if chemin in couvertes else '·'} {chemin:34} "
-                  f"matière indexée {len(citables)}/{cible.min_citations}{ecart}")
-        aveugles = sorted(couvertes & set(vides))
-        print(f"      cibles sans matière indexée suffisante : {len(vides)} / "
-              f"{len(SYNTHESIS_TARGETS)}"
-              + (f"   · dont {len(aveugles)} pourtant SYNTHÉTISÉE(S)" if aveugles else ""))
+        print(f"      SYNTHESIS_TARGETS supprimé (lot 3) — décompte par cible HORS SERVICE")
+        print(f"      champs couverts : {sorted(couvertes) or '(aucun)'}")
 
     print("\n  ⚠️ CE QUE LA SPEC §0.2 NE DIT PAS, et qui sort de cette mesure : NVDA a produit 4\n"
           "     synthèses sur 4 cibles dont la matière INDEXÉE est insuffisante. Elles ne sont pas\n"

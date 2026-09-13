@@ -31,7 +31,6 @@ from .service import (
     store_knowledge,
 )
 from .synthesis_feed import (
-    SYNTHESIS_TARGETS,
     SynthesisUnavailable,
     SynthesisUngrounded,
     run_synthesis_feed,
@@ -52,7 +51,6 @@ __all__ = [
     "run_synthesis_feed",
     "SynthesisUnavailable",
     "SynthesisUngrounded",
-    "SYNTHESIS_TARGETS",
     # embeddings (bge-m3 1024d — migration 027)
     "EmbeddingUnavailable",
     "backfill_embeddings",

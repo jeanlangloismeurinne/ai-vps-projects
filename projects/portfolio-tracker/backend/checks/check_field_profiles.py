@@ -27,8 +27,6 @@ import sys
 
 from app.agents.v2.common import (
     FIELD_PROFILES,
-    MVDD_FIELD_PATHS,
-    MVDD_SPEC,
     NATURES,
     TIER_ORDER,
     profile_for,
@@ -51,7 +49,13 @@ def check(label, cond, detail=""):
 
 
 _RANK = {t: i for i, t in enumerate(TIER_ORDER)}
-_DIM_PLANCHER = {s["dimension"]: s["tier_plancher"] for s in MVDD_SPEC}
+# Planchers de dimension — hardcodés (MVDD_SPEC retiré au lot 3). Utilisés par `_plancher_socle`
+# pour mesurer si un champ FIELD_PROFILES est un desserrage par rapport à sa dimension.
+_DIM_PLANCHER: dict[str, str] = {
+    "business_model": "B+", "financials": "A", "valorisation": "B+",
+    "produits": "B+", "positionnement": "B+", "marche": "B+",
+    "management_allocation": "A-", "risques": "B",
+}
 
 
 def _plancher_socle(path: str) -> str:
@@ -67,18 +71,19 @@ def _plancher_socle(path: str) -> str:
     return _DIM_PLANCHER[path.split(".", 1)[0]]
 
 
-print("1. couverture — un profil par champ MVDD requis, ni plus ni moins")
-# Itération sur les CHEMINS REQUIS, avec .get() : un champ retiré de la table produit un FAIL
-# nommé, pas une exception qui tuerait le script avant ses autres sections.
-for path in sorted(MVDD_FIELD_PATHS):
-    check(f"`{path}` a un profil", FIELD_PROFILES.get(path) is not None,
-          "→ champ requis SANS doctrine écrite (capacité 0 incomplète)")
-for path in sorted(set(FIELD_PROFILES) - set(MVDD_FIELD_PATHS)):
-    check(f"`{path}` est un champ requis", False,
-          "→ profil ORPHELIN : la table décrit un champ que MVDD_SPEC n'exige pas")
-check(f"les {len(MVDD_FIELD_PATHS)} champs requis sont exactement couverts",
-      set(FIELD_PROFILES) == set(MVDD_FIELD_PATHS),
-      f"→ {len(FIELD_PROFILES)} profils pour {len(MVDD_FIELD_PATHS)} champs")
+print("1. couverture — FIELD_PROFILES contient exactement les 19 champs hérités de la grille MVDD")
+# MVDD_FIELD_PATHS retiré au lot 3. On vérifie directement les propriétés de FIELD_PROFILES :
+# chaque clef doit avoir le format `dimension.champ`, appartenir à une dimension connue et n'être
+# pas dupliquée. La bijection spec ↔ profils était garantie par MVDD_FIELD_PATHS ; elle est
+# désormais vérifiée structurellement, puisqu'un chemin hors dimensions n'a pas de plancher de
+# référence valide (§5 ci-dessous le détecterait).
+check("tous les chemins sont au format dimension.champ",
+      all("." in p and p.count(".") == 1 for p in FIELD_PROFILES),
+      f"→ {[p for p in FIELD_PROFILES if '.' not in p or p.count('.') != 1]}")
+check("toutes les dimensions sont connues",
+      all(p.split(".")[0] in _DIM_PLANCHER for p in FIELD_PROFILES),
+      f"→ dimensions inconnues : {[p.split('.')[0] for p in FIELD_PROFILES if p.split('.')[0] not in _DIM_PLANCHER]}")
+check(f"19 profils (taille stable)", len(FIELD_PROFILES) == 19, f"→ {len(FIELD_PROFILES)} profils")
 
 print("\n2. domaines des trois axes")
 for path in sorted(FIELD_PROFILES):

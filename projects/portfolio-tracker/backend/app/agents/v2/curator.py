@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
 from app.agents.v2.common import (
-    FIELD_PROFILES, MVDD_SPEC, TIER_ORDER, count_tiers, format_entries_for_prompt,
+    FIELD_PROFILES, TIER_ORDER, count_tiers, format_entries_for_prompt,
 )
 from app.agents.v2.runner import extract_json
 from app.contracts import ContextPack, ReadinessReport, compute_cause_non_ready
@@ -45,43 +45,17 @@ _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}  # 0 = meilleur (A) … pl
 # `FIELD_PROFILES`, détenteur unique, et le desserrage prend effet — ce que la capacité 2 avait
 # préparé et que seule la capacité 4 pouvait câbler.
 
-# Champs requis GÉNUINEMENT introuvables (aucune source accessible à aucun tier — ni KB, ni web même
-# dégradé, ni synthèse) : ils NE bloquent PAS `ready` mais sont portés comme LACUNE DÉCLARÉE
-# (incertitude investissable « non quantifiée »). Décision méthodo 2026-08-26 : mieux vaut une thèse
-# ready avec un trou VISIBLE et assumé qu'un blocage indéfini sur une donnée qui n'existe pas.
-#
-# ⚠️ Une dispense est PAR ÉMETTEUR, jamais globale. Constaté sur le 2ᵉ ticker (MSFT, 2026-08-30) :
-# les deux dispenses ci-dessous étaient des constantes globales, donc MSFT héritait en silence d'un
-# passe-droit sur `business_model.recurrence_pct` justifié par « NVIDIA est un business hardware-
-# dominant » — alors que Microsoft publie précisément cette donnée (Microsoft Cloud, RPO). Pire, le
-# libellé NVDA partait tel quel dans les `incertitudes_investissables` de MSFT. Une dispense énonce
-# un fait sur UN émetteur : elle se clef sur lui. Défaut = AUCUNE dispense, donc le champ BLOQUE —
-# le sens sûr : on refuse un `ready` de trop, on n'en accorde pas un par héritage.
-#
-# RETRAIT 2026-08-31 — `NVDA / marche.croissance_marche_historique`. La dispense affirmait « aucune
-# source primaire/presse accessible à un tier suffisant » : c'était vrai de la TABLE DE DOMAINES, pas
-# du monde. La convention #32 a classé les cabinets d'études en `web_search_reputable` (plafond B),
-# ce qui rend enfin le champ atteignable à son plancher B (`FIELD_PLANCHER_OVERRIDES`) — les deux
-# garde-fous, réglés séparément, se contredisaient. Retiré sur PREUVE et non sur intuition : un
-# mandat NVDA a rendu 3 entries tier B (Omdia 0.630, IDC 0.605, TechInsights 0.602 — entries
-# 117-119), là où MSFT en avait déjà 3 (Synergy/Canalys, 109-111). Une dispense se retire quand on a
-# montré que le champ se fonde, jamais quand on estime qu'il devrait se fonder.
-DECLARED_NONBLOCKING_GAPS: dict[str, dict[str, str]] = {
-    "NVDA": {
-        "business_model.recurrence_pct":
-            "Part des revenus récurrents (logiciels/abonnements) — non chiffrée dans les sources "
-            "primaires disponibles. NVIDIA est un business hardware-dominant (quasi-totalité du CA "
-            "= vente de GPU/plateformes, one-time) ; NVIDIA AI Enterprise est en croissance mais sa "
-            "contribution relative n'est pas disclosée séparément à un tier accessible. "
-            "Lacune déclarée, non bloquante.",
-    },
-}
+# ── DECLARED_NONBLOCKING_GAPS supprimé au lot 3 ──────────────────────────────
+# Les dispenses de champs MVDD en dur sont retirées avec la grille MVDD. La table
+# `framework_dispenses` (migration 040, keyed par question_id) est le remplacement — lue en lot 4
+# par le manager. Le curator étant dead code jusqu'au lot 2c (index_couverture_pour → None),
+# nonblocking_gaps_for retourne {} pour tous les tickers : aucune dispense active.
 
 
 def nonblocking_gaps_for(ticker_id: Optional[str]) -> dict[str, str]:
-    """Dispenses applicables à CET émetteur. Ticker inconnu → dict vide : tous les champs requis
-    bloquent tant qu'une dispense n'a pas été écrite pour lui, en connaissance de son cas."""
-    return DECLARED_NONBLOCKING_GAPS.get((ticker_id or "").strip().upper(), {})
+    """Retourne {} — les dispenses MVDD champ-par-champ sont supprimées (lot 3).
+    Les dispenses framework-question seront lues depuis `framework_dispenses` en lot 4."""
+    return {}
 
 
 def _plancher_for(dimension: str, champ: str, dim_plancher: str) -> str:
@@ -107,27 +81,10 @@ def _best_tier(tiers: list[str]) -> Optional[str]:
     return min(valides, key=lambda t: _TIER_RANK[t]) if valides else None
 
 
-_MVDD_BY_DIM = {s["dimension"]: s for s in MVDD_SPEC}
-
-
-def _exigences(dimension: Optional[str]) -> tuple[list[str], str]:
-    """Champs requis + tier plancher d'une dimension : ils viennent du FRAMEWORK, du framework SEUL.
-
-    ⚠️ **Le levier RESSERRER du modèle a été RETIRÉ (lot 2c, maillon 5, écart V2 de l'audit).**
-    Jusqu'ici l'agent pouvait affiner l'exigence — ajouter un champ requis, relever le plancher — et
-    l'on prenait l'union des champs / le plus strict des planchers. Sous le principe 1 (« c'est le
-    framework qui dicte les questions »), un resserrement discrétionnaire est **une question posée par
-    le modèle**, pas par le framework : le traducteur dit *où chercher*, jamais *combien de preuve
-    suffit* (spec §3.6/§11). L'exigence est donc désormais lue TELLE QUELLE dans `MVDD_SPEC`, et la
-    proposition du modèle est ignorée. Ce n'est plus « le DERNIER levier du modèle sur le verdict » —
-    il n'y en a plus.
-    """
-    spec = _MVDD_BY_DIM.get(dimension or "", {})
-    requis: list[str] = list(spec.get("champs_requis") or [])
-    plancher = spec.get("tier_plancher")
-    if plancher not in _TIER_RANK:
-        plancher = "B"
-    return (requis or ["description"]), plancher
+# ── _MVDD_BY_DIM et _exigences supprimés au lot 3 ────────────────────────────
+# En lot 4 le manager lira les mandats de questions depuis le framework YAML. recompute_coverage
+# utilise désormais les champs_requis/tier_plancher présents dans le dict de dimension (posés par
+# l'analyste ou par les fixtures de test) sans les écraser depuis une spec codée en dur.
 
 
 class CouvertureSansEmetteur(RuntimeError):
@@ -261,12 +218,10 @@ def recompute_coverage(
             if not isinstance(d, dict):
                 continue
             dim = d.get("dimension")
-            requis, dim_plancher = _exigences(dim)
-            # L'exigence du framework écrase ce que le modèle a proposé : `champs_requis` /
-            # `tier_plancher` ne sont plus un levier du modèle (maillon 5, écart V2). Le rapport
-            # MONTRE l'exigence appliquée, jamais celle que le modèle aurait souhaitée.
-            d["champs_requis"] = requis
-            d["tier_plancher"] = dim_plancher
+            requis: list[str] = list(d.get("champs_requis") or [])
+            dim_plancher: str = d.get("tier_plancher") or "B"
+            if dim_plancher not in _TIER_RANK:
+                dim_plancher = "B"
             non_fondables: list[str] = []
             perimes: list[str] = []
             fondations: list[dict[str, Any]] = []
@@ -518,13 +473,10 @@ def _libelle_ancre(ancre: MaterialEventLookup) -> str:
 
 def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]], *,
                             ancre: MaterialEventLookup) -> str:
-    spec = json.dumps(MVDD_SPEC, ensure_ascii=False, indent=2)
     listing = format_entries_for_prompt(entries)
     return (
         f"[mode: readiness]\n\n"
         f"Ticker : {ticker_id}\n\n"
-        f"Cadre MVDD (8 dimensions, 2 blocs jamais fusionnés — champs requis & tier plancher indicatifs) :\n"
-        f"{spec}\n\n"
         f"knowledge_entries COURANTES de la KB ({len(entries)}) — cite-les par entry_id :\n"
         f"{listing}\n\n"
         f"Produis le readiness_report_json (contrat ReadinessReport, JSON strict).\n\n"
@@ -543,10 +495,9 @@ def _readiness_task_message(ticker_id: str, entries: list[dict[str, Any]], *,
         f"écarté. Tes gaps ne portent que ce que la base ne contient PAS.\n\n"
         f"Ce qui est VRAIMENT attendu de toi, et que le code ne sait pas produire : le `rationale` "
         f"(lecture d'ensemble du dossier), les `gaps` (ce qui manque, avec des `queries_suggerees` "
-        f"actionnables), les `incertitudes_investissables` et `qualite_info`. Reprends les 8 "
-        f"dimensions du cadre MVDD ci-dessus avec leurs `champs_requis` et `tier_plancher` TELS "
-        f"QUELS : ils sont dictés par le cadre, tu n'as aucun levier dessus — ni pour ajouter un "
-        f"champ, ni pour relever ou abaisser un plancher. Toute valeur que tu proposerais serait "
+        f"actionnables), les `incertitudes_investissables` et `qualite_info`. Les dimensions et "
+        f"leurs exigences sont dictées par le framework — tu n'as aucun levier dessus. Toute "
+        f"valeur que tu proposerais serait "
         f"ignorée et remplacée par celle du cadre. conviction/marge_securite = null, pas de "
         f"context_pack_entry_id.\n\n"
         f"⚠️ Dans le `rationale`, ne NOMME aucun verdict (`ready`, `not_ready`, `thin_qualitative`, "

@@ -39,7 +39,7 @@ import sys
 from datetime import date
 
 from app.agents.v2 import worker as worker_mod
-from app.agents.v2.common import FIELD_PROFILES, MVDD_SPEC, NATURES
+from app.agents.v2.common import FIELD_PROFILES, NATURES
 from app.agents.v2.curator import _plancher_for
 from app.knowledge import service as service_mod
 from app.knowledge.service import RELIABILITY_TABLE, compute_reliability
@@ -125,7 +125,12 @@ print("1bis. portée RÉELLE du desserrage — la doctrine et la porte coïncide
 # `FIELD_PROFILES`, détenteur unique (#46). La liste des écarts est donc vide, et l'assert du bas —
 # écrit à l'avance pour ça — est ce qui a exigé de la vider le jour du câblage.
 _DESSERRAGE_NON_CABLE: frozenset[str] = frozenset()
-_DIM_PLANCHER = {s["dimension"]: s["tier_plancher"] for s in MVDD_SPEC}
+# Planchers de dimension — hardcodés (MVDD_SPEC retiré au lot 3).
+_DIM_PLANCHER: dict[str, str] = {
+    "business_model": "B+", "financials": "A", "valorisation": "B+",
+    "produits": "B+", "positionnement": "B+", "marche": "B+",
+    "management_allocation": "A-", "risques": "B",
+}
 
 
 def _porte(champ: str) -> str:

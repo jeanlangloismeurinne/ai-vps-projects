@@ -59,7 +59,8 @@ from typing import Any
 from app.db.database import close_pool, get_db_session, init_pool
 from app.knowledge.embeddings import is_configured as embeddings_configured
 from app.knowledge.service import query_knowledge
-from app.knowledge.synthesis_feed import SYNTHESIS_TARGETS
+# SYNTHESIS_TARGETS supprimé au lot 3 — les mandats de questions framework le remplacent (lot 4).
+# Les sections de cet outil qui l'utilisaient sont conservées mais marquées HORS SERVICE ci-dessous.
 from tools._corpus_archive import ENTRIES, bandeau
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
@@ -254,103 +255,16 @@ async def main() -> int:
                     # `field_path` est porté DANS la ligne par le producteur ; `covers` en est
                     # l'index. On lit le porteur, et on dit si les deux divergent.
                     field_path = cs.get("field_path")
-                    if field_path not in SYNTHESIS_TARGETS:
-                        print(f"\n-- #{s['id']} : field_path={field_path!r} inconnu de "
-                              f"SYNTHESIS_TARGETS — corpus non reconstructible")
+                    if not field_path:
+                        print(f"\n-- #{s['id']} : field_path absent — corpus non reconstructible")
                         continue
                     if field_path not in (covers or []):
                         print(f"\n   ⚠️ #{s['id']} : field_path={field_path} ABSENT de "
                               f"covers={list(covers or [])}")
-                    target = SYNTHESIS_TARGETS[field_path]
-                    query_champ, _ = target.resolve(company)
-
-                    # 1) le corpus du champ, par l'appel de PRODUCTION
-                    found = await query_knowledge(
-                        conn, ticker_id=ticker, query=query_champ,
-                        entry_types=list(target.candidate_entry_types),
-                        min_reliability=MIN_RELIABILITY, include_sector=True,
-                        limit=MAX_CANDIDATES,
-                    )
-                    corpus = [e for e in found if e.get("reliability_tier") in target.citable_tiers]
-                    corpus_ids = {e["id"] for e in corpus}
-                    print(f"\n-- synthèse #{s['id']} → champ `{field_path}`")
-                    print(f"   corpus du CHAMP : {len(corpus)} entries citables "
-                          f"{sorted(corpus_ids)}")
-
-                    # 2) les questions déclarées, en TEXTE
-                    qs = _questions(dict(s))
-                    print(f"   questions déclarées ouvertes (filet lexical) : {len(qs)}")
-                    if not qs:
-                        lignes_bilan.append(f"{ticker}/{field_path}: 0 question")
-                        continue
-
-                    gains_champ = 0
-                    for i, (motif, question) in enumerate(qs, 1):
-                        total_questions += 1
-                        print(f"\n   [{i}] ({motif}) {question}")
-                        # 3) la même recherche, formulée sur LA QUESTION
-                        found_q = await query_knowledge(
-                            conn, ticker_id=ticker, query=question,
-                            entry_types=list(target.candidate_entry_types),
-                            min_reliability=MIN_RELIABILITY, include_sector=True,
-                            limit=MAX_CANDIDATES,
-                        )
-                        cit_q = [e for e in found_q
-                                 if e.get("reliability_tier") in target.citable_tiers]
-                        # Le rang est celui de la LISTE RENDUE (déjà triée par distance cosinus).
-                        gagnees = [(r, e) for r, e in enumerate(cit_q, 1)
-                                   if e["id"] not in corpus_ids]
-                        proches = [(r, e) for r, e in gagnees if r <= RANG_INGREDIENT]
-                        if proches:
-                            questions_avec_gain += 1
-                            gains_champ += 1
-                            print(f"       → INGRÉDIENT PLAUSIBLE : {len(proches)} entrie(s) hors "
-                                  f"corpus dans le top-{RANG_INGREDIENT} de la question :")
-                            for r, e in proches:
-                                print(f"         {_fmt(e, r)}")
-                        else:
-                            print(f"       → aucun proche voisin hors corpus "
-                                  f"(top-{RANG_INGREDIENT}) — la recherche sur la question ne "
-                                  f"gagne rien d'utilisable")
-                        loin = [(r, e) for r, e in gagnees if r > RANG_INGREDIENT]
-                        if loin:
-                            print(f"         (+ {len(loin)} hors corpus au-delà du rang "
-                                  f"{RANG_INGREDIENT}, non comptées : "
-                                  f"{', '.join('#%d' % e['id'] for _, e in loin)})")
-                        # L'étalon, imprimé SANS seuil : où tombe l'ingrédient qu'on sait être le
-                        # bon ? S'il tombe du mauvais côté, c'est le seuil qui est réfuté.
-                        if (ticker, field_path) == (ETALON[0], ETALON[1]) and etalon_id:
-                            pos = next((r for r, e in enumerate(cit_q, 1)
-                                        if e["id"] == etalon_id), None)
-                            sim = next((e.get("similarity") for e in cit_q
-                                        if e["id"] == etalon_id), None)
-                            etalon_rangs.append(pos)
-                            print(f"       ⇒ ÉTALON #{etalon_id} sur la question EN PROSE : "
-                                  + (f"rang {pos}"
-                                     + (f", sim={sim:.3f}" if isinstance(sim, float) else "")
-                                     if pos else "ABSENT des résultats"))
-                            # Contre-épreuve : la MÊME question, sa négation retirée.
-                            q_net = _sans_negation(question)
-                            found_n = await query_knowledge(
-                                conn, ticker_id=ticker, query=q_net,
-                                entry_types=list(target.candidate_entry_types),
-                                min_reliability=MIN_RELIABILITY, include_sector=True,
-                                limit=MAX_CANDIDATES,
-                            )
-                            cit_n = [e for e in found_n
-                                     if e.get("reliability_tier") in target.citable_tiers]
-                            pos_n = next((r for r, e in enumerate(cit_n, 1)
-                                          if e["id"] == etalon_id), None)
-                            sim_n = next((e.get("similarity") for e in cit_n
-                                          if e["id"] == etalon_id), None)
-                            etalon_rangs_nets.append(pos_n)
-                            print(f"       ⇒ ÉTALON #{etalon_id} SANS négation « {q_net[:70]} » : "
-                                  + (f"rang {pos_n}"
-                                     + (f", sim={sim_n:.3f}" if isinstance(sim_n, float) else "")
-                                     if pos_n else "ABSENT des résultats"))
-                    lignes_bilan.append(
-                        f"{ticker}/{field_path}: {len(qs)} question(s), {gains_champ} avec gain"
-                    )
+                    # SYNTHESIS_TARGETS supprimé au lot 3 : la mesure de rejeu n'est plus possible.
+                    print(f"\n   -- #{s['id']} : SYNTHESIS_TARGETS supprimé (lot 3) — "
+                          f"reconstruction corpus {field_path!r} HORS SERVICE")
+                    continue
     finally:
         await close_pool()
 

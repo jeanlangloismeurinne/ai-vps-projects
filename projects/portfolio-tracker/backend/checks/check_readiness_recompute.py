@@ -32,10 +32,9 @@ import sys
 from datetime import date
 
 from app.agents.v2.common import (
-    FIELD_PROFILES, MVDD_FIELD_PATHS, MVDD_SPEC, format_entries_for_prompt,
+    FIELD_PROFILES, format_entries_for_prompt,
 )
 from app.agents.v2.curator import (
-    DECLARED_NONBLOCKING_GAPS,
     CouvertureSansEmetteur,
     MOTIF_SANS_EMETTEUR,
     nonblocking_gaps_for,
@@ -43,7 +42,6 @@ from app.agents.v2.curator import (
     exiger_index_couverture,
     _apply_deterministic_overrides,
     _declare_nonblocking_gaps,
-    _exigences,
     constrain_rationale,
     verdicts_nommes,
     _plancher_for,
@@ -69,7 +67,24 @@ def check(label, cond, detail=""):
         print(f"  FAIL {label} {detail}")
 
 
-_SPEC = {s["dimension"]: s for s in MVDD_SPEC}
+# Spécification des 8 dimensions — hardcodée ici (MVDD_SPEC retiré du code de production au lot 3).
+# Ces valeurs définissent les FIXTURES de test ; elles ne doivent PAS être lues depuis le code de
+# production (sinon le check mesurerait sa propre constante, pas la règle).
+_SPEC: dict[str, dict] = {
+    "business_model": {"champs_requis": ["description", "drivers_revenus", "recurrence_pct"],
+                       "tier_plancher": "B+"},
+    "financials": {"champs_requis": ["roic_pct", "fcf_conversion_pct", "intensite_capex_pct", "levier"],
+                   "tier_plancher": "A"},
+    "valorisation": {"champs_requis": ["prix_actuel", "relatif_multiple", "base_rate_anchor"],
+                     "tier_plancher": "B+"},
+    "produits": {"champs_requis": ["description", "unit_economics"], "tier_plancher": "B+"},
+    "positionnement": {"champs_requis": ["moat_preuves", "position_vs_pairs"], "tier_plancher": "B+"},
+    "marche": {"champs_requis": ["croissance_marche_historique", "structure_5forces"],
+               "tier_plancher": "B+"},
+    "management_allocation": {"champs_requis": ["incitations", "skin_in_game_pct"],
+                               "tier_plancher": "A-"},
+    "risques": {"champs_requis": ["risques_cles"], "tier_plancher": "B"},
+}
 
 
 # Date par DÉFAUT des entries de fixture. Elle n'est pas décorative : une entry sans `source_date`
@@ -201,13 +216,8 @@ check("le desserrage est DÉCLARÉ, jamais tacite",
       bool((FIELD_PROFILES["marche.croissance_marche_historique"].get("desserrage") or "").strip()),
       "→ desserrage tacite : le trou de feedback_optional_schema_gate")
 
-print("\n3. MVDD_FIELD_PATHS — vocabulaire fermé de l'index")
-check("chemins complets uniquement", all("." in p for p in MVDD_FIELD_PATHS))
-check("business_model.description présent", "business_model.description" in MVDD_FIELD_PATHS)
-check("produits.description présent (homonyme distinct)", "produits.description" in MVDD_FIELD_PATHS)
-check("nom nu absent", "description" not in MVDD_FIELD_PATHS)
-check("un chemin par champ requis",
-      len(MVDD_FIELD_PATHS) == sum(len(s["champs_requis"]) for s in MVDD_SPEC))
+print("\n3. MVDD_FIELD_PATHS supprimé au lot 3 — section retirée")
+# MVDD_FIELD_PATHS and MVDD_SPEC removed in lot 3; no checks for them.
 
 print("\n4. L'index n'a AUCUN ÉMETTEUR entre le lot 2b et le lot 2c — et la porte refuse de prononcer")
 # _INDEX_SANS_EMETTEUR — écart déclaré, sur la forme de #52 : il vit dans le check du lot qui l'a
@@ -332,37 +342,10 @@ check("produits ok (description + unit_economics)", pr["ok"] is True, f"→ {pr[
 check("business_model.description NON fondé par le tag produits",
       "description" in bm["champs_non_fondables"], f"→ {bm['champs_non_fondables']}")
 
-print("\n8. _exigences — l'exigence vient du FRAMEWORK SEUL (levier RESSERRER retiré, maillon 5, V2)")
-# `_exigences` ne reçoit plus la proposition du modèle : elle lit `MVDD_SPEC` telle quelle. Le modèle
-# n'a plus AUCUN levier — ni pour resserrer (ajouter un champ, relever un plancher) ni pour desserrer.
-r, p = _exigences("business_model")
-check("champs_requis = ceux de MVDD_SPEC, tels quels",
-      r == _SPEC["business_model"]["champs_requis"], f"→ {r}")
-check("tier_plancher = celui de MVDD_SPEC, tel quel",
-      p == _SPEC["business_model"]["tier_plancher"], f"→ {p}")
-r3, p3 = _exigences("risques")
-check("autre dimension → son socle MVDD, sans altération",
-      r3 == _SPEC["risques"]["champs_requis"] and p3 == _SPEC["risques"]["tier_plancher"],
-      f"→ {r3} / {p3}")
-
-# LE POINT DE LECTURE, là où le levier vivait : au niveau du RAPPORT, une proposition du modèle est
-# écrasée par le cadre. On fabrique une dimension où le modèle a (a) retiré des champs, (b) inventé un
-# champ hors cadre, (c) baissé le plancher B+ → C. Le rapport doit rendre EXACTEMENT MVDD_SPEC — sinon
-# le modèle aurait rouvert un levier sur le verdict. Un `_exigences` qui ré-accepterait `d` ferait
-# rougir au moins l'un de ces trois asserts.
-_triche = {"dimension": "business_model", "tier_plancher": "C",
-           "champs_requis": ["description", "champ_invente_par_le_modele"],
-           "fondations": [], "champs_non_fondables": [], "champs_perimes": [],
-           "tier_atteint": None, "ok": True}
-cov = run([dim_cov("risques")], [entry(28, "A", ["risques.risques_cles"])],
-          dims_struct=[_triche])
-bmt = cov["structuree"]["dimensions"][0]
-check("champ inventé par le modèle → ABSENT du rapport (aucun RESSERRER par ajout)",
-      "champ_invente_par_le_modele" not in bmt["champs_requis"], f"→ {bmt['champs_requis']}")
-check("champs_requis du rapport = ceux du cadre (retrait du modèle ignoré)",
-      bmt["champs_requis"] == _SPEC["business_model"]["champs_requis"], f"→ {bmt['champs_requis']}")
-check("plancher baissé par le modèle (C) → ÉCRASÉ par le cadre (aucun DESSERRER)",
-      bmt["tier_plancher"] == _SPEC["business_model"]["tier_plancher"], f"→ {bmt['tier_plancher']}")
+print("\n8. _exigences supprimé au lot 3 — section retirée")
+# _exigences et _MVDD_BY_DIM retirés ; recompute_coverage lit désormais les champs_requis/tier_plancher
+# directement depuis le dict de dimension (posés par l'analyste). Le levier RESSERRER n'existe plus
+# depuis lot 2c maillon 5 ; cette section documentait le verrou, non la capacité active.
 
 print("\n9. reconcile_gaps — bijection champs_non_fondables ↔ gaps")
 # croissance est fondée à son plancher B (desserrage déclaré) ; structure_5forces ne l'est pas (C+
@@ -384,15 +367,14 @@ reconcile_gaps(report2, cov)
 check("gap synthétisé pour un non-fondable orphelin",
       any("structure_5forces" in x["champs_cibles"] for x in report2["gaps"]))
 
-print("\n10. Dispense RETIRÉE — croissance_marche_historique se fonde désormais (2026-08-31)")
-# La dispense disait « aucune source accessible à un tier suffisant ». C'était vrai de la table de
-# domaines, pas du monde : depuis #32 les cabinets d'études sont `web_search_reputable` (plafond B),
-# soit exactement le plancher dégradé du champ. Le retrait ne DESSERRE rien — il rend le champ
-# bloquant, et c'est une entry réelle qui le fonde (NVDA 117-119 : Omdia, IDC, TechInsights).
-check("croissance n'est PLUS une lacune déclarée pour NVDA",
+print("\n10. DECLARED_NONBLOCKING_GAPS supprimé — nonblocking_gaps_for retourne {} (lot 3)")
+# DECLARED_NONBLOCKING_GAPS est retiré avec MVDD_SPEC. Les dispenses framework-question sont dans la
+# table `framework_dispenses` (migration 040) et seront consommées par le manager en lot 4.
+# nonblocking_gaps_for() retourne {} pour tout ticker : aucune dispense active.
+check("nonblocking_gaps_for retourne {} pour tout ticker connu",
+      nonblocking_gaps_for("NVDA") == {} and nonblocking_gaps_for("MSFT") == {})
+check("croissance n'est plus dispensée (aucune dispense active)",
       "marche.croissance_marche_historique" not in nonblocking_gaps_for("NVDA"))
-check("business_model.recurrence_pct reste dispensé (fait NVIDIA, lui, toujours vrai)",
-      "business_model.recurrence_pct" in nonblocking_gaps_for("NVDA"))
 
 cov9 = run([dim_cov("marche")], [entry(56, "A-", ["marche.structure_5forces"], "agent_synthesis")])
 md9 = cov9["qualitative_marche"]["dimensions"][0]
@@ -463,13 +445,11 @@ def full_report(coverage, verdict="not_ready"):
 
 
 def corpus_complet():
-    """Une entry tier A par champ requis (hors lacune déclarée) — le cas `ready`."""
+    """Une entry tier A par champ requis — le cas `ready` (aucune dispense active au lot 3)."""
     ents, eid = [], 100
-    for s in MVDD_SPEC:
-        for champ in s["champs_requis"]:
-            path = f"{s['dimension']}.{champ}"
-            if path in nonblocking_gaps_for("NVDA"):
-                continue
+    for dim, spec in _SPEC.items():
+        for champ in spec["champs_requis"]:
+            path = f"{dim}.{champ}"
             ents.append(entry(eid, "A", [path]))
             eid += 1
     return ents
@@ -528,40 +508,29 @@ try:
 except Exception as e:  # noqa: BLE001
     check("ReadinessReport valide (thin, gaps reconciliés)", False, str(e)[:200])
 
-print("\n13. Dispense PAR EMETTEUR - aucun heritage silencieux (regression MSFT 2026-08-30)")
-# Le trou : les dispenses etaient GLOBALES. Tout nouveau ticker heritait du passe-droit NVDA sur
-# `business_model.recurrence_pct` - champ alors ni fonde, ni compte comme manque, avec un libelle
-# parlant de NVIDIA injecte dans SES incertitudes. Une dispense enonce un fait sur un emetteur.
-check("aucune dispense pour un ticker inconnu", nonblocking_gaps_for("MSFT") == {})
-check("aucune dispense sans ticker (defaut sur)", nonblocking_gaps_for(None) == {})
-check("dispense NVDA insensible a la casse", nonblocking_gaps_for("nvda") == nonblocking_gaps_for("NVDA"))
+print("\n13. Aucune dispense active (DECLARED_NONBLOCKING_GAPS supprimé — lot 3)")
+# Les dispenses MVDD champ-par-champ sont retirées. nonblocking_gaps_for() retourne {} pour tout
+# ticker : aucun héritage, aucune incertitude injectée silencieusement.
+check("aucune dispense pour MSFT", nonblocking_gaps_for("MSFT") == {})
+check("aucune dispense sans ticker", nonblocking_gaps_for(None) == {})
+check("retour identique quelle que soit la casse", nonblocking_gaps_for("nvda") == nonblocking_gaps_for("NVDA"))
 
 bm_nvda = run([], [], [dim_cov("business_model")], ticker_id="NVDA")["structuree"]["dimensions"][0]
 bm_msft = run([], [], [dim_cov("business_model")], ticker_id="MSFT")["structuree"]["dimensions"][0]
-check("NVDA : recurrence_pct dispense (absent des non-fondables)",
-      "recurrence_pct" not in bm_nvda["champs_non_fondables"])
-check("MSFT : recurrence_pct BLOQUE (aucun heritage)",
+check("recurrence_pct bloque pour NVDA (aucune dispense active)",
+      "recurrence_pct" in bm_nvda["champs_non_fondables"])
+check("recurrence_pct bloque pour MSFT (aucun heritage)",
       "recurrence_pct" in bm_msft["champs_non_fondables"], f"-> {bm_msft['champs_non_fondables']}")
 check("MSFT : marche.croissance_marche_historique bloque aussi",
       "croissance_marche_historique" in
       run([dim_cov("marche")], [], ticker_id="MSFT")["qualitative_marche"]["dimensions"][0]["champs_non_fondables"])
 
-# Le libelle NVDA ne doit jamais atterrir dans les incertitudes d'un autre emetteur.
+# _declare_nonblocking_gaps ne doit rien injecter puisque nonblocking_gaps_for retourne {}.
 rep_msft = {"incertitudes_investissables": []}
 _declare_nonblocking_gaps(rep_msft, run([dim_cov("marche")], [], [dim_cov("business_model")],
                                         ticker_id="MSFT"), "MSFT")
-check("aucune incertitude NVDA injectee chez MSFT",
+check("aucune incertitude injectee (nonblocking_gaps_for = {})",
       rep_msft["incertitudes_investissables"] == [], f"-> {rep_msft['incertitudes_investissables']}")
-
-# Un corpus complet SANS les champs dispenses ne peut plus etre `ready` pour un ticker sans dispense.
-rep_msft_ready = full_report({"structuree": {"dimensions": [dim_cov(d) for d in
-                                             ("business_model", "financials", "valorisation")], "bloc_ok": True},
-                              "qualitative_marche": {"dimensions": [dim_cov(d) for d in
-                                                     ("produits", "positionnement", "marche",
-                                                      "management_allocation", "risques")], "bloc_ok": True}})
-appliquer(rep_msft_ready, ents, ancre=_NEANT, ticker_id="MSFT")
-check("corpus 'ready NVDA' n'est PAS ready pour MSFT (2 champs non fondes)",
-      rep_msft_ready["verdict"] == "not_ready", f"-> {rep_msft_ready['verdict']}")
 
 
 print("\n14. Narration contrainte — le rationale ne contredit plus son verdict (dette A, rapport #24)")

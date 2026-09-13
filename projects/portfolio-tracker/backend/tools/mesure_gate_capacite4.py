@@ -51,7 +51,7 @@ from typing import Any, Optional
 
 import asyncpg
 
-from app.agents.v2.common import FIELD_PROFILES, MVDD_SPEC
+from app.agents.v2.common import FIELD_PROFILES
 from app.agents.v2.curator import (
     MOTIF_SANS_EMETTEUR,
     _plancher_for,
@@ -119,14 +119,12 @@ async def mesurer(conn, ticker_id: str) -> dict[str, Any]:
     lacunes: list[str] = []
     dispenses_vues: list[str] = []
 
-    for spec in MVDD_SPEC:
-        dim = spec["dimension"]
-        for champ in spec["champs_requis"]:
-            path = f"{dim}.{champ}"
-            if path in dispenses:
-                dispenses_vues.append(path)
-                continue
-            plancher = _plancher_for(dim, champ, spec["tier_plancher"])
+    for path, profil in FIELD_PROFILES.items():
+        dim, champ = path.split(".", 1)
+        if path in dispenses:
+            dispenses_vues.append(path)
+            continue
+        plancher = profil["plancher"]
             retenues = [i for i, t in index.get(path, []) if _tier_ge(t, plancher)]
             if not retenues:
                 lacunes.append(path)

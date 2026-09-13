@@ -139,107 +139,10 @@ class SynthesisTarget:
         )
 
 
-# Cibles connues. Le descripteur porte la définition du CHAMP, jamais la connaissance d'un émetteur.
-#
-# ⚠️ Constaté sur le 2ᵉ ticker (MSFT, 2026-08-30) : ces cibles se disaient « génériques par
-# construction » alors que seul le MÉCANISME l'était. Les `query`/`guidance` étaient rédigées pour
-# NVIDIA (« segments Data Center Gaming », « coût par GPU », « écosystème CUDA », « TSMC/HBM »).
-# Sur un autre émetteur, la requête sémantique cherchait le mauvais vocabulaire et la consigne
-# demandait au modèle de synthétiser une entreprise qui n'est pas celle analysée — une invitation
-# directe à sortir du corpus, dans le seul agent dont toute la valeur est de n'en pas sortir.
-# Règle : ce qui décrit le champ vit ici ; ce qui décrit l'émetteur vient des entries citées.
-SYNTHESIS_TARGETS: dict[str, SynthesisTarget] = {
-    "business_model.description": SynthesisTarget(
-        field_path="business_model.description",
-        dimension="business_model",
-        entry_type="analysis",
-        query=(
-            "modèle économique {company} activité principale segments opérationnels publiables "
-            "produits et services vendus chiffre d'affaires par segment clients cibles "
-            "canaux de monétisation structure du groupe"
-        ),
-        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis"),
-        min_citations=2,
-        citable_tiers=("A", "A-"),
-        guidance=(
-            "Synthétise la DESCRIPTION du modèle économique de {company}, telle qu'elle ressort des "
-            "entries : (1) activité principale — ce que l'entreprise vend réellement, (2) segments "
-            "opérationnels publiables et poids relatif de chacun, (3) clients cibles et canaux de "
-            "distribution, (4) mode de monétisation (vente unitaire, licence, abonnement, usage, "
-            "publicité) et profil de revenus chiffré. N'introduis AUCUN segment, produit ou client "
-            "qui ne figure pas dans les entries citées : la structure de l'entreprise se lit dans le "
-            "corpus, elle ne se suppose pas. Chaque affirmation cite les entries qui la fondent."
-        ),
-    ),
-    "produits.unit_economics": SynthesisTarget(
-        field_path="produits.unit_economics",
-        dimension="produits",
-        entry_type="analysis",
-        query=(
-            "économie unitaire {company} marge brute marge opérationnelle structure de coûts "
-            "coût unitaire prix de vente moyen pouvoir de fixation des prix rentabilité par "
-            "produit ou par client"
-        ),
-        candidate_entry_types=("fact_qualitative", "fact_financial", "analysis"),
-        min_citations=2,
-        citable_tiers=("A", "A-"),  # socle marges/coûts tier A ; exclut la presse marché B+ (hors-champ)
-        guidance=(
-            "Synthétise l'ÉCONOMIE UNITAIRE (unit economics) de l'offre de {company} : structure de "
-            "marge (marge brute / opérationnelle présentes dans les entries), levier de prix (prix de "
-            "vente moyen, pouvoir de fixation des prix), coûts unitaires SEULEMENT s'ils sont "
-            "dérivables des entries citées. L'unité pertinente dépend du métier (unité vendue, "
-            "siège, utilisateur, contrat, unité de consommation) : retiens celle que les entries "
-            "documentent, n'en invente pas. N'invente aucun chiffre absent des entries."
-        ),
-    ),
-    "positionnement.moat_preuves": SynthesisTarget(
-        field_path="positionnement.moat_preuves",
-        dimension="positionnement",
-        entry_type="analysis",
-        query=(
-            "avantage concurrentiel durable moat {company} coûts de transition base installée "
-            "effets de réseau économies d'échelle actifs incorporels marque brevets "
-            "rétention des clients barrières à l'entrée durabilité"
-        ),
-        candidate_entry_types=("fact_qualitative", "analysis", "fact_financial"),
-        min_citations=2,
-        citable_tiers=("A", "A-"),  # preuves du moat = socle A (dépôts, échelle, risques EDGAR A) ; la
-                                    # presse marché B+ porte des MENACES, pas des preuves
-        guidance=(
-            "Synthétise les PREUVES du moat (avantage concurrentiel durable) de {company} : d'abord "
-            "la NATURE du moat telle qu'elle ressort des entries — parmi coûts de transition, effets "
-            "de réseau, économies d'échelle, actifs incorporels (marque, brevets, licences), avantage "
-            "de coût — puis, pour chacune retenue, les preuves CHIFFRÉES ou factuelles tirées des "
-            "entries, et enfin sa durabilité face aux menaces documentées. Ne postule aucun type de "
-            "moat que les entries n'étayent pas : une nature de moat est une conclusion, pas une "
-            "hypothèse de départ. Chaque preuve est adossée aux entries citées."
-        ),
-    ),
-    "marche.structure_5forces": SynthesisTarget(
-        field_path="marche.structure_5forces",
-        dimension="marche",
-        entry_type="analysis",
-        query=(
-            "cinq forces de Porter {company} rivalité concurrentielle concurrents directs "
-            "menace de nouveaux entrants barrières à l'entrée pouvoir de négociation des clients "
-            "concentration de la clientèle pouvoir de négociation des fournisseurs dépendance "
-            "produits de substitution réglementation"
-        ),
-        candidate_entry_types=("fact_qualitative", "analysis"),
-        min_citations=3,
-        citable_tiers=("A", "A-"),  # les 5 forces s'adossent aux facteurs de risque EDGAR tier A ; la
-                                    # presse B+ porte la même chose en moins fiable → exclue
-        guidance=(
-            "Structure une analyse des 5 forces de Porter pour {company}, une par une : (1) intensité "
-            "de la rivalité concurrentielle, (2) menace de nouveaux entrants, (3) pouvoir de "
-            "négociation des clients, (4) pouvoir de négociation des fournisseurs, (5) menace de "
-            "produits de substitution. Pour chaque force, nomme les acteurs et les mécanismes que les "
-            "entries documentent RÉELLEMENT — n'importe aucun concurrent, fournisseur ou substitut "
-            "qui n'y figure pas. Chaque force est adossée aux entries citées et qualifiée (faible / "
-            "modérée / élevée) avec la preuve."
-        ),
-    ),
-}
+# ── SYNTHESIS_TARGETS supprimé au lot 3 ──────────────────────────────────────
+# Les sacs de mots-clefs et guidances codés en dur sont remplacés par les mandats de questions des
+# frameworks YAML (spec §5.1). run_synthesis_feed lèvera SynthesisUnavailable tant que le câblage
+# du lot 4 n'aura pas remplacé cette constante par la lecture du framework.
 
 
 _SYNTHESIS_SYSTEM_PROMPT = (
@@ -568,12 +471,13 @@ async def run_synthesis_feed(
     `SynthesisUnavailable` si le champ est inconnu ou le matériau citable insuffisant ;
     `SynthesisUngrounded` si la synthèse produite sort du corpus (rien n'est écrit).
     """
-    target = SYNTHESIS_TARGETS.get(field_path)
-    if target is None:
-        raise SynthesisUnavailable(
-            f"champ non synthétisable : {field_path} (connus : {sorted(SYNTHESIS_TARGETS)})"
-        )
+    raise SynthesisUnavailable(
+        f"SYNTHESIS_TARGETS supprimé (lot 3) : {field_path!r} — les mandats de questions du "
+        f"framework remplacent les cibles codées en dur (câblage lot 4)."
+    )
 
+    # unreachable until lot 4 wires the framework read; left in place to preserve structure
+    target = None  # noqa: F841
     # 1) charger le corpus citable (tier A/A-/B+ pertinent pour le champ) --------------------------
     async with get_db_session() as conn:
         # L'émetteur ne vient jamais du descripteur de champ : il est résolu ici, pour CE run.

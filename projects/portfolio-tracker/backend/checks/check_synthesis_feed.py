@@ -14,7 +14,7 @@ import sys
 from app.contracts import Approximation, GroundedSynthesis, LacuneDeclaree, SynthesisClaim
 from app.knowledge.synthesis_feed import (
     CITABLE_TIERS,
-    SYNTHESIS_TARGETS,
+    SynthesisTarget,
     _CONSIGNE_LACUNES,
     _SYNTHESIS_SKELETON,
     _SYNTHESIS_SYSTEM_PROMPT,
@@ -117,7 +117,18 @@ except Exception:
     check("synthèse sans aucun claim rejetée", True)
 
 print("\n5. build_content_structured — traçabilité du grounding")
-target = SYNTHESIS_TARGETS["produits.unit_economics"]
+# SYNTHESIS_TARGETS supprimé au lot 3 : on construit la cible inline pour le test de la
+# transformation pure (build_content_structured) qui, elle, reste inchangée.
+target = SynthesisTarget(
+    field_path="produits.unit_economics",
+    dimension="produits",
+    entry_type="analysis",
+    query="économie unitaire {company}",
+    candidate_entry_types=("fact_qualitative", "fact_financial", "analysis"),
+    min_citations=2,
+    citable_tiers=("A", "A-"),
+    guidance="Synthétise l'économie unitaire de {company}.",
+)
 tiers_by_id = {32: "A", 33: "A", 34: "B+"}
 cs = build_content_structured(target, synth, [32, 33, 34], tiers_by_id)
 check("field_path porté", cs["field_path"] == "produits.unit_economics")
@@ -129,51 +140,22 @@ check("review_status pending", cs["review_status"] == "pending")
 check("aucune lacune → compte AFFIRMÉ à 0, pas clef absente",
       cs["lacunes"] == [] and cs["lacunes_n"] == 0 and cs["lacunes_approximees_n"] == 0)
 
-print("\n6. Registre des cibles — les 2 champs bloquants sont couverts")
-check("produits.unit_economics enregistré", "produits.unit_economics" in SYNTHESIS_TARGETS)
-check("marche.structure_5forces enregistré", "marche.structure_5forces" in SYNTHESIS_TARGETS)
+print("\n6. SYNTHESIS_TARGETS supprimé au lot 3 — sections 6-7 retirées")
+# Les tests du registre de cibles et des descripteurs agnostiques n'ont plus d'objet :
+# SYNTHESIS_TARGETS est retiré, les mandats de questions du framework le remplacent (lot 4).
+# CITABLE_TIERS est conservé (utilisé par le feed quand il sera recâblé).
 check("CITABLE_TIERS = A/A-/B+ (≥ plancher B+)", set(CITABLE_TIERS) == {"A", "A-", "B+"})
-for fp, tgt in SYNTHESIS_TARGETS.items():
-    check(f"{fp} : entry_type=analysis, min_citations≥2", tgt.entry_type == "analysis" and tgt.min_citations >= 2)
-    check(f"{fp} : field_path cohérent avec la clé", tgt.field_path == fp)
-
-print("\n7. Descripteurs AGNOSTIQUES de l'emetteur (regression MSFT 2026-08-30)")
-# Le trou : les cibles se disaient generiques mais leurs query/guidance etaient redigees pour
-# NVIDIA. Sur un autre emetteur, la requete semantique cherchait le mauvais vocabulaire et la
-# consigne demandait de synthetiser une AUTRE entreprise que celle analysee.
-_EMETTEURS = ("nvidia", "nvda", "cuda", "nvlink", "blackwell", "rubin", "tsmc", "huawei",
-              "hyperscaler", "microsoft", "msft", "azure", "amd")
-for fp, tgt in SYNTHESIS_TARGETS.items():
-    for texte, quoi in ((tgt.query, "query"), (tgt.guidance, "guidance")):
-        fautes = [m for m in _EMETTEURS if m in texte.lower()]
-        check(f"{fp} : {quoi} sans nom d'emetteur code en dur", not fautes, f"-> {fautes}")
-    check(f"{fp} : query parametree par {{company}}", "{company}" in tgt.query)
-    check(f"{fp} : guidance parametree par {{company}}", "{company}" in tgt.guidance)
-
-# resolve() specialise sans laisser fuiter de placeholder.
-tgt = SYNTHESIS_TARGETS["business_model.description"]
-q_msft, g_msft = tgt.resolve("MSFT")
-q_nvda, g_nvda = tgt.resolve("NVDA")
+# La mécanique resolve() est vérifiable sans SYNTHESIS_TARGETS via la cible inline du §5.
+q_msft, g_msft = target.resolve("MSFT")
+q_nvda, g_nvda = target.resolve("NVDA")
 check("resolve injecte l'emetteur dans la query", "MSFT" in q_msft and "NVDA" in q_nvda)
 check("resolve injecte l'emetteur dans la guidance", "MSFT" in g_msft and "NVDA" in g_nvda)
 check("aucun placeholder residuel", "{company}" not in q_msft and "{company}" not in g_msft)
 check("deux emetteurs -> deux consignes distinctes", g_msft != g_nvda)
 check("le message de tache porte la guidance resolue",
-      "MSFT" in _synthesis_task_message(tgt, "#1 v1 [A] fact — x", g_msft))
-
-# La consigne de lacune a UN detenteur (_CONSIGNE_LACUNES) et passe par resolve(). Si quelqu'un la
-# recopie dans un descripteur, ou debranche la concatenation, ces deux asserts le disent.
-for fp, t2 in SYNTHESIS_TARGETS.items():
-    check(f"{fp} : la guidance ne recopie PAS la consigne de lacune",
-          "lacunes[]" not in t2.guidance)
-    check(f"{fp} : resolve() y adjoint la consigne unique",
-          _CONSIGNE_LACUNES.strip()[:40] in t2.resolve("ACME")[1])
-# Le trou ne se declare plus en prose : aucune guidance ne doit encore le demander (le correctif
-# doit RETIRER l'ancienne formulation, pas seulement ajouter la nouvelle).
-for fp, t2 in SYNTHESIS_TARGETS.items():
-    bas = t2.guidance.lower()
-    check(f"{fp} : plus de consigne de trou EN PROSE",
-          "non document" not in bas and "non observable" not in bas)
+      "MSFT" in _synthesis_task_message(target, "#1 v1 [A] fact — x", g_msft))
+check("resolve() adjoint la consigne de lacune unique",
+      _CONSIGNE_LACUNES.strip()[:40] in target.resolve("ACME")[1])
 
 
 print("\n8. Contrat de la LACUNE — une estimation sans base n'existe pas (capacité 5)")
@@ -232,8 +214,7 @@ synth_lac = GroundedSynthesis(
 )
 check("approximation_entry_ids() ≠ cited_entry_ids() (une pièce peut ne servir qu'au calcul)",
       synth_lac.approximation_entry_ids() == [32, 33] and synth_lac.cited_entry_ids() == [32])
-cs2 = build_content_structured(SYNTHESIS_TARGETS["produits.unit_economics"], synth_lac, [32],
-                               {32: "A", 33: "A"})
+cs2 = build_content_structured(target, synth_lac, [32], {32: "A", 33: "A"})
 check("content_structured compte les lacunes et les approchées",
       cs2["lacunes_n"] == 2 and cs2["lacunes_approximees_n"] == 1)
 

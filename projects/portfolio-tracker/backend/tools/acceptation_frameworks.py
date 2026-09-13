@@ -401,9 +401,9 @@ async def main() -> int:
     if frameworks is None:
         # Avant le lot 3, le vocabulaire cible est encore MVDD : on mesure l'écart contre lui, et
         # on le DIT — mesurer contre un vocabulaire qui n'existe pas rendrait 0 sur zéro question.
-        from app.agents.v2.common import MVDD_FIELD_PATHS
-        vocabulaire = set(MVDD_FIELD_PATHS)
-        origine = "MVDD_FIELD_PATHS (le vocabulaire que le lot 3 remplace)"
+        from app.agents.v2.common import FIELD_PROFILES
+        vocabulaire = set(FIELD_PROFILES.keys())
+        origine = "FIELD_PROFILES.keys() (remplace MVDD_FIELD_PATHS retiré au lot 3)"
     else:
         # `chemin_indexation` et non `id` : c'est LUI que le mémo consomme, et ALIAS projette
         # des chemins. Comparer des `qf_1` à des `business_model.description` rendrait T6/T7
