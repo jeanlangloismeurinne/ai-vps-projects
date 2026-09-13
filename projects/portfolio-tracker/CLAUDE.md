@@ -1039,6 +1039,30 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     ajouter un champ à un contrat partagé par plusieurs check ne se mesure qu'en rejouant **toute**
     la suite (`run_all.sh`), jamais seulement le check du module qu'on vient de modifier.
 
+65. **Le harnais de test négatif est un DÉTENTEUR UNIQUE, et l'archi est gardée comme le code (V3,
+    2026-09-13)** : la boucle de mutation (copie temp, application par python, docker run, classement
+    en 4 issues, bilan) vivait recopiée dans 13 `negatif_*.sh` — une méthode recopiée re-diverge (#46).
+    Elle vit désormais dans `checks/_negatif.sh` : un `negatif_*.sh` neuf = ses **mutations** +
+    `source _negatif.sh` + `run_mutations`. Les garde-fous côté check (dépouillement `tokenize` avant
+    un grep d'interdit, import vérifié par **AST** et non par `"X" in source`, `Bilan.require` contre
+    l'`all()` sur liste vide) vivent dans `checks/_harness.py`. Enfin l'ORGANISATION elle-même est un
+    invariant gardé : `check_architecture.py` tient la bijection registre `ARCHITECTURE-CIBLE.md` ↔
+    docs sur disque, l'intégrité des pointeurs de checks, l'absence de **garde orpheline** (tout
+    `check_*.py` adossé à une cible), la discipline de `roadmap/` et l'autonomie de `/V3`. Il est pur
+    filesystem/AST (net=none), donc aussi utilisable en hook léger. Détail + garde :
+    `check_architecture.py` (216 assertions) + `negatif_architecture.sh` (6 mutations/0).
+
+66. **La méthode de test se choisit par DÉCIDABILITÉ, pas par coût — et le décideur reste OUVERT
+    (V3)** : un appel modèle ne coûte quasi rien ; le vrai critère est « quelle étape TRANCHE la
+    question avec la bonne attribution ». Dry-run déterministe quand une source inspectable peut
+    produire/vérifier l'entrée (attribution + stabilité, cf. F15/F16 à 0 $) ; vrai-modèle direct quand
+    la question porte sur le modèle (refus/jugement/tool-call) ou qu'aucune source déterministe
+    n'existe. ⚠️ Le décideur est une **heuristique documentée** (`roadmap/V3/METHODE-TEST.md`), **jamais
+    un classifieur câblé** : un cas qui ne rentre pas dans les catégories se **nomme**, il ne se force
+    pas — on ne connaît pas aujourd'hui tous les cas déterministes ou non
+    (`feedback_decision_figee_a_remesurer`, `feedback_blocage_classifieur_non_permanent`). Re-mesurer
+    après tout correctif.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

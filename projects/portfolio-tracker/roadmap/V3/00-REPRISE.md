@@ -611,7 +611,7 @@ justes, c'est le *fait énoncé* qui était faux.
 - **`roadmap/V3/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
   PAS défait** (à relire à chaque lot) · §2 l'objet framework · §3 le manager · §4 les deux pilotes
   rédigés en entier · §5 le stockage · §9 le test d'acceptation · §10 les lots.
-- **`CLAUDE.md` du projet** — conventions **#22 à #64**. Les plus structurantes ici : #29 (la
+- **`CLAUDE.md` du projet** — conventions **#22 à #66**. Les plus structurantes ici : #29 (la
   couverture se **lit** dans un index), #31 (ce qui décrit un émetteur ne vit jamais dans une
   constante globale), #37 (un contrat valide un objet, jamais la cohérence entre deux), #42/#43
   (datation et **identité** d'un fait), #44 (calculé / non calculable / absent), #46 (**détenteur
@@ -627,6 +627,10 @@ justes, c'est le *fait énoncé* qui était faux.
 - **Architecture** : `roadmap/V3/ARCHITECTURE-CIBLE.md` (vue d'ensemble + carte des modules) et un
   `ARCHITECTURE.md` par module backend (`knowledge/`, `frameworks/`, `agents/v2/`, `contracts/`,
   `api/`) = **cible** ; l'**état réalisé** se lit en exécutant `backend/checks/` (`run_all.sh`).
+  L'organisation est gardée par `check_architecture.py`.
+- **Méthode de test & mesure** : `roadmap/V3/METHODE-TEST.md` — décideur ouvert (décidabilité, pas
+  coût), catalogue d'outils sans friction, faux-verts. Harnais : `checks/_negatif.sh` (boucle de
+  mutation, détenteur unique) + `checks/_harness.py` (garde-fous py). Conventions #65/#66.
 - **Code** : `backend/app/agents/v2/` (`common.py` — **`MVDD_SPEC`, la grille à remplacer** ·
   `worker.py:141` `_resolve_covers` · `curator.py:69` `DECLARED_NONBLOCKING_GAPS` · `analysis.py` ·
   `runner.py`) · `backend/app/knowledge/` (`synthesis_feed.py:145` **`SYNTHESIS_TARGETS`** ·

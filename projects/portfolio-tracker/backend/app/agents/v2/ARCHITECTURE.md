@@ -33,6 +33,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | Chaîne à deux agents, plan persisté, collecte aveugle | `check_traducteur.py`, `check_collecteur.py`, `check_collecte_executor.py`, `check_collecte_persist.py` |
 | Analyste : refus avant dépense, 3 états, pas de levier | `check_analyste.py` + `negatif_analyste.sh` + `tools/acceptation_analyste.sh` (vrai modèle) |
 | Porte à 3 états, remèdes distincts, lue au point de sortie | `check_readiness_recompute.py`, `tools/acceptation_gate.sh` |
+| Table de profils par champ (`FIELD_PROFILES` dans `common.py`) | `check_field_profiles.py` |
 | Décision contrainte par l'analyse (G2, #36) | `check_decision_validate.py` |
 | Réfutation bear→bull + anti-complaisance | `check_exit_debate.py`, `check_monitoring_v2.py` |
 | Télémétrie de coût (un abandon est facturé comme un succès) | `check_runner_telemetry.py` |

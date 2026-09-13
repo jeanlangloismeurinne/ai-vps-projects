@@ -53,4 +53,5 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
 | Format des montants (détenteur unique) | `check_edgar_feed.py` §11, `check_financials_feed.py` §9 |
 | search-worker ne qualifie pas sa propre source | `check_search_worker.py` |
+| `fetch_url` : deux chemins, le domaine décide (live) | `check_fetch_live.py`, `check_fetch_relevance.py` |
 | Listing lisible des entries | `check_knowledge_entries_listing.py` |

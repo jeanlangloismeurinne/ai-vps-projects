@@ -10,6 +10,11 @@
 > *invariant cible → `check_*.py` garant*. Un invariant sans check est une **dette**, marquée ⚠️.
 >
 > Pour connaître l'état réalisé d'un module : lire son `ARCHITECTURE.md`, puis **exécuter** ses checks.
+>
+> **Cette organisation est elle-même gardée** par `check_architecture.py` (+ `negatif_architecture.sh`) :
+> bijection registre ↔ docs, pointeurs de checks vivants, aucune garde orpheline, discipline de
+> dossier, autonomie de /V3. Ajouter un module = ajouter sa ligne au registre ci-dessous **et** son
+> `ARCHITECTURE.md` — le check refuse l'un sans l'autre.
 
 ## Le modèle-objet V3, en une phrase
 
