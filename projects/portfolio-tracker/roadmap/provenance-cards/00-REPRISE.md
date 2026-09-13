@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-12
+updated: 2026-09-13
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
@@ -12,7 +12,10 @@ role: >
   réclamés par le plan (`run_edgar_feed(metrics=…)` câblé par `collecte_executor.postes_edgar_du_plan`),
   le levier `RESSERRER` de `curator.py` est RETIRÉ (`_exigences` lit `MVDD_SPEC` tel quel), et **le
   §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
-  jusqu'à **039** ; maillon 5 = **code seul, aucune migration, aucun réseau**.
+  jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
+  **LOT 3 EN COURS depuis le 2026-09-13** : maillon 1 (l'analyste, convention #63) et maillon 2
+  (`framework_answers`/`framework_dispenses`, migration 040, convention #64) sont ✅ — détail dans
+  la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
   ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ le 2026-09-12 : `check_entry_nature §7` re-mesuré en INVARIANT, la
   suite est TOUT VERT (`bash checks/run_all.sh` = 2139 assertions, 0 échec).** L'ancien `== 13` était
   un **décompte du banc d'essai promu en cible**, interdit par §0.6 (« les données en base ne dictent
@@ -277,18 +280,41 @@ lot 1 ; les tables viennent en dernier.
    l'approximation reste réservée aux questions d'interprétation (plancher plus bas). La règle du
    cran n'est plus « provisoire » dans cet emploi — **rien à remesurer**, et un plancher qui gêne se
    corrige dans le référentiel de la question, jamais dans la règle de dérivation (#59, #63).
-2. ⬜ **Les tables** `framework_answers` / `framework_dispenses` (**migration 040**) + persistance.
-   ⚠️ La table de la roadmap dit « 037 » : **périmé**, 039 est appliquée. La 040 s'écrit juste avant
-   son lot, jamais en avance, générateur qui **importe** la règle au lieu de la ré-implémenter en SQL.
-3. ⬜ **Suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS`
-   (cette dernière devient une table clefée `(ticker_id, framework_id, framework_version,
-   question_id)` — sans la version, une dispense survit à la question qu'elle dispensait, écart V10).
+2. ✅ **Les tables** `framework_answers` / `framework_dispenses` (**migration 040**, appliquée
+   2026-09-13) + persistance. `framework_answers` **append-only et versionnée** (A1, comme
+   `knowledge_entries`) : une correction ne fait jamais d'UPDATE, elle INSERT et pose
+   `superseded_by` sur l'ancienne ligne ; lignée `(ticker_id, framework, framework_version,
+   question_id, analyste)` — **avec** `analyste` : deux analystes distincts ne se supersèdent
+   jamais (§3.4, N ≥ 1). `framework_dispenses` remplace `DECLARED_NONBLOCKING_GAPS` : clef
+   `(ticker_id, framework_id, framework_version, question_id)`, idempotente (`ON CONFLICT ... DO
+   UPDATE`). Écriture : `app/agents/v2/framework_persist.py` (`persist_answer`/`persist_dispense`,
+   #35 — atomicité explicite à la charge de l'appelant). **`FrameworkAnswer` portait `framework_id`
+   mais pas `framework_version`** avant ce maillon : fix + invariant `[V]` du pont (convention
+   **#64**). `check_framework_persist.py` **13/0** · `negatif_framework_persist.sh` **6 mutations
+   / 0 échec** — tout tourne en transaction ROLLBACK contre la base réelle, **zéro résidu vérifié**
+   (`feedback_fixture_pollue_le_reel`).
+   ⚠️ **`run_all.sh` n'avait pas tourné depuis l'ajout de `framework_version` au contrat (maillon
+   1)** : deux checks rougissaient déjà, invisibles jusqu'à ce que la suite complète soit rejouée
+   pour ce maillon. `check_framework_contract` §9 (bijection contrat↔pixels) — annotation
+   `⟦framework_version⟧` ajoutée à `framework_screen_niveau3.md`. `check_frameworks_definitions`
+   §4 — le pont lit `profil.get("framework_version")` en plus des 3 clefs de `CLEFS_PROFIL_LUES` ;
+   scindé en `CLEFS_PROFIL_QUESTION` (copiées par `getattr(q, …)`) et `CLEFS_PROFIL_LUES =
+   CLEFS_PROFIL_QUESTION + ("framework_version",)`. `run_all.sh` lui-même mis à jour : `check_
+   framework_persist` rejoint la case `CHECK_DB_URL` (comme `check_entry_nature`/`check_collecte_
+   persist`). Les deux checks + leurs négatifs sont revenus verts (**check_framework_contract
+   96/0, check_frameworks_definitions 39/0, négatif 22/22**) ; suite entière **2238/0**.
+3. ⬜ **Suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` — la table qui
+   remplace cette dernière existe déjà (maillon 2 ci-dessus) ; ce qui reste ici, c'est retirer les
+   trois constantes du code et brancher `persist_dispense`/la lecture de `framework_dispenses`
+   partout où `DECLARED_NONBLOCKING_GAPS` est encore lu.
 4. ⬜ **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3).
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 2** (les tables + la persistance des réponses).
-> Reprise conseillée : **NOUVELLE conversation**, et **Sonnet suffit** — voir la fin de l'entrée
-> d'archive du 2026-09-13 ([[feedback_fin_sprint_reco_conversation]]).
+> **▶ PROCHAIN JALON = lot 3, maillon 3** (suppression de `MVDD_SPEC` / `SYNTHESIS_TARGETS` /
+> `DECLARED_NONBLOCKING_GAPS` — la table de la dispense existe déjà, il reste le retrait des trois
+> constantes et le branchement des lectures).
+> Reprise conseillée : **NOUVELLE conversation**, et **Sonnet suffit** — retrait de constantes +
+> câblage, pas de décision de conception neuve.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -299,7 +325,7 @@ lot 1 ; les tables viennent en dernier.
 | 2a | ✅ **Le référentiel** — 13 questions en données inertes, 39/0, négatif 22/22 — 2026-09-10 | — |
 | 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
-| 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · `framework_answers` / `_dispenses` en base · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** |
+| 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 041 |
 | 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 042 |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
@@ -364,7 +390,8 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
   `/roadmap`** (sans lui `check_frameworks_definitions` §7 sort en échec au lieu de se sauter).
   ⚠️ **Ne pas le réécrire dans `/tmp`** : la version jetable sous-comptait 47 assertions en silence
   (`CHANTIER_OUTILLAGE_DEV.md` §27).
-- **Migrations appliquées jusqu'à 039** (036/037/038 lot 2b, **039** lot 2c — tables du plan de collecte).
+- **Migrations appliquées jusqu'à 040** (036/037/038 lot 2b, **039** lot 2c — tables du plan de
+  collecte, **040** lot 3 maillon 2 — `framework_answers`/`framework_dispenses`).
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
@@ -638,13 +665,20 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **LOT 2c TERMINÉ (2026-09-12). PROCHAIN PAS = LOT 3.** Tout le lot 2c est livré : contrat du plan
-> + pont (T1bis) + traducteur + collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES`
-> devenu CATALOGUE de recettes (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ,
-> §12bis MORT** (conventions #61/#62). Le lot 3 = analyste + manager sur `qualite_financiere` ;
-> `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de `MVDD_SPEC`,
-> `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan sur
-> NVDA/MSFT/RVMD ; migration **037**.
+> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13), 2 maillons sur 5 livrés.
+> PROCHAIN PAS = LOT 3, MAILLON 3.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
+> (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
+> #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,
+> aucun levier de modèle sur l'exigence, convention #63) ; ✅ **maillon 2 = `framework_answers`/
+> `framework_dispenses` en base + persistance** (migration **040 appliquée**, append-only
+> versionnée A1, lignée `ticker_id+framework+version+question_id+analyste` — §3.4, `framework_id`
+> manquait sa version sur le contrat, fix + invariant `[V]`, convention #64 ;
+> `check_framework_persist.py` 13/0, `negatif_framework_persist.sh` 6 mutations/0, zéro résidu).
+> **Reste au lot 3** : maillon 3 = **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`,
+> `DECLARED_NONBLOCKING_GAPS` (la table qui remplace la dernière existe déjà — retirer les trois
+> constantes du code et brancher les lectures) ; maillon 4 = collecte neuve pilotée par le plan sur
+> NVDA/MSFT/RVMD ; maillon 5 = réconciliation à 0/0. Prochaine migration : **041**.
 > ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ (2026-09-12)** : `check_entry_nature §7` re-mesuré en **invariant #51**
 > (metric structuré ⟹ `mesure`, garde de non-vacuité, tous tickers) au lieu du décompte `== 13`, qui
 > était une **cible-corpus interdite par §0.6**. Les 30 faits web du maillon 4 (`edgar_official`/
@@ -654,8 +688,16 @@ justes, c'est le *fait énoncé* qui était faux.
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot plusieurs fois** — elle se **requête**,
 > elle ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite **TOUT VERT** (`run_all.sh` = 2139 assertions, 0 échec) ; `check_edgar_feed` 98/0 et
-> hors ligne ; `check_entry_nature` 88/0 ; migrations appliquées jusqu'à **039**.
+> État : suite **TOUT VERT** (`run_all.sh` = 31 scripts, **2238 assertions, 0 échec** — `check_
+> framework_persist` désormais dans la boucle `CHECK_DB_URL`, comme `check_entry_nature`/`check_
+> collecte_persist`) ; `check_edgar_feed` 98/0 hors ligne ; `check_entry_nature` 88/0 ; `check_
+> analyste` 81/0 ; `check_framework_persist` 13/0 ; migrations appliquées jusqu'à **040**.
+> ⚠️ **Ajouter `framework_version` au contrat (maillon 2) a rougi deux checks qui n'avaient pas
+> tourné depuis son ajout** (`check_framework_contract` §9 — pixel manquant dans la maquette ;
+> `check_frameworks_definitions` §4 — le pont lit une clef que `CLEFS_PROFIL_LUES` ne déclarait
+> pas). Corrigés dans la foulée. Voir #64 : **rejouer `run_all.sh` en entier après tout ajout de
+> champ à un contrat partagé**, jamais seulement le check du module qu'on vient de toucher.
 > LIRE D'ABORD : ce fichier, puis `roadmap/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
-> le `CLAUDE.md` du projet (conventions #22-**#62**, dont **#61/#62 = maillon 5 du lot 2c**),
-> `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
+> le `CLAUDE.md` du projet (conventions #22-**#64**, dont **#63 = l'analyste** et **#64 =
+> `framework_version` sur `FrameworkAnswer`**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
+> décision manque.

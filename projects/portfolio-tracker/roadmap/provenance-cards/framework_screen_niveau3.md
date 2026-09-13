@@ -36,7 +36,7 @@ jamais le nombre estimé comme s'il était mesuré. C'est le contrôle ④ port�
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
 ║  NVDA ⟦ticker_id⟧   ·   Qualité financière ⟦framework_id⟧   ·   qf_1 ⟦question_id⟧    ║
 ║  « Quelle est la rentabilité du capital employé, et est-elle défendue ? »             ║
-║                                                    contrat v3.0.0 ⟦schema_version⟧   ║
+║                     framework v1.0.0 ⟦framework_version⟧ · contrat v3.0.0 ⟦schema_version⟧ ║
 ╠══════════════════════════════════════════════════════════════════════════════════════╣
 ║                                                                                      ║
 ║  ┌─ LA RÉPONSE ─────────────────────────────────────────────────────────────────┐    ║

@@ -117,7 +117,8 @@ check("`questions_sans_objet` se DÉRIVE de `questions_applicables` (pas de seco
       and 'mode' not in inspect.getsource(A.questions_sans_objet),
       "→ un second filtre divergerait, et des questions ne seraient ni planifiées ni répondues")
 
-_entete = dict(ticker_id=TICKER, framework_id="qualite_financiere", analyste="analyste_1")
+_entete = dict(ticker_id=TICKER, framework_id="qualite_financiere",
+               framework_version=F.schema_version, analyste="analyste_1")
 _so1 = A.reponse_sans_objet(Q["qf_1"], "pre_revenus", **_entete)
 check("le motif est le `motif_gabarit` du référentiel, recopié tel quel (jamais un motif de modèle)",
       _so1.sans_objet.motif == Q["qf_1"].variables_par_archetype["pre_revenus"].motif_gabarit)

@@ -127,7 +127,8 @@ def rejete(label, fn, motif):
 
 
 # ── fixtures : toutes valides par défaut, chaque cas n'en casse QU'UNE chose ───────────────────
-BASE = dict(schema_version=FRAMEWORK_SCHEMA_VERSION, framework_id="qf", question_id="qf_1",
+BASE = dict(schema_version=FRAMEWORK_SCHEMA_VERSION, framework_id="qf",
+            framework_version=FRAMEWORK_SCHEMA_VERSION, question_id="qf_1",
             ticker_id="AAPL", analyste="analyste_1")
 FOND = dict(cited_entry_ids=[190], rang_derive="A-", nature_effective="mesure")
 FOND_ITP = {**FOND, "nature_effective": "interpretation"}
@@ -434,14 +435,17 @@ print("\n8. le PONT relationnel — ce qu'un contrat ne peut PAS vérifier (#37)
 # en Python. Les cas ci-dessous sont tous formellement VALIDES : s'ils passaient, ce serait la
 # démonstration que le contrat seul ne suffit pas — et c'est précisément pourquoi le pont existe.
 QUESTIONS = {
-    "qf_1": {"plancher_tier": "B", "nature_attendue": "mesure"},
-    "qf_7": {"plancher_tier": "B+", "nature_attendue": "mesure"},
+    "qf_1": {"plancher_tier": "B", "nature_attendue": "mesure",
+             "framework_version": FRAMEWORK_SCHEMA_VERSION},
+    "qf_7": {"plancher_tier": "B+", "nature_attendue": "mesure",
+             "framework_version": FRAMEWORK_SCHEMA_VERSION},
     # ⚠️ Une SEULE question porte `sens_admis` ici, et c'est délibéré : [S] se saute quand le profil
     # n'en déclare pas, donc les deux profils ci-dessus servent à éprouver A→F sans que [S] ne
     # rougisse d'abord et masque le contrôle visé (le 1ᵉʳ faux vert — une fixture qui déclenche deux
     # contrôles ne dit pas lequel discrimine). Le RÉEL, lui, en porte toujours un (`min_length=2`),
     # et c'est `check_analyste.py` qui éprouve [S] contre les profils réels.
     "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure",
+                "framework_version": FRAMEWORK_SCHEMA_VERSION,
                 "sens_admis": ["cree_de_la_valeur", "detruit_de_la_valeur"]},
 }
 ENTRIES = {
@@ -501,6 +505,10 @@ pont_ok("[réf] une réponse cohérente passe le pont (sinon rien ci-dessous ne 
         rep())
 pont("[A] une question inconnue du framework",
      rep(question_id="qf_99"), "inconnue du framework")
+pont("[V] une réponse dans une VERSION différente du référentiel (§5.2, écart V10)",
+     rep(framework_version="v2.9.0"), "référentiel en")
+pont_ok("[V] … et la même version que le référentiel passe (sinon rien au-dessus ne discrimine)",
+        rep(framework_version=FRAMEWORK_SCHEMA_VERSION))
 pont("[B] une entry citée hors du corpus fourni (A2)",
      rep(blocs={"fondation": {**FOND, "cited_entry_ids": [190, 999]}}),
      "hors du corpus fourni")

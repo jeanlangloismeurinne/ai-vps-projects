@@ -224,7 +224,28 @@ interrogent `pg_class` **par OID** : `has_table_privilege(role, 'archive_v2.'||n
 `archive_v2.positions` — un nom de `public` recollé au mauvais schéma, le filtre n'étant pas
 garanti évalué avant la fonction. Un faux ROUGE ici, un faux VERT si le nom avait existé des deux
 côtés. **Un OID ne se résout pas : il désigne.**
-Prochaine migration : **039**.
+**Migration 039 = les tables de la CHAÎNE DE COLLECTE (chantier v3, lot 2c)** : trois tables
+ADDITIVES, `collection_plans` (le plan, daté et versionné §3.6, id propre + `created_at` — jamais
+d'unicité sur `(ticker, framework, version)`, qui interdirait de re-planifier), `collection_plan_items`
+(une ligne par ingrédient, CHECK `collection_plan_items_charge` redisant `traduit` ⟺ métrique+source
++ancre / `inobtenable` ⟺ motif seul — projection du contrat `collection_plan_schema`, jamais une
+conception de schéma indépendante), et `framework_mandates` (les mandats de collecte). L'AGENT
+dicte la table : contrat, pont `valider_pont_collection_plan` et aiguilleur `collecteur.aiguiller_plan`
+écrits et éprouvés avant la migration. Gardes éprouvées en négatif par `check_collecte_persist.py`.
+**Migration 040 = `framework_answers` / `framework_dispenses` (chantier v3, lot 3 maillon 2)** :
+remplace le dict codé en dur `DECLARED_NONBLOCKING_GAPS`. `framework_answers` est **append-only et
+versionnée** (A1, comme `knowledge_entries` — une correction ne fait jamais d'UPDATE, elle INSERT et
+pose `superseded_by` sur l'ancienne ligne), lignée `(ticker_id, framework, framework_version,
+question_id, analyste)` : voir #64 pour pourquoi `framework_version` y est et pourquoi `analyste` y
+est (§3.4, N ≥ 1 — deux analystes ne se supersèdent jamais). CHECK `framework_answers_statut` sur le
+vocabulaire fermé à 4 valeurs, index partiel sur les lignes courantes. `framework_dispenses` :
+`UNIQUE (ticker_id, framework_id, framework_version, question_id)`, `motif` obligatoire, idempotente
+(`ON CONFLICT ... DO UPDATE`). Écriture : `app/agents/v2/framework_persist.py`
+(`persist_answer`/`persist_dispense`, #35 — l'appelant doit envelopper `persist_answer` dans
+`async with conn.transaction():`, ses deux écritures liées ne sont pas atomiques par elles-mêmes).
+Détail + garde : `check_framework_persist.py` (13/0), `negatif_framework_persist.sh` (6 mutations/0
+échec, zéro résidu vérifié en base réelle).
+Prochaine migration : **041**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -985,6 +1006,38 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     à réviser si trop bloquante » — elle est **acquise** dans cet emploi ; ne pas la desserrer pour
     faire passer un cas (#59 : aucun levier de modèle sur `plancher_tier`). Un plancher qui gêne se
     corrige **dans le référentiel de la question**, jamais dans la règle de dérivation.
+
+64. **Une dispense/réponse non clefée par VERSION survit à la question qu'elle répondait (V3, lot 3
+    maillon 2, `contracts/framework_answer_schema.py` + migration 040)** : `FrameworkAnswer` portait
+    `framework_id` mais pas `framework_version` — un écart symétrique à #57 (une propriété se
+    déplace, elle ne disparaît pas de nulle part) : le framework est **versionné** (§2.4 de la spec),
+    donc une réponse ou une dispense sans version reste rattachée au libellé de la question même
+    après que son wording a changé, exactement comme une entry sans `framework_version` continuerait
+    de compter pour une couverture qu'elle ne fonde plus. Fix : `framework_version: str =
+    Field(min_length=1)` ajouté au contrat, invariant `[V]` neuf dans
+    `valider_pont_framework_answer` (la version de la réponse doit être celle du framework jugé),
+    et les deux tables de la migration 040 portent la colonne dans leur clef — `framework_answers`
+    (lignée `ticker_id, framework, framework_version, question_id, analyste`, #3.4 : deux analystes
+    ne se supersèdent jamais) et `framework_dispenses` (`UNIQUE (ticker_id, framework_id,
+    framework_version, question_id)`, idempotente par `ON CONFLICT ... DO UPDATE`). Détenteur unique
+    du mapping colonne↔chemin du contrat : `COLONNES_DENORMALISEES` (#46), lu tel quel en écriture
+    (`framework_persist.py:_lire_chemin`) et inversé en lecture (`acceptation_frameworks.py`).
+    Détail + garde : `check_framework_persist.py` (**13 vérifications OK, 0 échec**),
+    `negatif_framework_persist.sh` (**6 mutations correctement détectées, 0 échec**) — les deux
+    tournent dans une transaction ROLLBACK contre la base réelle, **aucun résidu**
+    (`feedback_fixture_pollue_le_reel`).
+    ⚠️ **Le champ ajouté au contrat a rougi DEUX checks qui n'avaient pas tourné entre-temps** —
+    `run_all.sh` n'avait pas été rejoué après l'ajout de `framework_version` : (1) `check_framework_
+    contract.py` §9 (bijection contrat↔pixels, #8.1) — `framework_version` n'avait aucune annotation
+    `⟦…⟧` dans `framework_screen_niveau3.md`, corrigé par une ligne `framework v1.0.0
+    ⟦framework_version⟧` distincte du `schema_version` déjà annoté ; (2) `check_frameworks_
+    definitions.py` §4 — le pont lit désormais `profil.get("framework_version")` en plus des trois
+    clefs de `CLEFS_PROFIL_LUES`, mais cette clef vient de `fichier.schema_version`, pas d'un
+    attribut de `Question` (`getattr(q, "framework_version")` lèverait). Scindé en
+    `CLEFS_PROFIL_QUESTION` (copiées par `getattr`) et `CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION +
+    ("framework_version",)` (toutes les clefs lues par le pont, ce que le check vérifie). Leçon :
+    ajouter un champ à un contrat partagé par plusieurs check ne se mesure qu'en rejouant **toute**
+    la suite (`run_all.sh`), jamais seulement le check du module qu'on vient de modifier.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

@@ -41,7 +41,7 @@ mutations=(
 "$PONT¦            if cible not in vus:¦            if False:¦[J] un substitut qui pointe une question inexistante"
 "$PONT¦    if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:¦    if False:¦[M] un fichier dont la version ne correspond pas"
 # §4 — les clefs que le pont LIT (le mode de panne est un SAUT, pas une erreur)
-"$PONT¦CLEFS_PROFIL_LUES = (\"plancher_tier\", \"nature_attendue\")¦CLEFS_PROFIL_LUES = (\"plancher_tier\",)¦les clefs réellement lues par le pont sont celles déclarées"
+"$PONT¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION + (\"framework_version\",)¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION¦les clefs réellement lues par le pont sont celles déclarées"
 "$PONT¦        if plancher is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦        if profil.get(\"plancher_tier_typo\") is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦les clefs réellement lues par le pont sont celles déclarées"
 # §5 — la garde de l'ORDRE questions → données. Le cœur du lot.
 "$YAML¦            libelle: Provisions constituées ou reprises, et dépréciations d'actifs, avec leur justification¦            libelle: Notes annexes sur les provisions et dépréciations d'inventaire, entry 33¦aucun énoncé, ingrédient ou gabarit ne nomme"

@@ -215,6 +215,11 @@ class FrameworkAnswer(Strict):
     """
     schema_version: Literal["v3.0.0"] = "v3.0.0"
     framework_id: str = Field(min_length=1)
+    # OBLIGATOIRE (spec §2.4/§5.2) : sans elle, une réponse survit à la question qu'elle répondait —
+    # le même écart V10 que `question_coverage`/`collection_plans`/`framework_dispenses`. Type `str`
+    # (pas l'entier `1` de l'exemple JSON de §2.4, jugé fautif) pour rester la MÊME valeur que
+    # `fichier.schema_version` partout ailleurs (`CollectionPlan.framework_version`, `traducteur.py`).
+    framework_version: str = Field(min_length=1)
     question_id: str = Field(min_length=1)
     ticker_id: str = Field(min_length=1)
     analyste: str = Field(min_length=1)      # §3.4 : N ≥ 1, deux réponses ne se moyennent JAMAIS
@@ -349,7 +354,7 @@ class FrameworkMandate(Strict):
         return self
 
 
-# ── Les colonnes que la table `framework_answers` devra porter (migration 036, lot 3) ─────────
+# ── Les colonnes que la table `framework_answers` devra porter (migration 040, lot 3) ─────────
 # DÉTENTEUR UNIQUE du nom de chaque colonne dénormalisée et du chemin du contrat dont elle est la
 # projection. Même rôle que `monitoring._colonnes_routeur` : ce qu'un LECTEUR (le test
 # d'acceptation, la porte, l'écran) doit pouvoir lire sans reparser le JSON.

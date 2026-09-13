@@ -390,6 +390,7 @@ def reponse_sans_objet(
     *,
     ticker_id: str,
     framework_id: str,
+    framework_version: str,
     analyste: str,
 ) -> FrameworkAnswer:
     """La réponse `sans_objet`, ÉCRITE PAR LE CODE depuis le référentiel (§4.1.3).
@@ -414,6 +415,7 @@ def reponse_sans_objet(
             "faire disparaître une question que la méthode pose")
     return FrameworkAnswer(
         framework_id=framework_id,
+        framework_version=framework_version,
         question_id=question.id,
         ticker_id=ticker_id,
         analyste=analyste,
@@ -432,6 +434,7 @@ def reponse_non_fondable(
     *,
     ticker_id: str,
     framework_id: str,
+    framework_version: str,
     analyste: str,
     manque: str,
     citables: int,
@@ -450,6 +453,7 @@ def reponse_non_fondable(
     """
     return FrameworkAnswer(
         framework_id=framework_id,
+        framework_version=framework_version,
         question_id=question.id,
         ticker_id=ticker_id,
         analyste=analyste,
@@ -487,6 +491,7 @@ def assembler_answer(
     entries: dict[int, dict[str, Any]],
     ticker_id: str,
     framework_id: str,
+    framework_version: str,
     analyste: str,
 ) -> FrameworkAnswer:
     """La sortie du modèle + les DEUX axes que le code dérive. Pur.
@@ -517,6 +522,7 @@ def assembler_answer(
             "mesure", "evenement", "interpretation"} else "interpretation"
     return FrameworkAnswer(
         framework_id=framework_id,
+        framework_version=framework_version,
         question_id=question.id,
         ticker_id=ticker_id,
         analyste=analyste,
@@ -636,7 +642,8 @@ async def repondre(
     fichier = fichier or load_frameworks()
     fw = _framework_de(fichier, framework_id)  # (1) lève tôt sur un framework inconnu (#40)
     resultat = ResultatAnalyste()
-    entete = dict(ticker_id=ticker_id, framework_id=framework_id, analyste=analyste)
+    entete = dict(ticker_id=ticker_id, framework_id=framework_id,
+                  framework_version=fichier.schema_version, analyste=analyste)
 
     for q in questions_sans_objet(fichier, framework_id, archetype):
         resultat.answers.append(reponse_sans_objet(q, archetype, **entete))

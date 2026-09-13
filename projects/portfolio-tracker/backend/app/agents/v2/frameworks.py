@@ -23,7 +23,10 @@ CE QUE LE PONT VÉRIFIE, ET POURQUOI CHACUN EXISTE
   S. le `sens` de la réponse appartient au vocabulaire FERMÉ de la question (`sens_admis`) — le
      contrat laisse `sens` libre parce qu'un contrat d'objet ne connaît pas la question (#37), et
      c'est ici qu'il se ferme. Un sens hors vocabulaire (ou absent) rend la réponse incomparable à
-     toutes les autres réponses de la même question : l'écran la montre, et rien ne la range.
+     toutes les autres réponses de la même question : l'écran la montre, et rien ne la range ;
+  V. la réponse cite la VERSION du référentiel en vigueur — sans elle, un correctif d'énoncé
+     laisserait une réponse ancienne se lire comme si elle répondait à l'énoncé actuel (même panne
+     que l'invariant [N] du plan de collecte, §5.2, écart V10).
 
 `servir_answer()` est le POINT DE LECTURE : il ajoute l'axe actualité, recalculé, sans rien écrire.
 Un GET qui servirait la ligne stockée telle quelle servirait le verdict d'avant l'événement
@@ -58,12 +61,19 @@ from app.knowledge.synthesis_feed import derive_synthesis_reliability
 
 FRAMEWORKS_YAML = Path(__file__).resolve().parents[2] / "frameworks" / "frameworks.yaml"
 
-# Les clefs que le pont LIT dans un profil de question. Détenteur unique : `valider_pont_…` les
+# Les clefs COPIÉES depuis un attribut de LA QUESTION (`getattr(q, clef)`, boucle de
+# `question_profiles`). `framework_version` n'en fait PAS partie : elle vient de `fichier.
+# schema_version`, pas d'une `Question` — la distinguer évite un `getattr(q, "framework_version")`
+# qui lèverait `AttributeError`.
+CLEFS_PROFIL_QUESTION = ("plancher_tier", "nature_attendue", "sens_admis")
+
+# TOUTES les clefs que le pont LIT dans un profil, `profil.get(...)` — celles de la question
+# ci-dessus ET celles du contrat (`framework_version`). Détenteur unique : `valider_pont_…` les
 # consomme par `profil.get(...)`, et un `.get` sur une clef mal orthographiée rend `None`, ce qui
 # SAUTE le contrôle au lieu de le faire échouer. Un contrôle qui ne s'exécute pas est un vert
 # (`feedback_check_degrade_en_sortant_a_zero`). `check_frameworks_definitions.py` vérifie que les
-# profils produits portent exactement ces clefs.
-CLEFS_PROFIL_LUES = ("plancher_tier", "nature_attendue", "sens_admis")
+# profils produits portent exactement ces clefs, non nulles.
+CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION + ("framework_version",)
 
 
 class FrameworkAnswerRefused(Exception):
@@ -210,11 +220,12 @@ def question_profiles(fichier: Optional[FrameworksFile] = None) -> dict[str, dic
     for f in fichier.frameworks:
         for q in f.questions:
             profil: dict[str, Any] = {}
-            for clef in CLEFS_PROFIL_LUES:
+            for clef in CLEFS_PROFIL_QUESTION:
                 valeur = getattr(q, clef)
                 profil[clef] = list(valeur) if isinstance(valeur, list) else valeur
             profil.update({
                 "framework_id": f.id,
+                "framework_version": fichier.schema_version,
                 "chemin_indexation": q.chemin_indexation,
                 "actualite_bloquante": q.actualite_bloquante,
                 "ingredients_essentiels": [i.id for i in q.ingredients_requis if i.essentiel],
@@ -239,7 +250,7 @@ def valider_pont_framework_answer(
     entries: dict[int, dict[str, Any]],
     autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
 ) -> None:
-    """Vérifie A→F et S. Ne rend rien : le seul résultat possible est « pas de refus ».
+    """Vérifie A→F, S et V. Ne rend rien : le seul résultat possible est « pas de refus ».
 
     `questions` : `{question_id: {plancher_tier, nature_attendue, sens_admis, ...}}` — les DONNÉES
     du lot 2, telles que `question_profiles()` les produit.
@@ -253,6 +264,17 @@ def valider_pont_framework_answer(
             f"({len(questions)} questions chargées) : une réponse qui ne s'indexe sur aucune "
             "question s'indexerait sur une question voisine")
     profil = questions[answer.question_id]
+
+    # V. la réponse porte la VERSION du référentiel en vigueur pour cette question — sinon un
+    #    correctif d'énoncé de `qf_1` laisserait une réponse ancienne se lire comme si elle répondait
+    #    à l'énoncé actuel. Même panne, même remède que l'invariant [N] du plan de collecte (§5.2,
+    #    écart V10) : une lignée non versionnée survit à ce qu'elle décrivait.
+    version_attendue = profil.get("framework_version")
+    if version_attendue is not None and answer.framework_version != version_attendue:
+        raise FrameworkAnswerRefused(
+            f"réponse en `{answer.framework_version}`, référentiel en `{version_attendue}` pour "
+            f"`{answer.question_id}` : une réponse sans la version de la question qu'elle répond "
+            "n'est plus interprétable dès le premier correctif d'énoncé (§2.4/§5.2)")
 
     if answer.fondation is not None:
         cites = list(answer.fondation.cited_entry_ids)
