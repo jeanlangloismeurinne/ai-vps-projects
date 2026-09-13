@@ -978,12 +978,13 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     `negatif_analyste.sh` **31 mutations / 0 échec**, et l'**acceptation contre le vrai modèle**
     `tools/acceptation_analyste.{py,sh}` (**6/0, zéro refus**, NVDA + RVMD, ~$0.005) — qui ne
     persiste rien et **ne doit jamais tourner dans `portfolio-backend`** (il porte le code déployé).
-    ❓ **Question de doctrine laissée ouverte** : la règle du cran
-    (`derive_synthesis_reliability`) est notée *provisoire, à réviser si trop bloquante* ; elle ferme
-    `approxime` sur 6 questions sur 7. Soit c'est voulu (une question à ancrage `A` n'accepte pas de
-    reconstruction), soit c'est un **emprunt non réexaminé** — la règle a été écrite pour les entries
-    `agent_synthesis`, jamais remesurée appliquée à l'approximation d'un analyste. Le correctif
-    ci-dessus est juste sous les deux réponses.
+    ✅ **Doctrine tranchée par l'utilisateur le 2026-09-13** : la fermeture d'`approxime` sur les
+    questions à plancher `A` est **voulue, pas un effet de bord à relâcher**. Une question qui exige
+    un ancrage tier `A` n'accepte **pas** une reconstruction : l'approximation reste réservée aux
+    questions d'interprétation, à plancher plus bas. La règle du cran cesse donc d'être « provisoire,
+    à réviser si trop bloquante » — elle est **acquise** dans cet emploi ; ne pas la desserrer pour
+    faire passer un cas (#59 : aucun levier de modèle sur `plancher_tier`). Un plancher qui gêne se
+    corrige **dans le référentiel de la question**, jamais dans la règle de dérivation.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

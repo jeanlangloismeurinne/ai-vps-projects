@@ -272,12 +272,11 @@ lot 1 ; les tables viennent en dernier.
    acceptation contre le vrai modèle 6/0, ZÉRO refus**, et RVMD `qf_6` rend enfin un `approxime`
    complet (méthode, hypothèses contestables, sensibilité). Convention **#63**. Récit + les trois
    pièges de garde rencontrés : **archive, entrée « 2026-09-13 »**.
-   ❓ **Question de doctrine ouverte, à trancher avec l'utilisateur** (le correctif est juste sous
-   les deux réponses) : la règle du cran est notée *provisoire, à réviser si trop bloquante*
-   ([[project_synthesis_tier_rule]]) et ferme `approxime` sur 6 questions sur 7. Soit c'est voulu
-   (une question à ancrage `A` n'accepte pas de reconstruction), soit c'est un **emprunt non
-   réexaminé** — la règle a été écrite pour les entries `agent_synthesis`, jamais remesurée
-   appliquée à l'approximation d'un analyste.
+   ✅ **Doctrine tranchée le 2026-09-13** : la fermeture d'`approxime` sur les questions à plancher
+   `A` est **voulue**. Une question qui exige un ancrage tier `A` n'accepte pas une reconstruction ;
+   l'approximation reste réservée aux questions d'interprétation (plancher plus bas). La règle du
+   cran n'est plus « provisoire » dans cet emploi — **rien à remesurer**, et un plancher qui gêne se
+   corrige dans le référentiel de la question, jamais dans la règle de dérivation (#59, #63).
 2. ⬜ **Les tables** `framework_answers` / `framework_dispenses` (**migration 040**) + persistance.
    ⚠️ La table de la roadmap dit « 037 » : **périmé**, 039 est appliquée. La 040 s'écrit juste avant
    son lot, jamais en avance, générateur qui **importe** la règle au lieu de la ré-implémenter en SQL.

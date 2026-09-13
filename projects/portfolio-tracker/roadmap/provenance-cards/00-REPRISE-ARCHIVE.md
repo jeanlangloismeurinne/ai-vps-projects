@@ -89,15 +89,22 @@ complète **2 223**. **Acceptation contre le vrai modèle 6/0, ZÉRO refus aux d
 enfin un `approxime` complet** — méthode, trois hypothèses contestables, sensibilité chiffrée.
 C'est la première fois que le bloc `Approximation` est atteint.
 
-### La question de doctrine ouverte (elle ne bloque pas le correctif)
+### La question de doctrine — TRANCHÉE le 2026-09-13
 
-La règle du cran (`derive_synthesis_reliability` : « un cran sous la plus faible citée ») est notée
+La règle du cran (`derive_synthesis_reliability` : « un cran sous la plus faible citée ») était notée
 **« provisoire, à réviser à l'usage si trop bloquante »** ([[project_synthesis_tier_rule]]). Elle
-ferme désormais `approxime` sur 6 questions sur 7, **par arithmétique**. Deux lectures possibles,
-et le correctif est juste sous les deux : (a) c'est voulu — une question qui exige un ancrage tier
-`A` n'accepte pas une reconstruction ; (b) c'est un emprunt non réexaminé — la règle a été écrite
-pour les entries `agent_synthesis` et n'a jamais été remesurée appliquée à l'approximation d'un
-analyste. À trancher avec l'utilisateur.
+ferme `approxime` sur 6 questions sur 7, **par arithmétique**. Deux lectures étaient possibles, et le
+correctif était juste sous les deux : (a) c'est voulu — une question qui exige un ancrage tier `A`
+n'accepte pas une reconstruction ; (b) c'est un emprunt non réexaminé — la règle a été écrite pour
+les entries `agent_synthesis` et n'a jamais été remesurée appliquée à l'approximation d'un analyste.
+
+**Réponse de l'utilisateur : (a).** C'est voulu, on garde. L'approximation reste réservée aux
+questions d'interprétation (plancher plus bas) ; une question à ancrage `A` n'accepte pas une
+estimation, point. Conséquences actées : la règle n'est plus « provisoire » dans cet emploi, rien
+n'est à remesurer, et un plancher jugé trop dur se corrige **dans le référentiel de la question**,
+jamais en desserrant la dérivation (#59). Mémoire `project_synthesis_tier_rule` corrigée en
+conséquence — elle portait encore le qualificatif « provisoire », qui aurait induit en erreur une
+session ultérieure.
 
 ---
 
