@@ -8,6 +8,218 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-13 — spec v3, **lot 3, maillon 1 : l'ANALYSTE**
+
+Livré : `agents/v2/analyste.py` (moitié déterministe + orchestration) et l'invariant `[S]` du pont
+(`frameworks.py` : le `sens` appartient au vocabulaire FERMÉ de la question — le contrat le laisse
+libre parce qu'un contrat d'objet ne connaît pas la question, #37, et c'est le pont qui le ferme).
+Commit `5ff4ef9`. Rien n'est câblé au runtime : aucun module de `app/` n'importe l'analyste.
+
+### Le défaut, et pourquoi seul le VRAI modèle pouvait le montrer
+
+Chaque question porte trois exigences. Le **plancher** était déjà structurel (`corpus_citable` ne
+montre rien en dessous). Les deux autres — `nature_attendue` et l'interaction plancher × règle du
+cran — ne vivaient QUE dans le pont, donc **après la dépense**, et le modèle ne les voit jamais
+(#59). Il ne pouvait donc ni les satisfaire ni savoir qu'il ne le pouvait pas.
+
+Mesuré sur NVDA + RVMD : **3 questions sur 14 sortaient en `refus`** — c'est-à-dire en *panne
+d'agent*, statut qui par construction ne produit **aucun mandat de collecte** — alors que le corpus
+ne POUVAIT pas fonder la réponse. C'est l'**erreur symétrique** de celle que l'en-tête du module
+interdit : il protège contre le blanchiment d'une panne de modèle en manque de données ; le corpus
+réel produisait l'inverse, imputant à l'agent un corpus muet, ce qui condamne la question au
+silence définitif (pas de mandat ⇒ pas de collecte ⇒ pas de réponse au tour suivant).
+
+### Le dry-run gratuit a montré le défaut BEAUCOUP plus large que le passage payant
+
+`tools/acceptation_analyste.py --admissibilite` (aucun appel modèle) rend, question par question,
+ce que le corpus réel rend possible. Lecture en texte (`feedback_frontiere_gratuite_avant_depense_
+modele`) : **`approxime` était fermé sur les 6 questions à plancher `A`**, et c'est de
+l'arithmétique, pas un hasard de corpus — `corpus_citable` plafonne le corpus au plancher, et
+`derive_synthesis_reliability` dégrade TOUJOURS d'un cran, donc au plancher `A` la meilleure
+reconstruction possible vaut `A-`, toujours sous le plancher. Tout le bloc `Approximation`
+(méthode / hypothèses / sensibilité) n'était atteignable que sur `qf_6`, où `repondu` était à son
+tour fermé faute d'entry `interpretation`. Le passage payant n'en montrait que 3 cas sur 14 ;
+le dry-run en a montré la cause structurelle, pour $0.
+
+### Le correctif
+
+`statuts_admissibles(question, citables)` calcule ce que le pont pourrait ENCORE accepter sur CE
+corpus, en **appelant** les détenteurs de règles (`derive_synthesis_reliability`, `TIER_ORDER`) —
+jamais en les recopiant (#46, asserté en `ast` : un `Call`, et aucun tier en dur).
+`contexte_analyste` publie `statuts_admis` comme **vocabulaire FERMÉ, même forme que `sens_admis`**
+— une propriété de la question sur ce corpus, jamais un curseur : `plancher_tier` et
+`nature_attendue` restent invisibles au modèle (#59). Dire ce qui est ouvert n'est pas montrer
+combien de preuve suffit. `repondre` écrit `non_fondable` **sans aucun appel** quand rien n'est
+ouvert (#40), avec **deux motifs distincts pour les deux causes** (aucune source ≠ aucune réponse
+recevable), et nomme un **refus dédié** quand le modèle sort du vocabulaire fermé — sinon le pont
+dirait « rang sous le plancher » là où la cause est « statut non ouvert ».
+
+### Une garde que rien ne peut faire rougir est un doublon
+
+Le test négatif a montré que la mutation désarmant l'ancienne garde `if not citables` de
+`contexte_analyste` laissait le check **VERT** : la porte des statuts rattrapait la question (sans
+entry citable, aucune nature n'est portée et le cran ne se calcule pas, donc seul `sans_fondement`
+reste ouvert — elle **subsume** le cas du corpus vide). Deux gardes d'accord restent deux gardes
+(#46) → détenteur unique `aucune_reponse_possible(ouverts)`, lu aux deux sites, et l'ancienne garde
+retirée. **C'est le test négatif qui a trouvé le doublon, pas la relecture.**
+
+### Trois pièges rencontrés EN ÉCRIVANT les gardes
+
+1. **Le grep d'interdit a lu sa propre énonciation** — `"A-" not in source` rougissait sur la
+   docstring qui explique précisément que le cran rend `A-`. Tombé dedans *en écrivant la garde qui
+   parle de ce piège* (`feedback_grep_interdit_lit_sa_propre_enonciation`). Remplacé par deux
+   asserts `ast` structurels. ⚠️ `_code_seul.code_seul` est **inutilisable ici** : il retire TOUTES
+   les chaînes, donc un tier recopié y deviendrait invisible (faux vert).
+2. **Un 5ᵉ faux vert, inédit** : trois asserts écrits en `all(...)` sur une liste **VIDE** — donc
+   verts sur rien. Apparu parce qu'un FAIL voisin a révélé que la fixture ne tuait pas les trois
+   questions visées. `len(_morts) == 3` est désormais exigé dans chacun. À ajouter à la liste des
+   faux verts : fixture non discriminante · script mort avant ses asserts · assert à côté du point
+   de lecture · assert écrit depuis sa propre constante · **`all()` sur une liste vide**.
+3. **Le harnais de mutation ne convertissait `\n` que dans le REMPLAÇANT, jamais dans le motif** :
+   deux gardes portant la même ligne (les deux sites d'appel de `aucune_reponse_possible`) étaient
+   **inatteignables par mutation**, donc non éprouvées *même vertes* (#56). Motifs multi-lignes
+   désormais acceptés — chaque site est adressable par la ligne qui le précède.
+
+### Mesures
+
+`check_analyste.py` **81 assertions** (§8 neuve, 18 asserts) · `negatif_analyste.sh`
+**31 mutations / 0 échec**, chacune rouge sur son assert NOMMÉ et atteignant son bilan · suite
+complète **2 223**. **Acceptation contre le vrai modèle 6/0, ZÉRO refus aux deux émetteurs**
+(NVDA $0.0015, RVMD $0.0032) : les 3 refus sont devenus des sorties honnêtes, et **RVMD `qf_6` rend
+enfin un `approxime` complet** — méthode, trois hypothèses contestables, sensibilité chiffrée.
+C'est la première fois que le bloc `Approximation` est atteint.
+
+### La question de doctrine ouverte (elle ne bloque pas le correctif)
+
+La règle du cran (`derive_synthesis_reliability` : « un cran sous la plus faible citée ») est notée
+**« provisoire, à réviser à l'usage si trop bloquante »** ([[project_synthesis_tier_rule]]). Elle
+ferme désormais `approxime` sur 6 questions sur 7, **par arithmétique**. Deux lectures possibles,
+et le correctif est juste sous les deux : (a) c'est voulu — une question qui exige un ancrage tier
+`A` n'accepte pas une reconstruction ; (b) c'est un emprunt non réexaminé — la règle a été écrite
+pour les entries `agent_synthesis` et n'a jamais été remesurée appliquée à l'approximation d'un
+analyste. À trancher avec l'utilisateur.
+
+---
+
+## 2026-09-12 — lot 2c (7 maillons), récit complet — *déplacé depuis `00-REPRISE.md` le 2026-09-13*
+
+### ✅ Lot 2c — **TERMINÉ le 2026-09-12** (audit des 2 principes rendu le 2026-09-10)
+
+L'audit de la spec complète a produit **10 écarts (V1–V10)**, dont deux structurants, tous deux
+consignés dans la spec. **V5** (`covers` re-vocabularisée) est traité par la 036 + `question_coverage`.
+Reste **V1**, qui est le cœur du lot 2c :
+
+- **V1** — le socle EDGAR collecte **avant et indépendamment de toute question** : `POSTES` est
+  une liste de **8** métriques écrites à la main qui servent **4** des **33** ingrédients essentiels,
+  3 postes ne répondent à rien, et les 12 ingrédients `mo_*` n'ont aucune source sans que rien ne le
+  dise. → `POSTES` devient **dérivé du plan de collecte** (spec §3.6), par la chaîne à deux agents
+  traducteur → plan persisté → collecteur. Retrait du levier `RESSERRER` de `curator.py` dans le
+  même lot.
+
+**Découpe du lot 2c, ordre imposé `contrat → agent → données` :**
+
+1. ✅ **Le contrat du plan de collecte** (2026-09-11) — `app/contracts/collection_plan_schema.py`
+   (`CollectionPlan` / `CollectionPlanItem`, strict). Le statut d'une ligne porte **exactement** sa
+   charge (`traduit` ⟺ métrique+source+ancre · `inobtenable` ⟺ motif seul → mandat) ; le 3ᵉ état
+   `omis` **n'est pas un statut** (absence de ligne, constatée au pont) ; ce que le traducteur n'a
+   pas le droit de porter (`plancher_tier`/`nature_attendue`/`essentiel`, #59) est **absent du
+   contrat**, donc rejeté par `extra='forbid'`, pas gardé par un `if`. Check
+   `check_collection_plan_contract.py` **22/0**, négatif bidirectionnel
+   `negatif_collection_plan_contract.sh` **satisfiabilité + 9 mutations / 9**, carte
+   `provenance-cards/collection_plan_card.md`. Suite **2 030**.
+2. ✅ **Le pont `valider_pont_collection_plan`** (2026-09-11, `agents/v2/frameworks.py`, lève
+   `CollectionPlanRefused`) : invariants relationnels `[N]` framework+version · `[O]` archétype
+   déclaré · `[P]` chaque `(question_id, ingredient_id)` résout · `[Q]` pas de collecte sur une
+   question sans objet · **`[R]` chaque ingrédient essentiel d'une question applicable a une
+   ligne — omission = plan REFUSÉ (c'est T1bis, §9.2)**. Check §6 (fixture construite depuis le
+   référentiel réel, complète par construction), négatif 7 mutations de pont. Suite **2 039**.
+3. ✅ **L'agent 1, le traducteur** (2026-09-11, `agents/v2/traducteur.py`). Moitié déterministe :
+   `questions_applicables` (filtre par archétype), `contexte_traducteur` (**lever-free : ni
+   `plancher_tier` ni `nature_attendue`**, #59), orchestration `traduire` où **l'en-tête du plan est
+   posé par le CODE** (le modèle ne produit que `TraducteurSortie.items`), sortie validée contrat +
+   pont. Prompt en **code** (`_TRADUCTEUR_SYSTEM_PROMPT`, comme la synthèse #54). Check
+   `check_traducteur.py` **15/0**, négatif **satisfiabilité + 6 mutations**.
+   **Acceptation contre le vrai modèle PASSÉE** (`tools/acceptation_traducteur.{py,sh}`, ne persiste
+   rien, ~$0.0012) : NVDA (rentable) → 30 lignes, 20 essentiels couverts, `cout_du_capital` sorti en
+   **traduit-vers-web** (WACC via données de marché — l'une des deux issues licites de §3.6) ; RVMD
+   (pre_revenus) → seules qf_4/6/7 (qf_1/2/3/5 correctement exclues), 13 traduits + **1 inobtenable
+   honnête** (`qf_4.couverture_des_interets` : biotech sans dette → mandat).
+   **RÈGLE D'ANCRAGE resserrée** (2026-09-11, re-testée) — améliore réellement : NVDA ancre « clôture
+   fin janvier » (émetteur-conscient) ; RVMD raisonne désormais sur le **jalon clinique** (une ligne
+   explicite). ⚠️ **Reste partiel** : la ligne phare *cash burn* de RVMD retombe encore sur « clôture
+   du trimestre ». **Non sur-optimisé sur 1 ticker à dessein** → à traquer par l'**éval multi-tickers**
+   (backlog #9), pas par du tuning sur RVMD seul. Resynchro du prompt en `agent_prompts` (#19/#39) au
+   câblage runtime.
+4. ✅ **L'agent 2, le collecteur** + l'aiguilleur — **cœur déterministe + persistance livrés**
+   (2026-09-11/12, `agents/v2/collecteur.py`) : `LigneAveugle` (le collecteur **ne voit ni question
+   ni ingrédient** → l'entry ne peut porter aucun vocabulaire de framework, principe 2 structurel),
+   `aiguiller_plan` (orchestration PURE, exécuteur `collecter` **injecté**) où **la couverture est un
+   sous-produit déterministe du dispatch** (`LienCouverture` = colonnes exactes de
+   `question_coverage`, écrites par l'aiguilleur qui tient le plan, jamais par le modèle, #57).
+   **Trois états, aucune ligne ne s'évapore** : traduit-collecté → lien ; inobtenable → mandat
+   (jamais exécuté) ; collecte échouée → mandat `echec_collecte` (jamais un silence, #25). Check
+   `check_collecteur.py` **15/0**, négatif **6 mutations**.
+   ✅ **Persistance (2026-09-12)** : `agents/v2/collecte_persist.py` (`persist_plan` écrit le plan +
+   ses lignes, `persist_aiguillage` écrit `question_coverage` **et** `framework_mandates` dans la
+   MÊME transaction, #35/#58, à appeler `async with conn.transaction()`). `check_collecte_persist.py`
+   **8/0** vérifie l'**ÉTAT persisté** contre la vraie base en transaction **ROLLBACK** (aucun
+   résidu, #47) — plan relu, liens et mandats relus, et §3 le **dernier rempart** : les CHECK SQL de
+   la 039 refusent une ligne `traduit` sans métrique / un mandat d'origine inconnue. Négatif
+   `negatif_collecte_persist.sh` **satisfiabilité + 5 mutations / 5** (réseau `coolify` + ROLLBACK).
+   Câblé dans `run_all.sh` (bloc `coolify` + `CHECK_DB_URL`).
+   ✅ **L'EXÉCUTEUR RÉEL + la chaîne runtime (2026-09-12, `agents/v2/collecte_executor.py`, mandat
+   utilisateur)** : dispatch question-AVEUGLE sur `source_pressentie` (+ métrique) — dépôt
+   réglementaire ET poste du socle → EDGAR (déterministe, tier A) ; tout le reste → search-worker.
+   `aiguiller_plan` laissé **intact** (pur, sync, son check+négatif inchangés) : l'exécuteur
+   pré-exécute chaque ligne aveugle DISTINCTE (passe async) puis injecte un **lookup sync** — toute
+   l'IO est dans `collecte_executor`. `executer_collecte_framework` = la chaîne runtime qui n'existait
+   pas (traduire → `persist_plan` → `executer_plan_reel` → `persist_aiguillage`). Tool versionné
+   `tools/collecter_framework.py` (`--plan-only` lit le plan+dispatch sans écrire, ~$0.0008).
+   Check `check_collecte_executor.py` **31/0**, négatif `negatif_collecte_executor.sh` **7/7**.
+   ⚠️ **Deux défauts trouvés par la méthode, pas par un diff** : (a) en lisant le plan NVDA en TEXTE
+   avant toute écriture, **5 des 6 lignes routées EDGAR étaient des dérivées** (capital employé,
+   croissance du CA, maintenance capex, rapprochement GAAP) qui ne faisaient que *contenir* un alias
+   de poste → corruption #43 ; corrigé par détection structurelle de dérivation (opérateurs + mots à
+   la **frontière de mot** — `ratio` matchait « opé**ratio**nnel ») ; après correctif, seul le niveau
+   brut `qf_2.resultat_net` va au socle (confirme #58 : les 8 postes servent peu d'ingrédients).
+   (b) le 1ᵉʳ run réel a **crashé tout le lot** sur un timeout fournisseur d'UNE ligne ; corrigé :
+   toute collecte qui échoue → mandat `echec_collecte` motivé (#25), jamais un crash. Convention
+   **#60** (CLAUDE.md projet). Exercé en réel : **RVMD** (11 liens + 1 inobtenable T1bis + 2
+   echec_collecte ; et la dédup par ligne aveugle vérifiée — deux ingrédients « lignes de crédit non
+   tirées » sur l'unique entry #300) + **NVDA ciblé** (chemin EDGAR → entry #318).
+5. ✅ **`POSTES` dérivé du plan** + **retrait du levier `RESSERRER`** (2026-09-12, conventions
+   #61/#62). `edgar_feed.POSTES` est un CATALOGUE de recettes ; `run_edgar_feed(..., metrics=…)` ne
+   collecte que les postes réclamés, `collecte_executor.postes_edgar_du_plan` les calcule (union des
+   lignes traduites routées EDGAR). `curator._exigences(dim)` lit `MVDD_SPEC` tel quel, prompt nettoyé.
+   **§12bis (état persisté data-first, plancher ≥50) MORT** — l'identité #43/F16 reste tenue hors ligne
+   (§3/§10/§12), `check_edgar_feed` ne requiert plus `CHECK_DB_URL`, proxy `PLANCHERS[0]` du rejeu
+   retiré. Nouveaux asserts éprouvés par mutation : `check_edgar_feed §3` (build ne bâtit que le
+   sous-ensemble), `check_collecte_executor §5bis` (`postes_edgar_du_plan`), `check_readiness §8`
+   (proposition du modèle ignorée). Code seul, aucune migration, aucun réseau. **DÉPLOYÉ le
+   2026-09-12 (commit `6cb1714`, `compose-deploy.sh`, HTTP 200)** — le prod porte donc la collecte
+   plan-dérivée et le gate sans levier modèle.
+6. ✅ **Migration 039** (tables `collection_plans`, `collection_plan_items`, `framework_mandates`) —
+   **appliquée en prod le 2026-09-11** (`BEGIN…COMMIT`, 3 tables + 2 index + GRANT `portfolio_user`).
+   ADDITIVE (rien de détruit, réversible par `DROP TABLE`). Les CHECK SQL **redisent le contrat** du
+   plan (dernier rempart, #37) — éprouvés en négatif dans `check_collecte_persist.py` §3.
+
+> **▶ LOT 2c TERMINÉ (7/7 maillons + migration 039) · PRÉ-REQUIS DU LOT 3 LEVÉ (§7 re-mesuré,
+> 2026-09-12). Prochain jalon = LOT 3** (analyste + manager sur `qualite_financiere` ;
+> `framework_answers`/`_mandates`/`_dispenses` en base ; **suppression** de `MVDD_SPEC`,
+> `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` ; collecte neuve pilotée par le plan sur
+> NVDA/MSFT/RVMD ; migration **037**). Reprise conseillée : **NOUVELLE conversation**
+> ([[feedback_fin_sprint_reco_conversation]]).
+> ✅ **Le pré-requis §7 a été tranché par le principe §0.6** (« les données en base ne dictent jamais
+> la roadmap ; elles sont soit compatibles, soit périmées ») : les 30 faits web du maillon 4 sont
+> **compatibles**, pas des parasites à réconcilier ; l'ancien `== 13` était une **cible-corpus**
+> interdite. §7 revérifie l'invariant #51 (metric structuré ⟹ `mesure`, garde de non-vacuité, tous
+> tickers) — jamais un décompte. Détail + test négatif : voir frontmatter et
+> [[project_entry_nature_gate_invariant]]. Le corpus RVMD hérité (43 déterministes actifs) sera
+> re-collecté propre par le lot 3 (§5.3) — inutile de le nettoyer à la main d'ici là.
+
+
+---
+
 ## 2026-09-12 — **pré-requis du lot 3 : `check_entry_nature §7` re-mesuré en invariant**
 
 Consigne d'ouverture : « continue le lot ; rappelle-toi que les données en base ne dictent jamais la

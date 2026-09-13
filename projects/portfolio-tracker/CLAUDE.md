@@ -929,6 +929,62 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     `check_readiness_recompute.py §8` — éprouvé par mutation (le modèle regagne le levier → 3 asserts
     rouges, chacun sur son nom).
 
+63. **Une exigence que le modèle ne peut NI VOIR NI SATISFAIRE se refuse AVANT la dépense — sinon le
+    pont impute à l'agent un corpus qui ne pouvait pas fonder, et la question meurt en silence (V3,
+    lot 3 maillon 1, `agents/v2/analyste.py`)** : #59 interdit au modèle tout levier sur
+    `plancher_tier` / `nature_attendue` — donc il ne les voit pas. Mais trois exigences par question
+    étaient tenues à **deux moments différents** : le plancher, structurellement (`corpus_citable`
+    n'expose rien en dessous) ; `nature_attendue` et l'interaction plancher × règle du cran,
+    **seulement dans le pont, après l'appel**. Un modèle qui ne peut ni voir ni deviner une exigence
+    ne peut pas la satisfaire : ses réponses sortaient en `refus`, c'est-à-dire en **panne d'agent**,
+    statut qui par construction ne produit **aucun mandat de collecte**. C'est l'erreur **symétrique**
+    de celle que tout le module interdit — là où l'on protège contre le blanchiment d'une panne de
+    modèle en « manque de données », le corpus réel produisait l'inverse : imputer à l'agent un corpus
+    muet, ce qui **condamne la question au silence définitif** (pas de mandat ⇒ pas de collecte ⇒ pas
+    de réponse au tour suivant). Mesuré contre le vrai modèle : **3 questions sur 14**.
+    **Règle** : ce que le pont refusera se calcule AVANT (#40) et se publie au modèle comme un
+    **vocabulaire FERMÉ**, de la même forme que ceux qu'il connaît déjà (`statuts_admis` ≡
+    `sens_admis`) — dire *ce qui reste ouvert* n'est pas montrer *combien de preuve suffit*, donc #59
+    tient toujours. Sortir de ce vocabulaire est une faute d'agent **nommée ici**, jamais laissée au
+    pont, qui dirait « rang sous le plancher » là où la cause est « statut non ouvert » : **deux
+    causes, deux motifs** (#54). Quand plus rien n'est ouvert, la question sort en `non_fondable`
+    **sans aucun appel** — et le nombre d'appels modèle EST la mesure du check.
+    ⚠️ **Le calcul APPELLE les détenteurs de règles, il ne les recopie jamais** (#46) — asserté en
+    `ast` (un `Call` réel, et aucun tier en dur), jamais en grep : `code_seul` est inutilisable ici,
+    il retire TOUTES les chaînes, donc un tier recopié y devient invisible (faux vert), et un grep
+    d'interdit rougirait sur la docstring qui l'explique (faux rouge, #56).
+    ⚠️ **Le dry-run GRATUIT montre la CAUSE là où le passage payant ne montre que des CAS** : le
+    passage réel rendait 3 refus sur 14 ; `--admissibilite` (aucun appel) a montré que `approxime`
+    était fermé sur **les 6 questions à plancher `A`**, par arithmétique — le corpus est plafonné au
+    plancher et la règle du cran dégrade toujours d'un rang, donc la meilleure reconstruction y vaut
+    `A-`, toujours dessous. Tout le bloc `Approximation` était inatteignable. Exécuter le producteur
+    déterministe et **lire sa sortie en texte** avant de payer
+    (`feedback_frontiere_gratuite_avant_depense_modele`).
+    ⚠️ **Une garde que rien ne peut faire rougir est un doublon, pas une garde** : le test négatif a
+    montré que désarmer l'ancienne garde « corpus vide » de `contexte_analyste` laissait le check
+    VERT — la porte des statuts la **subsume** (sans entry citable, aucune nature n'est portée et le
+    cran ne se calcule pas). Deux gardes d'accord restent deux gardes (#46) → détenteur unique
+    `aucune_reponse_possible`, lu aux deux sites, l'ancienne retirée. **C'est la mutation qui l'a
+    trouvé, pas la relecture.**
+    ⚠️ **5ᵉ faux vert, inédit et à ajouter à la liste** : un assert écrit en `all(...)` sur une liste
+    **VIDE** est vert sur rien. Exiger la cardinalité (`len(x) == 3`) dans chaque assert qui dépend
+    d'une sélection. (Les quatre autres : fixture non discriminante · script mort avant ses asserts ·
+    assert à côté du point de lecture · assert écrit depuis sa propre constante.)
+    ⚠️ **Corollaire de harnais** : `negatif_analyste.sh` ne convertissait `\n` que dans le
+    REMPLAÇANT, pas dans le motif — deux gardes portant la **même ligne** (les deux sites d'appel)
+    étaient **inatteignables par mutation**, donc non éprouvées *même vertes* (#56). Motifs
+    multi-lignes désormais acceptés : chaque site s'adresse par la ligne qui le précède.
+    Détail + garde : `check_analyste.py` **§8** (81 assertions au total),
+    `negatif_analyste.sh` **31 mutations / 0 échec**, et l'**acceptation contre le vrai modèle**
+    `tools/acceptation_analyste.{py,sh}` (**6/0, zéro refus**, NVDA + RVMD, ~$0.005) — qui ne
+    persiste rien et **ne doit jamais tourner dans `portfolio-backend`** (il porte le code déployé).
+    ❓ **Question de doctrine laissée ouverte** : la règle du cran
+    (`derive_synthesis_reliability`) est notée *provisoire, à réviser si trop bloquante* ; elle ferme
+    `approxime` sur 6 questions sur 7. Soit c'est voulu (une question à ancrage `A` n'accepte pas de
+    reconstruction), soit c'est un **emprunt non réexaminé** — la règle a été écrite pour les entries
+    `agent_synthesis`, jamais remesurée appliquée à l'approximation d'un analyste. Le correctif
+    ci-dessus est juste sous les deux réponses.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
