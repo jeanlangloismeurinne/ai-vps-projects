@@ -315,6 +315,7 @@ lot 1 ; les tables viennent en dernier.
 > constantes et le branchement des lectures).
 > Reprise conseillée : **NOUVELLE conversation**, et **Sonnet suffit** — retrait de constantes +
 > câblage, pas de décision de conception neuve.
+> **Session du 2026-09-13 terminée** — commit `f79c278`. Maillons 1-2 livrés, suite 31/2238 verte.
 
 ### Découpage des lots suivants (spec v3 §10)
 
