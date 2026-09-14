@@ -143,6 +143,129 @@ POSTES: list[Poste] = [
           composite_concepts=["LongTermDebtNoncurrent", "LongTermDebt",
                               "ConvertibleLongTermNotesPayable", "ConvertibleDebtNoncurrent",
                               "ConvertibleNotesPayableNoncurrent"]),
+
+    # ─── postes ajoutés le 2026-09-14 (lot 3, maillon 4) ──────────────────────────────────────────
+    # MOTIF, mesuré avant d'écrire une ligne (`tools/cartographier_xbrl.py`) : le catalogue en
+    # comptait 8 quand NVDA dépose 627 concepts us-gaap, MSFT 562 et RVMD 269. Conséquence relevée
+    # sur les 3 plans réels de `qualite_financiere` : 66 lignes sur 74 partaient vers une recherche
+    # web payante (tier B) pour des NIVEAUX BRUTS que la SEC publie déterministiquement en tier A,
+    # et 5 des 7 lignes routées EDGAR l'étaient sur un FAUX appariement — faute d'avoir le bon poste
+    # à nommer, l'appariement retombait sur le poste voisin (« échéances à 12 mois » → dette LT).
+    #
+    # CE QUI ENTRE ICI, ET CE QUI N'Y ENTRE PAS :
+    #   · un poste est un NIVEAU BRUT MONÉTAIRE, déposé tel quel par l'émetteur. C'est tout.
+    #   · pas de RATIO ni de TAUX : `EffectiveIncomeTaxRateContinuingOperations` est déposé en unité
+    #     `pure`, que `_UNITS` (des devises) ne sait pas lire — il serait ajouté « fondé » et ne se
+    #     fonderait jamais, un poste mort au vert. Le taux effectif se DÉRIVE de `income_tax_expense`
+    #     / `pretax_income`, deux postes bruts présents ci-dessous ;
+    #   · pas d'agrégat que l'émetteur ne dépose pas d'une pièce (la variation du BFR en est une :
+    #     XBRL la publie en TROIS lignes, créances / stocks / dettes fournisseurs). Les trois
+    #     briques sont au catalogue ; les additionner est une DÉRIVATION, et une dérivation ne se
+    #     collecte pas, elle se calcule — `_est_derivee` continue d'envoyer ces lignes-là au web.
+    #
+    # Un poste ajouté ici ne coûte AUCUN appel tant qu'aucun plan ne le réclame (`metrics=`, §3.6) :
+    # c'est un catalogue de recettes, pas une liste de courses. Et un poste que l'émetteur ne dépose
+    # pas retombe proprement au web (#30) — RVMD n'a ni stocks ni `LongTermDebtCurrent`, c'est le cas
+    # NOMINAL d'une biotech pré-revenus financée en convertibles, pas un défaut.
+
+    # ── compte de résultat ────────────────────────────────────────────────────────────────────────
+    Poste("cost_of_revenue",
+          ["CostOfRevenue", "CostOfGoodsAndServicesSold", "CostOfGoodsSold"],
+          ["financials", "margins", "edgar"], "Coût des ventes", flow=True),
+    Poste("research_development",
+          ["ResearchAndDevelopmentExpense",
+           "ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost"],
+          ["financials", "opex", "edgar"], "Frais de recherche et développement", flow=True),
+    Poste("selling_general_admin",
+          ["SellingGeneralAndAdministrativeExpense", "GeneralAndAdministrativeExpense",
+           "SellingAndMarketingExpense"],
+          ["financials", "opex", "edgar"], "Frais commerciaux et administratifs", flow=True),
+    Poste("operating_expenses",
+          ["OperatingExpenses", "CostsAndExpenses"],
+          ["financials", "opex", "edgar"], "Charges opérationnelles", flow=True),
+    Poste("operating_income",
+          ["OperatingIncomeLoss"],
+          ["financials", "profitability", "edgar"], "Résultat opérationnel", flow=True),
+    # `InterestExpense` est le concept historique ; les taxonomies récentes le scindent en
+    # `…Nonoperating` / `…Debt`. Les trois sont candidats et la FRAÎCHEUR arbitre (`select_concept`) :
+    # un émetteur qui a migré porte le nouveau, celui qui n'a pas migré porte l'ancien.
+    Poste("interest_expense",
+          ["InterestExpense", "InterestExpenseNonoperating", "InterestExpenseDebt",
+           "InterestIncomeExpenseNet"],
+          ["financials", "leverage", "edgar"], "Charge d'intérêts", flow=True),
+    Poste("pretax_income",
+          ["IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+           "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"],
+          ["financials", "profitability", "edgar"], "Résultat avant impôt", flow=True),
+    Poste("income_tax_expense",
+          ["IncomeTaxExpenseBenefit"],
+          ["financials", "profitability", "edgar"], "Charge d'impôt", flow=True),
+
+    # ── tableau des flux de trésorerie ────────────────────────────────────────────────────────────
+    Poste("depreciation_amortization",
+          ["DepreciationDepletionAndAmortization", "DepreciationAmortizationAndAccretionNet",
+           "DepreciationAndAmortization", "Depreciation"],
+          ["financials", "cash_flow", "edgar"], "Dotations aux amortissements", flow=True),
+    Poste("share_based_compensation",
+          ["ShareBasedCompensation", "AllocatedShareBasedCompensationExpense"],
+          ["financials", "cash_flow", "edgar"], "Rémunération en actions", flow=True),
+    Poste("change_in_receivables",
+          ["IncreaseDecreaseInAccountsReceivable"],
+          ["financials", "working_capital", "edgar"], "Variation des créances clients", flow=True),
+    Poste("change_in_inventories",
+          ["IncreaseDecreaseInInventories"],
+          ["financials", "working_capital", "edgar"], "Variation des stocks", flow=True),
+    Poste("change_in_payables",
+          ["IncreaseDecreaseInAccountsPayable",
+           "IncreaseDecreaseInAccountsPayableAndAccruedLiabilities"],
+          ["financials", "working_capital", "edgar"], "Variation des dettes fournisseurs", flow=True),
+    Poste("investing_cash_flow",
+          ["NetCashProvidedByUsedInInvestingActivities",
+           "NetCashProvidedByUsedInInvestingActivitiesContinuingOperations"],
+          ["financials", "cash_flow", "edgar"], "Flux d'investissement", flow=True),
+    Poste("financing_cash_flow",
+          ["NetCashProvidedByUsedInFinancingActivities",
+           "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations"],
+          ["financials", "cash_flow", "edgar"], "Flux de financement", flow=True),
+    Poste("dividends_paid",
+          ["PaymentsOfDividends", "PaymentsOfDividendsCommonStock"],
+          ["financials", "shareholder_return", "edgar"], "Dividendes versés", flow=True),
+    Poste("share_repurchase",
+          ["PaymentsForRepurchaseOfCommonStock"],
+          ["financials", "shareholder_return", "edgar"], "Rachats d'actions", flow=True),
+
+    # ── bilan ─────────────────────────────────────────────────────────────────────────────────────
+    Poste("total_liabilities",
+          ["Liabilities"],
+          ["financials", "balance_sheet", "edgar"], "Total passif", flow=False),
+    Poste("current_assets",
+          ["AssetsCurrent"],
+          ["financials", "balance_sheet", "edgar"], "Actif circulant", flow=False),
+    Poste("current_liabilities",
+          ["LiabilitiesCurrent"],
+          ["financials", "balance_sheet", "edgar"], "Passif circulant", flow=False),
+    Poste("accounts_receivable",
+          ["AccountsReceivableNetCurrent", "ReceivablesNetCurrent"],
+          ["financials", "working_capital", "edgar"], "Créances clients", flow=False),
+    Poste("inventory",
+          ["InventoryNet", "InventoryGross"],
+          ["financials", "working_capital", "edgar"], "Stocks", flow=False),
+    Poste("ppe_net",
+          ["PropertyPlantAndEquipmentNet"],
+          ["financials", "balance_sheet", "edgar"], "Immobilisations corporelles nettes", flow=False),
+    Poste("marketable_securities",
+          ["MarketableSecuritiesCurrent", "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+           "ShortTermInvestments", "OtherShortTermInvestments"],
+          ["financials", "balance_sheet", "edgar"], "Titres de placement à court terme", flow=False),
+    # LE POSTE QUI MANQUAIT, ET QUI A COÛTÉ UN FAUX APPARIEMENT (mesure du 2026-09-14) :
+    # l'ingrédient `qf_7.echeances_a_douze_mois` demandait la dette exigible sous 12 mois. Faute de
+    # ce poste, l'appariement par sous-chaînes a lu « part courante de la dette à LONG TERME » et
+    # l'a liée à `cash_and_lt_debt` — le bon libellé en face du MAUVAIS nombre (#43). NVDA et MSFT
+    # déposent `LongTermDebtCurrent` (« Long-term Debt, Current Maturities »).
+    Poste("long_term_debt_current",
+          ["LongTermDebtCurrent", "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths",
+           "ConvertibleNotesPayableCurrent", "DebtCurrent"],
+          ["financials", "leverage", "edgar"], "Dette exigible à douze mois", flow=False),
 ]
 
 # Le poste qui fixe la date d'ancrage : tous les autres sont pris au MÊME exercice (jamais mélangés).

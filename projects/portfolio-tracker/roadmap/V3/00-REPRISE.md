@@ -317,15 +317,87 @@ lot 1 ; les tables viennent en dernier.
    (2026-09-13, commit `203fe65`) — 15 fichiers ; `nonblocking_gaps_for()` retourne `{}` ;
    `read_dispenses()` branché dans `framework_persist.py` ; `run_all.sh` **2172/0** (29 scripts,
    −66 assertions vs 2238 : sections testant les symboles supprimés retirées comme prévu).
-4. ⬜ **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3).
+4. 🔄 **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3) — **OUVERT, et bloqué
+   par l'APPARIEMENT ingrédient → donnée EDGAR.** La collecte réelle **ne doit pas partir** tant
+   que la garde décrite au maillon 4bis n'existe pas : un faux appariement écrit un nombre exact en
+   face de la mauvaise question (#43/#60), et rien en aval ne le rattrape.
+   **Ce qui a été fait le 2026-09-14** (migration **041** appliquée, suite **2429/0**) :
+   · `fetch_company_facts()` (`knowledge/edgar_facts.py`) — l'INVENTAIRE complet des concepts
+     us-gaap déposés par un émetteur, là où `companyconcept` ne peut jamais révéler un poste qu'on
+     ignorait ; · `tools/cartographier_xbrl.py` + `.sh` — le mesureur versionné qui le lit ;
+   · `POSTES` enrichi **8 → 33** ; · le traducteur NOMME le poste (`CollectionPlanItem.poste`,
+     migration 041, `LigneAveugle.poste`) et l'appariement par sous-chaînes est **supprimé**
+     (pierre tombale dans `collecte_executor.py`).
+   **LA MESURE, qui est le vrai livrable du jour** (gratuite, `--plan-only`, ~$0,01 au total) :
+   | passage | lignes EDGAR | justes | fausses |
+   |---|---|---|---|
+   | avant (sous-chaînes, 8 postes) | 7 | 2 | 5 |
+   | catalogue 33 + poste nommé, prompt v1 | 34 | ~12 | **~22** |
+   | + prompt durci (un TEST à faire passer au poste) | 11 | **11** | **0** |
+   | **le même prompt, MSFT rejoué** | **15** | 5 | **10** |
+   ⚠️ **La dernière ligne disqualifie le remède par prompt** (`feedback_jugement_modele_instable_
+   entre_passages`). Le durcissement est conservé et **gardé** (`check_collecte_executor` §3bis :
+   le critère, les opérations disqualifiantes, les contre-exemples mesurés) — mais ces asserts
+   gardent l'ÉNONCÉ, **jamais le comportement**, et le disent. ⚠️ Inventaire des 627/562/269
+   concepts déposés contre **33** au catalogue : le catalogue regardait par le petit bout.
+   ⚠️ **Sur les 3 tickers, les 4 postes utiles sont les MÊMES** (`net_income`,
+   `operating_cash_flow`, `cash_and_lt_debt`, `long_term_debt_current`) — mais voir 4bis : cela ne
+   veut PAS dire que le poste se fige dans le référentiel.
+4bis. ⬜ **L'APPARIEMENT PAR TICKER — le maillon manquant** (conçu avec l'utilisateur le
+   2026-09-14, **doctrine tranchée, rien à remesurer**). Ce que fait un analyste en fonds : il
+   prend les questions de son framework, **liste les champs réellement déposés par CET émetteur**,
+   et construit le meilleur appariement — **exact**, ou **par approximation en explicitant les
+   hypothèses**, quitte à chercher sur le web un terme manquant du calcul.
+   ⚠️ **Le poste ne va PAS dans le référentiel du framework** (piste envisagée puis **écartée par
+   l'utilisateur**) : le référentiel doit rester applicable à **tout** ticker, et y écrire
+   `poste: net_income` graverait une hypothèse us-gaap dans un cadre qui doit valoir pour un
+   émetteur européen ou une société non cotée — #31 déplacé d'un cran vers le haut. L'appariement
+   est **par ticker**, mais contre l'**inventaire réel**, jamais contre une liste devinée.
+   **TROIS états, jamais deux** (#44/#54) : `exact` (le champ répond tel quel) · `approximation`
+   (formule sur N champs déposés + **hypothèses écrites**) · `indisponible` (→ web).
+   La case du milieu est celle qui porte l'information : aujourd'hui `qf_1.capital_employe` part
+   au web chercher un nombre **que personne ne publie**, alors que NVDA dépose `Assets`,
+   `CashAndCashEquivalentsAtCarryingValue`, `ShortTermInvestments`, `LiabilitiesCurrent`. Le
+   lecteur doit pouvoir **contester l'hypothèse**, jamais être trompé.
+   **RÈGLE DE TIER (tranchée le 2026-09-14 — convention #67)** : le discriminant est le
+   **DÉTERMINISME du calcul**, pas la nature du choix de formule. Calcul déterministe (formule
+   fermée, aucun paramètre à choisir) sur ingrédients **tous tier A → tier A** (2+2=4 n'est pas
+   moins sûr que 2 et 2) ; ingrédients **mixtes → le tier du plus FAIBLE**, sans cran (le calcul
+   n'ajoute aucune incertitude) ; calcul **non déterministe** (une part, une allocation, une
+   estimation) → **un cran sous le plus faible**, ce qui retombe exactement sur la règle acquise
+   du 2026-09-13. ⚠️ Une seule règle, un discriminant, **pas de second détenteur** (#46) — c'est
+   ce qui sépare `capital_employe` (soustraction de 4 postes déposés) de
+   `investissement_de_maintien` (« la part du capex nécessaire au maintien » : aucune formule
+   fermée, il faut choisir un pourcentage).
+   **RECALCUL DE LA CARTE (tranché)** : à **tout nouveau dépôt** — une société mûrit et se met à
+   déposer des ingrédients importants. Cas réel déjà sous la main : RVMD ne dépose ni `Revenues`,
+   ni `InventoryNet`, ni `AccountsReceivableNetCurrent` (27 postes sur 33, mesuré le 2026-09-14) —
+   ce n'est pas un trou de collecte, c'est une biotech pré-revenus ; son produit approuvé par la
+   FDA en août 2026 fera apparaître ces trois champs au premier trimestre de commercialisation.
+   Mécanique : la carte est **persistée** avec le dernier dépôt vu, et sa validité **revérifiée à
+   la lecture** — exactement le motif de #54 (`_apply_deterministic_overrides`).
+   **RÔLE DU WEB (tranché)** : aller chercher **un terme manquant du calcul**, pas « caler une
+   hypothèse ». La recherche cesse d'être ce qu'on fait après avoir échoué : elle devient un
+   **ingrédient**, et fait tomber le calcul dans la branche « mixtes » de la règle de tier.
+   ⚠️ **Ce que ça déplace** : `POSTES` garde son rôle de #61 (les recettes de collecte : concepts
+   candidats, flux/bilan, choix par fraîcheur #30) et l'enrichissement 8 → 33 garde sa valeur —
+   mais il **cesse d'être la frontière**. Le vocabulaire montré au modèle devient l'inventaire
+   réel du ticker. Réemployable tel quel : `fetch_company_facts()`, `cartographier_xbrl.py`, et
+   `financials_feed` qui sait déjà produire un fait dérivé en déclarant ses ancres (#42).
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4** (collecte neuve pilotée par le plan sur NVDA / MSFT /
-> RVMD — §5.3 : rejouer la chaîne traducteur → collecteur sur les 3 émetteurs, corpus re-collecté
-> propre pour RVMD). Prochaine migration : **041** (inchangé — maillon 3 était code seul).
-> Reprise conseillée : **NOUVELLE conversation**, **Sonnet** pour conduire les appels — si des
-> décisions de plan sont à trancher (ancrage, source, ingrédient non obtenable), préférer **Opus**.
-> **Session du 2026-09-13 terminée** — commit `203fe65`. Maillons 1-3 livrés, suite **2172/0** verte.
+> **▶ PROCHAIN JALON = lot 3, maillon 4bis** (l'appariement par ticker : inventaire → carte
+> persistée → trois états). Les trois arbitrages de doctrine sont **tranchés** ci-dessus : ne pas
+> les rouvrir, les implémenter. Le maillon 4 (collecte réelle) attend derrière. Prochaine
+> migration : **042** (041 appliquée le 2026-09-14 — `collection_plan_items.poste`).
+> Reprise conseillée : **NOUVELLE conversation** (le contexte de celle-ci est consommé par la
+> mesure, et la conception est écrite ici), et **OPUS** — contrairement au maillon 4 qui ne
+> demandait que de conduire des appels, 4bis est de la conception : trois états à tenir, une règle
+> de tier à un discriminant, et un jugement de modèle à **encadrer par du code** après qu'on a
+> mesuré qu'il ne tient pas seul. Le critère de succès ne s'énonce pas en trois lignes
+> (`feedback_deleguer_recherche_pas_jugement`), donc ce n'est pas délégable à Sonnet.
+> **Session du 2026-09-14 terminée** — suite **2429/0**, migration 041 appliquée, rien de déployé,
+> **aucune collecte réelle lancée** (et c'est volontaire).
 
 ### Découpage des lots suivants (spec v3 §10)
 

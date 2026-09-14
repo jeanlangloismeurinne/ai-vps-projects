@@ -67,7 +67,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "router_source",
-    "poste_pour_metrique",
+    "poste_retenu",
     "entry_type_pour_metrique",
     "construire_requete_web",
     "collecter_un",
@@ -95,28 +95,32 @@ def _norm(s: str) -> str:
 # — tout cela part au web. `\bsec\b`/`\bedgar\b` en mots pleins (jamais « second », « secteur »).
 _FORME_SEC = re.compile(r"\b(?:10|8|6|20|40)-?[kqf]\b|\bedgar\b|\bsec\b")
 
-# Alias par POSTE, en forme normalisée (sans accents). DÉTENTEUR de la correspondance métrique→poste ;
-# l'ENSEMBLE des postes, lui, est importé de `edgar_feed.POSTES` (#46 : un seul détenteur du socle —
-# un assert positif du check vérifie que ce tableau couvre EXACTEMENT les 8 metric de POSTES).
-_ALIAS_POSTE: dict[str, tuple[str, ...]] = {
-    "revenue": ("chiffre d affaires", "revenu", "revenue", "revenues",
-                "sales", "ventes", "turnover", "produit des activites"),
-    "net_income": ("resultat net", "benefice net", "net income", "profit net", "perte nette",
-                   "resultat de l exercice"),
-    "gross_profit": ("marge brute", "gross profit", "gross margin", "benefice brut"),
-    "operating_cash_flow": ("cash-flow operationnel", "cash flow operationnel",
-                            "flux de tresorerie operationnel", "operating cash flow",
-                            "tresorerie generee par l exploitation", "tresorerie d exploitation",
-                            "flux de tresorerie lies a l exploitation"),
-    "total_assets": ("total actif", "total des actifs", "actif total", "total assets",
-                     "total de l actif"),
-    "capital_expenditure": ("capex", "capital expenditure", "depenses d investissement",
-                            "investissements corporels", "acquisitions d immobilisations"),
-    "stockholders_equity": ("capitaux propres", "fonds propres", "stockholders equity",
-                            "shareholders equity", "total equity"),
-    "cash_and_lt_debt": ("tresorerie et dette", "dette long terme", "dette a long terme",
-                         "long term debt", "endettement", "cash and debt", "dette financiere"),
-}
+# L'ENSEMBLE des postes vient de `edgar_feed.POSTES`, détenteur unique du socle (#46).
+_TOUS_POSTES = frozenset(p.metric for p in POSTES)
+
+# ⚠️ CE QUI A ÉTÉ SUPPRIMÉ ICI, ET POURQUOI (2026-09-14, lot 3 maillon 4).
+# Une table `_ALIAS_POSTE` associait à chaque poste une liste de SOUS-CHAÎNES (« ventes », « dette à
+# long terme », « capex »…), cherchées dans la `metrique` du plan. Elle a été mesurée sur les 3 plans
+# réels de `qualite_financiere` : sur 7 lignes routées vers EDGAR, **5 l'étaient à tort** —
+#
+#   · « clauses de sauvegarde en cas de cession d'actifs »      → `revenue`   (« ventes »)
+#   · « charges fixes décaissables, hors dépenses
+#      d'investissement minimales »                             → `capex`     (dans une énumération)
+#   · « capex de maintien (estimation) »                        → `capex`     (≠ capex total)
+#   · « capex de croissance »                                   → `capex`     (≠ capex total)
+#   · « dette à court terme, incluant la part courante
+#      de la dette à long terme »                               → `cash_and_lt_debt`
+#
+# Les 2 appariements JUSTES étaient exactement les 2 réponses à nom court (« Net income (GAAP) »).
+# Le défaut n'était donc pas dans la liste d'alias — il était dans l'idée de chercher un nom de compte
+# dans une phrase écrite pour un humain. Aiguiser la table aurait déplacé les faux positifs, pas
+# supprimé la classe : c'est une règle recopiée qui re-diverge au correctif suivant
+# (`feedback_correctif_regle_jumeaux`).
+#
+# Désormais le traducteur NOMME le poste (`CollectionPlanItem.poste`, vocabulaire fermé) et l'aval
+# ne fait qu'une ÉGALITÉ. Un poste inconnu du catalogue ne lève pas : il route au web, le défaut sûr
+# (#60). La garde `_est_derivee` ci-dessous, elle, RESTE — elle est le seul contrôle déterministe
+# qui survit au fait que le poste soit nommé par un modèle.
 
 # Un poste du socle est un NIVEAU BRUT (« Net income (GAAP) »). Une métrique qui CONTIENT le nom d'un
 # poste peut pourtant en être une transformation — et la lier au nombre brut écrirait un lien vers le
@@ -152,28 +156,52 @@ def _est_derivee(n: str) -> bool:
     return any(op in n for op in _OPERATEURS_DERIVATION) or bool(_RE_MOTS_DERIVATION.search(n))
 
 
-def poste_pour_metrique(metrique: str) -> Optional[str]:
-    """La métrique (vocabulaire de l'entreprise, texte libre) correspond-elle à l'un des 8 POSTES du
-    socle EDGAR ? Rend le `metric` canonique, ou None. CONSERVATEUR par conception : au moindre doute
-    (métrique dérivée, formulation inconnue) → None, jamais un poste deviné — un faux match EDGAR est
-    une corruption silencieuse (lien vers le mauvais nombre), un None route simplement vers le web."""
-    n = _norm(metrique)
-    if _est_derivee(n):
+def poste_retenu(poste: Optional[str], metrique: str) -> Optional[str]:
+    """Le poste du socle EDGAR à interroger pour cette ligne — ou None, qui route au web.
+
+    Le poste n'est plus DEVINÉ depuis la métrique : il est NOMMÉ par le traducteur, dans le
+    vocabulaire fermé `edgar_feed.POSTES`, et persisté avec le plan. Cette fonction ne fait donc plus
+    d'appariement ; elle fait deux VÉTOS déterministes sur ce que le modèle a nommé :
+
+      1. le poste doit EXISTER au catalogue. Un poste inventé (`ebitda`, `free_cash_flow`) route au
+         web au lieu de lever : une manque coûte un appel web, un faux appariement corrompt (#60) ;
+      2. la métrique ne doit pas être une DÉRIVÉE. C'est le garde-fou qui survit au fait que le poste
+         soit choisi par un modèle : « capex de maintien (estimation) » a beau désigner du capex, ce
+         n'est PAS le capex déposé — le lier au nombre brut écrirait le bon libellé en face du mauvais
+         nombre (#43). Le véto est déterministe, donc il ne peut pas être desserré par un prompt (#59).
+
+    Le véto 2 est volontairement plus large que le besoin : il retient aussi des lignes qu'un poste
+    fonderait peut-être. C'est le sens du conservatisme — on préfère payer une recherche web qu'écrire
+    un lien de couverture vers un nombre qui répond à une autre question.
+    """
+    if not poste or poste not in _TOUS_POSTES:
+        if poste:
+            logger.warning(
+                "poste « %s » hors du catalogue EDGAR (%d postes) — ligne routée au web. "
+                "C'est un défaut du traducteur, pas un cas nominal : son prompt énumère le "
+                "vocabulaire fermé.", poste, len(_TOUS_POSTES))
         return None
-    for metric, alias in _ALIAS_POSTE.items():
-        if any(a in n for a in alias):
-            return metric
-    return None
+    if _est_derivee(_norm(metrique)):
+        logger.info(
+            "poste « %s » nommé pour une métrique DÉRIVÉE (« %s ») — ligne routée au web : un poste "
+            "est un niveau brut, pas son transformé (#43).", poste, metrique)
+        return None
+    return poste
 
 
-def router_source(source_pressentie: str, metrique: str) -> Literal["edgar", "web"]:
-    """Où exécuter cette ligne aveugle. EDGAR SEULEMENT si (a) la source pressentie nomme un dépôt
-    réglementaire ET (b) la métrique correspond à un poste du socle. Les deux conditions, parce qu'un
-    « 10-K » pour une métrique dérivée (free cash flow) n'est pas dans le socle, et une métrique de
-    poste citée depuis un « communiqué » se cherche quand même au web. Tout le reste → web."""
-    if _FORME_SEC.search(_norm(source_pressentie)) and poste_pour_metrique(metrique) is not None:
-        return "edgar"
-    return "web"
+def router_source(ligne: LigneAveugle) -> Literal["edgar", "web"]:
+    """Où exécuter cette ligne aveugle. EDGAR SEULEMENT si (a) le traducteur a nommé un poste du
+    catalogue qui survit aux vétos, ET (b) la source pressentie nomme un dépôt réglementaire.
+
+    La condition (b) SURVIT à l'enrichissement du catalogue, et ce n'est pas une inertie : un poste
+    cité depuis un « communiqué trimestriel » ou un « call » n'est pas forcément le poste DÉPOSÉ —
+    les entreprises y publient des agrégats ajustés qui portent le même nom. Aller quand même chez
+    EDGAR livrerait le chiffre GAAP en réponse à une question posée sur le chiffre ajusté. Le
+    collecteur ne juge pas la VALEUR d'une source (#59), mais il respecte celle que le plan a nommée.
+    """
+    if not _FORME_SEC.search(_norm(ligne.source_pressentie)):
+        return "web"
+    return "edgar" if poste_retenu(ligne.poste, ligne.metrique) is not None else "web"
 
 
 # Jetons financiers : une métrique chiffrable → `fact_financial`. Sinon `fact_qualitative`. Un mauvais
@@ -267,8 +295,8 @@ async def collecter_un(
 ) -> ResultatCollecte:
     """Exécute UNE ligne aveugle. Dispatch déterministe, puis réseau. Rend un XOR (entry OU echec),
     jamais un silence (#25) : c'est `aiguiller_plan` qui transformera un echec en mandat motivé."""
-    if router_source(ligne.source_pressentie, ligne.metrique) == "edgar":
-        poste = poste_pour_metrique(ligne.metrique)
+    if router_source(ligne) == "edgar":
+        poste = poste_retenu(ligne.poste, ligne.metrique)
         assert poste is not None  # garanti par router_source
         return await socle.entry_id(ligne.ticker_id, poste)
 
@@ -303,14 +331,14 @@ def postes_edgar_du_plan(plan: CollectionPlan) -> frozenset[str]:
     """Les postes du socle EDGAR que CE plan réclame (maillon 5 / §3.6) : l'union des postes canoniques
     des lignes traduites routées vers EDGAR. C'est exactement ce que le socle collectera — « un poste
     que nul plan ne réclame ne se collecte plus ». Détenteur unique du dispatch : `router_source` +
-    `poste_pour_metrique`, jamais une seconde liste (#46)."""
+    `poste_retenu`, jamais une seconde liste (#46)."""
     postes: set[str] = set()
     for item in plan.items:
         if item.statut != "traduit":
             continue
         ligne = ligne_aveugle(item, plan.ticker_id)
-        if router_source(ligne.source_pressentie, ligne.metrique) == "edgar":
-            poste = poste_pour_metrique(ligne.metrique)
+        if router_source(ligne) == "edgar":
+            poste = poste_retenu(ligne.poste, ligne.metrique)
             assert poste is not None  # garanti par router_source
             postes.add(poste)
     return frozenset(postes)

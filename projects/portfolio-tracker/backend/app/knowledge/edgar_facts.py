@@ -35,6 +35,12 @@ logger = logging.getLogger(__name__)
 # SEC impose un User-Agent identifiant (sinon 403) — cf. sec.gov/os/accessing-edgar-data.
 _UA = "portfolio-tracker/2.0 (research contact plm@lm-associes.com)"
 _COMPANYCONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/us-gaap/{tag}.json"
+# `companyfacts` rend TOUT ce que l'émetteur dépose, en un appel. C'est le pendant INVENTAIRE de
+# `companyconcept` (qui, lui, demande un concept qu'on connaît déjà). Il répond à une question que
+# `companyconcept` ne peut pas poser : « de quoi cet émetteur parle-t-il ? » — cf.
+# `tools/cartographier_xbrl.py`. Réponse volumineuse (1 à 5 Mo) : timeout propre, pas celui du search.
+_COMPANYFACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+_COMPANYFACTS_TIMEOUT_S = 60.0
 # formes annuelles acceptées (un 10-K, éventuellement amendé). Les 10-Q sont trimestriels → écartés.
 _ANNUAL_FORMS = {"10-K", "10-K/A", "20-F", "20-F/A"}
 _CIK_RE = re.compile(r"/data/(\d+)[/-]")
@@ -189,6 +195,53 @@ async def _companyconcept(cik: int, tag: str) -> dict[str, Any]:
         return r.json()
     except ValueError as e:
         raise EdgarUnavailable(f"réponse EDGAR non-JSON pour {tag} (CIK {cik}) : {e}") from e
+
+
+async def fetch_company_facts(cik: int) -> dict[str, list[dict[str, Any]]]:
+    """INVENTAIRE des concepts us-gaap réellement déposés par un émetteur : `{concept → points}`.
+
+    Pourquoi cette fonction existe (mesure du 2026-09-14) : le catalogue `POSTES` interrogeait 8
+    concepts, quand NVDA en dépose 627, MSFT 562 et RVMD 269. Un catalogue se construit contre ce que
+    l'émetteur DÉPOSE, jamais contre ce que sa catégorie est censée déposer (#30) — encore faut-il
+    pouvoir le LIRE. `companyconcept` ne le peut pas : il faut déjà connaître le nom du concept pour
+    le demander, donc il ne révèle jamais un poste qu'on ignorait. `companyfacts` le peut.
+
+    Les points sont rendus BRUTS (toutes unités, toutes formes, tous cadrages temporels confondus) :
+    c'est un inventaire, pas une mesure. Choisir un point pour un exercice reste le travail de
+    `_pick_for_period` / `select_concept`, sur le chemin `companyconcept`, qui lui est mesuré.
+    """
+    url = _COMPANYFACTS.format(cik=cik)
+    try:
+        async with httpx.AsyncClient(
+            timeout=_COMPANYFACTS_TIMEOUT_S, follow_redirects=True,
+            headers={"User-Agent": _UA, "Accept": "application/json"},
+        ) as client:
+            r = await client.get(url)
+    except httpx.HTTPError as e:
+        raise EdgarUnavailable(f"EDGAR injoignable pour companyfacts (CIK {cik}) : {e}") from e
+    if r.status_code != 200:
+        raise EdgarUnavailable(f"EDGAR {r.status_code} pour companyfacts (CIK {cik})")
+    try:
+        payload = r.json()
+    except ValueError as e:
+        raise EdgarUnavailable(f"companyfacts non-JSON (CIK {cik}) : {e}") from e
+
+    us_gaap = ((payload or {}).get("facts") or {}).get("us-gaap") or {}
+    if not us_gaap:
+        # Un émetteur déposant publie forcément des concepts us-gaap. Un dict vide est un défaut de
+        # récupération, pas un émetteur muet — le rendre tel quel ferait lire « rien de disponible »
+        # sur une entreprise qui dépose tout (#25).
+        raise EdgarUnavailable(
+            f"companyfacts (CIK {cik}) ne porte aucun concept us-gaap — réponse inexploitable")
+
+    out: dict[str, list[dict[str, Any]]] = {}
+    for concept, body in us_gaap.items():
+        points: list[dict[str, Any]] = []
+        for unit, serie in ((body or {}).get("units") or {}).items():
+            for p in serie or []:
+                points.append({**p, "unit": unit})
+        out[concept] = points
+    return out
 
 
 async def fetch_concept_annual(

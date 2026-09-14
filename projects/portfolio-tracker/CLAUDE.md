@@ -1063,6 +1063,62 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     (`feedback_decision_figee_a_remesurer`, `feedback_blocage_classifieur_non_permanent`). Re-mesurer
     après tout correctif.
 
+67. **L'APPARIEMENT question ↔ donnée est une propriété du COUPLE (question × émetteur), il se
+    calcule PAR TICKER contre les champs réellement déposés, et il n'entre jamais dans le
+    référentiel du framework (V3, lot 3 maillon 4bis — arbitrage utilisateur du 2026-09-14)** :
+    « le référentiel du framework doit rester applicable à tout ticker ». Écrire `poste:
+    net_income` en face d'un ingrédient graverait une hypothèse **us-gaap** dans un cadre destiné
+    aussi à des émetteurs européens ou non cotés — #31 déplacé d'un étage (ce qui décrit UN
+    émetteur ne vit jamais dans une constante globale ; ici, ce qui décrit UN RÉFÉRENTIEL COMPTABLE
+    ne vit jamais dans le framework). Le geste correct est celui de l'analyste en fonds : prendre
+    les questions du cadre, **lister les champs disponibles chez l'émetteur** (`companyfacts`, pas
+    `companyconcept` — l'inventaire, pas la vérification d'un nom déjà deviné), puis constituer le
+    meilleur appariement **pour ce ticker**.
+    ⚠️ **La frontière n'est pas le catalogue écrit à la main.** Mesuré : `edgar_feed.POSTES` compte
+    33 recettes (8 avant le 2026-09-14) quand NVDA dépose **627** concepts us-gaap, MSFT **562**,
+    RVMD **269**. Comparer une question à 33 noms écrits d'avance, c'est demander à un modèle de
+    forcer une correspondance dans un vocabulaire trop petit. `POSTES` garde son rôle (recettes :
+    concepts candidats, flux/bilan, choix par fraîcheur #30) et **cesse d'être la frontière** de ce
+    qui est appariable.
+    ⚠️ **Trois états, jamais deux** (#25/#44/#54) : `exact` (un champ déposé répond
+    COMPLÈTEMENT et EXACTEMENT) · `approximation` (une formule sur N champs déposés, **avec ses
+    hypothèses écrites**) · `indisponible` (aucun ingrédient — c'est là, et seulement là, que la
+    recherche web intervient). L'état du milieu porte l'information : aujourd'hui
+    `qf_1.capital_employe` part au web chercher un nombre que personne ne publie, alors que NVDA
+    dépose `Assets`, `CashAndCashEquivalentsAtCarryingValue`, `ShortTermInvestments` et
+    `LiabilitiesCurrent` — tout ce qu'il faut pour le calculer.
+    ⚠️ **Le tier d'un calcul se décide par le DÉTERMINISME, pas par la nature de la formule** —
+    un seul discriminant, donc pas de second détenteur (#46). Déterministe (formule fermée, aucun
+    paramètre à choisir) sur ingrédients tous tier A → **tier A** : 2+2=4 n'est pas moins sûr que 2
+    et 2. Déterministe sur ingrédients mixtes → le tier du **plus faible ingrédient**, sans cran.
+    **Non déterministe** (une part, une répartition, une estimation) → **un cran sous le plus
+    faible**, ce qui retombe exactement sur la règle acquise le 2026-09-13
+    (`project_synthesis_tier_rule`). C'est ce qui sépare `capital_employe` (déterministe) de
+    `investissement_de_maintien` (arbitraire assumé). ⚠️ Un ingrédient rapporté par le **web**
+    entre par la branche « mixte » : il ne calibre pas une hypothèse, il fournit un **terme
+    manquant** du calcul.
+    ⚠️ **La carte se recalcule à chaque NOUVEAU DÉPÔT** : une société mûrit et se met à déposer des
+    ingrédients qu'elle n'avait pas. Cas réel déjà en main — RVMD ne dépose ni `Revenues`, ni
+    `InventoryNet`, ni `AccountsReceivableNetCurrent` (27/33 postes fondés, mesuré) : c'est une
+    biotech pré-revenus, **une propriété de l'émetteur, pas un trou de collecte** (#44/#47), et son
+    approbation FDA d'août 2026 fera apparaître les trois. Mécanique : persister la carte avec le
+    dernier dépôt vu, **revérifier sa validité à la LECTURE** (le motif de #54 — un verdict figé à
+    l'écriture ne peut pas signaler qu'il a vieilli).
+    ⚠️ **Ce qui a disqualifié le remède par prompt, et qui gouverne la suite** : nommer le poste
+    dans le plan a fait passer le dispatch EDGAR de 7 à 34 lignes (~22 fausses), puis un prompt
+    durci a rendu **11/11 justes** — et le **même prompt rejoué sur MSFT** est retombé à 15 lignes
+    dont 10 fausses. Un jugement de modèle instable entre passages à température 0 disqualifie la
+    capacité qu'on allait bâtir dessus (`feedback_jugement_modele_instable_entre_passages`). Ce qui
+    garantira l'appariement est une **garde en code** (le modèle propose, le code vérifie —
+    #24/#28/#29), pas une formulation. ⚠️ `poste_retenu()` ne vérifie aujourd'hui QUE l'appartenance
+    au catalogue et le véto de dérivation sur la métrique — **jamais** que le poste nommé correspond
+    à la métrique : « clauses restrictives des contrats de dette → `total_liabilities` » passe. **La
+    collecte réelle ne doit pas partir tant que cette garde n'existe pas** : un faux appariement
+    écrit un nombre exact en face de la mauvaise question (#43/#60), et rien en aval ne le rattrape.
+    Détail : `roadmap/V3/00-REPRISE.md` (maillon 4/4bis), mesureur versionné
+    `backend/tools/cartographier_xbrl.{py,sh}`, asserts d'énoncé `check_collecte_executor.py` §3bis
+    — qui **déclarent eux-mêmes** ne garder que l'énoncé du prompt, pas le comportement.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

@@ -98,8 +98,16 @@ check("`LigneAveugle` ne déclare aucun champ de question/ingrédient/framework"
       not ({"question_id", "ingredient_id", "framework_id", "framework_version"}
            & set(LigneAveugle.model_fields)), f"→ {set(LigneAveugle.model_fields)}")
 _la = ligne_aveugle(TRAD_OK, "NVDA")
-check("`ligne_aveugle` produit bien un objet aveugle (métrique/source/ancre/ticker seulement)",
-      set(_la.model_dump()) == {"ticker_id", "metrique", "source_pressentie", "ancre"})
+# ⚠️ Cet assert est une LISTE BLANCHE, pas un décompte : tout champ neuf doit être justifié ici
+# avant de traverser. `poste` (2026-09-14) traverse parce qu'il appartient au plan COMPTABLE
+# (vocabulaire fermé `edgar_feed.POSTES` : `operating_income`, `inventory`…), jamais au framework.
+# Il dit à l'exécuteur QUOI aller chercher — exactement comme `metrique` et `source_pressentie` —
+# et toujours rien du POURQUOI. La frontière du principe 2 sépare la question de la donnée, pas le
+# général du précis : nommer le poste rend la ligne plus précise sans la rendre moins aveugle.
+# C'est l'assert au-dessus qui garde la vraie frontière (aucun champ de question/ingrédient).
+check("`ligne_aveugle` produit bien un objet aveugle (le plan comptable, jamais la question)",
+      set(_la.model_dump()) == {"ticker_id", "metrique", "source_pressentie", "ancre", "poste"},
+      f"→ {set(_la.model_dump())}")
 rejete("`ligne_aveugle` refuse une ligne `inobtenable` (rien à collecter)",
        lambda: ligne_aveugle(INOB, "NVDA"), "seule une ligne traduite")
 

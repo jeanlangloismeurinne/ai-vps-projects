@@ -16,9 +16,10 @@ import sys
 
 from app.agents.v2.collecte_executor import (
     executer_collecte_framework,
-    poste_pour_metrique,
+    poste_retenu,
     router_source,
 )
+from app.agents.v2.collecteur import ligne_aveugle
 from app.agents.v2.traducteur import traduire
 from app.db.database import close_pool, init_pool
 
@@ -26,6 +27,11 @@ from app.db.database import close_pool, init_pool
 async def _plan_only(ticker: str, framework: str, archetype: str) -> None:
     run, plan = await traduire(ticker, framework, archetype)
     edgar = web = inobtenable = 0
+    # Les DEUX façons dont un poste nommé peut ne pas aboutir. Les compter séparément est ce qui rend
+    # le prompt diagnosticable : un `veto` élevé dit que le traducteur nomme des postes sur des
+    # dérivées (à durcir dans le prompt) ; un `source` élevé dit qu'il nomme le bon poste mais
+    # pressent une source non réglementaire (à arbitrer, pas forcément un défaut).
+    veto = source_non_sec = 0
     print(f"\nPLAN {ticker} · {framework} · {archetype} (v{plan.framework_version}) — "
           f"{len(plan.items)} ligne(s)\n{'-'*78}")
     for it in plan.items:
@@ -33,15 +39,24 @@ async def _plan_only(ticker: str, framework: str, archetype: str) -> None:
             inobtenable += 1
             print(f"  [inobtenable] {it.question_id}.{it.ingredient_id} — {it.motif}")
             continue
-        voie = router_source(it.source_pressentie, it.metrique)
-        poste = poste_pour_metrique(it.metrique)
+        voie = router_source(ligne_aveugle(it, plan.ticker_id))
+        retenu = poste_retenu(it.poste, it.metrique)
         if voie == "edgar":
             edgar += 1
         else:
             web += 1
+            if it.poste and retenu is None:
+                veto += 1
+            elif retenu is not None:
+                source_non_sec += 1
+        detail = ""
+        if it.poste:
+            detail = f" → poste {it.poste}" + ("" if retenu else " [VÉTO]")
         print(f"  [{voie:5}] {it.question_id}.{it.ingredient_id} · « {it.metrique} » "
-              f"· src={it.source_pressentie!r}" + (f" → poste {poste}" if poste else ""))
+              f"· src={it.source_pressentie!r}{detail}")
     print(f"{'-'*78}\nDISPATCH : {edgar} edgar · {web} web · {inobtenable} inobtenable "
+          f"· dont {veto} poste(s) vétoés (dérivée/hors catalogue) et {source_non_sec} "
+          f"poste(s) écartés par la source pressentie "
           f"· coût traducteur ≈ ${getattr(run, 'cost_usd', 0) or 0:.4f}")
 
 

@@ -50,6 +50,7 @@ from app.contracts.framework_definition_schema import (
     FrameworksFile,
     QuestionDefinition,
 )
+from app.knowledge.edgar_feed import POSTES
 
 __all__ = [
     "TraducteurSortie",
@@ -130,6 +131,16 @@ def _framework(fichier: FrameworksFile, framework_id: str) -> FrameworkDefinitio
         f"({sorted(f.id for f in fichier.frameworks)})")
 
 
+def _catalogue_postes() -> str:
+    """Le vocabulaire FERMÉ des postes du socle EDGAR, rendu depuis `edgar_feed.POSTES`.
+
+    Rendu, jamais recopié : le catalogue a UN détenteur (#46). Une liste retapée dans la chaîne du
+    prompt serait d'accord avec lui aujourd'hui et divergente au premier poste ajouté — et la
+    divergence serait SILENCIEUSE, puisqu'un poste nommé hors catalogue route simplement au web.
+    """
+    return "\n".join(f"    · {p.metric} — {p.label}" for p in POSTES)
+
+
 _TRADUCTEUR_SYSTEM_PROMPT = (
     "Tu es le TRADUCTEUR d'une chaîne d'analyse d'investissement. On te confie les questions "
     "UNIVERSELLES d'une méthode d'analyse (posées en substance économique, sans nommer d'entreprise) "
@@ -147,7 +158,63 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "`motif`.\n"
     "  • `inobtenable` — aucune source connue ne produit cet ingrédient pour cette entreprise. "
     "Remplis alors `motif` (POURQUOI, en une phrase — il deviendra un mandat de recherche), et "
-    "laisse `metrique`/`source_pressentie`/`ancre` vides.\n\n"
+    "laisse `metrique`/`source_pressentie`/`ancre`/`poste` vides.\n\n"
+    "NOMMER LE POSTE COMPTABLE, QUAND IL Y EN A UN. Les émetteurs américains déposent auprès de la "
+    "SEC des états financiers balisés : chaque ligne du compte de résultat, du bilan et du tableau de "
+    "flux y porte une étiquette normalisée, et se lit alors sans interprétation ni recherche. Voici "
+    "les postes que nous savons relever ainsi :\n"
+    f"{_catalogue_postes()}\n"
+    "\n"
+    "  CE N'EST PAS UN MENU À REMPLIR. C'est une liste de nombres que nous savons aller chercher tout "
+    "seuls, et le défaut est de NE PAS en mettre. Avant d'écrire un `poste`, fais-lui passer ce test, "
+    "et ne l'écris que s'il le passe :\n"
+    "\n"
+    "    « Si je relève CE nombre dans le dépôt et que je le recopie tel quel, sans rien y ajouter "
+    "ni en retrancher, est-ce que j'ai répondu à l'ingrédient COMPLÈTEMENT et EXACTEMENT ? »\n"
+    "\n"
+    "  Si pour répondre il faut encore ADDITIONNER un autre poste, SOUSTRAIRE, DIVISER, prendre une "
+    "PART du nombre, choisir une AUTRE PÉRIODE que celle déposée, ou LIRE DU TEXTE à côté du nombre — "
+    "alors le test échoue et `poste` reste VIDE. La ligne part simplement se faire chercher "
+    "autrement, ce qui est le cas NORMAL et ne coûte rien.\n"
+    "  Sur un plan bien fait, la plupart des lignes n'ont pas de `poste`. Une seule question "
+    "financière sur trois environ demande un nombre brut ; les autres demandent un calcul, une "
+    "comparaison, une politique ou une explication, et aucune ne se lit sur une étiquette.\n"
+    "\n"
+    "  Exemples qui ÉCHOUENT le test, tous vus sur des plans réels — le poste avait l'air voisin, et "
+    "le nombre aurait répondu à une AUTRE question :\n"
+    "    · « clauses restrictives (covenants) des contrats de dette » — c'est du TEXTE, pas un "
+    "montant. Aucun poste. (Ni `total_liabilities`, ni aucun autre : la dette totale ne dit rien des "
+    "seuils à respecter.)\n"
+    "    · « politique de capitalisation des coûts de développement » — une RÈGLE comptable, pas un "
+    "montant. Le capex ne l'énonce pas.\n"
+    "    · « lignes de crédit disponibles NON UTILISÉES » — un montant qui n'est justement PAS au "
+    "bilan, puisqu'il n'a pas été tiré. Aucun poste de passif ne le porte.\n"
+    "    · « échéancier de la dette, montants exigibles PAR ANNÉE » — un tableau. "
+    "`long_term_debt_current` n'en est qu'une ligne : incomplet, donc non.\n"
+    "    · « charges sans décaissement : amortissements, rémunération en actions, provisions » — une "
+    "SOMME. `depreciation_amortization` n'en est qu'un terme.\n"
+    "    · « taux d'imposition effectif » — une DIVISION. `income_tax_expense` en est le numérateur.\n"
+    "    · « résultat d'exploitation APRÈS IMPÔT » — `operating_income` est avant impôt. Le nombre "
+    "existe, il ne répond pas à la question posée.\n"
+    "    · « flux d'exploitation sur les QUATRE DERNIERS TRIMESTRES » — une autre période que "
+    "l'exercice déposé.\n"
+    "    · « éléments présentés comme non récurrents » — une SÉLECTION à faire dans le compte de "
+    "résultat, pas une ligne du compte de résultat.\n"
+    "\n"
+    "  Exemples qui PASSENT le test : « résultat net », « flux net de trésorerie provenant des "
+    "activités d'exploitation », « trésorerie et équivalents plus titres de placement à court "
+    "terme », « part de la dette à long terme exigible sous douze mois ». Dans chaque cas on relève "
+    "le nombre et c'est fini.\n"
+    "\n"
+    "  — `poste` est FACULTATIF et la liste ne restreint RIEN : un ingrédient qui n'y figure pas se "
+    "planifie exactement comme avant, avec `poste` vide. Ne change jamais ce que tu demandes pour le "
+    "faire entrer dans cette liste, et ne déclare jamais `inobtenable` un ingrédient au prétexte qu'il "
+    "n'y est pas. La liste dit où un ingrédient DÉJÀ décidé peut se lire directement — rien d'autre.\n"
+    "  — `metrique` ne change pas : c'est toujours le nom que CETTE entreprise donne à l'ingrédient. "
+    "`poste` est une information EN PLUS, pas un remplacement.\n"
+    "  — DANS LE DOUTE, laisse `poste` vide. Un poste vide fait simplement chercher l'information "
+    "autrement ; un poste FAUX fait remonter un nombre exact qui répond à une AUTRE question, et "
+    "personne ne s'en apercevra.\n\n"
     "RÈGLE D'ANCRAGE — l'ancre n'est PAS par défaut la clôture comptable. Pose-toi la question : quel "
     "ÉVÉNEMENT du monde réel rendrait ce chiffre PÉRIMÉ pour CETTE entreprise-là ? Pour une société "
     "stable et régulière, c'est souvent la clôture du trimestre, et c'est très bien. Mais quand la "
@@ -180,7 +247,8 @@ def _message_traducteur(contexte: dict[str, Any]) -> str:
         f"{json.dumps(contexte, ensure_ascii=False, indent=2)}\n\n"
         "Produis l'objet JSON `{\"items\": [ ... ]}` : une ligne par ingrédient ci-dessus, avec son "
         "`question_id`, son `ingredient_id`, et son `statut` (`traduit` avec metrique/source/ancre, "
-        "ou `inobtenable` avec motif). Tout `essentiel: true` DOIT avoir sa ligne."
+        "et `poste` s'il correspond exactement à un poste du catalogue ; ou `inobtenable` avec "
+        "motif). Tout `essentiel: true` DOIT avoir sa ligne."
     )
 
 

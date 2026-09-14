@@ -59,6 +59,11 @@ class LigneAveugle(Strict):
     metrique: str = Field(min_length=3)
     source_pressentie: str = Field(min_length=3)
     ancre: str = Field(min_length=5)
+    # Le poste du socle EDGAR nommé par le traducteur, ou None. Il traverse la frontière aveugle SANS
+    # la percer : `operating_income` est une ligne du plan comptable américain, pas du vocabulaire de
+    # framework — le collecteur ne peut pas en déduire à quelle question il répond. C'est exactement
+    # le statut de `metrique`, qui traverse déjà.
+    poste: Optional[str] = None
 
 
 class ResultatCollecte(Strict):
@@ -127,6 +132,7 @@ def ligne_aveugle(item: CollectionPlanItem, ticker_id: str) -> LigneAveugle:
         metrique=item.metrique,          # type: ignore[arg-type]  — non-None garanti par le contrat
         source_pressentie=item.source_pressentie,  # type: ignore[arg-type]
         ancre=item.ancre,                # type: ignore[arg-type]
+        poste=item.poste,
     )
 
 

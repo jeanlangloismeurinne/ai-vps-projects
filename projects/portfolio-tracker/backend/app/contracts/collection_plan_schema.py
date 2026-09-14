@@ -102,6 +102,33 @@ class CollectionPlanItem(Strict):
         description="L'ÉVÉNEMENT par rapport auquel le fait sera daté (#59) — 'clôture du "
                     "trimestre', 'dernière lecture clinique'. Nommer l'ancre, jamais dégrader un tier.")
 
+    # Facultatif, et JAMAIS sur une ligne `inobtenable`. Le poste du socle EDGAR auquel cet
+    # ingrédient correspond — `operating_income`, `long_term_debt_current`… — ou None si aucun.
+    #
+    # POURQUOI CE CHAMP EXISTE (mesure du 2026-09-14). L'appariement se faisait en aval, par
+    # SOUS-CHAÎNES sur `metrique` : on cherchait « ventes » ou « dette à long terme » dans une phrase
+    # de 200 caractères écrite pour un humain. Sur les 3 plans réels de `qualite_financiere`, 5 des 7
+    # lignes routées vers EDGAR l'étaient sur un FAUX appariement — des « clauses de sauvegarde en cas
+    # de cession d'actifs » liées au chiffre d'affaires parce que la phrase contenait « ventes ». Le
+    # lien de couverture aurait porté le bon libellé en face du MAUVAIS nombre (#43).
+    #
+    # Le correctif n'est pas une table de sous-chaînes plus fine : c'est de ne plus DEVINER. Le
+    # traducteur, qui est le seul à savoir ce qu'il a voulu dire, le NOMME dans un vocabulaire FERMÉ
+    # (`edgar_feed.POSTES`) ; l'aval ne fait plus qu'une égalité. Un poste absent ou inconnu route au
+    # web — le défaut sûr (#60 : une manque coûte un appel web, un faux appariement corrompt).
+    #
+    # Le champ est ici, donc PERSISTÉ avec le plan : « mauvais plan ou mauvaise collecte ? » reste
+    # diagnosticable (§3.6). Un appariement qui ne vivait que dans une fonction ne laissait aucune
+    # trace de ce que le traducteur avait cru désigner.
+    #
+    # Il n'est PAS un `Literal` de la liste des postes, pour la raison qui interdit de figer
+    # `archetype` : le catalogue est détenu par `edgar_feed.POSTES` (#46) et le recopier ici le ferait
+    # diverger au premier poste ajouté. L'appartenance se vérifie contre le détenteur, dans le pont.
+    poste: Optional[str] = Field(
+        default=None, min_length=1, pattern=r"^[a-z][a-z0-9_]*$",
+        description="Poste du socle EDGAR correspondant (vocabulaire fermé `edgar_feed.POSTES`), "
+                    "ou absent si l'ingrédient n'est pas un niveau brut publié tel quel.")
+
     # Présent SI ET SEULEMENT SI `inobtenable`. Une ligne inobtenable devient un mandat ouvert qui
     # NOMME l'ingrédient (§3.6) — jamais un trou. Le motif est ce que le mandat portera ; il doit
     # EXPLIQUER, comme un `motif_plancher` (même longueur minimale) : « aucune source connue ne le
@@ -137,7 +164,12 @@ class CollectionPlanItem(Strict):
             porte = [nom for nom, val in
                      (("metrique", self.metrique),
                       ("source_pressentie", self.source_pressentie),
-                      ("ancre", self.ancre)) if val]
+                      ("ancre", self.ancre),
+                      # `poste` suit le même sort : un ingrédient dont on sait qu'il est le résultat
+                      # opérationnel déposé chez EDGAR n'est pas « inobtenable ». Les deux ensemble
+                      # seraient une ligne qui se contredit — on sait exactement où le prendre, et on
+                      # déclare qu'aucune source ne le produit.
+                      ("poste", self.poste)) if val]
             if porte:
                 raise ValueError(
                     f"statut='inobtenable' porte {porte} : si l'ingrédient a une métrique, une "

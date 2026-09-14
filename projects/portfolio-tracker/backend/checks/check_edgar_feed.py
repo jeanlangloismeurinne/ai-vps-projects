@@ -133,11 +133,21 @@ resolved = {
                    "point": pt("2026-06-30", 39_700_000_000, accn=ACCN, fy=2026)},
     },
 }
-_TOUS = {p.metric for p in POSTES}
-specs, unfounded = build_edgar_entries("MSFT", "MSFT", CIK, resolved, metrics=_TOUS)
+# ⚠️ On réclame EXACTEMENT ce que la fixture porte, pas le catalogue entier. Le catalogue est passé
+# de 8 à 33 postes le 2026-09-14 ; réclamer les 33 ici ferait remonter 25 `unfounded` qui ne
+# mesureraient qu'une chose — que la fixture n'a que 8 clefs. Un `unfounded` ne serait plus un
+# défaut de construction mais un artefact du harnais, et l'assert cesserait de discriminer.
+# Ce que §3 mesure est la CONSTRUCTION (un exercice unique, le format lu par `financials_feed`) ;
+# que les 33 postes soient réellement déposés par un émetteur est une question sur le MONDE, que
+# seule l'API tranche — `tools/cartographier_xbrl.py` la mesure (33/33 NVDA et MSFT, 27/33 RVMD).
+_RECLAMES = set(resolved)
+specs, unfounded = build_edgar_entries("MSFT", "MSFT", CIK, resolved, metrics=_RECLAMES)
 
+check("la fixture ne nomme que des postes du catalogue (une faute de frappe y serait muette)",
+      _RECLAMES <= {p.metric for p in POSTES}, f"→ {_RECLAMES - {p.metric for p in POSTES}}")
 check("8 postes produits", len(specs) == 8, f"→ {len(specs)}")
-check("aucun poste non fondé quand EDGAR les porte tous", unfounded == [], f"→ {unfounded}")
+check("aucun poste non fondé quand EDGAR porte tous ceux qu'on réclame",
+      unfounded == [], f"→ {unfounded}")
 
 # maillon 5 (§3.6) : `POSTES` est un CATALOGUE, pas une liste à collecter. `build_edgar_entries` ne
 # bâtit d'entry QUE pour les postes RÉCLAMÉS — un poste que nul plan ne réclame ne se collecte plus.
@@ -221,8 +231,11 @@ check("AUCUN poste ne manque → les 4 ratios seront fondables",
 # ── 6. Couverture partielle : un trou reste un trou ──────────────────────────────────────────────
 print("\n[6] poste introuvable → `unfounded`, jamais estimé (#25)")
 
+# Même précaution qu'en §3 : on réclame les 8 postes de la fixture, dont 2 qu'EDGAR ne rend pas.
+# C'est bien la question de §6 — un poste RÉCLAMÉ et introuvable. Un poste jamais réclamé n'est pas
+# « introuvable », il n'a pas été cherché (§3bis), et l'omettre du `metrics` le prouve.
 partial = {k: v for k, v in resolved.items() if k not in ("capital_expenditure", "gross_profit")}
-specs_p, unfounded_p = build_edgar_entries("MSFT", "MSFT", CIK, partial)
+specs_p, unfounded_p = build_edgar_entries("MSFT", "MSFT", CIK, partial, metrics=_RECLAMES)
 check("6 postes produits sur 8", len(specs_p) == 6, f"→ {len(specs_p)}")
 check("les 2 manquants sont déclarés",
       {u["metric"] for u in unfounded_p} == {"capital_expenditure", "gross_profit"},
@@ -241,7 +254,7 @@ check("aucun zéro fabriqué pour le capex",
 # dans `unfounded` : c'est cette dernière moitié de l'invariant que la ligne ci-dessous garde.
 half = dict(resolved)
 half["cash_and_lt_debt"] = {k: v for k, v in resolved["cash_and_lt_debt"].items() if k != "second"}
-_, unf_half = build_edgar_entries("MSFT", "MSFT", CIK, half)
+_, unf_half = build_edgar_entries("MSFT", "MSFT", CIK, half, metrics=_RECLAMES)
 check("composite incomplet → toujours signalé dans `unfounded` (l'absence ne devient pas muette)",
       any(u["metric"] == "cash_and_lt_debt" for u in unf_half), f"→ {unf_half}")
 
@@ -257,10 +270,31 @@ check("_parse_annual_points écarte les formes non annuelles",
               {"end": "2026-06-30", "val": 2, "form": "10-K", "fp": "FY"},
           ]}}, unit="USD") == [{"end": "2026-06-30", "val": 2.0, "start": None, "fy": None,
                                 "form": "10-K", "accn": None, "filed": None}])
-check("les 8 postes attendus sont déclarés",
+# Assert d'ÉGALITÉ EXACTE, jamais d'inclusion : c'est lui qui rend un poste ajouté ou retiré visible
+# en relecture. Passé de 8 à 33 le 2026-09-14 — la mesure (`tools/cartographier_xbrl.py`) a montré
+# que NVDA dépose 627 concepts us-gaap, MSFT 562, RVMD 269, quand le catalogue en interrogeait 8 ;
+# 66 des 74 lignes de plan partaient au web (tier B payant) pour des niveaux bruts publiés en tier A.
+check("les 33 postes attendus sont déclarés",
       {p.metric for p in POSTES} == {
+          # socle d'origine (lot 2c)
           "revenue", "net_income", "gross_profit", "operating_cash_flow", "stockholders_equity",
-          "total_assets", "capital_expenditure", "cash_and_lt_debt"})
+          "total_assets", "capital_expenditure", "cash_and_lt_debt",
+          # compte de résultat
+          "cost_of_revenue", "research_development", "selling_general_admin", "operating_expenses",
+          "operating_income", "interest_expense", "pretax_income", "income_tax_expense",
+          # tableau des flux
+          "depreciation_amortization", "share_based_compensation", "change_in_receivables",
+          "change_in_inventories", "change_in_payables", "investing_cash_flow",
+          "financing_cash_flow", "dividends_paid", "share_repurchase",
+          # bilan
+          "total_liabilities", "current_assets", "current_liabilities", "accounts_receivable",
+          "inventory", "ppe_net", "marketable_securities", "long_term_debt_current"},
+      f"→ {sorted({p.metric for p in POSTES})}")
+check("aucun poste ne porte de concept en unité non monétaire (un taux se DÉRIVE, il ne se "
+      "collecte pas : `_UNITS` ne lit que des devises, le poste serait mort au vert)",
+      not [p.metric for p in POSTES
+           if any("Rate" in c or "Percent" in c for c in p.concepts)],
+      f"→ {[p.metric for p in POSTES if any('Rate' in c or 'Percent' in c for c in p.concepts)]}")
 check("aucun poste ne porte de `covers` (ce sont des intrants, cf. migration 029)",
       all("covers" not in s.content_structured for s in specs))
 
@@ -276,7 +310,8 @@ sans_dette = {
     "cash_and_lt_debt": {"concept": "CashAndCashEquivalentsAtCarryingValue",
                          "point": pt("2025-12-31", 383_745_000), "unit": "USD"},
 }
-specs_nd, unf_nd = build_edgar_entries("RVMD", "RVMD", 1628171, sans_dette)
+specs_nd, unf_nd = build_edgar_entries("RVMD", "RVMD", 1628171, sans_dette,
+                                       metrics=set(sans_dette))
 comp = next((s for s in specs_nd if s.metric == "cash_and_lt_debt"), None)
 check("co-poste absent : l'entry composite est tout de même produite", comp is not None)
 if comp:
@@ -301,7 +336,8 @@ avec_conv["cash_and_lt_debt"] = dict(
     sans_dette["cash_and_lt_debt"],
     second={"concept": "ConvertibleLongTermNotesPayable",
             "point": pt("2025-12-31", 487_434_000), "unit": "USD"})
-comp2 = next(s for s in build_edgar_entries("RVMD", "RVMD", 1628171, avec_conv)[0]
+comp2 = next(s for s in build_edgar_entries("RVMD", "RVMD", 1628171, avec_conv,
+                                            metrics=set(avec_conv))[0]
              if s.metric == "cash_and_lt_debt")
 check("dette déposée en convertibles : les deux montants sont publiés (pas de régression)",
       comp2.content_structured.get("cash") == 383_745_000
@@ -352,7 +388,7 @@ resolved_f4 = {
                 "point": pt("2025-12-31", 0, start="2025-01-01", accn="a-1")},
 }
 specs_f4, _ = build_edgar_entries("RVMD", "RVMD", 1628171, resolved_f4,
-                                  fiscal_end=date(2025, 12, 31))
+                                  metrics=set(resolved_f4), fiscal_end=date(2025, 12, 31))
 eq = next(s for s in specs_f4 if s.metric == "stockholders_equity")
 rv = next(s for s in specs_f4 if s.metric == "revenue")
 check("le poste de bilan est daté du trimestre, pas de la clôture",
@@ -469,7 +505,7 @@ resolved_r = {
                    "point": pt("2026-06-30", 487_434_000.0, accn=_ACCN_R, fy=2026)},
     },
 }
-specs_r, _ = build_edgar_entries("RVMD", "RVMD", 1_628_171, resolved_r)
+specs_r, _ = build_edgar_entries("RVMD", "RVMD", 1_628_171, resolved_r, metrics=set(resolved_r))
 by_r = {s.metric: s for s in specs_r}
 
 check("un capex de 15,99 M$ s'écrit dans SON ordre de grandeur",
