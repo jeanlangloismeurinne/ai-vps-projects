@@ -17,5 +17,11 @@ async def import_file(
             files={"file": (filename, content, mime_type)},
             data={"vacation_ranges": vacation_ranges},
         )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            # Surface bank-review's real error message instead of an opaque HTTP status.
+            try:
+                detail = resp.json().get("error")
+            except Exception:
+                detail = None
+            raise RuntimeError(detail or resp.text or f"HTTP {resp.status_code}")
         return resp.json()
