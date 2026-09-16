@@ -112,6 +112,17 @@
     document.getElementById('vacation_ranges').value = JSON.stringify(periods);
   });
   {% endif %}
+
+  function deleteSession(d) {
+    if (!confirm(`Supprimer l'import « ${d.file} » et ses ${d.count} transaction(s) ?\n\nCette action est irréversible.`)) return;
+    fetch(`/api/import/session/${d.id}/delete`, { method: 'POST' })
+      .then(r => r.json().then(j => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (ok) location.reload();
+        else alert('Échec de la suppression : ' + (j.error || 'erreur inconnue'));
+      })
+      .catch(e => alert('Échec de la suppression : ' + e));
+  }
 </script>
 </div>
 
@@ -121,7 +132,7 @@
   {% if sessions %}
   <div class="sessions-list">
     {% for s in sessions %}
-    <a href="/import/history/{{ s.id }}" class="session-card">
+    <a href="/import/history/{{ s.id }}" class="session-card" style="position:relative">
       <div class="session-date">{{ s.created_at[:10] if s.created_at else "—" }}</div>
       <div class="session-file">{{ s.filename or "fichier inconnu" }}</div>
       <div class="session-meta">
@@ -130,6 +141,10 @@
         · {{ s.date_min }} → {{ s.date_max }}
         {% endif %}
       </div>
+      <button type="button" class="session-delete" title="Supprimer cet import et ses transactions"
+              data-id="{{ s.id }}" data-file="{{ (s.filename or 'fichier inconnu')|e }}" data-count="{{ s.row_count or 0 }}"
+              onclick="event.preventDefault();event.stopPropagation();deleteSession(this.dataset)"
+              style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;font-size:15px;opacity:.55;padding:2px 4px">🗑</button>
     </a>
     {% endfor %}
   </div>

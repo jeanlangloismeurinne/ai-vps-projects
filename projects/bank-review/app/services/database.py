@@ -463,6 +463,34 @@ async def get_session_with_transactions(session_id: int) -> tuple[dict | None, l
     return session_dict, txs
 
 
+async def delete_import_session(session_id: int) -> dict:
+    """Delete an import session and ALL its transactions, atomically.
+
+    Only touches transactions linked to this session (migrated history has
+    import_session_id IS NULL and is left intact). Budget actuals are recomputed
+    on read, so they drop automatically once the transactions are gone.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            session = await conn.fetchrow(
+                "SELECT id, filename FROM import_sessions WHERE id = $1", session_id
+            )
+            if not session:
+                return {"found": False, "deleted_transactions": 0, "filename": None}
+            deleted = await conn.fetchval(
+                "WITH d AS (DELETE FROM transactions WHERE import_session_id = $1 RETURNING 1) "
+                "SELECT count(*) FROM d",
+                session_id,
+            )
+            await conn.execute("DELETE FROM import_sessions WHERE id = $1", session_id)
+    return {
+        "found": True,
+        "deleted_transactions": int(deleted or 0),
+        "filename": session["filename"],
+    }
+
+
 # ── Classifier rules (new system) ────────────────────────────────────────────
 
 _DEFAULT_STAGE0 = [

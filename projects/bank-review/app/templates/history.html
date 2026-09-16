@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container">
 
-  <div class="budget-topbar" style="margin-bottom:16px">
+  <div class="budget-topbar" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
     <div>
       <a href="/import" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Retour aux imports</a>
       <h2 style="margin:4px 0 2px">Import du {{ session.created_at[:10] if session.created_at else "—" }}</h2>
@@ -13,6 +13,10 @@
         {% if session.date_min and session.date_max %}· {{ session.date_min }} → {{ session.date_max }}{% endif %}
       </p>
     </div>
+    <button type="button" class="btn-secondary" title="Supprimer cet import et toutes ses transactions"
+            data-id="{{ session.id }}" data-file="{{ (session.filename or 'fichier inconnu')|e }}" data-count="{{ stats.total }}"
+            onclick="deleteImport(this.dataset)"
+            style="white-space:nowrap;color:var(--red,#dc2626);border-color:var(--red,#dc2626)">🗑 Supprimer cet import</button>
   </div>
 
   <div class="stats-bar">
@@ -235,5 +239,16 @@
 
   function closeRuleModal() { document.getElementById('ruleModal').classList.add('hidden'); }
   function closeRuleOutside(e) { if (e.target.id === 'ruleModal') closeRuleModal(); }
+
+  function deleteImport(d) {
+    if (!confirm(`Supprimer l'import « ${d.file} » et ses ${d.count} transaction(s) ?\n\nCette action est irréversible.`)) return;
+    fetch(`/api/import/session/${d.id}/delete`, { method: 'POST' })
+      .then(r => r.json().then(j => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (ok) window.location.href = '/import';
+        else alert('Échec de la suppression : ' + (j.error || 'erreur inconnue'));
+      })
+      .catch(e => alert('Échec de la suppression : ' + e));
+  }
 </script>
 {% endblock %}

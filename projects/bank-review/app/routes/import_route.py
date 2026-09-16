@@ -13,7 +13,7 @@ from app.services.database import (
     insert_transactions, upsert_account,
     create_import_session, get_import_sessions, link_transactions_to_session,
     get_session_with_transactions, create_classifier_snapshot,
-    get_classifier_rules_all,
+    get_classifier_rules_all, delete_import_session,
 )
 from app.routes.budget import _annotate_with_rules
 from app.services.format_checker import check_format, apply_mapping, is_excel, xlsx_to_canonical_csv
@@ -83,9 +83,9 @@ async def import_upload(
         else:
             fmt = check_format(content)
             if not fmt.can_proceed:
-                # Unknown format — call Claude Haiku for detection
+                # Unknown format — call Claude Haiku for detection (index-based mapping)
                 try:
-                    mapping = await detect_mapping_with_claude(headers)
+                    mapping = await detect_mapping_with_claude(content)
                 except Exception as e:
                     sessions = await get_import_sessions(limit=20)
                     bank_formats = await get_all_bank_formats()
@@ -104,6 +104,12 @@ async def import_upload(
                                "vacation_ranges": vacation_ranges,
                                "filename": file.filename}, fh)
 
+                # Display view: show the header NAME the model picked for each field.
+                display_mapping = {
+                    field: (headers[idx] if isinstance(idx, int) and 0 <= idx < len(headers) else idx)
+                    for field, idx in mapping.items()
+                }
+
                 sessions = await get_import_sessions(limit=20)
                 bank_formats = await get_all_bank_formats()
                 return templates.TemplateResponse(request, "import.html", {
@@ -112,7 +118,7 @@ async def import_upload(
                     "bank_formats": bank_formats,
                     "format_unknown": True,
                     "detected_headers": headers,
-                    "claude_mapping": mapping,
+                    "claude_mapping": display_mapping,
                 })
             elif not fmt.is_exact_match:
                 content = apply_mapping(content, fmt)
@@ -368,6 +374,17 @@ async def import_history(request: Request, session_id: int):
     })
 
 
+@router.post("/api/import/session/{session_id}/delete")
+async def import_session_delete(request: Request, session_id: int):
+    """Supprime un import et TOUTES ses transactions (fichier importé par erreur)."""
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    result = await delete_import_session(session_id)
+    if not result.get("found"):
+        return JSONResponse({"error": "Import introuvable."}, status_code=404)
+    return {"deleted": result.get("deleted_transactions", 0), "filename": result.get("filename")}
+
+
 def _require_internal_api_key(x_internal_api_key: str = Header(default="")):
     expected = os.getenv("INTERNAL_API_KEY", "")
     if not expected or x_internal_api_key != expected:
@@ -404,15 +421,40 @@ async def import_direct(
 
     if is_excel(content):
         content = xlsx_to_canonical_csv(content)
-
-    fmt = check_format(content)
-    if not fmt.can_proceed:
-        return JSONResponse(
-            {"error": f"Format non reconnu : {', '.join(fmt.missing_required)}"},
-            status_code=400,
-        )
-    if not fmt.is_exact_match:
-        content = apply_mapping(content, fmt)
+    else:
+        # Same detection pipeline as the web upload, but fully automatic (no manual naming step).
+        headers = extract_csv_headers(content)
+        stored = await find_format_by_headers(headers)
+        if stored:
+            content = apply_bank_format_mapping(content, stored["headers"], stored["column_mapping"])
+        else:
+            fmt = check_format(content)
+            if fmt.can_proceed:
+                if not fmt.is_exact_match:
+                    content = apply_mapping(content, fmt)
+            else:
+                # Unknown format — detect the column mapping with Claude, apply it, remember it.
+                try:
+                    mapping = await detect_mapping_with_claude(content)
+                except Exception as e:
+                    return JSONResponse(
+                        {"error": f"Format non reconnu et détection automatique échouée : {e}"},
+                        status_code=400,
+                    )
+                missing = [
+                    f for f in ("dateOp", "label") if f not in mapping
+                ] + ([] if ("amount" in mapping or "amount_debit" in mapping) else ["amount"])
+                if missing:
+                    return JSONResponse(
+                        {"error": f"Format non reconnu : colonnes introuvables ({', '.join(missing)})"},
+                        status_code=400,
+                    )
+                content = apply_bank_format_mapping(content, headers, mapping)
+                auto_name = f"auto-{(headers[0] if headers else 'bank')[:20]}-{len(headers)}col"
+                try:
+                    await save_bank_format(auto_name, headers, mapping, "csv")
+                except Exception:
+                    pass  # persisting the format is best-effort; the import itself already succeeded
 
     tmp_name = f"import_direct_{uuid.uuid4().hex}.csv"
     dest = os.path.join(UPLOAD_DIR, tmp_name)
