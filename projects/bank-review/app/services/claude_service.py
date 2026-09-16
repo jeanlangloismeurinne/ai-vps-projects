@@ -1,6 +1,9 @@
 import anthropic
 import pandas as pd
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-6"
@@ -27,11 +30,17 @@ async def analyze_transactions(df: pd.DataFrame, question: str | None = None) ->
 {"Question spécifique : " + question if question else "Fais une analyse complète : résumé des flux, catégories de dépenses, tendances notables, anomalies éventuelles."}
 """
 
-    message = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system="Tu analyses des relevés bancaires. Réponds en français, de façon structurée et claire.",
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    return message.content[0].text
+    system = "Tu analyses des relevés bancaires. Réponds en français, de façon structurée et claire."
+    try:
+        message = client.messages.create(
+            model=MODEL,
+            max_tokens=2048,
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+    except Exception as e:
+        # Claude indisponible → repli DeepInfra.
+        logger.warning("Claude indisponible (%s) — analyse via DeepInfra", e)
+        from app.services.llm import deepinfra_complete
+        return await deepinfra_complete(system=system, user=prompt, max_tokens=2048)

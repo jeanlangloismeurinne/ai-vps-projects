@@ -84,8 +84,7 @@ async def detect_mapping_with_claude(content: bytes) -> dict:
     The mapping is INDEX-based (not header-name-based) so that columns with identical or
     misleading headers can still be resolved — the model decides from the sample values.
     """
-    from anthropic import AsyncAnthropic
-    client = AsyncAnthropic()
+    from app.services.llm import complete_text
 
     cols = _columns_with_samples(content)
 
@@ -109,14 +108,12 @@ async def detect_mapping_with_claude(content: bytes) -> dict:
         "Return ONLY a JSON object {field: column_index}. Omit optional fields not present."
     )
 
-    response = await client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=400,
+    text = await complete_text(
         system=system,
-        messages=[{"role": "user", "content": "Columns: " + json.dumps(cols, ensure_ascii=False)}],
+        user="Columns: " + json.dumps(cols, ensure_ascii=False),
+        max_tokens=400,
     )
 
-    text = response.content[0].text.strip()
     # Strip markdown code fences if present
     if "```" in text:
         parts = text.split("```")

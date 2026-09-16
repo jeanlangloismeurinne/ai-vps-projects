@@ -8,6 +8,9 @@ from collections import defaultdict
 
 import anthropic
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -236,29 +239,38 @@ class TransactionClassifier:
             + "\n".join(lines)
         )
 
-        msg = self._claude.messages.create(
-            model=MODEL,
-            max_tokens=512,
-            system="Tu classifies des dépenses bancaires. Réponds uniquement en JSON.",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": static_block,
-                            "cache_control": {"type": "ephemeral"},
-                        },
-                        {
-                            "type": "text",
-                            "text": transactions_block,
-                        },
-                    ],
-                }
-            ],
-        )
-
-        raw = msg.content[0].text.strip()
+        try:
+            msg = self._claude.messages.create(
+                model=MODEL,
+                max_tokens=512,
+                system="Tu classifies des dépenses bancaires. Réponds uniquement en JSON.",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": static_block,
+                                "cache_control": {"type": "ephemeral"},
+                            },
+                            {
+                                "type": "text",
+                                "text": transactions_block,
+                            },
+                        ],
+                    }
+                ],
+            )
+            raw = msg.content[0].text.strip()
+        except Exception as e:
+            # Claude indisponible → repli DeepInfra (prompt caching abandonné, contexte aplati).
+            logger.warning("Claude indisponible (%s) — classification via DeepInfra", e)
+            from app.services.llm import deepinfra_complete
+            raw = await deepinfra_complete(
+                system="Tu classifies des dépenses bancaires. Réponds uniquement en JSON.",
+                user=static_block + "\n\n" + transactions_block,
+                max_tokens=512,
+            )
         match = re.search(r"\[.*\]", raw, re.DOTALL)
         if not match:
             return [ClassificationResult("Non catégorisé", 30, "claude") for _ in rows]
