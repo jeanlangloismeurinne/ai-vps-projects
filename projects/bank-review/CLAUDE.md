@@ -130,6 +130,21 @@ Migration idempotente : `migrate_classifier_tables()` est appelée au startup (`
 - Prompt caching activé sur le bloc statique (`cache_control: {"type": "ephemeral"}`).
 - Réponse compacte attendue : `{"c": catégorie, "p": confiance}`.
 
+### Détection de format multi-banque (index, pas nom)
+
+`format_detector.py` reconnaît les exports non canoniques. Deux points **critiques** :
+
+- **Le mapping est par INDEX de colonne, pas par nom.** `detect_mapping_with_claude(content)`
+  reçoit `{index, header, samples}` par colonne et rend `{champ: index}` ; `apply_bank_format_mapping`
+  lit les cellules par index. C'est indispensable pour les exports à **en-têtes homonymes** :
+  l'export BoursoBank « opérations » a **deux colonnes `Solde`** (col 7 = montant de la transaction,
+  col 11 = solde du compte) et aucune colonne `amount`. Un mapping par nom écraserait les deux et
+  perdrait le montant. Ne jamais revenir à un `row_dict[header]`.
+- **Le chemin Slack/direct (`POST /api/import/direct`) auto-détecte** : `find_format_by_headers` →
+  `check_format` (exact/synonymes) → sinon `detect_mapping_with_claude` + apply + `save_bank_format`
+  (nom auto `auto-…`). Il ne renvoie 400 que si `dateOp`/`label`/`amount` restent introuvables.
+  Auparavant il faisait un simple `check_format` et renvoyait 400 sur tout format non exact.
+
 ## Tickets feedback
 
 Les retours utilisateur sont dans `feedback-tickets/*.md` (un fichier par ticket) et `TICKETS.md` (index auto-généré).
