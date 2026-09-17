@@ -213,6 +213,77 @@ def derive_synthesis_reliability(cited_tiers: list[str]) -> tuple[float, str, st
     return score, tier, note
 
 
+def derive_tier_calcul(
+    ingredients: list[tuple[str, float]],
+    *,
+    deterministe: bool,
+) -> tuple[float, str, str]:
+    """(score, tier, note) d'un fait CALCULÉ à partir d'autres faits — convention #67, maillon 4bis.
+
+    Le discriminant est le **DÉTERMINISME du calcul**, et lui seul. Pas la nature de la question, pas
+    le nombre d'ingrédients, pas le fait qu'un humain ait « choisi » la formule :
+
+      · calcul DÉTERMINISTE (formule fermée, aucun paramètre à choisir) → le tier et le score du plus
+        FAIBLE ingrédient, **sans cran**. 2+2=4 n'est pas moins sûr que 2 et 2 : une soustraction
+        n'ajoute aucune incertitude à ce qu'on lui donne. Le cas « tous tier A → tier A » n'est pas
+        une exception, c'est ce cas-ci quand tous les ingrédients sont en A — s'il avait fallu
+        l'écrire à part, c'est que la règle aurait eu deux discriminants ;
+      · calcul NON DÉTERMINISTE (une part, une allocation, une estimation) → **un cran sous le plus
+        faible**, ce qui est exactement la règle acquise le 2026-09-13.
+
+    C'est ce qui sépare `capital_employe` (`Assets − LiabilitiesCurrent − trésorerie` : quatre postes
+    déposés et une soustraction, rien à choisir) de `investissement_de_maintien` (« la PART du capex
+    nécessaire au maintien » : aucune formule fermée, il faut choisir un pourcentage, et ce
+    pourcentage est ce que le lecteur devra contester).
+
+    ⚠️ AUCUNE TABLE DE TIER N'EST ÉCRITE ICI (#46). La branche non déterministe **appelle**
+    `derive_synthesis_reliability`, qui détient `_NOTCH_BELOW` ; la branche déterministe n'invente pas
+    de score de référence pour un tier — elle **hérite du score de l'ingrédient** le plus faible.
+    Une seconde table « tier → score de base » aurait divergé de `RELIABILITY_TABLE` au premier
+    ajustement : les deux y sont déjà en désaccord sur B (0.65 côté sources, 0.70 côté cran), et un
+    troisième détenteur aurait figé l'un des deux par hasard.
+
+    `ingredients` = les (tier, score) RÉELS des faits d'entrée, lus en base — jamais déclarés par le
+    modèle, qui ne fournit que `deterministe` et la formule qui permet de le contester.
+    """
+    if not ingredients:
+        raise ValueError(
+            "derive_tier_calcul: aucun ingrédient. Un calcul sans entrée n'est pas un calcul — et "
+            "renvoyer un tier par défaut ici fabriquerait de la fiabilité à partir de rien")
+
+    tiers = [t for t, _ in ingredients]
+    if not deterministe:
+        # Le cran, et son détenteur unique. Le rang de tier, la table du cran et le repli sous B+
+        # sont ceux de la synthèse grounded : il n'y a qu'une règle « un cran sous le plus faible »
+        # dans le système, et c'est celle-là.
+        score, tier, _ = derive_synthesis_reliability(tiers)
+        note = (
+            f"calcul NON déterministe sur {len(ingredients)} ingrédient(s) "
+            f"[tiers {', '.join(sorted(set(tiers), key=lambda t: _TIER_RANK.get(t, len(TIER_ORDER))))}] ; "
+            f"un paramètre a dû être CHOISI → un cran sous le plus faible = {tier} ({score:.2f}) ; "
+            f"l'hypothèse est écrite et contestable (#67)"
+        )
+        return score, tier, note
+
+    # Déterministe : on hérite du plus faible, tel quel. Rang le plus GRAND = tier le plus faible,
+    # même convention que `derive_synthesis_reliability` (A=0 … C=6).
+    #
+    # ⚠️ Le second critère (score le plus bas) n'est pas cosmétique : à tier égal, un `max` sur le
+    # seul rang rend le PREMIER de la liste, et le résultat dépendrait alors de l'ordre dans lequel
+    # l'appelant a rangé ses ingrédients. Deux appels sur le même ensemble rendraient deux scores —
+    # une non-détermination silencieuse, dans la fonction même qui décide de ce qui est déterministe.
+    faible_tier, faible_score = max(
+        ingredients,
+        key=lambda ts: (_TIER_RANK.get(ts[0], len(TIER_ORDER)), -ts[1]))
+    uniq = sorted(set(tiers), key=lambda t: _TIER_RANK.get(t, len(TIER_ORDER)))
+    note = (
+        f"calcul déterministe sur {len(ingredients)} ingrédient(s) [tiers {', '.join(uniq)}] ; "
+        f"formule fermée, aucune incertitude ajoutée → tier du plus faible SANS cran = "
+        f"{faible_tier} ({faible_score:.2f}) (#67)"
+    )
+    return faible_score, faible_tier, note
+
+
 def validate_grounding(
     claims: list[dict[str, Any]],
     citable_ids: set[int],

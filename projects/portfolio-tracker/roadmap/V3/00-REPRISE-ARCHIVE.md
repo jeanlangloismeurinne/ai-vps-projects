@@ -8,6 +8,162 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-17 — spec v3, **lot 3, maillon 4bis étape 1 : LA GARDE D'APPARIEMENT**
+
+Livré : le contrat `app/contracts/appariement_schema.py`, la règle de tier
+`synthesis_feed.derive_tier_calcul`, le pont `app/agents/v2/apparieur.py`, la garde
+`checks/check_appariement.py` (**73/0**) et son négatif bidirectionnel
+`checks/negatif_appariement.sh` (**satisfiabilité + 17 mutations / 0 échec**). Suite entière
+**2502/0** (2429 + 73). **Aucune migration** ce jour, rien de déployé, **aucune collecte réelle
+lancée**. Convention **#68** écrite. `app/frameworks/ARCHITECTURE.md` cite la garde.
+
+### La frontière gratuite a fourni l'argument, pas moi
+
+Premier geste : rejouer `tools/cartographier_xbrl.sh` et **lire la sortie en texte**
+(`feedback_frontiere_gratuite_avant_depense_modele`). NVDA **627** concepts déposés / 33 postes
+fondés sur 33 · MSFT **562** / 33 · RVMD **269** / **27**. Les 6 absents de RVMD : `gross_profit`,
+`cost_of_revenue`, `change_in_inventories`, `accounts_receivable`, `inventory`,
+`long_term_debt_current`.
+
+Le même poste `inventory` est **fondé** chez NVDA et MSFT, **absent** chez RVMD. C'est #67
+démontré et non argumenté : l'appariement est une propriété du **couple** (question × émetteur),
+et une carte globale mentirait sur RVMD — pas d'un trou de collecte, mais parce qu'une biotech
+pré-revenus ne dépose pas d'inventaire. La mesure a coûté zéro appel modèle et elle a tranché la
+conception ; c'est l'inverse de l'ordre habituel, où on déduit d'abord et on mesure après.
+
+### Le vrai sujet de la journée : ce qu'une garde de code peut décider
+
+Le trou à combler était nommé depuis le 2026-09-14 : `collecte_executor.poste_retenu()` vérifie
+(1) l'appartenance au catalogue et (2) le veto de dérivation sur la métrique — **jamais** que le
+poste nommé correspond à la métrique. « clauses restrictives des contrats de dette →
+`total_liabilities` » passe.
+
+La tentation évidente était un troisième `if`. Elle ne marche pas, et ça se **mesure** : tous les
+émetteurs déposent `Liabilities`, donc l'invariant `[V]` (« ce concept est-il réellement déposé
+par CET émetteur ? ») est satisfait par le faux appariement sémantique. Aucun test structurel ne
+distingue « `Liabilities` répond à la question des clauses restrictives » de « `Liabilities`
+répond à la question du passif ». Le remède par prompt avait déjà été disqualifié le 2026-09-14
+(11/11 sur NVDA, puis **15 lignes / 10 fausses** avec le MÊME prompt sur MSFT,
+`feedback_jugement_modele_instable_entre_passages`).
+
+D'où l'arbitrage, écrit en **convention #68** : quand le sens échappe à la garde, on change la
+**FORME de la réponse**, pas la force de la garde. Les trois états font ce travail — un `exact` ne
+peut porter qu'**un concept nu** (aucune formule, aucune hypothèse, aucun motif), donc tout
+raisonnement est **contraint** de sortir en `approximation` avec ses hypothèses écrites, c'est-à-dire
+contestables par un lecteur. On ne rend pas le faux appariement impossible ; on lui retire l'endroit
+où il pouvait se cacher en silence.
+
+Cette limite est **exécutée**, pas supposée : `check_appariement.py` §9 construit le cas
+`clauses_restrictives → Liabilities` et **assert qu'il PASSE** le pont, puis assert que les phrases
+qui l'énoncent (`n'attrape PAS le faux appariement SÉMANTIQUE`, `gardent donc une STRUCTURE, jamais
+une sémantique`) sont bien présentes dans `apparieur.py`. Une mutation du négatif efface cette
+phrase et exige que le check rougisse : la limite écrite est gardée comme n'importe quel invariant
+(`feedback_grep_interdit_lit_sa_propre_enonciation` appliqué à l'envers — ici on assert en positif).
+
+### La règle de tier : un discriminant, aucun second détenteur
+
+`derive_tier_calcul(ingredients, *, deterministe)` implémente #67 et **n'écrit aucune table de
+tier** (#46). La branche non déterministe **appelle** `derive_synthesis_reliability` — vérifié par
+la mesure : `['A','B']` non déterministe rend `(0.60, 'B-')`, exactement ce que rend le détenteur.
+La branche déterministe **hérite du score propre de l'ingrédient le plus faible** plutôt que
+d'inventer une base tier→score : `RELIABILITY_TABLE` et `_NOTCH_BELOW` sont déjà en désaccord sur
+`B` (0.65 vs 0.70), donc choisir l'une des deux aurait fabriqué un troisième chiffre. Mesuré :
+déterministe tout-A → **A 0.95** ; déterministe mixte A+B → **B 0.65** (pas de cran) ; non
+déterministe A+B → **B- 0.60**.
+
+Un défaut trouvé par relecture avant test : `max(..., key=rang)` renvoie le **premier** maximal, si
+bien qu'à tier égal le résultat dépendait de l'ordre de la liste — une non-détermination silencieuse
+**dans la fonction même qui décide de ce qui est déterministe**. Corrigé par la clef `(rang, -score)`,
+et gardé par une mutation dédiée.
+
+### Les défauts rencontrés, et ce qu'ils enseignent
+
+- **Deux faux ROUGES au premier test du contrat.** Mes fixtures (`concepts=['A','B']`,
+  `formule='X'`) étaient refusées par les contraintes de **forme** (`ConceptDepose` min 2,
+  `formule` min 3) **avant** d'atteindre le validateur de charge que je voulais éprouver. Le refus
+  était juste, mon test visait à côté. `feedback_faux_rouge_se_creuse` : chercher POURQUOI ça
+  rougit avant de toucher à l'outil.
+- **Le piège falsy.** `porte = [nom for nom, val in (…) if val]` laissait passer
+  `deterministe=False`, c'est-à-dire exactement la moitié des cas à voir. Testé `is not None` dans
+  les deux branches, et une mutation du négatif rétablit la version falsy pour prouver que la garde
+  la voit.
+- **Le check est MORT en plein vol** à §6 : `rejete()` n'attrapait que `(ValidationError,
+  AppariementRefuse)` et `derive_tier_calcul([])` lève un `ValueError` nu. C'est le faux vert
+  « script mort avant ses asserts » — sauf qu'ici il est mort **bruyamment**, ce qui est le
+  comportement correct (`feedback_check_degrade_en_sortant_a_zero`).
+- **Un FAIL légitime que j'allais corriger du mauvais côté** : « le contrat ne nomme aucun tier
+  dans son CODE ». `strip_code` retire commentaires et docstrings mais garde les
+  `Field(description=…)` et les messages de `raise` — qui SONT du code. Les 3 occurrences étaient
+  de la prose explicative. **Mon assert était faux, pas le contrat** : remplacé par un assert sur
+  les **valeurs** (`"A-"`, `'B+'`, `"A"`…), qui est ce que #59 interdit réellement.
+- **Deux mutations classées « rouge, mais pas sur l'assert visé »** parce que j'avais copié le
+  motif attendu depuis le message du `raise` au lieu du **libellé de l'assert**. Quand la mutation
+  fait ACCEPTER l'objet, il n'y a plus d'exception du tout, donc plus de message. Un test négatif
+  qui vise le mauvais texte se lit exactement comme une garde absente. Corrigé, et la leçon écrite
+  en tête de `negatif_appariement.sh`.
+- **Une mutation « MOTIF INTROUVABLE »** : mon motif portait 12 espaces d'indentation, la ligne
+  réelle en a 8.
+- **Un `str.replace` en heredoc python a silencieusement fait no-op** (espace de tête dans le
+  motif) ; détecté en re-grepant après coup, refait à l'outil Edit.
+- **`check_architecture` est sorti à 1** : « garde orpheline — `check_appariement.py` n'est cité
+  par aucun ARCHITECTURE.md » (#65 faisant exactement son travail). Ligne ajoutée à
+  `app/frameworks/ARCHITECTURE.md`, re-run **222/0**.
+- Deux frictions mineures : collision de nom (`Hypothese` déjà exporté par
+  `analysis_v2_schemas` → `HypotheseEcrite`) et `termes_web` typé avec un plancher de 15 caractères
+  sémantiquement absurde pour un terme court → type `TermeWeb` (min 5). Une hypothèse se conteste,
+  un terme se cherche : ce ne sont pas les mêmes objets, ils ne partagent pas leur contrat.
+- Le test en conteneur a d'abord planté sur la `Settings` pydantic (DUST_API_KEY, DATABASE_URL…) :
+  `--env-file checks/env.checks` ajouté au `docker run`.
+
+### Ce qui n'est PAS fait, et qui bloque toujours
+
+`poste_retenu()` et `router_source()` sont **inchangés**. Aucun agent ne produit de carte. Rien ne
+la persiste. **La garde existe et n'est câblée nulle part** — donc le maillon 4 (collecte neuve
+pilotée par le plan sur NVDA/MSFT/RVMD) **reste bloqué**, et c'est volontairement qu'aucune
+collecte réelle n'a été lancée. L'étape 2 (apparieur → migration 042 → câblage) est décrite dans
+`00-REPRISE.md`.
+
+---
+
+## 2026-09-14 — spec v3, **lot 3, maillon 4 : l'inventaire réel, et la disqualification du remède par prompt**
+
+*(récit resté dans `00-REPRISE.md` jusqu'au 2026-09-17, archivé à cette date.)*
+
+Migration **041** appliquée, suite **2429/0**.
+
+- `fetch_company_facts()` (`knowledge/edgar_facts.py`) — l'**inventaire complet** des concepts
+  us-gaap déposés par un émetteur, là où `companyconcept` ne peut **jamais** révéler un poste qu'on
+  ignorait. C'est la différence entre interroger une liste qu'on a devinée et lire ce qui existe.
+- `tools/cartographier_xbrl.py` + `.sh` — le mesureur versionné qui le lit (`backend/tools/`,
+  jamais `/tmp`).
+- `POSTES` enrichi **8 → 33**.
+- Le traducteur **NOMME** le poste (`CollectionPlanItem.poste`, migration 041, `LigneAveugle.poste`)
+  et l'appariement par sous-chaînes est **supprimé** (pierre tombale dans `collecte_executor.py`).
+
+**La mesure, qui est le vrai livrable du jour** (gratuite, `--plan-only`, ~$0,01 au total) :
+
+| passage | lignes EDGAR | justes | fausses |
+|---|---|---|---|
+| avant (sous-chaînes, 8 postes) | 7 | 2 | 5 |
+| catalogue 33 + poste nommé, prompt v1 | 34 | ~12 | **~22** |
+| + prompt durci (un TEST à faire passer au poste) | 11 | **11** | **0** |
+| **le même prompt, MSFT rejoué** | **15** | 5 | **10** |
+
+⚠️ **La dernière ligne disqualifie le remède par prompt**
+(`feedback_jugement_modele_instable_entre_passages`). Le durcissement est conservé et **gardé**
+(`check_collecte_executor` §3bis : le critère, les opérations disqualifiantes, les contre-exemples
+mesurés) — mais ces asserts gardent l'**ÉNONCÉ**, **jamais le comportement**, et le disent.
+
+⚠️ Inventaire des **627/562/269** concepts déposés contre **33** au catalogue : le catalogue
+regardait par le petit bout.
+
+⚠️ Sur les 3 tickers, les 4 postes utiles sont les **mêmes** (`net_income`, `operating_cash_flow`,
+`cash_and_lt_debt`, `long_term_debt_current`) — mais cela ne veut **pas** dire que le poste se fige
+dans le référentiel : voir la doctrine du maillon 4bis (#67), tranchée le même jour avec
+l'utilisateur.
+
+---
+
 ## 2026-09-13 — spec v3, **lot 3, maillon 1 : l'ANALYSTE**
 
 Livré : `agents/v2/analyste.py` (moitié déterministe + orchestration) et l'invariant `[S]` du pont

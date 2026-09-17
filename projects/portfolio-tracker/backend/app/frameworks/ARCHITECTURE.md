@@ -43,5 +43,6 @@ un **résultat mesuré**, pas un objectif inscrit). Aucun levier de modèle sur 
 | Contrat de définition strict (`extra` interdit) | `check_framework_contract.py` + `negatif_framework_contract.sh` |
 | Traduction questions → plan de collecte par ticker | `check_traducteur.py`, `check_collection_plan_contract.py` |
 | Collecte plan-dérivée, aveugle à la question | `check_collecteur.py`, `check_collecte_executor.py` |
+| Appariement par TICKER contre l'inventaire réellement déposé — trois états, tier dérivé du déterminisme (#67) | `check_appariement.py` + `negatif_appariement.sh` (contrat `appariement_schema.py`, pont `agents/v2/apparieur.py`, règle `synthesis_feed.derive_tier_calcul`) |
 | Réponses de framework versionnées, refus avant dépense | `check_analyste.py`, `check_framework_persist.py` |
 | Réponse/dispense clefées par `framework_version` | `check_framework_persist.py` (#64) |

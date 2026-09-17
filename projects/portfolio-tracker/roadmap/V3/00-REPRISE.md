@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-13
+updated: 2026-09-17
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
@@ -13,21 +13,14 @@ role: >
   le levier `RESSERRER` de `curator.py` est RETIRÉ (`_exigences` lit `MVDD_SPEC` tel quel), et **le
   §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
   jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
-  **LOT 3 EN COURS depuis le 2026-09-13** : maillon 1 (l'analyste, convention #63) et maillon 2
-  (`framework_answers`/`framework_dispenses`, migration 040, convention #64) sont ✅ — détail dans
-  la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
-  ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ le 2026-09-12 : `check_entry_nature §7` re-mesuré en INVARIANT, la
-  suite est TOUT VERT (`bash checks/run_all.sh` = 2139 assertions, 0 échec).** L'ancien `== 13` était
-  un **décompte du banc d'essai promu en cible**, interdit par §0.6 (« les données en base ne dictent
-  jamais la roadmap ») : il confondait `entry_type=fact_financial` avec « sortie déterministe » et a
-  rougi (lecture **43**) dès que le collecteur du maillon 4 a écrit 30 faits web `edgar_official`/
-  `company_ir_official` SANS `metric` — **compatibles et frais** (10-Q 2026-06-30, tous `mesure`),
-  pas des parasites. §7 revérifie désormais l'invariant #51 sur l'état : **tout fait à recette
-  déterministe (un `metric` structuré, écrit par les 8 producteurs, jamais par le search-worker) est
-  `mesure`**, sur TOUS les tickers, avec garde de non-vacuité — jamais un décompte. Test négatif
-  versionné `checks/negatif_entry_nature_etat.sh` (satisfiabilité + 4 mutations/4, chacune rouge sur
-  son assert nommé). Le corpus RVMD hérité sera de toute façon re-collecté propre au lot 3 (§5.3).
-  Voir [[project_entry_nature_gate_invariant]].
+  **LOT 3 EN COURS depuis le 2026-09-13** : maillons 1 (l'analyste, #63), 2 (`framework_answers`/
+  `framework_dispenses`, migration 040, #64) et 3 (suppression de `MVDD_SPEC`) sont ✅ ; le maillon
+  **4 est BLOQUÉ** par l'appariement, dont l'**étape 1 (la garde) est livrée le 2026-09-17**
+  (conventions #67/#68, migrations jusqu'à **041**, suite `run_all.sh` = **2502 assertions, 0
+  échec**). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
+  ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
+  plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
+  [[project_entry_nature_gate_invariant]].
   Roadmap active : **`roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -321,30 +314,17 @@ lot 1 ; les tables viennent en dernier.
    par l'APPARIEMENT ingrédient → donnée EDGAR.** La collecte réelle **ne doit pas partir** tant
    que la garde décrite au maillon 4bis n'existe pas : un faux appariement écrit un nombre exact en
    face de la mauvaise question (#43/#60), et rien en aval ne le rattrape.
-   **Ce qui a été fait le 2026-09-14** (migration **041** appliquée, suite **2429/0**) :
-   · `fetch_company_facts()` (`knowledge/edgar_facts.py`) — l'INVENTAIRE complet des concepts
-     us-gaap déposés par un émetteur, là où `companyconcept` ne peut jamais révéler un poste qu'on
-     ignorait ; · `tools/cartographier_xbrl.py` + `.sh` — le mesureur versionné qui le lit ;
-   · `POSTES` enrichi **8 → 33** ; · le traducteur NOMME le poste (`CollectionPlanItem.poste`,
-     migration 041, `LigneAveugle.poste`) et l'appariement par sous-chaînes est **supprimé**
-     (pierre tombale dans `collecte_executor.py`).
-   **LA MESURE, qui est le vrai livrable du jour** (gratuite, `--plan-only`, ~$0,01 au total) :
-   | passage | lignes EDGAR | justes | fausses |
-   |---|---|---|---|
-   | avant (sous-chaînes, 8 postes) | 7 | 2 | 5 |
-   | catalogue 33 + poste nommé, prompt v1 | 34 | ~12 | **~22** |
-   | + prompt durci (un TEST à faire passer au poste) | 11 | **11** | **0** |
-   | **le même prompt, MSFT rejoué** | **15** | 5 | **10** |
-   ⚠️ **La dernière ligne disqualifie le remède par prompt** (`feedback_jugement_modele_instable_
-   entre_passages`). Le durcissement est conservé et **gardé** (`check_collecte_executor` §3bis :
-   le critère, les opérations disqualifiantes, les contre-exemples mesurés) — mais ces asserts
-   gardent l'ÉNONCÉ, **jamais le comportement**, et le disent. ⚠️ Inventaire des 627/562/269
-   concepts déposés contre **33** au catalogue : le catalogue regardait par le petit bout.
-   ⚠️ **Sur les 3 tickers, les 4 postes utiles sont les MÊMES** (`net_income`,
-   `operating_cash_flow`, `cash_and_lt_debt`, `long_term_debt_current`) — mais voir 4bis : cela ne
-   veut PAS dire que le poste se fige dans le référentiel.
-4bis. ⬜ **L'APPARIEMENT PAR TICKER — le maillon manquant** (conçu avec l'utilisateur le
-   2026-09-14, **doctrine tranchée, rien à remesurer**). Ce que fait un analyste en fonds : il
+   **Acquis le 2026-09-14** (migration **041**, suite **2429/0**) : `fetch_company_facts()`
+   (l'INVENTAIRE réellement déposé, que `companyconcept` ne peut jamais révéler),
+   `tools/cartographier_xbrl.py` + `.sh`, `POSTES` 8 → 33, le traducteur NOMME le poste
+   (`CollectionPlanItem.poste`, `LigneAveugle.poste`) et l'appariement par sous-chaînes est
+   **supprimé**. ⚠️ **Le remède par prompt est DISQUALIFIÉ, c'est mesuré** : prompt durci = 11/11
+   justes sur NVDA, **le même prompt sur MSFT = 15 lignes dont 10 fausses**
+   (`feedback_jugement_modele_instable_entre_passages`). Le durcissement est conservé et gardé
+   (`check_collecte_executor` §3bis), mais ces asserts gardent l'ÉNONCÉ, **jamais le comportement**.
+   → **récit complet et tableau des 4 passages : `00-REPRISE-ARCHIVE.md` § 2026-09-14.**
+4bis. 🔄 **L'APPARIEMENT PAR TICKER — ÉTAPE 1 LIVRÉE le 2026-09-17, étape 2 ouverte** (conçu avec
+   l'utilisateur le 2026-09-14, **doctrine tranchée, rien à remesurer**). Ce que fait un analyste en fonds : il
    prend les questions de son framework, **liste les champs réellement déposés par CET émetteur**,
    et construit le meilleur appariement — **exact**, ou **par approximation en explicitant les
    hypothèses**, quitte à chercher sur le web un terme manquant du calcul.
@@ -384,20 +364,69 @@ lot 1 ; les tables viennent en dernier.
    mais il **cesse d'être la frontière**. Le vocabulaire montré au modèle devient l'inventaire
    réel du ticker. Réemployable tel quel : `fetch_company_facts()`, `cartographier_xbrl.py`, et
    `financials_feed` qui sait déjà produire un fait dérivé en déclarant ses ancres (#42).
+   ────────────────────────────────────────────────────────────────────────────
+   **✅ ÉTAPE 1 — LA GARDE, livrée le 2026-09-17** (ordre respecté : contrat → agent → données ;
+   l'agent et la migration sont l'étape 2, donc **aucune migration ce jour**, prochaine = **042**).
+   Quatre pièces, à BRANCHER et non à réécrire :
+   · **contrat** `app/contracts/appariement_schema.py` — trois états, chacun portant EXACTEMENT sa
+     charge (`exact` ⟺ UN concept nu · `approximation` ⟺ formule + hypothèses + `deterministe`
+     · `indisponible` ⟺ motif seul) ; **aucun champ de tier** (`extra='forbid'`, #53/#59) ;
+   · **règle de tier #67** — `synthesis_feed.derive_tier_calcul(ingredients, deterministe=…)`,
+     un seul discriminant, zéro table de tier écrite ailleurs (#46 : la branche non déterministe
+     **appelle** `derive_synthesis_reliability`) ;
+   · **pont** `app/agents/v2/apparieur.py` — `valider_pont_appariement(carte, inventaire, plan=…)`,
+     PUR (l'inventaire est reçu déjà lu, donc rejouable hors-ligne et sans dépense). Invariants
+     `[V]` concept réellement déposé · `[W]` formule ⟺ concepts déclarés · `[X]` un `deterministe`
+     ne survit pas à un coefficient décimal · `[S]/[T]/[U]` cohérence avec le plan ;
+   · `check_appariement.py` **73/0** · `negatif_appariement.sh` **satisfiabilité + 17 mutations /
+     0 échec**. Suite **2502/0** (2429 + 73).
+   → **récit complet — frontière gratuite 627/562/269, valeurs de tier mesurées, et les 8 défauts
+   rencontrés (faux rouges, piège falsy, mutations visant le mauvais texte) :
+   `00-REPRISE-ARCHIVE.md` § 2026-09-17.**
+   ⚠️ **CE QUE LA GARDE N'ATTRAPE PAS, ET C'EST ÉCRIT DANS LE CODE** : le faux appariement
+   **SÉMANTIQUE**. « clauses restrictives → `Liabilities` » **passe `[V]`**, puisque tous les
+   émetteurs déposent `Liabilities` — `check_appariement.py` §9 EXÉCUTE ce cas et assert qu'il
+   passe, pour qu'aucun lecteur ne croie le pont sémantique. Ce qui s'y oppose est la FORME de la
+   réponse, pas un `if` : un `exact` ne pouvant porter qu'un concept nu, tout raisonnement est
+   CONTRAINT de sortir en `approximation` écrite et contestable. Voir **convention #68**.
+   ⚠️ **LA GARDE EXISTE, ELLE N'EST PAS CÂBLÉE** : `poste_retenu()` / `router_source()` sont
+   INCHANGÉS, aucun agent ne produit de carte, rien ne la persiste. **Le maillon 4 reste bloqué.**
+   ────────────────────────────────────────────────────────────────────────────
+   **⬜ ÉTAPE 2 — L'AGENT ET LES DONNÉES** (dans cet ordre) :
+   a. l'**apparieur** (`apparieur.py`, même fichier) : contexte = les questions du plan + l'INVENTAIRE
+      RÉEL de l'émetteur (jamais `POSTES`, qui cesse d'être la frontière) ; le modèle propose une
+      carte, `valider_pont_appariement` la refuse ou la laisse passer. Prévoir que le modèle
+      RÉINVENTE des noms voisins sur 269-627 concepts (`feedback_adressage_par_nom_exige_lecture`) —
+      c'est précisément ce que `[V]` attrape, donc mesurer le TAUX de refus avant de durcir quoi que
+      ce soit, et ne PAS traiter un prompt durci comme une garantie (mesure du 2026-09-14) ;
+   b. **migration 042** : persistance de la carte au grain (ticker × framework × version) avec
+      `dernier_depot_vu`, et **revérification À LA LECTURE** (motif de #54) — un `indisponible`
+      établi sur 269 concepts ne vaut rien contre un inventaire qui en compte 272 ;
+   c. **câblage** dans `collecte_executor` : la carte remplace `poste_retenu()` comme décideur du
+      routage EDGAR/web, et une `approximation` devient un fait dérivé déclarant ses ancres (#42,
+      `financials_feed` sait déjà le faire). C'est ce câblage, et lui seul, qui DÉBLOQUE le maillon 4.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4bis** (l'appariement par ticker : inventaire → carte
-> persistée → trois états). Les trois arbitrages de doctrine sont **tranchés** ci-dessus : ne pas
-> les rouvrir, les implémenter. Le maillon 4 (collecte réelle) attend derrière. Prochaine
-> migration : **042** (041 appliquée le 2026-09-14 — `collection_plan_items.poste`).
-> Reprise conseillée : **NOUVELLE conversation** (le contexte de celle-ci est consommé par la
-> mesure, et la conception est écrite ici), et **OPUS** — contrairement au maillon 4 qui ne
-> demandait que de conduire des appels, 4bis est de la conception : trois états à tenir, une règle
-> de tier à un discriminant, et un jugement de modèle à **encadrer par du code** après qu'on a
-> mesuré qu'il ne tient pas seul. Le critère de succès ne s'énonce pas en trois lignes
-> (`feedback_deleguer_recherche_pas_jugement`), donc ce n'est pas délégable à Sonnet.
-> **Session du 2026-09-14 terminée** — suite **2429/0**, migration 041 appliquée, rien de déployé,
-> **aucune collecte réelle lancée** (et c'est volontaire).
+> **▶ PROCHAIN JALON = lot 3, maillon 4bis ÉTAPE 2** — l'apparieur (a), la migration **042** (b),
+> puis le **câblage** (c) qui débloque le maillon 4. L'étape 1 (la garde) est livrée et testée :
+> ne pas la réécrire, la BRANCHER. Les arbitrages de doctrine restent tranchés au 2026-09-14 et
+> la frontière du décidable est désormais écrite en **convention #68** : ne pas rouvrir non plus la
+> question « et si le pont vérifiait aussi le sens ? » — il ne peut pas, c'est mesuré, et c'est la
+> troisième case qui répond à sa place.
+> Reprise conseillée : **NOUVELLE conversation** — celle-ci a consommé son contexte à écrire et à
+> éprouver la garde, et tout ce qui se transmet est dans ce fichier, dans #68 et dans le code.
+> Et **OPUS** pour l'étape 2a (l'apparieur) : c'est encore de la conception sous contrainte — un
+> contexte à composer pour que le modèle adresse 269 à 627 concepts par leur nom sans en
+> réinventer, sachant qu'on a MESURÉ qu'un prompt durci ne tient pas d'un ticker à l'autre. Le
+> critère de succès ne s'énonce pas en trois lignes (`feedback_deleguer_recherche_pas_jugement`).
+> ⚠️ En revanche **2b (migration 042) et 2c (câblage) seraient délégables à SONNET** une fois 2a
+> fait : leur critère de succès s'énonce court — « la carte se persiste au grain (ticker ×
+> framework × version), se revérifie à la lecture, et `router_source` la lit au lieu de
+> `poste_retenu` ; suite verte, négatif complet ». Si 2a est conduit en Opus, enchaîner 2b/2c dans
+> la même conversation coûte moins qu'un transfert.
+> **Session du 2026-09-17 terminée** — suite **2502/0** (+73), **aucune migration** (l'ordre
+> contrat → agent → données l'interdit avant 2a), rien de déployé, **aucune collecte réelle
+> lancée** (et c'est toujours volontaire : la garde n'est pas câblée).
 
 ### Découpage des lots suivants (spec v3 §10)
 

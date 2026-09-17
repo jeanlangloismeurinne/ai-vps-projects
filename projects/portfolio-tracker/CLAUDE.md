@@ -1119,6 +1119,44 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     `backend/tools/cartographier_xbrl.{py,sh}`, asserts d'énoncé `check_collecte_executor.py` §3bis
     — qui **déclarent eux-mêmes** ne garder que l'énoncé du prompt, pas le comportement.
 
+68. **Une garde de code vérifie la STRUCTURE et la RELATION, jamais le SENS — et quand le sens
+    échappe, c'est la FORME de la réponse qu'on change, pas la garde qu'on muscle (V3, lot 3
+    maillon 4bis — livré le 2026-09-17)** : #67 exigeait « une garde en code, pas une formulation ».
+    En l'écrivant, la frontière du décidable est devenue nette, et elle se déclare :
+    **ce qui se vérifie** — le concept nommé est-il DÉPOSÉ par cet émetteur (`[V]`, contre
+    `fetch_company_facts`) ; la formule ne référence-t-elle que des concepts déclarés, et les
+    déclare-t-elle tous (`[W]` — un concept vivant seulement dans la formule échappe à `[V]`, un
+    concept déclaré et inutilisé pèse sur le tier sans contribuer) ; un `deterministe=True`
+    survit-il à un coefficient décimal visible (`[X]`) ; la carte couvre-t-elle exactement les
+    lignes `traduit` du plan (`[S]/[T]/[U]`).
+    **ce qui NE se vérifie PAS** — apparier « clauses restrictives des contrats de dette » à
+    `Liabilities` **passe `[V]`**, puisque tous les émetteurs déposent `Liabilities`. Mesuré, pas
+    supposé : `check_appariement.py` §9 exécute ce cas et assert qu'il passe.
+    ⚠️ **Le remède n'est donc pas un `if` de plus, c'est la troisième case.** Un `exact` ne peut
+    porter qu'UN concept nu — sans formule, sans hypothèse, sans motif. Tout ce qui demande un
+    raisonnement est donc *contraint* de sortir en `approximation`, où la formule et les hypothèses
+    sont ÉCRITES et où le lecteur peut les contester. Un système à deux états n'a le choix qu'entre
+    mentir (`exact` sur un champ voisin) et renoncer (`indisponible`) : c'est la case manquante qui
+    fabriquait le faux appariement, pas la faiblesse du contrôle.
+    ⚠️ **Corollaire de méthode, et il vaut au-delà de ce maillon** : quand une garantie ne se décide
+    pas en code, chercher quelle FORME de réponse rendrait la faute impossible à formuler, avant de
+    chercher un contrôle plus fin. Même geste que #53/#59 (un champ absent par construction plutôt
+    qu'un `if`), appliqué non plus à un champ mais à un **vocabulaire d'états**.
+    ⚠️ **Un `Optional[bool]` a TROIS valeurs utiles, et `if val` n'en voit que deux.** `deterministe`
+    se teste `is not None` : un `exact` portant `deterministe=False` traverse un `if val` sans être
+    vu — la garde serait aveugle à exactement la moitié des cas qu'elle existe pour attraper. Même
+    famille que le 5ᵉ faux vert (`all()` sur liste vide) : une garde satisfaite par le vide.
+    ⚠️ **Une contrainte de liste ne contraint pas ses éléments.** `hypotheses=[""]` est une liste NON
+    VIDE d'éléments vides : elle satisfait `if not hypotheses`, et « une approximation s'explique »
+    devient un test de présence de crochets. Les contraintes portent sur l'élément
+    (`Annotated[str, Field(min_length=…)]`), jamais sur le conteneur seul.
+    État livré : contrat `app/contracts/appariement_schema.py`, pont `app/agents/v2/apparieur.py`,
+    règle de tier `synthesis_feed.derive_tier_calcul` (qui **appelle** `derive_synthesis_reliability`
+    pour la branche non déterministe — aucune table de tier recopiée, #46), `check_appariement.py`
+    **73/0** + `negatif_appariement.sh` **17 mutations / 0**. ⚠️ **La garde EXISTE mais n'est encore
+    CÂBLÉE nulle part** : `poste_retenu()` est inchangé, aucun agent ne produit de carte, rien ne la
+    persiste — **le maillon 4 reste donc bloqué** (voir `00-REPRISE.md`, étape 2 du 4bis).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
