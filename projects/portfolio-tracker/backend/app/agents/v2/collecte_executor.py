@@ -61,6 +61,7 @@ from app.db.database import get_db_session
 from app.knowledge.edgar_feed import POSTES, EdgarFeedUnavailable, run_edgar_feed
 from app.knowledge.websearch import SearchUnavailable
 
+from .appariement_persist import lire_carte
 from .collecte_persist import persist_aiguillage, persist_plan
 
 logger = logging.getLogger(__name__)
@@ -189,9 +190,24 @@ def poste_retenu(poste: Optional[str], metrique: str) -> Optional[str]:
     return poste
 
 
-def router_source(ligne: LigneAveugle) -> Literal["edgar", "web"]:
-    """Où exécuter cette ligne aveugle. EDGAR SEULEMENT si (a) le traducteur a nommé un poste du
-    catalogue qui survit aux vétos, ET (b) la source pressentie nomme un dépôt réglementaire.
+def router_source(
+    ligne: LigneAveugle,
+    *,
+    carte_statut: Optional[Literal["exact", "approximation", "indisponible"]] = None,
+) -> Literal["edgar", "web"]:
+    """Où exécuter cette ligne aveugle.
+
+    AVEC CARTE (`carte_statut` non None — câblage lot 3 maillon 4bis) :
+      · `indisponible` → web immédiatement, quel que soit le poste ou la source.
+      · `exact` / `approximation` → edgar SI la source pressentie nomme un dépôt réglementaire.
+        La vérification de source (b) est conservée : un appariement valide sur un inventaire EDGAR
+        ne change pas le fait qu'un agrégat ajusté du « communiqué trimestriel » porte parfois le
+        même nom que le poste GAAP — la source que le traducteur a nommée reste le tiebreaker.
+        Le véto `poste_retenu()` est COURT-CIRCUITÉ : la carte a déjà décidé que le concept existe.
+
+    SANS CARTE (repli, `carte_statut=None`) :
+      EDGAR SEULEMENT si (a) le traducteur a nommé un poste du catalogue qui survit aux vétos,
+      ET (b) la source pressentie nomme un dépôt réglementaire.
 
     La condition (b) SURVIT à l'enrichissement du catalogue, et ce n'est pas une inertie : un poste
     cité depuis un « communiqué trimestriel » ou un « call » n'est pas forcément le poste DÉPOSÉ —
@@ -201,6 +217,10 @@ def router_source(ligne: LigneAveugle) -> Literal["edgar", "web"]:
     """
     if not _FORME_SEC.search(_norm(ligne.source_pressentie)):
         return "web"
+    if carte_statut is not None:
+        # La carte a déjà décidé : `indisponible` → web ; `exact`/`approximation` → edgar.
+        # Le véto `poste_retenu()` est court-circuité — le concept existe dans l'inventaire.
+        return "web" if carte_statut == "indisponible" else "edgar"
     return "edgar" if poste_retenu(ligne.poste, ligne.metrique) is not None else "web"
 
 
@@ -291,14 +311,33 @@ class _SocleEdgar:
 
 
 async def collecter_un(
-    ligne: LigneAveugle, *, conn: asyncpg.Connection, socle: _SocleEdgar
+    ligne: LigneAveugle,
+    *,
+    conn: asyncpg.Connection,
+    socle: _SocleEdgar,
+    carte_statut: Optional[Literal["exact", "approximation", "indisponible"]] = None,
 ) -> ResultatCollecte:
     """Exécute UNE ligne aveugle. Dispatch déterministe, puis réseau. Rend un XOR (entry OU echec),
-    jamais un silence (#25) : c'est `aiguiller_plan` qui transformera un echec en mandat motivé."""
-    if router_source(ligne) == "edgar":
+    jamais un silence (#25) : c'est `aiguiller_plan` qui transformera un echec en mandat motivé.
+
+    `carte_statut` (fourni par `executer_plan_reel`, jamais par `LigneAveugle` — #58) court-circuite
+    `poste_retenu()` pour la décision EDGAR/web lorsque la carte l'a déjà tranché. Si le statut est
+    `exact` ou `approximation` mais que `poste_retenu` reste None (approximation sans poste catalogue
+    valide), on retombe sur le web avec un log nommé — le repli est distinct du câblage réussi."""
+    route = router_source(ligne, carte_statut=carte_statut)
+    if route == "edgar":
         poste = poste_retenu(ligne.poste, ligne.metrique)
-        assert poste is not None  # garanti par router_source
-        return await socle.entry_id(ligne.ticker_id, poste)
+        if poste is None:
+            # Repli NOMMÉ : la carte a dit « edgar » mais le poste n'est pas résolvable par _SocleEdgar
+            # (cas d'une approximation multi-concepts sans poste catalogue, ou dérivée confirmée).
+            # On ne crashe pas — le repli est documenté, pas un silence.
+            logger.info(
+                "carte_statut=%s mais poste_retenu()=None pour « %s » — repli web (approximation "
+                "multi-concepts non exécutable par _SocleEdgar, ligne routée web comme repli nommé)",
+                carte_statut, ligne.metrique,
+            )
+        else:
+            return await socle.entry_id(ligne.ticker_id, poste)
 
     # chemin web : le search-worker CHERCHE (sans connaître la question), puis on persiste ses entries.
     req = construire_requete_web(ligne)
@@ -327,21 +366,102 @@ async def collecter_un(
     return ResultatCollecte(entry_id=created[0]["id"])
 
 
-def postes_edgar_du_plan(plan: CollectionPlan) -> frozenset[str]:
+def postes_edgar_du_plan(
+    plan: CollectionPlan,
+    *,
+    carte_statuts: Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]] = None,
+) -> frozenset[str]:
     """Les postes du socle EDGAR que CE plan réclame (maillon 5 / §3.6) : l'union des postes canoniques
     des lignes traduites routées vers EDGAR. C'est exactement ce que le socle collectera — « un poste
     que nul plan ne réclame ne se collecte plus ». Détenteur unique du dispatch : `router_source` +
-    `poste_retenu`, jamais une seconde liste (#46)."""
+    `poste_retenu`, jamais une seconde liste (#46).
+
+    `carte_statuts` (dict `(question_id, ingredient_id) → statut`) est fourni par `executer_plan_reel`
+    lorsqu'une carte est disponible — il est transmis à `router_source` pour que les lignes `indisponible`
+    soient exclues du socle EDGAR, même si leur source pressentie nomme un dépôt réglementaire."""
     postes: set[str] = set()
     for item in plan.items:
         if item.statut != "traduit":
             continue
         ligne = ligne_aveugle(item, plan.ticker_id)
-        if router_source(ligne) == "edgar":
+        statut = carte_statuts.get((item.question_id, item.ingredient_id)) if carte_statuts else None
+        if router_source(ligne, carte_statut=statut) == "edgar":
             poste = poste_retenu(ligne.poste, ligne.metrique)
-            assert poste is not None  # garanti par router_source
+            if poste is None:
+                continue  # approximation sans poste catalogue : exclue du socle, partira au web
             postes.add(poste)
     return frozenset(postes)
+
+
+# Plus petite que toute date ISO (« 0 » < « 1 »… < « 9 »), donc `dernier_depot_vu < depot_courant`
+# est faux quelle que soit la carte. Ce n'est PAS une date par défaut : c'est l'aveu, écrit dans le
+# code, que cet appelant-là n'a pas de dépôt courant à opposer. Une date plausible (`1970-01-01`,
+# ou la date stockée elle-même) aurait eu le même effet en se lisant comme une mesure.
+_SANS_REVERIFICATION = "0000-00-00 (aucune date de dépôt courante : âge non revérifié ici)"
+
+
+async def _lire_statuts_carte(
+    conn: asyncpg.Connection,
+    plan: CollectionPlan,
+) -> Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]]:
+    """Lit la carte d'appariement persistée et construit le dict `(question_id, ingredient_id) → statut`.
+
+    LIT LA CARTE UNE SEULE FOIS par exécution — jamais une requête par ligne (#61 transposé au réseau DB).
+
+    ⚠️ CET EXÉCUTEUR NE REVÉRIFIE PAS L'ÂGE DE LA CARTE, et il ne prétend pas le faire.
+    `lire_carte` exige un `depot_courant` pour trancher (#54). L'exécuteur n'en détient AUCUN : il
+    n'a pas les `facts` (le socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR,
+    donc APRÈS la décision de routage), et aucune date de dépôt par ticker n'est persistée à ce jour.
+    La première version de ce code contournait le problème en relisant `dernier_depot_vu` dans la
+    table de la carte et en le repassant à `lire_carte` comme s'il était la date courante : la
+    comparaison devenait `X < X`, toujours fausse, et la branche « périmée » journalisait
+    `depot_vu=X < depot_courant=X` — un log qui ne peut jamais être vrai, donc un log qui se lirait
+    comme la PREUVE d'une garde qui fonctionne. C'est cette lecture-là qui est dangereuse, pas
+    l'absence de garde : une garde absente se voit, une garde nourrie de sa propre valeur ne se voit
+    pas (`feedback_controle_au_point_de_lecture`).
+
+    On appelle donc `lire_carte` avec la sentinelle `_SANS_REVERIFICATION`, plus petite que toute
+    date ISO : la comparaison `dernier_depot_vu < depot_courant` est structurellement fausse, ce qui
+    est EXACTEMENT ce que fait ce chemin — servir la carte telle qu'elle est stockée. La sentinelle
+    porte son propre aveu dans son nom, là où une date recopiée le dissimulait.
+
+    CE QUE ÇA COÛTE, tant que la date de dépôt par ticker n'est pas persistée : un `indisponible`
+    établi sur un inventaire de 269 concepts continue d'envoyer sa ligne au WEB PAYANT après que
+    l'émetteur a commencé à déposer le concept. C'est une fuite de coût, jamais un faux nombre — le
+    verdict servi reste celui d'un dépôt réel, seulement plus ancien.
+
+    REPLI NOMMÉ (jamais un silence) : si aucune carte n'est persistée ou si la lecture échoue, on
+    logue et on renvoie None. Le reste de `executer_plan_reel` tombe alors sur `poste_retenu()` comme
+    avant, et ce chemin est distinct du câblage réussi — le log en porte la trace."""
+    try:
+        carte = await lire_carte(
+            conn,
+            ticker_id=plan.ticker_id,
+            framework_id=plan.framework_id,
+            framework_version=plan.framework_version,
+            depot_courant=_SANS_REVERIFICATION,
+        )
+        if carte is None:
+            logger.info(
+                "aucune carte d'appariement pour %s/%s %s — repli sur poste_retenu() (repli nommé)",
+                plan.ticker_id, plan.framework_id, plan.framework_version,
+            )
+            return None
+        statuts = {(it.question_id, it.ingredient_id): it.statut for it in carte.items}
+        logger.info(
+            "carte d'appariement chargée pour %s/%s %s — %d ligne(s), depot_vu=%s "
+            "(âge NON revérifié : cet exécuteur n'a pas de date de dépôt courante)",
+            plan.ticker_id, plan.framework_id, plan.framework_version,
+            len(statuts), carte.dernier_depot_vu,
+        )
+        return statuts
+    except Exception as e:
+        logger.warning(
+            "lecture carte %s/%s %s échouée (%s: %s) — repli sur poste_retenu() (repli nommé)",
+            plan.ticker_id, plan.framework_id, plan.framework_version,
+            type(e).__name__, e,
+        )
+        return None
 
 
 async def executer_plan_reel(
@@ -351,8 +471,16 @@ async def executer_plan_reel(
     pré-exécute chaque ligne aveugle distincte, puis on lui injecte un lookup sync.
 
     Le socle EDGAR ne collecte que les postes RÉCLAMÉS par ce plan (`postes_edgar_du_plan`) : la
-    collecte data-first des 8 postes en bloc a disparu avec le maillon 5 (§3.6)."""
-    socle = _SocleEdgar(postes_edgar_du_plan(plan))
+    collecte data-first des 8 postes en bloc a disparu avec le maillon 5 (§3.6).
+
+    CARTE D'APPARIEMENT (maillon 4bis) : lue UNE FOIS en début d'exécution (#61), la carte fournit
+    le `carte_statut` de chaque ligne à `router_source` — le décideur réel devient la carte, et non
+    plus `poste_retenu` seul. Le repli (carte absente ou lecture échouée) est NOMMÉ et journalisé :
+    il est indiscernable du câblage réussi sans ce log."""
+    # ── Chargement de la carte : UNE requête, UNE fois, avant la boucle ──────────────────────────────
+    carte_statuts = await _lire_statuts_carte(conn, plan)
+
+    socle = _SocleEdgar(postes_edgar_du_plan(plan, carte_statuts=carte_statuts))
     resultats: dict[tuple[str, str, str, str], ResultatCollecte] = {}
     for item in plan.items:
         if item.statut != "traduit":
@@ -361,7 +489,8 @@ async def executer_plan_reel(
         cle = (ligne.ticker_id, ligne.metrique, ligne.source_pressentie, ligne.ancre)
         if cle in resultats:
             continue  # même ligne aveugle déjà collectée (deux ingrédients, une collecte)
-        resultats[cle] = await collecter_un(ligne, conn=conn, socle=socle)
+        statut = carte_statuts.get((item.question_id, item.ingredient_id)) if carte_statuts else None
+        resultats[cle] = await collecter_un(ligne, conn=conn, socle=socle, carte_statut=statut)
 
     def collecter(ligne: LigneAveugle) -> ResultatCollecte:
         cle = (ligne.ticker_id, ligne.metrique, ligne.source_pressentie, ligne.ancre)

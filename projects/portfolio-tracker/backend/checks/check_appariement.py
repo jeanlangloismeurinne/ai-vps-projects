@@ -52,10 +52,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _harness import Bilan, strip_code  # noqa: E402
 
 from app.agents.v2.apparieur import (  # noqa: E402
+    LEGENDE_INVENTAIRE,
     AppariementRefuse,
+    AppariementSansObjet,
     coefficients_choisis,
+    concepts_absents,
     concepts_de_la_formule,
+    dernier_depot_vu,
+    derniere_periode_vue,
+    mots_du_concept,
+    rendre_inventaire,
+    resumer_inventaire,
     valider_pont_appariement,
+    voisins_deposes,
 )
 from app.contracts.appariement_schema import (  # noqa: E402
     APPARIEMENT_SCHEMA_VERSION,
@@ -405,5 +414,161 @@ for phrase in ("n'attrape PAS le faux appariement SÉMANTIQUE",
                "gardent donc une STRUCTURE, jamais une sémantique"):
     b.check(phrase in SRC_APPARIEUR,
             f"§9 la limite est ÉCRITE dans `apparieur.py` (« {phrase[:40]}… »)")
+
+print("\n§10 L'INVENTAIRE COMME OUTIL DE LECTURE — le rendu est un PRODUCTEUR, il se garde")
+# POURQUOI CETTE SECTION EXISTE, ET POURQUOI ELLE EST HORS LIGNE.
+# La moitié « outil de lecture » de l'apparieur est du code déterministe pur, et elle n'était
+# éprouvée que par `tools/inventaire_apparieur.sh`, qui a besoin du réseau. Or c'est elle qui a
+# FABRIQUÉ un défaut mesuré contre le vrai modèle : ne montrant qu'un point par concept, elle a fait
+# écrire six `indisponible` sur MSFT motivés par « il n'y a pas de série de plusieurs exercices »
+# alors que `companyfacts` porte la série entière. Le rendu est donc un producteur au sens de #46/#48
+# — ce qu'il OMET se lit comme une propriété de l'émetteur — et il se garde comme tel, sans réseau.
+#
+# La fixture est copiée du réel (`feedback_fixture_copiee_du_reel`) : ce sont les formes de points
+# réellement rencontrées sur MSFT/NVDA le 2026-09-17 — un flux annuel républié trois fois sous le
+# même `end`, un flux semestriel plus récent que les annuels, un poste de bilan, un concept abandonné
+# en 2018, et un concept déposé sans aucun point chiffré.
+FACTS_FIXTURE = {
+    # Républié 3 fois sous le MÊME `end` (chaque dépôt le reprend en comparatif) + un 2ᵉ exercice.
+    # C'est le cas DISCRIMINANT de `nb_dates` : compter les points rendrait 4, la vérité est 2.
+    "NetIncomeLoss": [
+        {"start": "2024-07-01", "end": "2025-06-30", "val": 88.0, "unit": "USD", "filed": "2025-07-30"},
+        {"start": "2024-07-01", "end": "2025-06-30", "val": 88.0, "unit": "USD", "filed": "2026-01-28"},
+        {"start": "2024-07-01", "end": "2025-06-30", "val": 88.0, "unit": "USD", "filed": "2026-07-29"},
+        {"start": "2025-07-01", "end": "2026-06-30", "val": 133.0, "unit": "USD", "filed": "2026-07-29"},
+    ],
+    # Le point le PLUS RÉCENT est un semestre, alors que le concept porte aussi de l'annuel : sans
+    # `nb_exercices`, la table le donnerait à lire comme une métrique semestrielle.
+    "Revenues": [
+        {"start": "2024-07-01", "end": "2025-06-30", "val": 270.0, "unit": "USD", "filed": "2025-07-30"},
+        {"start": "2026-01-01", "end": "2026-06-30", "val": 145.0, "unit": "USD", "filed": "2026-07-29"},
+    ],
+    "Assets": [
+        {"end": "2025-06-30", "val": 700.0, "unit": "USD", "filed": "2025-07-30"},
+        {"end": "2026-06-30", "val": 758.0, "unit": "USD", "filed": "2026-07-29"},
+    ],
+    # Abandonné : réellement déposé (donc [V] le laisse passer), dernier point vieux de huit ans.
+    "AssetImpairmentCharges": [
+        {"start": "2017-07-01", "end": "2018-06-30", "val": 0.0, "unit": "USD", "filed": "2018-08-03"},
+    ],
+    # Nommable, mais rien de chiffré à relever : il reste AFFICHÉ (le vocabulaire lu doit être
+    # exactement celui que [V] accepte, sinon le taux de refus mesure notre filtre).
+    "SansPointExploitable": [{"end": None, "val": None, "unit": "USD", "filed": "2026-07-29"}],
+}
+lignes_fx = resumer_inventaire(FACTS_FIXTURE)
+par_concept = {l.concept: l for l in lignes_fx}
+b.require(lignes_fx, len(FACTS_FIXTURE), "§10 une ligne par concept déposé")
+b.check({l.concept for l in lignes_fx} == set(FACTS_FIXTURE),
+        "§10 le résumé est TOTAL — égalité d'ensembles, jamais un décompte")
+b.check([l.concept for l in lignes_fx] == sorted(FACTS_FIXTURE),
+        "§10 tri ALPHABÉTIQUE : le modèle localise un nom et voit ses voisins, pas un classement "
+        "par pertinence qui aurait déjà fait l'appariement à sa place")
+
+# LE CAS DISCRIMINANT DE LA PROFONDEUR — celui sans lequel la mesure serait fausse dans le sens
+# rassurant : `companyfacts` républie le même `end` à chaque dépôt qui le reprend en comparatif.
+ni = par_concept["NetIncomeLoss"]
+b.check(ni.nb_dates == 2 and ni.nb_points == 4,
+        "§10 `nb_dates` compte les DATES DISTINCTES, pas les points (4 points → 2 dates) : compter "
+        "les points surestimerait la profondeur d'un facteur 3 ou 4")
+b.check(ni.nb_exercices == 2,
+        "§10 `nb_exercices` compte les exercices ANNUELS distincts, pas les points annuels")
+b.check(ni.premier_end == "2025-06-30" and ni.dernier_end == "2026-06-30",
+        "§10 la série est bornée par ses deux extrémités, toutes deux rendues")
+
+# LE DÉFAUT MESURÉ CONTRE LE VRAI MODÈLE, REPRODUIT ICI : un rendu qui ne montre que le dernier
+# point fait conclure à l'absence de série. C'est l'assert qui l'aurait vu — et il porte sur le
+# TEXTE RENDU, pas sur le résumé, parce que c'est le texte qui part au modèle (#54 : un contrôle se
+# teste au point de lecture).
+texte_fx = rendre_inventaire(lignes_fx)
+
+
+def ligne_rendue(concept: str) -> str:
+    """La ligne du texte rendu qui commence par `concept`, ou la chaîne VIDE si le rendu ne la porte
+    pas. Le repli n'est pas une commodité : un `next(...)` nu lèverait `StopIteration`, le script
+    mourrait AVANT son bilan, et le test négatif classerait la mutation « script mort » au lieu de
+    « garde absente » — un assert doit pouvoir ROUGIR, jamais planter (`feedback_test_negatif_trois_faux_verts`)."""
+    return next((l for l in texte_fx.splitlines() if l.split()[:1] == [concept]), "")
+
+
+ligne_ni = ligne_rendue("NetIncomeLoss")
+b.check("2 dates depuis 2025-06-30" in ligne_ni,
+        "§10 le TEXTE rendu porte la profondeur de la série — sans elle, le modèle répond "
+        "`indisponible` « pas de série de plusieurs exercices » sur un concept qui la porte "
+        "(mesuré sur MSFT, 6 ingrédients)")
+b.check("+A×2" in ligne_ni,
+        "§10 le TEXTE rendu porte le NOMBRE d'exercices annuels, pas un simple drapeau `+A` : "
+        "« un exercice existe » ne dit pas si « cinq exercices » est servable")
+ligne_rev = ligne_rendue("Revenues")
+b.check("+A×1" in ligne_rev and "flux 180j" in ligne_rev,
+        "§10 un concept dont le point le plus récent est un SEMESTRE annonce quand même son "
+        "annuel — sinon le rendu mentirait par omission")
+ligne_aic = ligne_rendue("AssetImpairmentCharges")
+b.check("1 seule date" in ligne_aic,
+        "§10 une profondeur de 1 est imprimée EXPLICITEMENT : c'est elle qui rend un "
+        "`indisponible` LÉGITIME sur une question pluriannuelle. L'omettre laisserait deviner")
+b.check("2018-06-30" in ligne_aic,
+        "§10 la date du dernier point d'un concept ABANDONNÉ est rendue — le trou connu de [V] "
+        "n'est pas gardé, il est LISIBLE")
+b.check([l.split()[0] for l in texte_fx.splitlines() if l.split()] == sorted(FACTS_FIXTURE),
+        "§10 le texte reste RELISIBLE par son premier mot, une ligne par concept — c'est ce qui "
+        "permet à la frontière gratuite de prouver sa totalité en relisant son propre rendu")
+b.check(ligne_rendue("SansPointExploitable") != "",
+        "§10 un concept sans point chiffré reste NOMMÉ : le vocabulaire lu est exactement celui "
+        "que [V] accepte, sinon le taux de refus mesurerait notre filtre")
+
+# #46 — la profondeur annuelle APPELLE `is_annual_flow`, elle ne recopie pas ses bornes. Lu sur le
+# code DÉPOUILLÉ de sa prose : les bornes sont citées dans les commentaires qui expliquent l'appel,
+# et un grep brut rougirait sur sa propre énonciation.
+b.check("is_annual_flow(" in code_apparieur,
+        "§10 `is_annual_flow` est APPELÉE — un seul détenteur de « ce point couvre-t-il un "
+        "exercice ? » (#46)")
+for borne in ("350", "370", "365", "_ANNUAL_MIN_DAYS", "_ANNUAL_MAX_DAYS"):
+    b.check(borne not in code_apparieur,
+            f"§10 `apparieur.py` ne recopie pas la borne `{borne}` — une règle recopiée diverge "
+            "au correctif suivant")
+
+# La colonne ne sert à rien si la légende ne la déclare pas : le modèle ne peut pas employer une
+# colonne qu'il ne sait pas lire. Assert d'ÉNONCÉ, et il se déclare comme tel (même discipline que
+# §9 et que `check_collecte_executor` §3bis).
+# Les fragments sont recopiés de la légende, pas reconstitués de mémoire : la première version de
+# cet assert cherchait « N'EST PLUS ALIMENTÉ » là où la légende écrit « n'est PLUS ALIMENTÉ », et
+# elle a rougi sur sa propre paraphrase. On n'asserte donc que les segments TOUT EN MAJUSCULES, qui
+# sont ceux que la légende met en emphase et les seuls dont la casse ne soit pas une supposition.
+for phrase in ("PROFONDEUR", "LA DATE DU DERNIER POINT EST DÉCISIVE", "PLUS ALIMENTÉ",
+               "NE MONTRE QU'UN POINT PAR CONCEPT"):
+    b.check(phrase in LEGENDE_INVENTAIRE,
+            f"§10 la légende DÉCLARE la colonne au modèle (« {phrase[:34]}… ») — une colonne non "
+            "expliquée est une colonne non employée")
+
+# Les deux bornes temporelles, et elles ne se confondent pas : la PÉRIODE la plus récente couverte
+# (max `end`, bornée à aujourd'hui) n'est pas le DERNIER DÉPÔT vu (max `filed`), qui est ce que la
+# carte persistera pour savoir qu'elle a vieilli (#67).
+b.check(derniere_periode_vue(FACTS_FIXTURE) == "2026-06-30",
+        "§10 `derniere_periode_vue` = max `end` — la référence contre laquelle une date se lit")
+b.check(derniere_periode_vue(
+            {"X": [{"end": "2099-12-31", "val": 1.0, "unit": "USD"}]}) is None,
+        "§10 une période ENTIÈREMENT future est écartée, jamais rendue : une référence dans le "
+        "futur ferait paraître périmé tout l'inventaire (échéancier de dette, comparatif)")
+b.check(dernier_depot_vu(FACTS_FIXTURE) == "2026-07-29",
+        "§10 `dernier_depot_vu` = max `filed`, JAMAIS max `end` — c'est la date de DÉPÔT qui dit "
+        "si la carte a vieilli ; un `end` peut être postérieur au dépôt")
+try:
+    dernier_depot_vu({"X": [{"end": "2026-06-30", "val": 1.0, "unit": "USD"}]})
+    b.check(False, "§10 un inventaire sans aucun `filed` doit lever, pas rendre une date fabriquée")
+except AppariementSansObjet:
+    b.check(True, "§10 un inventaire non datable lève `AppariementSansObjet` AVANT toute dépense "
+                  "(#40) — jamais une date fabriquée qui se lirait comme une mesure")
+
+# L'outil de lecture du tour de réparation : le code LISTE les voisins déposés, le modèle DÉCIDE.
+# Aucune suggestion de remplacement — sur un critère lexical, ce serait la table de sous-chaînes qui
+# fabriquait 5 faux appariements sur 7 (mesure du 2026-09-14).
+b.check(mots_du_concept("InventoryNetCurrent") == {"inventory", "net", "current"},
+        "§10 `mots_du_concept` découpe le CamelCase en mots — la base du listage des voisins")
+voisins = voisins_deposes("InventoryNetCurrent", INVENTAIRE_NVDA)
+b.check("InventoryNet" in voisins and "Assets" not in voisins,
+        "§10 `voisins_deposes` ne rend que des concepts DÉPOSÉS partageant un mot avec l'absent")
+b.check(concepts_absents(carte(ligne(statut="exact", concepts=["InventoryNetCurrent"])),
+                         INVENTAIRE_NVDA) == ["InventoryNetCurrent"],
+        "§10 `concepts_absents` nomme ce que [V] a refusé, pour que la réparation soit ciblée")
 
 sys.exit(b.summary())

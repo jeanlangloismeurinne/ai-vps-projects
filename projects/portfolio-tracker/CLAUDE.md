@@ -1110,11 +1110,12 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     dont 10 fausses. Un jugement de modèle instable entre passages à température 0 disqualifie la
     capacité qu'on allait bâtir dessus (`feedback_jugement_modele_instable_entre_passages`). Ce qui
     garantira l'appariement est une **garde en code** (le modèle propose, le code vérifie —
-    #24/#28/#29), pas une formulation. ⚠️ `poste_retenu()` ne vérifie aujourd'hui QUE l'appartenance
-    au catalogue et le véto de dérivation sur la métrique — **jamais** que le poste nommé correspond
-    à la métrique : « clauses restrictives des contrats de dette → `total_liabilities` » passe. **La
-    collecte réelle ne doit pas partir tant que cette garde n'existe pas** : un faux appariement
-    écrit un nombre exact en face de la mauvaise question (#43/#60), et rien en aval ne le rattrape.
+    #24/#28/#29), pas une formulation. ⚠️ `poste_retenu()` ne vérifie QUE l'appartenance au catalogue
+    et le véto de dérivation sur la métrique — **jamais** que le poste nommé correspond à la
+    métrique : « clauses restrictives des contrats de dette → `total_liabilities` » passe. C'est
+    pourquoi la collecte réelle était bloquée : un faux appariement écrit un nombre exact en face de
+    la mauvaise question (#43/#60), et rien en aval ne le rattrape. **Levé le 2026-09-17** — la carte
+    d'appariement décide désormais du routage et `poste_retenu()` n'est plus que le repli (#68/#70).
     Détail : `roadmap/V3/00-REPRISE.md` (maillon 4/4bis), mesureur versionné
     `backend/tools/cartographier_xbrl.{py,sh}`, asserts d'énoncé `check_collecte_executor.py` §3bis
     — qui **déclarent eux-mêmes** ne garder que l'énoncé du prompt, pas le comportement.
@@ -1153,9 +1154,79 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     État livré : contrat `app/contracts/appariement_schema.py`, pont `app/agents/v2/apparieur.py`,
     règle de tier `synthesis_feed.derive_tier_calcul` (qui **appelle** `derive_synthesis_reliability`
     pour la branche non déterministe — aucune table de tier recopiée, #46), `check_appariement.py`
-    **73/0** + `negatif_appariement.sh` **17 mutations / 0**. ⚠️ **La garde EXISTE mais n'est encore
-    CÂBLÉE nulle part** : `poste_retenu()` est inchangé, aucun agent ne produit de carte, rien ne la
-    persiste — **le maillon 4 reste donc bloqué** (voir `00-REPRISE.md`, étape 2 du 4bis).
+    **103/0** + `negatif_appariement.sh` **37 mutations / 0**. ✅ **CÂBLÉE le 2026-09-17** : la carte
+    est persistée (migration **042**, `appariement_cartes` au grain ticker × framework × version) et
+    `executer_plan_reel` la lit une fois par exécution pour alimenter `router_source` — la carte est
+    devenue le décideur du routage, `poste_retenu()` n'est plus que le repli nommé. Le maillon 4 est
+    débloqué. Résidu connu et borné : **#70**.
+
+69. **Le RENDU d'un inventaire est un PRODUCTEUR : ce qu'il omet se lit comme une propriété de
+    l'émetteur (V3, lot 3 maillon 4bis étape 2a — 2026-09-17)** : l'apparieur reçoit les 269 à 627
+    concepts us-gaap réellement déposés sous forme de **table de texte alignée** (pas de JSON : ~3×
+    moins de jetons et relisible en colonnes). La première version n'affichait qu'**un point par
+    concept**, le plus récent. Résultat mesuré sur MSFT : **six ingrédients sortis `indisponible`**
+    avec pour motif « il n'y a pas de série de plusieurs exercices » — alors que `companyfacts`
+    porte la série entière. Le modèle n'a pas menti : il a décrit fidèlement ce que la table lui
+    montrait. **L'`indisponible` était FABRIQUÉ PAR NOTRE RENDU**, et il se serait lu en aval comme
+    un fait sur l'émetteur (même famille que `feedback_contrat_du_mesureur_ecarte_le_cas`).
+    ⚠️ **Le correctif est une colonne de PROFONDEUR**, et chacun de ses trois éléments a été
+    nécessaire : `N dates depuis AAAA-MM-JJ` (les **dates distinctes**, jamais les points —
+    `companyfacts` républie le même `end` à chaque dépôt qui le reprend en comparatif, donc compter
+    les points surestime la profondeur d'un facteur 3 à 4) ; `+A×K` (le **nombre** d'exercices
+    annuels, pas un drapeau : « un exercice existe » ne dit pas si « cinq exercices » est servable,
+    et c'est cette question-là que le plan pose) ; `1 seule date` **imprimé explicitement**, parce
+    que c'est lui qui rend un `indisponible` LÉGITIME au lieu de le laisser deviner.
+    Effet mesuré sur RVMD : **6 `approximation` → 10**, **7 `indisponible` → 4**. Coût : +$0.0004
+    par ticker, c'est-à-dire rien — « tout montrer » est ici la fois la bonne et la moins chère des
+    options.
+    ⚠️ **La légende DÉCLARE chaque colonne au modèle** : une colonne qu'il ne sait pas lire est une
+    colonne qu'il n'emploie pas. Et la règle de péremption (« un concept dont le dernier point est
+    très antérieur à la période courante n'est PLUS ALIMENTÉ ») vit dans cette légende **seule** :
+    aucun code ne la garde, `[V]` laisse passer un concept mort puisqu'il est réellement déposé.
+    ⚠️ **Un producteur se garde HORS LIGNE comme du code, pas comme une invite.** `check_appariement.py`
+    §10 éprouve le rendu sur une fixture **copiée du réel** (formes MSFT/NVDA du 2026-09-17), et ses
+    asserts portent sur le **TEXTE RENDU**, pas sur le résumé : c'est le texte qui part au modèle
+    (#54 — un contrôle se teste au point de lecture). L'assert central est celui qui aurait vu le
+    défaut MSFT. 22 asserts, **22 mutations** dont chacune refabrique une omission de cette famille.
+    Détenteur unique respecté (#46) : la profondeur annuelle **appelle** `is_annual_flow`, elle ne
+    recopie pas ses bornes — et une mutation le prouve en recopiant `350 <= … <= 370`, valeur
+    **juste** sur la fixture, donc invisible à tout assert de valeur. Seul un assert d'ÉNONCÉ la voit.
+
+70. **Une garde nourrie de SA PROPRE VALEUR ne se voit pas — et son signe est un log qui ne peut
+    jamais être vrai (V3, lot 3 maillon 4bis étape 2c — 2026-09-17)** : `lire_carte` tranche l'âge
+    d'une carte d'appariement en comparant son `dernier_depot_vu` à un `depot_courant` que
+    l'**appelant** fournit — c'est la revérification à la lecture de #54. Le premier câblage a
+    obtenu ce `depot_courant` en le relisant **dans la table de la carte** et en le repassant à
+    `lire_carte`. La comparaison devenait `X < X`, donc toujours fausse ; la branche « périmée »
+    était du code mort ; et elle journalisait `depot_vu=X < depot_courant=X` — **un log qui ne peut
+    jamais être vrai, donc un log qui se lit comme la PREUVE d'une garde qui fonctionne.**
+    ⚠️ **C'est cette lecture-là qui est dangereuse, pas l'absence de garde.** Une garde absente se
+    voit ; une garde nourrie de sa propre valeur passe tous ses tests, parce que le test l'appelle
+    directement avec une date fraîche — le trou n'existe que sur le chemin de PRODUCTION. Le test de
+    la fonction était vert, sa mutation rougissait, et la capacité était malgré tout morte.
+    ⚠️ **Signe diagnostique réemployable** : chercher, dans une garde, la branche dont la condition
+    ne peut pas être atteinte avec les valeurs que l'appelant réel fournit. Si un `logger` y décrit
+    une comparaison entre deux expressions de la **même** origine, la garde est décorative.
+    ⚠️ **Remède : une SENTINELLE qui avoue, et un assert STRUCTUREL.** `_SANS_REVERIFICATION`
+    (`"0000-00-00 (aucune date de dépôt courante : âge non revérifié ici)"`, plus petite que toute
+    date ISO) rend la comparaison fausse *par construction* tout en portant son propre aveu dans son
+    nom — là où une date plausible (`1970-01-01`, ou la date stockée) produisait le même effet en se
+    lisant comme une mesure. Et parce qu'**aucun test fonctionnel ne bouge** quand la régression
+    revient (les trois mutations §9 ne font rougir qu'**un seul** assert chacune, zéro test de
+    routage), la garde doit être lue sur l'**AST** : `check_collecte_executor.py` §9 vérifie que
+    l'exécuteur appelle bien `lire_carte`, que son `depot_courant` est la sentinelle nommée, et
+    qu'il n'émet **aucun `SELECT` sur `appariement_cartes`** — la boucle est coupée à la source, pas
+    gardée. L'AST plutôt qu'un grep parce que la prose du code et celle du check énoncent toutes
+    deux l'interdit (`feedback_grep_interdit_lit_sa_propre_enonciation`).
+    ⚠️ **Le résidu, nommé et chiffré** : l'exécuteur n'a AUCUN dépôt courant à opposer — il n'a pas
+    les `facts` (le socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc
+    *après* la décision de routage) et aucune date de dépôt par ticker n'est persistée à ce jour. La
+    circularité est réelle : il faut EDGAR pour dater la carte, et la carte pour savoir s'il faut
+    EDGAR. Ce que ça coûte tant que ce n'est pas tranché : un `indisponible` établi sur un inventaire
+    de 269 concepts continue d'envoyer sa ligne au **web payant** après que l'émetteur a commencé à
+    déposer le concept. **Une fuite de coût, jamais un faux nombre** — le verdict servi reste celui
+    d'un dépôt réel, seulement plus ancien. Sortie : persister la date de dépôt **par ticker** à
+    l'ingestion EDGAR, ce qui rend la référence disponible sans appel réseau et sans circularité.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

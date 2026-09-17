@@ -19,6 +19,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | `collecteur.py` · `collecte_executor.py` | Plan → collecte réelle ; l'exécuteur route en **aveugle** (ne connaît pas la question, #60) |
 | `collecte_persist.py` | Persistance du plan / liens / mandats |
 | `analyste.py` | Réponses de framework ; refuse **avant dépense** ce que le pont refuserait (#63) |
+| `apparieur.py` · `appariement_persist.py` | Appariement questions↔champs-EDGAR (3 états) ; persistance UPSERT + revérification à la lecture (#54) |
 | `curator.py` | Porte de complétude à 3 états + rôle de manager ; **aucun levier de modèle sur l'exigence** (#62) |
 | `framework_persist.py` | Écriture append-only versionnée des réponses/dispenses (#64) |
 | `common.py` | `MVDD_SPEC`, `FIELD_PROFILES`, `derive_nature` (détenteurs uniques) |
@@ -31,6 +32,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | Invariant cible | Garant |
 |---|---|
 | Chaîne à deux agents, plan persisté, collecte aveugle | `check_traducteur.py`, `check_collecteur.py`, `check_collecte_executor.py`, `check_collecte_persist.py` |
+| Carte d'appariement persistée, revérifiée à la lecture (#54), UPSERT sans historique | `check_appariement_persist.py` + `negatif_appariement_persist.sh` |
 | Analyste : refus avant dépense, 3 états, pas de levier | `check_analyste.py` + `negatif_analyste.sh` + `tools/acceptation_analyste.sh` (vrai modèle) |
 | Porte à 3 états, remèdes distincts, lue au point de sortie | `check_readiness_recompute.py`, `tools/acceptation_gate.sh` |
 | Table de profils par champ (`FIELD_PROFILES` dans `common.py`) | `check_field_profiles.py` |

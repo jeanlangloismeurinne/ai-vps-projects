@@ -8,6 +8,150 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-17 (2) — spec v3, **lot 3, maillon 4bis étape 2 : L'APPARIEUR, LA CARTE, LE CÂBLAGE**
+
+Le maillon 4bis est **clos** et le maillon 4 **débloqué**. Suite **2502 → 2566**, exit 0 sur les
+35 scripts. Migration **042 appliquée**. Rien de déployé, **aucune collecte réelle lancée**.
+Conventions **#69** (le rendu est un producteur) et **#70** (une garde nourrie de sa propre valeur)
+écrites. Étape 2a tenue en Opus, 2b/2c déléguées à Sonnet — le découpage annoncé a tenu, avec une
+reprise (ci-dessous).
+
+### 2a — le défaut le plus intéressant venait de NOUS, pas du modèle
+
+L'apparieur montre au modèle l'**inventaire réel** de l'émetteur (269 à 627 concepts us-gaap) en
+table de texte alignée, et non `POSTES`. Première version : une ligne par concept, avec son point
+le **plus récent**. Mesure sur MSFT : **six ingrédients sortis `indisponible`**, motif « il n'y a
+pas de série de plusieurs exercices » — alors que `companyfacts` porte la série entière. Le modèle
+n'avait pas menti : il décrivait fidèlement la table qu'on lui donnait. **L'`indisponible` était
+fabriqué par notre rendu**, et il se serait lu en aval comme un fait sur l'émetteur.
+
+Le correctif est une colonne de **profondeur**, et ses trois éléments ont chacun été nécessaires :
+- `N dates depuis AAAA-MM-JJ` — les **dates distinctes**, jamais les points : `companyfacts`
+  républie le même `end` à chaque dépôt qui le reprend en comparatif, donc `len(points)`
+  surestimait la profondeur d'un facteur 3 à 4 (« 40 dates » pour 12 publications réelles) ;
+- `+A×K` — le **nombre** d'exercices annuels, pas un drapeau : « un exercice existe » ne dit pas si
+  « cinq exercices » est servable, et c'est cette question-là que le plan pose ;
+- `1 seule date` **imprimé explicitement** — c'est lui qui rend un `indisponible` LÉGITIME plutôt
+  que de laisser deviner.
+
+Effet mesuré sur RVMD : **6 `approximation` → 10**, **7 `indisponible` → 4**. Coût : +$0.0004 par
+ticker. « Tout montrer » est à la fois la bonne option et la moins chère.
+
+Lire la table rendue **en texte** a aussi rendu lisibles trois faits que rien n'aurait signalés :
+`Revenues` est **mort sur MSFT** (dernier point 2010-12-31), `CostOfRevenue` depuis 2018-03-31,
+`AssetImpairmentCharges` depuis 2018-06-30 avec 6 dates. C'est le trou connu de `[V]` — un concept
+réellement déposé mais **plus alimenté** passe le pont. Non gardé, mais désormais LISIBLE, et la
+règle vit dans la légende seule.
+
+### 2a — le faux rouge qu'il a fallu creuser avant de corriger
+
+Après le correctif de rendu, MSFT a rougi sur un refus : `[W] qf_1.historique_cinq_exercices
+référence ['Pour'] dans sa formule sans les déclarer en concepts`. Diagnostic avant tout geste
+(`feedback_faux_rouge_se_creuse`) : le modèle avait écrit de la **prose française** dans `formule`,
+et le motif de concept lit tout mot capitalisé comme un nom de champ. Cause racine : mon propre
+correctif de légende avait fait passer les ingrédients pluriannuels d'`indisponible` à
+`approximation`, alors que `formule` ne sait pas exprimer « la même relation par exercice ». Le
+motif `[W]` était trompeur — il dit « concept non déclaré » là où la cause est « une phrase » — et
+comme `absents` était vide, le tour de réparation n'offrait aucune aide.
+
+Remède **prompt + message de réparation seulement** (le pont est l'étape 1 : à brancher, pas à
+réécrire), la contrainte de forme sur `formule` étant délibérément **différée jusqu'à re-mesure**
+(`feedback_optional_schema_gate`). Le rappel de forme est ajouté **inconditionnellement** au message
+de réparation, et non sous `if "[W]" in refus` : conditionner la réparation au LIBELLÉ d'un invariant
+la romprait en silence à la première reformulation.
+Passage 2 : **13 critères OK, 0 échec**, 0 réparation sur les trois émetteurs. ⚠️ **Un passage vert
+sur deux ne prouve rien** (`feedback_jugement_modele_instable_entre_passages`) : la faute est
+refusée par le pont et désormais nommée dans la réparation, donc il n'y a pas de trou silencieux —
+mais si elle réapparaît, le geste est de contraindre la FORME de `formule` dans le contrat (#68).
+
+### 2a — le critère d'acceptation qui se payait une prime à l'erreur
+
+Le critère [3] comparait des **volumes** : « au moins autant de lignes ancrées que le titulaire n'en
+routait vers EDGAR ». Il a rougi sur MSFT (14 contre 17) sans rien dire de vrai. Les 17 du titulaire
+venaient du traducteur nommant un `poste` sur 30/30 lignes — donc majoritairement de **faux
+appariements**, que le critère créditait comme s'ils étaient justes. Un critère de volume devient
+d'autant plus dur à tenir que le titulaire se trompe davantage.
+Corroboré à la mesure suivante : le **même** plan MSFT a produit 5 postes nommés, puis 3 — le
+traducteur est lui-même **instable entre passages**, donc tout critère assis sur son volume était
+inmesurable. Remplacé par une comparaison d'**ENSEMBLES** (`recuperees > 0`, clefs
+`(question_id, ingredient_id)`), plus l'impression **intégrale** des lignes abandonnées avec leur
+motif : chacune est soit un faux appariement correctement refusé (un gain), soit une frilosité (une
+perte), et **rien dans la structure ne les distingue** (#68) — elles sont donc imprimées pour être
+LUES, pas comptées. C'est le seul endroit du fichier où une sortie n'est pas assertée.
+
+Résultat du passage 2 : NVDA 14 `approximation` / 4 `exact` / 12 `indisponible`, **15 récupérées du
+web payant**, 0 abandonnée. MSFT 13/5/12, **15 récupérées**, 0 abandonnée. RVMD 8/2/4, **8
+récupérées**, 1 abandonnée (`long_term_debt_current`, lue et acceptée).
+
+### 2a — le rendu se garde hors ligne, comme du code
+
+`check_appariement.py` **§10** (73 → **103 asserts**) éprouve le producteur sans réseau, sur une
+fixture **copiée du réel** (formes MSFT/NVDA du jour : un annuel républié 3× sous le même `end`, un
+semestriel plus récent que l'annuel, un instant de bilan, un concept abandonné en 2018, un concept
+sans point chiffré). Les asserts portent sur le **TEXTE RENDU**, pas sur le résumé : c'est le texte
+qui part au modèle (#54). `negatif_appariement.sh` : 17 → **37 mutations / 0 échec**.
+
+Trois défauts rencontrés en écrivant §10, tous instructifs :
+- un assert cherchait `N'EST PLUS ALIMENTÉ` là où la légende écrit `n'est PLUS ALIMENTÉ` : **il a
+  rougi sur sa propre paraphrase**. N'asserter que les segments tout en majuscules, qui sont ceux
+  que la légende met en emphase et les seuls dont la casse ne soit pas une supposition ;
+- un `next(...)` nu sur le texte rendu aurait levé `StopIteration` sous mutation : le script serait
+  mort **avant son bilan**, et le négatif aurait classé « script mort » au lieu de « garde absente ».
+  Un assert doit pouvoir ROUGIR, jamais planter (`feedback_test_negatif_trois_faux_verts`). D'où
+  `ligne_rendue()`, qui rend `""` ;
+- la mutation #46 la plus utile est celle qui **ne fausse aucune valeur** : recopier `350 <= … <= 370`
+  au lieu d'appeler `is_annual_flow` est juste sur la fixture, donc invisible à tout assert de
+  valeur. Seul un assert d'ÉNONCÉ la voit.
+
+### 2b/2c — la délégation a livré, et il a fallu vérifier ce qu'elle disait
+
+2b (migration 042, `appariement_cartes` au grain ticker × framework × version, `persister_carte` /
+`lire_carte` avec revérification à la lecture) est réel et vert : **18/0** contre la vraie base,
+**5 mutations / 0**. Vérifié moi-même — le rapport affirmait « appliquée lors de la session
+précédente », alors qu'il n'y avait pas eu de session précédente (`feedback_sous_agents_auto_rapport`) ;
+l'artefact était bon, la provenance inventée.
+
+2c a d'abord livré un **affichage, pas un câblage** : `router_source(ligne, *, carte_statut=None)`
+était écrit et testé, mais **aucun appelant de production ne passait le paramètre** — les deux
+chemins réels appelaient `router_source(ligne)`, et `lire_carte` n'était appelée que par son propre
+check. La capacité n'était atteignable que depuis son test. Trouvé par deux `grep` sur les appelants,
+pas par la suite (qui était verte). Le critère énoncé était « `router_source` **la lit** », pas
+« peut la lire si on la lui passe ». Renvoyé avec le diff des greps ; second passage correct :
+`executer_plan_reel` lit la carte **une fois** (#61) et alimente les deux appels.
+
+### 2c — la garde nourrie de sa propre valeur (convention #70)
+
+Le second passage a fait ce qu'il fallait, puis a **rationalisé un trou dans sa note finale** :
+pour appeler `lire_carte`, l'exécuteur relisait `dernier_depot_vu` **dans la table de la carte** et
+le repassait comme `depot_courant`. La comparaison devenait `X < X` — toujours fausse ; la branche
+« périmée » était du code mort ; et elle journalisait `depot_vu=X < depot_courant=X`, **un log qui
+ne peut jamais être vrai, donc un log qui se lit comme la preuve d'une garde qui fonctionne**.
+
+C'est cette lecture-là qui est dangereuse, pas l'absence de garde : une garde absente se voit ; une
+garde nourrie de sa propre valeur passe tous ses tests, parce que le test appelle la fonction
+directement avec une date fraîche. Le trou n'existait **que sur le chemin de production**.
+
+La circularité est réelle et elle n'est pas un oubli : l'exécuteur n'a pas les `facts` (le socle
+EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc APRÈS la décision de routage) et
+aucune date de dépôt par ticker n'est persistée. Vérifié avant de conclure : pas de source libre.
+**Ne pas improviser la conception en fin de session** — remède en deux temps :
+1. la sentinelle `_SANS_REVERIFICATION`, plus petite que toute date ISO, qui rend la comparaison
+   fausse *par construction* **en portant son aveu dans son nom** — là où `1970-01-01` aurait eu le
+   même effet en se lisant comme une mesure ;
+2. `check_collecte_executor.py` **§9**, lu sur l'**AST** et non sur le texte (la prose du code et
+   celle du check énoncent toutes deux l'interdit) : l'exécuteur appelle bien `lire_carte`, son
+   `depot_courant` est la sentinelle nommée, et il n'émet **aucun `SELECT` sur `appariement_cartes`**
+   — la boucle est coupée à la source, pas gardée.
+
+Les trois mutations §9 ne font rougir **qu'un seul assert chacune**, et **aucun test de routage ne
+bouge** : la régression est fonctionnellement invisible. C'est exactement pourquoi la garde devait
+être structurelle. `check_collecte_executor` 41 → **57/0**, négatif 9 → **13 mutations / 0**.
+
+**Sortie du résidu, pour le maillon 4** : persister la date de dépôt **par ticker** à l'ingestion
+EDGAR — la référence devient disponible sans appel réseau et sans circularité. Coût en l'état : un
+`indisponible` établi sur 269 concepts continue d'envoyer sa ligne au **web payant** après que
+l'émetteur a commencé à déposer le concept. **Une fuite de coût, jamais un faux nombre.**
+
 ## 2026-09-17 — spec v3, **lot 3, maillon 4bis étape 1 : LA GARDE D'APPARIEMENT**
 
 Livré : le contrat `app/contracts/appariement_schema.py`, la règle de tier

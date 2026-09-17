@@ -91,6 +91,39 @@ def _parse_annual_points(payload: dict[str, Any], *, unit: str) -> list[dict[str
     return sorted(by_end.values(), key=lambda p: p["end"])
 
 
+def est_point_de_flux(point: dict[str, Any]) -> bool:
+    """Un point XBRL est un FLUX s'il porte une DURÉE (`start`), un INSTANT sinon.
+
+    Détenteur unique de ce discriminant (#46). On ne se fie JAMAIS à `fp` ni à `form` : EDGAR les rend
+    incohérents (RVMD tague `fp=Q2` un point au 2026-03-31, cf. `_parse_instant_points`).
+
+    La règle a deux lecteurs qui n'en font pas le même usage, et c'est pour cela qu'elle est ici
+    plutôt que recopiée dans chacun : le collecteur l'emploie pour ÉCARTER les flux d'un poste de
+    bilan, l'inventaire lisible de l'apparieur pour l'AFFICHER au modèle (« ce concept est un flux sur
+    365 jours, pas un solde »). Deux copies d'une même règle re-divergent au correctif suivant
+    (`feedback_correctif_regle_jumeaux`), et ici la divergence serait muette : le modèle apparierait
+    un flux là où le collecteur attend un instant, et remonterait un vide.
+    """
+    return point.get("start") is not None
+
+
+def duree_jours(point: dict[str, Any]) -> Optional[int]:
+    """Nombre de jours couverts par un point de flux. None si instantané ou dates illisibles.
+
+    Détenteur unique du calcul (#46) : `is_annual_flow` en dérive son verdict « couvre un exercice »,
+    l'inventaire de l'apparieur l'affiche tel quel. Un flux dont on ignore la durée est la panne que
+    `is_annual_flow` documente — un `fp=FY` qui porte un trimestre divise le CA par ~4 sans erreur
+    visible ; l'afficher au modèle lui évite d'apparier un trimestre à une question annuelle.
+    """
+    start, end = point.get("start"), point.get("end")
+    if not start or not end:
+        return None
+    try:
+        return (date.fromisoformat(str(end)) - date.fromisoformat(str(start))).days
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_instant_points(payload: dict[str, Any], *, unit: str) -> list[dict[str, Any]]:
     """Extrait les points INSTANTANÉS (postes de bilan) de la réponse companyconcept.
 
@@ -110,7 +143,7 @@ def _parse_instant_points(payload: dict[str, Any], *, unit: str) -> list[dict[st
     units = (payload.get("units") or {}).get(unit) or []
     by_end: dict[str, dict[str, Any]] = {}
     for it in units:
-        if it.get("start") is not None:      # flux : a une durée, ce n'est pas un poste de bilan
+        if est_point_de_flux(it):            # flux : a une durée, ce n'est pas un poste de bilan
             continue
         end, val = it.get("end"), it.get("val")
         if end is None or val is None:

@@ -14,10 +14,12 @@ role: >
   §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
   jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
   **LOT 3 EN COURS depuis le 2026-09-13** : maillons 1 (l'analyste, #63), 2 (`framework_answers`/
-  `framework_dispenses`, migration 040, #64) et 3 (suppression de `MVDD_SPEC`) sont ✅ ; le maillon
-  **4 est BLOQUÉ** par l'appariement, dont l'**étape 1 (la garde) est livrée le 2026-09-17**
-  (conventions #67/#68, migrations jusqu'à **041**, suite `run_all.sh` = **2502 assertions, 0
-  échec**). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
+  `framework_dispenses`, migration 040, #64) et 3 (suppression de `MVDD_SPEC`) sont ✅ ; le **maillon
+  4bis (l'appariement) est CLOS le 2026-09-17** — garde, apparieur, persistance (migration **042**
+  appliquée) et câblage sur le chemin réel (conventions **#67 → #70**, suite `run_all.sh` = **2566
+  assertions, 0 échec sur 35 scripts**). **Le maillon 4 est donc débloqué**, avec un résidu nommé et
+  chiffré (#70 : l'exécuteur n'a pas de date de dépôt courante à opposer à la carte — fuite de coût,
+  jamais un faux nombre). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -389,44 +391,60 @@ lot 1 ; les tables viennent en dernier.
    passe, pour qu'aucun lecteur ne croie le pont sémantique. Ce qui s'y oppose est la FORME de la
    réponse, pas un `if` : un `exact` ne pouvant porter qu'un concept nu, tout raisonnement est
    CONTRAINT de sortir en `approximation` écrite et contestable. Voir **convention #68**.
-   ⚠️ **LA GARDE EXISTE, ELLE N'EST PAS CÂBLÉE** : `poste_retenu()` / `router_source()` sont
-   INCHANGÉS, aucun agent ne produit de carte, rien ne la persiste. **Le maillon 4 reste bloqué.**
    ────────────────────────────────────────────────────────────────────────────
-   **⬜ ÉTAPE 2 — L'AGENT ET LES DONNÉES** (dans cet ordre) :
-   a. l'**apparieur** (`apparieur.py`, même fichier) : contexte = les questions du plan + l'INVENTAIRE
-      RÉEL de l'émetteur (jamais `POSTES`, qui cesse d'être la frontière) ; le modèle propose une
-      carte, `valider_pont_appariement` la refuse ou la laisse passer. Prévoir que le modèle
-      RÉINVENTE des noms voisins sur 269-627 concepts (`feedback_adressage_par_nom_exige_lecture`) —
-      c'est précisément ce que `[V]` attrape, donc mesurer le TAUX de refus avant de durcir quoi que
-      ce soit, et ne PAS traiter un prompt durci comme une garantie (mesure du 2026-09-14) ;
-   b. **migration 042** : persistance de la carte au grain (ticker × framework × version) avec
-      `dernier_depot_vu`, et **revérification À LA LECTURE** (motif de #54) — un `indisponible`
-      établi sur 269 concepts ne vaut rien contre un inventaire qui en compte 272 ;
-   c. **câblage** dans `collecte_executor` : la carte remplace `poste_retenu()` comme décideur du
-      routage EDGAR/web, et une `approximation` devient un fait dérivé déclarant ses ancres (#42,
-      `financials_feed` sait déjà le faire). C'est ce câblage, et lui seul, qui DÉBLOQUE le maillon 4.
+   **✅ ÉTAPE 2 — L'AGENT, LES DONNÉES ET LE CÂBLAGE** (livrée le 2026-09-17) :
+   a. ✅ **l'apparieur** `apparieur.py` — le modèle reçoit l'**inventaire réel** de l'émetteur (269
+      à 627 concepts) en table de texte alignée, plus les ingrédients du plan. `POSTES` a cessé
+      d'être la frontière. **Le rendu est un producteur et il se garde** : sa première version, en
+      ne montrant qu'un point par concept, FABRIQUAIT six `indisponible` « pas de série » sur MSFT
+      — corrigé par la colonne de profondeur (`N dates depuis…`, `+A×K`, `1 seule date`), effet
+      mesuré sur RVMD **6→10 `approximation`, 7→4 `indisponible`**. Voir **convention #69**.
+      `check_appariement.py` **103/0** · `negatif_appariement.sh` **37 mutations / 0**.
+   b. ✅ **migration 042 appliquée** — `appariement_cartes` au grain **ticker × framework × version**,
+      `dernier_depot_vu`, items en JSONB, gardes SQL (items non vide, format de date).
+      `check_appariement_persist.py` **18/0** contre la vraie base (ROLLBACK, aucun résidu) ·
+      `negatif_appariement_persist.sh` **5 mutations / 0**.
+   c. ✅ **câblage** — `executer_plan_reel` lit la carte **une fois par exécution** (#61) via
+      `_lire_statuts_carte` → `lire_carte`, et passe le `carte_statut` de chaque ligne à
+      `router_source` : `indisponible` → web, `exact`/`approximation` → edgar si la source est un
+      dépôt réglementaire. **La carte est le décideur, `poste_retenu()` n'est plus que le repli**, et
+      ce repli est NOMMÉ et journalisé (sans le log, il était indiscernable du câblage réussi — c'est
+      comme ça que le trou de la première version est passé). `check_collecte_executor.py` **57/0**
+      (§8 exerce le chemin de production, §9 la non-circularité sur l'AST) ·
+      `negatif_collecte_executor.sh` **13 mutations / 0**.
+   **Suite complète : 2566 assertions, exit 0 sur les 35 scripts** (2502 → 2566).
+   Rien de déployé, **aucune collecte réelle lancée**.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4bis ÉTAPE 2** — l'apparieur (a), la migration **042** (b),
-> puis le **câblage** (c) qui débloque le maillon 4. L'étape 1 (la garde) est livrée et testée :
-> ne pas la réécrire, la BRANCHER. Les arbitrages de doctrine restent tranchés au 2026-09-14 et
-> la frontière du décidable est désormais écrite en **convention #68** : ne pas rouvrir non plus la
-> question « et si le pont vérifiait aussi le sens ? » — il ne peut pas, c'est mesuré, et c'est la
-> troisième case qui répond à sa place.
-> Reprise conseillée : **NOUVELLE conversation** — celle-ci a consommé son contexte à écrire et à
-> éprouver la garde, et tout ce qui se transmet est dans ce fichier, dans #68 et dans le code.
-> Et **OPUS** pour l'étape 2a (l'apparieur) : c'est encore de la conception sous contrainte — un
-> contexte à composer pour que le modèle adresse 269 à 627 concepts par leur nom sans en
-> réinventer, sachant qu'on a MESURÉ qu'un prompt durci ne tient pas d'un ticker à l'autre. Le
-> critère de succès ne s'énonce pas en trois lignes (`feedback_deleguer_recherche_pas_jugement`).
-> ⚠️ En revanche **2b (migration 042) et 2c (câblage) seraient délégables à SONNET** une fois 2a
-> fait : leur critère de succès s'énonce court — « la carte se persiste au grain (ticker ×
-> framework × version), se revérifie à la lecture, et `router_source` la lit au lieu de
-> `poste_retenu` ; suite verte, négatif complet ». Si 2a est conduit en Opus, enchaîner 2b/2c dans
-> la même conversation coûte moins qu'un transfert.
-> **Session du 2026-09-17 terminée** — suite **2502/0** (+73), **aucune migration** (l'ordre
-> contrat → agent → données l'interdit avant 2a), rien de déployé, **aucune collecte réelle
-> lancée** (et c'est toujours volontaire : la garde n'est pas câblée).
+> **▶ PROCHAIN JALON = lot 3, maillon 4** — le maillon 4bis est clos, le maillon 4 est **débloqué** :
+> la garde d'appariement n'est plus seulement écrite, elle est sur le chemin réel.
+>
+> ⚠️ **À TRANCHER AVANT toute collecte réelle à grande échelle — le résidu nommé de 2c (#70).**
+> `lire_carte` revérifie l'âge de la carte en comparant son `dernier_depot_vu` à un `depot_courant`
+> fourni par l'appelant (#54), et **l'exécuteur n'en détient aucun** : il n'a pas les `facts` (le
+> socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc APRÈS la décision de
+> routage) et aucune date de dépôt par ticker n'est persistée. La circularité est réelle — il faut
+> EDGAR pour dater la carte, et la carte pour savoir s'il faut EDGAR. L'exécuteur passe donc la
+> sentinelle `_SANS_REVERIFICATION`, qui **avoue** au lieu de simuler : la première version relisait
+> `dernier_depot_vu` dans la table de la carte et le repassait à `lire_carte`, rendant la comparaison
+> `X < X` toujours fausse et journalisant `depot_vu=X < depot_courant=X` — un log qui ne peut jamais
+> être vrai. Épinglé par `check_collecte_executor.py` §9 (AST) + 3 mutations ; **aucun test de
+> routage ne bouge** quand la régression revient, d'où l'assert structurel.
+> **Ce que ça coûte en l'état** : un `indisponible` établi sur un inventaire de 269 concepts continue
+> d'envoyer sa ligne au **web payant** après que l'émetteur a commencé à déposer le concept. Une
+> **fuite de coût, jamais un faux nombre**. **Sortie** : persister la date de dépôt **par ticker** à
+> l'ingestion EDGAR — la référence devient disponible sans appel réseau et sans circularité.
+>
+> ⚠️ **Ce que le pont n'attrapera jamais, et qui reste vrai** : le faux appariement **sémantique**
+> (voir plus haut et #68). Ce qui s'y oppose est la troisième case, pas un contrôle plus fin.
+> ⚠️ **Le remède par prompt n'est pas une garantie, et la mesure le redit** : le défaut de prose dans
+> `formule` (le modèle écrivant « Pour chaque exercice… » là où seule une expression est admise) a
+> fait ROUGIR `[W]` sur MSFT au passage 1, puis le même corpus est passé VERT au passage 2 après
+> durcissement du prompt et du message de réparation. **Un passage vert sur deux ne prouve rien**
+> (`feedback_jugement_modele_instable_entre_passages`) : la faute est REFUSÉE par le pont et le motif
+> est désormais nommé dans la réparation, donc il n'y a pas de trou silencieux — mais si elle
+> réapparaît, le geste est de contraindre la FORME de `formule` dans le contrat (#68), pas de
+> re-durcir le prompt une troisième fois.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -502,8 +520,9 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
   `/roadmap`** (sans lui `check_frameworks_definitions` §7 sort en échec au lieu de se sauter).
   ⚠️ **Ne pas le réécrire dans `/tmp`** : la version jetable sous-comptait 47 assertions en silence
   (`CHANTIER_OUTILLAGE_DEV.md` §27).
-- **Migrations appliquées jusqu'à 040** (036/037/038 lot 2b, **039** lot 2c — tables du plan de
-  collecte, **040** lot 3 maillon 2 — `framework_answers`/`framework_dispenses`).
+- **Migrations appliquées jusqu'à 042** (036/037/038 lot 2b, **039** lot 2c — tables du plan de
+  collecte, **040** lot 3 maillon 2 — `framework_answers`/`framework_dispenses`, **041** `poste` sur
+  l'item de plan, **042** lot 3 maillon 4bis — `appariement_cartes`). Prochaine = **043**.
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
@@ -784,8 +803,8 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13), 3 maillons sur 5 livrés.
-> PROCHAIN PAS = LOT 3, MAILLON 4.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13) : maillons 1, 2, 3 et 4bis
+> livrés. PROCHAIN PAS = LOT 3, MAILLON 4, désormais DÉBLOQUÉ (4bis clos le 2026-09-17).** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
 > #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,
@@ -797,7 +816,11 @@ justes, c'est le *fait énoncé* qui était faux.
 > ✅ **maillon 3 = suppression** de `MVDD_SPEC` / `SYNTHESIS_TARGETS` / `DECLARED_NONBLOCKING_GAPS`
 > (commit `203fe65`, 15 fichiers, `nonblocking_gaps_for()` → `{}`, `read_dispenses()` branché).
 > **Reste au lot 3** : maillon 4 = collecte neuve pilotée par le plan sur NVDA/MSFT/RVMD (§5.3) ;
-> maillon 5 = réconciliation à 0/0. Prochaine migration : **041**.
+> maillon 5 = réconciliation à 0/0. Prochaine migration : **043**.
+> ✅ **maillon 4bis = l'appariement, CLOS le 2026-09-17** : garde + apparieur (l'inventaire réel
+> remplace `POSTES` comme frontière) + migration **042** + câblage sur le chemin réel de
+> `executer_plan_reel`. Conventions **#67 → #70**. Résidu nommé : #70 (pas de date de dépôt
+> courante côté exécuteur → fuite de coût vers le web payant, jamais un faux nombre).
 > ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ (2026-09-12)** : `check_entry_nature §7` re-mesuré en **invariant #51**
 > (metric structuré ⟹ `mesure`, garde de non-vacuité, tous tickers) au lieu du décompte `== 13`, qui
 > était une **cible-corpus interdite par §0.6**. Les 30 faits web du maillon 4 (`edgar_official`/
@@ -807,10 +830,11 @@ justes, c'est le *fait énoncé* qui était faux.
 > ⚠️ Sur ce chantier la ligne de base a **déjà changé le lot plusieurs fois** — elle se **requête**,
 > elle ne se souvient pas ; et depuis §0.6 elle n'est **jamais une cible**. ⚠️ Mesureurs versionnés,
 > jamais `/tmp` ; bilan reconnaissable à sa **forme** ; **jamais exécutés dans `portfolio-backend`**.
-> État : suite **TOUT VERT** (`run_all.sh` = **2172 assertions, 0 échec** — −66 vs 2238 : sections
+> État au 2026-09-12 (dépassé — l'état courant est en tête de fichier) : suite **TOUT VERT**
+> (`run_all.sh` = **2172 assertions, 0 échec** — −66 vs 2238 : sections
 > testant les 3 constantes supprimées au maillon 3 retirées comme prévu) ; `check_edgar_feed` 98/0
 > hors ligne ; `check_entry_nature` 88/0 ; `check_analyste` 81/0 ; `check_framework_persist` 13/0 ;
-> migrations appliquées jusqu'à **040** (maillon 3 = code seul, aucune migration).
+> migrations appliquées jusqu'à **040** à cette date (**042** depuis le 4bis).
 > ⚠️ **Ajouter `framework_version` au contrat (maillon 2) a rougi deux checks qui n'avaient pas
 > tourné depuis son ajout** (`check_framework_contract` §9 — pixel manquant dans la maquette ;
 > `check_frameworks_definitions` §4 — le pont lit une clef que `CLEFS_PROFIL_LUES` ne déclarait

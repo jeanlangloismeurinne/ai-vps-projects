@@ -73,6 +73,44 @@ mutations=(
 # ── La règle de tier : un seul discriminant ──────────────────────────────────
 "$TIERS¦    if not deterministe:¦    if True:¦tier du plus faible, SANS cran"
 "$TIERS¦        key=lambda ts: (_TIER_RANK.get(ts[0], len(TIER_ORDER)), -ts[1]))¦        key=lambda ts: (_TIER_RANK.get(ts[0], len(TIER_ORDER)),))¦ne dépend pas de l'ORDRE"
+# ── §10 L'inventaire comme OUTIL DE LECTURE : le rendu est un producteur ──────
+# Ces mutations gardent un PRODUCTEUR, pas une règle : ce que le rendu omet, le modèle le lit comme
+# une propriété de l'émetteur. Que ce ne soit pas théorique est MESURÉ — le rendu « un point par
+# concept » a fait écrire six `indisponible` motivés par « pas de série de plusieurs exercices » sur
+# MSFT, sur des concepts dont `companyfacts` porte la série entière. Chaque mutation ci-dessous
+# refabrique une omission de cette famille et exige qu'un assert la NOMME.
+"$PONT¦    for concept in sorted(facts):¦    for concept in sorted(facts)[1:]:¦égalité d'ensembles"
+"$PONT¦    for concept in sorted(facts):¦    for concept in list(facts):¦tri ALPHABÉTIQUE"
+"$PONT¦        dates = {str(p.get(\"end\")) for p in utiles}¦        dates = [str(p.get(\"end\")) for p in utiles]¦compte les DATES DISTINCTES"
+"$PONT¦            nb_exercices=len({str(p.get(\"end\")) for p in utiles if is_annual_flow(p)}),¦            nb_exercices=len([str(p.get(\"end\")) for p in utiles if is_annual_flow(p)]),¦exercices ANNUELS distincts"
+# #46 sur le rendu : la borne « ce point couvre-t-il un exercice ? » RECOPIÉE au lieu d'être appelée.
+# La mutation est volontairement JUSTE sur la fixture (350-370 englobe 365) : elle ne fausse aucune
+# valeur, elle ne crée qu'un second détenteur — c'est-à-dire la faute qui ne se voit pas avant le
+# correctif suivant. Seul un assert d'ÉNONCÉ peut la voir.
+"$PONT¦for p in utiles if is_annual_flow(p)}),¦for p in utiles if 350 <= (duree_jours(p) or 0) <= 370}),¦est APPELÉE — un seul détenteur"
+"$PONT¦            premier_end=min(dates),¦            premier_end=max(dates),¦bornée par ses deux extrémités"
+# LA MUTATION CENTRALE — elle reproduit à l'identique le défaut mesuré sur MSFT : la profondeur
+# CALCULÉE mais pas imprimée. Elle doit rougir sur un assert qui lit le TEXTE, pas le résumé (#54).
+"$PONT¦        profondeur = (f\"  · {l.nb_dates} dates depuis {l.premier_end}\" if l.nb_dates > 1¦        profondeur = (\"\" if l.nb_dates > 1¦porte la profondeur de la série"
+"$PONT¦                      else \"  · 1 seule date\")¦                      else \"\")¦profondeur de 1 est imprimée EXPLICITEMENT"
+"$PONT¦            cadre += f\"+A×{l.nb_exercices}\"¦            cadre += \"+A\"¦le NOMBRE d'exercices annuels"
+"$PONT¦        if l.nb_exercices:¦        if l.nb_exercices > 1:¦annonce quand même son annuel"
+"$PONT¦            out.append(f\"  {l.concept:<58} aucun point exploitable ({l.nb_points} point(s) déposé(s))\")¦            pass¦sans point chiffré reste NOMMÉ"
+"$PONT¦{cadre:<18} {l.dernier_end}  \"¦{cadre:<18}  \"¦n'est pas gardé, il est LISIBLE"
+"$PONT¦            if d <= limite:¦            if True:¦période ENTIÈREMENT future est écartée"
+"$PONT¦            f = p.get(\"filed\")¦            f = p.get(\"end\")¦, JAMAIS max "
+# `raise` → `return` d'une date FABRIQUÉE, et non suppression du `if` : une carte indatable qui
+# reçoit `1970-01-01` se relit « très vieille » au lieu d'« indatable », donc se revérifie pour
+# toujours sans jamais alerter. Le vert qui masque la perte, pas un plantage.
+"$PONT¦        raise AppariementSansObjet(¦        return \"1970-01-01\" or (¦doit lever, pas rendre une date fabriquée"
+"$PONT¦    return {m.lower() for m in re.findall(r\"[A-Z][a-z0-9]*|[a-z0-9]+\", concept)}¦    return {concept.lower()}¦découpe le CamelCase en mots"
+"$PONT¦    return [c for _, c in sorted(scores)[:limite]]¦    return [c for _, c in sorted(scores)[:limite]] + list(inventaire)¦partageant un mot avec l'absent"
+"$PONT¦    return sorted({c for it in carte.items for c in it.concepts if c not in depose})¦    return []¦nomme ce que [V] a refusé"
+# Deux phrases de légende sur quatre : celle qui DÉCLARE la colonne neuve, et celle qui énonce la
+# règle de péremption — la seule des deux qu'aucun code ne garde, donc celle dont la disparition
+# serait la plus silencieuse.
+"$PONT¦\"PROFONDEUR de la série.¦\"profondeur de la serie.¦(« PROFONDEUR…"
+"$PONT¦n'est PLUS ALIMENTÉ¦n'est plus alimenté¦(« PLUS ALIMENTÉ…"
 )
 
 source "$(dirname "$0")/_negatif.sh"

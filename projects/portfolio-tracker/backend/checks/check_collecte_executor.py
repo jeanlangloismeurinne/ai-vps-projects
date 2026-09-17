@@ -74,6 +74,9 @@ check("'10-K' + poste `operating_cash_flow` sur « free cash flow » → web "
       router_source(_ligne("free cash flow", "10-K", "operating_cash_flow")) == "web")
 check("'10-K' + poste INVENTÉ (`ebitda`, hors catalogue) → web, jamais une levée (#60)",
       router_source(_ligne("EBITDA ajusté", "10-K", "ebitda")) == "web")
+check("'10-K' + poste INVENTÉ non-dérivé (`gross_revenue_net`, hors catalogue) → web — "
+      "le filtre catalogue est distinct du véto dérivée (#60)",
+      router_source(_ligne("chiffre d'affaires net", "10-K", "gross_revenue_net")) == "web")
 check("'10-K (Income Statement)' + poste `net_income` sur « Net income (GAAP) » → edgar",
       router_source(_ligne("Net income (GAAP)", "10-K (Income Statement)", "net_income")) == "edgar")
 
@@ -268,6 +271,176 @@ except Exception as e:
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           False, f"→ a PROPAGÉ {type(e).__name__} au lieu de rendre un echec")
 
+
+# ── §7 router_source lit la carte d'appariement (câblage lot 3 maillon 4bis étape 2c) ──────────────
+# La carte REMPLACE `poste_retenu()` comme décideur EDGAR/web. Sans carte, l'ancienne logique tient.
+# ⚠️ Le paramètre `carte_statut` n'est pas dans LigneAveugle (le collecteur reste AVEUGLE, #58) : il
+# est passé au moment de l'appel, par le niveau qui dispose de la carte, sans piercer l'enveloppe.
+def _l(metrique, source, poste=None):
+    """Raccourci local §7 — `_ligne` est une instance LigneAveugle depuis §5 et ne s'appelle plus."""
+    return LigneAveugle(ticker_id="NVDA", metrique=metrique, source_pressentie=source,
+                        ancre="clôture de l'exercice", poste=poste)
+
+
+print("\n[7] router_source lit la carte d'appariement (câblage maillon 4bis — §2c)")
+check("carte `exact` + source réglementaire SEC → edgar (la carte court-circuite poste_retenu)",
+      router_source(_l("résultat net", "10-K (Income Statement)"), carte_statut="exact") == "edgar")
+check("carte `approximation` + source réglementaire SEC → edgar (formule connue, EDGAR a les termes)",
+      router_source(_l("capital employé", "10-K"), carte_statut="approximation") == "edgar")
+check("carte `indisponible` + source SEC + poste valide → web (l'inventaire n'a pas le concept)",
+      router_source(_l("coûts fixes décaissables", "10-K", "revenue"),
+                    carte_statut="indisponible") == "web")
+check("carte `exact` + source NON-SEC → web (la source ne nomme pas un dépôt réglementaire)",
+      router_source(_l("résultat net", "communiqué de presse"), carte_statut="exact") == "web")
+check("sans carte (repli) : logique antérieure préservée — poste valide + SEC → edgar",
+      router_source(_l("résultat net", "10-K", "net_income"), carte_statut=None) == "edgar")
+check("sans carte (repli) : logique antérieure préservée — pas de poste → web",
+      router_source(_l("résultat net", "10-K"), carte_statut=None) == "web")
+
+
+# ── §8 le CHEMIN D'EXÉCUTION RÉEL consulte la carte — pas seulement `router_source` en isolation ─────
+# C'est L'ASSERT QUI DISTINGUE LE CÂBLAGE DE L'AFFICHAGE (convention #54 / demande du lot 2c).
+# §7 ci-dessus prouve que `router_source` PEUT lire `carte_statut` si on le lui passe.
+# §8 prouve que `collecter_un` — la fonction qui contient les appels `router_source` dans le chemin de
+# production (lignes 317 et 359 de `collecte_executor.py`) — LE PASSE RÉELLEMENT à partir de son
+# propre paramètre `carte_statut`, et que ce paramètre change l'issue observable.
+#
+# CAS DISCRIMINANT : une ligne avec source SEC + poste VALIDE (`net_income` / `10-K`).
+#   · sans carte (repli) → `poste_retenu` renvoie `net_income` → chemin EDGAR → `socle.entry_id` appelé
+#   · avec `carte_statut="indisponible"` → `router_source` retourne "web" → `run_search_worker` appelé
+# Si le câblage manque, les deux cas prennent le même chemin — et l'assert « web avec indisponible »
+# rougit, parce que `socle.entry_id` est appelé à la place de `run_search_worker`.
+#
+# MUTATION ATTENDUE : retirer le passage de `carte_statut` à `router_source` dans `collecter_un`
+# (remplacer `router_source(ligne, carte_statut=carte_statut)` par `router_source(ligne)`) → l'assert
+# « indisponible → web (run_search_worker) » rougit car `socle.entry_id` est appelé à la place.
+print("\n[8] le chemin d'exécution réel (`collecter_un`) consulte la carte — pas seulement router_source")
+
+_edgar_calls = []
+_web_calls = []
+
+
+class _MockSocle:
+    """Enregistre les appels EDGAR (sans réseau)."""
+    async def entry_id(self, ticker_id, poste_metric):
+        _edgar_calls.append((ticker_id, poste_metric))
+        return _mod.ResultatCollecte(echec="mock edgar — pas de réseau dans le check")
+
+
+async def _mock_web(req):
+    """Enregistre les appels web (sans réseau)."""
+    _web_calls.append(req.ticker_id)
+    from app.contracts.worker_delegation_schema import WorkerExchange, WorkerResponse
+    # On retourne une réponse "not_found" pour que le check reste un echec propre — pas de persistence.
+    return WorkerExchange(
+        request=req,
+        response=WorkerResponse(status="not_found", entries=[]),
+    )
+
+
+# Ligne EDGAR par `poste_retenu` (SEC source + poste `net_income` valide non dérivé)
+_ligne_edgar = LigneAveugle(
+    ticker_id="NVDA", metrique="Net income (GAAP)",
+    source_pressentie="10-K (Income Statement)",
+    ancre="clôture de l'exercice", poste="net_income",
+)
+
+# ── cas 1 : sans carte → chemin EDGAR (poste_retenu décide) ──────────────────────────────────────────
+_edgar_calls.clear(); _web_calls.clear()
+_mod.run_search_worker = _mock_web
+try:
+    asyncio.run(_mod.collecter_un(_ligne_edgar, conn=None, socle=_MockSocle(), carte_statut=None))
+except Exception:
+    pass  # le mock edgar retourne un echec propre — la levée éventuelle ne nous intéresse pas
+check("§8 sans carte : une ligne SEC+poste valide prend le chemin EDGAR (socle.entry_id appelé)",
+      len(_edgar_calls) == 1 and _edgar_calls[0][1] == "net_income",
+      f"→ edgar_calls={_edgar_calls}, web_calls={_web_calls}")
+
+# ── cas 2 : carte `indisponible` → chemin WEB (carte décide, poste_retenu court-circuité) ────────────
+_edgar_calls.clear(); _web_calls.clear()
+try:
+    asyncio.run(_mod.collecter_un(
+        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="indisponible"))
+except Exception:
+    pass
+check("§8 carte `indisponible` : la même ligne prend le chemin WEB (run_search_worker appelé)",
+      len(_web_calls) == 1 and len(_edgar_calls) == 0,
+      f"→ edgar_calls={_edgar_calls}, web_calls={_web_calls}")
+
+# ── cas 3 : carte `exact` → chemin EDGAR (carte dit que le concept est déposé) ──────────────────────
+_edgar_calls.clear(); _web_calls.clear()
+try:
+    asyncio.run(_mod.collecter_un(
+        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="exact"))
+except Exception:
+    pass
+check("§8 carte `exact` : la même ligne prend le chemin EDGAR (la carte confirme le concept)",
+      len(_edgar_calls) == 1 and len(_edgar_calls) > 0,
+      f"→ edgar_calls={_edgar_calls}, web_calls={_web_calls}")
+
+# ── cas 4 : sans carte mais poste None (dérivée) → chemin WEB comme avant (repli inchangé) ──────────
+_ligne_derivee = LigneAveugle(
+    ticker_id="NVDA", metrique="free cash flow",
+    source_pressentie="10-K", ancre="clôture de l'exercice", poste="operating_cash_flow",
+)
+_edgar_calls.clear(); _web_calls.clear()
+try:
+    asyncio.run(_mod.collecter_un(_ligne_derivee, conn=None, socle=_MockSocle(), carte_statut=None))
+except Exception:
+    pass
+check("§8 repli (sans carte, poste dérivée) : chemin WEB préservé — le repli est inchangé",
+      len(_web_calls) == 1 and len(_edgar_calls) == 0,
+      f"→ edgar_calls={_edgar_calls}, web_calls={_web_calls}")
+
+# ── invariant de non-régression : §7 reste intact au niveau `router_source` ──────────────────────────
+check("§8 invariant §7 intact : carte `indisponible`+SEC → web ; `exact`+SEC → edgar ; repli tient",
+      all([
+          router_source(_l("résultat net", "10-K (Income Statement)"),
+                        carte_statut="indisponible") == "web",
+          router_source(_l("résultat net", "10-K (Income Statement)"),
+                        carte_statut="exact") == "edgar",
+          router_source(_l("résultat net", "10-K"), carte_statut=None) == "web",  # repli sans poste
+      ]))
+
+
+# ── §9 LA RÉFÉRENCE DE REVÉRIFICATION NE VIENT JAMAIS DE LA CARTE ELLE-MÊME ─────────────────────
+# `lire_carte` tranche l'âge de la carte en comparant son `dernier_depot_vu` à un `depot_courant`
+# que l'APPELANT fournit (#54). La première version du câblage puisait ce `depot_courant` dans la
+# table de la carte : la comparaison devenait `X < X`, donc toujours fausse, et la branche
+# « périmée » journalisait `depot_vu=X < depot_courant=X` — un log qui ne peut jamais être vrai. La
+# garde n'était pas absente, elle était NOURRIE DE SA PROPRE VALEUR, et c'est la seule des deux
+# formes qui ne se voit pas à la lecture (`feedback_controle_au_point_de_lecture`).
+#
+# Cet assert est structurel, lu sur l'AST et non sur le texte : la prose de ce fichier et celle de
+# l'exécuteur PARLENT toutes deux de `dernier_depot_vu` pour expliquer l'interdit, et un grep brut
+# rougirait sur sa propre énonciation (`feedback_grep_interdit_lit_sa_propre_enonciation`).
+print("\n[9] la référence de revérification ne peut pas venir de la carte elle-même")
+import ast  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+_ARBRE = ast.parse(Path(_mod.__file__).read_text(encoding="utf-8"))
+
+_appels_lire = [n for n in ast.walk(_ARBRE)
+                if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "lire_carte"]
+check("§9 l'exécuteur appelle `lire_carte` — le câblage existe dans le code de production, pas "
+      "seulement dans son test",
+      len(_appels_lire) == 1, f"→ {len(_appels_lire)} appel(s)")
+_kw = {k.arg: k.value for a in _appels_lire for k in a.keywords}
+check("§9 `depot_courant` est la SENTINELLE nommée, jamais une date lue en base : l'exécuteur avoue "
+      "dans son code qu'il n'a pas de dépôt courant à opposer",
+      isinstance(_kw.get("depot_courant"), ast.Name)
+      and _kw["depot_courant"].id == "_SANS_REVERIFICATION",
+      f"→ {ast.dump(_kw['depot_courant'])[:90] if 'depot_courant' in _kw else 'absent'}")
+_sql = [n.value for n in ast.walk(_ARBRE)
+        if isinstance(n, ast.Constant) and isinstance(n.value, str)
+        and "SELECT" in n.value and "appariement_cartes" in n.value]
+check("§9 l'exécuteur n'émet AUCUN `SELECT` sur `appariement_cartes` : il ne peut donc pas y "
+      "repuiser la date qu'il oppose à la carte — la boucle est coupée à la source, pas gardée",
+      _sql == [], f"→ {len(_sql)} requête(s)")
+check("§9 la sentinelle est plus petite que toute date ISO : la comparaison `<` est fausse par "
+      "CONSTRUCTION, elle ne dépend pas d'un `if` qu'un correctif pourrait retourner",
+      _mod._SANS_REVERIFICATION < "0001-01-01",
+      f"→ {_mod._SANS_REVERIFICATION!r}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

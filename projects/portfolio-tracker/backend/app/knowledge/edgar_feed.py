@@ -53,7 +53,7 @@ import httpx
 from app.config import settings
 from app.db.database import get_db_session
 from app.knowledge.edgar_facts import (
-    EdgarUnavailable, _UA, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
+    EdgarUnavailable, _UA, duree_jours, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
 )
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
@@ -280,12 +280,8 @@ _TOUS_POSTES = frozenset(p.metric for p in POSTES)
 def is_annual_flow(point: dict[str, Any]) -> bool:
     """Un point de flux couvre-t-il bien un exercice ? Un `fp=FY` déposé en 10-K peut porter un
     trimestre ; le retenir comme flux annuel diviserait le CA par ~4 **sans erreur visible**."""
-    start, end = point.get("start"), point.get("end")
-    if not start or not end:
-        return False
-    try:
-        days = (date.fromisoformat(end) - date.fromisoformat(start)).days
-    except (TypeError, ValueError):
+    days = duree_jours(point)  # détenteur unique du calcul (#46) — cf. `edgar_facts.duree_jours`
+    if days is None:
         return False
     return _ANNUAL_MIN_DAYS <= days <= _ANNUAL_MAX_DAYS
 
