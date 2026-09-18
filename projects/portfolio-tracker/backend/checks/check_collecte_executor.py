@@ -328,13 +328,23 @@ class _MockSocle:
 
 
 async def _mock_web(req):
-    """Enregistre les appels web (sans réseau)."""
+    """Enregistre les appels web (sans réseau), et rend un `WorkerExchange` VALIDE.
+
+    ⚠️ Il ne l'était pas jusqu'au 2026-09-18 : `WorkerResponse` était construite sans `request_hash`,
+    `worker` ni `execution`, donc ce mock LEVAIT une `ValidationError` à chaque appel. Les cas de §8
+    l'avalaient dans un `except Exception: pass` et restaient verts — un mock qui échoue à répondre
+    mesurait le chemin web. Le défaut ne s'est vu que par le test négatif : la mutation §6 (la porte
+    d'erreur générique restreinte) a cessé de rougir et a tué le script à la place
+    (`feedback_fixture_copiee_du_reel` — une fixture qui ne tient pas la forme du réel est aveugle)."""
     _web_calls.append(req.ticker_id)
-    from app.contracts.worker_delegation_schema import WorkerExchange, WorkerResponse
-    # On retourne une réponse "not_found" pour que le check reste un echec propre — pas de persistence.
+    from app.contracts.worker_delegation_schema import (
+        ExecutionDeclaration, WorkerExchange, WorkerResponse)
+    # `not_found` : le chemin web est bien emprunté, mais rien n'est persisté par le check.
     return WorkerExchange(
         request=req,
-        response=WorkerResponse(status="not_found", entries=[]),
+        response=WorkerResponse(
+            request_hash="mock", worker=req.worker, status="not_found", entries=[],
+            execution=ExecutionDeclaration(model_used="mock")),
     )
 
 
@@ -484,6 +494,31 @@ for _nom in sorted({n for n in _noms_depot if n != "_SANS_REVERIFICATION"}):
           f"→ {len(_rhs)} affectation(s) : "
           f"{[type(r).__name__ + ':' + str(getattr(getattr(r, 'func', None), 'id', '?')) for r in _rhs]}")
 
+# LE MÊME INTERDIT, UN CRAN PLUS BAS : D'OÙ VIENT LE SYMBOLE OPPOSÉ À EDGAR.
+# `plan.ticker_id` est un identifiant INTERNE — `PUB-XXXXXXXX` pour un titre coté ajouté sans
+# symbole, `PRIV-…` pour une société non cotée. Il n'a coïncidé avec le symbole de marché que tant
+# qu'on n'exerçait que RVMD/NVDA/MSFT, où les deux se ressemblent. Un assert de COMPORTEMENT ne peut
+# pas tenir cet interdit : il resterait vert sur tout ticker où l'id EST le symbole, c'est-à-dire
+# exactement sur les tickers qu'on teste (#71 — l'interdit juste adossé au mauvais invariant).
+_appels_cik = _appels("resolve_cik")
+_args_cik = [(_a.args[0] if _a.args else
+              {k.arg: k.value for k in _a.keywords}.get("ticker")) for _a in _appels_cik]
+check("§9 l'exécuteur résout le CIK, et il passe son argument par un NOM — une expression inline "
+      "(`plan.ticker_id`) rendrait la provenance du symbole ingardable à l'AST",
+      len(_appels_cik) >= 1 and all(isinstance(v, ast.Name) for v in _args_cik),
+      f"→ {len(_appels_cik)} appel(s) : {[type(v).__name__ for v in _args_cik]}")
+for _nom in sorted({v.id for v in _args_cik if isinstance(v, ast.Name)}):
+    _rhs = [n.value for n in ast.walk(_ARBRE) if isinstance(n, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == _nom for t in n.targets)]
+    _prod = [r.value if isinstance(r, ast.Await) else r for r in _rhs]
+    check(f"§9 `{_nom}` est PRODUIT par `symbole_de_marche(...)`, et par rien d'autre : le symbole "
+          "de marché se LIT dans `tickers.ticker_symbol` (#11), il ne se devine pas depuis l'id",
+          len(_prod) >= 1 and all(isinstance(r, ast.Call)
+                                  and getattr(r.func, "id", None) == "symbole_de_marche"
+                                  for r in _prod),
+          f"→ {len(_prod)} affectation(s) : "
+          f"{[getattr(getattr(r, 'func', None), 'id', type(r).__name__) for r in _prod]}")
+
 _sql = [n.value for n in ast.walk(_ARBRE)
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
         and "SELECT" in n.value and "appariement_cartes" in n.value]
@@ -516,7 +551,14 @@ check("§9 la sentinelle est plus petite que toute date ISO : la comparaison `<`
 print("\n[10] les quatre états de la carte, observés sur `assurer_carte` (sans réseau ni modèle)")
 from app.contracts.appariement_schema import AppariementCarte, AppariementItem  # noqa: E402
 
-_journal = {"apparier": 0, "persiste": 0, "depots_opposes": []}
+_journal = {"apparier": 0, "persiste": 0, "depots_opposes": [],
+            "symbole_pour": [], "cik_pour": []}
+
+# L'ID DU PLAN N'EST PAS SON SYMBOLE, et c'est délibéré : sur « NVDA »/« NVDA » les deux asserts de
+# provenance ci-dessous seraient verts quoi que fasse le code (`feedback_fixture_copiee_du_reel` —
+# une fixture plus favorable que la prod est un check aveugle).
+_TICKER_ID = "PUB-4F2A9C10"
+_SYMBOLE = "NVDA"
 
 # Un inventaire minimal mais de la MÊME FORME que le réel : `fetch_company_facts` rend
 # {concept → [points]} et chaque point porte `filed` (copié de la forme EDGAR, pas inventé plus
@@ -528,13 +570,14 @@ _DEPOT_REEL = "2026-06-30"   # le max(filed) de _FACTS — et non le max(end), q
 
 def _carte_stockee(depot):
     return AppariementCarte(
-        ticker_id="NVDA", framework_id="qualite_financiere", framework_version="v3.0.0",
+        ticker_id=_TICKER_ID, framework_id="qualite_financiere", framework_version="v3.0.0",
         dernier_depot_vu=depot,
         items=[AppariementItem(question_id="qf_1", ingredient_id="resultat_net",
                                statut="exact", concepts=["NetIncomeLoss"])])
 
 
 async def _fake_cik(ticker):
+    _journal["cik_pour"].append(ticker)
     return "0001045810"
 
 
@@ -542,10 +585,26 @@ async def _fake_facts(cik):
     return _FACTS
 
 
-def _installer(*, facts_ok=True, en_base=None):
-    """Substitue les frontières externes. `en_base` = la carte stockée (ou None)."""
+def _installer(*, facts_ok=True, en_base=None, symbole_ok=True):
+    """Substitue les CINQ frontières externes. `en_base` = la carte stockée (ou None).
+
+    ⚠️ `symbole_de_marche` est la cinquième, arrivée avec le maillon 4 : elle touche la BASE (elle
+    lit `tickers`), donc elle passe la frontière au même titre que le réseau. L'oublier n'a pas rendu
+    un assert faux — le script est mort sur un `AttributeError` avant d'atteindre son bilan, ce qui
+    se lit comme une absence de mesure et non comme un vert (`feedback_bilan_par_sa_forme`)."""
     _journal["apparier"] = _journal["persiste"] = 0
     _journal["depots_opposes"] = []
+    _journal["symbole_pour"] = []
+    _journal["cik_pour"] = []
+
+    async def _symbole(conn, ticker_id):
+        _journal["symbole_pour"].append(ticker_id)
+        if not symbole_ok:
+            raise _mod.EdgarFeedUnavailable(
+                f"{ticker_id} : pas de symbole de marché (privé/PUB-/PRIV-) — aucun dépôt EDGAR")
+        return _SYMBOLE
+    _mod.symbole_de_marche = _symbole
+
     _mod.resolve_cik = _fake_cik
     if facts_ok:
         _mod.fetch_company_facts = _fake_facts
@@ -581,7 +640,7 @@ class _RunFactice:
 
 import app.agents.v2.apparieur as _mod_apparieur  # noqa: E402
 
-_plan_carte = CollectionPlan(ticker_id="NVDA", framework_id="qualite_financiere",
+_plan_carte = CollectionPlan(ticker_id=_TICKER_ID, framework_id="qualite_financiere",
                              framework_version="v3.0.0", archetype="rentable",
                              items=[_it_rev, _it_ni])
 
@@ -599,6 +658,18 @@ check("§10 la date opposée à la carte est le `max(filed)` de l'inventaire (20
       f"→ {_journal['depots_opposes']}, depot_courant={_c1.depot_courant}")
 check("§10 la carte fraîche fournit bien les statuts au routage (couple question×ingrédient)",
       _c1.statuts == {("qf_1", "resultat_net"): "exact"}, f"→ {_c1.statuts}")
+# §9 lit que le symbole VIENT de `symbole_de_marche` ; ici on lit ce qui ARRIVE à EDGAR. Les deux
+# ensemble ferment le trou : le CIK était résolu depuis `plan.ticker_id`, ce qui ne marchait que
+# tant que l'id était le symbole — silencieux sur tout titre `PUB-…`.
+check("§10 `symbole_de_marche` est interrogé avec l'ID DU PLAN, et c'est le SYMBOLE qu'il rend qui "
+      "part chez EDGAR : l'id interne n'atteint jamais la SEC (#11)",
+      _journal["symbole_pour"] == [_TICKER_ID] and _journal["cik_pour"] == [_SYMBOLE],
+      f"→ symbole_de_marche({_journal['symbole_pour']}), resolve_cik({_journal['cik_pour']})")
+check("§10 l'inventaire remonté porte le symbole et le CIK résolus — l'exécution d'un appariement "
+      "écrit sa provenance (`sec.gov/…/CIK…`) sans re-résoudre quoi que ce soit",
+      _c1.inventaire is not None and _c1.inventaire.symbole == _SYMBOLE
+      and _c1.inventaire.facts == _FACTS,
+      f"→ {None if _c1.inventaire is None else (_c1.inventaire.symbole, _c1.inventaire.cik)}")
 
 # ── cas 2 : carte PÉRIMÉE → RECONSTRUCTION (pas un repli dégradé) ─────────────────────────────────
 _installer(en_base=_carte_stockee("2026-02-26"))   # antérieure au dépôt courant
@@ -633,6 +704,22 @@ check("§10 dans cet état, `depot_courant` est None et la sentinelle est ce qui
       _c4.depot_courant is None
       and _journal["depots_opposes"] == [_mod._SANS_REVERIFICATION],
       f"→ depot_courant={_c4.depot_courant}, opposés={_journal['depots_opposes']}")
+
+# ── cas 4bis : société SANS symbole de marché → même repli nommé, et zéro appel réseau ────────────
+# L'absence de symbole n'est pas une panne, c'est une propriété de l'émetteur (`PRIV-…`, ou un titre
+# coté ajouté sans symbole). Elle doit se comporter comme une frontière indisponible — pas remonter
+# en exception qui tue le lot, pas non plus partir interroger la SEC avec un id interne.
+_installer(en_base=_carte_stockee("2026-02-26"), symbole_ok=False)
+_c4b = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 société sans symbole de marché → `non_reverifiable` sur le stock, et `resolve_cik` n'est "
+      "JAMAIS appelé : on n'interroge pas EDGAR avec un identifiant interne",
+      _c4b.etat == "non_reverifiable" and _c4b.statuts is not None
+      and _journal["cik_pour"] == [] and _journal["apparier"] == 0,
+      f"→ etat={_c4b.etat}, resolve_cik={_journal['cik_pour']}, apparier={_journal['apparier']}")
+check("§10 sans symbole, aucun inventaire n'est remonté : `consignes` et `inventaire` restent None, "
+      "donc l'aval ne peut pas croire qu'il a de quoi exécuter un appariement",
+      _c4b.inventaire is None and _c4b.consignes is None,
+      f"→ inventaire={_c4b.inventaire}, consignes={_c4b.consignes}")
 
 # ── cas 5 : ni inventaire ni carte → repli NOMMÉ vers `poste_retenu()` ────────────────────────────
 _installer(facts_ok=False, en_base=None)
@@ -690,6 +777,187 @@ check("§10 `executer_plan_reel` expose le paramètre `carte` — un appelant qu
       "(ou qui n'en veut aucune) ne repaie pas la production",
       "carte" in __import__("inspect").signature(_mod.executer_plan_reel).parameters,
       f"→ {list(__import__('inspect').signature(_mod.executer_plan_reel).parameters)}")
+
+
+# ── §11 UNE CONSIGNE D'APPARIEMENT S'EXÉCUTE, ET ELLE RESTE AVEUGLE À LA QUESTION ─────────────────
+# CE QUE CE MAILLON DÉBLOQUE, ET CE QUI LE MESURE. La carte disait déjà « edgar » pour 9 lignes de
+# RVMD ; l'exécuteur, lui, n'avait AUCUN moyen d'exécuter autre chose qu'une RECETTE du catalogue —
+# donc ces 9 lignes repartaient au web. C'est la moitié manquante : la carte routait, personne ne
+# collectait. Le chiffre à suivre est « lignes COLLECTÉES depuis le dépôt », jamais « lignes ROUTÉES
+# vers EDGAR » (#71) — et il se mesure à l'acceptation, pas ici. Ici on garde la MÉCANIQUE.
+#
+# ⚠️ LA DISTRIBUTION RÉELLE INTERDIT DE N'EXÉCUTER QUE LES `exact` : sur RVMD la carte porte
+# 10 `approximation` · 3 `indisponible` · 0 `exact`. Chez une biotech pré-revenus, TOUTE ligne ancrée
+# passe par une formule. Un chemin qui ne saurait exécuter que le concept nu ne débloquerait rien.
+print("\n[11] une consigne d'appariement s'exécute (et l'ordre recette-puis-consigne est tenu)")
+
+_carte_mixte = AppariementCarte(
+    ticker_id=_TICKER_ID, framework_id="qualite_financiere", framework_version="v3.0.0",
+    dernier_depot_vu=_DEPOT_REEL,
+    items=[
+        AppariementItem(question_id="qf_1", ingredient_id="resultat_net",
+                        statut="exact", concepts=["NetIncomeLoss"]),
+        AppariementItem(question_id="qf_2", ingredient_id="tresorerie_par_action",
+                        statut="approximation",
+                        concepts=["CashAndCashEquivalentsAtCarryingValue", "Shares"],
+                        formule="CashAndCashEquivalentsAtCarryingValue / Shares",
+                        hypotheses=["les actions dilutives ne sont pas retirées"],
+                        deterministe=True),
+        AppariementItem(question_id="qf_3", ingredient_id="part_de_marche",
+                        statut="indisponible",
+                        motif="aucun concept XBRL ne porte une part de marché"),
+    ])
+_cons = _mod._consignes(_carte_mixte)
+
+check("§11 `exact` → l'expression EST le concept nu ; `approximation` → l'expression EST la formule. "
+      "Les deux s'exécutent par le même chemin, sans que l'aval ait à retrancher le statut",
+      _cons[("qf_1", "resultat_net")].expression == "NetIncomeLoss"
+      and _cons[("qf_2", "tresorerie_par_action")].expression
+      == "CashAndCashEquivalentsAtCarryingValue / Shares",
+      f"→ {[(k, v.expression) for k, v in _cons.items()]}")
+check("§11 `indisponible` ne produit AUCUNE consigne : le seul chemin qui lui reste est le web, et "
+      "c'est déjà ce que `router_source` décide (§7) — les deux ne peuvent pas diverger",
+      ("qf_3", "part_de_marche") not in _cons and len(_cons) == 2, f"→ {sorted(_cons)}")
+check("§11 l'approximation transporte ses HYPOTHÈSES et son caractère déterministe — sans eux le "
+      "tier ne peut pas se dériver, et un calcul non déterministe passerait pour un relevé (#67)",
+      _cons[("qf_2", "tresorerie_par_action")].hypotheses
+      == ("les actions dilutives ne sont pas retirées",)
+      and _cons[("qf_2", "tresorerie_par_action")].deterministe is True,
+      f"→ {_cons[('qf_2', 'tresorerie_par_action')]}")
+
+# L'AVEUGLEMENT EST UNE PROPRIÉTÉ DU TYPE, PAS UNE DISCIPLINE D'ÉCRITURE (#57/#58). Le couple
+# question×ingrédient est la CLEF du dictionnaire ; il n'entre dans aucune VALEUR. Un collecteur qui
+# reçoit la valeur nue ne peut donc pas écrire la question dans l'entry, même par inadvertance.
+_champs_consigne = set(_mod.ConsigneAppariement._fields)
+check("§11 `ConsigneAppariement` ne porte AUCUN champ de question : l'aveuglement du collecteur (#58) "
+      "tient à la forme du type, il ne dépend pas de la vigilance de l'appelant",
+      not (_champs_consigne & {"question_id", "ingredient_id", "question", "framework_id"}),
+      f"→ {sorted(_champs_consigne)}")
+_vocab = {"qf_1", "qf_2", "resultat_net", "tresorerie_par_action", "qualite_financiere"}
+_fuite = [(k, c, v) for k, v in _cons.items() for c in v
+          if isinstance(c, str) and any(j in c for j in _vocab)]
+check("§11 aucune VALEUR de consigne ne contient un fragment du vocabulaire de framework : le "
+      "couple reste une clef, il ne voyage pas avec la consigne",
+      _fuite == [], f"→ {_fuite}")
+
+# ── LE CHEMIN D'EXÉCUTION : trois issues, et l'ordre entre les deux premières ─────────────────────
+# `args` démarre à {} et non à None : un assert qui EXPLOSE au lieu de rougir tue le script avant son
+# bilan, et une absence de bilan se lit comme une absence de mesure, pas comme un échec nommé
+# (`feedback_bilan_par_sa_forme`). C'est exactement ce qu'a montré la mutation « consigne jamais
+# exécutée » : la garde suivante doit ROUGIR, pas mourir.
+_appar: dict = {"n": 0, "args": {}}
+
+
+class _ConnFactice:
+    """De quoi ouvrir une transaction, et rien de plus : ce que l'appariement ÉCRIT est éprouvé par
+    `check_appariement_feed` (la règle) et par l'acceptation réelle (l'état). Ici on mesure le
+    CÂBLAGE — qui appelle quoi, avec quels arguments."""
+    class _Tx:
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, *a):
+            return False
+
+    def transaction(self):
+        return self._Tx()
+
+
+async def _fake_executer(conn, *, ticker_id, symbole, cik, libelle, consigne, facts):
+    _appar["n"] += 1
+    _appar["args"] = dict(ticker_id=ticker_id, symbole=symbole, cik=cik, libelle=libelle,
+                          consigne=consigne, facts=facts)
+    return 9001
+
+
+_mod.executer_appariement = _fake_executer
+_inv = _mod.InventaireTicker(symbole=_SYMBOLE, cik=1045810, facts=_FACTS)
+_consigne_approx = _cons[("qf_2", "tresorerie_par_action")]
+
+# Une ligne SANS recette du catalogue : c'est le cas nominal d'une approximation. `poste` est None et
+# la métrique n'est pas un poste — seule la carte la route chez EDGAR.
+_ligne_sans_recette = LigneAveugle(
+    ticker_id=_TICKER_ID, metrique="trésorerie par action",
+    source_pressentie="10-Q (Balance Sheet)", ancre="clôture du trimestre", poste=None)
+
+check("§11 (préalable) cette ligne n'a AUCUNE recette du catalogue — sans quoi le cas ci-dessous "
+      "mesurerait le chemin 1 en croyant mesurer le chemin 2",
+      _mod.poste_retenu(_ligne_sans_recette.poste, _ligne_sans_recette.metrique) is None,
+      f"→ {_mod.poste_retenu(_ligne_sans_recette.poste, _ligne_sans_recette.metrique)}")
+
+# ── cas 1 : consigne + inventaire, pas de recette → L'APPARIEMENT S'EXÉCUTE ───────────────────────
+_appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
+_r1 = asyncio.run(_mod.collecter_un(
+    _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
+    consigne=_consigne_approx, inventaire=_inv))
+check("§11 consigne + inventaire, aucune recette → `executer_appariement` est appelé UNE fois et son "
+      "entry est rendue : la ligne est COLLECTÉE depuis le dépôt, elle ne repart plus au web",
+      _appar["n"] == 1 and _r1.entry_id == 9001 and _r1.echec is None and _web_calls == [],
+      f"→ n={_appar['n']}, resultat={_r1}, web={_web_calls}")
+check("§11 l'appariement reçoit le SYMBOLE et l'inventaire DÉJÀ LU (aucune seconde lecture EDGAR), "
+      "et le LIBELLÉ de la ligne — jamais le couple question×ingrédient (#58)",
+      _appar["args"].get("symbole") == _SYMBOLE and _appar["args"].get("facts") is _FACTS
+      and _appar["args"].get("libelle") == "trésorerie par action"
+      and _appar["args"].get("ticker_id") == _TICKER_ID,
+      f"→ {({k: v for k, v in _appar['args'].items() if k != 'facts'})}")
+
+# ── cas 2 : une RECETTE existe → elle passe DEVANT la consigne ────────────────────────────────────
+# Doubler les deux chemins écrirait deux entries actives pour le même fait (#43) ; et la recette
+# choisit son concept par FRAÎCHEUR parmi des candidats (#30), ce qu'une expression figée ne fait pas.
+_appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
+asyncio.run(_mod.collecter_un(
+    _ligne_edgar, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="exact",
+    consigne=_cons[("qf_1", "resultat_net")], inventaire=_inv))
+check("§11 quand une RECETTE du catalogue résout, elle passe devant la consigne : le socle est "
+      "appelé, l'appariement NON — un même fait n'a pas deux producteurs actifs (#30/#43)",
+      len(_edgar_calls) == 1 and _appar["n"] == 0,
+      f"→ edgar={_edgar_calls}, appariement={_appar['n']}")
+
+# ── cas 3 : consigne SANS inventaire → repli web, et il reste distinct d'une exécution ────────────
+_appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
+_mod.run_search_worker = _mock_web
+asyncio.run(_mod.collecter_un(
+    _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
+    consigne=_consigne_approx, inventaire=None))
+check("§11 consigne mais aucun inventaire (EDGAR injoignable) → repli WEB, et l'appariement n'est "
+      "pas tenté à vide : le repli reste un état distinct du câblage réussi",
+      _appar["n"] == 0 and len(_web_calls) == 1,
+      f"→ appariement={_appar['n']}, web={_web_calls}")
+
+# ── cas 4 : l'appariement REFUSE → echec MOTIVÉ, jamais un repli web muet ─────────────────────────
+# C'est le cœur du refus nommé (#25) : un web silencieux ferait lire « le dépôt ne porte pas ce
+# nombre » là où la cause est « l'ancre commune manque à ±20 jours ».
+_appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
+
+
+async def _executer_refuse(conn, **kw):
+    _appar["n"] += 1
+    raise _mod.AppariementInexecutable("aucune ancre commune à ±20 j (simulé)")
+
+
+_mod.executer_appariement = _executer_refuse
+_r4 = asyncio.run(_mod.collecter_un(
+    _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
+    consigne=_consigne_approx, inventaire=_inv))
+check("§11 appariement INEXÉCUTABLE → `echec` motivé qui NOMME la cause et l'expression, jamais une "
+      "exception qui tue le lot, jamais un nombre approché, jamais un repli web muet (#25)",
+      _r4.entry_id is None and _r4.echec is not None
+      and "ancre commune" in _r4.echec and _consigne_approx.expression in _r4.echec
+      and _web_calls == [],
+      f"→ {_r4}")
+
+
+# ── LE CÂBLAGE AMONT : la consigne ARRIVE jusqu'à `collecter_un` ──────────────────────────────────
+# Sans cet assert, tout §11 pourrait être vert alors qu'`executer_plan_reel` n'y passe jamais ni
+# `consigne` ni `inventaire` — une capacité parfaite et sans appelant, exactement l'état dans lequel
+# `apparier()` a vécu tout le maillon 4bis.
+_passes = [n for n in ast.walk(_ARBRE) if isinstance(n, ast.Call)
+           and getattr(n.func, "id", None) == "collecter_un"]
+_kw = [{k.arg for k in n.keywords} for n in _passes]
+check("§11 le code de production APPELLE `collecter_un` en lui passant `consigne` ET `inventaire` : "
+      "le chemin d'exécution est branché, pas seulement écrit à côté",
+      len(_passes) >= 1 and any({"consigne", "inventaire"} <= s for s in _kw),
+      f"→ {len(_passes)} appel(s), kwargs={_kw}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

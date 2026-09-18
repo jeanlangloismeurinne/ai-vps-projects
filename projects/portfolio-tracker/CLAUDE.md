@@ -1280,6 +1280,109 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     maillon 4, et c'est pourquoi ce nombre est imprimé et non gardé. Le compter comme « 9 lignes
     récupérées du web payant » serait exactement la faute que #71 vient de corriger.
 
+72. **Une formule d'appariement s'EXÉCUTE sur le dépôt DÉJÀ LU — et le chiffre à suivre est la ligne
+    COLLECTÉE, jamais la ligne ROUTÉE (V3, lot 3 maillon 4 — 2026-09-18,
+    `knowledge/appariement_feed.py` + `contracts/formule_grammaire.py`)** : #71 a fait décider la
+    carte (0 → 9 lignes routées EDGAR sur RVMD) et a mesuré que **0 de ces 9 n'était exécutable** —
+    `_SocleEdgar` ne sait collecter que les 33 **recettes** du catalogue `POSTES`, là où une
+    `approximation` est une **formule sur des concepts XBRL nus**. Les 9 repartaient au web par le
+    repli nommé. Le maillon 4 ferme cet écart : évaluer l'expression sur l'inventaire `companyfacts`
+    **déjà lu par `assurer_carte`** (aucun appel réseau de plus, la frontière gratuite est déjà
+    franchie — #63), écrire l'entry avec sa provenance concept par concept et son tier dérivé, et ne
+    laisser au web que les `indisponible` et les **échecs nommés**.
+    ⚠️ **L'énoncé du résultat est un piège en soi, et c'est la faute que #71 vient de corriger sous
+    une autre forme** : « 9 lignes routées vers EDGAR » n'est pas « 9 lignes collectées ». La mesure
+    est prise dans `knowledge_entries` **après** le run (`0 → 6` sur RVMD, 7 écritures dont 1
+    supersession, 2 refus nommés), jamais dans un compteur en mémoire ni dans un décompte de
+    dispatch. Un gain de décision annoncé comme un gain de collecte est un faux vert de récit.
+    ⚠️ **La consigne qui traverse la frontière est AVEUGLE par son TYPE** (#58) :
+    `ConsigneAppariement` porte l'expression, les concepts, les hypothèses et `deterministe` — et
+    **aucun champ ne peut porter une question** ; un assert exécute la construction et vérifie
+    qu'aucune VALEUR ne contient un fragment de vocabulaire de framework. La cécité est une
+    propriété du type, pas une discipline d'écriture.
+    ⚠️ **Quatre refus NOMMÉS, jamais un nombre fabriqué** (#25/#44/#54) : (1) l'apparieur a déclaré
+    un terme manquant (`termes_web`) → le calcul ne s'exécute pas amputé, sinon le résultat porterait
+    le tier A des termes **restants**, c'est-à-dire le meilleur des deux au lieu du pire ; (2) les
+    ancres ne sont pas communes (`TOLERANCE_ANCRE_J = 20`) — un solde de 2024 ne se soustrait pas à
+    un solde de 2026 ; (3) dimensions incohérentes (USD + shares) ; (4) ratio à dénominateur nul,
+    qui reste **inexistant** et ne devient jamais un zéro (#44 : « non calculable » ≠ « absent » ≠
+    « nul »). Chaque motif est rédigé pour finir dans un **mandat** : il nomme la cause ET
+    l'expression.
+    ⚠️ **Les deux derniers refus sont DÉLÉGUÉS à `formule_grammaire.py`, donc ils se testent CHEZ
+    LEUR DÉTENTEUR** (#46) : muter le producteur pour les éprouver ne dirait rien. `negatif_
+    appariement_feed.sh` désarme la grammaire elle-même (`_dimension` → `()`, `if d == 0` → `0.0`),
+    et l'écrit en tête de fichier. **Une garde déléguée s'éprouve là où la règle vit**, sinon le
+    test négatif mesure le câblage et croit mesurer la règle.
+    ⚠️ **Le cadrage décide de l'ancre, et un fait MIXTE prend la PLUS RÉCENTE des deux** (#42) :
+    `flux = ancre_bilan is None` (aucun poste de bilan → flux pur, identité `(metric, end)`) ; un
+    fait mixte est un `stock` daté de `max(dates)` et le DÉCLARE. Prendre `min` ferait **naître le
+    fait vieux** d'un exercice, et l'axe actualité — calculé à la lecture (#53) — travaillerait sur
+    une date fausse sans qu'aucun nombre ne soit faux.
+    ⚠️ **Un module qui QUALIFIE des calculs de déterministes doit l'être lui-même** : à récence et
+    profondeur égales, le choix du concept se départage **alphabétiquement**. Sans ce départage,
+    `max()` rend le premier rencontré, donc le fait dépend de l'ordre d'itération d'un dict — aucun
+    assert de valeur ne bouge, seul un test de reproductibilité le voit.
+    ⚠️ **Le `metric` du fait EST l'expression** (#43), donc une ré-exécution **supersède** au lieu de
+    doubler. Vérifié sur données réelles et non sur fixture : `LineOfCreditFacilityMaximumBorrowing
+    Capacity` est réclamé par `qf_4` **et** `qf_7`, d'où 7 écritures pour 6 entries actives. Écrire
+    le libellé à la place de l'expression rendrait le corpus porteur de deux réponses à une question.
+    ⚠️ **Le tier est DÉRIVÉ, jamais écrit ici** : `derive_tier_calcul(ingredients, deterministe=…)`
+    (#67) ; un `exact` n'en dérive aucun (il n'a pas d'ingrédient) ; `RELIABILITY_TABLE` est **lue**,
+    jamais recopiée (#46 — une troisième table serait verte aujourd'hui et divergente au premier
+    ajustement). Mesuré contre le vrai dépôt : **A (0,95)** sur les formules déterministes, **A−
+    (0,85)** sur les deux non déterministes — le cran de #67 discrimine sur des données réelles.
+    ⚠️ **La règle de lecture des points est passée DÉTENTEUR UNIQUE au passage** : `companyconcept`
+    (un concept) et `companyfacts` (tout l'émetteur) ne se lisent pas pareil, mais ce qu'il faut
+    FAIRE des points est identique (formes annuelles, dédoublonnage par `end`, 10-K préféré au
+    10-K/A). `edgar_facts.points_annuels` / `point_pour_periode` tiennent la **règle**, les
+    enveloppes cadrent la **réponse**. Recopiée dans `appariement_feed`, elle aurait re-divergé au
+    correctif suivant (`feedback_correctif_regle_jumeaux`) — et **muettement** : le même concept
+    aurait rendu deux nombres selon le chemin qui l'a lu.
+    **Ce que le harnais a appris, et qui vaut hors de ce maillon :**
+    ⚠️ **Une frontière externe oubliée tue le script AVANT son bilan, et une absence de mesure se lit
+    comme un vert.** `symbole_de_marche` est la **cinquième** frontière de `check_collecte_executor`
+    §10 — elle touche la BASE, pas le réseau, donc elle ne ressemblait pas aux quatre autres. Non
+    substituée, elle recevait `conn=None` : `AttributeError`, exit≠0, **aucune ligne de bilan**.
+    Compter les frontières = compter tout ce qui sort du process, pas tout ce qui sort par le réseau
+    (`feedback_bilan_par_sa_forme`).
+    ⚠️ **Un interdit d'ADRESSAGE ne peut pas être tenu par un assert de COMPORTEMENT.** #11 dit que
+    le symbole de marché se lit dans `tickers.ticker_symbol` et jamais dans `plan.ticker_id` — mais
+    sur RVMD/NVDA/MSFT l'id **EST** le symbole, c'est-à-dire exactement sur les tickers qu'on teste :
+    un assert de comportement y resterait vert quoi que fasse le code. Tenu à l'**AST** (l'argument
+    passe par un NOM, ce nom est produit par `symbole_de_marche(...)` et par rien d'autre) **et** par
+    une fixture délibérément discriminante (`_TICKER_ID = "PUB-4F2A9C10"` ≠ `_SYMBOLE = "NVDA"`) —
+    une fixture où les deux coïncident est un check aveugle au vert (`feedback_fixture_copiee_du_reel`).
+    ⚠️ **Un `except Exception: pass` dans un cas de test rend sa fixture infalsifiable.** Le
+    `_mock_web` de §8 construisait une `WorkerResponse` sans `request_hash`/`worker`/`execution` :
+    il levait une `ValidationError` à **chaque** appel depuis le jour de son écriture, avalée par le
+    `try/except` des cas. Le défaut n'est apparu que quand une mutation préexistante a **cessé de
+    rougir** — le test négatif l'a trouvé, pas la relecture.
+    ⚠️ **Une fixture où deux ancres COÏNCIDENT rend le cadrage mixte indistinguable du simple.** La
+    mutation « le fait naît vieux » (`min` au lieu de `max`) restait VERTE tant que la clôture du
+    flux et la date du bilan étaient le même jour. Corrigée en copiant la forme réelle d'un émetteur
+    à exercice calendaire lu au 2ᵉ trimestre : sa dernière clôture annuelle est **antérieure** à son
+    dernier bilan. Une fixture peut être aveugle en étant **non discriminante**, pas seulement en
+    étant plus favorable (#49).
+    ⚠️ **Deux détenteurs voisins ne rendent pas leur tuple dans le même ordre** — `RELIABILITY_TABLE`
+    rend `(tier, score)`, `derive_tier_calcul` rend `(score, tier, note)`. Les lire à l'envers
+    fabrique un **faux rouge** ; et une sonde d'interdit qui matche une clef légitime (`ingredients`)
+    en fabrique un autre. Chercher **pourquoi** ça rougit avant de corriger l'outil
+    (`feedback_faux_rouge_se_creuse`).
+    **État livré** : `app/knowledge/appariement_feed.py` + `app/contracts/formule_grammaire.py` ;
+    `check_appariement_feed.py` **33/0** + `negatif_appariement_feed.sh` **16 mutations / 0** ;
+    `check_collecte_executor.py` **74 → 92** (§11 neuf : consigne aveugle, recette du catalogue
+    prioritaire sur la formule — #30/#43 —, repli web, échec nommé) + `negatif_collecte_executor.sh`
+    **22 → 32 mutations / 0** ; suite complète **2634/0 sur 35 scripts**. Acceptation réelle
+    `tools/acceptation_appariement.{py,sh}` : **8 critères OK / 0**, ligne de base **requêtée** et
+    non rappelée, web **débranché** (une retombée web y est un échec), transaction ROLLBACK, zéro
+    résidu. Aucune migration, rien de déployé.
+    ⚠️ **Deux résidus nommés, ni l'un ni l'autre n'étant un défaut** : (a) `symbole_de_marche` n'a
+    que **2 appelants** — `valuation_feed`, `base_rate_corpus` et `financials_feed` portent encore
+    chacun leur copie de la règle #11 (jumeaux connus, hors périmètre assumé, à réduire quand l'un
+    d'eux sera touché) ; (b) les 2 refus de RVMD portent tous deux sur `AssetImpairmentCharges`,
+    dont les points sont des **fractions d'exercice** — c'est une propriété du dépôt, que le motif
+    nomme, pas un trou de collecte (#44/#47).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

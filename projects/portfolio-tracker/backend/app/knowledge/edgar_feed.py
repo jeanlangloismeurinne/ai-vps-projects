@@ -34,7 +34,7 @@ l'API réelle le 2026-08-30). Un concept peut répondre HTTP 200 avec un histori
     NVDA  `PaymentsToAcquireProductiveAssets`            → dernier point 2026-01-25  ✅
 
 Chaque poste porte donc une LISTE de concepts candidats, et un candidat n'est retenu que s'il a un
-point **près de la date d'ancrage** (`_pick_for_period`, tolérance 20 j). Prendre « le premier tag
+point **près de la date d'ancrage** (`point_pour_periode`, tolérance 20 j). Prendre « le premier tag
 qui répond » donnerait un CA de 2010 présenté comme le CA courant — un faux tier A, le pire mode de
 panne pour ce projet.
 
@@ -48,12 +48,13 @@ from dataclasses import dataclass, field as dc_field
 from datetime import date
 from typing import Any, Optional
 
+import asyncpg
 import httpx
 
 from app.config import settings
 from app.db.database import get_db_session
 from app.knowledge.edgar_facts import (
-    EdgarUnavailable, _UA, duree_jours, fetch_concept_annual, fetch_concept_instant, _pick_for_period,
+    EdgarUnavailable, _UA, duree_jours, fetch_concept_annual, fetch_concept_instant, point_pour_periode,
 )
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
@@ -292,11 +293,11 @@ def select_concept(
     """Choisit le concept XBRL dont l'historique atteint réellement `period_end`, et le point retenu.
 
     C'est ICI que se joue la correction du piège documenté en tête : un concept périmé (dernier point
-    2010) n'a aucun point près de l'ancrage → `_pick_for_period` rend None → on passe au suivant.
+    2010) n'a aucun point près de l'ancrage → `point_pour_periode` rend None → on passe au suivant.
     À fraîcheur égale, l'ordre de `Poste.concepts` tranche. Pur : aucune IO.
     """
     for concept in points_by_concept:
-        point = _pick_for_period(points_by_concept[concept] or [], period_end)
+        point = point_pour_periode(points_by_concept[concept] or [], period_end)
         if point is None:
             continue
         if flow and not is_annual_flow(point):
@@ -499,6 +500,28 @@ async def resolve_cik(symbol: str) -> int:
     return _cik_cache[key]
 
 
+async def symbole_de_marche(conn: asyncpg.Connection, ticker_id: str) -> str:
+    """`tickers.ticker_symbol` — JAMAIS `tickers.id` (convention #11). Détenteur unique (#46).
+
+    La règle a trois morceaux qui vont ensemble : lire la colonne dédiée, refuser une société
+    `private`, refuser un symbole absent (un id `PUB-XXXXXXXX` est un titre coté ajouté sans
+    symbole — il n'a aucun dépôt EDGAR à interroger). Elle vivait recopiée ici et dans trois autres
+    feeds ; `assurer_carte` allait en faire une cinquième copie, et pire : il résolvait le CIK
+    depuis `plan.ticker_id`, ce qui ne marche que tant que l'id EST le symbole.
+
+    Lève `EdgarFeedUnavailable` — l'absence de symbole n'est pas une panne, c'est une propriété de
+    l'émetteur, et l'appelant en fait un repli NOMMÉ (#25).
+    """
+    row = await conn.fetchrow(
+        "SELECT ticker_symbol, company_type FROM tickers WHERE id = $1", ticker_id)
+    if row is None:
+        raise EdgarFeedUnavailable(f"ticker inconnu : {ticker_id}")
+    if (row["company_type"] or "") == "private" or not row["ticker_symbol"]:
+        raise EdgarFeedUnavailable(
+            f"{ticker_id} : pas de symbole de marché (privé/PUB-/PRIV-) — aucun dépôt EDGAR")
+    return str(row["ticker_symbol"])
+
+
 async def _points_for(
     cik: int, concepts: list[str], *, flow: bool
 ) -> tuple[dict[str, list[dict[str, Any]]], str]:
@@ -672,16 +695,7 @@ async def run_edgar_feed(
         return {"ticker_id": ticker_id, "cik": None, "persisted": persist,
                 "postes": [], "unfounded": [], "created": []}
     async with get_db_session() as conn:
-        row = await conn.fetchrow(
-            "SELECT ticker_symbol, company_type FROM tickers WHERE id = $1", ticker_id
-        )
-    if row is None:
-        raise EdgarFeedUnavailable(f"ticker inconnu : {ticker_id}")
-    if (row["company_type"] or "") == "private" or not row["ticker_symbol"]:
-        raise EdgarFeedUnavailable(
-            f"{ticker_id} : pas de symbole de marché (privé/PUB-/PRIV-) — aucun dépôt EDGAR"
-        )
-    symbol = row["ticker_symbol"]
+        symbol = await symbole_de_marche(conn, ticker_id)
 
     cik = await resolve_cik(symbol)
     resolved, fiscal_end, balance_end = await collect_postes(cik, requested)

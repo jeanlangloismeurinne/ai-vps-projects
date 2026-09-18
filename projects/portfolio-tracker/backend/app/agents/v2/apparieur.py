@@ -63,6 +63,7 @@ from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.appariement_schema import AppariementCarte, AppariementItem
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
+from app.contracts.formule_grammaire import noms_de_la_formule
 from app.knowledge.edgar_facts import duree_jours, est_point_de_flux
 from app.knowledge.edgar_feed import is_annual_flow
 
@@ -105,11 +106,6 @@ class AppariementSansObjet(Exception):
     on ne paie pas un appel pour apprendre ce qu'une lecture du plan dit gratuitement."""
 
 
-# Un concept XBRL s'écrit en CamelCase et commence par une majuscule (`NetIncomeLoss`,
-# `LiabilitiesCurrent`). Les mots en minuscules d'une formule sont de la prose ou un terme web ; ils
-# ne sont pas des concepts déposés et ne se cherchent donc pas dans l'inventaire.
-_RE_CONCEPT = re.compile(r"\b[A-Z][A-Za-z0-9]*\b")
-
 # Un littéral DÉCIMAL dans une formule est la signature d'un coefficient CHOISI — « 60 % du capex est
 # du maintien ». Un entier ne l'est pas : c'est une conversion d'unité ou de période (`/4` pour un
 # trimestre, `*12` pour annualiser un mois), et il n'introduit aucun paramètre à débattre.
@@ -122,8 +118,18 @@ _RE_DECIMAL = re.compile(r"\b\d+[.,]\d+\b")
 
 
 def concepts_de_la_formule(formule: str) -> set[str]:
-    """Les identifiants CamelCase référencés par une formule. Pur, hors-ligne."""
-    return set(_RE_CONCEPT.findall(formule))
+    """Les concepts référencés par une formule. Pur, hors-ligne.
+
+    ⚠️ DÉLÈGUE à `formule_grammaire.noms_de_la_formule` depuis le maillon 4, et ce n'est pas un
+    remplacement cosmétique. Le relevé lexical précédent (`\\b[A-Z][A-Za-z0-9]*\\b`) ne voyait que
+    les majuscules : un nom en minuscule dans la formule ÉCHAPPAIT à [W], donc à la confrontation
+    avec l'inventaire [V], et ne se manifestait qu'à l'évaluation — loin de sa cause. Sous la
+    grammaire fermée, TOUT nom d'une formule est un concept (il n'y a ni fonction ni variable), donc
+    l'ensemble rendu ici est exactement celui que l'évaluateur emploiera. Un seul détenteur de « que
+    référence cette formule ? » (#46) : sans quoi le pont validerait un ensemble et le producteur en
+    calculerait un autre, en silence.
+    """
+    return noms_de_la_formule(formule)
 
 
 def coefficients_choisis(formule: str) -> list[str]:

@@ -77,16 +77,54 @@ mutations=(
 # §10 ─ LA CONFUSION QUE #70 A PRODUITE UNE FOIS : une carte servie sans pouvoir la dater se déclare
 # `fraiche`. Rien ne change au routage ; c'est le RÉCIT qui devient faux, et l'aval ne peut plus
 # distinguer « vérifié à jour » de « pas vérifiable ».
-"$SRC¦    return CarteCourante(_statuts(carte), \"non_reverifiable\", None)¦    return CarteCourante(_statuts(carte), \"fraiche\", None)  # mutation: l'aveu effacé¦inventaire injoignable"
+"$SRC¦    return CarteCourante(_statuts(carte), \"non_reverifiable\", None,¦    return CarteCourante(_statuts(carte), \"fraiche\", None,  # mutation: l'aveu effacé¦inventaire injoignable"
 # §10 ─ le repli nommé cesse de se distinguer : `statuts` vide au lieu de None. L'aval retombe bien
 # sur `poste_retenu()`, mais « carte sans aucune ligne » et « aucune carte » se confondent.
 "$SRC¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante(None, \"aucune\", None)¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante({}, \"aucune\", None)  # mutation: repli indistinct¦ni inventaire ni carte"
 # §10 ─ un refus définitif du modèle se maquille en reconstruction réussie : on servirait une carte
 # vide en la présentant comme neuve.
-"$SRC¦        return await _servir_le_stock(conn, plan, motif=f\"appariement REFUSÉ après réparation : {e}\")¦        return CarteCourante(None, \"reconstruite\", depot_courant)  # mutation: le refus maquillé¦appariement REFUSÉ après réparation"
+"$SRC¦        return await _servir_le_stock(conn, plan, motif=f\"appariement REFUSÉ après réparation : {e}\",\n                                      inventaire=inventaire)¦        return CarteCourante(None, \"reconstruite\", depot_courant)  # mutation: le refus maquillé¦appariement REFUSÉ après réparation"
 # §10 ─ LE CÂBLAGE : `assurer_carte` est parfaite et personne ne l'appelle. C'est littéralement
 # l'état dans lequel `apparier()`/`persister_carte()` ont vécu tout le maillon 4bis.
 "$SRC¦        carte = await assurer_carte(plan, conn=conn)¦        carte = CarteCourante(None, \"aucune\", None)  # mutation: le producteur débranché¦OBTIENT la carte quand l'appelant n'en fournit pas"
+
+# ── MUTATIONS DU MAILLON 4 — LE SYMBOLE OPPOSÉ À EDGAR ────────────────────────────────────────────
+# §9 ─ LE BUG RÉEL QUI DORMAIT ICI, REFABRIQUÉ : le symbole EST l'identifiant interne. Sur RVMD,
+# NVDA ou MSFT les deux coïncident, donc TOUT reste vert — y compris §10 si on l'avait écrit avec un
+# `ticker_id` égal au symbole. C'est la raison pour laquelle la fixture §10 utilise `PUB-4F2A9C10` :
+# une fixture plus favorable que la prod aurait rendu les deux gardes aveugles d'un coup.
+"$SRC¦        symbole = await symbole_de_marche(conn, plan.ticker_id)¦        symbole = plan.ticker_id  # mutation: l'id interne tient lieu de symbole¦est PRODUIT par \`symbole_de_marche(...)\`"
+# §9 ─ la même chose sans passer par une variable : l'id part directement à EDGAR, et la provenance
+# du symbole cesse d'être lisible à l'AST.
+"$SRC¦        cik = await resolve_cik(symbole)¦        cik = await resolve_cik(plan.ticker_id)  # mutation: l'id interne part chez EDGAR¦passe son argument par un NOM"
+# §10 ─ l'inventaire remonte l'ID au lieu du SYMBOLE : le CIK est juste, mais la provenance écrite
+# par l'exécution d'un appariement nommerait un identifiant qui n'existe pas chez la SEC.
+"$SRC¦    inventaire = InventaireTicker(symbole=symbole, cik=cik, facts=facts)¦    inventaire = InventaireTicker(symbole=plan.ticker_id, cik=cik, facts=facts)  # mutation: provenance interne¦l'inventaire remonté porte le symbole"
+# §10 ─ l'absence de symbole cesse d'être un repli NOMMÉ : la carte stockée n'est plus servie, tout
+# devient « aucune ». Une société sans symbole n'est pas une panne, et perdre sa carte le dit mal.
+"$SRC¦        return await _servir_le_stock(conn, plan, motif=f\"inventaire EDGAR injoignable : {e}\")¦        return CarteCourante(None, \"aucune\", None)  # mutation: le repli perd son nom¦société sans symbole de marché"
+
+# ── MUTATIONS DU MAILLON 4 — L'EXÉCUTION DE L'APPARIEMENT ─────────────────────────────────────────
+# §11 ─ L'ÉTAT D'AVANT CE LOT, REFABRIQUÉ : la carte route vers EDGAR, et l'exécuteur n'exécute que
+# les recettes du catalogue. Tout reste vert côté routage — c'est précisément le piège de #71 : le
+# gain de ROUTAGE existait déjà, la collecte non. Les 10 approximations de RVMD repartent au web.
+"$SRC¦        if consigne is not None and inventaire is not None:¦        if False:  # mutation: la consigne n'est jamais exécutée¦est appelé UNE fois et son entry est rendue"
+# §11 ─ l'ordre inversé : la consigne passe devant la recette du catalogue. Fonctionnellement ça
+# « marche » — et ça écrit deux producteurs actifs pour un même fait (#43), en perdant le choix par
+# fraîcheur entre concepts candidats (#30).
+"$SRC¦        poste = poste_retenu(ligne.poste, ligne.metrique)¦        poste = None  # mutation: la recette ne passe plus devant¦passe devant la consigne"
+# §11 ─ le refus perd son motif : l'echec ne nomme plus ni la cause ni l'expression. La ligne devient
+# un mandat illisible, et l'analyste lira « le dépôt ne porte pas ce nombre » là où l'ancre manquait.
+"$SRC¦                    echec=f\"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}\")¦                    echec=\"collecte impossible\")  # mutation: le refus perd son motif¦NOMME la cause et l'expression"
+# §11 ─ LA FUITE DU COUPLE DANS LA VALEUR : l'ingrédient voyage avec la consigne. Le collecteur cesse
+# d'être aveugle par CONSTRUCTION (#58) et peut réancrer l'entry sur la question.
+"$SRC¦            expression = str(it.concepts[0])      # le contrat garantit qu'il y en a exactement un¦            expression = f\"{it.ingredient_id}: {it.concepts[0]}\"  # mutation: le couple fuit¦aucune VALEUR de consigne ne contient un fragment"
+# §11 ─ un `indisponible` produit une consigne : on tenterait d'exécuter un MOTIF comme une formule,
+# et le web — seul chemin légitime pour ces lignes — ne serait plus emprunté.
+"$SRC¦        else:\n            continue¦        else:\n            expression = str(it.motif)  # mutation: l'indisponible devient exécutable¦ne produit AUCUNE consigne"
+# §11 ─ LE CÂBLAGE AMONT DÉBRANCHÉ : `collecter_un` ne reçoit plus la consigne. §11 reste vert en
+# appelant la fonction directement — seul l'assert structurel voit que personne ne la lui passe.
+"$SRC¦            consigne=consigne, inventaire=carte.inventaire)¦            )  # mutation: la consigne n'atteint jamais le collecteur¦en lui passant \`consigne\` ET \`inventaire\`"
 )
 
 passes=0; ratees=0

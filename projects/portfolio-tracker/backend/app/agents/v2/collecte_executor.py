@@ -58,12 +58,18 @@ from app.agents.v2.worker import WORKER_NAME, persist_worker_entries, run_search
 from app.contracts.collection_plan_schema import CollectionPlan
 from app.contracts.worker_delegation_schema import EntryType, OutputSchema, WorkerRequest
 from app.db.database import get_db_session
+from app.knowledge.appariement_feed import (
+    AppariementInexecutable,
+    ConsigneAppariement,
+    executer_appariement,
+)
 from app.knowledge.edgar_facts import EdgarUnavailable, fetch_company_facts
 from app.knowledge.edgar_feed import (
     POSTES,
     EdgarFeedUnavailable,
     resolve_cik,
     run_edgar_feed,
+    symbole_de_marche,
 )
 from app.knowledge.websearch import SearchUnavailable
 
@@ -86,6 +92,7 @@ __all__ = [
     "collecter_un",
     "postes_edgar_du_plan",
     "CarteCourante",
+    "InventaireTicker",
     "assurer_carte",
     "executer_plan_reel",
     "executer_collecte_framework",
@@ -330,28 +337,63 @@ async def collecter_un(
     conn: asyncpg.Connection,
     socle: _SocleEdgar,
     carte_statut: Optional[Literal["exact", "approximation", "indisponible"]] = None,
+    consigne: Optional[ConsigneAppariement] = None,
+    inventaire: Optional[InventaireTicker] = None,
 ) -> ResultatCollecte:
     """Exécute UNE ligne aveugle. Dispatch déterministe, puis réseau. Rend un XOR (entry OU echec),
     jamais un silence (#25) : c'est `aiguiller_plan` qui transformera un echec en mandat motivé.
 
     `carte_statut` (fourni par `executer_plan_reel`, jamais par `LigneAveugle` — #58) court-circuite
-    `poste_retenu()` pour la décision EDGAR/web lorsque la carte l'a déjà tranché. Si le statut est
-    `exact` ou `approximation` mais que `poste_retenu` reste None (approximation sans poste catalogue
-    valide), on retombe sur le web avec un log nommé — le repli est distinct du câblage réussi."""
+    `poste_retenu()` pour la décision EDGAR/web lorsque la carte l'a déjà tranché.
+
+    TROIS chemins EDGAR, et le deuxième est ce que le maillon 4 ajoute (#72) :
+      1. une RECETTE du catalogue (`poste_retenu` résout) → `_SocleEdgar`, inchangé ;
+      2. sinon une CONSIGNE d'appariement (`exact` ou `approximation`) → `executer_appariement`,
+         qui évalue l'expression sur l'inventaire DÉJÀ LU. C'est le cas NOMINAL d'une approximation :
+         une formule sur des concepts XBRL nus n'a pas de recette, et jusqu'ici elle repartait au web
+         chercher chez un tiers, en tier B, un nombre dont tous les termes étaient déposés en tier A ;
+      3. ni l'un ni l'autre → repli web NOMMÉ, journalisé (le repli reste distinct du câblage réussi).
+
+    ⚠️ L'ordre 1 avant 2 n'est pas un goût : une recette du catalogue choisit son concept par
+    FRAÎCHEUR parmi des candidats (#30), ce qu'une expression figée ne fait pas. Doubler le chemin
+    écrirait en plus deux entries actives pour le même fait (#43).
+
+    ⚠️ Un appariement qui ne s'exécute pas devient un `echec` MOTIVÉ, donc un mandat — jamais un
+    nombre approché, et jamais un repli web muet : la ligne repartant au web sans le dire ferait
+    lire « le dépôt ne porte pas ce nombre » là où la cause est « l'ancre commune manque »."""
     route = router_source(ligne, carte_statut=carte_statut)
     if route == "edgar":
         poste = poste_retenu(ligne.poste, ligne.metrique)
-        if poste is None:
-            # Repli NOMMÉ : la carte a dit « edgar » mais le poste n'est pas résolvable par _SocleEdgar
-            # (cas d'une approximation multi-concepts sans poste catalogue, ou dérivée confirmée).
-            # On ne crashe pas — le repli est documenté, pas un silence.
-            logger.info(
-                "carte_statut=%s mais poste_retenu()=None pour « %s » — repli web (approximation "
-                "multi-concepts non exécutable par _SocleEdgar, ligne routée web comme repli nommé)",
-                carte_statut, ligne.metrique,
-            )
-        else:
+        if poste is not None:
             return await socle.entry_id(ligne.ticker_id, poste)
+        if consigne is not None and inventaire is not None:
+            try:
+                async with conn.transaction():
+                    entry_id = await executer_appariement(
+                        conn,
+                        ticker_id=ligne.ticker_id,
+                        symbole=inventaire.symbole,
+                        cik=inventaire.cik,
+                        libelle=ligne.metrique,
+                        consigne=consigne,
+                        facts=inventaire.facts,
+                    )
+            except AppariementInexecutable as e:
+                return ResultatCollecte(
+                    echec=f"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}")
+            except Exception as e:  # écriture/DB/contrat → #25, jamais un crash qui perd le lot
+                return ResultatCollecte(
+                    echec=f"appariement « {consigne.expression} » échoué "
+                          f"({type(e).__name__}) : {e}")
+            return ResultatCollecte(entry_id=entry_id)
+        # Repli NOMMÉ : la carte a dit « edgar » mais il n'y a ni recette ni consigne exécutable
+        # (carte absente, statut hérité de `poste_retenu` seul, ou inventaire injoignable).
+        logger.info(
+            "carte_statut=%s, poste_retenu()=None et %s pour « %s » — repli web (repli nommé)",
+            carte_statut,
+            "aucune consigne d'appariement" if consigne is None else "aucun inventaire en main",
+            ligne.metrique,
+        )
 
     # chemin web : le search-worker CHERCHE (sans connaître la question), puis on persiste ses entries.
     req = construire_requete_web(ligne)
@@ -451,6 +493,21 @@ _SANS_REVERIFICATION = "0000-00-00 (aucune date de dépôt courante : âge non r
 EtatCarte = Literal["fraiche", "reconstruite", "non_reverifiable", "aucune"]
 
 
+class InventaireTicker(NamedTuple):
+    """L'inventaire XBRL lu UNE FOIS par `assurer_carte`, et de quoi en écrire la provenance.
+
+    `facts` est le `companyfacts` complet (1 à 5 Mo, 269 à 627 concepts) : le RE-télécharger par
+    ligne serait un appel réseau par ingrédient là où un seul suffit pour tout le plan. C'est ce qui
+    rend l'exécution d'un appariement GRATUITE — la dépense a déjà eu lieu pour produire la carte.
+
+    `symbole` vient de `tickers.ticker_symbol` (#11) et non de `tickers.id` ; `cik` en est résolu.
+    Les deux ne servent qu'à la PROVENANCE du fait produit (titre, URL de dépôt) — aucun des deux
+    n'entre dans une décision."""
+    symbole: str
+    cik: int
+    facts: dict[str, list[dict[str, Any]]]
+
+
 class CarteCourante(NamedTuple):
     """La carte dont dispose UNE exécution, et COMMENT elle a été obtenue.
 
@@ -458,11 +515,18 @@ class CarteCourante(NamedTuple):
     « carte servie parce qu'on n'a pas pu vérifier qu'elle l'est » sont indiscernables en aval — et
     c'est exactement la confusion que #70 a produite une fois. `depot_courant` est None quand
     l'inventaire n'a pas pu être lu : un None se lit comme une absence, une date recopiée se lirait
-    comme une mesure."""
+    comme une mesure.
+
+    `consignes` et `inventaire` sont ce que le maillon 4 ajoute : le premier dit QUOI calculer, le
+    second CONTRE QUOI. Les deux sont None quand la carte est servie sans inventaire en main
+    (`non_reverifiable` sur panne SEC, `aucune`) — et `collecter_un` retombe alors sur le repli web
+    NOMMÉ, jamais sur un calcul contre un inventaire qu'il aurait re-téléchargé pour l'occasion."""
     statuts: Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]]
     etat: EtatCarte
     depot_courant: Optional[str]
     cout_usd: float = 0.0
+    consignes: Optional[dict[tuple[str, str], ConsigneAppariement]] = None
+    inventaire: Optional[InventaireTicker] = None
 
 
 def _statuts(carte) -> dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]:
@@ -471,12 +535,50 @@ def _statuts(carte) -> dict[tuple[str, str], Literal["exact", "approximation", "
     return {(it.question_id, it.ingredient_id): it.statut for it in carte.items}
 
 
+def _consignes(carte) -> dict[tuple[str, str], ConsigneAppariement]:
+    """`(question_id, ingredient_id) → ConsigneAppariement`, pour les seules lignes EXÉCUTABLES.
+
+    C'EST ICI QUE LE VOCABULAIRE DE FRAMEWORK S'ARRÊTE. La CLEF le porte — elle sert à retrouver la
+    ligne du plan — mais la VALEUR ne le porte pas : une `ConsigneAppariement` n'a ni `question_id`
+    ni `ingredient_id` ni `framework_id`. `collecter_un` ne reçoit que la valeur, donc il reste
+    aussi aveugle qu'avec une `LigneAveugle` (#58), et le fait produit ne PEUT pas nommer la
+    question. L'aveuglement est une propriété du type, pas une discipline d'écriture (#57).
+
+    Un `exact` devient une expression à UN terme (le concept nu) : la grammaire l'admet tel quel, et
+    cela évite une seconde branche d'évaluation dont la seule différence serait de ne rien calculer.
+    Un `indisponible` n'a pas de consigne — c'est exactement là, et seulement là, que le web
+    intervient (#67).
+    """
+    out: dict[tuple[str, str], ConsigneAppariement] = {}
+    for it in carte.items:
+        if it.statut == "exact":
+            expression = str(it.concepts[0])      # le contrat garantit qu'il y en a exactement un
+        elif it.statut == "approximation":
+            expression = str(it.formule)          # le contrat garantit qu'elle est présente
+        else:
+            continue
+        out[(it.question_id, it.ingredient_id)] = ConsigneAppariement(
+            statut=it.statut,
+            expression=expression,
+            hypotheses=tuple(str(h) for h in it.hypotheses),
+            deterministe=it.deterministe,
+            termes_web=tuple(str(t) for t in it.termes_web),
+        )
+    return out
+
+
 async def _servir_le_stock(
     conn: asyncpg.Connection, plan: CollectionPlan, *, motif: str,
+    inventaire: Optional[InventaireTicker] = None,
 ) -> CarteCourante:
     """Dernier recours : servir la carte STOCKÉE sans pouvoir revérifier son âge, ou avouer qu'il n'y
     en a aucune. La sentinelle rend la comparaison `<` fausse par construction — on ne prétend pas
-    revérifier, on sert ce qui est là et le log le dit."""
+    revérifier, on sert ce qui est là et le log le dit.
+
+    `inventaire` n'est fourni que lorsqu'on l'a RÉELLEMENT lu (le modèle apparieur a échoué, mais
+    `companyfacts` était bien en main). Il est alors transmis : les consignes de la carte stockée
+    restent exécutables, et renoncer à les exécuter enverrait au web des lignes dont tous les termes
+    sont déposés. Sur une panne SEC il reste None — on ne calcule pas contre un inventaire absent."""
     try:
         carte = await lire_carte(
             conn,
@@ -500,7 +602,9 @@ async def _servir_le_stock(
         "verdict servi reste celui d'un dépôt réel, seulement peut-être plus ancien",
         plan.ticker_id, plan.framework_id, plan.framework_version, motif,
         len(carte.items), carte.dernier_depot_vu)
-    return CarteCourante(_statuts(carte), "non_reverifiable", None)
+    return CarteCourante(_statuts(carte), "non_reverifiable", None,
+                         consignes=_consignes(carte) if inventaire else None,
+                         inventaire=inventaire)
 
 
 async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> CarteCourante:
@@ -525,17 +629,22 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
     fois de suite) ou un `AppariementSansObjet` (rien de traduit à apparier) retombe sur le stock,
     puis sur `poste_retenu()` — en le DISANT à chaque marche."""
     # ── (1) la frontière gratuite : l'inventaire réel, avant toute dépense ────────────────────────
+    # ⚠️ Le symbole passe par `symbole_de_marche` (#11/#46) et non par `plan.ticker_id` : l'id peut
+    # être `PUB-XXXXXXXX`. Résoudre le CIK depuis l'id ne marchait que tant que les deux coïncidaient.
     try:
-        cik = await resolve_cik(plan.ticker_id)
+        symbole = await symbole_de_marche(conn, plan.ticker_id)
+        cik = await resolve_cik(symbole)
         facts = await fetch_company_facts(cik)
     except (EdgarFeedUnavailable, EdgarUnavailable) as e:
         return await _servir_le_stock(conn, plan, motif=f"inventaire EDGAR injoignable : {e}")
+    inventaire = InventaireTicker(symbole=symbole, cik=cik, facts=facts)
 
     # ── (2) la date opposable — `max(filed)` sur TOUT l'inventaire, détenteur unique (#46) ────────
     try:
         depot_courant = dernier_depot_vu(facts)
     except AppariementSansObjet as e:
-        return await _servir_le_stock(conn, plan, motif=f"inventaire non datable : {e}")
+        return await _servir_le_stock(conn, plan, motif=f"inventaire non datable : {e}",
+                                      inventaire=inventaire)
 
     # ── (3) la revérification d'âge, contre une date MESURÉE cette fois ───────────────────────────
     try:
@@ -556,7 +665,8 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
             "carte %s/%s %s FRAÎCHE — %d ligne(s), depot_vu=%s ≥ dépôt courant %s : aucun appel "
             "modèle", plan.ticker_id, plan.framework_id, plan.framework_version,
             len(carte.items), carte.dernier_depot_vu, depot_courant)
-        return CarteCourante(_statuts(carte), "fraiche", depot_courant)
+        return CarteCourante(_statuts(carte), "fraiche", depot_courant,
+                             consignes=_consignes(carte), inventaire=inventaire)
 
     # ── (4) absente ou PÉRIMÉE → reconstruction sur le même inventaire, pas un repli dégradé ──────
     logger.info(
@@ -566,12 +676,15 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
     try:
         res = await apparier(plan, facts)
     except AppariementSansObjet as e:
-        return await _servir_le_stock(conn, plan, motif=f"rien à apparier dans ce plan : {e}")
+        return await _servir_le_stock(conn, plan, motif=f"rien à apparier dans ce plan : {e}",
+                                      inventaire=inventaire)
     except AppariementRefuse as e:
-        return await _servir_le_stock(conn, plan, motif=f"appariement REFUSÉ après réparation : {e}")
+        return await _servir_le_stock(conn, plan, motif=f"appariement REFUSÉ après réparation : {e}",
+                                      inventaire=inventaire)
     except Exception as e:  # modèle indisponible / timeout / sortie non conforme → #25, jamais un crash
         return await _servir_le_stock(
-            conn, plan, motif=f"appariement échoué ({type(e).__name__}) : {e}")
+            conn, plan, motif=f"appariement échoué ({type(e).__name__}) : {e}",
+            inventaire=inventaire)
     row_id = await persister_carte(conn, res.carte)
     logger.info(
         "carte %s/%s %s RECONSTRUITE et persistée (#%d) — %d ligne(s), depot_vu=%s, "
@@ -580,7 +693,8 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
         len(res.carte.items), res.carte.dernier_depot_vu, len(res.refus_repares),
         getattr(res.run, "cost_usd", 0.0) or 0.0)
     return CarteCourante(_statuts(res.carte), "reconstruite", depot_courant,
-                         getattr(res.run, "cost_usd", 0.0) or 0.0)
+                         getattr(res.run, "cost_usd", 0.0) or 0.0,
+                         consignes=_consignes(res.carte), inventaire=inventaire)
 
 
 async def executer_plan_reel(
@@ -600,7 +714,17 @@ async def executer_plan_reel(
 
     `carte` permet à un appelant qui en détient déjà une (ou qui veut explicitement n'en avoir
     aucune : `CarteCourante(None, "aucune", None)`) de court-circuiter la production, donc la
-    dépense. Par défaut, l'exécuteur la PRODUIT — un décideur sans producteur ne décide jamais."""
+    dépense. Par défaut, l'exécuteur la PRODUIT — un décideur sans producteur ne décide jamais.
+
+    EXÉCUTION DE L'APPARIEMENT (maillon 4, #72) : la carte ne fait plus que router, elle fournit
+    aussi la CONSIGNE de chaque couple et l'INVENTAIRE contre lequel l'exécuter. Le chiffre à suivre
+    est « lignes COLLECTÉES depuis le dépôt », jamais « lignes routées vers EDGAR » (#71) : il se
+    lit sur l'état écrit (les entries taguées `appariement`), pas sur une intention de routage.
+
+    ⚠️ La déduplication « deux ingrédients, une collecte » se fait sur la ligne AVEUGLE. Deux
+    couples qui produisent la même ligne aveugle (même métrique, même source, même ancre) partagent
+    donc aussi la consigne du premier — ce qui est cohérent : c'est la même demande, l'appariement
+    ne peut pas légitimement en différer."""
     # ── Obtention de la carte : UNE fois, avant la boucle, et avant tout routage ─────────────────────
     if carte is None:
         carte = await assurer_carte(plan, conn=conn)
@@ -615,8 +739,14 @@ async def executer_plan_reel(
         cle = (ligne.ticker_id, ligne.metrique, ligne.source_pressentie, ligne.ancre)
         if cle in resultats:
             continue  # même ligne aveugle déjà collectée (deux ingrédients, une collecte)
-        statut = carte_statuts.get((item.question_id, item.ingredient_id)) if carte_statuts else None
-        resultats[cle] = await collecter_un(ligne, conn=conn, socle=socle, carte_statut=statut)
+        couple = (item.question_id, item.ingredient_id)
+        statut = carte_statuts.get(couple) if carte_statuts else None
+        # La consigne est résolue ICI, sur le couple, puis passée NUE : `collecter_un` ne reçoit
+        # jamais le couple lui-même (#58 — voir `_consignes`).
+        consigne = carte.consignes.get(couple) if carte.consignes else None
+        resultats[cle] = await collecter_un(
+            ligne, conn=conn, socle=socle, carte_statut=statut,
+            consigne=consigne, inventaire=carte.inventaire)
 
     def collecter(ligne: LigneAveugle) -> ResultatCollecte:
         cle = (ligne.ticker_id, ligne.metrique, ligne.source_pressentie, ligne.ancre)

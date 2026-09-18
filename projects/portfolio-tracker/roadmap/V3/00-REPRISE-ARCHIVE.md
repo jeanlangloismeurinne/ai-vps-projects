@@ -8,6 +8,112 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-18 (2) — spec v3, **lot 3, maillon 4 : L'EXÉCUTION D'UN APPARIEMENT**
+
+Suite **2583 → 2634**, exit 0 sur les **35** scripts. **Aucune migration.** Rien de déployé.
+Convention **#72**. Six étapes dans l'ordre imposé : contrat → lecture → producteur → câblage →
+checks → acceptation réelle.
+
+### Le blocage, tel que le lot précédent l'avait mesuré
+
+#71 avait livré le producteur de carte et mesuré ce qu'il débloquait — et ce qu'il ne débloquait
+pas : la carte fait passer le routage de **0 à 9 lignes vers EDGAR** sur RVMD, et **0 de ces 9
+n'est exécutable**. `_SocleEdgar` ne sait collecter que les **33 recettes** du catalogue `POSTES`
+(`run_edgar_feed`), là où une `approximation` est une **formule sur des concepts XBRL nus**. Les 9
+repartaient au web par le repli nommé de `collecter_un`. La décision avait changé, la collecte pas.
+
+Le garde-fou écrit dans le 00-REPRISE a tenu tout le lot : *« ne pas ré-annoncer un gain de routage
+comme une économie de collecte »*. Le chiffre suivi est « lignes **collectées depuis le dépôt** »,
+mesuré dans `knowledge_entries` après le run, jamais un décompte de dispatch.
+
+### Ce qui a été construit
+
+| Étape | Livrable |
+|---|---|
+| A — contrat | `app/contracts/formule_grammaire.py` : la grammaire d'expression, **détenteur unique** des refus « dimensions incohérentes » et « division par zéro » |
+| B — lecture | `edgar_facts.points_annuels` / `point_pour_periode` extraits en **détenteur unique** : `companyconcept` et `companyfacts` ne se lisent pas pareil, mais ce qu'il faut FAIRE des points est identique |
+| C — producteur | `app/knowledge/appariement_feed.py` : évalue l'expression sur l'inventaire **déjà lu**, produit le fait, sa provenance concept par concept, son tier dérivé |
+| D — câblage | `collecte_executor` : consigne aveugle (`ConsigneAppariement`), inventaire transporté, recette du catalogue **prioritaire** sur la formule |
+| E — checks | `check_appariement_feed.py` **33/0** + `negatif_appariement_feed.sh` **16/0** ; `check_collecte_executor` 74 → **92**, son négatif 22 → **32** |
+| F — acceptation | `tools/acceptation_appariement.{py,sh}` — 8 critères, ROLLBACK, web débranché |
+
+Aucun appel réseau supplémentaire : `assurer_carte` lit déjà `companyfacts` pour dater la carte
+(#71), l'exécution se fait sur **le même inventaire**. La frontière gratuite était déjà franchie.
+
+### Ce que l'acceptation réelle a mesuré (RVMD, plan #12, `$0.0015`)
+
+```
+LIGNE DE BASE (mesurée à l'instant, pas rappelée) : 0 entry « appariement » active · 13 lignes `traduit` sur 14
+carte : etat=reconstruite · dépôt courant 2026-08-05 · distribution 9 approximation · 4 indisponible
+SOUMISES : 9 lignes routées EDGAR sans recette du catalogue, avec une consigne
+LIGNES COLLECTÉES DEPUIS LE DÉPÔT : 0 → 6   (7 écritures, 1 supersession, 2 refus nommés)
+  #324 tier A  (0,95) · ConvertibleLongTermNotesPayable + Cash… + MarketableSecuritiesCurrent = 2 513 113 000 USD · FLUX 2025-12-31 + BILAN 2026-06-30 · 3 ingrédients
+  #326 tier A  (0,95) · Cash… + MarketableSecuritiesCurrent = 2 025 679 000 USD · EXERCICE CLOS LE 2025-12-31
+  #327 tier A  (0,95) · NetCashProvidedByUsedInOperatingActivities = −897 741 000 USD
+  #328 tier A− (0,85) · ResearchAndDevelopmentExpense + GeneralAndAdministrativeExpense = 1 182 369 000 USD · déterministe=False
+  #329 tier A  (0,95) · ConvertibleLongTermNotesPayable + OperatingLeaseLiabilityCurrent = 503 902 000 USD
+  #330 tier A− (0,85) · LineOfCreditFacilityMaximumBorrowingCapacity = 750 000 000 USD · déterministe=False
+BILAN acceptation appariement — 8 critères OK, 0 échec
+```
+
+Trois choses s'y lisent, qu'aucune fixture n'aurait montrées :
+
+- **#43 en action sur des données réelles.** 7 écritures, 6 entries actives :
+  `LineOfCreditFacilityMaximumBorrowingCapacity` est réclamé par `qf_4` **et** `qf_7`, et la seconde
+  exécution **supersède** la première au lieu de doubler — parce que le `metric` du fait EST
+  l'expression.
+- **Le cran de #67 discrimine.** A (0,95) sur les formules déterministes, A− (0,85) sur les deux
+  non déterministes. Le discriminant est le déterminisme, contre le vrai dépôt, pas une table.
+- **Les 2 refus nomment leur cause** : `AssetImpairmentCharges`, « ses points sont des fractions
+  d'exercice ». C'est une propriété du dépôt, pas un trou de collecte (#44/#47) — et le motif est
+  rédigé pour finir dans un mandat.
+
+⚠️ **La distribution mesurée est `9 approximation · 4 indisponible`, là où le 00-REPRISE écrivait
+`10 · 3`.** La carte a été reconstruite sur un dépôt plus récent. Rien à corriger : c'est le rappel
+que la ligne de base se **requête** (`feedback_ligne_de_base_est_une_mesure`) — le récit vieillit,
+la mesure non.
+
+### Les six défauts du lot, tous trouvés par le harnais et non par la relecture
+
+1. **Une cinquième frontière externe, oubliée parce qu'elle ne passe pas par le réseau.**
+   `symbole_de_marche` lit la BASE. Non substituée dans `_installer`, elle recevait `conn=None` :
+   `AttributeError` à `edgar_feed.py:515`, exit≠0, **aucune ligne de bilan**. Une absence de mesure
+   se lit comme un vert (`feedback_bilan_par_sa_forme`). Compter les frontières = compter ce qui
+   sort du **process**, pas ce qui sort par le réseau.
+2. **Un interdit d'adressage que nul assert de comportement ne peut tenir.** #11 : le symbole se lit
+   dans `tickers.ticker_symbol`, jamais dans `plan.ticker_id`. Mais sur RVMD/NVDA/MSFT l'id **EST**
+   le symbole — exactement les tickers qu'on teste. Tenu à l'**AST** (l'argument passe par un nom,
+   ce nom est produit par `symbole_de_marche(...)` et par rien d'autre) et par une fixture rendue
+   discriminante à dessein : `_TICKER_ID = "PUB-4F2A9C10"` ≠ `_SYMBOLE = "NVDA"`.
+3. **Un mock invalide depuis le premier jour, protégé par un `except Exception: pass`.**
+   `_mock_web` construisait une `WorkerResponse` sans `request_hash`/`worker`/`execution` : une
+   `ValidationError` à chaque appel, avalée par le `try/except` des cas de §8. Découvert parce
+   qu'une mutation **préexistante a cessé de rougir**. Un `except Exception` dans un cas de test
+   rend sa fixture infalsifiable.
+4. **Une fixture non discriminante sur les ancres.** Le flux annuel et le poste de bilan y tombaient
+   le même jour, donc le cadrage MIXTE était indistinguable d'un cadrage simple : la mutation « le
+   fait naît vieux » (`min` au lieu de `max`) restait **VERTE**. Corrigée en copiant la forme réelle
+   d'un émetteur à exercice calendaire lu au 2ᵉ trimestre — sa dernière clôture annuelle est
+   antérieure à son dernier bilan.
+5. **Deux faux rouges, tous deux de mon fait.** `RELIABILITY_TABLE` rend `(tier, score)` et
+   `derive_tier_calcul` rend `(score, tier, note)` : lus à l'envers. Et une sonde d'interdit qui
+   matchait la clef **légitime** `ingredients`. Chercher pourquoi ça rougit avant de corriger
+   l'outil (`feedback_faux_rouge_se_creuse`).
+6. **Deux mutations préexistantes devenues CADUQUES**, l'étape D ayant réécrit en multi-lignes le
+   `return` de `_servir_le_stock` et l'appel à `AppariementRefuse`. Le harnais l'a signalé
+   lui-même — c'est ce pour quoi la classe « motif introuvable » existe.
+
+### Deux points de méthode qui sortent du maillon
+
+- **Une garde déléguée se teste chez son détenteur.** Deux des quatre refus vivent dans
+  `formule_grammaire.py` (#46). Muter le producteur pour les éprouver n'aurait mesuré que le
+  câblage tout en donnant l'impression de mesurer la règle. `negatif_appariement_feed.sh` désarme
+  la grammaire elle-même, et l'écrit en tête de fichier.
+- **Un module qui qualifie des calculs de déterministes doit l'être lui-même.** À récence et
+  profondeur égales, le choix du concept se départage **alphabétiquement** : sans ce départage,
+  `max()` rend le premier rencontré et le fait dépend de l'ordre d'itération d'un dict. Aucun assert
+  de valeur ne bouge — seul un test de reproductibilité le voit.
+
 ## 2026-09-18 — spec v3, **lot 3, maillon 4bis étape 2d : LE PRODUCTEUR DE CARTE**
 
 Suite **2566 → 2583**, exit 0 sur les 34 scripts. **Aucune migration.** Rien de déployé, **aucune

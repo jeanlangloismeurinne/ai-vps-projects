@@ -74,6 +74,7 @@ from typing import Annotated, Literal, Optional
 from pydantic import Field, model_validator
 
 from .analysis_v2_schemas import Strict
+from .formule_grammaire import GRAMMAIRE_ADMISE, FormuleInexecutable, analyser_formule
 
 __all__ = [
     "APPARIEMENT_SCHEMA_VERSION",
@@ -129,10 +130,15 @@ class AppariementItem(Strict):
         description="Concepts us-gaap déposés par CET émetteur qui contribuent à l'ingrédient.")
 
     # Présents SI ET SEULEMENT SI `approximation`.
+    # ⚠️ Depuis le maillon 4, ce champ est EXÉCUTÉ, plus seulement lu : `appariement_feed` l'évalue
+    # sur les points déposés pour produire le fait. Sa FORME est donc contrainte
+    # (`formule_grammaire.analyser_formule`), et le refus emprunte le tour de réparation déjà en
+    # place — une prose ne dégrade plus la lisibilité, elle rend la ligne incollectable.
     formule: Optional[str] = Field(
         default=None, min_length=3,
-        description="La formule fermée, écrite avec les noms de concepts — "
-                    "'Assets - LiabilitiesCurrent - CashAndCashEquivalentsAtCarryingValue'.")
+        description="L'expression de calcul, écrite avec les noms de concepts et RIEN d'autre — "
+                    "'Assets - LiabilitiesCurrent - CashAndCashEquivalentsAtCarryingValue'. "
+                    f"Grammaire admise : {GRAMMAIRE_ADMISE}.")
     hypotheses: list[HypotheseEcrite] = Field(
         default_factory=list,
         description="Ce que la formule SUPPOSE, en clair, pour que le lecteur puisse le contester — "
@@ -213,6 +219,17 @@ class AppariementItem(Strict):
                 raise ValueError(
                     "statut='approximation' porte un `motif` : le motif est la raison d'une "
                     "absence ; une approximation a une formule, pas une excuse")
+            # La FORME de la formule, et c'est ici qu'elle se garde — pas dans le prompt (maillon 4).
+            # Depuis que `appariement_feed` l'évalue, une formule en prose n'est plus une approximation
+            # « moins lisible » : c'est une ligne qui repart au web chercher un nombre que l'émetteur
+            # dépose, sous un log de repli qui ressemble à un cas nominal. Le remède par prompt a été
+            # mesuré à un passage sur deux (00-REPRISE, 2026-09-18) ; celui-ci ne peut pas se desserrer
+            # par reformulation (#59).
+            try:
+                analyser_formule(self.formule)
+            except FormuleInexecutable as e:
+                raise ValueError(
+                    f"statut='approximation' avec une formule INEXÉCUTABLE — {e}") from e
 
         else:  # indisponible
             if not self.motif:

@@ -41,6 +41,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | `websearch.py` · `document_search.py` · `embeddings.py` | Recherche web + sélection de passages + embeddings bge-m3 1024d |
 | `units.py` | Détenteur unique du format des montants (#46) |
 | `edgar_facts.py` · `synthesis_feed.py` | Extraction EDGAR · synthèses grounded |
+| `appariement_feed.py` | Exécute une formule d'appariement sur les concepts XBRL **déjà lus** — produit un fait calculé, sa provenance concept par concept et son tier dérivé (#72) |
 
 ## Cible → garde (réalisé)
 
@@ -50,6 +51,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Nature dérivée (`metric` structuré ⟹ `mesure`) | `check_entry_nature.py` §7 (état persisté) |
 | Registre : standing par couple (source × nature) | `check_source_registry.py` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
+| Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
 | Format des montants (détenteur unique) | `check_edgar_feed.py` §11, `check_financials_feed.py` §9 |
 | search-worker ne qualifie pas sa propre source | `check_search_worker.py` |

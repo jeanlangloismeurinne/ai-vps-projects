@@ -14,16 +14,15 @@ role: >
   §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
   jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
   **LOT 3 EN COURS depuis le 2026-09-13** : maillons 1 (l'analyste, #63), 2 (`framework_answers`/
-  `framework_dispenses`, migration 040, #64) et 3 (suppression de `MVDD_SPEC`) sont ✅ ; le **maillon
-  4bis (l'appariement) est CLOS le 2026-09-18** — garde, apparieur, persistance (migration **042**
-  appliquée) puis, le 2026-09-18, le **PRODUCTEUR** de carte sur le chemin réel (`assurer_carte`) :
-  sans lui la lecture existait mais ne décidait jamais (conventions **#67 → #71**, suite `run_all.sh`
-  = **2583 assertions, 0 échec sur 34 scripts**). **#70 et #71 sont levés.** **Le maillon 4 est donc
-  débloqué, et son vrai blocage est MESURÉ** : la carte fait passer le routage de **0 à 9 lignes vers
-  EDGAR** sur RVMD, dont **0 exécutable** par le socle (une `approximation` est une formule sur
-  concepts XBRL nus, le socle ne sait exécuter que les 33 recettes du catalogue `POSTES`). Le maillon
-  4 = rendre le socle capable d'exécuter une formule d'appariement. Détail dans la checklist du lot 3
-  ci-dessous, ne pas dupliquer ici.
+  `framework_dispenses`, migration 040, #64), 3 (suppression de `MVDD_SPEC`) et 4bis (l'appariement,
+  conventions **#67 → #71**) sont ✅. Le **maillon 4 — L'EXÉCUTION d'un appariement — est livré le
+  2026-09-18** (convention **#72**) : `appariement_feed.py` évalue une formule sur les concepts XBRL
+  **déjà lus**, écrit l'entry avec sa provenance concept par concept et son tier dérivé, et ne laisse
+  au web que les `indisponible` et les échecs **nommés**. Mesuré contre le vrai dépôt (RVMD, ROLLBACK,
+  web débranché) : **lignes COLLECTÉES depuis le dépôt 0 → 6** — jamais « 9 lignes routées », qui
+  serait la faute que #71 vient de corriger. Suite `run_all.sh` = **2634 assertions, 0 échec sur 35
+  scripts**. **Reste au lot 3** : la collecte réelle **persistée** sur NVDA/MSFT/RVMD (§5.3), puis le
+  maillon 5 (réconciliation à 0/0). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -316,10 +315,43 @@ lot 1 ; les tables viennent en dernier.
    (2026-09-13, commit `203fe65`) — 15 fichiers ; `nonblocking_gaps_for()` retourne `{}` ;
    `read_dispenses()` branché dans `framework_persist.py` ; `run_all.sh` **2172/0** (29 scripts,
    −66 assertions vs 2238 : sections testant les symboles supprimés retirées comme prévu).
-4. 🔄 **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3) — **OUVERT, et bloqué
-   par l'APPARIEMENT ingrédient → donnée EDGAR.** La collecte réelle **ne doit pas partir** tant
-   que la garde décrite au maillon 4bis n'existe pas : un faux appariement écrit un nombre exact en
-   face de la mauvaise question (#43/#60), et rien en aval ne le rattrape.
+4. ✅ **L'EXÉCUTION d'un appariement — livrée le 2026-09-18** (convention **#72**, aucune migration).
+   Le socle sait désormais **exécuter** une formule d'appariement, et plus seulement router vers
+   EDGAR. Six étapes dans l'ordre imposé : **contrat** `app/contracts/formule_grammaire.py`
+   (détenteur unique des refus « dimensions incohérentes » et « division par zéro ») · **lecture**
+   `edgar_facts.points_annuels`/`point_pour_periode` extraits en détenteur unique (`companyconcept`
+   et `companyfacts` ne se lisent pas pareil, mais ce qu'il faut FAIRE des points est identique —
+   recopiée, la règle aurait rendu **deux nombres pour un même concept** selon le chemin) ·
+   **producteur** `app/knowledge/appariement_feed.py` (évalue sur l'inventaire **déjà lu** par
+   `assurer_carte`, donc **zéro appel réseau de plus**) · **câblage** `collecte_executor` (consigne
+   aveugle `ConsigneAppariement` — la cécité est une propriété du TYPE, #58 ; la recette du catalogue
+   reste **prioritaire** sur la formule, #30/#43) · **checks** · **acceptation réelle**.
+   **Quatre refus NOMMÉS, jamais un nombre fabriqué** : terme web manquant · ancres non communes
+   (tolérance 20 j) · dimensions incohérentes · ratio à dénominateur nul (qui reste *inexistant*,
+   jamais un zéro — #44). Chaque motif nomme la cause ET l'expression, pour finir dans un mandat.
+   Mesures : `check_appariement_feed.py` **33/0** + `negatif_appariement_feed.sh` **16 mutations/0** ·
+   `check_collecte_executor.py` **74 → 92** (§11 neuf) + son négatif **22 → 32 mutations/0** ·
+   suite complète **2634/0 sur 35 scripts** · acceptation `tools/acceptation_appariement.{py,sh}`
+   **8 critères OK / 0** (RVMD, $0.0015, ROLLBACK, **web débranché** — une retombée web y est un
+   échec), **lignes COLLECTÉES depuis le dépôt 0 → 6** (7 écritures, **1 supersession** — #43 visible
+   sur données réelles —, 2 refus nommés), tiers **A (0,95) vs A− (0,85)** : le cran de #67
+   discrimine sur le déterminisme contre le vrai dépôt.
+   ⚠️ **Distribution RVMD re-mesurée : `9 approximation · 4 indisponible`** (le paragraphe ci-dessous
+   écrivait `10 · 3` le 2026-09-17). La carte a été reconstruite sur un dépôt plus récent — la ligne
+   de base se **requête**, elle ne se rappelle pas.
+   ⚠️ **Deux résidus nommés, aucun n'est un défaut** : (a) `symbole_de_marche` n'a que **2 appelants**
+   — `valuation_feed`, `base_rate_corpus` et `financials_feed` portent encore chacun leur copie de la
+   règle #11 (jumeaux connus, à réduire quand l'un d'eux sera touché) ; (b) les 2 refus portent tous
+   deux sur `AssetImpairmentCharges`, dont les points sont des **fractions d'exercice** — propriété du
+   dépôt, pas un trou de collecte.
+   → **récit complet, les six défauts trouvés par le harnais et les deux points de méthode :
+   `00-REPRISE-ARCHIVE.md` § 2026-09-18 (2).**
+4ter. 🔄 **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3) — **OUVERT, et
+   désormais DÉBLOQUÉ** : la garde du 4bis existe, le producteur de carte tourne, et l'exécution est
+   livrée. Ce qui reste est de lancer la collecte **persistée** (l'acceptation du 2026-09-18 tourne en
+   ROLLBACK, donc rien n'est en base). ⚠️ Historique du blocage, conservé pour le *pourquoi* : un faux
+   appariement écrit un nombre exact en face de la mauvaise question (#43/#60), et rien en aval ne le
+   rattrape.
    **Acquis le 2026-09-14** (migration **041**, suite **2429/0**) : `fetch_company_facts()`
    (l'INVENTAIRE réellement déposé, que `companyconcept` ne peut jamais révéler),
    `tools/cartographier_xbrl.py` + `.sh`, `POSTES` 8 → 33, le traducteur NOMME le poste
@@ -427,25 +459,26 @@ lot 1 ; les tables viennent en dernier.
    Rien de déployé, **aucune collecte réelle lancée**.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4 — LA COLLECTE RÉELLE, ET SON VRAI BLOCAGE EST NOMMÉ.**
-> Le maillon 4bis est clos ; #70 **et** #71 sont levés. La carte est désormais produite, persistée,
-> revérifiée contre une date mesurée, et elle décide du routage sur le chemin exécuté.
+> **▶ PROCHAIN JALON = lot 3, maillon 4ter — LA COLLECTE RÉELLE **PERSISTÉE** SUR NVDA / MSFT / RVMD
+> (§5.3), puis le maillon 5 (réconciliation à 0/0).**
+> Le maillon 4 est clos (convention **#72**, 2026-09-18) : la carte est produite, persistée,
+> revérifiée contre une date mesurée, elle décide du routage — **et sa formule s'exécute** sur
+> l'inventaire déjà lu. Sur RVMD, **lignes COLLECTÉES depuis le dépôt : 0 → 6** (7 écritures,
+> 1 supersession par #43, 2 refus nommés sur `AssetImpairmentCharges`), tiers **A (0,95)** pour le
+> déterministe contre **A− (0,85)** pour le non-déterministe.
 >
-> ⚠️ **CE QUE LE MAILLON 4 DOIT LIVRER, MESURÉ ET NON SUPPOSÉ** (acceptation du 2026-09-18, RVMD) :
-> la carte fait passer le routage de **0 à 9 lignes vers EDGAR**, et **0 de ces 9 est exécutable**.
-> `_SocleEdgar` ne sait collecter que les **33 RECETTES** du catalogue `POSTES` (`run_edgar_feed`),
-> là où une `approximation` est une **FORMULE sur des concepts XBRL nus**. Les 9 repartent au web par
-> le repli nommé de `collecter_un` (`carte_statut=… mais poste_retenu()=None`). **La décision a
-> changé, la collecte pas encore.** Le maillon 4 est donc : *rendre le socle capable d'exécuter une
-> formule d'appariement* — évaluer `formule` sur les concepts déposés, écrire l'entry avec sa
-> provenance et son tier (`synthesis_feed.derive_tier_calcul` existe déjà, #68), et n'aller au web
-> que sur `indisponible`.
+> ⚠️ **CE QUI RESTE, ET POURQUOI CE N'EST PAS DÉJÀ FAIT** : l'acceptation du maillon 4 tourne en
+> transaction **ROLLBACK** — le critère [7] vérifie qu'il n'en reste rien. **Rien n'est en base.**
+> Le 4ter est donc l'exécution *pour de vrai* sur les trois émetteurs, avec ce que seule une
+> écriture durable révèle : les collisions d'identité sur plusieurs tickers, le coût agrégé, et le
+> comportement du repli web sur les `indisponible` qui restent.
 > ⚠️ **Ne pas ré-annoncer un gain de routage comme une économie de collecte** : c'est la faute que
-> #71 vient de corriger, sous une autre forme. Le chiffre à suivre est « lignes **collectées** depuis
-> le dépôt », jamais « lignes **routées** vers EDGAR ».
-> ⚠️ La distribution RVMD est **10 `approximation` · 3 `indisponible` · 0 `exact`** : chez une
-> biotech pré-revenus, *toute* ligne ancrée passe par une formule. Un maillon 4 qui n'exécuterait que
-> les `exact` ne débloquerait **rien** sur ce ticker.
+> #71 a corrigée, et #72 la répète. Le chiffre à suivre est « lignes **collectées** depuis le
+> dépôt », jamais « lignes **routées** vers EDGAR ».
+> ⚠️ **La distribution se re-mesure, elle ne se cite pas.** Annoncée ici **10 `approximation` ·
+> 3 `indisponible`** le 2026-09-18 au matin, elle valait **9 · 4** à l'acceptation du soir, même
+> ticker. Le récit vieillit, la mesure non (`feedback_ligne_de_base_est_une_mesure`) : requêter
+> l'état de départ **avant** le lot, jamais le recopier d'un bloc précédent.
 >
 > ⚠️ **Ce que le pont n'attrapera jamais, et qui reste vrai** : le faux appariement **sémantique**
 > (voir plus haut et #68). Ce qui s'y oppose est la troisième case, pas un contrôle plus fin.
@@ -523,8 +556,8 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite : `bash checks/run_all.sh` = TOUT VERT (2139 assertions, 0 échec, mesuré le 2026-09-12
-  après le re-mesurage de §7).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
+- **Suite : `bash checks/run_all.sh` = TOUT VERT (2634 assertions sur 35 scripts, 0 échec, mesuré le
+  2026-09-18 après le maillon 4).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
   requiert plus `CHECK_DB_URL`) ; `check_entry_nature` **88/0** (§7 = invariant #51, cf. frontmatter).
   Seuls `check_entry_nature §7` et `check_collecte_persist` gardent le montage réseau `coolify` +
   `CHECK_DB_URL`. `run_all.sh`
@@ -743,7 +776,11 @@ justes, c'est le *fait énoncé* qui était faux.
 - **`roadmap/V3/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
   PAS défait** (à relire à chaque lot) · §2 l'objet framework · §3 le manager · §4 les deux pilotes
   rédigés en entier · §5 le stockage · §9 le test d'acceptation · §10 les lots.
-- **`CLAUDE.md` du projet** — conventions **#22 à #66**. Les plus structurantes ici : #29 (la
+- **`CLAUDE.md` du projet** — conventions **#22 à #72**. Les plus structurantes ici : **#72**
+  (l'EXÉCUTION d'un appariement : formule sur concepts XBRL nus évaluée sur l'inventaire **déjà
+  lu**, 4 refus nommés, tier dérivé du **déterminisme**, `metric` = l'expression donc une
+  ré-exécution **supersède**), **#67 → #71** (la carte d'appariement : trois états, persistance,
+  revalidation contre `dernier_depot_vu`, producteur sur le chemin réel), #29 (la
   couverture se **lit** dans un index), #31 (ce qui décrit un émetteur ne vit jamais dans une
   constante globale), #37 (un contrat valide un objet, jamais la cohérence entre deux), #42/#43
   (datation et **identité** d'un fait), #44 (calculé / non calculable / absent), #46 (**détenteur
@@ -815,8 +852,10 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13) : maillons 1, 2, 3 et 4bis
-> livrés. PROCHAIN PAS = LOT 3, MAILLON 4, désormais DÉBLOQUÉ (4bis clos le 2026-09-18).** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13) : maillons 1, 2, 3, 4bis et 4
+> livrés. PROCHAIN PAS = LOT 3, MAILLON 4ter = la collecte réelle **PERSISTÉE** sur NVDA/MSFT/RVMD
+> (§5.3) — le maillon 4 l'a rendue exécutable, mais son acceptation tourne en **ROLLBACK**, donc
+> rien n'est en base.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
 > #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,
@@ -827,8 +866,20 @@ justes, c'est le *fait énoncé* qui était faux.
 > `check_framework_persist.py` 13/0, `negatif_framework_persist.sh` 6 mutations/0, zéro résidu) ;
 > ✅ **maillon 3 = suppression** de `MVDD_SPEC` / `SYNTHESIS_TARGETS` / `DECLARED_NONBLOCKING_GAPS`
 > (commit `203fe65`, 15 fichiers, `nonblocking_gaps_for()` → `{}`, `read_dispenses()` branché).
-> **Reste au lot 3** : maillon 4 = collecte neuve pilotée par le plan sur NVDA/MSFT/RVMD (§5.3) ;
+> **Reste au lot 3** : maillon 4ter = collecte neuve **persistée** sur NVDA/MSFT/RVMD (§5.3) ;
 > maillon 5 = réconciliation à 0/0. Prochaine migration : **043**.
+> ✅ **maillon 4 = l'EXÉCUTION d'un appariement, LIVRÉ le 2026-09-18** (convention **#72**, aucune
+> migration) : `knowledge/appariement_feed.py` évalue la `formule` sur les concepts XBRL **déjà lus**
+> par `assurer_carte` — **zéro appel réseau supplémentaire** — et écrit l'entry avec sa provenance
+> concept par concept et son tier dérivé. Quatre refus nommés (ancre hors tolérance, concept absent,
+> dimensions incohérentes, division par zéro), les deux derniers **délégués** à
+> `contracts/formule_grammaire.py` (détenteur unique #46) et donc éprouvés **chez leur détenteur**.
+> Acceptation réelle RVMD (ROLLBACK) : **8 critères OK / 0 échec**, **lignes COLLECTÉES depuis le
+> dépôt 0 → 6** (7 écritures, 1 supersession #43, 2 refus nommés), distribution **9 `approximation`
+> · 4 `indisponible`**, tiers **A (0,95)** vs **A− (0,85)**, $0.0015, dépôt courant 2026-08-05.
+> Suite **2634/0 sur 35 scripts** (était 2583/34) ; `check_appariement_feed` 33/0 ;
+> `negatif_appariement_feed.sh` **16 mutations / 0** ; `check_collecte_executor` 74 → **92** ;
+> `negatif_collecte_executor.sh` **32 / 0**.
 > ✅ **maillon 4bis = l'appariement, CLOS le 2026-09-18** : garde + apparieur (l'inventaire réel
 > remplace `POSTES` comme frontière) + migration **042** + **producteur** `assurer_carte()` sur le
 > chemin réel de `executer_plan_reel` (le câblage du 2026-09-17 n'était qu'une **lecture** : sans
@@ -856,6 +907,6 @@ justes, c'est le *fait énoncé* qui était faux.
 > pas). Corrigés dans la foulée. Voir #64 : **rejouer `run_all.sh` en entier après tout ajout de
 > champ à un contrat partagé**, jamais seulement le check du module qu'on vient de toucher.
 > LIRE D'ABORD : ce fichier, puis `roadmap/V3/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
-> le `CLAUDE.md` du projet (conventions #22-**#64**, dont **#63 = l'analyste** et **#64 =
-> `framework_version` sur `FrameworkAnswer`**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une
-> décision manque.
+> le `CLAUDE.md` du projet (conventions #22-**#72**, dont **#63 = l'analyste**, **#64 =
+> `framework_version` sur `FrameworkAnswer`**, **#67-#71 = la carte d'appariement** et **#72 = son
+> EXÉCUTION**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

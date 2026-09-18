@@ -14,7 +14,7 @@ import sys
 from datetime import date
 
 from app.knowledge.edgar_facts import (
-    _parse_annual_points, _pick_for_period, cik_from_url,
+    _parse_annual_points, point_pour_periode, cik_from_url,
 )
 from app.knowledge.financials_feed import (
     _md, _persist_capex_fact, _spec_source_date, build_financials_entries, extract_edgar_facts,
@@ -150,9 +150,9 @@ pts = _parse_annual_points(payload, unit="USD")
 check("points annuels seulement (les 10-Q trimestriels écartés)", len(pts) == 2, f"→ {len(pts)}")
 check("dédoublonnage par 'end' : 10-K préféré au 10-K/A",
       next(p for p in pts if p["end"] == "2026-01-25")["form"] == "10-K")
-picked = _pick_for_period(pts, date(2026, 1, 25))
+picked = point_pour_periode(pts, date(2026, 1, 25))
 check("appariement au period_end visé (2026-01-25)", picked and picked["val"] == 3236000000)
-check("hors tolérance → aucun point", _pick_for_period(pts, date(2030, 1, 1)) is None)
+check("hors tolérance → aucun point", point_pour_periode(pts, date(2030, 1, 1)) is None)
 
 print("\n6. ÉMETTEUR DÉFICITAIRE (RVMD) — un ratio valide un calcul, jamais son sens")
 # Chiffres RÉELS lus sur data.sec.gov le 2026-09-04 (CIK 1628171, exercice clos 2025-12-31).

@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import httpx
 
@@ -60,15 +60,32 @@ def cik_from_url(url: Optional[str]) -> Optional[int]:
 
 
 def _parse_annual_points(payload: dict[str, Any], *, unit: str) -> list[dict[str, Any]]:
-    """Extrait les points ANNUELS (un par exercice) de la réponse companyconcept.
+    """Points ANNUELS d'une réponse `companyconcept`, pour une unité. Enveloppe de `points_annuels`."""
+    return points_annuels((payload.get("units") or {}).get(unit) or [])
+
+
+# ── Le CŒUR de la sélection de points, séparé de la FORME de la réponse qui les porte ────────────
+#
+# `companyconcept` (un concept, `{units: {USD: [...]}}`) et `companyfacts` (tout l'émetteur, chaque
+# point déjà étiqueté de son unité) ne se lisent pas de la même façon, mais ce qu'il faut FAIRE des
+# points est identique : filtrer les formes annuelles, dédoublonner par date de clôture, préférer le
+# dépôt d'origine à son amendement. Depuis le maillon 4, `appariement_feed` lit l'inventaire
+# `companyfacts` pour évaluer une formule — s'il avait recopié cette règle, les deux copies
+# auraient re-divergé au correctif suivant (`feedback_correctif_regle_jumeaux`), et la divergence
+# aurait été muette : le même concept aurait rendu deux nombres selon le chemin qui l'a lu.
+#
+# D'où la séparation : les deux enveloppes ci-dessus/ci-dessous cadrent la RÉPONSE, ces deux
+# fonctions-ci tiennent la RÈGLE, et elles sont le détenteur unique (#46).
+
+def points_annuels(bruts: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Points ANNUELS (un par exercice) d'une liste de points BRUTS d'une SEULE unité. Pur.
 
     Dédoublonne par date de fin (`end`) : à `end` égal on préfère le 10-K originel au 10-K/A le plus
     récemment déposé (la valeur ré-affirmée dans un amendement reste la même ; on veut un seul point
     déterministe). Ne renvoie que les dépôts annuels (`_ANNUAL_FORMS`) marqués `fp='FY'`.
     """
-    units = (payload.get("units") or {}).get(unit) or []
     by_end: dict[str, dict[str, Any]] = {}
-    for it in units:
+    for it in bruts:
         if it.get("form") not in _ANNUAL_FORMS or it.get("fp") != "FY":
             continue
         end = it.get("end")
@@ -125,9 +142,14 @@ def duree_jours(point: dict[str, Any]) -> Optional[int]:
 
 
 def _parse_instant_points(payload: dict[str, Any], *, unit: str) -> list[dict[str, Any]]:
-    """Extrait les points INSTANTANÉS (postes de bilan) de la réponse companyconcept.
+    """Points INSTANTANÉS d'une réponse `companyconcept`. Enveloppe de `points_instantanes`."""
+    return points_instantanes((payload.get("units") or {}).get(unit) or [])
 
-    Différence essentielle avec `_parse_annual_points` : **aucun filtre sur la forme du dépôt**. Un
+
+def points_instantanes(bruts: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Points INSTANTANÉS (postes de bilan) d'une liste de points BRUTS d'une SEULE unité. Pur.
+
+    Différence essentielle avec `points_annuels` : **aucun filtre sur la forme du dépôt**. Un
     poste de bilan n'appartient pas à un exercice, il date d'un instant ; le restreindre aux 10-K
     rendait le socle aveugle à tout trimestre depuis le dernier annuel. Mesuré sur RVMD au
     2026-09-04 : bilan retenu au 2025-12-31 (trésorerie 383,7 M$, capitaux propres 1 631,3 M$,
@@ -140,9 +162,8 @@ def _parse_instant_points(payload: dict[str, Any], *, unit: str) -> list[dict[st
     À `end` égal, on préfère le dépôt annuel non amendé — le 10-K fait foi sur sa propre clôture,
     le comparatif d'un 10-Q ultérieur ne fait que la recopier.
     """
-    units = (payload.get("units") or {}).get(unit) or []
     by_end: dict[str, dict[str, Any]] = {}
-    for it in units:
+    for it in bruts:
         if est_point_de_flux(it):            # flux : a une durée, ce n'est pas un poste de bilan
             continue
         end, val = it.get("end"), it.get("val")
@@ -189,7 +210,7 @@ async def fetch_concept_instant(
     return points
 
 
-def _pick_for_period(points: list[dict[str, Any]], period_end: Optional[date], *, tol_days: int = 20
+def point_pour_periode(points: list[dict[str, Any]], period_end: Optional[date], *, tol_days: int = 20
                      ) -> Optional[dict[str, Any]]:
     """Point annuel dont la date de fin colle au `period_end` visé (tolérance : l'exercice fiscal ne
     tombe pas au jour près d'une année sur l'autre). À défaut de `period_end`, le plus récent."""
@@ -241,7 +262,7 @@ async def fetch_company_facts(cik: int) -> dict[str, list[dict[str, Any]]]:
 
     Les points sont rendus BRUTS (toutes unités, toutes formes, tous cadrages temporels confondus) :
     c'est un inventaire, pas une mesure. Choisir un point pour un exercice reste le travail de
-    `_pick_for_period` / `select_concept`, sur le chemin `companyconcept`, qui lui est mesuré.
+    `point_pour_periode` / `select_concept`, sur le chemin `companyconcept`, qui lui est mesuré.
     """
     url = _COMPANYFACTS.format(cik=cik)
     try:
@@ -300,7 +321,7 @@ async def fetch_annual_value(
 
     Renvoie le point retenu (`{end, val, ...}`) — l'appelant en fait un fait EDGAR tier A."""
     points = await fetch_concept_annual(cik, tag, unit=unit)
-    point = _pick_for_period(points, period_end)
+    point = point_pour_periode(points, period_end)
     if point is None:
         ends = ", ".join(p["end"] for p in points[-4:])
         raise EdgarUnavailable(
