@@ -49,10 +49,44 @@ mutations=(
 # routage ne bouge, et c'est exactement pour ça que la garde doit être STRUCTURELLE. Deux mutations,
 # parce que les deux moitiés se réintroduisent séparément : la sentinelle remplacée par une date lue,
 # et le `SELECT` qui la fournit.
-"$SRC¦            depot_courant=_SANS_REVERIFICATION,¦            depot_courant=\"2026-06-30\",  # mutation: une date plausible au lieu de l'aveu¦est la SENTINELLE nommée"
+"$SRC¦            depot_courant=_SANS_REVERIFICATION,¦            depot_courant=\"2026-06-30\",  # mutation: une date plausible au lieu de l'aveu¦sentinelle \`_SANS_REVERIFICATION\` est encore employée"
 "$SRC¦        carte = await lire_carte(¦        await conn.fetchrow(\"SELECT dernier_depot_vu FROM appariement_cartes WHERE ticker_id = \$1\", plan.ticker_id)\n        carte = await lire_carte(¦n'émet AUCUN \`SELECT\` sur \`appariement_cartes\`"
 # §9 ─ la sentinelle dégradée en date plausible : elle cesse d'avouer, et `<` peut redevenir vraie.
 "$SRC¦_SANS_REVERIFICATION = \"0000-00-00 (aucune date de dépôt courante : âge non revérifié ici)\"¦_SANS_REVERIFICATION = \"1970-01-01\"¦plus petite que toute date ISO"
+
+# ── MUTATIONS DU 2026-09-18 — le producteur, et la garde d'âge devenue ATTEIGNABLE ────────────────
+# §9 ─ LA MÊME RÉGRESSION, UN CRAN PLUS HAUT, ET C'EST LA PLUS INSTRUCTIVE DU FICHIER : la date
+# opposée à la carte n'est plus MESURÉE sur l'inventaire, c'est une constante — et on choisit
+# exprès la constante ÉGALE à la vraie date du 2026-09-18. Tous les asserts de comportement (§10)
+# RESTENT VERTS : le routage est identique, la carte fraîche est reconnue fraîche, la périmée est
+# reconstruite. Seul l'assert STRUCTUREL rougit. C'est la démonstration, dans le test négatif
+# lui-même, qu'une garde de comportement ne peut pas tenir cet interdit-là (#70).
+"$SRC¦        depot_courant = dernier_depot_vu(facts)¦        depot_courant = \"2026-06-30\"  # mutation: une date posée, jamais mesurée¦est PRODUIT par"
+# §9 ─ le chemin nominal renonce à revérifier : il repasse la sentinelle, donc la branche « périmée »
+# redevient inatteignable. C'est l'état exact d'avant ce lot, et il ne doit plus pouvoir revenir.
+"$SRC¦            depot_courant=depot_courant,¦            depot_courant=_SANS_REVERIFICATION,  # mutation: le nominal cesse de revérifier¦oppose une AUTRE référence que la sentinelle"
+# §9 ─ le PRODUCTEUR retiré : `apparier` n'est plus appelé. Sans cet assert, tout le reste de la
+# garde d'âge resterait vert sur une table vide — l'état mesuré en base le 2026-09-18.
+"$SRC¦        res = await apparier(plan, facts)¦        raise AppariementRefuse(\"mutation: producteur retiré\")¦sont appelés dans le code de production"
+# §10 ─ la carte est reconstruite à CHAQUE exécution : fonctionnellement correct, et il paie une
+# carte par run. Un coût qui ne rougit nulle part est un coût qu'on ne voit jamais.
+"$SRC¦    if carte is not None:¦    if False:  # mutation: la carte fraîche n'est jamais reconnue¦carte à jour → état"
+# §10 ─ la reconstruction ne PERSISTE pas : la carte est refaite, payée, puis jetée. Le run suivant
+# la refait. Seul un assert sur l'appel à `persister_carte` le voit.
+"$SRC¦    row_id = await persister_carte(conn, res.carte)¦    row_id = 0  # mutation: la carte reconstruite n'est pas persistée¦appelés une fois"
+# §10 ─ LA CONFUSION QUE #70 A PRODUITE UNE FOIS : une carte servie sans pouvoir la dater se déclare
+# `fraiche`. Rien ne change au routage ; c'est le RÉCIT qui devient faux, et l'aval ne peut plus
+# distinguer « vérifié à jour » de « pas vérifiable ».
+"$SRC¦    return CarteCourante(_statuts(carte), \"non_reverifiable\", None)¦    return CarteCourante(_statuts(carte), \"fraiche\", None)  # mutation: l'aveu effacé¦inventaire injoignable"
+# §10 ─ le repli nommé cesse de se distinguer : `statuts` vide au lieu de None. L'aval retombe bien
+# sur `poste_retenu()`, mais « carte sans aucune ligne » et « aucune carte » se confondent.
+"$SRC¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante(None, \"aucune\", None)¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante({}, \"aucune\", None)  # mutation: repli indistinct¦ni inventaire ni carte"
+# §10 ─ un refus définitif du modèle se maquille en reconstruction réussie : on servirait une carte
+# vide en la présentant comme neuve.
+"$SRC¦        return await _servir_le_stock(conn, plan, motif=f\"appariement REFUSÉ après réparation : {e}\")¦        return CarteCourante(None, \"reconstruite\", depot_courant)  # mutation: le refus maquillé¦appariement REFUSÉ après réparation"
+# §10 ─ LE CÂBLAGE : `assurer_carte` est parfaite et personne ne l'appelle. C'est littéralement
+# l'état dans lequel `apparier()`/`persister_carte()` ont vécu tout le maillon 4bis.
+"$SRC¦        carte = await assurer_carte(plan, conn=conn)¦        carte = CarteCourante(None, \"aucune\", None)  # mutation: le producteur débranché¦OBTIENT la carte quand l'appelant n'en fournit pas"
 )
 
 passes=0; ratees=0

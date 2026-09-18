@@ -411,8 +411,16 @@ check("§8 invariant §7 intact : carte `indisponible`+SEC → web ; `exact`+SEC
 # garde n'était pas absente, elle était NOURRIE DE SA PROPRE VALEUR, et c'est la seule des deux
 # formes qui ne se voit pas à la lecture (`feedback_controle_au_point_de_lecture`).
 #
-# Cet assert est structurel, lu sur l'AST et non sur le texte : la prose de ce fichier et celle de
-# l'exécuteur PARLENT toutes deux de `dernier_depot_vu` pour expliquer l'interdit, et un grep brut
+# ⚠️ CE QUE CETTE SECTION GARDE DEPUIS LE 2026-09-18, ET POURQUOI C'EST PLUS FORT QU'AVANT.
+# La version précédente exigeait UN SEUL appel à `lire_carte`, avec la sentinelle en `depot_courant`.
+# C'était l'interdit juste, adossé au mauvais invariant : il tenait parce que l'exécuteur n'avait
+# AUCUNE date à opposer — et donc il tenait aussi, sans rien dire, pendant que la table restait vide
+# et que la carte ne décidait jamais rien. L'interdit survit ici sous une forme qui ne peut plus se
+# satisfaire de l'inaction : le chemin NOMINAL passe une date, et cette date doit venir du producteur
+# `dernier_depot_vu(...)` — jamais d'une valeur relue en base.
+#
+# Ces asserts sont structurels, lus sur l'AST et non sur le texte : la prose de ce fichier et celle
+# de l'exécuteur PARLENT toutes deux de `dernier_depot_vu` pour expliquer l'interdit, et un grep brut
 # rougirait sur sa propre énonciation (`feedback_grep_interdit_lit_sa_propre_enonciation`).
 print("\n[9] la référence de revérification ne peut pas venir de la carte elle-même")
 import ast  # noqa: E402
@@ -420,17 +428,62 @@ from pathlib import Path  # noqa: E402
 
 _ARBRE = ast.parse(Path(_mod.__file__).read_text(encoding="utf-8"))
 
-_appels_lire = [n for n in ast.walk(_ARBRE)
-                if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "lire_carte"]
+
+def _appels(nom):
+    return [n for n in ast.walk(_ARBRE)
+            if isinstance(n, ast.Call) and getattr(n.func, "id", None) == nom]
+
+
+_appels_lire = _appels("lire_carte")
 check("§9 l'exécuteur appelle `lire_carte` — le câblage existe dans le code de production, pas "
       "seulement dans son test",
-      len(_appels_lire) == 1, f"→ {len(_appels_lire)} appel(s)")
-_kw = {k.arg: k.value for a in _appels_lire for k in a.keywords}
-check("§9 `depot_courant` est la SENTINELLE nommée, jamais une date lue en base : l'exécuteur avoue "
-      "dans son code qu'il n'a pas de dépôt courant à opposer",
-      isinstance(_kw.get("depot_courant"), ast.Name)
-      and _kw["depot_courant"].id == "_SANS_REVERIFICATION",
-      f"→ {ast.dump(_kw['depot_courant'])[:90] if 'depot_courant' in _kw else 'absent'}")
+      len(_appels_lire) >= 1, f"→ {len(_appels_lire)} appel(s)")
+
+# LE PRODUCTEUR EXISTE. Sans lui, tous les asserts d'âge ci-dessous sont vrais sur une table vide :
+# `lire_carte` renvoie None, l'exécuteur retombe sur `poste_retenu()`, et rien ne rougit. C'est
+# exactement l'état mesuré en base le 2026-09-18 (0 ligne, 0 appelant de `persister_carte` en
+# production) — un décideur sans producteur ne décide jamais.
+check("§9 l'exécuteur PRODUIT la carte quand elle manque : `apparier` puis `persister_carte` sont "
+      "appelés dans le code de production (sans quoi la garde d'âge porte sur une table vide)",
+      len(_appels("apparier")) >= 1 and len(_appels("persister_carte")) >= 1,
+      f"→ apparier={len(_appels('apparier'))}, persister_carte={len(_appels('persister_carte'))}")
+
+# Chaque `depot_courant` est un NOM (jamais une expression inline qu'on ne pourrait pas remonter).
+_noms_depot = []
+_non_nom = 0
+for _a in _appels_lire:
+    _v = {k.arg: k.value for k in _a.keywords}.get("depot_courant")
+    if isinstance(_v, ast.Name):
+        _noms_depot.append(_v.id)
+    else:
+        _non_nom += 1
+check("§9 chaque appel à `lire_carte` passe `depot_courant` par un NOM — une expression inline "
+      "rendrait sa provenance illisible à l'AST, donc l'interdit ingardable",
+      _non_nom == 0 and len(_noms_depot) == len(_appels_lire),
+      f"→ {_non_nom} appel(s) sans nom, {len(_noms_depot)}/{len(_appels_lire)}")
+
+# La sentinelle reste un emploi LÉGITIME (inventaire injoignable), mais elle n'est plus le seul.
+check("§9 la sentinelle `_SANS_REVERIFICATION` est encore employée — servir une carte sans pouvoir "
+      "la dater reste un état NOMMÉ, pas un silence",
+      "_SANS_REVERIFICATION" in _noms_depot, f"→ {sorted(set(_noms_depot))}")
+check("§9 au moins un appel oppose une AUTRE référence que la sentinelle : le chemin nominal "
+      "revérifie réellement l'âge (sans cela, la branche « périmée » reste inatteignable)",
+      any(n != "_SANS_REVERIFICATION" for n in _noms_depot), f"→ {sorted(set(_noms_depot))}")
+
+# L'INTERDIT, sous sa forme forte : toute référence autre que la sentinelle doit être PRODUITE par
+# `dernier_depot_vu(...)`. Une réassignation depuis `carte.dernier_depot_vu` ou depuis un `row[...]`
+# recréerait `X < X` — et cette fois-ci elle ne se verrait pas non plus.
+for _nom in sorted({n for n in _noms_depot if n != "_SANS_REVERIFICATION"}):
+    _rhs = [n.value for n in ast.walk(_ARBRE) if isinstance(n, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == _nom for t in n.targets)]
+    check(f"§9 `{_nom}` est PRODUIT par `dernier_depot_vu(...)`, et par rien d'autre : la date "
+          "opposée à la carte est mesurée sur l'inventaire, jamais relue depuis la carte",
+          len(_rhs) >= 1 and all(isinstance(r, ast.Call)
+                                 and getattr(r.func, "id", None) == "dernier_depot_vu"
+                                 for r in _rhs),
+          f"→ {len(_rhs)} affectation(s) : "
+          f"{[type(r).__name__ + ':' + str(getattr(getattr(r, 'func', None), 'id', '?')) for r in _rhs]}")
+
 _sql = [n.value for n in ast.walk(_ARBRE)
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
         and "SELECT" in n.value and "appariement_cartes" in n.value]
@@ -441,6 +494,202 @@ check("§9 la sentinelle est plus petite que toute date ISO : la comparaison `<`
       "CONSTRUCTION, elle ne dépend pas d'un `if` qu'un correctif pourrait retourner",
       _mod._SANS_REVERIFICATION < "0001-01-01",
       f"→ {_mod._SANS_REVERIFICATION!r}")
+
+
+# ── §10 LES QUATRE ÉTATS DE LA CARTE SONT OBSERVABLES, ET LA RECONSTRUCTION EST UNE RECONSTRUCTION ──
+# §9 lit le code ; §10 le FAIT TOURNER. Sans réseau, sans modèle, sans base : on substitue les quatre
+# frontières externes de `assurer_carte` (`resolve_cik`, `fetch_company_facts`, `lire_carte`,
+# `apparier`/`persister_carte`) et on COMPTE ce qui est appelé. `dernier_depot_vu` reste le VRAI —
+# c'est précisément ce que §9 exige comme source de la date, et le substituer mesurerait le mock.
+#
+# CE QUE CHAQUE CAS FERME :
+#   · carte fraîche        → ZÉRO appel modèle. Sans cet assert, une implémentation qui reconstruit à
+#                            chaque exécution serait verte partout ailleurs et coûterait une carte
+#                            par run.
+#   · carte périmée        → `apparier` appelé ET `persister_carte` appelé. C'est la branche que #70
+#                            rendait inatteignable ; qu'elle mène à une RECONSTRUCTION et non à un
+#                            repli est ce qui distingue le correctif d'un simple aveu.
+#   · inventaire injoignable → carte STOCKÉE servie, état `non_reverifiable`, et `depot_courant` None.
+#                            Un None se lit comme une absence ; une date recopiée se lirait comme une
+#                            mesure (c'est la faute de #70, transposée d'un cran).
+#   · rien du tout         → `aucune` + `statuts is None` → l'aval retombe sur `poste_retenu()`.
+print("\n[10] les quatre états de la carte, observés sur `assurer_carte` (sans réseau ni modèle)")
+from app.contracts.appariement_schema import AppariementCarte, AppariementItem  # noqa: E402
+
+_journal = {"apparier": 0, "persiste": 0, "depots_opposes": []}
+
+# Un inventaire minimal mais de la MÊME FORME que le réel : `fetch_company_facts` rend
+# {concept → [points]} et chaque point porte `filed` (copié de la forme EDGAR, pas inventé plus
+# commode — une fixture plus favorable que la prod est un check aveugle, `feedback_fixture_copiee`).
+_FACTS = {"Assets": [{"end": "2026-01-26", "val": 1.0, "filed": "2026-02-26", "form": "10-K"}],
+          "Revenues": [{"end": "2026-01-26", "val": 2.0, "filed": "2026-06-30", "form": "10-Q/A"}]}
+_DEPOT_REEL = "2026-06-30"   # le max(filed) de _FACTS — et non le max(end), qui vaudrait 2026-01-26
+
+
+def _carte_stockee(depot):
+    return AppariementCarte(
+        ticker_id="NVDA", framework_id="qualite_financiere", framework_version="v3.0.0",
+        dernier_depot_vu=depot,
+        items=[AppariementItem(question_id="qf_1", ingredient_id="resultat_net",
+                               statut="exact", concepts=["NetIncomeLoss"])])
+
+
+async def _fake_cik(ticker):
+    return "0001045810"
+
+
+async def _fake_facts(cik):
+    return _FACTS
+
+
+def _installer(*, facts_ok=True, en_base=None):
+    """Substitue les frontières externes. `en_base` = la carte stockée (ou None)."""
+    _journal["apparier"] = _journal["persiste"] = 0
+    _journal["depots_opposes"] = []
+    _mod.resolve_cik = _fake_cik
+    if facts_ok:
+        _mod.fetch_company_facts = _fake_facts
+    else:
+        async def _ko(cik):
+            raise _mod.EdgarUnavailable("SEC injoignable (simulé)")
+        _mod.fetch_company_facts = _ko
+
+    async def _lire(conn, *, ticker_id, framework_id, framework_version, depot_courant):
+        _journal["depots_opposes"].append(depot_courant)
+        if en_base is None:
+            return None
+        # LA VRAIE RÈGLE DE `lire_carte`, recopiée et non contournée : périmée ⟹ None (#54).
+        return None if en_base.dernier_depot_vu < depot_courant else en_base
+    _mod.lire_carte = _lire
+
+    async def _apparier(plan, facts):
+        _journal["apparier"] += 1
+        return _mod_apparieur.Appariement(
+            run=_RunFactice(), carte=_carte_stockee(_mod.dernier_depot_vu(facts)),
+            refus_repares=[])
+    _mod.apparier = _apparier
+
+    async def _persister(conn, carte):
+        _journal["persiste"] += 1
+        return 1
+    _mod.persister_carte = _persister
+
+
+class _RunFactice:
+    cost_usd = 0.0012
+
+
+import app.agents.v2.apparieur as _mod_apparieur  # noqa: E402
+
+_plan_carte = CollectionPlan(ticker_id="NVDA", framework_id="qualite_financiere",
+                             framework_version="v3.0.0", archetype="rentable",
+                             items=[_it_rev, _it_ni])
+
+# ── cas 1 : carte à jour (stockée sur le dépôt courant) → FRAÎCHE, zéro appel modèle ──────────────
+_installer(en_base=_carte_stockee(_DEPOT_REEL))
+_c1 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 carte à jour → état `fraiche`, AUCUN appel modèle (une carte valide ne se repaie pas)",
+      _c1.etat == "fraiche" and _journal["apparier"] == 0 and _journal["persiste"] == 0
+      and _c1.cout_usd == 0.0,
+      f"→ etat={_c1.etat}, apparier={_journal['apparier']}, persiste={_journal['persiste']}")
+check("§10 la date opposée à la carte est le `max(filed)` de l'inventaire (2026-06-30), pas le "
+      "`max(end)` (2026-01-26) : un rectificatif qui AJOUTE des concepts sans bouger la clôture "
+      "doit périmer la carte",
+      _journal["depots_opposes"] == [_DEPOT_REEL] and _c1.depot_courant == _DEPOT_REEL,
+      f"→ {_journal['depots_opposes']}, depot_courant={_c1.depot_courant}")
+check("§10 la carte fraîche fournit bien les statuts au routage (couple question×ingrédient)",
+      _c1.statuts == {("qf_1", "resultat_net"): "exact"}, f"→ {_c1.statuts}")
+
+# ── cas 2 : carte PÉRIMÉE → RECONSTRUCTION (pas un repli dégradé) ─────────────────────────────────
+_installer(en_base=_carte_stockee("2026-02-26"))   # antérieure au dépôt courant
+_c2 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 carte PÉRIMÉE → `reconstruite` : `apparier` ET `persister_carte` appelés une fois. "
+      "C'est la branche que #70 rendait inatteignable, et elle RECONSTRUIT au lieu de dégrader",
+      _c2.etat == "reconstruite" and _journal["apparier"] == 1 and _journal["persiste"] == 1,
+      f"→ etat={_c2.etat}, apparier={_journal['apparier']}, persiste={_journal['persiste']}")
+check("§10 la carte reconstruite est datée du dépôt COURANT (elle ne renaît pas périmée) et son "
+      "coût modèle est remonté, pas absorbé",
+      _c2.depot_courant == _DEPOT_REEL and _c2.cout_usd > 0,
+      f"→ depot_courant={_c2.depot_courant}, cout={_c2.cout_usd}")
+
+# ── cas 3 : aucune carte en base → production initiale ────────────────────────────────────────────
+_installer(en_base=None)
+_c3 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 aucune carte en base → `reconstruite` : le premier passage PRODUIT la carte au lieu de "
+      "retomber silencieusement sur `poste_retenu()` (l'état mesuré en prod le 2026-09-18)",
+      _c3.etat == "reconstruite" and _journal["apparier"] == 1 and _journal["persiste"] == 1,
+      f"→ etat={_c3.etat}, apparier={_journal['apparier']}, persiste={_journal['persiste']}")
+
+# ── cas 4 : inventaire injoignable + carte en base → servie SANS revérification, et c'est DIT ─────
+_installer(facts_ok=False, en_base=_carte_stockee("2026-02-26"))
+_c4 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 inventaire injoignable → `non_reverifiable` : la carte stockée est servie, mais l'état "
+      "le DIT — « à jour » et « pas vérifiable » ne se confondent plus en aval",
+      _c4.etat == "non_reverifiable" and _c4.statuts is not None
+      and _journal["apparier"] == 0,
+      f"→ etat={_c4.etat}, statuts={_c4.statuts}, apparier={_journal['apparier']}")
+check("§10 dans cet état, `depot_courant` est None et la sentinelle est ce qui a été opposé : "
+      "aucune date n'est inventée pour faire croire à une mesure",
+      _c4.depot_courant is None
+      and _journal["depots_opposes"] == [_mod._SANS_REVERIFICATION],
+      f"→ depot_courant={_c4.depot_courant}, opposés={_journal['depots_opposes']}")
+
+# ── cas 5 : ni inventaire ni carte → repli NOMMÉ vers `poste_retenu()` ────────────────────────────
+_installer(facts_ok=False, en_base=None)
+_c5 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 ni inventaire ni carte → `aucune` + `statuts is None` : l'aval retombe sur "
+      "`poste_retenu()`, et ce repli porte un nom (#25/#44)",
+      _c5.etat == "aucune" and _c5.statuts is None and _c5.depot_courant is None,
+      f"→ {_c5}")
+
+# ── cas 6 : le modèle REFUSE deux fois → on ne tue pas le lot, on sert le stock en le disant ──────
+_installer(en_base=_carte_stockee("2026-02-26"))
+
+
+async def _apparier_refuse(plan, facts):
+    _journal["apparier"] += 1
+    raise _mod.AppariementRefuse("concepts inventés deux fois de suite (simulé)")
+
+
+_mod.apparier = _apparier_refuse
+_c6 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))
+check("§10 appariement REFUSÉ après réparation → `non_reverifiable` sur le stock, jamais une "
+      "exception qui tue toute la collecte (#25) — et rien n'est persisté",
+      _c6.etat == "non_reverifiable" and _journal["persiste"] == 0 and _journal["apparier"] == 1,
+      f"→ etat={_c6.etat}, persiste={_journal['persiste']}")
+
+# ── LE CÂBLAGE : `executer_plan_reel` OBTIENT la carte, il ne se contente pas de l'accepter ───────
+# Sans ces deux asserts, `assurer_carte` pourrait être parfaite et n'être appelée par personne — ce
+# qui est EXACTEMENT l'état dans lequel `apparier()` et `persister_carte()` ont vécu tout le maillon
+# 4bis. Plan tout-`inobtenable` : l'aiguillage se fait sans une seule ligne à collecter, donc sans
+# réseau, et ce qu'on observe est le câblage nu.
+_plan_inob = CollectionPlan(ticker_id="NVDA", framework_id="qualite_financiere",
+                            framework_version="v3.0.0", archetype="rentable", items=[_it_inob])
+_assure = {"n": 0}
+
+
+async def _fake_assurer(plan, *, conn):
+    _assure["n"] += 1
+    return _mod.CarteCourante(None, "aucune", None)
+
+
+_mod.assurer_carte = _fake_assurer
+asyncio.run(_mod.executer_plan_reel(_plan_inob, conn=None))
+check("§10 `executer_plan_reel` OBTIENT la carte quand l'appelant n'en fournit pas : le producteur "
+      "est branché sur le chemin d'exécution, pas seulement écrit à côté",
+      _assure["n"] == 1, f"→ {_assure['n']} appel(s) à assurer_carte")
+
+_assure["n"] = 0
+asyncio.run(_mod.executer_plan_reel(
+    _plan_inob, conn=None, carte=_mod.CarteCourante(None, "aucune", None)))
+check("§10 une carte FOURNIE court-circuite la production : l'appelant qui en détient déjà une "
+      "(`executer_collecte_framework`) ne la repaie pas une seconde fois",
+      _assure["n"] == 0, f"→ {_assure['n']} appel(s) à assurer_carte")
+
+check("§10 `executer_plan_reel` expose le paramètre `carte` — un appelant qui en détient une "
+      "(ou qui n'en veut aucune) ne repaie pas la production",
+      "carte" in __import__("inspect").signature(_mod.executer_plan_reel).parameters,
+      f"→ {list(__import__('inspect').signature(_mod.executer_plan_reel).parameters)}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

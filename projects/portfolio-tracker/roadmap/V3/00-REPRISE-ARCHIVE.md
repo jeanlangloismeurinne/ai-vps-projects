@@ -8,6 +8,118 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-18 — spec v3, **lot 3, maillon 4bis étape 2d : LE PRODUCTEUR DE CARTE**
+
+Suite **2566 → 2583**, exit 0 sur les 34 scripts. **Aucune migration.** Rien de déployé, **aucune
+collecte réelle lancée** (périmètre arbitré avec l'utilisateur : producteur + garde, sans collecte).
+
+### Ce que le lot devait faire, et pourquoi ce n'était pas ça
+
+Le 00-REPRISE ouvrait sur un résidu écrit : #70, « l'exécuteur n'a pas de date de dépôt courante à
+opposer à la carte », avec une **Sortie déjà rédigée** — *persister la date de dépôt par ticker à
+l'ingestion EDGAR*. La dérouler aurait été l'erreur du lot.
+
+Elle recrée #70 un cran plus haut. Qui écrit cette date ? Soit le producteur de la carte lui-même,
+et on retombe sur `X < X`. Soit `run_edgar_feed`, qui n'interroge **que le sous-ensemble des concepts
+réclamés** (33 recettes du catalogue) au lieu de l'inventaire entier (269 à 627 concepts) : la date
+serait **sous-estimée**, donc la garde ne virerait presque jamais — un `X < X` déguisé en mesure.
+Arbitrage utilisateur, qui a tranché sans ambiguïté : *« Prends la date correspondant à la mise à
+jour de l'entrée correspondante dans Edgar […] Je veux si possible éviter de créer de nouvelles
+règles de décisions mais que la date retenue soit toujours correcte. »* Cela désigne exactement
+`apparieur.dernier_depot_vu` — un `max(filed)` sur TOUT l'inventaire, détenteur unique **déjà écrit**
+(#46). Zéro règle nouvelle.
+
+### Le vrai défaut, trouvé en mesurant la ligne de base au lieu de la rappeler
+
+Avant d'écrire une ligne, quatre requêtes gratuites (`feedback_ligne_de_base_est_une_mesure`) :
+
+```
+appariement_cartes  →  0 ligne
+persister_carte()   →  0 appelant en production  (checks seulement, en ROLLBACK)
+apparier()          →  0 appelant en production  (tools/acceptation_apparieur, qui ne persiste rien)
+lire_carte()        →  appelé par executer_plan_reel → renvoie TOUJOURS None → repli poste_retenu()
+```
+
+Le 00-REPRISE et la convention #68 affirmaient : « **la carte est le décideur, `poste_retenu()`
+n'est plus que le repli** ». Vrai **du code lu**, faux **du chemin exécuté** — rien ne produisait de
+carte. Le décideur n'avait pas de producteur, donc il ne décidait jamais, et `poste_retenu()`
+continuait de router seul : celui-là même dont #67 a mesuré 5 faux appariements sur 7.
+
+C'est **la même famille que #70, un cran plus haut**. #70 : une garde nourrie de sa propre valeur.
+#71 : une garde qu'**aucune donnée n'atteint**. Les deux passent tous leurs tests ; le signe est dans
+les deux cas une branche inatteignable — ici celle de la carte « périmée ».
+
+### Le correctif
+
+`assurer_carte()` dans `collecte_executor.py`. Ordre non arbitraire, frontière gratuite d'abord :
+`fetch_company_facts` (gratuit) → `dernier_depot_vu(facts)` → `lire_carte(depot_courant=<cette
+date>)` → si `None` (absente **ou périmée**) → `apparier()` sur **les mêmes** `facts` +
+`persister_carte()`. L'inventaire est lu une fois et sert aux deux emplois.
+
+La branche « périmée » devient **atteignable**, et ce qu'elle déclenche est une **RECONSTRUCTION**,
+pas un repli dégradé : l'inventaire qui a déclaré la carte périmée est exactement celui qu'il faut
+pour la refaire.
+
+Quatre états nommés (#25/#44) : `fraiche` (relue, âge revérifié, **zéro appel modèle**) ·
+`reconstruite` · `non_reverifiable` (inventaire injoignable → carte stockée servie **en le disant**)
+· `aucune` (repli nommé). `_SANS_REVERIFICATION` garde un emploi **légitime** — l'exception panne
+SEC — au lieu d'être le seul chemin.
+
+### L'assert qui compte, et pourquoi il est structurel
+
+`check_collecte_executor.py` §9 exigeait *un seul* appel à `lire_carte`, avec la sentinelle. Juste,
+et **satisfait par l'inaction** : il restait vert pendant que la table était vide. Le nouveau exige
+que le chemin nominal oppose une date, que cette date soit **produite par `dernier_depot_vu(...)` et
+par rien d'autre** (lecture AST des affectations), et que `apparier`/`persister_carte` soient
+réellement appelés.
+
+La mutation qui le démontre remplace `dernier_depot_vu(facts)` par la **constante égale à la vraie
+date** (`"2026-06-30"`). Résultat dans le test négatif : **1 seul assert rouge**, le structurel — les
+dix asserts de comportement de §10 restent verts. Le routage est identique, la carte fraîche est
+reconnue fraîche, la périmée est reconstruite. *Une garde de comportement ne peut pas tenir cet
+interdit-là*, et le test négatif l'imprime lui-même.
+
+`check_collecte_executor.py` **57 → 74/0** · `negatif_collecte_executor.sh` **13 → 22 mutations / 0**.
+
+### L'acceptation réelle, et le chiffre qu'il ne faut PAS lire comme un gain
+
+`tools/acceptation_carte_executeur.{py,sh}` — vrai modèle, vrai dépôt SEC, vraie base, plan RELU en
+base (jamais retraduit), transaction ROLLBACK, **$0.0015**. 6 critères / 0. Le plan est le #12,
+RVMD/`qualite_financiere` v3.0.0, 13 lignes `traduit` sur 14.
+
+| critère | mesure |
+|---|---|
+| [1] ligne de base | **0 carte en base** — le diagnostic remesuré, pas rappelé |
+| [2] production | `reconstruite`, 1 ligne écrite et lisible sur sa clef |
+| [3] relecture | `fraiche`, **coût modèle 0**, mêmes statuts |
+| [4] garde d'âge | opposée au **2026-08-06** → `None` (périmée) ; au **2026-08-05** (son dépôt) → valide |
+| [5] la carte décide | **0 → 9** lignes vers EDGAR, 9 récupérées du web, 0 abandonnée |
+| [6] rollback | 0 résidu, vérifié après coup |
+
+Distribution RVMD : **10 `approximation`, 3 `indisponible`, 0 `exact`**. Aucun appariement exact chez
+une biotech pré-revenus — chaque ligne ancrée passe par une formule. C'est cohérent, et c'est le cas
+que #67 existe pour créer.
+
+⚠️ **Et la mesure qui interdit de célébrer** : sur ces **9 lignes récupérées, 0 est exécutable** par
+`_SocleEdgar`, qui ne sait collecter que les 33 RECETTES du catalogue `POSTES`, là où une
+`approximation` est une FORMULE sur des concepts XBRL nus. Les 9 repartent au web par le repli nommé
+de `collecter_un`. **La décision a changé, la collecte pas encore.** Le compter comme « 9 lignes
+récupérées du web payant » serait exactement la faute que ce lot vient de corriger — un décompte de
+routage lu comme une économie de collecte. Le nombre est **imprimé et non gardé** : c'est le contenu
+du maillon 4, et il tombera le jour où le socle saura exécuter une formule.
+
+### Ce qui a été retiré, pas seulement ajouté
+
+(`feedback_correctif_omet_de_retirer`.) Trois affirmations devenues fausses ont été corrigées dans
+`CLAUDE.md` plutôt que laissées : la « Sortie » de #70 (c'était la mauvaise), « la carte est devenue
+le décideur du routage » en #68, et « levé le 2026-09-17 » en #67. Convention **#71** ajoutée.
+
+Fichiers : `app/agents/v2/collecte_executor.py` (producteur + câblage), `tools/collecter_framework.py`
+(l'état de la carte s'imprime), `checks/check_collecte_executor.py` §9 réécrit + §10 neuf,
+`checks/negatif_collecte_executor.sh`, `tools/acceptation_carte_executeur.{py,sh}` (neufs).
+
+---
+
 ## 2026-09-17 (2) — spec v3, **lot 3, maillon 4bis étape 2 : L'APPARIEUR, LA CARTE, LE CÂBLAGE**
 
 Le maillon 4bis est **clos** et le maillon 4 **débloqué**. Suite **2502 → 2566**, exit 0 sur les

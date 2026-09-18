@@ -63,6 +63,11 @@ async def _plan_only(ticker: str, framework: str, archetype: str) -> None:
 async def _plein(ticker: str, framework: str, archetype: str) -> None:
     res = await executer_collecte_framework(ticker, framework, archetype)
     print(f"\nCOLLECTE {ticker} · {framework} · {archetype} — plan #{res['plan_id']}")
+    # L'état de la carte se LIT : « fraiche » et « non_reverifiable » servent toutes deux une carte
+    # stockée, et seule cette ligne dit laquelle a été revérifiée contre une date mesurée (#70).
+    print(f"  carte d'appariement : {res['carte_etat']} · {res['carte_lignes']} ligne(s) "
+          f"· dépôt courant {res['carte_depot_courant'] or '(non mesuré)'} "
+          f"· coût apparieur ≈ ${res['apparieur_cost_usd']:.4f}")
     print(f"  lignes vues : {res['lignes_vues']}")
     print(f"  liens écrits (question_coverage) : {res['ecrits']['liens_ecrits']}")
     print(f"  mandats écrits (framework_mandates) : {res['ecrits']['mandats_ecrits']}")

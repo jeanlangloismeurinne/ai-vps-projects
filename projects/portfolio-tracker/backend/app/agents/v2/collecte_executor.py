@@ -42,7 +42,7 @@ import logging
 import re
 import unicodedata
 from collections.abc import Collection
-from typing import Any, Literal, Optional
+from typing import Any, Literal, NamedTuple, Optional
 
 import asyncpg
 
@@ -58,10 +58,22 @@ from app.agents.v2.worker import WORKER_NAME, persist_worker_entries, run_search
 from app.contracts.collection_plan_schema import CollectionPlan
 from app.contracts.worker_delegation_schema import EntryType, OutputSchema, WorkerRequest
 from app.db.database import get_db_session
-from app.knowledge.edgar_feed import POSTES, EdgarFeedUnavailable, run_edgar_feed
+from app.knowledge.edgar_facts import EdgarUnavailable, fetch_company_facts
+from app.knowledge.edgar_feed import (
+    POSTES,
+    EdgarFeedUnavailable,
+    resolve_cik,
+    run_edgar_feed,
+)
 from app.knowledge.websearch import SearchUnavailable
 
-from .appariement_persist import lire_carte
+from .appariement_persist import lire_carte, persister_carte
+from .apparieur import (
+    AppariementRefuse,
+    AppariementSansObjet,
+    apparier,
+    dernier_depot_vu,
+)
 from .collecte_persist import persist_aiguillage, persist_plan
 
 logger = logging.getLogger(__name__)
@@ -73,6 +85,8 @@ __all__ = [
     "construire_requete_web",
     "collecter_un",
     "postes_edgar_du_plan",
+    "CarteCourante",
+    "assurer_carte",
     "executer_plan_reel",
     "executer_collecte_framework",
 ]
@@ -393,46 +407,76 @@ def postes_edgar_du_plan(
     return frozenset(postes)
 
 
+# ────────────────────────── la carte d'appariement : la PRODUIRE, pas seulement la lire ──────────────
+#
+# CE QUI A CHANGÉ ICI, ET POURQUOI (2026-09-18, lot 3 — la garde #70 fermée par le haut).
+#
+# La version précédente ne faisait que LIRE la carte, avec une sentinelle qui avouait n'avoir aucune
+# date de dépôt à lui opposer. L'aveu était juste ; ce qu'il ne disait pas, c'est que la table était
+# VIDE — mesuré en base : 0 ligne dans `appariement_cartes`, 0 appelant de `persister_carte` en
+# production (les checks écrivent en ROLLBACK), 0 appelant de `apparier()` hors d'un outil
+# d'acceptation qui ne persiste rien. `lire_carte` renvoyait donc TOUJOURS None, et l'exécuteur
+# retombait TOUJOURS sur `poste_retenu()` — celui-là même dont la mesure du 2026-09-14 a montré que
+# 5 appariements sur 7 étaient faux. Un décideur sans producteur ne décide jamais : c'est la même
+# famille que #70 (`feedback_controle_au_point_de_lecture`), un cran plus haut — non pas une garde
+# nourrie de sa propre valeur, mais une garde qu'aucune donnée n'atteint.
+#
+# Le correctif ne muscle pas la garde, il lui donne une matière : l'exécuteur LIT L'INVENTAIRE
+# (`fetch_company_facts`, gratuit, un appel) AVANT de router. Il en tire la date du dépôt courant par
+# le détenteur unique qui existe déjà (`apparieur.dernier_depot_vu`, #46) — donc AUCUNE nouvelle
+# règle de décision n'est introduite, et la date retenue est par construction celle de la dernière
+# mise à jour de l'entrée EDGAR, qu'elle vienne d'un dépôt trimestriel ou d'un rectificatif ultérieur
+# (c'est un `max(filed)` sur TOUT l'inventaire, jamais un `max(end)` : un 10-K/A peut AJOUTER des
+# concepts sans déplacer la clôture).
+#
+# La branche « périmée » de `lire_carte` devient alors ATTEIGNABLE, et ce qu'elle déclenche est une
+# RECONSTRUCTION, pas un repli dégradé : une carte périmée est une carte à refaire, et l'inventaire
+# qui a servi à la déclarer périmée est précisément celui qu'il faut pour la refaire.
+#
+# QUATRE ÉTATS NOMMÉS, JAMAIS UN SILENCE (#25/#44). Trois servent une carte, le quatrième est le
+# repli :
+#   · `fraiche`          — carte persistée, âge REVÉRIFIÉ contre une date mesurée. Zéro appel modèle.
+#   · `reconstruite`     — absente ou périmée : `apparier()` + `persister_carte()`. Une dépense.
+#   · `non_reverifiable` — inventaire injoignable : on sert la carte STOCKÉE en le DISANT. C'est le
+#                          seul emploi légitime de `_SANS_REVERIFICATION`, et il est désormais
+#                          l'exception (panne SEC) au lieu d'être le seul chemin.
+#   · `aucune`           — ni inventaire ni carte : repli nommé sur `poste_retenu()`, journalisé.
+
 # Plus petite que toute date ISO (« 0 » < « 1 »… < « 9 »), donc `dernier_depot_vu < depot_courant`
 # est faux quelle que soit la carte. Ce n'est PAS une date par défaut : c'est l'aveu, écrit dans le
-# code, que cet appelant-là n'a pas de dépôt courant à opposer. Une date plausible (`1970-01-01`,
-# ou la date stockée elle-même) aurait eu le même effet en se lisant comme une mesure.
+# code, que CE chemin-là n'a pas de dépôt courant à opposer. Une date plausible (`1970-01-01`, ou la
+# date stockée elle-même) aurait eu le même effet en se lisant comme une mesure.
 _SANS_REVERIFICATION = "0000-00-00 (aucune date de dépôt courante : âge non revérifié ici)"
 
+EtatCarte = Literal["fraiche", "reconstruite", "non_reverifiable", "aucune"]
 
-async def _lire_statuts_carte(
-    conn: asyncpg.Connection,
-    plan: CollectionPlan,
-) -> Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]]:
-    """Lit la carte d'appariement persistée et construit le dict `(question_id, ingredient_id) → statut`.
 
-    LIT LA CARTE UNE SEULE FOIS par exécution — jamais une requête par ligne (#61 transposé au réseau DB).
+class CarteCourante(NamedTuple):
+    """La carte dont dispose UNE exécution, et COMMENT elle a été obtenue.
 
-    ⚠️ CET EXÉCUTEUR NE REVÉRIFIE PAS L'ÂGE DE LA CARTE, et il ne prétend pas le faire.
-    `lire_carte` exige un `depot_courant` pour trancher (#54). L'exécuteur n'en détient AUCUN : il
-    n'a pas les `facts` (le socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR,
-    donc APRÈS la décision de routage), et aucune date de dépôt par ticker n'est persistée à ce jour.
-    La première version de ce code contournait le problème en relisant `dernier_depot_vu` dans la
-    table de la carte et en le repassant à `lire_carte` comme s'il était la date courante : la
-    comparaison devenait `X < X`, toujours fausse, et la branche « périmée » journalisait
-    `depot_vu=X < depot_courant=X` — un log qui ne peut jamais être vrai, donc un log qui se lirait
-    comme la PREUVE d'une garde qui fonctionne. C'est cette lecture-là qui est dangereuse, pas
-    l'absence de garde : une garde absente se voit, une garde nourrie de sa propre valeur ne se voit
-    pas (`feedback_controle_au_point_de_lecture`).
+    `etat` n'est pas de la décoration : sans lui, « carte servie parce qu'elle est à jour » et
+    « carte servie parce qu'on n'a pas pu vérifier qu'elle l'est » sont indiscernables en aval — et
+    c'est exactement la confusion que #70 a produite une fois. `depot_courant` est None quand
+    l'inventaire n'a pas pu être lu : un None se lit comme une absence, une date recopiée se lirait
+    comme une mesure."""
+    statuts: Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]]
+    etat: EtatCarte
+    depot_courant: Optional[str]
+    cout_usd: float = 0.0
 
-    On appelle donc `lire_carte` avec la sentinelle `_SANS_REVERIFICATION`, plus petite que toute
-    date ISO : la comparaison `dernier_depot_vu < depot_courant` est structurellement fausse, ce qui
-    est EXACTEMENT ce que fait ce chemin — servir la carte telle qu'elle est stockée. La sentinelle
-    porte son propre aveu dans son nom, là où une date recopiée le dissimulait.
 
-    CE QUE ÇA COÛTE, tant que la date de dépôt par ticker n'est pas persistée : un `indisponible`
-    établi sur un inventaire de 269 concepts continue d'envoyer sa ligne au WEB PAYANT après que
-    l'émetteur a commencé à déposer le concept. C'est une fuite de coût, jamais un faux nombre — le
-    verdict servi reste celui d'un dépôt réel, seulement plus ancien.
+def _statuts(carte) -> dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]:
+    """`(question_id, ingredient_id) → statut`. Le COUPLE, jamais l'ingrédient nu : un même
+    ingrédient peut exister sous deux questions (contrat `CollectionPlanItem`)."""
+    return {(it.question_id, it.ingredient_id): it.statut for it in carte.items}
 
-    REPLI NOMMÉ (jamais un silence) : si aucune carte n'est persistée ou si la lecture échoue, on
-    logue et on renvoie None. Le reste de `executer_plan_reel` tombe alors sur `poste_retenu()` comme
-    avant, et ce chemin est distinct du câblage réussi — le log en porte la trace."""
+
+async def _servir_le_stock(
+    conn: asyncpg.Connection, plan: CollectionPlan, *, motif: str,
+) -> CarteCourante:
+    """Dernier recours : servir la carte STOCKÉE sans pouvoir revérifier son âge, ou avouer qu'il n'y
+    en a aucune. La sentinelle rend la comparaison `<` fausse par construction — on ne prétend pas
+    revérifier, on sert ce qui est là et le log le dit."""
     try:
         carte = await lire_carte(
             conn,
@@ -441,31 +485,106 @@ async def _lire_statuts_carte(
             framework_version=plan.framework_version,
             depot_courant=_SANS_REVERIFICATION,
         )
-        if carte is None:
-            logger.info(
-                "aucune carte d'appariement pour %s/%s %s — repli sur poste_retenu() (repli nommé)",
-                plan.ticker_id, plan.framework_id, plan.framework_version,
-            )
-            return None
-        statuts = {(it.question_id, it.ingredient_id): it.statut for it in carte.items}
-        logger.info(
-            "carte d'appariement chargée pour %s/%s %s — %d ligne(s), depot_vu=%s "
-            "(âge NON revérifié : cet exécuteur n'a pas de date de dépôt courante)",
-            plan.ticker_id, plan.framework_id, plan.framework_version,
-            len(statuts), carte.dernier_depot_vu,
-        )
-        return statuts
     except Exception as e:
         logger.warning(
             "lecture carte %s/%s %s échouée (%s: %s) — repli sur poste_retenu() (repli nommé)",
-            plan.ticker_id, plan.framework_id, plan.framework_version,
-            type(e).__name__, e,
+            plan.ticker_id, plan.framework_id, plan.framework_version, type(e).__name__, e)
+        return CarteCourante(None, "aucune", None)
+    if carte is None:
+        logger.info(
+            "aucune carte d'appariement pour %s/%s %s (%s) — repli sur poste_retenu() (repli nommé)",
+            plan.ticker_id, plan.framework_id, plan.framework_version, motif)
+        return CarteCourante(None, "aucune", None)
+    logger.warning(
+        "carte %s/%s %s servie SANS revérification d'âge (%s) — %d ligne(s), depot_vu=%s : le "
+        "verdict servi reste celui d'un dépôt réel, seulement peut-être plus ancien",
+        plan.ticker_id, plan.framework_id, plan.framework_version, motif,
+        len(carte.items), carte.dernier_depot_vu)
+    return CarteCourante(_statuts(carte), "non_reverifiable", None)
+
+
+async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> CarteCourante:
+    """Rend la carte d'appariement de CE plan, à jour — en la RECONSTRUISANT si elle ne l'est pas.
+
+    Ordre, et il n'est pas arbitraire : la frontière GRATUITE d'abord, la dépense ensuite (#63).
+      1. `fetch_company_facts` — un appel réseau gratuit, AVANT tout routage et toute dépense modèle ;
+      2. `dernier_depot_vu(facts)` — la date de la dernière mise à jour de l'entrée EDGAR, par le
+         détenteur unique qui existe déjà (#46). Aucune règle de décision nouvelle n'est écrite ici ;
+      3. `lire_carte(..., depot_courant=<cette date>)` — la revérification de #54 devient RÉELLE ;
+      4. None (absente OU périmée) → `apparier()` sur LES MÊMES `facts`, puis `persister_carte()`.
+         L'inventaire n'est lu qu'une fois et sert aux deux emplois.
+
+    LIT LA CARTE UNE SEULE FOIS par exécution — jamais une requête par ligne (#61 transposé au réseau
+    DB) — et n'appelle le modèle QUE si la carte manque ou a vieilli : une carte `fraiche` coûte zéro.
+
+    ⚠️ DÉPENSE. Cette fonction peut appeler le modèle apparieur (≈ $0.001 par carte, deux tours au
+    pire). C'est le prix d'une carte par (ticker × framework × version) et par dépôt, pas par
+    exécution : l'UPSERT de `persister_carte` fait qu'une deuxième exécution sur le même dépôt relit.
+
+    Aucun refus ne tue le lot : un `AppariementRefuse` (le modèle invente des noms de concepts deux
+    fois de suite) ou un `AppariementSansObjet` (rien de traduit à apparier) retombe sur le stock,
+    puis sur `poste_retenu()` — en le DISANT à chaque marche."""
+    # ── (1) la frontière gratuite : l'inventaire réel, avant toute dépense ────────────────────────
+    try:
+        cik = await resolve_cik(plan.ticker_id)
+        facts = await fetch_company_facts(cik)
+    except (EdgarFeedUnavailable, EdgarUnavailable) as e:
+        return await _servir_le_stock(conn, plan, motif=f"inventaire EDGAR injoignable : {e}")
+
+    # ── (2) la date opposable — `max(filed)` sur TOUT l'inventaire, détenteur unique (#46) ────────
+    try:
+        depot_courant = dernier_depot_vu(facts)
+    except AppariementSansObjet as e:
+        return await _servir_le_stock(conn, plan, motif=f"inventaire non datable : {e}")
+
+    # ── (3) la revérification d'âge, contre une date MESURÉE cette fois ───────────────────────────
+    try:
+        carte = await lire_carte(
+            conn,
+            ticker_id=plan.ticker_id,
+            framework_id=plan.framework_id,
+            framework_version=plan.framework_version,
+            depot_courant=depot_courant,
         )
-        return None
+    except Exception as e:
+        logger.warning(
+            "lecture carte %s/%s %s échouée (%s: %s) — on tente la reconstruction",
+            plan.ticker_id, plan.framework_id, plan.framework_version, type(e).__name__, e)
+        carte = None
+    if carte is not None:
+        logger.info(
+            "carte %s/%s %s FRAÎCHE — %d ligne(s), depot_vu=%s ≥ dépôt courant %s : aucun appel "
+            "modèle", plan.ticker_id, plan.framework_id, plan.framework_version,
+            len(carte.items), carte.dernier_depot_vu, depot_courant)
+        return CarteCourante(_statuts(carte), "fraiche", depot_courant)
+
+    # ── (4) absente ou PÉRIMÉE → reconstruction sur le même inventaire, pas un repli dégradé ──────
+    logger.info(
+        "carte %s/%s %s absente ou périmée contre le dépôt du %s — reconstruction (%d concepts "
+        "déposés)", plan.ticker_id, plan.framework_id, plan.framework_version,
+        depot_courant, len(facts))
+    try:
+        res = await apparier(plan, facts)
+    except AppariementSansObjet as e:
+        return await _servir_le_stock(conn, plan, motif=f"rien à apparier dans ce plan : {e}")
+    except AppariementRefuse as e:
+        return await _servir_le_stock(conn, plan, motif=f"appariement REFUSÉ après réparation : {e}")
+    except Exception as e:  # modèle indisponible / timeout / sortie non conforme → #25, jamais un crash
+        return await _servir_le_stock(
+            conn, plan, motif=f"appariement échoué ({type(e).__name__}) : {e}")
+    row_id = await persister_carte(conn, res.carte)
+    logger.info(
+        "carte %s/%s %s RECONSTRUITE et persistée (#%d) — %d ligne(s), depot_vu=%s, "
+        "%d réparation(s), $%.4f",
+        plan.ticker_id, plan.framework_id, plan.framework_version, row_id,
+        len(res.carte.items), res.carte.dernier_depot_vu, len(res.refus_repares),
+        getattr(res.run, "cost_usd", 0.0) or 0.0)
+    return CarteCourante(_statuts(res.carte), "reconstruite", depot_courant,
+                         getattr(res.run, "cost_usd", 0.0) or 0.0)
 
 
 async def executer_plan_reel(
-    plan: CollectionPlan, *, conn: asyncpg.Connection
+    plan: CollectionPlan, *, conn: asyncpg.Connection, carte: Optional[CarteCourante] = None,
 ) -> ResultatAiguillage:
     """Exécute un plan RÉELLEMENT (EDGAR + web), puis aiguille. `aiguiller_plan` reste intact : on
     pré-exécute chaque ligne aveugle distincte, puis on lui injecte un lookup sync.
@@ -473,12 +592,19 @@ async def executer_plan_reel(
     Le socle EDGAR ne collecte que les postes RÉCLAMÉS par ce plan (`postes_edgar_du_plan`) : la
     collecte data-first des 8 postes en bloc a disparu avec le maillon 5 (§3.6).
 
-    CARTE D'APPARIEMENT (maillon 4bis) : lue UNE FOIS en début d'exécution (#61), la carte fournit
-    le `carte_statut` de chaque ligne à `router_source` — le décideur réel devient la carte, et non
-    plus `poste_retenu` seul. Le repli (carte absente ou lecture échouée) est NOMMÉ et journalisé :
-    il est indiscernable du câblage réussi sans ce log."""
-    # ── Chargement de la carte : UNE requête, UNE fois, avant la boucle ──────────────────────────────
-    carte_statuts = await _lire_statuts_carte(conn, plan)
+    CARTE D'APPARIEMENT (maillon 4bis) : obtenue UNE FOIS en début d'exécution (#61) par
+    `assurer_carte` — produite si elle manque, reconstruite si elle a vieilli. Elle fournit le
+    `carte_statut` de chaque ligne à `router_source` : le décideur réel devient la carte, et non plus
+    `poste_retenu` seul. Le repli (`etat="aucune"`) est NOMMÉ et journalisé — sans ce log il serait
+    indiscernable du câblage réussi, et il l'a été pendant tout le maillon 4bis.
+
+    `carte` permet à un appelant qui en détient déjà une (ou qui veut explicitement n'en avoir
+    aucune : `CarteCourante(None, "aucune", None)`) de court-circuiter la production, donc la
+    dépense. Par défaut, l'exécuteur la PRODUIT — un décideur sans producteur ne décide jamais."""
+    # ── Obtention de la carte : UNE fois, avant la boucle, et avant tout routage ─────────────────────
+    if carte is None:
+        carte = await assurer_carte(plan, conn=conn)
+    carte_statuts = carte.statuts
 
     socle = _SocleEdgar(postes_edgar_du_plan(plan, carte_statuts=carte_statuts))
     resultats: dict[tuple[str, str, str, str], ResultatCollecte] = {}
@@ -510,7 +636,11 @@ async def executer_collecte_framework(
     mauvaise collecte ? » reste diagnosticable même si la collecte échoue en route (§3.6).
 
     ⚠️ Écritures PROD (knowledge_entries via les producteurs, collection_plans / question_coverage /
-    framework_mandates) + dépense réseau (modèle traducteur, appels search-worker par ligne web).
+    framework_mandates / appariement_cartes) + dépense réseau (modèle traducteur, modèle apparieur
+    si la carte manque ou a vieilli, appels search-worker par ligne web).
+
+    La carte est obtenue AVANT le routage et son état est REMONTÉ dans le compte rendu : « d'où
+    venait la décision de routage » se lit sur le résultat, pas seulement dans un log.
     """
     run, plan = await traduire(ticker_id, framework_id, archetype)  # modèle + contrat + pont
 
@@ -519,13 +649,14 @@ async def executer_collecte_framework(
             plan_id = await persist_plan(conn, plan)
 
     async with get_db_session() as conn:
-        result = await executer_plan_reel(plan, conn=conn)  # réseau + écritures d'entries
+        carte = await assurer_carte(plan, conn=conn)         # inventaire + carte (modèle si besoin)
+        result = await executer_plan_reel(plan, conn=conn, carte=carte)  # réseau + entries
         async with conn.transaction():
             ecrits = await persist_aiguillage(conn, result, plan_id=plan_id)
 
     logger.info(
-        "collecte %s/%s (%s) : plan #%d · %d ligne(s) · %d lien(s) · %d mandat(s)",
-        ticker_id, framework_id, archetype, plan_id, result.lignes_vues,
+        "collecte %s/%s (%s) : plan #%d · carte %s · %d ligne(s) · %d lien(s) · %d mandat(s)",
+        ticker_id, framework_id, archetype, plan_id, carte.etat, result.lignes_vues,
         len(result.liens), len(result.mandats),
     )
     return {
@@ -534,9 +665,13 @@ async def executer_collecte_framework(
         "framework_version": plan.framework_version,
         "archetype": archetype,
         "plan_id": plan_id,
+        "carte_etat": carte.etat,
+        "carte_depot_courant": carte.depot_courant,
+        "carte_lignes": len(carte.statuts) if carte.statuts else 0,
         "lignes_vues": result.lignes_vues,
         "liens": [l.model_dump() for l in result.liens],
         "mandats": [m.model_dump() for m in result.mandats],
         "ecrits": ecrits,
         "traducteur_cost_usd": getattr(run, "cost_usd", None),
+        "apparieur_cost_usd": carte.cout_usd,
     }

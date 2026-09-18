@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-17
+updated: 2026-09-18
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
@@ -15,11 +15,15 @@ role: >
   jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
   **LOT 3 EN COURS depuis le 2026-09-13** : maillons 1 (l'analyste, #63), 2 (`framework_answers`/
   `framework_dispenses`, migration 040, #64) et 3 (suppression de `MVDD_SPEC`) sont ✅ ; le **maillon
-  4bis (l'appariement) est CLOS le 2026-09-17** — garde, apparieur, persistance (migration **042**
-  appliquée) et câblage sur le chemin réel (conventions **#67 → #70**, suite `run_all.sh` = **2566
-  assertions, 0 échec sur 35 scripts**). **Le maillon 4 est donc débloqué**, avec un résidu nommé et
-  chiffré (#70 : l'exécuteur n'a pas de date de dépôt courante à opposer à la carte — fuite de coût,
-  jamais un faux nombre). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
+  4bis (l'appariement) est CLOS le 2026-09-18** — garde, apparieur, persistance (migration **042**
+  appliquée) puis, le 2026-09-18, le **PRODUCTEUR** de carte sur le chemin réel (`assurer_carte`) :
+  sans lui la lecture existait mais ne décidait jamais (conventions **#67 → #71**, suite `run_all.sh`
+  = **2583 assertions, 0 échec sur 34 scripts**). **#70 et #71 sont levés.** **Le maillon 4 est donc
+  débloqué, et son vrai blocage est MESURÉ** : la carte fait passer le routage de **0 à 9 lignes vers
+  EDGAR** sur RVMD, dont **0 exécutable** par le socle (une `approximation` est une formule sur
+  concepts XBRL nus, le socle ne sait exécuter que les 33 recettes du catalogue `POSTES`). Le maillon
+  4 = rendre le socle capable d'exécuter une formule d'appariement. Détail dans la checklist du lot 3
+  ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -325,7 +329,7 @@ lot 1 ; les tables viennent en dernier.
    (`feedback_jugement_modele_instable_entre_passages`). Le durcissement est conservé et gardé
    (`check_collecte_executor` §3bis), mais ces asserts gardent l'ÉNONCÉ, **jamais le comportement**.
    → **récit complet et tableau des 4 passages : `00-REPRISE-ARCHIVE.md` § 2026-09-14.**
-4bis. 🔄 **L'APPARIEMENT PAR TICKER — ÉTAPE 1 LIVRÉE le 2026-09-17, étape 2 ouverte** (conçu avec
+4bis. ✅ **L'APPARIEMENT PAR TICKER — CLOS le 2026-09-18** (étapes 1 et 2a→2d livrées ; conçu avec
    l'utilisateur le 2026-09-14, **doctrine tranchée, rien à remesurer**). Ce que fait un analyste en fonds : il
    prend les questions de son framework, **liste les champs réellement déposés par CET émetteur**,
    et construit le meilleur appariement — **exact**, ou **par approximation en explicitant les
@@ -404,36 +408,44 @@ lot 1 ; les tables viennent en dernier.
       `dernier_depot_vu`, items en JSONB, gardes SQL (items non vide, format de date).
       `check_appariement_persist.py` **18/0** contre la vraie base (ROLLBACK, aucun résidu) ·
       `negatif_appariement_persist.sh` **5 mutations / 0**.
-   c. ✅ **câblage** — `executer_plan_reel` lit la carte **une fois par exécution** (#61) via
-      `_lire_statuts_carte` → `lire_carte`, et passe le `carte_statut` de chaque ligne à
-      `router_source` : `indisponible` → web, `exact`/`approximation` → edgar si la source est un
-      dépôt réglementaire. **La carte est le décideur, `poste_retenu()` n'est plus que le repli**, et
-      ce repli est NOMMÉ et journalisé (sans le log, il était indiscernable du câblage réussi — c'est
-      comme ça que le trou de la première version est passé). `check_collecte_executor.py` **57/0**
-      (§8 exerce le chemin de production, §9 la non-circularité sur l'AST) ·
-      `negatif_collecte_executor.sh` **13 mutations / 0**.
-   **Suite complète : 2566 assertions, exit 0 sur les 35 scripts** (2502 → 2566).
+   c. ✅ **lecture** — `executer_plan_reel` lit la carte **une fois par exécution** (#61) et passe le
+      `carte_statut` de chaque ligne à `router_source` : `indisponible` → web, `exact`/`approximation`
+      → edgar si la source est un dépôt réglementaire. Le repli est NOMMÉ et journalisé.
+      ⚠️ Cette étape a été **annoncée à tort comme « la carte est le décideur »** : elle livrait la
+      LECTURE, pas la décision — rien ne produisait de carte (voir d).
+   d. ✅ **producteur** (2026-09-18, convention **#71**) — `assurer_carte()` : `fetch_company_facts`
+      (gratuit) → `dernier_depot_vu(facts)` → `lire_carte(depot_courant=<cette date>)` → si `None`
+      (absente **ou périmée**) → `apparier()` sur les mêmes `facts` + `persister_carte()`. La branche
+      « périmée » devient **atteignable** et déclenche une **reconstruction**, pas un repli dégradé.
+      Quatre états nommés : `fraiche` (zéro appel modèle) · `reconstruite` · `non_reverifiable`
+      (inventaire injoignable → carte stockée servie en le disant) · `aucune` (repli `poste_retenu()`).
+      **Aucune migration, aucune règle de décision nouvelle** — la date vient du détenteur unique
+      déjà écrit (#46). `check_collecte_executor.py` **74/0** (§9 réécrit en assert structurel plus
+      fort, §10 neuf : les quatre états exercés) · `negatif_collecte_executor.sh` **22 mutations / 0**.
+      Acceptation réelle `tools/acceptation_carte_executeur.{py,sh}` : **6/0, $0.0015, 0 résidu**.
+   **Suite complète : 2583 assertions, exit 0 sur les 34 scripts** (2502 → 2566 → 2583).
    Rien de déployé, **aucune collecte réelle lancée**.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4** — le maillon 4bis est clos, le maillon 4 est **débloqué** :
-> la garde d'appariement n'est plus seulement écrite, elle est sur le chemin réel.
+> **▶ PROCHAIN JALON = lot 3, maillon 4 — LA COLLECTE RÉELLE, ET SON VRAI BLOCAGE EST NOMMÉ.**
+> Le maillon 4bis est clos ; #70 **et** #71 sont levés. La carte est désormais produite, persistée,
+> revérifiée contre une date mesurée, et elle décide du routage sur le chemin exécuté.
 >
-> ⚠️ **À TRANCHER AVANT toute collecte réelle à grande échelle — le résidu nommé de 2c (#70).**
-> `lire_carte` revérifie l'âge de la carte en comparant son `dernier_depot_vu` à un `depot_courant`
-> fourni par l'appelant (#54), et **l'exécuteur n'en détient aucun** : il n'a pas les `facts` (le
-> socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc APRÈS la décision de
-> routage) et aucune date de dépôt par ticker n'est persistée. La circularité est réelle — il faut
-> EDGAR pour dater la carte, et la carte pour savoir s'il faut EDGAR. L'exécuteur passe donc la
-> sentinelle `_SANS_REVERIFICATION`, qui **avoue** au lieu de simuler : la première version relisait
-> `dernier_depot_vu` dans la table de la carte et le repassait à `lire_carte`, rendant la comparaison
-> `X < X` toujours fausse et journalisant `depot_vu=X < depot_courant=X` — un log qui ne peut jamais
-> être vrai. Épinglé par `check_collecte_executor.py` §9 (AST) + 3 mutations ; **aucun test de
-> routage ne bouge** quand la régression revient, d'où l'assert structurel.
-> **Ce que ça coûte en l'état** : un `indisponible` établi sur un inventaire de 269 concepts continue
-> d'envoyer sa ligne au **web payant** après que l'émetteur a commencé à déposer le concept. Une
-> **fuite de coût, jamais un faux nombre**. **Sortie** : persister la date de dépôt **par ticker** à
-> l'ingestion EDGAR — la référence devient disponible sans appel réseau et sans circularité.
+> ⚠️ **CE QUE LE MAILLON 4 DOIT LIVRER, MESURÉ ET NON SUPPOSÉ** (acceptation du 2026-09-18, RVMD) :
+> la carte fait passer le routage de **0 à 9 lignes vers EDGAR**, et **0 de ces 9 est exécutable**.
+> `_SocleEdgar` ne sait collecter que les **33 RECETTES** du catalogue `POSTES` (`run_edgar_feed`),
+> là où une `approximation` est une **FORMULE sur des concepts XBRL nus**. Les 9 repartent au web par
+> le repli nommé de `collecter_un` (`carte_statut=… mais poste_retenu()=None`). **La décision a
+> changé, la collecte pas encore.** Le maillon 4 est donc : *rendre le socle capable d'exécuter une
+> formule d'appariement* — évaluer `formule` sur les concepts déposés, écrire l'entry avec sa
+> provenance et son tier (`synthesis_feed.derive_tier_calcul` existe déjà, #68), et n'aller au web
+> que sur `indisponible`.
+> ⚠️ **Ne pas ré-annoncer un gain de routage comme une économie de collecte** : c'est la faute que
+> #71 vient de corriger, sous une autre forme. Le chiffre à suivre est « lignes **collectées** depuis
+> le dépôt », jamais « lignes **routées** vers EDGAR ».
+> ⚠️ La distribution RVMD est **10 `approximation` · 3 `indisponible` · 0 `exact`** : chez une
+> biotech pré-revenus, *toute* ligne ancrée passe par une formule. Un maillon 4 qui n'exécuterait que
+> les `exact` ne débloquerait **rien** sur ce ticker.
 >
 > ⚠️ **Ce que le pont n'attrapera jamais, et qui reste vrai** : le faux appariement **sémantique**
 > (voir plus haut et #68). Ce qui s'y oppose est la troisième case, pas un contrôle plus fin.
@@ -804,7 +816,7 @@ justes, c'est le *fait énoncé* qui était faux.
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
 > 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13) : maillons 1, 2, 3 et 4bis
-> livrés. PROCHAIN PAS = LOT 3, MAILLON 4, désormais DÉBLOQUÉ (4bis clos le 2026-09-17).** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> livrés. PROCHAIN PAS = LOT 3, MAILLON 4, désormais DÉBLOQUÉ (4bis clos le 2026-09-18).** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
 > #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,
@@ -817,10 +829,13 @@ justes, c'est le *fait énoncé* qui était faux.
 > (commit `203fe65`, 15 fichiers, `nonblocking_gaps_for()` → `{}`, `read_dispenses()` branché).
 > **Reste au lot 3** : maillon 4 = collecte neuve pilotée par le plan sur NVDA/MSFT/RVMD (§5.3) ;
 > maillon 5 = réconciliation à 0/0. Prochaine migration : **043**.
-> ✅ **maillon 4bis = l'appariement, CLOS le 2026-09-17** : garde + apparieur (l'inventaire réel
-> remplace `POSTES` comme frontière) + migration **042** + câblage sur le chemin réel de
-> `executer_plan_reel`. Conventions **#67 → #70**. Résidu nommé : #70 (pas de date de dépôt
-> courante côté exécuteur → fuite de coût vers le web payant, jamais un faux nombre).
+> ✅ **maillon 4bis = l'appariement, CLOS le 2026-09-18** : garde + apparieur (l'inventaire réel
+> remplace `POSTES` comme frontière) + migration **042** + **producteur** `assurer_carte()` sur le
+> chemin réel de `executer_plan_reel` (le câblage du 2026-09-17 n'était qu'une **lecture** : sans
+> producteur, `lire_carte()` renvoyait toujours `None` et la carte ne décidait jamais — #71).
+> Conventions **#67 → #71**, **#70 et #71 levés**, aucun résidu. La date de dépôt courante vient de
+> `dernier_depot_vu(companyfacts)` = `max(filed)` sur l'inventaire complet — détenteur unique, zéro
+> nouvelle règle de décision.
 > ✅ **PRÉ-REQUIS DU LOT 3 LEVÉ (2026-09-12)** : `check_entry_nature §7` re-mesuré en **invariant #51**
 > (metric structuré ⟹ `mesure`, garde de non-vacuité, tous tickers) au lieu du décompte `== 13`, qui
 > était une **cible-corpus interdite par §0.6**. Les 30 faits web du maillon 4 (`edgar_official`/

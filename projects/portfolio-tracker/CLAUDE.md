@@ -1114,8 +1114,9 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     et le véto de dérivation sur la métrique — **jamais** que le poste nommé correspond à la
     métrique : « clauses restrictives des contrats de dette → `total_liabilities` » passe. C'est
     pourquoi la collecte réelle était bloquée : un faux appariement écrit un nombre exact en face de
-    la mauvaise question (#43/#60), et rien en aval ne le rattrape. **Levé le 2026-09-17** — la carte
-    d'appariement décide désormais du routage et `poste_retenu()` n'est plus que le repli (#68/#70).
+    la mauvaise question (#43/#60), et rien en aval ne le rattrape. **Levé en deux temps** : le
+    mécanisme le 2026-09-17 (#68), le chemin d'exécution le **2026-09-18** seulement — jusque-là
+    aucune carte n'était jamais produite et `poste_retenu()` décidait encore seul (#71).
     Détail : `roadmap/V3/00-REPRISE.md` (maillon 4/4bis), mesureur versionné
     `backend/tools/cartographier_xbrl.{py,sh}`, asserts d'énoncé `check_collecte_executor.py` §3bis
     — qui **déclarent eux-mêmes** ne garder que l'énoncé du prompt, pas le comportement.
@@ -1154,11 +1155,14 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     État livré : contrat `app/contracts/appariement_schema.py`, pont `app/agents/v2/apparieur.py`,
     règle de tier `synthesis_feed.derive_tier_calcul` (qui **appelle** `derive_synthesis_reliability`
     pour la branche non déterministe — aucune table de tier recopiée, #46), `check_appariement.py`
-    **103/0** + `negatif_appariement.sh` **37 mutations / 0**. ✅ **CÂBLÉE le 2026-09-17** : la carte
-    est persistée (migration **042**, `appariement_cartes` au grain ticker × framework × version) et
-    `executer_plan_reel` la lit une fois par exécution pour alimenter `router_source` — la carte est
-    devenue le décideur du routage, `poste_retenu()` n'est plus que le repli nommé. Le maillon 4 est
-    débloqué. Résidu connu et borné : **#70**.
+    **103/0** + `negatif_appariement.sh` **37 mutations / 0**. ⚠️ **CÂBLÉE le 2026-09-17 — au sens
+    où la LECTURE existait, pas où la carte décidait** : la carte est persistable (migration **042**,
+    `appariement_cartes` au grain ticker × framework × version) et `executer_plan_reel` la lit une
+    fois par exécution pour alimenter `router_source`. Ce que cette ligne a affirmé à tort pendant un
+    jour : « la carte est devenue le décideur du routage ». Aucun code de production ne l'ÉCRIVAIT —
+    table vide, `lire_carte` toujours `None`, `poste_retenu()` décidait seul. ✅ Producteur livré le
+    **2026-09-18** (#71). Résidus d'alors, tous deux levés : **#70** (garde inerte) et **#71**
+    (producteur absent).
 
 69. **Le RENDU d'un inventaire est un PRODUCTEUR : ce qu'il omet se lit comme une propriété de
     l'émetteur (V3, lot 3 maillon 4bis étape 2a — 2026-09-17)** : l'apparieur reçoit les 269 à 627
@@ -1218,15 +1222,63 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     qu'il n'émet **aucun `SELECT` sur `appariement_cartes`** — la boucle est coupée à la source, pas
     gardée. L'AST plutôt qu'un grep parce que la prose du code et celle du check énoncent toutes
     deux l'interdit (`feedback_grep_interdit_lit_sa_propre_enonciation`).
-    ⚠️ **Le résidu, nommé et chiffré** : l'exécuteur n'a AUCUN dépôt courant à opposer — il n'a pas
-    les `facts` (le socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc
-    *après* la décision de routage) et aucune date de dépôt par ticker n'est persistée à ce jour. La
-    circularité est réelle : il faut EDGAR pour dater la carte, et la carte pour savoir s'il faut
-    EDGAR. Ce que ça coûte tant que ce n'est pas tranché : un `indisponible` établi sur un inventaire
-    de 269 concepts continue d'envoyer sa ligne au **web payant** après que l'émetteur a commencé à
-    déposer le concept. **Une fuite de coût, jamais un faux nombre** — le verdict servi reste celui
-    d'un dépôt réel, seulement plus ancien. Sortie : persister la date de dépôt **par ticker** à
-    l'ingestion EDGAR, ce qui rend la référence disponible sans appel réseau et sans circularité.
+    ⚠️ **Le résidu, nommé et chiffré** : l'exécuteur n'avait AUCUN dépôt courant à opposer — il n'a
+    pas les `facts` (le socle EDGAR ne les récupère qu'à la première ligne routée vers EDGAR, donc
+    *après* la décision de routage) et aucune date de dépôt par ticker n'était persistée. La
+    circularité paraissait réelle : il faut EDGAR pour dater la carte, et la carte pour savoir s'il
+    faut EDGAR. ✅ **LEVÉ le 2026-09-18 — et la sortie écrite ici était la mauvaise.** « Persister la
+    date de dépôt par ticker à l'ingestion EDGAR » aurait recréé #70 un cran plus haut : l'écrivain
+    de cette date est soit le producteur de la carte lui-même (`X < X` à nouveau), soit
+    `run_edgar_feed`, qui n'interroge que le SOUS-ENSEMBLE des concepts réclamés — une date
+    sous-estimée, donc une garde qui ne virerait presque jamais. Le correctif retenu n'introduit
+    **aucune règle de décision nouvelle** : l'exécuteur lit l'inventaire `companyfacts` (gratuit) et
+    en tire la date par le détenteur unique qui existait déjà, `apparieur.dernier_depot_vu` — un
+    `max(filed)` sur TOUT l'inventaire. Voir **#71**, qui remplace ce paragraphe.
+
+71. **Un décideur sans producteur ne décide jamais — et sa garde reste verte parce qu'aucune donnée
+    ne l'atteint (V3, lot 3 maillon 4bis étape 2d — 2026-09-18)** : #68 déclarait la carte
+    d'appariement « câblée », « devenue le décideur du routage », `poste_retenu()` réduit au repli.
+    C'était vrai **du code lu** et faux **du chemin exécuté**. Mesuré en base avant d'écrire une
+    ligne : `appariement_cartes` **0 ligne**, `persister_carte()` **0 appelant en production** (les
+    checks écrivent en ROLLBACK), `apparier()` **0 appelant** hors d'un outil d'acceptation qui ne
+    persiste rien. `lire_carte` renvoyait donc **toujours** `None` et l'exécuteur retombait
+    **toujours** sur `poste_retenu()` — celui-là même dont #67 a mesuré que 5 appariements sur 7
+    étaient faux.
+    ⚠️ **C'est la même famille que #70, un cran plus haut.** #70 : une garde nourrie de sa propre
+    valeur. #71 : une garde qu'**aucune donnée n'atteint**. Les deux passent tous leurs tests, et
+    dans les deux cas le signe est une branche inatteignable — ici, celle de la carte « périmée ».
+    ⚠️ **Signe diagnostique réemployable, et il est gratuit** : pour toute capacité déclarée câblée,
+    compter les **lignes en base** et les **appelants en production** de son producteur. Une lecture
+    de code ne distingue pas « la carte décide » de « la carte déciderait s'il y en avait une » ;
+    `SELECT count(*)` le fait en une seconde (#43 — « combien de lignes sont actives sur cette
+    clef ? », transposé d'une clef à une table).
+    ⚠️ **Le correctif donne une matière à la garde, il ne muscle pas la garde.** `assurer_carte()`
+    lit l'inventaire AVANT le routage (frontière gratuite d'abord, dépense ensuite — #63), en tire
+    `dernier_depot_vu(facts)`, et la branche « périmée » déclenche alors une **RECONSTRUCTION** sur
+    ce même inventaire, jamais un repli dégradé : une carte périmée est une carte à refaire, et
+    l'inventaire qui l'a déclarée périmée est exactement celui qu'il faut pour la refaire.
+    **Quatre états nommés** (#25/#44) : `fraiche` (relue, âge revérifié, **zéro appel modèle**) ·
+    `reconstruite` (absente ou périmée → `apparier` + `persister_carte`) · `non_reverifiable`
+    (inventaire injoignable → carte stockée servie **en le disant** ; seul emploi légitime restant
+    de `_SANS_REVERIFICATION`, désormais l'exception) · `aucune` (repli nommé sur `poste_retenu()`).
+    ⚠️ **L'interdit de #70 survit sous une forme plus forte, et c'est le point de méthode.** L'ancien
+    assert exigeait *un seul* appel à `lire_carte` avec la sentinelle : juste, mais satisfait par
+    l'inaction — il restait vert pendant que la table était vide. Le nouveau (`check_collecte_executor.py`
+    §9) exige que le chemin nominal oppose une date, que cette date soit **produite par
+    `dernier_depot_vu(...)` et par rien d'autre**, et que `apparier`/`persister_carte` soient
+    réellement appelés. La mutation qui le démontre remplace `dernier_depot_vu(facts)` par la
+    **constante égale à la vraie date** : les **dix** asserts de comportement de §10 restent verts,
+    seul l'assert structurel rougit. Une garde de comportement ne peut pas tenir cet interdit-là.
+    État livré : `check_collecte_executor.py` **74/0** (était 57), `negatif_collecte_executor.sh`
+    **22 mutations / 0** (était 13), suite complète **2583/0**. Aucune migration.
+    ⚠️ **Ce que l'acceptation réelle a mesuré, et qu'il ne faut PAS lire comme un gain**
+    (`tools/acceptation_carte_executeur.{py,sh}`, RVMD, $0.0015, transaction ROLLBACK) : la carte
+    fait passer le routage de **0 à 9 lignes** vers EDGAR — et **0 de ces 9 est exécutable** par
+    `_SocleEdgar`, qui ne sait collecter que les 33 RECETTES du catalogue `POSTES`, là où une
+    `approximation` est une FORMULE sur des concepts XBRL nus. Les 9 repartent au web par le repli
+    nommé de `collecter_un`. **La décision a changé, la collecte pas encore** : c'est le contenu du
+    maillon 4, et c'est pourquoi ce nombre est imprimé et non gardé. Le compter comme « 9 lignes
+    récupérées du web payant » serait exactement la faute que #71 vient de corriger.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
