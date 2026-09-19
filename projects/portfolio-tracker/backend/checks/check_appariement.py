@@ -77,6 +77,12 @@ from app.contracts.collection_plan_schema import (  # noqa: E402
     CollectionPlan,
     CollectionPlanItem,
 )
+from app.contracts.formule_grammaire import (  # noqa: E402
+    FormuleInexecutable,
+    analyser_formule,
+    noms_de_la_formule,
+    references_de_la_formule,
+)
 from app.knowledge.synthesis_feed import (  # noqa: E402
     derive_synthesis_reliability,
     derive_tier_calcul,
@@ -97,7 +103,7 @@ INVENTAIRE_NVDA = {
     "CashAndCashEquivalentsAtCarryingValue", "ShortTermInvestments", "NetIncomeLoss",
     "NetCashProvidedByUsedInOperatingActivities", "PaymentsToAcquirePropertyPlantAndEquipment",
     "IncomeTaxExpenseBenefit", "OperatingIncomeLoss", "ShareBasedCompensation",
-    "DepreciationDepletionAndAmortization", "InventoryNet",
+    "DepreciationDepletionAndAmortization", "InventoryNet", "Revenues",
 }
 
 
@@ -570,5 +576,78 @@ b.check("InventoryNet" in voisins and "Assets" not in voisins,
 b.check(concepts_absents(carte(ligne(statut="exact", concepts=["InventoryNetCurrent"])),
                          INVENTAIRE_NVDA) == ["InventoryNetCurrent"],
         "§10 `concepts_absents` nomme ce que [V] a refusé, pour que la réparation soit ciblée")
+
+
+# ── §11 LA RÉFÉRENCE TEMPORELLE `Concept[-1]` — la grammaire qui débloque l'archétype `rentable` ───
+# Une question de CROISSANCE (« progression de l'activité, exercice par exercice ») n'a pas de forme
+# sans référence à l'exercice antérieur : le modèle inventait `Revenues_previous_year`, un nom absent
+# du dépôt, donc un refus [W] qui — faute de refus par ingrédient — coulait la carte entière
+# (NVDA/MSFT `carte=aucune`, mesuré le 2026-09-19). La grammaire exprime désormais le décalage sur le
+# NOM (`Revenues[-1]`), pas par un concept neuf : c'est #57 appliqué à la formule.
+print("\n§11 LA RÉFÉRENCE TEMPORELLE `Concept[-1]` — le temporel porte sur le NOM, pas un concept neuf")
+
+CROISSANCE = dict(
+    statut="approximation", question_id="qf_3", ingredient_id="croissance_activite_par_exercice",
+    concepts=["Revenues"],
+    formule="(Revenues[0] - Revenues[-1]) / Revenues[-1]",
+    hypotheses=["progression mesurée d'un exercice annuel au suivant, sur les exercices déposés"],
+    deterministe=True)
+
+# LE CŒUR : `Revenues` est déposé, donc la croissance passe [V]/[W] — il n'y a JAMAIS de
+# `Revenues_previous_year` à confronter à l'inventaire. C'est la mutation clé : sans le décalage sur
+# le nom, ce cas exigerait un concept que l'émetteur ne dépose pas.
+accepte("§11 une croissance annuelle `(Revenues[0] - Revenues[-1]) / Revenues[-1]` passe le pont : "
+        "`Revenues` est déposé, le décalage ne crée aucun concept à refuser",
+        lambda: valider_pont_appariement(carte(ligne(**CROISSANCE)), INVENTAIRE_NVDA))
+
+b.check(noms_de_la_formule("(Revenues[0] - Revenues[-1]) / Revenues[-1]") == {"Revenues"},
+        "§11 `noms_de_la_formule` PROJETTE l'offset : la formule ne nomme QUE `Revenues`, donc [W] "
+        "confronte à l'inventaire un concept réellement déposé (pas de `Revenues_previous_year`)")
+b.check(references_de_la_formule("(Revenues[0] - Revenues[-1]) / Revenues[-1]")
+        == {("Revenues", 0), ("Revenues", -1)},
+        "§11 `references_de_la_formule` garde le grain fin (concept, offset) : l'évaluateur lit "
+        "`Revenues` à DEUX exercices, là où le pont ne voit qu'un concept")
+b.check(concepts_de_la_formule("(Revenues[0] - Revenues[-1]) / Revenues[-1]") == {"Revenues"},
+        "§11 le pont délègue à `noms_de_la_formule` (#46) : un seul relevé de « quels concepts », "
+        "partagé par la garde et l'évaluateur — ils ne peuvent pas diverger")
+
+# LA FORME EST GARDÉE DANS LE CONTRAT, avant toute évaluation. Un décalage POSITIF (exercice futur),
+# DÉCIMAL, une année en clair ou un indice sur un calcul sont refusés à la construction — pas laissés
+# filer jusqu'à l'évaluation, loin de leur cause.
+def _refus_forme(f):
+    try:
+        analyser_formule(f); return None
+    except FormuleInexecutable as e:
+        return str(e)
+
+for mauvaise, attendu in (
+    ("Revenues[1]", "POSITIF"),
+    ("Revenues[1.5]", "entier"),
+    ("Revenues[2024]", "POSITIF"),      # une année en clair est un décalage positif absurde
+    ("(Assets - Cash)[-1]", "pas un concept"),
+    ("Revenues[Assets]", "entier"),
+):
+    msg = _refus_forme(mauvaise)
+    b.check(msg is not None and attendu in msg,
+            f"§11 `{mauvaise}` est refusé à la FORME (« {attendu} »), avant toute évaluation → {msg!r}"[:170])
+
+b.check(_refus_forme("(Revenues[0] - Revenues[-1]) / Revenues[-1]") is None
+        and _refus_forme("Revenues") is None and _refus_forme("Revenues[0]") is None,
+        "§11 `Revenues`, `Revenues[0]` et un décalage négatif sont acceptés : la garde refuse le "
+        "mal formé sans interdire le bien formé (satisfiabilité)")
+
+# LE DÉCALAGE N'EST PAS UN COEFFICIENT : `[X]` ne doit pas voir le `-1` d'un décalage comme un
+# paramètre choisi. La croissance ci-dessus est `deterministe=True` et n'a AUCUN décimal — elle passe
+# `[X]`. C'est déjà couvert par l'`accepte` du cœur ; on le dit ici pour que la lecture soit explicite.
+b.check(coefficients_choisis("(Revenues[0] - Revenues[-1]) / Revenues[-1]") == [],
+        "§11 un décalage d'exercice n'est pas un coefficient décimal : `[X]` laisse `deterministe` "
+        "vrai sur une croissance (le `-1` est un rang d'exercice, pas un paramètre à débattre)")
+
+# LA DOCTRINE EST DITE DANS LE PROMPT — le modèle ne peut employer `[-1]` que si on la lui a montrée.
+# On garde l'ÉNONCÉ (la notation est enseignée + l'invention interdite nommée), jamais le comportement
+# du modèle (`check_collecte_executor` §3bis, même discipline).
+b.check("[-1]" in SRC_APPARIEUR and "Revenues_previous_year" in SRC_APPARIEUR,
+        "§11 le prompt ENSEIGNE `Champ[-1]` ET nomme l'invention interdite (`Revenues_previous_year`) "
+        ": sans la notation, le modèle ne peut pas exprimer une croissance et la réinvente")
 
 sys.exit(b.summary())

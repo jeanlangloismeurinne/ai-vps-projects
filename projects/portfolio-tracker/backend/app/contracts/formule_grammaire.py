@@ -24,11 +24,39 @@ CE QUE LA GRAMMAIRE ADMET — ET RIEN D'AUTRE
     `deterministe=True`) ;
   · les opérateurs binaires `+ - * /`, le `+`/`-` unaire, et les parenthèses.
 
+  · une RÉFÉRENCE TEMPORELLE `Concept[k]` (voir la section suivante), qui désigne le même concept à
+    un exercice antérieur.
+
 Tout le reste est REFUSÉ : un appel de fonction, un accès d'attribut, une comparaison, un `if`, une
 virgule (qui ferait un tuple), un mot de français (qui ne parse pas), une puissance, un modulo.
 La liste est une LISTE BLANCHE de types de nœuds, jamais une liste noire de motifs interdits : une
 liste noire laisse passer ce qu'elle n'a pas prévu, et ce qu'elle n'a pas prévu est exactement ce
 qu'un modèle écrira la fois suivante.
+
+LE TEMPOREL EST UNE PROPRIÉTÉ DE LA RÉFÉRENCE, PAS UN CONCEPT NEUF
+------------------------------------------------------------------
+`Concept[k]` (k entier <= 0) réfère au concept à un exercice DÉCALÉ : `Concept` ou `Concept[0]` est
+l'exercice le plus récent, `Concept[-1]` le précédent, `Concept[-2]` celui d'avant. C'est ce que la
+grammaire ne savait pas dire, et son absence coulait tout l'archétype `rentable` : une question de
+CROISSANCE (« progression de l'activité, exercice par exercice ») n'a pas de forme sans référence à
+la période antérieure, alors le modèle inventait un concept `Revenues_previous_year` — un nom que
+l'émetteur ne dépose pas, donc un refus [V]/[W] qui, faute de refus PAR INGRÉDIENT, jetait la carte
+entière (NVDA/MSFT `carte=aucune`, mesuré le 2026-09-19).
+
+Deux décisions de forme, chacune contre une tentation plus simple et fausse :
+
+  · L'offset porte sur le NOM, il ne crée pas un nom. `noms_de_la_formule` rend `Revenues` pour
+    `Revenues[-1]` comme pour `Revenues` : le pont [V]/[W] confronte donc à l'inventaire un concept
+    RÉELLEMENT déposé, et il n'y a jamais de `Revenues_previous_year` à inventer. C'est #57 appliqué
+    à la formule — la période est une propriété de la RELATION (fait ↔ exercice), pas une syllabe du
+    concept. L'évaluateur, lui, lit le grain fin `(concept, offset)` via `references_de_la_formule`.
+  · L'offset est RELATIF, jamais absolu (`Concept[-1]`, pas `Concept@FY2024`). Une carte se recalcule
+    à chaque nouveau dépôt (#67) : `[-1]` désigne toujours « l'exercice d'avant » quelle que soit
+    l'année du calcul, là où une année en dur pointerait un exercice figé et se périmerait en
+    silence au dépôt suivant. Et il est <= 0 : un exercice postérieur au plus récent n'existe pas.
+
+Un `Subscript` n'est admis que sur un NOM et avec un indice entier <= 0 : `(Assets - Cash)[-1]` ou
+`Revenues[k]` (k variable) sont refusés à la forme, avant toute évaluation.
 
 ⚠️ CE N'EST PAS UN BAC À SABLE D'EXÉCUTION, ET IL NE FAUT PAS LE LIRE COMME TEL. `evaluer_formule`
 n'appelle JAMAIS `eval()` : elle parcourt l'arbre et calcule elle-même. La liste blanche n'est donc
@@ -60,6 +88,7 @@ __all__ = [
     "GRAMMAIRE_ADMISE",
     "analyser_formule",
     "noms_de_la_formule",
+    "references_de_la_formule",
     "evaluer_formule",
     "dimension_formule",
     "rendre_dimension",
@@ -89,12 +118,14 @@ _NOEUDS_ADMIS: tuple[type, ...] = (
     ast.BinOp, ast.UnaryOp,
     ast.Name, ast.Load,
     ast.Constant,
+    ast.Subscript,          # `Concept[-1]` — la référence temporelle, contrainte par `_offset_du_subscript`
     ast.Add, ast.Sub, ast.Mult, ast.Div,
     ast.UAdd, ast.USub,
 )
 
 GRAMMAIRE_ADMISE = (
-    "noms de concepts déposés, nombres littéraux, opérateurs `+ - * /`, signe unaire et parenthèses"
+    "noms de concepts déposés (avec un décalage d'exercice optionnel `Concept[-1]`), nombres "
+    "littéraux, opérateurs `+ - * /`, signe unaire et parenthèses"
 )
 
 
@@ -106,6 +137,40 @@ def _refuser_noeud(noeud: ast.AST, formule: str) -> FormuleInexecutable:
         f"`{type(noeud).__name__}`, hors grammaire. Une formule ne contient que {GRAMMAIRE_ADMISE} — "
         "aucun mot de français, aucune énumération, aucune explication (celles-ci vont dans "
         "`hypotheses`, dont c'est exactement le rôle)")
+
+
+def _offset_du_subscript(noeud: ast.Subscript, formule: str) -> int:
+    """L'offset d'exercice d'une référence temporelle `Concept[k]`. Pur. Lève `FormuleInexecutable`.
+
+    Détenteur UNIQUE de « ce qu'est une référence temporelle » : la validation de forme
+    (`analyser_formule`), le relevé des références (`references_de_la_formule`), l'évaluation
+    (`_calculer`) et la dimension (`_dimension`) l'appellent tous, pour que « ce qui passe le
+    contrat » et « ce que le code lit » ne puissent pas diverger.
+
+    Contraint : la base est un NOM (`Revenues[-1]`, pas `(Assets - Cash)[-1]`), l'indice est un
+    ENTIER littéral (négatif via `[-1]`, ou `0`), et il est <= 0 — un exercice postérieur au plus
+    récent n'existe pas.
+    """
+    if not isinstance(noeud.value, ast.Name):
+        raise FormuleInexecutable(
+            f"« {formule} » indexe une expression qui n'est pas un concept : seul un NOM peut porter "
+            "un décalage d'exercice (`Revenues[-1]`), jamais un calcul entre parenthèses")
+    nom = noeud.value.id
+    sl = noeud.slice
+    if (isinstance(sl, ast.UnaryOp) and isinstance(sl.op, ast.USub)
+            and isinstance(sl.operand, ast.Constant)
+            and isinstance(sl.operand.value, int) and not isinstance(sl.operand.value, bool)):
+        return -sl.operand.value
+    if isinstance(sl, ast.Constant) and isinstance(sl.value, int) and not isinstance(sl.value, bool):
+        if sl.value > 0:
+            raise FormuleInexecutable(
+                f"« {formule} » emploie un décalage POSITIF `{nom}[{sl.value}]` : un exercice "
+                "postérieur au plus récent n'existe pas. Les décalages vont vers le PASSÉ "
+                "(`[0]` = dernier exercice, `[-1]` = précédent, `[-2]` celui d'avant)")
+        return sl.value  # 0
+    raise FormuleInexecutable(
+        f"« {formule} » indexe `{nom}` par autre chose qu'un entier d'exercice : un décalage temporel "
+        "est un entier <= 0 (`[-1]`, `[-2]`), jamais un nom, un décimal ni une expression")
 
 
 def analyser_formule(formule: str) -> ast.Expression:
@@ -130,6 +195,10 @@ def analyser_formule(formule: str) -> ast.Expression:
     for noeud in ast.walk(arbre):
         if not isinstance(noeud, _NOEUDS_ADMIS):
             raise _refuser_noeud(noeud, texte)
+        if isinstance(noeud, ast.Subscript):
+            # La FORME du décalage est vérifiée ici, avant toute évaluation : un `Revenues[2]` (futur)
+            # ou un `(a+b)[0]` parse (ses nœuds sont admis) mais ne décrit pas une référence temporelle.
+            _offset_du_subscript(noeud, texte)
         if isinstance(noeud, ast.Constant):
             # `True`/`False` sont des `int` en Python — les laisser passer ferait entrer un booléen
             # dans une somme et produirait 0 ou 1 sans erreur visible. Une chaîne, elle, se
@@ -141,20 +210,52 @@ def analyser_formule(formule: str) -> ast.Expression:
     return arbre
 
 
-def noms_de_la_formule(formule: str) -> set[str]:
-    """Les identifiants référencés par la formule. Pure, et lue depuis l'ARBRE.
+def _references(noeud: ast.AST, formule: str) -> set[tuple[str, int]]:
+    """Les couples (concept, offset) sous un nœud validé. Récursif, JAMAIS `ast.walk` : un
+    `Subscript` porte un `Name` que `ast.walk` verrait à part, et le compterait alors deux fois — une
+    fois comme référence temporelle, une fois comme offset 0. La descente contrôlée l'évite."""
+    if isinstance(noeud, ast.Subscript):
+        return {(noeud.value.id, _offset_du_subscript(noeud, formule))}  # type: ignore[union-attr]
+    if isinstance(noeud, ast.Name):
+        return {(noeud.id, 0)}
+    if isinstance(noeud, ast.Constant):
+        return set()
+    if isinstance(noeud, ast.UnaryOp):
+        return _references(noeud.operand, formule)
+    if isinstance(noeud, ast.BinOp):
+        return _references(noeud.left, formule) | _references(noeud.right, formule)
+    return set()   # inatteignable après `analyser_formule` — garde de forme
 
-    Sous la grammaire fermée, TOUT nom d'une formule est un concept : il n'y a ni fonction, ni
-    variable locale, ni mot-clef. C'est ce qui permet au pont [W] de comparer cet ensemble aux
-    `concepts` déclarés et d'être exhaustif — un relevé lexical (`\\b[A-Z][A-Za-z0-9]*\\b`) laissait
-    filer un nom en minuscule, qui échappait donc à la confrontation avec l'inventaire [V] tout en
-    faisant échouer l'évaluation plus tard, loin de sa cause.
+
+def references_de_la_formule(formule: str) -> set[tuple[str, int]]:
+    """Les références (concept, offset d'exercice) d'une formule. Pure, lue depuis l'ARBRE.
+
+    `Revenues` → `(Revenues, 0)` ; `Revenues[-1]` → `(Revenues, -1)`. C'est le grain que l'évaluateur
+    emploie : un même concept peut figurer à DEUX exercices (une croissance annuelle), et il faut
+    alors deux valeurs distinctes. `noms_de_la_formule` en est la projection sur les concepts.
     """
-    return {n.id for n in ast.walk(analyser_formule(formule)) if isinstance(n, ast.Name)}
+    return _references(analyser_formule(formule).body, formule)
 
 
-def evaluer_formule(formule: str, valeurs: Mapping[str, float]) -> float:
+def noms_de_la_formule(formule: str) -> set[str]:
+    """Les CONCEPTS référencés par la formule, offset projeté. Pure, lue depuis l'ARBRE.
+
+    Sous la grammaire fermée, tout nom d'une formule est un concept : il n'y a ni fonction, ni
+    variable locale, ni mot-clef. C'est ce qui permet au pont [W] de comparer cet ensemble aux
+    `concepts` déclarés et d'être exhaustif. Un décalage d'exercice NE crée PAS de concept :
+    `Revenues[-1]` rend `Revenues`, donc le pont confronte à l'inventaire un concept réellement
+    déposé, et il n'y a jamais de `Revenues_previous_year` inventé à refuser (la faute qui coulait
+    l'archétype `rentable`).
+    """
+    return {c for c, _ in references_de_la_formule(formule)}
+
+
+def evaluer_formule(formule: str, valeurs: Mapping[tuple[str, int], float]) -> float:
     """Calcule la formule sur les valeurs fournies. Pure. Lève `FormuleInexecutable`.
+
+    `valeurs` est keyée par (concept, offset) — le grain de `references_de_la_formule` : une même
+    formule peut lire un concept à deux exercices (`Revenues[0]` et `Revenues[-1]`). Une valeur y est
+    donc une PÉRIODE d'un concept, pas un concept.
 
     N'emploie PAS `eval()` : l'arbre est parcouru et chaque nœud calculé ici. Ce n'est pas une
     précaution de sécurité (cf. l'en-tête) — c'est ce qui garantit que le seul calcul possible est
@@ -164,16 +265,26 @@ def evaluer_formule(formule: str, valeurs: Mapping[str, float]) -> float:
     return _calculer(analyser_formule(formule).body, valeurs, formule)
 
 
-def _calculer(noeud: ast.AST, valeurs: Mapping[str, float], formule: str) -> float:
+def _valeur_reference(cle: tuple[str, int], valeurs: Mapping[tuple[str, int], float],
+                      formule: str) -> float:
+    concept, offset = cle
+    if cle not in valeurs:
+        libelle = concept if offset == 0 else f"{concept}[{offset}]"
+        raise FormuleInexecutable(
+            f"« {formule} » référence `{libelle}`, sans valeur résolue. Ce n'est PAS un zéro : un "
+            "concept qu'on n'a pas su lire dans le dépôt (ou pas à cet exercice-là) est un trou, et "
+            "le combler par zéro inverserait le signe de toute soustraction où il figure (#32)")
+    return float(valeurs[cle])
+
+
+def _calculer(noeud: ast.AST, valeurs: Mapping[tuple[str, int], float], formule: str) -> float:
     if isinstance(noeud, ast.Constant):
         return float(noeud.value)
+    if isinstance(noeud, ast.Subscript):
+        return _valeur_reference(
+            (noeud.value.id, _offset_du_subscript(noeud, formule)), valeurs, formule)  # type: ignore[union-attr]
     if isinstance(noeud, ast.Name):
-        if noeud.id not in valeurs:
-            raise FormuleInexecutable(
-                f"« {formule} » référence `{noeud.id}`, sans valeur résolue. Ce n'est PAS un zéro : "
-                "un concept qu'on n'a pas su lire dans le dépôt est un trou, et le combler par zéro "
-                "inverserait le signe de toute soustraction où il figure (#32)")
-        return float(valeurs[noeud.id])
+        return _valeur_reference((noeud.id, 0), valeurs, formule)
     if isinstance(noeud, ast.UnaryOp):
         v = _calculer(noeud.operand, valeurs, formule)
         return -v if isinstance(noeud.op, ast.USub) else v
@@ -233,15 +344,24 @@ def dimension_formule(formule: str, unites: Mapping[str, str]) -> Dimension:
     return _canon(_dimension(analyser_formule(formule).body, unites, formule))
 
 
+def _dimension_nom(nom: str, unites: Mapping[str, str], formule: str) -> Counter:
+    # L'unité est keyée par CONCEPT : un décalage d'exercice ne change pas l'unité d'un concept
+    # (`Revenues[-1]` est en `USD` comme `Revenues`), donc `Revenues[0] - Revenues[-1]` est
+    # dimensionnellement homogène et une croissance `.../Revenues[-1]` est bien « sans dimension ».
+    unite = unites.get(nom)
+    if unite is None:
+        raise FormuleInexecutable(
+            f"« {formule} » référence `{nom}`, dont l'unité n'a pas été résolue")
+    return Counter({unite: 1})
+
+
 def _dimension(noeud: ast.AST, unites: Mapping[str, str], formule: str) -> Counter:
     if isinstance(noeud, ast.Constant):
         return Counter()
+    if isinstance(noeud, ast.Subscript):
+        return _dimension_nom(noeud.value.id, unites, formule)  # type: ignore[union-attr]
     if isinstance(noeud, ast.Name):
-        unite = unites.get(noeud.id)
-        if unite is None:
-            raise FormuleInexecutable(
-                f"« {formule} » référence `{noeud.id}`, dont l'unité n'a pas été résolue")
-        return Counter({unite: 1})
+        return _dimension_nom(noeud.id, unites, formule)
     if isinstance(noeud, ast.UnaryOp):
         return _dimension(noeud.operand, unites, formule)
     if isinstance(noeud, ast.BinOp):

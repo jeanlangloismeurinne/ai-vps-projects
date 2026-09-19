@@ -73,6 +73,7 @@ from app.contracts.formule_grammaire import (
     dimension_formule,
     evaluer_formule,
     noms_de_la_formule,
+    references_de_la_formule,
     rendre_dimension,
 )
 from app.knowledge.edgar_facts import (
@@ -100,6 +101,7 @@ __all__ = [
     "TOLERANCE_ANCRE_J",
     "SOURCE_TYPE",
     "serie_du_concept",
+    "rendre_resultat",
     "ancre_commune",
     "resoudre_points",
     "construire_fait_apparie",
@@ -143,8 +145,11 @@ class ConsigneAppariement(NamedTuple):
 
 
 class PointRetenu(NamedTuple):
-    """UN concept, résolu à l'ancre : sa valeur et de quel dépôt elle sort. Ce qui rend la
-    provenance CONTESTABLE plutôt que promise — `accn` identifie le dépôt, `end` la date."""
+    """UNE référence (concept, offset d'exercice), résolue à sa date : sa valeur et de quel dépôt
+    elle sort. Ce qui rend la provenance CONTESTABLE plutôt que promise — `accn` identifie le dépôt,
+    `end` la date. `offset` (0 = exercice le plus récent, -1 = précédent) rend LISIBLE, dans la
+    provenance, à quelle période chaque terme a été lu : une croissance annuelle lit `Revenues` à
+    deux exercices, et le lecteur doit voir lequel est lequel."""
     concept: str
     valeur: float
     unite: str
@@ -153,6 +158,7 @@ class PointRetenu(NamedTuple):
     duree_jours: Optional[int]
     form: Optional[str]
     accn: Optional[str]
+    offset: int = 0
 
 
 class FaitApparie(NamedTuple):
@@ -171,6 +177,28 @@ class FaitApparie(NamedTuple):
 
 
 # ─────────────────────────────── la partie PURE (hors réseau, hors DB) ───────────────────────────
+
+def _ref_libelle(p: PointRetenu) -> str:
+    """`Concept` (offset 0) ou `Concept[-1]` : la provenance nomme la PÉRIODE de chaque terme, pour
+    qu'une croissance annuelle ne présente pas deux lectures du même concept comme interchangeables."""
+    return p.concept if p.offset == 0 else f"{p.concept}[{p.offset}]"
+
+
+def rendre_resultat(valeur: float, dimension: tuple, devise: str) -> str:
+    """Le RÉSULTAT du calcul, rendu pour être LU dans le contenu. Pur.
+
+    `montant` arrondit à l'entier tout ce qui est sous le million — sa mantisse `nd` ne s'applique
+    qu'aux paliers M/Md. Juste pour un poste de bilan, c'est FAUX pour un ratio SANS DIMENSION : une
+    croissance de 0,25 (25 %) y deviendrait « 0 », un fait dont le nombre structuré est juste et dont
+    le contenu ment (#42/#45 — le contenu est ce que l'agent lit). Le temporel produit précisément ce
+    genre de fait (une croissance est un flux ÷ un flux, donc sans dimension), donc un résultat sans
+    dimension est rendu à chiffres significatifs, jamais via `montant`. Un résultat dimensionné (un
+    montant, un `USD/shares`) reste rendu par `montant`, détenteur unique du format des montants (#46).
+    """
+    if not dimension:
+        return f"{valeur:.4g}".replace(".", ",")
+    return montant(valeur, devise, nd=2)
+
 
 def serie_du_concept(
     bruts: list[dict[str, Any]], concept: str
@@ -245,16 +273,38 @@ def ancre_commune(series: dict[str, list[dict[str, Any]]]) -> Optional[str]:
     return None
 
 
+def _decaler_annees(iso: str, k: int) -> date:
+    """La date `iso` décalée de `k` années (k <= 0), même mois et même jour. Pure.
+
+    Le décalage garde le mois/jour plutôt que de retrancher `k×365` jours : un exercice fiscal tombe
+    au même mois d'une année sur l'autre, et soustraire des jours accumulerait une dérive sur les
+    décalages profonds (`[-5]`). Le 29 février d'une année non bissextile retombe sur le 28 — un
+    exercice clos un 29 février est assez rare pour que le 28 soit le bon rattrapage, et
+    `point_pour_periode` absorbe l'écart d'un jour dans sa tolérance.
+    """
+    d = date.fromisoformat(iso)
+    try:
+        return d.replace(year=d.year + k)
+    except ValueError:
+        return d.replace(year=d.year + k, day=28)
+
+
 def resoudre_points(
     consigne: ConsigneAppariement, facts: dict[str, list[dict[str, Any]]]
-) -> tuple[dict[str, PointRetenu], Optional[str], Optional[str]]:
-    """Résout chaque concept de l'expression à une ancre COMMUNE PAR CADRAGE. Pur.
+) -> tuple[dict[tuple[str, int], PointRetenu], Optional[str], Optional[str]]:
+    """Résout chaque RÉFÉRENCE (concept, offset d'exercice) de l'expression. Pur.
 
-    Rend (points, ancre_flux, ancre_bilan). Deux ancres, jamais une : un flux appartient à un
-    exercice, un poste de bilan date d'un instant, et les confondre est le défaut de sens que
-    `collect_postes` documente. Une formule peut légitimement mêler les deux (une intensité = un
-    flux rapporté à un solde) ; elle porte alors ses DEUX dates, et l'entry les écrit toutes deux
-    plutôt que d'en supposer une.
+    Rend (points, ancre_flux, ancre_bilan). Deux ancres de BASE (offset 0), jamais une : un flux
+    appartient à un exercice, un poste de bilan date d'un instant, et les confondre est le défaut de
+    sens que `collect_postes` documente. Une formule peut légitimement mêler les deux (une intensité
+    = un flux rapporté à un solde) ; elle porte alors ses DEUX dates, et l'entry les écrit toutes
+    deux plutôt que d'en supposer une.
+
+    LE TEMPOREL : une référence `Concept[-k]` est résolue à l'exercice ~k an(s) avant l'ancre de base
+    de son cadrage (`_decaler_annees` + `point_pour_periode`). Le fait reste daté de l'ancre de base
+    (la période la plus RÉCENTE) — une croissance annuelle est affirmable « au dernier exercice » ;
+    les exercices antérieurs sont sa PROVENANCE, pas sa date. Un exercice décalé absent est un refus
+    NOMMÉ (l'émetteur manque d'historique), jamais un zéro ni un repli sur le point courant.
 
     Lève `AppariementInexecutable` avec un motif LISIBLE — il finira dans un mandat, donc il doit
     dire ce qui manque, pas qu'il manque quelque chose.
@@ -267,7 +317,15 @@ def resoudre_points(
             "et ce nombre porterait le tier de ses termes déposés (#67 : le web apporte un terme du "
             "calcul, il ne comble pas un calcul incomplet)")
 
-    concepts = sorted(noms_de_la_formule(consigne.expression))
+    try:
+        references = sorted(references_de_la_formule(consigne.expression))
+    except FormuleInexecutable as e:
+        # Le contrat `AppariementItem` valide déjà la FORME de la formule à la construction, donc ce
+        # chemin est théoriquement mort au flux nominal. Mais le producteur est sur la chaîne de
+        # collecte : une formule qui l'atteindrait mal formée (carte hors contrat, appel direct) doit
+        # devenir un mandat NOMMÉ (#25), jamais une exception nue qui casserait toute la collecte.
+        raise AppariementInexecutable(f"formule mal formée — {e}") from e
+    concepts = sorted({c for c, _ in references})
     if not concepts:
         raise AppariementInexecutable(
             f"« {consigne.expression} » ne référence aucun concept : il n'y a rien à lire au dépôt")
@@ -303,15 +361,25 @@ def resoudre_points(
                 "résultat ne décrit aucune période (#43)")
         ancres[cadrage] = ancre
 
-    points: dict[str, PointRetenu] = {}
-    for concept, serie in series.items():
-        ancre = ancres[cadrages[concept]]
-        assert ancre is not None  # garanti ci-dessus : un cadrage présent a une ancre
-        p = point_pour_periode(serie, date.fromisoformat(ancre), tol_days=TOLERANCE_ANCRE_J)
-        assert p is not None      # `ancre_commune` ne rend une date que si tous résolvent
-        points[concept] = PointRetenu(
-            concept=concept, valeur=float(p["val"]), unite=unites[concept], end=str(p["end"]),
-            cadrage=cadrages[concept], duree_jours=duree_jours(p),
+    points: dict[tuple[str, int], PointRetenu] = {}
+    for concept, offset in references:
+        base = ancres[cadrages[concept]]
+        assert base is not None  # garanti ci-dessus : un cadrage présent a une ancre de base
+        cible = _decaler_annees(base, offset)
+        p = point_pour_periode(series[concept], cible, tol_days=TOLERANCE_ANCRE_J)
+        if p is None:
+            # L'exercice décalé n'est pas déposé : refus NOMMÉ, jamais un zéro ni un repli sur le
+            # point courant (qui ferait une croissance de 0 %, un fait faux et rassurant). C'est un
+            # émetteur qui manque d'historique — une propriété de l'émetteur, donc un mandat (#25/#44).
+            dispo = ", ".join(str(pt["end"]) for pt in series[concept][-5:])
+            raise AppariementInexecutable(
+                f"`{concept}[{offset}]` demande l'exercice ~{-offset} an(s) avant {base} "
+                f"(cible {cible.isoformat()} ±{TOLERANCE_ANCRE_J} j), que cet émetteur n'a pas "
+                f"déposé (exercices lisibles : {dispo}). L'historique lui manque — c'est une "
+                "propriété de l'émetteur, pas un trou de collecte")
+        points[(concept, offset)] = PointRetenu(
+            concept=concept, offset=offset, valeur=float(p["val"]), unite=unites[concept],
+            end=str(p["end"]), cadrage=cadrages[concept], duree_jours=duree_jours(p),
             form=p.get("form"), accn=p.get("accn"))
     return points, ancres["flux"], ancres["instant"]
 
@@ -353,10 +421,10 @@ def construire_fait_apparie(
     seconde SUPERSÈDE la première (`_current_fact_ids`) au lieu de la doubler. Le nommer d'après
     l'ingrédient aurait inscrit du vocabulaire de framework sur le corpus — ce que #57 a retiré.
     """
-    unites = {c: p.unite for c, p in points.items()}
+    unites = {p.concept: p.unite for p in points.values()}     # keyé par concept (l'unité ignore l'offset)
     try:
         dimension = dimension_formule(consigne.expression, unites)
-        valeur = evaluer_formule(consigne.expression, {c: p.valeur for c, p in points.items()})
+        valeur = evaluer_formule(consigne.expression, {cle: p.valeur for cle, p in points.items()})
     except DimensionIncoherente as e:
         raise AppariementInexecutable(f"unités incohérentes — {e}") from e
     except FormuleInexecutable as e:
@@ -379,11 +447,11 @@ def construire_fait_apparie(
 
     fiabilite = _fiabilite(consigne, points)
     detail = "\n".join(
-        f"  · {p.concept} = {montant(p.valeur, p.unite, nd=2)} "
+        f"  · {_ref_libelle(p)} = {montant(p.valeur, p.unite, nd=2)} "
         f"({'flux' if p.cadrage == 'flux' else 'bilan'} {p.end}"
         + (f", {p.duree_jours} j" if p.duree_jours else "")
         + f", {p.form or 'forme inconnue'}, accession {p.accn or 'n/d'})"
-        for p in sorted(points.values(), key=lambda q: q.concept))
+        for p in sorted(points.values(), key=lambda q: (q.concept, q.offset)))
     hypotheses = ("\nHypothèses, à contester : "
                   + " ; ".join(consigne.hypotheses)) if consigne.hypotheses else ""
     if consigne.statut == "approximation":
@@ -394,7 +462,7 @@ def construire_fait_apparie(
 
     contenu = (
         f"{libelle} — {ticker_id} ({symbole}), {periode} : "
-        f"{montant(valeur, devise, nd=2)}.\n"
+        f"{rendre_resultat(valeur, dimension, devise)}.\n"
         f"Calculé depuis les dépôts SEC. Expression : {consigne.expression}\n{detail}"
         f"{hypotheses}{qualif}"
     )
@@ -411,14 +479,15 @@ def construire_fait_apparie(
         "ancre_flux": ancre_flux,
         "ancre_bilan": ancre_bilan,
         "ingredients": [
-            {"concept": p.concept, "xbrl_tag": f"us-gaap:{p.concept}", "value": p.valeur,
-             "unit": p.unite, "end": p.end, "cadrage": p.cadrage, "form": p.form, "accn": p.accn}
-            for p in sorted(points.values(), key=lambda q: q.concept)
+            {"concept": p.concept, "offset": p.offset, "xbrl_tag": f"us-gaap:{p.concept}",
+             "value": p.valeur, "unit": p.unite, "end": p.end, "cadrage": p.cadrage,
+             "form": p.form, "accn": p.accn}
+            for p in sorted(points.values(), key=lambda q: (q.concept, q.offset))
         ],
     }
     # L'URL pointe le dépôt du point le plus récent : c'est celui qu'un lecteur ouvrira pour
     # contester le nombre, et les autres accessions restent lisibles dans `ingredients`.
-    plus_recent = max(points.values(), key=lambda p: (p.end, p.concept))
+    plus_recent = max(points.values(), key=lambda p: (p.end, p.concept, p.offset))
     return FaitApparie(
         metric=consigne.expression,
         titre=f"{libelle} — {periode} ({symbole})",

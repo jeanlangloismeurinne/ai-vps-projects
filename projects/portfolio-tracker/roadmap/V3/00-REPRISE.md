@@ -24,10 +24,14 @@ role: >
   NVDA/MSFT/RVMD (§5.3) — est livré le 2026-09-19** (convention **#73**, aucune migration) : plans
   #55/#56/#57, **zéro doublon d'identité** (#43 en base). Ce que l'écriture durable a révélé et qui EST
   le lot : un **blocage web infini** borné par ligne (#73, chien de garde `asyncio.wait_for` → mandat),
-  et **l'apparieur qui refuse la carte entière sur `rentable`** (grammaire sans temporel — chantier
-  ouvert). Suite `run_all.sh` = **2642 assertions, 0 échec sur 35 scripts**. **Reste au lot 3** :
-  robustesse apparieur (grammaire temporelle + refus par ingrédient) puis maillon 5 (réconciliation à
-  0/0). Détail dans la checklist du lot 3 et le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
+  et **l'apparieur qui refuse la carte entière sur `rentable`** (grammaire sans temporel). Ce dernier
+  est LEVÉ le **2026-09-19 (convention #74)** : la grammaire exprime un **décalage d'exercice
+  `Concept[-1]`** (l'offset porte sur le nom, pas un concept neuf — #57 appliqué à la formule), et le
+  vrai modèle exprime enfin une croissance en tier A (MSFT `qf_3`, RVMD `qf_7`). Suite `run_all.sh` =
+  **2661 assertions, 0 échec sur 35 scripts**. **Reste au lot 3** : (b) le **refus PAR INGRÉDIENT**
+  (rendu URGENT par la même mesure — une bévue de modèle sur 1 des 30 ingrédients coule encore la
+  carte NVDA entière) puis maillon 5 (réconciliation à 0/0). Détail dans le **▶ PROCHAIN JALON**
+  ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -482,22 +486,35 @@ lot 1 ; les tables viennent en dernier.
 > blocage web infini est borné par ligne, #73). Mais deux défauts que **seule l'écriture durable a
 > révélés** restent ouverts :
 >
-> **(A) — LE PLUS PRIORITAIRE : l'apparieur ne fonde AUCUN appariement sur l'archétype `rentable`.**
-> NVDA et MSFT rendent `carte=aucune`, RVMD (`pre_revenus`) seul réussit — donc la matière-phare des
-> maillons 4/4bis (des formules tier A sur XBRL) ne se pose que sur 1 émetteur sur 3. Cause MESURÉE
-> (log capturé) : `[W]` (#68) refuse une **croissance annuelle** parce que le modèle invente
-> `Revenues_previous_year` — la **grammaire de formule ne sait pas référencer le même concept à une
-> période antérieure** (YoY, série n exercices). Deux gestes, dans l'ordre imposé contrat→agent :
-> (a) **la grammaire exprime le temporel** (`concept@period`, décalage d'exercice) — c'est
-> exactement le « contraindre la FORME de `formule` dans le contrat » qu'annonçait le maillon 4, la
-> récurrence est arrivée ; (b) **le refus devient PAR INGRÉDIENT, pas par carte** : aujourd'hui un
-> seul ingrédient inexprimable coule la carte ENTIÈRE (`AppariementRefuse` tout-ou-rien) et jette les
-> 20+ bons appariements — un ingrédient refusé doit sortir en mandat/web, les autres tenir (#25/#44
-> transposé du couple à la carte). ⚠️ Ne pas « re-durcir le prompt » : `feedback_jugement_modele_
-> instable_entre_passages` l'a déjà disqualifié — la garde est en code (#68), ce qui manque est la
-> FORME que le contrat autorise.
+> **(A) — robustesse apparieur.** Deux gestes, ordre imposé contrat→agent.
+> ✅ **(a) LA GRAMMAIRE TEMPORELLE — LIVRÉE le 2026-09-19** (convention **#74**, aucune migration).
+> L'archétype `rentable` sortait `carte=aucune` parce que `qf_3.croissance_activite_par_exercice` n'a
+> pas de forme sans référence à l'exercice antérieur : le modèle inventait `Revenues_previous_year`,
+> un nom absent du dépôt → refus `[W]` → carte entière coulée. La grammaire exprime désormais un
+> **décalage d'exercice `Concept[-1]`** (`ast.Subscript` contraint, offset entier ≤ 0, relatif jamais
+> absolu). Décision de fond : **l'offset porte sur le NOM, il ne crée pas un concept** — c'est #57
+> appliqué à la formule, `noms_de_la_formule` le PROJETTE (`Revenues[-1]` → `Revenues`) donc `[V]/[W]`
+> confrontent à l'inventaire un concept déposé, l'évaluateur lit le grain fin `(concept, offset)` via
+> `references_de_la_formule`. Détenteur unique `_offset_du_subscript` (#46). Le fait est daté de
+> l'exercice le plus RÉCENT (offset 0), les antérieurs sont sa provenance ; un exercice décalé absent
+> est un refus NOMMÉ, jamais un repli sur le point courant (fausse croissance 0 %). Défaut corrigé au
+> passage : un ratio SANS DIMENSION (une croissance) rendu « 0 » par `montant` → `rendre_resultat`
+> (#42/#45). `check_appariement §11` (115/0), `check_appariement_feed §6` (40/0), négatifs 40/0 et
+> 19/0, **suite 2661/0 sur 35 scripts**. **MESURÉ contre le vrai modèle** (`tools/acceptation_
+> apparieur.sh`) : MSFT `qf_3` → `(RevenueFromContractWithCustomerExcludingAssessedTax[0] - […][-1])
+> / […][-1]` accepté tier A ; RVMD `qf_7` → `Ncf[0]+[-1]+[-2]+[-3]`. Le blocage MESURÉ est retiré.
+> 🔜 **(b) LE REFUS PAR INGRÉDIENT — PROCHAIN, et la même mesure l'a rendu URGENT.** Entre deux
+> passages de l'acceptation, la carte NVDA est passée de ACCEPTÉE (13/0) à REFUSÉE (8/1) — **non sur
+> la croissance** (le geste (a) l'a réglée), mais sur un AUTRE ingrédient (`qf_4.endettement_brut_et_
+> net`, un `[W]` « concept déclaré non employé », bévue de modèle). C'est
+> `feedback_jugement_modele_instable_entre_passages` × le tout-ou-rien de `apparier()` : une seule
+> bévue sur l'un des 30 ingrédients coule la carte ENTIÈRE. Geste : un `AppariementRefuse` sur un
+> ingrédient sort en `indisponible`/mandat, les 29 autres survivent (#25/#44 transposé du couple à la
+> carte). Critère net en 3 lignes : « un ingrédient refusé sort en mandat/web, les 20+ autres
+> survivent ; NVDA/MSFT produisent une carte non vide ; zéro doublon d'identité ». ⚠️ Ne PAS re-durcir
+> le prompt (`feedback_jugement_modele_instable_entre_passages`) — la garde est en code.
 >
-> **(B) — maillon 5 : réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`, + le nettoyage
+> **(C) — maillon 5 : réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`, + le nettoyage
 > des « faux au sens v3 » hérités de RVMD (#190 ROIC fabriqué, #191, #186 — jugement humain).
 >
 > ⚠️ **La ligne de base se REQUÊTE, toujours.** Ce lot a démarré en trouvant NVDA 15 / MSFT 15 /
@@ -575,8 +592,8 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite : `bash checks/run_all.sh` = TOUT VERT (2634 assertions sur 35 scripts, 0 échec, mesuré le
-  2026-09-18 après le maillon 4).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
+- **Suite : `bash checks/run_all.sh` = TOUT VERT (2661 assertions sur 35 scripts, 0 échec, mesuré le
+  2026-09-19 après la grammaire temporelle #74 ; 2634 au maillon 4).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
   requiert plus `CHECK_DB_URL`) ; `check_entry_nature` **88/0** (§7 = invariant #51, cf. frontmatter).
   Seuls `check_entry_nature §7` et `check_collecte_persist` gardent le montage réseau `coolify` +
   `CHECK_DB_URL`. `run_all.sh`
@@ -795,7 +812,9 @@ justes, c'est le *fait énoncé* qui était faux.
 - **`roadmap/V3/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
   PAS défait** (à relire à chaque lot) · §2 l'objet framework · §3 le manager · §4 les deux pilotes
   rédigés en entier · §5 le stockage · §9 le test d'acceptation · §10 les lots.
-- **`CLAUDE.md` du projet** — conventions **#22 à #73**. Les plus structurantes ici : **#73**
+- **`CLAUDE.md` du projet** — conventions **#22 à #74**. Les plus structurantes ici : **#74**
+  (le TEMPOREL d'une formule porte sur le NOM `Concept[-1]`, pas un concept neuf — #57 appliqué à la
+  formule ; débloque l'archétype `rentable`, vérifié contre le vrai modèle), **#73**
   (un BLOCAGE réseau est un 4ᵉ état muet, invisible aux checks et à l'acceptation ROLLBACK : borné par
   ligne web via `asyncio.wait_for` → mandat nommé, #25), **#72**
   (l'EXÉCUTION d'un appariement : formule sur concepts XBRL nus évaluée sur l'inventaire **déjà

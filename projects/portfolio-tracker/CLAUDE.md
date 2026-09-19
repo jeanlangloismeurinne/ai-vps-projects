@@ -1419,6 +1419,71 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     gêne. Détail + garde : `check_collecte_executor.py §6bis`, `negatif_collecte_executor.sh` (mutation
     « garde par ligne retiré »).
 
+74. **Le TEMPOREL d'une formule d'appariement porte sur le NOM (`Concept[-1]`), jamais sur un concept
+    neuf — c'est #57 appliqué à la formule (V3, lot 3 maillon 4bis, `contracts/formule_grammaire.py`)** :
+    l'archétype `rentable` sortait `carte=aucune` sur NVDA/MSFT (mesuré le 2026-09-19) parce que la
+    question de CROISSANCE `qf_3.croissance_activite_par_exercice` (« progression de l'activité,
+    exercice par exercice », essentielle, plancher A) n'a pas de forme sans référence à l'exercice
+    antérieur. La grammaire ne savait pas l'exprimer, alors le modèle inventait `Revenues_previous_year`
+    — un nom absent du dépôt, donc un refus **[W]** (concept hors déclaration) qui, faute de refus PAR
+    ingrédient, coulait la carte entière. RVMD (`pre_revenus`, où qf_3 est `sans_objet`) réussissait
+    seul : le discriminant du blocage était **l'archétype, pas la taille d'inventaire**.
+    **La grammaire exprime désormais un décalage d'exercice `Concept[k]`** (k entier ≤ 0 : `Concept`
+    ou `Concept[0]` = exercice le plus récent, `Concept[-1]` = précédent) — un `ast.Subscript`
+    contraint (base = un NOM, indice = un entier littéral ≤ 0), refusé à la FORME dans le contrat
+    avant toute évaluation. Deux décisions, chacune contre une tentation plus simple et fausse :
+    ⚠️ **L'offset porte sur le NOM, il ne crée pas un nom.** `noms_de_la_formule` PROJETTE l'offset :
+    `Revenues[-1]` rend `Revenues`, donc le pont **[V]/[W]** confronte à l'inventaire un concept
+    réellement déposé — il n'y a jamais de `Revenues_previous_year` à refuser. C'est exactement #57 :
+    la période est une propriété de la RELATION (fait ↔ exercice), pas une syllabe du concept.
+    L'évaluateur, lui, lit le grain fin `(concept, offset)` via `references_de_la_formule` — une même
+    formule lit `Revenues` à DEUX exercices, il faut donc deux valeurs. Détenteur unique du décalage :
+    `_offset_du_subscript`, appelé par l'analyse de forme, le relevé de références, l'évaluation et la
+    dimension (#46), sans quoi « ce que le contrat accepte » et « ce que le code lit » divergeraient.
+    ⚠️ **L'offset est RELATIF, jamais absolu** (`Concept[-1]`, pas `Concept@FY2024`). Une carte se
+    recalcule à chaque nouveau dépôt (#67) : `[-1]` désigne toujours « l'exercice d'avant », là où une
+    année en dur pointerait un exercice figé et se périmerait en silence au dépôt suivant. Résolu par
+    `_decaler_annees(base, offset)` (même mois/jour, k années en arrière) + `point_pour_periode` :
+    un exercice décalé absent est un refus NOMMÉ (l'émetteur manque d'historique), **jamais un repli
+    sur le point courant** (qui ferait une croissance de 0 %, fait faux et rassurant, #25/#44).
+    ⚠️ **Le fait est daté de l'exercice le plus RÉCENT (offset 0)** : une croissance est affirmable
+    « au dernier exercice » ; les exercices antérieurs sont sa PROVENANCE (écrite concept par concept
+    AVEC leur `offset`), pas sa date (#42/#48).
+    ⚠️ **Un résultat SANS DIMENSION est rendu à chiffres significatifs, jamais par `montant`
+    (`appariement_feed.rendre_resultat`)** : une croissance est un flux ÷ un flux, donc sans
+    dimension, et `montant` arrondit à l'entier tout ce qui est sous le million (sa mantisse ne vaut
+    que pour les paliers M/Md) — une croissance de 0,25 y devenait « 0 » : le nombre structuré juste,
+    le CONTENU faux (#42/#45, le contenu est ce que l'agent lit). Défaut introduit par le temporel
+    (les ratios dimensionless deviennent courants), donc gardé (`check_appariement_feed §6`).
+    ⚠️ **Le prompt ENSEIGNE la notation et NOMME l'invention interdite** — sans la notation, le modèle
+    ne peut pas exprimer une croissance et réinvente `Revenues_previous_year`. Ce n'est **pas** le
+    « re-durcissement de prompt » disqualifié (`feedback_jugement_modele_instable_entre_passages`) :
+    la correction reste EN CODE (grammaire + pont [V]/[W]), le prompt ne fait qu'ENABLER l'expression
+    (#24/#28 : le modèle propose, le code vérifie). Une garde d'énoncé le tient (`check_appariement §11`).
+    Détail + garde : `check_appariement.py §11` (115/0, le temporel passe le pont, la forme est refusée
+    avant l'évaluation), `check_appariement_feed.py §6` (40/0, la croissance s'exécute, le fait est
+    daté, le rendu ne ment pas), `negatif_appariement.sh` (40 mutations, dont décalage positif accepté,
+    offset perdu, notation non enseignée) et `negatif_appariement_feed.sh` (19 mutations, dont ratio
+    arrondi à 0, offset ignoré, repli silencieux sur le point courant). Suite complète **2661/0 sur
+    35 scripts**. Aucune migration.
+    ⚠️ **MESURÉ contre le vrai modèle et le vrai dépôt** (`tools/acceptation_apparieur.sh`, NVDA/MSFT/
+    RVMD, DeepSeek + data.sec.gov, ~$0.05, ne persiste rien) : le modèle EMPLOIE la notation et le
+    pont l'accepte. MSFT — `qf_3.croissance_activite_par_exercice` → **`(RevenueFromContractWith
+    CustomerExcludingAssessedTax[0] - […][-1]) / […][-1]`**, récupérée du web en `approximation`
+    tier A ; RVMD — `qf_7` → `NetCashProvidedByUsedInOperatingActivities[0]+[-1]+[-2]+[-3]`. **La
+    grammaire retire le blocage MESURÉ** : là où l'archétype `rentable` sortait `carte=aucune`, la
+    croissance s'exprime et la carte est acceptée.
+    ⚠️ **ET CE QUE LA MÊME MESURE A RÉVÉLÉ, qui EST le geste suivant (b)** : entre deux passages, la
+    carte NVDA est passée de ACCEPTÉE (13/0) à REFUSÉE (8/1) — non sur la croissance, mais sur un
+    AUTRE ingrédient (`qf_4.endettement_brut_et_net`, un `[W]` « concept déclaré non employé », une
+    bévue de modèle). C'est `feedback_jugement_modele_instable_entre_passages` × le tout-ou-rien :
+    une seule bévue sur l'un des 30 ingrédients coule la carte ENTIÈRE. **RESTE OUVERT — le refus PAR
+    INGRÉDIENT** (geste (b) du chantier A) : un ingrédient refusé doit sortir en `indisponible`/mandat,
+    les 29 autres tenir (#25/#44 transposé du couple à la carte). Refactor gardé, critère net en trois
+    lignes (« un `AppariementRefuse` sur un ingrédient sort en mandat/web, les 20+ autres survivent ;
+    NVDA/MSFT produisent une carte non vide ; zéro doublon d'identité »), prochain lot. ⚠️ Ne PAS
+    re-durcir le prompt : la garde est en code, ce que le geste (a) vient de faire.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

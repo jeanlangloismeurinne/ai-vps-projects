@@ -367,5 +367,81 @@ check("§5 aucune lettre de tier en dur non plus : un `\"A\"` posé ici survivra
       "la table et publierait un tier que personne n'a décidé",
       _tiers == [], f"→ {_tiers}")
 
+# ── §6 LE TEMPOREL — une croissance annuelle S'EXÉCUTE, et le fait porte la période la plus récente ─
+# La grammaire sait désormais référencer le même concept à un exercice antérieur (`Revenues[-1]`).
+# C'est ce qui débloque l'archétype `rentable` (qf_3 « progression de l'activité, exercice par
+# exercice ») : le producteur lit `Revenues` à DEUX exercices et calcule la variation, là où le
+# modèle inventait `Revenues_previous_year`. Ce module en est l'exécution.
+print("\n[6] le temporel — `Revenues[-1]` s'exécute, le fait est daté de l'exercice le plus récent")
+
+_FACTS_CROISSANCE = {
+    "Revenues": [
+        _flux("2023-12-31", 100_000_000_000.0, start="2023-01-01", fy=2023),
+        _flux("2024-12-31", 120_000_000_000.0, start="2024-01-01", fy=2024),
+        _flux("2025-12-31", 150_000_000_000.0, start="2025-01-01", fy=2025),
+    ],
+}
+_CONS_CROISSANCE = ConsigneAppariement(
+    statut="approximation",
+    expression="(Revenues[0] - Revenues[-1]) / Revenues[-1]",
+    hypotheses=("progression mesurée d'un exercice annuel au suivant, sur les exercices déposés",),
+    deterministe=True)
+
+# Le chemin complet est CAPTURÉ, jamais laissé propager : un assert qui tue le script avant son bilan
+# se lit comme une absence de mesure, pas comme un échec nommé (`feedback_bilan_par_sa_forme`).
+try:
+    _points_c, _af_c, _ab_c = resoudre_points(_CONS_CROISSANCE, _FACTS_CROISSANCE)
+    _f_c = construire_fait_apparie("NVDA", "NVDA", 1045810, "progression de l'activité",
+                                   _CONS_CROISSANCE, _points_c, ancre_flux=_af_c, ancre_bilan=_ab_c)
+except AppariementInexecutable as _e:
+    _points_c, _af_c, _ab_c = {}, None, None
+
+    class _Vide:  # sentinelle : chaque assert de §6 rougit proprement, sans KeyError ni AttributeError
+        structure = {"value": None, "period_end": None, "ingredients": []}
+        contenu = f"REFUSÉ — {_e}"
+        fiabilite = None
+    _f_c = _Vide()
+check("§6 une croissance annuelle S'EXÉCUTE : (150 − 120) / 120 = 0,25, le même concept lu à deux "
+      "exercices — pas un `Revenues_previous_year` inventé",
+      _f_c.structure["value"] is not None and abs(_f_c.structure["value"] - 0.25) < 1e-9,
+      f"→ {_f_c.structure['value']}")
+check("§6 le fait est daté de l'exercice le PLUS RÉCENT (offset 0), pas de l'exercice antérieur qui "
+      "n'est que sa provenance : une croissance est affirmable « au dernier exercice »",
+      _f_c.structure["period_end"] == "2025-12-31" and _af_c == "2025-12-31",
+      f"→ period_end={_f_c.structure['period_end']}, ancre_flux={_af_c}")
+check("§6 la provenance NOMME l'exercice de chaque terme (`offset`) : le lecteur voit que Revenues a "
+      "été lu à 2025 ET à 2024, et lequel est lequel",
+      sorted((i["concept"], i["offset"], i["end"]) for i in _f_c.structure["ingredients"])
+      == [("Revenues", -1, "2024-12-31"), ("Revenues", 0, "2025-12-31")],
+      f"→ {_f_c.structure['ingredients']}")
+# LE FAIT QUE MON PROPRE CHANGEMENT A INTRODUIT, ET QU'IL FAUT GARDER : un résultat SANS DIMENSION
+# (une croissance = flux ÷ flux) rendu par `montant` serait arrondi à « 0 » (sa mantisse ne vaut que
+# pour les paliers M/Md). Le nombre structuré serait juste et le CONTENU mentirait (#42/#45).
+check("§6 un résultat SANS DIMENSION est rendu à chiffres significatifs dans le contenu (`0,25`), "
+      "jamais arrondi à « 0 » par `montant` : le contenu est ce que l'agent lit (#42/#45)",
+      "0,25" in _f_c.contenu and " 0 sans dimension" not in _f_c.contenu, f"→ {_f_c.contenu[:90]!r}")
+check("§6 le tier d'une croissance déterministe reste A (tous les termes sont `edgar_official`, la "
+      "formule est fermée) : le décalage d'exercice n'ajoute aucune incertitude (#67)",
+      _f_c.fiabilite is not None and _f_c.fiabilite[1] == RELIABILITY_TABLE[SOURCE_TYPE][0],
+      f"→ {_f_c.fiabilite}")
+
+# LE REFUS NOMMÉ : un émetteur qui n'a pas assez d'historique. `Revenues[-1]` sur une seule année ne
+# se replie PAS sur le point courant (une croissance de 0 %, fait faux et rassurant) — il refuse.
+_m = leve(resoudre_points, _CONS_CROISSANCE,
+          {"Revenues": [_flux("2025-12-31", 150_000_000_000.0, start="2025-01-01", fy=2025)]})
+check("§6 un exercice décalé ABSENT (émetteur sans historique) est un refus NOMMÉ, jamais un repli "
+      "sur le point courant : le motif dit l'exercice manquant et les exercices lisibles",
+      _m is not None and "Revenues[-1]" in _m and "2025-12-31" in _m, f"→ {_m!r}")
+
+# LE FUTUR N'EXISTE PAS — la garde de forme du contrat, éprouvée au point de production. `Revenues[1]`
+# est refusé à l'analyse, avant toute lecture de dépôt.
+_m = leve(resoudre_points, ConsigneAppariement(
+    statut="approximation", expression="Revenues[1] - Revenues", deterministe=True),
+    _FACTS_CROISSANCE)
+check("§6 un décalage POSITIF (`Revenues[1]`, un exercice futur) est refusé : un exercice postérieur "
+      "au plus récent n'existe pas",
+      _m is not None and ("POSITIF" in _m or "positif" in _m.lower()), f"→ {_m!r}")
+
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

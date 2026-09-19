@@ -41,6 +41,7 @@ printf '  ok   satisfiabilité · %s\n\n' "$(printf '%s' "$base" | grep -E 'vér
 CONTRAT="app/contracts/appariement_schema.py"
 PONT="app/agents/v2/apparieur.py"
 TIERS="app/knowledge/synthesis_feed.py"
+GRAM="app/contracts/formule_grammaire.py"
 
 # ⚠️ L'`assert attendu` se cherche dans la LIGNE DE FAIL, qui porte le LIBELLÉ de l'assert — pas
 # dans le message de l'exception refusée. Deux mutations ont d'abord été classées « rouge, mais pas
@@ -111,6 +112,18 @@ mutations=(
 # serait la plus silencieuse.
 "$PONT¦\"PROFONDEUR de la série.¦\"profondeur de la serie.¦(« PROFONDEUR…"
 "$PONT¦n'est PLUS ALIMENTÉ¦n'est plus alimenté¦(« PLUS ALIMENTÉ…"
+# ── §11 La référence temporelle `Concept[-1]` — la grammaire qui débloque l'archétype `rentable` ──
+# Le garde de FORME est chez son détenteur (`formule_grammaire.py`), pas dans le check : muter le
+# check ne dirait rien, c'est la grammaire qu'il faut désarmer (#46, une garde se teste chez son
+# détenteur). Un décalage POSITIF accepté = un exercice futur qui n'existe pas.
+"$GRAM¦        if sl.value > 0:¦        if False:  # mutation: un décalage POSITIF (exercice futur) est accepté¦POSITIF"
+# L'offset PERDU : `Revenues[-1]` devient l'exercice courant. `references_de_la_formule` cesse de
+# porter le grain fin (concept, offset), donc une croissance lirait deux fois le même exercice — le
+# fait faux et rassurant (0 %) que la grammaire existe pour éviter.
+"$GRAM¦        return {(noeud.value.id, _offset_du_subscript(noeud, formule))}  # type: ignore[union-attr]¦        return {(noeud.value.id, 0)}  # mutation: l'offset est perdu¦grain fin (concept, offset)"
+# La notation N'EST PLUS ENSEIGNÉE au modèle : sans elle, il ne peut pas exprimer une croissance et
+# réinvente `Revenues_previous_year`. C'est une garde sur l'ÉNONCÉ du prompt (comme la limite de §9).
+"$PONT¦(\`Revenues_previous_year\` n'existe¦(\`RevenuePrecedent\` n'existe¦le prompt ENSEIGNE"
 )
 
 source "$(dirname "$0")/_negatif.sh"

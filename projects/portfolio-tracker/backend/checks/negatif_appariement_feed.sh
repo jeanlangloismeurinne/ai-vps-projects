@@ -64,7 +64,7 @@ mutations=(
 "$SRC¦        metric=consigne.expression,¦        metric=libelle,  # mutation: l'identité du fait devient le libellé¦le \`metric\` du fait EST l'expression"
 # LA PROVENANCE : le tag XBRL perd son espace de noms. « NetIncomeLoss » sans `us-gaap:` n'identifie
 # plus rien d'ouvrable — la provenance redevient une promesse.
-"$SRC¦            {\"concept\": p.concept, \"xbrl_tag\": f\"us-gaap:{p.concept}\", \"value\": p.valeur,¦            {\"concept\": p.concept, \"xbrl_tag\": p.concept, \"value\": p.valeur,  # mutation¦provenance est écrite CONCEPT PAR CONCEPT"
+"$SRC¦            {\"concept\": p.concept, \"offset\": p.offset, \"xbrl_tag\": f\"us-gaap:{p.concept}\",¦            {\"concept\": p.concept, \"offset\": p.offset, \"xbrl_tag\": p.concept,  # mutation¦provenance est écrite CONCEPT PAR CONCEPT"
 # LA DATE D'UN FAIT MIXTE : la plus ANCIENNE des deux ancres. Le fait naît vieux d'un exercice, et
 # l'axe actualité — calculé à la lecture — travaillera sur une date fausse.
 "$SRC¦    ancre_fait = max(dates)¦    ancre_fait = min(dates)  # mutation: le fait naît vieux¦PLUS RÉCENTE des deux ancres"
@@ -89,6 +89,19 @@ mutations=(
 # LA TROISIÈME TABLE : le (tier, score) est recopié au lieu d'être lu. Vert partout aujourd'hui, et
 # divergent des deux autres au premier ajustement de la table (#46).
 "$SRC¦    tier_a = RELIABILITY_TABLE[SOURCE_TYPE]                       # LU, jamais écrit ici (#46)¦    tier_a = (\"A\", 0.95)  # mutation: une troisième table¦aucun score en dur dans le module"
+
+# ── §6 LE TEMPOREL — une croissance annuelle s'exécute, et le contenu ne ment pas sur le résultat ──
+# LE RENDU D'UN RATIO SANS DIMENSION : repassé par `montant`, une croissance de 0,25 devient « 0 »
+# (la mantisse de `montant` ne vaut que pour les paliers M/Md). Le nombre structuré reste juste et le
+# CONTENU ment (#42/#45) — c'est le défaut que le temporel a rendu courant, donc gardé ici.
+"$SRC¦    if not dimension:¦    if False:  # mutation: un ratio sans dimension est arrondi à 0 par montant¦SANS DIMENSION"
+# L'OFFSET IGNORÉ : `Revenues[-1]` est résolu à l'exercice courant. Une croissance lit deux fois le
+# même exercice → 0 %, le fait faux et rassurant que le décalage existe pour éviter.
+"$SRC¦        cible = _decaler_annees(base, offset)¦        cible = _decaler_annees(base, 0)  # mutation: l'offset d'exercice est ignoré¦une croissance annuelle S'EXÉCUTE"
+# LE REPLI SILENCIEUX : au lieu de REFUSER un exercice décalé absent, on se replie sur le point le
+# plus récent (`period_end=None` → `point_pour_periode` rend le dernier). Une croissance sur un seul
+# exercice devient alors 0 % au lieu d'un mandat — le fait faux et rassurant, jamais un « échec ».
+"$SRC¦        p = point_pour_periode(series[concept], cible, tol_days=TOLERANCE_ANCRE_J)¦        p = point_pour_periode(series[concept], None, tol_days=TOLERANCE_ANCRE_J)  # mutation: repli sur le point courant¦un exercice décalé ABSENT"
 )
 
 passes=0; ratees=0
