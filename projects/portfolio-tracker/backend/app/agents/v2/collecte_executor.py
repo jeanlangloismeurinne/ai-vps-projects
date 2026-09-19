@@ -38,6 +38,7 @@ suffisance, pas l'ouvrier qui ramène la matière.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import unicodedata
@@ -56,6 +57,7 @@ from app.agents.v2.collecteur import (
 from app.agents.v2.traducteur import traduire
 from app.agents.v2.worker import WORKER_NAME, persist_worker_entries, run_search_worker
 from app.contracts.collection_plan_schema import CollectionPlan
+from app.config import settings
 from app.contracts.worker_delegation_schema import EntryType, OutputSchema, WorkerRequest
 from app.db.database import get_db_session
 from app.knowledge.appariement_feed import (
@@ -398,10 +400,24 @@ async def collecter_un(
     # chemin web : le search-worker CHERCHE (sans connaître la question), puis on persiste ses entries.
     req = construire_requete_web(ligne)
     try:
-        exchange = await run_search_worker(req)
+        # Chien de garde par ligne (#25/#46) : `run_search_worker` peut enchaîner jusqu'à
+        # `max_iterations` appels modèle à 720 s — une ligne bloquée figeait TOUTE la collecte (mesuré
+        # >18 min sur RVMD). `wait_for` cap la ligne ENTIÈRE à `WEB_LINE_BUDGET_S` et ANNULE la
+        # coroutine au dépassement (tous ses appels internes sont `await`, donc l'annulation les
+        # traverse) ; comme la persistance a lieu APRÈS (plus bas), une ligne annulée n'écrit rien —
+        # elle devient un mandat MOTIVÉ, jamais une entry partielle. Le garde borne la ligne SANS
+        # imposer une signature aux appelants/substituts du worker : il n'y a qu'un détenteur du plafond.
+        exchange = await asyncio.wait_for(
+            run_search_worker(req), timeout=settings.WEB_LINE_BUDGET_S)
     except SearchUnavailable as e:
         return ResultatCollecte(echec=f"recherche web indisponible : {e}")
-    except Exception as e:  # timeout fournisseur / sortie non conforme / réseau → #25, jamais un crash
+    except (asyncio.TimeoutError, TimeoutError):
+        # Un blocage n'est pas une exception « naturelle » : sans ce garde il ne devient JAMAIS un
+        # echec, il bloque. Le motif NOMME la cause (#25) pour que le mandat soit lisible.
+        return ResultatCollecte(
+            echec=f"collecte web abandonnée : budget de {settings.WEB_LINE_BUDGET_S} s dépassé "
+                  f"pour « {ligne.metrique} » (ligne convertie en mandat, aucune donnée écrite)")
+    except Exception as e:  # sortie non conforme / réseau → #25, jamais un crash
         # Une collecte qui ÉCHOUE pour QUELQUE raison que ce soit devient un mandat MOTIVÉ (cause
         # nommée), jamais une exception qui fait perdre tout le lot et empêche de persister les liens
         # déjà acquis. Le plan est persisté et la couverture est idempotente : la ligne se re-collecte

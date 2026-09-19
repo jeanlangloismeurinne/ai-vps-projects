@@ -1383,6 +1383,42 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     dont les points sont des **fractions d'exercice** — c'est une propriété du dépôt, que le motif
     nomme, pas un trou de collecte (#44/#47).
 
+73. **Un BLOCAGE réseau est un QUATRIÈME état muet, invisible aux checks ET à l'acceptation ROLLBACK :
+    seule une exécution réelle NON surveillée le révèle — on le borne par UNITÉ, sinon il ne devient
+    jamais un mandat (V3, lot 3 maillon 4ter, `agents/v2/collecte_executor.py`)** : le maillon 4
+    rendait la collecte *exécutable* ; la première collecte réellement **persistée** sur les trois
+    émetteurs a figé pendant **>18 min** sur UNE ligne web (RVMD), 0 % CPU, une seule connexion HTTPS
+    ouverte. Cause : `SEARCH_TIMEOUT_S` (20 s) borne chaque OUTIL (search/fetch), mais `run_search_worker`
+    enchaîne jusqu'à `max_iterations` appels MODÈLE à **720 s** chacun — une ligne pouvait donc bloquer
+    toute la collecte plus d'une heure. `collecter_un` traduisait déjà un web qui LÈVE en mandat motivé
+    (#25), mais **un blocage ne lève pas** : il n'était attrapé par aucun `except`, c'était un silence
+    infini, le mode de panne symétrique de #25. ⚠️ **Ni un check ni une acceptation ROLLBACK ne
+    pouvaient le voir** — les checks substituent le worker (jamais de vrai réseau), l'acceptation du
+    maillon 4 débranchait le web ; le défaut n'existe que sur le chemin de PRODUCTION non surveillé, ce
+    que seul le lot 4ter empruntait. C'est le corollaire de #43/#71 transposé au TEMPS : une capacité
+    « exécutable » en test peut ne jamais se TERMINER en vrai. **Remède** : un chien de garde
+    `asyncio.wait_for` autour de la ligne web ENTIÈRE dans `collecter_un` — il cap la ligne à
+    `settings.WEB_LINE_BUDGET_S` (180 s, **détenteur unique #46** de la durée max d'une ligne web),
+    l'ANNULE au dépassement (tous ses appels internes sont `await`, l'annulation les traverse), et
+    comme la persistance a lieu APRÈS, une ligne annulée n'écrit rien — elle devient un `echec` qui
+    **NOMME le budget** → mandat (#25), jamais une entry partielle. ⚠️ **Le garde borne la ligne SANS
+    imposer de signature aux substituts du worker** : la première version passait `timeout=` à
+    `run_search_worker`, ce qui rippait dans tous les mocks (`_failing`, `_mock_web`) et cassait §6/§8/§11
+    ; le `wait_for` cap déjà la ligne entière, le `timeout=` interne était redondant — un seul détenteur
+    du plafond, pas deux. ⚠️ **Le test négatif se borne LUI-MÊME** : `check_collecte_executor.py §6bis`
+    substitue un worker qui ne rend jamais, entoure son propre appel d'un `wait_for(5 s)`, et la mutation
+    qui RETIRE le garde de prod rend la ligne non bornée → c'est le `wait_for` du CHECK qui lève et
+    rougit. Une garde de COMPORTEMENT (« ça a rendu un echec ») ne peut pas tenir cet interdit : sans
+    borne, il n'y a jamais de retour à tester (#70 transposé — un interdit d'atteignabilité se tient par
+    la forme, pas par le comportement). `negatif_collecte_executor.sh` **33 mutations / 0**.
+    ⚠️ **Ce que la mesure a montré et qu'il ne faut PAS lire comme un défaut du garde** : le garde a
+    coupé **8 lignes** sur les trois émetteurs (RVMD 1 · NVDA 4 · MSFT 3), chacune → mandat nommé. Le
+    web est **lent** (le search-worker épuise souvent ses 6 itérations), donc la SOMME des lignes
+    bornées reste grande (MSFT ≈ 1 h) : le garde empêche l'infini, pas la lenteur — un budget GLOBAL de
+    run et/ou un parallélisme des lignes web sont un chantier distinct, à ouvrir si le coût de temps
+    gêne. Détail + garde : `check_collecte_executor.py §6bis`, `negatif_collecte_executor.sh` (mutation
+    « garde par ligne retiré »).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

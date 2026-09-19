@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     SERPER_API_KEY: str = ""
     SEARCH_TIMEOUT_S: int = 20
     FETCH_URL_MAX_CHARS: int = 20000      # plafond de texte réinjecté au modèle par fetch_url
+    # Budget MUR par ligne web collectée (`collecte_executor.collecter_un`). `SEARCH_TIMEOUT_S` borne
+    # chaque OUTIL (search/fetch), mais un search-worker enchaîne jusqu'à `max_iterations` appels
+    # MODÈLE à 720 s chacun : une seule ligne peut donc bloquer la collecte >1 h. Ce plafond fait d'un
+    # blocage un `echec` MOTIVÉ → mandat (#25) au lieu d'un silence infini — c'est le détenteur unique
+    # (#46) de la durée max d'une ligne web, lu à la fois par le chien de garde `asyncio.wait_for` et
+    # par le `timeout` passé au worker (borne interne redondante mais utile si le garde disparaît).
+    WEB_LINE_BUDGET_S: int = 180
 
     class Config:
         env_file = None  # Coolify injecte les variables

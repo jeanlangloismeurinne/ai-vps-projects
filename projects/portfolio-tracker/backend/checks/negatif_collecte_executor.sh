@@ -34,7 +34,7 @@ mutations=(
 # §5 ─ field_path absent : en injecter un → ré-ancrerait la question
 "$SRC¦        output_schema=OutputSchema(entry_type=entry_type_pour_metrique(ligne.metrique)),¦        output_schema=OutputSchema(entry_type=entry_type_pour_metrique(ligne.metrique), field_path=\"qf_1.revenue\"),¦ancrerait la question"
 # §6 ─ la porte d'erreur générique : la restreindre → l'exception propage
-"$SRC¦    except Exception as e:  # timeout fournisseur / sortie non conforme / réseau → #25, jamais un crash¦    except KeyboardInterrupt as e:  # timeout fournisseur / sortie non conforme / réseau → #25, jamais un crash¦jamais une exception qui tue le lot"
+"$SRC¦    except Exception as e:  # sortie non conforme / réseau → #25, jamais un crash¦    except KeyboardInterrupt as e:  # sortie non conforme / réseau → #25, jamais un crash¦jamais une exception qui tue le lot"
 # §7 ─ le câblage carte : court-circuiter le check `indisponible` → la carte est ignorée
 'app/agents/v2/collecte_executor.py¦        return "web" if carte_statut == "indisponible" else "edgar"¦        return "edgar"  # mutation: ignore carte_statut indisponible¦l'"'"'inventaire n'"'"'a pas le concept'
 # §7 ─ le câblage carte : court-circuiter la branche `carte_statut is not None` avec `if False:`
@@ -125,6 +125,13 @@ mutations=(
 # §11 ─ LE CÂBLAGE AMONT DÉBRANCHÉ : `collecter_un` ne reçoit plus la consigne. §11 reste vert en
 # appelant la fonction directement — seul l'assert structurel voit que personne ne la lui passe.
 "$SRC¦            consigne=consigne, inventaire=carte.inventaire)¦            )  # mutation: la consigne n'atteint jamais le collecteur¦en lui passant \`consigne\` ET \`inventaire\`"
+
+# ── MUTATION DU 2026-09-19 — LE CHIEN DE GARDE PAR LIGNE WEB (#25) ─────────────────────────────────
+# §6bis ─ le garde retiré : une ligne web qui SE BLOQUE fige toute la collecte (mesuré >18 min sur
+# RVMD). Aucun assert de COMPORTEMENT ne bouge — sans borne, `collecter_un` ne rend jamais, donc il
+# n'y a rien à tester ; c'est le wait_for du CHECK lui-même qui LÈVE et rougit §6bis. La preuve, dans
+# le test négatif, qu'un blocage n'est pas une exception et n'est attrapable que par une borne.
+"$SRC¦        exchange = await asyncio.wait_for(\n            run_search_worker(req), timeout=settings.WEB_LINE_BUDGET_S)¦        exchange = await run_search_worker(req)  # mutation: garde par ligne retiré¦est BORNÉ par le garde de prod"
 )
 
 passes=0; ratees=0

@@ -20,9 +20,14 @@ role: >
   **déjà lus**, écrit l'entry avec sa provenance concept par concept et son tier dérivé, et ne laisse
   au web que les `indisponible` et les échecs **nommés**. Mesuré contre le vrai dépôt (RVMD, ROLLBACK,
   web débranché) : **lignes COLLECTÉES depuis le dépôt 0 → 6** — jamais « 9 lignes routées », qui
-  serait la faute que #71 vient de corriger. Suite `run_all.sh` = **2634 assertions, 0 échec sur 35
-  scripts**. **Reste au lot 3** : la collecte réelle **persistée** sur NVDA/MSFT/RVMD (§5.3), puis le
-  maillon 5 (réconciliation à 0/0). Détail dans la checklist du lot 3 ci-dessous, ne pas dupliquer ici.
+  serait la faute que #71 vient de corriger. Le **maillon 4ter — la collecte réellement PERSISTÉE sur
+  NVDA/MSFT/RVMD (§5.3) — est livré le 2026-09-19** (convention **#73**, aucune migration) : plans
+  #55/#56/#57, **zéro doublon d'identité** (#43 en base). Ce que l'écriture durable a révélé et qui EST
+  le lot : un **blocage web infini** borné par ligne (#73, chien de garde `asyncio.wait_for` → mandat),
+  et **l'apparieur qui refuse la carte entière sur `rentable`** (grammaire sans temporel — chantier
+  ouvert). Suite `run_all.sh` = **2642 assertions, 0 échec sur 35 scripts**. **Reste au lot 3** :
+  robustesse apparieur (grammaire temporelle + refus par ingrédient) puis maillon 5 (réconciliation à
+  0/0). Détail dans la checklist du lot 3 et le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -346,12 +351,24 @@ lot 1 ; les tables viennent en dernier.
    dépôt, pas un trou de collecte.
    → **récit complet, les six défauts trouvés par le harnais et les deux points de méthode :
    `00-REPRISE-ARCHIVE.md` § 2026-09-18 (2).**
-4ter. 🔄 **Collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD (§5.3) — **OUVERT, et
-   désormais DÉBLOQUÉ** : la garde du 4bis existe, le producteur de carte tourne, et l'exécution est
-   livrée. Ce qui reste est de lancer la collecte **persistée** (l'acceptation du 2026-09-18 tourne en
-   ROLLBACK, donc rien n'est en base). ⚠️ Historique du blocage, conservé pour le *pourquoi* : un faux
-   appariement écrit un nombre exact en face de la mauvaise question (#43/#60), et rien en aval ne le
-   rattrape.
+4ter. ✅ **Collecte neuve pilotée par le plan sur NVDA / MSFT / RVMD (§5.3) — LIVRÉE le 2026-09-19**
+   (convention **#73**, aucune migration). La chaîne `executer_collecte_framework` a tourné pour de
+   vrai et **persisté** sur les trois émetteurs : plans **#55/#56/#57**, **zéro doublon d'identité**
+   (#43 vérifié en base sur les trois), RVMD **43→53** actives dont **4 appariements tier A** ;
+   NVDA 15→57, MSFT 15→59 (liens web + recettes catalogue). **Ce que seule une écriture durable a
+   révélé, et qui EST le contenu du lot** : (1) la collecte figeait **>18 min** sur une ligne web —
+   les OUTILS sont bornés (20 s) mais les appels MODÈLE du worker à 720 s×6, et un **blocage n'est pas
+   une exception** (silence infini invisible aux checks et à l'acceptation ROLLBACK). Fix = chien de
+   garde `asyncio.wait_for` par ligne web → mandat NOMMÉ (#25/#73) ; il a coupé **8 lignes** en prod,
+   chacune motivée. (2) **L'apparieur refuse la carte ENTIÈRE sur l'archétype `rentable`** (NVDA/MSFT
+   `carte=aucune`, RVMD `pre_revenus` OK) : `[W]` (#68) refuse à juste titre une **croissance annuelle**
+   que la grammaire de formule ne sait pas exprimer (le modèle invente `Revenues_previous_year`) —
+   discriminant = l'archétype, PAS la taille d'inventaire. Dégradation gracieuse (repli `aucune`, zéro
+   corruption). → **récit complet, ligne de base requêtée, les 8 timeouts et le refus apparieur :
+   `00-REPRISE-ARCHIVE.md` § 2026-09-19.**
+   ⚠️ Historique du blocage conceptuel, conservé pour le *pourquoi* : un faux appariement écrit un
+   nombre exact en face de la mauvaise question (#43/#60), et rien en aval ne le rattrape — c'est
+   `[W]` qui le garde, et son refus sur `rentable` est le prix (correct) de cette garde.
    **Acquis le 2026-09-14** (migration **041**, suite **2429/0**) : `fetch_company_facts()`
    (l'INVENTAIRE réellement déposé, que `companyconcept` ne peut jamais révéler),
    `tools/cartographier_xbrl.py` + `.sh`, `POSTES` 8 → 33, le traducteur NOMME le poste
@@ -459,37 +476,39 @@ lot 1 ; les tables viennent en dernier.
    Rien de déployé, **aucune collecte réelle lancée**.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON = lot 3, maillon 4ter — LA COLLECTE RÉELLE **PERSISTÉE** SUR NVDA / MSFT / RVMD
-> (§5.3), puis le maillon 5 (réconciliation à 0/0).**
-> Le maillon 4 est clos (convention **#72**, 2026-09-18) : la carte est produite, persistée,
-> revérifiée contre une date mesurée, elle décide du routage — **et sa formule s'exécute** sur
-> l'inventaire déjà lu. Sur RVMD, **lignes COLLECTÉES depuis le dépôt : 0 → 6** (7 écritures,
-> 1 supersession par #43, 2 refus nommés sur `AssetImpairmentCharges`), tiers **A (0,95)** pour le
-> déterministe contre **A− (0,85)** pour le non-déterministe.
+> **▶ PROCHAIN JALON — DEUX CHANTIERS OUVERTS PAR 4ter (le plus mûr d'abord).**
+> Le maillon 4ter est **LIVRÉ** (2026-09-19, #73) : collecte réellement persistée sur les trois,
+> **zéro doublon d'identité** (#43 en base), plans #55/#56/#57. La chaîne se TERMINE désormais (le
+> blocage web infini est borné par ligne, #73). Mais deux défauts que **seule l'écriture durable a
+> révélés** restent ouverts :
 >
-> ⚠️ **CE QUI RESTE, ET POURQUOI CE N'EST PAS DÉJÀ FAIT** : l'acceptation du maillon 4 tourne en
-> transaction **ROLLBACK** — le critère [7] vérifie qu'il n'en reste rien. **Rien n'est en base.**
-> Le 4ter est donc l'exécution *pour de vrai* sur les trois émetteurs, avec ce que seule une
-> écriture durable révèle : les collisions d'identité sur plusieurs tickers, le coût agrégé, et le
-> comportement du repli web sur les `indisponible` qui restent.
-> ⚠️ **Ne pas ré-annoncer un gain de routage comme une économie de collecte** : c'est la faute que
-> #71 a corrigée, et #72 la répète. Le chiffre à suivre est « lignes **collectées** depuis le
-> dépôt », jamais « lignes **routées** vers EDGAR ».
-> ⚠️ **La distribution se re-mesure, elle ne se cite pas.** Annoncée ici **10 `approximation` ·
-> 3 `indisponible`** le 2026-09-18 au matin, elle valait **9 · 4** à l'acceptation du soir, même
-> ticker. Le récit vieillit, la mesure non (`feedback_ligne_de_base_est_une_mesure`) : requêter
-> l'état de départ **avant** le lot, jamais le recopier d'un bloc précédent.
+> **(A) — LE PLUS PRIORITAIRE : l'apparieur ne fonde AUCUN appariement sur l'archétype `rentable`.**
+> NVDA et MSFT rendent `carte=aucune`, RVMD (`pre_revenus`) seul réussit — donc la matière-phare des
+> maillons 4/4bis (des formules tier A sur XBRL) ne se pose que sur 1 émetteur sur 3. Cause MESURÉE
+> (log capturé) : `[W]` (#68) refuse une **croissance annuelle** parce que le modèle invente
+> `Revenues_previous_year` — la **grammaire de formule ne sait pas référencer le même concept à une
+> période antérieure** (YoY, série n exercices). Deux gestes, dans l'ordre imposé contrat→agent :
+> (a) **la grammaire exprime le temporel** (`concept@period`, décalage d'exercice) — c'est
+> exactement le « contraindre la FORME de `formule` dans le contrat » qu'annonçait le maillon 4, la
+> récurrence est arrivée ; (b) **le refus devient PAR INGRÉDIENT, pas par carte** : aujourd'hui un
+> seul ingrédient inexprimable coule la carte ENTIÈRE (`AppariementRefuse` tout-ou-rien) et jette les
+> 20+ bons appariements — un ingrédient refusé doit sortir en mandat/web, les autres tenir (#25/#44
+> transposé du couple à la carte). ⚠️ Ne pas « re-durcir le prompt » : `feedback_jugement_modele_
+> instable_entre_passages` l'a déjà disqualifié — la garde est en code (#68), ce qui manque est la
+> FORME que le contrat autorise.
 >
-> ⚠️ **Ce que le pont n'attrapera jamais, et qui reste vrai** : le faux appariement **sémantique**
-> (voir plus haut et #68). Ce qui s'y oppose est la troisième case, pas un contrôle plus fin.
-> ⚠️ **Le remède par prompt n'est pas une garantie, et la mesure le redit** : le défaut de prose dans
-> `formule` (le modèle écrivant « Pour chaque exercice… » là où seule une expression est admise) a
-> fait ROUGIR `[W]` sur MSFT au passage 1, puis le même corpus est passé VERT au passage 2 après
-> durcissement du prompt et du message de réparation. **Un passage vert sur deux ne prouve rien**
-> (`feedback_jugement_modele_instable_entre_passages`) : la faute est REFUSÉE par le pont et le motif
-> est désormais nommé dans la réparation, donc il n'y a pas de trou silencieux — mais si elle
-> réapparaît, le geste est de contraindre la FORME de `formule` dans le contrat (#68), pas de
-> re-durcir le prompt une troisième fois.
+> **(B) — maillon 5 : réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`, + le nettoyage
+> des « faux au sens v3 » hérités de RVMD (#190 ROIC fabriqué, #191, #186 — jugement humain).
+>
+> ⚠️ **La ligne de base se REQUÊTE, toujours.** Ce lot a démarré en trouvant NVDA 15 / MSFT 15 /
+> RVMD 43 actives là où « Où on en est » disait 52/51/27, et **aucun plan NVDA/MSFT** — le prérequis
+> n'était pas prêt. `feedback_ligne_de_base_est_une_mesure`.
+> ⚠️ **Résidus nommés (aucun n'est un défaut)** : cartes NVDA/MSFT non persistées (refus) ; **coût
+> web agrégé non instrumenté** (le tool imprime traducteur/apparieur, pas le web) ; **wall-clock ≈ 1 h
+> pour MSFT** — le garde #73 borne l'infini, pas la lenteur (budget global de run / parallélisme web =
+> chantier distinct) ; #340 mêle deux ancres à 182 j, DÉCLARÉ, à juger (backlog #9).
+> ⚠️ **Ne pas ré-annoncer un gain de routage comme une collecte** (#71) ; le chiffre est « lignes en
+> base », jamais « lignes routées ». La distribution se re-mesure, elle ne se cite pas.
 
 ### Découpage des lots suivants (spec v3 §10)
 
@@ -776,7 +795,9 @@ justes, c'est le *fait énoncé* qui était faux.
 - **`roadmap/V3/03-spec-frameworks.md`** — la roadmap active. §0 les faits mesurés · §1 **ce qui n'est
   PAS défait** (à relire à chaque lot) · §2 l'objet framework · §3 le manager · §4 les deux pilotes
   rédigés en entier · §5 le stockage · §9 le test d'acceptation · §10 les lots.
-- **`CLAUDE.md` du projet** — conventions **#22 à #72**. Les plus structurantes ici : **#72**
+- **`CLAUDE.md` du projet** — conventions **#22 à #73**. Les plus structurantes ici : **#73**
+  (un BLOCAGE réseau est un 4ᵉ état muet, invisible aux checks et à l'acceptation ROLLBACK : borné par
+  ligne web via `asyncio.wait_for` → mandat nommé, #25), **#72**
   (l'EXÉCUTION d'un appariement : formule sur concepts XBRL nus évaluée sur l'inventaire **déjà
   lu**, 4 refus nommés, tier dérivé du **déterminisme**, `metric` = l'expression donc une
   ré-exécution **supersède**), **#67 → #71** (la carte d'appariement : trois états, persistance,
@@ -907,6 +928,6 @@ justes, c'est le *fait énoncé* qui était faux.
 > pas). Corrigés dans la foulée. Voir #64 : **rejouer `run_all.sh` en entier après tout ajout de
 > champ à un contrat partagé**, jamais seulement le check du module qu'on vient de toucher.
 > LIRE D'ABORD : ce fichier, puis `roadmap/V3/03-spec-frameworks.md` (§1 = ce qui n'est PAS défait),
-> le `CLAUDE.md` du projet (conventions #22-**#72**, dont **#63 = l'analyste**, **#64 =
+> le `CLAUDE.md` du projet (conventions #22-**#73**, dont **#73 = le garde de blocage web**, **#63 = l'analyste**, **#64 =
 > `framework_version` sur `FrameworkAnswer`**, **#67-#71 = la carte d'appariement** et **#72 = son
 > EXÉCUTION**), `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.

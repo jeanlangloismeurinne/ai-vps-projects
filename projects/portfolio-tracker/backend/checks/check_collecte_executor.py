@@ -272,6 +272,54 @@ except Exception as e:
           False, f"→ a PROPAGÉ {type(e).__name__} au lieu de rendre un echec")
 
 
+# ── §6bis une collecte web qui SE BLOQUE devient un mandat borné, jamais un silence infini (#25) ───
+# §6 couvre l'exception ; le blocage est le mode de panne SYMÉTRIQUE et plus dangereux — il ne LÈVE
+# pas, donc l'`except` de §6 ne le voit jamais : il fige toute la collecte (mesuré >18 min sur RVMD).
+# Le garde est un `asyncio.wait_for` dans `collecter_un` ; on le prouve en substituant un worker QUI
+# NE REND JAMAIS. L'assert discriminant : le check s'entoure lui-même d'un `wait_for(5 s)`, donc si la
+# mutation RETIRE le garde de production, ce n'est plus borné → le wait_for du check LÈVE → FAIL.
+# Une garde de comportement (« ça a rendu un echec ») ne suffirait pas : sans borne, on n'obtient
+# jamais de retour à tester.
+print("\n[6bis] une collecte web qui SE BLOQUE → mandat borné et NOMMÉ, jamais un silence infini (#25)")
+from app.config import settings as _settings
+
+_budget_avant = _settings.WEB_LINE_BUDGET_S
+_orig_worker = _mod.run_search_worker
+
+
+async def _hang(_req, **_kw):
+    await asyncio.sleep(30)          # ne rend jamais dans le temps du test : simule le pair qui traîne
+
+
+async def _mesure_blocage():
+    _settings.WEB_LINE_BUDGET_S = 0.3     # le garde de PROD doit couper bien avant les 30 s du hang
+    _mod.run_search_worker = _hang
+    # wait_for du CHECK : si le garde de prod a sauté, `collecter_un` ne rend jamais → on LÈVE ici,
+    # au lieu de figer le check comme la prod figeait la collecte. C'est ce qui rend la mutation rouge.
+    return await asyncio.wait_for(
+        _mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())), timeout=5)
+
+
+try:
+    _rc_b = asyncio.run(_mesure_blocage())
+    check("un worker qui SE BLOQUE est BORNÉ par le garde de prod : `collecter_un` REND (le check "
+          "ne fige pas) — sans `asyncio.wait_for`, la ligne bloquerait indéfiniment",
+          _rc_b.echec is not None, f"→ {_rc_b!r}")
+    check("le mandat NOMME la cause (budget dépassé) et non un « échec » générique (#25) : un motif "
+          "muet se lit comme « le dépôt ne porte pas ce nombre »",
+          _rc_b.echec is not None and "budget" in _rc_b.echec
+          and str(int(_settings.WEB_LINE_BUDGET_S)) in _rc_b.echec, f"→ {_rc_b.echec!r}")
+except (asyncio.TimeoutError, TimeoutError):
+    check("un worker qui SE BLOQUE est BORNÉ par le garde de prod : `collecter_un` REND (le check "
+          "ne fige pas) — sans `asyncio.wait_for`, la ligne bloquerait indéfiniment",
+          False, "→ NON BORNÉ : `collecter_un` n'a pas rendu en 5 s (le garde de prod est absent)")
+    check("le mandat NOMME la cause (budget dépassé) et non un « échec » générique (#25)",
+          False, "→ non mesurable : la ligne n'a jamais rendu")
+finally:
+    _settings.WEB_LINE_BUDGET_S = _budget_avant
+    _mod.run_search_worker = _orig_worker
+
+
 # ── §7 router_source lit la carte d'appariement (câblage lot 3 maillon 4bis étape 2c) ──────────────
 # La carte REMPLACE `poste_retenu()` comme décideur EDGAR/web. Sans carte, l'ancienne logique tient.
 # ⚠️ Le paramètre `carte_statut` n'est pas dans LigneAveugle (le collecteur reste AVEUGLE, #58) : il

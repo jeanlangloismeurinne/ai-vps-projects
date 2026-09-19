@@ -8,6 +8,85 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-19 — spec v3, **lot 3, maillon 4ter : LA COLLECTE RÉELLE PERSISTÉE (NVDA / MSFT / RVMD)**
+
+Convention **#73**. **Aucune migration.** Rien de déployé (le chantier v3 tourne par outils, pas par
+l'API live — l'état « rien de déployé » des maillons 4/4bis reste vrai). Suite complète **2642/0 sur
+35 scripts** ; `check_collecte_executor` **92 → 94** (§6bis neuf), `negatif_collecte_executor.sh`
+**32 → 33 mutations / 0**.
+
+### La ligne de base, REQUÊTÉE et non rappelée — et elle contredisait déjà le récit
+
+Premier geste (Opus), avant toute dépense : requêter l'état réel. Le tableau « Où on en est » du
+00-REPRISE disait **NVDA 52 / MSFT 51 / RVMD 27** ; la base disait **NVDA 15 / MSFT 15 / RVMD 43**
+actives. Et surtout : **un seul plan persisté** (RVMD #12), **aucun plan NVDA/MSFT**, `appariement_cartes`
+**vide**. Le prérequis « collecte persistée sur les trois » n'était donc pas prêt — il fallait produire
+les plans NVDA/MSFT par le traducteur. `feedback_ligne_de_base_est_une_mesure`, encore : le récit
+vieillit, la base non.
+
+### Ce que la première collecte réelle a révélé — un BLOCAGE infini (→ convention #73)
+
+La frontière gratuite d'abord (`--plan-only`, ~$0.001/ticker) : NVDA 4 edgar / 26 web, MSFT 4/26 (2
+vétos #60 justes — `operating_income` NOPAT et `revenue` croissance forcés au web), RVMD 3/11. Puis
+la première collecte **persistée** (RVMD) : elle a écrit correctement (socle superséda #288→#332,
+2 appariements, 4 entries web) **puis a figé >18 min** sur une ligne web — 0 % CPU, une connexion
+HTTPS ouverte. Cause : les OUTILS sont bornés à 20 s (`SEARCH_TIMEOUT_S`) mais les appels MODÈLE du
+worker à **720 s** × 6 itérations ; `collecter_un` traduit un web qui LÈVE en mandat (#25), mais **un
+blocage ne lève pas** — silence infini qu'aucun check ni acceptation ROLLBACK ne voit (ils substituent
+ou débranchent le web). C'est #43/#71 transposé au TEMPS : « exécutable » en test ≠ « se termine » en
+vrai. **Fix** : chien de garde `asyncio.wait_for(run_search_worker(req), timeout=WEB_LINE_BUDGET_S=180)`
+— la ligne annulée n'écrit rien (persistance après) et devient un mandat qui NOMME le budget. Prouvé
+par `check_collecte_executor §6bis` (le check se borne lui-même en `wait_for(5 s)` ; la mutation qui
+retire le garde rend la ligne non bornée → le check lève et rougit — une garde de comportement ne peut
+pas tenir un interdit d'atteignabilité, #70). La 1ʳᵉ version passait `timeout=` au worker et cassait
+les mocks §6/§8/§11 → retirée (le `wait_for` cap déjà la ligne entière, un seul détenteur du plafond #46).
+
+Nettoyage rigoureux de la demi-collecte avant re-run : plan #54 + entries 332-339 supprimés, #288
+dé-supersédé, baseline RVMD restaurée à 43 (`feedback_fixture_pollue_le_reel` — une demi-collecte sans
+liens est exactement le corpus fabriqué à ne pas laisser).
+
+### Le re-run, bordé : les trois émetteurs collectent pour de vrai
+
+- **RVMD** (plan #55) : 10 liens, 4 mandats — dont **1 budget-timeout** (le fix en production), 2 refus
+  `AssetImpairmentCharges` (fractions d'exercice, #72), 1 poste EDGAR non fondé. **4 appariements tier A
+  (0,95)**, `nature=mesure`, `deterministe=true`, provenance concept par concept (ex. #340 dette nette
+  = `ConvertibleLongTermNotesPayable − Cash − MarketableSecurities` = −1,54 GdUSD, ancres mixtes
+  DÉCLARÉES « FLUX 2025-12-31 + BILAN 2026-06-30 » #42). #343 porte **deux** liens (qf_4 + qf_7, dedup
+  cross-question). Carte réutilisée `fraiche` ($0, persistée au 1ᵉʳ run tué).
+- **NVDA** (plan #56) : 24 liens, 6 mandats (**4 budget-timeouts** + 2 not_found). **Carte `aucune`.**
+- **MSFT** (plan #57) : 27 liens, 3 mandats (**3 budget-timeouts**). **Carte `aucune`.**
+
+**Vérification #43 — le chiffre que le lot devait rendre** : `SELECT metric, count(*) … GROUP BY … HAVING
+count(*)>1` sur les trois → **0 ligne**. **Zéro doublon d'identité** malgré les supersessions et le dedup
+cross-question. Le garde a coupé **8 lignes** au total, chacune → mandat nommé.
+
+### Le défaut le plus instructif — l'apparieur refuse la carte ENTIÈRE sur l'archétype `rentable`
+
+NVDA et MSFT (les deux `rentable`) rendent `carte=aucune` ; RVMD (`pre_revenus`) réussit. **Le
+discriminant n'est pas la taille de l'inventaire** (627 vs 269), c'est l'ARCHÉTYPE. Capturé au log
+(mesuré, pas déduit) : `appariement REFUSÉ après réparation : [W] qf_3.croissance_activite_par_exercice
+référence ['Revenues_previous_year'] dans sa formule sans les déclarer en concepts`. L'apparieur, à qui
+on demande une **croissance annuelle** (même concept à deux exercices), invente un pseudo-concept
+`Revenues_previous_year` — que la grammaire de formule ne sait pas exprimer — et le garde **[W] (#68) le
+refuse à juste titre** (un concept qui n'existe que dans la formule est la porte dérobée d'un concept
+inventé). `pre_revenus` n'a ni croissance ni série longue, donc RVMD passe. **Deux sous-défauts** :
+(a) la grammaire ne sait pas référencer « le MÊME concept à une période antérieure » (YoY, série
+n exercices) ; (b) **un seul ingrédient inexprimable coule la carte ENTIÈRE** (`AppariementRefuse`
+tout-ou-rien), jetant les bons appariements des 20+ autres. Ni l'un ni l'autre n'est causé par ce lot,
+le garde fait son travail, et la dégradation est GRACIEUSE (repli `aucune` nommé, recettes catalogue et
+web tiennent, zéro corruption). C'est le chantier du **prochain lot maillon 4bis** : refus par
+INGRÉDIENT (→ mandat/web) et non par carte, et une grammaire qui exprime le temporel.
+
+### Résidus nommés
+
+- **Cartes NVDA/MSFT absentes** : aucune persistée (refus). RVMD porte carte #161.
+- **Coût agrégé non instrumenté** : le tool imprime `traducteur_cost` (~$0.001/plan) et `apparieur_cost`
+  ($0 RVMD réutilisé, refus NVDA/MSFT), **pas le web** (dominant). Petit trou d'outillage.
+- **Aggregate wall-clock** : ~1 h pour MSFT seul — le garde borne l'infini, pas la lenteur (budget
+  global de run / parallélisme = chantier distinct).
+- **#340** mêle une trésorerie datée 2025-12-31 et un solde 2026-06-30 (182 j) via `cadrage` différents,
+  DÉCLARÉ mais à juger — signal pour le backlog #9 (éval plans multi-tickers), pas une corruption.
+
 ## 2026-09-18 (2) — spec v3, **lot 3, maillon 4 : L'EXÉCUTION D'UN APPARIEMENT**
 
 Suite **2583 → 2634**, exit 0 sur les **35** scripts. **Aucune migration.** Rien de déployé.
