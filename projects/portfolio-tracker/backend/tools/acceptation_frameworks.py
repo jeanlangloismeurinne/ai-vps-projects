@@ -38,7 +38,7 @@ from typing import Any, Optional
 from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES
 from app.db.database import close_pool, get_db_session, init_pool
 
-from tools.reconcilier_vocabulaires import ALIAS, DERIVES, feuilles_memo
+from tools.reconcilier_vocabulaires import ecart, feuilles_memo, vocabulaire_questions
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 
@@ -395,30 +395,33 @@ async def main() -> int:
     # ══════════════════════════════════════════════════════════════════════════
     _t("T6/T7", "un seul vocabulaire — zéro feuille de mémo sans question, zéro question "
                 "jamais consommée")
-    # Détenteur unique (#46) : la réconciliation vit dans `reconcilier_vocabulaires`, ce script la
-    # CONSOMME. En tenir un jumeau ici les ferait diverger au premier correctif.
+    # Détenteur unique (#46) : la réconciliation ENTIÈRE vit dans `reconcilier_vocabulaires` — le
+    # vocabulaire de référence ET la règle d'écart. Ce script les CONSOMME.
+    #
+    # ⚠️ Jusqu'au 2026-09-21 seules les INGRÉDIENTS étaient importés (`feuilles_memo`, `DERIVES`,
+    # `ALIAS`) et la règle était recalculée ici sur trois lignes. Les deux copies ont divergé
+    # exactement comme annoncé (`feedback_correctif_regle_jumeaux`) : `reconcilier` jugeait contre
+    # `FIELD_PROFILES` et rendait 14/3, ce script contre les frameworks et rendait 30/13 — et c'est
+    # le 14/3 du mesureur périmé qui a été recopié dans le 00-REPRISE et la spec. La règle ne se
+    # recalcule plus nulle part : `ecart()` est appelé, pas réécrit.
     memo = feuilles_memo()
     if frameworks is None:
-        # Avant le lot 3, le vocabulaire cible est encore MVDD : on mesure l'écart contre lui, et
-        # on le DIT — mesurer contre un vocabulaire qui n'existe pas rendrait 0 sur zéro question.
-        from app.agents.v2.common import FIELD_PROFILES
-        vocabulaire = set(FIELD_PROFILES.keys())
-        origine = "FIELD_PROFILES.keys() (remplace MVDD_FIELD_PATHS retiré au lot 3)"
+        # Pas de repli sur MVDD : mesurer contre la grille RETIRÉE rendrait un couple qui a l'air
+        # d'un résultat (14/3) alors qu'il décrit un vocabulaire sans autorité. Un référentiel
+        # illisible est un FAIL NOMMÉ (`feedback_check_degrade_en_sortant_a_zero`).
+        check("T6/T7 — le référentiel des questions est lisible", False,
+              f"→ {motif_fw} : sans lui, T6/T7 ne mesurent rien")
     else:
-        # `chemin_indexation` et non `id` : c'est LUI que le mémo consomme, et ALIAS projette
-        # des chemins. Comparer des `qf_1` à des `business_model.description` rendrait T6/T7
-        # rouges par mésappariement de vocabulaire, pas par l'écart qu'ils mesurent.
-        vocabulaire = {q.chemin_indexation for f in frameworks.values() for q in f.questions}
-        origine = "framework_questions (chemin_indexation)"
-    sans_question = sorted(f for f in memo - DERIVES if ALIAS.get(f) not in vocabulaire)
-    jamais_consommees = sorted(vocabulaire - {ALIAS[k] for k in ALIAS if k in memo})
-    print(f"  vocabulaire de référence : {origine} ({len(vocabulaire)} entrées)")
-    print(f"  feuilles de mémo sans question : {len(sans_question)}")
-    print(f"  questions jamais consommées    : {len(jamais_consommees)}")
-    check("T6 — zéro feuille de mémo sans question", not sans_question,
-          f"→ {len(sans_question)} : {sans_question[:4]}…")
-    check("T7 — zéro question jamais consommée", not jamais_consommees,
-          f"→ {len(jamais_consommees)} : {jamais_consommees[:4]}…")
+        vocabulaire = set(vocabulaire_questions())
+        sans_question, jamais_consommees = ecart(memo, vocabulaire)
+        print(f"  vocabulaire de référence : frameworks.yaml `chemin_indexation` "
+              f"({len(vocabulaire)} entrées, {len(frameworks)} framework(s))")
+        print(f"  feuilles de mémo sans question : {len(sans_question)}")
+        print(f"  questions jamais consommées    : {len(jamais_consommees)}")
+        check("T6 — zéro feuille de mémo sans question", not sans_question,
+              f"→ {len(sans_question)} : {sans_question[:4]}…")
+        check("T7 — zéro question jamais consommée", not jamais_consommees,
+              f"→ {len(jamais_consommees)} : {jamais_consommees[:4]}…")
 
     # ══════════════════════════════════════════════════════════════════════════
     _t("T8", "un renvoi du manager crée un mandat CONSOMMABLE, et le re-run change le statut")

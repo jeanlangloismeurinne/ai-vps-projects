@@ -127,9 +127,16 @@ rendent un bilan `N vérifications OK, M échec(s)` reconnaissable à sa **forme
 
 | Outil | Aujourd'hui | Vire au vert |
 |---|---|---|
-| `reconcilier_vocabulaires.{py,sh}` | **5 ok / 2 FAIL** — 14 orphelins + 3 inutilisés | lot 3 |
+| `reconcilier_vocabulaires.{py,sh}` | **4 ok / 2 FAIL** — 30 orphelins + 13 inutilisés, **0/6 blocs du mémo adossés** | état terminal (un framework par bloc) |
+| `check_reconciliation.py` + `negatif_reconciliation.sh` | **10 ok / 0 FAIL** · **5 mutations / 0 échappée** | (vert — garde l'instrument, pas le chiffre) |
 | `ligne_de_base_frameworks.{py,sh}` | **2 ok / 0 FAIL** — les 6 valeurs de §9.1 confirmées | (mesure, pas un test) |
-| `acceptation_frameworks.{py,sh}` | **1 ok / 8 FAIL** — les 8 critères T1-T8 rouges | par lots, les 8 au lot 7 |
+| `acceptation_frameworks.{py,sh}` | **3 ok / 10 FAIL** — T1-T8 rouges, dont 6 sur **zéro ligne** | par lots, les 8 au lot 7 |
+
+> ⚠️ **Le `14 / 3` cité partout jusqu'au 2026-09-21 mesurait l'ANCIEN étalon** (`FIELD_PROFILES`,
+> la grille MVDD que le lot 3 a dépossédée). L'acceptation, elle, mesurait déjà 30/13 : deux
+> copies d'une règle, divergentes en silence pendant tout le lot 3. Le couple n'a pas régressé,
+> l'étalon a été corrigé — détail en spec §6, règle désormais détenue une seule fois dans
+> `tools/reconcilier_vocabulaires.ecart`.
 
 ⚠️ Depuis le lot 1, cet outil **importe** `COLONNES_DENORMALISEES` du contrat au lieu de deviner
 ses noms de colonnes. Verdict inchangé après recâblage (mêmes 8 motifs) : un changement de verdict
@@ -921,7 +928,7 @@ justes, c'est le *fait énoncé* qui était faux.
 > **Roadmap active : `roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09). Diagnostic mesuré :
 > le système range la connaissance dans une **grille fermée de 19 champs identique pour tout
 > émetteur**, et écarte en silence tout ce qui n'y entre pas — **50 % d'orphelines sur NVDA** dont
-> **16 faits SEC tier A** ; **14 feuilles du `research_memo` sans aucun chemin d'indexation** (donc
+> **16 faits SEC tier A** ; **14 feuilles du `research_memo` sans aucun chemin dans cette grille** (donc
 > les étapes 4/5/6/8 du benchmark sont produites avec **zéro preuve indexable**) ; **3 chemins
 > jamais consommés**, dont le plus peuplé de la base ; RVMD (biotech pré-revenus) produit un ROIC
 > fabriqué, une « conversion FCF non définie », et **0 synthèse grounded**.

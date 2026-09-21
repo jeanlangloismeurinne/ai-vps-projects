@@ -964,8 +964,22 @@ que ça tombe juste.
 
 ## 6. Réconciliation des deux vocabulaires
 
-Le `research_memo` a 36 feuilles, l'index en a 19, 14 feuilles n'ont pas d'index et 3 chemins ne
-sont consommés par personne (§0.3). La v3 impose **un seul vocabulaire**.
+Le `research_memo` a 36 feuilles, l'index MVDD en avait 19, 14 feuilles n'avaient pas d'index et 3
+chemins n'étaient consommés par personne (§0.3). La v3 impose **un seul vocabulaire**.
+
+> ⚠️ **Le couple 14/3 décrit l'ANCIEN étalon, et ne doit plus être cité comme l'écart courant**
+> (corrigé le 2026-09-21). Il mesurait le mémo contre `FIELD_PROFILES` — la grille à qui le lot 3
+> a justement retiré son autorité. Mesuré contre le vocabulaire unique que cette section institue,
+> l'écart réel est **30 feuilles sans question / 13 questions jamais consommées**, et il est
+> structurellement pire : les 13 questions des deux pilotes vivent sous `qualite_financiere.*` et
+> `defendabilite.*`, qui ne sont des blocs du mémo sous aucune forme — **l'intersection est vide**.
+> Ce n'est donc pas un écart à colmater champ par champ. Le `0/0` exige **un framework par bloc de
+> mémo** (6 blocs, 30 feuilles à fonder) : l'état terminal de la roadmap, pas un lot.
+>
+> Le mesureur et l'acceptation avaient divergé sur ce point pendant tout le lot 3 — deux copies
+> d'une règle, l'une restée sur l'étalon déposé. La règle a désormais un détenteur unique,
+> `tools/reconcilier_vocabulaires.ecart`, éprouvé dans les deux sens par
+> `checks/check_reconciliation.py` + `negatif_reconciliation.sh`.
 
 ```mermaid
 graph TD

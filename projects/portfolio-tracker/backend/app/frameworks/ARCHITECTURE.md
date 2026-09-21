@@ -46,3 +46,12 @@ un **résultat mesuré**, pas un objectif inscrit). Aucun levier de modèle sur 
 | Appariement par TICKER contre l'inventaire réellement déposé — trois états, tier dérivé du déterminisme (#67) | `check_appariement.py` + `negatif_appariement.sh` (contrat `appariement_schema.py`, pont `agents/v2/apparieur.py`, règle `synthesis_feed.derive_tier_calcul`) |
 | Réponses de framework versionnées, refus avant dépense | `check_analyste.py`, `check_framework_persist.py` |
 | Réponse/dispense clefées par `framework_version` | `check_framework_persist.py` (#64) |
+| Un `chemin_indexation` appartient au framework qui l'instruit (invariant **[N]**) | `check_frameworks_definitions.py` + `negatif_frameworks_definitions.sh` |
+| La règle de réconciliation mémo ↔ questions est éprouvable dans les DEUX sens (satisfiable et discriminante), et tenue à un seul endroit | `check_reconciliation.py` + `negatif_reconciliation.sh` (règle : `tools/reconcilier_vocabulaires.ecart`) |
+
+> ⚠️ **L'écart lui-même n'est pas gardé ici, et c'est voulu.** `tools/reconcilier_vocabulaires.sh`
+> est ROUGE par construction (30 feuilles de mémo sans question, 13 questions jamais consommées) et
+> le reste jusqu'à ce que chaque bloc du mémo soit la projection d'un framework acquitté — l'état
+> terminal de la roadmap, pas un lot. `check_reconciliation.py` garde l'INSTRUMENT, pas le chiffre :
+> asserter `30` et `13` serait geler un décompte de corpus en cible (§0.6), et le faire rougir à la
+> première question ajoutée.

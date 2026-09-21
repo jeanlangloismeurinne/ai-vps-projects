@@ -121,7 +121,15 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
       K/L. `nature_attendue` et `plancher_tier` hors des vocabulaires DÉTENUS ailleurs
          (`common.NATURES`, `common.TIER_ORDER`). Le contrat les répète en `Literal` pour
          l'ergonomie ; c'est ici qu'on vérifie qu'ils n'ont pas divergé de leur détenteur (#46) ;
-      M. une version de schéma qui ne correspond pas au contrat qui vient de valider le fichier.
+      M. une version de schéma qui ne correspond pas au contrat qui vient de valider le fichier ;
+      N. un `chemin_indexation` dont la racine n'est pas l'id du framework qui le déclare. [H]
+         garde l'unicité du chemin, pas son APPARTENANCE : `qf_3: defendabilite.cout_du_capital`
+         passait G, H et tout le contrat. Le chemin serait alors rangé sous un framework qui ne
+         l'instruit pas — la réconciliation §6 attribuerait la question au mauvais bloc de mémo,
+         et le manager du framework `defendabilite` relirait une réponse dont il n'a pas la
+         méthodologie. Ajouté le 2026-09-21, quand `reconcilier_vocabulaires` a voulu tenir cette
+         règle de son côté : un invariant du référentiel se garde chez le référentiel, sinon il
+         re-diverge au correctif suivant (`feedback_correctif_regle_jumeaux`).
     """
     if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:
         raise FrameworkDefinitionRefused(
@@ -148,6 +156,18 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                 f"et `{q.id}` — l'index ne saurait plus laquelle des deux il fonde"
             )
         chemins[q.chemin_indexation] = q.id
+
+    # ⚠️ APRÈS [H], délibérément. Les fixtures de [G] et [H] montent deux frameworks `cadre_a` /
+    # `cadre_b` portant des chemins `cadre_test.*` : placé avant, [N] leur volait le refus et les
+    # deux cas négatifs rougissaient sur le mauvais assert (fixture non discriminante).
+    for f, q in toutes:
+        racine = q.chemin_indexation.split(".", 1)[0]
+        if racine != f.id:
+            raise FrameworkDefinitionRefused(
+                f"[N] `{q.id}` est déclarée par `{f.id}` mais indexe sous `{racine}` — "
+                f"un chemin appartient au framework qui l'instruit, sinon la réconciliation §6 "
+                f"l'attribue au mauvais bloc de mémo"
+            )
 
     attendus = set(fichier.archetypes)
     for _f, q in toutes:

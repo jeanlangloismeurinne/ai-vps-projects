@@ -300,6 +300,22 @@ rejete("[J] un substitut qui pointe SA PROPRE question",
 rejete("[M] un fichier dont la version ne correspond pas au contrat qui l'a validé",
        lambda: charge(fichier_base(schema_version="v2.9.0")),
        "[M]")
+# [N] — le chemin est UNIQUE (garde [H]) et pointe pourtant ailleurs que chez son framework. Sans
+# lui, la réconciliation §6 range la question sous un bloc de mémo que ce framework n'instruit pas,
+# et le manager relit une réponse dont il n'a pas la méthodologie.
+rejete("[N] une question dont le chemin d'indexation appartient à un AUTRE framework",
+       lambda: charge(fichier_base(frameworks=[
+           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
+            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
+            "nature_dominante": "mesure",
+            "questions": [q_base(chemin_indexation="cadre_voisin.conversion")]}])),
+       "[N]")
+valide("[N] un chemin préfixé par SON framework passe",
+       lambda: charge(fichier_base(frameworks=[
+           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
+            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
+            "nature_dominante": "mesure",
+            "questions": [q_base(chemin_indexation="cadre_test.autre_chose")]}])))
 valide("le fichier de test minimal passe contrat ET invariants",
        lambda: charge(fichier_base()))
 

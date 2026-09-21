@@ -183,16 +183,27 @@ async def main() -> int:
             print(f"      #{e['id']:<4} {(e['title'] or '')[:66]}")
 
     # ── MESURES 2 et 3 — les deux vocabulaires ──────────────────────────────────
-    _titre(2, "feuilles du research_memo SANS chemin d'indexation  /  chemins jamais consommés")
+    _titre(2, "feuilles du research_memo SANS chemin MVDD  /  chemins MVDD jamais consommés")
+    # ⚠️ CONTRE `FIELD_PROFILES`, LA GRILLE MVDD — délibérément, et ce n'est PAS l'écart courant.
+    # Ce script établit la ligne de base §9.1, c'est-à-dire « le constat du défaut qui motive la
+    # v3 » (spec §9.1) : il décrit l'ancien monde, et le décrire contre l'ancien étalon est
+    # exactement son travail. L'ÉCART COURANT, lui, se mesure contre les questions des frameworks
+    # et vaut 30 / 13 — `tools/reconcilier_vocabulaires.sh`.
+    #
+    # Les intitulés disent « MVDD » depuis le 2026-09-21 : écrits « sans chemin d'indexation » tout
+    # court, ils avaient laissé recopier ce 14 / 3 dans le 00-REPRISE et la spec §0.3 comme s'il
+    # était l'écart du jour. Un rendu qui omet son référentiel fabrique un fait
+    # (`feedback_rendu_est_un_producteur`).
     memo = feuilles_memo()
     index = set(FIELD_PROFILES.keys())
     sans_index = sorted(f for f in memo - DERIVES if ALIAS.get(f) not in index)
     jamais_consommes = sorted(index - {ALIAS[k] for k in ALIAS if k in memo})
     print(f"  feuilles du mémo (hors refs, hors dérivés) : {len(memo - DERIVES)}")
-    print(f"  chemins indexables                         : {len(index)}")
-    print(f"  → feuilles SANS chemin d'indexation        : {len(sans_index)}")
-    print(f"  → chemins JAMAIS consommés par le mémo     : {len(jamais_consommes)}")
-    print("  (détail nominatif : `bash tools/reconcilier_vocabulaires.sh`)")
+    print(f"  chemins MVDD (FIELD_PROFILES)              : {len(index)}")
+    print(f"  → feuilles SANS chemin MVDD                : {len(sans_index)}")
+    print(f"  → chemins MVDD JAMAIS consommés par le mémo: {len(jamais_consommes)}")
+    print("  ⚠️ référentiel MVDD (l'ancien monde). Écart COURANT contre les questions des")
+    print("     frameworks : `bash tools/reconcilier_vocabulaires.sh` (30 / 13).")
 
     # ── MESURE 4 — étapes 4/5/6/8 avec preuve indexable ─────────────────────────
     _titre(4, "étapes 4/5/6/8 du benchmark avec preuve INDEXABLE")
@@ -266,8 +277,8 @@ async def main() -> int:
     lignes_recap = [
         ("Orphelines par ticker", " · ".join(
             f"{t} {round(100*len(orphelines[t])/len(par_ticker[t]))} %" for t in TICKERS)),
-        ("Feuilles de mémo sans chemin d'indexation", str(len(sans_index))),
-        ("Chemins jamais consommés", str(len(jamais_consommes))),
+        ("Feuilles de mémo sans chemin MVDD (ancien étalon)", str(len(sans_index))),
+        ("Chemins MVDD jamais consommés (ancien étalon)", str(len(jamais_consommes))),
         ("Synthèses grounded sur RVMD", str(len([
             e for e in par_ticker["RVMD"]
             if e["entry_type"] == "analysis" and e["source_type"] == "agent_synthesis"]))),

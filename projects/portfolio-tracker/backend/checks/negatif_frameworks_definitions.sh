@@ -40,6 +40,7 @@ mutations=(
 "$PONT¦        if couverts != attendus:¦        if False:¦[I] une question MUETTE sur un archétype déclaré"
 "$PONT¦            if cible not in vus:¦            if False:¦[J] un substitut qui pointe une question inexistante"
 "$PONT¦    if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:¦    if False:¦[M] un fichier dont la version ne correspond pas"
+"$PONT¦        if racine != f.id:¦        if False:¦[N] une question dont le chemin d'indexation appartient à un AUTRE framework"
 # §4 — les clefs que le pont LIT (le mode de panne est un SAUT, pas une erreur)
 "$PONT¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION + (\"framework_version\",)¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION¦les clefs réellement lues par le pont sont celles déclarées"
 "$PONT¦        if plancher is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦        if profil.get(\"plancher_tier_typo\") is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦les clefs réellement lues par le pont sont celles déclarées"
@@ -56,7 +57,11 @@ mutations=(
 "$DEF¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\")¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\", \"D\")¦sous-ensemble STRICT de \`TIER_ORDER\`"
 # §7 — la spec et le référentiel ne divergent pas (mutation côté DONNÉES et côté SPEC)
 "$YAML¦        plancher_tier: B+\n        actualite_bloquante: false\n        sens_admis: [part_faible¦        plancher_tier: A\n        actualite_bloquante: false\n        sens_admis: [part_faible¦nature, plancher et actualité bloquante coïncident"
-"FROZEN:03-spec-frameworks.md¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`mesure\` | A |¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`interpretation\` | A |¦nature, plancher et actualité bloquante coïncident"
+# ⚠️ `V3/` dans le chemin : le lanceur copie `../roadmap` entier, la spec est donc à
+# `$tmp/roadmap/V3/…`. Écrite sans le `V3/`, la mutation ne trouvait pas son fichier et se
+# déclarait CADUQUE — l'assert « la spec et le référentiel ne divergent pas » n'avait aucun test
+# négatif du côté SPEC depuis sa création (une garde qu'aucune mutation n'atteint).
+"FROZEN:V3/03-spec-frameworks.md¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`mesure\` | A |¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`interpretation\` | A |¦nature, plancher et actualité bloquante coïncident"
 )
 
 passes=0; ratees=0
