@@ -171,10 +171,16 @@ async def store_knowledge(
     `nature` (migration 034) est DÉRIVÉE ici, jamais reçue : c'est le seul passage obligé des huit
     producteurs, donc le seul endroit où la règle ne peut pas se recopier (#46). `nature_declaree`
     est la proposition du modèle — `derive_nature` ne l'honore que pour promouvoir vers
-    `evenement`. Le MOTIF n'est pas persisté : la dérivation est une fonction pure de DEUX colonnes
-    déjà stockées (`entry_type`, `source_type` — `covers` en était la troisième jusqu'à la 036),
-    donc rejouable à tout instant sur n'importe quelle ligne — une colonne de plus se contenterait
-    de vieillir à côté de la règle.
+    `evenement`. Le MOTIF n'est pas persisté : la dérivation est une fonction pure de TROIS colonnes
+    déjà stockées (`entry_type`, `source_type`, `content` — `covers` en était une quatrième jusqu'à
+    la 036, et il est parti parce qu'il n'était justement PAS une colonne), donc rejouable à tout
+    instant sur n'importe quelle ligne — une colonne de plus se contenterait de vieillir à côté de
+    la règle.
+
+    ⚠️ `content` est entré dans la règle le 2026-09-21 (garde du guichet, #78) : une entry dont le
+    corps ANNONCE sa propre dérivation (« par différence », « Calcul : », « en déduisant ») ne peut
+    plus être tamponnée `mesure`. Mesuré sur la base avant d'être écrit : 16 des 161 entries
+    `mesure` courantes publiaient un chiffre calculé sous l'autorité d'un dépôt. Migration 044.
     Il n'entre pas non plus dans `reliability_note` : ce sont deux axes, et on ne les mélange pas,
     fût-ce en prose (#50).
 
@@ -189,7 +195,7 @@ async def store_knowledge(
     # source_type C+), le mode de panne de #48.
     source_type, nature, nature_motif = qualify(
         source_type=source_type, url=source_url, ticker_id=ticker_id,
-        entry_type=entry_type, nature_declaree=nature_declaree,
+        entry_type=entry_type, content=content, nature_declaree=nature_declaree,
     )
     if derived_reliability is not None:
         score, tier, note = derived_reliability

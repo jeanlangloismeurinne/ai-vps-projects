@@ -534,8 +534,23 @@ pont("[D] un rang sous le plancher de la question",
      "sous le plancher")
 pont("[E] la nature attendue n'est portée par aucune entry citée (#51)",
      rep(blocs={"fondation": {**FOND, "cited_entry_ids": [193], "rang_derive": "A-",
-                              "nature_effective": "mesure"}}),
+                              "nature_effective": "interpretation"}}),
      "propriété de l'assertion")
+# ⚠️ Ce cas DÉCLARAIT `nature_effective: "mesure"` jusqu'au 2026-09-21. Depuis que [E0] existe, il
+# aurait passé pour la MAUVAISE raison : le pont s'arrête sur l'auto-déclaration avant d'atteindre
+# la confrontation avec `nature_attendue`. Une fixture qui déclenche deux contrôles ne dit pas
+# lequel des deux discrimine — exactement le piège que le commentaire de l'entry 193 décrit déjà.
+pont("[E] … et le MÉLANGE ne concède pas la nature forte (#78) : un relevé + une interprétation",
+     rep(blocs={"fondation": {**FOND, "cited_entry_ids": [190, 193], "rang_derive": "A-",
+                              "nature_effective": "interpretation"}}),
+     "ne se concède jamais par mélange")
+pont("[E0] une `nature_effective` AUTO-DÉCLARÉE est refusée, comme un rang (#51)",
+     rep(blocs={"fondation": {**FOND, "cited_entry_ids": [193], "rang_derive": "A-",
+                              "nature_effective": "mesure"}}),
+     "nature auto-déclarée")
+pont_ok("[E0] … et la nature qui tombe juste passe (sinon [E0] refuse tout, il ne garde rien)",
+        rep(blocs={"fondation": {**FOND, "cited_entry_ids": [190], "rang_derive": "A-",
+                                 "nature_effective": "mesure"}}))
 pont("[S] un `sens` hors du vocabulaire fermé de la question",
      rep(question_id="qf_sens", blocs={"reponse": {"verbatim": "12,4 %", "sens": "plutot_bon"}}),
      "hors du vocabulaire")

@@ -263,6 +263,38 @@ def _plus_faible(tiers: list[str]) -> str:
     return max(tiers, key=lambda t: _TIER_RANK.get(t, len(TIER_ORDER)))
 
 
+def nature_effective_de(natures: list[Any], *, approximation: bool) -> str:
+    """La nature d'une FONDATION, dérivée des natures RÉELLES de ses entries citées.
+    DÉTENTEUR UNIQUE de la règle (#46), pendant exact de `_plus_faible` sur l'axe fiabilité.
+
+    RÈGLE : la nature forte ne se concède jamais par mélange. Une fondation vaut `mesure` seulement
+    si TOUTES ses entries citées sont des mesures — un chiffre relevé cité à côté d'un commentaire
+    (ou d'un calcul) produit une lecture DES DEUX, donc une `interpretation` (#51/#44). Sur une
+    approximation, elle est forcée à `interpretation` : reconstruire, c'est interpréter, et le
+    contrat le re-vérifie (§1.5). Une nature inconnue compte pour le pire, comme un tier inconnu.
+
+    ⚠️ CETTE FONCTION EST NÉE D'UN JUMEAU (2026-09-21, #78). La règle vivait en une expression
+    en ligne dans `assembler_answer` ; le pont, en la lisant sur le contrôle [E], allait la recopier.
+    Deux exemplaires d'accord le jour où on les écrit, divergents au correctif suivant — c'est
+    précisément ce que #46 interdit, et le geste que `feedback_correctif_regle_jumeaux` demande
+    (greper la constante caractéristique, livrer un détenteur unique).
+
+    ⚠️ ET ELLE EXISTE SURTOUT POUR QUE [E] NE CROIE PAS L'ANNONCE. Une `FrameworkAnswer` PORTE son
+    `nature_effective`, et le pont valide aussi des réponses qui ne viennent pas d'`assembler_answer`
+    (c'est sa raison d'être). Lire le champ déclaré plutôt que de le dériver serait exactement la
+    faute que le contrôle [C] nomme pour le rang : « un rang auto-déclaré est un rang faux, il se
+    dérive, il ne s'annonce pas ». Mesuré, pas supposé : la première rédaction de [E] lisait le
+    champ, et `check_framework_contract` [E] est passé de ROUGE (refus attendu) à VERT — une
+    fixture qui déclarait `mesure` en citant une entry d'interprétation était acquittée.
+    """
+    if approximation:
+        return "interpretation"
+    distinctes = {str(n) for n in natures}
+    if len(distinctes) == 1 and distinctes <= NATURES:
+        return distinctes.pop()
+    return "interpretation"
+
+
 def valider_pont_framework_answer(
     answer: FrameworkAnswer,
     *,
@@ -333,16 +365,51 @@ def valider_pont_framework_answer(
                 "réponse qui n'atteint pas son plancher est un `non_fondable`, pas une réponse "
                 "faible — la nuance est ce qui déclenche une collecte au lieu d'un affichage")
 
-        # E. la nature attendue est PORTÉE par une entry citée, pas déduite du statut (#51).
+        # E. la nature attendue est portée par TOUTES les entries citées, pas déduite du statut
+        #    (#51). Sauté sur `approxime`, dont la nature est `interpretation` par construction.
+        #
+        #    ⚠️ DURCI le 2026-09-21 (garde du guichet, #78) : « au moins une » est devenu « toutes ».
+        #    Ce n'est pas un tour de vis d'humeur, c'est la fermeture du dernier passage. La
+        #    rétrogradation au guichet range les chiffres calculés en `interpretation` ; mais [E]
+        #    dans sa forme « au moins une » laissait un `repondu` citer une pièce calculée À CÔTÉ
+        #    d'un relevé, recopier son chiffre, et garder statut `repondu` + rang du dépôt — le
+        #    trajet exact de la réponse #475. Le mélange était déjà NOMMÉ par le code :
+        #    `assembler_answer` calcule `nature_effective = mesure` seulement si TOUTES les citées
+        #    sont des mesures. Ce verdict était stocké et personne ne le lisait — un drapeau calculé
+        #    que rien n'applique est un affichage (`feedback_controle_au_point_de_lecture`). [E] le
+        #    LIT désormais, au lieu de refaire sa propre lecture à côté (#46).
+        #
+        #    CE QUE ÇA COÛTE, MESURÉ SUR LA BASE AVANT D'ÊTRE ÉCRIT : zéro. La seule réponse
+        #    `repondu` vivante (#473, qf_4) cite six entries, toutes `mesure`, aucune du lot dérivé.
+        #    Et ça ne ferme aucune question : un analyste qui a BESOIN d'une pièce calculée garde
+        #    `approxime` — où il doit écrire ses hypothèses et descendre d'un cran. C'est la
+        #    troisième case de #68 : la forme force l'hypothèse à s'écrire au lieu de se taire.
+        #    ⚠️ La nature effective se DÉRIVE des entries réelles (`nature_effective_de`,
+        #    détenteur unique partagé avec `assembler_answer`), elle ne se lit JAMAIS sur la
+        #    réponse : le pont valide aussi ce qui ne vient pas de l'analyste, et croire le champ
+        #    déclaré serait la faute que [C] nomme pour le rang.
+        natures_reelles = [entries[i].get("nature") for i in cites]
+        effective = nature_effective_de(natures_reelles, approximation=answer.statut == "approxime")
+
+        # E0. le pendant de [C] sur l'axe nature : la fondation ANNONCE ce que les entries commandent.
+        if answer.fondation.nature_effective != effective:
+            raise FrameworkAnswerRefused(
+                f"`nature_effective` = {answer.fondation.nature_effective} alors que les natures "
+                f"réelles {sorted(str(n) for n in natures_reelles)} commandent `{effective}`. Une "
+                "nature auto-déclarée est une nature fausse : elle se dérive des sources citées, "
+                "elle ne s'annonce pas (#51, pendant de la règle transverse 7)")
+
         attendue = profil.get("nature_attendue")
-        if attendue is not None:
-            portees = {entries[i].get("nature") for i in cites}
-            if attendue not in portees and answer.statut != "approxime":
-                raise FrameworkAnswerRefused(
-                    f"`{answer.question_id}` attend une assertion de nature `{attendue}`, mais les "
-                    f"entries citées portent {sorted(str(p) for p in portees)}. La nature est une "
-                    "propriété de l'assertion : elle se lit sur la source, elle ne se déduit pas "
-                    "du statut de la réponse")
+        if attendue is not None and answer.statut != "approxime" and effective != attendue:
+            portees = sorted({str(entries[i].get("nature")) for i in cites})
+            raise FrameworkAnswerRefused(
+                f"`{answer.question_id}` attend une assertion de nature `{attendue}`, mais la "
+                f"fondation vaut `{effective}` : les entries citées portent {portees}. La nature "
+                "est une propriété de l'assertion — elle se lit sur les sources, elle ne se déduit "
+                "pas du statut de la réponse, et elle ne se concède jamais par mélange : un relevé "
+                "cité à côté d'un chiffre calculé produit une LECTURE DES DEUX. S'appuyer sur le "
+                "calcul est permis, mais alors c'est une approximation : elle s'écrit avec ses "
+                "hypothèses et elle descend d'un cran")
 
     # S. le `sens` appartient au vocabulaire FERMÉ de la question. Le contrat le laisse libre (il ne
     #    connaît pas la question, #37) ; il se ferme ici, au seul endroit qui voit les deux.

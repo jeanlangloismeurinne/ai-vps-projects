@@ -8,6 +8,81 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-21 (3) — spec v3, **LE GARDE #78 — et il n'était pas à l'endroit annoncé**
+
+Convention **#78**. Migration **044** appliquée. Aucun déploiement.
+
+### La spécification du lot était fausse, et c'est la première chose mesurée
+
+Le lot précédent laissait en tête de ▶ PROCHAIN une garde décrite côté **analyste** : « aucun nombre
+du verbatim qui ne soit pas dans les entries citées ». Avant de l'écrire, elle a été **rejouée sur
+#475**, la réponse qui l'avait motivée. Elle est **VERTE** : `1,81` et `1,93` sont littéralement dans
+l'entry citée **#312**. Le défaut de #475 n'est pas un nombre inventé, c'est un nombre **juste
+recopié depuis un calcul que le collecteur avait présenté comme une mesure**.
+
+> **Une garde écrite pour un cas et verte sur ce cas est le pire des décors.** Elle aurait été
+> livrée, gardée par un check, et n'aurait jamais rien attrapé.
+
+`feedback_ligne_de_base_est_une_mesure` s'étend donc au-delà des décomptes de lignes : **la
+difficulté qu'un lot prétend fermer se requête avant le lot, elle aussi.**
+
+### L'arbitrage — option B, au guichet d'entrée
+
+Formulation retenue par l'utilisateur, verbatim : *« Une entry `mesure` ne peut pas contenir un
+chiffre calculé. Le collecteur déclare séparément ce qu'il a calculé ; le calcul part en pièce
+`interpretation`, que le plancher A écarte tout seul. Rouge sur #312/#313/#314. Migration 044 pour
+requalifier les 3. »*
+
+Mesure d'impact **avant** d'écrire la garde : **16 entries sur 161** `mesure` annoncent leur propre
+calcul (11 × `calcul :`, et `en déduisant`, `estimée à environ`, `soit environ`, `par différence`,
+`s'en déduit` une fois chacun). Un critère alternatif — `content_structured IS NULL` — a été
+**écarté par mesure** : il aurait frappé **36 des 54** entries RVMD, dont des mesures parfaitement
+citables. Vérifié également : aucune réponse vivante ne dépend des 16.
+
+### Ce qui est livré
+
+· `_MARQUEURS_DE_DERIVATION` — **vocabulaire fermé de 11 jetons**, détenteur unique (#46), et
+`annonce_une_derivation` **rend le marqueur** (pas un booléen) pour que le refus le NOMME (#63).
+· La rétrogradation vit dans `qualify`, **appelée par les deux sites d'écriture** ; `content` est
+désormais transmis depuis `store_knowledge` **et** depuis `_normalise_entry` du search-worker, qui
+qualifie **avant** le filtre de plancher `reliability_min`.
+· Contrat framework : **[E0]** neuf (`nature_effective` est DÉRIVÉE, jamais déclarée) + **[E]**
+durci ; `nature_effective_de` extrait en **détenteur unique** — c'est `run_all.sh` complet qui l'a
+révélé, le premier [E] lisant une valeur **auto-déclarée** (#70).
+· Migration **044** : générateur JSON-par-ligne, 242 lignes examinées, 226 inchangées, **16
+requalifiées**. Le `source_type` — donc le tier — n'est **pas touché** : les deux axes ne se
+mélangent pas (#50).
+
+### Deux gardes qui ne gardaient rien, trouvées par mutation
+
+**1. La garde de la migration, nourrie de sa propre écriture.** Elle comptait les 16 ids qu'elle
+venait d'écrire : toujours verte (#70). Remplacée par l'**invariant global** `mesure = 213`, et
+**prouvée capable de LEVER** avant application — bloc `DO $$` extrait seul, joué sur l'état
+pré-migration : `ERROR: 044 : 229 entries mesure en base, 213 prédites`, EXIT=3.
+
+**2. La boucle §5bis, générée depuis ce qu'elle garde.** Le parcours jeton par jeton était construit
+**depuis** `_MARQUEURS_DE_DERIVATION` : retirer un jeton retirait **aussi son assert**. Un assert
+écrit depuis sa propre constante — le **4ᵉ faux vert**. Corrigé par **§7bis**, qui ancre le
+vocabulaire sur le **corpus réel** (les ids de la migration 044, relus dans le fichier).
+
+> Question réutilisable : **« cet assert peut-il survivre à la suppression de ce qu'il garde ? »**
+> Si oui, il ne le garde pas.
+
+Leçon de harnais au passage : une mutation dont le motif `vieux` couvre **plusieurs lignes** ressort
+**CADUQUE** (`??`), pas `ok` — `_negatif.sh` n'étend `\n` que dans `neuf`. Trois mutations étaient
+dans ce cas et ne prouvaient rien.
+
+### Résultat
+
+`check_entry_nature` **153/0** · `check_framework_contract` **99/0** · négatif **9 mutations / 9
+rouges sur leur assert nommé** · `run_all.sh` **complet 2800 assertions / 0 échec sur 37 scripts**
+(base du lot : 2726). Post-migration requêté : `mesure` 229 → **213**, `interpretation` 13 → **29**,
+**0** des 16 ids encore `mesure`.
+
+Corrigé aussi : la trace durable de **#78** dans `CLAUDE.md` **prescrivait le remède mesuré
+inefficace**. Laissée telle quelle, elle aurait envoyé une session future construire la garde
+inutile.
+
 ## 2026-09-21 (2) — spec v3, **PREMIER PASSAGE RÉEL DE LA CHAÎNE DES SIX AGENTS**
 
 Convention **#78**. Aucune migration, aucun déploiement. Deux fichiers neufs et versionnés :

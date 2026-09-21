@@ -43,9 +43,21 @@ role: >
   `tools/executer_chaine.{py,sh}`, il écrit en prod sans ROLLBACK) : RVMD × `qualite_financiere` ×
   `pre_revenus` de bout en bout, 7 réponses persistées, 7 acquittements — **et un `repondu` portant
   un chiffre CALCULÉ (1,81–1,93 MdUSD) absent de toute entry citée, acquitté par les quatre
-  contrôles**. Ligne #475 supprimée (pollution, pas correction). **PROCHAIN = le garde #78** (« un
-  `repondu` ne peut porter aucun nombre absent de ses entries citées », correctif de FORME #68),
-  puis le lot 5. Détail dans le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
+  contrôles**. Ligne #475 supprimée (pollution, pas correction).
+  **LE GARDE #78 EST LIVRÉ le 2026-09-21 — et PAS à l'endroit annoncé.** Le contrôle prévu chez
+  l'analyste (« aucun nombre du verbatim absent des entries citées ») a été **MESURÉ VERT sur le cas
+  qui l'a motivé** : 1,81 et 1,93 sont bel et bien dans l'entry #312, bel et bien citée. Le défaut
+  est **au GUICHET D'ENTRÉE** (arbitrage utilisateur, option B) : un chiffre CALCULÉ à partir de
+  chiffres déposés était rangé `fact_financial` × source officielle, donc `mesure`, donc sous
+  l'autorité du dépôt — **16 des 161 `mesure` courantes**, toutes honnêtes dans leur prose, seul le
+  tampon faux. `derive_nature` rétrograde désormais sur un **vocabulaire fermé de 11 marqueurs**,
+  `content` est transmis depuis **les deux** sites d'appel, le pont gagne **[E0]** (la nature
+  effective est DÉRIVÉE, jamais déclarée) et **[E]** durci, avec `nature_effective_de` en détenteur
+  unique. Le tier n'est PAS touché (#50). **Migration 044 appliquée** (16 requalifiées, garde
+  globale `mesure = 213` éprouvée en négatif AVANT application). Suite `run_all.sh` =
+  **2800 assertions, 0 échec sur 37 scripts** ; `negatif_garde_guichet.sh` **9/0**.
+  **PROCHAIN = le lot 5** (+ les 3 difficultés mesurées non corrigées). Détail dans le
+  **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -589,14 +601,34 @@ lot 1 ; les tables viennent en dernier.
 > `framework_answers` = **6**. Les six survivantes sont fidèles ligne à ligne, vérifiées chiffre par
 > chiffre contre leurs entries — **première preuve réelle que la chaîne produit**.
 >
-> **▶ PROCHAIN — §10 lot 5, mais LE GARDE #78 D'ABORD.**
-> **(1) Un `repondu` ne peut porter aucun nombre absent de ses entries citées** — extraire les numéraux
-> du verbatim, exiger que chacun figure dans au moins une entry citée. Correctif **de FORME** (#68) :
-> un calcul est alors *forcé* de sortir en `approxime`, avec ses hypothèses écrites et son cran ;
-> muscler le contrôle ② demanderait un jugement sémantique, donc un appel modèle dans un agent PUR
-> (#76). Exige un `check_*` + un **négatif dont chaque mutation rougit sur son assert nommé**, puis
-> `run_all.sh` **complet** (#64), pas le seul module touché. C'est le lot suivant, décidé par
-> l'utilisateur le 2026-09-21.
+> **▶ PROCHAIN — §10 lot 5. LE GARDE #78 EST LIVRÉ (2026-09-21), mais PAS À L'ENDROIT ANNONCÉ.**
+> **(1) ✅ LIVRÉ — et l'énoncé de ce point était FAUX, ce qui est l'enseignement.** Le garde annoncé
+> (« un `repondu` ne peut porter aucun nombre absent de ses entries citées ») a été **MESURÉ VERT sur
+> le cas même qui l'a motivé** : 1,81 et 1,93 figurent bel et bien dans l'entry #312, qui était bel et
+> bien citée. L'analyste avait recopié fidèlement une pièce qui **mentait sur son propre statut**.
+> Le défaut n'est donc pas chez l'analyste mais **au guichet d'entrée** (arbitrage utilisateur,
+> option B) : un producteur qui CALCULE un chiffre à partir de chiffres déposés le rangeait sous
+> `fact_financial` × source officielle, donc sous `mesure`, donc sous l'autorité du dépôt.
+> **16 des 161 entries `mesure` courantes étaient dans ce cas** — toutes honnêtes dans leur prose
+> (elles écrivent leur calcul en toutes lettres), seul le tampon était faux. Livré : `derive_nature`
+> rétrograde sur un **vocabulaire fermé de 11 marqueurs de dérivation** (`annonce_une_derivation`
+> rend le marqueur TROUVÉ, jamais un booléen : le motif doit pouvoir le nommer), `content` transmis
+> depuis **les deux** sites d'appel (`store_knowledge` et le `_normalise_entry` du search-worker, qui
+> qualifie AVANT le filtre de plancher), contrôle **[E0]** neuf dans le pont (`nature_effective` est
+> DÉRIVÉE, jamais déclarée — le pendant de [C] sur l'axe nature) et **[E]** durci, avec
+> `nature_effective_de` en détenteur unique partagé par le pont et `assembler_answer` (le second la
+> tenait **en ligne** : un jumeau qui attendait de diverger). ⚠️ Le tier n'est PAS touché : le dépôt
+> reste un dépôt, c'est la phrase qu'on en a tirée qui n'est pas un relevé (#50).
+> **Migration 044 appliquée** (16 requalifiées, garde globale `mesure = 213` **éprouvée en négatif
+> avant application** : jouée seule sur l'état d'avant, elle RAISE sur 229). `check_entry_nature`
+> **153/0** avec un **§7bis** neuf, `negatif_garde_guichet.sh` **9 mutations / 0 échec**,
+> `run_all.sh` **2800 assertions / 0 échec sur 37 scripts**.
+> ⚠️ **Ce que §7bis a coûté et pourquoi il existe** : le parcours jeton par jeton de §5bis est
+> **GÉNÉRÉ depuis `_MARQUEURS_DE_DERIVATION`**, donc retirer un jeton retire AUSSI son assert — un
+> assert écrit depuis sa propre constante (4ᵉ faux vert). La mutation « amputer le vocabulaire » est
+> restée invisible jusqu'à ce qu'on lui cherche une ancre **non circulaire** : le CORPUS RÉEL, via
+> les ids que la migration 044 requalifie, **relus depuis le fichier** (#46) et confrontés au
+> `content` stocké. Un vocabulaire fermé ne se garde pas contre lui-même.
 > **(2) Le collecteur est aveugle au corpus déjà détenu** : 4 des 7 mandats collecteur de ce passage
 > sont de **faux manques** (#281, #298/#342, #292, #304/#305 — présentes ET citées). Dépense web
 > inutile, et une boucle vivante les ré-essaierait sans fin. ⚠️ Clefer sur la **ligne de plan**
@@ -604,7 +636,7 @@ lot 1 ; les tables viennent en dernier.
 > **(3) #280 et #296 assertent la même identité** (dette RVMD 487,43 MUSD au 2026-06-30), toutes deux
 > courantes, `metric` et `poste_kind` NULL → non clefables (#55/F16), donc `_current_fact_ids` ne peut
 > en superséder aucune. **Pré-existant.** Elles sont d'accord, d'où l'invisibilité (#46). Backfill
-> lignée 035 → candidat **044**.
+> lignée 035 → candidat **045** (044 est consommée par le garde du guichet).
 > **(4) Corpus plafonné 40/57**, tri `source_date DESC` : 17 entries invisibles à l'analyste, sans
 > garantie de hors-sujet. La troncature est DITE, elle n'est pas instrumentée.
 > Puis le lot 5 proprement dit : **le mémo projeté / réconciliation à 0/0** via
@@ -613,7 +645,7 @@ lot 1 ; les tables viennent en dernier.
 > `FIELD_PROFILES`, la grille MVDD à qui le lot 3 avait retiré son autorité — l'étalon a été corrigé,
 > ce n'est pas une régression), **+** le nettoyage des « faux au sens v3 » hérités de RVMD (#190 ROIC
 > fabriqué, #191, #186 — **jugement humain**), **+** le wiring de `serve_mandate`/`read_open_mandates`
-> dans la boucle live du search-worker. Migration prévue : **044**.
+> dans la boucle live du search-worker. Migration prévue : **045**.
 >
 > ⚠️ **Ligne de base du 2026-09-21 avant le passage** (requêtée, pas rappelée) : `framework_answers`
 > **0**, `framework_mandates` **16** (tous collecteur, **0 manager**), RVMD **53** entries courantes,

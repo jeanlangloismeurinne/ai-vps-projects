@@ -197,6 +197,7 @@ def qualify(
     url: Optional[str],
     ticker_id: Optional[str],
     entry_type: str,
+    content: Optional[str] = None,
     nature_declaree: Optional[str] = None,
 ) -> tuple[str, str, str]:
     """`(source_type, nature, motif)` — le passage unique des deux sites de qualification.
@@ -207,9 +208,15 @@ def qualify(
 
     La nature est dérivée du `source_type` reçu, c'est-à-dire du GÉNÉRIQUE — voir l'avertissement en
     tête de module. Le registre ne s'applique qu'ensuite, et seulement à `web_search_generic`.
+
+    ⚠️ `content` est TRANSMIS, jamais interprété ici : `derive_nature` en est le seul lecteur (#46).
+    Le passer est load-bearing — sans lui, la garde du guichet (#78) serait écrite chez son
+    détenteur et jamais atteinte depuis le seul chemin d'écriture, c'est-à-dire un décideur sans
+    producteur (`feedback_controle_au_point_de_lecture`).
     """
     nature, motif = derive_nature(
-        entry_type=entry_type, source_type=source_type, declared=nature_declaree,
+        entry_type=entry_type, source_type=source_type, content=content,
+        declared=nature_declaree,
     )
     if source_type != _PROMOUVABLE:
         return source_type, nature, motif

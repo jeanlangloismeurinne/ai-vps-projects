@@ -33,6 +33,10 @@ se juge pas sur son diff mais sur le comptage par clef).
         avec « sortie déterministe » et a rougi dès que le collecteur (§3.6, maillon 4 du lot 2c) a
         écrit des faits web `edgar_official` SANS `metric` — compatibles, pas des parasites. §0.6 :
         « les données en base ne dictent jamais la roadmap », leur nombre est un RÉSULTAT, pas un but.
+  • §7bis LE VOCABULAIRE FERMÉ, ANCRÉ SUR LE CORPUS — le parcours jeton par jeton de §5bis est
+        généré depuis `_MARQUEURS_DE_DERIVATION`, donc retirer un jeton retire son propre assert
+        (4ᵉ faux vert) : il ne peut pas voir une amputation. L'ancre non circulaire est le corpus
+        réel, via les ids que la migration 044 requalifie — relus DEPUIS le fichier (#46).
 
 Hors ligne :
     docker run --rm --network none -v "$PWD:/app:ro" -w /app -e PYTHONPATH=/app \
@@ -42,16 +46,21 @@ Avec l'état persisté (§7) — réseau `coolify` + vraie URL de base :
       --env-file checks/env.checks -e CHECK_DB_URL="postgresql://…/db_portfolio" \
       $IMG python checks/check_entry_nature.py
 """
+import glob
 import inspect
 import os
+import re
 import sys
 import typing
 
 from app.agents.v2.common import (
     FIELD_PROFILES,
     NATURES,
+    _MARQUEURS_DE_DERIVATION,
+    annonce_une_derivation,
     derive_nature,
 )
+from app.agents.v2.worker import _normalise_entry
 from app.contracts.worker_delegation_schema import EntryType
 from app.knowledge import ENTRIES_COURANTES
 from app.knowledge.service import store_knowledge
@@ -117,12 +126,25 @@ print("\n2bis. la nature ne se dérive QUE de ce qui est DANS la ligne (migratio
 # justement pas persisté. La garde est écrite en POSITIF (la signature n'a que deux ingrédients
 # arbitrables), jamais en `grep` d'un token absent : un grep de présence est satisfait par la prose
 # et un grep d'absence est mis en défaut par elle (#56).
+#
+# ⚠️ L'assert pinçait la signature à TROIS paramètres. Il a rougi le 2026-09-21 quand `content` est
+# entré dans la règle (garde du guichet, #78) — et c'est le bon comportement, ce n'est pas lui qui
+# était faux, c'est sa FORMULATION qui disait autre chose que ce qu'on garde. L'invariant n'a
+# jamais été un nombre de paramètres : c'est « chaque ingrédient est une COLONNE stockée de la
+# ligne », donc la règle est rejouable sur n'importe quelle ligne à n'importe quel instant.
+# `content` le respecte, `covers` ne le respectait pas. Le compte est un symptôme, la rejouabilité
+# est la garantie — et un assert qui fige le symptôme se fait modifier à chaque évolution légitime
+# jusqu'à ce que quelqu'un le désarme.
 _ING = set(inspect.signature(derive_nature).parameters)
-check("`derive_nature` n'a que trois entrées : deux colonnes + la proposition de l'agent",
-      _ING == {"entry_type", "source_type", "declared"}, f"→ {sorted(_ING)}")
+_COLONNES_INGREDIENTS = {"entry_type", "source_type", "content"}
+check("les ingrédients de `derive_nature` sont exactement trois COLONNES + la proposition de l'agent",
+      _ING == _COLONNES_INGREDIENTS | {"declared"}, f"→ {sorted(_ING)}")
 check("… et `covers` n'en est plus un ingrédient",
       "covers" not in _ING,
       "→ une règle dont un ingrédient n'est pas dans la ligne n'est pas rejouable (#48)")
+# La preuve que ce sont bien des COLONNES et pas des noms plausibles est en §7, qui les SELECT
+# sur la vraie table : ici, hors ligne, on ne peut affirmer que la liste — un `content` qui ne
+# serait pas une colonne rendrait §7 rouge au SELECT, pas vert en silence.
 # Ce qu'on PERD est mesuré, pas supposé : les 19 entries `fact_qualitative` qui tenaient leur
 # `mesure` de cette seule branche deviennent `interpretation`. Le mouvement va dans le sens PRUDENT
 # (#44), donc il ne fabrique aucune autorité — il en retire. L'assert le fige : le jour où un
@@ -188,6 +210,78 @@ check("déclaration identique à la dérivation → aucun bruit dans le motif",
       "écartée" not in derive_nature(entry_type="fact_financial", source_type="edgar_official",
                                      declared="mesure")[1])
 
+print("\n5bis. LA GARDE DU GUICHET (#78) — une dérivation ANNONCÉE ne se tamponne pas `mesure`")
+# POURQUOI CETTE SECTION EXISTE, mesuré et pas déduit. Le 2026-09-21, la réponse #475 a été
+# supprimée pour avoir publié « guidance de dépenses en trésorerie 1,81–1,93 MdUSD », un chiffre
+# qu'aucune société n'a publié. Le garde d'abord envisagé vivait chez l'analyste (« aucun nombre du
+# verbatim absent des entries citées ») ; il a été MESURÉ VERT sur ce cas précis, parce que 1,81 et
+# 1,93 figurent bel et bien dans l'entry #312, qui était bel et bien citée. L'analyste avait
+# recopié fidèlement une pièce qui mentait sur son propre statut : #312 est `fact_financial` ×
+# `company_ir_official`, donc `mesure`, donc tier A — et sa dernière phrase est une soustraction.
+# Seize entries sur 161 `mesure` courantes étaient dans ce cas (migration 044).
+_CALCUL = "Calcul : 155,237 × 0,8060 = 125,121 MUSD."
+_RELEVE = "Le résultat d'exploitation FY2026 s'élève à 155 237 MUSD (10-K, us-gaap:OperatingIncomeLoss)."
+check("un `fact_financial` EDGAR qui ANNONCE son calcul → `interpretation`",
+      nature_of(entry_type="fact_financial", source_type="edgar_official",
+                content=_CALCUL) == "interpretation",
+      "→ un chiffre calculé hérite de l'autorité du dépôt dont il est tiré")
+check("… et le même sans annonce de calcul reste `mesure` (la garde DISCRIMINE)",
+      nature_of(entry_type="fact_financial", source_type="edgar_official",
+                content=_RELEVE) == "mesure",
+      "→ la garde rétrograde tout : elle ne garde plus rien, elle punit")
+check("… `content` absent ne rétrograde pas (les producteurs qui ne le passent pas sont inchangés)",
+      nature_of(entry_type="fact_financial", source_type="edgar_official") == "mesure")
+check("… le motif NOMME le marqueur trouvé, il ne se contente pas de refuser",
+      "en déduisant" in derive_nature(entry_type="fact_financial", source_type="edgar_official",
+                                      content="En déduisant la SBC, 1,81 MdUSD.")[1],
+      f"→ {derive_nature(entry_type='fact_financial', source_type='edgar_official', content='En déduisant la SBC.')[1]}")
+# Le vocabulaire est FERMÉ et éprouvé JETON PAR JETON sur son détenteur : une énumération recopiée
+# ici resterait verte le jour où un marqueur est retiré du détenteur (#46). Chaque jeton doit donc
+# rétrograder par lui-même — un jeton mort dans la liste serait exactement le « vocabulaire encore
+# ouvert » que le commentaire de `_INTERPRETING_ENTRY_TYPES` proscrit.
+# ⚠️ ET CE PARCOURS NE PEUT PAS VOIR UNE AMPUTATION : il est GÉNÉRÉ depuis le détenteur, donc
+# retirer un jeton retire aussi son assert (4ᵉ faux vert — un assert écrit depuis sa propre
+# constante). Ce qu'il garde réellement est plus étroit : aucun jeton n'est INATTEIGNABLE par
+# construction (une majuscule dans la liste ne matcherait jamais un `content.lower()`). L'ancre
+# non circulaire contre l'amputation est le CORPUS RÉEL — §7bis.
+for _m in _MARQUEURS_DE_DERIVATION:
+    check(f"le marqueur « {_m} » rétrograde à lui seul",
+          nature_of(entry_type="fact_financial", source_type="edgar_official",
+                    content=f"Chiffre obtenu {_m} 12 MUSD.") == "interpretation",
+          "→ jeton mort dans le vocabulaire")
+check("la détection est insensible à la CASSE (les producteurs écrivent « Calcul : » en tête)",
+      annonce_une_derivation("CALCUL : 3 − 1 = 2") == "calcul :",
+      f"→ {annonce_une_derivation('CALCUL : 3 − 1 = 2')!r}")
+# ⚠️ Le jeton employé ici n'est NI celui de l'assert « le motif NOMME le marqueur » ci-dessus, NI
+# celui que le test négatif retire du vocabulaire : une fixture qui déclenche deux contrôles ne dit
+# pas lequel discrimine (#56).
+check("`annonce_une_derivation` rend le marqueur, pas un booléen (le motif doit le nommer)",
+      annonce_une_derivation("un total de soit environ 12 MUSD") == "soit environ",
+      f"→ {annonce_une_derivation('un total de soit environ 12 MUSD')!r}")
+check("une prose sans marqueur ne rend rien", annonce_une_derivation(_RELEVE) is None)
+check("un contenu vide ne rend rien (et ne lève pas)", annonce_une_derivation(None) is None)
+# LES DEUX AXES NE SE MÉLANGENT PAS (#50) : la rétrogradation touche la nature, JAMAIS le tier. Le
+# dépôt reste un dépôt ; c'est la phrase qu'on en a tirée qui n'est pas un relevé. On l'éprouve sur
+# la chaîne réelle de qualification, pas sur `derive_nature` seul : c'est `qualify` qui rend les
+# deux, et c'est là qu'un correctif maladroit les confondrait.
+_st_calc, _nat_calc, _ = qualify(source_type="edgar_official", url=None, ticker_id="TEST",
+                                 entry_type="fact_financial", content=_CALCUL)
+_st_rel, _nat_rel, _ = qualify(source_type="edgar_official", url=None, ticker_id="TEST",
+                               entry_type="fact_financial", content=_RELEVE)
+check("`qualify` propage la rétrogradation de nature", _nat_calc == "interpretation",
+      f"→ `{_nat_calc}` : `content` n'atteint pas `derive_nature` depuis le chemin d'écriture")
+check("… sans toucher au `source_type` (donc au tier) : deux axes, jamais mélangés (#50)",
+      _st_calc == _st_rel == "edgar_official", f"→ `{_st_calc}` vs `{_st_rel}`")
+# LE POINT DE LECTURE RÉEL. `qualify` est un maillon ; ce qui compte est que `content` arrive
+# jusqu'à lui DEPUIS les deux sites d'appel. Un paramètre ajouté au détenteur et non transmis par
+# l'appelant est un décideur sans producteur : 0 appel, 0 ligne, garde verte
+# (`feedback_controle_au_point_de_lecture`).
+for _nom, _fn in (("store_knowledge", store_knowledge),
+                  ("_normalise_entry (search-worker)", _normalise_entry)):
+    check(f"`{_nom}` transmet `content=` à `qualify`",
+          "content=content" in inspect.getsource(_fn),
+          "→ la garde est écrite chez son détenteur et jamais atteinte depuis ce chemin")
+
 print("\n6. détenteur unique (#46) — la nature n'est pas un paramètre d'écriture")
 sig = inspect.signature(store_knowledge).parameters
 check("`store_knowledge` n'accepte AUCUN paramètre `nature`", "nature" not in sig,
@@ -235,6 +329,20 @@ import asyncio  # noqa: E402  (import tardif : §1-§6 doivent tourner sans base
 import asyncpg  # noqa: E402
 
 
+def _ids_migration_044() -> list[int]:
+    """Les ids que la migration 044 requalifie, lus DEPUIS le fichier — jamais recopiés ici.
+
+    La migration est le détenteur unique (#46) de la mesure qui a motivé la garde du guichet : les
+    entries `mesure` dont la prose annonçait son propre calcul, relevées sur le corpus réel le
+    2026-09-21. Un fichier introuvable ou une liste vide doivent ROUGIR (ancre creuse), jamais
+    faire sauter la section (`feedback_check_degrade_en_sortant_a_zero`).
+    """
+    motif = os.path.join(os.path.dirname(__file__), "..", "app", "db", "migrations", "044_*.sql")
+    return sorted({int(n) for f in glob.glob(motif)
+                   for bloc in re.findall(r"id IN \(([\d,\s]+)\)", open(f, encoding="utf-8").read())
+                   for n in bloc.replace(" ", "").split(",") if n})
+
+
 async def _etat():
     conn = await asyncpg.connect(db_url.replace("postgresql+asyncpg://", "postgresql://"))
     try:
@@ -264,12 +372,16 @@ async def _etat():
         par_nature = await conn.fetch(
             "SELECT nature, count(*) n FROM knowledge_entries "
             f"WHERE {ENTRIES_COURANTES} GROUP BY 1 ORDER BY 1")
-        return nuls, hors, det, par_nature
+        # §7bis — l'ancre du vocabulaire fermé sur le corpus RÉEL (voir plus bas).
+        requalifiees = await conn.fetch(
+            "SELECT id, entry_type, source_type, content FROM knowledge_entries "
+            "WHERE id = ANY($1) ORDER BY id", _ids_migration_044())
+        return nuls, hors, det, par_nature, requalifiees
     finally:
         await conn.close()
 
 
-nuls, hors, det, par_nature = asyncio.run(_etat())
+nuls, hors, det, par_nature, requalifiees = asyncio.run(_etat())
 check("aucune entry active sans `nature`", nuls == 0, f"→ {nuls} NULL")
 check("aucune `nature` hors vocabulaire en base", hors == 0, f"→ {hors} lignes")
 # ⚠️ NON-VACUITÉ (faux vert n°1, §24) : « tous mesure » est vrai sur zéro ligne. Un producteur
@@ -290,6 +402,37 @@ print(f"  — faits à recette déterministe actifs : {len(det)} sur "
       f"{len(_tickers_det)} ticker(s) ({', '.join(_tickers_det)}), tous `mesure`")
 print("  — répartition des entries actives : "
       + ", ".join(f"{r['nature']}={r['n']}" for r in par_nature))
+
+print("\n7bis. LE VOCABULAIRE FERMÉ, ANCRÉ SUR LE CORPUS RÉEL (et non sur lui-même)")
+# POURQUOI CETTE SECTION EXISTE. Le parcours jeton par jeton de §5bis est GÉNÉRÉ depuis
+# `_MARQUEURS_DE_DERIVATION` : retirer un jeton du détenteur retire aussi l'assert qui le gardait —
+# un assert écrit depuis sa propre constante (4ᵉ faux vert). Il ne peut donc PAS voir une
+# amputation du vocabulaire, qui est exactement la régression à craindre : la garde continuerait de
+# tamponner `mesure` des entries dont la prose annonce son calcul, en silence.
+# L'ancre non circulaire est le CORPUS. La migration 044 tient la mesure du 2026-09-21 — les entries
+# `mesure` dont la prose annonçait sa propre dérivation — et ses ids sont relus DEPUIS le fichier,
+# jamais recopiés ici (#46). Chacune doit TOUJOURS être vue par la règle. L'assert ne dépend pas de
+# l'application de la migration : il porte sur le `content` stocké, que 044 ne touche pas.
+_ids_044 = _ids_migration_044()
+check("la migration 044 nomme les entries qu'elle requalifie — l'ancre n'est pas vide",
+      len(_ids_044) > 0,
+      "→ fichier `044_*.sql` introuvable ou sans liste d'ids : l'ancre du vocabulaire a disparu")
+check("… et la base les porte toutes — l'ancre n'est pas creuse",
+      len(requalifiees) == len(_ids_044), f"→ {len(requalifiees)}/{len(_ids_044)} en base")
+for row in requalifiees:
+    _marq = annonce_une_derivation(row["content"])
+    check(f"#{row['id']} du corpus réel ANNONCE son calcul, la règle le voit encore",
+          _marq is not None,
+          "→ le jeton qui le détectait a quitté `_MARQUEURS_DE_DERIVATION` : le vocabulaire fermé "
+          "s'est amputé, et aucun assert de §5bis ne pouvait le dire")
+    check(f"… donc #{row['id']} sort `interpretation` de la règle complète",
+          derive_nature(entry_type=row["entry_type"], source_type=row["source_type"],
+                        content=row["content"])[0] == "interpretation",
+          f"→ marqueur `{_marq}`, entry_type `{row['entry_type']}`, source `{row['source_type']}`")
+_marqueurs_corpus = sorted({annonce_une_derivation(r["content"]) for r in requalifiees
+                            if annonce_une_derivation(r["content"])})
+print(f"  — {len(requalifiees)} entries du corpus réel, {len(_marqueurs_corpus)} marqueur(s) "
+      f"attesté(s) : {', '.join(f'« {m} »' for m in _marqueurs_corpus)}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

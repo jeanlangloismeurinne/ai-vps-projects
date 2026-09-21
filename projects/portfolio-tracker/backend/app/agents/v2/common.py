@@ -216,18 +216,86 @@ _MEASURING_ENTRY_TYPES: frozenset[str] = frozenset({"fact_financial", "fact_stat
 _INTERPRETING_ENTRY_TYPES: frozenset[str] = frozenset({"analysis", "agent_synthesis"})
 
 
+# ── Une DÉRIVATION ANNONCÉE ne se tamponne pas `mesure` (garde du guichet, #78) ────────────────────
+# MESURÉ AVANT D'ÊTRE ÉCRIT, sur le corpus réel du 2026-09-21 : **16 des 161 entries `mesure`
+# courantes** portent un chiffre que personne n'a relevé — le producteur l'a CALCULÉ à partir de
+# chiffres déposés, puis l'a rangé sous `fact_financial` × source officielle, donc sous `mesure` et
+# sous le tier du dépôt. Exemples vérifiés un par un : #385 « capex de croissance ≈ 81,6 MdUSD,
+# estimé PAR DIFFÉRENCE », #355 « NOPAT : 155,237 × 0,8060 = 125,121 », #312 « EN DÉDUISANT la SBC,
+# 1,81–1,93 MdUSD » — celle qui a fondé la réponse #475, supprimée le 2026-09-21.
+#
+# POURQUOI ICI ET PAS PLUS BAS. Le garde d'abord envisagé vivait chez l'analyste (« aucun nombre du
+# verbatim ne peut être absent des entries citées »). Il a été MESURÉ VERT sur le cas qui l'a fait
+# écrire : 1,81 et 1,93 figurent bel et bien dans #312, qui était bel et bien citée. L'analyste
+# n'avait rien inventé — il a recopié fidèlement une pièce qui mentait sur son propre statut. Une
+# garde placée en aval d'un corpus qui ment ne peut pas faire mieux que le corpus (#46 : la faute a
+# un lieu, et ce n'est pas celui où elle se voit).
+#
+# CE QUE ÇA N'EST PAS. Ce n'est pas un jugement sémantique, et surtout pas « le texte contient-il un
+# calcul ? » — indécidable sans modèle, donc interdit dans un producteur pur (#76). C'est strictement
+# « le producteur ANNONCE-T-IL son propre acte arithmétique ? », sur un vocabulaire FERMÉ et versionné.
+# Les seize entries mesurées l'annoncent toutes, en toutes lettres : elles sont honnêtes dans leur
+# prose, c'est le TAMPON qui est faux. La garde lit donc ce que le producteur a lui-même écrit.
+#
+# CALIBRAGE, CONTRE LE CORPUS ET PAS CONTRE UNE INTUITION. Ce vocabulaire rend exactement les 16
+# entries dérivées, **0 faux positif** (9 des 16 relues intégralement, 7 par leur ligne de calcul).
+# ⚠️ Deux motifs ont été ÉCARTÉS après mesure, et le dire est le seul moyen qu'ils ne reviennent pas :
+#   · `retraité` — ne rend que #352, dont le chiffre de tête (résultat net NVDA 29 760 MUSD) est bien
+#     RELEVÉ ; la prose décrit un rapprochement, elle ne fabrique pas le nombre. La rétrograder
+#     retirerait une autorité qu'elle possède (`feedback_faux_rouge_se_creuse`).
+#   · `sur la base de` / `ajustée des` — rendent #313, déjà rendue par `estimée à environ`, et sont
+#     de la prose courante : ils n'ajoutent aucune détection et ouvrent un nid de faux rouges.
+#
+# ⚠️ Un marqueur AJOUTÉ ICI rétrograde du corpus existant. Il se mesure sur la base AVANT d'être
+# écrit (`feedback_ligne_de_base_est_une_mesure`), et la migration qui rejoue la règle le répercute.
+_MARQUEURS_DE_DERIVATION: tuple[str, ...] = (
+    "en déduisant",
+    "on en déduit",
+    "s'en déduit",
+    "par différence",
+    "après déduction",
+    "soit environ",
+    "estimé à environ",
+    "estimée à environ",
+    "estimés à environ",
+    "estimées à environ",
+    "calcul :",
+)
+
+
+def annonce_une_derivation(content: Optional[str]) -> Optional[str]:
+    """Le marqueur par lequel le producteur ANNONCE son propre calcul, ou `None`. Pur, insensible
+    à la casse. DÉTENTEUR UNIQUE de la lecture du vocabulaire (#46).
+
+    Rend le marqueur TROUVÉ, jamais un booléen : le motif de la rétrogradation doit pouvoir le
+    nommer. Une garde qui dit « non » sans dire sur quoi condamne le producteur à deviner, et un
+    producteur qui devine réessaie (#63).
+    """
+    if not content:
+        return None
+    bas = content.lower()
+    return next((m for m in _MARQUEURS_DE_DERIVATION if m in bas), None)
+
+
 def derive_nature(
     *,
     entry_type: str,
     source_type: str,
+    content: Optional[str] = None,
     declared: Optional[str] = None,
 ) -> tuple[str, str]:
     """Nature d'une entry — DÉTENTEUR UNIQUE de la règle (#46). Rend `(nature, motif)`.
 
-    Dérivation déterministe depuis les DEUX entrées qui sont des propriétés de l'entry elle-même
-    (`source_type` · `entry_type`), dans cet ordre de priorité. Aucun producteur ne la
+    Dérivation déterministe depuis les TROIS entrées qui sont des COLONNES de l'entry elle-même
+    (`source_type` · `entry_type` · `content`), dans cet ordre de priorité. Aucun producteur ne la
     ré-implémente : `store_knowledge` l'appelle pour TOUS les sites d'écriture, c'est le seul
     passage obligé des 8 producteurs.
+
+    ⚠️ L'invariant n'a jamais été « trois paramètres », c'est **chaque ingrédient est une colonne
+    stockée de la ligne**, donc la règle est rejouable sur n'importe quelle ligne à n'importe quel
+    instant — c'est la propriété pour laquelle le motif n'est pas persisté, et celle sur laquelle
+    les backfills 034 et 044 s'appuient. `content` la respecte ; `covers` ne la respectait pas, et
+    c'est pour ça qu'il est parti (voir ci-dessous), pas pour son rang dans la signature.
 
     ⚠️ **La branche `covers` a été RETIRÉE le 2026-09-10 (lot 2b, migration 036).** Elle disait :
     « une entry dont TOUS les champs couverts sont de nature dominante `mesure` est une mesure ».
@@ -258,8 +326,24 @@ def derive_nature(
     plancher A, et le requalifier en `mesure` lui accorderait l'autorité de la fiabilité sans
     qu'aucune source ne la porte.
     """
+    marqueur = annonce_une_derivation(content)
+
     if source_type in _NON_MEASURING_SOURCES:
         nature, motif = "interpretation", f"source `{source_type}` : énoncé produit, jamais relevé"
+    elif entry_type in _MEASURING_ENTRY_TYPES and marqueur is not None:
+        # RÉTROGRADATION — resserrement, jamais desserrage : symétrique exact de la règle
+        # `declared` ci-dessous, où seul `evenement` peut être promu. Le tier n'est PAS touché : la
+        # fiabilité est une propriété de la SOURCE, la nature une propriété de l'ASSERTION, et on
+        # ne mélange pas deux axes, fût-ce pour bien faire (#50). Le dépôt reste un dépôt ; c'est la
+        # phrase qu'on en a tirée qui n'est pas un relevé.
+        nature = "interpretation"
+        motif = (
+            f"entry_type `{entry_type}` : producteur déterministe, MAIS le contenu annonce sa "
+            f"propre dérivation (« {marqueur} ») → rétrogradé `interpretation`. Un chiffre calculé "
+            "à partir de chiffres déposés n'est pas relevé : publier le calcul sous le tampon du "
+            "dépôt lui prête une autorité que sa source ne porte pas. Pour publier le calcul, il "
+            "reste lisible et citable — simplement pas comme une mesure."
+        )
     elif entry_type in _MEASURING_ENTRY_TYPES:
         nature, motif = "mesure", f"entry_type `{entry_type}` : producteur déterministe"
     elif entry_type in _INTERPRETING_ENTRY_TYPES:

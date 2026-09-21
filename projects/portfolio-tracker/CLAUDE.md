@@ -245,7 +245,22 @@ vocabulaire fermé à 4 valeurs, index partiel sur les lignes courantes. `framew
 `async with conn.transaction():`, ses deux écritures liées ne sont pas atomiques par elles-mêmes).
 Détail + garde : `check_framework_persist.py` (13/0), `negatif_framework_persist.sh` (6 mutations/0
 échec, zéro résidu vérifié en base réelle).
-Prochaine migration : **041**.
+**Migration 042 = `appariement_cartes`** (carte d'appariement persistable, grain ticker × framework ×
+version — cf. #68/#71).
+**Migration 043 = réconciliation `framework_mandates` contrat↔table** (cf. #77) : `ingredient_id`
+rendu NULLABLE, colonnes `mandat`/`ticker_id`/`statut_avant`/`statut_apres`/`consomme_at`/
+`entry_ids_produits`, origine ouverte à `comite`, CHECK `forme` + CHECK `trace`.
+**Migration 044 = rejeu de `derive_nature` après l'entrée de `content` dans la règle** (garde du
+guichet, #78) : **16 entries requalifiées** `mesure` → `interpretation` (leur prose annonce sa propre
+dérivation). Générateur `_gen_044.py` — il n'écrit **aucune règle en SQL**, il appelle `derive_nature`
+sur un instantané **JSON par ligne** (et non le `psql -tA` des 034/035 : `content` est de la prose
+multi-lignes contenant des `|`) et n'émet que des listes d'ids (#46). ⚠️ `reliability_tier` /
+`reliability_score` **pas touchés** (#50). ⚠️ Sa garde est un **invariant GLOBAL** (`mesure = 213`),
+pas un accusé de réception de son propre UPDATE : la première version comptait les lignes de sa
+propre liste `id IN (…)` **après** les avoir écrites — une garde nourrie de sa propre valeur, donc
+invisible (#70). Éprouvée en négatif AVANT application : jouée seule sur l'état d'avant, elle RAISE
+sur 229.
+Prochaine migration : **045**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -1620,12 +1635,52 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     rien ne compare les nombres du verbatim à ceux de l'entry. **`feedback_garde_structure_pas_sens`
     confirmé sur donnée de production** — les contrôles gardent la STRUCTURE et la RELATION, jamais
     le SENS ; jumeau du défaut canonique #190, famille #42/#45/#47.
-    ⚠️ **Le correctif est de FORME, pas de muscle (#68), et il est EN AMONT** : *un `repondu` ne peut
-    porter aucun nombre absent de ses entries citées* — extraire les numéraux du verbatim, exiger que
-    chacun figure dans au moins une entry citée. Un calcul est alors **forcé** de sortir en
-    `approxime`, avec ses hypothèses écrites et son cran. Muscler le contrôle ② (« la citation
-    soutient-elle l'assertion ? ») aurait demandé un jugement sémantique — c'est-à-dire un appel
-    modèle dans un agent PUR (#76), et une garde dont le faux positif est indiscernable.
+    ⚠️ **Le correctif est de FORME, pas de muscle (#68), et il est EN AMONT.** Muscler le contrôle ②
+    (« la citation soutient-elle l'assertion ? ») aurait demandé un jugement sémantique —
+    c'est-à-dire un appel modèle dans un agent PUR (#76), et une garde dont le faux positif est
+    indiscernable. ⚠️ **MAIS L'ENDROIT ÉCRIT ICI D'ABORD ÉTAIT LE MAUVAIS, et c'est l'enseignement
+    principal de la convention.** Le garde envisagé — *« un `repondu` ne peut porter aucun nombre
+    absent de ses entries citées »* — a été **MESURÉ VERT sur le cas même qui l'a motivé** : 1,81 et
+    1,93 figurent bel et bien dans l'entry #312, qui était bel et bien citée. **Une garde écrite pour
+    un cas et verte sur ce cas est le pire des décors** : elle aurait été livrée, gardée, et
+    parfaitement inutile. C'est `feedback_ligne_de_base_est_une_mesure` appliqué à une SPEC — la
+    difficulté qu'un lot prétend fermer se **re-mesure** avant d'écrire la première ligne.
+    ⚠️ **Le vrai défaut est AU GUICHET D'ENTRÉE (arbitrage utilisateur du 2026-09-21, option B).**
+    L'analyste avait recopié **fidèlement** une pièce qui mentait sur son propre statut : #312 est
+    `fact_financial` × `company_ir_official`, donc `mesure`, donc tier A — et sa dernière phrase est
+    une soustraction. Un producteur qui CALCULE un chiffre à partir de chiffres déposés lui faisait
+    hériter de l'autorité du dépôt. **16 des 161 entries `mesure` courantes étaient dans ce cas**
+    (migration **044**), toutes HONNÊTES dans leur prose — elles écrivent leur calcul en toutes
+    lettres ; seul le tampon était faux. Livré : `derive_nature` rétrograde en `interpretation` quand
+    le `content` **annonce sa propre dérivation**, sur un **vocabulaire fermé de 11 marqueurs**
+    (`annonce_une_derivation` rend le marqueur **TROUVÉ, jamais un booléen** — sans lui le motif ne
+    peut pas le nommer, et un refus qui ne dit pas sur quoi condamne le producteur à deviner, #63) ;
+    `content` transmis depuis **LES DEUX** sites d'appel (`store_knowledge` **et** le
+    `_normalise_entry` du search-worker, qui qualifie AVANT le filtre de plancher — une garde écrite
+    chez son détenteur et jamais atteinte depuis le chemin d'écriture est un décideur sans
+    producteur, #71) ; contrôle **[E0]** neuf dans le pont (`nature_effective` est **DÉRIVÉE**, jamais
+    déclarée — le pendant exact de [C] sur l'axe nature) et **[E]** durci, avec `nature_effective_de`
+    en **détenteur unique** partagé par le pont et `assembler_answer`, qui la tenait **en ligne** : un
+    jumeau qui attendait de diverger (#46). ⚠️ **Le tier n'est PAS touché** : la fiabilité est une
+    propriété de la SOURCE, la nature une propriété de l'ASSERTION — le dépôt reste un dépôt, c'est
+    la phrase qu'on en a tirée qui n'est pas un relevé (#50) ; une mutation du test négatif garde
+    exactement ce non-mélange.
+    ⚠️ **`statuts_admissibles` (#63) reste EXACT après le durcissement, vérifié et non supposé** : sur
+    une question de nature attendue `mesure` le modèle peut toujours ne citer que des `mesure` ; et
+    l'asymétrie tombe **gratuitement** — sur une question d'`interpretation`, un mélange rend
+    `interpretation`, donc les chiffres d'appui restent citables. Un durcissement qui fermerait un
+    statut sans le publier ferait retomber la question en `refus`, c'est-à-dire en silence.
+    ⚠️ **UN VOCABULAIRE FERMÉ NE SE GARDE PAS CONTRE LUI-MÊME (4ᵉ faux vert, forme neuve).** Le
+    parcours jeton par jeton de `check_entry_nature §5bis` est **GÉNÉRÉ depuis
+    `_MARQUEURS_DE_DERIVATION`** : retirer un jeton du détenteur retire **aussi l'assert qui le
+    gardait**, donc la mutation « amputer le vocabulaire » restait VERTE — et l'amputation est
+    exactement la régression à craindre (la garde retamponnerait `mesure` en silence). Ce que le
+    parcours garde réellement est bien plus étroit : qu'aucun jeton ne soit **inatteignable par
+    construction** (une majuscule dans la liste ne matcherait jamais un `content.lower()`). L'ancre
+    non circulaire est le **CORPUS RÉEL** — §7bis relit les ids que la migration 044 requalifie
+    **DEPUIS le fichier** (#46, jamais une liste recopiée dans le check), les confronte au `content`
+    stocké, et exige que la règle les voie toujours. **Question réemployable : cet assert peut-il
+    survivre à la suppression de ce qu'il garde ?**
     ⚠️ **RETRAIT.** La ligne #475 a été **physiquement supprimée** (`DELETE`), les six autres
     conservées. La table est append-only (A1, #64) : A1 trace les **corrections d'analyse**, pas la
     pollution. Une donnée fabriquée laissée en base servirait de « corpus réel » à un test

@@ -70,6 +70,7 @@ from app.agents.v2.frameworks import (
     FrameworkAnswerRefused,
     _plus_faible,
     load_frameworks,
+    nature_effective_de,
     question_profiles,
     valider_pont_framework_answer,
 )
@@ -264,11 +265,17 @@ def statuts_admissibles(
     fonder la réponse condamne au contraire la question au silence — elle ne produit pas de mandat,
     donc elle reste sans réponse à jamais. Les deux sens comptent.
 
-      · `repondu` — admissible seulement si une entry citable porte `nature_attendue` : [E] exige que
-        la nature soit PORTÉE par une source citée, et une nature absente du corpus ne peut pas être
-        citée. ⚠️ On ne filtre PAS le corpus par nature pour autant : [E] demande que la nature
-        attendue soit présente parmi les citations, pas qu'elle soit seule — retirer les `mesure`
-        d'une question d'interprétation priverait la réponse des chiffres qui l'étayent.
+      · `repondu` — admissible seulement si une entry citable porte `nature_attendue` : une nature
+        absente du corpus ne peut pas être citée, donc [E] refuserait tout. ⚠️ On ne filtre PAS le
+        corpus par nature pour autant.
+        ⚠️ [E] a été DURCI le 2026-09-21 (#78) : il compare désormais `nature_effective` — donc, sur
+        une question de `mesure`, il exige que TOUTES les citations soient des mesures. Cette porte
+        reste pourtant EXACTE, et c'est vérifié, pas supposé : le modèle peut toujours choisir de ne
+        citer que des mesures, donc l'existence d'une seule mesure citable suffit à ouvrir
+        `repondu`. Et l'asymétrie tombe juste d'elle-même, sans qu'on l'écrive nulle part : sur une
+        question d'`interpretation`, un mélange rend `nature_effective = interpretation`, qui est
+        précisément la nature attendue — les chiffres qui étayent un jugement restent donc citables,
+        ce que la forme précédente de ce commentaire craignait de perdre.
       · `approxime` — admissible seulement si le cran atteint encore le plancher. La règle du cran a
         un détenteur unique (`derive_synthesis_reliability`, #46) : on l'INTERROGE sur le meilleur
         tier disponible (le modèle maximise en ne citant que ses meilleures sources), on ne la
@@ -512,14 +519,15 @@ def assembler_answer(
     """
     cites = list(dict.fromkeys(brute.cited_entry_ids))  # dédoublonne, ordre conservé
     tiers = [_tier_reel(entries.get(i)) for i in cites]
-    if brute.statut == "approxime":
-        _, rang, _ = derive_synthesis_reliability(tiers)
-        nature = "interpretation"
-    else:
-        rang = _plus_faible(tiers)
-        natures = {str(entries.get(i, {}).get("nature")) for i in cites}
-        nature = natures.pop() if len(natures) == 1 and natures <= {
-            "mesure", "evenement", "interpretation"} else "interpretation"
+    # Les DEUX axes interrogent leur détenteur unique, aucun n'est recopié ici (#46) : le rang via
+    # `_plus_faible` / `derive_synthesis_reliability`, la nature via `nature_effective_de`. Cette
+    # dernière était une expression EN LIGNE jusqu'au 2026-09-21 ; le pont [E] devant appliquer la
+    # même règle, la laisser ici en aurait fait un jumeau (`feedback_correctif_regle_jumeaux`).
+    approx = brute.statut == "approxime"
+    rang = derive_synthesis_reliability(tiers)[1] if approx else _plus_faible(tiers)
+    nature = nature_effective_de(
+        [entries.get(i, {}).get("nature") for i in cites], approximation=approx,
+    )
     return FrameworkAnswer(
         framework_id=framework_id,
         framework_version=framework_version,
@@ -570,6 +578,14 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "pas celles qui en parlent : un état financier qui donne le chiffre vaut citation ; un "
     "commentaire qui le mentionne n'en est pas la source. Si tu ne peux citer qu'un commentaire, "
     "dis-le dans ton `verbatim` — ne fais pas passer le second pour le premier.\n\n"
+    "UN CHIFFRE CALCULÉ N'EST PAS UN CHIFFRE RELEVÉ, MÊME QUAND UNE SOURCE LE PORTE. Certaines "
+    "sources du corpus publient un chiffre qu'elles ont elles-mêmes calculé, et elles le disent "
+    "(« Calcul : … », « estimé par différence », « en déduisant … »). Tu as le droit de t'en "
+    "servir. Mais alors ta réponse est un `approxime`, pas un `repondu` : tu écris la méthode, les "
+    "ingrédients et les hypothèses, et ta réponse descend d'un cran. Un `repondu` ne s'appuie que "
+    "sur ce que quelqu'un a relevé. Ce n'est pas une préférence de style : une réponse qui présente "
+    "un calcul comme un relevé lui prête l'autorité du document dont il est tiré, et un lecteur "
+    "qui la relit six mois plus tard n'a plus aucun moyen de voir la différence.\n\n"
     "TU NE NOTES AUCUNE SOURCE. Tu ne produis ni tier, ni score, ni niveau de confiance, ni "
     "'combien de preuve suffit' : la solidité de ta réponse se DÉDUIT de ce que tu as cité, elle ne "
     "se déclare pas. Tu n'as pas non plus à juger si l'entreprise est un bon investissement : tu "

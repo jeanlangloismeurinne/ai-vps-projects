@@ -250,8 +250,14 @@ def _normalise_entry(
     # dérivation de nature et l'arbitrage du registre, soit deux axes — et on ne les mélange pas,
     # fût-ce en prose (#50). Ce que la note doit dire, `compute_reliability` le dit déjà
     # (« base web_search_reputable=0.65 (tier B) »).
+    # ⚠️ `content` est load-bearing ici, pas décoratif. La nature choisit l'admission du registre
+    # (`nature in s.natures`), donc elle peut changer le `source_type` rendu, donc le tier, donc la
+    # décision du filtre `reliability_min` juste dessous. L'omettre ferait qualifier le worker sur
+    # une nature que `store_knowledge` ne retiendra pas — exactement la divergence que le fait
+    # d'avoir UNE seule fonction était censé rendre impossible (#46).
     source_type, _nature, motif_qualif = qualify(
         source_type=source_type, url=url, ticker_id=req.ticker_id, entry_type=want,
+        content=content,
     )
     logger.debug("search-worker: qualification %s → %s (%s)", url, source_type, motif_qualif)
 
