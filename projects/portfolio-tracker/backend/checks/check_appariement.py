@@ -55,6 +55,7 @@ from app.agents.v2.apparieur import (  # noqa: E402
     LEGENDE_INVENTAIRE,
     AppariementRefuse,
     AppariementSansObjet,
+    _repli_par_ingredient,
     coefficients_choisis,
     concepts_absents,
     concepts_de_la_formule,
@@ -649,5 +650,95 @@ b.check(coefficients_choisis("(Revenues[0] - Revenues[-1]) / Revenues[-1]") == [
 b.check("[-1]" in SRC_APPARIEUR and "Revenues_previous_year" in SRC_APPARIEUR,
         "§11 le prompt ENSEIGNE `Champ[-1]` ET nomme l'invention interdite (`Revenues_previous_year`) "
         ": sans la notation, le modèle ne peut pas exprimer une croissance et la réinvente")
+
+
+# ── §12 LE REFUS PAR INGRÉDIENT (#75) — une bévue sur UN couple, jamais la carte entière ───────────
+# Mesuré sur NVDA (00-REPRISE, 2026-09-19) : entre deux passages IDENTIQUES du modèle, la carte est
+# passée de 13/0 à 8/1 — non sur la même ligne, sur `qf_4.endettement_brut_et_net`, un [W] isolé
+# (`feedback_jugement_modele_instable_entre_passages`). Faute de refus par ingrédient, cette seule
+# bévue coulait TOUTE la carte (les 12 autres lignes, correctes, reculaient vers `poste_retenu()`
+# avec elles). `_repli_par_ingredient` est pure et hors-ligne : elle se rejoue sans modèle, ce qui
+# la place dans la frontière gratuite de ce fichier au même titre que le reste du pont.
+print("\n§12 LE REFUS PAR INGRÉDIENT (#75) — une bévue sur UN couple, jamais la carte entière")
+
+VALIDE_1 = ligne(**CAPITAL_EMPLOYE)                                            # qf_1.capital_employe
+VALIDE_2 = ligne(question_id="qf_2", ingredient_id="marge_op", statut="exact",
+                 concepts=["OperatingIncomeLoss"])
+MAUVAIS_V = ligne(question_id="qf_3", ingredient_id="stocks", statut="exact",
+                  concepts=["InventoryNetCurrent"])                  # absent de INVENTAIRE_NVDA
+HORS_PLAN = ligne(question_id="qf_9", ingredient_id="exotique", statut="exact",
+                  concepts=["Assets"])                          # couple ni traduit ni inobtenable
+DOUBLON = ligne(question_id="qf_1", ingredient_id="capital_employe", statut="exact",
+                concepts=["Assets"])                              # même couple que VALIDE_1
+
+TRADUITS_12 = {("qf_1", "capital_employe"), ("qf_2", "marge_op"), ("qf_3", "stocks"),
+               ("qf_4", "omis")}                              # qf_4.omis n'a AUCUNE ligne ci-dessous
+INOBTENABLES_12: set = set()
+
+items12, mandats12 = _repli_par_ingredient(
+    [VALIDE_1, VALIDE_2, MAUVAIS_V, HORS_PLAN, DOUBLON], INVENTAIRE_NVDA,
+    traduits=TRADUITS_12, inobtenables=INOBTENABLES_12)
+couples12 = {(it.question_id, it.ingredient_id) for it in items12}
+par_couple12 = {(it.question_id, it.ingredient_id): it for it in items12}
+
+b.check(couples12 == TRADUITS_12,
+        "§12 la carte repliée porte EXACTEMENT les couples `traduit` — ni un [S] hors plan, ni un "
+        "doublon, ni un [T] manquant : chacun couvert une fois et une seule")
+b.check(len(couples12) == len(items12),
+        "§12 zéro doublon d'identité — le critère net du jalon (00-REPRISE, 2026-09-19)")
+
+vi1 = par_couple12[("qf_1", "capital_employe")]
+b.check(vi1.statut == "approximation" and vi1.concepts == CAPITAL_EMPLOYE["concepts"],
+        "§12 un ingrédient VALIDE traverse le repli SANS modification (ni dégradé, ni écarté)")
+vi2 = par_couple12[("qf_2", "marge_op")]
+b.check(vi2.statut == "exact" and vi2.concepts == ["OperatingIncomeLoss"],
+        "§12 un second ingrédient valide survit à côté du premier — les autres ne se perdent pas "
+        "quand l'un d'eux est mauvais")
+
+mv = par_couple12[("qf_3", "stocks")]
+b.check(mv.statut == "indisponible",
+        "§12 [V] un concept que l'émetteur NE DÉPOSE PAS dégrade SA ligne en `indisponible`, "
+        "jamais la carte")
+b.check(not mv.concepts and mv.motif is not None and "NE DÉPOSE PAS" in mv.motif,
+        "§12 la ligne dégradée ne garde AUCUN concept inventé — le motif porte le refus du pont, "
+        "mot pour mot, pas une reformulation")
+
+om = par_couple12[("qf_4", "omis")]
+b.check(om.statut == "indisponible" and om.motif is not None and "omis" in om.motif,
+        "§12 [T] un couple `traduit` jamais écrit par le modèle devient un `indisponible` NOMMÉ — "
+        "un trou survivant au tour de réparation n'est pas un trou silencieux (#44/#54)")
+
+b.check(("qf_9", "exotique") not in couples12,
+        "§12 [S] un couple hors du plan (ni `traduit` ni `inobtenable`) est écarté — il ne mandate "
+        "rien, le plan ne l'a jamais demandé")
+b.check(len(mandats12) == 4,
+        "§12 quatre motifs comptés : [V] la ligne dégradée, [S] la ligne écartée, [T] la ligne "
+        "omise, et le doublon écarté — le décompte est la seule mesure du taux de bévue résiduel")
+
+accepte("§12 la carte repliée reste CONSTRUCTIBLE (le contrat de carte ne revoit aucun doublon)",
+        lambda: carte(*items12))
+
+PLAN_12 = CollectionPlan(
+    ticker_id="NVDA", framework_id="qualite_financiere", framework_version="v3.0.0",
+    archetype="compounder_rentable",
+    items=[CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit",
+                              metrique="ingrédient de test", source_pressentie="10-K",
+                              ancre="clôture de l'exercice")
+           for (q, i) in sorted(TRADUITS_12)])
+accepte("§12 la carte repliée passe le pont ENTIER [U]/[S]/[T]/[V]/[W]/[X] contre son plan — le "
+        "repli n'achète pas une carte à moitié valide, il en produit une VRAIMENT valide",
+        lambda: valider_pont_appariement(carte(*items12), INVENTAIRE_NVDA, plan=PLAN_12))
+
+# [S] une ligne apparié sur un couple `inobtenable` du plan est écartée elle aussi (pas mandatée :
+# le plan a déjà tranché qu'aucune source ne la produit).
+INOBT = ligne(question_id="qf_5", ingredient_id="covenant", statut="exact", concepts=["Liabilities"])
+items12b, mandats12b = _repli_par_ingredient(
+    [VALIDE_1, INOBT], INVENTAIRE_NVDA,
+    traduits={("qf_1", "capital_employe")}, inobtenables={("qf_5", "covenant")})
+b.check(("qf_5", "covenant") not in {(it.question_id, it.ingredient_id) for it in items12b},
+        "§12 [S] un couple `inobtenable` au plan est écarté du repli, jamais mandaté en double "
+        "d'un motif que le plan porte déjà")
+b.check(any("qf_5" in m for m in mandats12b),
+        "§12 l'écart [S] reste NOMMÉ dans les mandats, même s'il ne produit aucune ligne")
 
 sys.exit(b.summary())

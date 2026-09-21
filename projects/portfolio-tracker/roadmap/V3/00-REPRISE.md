@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-18
+updated: 2026-09-19
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
@@ -28,10 +28,19 @@ role: >
   est LEVÉ le **2026-09-19 (convention #74)** : la grammaire exprime un **décalage d'exercice
   `Concept[-1]`** (l'offset porte sur le nom, pas un concept neuf — #57 appliqué à la formule), et le
   vrai modèle exprime enfin une croissance en tier A (MSFT `qf_3`, RVMD `qf_7`). Suite `run_all.sh` =
-  **2661 assertions, 0 échec sur 35 scripts**. **Reste au lot 3** : (b) le **refus PAR INGRÉDIENT**
-  (rendu URGENT par la même mesure — une bévue de modèle sur 1 des 30 ingrédients coule encore la
-  carte NVDA entière) puis maillon 5 (réconciliation à 0/0). Détail dans le **▶ PROCHAIN JALON**
-  ci-dessous, ne pas dupliquer ici.
+  **2661 assertions, 0 échec sur 35 scripts**. **Le geste (b) — LE REFUS PAR INGRÉDIENT — est livré
+  le 2026-09-19** (convention **#75**) : une bévue sur UN couple sort désormais CE couple en
+  `indisponible`/mandat, jamais la carte entière. **Chantier A CLOS.** Suite `run_all.sh` =
+  **2674 assertions, 0 échec sur 35 scripts**. Mesuré contre le vrai modèle
+  (`tools/acceptation_apparieur.sh`, NVDA/MSFT/RVMD, **13 critère(s) OK / 0 échec**) : MSFT
+  reproduit EXACTEMENT la bévue qui avait coulé la carte entre deux passages de #74
+  (`qf_4.endettement_brut_et_net`, `[W]`) et la carte est quand même **acceptée** (1 réparation), le
+  couple fautif mandaté au web. **LOT 4 CLOS le 2026-09-21** : l'AGENT manager (2026-09-20, #76) ET
+  ses DONNÉES (2026-09-21, **#77** — migration **043** appliquée, `manager_persist.py`, T8 de bout en
+  bout 6/0). **Arbitrage utilisateur** : l'avis du manager se **recalcule** à la lecture, seul le
+  MANDAT est persisté (#53/#54). Suite `run_all.sh` = **2726 assertions, 0 échec sur 37 scripts**.
+  **PROCHAIN = lot 5** (mémo projeté + réconciliation à 0/0 + wiring de consommation des mandats).
+  Détail dans le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -503,19 +512,56 @@ lot 1 ; les tables viennent en dernier.
 > 19/0, **suite 2661/0 sur 35 scripts**. **MESURÉ contre le vrai modèle** (`tools/acceptation_
 > apparieur.sh`) : MSFT `qf_3` → `(RevenueFromContractWithCustomerExcludingAssessedTax[0] - […][-1])
 > / […][-1]` accepté tier A ; RVMD `qf_7` → `Ncf[0]+[-1]+[-2]+[-3]`. Le blocage MESURÉ est retiré.
-> 🔜 **(b) LE REFUS PAR INGRÉDIENT — PROCHAIN, et la même mesure l'a rendu URGENT.** Entre deux
-> passages de l'acceptation, la carte NVDA est passée de ACCEPTÉE (13/0) à REFUSÉE (8/1) — **non sur
-> la croissance** (le geste (a) l'a réglée), mais sur un AUTRE ingrédient (`qf_4.endettement_brut_et_
-> net`, un `[W]` « concept déclaré non employé », bévue de modèle). C'est
+> ✅ **(b) LE REFUS PAR INGRÉDIENT — LIVRÉ le 2026-09-19** (convention **#75**, aucune migration).
+> Entre deux passages de l'acceptation, la carte NVDA était passée de ACCEPTÉE (13/0) à REFUSÉE (8/1)
+> — **non sur la croissance** (le geste (a) l'avait réglée), mais sur un AUTRE ingrédient
+> (`qf_4.endettement_brut_et_net`, un `[W]` « concept déclaré non employé », bévue de modèle). C'était
 > `feedback_jugement_modele_instable_entre_passages` × le tout-ou-rien de `apparier()` : une seule
-> bévue sur l'un des 30 ingrédients coule la carte ENTIÈRE. Geste : un `AppariementRefuse` sur un
-> ingrédient sort en `indisponible`/mandat, les 29 autres survivent (#25/#44 transposé du couple à la
-> carte). Critère net en 3 lignes : « un ingrédient refusé sort en mandat/web, les 20+ autres
-> survivent ; NVDA/MSFT produisent une carte non vide ; zéro doublon d'identité ». ⚠️ Ne PAS re-durcir
-> le prompt (`feedback_jugement_modele_instable_entre_passages`) — la garde est en code.
+> bévue sur l'un des 30 ingrédients coulait la carte ENTIÈRE. Geste livré : un `AppariementRefuse`
+> décidable PER-COUPLE (`[S]`/`[T]`/`[V]`/`[W]`/`[X]`, jamais `[U]` card-structural) sort en
+> `indisponible`/mandat via `_repli_par_ingredient`, les autres survivent (#25/#44/#54/#67 transposé du
+> couple à la carte). `check_appariement.py §12` (128/0), `negatif_appariement.sh` (45 mutations/0),
+> **suite 2674/0 sur 35 scripts**. **MESURÉ contre le vrai modèle** (`tools/acceptation_apparieur.sh`,
+> NVDA/MSFT/RVMD, 13 critère(s) OK / 0 échec) : MSFT a reproduit EXACTEMENT la bévue
+> `qf_4.endettement_brut_et_net [W]` (+ une seconde sur `qf_5.decomposition_marge_rotation [W]`) et la
+> carte a quand même été **acceptée** (1 réparation), les deux couples fautifs mandatés au web. ⚠️ Le
+> prompt n'a PAS été re-durci (`feedback_jugement_modele_instable_entre_passages`) — la garde est en
+> code. **Chantier A (robustesse apparieur) CLOS.**
 >
-> **(C) — maillon 5 : réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`, + le nettoyage
-> des « faux au sens v3 » hérités de RVMD (#190 ROIC fabriqué, #191, #186 — jugement humain).
+> **(C) — LE MANAGER (§10 lot 4), AGENT LIVRÉ le 2026-09-20** (convention **#76**, aucune migration).
+> ⚠️ **Cadrage rectifié en début de lot** : le REPRISE nommait « maillon 5 réconciliation » comme
+> seul chantier ouvert, mais §10 impose le **manager (lot 4) AVANT** le mémo projeté (lot 5), et la
+> réconciliation à 0/0 dépend de frameworks *acquittés* — donc du manager. De plus le 0/0 complet
+> exige un framework par bloc de mémo (2 pilotes / 13 questions contre 36 feuilles) : c'est l'**état
+> terminal** de la roadmap, pas un lot. Arbitrage utilisateur : **faire le manager**.
+> Livré : le contrat du manager existait déjà (lot 1 — `ControlesManager`/`ManagerVerdict`/
+> `FrameworkMandate`), donc ce lot livre l'**AGENT** (ordre contrat→agent→données). `agents/v2/
+> manager.py` : quatre contrôles **déterministes** (aucun appel modèle), chacun re-vérifiant ce que
+> le contrat **ne peut pas** juger (#37) et donc chacun `ko` **atteignable** — ① question inapplicable
+> répondue (T4/#190), ② citation hors du corpus *fourni au manager* (#28), ③ rang non dégradé, ④
+> substitut vers sa propre question (détenteur `motif_substitut_hors_sujet` **extrait du pont** et
+> partagé, #46). Un renvoi PRODUIT un `FrameworkMandate` `ouvert`/`manager_renvoi` (ferme l'Écart B) ;
+> les questions applicables sans réponse deviennent des mandats (contrôle ①, niveau framework).
+> `check_manager.py` **35/0** + `negatif_manager.sh` **7 mutations / 0**, suite **2709/0 sur 36
+> scripts**. Détail : convention **#76**.
+>
+> **✅ DONNÉES DU MANAGER — LIVRÉES le 2026-09-21 (convention #77)**, ce qui CLÔT le lot 4. Migration
+> **043** appliquée (ADDITIVE), `manager_persist.py`, `check_manager_persist` **17/0**, négatif
+> **5/0**, **acceptation T8 6/0**. **Arbitrage utilisateur (2026-09-21)** : l'avis du manager NE SE
+> PERSISTE PAS — il se **recalcule** à la lecture (le manager est pur, gratuit ; un verdict figé ne
+> peut pas signaler qu'il a vieilli, #53/#54) ; seul l'EFFET durable, le **mandat** et son cycle de
+> vie ouvert→servi, est archivé. Le libellé « verdict rangé sur la réponse » est ainsi corrigé.
+> La 043 réconcilie `FrameworkMandate` (par-question, `mandat` exécutable, `ticker_id`) et la table
+> `framework_mandates` (039, par-ingrédient) : `ingredient_id` NULLABLE + colonnes de cycle de vie +
+> `comite` + deux CHECK (`forme`, `trace`) qui redisent le contrat — un `ingredient_id` bidon serait
+> un faux (#76). T8 mesuré de bout en bout sur le défaut canonique #190 (ROIC fabriqué RVMD →
+> renvoi → mandat consommable → servi, `repondu`→`sans_objet`). Détail : archive 2026-09-21, #77.
+>
+> **▶ PROCHAIN — §10 lot 5 : le mémo projeté / réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`
+> (toujours `5 ok / 2 FAIL — 14 orphelins + 3 inutilisés`, requêté le 2026-09-20), **+** le nettoyage
+> des « faux au sens v3 » hérités de RVMD (#190 ROIC fabriqué, #191, #186 — **jugement humain**), **+**
+> le wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker (consommer
+> réellement les mandats manager). Migration prévue : **044**.
 >
 > ⚠️ **La ligne de base se REQUÊTE, toujours.** Ce lot a démarré en trouvant NVDA 15 / MSFT 15 /
 > RVMD 43 actives là où « Où on en est » disait 52/51/27, et **aucun plan NVDA/MSFT** — le prérequis
@@ -537,7 +583,7 @@ lot 1 ; les tables viennent en dernier.
 | 2b | **Archivage et dévocabularisation** : `archive_v2` (rien de détruit) · `knowledge_entries` amaigrie de **8 colonnes** (7 à zéro écriture **+ `covers`**) · `question_coverage` créée, portée par framework **et version** · `entry_type`/`report_type` dévocabularisés | **036** |
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
-| 4 | Le **manager** et ses 4 contrôles · le renvoi qui produit un mandat consommé par le **collecteur** | 041 |
+| 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
 | 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 042 |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
@@ -592,18 +638,22 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite : `bash checks/run_all.sh` = TOUT VERT (2661 assertions sur 35 scripts, 0 échec, mesuré le
-  2026-09-19 après la grammaire temporelle #74 ; 2634 au maillon 4).** `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
+- **Suite : `bash checks/run_all.sh` = TOUT VERT (2726 assertions sur 37 scripts, 0 échec, mesuré le
+  2026-09-21 après les données du manager #77 ; 2709/36 à l'agent manager #76).** `check_manager`
+  **35/0** hors ligne (le manager est pur — aucun appel modèle) + `negatif_manager.sh` 7/7 ;
+  `check_manager_persist` **17/0** (base réelle, ROLLBACK) + `negatif_manager_persist.sh` 5/0.
+  `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
   requiert plus `CHECK_DB_URL`) ; `check_entry_nature` **88/0** (§7 = invariant #51, cf. frontmatter).
-  Seuls `check_entry_nature §7` et `check_collecte_persist` gardent le montage réseau `coolify` +
-  `CHECK_DB_URL`. `run_all.sh`
+  Les checks « état persisté » gardent le montage réseau `coolify` + `CHECK_DB_URL` (`check_entry_nature §7`,
+  `check_collecte_persist`, `check_framework_persist`, `check_appariement_persist`, `check_manager_persist`). `run_all.sh`
   porte les montages `/contract_frozen` (sans lui 4 scripts sous-comptent en sortant à 0) **et
   `/roadmap`** (sans lui `check_frameworks_definitions` §7 sort en échec au lieu de se sauter).
   ⚠️ **Ne pas le réécrire dans `/tmp`** : la version jetable sous-comptait 47 assertions en silence
   (`CHANTIER_OUTILLAGE_DEV.md` §27).
-- **Migrations appliquées jusqu'à 042** (036/037/038 lot 2b, **039** lot 2c — tables du plan de
+- **Migrations appliquées jusqu'à 043** (036/037/038 lot 2b, **039** lot 2c — tables du plan de
   collecte, **040** lot 3 maillon 2 — `framework_answers`/`framework_dispenses`, **041** `poste` sur
-  l'item de plan, **042** lot 3 maillon 4bis — `appariement_cartes`). Prochaine = **043**.
+  l'item de plan, **042** lot 3 maillon 4bis — `appariement_cartes`, **043** lot 4 données —
+  réconciliation `framework_mandates` pour le mandat manager). Prochaine = **044**.
 - **Déploiement : le chemin nominal est repassé** (`compose-deploy.sh`, un seul appel) après quatre
   sessions de refus du classifieur. Le repli en commandes séparées reste documenté au §12 de
   `CHANTIER_OUTILLAGE_DEV.md`, mais **re-tester le nominal en premier** à chaque session.
@@ -892,10 +942,12 @@ justes, c'est le *fait énoncé* qui était faux.
 > montre que la formulation n'est pas en cause. L'ingrédient (#33) est **orphelin**, donc hors du
 > corpus du champ — *le barreau 4 ne compense pas une limite de la recherche, il compense un défaut
 > de rangement*, et c'est le rangement que la v3 corrige.
-> 🚦 **LOT 2c TERMINÉ (2026-09-12). LOT 3 EN COURS (ouvert 2026-09-13) : maillons 1, 2, 3, 4bis et 4
-> livrés. PROCHAIN PAS = LOT 3, MAILLON 4ter = la collecte réelle **PERSISTÉE** sur NVDA/MSFT/RVMD
-> (§5.3) — le maillon 4 l'a rendue exécutable, mais son acceptation tourne en **ROLLBACK**, donc
-> rien n'est en base.** Lot 2c : contrat du plan + pont (T1bis) + traducteur +
+> 🚦 **LOT 3 TERMINÉ. LOT 4 CLOS (2026-09-21) : agent manager (#76) + ses DONNÉES (#77, migration 043,
+> `manager_persist.py`, acceptation T8 6/0). Arbitrage utilisateur : l'avis du manager se RECALCULE à
+> la lecture, seul le MANDAT est persisté (#53/#54). PROCHAIN PAS = LOT 5 = le `research_memo` devient
+> la PROJECTION des frameworks acquittés + réconciliation à 0/0 + le wiring de consommation des
+> mandats manager dans la boucle live du search-worker. Migration prévue : 044.** Historique — Lot 2c :
+> contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
 > #61/#62). Lot 3 : ✅ **maillon 1 = l'analyste** (`agents/v2/analyste.py`, trois états nommés,

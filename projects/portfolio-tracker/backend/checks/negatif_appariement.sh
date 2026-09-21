@@ -124,6 +124,17 @@ mutations=(
 # La notation N'EST PLUS ENSEIGNÉE au modèle : sans elle, il ne peut pas exprimer une croissance et
 # réinvente `Revenues_previous_year`. C'est une garde sur l'ÉNONCÉ du prompt (comme la limite de §9).
 "$PONT¦(\`Revenues_previous_year\` n'existe¦(\`RevenuePrecedent\` n'existe¦le prompt ENSEIGNE"
+# ── §12 Le refus PAR INGRÉDIENT (#75) — chaque mutation désarme UNE des cinq décisions de
+# `_repli_par_ingredient`, jamais la boucle entière : c'est le point qui a coulé NVDA (00-REPRISE,
+# 2026-09-19), donc c'est lui que ces mutations rejouent, une décision à la fois.
+# ⚠️ `retenues` est un DICT keyé par couple : sans le garde-fou, une réécriture ne produit jamais
+# de doublon DANS LA LISTE rendue (le dict absorbe silencieusement) — elle produit un GAGNANT
+# différent. C'est `vi1` (le premier occurrence, VALIDE_1) qui se ferait remplacer par DOUBLON.
+"$PONT¦        if couple in retenues:¦        if False:¦traverse le repli SANS modification"
+"$PONT¦        if couple in inobtenables or couple not in traduits:¦        if False:¦EXACTEMENT les couples"
+"$PONT¦            mandats.append(motif)¦            pass¦quatre motifs comptés"
+"$PONT¦                      f\"web plutôt que de faire échouer la carte entière : {motif}\")¦                      f\"web plutôt que de faire échouer la carte entière\")¦porte le refus du pont, mot pour mot"
+"$PONT¦            motif=\"omis par le modèle : aucune ligne produite pour cet ingrédient après le tour de \"¦            motif=\"MOTIF NEUTRE : aucune ligne produite pour cet ingrédient après le tour de \"¦trou survivant au tour de réparation"
 )
 
 source "$(dirname "$0")/_negatif.sh"

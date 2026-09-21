@@ -673,7 +673,7 @@ def _installer(*, facts_ok=True, en_base=None, symbole_ok=True):
         _journal["apparier"] += 1
         return _mod_apparieur.Appariement(
             run=_RunFactice(), carte=_carte_stockee(_mod.dernier_depot_vu(facts)),
-            refus_repares=[])
+            refus_repares=[], mandats=[])
     _mod.apparier = _apparier
 
     async def _persister(conn, carte):

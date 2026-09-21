@@ -1484,6 +1484,119 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     NVDA/MSFT produisent une carte non vide ; zéro doublon d'identité »), prochain lot. ⚠️ Ne PAS
     re-durcir le prompt : la garde est en code, ce que le geste (a) vient de faire.
 
+75. **Une bévue sur UN ingrédient ne fait plus tomber la carte ENTIÈRE — elle se REPLIE, ingrédient
+    par ingrédient (V3, lot 3 maillon 4bis, geste (b) — 2026-09-19, `agents/v2/apparieur.py`)** :
+    #74 avait mesuré, entre deux passages de l'acceptation réelle, que la carte NVDA basculait de
+    ACCEPTÉE (13/0) à REFUSÉE (8/1) — non sur la croissance (réglée par #74), mais sur un AUTRE
+    ingrédient (`qf_4.endettement_brut_et_net`, un `[W]` « concept déclaré non employé »). C'est
+    `feedback_jugement_modele_instable_entre_passages` × le tout-ou-rien de `apparier()` : un second
+    refus, après le tour de réparation, faisait encore LEVER sur la carte entière — la même
+    transposition que #25/#44/#54 (couple → carte) déjà faite ailleurs, restée non faite ici.
+    **`_repli_par_ingredient`** couvre exactement les invariants **décidables par couple** — `[S]`
+    (hors plan), `[T]` (omis, même après réparation), `[V]`/`[W]`/`[X]` (le pont par ligne) — jamais
+    `[U]` (ticker/framework/version), qui est structurellement un problème de la carte ENTIÈRE et
+    reste hors de son périmètre. Un couple fautif sort en `indisponible` avec le motif du pont
+    **mot pour mot** (mandaté au web plutôt que de faire échouer la carte) ; les couples valides
+    traversent SANS modification ; un doublon d'écriture retient la **première** occurrence
+    (`retenues` est un dict keyé par couple — il empêche déjà tout doublon dans la sortie, la garde
+    décide seulement **qui gagne**, pas *si* un doublon fuit). Après le repli, l'appel défensif à
+    `valider_pont_appariement()` qui suit ne devrait plus jamais lever : `[U]` est trivial (les
+    champs d'en-tête viennent du `plan`), `[S]`/`[T]` sont garantis par construction, `[V]`/`[W]`/`[X]`
+    sont vacuously vrais sur un `indisponible` synthétisé (`concepts=[]`). Mesuré, pas supposé
+    (§12 de `check_appariement.py`).
+    ⚠️ **`mandats` est DISTINCT de `refus_repares`** : un refus RÉPARÉ est un tour de modèle qui a
+    corrigé la carte ENTIÈRE ; un mandat est un INGRÉDIENT que le second tour n'a pas su corriger et
+    qui sort seul en `indisponible` pendant que le reste de la carte survit — deux compteurs, deux
+    causes, jamais fusionnés (#54).
+    Détail + garde : `check_appariement.py` **§12** (128/0 sur la suite du fichier) —
+    `negatif_appariement.sh` **45 mutations / 0 échec**, dont une leçon de harnais réutilisable : la
+    mutation visant le garde-fou de dédoublonnage attendait d'abord « zéro doublon d'identité »
+    (structurellement impossible à violer, `retenues` étant un dict) et rougissait sur un AUTRE
+    assert (« traverse le repli SANS modification ») — le vrai rôle de la garde est de décider QUI
+    gagne entre deux occurrences du même couple, pas d'empêcher une fuite de doublon dans la liste
+    rendue (la structure de données s'en charge déjà). Suite complète **2674/0 sur 35 scripts**.
+
+76. **Un contrôle qui re-vérifie ce que le contrat GARANTIT n'a pas de `ko` atteignable — le manager
+    re-vérifie ce que le contrat ne PEUT PAS juger (V3, lot 4, `agents/v2/manager.py`)** : le manager
+    est le garant de la SORTIE d'un framework (§3), et ses quatre contrôles (complétude · fondation ·
+    honnêteté de l'approximation · non-substitution) sont **déterministes** — aucun jugement
+    d'investissement, donc **aucun appel modèle**, toute la décision se joue hors ligne (frontière
+    gratuite). Le piège en l'écrivant : la moitié de ces contrôles est **déjà garantie par la
+    construction Pydantic** (`FrameworkAnswer._le_statut_porte_exactement_ses_blocs` interdit une
+    approximation présentée comme mesure ; `SansObjet` impose un motif) — les re-tester donnerait des
+    gardes **qu'aucune mutation ne peut faire rougir**, le 5ᵉ faux vert (#63). La règle : le manager
+    ne contrôle QUE ce que le contrat ne peut pas voir, parce qu'un contrat valide un OBJET, jamais la
+    cohérence entre trois (#37) — la réponse, **le corpus tel qu'il est MAINTENANT**, et le
+    référentiel. D'où quatre `ko` chacun atteignable par un `FrameworkAnswer` VALIDE rendu incohérent
+    avec son contexte : ① une question **inapplicable** pour l'archétype répondue autrement que
+    `sans_objet` (le défaut T4, entry #190) ; ② une citation hors du corpus **fourni au manager** (une
+    entry supersédée depuis l'analyse — le grounding re-vérifié, #28) ; ③ une approximation dont le
+    rang **n'est pas dégradé** d'un cran ; ④ un substitut pointant sa **propre** question. ⚠️ **Une
+    garde déléguée s'éprouve chez son détenteur** (#46/#72) : le contrôle ④ EST
+    `frameworks.motif_substitut_hors_sujet`, extrait du pont (control F) et partagé — le test négatif
+    le mute dans `frameworks.py`, pas dans le manager, sinon il mesurerait le câblage et croirait
+    mesurer la règle. De même ② appelle `validate_grounding`, ③ appelle `derive_synthesis_reliability`
+    (la règle du cran), l'applicabilité vient de `questions_applicables` — aucun détenteur recopié,
+    aucune table de tier écrite dans le module (asserté par AST + grep sur le code dépouillé).
+    ⚠️ **Le manager ne réécrit ni ne promeut (§3.3), et c'est STRUCTUREL** : le module ne construit
+    aucune `Reponse`/`Fondation`, donc il n'a **nulle part** où écrire une correction ou un rang — la
+    garantie tient à ce qu'il n'a pas le champ, pas à un `if`. ⚠️ **Ce lot livre l'AGENT, pas la
+    donnée** : le manager rend une `Decision` (les 4 contrôles + acquitte/renvoie + la spécification du
+    mandat), pas un `ManagerVerdict` complet — ce dernier porte `mandat_de_recherche_id`, un entier
+    assigné par la BASE. La persistance et l'acceptation **T8** (un renvoi crée un mandat consommable,
+    le re-run change le statut) sont le maillon suivant. ⚠️ **Écart contrat↔table à résoudre en
+    migration 043** : le contrat `FrameworkMandate` (manager/comité) est **par question**, sans
+    `ingredient_id`, et porte un `mandat` exécutable ; la table `framework_mandates` (039, conçue pour
+    les lignes `inobtenable` du traducteur) a `ingredient_id NOT NULL` et pas de colonne `mandat`. Ne
+    pas persister le mandat manager sans réconcilier les deux (un `ingredient_id` bidon serait un faux).
+    Détail + garde : `check_manager.py` **35/0** (§1 chaque `ko` atteignable, §3 détenteurs par AST,
+    §5 garantie structurelle) + `negatif_manager.sh` **7 mutations / 0** (les 4 contrôles + l'Écart B +
+    les questions manquantes + une dispense ignorée), suite complète **2709/0 sur 36 scripts**.
+
+77. **Un avis DÉTERMINISTE ne se stocke pas, il se RECALCULE — on ne persiste que son EFFET durable,
+    le mandat, et son cycle de vie (V3, lot 4 données, migration 043, `agents/v2/manager_persist.py`)** :
+    la couche données du manager avait deux choses candidates au stockage — l'AVIS (4 contrôles +
+    acquitté/renvoyé) et le MANDAT qu'un renvoi produit. **Arbitrage utilisateur du 2026-09-21** : on
+    ne stocke QUE le mandat. L'avis se recalcule à la lecture en rejouant `reviser_framework` (la
+    fonction de production) contre le corpus tel qu'il est MAINTENANT — le manager étant PUR (aucun
+    appel modèle), c'est gratuit. C'est exactement la doctrine déjà acquise pour l'actualité (#53) et
+    la porte de complétude (#54) : un verdict figé à l'écriture ne peut pas signaler qu'il a vieilli,
+    il validerait un dossier dont une source a été supersédée depuis (cause n°2 du #50). Le libellé du
+    fichier de reprise (« le verdict rangé sur la réponse ») annonçait un tampon durable ; l'arbitrage
+    l'a corrigé. Le `ManagerVerdict` complet (avec `mandat_de_recherche_id`) s'ASSEMBLE néanmoins à la
+    lecture (`assemble_verdict`), quand le mandat a son id — mais il n'est jamais écrit.
+    ⚠️ **La réconciliation contrat↔table (#76), en une migration ADDITIVE** : la table
+    `framework_mandates` (039) est née pour le TRADUCTEUR (par-INGRÉDIENT, `ingredient_id NOT NULL`,
+    pas de texte de mandat) ; le contrat `FrameworkMandate` (manager/comité) est par-QUESTION, porte un
+    `mandat` exécutable + un `ticker_id`, et un cycle de vie. 043 rend `ingredient_id` NULLABLE, ajoute
+    `mandat`/`ticker_id`/`statut_avant`/`statut_apres`/`consomme_at`/`entry_ids_produits`, ouvre
+    l'origine à `comite`, et pose DEUX CHECK qui redisent le contrat : `forme` (par origine — un
+    `ingredient_id` bidon sur un mandat manager serait un faux, #76) et `trace` (projection EXACTE de
+    `_un_etat_porte_exactement_sa_trace` : un `ouvert` n'a pas de suite, un `servi` porte l'avant,
+    l'après et l'instant). Les 16 lignes collecteur existantes satisfont les deux — aucune n'est
+    rejetée. Éprouvé en négatif : `check_manager_persist.py §5` fait REFUSER par la base chaque forme
+    interdite et ACCEPTER `comite`.
+    ⚠️ **NOMMAGE** : le contrat appelle le cycle de vie `etat`, la colonne 039 l'appelle `statut` (et
+    l'index partiel la lit) ; la persistance mappe `etat`↔`statut` — deux nomenclatures d'accord
+    restent deux nomenclatures (#46), comme `framework_answers` garde `rang_degrade`.
+    ⚠️ **VERSION** : le contrat `FrameworkMandate` ne porte pas `framework_version` (par-question,
+    transient), mais la table l'exige (sans elle un mandat survit à sa question — écart V10, argument
+    de #64). Une revue est pour UNE version : `persist_review` la reçoit une fois
+    (`fichier.schema_version`) et l'écrit sur chaque mandat. Si un jour un pont re-valide la version
+    d'un mandat, le champ devra monter sur le contrat (comme #64 l'a fait pour `FrameworkAnswer`).
+    ⚠️ **IDEMPOTENCE PAR QUESTION, différente du collecteur** : un mandat collecteur est un fait
+    d'historique DATÉ (deux échecs successifs = deux faits, `collecte_persist` ne dédoublonne pas) ;
+    un mandat MANAGER est une requête PERMANENTE par question — re-réviser ne doit pas empiler des
+    ouverts identiques. `persist_review` n'insère que si aucun mandat manager/comité OUVERT n'existe
+    déjà sur `(ticker, framework, version, question)`.
+    Détail + garde : `check_manager_persist.py` **17/0** (contre la vraie base, ROLLBACK, zéro résidu)
+    + `negatif_manager_persist.sh` **5 mutations / 0** (idempotence, non-re-consommation, entries
+    produites, fuite d'un servi dans `read_open_mandates`, dernier rempart CHECK) + l'**acceptation
+    T8** `tools/acceptation_manager.{py,sh}` **6/0** (le défaut canonique #190 : un ROIC fabriqué sur
+    RVMD pré-revenus → renvoi ① → mandat consommable → servi → **statut_avant `repondu` ≠ statut_apres
+    `sans_objet`** = le re-run change le statut, ≥ 1 cas de bout en bout ; la réponse corrigée est
+    acquittée sans rouvrir de mandat). Suite complète **2726/0 sur 37 scripts**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 

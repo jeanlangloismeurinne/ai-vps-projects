@@ -8,6 +8,77 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-21 — spec v3, **lot 4, données : LA PERSISTANCE DU MANDAT DU MANAGER (T8)**
+
+Convention **#77**. **Migration 043** (ADDITIVE, appliquée). Rien de déployé (le chantier v3 tourne
+par outils, pas par l'API live). Suite complète **2726/0 sur 37 scripts** (était 2709/36).
+
+### L'arbitrage qui a décidé de la migration : que persiste-t-on d'un avis déterministe ?
+
+Le lot 4 avait livré l'AGENT manager le 2026-09-20 (#76). Restait sa couche données. Deux candidats
+au stockage : l'AVIS du manager (4 contrôles + acquitté/renvoyé) et le MANDAT qu'un renvoi produit.
+Le fichier de reprise annonçait « le verdict rangé sur la réponse » — un tampon durable. **Posé à
+l'utilisateur en termes métier** (le comité d'investissement : appose-t-on un tampon, ou re-joue-t-on
+la checklist à l'ouverture ?), **arbitrage : on recalcule**. Le manager est PUR (aucun appel modèle),
+donc rejouer `reviser_framework` à la lecture est gratuit ; et un avis figé à l'écriture ne peut pas
+signaler qu'il a vieilli — c'est la cause n°2 du #50, déjà tranchée pour l'actualité (#53) et la porte
+(#54). Conséquence : **aucune colonne de verdict** sur `framework_answers`. On ne persiste que le
+mandat et son cycle de vie ; `assemble_verdict` reconstitue le `ManagerVerdict` complet à la lecture,
+quand le mandat a son id, sans jamais l'écrire.
+
+### La réconciliation contrat↔table (#76), en une migration ADDITIVE
+
+La table `framework_mandates` (039) était née pour le TRADUCTEUR — par-INGRÉDIENT (`ingredient_id NOT
+NULL`), sans texte de mandat. Le contrat `FrameworkMandate` (manager/comité) est par-QUESTION, porte
+un `mandat` exécutable + un `ticker_id`, et un cycle de vie ouvert→servi (T8). **043** : `ingredient_id`
+NULLABLE ; ajout de `mandat`/`ticker_id`/`statut_avant`/`statut_apres`/`consomme_at`/`entry_ids_produits`
+(NOT NULL DEFAULT '{}') ; origine ouverte à `comite` ; DEUX CHECK qui redisent le contrat — `forme`
+(par origine : un `ingredient_id` bidon sur un mandat manager serait un faux, #76) et `trace`
+(projection EXACTE de `FrameworkMandate._un_etat_porte_exactement_sa_trace`). Les **16 lignes
+collecteur existantes** satisfont les deux — aucune rejetée (vérifié : count 16 après ADD CONSTRAINT).
+
+Trois décisions de nommage/portée, chacune contre une tentation plus simple et fausse :
+- **`etat` (contrat) ↔ `statut` (colonne 039 + index partiel)** : on garde le nom de la colonne, la
+  persistance mappe. Deux nomenclatures d'accord restent deux nomenclatures (#46), comme
+  `framework_answers` garde `rang_degrade`.
+- **`framework_version` reste HORS du contrat**, fourni à `persist_review` par la revue
+  (`fichier.schema_version`) : une revue est pour UNE version, la table l'exige (écart V10, #64). Si
+  un pont re-valide un jour la version d'un mandat, le champ montera sur le contrat.
+- **Idempotence PAR QUESTION**, différente du collecteur : un mandat collecteur est un fait daté (pas
+  de dédoublonnage) ; un mandat manager est une requête PERMANENTE — `persist_review` n'insère que si
+  aucun mandat manager/comité OUVERT n'existe déjà sur `(ticker, framework, version, question)`.
+
+### Éprouvé — la base refuse, le négatif discrimine, T8 de bout en bout
+
+- `check_manager_persist.py` **17/0** contre la vraie base (ROLLBACK, zéro résidu) : §1 écriture
+  par-question, §2 idempotence, §3 `serve_mandate` ouvert→servi (et pas de re-consommation), §4
+  `read_open_mandates` n'exclut ni le servi ni le collecteur, §5 dernier rempart (la base REFUSE
+  chaque forme/trace interdite et ACCEPTE `comite`).
+- `negatif_manager_persist.sh` **5 mutations / 0**, chacune rouge sur son assert nommé (idempotence
+  cassée, non-re-consommation cassée, entries non écrites, un servi qui fuit dans `read_open`, et un
+  CHECK rendu licite → la base accepte → `_rejette` rougit).
+- **Acceptation T8** `tools/acceptation_manager.{py,sh}` **6/0** — le défaut canonique #190 : un ROIC
+  fabriqué sur RVMD pré-revenus (`qf_1` `sans_objet` pour l'archétype) → renvoi manager (contrôle ①
+  completude ko) → mandat consommable persisté `ouvert` → `serve_mandate` → **statut_avant `repondu`
+  ≠ statut_apres `sans_objet`** (le re-run change le statut, ≥ 1 cas de bout en bout) → la réponse
+  corrigée est ACQUITTÉE et n'ouvre aucun nouveau mandat. Déterministe, $0, ROLLBACK.
+
+### La garde d'architecture, en filet
+
+Le premier `run_all.sh` post-livraison a rougi sur `check_architecture` (**garde orpheline** #65 :
+un `check_*.py` sans cible dans un `ARCHITECTURE.md`). Corrigé en citant `manager_persist.py` et le
+trio de gardes dans `agents/v2/ARCHITECTURE.md` — la capacité n'est livrée que quand son garant est
+adossé. Puis suite rejouée en entier (jamais le delta) : **2726/0**.
+
+### Reste au chantier
+
+Lot 4 CLOS (agent #76 + données #77). **PROCHAIN = lot 5** (spec §10) : le `research_memo` devient
+la PROJECTION des frameworks acquittés + réconciliation à 0/0 (`tools/reconcilier_vocabulaires.py`,
+toujours 5 ok / 2 FAIL) + le nettoyage des « faux au sens v3 » hérités de RVMD (#190/#191/#186,
+jugement humain). Migration prévue : **044**. Le wiring de `serve_mandate`/`read_open_mandates` dans
+la boucle live du search-worker (consommer réellement les mandats manager) est un maillon du lot 5,
+pas de celui-ci.
+
 ## 2026-09-19 — spec v3, **lot 3, maillon 4ter : LA COLLECTE RÉELLE PERSISTÉE (NVDA / MSFT / RVMD)**
 
 Convention **#73**. **Aucune migration.** Rien de déployé (le chantier v3 tourne par outils, pas par

@@ -704,10 +704,10 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
     row_id = await persister_carte(conn, res.carte)
     logger.info(
         "carte %s/%s %s RECONSTRUITE et persistée (#%d) — %d ligne(s), depot_vu=%s, "
-        "%d réparation(s), $%.4f",
+        "%d réparation(s), %d mandat(s) par ingrédient (#75), $%.4f",
         plan.ticker_id, plan.framework_id, plan.framework_version, row_id,
         len(res.carte.items), res.carte.dernier_depot_vu, len(res.refus_repares),
-        getattr(res.run, "cost_usd", 0.0) or 0.0)
+        len(res.mandats), getattr(res.run, "cost_usd", 0.0) or 0.0)
     return CarteCourante(_statuts(res.carte), "reconstruite", depot_courant,
                          getattr(res.run, "cost_usd", 0.0) or 0.0,
                          consignes=_consignes(res.carte), inventaire=inventaire)

@@ -602,10 +602,17 @@ class AppariementSortie(Strict):
 class Appariement(NamedTuple):
     """Ce qu'un appariement rend : la carte VALIDÉE, la télémétrie, et les refus qu'il a fallu
     réparer. Les refus sont rendus plutôt que jetés : c'est la seule mesure du taux d'invention, et
-    un échec qui ne se compte pas est un échec qu'on ne cherche pas à réduire."""
+    un échec qui ne se compte pas est un échec qu'on ne cherche pas à réduire.
+
+    `mandats` (#75) est DISTINCT de `refus_repares` : un refus RÉPARÉ est un tour de modèle qui a
+    corrigé la carte ENTIÈRE ; un mandat est un INGRÉDIENT que le second tour n'a pas su corriger et
+    qui est sorti seul en `indisponible`, pendant que le reste de la carte survit. Les confondre
+    masquerait la mesure que ce geste existe pour rendre lisible : combien de lignes se perdent
+    encore À L'UNITÉ, une fois le taux de réparation de carte déjà comptabilisé."""
     run: AgentRunResult
     carte: AppariementCarte
     refus_repares: list[str]
+    mandats: list[str]
 
 
 def mots_du_concept(concept: str) -> set[str]:
@@ -803,6 +810,69 @@ def message_reparation(refus: str, absents: list[str], inventaire: Collection[st
     )
 
 
+def _repli_par_ingredient(
+    items: list[AppariementItem], depose: set[str], *,
+    traduits: set[tuple[str, str]], inobtenables: set[tuple[str, str]],
+) -> tuple[list[AppariementItem], list[str]]:
+    """LE REFUS PAR INGRÉDIENT (#75) : une bévue sur UN couple sort CE couple en `indisponible`,
+    jamais la carte entière. Transposition de #25/#44 — l'état du milieu (une ligne dégradée et
+    NOMMÉE) remplace le choix entre mentir (garder un [V]/[W]/[X] fautif) et renoncer (perdre les
+    N-1 AUTRES lignes, valides, avec elle).
+
+    Mesuré sur NVDA (00-REPRISE, 2026-09-19) : entre deux passages identiques, la carte est passée
+    de 13/0 à 8/1 — non sur la même ligne, sur `qf_4.endettement_brut_et_net`, un [W] isolé
+    (`feedback_jugement_modele_instable_entre_passages`). Le remède n'est PAS un troisième tour de
+    modèle (le prompt ne se durcit pas contre une instabilité, #59) : c'est le CODE qui absorbe la
+    bévue au lieu de la laisser couler les 29 autres.
+
+    N'appelée QU'APRÈS le seul tour de réparation (#40 : « un seul tour » reste le signal mesuré,
+    ce geste ne l'affaiblit pas — il évite seulement qu'un reliquat de ce tour rase tout).
+
+    Ce qui se décide COUPLE PAR COUPLE, et rien de plus :
+      [S] un item hors du plan (`inobtenable`, ou couple inconnu) — écarté, il ne mandate rien : le
+          plan ne le demande pas ;
+      [V]/[W]/[X] un item qui contredit le réel — dégradé en `indisponible`, motif = le refus ;
+      [T] un couple `traduit` sans AUCUNE ligne, même après le tour de réparation — fabriqué en
+          `indisponible`, plutôt que de laisser l'omission couler la carte (#44/#54 : un trou n'est
+          jamais silencieux).
+    [U] (mauvais ticker/framework/version) reste HORS de cette fonction : ce n'est jamais la faute
+    d'UN ingrédient, c'est la carte entière qui décrit autre chose.
+    """
+    mandats: list[str] = []
+    retenues: dict[tuple[str, str], AppariementItem] = {}
+    for it in items:
+        couple = (it.question_id, it.ingredient_id)
+        if couple in retenues:
+            mandats.append(f"[dédoublonnage] {couple} apparié plusieurs fois : seule la première "
+                            "ligne est retenue, les suivantes sont écartées")
+            continue
+        if couple in inobtenables or couple not in traduits:
+            mandats.append(f"[S] {couple} ne correspond à aucune ligne `traduit` du plan — ligne "
+                            "écartée (elle ne mandate rien : le plan ne la demande pas)")
+            continue
+        try:
+            _valider_ligne(it, depose)
+            retenues[couple] = it
+        except AppariementRefuse as e:
+            motif = str(e)
+            retenues[couple] = AppariementItem(
+                question_id=it.question_id, ingredient_id=it.ingredient_id,
+                statut="indisponible",
+                motif=f"appariement refusé après vérification contre le dépôt réel, mandaté au "
+                      f"web plutôt que de faire échouer la carte entière : {motif}")
+            mandats.append(motif)
+
+    # [T] un trou survivant au tour de réparation reste un trou NOMMÉ, jamais une omission muette.
+    for couple in sorted(traduits - retenues.keys()):
+        retenues[couple] = AppariementItem(
+            question_id=couple[0], ingredient_id=couple[1], statut="indisponible",
+            motif="omis par le modèle : aucune ligne produite pour cet ingrédient après le tour de "
+                  "réparation — mandaté au web plutôt que de faire échouer la carte entière")
+        mandats.append(f"[T] {couple} omis par le modèle, même après réparation")
+
+    return [retenues[c] for c in sorted(retenues)], mandats
+
+
 async def _resolve_apparieur_agent() -> ResolvedAgent:
     """Réutilise provider + modèle de l'ingestion-agent (config en DB, source de vérité), avec le
     prompt système de l'APPARIEUR. Même montage que le traducteur et la synthèse (#54) : le prompt de
@@ -845,11 +915,19 @@ async def apparier(
     table ; (3) le modèle produit les LIGNES ; (4) le CODE pose l'en-tête et construit la carte ;
     (5) le pont contre le RÉEL — et un refus ouvre UN tour de réparation, pas plus.
 
-    Pourquoi un seul tour : le nombre de réparations est le SIGNAL qu'on mesure (taux d'invention de
-    noms). En autoriser plusieurs le diluerait jusqu'à ce que « ça finit par passer » remplace « ça
-    passe », et masquerait exactement ce que l'étape 2a doit chiffrer avant de durcir quoi que ce
-    soit. Un second refus lève : une carte à moitié valide ferait router au web des ingrédients dont
-    on croirait avoir vérifié l'appariement.
+    Pourquoi un seul tour DE MODÈLE : le nombre de réparations est le SIGNAL qu'on mesure (taux
+    d'invention de noms). En autoriser plusieurs le diluerait jusqu'à ce que « ça finit par passer »
+    remplace « ça passe », et masquerait exactement ce que l'étape 2a doit chiffrer avant de durcir
+    quoi que ce soit.
+
+    Un second refus ne LÈVE plus (#75) : il REPLIE, ingrédient par ingrédient
+    (`_repli_par_ingredient`). Mesuré sur NVDA (00-REPRISE, 2026-09-19), une seule bévue de modèle
+    sur l'un des 30 ingrédients — une seule fois sur deux passages IDENTIQUES
+    (`feedback_jugement_modele_instable_entre_passages`) — faisait échouer la carte ENTIÈRE et
+    reculer les 29 autres lignes, déjà correctes, vers `poste_retenu()`. Le remède n'est PAS un
+    troisième tour de modèle : c'est le CODE qui absorbe la bévue résiduelle en sortant CE couple
+    seul en `indisponible`, motivé, pendant que le reste de la carte survit — la même transposition
+    du couple à la carte que #25/#44.
     """
     contexte = contexte_apparieur(plan, facts)          # (1) lève AppariementSansObjet, sans dépense
     depot = dernier_depot_vu(facts)                     # (1) idem : une carte non datable est inutile
@@ -857,6 +935,12 @@ async def apparier(
     message = message_apparieur(contexte, inventaire_texte,
                                 derniere_periode=derniere_periode_vue(facts))
     agent = agent or await _resolve_apparieur_agent()
+    # Pour le repli du second tour (#75) : ce que le plan a dit chercher / avoir renoncé à chercher,
+    # calculé une fois, hors-ligne — même détenteur que les invariants [S]/[T] du pont.
+    traduits = {(it.question_id, it.ingredient_id)
+                for it in plan.items if it.statut == "traduit"}
+    inobtenables = {(it.question_id, it.ingredient_id)
+                    for it in plan.items if it.statut == "inobtenable"}
 
     def construire(items: list[AppariementItem]) -> AppariementCarte:
         """(4) L'en-tête est un fait de la requête, pas un jugement de modèle : le code le pose."""
@@ -876,7 +960,7 @@ async def apparier(
     try:
         carte = construire(run.parsed.items)
         valider_pont_appariement(carte, facts.keys(), plan=plan)                    # (5)
-        return Appariement(run=run, carte=carte, refus_repares=refus_repares)
+        return Appariement(run=run, carte=carte, refus_repares=refus_repares, mandats=[])
     except (AppariementRefuse, ValidationError) as premier_refus:
         # Un `ValidationError` ici ne vient PAS du contrat de ligne (le runner l'a déjà réparé) : il
         # vient du validateur de la CARTE — un ingrédient apparié deux fois. Même traitement, parce
@@ -894,6 +978,13 @@ async def apparier(
         {"role": "user", "content": message_reparation(motif, absents, facts.keys())},
     ]
     run2 = _cumuler(run, await run_json_agent(agent, convo, AppariementSortie, json_object=False))
-    carte = construire(run2.parsed.items)
-    valider_pont_appariement(carte, facts.keys(), plan=plan)  # un second refus LÈVE, il ne dégrade pas
-    return Appariement(run=run2, carte=carte, refus_repares=refus_repares)
+
+    # (5bis) #75 : le second refus ne fait plus tomber la carte — il REPLIE, ingrédient par
+    # ingrédient. `_repli_par_ingredient` ne gère que [S]/[T]/[V]/[W]/[X] (tout ce qui se décide
+    # couple par couple) ; l'appel à `valider_pont_appariement` qui suit reste la garde de [U] et
+    # une confirmation défensive — il ne devrait plus jamais lever après un repli complet.
+    items2, mandats = _repli_par_ingredient(
+        run2.parsed.items, set(facts.keys()), traduits=traduits, inobtenables=inobtenables)
+    carte = construire(items2)
+    valider_pont_appariement(carte, facts.keys(), plan=plan)
+    return Appariement(run=run2, carte=carte, refus_repares=refus_repares, mandats=mandats)

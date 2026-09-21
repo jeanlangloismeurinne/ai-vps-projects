@@ -338,18 +338,34 @@ def valider_pont_framework_answer(
                 "autres réponses de la même question — l'écran la montre, et rien ne la range")
 
     # F. un substitut pointe la réponse d'une AUTRE question.
-    if answer.sans_objet is not None and answer.sans_objet.substitut_answer_id is not None:
-        cible = (autres_reponses or {}).get(answer.sans_objet.substitut_answer_id)
-        if cible is None:
-            raise FrameworkAnswerRefused(
-                f"`substitut_answer_id` = {answer.sans_objet.substitut_answer_id} ne désigne "
+    motif_substitut = motif_substitut_hors_sujet(answer, autres_reponses)
+    if motif_substitut is not None:
+        raise FrameworkAnswerRefused(motif_substitut)
+
+
+def motif_substitut_hors_sujet(
+    answer: FrameworkAnswer,
+    autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
+) -> Optional[str]:
+    """Le contrôle ④ « substitut » — DÉTENTEUR UNIQUE, partagé par le pont (control F) et le manager.
+
+    Retourne un motif si le substitut d'un `sans_objet` est inouvrable ou pointe la MÊME question ;
+    `None` si tout va bien. Le pont le `raise`, le manager en fait un contrôle `ko` — deux emplois,
+    une règle (#46). La recopier ferait diverger le message du pont de celui du manager au premier
+    correctif, et un lecteur croirait à deux contrôles là où il n'y en a qu'un.
+    """
+    if answer.sans_objet is None or answer.sans_objet.substitut_answer_id is None:
+        return None
+    cible = (autres_reponses or {}).get(answer.sans_objet.substitut_answer_id)
+    if cible is None:
+        return (f"`substitut_answer_id` = {answer.sans_objet.substitut_answer_id} ne désigne "
                 "aucune réponse fournie : un substitut qu'on ne peut pas ouvrir n'est pas un "
                 "substitut, c'est une promesse")
-        if cible.question_id == answer.question_id:
-            raise FrameworkAnswerRefused(
-                f"le substitut de `{answer.question_id}` est une réponse à `{answer.question_id}` "
+    if cible.question_id == answer.question_id:
+        return (f"le substitut de `{answer.question_id}` est une réponse à `{answer.question_id}` "
                 "elle-même : un hors-sujet qui se cite en substitut republie la question qu'il "
                 "vient de déclarer sans objet (contrôle ④, §3.2)")
+    return None
 
 
 def servir_answer(
