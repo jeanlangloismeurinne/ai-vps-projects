@@ -8,6 +8,142 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-21 (2) — spec v3, **PREMIER PASSAGE RÉEL DE LA CHAÎNE DES SIX AGENTS**
+
+Convention **#78**. Aucune migration, aucun déploiement. Deux fichiers neufs et versionnés :
+`tools/executer_chaine.py` + `tools/executer_chaine.sh`. **Ils écrivent en production, sans
+ROLLBACK, et c'est le but** — un mécanisme prouvé en transaction n'a jamais tourné.
+
+### Pourquoi ce passage
+
+Les six agents (traducteur → collecteur → apparieur → analyste → manager → mandats) étaient tous
+livrés et gardés par des checks, et **aucun code d'`app/` ne les appelait**. `collecte_executor`,
+`analyste` et `framework_persist` avaient zéro appelant. La conséquence se lisait dans
+l'acceptation : six critères sur huit rouges **sur zéro ligne**, jamais sur une mauvaise valeur, et
+T8 vert à 6/0 **sous `ROLLBACK`** — vrai, et muet sur le réel. C'est #71 : un décideur sans
+producteur ne décide jamais, et sa garde reste verte.
+
+Autorisation utilisateur explicite : *« Tu peux faire tourner en réel, il faut tester […] si on se
+rend compte que c'est faux alors il faut effectivement retirer et corriger le système en amont
+avant de réessayer »*, puis *« je veux un test complet pour qu'on puisse identifier toutes les
+difficultés »* — d'où la chaîne entière, maillon 1 (collecte) inclus.
+
+### Ligne de base, requêtée avant le lot
+
+`framework_answers` **0** · `framework_mandates` **16** (tous collecteur, **0 manager**) · RVMD **53**
+entries courantes · 3 plans · 1 carte. (`feedback_ligne_de_base_est_une_mesure` — le lot précédent
+avait démarré sur des chiffres de mémoire faux, on ne recommence pas.)
+
+### Frontière gratuite avant la dépense
+
+`acceptation_analyste.sh --admissibilite` sur RVMD × `pre_revenus` prédisait : seules qf_4, qf_6,
+qf_7 applicables ; qf_6 ne peut sortir qu'en `approxime` (aucune entry citable ne porte la nature
+`interpretation`) ; qf_4 et qf_7 peuvent être `repondu`. **Le passage réel a confirmé au mot près.**
+
+### Le passage
+
+    plan #78 · carte fraiche (dépôt 2026-08-05, 14 lignes) · 0 appel apparieur
+    14 lignes de plan → 7 liens + 7 mandats collecteur
+    corpus fourni : 40 entries sur 57 (PLAFONNÉ)
+    7 réponses · sans_objet 4 · repondu 2 · approxime 1 · 0 refus · ids 469-475
+    manager : 7 acquittements, 4 contrôles au vert chacun · 0 mandat
+    coût traducteur $0.00132138 · apparieur $0
+
+469 qf_1 `sans_objet` · 470 qf_2 `sans_objet`→qf_7 · 471 qf_3 `sans_objet` · 472 qf_5 `sans_objet` ·
+473 qf_4 `repondu` A/mesure · 474 qf_6 `approxime` A-/interpretation · 475 qf_7 `repondu` A/mesure.
+
+### Le défaut — tous les nombres justes, le fait faux
+
+`qf_7` (#475) : « […] la guidance de dépenses opérationnelles **en trésorerie** pour FY2026 est de
+**1,81 à 1,93 MdUSD** », cite [279, 311, 308, 312].
+
+L'entry **#312** dit : « guidance de dépenses opérationnelles **GAAP** pour l'exercice 2026 complet :
+**2,1 à 2,2 MdUSD**, incluant une estimation de rémunération en actions non-cash de **270 à
+290 MUSD** ». L'analyste a calculé 2,1 − 0,29 = 1,81 et 2,2 − 0,27 = 1,93, et a présenté le résultat
+comme une guidance **citée**. Balayage du corpus sur « 1,81 » / « 1,93 » / « cash opex » /
+« dépenses opérationnelles en trésorerie » : seules #312 (GAAP 2,1–2,2) et #448 (consensus **EPS**
+Zacks 1,93 USD/action, sans rapport). **Cette guidance n'existe pas.**
+
+Trois marqueurs auraient dû virer, aucun n'a viré : le **statut** (`repondu` au lieu d'`approxime`),
+la **nature** (`mesure` pour un calcul), le **rang** (A, sans cran). L'appariement bas×haut
+(guidance basse × SBC haute) est en plus un choix discrétionnaire non déclaré.
+
+Le manager a acquitté **correctement** : #312 *est* dans le corpus fourni et *est* citée, le rang
+n'avait pas à être dégradé pour un `repondu`, la question est applicable, aucun substitut. Les
+quatre contrôles gardent la **structure** et la **relation** — jamais le **sens**
+(`feedback_garde_structure_pas_sens`, confirmé ici sur donnée de production). Jumeau du défaut
+canonique #190, famille #42/#45/#47.
+
+La conclusion (« autonomie longue », ~2 ans dans les deux lectures) est **vraie quoi qu'il arrive** :
+c'est exactement ce qui rend le défaut invisible (#46).
+
+**Retrait.** `DELETE FROM framework_answers WHERE id = 475`, les six autres conservées. La table est
+append-only (A1, #64) et une correction d'analyse doit y passer par `superseded_by` — mais ceci
+n'est pas une correction d'analyse, c'est une **pollution** : une donnée fabriquée qui servirait de
+« corpus réel » à un test d'acceptation. `feedback_fixture_pollue_le_reel` (douze jours déjà payés
+sur ce chantier). Recomptage après retrait : **6**, aucun `qf_7` actif.
+
+**Correctif décidé pour le lot suivant** (arbitrage utilisateur) : *un `repondu` ne peut porter aucun
+nombre absent de ses entries citées*. Extraire les numéraux du verbatim, exiger que chacun figure
+dans au moins une entry citée. C'est le geste **#68** — changer la FORME de ce qui est acceptable
+plutôt que muscler une garde sémantique : un calcul est alors *forcé* de sortir en `approxime`, avec
+ses hypothèses écrites et son cran. L'alternative (« la citation soutient-elle l'assertion ? »)
+demanderait un jugement, donc un appel modèle dans un agent **pur** (#76), et une garde dont le faux
+positif serait indiscernable.
+
+### Les trois autres difficultés (mesurées, non corrigées)
+
+1. **Le collecteur est aveugle au corpus déjà détenu.** 4 des 7 mandats collecteur sont de **faux
+   manques** : `qf_4 echeancier_de_la_dette` (#281 existe et est citée), `qf_4 clauses_de_sauvegarde`
+   (#298, #342), `qf_6 politique_de_capitalisation` (#292), `qf_6 elements_non_recurrents` (#304,
+   #305). Coût web inutile, et une boucle vivante les ré-essaierait sans fin. ⚠️ Le correctif doit
+   clefer sur la **ligne de plan** (métrique/source/ancre) : le collecteur est aveugle à la question
+   **par construction** (#58), on ne peut pas lui rendre la vue par là.
+2. **#280 et #296 portent la même identité** (« dette totale RVMD au 2026-06-30 = 487,43 MUSD »),
+   toutes deux `superseded_by IS NULL`, toutes deux `content_structured->>'metric'` NULL et
+   `poste_kind` NULL → **non clefables par un lecteur** (#55/F16), donc `_current_fact_ids` ne peut
+   en superséder aucune. **Pré-existant**, pas produit par ce passage. Elles sont d'accord
+   aujourd'hui — d'où l'invisibilité (#46). Backfill dans la lignée de 035, candidat **044**.
+3. **Corpus plafonné 40/57**, tri `source_date DESC NULLS LAST, id DESC` : 17 entries invisibles à
+   l'analyste sans rien qui garantisse qu'elles étaient hors sujet. La troncature est DITE (le tool
+   l'imprime « PLAFONNÉ »), elle n'est pas instrumentée.
+
+### Ce qui s'est révélé SAIN (et vérifié comme tel, pas supposé)
+
+- Le chien de garde **#73** a coupé exactement une ligne web à 180 s sur RVMD — comme mesuré au lot 4ter.
+- Le refus `AssetImpairmentCharges` s'est reproduit **mot pour mot** comme le résidu de **#72**
+  l'annonçait (fractions d'exercice = propriété du dépôt, pas de la formule).
+- `long_term_debt_current` non fondé est **juste** : la convertible échoit en 2033.
+- La carte a été relue `fraiche` avec **zéro appel modèle** — l'état de #71 fonctionne.
+- **qf_4 et qf_6 sont fidèles ligne à ligne.** Chaque chiffre retrouvé dans son entry : 500 M$ de
+  principal / 487,43 M$ de valeur comptable (#280), 750 M$ non tirés (#300), 3 937,969 M$ =
+  815,435 + 3 122,534 (#279), « ne contient pas de covenants financiers » (#298), 644,4 M$ de perte
+  nette (#295), 151,0 M$ de warrants EQRx (#304), 23,8 M$ d'intérêts (#305), R&D passée en charges
+  (#292), aucun rapprochement non-GAAP publié (#294/#295), « at least 12 months » (#311).
+
+C'est la **première preuve réelle** que la chaîne produit — et la démonstration, sur la même sortie,
+que son verdict ne se lit pas dans son code de retour.
+
+### L'outillage
+
+`tools/executer_chaine.sh` : réseau `coolify`, dépôt monté **en lecture seule** dans une instance
+**neuve** de l'image de `portfolio-backend` (jamais dans le conteneur lui-même, qui porte du code
+possiblement antérieur), `--env-file checks/env.checks --env-file .env` dans **cet ordre** (env.checks
+porte une `DATABASE_URL` bidon que le vrai `.env` doit écraser). `"$@"` load-bearing : sans lui
+`--sans-collecte` — le passage sans dépense traducteur/web — serait inatteignable sans retaper le
+`docker run` (`feedback_frontiere_gratuite_avant_depense_modele`). L'invocation EST une partie du
+test, a fortiori quand elle écrit en base.
+
+`tools/executer_chaine.py` refuse `DATABASE_URL`/`DEEPINFRA_API_KEY` manquantes **avant la première
+écriture** (#40 — le découvrir au maillon 2 laisserait un plan et des entries à demi écrits ; c'est
+d'ailleurs le `TypeError: init_pool() missing 1 required positional argument` de la première
+tentative qui l'a imposé, résolu en lisant comment `acceptation_analyste.py` ouvre son pool plutôt
+qu'en devinant). Il clôt sur l'**INVENTAIRE NOMMÉ** de ses écrits, ids compris — ce n'est pas de la
+décoration, c'est **la clef de retrait**, et c'est elle qui a permis le `DELETE` de #475.
+
+Et il clôt aussi sur l'avertissement qui a cadré toute la vérification : **« LE VERDICT EST À LA
+LECTURE, pas au code de sortie. »** Ce passage est sorti en **exit 0** sur une réponse fausse.
+
 ## 2026-09-21 — spec v3, **lot 4, données : LA PERSISTANCE DU MANDAT DU MANAGER (T8)**
 
 Convention **#77**. **Migration 043** (ADDITIVE, appliquée). Rien de déployé (le chantier v3 tourne

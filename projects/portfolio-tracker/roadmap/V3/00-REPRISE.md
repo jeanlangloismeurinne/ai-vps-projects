@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-19
+updated: 2026-09-21
 project: portfolio-tracker
 role: >
   Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
@@ -39,8 +39,13 @@ role: >
   ses DONNÉES (2026-09-21, **#77** — migration **043** appliquée, `manager_persist.py`, T8 de bout en
   bout 6/0). **Arbitrage utilisateur** : l'avis du manager se **recalcule** à la lecture, seul le
   MANDAT est persisté (#53/#54). Suite `run_all.sh` = **2726 assertions, 0 échec sur 37 scripts**.
-  **PROCHAIN = lot 5** (mémo projeté + réconciliation à 0/0 + wiring de consommation des mandats).
-  Détail dans le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
+  **PREMIER PASSAGE RÉEL DE LA CHAÎNE le 2026-09-21** (convention **#78**,
+  `tools/executer_chaine.{py,sh}`, il écrit en prod sans ROLLBACK) : RVMD × `qualite_financiere` ×
+  `pre_revenus` de bout en bout, 7 réponses persistées, 7 acquittements — **et un `repondu` portant
+  un chiffre CALCULÉ (1,81–1,93 MdUSD) absent de toute entry citée, acquitté par les quatre
+  contrôles**. Ligne #475 supprimée (pollution, pas correction). **PROCHAIN = le garde #78** (« un
+  `repondu` ne peut porter aucun nombre absent de ses entries citées », correctif de FORME #68),
+  puis le lot 5. Détail dans le **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
   ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
   plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
   [[project_entry_nature_gate_invariant]].
@@ -564,11 +569,55 @@ lot 1 ; les tables viennent en dernier.
 > un faux (#76). T8 mesuré de bout en bout sur le défaut canonique #190 (ROIC fabriqué RVMD →
 > renvoi → mandat consommable → servi, `repondu`→`sans_objet`). Détail : archive 2026-09-21, #77.
 >
-> **▶ PROCHAIN — §10 lot 5 : le mémo projeté / réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`
-> (toujours `5 ok / 2 FAIL — 14 orphelins + 3 inutilisés`, requêté le 2026-09-20), **+** le nettoyage
-> des « faux au sens v3 » hérités de RVMD (#190 ROIC fabriqué, #191, #186 — **jugement humain**), **+**
-> le wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker (consommer
-> réellement les mandats manager). Migration prévue : **044**.
+> **✅ PREMIER PASSAGE RÉEL DE LA CHAÎNE — 2026-09-21 (convention #78)**, `tools/executer_chaine.{py,sh}`
+> (versionnés, ils ÉCRIVENT EN PROD, sans ROLLBACK, et c'est le but). Les six agents existaient,
+> validés hors ligne, et **personne ne les appelait** (#71). `RVMD × qualite_financiere × pre_revenus`
+> est allé de bout en bout contre le vrai modèle et la vraie base : plan #78, carte relue `fraiche`
+> (**0 appel apparieur**), corpus **40/57 (PLAFONNÉ)**, **7 réponses** (4 `sans_objet`, 2 `repondu`,
+> 1 `approxime`, **0 refus**), ids 469-475, **7 acquittements / 0 mandat manager**, traducteur
+> $0,0013. La frontière gratuite avait prédit **exactement** ce résultat
+> (`acceptation_analyste.sh --admissibilite`).
+> ⚠️ **UN DÉFAUT, et c'est le plus important du chantier** : `qf_7` (#475) citait une « guidance de
+> dépenses opérationnelles **en trésorerie** 1,81–1,93 MdUSD » **qui n'existe nulle part** — l'analyste
+> avait soustrait la SBC de la guidance **GAAP** 2,1–2,2 de l'entry #312 et présenté le calcul comme
+> une citation. Statut `repondu`, nature `mesure`, rang **A**, aucun cran. Les quatre contrôles du
+> manager l'ont acquitté **correctement** : #312 est bien dans le corpus et bien citée ; rien ne compare
+> les NOMBRES du verbatim à ceux de l'entry. `feedback_garde_structure_pas_sens` **confirmé en
+> production**. La conclusion (« autonomie longue ») reste vraie dans les deux lectures — c'est ce qui
+> le rend invisible (#46). **Ligne #475 physiquement SUPPRIMÉE** (pollution, pas correction d'analyse :
+> A1 trace les secondes, `feedback_fixture_pollue_le_reel` proscrit les premières) ; recomptage
+> `framework_answers` = **6**. Les six survivantes sont fidèles ligne à ligne, vérifiées chiffre par
+> chiffre contre leurs entries — **première preuve réelle que la chaîne produit**.
+>
+> **▶ PROCHAIN — §10 lot 5, mais LE GARDE #78 D'ABORD.**
+> **(1) Un `repondu` ne peut porter aucun nombre absent de ses entries citées** — extraire les numéraux
+> du verbatim, exiger que chacun figure dans au moins une entry citée. Correctif **de FORME** (#68) :
+> un calcul est alors *forcé* de sortir en `approxime`, avec ses hypothèses écrites et son cran ;
+> muscler le contrôle ② demanderait un jugement sémantique, donc un appel modèle dans un agent PUR
+> (#76). Exige un `check_*` + un **négatif dont chaque mutation rougit sur son assert nommé**, puis
+> `run_all.sh` **complet** (#64), pas le seul module touché. C'est le lot suivant, décidé par
+> l'utilisateur le 2026-09-21.
+> **(2) Le collecteur est aveugle au corpus déjà détenu** : 4 des 7 mandats collecteur de ce passage
+> sont de **faux manques** (#281, #298/#342, #292, #304/#305 — présentes ET citées). Dépense web
+> inutile, et une boucle vivante les ré-essaierait sans fin. ⚠️ Clefer sur la **ligne de plan**
+> (métrique/source/ancre), **jamais** sur la question : le collecteur y est aveugle par construction (#58).
+> **(3) #280 et #296 assertent la même identité** (dette RVMD 487,43 MUSD au 2026-06-30), toutes deux
+> courantes, `metric` et `poste_kind` NULL → non clefables (#55/F16), donc `_current_fact_ids` ne peut
+> en superséder aucune. **Pré-existant.** Elles sont d'accord, d'où l'invisibilité (#46). Backfill
+> lignée 035 → candidat **044**.
+> **(4) Corpus plafonné 40/57**, tri `source_date DESC` : 17 entries invisibles à l'analyste, sans
+> garantie de hors-sujet. La troncature est DITE, elle n'est pas instrumentée.
+> Puis le lot 5 proprement dit : **le mémo projeté / réconciliation à 0/0** via
+> `tools/reconcilier_vocabulaires.py` (⚠️ **`4 ok / 2 FAIL — 30 orphelins + 13 inutilisés`, 0/6 blocs**,
+> re-mesuré le 2026-09-21 : le `5 ok / 2 FAIL — 14 / 3` cité ici jusque-là était jugé contre
+> `FIELD_PROFILES`, la grille MVDD à qui le lot 3 avait retiré son autorité — l'étalon a été corrigé,
+> ce n'est pas une régression), **+** le nettoyage des « faux au sens v3 » hérités de RVMD (#190 ROIC
+> fabriqué, #191, #186 — **jugement humain**), **+** le wiring de `serve_mandate`/`read_open_mandates`
+> dans la boucle live du search-worker. Migration prévue : **044**.
+>
+> ⚠️ **Ligne de base du 2026-09-21 avant le passage** (requêtée, pas rappelée) : `framework_answers`
+> **0**, `framework_mandates` **16** (tous collecteur, **0 manager**), RVMD **53** entries courantes,
+> 3 plans, 1 carte. Après passage et retrait de #475 : `framework_answers` **6**.
 >
 > ⚠️ **La ligne de base se REQUÊTE, toujours.** Ce lot a démarré en trouvant NVDA 15 / MSFT 15 /
 > RVMD 43 actives là où « Où on en est » disait 52/51/27, et **aucun plan NVDA/MSFT** — le prérequis

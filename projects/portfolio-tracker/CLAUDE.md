@@ -1597,6 +1597,69 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     `sans_objet`** = le re-run change le statut, ≥ 1 cas de bout en bout ; la réponse corrigée est
     acquittée sans rouvrir de mandat). Suite complète **2726/0 sur 37 scripts**.
 
+78. **Tous les nombres justes, le fait FAUX — un `repondu` peut porter un chiffre CALCULÉ qu'aucune
+    entry citée ne contient, et les quatre contrôles l'acquittent (V3, PREMIER PASSAGE RÉEL du
+    2026-09-21, `tools/executer_chaine.{py,sh}`)** : la chaîne des six agents existait, validée hors
+    ligne, et **personne ne l'avait jamais appelée** (#71 — un décideur sans producteur). Le passage
+    manuel `RVMD × qualite_financiere × pre_revenus` l'a fait tourner de bout en bout contre le vrai
+    modèle et la vraie base : plan #78, carte relue `fraiche` (**0 appel apparieur** — l'état de #71
+    tient), corpus 40/57, **7 réponses** (4 `sans_objet`, 2 `repondu`, 1 `approxime`, 0 refus), ids
+    469-475, **7 acquittements, 0 mandat manager**, coût traducteur $0,0013. La prédiction de la
+    frontière gratuite (`acceptation_analyste.sh --admissibilite` : seules qf_4/qf_6/qf_7 applicables,
+    qf_6 ne pouvant être qu'`approxime`) s'est vérifiée **au mot près**.
+    ⚠️ **LE DÉFAUT.** `qf_7` (#475) affirmait « la guidance de dépenses opérationnelles **en
+    trésorerie** pour FY2026 est de **1,81 à 1,93 MdUSD** ». L'entry citée #312 dit : guidance
+    **GAAP** 2,1–2,2 MdUSD, dont 270–290 MUSD de rémunération en actions non-cash. L'analyste a
+    **soustrait** (2,1 − 0,29 = 1,81 ; 2,2 − 0,27 = 1,93) et a présenté le résultat comme une
+    guidance CITÉE. Balayage du corpus : aucune entry ne porte ces nombres (seul #448 porte 1,93, un
+    consensus **EPS** sans rapport). Trois marqueurs auraient dû virer et n'ont pas viré — statut
+    (`repondu` au lieu d'`approxime`), nature (`mesure` pour un calcul), rang (**A**, sans cran) — et
+    l'appariement bas×haut (guidance basse × SBC haute) est un choix discrétionnaire non déclaré. La
+    conclusion (« autonomie longue ») reste vraie dans les deux lectures : c'est **ce qui le rend
+    invisible** (#46). Le manager a acquitté **correctement** : #312 EST dans le corpus et EST citée ;
+    rien ne compare les nombres du verbatim à ceux de l'entry. **`feedback_garde_structure_pas_sens`
+    confirmé sur donnée de production** — les contrôles gardent la STRUCTURE et la RELATION, jamais
+    le SENS ; jumeau du défaut canonique #190, famille #42/#45/#47.
+    ⚠️ **Le correctif est de FORME, pas de muscle (#68), et il est EN AMONT** : *un `repondu` ne peut
+    porter aucun nombre absent de ses entries citées* — extraire les numéraux du verbatim, exiger que
+    chacun figure dans au moins une entry citée. Un calcul est alors **forcé** de sortir en
+    `approxime`, avec ses hypothèses écrites et son cran. Muscler le contrôle ② (« la citation
+    soutient-elle l'assertion ? ») aurait demandé un jugement sémantique — c'est-à-dire un appel
+    modèle dans un agent PUR (#76), et une garde dont le faux positif est indiscernable.
+    ⚠️ **RETRAIT.** La ligne #475 a été **physiquement supprimée** (`DELETE`), les six autres
+    conservées. La table est append-only (A1, #64) : A1 trace les **corrections d'analyse**, pas la
+    pollution. Une donnée fabriquée laissée en base servirait de « corpus réel » à un test
+    d'acceptation — exactement ce que `feedback_fixture_pollue_le_reel` proscrit (douze jours déjà
+    payés sur ce chantier). Vérifié par recomptage : `framework_answers` = **6**, aucun `qf_7` actif.
+    ⚠️ **TROIS AUTRES DIFFICULTÉS, mesurées, non corrigées** : ① **le collecteur est aveugle au corpus
+    déjà détenu** — 4 des 7 mandats collecteur sont de FAUX manques (`echeancier_de_la_dette` #281,
+    `clauses_de_sauvegarde` #298/#342, `politique_de_capitalisation` #292, `elements_non_recurrents`
+    #304/#305, toutes présentes ET citées), ce qui dépense du web et qu'une boucle vivante
+    ré-essaierait sans fin ; le correctif doit clefer sur la LIGNE DE PLAN (métrique/source/ancre),
+    jamais sur la question — le collecteur est aveugle à la question **par construction** (#58).
+    ② **Deux entries courantes sur une même identité** : #280 et #296 assertent toutes deux « dette
+    totale RVMD au 2026-06-30 = 487,43 MUSD », `superseded_by IS NULL` toutes deux, `metric` et
+    `poste_kind` **NULL** toutes deux → non clefables par un lecteur (#55/F16), donc `_current_fact_ids`
+    ne peut en superséder aucune. Elles sont **d'accord** aujourd'hui, ce qui est précisément ce qui
+    l'a rendu invisible (#46). Pré-existant, pas produit par ce passage ; backfill à prévoir (lignée 035).
+    ③ **Corpus plafonné 40/57**, trié `source_date DESC` : 17 entries invisibles à l'analyste, sans
+    rien qui garantisse qu'elles étaient hors sujet. La troncature est DITE, elle n'est pas
+    instrumentée.
+    ⚠️ **SAIN, et vérifié comme tel** : le chien de garde #73 a coupé exactement une ligne web à 180 s
+    (comme mesuré) ; le refus `AssetImpairmentCharges` s'est reproduit **mot pour mot** comme le
+    résidu de #72 l'annonçait (fractions d'exercice = propriété du dépôt) ; `long_term_debt_current`
+    non fondé est JUSTE (la convertible échoit en 2033) ; et **qf_4 comme qf_6 sont fidèles ligne à
+    ligne** — chaque chiffre retrouvé dans son entry.
+    ⚠️ **L'invocation est versionnée et elle ÉCRIT EN PROD** : `tools/executer_chaine.sh` (réseau
+    `coolify`, dépôt monté en **lecture seule** dans une instance NEUVE de l'image — jamais dans
+    `portfolio-backend`, ordre des `--env-file` load-bearing), `"$@"` load-bearing pour atteindre
+    `--sans-collecte` (le passage sans dépense). **Pas de ROLLBACK, c'est le but** : un mécanisme
+    prouvé en transaction n'a pas tourné. L'outil imprime en clôture l'**INVENTAIRE NOMMÉ** de ses
+    écrits, ids compris — c'est la clef de retrait, et c'est ce qui a permis le `DELETE` ci-dessus.
+    Il refuse `DATABASE_URL`/`DEEPINFRA_API_KEY` manquantes **avant la première écriture** (#40),
+    et se clôt sur : **« LE VERDICT EST À LA LECTURE, pas au code de sortie »** — exit 0 sur une
+    sortie fausse, c'est exactement ce qui s'est produit.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 
