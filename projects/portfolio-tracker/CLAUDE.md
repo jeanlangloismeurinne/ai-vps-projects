@@ -1,5 +1,32 @@
 # CLAUDE.md — portfolio-tracker
 
+> ## ⚠️ CE FICHIER DÉCRIT V0/V1/V2. IL NE DIT PAS OÙ EN EST LA V3.
+>
+> Les 1700 lignes qui suivent racontent trois générations du système, dont deux sont **arrêtées**.
+> Lues comme un état des lieux, elles font conclure qu'une brique est faite alors que la spec V3 a
+> bougé — c'est arrivé, et ça a coûté un aller-retour (2026-09-22).
+>
+> **Ce qui fait foi pour la V3, dans cet ordre :**
+>
+> | Question | Où est la réponse |
+> |---|---|
+> | Où on en est, quel est le prochain lot | `roadmap/V3/00-REPRISE.md` |
+> | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
+> | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module — p.ex. `backend/app/agents/v2/ARCHITECTURE.md` |
+> | La PREUVE qu'une brique existe | `backend/checks/` — on l'exécute, on ne la lit pas |
+>
+> Une brique de la V3 n'est « faite » que si un `check_*.py` la garde **et** qu'un `negatif_*.sh`
+> prouve que ce check vire au rouge quand on la casse. Aucune ligne de prose, ici ou ailleurs, ne
+> remplace cette preuve. Et il est NORMAL qu'aucun framework n'ait encore produit d'investissement :
+> la chaîne V3 n'a jamais tourné de bout en bout, elle se construit lot par lot.
+>
+> ⚠️ Le répertoire `backend/app/agents/v2/` contient surtout de la **V3**, malgré son nom. Les cinq
+> seuls fichiers de la boucle V2 y sont nommés dans son `ARCHITECTURE.md` (`debate.py`,
+> `decision.py`, `exit.py`, `monitoring.py`, `analysis.py`). Tout le reste est V3.
+>
+> Ce qui suit reste utile pour : l'infrastructure, le schéma de base, les migrations, les pièges
+> d'exploitation. Pas pour l'avancement.
+
 ## Contexte
 
 Système de suivi d'investissement boursier long terme sur VPS Hetzner (jlmvpscode.duckdns.org).

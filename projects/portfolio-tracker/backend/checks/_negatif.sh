@@ -19,6 +19,10 @@
 #
 # La mutation est appliquée par PYTHON, pas `sed` : le remplacement ÉCHOUE bruyamment si le motif
 # n'existe plus, sinon une mutation caduque se lirait « le check a rougi » pour une autre raison.
+#
+# ⚠️ `\n` n'est converti que dans le REMPLAÇANT, pas dans le motif : un motif multi-ligne se cherche
+# donc littéralement et sort en MUTATION CADUQUE. Viser une ligne unique et faire porter le
+# multi-ligne au remplaçant (insérer avant/après) suffit dans tous les cas rencontrés.
 
 run_mutations() {
   : "${CHECK:?run_mutations: CHECK (chemin du check) est requis}"

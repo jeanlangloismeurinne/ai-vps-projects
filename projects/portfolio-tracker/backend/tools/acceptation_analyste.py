@@ -24,7 +24,6 @@ import asyncio
 import os
 import sys
 import traceback
-from typing import Any
 
 from app.agents.v2.analyste import (
     corpus_citable,
@@ -32,6 +31,7 @@ from app.agents.v2.analyste import (
     repondre,
     statuts_admissibles,
 )
+from app.agents.v2.dossier import charger_dossier
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.traducteur import questions_applicables
 from app.db.database import close_pool, get_db_session, init_pool
@@ -43,27 +43,18 @@ CAS = [
     ("RVMD", "qualite_financiere", "pre_revenus"),
 ]
 
-# Le corpus envoyé au modèle est PLAFONNÉ — un dossier entier ferait un prompt de plusieurs centaines
-# de milliers de tokens pour une mesure qui doit rester à quelques centimes. On prend les plus
-# RÉCENTES, et on DIT combien on a laissé dehors : une mesure tronquée qui tait sa troncature ferait
-# lire « le corpus ne fonde pas » là où c'est le plafond qui a coupé.
-CORPUS_MAX = int(os.environ.get("ACCEPTATION_CORPUS_MAX", "40"))
-
-
-async def _corpus(conn, ticker_id: str) -> tuple[dict[int, dict[str, Any]], int]:
-    total = await conn.fetchval(
-        "SELECT count(*) FROM knowledge_entries WHERE ticker_id = $1 AND superseded_by IS NULL",
-        ticker_id)
-    rows = await conn.fetch(
-        """
-        SELECT id, title, content, source_type, source_date, reliability_tier, nature
-          FROM knowledge_entries
-         WHERE ticker_id = $1 AND superseded_by IS NULL
-         ORDER BY source_date DESC NULLS LAST, id DESC
-         LIMIT $2
-        """,
-        ticker_id, CORPUS_MAX)
-    return {r["id"]: dict(r) for r in rows}, int(total or 0)
+# Le dossier envoyé au modèle est PLAFONNÉ — un corpus entier ferait un prompt de plusieurs
+# centaines de milliers de tokens pour une mesure qui doit rester à quelques centimes.
+#
+# ⚠️ L'ASSEMBLAGE N'EST PLUS FAIT ICI. Il était recopié à l'identique dans `tools/executer_chaine.py`
+# — une règle tenue à deux endroits re-diverge au correctif suivant (#46,
+# `feedback_correctif_regle_jumeaux`) — et il coupait par la DATE, donc il pouvait écarter la pièce
+# qui fonde un ingrédient tout en gardant trois versions d'un autre. C'était l'outil de MESURE qui
+# fabriquait la non-représentativité du corpus de test. Détenteur unique : `app/agents/v2/dossier.py`
+# (gardé par `checks/check_dossier.py` + `checks/negatif_dossier.sh`). Ici on LIT, et on dit ce qui
+# est resté dehors : une mesure tronquée qui tait sa troncature ferait lire « le corpus ne fonde
+# pas » là où c'est le plafond qui a coupé.
+PLAFOND = int(os.environ.get("ACCEPTATION_CORPUS_MAX", "40"))
 
 
 def _montrer(resultat, ticker: str) -> None:
@@ -104,7 +95,11 @@ async def _admissibilite(fichier) -> int:
     for ticker, framework_id, archetype in CAS:
         print(f"\n{'='*78}\n{ticker} · {framework_id} · archétype « {archetype} »\n{'='*78}")
         async with get_db_session() as conn:
-            entries, _ = await _corpus(conn, ticker)
+            dossier = await charger_dossier(
+                conn, ticker_id=ticker, framework_id=framework_id,
+                framework_version=fichier.schema_version, plafond=PLAFOND)
+        entries = dossier.entries
+        print(dossier.bilan())
         for q in questions_applicables(fichier, framework_id, archetype):
             citables = corpus_citable(q, entries)
             ouverts, ecartes = statuts_admissibles(q, citables)
@@ -151,12 +146,15 @@ async def main() -> int:
         for ticker, framework_id, archetype in CAS:
             print(f"\n{'='*78}\n{ticker} · {framework_id} · archétype « {archetype} »\n{'='*78}")
             async with get_db_session() as conn:
-                entries, total = await _corpus(conn, ticker)
+                dossier = await charger_dossier(
+                    conn, ticker_id=ticker, framework_id=framework_id,
+                    framework_version=fichier.schema_version, plafond=PLAFOND)
+            entries = dossier.entries
             tiers: dict[str, int] = {}
             for e in entries.values():
                 tiers[str(e.get("reliability_tier"))] = tiers.get(str(e.get("reliability_tier")), 0) + 1
-            print(f"  corpus : {len(entries)} entries sur {total} au dossier "
-                  f"(plafond {CORPUS_MAX}) · tiers {dict(sorted(tiers.items()))}")
+            print(dossier.bilan())
+            print(f"  · tiers {dict(sorted(tiers.items()))}")
             if not entries:
                 fail += 1
                 print("  FAIL aucun corpus pour ce ticker — la mesure ne porterait sur rien "

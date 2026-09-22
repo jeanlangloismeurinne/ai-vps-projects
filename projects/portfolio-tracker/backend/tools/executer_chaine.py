@@ -45,6 +45,7 @@ from typing import Any
 
 from app.agents.v2.analyste import repondre
 from app.agents.v2.collecte_executor import executer_collecte_framework
+from app.agents.v2.dossier import charger_dossier
 from app.agents.v2.framework_persist import persist_answer, read_dispenses
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager import reviser_framework
@@ -53,7 +54,12 @@ from app.db.database import close_pool, get_db_session, init_pool
 
 # Même plafond que `tools/acceptation_analyste.py` — et pour la même raison : un dossier entier
 # ferait un prompt de plusieurs centaines de milliers de tokens. La troncature est DITE.
-CORPUS_MAX = int(os.environ.get("CHAINE_CORPUS_MAX", "40"))
+#
+# ⚠️ Seul le PLAFOND est partagé, plus la règle. L'assemblage vivait ici ET dans l'acceptation, sous
+# le commentaire « même plafond que l'autre, et pour la même raison » — c'est-à-dire une règle sans
+# détenteur, qui re-diverge au correctif suivant (#46). Elle est désormais dans
+# `app/agents/v2/dossier.py`, et ce passage se contente de l'appeler.
+PLAFOND = int(os.environ.get("CHAINE_CORPUS_MAX", "40"))
 
 # L'analyste n'a pas de défaut (§3.4) : deux réponses anonymes à une même question sont
 # indiscernables. Ce passage signe donc ses réponses.
@@ -62,22 +68,6 @@ ANALYSTE = os.environ.get("CHAINE_ANALYSTE", "passage_manuel_v3")
 
 def _titre(n: int, texte: str) -> None:
     print(f"\n{'─'*78}\nMAILLON {n} — {texte}\n{'─'*78}")
-
-
-async def _corpus(conn, ticker_id: str) -> tuple[dict[int, dict[str, Any]], int]:
-    total = await conn.fetchval(
-        "SELECT count(*) FROM knowledge_entries WHERE ticker_id = $1 AND superseded_by IS NULL",
-        ticker_id)
-    rows = await conn.fetch(
-        """
-        SELECT id, title, content, source_type, source_date, reliability_tier, nature
-          FROM knowledge_entries
-         WHERE ticker_id = $1 AND superseded_by IS NULL
-         ORDER BY source_date DESC NULLS LAST, id DESC
-         LIMIT $2
-        """,
-        ticker_id, CORPUS_MAX)
-    return {r["id"]: dict(r) for r in rows}, int(total or 0)
 
 
 async def main() -> int:
@@ -125,9 +115,11 @@ async def main() -> int:
         # ── MAILLON 2 — l'analyste répond ───────────────────────────────────────
         _titre(2, "analyste — une réponse OU un refus nommé par question")
         async with get_db_session() as conn:
-            entries, total = await _corpus(conn, ticker_id)
-        print(f"  corpus fourni : {len(entries)} entries sur {total} en base"
-              f"{' (PLAFONNÉ)' if total > len(entries) else ''}")
+            dossier = await charger_dossier(
+                conn, ticker_id=ticker_id, framework_id=framework_id,
+                framework_version=fichier.schema_version, plafond=PLAFOND)
+        entries = dossier.entries
+        print(dossier.bilan())
         if not entries:
             print("  ⚠️ corpus VIDE : l'analyste ne peut que refuser. On s'arrête — un passage "
                   "sur zéro entry ne prouverait rien.")

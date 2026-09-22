@@ -2,70 +2,22 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-21
+updated: 2026-09-22
 project: portfolio-tracker
 role: >
-  Prompt à coller pour reprendre le chantier V2. Contrat FIGÉ · couche 2 DÉPLOYÉE · boucle V2
-  complète (décider → surveiller → sortir → apprendre) · écrans UX-1/2/3 livrés · chaîne exercée
-  sur NVDA, MSFT et RVMD. **LOT 2c TERMINÉ le 2026-09-12** — le maillon 5 est livré : `POSTES` est
-  devenu un CATALOGUE de recettes (`edgar_feed`), le socle EDGAR ne collecte plus que les postes
-  réclamés par le plan (`run_edgar_feed(metrics=…)` câblé par `collecte_executor.postes_edgar_du_plan`),
-  le levier `RESSERRER` de `curator.py` est RETIRÉ (`_exigences` lit `MVDD_SPEC` tel quel), et **le
-  §12bis hérité est MORT** avec le socle data-first (conventions #61/#62). Migrations appliquées
-  jusqu'à **040** ; maillon 5 (lot 2c) = **code seul, aucune migration, aucun réseau**.
-  **LOT 3 EN COURS depuis le 2026-09-13** : maillons 1 (l'analyste, #63), 2 (`framework_answers`/
-  `framework_dispenses`, migration 040, #64), 3 (suppression de `MVDD_SPEC`) et 4bis (l'appariement,
-  conventions **#67 → #71**) sont ✅. Le **maillon 4 — L'EXÉCUTION d'un appariement — est livré le
-  2026-09-18** (convention **#72**) : `appariement_feed.py` évalue une formule sur les concepts XBRL
-  **déjà lus**, écrit l'entry avec sa provenance concept par concept et son tier dérivé, et ne laisse
-  au web que les `indisponible` et les échecs **nommés**. Mesuré contre le vrai dépôt (RVMD, ROLLBACK,
-  web débranché) : **lignes COLLECTÉES depuis le dépôt 0 → 6** — jamais « 9 lignes routées », qui
-  serait la faute que #71 vient de corriger. Le **maillon 4ter — la collecte réellement PERSISTÉE sur
-  NVDA/MSFT/RVMD (§5.3) — est livré le 2026-09-19** (convention **#73**, aucune migration) : plans
-  #55/#56/#57, **zéro doublon d'identité** (#43 en base). Ce que l'écriture durable a révélé et qui EST
-  le lot : un **blocage web infini** borné par ligne (#73, chien de garde `asyncio.wait_for` → mandat),
-  et **l'apparieur qui refuse la carte entière sur `rentable`** (grammaire sans temporel). Ce dernier
-  est LEVÉ le **2026-09-19 (convention #74)** : la grammaire exprime un **décalage d'exercice
-  `Concept[-1]`** (l'offset porte sur le nom, pas un concept neuf — #57 appliqué à la formule), et le
-  vrai modèle exprime enfin une croissance en tier A (MSFT `qf_3`, RVMD `qf_7`). Suite `run_all.sh` =
-  **2661 assertions, 0 échec sur 35 scripts**. **Le geste (b) — LE REFUS PAR INGRÉDIENT — est livré
-  le 2026-09-19** (convention **#75**) : une bévue sur UN couple sort désormais CE couple en
-  `indisponible`/mandat, jamais la carte entière. **Chantier A CLOS.** Suite `run_all.sh` =
-  **2674 assertions, 0 échec sur 35 scripts**. Mesuré contre le vrai modèle
-  (`tools/acceptation_apparieur.sh`, NVDA/MSFT/RVMD, **13 critère(s) OK / 0 échec**) : MSFT
-  reproduit EXACTEMENT la bévue qui avait coulé la carte entre deux passages de #74
-  (`qf_4.endettement_brut_et_net`, `[W]`) et la carte est quand même **acceptée** (1 réparation), le
-  couple fautif mandaté au web. **LOT 4 CLOS le 2026-09-21** : l'AGENT manager (2026-09-20, #76) ET
-  ses DONNÉES (2026-09-21, **#77** — migration **043** appliquée, `manager_persist.py`, T8 de bout en
-  bout 6/0). **Arbitrage utilisateur** : l'avis du manager se **recalcule** à la lecture, seul le
-  MANDAT est persisté (#53/#54). Suite `run_all.sh` = **2726 assertions, 0 échec sur 37 scripts**.
-  **PREMIER PASSAGE RÉEL DE LA CHAÎNE le 2026-09-21** (convention **#78**,
-  `tools/executer_chaine.{py,sh}`, il écrit en prod sans ROLLBACK) : RVMD × `qualite_financiere` ×
-  `pre_revenus` de bout en bout, 7 réponses persistées, 7 acquittements — **et un `repondu` portant
-  un chiffre CALCULÉ (1,81–1,93 MdUSD) absent de toute entry citée, acquitté par les quatre
-  contrôles**. Ligne #475 supprimée (pollution, pas correction).
-  **LE GARDE #78 EST LIVRÉ le 2026-09-21 — et PAS à l'endroit annoncé.** Le contrôle prévu chez
-  l'analyste (« aucun nombre du verbatim absent des entries citées ») a été **MESURÉ VERT sur le cas
-  qui l'a motivé** : 1,81 et 1,93 sont bel et bien dans l'entry #312, bel et bien citée. Le défaut
-  est **au GUICHET D'ENTRÉE** (arbitrage utilisateur, option B) : un chiffre CALCULÉ à partir de
-  chiffres déposés était rangé `fact_financial` × source officielle, donc `mesure`, donc sous
-  l'autorité du dépôt — **16 des 161 `mesure` courantes**, toutes honnêtes dans leur prose, seul le
-  tampon faux. `derive_nature` rétrograde désormais sur un **vocabulaire fermé de 11 marqueurs**,
-  `content` est transmis depuis **les deux** sites d'appel, le pont gagne **[E0]** (la nature
-  effective est DÉRIVÉE, jamais déclarée) et **[E]** durci, avec `nature_effective_de` en détenteur
-  unique. Le tier n'est PAS touché (#50). **Migration 044 appliquée** (16 requalifiées, garde
-  globale `mesure = 213` éprouvée en négatif AVANT application). Suite `run_all.sh` =
-  **2800 assertions, 0 échec sur 37 scripts** ; `negatif_garde_guichet.sh` **9/0**.
-  **PROCHAIN = le lot 5** (+ les 3 difficultés mesurées non corrigées). Détail dans le
-  **▶ PROCHAIN JALON** ci-dessous, ne pas dupliquer ici.
-  ✅ Pré-requis du lot 3 levé le 2026-09-12 (`check_entry_nature §7` re-mesuré en INVARIANT et non
-  plus en décompte, interdit par §0.6) — récit dans `00-REPRISE-ARCHIVE.md` § 2026-09-12, règle dans
-  [[project_entry_nature_gate_invariant]].
+  Prompt de reprise du chantier V3 (frameworks). Le RÉCIT des lots livrés n'est PAS ici : il est
+  dans `00-REPRISE-ARCHIVE.md`, les règles durables dans le `CLAUDE.md` du projet (conventions
+  numérotées #25…#78), et la PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
   Roadmap active : **`roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
-  d'indexation passe d'une **grille fermée de 19 champs identique pour tous les émetteurs** à des
+  d'indexation passe d'une grille fermée de 19 champs identique pour tous les émetteurs à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
-  `roadmap/V3/doctrine-trois-axes.md` est **close** : capacités 0 à 4 livrées, capacité 5
-  fermée sur son barreau 4 (« le défaut est en dessous »).
+  `roadmap/V3/doctrine-trois-axes.md` est **close**.
+  ÉTAT au 2026-09-22 : lots 0 à 4 clos ; la chaîne à six agents est allée **une fois** de bout en
+  bout en réel (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais
+  produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie
+  aval/suivi vient après (arbitrage utilisateur 2026-09-22).
+  Suite `run_all.sh` = **2824 assertions, 0 échec sur 39 scripts**. Migrations jusqu'à **044**.
+  PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
 # Prompt de reprise — portfolio-tracker V2
@@ -629,16 +581,76 @@ lot 1 ; les tables viennent en dernier.
 > restée invisible jusqu'à ce qu'on lui cherche une ancre **non circulaire** : le CORPUS RÉEL, via
 > les ids que la migration 044 requalifie, **relus depuis le fichier** (#46) et confrontés au
 > `content` stocké. Un vocabulaire fermé ne se garde pas contre lui-même.
-> **(2) Le collecteur est aveugle au corpus déjà détenu** : 4 des 7 mandats collecteur de ce passage
-> sont de **faux manques** (#281, #298/#342, #292, #304/#305 — présentes ET citées). Dépense web
-> inutile, et une boucle vivante les ré-essaierait sans fin. ⚠️ Clefer sur la **ligne de plan**
-> (métrique/source/ancre), **jamais** sur la question : le collecteur y est aveugle par construction (#58).
-> **(3) #280 et #296 assertent la même identité** (dette RVMD 487,43 MUSD au 2026-06-30), toutes deux
-> courantes, `metric` et `poste_kind` NULL → non clefables (#55/F16), donc `_current_fact_ids` ne peut
-> en superséder aucune. **Pré-existant.** Elles sont d'accord, d'où l'invisibilité (#46). Backfill
-> lignée 035 → candidat **045** (044 est consommée par le garde du guichet).
-> **(4) Corpus plafonné 40/57**, tri `source_date DESC` : 17 entries invisibles à l'analyste, sans
-> garantie de hors-sujet. La troncature est DITE, elle n'est pas instrumentée.
+> **(2) ⇢ REQUALIFIÉ le 2026-09-22 — ce n'était pas un défaut.** « Le collecteur est aveugle au
+> corpus déjà détenu : 4 des 7 mandats sont de faux manques. » **Arbitrage utilisateur** : à
+> l'initialisation et en test, **on rachète TOUT** — le rachat n'est pas une dépense à éviter, c'est
+> le mode nominal. Ce qui reste à construire n'est pas un filtre amont mais la **comparaison du
+> nouvel état à l'ancien** quand le ticker est déjà en portefeuille (partie aval/suivi, après
+> l'amont). Le coût web se borne par budget, pas en aveuglant la collecte.
+> **(3) ⇢ REFORMULÉ.** #280 et #296 assertent la même identité (dette RVMD 487,43 MUSD au
+> 2026-06-30), toutes deux courantes, `metric`/`poste_kind` NULL → non clefables (#55/F16). Ce n'est
+> **pas** un problème de supersession : l'utilisateur veut que l'historique **s'empile** et se garde.
+> Le vrai besoin est la **LIGNÉE** — savoir que ces deux pièces parlent du même point, et laquelle
+> fait foi. C'est ce que `dossier.py` rend désormais au moment de la LECTURE (voir ci-dessous) ; le
+> backfill lignée 035 (candidat **045**) reste utile pour les pièces hors index de couverture.
+> **(4) ✅ ADRESSÉ le 2026-09-22 — le plafond ne peut plus couper une pièce qui fonde un point.**
+> Voir le lot ci-dessous.
+> **✅ LE DOSSIER REMIS À L'ANALYSTE — LIVRÉ le 2026-09-22.** `app/agents/v2/dossier.py`, détenteur
+> unique (#46), aucune migration, aucune écriture. Ce qu'il ferme, **mesuré**, pas supposé :
+> le corpus était assemblé **à plat** (les N plus récentes par `source_date`, tronquées), et cette
+> règle était recopiée à l'identique dans `tools/acceptation_analyste.py` et `tools/executer_chaine.py`
+> — sous le commentaire « même plafond que l'autre, et pour la même raison », c'est-à-dire une règle
+> sans détenteur. Conséquences mesurées sur RVMD : `qf_4.endettement_brut_et_net` portait **trois**
+> entries courantes toutes tier A (#296, #340, #443), aucune ne remplaçant l'autre → l'analyste
+> recevait trois réponses concurrentes au même point ; et la troncature par date pouvait écarter la
+> pièce qui fonde un ingrédient tout en gardant trois versions d'un autre. **C'est l'outil de MESURE
+> qui fabriquait le vrac du corpus de test.**
+> Livré : une **chemise par point de la liste du comité**, la plus récente **en vigueur**, les
+> antérieures **gardées en base** et comptées au bilan, les pièces hors index **jointes** (les
+> écarter ferait lire « indisponible » là où il y a de la donnée), le plafond mordant sur le RESTE —
+> et `plafond_insuffisant` DIT au lieu de couper un porteur.
+> ⚠️ **La clef de regroupement n'est PAS la ligne de plan.** Premier réflexe, et il est faux :
+> mesuré sur les 4 plans RVMD du même framework en version identique, **9 ingrédients sur 14 portent
+> QUATRE libellés `metrique` distincts**, l'ancre dérive aussi, **aucun n'est stable**. Le traducteur
+> reformule à chaque passage, c'est son droit. Ce qui est stable est le point du référentiel inerte —
+> `(question_id, ingredient_id)` — déjà écrit par `question_coverage` (#57) et **LU** (#29).
+> ⚠️ **L'aveuglement du collecteur reste intact (#58)** : ce module lit la question, mais il est en
+> aval de toute collecte ; le collecteur ne l'importe pas.
+> Gardes : `check_dossier.py` **24/0** (fixture **copiée du corpus RVMD réel** : ids, dates de source
+> ET de collecte authentiques), `negatif_dossier.sh` **10 mutations / 0**, `tools/montrer_dossier.sh`
+> (lecture gratuite du dossier réel). Suite **2824 / 0 sur 39 scripts**.
+> ⚠️ **CE QUI A TROUVÉ LE VRAI DÉFAUT** : pas un décompte. Écrite avec la date nue, la clef de tri
+> `_rang` trie en ordre CROISSANT — elle élisait la **plus ANCIENNE** pièce « en vigueur »
+> (`qf_4.lignes_de_credit_non_tirees` servait le 2025-06-30 en écartant le 2026-08-05). Le dossier
+> sortait bien formé, de la bonne taille, une pièce par point, et l'outil imprimait « 0 échec ».
+> Seule la **LECTURE du dossier en texte** l'a montré (`feedback_rendu_est_un_producteur`,
+> `feedback_frontiere_gratuite_avant_depense_modele`). Figé en §3 du check, éprouvé par mutation.
+>
+> ⚠️ **DÉFAUT NOUVEAU, NOMMÉ ET DÉLIBÉRÉMENT NON CORRIGÉ ICI — la DATATION HÉTÉROGÈNE.** Sur RVMD,
+> **6 des 8 chemises à plusieurs versions** ont une pièce en vigueur **collectée AVANT** une de ses
+> antérieures. Cause : `edgar_feed` date une entry à la clôture de période (`period_end`), le chemin
+> narratif/web à ce que le modèle déclare. **Deux horloges dans la même chemise.** L'assemblage n'a
+> pas de quoi trancher — il le NOMME au bilan (et dit `INDÉTERMINABLE` si `created_at` n'est pas
+> chargé, #25/#44). **Le remède est à la PRODUCTION des entries, c'est un lot distinct.**
+>
+> **▶ CE QUE L'UTILISATEUR A TRANCHÉ LE 2026-09-22, et qui commande la suite :**
+> 1. **On finit l'AMONT** pour faire tourner la V3 complète sur un cas sans difficulté. **Ensuite
+>    seulement** l'aval/suivi. Les questions d'obsolescence entre runs ne se posent qu'en mode suivi
+>    (ou quand on actualise un mémo que le comité avait jugé insuffisamment attractif il y a
+>    quelques mois) — ne pas les instruire avant.
+> 2. **La spec V3 doit gagner une PARTIE MONITORING** : les règles d'ajout de données à la base à
+>    mesure que l'état du monde change. **On n'écrase pas** — on **empile** pour construire
+>    l'historique — mais le système doit répondre au framework sur la donnée **la plus récente (et
+>    son historique)**, sans passer à côté d'une information récente. `dossier.py` est la moitié
+>    LECTURE de cette règle ; la moitié ÉCRITURE reste à spécifier.
+> 3. **Sur les entrées en PROSE** : le système doit **juger** si une prose ancienne est toujours
+>    d'actualité (recherche web ou appel EDGAR). Si oui, elle continue de servir ; si périmée, on
+>    l'**archive pour la trace** et on la remplace par une prose actualisée.
+> 4. **Publications trimestrielles = revue complète de la thèse.** Position ouverte = actualisations
+>    régulières cherchant ce qui ferait évoluer la thèse, dans les deux sens.
+> 5. **Périmètre : EDGAR uniquement** pour l'instant. Le mode dégradé (européennes, non-coté) est une
+>    version ultérieure — ne pas le construire maintenant.
+>
 > Puis le lot 5 proprement dit : **le mémo projeté / réconciliation à 0/0** via
 > `tools/reconcilier_vocabulaires.py` (⚠️ **`4 ok / 2 FAIL — 30 orphelins + 13 inutilisés`, 0/6 blocs**,
 > re-mesuré le 2026-09-21 : le `5 ok / 2 FAIL — 14 / 3` cité ici jusque-là était jugé contre

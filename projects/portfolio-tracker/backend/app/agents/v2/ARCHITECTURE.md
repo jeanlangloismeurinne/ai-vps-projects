@@ -18,6 +18,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | `traducteur.py` | Questions universelles → **plan de collecte** par ticker (métrique, source, ancre) |
 | `collecteur.py` · `collecte_executor.py` | Plan → collecte réelle ; l'exécuteur route en **aveugle** (ne connaît pas la question, #60) |
 | `collecte_persist.py` | Persistance du plan / liens / mandats |
+| `dossier.py` | **Détenteur unique** de l'assemblage du corpus remis à l'analyste (#46) : une chemise par point de la liste du comité — clef `(question_id, ingredient_id)` LUE de `question_coverage` (#29/#57), jamais la ligne de plan (elle dérive à chaque run) ; la pièce la plus récente en vigueur, les antérieures gardées en base et comptées, les pièces hors index jointes ; le plafond mord sur le reste, **jamais** sur une pièce en vigueur |
 | `analyste.py` | Réponses de framework ; refuse **avant dépense** ce que le pont refuserait (#63) |
 | `manager.py` | **Manager** d'un framework — 4 contrôles déterministes (complétude · fondation · honnêteté · non-substitution), acquitte ou renvoie ; un renvoi PRODUIT un mandat (ferme l'Écart B, §3) |
 | `apparieur.py` · `appariement_persist.py` | Appariement questions↔champs-EDGAR (3 états) ; persistance UPSERT + revérification à la lecture (#54) |
@@ -35,6 +36,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 |---|---|
 | Chaîne à deux agents, plan persisté, collecte aveugle | `check_traducteur.py`, `check_collecteur.py`, `check_collecte_executor.py`, `check_collecte_persist.py` |
 | Carte d'appariement persistée, revérifiée à la lecture (#54), UPSERT sans historique | `check_appariement_persist.py` + `negatif_appariement_persist.sh` |
+| Dossier : un point = une chemise, la plus récente en vigueur, le plafond ne coupe jamais une pièce en vigueur, la datation hétérogène est NOMMÉE | `check_dossier.py` + `negatif_dossier.sh` + `tools/montrer_dossier.sh` (lecture du dossier réel, gratuite) |
 | Analyste : refus avant dépense, 3 états, pas de levier | `check_analyste.py` + `negatif_analyste.sh` + `tools/acceptation_analyste.sh` (vrai modèle) |
 | Manager : 4 contrôles déterministes, chaque `ko` atteignable, renvoi → mandat | `check_manager.py` + `negatif_manager.sh` |
 | Mandat manager persisté (par-question, réconcilié avec la table 039), consommable, statut qui change au re-run (T8) | `check_manager_persist.py` + `negatif_manager_persist.sh` + `tools/acceptation_manager.sh` |
