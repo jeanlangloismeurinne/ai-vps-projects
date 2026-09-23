@@ -776,6 +776,15 @@ lot 1 ; les tables viennent en dernier.
 > bash checks/avec_base.sh <check>     # lanceur versionné des checks qui lisent l'état persisté
 > ```
 >
+> ⚠️ **#81 EST COMMITTÉ ET POUSSÉ (`726b7b0`) MAIS PAS DÉPLOYÉ.** Le classifieur de permissions a
+> refusé `infrastructure/compose-deploy.sh portfolio-backend --rebuild-only` deux fois le
+> 2026-09-23. Je n'ai pas contourné. **Tant que ce rebuild n'a pas eu lieu, `portfolio-backend`
+> exécute le code d'AVANT le correctif** : la collecte de marché y plante toujours sur `NaN` dès
+> qu'une clôture manque chez le fournisseur, et les relevés de valorisation s'y datent du jour.
+> À vérifier en début de session (`docker inspect portfolio-backend` + un `refresh_m1`), puis :
+> `! infrastructure/compose-deploy.sh portfolio-backend --rebuild-only` — ou ré-essayer, un blocage
+> du classifieur n'est pas permanent (`feedback_blocage_classifieur_non_permanent`).
+>
 > **▶ CE QUE L'UTILISATEUR A TRANCHÉ LE 2026-09-22, et qui commande la suite :**
 > 1. **On finit l'AMONT** pour faire tourner la V3 complète sur un cas sans difficulté. **Ensuite
 >    seulement** l'aval/suivi. Les questions d'obsolescence entre runs ne se posent qu'en mode suivi
