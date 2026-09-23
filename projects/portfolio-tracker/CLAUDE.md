@@ -1811,16 +1811,92 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     met #307 et #444 **à égalité** au 2026-06-30 ; le tie-break `-id` de `dossier._rang` élit #444,
     qui couvre un fait plus **étroit**. La règle retire l'ordre FAUX ; elle ne fabrique pas un
     meilleur gagnant.
-    Détail + garde : `check_datation.py` **107/0** (§6 rejoue les cas RÉELS #307/#309/#296 sur leurs
+    Détail + garde : `check_datation.py` **98/0** (§6 rejoue les cas RÉELS #307/#309/#296 sur leurs
     valeurs mesurées en base, ancre non circulaire ; §7 lit l'état persisté et dénombre l'héritage au
     lieu de le tolérer en silence), `negatif_datation.sh` **28 mutations / 0 échec** avec
-    satisfiabilité mesurée avant toute mutation. Suite complète **2926 / 0 sur 40 scripts**.
-    ⚠️ **La RE-COLLECTE des 174 entries d'héritage reste à faire** — `bash tools/rejeu_producteurs.sh`,
-    coût zéro token (appels réseau seulement). Jamais un backfill par modèle : ce serait inventer des
-    dates que personne n'a déposées.
+    satisfiabilité mesurée avant toute mutation.
+    ⚠️ **RE-COLLECTE EN COURS, pas terminée** — `bash tools/rejeu_producteurs.sh`, coût zéro token
+    (appels réseau seulement). Jamais un backfill par modèle : ce serait inventer des dates que
+    personne n'a déposées. État MESURÉ le 2026-09-23 par `bash checks/avec_base.sh check_datation`
+    §7 : **128 entrées d'héritage** restantes, **110 déjà datées** sous la 045 (départ : 174/0). Le
+    rejeu ne couvre que les tickers et les producteurs déterministes qu'il énumère — le solde tombera
+    quand son périmètre s'élargira, pas tout seul.
+
+### #81 — le cours coté et sa date : une séance vide n'est pas une séance
+
+**Le défaut, mesuré le 2026-09-23.** La re-collecte de #79 a échoué **6 fois sur 15** :
+`InvalidTextRepresentationError … Token "NaN" is invalid`. Ce n'était pas une régression du lot —
+`git diff HEAD~1 -- valuation_feed.py` ne montrait que la ligne `datation=constatee(...)`, et les
+mêmes producteurs avaient écrit sans erreur le 2026-09-11. **Les données avaient changé, pas le
+code.** Le dry-run (`persist=False`) échouait aussi : la panne était donc en AMONT de toute écriture
+de connaissance — `data_service.py _db_store_m1`, l'insertion JSONB dans `market_snapshots`.
+
+Mesure exacte, identique sur MSFT, NVDA et RVMD : **4 clefs non finies**, `m1.price.{ytd,1m,3m,6m}
+_change_pct = nan`. Puis la cause, en une ligne : le fournisseur rendait **251 séances dont la
+DERNIÈRE avait un `Close` vide**. Identique sur les trois titres ⟹ le fournisseur, pas le titre.
+Or les quatre variations se terminent **toutes** au dernier cours : un seul jour manquant les
+emportait les quatre d'un coup. Les gardes d'alors — `len(hist) < days`, `ytd.empty` — testaient la
+**FORME du cadre**, jamais la **VALEUR des cours aux bornes**.
+
+**Pourquoi `NaN` est un quatrième état muet** (#44/#47 en portent trois : calculé / non calculable /
+absent). Il a la FORME d'un nombre ; il est **vrai** au sens booléen, donc `if x:` ne le distingue
+pas d'une mesure ; tout lecteur le voit comme un chiffre PRÉSENT ; et il s'écrit en JSON comme le
+jeton nu `NaN`, que PostgreSQL refuse. Rayon de souffle : il empoisonne **trois** consommateurs à la
+fois — Postgres casse l'écriture du cache **après** que l'appel réseau a été payé, Redis le mémorise
+4 h, et tout lecteur le prend pour une mesure.
+
+**L'arbitrage du fonds (2026-09-23).** Question posée : quand le dernier cours manque, que fait un
+vrai fonds ? Réponse retenue — il **marque au dernier cours coté et NOTE cette date**. Il ne laisse
+pas une ligne non valorisée parce que la bande du jour n'est pas arrivée. C'est la règle de #79
+transposée au prix : *la mesure est datée du dernier FAIT, pas du jour où on la lit*.
+
+**Trois règles, trois détenteurs uniques (#46)** — `app/data_collection/m1_quantitative.py` :
+- `fini(val)` — un non-nombre est une **absence**. `0.0` traverse (c'est une VALEUR mesurée) ; seuls
+  `None`, les non-finis et le non-castable retombent sur `None`. Trois producteurs l'appellent.
+- `serie_cotee(hist)` — une séance sans cours n'est pas une séance. Les fenêtres 21/63/126 comptent
+  donc des séances **réellement cotées**, ce qui est leur sens.
+- `_assainir_non_finis()` dans `data_service.py` — le **FILET**, posé sur la porte de la convention
+  #8 (`DataService` = point d'accès unique). Il ne fait pas double emploi avec `fini` : celui-ci dit
+  qu'un calcul déclare son absence, celui-là qu'aucun champ **futur** ne pourra injecter un
+  non-nombre sans qu'on le sache. Les champs écartés sont **NOMMÉS** dans le log (#69).
+
+**Le défaut jumeau, trouvé en mesurant le correctif.** `1y_change_pct` restait `null` après
+réparation. Cause : `period="1y"` rend **251** séances et le calcul en exigeait **252**. Cette
+colonne **ne pouvait donc jamais se remplir** — et son vide se lisait comme une propriété de
+l'émetteur alors qu'il était une propriété du seuil. Remplacée par `_calc_window_change` : la
+fenêtre EST d'un an par construction, on prend ses deux bornes cotées plutôt que de compter des
+séances. Le `minimum=200` garde ce que le seuil gardait vraiment (une fenêtre tronquée n'est pas
+« 1 an »). ⚠️ **Toujours se demander si une garde est FRANCHISSABLE par une donnée réelle** — sinon
+c'est le 6ᵉ faux-vert déplacé du test vers la production.
+
+**La cascade dans le dossier (#79).** `.info["regularMarketTime"]` de MSFT valait le **22/09 20:00
+UTC** — la clôture de la VEILLE — pendant que `valuation_feed` datait le relevé du jour. Le défaut
+de #79 vivait donc encore dans le flux de prix : un relevé simplement **rafraîchi** battait au tri
+un fait réellement plus récent. Corrigé : `date_du_fait` = l'horodatage du **marché**, lu dans le
+fuseau de la **place** (une clôture asiatique bascule de jour en UTC) ; `date_du_document` =
+aujourd'hui. Détenteur unique : `valuation_feed._date_du_fait`.
+
+**Gardes.** `check_cours_cote.py` **82/0** — §3 rejoue la forme MESURÉE en production (251 séances,
+la dernière vide) ; §6 prouve le filet par un **couple discriminant** (la charge assainie passe
+`json.dumps(allow_nan=False)`, la charge brute le fait échouer — littéralement ce que Postgres
+exigeait) ; §7 **découvre par AST** toute fonction lisant une cellule et exige qu'elle passe par
+`fini`. `negatif_cours_cote.sh` **30 mutations / 0 échec**, satisfiabilité mesurée d'abord.
+
+**Ce que le test négatif a trouvé et que la relecture n'aurait pas vu** (trois faux verts, tous
+dans le check lui-même) :
+- deux mutations tuaient le script **avant son bilan** : `logs[0]` sur une liste vide quand le filet
+  est désarmé. Un assert se lit par un accès TOLÉRANT, sinon il ne juge rien ;
+- `b.check("6" in logs[0], …)` restait **VERT** avec un décompte faux : le chemin
+  `m1.financials_3y.2026.fcf` contient déjà un « 6 ». Un décompte se lit **avec son unité**
+  (`"6 champ(s)"`), jamais comme un chiffre nu dans une chaîne qui contient d'autres chiffres.
+
+⚠️ **Non traité, noté** : FMP rend **403 Forbidden** sur `analyst-estimates` pour les trois tickers
+(clef rejetée) — `eps_estimates` est donc vide en production. Sans rapport avec ce lot.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
+⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
+certaines clôtures sont vides** — cadre plein, valeurs absentes. Cf. **#81**.
 
 ---
 

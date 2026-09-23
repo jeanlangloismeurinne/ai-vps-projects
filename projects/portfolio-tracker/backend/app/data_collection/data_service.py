@@ -22,6 +22,47 @@ TTL_M1 = 4 * 3600            # 4h — prix, valorisation, financials
 TTL_CALENDAR = 7 * 24 * 3600  # 7j — dates earnings
 
 
+def _assainir_non_finis(ticker: str, data: dict) -> dict:
+    """Aucun non-nombre n'entre dans le système par cette porte — et ce qui tombe est NOMMÉ.
+
+    `m1_quantitative.fini` tient la règle CHAMP PAR CHAMP ; ceci en est le FILET, au seul endroit
+    où la charge d'un fournisseur franchit la frontière (convention #8 : `DataService` est l'unique
+    point d'accès aux données de marché). Les deux sont nécessaires et ne gardent pas la même
+    chose : la première dit qu'un calcul déclare son absence, le second qu'aucun champ FUTUR ne
+    pourra injecter un non-nombre sans qu'on le sache.
+
+    Pourquoi ici et pas au seul `_db_store_m1` : un `NaN` qui survit au fetch empoisonne **trois**
+    consommateurs, pas un — PostgreSQL le refuse (jeton `NaN` illégal en JSON, donc l'écriture du
+    cache casse APRÈS que l'appel réseau a été payé), Redis le mémorise pour 4 h, et tout lecteur
+    le voit comme un nombre PRÉSENT (`if x:` est vrai sur `NaN`, #47). La porte est donc le fetch.
+
+    Un champ écarté devient `None` — l'état ABSENT du trio de #44 — jamais `0`, qui se lirait comme
+    une mesure. Le `logger.warning` nomme les chemins : une absence silencieuse se lit comme une
+    propriété de l'émetteur (#69), pas comme une panne de fournisseur.
+    """
+    import math
+
+    tombes: list[str] = []
+
+    def _net(prefixe, obj):
+        if isinstance(obj, dict):
+            return {k: _net(f"{prefixe}.{k}", v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_net(f"{prefixe}[{i}]", v) for i, v in enumerate(obj)]
+        if isinstance(obj, float) and not math.isfinite(obj):
+            tombes.append(prefixe)
+            return None
+        return obj
+
+    propre = _net("m1", data)
+    if tombes:
+        logger.warning(
+            "m1 %s : %d champ(s) non finis écartés (absents, pas nuls) → %s",
+            ticker, len(tombes), ", ".join(sorted(tombes)),
+        )
+    return propre
+
+
 class DataService:
 
     # ------------------------------------------------------------------ M1
@@ -89,7 +130,8 @@ class DataService:
     async def _fetch_m1(self, ticker: str, fmp_api_key: str) -> dict:
         from app.data_collection.m1_quantitative import collect_quantitative
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, collect_quantitative, ticker, fmp_api_key)
+        data = await loop.run_in_executor(None, collect_quantitative, ticker, fmp_api_key)
+        return _assainir_non_finis(ticker, data)
 
     async def _db_m1_recent(self, ticker: str, max_age_hours: int) -> Optional[dict]:
         cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)

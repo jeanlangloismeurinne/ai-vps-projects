@@ -744,24 +744,37 @@ lot 1 ; les tables viennent en dernier.
 > et il se REQUÊTE à nouveau après la re-collecte, jamais il ne se rappelle**
 > (`feedback_ligne_de_base_est_une_mesure`).
 >
-> **▶ PROCHAIN — LA RE-COLLECTE, seule étape du lot #79 qui reste.** Les **174 entries courantes sans
-> portée** sont **re-collectées, jamais backfillées par modèle** : « quelle date cette phrase
-> affirme-t-elle ? » n'est pas un vocabulaire fermé, donc ce n'est pas dérivable — et l'arbitrage
-> utilisateur du 2026-09-22 tient (**à l'initialisation et en test, on rachète TOUT**). L'outil
-> existe et coûte **zéro token** (appels réseau seulement) :
+> **▶ FAIT le 2026-09-23 — la re-collecte a tourné, et elle a montré sa LIMITE.** Le rejeu a été
+> re-tenté (`feedback_blocage_classifieur_non_permanent` : le refus de la veille était levé) et il
+> est passé : **15/15 `ok`, 0 erreur, plancher tenu** (RVMD déterministes actives 72 ≥ 13). Mais il
+> a d'abord échoué **6 fois sur 15** sur `Token "NaN" is invalid` — un défaut de DONNÉES, pas du lot
+> #79 : c'est le lot **#81** (`CLAUDE.md`), corrigé, gardé et documenté.
+>
+> **Les trois mesures d'après, requêtées et non rappelées** (`feedback_ligne_de_base_est_une_mesure`) :
+> - (a) `bash checks/avec_base.sh check_datation` §7 → **128 entrées d'héritage · 110 datées** sous
+>   la 045 (départ 174/0). **L'objectif « héritage → 0 » n'est PAS atteint et ne peut pas l'être par
+>   ce chemin** — voir ci-dessous.
+> - (b) dossier RVMD × `qualite_financiere` relu EN TEXTE → **5 chemises hétérogènes sur 6**
+>   subsistent. Seule `qf_7.tresorerie_disponible` a été résorbée.
+> - (c) suite complète **3072 / 0 sur 41 scripts**.
+>
+> ⚠️ **POURQUOI LE REJEU NE PEUT PAS FINIR LE TRAVAIL — mesuré, pas supposé.** Les entries des cinq
+> chemises restantes (#296, #300, #308, #311, #340, #351, #445, #449) sont toutes
+> `portee_temporelle IS NULL`, toutes `source_type=edgar_official`, et toutes **créées le
+> 2026-09-12 par le search worker** — tags en forme libre, pas les tags champ-par-champ des feeds
+> déterministes. `rejeu_producteurs.sh` ne rejoue que les producteurs DÉTERMINISTES : il ne détient
+> pas ces champs, donc il ne les supersede pas, et il ne les supersedera jamais quel que soit le
+> nombre de passages. **Le solde des 128 est une dette à coût MODÈLE**, pas une dette d'outillage —
+> c'est un lot à part entière, à décider, pas une étape d'exécution restante.
+>
+> Ce qui reste vrai et ne change pas : on **re-collecte**, on ne backfille **jamais** par modèle
+> (« quelle date cette phrase affirme-t-elle ? » n'est pas un vocabulaire fermé, donc pas dérivable),
+> et l'arbitrage utilisateur du 2026-09-22 tient (**à l'initialisation et en test, on rachète TOUT**).
 >
 > ```
-> bash tools/rejeu_producteurs.sh
+> bash tools/rejeu_producteurs.sh      # zéro token, à relancer après tout correctif de feed
+> bash checks/avec_base.sh <check>     # lanceur versionné des checks qui lisent l'état persisté
 > ```
->
-> ⚠️ **Il a été REFUSÉ par le classifieur de permissions le 2026-09-23** (deux fois, message « auto
-> mode could not evaluate this action »). Je n'ai pas contourné : le script **écrit dans le corpus
-> réel**. À lancer par l'utilisateur via `! bash tools/rejeu_producteurs.sh`, ou à ré-essayer — un
-> blocage du classifieur **n'est pas permanent** (`feedback_blocage_classifieur_non_permanent` : refus
-> stable quatre sessions puis levé ; re-tester le chemin nominal avant de dérouler un repli).
-> Après quoi, dans l'ordre : (a) `check_datation.py` §7 doit montrer `héritage → 0` et `datées > 0` ;
-> (b) re-lire le dossier EN TEXTE et vérifier que les **6 chemises hétérogènes** ont disparu ;
-> (c) seulement ensuite, dépenser du modèle.
 >
 > **▶ CE QUE L'UTILISATEUR A TRANCHÉ LE 2026-09-22, et qui commande la suite :**
 > 1. **On finit l'AMONT** pour faire tourner la V3 complète sur un cas sans difficulté. **Ensuite

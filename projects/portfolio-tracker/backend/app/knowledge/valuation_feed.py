@@ -121,6 +121,32 @@ def _num(v: Any, *, suffix: str = "", nd: int = 2) -> str:
     return f"{f:.{nd}f}{suffix}".replace(".", ",")
 
 
+def _date_du_fait(m1: dict[str, Any]) -> Optional[date]:
+    """DÉTENTEUR UNIQUE (#46) de « à quelle date le marché a-t-il produit ce relevé ? ».
+
+    Deux horodatages remontent du quant, et ils ne disent PAS la même chose :
+      · `price_as_of`      — la dernière cotation régulière, celle de `current_price` ;
+      · `last_close_date`  — la dernière séance dont la clôture est exploitable, celle sur
+                             laquelle reposent les variations 1m/3m/6m/1an/YTD.
+    Le relevé est fondé d'abord sur le prix, donc `price_as_of` prime ; `last_close_date` est le
+    repli quand le fournisseur n'horodate pas sa cotation.
+
+    Pourquoi ce n'est pas `date.today()` : mesuré le 2026-09-23, le « prix actuel » de MSFT était
+    la clôture du 22/09. Dater du jour, c'est faire battre un relevé simplement rafraîchi contre
+    un fait réellement plus récent — le défaut que #79 corrige.
+    """
+    price = m1.get("price") or {}
+    for clef in ("price_as_of", "last_close_date"):
+        brut = price.get(clef)
+        if not brut:
+            continue
+        try:
+            return date.fromisoformat(str(brut)[:10])
+        except ValueError:
+            logger.warning("valuation_feed : `%s` illisible (%r) — ignoré", clef, brut)
+    return None
+
+
 def build_valuation_entries(
     ticker_id: str, symbol: str, m1: dict[str, Any], *, as_of: date
 ) -> list[ValuationEntrySpec]:
@@ -277,7 +303,13 @@ async def run_valuation_feed(
         else await svc.get_m1(symbol, settings.FMP_API_KEY)
     )
 
-    as_of = date.today()
+    # La date du FAIT est celle que le MARCHÉ a produite, jamais l'horloge du serveur (#79).
+    # Mesuré le 2026-09-23 sur MSFT : `current_price` valait 498,00 avec `regularMarketTime` au
+    # 22/09 20:00 UTC — la clôture de la VEILLE. Le relevé se datait pourtant du jour, ce qui est
+    # exactement le défaut que le lot #79 corrige, vivant ici dans le flux de prix.
+    # Repli sur aujourd'hui si le fournisseur n'horodate rien : mieux vaut une date trop récente,
+    # visible et bornée, qu'une pièce sans date de tri (`indatable` se perdrait au classement).
+    as_of = _date_du_fait(m1) or date.today()
     specs = build_valuation_entries(ticker_id, symbol, m1, as_of=as_of)
 
     created: list[dict[str, Any]] = []
@@ -296,11 +328,14 @@ async def run_valuation_feed(
                         content_structured=spec.content_structured,
                         tags=spec.tags,
                         lang="fr",
-                        # Un relevé de marché est constaté le jour où le marché l'a produit, et son
-                        # « document » est ce même relevé : les deux dates COÏNCIDENT, et c'est un
-                        # fait, pas un tampon. Ce n'est donc pas le cas #296 — celui-là reportait un
-                        # fait ANTÉRIEUR sous la date de son classement.
-                        datation=constatee(date_du_fait=as_of, date_du_document=as_of),
+                        # Un relevé de marché est constaté le jour où le MARCHÉ l'a produit ; le
+                        # « document » est la lecture qu'on en fait aujourd'hui. On croyait ces
+                        # deux dates confondues : mesuré, elles ne le sont pas — le 2026-09-23 à
+                        # 09 h UTC, le dernier cours coté datait du 22/09. Les confondre, c'était
+                        # le cas #296 (un fait antérieur reporté sous la date de son classement),
+                        # et c'est ce qui faisait battre un vieux relevé rafraîchi contre un fait
+                        # récent au tri du dossier.
+                        datation=constatee(date_du_fait=as_of, date_du_document=date.today()),
                         supersedes_entry_id=prev_id,
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev_id})
