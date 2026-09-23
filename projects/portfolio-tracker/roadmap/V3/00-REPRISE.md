@@ -2,12 +2,12 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-22
+updated: 2026-09-23
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Le RÉCIT des lots livrés n'est PAS ici : il est
   dans `00-REPRISE-ARCHIVE.md`, les règles durables dans le `CLAUDE.md` du projet (conventions
-  numérotées #25…#78), et la PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
+  numérotées #25…#79), et la PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
   Roadmap active : **`roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une grille fermée de 19 champs identique pour tous les émetteurs à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
@@ -16,7 +16,9 @@ role: >
   bout en réel (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais
   produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie
   aval/suivi vient après (arbitrage utilisateur 2026-09-22).
-  Suite `run_all.sh` = **2824 assertions, 0 échec sur 39 scripts**. Migrations jusqu'à **044**.
+  Suite `run_all.sh` = **2926 assertions, 0 échec sur 40 scripts**. Migrations jusqu'à **045**
+  (appliquée). ⚠️ Une étape du lot #79 reste À EXÉCUTER : la **re-collecte** du corpus hérité
+  (174 entries courantes sans portée) — voir ▶ PROCHAIN.
   PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
@@ -628,10 +630,138 @@ lot 1 ; les tables viennent en dernier.
 >
 > ⚠️ **DÉFAUT NOUVEAU, NOMMÉ ET DÉLIBÉRÉMENT NON CORRIGÉ ICI — la DATATION HÉTÉROGÈNE.** Sur RVMD,
 > **6 des 8 chemises à plusieurs versions** ont une pièce en vigueur **collectée AVANT** une de ses
-> antérieures. Cause : `edgar_feed` date une entry à la clôture de période (`period_end`), le chemin
-> narratif/web à ce que le modèle déclare. **Deux horloges dans la même chemise.** L'assemblage n'a
+> antérieures. ~~Cause : `edgar_feed` date une entry à la clôture de période (`period_end`), le chemin
+> narratif/web à ce que le modèle déclare.~~ **Deux horloges dans la même chemise.** L'assemblage n'a
 > pas de quoi trancher — il le NOMME au bilan (et dit `INDÉTERMINABLE` si `created_at` n'est pas
 > chargé, #25/#44). **Le remède est à la PRODUCTION des entries, c'est un lot distinct.**
+> ⚠️ **LA CAUSE ÉCRITE CI-DESSUS ÉTAIT FAUSSE** (re-mesurée le 2026-09-23 avant d'écrire une ligne,
+> #78) : les deux horloges vivent **toutes les deux sur `edgar_official`**, pas une par canal. Ne pas
+> la re-citer.
+
+---
+
+> **✅ LOT « LE GUICHET DATE LE FAIT » — LIVRÉ le 2026-09-23 (convention #79, migration 045).**
+> Ordre imposé respecté : **contrat → agent → données**.
+>
+> **Ce qui était mesuré** (relevé en base avant le lot, non rappelé) : **21 des 54** entries
+> courantes datées de RVMD écrivent DEUX dates dans leur prose et n'en stockent qu'une.
+> #307 affirme « au 2026-06-30 » et trie au **2026-08-05** (le dépôt du 10-Q) ; #309 est la colonne
+> **comparative** du même 10-Q — un chiffre de 2025 portant le tampon le plus frais du dossier ;
+> #296 trie au **2026-09-01**, une date qui n'apparaît **nulle part dans sa propre prose** — ni le
+> fait, ni le dépôt : le tampon du greffier au moment du classement. Ce dernier n'est plus un
+> problème de fraîcheur mais de **traçabilité** : la ligne ne peut plus être rapprochée de sa source.
+>
+> **Ce qui a été livré, et pourquoi ce n'est PAS une garde de plus.** Une garde vérifie la structure
+> et la relation, **jamais le sens** (#68) : aucun code ne peut regarder `source_date = 2026-08-05`
+> et savoir si c'est le fait ou le papier — les deux sont des dates plausibles, structurellement
+> indiscernables. C'est donc la **FORME de la réponse** qui change : deux cases nommées
+> (`date_du_fait`, `date_du_document`) rendent la confusion **inexprimable** au lieu de la rendre
+> surveillée. Le modèle écrivait DÉJÀ les deux dates dans sa prose — il ne lui manquait pas la
+> connaissance, il lui manquait la case. Et **`source_date` cesse d'être reçue** : elle est DÉRIVÉE
+> (`app/knowledge/datation.py`, détenteur unique #46), comme `nature` l'est au guichet depuis la 034.
+> Les lecteurs (`dossier._rang`, `actualite`, `compute_reliability`) ne changent pas d'une ligne.
+>
+> **Le vocabulaire est FERMÉ, trois états** (#25/#44/#54) : `constatee` fait foi à la date du **FAIT**
+> · `prospective` à la date de son **ANNONCE** · `indatable` n'a **pas** de date de tri (`NULL`, donc
+> `actualite` rend `indeterminable` et la pièce perd toute élection de fraîcheur — perdre faute de
+> date est honnête, gagner sur la date d'une page ne l'est pas). Pas de quatrième état, **pas de
+> défaut**. En base, `portee_temporelle IS NULL` désigne les lignes **antérieures à la 045** : un
+> constat d'héritage dénombré, pas un état du vocabulaire.
+>
+> **▶ LES DEUX ARBITRAGES DU FONDS** (l'utilisateur a raisonné depuis la pratique d'un vrai fonds) :
+> 1. **2026-09-23 — « on note les deux dates, et la mesure retenue est celle du dernier FAIT »**,
+>    pas du dernier papier reçu. C'est toute la règle de dérivation de `constatee`.
+> 2. **2026-09-23 — une pièce prospective se classe en `prospective` à la date de son ANNONCE**, et
+>    la période visée devient un **attribut** de la pièce (`periode_visee`), pas sa fraîcheur. Une
+>    guidance émise le 5 août est une information du 5 août, pas une information de l'exercice
+>    qu'elle vise. ⇢ Ouvre un **module de backlog** : confronter ultérieurement le **réalisé à
+>    l'annoncé** pour produire des insights sur **la qualité des prévisions du management**,
+>    destinés à alimenter certains frameworks (`qualite_financiere`, futur framework gouvernance).
+>    `periode_visee` en est le seul ingrédient — c'est pourquoi il est au contrat alors qu'il ne sert
+>    aucun tri aujourd'hui.
+> 3. **2026-09-23 — une note produite par le fonds lui-même est un DOCUMENT DU JOUR**, à condition
+>    qu'elle indique **sur quel état de la base de connaissance — et notamment de quels frameworks —
+>    elle se fonde**. Donc `date_du_fait = date_du_document = aujourd'hui` pour `synthesis_feed`,
+>    le context pack du `curator` et l'ancre de base rate : une synthèse n'hérite **pas** de la date
+>    de ses ingrédients. La règle de dérivation de son **tier** (« un cran sous la plus faible entry
+>    citée ») et celle de sa **date** ne répondent pas à la même question : le tier dit « à quel point
+>    peut-on s'y fier », la date dit « de quand est cette lecture ». Ce qui empêche la note de se
+>    faire passer pour un fait frais n'est pas sa date, c'est **l'état écrit à côté**.
+>    ⇢ **Résiduel #80** : cet état est **partiellement** écrit (`source_entry_refs` id+version pour le
+>    context pack, `cited_entry_ids` + tiers pour la synthèse) — **la version des frameworks n'est
+>    enregistrée nulle part**. Une note ne devrait pas pouvoir citer ses pièces sans dire selon
+>    quelle grille elle les a lues. Mesuré, pas supposé : `grep framework_version` = 0 occurrence
+>    dans les trois producteurs.
+>
+> **Gardes.** `check_datation.py` **107/0** (sept sections ; §6 rejoue les cas RÉELS #307/#309/#296
+> sur leurs valeurs **mesurées en base**, ancre non circulaire ; §7 lit l'état persisté et **dénombre
+> l'héritage** au lieu de le tolérer en silence). `negatif_datation.sh` **28 mutations / 0 échec**,
+> avec satisfiabilité mesurée avant toute mutation. Suite **2926 / 0 sur 40 scripts**.
+>
+> ⚠️ **CE QUE LE TEST NÉGATIF A TROUVÉ, ET QUI VAUT LE FICHIER.** Deux trous, aucun visible au vert :
+> - **La mutation « `indatable` se fabrique une date » est restée VERTE.** §2 n'éprouvait `indatable`
+>   que **sans** document — le seul cas où la mutation ne change rien. Le cas réel (une indatable qui
+>   NOMME sa source, ce que le contrat autorise et encourage) n'était asserté nulle part. Un assert
+>   écrit sur le cas commode est aveugle au cas réel (`feedback_fixture_copiee_du_reel`).
+> - **La liste des producteurs était RETAPÉE À LA MAIN : six fichiers, alors qu'il y en a NEUF.**
+>   `curator.py`, `base_rate_corpus.py` et `synthesis_feed.py` appelaient `store_knowledge` **sans
+>   `datation=`** — donc plantaient au premier appel réel — et le check était **vert** : il ne les
+>   regardait pas. Un recensement par nom qui ne couvre qu'une partie du corpus refait le bug en
+>   `verdict=ok` (`feedback_adressage_par_nom_exige_lecture`). Les appelants sont désormais **LUS
+>   dans l'arbre des sources** (AST) ; la liste écrite n'est plus qu'un **accusé de réception**, et
+>   tout écart — producteur neuf **comme** producteur disparu — rougit et exige une décision
+>   explicite sur sa datation. Les deux sens sont éprouvés par mutation.
+> ⚠️ Corollaire méthodo : l'assert « X appelle bien `store_knowledge` » a été **retiré** — depuis que
+> la liste est découverte, il est une tautologie, et une garde qu'aucune mutation ne peut atteindre
+> est le 6ᵉ faux-vert. Ce qu'il protégeait est tenu par `require(…, 9)` + le recensement.
+>
+> ⚠️ **FAUX ROUGE DE MA PROPRE FABRICATION, gardé pour le motif.** §7 filtrait les contraintes par
+> `conname LIKE '%datation%' OR '%portee_temporelle%'` : parenthésage fautif **et**, plus
+> fondamentalement, `..._source_date_derivee_check` ne porte **aucun** de ces motifs — l'assert était
+> **structurellement insatisfiable** sur une base parfaitement conforme. Les noms attendus sont
+> maintenant **lus dans le fichier de migration** (#46). `feedback_faux_rouge_se_creuse` : chercher
+> pourquoi ça rougit **avant** de corriger l'outil.
+>
+> ⚠️ **RÉSIDUS NOMMÉS (aucun n'est un défaut de ce lot)** :
+> 1. **`date_du_document` n'est pas rapprochée de l'index des dépôts EDGAR.** Ce serait un contrôle
+>    juste, et il rendrait la **porte d'écriture dépendante du réseau** : une panne d'EDGAR se lirait
+>    « date invérifiable », donc, sous la moindre tolérance, « date acceptée » — une panne réseau qui
+>    produit la phrase rassurante (#49). Le rapprochement est un travail de **LECTURE**.
+> 2. **#445 étiquette une ligne de crédit non tirée « EXERCICE CLOS LE 2025-06-30 »** — un **stock**
+>    présenté comme un **flux**. Défaut du producteur XBRL, famille `poste_kind` (#55/F16), pas de la
+>    datation.
+> 3. **La règle retire un faux ordre, elle ne fabrique pas un meilleur gagnant** (#71). Sur
+>    `qf_7.tresorerie_disponible`, #307 et #444 s'ÉGALISENT au 2026-06-30 et c'est le départage aval
+>    (`dossier._rang`, `-id`) qui tranche — vers #444, qui couvre un fait **plus étroit**. À ne pas
+>    survendre.
+>
+> ⚠️ **LIGNE DE BASE DU 2026-09-23, lue EN TEXTE avant toute re-collecte** (frontière gratuite,
+> `bash tools/montrer_dossier.sh RVMD qualite_financiere v3.0.0`) : 40 pièces remises sur 57
+> courantes · 14 chemises · **8 chemises à plusieurs versions** · **6 à datation hétérogène**
+> (`qf_4.endettement_brut_et_net`, `qf_4.lignes_de_credit_non_tirees`, `qf_7.charges_fixes_decaissables`,
+> `qf_7.consommation_de_tresorerie_recente`, `qf_7.lignes_de_credit_non_tirees`,
+> `qf_7.tresorerie_disponible`) · #296 toujours en vigueur au **2026-09-01**. **C'est l'état à battre,
+> et il se REQUÊTE à nouveau après la re-collecte, jamais il ne se rappelle**
+> (`feedback_ligne_de_base_est_une_mesure`).
+>
+> **▶ PROCHAIN — LA RE-COLLECTE, seule étape du lot #79 qui reste.** Les **174 entries courantes sans
+> portée** sont **re-collectées, jamais backfillées par modèle** : « quelle date cette phrase
+> affirme-t-elle ? » n'est pas un vocabulaire fermé, donc ce n'est pas dérivable — et l'arbitrage
+> utilisateur du 2026-09-22 tient (**à l'initialisation et en test, on rachète TOUT**). L'outil
+> existe et coûte **zéro token** (appels réseau seulement) :
+>
+> ```
+> bash tools/rejeu_producteurs.sh
+> ```
+>
+> ⚠️ **Il a été REFUSÉ par le classifieur de permissions le 2026-09-23** (deux fois, message « auto
+> mode could not evaluate this action »). Je n'ai pas contourné : le script **écrit dans le corpus
+> réel**. À lancer par l'utilisateur via `! bash tools/rejeu_producteurs.sh`, ou à ré-essayer — un
+> blocage du classifieur **n'est pas permanent** (`feedback_blocage_classifieur_non_permanent` : refus
+> stable quatre sessions puis levé ; re-tester le chemin nominal avant de dérouler un repli).
+> Après quoi, dans l'ordre : (a) `check_datation.py` §7 doit montrer `héritage → 0` et `datées > 0` ;
+> (b) re-lire le dossier EN TEXTE et vérifier que les **6 chemises hétérogènes** ont disparu ;
+> (c) seulement ensuite, dépenser du modèle.
 >
 > **▶ CE QUE L'UTILISATEUR A TRANCHÉ LE 2026-09-22, et qui commande la suite :**
 > 1. **On finit l'AMONT** pour faire tourner la V3 complète sur un cas sans difficulté. **Ensuite
@@ -867,6 +997,25 @@ justes, c'est le *fait énoncé* qui était faux.
    n'écrit. Garde-fous : critère énonçable en 3 lignes ([[feedback_deleguer_recherche_pas_jugement]]),
    lire le décompte par catégorie, jamais un cas isolé ([[feedback_jugement_modele_instable_entre_passages]]).
    Réutilise le patron `tools/acceptation_traducteur.py`. À outiller après le collecteur.
+10. **Module « réalisé vs annoncé » — la qualité des prévisions du management** (arbitrage du fonds
+    du 2026-09-23, cf. le lot #79 ci-dessus). Une pièce `prospective` est datée de son **ANNONCE** et
+    porte la période qu'elle vise en **attribut** (`periode_visee`). Le module confronte
+    ultérieurement le **constat** publié pour cette période à ce qui avait été annoncé, et en tire un
+    insight sur la fiabilité des prévisions de l'émetteur — matière pour `qualite_financiere` et un
+    futur framework gouvernance. ⚠️ `periode_visee` est **le seul ingrédient** de ce module : c'est
+    pourquoi il est au contrat #79 alors qu'il ne sert **aucun tri** aujourd'hui. ⚠️ Ne PAS le
+    dériver en fraîcheur : une guidance émise le 5 août est une information du 5 août, jamais une
+    information de l'exercice qu'elle vise — c'est l'arbitrage même qui fonde `prospective`.
+11. **Résiduel #80 — une note du fonds ne dit pas selon QUELLE GRILLE elle a lu ses pièces**
+    (ouvert par le lot #79). L'arbitrage n° 3 du fonds autorise `date_du_fait = date_du_document =
+    aujourd'hui` pour les notes dérivées **à la condition** que l'état de la base sur lequel elles se
+    fondent soit écrit à côté. Cet état est **partiellement** écrit : `source_entry_refs`
+    (entry_id + version) pour le context pack du `curator`, `cited_entry_ids` + tiers pour
+    `synthesis_feed`. **La version des frameworks n'est enregistrée nulle part** — mesuré, pas
+    supposé : `grep framework_version` = **0 occurrence** dans les trois producteurs de notes
+    (`curator.py`, `synthesis_feed.py`, `base_rate_corpus.py`). Une note relue dans six mois ne peut
+    donc pas dire si la grille a changé depuis. ⚠️ C'est l'argument de #64 transposé de la réponse à
+    la **note** : sans version, la note reste rattachée à une grille dont le libellé a pu bouger.
 
 ### Dettes techniques connues, assumées
 

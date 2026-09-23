@@ -24,7 +24,7 @@ mécanique est juste, pas qu'elle débloque quoi que ce soit (#71 : router n'est
 Cible : pydantic v2 (container backend). Tester en container, **pas** le python hôte (v1).
 """
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 from app.knowledge.appariement_feed import (
     SOURCE_TYPE,
@@ -66,14 +66,22 @@ def leve(fn, *a, **kw):
 # `form`, `fp`, `accn`, `filed`, et `start` SEULEMENT pour un flux. Une fixture qui omettrait `fp` ou
 # `form` rendrait `points_annuels` vide et ferait lire tous les flux comme des instants — le check
 # serait vert sur un chemin que la prod ne prend jamais (`feedback_fixture_copiee_du_reel`).
-def _flux(end, val, *, start, unit="USD", form="10-K", accn="0001-25-000001", fy=2026):
+# ⚠️ `filed` valait `end` jusqu'au 2026-09-23 : une fixture où la date du DOCUMENT est celle du
+# FAIT ne peut pas voir leur confusion, et c'est précisément celle que #79 ferme. Un dépôt arrive
+# APRÈS la clôture qu'il décrit — 36 jours, l'ordre de grandeur réel d'un 10-Q. Une fixture plus
+# commode que la prod est un check aveugle au vert (`feedback_fixture_copiee_du_reel`).
+def _depot(end: str) -> str:
+    return (date.fromisoformat(end) + timedelta(days=36)).isoformat()
+
+
+def _flux(end, val, *, start, unit="USD", form="10-K", accn="0001-25-000001", fy=2026, filed=None):
     return {"end": end, "val": val, "start": start, "unit": unit, "form": form, "fp": "FY",
-            "accn": accn, "filed": end, "fy": fy}
+            "accn": accn, "filed": filed or _depot(end), "fy": fy}
 
 
-def _instant(end, val, *, unit="USD", form="10-Q", accn="0001-25-000002"):
+def _instant(end, val, *, unit="USD", form="10-Q", accn="0001-25-000002", filed=None):
     return {"end": end, "val": val, "unit": unit, "form": form, "fp": "Q2", "accn": accn,
-            "filed": end}
+            "filed": filed or _depot(end)}
 
 
 _FACTS = {
@@ -252,10 +260,16 @@ check("§3 les hypothèses du calcul voyagent AVEC le fait, dans le structuré e
       _f.structure["hypotheses"] == list(_CONS_APPROX.hypotheses)
       and "contester" in _f.contenu and _CONS_APPROX.hypotheses[0] in _f.contenu,
       f"→ {_f.structure['hypotheses']}")
-check("§3 la date du fait est celle de l'ancre, et `source_date` la porte comme une DATE (pas une "
+check("§3 la date du fait est celle de l'ancre, et la datation la porte comme une DATE (pas une "
       "chaîne) : l'axe actualité se calcule à la lecture, encore faut-il ne pas lui mentir en amont",
-      _f.source_date == date(2026, 6, 30) and _f.structure["period_end"] == "2026-06-30",
-      f"→ {_f.source_date}")
+      _f.datation.date_du_fait == date(2026, 6, 30) and _f.structure["period_end"] == "2026-06-30",
+      f"→ {_f.datation.date_du_fait}")
+check("§3 (#79) le DOCUMENT est daté du dépôt, pas de la clôture : les deux dates sont distinctes "
+      "et `source_date` dérive de celle du FAIT",
+      _f.datation.date_du_document == date(2026, 8, 5)
+      and _f.datation.date_du_document != _f.datation.date_du_fait
+      and _f.datation.source_date() == _f.datation.date_du_fait,
+      f"→ doc={_f.datation.date_du_document} fait={_f.datation.date_du_fait}")
 check("§3 un fait de bilan pur est marqué `stock` et non `flow` : le cadrage décide de l'identité du "
       "fait en base (clé par `metric` seul pour un stock, `metric`+`end` pour un flux)",
       _f.structure["poste_kind"] == "stock" and _f.flux is False,

@@ -148,36 +148,55 @@ hostile = {
     "request_hash": "peu importe",
     "worker": "search-worker",
     "status": "found",
+    # #79 — chaque entry DÉCLARE sa datation (deux dates nommées), sinon l'ouvrier la rejette
+    # AVANT tout le reste. Les dates du fait et du document sont tenues DISTINCTES : les faire
+    # coïncider rendrait la dérivation `source_date` indiscernable d'une recopie, et le rejet
+    # des entries (a)/(c) doit être prononcé par SA règle — plancher, type — jamais par la
+    # datation (un refus prononcé par une autre règle est un faux vert, cf. #56).
     "entries": [
         # a) source surqualifiée + score gonflé sur un blog → doit tomber sous le plancher
         {"entry_type": "fact_qualitative", "title": "CUDA lock-in", "content": "Blog affirmant un lock-in.",
          "source_type": "edgar_official", "source_url": "https://blog.random-guy.dev/cuda",
+         "portee_temporelle": "constatee", "date_du_fait": "2026-06-30",
+         "date_du_document": "2026-07-02",
          "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "source officielle"},
         # b) presse financière, score gonflé → recalculé à 0.75
         {"entry_type": "fact_qualitative", "title": "Coût de migration hors CUDA",
          "content": "Reuters rapporte des coûts de réécriture de kernels significatifs.",
          "source_type": "financial_press", "source_url": "https://www.reuters.com/tech/cuda",
-         "source_date": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
+         "portee_temporelle": "constatee", "date_du_fait": "2026-07-10",
+         "date_du_document": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
          "reliability_note": "je suis confiant"},
         # c) mauvais entry_type → rejet
         {"entry_type": "fact_financial", "title": "CA FY26", "content": "130 Md$",
          "source_type": "edgar_official", "source_url": "https://www.sec.gov/x",
+         "portee_temporelle": "constatee", "date_du_fait": "2026-01-25",
+         "date_du_document": "2026-02-25",
          "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "10-K"},
-        # d) doublon exact de (b)
+        # d) doublon exact de (b) — mêmes dates, sinon ce ne serait plus un doublon
         {"entry_type": "fact_qualitative", "title": "Coût de migration hors CUDA",
          "content": "Reuters rapporte des coûts de réécriture de kernels significatifs.",
          "source_type": "financial_press", "source_url": "https://www.reuters.com/tech/cuda",
-         "source_date": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
+         "portee_temporelle": "constatee", "date_du_fait": "2026-07-10",
+         "date_du_document": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
          "reliability_note": "doublon"},
-        # e) IR officiel → 0.90, doit finir premier au tri
+        # e) IR officiel → 0.90, doit finir premier au tri. C'est aussi le cas `indatable` du
+        #    vocabulaire #79 : une page décrivant l'ampleur d'un écosystème n'affirme aucune
+        #    date de fait. `source_date` y est donc NULL — l'absence est le RÉSULTAT, pas un
+        #    échec —, la décote d'âge ne mord pas, et le 0.90 lu ici est bien la promotion par
+        #    le domaine et rien d'autre.
         {"entry_type": "fact_qualitative", "title": "Écosystème CUDA",
          "content": "Page IR NVIDIA décrivant l'ampleur de l'écosystème développeurs.",
          "source_type": "web_search_generic", "source_url": "https://ir.nvidia.com/ecosystem",
+         "portee_temporelle": "indatable", "date_du_document": "2026-06-01",
+         "datation_motif": "description stable d'un écosystème, aucune date de fait affirmée",
          "reliability_score": 0.50, "reliability_tier": "C+", "reliability_note": "prudent"},
         # f) 3ᵉ entry valide → doit être tronquée (max_entries=2)
         {"entry_type": "fact_qualitative", "title": "Barrière outillage",
          "content": "Les Échos : outillage propriétaire difficile à répliquer.",
          "source_type": "financial_press", "source_url": "https://lesechos.fr/cuda",
+         "portee_temporelle": "constatee", "date_du_fait": "2026-04-02",
+         "date_du_document": "2026-04-08",
          "reliability_score": 0.75, "reliability_tier": "B+", "reliability_note": "presse"},
     ],
     "uncovered_fields": [],
@@ -200,8 +219,13 @@ check("IR NVIDIA promu par le domaine et classé 1er (0.90)",
       and entries[0]["source_type"] == "company_ir_official"
       and entries[0]["reliability_score"] == 0.90,
       f"→ {entries[0]['source_type']} {entries[0]['reliability_score']}")
+# La 2ᵉ est de la presse DATÉE (#79) : son 0.75 de base porte la décote d'âge, qui bouge avec
+# le jour où le check tourne — d'où la fenêtre, comme le `≤` de check_provenance. Ce que
+# l'assert tient vraiment est l'ORDRE et les deux bases, pas une décimale.
 check("troncature = les 2 MIEUX notées, pas les 2 premières venues",
-      [e["reliability_score"] for e in entries] == [0.90, 0.75],
+      entries[0]["reliability_score"] == 0.90
+      and 0.73 <= entries[1]["reliability_score"] <= 0.75
+      and entries[0]["reliability_score"] > entries[1]["reliability_score"],
       f"→ {[e['reliability_score'] for e in entries]}")
 
 # Même sortie, plafond desserré : on voit alors le recalcul de score sur chaque entry retenue.
@@ -258,8 +282,12 @@ check("mandat divergent sans résultat : l'invariant croisé A6 passe", True)
 print("\n6. llm_memory — P2 imposé même si le modèle l'oublie")
 req_mem = req.model_copy(update={"reliability_min": 0.0})
 out3 = _apply_deterministic_overrides(
+    # Un souvenir de modèle n'affirme aucune date : `indatable` (#79), donc `source_date` NULL
+    # et aucune décote d'âge — le 0.40 lu plus bas est le plancher llm_memory, rien d'autre.
     {"entries": [{"entry_type": "fact_qualitative", "title": "De mémoire",
                   "content": "CUDA domine depuis longtemps.", "source_type": "llm_memory",
+                  "portee_temporelle": "indatable",
+                  "datation_motif": "restitution de mémoire, aucune date affirmée",
                   "reliability_score": 0.9, "reliability_tier": "A", "reliability_note": "sûr",
                   "requires_human_review": False}],
      "uncovered_fields": []},

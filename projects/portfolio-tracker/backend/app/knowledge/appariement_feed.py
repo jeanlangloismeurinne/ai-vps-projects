@@ -86,6 +86,7 @@ from app.knowledge.edgar_facts import (
 # UNIQUE, tenue par `edgar_feed` (clé par `metric` seul pour un stock, `metric`+`end` pour un flux).
 # `financials_feed` l'importe déjà pour la même raison : deux appariements du même fait sous deux
 # jeux de tags feraient répondre deux choses à la même question.
+from app.knowledge.datation import Datation, constatee
 from app.knowledge.edgar_feed import _current_fact_ids, filing_url, is_annual_flow
 from app.knowledge.service import RELIABILITY_TABLE, store_knowledge
 from app.knowledge.synthesis_feed import derive_tier_calcul
@@ -159,6 +160,7 @@ class PointRetenu(NamedTuple):
     form: Optional[str]
     accn: Optional[str]
     offset: int = 0
+    filed: Optional[str] = None       # date de DÉPÔT du document qui porte le point (#79)
 
 
 class FaitApparie(NamedTuple):
@@ -170,7 +172,7 @@ class FaitApparie(NamedTuple):
     structure: dict[str, Any]
     tags: list[str]
     source_url: Optional[str]
-    source_date: date
+    datation: Datation
     fiscal_period: str
     flux: bool
     fiabilite: Optional[tuple[float, str, str]]
@@ -380,7 +382,7 @@ def resoudre_points(
         points[(concept, offset)] = PointRetenu(
             concept=concept, offset=offset, valeur=float(p["val"]), unite=unites[concept],
             end=str(p["end"]), cadrage=cadrages[concept], duree_jours=duree_jours(p),
-            form=p.get("form"), accn=p.get("accn"))
+            form=p.get("form"), accn=p.get("accn"), filed=p.get("filed"))
     return points, ancres["flux"], ancres["instant"]
 
 
@@ -488,6 +490,15 @@ def construire_fait_apparie(
     # L'URL pointe le dépôt du point le plus récent : c'est celui qu'un lecteur ouvrira pour
     # contester le nombre, et les autres accessions restent lisibles dans `ingredients`.
     plus_recent = max(points.values(), key=lambda p: (p.end, p.concept, p.offset))
+    # Le DOCUMENT d'un fait apparié est le dépôt le plus RÉCENT parmi ses ingrédients : c'est la
+    # date à partir de laquelle l'expression pouvait être évaluée (#79). Sans elle, on ne saurait
+    # pas si `ancre_fait` est le fait ou le papier — et c'est cinquième refus par ingrédient, dans
+    # la lignée des quatre de l'en-tête (#75) : nommé, jamais approché.
+    depots = [p.filed for p in points.values() if p.filed]
+    if not depots:
+        raise AppariementInexecutable(
+            "aucun ingrédient ne porte de date de dépôt (`filed`) : l'expression serait écrite "
+            "sans qu'on puisse distinguer la date du fait de celle du document")
     return FaitApparie(
         metric=consigne.expression,
         titre=f"{libelle} — {periode} ({symbole})",
@@ -495,7 +506,10 @@ def construire_fait_apparie(
         structure=structure,
         tags=list(_TAGS),
         source_url=filing_url(cik, plus_recent.accn),
-        source_date=date.fromisoformat(ancre_fait),
+        datation=constatee(
+            date_du_fait=date.fromisoformat(ancre_fait),
+            date_du_document=date.fromisoformat(max(depots)[:10]),
+        ),
         fiscal_period=periode,
         flux=flux,
         fiabilite=fiabilite,
@@ -533,7 +547,7 @@ async def executer_appariement(
     stored = await store_knowledge(
         conn, ticker_id=ticker_id, entry_type="fact_financial", content=fait.contenu,
         source_type=SOURCE_TYPE, title=fait.titre, content_structured=fait.structure,
-        tags=fait.tags, lang="fr", source_url=fait.source_url, source_date=fait.source_date,
+        tags=fait.tags, lang="fr", source_url=fait.source_url, datation=fait.datation,
         fiscal_period=fait.fiscal_period, supersedes_entry_id=prevs[0] if prevs else None,
         derived_reliability=fait.fiabilite,
     )

@@ -40,11 +40,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Optional
 
 from app.config import settings
 from app.data_collection.data_service import DataService
 from app.db.database import get_db_session
+from app.knowledge.datation import constatee, indatable
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
 
@@ -356,8 +358,17 @@ async def seed_base_rate_corpus(conn) -> int:
         tags=["base_rate", "sales_growth_base_rate", "corpus", "outside_view"],
         lang="fr",
         source_url=BASE_RATE_BOOK["source_url"],
-        # pas de source_date : une base rate structurelle 1950-2015 ne « vieillit » pas comme un
-        # chiffre trimestriel — la faire décroître avec l'âge serait un faux signal (vintage en note).
+        # #79 — LE CAS D'ÉCOLE D'`indatable`. Ce commentaire disait DÉJÀ la bonne chose (« pas de
+        # source_date, une base rate structurelle ne vieillit pas ») : il lui manquait seulement
+        # une case pour le dire au système au lieu de le dire au lecteur. L'absence de date est
+        # désormais le RÉSULTAT d'une portée déclarée, et non un champ qu'on a omis de remplir —
+        # la différence se voit à la relecture, où un `source_date` NULL ne se lit plus « on n'a
+        # pas su » mais « il n'y a pas de date à avoir ».
+        datation=indatable(
+            motif="corpus structurel 1950-2015 (Base Rate Book) : une distribution historique "
+                  "n'affirme aucun fait daté et ne se périme pas comme un chiffre trimestriel ; "
+                  "son millésime est en note, pas en fraîcheur",
+        ),
     )
     logger.info("base_rate_corpus: entry de corpus seedée #%s", stored["id"])
     return stored["id"]
@@ -421,6 +432,15 @@ async def run_base_rate_anchor(
                     lang="fr",
                     source_url=spec.source_url,
                     supersedes_entry_id=prev_id,
+                    # #79 — L'ANCRE est une NOTE, pas une pièce collectée : elle confronte la
+                    # croissance observée de l'émetteur à la distribution du corpus. Document du
+                    # jour (arbitrage du fonds, 2026-09-23), et l'état sur lequel elle se fonde est
+                    # écrit à côté — `corpus_entry_id` NOMME la pièce de corpus utilisée. Noter que
+                    # l'ingrédient est `indatable` : une note peut donc être datée alors que ce
+                    # qu'elle recombine ne l'est pas, ce qui est exactement pourquoi la date de la
+                    # note ne se DÉDUIT pas de ses ingrédients.
+                    datation=constatee(date_du_fait=date.today(),
+                                       date_du_document=date.today()),
                 )
                 created = dict(stored) | {"field": spec.field, "supersedes": prev_id}
         logger.info("base_rate_anchor %s (%s) → entry #%s (corpus #%s)",

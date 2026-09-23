@@ -287,7 +287,14 @@ pas un accusé de réception de son propre UPDATE : la première version comptai
 propre liste `id IN (…)` **après** les avoir écrites — une garde nourrie de sa propre valeur, donc
 invisible (#70). Éprouvée en négatif AVANT application : jouée seule sur l'état d'avant, elle RAISE
 sur 229.
-Prochaine migration : **045**.
+**Migration 045 = les deux dates d'une pièce (#79)** : `knowledge_entries` reçoit `date_du_fait`,
+`date_du_document`, `portee_temporelle` (CHECK sur le vocabulaire fermé `constatee|prospective|
+indatable`) et `periode_visee`. `source_date` **reste** la colonne de tri, mais elle n'est plus
+reçue : elle est **DÉRIVÉE** des deux dates par `app/knowledge/datation.py` (détenteur unique #46),
+comme `nature` l'est au guichet depuis la 034. Additive et sans backfill par modèle : les lignes
+antérieures ont `portee_temporelle IS NULL`, qui désigne un **héritage à re-collecter** (174 entries
+courantes, dénombrées par `check_datation.py` §7) et non un quatrième état du vocabulaire.
+Prochaine migration : **046**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -1741,6 +1748,76 @@ committées. Copies de référence : `/root/secrets/coolify-env-backup/portfolio
     Il refuse `DATABASE_URL`/`DEEPINFRA_API_KEY` manquantes **avant la première écriture** (#40),
     et se clôt sur : **« LE VERDICT EST À LA LECTURE, pas au code de sortie »** — exit 0 sur une
     sortie fausse, c'est exactement ce qui s'est produit.
+
+79. **Une pièce porte DEUX dates nommées, et `source_date` cesse d'être reçue — quand deux dates sont
+    structurellement indiscernables, on change la FORME de la réponse, pas la sévérité de la garde
+    (V3, migration 045, `knowledge/datation.py`)** : le corpus confondait la date du **FAIT** et la
+    date du **DOCUMENT** dans une colonne unique, `source_date`, que chaque producteur remplissait à
+    sa façon. Mesuré sur le dossier réel RVMD × `qualite_financiere` avant d'écrire une ligne
+    (`tools/montrer_dossier.sh`, lecture seule) : **6 chemises sur 14** portaient une datation
+    hétérogène, et le cas discriminant est #307 — une pièce **datée du papier** (2026-08-05) battait
+    #444, qui porte un fait **plus récent**. Tous les nombres justes, l'ORDRE faux, donc invisible à
+    tout contrôle arithmétique (famille #42/#45/#48). ⚠️ **La cause écrite dans le fichier de reprise
+    était fausse et a été corrigée** (« `edgar_feed` date à `period_end`, le chemin narratif à ce que
+    le modèle déclare ») : les deux horloges vivent sur le **même** `source_type` `edgar_official` —
+    relire le code avant de calibrer une dette ([[feedback_dette_perimetre_relire_code]]).
+    ⚠️ **Le remède n'est pas une garde plus sévère, c'est la troisième case de #68 transposée aux
+    dates.** Deux dates sont structurellement **indiscernables** : aucun `if` ne distingue « 30 juin »
+    le fait de « 30 juin » le dépôt. Un producteur doit donc être *incapable de formuler* la
+    confusion — d'où un constructeur par portée, qui exige ses dates par **nom** :
+    `constatee(date_du_fait=…, date_du_document=…)` · `prospective(date_annonce=…, periode_visee=…)` ·
+    `indatable(motif=…)`. **Vocabulaire FERMÉ, trois états, aucun défaut** (#25/#44/#54).
+    ⚠️ **`source_date` est DÉRIVÉE, jamais reçue** (#46, comme `nature` depuis la 034) : `store_knowledge`
+    n'accepte plus `source_date=`, il exige `datation=`. Les lecteurs (`dossier._rang`, `actualite`,
+    `compute_reliability`) ne changent pas d'une ligne — c'est ce qui rend le lot additif.
+    ⚠️ **TROIS ARBITRAGES DU FONDS** (rendus par l'utilisateur depuis la pratique d'un vrai fonds,
+    2026-09-23) : ① on note **les deux** dates, et la mesure retenue est celle du **dernier FAIT**,
+    pas du dernier papier reçu — c'est toute la règle de `constatee` ; ② une pièce prospective se
+    classe à la date de son **ANNONCE**, la période visée devenant un **attribut** (`periode_visee`)
+    et non sa fraîcheur — une guidance du 5 août est une information du 5 août ; ③ une note produite
+    par le fonds lui-même est un **document du jour** (`date_du_fait = date_du_document = today` pour
+    `synthesis_feed`, le context pack du `curator`, l'ancre de base rate), **à la condition** que
+    l'état de la base sur lequel elle se fonde soit écrit à côté. Une synthèse n'hérite **pas** de la
+    date de ses ingrédients : la règle de son **tier** (« un cran sous la plus faible entry citée »)
+    et celle de sa **date** ne répondent pas à la même question — le tier dit à quel point on peut
+    s'y fier, la date dit de quand est cette lecture. ⇢ **Résiduel #80** : la version des
+    **frameworks** n'est enregistrée nulle part (mesuré : `grep framework_version` = 0 occurrence
+    dans les trois producteurs de notes).
+    ⚠️ `indatable` n'a **pas** de date de tri (`NULL`) : `actualite` rend alors `indeterminable` et la
+    pièce perd toute élection de fraîcheur. **Perdre faute de date est honnête ; gagner sur la date
+    d'une page ne l'est pas.** ⚠️ En base, `portee_temporelle IS NULL` désigne les lignes **antérieures
+    à la 045** — un héritage **dénombré** (174 entries courantes), pas un quatrième état.
+    **Ce que le test négatif a trouvé, et que la relecture n'aurait pas vu :**
+    ⚠️ **Un assert écrit sur le cas COMMODE est aveugle au cas réel.** La mutation « une pièce
+    `indatable` se fabrique une date depuis son document » est restée **VERTE** au premier passage :
+    §2 n'éprouvait `indatable` que **sans** document, le seul cas où la mutation ne change rien. Or
+    §3 autorise explicitement une `indatable` à NOMMER le document d'où elle vient. Assert ajouté sur
+    ce cas-là ; c'est lui qui paie le fichier.
+    ⚠️ **SIX producteurs recensés à la main, NEUF dans les sources.** `curator.py`,
+    `base_rate_corpus.py` (×2) et `synthesis_feed.py` appelaient `store_knowledge` **sans**
+    `datation=`, un kw-only sans défaut : trois crashs garantis à l'exécution, **check au vert**.
+    C'est [[feedback_adressage_par_nom_exige_lecture]] — un recensement qui ne couvre qu'une partie
+    du corpus refait le bug en `verdict=ok`. §5 **DÉCOUVRE** désormais les appelants par AST
+    (`os.walk` + `_kwargs_de`) et le census est **bidirectionnel** : non recensés ET recensés
+    disparus, deux mutations, deux directions.
+    ⚠️ **Une garde qu'aucune mutation ne peut atteindre est morte, même verte** (6ᵉ faux vert) :
+    après la découverte, « ce fichier appelle bien `store_knowledge` » est une **tautologie** (le
+    fichier est découvert *parce que* l'appel existe). Retirée, son rôle repris par
+    `require(…, 9)` + le census.
+    ⚠️ **Un refus inattendu doit être un FAIL NOMMÉ, jamais la mort du script** : le helper `date_de(**kw)`
+    rend `f"REFUSÉ : {e}"` au lieu de laisser l'exception tuer le script avant son bilan
+    ([[feedback_bilan_par_sa_forme]]) — mesuré, une mutation le faisait.
+    ⚠️ **Caveat honnête, à ne pas lire comme un gain** : sur `qf_7.tresorerie_disponible`, la règle
+    met #307 et #444 **à égalité** au 2026-06-30 ; le tie-break `-id` de `dossier._rang` élit #444,
+    qui couvre un fait plus **étroit**. La règle retire l'ordre FAUX ; elle ne fabrique pas un
+    meilleur gagnant.
+    Détail + garde : `check_datation.py` **107/0** (§6 rejoue les cas RÉELS #307/#309/#296 sur leurs
+    valeurs mesurées en base, ancre non circulaire ; §7 lit l'état persisté et dénombre l'héritage au
+    lieu de le tolérer en silence), `negatif_datation.sh` **28 mutations / 0 échec** avec
+    satisfiabilité mesurée avant toute mutation. Suite complète **2926 / 0 sur 40 scripts**.
+    ⚠️ **La RE-COLLECTE des 174 entries d'héritage reste à faire** — `bash tools/rejeu_producteurs.sh`,
+    coût zéro token (appels réseau seulement). Jamais un backfill par modèle : ce serait inventer des
+    dates que personne n'a déposées.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

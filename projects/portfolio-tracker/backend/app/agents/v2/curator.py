@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import date
 from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
@@ -25,6 +26,7 @@ from app.contracts import ContextPack, ReadinessReport, compute_cause_non_ready
 from app.db.database import get_db_session
 from app.knowledge import get_current_entries, store_knowledge
 from app.knowledge.actualite import etat_actualite_entry
+from app.knowledge.datation import constatee
 from app.knowledge.material_events import (
     MaterialEventLookup, ancre_substantielle, material_anchor_for_ticker,
 )
@@ -717,5 +719,14 @@ async def _produce_context_pack(
         source_type="agent_synthesis",
         title=f"Context pack — {ticker_id}",
         tags=["context_pack", "curator"],
+        # #79 — LA NOTE EST UN DOCUMENT DU JOUR (arbitrage du fonds, 2026-09-23). Un context pack
+        # ne rapporte aucun fait extérieur : il dit « voici notre lecture, aujourd'hui ». Sa date
+        # de fait EST sa date de rédaction, et ce n'est pas le défaut #79 remonté d'un étage à une
+        # condition — que l'ÉTAT de la base sur lequel elle se fonde soit écrit à côté, pas
+        # confondu avec sa date. Il l'est : `source_entry_refs` (entry_id + version, triés) voyage
+        # dans `content_structured`. Ce qui manque encore est la version des FRAMEWORKS, nommée en
+        # résiduel — une note ne doit pas pouvoir citer ses pièces sans dire selon quelle grille
+        # elle les a lues.
+        datation=constatee(date_du_fait=date.today(), date_du_document=date.today()),
     )
     return stored["id"]

@@ -40,6 +40,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | `material_events.py` · `staleness.py` · `actualite.py` | Événements matériels & péremption (axe actualité) |
 | `websearch.py` · `document_search.py` · `embeddings.py` | Recherche web + sélection de passages + embeddings bge-m3 1024d |
 | `units.py` | Détenteur unique du format des montants (#46) |
+| `datation.py` | Détenteur unique de la datation d'une pièce : portée fermée (`constatee`/`prospective`/`indatable`), **deux dates nommées** (fait, document), `source_date` DÉRIVÉE (#79). Moitié ÉCRITURE de ce dont `actualite.py` est la moitié LECTURE |
 | `edgar_facts.py` · `synthesis_feed.py` | Extraction EDGAR · synthèses grounded |
 | `appariement_feed.py` | Exécute une formule d'appariement sur les concepts XBRL **déjà lus** — produit un fait calculé, sa provenance concept par concept et son tier dérivé (#72) |
 
@@ -49,6 +50,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 |---|---|
 | Score/tier calculés, jamais fournis ; passage obligé | `check_provenance.py`, `check_synthesis_feed.py` |
 | Nature dérivée (`metric` structuré ⟹ `mesure`) | `check_entry_nature.py` §7 (état persisté) |
+| Datation : deux dates nommées, `source_date` dérivée, confusion fait/document INEXPRIMABLE (#79) | `check_datation.py` + `negatif_datation.sh` |
 | Registre : standing par couple (source × nature) | `check_source_registry.py` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
 | Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |

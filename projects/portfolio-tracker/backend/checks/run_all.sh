@@ -35,7 +35,7 @@ for f in checks/check_*.py; do
   # socle data-first au maillon 5 — sa garantie F16/#43 est désormais tenue hors ligne, §3/§10/§12.)
   net=none; extra=()
   case "$n" in
-    check_entry_nature|check_collecte_persist|check_framework_persist|check_appariement_persist|check_manager_persist)
+    check_entry_nature|check_collecte_persist|check_framework_persist|check_appariement_persist|check_manager_persist|check_datation)
       net=coolify
       extra=(-e "CHECK_DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)")
       ;;

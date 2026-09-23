@@ -77,6 +77,7 @@ from app.contracts import (
     WorkerResponse,
 )
 from app.db.database import get_db_session
+from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.source_registry import qualify
@@ -94,7 +95,7 @@ _CLOSING_INSTRUCTION = (
     "`WorkerResponse` du contrat, sans texte autour.\n"
     "Rappels : aucune prose (G3) ; ce que tu n'as pas trouvé va dans `uncovered_fields` ; "
     "chaque entry porte `content` (Markdown, autoportant), `source_type`, `source_url`, "
-    "`source_date` (ISO) et une `reliability_note` non vide ; n'invente aucune URL — n'utilise que "
+    "sa DATATION (règle ci-dessous) et une `reliability_note` non vide ; n'invente aucune URL — n'utilise que "
     "celles rapportées par les outils. Les champs `reliability_score`/`reliability_tier` sont "
     "recalculés côté serveur d'après la source : donne-les au mieux, mais c'est `source_type` et "
     "`source_url` qui comptent.\n"
@@ -106,7 +107,23 @@ _CLOSING_INSTRUCTION = (
     "et ce n'est pas sanctionné.\n"
     "2. Une entrée = UN document. Ne fusionne jamais deux dépôts (un 10-K et un 10-Q, un communiqué "
     "et un article) sous un seul `source_url` : fais-en deux entries, chacune avec son URL et sa "
-    "date."
+    "date.\n"
+    "LA DATATION — DEUX DATES, JAMAIS UNE :\n"
+    "Un document et le fait qu'il rapporte n'ont pas la même date. Un 10-Q déposé le 2026-08-05 "
+    "décrit un bilan au 2026-06-30 : ce sont deux dates, et elles vont dans deux champs.\n"
+    "• `date_du_document` = quand le document a été publié ou déposé.\n"
+    "• `date_du_fait` = de quel instant (bilan) ou de quelle FIN D'EXERCICE (flux) l'assertion est "
+    "vraie. « Six mois clos le 2025-06-30 » donne `date_du_fait: 2025-06-30`, même si tu l'as lu "
+    "dans un dépôt de 2026 — c'est le cas des colonnes comparatives, et s'y tromper fait passer le "
+    "chiffre de l'an dernier pour le plus récent du dossier.\n"
+    "• `portee_temporelle` : `constatee` (ce qui A ÉTÉ — donne les deux dates), `prospective` "
+    "(une guidance, un plan, un consensus : donne `date_du_document` et `periode_visee`, la fin de "
+    "la période annoncée, PAS de `date_du_fait` — il n'y a pas encore de fait), ou `indatable` "
+    "(description stable sans date : modèle d'affaires, gouvernance — alors `datation_motif` dit "
+    "pourquoi).\n"
+    "N'invente jamais une date pour remplir un champ : si tu ne sais pas de quand date le fait, la "
+    "portée est `indatable` avec son motif, PAS `constatee` datée du document. Le serveur calcule "
+    "lui-même la date de tri à partir de ce que tu déclares ; tu ne la fournis pas."
 )
 
 
@@ -228,7 +245,21 @@ def _normalise_entry(
 
     url = (raw.get("source_url") or "").strip() or None
     source_type = _resolve_source_type(raw.get("source_type"), url, req.ticker_id)
-    source_date = _parse_iso_date(raw.get("source_date"))
+    # La datation est construite ICI, donc VALIDÉE ici (#79) : une entry mal datée est rejetée
+    # avant d'avoir coûté un embedding et une transaction, et le motif du refus est journalisé au
+    # lieu de disparaître. `source_date` n'est plus lue de `raw` — elle n'existe plus côté modèle.
+    try:
+        datation = Datation(
+            portee=str(raw.get("portee_temporelle") or ""),
+            date_du_document=_parse_iso_date(raw.get("date_du_document")),
+            date_du_fait=_parse_iso_date(raw.get("date_du_fait")),
+            periode_visee=_parse_iso_date(raw.get("periode_visee")),
+            motif=raw.get("datation_motif"),
+        )
+    except DatationInvalide as e:
+        logger.info("search-worker: entry rejetée (datation) — %s", e)
+        return None
+    source_date = datation.source_date()
 
     caveats: list[str] = []
     unverified, provenance_note = _verify_provenance(url, log)
@@ -293,7 +324,11 @@ def _normalise_entry(
         "lang": (raw.get("lang") or "fr")[:8],
         "source_type": source_type,
         "source_url": url,
-        "source_date": source_date.isoformat() if source_date else None,
+        "portee_temporelle": datation.portee,
+        "date_du_document": datation.date_du_document.isoformat() if datation.date_du_document else None,
+        "date_du_fait": datation.date_du_fait.isoformat() if datation.date_du_fait else None,
+        "periode_visee": datation.periode_visee.isoformat() if datation.periode_visee else None,
+        "datation_motif": datation.motif,
         "fiscal_period": raw.get("fiscal_period") or req.output_schema.fiscal_period,
         "reliability_score": score,
         "reliability_tier": tier,
@@ -624,7 +659,7 @@ async def persist_worker_entries(
             tags=entry.tags,
             lang=entry.lang,
             source_url=entry.source_url,
-            source_date=_parse_iso_date(entry.source_date),
+            datation=entry.datation(),
             fiscal_period=entry.fiscal_period,
             model_cutoff=entry.model_cutoff,
             # ⚠️ Plus de `covers=` (migration 036) : `store_knowledge` ne l'accepte plus, et le lien

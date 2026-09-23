@@ -38,6 +38,7 @@ from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annu
 # L'identité d'un fait EDGAR (quelle entrée courante un nouveau fait remplace) est une règle
 # UNIQUE, tenue par edgar_feed. Ce module écrit lui aussi un `capital_expenditure` : lui donner
 # son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
+from app.knowledge.datation import Datation, constatee
 from app.knowledge.edgar_feed import POSTES, _current_fact_ids
 from app.knowledge.service import ENTRIES_COURANTES, get_current_entries, store_knowledge
 from app.knowledge.units import montant
@@ -136,6 +137,26 @@ def _spec_source_date(spec: "FinancialsEntrySpec", facts: dict[str, Any]) -> Opt
     return _parse_end(spec.content_structured.get("period_end")) or facts.get("period_end")
 
 
+def _spec_datation(spec: "FinancialsEntrySpec", facts: dict[str, Any]) -> Optional[Datation]:
+    """La datation complète d'un ratio — `date_du_fait` par le détenteur unique ci-dessus (#46),
+    `date_du_document` par le dépôt le plus récent de ses ingrédients (#79).
+
+    Rend `None` — jamais une datation approchée — quand l'une des deux manque. Un ratio non écrit
+    et nommé dans `unfounded` est un état lisible ; un ratio écrit sur une date inventée est un
+    faux qui porte le tier de sa source (#54, et #296 en exemple).
+    """
+    fait = _spec_source_date(spec, facts)
+    depot = facts.get("depot_le_plus_recent")
+    if fait is None or depot is None:
+        return None
+    # Un dépôt ANTÉRIEUR à l'ancre du ratio signale un socle incohérent (on aurait calculé avant
+    # d'avoir la donnée) : `Datation` le refuserait en levant. On le rend non fondé ici pour que le
+    # feed nomme le poste au lieu d'interrompre l'écriture des autres.
+    if fait > depot:
+        return None
+    return constatee(date_du_fait=fait, date_du_document=depot)
+
+
 def _parse_end(v: Any) -> Optional[date]:
     if isinstance(v, date):
         return v
@@ -202,7 +223,8 @@ def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
         currency = cs.get("currency") or currency
         rec = {"period": cs.get("period") or e.get("fiscal_period"),
                "source_url": e.get("source_url"), "entry_id": e.get("id"),
-               "kind": _poste_kind(metric, cs), "cs": cs}
+               "kind": _poste_kind(metric, cs), "cs": cs,
+               "date_du_document": e.get("date_du_document")}
         by_metric.setdefault(metric, {})[end] = rec
 
     def _latest(metric: str) -> Optional[date]:
@@ -220,6 +242,15 @@ def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "periods_mixed": bool(stock_target and flow_target and stock_target != flow_target),
         "jours_entre_ancres": ((stock_target - flow_target).days
                                if stock_target and flow_target else None),
+        # Le DOCUMENT d'un ratio dérivé est le dépôt le plus RÉCENT parmi ses ingrédients (#79) :
+        # c'est la date à partir de laquelle le ratio pouvait être calculé. Prendre le plus ancien
+        # prétendrait qu'on savait avant de savoir ; prendre le jour du calcul re-fabriquerait le
+        # tampon de greffier que la 045 supprime (cas #296).
+        "depot_le_plus_recent": max(
+            (r["date_du_document"] for m in by_metric.values() for r in m.values()
+             if r.get("date_du_document")),
+            default=None,
+        ),
     }
     if flow_target is None and stock_target is None:
         return facts
@@ -532,7 +563,11 @@ async def _persist_capex_fact(
         conn, ticker_id=ticker_id, entry_type="fact_financial", content=content,
         source_type=_SOURCE_TYPE, title=f"Capex {fiscal_period or period_end} ({symbol})",
         content_structured=structured, tags=["financials", "capex", "fact", "edgar"],
-        lang="fr", source_url=source_url, source_date=_parse_end(period_end),
+        lang="fr", source_url=source_url,
+        datation=constatee(
+            date_du_fait=_parse_end(period_end),
+            date_du_document=_parse_end(point.get("filed")),
+        ),
         fiscal_period=fiscal_period, supersedes_entry_id=prevs[0] if prevs else None,
     )
     if len(prevs) > 1:
@@ -618,6 +653,13 @@ async def run_financials_feed(
                     )
                     capex_entry = dict(stored) | {"metric": "capital_expenditure"}
                 for spec in specs:
+                    datation = _spec_datation(spec, facts)
+                    if datation is None:
+                        unfounded.append({
+                            "field": spec.field,
+                            "reason": "datation incomplète (ancre du fait ou dépôt de ses ingrédients absent)",
+                        })
+                        continue
                     prev = await _current_tagged_entry_id(
                         conn, ticker_id, ["financials", spec.field, "derived_ratio"]
                     )
@@ -625,7 +667,7 @@ async def run_financials_feed(
                         conn, ticker_id=ticker_id, entry_type=spec.entry_type, content=spec.content,
                         source_type=spec.source_type, title=spec.title,
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
-                        source_url=spec.source_url, source_date=_spec_source_date(spec, facts),
+                        source_url=spec.source_url, datation=datation,
                         fiscal_period=spec.fiscal_period, supersedes_entry_id=prev,
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev})

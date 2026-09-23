@@ -50,6 +50,7 @@ from app.contracts import (
 )
 from app.db.database import get_db_session
 from app.knowledge import get_current_entries, store_knowledge
+from app.knowledge.datation import constatee
 
 logger = logging.getLogger(__name__)
 
@@ -719,7 +720,10 @@ async def _persister_postmortem(inputs, data, contexte, agent, run) -> dict[str,
                     source_type=LESSON_SOURCE_TYPE,
                     tags=list(lecon.get("tags") or []),
                     lang="fr",
-                    source_date=date.today(),
+                    # Une leçon de post-mortem est constatée le jour où elle est TIRÉE : le fait,
+                    # ici, c'est la formulation elle-même, et le post-mortem en est le document.
+                    # Les deux dates coïncident légitimement (#79).
+                    datation=constatee(date_du_fait=date.today(), date_du_document=date.today()),
                     embedding=vecteurs[i] if vecteurs else None,
                     embed=False,          # déjà calculé hors transaction (ou assumé absent)
                 )

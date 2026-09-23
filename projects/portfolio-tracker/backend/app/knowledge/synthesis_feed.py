@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Optional
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
@@ -40,6 +41,7 @@ from app.agents.v2.common import TIER_ORDER, format_entries_for_prompt
 from app.agents.v2.runner import run_json_agent
 from app.contracts import GroundedSynthesis
 from app.db.database import get_db_session
+from app.knowledge.datation import constatee
 from app.knowledge.service import ENTRIES_COURANTES, query_knowledge, store_knowledge
 
 logger = logging.getLogger(__name__)
@@ -648,6 +650,17 @@ async def run_synthesis_feed(
                     content_structured=content_structured, tags=_tags(target), lang=synth.lang,
                     supersedes_entry_id=prev, requires_human_review=True,
                     derived_reliability=(score, tier, note),
+                    # #79 — UNE SYNTHÈSE EST UN DOCUMENT DU JOUR (arbitrage du fonds, 2026-09-23).
+                    # Elle n'hérite PAS de la date de ses ingrédients, et c'est délibéré : la règle
+                    # de dérivation de son TIER (« un cran sous la plus faible entry citée ») et
+                    # celle de sa DATE ne sont pas la même question. Le tier répond « à quel point
+                    # peut-on s'y fier », la date répond « de quand est cette lecture » — et la
+                    # réponse est : d'aujourd'hui. Ce qui empêche la note de se faire passer pour
+                    # un fait frais n'est pas sa date, c'est que l'état dont elle se nourrit est
+                    # ÉCRIT : `cited_entry_ids` dans `content_structured`, et les tiers par id.
+                    # Manque la version des frameworks (résiduel #80).
+                    datation=constatee(date_du_fait=date.today(),
+                                       date_du_document=date.today()),
                 )
                 persisted = dict(stored) | {"supersedes": prev}
         logger.info(

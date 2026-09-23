@@ -30,6 +30,7 @@ from typing import Any, Optional
 from app.config import settings
 from app.data_collection.data_service import DataService
 from app.db.database import get_db_session
+from app.knowledge.datation import constatee
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 
 logger = logging.getLogger(__name__)
@@ -295,7 +296,11 @@ async def run_valuation_feed(
                         content_structured=spec.content_structured,
                         tags=spec.tags,
                         lang="fr",
-                        source_date=as_of,
+                        # Un relevé de marché est constaté le jour où le marché l'a produit, et son
+                        # « document » est ce même relevé : les deux dates COÏNCIDENT, et c'est un
+                        # fait, pas un tampon. Ce n'est donc pas le cas #296 — celui-là reportait un
+                        # fait ANTÉRIEUR sous la date de son classement.
+                        datation=constatee(date_du_fait=as_of, date_du_document=as_of),
                         supersedes_entry_id=prev_id,
                     )
                     created.append(dict(stored) | {"field": spec.field, "supersedes": prev_id})

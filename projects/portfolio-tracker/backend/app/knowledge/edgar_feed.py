@@ -56,6 +56,7 @@ from app.db.database import get_db_session
 from app.knowledge.edgar_facts import (
     EdgarUnavailable, _UA, duree_jours, fetch_concept_annual, fetch_concept_instant, point_pour_periode,
 )
+from app.knowledge.datation import constatee
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.units import montant
 
@@ -344,6 +345,11 @@ class EdgarEntrySpec:
     source_url: Optional[str]
     period_end: date
     fiscal_period: Optional[str]
+    # Date de DÉPÔT du document qui porte le point (#79). `period_end` dit de QUOI le chiffre est
+    # vrai, `filed` dit QUAND on l'a su : ce sont deux faits distincts, et les confondre est
+    # exactement ce que la migration 045 rend inexprimable. EDGAR la fournit dans le même point
+    # XBRL — on ne la calcule pas, on cesse simplement de la jeter.
+    filed: date
 
 
 def build_edgar_entries(
@@ -376,6 +382,15 @@ def build_edgar_entries(
             continue
         point, concept, unit = got["point"], got["concept"], got["unit"]
         period_end = date.fromisoformat(point["end"])
+        # Un point sans date de dépôt ne peut pas être daté honnêtement : on ne saurait dire si
+        # `period_end` est le fait ou le papier, et c'est précisément la confusion qu'on ferme.
+        # Il ressort donc en `unfounded` AVEC SON MOTIF plutôt que d'entrer au corpus avec une
+        # date de document fabriquée — un poste absent et nommé vaut mieux qu'un poste présent
+        # et faux (#54 : trois états, pas deux).
+        if not point.get("filed"):
+            unfounded.append({"metric": poste.metric, "reason": "point XBRL sans date de dépôt (`filed`)"})
+            continue
+        filed = date.fromisoformat(str(point["filed"]))
         # Un flux porte un libellé d'exercice (`FY2025`) ; un poste de bilan porte une DATE, parce
         # qu'il n'appartient à aucun exercice. Le libellé n'est jamais tiré de `fp`, incohérent sur
         # les comparatifs de 10-Q (RVMD tague `fp=Q2` un point au 2026-03-31).
@@ -451,7 +466,7 @@ def build_edgar_entries(
             metric=poste.metric,
             title=f"{poste.label} {period or point['end']} ({symbol})",
             content=content, content_structured=structured, tags=list(poste.tags),
-            source_url=url, period_end=period_end, fiscal_period=period,
+            source_url=url, period_end=period_end, fiscal_period=period, filed=filed,
         ))
 
     return specs, unfounded
@@ -716,7 +731,8 @@ async def run_edgar_feed(
                         conn, ticker_id=ticker_id, entry_type="fact_financial",
                         content=spec.content, source_type=_SOURCE_TYPE, title=spec.title,
                         content_structured=spec.content_structured, tags=spec.tags, lang="fr",
-                        source_url=spec.source_url, source_date=spec.period_end,
+                        source_url=spec.source_url,
+                        datation=constatee(date_du_fait=spec.period_end, date_du_document=spec.filed),
                         fiscal_period=spec.fiscal_period,
                         supersedes_entry_id=prevs[0] if prevs else None,
                     )

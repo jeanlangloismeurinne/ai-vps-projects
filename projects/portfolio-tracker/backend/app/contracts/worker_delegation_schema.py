@@ -29,9 +29,23 @@ Cible : pydantic v2 (container backend 2.13.4). Le python hôte a v1 → tester 
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.knowledge.datation import Datation, DatationInvalide
+
+
+def _iso(v: Optional[str], champ: str) -> Optional[date]:
+    """ISO → `date`, ou refus NOMMÉ. Une date illisible n'est pas une date absente : les confondre
+    ferait d'une faute de frappe du modèle un `indatable` silencieux (#54)."""
+    if v is None:
+        return None
+    try:
+        return date.fromisoformat(str(v)[:10])
+    except ValueError as e:
+        raise DatationInvalide(f"{champ} : {v!r} n'est pas une date ISO lisible") from e
 
 SCHEMA_VERSION = "v2.0.0"  # même famille que analysis_v2_schemas.py / readiness_report_schema.py
 
@@ -135,7 +149,16 @@ class ProducedEntry(Strict):
     lang: str = "en"
     source_type: SourceType
     source_url: Optional[str] = None
-    source_date: Optional[str] = None        # ISO date
+    # ── datation : DEUX dates nommées, jamais une seule case contestée (#79) ──────────────────
+    # `source_date` a été RETIRÉ le 2026-09-23. La classe étant `extra="forbid"`, un modèle qui
+    # l'émettrait encore est REJETÉ — voulu : une clef silencieusement ignorée serait le mode de
+    # panne de #54, et c'est justement une clef silencieuse qui a produit #296 (une date absente de
+    # la prose de l'entry, posée au classement).
+    portee_temporelle: Literal["constatee", "prospective", "indatable"]
+    date_du_document: Optional[str] = None   # ISO — quand le document a été publié / déposé
+    date_du_fait: Optional[str] = None       # ISO — de quel instant/exercice l'assertion est vraie
+    periode_visee: Optional[str] = None      # ISO — borne de FIN de la période annoncée (prospective)
+    datation_motif: Optional[str] = None     # obligatoire si `indatable` : pourquoi pas de date
     fiscal_period: Optional[str] = None
     reliability_score: float = Field(ge=0, le=1)
     reliability_tier: Tier
@@ -150,8 +173,24 @@ class ProducedEntry(Strict):
     # c'est voulu (une clef silencieusement ignorée serait le mode de panne de #54), et c'est
     # précisément ce qui rend la migration 037 non optionnelle.
 
+    def datation(self) -> Datation:
+        """La datation validée de cette entry. Construire l'objet EST la validation (#46) : la règle
+        vit dans `app.knowledge.datation`, ce contrat ne la recopie pas — il l'appelle."""
+        return Datation(
+            portee=self.portee_temporelle,
+            date_du_document=_iso(self.date_du_document, "date_du_document"),
+            date_du_fait=_iso(self.date_du_fait, "date_du_fait"),
+            periode_visee=_iso(self.periode_visee, "periode_visee"),
+            motif=self.datation_motif,
+        )
+
     @model_validator(mode="after")
     def _regles_structurelles(self):
+        # La datation est validée ICI, à la lecture de la réponse du modèle, et pas seulement au
+        # guichet : une entry mal datée doit être refusée AVANT d'avoir coûté un embedding et une
+        # transaction. `Datation.__post_init__` lève `DatationInvalide`, que Pydantic remonte comme
+        # erreur de validation du champ — le motif nommé remonte avec (#54).
+        self.datation()
         # P2 (§6.4) : mémoire modèle -> revue humaine + cutoff obligatoires
         if self.source_type == "llm_memory":
             if not self.requires_human_review:

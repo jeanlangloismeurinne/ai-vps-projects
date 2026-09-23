@@ -27,6 +27,7 @@ from typing import Any, Optional, Sequence
 
 import asyncpg
 
+from .datation import Datation
 from .source_registry import qualify
 from .embeddings import (
     EmbeddingUnavailable,
@@ -124,7 +125,7 @@ async def store_knowledge(
     tags: Optional[Sequence[str]] = None,
     lang: str = "en",
     source_url: Optional[str] = None,
-    source_date: Optional[date] = None,
+    datation: Datation,
     fiscal_period: Optional[str] = None,
     document_id: Optional[int] = None,
     model_cutoff: Optional[str] = None,
@@ -184,6 +185,21 @@ async def store_knowledge(
     Il n'entre pas non plus dans `reliability_note` : ce sont deux axes, et on ne les mélange pas,
     fût-ce en prose (#50).
 
+    `source_date` (migration 045) est DÉRIVÉE ici de `datation`, jamais reçue — même forme que
+    `nature`, et pour la même raison : c'est le seul passage obligé des huit producteurs. Le
+    paramètre `source_date=` a été RETIRÉ le 2026-09-23. Il accueillait indifféremment la date du
+    FAIT et celle du DOCUMENT, et aucune garde ne pouvait les distinguer : deux dates sont
+    structurellement indiscernables, donc c'est la FORME qui devait changer, pas la sévérité du
+    contrôle (#68). L'appelant déclare désormais `Datation(portee=…, date_du_fait=…,
+    date_du_document=…)` et la confusion devient inexprimable.
+
+    ⚠️ Différence avec `nature` : le MOTIF de la datation EST persisté (`datation_motif`), alors que
+    `nature_motif` ne l'est pas. Ce n'est pas une incohérence, c'est la même règle appliquée : un
+    motif se stocke quand il n'est PAS rejouable. `nature` se recalcule à tout instant depuis trois
+    colonnes déjà en base ; « pourquoi cette pièce n'est-elle pas datable » est un jugement que
+    rien en base ne reconstitue. Ne pas le stocker laisserait une absence muette, et une absence
+    muette se relit plus tard comme une propriété du sujet (`feedback_rendu_est_un_producteur`).
+
     `source_type` peut être PROMU ici par le registre nominatif (`source_registry.qualify`, capacité
     2) : une source admise pour une nature donnée passe de `web_search_generic` à
     `web_search_reputable` **pour cette nature seulement**. Le paramètre reçu est donc la
@@ -197,6 +213,17 @@ async def store_knowledge(
         source_type=source_type, url=source_url, ticker_id=ticker_id,
         entry_type=entry_type, content=content, nature_declaree=nature_declaree,
     )
+    # `source_date` est DÉRIVÉE de la datation déclarée, jamais reçue (#79). Le paramètre a été
+    # RETIRÉ de la signature le 2026-09-23 : tant qu'il existait, une seule case accueillait la date
+    # du FAIT et celle du DOCUMENT, et rien dans la structure ne disait laquelle y était. Mesuré sur
+    # RVMD avant le lot : #307 datée du dépôt battait #444 datée du bilan ; #309 (colonne
+    # comparative, six mois clos le 2025-06-30) portait le tampon le plus frais du dossier ; #296
+    # portait 2026-09-01, une date absente de sa propre prose. Aucune garde ne pouvait les
+    # distinguer — deux dates sont structurellement indiscernables (#68) — donc c'est la FORME de la
+    # réponse qui a changé, pas la sévérité du contrôle.
+    # La classe `Datation` valide à la construction : arriver ici avec une datation incohérente est
+    # impossible, et c'est pour ça que ce site n'en revalide rien (#46 — la règle a un détenteur).
+    source_date = datation.source_date()
     if derived_reliability is not None:
         score, tier, note = derived_reliability
     else:
@@ -237,16 +264,21 @@ async def store_knowledge(
             tags, lang, source_type, source_url, source_date, fiscal_period,
             reliability_score, reliability_tier, reliability_note,
             requires_human_review, model_cutoff, version,
-            embedding, nature
+            embedding, nature,
+            portee_temporelle, date_du_fait, date_du_document, periode_visee, datation_motif
         ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::vector,$20
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::vector,$20,
+            $21,$22,$23,$24,$25
         )
-        RETURNING id, version, reliability_score, reliability_tier, nature
+        RETURNING id, version, reliability_score, reliability_tier, nature,
+                  portee_temporelle, source_date
         """,
         ticker_id, document_id, entry_type, title, content, content_structured,
         list(tags or []), lang, source_type, source_url, source_date, fiscal_period,
         score, tier, note, requires_review, model_cutoff, version,
         vec_literal, nature,
+        datation.portee, datation.date_du_fait, datation.date_du_document, datation.periode_visee,
+        datation.motif,
     )
 
     if supersedes_entry_id is not None:
@@ -318,7 +350,8 @@ async def get_current_entries(
     sql = f"""
         SELECT id, ticker_id, entry_type, title, content, content_structured, tags,
                source_type, source_url, source_date, fiscal_period, reliability_score, reliability_tier,
-               requires_human_review, version, nature
+               requires_human_review, version, nature,
+               portee_temporelle, date_du_fait, date_du_document, periode_visee
         FROM knowledge_entries
         WHERE {' AND '.join(clauses)}
         ORDER BY reliability_score DESC, source_date DESC NULLS LAST, id

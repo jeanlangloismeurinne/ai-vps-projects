@@ -229,21 +229,28 @@ print("\n7. DEUX ANCRES — un flux vient de l'exercice, un bilan du dernier tri
 # Un socle où le bilan est plus récent que la clôture est le cas NORMAL dès qu'un 10-Q est déposé.
 
 
-def _e(metric, *, end, kind, value=None, eid=100, **extra):
+def _e(metric, *, end, kind, value=None, eid=100, filed=None, **extra):
     cs = {"metric": metric, "currency": "USD", "period": end, "period_end": end,
           "poste_kind": kind}
     if value is not None:
         cs["value"] = value
     cs.update(extra)
+    # `date_du_document` est un objet `date`, comme le rend `get_current_entries` (migration 045) —
+    # PAS une chaîne. Une fixture plus commode que la prod est un check aveugle au vert
+    # (`feedback_fixture_copiee_du_reel`) : ici, une chaîne masquerait une comparaison date/str qui
+    # lèverait en production. Défaut = le dépôt du 10-Q de RVMD, celui dont sortent réellement les
+    # postes de bilan ci-dessous ; les flux annuels portent le dépôt de leur 10-K.
     return {"id": eid, "entry_type": "fact_financial", "source_type": "edgar_official",
-            "content_structured": cs, "source_url": URL, "source_date": end, "fiscal_period": end}
+            "content_structured": cs, "source_url": URL, "source_date": end, "fiscal_period": end,
+            "date_du_document": filed or date(2026, 8, 5)}
 
 
+_DEPOT_10K = date(2026, 2, 25)   # les flux FY2025 sortent du 10-K
 MIXTE = [
-    _e("revenue", end="2025-12-31", kind="flow", value=0.0, eid=101),
-    _e("net_income", end="2025-12-31", kind="flow", value=-1_131_301_000.0, eid=102),
-    _e("operating_cash_flow", end="2025-12-31", kind="flow", value=-897_741_000.0, eid=103),
-    _e("capital_expenditure", end="2025-12-31", kind="flow", value=15_990_000.0, eid=104),
+    _e("revenue", end="2025-12-31", kind="flow", value=0.0, eid=101, filed=_DEPOT_10K),
+    _e("net_income", end="2025-12-31", kind="flow", value=-1_131_301_000.0, eid=102, filed=_DEPOT_10K),
+    _e("operating_cash_flow", end="2025-12-31", kind="flow", value=-897_741_000.0, eid=103, filed=_DEPOT_10K),
+    _e("capital_expenditure", end="2025-12-31", kind="flow", value=15_990_000.0, eid=104, filed=_DEPOT_10K),
     _e("stockholders_equity", end="2026-06-30", kind="stock", value=2_606_238_000.0, eid=105),
     _e("total_assets", end="2026-06-30", kind="stock", value=4_323_270_000.0, eid=106),
     _e("cash_and_lt_debt", end="2026-06-30", kind="stock", eid=107,
@@ -464,7 +471,10 @@ class _Ctx:
 
 async def _fake_store(conn, **kw):
     _ecrit.append(kw)
-    return {"id": 900 + len(_ecrit), "source_date": kw.get("source_date")}
+    # `source_date` n'est plus reçue : elle est DÉRIVÉE de `datation` (#79, migration 045). La
+    # doublure dérive donc comme le vrai guichet — sinon elle rendrait une colonne que la
+    # production ne rend plus, et le check mesurerait la doublure au lieu du code.
+    return {"id": 900 + len(_ecrit), "source_date": kw["datation"].source_date()}
 
 
 _orig = (_ff.get_db_session, _ff.get_current_entries, _ff.store_knowledge,
@@ -499,20 +509,37 @@ check("chaque entry écrite porte son champ dans ses tags, et un seul",
 check("le chemin d'écriture a bien tourné hors ligne (sinon les asserts suivants sont vides)",
       len(_ecrit_by) >= 3, f"→ {sorted(_ecrit_by)}")
 check("`store_knowledge` REÇOIT la date du bilan pour le levier (pas celle du flux)",
-      _ecrit_by["levier"]["source_date"] == date(2026, 6, 30),
-      f"→ {_ecrit_by['levier']['source_date']}")
+      _ecrit_by["levier"]["datation"].date_du_fait == date(2026, 6, 30),
+      f"→ {_ecrit_by['levier']['datation'].date_du_fait}")
 for _f in _flux14:
     check(f"`store_knowledge` reçoit l'ancre de flux pour {_f}",
-          _ecrit_by[_f]["source_date"] == date(2025, 12, 31),
-          f"→ {_ecrit_by[_f]['source_date']}")
+          _ecrit_by[_f]["datation"].date_du_fait == date(2025, 12, 31),
+          f"→ {_ecrit_by[_f]['datation'].date_du_fait}")
 check("la ligne écrite ne se contredit pas : `source_date` ⊂ `fiscal_period`",
-      _ecrit_by["levier"]["source_date"].isoformat() in _ecrit_by["levier"]["fiscal_period"],
+      _ecrit_by["levier"]["datation"].source_date().isoformat() in _ecrit_by["levier"]["fiscal_period"],
       f"→ {_ecrit_by['levier']['fiscal_period']}")
+
+# #79 — LES DEUX DATES SONT DISTINCTES AU POINT D'ÉCRITURE. Les asserts ci-dessus ne verraient pas
+# un `date_du_document` recopié depuis `date_du_fait` : la dérivation rendrait la même valeur, tous
+# verts. On asserte donc la SÉPARATION elle-même, sur le cas où elle est visible — le levier, dont
+# le fait est le bilan du 2026-06-30 et le document le dépôt du 2026-08-05.
+check("la date du DOCUMENT n'est pas celle du FAIT (elles ne sont pas recopiées l'une sur l'autre)",
+      _ecrit_by["levier"]["datation"].date_du_document == date(2026, 8, 5)
+      and _ecrit_by["levier"]["datation"].date_du_document != _ecrit_by["levier"]["datation"].date_du_fait,
+      f"→ doc={_ecrit_by['levier']['datation'].date_du_document} "
+      f"fait={_ecrit_by['levier']['datation'].date_du_fait}")
+check("le document retenu est le dépôt le PLUS RÉCENT des ingrédients, pas le plus ancien",
+      _ecrit_by["levier"]["datation"].date_du_document > _DEPOT_10K,
+      f"→ {_ecrit_by['levier']['datation'].date_du_document} ≤ {_DEPOT_10K}")
+check("c'est bien `source_date` DÉRIVÉE qui sortirait en base, et elle vaut la date du fait",
+      _ecrit_by["levier"]["datation"].source_date()
+      == _ecrit_by["levier"]["datation"].date_du_fait,
+      f"→ {_ecrit_by['levier']['datation'].source_date()}")
 
 # La règle a UN détenteur : la répéter sur les 4 sites de construction garantit de re-diverger.
 _src_ff = inspect.getsource(sys.modules[_md.__module__])
 check("l'écriture délègue la datation au détenteur unique",
-      "source_date=_spec_source_date(spec, facts)" in _src_ff,
+      "_spec_datation(spec, facts)" in _src_ff and "datation=datation," in _src_ff,
       "→ la date est recalculée au site d'écriture : elle re-divergera")
 check("aucun site de construction ne pose sa propre `source_date`",
       "source_date=" not in _src_ff.split("def build_financials_entries")[1].split("def ")[0],

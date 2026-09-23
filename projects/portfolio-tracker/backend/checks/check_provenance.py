@@ -95,7 +95,12 @@ raw_edgar = {
     "content": "Le 10-K FY2026 révèle que deux clients directs représentaient 22% et 14% du CA.",
     "source_url": EDGAR,
     "source_type": "edgar_official",
-    "source_date": "2026-02-25",
+    # #79 — deux dates NOMMÉES, jamais une. Le fait est la clôture de l'exercice ; le document
+    # est le 10-K qui le dépose un mois plus tard. Les garder DISTINCTS est ce qui rend la
+    # fixture discriminante : les confondre rendrait la dérivation invisible.
+    "portee_temporelle": "constatee",
+    "date_du_fait": "2026-01-25",
+    "date_du_document": "2026-02-25",
     "reliability_note": "dépôt officiel",
 }
 
