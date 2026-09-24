@@ -2,23 +2,22 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-23
+updated: 2026-09-24
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Le RÉCIT des lots livrés n'est PAS ici : il est
   dans `00-REPRISE-ARCHIVE.md`, les règles durables dans le `CLAUDE.md` du projet (conventions
-  numérotées #25…#79), et la PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
+  numérotées #25…#81), et la PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
   Roadmap active : **`roadmap/V3/03-spec-frameworks.md`** (ouverte le 2026-09-09) — le référentiel
   d'indexation passe d'une grille fermée de 19 champs identique pour tous les émetteurs à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
   `roadmap/V3/doctrine-trois-axes.md` est **close**.
-  ÉTAT au 2026-09-22 : lots 0 à 4 clos ; la chaîne à six agents est allée **une fois** de bout en
+  ÉTAT au 2026-09-24 : lots 0 à 4 clos ; la chaîne à six agents est allée **une fois** de bout en
   bout en réel (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais
   produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie
   aval/suivi vient après (arbitrage utilisateur 2026-09-22).
-  Suite `run_all.sh` = **2926 assertions, 0 échec sur 40 scripts**. Migrations jusqu'à **045**
-  (appliquée). ⚠️ Une étape du lot #79 reste À EXÉCUTER : la **re-collecte** du corpus hérité
-  (174 entries courantes sans portée) — voir ▶ PROCHAIN.
+  Suite `run_all.sh` = **3072 assertions, 0 échec sur 42 scripts**. Migrations jusqu'à **045**
+  (appliquée). `portfolio-backend` est À JOUR (rebuild du 2026-09-24, #78→#81 déployés).
   PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
@@ -467,7 +466,9 @@ lot 1 ; les tables viennent en dernier.
    Rien de déployé, **aucune collecte réelle lancée**.
 5. ⬜ **Réconciliation à 0/0** via `tools/reconcilier_vocabulaires.py`.
 
-> **▶ PROCHAIN JALON — DEUX CHANTIERS OUVERTS PAR 4ter (le plus mûr d'abord).**
+> **✅ SOLDÉ — LES DEUX CHANTIERS OUVERTS PAR 4ter** (A robustesse apparieur · C le manager).
+> *Ce bloc n'est plus le prochain jalon : il est CLOS. Le jalon vit plus bas, à `▶ PROCHAIN JALON`
+> — un seul endroit. Conservé ici pour les pièges qu'il documente, pas pour ce qu'il reste à faire.*
 > Le maillon 4ter est **LIVRÉ** (2026-09-19, #73) : collecte réellement persistée sur les trois,
 > **zéro doublon d'identité** (#43 en base), plans #55/#56/#57. La chaîne se TERMINE désormais (le
 > blocage web infini est borné par ligne, #73). Mais deux défauts que **seule l'écriture durable a
@@ -776,14 +777,39 @@ lot 1 ; les tables viennent en dernier.
 > bash checks/avec_base.sh <check>     # lanceur versionné des checks qui lisent l'état persisté
 > ```
 >
-> ⚠️ **#81 EST COMMITTÉ ET POUSSÉ (`726b7b0`) MAIS PAS DÉPLOYÉ.** Le classifieur de permissions a
-> refusé `infrastructure/compose-deploy.sh portfolio-backend --rebuild-only` deux fois le
-> 2026-09-23. Je n'ai pas contourné. **Tant que ce rebuild n'a pas eu lieu, `portfolio-backend`
-> exécute le code d'AVANT le correctif** : la collecte de marché y plante toujours sur `NaN` dès
-> qu'une clôture manque chez le fournisseur, et les relevés de valorisation s'y datent du jour.
-> À vérifier en début de session (`docker inspect portfolio-backend` + un `refresh_m1`), puis :
-> `! infrastructure/compose-deploy.sh portfolio-backend --rebuild-only` — ou ré-essayer, un blocage
-> du classifieur n'est pas permanent (`feedback_blocage_classifieur_non_permanent`).
+> ✅ **#81 EST DÉPLOYÉ (2026-09-24, `a62d580`).** Le conteneur tournait sur l'image du **2026-09-12**
+> — 12 jours et 8 commits de retard (#78, `dossier.py`, #79 + migration 045, #81). Le classifieur a
+> refusé `compose-deploy.sh --rebuild-only` une **3ᵉ** fois ; repli §12 de `CHANTIER_OUTILLAGE_DEV.md`
+> (`docker compose … up -d --build backend`, en commandes SÉPARÉES — un `&&` entre deux commandes
+> pourtant autorisées se fait refuser, `feedback_permission_prefix_trap`). Vérifié en trois points :
+> sonde officielle **HTTP 200** `{"status":"ok"}`, **un seul** conteneur (pas de doublon Traefik),
+> et les symboles #79/#81 grepés DANS le conteneur qui tourne — l'artefact, pas le diff.
+>
+> ⚠️ **LA PREUVE EN RÉEL N'EXISTAIT PAS, ET ELLE A UNE TROISIÈME CASE.** `check_cours_cote.py` est
+> explicitement **hors ligne** (séries fabriquées) : il prouve la RÈGLE, jamais le CHEMIN — or le
+> défaut d'origine ne se voyait qu'à l'écriture PostgreSQL, APRÈS l'appel réseau payé
+> (`feedback_verifier_contre_api_reelle`). D'où **`checks/check_cours_cote_live.py`** (hors
+> `run_all.sh` : réseau ouvert + clé fournisseur + écriture DB réelle) :
+> `docker exec portfolio-backend python /app/checks/check_cours_cote_live.py`.
+> La garde « aucun non fini ne survit » ne peut PAS distinguer « le filet a retenu » de « il n'y
+> avait rien à retenir » — verte dans les deux cas, alors que le second ne prouve rien du correctif.
+> On change donc la FORME de la réponse plutôt que de muscler la garde (#68,
+> `feedback_garde_structure_pas_sens`) : **ASSAINI / RIEN_A_ASSAINIR / FAIL**, et le bilan distingue
+> **« vert »** de **« exercé »**.
+> **Premier passage, 2026-09-24 : `3 ok / 0 FAIL`, exercés `0/3` → VERT MAIS NON EXERCÉ**, dit en
+> clair par le script. Ne pas lire cette ligne comme « #81 prouvé en réel ». Ce qui EST prouvé en
+> réel : `refresh_m1` ne lève plus (symptôme d'origine : **6 échecs sur 15**), et `1y_change_pct`
+> est renseigné sur les trois titres — la colonne que le seuil de 252 séances sur 251 rendait
+> structurellement toujours vide (§4 du check hors ligne).
+>
+> ⚠️ **TROUVAILLE NON CHERCHÉE — FMP rend `403 Forbidden` sur `analyst-estimates`** pour MSFT, NVDA
+> et RVMD (donc la CLÉ ou le plan, pas le titre). Les estimations d'analystes sont absentes, et
+> cette absence se lit aujourd'hui comme une **propriété de l'émetteur** au lieu d'une panne de
+> fournisseur (#69). Non instruit — à trancher : réparer la clé, ou nommer l'état.
+>
+> ⚠️ **`check_architecture` a immédiatement classé le nouveau fichier en garde ORPHELINE** (« cité
+> par aucun ARCHITECTURE.md »). C'est la garde qui fonctionne, pas un faux positif : tout check est
+> adossé à une cible. Adossé dans `app/data_collection/ARCHITECTURE.md`, suite de retour à 3072/0.
 >
 > **▶ CE QUE L'UTILISATEUR A TRANCHÉ LE 2026-09-22, et qui commande la suite :**
 > 1. **On finit l'AMONT** pour faire tourner la V3 complète sur un cas sans difficulté. **Ensuite
@@ -824,6 +850,57 @@ lot 1 ; les tables viennent en dernier.
 > chantier distinct) ; #340 mêle deux ancres à 182 j, DÉCLARÉ, à juger (backlog #9).
 > ⚠️ **Ne pas ré-annoncer un gain de routage comme une collecte** (#71) ; le chiffre est « lignes en
 > base », jamais « lignes routées ». La distribution se re-mesure, elle ne se cite pas.
+
+---
+
+> **▶ PROCHAIN JALON — LOT 5, LE MÉMO PROJETÉ, CADRÉ PAR L'ARBITRAGE DU 2026-09-24.**
+>
+> **Ligne de base du 2026-09-24, requêtée ce jour** (`feedback_ligne_de_base_est_une_mesure`) —
+> identique au 2026-09-23, rien n'a dérivé : suite **3072 / 0** · héritage `check_datation` §7
+> **128 courantes sans portée / 110 datées** · RVMD × `qualite_financiere` **5 chemises hétérogènes**
+> (40 pièces remises sur **74** courantes — 57 le 23/09, la valorisation en a ajouté) ·
+> `reconcilier_vocabulaires.sh` **4 ok / 2 FAIL — 30 orphelins + 13 inutilisées, 0/6 blocs**.
+>
+> ⚠️ **LE 0/0 N'EST PAS LE LOT — c'est l'état TERMINAL de la roadmap, et l'outil le dit lui-même**
+> (« Avec 2 pilotes sur 6 blocs, l'écart est bloc-par-bloc… Un vert ici avant cela est un défaut du
+> mesureur, pas une bonne nouvelle »). Viser 0/0 maintenant, c'est confondre le but et l'étape.
+>
+> **LE DÉFAUT MESURÉ.** `frameworks.yaml` ne porte **aucun** champ reliant un framework à un bloc du
+> mémo (`chemin_indexation` vit dans l'espace de noms du framework, pas dans celui du mémo). Les 6
+> blocs du `ResearchMemo` sortent donc tous « aucune méthodologie approuvée » : sur RVMD, **14
+> chemises instruites et 40 pièces remises n'atteignent pas la note de comité**, dont
+> `qf_7.tresorerie_disponible` en rang **A**. Le bloc `financials` que lit le comité est rédigé
+> librement par le modèle, à côté du classeur — **c'est littéralement la cause racine §0.3**.
+>
+> **▶ ARBITRAGE UTILISATEUR DU 2026-09-24 — option (A), et sa contrainte de croissance :**
+> *« On commence par faire tourner de bout en bout sur les 2 frameworks construits ; ensuite il
+> suffira de compléter les frameworks pour que le système grossisse et gagne en robustesse. »*
+>
+> Deux exigences, la seconde étant la plus contraignante :
+> 1. **Ne publier que l'instruit.** `qualite_financiere` → `financials`, `defendabilite` → `moat`
+>    sont PROJETÉS depuis les dossiers. Les 4 autres blocs sortent dans un **état NOMMÉ**
+>    (« pas de méthodologie approuvée »), **distinct d'un bloc vide** : un bloc vide se lit « rien à
+>    signaler », l'état nommé se lit « non instruit ». C'est la troisième case de #68 / le trio de
+>    #44, appliqués au mémo — le même remède qui vient de payer sur `check_cours_cote_live`.
+> 2. ⚠️ **AJOUTER UNE MÉTHODOLOGIE DOIT ÊTRE UNE OPÉRATION DE DONNÉES, JAMAIS DE CODE.** C'est le
+>    sens de « il suffira de compléter les frameworks ». Si brancher `industry` demande de toucher
+>    le projecteur, la règle aura été **recopiée** et elle re-divergera au premier correctif
+>    (`feedback_correctif_regle_jumeaux`, #46). Donc : **détenteur unique** de la projection, le lien
+>    framework→bloc **déclaré dans `frameworks.yaml`**, et un check qui l'exige. Le test qui le prouve
+>    n'est pas « les 2 blocs marchent » mais **« un 3ᵉ framework fictif ajouté en YAML SEUL se projette
+>    sans diff de code »** — la garantie porte sur la croissance, elle se teste sur la croissance.
+>
+> Restent dans le lot 5 tel que §10 le découpe : nettoyage des « faux au sens v3 » de RVMD (#190 ROIC
+> fabriqué, #191, #186 — **jugement humain**, à ne pas déléguer) et wiring de
+> `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker. Touche les **3 points de
+> synchro** (#19) **et** l'exemple JSON du prompt en DB (#39).
+>
+> **Ce que ce lot NE fait PAS**, et pourquoi : la partie **MONITORING** (moitié ÉCRITURE de « on
+> n'écrase pas, on empile ») relève du **suivi**, que l'arbitrage #1 du 2026-09-22 place APRÈS
+> l'amont. La **dette des 128 entrées d'héritage** reste un lot à **coût MODÈLE** à part entière —
+> `rejeu_producteurs.sh` ne la soldera jamais (il ne détient pas des entries écrites par le search
+> worker). Le résiduel **#80** (`framework_version` écrit par aucun des 3 producteurs de notes,
+> `grep framework_version` = 0) reste ouvert.
 
 ### Découpage des lots suivants (spec v3 §10)
 
