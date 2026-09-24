@@ -27,6 +27,7 @@ macro) pour la boucle V1. `data_service.py` est le **seul point d'accès** aux d
 | Garantie | Garde |
 |---|---|
 | Le cours coté et sa date : un non-nombre est une ABSENCE, une séance vide n'est pas une séance, et la mesure est datée du dernier FAIT (#81) | `check_cours_cote.py` + `negatif_cours_cote.sh` |
+| La même garantie tenue sur le CHEMIN RÉEL : un `refresh_m1` contre le vrai fournisseur, jusqu'à l'écriture PostgreSQL, ne laisse passer aucun non fini (#81) | `check_cours_cote_live.py` (hors `run_all.sh` : réseau ouvert + clé fournisseur + écriture DB) |
 
 Ce que cette garde tient, et pourquoi elle est née dans un module « legacy » : le 2026-09-23, le
 fournisseur a rendu 251 séances dont la dernière avait un `Close` vide — sur les trois titres à la

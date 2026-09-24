@@ -22,8 +22,10 @@ total=0
 worst=0
 for f in checks/check_*.py; do
   n=$(basename "$f" .py)
-  # Les deux checks « live » sortent du périmètre hors-ligne : ils appellent le réseau ouvert.
-  case "$n" in check_fetch_live|check_fetch_relevance) continue ;; esac
+  # Les checks « live » sortent du périmètre hors-ligne : ils appellent le réseau ouvert.
+  # `check_cours_cote_live` y ajoute la clé fournisseur et une écriture DB réelle — il se lance à
+  # la main (`docker exec portfolio-backend python /app/checks/check_cours_cote_live.py`), pas ici.
+  case "$n" in check_fetch_live|check_fetch_relevance|check_cours_cote_live) continue ;; esac
 
   # Trois checks lisent l'ÉTAT persisté, pas seulement la règle : `check_entry_nature` §7
   # (acceptation de la capacité 1), `check_collecte_persist` (lot 2c — le plan/les liens/les
