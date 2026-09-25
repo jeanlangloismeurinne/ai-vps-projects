@@ -50,6 +50,8 @@ export const CAUSES = {
   },
 }
 
+const AVEC_FAIT = new Set(['fait_nouveau_publie', 'actualite_indeterminable', 'controle_ko'])
+
 export const NATURES_MANQUE = {
   sans_reponse: 'Sans réponse',
   non_fondee: 'Non fondée',
@@ -129,7 +131,10 @@ export function ManqueBloc({ m, tickerId, lien = true }) {
         <Badge variant={c.variant}>{c.titre}</Badge>
       </div>
       <p className="text-xs text-gray-400">{c.geste}</p>
-      <p className="text-xs text-gray-500">{m.explication}</p>
+      {/* L'explication n'est affichée que lorsqu'elle porte un FAIT (le motif d'actualité, le
+          contrôle refusé) ; pour une cause de collecte elle répète la phrase de la cause, et la
+          preuve est la liste des ingrédients ci-dessous (mesuré à la capture du 2026-09-25). */}
+      {AVEC_FAIT.has(m.cause) && <p className="text-xs text-gray-500">{m.explication}</p>}
       {m.ingredients.length > 0 && (
         <ul className="space-y-1 pt-1">
           {m.ingredients.map(i => (
@@ -137,7 +142,9 @@ export function ManqueBloc({ m, tickerId, lien = true }) {
               <Badge variant={(CAUSES[i.cause] || {}).variant || 'gray'} className="shrink-0">
                 {(CAUSES[i.cause] || {}).titre || i.cause}
               </Badge>
-              <span>
+              {/* Le motif du producteur est rendu tel quel, mais une trace technique de 20 lignes
+                  noyait l'alerte : 2 lignes visibles, le texte entier au survol. */}
+              <span className="line-clamp-2" title={i.motif}>
                 <span className="text-gray-300">{i.ingredient_id.replaceAll('_', ' ')}</span>
                 {' — '}{i.motif}
               </span>
