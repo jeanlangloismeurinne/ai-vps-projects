@@ -168,6 +168,32 @@ réel divergent, ce qui coûte un aller-retour de refus à chaque session. Effor
 > **Section conservée** (contrairement au protocole d'éviction du fichier) : c'est le seul endroit
 > qui documente le repli, encore utile si la règle de permission disparaît, et la trajectoire
 > refus → refus stable → levée est elle-même l'enseignement.
+>
+> ⚠️ **2026-09-25 — LE BLOCAGE EST REVENU, et c'est la trajectoire complète qui est l'enseignement.**
+> `compose-deploy.sh <app> --rebuild-only` refusé **deux fois** (sur `portfolio-tracker` puis sur
+> `portfolio-backend` : le nom d'app n'y est pour rien), vingt jours après la levée du 2026-09-05.
+> La trajectoire est donc **refus → refus stable → levée → refus**, et non une progression. Ce qui
+> se garde n'est ni « c'est bloqué » ni « c'est débloqué » — les deux sont des **mesures d'un jour**,
+> jamais des propriétés de l'environnement. La règle de méthode ne bouge pas, et elle vaut
+> maintenant **dans les deux sens** : re-tester le nominal une fois par session, ET ne pas radier le
+> repli parce qu'il a cessé de servir. C'est exactement `feedback_ligne_de_base_est_une_mesure`
+> appliqué à l'outillage : un état de départ se requête, il ne se rappelle pas.
+>
+> **Déploiement du 2026-09-25 livré par le repli** (`e2b548f`, lot 5 du chantier V3). Deux des
+> quatre garde-fous perdus ont mordu, et méritent d'être nommés :
+> - **Le `docker ps` anti-doublon** : vérifié, **un seul** `portfolio-backend`, réseau `coolify`
+>   unique, `traefik.docker.network=coolify` présent ([[feedback_coolify_orphan_container]],
+>   [[feedback_traefik_multi_network]] — rien à corriger cette fois, mais rien non plus n'aurait
+>   prévenu).
+> - ⚠️ **L'attente de santé, et un FAUX NÉGATIF de 30 secondes.** Juste après le `up -d --build`,
+>   `GET /api/health` a rendu **HTTP 404 avec la page Next.js du frontend** — signature d'un
+>   `/api` routé vers le mauvais service, c'est-à-dire d'une panne de routage. Il n'y en avait
+>   aucune : Traefik n'avait simplement pas encore re-découvert le conteneur recréé, et la sonde
+>   interne disait `200` au même instant. **Un verdict d'infrastructure pris sur la première sonde
+>   est une mesure prise avant que le sujet existe.** 34 s plus tard : `healthy`, et
+>   `/api/health` → `200 {"status":"ok"}`. La leçon généralise §14 : ce n'est pas seulement qu'il
+>   faut attendre, c'est que **la réponse servie pendant l'attente est PLAUSIBLE et FAUSSE** — elle
+>   ne ressemble pas à une erreur transitoire, elle ressemble à un diagnostic.
 
 ### §13 — Un check peut se dégrader en silence **en sortant à 0**, et un total d'assertions est une mesure, pas un document
 

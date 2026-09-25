@@ -21,7 +21,11 @@ role: >
   Suite `run_all.sh` = **3141 assertions, 0 échec sur 42 scripts** (re-mesuré le 2026-09-25 ; les
   3 checks « live » sont hors périmètre par conception, d'où 42 exécutés pour 45 fichiers).
   Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
-  ÉCRITE sera **047**. `portfolio-backend` est À JOUR (rebuild du 2026-09-24, #78→#81 déployés).
+  ÉCRITE sera **047**. `portfolio-backend` est À JOUR — rebuild du **2026-09-25** (commit `e2b548f`),
+  vérifié DANS le conteneur (`projection_memo.py` présent, `operations_etablies` × 2) et par
+  `GET /api/health` → **200**. ⚠️ Ce champ affirmait « à jour » le 2026-09-24 alors que le conteneur
+  ne portait **ni la garde ROIC ni le projecteur** : un correctif commité n'est pas un correctif
+  déployé, et le feed serait reparti fabriquer un successeur à #656.
   PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
@@ -878,6 +882,15 @@ lot 1 ; les tables viennent en dernier.
 > régression, c'est la garde de `feedback_check_degrade_en_sortant_a_zero` qui fonctionne : §7
 > confronte le référentiel à `/roadmap/V3/03-spec-frameworks.md`, et `run_all.sh` monte `/roadmap`
 > (+ `/contract_frozen`) que l'invocation nue n'a pas. Avec les montages : **44 / 0**.
+> ⚠️ **ET LE VERT DE LA SUITE NE DIT RIEN DE LA PRODUCTION.** Mesuré le 2026-09-25 :
+> `docker exec portfolio-backend grep -c operations_etablies …/financials_feed.py` rendait **0**, et
+> `projection_memo.py` n'existait pas dans le conteneur — **la garde ROIC tournait à 3141/0 dans la
+> suite pendant que le conteneur de prod exécutait le code qui fabrique le faux.** Le prochain
+> passage du feed aurait superseded #662 par un #66x fabriqué, en silence, sans qu'aucun compteur
+> ne bouge. Rebuild fait (`e2b548f`), vérifié DANS le conteneur puis par `GET /api/health` = 200.
+> **Réflexe à garder : après un correctif de producteur, `docker exec … grep` la constante
+> caractéristique — le dépôt et le conteneur sont deux mesures différentes.**
+>
 > Héritage `check_datation` §7 :
 > **128 courantes sans portée / 110 datées** · RVMD × `qualite_financiere` **5 chemises hétérogènes**
 > (40 pièces remises sur **74** courantes — 57 le 23/09, la valorisation en a ajouté) ·
