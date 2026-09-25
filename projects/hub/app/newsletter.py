@@ -132,7 +132,7 @@ _CSS = """
 """
 
 
-def _page(title: str, body: str, tabs: str, active) -> str:
+def _page(title: str, body: str, tabs: str, active, extra_css: str = "") -> str:
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -149,7 +149,7 @@ def _page(title: str, body: str, tabs: str, active) -> str:
   .container{{max-width:860px;margin:0 auto;padding:2rem 1.5rem}}
   .page-title{{font-size:1.2rem;font-weight:700;margin-bottom:1.2rem}}
 </style>
-{_CSS}
+{_CSS}{extra_css}
 </head>
 <body>
 <header><div class="logo"><a href="/">JLM VPS</a> <span class="sep">/</span> <span class="logo">Newsletter</span></div></header>
@@ -158,6 +158,7 @@ def _page(title: str, body: str, tabs: str, active) -> str:
   <div class="tabs">
     <a class="tab {'active' if active=='kb' else ''}" href="/newsletter">📚 Résumés (KB)</a>
     <a class="tab {'active' if active=='prompt' else ''}" href="/newsletter/prompt">✏️ Prompt de résumé</a>
+    <a class="tab {'active' if active=='aliases' else ''}" href="/newsletter/aliases">📮 Alias</a>
   </div>
   {body}
 </div>
@@ -199,18 +200,14 @@ def _page_kb(docs: list[dict], error: str = "") -> str:
 
 # ── Page éditeur de prompt ─────────────────────────────────────────────────────
 
-def _page_prompt(data: dict, flash: str = "", error: str = "") -> str:
+def _prompt_editor(data: dict, save_action: str, activate_action: str) -> str:
+    """Éditeur de prompt versionné : formulaire d'enregistrement + historique (menu « Restaurer »).
+
+    Partagé par la page newsletter (`/newsletter/prompt`, HTML inchangé) et les pages d'alias.
+    """
     active_id = data.get("active_id")
     active_prompt = data.get("active_prompt", "")
     versions = data.get("versions", [])
-
-    flash_html = ""
-    if flash == "saved":
-        flash_html = '<div class="alert alert-ok">✓ Nouvelle version enregistrée et activée.</div>'
-    elif flash == "activated":
-        flash_html = '<div class="alert alert-ok">✓ Version restaurée et activée.</div>'
-    if error:
-        flash_html += f'<div class="alert alert-err">{_e(error)}</div>'
 
     # Menu déroulant des versions (plus récente d'abord, données triées par le service).
     v_opts = ""
@@ -229,9 +226,8 @@ def _page_prompt(data: dict, flash: str = "", error: str = "") -> str:
             break
     active_html = f'<div class="hint" style="margin-bottom:1rem">Actuellement active : <span class="v-active">{_e(active_note)}</span></div>' if active_note else ""
 
-    body = f"""{flash_html}
-{active_html}
-<form method="POST" action="/newsletter/prompt/save">
+    return f"""{active_html}
+<form method="POST" action="{save_action}">
   <div class="section">
     <div class="section-title">Prompt envoyé à DeepInfra (rédaction du résumé en HTML)</div>
     <label>Prompt</label>
@@ -246,7 +242,7 @@ def _page_prompt(data: dict, flash: str = "", error: str = "") -> str:
 
 <div class="section">
   <div class="section-title">Historique des versions — revenir à une version antérieure</div>
-  <form method="POST" action="/newsletter/prompt/activate" style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+  <form method="POST" action="{activate_action}" style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
     <div style="flex:1;min-width:220px">
       <label>Version</label>
       <select name="version_id">{v_opts}</select>
@@ -255,6 +251,18 @@ def _page_prompt(data: dict, flash: str = "", error: str = "") -> str:
   </form>
   {"" if versions else '<p class="empty" style="margin-top:.6rem">Aucune version enregistrée.</p>'}
 </div>"""
+
+
+def _page_prompt(data: dict, flash: str = "", error: str = "") -> str:
+    flash_html = ""
+    if flash == "saved":
+        flash_html = '<div class="alert alert-ok">✓ Nouvelle version enregistrée et activée.</div>'
+    elif flash == "activated":
+        flash_html = '<div class="alert alert-ok">✓ Version restaurée et activée.</div>'
+    if error:
+        flash_html += f'<div class="alert alert-err">{_e(error)}</div>'
+
+    body = f"{flash_html}\n" + _prompt_editor(data, "/newsletter/prompt/save", "/newsletter/prompt/activate")
     return _page("Éditeur de prompt", body, "", "prompt")
 
 
@@ -327,3 +335,275 @@ async def prompt_activate(request: Request, version_id: str = Form("")):
     except (ApiError, ValueError) as exc:
         return RedirectResponse(f"/newsletter/prompt?error={quote(str(exc))}", status_code=303)
     return RedirectResponse("/newsletter/prompt?activated=1", status_code=303)
+
+
+# ══ Alias ══════════════════════════════════════════════════════════════════════════════════════════
+# Un alias = une adresse de réception + sa politique : fréquence, expéditeurs autorisés, prompt.
+# Le service (newsletter-summary) est seul détenteur des règles ; le Hub ne fait que les saisir et
+# les afficher — toute valeur invalide (nom, adresse d'expéditeur) revient du service en erreur
+# lisible, jamais ignorée en silence.
+
+_FREQ_LABELS = {
+    "morning": "Matin à 8h — un lot par destinataire",
+    "evening": "Soir à 18h — un lot par destinataire",
+    "minute": "Chaque minute — un e-mail par mail reçu",
+}
+_STATUS_LABELS = {
+    "new": ("en attente", "#f59e0b"), "processing": ("en cours", "#f59e0b"),
+    "summarized": ("envoyé", "#2da862"), "failed": ("échec", "#f87171"), "rejected": ("rejeté", "#6b7280"),
+    "ignored": ("ignoré", "#6b7280"),
+}
+
+_CSS_ALIAS = """
+<style>
+  .badge{display:inline-block;border-radius:20px;padding:.1rem .55rem;font-size:.7rem;font-weight:600;
+         border:1px solid currentColor;white-space:nowrap}
+  .al-card{display:block;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;padding:.9rem 1.1rem;
+           margin-bottom:.7rem}
+  .al-card:hover{border-color:#4f6ef7}
+  .al-addr{font-weight:600;font-size:.95rem;word-break:break-all}
+  .al-meta{font-size:.76rem;color:#888;margin-top:.3rem;display:flex;gap:.9rem;flex-wrap:wrap}
+  .check{display:flex;gap:.5rem;align-items:center;margin:.5rem 0;font-size:.85rem;text-transform:none;letter-spacing:0;color:#c8ccd6}
+  .check input{width:auto}
+  .warn{font-size:.78rem;color:#f59e0b;margin-top:.3rem}
+  table.mails{width:100%;border-collapse:collapse;font-size:.78rem}
+  table.mails th{text-align:left;color:#888;font-weight:600;padding:.35rem .4rem;border-bottom:1px solid #2a2d3a}
+  table.mails td{padding:.4rem;border-bottom:1px solid #1e2130;vertical-align:top;word-break:break-word}
+  .err{color:#f87171}
+  .tblwrap{overflow-x:auto}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:640px){.row2{grid-template-columns:1fr}}
+</style>
+"""
+
+
+def _badge(status: str) -> str:
+    label, color = _STATUS_LABELS.get(status, (status, "#888"))
+    return f'<span class="badge" style="color:{color}">{_e(label)}</span>'
+
+
+def _counts_html(counts: dict) -> str:
+    """Décompte lisible par statut : ce qui attend ou a échoué ne doit jamais rester invisible."""
+    pending = counts.get("new", 0) + counts.get("processing", 0)
+    parts = [f"{pending} en attente"]
+    for key, word in (("failed", "échec(s)"), ("rejected", "rejeté(s)"), ("summarized", "envoyé(s)")):
+        if counts.get(key):
+            color = "#f87171" if key == "failed" else "inherit"
+            parts.append(f'<span style="color:{color}">{counts[key]} {word}</span>')
+    return " · ".join(parts)
+
+
+def _senders_label(a: dict) -> str:
+    if a.get("open_senders"):
+        return "tous les expéditeurs"
+    n = len(a.get("allowed_senders") or [])
+    return f"{n} expéditeur(s) autorisé(s)" if n else '<span style="color:#f87171">aucun expéditeur autorisé</span>'
+
+
+def _flash(saved: str = "", created: str = "", activated: str = "", prompt_saved: str = "", error: str = "") -> str:
+    out = ""
+    for cond, msg in ((saved, "✓ Réglages enregistrés."), (created, "✓ Alias créé — ajoutez maintenant les expéditeurs autorisés."),
+                      (prompt_saved, "✓ Nouvelle version du prompt enregistrée et activée."), (activated, "✓ Version restaurée et activée.")):
+        if cond:
+            out += f'<div class="alert alert-ok">{msg}</div>'
+    if error:
+        out += f'<div class="alert alert-err">{_e(error)}</div>'
+    return out
+
+
+def _page_aliases(data: dict, flash_html: str = "", error: str = "") -> str:
+    aliases = data.get("aliases", [])
+    domain = data.get("domain", "")
+    banner = f'<div class="alert alert-err">{_e(error)}</div>' if error else ""
+    cards = ""
+    for a in aliases:
+        state = "" if a.get("enabled") else ' <span class="badge" style="color:#6b7280">désactivé</span>'
+        default = ' <span class="badge" style="color:#4f6ef7">par défaut</span>' if a.get("is_default") else ""
+        dest = f'envoi à {_e(a["recipient"])}' if a.get("recipient") else "réponse à l'expéditeur"
+        cards += f"""
+<a class="al-card" href="/newsletter/aliases/{a['id']}">
+  <div class="al-addr">{_e(a['address'])}{default}{state}</div>
+  <div class="al-meta"><span>{_e(_FREQ_LABELS.get(a['frequency'], a['frequency']))}</span><span>{_senders_label(a)}</span><span>{_e(dest)}</span></div>
+  <div class="al-meta">{_counts_html(a.get('counts') or {})}</div>
+</a>"""
+    if not aliases and not error:
+        cards = '<p class="empty">Aucun alias.</p>'
+    freq_opts = "".join(f'<option value="{k}"{" selected" if k == "minute" else ""}>{_e(v)}</option>' for k, v in _FREQ_LABELS.items())
+    body = f"""{flash_html}{banner}
+<div class="section">
+  <div class="section-title">Alias de réception</div>
+  <div class="hint" style="margin:0 0 .9rem">Un mail envoyé à l'adresse d'un alias est résumé, et le résumé revient à l'expéditeur s'il est autorisé.
+  Tant que le gateway est en mode développement, tous les envois sont redirigés vers l'adresse du compte Resend.</div>
+  {cards}
+</div>
+<form method="POST" action="/newsletter/aliases/create">
+  <div class="section">
+    <div class="section-title">Créer un alias</div>
+    <label>Adresse</label>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+      <input type="text" name="local_part" placeholder="summary ou aaa+bbb" required style="flex:1;min-width:160px" autocomplete="off">
+      <span class="hint" style="margin:0">@{_e(domain)}</span>
+    </div>
+    <div class="hint">Lettres, chiffres et _ + - ; le point n'est admis qu'entre deux segments. <code>aaa+bbb</code> est une adresse à part entière (pas de repli sur <code>aaa</code>).</div>
+    <div class="row2" style="margin-top:.8rem">
+      <div><label>Fréquence</label><select name="frequency">{freq_opts}</select></div>
+      <div><label>Expéditeurs autorisés (un par ligne)</label><textarea name="allowed_senders" rows="3" placeholder="vous@exemple.fr"></textarea></div>
+    </div>
+    <div class="hint">Sans expéditeur autorisé, personne ne peut utiliser l'alias. Le prompt de départ est une copie de celui de la newsletter.</div>
+    <button type="submit" class="btn btn-primary" style="margin-top:.8rem">➕ Créer l'alias</button>
+  </div>
+</form>"""
+    return _page("Alias", body, "", "aliases", extra_css=_CSS_ALIAS)
+
+
+def _page_alias(alias: dict, prompt_data: dict, mails: list, flash_html: str = "", error: str = "") -> str:
+    aid = alias["id"]
+    banner = f'<div class="alert alert-err">{_e(error)}</div>' if error else ""
+    freq_opts = "".join(f'<option value="{k}"{" selected" if k == alias["frequency"] else ""}>{_e(v)}</option>' for k, v in _FREQ_LABELS.items())
+    senders = "\n".join(alias.get("allowed_senders") or [])
+    enabled_box = "" if alias.get("is_default") else (
+        '<input type="hidden" name="enabled_present" value="1">'
+        f'<label class="check"><input type="checkbox" name="enabled"{" checked" if alias.get("enabled") else ""}> Alias actif</label>'
+        '<div class="hint" style="margin-top:-.2rem">Désactivé : les mails reçus sont rejetés (conservés, sans réponse).</div>'
+    )
+    dest = (f"Le digest est envoyé à <strong>{_e(alias['recipient'])}</strong>." if alias.get("recipient")
+            else "La réponse est envoyée à <strong>l'expéditeur</strong> du mail.")
+    rows = ""
+    for m in mails:
+        err = f'<div class="err">{_e(m["last_error"])}</div>' if m.get("last_error") else ""
+        tries = f' ({m["attempts"]} essai(s))' if m.get("attempts") else ""
+        rows += (f'<tr><td>{_fmt(m.get("received_at"))}</td><td>{_e(m.get("from_addr") or "")}</td>'
+                 f'<td>{_e(m.get("subject") or "(sans objet)")}{err}</td><td>{_badge(m.get("status", ""))}{_e(tries)}</td></tr>')
+    table = (f'<div class="tblwrap"><table class="mails"><tr><th>Reçu</th><th>Expéditeur</th><th>Objet</th><th>Statut</th></tr>{rows}</table></div>'
+             if rows else '<p class="empty">Aucun mail reçu sur cet alias.</p>')
+    editor = _prompt_editor(prompt_data, f"/newsletter/aliases/{aid}/prompt/save", f"/newsletter/aliases/{aid}/prompt/activate")
+    body = f"""{flash_html}{banner}
+<div style="margin-bottom:1rem"><a class="btn btn-secondary" href="/newsletter/aliases">← Tous les alias</a></div>
+<div class="page-title" style="font-size:1.05rem;word-break:break-all">{_e(alias['address'])}</div>
+<form method="POST" action="/newsletter/aliases/{aid}/save">
+  <div class="section">
+    <div class="section-title">Réglages</div>
+    <label>Fréquence du résumé</label>
+    <select name="frequency">{freq_opts}</select>
+    <div class="hint">« Chaque minute » : le système vérifie chaque minute et vous renvoie <strong>un e-mail par mail reçu</strong> (jamais de regroupement).
+    Matin/soir : un seul e-mail regroupant tous les mails reçus depuis le dernier envoi.</div>
+    <label style="margin-top:.9rem">Expéditeurs autorisés (un par ligne)</label>
+    <textarea name="allowed_senders" rows="4" placeholder="vous@exemple.fr">{_e(senders)}</textarea>
+    <div class="hint">Les mails d'une autre adresse sont rejetés sans réponse. {dest}</div>
+    <label class="check" style="margin-top:.7rem"><input type="checkbox" name="open_senders"{" checked" if alias.get("open_senders") else ""}> Accepter tous les expéditeurs</label>
+    <div class="warn">⚠ À éviter sur un alias qui répond à l'expéditeur : l'adresse d'un expéditeur est facile à usurper.</div>
+    {enabled_box}
+    <button type="submit" class="btn btn-primary" style="margin-top:.8rem">💾 Enregistrer les réglages</button>
+  </div>
+</form>
+{editor}
+<div class="section">
+  <div class="section-title">Derniers mails</div>
+  <div class="hint" style="margin:0 0 .6rem">{_counts_html(alias.get('counts') or {})}</div>
+  {table}
+</div>"""
+    return _page(alias["address"], body, "", "aliases", extra_css=_CSS_ALIAS)
+
+
+async def _alias_by_id(aid: int) -> dict | None:
+    data = await _api("GET", "/api/aliases")
+    return next((a for a in data.get("aliases", []) if a["id"] == aid), None)
+
+
+def _to(path: str, **params) -> RedirectResponse:
+    from urllib.parse import urlencode
+    qs = urlencode({k: v for k, v in params.items() if v})
+    return RedirectResponse(f"{path}?{qs}" if qs else path, status_code=303)
+
+
+@router.get("/aliases", response_class=HTMLResponse)
+async def aliases_view(request: Request, error: str = "", created: str = "", saved: str = ""):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    data, err = {}, error
+    try:
+        data = await _api("GET", "/api/aliases")
+    except ApiError as exc:
+        err = err or str(exc)
+    return HTMLResponse(_page_aliases(data, flash_html=_flash(saved=saved, created=created), error=err))
+
+
+@router.post("/aliases/create")
+async def alias_create(request: Request, local_part: str = Form(""), frequency: str = Form("minute"),
+                       allowed_senders: str = Form("")):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    try:
+        res = await _api("POST", "/api/aliases", {"local_part": local_part, "frequency": frequency,
+                                                   "allowed_senders": allowed_senders})
+    except ApiError as exc:
+        return _to("/newsletter/aliases", error=str(exc))
+    return _to(f"/newsletter/aliases/{res['id']}", created="1")
+
+
+@router.get("/aliases/{aid}", response_class=HTMLResponse)
+async def alias_view(request: Request, aid: int, saved: str = "", created: str = "", prompt_saved: str = "",
+                     activated: str = "", error: str = ""):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    try:
+        alias = await _alias_by_id(aid)
+        if alias is None:
+            return _to("/newsletter/aliases", error="Alias introuvable")
+        prompt_data = await _api("GET", f"/api/prompt?alias_id={aid}")
+        mails = (await _api("GET", f"/api/aliases/{aid}/mails?limit=20")).get("mails", [])
+    except ApiError as exc:
+        return _to("/newsletter/aliases", error=str(exc))
+    flash = _flash(saved=saved, created=created, prompt_saved=prompt_saved, activated=activated)
+    return HTMLResponse(_page_alias(alias, prompt_data, mails, flash_html=flash, error=error))
+
+
+@router.post("/aliases/{aid}/save")
+async def alias_save(request: Request, aid: int, frequency: str = Form(""), allowed_senders: str = Form(""),
+                     open_senders: str = Form(""), enabled: str = Form(""), enabled_present: str = Form("")):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    payload = {"frequency": frequency, "allowed_senders": allowed_senders, "open_senders": bool(open_senders)}
+    if enabled_present:   # absent pour l'alias par défaut : la case n'est pas affichée, on ne le désactive jamais par oubli
+        payload["enabled"] = bool(enabled)
+    try:
+        await _api("PUT", f"/api/aliases/{aid}", payload)
+    except ApiError as exc:
+        return _to(f"/newsletter/aliases/{aid}", error=str(exc))
+    return _to(f"/newsletter/aliases/{aid}", saved="1")
+
+
+@router.post("/aliases/{aid}/prompt/save")
+async def alias_prompt_save(request: Request, aid: int, prompt: str = Form(""), note: str = Form("")):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    if not prompt.strip():
+        return _to(f"/newsletter/aliases/{aid}", error="Le prompt ne peut pas être vide")
+    try:
+        await _api("POST", "/api/prompt/versions", {"prompt": prompt, "note": note, "alias_id": aid})
+    except ApiError as exc:
+        return _to(f"/newsletter/aliases/{aid}", error=str(exc))
+    return _to(f"/newsletter/aliases/{aid}", prompt_saved="1")
+
+
+@router.post("/aliases/{aid}/prompt/activate")
+async def alias_prompt_activate(request: Request, aid: int, version_id: str = Form("")):
+    from app.main import settings
+    from app.roadmap import _require_auth
+    if r := _require_auth(request, settings):
+        return r
+    try:
+        await _api("POST", "/api/prompt/activate", {"version_id": int(version_id), "alias_id": aid})
+    except (ApiError, ValueError) as exc:
+        return _to(f"/newsletter/aliases/{aid}", error=str(exc))
+    return _to(f"/newsletter/aliases/{aid}", activated="1")

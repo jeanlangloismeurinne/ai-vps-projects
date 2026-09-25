@@ -70,7 +70,7 @@ SERVICES = [
         "id": "newsletter",
         "emoji": "📬",
         "name": "Newsletter Summary",
-        "desc": "Résumés des newsletters (KB) · Éditeur de prompt de résumé",
+        "desc": "Résumés des newsletters (KB) · Alias de mails (résumé à la demande) · Éditeur de prompt",
         "url": "/newsletter",
         "color": "#0ea5e9",
     },
