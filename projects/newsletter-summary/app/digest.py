@@ -188,6 +188,9 @@ def render_text(items: list[Item], pres: dict, today: str) -> str:
         summary_text = _summary_to_text(email.summary) if email.summary else ""
         if summary_text:
             lines.append(summary_text)
+        elif getattr(email, "_summary_error", ""):
+            # Le motif nommé doit aussi arriver en texte brut (l'ancien rendu disait « (vide) »).
+            lines.append(f"⚠ Résumé en échec — {email._summary_error}")
         elif not email.text_body and not email.html_body:
             lines.append("⚠ Corps non reçu — Resend n'a transmis que les métadonnées (pas de text/html).")
         else:

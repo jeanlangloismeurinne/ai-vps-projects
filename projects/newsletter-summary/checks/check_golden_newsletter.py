@@ -15,7 +15,7 @@ Lancer :  projects/newsletter-summary/checks/run.sh checks/check_golden_newslett
 import asyncio
 import json
 
-from _harness import GOLDEN, Doubles, alias_digest, add_email, fresh_db, get_email
+from _harness import ERROR_MARKER, GOLDEN, Doubles, alias_digest, add_email, fresh_db, get_email
 
 
 async def main():
@@ -33,7 +33,13 @@ async def main():
     got = d.gateway.sent[0]
     assert got["to"] == golden["to"], f"destinataire : {got['to']!r} ≠ {golden['to']!r}"
     assert got["subject"] == golden["subject"], f"objet : {got['subject']!r} ≠ {golden['subject']!r}"
-    assert got["body"] == golden["body"], "corps TEXTE différent du legacy"
+    # Seul écart VOLONTAIRE avec le legacy : le corps texte d'une carte en échec nomme le motif au lieu de
+    # « (vide) » (constaté en exécution réelle : un mail-lien refusé arrivait « (vide) » en texte brut).
+    # L'écart est déclaré ici et auto-vérifié : il doit exister EXACTEMENT une fois dans la fixture.
+    legacy_vide = f"Résumé en échec {ERROR_MARKER}\n\n(vide)"
+    assert golden["body"].count(legacy_vide) == 1, "fixture : le bloc « (vide) » de la carte en échec est introuvable"
+    expected_body = golden["body"].replace(legacy_vide, f"Résumé en échec {ERROR_MARKER}\n\n⚠ Résumé en échec — DeepInfra simulé indisponible")
+    assert got["body"] == expected_body, "corps TEXTE différent du legacy (hors l'écart déclaré sur les cartes en échec)"
     assert got["html"] == golden["html"], "corps HTML différent du legacy"
 
     # Ce que la base retient est plus fidèle que l'ancien « tout summarized » : le corps absent et

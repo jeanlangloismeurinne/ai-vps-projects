@@ -111,6 +111,7 @@ async def main():
     assert e.status == "failed" and "DeepInfra simulé indisponible" in e.last_error, f"S5 : {(e.status, e.last_error)}"
     assert len(d.gateway.sent) == 1 and "⚠ Résumé en échec — DeepInfra simulé indisponible" in d.gateway.sent[0]["html"], \
         "S5 : à l'épuisement des tentatives l'expéditeur doit recevoir une carte d'erreur NOMMÉE (jamais le silence)"
+    assert "⚠ Résumé en échec — DeepInfra simulé indisponible" in d.gateway.sent[0]["body"], "S5 : le motif doit aussi figurer dans le corps TEXTE (« (vide) » = motif perdu)"
     d.gateway.sent.clear()
 
     # ── S6 échec d'envoi : tentatives bornées puis `failed` nommé ──
@@ -174,6 +175,7 @@ async def main():
     assert "https://exemple.org/article" in card["html"], "S9 : l'en-tête de carte doit afficher l'URL"
     err = next(m for m in d.gateway.sent if "page bloquée (403)" in m["html"])
     assert "⚠ Résumé en échec — page bloquée (403)" in err["html"], "S9 : échec permanent = carte d'erreur immédiate, raison nommée"
+    assert "⚠ Résumé en échec — page bloquée (403)" in err["body"], "S9 : la raison doit figurer aussi en texte brut"
     e = await get_email(i_403)
     assert e.status == "failed" and e.last_error == "page bloquée (403)" and e.attempts == 0, f"S9 : {(e.status, e.last_error, e.attempts)}"
     d.gateway.sent.clear()
