@@ -10,6 +10,7 @@
 >
 > | Question | Où est la réponse |
 > |---|---|
+> | **Comment décider et comment poser un arbitrage — à lire À CHAQUE session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, quel est le prochain lot | `roadmap/V3/00-REPRISE.md` |
 > | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
 > | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module — p.ex. `backend/app/agents/v2/ARCHITECTURE.md` |
@@ -2007,11 +2008,12 @@ entrées append-only versionnées, `reliability_score` par source).
 
 Voir `CONTROL_SYSTEM.md` à la racine du repo pour le protocole complet.
 Déclencheur : **« reprends le projet portfolio-tracker à partir du fichier de reprise »**
-→ Lire **`roadmap/V3/00-REPRISE.md`** (le fichier de reprise, au sommet du dossier `/V3`), puis la
+→ Lire **`roadmap/V3/PRINCIPES-FONDATEURS.md`** (deux principes de conduite : arbitrages en termes métier, décisions éclairées par la pratique d'un vrai fonds), puis **`roadmap/V3/00-REPRISE.md`** (le fichier de reprise, au sommet du dossier `/V3`), puis la
 roadmap qu'il déclare active, annoncer le lot de conversation, exécuter, cocher les capacités livrées.
 
 **Tout le pilotage vit dans `roadmap/V3/`, dossier autonome et point d'entrée unique :**
 - `03-spec-frameworks.md` — **la roadmap active** (§1 = ce qui n'est PAS défait, à relire à chaque lot) ;
+- `PRINCIPES-FONDATEURS.md` — les **principes de conduite** du chantier (lus à chaque reprise) ;
 - `principe-directeur.md` — la **constitution**, prime sur toute spec ;
 - `doctrine-trois-axes.md` — doctrine fiabilité/nature/actualité (close, en production) ;
 - `benchmark-methodologies.md` — la matière descendante des frameworks (Partie B/D3/E) ;
