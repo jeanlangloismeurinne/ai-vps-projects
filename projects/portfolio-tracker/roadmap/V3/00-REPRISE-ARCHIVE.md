@@ -8,6 +8,77 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-25 (2) — lot 5, **le BOUCLAGE comité → collecte (fermeture de la figure #71)**
+
+Aucune migration (la table 043 portait déjà tout le cycle de vie). Livré au niveau **code + tests
+hors-ligne + persistance réelle** ; le passage RÉEL de bout en bout et le déploiement restent à jouer
+dans une session à permissions infra (le sandbox de cette session bloque les requêtes DB ad hoc, le
+`docker run` réseau `coolify` avec écriture prod, et le build de déploiement).
+
+### Le trou fermé
+
+`serve_mandate`/`read_open_mandates` existaient, testés, et n'avaient **0 appelant dans `app/`**
+(mesuré le 2026-09-25) : un décideur sans producteur (#71). Le manager renvoie et écrit un mandat
+ouvert ; personne ne le relisait jamais pour refaire la recherche et le solder.
+
+### Arbitrages utilisateur (2026-09-25), rendus en termes de fonds
+
+1. **Même processus, scopé** — l'analyste refait les recherches manquantes par le MÊME chemin
+   (traducteur → plan → collecteur), restreint aux questions renvoyées ; pas de chemin de recherche
+   parallèle (#46). D'où `executer_collecte_framework(..., questions=scope)`.
+2. **Cadence « cycle suivant »** (le comité reconvoque, il ne reste pas en salle) : un passage de
+   bouclage est synchrone et produit une NOTE ARRÊTÉE, pas une boucle interne — c'est là que
+   l'utilisateur intervient, en connaissance des forces ET des limites.
+3. **Distinguer « collecte insuffisante » de « mandat pas clair »** — exigence explicite. Réalisée
+   par une note à **quatre sorts** dérivés (aucun modèle) : `acquis` · `collecte_insuffisante` (source
+   décevante = limite du monde) · `mandat_non_executable` (le traducteur n'a pas su en faire une ligne
+   = la question est en cause) · `classe_sans_suite` (dispense = le comité accepte le trou). Le
+   discriminant collecte/mandat se lit sur l'origine des mandats collecteur (`echec_collecte` vs
+   `inobtenable`), pas sur un jugement.
+
+### Livré
+
+- **Contrat** `app/contracts/bouclage_schema.py` — `MandatBoucle`/`CompteRenduBouclage`, `acquis ⟺
+  statut_apres != non_fondable`, non persisté (assemblé au run, #53/#77).
+- **Agent** `app/agents/v2/bouclage.py` — `boucler_renvois` (lit les ouverts → re-collecte scopée →
+  re-répond → sert les mandats → note honnête) + `classer_sort` détenteur unique des 4 sorts.
+- **Scope threadé** (additif, `questions=None` = comportement historique) dans `traducteur.traduire`/
+  `contexte_traducteur`, `frameworks.valider_pont_collection_plan` (`[R]` n'exige que le scope, `[P]`
+  refuse une ligne hors scope), `collecte_executor.executer_collecte_framework`.
+- `manager_persist.id_du_mandat_ouvert` promu **détenteur unique public** du handle à servir (l'idempotence
+  de `persist_review` et le bouclage l'utilisent — `read_open_mandates` rend le contenu, pas l'id de ligne).
+- **Gardes** : `check_bouclage.py` **27/0** + `negatif_bouclage.sh` **11 mutations / 0**, dont les
+  **deux mutations « EXERCÉ »** : retirer l'appel de prod à `serve_mandate`/`read_open_mandates`
+  rougit §4 (on compte les appelants en prod par AST, pas les asserts — #71/`feedback_controle_au_point_de_lecture`).
+- **Entrée de production** `tools/boucler_renvois.{py,sh}` — le passage manuel qui EXERCE le décideur
+  (comme `executer_chaine`, écrit en prod, pas de rollback).
+- Suite complète **`run_all.sh` = 3168/0** (3141 + 27), exit 0 ; `check_manager_persist` a tourné
+  contre la vraie base (17/0) → `id_du_mandat_ouvert` prouvé en base.
+
+### Le défaut que le check a trouvé, et qui aurait tué l'arbitrage n°1
+
+La première version scopait le pont, mais `valider_pont_collection_plan` avait un **local
+`questions = {q.id: q …}`** (le dict des définitions) qui **shadowait le paramètre `questions`** (le
+scope). Résultat : `q.id not in questions` testait l'appartenance au dict de TOUTES les questions →
+le filtre `[R]` ne filtrait jamais → un plan « scopé » aurait re-collecté le framework ENTIER, c'est
+exactement le chemin parallèle que l'arbitrage n°1 interdit, en silence. `check_bouclage §5` l'a fait
+rougir immédiatement. Local renommé `qdefs`. Leçon : un paramètre neuf qui reprend un nom de local
+existant est un jumeau silencieux (#46 transposé aux noms de variables).
+
+### Ce qui RESTE (honnête, non fait faute de permissions infra cette session)
+
+- **Passage réel de bout en bout** (`bash tools/boucler_renvois.sh <ticker> <fw> <arch>`) sur un
+  renvoi manager OUVERT. ⚠️ **Prérequis mesuré à faire d'abord** : les passages du 21 et du 25/09 ont
+  tous deux fini en **acquittements** (0 mandat manager) — il se peut qu'AUCUN mandat manager ouvert
+  n'existe en base. Le premier geste du prochain lot est donc de requêter
+  `framework_mandates WHERE origine IN ('manager_renvoi','comite') AND statut='ouvert'` ; s'il est
+  vide, provoquer un renvoi (une réponse insuffisante) avant de pouvoir boucler. `read_open_mandates`
+  NE rend PAS les mandats collecteur — un stock de mandats `echec_collecte`/`inobtenable` ne se
+  boucle pas par ici (c'est le collecteur qui les rejoue).
+- **Déploiement** (rebuild) des modules partagés modifiés (additifs) + vérification `docker exec …
+  grep` dans le conteneur (`feedback_commite_nest_pas_deploye`). Non urgent : les changements sont
+  additifs (`questions=None`), le conteneur tourne inchangé ; mais à faire pour la cohérence dépôt↔conteneur.
+
 ## 2026-09-25 — lot 5, **la chaîne de bout en bout sur `defendabilite` (arbitrage A consommé)**
 
 Aucune migration, aucun déploiement. Un seul geste de code : `tools/acceptation_analyste.py` gagne

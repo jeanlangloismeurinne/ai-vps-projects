@@ -24,7 +24,8 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | `apparieur.py` · `appariement_persist.py` | Appariement questions↔champs-EDGAR (3 états) ; persistance UPSERT + revérification à la lecture (#54) |
 | `curator.py` | Porte de complétude à 3 états + rôle de manager ; **aucun levier de modèle sur l'exigence** (#62) |
 | `framework_persist.py` | Écriture append-only versionnée des réponses/dispenses (#64) |
-| `manager_persist.py` | Persistance du **mandat** du manager + son cycle de vie (ouvert→servi) ; l'avis se **recalcule** à la lecture, jamais stocké (#53/#54, arbitrage 2026-09-21) — migration 043 (#77) |
+| `manager_persist.py` | Persistance du **mandat** du manager + son cycle de vie (ouvert→servi) ; l'avis se **recalcule** à la lecture, jamais stocké (#53/#54, arbitrage 2026-09-21) — migration 043 (#77) ; `id_du_mandat_ouvert` détenteur unique du handle à servir |
+| `bouclage.py` | **Bouclage comité → collecte** (lot 5, #71) — lit les renvois ouverts (`read_open_mandates`), refait la recherche PAR LE MÊME PROCESSUS scopé aux questions renvoyées (`executer_collecte_framework(questions=…)`, #46 : pas de chemin parallèle), re-répond, SERT les mandats (`serve_mandate`) et rend une note à 4 sorts (`classer_sort`, détenteur unique) |
 | `common.py` | `MVDD_SPEC`, `FIELD_PROFILES`, `derive_nature` (détenteurs uniques) |
 | `runner.py` | Boucle d'outils + tour de clôture JSON validé ; télémétrie de coût exacte (#41) |
 | `worker.py` · `tools.py` | `search-worker` + exécuteurs des 3 outils |
@@ -40,6 +41,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | Analyste : refus avant dépense, 3 états, pas de levier | `check_analyste.py` + `negatif_analyste.sh` + `tools/acceptation_analyste.sh` (vrai modèle) |
 | Manager : 4 contrôles déterministes, chaque `ko` atteignable, renvoi → mandat | `check_manager.py` + `negatif_manager.sh` |
 | Mandat manager persisté (par-question, réconcilié avec la table 039), consommable, statut qui change au re-run (T8) | `check_manager_persist.py` + `negatif_manager_persist.sh` + `tools/acceptation_manager.sh` |
+| Bouclage comité → collecte : renvois relus et servis (EXERCÉ, pas seulement vert — appelants comptés en prod, #71), même processus scopé (#46), note honnête à 4 sorts (`acquis`/`collecte_insuffisante`/`mandat_non_executable`/`classe_sans_suite`) distinguant « collecte insuffisante » de « mandat pas clair » | `check_bouclage.py` + `negatif_bouclage.sh` + `tools/acceptation_bouclage.sh` (wiring DB de bout en bout contre la vraie base, ROLLBACK, zéro résidu) + `tools/boucler_renvois.sh` (passage réel complet, vrai modèle, écrit en prod) |
 | Note de comité PROJETÉE : ne publier que l'instruit, 4 états de rubrique jamais fusionnés, l'ordre du jour couvert en entier — et surtout **ajouter une méthodologie est une opération de DONNÉES** (un 3ᵉ framework en YAML seul se projette sans diff de code) | `check_memo_projete.py` + `negatif_memo_projete.sh` + `tools/montrer_memo_projete.sh` (lecture de la note réelle, gratuite) |
 | Porte à 3 états, remèdes distincts, lue au point de sortie | `check_readiness_recompute.py`, `tools/acceptation_gate.sh` |
 | Table de profils par champ (`FIELD_PROFILES` dans `common.py`) | `check_field_profiles.py` |

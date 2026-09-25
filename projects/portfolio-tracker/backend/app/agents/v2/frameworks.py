@@ -519,6 +519,7 @@ def valider_pont_collection_plan(
     plan: CollectionPlan,
     *,
     fichier: Optional[FrameworksFile] = None,
+    questions: Optional[frozenset[str]] = None,
 ) -> None:
     """Vérifie qu'un plan de collecte est cohérent avec le RÉFÉRENTIEL. Ne rend rien : le seul
     résultat possible est « pas de refus ».
@@ -541,6 +542,11 @@ def valider_pont_collection_plan(
          (`traduit` ou `inobtenable motivé`). Une omission n'est pas un trou : c'est un plan
          REFUSÉ. Un essentiel qui disparaît en silence produit un VERT (couverture à 100 % sur ce
          qui reste) — le mode de panne que toute la v3 combat.
+
+    `questions` (optionnel) SCOPE la validation au BOUCLAGE (lot 5) : un plan qui rejoue un renvoi ne
+    couvre légitimement que la question renvoyée. Alors `[R]` n'exige QUE les questions du scope, et
+    `[P]` refuse une ligne HORS scope (le modèle n'a vu que le scope — une ligne ailleurs est une
+    dérive, pas un cas d'usage). `questions=None` = le comportement historique, plan complet.
 
     Ce que ce pont NE fait PAS : émettre le mandat d'une ligne `inobtenable` (c'est le flux
     traducteur → `framework_mandates`), ni écrire `question_coverage` (c'est l'aiguilleur du
@@ -568,11 +574,13 @@ def valider_pont_collection_plan(
             f"[O] archétype `{plan.archetype}` hors des archétypes déclarés "
             f"{sorted(fichier.archetypes)} : une question ne s'instancie que sur un archétype connu")
 
-    questions = {q.id: q for q in fw.questions}
+    # `qdefs`, PAS `questions` : le paramètre `questions` (scope de bouclage) ne doit pas être
+    # shadowé par le dict des définitions du framework — la collision rendait le scope inopérant.
+    qdefs = {q.id: q for q in fw.questions}
 
     # P + Q. chaque ligne résout, et ne vise pas une question sans objet pour cet archétype.
     for it in plan.items:
-        q = questions.get(it.question_id)
+        q = qdefs.get(it.question_id)
         if q is None:
             raise CollectionPlanRefused(
                 f"[P] la ligne vise la question `{it.question_id}`, absente de "
@@ -583,6 +591,10 @@ def valider_pont_collection_plan(
             raise CollectionPlanRefused(
                 f"[P] `{it.question_id}` n'a pas d'ingrédient `{it.ingredient_id}` "
                 f"({sorted(ingredients)}) : un ingrédient inventé écrirait le corrigé")
+        if questions is not None and it.question_id not in questions:
+            raise CollectionPlanRefused(
+                f"[P] la ligne vise `{it.question_id}`, HORS du scope de bouclage {sorted(questions)} : "
+                "un plan scopé ne collecte que les questions renvoyées (le modèle n'a vu qu'elles)")
         if q.variables_par_archetype[plan.archetype].mode == "sans_objet":
             raise CollectionPlanRefused(
                 f"[Q] `{it.question_id}` est SANS OBJET pour l'archétype `{plan.archetype}` : "
@@ -595,6 +607,8 @@ def valider_pont_collection_plan(
     for q in fw.questions:
         if q.variables_par_archetype[plan.archetype].mode != "variable":
             continue
+        if questions is not None and q.id not in questions:
+            continue  # bouclage : seules les questions renvoyées sont exigées (les autres sont déjà traitées)
         for i in q.ingredients_requis:
             if i.essentiel and (q.id, i.id) not in couples:
                 raise CollectionPlanRefused(

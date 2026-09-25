@@ -776,10 +776,15 @@ async def executer_plan_reel(
 
 async def executer_collecte_framework(
     ticker_id: str, framework_id: str, archetype: str,
+    *, questions: Optional[frozenset[str]] = None,
 ) -> dict[str, Any]:
     """Chaîne RUNTIME de bout en bout (spec §3.6) : traduire → persister le plan → collecter →
     persister liens + mandats. Le plan est persisté AVANT la collecte, pour que « mauvais plan ou
     mauvaise collecte ? » reste diagnosticable même si la collecte échoue en route (§3.6).
+
+    `questions` RESTREINT la collecte à un sous-ensemble de questions (BOUCLAGE, lot 5) — le
+    traducteur et le pont sont scopés au même ensemble. `None` = collecte complète (comportement
+    historique, tous les appelants existants inchangés).
 
     ⚠️ Écritures PROD (knowledge_entries via les producteurs, collection_plans / question_coverage /
     framework_mandates / appariement_cartes) + dépense réseau (modèle traducteur, modèle apparieur
@@ -788,7 +793,7 @@ async def executer_collecte_framework(
     La carte est obtenue AVANT le routage et son état est REMONTÉ dans le compte rendu : « d'où
     venait la décision de routage » se lit sur le résultat, pas seulement dans un log.
     """
-    run, plan = await traduire(ticker_id, framework_id, archetype)  # modèle + contrat + pont
+    run, plan = await traduire(ticker_id, framework_id, archetype, questions=questions)  # modèle + contrat + pont
 
     async with get_db_session() as conn:
         async with conn.transaction():

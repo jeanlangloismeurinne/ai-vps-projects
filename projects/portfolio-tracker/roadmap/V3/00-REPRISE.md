@@ -14,13 +14,18 @@ role: >
   `roadmap/V3/doctrine-trois-axes.md` est **close**.
   ÉTAT au 2026-09-25 : lots 0 à 4 clos, **lot 5 EN COURS** (le projecteur du mémo est livré et
   prouvé ; la chaîne est allée de bout en bout sur `defendabilite` le 2026-09-25 — arbitrage A
-  consommé, `moat` → `instruite` ; reste le wiring live de `serve_mandate`). La chaîne à six agents
+  consommé, `moat` → `instruite` ; **le BOUCLAGE comité → collecte est livré au niveau code + tests
+  + persistance réelle** le 2026-09-25 (2) — `serve_mandate`/`read_open_mandates` ont enfin un
+  appelant de prod (`bouclage.py`), note honnête à 4 sorts, garde qui COMPTE les appelants ; reste le
+  **passage réel de bout en bout + le déploiement**, tous deux bloqués par le sandbox de la session,
+  voir archive). La chaîne à six agents
   est allée de bout en bout en réel sur **deux** frameworks : RVMD × `qualite_financiere` ×
   `pre_revenus` (2026-09-21, #78) et RVMD × `defendabilite` × `pre_revenus` (2026-09-25, archive).
   Elle n'a jamais produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la
   partie aval/suivi vient après (arbitrage utilisateur 2026-09-22).
-  Suite `run_all.sh` = **3141 assertions, 0 échec sur 42 scripts** (re-mesuré le 2026-09-25 ; les
-  3 checks « live » sont hors périmètre par conception, d'où 42 exécutés pour 45 fichiers).
+  Suite `run_all.sh` = **3168 assertions, 0 échec sur 43 scripts** (re-mesuré le 2026-09-25 (2) ;
+  +27 par `check_bouclage` ; les 3 checks « live » restent hors périmètre par conception, d'où 43
+  exécutés pour 46 fichiers). `negatif_bouclage.sh` = **11 mutations / 0** (dont les 2 « exercé »).
   Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
   ÉCRITE sera **047**. `portfolio-backend` est À JOUR — rebuild du **2026-09-25** (commit `e2b548f`),
   vérifié DANS le conteneur (`projection_memo.py` présent, `operations_etablies` × 2) et par
@@ -996,14 +1001,24 @@ lot 1 ; les tables viennent en dernier.
 >    défaut** : le web n'a pas ramené les preuves de moat (search-workers épuisés, 3 échecs de
 >    validation) — `moat` reste `non_fondable` en attente de collecte réelle. Détail : archive
 >    2026-09-25. Outil : `tools/acceptation_analyste.py` gagne `ACCEPTATION_CAS` (surcharge du `CAS`).
-> 2. **Wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker.** Touche
->    les **3 points de synchro** (#19) **et** l'exemple JSON du prompt en DB (#39).
->    ⚠️ **Mesuré le 2026-09-25**, `grep -rn 'serve_mandate\|read_open_mandates' app/ tools/` :
->    **0 appelant dans `app/`**, les seuls appels vivent dans `tools/acceptation_manager.py`. Le
->    décideur existe, il est testé, et **rien ne le déclenche en production** — figure #71 (« un
->    décideur sans producteur ne décide jamais : 0 appelant, 0 ligne, garde verte »). La garde à
->    écrire doit donc distinguer **« vert »** de **« exercé »** : compter les appelants, pas les
->    asserts ([[feedback_controle_au_point_de_lecture]]).
+> 2. ✅ **Wiring de `serve_mandate`/`read_open_mandates` — LIVRÉ le 2026-09-25 (2) au niveau code +
+>    tests + persistance réelle** (récit complet : archive § « le BOUCLAGE comité → collecte »).
+>    `app/agents/v2/bouclage.py` (`boucler_renvois`) lit les renvois ouverts, refait la recherche PAR
+>    LE MÊME PROCESSUS scopé (arbitrage : pas de chemin parallèle, #46 ; d'où `executer_collecte_
+>    framework(questions=…)`), re-répond, SERT les mandats, et rend une note à **4 sorts** distinguant
+>    « collecte insuffisante » de « mandat pas clair » (arbitrage utilisateur). `serve_mandate`/
+>    `read_open_mandates` ont donc un appelant de PROD (fin de la figure #71). ⚠️ **Ni #19 ni #39 ne
+>    sont touchés** : le mandat re-rentre par le traducteur, pas par un input élargi du search-worker
+>    (l'arbitrage « même processus » l'a évité). Garde : `check_bouclage.py` **27/0** (§4 COMPTE les
+>    appelants en prod par AST — « exercé » ≠ « vert », [[feedback_controle_au_point_de_lecture]]) +
+>    `negatif_bouclage.sh` **11/0**. Entrée de prod : `tools/boucler_renvois.{py,sh}`.
+>    ✅ **BOUT EN BOUT MESURÉ contre la VRAIE base** (`tools/acceptation_bouclage.sh`, **8/0**,
+>    transaction ROLLBACK, zéro résidu) : un renvoi seedé est lu par `read_open_mandates`, retrouvé par
+>    `id_du_mandat_ouvert`, SERVI (`ouvert→servi`, avant/après figés), absent des ouverts ensuite, et
+>    transformé en note `acquis`. ⚠️ **MESURE au passage : 0 mandat `manager_renvoi`/`comite` OUVERT en
+>    base** — les passages du 21 et du 25/09 ont acquitté. Donc un PASSAGE RÉEL complet
+>    (`boucler_renvois.sh`) rendrait « rien à boucler » : la boucle live n'aura de matière qu'après un
+>    vrai renvoi (une réponse insuffisante qui échoue un des 4 contrôles). Le wiring, lui, est prouvé.
 >
 > **Ce que ce lot NE fait PAS**, et pourquoi : la partie **MONITORING** (moitié ÉCRITURE de « on
 > n'écrase pas, on empile ») relève du **suivi**, que l'arbitrage #1 du 2026-09-22 place APRÈS
@@ -1023,7 +1038,7 @@ lot 1 ; les tables viennent en dernier.
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
-| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ⏳ **wiring `serve_mandate` en live** (0 appelant mesuré) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
+| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ✅ **BOUCLAGE comité → collecte** (2026-09-25 (2), code+tests+persistance : `bouclage.py`, note à 4 sorts, `check_bouclage` **27/0** + négatif **11/0** dont les 2 « exercé » ; `tools/boucler_renvois.sh`) — ⏳ **passage réel + déploiement** (sandbox) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 

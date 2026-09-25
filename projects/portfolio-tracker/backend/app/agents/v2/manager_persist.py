@@ -48,13 +48,14 @@ __all__ = [
     "persist_review",
     "serve_mandate",
     "read_open_mandates",
+    "id_du_mandat_ouvert",
     "assemble_verdict",
 ]
 
 _ORIGINES_MANAGER = ("manager_renvoi", "comite")
 
 
-async def _mandat_ouvert_existant(
+async def id_du_mandat_ouvert(
     conn: asyncpg.Connection,
     *,
     ticker_id: str,
@@ -62,7 +63,12 @@ async def _mandat_ouvert_existant(
     framework_version: str,
     question_id: str,
 ) -> Optional[int]:
-    """L'id d'un mandat manager/comité OUVERT déjà présent sur cette lignée par-question, ou None."""
+    """L'id du mandat manager/comité OUVERT sur cette lignée par-question, ou None.
+
+    DÉTENTEUR UNIQUE (#46) de « quel mandat servir pour cette question » : `persist_review` s'en sert
+    pour l'idempotence (ne pas ré-ouvrir un mandat déjà ouvert) ET le BOUCLAGE (lot 5) pour retrouver
+    l'id à passer à `serve_mandate` — `read_open_mandates` rend le contenu du mandat, pas son handle
+    de ligne. L'idempotence garantit AU PLUS UN tel mandat, donc l'id est non ambigu."""
     return await conn.fetchval(
         "SELECT id FROM framework_mandates "
         "WHERE ticker_id = $1 AND framework_id = $2 AND framework_version = $3 AND question_id = $4 "
@@ -101,7 +107,7 @@ async def persist_review(
     ecrits = deja = 0
     ids: list[int] = []
     for m in review.mandats():
-        existant = await _mandat_ouvert_existant(
+        existant = await id_du_mandat_ouvert(
             conn, ticker_id=m.ticker_id, framework_id=m.framework_id,
             framework_version=framework_version, question_id=m.question_id)
         if existant is not None:

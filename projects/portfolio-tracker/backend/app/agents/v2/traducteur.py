@@ -91,7 +91,8 @@ def questions_applicables(
 
 
 def contexte_traducteur(
-    fichier: FrameworksFile, framework_id: str, archetype: str, ticker_id: str
+    fichier: FrameworksFile, framework_id: str, archetype: str, ticker_id: str,
+    *, questions: Optional[frozenset[str]] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free par construction.
 
@@ -100,9 +101,27 @@ def contexte_traducteur(
     `essentiel`). **Aucun `plancher_tier`, aucun `nature_attendue`** : ce ne sont pas des leviers du
     traducteur (#59). `essentiel` reste montré — c'est une propriété du framework (quels ingrédients
     la question ne peut pas se passer), pas un curseur de « combien de preuve suffit ».
+
+    `questions` (optionnel) RESTREINT le contexte à un sous-ensemble d'ids — le cas du BOUCLAGE (lot
+    5) : rejouer UN renvoi ne re-planifie pas tout le framework. Un id hors des questions applicables
+    lève (un scope qui nomme une question `sans_objet` ou inconnue rendrait le contexte vide en
+    silence — « tout est couvert » sur rien, #32).
     """
     fw = _framework(fichier, framework_id)
     applicables = questions_applicables(fichier, framework_id, archetype)
+    if questions is not None:
+        ids_applicables = {q.id for q in applicables}
+        hors = questions - ids_applicables
+        if hors:
+            raise TraducteurInapplicable(
+                f"scope de bouclage {sorted(hors)} hors des questions applicables "
+                f"{sorted(ids_applicables)} pour l'archétype `{archetype}` : une question sans objet "
+                "ou inconnue ne se re-planifie pas (#32)")
+        if not questions:
+            raise TraducteurInapplicable(
+                "scope de bouclage VIDE : un passage sans question à rejouer ne doit pas appeler le "
+                "traducteur (l'orchestrateur s'arrête avant, #40)")
+        applicables = [q for q in applicables if q.id in questions]
     return {
         "ticker": ticker_id,
         "framework": {"id": fw.id, "libelle": fw.libelle, "methodologie": fw.methodologie},
@@ -273,15 +292,21 @@ async def traduire(
     *,
     fichier: Optional[FrameworksFile] = None,
     agent: Optional[ResolvedAgent] = None,
+    questions: Optional[frozenset[str]] = None,
 ):
     """Produit et VALIDE le plan de collecte d'un (ticker × framework × archétype).
 
     Ordre : (1) refuser l'inapplicable AVANT toute dépense (#40) ; (2) assembler le contexte
     lever-free ; (3) le modèle produit les LIGNES ; (4) le CODE pose l'en-tête et construit le
     `CollectionPlan` ; (5) contrat puis pont. Rend l'`AgentRunResult` (télémétrie) et le plan validé.
+
+    `questions` RESTREINT le plan à un sous-ensemble (BOUCLAGE, lot 5) : le contexte ET le pont sont
+    scopés au MÊME ensemble, sinon `[R]` refuserait un plan légitimement partiel (il exige tout
+    ingrédient essentiel des questions applicables).
     """
     fichier = fichier or load_frameworks()
-    contexte = contexte_traducteur(fichier, framework_id, archetype, ticker_id)  # (1)+(2), lève tôt
+    contexte = contexte_traducteur(
+        fichier, framework_id, archetype, ticker_id, questions=questions)  # (1)+(2), lève tôt
     agent = agent or await _resolve_traducteur_agent()
 
     messages = [{"role": "user", "content": _message_traducteur(contexte)}]
@@ -296,5 +321,5 @@ async def traduire(
         archetype=archetype,
         items=run.parsed.items,
     )
-    valider_pont_collection_plan(plan, fichier=fichier)  # (5) lève CollectionPlanRefused si incohérent
+    valider_pont_collection_plan(plan, fichier=fichier, questions=questions)  # (5) lève si incohérent
     return run, plan
