@@ -64,4 +64,23 @@ asyncio.run(nl.alias_save(Req(), 1, frequency="morning", allowed_senders="", ope
 assert "enabled" not in sent["payload"], f"un enregistrement de l'alias par défaut a envoyé enabled={sent['payload']}"
 asyncio.run(nl.alias_save(Req(), 2, frequency="minute", allowed_senders="a@b.fr", open_senders="", enabled="", enabled_present="1"))
 assert sent["payload"]["enabled"] is False and sent["payload"]["open_senders"] is False, sent
+# ── `_api` : l'erreur du service arrive lisible (le `detail` de FastAPI), pas en JSON brut ──
+import httpx  # noqa: E402
+_real = httpx.AsyncClient
+def _client_for(handler):
+    return lambda **kw: _real(transport=httpx.MockTransport(handler), **kw)
+async def _call():
+    try:
+        await real_api("POST", "/api/aliases", {})
+    except nl.ApiError as exc:
+        return str(exc)
+import importlib; importlib.reload(nl)                         # retire la doublure `_api` posée plus haut
+real_api = nl._api
+nl.httpx.AsyncClient = _client_for(lambda r: httpx.Response(400, json={"detail": "l'alias 'x' existe déjà"}))
+msg = asyncio.run(_call())
+assert msg == "Le service a répondu 400 : l'alias 'x' existe déjà", f"erreur du service non lisible : {msg!r}"
+nl.httpx.AsyncClient = _client_for(lambda r: httpx.Response(502, text="<html>bad gateway</html>"))
+msg = asyncio.run(_call())
+assert "502" in msg and "bad gateway" in msg, f"corps non JSON : {msg!r}"
+nl.httpx.AsyncClient = _real
 print("OK — pages Alias : contenu, échappement (3 sources), formulaires ciblés, alias par défaut protégé")

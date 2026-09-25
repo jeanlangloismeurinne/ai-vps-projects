@@ -37,7 +37,11 @@ async def _api(method: str, path: str, payload: dict | None = None) -> dict:
     except httpx.HTTPError as exc:
         raise ApiError(f"Service newsletter injoignable : {type(exc).__name__}")
     if r.status_code >= 400:
-        raise ApiError(f"Le service a répondu {r.status_code} : {r.text[:200]}")
+        try:   # FastAPI renvoie {"detail": "…"} : on montre le message, pas le JSON brut
+            detail = r.json().get("detail")
+        except Exception:
+            detail = None
+        raise ApiError(f"Le service a répondu {r.status_code} : {detail if isinstance(detail, str) else r.text[:200]}")
     return r.json()
 
 
