@@ -47,6 +47,7 @@ MUTATIONS = [
     # ── migration ──
     ("mails non rattachés", A, "update(Email).where(Email.alias_id.is_(None))", "update(Email).where(Email.alias_id == -1)", "check_migration", "non rattachés"),
     ("colonne attempts non ajoutée", D, '    "ALTER TABLE emails ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0",\n', "", "check_migration", "colonne manquante"),
+    ("RECIPIENT_EMAIL ignorée après création", A, "if alias.recipient != settings.RECIPIENT_EMAIL:", "if False:", "check_migration", "RECIPIENT_EMAIL modifiée"),
     # ── KB ──
     ("tag d'alias absent de la KB", K, '"tags": [f"alias:{alias}"] if alias else [],', '"tags": [],', "check_kb_alias", "tag d'alias absent"),
     # ── SSRF ──

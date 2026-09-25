@@ -19,6 +19,15 @@ parti :
 
 ---
 
+## 2026-09-25 — Alias de mails (résumé à la demande) — livré
+
+Newsletter = alias par défaut d'un moteur unique (`app/alias_digest.py`) ; alias `summary@`/`aaa+bbb@` répondant à l'expéditeur ;
+cadences matin/soir/minute (minute = 1 mail → 1 e-mail) ; prompt par alias ; mail-lien → page récupérée (garde SSRF) ; KB avec
+tag d'alias ; onglet « Alias » du Hub. Ancien `run_daily_digest` supprimé (la fixture d'or `checks/golden/` en tient lieu).
+Trouvé **en exécution réelle** (invisible aux checks) : motif d'échec « (vide) » en texte brut ; exception `httpx` brute dans l'e-mail
+d'erreur ; `RECIPIENT_EMAIL` ignorée après la 1ʳᵉ création. Trouvé **par mutation** : fixture de portée des prompts égale au défaut
+d'env → désactivation silencieuse masquée par le repli. Sauvegarde pré-migration : `/root/secrets/newsletter-summary-pre-alias-2026-09-25.sql`.
+
 ## 2026-09-04 — Cartes déterministes, anti-troncature, plein écran mobile
 
 **Cause racine sur le digest du 04/09** (7 newsletters) : le modèle dépassait la consigne de

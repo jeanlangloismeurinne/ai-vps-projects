@@ -217,6 +217,12 @@ async def seed_default_alias(db) -> Alias:
         await db.commit()
         await db.refresh(alias)
         logger.info("Alias par défaut « newsletter » créé (destinataire %s).", settings.RECIPIENT_EMAIL)
+    # `RECIPIENT_EMAIL` reste LA source du destinataire de la newsletter (comme avant les alias) : sans cette
+    # synchro, la variable n'aurait d'effet qu'à la toute première création et changer d'adresse ne ferait plus rien.
+    if alias.recipient != settings.RECIPIENT_EMAIL:
+        logger.info("Alias newsletter : destinataire %s → %s (RECIPIENT_EMAIL).", alias.recipient, settings.RECIPIENT_EMAIL)
+        alias.recipient = settings.RECIPIENT_EMAIL
+        await db.commit()
     r1 = await db.execute(update(Email).where(Email.alias_id.is_(None)).values(alias_id=alias.id))
     r2 = await db.execute(update(PromptVersion).where(PromptVersion.alias_id.is_(None)).values(alias_id=alias.id))
     await db.commit()

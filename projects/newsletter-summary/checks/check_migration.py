@@ -60,6 +60,12 @@ async def main():
         async with AsyncSessionLocal() as db:
             assert await get_active_html_prompt(db) == "ANCIEN-ACTIF", "le prompt de la newsletter a changé à la migration"
             assert default.recipient and default.open_senders and default.is_default and default.frequency == "morning"
+    # RECIPIENT_EMAIL reste la source du destinataire de la newsletter : changer la variable doit changer l'alias.
+    from app.config import settings
+    settings.RECIPIENT_EMAIL = "nouvelle-adresse@exemple.fr"
+    async with AsyncSessionLocal() as db:
+        default = await al.seed_default_alias(db)
+    assert default.recipient == "nouvelle-adresse@exemple.fr", f"RECIPIENT_EMAIL modifiée mais l'alias garde {default.recipient!r} (l'ancien comportement est perdu)"
     print("OK — migration sur le schéma réel de prod : colonnes ajoutées, lignes rattachées, prompt actif conservé, idempotente")
 
 
