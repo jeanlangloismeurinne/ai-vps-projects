@@ -295,7 +295,7 @@ reçue : elle est **DÉRIVÉE** des deux dates par `app/knowledge/datation.py` (
 comme `nature` l'est au guichet depuis la 034. Additive et sans backfill par modèle : les lignes
 antérieures ont `portee_temporelle IS NULL`, qui désigne un **héritage à re-collecter** (174 entries
 courantes, dénombrées par `check_datation.py` §7) et non un quatrième état du vocabulaire.
-Prochaine migration : **046**.
+Prochaine migration : **048** (046 archétypes, 047 cause d'un manque — #83).
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -1946,6 +1946,49 @@ Gardes : `check_qualite_info.py` **26/0** + `negatif_qualite_info.sh` **6 mutati
 `tools/montrer_qualite_info.sh` (producteur exercé sur données réelles, #71) · suite **3194/0 sur 44
 scripts**. ⚠️ **Ce maillon livre la MESURE, pas encore l'ÉCRAN ni l'ACTION** : les 3 niveaux de
 drill-down et l'acquitter/renvoyer tracé (A7, migration à venir) sont la suite du lot 6.
+
+### #83 — « peut-on décider ? » : un manque se NOMME avec sa cause, et la cause appartient à celui qui a échoué
+
+**Ce que la capacité ajoute (V3, lot 6 maillon 2, `agents/v2/parcours.py`, contrat `parcours_schema.py`,
+migration 047).** Les trois niveaux de drill-down (`GET /v2/tickers/:id/dossier`, `/frameworks/:fid`,
+`/frameworks/:fid/q/:qid`), tout recalculé à la lecture, et l'ALERTE en tête de la page d'un titre.
+
+**La logique de fonds (arbitrage du comité n°3, 2026-09-25).** Un analyste qui présente un dossier
+incomplet ne dit pas « 5 trous » : il dit, question par question, ce qui manque et pourquoi — parce que
+le comité ne réagit pas pareil à « la donnée n'est pas publiée » (on décide sans), « la base était en
+panne » (on relance avant de décider) et « ça n'existe pas pour une biotech » (on reformule la
+question). D'où trois causes de collecte, **déclarées par l'exécuteur au moment où il échoue**
+(`cause_manque_schema`, colonne `framework_mandates.cause`) — jamais relues dans la prose du motif,
+ce qui serait un jumeau du producteur. Mesuré à la reprise de l'historique : **12 des 28** échecs de
+collecte RVMD étaient des pannes de notre outil (budget 180 s, sortie non conforme), jusque-là
+indiscernables de « rien de publié ». Un temps épuisé est `source_indisponible`, jamais
+`recherche_epuisee` : l'analyste coupé en route n'a pas conclu.
+
+⚠️ **Détenteur unique de l'assemblage.** `servir_memo` et `servir_qualite_info` recopiaient la même
+plomberie et divergeaient déjà (ingrédients chargés ou non) ; ils passent par `charger_etat_dossier`.
+L'unification a fait voir un 2ᵉ écart : les deux jugeaient l'actualité contre l'ancre BRUTE, la porte
+de complétude contre `ancre_substantielle` — un 8-K de pure forme aurait périmé la note sans périmer
+la readiness (et contredit l'arbitrage n°2). ⚠️ Un renvoi recalculé sans mandat ouvert est NOMMÉ
+`renvoi_a_emettre`, jamais complété par un id inventé (Écart B). ⚠️ Préséance de la cause affichée :
+la panne passe devant « rien de publié », qui passe devant « aucune source » — on montre d'abord ce
+qu'on peut encore obtenir.
+
+⚠️ **Le point de lecture est gardé comme du code** : l'écran de niveau 3 porte un `data-champ` par
+champ terminal de `FrameworkAnswerServie` (39), et `check_parcours` §7 exige la bijection sur le JSX
+**dépouillé de ses commentaires** ; il vérifie aussi que l'alerte précède tout le reste. Le frontend est
+monté en `/frontend` par `run_all.sh` et par le harnais (`WITH_FRONT=1`, préfixe `FRONT:`).
+
+**Trois faux verts trouvés par le test négatif, pas par la relecture :** (1) l'ordre des méthodologies
+comparé à l'objet même que l'assembleur reçoit — une mutation qui le trie trie aussi la référence ;
+l'ordre attendu se relit dans le FICHIER YAML ; (2) `check_collecte_persist` « CHECK origine » était
+refusé en réalité par `forme` depuis la 043 (PostgreSQL teste les CHECK par ordre alphabétique) —
+`_rejette` exige désormais la **contrainte nommée** ; (3) le harnais remplace la 1ʳᵉ occurrence : une
+ligne dupliquée dans deux fonctions se mute là où on ne l'attend pas.
+
+Gardes : `check_parcours.py` **63/0** + `negatif_parcours.sh` **21/0** · `negatif_047.sh` **3/0** ·
+`check_collecteur` / `check_collecte_executor` (cause par site d'échec, 9 + 37 mutations) ·
+`tools/montrer_parcours.sh RVMD [--json …]` (lecture gratuite des 3 niveaux réels). Suite **3276/0 sur
+45**. Déployé `7af7276`/`75fe521`, vérifié dans le conteneur et par capture headless regardée.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

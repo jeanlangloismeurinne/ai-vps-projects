@@ -8,6 +8,29 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-25 (5) — LOT 6 MAILLON 2 : le parcours du comité (3 niveaux + alerte « peut-on décider ? »)
+
+Déployé `7af7276` + `75fe521` (frontend), vérifié dans le conteneur et par capture headless regardée.
+- **Migration 047** `framework_mandates.cause` : le collecteur DÉCLARE pourquoi il n'a pas obtenu un
+  ingrédient — `recherche_epuisee` / `source_indisponible` / `sans_source_possible` (les trois mots de
+  l'arbitrage n°3). Historique repris par les préfixes exacts du producteur : 16 / 12 / 5 sur 33 ;
+  garde `047/K1` éprouvée en négatif sur copie du réel (`negatif_047.sh` 3/0). Mesuré : 12 des 28
+  échecs de collecte étaient des PANNES de notre outil (budget 180 s, sortie non conforme), confondues
+  jusque-là avec « rien de publié ».
+- **`parcours.py`** détenteur unique de l'assemblage : `servir_memo` et `servir_qualite_info` y passent
+  (sorties RVMD identiques avant/après). Au passage : l'actualité se juge désormais contre
+  `ancre_substantielle` partout (les deux assembleurs d'avant lisaient l'ancre brute — un 8-K de pure
+  forme aurait périmé la note projetée sans périmer la readiness).
+- **Endpoints** `GET /v2/tickers/:id/dossier`, `/frameworks/:fid`, `/frameworks/:fid/q/:qid` (404 nommés).
+- **Écrans** : alerte en tête de `/v2/tickers/:id`, niveau 2, niveau 3 à bijection `data-champ` ↔
+  contrat (39 champs). `check_parcours` 63/0, `negatif_parcours` 21/0, suite 3276/0 sur 45.
+- Trois faux verts trouvés par le négatif : l'ordre des méthodologies comparé à l'objet même que
+  l'assembleur reçoit (assert écrit depuis sa propre constante) ; `check_collecte_persist` « CHECK
+  origine » refusé en réalité par `forme` depuis la 043 (d'où `_rejette(..., contrainte=)`) ; une
+  mutation visant la 1ʳᵉ occurrence d'une ligne dupliquée.
+- Constat de données : le plan `defendabilite` RVMD (plan 103, 2026-09-25) cherche « inhibiteur de
+  CDK8/19 » et « révatiglimab (RVU120) » — c'est **Ryvu Therapeutics**, pas Revolution Medicines.
+
 ## 2026-09-25 (4) — DÉLESTAGE du `00-REPRISE.md` : copie conforme de l'état d'avant
 
 > Le fichier de reprise faisait **1 541 lignes / 134 Ko**, dont l'essentiel racontait des lots

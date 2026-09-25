@@ -46,7 +46,7 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 3 | Analyste, `framework_answers`, suppression de la grille MVDD, appariement par ticker, collecte neuve NVDA/MSFT/RVMD | ✅ migrations 040-042 |
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
-| **6** | **Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7)** | 🔄 **maillon 1 livré** |
+| **6** | **Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7)** | 🔄 **maillons 1-2 livrés** (déployé `7af7276`) |
 | 7 | Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal) | ⬜ |
 
 Détail de chaque lot : archive (entrées datées) + conventions #57 → #82 du `CLAUDE.md`.
@@ -55,16 +55,16 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #82 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3194 assertions / 0 échec sur 44 scripts** (2026-09-25).
+- **Suite** `bash checks/run_all.sh` = **3276 assertions / 0 échec sur 45 scripts** (2026-09-25,
+  après le maillon 2 ; re-mesuré 3200 au départ, la reprise disait 3194). Montage `/frontend` ajouté.
   Les 3 checks « live » (`check_fetch_live`, `check_fetch_relevance`, `check_cours_cote_live`)
   sont hors suite par conception. Un check lancé à la main sans les montages de `run_all.sh`
   (`/roadmap`, `/contract_frozen`) sort un faux FAIL.
-- **Migrations** : **046 appliquée** ; la prochaine écrite sera **047**. Vérifier en base avant
+- **Migrations** : **047 appliquée** (cause d'un manque de collecte) ; la prochaine écrite sera
+  **048** (trace A7). Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : `portfolio-backend` sur l'image **`3588d23`** (clôture lot 5, health 200).
-  HEAD = `51e54ca` (maillon `qualite_info`) **non déployé** — sans conséquence tant qu'aucun
-  endpoint ne l'expose ; à déployer avec le drill-down. Vérifier par `docker exec … grep`, jamais
-  par le dépôt (`feedback_commite_nest_pas_deploye`).
+- **Production** : stack sur **`7af7276`** (backend) / **`75fe521`** (frontend), vérifiée par
+  `docker exec … grep` et capture headless des 3 écrans (image `ev-prices` = Playwright).
 - **Chaîne réelle** : allée de bout en bout sur RVMD × `qualite_financiere` (2026-09-21) et RVMD ×
   `defendabilite` (2026-09-25). `qualite_info` mesurée RVMD : `defendabilite` **0,00** (5 non
   fondables → à collecter) · `qualite_financiere` **0,00** (2 réponses applicables, périmées → à
@@ -82,18 +82,20 @@ une trace de chaque décision humaine.
    d'un dossier cesse d'être une appréciation du modèle et devient une mesure recalculée à la
    lecture, une par (framework, version). Quatre arbitrages du fonds rendus. Gardes :
    `check_qualite_info` 26/0 + négatif 6/0 · lecture gratuite `bash tools/montrer_qualite_info.sh RVMD`.
-2. 🔜 **Les 3 niveaux de drill-down** (spec §8.1) — niveau 1 le verdict (`/v2/tickers/:id` :
-   statut des frameworks) · niveau 2 le framework (ses questions, le verdict du manager et ses 4
-   contrôles) · niveau 3 **la preuve** (réponse, rang dérivé, pièces citées, actualité recalculée,
-   méthode d'approximation). **Le niveau 3 est le point de lecture qui compte** : chaque champ du
-   contrat a son pixel, garanti par `check_framework_contract` §9 (maquette
-   `provenance-cards/framework_screen_niveau3.md`). Ordre : endpoints GET (tout recalculé à la
-   lecture, rien persisté — #53/#54/#77) → écrans. Capturer les payloads RÉELS avant d'écrire du
-   JSX ; vérifier par capture headless regardée, jamais par un 200.
-3. 🔜 **Acquitter / renvoyer tracés (A7, spec §8.2)** — « renvoyer » emprunte **le même canal**
+2. ✅ **Les 3 niveaux de drill-down** (2026-09-25, conv. **#83**, migration **047**) — `parcours.py`
+   détenteur unique de l'assemblage (note projetée et note de qualité y passent) ; `GET
+   /v2/tickers/:id/dossier` · `/frameworks/:fid` · `/frameworks/:fid/q/:qid` ; alerte « peut-on
+   décider ? » EN TÊTE de `/v2/tickers/:id`, chaque manque avec sa cause (déclarée par le
+   collecteur) ; niveau 3 en bijection `data-champ` ↔ contrat. Gardes : `check_parcours` 63/0 +
+   négatif 21/0 · `negatif_047.sh` 3/0 · lecture gratuite `bash tools/montrer_parcours.sh RVMD`.
+3. 🔜 **PROCHAIN — Acquitter / renvoyer tracés (A7, spec §8.2)** — « renvoyer » emprunte **le même canal**
    que le renvoi du manager (`framework_mandates`, origine `comite`, déjà ouverte par la 043 ;
    bouclage `bouclage.py` déjà en prod) : un seul détenteur. « Acquitter » demande une **trace**
-   de la décision humaine → table de trace, migration **047**, écrite juste avant son maillon.
+   de la décision humaine → table de trace, migration **048**, écrite juste avant son maillon.
+   Les boutons se posent sur l'écran de niveau 3 (`pages/v2/tickers/[ticker_id]/frameworks/
+   [framework_id]/q/[question_id].js`) ; l'alerte du niveau 1 devra lire l'acceptation (une question
+   acceptée par le comité cesse d'être un manque tant qu'aucun fait important ne la fait tomber —
+   même `ancre_substantielle` que l'actualité, déjà câblée dans `charger_etat_dossier`).
    Ordre imposé : contrat → agent → données.
 
 **✅ ARBITRAGES DU COMITÉ RENDUS PAR L'UTILISATEUR (2026-09-25)** — posés en termes de fonds
@@ -151,6 +153,15 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 ## Ce qui reste ouvert — hors lot 6
 
 **Dettes à décider (chacune est un lot en soi, à arbitrer en termes métier)**
+- ⚠️ **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
+  cherchent « inhibiteur de CDK8/19 » et « révatiglimab (RVU120) » — c'est **Ryvu Therapeutics**,
+  pas Revolution Medicines (inhibiteurs RAS). Ces « recherches épuisées » portent sur la MAUVAISE
+  société ; le traducteur n'a aucune garde d'identité de l'émetteur. Rendu visible par l'alerte.
+- **12 ingrédients `source_indisponible`** sur RVMD (budget 180 s ×9, sortie non conforme ×3) :
+  relançables tels quels — c'est ce que l'alerte recommande au comité.
+- **`mo_2` applicable à une pré-revenus** alors que ses 4 ingrédients sont « sans source possible »
+  (marges, parts de marché, rétention, coût d'acquisition) : référentiel à revoir pour
+  `pre_revenus` (opération de données dans `frameworks.yaml`).
 - **128 pièces d'héritage sans datation** (écrites par le search-worker avant la 045) : le rejeu
   des producteurs déterministes ne les soldera **jamais** ; les solder coûte des appels modèle. On
   re-collecte, on ne date **jamais** a posteriori par modèle. 5 chemises RVMD × `qualite_financiere`
@@ -284,7 +295,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 5 clos ;
-> **lot 6 (le parcours du comité) en cours** : `qualite_info` livrée (#82) ; restent les 3 niveaux
-> de drill-down (GET recalculés à la lecture, puis écrans) et acquitter/renvoyer tracés (A7,
-> migration 047). Ordre imposé contrat → agent → données. Re-requêter toute ligne de base avant
+> **lot 6 (le parcours du comité) en cours** : `qualite_info` (#82) et les 3 niveaux de
+> drill-down (#83, migration 047) livrés et déployés ; reste acquitter/renvoyer tracés (A7,
+> migration 048). Ordre imposé contrat → agent → données. Re-requêter toute ligne de base avant
 > de s'en servir.
