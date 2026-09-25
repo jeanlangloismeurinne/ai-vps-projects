@@ -21,14 +21,22 @@ role: >
   conteneur, health 200) et le **passage réel** ne trouve **aucun renvoi ouvert** — re-mesuré en SQL
   le 2026-09-25 : **0 mandat `manager_renvoi`/`comite` ouvert**, donc `boucler_renvois.sh` rendrait
   « rien à boucler » et n'écrirait rien ; la boucle live n'aura de matière qu'après un vrai renvoi, le
-  wiring étant prouvé par l'acceptation ROLLBACK 8/0. **Prochain = lot 6, le parcours.** La chaîne à six agents
+  wiring étant prouvé par l'acceptation ROLLBACK 8/0. **LOT 6 OUVERT (le parcours) — maillon 1
+  `qualite_info` LIVRÉ le 2026-09-25** (convention **#82**, aucune migration) : la qualité d'info
+  cesse d'être un jugement du modèle et devient une dérivée mécanique des `framework_answers`,
+  recalculée à la lecture, une mesure par (framework, version) ; quatre arbitrages du fonds rendus par
+  l'utilisateur (`sans_objet` hors base, `approxime` sans décote de statut, périmée→0 pour la décision
+  du jour, rang moyen PUBLIÉ jamais fondu dans le score, #50) ; RVMD mesuré `defendabilite` **0,00** /
+  `qualite_financiere` **0,00** pour les bonnes raisons (à collecter / à rafraîchir). **Reste du lot 6 :
+  les 3 niveaux de drill-down (endpoints + écrans) et acquitter/renvoyer tracés (A7, migration à
+  venir).** La chaîne à six agents
   est allée de bout en bout en réel sur **deux** frameworks : RVMD × `qualite_financiere` ×
   `pre_revenus` (2026-09-21, #78) et RVMD × `defendabilite` × `pre_revenus` (2026-09-25, archive).
   Elle n'a jamais produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la
   partie aval/suivi vient après (arbitrage utilisateur 2026-09-22).
-  Suite `run_all.sh` = **3168 assertions, 0 échec sur 43 scripts** (re-mesuré le 2026-09-25 (2) ;
-  +27 par `check_bouclage` ; les 3 checks « live » restent hors périmètre par conception, d'où 43
-  exécutés pour 46 fichiers). `negatif_bouclage.sh` = **11 mutations / 0** (dont les 2 « exercé »).
+  Suite `run_all.sh` = **3194 assertions, 0 échec sur 44 scripts** (re-mesuré le 2026-09-25 (3) ;
+  +26 par `check_qualite_info` ; les 3 checks « live » restent hors périmètre par conception).
+  `negatif_qualite_info.sh` = **6 mutations / 0**.
   Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
   ÉCRITE sera **047**. `portfolio-backend` est À JOUR — image **`3588d23`** (HEAD, le commit du
   bouclage) construite le **2026-09-25 12:50**, vérifiée DANS le conteneur (`bouclage.py` présent —
@@ -1053,7 +1061,7 @@ lot 1 ; les tables viennent en dernier.
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
 | 5 | ✅ **CLOS (2026-09-25)** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ✅ **BOUCLAGE comité → collecte** (code+tests+persistance : `bouclage.py`, note à 4 sorts, `check_bouclage` **27/0** + négatif **11/0**) · ✅ **déployé** (image `3588d23` en prod 12:50, health 200) · **passage réel = rien à boucler** (SQL 2026-09-25 : 0 mandat `manager_renvoi`/`comite` ouvert ; wiring prouvé par acceptation ROLLBACK 8/0) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
-| 6 | 🔜 **PROCHAIN** — Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
+| 6 | 🔄 **EN COURS** — ✅ **`qualite_info` dérivée** (maillon 1, 2026-09-25, `agents/v2/qualite_info.py` + contrat `qualite_info_schema.py` ; recalcul à la lecture, une mesure par (framework, version) ; `sans_objet` hors base, `approxime` sans décote de statut, périmée→0, rang moyen PUBLIÉ jamais fondu (#50), 3ᵉ état `aucune_question_applicable` ; `check_qualite_info` **26/0** + négatif **6/0** + `tools/montrer_qualite_info.sh` — RVMD mesuré 0,00/0,00 pour les bonnes raisons ; convention **#82**, aucune migration) · 🔜 **les 3 niveaux de drill-down** (endpoints GET + écrans) · 🔜 **acquitter / renvoyer tracés (A7)** (migration de la table de trace à venir) | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 
 ⚠️ **Ordre imposé, inchangé : UX (contrat) → agent → données.** Jamais commencer par la table.

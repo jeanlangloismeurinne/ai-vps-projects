@@ -1893,6 +1893,59 @@ dans le check lui-même) :
 ⚠️ **Non traité, noté** : FMP rend **403 Forbidden** sur `analyst-estimates` pour les trois tickers
 (clef rejetée) — `eps_estimates` est donc vide en production. Sans rapport avec ce lot.
 
+### #82 — `qualite_info` : une mesure a plusieurs AXES, et un axe ne se fond jamais dans un scalaire
+
+**Ce que la capacité ajoute (V3, lot 6 maillon 1, `agents/v2/qualite_info.py` + contrat
+`qualite_info_schema.py`).** `qualite_info` cesse d'être un `float` posé par le modèle (`RiskMatrix`)
+pour devenir une **dérivée mécanique** des `framework_answers`, recalculée à la lecture (#53/#54),
+**une mesure par (framework, version)**. Aucune migration : la stocker figerait un verdict d'avant le
+prochain événement matériel (cause n°2 du #50).
+
+**Les quatre arbitrages du fonds, rendus par l'utilisateur (2026-09-25) — chacun est un jugement de
+comité d'investissement, pas un défaut technique :**
+- `sans_objet` → **HORS base**. Un fonds qui constate qu'une question n'a pas d'objet (rentabilité du
+  capital pour une biotech pré-revenus) ne se pénalise pas : il la sort du dénominateur (et à terme la
+  **remplace** — le mécanisme de `substitut` existe déjà dans le contrat). Tout hors objet ⟹ 3ᵉ état
+  nommé `aucune_question_applicable`, **jamais un 0** qui se lirait « dossier de mauvaise qualité »
+  là où la vérité est « ce cadre ne s'applique pas ici » (#44).
+- `repondu` et `approxime` → **même crédit de STATUT**. La moindre qualité d'une approximation est
+  DÉJÀ portée par son rang (le cran dégrade A → A−, `project_synthesis_tier_rule`) ; la décoter une
+  2ᵉ fois au statut compterait deux fois la même chose (#46).
+- le tier → **PUBLIÉ** (`rang_moyen`), **jamais fondu dans le scalaire**. La spec §7 range le rang
+  moyen comme ingrédient SÉPARÉ. Le fondre dans `score` recombinerait des axes en un scalaire
+  (interdit #50) et compterait deux fois le plancher (qui garantit déjà le tier minimum). Le comité
+  lit la solidité des sources À CÔTÉ du score ; `rang_moyen` ne se compare qu'à framework + version
+  égaux (écart V9). **L'assert qui aurait vu une fusion** : une réponse PÉRIMÉE contribue 0 au score
+  ET compte quand même dans `rang_moyen` (fraîcheur et solidité sont deux axes) — `check_qualite_info §3`.
+- `perimee`/`indeterminable` → **crédit 0 pour la décision du jour**, mais la réponse n'est jamais
+  supprimée : une information périmée ne fonde pas une décision fraîche (il faut l'actualiser), mais
+  l'historique garde sa valeur pour lire les trajectoires. C'est le SCORE qui décote, pas la donnée
+  qui disparaît. `indeterminable` reste COMPTÉ à part (#53) : son remède est « rendre datable », pas
+  « re-collecter plus récent ». Détenteur unique du crédit d'actualité : `FACTEUR_ACTUALITE` (contrat).
+
+⚠️ **Le point de méthode : la composition de la BASE est garantie par le CONTRAT, pas par la
+dérivation — et c'est une force qui se paie au test négatif.** Le validateur `_coherence` recalcule
+`base` depuis les compteurs (`sans_objet` exclu, `non_fondable` inclus) et lie `rang_moyen`/`score`/
+`etat` entre eux. Toute mutation de la dérivation qui dévierait de cette composition fabrique un
+`QualiteInfo` **invalide** → Pydantic LÈVE → « script mort », un autre canal que « rouge sur
+l'assert ». Ces garanties (§1①/§1④/§2/présence de `rang_moyen`) ne sont donc **pas mutées** — comme
+`negatif_manager.sh` n'attaque pas ses asserts structurels : elles sont tenues par construction, et
+le négatif ne mute que les décisions RÉELLES de la dérivation (crédit, actualité, rang, regroupement)
++ la règle chez son détenteur (`FACTEUR_ACTUALITE` dans le contrat, #46).
+
+⚠️ **`rang_moyen` ne convertit jamais un tier en nombre [0,1]** : il moyenne la POSITION dans le
+vocabulaire ordonné `Tier` (lu par `get_args`, détenteur unique de l'ordre), puis revient à
+l'étiquette. Une table tier → nombre aurait divergé de `RELIABILITY_TABLE` au premier tier ajouté (#46).
+
+**MESURÉ sur la vraie base** (`bash tools/montrer_qualite_info.sh RVMD`, lecture seule, gratuite) :
+`defendabilite` **0,00** (5 non fondables → à collecter) · `qualite_financiere` **0,00** (les 2 seules
+réponses applicables sont périmées → à rafraîchir, 4 sans objet hors base, rang moyen A− publié). Deux
+mesures **vraies et lisibles** : le 0 dit *pourquoi*, et le remède se lit dans la décomposition.
+Gardes : `check_qualite_info.py` **26/0** + `negatif_qualite_info.sh` **6 mutations/0** ·
+`tools/montrer_qualite_info.sh` (producteur exercé sur données réelles, #71) · suite **3194/0 sur 44
+scripts**. ⚠️ **Ce maillon livre la MESURE, pas encore l'ÉCRAN ni l'ACTION** : les 3 niveaux de
+drill-down et l'acquitter/renvoyer tracé (A7, migration à venir) sont la suite du lot 6.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

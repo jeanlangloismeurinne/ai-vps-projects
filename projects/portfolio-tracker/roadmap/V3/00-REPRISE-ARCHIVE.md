@@ -8,6 +8,64 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-25 (3) — lot 6 maillon 1, **`qualite_info` DÉRIVÉE (niveau 1 du parcours)**
+
+Aucune migration (recalcul à la lecture, comme l'actualité #53 et la porte #54 — stocker figerait un
+verdict d'avant le prochain événement matériel). Convention **#82**.
+
+### L'ordre imposé, respecté
+
+Le contrat `RiskMatrix.qualite_info` (un `float` posé par le modèle) existait déjà. Ce maillon livre la
+**dérivation mécanique** qui le remplace : contrat structuré `qualite_info_schema.py` → dérivation pure
+`agents/v2/qualite_info.py` → check + négatif → producteur exercé sur la vraie base. `qualite_info` n'est
+plus une appréciation, c'est une **mesure**, une par (framework, version) — deux versions ne se comparent
+pas au niveau 3 (écart V9).
+
+### Les quatre arbitrages du fonds (rendus par l'utilisateur, en termes de comité d'investissement)
+
+La spec §7 fixe les INGRÉDIENTS (mix des statuts, part périmée, rang moyen) mais pas les
+PONDÉRATIONS — ce sont des jugements de comité. Présentés en termes de fonds, tranchés :
+1. **`sans_objet` hors base.** Un fonds qui constate qu'une question n'a pas d'objet (rentabilité du
+   capital pour une biotech pré-revenus) ne se pénalise pas — il la sort du calcul, et à terme la
+   remplace (le `substitut` existe déjà). Tout hors objet ⟹ 3ᵉ état `aucune_question_applicable`,
+   jamais un 0 (#44).
+2. **`approxime` sans décote de statut.** Intuition de l'utilisateur, et pratique d'une équipe : la
+   qualité d'une approximation est déjà portée par son rang (cran A → A−) ; la décoter au statut la
+   compterait deux fois (#46). `repondu` et `approxime` valent le même crédit de base.
+3. **Le tier publié, jamais fondu dans le score.** Un fonds distingue une réponse 10-K d'une réponse
+   de presse, mais la spec range le rang moyen comme ingrédient SÉPARÉ. Le fondre violerait #50 et
+   compterait deux fois le plancher. `rang_moyen` est publié à côté du score. L'assert-clé (§3) : une
+   réponse PÉRIMÉE contribue 0 au score ET compte dans `rang_moyen` — fraîcheur et solidité sont deux
+   axes distincts.
+4. **`perimee`/`indeterminable` → 0 pour la décision du jour, la réponse conservée.** « Une info
+   périmée ne vaut rien, il faut l'actualiser ; mais l'historique a de la valeur pour les trajectoires »
+   (utilisateur). Le SCORE décote, la donnée ne disparaît pas. `indeterminable` compté à part (#53).
+
+### Le point de méthode — la base est garantie par le CONTRAT, pas par la dérivation
+
+`_coherence` recalcule `base` depuis les compteurs et lie `rang_moyen`/`score`/`etat`. Toute mutation
+qui dévierait de la composition (sans_objet dans la base, non_fondable hors base, score sur base vide)
+fabrique un `QualiteInfo` INVALIDE → Pydantic LÈVE → « script mort », un autre canal que « rouge sur
+l'assert ». Ces garanties ne sont donc PAS mutées (précédent `negatif_manager.sh` §5) : elles sont
+tenues par construction. Le négatif ne mute que les décisions RÉELLES de la dérivation (crédit,
+actualité, rang, regroupement) + la règle chez son détenteur (`FACTEUR_ACTUALITE` dans le contrat).
+`rang_moyen` moyenne la POSITION dans le vocabulaire `Tier` (lu par `get_args`, détenteur unique de
+l'ordre) — jamais une table tier → nombre qui divergerait de `RELIABILITY_TABLE` (#46).
+
+### Mesuré sur la vraie base
+
+`bash tools/montrer_qualite_info.sh RVMD` (lecture seule, gratuite, producteur exercé sur données de
+prod — #71) : `defendabilite` **0,00** (5 non fondables → à collecter) · `qualite_financiere` **0,00**
+(les 2 seules réponses applicables sont périmées → à rafraîchir ; 4 sans objet hors base ; rang moyen
+A− publié). Le 0 dit *pourquoi*, et le remède se lit dans la décomposition. Gardes : `check_qualite_info`
+**26/0**, `negatif_qualite_info` **6/0**, suite **3194/0 sur 44 scripts**.
+
+### Ce que ce maillon NE fait PAS
+
+Il livre la MESURE, pas encore l'ÉCRAN ni l'ACTION. Restent au lot 6 : les 3 niveaux de drill-down
+(endpoints GET + écrans niveau 1/2/3) et l'acquitter/renvoyer tracé (A7 — migration d'une table de
+trace des overrides utilisateur ; « renvoyer » emprunte le canal du renvoi manager, #46).
+
 ## 2026-09-25 (2) — lot 5, **le BOUCLAGE comité → collecte (fermeture de la figure #71)**
 
 Aucune migration (la table 043 portait déjà tout le cycle de vie). Livré au niveau **code + tests
