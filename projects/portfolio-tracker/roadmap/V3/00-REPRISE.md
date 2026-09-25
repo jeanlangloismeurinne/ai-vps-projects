@@ -96,14 +96,25 @@ une trace de chaque décision humaine.
    de la décision humaine → table de trace, migration **047**, écrite juste avant son maillon.
    Ordre imposé : contrat → agent → données.
 
-**Arbitrages à poser à l'utilisateur pour ce lot — en termes de comité** (principe 1), chacun
-précédé de « ce que ferait un vrai fonds » (principe 2). Pistes, à reformuler au moment venu :
-- Que doit consigner le procès-verbal quand le comité **accepte** une réponse faible (qui, quand,
-  sur quelle version du dossier, avec quel commentaire) ?
-- Une acceptation du comité survit-elle à l'arrivée d'une information nouvelle, ou le dossier
-  doit-il repasser devant lui ?
-- Que voit le comité en premier sur la page d'un titre : la note de qualité, les questions non
-  instruites, ou les renvois en cours ?
+**✅ ARBITRAGES DU COMITÉ RENDUS PAR L'UTILISATEUR (2026-09-25)** — posés en termes de fonds
+(principes 1 et 2). Ils cadrent les maillons 2 et 3 :
+1. **Procès-verbal COMPLET quand le comité accepte une réponse faible** : qui, quand, sur quelle
+   **version du dossier**, avec une **justification écrite obligatoire**. Un vrai comité écrit
+   pourquoi il passe outre une faiblesse, pour qu'on puisse relire la décision six mois plus tard
+   dans son contexte. ⟹ la trace A7 (migration 047) porte l'auteur, l'instant, la version du
+   dossier (framework + version + réponse) et un motif non vide.
+2. **Une acceptation TOMBE dès qu'un fait important est publié après elle** (résultats,
+   approbation réglementaire, acquisition), et la question repasse devant le comité ; une
+   information de routine ne la remet pas en cause. ⟹ la validité d'une acceptation se
+   **recalcule à la lecture** contre l'ancre matérielle (`ancre_substantielle`, #53/#54 — un 8-K
+   de pure forme ne périme rien), jamais figée à l'écriture.
+3. **La page d'un titre répond d'abord à « peut-on décider ? »** — avec une nuance de fond :
+   le processus est conçu pour que le système aille **lui-même** chercher ce qui manque avant de
+   présenter le dossier ; un dossier complet est donc l'état **normal**. Quand ce n'est pas le
+   cas, **l'utilisateur veut le savoir** : l'incomplétude s'affiche comme une **alerte**, en tête,
+   qui nomme ce qui manque et **pourquoi le système n'a pas pu l'obtenir** (recherche épuisée,
+   source indisponible, question sans source possible) — jamais comme un simple compteur parmi
+   d'autres. Ensuite viennent la note de qualité de chaque méthodologie, puis leurs conclusions.
 
 ---
 
