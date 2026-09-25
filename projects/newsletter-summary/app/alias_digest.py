@@ -19,6 +19,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+import httpx
 from sqlalchemy import func, select, update
 
 from app import aliases as al
@@ -38,6 +39,18 @@ RUN_TIMEOUT_S = 600
 
 class _Transient(Exception):
     """Échec réessayable (corps pas encore rapatrié…)."""
+
+
+def _reason(exc: Exception) -> str:
+    """Motif d'échec destiné au DESTINATAIRE : court, sur une ligne, sans URL d'API ni lien de doc.
+
+    L'exception brute de httpx (« Client error '401 Unauthorized' for url 'https://api…' For more
+    information check: https://developer.mozilla.org/… ») a été constatée dans un vrai e-mail d'erreur :
+    illisible, et bavard sur l'infrastructure. Le détail complet reste dans les logs.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"service de résumé en erreur (HTTP {exc.response.status_code})"
+    return " ".join((str(exc) or type(exc).__name__).split())[:200]
 
 
 def _now() -> datetime:
@@ -196,7 +209,7 @@ async def _process_group(db, alias: Alias, recipient: str, mails: list[Email], p
                 reason, retryable = str(exc), True
                 logger.warning("Mail %s : %s", email.id, reason)
             else:
-                reason, retryable = str(exc) or type(exc).__name__, True
+                reason, retryable = _reason(exc), True
                 logger.exception("Résumé échoué pour le mail %s", email.id)
             if alias.frequency == "minute" and retryable and (email.attempts or 0) + 1 < settings.ALIAS_MAX_ATTEMPTS:
                 _release(email, reason)

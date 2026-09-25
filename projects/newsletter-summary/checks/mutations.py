@@ -32,6 +32,7 @@ MUTATIONS = [
     ("orphelins jamais récupérés", AD, 'Email.status == "processing", Email.claimed_at < _now() - STUCK_AFTER', 'Email.status == "sans-objet", Email.claimed_at < _now() - STUCK_AFTER', "check_engine", "S8"),
     ("récents volés", AD, "Email.claimed_at < _now() - STUCK_AFTER", "Email.claimed_at < _now() + STUCK_AFTER", "check_engine", "S8 : un `processing` récent|S4 : doublons"),   # selon le calage des runs, le vol rougit S4 (doublons) ou S8
     ("récupération sans compter la tentative", AD, 'e.attempts = (e.attempts or 0) + 1\n        e.claimed_at = None\n        e.last_error = "traitement', 'e.claimed_at = None\n        e.last_error = "traitement', "check_engine", "S8"),
+    ("motif brut de l'exception envoyé", AD, "reason, retryable = _reason(exc), True", "reason, retryable = str(exc) or type(exc).__name__, True", "check_engine", "S5b"),
     ("motif d'échec absent du corps texte", "app/digest.py", 'lines.append(f"⚠ Résumé en échec — {email._summary_error}")', 'lines.append("(vide)")', "check_engine", "corps TEXTE"),
     # ── routage ──
     ("plus-tag replié sur l'alias de base", A, "if lp in by_local:\n            return by_local[lp]", 'if lp in by_local:\n            return by_local[lp]\n        if lp.split("+")[0] in by_local:\n            return by_local[lp.split("+")[0]]', "check_alias_routing", "ne doit PAS retomber"),

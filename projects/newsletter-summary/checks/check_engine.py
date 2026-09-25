@@ -114,6 +114,25 @@ async def main():
     assert "⚠ Résumé en échec — DeepInfra simulé indisponible" in d.gateway.sent[0]["body"], "S5 : le motif doit aussi figurer dans le corps TEXTE (« (vide) » = motif perdu)"
     d.gateway.sent.clear()
 
+    # ── S5b le motif envoyé au destinataire est lisible : pas d'exception brute (URL d'API, lien de doc, sauts de ligne) ──
+    import httpx
+    from app import summarizer
+    real_sum = summarizer.summarize_html
+
+    async def broken(email, **kw):
+        req = httpx.Request("POST", "https://api.deepinfra.com/v1/openai/chat/completions")
+        raise httpx.HTTPStatusError("Client error '401 Unauthorized' for url 'https://api.deepinfra.com/…'\nFor more information check: https://developer.mozilla.org/…",
+                                    request=req, response=httpx.Response(401, request=req))
+    summarizer.summarize_html = broken
+    ev = await make_alias("lisible", frequency="evening", allowed_senders=JEAN)
+    i5b = await add_email(ev.id, frm=JEAN, subject="S5b")
+    await alias_digest.run_alias_digests("evening")
+    e = await get_email(i5b)
+    assert e.last_error == "service de résumé en erreur (HTTP 401)", f"S5b : motif brut envoyé au destinataire : {e.last_error!r}"
+    assert "deepinfra" not in d.gateway.sent[-1]["html"].lower() and "mozilla" not in d.gateway.sent[-1]["body"].lower(), "S5b : URL d'API / lien de doc dans l'e-mail"
+    summarizer.summarize_html = real_sum
+    d.gateway.sent.clear()
+
     # ── S6 échec d'envoi : tentatives bornées puis `failed` nommé ──
     sf = await make_alias("panne", frequency="minute", allowed_senders=JEAN)
     i6 = await add_email(sf.id, frm=JEAN, subject="S6")
