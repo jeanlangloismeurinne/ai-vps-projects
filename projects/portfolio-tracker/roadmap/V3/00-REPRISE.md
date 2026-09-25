@@ -13,11 +13,12 @@ role: >
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
   `roadmap/V3/doctrine-trois-axes.md` est **close**.
   ÉTAT au 2026-09-25 : lots 0 à 4 clos, **lot 5 EN COURS** (le projecteur du mémo est livré et
-  prouvé ; restent la chaîne de bout en bout sur `defendabilite` et le wiring live de
-  `serve_mandate`). La chaîne à six agents est allée **une fois** de bout en bout en réel
-  (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais produit
-  d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie aval/suivi vient
-  après (arbitrage utilisateur 2026-09-22).
+  prouvé ; la chaîne est allée de bout en bout sur `defendabilite` le 2026-09-25 — arbitrage A
+  consommé, `moat` → `instruite` ; reste le wiring live de `serve_mandate`). La chaîne à six agents
+  est allée de bout en bout en réel sur **deux** frameworks : RVMD × `qualite_financiere` ×
+  `pre_revenus` (2026-09-21, #78) et RVMD × `defendabilite` × `pre_revenus` (2026-09-25, archive).
+  Elle n'a jamais produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la
+  partie aval/suivi vient après (arbitrage utilisateur 2026-09-22).
   Suite `run_all.sh` = **3141 assertions, 0 échec sur 42 scripts** (re-mesuré le 2026-09-25 ; les
   3 checks « live » sont hors périmètre par conception, d'où 42 exécutés pour 45 fichiers).
   Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
@@ -982,14 +983,19 @@ lot 1 ; les tables viennent en dernier.
 >
 > **▶ CE QUI RESTE DU LOT 5, DANS L'ORDRE.**
 >
-> 1. **Faire tourner la chaîne de bout en bout sur `defendabilite`** — littéralement l'arbitrage (A),
->    et le seul item qui le consomme. `moat` est aujourd'hui `sans_acquittement` : **méthodologie
->    approuvée, 0 réponse au dossier**. ⚠️ **Coût MODÈLE.** Donc, avant toute dépense, exécuter la
->    **frontière gratuite** et la **lire en texte** (`feedback_frontiere_gratuite_avant_depense_modele`) :
->    `acceptation_analyste.sh --admissibilite` sur RVMD × `defendabilite`, puis
->    `tools/montrer_memo_projete.sh RVMD`. ⚠️ **Et re-requêter la ligne de base AVANT le passage**,
->    pas après (`feedback_ligne_de_base_est_une_mesure`) — le lot 4 a démarré sur un « 52/51/27 »
->    de mémoire qui valait 15/15/43.
+> 1. ✅ **FAIT le 2026-09-25 — la chaîne est allée de bout en bout sur `defendabilite` (arbitrage A
+>    consommé).** Protocole tenu : frontière gratuite lue en texte (aucune question morte, mais
+>    dossier à **35 `mesure` / 3 `interpretation`, 0 indexée moat**), ligne de base requêtée (chemin
+>    VIERGE), arbitrage utilisateur = *commander la recherche* (chaîne complète, pas `--sans-collecte`).
+>    Passage réel (plan #103, prod sans rollback) : **6 liens de couverture (0→6)**, 10 mandats
+>    collecteur (ids 586-595), RVMD 74→**89** ; analyste **6 réponses (596-601) : 5 `non_fondable`
+>    remède collecte · 1 `sans_objet` · 0 refus** ; manager 6 acquittements. `MOAT` passe de
+>    `sans_acquittement` à **`instruite`** — les DEUX frameworks construits projettent désormais.
+>    ⚠️ **Le piège #78 n'a PAS eu lieu** : l'analyste a refusé de fabriquer une barrière depuis des
+>    financières, il a `non_fondable` en NOMMANT la recherche à commander. ⚠️ **LIMITE MESURÉE, pas un
+>    défaut** : le web n'a pas ramené les preuves de moat (search-workers épuisés, 3 échecs de
+>    validation) — `moat` reste `non_fondable` en attente de collecte réelle. Détail : archive
+>    2026-09-25. Outil : `tools/acceptation_analyste.py` gagne `ACCEPTATION_CAS` (surcharge du `CAS`).
 > 2. **Wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker.** Touche
 >    les **3 points de synchro** (#19) **et** l'exemple JSON du prompt en DB (#39).
 >    ⚠️ **Mesuré le 2026-09-25**, `grep -rn 'serve_mandate\|read_open_mandates' app/ tools/` :
@@ -1017,7 +1023,7 @@ lot 1 ; les tables viennent en dernier.
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
-| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ⏳ **chaîne de bout en bout sur `defendabilite`** (coût modèle) · ⏳ **wiring `serve_mandate` en live** (0 appelant mesuré) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
+| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ⏳ **wiring `serve_mandate` en live** (0 appelant mesuré) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 

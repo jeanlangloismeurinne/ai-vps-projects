@@ -38,10 +38,31 @@ from app.db.database import close_pool, get_db_session, init_pool
 
 # NVDA (rentable) vs RVMD (pré-revenus) : même contraste que l'acceptation du traducteur — c'est le
 # sens des deux pilotes, et c'est sur `pre_revenus` que les `sans_objet` du référentiel se voient.
-CAS = [
+# ⚠️ Surchargeable par `ACCEPTATION_CAS` (même motif que `ACCEPTATION_CORPUS_MAX` plus bas) : la
+# frontière gratuite du lot 5 doit se lancer sur RVMD × `defendabilite` sans retaper la commande
+# `docker run` (`feedback_frontiere_gratuite_avant_depense_modele`). Format :
+# `ticker:framework:archetype[,ticker:framework:archetype…]`. Le défaut mesure les deux pilotes.
+_CAS_DEFAUT = [
     ("NVDA", "qualite_financiere", "rentable"),
     ("RVMD", "qualite_financiere", "pre_revenus"),
 ]
+
+
+def _lire_cas() -> list[tuple[str, str, str]]:
+    brut = os.environ.get("ACCEPTATION_CAS", "").strip()
+    if not brut:
+        return _CAS_DEFAUT
+    cas: list[tuple[str, str, str]] = []
+    for triplet in brut.split(","):
+        parts = triplet.strip().split(":")
+        if len(parts) != 3 or not all(parts):
+            raise SystemExit(
+                f"ACCEPTATION_CAS mal formé : « {triplet} » — attendu ticker:framework:archetype")
+        cas.append((parts[0], parts[1], parts[2]))
+    return cas
+
+
+CAS = _lire_cas()
 
 # Le dossier envoyé au modèle est PLAFONNÉ — un corpus entier ferait un prompt de plusieurs
 # centaines de milliers de tokens pour une mesure qui doit rester à quelques centimes.

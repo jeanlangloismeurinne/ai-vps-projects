@@ -8,6 +8,55 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-25 — lot 5, **la chaîne de bout en bout sur `defendabilite` (arbitrage A consommé)**
+
+Aucune migration, aucun déploiement. Un seul geste de code : `tools/acceptation_analyste.py` gagne
+un `CAS` surchargeable par `ACCEPTATION_CAS=ticker:framework:archetype` (même motif que
+`ACCEPTATION_CORPUS_MAX`), pour que la frontière gratuite du lot se lance sur `defendabilite` sans
+retaper le `docker run` (`feedback_frontiere_gratuite_avant_depense_modele`). Défaut inchangé.
+
+### Le protocole avant dépense, tenu
+
+1. **Frontière gratuite lue en texte** (`acceptation_analyste.py --admissibilite`, 0 appel modèle) :
+   sur RVMD × `defendabilite`, aucune des 5 questions n'est morte par construction, MAIS le dossier
+   est à **35 pièces `mesure` financières contre 3 `interpretation`, 0 indexée moat**. Signal net
+   du risque #78 (bâtir une barrière sur un bilan).
+2. **Ligne de base requêtée** (jamais rappelée, `feedback_ligne_de_base_est_une_mesure`) : chemin
+   VIERGE — 0 plan, 0 carte, 0 couverture, 0 réponse `defendabilite` ; RVMD 74 courantes ; 23 mandats.
+3. **Arbitrage utilisateur** : *commander la recherche* (chaîne complète), pas `--sans-collecte`.
+
+### Ce que le passage a produit (plan #103, écriture prod sans rollback)
+
+Collecte : **6 liens de couverture (0→6)**, 10 mandats collecteur (ids 586-595, un par ingrédient
+manquant), RVMD 74→**89**. ⚠️ **Le web n'a PAS ramené les preuves de moat** : search-workers épuisés
+à 6 itérations, 3 échecs de validation (~$0,02). La collecte automatique de brevets/concurrents/parts
+de marché reste à mûrir — c'est une limite MESURÉE, pas un défaut du lot.
+
+Analyste : **6 réponses (596-601) — 5 `non_fondable` remède collecte · 1 `sans_objet` · 0 refus.**
+Manager : 6 acquittements, 4 contrôles verts, 0 mandat manager (cohérent — les réponses sont saines
+mais non fondables, la voie collecteur porte déjà le « à collecter »).
+
+### Le verdict est à la lecture, et il est honnête
+
+**Le piège #78 n'a PAS eu lieu, et pas grâce à une garde.** L'analyste a REFUSÉ de fabriquer un
+verdict de barrière depuis des financières : les 5 `non_fondable` nomment précisément la recherche à
+commander (durée résiduelle des brevets, dates d'exclusivité, pipeline concurrent, parts de marché,
+coût de réplication) ; `mo_6` sort `sans_objet` à juste titre (RVMD ne pratique aucun prix,
+pré-commercialisation). Aucune réponse `repondu`/`approxime` citant des entries ⟹ **rien à
+fabriquer** : le risque a été évité par l'honnêteté de l'agent. Un refus fondé qui produit une liste
+de recherche exécutable, c'est exactement le comportement conçu (§3, boucle comité→collecte).
+
+`montrer_memo_projete.sh RVMD` : `MOAT` passe de `sans_acquittement` à **`instruite`** (6 points).
+Les **deux** frameworks construits (`financials` + `moat`) projettent désormais comme chapitres
+instruits — **l'arbitrage (A) est consommé, la mécanique de bout en bout prouvée sur les deux.**
+
+### Ce que ce passage éclaire pour la suite
+
+Les 10 mandats collecteur `ouvert` + 5 `non_fondable remède collecte` sont exactement ce qu'une
+**boucle vivante servirait** : c'est la raison d'être de l'item 2 (wiring `serve_mandate` /
+`read_open_mandates`, 0 appelant dans `app/` mesuré le 2026-09-25, figure #71). La garde à écrire
+doit distinguer **« vert » de « exercé »** (compter les appelants, pas les asserts).
+
 ## 2026-09-21 (3) — spec v3, **LE GARDE #78 — et il n'était pas à l'endroit annoncé**
 
 Convention **#78**. Migration **044** appliquée. Aucun déploiement.
