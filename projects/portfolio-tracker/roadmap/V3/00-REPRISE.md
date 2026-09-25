@@ -12,13 +12,16 @@ role: >
   d'indexation passe d'une grille fermée de 19 champs identique pour tous les émetteurs à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
   `roadmap/V3/doctrine-trois-axes.md` est **close**.
-  ÉTAT au 2026-09-25 : lots 0 à 4 clos, **lot 5 EN COURS** (le projecteur du mémo est livré et
+  ÉTAT au 2026-09-25 : lots 0 à 4 clos, **lot 5 CLOS** (le projecteur du mémo est livré et
   prouvé ; la chaîne est allée de bout en bout sur `defendabilite` le 2026-09-25 — arbitrage A
   consommé, `moat` → `instruite` ; **le BOUCLAGE comité → collecte est livré au niveau code + tests
   + persistance réelle** le 2026-09-25 (2) — `serve_mandate`/`read_open_mandates` ont enfin un
-  appelant de prod (`bouclage.py`), note honnête à 4 sorts, garde qui COMPTE les appelants ; reste le
-  **passage réel de bout en bout + le déploiement**, tous deux bloqués par le sandbox de la session,
-  voir archive). La chaîne à six agents
+  appelant de prod (`bouclage.py`), note honnête à 4 sorts, garde qui COMPTE les appelants ;
+  **déploiement FAIT** (image `3588d23` en prod le 2026-09-25 12:50, `bouclage.py` présent dans le
+  conteneur, health 200) et le **passage réel** ne trouve **aucun renvoi ouvert** — re-mesuré en SQL
+  le 2026-09-25 : **0 mandat `manager_renvoi`/`comite` ouvert**, donc `boucler_renvois.sh` rendrait
+  « rien à boucler » et n'écrirait rien ; la boucle live n'aura de matière qu'après un vrai renvoi, le
+  wiring étant prouvé par l'acceptation ROLLBACK 8/0. **Prochain = lot 6, le parcours.** La chaîne à six agents
   est allée de bout en bout en réel sur **deux** frameworks : RVMD × `qualite_financiere` ×
   `pre_revenus` (2026-09-21, #78) et RVMD × `defendabilite` × `pre_revenus` (2026-09-25, archive).
   Elle n'a jamais produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la
@@ -27,11 +30,13 @@ role: >
   +27 par `check_bouclage` ; les 3 checks « live » restent hors périmètre par conception, d'où 43
   exécutés pour 46 fichiers). `negatif_bouclage.sh` = **11 mutations / 0** (dont les 2 « exercé »).
   Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
-  ÉCRITE sera **047**. `portfolio-backend` est À JOUR — rebuild du **2026-09-25** (commit `e2b548f`),
-  vérifié DANS le conteneur (`projection_memo.py` présent, `operations_etablies` × 2) et par
-  `GET /api/health` → **200**. ⚠️ Ce champ affirmait « à jour » le 2026-09-24 alors que le conteneur
-  ne portait **ni la garde ROIC ni le projecteur** : un correctif commité n'est pas un correctif
-  déployé, et le feed serait reparti fabriquer un successeur à #656.
+  ÉCRITE sera **047**. `portfolio-backend` est À JOUR — image **`3588d23`** (HEAD, le commit du
+  bouclage) construite le **2026-09-25 12:50**, vérifiée DANS le conteneur (`bouclage.py` présent —
+  il n'existe QUE dans 3588d23, donc l'image porte bien HEAD —, `operations_etablies` × 2) et par
+  `GET /api/health` → **200**. ⚠️ Ce champ affirmait « e2b548f » le 2026-09-25 alors que le conteneur
+  portait déjà 3588d23 (déploiement complété après l'écriture) : un correctif commité n'est pas un
+  correctif déployé, et sa réciproque — un conteneur peut être en AVANCE sur ce que le REPRISE croit ;
+  la seule mesure est `docker exec … grep` de la constante caractéristique.
   PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
@@ -1019,6 +1024,15 @@ lot 1 ; les tables viennent en dernier.
 >    base** — les passages du 21 et du 25/09 ont acquitté. Donc un PASSAGE RÉEL complet
 >    (`boucler_renvois.sh`) rendrait « rien à boucler » : la boucle live n'aura de matière qu'après un
 >    vrai renvoi (une réponse insuffisante qui échoue un des 4 contrôles). Le wiring, lui, est prouvé.
+>    ✅ **CLÔTURE DU LOT 5 le 2026-09-25 (3)** : le déploiement, annoncé « bloqué par le sandbox », était
+>    en réalité DÉJÀ FAIT — image `3588d23` (HEAD) construite à 12:50, `bouclage.py` présent dans le
+>    conteneur (il n'existe que dans ce commit → l'image porte HEAD), `GET /api/health` = 200. La
+>    précondition du passage réel a été **re-mesurée en SQL ce jour** (`framework_mandates` : 0 ligne
+>    `ouvert` d'origine `manager_renvoi`/`comite`), ce qui rend son verdict déterministe et connu
+>    (« rien à boucler ») sans lancer le script — lui-même refusé par le classifieur cette session, la
+>    mesure SQL étant le repli documenté ([[feedback_deploy_classifier_fallback]]). ⚠️ **Exercer
+>    réellement `serve_mandate` en prod exigerait de FABRIQUER un renvoi (une réponse déficiente) —
+>    écarté par [[feedback_fixture_pollue_le_reel]] : on ne pollue pas le réel pour verdir un chemin.**
 >
 > **Ce que ce lot NE fait PAS**, et pourquoi : la partie **MONITORING** (moitié ÉCRITURE de « on
 > n'écrase pas, on empile ») relève du **suivi**, que l'arbitrage #1 du 2026-09-22 place APRÈS
@@ -1038,8 +1052,8 @@ lot 1 ; les tables viennent en dernier.
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
-| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ✅ **BOUCLAGE comité → collecte** (2026-09-25 (2), code+tests+persistance : `bouclage.py`, note à 4 sorts, `check_bouclage` **27/0** + négatif **11/0** dont les 2 « exercé » ; `tools/boucler_renvois.sh`) — ⏳ **passage réel + déploiement** (sandbox) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
-| 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
+| 5 | ✅ **CLOS (2026-09-25)** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ✅ **chaîne de bout en bout sur `defendabilite`** (2026-09-25 — arbitrage A consommé, `moat` → `instruite`, 5 `non_fondable`+1 `sans_objet`, #78 évité, web n'a pas ramené le moat) · ✅ **BOUCLAGE comité → collecte** (code+tests+persistance : `bouclage.py`, note à 4 sorts, `check_bouclage` **27/0** + négatif **11/0**) · ✅ **déployé** (image `3588d23` en prod 12:50, health 200) · **passage réel = rien à boucler** (SQL 2026-09-25 : 0 mandat `manager_renvoi`/`comite` ouvert ; wiring prouvé par acceptation ROLLBACK 8/0) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
+| 6 | 🔜 **PROCHAIN** — Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 
 ⚠️ **Ordre imposé, inchangé : UX (contrat) → agent → données.** Jamais commencer par la table.
