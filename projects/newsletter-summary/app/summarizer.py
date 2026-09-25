@@ -49,7 +49,7 @@ async def summarize(email: Email) -> str:
     return result.strip()
 
 
-async def summarize_html(email: Email, *, prompt: str | None = None) -> str:
+async def summarize_html(email: Email, *, prompt: str | None = None, plain: str | None = None) -> str:
     """Résume le mail en un BLOC HTML autonome (styles inline) via DeepInfra.
 
     Ce bloc est destiné à être inséré tel quel dans l'email HTML assemblé par digest.py.
@@ -57,8 +57,12 @@ async def summarize_html(email: Email, *, prompt: str | None = None) -> str:
     le défaut `SUMMARIZE_HTML_PROMPT`. Le message système porte — côté code, donc toujours
     garanties même si le prompt est librement réédité — les exigences « en français » et
     « exclure les publicités ».
+
+    `plain` : texte à résumer À LA PLACE du corps du mail (mail réduit à un lien → contenu de la
+    page). Absent = comportement d'origine.
     """
-    plain = _to_plain(email)
+    if plain is None:
+        plain = _to_plain(email)
     if not plain:
         logger.warning("Email %s sans contenu texte — résumé HTML vide.", email.message_id)
         return ""

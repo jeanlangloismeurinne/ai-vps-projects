@@ -1,67 +1,24 @@
-import asyncio
 import hashlib
 import json
 import logging
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException, Depends, Header
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.database import init_db, get_db, AsyncSessionLocal
 from app.models import Email, KbDocument
-from app import resend, digest, comms_client
+from app import resend, backfill
+from app import aliases as al
 from app.prompts import get_active_html_prompt, list_versions, create_version, activate_version, seed_default
 from app.kb import envelope_to_dict
 from app.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
-
-
-async def _backfill_body(row_id: int, email_id: str) -> dict:
-    """Rapatrie le corps du mail via le gateway (→ API Resend Received) et met à jour la ligne.
-
-    Le webhook Resend ne livre ni text/html ; on les récupère donc via email_id.
-    Retries courtes : Resend peut mettre un instant à indexer le mail reçu (404).
-    """
-    attempts = 3
-    for i in range(attempts):
-        try:
-            data = await comms_client.get_client().fetch_inbound_email(email_id)
-            break
-        except comms_client.CommsError as exc:
-            if i < attempts - 1:
-                await asyncio.sleep(0.8 * (i + 1))
-                continue
-            logger.warning("Corps non rapatriable pour email_id=%s : %s", email_id, exc)
-            return {"ok": False, "reason": str(exc)}
-
-    if not data:
-        return {"ok": False, "reason": "no data"}
-
-    async with AsyncSessionLocal() as db:
-        row = await db.get(Email, row_id)
-        if row is None:
-            return {"ok": False, "reason": "ligne absente"}
-        if not row.text_body and data.get("text"):
-            row.text_body = data.get("text") or ""
-        if not row.html_body and data.get("html"):
-            row.html_body = data.get("html") or ""
-        if not row.email_id:
-            row.email_id = email_id
-        # Backfill métadonnées si le webhook ne les avait pas livrées.
-        if not row.from_addr and data.get("from"):
-            row.from_addr = data.get("from") or ""
-        if not row.subject and data.get("subject"):
-            row.subject = data.get("subject") or ""
-        await db.commit()
-    logger.info(
-        "Backfill corps OK — row=%d email_id=%s text_len=%d",
-        row_id, email_id, len(data.get("text") or ""),
-    )
-    return {"ok": True, "has_body": bool(data.get("text") or data.get("html"))}
 
 
 def _derive_message_id(payload: dict, fields: dict) -> str:
@@ -94,13 +51,15 @@ def require_hub_token(x_hub_token: str | None = Header(default=None)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    # Seed une v1 du prompt (défaut d'env) si l'éditeur du Hub n'a jamais rien enregistré :
-    # l'éditeur n'est pas vide et le digest dispose toujours d'une version persistée.
+    # Alias par défaut (la newsletter) + rattachement des mails/versions d'avant les alias, PUIS
+    # une v1 du prompt (défaut d'env) si l'éditeur n'a jamais rien enregistré : l'éditeur n'est pas
+    # vide et le moteur dispose toujours d'une version persistée.
     async with AsyncSessionLocal() as db:
         try:
+            await al.seed_default_alias(db)
             await seed_default(db)
         except Exception:
-            logger.exception("Seeding du prompt initial en échec")
+            logger.exception("Amorçage de l'alias par défaut / du prompt initial en échec")
     start_scheduler()
     yield
     stop_scheduler()
@@ -153,7 +112,14 @@ async def webhook_resend(request: Request):
         if existing.scalar_one_or_none() is not None:
             return {"status": "duplicate", "message_id": fields["message_id"]}
 
-        email = Email(**fields)
+        # Routage : alias dont la partie locale correspond EXACTEMENT au destinataire, sinon l'alias
+        # par défaut (la newsletter — le catch-all d'avant les alias). Un `From` vide n'est pas
+        # refusé ici (pas encore rapatrié) : le moteur re-contrôle à l'instant du traitement.
+        alias = al.match_alias(await al.list_aliases(db), fields["to_addr"])
+        admitted, refusal = al.admit(alias, fields["from_addr"], sender_known=False)
+        email = Email(**fields, alias_id=alias.id if alias else None,
+                      status="new" if admitted else "rejected",
+                      last_error=None if admitted else refusal)
         db.add(email)
         try:
             await db.commit()
@@ -163,18 +129,23 @@ async def webhook_resend(request: Request):
         row_id = email.id
         email_id = fields.get("email_id") or ""
 
+    if not admitted:
+        logger.info("Mail rejeté à la réception — alias=%s : %s", alias.local_part if alias else None, refusal)
+        return {"status": "rejected", "reason": refusal}
+
     # Rapatrier le corps (le webhook ne livre que les métadonnées). Non bloquant :
     # si ça échoue, la ligne reste metadata-only et le digest signalera « Corps non reçu ».
-    backfill = {"ok": False, "reason": "pas d'email_id"}
+    backfill_result = {"ok": False, "reason": "pas d'email_id"}
     if email_id:
         try:
-            backfill = await _backfill_body(row_id, email_id)
+            backfill_result = await backfill.backfill_body(row_id, email_id)
         except Exception as exc:
             logger.exception("Backfill corps exceptionnellement en erreur")
-            backfill = {"ok": False, "reason": str(exc)}
+            backfill_result = {"ok": False, "reason": str(exc)}
 
     return {"status": "stored", "message_id": fields["message_id"],
-            "backfill": backfill, "email_id": email_id}
+            "backfill": backfill_result, "email_id": email_id,
+            "alias": alias.local_part if alias else None}
 
 
 @app.post("/webhook/resend/test")
@@ -187,11 +158,11 @@ async def webhook_resend_test(request: Request):
 # ── API des versions de prompt + KB (appelées par le Hub sur le réseau Docker) ──
 
 @app.get("/api/prompt")
-async def api_prompt(_auth: bool = Depends(require_hub_token)):
-    """État du prompt : version active + historique (menu déroulant du Hub)."""
+async def api_prompt(alias_id: int | None = None, _auth: bool = Depends(require_hub_token)):
+    """État du prompt d'un alias (défaut : la newsletter) : version active + historique."""
     async with AsyncSessionLocal() as db:
-        active_prompt = await get_active_html_prompt(db)
-        versions = await list_versions(db)
+        active_prompt = await get_active_html_prompt(db, alias_id)
+        versions = await list_versions(db, alias_id)
     active_id = next((v.id for v in versions if v.is_active), None)
     return {
         "active_id": active_id,
@@ -217,7 +188,7 @@ async def api_prompt_create(payload: dict, _auth: bool = Depends(require_hub_tok
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt vide")
     async with AsyncSessionLocal() as db:
-        row = await create_version(db, prompt=prompt, note=note)
+        row = await create_version(db, prompt=prompt, note=note, alias_id=payload.get("alias_id"))
     return {"ok": True, "id": row.id}
 
 
@@ -228,10 +199,77 @@ async def api_prompt_activate(payload: dict, _auth: bool = Depends(require_hub_t
     if version_id is None:
         raise HTTPException(status_code=400, detail="version_id manquant")
     async with AsyncSessionLocal() as db:
-        row = await activate_version(db, int(version_id))
+        row = await activate_version(db, int(version_id), alias_id=payload.get("alias_id"))
     if row is None:
         raise HTTPException(status_code=404, detail="version introuvable")
     return {"ok": True, "id": row.id}
+
+
+# ── API des alias (appelée par le Hub) ──
+
+def _alias_json(a, counts: dict) -> dict:
+    return {
+        "id": a.id, "local_part": a.local_part, "address": al.full_address(a),
+        "enabled": a.enabled, "frequency": a.frequency, "is_default": a.is_default,
+        "recipient": a.recipient, "open_senders": a.open_senders,
+        "allowed_senders": a.allowed_senders or [], "counts": counts,
+    }
+
+
+@app.get("/api/aliases")
+async def api_aliases(_auth: bool = Depends(require_hub_token)):
+    """Alias + décompte des mails par statut (en attente, échecs… — rien ne reste invisible)."""
+    async with AsyncSessionLocal() as db:
+        aliases = await al.list_aliases(db)
+        rows = await db.execute(select(Email.alias_id, Email.status, func.count()).group_by(Email.alias_id, Email.status))
+    counts: dict = defaultdict(dict)
+    for alias_id, status, n in rows.all():
+        counts[alias_id][status] = n
+    return {"domain": settings.INBOUND_DOMAIN, "aliases": [_alias_json(a, counts.get(a.id, {})) for a in aliases]}
+
+
+@app.post("/api/aliases")
+async def api_alias_create(payload: dict, _auth: bool = Depends(require_hub_token)):
+    async with AsyncSessionLocal() as db:
+        try:
+            a = await al.create_alias(
+                db, payload.get("local_part", ""), frequency=payload.get("frequency", "minute"),
+                allowed_senders=payload.get("allowed_senders"), open_senders=bool(payload.get("open_senders", False)),
+                enabled=bool(payload.get("enabled", True)),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "id": a.id, "address": al.full_address(a)}
+
+
+@app.put("/api/aliases/{alias_id}")
+async def api_alias_update(alias_id: int, payload: dict, _auth: bool = Depends(require_hub_token)):
+    async with AsyncSessionLocal() as db:
+        try:
+            a = await al.update_alias(
+                db, alias_id, frequency=payload.get("frequency"), allowed_senders=payload.get("allowed_senders"),
+                open_senders=payload.get("open_senders"), enabled=payload.get("enabled"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    if a is None:
+        raise HTTPException(status_code=404, detail="alias introuvable")
+    return {"ok": True, "id": a.id}
+
+
+@app.get("/api/aliases/{alias_id}/mails")
+async def api_alias_mails(alias_id: int, limit: int = 20, _auth: bool = Depends(require_hub_token)):
+    """Derniers mails d'un alias avec statut et dernière erreur nommée."""
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(
+            select(Email).where(Email.alias_id == alias_id).order_by(Email.id.desc()).limit(max(1, min(limit, 100)))
+        )
+        rows = list(res.scalars().all())
+    return {"mails": [
+        {"id": e.id, "received_at": e.received_at, "from_addr": e.from_addr, "subject": e.subject,
+         "status": e.status, "attempts": e.attempts, "last_error": e.last_error, "summarized_at": e.summarized_at}
+        for e in rows
+    ]}
 
 
 @app.get("/api/kb")

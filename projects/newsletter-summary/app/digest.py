@@ -1,20 +1,18 @@
-"""Digest matinal : résume toutes les mails non traitées, envoie l'e-mail récap, marque 'summarized'."""
+"""Rendu des e-mails de résumé : enveloppe HTML, cartes, corps texte, libellés.
+
+L'orchestration (qui résumer, à qui envoyer, quand) vit dans `alias_digest.py` ; ce module ne
+fait que produire le texte et le HTML. Le rendu de la newsletter d'origine y est conservé à
+l'identique (fixture gelée `checks/golden/legacy_digest.json`).
+"""
 from __future__ import annotations
 
 import html as html_mod
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import select
-
 from app.models import Email
-from app.database import AsyncSessionLocal
-from app.config import settings
-from app import resend, summarizer
-from app import comms_client
-from app.prompts import get_active_html_prompt
-from app.kb import store_email_summary
 
 logger = logging.getLogger(__name__)
 
@@ -49,19 +47,19 @@ _ENVELOPPE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Résumé quotidien des newsletters</title>
+<title>{title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#eef1f5;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
   <div style="max-width:640px;margin:0 auto;padding:0;">
     <div style="background:#1f2937;color:#ffffff;padding:18px 16px;">
-      <h1 style="margin:0;font-size:20px;line-height:1.3;">📬 Résumé quotidien des newsletters</h1>
-      <p style="margin:8px 0 0;font-size:13px;opacity:.85;">{date} — {count} newsletter(s)</p>
+      <h1 style="margin:0;font-size:20px;line-height:1.3;">📬 {title}</h1>
+      <p style="margin:8px 0 0;font-size:13px;opacity:.85;">{date} — {count} {label}(s)</p>
     </div>
     <div style="background:#ffffff;padding:12px 0;">
 {cards}
     </div>
     <p style="text-align:center;color:#9ca3af;font-size:11px;margin:16px 0 0;">
-      Newsletter Summary · généré automatiquement chaque matin
+      {footer}
     </p>
   </div>
 </body>
@@ -81,13 +79,19 @@ _CARD_OPEN = (
 _CARD_CLOSE = "</div>"
 
 
-def _card_header(email: Email) -> str:
-    """En-tête de carte (expéditeur + sujet), rendu par le code — pas par le modèle."""
+def _card_header(email: Email, from_line: str | None = None, subject_line: str | None = None) -> str:
+    """En-tête de carte (expéditeur + sujet), rendu par le code — pas par le modèle.
+
+    `from_line` / `subject_line` : surcharges d'affichage (mail réduit à un lien : l'URL et le titre
+    de la page). Absentes = expéditeur et sujet du mail, comme avant.
+    """
+    frm = email.from_addr if from_line is None else from_line
+    sub = email.subject if subject_line is None else subject_line
     return (
         f'<div style="font-size:12px;color:#6b7280;margin:0 0 2px;word-break:break-word;">'
-        f'{_esc(email.from_addr or "")}</div>'
+        f'{_esc(frm or "")}</div>'
         f'<div style="font-weight:bold;font-size:16px;color:#111827;line-height:1.35;'
-        f'margin:0 0 10px;">{_esc(email.subject or "(sans objet)")}</div>'
+        f'margin:0 0 10px;">{_esc(sub or "(sans objet)")}</div>'
     )
 
 
@@ -131,7 +135,7 @@ def _sanitize_inner(raw: str) -> str:
     return s
 
 
-def _card_html(email: Email) -> str:
+def _card_html(email: Email, from_line: str | None = None, subject_line: str | None = None) -> str:
     """Carte d'une newsletter : ouverture + en-tête + corps + fermeture, tout côté code.
 
     Le modèle ne fournit que le corps (`email.summary`), passé au sanitizer. Les balises de
@@ -144,86 +148,56 @@ def _card_html(email: Email) -> str:
     else:
         error = getattr(email, "_summary_error", "") or ""
         body = _fallback_inner(email, error=error)
-    return f"{_CARD_OPEN}{_card_header(email)}{body}{_CARD_CLOSE}"
+    return f"{_CARD_OPEN}{_card_header(email, from_line, subject_line)}{body}{_CARD_CLOSE}"
 
 
-async def run_daily_digest(trigger: str = "scheduled") -> dict:
-    """Résume les emails status='new' puis envoie le digest (HTML) à RECIPIENT_EMAIL."""
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Email).where(Email.status == "new").order_by(Email.received_at.asc())
-        )
-        emails = list(result.scalars().all())
+@dataclass
+class Item:
+    """Un mail à rendre, avec ses éventuelles surcharges d'en-tête (mail réduit à un lien)."""
+    email: Email
+    from_line: str | None = None
+    subject_line: str | None = None
 
-        if not emails:
-            logger.info("Digest : aucun email en attente — rien à envoyer.")
-            return {"sent": False, "count": 0}
 
-        # 1) Résumer chaque mail en HTML — un appel DeepInfra PAR MAIL (bloc HTML autonome
-        #    distinct), avec le prompt actif (éditable via le Hub) relu à chaque exécution.
-        prompt = await get_active_html_prompt(db)
-        blocks = []
-        for email in emails:
-            try:
-                email.summary = await summarizer.summarize_html(email, prompt=prompt)
-            except Exception as exc:  # ne bloque pas le digest sur un mail
-                logger.exception("Résumé HTML échoué pour email %s", email.message_id)
-                email.summary = None
-                email._summary_error = str(exc)  # type: ignore[attr-defined]
-            blocks.append(email)
-        await db.commit()
+def today_label() -> str:
+    return datetime.now(PARIS_TZ).strftime("%A %d %B %Y")
 
-        # 1b) Persister chaque résumé dans la KB (enveloppe KNOWLEDGE_ARCHITECTURE §3).
-        #     Un échec d'écriture ne bloque pas l'envoi du digest.
-        for email in blocks:
-            if email.summary:
-                try:
-                    await store_email_summary(email)
-                except Exception as exc:
-                    logger.exception("Écriture KB échouée pour email %s", email.message_id)
 
-        # 2) Composer les corps
-        today = datetime.now(PARIS_TZ).strftime("%A %d %B %Y")
+def render_html(items: list[Item], pres: dict, today: str) -> str:
+    """E-mail HTML : enveloppe + une carte par mail (cadre et en-tête produits par le code)."""
+    cards = "\n".join(_card_html(i.email, i.from_line, i.subject_line) for i in items)
+    return _ENVELOPPE_HTML.format(
+        date=_esc(today), count=len(items), cards=cards,
+        title=_esc(pres["title"]), label=_esc(pres["label"]), footer=_esc(pres["footer"]),
+    )
 
-        # 2a) Corps HTML — enveloppe + cartes DeepSeek
-        cards = "\n".join(_card_html(email) for email in blocks)
-        html_body = _ENVELOPPE_HTML.format(
-            date=_esc(today), count=len(blocks), cards=cards,
-        )
 
-        # 2b) Corps texte (fallback : clients non-HTML, lisibilité)
-        lines = [
-            f"Résumé quotidien des newsletters — {today}",
-            f"{len(blocks)} newsletter(s) reçue(s).",
-            "",
-        ]
-        for email in blocks:
-            lines.append("─" * 40)
-            lines.append(f"■ {email.from_addr} — {email.subject}")
-            lines.append("")
-            summary_text = _summary_to_text(email.summary) if email.summary else ""
-            if summary_text:
-                lines.append(summary_text)
-            elif not email.text_body and not email.html_body:
-                lines.append("⚠ Corps non reçu — Resend n'a transmis que les métadonnées (pas de text/html).")
-            else:
-                lines.append("(vide)")
-            lines.append("")
-        plain_body = "\n".join(lines)
+def render_text(items: list[Item], pres: dict, today: str) -> str:
+    """Corps texte (fallback : clients non-HTML, lisibilité)."""
+    lines = [
+        f"{pres['title']} — {today}",
+        pres["count_line"].format(count=len(items)),
+        "",
+    ]
+    for it in items:
+        email = it.email
+        lines.append("─" * 40)
+        lines.append(f"■ {email.from_addr if it.from_line is None else it.from_line} — "
+                     f"{email.subject if it.subject_line is None else it.subject_line}")
+        lines.append("")
+        summary_text = _summary_to_text(email.summary) if email.summary else ""
+        if summary_text:
+            lines.append(summary_text)
+        elif not email.text_body and not email.html_body:
+            lines.append("⚠ Corps non reçu — Resend n'a transmis que les métadonnées (pas de text/html).")
+        else:
+            lines.append("(vide)")
+        lines.append("")
+    return "\n".join(lines)
 
-        # 3) Envoyer — via le comms-gateway (le projet ne détient plus de clé Resend)
-        await comms_client.get_client().send_email(
-            to=settings.RECIPIENT_EMAIL,
-            subject=f"📬 Résumé hebdo-news — {len(blocks)} newsletter(s) — {today}",
-            body=plain_body,
-            html=html_body,
-        )
 
-        # 4) Marquer traité
-        for email in blocks:
-            email.status = "summarized"
-            email.summarized_at = datetime.utcnow()
-        await db.commit()
-
-        logger.info("Digest envoyé — %d newsletter(s) marquées summarized.", len(blocks))
-        return {"sent": True, "count": len(blocks)}
+def render_subject(items: list[Item], pres: dict, today: str, single: bool) -> str:
+    """Objet. `single` (cadence « chaque minute » : un e-mail par mail) → gabarit à l'unité."""
+    tpl = pres["subject_single"] if single else pres["subject"]
+    subject = items[0].email.subject if items else ""
+    return tpl.format(count=len(items), date=today, subject=subject or "(sans objet)")

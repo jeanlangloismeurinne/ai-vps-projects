@@ -52,9 +52,22 @@ class Settings(BaseSettings):
         "EMAIL À RÉSUMER :\n{email}"
     )
 
-    # Job matinal (Europe/Paris)
+    # Créneaux des digests par lots (Europe/Paris). Le « matin » garde son nom historique
+    # (SUMMARY_HOUR/MINUTE) : la config existante conserve son sens.
     SUMMARY_HOUR: int = 8
     SUMMARY_MINUTE: int = 0
+    EVENING_HOUR: int = 18
+    EVENING_MINUTE: int = 0
+
+    # Alias : domaine de réception (affichage de l'adresse complète dans le Hub — la
+    # correspondance d'alias se fait sur la partie locale seule).
+    INBOUND_DOMAIN: str = "oozeenaru.resend.app"
+    # Plafond de mails traités par jour sur les alias à liste blanche (tous alias confondus).
+    # Le gateway plafonne à 60 e-mails/jour pour tout ce client : sans ce garde-fou, un afflux
+    # (le champ From est usurpable) épuiserait le quota et affamerait le digest newsletter.
+    ALIAS_MAX_PER_DAY: int = 40
+    # Tentatives par mail avant échec définitif (cadence « chaque minute » uniquement).
+    ALIAS_MAX_ATTEMPTS: int = 3
 
     # Sécurité du webhook inbound : si défini, requis en ?token= sur POST /webhook/resend
     WEBHOOK_TOKEN: str = ""

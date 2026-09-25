@@ -25,6 +25,42 @@ class Email(Base):
     # new = pas encore résumé/envoyé dans un digest ; summarized = inclus dans un digest.
     status: Mapped[str] = mapped_column(String(16), default="new", index=True)
     summarized_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Alias qui a reçu le mail (aliases.id). Toujours renseigné : une adresse inconnue du domaine
+    # est rattachée à l'alias par défaut (la newsletter), comme avant l'introduction des alias.
+    alias_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    # Nombre de tentatives de traitement et dernière erreur NOMMÉE : un mail ne reste jamais
+    # bloqué ou perdu sans trace (statuts new → processing → summarized | failed | rejected).
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Instant de la réservation (status='processing') : sert à récupérer un run interrompu.
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Alias(Base):
+    """Adresse de réception (`<local_part>@<domaine>`) et sa politique de traitement.
+
+    La newsletter n'est PAS un cas à part : c'est l'alias `is_default` (catch-all du domaine,
+    tous expéditeurs, digest à adresse fixe). Un alias « à la demande » répond à l'expéditeur.
+    Les seules différences entre les deux tiennent dans ces colonnes — pas dans le code.
+    """
+    __tablename__ = "aliases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Partie locale, minuscule, unique. `aaa+bbb` est un alias à part entière (correspondance exacte).
+    local_part: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # morning | evening | minute. `minute` = un e-mail de réponse PAR mail reçu (jamais de lot).
+    frequency: Mapped[str] = mapped_column(String(16), default="morning")
+    # Un seul alias par défaut : reçoit toute adresse du domaine qui ne correspond à aucun alias.
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    # NULL = répondre à l'expéditeur ; sinon adresse fixe (la newsletter → RECIPIENT_EMAIL).
+    recipient: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # False (défaut sûr) : seuls `allowed_senders` sont acceptés — liste vide = personne.
+    open_senders: Mapped[bool] = mapped_column(Boolean, default=False)
+    allowed_senders: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # Surcharges d'habillage (titre, objet, pied…) ; clés absentes → défauts de aliases.py.
+    presentation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class PromptVersion(Base):
@@ -42,6 +78,8 @@ class PromptVersion(Base):
     prompt: Mapped[str] = mapped_column(Text)
     note: Mapped[str] = mapped_column(Text, default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # Alias auquel appartient la version (une version active PAR alias).
+    alias_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
 
 class KbDocument(Base):

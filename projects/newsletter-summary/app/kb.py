@@ -37,8 +37,12 @@ def _summary_to_markdown(html_block: str) -> str:
     return _html2text.handle(html_block).strip()
 
 
-def build_envelope(email: Email) -> dict:
+def build_envelope(email: Email, alias: str | None = None, source_url: str | None = None) -> dict:
     """Construit l'enveloppe document §3 à partir d'un mail résumé.
+
+    `alias` : nom de l'alias qui a reçu le mail → tag `alias:<nom>` + `metadata.alias`.
+    `source_url` : mail réduit à un lien → l'URL devient l'`uri` canonique du document.
+    Sans ces deux paramètres l'enveloppe est celle d'avant les alias, à l'identique.
 
     Les clés correspondent aux noms d'attributs du modèle `KbDocument` (donc `metadata_`
     pour la colonne « metadata »). La sérialisation JSON s'effectue dans `envelope_to_dict`.
@@ -50,11 +54,11 @@ def build_envelope(email: Email) -> dict:
         "doc_id": f"newsletter-summary:mailbox:{email.message_id}",
         "project": "newsletter-summary",
         "source": "mailbox",
-        "uri": f"resend:{email.email_id or ''}",
+        "uri": source_url or f"resend:{email.email_id or ''}",
         "title": email.subject or "(sans objet)",
         "body": body_md,
         "lang": "fr",
-        "tags": [],
+        "tags": [f"alias:{alias}"] if alias else [],
         "entities": {},
         "reliability": 0.70,
         "reliability_tier": "B",
@@ -67,6 +71,8 @@ def build_envelope(email: Email) -> dict:
             "message_id": email.message_id,
             "email_id": email.email_id or "",
             "from_addr": email.from_addr or "",
+            **({"alias": alias} if alias else {}),
+            **({"source_url": source_url} if source_url else {}),
         },
     }
 
@@ -94,11 +100,11 @@ def envelope_to_dict(kb: KbDocument) -> dict:
     }
 
 
-async def store_email_summary(email: Email) -> None:
+async def store_email_summary(email: Email, alias: str | None = None, source_url: str | None = None) -> None:
     """Upsert de l'enveloppe KB du mail résumé (par doc_id stable)."""
     if not email.summary:
         return
-    env = build_envelope(email)
+    env = build_envelope(email, alias=alias, source_url=source_url)
     async with AsyncSessionLocal() as db:
         existing = await db.execute(
             select(KbDocument).where(KbDocument.doc_id == env["doc_id"])

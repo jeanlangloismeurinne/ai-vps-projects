@@ -1,0 +1,37 @@
+[
+  {
+    "from_addr": "playbook@politico.eu",
+    "to_addr": "newsletter@oozeenaru.resend.app",
+    "subject": "The Berlaymont’s battle plans",
+    "received_at": "2026-09-25T05:00:55",
+    "has_body": true
+  },
+  {
+    "from_addr": "playbookparis@politico.eu",
+    "to_addr": "newsletter@oozeenaru.resend.app",
+    "subject": "Desserrer l’étau, pas les taxes",
+    "received_at": "2026-09-25T05:08:53",
+    "has_body": true
+  },
+  {
+    "from_addr": "lamatinaleeuropeenne@substack.com",
+    "to_addr": "newsletter@oozeenaru.resend.app",
+    "subject": "Russie : une rupture en carton pâte entre Le Pen et AfD",
+    "received_at": "2026-09-25T05:30:15",
+    "has_body": true
+  },
+  {
+    "from_addr": "playbook@politico.eu",
+    "to_addr": "newsletter@oozeenaru.resend.app",
+    "subject": "Mail arrivé trop tôt (corps non rapatrié)",
+    "received_at": "2026-09-25T05:10:00",
+    "has_body": false
+  },
+  {
+    "from_addr": "no-reply@newsletter.euractiv.com",
+    "to_addr": "newsletter@oozeenaru.resend.app",
+    "subject": "Résumé en échec [[echec-resume]]",
+    "received_at": "2026-09-25T05:20:00",
+    "has_body": true
+  }
+]
