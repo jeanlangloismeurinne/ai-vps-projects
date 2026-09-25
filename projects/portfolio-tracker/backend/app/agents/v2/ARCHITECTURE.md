@@ -40,6 +40,7 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | Analyste : refus avant dépense, 3 états, pas de levier | `check_analyste.py` + `negatif_analyste.sh` + `tools/acceptation_analyste.sh` (vrai modèle) |
 | Manager : 4 contrôles déterministes, chaque `ko` atteignable, renvoi → mandat | `check_manager.py` + `negatif_manager.sh` |
 | Mandat manager persisté (par-question, réconcilié avec la table 039), consommable, statut qui change au re-run (T8) | `check_manager_persist.py` + `negatif_manager_persist.sh` + `tools/acceptation_manager.sh` |
+| Note de comité PROJETÉE : ne publier que l'instruit, 4 états de rubrique jamais fusionnés, l'ordre du jour couvert en entier — et surtout **ajouter une méthodologie est une opération de DONNÉES** (un 3ᵉ framework en YAML seul se projette sans diff de code) | `check_memo_projete.py` + `negatif_memo_projete.sh` + `tools/montrer_memo_projete.sh` (lecture de la note réelle, gratuite) |
 | Porte à 3 états, remèdes distincts, lue au point de sortie | `check_readiness_recompute.py`, `tools/acceptation_gate.sh` |
 | Table de profils par champ (`FIELD_PROFILES` dans `common.py`) | `check_field_profiles.py` |
 | Décision contrainte par l'analyse (G2, #36) | `check_decision_validate.py` |

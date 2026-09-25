@@ -335,8 +335,20 @@ def build_financials_entries(
     def _tags(f: str) -> list[str]:
         return ["financials", f, "derived_ratio", "edgar"]
 
-    def _miss(f: str, need: str) -> None:
-        unfounded.append({"field": f, "reason": f"intrant manquant en base EDGAR : {need}"})
+    # DEUX ÉTATS, et les fondre est exactement ce que ce feed passe son temps à empêcher ailleurs.
+    # Jusqu'au 2026-09-24 le préfixe « intrant manquant » était écrit en dur : le motif du CA nul
+    # sortait « intrant manquant en base EDGAR : chiffre d'affaires NUL (déposé, pas manquant) » —
+    # une phrase qui se contredit dans sa propre longueur. L'auteur de la branche avait pris soin de
+    # distinguer les deux mondes ; le détenteur du message les refusionnait trois lignes plus loin
+    # (#46). Un « intrant manquant » envoie la chaîne chercher une source ; un « non défini » lui dit
+    # que la donnée est là et que c'est le RATIO qui n'existe pas. L'état est désormais STRUCTURÉ —
+    # une prose ne se teste qu'au `in`, et c'est ce `in` qui a laissé passer la contradiction.
+    def _miss(f: str, need: str, *, etat: str = "intrant_absent") -> None:
+        prefixe = {
+            "intrant_absent": "intrant manquant en base EDGAR : ",
+            "non_defini": "ratio NON DÉFINI pour cet émetteur (intrants présents) : ",
+        }[etat]
+        unfounded.append({"field": f, "etat": etat, "reason": prefixe + need})
 
     def _absents(**intrants: Any) -> str:
         """Nomme les intrants RÉELLEMENT absents, jamais la liste entière de la formule.
@@ -387,15 +399,76 @@ def build_financials_entries(
 
     # ── roic_pct : NOPAT / capital investi (NOPAT ≈ résultat net, société en trésorerie nette) ──
     if net_income and equity and debt is not None and cash is not None:
+        # ⚠️ LE JUMEAU DU PIÈGE FCF, ET IL A MANQUÉ QUATRE GÉNÉRATIONS. Le ROIC mesure ce que les
+        # OPÉRATIONS rendent sur le capital employé, et l'approximation NOPAT ≈ résultat net ne tient
+        # que si le résultat est dominé par l'exploitation. Chez un émetteur pré-commercial il n'y a
+        # pas d'exploitation : le résultat net EST la consommation de R&D, et le quotient devient
+        # « brûlage / base de capital » — un rythme de consommation, pas un rendement. Mesuré sur
+        # RVMD FY2025 : −49,7 % publié tier A, qui se lit « détruit la moitié de son capital par an
+        # en exploitant mal » là où le fait est « n'a pas commencé à exploiter ».
+        #
+        # Même famille que la conversion FCF trente lignes plus bas, SIGNE OPPOSÉ : là-bas le nombre
+        # était flatteur (+80,8 %), ici il est accablant. Une garde qui n'attrape que les nombres
+        # flatteurs est une demi-garde — c'est pour ça que celle-ci a manqué si longtemps.
+        #
+        # Et un faux se REPRODUIT : #190 (archivé) a redonné #231, #274, #549, #656. Supprimer la
+        # ligne ne règle rien, le détenteur est ICI (#46).
+        #
+        # ⚠️ ET LE REFUS SE PUBLIE, il ne se tait pas — exactement comme la conversion FCF. Un champ
+        # simplement ABSENT du corpus se lit « personne ne l'a calculé » ; l'entry qui nomme la
+        # non-applicabilité se lit « cela ne s'applique pas à cet émetteur ». Ce sont deux faits
+        # différents et c'est le lecteur d'aval qui paierait la confusion
+        # (`feedback_rendu_est_un_producteur`). Publier a de surcroît une conséquence mécanique :
+        # l'entry porte les mêmes tags, donc elle SUPERSEDE la précédente par le chemin normal.
+        # Un refus muet aurait laissé #656 « courante » pour toujours — `ENTRIES_COURANTES` ne
+        # connaît que `superseded_by`, et un stockage append-only ne supprime pas, il empile.
+        operations = None if revenue is None else revenue > 0
         invested = equity + debt - cash
         roic = net_income / invested * 100 if invested else None
-        if roic is not None:
+        if operations is False:
+            structured = {
+                "metric": "roic", "field": "roic_pct", "roic_pct": None,
+                "operations_etablies": False, "revenue": revenue,
+                "net_income": net_income, "invested_capital": invested,
+                "currency": cur, "period": period,
+                "method": ("chiffre d'affaires nul (déposé) → le ROIC n'est pas défini : sans "
+                           "exploitation, NOPAT ≈ résultat net ne tient plus et le quotient "
+                           "mesurerait un rythme de consommation du capital, pas un rendement"),
+            }
+            content = (
+                f"ROIC de {ticker_id} ({symbol}) — {fy} : **non défini**, et `roic_pct` vaut None. "
+                f"L'émetteur ne déclare aucun chiffre d'affaires (CA déposé à {_md(revenue, cur)}, "
+                f"pas manquant) : il n'y a pas d'exploitation dont mesurer le rendement. "
+                f"L'approximation NOPAT ≈ résultat net, licite chez un émetteur qui vend, ne tient "
+                f"plus ici — le résultat net {_md(net_income, cur)} EST la consommation de R&D, et "
+                f"le quotient sur un capital investi de {_md(invested, cur)} donnerait "
+                f"{_pct(roic) if roic is not None else 'n/d'}, qui se lirait comme un rendement "
+                f"négatif de l'exploitation alors que l'exploitation n'a pas commencé. La "
+                f"consommation de trésorerie, elle, est publiée séparément et c'est le fait "
+                f"pertinent. Postes du 10-K EDGAR (tier A)."
+            )
+            specs.append(FinancialsEntrySpec(
+                field="roic_pct", entry_type="fact_financial",
+                title=f"Financials — ROIC NON DÉFINI {fy} (émetteur sans chiffre d'affaires)",
+                content=content, content_structured=structured,
+                fiscal_period=period, source_url=src, tags=_tags("roic_pct"),
+            ))
+        elif roic is None:
+            _miss("roic_pct", "capital investi nul")
+        else:
+            # `operations is None` : le poste CA n'a pas été résolu. On publie — refuser ici
+            # priverait de ROIC tout émetteur dont le concept XBRL du CA n'a pas répondu — mais on
+            # DIT que l'hypothèse n'a pas pu être vérifiée, plutôt que de la passer sous silence.
+            # Troisième état : ni le refus, ni le faux-semblant de certitude (#25).
+            reserve = ("" if operations else
+                       " ⚠️ Le chiffre d'affaires n'a pas été résolu dans les dépôts : l'hypothèse "
+                       "« le résultat est dominé par l'exploitation » n'a donc PAS pu être vérifiée.")
             structured = _dater({
                 "metric": "roic", "field": "roic_pct",
                 "roic_pct": round(roic, 2), "net_income": net_income,
                 "invested_capital": invested, "stockholders_equity": equity,
                 "long_term_debt": debt, "cash": cash, "currency": cur, "period": period,
-                "nopat_approx": "net_income",
+                "nopat_approx": "net_income", "operations_etablies": operations,
                 "method": ("NOPAT ≈ résultat net (charge d'intérêts nette négligeable en position de "
                            "trésorerie nette) ; capital investi = capitaux propres + dette LT − trésorerie"),
             }, mixte=True)
@@ -405,8 +478,8 @@ def build_financials_entries(
                 f"{_md(cash, cur)}), NOPAT approché par le résultat net {_md(net_income, cur)}. "
                 f"Approximation NOPAT ≈ résultat net justifiée par la position de trésorerie nette "
                 f"(intérêts nets négligeables) — elle peut LÉGÈREMENT majorer le ROIC si le résultat "
-                f"non opérationnel est significatif.{mention_mixte} Calculé depuis les dépôts EDGAR "
-                f"(tier A)."
+                f"non opérationnel est significatif.{reserve}{mention_mixte} Calculé depuis les "
+                f"dépôts EDGAR (tier A)."
             )
             specs.append(FinancialsEntrySpec(
                 field="roic_pct", entry_type="fact_financial",
@@ -414,8 +487,6 @@ def build_financials_entries(
                 content=content, content_structured=structured,
                 fiscal_period=period, source_url=src, tags=_tags("roic_pct"),
             ))
-        else:
-            _miss("roic_pct", "capital investi nul")
     else:
         _miss("roic_pct", _absents(**{"résultat net": net_income, "capitaux propres": equity,
                                       "dette LT": debt, "trésorerie": cash}))
@@ -506,13 +577,14 @@ def build_financials_entries(
         # chaîne chercher une source qu'elle ne trouvera jamais, et fait passer pour une lacune de
         # collecte ce qui est un fait d'entreprise (pré-commercialisation).
         if capex is None:
-            need = "capex (EDGAR indisponible)"
+            _miss("intensite_capex_pct", "capex (EDGAR indisponible)")
         elif revenue == 0:
-            need = ("chiffre d'affaires NUL (déposé, pas manquant) — l'intensité capitalistique "
-                    "n'est pas définie sans base de CA ; émetteur en pré-commercialisation")
+            _miss("intensite_capex_pct",
+                  "chiffre d'affaires NUL (déposé, pas manquant) — l'intensité capitalistique "
+                  "n'est pas définie sans base de CA ; émetteur en pré-commercialisation",
+                  etat="non_defini")
         else:
-            need = "chiffre d'affaires"
-        _miss("intensite_capex_pct", need)
+            _miss("intensite_capex_pct", "chiffre d'affaires")
 
     return specs, unfounded
 

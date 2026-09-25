@@ -28,9 +28,8 @@ raisons. Les asserts ci-dessous portent sur la FORME de la règle, jamais sur sa
 """
 import sys
 
-from tools.reconcilier_vocabulaires import (
-    BLOCS, DERIVES, ecart, feuilles_memo, vocabulaire_questions,
-)
+from app.contracts.memo_blocs import BLOCS_MEMO, feuilles_memo
+from tools.reconcilier_vocabulaires import DERIVES, ecart, vocabulaire_questions
 
 ok = fail = 0
 
@@ -58,7 +57,7 @@ check("les DÉRIVÉS sont un sous-ensemble strict des feuilles du mémo",
       DERIVES < memo,
       f"→ {sorted(DERIVES - memo)} : une dispense qui ne dispense plus rien")
 check("chaque bloc déclaré est une classe du contrat `ResearchMemo`",
-      all(hasattr(c, "model_fields") for c in BLOCS.values()),
+      all(hasattr(c, "model_fields") for c in BLOCS_MEMO.values()),
       "→ un bloc qui n'est plus un modèle Pydantic rendrait zéro feuille sans se plaindre")
 
 print("\n2. SATISFIABILITÉ — la règle peut virer au vert")

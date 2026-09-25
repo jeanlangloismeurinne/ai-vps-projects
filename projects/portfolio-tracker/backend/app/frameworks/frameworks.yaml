@@ -39,6 +39,10 @@ frameworks:
       rendement qui devient du cash disponible. Les niveaux comptables ne disent rien seuls ; ce
       sont les relations et leur persistance qui informent.
     nature_dominante: mesure
+    # Le chapitre de la note de comité que ce framework PROJETTE (§6). C'est la SEULE déclaration
+    # nécessaire pour qu'un chapitre cesse d'être « sans méthodologie approuvée » : ajouter une
+    # méthodologie est une opération de données, jamais de code.
+    bloc_memo: financials
     questions:
 
       - id: qf_1
@@ -287,6 +291,7 @@ frameworks:
       Porter / Morningstar. Un avantage concurrentiel n'existe que s'il a une source nommée, une
       preuve observable et une trajectoire. Un moat affirmé sans preuve est une opinion.
     nature_dominante: interpretation
+    bloc_memo: moat
     questions:
 
       - id: mo_1

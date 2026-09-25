@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-24
+updated: 2026-09-25
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Le RÉCIT des lots livrés n'est PAS ici : il est
@@ -12,12 +12,16 @@ role: >
   d'indexation passe d'une grille fermée de 19 champs identique pour tous les émetteurs à des
   **frameworks stables à variables par entreprise**, chacun garanti par un **manager**.
   `roadmap/V3/doctrine-trois-axes.md` est **close**.
-  ÉTAT au 2026-09-24 : lots 0 à 4 clos ; la chaîne à six agents est allée **une fois** de bout en
-  bout en réel (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais
-  produit d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie
-  aval/suivi vient après (arbitrage utilisateur 2026-09-22).
-  Suite `run_all.sh` = **3072 assertions, 0 échec sur 42 scripts**. Migrations jusqu'à **045**
-  (appliquée). `portfolio-backend` est À JOUR (rebuild du 2026-09-24, #78→#81 déployés).
+  ÉTAT au 2026-09-25 : lots 0 à 4 clos, **lot 5 EN COURS** (le projecteur du mémo est livré et
+  prouvé ; restent la chaîne de bout en bout sur `defendabilite` et le wiring live de
+  `serve_mandate`). La chaîne à six agents est allée **une fois** de bout en bout en réel
+  (RVMD × `qualite_financiere` × `pre_revenus`, 2026-09-21, #78). Elle n'a jamais produit
+  d'investissement, et c'est NORMAL — on construit l'amont lot par lot, la partie aval/suivi vient
+  après (arbitrage utilisateur 2026-09-22).
+  Suite `run_all.sh` = **3141 assertions, 0 échec sur 42 scripts** (re-mesuré le 2026-09-25 ; les
+  3 checks « live » sont hors périmètre par conception, d'où 42 exécutés pour 45 fichiers).
+  Migrations : **046 appliquée** (vérifiée en base, `ticker_archetypes` existe) ; la prochaine
+  ÉCRITE sera **047**. `portfolio-backend` est À JOUR (rebuild du 2026-09-24, #78→#81 déployés).
   PROCHAIN : voir **▶ PROCHAIN JALON** ci-dessous — seul endroit où il est écrit.
 ---
 
@@ -535,6 +539,9 @@ lot 1 ; les tables viennent en dernier.
 > `comite` + deux CHECK (`forme`, `trace`) qui redisent le contrat — un `ingredient_id` bidon serait
 > un faux (#76). T8 mesuré de bout en bout sur le défaut canonique #190 (ROIC fabriqué RVMD →
 > renvoi → mandat consommable → servi, `repondu`→`sans_objet`). Détail : archive 2026-09-21, #77.
+> ⚠️ Depuis le 2026-09-24, #190 n'est plus qu'un **exemple** : le producteur qui le refabriquait à
+> chaque passage est corrigé et sa dernière génération (#656) est superseded. La voie manager reste
+> nécessaire — elle traite ce que le déterministe ne peut pas voir, pas ce cas-là en particulier.
 >
 > **✅ PREMIER PASSAGE RÉEL DE LA CHAÎNE — 2026-09-21 (convention #78)**, `tools/executer_chaine.{py,sh}`
 > (versionnés, ils ÉCRIVENT EN PROD, sans ROLLBACK, et c'est le but). Les six agents existaient,
@@ -833,9 +840,12 @@ lot 1 ; les tables viennent en dernier.
 > `tools/reconcilier_vocabulaires.py` (⚠️ **`4 ok / 2 FAIL — 30 orphelins + 13 inutilisés`, 0/6 blocs**,
 > re-mesuré le 2026-09-21 : le `5 ok / 2 FAIL — 14 / 3` cité ici jusque-là était jugé contre
 > `FIELD_PROFILES`, la grille MVDD à qui le lot 3 avait retiré son autorité — l'étalon a été corrigé,
-> ce n'est pas une régression), **+** le nettoyage des « faux au sens v3 » hérités de RVMD (#190 ROIC
-> fabriqué, #191, #186 — **jugement humain**), **+** le wiring de `serve_mandate`/`read_open_mandates`
-> dans la boucle live du search-worker. Migration prévue : **045**.
+> ce n'est pas une régression), **+** ~~le nettoyage des « faux au sens v3 » hérités de RVMD~~
+> **✅ FAIT le 2026-09-24** (un seul faux réel, #190→…→#656, retiré par correctif de PRODUCTEUR et
+> refus publié → **#662** ; #191 et #186 n'en étaient pas — voir §« Nettoyage des faux » plus bas),
+> **+** le wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker.
+> ⚠️ Migration : **aucune à ce jour dans ce lot** ; **046 est appliquée**, la prochaine écrite sera
+> **047** (le « 045 » écrit ici était une prévision, jamais une mesure).
 >
 > ⚠️ **Ligne de base du 2026-09-21 avant le passage** (requêtée, pas rappelée) : `framework_answers`
 > **0**, `framework_mandates` **16** (tous collecteur, **0 manager**), RVMD **53** entries courantes,
@@ -855,8 +865,20 @@ lot 1 ; les tables viennent en dernier.
 
 > **▶ PROCHAIN JALON — LOT 5, LE MÉMO PROJETÉ, CADRÉ PAR L'ARBITRAGE DU 2026-09-24.**
 >
-> **Ligne de base du 2026-09-24, requêtée ce jour** (`feedback_ligne_de_base_est_une_mesure`) —
-> identique au 2026-09-23, rien n'a dérivé : suite **3072 / 0** · héritage `check_datation` §7
+> **Ligne de base du 2026-09-25, re-requêtée ce jour** (`feedback_ligne_de_base_est_une_mesure`) —
+> suite **3141 / 0 sur 42 scripts** (3072 le 24 au matin ; +69 par le nettoyage RVMD ci-dessous,
+> dont +15 dans `check_financials_feed` et le négatif neuf).
+> ⚠️ **42, pas 43** — le « 43 » écrit ici le 24 était un décompte de mémoire. `run_all.sh` exclut
+> **par conception** les 3 checks « live » (`check_fetch_live`, `check_fetch_relevance`,
+> `check_cours_cote_live` : réseau ouvert, clé fournisseur, écriture DB réelle) ; 45 fichiers
+> `check_*.py` existent, 42 tournent hors-ligne. Un total juste sur un dénominateur faux se relit
+> comme une couverture qu'on n'a pas.
+> ⚠️ **Et le rapport ne se lit que par `run_all.sh`** : lancé à la main sur `$PWD:/app`,
+> `check_frameworks_definitions` sort **41 ok / 1 FAIL — « spec absente »**. Ce n'est pas une
+> régression, c'est la garde de `feedback_check_degrade_en_sortant_a_zero` qui fonctionne : §7
+> confronte le référentiel à `/roadmap/V3/03-spec-frameworks.md`, et `run_all.sh` monte `/roadmap`
+> (+ `/contract_frozen`) que l'invocation nue n'a pas. Avec les montages : **44 / 0**.
+> Héritage `check_datation` §7 :
 > **128 courantes sans portée / 110 datées** · RVMD × `qualite_financiere` **5 chemises hétérogènes**
 > (40 pièces remises sur **74** courantes — 57 le 23/09, la valorisation en a ajouté) ·
 > `reconcilier_vocabulaires.sh` **4 ok / 2 FAIL — 30 orphelins + 13 inutilisées, 0/6 blocs**.
@@ -865,12 +887,13 @@ lot 1 ; les tables viennent en dernier.
 > (« Avec 2 pilotes sur 6 blocs, l'écart est bloc-par-bloc… Un vert ici avant cela est un défaut du
 > mesureur, pas une bonne nouvelle »). Viser 0/0 maintenant, c'est confondre le but et l'étape.
 >
-> **LE DÉFAUT MESURÉ.** `frameworks.yaml` ne porte **aucun** champ reliant un framework à un bloc du
-> mémo (`chemin_indexation` vit dans l'espace de noms du framework, pas dans celui du mémo). Les 6
-> blocs du `ResearchMemo` sortent donc tous « aucune méthodologie approuvée » : sur RVMD, **14
-> chemises instruites et 40 pièces remises n'atteignent pas la note de comité**, dont
-> `qf_7.tresorerie_disponible` en rang **A**. Le bloc `financials` que lit le comité est rédigé
-> librement par le modèle, à côté du classeur — **c'est littéralement la cause racine §0.3**.
+> **LE DÉFAUT MESURÉ — ÉTAT DU 2026-09-24 AU MATIN, CORRIGÉ DEPUIS** (gardé parce que le jalon ne se
+> comprend pas sans lui). `frameworks.yaml` ne portait **aucun** champ reliant un framework à un bloc
+> du mémo (`chemin_indexation` vit dans l'espace de noms du framework, pas dans celui du mémo). Les 6
+> blocs du `ResearchMemo` sortaient donc tous « aucune méthodologie approuvée » : sur RVMD, **14
+> chemises instruites et 40 pièces remises n'atteignaient pas la note de comité**, dont
+> `qf_7.tresorerie_disponible` en rang **A**. Le bloc `financials` que lit le comité était rédigé
+> librement par le modèle, à côté du classeur — **c'était littéralement la cause racine §0.3**.
 >
 > **▶ ARBITRAGE UTILISATEUR DU 2026-09-24 — option (A), et sa contrainte de croissance :**
 > *« On commence par faire tourner de bout en bout sur les 2 frameworks construits ; ensuite il
@@ -890,10 +913,78 @@ lot 1 ; les tables viennent en dernier.
 >    n'est pas « les 2 blocs marchent » mais **« un 3ᵉ framework fictif ajouté en YAML SEUL se projette
 >    sans diff de code »** — la garantie porte sur la croissance, elle se teste sur la croissance.
 >
-> Restent dans le lot 5 tel que §10 le découpe : nettoyage des « faux au sens v3 » de RVMD (#190 ROIC
-> fabriqué, #191, #186 — **jugement humain**, à ne pas déléguer) et wiring de
-> `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker. Touche les **3 points de
-> synchro** (#19) **et** l'exemple JSON du prompt en DB (#39).
+> ✅ **LES DEUX EXIGENCES SONT LIVRÉES ET PROUVÉES — 2026-09-24.** Ce fichier ne le disait pas encore
+> (écrit le 2026-09-25) : le jalon était mesuré sur son diagnostic, jamais sur sa livraison.
+> - **Détenteur unique** : `app/agents/v2/projection_memo.py`. ⚠️ **Il ne nomme AUCUN framework** —
+>   ni `qualite_financiere`, ni `defendabilite`, nulle part : ni constante, ni `if`, ni table de
+>   correspondance. Le lien vit **en données**, `bloc_memo:` dans `frameworks.yaml` (2 occurrences,
+>   lignes 45 et 294), et le module l'itère. C'est exactement l'exigence n°2.
+> - **La preuve de croissance, pas la preuve d'usage** : `check_memo_projete.py` **§4** injecte un
+>   framework **fictif** (`cadre_fictif` → un bloc cible) **en YAML seul**, et vérifie qu'il se
+>   projette. Un projecteur qui aurait codé les 2 en dur passerait « les 2 blocs marchent » et
+>   rougirait ici. ⚠️ Le négatif correspondant **mute le YAML, pas le Python** — c'est le seul
+>   endroit du dépôt où la mutation porte sur la donnée, parce que c'est la donnée qui porte la règle.
+> - **Trois états nommés, jamais un bloc vide** : `instruite` / `sans_acquittement` /
+>   `pas_de_methodologie_approuvee`. Un bloc vide se lit « rien à signaler ».
+> - **Le projecteur ne RÉDIGE pas, n'AGRÈGE pas, ne JUGE pas, n'ÉCRIT pas** — aucun appel de modèle,
+>   deux analystes sur une question donnent **deux points** (moyenner reproduirait la cause n°1 de
+>   #50), `posture='NEUTRE'` verrouillée par le contrat, production **à la lecture** (#53/#54).
+> - **Une réponse orpheline lève un `ProjectionRefusee`, elle n'est jamais sautée.** Sautée, elle
+>   ferait passer un chapitre de `instruite` à `sans_acquittement` **sans qu'aucun décompte ne bouge**
+>   (`feedback_check_degrade_en_sortant_a_zero`).
+> - **Gardes** : `check_memo_projete.py` **51 / 0** + `negatif_memo_projete.sh` **25 mutations / 0** ;
+>   `check_frameworks_definitions.py` **44 / 0** + `negatif_frameworks_definitions.sh` **25 / 0**
+>   (ré-exécutés le 2026-09-25, pas rappelés).
+> - **Lecture gratuite** : `bash tools/montrer_memo_projete.sh RVMD` — exit 0 = note imprimée,
+>   1 = projection REFUSÉE, 2 = non mesurable. Bilan RVMD : **6 chapitres — 1 instruite
+>   (`financials`) · 1 `sans_acquittement` (`moat` : méthodologie approuvée, 0 réponse au dossier) ·
+>   4 `pas_de_methodologie_approuvee` · 6 points publiés · 0 réponse non acquittée.**
+>
+> ⚠️ **CE QUE CE BILAN DIT ET QU'IL FAUT ENTENDRE** : `moat` est `sans_acquittement`, donc
+> l'arbitrage (A) — « faire tourner de bout en bout sur **les 2** frameworks construits » — n'est
+> **pas** consommé. La mécanique est prouvée sur 2 blocs ; la CHAÎNE n'a tourné que sur un. C'est le
+> premier point de la reprise, et il coûte des appels modèle (voir ci-dessous).
+>
+> ✅ **Nettoyage des « faux au sens v3 » de RVMD — FAIT le 2026-09-24, et c'était un défaut de
+> PRODUCTEUR, pas de donnée.** Le jugement humain a corrigé la caractérisation que ce fichier en
+> donnait (cf. §« 24 entries suspectes » plus bas, réécrit) : **#191 n'est pas un faux** — son
+> descendant courant #657 refuse le ratio et publie la consommation de trésorerie, c'est la doctrine
+> correctement appliquée, jugée sur son titre et non sur son contenu. **#186 n'a aucun descendant
+> vivant.** Seul **#190** en était un, et il s'était **reproduit** #190→#231→#274→#549→**#656** :
+> supprimer la ligne n'aurait rien réglé, le détenteur est le producteur (#46). Livré dans
+> `financials_feed.py` — garde ROIC jumelle de la garde FCF (elle manquait parce qu'on n'avait
+> cherché que les nombres **flatteurs** : +80,8 % de conversion saute aux yeux, −49,7 % de ROIC
+> paraît plausible) · le refus est **PUBLIÉ** avec les tags du champ, donc il supersede la ligne
+> fausse par le chemin normal (un refus muet aurait laissé #656 courante pour toujours —
+> `ENTRIES_COURANTES` ne connaît que `superseded_by`) · « intrant absent » et « ratio non défini »
+> deviennent un `etat` **structuré** (la prose ne se testait qu'au `in`, et ce `in` n'a jamais vu le
+> préfixe ajouté devant : le motif sortait « intrant manquant en base EDGAR : chiffre d'affaires NUL
+> (déposé, pas manquant) », au vert depuis le 2026-09-04). Écrit en prod : #656 → **#662**
+> (`roic_pct` NULL). Gardes : `check_financials_feed.py` **108/0** (dont le retrait de l'assert
+> « ROIC négatif publié tel quel (−90,7 %) », qui **verrouillait le faux**) +
+> `negatif_financials_feed.sh` **8 mutations / 0**, satisfiabilité mesurée d'abord.
+> ⚠️ Confirmation indépendante et gratuite : `qf_1` était déjà `sans_objet` en base (#469, « sans
+> exploitation qui immobilise du capital productif, la question n'a pas d'objet ») — **l'analyste
+> avait raison pendant que le producteur déterministe le contredisait en tier A.**
+>
+> **▶ CE QUI RESTE DU LOT 5, DANS L'ORDRE.**
+>
+> 1. **Faire tourner la chaîne de bout en bout sur `defendabilite`** — littéralement l'arbitrage (A),
+>    et le seul item qui le consomme. `moat` est aujourd'hui `sans_acquittement` : **méthodologie
+>    approuvée, 0 réponse au dossier**. ⚠️ **Coût MODÈLE.** Donc, avant toute dépense, exécuter la
+>    **frontière gratuite** et la **lire en texte** (`feedback_frontiere_gratuite_avant_depense_modele`) :
+>    `acceptation_analyste.sh --admissibilite` sur RVMD × `defendabilite`, puis
+>    `tools/montrer_memo_projete.sh RVMD`. ⚠️ **Et re-requêter la ligne de base AVANT le passage**,
+>    pas après (`feedback_ligne_de_base_est_une_mesure`) — le lot 4 a démarré sur un « 52/51/27 »
+>    de mémoire qui valait 15/15/43.
+> 2. **Wiring de `serve_mandate`/`read_open_mandates` dans la boucle live du search-worker.** Touche
+>    les **3 points de synchro** (#19) **et** l'exemple JSON du prompt en DB (#39).
+>    ⚠️ **Mesuré le 2026-09-25**, `grep -rn 'serve_mandate\|read_open_mandates' app/ tools/` :
+>    **0 appelant dans `app/`**, les seuls appels vivent dans `tools/acceptation_manager.py`. Le
+>    décideur existe, il est testé, et **rien ne le déclenche en production** — figure #71 (« un
+>    décideur sans producteur ne décide jamais : 0 appelant, 0 ligne, garde verte »). La garde à
+>    écrire doit donc distinguer **« vert »** de **« exercé »** : compter les appelants, pas les
+>    asserts ([[feedback_controle_au_point_de_lecture]]).
 >
 > **Ce que ce lot NE fait PAS**, et pourquoi : la partie **MONITORING** (moitié ÉCRITURE de « on
 > n'écrase pas, on empile ») relève du **suivi**, que l'arbitrage #1 du 2026-09-22 place APRÈS
@@ -913,7 +1004,7 @@ lot 1 ; les tables viennent en dernier.
 | 2c | ✅ **TERMINÉ** : traducteur → plan → collecteur (§3.6) · persistance · exécuteur réel + chaîne runtime · **`POSTES` dérivé du plan + retrait du levier `RESSERRER` + mort de §12bis (maillon 5, 2026-09-12)** | **039** ✅ |
 | 3 | 🔄 **EN COURS** — ✅ **l'analyste** (maillon 1, 2026-09-13) · ✅ **`framework_answers` / `_dispenses` en base + persistance** (maillon 2, 2026-09-13, migration **040 appliquée**) · **suppression** de `MVDD_SPEC`, `SYNTHESIS_TARGETS`, `DECLARED_NONBLOCKING_GAPS` · **collecte neuve pilotée par le plan** sur NVDA / MSFT / RVMD | **040** ✅ |
 | 4 | ✅ **CLOS (2026-09-21)** — AGENT (2026-09-20, #76 : manager + 4 contrôles + renvoi→mandat, `check_manager` 35/0) **et DONNÉES** (2026-09-21, **#77** : migration **043** appliquée réconciliant `FrameworkMandate` par-question ↔ table 039 par-ingrédient · `manager_persist.py` — l'avis se **recalcule**, seul le mandat est persisté (arbitrage utilisateur) · `check_manager_persist` 17/0 · négatif 5/0 · **acceptation T8 6/0**) | **043** ✅ |
-| 5 | Le `research_memo` devient la **projection** des frameworks acquittés · réconciliation à 0/0 | 042 |
+| 5 | 🔄 **EN COURS** — ✅ **le projecteur** (2026-09-24, `projection_memo.py`, détenteur unique qui ne nomme aucun framework ; lien `bloc_memo` **en YAML** ; 3 états nommés ; `check_memo_projete` **51/0** + négatif **25/0**) · ✅ **nettoyage des faux RVMD** (#656→#662) · ⏳ **chaîne de bout en bout sur `defendabilite`** (coût modèle) · ⏳ **wiring `serve_mandate` en live** (0 appelant mesuré) · ⏳ réconciliation à 0/0 — **état terminal de la roadmap, PAS ce lot** | — (aucune migration à ce jour ; **046 appliquée**, la prochaine écrite sera 047) |
 | 6 | Les 3 niveaux de drill-down · acquitter / renvoyer tracés (A7) · `qualite_info` **dérivée** | — |
 | 7 | Le second pilote de bout en bout · acceptation complète T1-T8 | — |
 
@@ -958,6 +1049,13 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 
 ## Où on en est (2026-09-09)
 
+> ⚠️ **CE TITRE MENT SUR SON CONTENU : ce tableau est un INSTANTANÉ DU 2026-09-09, pas un état
+> courant.** Il a déjà coûté un faux départ : le lot 4 a démarré sur ses « 52 / 51 / 27 » alors que
+> la base portait **15 / 15 / 43**. ⚠️ **Aucun chiffre de cette section ne se cite sans être
+> re-requêté** (`feedback_ligne_de_base_est_une_mesure`). Ce qui est à jour vit à un seul endroit :
+> **▶ PROCHAIN JALON** ci-dessus. On le garde pour les **modes de panne** qu'il documente, qui eux
+> n'ont pas de date de péremption.
+
 **Le système est exercé, pas prototypé.** La chaîne complète a tourné de bout en bout sur trois
 émetteurs, et on connaît ses modes de panne — c'est le principal actif du chantier.
 
@@ -967,8 +1065,11 @@ règle plutôt que la ré-implémenter en SQL (méthode des migrations 034/035) 
 | Readiness | **`not_ready (peremption)`**, 9 champs périmés, 7 mandats, **0 collecte** | **`not_ready (peremption)`**, 9 champs périmés, **0 collecte** | **rapport #28** — `not_ready`, **9 collecte / 4 rafraîchissement** |
 | Chaîne | research → bull/bear → réfutation → synthèse = `PROCEED_AVEC_CONDITIONS` | idem, ≈ $0,018 | **0 synthèse grounded** — 3 des 4 cibles vides |
 
-- **Suite : `bash checks/run_all.sh` = TOUT VERT (2726 assertions sur 37 scripts, 0 échec, mesuré le
-  2026-09-21 après les données du manager #77 ; 2709/36 à l'agent manager #76).** `check_manager`
+- **Suite : `bash checks/run_all.sh` = TOUT VERT.** ⚠️ **Le total vit au ▶ PROCHAIN JALON, pas ici**
+  (détenteur unique, #46) — le « 2726 / 37 » qui traînait sur cette ligne datait du 2026-09-21 et
+  valait **3141 / 42** au 2026-09-25. Un compteur recopié re-diverge au correctif suivant. Ce qui
+  suit ne décrit que des **conditions d'exécution**, qui elles ne se périment pas au même rythme :
+  `check_manager`
   **35/0** hors ligne (le manager est pur — aucun appel modèle) + `negatif_manager.sh` 7/7 ;
   `check_manager_persist` **17/0** (base réelle, ROLLBACK) + `negatif_manager_persist.sh` 5/0.
   `check_edgar_feed` **98/0** et **hors ligne** (§12bis mort → ne
@@ -1050,18 +1151,37 @@ justes, c'est le *fait énoncé* qui était faux.
    automatisable sans donner à une heuristique de dates une voix sur ce que le corpus affirme (#29).
    ⚠️ Quatre entries tier A affirment « aucun produit approuvé pour la vente commerciale » alors que
    **la FDA a approuvé RASONQUE le 2026-08-26** — aucune n'est fausse, toutes sont périmées.
-   ⚠️ Trois d'entre elles sont des **faux** au sens de la v3, pas des périmées : #190 fabrique un
-   ROIC pour une société sans revenus, #191 s'intitule « conversion FCF **non définie** », #186
-   range l'incidence du cancer du pancréas sous `marche.croissance_marche_historique`. Le lot 3 les
-   rendra visibles comme orphelines **nommées** ; l'arbitrage reste humain.
+   **Ce point reste ouvert.**
+
+   ✅ **Le volet « faux au sens v3 » est CLOS le 2026-09-24 — et ce fichier en donnait une
+   caractérisation fausse sur deux points sur trois.** Ce qui a été mesuré, et qui se re-mesure en
+   deux requêtes :
+   - **Les ids #186/#190/#191 ne sont plus lus par la chaîne vivante.** La migration 036 a déplacé la
+     grappe V2 dans `archive_v2.knowledge_entries` (ids **1–191**, gelés) ; `public` commence à
+     **192**. Un `SELECT … WHERE id IN (186,190,191)` sur `public` rend **0 ligne** — ce n'est pas un
+     corpus propre, c'est un corpus qu'on regardait au mauvais endroit.
+   - **Les faux se REPRODUISENT.** #190 → #231 → #274 → #549 → **#656**, quatre générations de la
+     même entry tier A, la dernière courante. Supprimer une ligne n'aurait rien réglé : **le
+     détenteur est le producteur** (#46), pas la donnée.
+   - **#191 n'est pas un faux.** Ce fichier le jugeait sur son TITRE (« conversion FCF non
+     définie »). Son descendant courant **#657** refuse le ratio et publie la consommation de
+     trésorerie à la place : c'est la doctrine correctement appliquée, l'exemplaire dont la garde
+     ROIC manquait.
+   - **#186 n'a aucun descendant vivant** — rien à statuer.
+   - **Seul #190 en était un**, et il est retiré par le chemin normal : correctif de producteur dans
+     `financials_feed.py` (garde ROIC **jumelle** de la garde FCF, absente parce qu'on n'avait
+     cherché que les nombres **flatteurs**), refus **PUBLIÉ** avec les tags du champ, donc
+     **#656 → #662** (`roic_pct` NULL). Un refus muet aurait laissé #656 courante pour toujours :
+     `ENTRIES_COURANTES` ne connaît que `superseded_by`. Gardes : `check_financials_feed.py`
+     **108/0** + `negatif_financials_feed.sh` **8/0**. Détail et arbitrages : §« Nettoyage des faux
+     au sens v3 » plus haut.
+
    ⚠️ **Mesuré le 2026-09-12** : RVMD porte **43** entries déterministes actives (vs 13 au banc
    d'essai) — dont **30 faits web SANS `metric`** (25 `edgar_official` + 5 `company_ir_official`),
    écrits par le collecteur du maillon 4 (search-worker sur sec.gov / IR). ✅ **Ces 30 ne sont PAS des
    parasites — §0.6 les qualifie de compatibles** (frais, cités, tous `mesure`) : on ne les
    réconcilie donc pas ici, et §7 a été re-mesuré en invariant plutôt que de compter le corpus (cf.
-   frontmatter, [[project_entry_nature_gate_invariant]]). Restent seulement les **faux au sens v3**
-   (#190 ROIC fabriqué, #191 « conversion FCF non définie », #186 mal rangé) — jugement humain, que le
-   lot 3 rendra visibles comme orphelines nommées, et que sa collecte neuve (§5.3) superséder a.
+   frontmatter, [[project_entry_nature_gate_invariant]]).
 2. **FDA / EMA en régulateur A- (0,85)** — décidé, non commencé. `fda.gov` n'est dans **aucune**
    table ; `_EU_REGULATOR_SUFFIXES` porte `esma.europa.eu` (titres) mais pas `ema.europa.eu`
    (médicaments). L'approbation FDA du 2026-08-26 classe aujourd'hui `web_search_generic` **0,50**.
@@ -1273,6 +1393,10 @@ justes, c'est le *fait énoncé* qui était faux.
 > les étapes 4/5/6/8 du benchmark sont produites avec **zéro preuve indexable**) ; **3 chemins
 > jamais consommés**, dont le plus peuplé de la base ; RVMD (biotech pré-revenus) produit un ROIC
 > fabriqué, une « conversion FCF non définie », et **0 synthèse grounded**.
+> ⚠️ **Relecture du 2026-09-24 sur ce diagnostic** : le ROIC fabriqué était réel (corrigé depuis, au
+> producteur), mais la « conversion FCF non définie » était **l'exemple du système qui marche**, pas
+> un défaut — l'entry NOMME son refus. Un diagnostic qui juge une entry sur son TITRE se trompe de
+> sujet ; c'est la garde ROIC jumelle qui manquait, pas celle du FCF.
 > La v3 remplace la grille par des **frameworks stables à variables par entreprise** : le
 > référentiel est un **fichier inerte versionné** (`app/frameworks/frameworks.yaml`, **pas des
 > tables**), **`covers` DISPARAÎT de `knowledge_entries`** au profit d'une table de liaison
@@ -1292,9 +1416,15 @@ justes, c'est le *fait énoncé* qui était faux.
 > de rangement*, et c'est le rangement que la v3 corrige.
 > 🚦 **LOT 3 TERMINÉ. LOT 4 CLOS (2026-09-21) : agent manager (#76) + ses DONNÉES (#77, migration 043,
 > `manager_persist.py`, acceptation T8 6/0). Arbitrage utilisateur : l'avis du manager se RECALCULE à
-> la lecture, seul le MANDAT est persisté (#53/#54). PROCHAIN PAS = LOT 5 = le `research_memo` devient
-> la PROJECTION des frameworks acquittés + réconciliation à 0/0 + le wiring de consommation des
-> mandats manager dans la boucle live du search-worker. Migration prévue : 044.** Historique — Lot 2c :
+> la lecture, seul le MANDAT est persisté (#53/#54).
+> **LOT 5 EN COURS (2026-09-25) : ✅ le `research_memo` EST la projection des frameworks acquittés**
+> — `projection_memo.py`, détenteur unique qui **ne nomme aucun framework** (le lien est `bloc_memo`
+> dans `frameworks.yaml`), 3 états nommés, `check_memo_projete` **51/0** + négatif **25/0**, prouvé
+> par un **3ᵉ framework fictif ajouté en YAML seul**. ✅ Faux RVMD nettoyés au producteur (#656→#662).
+> ⏳ Restent : la chaîne de bout en bout sur `defendabilite` (coût modèle) et le wiring de
+> `serve_mandate` en live (**0 appelant dans `app/`, mesuré**). ⚠️ **Aucune migration dans ce lot à
+> ce jour** ; 046 est appliquée, la prochaine écrite sera 047 — le « 044 » annoncé ici était une
+> prévision, et ce tableau de prévisions a déjà menti trois fois.** Historique — Lot 2c :
 > contrat du plan + pont (T1bis) + traducteur +
 > collecteur + persistance + exécuteur réel + **maillon 5 : `POSTES` devenu CATALOGUE de recettes
 > (collecte plan-dérivée), levier `RESSERRER` de `curator.py` RETIRÉ, §12bis MORT** (conventions
@@ -1306,8 +1436,11 @@ justes, c'est le *fait énoncé* qui était faux.
 > `check_framework_persist.py` 13/0, `negatif_framework_persist.sh` 6 mutations/0, zéro résidu) ;
 > ✅ **maillon 3 = suppression** de `MVDD_SPEC` / `SYNTHESIS_TARGETS` / `DECLARED_NONBLOCKING_GAPS`
 > (commit `203fe65`, 15 fichiers, `nonblocking_gaps_for()` → `{}`, `read_dispenses()` branché).
-> **Reste au lot 3** : maillon 4ter = collecte neuve **persistée** sur NVDA/MSFT/RVMD (§5.3) ;
-> maillon 5 = réconciliation à 0/0. Prochaine migration : **043**.
+> ~~**Reste au lot 3**~~ *(phrase d'époque, conservée telle quelle : elle disait « maillon 4ter =
+> collecte neuve persistée sur NVDA/MSFT/RVMD (§5.3) ; maillon 5 = réconciliation à 0/0. Prochaine
+> migration : 043 ». Le lot 3 est clos et la 043 est appliquée depuis. **Rien de ce bloc « À coller »
+> ne se lit comme une consigne** — le seul endroit où le prochain pas est écrit reste ▶ PROCHAIN
+> JALON.)*
 > ✅ **maillon 4 = l'EXÉCUTION d'un appariement, LIVRÉ le 2026-09-18** (convention **#72**, aucune
 > migration) : `knowledge/appariement_feed.py` évalue la `formule` sur les concepts XBRL **déjà lus**
 > par `assurer_carte` — **zéro appel réseau supplémentaire** — et écrit l'entry avec sa provenance

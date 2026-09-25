@@ -41,6 +41,18 @@ mutations=(
 "$PONT¦            if cible not in vus:¦            if False:¦[J] un substitut qui pointe une question inexistante"
 "$PONT¦    if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:¦    if False:¦[M] un fichier dont la version ne correspond pas"
 "$PONT¦        if racine != f.id:¦        if False:¦[N] une question dont le chemin d'indexation appartient à un AUTRE framework"
+# [O] et [P] — le lien framework → chapitre de note (lot 5). Sans ces deux mutations, les asserts
+# ajoutés avec le lien seraient des gardes qu'aucune mutation n'atteint (6ᵉ faux vert).
+"$PONT¦        if f.bloc_memo not in BLOCS_MEMO:¦        if False:¦[O] un framework qui projette sur un chapitre INEXISTANT"
+"$PONT¦        if f.bloc_memo in revendique:¦        if False:¦[P] deux frameworks qui revendiquent le MÊME chapitre"
+# ⚠️ PAS DE MUTATION DU `bloc_memo` RÉEL DANS LE YAML, ET C'EST MESURÉ, PAS OMIS. Essayée : elle
+# fait sortir le check en « script MORT avant son bilan ». La raison n'est pas un défaut du check,
+# c'est la force de la garde — `load_frameworks()` est appelé au chargement du module, donc un
+# `bloc_memo` fautif dans le référentiel réel n'abîme pas un assert, il rend le système entier
+# inchargeable. Le harnais ne sait pas coter « mort bruyamment = gardé », et le faire taire en
+# assouplissant le check échangerait une garde catastrophique contre un assert rouge. Le versant
+# DONNÉES de [O]/[P] est éprouvé ailleurs, sur un référentiel AUGMENTÉ jetable :
+# `checks/negatif_memo_projete.sh` §4.
 # §4 — les clefs que le pont LIT (le mode de panne est un SAUT, pas une erreur)
 "$PONT¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION + (\"framework_version\",)¦CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION¦les clefs réellement lues par le pont sont celles déclarées"
 "$PONT¦        if plancher is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦        if profil.get(\"plancher_tier_typo\") is not None and _TIER_RANK.get(attendu, len(TIER_ORDER)) > _TIER_RANK.get(¦les clefs réellement lues par le pont sont celles déclarées"

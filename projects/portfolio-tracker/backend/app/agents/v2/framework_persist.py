@@ -18,13 +18,15 @@ panne entre les deux laisserait deux lignes courantes actives sur la même lign�
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Optional
 
 import asyncpg
 
 from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES, FrameworkAnswer
 
-__all__ = ["persist_answer", "persist_dispense", "read_dispenses"]
+__all__ = ["persist_answer", "persist_archetype", "persist_dispense",
+           "read_answers_courantes", "read_archetype", "read_dispenses"]
 
 
 def _lire_chemin(answer: FrameworkAnswer, chemin: str) -> Any:
@@ -71,6 +73,103 @@ async def persist_answer(conn: asyncpg.Connection, answer: FrameworkAnswer) -> i
             nouveau_id, ancien_id)
 
     return nouveau_id
+
+
+async def read_answers_courantes(
+    conn: asyncpg.Connection,
+    *,
+    ticker_id: str,
+    framework_version: str,
+) -> list[tuple[int, FrameworkAnswer]]:
+    """Les réponses COURANTES d'un émetteur, pour une version de référentiel. Rend `(id, réponse)`.
+
+    « Courante » = `superseded_by IS NULL`, et cette sélection appartient à la table : la lignée est
+    fermée par `persist_answer`, pas re-déduite par le lecteur. La refaire côté appelant en ferait
+    un jumeau, divergent le jour où la règle de supersession changera (#46).
+
+    `framework_version` est un paramètre REQUIS, jamais un filtre optionnel : sans lui, le lecteur
+    rendrait aussi les réponses écrites contre un énoncé qui a changé, et le projecteur les
+    publierait comme si elles répondaient à la question actuelle (écart V10). Un appelant qui veut
+    « tout » doit le dire version par version, donc savoir qu'il le fait.
+
+    `answer_json` est de type JSONB : asyncpg le décode déjà. Le revalider par le contrat n'est pas
+    redondant — une ligne écrite par une version antérieure du contrat doit LEVER ici, pas se
+    charger à moitié.
+    """
+    rows = await conn.fetch(
+        "SELECT id, answer_json FROM framework_answers "
+        "WHERE ticker_id = $1 AND framework_version = $2 AND superseded_by IS NULL "
+        "ORDER BY id",
+        ticker_id, framework_version)
+    return [(row["id"], FrameworkAnswer.model_validate(row["answer_json"])) for row in rows]
+
+
+async def read_archetype(
+    conn: asyncpg.Connection,
+    *,
+    ticker_id: str,
+    a_la_date: Optional[date] = None,
+) -> Optional[tuple[str, str]]:
+    """L'archétype EN VIGUEUR d'un émetteur (migration 046). Rend `(archetype, motif)` ou `None`.
+
+    `None` = **l'émetteur n'est pas classé**, et c'est un troisième état, pas un défaut de lecture :
+    il se distingue de « classé rentable » comme de « classé pré-revenus ». Retomber sur un
+    archétype par défaut ferait répondre des questions hors-sujet et fabriquerait exactement le
+    défaut T4 / entry #190 (un ROIC pour une société sans revenus). L'ignorance se DIT (#25/#44).
+
+    « En vigueur » = la date d'effet la plus récente qui ne soit pas dans le futur. `created_at`
+    n'entre pas dans le tri : une saisie tardive ne doit pas prendre le pas sur un classement dont
+    l'effet est antérieur.
+
+    ⚠️ LE VOCABULAIRE EST CONFRONTÉ À SON DÉTENTEUR, PAS À UN CHECK SQL. Un archétype stocké qui ne
+    figure plus dans `frameworks.yaml` LÈVE : sauté, il rendrait `None` et l'émetteur paraîtrait
+    non classé alors qu'il l'est — un contrôle qui dégrade en sortant à zéro est un vert
+    (`feedback_check_degrade_en_sortant_a_zero`).
+    """
+    row = await conn.fetchrow(
+        "SELECT archetype, motif FROM ticker_archetypes "
+        "WHERE ticker_id = $1 AND effective_from <= $2 "
+        "ORDER BY effective_from DESC LIMIT 1",
+        ticker_id, a_la_date or date.today())
+    if row is None:
+        return None
+
+    # Import local : `framework_persist` est importé par des checks sans référentiel monté.
+    from app.agents.v2.frameworks import FrameworkDefinitionRefused, load_frameworks
+
+    declares = load_frameworks().archetypes
+    if row["archetype"] not in declares:
+        raise FrameworkDefinitionRefused(
+            f"`{ticker_id}` est classé `{row['archetype']}`, qui n'est plus un archétype déclaré "
+            f"({sorted(declares)}) — un classement périmé rendrait hors-sujet des questions qui "
+            "s'appliquent, et le manager acquitterait des `sans_objet` fabriqués")
+    return row["archetype"], row["motif"]
+
+
+async def persist_archetype(
+    conn: asyncpg.Connection,
+    *,
+    ticker_id: str,
+    archetype: str,
+    motif: str,
+    effective_from: Optional[date] = None,
+) -> int:
+    """Classe un émetteur à une date d'effet. APPEND-ONLY : ne met jamais à jour la ligne courante.
+
+    Un reclassement est un FAIT DATÉ (« la société est devenue rentable au T3 »), pas une
+    correction : l'écraser perdrait la raison pour laquelle les notes antérieures posaient d'autres
+    questions. C'est l'arbitrage du 2026-09-22 — on n'écrase pas, on empile.
+
+    Rejouer le MÊME jour d'effet met à jour le classement de ce jour (`ON CONFLICT`) : c'est une
+    correction de saisie, pas un empilement, et l'index unique la rend explicite.
+    """
+    return await conn.fetchval(
+        "INSERT INTO ticker_archetypes (ticker_id, archetype, effective_from, motif) "
+        "VALUES ($1, $2, $3, $4) "
+        "ON CONFLICT (ticker_id, effective_from) "
+        "DO UPDATE SET archetype = EXCLUDED.archetype, motif = EXCLUDED.motif "
+        "RETURNING id",
+        ticker_id, archetype, effective_from or date.today(), motif)
 
 
 async def read_dispenses(

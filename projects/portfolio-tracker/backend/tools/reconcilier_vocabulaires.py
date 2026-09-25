@@ -58,7 +58,7 @@ from __future__ import annotations
 import sys
 
 from app.agents.v2.frameworks import load_frameworks
-from app.contracts import analysis_v2_schemas as S
+from app.contracts.memo_blocs import BLOCS_MEMO, feuilles_memo
 
 ok = fail = 0
 
@@ -73,16 +73,11 @@ def check(label: str, cond: bool, detail: str = "") -> None:
         print(f"  FAIL {label} {detail}")
 
 
-# Les 6 blocs du `ResearchMemo` qui portent de la connaissance sur l'émetteur. Les deux listes
-# d'incertitudes et `posture` n'en sont pas : ce sont des méta-champs du mémo lui-même.
-BLOCS: dict[str, type] = {
-    "business_model": S.BusinessModel,
-    "moat": S.Moat,
-    "financials": S.Financials,
-    "management": S.Management,
-    "industry": S.Industry,
-    "valuation": S.Valuation,
-}
+# ⚠️ LA LISTE DES BLOCS A DÉMÉNAGÉ LE 2026-09-24 (lot 5). Elle vivait ici, recopiée à la main ; le
+# projecteur et le pont des définitions en avaient besoin aussi, et trois exemplaires re-divergent
+# au premier renommage (`feedback_correctif_regle_jumeaux`). Détenteur unique :
+# `app.contracts.memo_blocs`, où elle est DÉRIVÉE de `ResearchMemo.model_fields`.
+# `feuilles_memo()` l'a suivie, pour la même raison : elle dépendait d'elle.
 
 # Champs DÉRIVÉS d'autres champs du mémo : ils n'ont pas à être fondés par une entry, ils se
 # calculent. Les exclure n'est pas une dispense de confort — c'est la différence entre « rien ne peut
@@ -130,17 +125,6 @@ ALIAS: dict[str, str] = {
 }
 
 
-def feuilles_memo() -> set[str]:
-    """Les feuilles du `ResearchMemo`, lues dans le contrat lui-même — jamais recopiées."""
-    out: set[str] = set()
-    for prefixe, cls in BLOCS.items():
-        for nom in cls.model_fields:
-            if nom == "source_entry_refs":     # la référence n'est pas un champ de connaissance
-                continue
-            out.add(f"{prefixe}.{nom}")
-    return out
-
-
 def vocabulaire_questions() -> dict[str, str]:
     """Les `chemin_indexation` des questions, lus dans `frameworks.yaml` — chemin → framework id.
 
@@ -183,7 +167,8 @@ def main() -> int:
     # l'invariant [N] de `_valider_pont_definitions`, et `vocabulaire_questions()` passe par
     # `load_frameworks()`, qui LÈVE. Le vérifier une seconde fois ici en referait un jumeau — la
     # panne exacte que ce correctif répare.
-    fw_ids = {f.id for f in load_frameworks().frameworks}
+    fichier = load_frameworks()
+    fw_ids = {f.id for f in fichier.frameworks}
     derives_morts = sorted(d for d in DERIVES if d not in memo)
     check("[A] chaque champ déclaré DÉRIVÉ est encore une feuille du mémo", not derives_morts,
           f"→ {derives_morts} : une dispense qui ne dispense plus rien")
@@ -213,16 +198,25 @@ def main() -> int:
         print(f"   · {c}   [{questions[c]}]")
 
     # ── §C — l'écart est-il champ-par-champ, ou bloc-par-bloc ? ──────────────────
-    # Un « 30 » nu se lit comme 30 champs cassés. Il dit en réalité : aucun des 6 blocs du mémo
-    # n'a de méthodologie approuvée, et les 2 frameworks pilotes ne sont les blocs d'aucun mémo.
-    # Sans ce décompte, le rendu fabrique un diagnostic faux (`feedback_rendu_est_un_producteur`).
-    blocs_couverts = sorted({b for b in BLOCS if any(c.startswith(f"{b}.") for c in index)})
-    blocs_nus = sorted(set(BLOCS) - set(blocs_couverts))
-    print(f"\nblocs du mémo adossés à au moins une question : {len(blocs_couverts)} / {len(BLOCS)}")
+    # Un « 30 » nu se lit comme 30 champs cassés. Il dit en réalité : combien de chapitres de la
+    # note n'ont AUCUNE méthodologie approuvée. Sans ce décompte, le rendu fabrique un diagnostic
+    # faux (`feedback_rendu_est_un_producteur`).
+    #
+    # ⚠️ CE DÉCOMPTE MESURAIT LA MAUVAISE CHOSE JUSQU'AU 2026-09-24. Il testait
+    # `chemin.startswith(f"{bloc}.")` — c'est-à-dire la COÏNCIDENCE DE NOMS entre un framework et un
+    # chapitre. Or l'invariant [N] force la racine du chemin à valoir l'id du framework : §C ne
+    # pouvait virer au vert qu'en appelant un framework `financials`, soit « un alias de plus »,
+    # ce que l'en-tête de ce fichier rejette explicitement. Le lot 5 déclare le lien dans le
+    # référentiel (`bloc_memo`), et §C le LIT — un lien déclaré, jamais un nom deviné.
+    revendique = {f.bloc_memo: f.id for f in fichier.frameworks}
+    blocs_couverts = sorted(b for b in BLOCS_MEMO if b in revendique)
+    blocs_nus = sorted(set(BLOCS_MEMO) - set(revendique))
+    print(f"\nchapitres de la note adossés à une méthodologie approuvée : "
+          f"{len(blocs_couverts)} / {len(BLOCS_MEMO)}")
+    for b in blocs_couverts:
+        print(f"   ✓ {b} ← {revendique[b]}")
     for b in blocs_nus:
         print(f"   · {b} — aucune méthodologie approuvée")
-    print(f"frameworks qui ne projettent aucun bloc du mémo : "
-          f"{sorted(fw_ids - {c.split('.')[0] for c in index if c.split('.')[0] in BLOCS})}")
 
     print()
     check("[B] zéro feuille de mémo sans question (T6)", not orphelins,

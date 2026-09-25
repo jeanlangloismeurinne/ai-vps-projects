@@ -198,12 +198,28 @@ check("résultat net POSITIF → le ratio est publié normalement (pas de régre
       conv_b["fcf_conversion_pct"].content_structured.get("fcf_conversion_pct") is not None)
 
 # — « CA nul » et « CA absent » ne sont pas le même monde.
-check("CA nul : le motif dit `NUL (déposé, pas manquant)`, pas « intrant manquant »",
+# ⚠️ CET ASSERT A ÉTÉ ÉCRIT À CÔTÉ DE CE QUE SON TITRE ANNONÇAIT. Il ne testait que `"NUL" in
+# reason` ; son titre promettait « pas "intrant manquant" ». Or `_miss` préfixait « intrant manquant
+# en base EDGAR : » en dur, et le motif sortait donc « intrant manquant … NUL (déposé, pas
+# manquant) » — une phrase qui se contredit dans sa propre longueur, au vert depuis le 2026-09-04.
+# La moitié non testée du titre était précisément la moitié fausse. L'état est maintenant STRUCTURÉ
+# (`etat`) et c'est LUI qu'on asserte : une prose ne se teste qu'au `in`, et un `in` ne voit jamais
+# ce qui a été ajouté DEVANT lui.
+unf_etat = {u["field"]: u.get("etat") for u in unf_r}
+check("CA nul → état `non_defini` (la donnée est là, c'est le ratio qui n'existe pas)",
+      unf_etat.get("intensite_capex_pct") == "non_defini", f"→ {unf_etat.get('intensite_capex_pct')}")
+check("CA nul : le motif ne dit PAS « intrant manquant » (il l'a dit pendant 20 jours)",
+      "intrant manquant" not in unf_by.get("intensite_capex_pct", ""),
+      f"→ {unf_by.get('intensite_capex_pct')}")
+check("CA nul : le motif dit `NUL (déposé, pas manquant)`",
       "NUL" in unf_by.get("intensite_capex_pct", ""), f"→ {unf_by.get('intensite_capex_pct')}")
 SANS_CA = dict(RVMD, revenue=None)
-unf_sans = {u["field"]: u["reason"] for u in build_financials_entries("RVMD", "RVMD", SANS_CA, as_of=AS_OF)[1]}
+specs_sans, unf_sans_r = build_financials_entries("RVMD", "RVMD", SANS_CA, as_of=AS_OF)
+unf_sans = {u["field"]: u["reason"] for u in unf_sans_r}
 check("CA réellement absent : le motif ne dit PAS `NUL`",
       "NUL" not in unf_sans.get("intensite_capex_pct", ""), f"→ {unf_sans.get('intensite_capex_pct')}")
+check("CA réellement absent → état `intrant_absent`, distinct du CA nul",
+      {u["field"]: u.get("etat") for u in unf_sans_r}.get("intensite_capex_pct") == "intrant_absent")
 
 # — un motif d'absence nomme ce qui manque, pas la formule entière.
 PARTIEL = dict(RVMD, cash=None)
@@ -212,10 +228,56 @@ check("motif ciblé : seule la trésorerie est nommée",
       "trésorerie" in unf_p.get("levier", "") and "capitaux propres" not in unf_p.get("levier", ""),
       f"→ {unf_p.get('levier')}")
 
-# — les faits centraux de cette thèse sont bien produits, avec le bon signe.
-check("ROIC négatif publié tel quel (−90,7 %)",
-      approx(by_field["roic_pct"].content_structured["roic_pct"], -90.68, tol=0.1),
-      f"→ {by_field.get('roic_pct') and by_field['roic_pct'].content_structured.get('roic_pct')}")
+# — LE JUMEAU DU PIÈGE FCF. Cette section affirmait « ROIC négatif publié tel quel (−90,7 %) » :
+# un check qui VERROUILLAIT le défaut. Le ROIC mesure le rendement des OPÉRATIONS sur le capital ;
+# sans exploitation, NOPAT ≈ résultat net ne tient plus et le quotient mesure un rythme de brûlage.
+# Le faux s'était reproduit sur quatre générations en base (#190 archivé → #231, #274, #549, #656).
+# La garde FCF n'attrapait que le nombre FLATTEUR ; celui-ci est accablant, et tout aussi vide.
+_roic_r = by_field.get("roic_pct")
+check("émetteur pré-commercial : le ROIC n'est PAS chiffré", _roic_r is not None
+      and _roic_r.content_structured.get("roic_pct") is None,
+      f"→ {_roic_r and _roic_r.content_structured.get('roic_pct')}")
+# ⚠️ ET IL EST TOUT DE MÊME PUBLIÉ. Un champ absent du corpus se lit « personne ne l'a calculé » ;
+# l'entry qui NOMME la non-applicabilité se lit « cela ne s'applique pas ici ». Publier a aussi une
+# conséquence mécanique décisive : l'entry porte les mêmes tags, donc elle supersede #656 par le
+# chemin normal. Un refus muet l'aurait laissée courante pour toujours — `ENTRIES_COURANTES` ne
+# connaît que `superseded_by`, et un stockage append-only ne supprime pas.
+check("le refus est PUBLIÉ (il supersedera la ligne fausse), pas tu",
+      _roic_r is not None and "NON DÉFINI" in _roic_r.title, f"→ {_roic_r and _roic_r.title}")
+check("le refus porte les tags du champ — sans eux il ne supersede rien",
+      _roic_r is not None and _roic_r.tags[:2] == ["financials", "roic_pct"],
+      f"→ {_roic_r and _roic_r.tags}")
+check("`operations_etablies` est False, pas None (le CA est déposé, pas absent)",
+      _roic_r is not None and _roic_r.content_structured.get("operations_etablies") is False,
+      f"→ {_roic_r and _roic_r.content_structured.get('operations_etablies')}")
+check("le texte nomme l'exploitation absente, pas une lacune de collecte",
+      _roic_r is not None and "pas d'exploitation" in _roic_r.content
+      and "pas manquant" in _roic_r.content)
+check("le nombre vide n'est jamais dans le structuré (il reste dans la prose, en contre-exemple)",
+      _roic_r is not None
+      and -90.68 not in [v for v in _roic_r.content_structured.values() if isinstance(v, float)])
+
+# — CA > 0 : aucune régression, le ratio sort comme avant et se dit vérifié.
+check("CA positif → ROIC publié, `operations_etablies` vrai",
+      by["roic_pct"].content_structured.get("operations_etablies") is True,
+      f"→ {by['roic_pct'].content_structured.get('operations_etablies')}")
+
+# — CA NON RÉSOLU : ni le refus, ni le faux-semblant de certitude (#25). On publie EN DISANT que
+#   l'hypothèse n'a pas pu être vérifiée — trois états, jamais deux.
+roic_sans = {s.field: s for s in specs_sans}.get("roic_pct")
+# ⚠️ « publié » ne discrimine plus rien depuis que le REFUS est publié lui aussi : les deux cas
+# rendent une entry. C'est CHIFFRÉ qu'il faut asserter — la différence entre les deux formes est
+# la valeur, pas la présence. Un assert qui survit au changement de forme de son sujet a cessé de
+# mesurer ce que son titre annonce.
+check("CA non résolu → le ROIC est tout de même CHIFFRÉ (pas de refus abusif)",
+      roic_sans is not None and roic_sans.content_structured.get("roic_pct") is not None,
+      f"→ {roic_sans and roic_sans.content_structured.get('roic_pct')}")
+if roic_sans:
+    check("CA non résolu → `operations_etablies` est None, ni True ni False",
+          roic_sans.content_structured.get("operations_etablies") is None,
+          f"→ {roic_sans.content_structured.get('operations_etablies')}")
+    check("CA non résolu → le texte DIT que l'hypothèse n'a pas pu être vérifiée",
+          "n'a pas été résolu" in roic_sans.content and "PAS pu être vérifiée" in roic_sans.content)
 check("dette LT à zéro → gearing 0 %, et la position de trésorerie nette est signalée",
       by_field["levier"].content_structured["debt_to_equity_pct"] == 0.0
       and by_field["levier"].content_structured["net_cash_position"] is True)
@@ -271,10 +333,27 @@ check("le mélange d'ancres est DÉCLARÉ, pas tu",
       f_mix["periods_mixed"] is True and f_mix["jours_entre_ancres"] == 181,
       f"→ {f_mix['periods_mixed']} / {f_mix['jours_entre_ancres']}")
 
-specs_mix, _ = build_financials_entries("RVMD", "RVMD", f_mix, as_of=AS_OF)
+specs_mix, unf_mix = build_financials_entries("RVMD", "RVMD", f_mix, as_of=AS_OF)
 by_mix = {s.field: s for s in specs_mix}
+
+# ⚠️ POURQUOI CETTE SECTION A DEUX SOCLES DEPUIS LE 2026-09-24. Ce qu'elle mesure, c'est l'ANCRE :
+# un flux de l'exercice, un bilan du trimestre. Or le seul ratio MIXTE est le ROIC, et le ROIC est
+# désormais refusé aux émetteurs pré-commerciaux — RVMD en est un (CA déposé à 0). La section était
+# donc couplée, sans le dire, à une garde qui ne la concerne pas.
+# `f_mix_ca` ne rend pas la fixture plus commode (`feedback_fixture_copiee_du_reel`) : il la rend
+# APPLICABLE. Les ancres, les montants de bilan et de flux restent ceux de RVMD au 2026-06-30 ; seul
+# le CA passe à une valeur positive, parce que le mécanisme sous test est universel et que le cas
+# NORMAL d'un ratio mixte est un émetteur qui exploite. La valeur elle-même ne porte rien : aucun
+# assert ne la lit, seul son signe compte.
+f_mix_ca = dict(f_mix, revenue=1_000_000_000.0)
+by_mix_ca = {s.field: s for s in build_financials_entries("RVMD", "RVMD", f_mix_ca, as_of=AS_OF)[0]}
 check("le ROIC reste fondé malgré les deux ancres (il n'est pas devenu un trou)",
-      "roic_pct" in by_mix and by_mix["roic_pct"].content_structured.get("roic_pct") is not None)
+      "roic_pct" in by_mix_ca
+      and by_mix_ca["roic_pct"].content_structured.get("roic_pct") is not None)
+# …et le cas RÉEL reste mesuré : deux ancres ne rachètent pas une exploitation absente.
+check("émetteur pré-commercial à deux ancres : le ROIC reste non chiffré (la garde prime l'ancre)",
+      "roic_pct" in by_mix and by_mix["roic_pct"].content_structured.get("roic_pct") is None,
+      f"→ {by_mix.get('roic_pct') and by_mix['roic_pct'].content_structured.get('roic_pct')}")
 check("le levier est calculé sur le bilan RÉCENT (dette convertible incluse)",
       approx(by_mix["levier"].content_structured["debt_to_equity_pct"], 18.7, tol=0.2),
       f"→ {by_mix['levier'].content_structured['debt_to_equity_pct']}")
@@ -313,7 +392,10 @@ print("\n8. UN RATIO SE DATE PAR SES POSTES, et un fait vaut par ce qu'il mesure
 #   (b) le capex écrit par ce module portait le tag `fact`, celui du socle EDGAR ne le portait
 #       pas : deux entrées `capital_expenditure` FY2025 courantes en même temps pour RVMD, un
 #       seul mot d'écart.
-specs_f6, _ = build_financials_entries("RVMD", "RVMD", dict(f_mix, capex=15_990_000.0),
+# `f_mix_ca` pour la même raison qu'en §7 : la datation d'un ratio MIXTE ne s'observe que sur un
+# ratio mixte PUBLIÉ, et le ROIC est le seul. Le levier, lui, ne dépend pas du CA — ses asserts
+# ci-dessous portent le même fait qu'avant.
+specs_f6, _ = build_financials_entries("RVMD", "RVMD", dict(f_mix_ca, capex=15_990_000.0),
                                        as_of=date(2026, 9, 4))
 by_f6 = {s.field: s for s in specs_f6}
 lev, roic = by_f6["levier"], by_f6["roic_pct"]
@@ -347,7 +429,8 @@ check("un ratio MIXTE le dit AUSSI en toutes lettres (c'est le texte que l'agent
       f"→ {roic.content[-160:]}")
 
 # Non-régression : ancres confondues → aucune mention de mixité, et le levier redevient FY.
-specs_uni, _ = build_financials_entries("RVMD", "RVMD", dict(f_uni, capex=15_990_000.0),
+specs_uni, _ = build_financials_entries("RVMD", "RVMD",
+                                        dict(f_uni, capex=15_990_000.0, revenue=1_000_000_000.0),
                                         as_of=date(2026, 9, 4))
 by_uni = {s.field: s for s in specs_uni}
 check("ancres confondues → le ROIC ne déclare aucune mixité",
@@ -399,8 +482,14 @@ check("le levier, dont les trois postes sont du même ordre, reste homogène",
 # `check_edgar_feed.py` §11, où le poste `revenue` à zéro est bien publié.
 check("un vrai zéro s'écrit sans mantisse ni palier",
       _md(0.0, "USD") == "0 USD", f"→ {_md(0.0, 'USD')}")
+# ⚠️ CET ASSERT SE BÂTIT SUR UN SOCLE À CA NUL, et il faut le dire : depuis que §8 exerce la
+# datation sur `f_mix_ca` (CA positif — seul cas où un ratio mixte est publiable), `by_f6` a un
+# dénominateur. Le lire ici aurait transformé « le CA nul retire l'intensité capex » en « l'intensité
+# capex est là », au vert, sans que personne ne voie que le sujet avait changé sous l'assert.
+_by_ca0 = {s.field: s for s in build_financials_entries(
+    "RVMD", "RVMD", dict(f_mix, capex=15_990_000.0), as_of=date(2026, 9, 4))[0]}
 check("un CA nul retire l'intensité capex plutôt que d'inventer un dénominateur",
-      "intensite_capex_pct" not in by_f6, f"→ {sorted(by_f6)}")
+      "intensite_capex_pct" not in _by_ca0, f"→ {sorted(_by_ca0)}")
 check("une ABSENCE n'est pas un zéro (elle ne s'écrit pas en montant du tout)",
       _md(None, "USD") == "n/d", f"→ {_md(None, 'USD')}")
 # La règle vit à un seul endroit : c'est tout l'objet de F10 (corollaire de méthode de #43 appliqué
@@ -418,7 +507,10 @@ print("\n10. LA COLONNE `source_date` EST LE 4ᵉ PORTEUR DE LA DATE, et il avai
 # quand même `source_date=facts['period_end']`, identique pour les quatre ratios.
 # C'est la colonne, pas le texte, que trient l'ancre temporelle (F12), le balayage et tout
 # « la plus récente » : le levier paraissait vieux de 239 jours au lieu de 58.
-_facts_f14 = dict(f_mix, capex=15_990_000.0)
+# `f_mix_ca` (§7) : cette section compare l'ancre d'un ratio de FLUX à celle d'un ratio de BILAN,
+# et il lui faut donc au moins deux ratios de flux. Sur un émetteur pré-commercial il n'en reste
+# qu'un — le garde-fou « la fixture construit bien des ratios de flux » plus bas le dit lui-même.
+_facts_f14 = dict(f_mix_ca, capex=15_990_000.0)
 _by14 = {s.field: s for s in build_financials_entries("RVMD", "RVMD", _facts_f14,
                                                       as_of=date(2026, 9, 4))[0]}
 check("un ratio 100 % bilan porte la date du BILAN en `source_date`",
@@ -480,7 +572,14 @@ async def _fake_store(conn, **kw):
 _orig = (_ff.get_db_session, _ff.get_current_entries, _ff.store_knowledge,
          _ff._current_tagged_entry_id)
 _ff.get_db_session = lambda *a, **k: _Ctx(_FakeConn())
-_ff.get_current_entries = _aw(MIXTE)
+# Les ENTRIES, pas les `facts` : ce chemin-ci repasse par `extract_edgar_facts`. Même variante à CA
+# positif qu'en §7/§8/§10, et pour la même raison — la boucle `_flux14` ci-dessous exige que le
+# chemin d'écriture produise les MÊMES champs que `_by14`. Les nourrir différemment ferait lever un
+# `KeyError` loin d'ici, au lieu de dire lequel des deux socles a bougé.
+MIXTE_CA = [dict(e, content_structured=dict(e["content_structured"], value=1_000_000_000.0))
+            if e["content_structured"]["metric"] == "revenue" else e
+            for e in MIXTE]
+_ff.get_current_entries = _aw(MIXTE_CA)
 _ff.store_knowledge = _fake_store
 _ff._current_tagged_entry_id = _aw(None)
 try:

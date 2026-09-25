@@ -53,6 +53,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Datation : deux dates nommées, `source_date` dérivée, confusion fait/document INEXPRIMABLE (#79) | `check_datation.py` + `negatif_datation.sh` |
 | Registre : standing par couple (source × nature) | `check_source_registry.py` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
+| Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |
 | Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
 | Format des montants (détenteur unique) | `check_edgar_feed.py` §11, `check_financials_feed.py` §9 |

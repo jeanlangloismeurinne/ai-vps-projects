@@ -38,7 +38,8 @@ from typing import Any, Optional
 from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES
 from app.db.database import close_pool, get_db_session, init_pool
 
-from tools.reconcilier_vocabulaires import ecart, feuilles_memo, vocabulaire_questions
+from app.contracts.memo_blocs import feuilles_memo   # détenteur depuis le lot 5
+from tools.reconcilier_vocabulaires import ecart, vocabulaire_questions
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 

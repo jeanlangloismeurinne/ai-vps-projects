@@ -56,6 +56,7 @@ from app.contracts.framework_definition_schema import (
     FRAMEWORK_DEFINITION_SCHEMA_VERSION,
     FrameworksFile,
 )
+from app.contracts.memo_blocs import BLOCS_MEMO
 from app.knowledge.actualite import MaterialEventLookup, etat_actualite_entry
 from app.knowledge.synthesis_feed import derive_synthesis_reliability
 
@@ -129,7 +130,15 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
          et le manager du framework `defendabilite` relirait une réponse dont il n'a pas la
          méthodologie. Ajouté le 2026-09-21, quand `reconcilier_vocabulaires` a voulu tenir cette
          règle de son côté : un invariant du référentiel se garde chez le référentiel, sinon il
-         re-diverge au correctif suivant (`feedback_correctif_regle_jumeaux`).
+         re-diverge au correctif suivant (`feedback_correctif_regle_jumeaux`) ;
+      O. un `bloc_memo` qui ne désigne AUCUN bloc du `ResearchMemo` (lot 5, §6). Le contrat ne peut
+         pas le voir : il ne connaît pas le mémo (#37). Non gardé, une faute de frappe
+         (`financial` pour `financials`) rendrait le framework muet — sa rubrique sortirait « pas
+         de méthodologie approuvée » alors que ses questions sont instruites, et le comité lirait
+         l'absence comme une propriété de l'émetteur (`feedback_rendu_est_un_producteur`) ;
+      P. deux frameworks qui revendiquent le MÊME bloc. §6 pose « un bloc du mémo = un framework » :
+         à deux, le projecteur devrait choisir, et le choix se ferait par l'ordre du fichier — une
+         méthodologie approuvée disparaîtrait de la note sans qu'aucun décompte ne bouge.
     """
     if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:
         raise FrameworkDefinitionRefused(
@@ -202,6 +211,28 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             raise FrameworkDefinitionRefused(
                 f"[L] `{q.id}` : plancher `{q.plancher_tier}` hors de `common.TIER_ORDER`"
             )
+
+    # ── [O] / [P] — le lien vers l'ordre du jour du comité (§6, lot 5) ───────────────────────────
+    # L'ordre du jour est IMPORTÉ de son détenteur (`contracts.memo_blocs`), jamais recopié : un bloc
+    # renommé dans le contrat du mémo fait rougir ici, au lieu de laisser un `bloc_memo` périmé
+    # désigner un chapitre qui n'existe plus.
+    revendique: dict[str, str] = {}
+    for f in fichier.frameworks:
+        if f.bloc_memo not in BLOCS_MEMO:
+            raise FrameworkDefinitionRefused(
+                f"[O] `{f.id}` projette sur `{f.bloc_memo}`, qui n'est pas un bloc du "
+                f"`ResearchMemo` ({sorted(BLOCS_MEMO)}) — un framework qui projette dans le vide "
+                f"est muet : sa rubrique sortirait « pas de méthodologie approuvée » alors qu'il "
+                f"porte {len(f.questions)} question(s) instruite(s)"
+            )
+        if f.bloc_memo in revendique:
+            raise FrameworkDefinitionRefused(
+                f"[P] le bloc `{f.bloc_memo}` est revendiqué par `{revendique[f.bloc_memo]}` ET "
+                f"par `{f.id}` — §6 pose « un bloc du mémo = un framework » ; à deux, le "
+                f"projecteur trancherait par l'ordre du fichier et une méthodologie approuvée "
+                f"disparaîtrait de la note sans qu'aucun décompte ne bouge"
+            )
+        revendique[f.bloc_memo] = f.id
 
 
 @lru_cache(maxsize=1)

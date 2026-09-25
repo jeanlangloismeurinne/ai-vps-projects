@@ -162,6 +162,22 @@ class FrameworkDefinition(Strict):
     etape_benchmark: int = Field(ge=1, le=8)
     methodologie: str = Field(min_length=40)
     nature_dominante: Literal["mesure", "evenement", "interpretation"]
+    # Le bloc du `ResearchMemo` que ce framework PROJETTE (§6, lot 5). REQUIS, jamais optionnel :
+    # `Optional` ici rendrait « ce framework ne projette rien » indiscernable de « on a oublié de le
+    # déclarer », et le mémo sortirait une rubrique « pas de méthodologie approuvée » sur un sujet
+    # pourtant instruit (`feedback_optional_schema_gate` — un desserrage à chaud est un trou
+    # silencieux).
+    #
+    # ⚠️ IL EXISTE PARCE QUE `chemin_indexation` NE PEUT PAS EN TENIR LIEU. L'invariant [N] du pont
+    # force la racine du chemin à être l'id du framework : `qualite_financiere.*` vit donc dans
+    # l'espace de noms du FRAMEWORK, jamais dans celui du mémo. Sans ce champ, le seul lien possible
+    # serait la coïncidence de noms (appeler un framework `financials`) — un alias de plus, et
+    # §0.3 rouvert.
+    #
+    # Le contrat ne vérifie PAS que ce bloc existe : il valide un objet, jamais la cohérence entre
+    # deux (#37). C'est l'invariant relationnel [O] de `frameworks._valider_pont_definitions`, qui
+    # confronte la valeur à `contracts.memo_blocs.BLOCS_MEMO`.
+    bloc_memo: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
     questions: list[QuestionDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")

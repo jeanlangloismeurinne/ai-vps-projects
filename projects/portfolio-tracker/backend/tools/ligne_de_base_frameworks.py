@@ -40,7 +40,8 @@ from app.db.database import close_pool, get_db_session, init_pool
 # SYNTHESIS_TARGETS supprimé au lot 3 — mesure 5 devient partielle (lot 4)
 
 from tools._corpus_archive import ENTRIES, bandeau
-from tools.reconcilier_vocabulaires import ALIAS, DERIVES, feuilles_memo
+from app.contracts.memo_blocs import feuilles_memo   # détenteur depuis le lot 5, cf. son en-tête
+from tools.reconcilier_vocabulaires import ALIAS, DERIVES
 
 TICKERS = ["NVDA", "MSFT", "RVMD"]
 

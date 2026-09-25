@@ -36,7 +36,14 @@ run_mutations() {
     IFS='¦' read -r fichier vieux neuf attendu <<< "$m"
     tmp=$(mktemp -d)
     cp -r . "$tmp/backend" 2>/dev/null
-    rm -rf "$tmp/backend/checks/__pycache__" "$tmp/backend/.git" 2>/dev/null
+    # ⚠️ TOUS les `__pycache__`, pas seulement celui de `checks/`. Les premières mutations du
+    # harnais ne portaient que sur `checks/` ; celles du lot 5 visent `app/contracts/` et
+    # `app/agents/v2/`, dont le bytecode était copié dans le bac à sable. L'invalidation de Python
+    # est un couple `(mtime, size)` : elle est aveugle à une édition qui ne change ni l'un ni
+    # l'autre, et le conteneur exécuterait alors un AUTRE code que celui qu'on vient de muter —
+    # « le check reste VERT » se lirait « ce critère ne garde rien » (`feedback_pycache_faux_vert`).
+    find "$tmp/backend" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null
+    rm -rf "$tmp/backend/.git" 2>/dev/null
     mounts=(-v "$tmp/backend:/app:ro" -v "$PWD/../roadmap:/roadmap:ro")
     if [ "$with_frozen" = "1" ]; then
       cp -r "$frozen_src" "$tmp/frozen" 2>/dev/null

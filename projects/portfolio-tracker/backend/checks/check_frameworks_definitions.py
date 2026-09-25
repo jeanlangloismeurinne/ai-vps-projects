@@ -149,18 +149,33 @@ def q_base(**over):
     return d
 
 
+def fw_base(**over):
+    """Un framework minimal LICITE — détenteur unique de sa forme (#46).
+
+    Les cas [G]–[N] recopiaient ce dict en ligne, six fois. Le jour où `FrameworkDefinition` a gagné
+    `bloc_memo` (requis, lot 5), les six ont rougi d'un coup — et pas sur la règle visée : chacune
+    annonçait « refusé, mais PAS par la règle visée ». Le harnais a fait son travail (il exige le
+    NOM de l'assert qui rougit), mais six jumeaux à corriger pour un champ, c'est exactement ce que
+    #46 décrit. Un seul endroit le déclare désormais.
+    """
+    d = {
+        "id": "cadre_test",
+        "libelle": "Cadre de test",
+        "etape_benchmark": 5,
+        "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
+        "nature_dominante": "mesure",
+        "bloc_memo": "business_model",
+        "questions": [q_base()],
+    }
+    d.update(over)
+    return d
+
+
 def fichier_base(**over):
     d = {
         "schema_version": FRAMEWORK_DEFINITION_SCHEMA_VERSION,
         "archetypes": list(ARCHETYPES),
-        "frameworks": [{
-            "id": "cadre_test",
-            "libelle": "Cadre de test",
-            "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base()],
-        }],
+        "frameworks": [fw_base()],
     }
     d.update(over)
     return d
@@ -248,13 +263,9 @@ valide("la question minimale licite se construit",
 print("\n3. les invariants RELATIONNELS (#37) — ceux qu'un contrat d'objet ne peut pas voir")
 rejete("[G] deux frameworks qui déclarent la MÊME question",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_a", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure", "questions": [q_base()]},
-           {"id": "cadre_b", "libelle": "Cadre B", "etape_benchmark": 4,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base(chemin_indexation="cadre_test.autre")]}])),
+           fw_base(id="cadre_a", libelle="Cadre A"),
+           fw_base(id="cadre_b", libelle="Cadre B", etape_benchmark=4, bloc_memo="industry",
+                   questions=[q_base(chemin_indexation="cadre_test.autre")])])),
        "[G]")
 # ⚠️ Les deux questions sont dans des frameworks DIFFÉRENTS, et portent des id différents. Dans un
 # même framework, c'est le contrat (`_les_questions_sont_distinctes`) qui prononce le refus, et le
@@ -262,12 +273,9 @@ rejete("[G] deux frameworks qui déclarent la MÊME question",
 # vert). Mesuré, pas prévu — la première version de ce cas rougissait sur l'autre règle.
 rejete("[H] deux frameworks dont deux questions partagent un chemin d'indexation",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_a", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure", "questions": [q_base()]},
-           {"id": "cadre_b", "libelle": "Cadre B", "etape_benchmark": 4,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure", "questions": [q_base(id="zz_2")]}])),
+           fw_base(id="cadre_a", libelle="Cadre A"),
+           fw_base(id="cadre_b", libelle="Cadre B", etape_benchmark=4, bloc_memo="industry",
+                   questions=[q_base(id="zz_2")])])),
        "l'index ne saurait plus laquelle des deux il fonde")
 rejete("[I] une question MUETTE sur un archétype déclaré",
        lambda: charge(fichier_base(archetypes=["rentable", "pre_revenus", "financiere"])),
@@ -277,25 +285,19 @@ rejete("[I] une question qui INVENTE un archétype non déclaré",
        "inventés"),
 rejete("[J] un substitut qui pointe une question inexistante",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base(variables_par_archetype={
-                "rentable": {"mode": "variable", "variable": "Part du résultat en cash"},
-                "pre_revenus": {"mode": "sans_objet",
-                                "motif_gabarit": "Un motif suffisamment long pour passer le seuil",
-                                "substitut_question_id": "zz_404"}})]}])),
+           fw_base(libelle="Cadre A", questions=[q_base(variables_par_archetype={
+               "rentable": {"mode": "variable", "variable": "Part du résultat en cash"},
+               "pre_revenus": {"mode": "sans_objet",
+                               "motif_gabarit": "Un motif suffisamment long pour passer le seuil",
+                               "substitut_question_id": "zz_404"}})])])),
        "qui n'existe pas")
 rejete("[J] un substitut qui pointe SA PROPRE question",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base(variables_par_archetype={
-                "rentable": {"mode": "variable", "variable": "Part du résultat en cash"},
-                "pre_revenus": {"mode": "sans_objet",
-                                "motif_gabarit": "Un motif suffisamment long pour passer le seuil",
-                                "substitut_question_id": "zz_1"}})]}])),
+           fw_base(libelle="Cadre A", questions=[q_base(variables_par_archetype={
+               "rentable": {"mode": "variable", "variable": "Part du résultat en cash"},
+               "pre_revenus": {"mode": "sans_objet",
+                               "motif_gabarit": "Un motif suffisamment long pour passer le seuil",
+                               "substitut_question_id": "zz_1"}})])])),
        "se cite elle-même comme substitut")
 rejete("[M] un fichier dont la version ne correspond pas au contrat qui l'a validé",
        lambda: charge(fichier_base(schema_version="v2.9.0")),
@@ -305,19 +307,37 @@ rejete("[M] un fichier dont la version ne correspond pas au contrat qui l'a vali
 # et le manager relit une réponse dont il n'a pas la méthodologie.
 rejete("[N] une question dont le chemin d'indexation appartient à un AUTRE framework",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base(chemin_indexation="cadre_voisin.conversion")]}])),
+           fw_base(libelle="Cadre A",
+                   questions=[q_base(chemin_indexation="cadre_voisin.conversion")])])),
        "[N]")
 valide("[N] un chemin préfixé par SON framework passe",
        lambda: charge(fichier_base(frameworks=[
-           {"id": "cadre_test", "libelle": "Cadre A", "etape_benchmark": 5,
-            "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
-            "nature_dominante": "mesure",
-            "questions": [q_base(chemin_indexation="cadre_test.autre_chose")]}])))
+           fw_base(libelle="Cadre A",
+                   questions=[q_base(chemin_indexation="cadre_test.autre_chose")])])))
 valide("le fichier de test minimal passe contrat ET invariants",
        lambda: charge(fichier_base()))
+
+# ── [O] et [P], les deux invariants du lien framework → chapitre de note (lot 5, §6) ────────────
+# Ils vivent ici et pas dans le contrat d'objet : un framework au `bloc_memo` fautif reste un
+# framework bien formé (#37). C'est la RELATION au mémo qui est en cause, donc le pont.
+rejete("[O] un framework qui projette sur un chapitre INEXISTANT du mémo",
+       lambda: charge(fichier_base(frameworks=[fw_base(bloc_memo="rentabilite")])),
+       "[O]")
+rejete("[P] deux frameworks qui revendiquent le MÊME chapitre du mémo",
+       lambda: charge(fichier_base(frameworks=[
+           fw_base(id="cadre_a", libelle="Cadre A",
+                   questions=[q_base(chemin_indexation="cadre_a.conversion")]),
+           fw_base(id="cadre_b", libelle="Cadre B", etape_benchmark=4,
+                   questions=[q_base(id="zz_2", chemin_indexation="cadre_b.autre")])])),
+       "[P]")
+# Le cas POSITIF de [P] — sans lui, la garde passerait aussi bien si elle refusait TOUT fichier à
+# deux frameworks, et l'on ne saurait pas laquelle des deux propriétés on mesure.
+valide("[P] deux frameworks sur DEUX chapitres distincts passent",
+       lambda: charge(fichier_base(frameworks=[
+           fw_base(id="cadre_a", libelle="Cadre A",
+                   questions=[q_base(chemin_indexation="cadre_a.conversion")]),
+           fw_base(id="cadre_b", libelle="Cadre B", etape_benchmark=4, bloc_memo="industry",
+                   questions=[q_base(id="zz_2", chemin_indexation="cadre_b.autre")])])))
 
 
 print("\n4. les profils portent EXACTEMENT les clefs que le pont lit")
