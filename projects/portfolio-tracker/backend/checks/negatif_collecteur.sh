@@ -23,8 +23,11 @@ mutations=(
 "$SRC¦    ticker_id: str = Field(min_length=1)¦    ticker_id: str = Field(min_length=1)\n    question_id: str = \"x\"¦ne déclare aucun champ de question"
 "$SRC¦        if (self.entry_id is None) == (self.echec is None):¦        if False:¦les deux à la fois"
 "$SRC¦                   question_id=item.question_id, ingredient_id=item.ingredient_id)¦                   question_id=item.ingredient_id, ingredient_id=item.ingredient_id)¦clefé par la"
-"$SRC¦origine=\"inobtenable\"))¦origine=\"echec_collecte\"))¦d'origine \`inobtenable\`"
-"$SRC¦            res.mandats.append(MandatCollecte(**cle, motif=rc.echec, origine=\"echec_collecte\"))¦            pass  # évaporation¦ligne ne s'évapore"
+"$SRC¦origine=\"inobtenable\", cause=CAUSE_INOBTENABLE))¦origine=\"echec_collecte\", cause=\"recherche_epuisee\"))¦d'origine \`inobtenable\`"
+"$SRC¦            res.mandats.append(MandatCollecte(**cle, motif=rc.echec, origine=\"echec_collecte\", cause=rc.cause))¦            pass  # évaporation¦ligne ne s'évapore"
+"$SRC¦        if (self.echec is None) != (self.cause is None):¦        if False:¦échec SANS cause"
+"$SRC¦        if (self.origine == \"inobtenable\") != (self.cause == CAUSE_INOBTENABLE):¦        if False:¦seul le traducteur le sait"
+"$SRC¦origine=\"echec_collecte\", cause=rc.cause))¦origine=\"echec_collecte\", cause=\"source_indisponible\"))¦DÉCLARÉE par l'exécuteur"
 "$SRC¦    entry_id: int¦    entry_id: int\n    colonne_en_trop: str = \"x\"¦EXACTEMENT les colonnes"
 )
 

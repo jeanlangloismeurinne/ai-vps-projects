@@ -64,8 +64,9 @@ async def persist_aiguillage(
     for m in result.mandats:
         await conn.execute(
             "INSERT INTO framework_mandates "
-            "(framework_id, framework_version, question_id, ingredient_id, motif, origine, plan_id) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            "(framework_id, framework_version, question_id, ingredient_id, motif, origine, plan_id, "
+            " cause) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
             m.framework_id, m.framework_version, m.question_id, m.ingredient_id,
-            m.motif, m.origine, plan_id)
+            m.motif, m.origine, plan_id, m.cause)
     return {"liens_ecrits": len(result.liens), "mandats_ecrits": len(result.mandats)}

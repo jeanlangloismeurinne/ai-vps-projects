@@ -46,6 +46,7 @@ for f in checks/check_*.py; do
   out=$(docker run --rm --network "$net" -v "$PWD:/app:ro" \
         -v "$PWD/../roadmap/V3/provenance-cards:/contract_frozen:ro" \
         -v "$PWD/../roadmap:/roadmap:ro" \
+        -v "$PWD/../frontend:/frontend:ro" \
         -w /app -e PYTHONPATH=/app --env-file checks/env.checks "${extra[@]}" "$IMG" python "$f" 2>&1)
   rc=$?
 

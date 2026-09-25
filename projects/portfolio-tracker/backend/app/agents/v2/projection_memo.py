@@ -250,83 +250,23 @@ async def servir_memo(conn, ticker_id: str) -> MemoProjete:
     la rétractation d'une pièce. `reviser_framework` est PURE (aucun appel de modèle), donc le
     recalcul à la lecture ne coûte rien et ne peut pas dériver de ce qui serait stocké.
 
-    ⚠️ SEULS LES ACQUITTEMENTS SONT ATTACHÉS, JAMAIS LES RENVOIS
-    Un renvoi n'est pas un verdict complet : le contrat exige qu'il porte l'id du mandat qui le
-    matérialise (`_un_renvoi_produit_quelque_chose`, Écart B). Cet id est attribué par la BASE, à
-    l'écriture — or cette fonction est une LECTURE. Fabriquer un id ici, ou attacher un renvoi sans
-    id, inventerait une pièce qui n'existe pas. Le complément est publié quand même, en clair :
+    ⚠️ UN RENVOI N'EST ATTACHÉ QUE S'IL A SON MANDAT
+    Le contrat exige qu'un renvoi porte l'id du mandat qui le matérialise
+    (`_un_renvoi_produit_quelque_chose`, Écart B). L'assembleur le complète par le mandat OUVERT sur
+    la question ; s'il n'y en a pas, il n'invente rien (`renvoi_a_emettre`, niveau 3 du parcours).
+    Ici seuls comptent les acquittements ; le complément est publié en clair :
     `RubriqueProjetee.reponses_non_acquittees`.
 
     Le corpus chargé porte `source_date` (lu par `date_effective`) et `reliability_tier` (lu par le
     contrôle ③ d'honnêteté). Pas `content` : rien ne le consomme, et il donnerait l'illusion d'une
     note enrichie.
     """
-    # Imports tardifs : ce module est importé par des checks sans base ni réseau. En tête, ils
-    # tireraient asyncpg et le client EDGAR pour une projection qui est purement en mémoire.
-    from app.agents.v2.frameworks import servir_answer
-    from app.agents.v2.framework_persist import (
-        read_answers_courantes, read_archetype, read_dispenses)
-    from app.agents.v2.manager import reviser_framework
-    from app.agents.v2.manager_persist import assemble_verdict
-    from app.knowledge.material_events import material_anchor_for_ticker
+    # L'assemblage (réponses courantes → pièces → revue recalculée → service) a UN détenteur depuis
+    # le lot 6 : `parcours.charger_etat_dossier`, que partagent la note de qualité et les trois
+    # niveaux du parcours. Import tardif : ce module est importé par des checks sans base ni réseau.
+    from app.agents.v2.parcours import charger_etat_dossier
 
-    fichier = load_frameworks()
-    brutes = await read_answers_courantes(
-        conn, ticker_id=ticker_id, framework_version=fichier.schema_version)
-
-    cites: set[int] = set()
-    for _id, a in brutes:
-        if a.fondation is not None:
-            cites.update(a.fondation.cited_entry_ids)
-        if a.approximation is not None:
-            cites.update(a.approximation.ingredients_entry_ids)
-
-    entries: dict[int, dict] = {}
-    if cites:
-        rows = await conn.fetch(
-            "SELECT id, source_date, reliability_tier FROM knowledge_entries "
-            "WHERE id = ANY($1::int[])",
-            sorted(cites))
-        entries = {r["id"]: {"source_date": r["source_date"],
-                             "reliability_tier": r["reliability_tier"]} for r in rows}
-
-    classement = await read_archetype(conn, ticker_id=ticker_id)
-    archetype = classement[0] if classement is not None else None
-
-    # ── La revue, recalculée framework par framework ──────────────────────────────────────────
-    # `autres_reponses` est keyé par l'ID DE LIGNE (contrôle ④, non-substitution) : la clef vient
-    # de la base, pas d'un index de boucle qui changerait avec l'ordre de lecture.
-    verdicts: dict[int, ManagerVerdict] = {}
-    if archetype is not None:
-        par_ligne = {i: a for i, a in brutes}
-        for f in fichier.frameworks:
-            du_framework = [(i, a) for i, a in brutes if a.framework_id == f.id]
-            if not du_framework:
-                continue
-            dispenses = frozenset(await read_dispenses(
-                conn, ticker_id=ticker_id, framework_id=f.id,
-                framework_version=fichier.schema_version))
-            revue = reviser_framework(
-                [a for _i, a in du_framework],
-                fichier=fichier, framework_id=f.id, archetype=archetype,
-                ticker_id=ticker_id, entries=entries, dispenses=dispenses,
-                autres_reponses=par_ligne,
-            )
-            for i, a in du_framework:
-                d = revue.decisions.get((a.question_id, a.analyste))
-                if d is None or d.verdict != "acquitte":
-                    continue
-                verdicts[i] = assemble_verdict(d, mandat_de_recherche_id=None)
-
-    ancre = await material_anchor_for_ticker(conn, ticker_id)
-    lues = []
-    for i, a in brutes:
-        # `model_copy` ne valide pas — mais `servir_answer` reconstruit un `FrameworkAnswerServie`
-        # depuis le dump, donc le verdict attaché repasse par le contrat entier (qui re-vérifie
-        # notamment qu'un acquittement ne porte pas de mandat).
-        if i in verdicts:
-            a = a.model_copy(update={"manager": verdicts[i]})
-        lues.append(AnswerLue(answer_id=i, answer=servir_answer(a, ancre=ancre, entries=entries)))
-
+    etat = await charger_etat_dossier(conn, ticker_id)
+    lues = [AnswerLue(answer_id=r.answer_id, answer=r.servie) for r in etat.reponses]
     return projeter_memo(
-        ticker_id=ticker_id, lues=lues, archetype=archetype, fichier=fichier)
+        ticker_id=ticker_id, lues=lues, archetype=etat.archetype, fichier=etat.fichier)

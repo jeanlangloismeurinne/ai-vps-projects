@@ -267,6 +267,9 @@ try:
     _rc = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())))
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           _rc.echec is not None and "provider timeout simulé" in _rc.echec, f"→ {_rc!r}")
+    check("§6 cause d'une collecte web qui LÈVE = `source_indisponible` (notre outil a cassé : on "
+          "relance, on ne conclut pas que la donnée n'existe pas)",
+          _rc.cause == "source_indisponible", f"→ {_rc.cause!r}")
 except Exception as e:
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           False, f"→ a PROPAGÉ {type(e).__name__} au lieu de rendre un echec")
@@ -309,6 +312,9 @@ try:
           "muet se lit comme « le dépôt ne porte pas ce nombre »",
           _rc_b.echec is not None and "budget" in _rc_b.echec
           and str(int(_settings.WEB_LINE_BUDGET_S)) in _rc_b.echec, f"→ {_rc_b.echec!r}")
+    check("§6bis cause d'un temps épuisé = `source_indisponible`, JAMAIS `recherche_epuisee` : "
+          "l'analyste coupé en route n'a pas conclu que la donnée n'est pas publiée",
+          _rc_b.cause == "source_indisponible", f"→ {_rc_b.cause!r}")
 except (asyncio.TimeoutError, TimeoutError):
     check("un worker qui SE BLOQUE est BORNÉ par le garde de prod : `collecter_un` REND (le check "
           "ne fige pas) — sans `asyncio.wait_for`, la ligne bloquerait indéfiniment",
@@ -328,6 +334,30 @@ def _l(metrique, source, poste=None):
     """Raccourci local §7 — `_ligne` est une instance LigneAveugle depuis §5 et ne s'appelle plus."""
     return LigneAveugle(ticker_id="NVDA", metrique=metrique, source_pressentie=source,
                         ancre="clôture de l'exercice", poste=poste)
+
+
+# ── §6ter le search-worker va AU BOUT et ne retient rien → `recherche_epuisee` ─────────────────────
+print("\n[6ter] un search-worker qui répond `not_found` → cause `recherche_epuisee` (le seul « rien de publié » du web)")
+
+
+async def _worker_not_found(req, **_kw):
+    from app.contracts.worker_delegation_schema import (
+        ExecutionDeclaration, WorkerExchange, WorkerResponse)
+    return WorkerExchange(
+        request=req,
+        response=WorkerResponse(
+            request_hash="mock", worker=req.worker, status="not_found", entries=[],
+            execution=ExecutionDeclaration(model_used="mock")),
+    )
+
+
+_mod.run_search_worker = _worker_not_found
+try:
+    _rc_nf = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())))
+    check("§6ter `not_found` → echec de cause `recherche_epuisee`",
+          _rc_nf.echec is not None and _rc_nf.cause == "recherche_epuisee", f"→ {_rc_nf!r}")
+finally:
+    _mod.run_search_worker = _orig_worker
 
 
 print("\n[7] router_source lit la carte d'appariement (câblage maillon 4bis — §2c)")
@@ -372,7 +402,8 @@ class _MockSocle:
     """Enregistre les appels EDGAR (sans réseau)."""
     async def entry_id(self, ticker_id, poste_metric):
         _edgar_calls.append((ticker_id, poste_metric))
-        return _mod.ResultatCollecte(echec="mock edgar — pas de réseau dans le check")
+        return _mod.ResultatCollecte(echec="mock edgar — pas de réseau dans le check",
+                                     cause="source_indisponible")
 
 
 async def _mock_web(req):
@@ -993,6 +1024,8 @@ check("§11 appariement INEXÉCUTABLE → `echec` motivé qui NOMME la cause et 
       and "ancre commune" in _r4.echec and _consigne_approx.expression in _r4.echec
       and _web_calls == [],
       f"→ {_r4}")
+check("§11 cause d'un appariement inexécutable = `recherche_epuisee` (le dépôt a été lu, il ne porte "
+      "pas le concept sous une forme calculable)", _r4.cause == "recherche_epuisee", f"→ {_r4.cause!r}")
 
 
 # ── LE CÂBLAGE AMONT : la consigne ARRIVE jusqu'à `collecter_un` ──────────────────────────────────

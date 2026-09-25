@@ -33,7 +33,7 @@ mutations=(
 "$SRC¦    for lien in result.liens:¦    for lien in result.liens[:0]:¦lien est écrit dans question_coverage"
 "$SRC¦    for m in result.mandats:¦    for m in result.mandats[:0]:¦mandat est écrit dans framework_mandates"
 "$CHECK¦'traduit', NULL, 's', 'a')¦'traduit', 'm', 's', 'a')¦sans métrique est REFUSÉE"
-"$CHECK¦'m', 'autre')\")¦'m', 'inobtenable')\")¦origine inconnue est REFUSÉ"
+"$CHECK¦'m', 'autre')\", contrainte¦'m', 'inobtenable')\", contrainte¦origine inconnue est REFUSÉ"
 )
 
 passes=0; ratees=0

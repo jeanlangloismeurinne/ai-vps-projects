@@ -136,34 +136,12 @@ async def servir_qualite_info(conn, ticker_id: str) -> list[QualiteInfo]:
     de rater `servir_answer()` — et la mesure sortirait alors sur l'axe actualité d'avant le dernier
     événement matériel (#53/#54), c'est-à-dire en surévaluant systématiquement une réponse périmée.
 
-    Même plomberie que `projection_memo.servir_memo` (dont ce module est le voisin) : lecture des
-    réponses courantes à la version de référence, chargement du seul `source_date` des entries citées
-    (l'actualité s'en date), ancre matérielle, service, dérivation.
+    L'assemblage lui-même est délégué à `parcours.charger_etat_dossier` (lot 6), détenteur unique
+    partagé avec la note projetée et les trois niveaux du parcours.
     """
-    # Imports tardifs : ce module est importé par un check sans base ni réseau. En tête, ils
-    # tireraient asyncpg et le client EDGAR pour une dérivation qui est purement en mémoire.
-    from app.agents.v2.frameworks import load_frameworks, servir_answer
-    from app.agents.v2.framework_persist import read_answers_courantes
-    from app.knowledge.material_events import material_anchor_for_ticker
+    # L'assemblage a UN détenteur depuis le lot 6 (`parcours.charger_etat_dossier`) : c'est lui qui
+    # sert chaque réponse (actualité recalculée). Import tardif : module importé sans base ni réseau.
+    from app.agents.v2.parcours import charger_etat_dossier
 
-    fichier = load_frameworks()
-    brutes = await read_answers_courantes(
-        conn, ticker_id=ticker_id, framework_version=fichier.schema_version)
-
-    cites: set[int] = set()
-    for _id, a in brutes:
-        if a.fondation is not None:
-            cites.update(a.fondation.cited_entry_ids)
-
-    entries: dict[int, dict] = {}
-    if cites:
-        rows = await conn.fetch(
-            "SELECT id, source_date, reliability_tier FROM knowledge_entries "
-            "WHERE id = ANY($1::int[])",
-            sorted(cites))
-        entries = {r["id"]: {"source_date": r["source_date"],
-                             "reliability_tier": r["reliability_tier"]} for r in rows}
-
-    ancre = await material_anchor_for_ticker(conn, ticker_id)
-    servies = [servir_answer(a, ancre=ancre, entries=entries) for _id, a in brutes]
-    return derive_qualite_info(servies)
+    etat = await charger_etat_dossier(conn, ticker_id)
+    return derive_qualite_info([r.servie for r in etat.reponses])

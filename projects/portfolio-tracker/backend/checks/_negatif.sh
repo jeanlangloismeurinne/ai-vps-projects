@@ -13,7 +13,8 @@
 #   CHECK="checks/check_xxx.py"          # obligatoire — le check à éprouver
 #   WITH_FROZEN=1                        # défaut 0 — monte ../roadmap/V3/provenance-cards en /contract_frozen
 #   NET=none                             # défaut none — ou "coolify" (+ CHECK_DB_URL) pour les checks d'état
-#   mutations=( "fichier¦vieux¦neuf¦assert attendu" … )   # FROZEN:<f> vise un doc figé
+#   WITH_FRONT=1                         # défaut 0 — copie pages/ + components/ du frontend en /frontend
+#   mutations=( "fichier¦vieux¦neuf¦assert attendu" … )   # FROZEN:<f> vise un doc figé, FRONT:<f> un écran
 #   source "$(dirname "$0")/_negatif.sh"
 #   run_mutations                        # imprime le bilan, exit 1 si une mutation échappe
 #
@@ -45,6 +46,12 @@ run_mutations() {
     find "$tmp/backend" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null
     rm -rf "$tmp/backend/.git" 2>/dev/null
     mounts=(-v "$tmp/backend:/app:ro" -v "$PWD/../roadmap:/roadmap:ro")
+    # `/frontend` (lot 6) : les écrans du parcours sont des points de lecture gardés comme du code.
+    # On ne copie que `pages/` et `components/` — jamais `node_modules`.
+    if [ "${WITH_FRONT:-0}" = "1" ]; then
+      mkdir -p "$tmp/frontend" && cp -r ../frontend/pages ../frontend/components "$tmp/frontend/"
+      mounts+=(-v "$tmp/frontend:/frontend:ro")
+    fi
     if [ "$with_frozen" = "1" ]; then
       cp -r "$frozen_src" "$tmp/frozen" 2>/dev/null
       mounts+=(-v "$tmp/frozen:/contract_frozen:ro")
@@ -53,7 +60,10 @@ run_mutations() {
     [ "$net" = "coolify" ] && extra=(-e "CHECK_DB_URL=${CHECK_DB_URL:-}")
 
     cible="$tmp/backend/$fichier"
-    case "$fichier" in FROZEN:*) cible="$tmp/frozen/${fichier#FROZEN:}" ;; esac
+    case "$fichier" in
+      FROZEN:*) cible="$tmp/frozen/${fichier#FROZEN:}" ;;
+      FRONT:*)  cible="$tmp/frontend/${fichier#FRONT:}" ;;
+    esac
 
     if ! python3 -c "
 import sys, pathlib

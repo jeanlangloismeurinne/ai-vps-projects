@@ -48,15 +48,24 @@ from app.agents.v2.collecteur import (  # noqa: E402
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem  # noqa: E402
 
 
-async def _rejette(conn, label, sql, *args):
-    """La base DOIT refuser (CheckViolation). Savepoint : l'échec n'abîme pas la transaction outer."""
+async def _rejette(conn, label, sql, *args, contrainte: str):
+    """La base DOIT refuser (CheckViolation), et par la contrainte NOMMÉE. Savepoint : l'échec
+    n'abîme pas la transaction outer.
+
+    ⚠️ La contrainte est exigée depuis la 047 : un refus prononcé par une AUTRE règle est un faux vert
+    (4ᵉ). Mesuré : la mutation « l'origine inconnue devient `inobtenable` » restait verte, parce que
+    la ligne sans cause était refusée par `framework_mandates_cause` et plus par `_origine`."""
     global ok, fail
     sp = conn.transaction()
     await sp.start()
     try:
         await conn.execute(sql, *args)
-    except asyncpg.exceptions.CheckViolationError:
+    except asyncpg.exceptions.CheckViolationError as e:
         await sp.rollback()
+        if e.constraint_name != contrainte:
+            fail += 1
+            print(f"  FAIL {label} → refusée par `{e.constraint_name}`, pas par `{contrainte}`")
+            return
         ok += 1
         print(f"  ok   {label}")
         return
@@ -130,7 +139,8 @@ async def run():
                 mandats=[MandatCollecte(
                     framework_id="qualite_financiere", framework_version="v3.0.0",
                     question_id="qf_1", ingredient_id="cout_du_capital",
-                    motif="aucune source EDGAR", origine="inobtenable")],
+                    motif="aucune source EDGAR", origine="inobtenable",
+                    cause="sans_source_possible")],
                 lignes_vues=2)
             await persist_aiguillage(conn, res, plan_id=plan_id)
             n_cov = await conn.fetchval(
@@ -142,6 +152,11 @@ async def run():
                 "SELECT count(*) FROM framework_mandates WHERE plan_id = $1 AND origine = 'inobtenable'",
                 plan_id)
             check("le mandat est écrit dans framework_mandates", n_mand == 1, f"→ {n_mand}")
+            cause_lue = await conn.fetchval(
+                "SELECT cause FROM framework_mandates WHERE plan_id = $1 AND origine = 'inobtenable'",
+                plan_id)
+            check("la CAUSE du mandat est écrite telle que déclarée (migration 047 — l'alerte du "
+                  "niveau 1 la lit)", cause_lue == "sans_source_possible", f"→ {cause_lue!r}")
 
             # ── §3 dernier rempart : les CHECK de base ──────────────────────────────────────────
             print("\n[3] la base REDIT le contrat — dernier rempart si une écriture le contournait")
@@ -149,12 +164,29 @@ async def run():
                 conn, "une ligne `traduit` sans métrique est REFUSÉE (CHECK charge)",
                 "INSERT INTO collection_plan_items "
                 "(plan_id, question_id, ingredient_id, statut, metrique, source_pressentie, ancre) "
-                "VALUES ($1, 'qf_9', 'x', 'traduit', NULL, 's', 'a')", plan_id)
+                "VALUES ($1, 'qf_9', 'x', 'traduit', NULL, 's', 'a')", plan_id,
+                contrainte="collection_plan_items_charge")
             await _rejette(
-                conn, "un mandat d'origine inconnue est REFUSÉ (CHECK origine)",
+                # C'est `forme` qui refuse, pas `origine` : depuis la 043, `forme` exige une origine
+                # parmi les quatre connues et SUBSUME donc `origine` (PostgreSQL teste les CHECK par
+                # ordre alphabétique). L'étiquette disait « CHECK origine » à tort depuis la 043 ;
+                # c'est la contrainte nommée, exigée depuis la 047, qui l'a fait voir.
+                conn, "un mandat d'origine inconnue est REFUSÉ (CHECK forme, qui subsume origine)",
                 "INSERT INTO framework_mandates "
                 "(framework_id, framework_version, question_id, ingredient_id, motif, origine) "
-                "VALUES ('f', 'v', 'qf_1', 'x', 'm', 'autre')")
+                "VALUES ('f', 'v', 'qf_1', 'x', 'm', 'autre')", contrainte="framework_mandates_forme")
+            await _rejette(
+                conn, "un échec de collecte SANS cause est REFUSÉ (CHECK cause, 047)",
+                "INSERT INTO framework_mandates "
+                "(framework_id, framework_version, question_id, ingredient_id, motif, origine) "
+                "VALUES ('f', 'v', 'qf_1', 'x', 'm', 'echec_collecte')",
+                contrainte="framework_mandates_cause")
+            await _rejette(
+                conn, "un échec de collecte déclaré « sans source possible » est REFUSÉ (CHECK cause, 047)",
+                "INSERT INTO framework_mandates "
+                "(framework_id, framework_version, question_id, ingredient_id, motif, origine, cause) "
+                "VALUES ('f', 'v', 'qf_1', 'x', 'm', 'echec_collecte', 'sans_source_possible')",
+                contrainte="framework_mandates_cause")
         finally:
             await tr.rollback()  # AUCUN résidu : la vérification ne pollue pas le réel
     finally:

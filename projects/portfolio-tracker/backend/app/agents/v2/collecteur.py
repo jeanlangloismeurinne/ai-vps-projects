@@ -38,6 +38,11 @@ from typing import Callable, Optional
 from pydantic import Field, model_validator
 
 from app.contracts.analysis_v2_schemas import Strict
+from app.contracts.cause_manque_schema import (
+    CAUSE_INOBTENABLE,
+    CauseEchecCollecte,
+    CauseManqueCollecte,
+)
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
 
 __all__ = [
@@ -72,6 +77,9 @@ class ResultatCollecte(Strict):
     un vide (#25) : il devra devenir un mandat, pas disparaître."""
     entry_id: Optional[int] = None
     echec: Optional[str] = Field(default=None, min_length=3)
+    # La CAUSE de l'échec, déclarée par l'exécuteur qui seul la connaît (`cause_manque_schema`).
+    # Présente ssi `echec` : un échec sans cause serait lu par l'écran comme une cause au hasard.
+    cause: Optional[CauseEchecCollecte] = None
 
     @model_validator(mode="after")
     def _exactement_un(self):
@@ -79,6 +87,10 @@ class ResultatCollecte(Strict):
             raise ValueError(
                 "ResultatCollecte porte SOIT `entry_id` SOIT `echec`, jamais les deux ni aucun : "
                 "une collecte a réussi (une entry) ou échoué (un motif), pas un état intermédiaire")
+        if (self.echec is None) != (self.cause is None):
+            raise ValueError(
+                "un échec porte sa `cause` (recherche épuisée / source indisponible), et une réussite "
+                "n'en porte pas : le comité doit savoir si l'on relance ou si l'on renonce")
         return self
 
 
@@ -101,6 +113,7 @@ class MandatCollecte(Strict):
     ingredient_id: str = Field(min_length=1)
     motif: str = Field(min_length=3)
     origine: str  # "inobtenable" (le traducteur savait) | "echec_collecte" (la source a déçu)
+    cause: CauseManqueCollecte
 
     @model_validator(mode="after")
     def _origine_connue(self):
@@ -108,6 +121,11 @@ class MandatCollecte(Strict):
             raise ValueError(
                 f"origine `{self.origine}` inconnue : un mandat vient SOIT du plan (`inobtenable`), "
                 "SOIT d'une collecte qui a échoué (`echec_collecte`) — pas d'une troisième cause muette")
+        if (self.origine == "inobtenable") != (self.cause == CAUSE_INOBTENABLE):
+            raise ValueError(
+                f"origine `{self.origine}` avec cause `{self.cause}` : « sans source possible » est "
+                "exactement ce que dit le traducteur (`inobtenable`), et seulement lui — une collecte "
+                "tentée a échoué pour une raison, elle n'a pas découvert l'absence de source")
         return self
 
 
@@ -153,7 +171,7 @@ def aiguiller_plan(
                    question_id=item.question_id, ingredient_id=item.ingredient_id)
         if item.statut == "inobtenable":
             # Le traducteur a déjà tranché : aucune source. On n'exécute pas, on ouvre le mandat.
-            res.mandats.append(MandatCollecte(**cle, motif=item.motif, origine="inobtenable"))  # type: ignore[arg-type]
+            res.mandats.append(MandatCollecte(**cle, motif=item.motif, origine="inobtenable", cause=CAUSE_INOBTENABLE))  # type: ignore[arg-type]
             continue
 
         rc = collecter(ligne_aveugle(item, plan.ticker_id))
@@ -161,5 +179,5 @@ def aiguiller_plan(
             res.liens.append(LienCouverture(**cle, entry_id=rc.entry_id))
         else:
             # Une source pressentie qui ne rend rien devient un mandat MOTIVÉ, jamais un silence (#25).
-            res.mandats.append(MandatCollecte(**cle, motif=rc.echec, origine="echec_collecte"))  # type: ignore[arg-type]
+            res.mandats.append(MandatCollecte(**cle, motif=rc.echec, origine="echec_collecte", cause=rc.cause))  # type: ignore[arg-type]
     return res

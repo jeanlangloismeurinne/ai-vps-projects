@@ -183,8 +183,9 @@ async def run():
             # un mandat COLLECTEUR (origine echec_collecte, par-ingrédient) sur le même ticker
             await conn.execute(
                 "INSERT INTO framework_mandates "
-                "(framework_id, framework_version, question_id, ingredient_id, motif, origine) "
-                "VALUES ($1, $2, 'qf_9', 'ing_x', 'échec collecte', 'echec_collecte')", FW, FV)
+                "(framework_id, framework_version, question_id, ingredient_id, motif, origine, cause) "
+                "VALUES ($1, $2, 'qf_9', 'ing_x', 'échec collecte', 'echec_collecte', "
+                "'recherche_epuisee')", FW, FV)
             ouverts = await read_open_mandates(conn, ticker_id=ticker, framework_id=FW,
                                                framework_version=FV)
             qids = sorted(m.question_id for m in ouverts)

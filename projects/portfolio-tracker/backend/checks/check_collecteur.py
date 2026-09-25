@@ -87,7 +87,8 @@ class Espion:
     def __call__(self, ligne: LigneAveugle) -> ResultatCollecte:
         self.vues.append(ligne)
         if ligne.metrique.startswith("ECHEC"):
-            return ResultatCollecte(echec="la source pressentie n'a rien rendu")
+            return ResultatCollecte(echec="la source pressentie n'a rien rendu",
+                                    cause="recherche_epuisee")
         self._n += 1
         return ResultatCollecte(entry_id=self._n)
 
@@ -114,10 +115,16 @@ rejete("`ligne_aveugle` refuse une ligne `inobtenable` (rien à collecter)",
 # ── §2 un résultat de collecte est un XOR ─────────────────────────────────────────────────────────
 print("\n[2] une collecte a réussi (une entry) OU échoué (un motif), jamais un entre-deux (#25)")
 check("entry seule est valide", ResultatCollecte(entry_id=1).entry_id == 1)
-check("échec seul est valide", ResultatCollecte(echec="rien trouvé").echec == "rien trouvé")
+check("échec seul (avec sa cause) est valide",
+      ResultatCollecte(echec="rien trouvé", cause="recherche_epuisee").echec == "rien trouvé")
 rejete("les deux à la fois → refusé", lambda: ResultatCollecte(entry_id=1, echec="rien"),
        "SOIT `entry_id` SOIT `echec`")
 rejete("aucun des deux → refusé", lambda: ResultatCollecte(), "SOIT `entry_id` SOIT `echec`")
+# La cause (arbitrage du comité n°3, 2026-09-25) : relancer ou renoncer se décide sur elle.
+rejete("un échec SANS cause → refusé (l'écran lirait une cause au hasard)",
+       lambda: ResultatCollecte(echec="rien trouvé"), "porte sa `cause`")
+rejete("une réussite qui porte une cause → refusé",
+       lambda: ResultatCollecte(entry_id=1, cause="source_indisponible"), "porte sa `cause`")
 
 # ── §3 + §4 aiguillage : couverture déterministe, trois états, rien ne s'évapore ─────────────────
 print("\n[3+4] aiguillage : couverture = sous-produit du dispatch · trois états · aucune évaporation")
@@ -143,8 +150,24 @@ check("AUCUNE ligne ne s'évapore : liens + mandats == lignes vues",
       f"→ {len(R.liens)} + {len(R.mandats)} vs {R.lignes_vues}")
 rejete("un mandat d'origine inconnue est refusé (pas de 3ᵉ cause muette)",
        lambda: MandatCollecte(framework_id="f", framework_version="v", question_id="qf_1",
-                              ingredient_id="x", motif="peu importe", origine="autre"),
+                              ingredient_id="x", motif="peu importe", origine="autre",
+                              cause="recherche_epuisee"),
        "origine `autre` inconnue")
+check("l'inobtenable porte la cause « sans source possible » (le traducteur savait)",
+      any(m.origine == "inobtenable" and m.cause == "sans_source_possible" for m in R.mandats))
+check("la collecte échouée porte la cause DÉCLARÉE par l'exécuteur, recopiée sans ré-interprétation",
+      any(m.origine == "echec_collecte" and m.cause == "recherche_epuisee" for m in R.mandats),
+      f"→ {[(m.origine, m.cause) for m in R.mandats]}")
+rejete("un échec de collecte déclaré « sans source possible » → refusé (seul le traducteur le sait)",
+       lambda: MandatCollecte(framework_id="f", framework_version="v", question_id="qf_1",
+                              ingredient_id="x", motif="peu importe", origine="echec_collecte",
+                              cause="sans_source_possible"),
+       "« sans source possible » est")
+rejete("un inobtenable déclaré « source indisponible » → refusé",
+       lambda: MandatCollecte(framework_id="f", framework_version="v", question_id="qf_1",
+                              ingredient_id="x", motif="peu importe", origine="inobtenable",
+                              cause="source_indisponible"),
+       "« sans source possible » est")
 
 # ── §5 les colonnes du lien sont celles de question_coverage ──────────────────────────────────────
 print("\n[5] le lien mappe 1:1 sur `question_coverage` (persistance sans nomenclature devinée)")

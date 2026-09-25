@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { Card, CardHeader, CardBody, Badge, KeyValue, Dl, EmptyState, ErrorState } from '../../../../components/v2'
+import DossierComite from '../../../../components/v2/DossierComite'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -177,6 +178,9 @@ export default function TickerPivot() {
           </Badge>
         </h1>
       </div>
+
+      {/* La page d'un titre répond d'abord à « peut-on décider ? » (arbitrage du comité n°3). */}
+      <DossierComite tickerId={t.ticker_id} />
 
       <Card>
         <CardHeader title="Identité" />

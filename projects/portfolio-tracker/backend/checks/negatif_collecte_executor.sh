@@ -115,7 +115,7 @@ mutations=(
 "$SRC¦        poste = poste_retenu(ligne.poste, ligne.metrique)¦        poste = None  # mutation: la recette ne passe plus devant¦passe devant la consigne"
 # §11 ─ le refus perd son motif : l'echec ne nomme plus ni la cause ni l'expression. La ligne devient
 # un mandat illisible, et l'analyste lira « le dépôt ne porte pas ce nombre » là où l'ancre manquait.
-"$SRC¦                    echec=f\"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}\")¦                    echec=\"collecte impossible\")  # mutation: le refus perd son motif¦NOMME la cause et l'expression"
+"$SRC¦                    echec=f\"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}\",¦                    echec=\"collecte impossible\",  # mutation: le refus perd son motif¦NOMME la cause et l'expression"
 # §11 ─ LA FUITE DU COUPLE DANS LA VALEUR : l'ingrédient voyage avec la consigne. Le collecteur cesse
 # d'être aveugle par CONSTRUCTION (#58) et peut réancrer l'entry sur la question.
 "$SRC¦            expression = str(it.concepts[0])      # le contrat garantit qu'il y en a exactement un¦            expression = f\"{it.ingredient_id}: {it.concepts[0]}\"  # mutation: le couple fuit¦aucune VALEUR de consigne ne contient un fragment"
@@ -132,6 +132,11 @@ mutations=(
 # n'y a rien à tester ; c'est le wait_for du CHECK lui-même qui LÈVE et rougit §6bis. La preuve, dans
 # le test négatif, qu'un blocage n'est pas une exception et n'est attrapable que par une borne.
 "$SRC¦        exchange = await asyncio.wait_for(\n            run_search_worker(req), timeout=settings.WEB_LINE_BUDGET_S)¦        exchange = await run_search_worker(req)  # mutation: garde par ligne retiré¦est BORNÉ par le garde de prod"
+# Lot 6 maillon 2 — la CAUSE déclarée par l'exécuteur (arbitrage du comité n°3). Une mutation par cause.
+"$SRC¦cause=\"source_indisponible\")  # cause: temps épuisé¦cause=\"recherche_epuisee\")¦temps épuisé = \`source_indisponible\`"
+"$SRC¦cause=\"source_indisponible\")  # cause: worker en erreur¦cause=\"recherche_epuisee\")¦collecte web qui LÈVE = \`source_indisponible\`"
+"$SRC¦cause=\"recherche_epuisee\")  # cause: not_found¦cause=\"source_indisponible\")¦\`not_found\` → echec de cause"
+"$SRC¦cause=\"recherche_epuisee\")  # cause: appariement inexécutable¦cause=\"source_indisponible\")¦appariement inexécutable = \`recherche_epuisee\`"
 )
 
 passes=0; ratees=0

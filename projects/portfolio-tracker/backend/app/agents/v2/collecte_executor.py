@@ -313,13 +313,15 @@ class _SocleEdgar:
         if ticker_id not in self._par_ticker and ticker_id not in self._indispo:
             await self._collecter(ticker_id)
         if ticker_id in self._indispo:
-            return ResultatCollecte(echec=self._indispo[ticker_id])
+            return ResultatCollecte(echec=self._indispo[ticker_id], cause="source_indisponible")
         par_metric = self._par_ticker[ticker_id]
         entry_id = par_metric.get(poste_metric)
         if entry_id is None:
             return ResultatCollecte(
                 echec=f"poste EDGAR '{poste_metric}' non fondé pour {ticker_id} "
-                      "(aucun concept XBRL exploitable dans les dépôts)")
+                      "(aucun concept XBRL exploitable dans les dépôts)",
+                # Les dépôts ont été LUS : la donnée n'y est pas publiée sous forme exploitable.
+                cause="recherche_epuisee")
         return ResultatCollecte(entry_id=entry_id)
 
     async def _collecter(self, ticker_id: str) -> None:
@@ -382,11 +384,15 @@ async def collecter_un(
                     )
             except AppariementInexecutable as e:
                 return ResultatCollecte(
-                    echec=f"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}")
+                    echec=f"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}",
+                    # Le dépôt a été lu ; il ne porte pas le concept sous une forme calculable.
+                    cause="recherche_epuisee")  # cause: appariement inexécutable
             except Exception as e:  # écriture/DB/contrat → #25, jamais un crash qui perd le lot
                 return ResultatCollecte(
                     echec=f"appariement « {consigne.expression} » échoué "
-                          f"({type(e).__name__}) : {e}")
+                          f"({type(e).__name__}) : {e}",
+                    # Notre outil a cassé, pas la source qui a déçu : ça se relance.
+                    cause="source_indisponible")
             return ResultatCollecte(entry_id=entry_id)
         # Repli NOMMÉ : la carte a dit « edgar » mais il n'y a ni recette ni consigne exécutable
         # (carte absente, statut hérité de `poste_retenu` seul, ou inventaire injoignable).
@@ -410,29 +416,37 @@ async def collecter_un(
         exchange = await asyncio.wait_for(
             run_search_worker(req), timeout=settings.WEB_LINE_BUDGET_S)
     except SearchUnavailable as e:
-        return ResultatCollecte(echec=f"recherche web indisponible : {e}")
+        return ResultatCollecte(echec=f"recherche web indisponible : {e}",
+                                cause="source_indisponible")
     except (asyncio.TimeoutError, TimeoutError):
         # Un blocage n'est pas une exception « naturelle » : sans ce garde il ne devient JAMAIS un
         # echec, il bloque. Le motif NOMME la cause (#25) pour que le mandat soit lisible.
         return ResultatCollecte(
             echec=f"collecte web abandonnée : budget de {settings.WEB_LINE_BUDGET_S} s dépassé "
-                  f"pour « {ligne.metrique} » (ligne convertie en mandat, aucune donnée écrite)")
+                  f"pour « {ligne.metrique} » (ligne convertie en mandat, aucune donnée écrite)",
+            # Un temps épuisé n'est pas une recherche épuisée : l'analyste coupé en route n'a pas
+            # conclu que la donnée n'existe pas. Ça se relance.
+            cause="source_indisponible")  # cause: temps épuisé
     except Exception as e:  # sortie non conforme / réseau → #25, jamais un crash
         # Une collecte qui ÉCHOUE pour QUELQUE raison que ce soit devient un mandat MOTIVÉ (cause
         # nommée), jamais une exception qui fait perdre tout le lot et empêche de persister les liens
         # déjà acquis. Le plan est persisté et la couverture est idempotente : la ligne se re-collecte
         # à un prochain run. Portée au SEUL `run_search_worker` (appel externe, modèle/recherche) — un
         # bug de dispatch en amont, lui, continue de remonter, jamais masqué en mandat.
-        return ResultatCollecte(echec=f"collecte web échouée ({type(e).__name__}) : {e}")
+        return ResultatCollecte(echec=f"collecte web échouée ({type(e).__name__}) : {e}",
+                                cause="source_indisponible")  # cause: worker en erreur
     if exchange.response.status == "not_found" or not exchange.response.entries:
         return ResultatCollecte(
             echec=f"search-worker n'a rien retenu pour « {ligne.metrique} » "
-                  f"(status={exchange.response.status})")
+                  f"(status={exchange.response.status})",
+            # Le seul cas où la recherche web est allée AU BOUT et a conclu : rien de publié.
+            cause="recherche_epuisee")  # cause: not_found
     async with conn.transaction():
         created = await persist_worker_entries(conn, exchange)
     if not created:
         return ResultatCollecte(
-            echec=f"search-worker: aucune entry persistée pour « {ligne.metrique} »")
+            echec=f"search-worker: aucune entry persistée pour « {ligne.metrique} »",
+            cause="recherche_epuisee")
     # Une ligne → un lien. Le worker peut retenir plusieurs entries (Pareto) ; elles entrent toutes au
     # corpus, mais la couverture de CET ingrédient est adossée à la première (la mieux classée).
     return ResultatCollecte(entry_id=created[0]["id"])
