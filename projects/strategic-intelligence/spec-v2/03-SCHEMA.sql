@@ -368,7 +368,7 @@ CREATE TABLE source (
   zone_id            UUID REFERENCES taxonomy_term(id),
   domain_codes       TEXT[] NOT NULL DEFAULT '{}',
   content_type       TEXT,                       -- terme de la taxonomie content_type
-  default_sensitivity sensitivity NOT NULL DEFAULT 'green',  -- terrain@ : red
+  default_sensitivity sensitivity NOT NULL DEFAULT 'green',  -- terrain+<pack>@ : red
   is_primary         BOOLEAN NOT NULL DEFAULT false,
   independence_group TEXT,                       -- même groupe = pas de corroboration mutuelle
   schedule_cron      TEXT,                       -- NULL = poussée (email, fichier)
@@ -789,7 +789,7 @@ CREATE TABLE forecast (
 -- =====================================================================
 CREATE TABLE field_note (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  raw_item_id  UUID REFERENCES raw_item(id),    -- note reçue par terrain@ (contenu chiffré dans raw_item)
+  raw_item_id  UUID REFERENCES raw_item(id),    -- note reçue par terrain+<pack>@ (contenu chiffré dans raw_item)
   author_id    UUID REFERENCES app_user(id),    -- note saisie dans l'outil
   body_enc     BYTEA,
   occurred_on  DATE,

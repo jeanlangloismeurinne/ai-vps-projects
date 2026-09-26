@@ -35,7 +35,7 @@ arbitrer seul.
 | Confidentialité | isolement réseau d'une « zone rouge » + modèle local | **routeur de sortie unique**, trois niveaux (libre / segmenté / jamais), segmentation des appels, information de l'utilisateur. Aucun modèle local |
 | Organisation | couches techniques, 9 points d'extension fermés | **noyau + modules métier + fonctions**, manifeste `module.yml`, bus d'événements, 13 points d'extension |
 | Sources | YAML versionné, JSONPath GET, secrets en `.env` | **base = source de vérité, édition dans l'interface**, familles / gabarits / instances, contrat de mappage élargi (XML, POST, liste→détail, HTML), coffre de secrets, 6 cas pilotes |
-| Newsletters et terrain | absent | deux alias `newsletter-summary` : `veille@` (newsletters) et `terrain@` (notes personnelles) |
+| Newsletters et terrain | absent | deux alias `newsletter-summary` : `veille+<pack>@` (newsletters) et `terrain+<pack>@` (notes personnelles) |
 | Wiki | agent curateur réécrivant des pages Git | **fiches générées depuis la base** ; le LLM n'écrit que l'interprétation |
 | Métier | domaines, horizons, questions clés, thèses | + **types d'événements**, **scénarios**, **observations chiffrées**, **livrables**, **double score importance/crédibilité**, **calibration** |
 | Infrastructure | VPS 8 vCPU/16 Go dédié, Caddy, Valkey, Ollama | VPS existant agrandi, Traefik, `shared-postgres`, file sur Postgres, DeepInfra, Exa, `comms-gateway` |

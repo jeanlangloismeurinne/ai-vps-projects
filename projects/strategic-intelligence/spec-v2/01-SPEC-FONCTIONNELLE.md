@@ -8,7 +8,7 @@ Un directeur de la stratégie, utilisateur principal, non technique dans l'usage
 
 Ce qu'il attend de l'outil, dans l'ordre :
 1. **Ne pas être surpris** : aucune information importante de son marché ne doit lui parvenir
-   par un tiers avant d'être passée par l'outil (mesuré par la revue de couverture, §14).
+   par un tiers avant d'être passée par l'outil (mesuré par la revue de couverture, §16).
 2. **Savoir quand changer d'avis** : ses questions clés et ses scénarios bougent avec les faits,
    et l'outil le lui dit.
 3. **Transmettre** : produire en quelques minutes une note citée pour le comité exécutif.
@@ -68,8 +68,12 @@ montant, date de closing…) et les **rôles** de ses entités (`subject`, `obje
 
 | Objet | Description | Sensibilité |
 |---|---|---|
-| `field_note` | Note terrain reçue par l'alias `terrain@` ou saisie dans l'outil (salon, rendez-vous, rumeur) | `red` |
+| `field_note` | Note terrain reçue par l'alias `terrain+<pack>@` ou saisie dans l'outil (salon, rendez-vous, rumeur) | `red` |
 | `annotation` | Note de l'utilisateur sur n'importe quel objet | `red` |
+
+**Le groupe de l'utilisateur** est représenté par des acteurs de relation `group_entity`. Un signal
+qui les concerne est marqué « nous » dans l'interface et alimente la veille de réputation (`PERC`) ;
+leurs noms figurent dans les termes d'identité (`05` §3, S3).
 | `feedback` | Jugement sur un signal : `relevant`, `noise`, `already_known`, `critical` | `amber` |
 
 ### 2.5 Diffusion et gouvernance
@@ -233,7 +237,7 @@ réviser la spec (règle d'or 9).
 | `scenarios` | jeux de scénarios et signes avant-coureurs (4) · vraisemblance historisée (4) |
 | `theses` | board de thèses (4) · rattachement par les indicateurs, validé par l'utilisateur (4) · « convictions qui ont bougé » dans l'interface (4) |
 | `calibration` | enregistrement des probabilités datées (4) · score de Brier à l'échéance (4) |
-| `terrain` | réception des notes `terrain@` (1) · saisie rapide dans l'outil (2) · rattachement manuel aux entités et questions (2) |
+| `terrain` | réception des notes `terrain+<pack>@` (1) · saisie rapide dans l'outil (2) · rattachement manuel aux entités et questions (2) |
 | `concurrence` | fiches concurrents (3) · pages produits et carrières suivies (3) |
 | `commande_publique` | avis de marché dans le périmètre (1) · calendrier des clôtures (3) · attributions aux concurrents suivis (3) |
 | `reglementaire` | textes suivis et entrées en vigueur (3) |
@@ -325,7 +329,33 @@ refusée côté LLM et traitée par recherche plein texte uniquement.
 - **Livrables** : générés à la demande, exportés en PDF ou Markdown. Le gabarit filtre les
   contenus selon le rôle du destinataire (un livrable pour `reader` n'inclut jamais de `red`).
 
-## 14. Métriques de pilotage
+## 14. Données personnelles
+
+Les personnes ne sont enregistrées qu'en qualité professionnelle (nom, fonction, organisation, source).
+Une entité `person` non citée par un signal depuis 24 mois est purgée. Les adresses de l'utilisateur
+(liste des expéditeurs de `terrain+<pack>@`) vivent dans le Hub de newsletter-summary, jamais dans un
+fichier versionné.
+
+## 15. Catalogue des gabarits de prompts
+
+Chaque gabarit est versionné en base (`prompt_template`), produit une sortie **JSON validée par
+schéma** (rejet et nouvelle tentative, puis échec nommé), et déclare son niveau de sensibilité maximal.
+
+| Code | Usage | Entrée | Sortie | Niveau |
+|---|---|---|---|---|
+| `extract_signal` | extraction (L1-09) | texte d'un `raw_item`, liste des types d'événements et leurs schémas, segments et technologies du pack | `{is_relevant, event_type, event_fields, entities[{surface, kind, role}], event_date, precision, observations[], quotes[]}` | `green` |
+| `so_what` | implication pour le périmètre | signal + description publique du périmètre | une phrase, citée | `green` |
+| `perimeter_impact` | composante de score | signal + segments et technologies | note 0-1 + justification | `green` |
+| `event_same` | regroupement d'événements ambigu | deux signaux | `{same_event, confidence}` | `green` |
+| `section_lecture` | fiches (lot 3) | evidences d'une entité | sections « Lecture » et « Ce qui changerait notre lecture », chaque phrase citée | `green` |
+| `source_dossier` | qualification d'une source | extraits de la source | fiche de qualification | `green` |
+| `pack_assistant` | nouveau secteur | description publique d'un secteur | propositions de segments, technologies, types d'événements, métriques, acteurs, sources | `green` |
+| `indicator_check` | question vérifiable | une `check_question` + un signal | `{answer: yes/no/unclear, quote}` | `amber` |
+| `probe_generation` | sondes | une question clé | 3 à 5 requêtes | `amber` |
+| `question_assistant` | falsifiabilité | un brouillon de question | `{falsifiable, issues[], reformulations[]}` | `amber` |
+| `scout` | radar (lot 5) | signaux orphelins `green` | 3 à 5 hypothèses citées | `green` |
+
+## 16. Métriques de pilotage
 
 Calculées mensuellement, affichées dans l'administration : taux de pertinence (cartes non
 marquées « bruit ») · **taux de couverture** (événements majeurs détectés / événements majeurs

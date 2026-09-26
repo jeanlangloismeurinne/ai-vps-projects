@@ -52,7 +52,7 @@ Formule : **on envoie ce qu'on observe, jamais ce qu'on en pense.**
 |---|---|---|
 | S1 | **Un seul objet `amber` par appel** (une question, ou un indicateur, ou une sonde) | compte des références `amber` du payload |
 | S2 | **Jamais de position** : ni sens (`confirms`/`refutes`), ni poids, ni confiance, ni lien vers une thèse ou un scénario | champs interdits dans les parties `amber` |
-| S3 | **Jamais l'identité du périmètre** avec un objet `amber` : pas de nom d'entreprise, pas de relation acteur ↔ périmètre | les termes d'identité (réglage `noyau.identity_terms`, saisi dans l'interface, non versionné) sont refusés dans un envoi `amber` |
+| S3 | **Jamais l'identité du périmètre dans la partie `amber`** : ni nom d'une entité du groupe, ni relation acteur ↔ périmètre dans la question, l'indicateur ou la sonde. Le texte `green` d'un signal peut, lui, citer le groupe (un article qui le mentionne reste vérifiable) | les termes d'identité (réglage `noyau.identity_terms`, saisi dans l'interface, non versionné) sont refusés dans les parties `amber` d'un envoi |
 | S4 | **Forme neutre et fermée** : l'indicateur est envoyé sous sa `check_question` (« ce texte annonce-t-il… ? ») | le gabarit `indicator_check` n'accepte que `check_question` + texte du signal |
 | S5 | **Contexte minimal** : le texte du signal candidat et la question, rien d'autre | taille maximale et parties déclarées par le gabarit |
 | S6 | **Pas de rafale thématique** : les appels `amber` sont étalés et mêlés aux appels `green` du traitement courant | file dédiée, débit plafonné par objet |
@@ -149,8 +149,20 @@ dans `/root/secrets/` (sans elle, les données `red` sont perdues).
   sortie : les sections `amber` et `red` sont remplacées par un décompte et un lien avant l'envoi.
 - **Prérequis externes** (état 2026-09-26, `CLAUDE.md` du dépôt) : pas de domaine d'envoi
   vérifié chez Resend (livraison réelle impossible, mode dev), app Slack du gateway à créer.
-  Tant qu'ils ne sont pas levés, le brief est consultable dans l'interface et le courriel part en
-  mode dev ; ce n'est pas un blocage des lots.
+  Tant qu'ils ne sont pas levés, le brief est consultable dans l'interface et le courriel part
+  **à l'adresse du compte Resend** (mode dev du gateway, décision utilisateur) ; les alertes Slack
+  attendent l'app Slack du gateway. Ce n'est pas un blocage des lots.
+
+## 10. Phase de test (V0)
+
+La V0 est construite avec DeepInfra (D5). L'utilisateur prévoit de basculer ensuite vers une API
+jugée plus sûre pour un groupe de défense. Conséquences de conception, déjà couvertes par le
+point d'extension E4 et exigées dès le lot 0 :
+- changer de fournisseur ou de modèle est **un changement de configuration** (par usage), jamais de code ;
+- les embeddings coexistent par modèle (table `embedding`) : un changement de modèle déclenche une
+  revectorisation en tâche de fond, sans migration ;
+- les règles de sensibilité et de segmentation s'appliquent **à l'identique** quel que soit le fournisseur ;
+- l'écran « sorties externes » affiche le fournisseur de chaque envoi.
 
 ## 9. Ce que garde `check_sensibilite.py`
 

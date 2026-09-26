@@ -26,16 +26,16 @@ sources:
   # ---- Science et propriété industrielle ----------------------------------------------
   - {code: SRC-PI-002, label: "Prépublications scientifiques", template: arxiv, params: {}, lang: en, zone: WORLD, domains: [TECH, WEAK], reliability: B2, is_primary: true}
 
-  # ---- Pages d'acteurs (dérivées du référentiel, proposées à l'ajout d'un acteur) ------
-  # Exemple d'instance : une par page produit suivie.
-  - {code: SRC-AC-002-ACT-0002, label: "Page produits — <acteur B>", template: actor_product_page, params: {url: "<url>", selector: "main"}, bound_entity: ACT-0002, lang: en, zone: NA, domains: [COMP, TECH], reliability: A2, is_primary: true}
+  # ---- Pages d'acteurs ------------------------------------------------------------------
+  # Aucune instance ici : l'outil les PROPOSE à l'ajout de chaque acteur (04 §6), l'utilisateur complète.
 
   # ---- Recherche dirigée ----------------------------------------------------------------
   - {code: SRC-WS-001, label: "Recherche web (sondes)", template: exa_search, params: {}, lang: multi, zone: WORLD, domains: [DEM, COMP, TECH, CAP, WEAK], reliability: F6}
 
   # ---- Entrées courriel (newsletter-summary, 07) ------------------------------------------
-  # Les instances « une par expéditeur » de veille@ sont créées automatiquement au premier courriel.
-  - {code: SRC-TERRAIN, label: "Notes terrain", template: field_note_email, params: {}, lang: multi, zone: WORLD, domains: [], reliability: C3, default_sensitivity: red}
+  # Les instances « une par expéditeur » de veille+spatial@ sont créées automatiquement au premier courriel.
+  # Adresses : veille+spatial@ et terrain+spatial@ (pack.inbound.alias_tag).
+  - {code: SRC-TERRAIN, label: "Notes terrain", template: field_note_email, params: {alias_tag: spatial}, lang: multi, zone: WORLD, domains: [], reliability: C3, default_sensitivity: red}
 
 # Sources du catalogue v1 à convertir aux lots suivants (gabarits à écrire contre l'API réelle) :
 # BOAMP, SAM.gov, portail achats ESA (html_list), USAspending (http_json POST), EPO OPS (http_xml + OAuth2),

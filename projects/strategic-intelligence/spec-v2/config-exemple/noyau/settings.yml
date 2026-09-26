@@ -6,15 +6,18 @@
 noyau:
   providers:
     llm:
-      default: {provider: deepinfra, model: "<modèle économique, choisi au lot 1 après essai>"}
+      default: {provider: deepinfra, model: "deepseek-ai/DeepSeek-V4-Flash-0731"}   # déjà en production dans newsletter-summary ;
+                                         # support du format de sortie structuré à vérifier au lot 1 contre l'API réelle
       by_purpose: {}                     # surcharge par usage (extraction, so_what, ...)
-    embedding: {provider: deepinfra, model: "BAAI/bge-m3", dim: 1024}
+    embedding: {provider: deepinfra, model: "BAAI/bge-m3", dim: 1024}      # vérifié le 2026-09-26 : 1024 dimensions
     search: {provider: exa, monthly_max_queries: 1000}
   secrets:                               # noms attendus dans le coffre (valeurs saisies dans l'UI)
     - DEEPINFRA_API_KEY
     - EXA_API_KEY
     - GATEWAY_TOKEN
     - INBOUND_API_KEY                    # partagée avec newsletter-summary
+  identity_terms: []                     # saisis dans l'interface, jamais versionnés (05 §3, S3)
+  phase: test                            # test = V0 sur DeepInfra ; bascule vers une API sécurisée par configuration (D5)
   budget:
     mode: observe                        # observe | enforce (D7)
     monthly_cap_eur: 40
@@ -64,7 +67,7 @@ diffusion:
     per_domain_max: 3
     total_max: 18
   alerts:
-    channel: slack
+    channel: slack                       # canal Slack : pack.diffusion.slack_channel
     per_day_max: 3
   weekly_review:
     day: friday

@@ -102,6 +102,7 @@ taxonomies:
       - {code: partner_of,          label: "Partenaire"}
       - {code: research_partner_of, label: "Partenaire de recherche"}
       - {code: subsidiary_of,       label: "Filiale"}
+      - {code: group_entity,        label: "Entité du groupe de l'utilisateur"}   # « nous » : reconnu dans les signaux, jamais envoyé en amber
 
   - code: link_kind
     label: "Liens entre signaux"

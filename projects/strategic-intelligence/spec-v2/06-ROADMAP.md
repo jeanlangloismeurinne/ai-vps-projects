@@ -1,6 +1,7 @@
 # Roadmap et backlog
 
-Six lots. Un lot n'est commencé que lorsque les critères du précédent sont **verts et vérifiés en
+Six lots. **La V0 = lots 0 à 2** (D29) : à sa livraison, l'utilisateur paramètre ses mandats et questions
+clés réels. Un lot n'est commencé que lorsque les critères du précédent sont **verts et vérifiés en
 conditions réelles** (déployé, exécuté contre les vrais services, observé). Chaque ticket porte
 un identifiant utilisé en préfixe de commit. Les durées sont des ordres de grandeur de
 développement par agent.
@@ -24,7 +25,7 @@ Rien de métier : tout ce qui rend le reste ajoutable sans casser.
 
 | Ticket | Contenu |
 |---|---|
-| L0-01 | Projet sur le VPS selon `CLAUDE.md` « Ajouter un projet » : base `db_strategic`, `docker-compose.yml` (réseau `coolify`, labels Traefik et middlewares propres `sigzip`/`siredirect`), `.env` 600, entrées dans `compose-deploy.sh`, `_KNOWN_PROJECTS`, `00-REPRISE.md` |
+| L0-01 | Projet sur le VPS selon `CLAUDE.md` « Ajouter un projet » : base `db_strategic`, `docker-compose.yml` (réseau `coolify`, labels Traefik et middlewares propres `sigzip`/`siredirect`, hôte `strategie.jlmvpscode.duckdns.org`), `.env` 600 (existe déjà avec les clés DeepInfra et Exa), entrées dans `compose-deploy.sh`, `_KNOWN_PROJECTS` |
 | L0-02 | Outillage : ruff, mypy strict, pytest ; `checks/` avec `_harness.py` recopié de portfolio-tracker, `run_all.sh`, hook pré-commit exécutant `check_architecture.py` |
 | L0-03 | `ARCHITECTURE.md` depuis `modeles/`, `ARCHITECTURE.md` des modules socle ; `check_architecture.py` + `negatif_architecture.sh` |
 | L0-04 | Schéma du noyau (migrations Alembic, `03-SCHEMA.sql` section NOYAU) ; amorçage d'une base vide |
@@ -33,10 +34,10 @@ Rien de métier : tout ce qui rend le reste ajoutable sans casser.
 | L0-07 | Bus d'événements (`event_outbox`, `event_consumption`, `SKIP LOCKED`), ordonnanceur sur Postgres, processus `web`/`worker`/`scheduler` |
 | L0-08 | Routeur de sortie : niveaux, règles S1-S5, `prompt_template` et validation, `egress_log`, mode simulation ; fournisseurs DeepInfra (LLM, embeddings) et factice ; `check_sorties.py`, `check_sensibilite.py` + négatifs |
 | L0-09 | Garde-budget : `api_usage`, plafond, modes `observe`/`enforce`, bandeau, alerte d'anomalie |
-| L0-10 | Coffre de secrets et chiffrement des colonnes `red` ; copie de la clé maîtresse dans `/root/secrets/` |
+| L0-10 | Coffre de secrets, import des clés du `.env` au premier démarrage (D28), chiffrement des colonnes `red` ; copie de la clé maîtresse dans `/root/secrets/strategic-intelligence.env` |
 | L0-11 | `noyau.http` : garde SSRF, `robots.txt`, `User-Agent`, débit par domaine, domaines interdits |
 | L0-12 | `check_agnosticite.py` + négatif |
-| L0-13 | Authentification mot de passe + TOTP, rôles `owner`/`analyst`/`reader` |
+| L0-13 | Authentification mot de passe + TOTP, rôles `owner`/`analyst`/`reader`, commande `create-owner` ; saisie des termes d'identité dans l'interface |
 | L0-14 | Écran « Modules et fonctions » minimal ; sauvegarde de `db_strategic` vérifiée par une restauration |
 
 **Critères d'acceptation**
@@ -88,7 +89,7 @@ Le lot qui doit convaincre : un brief quotidien utile, alimenté par six types d
 | L1-02 | Familles `http_json` (GET/POST), `http_xml`, `html_list`, `html_diff`, `email`, `file` ; transformations initiales |
 | L1-03 | Découverte automatique (flux, sitemap, proposition de sélecteurs pour `html_list`) |
 | L1-04 | `source_sample` et santé des sources ; événement `source.degraded`, alertes |
-| L1-05 | Chantier newsletter-summary (`07`) : alias `veille@` et `terrain@`, mode « transmettre », point d'entrée de réception |
+| L1-05 | Chantier newsletter-summary (`07`) : action `forward`, alias `veille+spatial` et `terrain+spatial` créés dans le Hub (expéditeurs de `terrain` saisis par l'utilisateur), point d'entrée `/internal/inbound/email` ; test avec un vrai courriel sur chaque alias |
 | L1-06 | **Six cas pilotes** (`04` §5) en production, chacun avec son échantillon réel |
 | L1-07 | Embeddings DeepInfra `bge-m3`, table `embedding`, déduplication sémantique |
 | L1-08 | Filtre de pertinence gratuit dérivé du pack |
@@ -100,7 +101,7 @@ Le lot qui doit convaincre : un brief quotidien utile, alimenté par six types d
 | L1-14 | Brief web « depuis votre dernière visite », actions sur les cartes, `feedback` |
 | L1-15 | Brief par courriel et alertes Slack via `comms-gateway` (mode dev tant que les prérequis du gateway ne sont pas levés) |
 | L1-16 | Réception des notes terrain : `field_note`, chiffrement, accusé sans contenu |
-| L1-17 | Corpus de référence : 200 contenus réels annotés (doublon, type d'événement, entités, pertinence), rejeu fantôme comparatif |
+| L1-17 | Corpus de référence : 200 contenus réels **pré-annotés par l'agent** (doublon, type d'événement, entités, pertinence), dont un échantillon de 50 **validé par l'utilisateur** dans un écran dédié ; rejeu fantôme comparatif |
 | L1-18 | Écrans d'administration : sources, coûts, sorties externes (journal, validation des gabarits) |
 
 **Critères d'acceptation**
@@ -135,16 +136,21 @@ Le lot qui doit convaincre : un brief quotidien utile, alimenté par six types d
 | L2-10 | Workflow de qualification des sources découvertes, essai, rétrogradation |
 
 **Critères d'acceptation**
-- Les mandats de départ du pack sont actifs et alimentés.
+- Le module fonctionne de bout en bout sur l'exemple neutre de `config-exemple/demarrage-mandats.example.yml`
+  appliqué aux données réelles (l'utilisateur paramètre ses vrais mandats après la V0, D25).
 - Un indicateur s'est déclenché sur un vrai signal par règle déclarative, un autre par question vérifiable.
+- **Livraison de la V0** : l'import de mandats depuis un fichier local (non versionné) est disponible, et
+  l'agent le signale à l'utilisateur.
 - La revue du vendredi liste les objets `amber` sortis ; l'utilisateur l'a revue une fois.
 - Une note d'une page a été produite, entièrement citée, et exportée.
-- Une note terrain reçue par `terrain@` est rattachée à une question sans aucune sortie externe
+- Une note terrain reçue par `terrain+<pack>@` est rattachée à une question sans aucune sortie externe
   (vérifié dans `egress_log`).
 
 ---
 
 ## Lot 3 — Modules métier, connaissance, second secteur (3 semaines)
+
+**Au début du lot** : demander à l'utilisateur de créer le compte développeur EPO OPS (D26).
 
 | Ticket | Contenu |
 |---|---|
@@ -173,6 +179,7 @@ Le lot qui doit convaincre : un brief quotidien utile, alimenté par six types d
 
 | Ticket | Contenu |
 |---|---|
+| L4-00 | **Atelier scénarios avec l'utilisateur** (D27) : incertitudes majeures, 2 à 4 scénarios par jeu, signes avant-coureurs — avant de coder les écrans |
 | L4-01 | Module `scenarios` : jeux de scénarios, signes avant-coureurs, rapports de vraisemblance |
 | L4-02 | Vraisemblance historisée (`red`), mise à jour par indicateurs observés et par l'utilisateur |
 | L4-03 | Module `theses` : création, indicateurs, rattachement proposé par indicateurs et validé par l'utilisateur |

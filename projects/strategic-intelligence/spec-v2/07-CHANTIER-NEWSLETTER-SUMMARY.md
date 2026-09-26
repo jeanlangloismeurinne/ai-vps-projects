@@ -11,7 +11,7 @@ par DeepInfra puis envoyer une réponse (digest ou réponse à l'expéditeur). L
 alias tiennent dans des colonnes (`frequency`, `recipient`, `open_senders`, `allowed_senders`,
 `presentation`), pas dans le code — c'est la bonne base.
 
-Tel quel, un alias `terrain@` enverrait les notes de l'utilisateur à un LLM externe et les
+Tel quel, un alias `terrain+spatial@` enverrait les notes de l'utilisateur à un LLM externe et les
 recopierait dans un courriel : contraire à D3.
 
 ## 2. Évolution demandée
@@ -32,29 +32,36 @@ Comportement de `forward` :
    le webhook Resend ne porte pas le corps), pièces jointes comprises.
 4. `POST` vers strategic-intelligence (réseau interne `coolify`, jamais par Internet) :
    `/internal/inbound/email` avec en-tête `X-Internal-Api-Key`, corps JSON
-   `{alias, message_id, from, to, subject, received_at, html, text, attachments:[{filename, content_type, base64}]}`.
+   `{alias, forward_target, message_id, from, to, subject, received_at, html, text, attachments:[{filename, content_type, base64}]}`.
    Réponse `202` = pris en charge ; tout autre code = nouvelle tentative (3 fois), puis `failed`
    avec erreur nommée.
 5. `ack = receipt` : un courriel « Note reçue le … » **sans reprise du contenu ni de l'objet**.
 6. Le courriel n'est pas conservé en clair dans newsletter-summary au-delà de la transmission
    réussie (statut `forwarded`, corps purgé).
 
-## 3. Les deux alias
+## 3. Les alias, un couple par pack sectoriel
 
-| Alias | `action` | Expéditeurs | Accusé | Côté strategic-intelligence |
+Domaine de réception actuel de newsletter-summary : `oozeenaru.resend.app` (`INBOUND_DOMAIN`).
+Le suffixe `+<pack>` désigne le pack destinataire : un nouveau secteur = deux nouveaux alias,
+créés dans le Hub, sans code. `forward_target` vaut `strategic-intelligence:<veille|terrain>:<pack>`.
+
+| Alias (local-part exact) | `action` | Expéditeurs | Accusé | Côté strategic-intelligence |
 |---|---|---|---|---|
-| `veille@` | `forward` → `strategic-intelligence:veille` | **ouvert** (les newsletters viennent d'expéditeurs variés) ; plafond journalier dédié | aucun | gabarit `newsletter_email`, `green`, une instance par expéditeur créée en `pending` |
-| `terrain@` | `forward` → `strategic-intelligence:terrain` | **adresses de l'utilisateur uniquement** | `receipt` | gabarit `field_note_email`, `red`, chiffré à l'arrivée |
+| `veille+spatial` | `forward` → `strategic-intelligence:veille:spatial` | **ouvert** (newsletters d'expéditeurs variés) ; plafond journalier dédié | aucun | gabarit `newsletter_email`, `green`, une instance par expéditeur créée en `pending` |
+| `terrain+spatial` | `forward` → `strategic-intelligence:terrain:spatial` | **les trois adresses de l'utilisateur**, saisies dans le Hub (jamais dans un fichier versionné) | `receipt` | gabarit `field_note_email`, `red`, chiffré à l'arrivée |
 
-Le flux newsletter personnel existant (alias par défaut) n'est **pas** modifié et n'alimente pas
-strategic-intelligence (D8).
+L'utilisateur se charge d'abonner `veille+spatial@…` à ses newsletters. Le flux newsletter
+personnel existant (alias par défaut) n'est **pas** modifié et n'alimente pas strategic-intelligence (D8).
+
+Rappel du moteur actuel : la correspondance d'alias est **exacte** (`veille+spatial` est un alias à
+part entière ; `veille+autre` ne retombe pas dessus mais sur l'alias par défaut). Il faut donc
+créer explicitement chaque alias `+<pack>`.
 
 ## 4. Points à vérifier au moment du chantier
 
-- L'hypothèse « Resend accepte n'importe quel local-part » n'est pas encore vérifiée en
-  production (mémoire du projet) : envoyer un vrai courriel à `veille@` et `terrain@` avant de
-  conclure.
+- L'hypothèse « Resend accepte n'importe quel local-part, `+` compris » n'est pas encore vérifiée en
+  production : envoyer un vrai courriel à `veille+spatial@` et `terrain+spatial@` avant de conclure.
 - Plafond du gateway (60 courriels/jour pour le client newsletter-summary) : `forward` n'envoie
-  qu'un accusé pour `terrain@` ; aucun envoi pour `veille@`. Pas d'effet sur le digest existant.
-- Tests : un courriel `terrain@` d'un expéditeur non autorisé est `rejected` sans transmission ;
+  qu'un accusé pour `terrain+*` ; aucun envoi pour `veille+*`. Pas d'effet sur le digest existant.
+- Tests : un courriel `terrain+spatial@` d'un expéditeur non autorisé est `rejected` sans transmission ;
   un courriel `forward` ne déclenche aucun appel DeepInfra (vérifié par le journal du client).

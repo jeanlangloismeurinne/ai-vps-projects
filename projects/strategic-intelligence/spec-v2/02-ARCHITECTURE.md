@@ -228,10 +228,14 @@ une publication scientifique ou une newsletter sans dupliquer la chaîne.
 | LLM et embeddings | DeepInfra (API compatible OpenAI) ; embeddings `BAAI/bge-m3`, 1024 dimensions |
 | Recherche web | Exa |
 | Courriel, Slack | `comms-gateway` (client dédié, quotas propres) |
-| Entrées courriel | `newsletter-summary`, alias `veille@` et `terrain@` (`07`) |
+| Entrées courriel | `newsletter-summary`, alias `veille+<pack>@` et `terrain+<pack>@` (`07`) |
 | Détection de changement de page | famille `html_diff` interne (hash de la zone sélectionnée) ; `changedetection.io` non retenu au départ (RAM du VPS) |
 | Interface | FastAPI + Jinja2 + HTMX + Tailwind (CSS précompilé) |
-| Authentification | mot de passe + TOTP |
+| Adresse | `strategie.jlmvpscode.duckdns.org` (TLS Traefik, middlewares propres `sigzip`, `siredirect`) |
+| Entrée interne | `POST /internal/inbound/email` : réseau `coolify` seulement, aucune route Traefik (`04` §5.7) |
+| Authentification | mot de passe + TOTP ; compte `owner` créé au premier démarrage par une commande (`python -m app.noyau.admin create-owner`), jamais par l'interface publique |
+| Secrets | le `.env` porte la clé maîtresse et, au premier démarrage seulement, les clés à importer dans le coffre (D28) |
+| Rendu des courriels | gabarits Jinja : structure, en-tête, liens et fermeture produits par le code ; le LLM ne fournit que du texte, échappé |
 | Sauvegarde | `db_strategic` intégrée au dispositif de sauvegarde du VPS (à vérifier au lot 0, sinon `pg_dump` chiffré quotidien vers stockage objet) |
 | Journaux | JSON structurés, identifiant de corrélation par contenu de bout en bout |
 

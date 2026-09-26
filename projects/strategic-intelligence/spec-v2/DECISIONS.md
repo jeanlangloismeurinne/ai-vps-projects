@@ -29,7 +29,9 @@ par les indicateurs (`amber`, segmentés) pour être rapprochées des signaux.
 Conséquence : la segmentation vise l'irréconstituabilité des *convictions*, pas l'invisibilité
 des *sujets*.
 
-**D5 — Fournisseur LLM et embeddings : DeepInfra.**
+**D5 — Fournisseur LLM et embeddings : DeepInfra, en phase de test (V0).** Bascule ultérieure vers une API
+sécurisée, par configuration uniquement (`05` §10). Modèle par défaut `deepseek-ai/DeepSeek-V4-Flash-0731`
+(déjà en production dans newsletter-summary), embeddings `BAAI/bge-m3` ; clés vérifiées le 2026-09-26.
 Pourquoi : déjà utilisé sur le VPS (newsletter-summary, portfolio-tracker), clé disponible,
 embeddings `BAAI/bge-m3` (1024 dimensions, multilingue) standard du dépôt.
 Conséquence : un seul fournisseur externe de modèles au démarrage ; le routeur reste
@@ -42,11 +44,12 @@ Pourquoi : on veut d'abord mesurer le coût réel du système en marche.
 Conséquence : garde-budget en mode `observe` (comptage, projection, bandeau, alerte) ;
 l'utilisateur bascule en mode `enforce` dans l'interface quand il le décide (`05` §6).
 
-**D8 — Newsletters : un alias dédié `veille@` de newsletter-summary.** L'utilisateur y abonne les
-newsletters stratégiques. Le flux newsletter personnel existant n'alimente pas l'outil.
+**D8 — Newsletters : alias dédié `veille+<pack>@` de newsletter-summary** (`veille+spatial@`). L'utilisateur
+y abonne les newsletters stratégiques. Le suffixe désigne le pack destinataire. Le flux newsletter personnel
+existant n'alimente pas l'outil.
 
-**D9 — Notes terrain : un second alias `terrain@`**, accepté uniquement depuis les adresses de
-l'utilisateur, sans LLM, avec accusé de réception sans reprise du contenu, pièces jointes PDF
+**D9 — Notes terrain : alias `terrain+<pack>@`** (`terrain+spatial@`), accepté uniquement depuis les trois
+adresses de l'utilisateur (saisies dans le Hub, jamais versionnées), sans LLM, avec accusé de réception sans reprise du contenu, pièces jointes PDF
 acceptées. Pas de résumé par courriel des newsletters de veille : le brief de l'outil le remplace.
 
 **D10 — Configuration : la base fait foi, l'interface l'édite, le YAML sert à l'import/export.**
@@ -54,7 +57,9 @@ acceptées. Pas de résumé par courriel des newsletters de veille : le brief de
 **D11 — Connaissance : fiches générées depuis la base ; le LLM n'écrit que les sections d'interprétation.**
 Pas d'agent curateur libre, pas de dépôt Git de wiki.
 
-**D12 — Diffusion : le brief par courriel (via `comms-gateway`), les alertes immédiates sur Slack.**
+**D12 — Diffusion : le brief par courriel (via `comms-gateway`), les alertes immédiates sur Slack**, canal
+`strategic-intelligence-<pack>` (`strategic-intelligence-space`). Tant qu'aucun domaine n'est vérifié chez
+Resend, le courriel part à l'adresse du compte Resend.
 Le courriel et Slack ne contiennent que du `green` ; le reste est un lien vers l'outil.
 
 **D13 — Axes métier retenus : types d'événements, scénarios, observations chiffrées, livrables,
@@ -71,6 +76,24 @@ continue (lot 1). Constat du 2026-09-26 : 2 vCPU, 3 Go dont ~0 disponible, 5,4 G
 
 **D17 — Suivi d'architecture sur le modèle de portfolio-tracker**, adapté aux manifestes de
 module (`02` §10). Cible en prose, réalisé prouvé par des checks, chaque check éprouvé en négatif.
+
+**D19 — Le périmètre évolue.** Le pack est versionné (chaque modification = `config_change`) ; ajouter ou
+retirer un segment ne demande ni code ni migration. Révision du 2026-09-26 : ajout des lanceurs et des
+communications RF embarquées, retrait de la navigation et de la référence de temps.
+
+**D24 — Sous-domaine** : `strategie.jlmvpscode.duckdns.org`.
+
+**D25 — Mandats et questions clés réels paramétrés par l'utilisateur après la V0** (lots 0 à 2). Une
+proposition existe hors dépôt ; les lots se testent sur l'exemple neutre de `config-exemple/`.
+
+**D26 — Brevets EPO** : l'agent demande à l'utilisateur de créer le compte développeur au début du lot 3.
+
+**D27 — Scénarios construits avec l'utilisateur** (atelier au lot 4), pas importés.
+
+**D28 — Secrets amorcés depuis le `.env`** au premier démarrage (copie de référence
+`/root/secrets/strategic-intelligence.env`), puis gérés dans le coffre.
+
+**D29 — V0 = lots 0 à 2** : brief, sources pilotes, questions clés, terrain, premier livrable.
 
 ## Décisions techniques par défaut (acceptées par l'utilisateur)
 

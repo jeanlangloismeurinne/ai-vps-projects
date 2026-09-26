@@ -11,7 +11,7 @@
 pack:
   code: spatial
   label: "Activités spatiales"
-  version: 1
+  version: 2                          # le périmètre évolue : chaque modification est versionnée (config_change)
 
 perimeter:
   code: PER-001
@@ -19,8 +19,9 @@ perimeter:
   domestic_zone: EU-FR
   reference_currency: EUR
   description: >                       # green : description publique, utilisée par le so-what
-    Propulsion spatiale, équipements et sous-systèmes satellites, segment sol et liaisons,
-    optique et instruments d'observation, navigation et référence de temps, services en orbite.
+    Propulsion spatiale (satellites et lanceurs), lanceurs, équipements et sous-systèmes
+    satellites dont équipements de communication radiofréquence embarqués, segment sol et
+    télémesure, optique et instruments d'observation, services en orbite.
 
 # Termes qui identifient l'entreprise de l'utilisateur : réglage `noyau.identity_terms`, saisi dans
 # l'interface, jamais versionné (05 §3, S3).
@@ -59,8 +60,11 @@ market_segments:
   - {code: SEG-02,   label: "Équipements et sous-systèmes satellites", keywords: ["satellite subsystem", "satellite platform", "spacecraft bus"]}
   - {code: SEG-03,   label: "Segment sol et liaisons", keywords: ["ground segment", "ground station", "TT&C"]}
   - {code: SEG-04,   label: "Optique et instruments d'observation", keywords: ["earth observation instrument", "space optics", "imager"]}
-  - {code: SEG-05,   label: "Navigation, positionnement et référence de temps", keywords: ["GNSS", "atomic clock", "PNT"]}
   - {code: SEG-06,   label: "Services en orbite et fin de vie", keywords: ["in-orbit servicing", "deorbit", "space debris removal"]}
+  - {code: SEG-07,   label: "Communications radiofréquence embarquées", parent: SEG-02, keywords: ["X-band transmitter", "S-band transceiver", "TT&C transponder", "satellite radio", "software defined radio", "émetteur bande X"]}
+  - {code: SEG-08,   label: "Lanceurs", keywords: ["launch vehicle", "launcher", "lanceur", "heavy-lift", "microlauncher", "orbital launch"]}
+  - {code: SEG-08-A, label: "Propulsion de lanceurs", parent: SEG-08, keywords: ["rocket engine", "upper stage engine", "cryogenic engine", "solid rocket motor", "moteur-fusée"]}
+  - {code: SEG-08-B, label: "Services de lancement et accès à l'espace", parent: SEG-08, keywords: ["launch contract", "launch services", "rideshare", "contrat de lancement"]}
 
 # ---------------------------------------------------------------------
 # Technologies (taxonomie tech_domain)
@@ -71,11 +75,13 @@ tech_domains:
   - {code: TEC-03, label: "Électronique de puissance spatialisée", watch_level: 2, aliases: ["PPU", "power processing unit"]}
   - {code: TEC-04, label: "Composants durcis aux radiations", watch_level: 2, aliases: ["rad-hard", "radiation hardened"]}
   - {code: TEC-05, label: "Optique et détecteurs", watch_level: 2}
-  - {code: TEC-06, label: "Navigation inertielle et horloges", watch_level: 2}
-  - {code: TEC-07, label: "Liaisons optiques et radiofréquence", watch_level: 2, aliases: ["optical inter-satellite link", "laser communication terminal"]}
+  - {code: TEC-07, label: "Liaisons optiques et radiofréquence", watch_level: 3, aliases: ["optical inter-satellite link", "laser communication terminal", "X-band", "Ka-band downlink", "SDR"]}
   - {code: TEC-08, label: "Traitement embarqué et autonomie", watch_level: 3}
   - {code: TEC-09, label: "Rendez-vous, capture et service en orbite", watch_level: 3, aliases: ["RPO", "rendezvous and proximity operations"]}
-  - {code: TEC-10, label: "Fabrication additive et procédés", watch_level: 1}
+  - {code: TEC-10, label: "Fabrication additive et procédés", watch_level: 2}
+  - {code: TEC-11, label: "Propulsion liquide et cryotechnique de lanceurs", watch_level: 3, aliases: ["methalox", "LOX-methane", "LOX-LH2", "staged combustion"]}
+  - {code: TEC-12, label: "Réutilisabilité des lanceurs", watch_level: 3, aliases: ["reusable launcher", "booster recovery", "propulsive landing", "réutilisable"]}
+  - {code: TEC-13, label: "Propulsion solide", watch_level: 1, aliases: ["solid rocket motor", "propulsion solide"]}
 
 # Termes ajoutés aux taxonomies du noyau
 event_types_extra:
@@ -95,6 +101,8 @@ metrics:
   - {code: contract_value,    label: "Montant de contrat", unit: currency, period: point}
   - {code: funding_amount,    label: "Montant levé", unit: currency, period: point}
   - {code: launches,          label: "Lancements réalisés", unit: count, period: year}
+  - {code: launch_backlog,    label: "Carnet de lancements contractés", unit: count, period: point}
+  - {code: launch_price,      label: "Prix public de lancement", unit: currency, period: point}
   - {code: headcount,         label: "Effectif", unit: count, period: point}
   - {code: public_budget,     label: "Budget public alloué", unit: currency, period: year}
 
@@ -106,14 +114,18 @@ sources:
   cpv_codes: ["<codes CPV du secteur, à compléter>"]
 
 # ---------------------------------------------------------------------
-# Acteurs de départ (entity kind=actor). Les RELATIONS au périmètre sont amber :
-# elles ne sont pas ici (voir l'en-tête).
+# Acteurs de départ : non versionnés (liste relative au périmètre, donc sensible).
+# Import par l'interface depuis prive/ ; format : entity kind=actor (code, label, actor_type, hq_zone, web_domains).
 # ---------------------------------------------------------------------
-actors:
-  - {code: ACT-0001, label: "<Intégrateur européen A>", actor_type: corporate, hq_zone: EU, web_domains: ["<domaine>"]}
-  - {code: ACT-0002, label: "<Fabricant de propulsion nord-américain B>", actor_type: corporate, hq_zone: NA, web_domains: ["<domaine>"]}
-  - {code: ACT-0003, label: "<Agence spatiale européenne>", actor_type: agency, hq_zone: EU, web_domains: ["<domaine>"]}
-  - {code: ACT-0004, label: "<Jeune pousse propulsion européenne C>", actor_type: startup, hq_zone: EU, web_domains: ["<domaine>"]}
+actors: []
+
+# ---------------------------------------------------------------------
+# Diffusion et entrées propres au pack
+# ---------------------------------------------------------------------
+diffusion:
+  slack_channel: "strategic-intelligence-space"
+inbound:
+  alias_tag: spatial                   # alias newsletter-summary : veille+spatial@ et terrain+spatial@
 
 # Surcharges de pondération par domaine
 scoring_overrides:

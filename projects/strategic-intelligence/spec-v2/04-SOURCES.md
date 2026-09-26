@@ -40,7 +40,7 @@ Ce que l'utilisateur renseigne (ou accepte tel que proposé) :
 | domaines | domaines de veille probables |
 | primaire | brevet, avis officiel, texte réglementaire, communiqué de l'acteur concerné |
 | groupe d'indépendance | deux sources du même groupe (même rédaction, même agence) ne se corroborent pas |
-| sensibilité par défaut | `green` sauf `terrain@` (`red`) |
+| sensibilité par défaut | `green` sauf `terrain+<pack>@` (`red`) |
 | fréquence | expression cron ; vide pour une source poussée (courriel, fichier) |
 | fiabilité | code de l'échelle (Admiralty par défaut, ex. `B2`) |
 | statut | `pending` → `trial` (60 jours) → `accepted` / `rejected` / `suspended` |
@@ -165,9 +165,9 @@ Ce sont les cas qui **prouvent le contrat** au lot 1 : chacun exerce une capacit
 Les URL et noms de champs des API tierces sont **à vérifier contre l'API réelle** avant de
 considérer le gabarit acquis (`source_sample` capturé depuis une vraie réponse).
 
-### 5.1 Newsletter — alias `veille@` (famille `email`)
+### 5.1 Newsletter — alias `veille+<pack>@` (famille `email`)
 
-Parcours : l'utilisateur abonne l'adresse `veille@…` à une newsletter → newsletter-summary
+Parcours : l'utilisateur abonne l'adresse `veille+<pack>@…` (ex. `veille+spatial@`) à une newsletter → newsletter-summary
 reçoit le courriel, applique la liste des expéditeurs autorisés, **le transmet sans LLM** à
 strategic-intelligence (`07`) → la collecte crée un `raw_item` parent (le courriel) puis un
 `raw_item` enfant par article (`split`), avec `parent_raw_item_id`.
@@ -353,11 +353,74 @@ schedule_default: "0 5 * * *"
 Ce gabarit est volontairement incomplet : c'est le cas où le contrat est exercé sur une vraie API
 en POST. Il se finalise au lot 1 contre l'API réelle, avec capture d'un `source_sample`.
 
+### 5.7 Point d'entrée des courriels (famille `email`)
+
+`POST /internal/inbound/email`, joignable **uniquement** sur le réseau Docker `coolify` (aucune route
+Traefik), authentifié par `X-Internal-Api-Key` (secret `INBOUND_API_KEY`, partagé avec
+newsletter-summary). Corps : voir `07` §2. Traitement :
+1. `forward_target` → pack et gabarit (`veille` → `newsletter_email`, `terrain` → `field_note_email`) ;
+   cible inconnue → `422`, rien n'est écrit.
+2. Idempotence sur `message_id` : un second envoi du même courriel répond `202` sans doublon.
+3. `veille` : instance de source retrouvée ou créée par expéditeur (`pending`), `raw_item` parent puis
+   enfants (`split`). `terrain` : `raw_item` `red` (contenu chiffré), `field_note`, événement
+   `field_note.received`.
+4. Réponse `202` dès l'écriture en base ; le traitement suit par le bus.
+
 ### Cas complémentaires (hors pilotes, même contrat)
 
-- **Notes terrain — alias `terrain@`** : gabarit `field_note_email`, famille `email`, sensibilité
-  `red`, pas de `split`, pas de `detail`, pas d'embedding ni de LLM ; crée un `field_note`.
+- **Notes terrain — alias `terrain+<pack>@`** : gabarit `field_note_email`, famille `email`, sensibilité
+  `red`, pas de `split`, pas de `detail`, pas d'embedding ni de LLM ; crée un `field_note`. Pièces
+  jointes PDF extraites en texte localement (bibliothèque locale, aucun service externe).
+
+  ```yaml
+  template: field_note_email
+  version: 1
+  family: email
+  content_type: field_note
+  default_sensitivity: red
+  params:
+    alias_tag: {type: str, required: true}
+  mapping:
+    source_native_id: "$.message_id"
+    title: "$.subject"
+    content: {path: "$.text ?? $.html", transform: strip_html}
+    published_at: {path: "$.received_at", parse: datetime}
+  attachments: {accept: [application/pdf, text/plain], extract: local_text}
+  ```
+
 - **Recherche Exa** : gabarit `exa_search`, famille `search`, exécute les sondes des questions clés.
+  Chaque exécution est une sortie `amber` (la requête) soumise au routeur ; les résultats deviennent
+  des `raw_item` rattachés à la sonde (`probe_id`), leur fiabilité étant celle du domaine atteint.
+
+  ```yaml
+  template: exa_search
+  version: 1
+  family: search
+  content_type: article
+  params:
+    num_results: {type: int, default: 10}
+    days_back: {type: int, default: 7}
+  request:
+    method: POST
+    url: "https://api.exa.ai/search"
+    headers: {x-api-key: "{{ secret('EXA_API_KEY') }}"}
+    body:
+      query: "{{ probe.query }}"
+      numResults: "{{ params.num_results }}"
+      startPublishedDate: "{{ now_minus_days(params.days_back) }}"
+      contents: {text: true}
+  response: {format: json, items_path: "$.results[*]"}
+  mapping:
+    source_native_id: "$.url"
+    url: "$.url"
+    title: "$.title"
+    content: "$.text"
+    published_at: {path: "$.publishedDate", parse: datetime}
+    authors: "$.author"
+  incremental: {mode: none}
+  ```
+  Clé et réponse vérifiées le 2026-09-26 (`/search`, HTTP 200, champs `results[].url/title`,
+  `costDollars`) ; le champ `contents.text` est à confirmer au lot 2.
 - **Brevets EPO OPS** (`http_xml` + `oauth2_client_credentials`), **Registre fédéral NA**
   (`http_json` GET), **EUR-Lex** : lot 3.
 
