@@ -1,0 +1,4 @@
+# Contenu sensible (amber/red) : jamais versionné — voir spec-v2/05-SORTIES-EXTERNES.md
+prive/
+*.local.yml
+.env

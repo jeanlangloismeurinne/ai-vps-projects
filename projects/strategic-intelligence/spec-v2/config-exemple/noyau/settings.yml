@@ -1,0 +1,76 @@
+# =====================================================================
+# Réglages du NOYAU et des modules socle — valeurs par défaut génériques.
+# Chargés à l'amorçage, puis édités dans l'interface (la base fait foi).
+# =====================================================================
+
+noyau:
+  providers:
+    llm:
+      default: {provider: deepinfra, model: "<modèle économique, choisi au lot 1 après essai>"}
+      by_purpose: {}                     # surcharge par usage (extraction, so_what, ...)
+    embedding: {provider: deepinfra, model: "BAAI/bge-m3", dim: 1024}
+    search: {provider: exa, monthly_max_queries: 1000}
+  secrets:                               # noms attendus dans le coffre (valeurs saisies dans l'UI)
+    - DEEPINFRA_API_KEY
+    - EXA_API_KEY
+    - GATEWAY_TOKEN
+    - INBOUND_API_KEY                    # partagée avec newsletter-summary
+  budget:
+    mode: observe                        # observe | enforce (D7)
+    monthly_cap_eur: 40
+    per_purpose_cap_eur: {}
+    warn_at_pct: 80
+    anomaly_factor: 3                    # coût d'un jour > 3 × médiane 14 j → alerte
+    mass_job_confirm_above_eur: 2
+  egress:
+    preview_retention_days: 30
+    amber_max_calls_per_object_per_hour: 20
+  http:
+    user_agent: "veille-strategique/1.0 (usage interne; contact: <adresse>)"
+    respect_robots: true
+    default_rate_limit_rpm: 10
+    timeout_s: 30
+    forbidden_domains: []
+  maturity:
+    evaluate_cron: "15 2 * * *"
+
+signaux:
+  dedupe:
+    simhash_max_distance: 3
+    title_trigram_min: 0.85
+    cosine_min: 0.92
+  event_clustering:
+    max_days_apart: 7
+  scoring:
+    credibility: {source_reliability: 0.55, corroboration: 0.45}
+    importance: {perimeter_impact: 0.35, question_proximity: 0.25, novelty: 0.25, actionability: 0.15}
+    novelty_window_days: 90
+  thresholds:
+    must_know: {importance: 80, credibility: 70}
+    unconfirmed: {importance: 80, credibility_below: 70}
+    orphan_distance: 0.55
+  optional_annotations:                  # fonctions activables (01 §5)
+    watch_angle: false
+    horizon: false
+    market_segment: false
+    tech_domain: false
+    secondary_domains: false
+
+diffusion:
+  daily:
+    send_hour_local: 7
+    must_know_max: 5
+    unconfirmed_max: 3
+    per_domain_max: 3
+    total_max: 18
+  alerts:
+    channel: slack
+    per_day_max: 3
+  weekly_review:
+    day: friday
+    hour_local: 8
+
+collecte:
+  trial_days: 60
+  trial_min_relevance_rate: 0.15
+  silence_alert_days: 14

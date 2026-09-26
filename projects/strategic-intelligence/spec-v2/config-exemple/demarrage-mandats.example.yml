@@ -1,0 +1,41 @@
+# =====================================================================
+# FORMAT d'import des mandats, questions clés, relations et scénarios (contenu AMBER).
+# Exemple NEUTRE et fictif. Les vraies données s'importent par l'interface depuis un
+# fichier local non versionné (prive/), jamais depuis le dépôt.
+# La décision éclairée (RED), les vraisemblances et les thèses se saisissent dans l'interface.
+# =====================================================================
+
+actor_relations:
+  - {actor: ACT-0001, kind: customer_of,   segments: [SEG-XX], intensity: 3}
+  - {actor: ACT-0002, kind: competitor_of, segments: [SEG-XX], intensity: 2}
+
+mandates:
+  - code: MAN-EX1
+    label: "Capacités industrielles des concurrents"
+    review_due_on: 2027-06-30
+    key_questions:
+      - code: KQ-EX1
+        statement: >
+          Un concurrent suivi mettra-t-il en service une nouvelle capacité de production sur le
+          segment SEG-XX avant le 31 décembre 2027 ?
+        question_type: prospective
+        answer_horizon: 2027-12-31
+        cadence: weekly
+        scope: {segments: [SEG-XX], zones: [EU]}
+        indicators:
+          - statement: "Annonce d'ouverture de site par un concurrent"
+            direction: confirms
+            weight: 3
+            match_rule: {event_type: capacity_change, subject: {relation: competitor_of}, segments: [SEG-XX]}
+          - statement: "Report ou abandon d'un projet industriel"
+            direction: refutes
+            weight: 2
+            check_question: "Ce texte rapporte-t-il le report ou l'abandon d'un projet d'usine sur ce segment ?"
+
+scenario_sets:
+  - code: SCN-EX1
+    uncertainty: "Structure du marché SEG-XX à cinq ans"
+    horizon_date: 2031-12-31
+    scenarios:
+      - {code: A, statement: "Concentration autour de deux acteurs"}
+      - {code: B, statement: "Fragmentation durable"}

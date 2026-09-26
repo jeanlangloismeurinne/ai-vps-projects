@@ -1,0 +1,121 @@
+# =====================================================================
+# PACK SECTORIEL — activités spatiales (périmètre réel, D1)
+# Seul endroit où apparaissent des valeurs sectorielles. Aucune de ces chaînes
+# ne doit apparaître dans app/ (check_agnosticite.py).
+# Contenu green : ce fichier peut être versionné.
+# Les mandats, questions clés, relations et termes d'identité (amber) ne sont PAS ici : ils se
+# saisissent dans l'interface ou s'importent depuis un fichier local non versionné (prive/).
+# Format : config-exemple/demarrage-mandats.example.yml.
+# =====================================================================
+
+pack:
+  code: spatial
+  label: "Activités spatiales"
+  version: 1
+
+perimeter:
+  code: PER-001
+  label: "Activités spatiales"
+  domestic_zone: EU-FR
+  reference_currency: EUR
+  description: >                       # green : description publique, utilisée par le so-what
+    Propulsion spatiale, équipements et sous-systèmes satellites, segment sol et liaisons,
+    optique et instruments d'observation, navigation et référence de temps, services en orbite.
+
+# Termes qui identifient l'entreprise de l'utilisateur : réglage `noyau.identity_terms`, saisi dans
+# l'interface, jamais versionné (05 §3, S3).
+
+# ---------------------------------------------------------------------
+# Zones géographiques (taxonomie geo_zone)
+# ---------------------------------------------------------------------
+geo_zones:
+  - {code: WORLD, label: "Monde"}
+  - {code: NA,    label: "Amérique du Nord", parent: WORLD, iso: [US, CA]}
+  - {code: EU,    label: "Europe",           parent: WORLD}
+  - {code: EU-FR, label: "Marché domestique", parent: EU, iso: [FR]}
+  - {code: EU-UE, label: "UE hors domestique", parent: EU, iso: [DE, IT, ES, BE, NL, LU, SE, PL, AT, PT, FI, DK, CZ, RO]}
+  - {code: EU-XT, label: "Europe hors UE",   parent: EU, iso: [GB, NO, CH]}
+  - {code: APAC,  label: "Asie-Pacifique développée", parent: WORLD, iso: [JP, KR, AU, SG]}
+  - {code: CN,    label: "Chine", parent: WORLD, iso: [CN]}
+  - {code: IN,    label: "Inde",  parent: WORLD, iso: [IN]}
+  - {code: ROW,   label: "Reste du monde", parent: WORLD}
+
+geo_dynamics:
+  NA:   {funding_mode: venture_led,     public_demand_weight: 0.5, cycle_speed: fast,   entry_barrier: high}
+  EU:   {funding_mode: institution_led, public_demand_weight: 0.7, cycle_speed: medium, entry_barrier: high}
+  APAC: {funding_mode: mixed,           public_demand_weight: 0.6, cycle_speed: medium, entry_barrier: medium}
+  CN:   {funding_mode: state_led,       public_demand_weight: 0.9, cycle_speed: fast,   entry_barrier: closed}
+  IN:   {funding_mode: mixed,           public_demand_weight: 0.7, cycle_speed: fast,   entry_barrier: medium}
+
+active_zones: [NA, EU, EU-FR, EU-UE, EU-XT, APAC, CN, ROW]
+
+# ---------------------------------------------------------------------
+# Segments (taxonomie market_segment) — keywords alimentent filtres et gabarits
+# ---------------------------------------------------------------------
+market_segments:
+  - {code: SEG-01,   label: "Propulsion spatiale", keywords: ["space propulsion", "propulsion spatiale", "thruster"]}
+  - {code: SEG-01-A, label: "Propulsion électrique", parent: SEG-01, keywords: ["electric propulsion", "Hall thruster", "ion thruster", "propulsion électrique"]}
+  - {code: SEG-01-B, label: "Propulsion chimique",   parent: SEG-01, keywords: ["chemical propulsion", "bipropellant", "monopropellant"]}
+  - {code: SEG-02,   label: "Équipements et sous-systèmes satellites", keywords: ["satellite subsystem", "satellite platform", "spacecraft bus"]}
+  - {code: SEG-03,   label: "Segment sol et liaisons", keywords: ["ground segment", "ground station", "TT&C"]}
+  - {code: SEG-04,   label: "Optique et instruments d'observation", keywords: ["earth observation instrument", "space optics", "imager"]}
+  - {code: SEG-05,   label: "Navigation, positionnement et référence de temps", keywords: ["GNSS", "atomic clock", "PNT"]}
+  - {code: SEG-06,   label: "Services en orbite et fin de vie", keywords: ["in-orbit servicing", "deorbit", "space debris removal"]}
+
+# ---------------------------------------------------------------------
+# Technologies (taxonomie tech_domain)
+# ---------------------------------------------------------------------
+tech_domains:
+  - {code: TEC-01, label: "Propulsion électrique et plasmique", watch_level: 3, aliases: ["propulsion à effet Hall", "propulseur ionique", "Hall effect thruster", "gridded ion engine"]}
+  - {code: TEC-02, label: "Ergols et gaz propulsifs alternatifs", watch_level: 3, aliases: ["green propellant", "krypton propellant", "iodine propellant"]}
+  - {code: TEC-03, label: "Électronique de puissance spatialisée", watch_level: 2, aliases: ["PPU", "power processing unit"]}
+  - {code: TEC-04, label: "Composants durcis aux radiations", watch_level: 2, aliases: ["rad-hard", "radiation hardened"]}
+  - {code: TEC-05, label: "Optique et détecteurs", watch_level: 2}
+  - {code: TEC-06, label: "Navigation inertielle et horloges", watch_level: 2}
+  - {code: TEC-07, label: "Liaisons optiques et radiofréquence", watch_level: 2, aliases: ["optical inter-satellite link", "laser communication terminal"]}
+  - {code: TEC-08, label: "Traitement embarqué et autonomie", watch_level: 3}
+  - {code: TEC-09, label: "Rendez-vous, capture et service en orbite", watch_level: 3, aliases: ["RPO", "rendezvous and proximity operations"]}
+  - {code: TEC-10, label: "Fabrication additive et procédés", watch_level: 1}
+
+# Termes ajoutés aux taxonomies du noyau
+event_types_extra:
+  - {code: launch, parent: test_milestone, label: "Lancement", attributes: {roles: {subject: opérateur, object: mission}}}
+  - {code: in_orbit_milestone, parent: test_milestone, label: "Jalon en orbite", attributes: {roles: {subject: opérateur, object: satellite}}}
+
+maturity_scale:
+  code: trl
+  label: "Technology Readiness Level"
+  terms: [{code: TRL1, ordinal: 1}, {code: TRL2, ordinal: 2}, {code: TRL3, ordinal: 3}, {code: TRL4, ordinal: 4},
+          {code: TRL5, ordinal: 5}, {code: TRL6, ordinal: 6}, {code: TRL7, ordinal: 7}, {code: TRL8, ordinal: 8}, {code: TRL9, ordinal: 9}]
+
+metrics:
+  - {code: backlog,           label: "Carnet de commandes", unit: currency, period: year}
+  - {code: revenue_segment,   label: "Chiffre d'affaires du segment", unit: currency, period: year}
+  - {code: units_delivered,   label: "Unités livrées", unit: count, period: year}
+  - {code: contract_value,    label: "Montant de contrat", unit: currency, period: point}
+  - {code: funding_amount,    label: "Montant levé", unit: currency, period: point}
+  - {code: launches,          label: "Lancements réalisés", unit: count, period: year}
+  - {code: headcount,         label: "Effectif", unit: count, period: point}
+  - {code: public_budget,     label: "Budget public alloué", unit: currency, period: year}
+
+# ---------------------------------------------------------------------
+# Paramètres sectoriels consommés par les gabarits (default_from)
+# ---------------------------------------------------------------------
+sources:
+  arxiv_categories: ["physics.space-ph", "physics.plasm-ph", "astro-ph.IM", "eess.SY"]
+  cpv_codes: ["<codes CPV du secteur, à compléter>"]
+
+# ---------------------------------------------------------------------
+# Acteurs de départ (entity kind=actor). Les RELATIONS au périmètre sont amber :
+# elles ne sont pas ici (voir l'en-tête).
+# ---------------------------------------------------------------------
+actors:
+  - {code: ACT-0001, label: "<Intégrateur européen A>", actor_type: corporate, hq_zone: EU, web_domains: ["<domaine>"]}
+  - {code: ACT-0002, label: "<Fabricant de propulsion nord-américain B>", actor_type: corporate, hq_zone: NA, web_domains: ["<domaine>"]}
+  - {code: ACT-0003, label: "<Agence spatiale européenne>", actor_type: agency, hq_zone: EU, web_domains: ["<domaine>"]}
+  - {code: ACT-0004, label: "<Jeune pousse propulsion européenne C>", actor_type: startup, hq_zone: EU, web_domains: ["<domaine>"]}
+
+# Surcharges de pondération par domaine
+scoring_overrides:
+  WEAK: {importance: {novelty: 0.45, question_proximity: 0.0}}
+  REG:  {credibility: {source_reliability: 0.75, corroboration: 0.25}}

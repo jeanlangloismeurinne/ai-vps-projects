@@ -1,7 +1,9 @@
 ---
 id: roadmap-1784967879779
 type: roadmap
-status: spec-ready
+status: archived
+archived_at: 2026-09-26
+replaced_by: projects/strategic-intelligence
 created: 2026-07-25T08:24:39.780167
 project: horizon-scan
 ---

@@ -1,0 +1,176 @@
+# =====================================================================
+# Taxonomies du NOYAU — génériques, valables pour tout secteur.
+# Le moteur exige la présence de ces taxonomies, jamais leur contenu.
+# Un pack sectoriel peut ajouter des termes (ex. types d'événements propres au secteur).
+# =====================================================================
+
+taxonomies:
+  - code: watch_domain
+    label: "Domaines de veille"
+    kind: flat
+    cardinality: multi
+    is_core: true
+    terms:
+      - {code: DEM,  label: "Demande et marché"}
+      - {code: COMP, label: "Concurrence"}
+      - {code: CUST, label: "Clients et comptes"}
+      - {code: TECH, label: "Technologie et innovation"}
+      - {code: CAP,  label: "Startups et capital"}
+      - {code: REG,  label: "Réglementaire et normatif"}
+      - {code: POL,  label: "Politique et budgets publics"}
+      - {code: SUPP, label: "Chaîne d'approvisionnement"}
+      - {code: TAL,  label: "Talents et écosystème"}
+      - {code: PERC, label: "Perception et réputation"}
+      - {code: WEAK, label: "Signaux faibles et adjacences"}
+
+  - code: event_type
+    label: "Types d'événements"
+    kind: hierarchical
+    cardinality: single
+    is_core: true
+    terms:
+      - code: acquisition
+        label: "Acquisition"
+        attributes:
+          roles: {subject: acquéreur, object: cible}
+          extraction_schema: {type: object, properties: {amount: {type: number}, currency: {type: string}, closing_date: {type: string, format: date}, stake_pct: {type: number}}}
+      - code: funding_round
+        label: "Levée de fonds"
+        attributes:
+          roles: {subject: bénéficiaire, counterpart: investisseurs}
+          extraction_schema: {type: object, properties: {amount: {type: number}, currency: {type: string}, round_label: {type: string}, valuation: {type: number}}}
+      - code: divestment
+        label: "Cession"
+        attributes: {roles: {subject: cédant, object: actif, counterpart: acquéreur}}
+      - code: partnership
+        label: "Partenariat ou accord"
+        attributes: {roles: {subject: partie, counterpart: partie}}
+      - code: contract_awarded
+        label: "Contrat attribué"
+        attributes:
+          roles: {subject: titulaire, counterpart: acheteur}
+          extraction_schema: {type: object, properties: {amount: {type: number}, currency: {type: string}, duration_months: {type: integer}, program: {type: string}}}
+      - code: tender_published
+        label: "Appel d'offres publié"
+        attributes:
+          roles: {counterpart: acheteur}
+          extraction_schema: {type: object, properties: {deadline: {type: string, format: date}, estimated_value: {type: number}, currency: {type: string}, lots: {type: integer}}}
+      - {code: product_launch, label: "Lancement ou annonce produit", attributes: {roles: {subject: fournisseur, object: produit}}}
+      - {code: product_change, label: "Modification d'offre ou de spécification", attributes: {roles: {subject: fournisseur, object: produit}}}
+      - {code: test_milestone, label: "Essai, qualification, jalon technique", attributes: {roles: {subject: acteur, object: produit}}}
+      - {code: failure_delay, label: "Échec, report, incident", attributes: {roles: {subject: acteur, object: programme}}}
+      - {code: capacity_change, label: "Ouverture ou fermeture de capacité, site", attributes: {roles: {subject: acteur}}}
+      - {code: hiring_signal, label: "Recrutement significatif", attributes: {roles: {subject: employeur}}}
+      - {code: leadership_change, label: "Nomination, départ de dirigeant", attributes: {roles: {subject: organisation, object: personne}}}
+      - {code: regulation_adopted, label: "Texte adopté ou publié", attributes: {roles: {subject: autorité}}}
+      - {code: regulation_effective, label: "Entrée en vigueur", attributes: {roles: {subject: autorité}}}
+      - {code: public_budget, label: "Budget ou programme public annoncé", attributes: {roles: {subject: autorité}}}
+      - {code: patent_filed, label: "Dépôt ou publication de brevet", attributes: {roles: {subject: déposant}}}
+      - {code: publication, label: "Publication scientifique ou technique", attributes: {roles: {subject: institution}}}
+      - {code: financial_results, label: "Résultats financiers", attributes: {roles: {subject: émetteur}}}
+      - {code: other, label: "Autre"}
+
+  - code: horizon
+    label: "Horizons"
+    kind: scale
+    is_core: true
+    terms:
+      - {code: done,       label: "Fait accompli (0-3 mois)",   ordinal: 1}
+      - {code: ongoing,    label: "En cours (3-18 mois)",        ordinal: 2}
+      - {code: early,      label: "Émergent (18 mois-5 ans)",    ordinal: 3}
+      - {code: structural, label: "Structurel (plus de 5 ans)",  ordinal: 4}
+
+  - code: watch_angle
+    label: "Angles"
+    kind: flat
+    cardinality: multi
+    is_core: true
+    terms:
+      - {code: market,     label: "Marché"}
+      - {code: innovation, label: "Innovation"}
+
+  - code: relation_kind
+    label: "Rôles d'un acteur"
+    kind: flat
+    is_core: true
+    terms:
+      - {code: competitor_of,       label: "Concurrent"}
+      - {code: customer_of,         label: "Client"}
+      - {code: supplier_of,         label: "Fournisseur"}
+      - {code: investor_in,         label: "Investisseur"}
+      - {code: regulator_of,        label: "Régulateur"}
+      - {code: partner_of,          label: "Partenaire"}
+      - {code: research_partner_of, label: "Partenaire de recherche"}
+      - {code: subsidiary_of,       label: "Filiale"}
+
+  - code: link_kind
+    label: "Liens entre signaux"
+    kind: flat
+    is_core: true
+    terms:
+      - {code: duplicate_of,  label: "Doublon"}
+      - {code: follow_up_of,  label: "Suite"}
+      - {code: contradicts,   label: "Contredit"}
+      - {code: corroborates,  label: "Corrobore"}
+      - {code: relates_to,    label: "En rapport"}
+
+  - code: reliability_scale
+    label: "Échelle de fiabilité (Admiralty)"
+    kind: scale
+    is_core: true
+    terms:
+      - {code: A, label: "Source totalement fiable",   ordinal: 1, attributes: {axis: source, value: 1.0}}
+      - {code: B, label: "Source habituellement fiable", ordinal: 2, attributes: {axis: source, value: 0.8}}
+      - {code: C, label: "Source assez fiable",        ordinal: 3, attributes: {axis: source, value: 0.6}}
+      - {code: D, label: "Source pas toujours fiable", ordinal: 4, attributes: {axis: source, value: 0.4}}
+      - {code: E, label: "Source non fiable",          ordinal: 5, attributes: {axis: source, value: 0.2}}
+      - {code: F, label: "Fiabilité non évaluable",    ordinal: 6, attributes: {axis: source, value: 0.5}}
+      - {code: "1", label: "Information confirmée",     ordinal: 1, attributes: {axis: info, value: 1.0}}
+      - {code: "2", label: "Probablement vraie",        ordinal: 2, attributes: {axis: info, value: 0.8}}
+      - {code: "3", label: "Possiblement vraie",        ordinal: 3, attributes: {axis: info, value: 0.6}}
+      - {code: "4", label: "Douteuse",                  ordinal: 4, attributes: {axis: info, value: 0.4}}
+      - {code: "5", label: "Improbable",                ordinal: 5, attributes: {axis: info, value: 0.2}}
+      - {code: "6", label: "Non évaluable",             ordinal: 6, attributes: {axis: info, value: 0.5}}
+
+  - code: content_type
+    label: "Types de contenu"
+    kind: flat
+    is_core: true
+    terms:
+      - {code: article,       label: "Article"}
+      - {code: press_release, label: "Communiqué"}
+      - {code: newsletter,    label: "Newsletter"}
+      - {code: tender,        label: "Avis de marché"}
+      - {code: patent,        label: "Brevet"}
+      - {code: preprint,      label: "Prépublication"}
+      - {code: regulation,    label: "Texte réglementaire"}
+      - {code: product_page,  label: "Page produit"}
+      - {code: job_posting,   label: "Offre d'emploi"}
+      - {code: filing,        label: "Dépôt réglementaire ou financier"}
+      - {code: field_note,    label: "Note terrain"}
+      - {code: document,      label: "Document déposé"}
+
+  - code: entity_kind
+    label: "Types d'entités"
+    kind: flat
+    is_core: true
+    terms:
+      - {code: actor,       label: "Acteur"}
+      - {code: offering,    label: "Offre, produit",  attributes: {attributes_schema: {type: object, properties: {owner: {type: string}, maturity_code: {type: string}}}}}
+      - {code: program,     label: "Programme, marché, contrat", attributes: {attributes_schema: {type: object, properties: {amount: {type: number}, currency: {type: string}, status: {type: string}}}}}
+      - {code: regulation,  label: "Texte réglementaire", attributes: {attributes_schema: {type: object, properties: {stage: {type: string}, jurisdiction: {type: string}}}}}
+      - {code: transaction, label: "Transaction"}
+      - {code: person,      label: "Personne (qualité professionnelle)"}
+
+  - code: actor_type
+    label: "Types d'acteurs"
+    kind: flat
+    is_core: true
+    terms:
+      - {code: corporate,   label: "Entreprise"}
+      - {code: startup,     label: "Jeune pousse"}
+      - {code: agency,      label: "Agence publique"}
+      - {code: regulator,   label: "Autorité"}
+      - {code: lab,         label: "Laboratoire, institut"}
+      - {code: investor,    label: "Investisseur"}
+      - {code: association, label: "Association, consortium"}

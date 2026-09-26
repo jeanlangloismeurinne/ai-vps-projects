@@ -1,0 +1,45 @@
+# =====================================================================
+# Instances de sources de départ du pack spatial (issues du catalogue v1, converties
+# au modèle gabarit + paramètres). Import par l'interface ; chaque instance démarre
+# en statut `pending` et passe par l'aperçu avant activation.
+# verify: true = URL à vérifier à l'activation (les adresses de flux changent souvent).
+# Les gabarits référencés sont définis dans 04-SOURCES.md (§5) ou fournis par les modules.
+# =====================================================================
+
+sources:
+  # ---- Presse sectorielle (rss_generic) --------------------------------------------
+  - {code: SRC-PR-001, label: "Presse sectorielle internationale 1", template: rss_generic, params: {url: "https://spacenews.com/feed/", full_text: false}, lang: en, zone: WORLD, domains: [DEM, COMP, CUST], reliability: B2, independence_group: spacenews, verify: true}
+  - {code: SRC-PR-002, label: "Presse sectorielle internationale 2", template: rss_generic, params: {url: "https://payloadspace.com/feed/"}, lang: en, zone: NA, domains: [DEM, CAP], reliability: B2, independence_group: payload, verify: true}
+  - {code: SRC-PR-003, label: "Presse sectorielle européenne", template: rss_generic, params: {url: "https://europeanspaceflight.com/feed/"}, lang: en, zone: EU, domains: [DEM, COMP], reliability: B2, independence_group: esf, verify: true}
+  - {code: SRC-PR-004, label: "Presse sectorielle francophone", template: rss_generic, params: {url: "https://air-cosmos.com/rss"}, lang: fr, zone: EU-FR, domains: [DEM, POL], reliability: B2, independence_group: aircosmos, verify: true}
+  - {code: SRC-PR-005, label: "Presse satellite et télécoms", template: rss_generic, params: {url: "https://www.satellitetoday.com/feed/"}, lang: en, zone: WORLD, domains: [DEM, CUST], reliability: B3, independence_group: satellitetoday, verify: true}
+  - {code: SRC-PR-006, label: "Presse défense et espace militaire", template: rss_generic, params: {url: "https://breakingdefense.com/feed/"}, lang: en, zone: NA, domains: [POL, DEM], reliability: B2, independence_group: breakingdefense, verify: true}
+
+  # ---- Institutionnel primaire ------------------------------------------------------
+  - {code: SRC-IN-001, label: "Agence spatiale européenne, actualités", template: rss_generic, params: {url: "https://www.esa.int/rssfeed/Our_Activities"}, lang: en, zone: EU, domains: [POL, CUST, DEM], reliability: A1, is_primary: true, verify: true}
+  - {code: SRC-IN-002, label: "Agence spatiale nationale domestique", template: rss_generic, params: {url: "https://cnes.fr/fr/rss.xml"}, lang: fr, zone: EU-FR, domains: [POL, CUST], reliability: A1, is_primary: true, verify: true}
+  - {code: SRC-IN-004, label: "Agence spatiale nord-américaine", template: rss_generic, params: {url: "https://www.nasa.gov/news-release/feed/"}, lang: en, zone: NA, domains: [POL, CUST], reliability: A1, is_primary: true, verify: true}
+
+  # ---- Commande publique -------------------------------------------------------------
+  - {code: SRC-AO-001, label: "Marchés publics UE", template: ted_v3, params: {}, lang: multi, zone: EU-UE, domains: [CUST, DEM], reliability: A1, is_primary: true}
+
+  # ---- Science et propriété industrielle ----------------------------------------------
+  - {code: SRC-PI-002, label: "Prépublications scientifiques", template: arxiv, params: {}, lang: en, zone: WORLD, domains: [TECH, WEAK], reliability: B2, is_primary: true}
+
+  # ---- Pages d'acteurs (dérivées du référentiel, proposées à l'ajout d'un acteur) ------
+  # Exemple d'instance : une par page produit suivie.
+  - {code: SRC-AC-002-ACT-0002, label: "Page produits — <acteur B>", template: actor_product_page, params: {url: "<url>", selector: "main"}, bound_entity: ACT-0002, lang: en, zone: NA, domains: [COMP, TECH], reliability: A2, is_primary: true}
+
+  # ---- Recherche dirigée ----------------------------------------------------------------
+  - {code: SRC-WS-001, label: "Recherche web (sondes)", template: exa_search, params: {}, lang: multi, zone: WORLD, domains: [DEM, COMP, TECH, CAP, WEAK], reliability: F6}
+
+  # ---- Entrées courriel (newsletter-summary, 07) ------------------------------------------
+  # Les instances « une par expéditeur » de veille@ sont créées automatiquement au premier courriel.
+  - {code: SRC-TERRAIN, label: "Notes terrain", template: field_note_email, params: {}, lang: multi, zone: WORLD, domains: [], reliability: C3, default_sensitivity: red}
+
+# Sources du catalogue v1 à convertir aux lots suivants (gabarits à écrire contre l'API réelle) :
+# BOAMP, SAM.gov, portail achats ESA (html_list), USAspending (http_json POST), EPO OPS (http_xml + OAuth2),
+# HAL (http_json), EUR-Lex, Légifrance (PISTE), Federal Register (http_json), dépôts FCC (html_diff),
+# UIT, contrôle des exportations (html_diff), communiqués et IR des acteurs (dérivés du référentiel),
+# registres des sociétés FR et UK, presse financement (rss), GDELT (radar), agrégateur d'actualités.
+# Source sociale : désactivée (voir 06-ROADMAP « Après le lot 5 »).
