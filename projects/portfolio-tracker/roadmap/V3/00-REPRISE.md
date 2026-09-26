@@ -60,7 +60,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #90 du 
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`DEPLOY_SHA`** (#90), vérifié par `docker exec … grep
+- **Production** : backend sur **`8e6370e`** (#90), vérifié par `docker exec … grep
   qualifications_de_l_emetteur`. **PV du comité en prod : 0 décision.**
 - **Notes flash en base** (catalogue d'événements **1.1.0**) : RVMD #80-#85, NVDA #86-#87, MSFT #88 — 9
   dépôts lus sur 400 jours, 0 refus ; #66-#71 = première lecture RVMD sous l'ancien catalogue, conservées.
