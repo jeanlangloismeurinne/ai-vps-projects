@@ -39,7 +39,7 @@ mutations=(
 "$NOTE¦    \"instruite\", \"sans_acquittement\", \"non_revalidable\", \"pas_de_methodologie_approuvee\")¦    \"instruite\", \"sans_acquittement\", \"pas_de_methodologie_approuvee\")¦les deux états du milieu existent"
 "$NOTE¦        if self.etat in (\"sans_acquittement\", \"non_revalidable\") and self.points:¦        if self.etat == \"sans_acquittement\" and self.points:¦\`non_revalidable\` qui porte quand même un point"
 "$NOTE¦        if self.etat == \"instruite\" and not self.points:¦        if False:¦\`instruite\` SANS aucun point"
-"$NOTE¦        if self.answer.manager is None or self.answer.manager.verdict != \"acquitte\":¦        if False:¦publie une réponse NON acquittée"
+"$NOTE¦        if not acquitte:¦        if False:¦publie une réponse NON acquittée"
 "$NOTE¦        if self.answer.question_id != self.question_id:¦        if False:¦un point MAL ÉTIQUETÉ"
 "$NOTE¦        if manquants:¦        if False:¦ne dit PAS à quelle méthodologie"
 "$NOTE¦            if portes:¦            if False:¦qui nomme quand même un framework"
@@ -53,8 +53,8 @@ mutations=(
 "$PROJ¦        if a.framework_version != fichier.schema_version:¦        if False:¦une version PÉRIMÉE du référentiel"
 "$PROJ¦        if a.question_id not in {q.id for q in f.questions}:¦        if False:¦dont la question est inconnue de SON framework"
 "$PROJ¦        if archetype is None:¦        if False:¦émetteur NON CLASSÉ"
-"$PROJ¦        non_acquittees = len(du_framework) - len(acquittees)¦        non_acquittees = 0¦le renvoi n'est pas publié mais il est COMPTÉ"
-"$PROJ¦            key=lambda lue: (rang[lue.answer.question_id], lue.answer.analyste),¦            key=lambda lue: (rang[lue.answer.question_id],),¦un ordre décidé par le référentiel + l'analyste"
+"$PROJ¦        non_acquittees = len(du_framework) - len(publiees)¦        non_acquittees = 0¦le renvoi n'est pas publié mais il est COMPTÉ"
+"$PROJ¦        publiees.sort(key=lambda p: (rang[p[0].answer.question_id], p[0].answer.analyste))¦        publiees.sort(key=lambda p: (rang[p[0].answer.question_id],))¦un ordre décidé par le référentiel + l'analyste"
 
 # §4 — ⚠️ LA PREUVE DU LOT. Un projecteur qui ne connaîtrait que les deux pilotes.
 "$PROJ¦    par_bloc = {f.bloc_memo: f for f in fichier.frameworks}¦    par_bloc = {f.bloc_memo: f for f in fichier.frameworks[:2]}¦le chapitre est instruit par le YAML"
@@ -63,8 +63,8 @@ mutations=(
 # §5 — le versant statique : un nom de framework qui se glisse dans le code, une écriture qui
 # s'y glisse. Les deux sont MORTS (personne ne les appelle) et c'est le point : §5 doit rougir sur
 # la seule PRÉSENCE, sans qu'aucun comportement ne change.
-"$PROJ¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\"]¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\"]\n_PILOTES = (\"qualite_financiere\", \"defendabilite\")¦aucun id de framework ni nom de chapitre"
-"$PROJ¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\"]¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\"]\n_TRACE = \"INSERT INTO memo_trace (ticker_id) VALUES (\$1)\"¦n'ÉCRIT rien"
+"$PROJ¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\", \"memo_de_l_etat\"]¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\", \"memo_de_l_etat\"]\n_PILOTES = (\"qualite_financiere\", \"defendabilite\")¦aucun id de framework ni nom de chapitre"
+"$PROJ¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\", \"memo_de_l_etat\"]¦__all__ = [\"AnswerLue\", \"ProjectionRefusee\", \"projeter_memo\", \"memo_de_l_etat\"]\n_TRACE = \"INSERT INTO memo_trace (ticker_id) VALUES (\$1)\"¦n'ÉCRIT rien"
 )
 
 CHECK="checks/check_memo_projete.py"

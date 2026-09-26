@@ -27,7 +27,7 @@ from fastapi import APIRouter, HTTPException
 from app.agents.v2.comite import DecisionRefusee, acquitter, renvoyer
 from app.agents.v2.parcours import (
     ReferenceInconnue, charger_etat_dossier, dresser_niveau1, dresser_niveau2, dresser_niveau3)
-from app.agents.v2.projection_memo import AnswerLue, projeter_memo
+from app.agents.v2.projection_memo import memo_de_l_etat
 from app.contracts.comite_schema import DemandeAcquittement, DemandeRenvoi
 from app.contracts.parcours_schema import DossierTitre, FrameworkDuDossier, PreuvesQuestion
 from app.db.database import get_db_session
@@ -46,10 +46,7 @@ async def _etat(ticker_id: str):
 @router.get("/v2/tickers/{ticker_id}/dossier", response_model=DossierTitre)
 async def dossier_niveau1(ticker_id: str) -> DossierTitre:
     etat = await _etat(ticker_id)
-    memo = projeter_memo(
-        ticker_id=ticker_id, archetype=etat.archetype, fichier=etat.fichier,
-        lues=[AnswerLue(answer_id=r.answer_id, answer=r.servie) for r in etat.reponses])
-    return dresser_niveau1(etat, memo)
+    return dresser_niveau1(etat, memo_de_l_etat(etat))
 
 
 @router.get("/v2/tickers/{ticker_id}/frameworks/{framework_id}", response_model=FrameworkDuDossier)

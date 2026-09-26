@@ -34,7 +34,7 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.parcours import (
     Collecte, EtatDossier, ReferenceInconnue, ReponseLue, dresser_niveau1, dresser_niveau2,
     dresser_niveau3, manque_de_la_question)
-from app.agents.v2.projection_memo import AnswerLue, projeter_memo
+from app.agents.v2.projection_memo import memo_de_l_etat
 from app.contracts.framework_answer_schema import (
     Approximation, ControlesManager, FondationServie, FrameworkAnswerServie, ManagerVerdict,
     Reponse, SansObjet)
@@ -228,8 +228,7 @@ def etat(reponses, *, archetype="pre_revenus", collecte=None, applicables=None, 
 
 
 def memo_de(e):
-    return projeter_memo(ticker_id="RVMD", archetype=e.archetype, fichier=e.fichier, genere_le=T0,
-                         lues=[AnswerLue(answer_id=r.answer_id, answer=r.servie) for r in e.reponses])
+    return memo_de_l_etat(e, genere_le=T0)
 
 
 QF = next(f for f in FICHIER.frameworks if f.id == "qualite_financiere")

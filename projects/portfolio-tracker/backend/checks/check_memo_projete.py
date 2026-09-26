@@ -249,25 +249,25 @@ valide("une note qui couvre exactement l'ordre du jour se construit",
 
 print("\n3. le PROJECTEUR refuse plutôt que de SAUTER")
 rejete("une réponse d'un AUTRE émetteur glissée dans la note",
-       lambda: projeter_memo(ticker_id="ZZZ", archetype="rentable",
+       lambda: projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable",
                              lues=[lue(_PILOTE.id, _Q1, ticker_id="AAAA")]),
        "une note qui mélange deux émetteurs")
 rejete("une réponse rattachée à un framework ABSENT du référentiel",
-       lambda: projeter_memo(ticker_id="ZZZ", archetype="rentable",
+       lambda: projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable",
                              lues=[lue("cadre_disparu", _Q1)]),
        "elle rétrécirait la note en silence")
 rejete("une réponse écrite contre une version PÉRIMÉE du référentiel",
-       lambda: projeter_memo(ticker_id="ZZZ", archetype="rentable",
+       lambda: projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable",
                              lues=[lue(_PILOTE.id, _Q1, framework_version="v2.0.0")]),
        "n'est plus la réponse à la question qu'on publie")
 rejete("une réponse dont la question est inconnue de SON framework",
-       lambda: projeter_memo(ticker_id="ZZZ", archetype="rentable",
+       lambda: projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable",
                              lues=[lue(_PILOTE.id, _Q2)]),
        "s'indexerait sur une question voisine")
 
 # Les quatre états, produits pour de bon — un état déclaré dans un contrat que rien ne produit est
 # un décideur sans producteur (`feedback_controle_au_point_de_lecture`).
-_vide = projeter_memo(ticker_id="ZZZ", archetype="rentable", lues=[])
+_vide = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[])
 check("émetteur classé, dossier vide → les chapitres pilotés sortent `sans_acquittement`",
       _vide.par_bloc()[_PILOTE.bloc_memo].etat == "sans_acquittement",
       f"→ {_vide.par_bloc()[_PILOTE.bloc_memo].etat}")
@@ -276,7 +276,7 @@ check("… et les chapitres sans pilote sortent `pas_de_methodologie_approuvee`"
           if r.bloc not in {f.bloc_memo for f in REEL.frameworks}),
       "→ un chapitre non instruit qui sortirait vide se lirait « rien à signaler »")
 
-_non_classe = projeter_memo(ticker_id="ZZZ", archetype=None,
+_non_classe = projeter_memo(ticker_id="ZZZ", comite={}, archetype=None,
                             lues=[lue(_PILOTE.id, _Q1, manager=RENVOYE)])
 _r = _non_classe.par_bloc()[_PILOTE.bloc_memo]
 check("émetteur NON CLASSÉ → `non_revalidable`, jamais `sans_acquittement`",
@@ -287,7 +287,7 @@ check("… et le motif dit que le remède est un CLASSEMENT, pas une collecte",
 check("… et les réponses au dossier sont comptées, jamais tues",
       _r.reponses_non_acquittees == 1, f"→ {_r.reponses_non_acquittees}")
 
-_instruite = projeter_memo(ticker_id="ZZZ", archetype="rentable", lues=[
+_instruite = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[
     lue(_PILOTE.id, _Q1, answer_id=11),
     lue(_PILOTE.id, _PILOTE.questions[1].id, answer_id=12, manager=RENVOYE)])
 _r = _instruite.par_bloc()[_PILOTE.bloc_memo]
@@ -302,7 +302,7 @@ check("… et l'id de la ligne, pour que le comité remonte à la pièce",
       _r.points[0].answer_id == 11)
 
 # Deux analystes sur une même question donnent DEUX points, jamais une moyenne (§3.4).
-_deux = projeter_memo(ticker_id="ZZZ", archetype="rentable", lues=[
+_deux = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[
     lue(_PILOTE.id, _Q1, answer_id=21, analyste="analyste_2"),
     lue(_PILOTE.id, _Q1, answer_id=22, analyste="analyste_1")])
 _r = _deux.par_bloc()[_PILOTE.bloc_memo]
@@ -369,7 +369,7 @@ def _referentiel_augmente(bloc: str) -> str:
 
 
 if _CIBLE is not None:
-    _avant = projeter_memo(ticker_id="ZZZ", archetype="rentable", lues=[]).par_bloc()[_CIBLE]
+    _avant = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[]).par_bloc()[_CIBLE]
     check(f"avant : le chapitre visé sort « pas de méthodologie approuvée »",
           _avant.etat == "pas_de_methodologie_approuvee", f"→ {_avant.etat}")
 
@@ -382,7 +382,7 @@ if _CIBLE is not None:
         print(f"       (référentiel augmenté non chargeable : {type(e).__name__}: {str(e)[:200]})")
 
     if _augmente is not None:
-        _apres = projeter_memo(ticker_id="ZZZ", archetype="rentable", lues=[],
+        _apres = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[],
                                fichier=_augmente).par_bloc()[_CIBLE]
         check("APRÈS, sans UNE ligne de Python modifiée : le chapitre est instruit par le YAML",
               _apres.etat == "sans_acquittement" and _apres.framework_id == "cadre_fictif",
@@ -392,14 +392,14 @@ if _CIBLE is not None:
               and _apres.methodologie.startswith("Méthodologie fictive"),
               f"→ {_apres.libelle}")
 
-        _avec = projeter_memo(ticker_id="ZZZ", archetype="rentable", fichier=_augmente,
+        _avec = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", fichier=_augmente,
                               lues=[lue("cadre_fictif", "cx_1", answer_id=31)]).par_bloc()[_CIBLE]
         check("… et une réponse acquittée s'y publie comme dans n'importe quel chapitre piloté",
               _avec.etat == "instruite" and [p.question_id for p in _avec.points] == ["cx_1"],
               f"→ {_avec.etat} / {[p.question_id for p in _avec.points]}")
         check("… la note couvre toujours exactement l'ordre du jour après la croissance",
               set(_avec.bloc for _avec in projeter_memo(
-                  ticker_id="ZZZ", archetype="rentable", lues=[], fichier=_augmente).rubriques)
+                  ticker_id="ZZZ", comite={}, archetype="rentable", lues=[], fichier=_augmente).rubriques)
               == set(BLOCS_MEMO))
 
     # Le versant DONNÉES de la garantie : croître est une opération de données, mais une opération

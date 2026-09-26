@@ -37,16 +37,18 @@ réponses ». Un contrôle qui dégrade en sortant à zéro est un vert
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import NamedTuple, Optional, Sequence
+from typing import Mapping, NamedTuple, Optional, Sequence
 
 from app.contracts.framework_answer_schema import FrameworkAnswerServie, ManagerVerdict
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.contracts.memo_blocs import BLOCS_MEMO
-from app.contracts.memo_projete_schema import MemoProjete, PointProjete, RubriqueProjetee
+from app.contracts.comite_schema import PositionComite
+from app.contracts.memo_projete_schema import (
+    MemoProjete, PointProjete, RetenueParLeComite, RubriqueProjetee)
 
 from app.agents.v2.frameworks import load_frameworks
 
-__all__ = ["AnswerLue", "ProjectionRefusee", "projeter_memo"]
+__all__ = ["AnswerLue", "ProjectionRefusee", "projeter_memo", "memo_de_l_etat"]
 
 
 class ProjectionRefusee(Exception):
@@ -68,6 +70,9 @@ class AnswerLue(NamedTuple):
     """
     answer_id: Optional[int]
     answer: FrameworkAnswerServie
+    # Ce que le contrôle reproche à la réponse, RECALCULÉ à la lecture (#77). Lu seulement quand le
+    # comité l'a retenue malgré tout (arbitrage A) : la note doit dire ce qu'il a surmonté.
+    motif_revue: Optional[str] = None
 
 
 def _motif_sans_methodologie() -> str:
@@ -96,9 +101,15 @@ def _motif_non_revalidable(libelle: str, au_dossier: int, questions: int) -> str
             "refus du manager, c'est un classement qui manque au dossier")
 
 
-def _motif_instruite(libelle: str, points: int, questions: int, non_acquittees: int) -> str:
-    base = (f"méthodologie « {libelle} » — {points} point(s) acquitté(s) sur {questions} "
-            f"question(s) instruite(s)")
+def _motif_instruite(libelle: str, points: int, questions: int, non_acquittees: int,
+                     retenues: int = 0) -> str:
+    if retenues:
+        base = (f"méthodologie « {libelle} » — {points} point(s) publié(s) sur {questions} "
+                f"question(s) instruite(s) : {points - retenues} acquitté(s) par le contrôle, "
+                f"{retenues} retenu(s) par le comité malgré leur faiblesse")
+    else:
+        base = (f"méthodologie « {libelle} » — {points} point(s) acquitté(s) sur {questions} "
+                f"question(s) instruite(s)")
     if non_acquittees:
         return f"{base} ; {non_acquittees} réponse(s) au dossier non acquittée(s)"
     return base
@@ -109,6 +120,7 @@ def projeter_memo(
     ticker_id: str,
     lues: Sequence[AnswerLue],
     archetype: Optional[str],
+    comite: Mapping[tuple[str, str], PositionComite],
     fichier: Optional[FrameworksFile] = None,
     genere_le: Optional[datetime] = None,
 ) -> MemoProjete:
@@ -125,6 +137,12 @@ def projeter_memo(
     ne sert pas à re-réviser ici : la revue est faite par `servir_memo`, en amont. Il sert à dire
     au comité POURQUOI une rubrique est vide — « rien n'a passé les contrôles » (le dossier) ou
     « personne n'a pu relire » (notre saisie).
+
+    `comite` : la position du comité par (framework, question), SERVIE (`EtatDossier.comite`).
+    REQUIS pour la même raison qu'`archetype` : un assembleur qui l'oublierait publierait une note
+    qui ignore les décisions du comité alors que l'alerte les compte (arbitrage A). Une réponse non
+    acquittée entre dans la note SSI le comité l'a acceptée, que l'acceptation tient AUJOURD'HUI,
+    et qu'elle porte sur CETTE réponse — et elle y entre marquée, avec sa faiblesse.
     """
     fichier = fichier or load_frameworks()
     genere_le = genere_le or datetime.now(timezone.utc)
@@ -175,12 +193,19 @@ def projeter_memo(
         # questions du référentiel, pas dans celui où la base a rendu ses lignes — un ordre qui
         # dépend de la base ferait bouger la note sans qu'aucune donnée ne change.
         rang = {q.id: i for i, q in enumerate(f.questions)}
-        acquittees = sorted(
-            (lue for lue in du_framework
-             if lue.answer.manager is not None and lue.answer.manager.verdict == "acquitte"),
-            key=lambda lue: (rang[lue.answer.question_id], lue.answer.analyste),
-        )
-        non_acquittees = len(du_framework) - len(acquittees)
+        # Une réponse entre dans la note par le contrôle (acquittée) OU par le comité (retenue
+        # malgré sa faiblesse, arbitrage A) — jamais par aucun des deux.
+        publiees: list[tuple[AnswerLue, Optional[RetenueParLeComite]]] = []
+        for lue in du_framework:
+            if lue.answer.manager is not None and lue.answer.manager.verdict == "acquitte":
+                publiees.append((lue, None))
+                continue
+            retenue = _retenue(comite.get((f.id, lue.answer.question_id)), lue)
+            if retenue is not None:
+                publiees.append((lue, retenue))
+        publiees.sort(key=lambda p: (rang[p[0].answer.question_id], p[0].answer.analyste))
+        non_acquittees = len(du_framework) - len(publiees)
+        retenues = sum(1 for _l, r in publiees if r is not None)
 
         points = [
             PointProjete(
@@ -189,8 +214,9 @@ def projeter_memo(
                 chemin_indexation=enonces[lue.answer.question_id].chemin_indexation,
                 answer=lue.answer,
                 answer_id=lue.answer_id,
+                retenue_par_comite=retenue,
             )
-            for lue in acquittees
+            for lue, retenue in publiees
         ]
 
         commun = dict(
@@ -215,7 +241,8 @@ def projeter_memo(
         elif points:
             rubriques.append(RubriqueProjetee(
                 etat="instruite",
-                motif=_motif_instruite(f.libelle, len(points), len(f.questions), non_acquittees),
+                motif=_motif_instruite(f.libelle, len(points), len(f.questions), non_acquittees,
+                                       retenues),
                 points=points,
                 **commun,
             ))
@@ -232,6 +259,34 @@ def projeter_memo(
         framework_version=fichier.schema_version,
         rubriques=rubriques,
     )
+
+
+def _retenue(position: Optional[PositionComite], lue: AnswerLue) -> Optional[RetenueParLeComite]:
+    """La décision du comité qui fait entrer CETTE réponse non acquittée dans la note, ou None.
+
+    Trois conditions, chacune un faux si on la lâche : la dernière décision est une ACCEPTATION (un
+    renvoi postérieur l'a remplacée) ; elle est EN VIGUEUR aujourd'hui (tombée sur un fait nouveau,
+    elle ne fonde plus rien) ; elle porte sur CETTE réponse (le comité a lu une version précise).
+    """
+    if position is None or position.acceptation is None:
+        return None
+    acc = position.acceptation
+    if acc.etat != "en_vigueur" or acc.decision.answer_id != lue.answer_id:
+        return None
+    return RetenueParLeComite(
+        acceptation=acc,
+        faiblesse=lue.motif_revue or "le contrôle qualité n'a pas pu relire cette réponse")
+
+
+def memo_de_l_etat(etat, *, genere_le: Optional[datetime] = None) -> MemoProjete:
+    """DÉTENTEUR UNIQUE (#46) de l'assemblage état du dossier → note. L'endpoint, l'outil
+    `montrer_parcours`, `servir_memo` et les checks passent tous par ici : cinq assembleurs
+    recopiés, c'est cinq endroits où oublier le comité (arbitrage A) ou le motif de la revue."""
+    lues = [AnswerLue(answer_id=r.answer_id, answer=r.servie, motif_revue=r.motif_revue)
+            for r in etat.reponses]
+    return projeter_memo(ticker_id=etat.ticker_id, lues=lues, archetype=etat.archetype,
+                         comite=etat.comite, fichier=etat.fichier,
+                         genere_le=genere_le or etat.genere_le)
 
 
 async def servir_memo(conn, ticker_id: str) -> MemoProjete:
@@ -266,7 +321,4 @@ async def servir_memo(conn, ticker_id: str) -> MemoProjete:
     # niveaux du parcours. Import tardif : ce module est importé par des checks sans base ni réseau.
     from app.agents.v2.parcours import charger_etat_dossier
 
-    etat = await charger_etat_dossier(conn, ticker_id)
-    lues = [AnswerLue(answer_id=r.answer_id, answer=r.servie) for r in etat.reponses]
-    return projeter_memo(
-        ticker_id=ticker_id, lues=lues, archetype=etat.archetype, fichier=etat.fichier)
+    return memo_de_l_etat(await charger_etat_dossier(conn, ticker_id))

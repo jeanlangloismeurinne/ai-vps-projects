@@ -22,7 +22,7 @@ import traceback
 
 from app.agents.v2.parcours import (
     charger_etat_dossier, dresser_niveau1, dresser_niveau2, dresser_niveau3)
-from app.agents.v2.projection_memo import projeter_memo, AnswerLue
+from app.agents.v2.projection_memo import memo_de_l_etat
 from app.db.database import close_pool, get_db_session, init_pool
 
 L = 78
@@ -68,9 +68,7 @@ async def main() -> int:
     finally:
         await close_pool()
 
-    memo = projeter_memo(ticker_id=ticker_id, archetype=etat.archetype, fichier=etat.fichier,
-                         lues=[AnswerLue(answer_id=r.answer_id, answer=r.servie)
-                               for r in etat.reponses])
+    memo = memo_de_l_etat(etat)
     if reste[:1] == ["--json"]:
         niveau = reste[1]
         obj = (dresser_niveau1(etat, memo) if niveau == "1"

@@ -75,6 +75,12 @@ def _imprimer(memo) -> None:
             print(f"       statut {a.statut}"
                   + (f" · analyste {a.analyste}" if a.analyste else "")
                   + (f" · ligne #{p.answer_id}" if p.answer_id is not None else ""))
+            if p.retenue_par_comite is not None:
+                d = p.retenue_par_comite.acceptation.decision
+                print(f"       ⚠ RETENUE PAR LE COMITÉ malgré : "
+                      f"{_coupe(p.retenue_par_comite.faiblesse, 200)}")
+                print(f"         décision de {d.auteur} le {d.decide_le:%Y-%m-%d} : "
+                      f"« {_coupe(d.motif, 200)} »")
             if a.reponse is not None:
                 valeur = ("" if a.reponse.valeur is None
                           else f"  [{a.reponse.valeur} {a.reponse.unite}]")

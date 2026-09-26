@@ -38,12 +38,13 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.parcours import (
     EtatDossier, ReponseLue, dresser_niveau1, dresser_niveau2, dresser_niveau3,
     manque_de_la_question)
-from app.agents.v2.projection_memo import AnswerLue, projeter_memo
+from app.agents.v2.projection_memo import memo_de_l_etat
 from app.contracts.comite_schema import (
     AcceptationServie, DecisionComite, DemandeAcquittement, DemandeRenvoi, FaitImportant,
     PositionComite)
 from app.contracts.framework_answer_schema import (
     ControlesManager, FondationServie, FrameworkAnswerServie, ManagerVerdict, Reponse)
+from app.contracts.memo_projete_schema import PointProjete, RetenueParLeComite
 from app.contracts.parcours_schema import Manque, PreuvesQuestion
 from app.contracts.readiness_report_schema import GapItem
 from app.knowledge.material_events import (
@@ -292,8 +293,14 @@ def etat(comite=None, registre=None, reponses=(NF,)):
 
 
 def memo_de(e):
-    return projeter_memo(ticker_id="RVMD", archetype=e.archetype, fichier=e.fichier, genere_le=T_ACC,
-                         lues=[AnswerLue(answer_id=r.answer_id, answer=r.servie) for r in e.reponses])
+    """La note du niveau 1. Un refus du contrat (point mal formé) est un FAIL NOMMÉ ; la suite se
+    mesure sur une note sans comité, pour que le script atteigne quand même ses asserts §4bis."""
+    try:
+        return memo_de_l_etat(e, genere_le=T_ACC)
+    except Exception as ex:  # noqa: BLE001
+        b.check(False, f"§4 la note du niveau 1 est REFUSÉE par son contrat : {str(ex)[:160]}")
+        from dataclasses import replace
+        return memo_de_l_etat(replace(e, comite={}), genere_le=T_ACC)
 
 
 CLE = ("qualite_financiere", "qf_7")
@@ -343,6 +350,84 @@ refuse(lambda: PreuvesQuestion(**{**n3_vide.model_dump(), "comite": p_r.model_du
                                   "registre": [ACC.model_dump(),
                                                                   RENVOI.model_dump()]}),
        "la plus récente", "§4 une position qui n'est pas la tête du registre est refusée")
+
+# ══ §4bis LA NOTE DE COMITÉ (arbitrage A, 2026-09-26) ═════════════════════════════════════════
+print("[4bis] la note reprend ce que le comité a retenu, marqué, avec la faiblesse surmontée")
+# La forme RÉELLE d'une réponse que le comité a acceptée malgré le contrôle : `acquitter` abandonne
+# le mandat ouvert, donc `charger_etat_dossier` la sert SANS avis attaché (`renvoi_a_emettre`), avec
+# le verdict et le motif de la revue recalculés à côté. Pas un avis « renvoyé » inventé : sans
+# mandat, le contrat l'interdirait (Écart B).
+FAIBLESSE = "② actualité ko : la marge publiée précède l'approbation FDA du 2026-08-26"
+NF_FAIBLE = ReponseLue(answer_id=469, servie=NF.servie.model_copy(update={"manager": None}),
+                       verdict="renvoye", controles=OK4, motif_revue=FAIBLESSE,
+                       etat_revue="renvoi_a_emettre")
+
+
+def note_qf(comite):
+    e = etat(comite=comite, registre={CLE: [ACC]}, reponses=(NF_FAIBLE,))
+    try:
+        return memo_de_l_etat(e, genere_le=T_ACC).par_bloc()[
+            next(f.bloc_memo for f in FICHIER.frameworks if f.id == "qualite_financiere")]
+    except Exception as e:  # noqa: BLE001 — un refus est un FAIL nommé, pas la mort du script
+        return f"REFUSÉ : {e}"
+
+
+r_acc = note_qf({CLE: pos_ok})
+pt = r_acc.points[0] if not isinstance(r_acc, str) and r_acc.points else None
+b.check(pt is not None and pt.question_id == "qf_7" and pt.retenue_par_comite is not None,
+        f"§4bis une acceptation EN VIGUEUR fait entrer la réponse dans la note — obtenu {r_acc if pt is None else 'ok'}")
+b.check(pt is not None and pt.retenue_par_comite.faiblesse == FAIBLESSE
+        and pt.retenue_par_comite.acceptation.decision.auteur == ACC.auteur
+        and pt.retenue_par_comite.acceptation.decision.motif == ACC.motif,
+        "§4bis … marquée : la faiblesse (lue à la revue du jour), qui a tranché, et pourquoi")
+b.check(not isinstance(r_acc, str) and r_acc.etat == "instruite"
+        and r_acc.reponses_non_acquittees == 0
+        and "1 retenu(s) par le comité malgré leur faiblesse" in r_acc.motif,
+        f"§4bis la rubrique DIT combien de points reposent sur le comité — obtenu "
+        f"{r_acc if isinstance(r_acc, str) else r_acc.motif}")
+r_sans = note_qf({})
+b.check(not isinstance(r_sans, str) and r_sans.points == [] and r_sans.reponses_non_acquittees == 1,
+        "§4bis témoin : sans décision du comité, la réponse faible reste hors de la note, comptée")
+r_tb = note_qf({CLE: pos_tb})
+b.check(not isinstance(r_tb, str) and r_tb.points == [],
+        "§4bis une acceptation TOMBÉE (fait nouveau) sort de la note : la question repasse en alerte")
+pos_autre = position_du_comite([decision(answer_id=470)], reponses_courantes=frozenset({469, 470}),
+                               ancre=ancre(FDA))
+r_autre = note_qf({CLE: pos_autre})
+b.check(not isinstance(r_autre, str) and r_autre.points == [],
+        "§4bis une acceptation d'une AUTRE version de la réponse ne couvre pas celle-ci")
+r_renv = note_qf({CLE: p_r})
+b.check(not isinstance(r_renv, str) and r_renv.points == [],
+        "§4bis un renvoi POSTÉRIEUR à l'acceptation la remplace : rien n'entre dans la note")
+try:
+    r_acq = memo_de_l_etat(e_acc, genere_le=T_ACC).par_bloc()[
+        next(f.bloc_memo for f in FICHIER.frameworks if f.id == "qualite_financiere")]
+except Exception as e:  # noqa: BLE001
+    r_acq = f"REFUSÉ : {e}"
+b.check(not isinstance(r_acq, str) and len(r_acq.points) == 1
+        and r_acq.points[0].retenue_par_comite is None,
+        "§4bis une réponse ACQUITTÉE par le contrôle n'est pas marquée « retenue malgré » même si le "
+        "comité l'a aussi acceptée (pas de faiblesse inventée)")
+if pt is not None:
+    refuse(lambda: RetenueParLeComite(acceptation=s_ac, faiblesse="x"), "ne fonde plus rien",
+           "§4bis contrat : une acceptation tombée ne se porte pas au mémo")
+    refuse(lambda: PointProjete(**{**pt.model_dump(), "answer_id": 470}), "UNE version du dossier",
+           "§4bis contrat : la décision ne se prête pas à une autre réponse")
+    refuse(lambda: PointProjete(**{**pt.model_dump(), "answer": NF.servie.model_dump()}),
+           "inventerait une faiblesse",
+           "§4bis contrat : un point acquitté ne peut pas être marqué « retenu malgré »")
+    refuse(lambda: PointProjete(**{**pt.model_dump(), "retenue_par_comite": None}),
+           "n'est pas acquittée", "§4bis contrat : sans décision du comité, le non-acquitté reste refusé")
+else:
+    b.check(False, "§4bis contrat non mesuré : aucun point retenu à muter")
+assembleurs = sorted(str(p) for p in [*Path("app").rglob("*.py"), *Path("tools").rglob("*.py")]
+                     if "projeter_memo(" in strip_code(p.read_text(encoding="utf-8"))
+                     and p.name != "projection_memo.py")
+b.check(assembleurs == [],
+        f"§4bis SEUL `memo_de_l_etat` assemble la note (aucun `projeter_memo` recopié) — obtenu {assembleurs}")
+b.check(Path("/frontend/components/v2/DossierComite.js").exists()
+        and "retenue_par_comite" in Path("/frontend/components/v2/DossierComite.js").read_text(),
+        "§4bis point de lecture : l'écran de la note LIT la mention du comité")
 
 # ══ §5 DÉTENTEURS UNIQUES ═════════════════════════════════════════════════════════════════════
 print("[5] détenteurs uniques (#46)")

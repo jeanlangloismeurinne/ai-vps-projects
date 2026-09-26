@@ -48,9 +48,11 @@ s'écrire.
 
 CE QUE LE CONTRAT REND IMPOSSIBLE PAR CONSTRUCTION, PLUTÔT QUE DE LE GARDER PAR UN `if`
 ----------------------------------------------------------------------------------------
-  · **publier du non-acquitté** — `PointProjete` exige `manager.verdict == 'acquitte'`. « Ne
-    publier que l'instruit » n'est pas une discipline du projecteur : un projecteur qui l'oublierait
-    ne construirait pas son objet ;
+  · **publier du non-acquitté SANS LE DIRE** — `PointProjete` exige `manager.verdict == 'acquitte'`,
+    OU une acceptation du comité EN VIGUEUR sur cette réponse précise, portée avec la faiblesse
+    qu'elle a surmontée (`RetenueParLeComite`, arbitrage A du 2026-09-26). « Ne publier que
+    l'instruit » n'est pas une discipline du projecteur : un projecteur qui l'oublierait ne
+    construirait pas son objet ;
   · **omettre un chapitre** — `MemoProjete` exige EXACTEMENT l'ordre du jour (`BLOCS_MEMO`). Un
     chapitre omis se lirait comme une propriété du sujet (`feedback_rendu_est_un_producteur`) ;
   · **servir sans l'axe actualité** — le point porte une `FrameworkAnswerServie`, pas une
@@ -76,12 +78,13 @@ from typing import Literal, Optional
 from pydantic import Field, model_validator
 
 from .analysis_v2_schemas import Strict
+from .comite_schema import AcceptationServie
 from .framework_answer_schema import FrameworkAnswerServie
 from .memo_blocs import BLOCS_MEMO
 
 __all__ = [
     "MEMO_PROJETE_SCHEMA_VERSION", "ETATS_RUBRIQUE", "EtatRubrique",
-    "PointProjete", "RubriqueProjetee", "MemoProjete",
+    "RetenueParLeComite", "PointProjete", "RubriqueProjetee", "MemoProjete",
 ]
 
 # Contrat NEUF du lot 5. Il ne bouscule pas `SCHEMA_VERSION` ("v2.0.0") des 4 JSON d'analyse : le
@@ -94,6 +97,31 @@ ETATS_RUBRIQUE = (
     "instruite", "sans_acquittement", "non_revalidable", "pas_de_methodologie_approuvee")
 EtatRubrique = Literal[
     "instruite", "sans_acquittement", "non_revalidable", "pas_de_methodologie_approuvee"]
+
+
+class RetenueParLeComite(Strict):
+    """Pourquoi un point que le contrôle qualité n'a PAS acquitté figure quand même dans la note.
+
+    ARBITRAGE A (2026-09-26) — ce que fait un vrai fonds : le mémo de comité reprend ce sur quoi le
+    comité s'est APPUYÉ pour décider, y compris une information qu'il a retenue en connaissance de
+    sa faiblesse — mais il le DIT, avec la faiblesse, qui a tranché, quand et pourquoi. Une note qui
+    omettrait la réponse contredirait l'alerte (qui la compte comme réglée) ; une note qui la
+    publierait sans mention la ferait passer pour contrôlée. Les deux sont des faux.
+
+    `faiblesse` : ce que le contrôle reproche À LA LECTURE (l'avis du manager est recalculé, #77) —
+    pas le souvenir de ce qu'il reprochait le jour de la décision.
+    """
+    acceptation: AcceptationServie
+    faiblesse: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _seule_une_acceptation_qui_tient_publie(self):
+        if self.acceptation.etat != "en_vigueur":
+            raise ValueError(
+                f"acceptation `{self.acceptation.etat}` portée au mémo : une acceptation tombée "
+                "(fait important publié depuis, analyse refaite) ou invérifiable ne fonde plus rien "
+                "— la question repasse devant le comité, elle ne s'imprime pas dans sa note")
+        return self
 
 
 class PointProjete(Strict):
@@ -113,6 +141,10 @@ class PointProjete(Strict):
     # L'id de la ligne `framework_answers` dont ce point est la projection. Le comité doit pouvoir
     # remonter à la pièce ; une note sans traçabilité de ligne rouvre §0.3 d'un cran plus haut.
     answer_id: Optional[int] = None
+    # Présent SSI le point entre dans la note par une décision du comité et non par le contrôle
+    # (arbitrage A). Jamais les deux : une réponse acquittée par le contrôle n'a pas besoin qu'on
+    # passe outre, et la marquer « retenue malgré » inventerait une faiblesse.
+    retenue_par_comite: Optional[RetenueParLeComite] = None
 
     @model_validator(mode="after")
     def _un_point_publie_ce_qui_a_ete_acquitte(self):
@@ -121,7 +153,21 @@ class PointProjete(Strict):
                 f"point `{self.question_id}` portant la réponse de `{self.answer.question_id}` : "
                 "un point mal étiqueté range une réponse sous la mauvaise question, et le comité "
                 "lit un verdict qui ne répond pas à ce qu'il croit lire")
-        if self.answer.manager is None or self.answer.manager.verdict != "acquitte":
+        acquitte = self.answer.manager is not None and self.answer.manager.verdict == "acquitte"
+        if self.retenue_par_comite is not None:
+            if acquitte:
+                raise ValueError(
+                    f"point `{self.question_id}` acquitté par le contrôle ET marqué « retenu par le "
+                    "comité malgré sa faiblesse » : la mention inventerait une faiblesse que le "
+                    "contrôle ne reproche plus")
+            d = self.retenue_par_comite.acceptation.decision
+            if (d.answer_id, d.question_id) != (self.answer_id, self.question_id):
+                raise ValueError(
+                    f"point `{self.question_id}` (réponse #{self.answer_id}) couvert par la décision "
+                    f"du comité sur `{d.question_id}` (réponse #{d.answer_id}) : le comité a accepté "
+                    "UNE version du dossier, sa décision ne se prête pas à une autre réponse")
+            return self
+        if not acquitte:
             verdict = None if self.answer.manager is None else self.answer.manager.verdict
             raise ValueError(
                 f"point `{self.question_id}` dont la réponse n'est pas acquittée (verdict "

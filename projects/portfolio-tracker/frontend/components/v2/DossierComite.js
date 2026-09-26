@@ -82,12 +82,27 @@ function NotesQualite({ d }) {
   )
 }
 
+// Arbitrage A : une réponse que le contrôle n'a pas acquittée n'entre dans la note que parce que le
+// comité l'a retenue — la note le DIT, avec ce qu'il a surmonté, qui a tranché, quand et pourquoi.
+function RetenueComite({ r }) {
+  const d = r.acceptation.decision
+  return (
+    <div className="mt-2 rounded border border-amber-700/60 bg-amber-900/20 px-2 py-1.5 text-xs space-y-0.5">
+      <p className="font-semibold text-amber-300">Retenue par le comité malgré sa faiblesse</p>
+      <p className="text-amber-200/90">Faiblesse relevée par le contrôle : {r.faiblesse}</p>
+      <p className="text-gray-300">
+        Décision de {d.auteur} le {new Date(d.decide_le).toLocaleDateString('fr-FR')} : « {d.motif} »
+      </p>
+    </div>
+  )
+}
+
 function Conclusions({ d }) {
   return (
     <Card>
       <CardHeader
         title="Conclusions des méthodologies"
-        subtitle="La note de comité : seules les réponses passées au contrôle y figurent. Aucune opinion n'y est ajoutée."
+        subtitle="La note de comité : les réponses passées au contrôle, et celles que le comité a retenues malgré leur faiblesse — signalées comme telles. Aucune opinion n'y est ajoutée."
       />
       <CardBody className="space-y-4">
         {d.memo.rubriques.filter(r => r.framework_id).map(r => (
@@ -107,6 +122,7 @@ function Conclusions({ d }) {
                 <p className="text-sm text-gray-200 mt-1">
                   {pt.answer.reponse?.verbatim || pt.answer.sans_objet?.motif || pt.answer.gap?.manque}
                 </p>
+                {pt.retenue_par_comite && <RetenueComite r={pt.retenue_par_comite} />}
               </Link>
             ))}
           </div>

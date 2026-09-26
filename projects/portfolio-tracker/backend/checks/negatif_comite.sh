@@ -16,6 +16,10 @@ WITH_FRONT=1
 C="app/agents/v2/comite.py"
 P="app/agents/v2/parcours.py"
 S="app/contracts/comite_schema.py"
+M="app/agents/v2/projection_memo.py"
+N="app/contracts/memo_projete_schema.py"
+A="app/api/parcours_v2.py"
+D="FRONT:components/v2/DossierComite.js"
 REG="FRONT:components/v2/RegistreComite.js"
 N3="FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/q/[question_id].js"
 mutations=(
@@ -43,6 +47,21 @@ mutations=(
 "$P¦        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []))¦        comite=None, registre=[])  # mutation: le PV n'atteint pas l'écran¦le PV COMPLET"
 # ── l'ancre du POST ───────────────────────────────────────────────────────────────────────────
 "app/api/parcours_v2.py¦        ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))¦        ancre = await material_anchor_for_ticker(conn, ticker_id)  # mutation¦l'ancre qui PÈSE"
+# ── la note de comité reprend ce que le comité a retenu (arbitrage A, 2026-09-26) ───────────────
+"$M¦            retenue = _retenue(comite.get((f.id, lue.answer.question_id)), lue)¦            retenue = None  # mutation: le comité ignoré par la note¦fait entrer la réponse dans la note"
+"$M¦                comite=etat.comite, fichier=etat.fichier,¦                comite={}, fichier=etat.fichier,  # mutation: assembleur sans comité¦fait entrer la réponse dans la note"
+"$M¦    if acc.etat != \"en_vigueur\" or acc.decision.answer_id != lue.answer_id:¦    if acc.decision.answer_id != lue.answer_id:  # mutation: acceptation tombée publiée¦acceptation TOMBÉE (fait nouveau) sort"
+"$M¦    if acc.etat != \"en_vigueur\" or acc.decision.answer_id != lue.answer_id:¦    if acc.etat != \"en_vigueur\":  # mutation: une autre version couverte¦AUTRE version de la réponse"
+"$M¦    if position is None or position.acceptation is None:¦    if position is None:  # mutation: un renvoi lu comme une acceptation¦renvoi POSTÉRIEUR"
+"$M¦    lues = [AnswerLue(answer_id=r.answer_id, answer=r.servie, motif_revue=r.motif_revue)¦    lues = [AnswerLue(answer_id=r.answer_id, answer=r.servie)  # mutation: faiblesse perdue¦marquée : la faiblesse"
+"$M¦                                       retenues),¦                                       0),  # mutation: motif muet sur le comité¦la rubrique DIT combien"
+"$M¦        non_acquittees = len(du_framework) - len(publiees)¦        non_acquittees = len(du_framework) - len([p for p in publiees if p[1] is None])  # mutation: la retenue comptée non acquittée¦la rubrique DIT combien"
+"$M¦            if lue.answer.manager is not None and lue.answer.manager.verdict == \"acquitte\":¦            if False:  # mutation: le comité passe avant le contrôle¦pas de faiblesse inventée"
+"$N¦        if self.acceptation.etat != \"en_vigueur\":¦        if False:  # mutation¦une acceptation tombée ne se porte pas"
+"$N¦            if (d.answer_id, d.question_id) != (self.answer_id, self.question_id):¦            if False:  # mutation¦la décision ne se prête pas"
+"$N¦            if acquitte:¦            if False:  # mutation¦un point acquitté ne peut pas"
+"$A¦    return dresser_niveau1(etat, memo_de_l_etat(etat))¦    return dresser_niveau1(etat, projeter_memo(ticker_id=ticker_id, lues=[], archetype=None, comite={}))¦SEUL \`memo_de_l_etat\` assemble"
+"$D¦                {pt.retenue_par_comite && <RetenueComite r={pt.retenue_par_comite} />}¦                {null}¦l'écran de la note LIT la mention"
 # ── le point de lecture ───────────────────────────────────────────────────────────────────────
 "$REG¦<span data-pv=\"mandat_remplace_id\">¦<span>¦tout champ du PV a son pixel"
 "$REG¦<span data-pv=\"auteur\">{dcs.auteur}</span>¦<span data-pv=\"auteur\">{dcs.auteur}</span><span data-pv=\"signature\" />¦tout pixel rend un champ RÉEL"
