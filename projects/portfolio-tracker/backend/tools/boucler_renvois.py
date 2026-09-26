@@ -53,7 +53,8 @@ async def main() -> int:
         print(f"{'='*78}\nPASSAGE DE BOUCLAGE — {ticker_id} · {framework_id} · « {archetype} »\n"
               f"analyste `{ANALYSTE}`\n{'='*78}")
         note = await boucler_renvois(
-            ticker_id, framework_id, archetype, analyste=ANALYSTE)
+            ticker_id, framework_id, archetype, analyste=ANALYSTE,
+            sur_lecture=lambda lecture: print(lecture.texte()))
 
         print(f"\nmandats ouverts lus au départ : {note.mandats_lus}")
         if note.mandats_lus == 0:

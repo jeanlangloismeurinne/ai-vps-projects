@@ -8,6 +8,20 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-26 (7) — LOT 7 : la note flash branchée au flux (#91, arbitrage option c)
+
+- **Arbitrage rendu** : l'analyste lit (a) chaque matin pour tout titre suivi, sous `v2_auto_enabled`, et
+  (b) à chaque passage de la chaîne. Recommandation (c) acceptée telle quelle.
+- **Livré** : `note_flash.lire_les_depots_en_attente` (détenteur unique du geste ; l'outil
+  `rediger_notes_flash` y passe désormais, limite par défaut 50 → 20) ; `lecture_du_matin` + job
+  `notes_flash_matin` (7 h) ; maillon 0 de `executer_chaine` ; `boucler_renvois(sur_lecture=…)` lu avant
+  le dossier, seulement s'il y a un renvoi. Aucune migration, aucun contrat modifié.
+- **Gardes** : `check_note_flash_branchement` 34/0 + négatif 15/0 ; suite **3550/0 sur 51 scripts**.
+- **Mesuré (recensement gratuit sur la prod)** : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AZN 125, NVO 73
+  dépôts à lire ; 9 titres hors EDGAR. Aucune note écrite (réglage coupé, conforme).
+- **Leçon de harnais** : `_negatif.sh` ne convertit pas `\n` dans le MOTIF (seulement dans le remplaçant) —
+  3 mutations multi-lignes caduques, réécrites en motifs d'une ligne.
+
 ## 2026-09-26 (6) — LOT 7 : la note flash (taxonomie des événements, maillon 2, #90)
 
 - **Mesuré avant d'écrire** : le flux réel porte 23 dépôts `a_qualifier` RVMD, 14 NVDA, 17 MSFT ; trois

@@ -339,6 +339,7 @@ Les routers sont dans `backend/app/api/` — `grep` fait foi si divergence.
 |-------|------|-----|--------|
 | `*/5` | lun-ven 9h-17h | `_check_price_alerts_v1` | Vérifie price_alerts V1, notifie Slack |
 | 7h05 | tous | `_daily_check_v1` | EventRouterV1 — mode 1 (J-2), mode 2 (J+1), mode 4 (sector pulse J+1), mode 3 (conviction_review jour J) — lit `calendar_events` V1 (`thesis_v2_id IS NULL`) |
+| 7h00 | tous | `_notes_flash_matin` | Notes flash (#91) — pour chaque titre suivi (`tickers.status` ∈ portfolio/watchlist), lit les dépôts 8-K/6-K « à qualifier » non lus. Dépense gardée par `v2_auto_enabled` : FALSE ⟹ **recensement gratuit**, Slack seulement si un dépôt non lu a été publié depuis la veille ; TRUE ⟹ notes écrites (≤ 20 par titre et par matin), Slack avec types, passage et refus. Titre hors EDGAR = « hors flux », silencieux |
 | 7h15 | tous | `_daily_check_v2` | EventRouterV2 — modes 1/2/4/3 aux mêmes échéances + **mode 6** (revue annuelle, **avec rattrapage** `scheduled_date <= today`, cf. #38) — lit `calendar_events` du flux V2 (`thesis_v2_id IS NOT NULL`, INNER JOIN `theses_v2` active). Job **séparé** du V1 à dessein : les enchaîner ferait qu'une exception d'un flux empêcherait l'autre de tourner. Gouverné par `portfolio_settings.v2_auto_enabled` (**FALSE** par défaut → session `pending_manual` avec contexte, notifiée, au lieu d'une dépense) |
 | 7h30 | tous | `_refresh_watchlist_prices` | Prix watchlist V0 via `get_m1()` |
 | 8h00 | lundi | `_weekly_review` | Snapshot portfolio V0 → digest Slack |
@@ -2272,7 +2273,7 @@ invalidé toutes les réponses des méthodologies. Séparées, un changement de 
 dépôts (`a_relire`) sans toucher aux réponses ; une note d'une ancienne version compte encore tant
 qu'elle n'est pas relue. Relues sous 1.1.0 : 6/6 justes, 0 refus.
 
-⚠️ **Ce qui n'est PAS fait** : la note flash ne tourne pas d'elle-même — `tools/rediger_notes_flash.sh
+⚠️ **(Levé par #91)** ~~Ce qui n'est PAS fait~~ : la note flash ne tournait pas d'elle-même — `tools/rediger_notes_flash.sh
 TICKER [--ecrire]` (lecture gratuite par défaut) est le seul appelant. La brancher au flux (chaîne
 d'analyse, ou tâche quotidienne sous `v2_auto_enabled`) est le pas suivant. Fenêtre par défaut : 400
 jours ; les `a_qualifier` plus anciens restent non lus (ils ne pèsent que s'ils sont postérieurs aux
@@ -2290,6 +2291,40 @@ Gardes : `check_note_flash.py` **50/0** + `negatif_note_flash.sh` **19/0** · `c
 **16/0** (vraie base, ROLLBACK, CIK fictif) + `negatif_note_flash_persist.sh` **4/0** · `check_evenements.py`
 **51/0** (§7) + `negatif_evenements.sh` **19/0** · `negatif_050.sh` **18/0**. Notes réelles : RVMD
 #80-#85, NVDA #86-#87, MSFT #88 (#66-#71 : première lecture RVMD sous l'ancien catalogue, conservées).
+
+### #91 — l'analyste lit ses communiqués à DEUX moments : chaque matin, et avant de rouvrir un dossier
+
+**Arbitrage du 2026-09-26 (option c), rendu comme un vrai fonds.** Pour une position détenue, l'analyste
+lit le communiqué le matin de sa publication ; et on ne présente jamais un dossier au comité sans avoir lu
+ce que l'émetteur a publié depuis. Donc les deux : (a) un passage QUOTIDIEN pour tout titre suivi (job
+`notes_flash_matin`, 7 h Paris, avant le routeur V2) ; (b) une lecture au début de chaque PASSAGE DE LA
+CHAÎNE (`executer_chaine`, `boucler_renvois` — seulement s'il y a un renvoi, un bouclage sans renvoi ne
+rouvre pas le dossier et ne dépense rien, #40).
+
+**La dépense quotidienne est sous le réglage qui encadre toute dépense non supervisée** (`v2_auto_enabled`,
+FALSE par défaut, #38). Coupé : aucun appel modèle, aucun téléchargement — les dépôts non lus sont
+RECENSÉS et le gérant n'est prévenu que de ceux publiés depuis la veille (l'arriéré connu ne se re-signale
+pas chaque matin). Un report, jamais un abandon — même doctrine que `event_router_v2`. Le passage de la
+chaîne, lui, est lancé par un humain : sa dépense est décidée par lui.
+
+**Un seul détenteur du geste** : `note_flash.lire_les_depots_en_attente(conn, ticker, ecrire=…)` — quoi lire
+(`depots_a_lire`), dans quel ordre (plus récent d'abord), jusqu'où (`LIMITE_PAR_PASSAGE` = 20, l'arriéré au-delà
+COMPTÉ `reportes`), que faire d'un échec. L'outil, la chaîne, le bouclage et le matin l'appellent ; aucun ne
+recopie la boucle (#46). Chaque note est écrite dans SA transaction ; un refus du pont, une panne inattendue
+(nommée avec son étape), une lecture qui dépasse `BORNE_PAR_ETAPE_S` (600 s, `feedback_blocage_est_etat_muet`)
+ou un doublon concurrent (la note existante fait foi) est un **refus nommé** — le dépôt reste `a_qualifier`
+(il rouvre tout, Q3) et le dépôt SUIVANT est lu. Un titre hors EDGAR (Paris, non coté) est « hors flux », dit,
+rien n'est appelé ; un titre en panne n'arrête pas le passage du matin.
+
+**Mesuré sur la vraie base (recensement, 2026-09-26)** : 17 titres suivis, 9 hors flux, RVMD/NVDA/MSFT à jour ;
+AMZN 9 et GOOG 9 dépôts à lire ; **AstraZeneca 125 et Novo Nordisk 73** 6-K sur 400 jours — un émetteur
+étranger dépose un 6-K presque chaque jour : réglage ouvert, l'arriéré se résorbe en ~7 matins à 20 lectures.
+
+Gardes : `check_note_flash_branchement.py` **34/0** (hors ligne ; §4 prouve que le réglage coupé n'appelle
+NI le modèle NI EDGAR ; §6 tient les appelants — le job est lu sur l'AST de `main.py`, un nom resté dans une
+définition jamais planifiée satisferait un grep) + `negatif_note_flash_branchement.sh` **15/0**.
+⚠️ Trois mutations écrites d'abord sur deux lignes étaient CADUQUES : le harnais `_negatif.sh` ne convertit
+`\n` que dans le remplaçant, pas dans le motif — un motif d'une ligne, rendu unique par son commentaire.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

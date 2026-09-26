@@ -38,14 +38,16 @@ chaque lecture contre le référentiel du jour (#53), à partir de `qualificatio
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Optional
 
+import asyncpg
 import httpx
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
@@ -54,10 +56,12 @@ from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.config import settings
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.contracts.note_flash_schema import SURPRISE, NoteFlashSortie, type_derive
+from app.db.database import get_db_session
 from app.knowledge.edgar_facts import _UA
-from app.knowledge.edgar_feed import IdentiteEmetteur
+from app.knowledge.edgar_feed import EdgarFeedUnavailable, IdentiteEmetteur, identite_de_l_emetteur
 from app.knowledge.evenements import A_QUALIFIER, QualificationLue, types_du_depot
-from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
+from app.knowledge.material_events import (
+    MaterialEvent, MaterialEventLookup, material_anchor_for_ticker)
 from app.knowledge.websearch import html_to_text
 
 logger = logging.getLogger(__name__)
@@ -66,7 +70,8 @@ __all__ = [
     "DocumentDepot", "NoteRedigee", "NoteFlashImpossible", "NoteFlashRefusee",
     "extraire_documents", "types_proposables", "contexte_note_flash", "valider_note",
     "depots_a_lire", "telecharger_soumission", "rediger_note_flash", "persister_note",
-    "qualifications_de_l_emetteur",
+    "qualifications_de_l_emetteur", "LectureDesDepots", "DepotTraite", "lire_les_depots_en_attente",
+    "titres_suivis", "lecture_du_matin",
 ]
 
 
@@ -426,3 +431,267 @@ async def qualifications_de_l_emetteur(conn, cik: Optional[int],
          ORDER BY accession, (catalogue_version = $2) DESC, redigee_le DESC, id DESC
         """, cik, fichier.types_evenement_version)
     return {r["accession"]: relire_note(dict(r), fichier) for r in rows}
+
+
+# ── 6. Lire les dépôts en attente — le GESTE de l'analyste, détenteur unique ────────────────────────
+#
+# Arbitrage de l'utilisateur (2026-09-26, option c) : l'analyste lit un communiqué À DEUX MOMENTS —
+#   · CHAQUE MATIN, pour tout titre suivi (portefeuille et liste de surveillance), dès sa publication :
+#     c'est ce que fait un fonds pour une position détenue. Dépense automatique quotidienne, donc placée
+#     sous le réglage qui encadre toute dépense non supervisée (`v2_auto_enabled`, FALSE par défaut) :
+#     réglage coupé ⟹ AUCUN appel modèle, les dépôts non lus sont SIGNALÉS (un report, jamais un abandon —
+#     même doctrine que `event_router_v2`) ;
+#   · À CHAQUE PASSAGE DE LA CHAÎNE sur un titre (`executer_chaine`, `boucler_renvois`), avant de charger
+#     le dossier : on ne rouvre pas un dossier devant le comité sans avoir lu ce que l'émetteur a publié.
+#     Le passage est lancé par un humain, sa dépense est décidée par lui.
+# Les trois appelants passent par cette fonction : la règle « quoi lire, dans quel ordre, que faire d'un
+# refus » n'a qu'un détenteur (#46). Un dépôt que la lecture n'a pas pu qualifier reste `a_qualifier` —
+# il rouvre tout (Q3) ; l'échec est NOMMÉ, jamais converti en « ne rouvre rien ».
+
+FENETRE = timedelta(days=400)
+LIMITE_PAR_PASSAGE = 20
+# Une lecture (téléchargement OU rédaction) qui ne rend pas la main est un échec NOMMÉ du dépôt, pas un
+# passage du matin qui ne finit jamais (`feedback_blocage_est_etat_muet`).
+BORNE_PAR_ETAPE_S = 600
+_PAUSE_EDGAR_S = 0.3   # accès équitable à EDGAR : jamais deux soumissions dans la même seconde
+
+
+@dataclass
+class DepotTraite:
+    """Un dépôt `a_qualifier` rencontré par un passage, et ce qu'il en est advenu."""
+    event: MaterialEvent
+    documents: list[DocumentDepot] = field(default_factory=list)
+    apercu: Optional[str] = None
+    note: Optional[NoteValidee] = None
+    note_id: Optional[int] = None
+    corrigee: bool = False
+    refus: Optional[str] = None
+
+
+@dataclass
+class LectureDesDepots:
+    """Le compte rendu d'un passage de lecture sur UN titre. Non persisté : les notes le sont."""
+    ticker_id: str
+    ecrire: bool
+    depuis: date
+    catalogue_version: str
+    cik: Optional[int] = None
+    raison_sociale: Optional[str] = None
+    hors_flux: Optional[str] = None      # EDGAR ne sert rien pour ce titre (non déposant SEC, panne…)
+    deja_lus: int = 0
+    en_attente: int = 0                  # dépôts à lire dans la fenêtre, AVANT la limite du passage
+    depots: list[DepotTraite] = field(default_factory=list)
+    cout_usd: float = 0.0
+
+    @property
+    def ecrits(self) -> list[DepotTraite]:
+        return [d for d in self.depots if d.note_id is not None]
+
+    @property
+    def refus(self) -> list[DepotTraite]:
+        return [d for d in self.depots if d.refus]
+
+    @property
+    def reportes(self) -> int:
+        """Dépôts en attente laissés à un passage suivant par la limite."""
+        return max(self.en_attente - len(self.depots), 0)
+
+    def texte(self) -> str:
+        L = 78
+        qui = f"{self.raison_sociale} ({self.ticker_id}" if self.raison_sociale else f"({self.ticker_id}"
+        lignes = [f"{'─' * L}", f"NOTES FLASH — {qui}{f', CIK {self.cik}' if self.cik else ''}) · "
+                  f"catalogue d'événements {self.catalogue_version}"]
+        if self.hors_flux:
+            lignes += [f"  hors flux : {self.hors_flux}", f"{'─' * L}"]
+            return "\n".join(lignes)
+        lignes.append(f"  {self.en_attente} dépôt(s) à lire depuis le {self.depuis} · {self.deja_lus} "
+                      f"déjà lu(s) · mode {'ÉCRITURE' if self.ecrire else 'lecture gratuite'}"
+                      + (f" · {self.reportes} reporté(s) au passage suivant (limite)" if self.reportes else ""))
+        lignes.append("─" * L)
+        for d in self.depots:
+            lignes.append(f"\n▸ {d.event.resume()}  [{d.event.accession}]")
+            for doc in d.documents:
+                lignes.append(f"    {doc.type:<8} {doc.nom:<28} {doc.taille:>6} car."
+                              f"{' (TRONQUÉ)' if doc.tronque else ''}")
+            if d.apercu:
+                lignes.append(f"    « {d.apercu} »")
+            if d.note is not None:
+                if d.note.lisible:
+                    for el in d.note.elements:
+                        cause = f" · cause {el['cause']}" if el.get("cause") else ""
+                        lignes.append(f"    → {el['type']}{cause} : « {el['passage'][:220]} »")
+                        if el.get("passage_cause"):
+                            lignes.append(f"        cause citée : « {el['passage_cause'][:200]} »")
+                else:
+                    lignes.append(f"    → ILLISIBLE : {d.note.motif}")
+            if d.note_id is not None:
+                lignes.append(f"    ✔ note #{d.note_id} — types retenus : {', '.join(d.note.types)}"
+                              f"{' (après une correction)' if d.corrigee else ''}")
+            if d.refus:
+                lignes.append(f"    ✘ {d.refus} — le dépôt reste à qualifier")
+        lignes.append(f"\n{'─' * L}\nINVENTAIRE — {len(self.ecrits)} note(s) écrite(s), {len(self.refus)} "
+                      f"refus, coût modèle ${self.cout_usd:.4f}\n{'─' * L}")
+        for d in self.ecrits:
+            lignes.append(f"  notes_flash #{d.note_id}  {d.event.accession}  {', '.join(d.note.types)}")
+        for d in self.refus:
+            lignes.append(f"  REFUS  {d.event.accession}  {d.refus[:160]}")
+        return "\n".join(lignes)
+
+
+async def lire_les_depots_en_attente(
+    conn, ticker_id: str, *, ecrire: bool, depuis: Optional[date] = None,
+    limite: int = LIMITE_PAR_PASSAGE, apercu: bool = False,
+    fichier: Optional[FrameworksFile] = None, agent: Optional[ResolvedAgent] = None,
+) -> LectureDesDepots:
+    """Lit (`ecrire=True`) ou recense (`ecrire=False`) les dépôts `a_qualifier` non encore lus d'un titre.
+
+    `ecrire=False` ne dépense RIEN : sans `apercu`, il ne télécharge même pas (le passage du matin
+    réglage coupé ne fait que compter) ; avec `apercu`, il télécharge et montre ce que le modèle lirait
+    (la frontière gratuite de l'outil). Chaque note est persistée dans SA transaction : un refus, une
+    panne ou une borne dépassée sur un dépôt n'empêche jamais la lecture des suivants."""
+    fichier = fichier or load_frameworks()
+    depuis = depuis or (date.today() - FENETRE)
+    lecture = LectureDesDepots(ticker_id=ticker_id, ecrire=ecrire, depuis=depuis,
+                               catalogue_version=fichier.types_evenement_version)
+    flux = await material_anchor_for_ticker(conn, ticker_id)
+    if flux.status != "found" or flux.cik is None:
+        lecture.hors_flux = f"flux EDGAR {flux.status} : {flux.raison or 'aucun dépôt'}"
+        return lecture
+    lecture.cik = flux.cik
+    deja = await qualifications_de_l_emetteur(conn, flux.cik, fichier)
+    lecture.deja_lus = len(deja)
+    tous = depots_a_lire(flux, deja, depuis=depuis)
+    lecture.en_attente = len(tous)
+    a_lire = tous[:max(limite, 0)]
+    if not ecrire and not apercu:
+        lecture.depots = [DepotTraite(event=e) for e in a_lire]
+        return lecture
+    if not a_lire:
+        return lecture
+    try:
+        emetteur = await identite_de_l_emetteur(conn, ticker_id)
+    except EdgarFeedUnavailable as ex:
+        lecture.depots = [DepotTraite(event=e, refus=f"identité de l'émetteur introuvable : {ex}")
+                          for e in a_lire]
+        return lecture
+    lecture.raison_sociale = emetteur.raison_sociale
+    if ecrire:
+        agent = agent or await _resoudre_agent()
+    for e in a_lire:
+        d = DepotTraite(event=e)
+        lecture.depots.append(d)
+        etape = "téléchargement"
+        try:
+            soum = await asyncio.wait_for(telecharger_soumission(flux.cik, e.accession),
+                                          BORNE_PAR_ETAPE_S)
+            await asyncio.sleep(_PAUSE_EDGAR_S)
+            d.documents = extraire_documents(soum)
+            if not ecrire:
+                if d.documents:
+                    d.apercu = d.documents[0].texte[:420].replace("\n", " ")
+                continue
+            etape = "lecture par le modèle"
+            red = await asyncio.wait_for(
+                rediger_note_flash(e, ticker_id=ticker_id, cik=flux.cik, emetteur=emetteur,
+                                   fichier=fichier, agent=agent, soumission=soum),
+                BORNE_PAR_ETAPE_S)
+            lecture.cout_usd += sum(r.cost_usd for r in red.runs)
+            d.note, d.corrigee = red.note, len(red.runs) > 1
+            etape = "écriture"
+            async with conn.transaction():
+                d.note_id = await persister_note(conn, red)
+        except (NoteFlashImpossible, NoteFlashRefusee) as ex:
+            d.refus = f"{type(ex).__name__} : {ex}"
+        except asyncio.TimeoutError:
+            d.refus = f"{etape} non terminé(e) en {BORNE_PAR_ETAPE_S} s"
+        except asyncpg.UniqueViolationError:
+            d.refus = ("déjà lu sous ce catalogue par un passage concurrent — la note existante fait "
+                       "foi, celle-ci n'est pas écrite")
+        except Exception as ex:  # noqa: BLE001 — une panne d'un dépôt ne tait jamais les suivants
+            logger.exception("note flash %s %s : panne à l'étape %s", ticker_id, e.accession, etape)
+            d.refus = f"panne à l'étape {etape} ({type(ex).__name__}) : {ex}"
+    return lecture
+
+
+# ── 7. Le passage du matin ──────────────────────────────────────────────────────────────────────────
+
+async def titres_suivis(conn) -> list[str]:
+    """Les titres dont le fonds lit les communiqués : ceux détenus et ceux sous surveillance. Un titre
+    hors EDGAR (coté à Paris, non coté) y figure : `lire_les_depots_en_attente` le dit « hors flux »."""
+    rows = await conn.fetch(
+        "SELECT id FROM tickers WHERE status IN ('portfolio', 'watchlist') ORDER BY id")
+    return [r["id"] for r in rows]
+
+
+def message_du_matin(lectures: list[LectureDesDepots], *, auto: bool, today: date) -> Optional[str]:
+    """Ce que le gérant reçoit le matin. Fonction PURE. `None` = rien à dire (aucun bruit quotidien).
+
+    Réglage ouvert : les notes écrites et les refus (un refus laisse le dépôt rouvrir tout le dossier).
+    Réglage coupé : seulement les dépôts NON LUS publiés depuis la veille — l'arriéré, lui, est connu
+    et ne se re-signale pas chaque matin."""
+    if auto:
+        ecrits = [(l, d) for l in lectures for d in l.ecrits]
+        refus = [(l, d) for l in lectures for d in l.refus]
+        if not ecrits and not refus:
+            return None
+        lignes = [f"📰 Notes flash du {today:%d/%m} — {len(ecrits)} communiqué(s) lu(s)"
+                  + (f", {len(refus)} non qualifié(s)" if refus else "")]
+        for l, d in ecrits:
+            passage = d.note.elements[0]["passage"][:160] if d.note.elements else (d.note.motif or "")
+            lignes.append(f"• {l.ticker_id} {d.event.resume()} → {', '.join(d.note.types)} : « {passage} »")
+        for l, d in refus:
+            lignes.append(f"• {l.ticker_id} {d.event.resume()} — NON QUALIFIÉ ({d.refus[:140]}) : "
+                          "il rouvre toutes les questions du dossier jusqu'à sa lecture")
+        return "\n".join(lignes)
+    hier = today - timedelta(days=1)
+    neufs = [(l, d) for l in lectures for d in l.depots
+             if d.note_id is None and d.event.filing_date and d.event.filing_date >= hier]
+    if not neufs:
+        return None
+    lignes = [f"🔔 [En attente] {len(neufs)} communiqué(s) publié(s) depuis hier NON LU(S) — la lecture "
+              "automatique est coupée (`v2_auto_enabled=FALSE`). Tant qu'ils ne sont pas lus, ils "
+              "rouvrent toutes les questions du dossier :"]
+    for l, d in neufs:
+        lignes.append(f"• {l.ticker_id} {d.event.resume()} — `bash tools/rediger_notes_flash.sh "
+                      f"{l.ticker_id} --ecrire`")
+    return "\n".join(lignes)
+
+
+async def _notifier_slack(message: str) -> None:
+    """Une notification qui échoue ne fait jamais échouer le passage (les notes sont déjà écrites)."""
+    try:
+        from app.notifications.slack_webhook import SlackWebhook
+        await SlackWebhook().send(message)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("notes flash du matin — notification Slack non envoyée : %s", e)
+
+
+async def lecture_du_matin(today: Optional[date] = None, *, notifier=None) -> list[LectureDesDepots]:
+    """Le passage quotidien (job `notes_flash_matin`) : pour chaque titre suivi, lire les dépôts à
+    qualifier — SI ET SEULEMENT SI `v2_auto_enabled` ; sinon les recenser, sans rien dépenser. Un titre
+    en panne est nommé dans son compte rendu, il n'empêche pas les suivants."""
+    today = today or date.today()
+    notifier = notifier or _notifier_slack
+    async with get_db_session() as conn:
+        auto = bool(await conn.fetchval("SELECT v2_auto_enabled FROM portfolio_settings LIMIT 1"))
+        titres = await titres_suivis(conn)
+    fichier = load_frameworks()
+    lectures: list[LectureDesDepots] = []
+    for t in titres:
+        try:
+            async with get_db_session() as conn:
+                lecture = await lire_les_depots_en_attente(
+                    conn, t, ecrire=auto, depuis=today - FENETRE, fichier=fichier)
+        except Exception as ex:  # noqa: BLE001 — un titre en panne n'arrête pas les suivants
+            logger.exception("notes flash du matin — %s en panne", t)
+            lecture = LectureDesDepots(ticker_id=t, ecrire=auto, depuis=today - FENETRE,
+                                       catalogue_version=fichier.types_evenement_version,
+                                       hors_flux=f"panne ({type(ex).__name__}) : {ex}")
+        lectures.append(lecture)
+    logger.info("notes flash du matin (%s) — %s", "lecture" if auto else "recensement seul",
+                {l.ticker_id: (len(l.ecrits), len(l.refus), l.en_attente) for l in lectures
+                 if not l.hors_flux})
+    message = message_du_matin(lectures, auto=auto, today=today)
+    if message:
+        await notifier(message)
+    return lectures

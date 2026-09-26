@@ -82,6 +82,14 @@ async def startup():
         CronTrigger(hour=7, minute=15, timezone="Europe/Paris"),
         id="daily_check_v2", replace_existing=True,
     )
+    # Notes flash (V3 lot 7, arbitrage 2026-09-26 option c) : chaque matin, l'analyste lit les
+    # communiqués publiés par les titres suivis — AVANT le routeur V2. La dépense est gardée par
+    # `v2_auto_enabled` DANS `lecture_du_matin` (coupé ⟹ recensement gratuit, signalé).
+    scheduler.add_job(
+        _notes_flash_matin,
+        CronTrigger(hour=7, minute=0, timezone="Europe/Paris"),
+        id="notes_flash_matin", replace_existing=True,
+    )
     scheduler.add_job(
         _weekly_review,
         CronTrigger(day_of_week="mon", hour=8, minute=0, timezone="Europe/Paris"),
@@ -146,6 +154,11 @@ async def _daily_check_v1():
 async def _daily_check_v2():
     from app.calendar.event_router_v2 import EventRouterV2
     await EventRouterV2().process_daily_events()
+
+
+async def _notes_flash_matin():
+    from app.agents.v2.note_flash import lecture_du_matin
+    await lecture_du_matin()
 
 
 async def _weekly_review():

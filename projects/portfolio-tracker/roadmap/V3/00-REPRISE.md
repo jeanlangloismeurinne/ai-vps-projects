@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26 (6)
+updated: 2026-09-26 (7)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -47,21 +47,24 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
 | 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
-| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · ce qu'un événement rouvre, horloge par question (#89) · **la note flash** (#90, migration 050) — reste : ▶ PROCHAIN JALON |
+| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · ce qu'un événement rouvre, horloge par question (#89) · **la note flash** (#90, migration 050) · **branchée au flux** (#91 : chaque matin + avant chaque passage de chaîne) — reste : ▶ PROCHAIN JALON |
 
-Détail de chaque lot : archive (entrées datées) + conventions #57 → #90 du `CLAUDE.md`.
+Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du `CLAUDE.md`.
 
 ### Mesures courantes — à RE-REQUÊTER avant de s'en servir
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3516 assertions / 0 échec sur 50 scripts** (2026-09-26,
-  après #90 ; ligne de base re-mesurée au départ : 3437/48). Les 3 checks « live » sont hors suite par
+- **Suite** `bash checks/run_all.sh` = **3550 assertions / 0 échec sur 51 scripts** (2026-09-26,
+  après #91 ; 3516/50 après #90). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`8e6370e`** (#90), vérifié par `docker exec … grep
-  qualifications_de_l_emetteur`. **PV du comité en prod : 0 décision.**
+- **Production** : backend sur **#91** (commit du 2026-09-26 (7)) — à vérifier par `docker exec
+  portfolio-backend grep -c lecture_du_matin /app/app/agents/v2/note_flash.py`. **PV du comité en prod : 0 décision.**
+- **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
+  2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
+  9 titres hors EDGAR.
 - **Notes flash en base** (catalogue d'événements **1.1.0**) : RVMD #80-#85, NVDA #86-#87, MSFT #88 — 9
   dépôts lus sur 400 jours, 0 refus ; #66-#71 = première lecture RVMD sous l'ancien catalogue, conservées.
 - **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, après #90) : 7 manques — qf_4 (financement du
@@ -71,23 +74,18 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #90 du 
 
 ---
 
-## ▶ PROCHAIN JALON — LOT 7 : brancher la note flash au flux, puis le maillon 3 (reclassement)
+## ▶ PROCHAIN JALON — LOT 7 : le maillon 3 (reclassement proposé au comité)
 
-**✅ Fait le 2026-09-26 (6) — la note flash (#90)** : un agent lit les dépôts que la forme ne qualifie
-pas, les range dans le catalogue en citant le passage (pont de citation littérale, rien d'écrit sinon) ;
-le point de lecture ne remplace que la part `a_qualifier` ; version du catalogue d'événements séparée de
-celle des méthodologies (`types_evenement_version`, 1.1.0). Mesuré : 9 notes réelles, 0 refus ; qf_6
-RVMD n'est plus périmée à tort ; le rachat de Hugging Face par NVDA est reconnu comme un changement de
-périmètre. Détail : `04-taxonomie-evenements.md` §11, convention #90.
+**✅ Fait le 2026-09-26 (7) — la note flash branchée au flux (#91, arbitrage option c)** : l'analyste lit
+chaque matin pour tout titre suivi (job `notes_flash_matin`, 7 h, dépense sous `v2_auto_enabled`) et au
+début de chaque passage de la chaîne (`executer_chaine` maillon 0, `boucler_renvois` avant le dossier).
+Détenteur unique `note_flash.lire_les_depots_en_attente`. Détail : convention #91.
 
-**🔜 PROCHAIN PAS — la note flash ne tourne pas d'elle-même.** Seul appelant : `tools/rediger_notes_flash.sh
-TICKER [--ecrire]`. Un 8.01 publié demain restera « à qualifier » (donc rouvrira tout) jusqu'à ce que
-quelqu'un lance l'outil. **Arbitrage à demander à l'utilisateur, en termes de fonds** : quand l'analyste
-lit-il un communiqué ? (a) chaque matin, pour tout titre suivi, dès sa publication — dépense automatique
-quotidienne (petite : ~$0,0003 par dépôt), à placer sous le réglage qui encadre la dépense V2 non
-supervisée (`v2_auto_enabled`, FALSE par défaut) ; (b) seulement quand on rouvre le dossier d'un titre
-(passage de la chaîne d'analyse) ; (c) les deux. Recommandation : (c) — la lecture au passage de la chaîne
-est gratuite à ajouter et sans risque ; le matin est ce que fait un fonds pour une position détenue (Q5).
+**⚠️ À faire valider par l'utilisateur, en termes de fonds** : le réglage de dépense automatique est
+COUPÉ — tant qu'il l'est, aucun communiqué n'est lu le matin, le gérant est seulement prévenu des
+publications de la veille. L'ouvrir fait lire ~20 communiqués par titre et par matin (~$0,0003 chacun ;
+arriéré AZN/NVO résorbé en une semaine) ; mais il ouvre AUSSI les revues calendaires V2 automatiques
+(`event_router_v2`). Si l'utilisateur veut l'un sans l'autre, c'est un second réglage (migration 051).
 
 **Puis maillon 3** (Q4 : une approbation qualifiée — RVMD #80 — fait PROPOSER le reclassement de
 « pré-revenus » à « commerciale », le comité valide) et **maillon 4** (Q5 : position détenue sous revue).
@@ -297,7 +295,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
    parcours, cœur du lot 6 · §10 les lots).
-3. **`CLAUDE.md` du projet** — conventions **#25 → #90** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #91** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -318,7 +316,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
 > (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur (#86), pièces
 > Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; taxonomie des événements
-> maillons 1 (#89, horloge par question) et 2 (#90, la note flash) livrés ; prochain pas = brancher la
-> note flash au flux (arbitrage à demander), puis le reclassement proposé au comité (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
+> maillons 1 (#89, horloge par question) et 2 (#90, la note flash) livrés, note flash branchée au flux
+> (#91) ; prochain pas = le reclassement proposé au comité (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
 > ligne de base avant
 > de s'en servir.

@@ -16,7 +16,7 @@ avant : on ne câble pas une boucle automatique sur une chaîne dont personne n'
 
 ⚠️ IL ÉCRIT EN PROD, ET C'EST LE BUT
 ------------------------------------
-`knowledge_entries`, `collection_plans`, `question_coverage`, `appariement_cartes`,
+`notes_flash` (maillon 0), `knowledge_entries`, `collection_plans`, `question_coverage`, `appariement_cartes`,
 `framework_answers`, `framework_mandates`. Il DÉPENSE : traducteur, apparieur (si la carte manque),
 search-worker par ligne web, analyste.
 
@@ -50,6 +50,7 @@ from app.agents.v2.framework_persist import persist_answer, read_dispenses
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager import reviser_framework
 from app.agents.v2.manager_persist import persist_review
+from app.agents.v2.note_flash import lire_les_depots_en_attente
 from app.db.database import close_pool, get_db_session, init_pool
 
 # Même plafond que `tools/acceptation_analyste.py` — et pour la même raison : un dossier entier
@@ -95,6 +96,16 @@ async def main() -> int:
     await init_pool(url)
     ecrits: dict[str, Any] = {}
     try:
+        # ── MAILLON 0 — l'analyste lit ce que l'émetteur a publié (arbitrage 2026-09-26, c) ──
+        # Avant de rouvrir le dossier : un dépôt non lu reste `a_qualifier` et rouvrirait TOUTES les
+        # questions (Q3). Un refus ou une panne de lecture n'arrête pas la chaîne — le dépôt reste à
+        # qualifier, ce qui est l'hypothèse prudente, et l'échec est imprimé nommément.
+        _titre(0, "notes flash — les dépôts à qualifier publiés depuis la dernière lecture")
+        async with get_db_session() as conn:
+            lecture = await lire_les_depots_en_attente(conn, ticker_id, ecrire=True, fichier=fichier)
+        print(lecture.texte())
+        ecrits["notes_flash"] = [d.note_id for d in lecture.ecrits]
+
         # ── MAILLON 1 — le plan, la collecte, les liens ─────────────────────────
         if sans_collecte:
             _titre(1, "collecte SAUTÉE (--sans-collecte) — corpus déjà en base")

@@ -36,7 +36,7 @@ re-sert (idempotence de `id_du_mandat_ouvert`).
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import asyncpg
 
@@ -50,6 +50,7 @@ from app.agents.v2.manager_persist import (
     read_open_mandates,
     serve_mandate,
 )
+from app.agents.v2.note_flash import LectureDesDepots, lire_les_depots_en_attente
 from app.contracts.bouclage_schema import CompteRenduBouclage, MandatBoucle, SortBouclage
 from app.contracts.framework_answer_schema import Statut
 from app.db.database import get_db_session
@@ -149,6 +150,7 @@ async def boucler_renvois(
     analyste: str,
     fichier=None,
     plafond: int = PLAFOND_DOSSIER,
+    sur_lecture: Optional[Callable[[LectureDesDepots], None]] = None,
 ) -> CompteRenduBouclage:
     """UN passage de bouclage : lire les renvois ouverts, refaire la recherche PAR LE MÊME PROCESSUS
     (scopé), re-répondre, servir les mandats, rendre la note honnête.
@@ -157,6 +159,9 @@ async def boucler_renvois(
     dans `portfolio-backend` (il porte le code déployé). Rend un `CompteRenduBouclage` NON persisté
     (assemblé au run, recalculable — #53/#77).
     """
+    # `sur_lecture` fourni ⟹ le passage LIT d'abord les dépôts à qualifier du titre (notes flash,
+    # arbitrage 2026-09-26, c) et remet le compte rendu à l'appelant. Seulement s'il y a un renvoi
+    # à boucler : un passage sans renvoi ne rouvre pas le dossier et ne dépense rien (#40).
     fichier = fichier or load_frameworks()
     version = fichier.schema_version
 
@@ -170,6 +175,10 @@ async def boucler_renvois(
             mandats_lus=0, boucles=[])
 
     scope = frozenset(m.question_id for m in ouverts)
+
+    if sur_lecture is not None:
+        async with get_db_session() as conn:
+            sur_lecture(await lire_les_depots_en_attente(conn, ticker_id, ecrire=True, fichier=fichier))
 
     async with get_db_session() as conn:
         statuts_avant = await _statuts_avant(
