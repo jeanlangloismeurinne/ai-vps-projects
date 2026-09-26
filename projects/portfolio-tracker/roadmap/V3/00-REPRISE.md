@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26
+updated: 2026-09-26 (2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#84), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#86), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -46,71 +46,62 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 3 | Analyste, `framework_answers`, suppression de la grille MVDD, appariement par ticker, collecte neuve NVDA/MSFT/RVMD | ✅ migrations 040-042 |
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
-| **6** | **Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7)** | 🔄 **maillons 1-3 livrés** (déployé `8adbbce`) — reste : arbitrages à rendre (ci-dessous) |
-| 7 | Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal) | ⬜ |
+| 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
+| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 **identité de l'émetteur livrée** (#86, déployé `e449d3f`) — reste : ▶ PROCHAIN JALON |
 
-Détail de chaque lot : archive (entrées datées) + conventions #57 → #84 du `CLAUDE.md`.
+Détail de chaque lot : archive (entrées datées) + conventions #57 → #86 du `CLAUDE.md`.
 
 ### Mesures courantes — à RE-REQUÊTER avant de s'en servir
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3355 assertions / 0 échec sur 47 scripts** (2026-09-26,
-  après le maillon 3 ; re-mesuré 3276/45 au départ, conforme). `check_comite_persist` rejoint les
+- **Suite** `bash checks/run_all.sh` = **3377 assertions / 0 échec sur 47 scripts** (2026-09-26,
+  après #86 ; re-mesuré 3355/47 au départ de la session, conforme). `check_comite_persist` rejoint les
   checks « base » (réseau `coolify`).
   Les 3 checks « live » (`check_fetch_live`, `check_fetch_relevance`, `check_cours_cote_live`)
   sont hors suite par conception. Un check lancé à la main sans les montages de `run_all.sh`
   (`/roadmap`, `/contract_frozen`) sort un faux FAIL.
 - **Migrations** : **048 appliquée** (registre du comité, append-only) ; la prochaine sera **049**.
   Vérifier en base avant d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`8adbbce`** (backend + frontend), vérifiée par `docker exec … grep`,
+- **Production** : stack sur **`e449d3f`** (backend + frontend), vérifiée par `docker exec … grep`,
   par les chemins de REFUS des deux POST (422/409/404) et capture headless du niveau 3 (image
   `ev-prices` = Playwright). **PV du comité en prod : 0 décision** — aucune écrite pour vérifier.
 - **Chaîne réelle** : allée de bout en bout sur RVMD × `qualite_financiere` (2026-09-21) et RVMD ×
-  `defendabilite` (2026-09-25). `qualite_info` mesurée RVMD : `defendabilite` **0,00** (5 non
+  `defendabilite` (2026-09-25, plan 103 rédigé sur RYVU ; **refaite le 2026-09-26 après #86** : plan
+  130 sur les inhibiteurs de RAS, `mo_2` répondu rang A (#676, brevets 2031-2045 + approbation FDA,
+  relu contre #694/#695 : juste), `mo_6` sans objet (#675), **mo_1/3/4/5 refusés par l'analyste**
+  (voir ▶), mandats manager 983-986 ouverts). `qualite_info` mesurée RVMD : `defendabilite` **0,00** (5 non
   fondables → à collecter) · `qualite_financiere` **0,00** (2 réponses applicables, périmées → à
   rafraîchir ; rang moyen A− publié). Aucun investissement produit : **normal**, l'aval vient après.
 
 ---
 
-## ▶ PROCHAIN JALON — CLORE LE LOT 6 : faire rendre les arbitrages ouverts, puis lot 7
+## ▶ PROCHAIN JALON — LOT 7 : faire répondre mo_1/3/4/5 de RVMD sur la BONNE société
 
-**Ce que le lot 6 donne au comité** : descendre d'un verdict jusqu'à la pièce qui le fonde, et **agir**
-sur chaque réponse — l'accepter telle quelle ou la renvoyer en recherche — avec une trace de chaque
-décision humaine. Les trois maillons sont livrés et déployés :
+**Fait le 2026-09-26** : arbitrages A-E rendus (« je valide les arbitrages proposés ») — A codé (#85),
+B-E confirmés (#84) ; lot 6 clos. Puis la dette « confusion d'émetteur » : cause = le traducteur et la
+requête web ne recevaient que le SIGLE ; ils reçoivent désormais raison sociale + CIK SEC (#86).
 
-1. ✅ **`qualite_info` dérivée** (conv. **#82**) — `check_qualite_info` 26/0 + négatif 6/0.
-2. ✅ **Les 3 niveaux de drill-down + l'alerte « peut-on décider ? »** (conv. **#83**, migration 047) —
-   `check_parcours` 63/0 + négatif 21/0 · `bash tools/montrer_parcours.sh RVMD`.
-3. ✅ **Acquitter / renvoyer tracés** (2026-09-26, conv. **#84**, migration **048**, déployé `8adbbce`)
-   — procès-verbal append-only ; l'acceptation retire la question de l'alerte et TOMBE d'elle-même à la
-   lecture (fait important déposé après la décision · analyse refaite · EDGAR illisible ⟹ non
-   vérifiable) ; renvoyer = même canal que le manager. `check_comite` 57/0 + négatif 21/0 ·
-   `check_comite_persist` 22/0 + négatif 6/0 · `negatif_048.sh` 14/0.
+**🔜 PROCHAIN PAS — le refus de nature de l'analyste (défaut RÉEL, mesuré sur la chaîne du 2026-09-26).**
+Sur RVMD × `defendabilite`, l'analyste a rendu 4 refus identiques : `mo_1/3/4/5` attendent une assertion
+de nature `interpretation`, mais citent des pièces `mesure` (brevets, pipeline) → `FrameworkAnswerRefused`
+(« la nature … ne se concède jamais »). Conséquences : **aucune réponse neuve** sur ces 4 questions ; les
+anciennes réponses **#597, #599, #600, #601** (non fondées, écrites sur la piste RYVU) restent COURANTES
+et l'alerte les lit ; le manager a bien ouvert les mandats 983-986 (rien n'est muet). À instruire en
+termes de fonds AVANT tout correctif : « une interprétation (la barrière tient-elle ?) peut-elle se
+fonder sur des faits mesurés (brevets datés, stade clinique) ? » — un analyste de fonds dirait oui : une
+interprétation S'APPUIE sur des mesures. Relire #51 / `nature_attendue` et le contrôle de nature de
+`framework_answer_schema` : la règle compare-t-elle la nature de la RÉPONSE ou celle des PIÈCES ?
+(`feedback_decision_figee_a_remesurer` : remesurer avant d'écrire.) Puis rejouer `--sans-collecte`
+(moins cher) et lire les verbatims.
 
-**🔜 PROCHAIN PAS — faire rendre à l'utilisateur les arbitrages ci-dessous (en termes de fonds), les
-appliquer s'ils diffèrent du choix par défaut, puis ouvrir le lot 7.**
+**❓ ARBITRAGE À RENDRE PAR L'UTILISATEUR — les pièces mal classées.** L'ancienne collecte (sur Ryvu) a
+déposé au dossier RVMD 5 pièces sur des concurrents de Ryvu : **#665, #666, #667, #671, #672** (la #664,
+« RVMD n'a aucun programme CDK8/19 », est juste). Un fonds les reclasserait hors du dossier en gardant la
+trace. Proposition : les retirer du dossier RVMD (archivées, pas supprimées). Acte humain — rien n'est fait.
 
-**❓ ARBITRAGES OUVERTS (maillon 3 — choix par défaut pris « comme un vrai fonds », à confirmer)**
-- **A. Le mémo et les réponses acceptées par le comité.** Aujourd'hui la note de comité (chapitres du
-  mémo) ne reprend que ce que le contrôle qualité a validé ; une réponse acceptée par le comité malgré
-  sa faiblesse n'y entre pas, alors que l'alerte la compte comme réglée. Faut-il que le mémo l'intègre,
-  marquée « retenue par le comité malgré … » avec le motif ? (NON TRANCHÉ — rien n'est codé.)
-- **B. Accepter arrête la recherche en cours** sur la question (le mandat ouvert passe « abandonné »).
-  Défaut retenu : oui — un comité qui décide sans une donnée ne laisse pas l'analyste continuer à
-  dépenser dessus. ⚠️ Limite connue : un nouveau passage complet de la chaîne (`executer_chaine`)
-  refait l'analyse, donc fait tomber l'acceptation (« analyse refaite ») et peut rouvrir un mandat.
-- **C. Renvoyer remplace la recherche en cours** par la consigne du comité (le mandat du manager est
-  abandonné, celui du comité ouvert). Défaut retenu : oui — la consigne du comité prime.
-- **D. Un fait publié AVANT le jour de la décision** mais que notre écran n'avait pas montré (retard du
-  flux EDGAR) ne fait PAS tomber l'acceptation — la règle est « publié après elle ». Défaut retenu :
-  la lettre de l'arbitrage n°2. Alternative : la faire tomber par prudence.
-- **E. Qui signe** : un nom saisi librement (mémorisé par navigateur) — il n'y a pas d'identification
-  des membres du comité dans l'application.
-
-**Puis le lot 7** (spec §10) : second pilote `defendabilite` de bout en bout, acceptation T1-T8,
-réconciliation à 0/0 — en commençant par la dette « confusion d'émetteur » ci-dessous, qui fausse
-aujourd'hui `defendabilite` RVMD.
+**Puis la suite du lot 7** (spec §10) : `defendabilite` de bout en bout sur un second émetteur,
+acceptation T1-T8, réconciliation à 0/0.
 
 **✅ ARBITRAGES DU COMITÉ RENDUS PAR L'UTILISATEUR (2026-09-25)** — posés en termes de fonds
 (principes 1 et 2). Ils cadrent les maillons 2 et 3 :
@@ -170,7 +161,7 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 - **Chaîne complète vs acceptation du comité** (#84) : `executer_chaine` → `persist_review` ne consulte
   pas le PV ; un re-run refait l'analyse (l'acceptation tombe, « analyse refaite ») et peut rouvrir un
   mandat que le comité avait arrêté. Honnête (le dossier a changé) mais coûteux — lié à l'arbitrage B.
-- ⚠️ **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
+- ✅ (corrigé #86, 2026-09-26 — reste les pièces mal classées, ▶) **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
   cherchent « inhibiteur de CDK8/19 » et « révatiglimab (RVU120) » — c'est **Ryvu Therapeutics**,
   pas Revolution Medicines (inhibiteurs RAS). Ces « recherches épuisées » portent sur la MAUVAISE
   société ; le traducteur n'a aucune garde d'identité de l'émetteur. Rendu visible par l'alerte.
@@ -294,7 +285,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
    parcours, cœur du lot 6 · §10 les lots).
-3. **`CLAUDE.md` du projet** — conventions **#25 → #84** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #86** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -312,8 +303,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
-> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 5 clos ;
-> **lot 6 (le parcours du comité) : 3 maillons livrés et déployés** (`qualite_info` #82, drill-down
-> #83, registre du comité #84 / migration 048). Reste : faire rendre les arbitrages A-E du ▶ PROCHAIN
-> JALON, puis le lot 7. Ordre imposé contrat → agent → données. Re-requêter toute ligne de base avant
+> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
+> (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur livrée (#86) ;
+> prochain pas = le refus de nature de l'analyste sur mo_1/3/4/5 de RVMD (▶ PROCHAIN JALON), et
+> l'arbitrage sur les 5 pièces mal classées. Ordre imposé contrat → agent → données. Re-requêter toute
+> ligne de base avant
 > de s'en servir.

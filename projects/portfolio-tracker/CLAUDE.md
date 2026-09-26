@@ -2024,9 +2024,11 @@ acceptée(s) par le comité malgré leur faiblesse ») ; les décomptes comité 
 **séparés** (deux acteurs, jamais fondus). ⚠️ `qualite_info` n'est PAS touchée : accepter une réponse
 faible ne rend pas l'information meilleure (axes séparés, #50/#82).
 
-**Choix de conception pris « comme un vrai fonds », à confirmer par l'utilisateur :** accepter ARRÊTE la
-recherche en cours sur la question (mandat `abandonne`, jamais supprimé, id gardé au PV) ; renvoyer
-REMPLACE la recherche en cours par la consigne du comité ; renvoyer emprunte `persist_mandate` (origine
+**Choix de conception pris « comme un vrai fonds », CONFIRMÉS par l'utilisateur le 2026-09-26 (arbitrages
+B-E) :** accepter ARRÊTE la recherche en cours sur la question (mandat `abandonne`, jamais supprimé, id
+gardé au PV) ; renvoyer REMPLACE la recherche en cours par la consigne du comité ; un fait publié AVANT le
+jour de la décision ne la fait pas tomber même si notre écran ne l'avait pas montré ; le signataire est un
+nom saisi librement (pas d'identification des membres) ; renvoyer emprunte `persist_mandate` (origine
 `comite`) — le bouclage le consomme comme un renvoi du manager, aucun chemin parallèle (#46).
 
 **Trois faux verts trouvés par le test négatif :** (1) le cas « fuseau de New York » n'était pas
@@ -2042,6 +2044,68 @@ question · 404 question inconnue) et la persistance en ROLLBACK.
 Gardes : `check_comite.py` **57/0** + `negatif_comite.sh` **21/0** · `check_comite_persist.py` **22/0**
 (vraie base, ROLLBACK, zéro résidu) + `negatif_comite_persist.sh` **6/0** · `negatif_048.sh` **14/0** ·
 suite **3355/0 sur 47**. Déployé `8adbbce`, vérifié dans le conteneur et par capture headless regardée.
+
+### #85 — la note de comité reprend ce que le comité a RETENU, et le dit
+
+**Arbitrage A, rendu le 2026-09-26.** Ce que fait un vrai fonds : le mémo de comité reprend ce sur quoi
+le comité s'est appuyé pour décider, y compris une information retenue en connaissance de sa faiblesse —
+mais marquée comme telle. Une note qui l'omet contredit l'alerte (qui la compte réglée) ; une note qui la
+publie sans mention la fait passer pour contrôlée. Les deux sont des faux.
+
+**La règle (`projection_memo._retenue`, contrat `RetenueParLeComite`).** Une réponse NON acquittée par le
+contrôle entre dans la note SSI la dernière décision du comité sur la question est une acceptation, EN
+VIGUEUR aujourd'hui (recalculée, #84), portant sur CETTE réponse (`answer_id`). Le point porte alors
+`retenue_par_comite` = l'acceptation servie + la **faiblesse relue à la revue du jour** (`motif_revue`,
+#77 — pas le souvenir du jour de la décision). Une réponse acquittée par le contrôle n'est JAMAIS marquée
+« retenue malgré » (le contrat le refuse : ce serait inventer une faiblesse). La rubrique dit combien de
+ses points reposent sur le comité ; `reponses_non_acquittees` ne compte plus les retenues.
+
+**Un détenteur unique d'assemblage : `memo_de_l_etat(etat)`.** Cinq sites (endpoint, `servir_memo`,
+`montrer_parcours`, deux checks) recopiaient `projeter_memo(… lues=[AnswerLue(…)])` : ajouter le comité
+aurait fait cinq endroits où l'oublier. `projeter_memo` exige désormais `comite=` sans valeur par défaut
+(`feedback_optional_schema_gate`), et `check_comite` §4bis vérifie qu'aucun module de `app/`/`tools/`
+ne l'appelle en dehors de `projection_memo.py`.
+
+**Faux verts trouvés par le test négatif :** une mutation « le comité passe avant le contrôle » tuait le
+script avant son bilan (le contrat levait dans l'appel non protégé du §4) — `memo_de` du check nomme
+désormais le refus et continue ; quatre mutations de `negatif_memo_projete.sh` étaient CADUQUES après le
+refactor (encore : un harnais par motif exact se relit après chaque modification du module muté).
+⚠️ Le rendu d'un point retenu n'a **jamais été vu sur une vraie décision** : le PV de prod est vide, et on
+n'en fabrique pas une pour le verdir (`feedback_append_only_verif_par_refus`).
+
+Gardes : `check_comite.py` **71/0** + `negatif_comite.sh` **35/0** · `negatif_memo_projete.sh` **25/0** ·
+suite **3369/0 sur 47**. Déployé `4316222`, vérifié dans les deux conteneurs et sur le payload réel.
+
+### #86 — un sigle n'est pas une identité : tout agent qui cherche pour un émetteur reçoit sa raison sociale et son CIK
+
+**Le défaut (mesuré le 2026-09-25, plan 103).** Le traducteur ne recevait que « RVMD » ; il a planifié la
+défendabilité de Revolution Medicines sur RVU120 / CDK8/19 — les programmes de **Ryvu Therapeutics**. Le
+collecteur web, qui demandait « Pour l'entreprise RVMD… », a cherché et PERSISTÉ au dossier RVMD cinq
+pièces sur des concurrents de Ryvu (#665-667, #671, #672). L'alerte a tout rendu visible : 5 « recherches
+épuisées » sur la mauvaise société.
+
+**Ce que fait un vrai fonds.** Une demande de recherche ne s'adresse jamais sur un sigle : elle nomme la
+raison sociale et un identifiant non ambigu (ISIN, CIK). Le même sigle existe sur plusieurs places.
+
+**La règle.** `edgar_feed.identite_de_l_emetteur(conn, ticker_id)` = **détenteur unique** de « qui est ce
+titre ? » (`symbole_de_marche` #11 → registre SEC `company_tickers.json` : CIK + `title`). Consommateurs :
+- `traducteur.contexte_traducteur(…, emetteur=)` — **requis, sans défaut** ; le contexte porte
+  `entreprise: {raison_sociale, symbole, cik_sec}` et la consigne dit « l'entreprise est celle de la
+  raison sociale, jamais celle que suggère le sigle ». `traduire()` résout l'identité AVANT la dépense ;
+  sans elle, il lève (on ne planifie pas sur un sigle) ;
+- `collecte_executor.construire_requete_web(ligne, emetteur=)` — requis ; `collecter_un(…, emetteur=)`
+  requis mais NULLABLE : `None` (registre injoignable) ⟹ la ligne web devient un **échec nommé → mandat**,
+  le search-worker n'est pas appelé. `executer_plan_reel` résout une fois par plan.
+⚠️ Une garde de SENS est impossible (`feedback_garde_structure_pas_sens`) : le modèle peut encore se
+tromper de produits en ayant le bon nom. La garde est de FORME (l'identité voyage, requise) ; la preuve
+de sens est la LECTURE du plan en texte (`tools/acceptation_traducteur.sh`, cas RVMD × defendabilite,
+signal « aucun marqueur Ryvu »). ⚠️ Agent au 4ᵉ ticker : l'analyste et le manager lisent des pièces, pas
+un sigle — non touchés.
+
+Gardes : `check_traducteur` **21/0** + `negatif_traducteur.sh` **12/0** (dont 1 mutation caduque depuis
+le lot 5, réparée) · `check_collecte_executor` **100/0** + `negatif_collecte_executor.sh` **39/0** ·
+`check_bouclage` 27/0 · suite **3377/0 sur 47**. Déployé `e449d3f`. Acceptation réelle (DeepSeek) :
+plan RVMD × defendabilite sur les inhibiteurs de RAS, 0 marqueur Ryvu.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

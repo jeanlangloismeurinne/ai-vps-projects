@@ -8,6 +8,38 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-26 (3) — LOT 7 : l'identité de l'émetteur (#86) et la chaîne RVMD × defendabilite refaite
+
+Déployé `e449d3f`. Cause de la confusion Ryvu : le traducteur et la requête web ne recevaient que le
+sigle. `edgar_feed.identite_de_l_emetteur` (symbole → registre SEC : CIK + raison sociale) devient le
+détenteur unique ; `contexte_traducteur(emetteur=)` et `construire_requete_web(emetteur=)` l'exigent ;
+`collecter_un(emetteur=None)` → échec nommé, aucune recherche sur le sigle. Acceptation réelle : plan
+RVMD × defendabilite sur les inhibiteurs de RAS, 0 marqueur Ryvu. Chaîne réelle refaite (plan 130) :
+mo_2 répondu rang A (#676, juste), mo_6 sans objet (#675), mo_1/3/4/5 refusés par l'analyste (nature
+`interpretation` attendue, pièces `mesure`) → mandats manager 983-986 ; anciennes réponses #597/#599-601
+(piste Ryvu) toujours courantes. 5 pièces mal classées au dossier RVMD : #665-667, #671, #672.
+Gardes : suite 3377/0 sur 47 ; négatifs traducteur 12/0, collecteur 39/0.
+
+## 2026-09-26 (2) — LOT 6 MAILLON 4 : arbitrages A-E rendus, la note de comité reprend le retenu
+
+**Arbitrages rendus par l'utilisateur** (« je valide les arbitrages proposés ») : **A** — la note de
+comité intègre une réponse acceptée par le comité malgré sa faiblesse, MARQUÉE (faiblesse du jour, qui,
+quand, pourquoi) ; **B** — accepter arrête la recherche en cours ; **C** — renvoyer remplace la recherche
+en cours ; **D** — un fait publié avant le jour de la décision ne la fait pas tomber ; **E** — signataire
+en nom libre. B-E étaient déjà codés (#84) ; A est codé ici.
+
+Déployé `4316222` (backend + frontend), vérifié dans les deux conteneurs et sur le payload réel du
+niveau 1 RVMD (12 points, champ `retenue_par_comite` servi, nul — PV de prod vide). Convention **#85**.
+- **Contrat** `memo_projete_schema.py` : `RetenueParLeComite` (acceptation servie EN VIGUEUR + faiblesse) ;
+  `PointProjete.retenue_par_comite` — un point entre par le contrôle OU par le comité, jamais les deux,
+  et la décision doit porter sur CETTE réponse.
+- **Projecteur** : `projeter_memo(…, comite=)` requis ; `_retenue` ; motif de rubrique qui compte les
+  retenues ; `reponses_non_acquittees` ne les compte plus. **`memo_de_l_etat`** = détenteur unique de
+  l'assemblage (endpoint, `servir_memo`, `montrer_parcours`, `check_parcours`, `check_comite`).
+- **Écran** `DossierComite.js` : encadré « Retenue par le comité malgré sa faiblesse ».
+- Gardes : `check_comite` 71/0 + négatif 35/0 · `negatif_memo_projete` 25/0 (4 mutations caduques
+  réalignées) · suite 3369/0 sur 47.
+
 ## 2026-09-26 — LOT 6 MAILLON 3 : le registre du comité (acquitter / renvoyer tracés, A7)
 
 Déployé `8adbbce` (backend + frontend), vérifié dans le conteneur, par les chemins de refus en prod et
