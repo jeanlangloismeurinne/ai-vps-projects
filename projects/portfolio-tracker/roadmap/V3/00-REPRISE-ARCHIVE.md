@@ -8,6 +8,28 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-26 — LOT 6 MAILLON 3 : le registre du comité (acquitter / renvoyer tracés, A7)
+
+Déployé `8adbbce` (backend + frontend), vérifié dans le conteneur, par les chemins de refus en prod et
+par capture headless regardée (niveau 3 RVMD qf_4). Convention **#84**.
+- **Contrat** `comite_schema.py` : `DemandeAcquittement` / `DemandeRenvoi` (auteur et motif non blancs),
+  `DecisionComite` (une ligne de PV, forme par action, ancre `found|none|unavailable` cohérente avec le
+  fait cité), `AcceptationServie` (4 états), `PositionComite`. Le contrat du parcours porte
+  `Manque.acceptation_tombee`, `LigneQuestion.comite`, `SyntheseFramework.n_acceptees_comite`,
+  `PreuvesQuestion.comite` + `registre`.
+- **Agent** `comite.py` : `servir_acceptation` (pure, détenteur de l'arbitrage n°2 — jour de dépôt EDGAR
+  lu à New York, tous les dépôts substantiels récents parcourus), `position_du_comite`, `lire_registre`,
+  `acquitter` / `renvoyer` (transaction : arrêt de la recherche en cours via `abandonner_mandat`, mandat
+  `comite` via `persist_mandate`, ligne de PV). `parcours.py` lit le registre et sert la position.
+- **Migration 048** `comite_decisions` append-only (REVOKE UPDATE/DELETE + trigger), garde `048/K1`.
+  Appliquée après `negatif_048.sh` 14/0 sur copie du réel.
+- **Écrans** : bloc « Décision du comité » au niveau 3 (formulaire signé/motivé, PV complet, un `data-pv`
+  par champ, bijection gardée), badge au niveau 2, mention « acceptation tombée » dans l'alerte.
+- Gardes : `check_comite` 57/0 + négatif 21/0 · `check_comite_persist` 22/0 + négatif 6/0 · suite
+  **3355/0 sur 47**. Faux verts trouvés par le négatif : cas « fuseau » non discriminant ; script mort sur
+  mutation de la position ; deux mutations de `negatif_parcours.sh` devenues caduques.
+- PV de production : **0 décision** (aucune écrite pour vérifier — un PV append-only ne se nettoie pas).
+
 ## 2026-09-25 (5) — LOT 6 MAILLON 2 : le parcours du comité (3 niveaux + alerte « peut-on décider ? »)
 
 Déployé `7af7276` + `75fe521` (frontend), vérifié dans le conteneur et par capture headless regardée.

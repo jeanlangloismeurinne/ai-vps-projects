@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-25
+updated: 2026-09-26
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#82), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#84), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -46,25 +46,26 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 3 | Analyste, `framework_answers`, suppression de la grille MVDD, appariement par ticker, collecte neuve NVDA/MSFT/RVMD | ✅ migrations 040-042 |
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
-| **6** | **Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7)** | 🔄 **maillons 1-2 livrés** (déployé `7af7276`) |
+| **6** | **Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7)** | 🔄 **maillons 1-3 livrés** (déployé `8adbbce`) — reste : arbitrages à rendre (ci-dessous) |
 | 7 | Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal) | ⬜ |
 
-Détail de chaque lot : archive (entrées datées) + conventions #57 → #82 du `CLAUDE.md`.
+Détail de chaque lot : archive (entrées datées) + conventions #57 → #84 du `CLAUDE.md`.
 
 ### Mesures courantes — à RE-REQUÊTER avant de s'en servir
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3276 assertions / 0 échec sur 45 scripts** (2026-09-25,
-  après le maillon 2 ; re-mesuré 3200 au départ, la reprise disait 3194). Montage `/frontend` ajouté.
+- **Suite** `bash checks/run_all.sh` = **3355 assertions / 0 échec sur 47 scripts** (2026-09-26,
+  après le maillon 3 ; re-mesuré 3276/45 au départ, conforme). `check_comite_persist` rejoint les
+  checks « base » (réseau `coolify`).
   Les 3 checks « live » (`check_fetch_live`, `check_fetch_relevance`, `check_cours_cote_live`)
   sont hors suite par conception. Un check lancé à la main sans les montages de `run_all.sh`
   (`/roadmap`, `/contract_frozen`) sort un faux FAIL.
-- **Migrations** : **047 appliquée** (cause d'un manque de collecte) ; la prochaine écrite sera
-  **048** (trace A7). Vérifier en base avant
-  d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`7af7276`** (backend) / **`75fe521`** (frontend), vérifiée par
-  `docker exec … grep` et capture headless des 3 écrans (image `ev-prices` = Playwright).
+- **Migrations** : **048 appliquée** (registre du comité, append-only) ; la prochaine sera **049**.
+  Vérifier en base avant d'écrire, jamais se fier à un tableau.
+- **Production** : stack sur **`8adbbce`** (backend + frontend), vérifiée par `docker exec … grep`,
+  par les chemins de REFUS des deux POST (422/409/404) et capture headless du niveau 3 (image
+  `ev-prices` = Playwright). **PV du comité en prod : 0 décision** — aucune écrite pour vérifier.
 - **Chaîne réelle** : allée de bout en bout sur RVMD × `qualite_financiere` (2026-09-21) et RVMD ×
   `defendabilite` (2026-09-25). `qualite_info` mesurée RVMD : `defendabilite` **0,00** (5 non
   fondables → à collecter) · `qualite_financiere` **0,00** (2 réponses applicables, périmées → à
@@ -72,31 +73,44 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #82 du 
 
 ---
 
-## ▶ PROCHAIN JALON — LOT 6, LE PARCOURS DU COMITÉ (spec §8)
+## ▶ PROCHAIN JALON — CLORE LE LOT 6 : faire rendre les arbitrages ouverts, puis lot 7
 
-**Ce que le lot doit donner au comité** : pouvoir descendre d'un verdict jusqu'à la pièce qui le
-fonde, et **agir** sur chaque réponse — l'accepter telle quelle ou la renvoyer en recherche — avec
-une trace de chaque décision humaine.
+**Ce que le lot 6 donne au comité** : descendre d'un verdict jusqu'à la pièce qui le fonde, et **agir**
+sur chaque réponse — l'accepter telle quelle ou la renvoyer en recherche — avec une trace de chaque
+décision humaine. Les trois maillons sont livrés et déployés :
 
-1. ✅ **`qualite_info` dérivée** (2026-09-25, conv. **#82**, aucune migration) — la note de qualité
-   d'un dossier cesse d'être une appréciation du modèle et devient une mesure recalculée à la
-   lecture, une par (framework, version). Quatre arbitrages du fonds rendus. Gardes :
-   `check_qualite_info` 26/0 + négatif 6/0 · lecture gratuite `bash tools/montrer_qualite_info.sh RVMD`.
-2. ✅ **Les 3 niveaux de drill-down** (2026-09-25, conv. **#83**, migration **047**) — `parcours.py`
-   détenteur unique de l'assemblage (note projetée et note de qualité y passent) ; `GET
-   /v2/tickers/:id/dossier` · `/frameworks/:fid` · `/frameworks/:fid/q/:qid` ; alerte « peut-on
-   décider ? » EN TÊTE de `/v2/tickers/:id`, chaque manque avec sa cause (déclarée par le
-   collecteur) ; niveau 3 en bijection `data-champ` ↔ contrat. Gardes : `check_parcours` 63/0 +
-   négatif 21/0 · `negatif_047.sh` 3/0 · lecture gratuite `bash tools/montrer_parcours.sh RVMD`.
-3. 🔜 **PROCHAIN — Acquitter / renvoyer tracés (A7, spec §8.2)** — « renvoyer » emprunte **le même canal**
-   que le renvoi du manager (`framework_mandates`, origine `comite`, déjà ouverte par la 043 ;
-   bouclage `bouclage.py` déjà en prod) : un seul détenteur. « Acquitter » demande une **trace**
-   de la décision humaine → table de trace, migration **048**, écrite juste avant son maillon.
-   Les boutons se posent sur l'écran de niveau 3 (`pages/v2/tickers/[ticker_id]/frameworks/
-   [framework_id]/q/[question_id].js`) ; l'alerte du niveau 1 devra lire l'acceptation (une question
-   acceptée par le comité cesse d'être un manque tant qu'aucun fait important ne la fait tomber —
-   même `ancre_substantielle` que l'actualité, déjà câblée dans `charger_etat_dossier`).
-   Ordre imposé : contrat → agent → données.
+1. ✅ **`qualite_info` dérivée** (conv. **#82**) — `check_qualite_info` 26/0 + négatif 6/0.
+2. ✅ **Les 3 niveaux de drill-down + l'alerte « peut-on décider ? »** (conv. **#83**, migration 047) —
+   `check_parcours` 63/0 + négatif 21/0 · `bash tools/montrer_parcours.sh RVMD`.
+3. ✅ **Acquitter / renvoyer tracés** (2026-09-26, conv. **#84**, migration **048**, déployé `8adbbce`)
+   — procès-verbal append-only ; l'acceptation retire la question de l'alerte et TOMBE d'elle-même à la
+   lecture (fait important déposé après la décision · analyse refaite · EDGAR illisible ⟹ non
+   vérifiable) ; renvoyer = même canal que le manager. `check_comite` 57/0 + négatif 21/0 ·
+   `check_comite_persist` 22/0 + négatif 6/0 · `negatif_048.sh` 14/0.
+
+**🔜 PROCHAIN PAS — faire rendre à l'utilisateur les arbitrages ci-dessous (en termes de fonds), les
+appliquer s'ils diffèrent du choix par défaut, puis ouvrir le lot 7.**
+
+**❓ ARBITRAGES OUVERTS (maillon 3 — choix par défaut pris « comme un vrai fonds », à confirmer)**
+- **A. Le mémo et les réponses acceptées par le comité.** Aujourd'hui la note de comité (chapitres du
+  mémo) ne reprend que ce que le contrôle qualité a validé ; une réponse acceptée par le comité malgré
+  sa faiblesse n'y entre pas, alors que l'alerte la compte comme réglée. Faut-il que le mémo l'intègre,
+  marquée « retenue par le comité malgré … » avec le motif ? (NON TRANCHÉ — rien n'est codé.)
+- **B. Accepter arrête la recherche en cours** sur la question (le mandat ouvert passe « abandonné »).
+  Défaut retenu : oui — un comité qui décide sans une donnée ne laisse pas l'analyste continuer à
+  dépenser dessus. ⚠️ Limite connue : un nouveau passage complet de la chaîne (`executer_chaine`)
+  refait l'analyse, donc fait tomber l'acceptation (« analyse refaite ») et peut rouvrir un mandat.
+- **C. Renvoyer remplace la recherche en cours** par la consigne du comité (le mandat du manager est
+  abandonné, celui du comité ouvert). Défaut retenu : oui — la consigne du comité prime.
+- **D. Un fait publié AVANT le jour de la décision** mais que notre écran n'avait pas montré (retard du
+  flux EDGAR) ne fait PAS tomber l'acceptation — la règle est « publié après elle ». Défaut retenu :
+  la lettre de l'arbitrage n°2. Alternative : la faire tomber par prudence.
+- **E. Qui signe** : un nom saisi librement (mémorisé par navigateur) — il n'y a pas d'identification
+  des membres du comité dans l'application.
+
+**Puis le lot 7** (spec §10) : second pilote `defendabilite` de bout en bout, acceptation T1-T8,
+réconciliation à 0/0 — en commençant par la dette « confusion d'émetteur » ci-dessous, qui fausse
+aujourd'hui `defendabilite` RVMD.
 
 **✅ ARBITRAGES DU COMITÉ RENDUS PAR L'UTILISATEUR (2026-09-25)** — posés en termes de fonds
 (principes 1 et 2). Ils cadrent les maillons 2 et 3 :
@@ -153,6 +167,9 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 ## Ce qui reste ouvert — hors lot 6
 
 **Dettes à décider (chacune est un lot en soi, à arbitrer en termes métier)**
+- **Chaîne complète vs acceptation du comité** (#84) : `executer_chaine` → `persist_review` ne consulte
+  pas le PV ; un re-run refait l'analyse (l'acceptation tombe, « analyse refaite ») et peut rouvrir un
+  mandat que le comité avait arrêté. Honnête (le dossier a changé) mais coûteux — lié à l'arbitrage B.
 - ⚠️ **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
   cherchent « inhibiteur de CDK8/19 » et « révatiglimab (RVU120) » — c'est **Ryvu Therapeutics**,
   pas Revolution Medicines (inhibiteurs RAS). Ces « recherches épuisées » portent sur la MAUVAISE
@@ -277,15 +294,16 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
    parcours, cœur du lot 6 · §10 les lots).
-3. **`CLAUDE.md` du projet** — conventions **#25 → #82** ; pour le lot 6 : #53/#54 (recalcul à la
-   lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), et `feedback_controle_au_point_de_lecture`.
+3. **`CLAUDE.md` du projet** — conventions **#25 → #84** ; pour le lot 6 : #53/#54 (recalcul à la
+   lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
+   comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
    `benchmark-methodologies.md` (matière des frameworks) · `METHODE-TEST.md` (choix de la méthode
    de test) · `ARCHITECTURE-CIBLE.md` + un `ARCHITECTURE.md` par module (cible ; le réalisé = les
    checks) · `provenance-cards/` (contrats figés, maquette niveau 3).
 5. Code du flux : `backend/app/agents/v2/` (`traducteur`, `collecte_executor`, `apparieur`,
    `dossier`, `analyste`, `manager`, `manager_persist`, `bouclage`, `projection_memo`,
-   `qualite_info`) · `backend/app/contracts/` · `backend/checks/README.md`.
+   `qualite_info`, `parcours`, `comite`) · `backend/app/contracts/` · `backend/checks/README.md`.
 6. `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
 
 ---
@@ -295,7 +313,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 5 clos ;
-> **lot 6 (le parcours du comité) en cours** : `qualite_info` (#82) et les 3 niveaux de
-> drill-down (#83, migration 047) livrés et déployés ; reste acquitter/renvoyer tracés (A7,
-> migration 048). Ordre imposé contrat → agent → données. Re-requêter toute ligne de base avant
+> **lot 6 (le parcours du comité) : 3 maillons livrés et déployés** (`qualite_info` #82, drill-down
+> #83, registre du comité #84 / migration 048). Reste : faire rendre les arbitrages A-E du ▶ PROCHAIN
+> JALON, puis le lot 7. Ordre imposé contrat → agent → données. Re-requêter toute ligne de base avant
 > de s'en servir.

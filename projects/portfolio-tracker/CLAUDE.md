@@ -295,7 +295,11 @@ reçue : elle est **DÉRIVÉE** des deux dates par `app/knowledge/datation.py` (
 comme `nature` l'est au guichet depuis la 034. Additive et sans backfill par modèle : les lignes
 antérieures ont `portee_temporelle IS NULL`, qui désigne un **héritage à re-collecter** (174 entries
 courantes, dénombrées par `check_datation.py` §7) et non un quatrième état du vocabulaire.
-Prochaine migration : **048** (046 archétypes, 047 cause d'un manque — #83).
+**Migration 048 = le registre du comité (#84)** : `comite_decisions`, procès-verbal APPEND-ONLY des
+décisions `acquitter`/`renvoyer` (auteur, instant, version, réponse lue, motif non blanc, dernier fait
+important connu). Le rôle applicatif n'a que SELECT/INSERT, un trigger refuse toute réécriture même au
+propriétaire, garde `048/K1` sur les droits. Éprouvée par `negatif_048.sh` (14/0) sur copie de la base.
+Prochaine migration : **049**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -1989,6 +1993,55 @@ Gardes : `check_parcours.py` **63/0** + `negatif_parcours.sh` **21/0** · `negat
 `check_collecteur` / `check_collecte_executor` (cause par site d'échec, 9 + 37 mutations) ·
 `tools/montrer_parcours.sh RVMD [--json …]` (lecture gratuite des 3 niveaux réels). Suite **3276/0 sur
 45**. Déployé `7af7276`/`75fe521`, vérifié dans le conteneur et par capture headless regardée.
+
+### #84 — le procès-verbal du comité : une acceptation se SIGNE, se MOTIVE, et TOMBE d'elle-même
+
+**Ce que la capacité ajoute (V3, lot 6 maillon 3, `agents/v2/comite.py`, contrat `comite_schema.py`,
+migration 048).** Les deux gestes du comité (spec §8.2) au niveau 3 du parcours — ACCEPTER une réponse
+telle qu'elle est, RENVOYER la question en recherche — chacun inscrit à un procès-verbal (A7).
+`POST /v2/tickers/:id/frameworks/:fid/q/:qid/{acquitter,renvoyer}` rend le niveau 3 recalculé.
+
+**La logique de fonds (arbitrages du comité n°1 et n°2, 2026-09-25).** Un comité qui passe outre une
+faiblesse écrit qui, quand, sur quelle version du dossier et pourquoi — pour relire la décision six mois
+plus tard ; et une acceptation cesse de valoir dès qu'un fait important est publié après elle. D'où :
+- un PV **append-only** (ni UPDATE ni DELETE, même au propriétaire) : une décision nouvelle s'AJOUTE, la
+  plus récente sur une question est la position du comité ;
+- l'acceptation porte sur **une réponse précise** (`answer_id`) : si l'analyse est refaite, le comité n'a
+  pas lu la nouvelle → `tombee_reponse_remplacee` ;
+- sa validité se **recalcule à la lecture** (`servir_acceptation`, détenteur unique), jamais stockée :
+  `en_vigueur` · `tombee_reponse_remplacee` · `tombee_fait_nouveau` (le fait est NOMMÉ) · `non_verifiable`
+  (EDGAR illisible ⟹ on ne SAIT pas, #49 — ni en vigueur ni tombée, et ça ne fonde pas une décision) ;
+- « publié après » se juge au **jour de dépôt EDGAR, lu à New York** : un dépôt d'un jour postérieur à la
+  décision fait tomber ; du jour même, aussi, sauf si c'est le fait que le PV cite comme connu ; d'un jour
+  antérieur, jamais (il était public quand le comité a tranché). On parcourt TOUS les dépôts substantiels
+  récents — deux faits du même jour ne se départagent pas par l'ordre du flux ;
+- même ancre que l'actualité et la porte (`ancre_substantielle`) : un 8-K de pure forme ne fait rien tomber.
+
+**Ce que le comité change dans le dossier.** Une acceptation en vigueur retire la question de l'alerte
+« peut-on décider ? », même non fondée ; tombée, elle l'y remet **en disant pourquoi**
+(`Manque.acceptation_tombee`). Le niveau 1 dit quand la complétude repose sur le comité (« dont N
+acceptée(s) par le comité malgré leur faiblesse ») ; les décomptes comité / contrôle qualité restent
+**séparés** (deux acteurs, jamais fondus). ⚠️ `qualite_info` n'est PAS touchée : accepter une réponse
+faible ne rend pas l'information meilleure (axes séparés, #50/#82).
+
+**Choix de conception pris « comme un vrai fonds », à confirmer par l'utilisateur :** accepter ARRÊTE la
+recherche en cours sur la question (mandat `abandonne`, jamais supprimé, id gardé au PV) ; renvoyer
+REMPLACE la recherche en cours par la consigne du comité ; renvoyer emprunte `persist_mandate` (origine
+`comite`) — le bouclage le consomme comme un renvoi du manager, aucun chemin parallèle (#46).
+
+**Trois faux verts trouvés par le test négatif :** (1) le cas « fuseau de New York » n'était pas
+discriminant — décidé à 22 h NY contre un 8-K du lendemain, UTC et NY donnaient le même verdict ; le cas
+discriminant est un dépôt du JOUR NY de la décision, qui est « la veille » en UTC ; (2) une mutation de la
+position tuait le script avant son bilan (le contrat du niveau 3 levait) — le refus est désormais un FAIL
+nommé ; (3) deux mutations de `negatif_parcours.sh` étaient devenues CADUQUES (motif absent) après le
+branchement — un harnais qui remplace un motif exact se relit après chaque modification du module muté.
+⚠️ **Un PV append-only ne s'éprouve pas en production par une vraie décision** : elle y resterait pour
+toujours. Le déploiement a été vérifié par les chemins de REFUS (422 motif blanc · 409 réponse d'une autre
+question · 404 question inconnue) et la persistance en ROLLBACK.
+
+Gardes : `check_comite.py` **57/0** + `negatif_comite.sh` **21/0** · `check_comite_persist.py` **22/0**
+(vraie base, ROLLBACK, zéro résidu) + `negatif_comite_persist.sh` **6/0** · `negatif_048.sh` **14/0** ·
+suite **3355/0 sur 47**. Déployé `8adbbce`, vérifié dans le conteneur et par capture headless regardée.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
