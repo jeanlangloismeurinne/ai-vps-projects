@@ -168,7 +168,10 @@ async def main() -> int:
                     res = await collecter_un(
                         ligne, conn=conn, socle=socle,
                         carte_statut=(carte.statuts or {}).get(cle),
-                        consigne=consigne, inventaire=carte.inventaire)
+                        consigne=consigne, inventaire=carte.inventaire,
+                        # chemin EDGAR seul : une ligne qui retomberait au web y est refusée
+                        # nommément (identité non fournie), jamais cherchée sur le sigle.
+                        emetteur=None)
                     if res.entry_id:
                         collectees.append((cle, it, consigne, res.entry_id))
                         print(f"    COLLECTÉE  {cle[0]}.{cle[1]} → entry #{res.entry_id} "
@@ -236,7 +239,10 @@ async def main() -> int:
                     res2 = await collecter_un(
                         ligne_aveugle(it, plan.ticker_id), conn=conn, socle=socle,
                         carte_statut=(carte.statuts or {}).get(cle),
-                        consigne=consigne, inventaire=carte.inventaire)
+                        consigne=consigne, inventaire=carte.inventaire,
+                        # chemin EDGAR seul : une ligne qui retomberait au web y est refusée
+                        # nommément (identité non fournie), jamais cherchée sur le sigle.
+                        emetteur=None)
                     actives = await conn.fetchval(
                         "SELECT count(*) FROM knowledge_entries WHERE ticker_id = $1 "
                         "AND 'appariement' = ANY(tags) AND superseded_by IS NULL "

@@ -46,7 +46,7 @@ import logging
 from collections.abc import Collection
 from dataclasses import dataclass, field as dc_field
 from datetime import date
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 import asyncpg
 import httpx
@@ -475,6 +475,39 @@ def build_edgar_entries(
 # ─────────────────────────────────────── couche IO ───────────────────────────────────────────────
 
 _cik_cache: dict[str, int] = {}
+_raison_cache: dict[str, str] = {}
+
+
+class IdentiteEmetteur(NamedTuple):
+    """QUI est l'émetteur, tel que le registre officiel de la SEC le nomme.
+
+    Un symbole boursier n'est PAS une identité : « RVMD » a été lu comme Ryvu Therapeutics (RVU120,
+    CDK8/19) par le traducteur le 2026-09-25, alors que c'est Revolution Medicines — cinq « recherches
+    épuisées » sur la mauvaise société. Un fonds ne passe jamais une demande de recherche sur un
+    sigle : il nomme la raison sociale et un identifiant non ambigu (ici le CIK SEC).
+    """
+    symbole: str
+    cik: int
+    raison_sociale: str
+
+
+async def resolve_identite(symbol: str) -> IdentiteEmetteur:
+    """Symbole → (CIK, raison sociale) depuis le MÊME registre que `resolve_cik`, même mémoïsation.
+    Lève `EdgarFeedUnavailable` si le registre est injoignable ou ne connaît pas le symbole — jamais
+    une raison sociale devinée."""
+    cik = await resolve_cik(symbol)
+    raison = _raison_cache.get(symbol.upper())
+    if not raison:
+        raise EdgarFeedUnavailable(
+            f"registre SEC : aucune raison sociale pour {symbol} (CIK {cik}) — on ne planifie pas une "
+            "recherche sur un sigle seul")
+    return IdentiteEmetteur(symbole=symbol.upper(), cik=cik, raison_sociale=raison)
+
+
+async def identite_de_l_emetteur(conn: asyncpg.Connection, ticker_id: str) -> IdentiteEmetteur:
+    """DÉTENTEUR UNIQUE (#46) de « qui est ce titre ? » : `symbole_de_marche` (#11) puis le registre
+    SEC. Lève `EdgarFeedUnavailable` (titre sans symbole, registre injoignable, symbole inconnu)."""
+    return await resolve_identite(await symbole_de_marche(conn, ticker_id))
 
 
 async def resolve_cik(symbol: str) -> int:
@@ -507,6 +540,8 @@ async def resolve_cik(symbol: str) -> int:
         cik = (rec or {}).get("cik_str")
         if t and cik is not None:
             _cik_cache[str(t).upper()] = int(cik)
+            if (rec or {}).get("title"):
+                _raison_cache[str(t).upper()] = str(rec["title"]).strip()
     if key not in _cik_cache:
         raise EdgarFeedUnavailable(
             f"symbole {symbol} absent du registre SEC — émetteur non déposant EDGAR "

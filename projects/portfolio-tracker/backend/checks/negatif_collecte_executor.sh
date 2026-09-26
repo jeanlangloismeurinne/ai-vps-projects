@@ -124,7 +124,7 @@ mutations=(
 "$SRC¦        else:\n            continue¦        else:\n            expression = str(it.motif)  # mutation: l'indisponible devient exécutable¦ne produit AUCUNE consigne"
 # §11 ─ LE CÂBLAGE AMONT DÉBRANCHÉ : `collecter_un` ne reçoit plus la consigne. §11 reste vert en
 # appelant la fonction directement — seul l'assert structurel voit que personne ne la lui passe.
-"$SRC¦            consigne=consigne, inventaire=carte.inventaire)¦            )  # mutation: la consigne n'atteint jamais le collecteur¦en lui passant \`consigne\` ET \`inventaire\`"
+"$SRC¦            consigne=consigne, inventaire=carte.inventaire, emetteur=emetteur)¦            emetteur=emetteur)  # mutation: la consigne n'atteint jamais le collecteur¦en lui passant \`consigne\` ET \`inventaire\`"
 
 # ── MUTATION DU 2026-09-19 — LE CHIEN DE GARDE PAR LIGNE WEB (#25) ─────────────────────────────────
 # §6bis ─ le garde retiré : une ligne web qui SE BLOQUE fige toute la collecte (mesuré >18 min sur
@@ -137,6 +137,9 @@ mutations=(
 "$SRC¦cause=\"source_indisponible\")  # cause: worker en erreur¦cause=\"recherche_epuisee\")¦collecte web qui LÈVE = \`source_indisponible\`"
 "$SRC¦cause=\"recherche_epuisee\")  # cause: not_found¦cause=\"source_indisponible\")¦\`not_found\` → echec de cause"
 "$SRC¦cause=\"recherche_epuisee\")  # cause: appariement inexécutable¦cause=\"source_indisponible\")¦appariement inexécutable = \`recherche_epuisee\`"
+# ── l'identité de l'émetteur dans la requête web (lot 7, 2026-09-26 — RVMD cherché chez Ryvu) ─────
+"$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC \"¦            f\"Pour l'entreprise {emetteur.symbole} (symbole {emetteur.symbole}, SEC \"¦NOMME l'entreprise (raison sociale + CIK SEC)"
+"$SRC¦    if emetteur is None:\n        return ResultatCollecte(¦    if False:\n        return ResultatCollecte(¦identité NON RÉSOLUE → echec nommé"
 )
 
 passes=0; ratees=0

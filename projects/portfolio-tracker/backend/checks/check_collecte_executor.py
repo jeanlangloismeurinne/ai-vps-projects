@@ -32,7 +32,13 @@ from app.agents.v2.collecte_executor import (
 )
 from app.agents.v2.traducteur import _TRADUCTEUR_SYSTEM_PROMPT, _catalogue_postes
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
-from app.knowledge.edgar_feed import POSTES
+from app.knowledge.edgar_feed import POSTES, IdentiteEmetteur
+
+# Identités copiées du registre SEC réel (`edgar_feed.resolve_identite`, relevé le 2026-09-26).
+_EMETTEUR = {
+    "NVDA": IdentiteEmetteur(symbole="NVDA", cik=1045810, raison_sociale="NVIDIA CORP"),
+    "RVMD": IdentiteEmetteur(symbole="RVMD", cik=1628171, raison_sociale="Revolution Medicines, Inc."),
+}
 
 
 def _ligne(metrique, source, poste=None, ticker="NVDA", ancre="clôture de l'exercice"):
@@ -191,13 +197,17 @@ check("'type de barrière à l'entrée (moat)' → fact_qualitative",
 print("\n[5] la requête web est AVEUGLE à la question et ne juge pas la valeur de la source (#59)")
 _ligne = LigneAveugle(ticker_id="NVDA", metrique="free cash flow",
                       source_pressentie="10-K + communiqué", ancre="clôture du trimestre")
-req = construire_requete_web(_ligne)
+req = construire_requete_web(_ligne, emetteur=_EMETTEUR[_ligne.ticker_id])
 check("reliability_min permissif = 0.40 (le collecteur ne juge pas la valeur d'une source, #59)",
       req.reliability_min == 0.40, f"→ {req.reliability_min}")
 check("aucun `field_path` dans la requête (un field_path ré-ancrerait la question — #58)",
       req.output_schema.field_path is None, f"→ {req.output_schema.field_path}")
 check("worker = search-worker, ticker repris de la ligne",
       req.worker == "search-worker" and req.ticker_id == "NVDA")
+# Lot 7 (2026-09-26) : « Pour l'entreprise RVMD… » a fait chercher la défendabilité de Revolution
+# Medicines chez Ryvu Therapeutics. La requête nomme l'entreprise par sa raison sociale et son CIK.
+check("§5 la requête NOMME l'entreprise (raison sociale + CIK SEC), pas son seul sigle",
+      "NVIDIA CORP" in req.query and "1045810" in req.query, f"→ {req.query[:160]}")
 check("la requête porte la métrique, la source ET l'ancre de la ligne",
       all(x in req.query for x in (_ligne.metrique, _ligne.source_pressentie, _ligne.ancre)))
 check("le type d'entry de la requête suit la déduction (#4) : 'free cash flow' → fact_financial",
@@ -264,7 +274,7 @@ _mod.run_search_worker = _failing  # monkeypatch : le modèle/réseau échoue
 _ligne_web = LigneAveugle(ticker_id="RVMD", metrique="analyse qualitative du moat",
                           source_pressentie="communiqué", ancre="dernière lecture clinique")
 try:
-    _rc = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())))
+    _rc = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset()), emetteur=_EMETTEUR[_ligne_web.ticker_id]))
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           _rc.echec is not None and "provider timeout simulé" in _rc.echec, f"→ {_rc!r}")
     check("§6 cause d'une collecte web qui LÈVE = `source_indisponible` (notre outil a cassé : on "
@@ -273,6 +283,28 @@ try:
 except Exception as e:
     check("une collecte web qui LÈVE → echec motivé (jamais une exception qui tue le lot, #25)",
           False, f"→ a PROPAGÉ {type(e).__name__} au lieu de rendre un echec")
+
+# Sans identité résolue, on ne cherche PAS sur le sigle : le worker n'est même pas appelé.
+_appels_worker = []
+
+
+async def _espion(_req, **_kw):
+    _appels_worker.append(_req)
+    raise RuntimeError("ne doit pas être appelé")
+
+
+_mod.run_search_worker = _espion
+try:
+    _rc_id = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset()),
+                                           emetteur=None))
+    check("§6 identité NON RÉSOLUE → echec nommé, et AUCUNE recherche web sur le sigle seul",
+          _rc_id.echec is not None and "identité de l'émetteur non résolue" in _rc_id.echec
+          and _rc_id.cause == "source_indisponible" and not _appels_worker,
+          f"→ {_rc_id!r} · appels worker={len(_appels_worker)}")
+except Exception as e:  # noqa: BLE001
+    check("§6 identité NON RÉSOLUE → echec nommé, et AUCUNE recherche web sur le sigle seul",
+          False, f"→ a PROPAGÉ {type(e).__name__}: {e}")
+_mod.run_search_worker = _failing
 
 
 # ── §6bis une collecte web qui SE BLOQUE devient un mandat borné, jamais un silence infini (#25) ───
@@ -300,7 +332,7 @@ async def _mesure_blocage():
     # wait_for du CHECK : si le garde de prod a sauté, `collecter_un` ne rend jamais → on LÈVE ici,
     # au lieu de figer le check comme la prod figeait la collecte. C'est ce qui rend la mutation rouge.
     return await asyncio.wait_for(
-        _mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())), timeout=5)
+        _mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset()), emetteur=_EMETTEUR[_ligne_web.ticker_id]), timeout=5)
 
 
 try:
@@ -353,7 +385,7 @@ async def _worker_not_found(req, **_kw):
 
 _mod.run_search_worker = _worker_not_found
 try:
-    _rc_nf = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset())))
+    _rc_nf = asyncio.run(_mod.collecter_un(_ligne_web, conn=None, socle=_mod._SocleEdgar(frozenset()), emetteur=_EMETTEUR[_ligne_web.ticker_id]))
     check("§6ter `not_found` → echec de cause `recherche_epuisee`",
           _rc_nf.echec is not None and _rc_nf.cause == "recherche_epuisee", f"→ {_rc_nf!r}")
 finally:
@@ -438,7 +470,7 @@ _ligne_edgar = LigneAveugle(
 _edgar_calls.clear(); _web_calls.clear()
 _mod.run_search_worker = _mock_web
 try:
-    asyncio.run(_mod.collecter_un(_ligne_edgar, conn=None, socle=_MockSocle(), carte_statut=None))
+    asyncio.run(_mod.collecter_un(_ligne_edgar, conn=None, socle=_MockSocle(), carte_statut=None, emetteur=_EMETTEUR[_ligne_edgar.ticker_id]))
 except Exception:
     pass  # le mock edgar retourne un echec propre — la levée éventuelle ne nous intéresse pas
 check("§8 sans carte : une ligne SEC+poste valide prend le chemin EDGAR (socle.entry_id appelé)",
@@ -449,7 +481,7 @@ check("§8 sans carte : une ligne SEC+poste valide prend le chemin EDGAR (socle.
 _edgar_calls.clear(); _web_calls.clear()
 try:
     asyncio.run(_mod.collecter_un(
-        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="indisponible"))
+        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="indisponible", emetteur=_EMETTEUR[_ligne_edgar.ticker_id]))
 except Exception:
     pass
 check("§8 carte `indisponible` : la même ligne prend le chemin WEB (run_search_worker appelé)",
@@ -460,7 +492,7 @@ check("§8 carte `indisponible` : la même ligne prend le chemin WEB (run_search
 _edgar_calls.clear(); _web_calls.clear()
 try:
     asyncio.run(_mod.collecter_un(
-        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="exact"))
+        _ligne_edgar, conn=None, socle=_MockSocle(), carte_statut="exact", emetteur=_EMETTEUR[_ligne_edgar.ticker_id]))
 except Exception:
     pass
 check("§8 carte `exact` : la même ligne prend le chemin EDGAR (la carte confirme le concept)",
@@ -474,7 +506,7 @@ _ligne_derivee = LigneAveugle(
 )
 _edgar_calls.clear(); _web_calls.clear()
 try:
-    asyncio.run(_mod.collecter_un(_ligne_derivee, conn=None, socle=_MockSocle(), carte_statut=None))
+    asyncio.run(_mod.collecter_un(_ligne_derivee, conn=None, socle=_MockSocle(), carte_statut=None, emetteur=_EMETTEUR[_ligne_derivee.ticker_id]))
 except Exception:
     pass
 check("§8 repli (sans carte, poste dérivée) : chemin WEB préservé — le repli est inchangé",
@@ -638,6 +670,7 @@ _journal = {"apparier": 0, "persiste": 0, "depots_opposes": [],
 # une fixture plus favorable que la prod est un check aveugle).
 _TICKER_ID = "PUB-4F2A9C10"
 _SYMBOLE = "NVDA"
+_EMETTEUR[_TICKER_ID] = _EMETTEUR[_SYMBOLE]   # l'identité suit le SYMBOLE, jamais l'id interne (#11)
 
 # Un inventaire minimal mais de la MÊME FORME que le réel : `fetch_company_facts` rend
 # {concept → [points]} et chaque point porte `filed` (copié de la forme EDGAR, pas inventé plus
@@ -840,14 +873,14 @@ async def _fake_assurer(plan, *, conn):
 
 
 _mod.assurer_carte = _fake_assurer
-asyncio.run(_mod.executer_plan_reel(_plan_inob, conn=None))
+asyncio.run(_mod.executer_plan_reel(_plan_inob, conn=None, emetteur=_EMETTEUR[_plan_inob.ticker_id]))
 check("§10 `executer_plan_reel` OBTIENT la carte quand l'appelant n'en fournit pas : le producteur "
       "est branché sur le chemin d'exécution, pas seulement écrit à côté",
       _assure["n"] == 1, f"→ {_assure['n']} appel(s) à assurer_carte")
 
 _assure["n"] = 0
 asyncio.run(_mod.executer_plan_reel(
-    _plan_inob, conn=None, carte=_mod.CarteCourante(None, "aucune", None)))
+    _plan_inob, conn=None, carte=_mod.CarteCourante(None, "aucune", None), emetteur=_EMETTEUR[_plan_inob.ticker_id]))
 check("§10 une carte FOURNIE court-circuite la production : l'appelant qui en détient déjà une "
       "(`executer_collecte_framework`) ne la repaie pas une seconde fois",
       _assure["n"] == 0, f"→ {_assure['n']} appel(s) à assurer_carte")
@@ -968,7 +1001,7 @@ check("§11 (préalable) cette ligne n'a AUCUNE recette du catalogue — sans qu
 _appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
 _r1 = asyncio.run(_mod.collecter_un(
     _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
-    consigne=_consigne_approx, inventaire=_inv))
+    consigne=_consigne_approx, inventaire=_inv, emetteur=_EMETTEUR[_ligne_sans_recette.ticker_id]))
 check("§11 consigne + inventaire, aucune recette → `executer_appariement` est appelé UNE fois et son "
       "entry est rendue : la ligne est COLLECTÉE depuis le dépôt, elle ne repart plus au web",
       _appar["n"] == 1 and _r1.entry_id == 9001 and _r1.echec is None and _web_calls == [],
@@ -986,7 +1019,7 @@ check("§11 l'appariement reçoit le SYMBOLE et l'inventaire DÉJÀ LU (aucune s
 _appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
 asyncio.run(_mod.collecter_un(
     _ligne_edgar, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="exact",
-    consigne=_cons[("qf_1", "resultat_net")], inventaire=_inv))
+    consigne=_cons[("qf_1", "resultat_net")], inventaire=_inv, emetteur=_EMETTEUR[_ligne_edgar.ticker_id]))
 check("§11 quand une RECETTE du catalogue résout, elle passe devant la consigne : le socle est "
       "appelé, l'appariement NON — un même fait n'a pas deux producteurs actifs (#30/#43)",
       len(_edgar_calls) == 1 and _appar["n"] == 0,
@@ -997,7 +1030,7 @@ _appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
 _mod.run_search_worker = _mock_web
 asyncio.run(_mod.collecter_un(
     _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
-    consigne=_consigne_approx, inventaire=None))
+    consigne=_consigne_approx, inventaire=None, emetteur=_EMETTEUR[_ligne_sans_recette.ticker_id]))
 check("§11 consigne mais aucun inventaire (EDGAR injoignable) → repli WEB, et l'appariement n'est "
       "pas tenté à vide : le repli reste un état distinct du câblage réussi",
       _appar["n"] == 0 and len(_web_calls) == 1,
@@ -1017,7 +1050,7 @@ async def _executer_refuse(conn, **kw):
 _mod.executer_appariement = _executer_refuse
 _r4 = asyncio.run(_mod.collecter_un(
     _ligne_sans_recette, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
-    consigne=_consigne_approx, inventaire=_inv))
+    consigne=_consigne_approx, inventaire=_inv, emetteur=_EMETTEUR[_ligne_sans_recette.ticker_id]))
 check("§11 appariement INEXÉCUTABLE → `echec` motivé qui NOMME la cause et l'expression, jamais une "
       "exception qui tue le lot, jamais un nombre approché, jamais un repli web muet (#25)",
       _r4.entry_id is None and _r4.echec is not None

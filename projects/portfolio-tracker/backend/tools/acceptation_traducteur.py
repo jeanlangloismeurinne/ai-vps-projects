@@ -27,7 +27,16 @@ from app.db.database import close_pool, init_pool
 CAS = [
     ("NVDA", "qualite_financiere", "rentable"),
     ("RVMD", "qualite_financiere", "pre_revenus"),
+    # Lot 7 (2026-09-26) : le cas qui a trahi la confusion d'émetteur — le plan 103 (2026-09-25) a
+    # planifié la défendabilité de Revolution Medicines sur les produits de Ryvu Therapeutics.
+    ("RVMD", "defendabilite", "pre_revenus"),
 ]
+
+# Les marqueurs RELEVÉS dans le plan 103 (collection_plan_items 411-426) : RVU120 / révatiglimab /
+# CDK8/19 sont les programmes de Ryvu Therapeutics, pas de Revolution Medicines. Un SIGNAL, pas une
+# garde de sens (`feedback_garde_structure_pas_sens`) : leur absence ne prouve pas que le plan parle
+# de la bonne société — la lecture en texte reste le juge.
+_AUTRE_EMETTEUR = {"RVMD": ("rvu120", "révatiglimab", "revatiglimab", "cdk8", "ryvu")}
 
 
 def _essentiels(fichier, framework_id, archetype) -> set[tuple[str, str]]:
@@ -73,6 +82,17 @@ async def main() -> int:
                 else:
                     print(f"{marque} {it.question_id}.{it.ingredient_id}")
                     print(f"      ⚠ INOBTENABLE → mandat : {it.motif}")
+
+            texte = " ".join(f"{it.metrique or ''} {it.source_pressentie or ''} {it.motif or ''}"
+                             for it in plan.items).lower()
+            intrus = [m for m in _AUTRE_EMETTEUR.get(ticker, ()) if m in texte]
+            if ticker in _AUTRE_EMETTEUR:
+                if intrus:
+                    fail += 1
+                    print(f"  FAIL le plan décrit une AUTRE société (marqueurs relevés : {intrus})")
+                else:
+                    ok += 1
+                    print("  ok   aucun marqueur de l'autre émetteur (Ryvu) dans le plan")
 
             couples = {(it.question_id, it.ingredient_id) for it in plan.items}
             manque = ess - couples

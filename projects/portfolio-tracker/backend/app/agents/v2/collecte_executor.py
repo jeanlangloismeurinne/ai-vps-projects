@@ -69,6 +69,8 @@ from app.knowledge.edgar_facts import EdgarUnavailable, fetch_company_facts
 from app.knowledge.edgar_feed import (
     POSTES,
     EdgarFeedUnavailable,
+    IdentiteEmetteur,
+    identite_de_l_emetteur,
     resolve_cik,
     run_edgar_feed,
     symbole_de_marche,
@@ -270,12 +272,15 @@ def entry_type_pour_metrique(metrique: str) -> EntryType:
     return "fact_qualitative"
 
 
-def construire_requete_web(ligne: LigneAveugle) -> WorkerRequest:
+def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -> WorkerRequest:
     """Construit la requête du search-worker depuis la ligne AVEUGLE — sans jamais nommer la question.
 
     `requester='knowledge-curator'` : le collecteur s'exécute dans le flux de constitution de
     connaissance (le `Requester` est de la traçabilité pure, sans consommateur en aval — réutiliser
     le plus proche évite une modification de contrat fermé pour un champ décoratif).
+    `emetteur` est REQUIS (lot 7) : la requête nommait l'entreprise par son SIGLE seul (« Pour
+    l'entreprise RVMD… »), et un sigle se partage entre sociétés — c'est ainsi que la défendabilité de
+    Revolution Medicines a été cherchée chez Ryvu. La raison sociale et le CIK lèvent l'ambiguïté.
     `reliability_min=0.40` : plancher permissif — le collecteur ne juge pas la valeur d'une source
     (#59), il ramène la matière ; la suffisance est jugée plus tard par le manager du framework."""
     return WorkerRequest(
@@ -283,7 +288,9 @@ def construire_requete_web(ligne: LigneAveugle) -> WorkerRequest:
         worker=WORKER_NAME,
         ticker_id=ligne.ticker_id,
         query=(
-            f"Pour l'entreprise {ligne.ticker_id}, trouve la donnée suivante : {ligne.metrique}. "
+            f"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC "
+            f"{emetteur.cik}) — et aucune autre société portant un sigle voisin —, trouve la donnée "
+            f"suivante : {ligne.metrique}. "
             f"Cherche en priorité dans : {ligne.source_pressentie}. "
             f"Date le fait par rapport à l'événement : {ligne.ancre}."
         ),
@@ -343,6 +350,7 @@ async def collecter_un(
     carte_statut: Optional[Literal["exact", "approximation", "indisponible"]] = None,
     consigne: Optional[ConsigneAppariement] = None,
     inventaire: Optional[InventaireTicker] = None,
+    emetteur: Optional[IdentiteEmetteur],
 ) -> ResultatCollecte:
     """Exécute UNE ligne aveugle. Dispatch déterministe, puis réseau. Rend un XOR (entry OU echec),
     jamais un silence (#25) : c'est `aiguiller_plan` qui transformera un echec en mandat motivé.
@@ -404,7 +412,14 @@ async def collecter_un(
         )
 
     # chemin web : le search-worker CHERCHE (sans connaître la question), puis on persiste ses entries.
-    req = construire_requete_web(ligne)
+    # Sans identité résolue, on ne cherche PAS sur le sigle seul : ce serait collecter pour une autre
+    # société (Ryvu pour RVMD, 2026-09-25). La ligne devient un mandat motivé, jamais une entry fausse.
+    if emetteur is None:
+        return ResultatCollecte(
+            echec=f"identité de l'émetteur non résolue (registre SEC) : pas de recherche web sur le "
+                  f"sigle {ligne.ticker_id} seul pour « {ligne.metrique} »",
+            cause="source_indisponible")
+    req = construire_requete_web(ligne, emetteur=emetteur)
     try:
         # Chien de garde par ligne (#25/#46) : `run_search_worker` peut enchaîner jusqu'à
         # `max_iterations` appels modèle à 720 s — une ligne bloquée figeait TOUTE la collecte (mesuré
@@ -729,6 +744,7 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
 
 async def executer_plan_reel(
     plan: CollectionPlan, *, conn: asyncpg.Connection, carte: Optional[CarteCourante] = None,
+    emetteur: Optional[IdentiteEmetteur] = None,
 ) -> ResultatAiguillage:
     """Exécute un plan RÉELLEMENT (EDGAR + web), puis aiguille. `aiguiller_plan` reste intact : on
     pré-exécute chaque ligne aveugle distincte, puis on lui injecte un lookup sync.
@@ -759,6 +775,14 @@ async def executer_plan_reel(
     if carte is None:
         carte = await assurer_carte(plan, conn=conn)
     carte_statuts = carte.statuts
+    # QUI est l'émetteur — résolu UNE fois (détenteur unique, #46), passé à chaque ligne web. Un
+    # registre injoignable ne tue pas le lot : les lignes web deviennent des mandats motivés.
+    if emetteur is None:
+        try:
+            emetteur = await identite_de_l_emetteur(conn, plan.ticker_id)
+        except EdgarFeedUnavailable as e:
+            logger.warning("identité de %s non résolue (%s) — lignes web converties en mandats",
+                           plan.ticker_id, e)
 
     socle = _SocleEdgar(postes_edgar_du_plan(plan, carte_statuts=carte_statuts))
     resultats: dict[tuple[str, str, str, str], ResultatCollecte] = {}
@@ -776,7 +800,7 @@ async def executer_plan_reel(
         consigne = carte.consignes.get(couple) if carte.consignes else None
         resultats[cle] = await collecter_un(
             ligne, conn=conn, socle=socle, carte_statut=statut,
-            consigne=consigne, inventaire=carte.inventaire)
+            consigne=consigne, inventaire=carte.inventaire, emetteur=emetteur)
 
     def collecter(ligne: LigneAveugle) -> ResultatCollecte:
         cle = (ligne.ticker_id, ligne.metrique, ligne.source_pressentie, ligne.ancre)

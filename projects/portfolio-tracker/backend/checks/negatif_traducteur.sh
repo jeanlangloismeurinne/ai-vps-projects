@@ -33,7 +33,14 @@ mutations=(
 "$SRC¦    items: list[CollectionPlanItem] = Field(min_length=1)¦    items: list[CollectionPlanItem] = Field(min_length=1)\n    ticker_id: str = \"x\"¦n'a QUE"
 "$SRC¦        framework_version=fichier.schema_version,¦        framework_version=archetype,¦pose lui-même"
 "$SRC¦    if archetype not in set(fichier.archetypes):¦    if False:¦[O-tôt] archétype inconnu"
-"$SRC¦    valider_pont_collection_plan(plan, fichier=fichier)¦    None  # pont retiré¦passe le plan au pont"
+"$SRC¦    valider_pont_collection_plan(plan, fichier=fichier, questions=questions)¦    None  # pont retiré¦passe le plan au pont"
+# ── l'identité de l'émetteur (lot 7, 2026-09-26 — le plan RVMD rédigé sur Ryvu) ──────────────────
+"$SRC¦            \"raison_sociale\": emetteur.raison_sociale,¦            \"raison_sociale\": emetteur.symbole,¦porte la raison sociale ET le CIK"
+"$SRC¦    *, emetteur: IdentiteEmetteur, questions:¦    *, emetteur: IdentiteEmetteur = IdentiteEmetteur(\"?\", 0, \"?\"), questions:¦REFUSE de se construire sans identité"
+"$SRC¦JAMAIS CELLE QUE SUGGÈRE LE \"¦\"¦la consigne dit que l'entreprise"
+"$SRC¦        emetteur = await identite_de_l_emetteur(conn, ticker_id)¦        emetteur = IdentiteEmetteur(ticker_id, 0, ticker_id)¦AVANT la dépense modèle"
+"$SRC¦        fichier, framework_id, archetype, ticker_id, emetteur=emetteur,¦        fichier, framework_id, archetype, ticker_id, emetteur=IdentiteEmetteur(ticker_id, 0, ticker_id),¦et la passe au contexte"
+"app/knowledge/edgar_feed.py¦    return await resolve_identite(await symbole_de_marche(conn, ticker_id))¦    return await resolve_identite(ticker_id)¦passe par \`symbole_de_marche\`"
 )
 
 passes=0; ratees=0

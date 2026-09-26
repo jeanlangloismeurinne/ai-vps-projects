@@ -50,7 +50,8 @@ from app.contracts.framework_definition_schema import (
     FrameworksFile,
     QuestionDefinition,
 )
-from app.knowledge.edgar_feed import POSTES
+from app.db.database import get_db_session
+from app.knowledge.edgar_feed import POSTES, IdentiteEmetteur, identite_de_l_emetteur
 
 __all__ = [
     "TraducteurSortie",
@@ -92,11 +93,15 @@ def questions_applicables(
 
 def contexte_traducteur(
     fichier: FrameworksFile, framework_id: str, archetype: str, ticker_id: str,
-    *, questions: Optional[frozenset[str]] = None,
+    *, emetteur: IdentiteEmetteur, questions: Optional[frozenset[str]] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free par construction.
 
-    Ne porte QUE : le ticker, l'identité + la méthodologie du framework, l'archétype, et pour chaque
+    `emetteur` est REQUIS, sans défaut (lot 7, 2026-09-26) : le contexte nommait l'entreprise par son
+    seul SIGLE, et le modèle a planifié la défendabilité de RVMD sur les produits de Ryvu Therapeutics
+    (RVU120, CDK8/19). Un sigle n'est pas une identité ; la raison sociale et le CIK SEC en sont une.
+
+    Ne porte QUE : l'entreprise (sigle, raison sociale, CIK), l'identité + la méthodologie du framework, l'archétype, et pour chaque
     question applicable son énoncé, sa variable d'archétype, et ses ingrédients (`id`, `libelle`,
     `essentiel`). **Aucun `plancher_tier`, aucun `nature_attendue`** : ce ne sont pas des leviers du
     traducteur (#59). `essentiel` reste montré — c'est une propriété du framework (quels ingrédients
@@ -124,6 +129,11 @@ def contexte_traducteur(
         applicables = [q for q in applicables if q.id in questions]
     return {
         "ticker": ticker_id,
+        "entreprise": {
+            "raison_sociale": emetteur.raison_sociale,
+            "symbole": emetteur.symbole,
+            "cik_sec": emetteur.cik,
+        },
         "framework": {"id": fw.id, "libelle": fw.libelle, "methodologie": fw.methodologie},
         "archetype": archetype,
         "questions": [
@@ -166,6 +176,12 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "et UNE entreprise précise. Ta tâche : produire un PLAN DE COLLECTE — pour chaque ingrédient de "
     "chaque question, dire COMMENT cette entreprise-là le nomme et OÙ le chercher. Tu ne collectes "
     "RIEN : tu planifies. Un autre agent exécutera chaque ligne sans connaître la question.\n\n"
+    "L'ENTREPRISE EST CELLE QUE NOMMENT SA RAISON SOCIALE ET SON CIK SEC, JAMAIS CELLE QUE SUGGÈRE LE "
+    "SIGLE. Un même sigle désigne d'autres sociétés sur d'autres places ou dans d'autres registres : "
+    "ne décris que l'entreprise de `entreprise.raison_sociale` (déposante SEC sous `entreprise.cik_sec`). "
+    "Tout produit, programme ou marché que tu nommes doit être le SIEN ; si tu ne connais pas ses "
+    "produits, reste générique (« le produit principal de <raison sociale> ») plutôt que d'en "
+    "emprunter à une autre société.\n\n"
     "UNE LIGNE PAR INGRÉDIENT. Pour chaque ingrédient fourni, produis exactement une ligne, avec son "
     "`question_id` et son `ingredient_id` (repris tels quels du contexte — n'en invente aucun), et un "
     "`statut` :\n"
@@ -305,8 +321,13 @@ async def traduire(
     ingrédient essentiel des questions applicables).
     """
     fichier = fichier or load_frameworks()
+    # (0) QUI est l'émetteur — résolu AVANT toute dépense, et sans lui on ne planifie pas : un plan
+    # rédigé sur un sigle ambigu collecte pour une autre société (Ryvu pour RVMD, 2026-09-25).
+    async with get_db_session() as conn:
+        emetteur = await identite_de_l_emetteur(conn, ticker_id)
     contexte = contexte_traducteur(
-        fichier, framework_id, archetype, ticker_id, questions=questions)  # (1)+(2), lève tôt
+        fichier, framework_id, archetype, ticker_id, emetteur=emetteur,
+        questions=questions)  # (1)+(2), lève tôt
     agent = agent or await _resolve_traducteur_agent()
 
     messages = [{"role": "user", "content": _message_traducteur(contexte)}]
