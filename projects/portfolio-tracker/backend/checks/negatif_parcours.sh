@@ -21,7 +21,7 @@ mutations=(
 "$P¦    \"source_indisponible\", \"recherche_epuisee\", \"sans_source_possible\")¦    \"recherche_epuisee\", \"source_indisponible\", \"sans_source_possible\")  # mutation¦la cause en tête est la PANNE"
 "$P¦    if collecte is None or collecte.plan_id is None:¦    if collecte is None:  # mutation: plan absent lu comme recherche menée¦une collecte sans plan"
 "$P¦    if renvoyees:¦    if renvoyees and False:  # mutation: renvoi ignoré¦renvoyée → nature"
-"$P¦                  question_id=question_id, enonce=enonce, mandat_ouvert_id=mandat_ouvert_id)¦                  question_id=question_id, enonce=enonce, mandat_ouvert_id=None)¦DÉJÀ repartie en recherche"
+"$P¦                  question_id=question_id, enonce=enonce, mandat_ouvert_id=mandat_ouvert_id,¦                  question_id=question_id, enonce=enonce, mandat_ouvert_id=None,¦DÉJÀ repartie en recherche"
 "$P¦                      explication=f\"{_EXPLICATION['controle_ko']} : {r.motif_revue}\", **commun)¦                      explication=_EXPLICATION['controle_ko'], **commun)¦nomme le contrôle qui a refusé"
 "$P¦                                      f\"{r.servie.fondation.motif_actualite}\", **commun)¦                                      \"\", **commun)¦porte le motif d'actualité"
 "$P¦    if etat.archetype is None:¦    if False:  # mutation: non classé lu comme complet¦NON CLASSÉE"
@@ -29,7 +29,7 @@ mutations=(
 "$P¦            remplacee=p[\"superseded_by\"] is not None))¦            remplacee=False))¦REMPLACÉE"
 "$P¦            rang_plus_faible_cite=_plus_faible(tiers) if tiers else None))¦            rang_plus_faible_cite=tiers[0] if tiers else None))¦rang le plus faible CITÉ"
 "$P¦            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),¦            answer_id=i, servie=FrameworkAnswerServie(**a.model_dump()),¦APPELLE \`servir_answer\`"
-"$P¦    syntheses, manques = [], []¦    syntheses, manques = [], []\n    etat.fichier.frameworks.sort(key=lambda f: f.id)  # mutation: ordre alphabétique¦l'ordre du RÉFÉRENTIEL"
+"$P¦    syntheses, manques, acceptees = [], [], 0¦    syntheses, manques, acceptees = [], [], 0\n    etat.fichier.frameworks.sort(key=lambda f: f.id)  # mutation: ordre alphabétique¦l'ordre du RÉFÉRENTIEL"
 "$P¦    ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))¦    ancre = await material_anchor_for_ticker(conn, ticker_id)  # mutation: ancre brute¦l'ancre qui PÈSE"
 # §7 — le point de lecture : un champ perdu, un pixel inventé, l'alerte descendue sous l'identité.
 "$N3¦<span data-champ=\"approximation.sensibilite\">{a.approximation.sensibilite}</span>¦<span>{a.approximation.sensibilite}</span>¦tout champ du contrat a son pixel"

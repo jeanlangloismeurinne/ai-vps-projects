@@ -31,6 +31,7 @@ from pydantic import Field, model_validator
 
 from app.contracts.analysis_v2_schemas import Strict, Tier
 from app.contracts.cause_manque_schema import CauseManqueCollecte
+from app.contracts.comite_schema import AcceptationServie, DecisionComite, PositionComite
 from app.contracts.framework_answer_schema import (
     ControlesManager,
     FrameworkAnswerServie,
@@ -87,6 +88,10 @@ class Manque(Strict):
     # La question est-elle déjà repartie en recherche ? (mandat manager/comité ouvert)
     mandat_ouvert_id: Optional[int] = None
     answer_id: Optional[int] = None
+    # Le comité avait accepté cette question, et son acceptation ne tient plus (réponse refaite, fait
+    # important publié depuis, ou vérification impossible) : la question REPASSE devant lui, et
+    # l'alerte dit pourquoi (arbitrage n°2). Une acceptation EN VIGUEUR n'est jamais un manque.
+    acceptation_tombee: Optional[AcceptationServie] = None
 
     @model_validator(mode="after")
     def _une_cause_de_collecte_se_prouve(self):
@@ -97,6 +102,9 @@ class Manque(Strict):
                 raise ValueError(
                     f"cause `{self.cause}` sans aucun ingrédient manquant : une cause de collecte "
                     "se prouve par ce que la collecte a rencontré, ingrédient par ingrédient")
+        if self.acceptation_tombee is not None and self.acceptation_tombee.etat == "en_vigueur":
+            raise ValueError("un manque porteur d'une acceptation EN VIGUEUR : le comité a accepté "
+                             "la question, elle ne manque pas")
         return self
 
 
@@ -128,9 +136,12 @@ class SyntheseFramework(Strict):
     qualite: Optional[QualiteInfo] = None      # None = aucune réponse au dossier
     n_questions: int = Field(ge=0)
     n_applicables: Optional[int] = Field(default=None, ge=0)   # None = émetteur non classé
-    n_acquittees: int = Field(ge=0)
+    n_acquittees: int = Field(ge=0)            # par le MANAGER (l'avis recalculé)
     n_renvoyees: int = Field(ge=0)
     n_manques: int = Field(ge=0)
+    # Questions dont l'acceptation du COMITÉ tient aujourd'hui. Compté À PART des acquittements du
+    # manager : deux acteurs, deux décisions, jamais fondues (le comité passe outre, il ne relit pas).
+    n_acceptees_comite: int = Field(default=0, ge=0)
 
 
 class DossierTitre(Strict):
@@ -164,6 +175,7 @@ class LigneQuestion(Strict):
     dispensee: bool = False
     reponses: list[ReponseResumee] = Field(default_factory=list)
     manque: Optional[Manque] = None
+    comite: Optional[PositionComite] = None    # la dernière décision du comité sur la question
 
 
 class FrameworkDuDossier(Strict):
@@ -236,3 +248,15 @@ class PreuvesQuestion(Strict):
     applicable: Optional[bool] = None
     preuves: list[PreuveReponse] = Field(default_factory=list)
     manque: Optional[Manque] = None
+    # Le COMITÉ (lot 6 maillon 3) : sa position du jour et le procès-verbal COMPLET de la question, le
+    # plus récent d'abord — relire une décision six mois plus tard dans son contexte (arbitrage n°1).
+    comite: Optional[PositionComite] = None
+    registre: list[DecisionComite] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _la_position_est_la_tete_du_registre(self):
+        if (self.comite is None) != (not self.registre):
+            raise ValueError("position du comité servie ssi le registre de la question est non vide")
+        if self.comite is not None and self.comite.derniere.id != self.registre[0].id:
+            raise ValueError("la position du comité n'est pas la décision la plus récente du registre")
+        return self

@@ -8,7 +8,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { Card, CardHeader, CardBody, Badge, ErrorState } from '../../../../../../components/v2'
 import {
-  API, CONTROLES, ActualiteBadge, EtatControle, ManqueBloc, ScoreQualite, StatutBadge,
+  API, CONTROLES, ActualiteBadge, ComiteBadge, EtatControle, ManqueBloc, ScoreQualite, StatutBadge,
 } from '../../../../../../components/v2/parcours'
 
 function LigneQuestion({ lq, tickerId, frameworkId }) {
@@ -24,6 +24,7 @@ function LigneQuestion({ lq, tickerId, frameworkId }) {
         <div className="flex gap-1.5 shrink-0">
           {inapplicable && <Badge variant="gray">ne s'applique pas à cette société</Badge>}
           {lq.dispensee && <Badge variant="gray">dispensée par le comité</Badge>}
+          <ComiteBadge pos={lq.comite} />
           {lq.applicable === null && <Badge variant="gray">applicabilité inconnue</Badge>}
         </div>
       </div>
@@ -95,6 +96,8 @@ export default function FrameworkNiveau2() {
             <p className="text-sm text-gray-200">{s.n_applicables ?? '?'} / {s.n_questions}</p></div>
           <div><p className="text-[10px] uppercase text-gray-500">acquittées · renvoyées</p>
             <p className="text-sm text-gray-200">{s.n_acquittees} · {s.n_renvoyees}</p></div>
+          <div><p className="text-[10px] uppercase text-gray-500">acceptées par le comité</p>
+            <p className="text-sm text-gray-200">{s.n_acceptees_comite}</p></div>
           <div><p className="text-[10px] uppercase text-gray-500">manques</p>
             <p className={`text-sm ${s.n_manques ? 'text-amber-300' : 'text-gray-200'}`}>{s.n_manques}</p></div>
         </CardBody>

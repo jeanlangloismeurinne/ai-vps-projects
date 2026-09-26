@@ -30,6 +30,7 @@ from typing import Any, Optional
 
 from app.agents.v2.frameworks import _plus_faible, load_frameworks
 from app.contracts.cause_manque_schema import CauseManqueCollecte
+from app.contracts.comite_schema import AcceptationServie, DecisionComite, PositionComite
 from app.contracts.framework_answer_schema import FrameworkAnswer, FrameworkAnswerServie
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.contracts.parcours_schema import (
@@ -104,6 +105,10 @@ class EtatDossier:
     mandats_ouverts: dict[tuple[str, str], int]               # (framework, question) → id
     collecte: dict[tuple[str, str], Collecte]                 # (framework, question) → dernière
     genere_le: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Le COMITÉ (maillon 3) : le PV de chaque question (le plus récent d'abord) et sa position du
+    # jour, SERVIE par `comite.position_du_comite` au chargement (recalculée, jamais lue en base).
+    registre: dict[tuple[str, str], list[DecisionComite]] = field(default_factory=dict)
+    comite: dict[tuple[str, str], PositionComite] = field(default_factory=dict)
 
 
 # ── La règle du manque (PURE) ──────────────────────────────────────────────────────────────────
@@ -150,11 +155,15 @@ def manque_de_la_question(
     reponses: list[ReponseLue],
     collecte: Optional[Collecte],
     mandat_ouvert_id: Optional[int],
+    acceptation: Optional[AcceptationServie] = None,
 ) -> Optional[Manque]:
     """DÉTENTEUR UNIQUE (#46) de « cette question manque-t-elle au dossier, et pourquoi ? ». Pure.
 
     L'ordre des branches EST la doctrine :
       1. inapplicable ou dispensée (le comité a accepté le trou) → pas un manque ;
+      1bis. une ACCEPTATION DU COMITÉ en vigueur → pas un manque : le comité a lu la réponse et passé
+         outre sa faiblesse, par écrit (arbitrage n°1). Tombée, elle ne protège plus rien, et le
+         manque la PORTE pour dire pourquoi la question repasse devant le comité (arbitrage n°2) ;
       2. une réponse acquittée qui tient AUJOURD'HUI (fondée et courante, ou hors-sujet motivé) →
          pas un manque — deux analystes sont deux points : il suffit qu'un point tienne ;
       3. sinon, le manque le plus actionnable : une réponse RENVOYÉE (le contrôle nomme sa cause),
@@ -162,6 +171,8 @@ def manque_de_la_question(
          l'absence de réponse — ces deux dernières prennent leur cause dans la dernière collecte.
     """
     if not applicable or dispensee:
+        return None
+    if acceptation is not None and acceptation.etat == "en_vigueur":
         return None
 
     def tient(r: ReponseLue) -> bool:
@@ -177,7 +188,8 @@ def manque_de_la_question(
         return None
 
     commun = dict(framework_id=framework_id, libelle_framework=libelle_framework,
-                  question_id=question_id, enonce=enonce, mandat_ouvert_id=mandat_ouvert_id)
+                  question_id=question_id, enonce=enonce, mandat_ouvert_id=mandat_ouvert_id,
+                  acceptation_tombee=acceptation)
 
     renvoyees = [r for r in reponses if r.verdict == "renvoye"]
     if renvoyees:
@@ -223,16 +235,18 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
         reps = [r for r in etat.reponses
                 if r.servie.framework_id == f.id and r.servie.question_id == q.id]
         applicable = None if applicables is None else q.id in applicables
+        position = etat.comite.get((f.id, q.id))
         manque = None
         if applicable is not None:
             manque = manque_de_la_question(
                 framework_id=f.id, libelle_framework=f.libelle, question_id=q.id,
                 enonce=q.enonce, applicable=applicable, dispensee=q.id in dispenses,
                 reponses=reps, collecte=etat.collecte.get((f.id, q.id)),
-                mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)))
+                mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)),
+                acceptation=position.acceptation if position else None)
         lignes.append(LigneQuestion(
             question_id=q.id, enonce=q.enonce, applicable=applicable,
-            dispensee=q.id in dispenses, manque=manque,
+            dispensee=q.id in dispenses, manque=manque, comite=position,
             reponses=[ReponseResumee(
                 answer_id=r.answer_id, analyste=r.servie.analyste, statut=r.servie.statut,
                 rang_derive=r.servie.fondation.rang_derive if r.servie.fondation else None,
@@ -257,16 +271,24 @@ def _synthese(etat: EtatDossier, f, lignes: list[LigneQuestion]) -> SyntheseFram
         n_acquittees=sum(1 for r in reps if r.verdict == "acquitte"),
         n_renvoyees=sum(1 for r in reps if r.verdict == "renvoye"),
         n_manques=sum(1 for lq in lignes if lq.manque is not None),
+        n_acceptees_comite=sum(1 for lq in lignes if lq.applicable and _acceptee(lq)),
     )
+
+
+def _acceptee(lq: LigneQuestion) -> bool:
+    """L'acceptation du comité tient-elle sur cette ligne aujourd'hui ?"""
+    return (lq.comite is not None and lq.comite.acceptation is not None
+            and lq.comite.acceptation.etat == "en_vigueur")
 
 
 def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
     """NIVEAU 1 : l'alerte en tête, puis la note de chaque méthodologie, puis la note de comité."""
-    syntheses, manques = [], []
+    syntheses, manques, acceptees = [], [], 0
     for f in etat.fichier.frameworks:
         lignes = _lignes(etat, f)
         syntheses.append(_synthese(etat, f, lignes))
         manques.extend(lq.manque for lq in lignes if lq.manque is not None)
+        acceptees += sum(1 for lq in lignes if lq.applicable and _acceptee(lq))
 
     if etat.archetype is None:
         pod = PeutOnDecider(
@@ -282,9 +304,12 @@ def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
                    "1 question applicable sans réponse qui tienne aujourd'hui — le système n'a "
                    "pas pu l'obtenir"))
     else:
+        # Le comité doit savoir que la complétude repose en partie sur SES acceptations : un dossier
+        # complet « parce que le comité a passé outre » ne se lit pas comme un dossier sans faiblesse.
         pod = PeutOnDecider(etat="dossier_complet",
                             motif="toutes les questions applicables ont une réponse acquittée et "
-                                  "à jour")
+                                  "à jour" + (f", dont {acceptees} acceptée(s) par le comité malgré "
+                                              "leur faiblesse" if acceptees else ""))
     return DossierTitre(ticker_id=etat.ticker_id, archetype=etat.archetype,
                         genere_le=etat.genere_le, peut_on_decider=pod,
                         frameworks=syntheses, memo=memo)
@@ -344,7 +369,8 @@ def dresser_niveau3(etat: EtatDossier, framework_id: str, question_id: str) -> P
     return PreuvesQuestion(
         ticker_id=etat.ticker_id, framework_id=f.id, libelle_framework=f.libelle,
         framework_version=etat.fichier.schema_version, question_id=q.id, enonce=q.enonce,
-        applicable=ligne.applicable, preuves=preuves, manque=ligne.manque)
+        applicable=ligne.applicable, preuves=preuves, manque=ligne.manque,
+        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []))
 
 
 # ── La seule moitié qui lit ────────────────────────────────────────────────────────────────────
@@ -394,6 +420,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     `renvoi_a_emettre`.
     """
     # Imports tardifs : ce module est importé par des checks sans base ni réseau.
+    from app.agents.v2.comite import lire_registre, position_du_comite
     from app.agents.v2.frameworks import servir_answer
     from app.agents.v2.framework_persist import (
         read_answers_courantes, read_archetype, read_dispenses)
@@ -480,7 +507,19 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
             answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),
             verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue))
 
+    # Le COMITÉ : son PV, et sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage
+    # n°2) et les réponses COURANTES (une réponse refaite n'est pas celle que le comité a lue).
+    registre = await lire_registre(conn, ticker_id=ticker_id, framework_version=version)
+    courantes: dict[tuple[str, str], frozenset[int]] = {}
+    for i, a in brutes:
+        cle = (a.framework_id, a.question_id)
+        courantes[cle] = courantes.get(cle, frozenset()) | {i}
+    comite = {cle: position_du_comite(decisions, reponses_courantes=courantes.get(cle, frozenset()),
+                                      ancre=ancre)
+              for cle, decisions in registre.items()}
+
     return EtatDossier(
         ticker_id=ticker_id, fichier=fichier, archetype=archetype, reponses=reponses,
         pieces=pieces, applicables=applicables, dispenses=dispenses,
-        mandats_ouverts=mandats_ouverts, collecte=await _collectes(conn, ticker_id, version))
+        mandats_ouverts=mandats_ouverts, collecte=await _collectes(conn, ticker_id, version),
+        registre=registre, comite=comite)

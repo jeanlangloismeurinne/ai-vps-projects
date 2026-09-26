@@ -47,6 +47,7 @@ __all__ = [
     "persist_mandate",
     "persist_review",
     "serve_mandate",
+    "abandonner_mandat",
     "read_open_mandates",
     "id_du_mandat_ouvert",
     "assemble_verdict",
@@ -135,6 +136,17 @@ async def serve_mandate(
         "UPDATE framework_mandates SET statut = 'servi', statut_avant = $2, statut_apres = $3, "
         "consomme_at = now(), entry_ids_produits = $4 WHERE id = $1 AND statut = 'ouvert'",
         mandate_id, statut_avant, statut_apres, entry_ids_produits)
+    return res.endswith(" 1")
+
+
+async def abandonner_mandat(conn: asyncpg.Connection, mandate_id: int) -> bool:
+    """Le comité a tranché la question (lot 6 maillon 3) : la recherche en cours s'arrête —
+    'ouvert' → 'abandonne', jamais supprimée (le PV du comité garde son id). Seuls les mandats
+    manager/comité s'abandonnent : un mandat du collecteur est un fait d'historique daté. Rend True
+    si une ligne a bougé (on n'abandonne pas un mandat déjà servi)."""
+    res = await conn.execute(
+        "UPDATE framework_mandates SET statut = 'abandonne' WHERE id = $1 AND statut = 'ouvert' "
+        "AND origine IN ('manager_renvoi', 'comite')", mandate_id)
     return res.endswith(" 1")
 
 

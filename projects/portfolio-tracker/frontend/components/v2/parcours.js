@@ -72,6 +72,23 @@ export const ACTUALITE = {
   indeterminable: { label: 'Non vérifiable', variant: 'amber' },
 }
 
+// L'état d'une acceptation du comité, recalculé à chaque lecture (arbitrage n°2 : elle tombe sur un
+// fait important publié après elle, jamais sur une information de routine).
+export const ETATS_ACCEPTATION = {
+  en_vigueur: { label: 'Acceptée par le comité', variant: 'emerald' },
+  tombee_fait_nouveau: { label: 'Acceptation tombée — fait nouveau', variant: 'amber' },
+  tombee_reponse_remplacee: { label: "Acceptation tombée — l'analyse a été refaite", variant: 'amber' },
+  non_verifiable: { label: 'Acceptation non vérifiable', variant: 'amber' },
+}
+
+// Le badge du comité sur une ligne de question (niveau 2) : sa dernière décision, servie.
+export function ComiteBadge({ pos }) {
+  if (!pos) return null
+  if (!pos.acceptation) return <Badge variant="sky">renvoyée par le comité</Badge>
+  const e = ETATS_ACCEPTATION[pos.acceptation.etat] || { label: pos.acceptation.etat, variant: 'gray' }
+  return <Badge variant={e.variant}>{e.label}</Badge>
+}
+
 export const CONTROLES = [
   ['completude', '① Complétude'],
   ['fondation', '② Fondation'],
@@ -135,6 +152,15 @@ export function ManqueBloc({ m, tickerId, lien = true }) {
           contrôle refusé) ; pour une cause de collecte elle répète la phrase de la cause, et la
           preuve est la liste des ingrédients ci-dessous (mesuré à la capture du 2026-09-25). */}
       {AVEC_FAIT.has(m.cause) && <p className="text-xs text-gray-500">{m.explication}</p>}
+      {/* La question REPASSE devant le comité : il l'avait acceptée, et l'alerte dit pourquoi
+          l'acceptation ne tient plus (arbitrage n°2). */}
+      {m.acceptation_tombee && (
+        <p className="text-xs text-amber-300">
+          Le comité l'avait acceptée ({m.acceptation_tombee.decision.auteur}, le{' '}
+          {new Date(m.acceptation_tombee.decision.decide_le).toLocaleDateString('fr-FR')}) — elle
+          repasse devant lui : {m.acceptation_tombee.motif_etat}
+        </p>
+      )}
       {m.ingredients.length > 0 && (
         <ul className="space-y-1 pt-1">
           {m.ingredients.map(i => (

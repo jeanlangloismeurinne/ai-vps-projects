@@ -18,6 +18,7 @@ import { Card, CardHeader, CardBody, Badge, ErrorState } from '../../../../../..
 import {
   API, CONTROLES, ActualiteBadge, EtatControle, ManqueBloc, StatutBadge,
 } from '../../../../../../../components/v2/parcours'
+import RegistreComite from '../../../../../../../components/v2/RegistreComite'
 
 // Un pixel = un champ. Le marqueur est le chemin du contrat, écrit en LITTÉRAL à chaque usage pour
 // que le check le lise dans le source.
@@ -264,6 +265,8 @@ export default function QuestionNiveau3() {
       {d.manque && <ManqueBloc m={d.manque} tickerId={d.ticker_id} lien={false} />}
       {d.preuves.length === 0 && <p className="text-sm text-amber-300">Aucune réponse au dossier pour cette question.</p>}
       {d.preuves.map(pr => <Preuve key={pr.answer_id} pr={pr} tickerId={d.ticker_id} />)}
+      {/* Le comité agit APRÈS avoir lu la preuve : accepter ou renvoyer, inscrit au procès-verbal. */}
+      <RegistreComite key={d.registre.length} d={d} onRecalcule={setD} />
     </div>
   )
 }
