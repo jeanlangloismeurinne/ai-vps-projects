@@ -60,7 +60,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du 
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **049 appliquée** (registre des pièces écartées) ; la prochaine sera **050**.
   Vérifier en base avant d'écrire, jamais se fier à un tableau.
-- **Production** : voir le commit de déploiement du 2026-09-26 (3) dans l'archive ; vérifier par
+- **Production** : backend sur **`16cd4e9`** (frontend inchangé), vérifié par
   `docker exec … grep nature_satisfait`. **PV du comité en prod : 0 décision.**
 - **Chaîne réelle RVMD × `defendabilite`** (2026-09-26, `--sans-collecte`, après #88) : **0 refus** —
   mo_1 `repondu` A (#690), mo_2 `repondu` A (#691), mo_3/mo_4 `approxime` A− (#692/#693), mo_5
