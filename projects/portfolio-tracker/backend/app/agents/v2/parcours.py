@@ -421,7 +421,9 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     """
     # Imports tardifs : ce module est importé par des checks sans base ni réseau.
     from app.agents.v2.comite import lire_registre, position_du_comite
-    from app.agents.v2.frameworks import servir_answer
+    from app.agents.v2.frameworks import servir_answer, types_qui_rouvrent
+    from app.knowledge.evenements import ancre_de_la_question
+    from app.knowledge.material_events import MaterialEventLookup
     from app.agents.v2.framework_persist import (
         read_answers_courantes, read_archetype, read_dispenses)
     from app.agents.v2.manager import reviser_framework
@@ -488,6 +490,20 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     # assembleurs d'avant lisaient l'ancre brute, là où la porte de complétude lisait déjà celle-ci :
     # un 8-K formel aurait périmé la note projetée sans périmer la readiness.
     ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+
+    # ⚠️ CHAQUE QUESTION A SA PROPRE HORLOGE (#89) : son ancre est le dernier fait important d'un
+    # TYPE qui la rouvre (référentiel, `rouverte_par`). Juger toutes les questions contre le dernier
+    # fait venu fabriquait les deux erreurs : un financement périmait la barrière brevetaire, et —
+    # pire — dire « un financement ne périme pas le moat » contre le DERNIER fait aurait rendu à
+    # jour un moat que l'approbation FDA de la veille devait rouvrir.
+    ancres: dict[str, MaterialEventLookup] = {}
+
+    def ancre_de(question_id: str) -> MaterialEventLookup:
+        if question_id not in ancres:
+            ancres[question_id] = ancre_de_la_question(
+                ancre, rouvrent=types_qui_rouvrent(fichier, question_id))
+        return ancres[question_id]
+
     reponses: list[ReponseLue] = []
     for i, a in brutes:
         d = decisions.get(i)
@@ -504,7 +520,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
             else:
                 etat_revue = "renvoi_a_emettre"
         reponses.append(ReponseLue(
-            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),
+            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),
             verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue))
 
     # Le COMITÉ : son PV, et sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage
@@ -515,7 +531,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
         cle = (a.framework_id, a.question_id)
         courantes[cle] = courantes.get(cle, frozenset()) | {i}
     comite = {cle: position_du_comite(decisions, reponses_courantes=courantes.get(cle, frozenset()),
-                                      ancre=ancre)
+                                      ancre=ancre_de(cle[1]))
               for cle, decisions in registre.items()}
 
     return EtatDossier(

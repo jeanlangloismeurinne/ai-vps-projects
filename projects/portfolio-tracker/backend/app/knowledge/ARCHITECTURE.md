@@ -38,6 +38,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | `source_registry.py` | Registre nominatif des sources admises (#52) |
 | `edgar_feed.py` · `financials_feed.py` · `valuation_feed.py` · `base_rate_corpus.py` | Feeds financiers déterministes |
 | `material_events.py` · `staleness.py` · `actualite.py` | Événements matériels & péremption (axe actualité) |
+| `evenements.py` | Ce qu'un événement ROUVRE (#89) : type d'un dépôt par sa FORME (`a_qualifier` quand la forme ne décide pas) et ancre PAR QUESTION — le dernier fait d'un type qui la rouvre, filtré par `frameworks.types_qui_rouvrent` |
 | `websearch.py` · `document_search.py` · `embeddings.py` | Recherche web + sélection de passages + embeddings bge-m3 1024d |
 | `units.py` | Détenteur unique du format des montants (#46) |
 | `datation.py` | Détenteur unique de la datation d'une pièce : portée fermée (`constatee`/`prospective`/`indatable`), **deux dates nommées** (fait, document), `source_date` DÉRIVÉE (#79). Moitié ÉCRITURE de ce dont `actualite.py` est la moitié LECTURE |
@@ -56,6 +57,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |
 | Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
+| Chaque question a sa propre horloge : un fait ne rouvre que les questions dont le référentiel déclare son type (#89) | `check_evenements.py` + `negatif_evenements.sh` ; le référentiel ([Q]/[R]) chez `check_frameworks_definitions.py` |
 | Format des montants (détenteur unique) | `check_edgar_feed.py` §11, `check_financials_feed.py` §9 |
 | search-worker ne qualifie pas sa propre source | `check_search_worker.py` |
 | `fetch_url` : deux chemins, le domaine décide (live) | `check_fetch_live.py`, `check_fetch_relevance.py` |

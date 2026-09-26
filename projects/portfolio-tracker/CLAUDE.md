@@ -2169,6 +2169,56 @@ Gardes : `check_framework_contract` (+3 passages [E] sur question de jugement) +
 mutation [F] caduque depuis #76, réparée) · `check_analyste` + négatif **32/0** (dont 2 mutations caduques
 depuis #78, réparées — l'une désormais chez son détenteur `nature_effective_de`) · suite **3383/0 sur 47**.
 
+### #89 — créer un framework, c'est décider ce qui ROUVRE chacune de ses questions
+
+**Arbitrages du 2026-09-26, rendus comme un vrai fonds.** Le jour d'une publication, l'analyste lit le
+communiqué et écrit une note flash : quels points de la thèse sont touchés. Il ne refait pas tout le
+dossier à chaque communiqué, et il ne laisse jamais un point touché affiché comme à jour. D'où : un
+financement ne rouvre que les questions de financement (qf_4, qf_7) ; des résultats conformes rouvrent
+les chiffres et la trajectoire de la barrière, pas son mécanisme (Q1) ; un profit warning rouvre la
+défendabilité selon sa CAUSE — « l'entreprise ou le secteur ? », cause non dite = concurrentielle (Q2) ;
+dans le doute on rouvre large, le comité referme avec un motif écrit (Q3) ; une première approbation
+fait PROPOSER le reclassement de l'entreprise, le comité valide (Q4) ; une position détenue dont un
+pilier est rouvert passe sous revue (Q5). Détail : `roadmap/V3/04-taxonomie-evenements.md`.
+
+**La règle.** `frameworks.yaml` porte un catalogue `types_evenement` (portée `questions_declarees` /
+`toutes` / `aucune`) et, sur CHAQUE question, `rouverte_par` — **requis, sans défaut** : un défaut vide
+rendrait « rien ne la rouvre » indiscernable de « on a oublié », et la question resterait à jour après
+n'importe quel communiqué (`feedback_optional_schema_gate`). Le pont refuse un type absent du catalogue
+([Q] — une faute de frappe ne rouvrirait jamais rien), un type de portée `aucune` ou `toutes` listé par
+une question ([Q]), et une table de forme qui produirait un type hors catalogue ou un `a_qualifier` qui
+ne serait pas de portée `toutes` ([R]). Ajouter une méthodologie reste une opération de DONNÉES.
+
+**L'horloge est PAR QUESTION** — c'est le fond de la convention, et il a été trouvé en MESURANT avant
+de coder. L'ancre unique (« le dernier fait substantiel ») fabriquait deux erreurs : un financement
+périmait la barrière brevetaire de RVMD ; et le correctif naïf — « un financement ne périme pas le
+moat », jugé contre ce même dernier fait — aurait rendu À JOUR la défendabilité que l'approbation FDA
+de la VEILLE devait rouvrir. Une fausse fraîcheur produite par une règle juste appliquée à la mauvaise
+horloge. `evenements.ancre_de_la_question(lookup, rouvrent=types_qui_rouvrent(fichier, qid))` rend le
+dernier dépôt d'un type qui rouvre la question ; `frameworks.types_qui_rouvrent` est le **détenteur
+unique** de l'union « types déclarés ∪ types de portée totale ». Branché au seul assembleur
+(`parcours.charger_etat_dossier` : réponses servies, position du comité — donc note de qualité, note de
+comité, alerte) et à l'endpoint de décision du comité (le PV cite le dernier fait qui rouvre la
+question). ⚠️ L'historique consulté est désormais COMPLET (`material_anchor_for_ticker`) : avec une
+fenêtre de 10 dépôts, un type rare aurait rendu « aucun » là où l'on ne sait pas — sans appel réseau de
+plus (le flux est en cache). ⚠️ Un `none` né du filtre porte une phrase (`filtre`) : sans elle le motif
+aurait dit « l'émetteur n'a publié aucun 8-K ».
+
+**La FORME n'est pas la SUBSTANCE.** `types_du_depot` ne qualifie que ce que l'item 8-K décide (2.03
+financement, 2.01 périmètre, 2.02 résultats…) ; 8.01, 7.01 seul, 1.01 sans obligation ni émission,
+un 6-K sans item, un item inconnu sont `a_qualifier` — portée totale tant que la note flash (maillon 2)
+ne les a pas lus. 7.01 et 9.01 sont accessoires d'un item décidé. ⚠️ Conséquence assumée : aujourd'hui
+un 8.01 anodin rouvre tout. ⚠️ Limite nommée : les événements EXTÉRIEURS à l'émetteur (concurrent,
+régulateur sectoriel) sont invisibles — sprint de design à venir, à partir des frameworks d'analyse
+concurrentielle.
+
+Gardes : `check_evenements.py` **38/0** (formes RÉELLES RVMD/NVDA/MSFT ; couple discriminant §3 ;
+branchement tenu en AST, parce que sur un flux où le dernier fait rouvre tout l'ancre unique donne le
+même verdict) + `negatif_evenements.sh` **13/0** ; `check_frameworks_definitions.py` **54/0** (spec
+§4.1.1/§4.2.1 confrontée colonne « Rouverte par ») + `negatif_frameworks_definitions.sh` **31/0**.
+⚠️ Une promesse écrite avant de coder était fausse (« retirer le 26/08 rend le moat à jour » : le 8-K du
+14/04 porte aussi un 8.01) — re-mesurée, remplacée par le couple discriminant.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

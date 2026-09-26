@@ -1,6 +1,6 @@
 ---
 id: taxonomie-evenements
-status: proposition — arbitrages Q1-Q5 à rendre
+status: arbitrée le 2026-09-26 — maillon 1 livré (référentiel + horloge par question)
 created: 2026-09-26
 project: portfolio-tracker
 role: >
@@ -163,7 +163,11 @@ qui ne l'étaient pas. C'est une conséquence d'une autre nature que les onze au
   peut donc être « à jour » au sens du système alors qu'un concurrent vient d'être approuvé — à
   afficher comme limite, pas à taire.
 
-## 7. Arbitrages demandés
+## 7. Arbitrages — ✅ RENDUS le 2026-09-26 : les cinq recommandations sont retenues
+
+> Et un principe, énoncé par l'utilisateur : **lorsqu'on crée un framework, il faut définir ce qui
+> rouvre chacune de ses questions, et par quel type d'événement.** C'est désormais une exigence du
+> référentiel (`rouverte_par`, requis, sans défaut — §9).
 
 **Q1 — Résultats trimestriels conformes.** Rouvrent-ils les chiffres **et** les questions de
 trajectoire de la barrière (marges comparées, parts de marché, prix pratiqués), ou toute l'analyse de
@@ -217,3 +221,45 @@ seulement signalé ?
 5. **Test d'acceptation sur le réel** : RVMD — le financement du 27/08 ne rouvre ni mo_1 ni mo_2 ;
    l'approbation du 26/08 les rouvre ; qf_4/qf_7 rouverts par le 27/08. Test négatif : retirer
    l'approbation du flux doit rendre mo_1…mo_5 à jour — sinon la garde ne lit pas la famille.
+
+## 9. Ce qui est livré — maillon 1 (2026-09-26)
+
+- **Le référentiel déclare ce qui rouvre quoi** (`frameworks.yaml`) : un catalogue `types_evenement`
+  (15 types, chacun avec sa portée : `questions_declarees`, `toutes`, `aucune`) et, sur chaque
+  question, `rouverte_par` — **requis, sans valeur par défaut**. Un framework neuf qui ne le déclare
+  pas est refusé au chargement ; un type mal orthographié, ou un type qui ne rouvre rien, aussi.
+- **La forme du dépôt qualifie ce qu'elle peut** (`knowledge/evenements.py`) ; tout le reste est
+  `a_qualifier`, de portée totale (Q3 : dans le doute, on rouvre).
+- **Chaque question a sa propre horloge** : dossier, note de qualité, note de comité, alerte « peut-on
+  décider ? » et validité d'une acceptation du comité se jugent contre le dernier fait qui rouvre
+  CETTE question. Le motif le dit : « … 8-K du 2026-08-27 … — rouvre au titre de : financement ».
+
+**Mesuré sur RVMD (lecture seule)** : qf_4 est rouverte par le financement du 27/08 ; mo_1…mo_5 par
+le communiqué FDA du 26/08 (encore `a_qualifier`), plus du tout par le financement.
+
+⚠️ **Ce que le maillon 1 ne fait pas encore, et qui se voit** : tant que la note flash n'existe pas,
+tout 8.01 rouvre tout. C'est voulu (Q3), mais cela veut dire qu'un communiqué anodin publié en 8.01
+rouvre aussi la barrière. Sur RVMD le résultat ne changera pas une fois l'approbation qualifiée
+(`reglementaire_favorable` rouvre toute la défendabilité) ; il changera sur un 8.01 de routine.
+
+⚠️ **Correction d'une promesse du §8** : « retirer le 26/08 du flux rend mo_1…mo_5 à jour » est faux
+sur le flux réel — le 8-K du 14/04 porte aussi un 8.01 (donc `a_qualifier`) et les pièces du moat lui
+sont antérieures. Le test retenu est le **couple discriminant** (`check_evenements` §3) : pièces du
+05/08, financement seul ⟹ la barrière reste à jour et la dette est rouverte ; ajouter le 8.01 du
+26/08 ⟹ la barrière est rouverte.
+
+## 10. La suite
+
+1. **Maillon 2 — la note flash** : un agent lit les dépôts `a_qualifier` (8.01, 7.01 seul, 1.01 sans
+   financement, 6-K…) et les range dans un type, en citant le passage ; pour une surprise, il dit la
+   cause (secteur / concurrence / exécution ; non dite ⟹ concurrence, Q2). Qualification persistée
+   une fois par dépôt (un dépôt ne change pas) ; la portée reste recalculée à la lecture.
+2. **Maillon 3 — Q4** : une approbation qualifiée fait PROPOSER le reclassement de l'entreprise (de
+   « pré-revenus » à « commerciale ») au comité, qui valide.
+3. **Maillon 4 — Q5** : sur une position détenue, une question rouverte qui porte une hypothèse de la
+   thèse met la position sous revue.
+4. **Sprint de DESIGN — les événements extérieurs à l'émetteur** (demandé par l'utilisateur) :
+   approbation d'un concurrent, arrivée de génériques, résultats ou avertissement d'un pair,
+   régulation des prix. Comment les faire entrer dans le flux d'investissement ? Les frameworks futurs
+   d'analyse concurrentielle (spec, benchmark des méthodologies) y apporteront une partie de la
+   réponse — le sprint doit partir d'eux, pas d'une source de données.

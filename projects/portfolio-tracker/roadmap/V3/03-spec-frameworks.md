@@ -354,7 +354,7 @@ graph LR
   Q --> CHEMIN["chemin d'indexation<br/>qui lui appartient<br/>— vit dans le RÉFÉRENTIEL,<br/>jamais sur l'entry (§5.1)"]
   Q --> NAT["nature dominante attendue<br/>mesure / evenement / interpretation"]
   Q --> PLANCHER["plancher de fiabilité"]
-  Q --> ACTU["actualité bloquante ?"]
+  Q --> ACTU["types d'événement qui la ROUVRENT<br/>(catalogue du référentiel, #89)"]
   Q --> SUBST["substituts admis<br/>quand sans_objet"]
   style ENON fill:#fff3cd,stroke:#c90
 ```
@@ -665,15 +665,15 @@ cash disponible. Les niveaux comptables ne disent rien seuls ; ce sont les **rel
 
 #### 4.1.1 Les questions universelles
 
-| id | Question — **en substance économique** | Nature attendue | Plancher | Actualité bloquante |
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89) |
 |---|---|---|---|---|
-| `qf_1` | Le capital employé rapporte-t-il **durablement plus que son coût** ? | `mesure` | A | oui |
-| `qf_2` | Le résultat comptable **se transforme-t-il en cash** ? | `mesure` | A | oui |
-| `qf_3` | La croissance **coûte-t-elle** du capital, et combien par point de croissance ? | `mesure` | A | oui |
-| `qf_4` | La structure de financement **contraint-elle** les décisions d'exploitation ? | `mesure` | A | oui |
-| `qf_5` | Le **rendement** observé est-il stable, en amélioration, ou en érosion sur ≥ 5 ans ? | `mesure` | A | oui |
-| `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | non |
-| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | **oui** |
+| `qf_1` | Le capital employé rapporte-t-il **durablement plus que son coût** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_2` | Le résultat comptable **se transforme-t-il en cash** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_3` | La croissance **coûte-t-elle** du capital, et combien par point de croissance ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_4` | La structure de financement **contraint-elle** les décisions d'exploitation ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_5` | Le **rendement** observé est-il stable, en amélioration, ou en érosion sur ≥ 5 ans ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable` |
 
 > `qf_6` est `financials.earnings_quality`, aujourd'hui **sans chemin d'indexation** (§0.3).
 > `qf_7` est ce qui manquait totalement à RVMD (le *runway*) et qui est **aussi** pertinent sur
@@ -723,14 +723,14 @@ est une opinion.
 
 #### 4.2.1 Les questions universelles
 
-| id | Question — **en substance économique** | Nature attendue | Plancher | Actualité bloquante |
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89) |
 |---|---|---|---|---|
-| `mo_1` | Qu'est-ce qui **empêche** concrètement un concurrent de capter ce profit ? | `interpretation` | B | non |
-| `mo_2` | Quelle **preuve observable** soutient cette barrière — prix, parts, rétention, marges relatives ? | `mesure` | B+ | non |
-| `mo_3` | La barrière **s'élargit-elle ou s'érode-t-elle** ? Sur quel signal le voit-on ? | `interpretation` | B | **oui** |
-| `mo_4` | Combien de temps tient-elle **si rien ne change** ? Quelle classe de référence l'ancre ? | `interpretation` | B | non |
-| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | **oui** |
-| `mo_6` | Le **pouvoir de fixation des prix** est-il exercé, et supporté par le client ? | `mesure` | B+ | non |
+| `mo_1` | Qu'est-ce qui **empêche** concrètement un concurrent de capter ce profit ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial` |
+| `mo_2` | Quelle **preuve observable** soutient cette barrière — prix, parts, rétention, marges relatives ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable`, `accord_commercial` |
+| `mo_3` | La barrière **s'élargit-elle ou s'érode-t-elle** ? Sur quel signal le voit-on ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `reglementaire_favorable`, `incident` |
+| `mo_4` | Combien de temps tient-elle **si rien ne change** ? Quelle classe de référence l'ancre ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable` |
+| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `incident` |
+| `mo_6` | Le **pouvoir de fixation des prix** est-il exercé, et supporté par le client ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable` |
 
 > `mo_1`/`mo_3`/`mo_4` sont respectivement `moat.type`, `moat.trend`, `moat.durabilite_ans` —
 > **les trois sans chemin d'indexation** aujourd'hui (§0.3). `mo_4` porte l'ancre base-rate

@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26 (4)
+updated: 2026-09-26 (5)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -47,7 +47,7 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
 | 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
-| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · **jugement fondé sur des faits = réponse directe** (#88) — reste : ▶ PROCHAIN JALON |
+| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · **ce qu'un événement rouvre, horloge par question** (#89) — reste : ▶ PROCHAIN JALON |
 
 Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du `CLAUDE.md`.
 
@@ -55,8 +55,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3383 assertions / 0 échec sur 47 scripts** (2026-09-26,
-  après #88 ; re-mesuré 3378/47 au départ, conforme). Les 3 checks « live » sont hors suite par
+- **Suite** `bash checks/run_all.sh` = **3437 assertions / 0 échec sur 48 scripts** (2026-09-26,
+  après #89 ; ligne de base re-mesurée au départ : 3389/47). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **049 appliquée** (registre des pièces écartées) ; la prochaine sera **050**.
   Vérifier en base avant d'écrire, jamais se fier à un tableau.
@@ -70,43 +70,33 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du 
 
 ---
 
-## ▶ PROCHAIN JALON — LOT 7 : ce qu'un événement ROUVRE (taxonomie des événements)
+## ▶ PROCHAIN JALON — LOT 7 : ce qu'un événement ROUVRE — maillon 2, la note flash
 
 **Fait le 2026-09-26 (3)** : (1) le CIK sort du mandat web (arbitrage utilisateur, amendement #86) ;
 (2) les 5 pièces Ryvu quittent le dossier RVMD vers un registre des pièces écartées (#87, migration 049,
 arbitrage utilisateur) ; (3) le refus de nature de l'analyste est levé (#88, arbitrage utilisateur :
 « un jugement fondé sur des faits vérifiés est une réponse directe ») — 0 refus sur la chaîne réelle.
 
-**✅ Arbitrage rendu (2026-09-26 (4))** : un événement de **financement** ne rouvre, a priori, que les
-questions de financement (qf_4, qf_7) — pas la barrière brevetaire. **Et l'utilisateur élargit la
-question** : il faut une **taxonomie d'événements** qui décide ce qui rouvre quoi ; certains (profit
-warning) peuvent révéler une vulnérabilité fondamentale et rouvrir la défendabilité ; certains exigent
-du jugement ; l'effet diffère pour une position en analyse ou détenue.
+**✅ Fait le 2026-09-26 (5) — taxonomie des événements, maillon 1 (#89)** : l'utilisateur a retenu
+les 5 recommandations (Q1-Q5 de `04-taxonomie-evenements.md` §7) et posé le principe « **créer un
+framework, c'est définir ce qui rouvre chacune de ses questions, et par quel type d'événement** ».
+Livré : catalogue `types_evenement` + `rouverte_par` REQUIS par question (`frameworks.yaml`, pont
+[Q]/[R]) ; `knowledge/evenements.py` (type d'un dépôt par sa forme, `a_qualifier` sinon ; ancre PAR
+QUESTION) ; branché dans `charger_etat_dossier` (réponses, comité ⟹ note de qualité, note de comité,
+alerte) et l'endpoint de décision du comité. Mesuré sur RVMD : qf_4 rouverte par le financement du
+27/08, mo_1…mo_5 par le 8.01 FDA du 26/08 (plus par le financement). Pas de migration.
 
-**📄 Proposition écrite : `roadmap/V3/04-taxonomie-evenements.md`** — 12 familles (forme vs lecture,
-avec/sans jugement), cas du profit warning (« l'entreprise ou le secteur ? »), cas de la première
-approbation (changement d'archétype), position en analyse vs détenue, limites nommées (comptes
-retraités = axe fiabilité ; gouvernance sans framework ; événements hors émetteur invisibles à EDGAR).
+**🔜 PROCHAIN PAS — maillon 2 : la note flash** (`04-taxonomie-evenements.md` §10) : un agent lit les
+dépôts `a_qualifier` et les range dans un type en citant le passage (cause pour une surprise ; non
+dite ⟹ concurrence). Tant qu'il n'existe pas, tout 8.01 rouvre tout (voulu, Q3). Qualification
+persistée une fois par dépôt (migration **050**), portée recalculée à la lecture. Puis maillon 3
+(Q4 : proposer le reclassement après une approbation, le comité valide) et maillon 4 (Q5 : position
+détenue sous revue).
 
-**⚠️ DÉCOUVERTE MESURÉE — l'arbitrage appliqué tel quel au mécanisme actuel fabriquerait une FAUSSE
-FRAÎCHEUR.** L'ancre est « le DERNIER événement substantiel » (`ancre_substantielle`). Chez RVMD : FDA
-approuve RASONQUE le **26/08** (8.01), financement le **27/08** (1.01+2.03). Les 6 réponses
-`defendabilite` citent des pièces ≤ 05/08 (vérifié en base : #690-694). Filtrer « le financement ne
-périme pas le moat » sur le DERNIER événement rendrait mo_1…mo_5 **à jour** — alors que l'approbation
-de la veille doit les rouvrir. ⟹ **chaque question a sa propre horloge** : son ancre = le dernier
-événement d'une famille qui la rouvre. Le booléen `actualite_bloquante` (déclaré, jamais lu en V3 —
-#71) est remplacé par une liste de familles par question dans `frameworks.yaml` (données, pas code).
-
-**🔜 PROCHAIN PAS — rendre les arbitrages Q1-Q5 du §7 de `04-taxonomie-evenements.md`**, posés en
-termes de fonds : Q1 résultats conformes (chiffres + trajectoire, ou tout le moat ?) · Q2 profit warning
-(selon la cause, ou systématique ?) · Q3 dans le doute, rouvrir large ou étroit ? · Q4 première
-approbation : reclassement automatique ou validé par le comité ? · Q5 position détenue : mise sous
-revue automatique ? **Puis** coder dans l'ordre contrat → agent → données (§8 du document) : catalogue
-des familles + `rouverte_par` par question (YAML) · table item → famille (à côté de `ITEM_LABELS`) ·
-horloge par question lue par `qualite_info` / `parcours._manque` / note de comité / validité d'une
-acceptation (#84) · agent « note flash » pour 8.01/7.01/1.01 seul/6-K. Acceptation réelle RVMD : le
-27/08 rouvre qf_4/qf_7 seulement, le 26/08 rouvre la défendabilité ; test négatif : retirer le 26/08
-du flux rend mo_1…mo_5 à jour.
+**🗓 Sprint de DESIGN demandé** : les événements EXTÉRIEURS à l'émetteur (concurrent, génériques, pair,
+régulation des prix) sont invisibles aux dépôts EDGAR de l'émetteur. Réfléchir à leur place dans le
+flux d'investissement en partant des frameworks futurs d'analyse concurrentielle (spec, benchmark),
+qui y répondront en partie.
 
 **Constaté au même passage, à instruire ensuite** : les mandats manager **983-986** (« question sans
 aucune réponse », ouverts avant #88) restent `ouvert` alors que mo_1/3/4/5 sont désormais répondus et
@@ -323,7 +313,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
 > (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur (#86), pièces
-> Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; prochain pas = arbitrer
-> la taxonomie des événements (`04-taxonomie-evenements.md` §7, ▶ PROCHAIN JALON) puis la coder. Ordre imposé contrat → agent → données. Re-requêter toute
+> Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; taxonomie des événements
+> maillon 1 livré (#89) ; prochain pas = la note flash (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
 > ligne de base avant
 > de s'en servir.

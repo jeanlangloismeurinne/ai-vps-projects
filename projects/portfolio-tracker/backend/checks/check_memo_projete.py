@@ -340,7 +340,7 @@ _FICTIF = """
         chemin_indexation: cadre_fictif.structure_du_secteur
         nature_attendue: interpretation
         plancher_tier: A
-        actualite_bloquante: false
+        rouverte_par: [resultats, surprise_concurrence]
         sens_admis: [favorable, defavorable]
         ingredients_requis:
           - id: intensite_concurrentielle

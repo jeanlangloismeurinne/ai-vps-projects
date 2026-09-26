@@ -27,6 +27,69 @@ archetypes:
   - pre_revenus
   - financiere
 
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# TYPES D'ÉVÉNEMENT — ce qu'un fait publié par l'émetteur peut ROUVRIR (#89, arbitrage du 2026-09-26)
+#
+# Un vrai fonds ne refait pas tout le dossier à chaque communiqué, et ne laisse jamais un point touché
+# affiché comme à jour. Chaque question déclare donc, plus bas, les types qui la rouvrent
+# (`rouverte_par`) : CRÉER UN FRAMEWORK, C'EST AUSSI DÉCIDER CE QUI ROUVRE CHACUNE DE SES QUESTIONS.
+#
+# `portee` :
+#   questions_declarees — rouvre les seules questions qui listent ce type ;
+#   toutes              — rouvre toute question, sans qu'aucune ait à le lister (l'entreprise
+#                         analysée a changé, ou personne n'a encore lu le communiqué) ;
+#   aucune              — ne rouvre rien ; une question ne peut pas le lister.
+# Qualification par la FORME du dépôt : `knowledge/evenements.py` (table item 8-K → type). Ce qui ne
+# s'y décide pas est `a_qualifier`, de portée totale : dans le doute, on rouvre (arbitrage Q3).
+# Limite nommée : les événements EXTÉRIEURS à l'émetteur (concurrent, régulateur sectoriel) ne sont
+# pas dans ses dépôts, donc invisibles ici — sprint de design à venir.
+types_evenement:
+  - id: routine
+    libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
+    portee: aucune
+  - id: gouvernance
+    libelle: Départ ou nomination de dirigeants — aucune méthodologie ne le porte encore
+    portee: aucune
+  - id: a_qualifier
+    libelle: Communiqué dont la forme ne dit pas la substance — à lire avant de conclure
+    portee: toutes
+  - id: perimetre
+    libelle: Acquisition, cession, fusion ou scission — l'entreprise analysée n'est plus la même
+    portee: toutes
+  - id: existentiel
+    libelle: Faillite, changement de contrôle, radiation, dette rendue exigible
+    portee: toutes
+  - id: financement
+    libelle: Dette, obligation convertible, émission d'actions, ligne de crédit
+    portee: questions_declarees
+  - id: resultats
+    libelle: Publication de résultats conforme aux attentes
+    portee: questions_declarees
+  - id: surprise_secteur
+    libelle: Écart aux attentes dont la cause est commune au secteur (demande, cycle, change)
+    portee: questions_declarees
+  - id: surprise_concurrence
+    libelle: Écart aux attentes propre à l'entreprise — parts perdues, prix cassés, client qui internalise ; aussi quand la cause n'est pas dite
+    portee: questions_declarees
+  - id: surprise_execution
+    libelle: Écart aux attentes dû à l'exécution interne — retard, usine, produit
+    portee: questions_declarees
+  - id: reglementaire_favorable
+    libelle: Approbation d'un produit ou décision réglementaire favorable
+    portee: questions_declarees
+  - id: reglementaire_defavorable
+    libelle: Refus, échec d'essai, retrait ou rappel d'un produit
+    portee: questions_declarees
+  - id: accord_commercial
+    libelle: Licence, partenariat, contrat avec un client important, ou leur résiliation
+    portee: questions_declarees
+  - id: integrite_comptes
+    libelle: Comptes antérieurs déclarés non fiables, changement de commissaire aux comptes
+    portee: questions_declarees
+  - id: incident
+    libelle: Incident de cybersécurité, accident, litige majeur
+    portee: questions_declarees
+
 frameworks:
 
   # ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -50,7 +113,7 @@ frameworks:
         chemin_indexation: qualite_financiere.rendement_du_capital
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [cree_de_la_valeur, a_l_equilibre, detruit_de_la_valeur]
         ingredients_requis:
           - id: resultat_operationnel_apres_impot
@@ -87,7 +150,7 @@ frameworks:
         chemin_indexation: qualite_financiere.conversion_en_cash
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [conversion_forte, conversion_partielle, conversion_absente]
         ingredients_requis:
           - id: resultat_net
@@ -121,7 +184,7 @@ frameworks:
         chemin_indexation: qualite_financiere.cout_de_la_croissance
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [croissance_peu_capitalistique, croissance_capitalistique, croissance_destructrice]
         ingredients_requis:
           - id: croissance_activite_par_exercice
@@ -155,7 +218,7 @@ frameworks:
         chemin_indexation: qualite_financiere.contrainte_de_financement
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [aucune_contrainte, contrainte_moderee, contrainte_forte]
         ingredients_requis:
           - id: endettement_brut_et_net
@@ -189,7 +252,7 @@ frameworks:
         chemin_indexation: qualite_financiere.trajectoire_du_rendement
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [en_amelioration, stable, en_erosion]
         ingredients_requis:
           - id: serie_longue_du_rendement
@@ -220,7 +283,7 @@ frameworks:
         chemin_indexation: qualite_financiere.discretion_comptable
         nature_attendue: interpretation
         plancher_tier: B+
-        actualite_bloquante: false
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
         sens_admis: [part_faible, part_significative, part_dominante]
         ingredients_requis:
           - id: provisions_et_depreciations
@@ -251,7 +314,7 @@ frameworks:
         chemin_indexation: qualite_financiere.autonomie_de_financement
         nature_attendue: mesure
         plancher_tier: A
-        actualite_bloquante: true
+        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, reglementaire_defavorable]
         sens_admis: [autonomie_longue, autonomie_limitee, autonomie_critique]
         ingredients_requis:
           - id: tresorerie_disponible
@@ -303,7 +366,7 @@ frameworks:
           Sur un champ d'interprétation, un dépôt réglementaire est du boilerplate juridique malgré
           son tier A (convention #50). Le desserrage est DÉCLARÉ, jamais tacite, et n'admet
           personne de nouveau sans passage par le registre nominatif des sources (#52).
-        actualite_bloquante: false
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial]
         sens_admis: [barriere_structurelle, barriere_contestable, aucune_barriere]
         ingredients_requis:
           - id: mecanisme_de_captation
@@ -331,7 +394,7 @@ frameworks:
         chemin_indexation: defendabilite.preuve_observable
         nature_attendue: mesure
         plancher_tier: B+
-        actualite_bloquante: false
+        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable, accord_commercial]
         sens_admis: [preuve_directe, preuve_indirecte, aucune_preuve]
         ingredients_requis:
           - id: marges_relatives_aux_pairs
@@ -365,7 +428,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1 : la trajectoire d'une barrière se lit dans des
           observations de terrain qu'aucun dépôt réglementaire ne porte.
-        actualite_bloquante: true
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, reglementaire_favorable, incident]
         sens_admis: [en_elargissement, stable, en_erosion]
         ingredients_requis:
           - id: signal_de_trajectoire_nomme
@@ -396,7 +459,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1. La durée d'une barrière est un jugement ancré, pas une
           donnée déposée.
-        actualite_bloquante: false
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable]
         sens_admis: [duree_longue, duree_moyenne, duree_courte]
         ingredients_requis:
           - id: classe_de_reference
@@ -427,7 +490,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1. Une pré-mortem se nourrit d'observations de terrain,
           jamais du document où l'entreprise décrit ses propres risques.
-        actualite_bloquante: true
+        rouverte_par: [surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, incident]
         sens_admis: [vecteur_en_mouvement, vecteur_latent, aucun_vecteur_identifie]
         ingredients_requis:
           - id: vecteur_nomme
@@ -455,7 +518,7 @@ frameworks:
         chemin_indexation: defendabilite.pouvoir_de_prix
         nature_attendue: mesure
         plancher_tier: B+
-        actualite_bloquante: false
+        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable]
         sens_admis: [pouvoir_exerce_et_absorbe, pouvoir_exerce_avec_resistance, pouvoir_absent]
         ingredients_requis:
           - id: evolution_des_prix_pratiques

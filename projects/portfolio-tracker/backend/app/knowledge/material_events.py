@@ -106,6 +106,10 @@ class MaterialEvent:
     items: tuple[str, ...] = ()
     accession: Optional[str] = None
     url: Optional[str] = None
+    # Les types d'événement par lesquels ce dépôt ROUVRE une question donnée (#89). Vide tant que
+    # le dépôt n'a pas été rapporté à une question (`evenements.ancre_de_la_question` le pose) ;
+    # `resume()` l'écrit, pour que le motif d'actualité dise POURQUOI ce dépôt compte.
+    types: tuple[str, ...] = ()
 
     @property
     def items_substantiels(self) -> tuple[str, ...]:
@@ -123,7 +127,8 @@ class MaterialEvent:
         if self.filing_date != self.event_date:
             base += f" (déposé le {self.filing_date.isoformat()})"
         lib = self.libelle_items()
-        return f"{base}, items {lib}" if lib else base
+        base = f"{base}, items {lib}" if lib else base
+        return f"{base} — rouvre au titre de : {', '.join(self.types)}" if self.types else base
 
 
 @dataclass(frozen=True)
@@ -135,6 +140,10 @@ class MaterialEventLookup:
     cik: Optional[int] = None
     raison: Optional[str] = None          # renseigné pour `unavailable` uniquement
     recents: tuple[MaterialEvent, ...] = field(default=())
+    # Posé quand le flux a été RESTREINT aux types qui rouvrent une question (#89) : les types
+    # retenus, ou — sur un `none` issu du filtre — la phrase qui dit qu'aucun dépôt consulté ne
+    # rouvre la question. Sans lui, un `none` filtré se lirait « l'émetteur n'a rien publié ».
+    filtre: Optional[str] = None
 
     @property
     def connu(self) -> bool:
@@ -332,8 +341,16 @@ async def resolve_cik_for_ticker(conn, ticker_id: str) -> Optional[int]:
         return None
 
 
+# Profondeur de l'historique consulté. L'ancre d'une QUESTION (#89) est le dernier dépôt d'un type
+# qui la rouvre : un type rare (un changement de périmètre) peut dater de loin, et une fenêtre de 10
+# dépôts rendrait « aucun » là où l'on ne sait pas. Le flux `recent` d'EDGAR est déjà en mémoire
+# (cache au seul point de sortie réseau) : lire tout l'historique qu'il porte ne coûte aucun appel.
+_HISTORIQUE_COMPLET = 10_000
+
+
 async def material_anchor_for_ticker(conn, ticker_id: Optional[str]) -> MaterialEventLookup:
-    """Ancre matérielle d'un ticker, prête à être formulée au modèle."""
+    """Ancre matérielle d'un ticker, prête à être formulée au modèle. Porte TOUT l'historique des
+    dépôts matériels que le flux `recent` d'EDGAR expose (`recents`), le plus récent en tête."""
     if not ticker_id:
         return MaterialEventLookup(status="unavailable", raison="aucun ticker_id fourni")
     cik = await resolve_cik_for_ticker(conn, ticker_id)
@@ -342,4 +359,4 @@ async def material_anchor_for_ticker(conn, ticker_id: Optional[str]) -> Material
             status="unavailable",
             raison=f"CIK non résolu pour {ticker_id} (émetteur non déposant SEC ?)",
         )
-    return await latest_material_event(cik)
+    return await latest_material_event(cik, limit=_HISTORIQUE_COMPLET)

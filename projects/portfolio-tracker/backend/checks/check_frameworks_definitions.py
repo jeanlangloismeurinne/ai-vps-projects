@@ -132,7 +132,7 @@ def q_base(**over):
         "chemin_indexation": "cadre_test.conversion",
         "nature_attendue": "mesure",
         "plancher_tier": "A",
-        "actualite_bloquante": True,
+        "rouverte_par": ["resultats", "surprise_concurrence", "integrite_comptes"],
         "sens_admis": ["fort", "faible"],
         "ingredients_requis": [
             {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré",
@@ -171,10 +171,18 @@ def fw_base(**over):
     return d
 
 
+def _catalogue_reel():
+    """Le catalogue `types_evenement` COPIÉ du référentiel réel, jamais écrit à la main : une
+    fixture plus favorable que le réel serait aveugle au vert (`feedback_fixture_copiee_du_reel`)."""
+    brut = yaml.safe_load(FRAMEWORKS_YAML.read_text(encoding="utf-8"))
+    return [dict(t) for t in brut["types_evenement"]]
+
+
 def fichier_base(**over):
     d = {
         "schema_version": FRAMEWORK_DEFINITION_SCHEMA_VERSION,
         "archetypes": list(ARCHETYPES),
+        "types_evenement": _catalogue_reel(),
         "frameworks": [fw_base()],
     }
     d.update(over)
@@ -340,6 +348,51 @@ valide("[P] deux frameworks sur DEUX chapitres distincts passent",
                    questions=[q_base(id="zz_2", chemin_indexation="cadre_b.autre")])])))
 
 
+# ── [Q] et [R], ce qui rouvre quoi (#89) ─────────────────────────────────────────────────────────
+# Créer un framework, c'est décider ce qui rouvre chacune de ses questions : l'absence se REFUSE au
+# contrat, la faute de frappe et le type non listable au pont, et la table de FORME (code) doit
+# rester dans le catalogue (données).
+rejete("une question qui ne déclare PAS ce qui la rouvre",
+       lambda: QuestionDefinition.model_validate(
+           {k: v for k, v in q_base().items() if k != "rouverte_par"}),
+       "rouverte_par")
+rejete("une question dont `rouverte_par` est vide",
+       lambda: QuestionDefinition.model_validate(q_base(rouverte_par=[])),
+       "at least 1 item")
+rejete("[Q] une question rouverte par un type ABSENT du catalogue (faute de frappe)",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[
+           q_base(rouverte_par=["financment"])])])),
+       "absent du catalogue")
+rejete("[Q] une question qui liste un type qui ne rouvre RIEN (`routine`)",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[
+           q_base(rouverte_par=["resultats", "routine"])])])),
+       "un type qui ne rouvre rien")
+rejete("[Q] une question qui liste un type de portée TOTALE (`perimetre`)",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[
+           q_base(rouverte_par=["resultats", "perimetre"])])])),
+       "rouvre déjà TOUTES les questions")
+rejete("[R] le catalogue perd un type que la FORME produit (`financement`)",
+       lambda: charge(fichier_base(
+           types_evenement=[t for t in _catalogue_reel() if t["id"] != "financement"],
+           frameworks=[fw_base(questions=[q_base(rouverte_par=["resultats"])])])),
+       "absents du catalogue")
+rejete("[R] `a_qualifier` rétrogradé à une portée partielle",
+       lambda: charge(fichier_base(types_evenement=[
+           dict(t, portee="questions_declarees") if t["id"] == "a_qualifier" else t
+           for t in _catalogue_reel()])),
+       "doit rouvrir tout")
+_univ = {t.id for t in _reel.types_evenement if t.portee == "toutes"}
+check("les types de portée totale du référentiel réel sont exactement a_qualifier, perimetre, "
+      "existentiel", _univ == {"a_qualifier", "perimetre", "existentiel"}, f"→ {sorted(_univ)}")
+check("`types_qui_rouvrent(qf_4)` = ses types déclarés ∪ les types de portée totale",
+      fwk.types_qui_rouvrent(_reel, "qf_4")
+      == frozenset(next(q for q in _questions if q.id == "qf_4").rouverte_par) | _univ,
+      f"→ {sorted(fwk.types_qui_rouvrent(_reel, 'qf_4'))}")
+check("l'arbitrage du 2026-09-26 : un FINANCEMENT rouvre qf_4 et qf_7, et aucune autre question",
+      sorted(q.id for q in _questions if "financement" in q.rouverte_par) == ["qf_4", "qf_7"],
+      f"→ {sorted(q.id for q in _questions if 'financement' in q.rouverte_par)}")
+
+
 print("\n4. les profils portent EXACTEMENT les clefs que le pont lit")
 # Le pont lit par `profil.get("plancher_tier")` / `.get("nature_attendue")`. Un `.get` sur une clef
 # absente rend `None`, et les contrôles D et E se contentent alors de ne rien faire : le mode de
@@ -440,20 +493,22 @@ else:
     _txt = _spec.read_text(encoding="utf-8")
     # Les lignes de tableau de la forme : | `qf_1` | … | `mesure` | A | oui |
     _lignes = re.findall(
-        r"^\|\s*`((?:qf|mo)_\d+)`\s*\|[^|]*\|\s*`(\w+)`\s*\|\s*\**([AB][+-]?)\**\s*\|\s*\**(\w+)\**\s*\|",
+        r"^\|\s*`((?:qf|mo)_\d+)`\s*\|[^|]*\|\s*`(\w+)`\s*\|\s*\**([AB][+-]?)\**\s*\|([^|\n]*)\|",
         _txt, flags=re.M)
-    _spec_tab = {qid: (nat, tier, act) for qid, nat, tier, act in _lignes}
+    # La dernière colonne liste les types qui ROUVRENT la question (#89), en `code`, dans l'ordre.
+    _spec_tab = {qid: (nat, tier, tuple(re.findall(r"`(\w+)`", rouv)))
+                 for qid, nat, tier, rouv in _lignes}
     check("les tables §4.1.1 et §4.2.1 sont lisibles et portent 13 questions",
           len(_spec_tab) == 13, f"→ {len(_spec_tab)} ligne(s) reconnue(s) : {sorted(_spec_tab)}")
-    _yaml_tab = {q.id: (q.nature_attendue, q.plancher_tier,
-                        "oui" if q.actualite_bloquante else "non") for q in _questions}
+    _yaml_tab = {q.id: (q.nature_attendue, q.plancher_tier, tuple(q.rouverte_par))
+                 for q in _questions}
     check("les identifiants de la spec et du référentiel sont les mêmes",
           set(_spec_tab) == set(_yaml_tab),
           f"→ spec seule : {sorted(set(_spec_tab) - set(_yaml_tab))}, "
           f"référentiel seul : {sorted(set(_yaml_tab) - set(_spec_tab))}")
     _ecarts = {k: (_spec_tab[k], _yaml_tab[k]) for k in set(_spec_tab) & set(_yaml_tab)
                if _spec_tab[k] != _yaml_tab[k]}
-    check("nature, plancher et actualité bloquante coïncident question par question",
+    check("nature, plancher et types qui rouvrent coïncident question par question",
           not _ecarts, f"→ (spec, référentiel) : {_ecarts}")
 
 print(f"\n{'=' * 60}\n{ok} vérifications OK, {fail} échec(s)")

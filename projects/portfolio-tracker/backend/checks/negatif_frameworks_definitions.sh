@@ -27,7 +27,7 @@ mutations=(
 # ⚠️ La question surnuméraire s'appelle `qf_8`, pas `qf_7_bis` : le `pattern` d'id du contrat
 # (`^[a-z]{2}_[0-9]+$`) refusait `qf_7_bis` AVANT que l'assert de comptage soit atteint — la
 # mutation prouvait le pattern, pas le comptage. Mesuré, pas prévu (1ᵉʳ faux vert, sens rouge).
-"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        actualite_bloquante: true\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦le référentiel porte les 2 pilotes et leurs 13 questions"
+"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦le référentiel porte les 2 pilotes et leurs 13 questions"
 # §2 — le contrat refuse les définitions creuses
 "$DEF¦        if not any(i.essentiel for i in self.ingredients_requis):¦        if False:¦une question sans aucun ingrédient ESSENTIEL"
 "$DEF¦        if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:¦        if False:¦un plancher desserré SANS motif déclaré"
@@ -68,12 +68,19 @@ mutations=(
 "$DEF¦    nature_attendue: Literal[\"mesure\", \"evenement\", \"interpretation\"]¦    nature_attendue: Literal[\"mesure\", \"evenement\", \"interpretation\", \"rumeur\"]¦\`nature_attendue\` (contrat de définition) == \`common.NATURES\`"
 "$DEF¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\")¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\", \"D\")¦sous-ensemble STRICT de \`TIER_ORDER\`"
 # §7 — la spec et le référentiel ne divergent pas (mutation côté DONNÉES et côté SPEC)
-"$YAML¦        plancher_tier: B+\n        actualite_bloquante: false\n        sens_admis: [part_faible¦        plancher_tier: A\n        actualite_bloquante: false\n        sens_admis: [part_faible¦nature, plancher et actualité bloquante coïncident"
+"$YAML¦        plancher_tier: B+\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]\n        sens_admis: [part_faible¦        plancher_tier: A\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]\n        sens_admis: [part_faible¦nature, plancher et types qui rouvrent coïncident"
 # ⚠️ `V3/` dans le chemin : le lanceur copie `../roadmap` entier, la spec est donc à
 # `$tmp/roadmap/V3/…`. Écrite sans le `V3/`, la mutation ne trouvait pas son fichier et se
 # déclarait CADUQUE — l'assert « la spec et le référentiel ne divergent pas » n'avait aucun test
 # négatif du côté SPEC depuis sa création (une garde qu'aucune mutation n'atteint).
-"FROZEN:V3/03-spec-frameworks.md¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`mesure\` | A |¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`interpretation\` | A |¦nature, plancher et actualité bloquante coïncident"
+"FROZEN:V3/03-spec-frameworks.md¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`mesure\` | A |¦| \`qf_7\` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | \`interpretation\` | A |¦nature, plancher et types qui rouvrent coïncident"
+# §3 [Q]/[R] — ce qui rouvre quoi (#89) : chaque garde, désarmée chez son détenteur
+"$DEF¦    rouverte_par: list[str] = Field(min_length=1)¦    rouverte_par: list[str] = Field(default_factory=list)¦ne déclare PAS ce qui la rouvre"
+"$PONT¦            if t not in portees:¦            if False:¦type ABSENT du catalogue"
+"$PONT¦            if portees[t] != \"questions_declarees\":¦            if t in portees and False:¦un type qui ne rouvre RIEN"
+"$PONT¦    if portees.get(A_QUALIFIER) != \"toutes\":¦    if False:¦rétrogradé à une portée partielle"
+"$PONT¦                return frozenset(q.rouverte_par) | universels¦                return frozenset(q.rouverte_par)¦ses types déclarés ∪ les types de portée totale"
+"$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4 et qf_7, et aucune autre"
 )
 
 passes=0; ratees=0

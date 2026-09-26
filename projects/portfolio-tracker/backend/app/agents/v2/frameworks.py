@@ -139,6 +139,15 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
       P. deux frameworks qui revendiquent le MÊME bloc. §6 pose « un bloc du mémo = un framework » :
          à deux, le projecteur devrait choisir, et le choix se ferait par l'ordre du fichier — une
          méthodologie approuvée disparaîtrait de la note sans qu'aucun décompte ne bouge.
+      Q. un `rouverte_par` qui nomme un type absent du catalogue `types_evenement`, ou un type qu'une
+         question n'a pas à lister (#89). Absent : une faute de frappe (`financment`) ne rouvrirait
+         JAMAIS la question — elle resterait à jour après chaque financement, en silence. Portée
+         `aucune` : contradiction (la routine ne rouvre rien). Portée `toutes` : redondant, et
+         trompeur — le lecteur croirait que les autres questions n'y sont pas soumises ;
+      R. la table de FORME (`evenements.TYPE_PAR_ITEM`, code) produit un type que le catalogue
+         (données) ne déclare pas, ou `a_qualifier` n'y est pas de portée `toutes`. Le premier cas
+         ferait d'un dépôt reconnu un dépôt qui ne rouvre rien ; le second trahirait l'arbitrage Q3
+         (« dans le doute, on rouvre large »).
     """
     if fichier.schema_version != FRAMEWORK_DEFINITION_SCHEMA_VERSION:
         raise FrameworkDefinitionRefused(
@@ -234,6 +243,34 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             )
         revendique[f.bloc_memo] = f.id
 
+    # ── [Q] / [R] — ce qui rouvre quoi (#89) ───────────────────────────────────────────────────
+    portees = {t.id: t.portee for t in fichier.types_evenement}
+    for _f, q in toutes:
+        for t in q.rouverte_par:
+            if t not in portees:
+                raise FrameworkDefinitionRefused(
+                    f"[Q] `{q.id}` est rouverte par `{t}`, absent du catalogue `types_evenement` "
+                    f"({sorted(portees)}) — un type inconnu ne rouvre jamais rien, et la question "
+                    f"resterait à jour en silence")
+            if portees[t] != "questions_declarees":
+                raise FrameworkDefinitionRefused(
+                    f"[Q] `{q.id}` liste `{t}`, de portée `{portees[t]}` : "
+                    + ("un type qui ne rouvre rien ne peut pas rouvrir une question"
+                       if portees[t] == "aucune" else
+                       "il rouvre déjà TOUTES les questions — le lister ici laisserait croire que "
+                       "les autres n'y sont pas soumises"))
+    # Import tardif : `evenements` importe `material_events` (réseau), jamais au chargement du module.
+    from app.knowledge.evenements import A_QUALIFIER, TYPES_DE_LA_FORME
+    inconnus = sorted(TYPES_DE_LA_FORME - set(portees))
+    if inconnus:
+        raise FrameworkDefinitionRefused(
+            f"[R] la qualification par la forme produit {inconnus}, absents du catalogue "
+            f"`types_evenement` — un dépôt reconnu ne rouvrirait rien")
+    if portees.get(A_QUALIFIER) != "toutes":
+        raise FrameworkDefinitionRefused(
+            f"[R] `{A_QUALIFIER}` est de portée `{portees.get(A_QUALIFIER)}` au lieu de `toutes` — "
+            f"un communiqué que personne n'a lu doit rouvrir tout (arbitrage Q3 du 2026-09-26)")
+
 
 @lru_cache(maxsize=1)
 def load_frameworks(chemin: Optional[str] = None) -> FrameworksFile:
@@ -278,11 +315,23 @@ def question_profiles(fichier: Optional[FrameworksFile] = None) -> dict[str, dic
                 "framework_id": f.id,
                 "framework_version": fichier.schema_version,
                 "chemin_indexation": q.chemin_indexation,
-                "actualite_bloquante": q.actualite_bloquante,
+                "rouverte_par": list(q.rouverte_par),
                 "ingredients_essentiels": [i.id for i in q.ingredients_requis if i.essentiel],
             })
             profils[q.id] = profil
     return profils
+
+
+def types_qui_rouvrent(fichier: FrameworksFile, question_id: str) -> frozenset[str]:
+    """DÉTENTEUR UNIQUE (#46) de « quels types d'événement rouvrent cette question ? » (#89) :
+    ceux qu'elle déclare, plus ceux de portée `toutes`. C'est l'argument `rouvrent` de
+    `evenements.ancre_de_la_question` ; aucun lecteur ne recompose l'union de son côté."""
+    for f in fichier.frameworks:
+        for q in f.questions:
+            if q.id == question_id:
+                universels = {t.id for t in fichier.types_evenement if t.portee == "toutes"}
+                return frozenset(q.rouverte_par) | universels
+    raise KeyError(f"question `{question_id}` absente du référentiel")
 
 
 def _plus_faible(tiers: list[str]) -> str:

@@ -131,8 +131,12 @@ def etat_actualite(
         # ce soit. C'est la seule branche où « rien n'a changé » est une mesure, pas un silence.
         return Actualite(
             etat="courante",
-            motif="l'émetteur n'a publié aucun 8-K/6-K : aucun événement matériel ne peut périmer "
-                  "ce fait. Les dépôts périodiques restent traités par le supersedage (#43).",
+            # Un `none` né du filtre par question (#89) n'est pas « rien publié » : il dit qu'aucun
+            # dépôt publié n'est d'un type qui rouvre CETTE question — et il le dit.
+            motif=(f"{ancre.filtre} : aucun événement publié ne rouvre ce fait."
+                   if ancre.filtre else
+                   "l'émetteur n'a publié aucun 8-K/6-K : aucun événement matériel ne peut périmer "
+                   "ce fait. Les dépôts périodiques restent traités par le supersedage (#43)."),
             seuil=None,
             source_date=source_date,
         )

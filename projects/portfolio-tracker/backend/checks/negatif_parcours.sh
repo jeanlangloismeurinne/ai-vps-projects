@@ -28,7 +28,7 @@ mutations=(
 "$P¦            pieces.append(PieceCitee(entry_id=i, role=role, present_au_corpus=False))¦            pass  # mutation: pièce absente omise¦ABSENTE du corpus"
 "$P¦            remplacee=p[\"superseded_by\"] is not None))¦            remplacee=False))¦REMPLACÉE"
 "$P¦            rang_plus_faible_cite=_plus_faible(tiers) if tiers else None))¦            rang_plus_faible_cite=tiers[0] if tiers else None))¦rang le plus faible CITÉ"
-"$P¦            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),¦            answer_id=i, servie=FrameworkAnswerServie(**a.model_dump()),¦APPELLE \`servir_answer\`"
+"$P¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),¦            answer_id=i, servie=FrameworkAnswerServie(**a.model_dump()),¦APPELLE \`servir_answer\`"
 "$P¦    syntheses, manques, acceptees = [], [], 0¦    syntheses, manques, acceptees = [], [], 0\n    etat.fichier.frameworks.sort(key=lambda f: f.id)  # mutation: ordre alphabétique¦l'ordre du RÉFÉRENTIEL"
 "$P¦    ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))¦    ancre = await material_anchor_for_ticker(conn, ticker_id)  # mutation: ancre brute¦l'ancre qui PÈSE"
 # §7 — le point de lecture : un champ perdu, un pixel inventé, l'alerte descendue sous l'identité.

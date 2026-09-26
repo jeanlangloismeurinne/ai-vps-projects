@@ -35,8 +35,8 @@ from .analysis_v2_schemas import Strict, Tier
 
 __all__ = [
     "FRAMEWORK_DEFINITION_SCHEMA_VERSION",
-    "MODES_ARCHETYPE", "PLANCHERS_DESSERRES",
-    "IngredientRequis", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
+    "MODES_ARCHETYPE", "PLANCHERS_DESSERRES", "PORTEES_EVENEMENT",
+    "TypeEvenement", "IngredientRequis", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
     "FrameworksFile",
 ]
 
@@ -51,6 +51,23 @@ MODES_ARCHETYPE = ("variable", "sans_objet")
 # tier A (#50). Ce desserrage est légitime — mais il doit s'ÉCRIRE. Un plancher bas sans motif ne
 # se distingue pas d'un oubli, et c'est par des oublis que les plafonds descendent.
 PLANCHERS_DESSERRES = ("B", "B-", "C+", "C")
+
+
+# Ce qu'un type d'événement rouvre (#89). Voir le catalogue `types_evenement` de `frameworks.yaml`.
+PORTEES_EVENEMENT = ("questions_declarees", "toutes", "aucune")
+
+
+class TypeEvenement(Strict):
+    """Un type d'événement publié par l'émetteur, et sa PORTÉE.
+
+    `toutes` existe pour les événements qui changent l'objet même de l'analyse (périmètre,
+    existentiel) ou qu'on n'a pas encore lus (`a_qualifier`) : les faire lister par chaque question
+    ferait qu'une question oubliée resterait « à jour » après une fusion. `aucune` existe pour les
+    dépôts de pure forme — nommés, pour qu'un dépôt reconnu ne se confonde jamais avec un dépôt
+    inconnu (qui, lui, est `a_qualifier`)."""
+    id: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    libelle: str = Field(min_length=20)
+    portee: Literal["questions_declarees", "toutes", "aucune"]
 
 
 class IngredientRequis(Strict):
@@ -123,7 +140,12 @@ class QuestionDefinition(Strict):
     nature_attendue: Literal["mesure", "evenement", "interpretation"]
     plancher_tier: Tier
     motif_plancher: Optional[str] = Field(default=None, min_length=20)
-    actualite_bloquante: bool
+    # Les types d'événement qui ROUVRENT la question (#89) — REQUIS, sans défaut : créer un framework,
+    # c'est décider ce qui rouvre chacune de ses questions (arbitrage du 2026-09-26). Un défaut vide
+    # rendrait « rien ne la rouvre » indiscernable de « on a oublié de le déclarer », et la question
+    # resterait à jour après n'importe quel communiqué. Les types de portée `toutes` n'ont pas à y
+    # figurer ; leur appartenance au catalogue est un invariant RELATIONNEL (pont, [Q]).
+    rouverte_par: list[str] = Field(min_length=1)
     sens_admis: list[str] = Field(min_length=2)
     ingredients_requis: list[IngredientRequis] = Field(min_length=1)
     variables_par_archetype: dict[str, VariableArchetype] = Field(min_length=1)
@@ -138,6 +160,8 @@ class QuestionDefinition(Strict):
         ids = [i.id for i in self.ingredients_requis]
         if len(set(ids)) != len(ids):
             raise ValueError(f"{self.id} : deux ingrédients portent le même id — {sorted(ids)}")
+        if len(set(self.rouverte_par)) != len(self.rouverte_par):
+            raise ValueError(f"{self.id} : `rouverte_par` contient un doublon")
         if len(set(self.sens_admis)) != len(self.sens_admis):
             raise ValueError(f"{self.id} : `sens_admis` contient un doublon")
         if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:
@@ -201,10 +225,14 @@ class FrameworksFile(Strict):
     question doit couvrir exactement cette liste — vérifié par le pont, pas ici (#37)."""
     schema_version: str = Field(min_length=1)
     archetypes: list[str] = Field(min_length=1)
+    types_evenement: list[TypeEvenement] = Field(min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")
     def _les_archetypes_sont_distincts(self):
         if len(set(self.archetypes)) != len(self.archetypes):
             raise ValueError("`archetypes` contient un doublon")
+        ids = [t.id for t in self.types_evenement]
+        if len(set(ids)) != len(ids):
+            raise ValueError("`types_evenement` contient un doublon")
         return self
