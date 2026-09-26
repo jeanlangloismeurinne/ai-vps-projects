@@ -57,6 +57,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |
 | Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
+| Une note flash ne remplace que la part `a_qualifier` d'un dépôt ; illisible, elle le laisse rouvert ; l'horloge la reçoit en paramètre REQUIS (#90) | `check_evenements.py` §7 + `negatif_evenements.sh` ; l'agent chez `check_note_flash.py` |
 | Chaque question a sa propre horloge : un fait ne rouvre que les questions dont le référentiel déclare son type (#89) | `check_evenements.py` + `negatif_evenements.sh` ; le référentiel ([Q]/[R]) chez `check_frameworks_definitions.py` |
 | Format des montants (détenteur unique) | `check_edgar_feed.py` §11, `check_financials_feed.py` §9 |
 | search-worker ne qualifie pas sa propre source | `check_search_worker.py` |

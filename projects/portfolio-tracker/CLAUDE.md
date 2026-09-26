@@ -305,7 +305,13 @@ dossier d'un émetteur alors qu'elle porte sur une AUTRE société en SORT (la l
 JSONB avec ses rattachements aux questions, qui/quand/pourquoi. Append-only, lecture seule pour le rôle
 applicatif. Appliquée le 2026-09-26 sur les 5 pièces Ryvu du dossier RVMD (#665-667, #671, #672).
 Éprouvée par `negatif_049.sh` (19/0) sur copie de la base.
-Prochaine migration : **050**.
+**Migration 050 = les notes flash (#90)** : `notes_flash` — la lecture d'un dépôt 8-K/6-K que la
+forme ne qualifie pas : types retenus (dérivés par le code), passages cités, documents lus, modèle, version
+du CATALOGUE D'ÉVÉNEMENTS (`types_evenement_version`, distincte de `schema_version`). Une note par
+`(accession, catalogue_version)`, append-only (le rôle applicatif écrit et lit, trigger contre toute
+réécriture). Deux formes exclusives par CHECK : lisible (≥ 1 type, jamais `a_qualifier`) ou illisible
+(`{a_qualifier}` + motif). Éprouvée par `negatif_050.sh` (18/0) sur copie de la base.
+Prochaine migration : **051**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -2218,6 +2224,72 @@ même verdict) + `negatif_evenements.sh` **13/0** ; `check_frameworks_definition
 §4.1.1/§4.2.1 confrontée colonne « Rouverte par ») + `negatif_frameworks_definitions.sh` **31/0**.
 ⚠️ Une promesse écrite avant de coder était fausse (« retirer le 26/08 rend le moat à jour » : le 8-K du
 14/04 porte aussi un 8.01) — re-mesurée, remplacée par le couple discriminant.
+
+### #90 — la note flash : on LIT le communiqué que la forme ne qualifie pas, et on cite ce qu'on a lu
+
+**Ce que fait un vrai fonds (arbitrages Q2/Q3 du 2026-09-26, `04-taxonomie-evenements.md`).** Le jour
+d'une publication, l'analyste lit le communiqué et écrit une note flash : de quel type d'événement il
+s'agit, passage à l'appui. Il ne la réécrit pas — le communiqué ne change pas — mais il la relit quand
+la grille de lecture change.
+
+**Le défaut que la capacité ferme (mesuré le 2026-09-26).** Au maillon 1 (#89), tout ce que la forme
+ne décide pas est `a_qualifier` et rouvre TOUT : 23 dépôts RVMD, 14 NVDA, 17 MSFT. Sur RVMD, le
+communiqué FDA du 26/08 périmait qf_6 (choix comptables) ; lu, il ne rouvre que la défendabilité —
+qf_6 redevient à jour, la note de qualité financière passe de 0,00 à 0,50. Chez NVDA, l'accord de
+rachat de Hugging Face (8.01 du 02/09) est un changement de PÉRIMÈTRE que la forme ne voit pas (l'item
+2.01 ne viendra qu'à la clôture) ; chez MSFT, la présentation des nouveaux segments (7.01) est lue comme
+de la routine.
+
+**La règle (`agents/v2/note_flash.py`, contrat `note_flash_schema.py`, migration 050).**
+- **Ce qu'on lit** : la soumission EDGAR complète (`<accession>.txt`), dont chaque document porte son
+  type SEC — le formulaire et ses communiqués EX-99 seulement (jamais un acte EX-1/4/5/10 ni le XBRL),
+  sans l'en-tête XBRL masqué ni la page de garde ; budget borné, troncature DITE et persistée.
+- **Ce que le modèle voit** : l'entreprise par sa raison sociale (#86), la forme du dépôt, le texte, et
+  le catalogue par identifiant + libellé — JAMAIS la portée ni ce que rouvre un type : il dit ce qui
+  s'est passé, pas combien de questions il veut rouvrir (#59, aucun levier sur l'exigence).
+- **Ce que le code fixe** : le modèle dit `surprise` + une cause ; le code dérive `surprise_<cause>`,
+  cause non dite ⟹ `surprise_concurrence` (Q2 ne dépend pas de la mémoire du modèle, #57). Le pont
+  vérifie que chaque type est au catalogue proposé et que chaque passage (et passage de cause) est une
+  citation LITTÉRALE (casse, espaces, guillemets typographiques normalisés — rien d'autre). Un refus est
+  renvoyé UNE fois au modèle, puis la note est refusée et RIEN n'est écrit : le dépôt reste
+  `a_qualifier`, il rouvre tout. Un échec ne devient jamais « ne rouvre rien ».
+- **Ce qui change au point de lecture** (`evenements.types_du_depot`) : une note ne remplace QUE la part
+  `a_qualifier` — un 8-K « 1.01 + 2.03 + 8.01 » reste un financement quoi que dise la note de son 8.01.
+  `ancre_de_la_question(…, qualifications=)` est REQUIS, sans défaut (un lecteur qui l'oublierait
+  rouvrirait tout en silence, puisque c'est aussi l'état d'un dépôt non lu) ; son seul producteur est
+  `qualifications_de_l_emetteur`, branché aux deux points de lecture (assemblage du dossier, PV du
+  comité) — tenu en AST. Le motif d'actualité dit « rouvre au titre de : X (note flash du … : « … ») ».
+
+**La version du CATALOGUE n'est pas celle des méthodologies** (`types_evenement_version` dans
+`frameworks.yaml`, champ requis du contrat). Trouvé en LISANT les six premières notes RVMD : deux fautes
+de sens, toutes deux dues au vocabulaire — « Publication de résultats conforme aux attentes » se lisait
+« résultats cliniques » (#71), et un succès de phase 3 était rangé en « écart aux attentes » (#69), ce
+qui rouvrait toute la qualité financière. Le remède est de DONNÉES (libellés : résultats FINANCIERS ;
+essai qui atteint son objectif = réglementaire favorable ; une surprise est un écart FINANCIER), pas une
+garde : aucun contrôle ne décide qu'un passage justifie un type (`feedback_garde_structure_pas_sens`).
+Mais les notes sont immuables, une par `(dépôt, version)` : sous `schema_version`, relire deux 8-K aurait
+invalidé toutes les réponses des méthodologies. Séparées, un changement de libellé fait RELIRE les
+dépôts (`a_relire`) sans toucher aux réponses ; une note d'une ancienne version compte encore tant
+qu'elle n'est pas relue. Relues sous 1.1.0 : 6/6 justes, 0 refus.
+
+⚠️ **Ce qui n'est PAS fait** : la note flash ne tourne pas d'elle-même — `tools/rediger_notes_flash.sh
+TICKER [--ecrire]` (lecture gratuite par défaut) est le seul appelant. La brancher au flux (chaîne
+d'analyse, ou tâche quotidienne sous `v2_auto_enabled`) est le pas suivant. Fenêtre par défaut : 400
+jours ; les `a_qualifier` plus anciens restent non lus (ils ne pèsent que s'ils sont postérieurs aux
+pièces d'une réponse).
+
+**Faux verts trouvés par le test négatif :** (1) retirer l'en-tête XBRL restait VERT sur un 8-K — le
+découpage au premier item le rendait redondant ; un 6-K, qui n'a jamais d'item, est le cas
+discriminant (même soumission réelle présentée en 6-K) ; (2) la mutation « dépôt mixte » rougissait sur
+l'assert du dépôt entièrement décidé — deux décisions, deux mutations ; (3) une note mal encodée (JSON
+en chaîne) était refusée par la base mais tuait le check avant son bilan — écriture sous savepoint,
+refus nommé ; (4) un script d'édition sans `assert` sur son motif avait silencieusement raté son
+remplacement — c'est le check qui l'a vu.
+
+Gardes : `check_note_flash.py` **50/0** + `negatif_note_flash.sh` **19/0** · `check_note_flash_persist.py`
+**16/0** (vraie base, ROLLBACK, CIK fictif) + `negatif_note_flash_persist.sh` **4/0** · `check_evenements.py`
+**51/0** (§7) + `negatif_evenements.sh` **19/0** · `negatif_050.sh` **18/0**. Notes réelles : RVMD
+#80-#85, NVDA #86-#87, MSFT #88 (#66-#71 : première lecture RVMD sous l'ancien catalogue, conservées).
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

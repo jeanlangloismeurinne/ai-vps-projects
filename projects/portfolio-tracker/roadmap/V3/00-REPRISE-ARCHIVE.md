@@ -8,6 +8,39 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-26 (6) — LOT 7 : la note flash (taxonomie des événements, maillon 2, #90)
+
+- **Mesuré avant d'écrire** : le flux réel porte 23 dépôts `a_qualifier` RVMD, 14 NVDA, 17 MSFT ; trois
+  lus en texte donnaient les cas types (FDA en 8.01, rachat de Hugging Face en 8.01, segments MSFT en 7.01).
+  La soumission EDGAR complète (`.txt`) étiquette chaque document par son type SEC : on lit le formulaire
+  et les EX-99, jamais les actes.
+- **Livré** : contrat `note_flash_schema.py` (surprise + cause, type dérivé par le code), agent
+  `agents/v2/note_flash.py` (extraction, contexte sans portée, pont de citation littérale, un renvoi au
+  modèle puis refus, persistance, relecture), migration **050** `notes_flash` (append-only, une note par
+  dépôt et par version du catalogue, deux formes par CHECK ; `negatif_050.sh` 18/0 sur copie, appliquée),
+  `evenements.types_du_depot(…, qualification)` + `ancre_de_la_question(…, qualifications=)` REQUIS,
+  branché au dossier et au PV du comité (AST), outil `tools/rediger_notes_flash.sh` (lecture gratuite par
+  défaut, `--ecrire`).
+- **Lu en texte, deux fautes sur six** (RVMD #69 succès de phase 3 en « surprise », #71 données de phase 1
+  en « résultats ») — dues aux libellés. Corrigé en DONNÉES, sous une **version du catalogue d'événements
+  séparée** de `schema_version` (sinon relire deux 8-K invalidait toutes les réponses). Relu sous 1.1.0 :
+  6/6 justes. NVDA #86 périmètre (Hugging Face), #87 financement ; MSFT #88 routine. Coût total ~$0,004.
+- **Effet mesuré** (`montrer_parcours RVMD`) : qf_6 n'est plus périmée à tort (qualité financière 0,00 →
+  0,50) ; mo_1…mo_5 restent rouvertes par l'approbation, motif « reglementaire_favorable (note flash …) ».
+- **Faux verts du jour** : en-tête XBRL redondant sur un 8-K (6-K discriminant) ; mutation « dépôt mixte »
+  rouge sur le mauvais assert ; note mal encodée qui tuait le check avant son bilan ; script d'édition sans
+  `assert` qui ratait son remplacement ; check d'écriture « isolé » par un CIK fictif alors que l'unicité
+  porte sur le numéro de dépôt — heurté par la vraie note écrite entre deux passages.
+
+## 2026-09-26 (5) — LOT 7 : taxonomie des événements, maillon 1 (#89)
+
+L'utilisateur a retenu les 5 recommandations (Q1-Q5 de `04-taxonomie-evenements.md` §7) et posé le
+principe « créer un framework, c'est définir ce qui rouvre chacune de ses questions, et par quel type
+d'événement ». Livré : catalogue `types_evenement` + `rouverte_par` REQUIS par question (pont [Q]/[R]) ;
+`knowledge/evenements.py` (type d'un dépôt par sa forme, `a_qualifier` sinon ; ancre PAR QUESTION) ;
+branché dans `charger_etat_dossier` et l'endpoint de décision du comité. Mesuré sur RVMD : qf_4 rouverte
+par le financement du 27/08, mo_1…mo_5 par le 8.01 FDA du 26/08. Pas de migration.
+
 ## 2026-09-26 (4) — LOT 7 : CIK hors du web, pièces Ryvu écartées (#87), jugement fondé sur des faits (#88)
 
 Trois demandes de l'utilisateur, en une session :

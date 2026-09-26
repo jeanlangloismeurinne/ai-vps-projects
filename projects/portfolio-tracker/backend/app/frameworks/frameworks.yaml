@@ -43,6 +43,17 @@ archetypes:
 # s'y décide pas est `a_qualifier`, de portée totale : dans le doute, on rouvre (arbitrage Q3).
 # Limite nommée : les événements EXTÉRIEURS à l'émetteur (concurrent, régulateur sectoriel) ne sont
 # pas dans ses dépôts, donc invisibles ici — sprint de design à venir.
+#
+# `types_evenement_version` — la version de CE catalogue, distincte de `schema_version` (#90). Une note
+# flash est la lecture d'un dépôt contre ce catalogue, une fois par version : changer un libellé ici
+# fait RELIRE les dépôts, sans toucher aux réponses des méthodologies.
+#   1.0.0 — maillon 1 (#89) ; les six premières notes RVMD (#66-#71) ont été écrites sous « v3.0.0 »,
+#           avant que la version du catalogue ne soit séparée de celle du référentiel.
+#   1.1.0 — libellés désambiguïsés après lecture de ces notes : « résultats » = résultats FINANCIERS
+#           (#71 y rangeait des données cliniques de phase 1) ; un essai clinique qui atteint son objectif
+#           est une décision réglementaire / produit favorable (#69 rangeait le succès de phase 3 en
+#           « écart aux attentes », ce qui rouvrait toute la qualité financière).
+types_evenement_version: "1.1.0"
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
@@ -63,7 +74,7 @@ types_evenement:
     libelle: Dette, obligation convertible, émission d'actions, ligne de crédit
     portee: questions_declarees
   - id: resultats
-    libelle: Publication de résultats conforme aux attentes
+    libelle: Publication des résultats FINANCIERS périodiques (trimestre, exercice) conformes aux attentes — pas des résultats cliniques
     portee: questions_declarees
   - id: surprise_secteur
     libelle: Écart aux attentes dont la cause est commune au secteur (demande, cycle, change)
@@ -75,7 +86,7 @@ types_evenement:
     libelle: Écart aux attentes dû à l'exécution interne — retard, usine, produit
     portee: questions_declarees
   - id: reglementaire_favorable
-    libelle: Approbation d'un produit ou décision réglementaire favorable
+    libelle: Approbation d'un produit, décision réglementaire favorable, ou essai clinique qui atteint son objectif
     portee: questions_declarees
   - id: reglementaire_defavorable
     libelle: Refus, échec d'essai, retrait ou rappel d'un produit

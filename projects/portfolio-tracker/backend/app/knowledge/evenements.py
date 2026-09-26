@@ -26,20 +26,27 @@ Les items 8-K décrivent la forme : l'item 8.01 « autre événement important �
 approbation FDA ; un profit warning n'a pas d'item propre. `types_du_depot` ne qualifie par la forme
 que ce que la forme DÉCIDE (2.03 est un financement, 2.01 un changement de périmètre…) ; tout le
 reste est `a_qualifier`, un type que le catalogue déclare de portée TOTALE — tant que personne n'a lu
-le communiqué, il rouvre tout. C'est la note flash (agent à venir) qui le requalifiera, jamais une
-heuristique de mots.
+le communiqué, il rouvre tout. C'est la note flash (`agents/v2/note_flash.py`, maillon 2) qui le
+requalifie en le LISANT, jamais une heuristique de mots.
+
+Ce que la note flash change — et ce qu'elle ne change pas
+---------------------------------------------------------
+Une note flash persistée (`QualificationLue`) REMPLACE la seule part `a_qualifier` d'un dépôt : ce que
+la forme a décidé reste (un 8-K « 1.01 + 2.03 + 8.01 » demeure un financement, quoi que dise la note
+de son 8.01). Une note ILLISIBLE laisse `a_qualifier` — lu mais indéterminable, rouvre tout (Q3). Le
+dépôt ne change jamais ; la portée, elle, se recalcule à chaque lecture contre le référentiel du jour.
 
 Fonctions PURES : aucune IO, aucune écriture — l'ancre se recalcule à chaque lecture (#53).
 """
 from __future__ import annotations
 
-from dataclasses import replace
-from typing import Optional
+from dataclasses import dataclass, replace
+from typing import Mapping, Optional
 
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
 
 __all__ = [
-    "A_QUALIFIER", "ROUTINE", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME",
+    "A_QUALIFIER", "ROUTINE", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME", "QualificationLue",
     "types_du_depot", "ancre_de_la_question",
 ]
 
@@ -84,16 +91,42 @@ _PREUVES_DE_FINANCEMENT = frozenset({"2.03", "3.02"})
 TYPES_DE_LA_FORME = frozenset(TYPE_PAR_ITEM.values()) | {A_QUALIFIER, ROUTINE, "financement"}
 
 
-def types_du_depot(event: MaterialEvent) -> frozenset[str]:
-    """Les types d'un dépôt, qualifié PAR SA FORME seule. Jamais vide.
+@dataclass(frozen=True)
+class QualificationLue:
+    """Ce qu'une note flash a conclu d'un dépôt, tel qu'on le RELIT (jamais tel que le modèle l'a émis).
+
+    `types` : les types du catalogue qu'elle a retenus — `{a_qualifier}` si elle a jugé le dépôt
+    illisible, ou si un type qu'elle portait n'existe plus au référentiel du jour (le chargeur le
+    ramène alors à `a_qualifier` : un type disparu ne doit pas devenir « ne rouvre rien »).
+    `resume` : ce que le motif d'actualité en dira (« note flash du …: « passage » »)."""
+    types: frozenset[str]
+    resume: str
+    # Écrite sous une AUTRE version du catalogue d'événements : elle compte encore (mieux vaut une
+    # lecture d'hier que pas de lecture), mais le dépôt est à relire contre la grille du jour.
+    a_relire: bool = False
+
+
+def types_du_depot(event: MaterialEvent,
+                   qualification: Optional[QualificationLue] = None) -> frozenset[str]:
+    """Les types d'un dépôt : ce que sa FORME décide, et — pour la part que la forme ne décide pas —
+    ce que la note flash en a lu (`qualification`). Jamais vide.
 
     · aucun item déclaré (un 6-K, qui n'en porte jamais) → `a_qualifier` : « sans item » n'est pas
       « sans substance » (même règle que `ancre_substantielle`) ;
     · seulement des accessoires : 9.01 seul → `routine` ; 7.01 (± 9.01) seul → `a_qualifier` ;
     · sinon, l'union des types de chaque item substantiel ; un item non décidé par la forme
       (8.01, 1.01 sans preuve de financement, 1.02, 2.05, 2.06, un item inconnu…) ajoute
-      `a_qualifier`, qui l'emporte par sa portée totale — dans le doute, on rouvre (Q3).
+      `a_qualifier`, qui l'emporte par sa portée totale — dans le doute, on rouvre (Q3) ;
+    · une `qualification` ne remplace QUE `a_qualifier` : un dépôt que la forme a entièrement décidé
+      ignore la note ; un dépôt mixte garde ses types de forme.
     """
+    forme = _types_de_la_forme(event)
+    if qualification is None or A_QUALIFIER not in forme:
+        return forme
+    return ((forme - {A_QUALIFIER}) | qualification.types) or frozenset({A_QUALIFIER})
+
+
+def _types_de_la_forme(event: MaterialEvent) -> frozenset[str]:
     items = tuple(event.items)
     if not items:
         return frozenset({A_QUALIFIER})
@@ -111,12 +144,17 @@ def types_du_depot(event: MaterialEvent) -> frozenset[str]:
 
 def ancre_de_la_question(
     lookup: MaterialEventLookup, *, rouvrent: frozenset[str],
+    qualifications: Mapping[str, QualificationLue],
 ) -> MaterialEventLookup:
     """L'ancre d'UNE question : le flux restreint aux dépôts dont un type la rouvre.
 
     `rouvrent` = les types déclarés par la question ∪ les types de portée totale du catalogue —
     l'appelant les calcule depuis le référentiel (`frameworks.types_qui_rouvrent`), ce module ne
     connaît aucune question.
+
+    `qualifications` (accession → note flash relue) est REQUIS, sans défaut : un lecteur qui
+    l'oublierait continuerait de rouvrir tout sur chaque 8.01 lu — en silence, puisque c'est aussi
+    l'état d'un dépôt non lu. `{}` se passe explicitement (aucune note n'existe encore).
 
     Les statuts `none` et `unavailable` traversent inchangés (#49) : on ne filtre pas une ignorance.
     Un flux `found` dont AUCUN dépôt ne rouvre la question rend `none` — un état CONNU — avec un
@@ -130,10 +168,12 @@ def ancre_de_la_question(
     familles = ", ".join(sorted(rouvrent)) or "aucun type"
     gardes: list[MaterialEvent] = []
     for e in lookup.recents:
-        types = types_du_depot(e)
+        note = qualifications.get(e.accession) if e.accession else None
+        types = types_du_depot(e, note)
         touches = types & rouvrent
         if touches:
-            gardes.append(replace(e, types=tuple(sorted(touches))))
+            gardes.append(replace(e, types=tuple(sorted(touches)),
+                                  note=note.resume if note is not None else None))
     if not gardes:
         n = len(lookup.recents)
         depuis: Optional[str] = (min(e.event_date for e in lookup.recents).isoformat()

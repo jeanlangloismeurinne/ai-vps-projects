@@ -423,6 +423,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     from app.agents.v2.comite import lire_registre, position_du_comite
     from app.agents.v2.frameworks import servir_answer, types_qui_rouvrent
     from app.knowledge.evenements import ancre_de_la_question
+    from app.agents.v2.note_flash import qualifications_de_l_emetteur
     from app.knowledge.material_events import MaterialEventLookup
     from app.agents.v2.framework_persist import (
         read_answers_courantes, read_archetype, read_dispenses)
@@ -496,12 +497,15 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     # fait venu fabriquait les deux erreurs : un financement périmait la barrière brevetaire, et —
     # pire — dire « un financement ne périme pas le moat » contre le DERNIER fait aurait rendu à
     # jour un moat que l'approbation FDA de la veille devait rouvrir.
+    # Ce que les notes flash ont LU des dépôts que la forme ne qualifie pas (maillon 2) : sans elles,
+    # chaque 8.01 rouvre tout ; avec elles, il rouvre ce qu'il touche. Relu à chaque assemblage.
+    notes = await qualifications_de_l_emetteur(conn, ancre.cik, fichier)
     ancres: dict[str, MaterialEventLookup] = {}
 
     def ancre_de(question_id: str) -> MaterialEventLookup:
         if question_id not in ancres:
             ancres[question_id] = ancre_de_la_question(
-                ancre, rouvrent=types_qui_rouvrent(fichier, question_id))
+                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)
         return ancres[question_id]
 
     reponses: list[ReponseLue] = []

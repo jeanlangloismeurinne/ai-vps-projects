@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26 (5)
+updated: 2026-09-26 (6)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -47,51 +47,55 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
 | 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
-| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · **ce qu'un événement rouvre, horloge par question** (#89) — reste : ▶ PROCHAIN JALON |
+| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · ce qu'un événement rouvre, horloge par question (#89) · **la note flash** (#90, migration 050) — reste : ▶ PROCHAIN JALON |
 
-Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du `CLAUDE.md`.
+Détail de chaque lot : archive (entrées datées) + conventions #57 → #90 du `CLAUDE.md`.
 
 ### Mesures courantes — à RE-REQUÊTER avant de s'en servir
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3437 assertions / 0 échec sur 48 scripts** (2026-09-26,
-  après #89 ; ligne de base re-mesurée au départ : 3389/47). Les 3 checks « live » sont hors suite par
+- **Suite** `bash checks/run_all.sh` = **3516 assertions / 0 échec sur 50 scripts** (2026-09-26,
+  après #90 ; ligne de base re-mesurée au départ : 3437/48). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
-- **Migrations** : **049 appliquée** (registre des pièces écartées) ; la prochaine sera **050**.
-  Vérifier en base avant d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`16cd4e9`** (frontend inchangé), vérifié par
-  `docker exec … grep nature_satisfait`. **PV du comité en prod : 0 décision.**
-- **Chaîne réelle RVMD × `defendabilite`** (2026-09-26, `--sans-collecte`, après #88) : **0 refus** —
-  mo_1 `repondu` A (#690), mo_2 `repondu` A (#691), mo_3/mo_4 `approxime` A− (#692/#693), mo_5
-  `repondu` A (#694), mo_6 `sans_objet` (#689) ; 6 acquittements ; verbatims relus contre les pièces :
-  fidèles. **Mais le dossier affiche mo_1…mo_5 « périmées »** (voir ▶). `qualite_financiere` RVMD :
-  qf_4/qf_6 périmées, qf_7 sans réponse (source indisponible).
+- **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
+  d'écrire, jamais se fier à un tableau.
+- **Production** : backend sur **`DEPLOY_SHA`** (#90), vérifié par `docker exec … grep
+  qualifications_de_l_emetteur`. **PV du comité en prod : 0 décision.**
+- **Notes flash en base** (catalogue d'événements **1.1.0**) : RVMD #80-#85, NVDA #86-#87, MSFT #88 — 9
+  dépôts lus sur 400 jours, 0 refus ; #66-#71 = première lecture RVMD sous l'ancien catalogue, conservées.
+- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, après #90) : 7 manques — qf_4 (financement du
+  27/08), qf_7 (source indisponible), mo_1…mo_5 rouvertes par l'approbation FDA LUE
+  (« reglementaire_favorable (note flash …) ») ; **qf_6 n'est plus périmée** (qualité financière 0,50).
+  Mandats 983-986 toujours ouverts sur des questions répondues (voir ▶).
 
 ---
 
-## ▶ PROCHAIN JALON — LOT 7 : ce qu'un événement ROUVRE — maillon 2, la note flash
+## ▶ PROCHAIN JALON — LOT 7 : brancher la note flash au flux, puis le maillon 3 (reclassement)
 
-**Fait le 2026-09-26 (3)** : (1) le CIK sort du mandat web (arbitrage utilisateur, amendement #86) ;
-(2) les 5 pièces Ryvu quittent le dossier RVMD vers un registre des pièces écartées (#87, migration 049,
-arbitrage utilisateur) ; (3) le refus de nature de l'analyste est levé (#88, arbitrage utilisateur :
-« un jugement fondé sur des faits vérifiés est une réponse directe ») — 0 refus sur la chaîne réelle.
+**✅ Fait le 2026-09-26 (6) — la note flash (#90)** : un agent lit les dépôts que la forme ne qualifie
+pas, les range dans le catalogue en citant le passage (pont de citation littérale, rien d'écrit sinon) ;
+le point de lecture ne remplace que la part `a_qualifier` ; version du catalogue d'événements séparée de
+celle des méthodologies (`types_evenement_version`, 1.1.0). Mesuré : 9 notes réelles, 0 refus ; qf_6
+RVMD n'est plus périmée à tort ; le rachat de Hugging Face par NVDA est reconnu comme un changement de
+périmètre. Détail : `04-taxonomie-evenements.md` §11, convention #90.
 
-**✅ Fait le 2026-09-26 (5) — taxonomie des événements, maillon 1 (#89)** : l'utilisateur a retenu
-les 5 recommandations (Q1-Q5 de `04-taxonomie-evenements.md` §7) et posé le principe « **créer un
-framework, c'est définir ce qui rouvre chacune de ses questions, et par quel type d'événement** ».
-Livré : catalogue `types_evenement` + `rouverte_par` REQUIS par question (`frameworks.yaml`, pont
-[Q]/[R]) ; `knowledge/evenements.py` (type d'un dépôt par sa forme, `a_qualifier` sinon ; ancre PAR
-QUESTION) ; branché dans `charger_etat_dossier` (réponses, comité ⟹ note de qualité, note de comité,
-alerte) et l'endpoint de décision du comité. Mesuré sur RVMD : qf_4 rouverte par le financement du
-27/08, mo_1…mo_5 par le 8.01 FDA du 26/08 (plus par le financement). Pas de migration.
+**🔜 PROCHAIN PAS — la note flash ne tourne pas d'elle-même.** Seul appelant : `tools/rediger_notes_flash.sh
+TICKER [--ecrire]`. Un 8.01 publié demain restera « à qualifier » (donc rouvrira tout) jusqu'à ce que
+quelqu'un lance l'outil. **Arbitrage à demander à l'utilisateur, en termes de fonds** : quand l'analyste
+lit-il un communiqué ? (a) chaque matin, pour tout titre suivi, dès sa publication — dépense automatique
+quotidienne (petite : ~$0,0003 par dépôt), à placer sous le réglage qui encadre la dépense V2 non
+supervisée (`v2_auto_enabled`, FALSE par défaut) ; (b) seulement quand on rouvre le dossier d'un titre
+(passage de la chaîne d'analyse) ; (c) les deux. Recommandation : (c) — la lecture au passage de la chaîne
+est gratuite à ajouter et sans risque ; le matin est ce que fait un fonds pour une position détenue (Q5).
 
-**🔜 PROCHAIN PAS — maillon 2 : la note flash** (`04-taxonomie-evenements.md` §10) : un agent lit les
-dépôts `a_qualifier` et les range dans un type en citant le passage (cause pour une surprise ; non
-dite ⟹ concurrence). Tant qu'il n'existe pas, tout 8.01 rouvre tout (voulu, Q3). Qualification
-persistée une fois par dépôt (migration **050**), portée recalculée à la lecture. Puis maillon 3
-(Q4 : proposer le reclassement après une approbation, le comité valide) et maillon 4 (Q5 : position
-détenue sous revue).
+**Puis maillon 3** (Q4 : une approbation qualifiée — RVMD #80 — fait PROPOSER le reclassement de
+« pré-revenus » à « commerciale », le comité valide) et **maillon 4** (Q5 : position détenue sous revue).
+
+**À relire par le comité, noté** : MSFT #88 a lu la présentation des nouveaux segments (7.01 du 02/09)
+comme de la **routine** — défendable (aucun chiffre neuf), mais un changement de segments change la
+comparabilité des chiffres historiques ; si le comité juge qu'il doit rouvrir la qualité financière,
+c'est une précision du libellé `routine` (donnée, nouvelle version du catalogue), pas du code.
 
 **🗓 Sprint de DESIGN demandé** : les événements EXTÉRIEURS à l'émetteur (concurrent, génériques, pair,
 régulation des prix) sont invisibles aux dépôts EDGAR de l'émetteur. Réfléchir à leur place dans le
@@ -293,7 +297,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
    parcours, cœur du lot 6 · §10 les lots).
-3. **`CLAUDE.md` du projet** — conventions **#25 → #88** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #90** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -302,7 +306,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
    checks) · `provenance-cards/` (contrats figés, maquette niveau 3).
 5. Code du flux : `backend/app/agents/v2/` (`traducteur`, `collecte_executor`, `apparieur`,
    `dossier`, `analyste`, `manager`, `manager_persist`, `bouclage`, `projection_memo`,
-   `qualite_info`, `parcours`, `comite`) · `backend/app/contracts/` · `backend/checks/README.md`.
+   `qualite_info`, `parcours`, `comite`, `note_flash`) · `backend/app/contracts/` · `backend/checks/README.md`.
 6. `00-REPRISE-ARCHIVE.md` si le *pourquoi* d'une décision manque.
 
 ---
@@ -314,6 +318,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
 > (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur (#86), pièces
 > Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; taxonomie des événements
-> maillon 1 livré (#89) ; prochain pas = la note flash (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
+> maillons 1 (#89, horloge par question) et 2 (#90, la note flash) livrés ; prochain pas = brancher la
+> note flash au flux (arbitrage à demander), puis le reclassement proposé au comité (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
 > ligne de base avant
 > de s'en servir.

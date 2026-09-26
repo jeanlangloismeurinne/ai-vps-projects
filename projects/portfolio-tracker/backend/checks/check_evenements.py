@@ -16,6 +16,11 @@ Ce que la capacité garantit, et ce que chaque section éprouve :
        dépôt ne rouvre la question rend `none` AVEC une phrase qui le dit, et le motif d'actualité ne
        prétend pas que « l'émetteur n'a rien publié ».
   • §5 LE MOTIF DIT POURQUOI — le résumé du fait retenu nomme le type au titre duquel il rouvre.
+  • §7 LA NOTE FLASH NE REMPLACE QUE CE QUE LA FORME N'A PAS DÉCIDÉ (maillon 2) — une note ne touche
+       que la part `a_qualifier` ; une note illisible laisse tout rouvert ; et le couple discriminant :
+       l'approbation du 26/08 LUE rouvre toujours la barrière (mo_1) mais plus les choix comptables
+       (qf_6), qui retombent sur les résultats du 05/08 ; le 7.01 MSFT lu comme routine ne rouvre plus
+       rien. Le motif dit que le type vient de la lecture, passage à l'appui.
   • §6 LE POINT DE LECTURE EST BRANCHÉ (AST) — l'assemblage du dossier sert chaque réponse et chaque
        position du comité contre l'ancre de SA question, produite par `ancre_de_la_question` nourrie
        de `types_qui_rouvrent` ; l'endpoint de décision du comité aussi. Un assert de comportement ne
@@ -35,7 +40,7 @@ from _harness import Bilan, strip_code  # noqa: E402
 from app.agents.v2.frameworks import load_frameworks, types_qui_rouvrent  # noqa: E402
 from app.knowledge.actualite import etat_actualite  # noqa: E402
 from app.knowledge.evenements import (  # noqa: E402
-    A_QUALIFIER, ancre_de_la_question, types_du_depot)
+    A_QUALIFIER, QualificationLue, ancre_de_la_question, types_du_depot)
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup  # noqa: E402
 
 b = Bilan()
@@ -69,9 +74,10 @@ GOUV_18_06 = ev("2026-06-18", ["5.02", "5.07"], filed="2026-06-22")
 fichier = load_frameworks()
 
 
-def ancre(lk, qid):
+def ancre(lk, qid, notes=None):
     try:
-        return ancre_de_la_question(lk, rouvrent=types_qui_rouvrent(fichier, qid))
+        return ancre_de_la_question(lk, rouvrent=types_qui_rouvrent(fichier, qid),
+                                    qualifications=notes or {})
     except Exception as e:  # noqa: BLE001
         return MaterialEventLookup(status="unavailable", raison=f"LÈVE : {e!r}")
 
@@ -150,6 +156,57 @@ b.check("rouvre au titre de" not in FIN_27_08.resume(),
         "un dépôt non rapporté à une question ne s'attribue aucun type")
 
 
+print("§7 la note flash ne remplace que ce que la forme n'a pas décidé (maillon 2)")
+FIN_MIXTE_14_04 = ev("2026-04-14", ["1.01", "2.03", "8.01", "9.01"])
+MSFT_701 = ev("2026-09-02", ["7.01", "9.01"])
+LUE_FDA = QualificationLue(types=frozenset({"reglementaire_favorable"}),
+                           resume="note flash du 2026-09-26 : « the U.S. Food and Drug Administration "
+                                  "approved RASONQUE™ (daraxonrasib) »")
+LUE_ROUTINE = QualificationLue(types=frozenset({"routine"}), resume="note flash : présentation")
+ILLISIBLE = QualificationLue(types=frozenset({A_QUALIFIER}), resume="note flash : illisible")
+
+
+def types_lus(e, note):
+    try:
+        return sorted(types_du_depot(e, note))
+    except Exception as ex:  # noqa: BLE001
+        return f"LÈVE : {ex!r}"
+
+
+b.check(types_lus(FDA_26_08, LUE_FDA) == ["reglementaire_favorable"],
+        f"le 8.01 du 26/08 LU devient une approbation → {types_lus(FDA_26_08, LUE_FDA)}")
+b.check(types_lus(FIN_MIXTE_14_04, LUE_ROUTINE) == ["financement", "routine"],
+        "un dépôt mixte garde son type de FORME (financement) quoi que dise la note de son 8.01 → "
+        f"{types_lus(FIN_MIXTE_14_04, LUE_ROUTINE)}")
+b.check(types_lus(RES_05_08, LUE_ROUTINE) == ["resultats"],
+        f"un dépôt que la forme a DÉCIDÉ ignore la note → {types_lus(RES_05_08, LUE_ROUTINE)}")
+b.check(types_lus(FDA_26_08, ILLISIBLE) == [A_QUALIFIER],
+        f"une note ILLISIBLE laisse le dépôt à qualifier (rouvre tout, Q3) → "
+        f"{types_lus(FDA_26_08, ILLISIBLE)}")
+b.check(types_lus(FDA_26_08, None) == [A_QUALIFIER], "sans note, rien ne change (maillon 1)")
+
+notes_rvmd = {FDA_26_08.accession: LUE_FDA}
+l_mo1, l_qf6 = ancre(reel, "mo_1", notes_rvmd), ancre(reel, "qf_6", notes_rvmd)
+b.check(l_mo1.status == "found" and l_mo1.event.event_date == date(2026, 8, 26),
+        "l'approbation LUE rouvre toujours la barrière (mo_1 → 26/08) → "
+        f"{getattr(l_mo1.event, 'event_date', None)}")
+b.check(l_qf6.status == "found" and l_qf6.event.event_date == date(2026, 8, 5),
+        "…mais plus les choix comptables : qf_6 retombe sur les résultats du 05/08 → "
+        f"{getattr(l_qf6.event, 'event_date', None)}")
+b.check(etat_actualite(source_date=PIECES, ancre=l_qf6).etat == "courante"
+        and etat_actualite(source_date=PIECES, ancre=ancre(reel, "qf_6")).etat == "perimee",
+        "témoin : des pièces du 05/08 sur qf_6 étaient PÉRIMÉES par le 8.01 non lu, À JOUR une fois lu")
+m_lu = ancre(flux(MSFT_701), "mo_1", {MSFT_701.accession: LUE_ROUTINE})
+b.check(m_lu.status == "none" and ancre(flux(MSFT_701), "mo_1").status == "found",
+        "MSFT 02/09 : le 7.01 lu comme routine ne rouvre plus rien ; non lu, il rouvrait tout")
+b.check("note flash" in (l_mo1.event.resume() if l_mo1.event else "")
+        and "RASONQUE" in (l_mo1.event.resume() if l_mo1.event else ""),
+        f"le motif dit que le type vient de la LECTURE, passage à l'appui → "
+        f"{l_mo1.event.resume() if l_mo1.event else None!r}")
+b.check("note flash" not in (a_qf4.event.resume() if a_qf4.event else "note flash"),
+        "un type décidé par la forme ne se prétend pas lu")
+
+
 print("§6 le point de lecture est branché (AST)")
 
 
@@ -195,6 +252,31 @@ b.check(decider is not None and len(appels(decider, "ancre_de_la_question")) == 
         and all(est_appel(kw(c, "rouvrent"), "types_qui_rouvrent")
                 for c in appels(decider, "ancre_de_la_question")),
         "l'endpoint de décision du comité inscrit au PV l'ancre de SA question")
+
+
+def nourri_par(fn, nom_arg, producteur):
+    """L'argument `nom_arg` de chaque appel à `ancre_de_la_question` dans `fn` est un NOM, et ce nom
+    n'est affecté QUE par `await producteur(...)` — jamais un `{}` en dur, jamais une autre source."""
+    if fn is None:
+        return False
+    cibles = [kw(c, nom_arg) for c in appels(fn, "ancre_de_la_question")]
+    if not cibles or not all(isinstance(v, ast.Name) for v in cibles):
+        return False
+    noms = {v.id for v in cibles}
+    for nom in noms:
+        valeurs = [n.value for n in ast.walk(fn) if isinstance(n, ast.Assign)
+                   and any(isinstance(t, ast.Name) and t.id == nom for t in n.targets)]
+        if not valeurs or not all(isinstance(v, ast.Await) and est_appel(v.value, producteur)
+                                  for v in valeurs):
+            return False
+    return True
+
+
+b.check(nourri_par(charger, "qualifications", "qualifications_de_l_emetteur"),
+        "l'assemblage du dossier nourrit l'horloge des notes flash RELUES en base "
+        "(`qualifications_de_l_emetteur`), jamais d'un `{}`")
+b.check(nourri_par(decider, "qualifications", "qualifications_de_l_emetteur"),
+        "le PV du comité cite l'ancre calculée avec les notes flash relues")
 src = strip_code((APP / "knowledge/evenements.py").read_text(encoding="utf-8"))
 b.check("async def" not in src and "await" not in src and "httpx" not in src,
         "le module de taxonomie est PUR : aucune IO (l'ancre se recalcule à la lecture, #53)")

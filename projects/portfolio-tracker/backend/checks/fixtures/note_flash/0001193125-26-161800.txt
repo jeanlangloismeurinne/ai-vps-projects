@@ -1,0 +1,622 @@
+<SEC-DOCUMENT>0001193125-26-161800.txt : 20260417
+<SEC-HEADER>0001193125-26-161800.hdr.sgml : 20260417
+<ACCEPTANCE-DATETIME>20260417171649
+ACCESSION NUMBER:		0001193125-26-161800
+CONFORMED SUBMISSION TYPE:	8-K
+PUBLIC DOCUMENT COUNT:		24
+CONFORMED PERIOD OF REPORT:	20260414
+ITEM INFORMATION:		Entry into a Material Definitive Agreement
+ITEM INFORMATION:		Creation of a Direct Financial Obligation or an Obligation under an Off-Balance Sheet Arrangement of a Registrant
+ITEM INFORMATION:		Other Events
+ITEM INFORMATION:		Financial Statements and Exhibits
+FILED AS OF DATE:		20260417
+DATE AS OF CHANGE:		20260417
+
+FILER:
+
+	COMPANY DATA:	
+		COMPANY CONFORMED NAME:			Revolution Medicines, Inc.
+		CENTRAL INDEX KEY:			0001628171
+		STANDARD INDUSTRIAL CLASSIFICATION:	BIOLOGICAL PRODUCTS (NO DIAGNOSTIC SUBSTANCES) [2836]
+		ORGANIZATION NAME:           	03 Life Sciences
+		EIN:				472029180
+		STATE OF INCORPORATION:			DE
+		FISCAL YEAR END:			1231
+
+	FILING VALUES:
+		FORM TYPE:		8-K
+		SEC ACT:		1934 Act
+		SEC FILE NUMBER:	001-39219
+		FILM NUMBER:		26872629
+
+	BUSINESS ADDRESS:	
+		STREET 1:		700 SAGINAW DR
+		CITY:			REDWOOD CITY
+		STATE:			CA
+		ZIP:			94063
+		BUSINESS PHONE:		650-481-6801
+
+	MAIL ADDRESS:	
+		STREET 1:		700 SAGINAW DR
+		CITY:			REDWOOD CITY
+		STATE:			CA
+		ZIP:			94063
+</SEC-HEADER>
+<DOCUMENT>
+<TYPE>8-K
+<SEQUENCE>1
+<FILENAME>d19920d8k.htm
+<DESCRIPTION>8-K
+<TEXT>
+<XBRL>
+<?xml version='1.0' encoding='ASCII'?>
+<html xmlns:dei="http://xbrl.sec.gov/dei/2025" xmlns:us-types="http://fasb.org/us-types/2025" xmlns:nonnum="http://www.xbrl.org/dtr/type/non-numeric" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:rvmdw="http://imetrix.edgar-online.com/20260414" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:utr="http://www.xbrl.org/2009/utr" xmlns:iso4217="http://www.xbrl.org/2003/iso4217" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL" xmlns:ixt="http://www.xbrl.org/inlineXBRL/transformation/2015-02-26" xmlns:ixt-sec="http://www.sec.gov/inlineXBRL/transformation/2015-08-31" xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi" xmlns:srt="http://fasb.org/srt/2025" xmlns:stpr="http://xbrl.sec.gov/stpr/2025" xmlns:us-gaap="http://fasb.org/us-gaap/2025" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>8-K</title>
+<meta http-equiv="Content-Type" content="text/html"/>
+</head>
+   <body><div style="display:none"> <ix:header> <ix:hidden> <ix:nonNumeric name="dei:AmendmentFlag" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-320">false</ix:nonNumeric> <ix:nonNumeric id="Hidden_dei_EntityCentralIndexKey" name="dei:EntityCentralIndexKey" contextRef="duration_2026-04-14_to_2026-04-14">0001628171</ix:nonNumeric> </ix:hidden> <ix:references> <link:schemaRef xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:link="http://www.xbrl.org/2003/linkbase" xlink:type="simple" xlink:href="rvmdw-20260414.xsd" xlink:arcrole="http://www.xbrl.org/2003/linkbase"/> </ix:references> <ix:resources> <xbrli:context id="duration_2026-04-14_to_2026-04-14"> <xbrli:entity> <xbrli:identifier scheme="http://www.sec.gov/CIK">0001628171</xbrli:identifier> </xbrli:entity> <xbrli:period> <xbrli:startDate>2026-04-14</xbrli:startDate> <xbrli:endDate>2026-04-14</xbrli:endDate> </xbrli:period> </xbrli:context> <xbrli:context id="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-CommonStockParValue0.0001PerShareMember"> <xbrli:entity> <xbrli:identifier scheme="http://www.sec.gov/CIK">0001628171</xbrli:identifier> <xbrli:segment> <xbrldi:explicitMember dimension="us-gaap:StatementClassOfStockAxis">rvmdw:CommonStockParValue0.0001PerShareMember</xbrldi:explicitMember> </xbrli:segment> </xbrli:entity> <xbrli:period> <xbrli:startDate>2026-04-14</xbrli:startDate> <xbrli:endDate>2026-04-14</xbrli:endDate> </xbrli:period> </xbrli:context> <xbrli:context id="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member"> <xbrli:entity> <xbrli:identifier scheme="http://www.sec.gov/CIK">0001628171</xbrli:identifier> <xbrli:segment> <xbrldi:explicitMember dimension="us-gaap:StatementClassOfStockAxis">rvmdw:WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member</xbrldi:explicitMember> </xbrli:segment> </xbrli:entity> <xbrli:period> <xbrli:startDate>2026-04-14</xbrli:startDate> <xbrli:endDate>2026-04-14</xbrli:endDate> </xbrli:period> </xbrli:context> </ix:resources> </ix:header> </div> <div style="text-align:center"> <div style="width:8.5in;text-align:left;margin-left: auto;margin-right: auto"> <div style="line-height:1.0pt;margin-top:0pt;margin-bottom:0pt;border-bottom:1px solid #000000">&#160;</div> <div style="line-height:3.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1px solid #000000">&#160;</div> <p style="margin-top:4pt; margin-bottom:0pt; font-size:18pt; font-family:Times New Roman;font-weight:bold;text-align:center">UNITED STATES</p> <p style="margin-top:0pt; margin-bottom:0pt; font-size:18pt; font-family:Times New Roman;font-weight:bold;text-align:center">SECURITIES AND EXCHANGE COMMISSION</p> <p style="margin-top:0pt; margin-bottom:0pt; font-size:12pt; font-family:Times New Roman;font-weight:bold;text-align:center">WASHINGTON, D.C. 20549</p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="text-align:center"> <div style="line-height:6.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1.00pt solid #000000;width:21%;text-align:center;margin-left: auto;margin-right: auto">&#160;</div></div> <p style="margin-top:9pt; margin-bottom:0pt; font-size:18pt; font-family:Times New Roman;font-weight:bold;text-align:center">FORM <span style="white-space:nowrap"><ix:nonNumeric name="dei:DocumentType" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-347">8-K</ix:nonNumeric></span></p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="text-align:center"> <div style="line-height:6.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1.00pt solid #000000;width:21%;text-align:center;margin-left: auto;margin-right: auto">&#160;</div></div> <p style="margin-top:9pt; margin-bottom:0pt; font-size:12pt; font-family:Times New Roman;font-weight:bold;text-align:center">CURRENT REPORT</p> <p style="margin-top:0pt; margin-bottom:0pt; font-size:12pt; font-family:Times New Roman;font-weight:bold;text-align:center">Pursuant to Section 13 or 15(d)</p> <p style="margin-top:0pt; margin-bottom:0pt; font-size:12pt; font-family:Times New Roman;font-weight:bold;text-align:center">of the Securities Exchange Act of 1934</p> <p style="margin-top:9pt; margin-bottom:0pt; font-size:12pt; font-family:Times New Roman;font-weight:bold;text-align:center">Date of Report (Date of earliest event reported): <ix:nonNumeric name="dei:DocumentPeriodEndDate" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt:datemonthdayyearen" id="ixv-348">April 14, 2026</ix:nonNumeric></p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="text-align:center"> <div style="line-height:6.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1.00pt solid #000000;width:21%;text-align:center;margin-left: auto;margin-right: auto">&#160;</div></div> <p style="margin-top:9pt; margin-bottom:0pt; font-size:24pt; font-family:Times New Roman;font-weight:bold;text-align:center"> <ix:nonNumeric name="dei:EntityRegistrantName" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-349">REVOLUTION MEDICINES, INC.</ix:nonNumeric> </p> <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center">(Exact name of registrant as specified in its charter)</p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="text-align:center"> <div style="line-height:6.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1.00pt solid #000000;width:21%;text-align:center;margin-left: auto;margin-right: auto">&#160;</div></div> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Times New Roman; font-size:8pt;width:100%;border-spacing:0;margin:0 auto">
+<tr>
+<td style="width:34%"/>
+<td style="vertical-align:bottom"/>
+<td style="width:32%"/>
+<td style="vertical-align:bottom;width:1%"/>
+<td style="width:32%"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;text-align:center"><span style="font-weight:bold"><ix:nonNumeric name="dei:EntityIncorporationStateCountryCode" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:stateprovnameen" id="ixv-350">Delaware</ix:nonNumeric></span></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><span style="font-weight:bold"><span style="white-space:nowrap"><ix:nonNumeric name="dei:EntityFileNumber" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-351">001-39219</ix:nonNumeric></span></span></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><span style="font-weight:bold"><span style="white-space:nowrap"><ix:nonNumeric name="dei:EntityTaxIdentificationNumber" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-352">47-2029180</ix:nonNumeric></span></span></td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:8pt">
+<td style="vertical-align:top;text-align:center"> <p style="margin-top:0pt; margin-bottom:0pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">(State or other jurisdiction</p> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">of incorporation)</p></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"> <p style="margin-top:0pt; margin-bottom:0pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">(Commission</p> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">File Number)</p></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"> <p style="margin-top:0pt; margin-bottom:0pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">(IRS Employer</p> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">Identification No.)</p></td></tr></table> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;width:100%;border-spacing:0;margin:0 auto">
+<tr>
+<td style="width:50%"/>
+<td style="vertical-align:bottom;width:1%"/>
+<td style="width:48%"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:bottom;text-align:center"> <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center"><ix:nonNumeric name="dei:EntityAddressAddressLine1" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-353">700 Saginaw Drive</ix:nonNumeric></p> <p style="margin-top:0pt; margin-bottom:1pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center"><ix:nonNumeric name="dei:EntityAddressCityOrTown" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-354">Redwood City</ix:nonNumeric>, <ix:nonNumeric name="dei:EntityAddressStateOrProvince" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:stateprovnameen" id="ixv-355">California</ix:nonNumeric></p></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom;text-align:center"><span style="font-weight:bold"><ix:nonNumeric name="dei:EntityAddressPostalZipCode" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-356">94063</ix:nonNumeric></span></td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:8pt">
+<td style="vertical-align:top;text-align:center"><span style="font-weight:bold">(Address of Principal Executive Offices)</span></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><span style="font-weight:bold">(Zip Code)</span></td></tr></table> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center">Registrant&#8217;s telephone number, including area code: <ix:nonNumeric name="dei:CityAreaCode" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-357">(650)</ix:nonNumeric> <span style="white-space:nowrap"><ix:nonNumeric name="dei:LocalPhoneNumber" contextRef="duration_2026-04-14_to_2026-04-14" id="ixv-358">481-6801</ix:nonNumeric></span></p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="text-align:center"> <div style="line-height:6.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1.00pt solid #000000;width:21%;text-align:center;margin-left: auto;margin-right: auto">&#160;</div></div> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">Check the appropriate box below if the Form <span style="white-space:nowrap">8-K</span> filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:</p> <p style="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;border-spacing:0;width:100%" cellpadding="0" cellspacing="0">
+<tr style="page-break-inside:avoid">
+<td style="width:4%;vertical-align:top;text-align:left"><ix:nonNumeric name="dei:WrittenCommunications" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:boolballotbox" id="ixv-359">&#9744;</ix:nonNumeric></td>
+<td style="vertical-align:top;text-align:left"> <p style=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;text-align:left">Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)</p></td></tr></table> <p style="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;border-spacing:0;width:100%" cellpadding="0" cellspacing="0">
+<tr style="page-break-inside:avoid">
+<td style="width:4%;vertical-align:top;text-align:left"><ix:nonNumeric name="dei:SolicitingMaterial" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:boolballotbox" id="ixv-360">&#9744;</ix:nonNumeric></td>
+<td style="vertical-align:top;text-align:left"> <p style=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;text-align:left">Soliciting material pursuant to Rule <span style="white-space:nowrap">14a-12</span> under the Exchange Act (17 CFR <span style="white-space:nowrap">240.14a-12)</span></p></td></tr></table> <p style="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;border-spacing:0;width:100%" cellpadding="0" cellspacing="0">
+<tr style="page-break-inside:avoid">
+<td style="width:4%;vertical-align:top;text-align:left"><ix:nonNumeric name="dei:PreCommencementTenderOffer" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:boolballotbox" id="ixv-361">&#9744;</ix:nonNumeric></td>
+<td style="vertical-align:top;text-align:left"> <p style=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;text-align:left"><span style="white-space:nowrap">Pre-commencement</span> communications pursuant to Rule <span style="white-space:nowrap">14d-2(b)</span> under the Exchange Act (17 CFR <span style="white-space:nowrap">240.14d-2(b))</span></p></td></tr></table> <p style="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;border-spacing:0;width:100%" cellpadding="0" cellspacing="0">
+<tr style="page-break-inside:avoid">
+<td style="width:4%;vertical-align:top;text-align:left"><ix:nonNumeric name="dei:PreCommencementIssuerTenderOffer" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:boolballotbox" id="ixv-362">&#9744;</ix:nonNumeric></td>
+<td style="vertical-align:top;text-align:left"> <p style=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;text-align:left"><span style="white-space:nowrap">Pre-commencement</span> communications pursuant to Rule <span style="white-space:nowrap">13e-4(c)</span> under the Exchange Act (17 CFR <span style="white-space:nowrap">240.13e-4(c))</span></p></td></tr></table> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center">Securities registered pursuant to Section&#160;12(b) of the Act:</p> <p style="font-size:9pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Times New Roman; font-size:10pt;width:100%;border-spacing:0;margin:0 auto">
+<tr>
+<td style="width:34%"/>
+<td style="vertical-align:bottom"/>
+<td style="width:32%"/>
+<td style="vertical-align:bottom;width:1%"/>
+<td style="width:32%"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:8pt">
+<td style="border-bottom:1.00pt solid #000000;vertical-align:bottom;white-space:nowrap;text-align:center"> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">Title of each class</p></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="border-bottom:1.00pt solid #000000;vertical-align:bottom;text-align:center"> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">Trading<br/>Symbol(s)</p></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="border-bottom:1.00pt solid #000000;vertical-align:bottom;text-align:center"> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">Name of each exchange<br/>on which registered</p></td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:Security12bTitle" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-CommonStockParValue0.0001PerShareMember" id="ixv-363">Common Stock, par value $0.0001 per share</ix:nonNumeric></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:TradingSymbol" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-CommonStockParValue0.0001PerShareMember" id="ixv-364">RVMD</ix:nonNumeric></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:SecurityExchangeName" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-CommonStockParValue0.0001PerShareMember" format="ixt-sec:exchnameen" id="ixv-365">The Nasdaq Stock Market LLC</ix:nonNumeric></td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:Security12bTitle" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member" id="ixv-366">Warrants to purchase 0.1112 shares of common stock expiring 2026</ix:nonNumeric></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:TradingSymbol" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member" id="ixv-367">RVMDW</ix:nonNumeric></td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top;text-align:center"><ix:nonNumeric name="dei:SecurityExchangeName" contextRef="duration_2026-04-14_to_2026-04-14_us-gaap-StatementClassOfStockAxis_rvmdw-WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member" format="ixt-sec:exchnameen" id="ixv-368">The Nasdaq Stock Market LLC</ix:nonNumeric></td></tr></table> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">Indicate by check mark whether the registrant is an emerging growth company as defined in Rule 405 of the Securities Act of 1933 (&#167;230.405 of this chapter) or Rule <span style="white-space:nowrap">12b-2</span> of the Securities Exchange Act of 1934 <span style="white-space:nowrap">(&#167;240.12b-2</span> of this chapter).</p> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;text-align:right">Emerging growth company <ix:nonNumeric name="dei:EntityEmergingGrowthCompany" contextRef="duration_2026-04-14_to_2026-04-14" format="ixt-sec:boolballotbox" id="ixv-369">&#9744;</ix:nonNumeric></p> <p style="margin-top:9pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">If an emerging growth company, indicate by check mark if the registrant has elected not to use the extended transition period for complying with any new or revised financial accounting standards provided pursuant to Section&#160;13(a) of the Exchange Act. &#9744;</p> <p style="font-size:10pt;margin-top:0pt;margin-bottom:0pt">&#160;</p> <div style="line-height:1.0pt;margin-top:0pt;margin-bottom:0pt;border-bottom:1px solid #000000">&#160;</div> <div style="line-height:3.0pt;margin-top:0pt;margin-bottom:2pt;border-bottom:1px solid #000000">&#160;</div></div></div>
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<hr style="color:#999999;height:3px;width:100%;clear:both"/>
+
+<div style="text-align:center"><div style="width:8.5in;text-align:left;margin-left: auto;margin-right: auto">
+ <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold">Item&#8201;1.01 Entry Into a Material Definitive Agreement. </p> <p style="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">On April&#160;17, 2026, Revolution Medicines, Inc. (the &#8220;Company&#8221;) issued $500,000,000 aggregate principal amount of its 0.50% Convertible Senior Notes due 2033 (the &#8220;Notes&#8221;). The Notes were issued pursuant to, and are governed by, an indenture (the &#8220;Base Indenture&#8221;), dated as of April&#160;17, 2026, between the Company and U.S. Bank Trust Company, National Association, as trustee (the &#8220;Trustee&#8221;), as supplemented by a First Supplemental Indenture (the &#8220;Supplemental Indenture,&#8221; and the Base Indenture, as supplemented by the Supplemental Indenture, the &#8220;Indenture&#8221;), dated as of April&#160;17, 2026, between the Company and the Trustee. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The Notes are senior, unsecured obligations and are (i)&#160;equal in right of payment with the Company&#8217;s existing and future senior, unsecured indebtedness; (ii)&#160;senior in right of payment to the Company&#8217;s existing and future indebtedness that is expressly subordinated to the Notes; (iii)&#160;effectively subordinated to the Company&#8217;s existing and future secured indebtedness, to the extent of the value of the collateral securing that indebtedness; and (iv)&#160;structurally subordinated to all existing and future indebtedness and other liabilities, including trade payables, and (to the extent the Company is not a holder thereof) preferred equity, if any, of the Company&#8217;s subsidiaries. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The Notes will accrue interest at a rate of 0.50% per annum, payable semi-annually in arrears on May&#160;1 and November&#160;1 of each year, beginning on November&#160;1, 2026. The Notes will mature on May&#160;1, 2033, unless earlier repurchased, redeemed or converted. Before February&#160;1, 2033, noteholders will have the right to convert their Notes only upon the occurrence of certain events. From and after February&#160;1, 2033, noteholders may convert their Notes at any time at their election until the close of business on the second scheduled trading day immediately before the maturity date. The Company will settle conversions by paying or delivering, as applicable, cash, shares of its common stock or a combination of cash and shares of its common stock, at the Company&#8217;s election. The initial conversion rate is 5.0302 shares of the Company&#8217;s common stock per $1,000 principal amount of Notes, which represents an initial conversion price of approximately $198.80 per share of the Company&#8217;s common stock. The conversion rate and conversion price will be subject to customary adjustments upon the occurrence of certain events. In addition, if certain corporate events that constitute a &#8220;Make-Whole Fundamental Change&#8221; (as defined in the Indenture) occur, then the conversion rate will, in certain circumstances, be increased for a specified period of time. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The Notes will be redeemable, in whole or in part (subject to certain limitations described below), at the Company&#8217;s option at any time, and from time to time, on or after May&#160;6, 2030 and on or before the 31st scheduled trading day immediately before the maturity date, but only if the last reported sale price per share of the Company&#8217;s common stock exceeds 130% of the conversion price on (i)&#160;each of at least 20 trading days, whether or not consecutive, during the 30 consecutive trading days ending on, and including, the trading day immediately before the date the Company sends the related redemption notice; and (ii)&#160;the trading day immediately before the date the Company sends such redemption notice. However, the Company may not redeem less than all of the outstanding Notes unless at least $100.0&#160;million aggregate principal amount of Notes are outstanding and not called for redemption as of the time the Company sends the related redemption notice. The redemption price will be a cash amount equal to the principal amount of the Notes to be redeemed, plus accrued and unpaid interest, if any, to, but excluding, the redemption date. In addition, calling any Note for redemption will constitute a Make-Whole Fundamental Change with respect to that Note, in which case the conversion rate applicable to the conversion of that Note will be increased in certain circumstances if it is converted after it is called for redemption. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">If certain corporate events that constitute a &#8220;Fundamental Change&#8221; (as defined in the Indenture) occur, then, subject to a limited exception for certain cash mergers, noteholders may require the Company to repurchase their Notes at a cash repurchase price equal to the principal amount of the Notes to be repurchased, plus accrued and unpaid interest, if any, to, but excluding, the fundamental change repurchase date. The definition of Fundamental Change includes certain business combination transactions involving the Company and certain <span style="white-space:nowrap">de-listing</span> events with respect to the Company&#8217;s common stock. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The Notes will have customary provisions relating to the occurrence of &#8220;Events of Default&#8221; (as defined in the Indenture), which include the following: (i)&#160;certain payment defaults on the Notes (which, in the case of a default in the payment of interest on the Notes, will be subject to a <span style="white-space:nowrap">30-day</span> cure period); (ii) the Company&#8217;s failure to send certain notices under the Indenture within specified periods of time; (iii)&#160;a default in the Company&#8217;s obligation to convert a Note upon the exercise of the conversion right with respect thereto, if such default is not cured within five </p>
+</div></div>
+
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<hr style="color:#999999;height:3px;width:100%;clear:both"/>
+
+<div style="text-align:center"><div style="width:8.5in;text-align:left;margin-left: auto;margin-right: auto">
+ <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">
+days after its occurrence; (iv)&#160;the Company&#8217;s failure to comply with certain covenants in the Indenture relating to the Company&#8217;s ability to consolidate with or merge with or into, or sell, lease or otherwise transfer, in one transaction or a series of transactions, all or substantially all of the assets of the Company and its subsidiaries, taken as a whole, to another person; (v)&#160;a default by the Company in its other obligations or agreements under the Indenture or the Notes if such default is not cured or waived within 60 days after notice is given in accordance with the Indenture; (vi)&#160;certain defaults by the Company or any of its significant subsidiaries with respect to indebtedness for borrowed money of at least $100,000,000; and (vii)&#160;certain events of bankruptcy, insolvency and reorganization involving the Company or any of its significant subsidiaries. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">If an Event of Default involving bankruptcy, insolvency or reorganization events with respect to the Company (and not solely with respect to a significant subsidiary of the Company) occurs, then the principal amount of, and all accrued and unpaid interest on, all of the Notes then outstanding will immediately become due and payable without any further action or notice by any person. If any other Event of Default occurs and is continuing, then the Trustee, by notice to the Company, or noteholders of at least 25% of the aggregate principal amount of Notes then outstanding, by notice to the Company and the Trustee, may declare the principal amount of, and all accrued and unpaid interest on, all of the Notes then outstanding to become due and payable immediately. However, notwithstanding the foregoing, the Company may elect, at its option, that the sole remedy for an Event of Default relating to certain failures by the Company to comply with certain reporting covenants in the Indenture consists exclusively of the right of the noteholders to receive special interest on the Notes for up to 365 days at a specified rate per annum not exceeding 0.50% on the principal amount of the Notes. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The above description of the Indenture and the Notes is a summary and is not complete. A copy of the Base Indenture, the Supplemental Indenture and the form of the certificate representing the Notes are filed as Exhibits 4.1, 4.2, and 4.3, respectively, to this Current Report on Form <span style="white-space:nowrap">8-K,</span> and the above summary is qualified by reference to the terms of the Base Indenture, the Supplemental Indenture and the Notes set forth in such exhibits. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">A copy of the opinion of Latham&#160;&amp; Watkins LLP relating to the validity of the Notes pursuant to the Indenture is filed herewith as Exhibit 5.1. </p> <p style="margin-top:18pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold">Item&#8201;2.03 Creation of a Direct Financial Obligation or an Obligation Under an <span style="white-space:nowrap">Off-Balance</span> Sheet Arrangement of a Registrant. </p> <p style="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">The disclosure set forth in Item 1.01 above is incorporated by reference into this Item 2.03. </p> <p style="margin-top:18pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold">Item&#8201;8.01 Other Events. </p> <p style="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">On April&#160;14, 2026, the Company entered into an underwriting agreement (the &#8220;Note Underwriting Agreement&#8221;) with J.P. Morgan Securities LLC, TD&#160;Securities (USA) LLC and Guggenheim Securities, LLC, as representatives of the several underwriters named therein (collectively, the &#8220;Underwriters&#8221;) agreeing, subject to customary representations, warranties and covenants, to issue and sell $500,000,000 aggregate principal amount of Notes to the Underwriters. In the Note Underwriting Agreement, the Company has also agreed to indemnify the Underwriters against certain liabilities, including liabilities under the Securities Act of 1933, as amended, or to contribute payments that the Underwriters may be required to make because of such liabilities. </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">A copy of the Note Underwriting Agreement is filed as Exhibit 1.1 and is incorporated herein by reference. The foregoing description of the Note Underwriting Agreement does not purport to be complete and is qualified in its entirety by reference to such exhibit. </p>
+</div></div>
+
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<hr style="color:#999999;height:3px;width:100%;clear:both"/>
+
+<div style="text-align:center"><div style="width:8.5in;text-align:left;margin-left: auto;margin-right: auto">
+ <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold">Item&#8201;9.01 Financial Statements and Exhibits. </p> <p style="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">(d) Exhibits </p> <p style="font-size:12pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table cellspacing="0" cellpadding="0" style="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt;width:100%;border-spacing:0;margin:0 auto">
+
+
+<tr>
+
+<td/>
+
+<td style="vertical-align:bottom;width:4%"/>
+<td style="width:93%"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:8pt">
+<td style="border-bottom:1.00pt solid #000000;vertical-align:bottom;white-space:nowrap;text-align:center"><span style="font-weight:bold">Exhibit</span><br/><span style="font-weight:bold">No.</span></td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="border-bottom:1.00pt solid #000000;vertical-align:bottom;text-align:center"> <p style="margin-top:0pt; margin-bottom:1pt; font-size:8pt; font-family:Times New Roman;font-weight:bold;text-align:center">Description</p></td></tr>
+
+
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">1.1</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex11.htm">Underwriting Agreement, dated as of April&#160;14, 2026, between Revolution Medicines, Inc. and the representatives of the underwriters named therein, relating to the issuance and sale of 0.50% Convertible Senior Notes due 2033. </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">4.1</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex41.htm">Indenture, dated as of April&#160;17, 2026, between Revolution Medicines, Inc. and U.S. Bank Trust Company, National Association, as trustee. </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">4.2</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex42.htm">First<span style="font-style:italic"> </span>Supplemental Indenture, dated as of April&#160;17, 2026, between Revolution Medicines, Inc. and U.S. Bank Trust Company, National&#160;Association, as trustee. </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">4.3</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex42.htm">Form of certificate representing the 0.50% Convertible Senior Notes due 2033 (included as Exhibit A to Exhibit&#160;4.2). </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">5.1</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex51.htm">Opinion of Latham&#160;&amp; Watkins LLP. </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">23.1</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top"><a href="d19920dex51.htm">Consent of Latham&#160;&amp; Watkins LLP (included in Exhibit&#160;5.1). </a></td></tr>
+<tr style="font-size:1pt">
+<td style="height:6pt"/>
+<td style="height:6pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:top;white-space:nowrap">104</td>
+<td style="vertical-align:bottom">&#160;&#160;</td>
+<td style="vertical-align:top">Cover Page Interactive Data File (embedded within the Inline XBRL document).</td></tr>
+</table>
+</div></div>
+
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<hr style="color:#999999;height:3px;width:100%;clear:both"/>
+
+<div style="text-align:center"><div style="width:8.5in;text-align:left;margin-left: auto;margin-right: auto">
+ <p style="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman;font-weight:bold;text-align:center">SIGNATURES </p> <p style="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">Pursuant to the requirements of the Securities Exchange Act of 1934, the registrant has duly caused this report to be signed on its behalf by the undersigned hereunto duly authorized. </p> <p style="font-size:12pt;margin-top:0pt;margin-bottom:0pt">&#160;</p>
+<table cellspacing="0" cellpadding="0" style="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt;width:100%;border-spacing:0">
+
+
+<tr>
+
+<td style="width:45%"/>
+
+<td style="vertical-align:bottom;width:1%"/>
+<td style="width:4%"/>
+
+<td style="vertical-align:bottom"/>
+<td style="width:3%"/>
+
+<td style="vertical-align:bottom;width:1%"/>
+<td style="width:45%"/></tr>
+
+
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:bottom" colspan="3">Date: April&#160;17, 2026</td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom" colspan="3"><span style="font-weight:bold">REVOLUTION MEDICINES, INC.</span></td></tr>
+<tr style="font-size:1pt">
+<td style="height:12pt"/>
+<td style="height:12pt" colspan="2"/>
+<td style="height:12pt" colspan="2"/>
+<td style="height:12pt" colspan="2"/></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:top">By:</td>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"> <p style="margin-top:0pt; margin-bottom:1pt; border-bottom:1px solid #000000; font-size:10pt; font-family:Times New Roman">/s/ Jack Anders</p></td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom">Jack Anders</td></tr>
+<tr style="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom"/>
+<td style="vertical-align:bottom">&#160;</td>
+<td style="vertical-align:bottom">Chief Financial Officer</td></tr>
+</table>
+</div></div>
+
+</body></html>
+</XBRL>
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-5.1
+<SEQUENCE>5
+<FILENAME>d19920dex51.htm
+<DESCRIPTION>EX-5.1
+<TEXT>
+<HTML><HEAD>
+<TITLE>EX-5.1</TITLE>
+</HEAD>
+ <BODY BGCOLOR="WHITE" STYLE="line-height:Normal">
+
+<Center><DIV STYLE="width:8.5in" align="left">
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman" ALIGN="right"><B>Exhibit 5.1 </B></P> <P STYLE="font-size:12pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE CELLSPACING="0" CELLPADDING="0" WIDTH="100%" BORDER="0" STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" ALIGN="center">
+
+
+<TR>
+
+<TD WIDTH="63%"></TD>
+
+<TD VALIGN="bottom" WIDTH="1%"></TD>
+<TD WIDTH="9%"></TD>
+
+<TD VALIGN="bottom" WIDTH="1%"></TD>
+<TD WIDTH="26%"></TD></TR>
+
+
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="top" ROWSPAN="15"> <P STYLE="margin-top:0pt;margin-bottom:0pt">
+
+
+<IMG SRC="g19920dsp215.jpg" ALT="LOGO">
+</P> <P STYLE="font-size:12pt; margin-top:0pt; margin-bottom:0pt">&nbsp;</P> <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">April&nbsp;17, 2026</P>
+<P STYLE="font-size:12pt; margin-top:0pt; margin-bottom:0pt">&nbsp;</P> <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">Revolution Medicines, Inc.</P>
+<P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">700 Saginaw Drive</P> <P STYLE="margin-top:0pt; margin-bottom:1pt; font-size:10pt; font-family:Times New Roman">Redwood City, CA 94063</P></TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom" COLSPAN="3">140 Scott Drive</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom" COLSPAN="3">Menlo Park, California 94025</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom" COLSPAN="3">Tel: +1.650.328.4600 Fax: +1.650.463.2600</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom" COLSPAN="3"> <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">www.lw.com</P> <P STYLE="font-size:6pt; margin-top:0pt; margin-bottom:1pt">&nbsp;</P></TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom" COLSPAN="3">FIRM / AFFILIATE OFFICES</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Austin</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Milan</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Beijing</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Munich</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Boston</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">New York</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Brussels</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Orange County</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Chicago</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Paris</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Dubai</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Riyadh</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">D&uuml;sseldorf</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">San Diego</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Frankfurt</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">San Francisco</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Hamburg</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Seoul</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Hong Kong</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Silicon Valley</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom"></TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Houston</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Singapore</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom"></TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">London</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Tel Aviv</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom"></TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Los&nbsp;Angeles</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Tokyo</TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="bottom"></TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Madrid</TD>
+<TD VALIGN="bottom">&nbsp;&nbsp;</TD>
+<TD VALIGN="bottom">Washington, D.C.</TD></TR>
+</TABLE> <P STYLE="font-size:12pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%" VALIGN="top" ALIGN="left">Re:</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">Registration Statement on Form <FONT STYLE="white-space:nowrap">S-3</FONT> (Registration <FONT
+STYLE="white-space:nowrap">No.&nbsp;333-277640);</FONT> $500,000,000 Aggregate Principal Amount of 0.50% Convertible Senior Notes due 2033 of Revolution Medicines, Inc. </P></TD></TR></TABLE>
+<P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P><DIV STYLE="line-height:1.0pt;margin-top:0pt;margin-bottom:2pt;margin-left:4%;border-bottom:1px solid #000000; width:96%">&nbsp;</DIV>
+<P STYLE="margin-top:12pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">To the addressee set forth above: </P> <P STYLE="margin-top:6pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">We have acted
+as special counsel to Revolution Medicines, Inc., a Delaware corporation (the &#8220;<B><I>Company</I></B>&#8221;), in connection with the issuance and sale of $500,000,000 aggregate principal amount of the Company&#8217;s 0.50% Convertible Senior
+Notes due 2033 (the &#8220;<B><I>Notes</I></B>&#8221;), pursuant to a registration statement on Form <FONT STYLE="white-space:nowrap">S-3</FONT> under the Securities Act of 1933, as amended (the &#8220;<B><I>Securities Act</I></B>&#8221;), filed
+with the Securities and Exchange Commission (the &#8220;<B><I>Commission</I></B>&#8221;) on March&nbsp;4, 2024 (Registration <FONT STYLE="white-space:nowrap">No.&nbsp;333-277640)</FONT> (as so filed and as amended, the &#8220;<B><I>Registration
+Statement</I></B>&#8221;), a base prospectus, dated March&nbsp;4, 2024, included in the Registration Statement at the time it originally became effective under the Securities Act (the &#8220;<B><I>Base Prospectus</I></B>&#8221;), a preliminary
+prospectus supplement, dated April&nbsp;13, 2026, filed with the Commission pursuant to Rule 424(b) under the Securities Act (such preliminary prospectus supplement, together with the Base Prospectus, the &#8220;<B><I>Preliminary
+Prospectus</I></B>&#8221;), a prospectus supplement, dated April&nbsp;14, 2026, filed with the Commission pursuant to Rule 424(b) under the Securities Act on April&nbsp;15, 2026 (the &#8220;<B><I>Prospectus Supplement</I></B>,&#8221; and, together
+with the Base Prospectus, the &#8220;<B><I>Prospectus</I></B>&#8221;), and an underwriting agreement, dated April&nbsp;14, 2026, between the Company and the representatives of the several underwriters named therein (the
+&#8220;<B><I>Underwriting</I></B> <B><I>Agreement</I></B>&#8221;). The Notes are being issued pursuant to an indenture, dated as of April&nbsp;17, 2026, between the Company and U.S. Bank Trust Company, National Association, as trustee (the
+&#8220;<B><I>Trustee</I></B>&#8221;) (such indenture, the &#8220;<B><I>Base Indenture</I></B>&#8221;), as supplemented by that certain first supplemental indenture, dated as of the date hereof, between the Company and the Trustee (the
+&#8220;<B><I>Supplemental Indenture</I></B>,&#8221; and the Base Indenture as supplemented by the Supplemental Indenture, the &#8220;<B><I>Indenture</I></B>&#8221;). The Notes are convertible, in accordance with their terms and the terms of the
+Indenture, into consideration consisting, at the Company&#8217;s election, of cash, shares of the Company&#8217;s common stock, $0.0001 par value per share (the &#8220;<B><I>Common Stock</I></B>&#8221;), or a combination of cash and shares of Common
+Stock. </P> <P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">This opinion is being furnished in connection with the requirements of Item 601(b)(5) of Regulation
+<FONT STYLE="white-space:nowrap">S-K</FONT> under the Securities Act, and no opinion is expressed herein as to any matter pertaining to the contents of the Registration Statement, the Preliminary Prospectus or the Prospectus, other than as expressly
+stated herein with respect to the issue of the Notes and the issue of shares of Common Stock upon conversion of the Notes. </P>
+</DIV></Center>
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<HR SIZE="3" style="COLOR:#999999" WIDTH="100%" ALIGN="CENTER">
+
+<Center><DIV STYLE="width:8.5in" align="left">
+
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">
+<B>April&nbsp;17, 2026</B> </P> <P STYLE="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman"><B> Page
+2</B>
+ </P> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P> <P STYLE="margin-top:0pt;margin-bottom:0pt">
+
+
+<IMG SRC="g19920snap7.jpg" ALT="LOGO">
+ </P> <p STYLE="margin-top:0pt;margin-bottom:0pt ; font-size:8pt">&nbsp;</P>
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">As such counsel, we have examined such matters of fact and questions of law as we have
+considered appropriate for purposes of this letter. With your consent, we have relied upon oral and written statements and representations of officers and other representatives of the Company and others as to factual matters without having
+independently verified such factual matters. We have assumed the genuineness of all signatures, including any endorsements, the legal capacity and competency of all natural persons, the authenticity of all documents submitted to us as originals, the
+conformity to original documents of all documents submitted to us as facsimile, electronic, certified or photostatic copies and the authenticity of the originals of such copies. </P>
+<P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">We are opining herein as to the internal laws of the State of New York, and the Delaware General Corporation Law (the
+&#8220;<B><I>DGCL</I></B>&#8221;), and we express no opinion with respect to the applicability to the opinions expressed herein, or the effect thereon, of the laws of any other jurisdiction or, in the case of Delaware, any other laws, or as to any
+matters of municipal law or the laws of any local agencies within any state. </P> <P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">Subject to the foregoing and the other matters set forth
+herein, it is our opinion that, as of the date hereof: </P> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%" VALIGN="top" ALIGN="left">1.</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">When the Notes have been executed, issued and authenticated in accordance with the terms of the Indenture and
+delivered and paid for in accordance with the terms of the Underwriting Agreement, the Notes will be legally valid and binding obligations of the Company, enforceable against the Company in accordance with their terms. </P></TD></TR></TABLE>
+<P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%" VALIGN="top" ALIGN="left">2.</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">The shares of Common Stock initially issuable upon conversion of the Notes have been duly authorized by all
+necessary corporate action of the Company and, when issued upon conversion of the Notes in accordance with the terms of the Notes and the Indenture, will be validly issued, fully paid and <FONT STYLE="white-space:nowrap">non-assessable.</FONT>
+</P></TD></TR></TABLE> <P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">Our opinions are subject to: </P> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%">&nbsp;</TD>
+<TD WIDTH="6%" VALIGN="top" ALIGN="left">(a)</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">the effects of bankruptcy, insolvency, reorganization, preference, fraudulent transfer, moratorium or other
+similar laws relating to or affecting the rights or remedies of creditors; </P></TD></TR></TABLE> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%">&nbsp;</TD>
+<TD WIDTH="6%" VALIGN="top" ALIGN="left">(b)</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">the effects of general principles of equity, whether considered in a proceeding in equity or at law (including
+the possible unavailability of specific performance or injunctive relief), concepts of materiality, reasonableness, good faith and fair dealing and the discretion of the court before which a proceeding is brought; and </P></TD></TR></TABLE>
+<P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P>
+<TABLE STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt" BORDER="0" CELLPADDING="0" CELLSPACING="0" WIDTH="100%">
+<TR style = "page-break-inside:avoid">
+<TD WIDTH="4%">&nbsp;</TD>
+<TD WIDTH="6%" VALIGN="top" ALIGN="left">(c)</TD>
+<TD ALIGN="left" VALIGN="top"> <P STYLE=" margin-top:0pt ; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman; " ALIGN="left">the invalidity, under certain circumstances under law or court decisions, of provisions for the indemnification
+or exculpation of, or contribution to, a party with respect to a liability, where such indemnification, exculpation or contribution is contrary to public policy. </P></TD></TR></TABLE>
+</DIV></Center>
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<HR SIZE="3" style="COLOR:#999999" WIDTH="100%" ALIGN="CENTER">
+
+<Center><DIV STYLE="width:8.5in" align="left">
+
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">
+<B>April&nbsp;17, 2026</B> </P> <P STYLE="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman"><B> Page
+3</B>
+ </P> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P> <P STYLE="margin-top:0pt;margin-bottom:0pt">
+
+
+<IMG SRC="g19920snap7.jpg" ALT="LOGO">
+ </P> <p STYLE="margin-top:0pt;margin-bottom:0pt ; font-size:8pt">&nbsp;</P>
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">We express no opinion with respect to (i)&nbsp;consents to, or restrictions upon, governing
+law, jurisdiction, venue, service of process, arbitration, remedies or judicial relief; (ii)&nbsp;advance waivers of claims, defenses, rights granted by law, notice or opportunity for hearing, evidentiary requirements, statutes of limitation, trial
+by jury or at law or other procedural rights; (iii)&nbsp;waivers of rights or defenses contained in Section&nbsp;3.04 of the Supplemental Indenture, and waivers of broadly or vaguely stated rights; (iv)&nbsp;covenants not to compete;
+(v)&nbsp;provisions for exclusivity, election or cumulation of rights or remedies; (vi)&nbsp;provisions authorizing or validating conclusive or discretionary determinations; (vii)&nbsp;grants of setoff rights; (viii)&nbsp;provisions to the effect
+that a guarantor is liable as a primary obligor, and not as a surety and provisions purporting to waive modifications of any guaranteed obligation to the extent such modification constitutes a novation; (ix)&nbsp;provisions for the payment of
+attorneys&#8217; fees where such payment is contrary to law or public policy; (x)&nbsp;proxies, powers and trusts; (xi)&nbsp;provisions prohibiting, restricting, or requiring consent to assignment or transfer of any agreement, right or property;
+(xii)&nbsp;provisions for liquidated damages, default interest, late charges, monetary penalties, prepayment or make-whole premiums or other economic remedies to the extent such provisions are deemed to constitute a penalty; (xiii)&nbsp;provisions
+permitting, upon acceleration of any indebtedness (including the Notes), collection of that portion of the stated principal amount thereof that might be determined to constitute unearned interest thereon; (xiv)&nbsp;any &#8220;swap&#8221; (as such
+term is defined in the Commodity Exchange Act of 1936, as amended), including any guarantee thereof, by any party that is not an &#8220;eligible contract participant&#8221; (as such term is defined in such Act) or any provision of the Indenture or
+the Notes that purports to share the proceeds of any guarantee or collateral provided by any party that is not an eligible contract participant with the provider of any such swap or the effect of such sharing provisions on the opinions expressed
+herein; and (xv)&nbsp;the severability, if invalid, of provisions to the foregoing effect. </P> <P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">In rendering the opinion in numbered paragraph
+2 of this letter, we have assumed that the Company will comply with all applicable notice requirements regarding <FONT STYLE="white-space:nowrap">un-certificated</FONT> shares provided in the DGCL. </P>
+<P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">With your consent, we have assumed that (a)&nbsp;each of the Base Indenture and the Supplemental Indenture has been duly authorized, executed
+and delivered by the parties thereto other than the Company; (b)&nbsp;the Indenture constitutes legally valid and binding obligations of the parties thereto (other than the Company), enforceable against each of them in accordance with their
+respective terms; and (c)&nbsp;the status of the Indenture and the Notes as legally valid and binding obligations of the parties thereto is not affected by any (i)&nbsp;breaches of, or defaults under, agreements or instruments; (ii)&nbsp;violations
+of statutes, rules, regulations or court or governmental orders; or (iii)&nbsp;failures to obtain required consents, approvals or authorizations from, or make required registrations, declarations or filings with, governmental authorities. </P>
+<P STYLE="margin-top:12pt; margin-bottom:0pt; text-indent:4%; font-size:10pt; font-family:Times New Roman">This opinion is for your benefit in connection with the Registration Statement and may be relied upon by you and by persons entitled to rely
+upon it pursuant to the applicable provisions of the Securities Act. We consent to your filing this opinion as an exhibit to the Company&#8217;s Current Report on Form <FONT STYLE="white-space:nowrap">8-K,</FONT> filed with the Commission on or
+about April&nbsp;17, 2026, and to the reference to our firm contained in the Prospectus Supplement under the heading &#8220;Legal Matters.&#8221; In giving </P>
+</DIV></Center>
+
+
+<p style="margin-top:1em; margin-bottom:0em; page-break-before:always"> </p>
+<HR SIZE="3" style="COLOR:#999999" WIDTH="100%" ALIGN="CENTER">
+
+<Center><DIV STYLE="width:8.5in" align="left">
+
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">
+<B>April&nbsp;17, 2026</B> </P> <P STYLE="margin-top:6pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman"><B> Page
+4</B>
+ </P> <P STYLE="font-size:6pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P> <P STYLE="margin-top:0pt;margin-bottom:0pt">
+
+
+<IMG SRC="g19920snap7.jpg" ALT="LOGO">
+ </P> <p STYLE="margin-top:0pt;margin-bottom:0pt ; font-size:8pt">&nbsp;</P>
+ <P STYLE="margin-top:0pt; margin-bottom:0pt; font-size:10pt; font-family:Times New Roman">such consent, we do not thereby admit that we are in the category of persons whose consent is required under
+Section&nbsp;7 of the Securities Act or the rules and regulations of the Commission thereunder. </P> <P STYLE="font-size:12pt;margin-top:0pt;margin-bottom:0pt">&nbsp;</P><DIV ALIGN="right">
+<TABLE CELLSPACING="0" CELLPADDING="0" WIDTH="40%" BORDER="0" STYLE="BORDER-COLLAPSE:COLLAPSE; font-family:Times New Roman; font-size:10pt">
+
+
+<TR>
+
+<TD WIDTH="100%"></TD></TR>
+
+
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="top">Sincerely,</TD></TR>
+<TR STYLE="font-size:1pt">
+<TD HEIGHT="16"></TD></TR>
+<TR STYLE="page-break-inside:avoid ; font-family:Times New Roman; font-size:10pt">
+<TD VALIGN="top">/s/ Latham&nbsp;&amp; Watkins LLP</TD></TR>
+</TABLE></DIV>
+</DIV></Center>
+
+</BODY></HTML>
+</TEXT>
+</DOCUMENT>
+<DOCUMENT>
+<TYPE>EX-101.SCH
+<SEQUENCE>6
+<FILENAME>rvmdw-20260414.xsd
+<DESCRIPTION>XBRL TAXONOMY EXTENSION SCHEMA
+<TEXT>
+<XBRL>
+<?xml version="1.0" encoding="us-ascii"?>
+<!-- DFIN - https://www.dfinsolutions.com/ -->
+<!-- CTU Version: Release 2606 Build:20260317.3 -->
+<!-- Creation date: 4/18/2026 1:06:10 AM Eastern Time -->
+<!-- Copyright (c) 2026 Donnelley Financial Solutions, Inc. All Rights Reserved. -->
+<xsd:schema
+  xmlns:nonnum="http://www.xbrl.org/dtr/type/non-numeric"
+  xmlns:num="http://www.xbrl.org/dtr/type/numeric"
+  xmlns:us-types="http://fasb.org/us-types/2025"
+  xmlns:rvmdw="http://imetrix.edgar-online.com/20260414"
+  xmlns:dei="http://xbrl.sec.gov/dei/2025"
+  xmlns:xbrli="http://www.xbrl.org/2003/instance"
+  xmlns:link="http://www.xbrl.org/2003/linkbase"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xbrldt="http://xbrl.org/2005/xbrldt"
+  xmlns:srt="http://fasb.org/srt/2025"
+  xmlns:stpr="http://xbrl.sec.gov/stpr/2025"
+  xmlns:us-gaap="http://fasb.org/us-gaap/2025"
+  attributeFormDefault="unqualified"
+  elementFormDefault="qualified"
+  targetNamespace="http://imetrix.edgar-online.com/20260414"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <xsd:import schemaLocation="http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd" namespace="http://www.xbrl.org/2003/instance" />
+    <xsd:import schemaLocation="http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd" namespace="http://www.xbrl.org/2003/linkbase" />
+    <xsd:import schemaLocation="https://xbrl.sec.gov/dei/2025/dei-2025.xsd" namespace="http://xbrl.sec.gov/dei/2025" />
+    <xsd:import schemaLocation="http://www.xbrl.org/dtr/type/numeric-2009-12-16.xsd" namespace="http://www.xbrl.org/dtr/type/numeric" />
+    <xsd:import schemaLocation="http://www.xbrl.org/dtr/type/nonNumeric-2009-12-16.xsd" namespace="http://www.xbrl.org/dtr/type/non-numeric" />
+    <xsd:import schemaLocation="https://xbrl.sec.gov/naics/2025/naics-2025.xsd" namespace="http://xbrl.sec.gov/naics/2025" />
+    <xsd:import schemaLocation="http://www.xbrl.org/2005/xbrldt-2005.xsd" namespace="http://xbrl.org/2005/xbrldt" />
+    <xsd:import schemaLocation="https://xbrl.fasb.org/srt/2025/elts/srt-2025.xsd" namespace="http://fasb.org/srt/2025" />
+    <xsd:import schemaLocation="https://xbrl.sec.gov/stpr/2025/stpr-2025.xsd" namespace="http://xbrl.sec.gov/stpr/2025" />
+    <xsd:import schemaLocation="https://xbrl.fasb.org/us-gaap/2025/elts/us-gaap-2025.xsd" namespace="http://fasb.org/us-gaap/2025" />
+    <xsd:import schemaLocation="https://xbrl.fasb.org/us-gaap/2025/elts/us-types-2025.xsd" namespace="http://fasb.org/us-types/2025" />
+  <xsd:annotation>
+    <xsd:appinfo>
+      <link:linkbaseRef xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="rvmdw-20260414_lab.xml" xlink:role="http://www.xbrl.org/2003/role/labelLinkbaseRef" xlink:title="Label Links, all" xlink:type="simple" />
+      <link:linkbaseRef xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="rvmdw-20260414_pre.xml" xlink:role="http://www.xbrl.org/2003/role/presentationLinkbaseRef" xlink:title="Presentation Links, all" xlink:type="simple" />
+      <link:linkbaseRef xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="rvmdw-20260414_def.xml" xlink:role="http://www.xbrl.org/2003/role/definitionLinkbaseRef" xlink:title="Definition Links, all" xlink:type="simple" />
+      <link:roleType roleURI="http://imetrix.edgar-online.com//20260414/taxonomy/role/DocumentDocumentAndEntityInformation" id="Role_DocumentDocumentAndEntityInformation">
+        <link:definition>100000 - Document - Document and Entity Information</link:definition>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+    </xsd:appinfo>
+  </xsd:annotation>
+  <xsd:element id="rvmdw_DocumentAndEntityInformationTable" name="DocumentAndEntityInformationTable" type="xbrli:stringItemType" substitutionGroup="xbrldt:hypercubeItem" xbrli:periodType="duration" nillable="true" abstract="true" />
+  <xsd:element id="rvmdw_DocumentAndEntityInformationLineItems" name="DocumentAndEntityInformationLineItems" type="xbrli:stringItemType" substitutionGroup="xbrli:item" xbrli:periodType="duration" nillable="true" abstract="true" />
+  <xsd:element id="rvmdw_CommonStockParValue0.0001PerShareMember" name="CommonStockParValue0.0001PerShareMember" type="nonnum:domainItemType" substitutionGroup="xbrli:item" xbrli:periodType="duration" nillable="true" abstract="true" />
+  <xsd:element id="rvmdw_WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member" name="WarrantsToPurchase0.1112SharesOfCommonStockExpiring2026Member" type="nonnum:domainItemType" substitutionGroup="xbrli:item" xbrli:periodType="duration" nillable="true" abstract="true" />
+</xsd:schema>
+</XBRL>
+</TEXT>
+</DOCUMENT>
+</SEC-DOCUMENT>

@@ -225,6 +225,10 @@ class FrameworksFile(Strict):
     question doit couvrir exactement cette liste — vérifié par le pont, pas ici (#37)."""
     schema_version: str = Field(min_length=1)
     archetypes: list[str] = Field(min_length=1)
+    # La version du CATALOGUE D'ÉVÉNEMENTS, distincte de celle des méthodologies (#90) : une note flash
+    # est la lecture d'un dépôt contre CE catalogue. Corriger un libellé d'événement ne change aucune
+    # question ; le faire sous `schema_version` invaliderait toutes les réponses pour relire un 8-K.
+    types_evenement_version: str = Field(min_length=1)
     types_evenement: list[TypeEvenement] = Field(min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 

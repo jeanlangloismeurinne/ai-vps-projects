@@ -110,6 +110,9 @@ class MaterialEvent:
     # le dépôt n'a pas été rapporté à une question (`evenements.ancre_de_la_question` le pose) ;
     # `resume()` l'écrit, pour que le motif d'actualité dise POURQUOI ce dépôt compte.
     types: tuple[str, ...] = ()
+    # Ce que la note flash a lu de ce dépôt (maillon 2), quand elle existe : le motif dit alors d'où
+    # vient le type — la LECTURE du communiqué, pas sa forme.
+    note: Optional[str] = None
 
     @property
     def items_substantiels(self) -> tuple[str, ...]:
@@ -128,7 +131,10 @@ class MaterialEvent:
             base += f" (déposé le {self.filing_date.isoformat()})"
         lib = self.libelle_items()
         base = f"{base}, items {lib}" if lib else base
-        return f"{base} — rouvre au titre de : {', '.join(self.types)}" if self.types else base
+        if not self.types:
+            return base
+        base = f"{base} — rouvre au titre de : {', '.join(self.types)}"
+        return f"{base} ({self.note})" if self.note else base
 
 
 @dataclass(frozen=True)

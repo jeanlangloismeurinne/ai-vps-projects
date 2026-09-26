@@ -25,13 +25,20 @@ mutations=(
 "$EV¦        touches = types & rouvrent¦        touches = types¦mo_1 (la barrière) s'ancre au 8.01 du 26/08"
 "$PA¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),¦            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),¦chaque réponse est servie contre l'ancre de SA question"
 "$PA¦                                      ancre=ancre_de(cle[1]))¦                                      ancre=ancre)¦la position du comité se juge contre l'ancre de SA question"
-"$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id))¦                ancre, rouvrent=frozenset({\"financement\"}))¦filtrée par \`types_qui_rouvrent\`"
-"$API¦                ancre, rouvrent=types_qui_rouvrent(load_frameworks(), question_id))¦                ancre, rouvrent=frozenset())¦inscrit au PV l'ancre de SA question"
+"$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=frozenset({\"financement\"}), qualifications=notes)¦filtrée par \`types_qui_rouvrent\`"
+"$API¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=frozenset(), qualifications=notes)¦inscrit au PV l'ancre de SA question"
 # §4 — les états traversent, un « aucun » filtré se dit
 "$EV¦    if lookup.status != \"found\":¦    if lookup.status == \"none\":¦\`unavailable\` traverse"
 "$AC¦                   if ancre.filtre else¦                   if False else¦le motif ne prétend pas que l'émetteur n'a rien publié"
+# §7 — la note flash (maillon 2) : elle ne remplace que la part non décidée, et elle est LUE
+"$EV¦    if qualification is None or A_QUALIFIER not in forme:¦    if qualification is None:¦un dépôt que la forme a DÉCIDÉ ignore la note"
+"$EV¦    return ((forme - {A_QUALIFIER}) | qualification.types) or frozenset({A_QUALIFIER})¦    return qualification.types or frozenset({A_QUALIFIER})¦un dépôt mixte garde son type de FORME"
+"$EV¦        note = qualifications.get(e.accession) if e.accession else None¦        note = None¦mais plus les choix comptables"
+"$ME¦        return f\"{base} ({self.note})\" if self.note else base¦        return base¦le type vient de la LECTURE"
+"$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦l'assemblage du dossier nourrit l'horloge des notes flash"
+"$API¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦le PV du comité cite l'ancre calculée avec les notes flash"
 # §5 — le motif dit pourquoi
-"$ME¦        return f\"{base} — rouvre au titre de : {', '.join(self.types)}\" if self.types else base¦        return base¦se nomme par son type"
+"$ME¦        base = f\"{base} — rouvre au titre de : {', '.join(self.types)}\"¦        base = base¦se nomme par son type"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

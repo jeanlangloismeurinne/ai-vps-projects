@@ -71,6 +71,7 @@ async def dossier_niveau3(ticker_id: str, framework_id: str, question_id: str) -
 async def _decider(ticker_id: str, framework_id: str, question_id: str, geste, demande):
     # Import tardif : l'ancre appelle EDGAR, et ce module est importé par des checks hors réseau.
     from app.agents.v2.frameworks import load_frameworks, types_qui_rouvrent
+    from app.agents.v2.note_flash import qualifications_de_l_emetteur
     from app.knowledge.evenements import ancre_de_la_question
     from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
 
@@ -80,9 +81,11 @@ async def _decider(ticker_id: str, framework_id: str, question_id: str, geste, d
         # La MÊME ancre que celle qui jugera l'acceptation à la lecture (arbitrage n°2) : celle de
         # CETTE question (#89) — le PV cite le dernier fait qui la rouvre, pas le dernier fait venu.
         ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+        fichier = load_frameworks()
+        notes = await qualifications_de_l_emetteur(conn, ancre.cik, fichier)
         try:
             ancre = ancre_de_la_question(
-                ancre, rouvrent=types_qui_rouvrent(load_frameworks(), question_id))
+                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)
         except KeyError as e:
             raise HTTPException(status_code=404, detail=str(e))
         try:

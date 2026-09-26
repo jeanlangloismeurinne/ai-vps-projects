@@ -1,6 +1,6 @@
 ---
 id: taxonomie-evenements
-status: arbitrée le 2026-09-26 — maillon 1 livré (référentiel + horloge par question)
+status: arbitrée le 2026-09-26 — maillons 1 (référentiel + horloge par question) et 2 (note flash) livrés
 created: 2026-09-26
 project: portfolio-tracker
 role: >
@@ -250,10 +250,8 @@ sont antérieures. Le test retenu est le **couple discriminant** (`check_eveneme
 
 ## 10. La suite
 
-1. **Maillon 2 — la note flash** : un agent lit les dépôts `a_qualifier` (8.01, 7.01 seul, 1.01 sans
-   financement, 6-K…) et les range dans un type, en citant le passage ; pour une surprise, il dit la
-   cause (secteur / concurrence / exécution ; non dite ⟹ concurrence, Q2). Qualification persistée
-   une fois par dépôt (un dépôt ne change pas) ; la portée reste recalculée à la lecture.
+1. ✅ **Maillon 2 — la note flash** (livré le 2026-09-26, §11). Reste à la BRANCHER au flux : elle ne
+   tourne aujourd'hui que par `tools/rediger_notes_flash.sh`.
 2. **Maillon 3 — Q4** : une approbation qualifiée fait PROPOSER le reclassement de l'entreprise (de
    « pré-revenus » à « commerciale ») au comité, qui valide.
 3. **Maillon 4 — Q5** : sur une position détenue, une question rouverte qui porte une hypothèse de la
@@ -263,3 +261,36 @@ sont antérieures. Le test retenu est le **couple discriminant** (`check_eveneme
    régulation des prix. Comment les faire entrer dans le flux d'investissement ? Les frameworks futurs
    d'analyse concurrentielle (spec, benchmark des méthodologies) y apporteront une partie de la
    réponse — le sprint doit partir d'eux, pas d'une source de données.
+
+## 11. Ce qui est livré — maillon 2, la note flash (2026-09-26, convention #90)
+
+- **Un agent lit** les dépôts que la forme ne qualifie pas — le formulaire et ses communiqués, jamais les
+  actes juridiques — et range chacun dans un ou plusieurs types du catalogue, **en citant le passage**.
+  Il ne voit pas ce que chaque type rouvre : il dit ce qui s'est passé, pas combien de questions il veut
+  rouvrir. Pour un écart aux attentes, il dit la cause ; « non dite » devient « concurrence » par le
+  code (Q2).
+- **Le code vérifie** que chaque citation est littéralement dans le dépôt ; sinon rien n'est écrit et le
+  dépôt reste à qualifier (il rouvre tout, Q3). Une note par dépôt, jamais réécrite (migration 050).
+- **Au point de lecture**, la note ne remplace que la part non décidée par la forme ; le motif dit
+  « rouvre au titre de : réglementaire favorable (note flash du … : « … ») ».
+
+**Mesuré sur le réel.** RVMD : 6 dépôts lus — l'approbation du 26/08, le vote prioritaire FDA, les
+résultats de phase 3 et de phase 1 (réglementaire favorable), l'émission d'actions et les convertibles
+d'avril (financement). qf_6 (choix comptables) n'est plus périmée à tort par le communiqué FDA : la note
+de qualité financière passe de 0,00 à 0,50 ; mo_1…mo_5 restent rouvertes, pour la bonne raison, dite.
+NVDA : l'accord de rachat de Hugging Face (8.01) est lu comme un **changement de périmètre** — que la
+forme ne pouvait pas voir ; l'émission obligataire de juin, comme un financement. MSFT : la présentation
+des nouveaux segments (7.01) est lue comme de la **routine** (point à relire par le comité : un
+changement de segments ne rouvre aucune question, mais il change la comparabilité des chiffres).
+
+**Ce que la lecture des notes a appris.** Deux des six premières notes RVMD étaient fausses **à cause du
+vocabulaire** : « publication de résultats » lu comme résultats cliniques, et un succès de phase 3 rangé
+en « écart aux attentes » — ce qui rouvrait toute la qualité financière. Corrigé dans les libellés (une
+surprise est un écart FINANCIER ; un essai qui atteint son objectif est un événement réglementaire
+favorable), sous une **version du catalogue d'événements distincte** de celle des méthodologies : ainsi
+les dépôts se relisent sans toucher aux réponses. Relus : 6/6 justes.
+
+**Reste ouvert** : brancher la note flash au flux (le système doit lire lui-même un communiqué nouveau,
+arbitrage du 25/09 — à faire sous le réglage qui encadre la dépense automatique), puis maillons 3 (Q4) et
+4 (Q5).
+
