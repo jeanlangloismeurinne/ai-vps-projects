@@ -205,9 +205,13 @@ check("aucun `field_path` dans la requête (un field_path ré-ancrerait la quest
 check("worker = search-worker, ticker repris de la ligne",
       req.worker == "search-worker" and req.ticker_id == "NVDA")
 # Lot 7 (2026-09-26) : « Pour l'entreprise RVMD… » a fait chercher la défendabilité de Revolution
-# Medicines chez Ryvu Therapeutics. La requête nomme l'entreprise par sa raison sociale et son CIK.
-check("§5 la requête NOMME l'entreprise (raison sociale + CIK SEC), pas son seul sigle",
-      "NVIDIA CORP" in req.query and "1045810" in req.query, f"→ {req.query[:160]}")
+# Medicines chez Ryvu Therapeutics. La requête nomme l'entreprise par sa RAISON SOCIALE.
+check("§5 la requête NOMME l'entreprise par sa raison sociale, pas son seul sigle",
+      "NVIDIA CORP" in req.query, f"→ {req.query[:160]}")
+# Arbitrage du 2026-09-26 : le CIK est la clef des sources structurées (EDGAR), pas un terme de
+# recherche web — un numéro de déposant ne ramène pas de contenu de qualité.
+check("§5 le mandat web ne porte AUCUN numéro d'identifiant réglementaire (CIK)",
+      "1045810" not in req.query and "CIK" not in req.query, f"→ {req.query[:160]}")
 check("la requête porte la métrique, la source ET l'ancre de la ligne",
       all(x in req.query for x in (_ligne.metrique, _ligne.source_pressentie, _ligne.ancre)))
 check("le type d'entry de la requête suit la déduction (#4) : 'free cash flow' → fact_financial",

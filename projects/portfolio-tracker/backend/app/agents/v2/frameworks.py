@@ -326,6 +326,33 @@ def nature_effective_de(natures: list[Any], *, approximation: bool) -> str:
     return "interpretation"
 
 
+def nature_satisfait(effective: str, attendue: str) -> bool:
+    """La nature d'une fondation SATISFAIT-elle la nature attendue par la question ? DÉTENTEUR UNIQUE
+    (#46), lu par le pont [E] et par `analyste.statuts_admissibles` (qui doit ouvrir exactement ce que
+    le pont acceptera, #63).
+
+    ARBITRAGE DE L'UTILISATEUR DU 2026-09-26, rendu comme un vrai fonds : un JUGEMENT de l'analyste
+    appuyé sur des faits vérifiés est une réponse directe à une question de jugement — dans un mémo de
+    comité, l'analyste répond à « qu'est-ce qui empêche un concurrent de capter ce profit ? » en citant
+    les brevets et l'approbation réglementaire, sans avoir besoin qu'une opinion extérieure le dise à
+    sa place. La nature attendue `interpretation` décrit l'ASSERTION demandée (un jugement), pas une
+    exigence sur ses PIÈCES : elle PERMET de s'appuyer sur des opinions (d'où ses planchers plus bas),
+    elle n'OBLIGE pas à en citer. Toute fondation la satisfait donc — des mesures, des événements, des
+    opinions, ou un mélange.
+    L'exigence inverse reste ENTIÈRE (#78) : une question de MESURE (« quelle preuve observable ? »)
+    ne se satisfait que d'une fondation entièrement mesurée — un chiffre calculé ou une opinion citée
+    à côté d'un relevé en ferait une lecture des deux.
+
+    Mesuré avant d'écrire (RVMD × defendabilite, plan 130) : l'égalité stricte refusait 4 réponses sur
+    4 questions de jugement (mo_1/3/4/5) fondées sur des brevets datés et un stade clinique, alors que
+    `statuts_admissibles` leur avait ouvert `repondu` — le modèle ne voit pas la nature des pièces
+    (#59), il ne pouvait ni savoir ni éviter. Les questions restaient sans réponse.
+    """
+    if attendue == "interpretation":
+        return effective in NATURES
+    return effective == attendue
+
+
 def valider_pont_framework_answer(
     answer: FrameworkAnswer,
     *,
@@ -431,7 +458,11 @@ def valider_pont_framework_answer(
                 "elle ne s'annonce pas (#51, pendant de la règle transverse 7)")
 
         attendue = profil.get("nature_attendue")
-        if attendue is not None and answer.statut != "approxime" and effective != attendue:
+        # ⚠️ ASSOUPLI le 2026-09-26 pour les seules questions de JUGEMENT (arbitrage utilisateur,
+        #    `nature_satisfait`) : un jugement fondé sur des faits vérifiés est une réponse directe.
+        #    Les questions de MESURE gardent l'exigence « tout mesuré » de #78, intacte.
+        if (attendue is not None and answer.statut != "approxime"
+                and not nature_satisfait(effective, attendue)):
             portees = sorted({str(entries[i].get("nature")) for i in cites})
             raise FrameworkAnswerRefused(
                 f"`{answer.question_id}` attend une assertion de nature `{attendue}`, mais la "

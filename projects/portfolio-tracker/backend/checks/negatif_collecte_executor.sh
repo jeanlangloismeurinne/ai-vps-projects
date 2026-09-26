@@ -138,7 +138,8 @@ mutations=(
 "$SRC¦cause=\"recherche_epuisee\")  # cause: not_found¦cause=\"source_indisponible\")¦\`not_found\` → echec de cause"
 "$SRC¦cause=\"recherche_epuisee\")  # cause: appariement inexécutable¦cause=\"source_indisponible\")¦appariement inexécutable = \`recherche_epuisee\`"
 # ── l'identité de l'émetteur dans la requête web (lot 7, 2026-09-26 — RVMD cherché chez Ryvu) ─────
-"$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC \"¦            f\"Pour l'entreprise {emetteur.symbole} (symbole {emetteur.symbole}, SEC \"¦NOMME l'entreprise (raison sociale + CIK SEC)"
+"$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (cotée sous le symbole {emetteur.symbole}) \"¦            f\"Pour l'entreprise {emetteur.symbole} (cotée sous le symbole {emetteur.symbole}) \"¦NOMME l'entreprise par sa raison sociale"
+"$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (cotée sous le symbole {emetteur.symbole}) \"¦            f\"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC {emetteur.cik}) \"¦AUCUN numéro d'identifiant"
 "$SRC¦    if emetteur is None:\n        return ResultatCollecte(¦    if False:\n        return ResultatCollecte(¦identité NON RÉSOLUE → echec nommé"
 )
 

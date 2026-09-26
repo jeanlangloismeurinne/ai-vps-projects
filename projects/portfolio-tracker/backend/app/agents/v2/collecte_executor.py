@@ -280,7 +280,11 @@ def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -
     le plus proche évite une modification de contrat fermé pour un champ décoratif).
     `emetteur` est REQUIS (lot 7) : la requête nommait l'entreprise par son SIGLE seul (« Pour
     l'entreprise RVMD… »), et un sigle se partage entre sociétés — c'est ainsi que la défendabilité de
-    Revolution Medicines a été cherchée chez Ryvu. La raison sociale et le CIK lèvent l'ambiguïté.
+    Revolution Medicines a été cherchée chez Ryvu. La RAISON SOCIALE lève l'ambiguïté.
+    ⚠️ Le CIK n'entre PAS dans le mandat web (arbitrage utilisateur du 2026-09-26) : c'est la clef des
+    sources STRUCTURÉES (EDGAR, où il sert déjà via `resolve_cik`) ; dans une recherche de presse ou de
+    site d'émetteur, un numéro d'identifiant ne ramène pas de contenu de qualité — un analyste nomme la
+    société, il ne cherche pas son numéro de déposant.
     `reliability_min=0.40` : plancher permissif — le collecteur ne juge pas la valeur d'une source
     (#59), il ramène la matière ; la suffisance est jugée plus tard par le manager du framework."""
     return WorkerRequest(
@@ -288,9 +292,10 @@ def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -
         worker=WORKER_NAME,
         ticker_id=ligne.ticker_id,
         query=(
-            f"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC "
-            f"{emetteur.cik}) — et aucune autre société portant un sigle voisin —, trouve la donnée "
+            f"Pour l'entreprise {emetteur.raison_sociale} (cotée sous le symbole {emetteur.symbole}) "
+            f"— et aucune autre société portant un sigle voisin —, trouve la donnée "
             f"suivante : {ligne.metrique}. "
+            f"Formule tes recherches web avec la raison sociale, jamais avec le sigle seul. "
             f"Cherche en priorité dans : {ligne.source_pressentie}. "
             f"Date le fait par rapport à l'événement : {ligne.ancre}."
         ),

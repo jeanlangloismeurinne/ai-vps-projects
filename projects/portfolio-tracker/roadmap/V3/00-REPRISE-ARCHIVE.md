@@ -8,6 +8,28 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-26 (4) — LOT 7 : CIK hors du web, pièces Ryvu écartées (#87), jugement fondé sur des faits (#88)
+
+Trois demandes de l'utilisateur, en une session :
+- **CIK hors du mandat web** (« pas certain que faire des recherches web avec des numéros d'identifiant
+  compliqués soit la meilleure façon de trouver du contenu de qualité ») : `construire_requete_web` nomme
+  la raison sociale + symbole, consigne de chercher par la raison sociale ; le traducteur garde le CIK.
+  `check_collecte_executor` 101/0, négatif 40/0.
+- **Pièces Ryvu archivées** (« tu peux archiver les données récoltées sur les entreprises non pertinentes
+  par erreur ») : migration **049** `pieces_ecartees` — #665/#666/#667/#671/#672 déplacées au registre
+  (pièce entière en JSONB + 2 rattachements à mo_3), #664 (juste) gardée. `negatif_049.sh` 19/0 sur copie.
+  La garde K3 « rattachements restants » était subsumée par la FK : retirée (6ᵉ faux vert).
+- **Refus de nature de l'analyste** : instruit sur la frontière gratuite (`acceptation_analyste
+  --admissibilite` avec `ACCEPTATION_CAS=RVMD:defendabilite:pre_revenus`) — les 3 statuts étaient ouverts
+  sur mo_1/3/4/5, le pont refusait `repondu` sur fondation 100 % mesurée. Arbitrage utilisateur :
+  **réponse directe**. `frameworks.nature_satisfait` (détenteur unique porte + pont). Chaîne réelle
+  `--sans-collecte` : 0 refus, réponses #689-694 relues, fidèles. Mutations caduques réparées au passage :
+  [F] de `negatif_framework_contract` (depuis #76), « UN CRAN SOUS » et « nature forte » de
+  `negatif_analyste` (depuis #78).
+- **Constats laissés ouverts** : péremption qui ignore `actualite_bloquante` des questions (▶) ; mandats
+  983-986 ouverts sur des questions répondues ; `negatif_acceptation_frameworks.sh` mort depuis la 036.
+Suite **3383/0 sur 47**.
+
 ## 2026-09-26 (3) — LOT 7 : l'identité de l'émetteur (#86) et la chaîne RVMD × defendabilite refaite
 
 Déployé `e449d3f`. Cause de la confusion Ryvu : le traducteur et la requête web ne recevaient que le

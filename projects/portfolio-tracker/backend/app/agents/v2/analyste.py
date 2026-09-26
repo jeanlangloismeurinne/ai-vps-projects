@@ -71,6 +71,7 @@ from app.agents.v2.frameworks import (
     _plus_faible,
     load_frameworks,
     nature_effective_de,
+    nature_satisfait,
     question_profiles,
     valider_pont_framework_answer,
 )
@@ -291,11 +292,18 @@ def statuts_admissibles(
     ecartes: list[str] = []
 
     natures = {str(e.get("nature")) for e in citables.values()}
-    if question.nature_attendue in natures:
+    # Une entry citée SEULE fonde une réponse de sa propre nature effective : on interroge les deux
+    # détenteurs (`nature_effective_de`, `nature_satisfait`) plutôt que de comparer les natures brutes,
+    # sinon cette porte et le pont [E] divergeraient au premier assouplissement (#46) — c'est ce qui
+    # est arrivé le 2026-09-26 : porte ouverte, pont fermé, 4 refus sur RVMD.
+    if any(nature_satisfait(nature_effective_de([e.get("nature")], approximation=False),
+                            question.nature_attendue)
+           for e in citables.values()):
         ouverts.append("repondu")
     else:
         ecartes.append(
-            f"`repondu` écarté : aucune entry citable ne porte la nature `{question.nature_attendue}` "
+            f"`repondu` écarté : aucune entry citable ne fonde une assertion de nature "
+            f"`{question.nature_attendue}` "
             f"(le corpus citable porte {sorted(natures) or 'rien'}) — [E] refuserait toute réponse "
             "directe, quelle que soit sa qualité")
 

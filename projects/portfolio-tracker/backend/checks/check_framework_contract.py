@@ -444,6 +444,10 @@ QUESTIONS = {
     # rougisse d'abord et masque le contrôle visé (le 1ᵉʳ faux vert — une fixture qui déclenche deux
     # contrôles ne dit pas lequel discrimine). Le RÉEL, lui, en porte toujours un (`min_length=2`),
     # et c'est `check_analyste.py` qui éprouve [S] contre les profils réels.
+    # Une question de JUGEMENT (arbitrage du 2026-09-26) : sa nature attendue PERMET des opinions, elle
+    # n'en EXIGE pas. Plancher `A-` pour qu'aucune des entries ci-dessous ne rougisse [D] avant [E].
+    "qf_itp": {"plancher_tier": "A-", "nature_attendue": "interpretation",
+               "framework_version": FRAMEWORK_SCHEMA_VERSION},
     "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure",
                 "framework_version": FRAMEWORK_SCHEMA_VERSION,
                 "sens_admis": ["cree_de_la_valeur", "detruit_de_la_valeur"]},
@@ -544,6 +548,20 @@ pont("[E] … et le MÉLANGE ne concède pas la nature forte (#78) : un relevé 
      rep(blocs={"fondation": {**FOND, "cited_entry_ids": [190, 193], "rang_derive": "A-",
                               "nature_effective": "interpretation"}}),
      "ne se concède jamais par mélange")
+# Arbitrage du 2026-09-26 (`nature_satisfait`) : un JUGEMENT fondé sur des faits vérifiés est une
+# réponse directe. Trois fondations, trois passages — et les deux refus ci-dessus (question de MESURE)
+# restent rouges : l'assouplissement ne vaut que pour les questions de jugement.
+pont_ok("[E] une question de JUGEMENT fondée sur des FAITS mesurés est une réponse directe (RVMD mo_1)",
+        rep(question_id="qf_itp", blocs={"fondation": {**FOND, "cited_entry_ids": [190],
+                                                       "rang_derive": "A-", "nature_effective": "mesure"}}))
+pont_ok("[E] … fondée sur un MÉLANGE de faits et d'opinions, aussi",
+        rep(question_id="qf_itp", blocs={"fondation": {**FOND, "cited_entry_ids": [190, 193],
+                                                       "rang_derive": "A-",
+                                                       "nature_effective": "interpretation"}}))
+pont_ok("[E] … et fondée sur des opinions seules, toujours",
+        rep(question_id="qf_itp", blocs={"fondation": {**FOND, "cited_entry_ids": [193],
+                                                       "rang_derive": "A-",
+                                                       "nature_effective": "interpretation"}}))
 pont("[E0] une `nature_effective` AUTO-DÉCLARÉE est refusée, comme un rang (#51)",
      rep(blocs={"fondation": {**FOND, "cited_entry_ids": [193], "rang_derive": "A-",
                               "nature_effective": "mesure"}}),

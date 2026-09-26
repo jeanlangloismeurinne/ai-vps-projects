@@ -466,21 +466,35 @@ _ouv_qf6, _ = A.statuts_admissibles(Q["qf_6"], A.corpus_citable(Q["qf_6"], ENTRI
 check("au plancher `B+` avec une source `A`, `approxime` reste OUVERT (la règle discrimine)",
       "approxime" in _ouv_qf6, f"→ {_ouv_qf6}")
 
-# `repondu` fermé quand la nature attendue est ABSENTE du corpus citable — le cas RVMD qf_6.
+# Arbitrage du 2026-09-26 (`nature_satisfait`) : une question de JUGEMENT se répond directement sur
+# des faits mesurés. Le cas mesuré sur RVMD × defendabilite : la porte ouvrait `repondu`, le pont le
+# refusait — 4 refus, 4 questions sans réponse. La porte et le pont lisent désormais la même règle.
 _MESURES_SEULES = {i: e for i, e in ENTRIES.items() if e.get("nature") == "mesure"}
-_ouv_nat, _ecart_nat = A.statuts_admissibles(
-    Q["qf_6"], A.corpus_citable(Q["qf_6"], _MESURES_SEULES))
-check("`repondu` est FERMÉ quand aucune entry citable ne porte la `nature_attendue` ([E], cas RVMD)",
-      "repondu" not in _ouv_nat, f"→ {_ouv_nat}")
+_ouv_jug, _ = A.statuts_admissibles(Q["qf_6"], A.corpus_citable(Q["qf_6"], _MESURES_SEULES))
+check("`repondu` est OUVERT sur une question de JUGEMENT dont le corpus ne porte que des faits (RVMD mo_1)",
+      "repondu" in _ouv_jug, f"→ {_ouv_jug}")
+# `repondu` reste fermé sur une question de MESURE quand le corpus citable n'a que des opinions (#78).
+_OPINION_A = {6: {"reliability_tier": "A", "nature": "interpretation", "title": "lettre aux actionnaires",
+                  "content": "la marge devrait rester élevée", "source_type": "company_ir_official",
+                  "source_date": "2025-06-01"}}
+_ouv_nat, _ecart_nat = A.statuts_admissibles(Q["qf_4"], A.corpus_citable(Q["qf_4"], _OPINION_A))
+check("`repondu` est FERMÉ sur une question de MESURE quand aucune entry citable n'est mesurée ([E])",
+      "repondu" not in _ouv_nat and len(A.corpus_citable(Q["qf_4"], _OPINION_A)) == 1, f"→ {_ouv_nat}")
 check("… et le motif nomme la nature manquante ET celles que le corpus porte (deux causes, deux remèdes)",
       any("interpretation" in m and "mesure" in m for m in _ecart_nat), f"→ {_ecart_nat}")
+check("la porte et le pont interrogent le MÊME détenteur `nature_satisfait` (un `Call`, #46)",
+      all(any(isinstance(n, ast.Call) and getattr(n.func, "id", None) == "nature_satisfait"
+              for n in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(f))))) for f in
+          (A.statuts_admissibles, __import__("app.agents.v2.frameworks", fromlist=["x"])
+           .valider_pont_framework_answer)),
+      "→ deux lectures de la règle divergent au premier assouplissement : c'est le défaut du 2026-09-26")
 check("⚠️ le corpus n'est PAS filtré par nature pour autant : [E] veut la nature PRÉSENTE, pas SEULE",
       len(A.corpus_citable(Q["qf_6"], ENTRIES)) > 1
       and {str(e.get("nature")) for e in A.corpus_citable(Q["qf_6"], ENTRIES).values()} != {"interpretation"},
       "→ retirer les `mesure` d'une question d'interprétation la priverait des chiffres qui l'étayent")
 
 check("`sans_fondement` reste ouvert dans TOUS les cas (on ne retire jamais la sortie honnête, #60)",
-      all("sans_fondement" in o for o in (_ouv_qf4, _ouv_qf6, _ouv_nat)),
+      all("sans_fondement" in o for o in (_ouv_qf4, _ouv_qf6, _ouv_nat, _ouv_jug)),
       "→ fermer les trois laisserait le choix entre mentir et se taire")
 # ⚠️ Asserté sur la STRUCTURE, jamais sur le texte (#56). Un `"derive_synthesis_reliability" in
 # source` serait satisfait par le commentaire qui la mentionne (faux vert), et un `"A-" not in
@@ -548,40 +562,61 @@ def passage_corpus(reponses, entries):
         A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
 
 
-# Sur `pre_revenus`, seules qf_4/qf_6/qf_7 sont applicables. Corpus : une entry `B+`/`mesure`, qui
-# tue les trois par DEUX chemins différents — qf_4/qf_7 (plancher A) n'ont aucune source citable
-# (branche 2a), qf_6 (plancher B+) en a une mais aucune réponse recevable (branche 2b).
-_BPLUS_MESURE = {7: {"reliability_tier": "B+", "nature": "mesure", "title": "note sectorielle",
-                     "content": "charges de structure estimées", "source_type": "analyst_note",
-                     "source_date": "2025-07-01"}}
-_Rm, _appels = passage_corpus([], _BPLUS_MESURE)
+# Sur `pre_revenus`, seules qf_4/qf_6/qf_7 sont applicables. DEUX passages, un par cause de mort :
+#   · corpus `B`/`mesure` — sous tous les planchers (A, B+, A) : AUCUNE source citable (branche 2a),
+#     les trois questions meurent sans appel ;
+#   · corpus `A`/`interpretation` — citable partout, mais qf_4/qf_7 sont des questions de MESURE à
+#     plancher A : `repondu` fermé (une opinion ne fonde pas une mesure, #78), `approxime` fermé (le
+#     cran rend A−) ⟹ aucune réponse recevable (branche 2b). qf_6, question de JUGEMENT, reste
+#     ouverte : depuis l'arbitrage du 2026-09-26 (`nature_satisfait`), une question de jugement dotée
+#     d'une source citable a toujours une réponse recevable — la branche 2b ne s'y atteint plus, et
+#     c'est l'arbitrage même (la 1ʳᵉ version de ce bloc tuait qf_6 par la nature, ce qui était le défaut).
+_B_MESURE = {7: {"reliability_tier": "B", "nature": "mesure", "title": "note sectorielle",
+                 "content": "charges de structure estimées", "source_type": "analyst_note",
+                 "source_date": "2025-07-01"}}
+_A_OPINION = {8: {"reliability_tier": "A", "nature": "interpretation", "title": "lettre aux actionnaires",
+                  "content": "la structure de coûts restera maîtrisée", "source_type": "company_ir_official",
+                  "source_date": "2025-07-01"}}
+_Rm, _appels = passage_corpus([], _B_MESURE)
+# qf_6 part au modèle (elle est ouverte) : le faux modèle y répond honnêtement `sans_fondement`, pour
+# que le passage aille à son terme et qu'on lise le motif de qf_4.
+_Ro, _appels_o = passage_corpus([dict(question_id="qf_6", statut="sans_fondement",
+                                      verbatim="aucune source ne chiffre la part non récurrente")],
+                                _A_OPINION)
+_morts_o = {a.question_id: a.gap.manque for a in _ans(_Ro) if a.statut == "non_fondable"}
 _morts = [a for a in _ans(_Rm) if a.statut == "non_fondable"]
 _nf_morts = sorted(a.question_id for a in _morts)
 check("les questions infondables sortent en `non_fondable`, SANS aucun appel modèle (#40)",
-      _nf_morts == ["qf_4", "qf_6", "qf_7"] and _appels == [],
-      f"→ non_fondable {_nf_morts} / {len(_appels)} appel(s) modèle")
+      _nf_morts == ["qf_4", "qf_6", "qf_7"] and _appels == []
+      and sorted(_morts_o) == ["qf_4", "qf_6", "qf_7"] and len(_appels_o) == 1,
+      f"→ non_fondable {_nf_morts} / {len(_appels)} appel(s) modèle sans corpus ; "
+      f"{len(_appels_o)} appel(s) (attendu 1, qf_6 seule) et non_fondable {sorted(_morts_o)} quand "
+      "qf_4/qf_7 ont un corpus mais aucune "
+      "réponse recevable")
 # ⚠️ `_morts` est exigé NON VIDE : la 1ʳᵉ version de ces trois asserts était un `all(...)` sur une
 # liste vide — donc VERTE sur rien. C'est le faux vert que le FAIL ci-dessus a fait apparaître.
 check("… et c'est bien un MANQUE DE DONNÉES : chacune porte son gap en `collecte` (donc un mandat)",
       len(_morts) == 3 and all(a.gap is not None and a.gap.remede == "collecte" for a in _morts),
       "→ c'est l'erreur symétrique de l'en-tête : imputer à l'agent un corpus qui ne pouvait pas "
       "fonder condamnerait la question au silence, faute de mandat")
-# Le CONTEXTE ne montre pas une question morte. ⚠️ L'assert discrimine les DEUX portes : qf_6 a un
-# corpus citable NON VIDE (donc la porte « pas de corpus » ne l'aurait pas retirée) et sort quand
-# même du contexte — c'est bien la porte des statuts qui l'a fermée.
-_CTX_MORT = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, _BPLUS_MESURE)
+# Le CONTEXTE ne montre pas une question morte. ⚠️ L'assert discrimine les DEUX portes : qf_4/qf_7 ont
+# un corpus citable NON VIDE (donc la porte « pas de corpus » ne les aurait pas retirées) et sortent
+# quand même du contexte — c'est bien la porte des statuts qui les a fermées ; qf_6 y reste.
+_CTX_MORT = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, _A_OPINION)
 check("une question dont AUCUN statut n'est ouvert n'est pas montrée au modèle (elle a pourtant un corpus)",
-      [q["id"] for q in _CTX_MORT["questions"]] == []
-      and len(A.corpus_citable(Q["qf_6"], _BPLUS_MESURE)) > 0,
+      [q["id"] for q in _CTX_MORT["questions"]] == ["qf_6"]
+      and len(A.corpus_citable(Q["qf_4"], _A_OPINION)) == 1
+      and len(A.corpus_citable(Q["qf_7"], _A_OPINION)) == 1,
       f"→ contexte {[q['id'] for q in _CTX_MORT['questions']]} / "
-      f"citables qf_6 {len(A.corpus_citable(Q['qf_6'], _BPLUS_MESURE))}")
+      f"citables qf_4 {len(A.corpus_citable(Q['qf_4'], _A_OPINION))}")
 
 _manques = {a.question_id: a.gap.manque for a in _morts}
 check("… et les DEUX causes ont DEUX motifs distincts (aucune source ≠ aucune réponse recevable)",
       len(_morts) == 3
       and "aucune source fournie ne fonde" in _manques.get("qf_4", "")
-      and "aucune réponse recevable" in _manques.get("qf_6", ""),
-      f"→ {_manques}")
+      and "aucune réponse recevable" in _morts_o.get("qf_4", ""),
+      f"→ sans source {_manques.get('qf_4', '')[:80]} / sans réponse recevable "
+      f"{_morts_o.get('qf_4', '')[:80]}")
 
 # La faute SYMÉTRIQUE : le modèle sort du vocabulaire fermé qu'on lui a montré. C'est une panne
 # d'agent — refus nommé, et surtout AUCUN gap.

@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26 (2)
+updated: 2026-09-26 (3)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#86), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#88), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -47,58 +47,55 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
 | 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
-| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 **identité de l'émetteur livrée** (#86, déployé `e449d3f`) — reste : ▶ PROCHAIN JALON |
+| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · **jugement fondé sur des faits = réponse directe** (#88) — reste : ▶ PROCHAIN JALON |
 
-Détail de chaque lot : archive (entrées datées) + conventions #57 → #86 du `CLAUDE.md`.
+Détail de chaque lot : archive (entrées datées) + conventions #57 → #88 du `CLAUDE.md`.
 
 ### Mesures courantes — à RE-REQUÊTER avant de s'en servir
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3377 assertions / 0 échec sur 47 scripts** (2026-09-26,
-  après #86 ; re-mesuré 3355/47 au départ de la session, conforme). `check_comite_persist` rejoint les
-  checks « base » (réseau `coolify`).
-  Les 3 checks « live » (`check_fetch_live`, `check_fetch_relevance`, `check_cours_cote_live`)
-  sont hors suite par conception. Un check lancé à la main sans les montages de `run_all.sh`
-  (`/roadmap`, `/contract_frozen`) sort un faux FAIL.
-- **Migrations** : **048 appliquée** (registre du comité, append-only) ; la prochaine sera **049**.
+- **Suite** `bash checks/run_all.sh` = **3383 assertions / 0 échec sur 47 scripts** (2026-09-26,
+  après #88 ; re-mesuré 3378/47 au départ, conforme). Les 3 checks « live » sont hors suite par
+  conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
+- **Migrations** : **049 appliquée** (registre des pièces écartées) ; la prochaine sera **050**.
   Vérifier en base avant d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`e449d3f`** (backend + frontend), vérifiée par `docker exec … grep`,
-  par les chemins de REFUS des deux POST (422/409/404) et capture headless du niveau 3 (image
-  `ev-prices` = Playwright). **PV du comité en prod : 0 décision** — aucune écrite pour vérifier.
-- **Chaîne réelle** : allée de bout en bout sur RVMD × `qualite_financiere` (2026-09-21) et RVMD ×
-  `defendabilite` (2026-09-25, plan 103 rédigé sur RYVU ; **refaite le 2026-09-26 après #86** : plan
-  130 sur les inhibiteurs de RAS, `mo_2` répondu rang A (#676, brevets 2031-2045 + approbation FDA,
-  relu contre #694/#695 : juste), `mo_6` sans objet (#675), **mo_1/3/4/5 refusés par l'analyste**
-  (voir ▶), mandats manager 983-986 ouverts). `qualite_info` mesurée RVMD : `defendabilite` **0,00** (5 non
-  fondables → à collecter) · `qualite_financiere` **0,00** (2 réponses applicables, périmées → à
-  rafraîchir ; rang moyen A− publié). Aucun investissement produit : **normal**, l'aval vient après.
+- **Production** : voir le commit de déploiement du 2026-09-26 (3) dans l'archive ; vérifier par
+  `docker exec … grep nature_satisfait`. **PV du comité en prod : 0 décision.**
+- **Chaîne réelle RVMD × `defendabilite`** (2026-09-26, `--sans-collecte`, après #88) : **0 refus** —
+  mo_1 `repondu` A (#690), mo_2 `repondu` A (#691), mo_3/mo_4 `approxime` A− (#692/#693), mo_5
+  `repondu` A (#694), mo_6 `sans_objet` (#689) ; 6 acquittements ; verbatims relus contre les pièces :
+  fidèles. **Mais le dossier affiche mo_1…mo_5 « périmées »** (voir ▶). `qualite_financiere` RVMD :
+  qf_4/qf_6 périmées, qf_7 sans réponse (source indisponible).
 
 ---
 
-## ▶ PROCHAIN JALON — LOT 7 : faire répondre mo_1/3/4/5 de RVMD sur la BONNE société
+## ▶ PROCHAIN JALON — LOT 7 : la péremption d'une réponse suit le profil de sa QUESTION
 
-**Fait le 2026-09-26** : arbitrages A-E rendus (« je valide les arbitrages proposés ») — A codé (#85),
-B-E confirmés (#84) ; lot 6 clos. Puis la dette « confusion d'émetteur » : cause = le traducteur et la
-requête web ne recevaient que le SIGLE ; ils reçoivent désormais raison sociale + CIK SEC (#86).
+**Fait le 2026-09-26 (3)** : (1) le CIK sort du mandat web (arbitrage utilisateur, amendement #86) ;
+(2) les 5 pièces Ryvu quittent le dossier RVMD vers un registre des pièces écartées (#87, migration 049,
+arbitrage utilisateur) ; (3) le refus de nature de l'analyste est levé (#88, arbitrage utilisateur :
+« un jugement fondé sur des faits vérifiés est une réponse directe ») — 0 refus sur la chaîne réelle.
 
-**🔜 PROCHAIN PAS — le refus de nature de l'analyste (défaut RÉEL, mesuré sur la chaîne du 2026-09-26).**
-Sur RVMD × `defendabilite`, l'analyste a rendu 4 refus identiques : `mo_1/3/4/5` attendent une assertion
-de nature `interpretation`, mais citent des pièces `mesure` (brevets, pipeline) → `FrameworkAnswerRefused`
-(« la nature … ne se concède jamais »). Conséquences : **aucune réponse neuve** sur ces 4 questions ; les
-anciennes réponses **#597, #599, #600, #601** (non fondées, écrites sur la piste RYVU) restent COURANTES
-et l'alerte les lit ; le manager a bien ouvert les mandats 983-986 (rien n'est muet). À instruire en
-termes de fonds AVANT tout correctif : « une interprétation (la barrière tient-elle ?) peut-elle se
-fonder sur des faits mesurés (brevets datés, stade clinique) ? » — un analyste de fonds dirait oui : une
-interprétation S'APPUIE sur des mesures. Relire #51 / `nature_attendue` et le contrôle de nature de
-`framework_answer_schema` : la règle compare-t-elle la nature de la RÉPONSE ou celle des PIÈCES ?
-(`feedback_decision_figee_a_remesurer` : remesurer avant d'écrire.) Puis rejouer `--sans-collecte`
-(moins cher) et lire les verbatims.
+**🔜 PROCHAIN PAS — défaut MESURÉ, à faire valider en termes de fonds avant de coder.** Le 8-K du
+2026-08-27 (items 1.01/2.03 : un accord de FINANCEMENT) rend « périmées » toutes les réponses fondées sur
+des pièces antérieures — y compris les brevets de mo_1 et mo_2. Or le référentiel DÉCLARE déjà, par
+question, `actualite_bloquante` : **false** pour qf_6, mo_1, mo_2, mo_4, mo_6 (un moat ne se périme pas
+sur un financement ; #54 : « c'est le profil qui périme, pas l'âge »). **Personne ne le lit en V3** :
+`frameworks.servir_answer` calcule l'axe (juste, #53 : l'axe ignore le profil), mais les CONSOMMATEURS
+— `qualite_info` (crédit ×0), `parcours._manque` (alerte « fait nouveau publié »), la note de comité —
+n'y confrontent jamais le profil. Un décideur déclaré sans lecteur (#71). Question métier à poser :
+« un accord de financement signé fin août doit-il faire repasser devant le comité la question "qu'est-ce
+qui empêche un concurrent de copier les molécules de Revolution Medicines ?" ? » — un fonds répondrait
+non : un financement ré-ouvre les questions de financement (qf_4, qf_7), pas la barrière brevetaire.
+Touche le contrat `QualiteInfo` (validateur `_coherence`), `parcours`, `projection_memo` : relire #82-#85
+avant d'écrire.
 
-**❓ ARBITRAGE À RENDRE PAR L'UTILISATEUR — les pièces mal classées.** L'ancienne collecte (sur Ryvu) a
-déposé au dossier RVMD 5 pièces sur des concurrents de Ryvu : **#665, #666, #667, #671, #672** (la #664,
-« RVMD n'a aucun programme CDK8/19 », est juste). Un fonds les reclasserait hors du dossier en gardant la
-trace. Proposition : les retirer du dossier RVMD (archivées, pas supprimées). Acte humain — rien n'est fait.
+**Constaté au même passage, à instruire ensuite** : les mandats manager **983-986** (« question sans
+aucune réponse », ouverts avant #88) restent `ouvert` alors que mo_1/3/4/5 sont désormais répondus et
+acquittés — le parcours affiche encore « repartie en recherche : mandat #983 ». `persist_review` n'en
+ferme aucun sur un acquittement. Un fonds clôt la demande de recherche quand la question a trouvé sa
+réponse ; relire #77 (idempotence par question) et le bouclage (#71/lot 5) avant de choisir le geste.
 
 **Puis la suite du lot 7** (spec §10) : `defendabilite` de bout en bout sur un second émetteur,
 acceptation T1-T8, réconciliation à 0/0.
@@ -161,7 +158,7 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 - **Chaîne complète vs acceptation du comité** (#84) : `executer_chaine` → `persist_review` ne consulte
   pas le PV ; un re-run refait l'analyse (l'acceptation tombe, « analyse refaite ») et peut rouvrir un
   mandat que le comité avait arrêté. Honnête (le dossier a changé) mais coûteux — lié à l'arbitrage B.
-- ✅ (corrigé #86, 2026-09-26 — reste les pièces mal classées, ▶) **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
+- ✅ (corrigé #86 ; pièces écartées #87, 2026-09-26) **Confusion d'émetteur dans le plan `defendabilite` RVMD** (plan 103, 2026-09-25) : mo_1/mo_5
   cherchent « inhibiteur de CDK8/19 » et « révatiglimab (RVU120) » — c'est **Ryvu Therapeutics**,
   pas Revolution Medicines (inhibiteurs RAS). Ces « recherches épuisées » portent sur la MAUVAISE
   société ; le traducteur n'a aucune garde d'identité de l'émetteur. Rendu visible par l'alerte.
@@ -209,6 +206,10 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
   `source_registry._TICKER_SECTEURS` en même temps.
 - `ingestion-agent` (document → pièces), jamais construit, non bloquant ; N analystes par
   framework (contrat prêt, jamais de moyenne).
+
+- **`negatif_acceptation_frameworks.sh` est MORT depuis la 036** (constaté le 2026-09-26) : il rejoue la
+  036 sur une copie de la prod, qui l'a déjà (`schema "archive_v2" already exists`) — satisfiabilité et
+  6 mutations en FAIL. Hors `run_all.sh`, donc invisible. À refaire sur un état pré-036 ou à retirer.
 
 **Dettes techniques connues, assumées**
 - `base_rate_ge` non câblé dans `run_research` ; `BullCase.conviction ×10 si ≤1` (filet) ;
@@ -285,7 +286,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
    parcours, cœur du lot 6 · §10 les lots).
-3. **`CLAUDE.md` du projet** — conventions **#25 → #86** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #88** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -304,8 +305,8 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
-> (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur livrée (#86) ;
-> prochain pas = le refus de nature de l'analyste sur mo_1/3/4/5 de RVMD (▶ PROCHAIN JALON), et
-> l'arbitrage sur les 5 pièces mal classées. Ordre imposé contrat → agent → données. Re-requêter toute
+> (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur (#86), pièces
+> Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; prochain pas = la
+> péremption d'une réponse suit le profil de sa question (▶ PROCHAIN JALON), à valider en termes de fonds. Ordre imposé contrat → agent → données. Re-requêter toute
 > ligne de base avant
 > de s'en servir.

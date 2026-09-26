@@ -299,7 +299,13 @@ courantes, dénombrées par `check_datation.py` §7) et non un quatrième état 
 décisions `acquitter`/`renvoyer` (auteur, instant, version, réponse lue, motif non blanc, dernier fait
 important connu). Le rôle applicatif n'a que SELECT/INSERT, un trigger refuse toute réécriture même au
 propriétaire, garde `048/K1` sur les droits. Éprouvée par `negatif_048.sh` (14/0) sur copie de la base.
-Prochaine migration : **049**.
+**Migration 049 = le registre des pièces écartées (#87)** : `pieces_ecartees` — une pièce déposée au
+dossier d'un émetteur alors qu'elle porte sur une AUTRE société en SORT (la ligne quitte
+`knowledge_entries`, donc aucun agent ne la lit plus, par construction) et y est conservée ENTIÈRE en
+JSONB avec ses rattachements aux questions, qui/quand/pourquoi. Append-only, lecture seule pour le rôle
+applicatif. Appliquée le 2026-09-26 sur les 5 pièces Ryvu du dossier RVMD (#665-667, #671, #672).
+Éprouvée par `negatif_049.sh` (19/0) sur copie de la base.
+Prochaine migration : **050**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -2106,6 +2112,62 @@ Gardes : `check_traducteur` **21/0** + `negatif_traducteur.sh` **12/0** (dont 1 
 le lot 5, réparée) · `check_collecte_executor` **100/0** + `negatif_collecte_executor.sh` **39/0** ·
 `check_bouclage` 27/0 · suite **3377/0 sur 47**. Déployé `e449d3f`. Acceptation réelle (DeepSeek) :
 plan RVMD × defendabilite sur les inhibiteurs de RAS, 0 marqueur Ryvu.
+
+⚠️ **Amendement du 2026-09-26 (arbitrage utilisateur) — le CIK n'entre PAS dans le mandat WEB.** Un
+numéro de déposant est la clef des sources STRUCTURÉES (EDGAR, où `resolve_cik` s'en sert déjà) ; dans
+une recherche de presse ou de site d'émetteur, il ne ramène pas de contenu de qualité — un analyste
+nomme la société, il ne cherche pas son numéro. `construire_requete_web` nomme la **raison sociale** et
+le symbole, et consigne « formule tes recherches avec la raison sociale, jamais avec le sigle seul ». Le
+contexte du TRADUCTEUR garde le CIK (il ne cherche pas, il planifie ; mesuré : aucune ligne du plan 130
+ne le recopie). Garde : `check_collecte_executor` §5 (aucun CIK dans le mandat) + mutation (40/0).
+
+### #87 — une pièce d'une autre société sort du dossier, et la trace reste
+
+**Ce que ferait un vrai fonds (arbitrage du 2026-09-26, « c'est normal en phase de debug »).** Un
+document classé par erreur dans le dossier d'une valeur n'y reste pas — l'analyste qui le relirait
+prendrait la concurrence de Ryvu pour celle de Revolution Medicines — mais il n'est pas détruit : il part
+au registre des pièces écartées, avec qui, quand, pourquoi.
+**Forme, pas garde** : écarter DÉPLACE la ligne (`pieces_ecartees`, migration 049) au lieu de poser un
+drapeau — tous les lecteurs filtrent `superseded_by IS NULL`, un drapeau neuf exigerait que chacun
+apprenne à le lire, et un lecteur oublié ferait fuir la pièce. `superseded_by` n'est PAS employé : il dit
+« remplacée par une version plus récente du même fait » (#43), ce qui serait faux. La pièce est gardée
+en JSONB (pas de jumeau de schéma de `knowledge_entries` à tenir, #46). Écarter est un acte HUMAIN : le
+rôle applicatif ne fait que lire le registre.
+⚠️ **Une garde redondante avec une clé étrangère est une garde qu'aucune mutation n'atteint** (6ᵉ faux
+vert) : la 1ʳᵉ version de `049/K3` comptait les rattachements restants — la mutation « les laisser »
+a été refusée par `question_coverage_entry_id_fkey` avant K3. Garde retirée, le test négatif éprouve la
+FK nommément.
+⚠️ Non écartés, et c'est voulu : les demandes de recherche du plan 103 (mandats 586-595, rédigés sur
+Ryvu) — le parcours ne lit que le DERNIER plan par question (plan 130), elles sont de l'historique inerte ;
+les anciennes réponses #597/#599-601 — remplacées par la nouvelle analyse (lignée append-only, A1).
+
+### #88 — un jugement fondé sur des faits vérifiés est une réponse directe
+
+**Le défaut (mesuré le 2026-09-26, RVMD × defendabilite, plan 130).** mo_1/3/4/5 (« qu'est-ce qui empêche
+un concurrent de capter ce profit ? »…) attendent une assertion de nature `interpretation`. L'analyste a
+répondu `repondu` en citant des pièces `mesure` (brevets datés, stade clinique) ; le pont [E] exigeait
+l'ÉGALITÉ `nature_effective == nature_attendue` et a refusé les 4 — alors que `statuts_admissibles`
+leur avait ouvert `repondu`. Le modèle ne voit pas la nature des pièces (#59) : il ne pouvait ni savoir
+ni éviter. Quatre questions sans réponse (#63, erreur symétrique).
+**Arbitrage de l'utilisateur (2026-09-26), rendu comme un vrai fonds** : dans un mémo de comité,
+l'analyste répond à une question de jugement en citant ses faits ; un jugement appuyé sur des faits
+vérifiés vaut autant qu'un jugement qui cite une opinion extérieure, sinon mieux. La nature attendue
+`interpretation` décrit l'ASSERTION demandée, pas une exigence sur ses PIÈCES : elle PERMET des opinions
+(d'où ses planchers plus bas), elle n'OBLIGE pas à en citer. L'exigence inverse reste entière (#78) : une
+question de MESURE ne se satisfait que d'une fondation entièrement mesurée.
+**La règle** : `frameworks.nature_satisfait(effective, attendue)` — **détenteur unique**, lu par le pont
+[E] ET par `analyste.statuts_admissibles` (qui interroge `nature_effective_de` sur chaque pièce seule
+plutôt que de comparer les natures brutes). La porte et le pont divergeaient déjà : c'est le défaut.
+⚠️ **Conséquence assumée** : une question de jugement dotée d'une source citable a désormais toujours une
+réponse recevable — la branche « corpus citable, aucune réponse recevable » ne s'atteint plus que sur les
+questions de mesure (fixture de `check_analyste` §8 refaite en deux passages, un par cause de mort).
+**Mesuré contre le vrai modèle** (`executer_chaine.sh RVMD defendabilite pre_revenus --sans-collecte`) :
+**0 refus** (4 avant) ; mo_1 `repondu` A, mo_2 `repondu` A, mo_3/mo_4 `approxime` A−, mo_5 `repondu` A,
+mo_6 `sans_objet` ; 6 acquittements ; réponses #689-694, relues contre #673/#679/#694/#695/#696 :
+**fidèles** (dates de brevets, BTD du 2026-09-14, noms des essais, « 5 à 19 ans » présenté en approximation).
+Gardes : `check_framework_contract` (+3 passages [E] sur question de jugement) + négatif **24/0** (dont la
+mutation [F] caduque depuis #76, réparée) · `check_analyste` + négatif **32/0** (dont 2 mutations caduques
+depuis #78, réparées — l'une désormais chez son détenteur `nature_effective_de`) · suite **3383/0 sur 47**.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
