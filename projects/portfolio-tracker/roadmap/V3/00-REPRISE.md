@@ -71,9 +71,10 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`449c289`** (#92, 3 frameworks), vérifié par `docker exec
-  portfolio-backend grep -c "id: me_" /app/app/frameworks/frameworks.yaml` (= 6). Dossier RVMD en prod :
-  13 manques, dont les 6 `me_*` (framework jamais passé en chaîne — attendu, capacité 5). **PV du comité en prod : 0 décision.**
+- **Production** : backend sur **`1916b1d`** (#93, 4 frameworks / 25 questions), vérifié dans le
+  conteneur : 6 `se_*`, 4 types `origine: exterieur`, le référentiel passe le pont (4 frameworks, 25
+  questions). Chapitre `industry` : `sans_acquittement` sur NVDA/MSFT/RVMD (aucune chaîne passée —
+  attendu, capacité 5). **PV du comité en prod : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
