@@ -829,6 +829,33 @@ sans objet pour un émetteur sans ventes.
 > (catalogue d'événements 1.2.0) ; une levée de fonds est un acte d'allocation — `financement`
 > rouvre `ma_1` et `ma_3` en plus de `qf_4`/`qf_7` (arbitrage du 2026-09-26 étendu).
 
+### 4.6 Framework « Valorisation » (2026-09-28)
+
+Roadmap `05-frameworks-complets.md`, capacité 4, co-écrit avec l'utilisateur (#95). **Thèse
+méthodologique** (Greenwald, Damodaran, Mauboussin) : une fourchette, jamais un point ; la valeur
+(va_1-3) ne bouge que sur un fait nouveau, ce que le prix suppose (va_4-6) se recalcule à la lecture
+au dernier cours coté daté (**option 1**, arbitrage du 2026-09-28 — construit en capacité 4 bis).
+**Un seul modèle** : la valorisation REPREND les réponses acquittées des autres méthodologies
+(qf_1 coût du capital, qf_2 cash disponible, qf_3 coût de la croissance, qf_4 passage à la valeur par
+action, qf_5/qf_6/se_4 résultat normalisé, qf_7 dilution, mo_4 durée, me_5 plafond, se_3 pairs) et
+s'instruit **après** elles. Règle de Greenwald : la croissance ne vaut que si qf_1 crée de la valeur et
+que la barrière tient.
+
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
+|---|---|---|---|---|
+| `va_1` | Combien vaut l'entreprise **sans supposer aucune croissance** ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `financement` |
+| `va_2` | Quelle **fourchette** donnent trois scénarios, et quelles hypothèses les séparent ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `concurrent_offensive`, `concurrent_revers` |
+| `va_3` | Qu'ont valu des entreprises **dans une situation comparable** ? | `mesure` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
+| `va_4` | Que faut-il **croire pour justifier le prix** actuel ? | `mesure` | B+ | `resultats`, `financement`, `integrite_comptes` |
+| `va_5` | Le prix est-il élevé ou bas **face aux pairs et à l'historique** ? | `mesure` | B+ | `resultats`, `integrite_comptes` |
+| `va_6` | Quelle **marge de sécurité** sépare le prix de la fourchette, et sur quelle hypothèse repose-t-elle ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `integrite_comptes`, `concurrent_offensive`, `concurrent_revers` |
+
+> **Correspondance avec le contrat aval** (`analysis_v2_schemas.Valuation`, lu par `decision`,
+> `debate`, `monitoring`, `exit`) : va_1 → `epv` · va_2 → `dcf_scenarios` (+ hypothèses de la thèse,
+> étape 10) · va_3 → `base_rate_anchor` (règle 2) · va_4 → `reverse_dcf` (règle 5) · va_5 → `relatif` ·
+> va_6 → `prix_actuel`, `iv_range`, `marge_securite_base_pct` (indicateur séparé, règle 4). Une réponse
+> de framework ne porte aujourd'hui qu'UN nombre : la réponse à plusieurs nombres est en 4 bis.
+
 ## 5. Le modèle de stockage — ce qui remplace la grille de 19
 
 ### 5.1 Le principe

@@ -82,7 +82,7 @@ mutations=(
 "$PONT¦            if portees[t] != \"questions_declarees\":¦            if t in portees and False:¦un type qui ne rouvre RIEN"
 "$PONT¦    if portees.get(A_QUALIFIER) != \"toutes\":¦    if False:¦rétrogradé à une portée partielle"
 "$PONT¦                return frozenset(q.rouverte_par) | universels¦                return frozenset(q.rouverte_par)¦ses types déclarés ∪ les types de portée totale"
-"$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, ma_1 et ma_3, et aucune autre"
+"$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, ma_1, ma_3, va_1, va_2, va_4 et va_6"
 )
 
 passes=0; ratees=0

@@ -2386,6 +2386,26 @@ sous `app/` (les checks seulement).
 - Piège rencontré : une ancre testée sur un flux qui contient un dépôt `a_qualifier` postérieur
   s'ancre à LUI (portée totale) — le test de `ma_4` retire le 8.01 du 26/08 pour isoler la gouvernance.
 
+### #95 — « Valorisation » : les questions en données, le calcul hors du modèle
+
+**Quatrième et dernier framework rédigé** (roadmap 05, capacité 4, 2026-09-28) : `va_1`…`va_6`, bloc
+`valuation` (spec 03 §4.6). **6 chapitres sur 6** ont désormais une méthodologie.
+- **Un seul modèle, jamais deux chiffres** : les ingrédients disent « repris de qf_x/mo_x/me_x/se_x ».
+  Un vrai fonds valorise sur les chiffres normalisés de l'analyse financière ; deux coûts du capital
+  dans un dossier font refuser le mémo. Le MÉCANISME de reprise n'existe pas encore (capacité 4 bis) —
+  d'ici là, le collecteur chercherait ces ingrédients comme les autres.
+- **Option 1** (arbitrage) : va_4-6 dépendent du cours — recalculés à la lecture au dernier cours coté
+  daté, jamais figés ; va_1-3 ne bougent que sur un fait nouveau.
+- **Le calcul n'est pas fait par le modèle** (arbitrage) : base commune de calculs fermés + modèle
+  propre à chaque entreprise, exécutable (RVMD = somme des programmes pondérée ; NVDA = segments).
+  Prolonge #72 (le modèle écrit, un code fermé exécute). Conception en 4 bis.
+- **Une levée de fonds rouvre la valeur PAR ACTION** : va_1, va_2, va_4, va_6 (pas va_3, pas va_5).
+- **Correspondance 1:1 avec le contrat aval** `Valuation` (epv, dcf_scenarios, base_rate_anchor,
+  reverse_dcf, relatif, prix/iv_range/marge) — mais une réponse ne porte qu'UN nombre : réponse à
+  plusieurs nombres en 4 bis ; raccordement au mémo chiffré en capacité 9.
+- `check_memo_projete` §4 (croissance en YAML seul) ne trouvait plus de chapitre libre : il en LIBÈRE
+  un en retirant, d'une copie du référentiel réel, le framework qui le revendique.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

@@ -425,11 +425,13 @@ check("`types_qui_rouvrent(qf_4)` = ses types déclarés ∪ les types de porté
       fwk.types_qui_rouvrent(_reel, "qf_4")
       == frozenset(next(q for q in _questions if q.id == "qf_4").rouverte_par) | _univ,
       f"→ {sorted(fwk.types_qui_rouvrent(_reel, 'qf_4'))}")
-# Arbitrages du 2026-09-26 (qf_4, qf_7) puis du 2026-09-28 (#94 : une levée de fonds est un acte
-# d'allocation — ma_1, ma_3).
-check("les arbitrages : un FINANCEMENT rouvre qf_4, qf_7, ma_1 et ma_3, et aucune autre question",
+# Arbitrages du 2026-09-26 (qf_4, qf_7), puis du 2026-09-28 : une levée de fonds est un acte
+# d'allocation (#94 — ma_1, ma_3) et change la valeur PAR ACTION (#95 — va_1, va_2, va_4, va_6 ; pas
+# va_3, la classe de référence, ni va_5, un multiple de prix).
+check("les arbitrages : un FINANCEMENT rouvre qf_4, qf_7, ma_1, ma_3, va_1, va_2, va_4 et va_6, et "
+      "aucune autre question",
       sorted(q.id for q in _questions if "financement" in q.rouverte_par)
-      == ["ma_1", "ma_3", "qf_4", "qf_7"],
+      == ["ma_1", "ma_3", "qf_4", "qf_7", "va_1", "va_2", "va_4", "va_6"],
       f"→ {sorted(q.id for q in _questions if 'financement' in q.rouverte_par)}")
 
 

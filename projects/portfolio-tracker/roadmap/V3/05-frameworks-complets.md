@@ -109,10 +109,58 @@ framework isolé.
   `gouvernance` mutée au rouge (check_evenements + check_frameworks_definitions).
 
 ### 4. Framework « Valorisation » (étape 8, bloc `valuation`) · même contexte
-- [ ] Questions validées une à une (fourchette de valeur, ce que le prix suppose, marge de sécurité)
-- [ ] Nommer ce qui dépend du cours coté, daté (#81)
-- [ ] Suite verte
+- [x] Questions validées une à une (fourchette de valeur, ce que le prix suppose, marge de sécurité)
+- [x] Nommer ce qui dépend du cours coté, daté (#81)
+- [x] Suite verte
 - **Acceptation** : identique à la capacité 1, sur le bloc `valuation`.
+
+- ✅ **Livré le 2026-09-28** (questions seulement, par découpage validé) : `va_1`…`va_6` (spec 03 §4.6).
+  Deux groupes : ce que VAUT l'entreprise (va_1-3) et ce que le PRIX suppose (va_4-6, dépendants du
+  cours coté daté). Ingrédients « repris de qf_x/mo_x/me_x/se_x » écrits en données ; le mécanisme de
+  reprise n'existe pas (4 bis). Acceptation : `valuation` en `sans_acquittement` sur NVDA/MSFT/RVMD
+  (`pas_de_methodologie_approuvee` au passage précédent) ; **6 chapitres sur 6** adossés à une
+  méthodologie. Aucun `.py` sous `app/`. Suite 3566/0, négatif 31/31.
+
+### 4 bis. L'atelier de valorisation (inséré le 2026-09-28) · contexte partagé : `framework_answer_schema`, `analyste`, `manager`, `traducteur`/`collecteur`, `formule_grammaire` (#72, précédent du calcul fermé), `analysis_v2_schemas.Valuation`
+
+**Pourquoi** : sans lui, éprouver la valorisation (capacité 5) mesurerait surtout les erreurs de calcul
+d'un modèle de langage — instable d'un passage à l'autre, mesuré.
+
+**Arbitrages de l'utilisateur (2026-09-28)**
+- **Option 1** : ce qui dépend du cours (va_4-6) n'est jamais figé — recalculé à la lecture au dernier
+  cours coté, daté ; la fourchette (va_1-3) ne bouge que sur un fait nouveau.
+- **La valorisation s'instruit APRÈS** les frameworks dont elle reprend les chiffres.
+- **Une base commune de calculs, ET des capacités d'exécution de code propres à chaque entreprise** :
+  « le CA futur de RVMD s'apprécie sur le portefeuille de molécules et leur potentiel. Ce n'est pas du
+  tout la même méthodologie pour NVDA. »
+
+**Ce que ferait un vrai fonds** : des gabarits maison (DCF, valeur sans croissance, ce que suppose le
+prix, valeur des programmes pondérée par probabilité de succès) ; et, à l'initiation, un MODÈLE PROPRE
+à l'entreprise construit par l'analyste (somme des programmes pour une biotech, modèle par segment
+pour NVDA), revu par le directeur de la recherche, puis CONSERVÉ d'une révision à l'autre — ce sont les
+hypothèses qui changent, pas la mécanique. Le comité peut rouvrir le modèle et changer une hypothèse.
+
+**À instruire avec l'utilisateur en ouverture de lot (en termes de fonds)** : qui écrit le modèle
+propre à l'entreprise (l'agent, en code) et qui le valide (acte humain, comme l'admission d'une
+source ?) ; quand il est réécrit (changement de stade — RVMD en phase commerciale, capacité 7) ; où il
+s'exécute (isolé, sans réseau — sécurité du VPS).
+
+- [ ] Reprise des réponses acquittées : un ingrédient « repris de » n'est jamais recollecté ; une seule
+  valeur par dossier (le coût du capital de va_1 EST celui de qf_1, même pièce)
+- [ ] Ordonnancement : la valorisation n'est instruite qu'après les frameworks dont elle reprend
+- [ ] Base commune de calculs fermés et testés (valeur sans croissance, DCF à trois scénarios, croissance
+  implicite dans le prix, valeur pondérée par probabilité, dilution, marge de sécurité)
+- [ ] Modèle propre à l'entreprise, exécutable, versionné, validé (arbitrage ci-dessus)
+- [ ] Réponse à PLUSIEURS nombres (le contrat de réponse n'en porte qu'un) — correspondance avec
+  `Valuation` (§4.6 de la spec)
+- [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
+- [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
+  que la barrière tient)
+- [ ] Dépendance entre questions : rouvrir va_1/va_2 rouvre va_6 (aujourd'hui simulé par un
+  `rouverte_par` large)
+- **Acceptation** : sur RVMD et NVDA, deux modèles d'entreprise DIFFÉRENTS (somme des programmes /
+  segments) donnent chacun une fourchette ; changer une hypothèse recalcule sans appel modèle ; le
+  coût du capital de va_1 est celui de qf_1 ; au cours du jour, va_6 change sans que va_2 bouge.
 
 ### 5. Éprouver les six frameworks sur les cas réels · contexte partagé : chaîne `executer_chaine`, parcours, `tools/montrer_parcours.sh`
 - [ ] Chaîne complète sur NVDA, MSFT, RVMD pour les quatre nouveaux frameworks (le rachat de
@@ -142,9 +190,16 @@ framework isolé.
 
 ### 8. Position détenue sous revue (ex-maillon 4, arbitrage Q5) · contexte partagé : thèse V2, hypothèses et seuils
 - [ ] Une question rouverte qui porte une hypothèse de la thèse met la position sous revue
+- [ ] **Dette relevée le 2026-09-28 (#95)** : le suivi (`monitoring.py`) RÉESTIME la fourchette de
+  valeur de la thèse (`valuation_range_updated`) — contraire à l'option 1 : la valeur ne bouge que sur
+  un fait nouveau passé par l'analyste et le manager ; le suivi ne recalcule que ce qui dépend du cours
 - **Acceptation** : sur une thèse de test, rouvrir la question sous-jacente fait passer la position
   sous revue ; rouvrir une question sans hypothèse n'y change rien (test négatif).
 
 ### 9. Acceptation T1-T8 et réconciliation à 0/0 sur l'ensemble (ex-fin du lot 7)
 - [ ] `tools/acceptation_frameworks.py` sur les six frameworks
+- [ ] **Constat du 2026-09-28 (#95)** : 6 chapitres sur 6 adossés, mais T6/T7 restent rouges (30 champs
+  / 37 questions) — il manque le lien question → champ du mémo, et le raccordement du mémo projeté
+  (texte) à bull/bear → décision → suivi → sortie, qui lisent l'ancien mémo CHIFFRÉ. Aucun chapitre
+  n'est raccordé ; la valorisation est celle où le manque se voit le plus
 - **Acceptation** : T1-T8 verts ; réconciliation des vocabulaires à 0/0.

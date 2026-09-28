@@ -38,7 +38,9 @@ import inspect
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import get_args
+from typing import Optional, get_args
+
+import yaml
 
 from pydantic import ValidationError
 
@@ -319,9 +321,14 @@ print("\n4. ⚠️ LA PREUVE DU LOT — un 3ᵉ framework ajouté en YAML SEUL s
 # le chapitre visé change d'état. Le bloc ciblé est choisi parmi ceux que personne ne revendique —
 # lu, jamais retapé : le jour où un pilote le prendra, ce test se déplacera tout seul.
 _libres = sorted(set(BLOCS_MEMO) - {f.bloc_memo for f in REEL.frameworks})
-check("il reste un chapitre sans méthodologie sur lequel faire croître le référentiel",
-      bool(_libres), "→ tous les chapitres sont pilotés : choisir un autre support de test")
-_CIBLE = _libres[0] if _libres else None
+# Depuis #95, les six chapitres sont pilotés : aucun n'est libre. On en LIBÈRE un en retirant, d'une
+# copie du référentiel RÉEL (lu, jamais retapé), le framework qui le revendique — puis on le fait
+# re-croître en YAML seul. La garantie testée est la même : un chapitre change d'état par une
+# opération de données.
+_RETIRE = None if _libres else REEL.frameworks[-1].id
+_CIBLE = _libres[0] if _libres else REEL.frameworks[-1].bloc_memo
+check("un chapitre est disponible pour faire croître le référentiel (libre, ou libéré dans une copie)",
+      _CIBLE in BLOCS_MEMO, f"→ {_CIBLE} (framework retiré de la copie : {_RETIRE})")
 
 _FICTIF = """
   - id: cadre_fictif
@@ -354,22 +361,34 @@ _VAR = ("          {a}:\n"
         "            variable: Rentabilité que la structure du secteur laisse aux acteurs en place\n")
 
 
-def _referentiel_augmente(bloc: str) -> str:
-    """Le référentiel RÉEL + un framework de plus, écrit en YAML. Rendu : le chemin du fichier.
+def _referentiel(bloc: Optional[str], retirer: Optional[str] = None) -> str:
+    """Le référentiel RÉEL, moins `retirer` s'il est donné, plus le framework fictif sur `bloc` s'il
+    est donné. Rendu : le chemin du fichier.
 
     Le fichier de base est LU, jamais reconstruit : un test qui se fabriquerait un mini-référentiel
     prouverait que le projecteur sait projeter une maquette (`feedback_fixture_copiee_du_reel`).
     """
-    bloc_yaml = (_FICTIF.replace("__CIBLE__", bloc)
-                 .replace("__ARCHETYPES__",
-                          "".join(_VAR.format(a=a) for a in REEL.archetypes).rstrip("\n")))
+    brut = yaml.safe_load(FRAMEWORKS_YAML.read_text(encoding="utf-8"))
+    if retirer:
+        brut["frameworks"] = [f for f in brut["frameworks"] if f["id"] != retirer]
+    if bloc:
+        bloc_yaml = (_FICTIF.replace("__CIBLE__", bloc)
+                     .replace("__ARCHETYPES__",
+                              "".join(_VAR.format(a=a) for a in REEL.archetypes).rstrip("\n")))
+        brut["frameworks"] += yaml.safe_load("frameworks:\n" + bloc_yaml)["frameworks"]
     p = Path(tempfile.mkdtemp()) / "frameworks.yaml"
-    p.write_text(FRAMEWORKS_YAML.read_text(encoding="utf-8") + "\n" + bloc_yaml, encoding="utf-8")
+    p.write_text(yaml.safe_dump(brut, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return str(p)
 
 
+def _referentiel_augmente(bloc: str) -> str:
+    return _referentiel(bloc, retirer=_RETIRE)
+
+
 if _CIBLE is not None:
-    _avant = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[]).par_bloc()[_CIBLE]
+    _avant = projeter_memo(ticker_id="ZZZ", comite={}, archetype="rentable", lues=[],
+                           fichier=load_frameworks(_referentiel(None, retirer=_RETIRE))
+                           ).par_bloc()[_CIBLE]
     check(f"avant : le chapitre visé sort « pas de méthodologie approuvée »",
           _avant.etat == "pas_de_methodologie_approuvee", f"→ {_avant.etat}")
 
@@ -405,7 +424,7 @@ if _CIBLE is not None:
     # Le versant DONNÉES de la garantie : croître est une opération de données, mais une opération
     # GARDÉE. Deux frameworks sur un même chapitre se refusent au chargement, pas à la projection.
     rejete("croître sur un chapitre DÉJÀ revendiqué est refusé par le référentiel ([P])",
-           lambda: load_frameworks(_referentiel_augmente(REEL.frameworks[0].bloc_memo)),
+           lambda: load_frameworks(_referentiel(REEL.frameworks[0].bloc_memo)),
            "[P]")
 
 

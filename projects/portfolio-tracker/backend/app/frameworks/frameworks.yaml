@@ -1202,3 +1202,205 @@ frameworks:
           financiere:
             mode: variable
             variable: Contrôle des droits de vote, indépendance du conseil et poids du régulateur dans la gouvernance
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  # « Valorisation » — roadmap 05, capacité 4 (2026-09-28), co-écrit avec l'utilisateur (#95).
+  # Deux groupes : ce que VAUT l'entreprise (va_1…va_3, bouge sur un fait nouveau) et ce que le PRIX
+  # du jour suppose (va_4…va_6). Arbitrage « option 1 » : ce qui dépend du cours n'est jamais figé —
+  # recalculé à la lecture au dernier cours coté, avec sa date (#81) ; construit en capacité 4 bis.
+  #
+  # ⚠️ UN SEUL MODÈLE, JAMAIS DEUX CHIFFRES. Les ingrédients « repris de qf_x / mo_x / me_x / se_x »
+  # désignent la réponse ACQUITTÉE de cette question, pas une recherche nouvelle. Le mécanisme de
+  # reprise n'existe pas encore (capacité 4 bis) : aujourd'hui le collecteur les chercherait comme
+  # n'importe quel ingrédient. Arbitrage du 2026-09-28 : la valorisation s'instruit APRÈS les autres
+  # frameworks acquittés. Règle de Greenwald (à faire tenir par le manager en 4 bis) : la croissance
+  # ne vaut que si qf_1 crée de la valeur ET que la barrière (mo_*) tient.
+  - id: valorisation
+    libelle: Valorisation
+    etape_benchmark: 8
+    methodologie: >-
+      Valorisation multi-lentilles (Greenwald, Damodaran, Mauboussin). L'analyste établit une
+      fourchette de valeur, jamais un point : la valeur sans croissance, des scénarios qui ne
+      diffèrent que par deux ou trois hypothèses décisives, une classe de référence ; puis ce que le
+      prix du jour suppose, sa position face aux pairs, et la marge de sécurité. Il reprend les
+      chiffres normalisés des autres méthodologies, il ne les recalcule pas.
+    nature_dominante: mesure
+    bloc_memo: valuation
+    questions:
+
+      - id: va_1
+        enonce: Combien vaut l'entreprise sur ce qu'elle gagne aujourd'hui, sans supposer aucune croissance ?
+        chemin_indexation: valorisation.valeur_sans_croissance
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, financement]
+        sens_admis: [plancher_solide, plancher_fragile, pas_de_plancher]
+        ingredients_requis:
+          - id: resultat_normalise
+            libelle: Résultat d'exploitation normalisé, de milieu de cycle — repris de qf_6, qf_5 et se_4
+            essentiel: true
+          - id: taux_d_actualisation
+            libelle: Coût du capital servant de taux d'actualisation — repris de qf_1
+            essentiel: true
+          - id: passage_a_la_valeur_par_action
+            libelle: Dette nette, trésorerie excédentaire et nombre d'actions dilué — repris de qf_4
+            essentiel: true
+          - id: valeur_des_actifs
+            libelle: Ce que coûterait la reconstitution des actifs, ou ce qu'un acquéreur paierait pour eux
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Résultat normalisé capitalisé au coût du capital, ramené par action
+          pre_revenus:
+            mode: variable
+            variable: Trésorerie nette et valeur que paierait un acquéreur pour les programmes, par action
+          financiere:
+            mode: variable
+            variable: Résultat normalisé capitalisé au coût des fonds propres, comparé à la valeur comptable tangible
+
+      - id: va_2
+        enonce: Quelle fourchette de valeur donnent un scénario pessimiste, un central et un optimiste, et quelles hypothèses les séparent ?
+        chemin_indexation: valorisation.scenarios_de_valeur
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Un scénario est un jugement sur l'avenir ; ses hypothèses se fondent sur des pièces de tout
+          rang, et c'est leur ancrage explicite — pas le rang de la source — qui le rend contestable.
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, concurrent_offensive, concurrent_revers]
+        sens_admis: [fourchette_resserree, fourchette_large, fourchette_indeterminable]
+        ingredients_requis:
+          - id: hypotheses_decisives
+            libelle: Les deux ou trois hypothèses qui font varier la valeur, avec leur valeur dans chaque scénario et ce qui les fonde
+            essentiel: true
+          - id: cout_de_la_croissance
+            libelle: Capital à réinvestir par point de croissance — repris de qf_3 ; cash réellement disponible — repris de qf_2
+            essentiel: true
+          - id: duree_et_plafond_de_la_croissance
+            libelle: Durée pendant laquelle la croissance peut durer — reprise de mo_4 — et son plafond — repris de me_5
+            essentiel: true
+          - id: dilution_future
+            libelle: Dilution attendue des actionnaires pour financer le plan — reprise de qf_7
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Valeur par action dans trois scénarios de croissance, de marge et de réinvestissement, sur au moins 5 ans
+          pre_revenus:
+            mode: variable
+            variable: Valeur de chaque programme pondérée par sa probabilité de succès, sous trois scénarios de prix, de pénétration et de calendrier, nette de la dilution
+          financiere:
+            mode: variable
+            variable: Valeur par action dans trois scénarios de croissance des encours, de coût du risque et de rendement des fonds propres
+
+      - id: va_3
+        enonce: Qu'ont valu, historiquement, des entreprises dans une situation comparable ?
+        chemin_indexation: valorisation.classe_de_reference
+        nature_attendue: mesure
+        plancher_tier: B
+        motif_plancher: >-
+          Une classe de référence se mesure dans des études et des bases historiques d'observateurs,
+          jamais dans les dépôts de l'émetteur.
+        rouverte_par: [reglementaire_favorable, reglementaire_defavorable]
+        sens_admis: [classe_favorable, classe_neutre, classe_defavorable]
+        ingredients_requis:
+          - id: classe_retenue
+            libelle: La classe d'entreprises comparables retenue, et pourquoi celle-là
+            essentiel: true
+          - id: distribution_des_issues
+            libelle: Distribution observée des issues dans cette classe — croissance réalisée, taux de succès, rendement pour l'actionnaire
+            essentiel: true
+          - id: position_dans_la_classe
+            libelle: Où les scénarios de l'entreprise se situent dans cette distribution
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Croissance et rentabilité réalisées par les entreprises de même taille et même secteur sur 5 à 10 ans
+          pre_revenus:
+            mode: variable
+            variable: Taux de succès et trajectoires commerciales des produits au même stade, dans la même indication
+          financiere:
+            mode: variable
+            variable: Rendement des fonds propres et pertes de crédit observés sur un cycle complet pour des établissements comparables
+
+      - id: va_4
+        enonce: Que faut-il croire pour justifier le prix actuel — quelle croissance, quelle rentabilité, sur combien d'années ?
+        chemin_indexation: valorisation.ce_que_suppose_le_prix
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, financement, integrite_comptes]
+        sens_admis: [attentes_modestes, attentes_exigeantes, attentes_irrealistes]
+        ingredients_requis:
+          - id: cours_cote_date
+            libelle: Dernier cours coté et sa date, et nombre d'actions dilué
+            essentiel: true
+          - id: croissance_implicite
+            libelle: Croissance et rentabilité que le prix suppose, au coût du capital repris de qf_1
+            essentiel: true
+          - id: comparaison_aux_scenarios
+            libelle: Position de ces attentes implicites face aux scénarios de va_2 et à la classe de référence de va_3
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Croissance et marge implicites dans le prix, et durée pendant laquelle elles doivent tenir
+          pre_revenus:
+            mode: variable
+            variable: Ventes de pointe et probabilité de succès implicites dans le prix
+          financiere:
+            mode: variable
+            variable: Rendement des fonds propres implicite dans le prix rapporté à la valeur comptable
+
+      - id: va_5
+        enonce: Le prix est-il élevé ou bas par rapport aux pairs et à l'historique du titre, et l'écart s'explique-t-il ?
+        chemin_indexation: valorisation.comparaison_relative
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, integrite_comptes]
+        sens_admis: [decote, en_ligne, prime]
+        ingredients_requis:
+          - id: multiple_pertinent
+            libelle: Le multiple pertinent pour ce secteur, et pourquoi celui-là
+            essentiel: true
+          - id: comparaison_pairs_et_historique
+            libelle: Ce multiple pour l'entreprise, ses pairs directs — ceux de se_3 — et son propre historique, à une même date
+            essentiel: true
+          - id: explication_de_l_ecart
+            libelle: Ce qui explique l'écart — croissance, rentabilité, risque — au regard des autres méthodologies
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Multiple de résultat ou de valeur d'entreprise face aux pairs et à l'historique sur 10 ans
+          pre_revenus:
+            mode: variable
+            variable: Valeur d'entreprise face aux développeurs comparables au même stade et dans la même indication
+          financiere:
+            mode: variable
+            variable: Prix rapporté à la valeur comptable tangible, face aux pairs et à l'historique
+
+      - id: va_6
+        enonce: Quelle marge de sécurité sépare le prix de la fourchette de valeur, et sur quelle hypothèse repose-t-elle surtout ?
+        chemin_indexation: valorisation.marge_de_securite
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, integrite_comptes, concurrent_offensive, concurrent_revers]
+        sens_admis: [marge_confortable, marge_mince, marge_negative]
+        ingredients_requis:
+          - id: prix_et_fourchette
+            libelle: Dernier cours coté et sa date, face à la fourchette de valeur de va_1 et va_2
+            essentiel: true
+          - id: hypothese_portante
+            libelle: L'hypothèse dont dépend surtout la marge, et la marge si elle se révèle fausse
+            essentiel: true
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Écart entre le cours et le scénario central, et entre le cours et le scénario pessimiste
+          pre_revenus:
+            mode: variable
+            variable: Écart entre le cours et la valeur pondérée des programmes, et entre le cours et la trésorerie nette
+          financiere:
+            mode: variable
+            variable: Écart entre le cours et la valeur centrale, et entre le cours et la valeur comptable tangible

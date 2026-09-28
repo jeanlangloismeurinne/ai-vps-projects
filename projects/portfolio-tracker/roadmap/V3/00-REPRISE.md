@@ -28,10 +28,11 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §4 (framework
-> « Valorisation ») ; livrées le 2026-09-28 : §1 « Modèle économique » (`me_1`…`me_6`, #92), §2
-> « Secteur et concurrence » (`se_1`…`se_6` + 4 événements extérieurs, #93), §3 « Management et
-> allocation du capital » (`ma_1`…`ma_6`, #94).
+> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
+> « L'atelier de valorisation »** (insérée le 2026-09-28). Les quatre frameworks manquants sont
+> RÉDIGÉS (#92 modèle économique, #93 secteur et concurrence, #94 management, #95 valorisation) :
+> 6 chapitres sur 6 ont une méthodologie. Ouvrir la 4 bis en instruisant avec l'utilisateur, en termes
+> de fonds, qui écrit et qui valide le modèle propre à chaque entreprise (cf. la roadmap).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -68,7 +69,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
 - **Suite** `bash checks/run_all.sh` = **3566 assertions / 0 échec sur 51 scripts** (2026-09-28,
-  après #94 : 5 frameworks, 31 questions). Les 3 checks « live » sont hors suite par
+  après #95 : 6 frameworks, 37 questions). Réconciliation (`tools/reconcilier_vocabulaires.sh`) :
+  6/6 chapitres adossés, T6/T7 toujours rouges (30 champs / 37 questions — capacité 9). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
@@ -106,7 +108,14 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
    ils rouvrent les questions du secteur qui les citent, jamais tout le dossier ; le veilleur qui les
    repère reste à construire.
 5. **Une levée de fonds est un acte d'allocation (#94)** : elle rouvre aussi le jugement sur le
-   management (usage du capital, prix des émissions) — extension de la règle du 26/09.
+   management (usage du capital, prix des émissions) — extension de la règle du 26/09 ; et la
+   valeur PAR ACTION (va_1/va_2/va_4/va_6, #95).
+6. **Valorisation (#95)** : option 1 (ce qui dépend du cours est recalculé à la lecture au dernier
+   cours coté daté, la fourchette ne bouge que sur un fait nouveau) ; la valorisation s'instruit
+   APRÈS les frameworks dont elle reprend les chiffres ; **le calcul n'est pas fait par le modèle** —
+   base commune de calculs + capacités d'exécution de code PROPRES À CHAQUE ENTREPRISE (« le CA futur
+   de RVMD s'apprécie sur le portefeuille de molécules […] pas du tout la même méthodologie pour
+   NVDA »).
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
@@ -304,9 +313,10 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
-> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/05-frameworks-complets.md` — rédiger les
-> quatre frameworks manquants (modèle économique → secteur et concurrence → management → valorisation),
-> co-écrits question par question avec l'utilisateur, en données seules ; puis les éprouver sur
-> NVDA/MSFT/RVMD + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
+> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/05-frameworks-complets.md` — les quatre
+> frameworks manquants sont rédigés (#92-#95) ; capacité en cours **4 bis, l'atelier de valorisation**
+> (reprise des réponses acquittées, calculs fermés + modèle propre à chaque entreprise, réponse à
+> plusieurs nombres, option 1 au cours du jour) ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
+> + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute
 > ligne de base avant de s'en servir.
