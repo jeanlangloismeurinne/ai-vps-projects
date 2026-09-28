@@ -74,10 +74,10 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`05f4bdd`** (#94, 5 frameworks / 31 questions, catalogue
-  d'événements 1.2.0), vérifié dans le conteneur (6 `ma_*`, version 1.2.0). Chapitres `industry` et
-  `management` : `sans_acquittement` sur NVDA/MSFT/RVMD (aucune chaîne passée — attendu, capacité 5).
-  **PV du comité en prod : 0 décision.**
+- **Production** : backend sur **`5465a52`** (#95, 6 frameworks / 37 questions, catalogue
+  d'événements 1.2.0), vérifié dans le conteneur (6 `va_*`, le référentiel passe le pont). Chapitres
+  `business_model`, `industry`, `management`, `valuation` : `sans_acquittement` sur NVDA/MSFT/RVMD
+  (aucune chaîne passée — attendu, capacité 5). **PV du comité en prod : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
