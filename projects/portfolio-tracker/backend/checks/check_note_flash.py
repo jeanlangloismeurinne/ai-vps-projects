@@ -192,6 +192,16 @@ b.check(refuse(pont(lisible=True, elements=[{"type": "approbation_fda", "passage
                "absent du catalogue"), "un type hors catalogue est refusé, en le nommant")
 b.check(refuse(pont(lisible=True, elements=[{"type": A_QUALIFIER, "passage": cite_normalisee}]),
                "absent du catalogue"), "`a_qualifier` n'est pas un type qu'une note lisible range")
+# #93 — les types d'origine EXTÉRIEURE (événement chez un concurrent) ne sont ni vus ni admis : la
+# note lit un dépôt de l'émetteur. Liste lue dans le référentiel réel, et exigée non vide (un
+# `all()`/intersection sur liste vide serait un faux vert).
+_exterieurs = {t.id for t in fichier.types_evenement if t.origine == "exterieur"}
+b.check(bool(_exterieurs) and not (_exterieurs & {t["id"] for t in ctx["types_evenement"]}),
+        f"aucun type d'origine extérieure n'est proposé au modèle (#93) → {sorted(_exterieurs)}")
+b.check(refuse(pont(lisible=True, elements=[{"type": "concurrent_offensive",
+                                             "passage": cite_normalisee}]),
+               "absent du catalogue"),
+        "un dépôt de l'émetteur rangé en « offensive d'un concurrent » est refusé (#93)")
 b.check(refuse(pont(lisible=True, elements=[{"type": "surprise", "passage": cite_normalisee,
                                              "cause": "secteur",
                                              "passage_cause": "demand weakened across the whole "

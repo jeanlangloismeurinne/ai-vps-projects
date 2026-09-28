@@ -68,6 +68,24 @@ class TypeEvenement(Strict):
     id: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
     libelle: str = Field(min_length=20)
     portee: Literal["questions_declarees", "toutes", "aucune"]
+    # D'OÙ VIENT L'ÉVÉNEMENT (#93, arbitrage A du 2026-09-28). `emetteur` : un fait que l'émetteur
+    # publie lui-même — le seul que la note flash lit. `exterieur` : un fait survenu chez un
+    # concurrent ou dans le secteur (approbation d'un rival, réforme des prix) — un vrai fonds relit
+    # la partie concurrence du dossier sans attendre que l'émetteur en parle. REQUIS, sans défaut :
+    # une origine omise ferait proposer un événement de concurrent au lecteur d'un 8-K de l'émetteur.
+    origine: Literal["emetteur", "exterieur"]
+
+    @model_validator(mode="after")
+    def _un_evenement_exterieur_rouvre_des_questions_nommees(self):
+        # Un fait chez un concurrent ne change pas l'entreprise analysée (portée `toutes` serait une
+        # relecture complète du dossier pour la décision d'un tiers), et un type extérieur qui ne
+        # rouvrirait rien (`aucune`) n'aurait pas de raison d'être déclaré.
+        if self.origine == "exterieur" and self.portee != "questions_declarees":
+            raise ValueError(
+                f"`{self.id}` est un événement extérieur de portée `{self.portee}` : un fait survenu "
+                f"chez un concurrent ou dans le secteur rouvre les questions qui le déclarent, "
+                f"jamais tout le dossier, et jamais rien")
+        return self
 
 
 class IngredientRequis(Strict):

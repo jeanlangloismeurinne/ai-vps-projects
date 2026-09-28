@@ -780,6 +780,32 @@ décrit avant la première vente, on demande ce qui est visé.
 
 > Un changement de périmètre (`perimetre`, portée totale) rouvre les six sans qu'aucune ait à le
 > lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un dépôt.
+
+### 4.4 Framework « Secteur et concurrence » (2026-09-28)
+
+Roadmap `05-frameworks-complets.md`, capacité 2, co-écrit avec l'utilisateur. **Thèse méthodologique**
+(Porter, cinq forces, et la pratique de l'analyste sectoriel) : un bon acteur dans un secteur
+structurellement pauvre reste un placement médiocre ; l'analyste tient la structure du secteur et un
+tableau des pairs, qu'il remet à jour à chaque publication d'un concurrent. Il écarte ce que les autres
+portent déjà : barrière à l'entrée (`mo_1`), pouvoir de prix (`mo_6`), taille du marché et part prise
+(`me_5`). Recoupement **accepté** : `se_3` mesure le rang face aux pairs, `mo_2` y cherche la preuve
+d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
+
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
+|---|---|---|---|---|
+| `se_1` | Le secteur dans son ensemble **gagne-t-il de l'argent**, et qui capte la valeur entre clients, fournisseurs et intermédiaires ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `regulation_du_secteur`, `concurrent_rapprochement` |
+| `se_2` | Comment le marché est-il **partagé**, et ce partage bouge-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
+| `se_3` | Face à ses **pairs directs**, l'entreprise fait-elle mieux ou moins bien, et l'écart se creuse-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `surprise_execution`, `concurrent_offensive`, `concurrent_revers` |
+| `se_4` | La demande du secteur est-elle **cyclique**, et où en est-on du cycle ? | `interpretation` | B | `resultats`, `surprise_secteur` |
+| `se_5` | Qu'est-ce qui pourrait **changer les règles** du secteur — substitut, régulation des prix, nouveau modèle ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `regulation_du_secteur`, `concurrent_offensive` |
+| `se_6` | Que font les **concurrents** en ce moment, et qu'est-ce que ça change pour l'entreprise ? | `interpretation` | B | `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
+
+> **Événements extérieurs à l'émetteur (#93, arbitrage A)** : `concurrent_offensive`,
+> `concurrent_revers`, `concurrent_rapprochement`, `regulation_du_secteur` — origine `exterieur`,
+> toujours de portée `questions_declarees`, jamais proposés à la note flash (qui lit les dépôts de
+> l'émetteur). **Aucun veilleur ne les repère encore** : en pratique ils ne rouvrent rien tant qu'il
+> n'existe pas. Les questions du moat (`mo_3`, `mo_5`) ne les listent pas encore — les y ajouter
+> réécrirait des questions existantes (#64), décision laissée à l'épreuve (capacité 5).
 ---
 
 ## 5. Le modèle de stockage — ce qui remplace la grille de 19

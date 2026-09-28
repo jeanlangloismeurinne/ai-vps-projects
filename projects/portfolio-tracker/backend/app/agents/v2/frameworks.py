@@ -145,7 +145,8 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
          `aucune` : contradiction (la routine ne rouvre rien). Portée `toutes` : redondant, et
          trompeur — le lecteur croirait que les autres questions n'y sont pas soumises ;
       R. la table de FORME (`evenements.TYPE_PAR_ITEM`, code) produit un type que le catalogue
-         (données) ne déclare pas, ou `a_qualifier` n'y est pas de portée `toutes`. Le premier cas
+         (données) ne déclare pas, le déclare d'origine `exterieur` (#93), ou `a_qualifier` n'y
+         est pas de portée `toutes`. Le premier cas
          ferait d'un dépôt reconnu un dépôt qui ne rouvre rien ; le second trahirait l'arbitrage Q3
          (« dans le doute, on rouvre large »).
     """
@@ -266,6 +267,12 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
         raise FrameworkDefinitionRefused(
             f"[R] la qualification par la forme produit {inconnus}, absents du catalogue "
             f"`types_evenement` — un dépôt reconnu ne rouvrirait rien")
+    exterieurs = sorted(TYPES_DE_LA_FORME & {t.id for t in fichier.types_evenement
+                                              if t.origine == "exterieur"})
+    if exterieurs:
+        raise FrameworkDefinitionRefused(
+            f"[R] la qualification par la forme produit {exterieurs}, déclarés d'origine extérieure "
+            f"— un dépôt de l'émetteur serait lu comme un événement chez un concurrent (#93)")
     if portees.get(A_QUALIFIER) != "toutes":
         raise FrameworkDefinitionRefused(
             f"[R] `{A_QUALIFIER}` est de portée `{portees.get(A_QUALIFIER)}` au lieu de `toutes` — "

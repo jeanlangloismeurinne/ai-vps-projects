@@ -386,6 +386,35 @@ rejete("[R] `a_qualifier` rétrogradé à une portée partielle",
            dict(t, portee="questions_declarees") if t["id"] == "a_qualifier" else t
            for t in _catalogue_reel()])),
        "doit rouvrir tout")
+# #93 — l'origine des événements (arbitrage A du 2026-09-28).
+rejete("[#93] un type sans `origine` déclarée",
+       lambda: charge(fichier_base(types_evenement=[
+           {k: v for k, v in t.items() if k != "origine"} if t["id"] == "incident" else t
+           for t in _catalogue_reel()])),
+       "origine")
+rejete("[#93] un événement EXTÉRIEUR de portée totale",
+       lambda: charge(fichier_base(types_evenement=[
+           dict(t, portee="toutes") if t["id"] == "concurrent_offensive" else t
+           for t in _catalogue_reel()])),
+       "jamais tout le dossier")
+rejete("[#93] un événement EXTÉRIEUR qui ne rouvrirait rien",
+       lambda: charge(fichier_base(types_evenement=[
+           dict(t, portee="aucune") if t["id"] == "concurrent_revers" else t
+           for t in _catalogue_reel()])),
+       "jamais rien")
+rejete("[R] un type que la FORME produit déclaré d'origine extérieure (`financement`)",
+       lambda: charge(fichier_base(types_evenement=[
+           dict(t, origine="exterieur") if t["id"] == "financement" else t
+           for t in _catalogue_reel()])),
+       "origine extérieure")
+_ext = {t.id for t in _reel.types_evenement if t.origine == "exterieur"}
+_listes = {t for _q in _questions for t in _q.rouverte_par}
+check("chaque événement extérieur déclaré rouvre au moins une question (sinon il n'a pas de raison "
+      "d'être au catalogue)", bool(_ext) and _ext <= _listes,
+      f"→ extérieurs {sorted(_ext)}, jamais listés : {sorted(_ext - _listes)}")
+check("un événement extérieur ne rouvre que les questions qui le déclarent", all(
+          fwk.types_qui_rouvrent(_reel, _q.id) & _ext == frozenset(_q.rouverte_par) & _ext
+          for _q in _questions), "")
 _univ = {t.id for t in _reel.types_evenement if t.portee == "toutes"}
 check("les types de portée totale du référentiel réel sont exactement a_qualifier, perimetre, "
       "existentiel", _univ == {"a_qualifier", "perimetre", "existentiel"}, f"→ {sorted(_univ)}")

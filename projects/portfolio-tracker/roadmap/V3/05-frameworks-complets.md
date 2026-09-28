@@ -79,11 +79,20 @@ framework isolé.
   checks — aucun `.py` sous `app/`. Suite 3556/0 sur 51.
 
 ### 2. Framework « Secteur et concurrence » (étape 7, bloc `industry`) · même contexte
-- [ ] Questions validées une à une (structure du secteur, position face aux pairs, cycle, menaces)
-- [ ] Déclare les questions que rouvrent les événements des concurrents : c'est la matière du sprint
+- [x] Questions validées une à une (structure du secteur, position face aux pairs, cycle, menaces)
+- [x] Déclare les questions que rouvrent les événements des concurrents : c'est la matière du sprint
   de design « événements extérieurs à l'émetteur »
-- [ ] Suite verte
+- [x] Suite verte
 - **Acceptation** : identique à la capacité 1, sur le bloc `industry`.
+
+- ✅ **Livré le 2026-09-28** : `se_1`…`se_6` (spec 03 §4.4), validées d'un bloc par l'utilisateur,
+  recoupement `se_3`/`mo_2` accepté. **Option A** : 4 types d'événement d'origine `exterieur`
+  déclarés (#93) — ⚠️ l'acceptation « aucun `.py` sous `app/` » ne tient PAS pour cette capacité, par
+  décision annoncée (champ `origine` au contrat, garde [R], filtre de la note flash). Acceptation
+  mesurée par `tools/montrer_memo_projete.sh` : `industry` en `sans_acquittement` sur NVDA/MSFT/RVMD ;
+  contre-essai avec le référentiel d'avant → `pas_de_methodologie_approuvee`. Suite 3564/0 sur 51,
+  `negatif_frameworks_definitions.sh` 31/31, 3 gardes neuves mutées au rouge. Aucun veilleur ne
+  repère encore les événements extérieurs.
 
 ### 3. Framework « Management et allocation du capital » (étape 6, bloc `management`) · même contexte
 - [ ] Questions validées une à une (grille Thorndike : réinvestissement, rachats au bon prix,

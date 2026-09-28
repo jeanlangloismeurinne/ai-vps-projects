@@ -2348,6 +2348,28 @@ Ce qu'il a coûté, et qui vaudra pour les trois suivants :
   cherche, son absence ne bloquera pas — état « attendu » = capacité 7 de la roadmap 05, pas encore
   construit : aujourd'hui une question sans matière s'affiche comme un manque).
 
+### #93 — « Secteur et concurrence », et l'origine d'un événement
+
+**Deuxième framework de la roadmap 05** (capacité 2, 2026-09-28) : `se_1`…`se_6`, bloc `industry`,
+co-écrit avec l'utilisateur (spec 03 §4.4). Recoupement `se_3` (rang face aux pairs) / `mo_2` (preuve
+d'une barrière) **accepté** par l'utilisateur. Aucune question sans objet pour `pre_revenus`.
+- **Arbitrage A du 2026-09-28 — événements extérieurs à l'émetteur.** Un vrai fonds relit la partie
+  concurrence d'un dossier quand un CONCURRENT publie (approbation, échec, rapprochement, réforme des
+  prix du secteur), sans attendre que l'émetteur en parle. Le catalogue `types_evenement` porte donc
+  un champ REQUIS `origine: emetteur | exterieur` et quatre types extérieurs (`concurrent_offensive`,
+  `concurrent_revers`, `concurrent_rapprochement`, `regulation_du_secteur`).
+- **Règles** : un type extérieur est toujours `questions_declarees` (contrat) ; la table de FORME ne
+  produit jamais un type extérieur (pont [R]) ; la note flash ne les voit ni ne les admet
+  (`types_proposables` filtre `origine == "emetteur"`, le pont de la note lit la même liste).
+- **Ce n'était pas une pure opération de données** (annoncé à l'utilisateur avant) : 3 `.py` sous
+  `app/` touchés (contrat, pont, note flash). Les frameworks suivants redeviennent données seules.
+- **`types_evenement_version` NON montée** : elle date ce que le LECTEUR d'un dépôt voit, et il ne
+  voit que les types `emetteur`, inchangés. La monter aurait marqué « à relire » les 9 notes pour un
+  catalogue identique à leurs yeux.
+- ⚠️ **Limite nommée : aucun veilleur ne repère ces événements** — en pratique ils ne rouvrent rien
+  tant qu'il n'existe pas. `mo_3`/`mo_5` ne les listent pas (réécrire une question existante = #64) :
+  à trancher à l'épreuve (capacité 5).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

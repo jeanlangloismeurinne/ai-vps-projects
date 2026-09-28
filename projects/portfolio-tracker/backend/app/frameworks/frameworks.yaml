@@ -1,4 +1,4 @@
-# Les deux frameworks pilotes et leurs 13 questions — DÉTENTEUR UNIQUE (chantier v3, lot 2).
+# Les frameworks et leurs questions — DÉTENTEUR UNIQUE (chantier v3, lot 2 ; pilotes puis roadmap 05).
 #
 # POURQUOI CE FICHIER N'EST PAS DU PYTHON. L'ordre imposé du chantier est UX → agent → données :
 # les questions se dérivent d'une méthodologie (Greenwald, Porter), jamais de ce que la base
@@ -42,7 +42,8 @@ archetypes:
 # Qualification par la FORME du dépôt : `knowledge/evenements.py` (table item 8-K → type). Ce qui ne
 # s'y décide pas est `a_qualifier`, de portée totale : dans le doute, on rouvre (arbitrage Q3).
 # Limite nommée : les événements EXTÉRIEURS à l'émetteur (concurrent, régulateur sectoriel) ne sont
-# pas dans ses dépôts, donc invisibles ici — sprint de design à venir.
+# pas dans ses dépôts. Ils sont DÉCLARÉS ci-dessous (origine `exterieur`, #93) mais aucun veilleur ne
+# les repère encore.
 #
 # `types_evenement_version` — la version de CE catalogue, distincte de `schema_version` (#90). Une note
 # flash est la lecture d'un dépôt contre ce catalogue, une fois par version : changer un libellé ici
@@ -53,53 +54,95 @@ archetypes:
 #           (#71 y rangeait des données cliniques de phase 1) ; un essai clinique qui atteint son objectif
 #           est une décision réglementaire / produit favorable (#69 rangeait le succès de phase 3 en
 #           « écart aux attentes », ce qui rouvrait toute la qualité financière).
+#   Ajout des types d'origine `exterieur` (#93) SANS changer la version : la version date ce que le
+#   LECTEUR d'un dépôt voit, et il ne voit que les types `emetteur` — inchangés. Les monter aurait
+#   fait relire les dépôts pour un catalogue identique à leurs yeux.
+#
+# `origine` (#93) : `emetteur` = publié par l'entreprise elle-même, lu par la note flash ;
+# `exterieur` = survenu chez un concurrent ou dans le secteur, toujours `questions_declarees`.
 types_evenement_version: "1.1.0"
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
     portee: aucune
+    origine: emetteur
   - id: gouvernance
     libelle: Départ ou nomination de dirigeants — aucune méthodologie ne le porte encore
     portee: aucune
+    origine: emetteur
   - id: a_qualifier
     libelle: Communiqué dont la forme ne dit pas la substance — à lire avant de conclure
     portee: toutes
+    origine: emetteur
   - id: perimetre
     libelle: Acquisition, cession, fusion ou scission — l'entreprise analysée n'est plus la même
     portee: toutes
+    origine: emetteur
   - id: existentiel
     libelle: Faillite, changement de contrôle, radiation, dette rendue exigible
     portee: toutes
+    origine: emetteur
   - id: financement
     libelle: Dette, obligation convertible, émission d'actions, ligne de crédit
     portee: questions_declarees
+    origine: emetteur
   - id: resultats
     libelle: Publication des résultats FINANCIERS périodiques (trimestre, exercice) conformes aux attentes — pas des résultats cliniques
     portee: questions_declarees
+    origine: emetteur
   - id: surprise_secteur
     libelle: Écart aux attentes dont la cause est commune au secteur (demande, cycle, change)
     portee: questions_declarees
+    origine: emetteur
   - id: surprise_concurrence
     libelle: Écart aux attentes propre à l'entreprise — parts perdues, prix cassés, client qui internalise ; aussi quand la cause n'est pas dite
     portee: questions_declarees
+    origine: emetteur
   - id: surprise_execution
     libelle: Écart aux attentes dû à l'exécution interne — retard, usine, produit
     portee: questions_declarees
+    origine: emetteur
   - id: reglementaire_favorable
     libelle: Approbation d'un produit, décision réglementaire favorable, ou essai clinique qui atteint son objectif
     portee: questions_declarees
+    origine: emetteur
   - id: reglementaire_defavorable
     libelle: Refus, échec d'essai, retrait ou rappel d'un produit
     portee: questions_declarees
+    origine: emetteur
   - id: accord_commercial
     libelle: Licence, partenariat, contrat avec un client important, ou leur résiliation
     portee: questions_declarees
+    origine: emetteur
   - id: integrite_comptes
     libelle: Comptes antérieurs déclarés non fiables, changement de commissaire aux comptes
     portee: questions_declarees
+    origine: emetteur
   - id: incident
     libelle: Incident de cybersécurité, accident, litige majeur
     portee: questions_declarees
+    origine: emetteur
+  # ── Extérieurs à l'émetteur (#93, arbitrage A du 2026-09-28) ─────────────────────────────────────
+  # Déclarés pour que le framework « Secteur et concurrence » dise ce qu'ils rouvrent. ⚠️ AUCUN
+  # veilleur ne les repère encore : ils ne viennent pas des dépôts de l'émetteur, et la note flash ne
+  # les voit pas (`note_flash.types_proposables`). Tant que le veilleur n'existe pas, ils ne rouvrent
+  # rien EN PRATIQUE — limite nommée, pas une garantie.
+  - id: concurrent_offensive
+    libelle: Chez un concurrent — approbation ou lancement d'un produit concurrent, baisse de prix, hausse de capacités
+    portee: questions_declarees
+    origine: exterieur
+  - id: concurrent_revers
+    libelle: Chez un concurrent — échec d'essai, refus, retrait de produit, sortie du marché
+    portee: questions_declarees
+    origine: exterieur
+  - id: concurrent_rapprochement
+    libelle: Dans le secteur — fusion ou acquisition entre concurrents, ou rachat d'un concurrent par un tiers
+    portee: questions_declarees
+    origine: exterieur
+  - id: regulation_du_secteur
+    libelle: Dans le secteur — réforme qui touche les prix ou les règles de tous les acteurs (négociation des prix, restriction d'exportation, nouvelle norme)
+    portee: questions_declarees
+    origine: exterieur
 
 frameworks:
 
@@ -756,3 +799,207 @@ frameworks:
           financiere:
             mode: variable
             variable: Concentration des encours par secteur, par contrepartie et par zone
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  # « Secteur et concurrence » — roadmap 05, capacité 2 (2026-09-28), co-écrit avec l'utilisateur.
+  # Porter : un bon acteur dans un secteur structurellement pauvre reste un placement médiocre. Il
+  # écarte ce que les autres portent déjà : la barrière à l'entrée (mo_1), le pouvoir de prix (mo_6),
+  # la taille du marché et la part prise (me_5). Recoupement ACCEPTÉ par l'utilisateur : se_3 mesure
+  # le RANG face aux pairs, mo_2 y cherche la PREUVE d'une barrière — même matière, deux usages.
+  # C'est le premier framework rouvert par des événements EXTÉRIEURS à l'émetteur (#93).
+  # Aucune question n'est sans objet pour un émetteur sans ventes : le secteur et les concurrents
+  # existent avant la première vente.
+  - id: secteur_concurrence
+    libelle: Secteur et concurrence
+    etape_benchmark: 7
+    methodologie: >-
+      Porter (cinq forces) et la pratique de l'analyste sectoriel. L'analyste établit si le secteur
+      gagne durablement de l'argent et qui en capte la valeur, comment le marché est partagé, où
+      l'entreprise se range face à ses pairs directs, la cyclicité de la demande, ce qui pourrait
+      changer les règles du secteur, et ce que font les concurrents en ce moment.
+    nature_dominante: interpretation
+    bloc_memo: industry
+    questions:
+
+      - id: se_1
+        enonce: Le secteur dans son ensemble gagne-t-il de l'argent, et qui capte la valeur entre clients, fournisseurs et intermédiaires ?
+        chemin_indexation: secteur_concurrence.rentabilite_du_secteur
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          La répartition de la valeur dans une chaîne se lit dans des études sectorielles et des
+          comparaisons entre acteurs ; un dépôt de l'émetteur n'en porte que sa propre part.
+        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, accord_commercial, regulation_du_secteur, concurrent_rapprochement]
+        sens_admis: [secteur_structurellement_rentable, secteur_ordinaire, secteur_structurellement_pauvre]
+        ingredients_requis:
+          - id: rentabilite_des_acteurs
+            libelle: Rentabilité des principaux acteurs du secteur sur un cycle complet, pas seulement celle de l'entreprise
+            essentiel: true
+          - id: pouvoir_des_clients
+            libelle: Poids et pouvoir de négociation des clients ou des payeurs — concentration, capacité à imposer leurs prix
+            essentiel: true
+          - id: pouvoir_des_fournisseurs
+            libelle: Poids et pouvoir de négociation des fournisseurs clés — fournisseur unique, intrant rare
+            essentiel: true
+          - id: intermediaires
+            libelle: Intermédiaires entre l'entreprise et le client final, et la part de valeur qu'ils prélèvent
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Rentabilité des acteurs du secteur sur un cycle et partage de la valeur avec clients et fournisseurs
+          pre_revenus:
+            mode: variable
+            variable: Rentabilité des offres comparables déjà commercialisées et pouvoir des payeurs qui en fixent le prix
+          financiere:
+            mode: variable
+            variable: Rentabilité des établissements du secteur sur un cycle de crédit et pouvoir des déposants et emprunteurs
+
+      - id: se_2
+        enonce: Comment le marché est-il partagé entre les acteurs, et ce partage est-il en train de bouger ?
+        chemin_indexation: secteur_concurrence.partage_du_marche
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, surprise_concurrence, accord_commercial, concurrent_offensive, concurrent_revers, concurrent_rapprochement]
+        sens_admis: [marche_concentre, marche_disperse, marche_en_recomposition]
+        ingredients_requis:
+          - id: acteurs_et_parts
+            libelle: Les principaux acteurs du marché et la part que chacun détient, avec la source de l'estimation
+            essentiel: true
+          - id: evolution_des_parts
+            libelle: Évolution de ces parts sur les dernières années — qui gagne, qui perd
+            essentiel: true
+          - id: entrants_recents
+            libelle: Acteurs entrés sur le marché ou sortis de celui-ci récemment
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Parts de marché des principaux acteurs et leur évolution sur 3 à 5 ans
+          pre_revenus:
+            mode: variable
+            variable: Offres déjà commercialisées et programmes concurrents sur la même cible, classés par stade d'avancement
+          financiere:
+            mode: variable
+            variable: Parts des établissements sur les encours et les clientèles servies, et leur évolution
+
+      - id: se_3
+        enonce: Face à ses pairs directs, l'entreprise fait-elle mieux ou moins bien — croissance, marges, investissement — et l'écart se creuse-t-il ?
+        chemin_indexation: secteur_concurrence.rang_face_aux_pairs
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, surprise_concurrence, surprise_execution, concurrent_offensive, concurrent_revers]
+        sens_admis: [devant_ses_pairs, au_niveau_de_ses_pairs, derriere_ses_pairs]
+        ingredients_requis:
+          - id: pairs_directs
+            libelle: Les pairs directs retenus pour la comparaison, et pourquoi ceux-là
+            essentiel: true
+          - id: indicateurs_compares
+            libelle: Croissance, marges et intensité d'investissement de l'entreprise et de chaque pair, sur la même période
+            essentiel: true
+          - id: evolution_de_l_ecart
+            libelle: Évolution de l'écart entre l'entreprise et ses pairs sur plusieurs exercices
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Croissance, marges et intensité d'investissement comparées aux pairs directs sur 3 à 5 ans
+          pre_revenus:
+            mode: variable
+            variable: Avancement des essais et années de trésorerie disponibles comparés aux développeurs concurrents sur la même cible
+          financiere:
+            mode: variable
+            variable: Rentabilité des fonds propres, coût du risque et efficacité comparés aux établissements pairs
+
+      - id: se_4
+        enonce: La demande qui fait vivre le secteur est-elle cyclique, et où en est-on du cycle aujourd'hui ?
+        chemin_indexation: secteur_concurrence.cyclicite
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          La position dans un cycle est un jugement porté sur des séries de demande et des analyses
+          sectorielles ; aucun dépôt de l'émetteur ne la déclare.
+        rouverte_par: [resultats, surprise_secteur]
+        sens_admis: [demande_peu_cyclique, cycle_favorable, cycle_defavorable]
+        ingredients_requis:
+          - id: historique_de_la_demande
+            libelle: Évolution de la demande du secteur sur au moins un cycle complet, creux et pics compris
+            essentiel: true
+          - id: moteur_du_cycle
+            libelle: Ce qui fait tourner le cycle — investissement des clients, crédit, stocks, prix d'une matière
+            essentiel: true
+          - id: position_actuelle
+            libelle: Signaux récents qui situent le secteur dans son cycle — commandes, stocks, capacités, prix
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Sensibilité de la demande du secteur au cycle économique et position actuelle dans ce cycle
+          pre_revenus:
+            mode: variable
+            variable: Dépendance aux périodes où le secteur peut lever des fonds, et état actuel de ces conditions de financement
+          financiere:
+            mode: variable
+            variable: Position dans le cycle du crédit et des taux, et sensibilité des résultats à ce cycle
+
+      - id: se_5
+        enonce: Qu'est-ce qui pourrait changer les règles du secteur — une technologie qui remplace l'offre, une régulation des prix, un nouveau modèle ?
+        chemin_indexation: secteur_concurrence.changement_des_regles
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Une menace sur le secteur entier s'instruit dans des analyses de la technologie, de la
+          régulation et des concurrents ; un dépôt de l'émetteur n'en porte que les facteurs de risque.
+        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, regulation_du_secteur, concurrent_offensive]
+        sens_admis: [regles_stables, menace_identifiee, regles_en_train_de_changer]
+        ingredients_requis:
+          - id: substituts
+            libelle: Offres ou technologies de substitution qui répondent au même besoin autrement, et leur avancement
+            essentiel: true
+          - id: evolutions_reglementaires
+            libelle: Évolutions réglementaires en cours ou annoncées qui touchent les prix ou les règles de tout le secteur
+            essentiel: true
+          - id: nouveaux_modeles
+            libelle: Nouveaux modèles économiques ou nouveaux entrants qui pourraient déplacer la valeur du secteur
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Technologies de substitution, régulation et nouveaux modèles qui menacent les profits du secteur
+          pre_revenus:
+            mode: variable
+            variable: Approches thérapeutiques ou techniques concurrentes et régulation des prix qui s'appliquera à l'offre visée
+          financiere:
+            mode: variable
+            variable: Évolution prudentielle et nouveaux acteurs qui contournent l'intermédiation traditionnelle
+
+      - id: se_6
+        enonce: Que font les concurrents en ce moment — lancements, prix, capacités, échecs — et qu'est-ce que ça change pour l'entreprise ?
+        chemin_indexation: secteur_concurrence.mouvements_des_concurrents
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Les mouvements d'un concurrent se lisent dans SES publications et dans la presse
+          spécialisée, jamais dans les dépôts de l'émetteur analysé.
+        rouverte_par: [surprise_concurrence, accord_commercial, concurrent_offensive, concurrent_revers, concurrent_rapprochement]
+        sens_admis: [pression_croissante, pression_stable, pression_en_recul]
+        ingredients_requis:
+          - id: mouvements_recents
+            libelle: Mouvements récents des principaux concurrents — lancements, approbations, prix, capacités, échecs, retraits
+            essentiel: true
+          - id: consequence_pour_l_entreprise
+            libelle: Ce que ces mouvements changent pour l'entreprise — clients, prix, calendrier, part de marché visée
+            essentiel: true
+          - id: reaction_de_l_entreprise
+            libelle: La réaction annoncée ou observée de l'entreprise à ces mouvements
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Lancements, prix et capacités des concurrents directs sur les 12 derniers mois et effet sur l'entreprise
+          pre_revenus:
+            mode: variable
+            variable: Résultats d'essais, approbations et échecs des programmes concurrents sur la même cible
+          financiere:
+            mode: variable
+            variable: Politique de prix, de crédit et d'expansion des établissements concurrents

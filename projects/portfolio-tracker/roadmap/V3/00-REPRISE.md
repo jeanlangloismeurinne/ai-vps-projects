@@ -28,8 +28,9 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §2 (framework
-> « Secteur et concurrence ») ; §1 « Modèle économique » livrée le 2026-09-28 (`me_1`…`me_6`, #92).
+> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §3 (framework
+> « Management et allocation du capital ») ; livrées le 2026-09-28 : §1 « Modèle économique »
+> (`me_1`…`me_6`, #92) et §2 « Secteur et concurrence » (`se_1`…`se_6` + 4 événements extérieurs, #93).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -65,8 +66,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3556 assertions / 0 échec sur 51 scripts** (2026-09-28,
-  après #92 : 3 frameworks, 19 questions). Les 3 checks « live » sont hors suite par
+- **Suite** `bash checks/run_all.sh` = **3564 assertions / 0 échec sur 51 scripts** (2026-09-28,
+  après #93 : 4 frameworks, 25 questions). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
@@ -138,9 +139,11 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 - **À relire par le comité** : MSFT #88 a lu la présentation des nouveaux segments (7.01 du 02/09) comme
   de la routine — défendable, mais un changement de segments change la comparabilité ; si le comité
   juge qu'il doit rouvrir la qualité financière, c'est une précision du libellé `routine` (donnée).
-- **Sprint de design — événements extérieurs à l'émetteur** (concurrent, génériques, pair, régulation
-  des prix) : absorbé par la capacité 2 de la roadmap 05 (secteur et concurrence), qui doit déclarer
-  ce que ces événements rouvrent.
+- **Événements extérieurs à l'émetteur — le VEILLEUR reste à construire** : les 4 types
+  (`concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement`, `regulation_du_secteur`)
+  sont déclarés et rouvrent les `se_*` qui les listent (#93), mais rien ne les repère : en pratique ils
+  ne rouvrent rien. Et `mo_3`/`mo_5` ne les listent pas (réécriture d'une question existante, #64) —
+  à trancher sur la mesure de la capacité 5.
 
 
 **Dettes à décider (chacune est un lot en soi, à arbitrer en termes métier)**

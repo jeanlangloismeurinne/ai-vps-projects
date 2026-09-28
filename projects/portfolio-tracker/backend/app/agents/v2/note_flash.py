@@ -193,9 +193,12 @@ def depots_a_lire(lookup: MaterialEventLookup, qualifications: dict[str, Qualifi
 def types_proposables(fichier: FrameworksFile) -> list[dict[str, str]]:
     """Le catalogue tel que le modèle le voit : identifiant et libellé, SANS portée (cf. module).
     `a_qualifier` en est retiré (c'est la forme `lisible=false`), et les trois `surprise_*` sont
-    remplacés par `surprise` + cause (le code dérive le type, Q2)."""
+    remplacés par `surprise` + cause (le code dérive le type, Q2). Les types d'origine `exterieur`
+    (#93) en sont retirés : la note lit un dépôt DE L'ÉMETTEUR, elle ne range jamais ce dépôt en
+    « événement chez un concurrent » — le pont refuse donc aussi ces types, par la même liste."""
     out = [{"id": t.id, "libelle": t.libelle} for t in fichier.types_evenement
-           if t.id != A_QUALIFIER and not t.id.startswith("surprise_")]
+           if t.origine == "emetteur"
+           and t.id != A_QUALIFIER and not t.id.startswith("surprise_")]
     out.append({"id": SURPRISE, "libelle": (
         "Écart des résultats ou des prévisions FINANCIERS (chiffre d'affaires, marge, résultat, "
         "guidance) à ce qu'annonçait la direction ou attendait le marché — y compris une annonce "
