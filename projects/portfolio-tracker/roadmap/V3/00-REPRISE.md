@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-26 (7)
+updated: 2026-09-28
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -21,20 +21,30 @@ role: >
 
 > **Ce fichier ne s'empile pas.** Récit → `00-REPRISE-ARCHIVE.md` (copie conforme) ; durable →
 > `CLAUDE.md` du projet ; outillage transverse → `../../../CHANTIER_OUTILLAGE_DEV.md`. Protocole
-> d'éviction : `CONTROL_SYSTEM.md` §5. Le prochain pas n'est écrit qu'à **un seul endroit** :
-> ▶ PROCHAIN JALON.
+> d'éviction : `CONTROL_SYSTEM.md` §5. Le prochain pas n'est écrit qu'à **un seul endroit** : la
+> checklist de la roadmap active (première case non cochée).
 
 ---
 
-## 🎯 Roadmap active — `roadmap/V3/03-spec-frameworks.md` (ouverte le 2026-09-09)
+## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-**Le diagnostic d'origine, en une phrase** : le système rangeait la connaissance dans une grille
-fermée de 19 champs identique pour tout émetteur, et écartait en silence tout ce qui n'y entrait
-pas. La V3 la remplace par des **frameworks stables à variables par entreprise** (référentiel
-inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, avec la chaîne
-**traducteur → collecteur → apparieur → analyste → manager → projection du mémo**.
+> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §1 (framework
+> « Modèle économique »).
 
-### État des lots (spec §10)
+**Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
+grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
+question : les frameworks sont-ils vraiment agnostiques à l'entreprise, ou faut-il un agent qui les
+adapte à l'entreprise et à son stade ? Réponse de méthode retenue : **rédiger les quatre frameworks qui
+manquent au mémo** (modèle économique, secteur et concurrence, management, valorisation), **les éprouver
+sur les cas réels**, et seulement alors décider à quel niveau vit l'adaptation. Détail et ordre justifié
+dans la roadmap. La spec 03 reste la référence de conception (§1 ce qui n'est pas défait, §2 l'objet
+framework, §9.3 le critère de déclenchement des frameworks par archétype).
+
+**Ce que la mesure dit déjà** : les 13 questions des deux pilotes ont servi à NVDA, MSFT et RVMD sans
+réécriture ; l'adaptation vit au **stade** (`archetypes`, liste fermée de 3, écrite à la main) et à
+l'**entreprise** (le traducteur). L'approbation RVMD montre que l'étage « stade » est fermé.
+
+### Spec 03 — état des lots (§10)
 
 | Lot | Contenu | État |
 |---|---|---|
@@ -47,7 +57,7 @@ inerte `app/frameworks/frameworks.yaml`), chacun garanti par un **manager**, ave
 | 4 | Manager (4 contrôles, renvoi → mandat) + ses données | ✅ 2026-09-21, migration 043 |
 | 5 | Mémo projeté, chaîne de bout en bout sur les 2 pilotes, bouclage comité → collecte | ✅ 2026-09-25 (déployé `3588d23`) |
 | 6 | Le parcours : `qualite_info` dérivée · 3 niveaux de drill-down · acquitter/renvoyer tracés (A7) · la note reprend le retenu (arbitrage A) | ✅ 2026-09-26 (déployé `4316222`, #82-#85) |
-| **7** | **Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 (état terminal)** | 🔄 identité de l'émetteur (#86) · pièces Ryvu écartées (#87, migration 049) · jugement fondé sur des faits = réponse directe (#88) · ce qu'un événement rouvre, horloge par question (#89) · **la note flash** (#90, migration 050) · **branchée au flux** (#91 : chaque matin + avant chaque passage de chaîne) — reste : ▶ PROCHAIN JALON |
+| 7 | Second pilote complet · acceptation T1-T8 · réconciliation à 0/0 | ⏸ suspendu le 2026-09-28 après #86-#91 (identité de l'émetteur, pièces Ryvu écartées, jugement fondé sur des faits, horloge par question, note flash branchée) — son reste (maillons 3-4, T1-T8, 0/0) est repris en capacités 7-9 de `05-frameworks-complets.md` |
 
 Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du `CLAUDE.md`.
 
@@ -70,68 +80,23 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 - **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, après #90) : 7 manques — qf_4 (financement du
   27/08), qf_7 (source indisponible), mo_1…mo_5 rouvertes par l'approbation FDA LUE
   (« reglementaire_favorable (note flash …) ») ; **qf_6 n'est plus périmée** (qualité financière 0,50).
-  Mandats 983-986 toujours ouverts sur des questions répondues (voir ▶).
-
----
-
-## ▶ PROCHAIN JALON — LOT 7 : le maillon 3 (reclassement proposé au comité)
-
-**✅ Fait le 2026-09-26 (7) — la note flash branchée au flux (#91, arbitrage option c)** : l'analyste lit
-chaque matin pour tout titre suivi (job `notes_flash_matin`, 7 h, dépense sous `v2_auto_enabled`) et au
-début de chaque passage de la chaîne (`executer_chaine` maillon 0, `boucler_renvois` avant le dossier).
-Détenteur unique `note_flash.lire_les_depots_en_attente`. Détail : convention #91.
-
-**⚠️ À faire valider par l'utilisateur, en termes de fonds** : le réglage de dépense automatique est
-COUPÉ — tant qu'il l'est, aucun communiqué n'est lu le matin, le gérant est seulement prévenu des
-publications de la veille. L'ouvrir fait lire ~20 communiqués par titre et par matin (~$0,0003 chacun ;
-arriéré AZN/NVO résorbé en une semaine) ; mais il ouvre AUSSI les revues calendaires V2 automatiques
-(`event_router_v2`). Si l'utilisateur veut l'un sans l'autre, c'est un second réglage (migration 051).
-
-**Puis maillon 3** (Q4 : une approbation qualifiée — RVMD #80 — fait PROPOSER le reclassement de
-« pré-revenus » à « commerciale », le comité valide) et **maillon 4** (Q5 : position détenue sous revue).
-
-**À relire par le comité, noté** : MSFT #88 a lu la présentation des nouveaux segments (7.01 du 02/09)
-comme de la **routine** — défendable (aucun chiffre neuf), mais un changement de segments change la
-comparabilité des chiffres historiques ; si le comité juge qu'il doit rouvrir la qualité financière,
-c'est une précision du libellé `routine` (donnée, nouvelle version du catalogue), pas du code.
-
-**🗓 Sprint de DESIGN demandé** : les événements EXTÉRIEURS à l'émetteur (concurrent, génériques, pair,
-régulation des prix) sont invisibles aux dépôts EDGAR de l'émetteur. Réfléchir à leur place dans le
-flux d'investissement en partant des frameworks futurs d'analyse concurrentielle (spec, benchmark),
-qui y répondront en partie.
-
-**Constaté au même passage, à instruire ensuite** : les mandats manager **983-986** (« question sans
-aucune réponse », ouverts avant #88) restent `ouvert` alors que mo_1/3/4/5 sont désormais répondus et
-acquittés — le parcours affiche encore « repartie en recherche : mandat #983 ». `persist_review` n'en
-ferme aucun sur un acquittement. Un fonds clôt la demande de recherche quand la question a trouvé sa
-réponse ; relire #77 (idempotence par question) et le bouclage (#71/lot 5) avant de choisir le geste.
-
-**Puis la suite du lot 7** (spec §10) : `defendabilite` de bout en bout sur un second émetteur,
-acceptation T1-T8, réconciliation à 0/0.
-
-**✅ ARBITRAGES DU COMITÉ RENDUS PAR L'UTILISATEUR (2026-09-25)** — posés en termes de fonds
-(principes 1 et 2). Ils cadrent les maillons 2 et 3 :
-1. **Procès-verbal COMPLET quand le comité accepte une réponse faible** : qui, quand, sur quelle
-   **version du dossier**, avec une **justification écrite obligatoire**. Un vrai comité écrit
-   pourquoi il passe outre une faiblesse, pour qu'on puisse relire la décision six mois plus tard
-   dans son contexte. ⟹ la trace A7 (migration 047) porte l'auteur, l'instant, la version du
-   dossier (framework + version + réponse) et un motif non vide.
-2. **Une acceptation TOMBE dès qu'un fait important est publié après elle** (résultats,
-   approbation réglementaire, acquisition), et la question repasse devant le comité ; une
-   information de routine ne la remet pas en cause. ⟹ la validité d'une acceptation se
-   **recalcule à la lecture** contre l'ancre matérielle (`ancre_substantielle`, #53/#54 — un 8-K
-   de pure forme ne périme rien), jamais figée à l'écriture.
-3. **La page d'un titre répond d'abord à « peut-on décider ? »** — avec une nuance de fond :
-   le processus est conçu pour que le système aille **lui-même** chercher ce qui manque avant de
-   présenter le dossier ; un dossier complet est donc l'état **normal**. Quand ce n'est pas le
-   cas, **l'utilisateur veut le savoir** : l'incomplétude s'affiche comme une **alerte**, en tête,
-   qui nomme ce qui manque et **pourquoi le système n'a pas pu l'obtenir** (recherche épuisée,
-   source indisponible, question sans source possible) — jamais comme un simple compteur parmi
-   d'autres. Ensuite viennent la note de qualité de chaque méthodologie, puis leurs conclusions.
+  Mandats 983-986 toujours ouverts sur des questions répondues (voir « Reste ouvert »).
 
 ---
 
 ## Arbitrages de l'utilisateur qui commandent la suite
+
+**2026-09-28 — construire le système avant de l'étendre**
+1. **Lecture automatique des communiqués : on reste en l'état** (`v2_auto_enabled = FALSE`). « La
+   priorité est de construire le système de bout en bout en utilisant des exemples pour piloter son
+   architecture de façon à ce qu'il soit réplicable sur tout titre. On gérera les autres titres en
+   portefeuille une fois le système conçu. » ⟹ l'arriéré AZN/NVO/AMZN/GOOG n'est pas à résorber.
+2. **Information attendue ≠ information manquante.** Après un changement de stade (RVMD approuvée), le
+   système va chercher la matière nouvelle même si elle n'est vraisemblablement pas encore publiée ;
+   son absence ne bloque pas et ne déclenche ni alerte ni revue de position.
+3. **Rédiger d'abord tous les frameworks prévus, les éprouver sur des cas concrets, puis décider où vit
+   l'adaptation** (stade, entreprise, agent concepteur de grille) — roadmap `05-frameworks-complets.md`,
+   ordre validé : modèle économique → secteur et concurrence → management → valorisation.
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
@@ -161,7 +126,21 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 
 ---
 
-## Ce qui reste ouvert — hors lot 6
+## Ce qui reste ouvert
+
+**Remontés du jalon du lot 7 au 2026-09-28 (non traités, toujours vrais)**
+- **Mandats manager 983-986** (« question sans aucune réponse », ouverts avant #88) restent `ouvert`
+  alors que mo_1/3/4/5 sont répondus et acquittés — le parcours affiche encore « repartie en
+  recherche : mandat #983 ». `persist_review` n'en ferme aucun sur un acquittement. Un fonds clôt la
+  demande de recherche quand la question a trouvé sa réponse ; relire #77 et le bouclage (#71/lot 5)
+  avant de choisir le geste.
+- **À relire par le comité** : MSFT #88 a lu la présentation des nouveaux segments (7.01 du 02/09) comme
+  de la routine — défendable, mais un changement de segments change la comparabilité ; si le comité
+  juge qu'il doit rouvrir la qualité financière, c'est une précision du libellé `routine` (donnée).
+- **Sprint de design — événements extérieurs à l'émetteur** (concurrent, génériques, pair, régulation
+  des prix) : absorbé par la capacité 2 de la roadmap 05 (secteur et concurrence), qui doit déclarer
+  ce que ces événements rouvrent.
+
 
 **Dettes à décider (chacune est un lot en soi, à arbitrer en termes métier)**
 - **Chaîne complète vs acceptation du comité** (#84) : `executer_chaine` → `persist_review` ne consulte
@@ -293,8 +272,8 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 ## À lire avant de reprendre
 
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
-2. Ce fichier, puis **`roadmap/V3/03-spec-frameworks.md`** (§1 ce qui n'est PAS défait · §8 le
-   parcours, cœur du lot 6 · §10 les lots).
+2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
+   `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
 3. **`CLAUDE.md` du projet** — conventions **#25 → #91** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
@@ -313,10 +292,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 
 > Reprise de **portfolio-tracker V3**. Lis d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md` (arbitrages
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
-> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/03-spec-frameworks.md`. Lots 0 à 6 clos
-> (lot 6 : parcours du comité, #82-#85). **Lot 7 en cours** : identité de l'émetteur (#86), pièces
-> Ryvu écartées (#87), jugement fondé sur des faits = réponse directe (#88) ; taxonomie des événements
-> maillons 1 (#89, horloge par question) et 2 (#90, la note flash) livrés, note flash branchée au flux
-> (#91) ; prochain pas = le reclassement proposé au comité (▶ PROCHAIN JALON). Ordre imposé contrat → agent → données. Re-requêter toute
-> ligne de base avant
-> de s'en servir.
+> `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/05-frameworks-complets.md` — rédiger les
+> quatre frameworks manquants (modèle économique → secteur et concurrence → management → valorisation),
+> co-écrits question par question avec l'utilisateur, en données seules ; puis les éprouver sur
+> NVDA/MSFT/RVMD + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
+> la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute
+> ligne de base avant de s'en servir.

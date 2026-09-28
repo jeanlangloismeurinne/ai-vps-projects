@@ -2391,7 +2391,9 @@ Déclencheur : **« reprends le projet portfolio-tracker à partir du fichier de
 roadmap qu'il déclare active, annoncer le lot de conversation, exécuter, cocher les capacités livrées.
 
 **Tout le pilotage vit dans `roadmap/V3/`, dossier autonome et point d'entrée unique :**
-- `03-spec-frameworks.md` — **la roadmap active** (§1 = ce qui n'est PAS défait, à relire à chaque lot) ;
+- `05-frameworks-complets.md` — **la roadmap active** depuis le 2026-09-28 (rédiger et éprouver les
+  frameworks manquants) ;
+- `03-spec-frameworks.md` — la spec de conception V3 (§1 = ce qui n'est PAS défait, à relire à chaque lot) ;
 - `PRINCIPES-FONDATEURS.md` — les **principes de conduite** du chantier (lus à chaque reprise) ;
 - `principe-directeur.md` — la **constitution**, prime sur toute spec ;
 - `doctrine-trois-axes.md` — doctrine fiabilité/nature/actualité (close, en production) ;
