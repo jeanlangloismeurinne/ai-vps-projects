@@ -95,11 +95,18 @@ framework isolé.
   repère encore les événements extérieurs.
 
 ### 3. Framework « Management et allocation du capital » (étape 6, bloc `management`) · même contexte
-- [ ] Questions validées une à une (grille Thorndike : réinvestissement, rachats au bon prix,
+- [x] Questions validées une à une (grille Thorndike : réinvestissement, rachats au bon prix,
   acquisitions, incitations)
-- [ ] Suite verte
+- [x] Suite verte
 - **Acceptation** : identique à la capacité 1, sur le bloc `management`. Le type d'événement
-  `gouvernance` rouvre enfin quelque chose (aujourd'hui `portee: aucune`, faute de méthodologie).
+  `gouvernance` rouvre enfin quelque chose (était `portee: aucune`, faute de méthodologie).
+
+- ✅ **Livré le 2026-09-28** : `ma_1`…`ma_6` (spec 03 §4.5), validées d'un bloc. `gouvernance` rouvre
+  `ma_4`/`ma_5`/`ma_6` (catalogue 1.2.0, 9 notes relues) ; `financement` rouvre aussi `ma_1`/`ma_3`
+  (arbitrage). Acceptation mesurée par `tools/montrer_memo_projete.sh` : `management` en
+  `sans_acquittement` sur NVDA/MSFT/RVMD (`valuation`, non écrit, reste `pas_de_methodologie_approuvee`
+  dans le même passage). Aucun `.py` sous `app/`. Suite 3566/0 sur 51, négatif 31/31 ; garde
+  `gouvernance` mutée au rouge (check_evenements + check_frameworks_definitions).
 
 ### 4. Framework « Valorisation » (étape 8, bloc `valuation`) · même contexte
 - [ ] Questions validées une à une (fourchette de valeur, ce que le prix suppose, marge de sécurité)

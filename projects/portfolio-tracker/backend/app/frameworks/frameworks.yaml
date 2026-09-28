@@ -54,21 +54,24 @@ archetypes:
 #           (#71 y rangeait des données cliniques de phase 1) ; un essai clinique qui atteint son objectif
 #           est une décision réglementaire / produit favorable (#69 rangeait le succès de phase 3 en
 #           « écart aux attentes », ce qui rouvrait toute la qualité financière).
-#   Ajout des types d'origine `exterieur` (#93) SANS changer la version : la version date ce que le
+#   1.2.0 — `gouvernance` rouvre enfin quelque chose (#94, framework management) : son libellé ne dit
+#           plus « aucune méthodologie ne le porte » et couvre la rémunération et le conseil (item
+#           5.02 du 8-K). Le lecteur voit ce libellé : les notes écrites sous 1.1.0 sont à relire.
+#   Ajout des types d'origine `exterieur` (#93, sous 1.1.0) SANS changer la version : la version date ce que le
 #   LECTEUR d'un dépôt voit, et il ne voit que les types `emetteur` — inchangés. Les monter aurait
 #   fait relire les dépôts pour un catalogue identique à leurs yeux.
 #
 # `origine` (#93) : `emetteur` = publié par l'entreprise elle-même, lu par la note flash ;
 # `exterieur` = survenu chez un concurrent ou dans le secteur, toujours `questions_declarees`.
-types_evenement_version: "1.1.0"
+types_evenement_version: "1.2.0"
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
     portee: aucune
     origine: emetteur
   - id: gouvernance
-    libelle: Départ ou nomination de dirigeants — aucune méthodologie ne le porte encore
-    portee: aucune
+    libelle: Départ ou nomination de dirigeants, changement de leur rémunération ou de la composition du conseil
+    portee: questions_declarees
     origine: emetteur
   - id: a_qualifier
     libelle: Communiqué dont la forme ne dit pas la substance — à lire avant de conclure
@@ -1003,3 +1006,199 @@ frameworks:
           financiere:
             mode: variable
             variable: Politique de prix, de crédit et d'expansion des établissements concurrents
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  # « Management et allocation du capital » — roadmap 05, capacité 3 (2026-09-28), co-écrit avec
+  # l'utilisateur. Thorndike (The Outsiders) : on juge les dirigeants sur ce qu'ils FONT de l'argent.
+  # Il écarte ce que les autres portent : le rendement du capital (qf_1), la contrainte de la dette
+  # (qf_4), les choix comptables flatteurs (qf_6). Arbitrage du 2026-09-28 : une levée de fonds est
+  # un acte d'allocation — `financement` rouvre ma_1 et ma_3 en plus de qf_4/qf_7 (#94).
+  # Aucune question n'est sans objet pour un émetteur sans ventes.
+  - id: management_capital
+    libelle: Management et allocation du capital
+    etape_benchmark: 6
+    methodologie: >-
+      Thorndike (The Outsiders) et la pratique du gérant. On juge la direction sur ce qu'elle fait
+      de l'argent — où va chaque dollar généré ou levé, à quel prix elle rachète ou émet des actions,
+      ce qu'ont rapporté ses acquisitions — puis sur ce qui la motive, sur sa parole tenue, et sur
+      qui décide vraiment.
+    nature_dominante: interpretation
+    bloc_memo: management
+    questions:
+
+      - id: ma_1
+        enonce: Où va l'argent que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ?
+        chemin_indexation: management_capital.usage_du_capital
+        nature_attendue: mesure
+        plancher_tier: A
+        rouverte_par: [financement, resultats]
+        sens_admis: [allocation_creatrice, allocation_neutre, allocation_destructrice]
+        ingredients_requis:
+          - id: repartition_des_usages
+            libelle: Répartition sur plusieurs exercices de l'argent généré ou levé entre réinvestissement, acquisitions, rachats d'actions, dividendes et remboursement de dette
+            essentiel: true
+          - id: rendement_des_usages
+            libelle: Ce que chaque usage a rapporté — croissance ou rendement obtenus au regard des montants engagés
+            essentiel: true
+          - id: politique_annoncee
+            libelle: La politique d'allocation annoncée par la direction et ses priorités déclarées
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Répartition des usages du cash généré sur 5 à 10 ans et rendement de chacun
+          pre_revenus:
+            mode: variable
+            variable: Répartition des fonds levés entre les programmes et rythme de dilution des actionnaires
+          financiere:
+            mode: variable
+            variable: Partage du résultat entre croissance des encours, dividendes, rachats et renforcement des fonds propres
+
+      - id: ma_2
+        enonce: Les acquisitions passées ont-elles rapporté ce qu'elles ont coûté ?
+        chemin_indexation: management_capital.bilan_des_acquisitions
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Le bilan d'une acquisition se juge en confrontant la promesse au réalisé, souvent dans des
+          analyses extérieures ; le dépôt n'en porte que le prix et les dépréciations.
+        rouverte_par: [resultats, integrite_comptes]
+        sens_admis: [acquisitions_creatrices, acquisitions_decevantes, acquisitions_destructrices, pas_d_acquisition_significative]
+        ingredients_requis:
+          - id: acquisitions_realisees
+            libelle: Acquisitions significatives des dix dernières années, avec leur prix et la justification donnée à l'époque
+            essentiel: true
+          - id: resultat_obtenu
+            libelle: Ce que chaque acquisition a effectivement rapporté au regard de ce qui avait été promis
+            essentiel: true
+          - id: depreciations
+            libelle: Dépréciations ou cessions ultérieures des actifs acquis
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Acquisitions significatives sur 10 ans, promesse au moment de l'achat et résultat obtenu
+          pre_revenus:
+            mode: variable
+            variable: Molécules, technologies ou sociétés acquises ou prises en licence, et ce qu'elles sont devenues
+          financiere:
+            mode: variable
+            variable: Rachats d'établissements ou de portefeuilles, et leur rentabilité après intégration
+
+      - id: ma_3
+        enonce: Les rachats et les émissions d'actions se font-ils au bon prix — racheter quand l'action est bon marché, émettre quand elle est chère ?
+        chemin_indexation: management_capital.prix_des_rachats_et_emissions
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [financement, resultats]
+        sens_admis: [prix_judicieux, prix_indifferent, prix_destructeur, aucune_operation_significative]
+        ingredients_requis:
+          - id: operations_sur_le_capital
+            libelle: Rachats et émissions d'actions des dernières années, avec leurs montants, dates et prix
+            essentiel: true
+          - id: valeur_au_moment_de_l_operation
+            libelle: Niveau de valorisation de l'action au moment de chaque opération, comparé à son historique ou à une estimation de sa valeur
+            essentiel: true
+          - id: dilution_par_la_remuneration
+            libelle: Dilution créée par la rémunération en actions, que les rachats compensent le cas échéant
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Prix des rachats et des émissions comparés à la valorisation de l'action au moment de chaque opération
+          pre_revenus:
+            mode: variable
+            variable: Prix et moment des levées de fonds en actions, et dilution qui en résulte
+          financiere:
+            mode: variable
+            variable: Prix des rachats et des émissions comparé à la valeur comptable des fonds propres
+
+      - id: ma_4
+        enonce: La rémunération des dirigeants récompense-t-elle ce qui crée de la valeur pour l'actionnaire, et ont-ils leur propre argent en jeu ?
+        chemin_indexation: management_capital.alignement_des_dirigeants
+        nature_attendue: mesure
+        plancher_tier: A
+        rouverte_par: [gouvernance]
+        sens_admis: [dirigeants_alignes, alignement_partiel, dirigeants_non_alignes]
+        ingredients_requis:
+          - id: criteres_de_remuneration
+            libelle: Ce que mesurent les objectifs de la rémunération variable des dirigeants — taille, croissance, rendement du capital, cours de bourse
+            essentiel: true
+          - id: detention_des_dirigeants
+            libelle: Actions détenues par les dirigeants à titre personnel, rapportées à leur rémunération annuelle
+            essentiel: true
+          - id: cessions_et_achats_des_dirigeants
+            libelle: Achats et ventes d'actions par les dirigeants sur les derniers exercices
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Critères de la rémunération variable et détention personnelle des dirigeants
+          pre_revenus:
+            mode: variable
+            variable: Critères de la rémunération — étapes cliniques, trésorerie, cours — et détention personnelle des dirigeants
+          financiere:
+            mode: variable
+            variable: Critères de la rémunération au regard du risque pris, et détention personnelle des dirigeants
+
+      - id: ma_5
+        enonce: La direction fait-elle ce qu'elle dit — objectifs annoncés tenus, franchise sur ses échecs ?
+        chemin_indexation: management_capital.parole_tenue
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          La parole tenue se juge en rapprochant des annonces successives de leur réalisation ; ce
+          rapprochement n'est publié par personne, il se construit.
+        rouverte_par: [resultats, surprise_execution, integrite_comptes, gouvernance]
+        sens_admis: [parole_tenue, parole_inegale, parole_non_tenue]
+        ingredients_requis:
+          - id: objectifs_annonces
+            libelle: Objectifs chiffrés ou datés annoncés par la direction sur les derniers exercices
+            essentiel: true
+          - id: realisation
+            libelle: Ce qui a été effectivement réalisé face à chacun de ces objectifs
+            essentiel: true
+          - id: communication_des_echecs
+            libelle: Manière dont la direction a présenté ses échecs ou ses retards — reconnus, minimisés ou passés sous silence
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Objectifs financiers et opérationnels annoncés sur 3 à 5 ans et leur réalisation
+          pre_revenus:
+            mode: variable
+            variable: Calendriers d'essais, de dépôts réglementaires et de lancements annoncés, et leur respect
+          financiere:
+            mode: variable
+            variable: Objectifs de rentabilité, de coût du risque et de solvabilité annoncés, et leur réalisation
+
+      - id: ma_6
+        enonce: Qui décide vraiment, et le conseil peut-il s'opposer à la direction ?
+        chemin_indexation: management_capital.pouvoir_de_decision
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          La répartition des droits de vote se lit dans les dépôts, mais la capacité réelle du conseil
+          à s'opposer est un jugement que le document de convocation ne porte qu'en boilerplate.
+        rouverte_par: [gouvernance]
+        sens_admis: [contre_pouvoir_effectif, contre_pouvoir_limite, direction_sans_contre_pouvoir]
+        ingredients_requis:
+          - id: controle_des_droits_de_vote
+            libelle: Qui contrôle les droits de vote — actionnaire de référence, fondateurs, actions à droits de vote multiples
+            essentiel: true
+          - id: independance_du_conseil
+            libelle: Composition du conseil, part d'administrateurs indépendants, et séparation entre présidence et direction générale
+            essentiel: true
+          - id: desaccords_observes
+            libelle: Désaccords observés entre le conseil, les actionnaires et la direction — votes contestés, départs, interventions d'actionnaires
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Contrôle des droits de vote et indépendance effective du conseil
+          pre_revenus:
+            mode: variable
+            variable: Contrôle des droits de vote, poids des investisseurs historiques et indépendance du conseil
+          financiere:
+            mode: variable
+            variable: Contrôle des droits de vote, indépendance du conseil et poids du régulateur dans la gouvernance

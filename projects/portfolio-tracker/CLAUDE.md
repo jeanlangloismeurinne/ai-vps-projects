@@ -2370,6 +2370,22 @@ d'une barrière) **accepté** par l'utilisateur. Aucune question sans objet pour
   tant qu'il n'existe pas. `mo_3`/`mo_5` ne les listent pas (réécrire une question existante = #64) :
   à trancher à l'épreuve (capacité 5).
 
+### #94 — « Management et allocation du capital » ; la gouvernance rouvre enfin quelque chose
+
+**Troisième framework de la roadmap 05** (capacité 3, 2026-09-28) : `ma_1`…`ma_6`, bloc `management`,
+co-écrit avec l'utilisateur (spec 03 §4.5, grille Thorndike). Retour aux données seules : aucun `.py`
+sous `app/` (les checks seulement).
+- **`gouvernance`** (item 5.02 : dirigeants, rémunération, conseil) passe de portée `aucune` à
+  `questions_declarees` et rouvre `ma_4`/`ma_5`/`ma_6`. Son libellé change (il disait « aucune
+  méthodologie ne le porte ») ⟹ **catalogue d'événements 1.2.0** : le lecteur voit ce libellé, les
+  9 notes sous 1.1.0 sont relues (règle #90).
+- **Arbitrage du 2026-09-28 — une levée de fonds est un acte d'allocation.** Un vrai fonds juge le
+  prix auquel la direction émet des actions : `financement` rouvre `ma_1` (usage du capital) et
+  `ma_3` (prix des rachats et émissions) en plus de `qf_4`/`qf_7` (arbitrage du 2026-09-26 étendu,
+  pas renversé).
+- Piège rencontré : une ancre testée sur un flux qui contient un dépôt `a_qualifier` postérieur
+  s'ancre à LUI (portée totale) — le test de `ma_4` retire le 8.01 du 26/08 pour isoler la gouvernance.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

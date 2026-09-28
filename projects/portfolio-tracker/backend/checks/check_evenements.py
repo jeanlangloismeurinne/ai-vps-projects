@@ -118,6 +118,13 @@ b.check(a_qf6.status == "found" and a_qf6.event.event_date == date(2026, 8, 26),
         f"→ {getattr(a_qf6.event, 'event_date', None)}")
 b.check(all(e.event_date != date(2026, 6, 18) for e in a_mo1.recents),
         "un dépôt de pure gouvernance + routine ne rouvre aucune question de défendabilité")
+# Sans le 8.01 du 26/08 (à qualifier, il rouvre TOUT et deviendrait l'ancre) : ni le financement
+# ni les résultats ne rouvrent ma_4 ; seul le dépôt de gouvernance le peut.
+a_ma4 = ancre(flux(FIN_27_08, RES_05_08, GOUV_18_06), "ma_4")
+b.check(a_ma4.status == "found" and a_ma4.event.event_date == date(2026, 6, 18),
+        "#94 : le dépôt de gouvernance (dirigeants, 18/06) rouvre l'alignement des dirigeants "
+        f"(ma_4) — `gouvernance` rouvre enfin quelque chose → {a_ma4.status} "
+        f"{getattr(a_ma4.event, 'event_date', None)}")
 
 
 print("§3 le couple discriminant : la fausse fraîcheur de l'ancre unique")

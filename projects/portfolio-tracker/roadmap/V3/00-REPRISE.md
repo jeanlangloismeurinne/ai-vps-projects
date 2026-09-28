@@ -28,9 +28,10 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §3 (framework
-> « Management et allocation du capital ») ; livrées le 2026-09-28 : §1 « Modèle économique »
-> (`me_1`…`me_6`, #92) et §2 « Secteur et concurrence » (`se_1`…`se_6` + 4 événements extérieurs, #93).
+> **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : §4 (framework
+> « Valorisation ») ; livrées le 2026-09-28 : §1 « Modèle économique » (`me_1`…`me_6`, #92), §2
+> « Secteur et concurrence » (`se_1`…`se_6` + 4 événements extérieurs, #93), §3 « Management et
+> allocation du capital » (`ma_1`…`ma_6`, #94).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -66,8 +67,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3564 assertions / 0 échec sur 51 scripts** (2026-09-28,
-  après #93 : 4 frameworks, 25 questions). Les 3 checks « live » sont hors suite par
+- **Suite** `bash checks/run_all.sh` = **3566 assertions / 0 échec sur 51 scripts** (2026-09-28,
+  après #94 : 5 frameworks, 31 questions). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
@@ -100,6 +101,11 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 3. **Rédiger d'abord tous les frameworks prévus, les éprouver sur des cas concrets, puis décider où vit
    l'adaptation** (stade, entreprise, agent concepteur de grille) — roadmap `05-frameworks-complets.md`,
    ordre validé : modèle économique → secteur et concurrence → management → valorisation.
+4. **Événements chez les concurrents (option A, #93)** : déclarés au catalogue (origine `exterieur`),
+   ils rouvrent les questions du secteur qui les citent, jamais tout le dossier ; le veilleur qui les
+   repère reste à construire.
+5. **Une levée de fonds est un acte d'allocation (#94)** : elle rouvre aussi le jugement sur le
+   management (usage du capital, prix des émissions) — extension de la règle du 26/09.
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite

@@ -808,6 +808,27 @@ d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
 > réécrirait des questions existantes (#64), décision laissée à l'épreuve (capacité 5).
 ---
 
+### 4.5 Framework « Management et allocation du capital » (2026-09-28)
+
+Roadmap `05-frameworks-complets.md`, capacité 3, co-écrit avec l'utilisateur. **Thèse
+méthodologique** (Thorndike, *The Outsiders*) : on juge la direction sur ce qu'elle fait de l'argent,
+puis sur ce qui la motive, sa parole tenue et qui décide vraiment. Il écarte le rendement du capital
+(`qf_1`), la contrainte de la dette (`qf_4`), les choix comptables (`qf_6`). Aucune question n'est
+sans objet pour un émetteur sans ventes.
+
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #94) |
+|---|---|---|---|---|
+| `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats` |
+| `ma_2` | Les **acquisitions** passées ont-elles rapporté ce qu'elles ont coûté ? | `interpretation` | B | `resultats`, `integrite_comptes` |
+| `ma_3` | Les **rachats et émissions** d'actions se font-ils au bon prix ? | `mesure` | B+ | `financement`, `resultats` |
+| `ma_4` | La **rémunération** des dirigeants récompense-t-elle la création de valeur, et ont-ils leur argent en jeu ? | `mesure` | A | `gouvernance` |
+| `ma_5` | La direction **fait-elle ce qu'elle dit** ? | `interpretation` | B | `resultats`, `surprise_execution`, `integrite_comptes`, `gouvernance` |
+| `ma_6` | **Qui décide vraiment**, et le conseil peut-il s'opposer à la direction ? | `interpretation` | B | `gouvernance` |
+
+> **Arbitrages du 2026-09-28 (#94)** : `gouvernance` passe de portée `aucune` à `questions_declarees`
+> (catalogue d'événements 1.2.0) ; une levée de fonds est un acte d'allocation — `financement`
+> rouvre `ma_1` et `ma_3` en plus de `qf_4`/`qf_7` (arbitrage du 2026-09-26 étendu).
+
 ## 5. Le modèle de stockage — ce qui remplace la grille de 19
 
 ### 5.1 Le principe

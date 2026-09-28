@@ -416,14 +416,20 @@ check("un événement extérieur ne rouvre que les questions qui le déclarent",
           fwk.types_qui_rouvrent(_reel, _q.id) & _ext == frozenset(_q.rouverte_par) & _ext
           for _q in _questions), "")
 _univ = {t.id for t in _reel.types_evenement if t.portee == "toutes"}
+check("#94 : un départ ou une nomination de dirigeants rouvre ma_4, ma_5 et ma_6, et aucune autre",
+      sorted(q.id for q in _questions if "gouvernance" in q.rouverte_par) == ["ma_4", "ma_5", "ma_6"],
+      f"→ {sorted(q.id for q in _questions if 'gouvernance' in q.rouverte_par)}")
 check("les types de portée totale du référentiel réel sont exactement a_qualifier, perimetre, "
       "existentiel", _univ == {"a_qualifier", "perimetre", "existentiel"}, f"→ {sorted(_univ)}")
 check("`types_qui_rouvrent(qf_4)` = ses types déclarés ∪ les types de portée totale",
       fwk.types_qui_rouvrent(_reel, "qf_4")
       == frozenset(next(q for q in _questions if q.id == "qf_4").rouverte_par) | _univ,
       f"→ {sorted(fwk.types_qui_rouvrent(_reel, 'qf_4'))}")
-check("l'arbitrage du 2026-09-26 : un FINANCEMENT rouvre qf_4 et qf_7, et aucune autre question",
-      sorted(q.id for q in _questions if "financement" in q.rouverte_par) == ["qf_4", "qf_7"],
+# Arbitrages du 2026-09-26 (qf_4, qf_7) puis du 2026-09-28 (#94 : une levée de fonds est un acte
+# d'allocation — ma_1, ma_3).
+check("les arbitrages : un FINANCEMENT rouvre qf_4, qf_7, ma_1 et ma_3, et aucune autre question",
+      sorted(q.id for q in _questions if "financement" in q.rouverte_par)
+      == ["ma_1", "ma_3", "qf_4", "qf_7"],
       f"→ {sorted(q.id for q in _questions if 'financement' in q.rouverte_par)}")
 
 
