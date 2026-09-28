@@ -211,9 +211,12 @@ valide("le référentiel RÉEL charge et passe contrat + invariants", load_frame
 
 _reel = load_frameworks()
 _questions = [q for f in _reel.frameworks for q in f.questions]
-check("le référentiel porte les 2 pilotes et leurs 13 questions (§4)",
-      len(_reel.frameworks) == 2 and len(_questions) == 13,
-      f"→ {len(_reel.frameworks)} framework(s), {len(_questions)} question(s)")
+# Le référentiel CROÎT (roadmap 05) : on n'y garde plus un décompte figé — il serait réécrit à chaque
+# framework, donc écrit depuis sa propre constante (4ᵉ faux vert). Les pilotes doivent y rester, et le
+# nombre exact de questions est confronté à la SPEC, lue indépendamment (§7).
+check("le référentiel porte toujours les 2 pilotes (§4)",
+      {"qualite_financiere", "defendabilite"} <= {f.id for f in _reel.frameworks},
+      f"→ frameworks : {[f.id for f in _reel.frameworks]}")
 
 
 print("\n2. le contrat REFUSE les définitions creuses")
@@ -481,7 +484,7 @@ check("les planchers réellement employés appartiennent tous à `TIER_ORDER`",
       all(q.plancher_tier in TIER_ORDER for q in _questions))
 
 
-print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1)")
+print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1 / §4.3 …)")
 # La spec porte les mêmes tables en prose. Le YAML est le DÉTENTEUR ; la spec est PARSÉE et
 # confrontée, jamais recopiée à la main. Sans cette confrontation, les deux nomenclatures
 # divergeraient au premier correctif — c'est exactement ce qui est arrivé aux cartes de provenance
@@ -495,13 +498,18 @@ else:
     _txt = _spec.read_text(encoding="utf-8")
     # Les lignes de tableau de la forme : | `qf_1` | … | `mesure` | A | oui |
     _lignes = re.findall(
-        r"^\|\s*`((?:qf|mo)_\d+)`\s*\|[^|]*\|\s*`(\w+)`\s*\|\s*\**([AB][+-]?)\**\s*\|([^|\n]*)\|",
+        r"^\|\s*`([a-z]{2}_\d+)`\s*\|[^|]*\|\s*`(\w+)`\s*\|\s*\**([AB][+-]?)\**\s*\|([^|\n]*)\|",
         _txt, flags=re.M)
     # La dernière colonne liste les types qui ROUVRENT la question (#89), en `code`, dans l'ordre.
     _spec_tab = {qid: (nat, tier, tuple(re.findall(r"`(\w+)`", rouv)))
                  for qid, nat, tier, rouv in _lignes}
-    check("les tables §4.1.1 et §4.2.1 sont lisibles et portent 13 questions",
-          len(_spec_tab) == 13, f"→ {len(_spec_tab)} ligne(s) reconnue(s) : {sorted(_spec_tab)}")
+    # Une ligne par question, dans les tableaux de §4 : le décompte se lit dans la SPEC et se confronte
+    # au référentiel, jamais à une constante écrite ici. Le plancher « ≥ 13 » garde que les pilotes
+    # n'ont pas disparu de la prose pendant qu'ils restaient dans le YAML.
+    check("les tableaux de §4 sont lisibles, pilotes compris, et portent autant de questions que le "
+          "référentiel",
+          len(_spec_tab) >= 13 and len(_spec_tab) == len(_questions),
+          f"→ spec {len(_spec_tab)} ligne(s), référentiel {len(_questions)} question(s)")
     _yaml_tab = {q.id: (q.nature_attendue, q.plancher_tier, tuple(q.rouverte_par))
                  for q in _questions}
     check("les identifiants de la spec et du référentiel sont les mêmes",

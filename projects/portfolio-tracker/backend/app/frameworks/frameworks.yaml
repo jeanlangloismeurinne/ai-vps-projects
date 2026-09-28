@@ -554,3 +554,205 @@ frameworks:
           financiere:
             mode: variable
             variable: Écart soutenu entre le taux servi et le taux de marché, sans fuite des encours
+
+  # ═══════════════════════════════════════════════════════════════════════════════════════════
+  # Troisième framework, et premier écrit après les pilotes (roadmap 05, capacité 1, 2026-09-28).
+  # Co-écrit question par question avec l'utilisateur. Il écarte ce que les deux pilotes portent déjà
+  # (preuve de la barrière, conversion en cash, coût de la croissance). Aucune question n'est sans
+  # objet pour un émetteur sans ventes : un modèle économique se décrit avant la première vente — on
+  # demande alors ce qui est VISÉ (arbitrage du 2026-09-28 : l'information attendue se cherche, son
+  # absence ne bloque pas).
+  - id: modele_economique
+    libelle: Modèle économique
+    etape_benchmark: 3
+    methodologie: >-
+      Écoles « qualité » (Buffett / Fundsmith, Baillie Gifford). Avant de juger la barrière ou les
+      chiffres, l'analyste établit comment l'argent est gagné : qui paie et pour quoi, d'où vient
+      chaque dollar et ce qui revient sans nouvel effort de vente, ce que rapporte une unité de plus,
+      ce qui fait varier l'activité, jusqu'où elle peut croître, et de quoi elle dépend.
+    nature_dominante: interpretation
+    bloc_memo: business_model
+    questions:
+
+      - id: me_1
+        enonce: Qui paie, pour quoi, et pourquoi ce client-là plutôt qu'un autre fournisseur ?
+        chemin_indexation: modele_economique.proposition_de_valeur
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Même desserrage déclaré que mo_1 : la raison pour laquelle un client choisit une offre se
+          lit dans des observations de terrain, qu'un dépôt réglementaire ne porte qu'en boilerplate.
+        rouverte_par: [accord_commercial, reglementaire_favorable, reglementaire_defavorable, surprise_concurrence]
+        sens_admis: [proposition_distinctive, proposition_banalisee, proposition_non_etablie]
+        ingredients_requis:
+          - id: client_payeur
+            libelle: Qui paie effectivement — le client qui signe et règle, distinct le cas échéant de l'utilisateur
+            essentiel: true
+          - id: besoin_servi
+            libelle: Le besoin ou le problème que l'offre résout pour ce client payeur
+            essentiel: true
+          - id: alternatives_du_client
+            libelle: Ce que le client utiliserait à défaut — offre concurrente, solution interne, ou ne rien faire
+            essentiel: true
+          - id: motif_de_choix_observe
+            libelle: Raison observée pour laquelle le client choisit cette offre plutôt que l'alternative
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Client payeur, besoin servi et alternative écartée, pour chaque ligne d'activité principale
+          pre_revenus:
+            mode: variable
+            variable: Client payeur visé, besoin servi et solution de référence que l'offre remplacerait
+          financiere:
+            mode: variable
+            variable: Clientèle servie — déposants, emprunteurs, assurés — et ce qui lui fait choisir l'établissement
+
+      - id: me_2
+        enonce: D'où vient chaque dollar de chiffre d'affaires, et quelle part revient sans nouvel effort de vente ?
+        chemin_indexation: modele_economique.sources_de_revenus
+        nature_attendue: mesure
+        plancher_tier: A
+        rouverte_par: [resultats, accord_commercial, integrite_comptes]
+        sens_admis: [revenus_recurrents, revenus_mixtes, revenus_transactionnels, revenus_non_etablis]
+        ingredients_requis:
+          - id: repartition_du_chiffre_d_affaires
+            libelle: Répartition du chiffre d'affaires par source — produits, services, zones, catégories de clients
+            essentiel: true
+          - id: part_engagee_ou_repetee
+            libelle: Part du chiffre d'affaires adossée à des contrats, abonnements ou achats répétés, et durée de ces engagements
+            essentiel: true
+          - id: montant_engage_non_reconnu
+            libelle: Montant déjà engagé par les clients et pas encore reconnu en chiffre d'affaires
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Répartition du chiffre d'affaires par source et part adossée à des engagements pluriannuels
+          pre_revenus:
+            mode: variable
+            variable: Sources de revenus visées, et revenus déjà perçus hors ventes — collaborations, licences, subventions
+          financiere:
+            mode: variable
+            variable: Répartition des revenus entre marge d'intérêt, commissions et autres produits, et part récurrente
+
+      - id: me_3
+        enonce: Que rapporte une unité vendue de plus, une fois payés les coûts qu'elle entraîne ?
+        chemin_indexation: modele_economique.economie_unitaire
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
+        sens_admis: [economie_unitaire_forte, economie_unitaire_faible, economie_unitaire_negative, economie_unitaire_non_etablie]
+        ingredients_requis:
+          - id: prix_par_unite
+            libelle: Prix obtenu par unité vendue — produit, abonnement, contrat ou traitement
+            essentiel: true
+          - id: couts_entraines_par_unite
+            libelle: Coûts directement entraînés par une unité vendue de plus — production, livraison, service, redevances
+            essentiel: true
+          - id: marge_brute_sur_plusieurs_periodes
+            libelle: Marge brute de l'activité et son évolution sur plusieurs périodes
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Marge dégagée par unité vendue après ses coûts variables, et son évolution
+          pre_revenus:
+            mode: variable
+            variable: Prix visé ou annoncé par unité et coût de production unitaire attendu
+          financiere:
+            mode: variable
+            variable: Marge d'un encours après coût de la ressource et coût du risque
+
+      - id: me_4
+        enonce: Quels sont les deux ou trois moteurs qui font varier le chiffre d'affaires ?
+        chemin_indexation: modele_economique.moteurs_de_l_activite
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          Nommer les moteurs d'une activité est un raisonnement sur des séries publiées ; les
+          explications de la direction et des observateurs en font partie, pas seulement les dépôts.
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution]
+        sens_admis: [moteurs_maitrises, moteurs_subis, moteurs_indetermines]
+        ingredients_requis:
+          - id: moteurs_nommes
+            libelle: Les deux ou trois grandeurs dont les variations expliquent l'essentiel de celles du chiffre d'affaires
+            essentiel: true
+          - id: part_maitrisee_des_moteurs
+            libelle: Part de ces moteurs que l'entreprise contrôle elle-même, par opposition à ceux qu'elle subit — cycle, taux, réglementation
+            essentiel: true
+          - id: sensibilite_passee
+            libelle: Variation passée du chiffre d'affaires rapportée à celle de chacun de ces moteurs
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Grandeurs de volume et de prix qui expliquent les variations du chiffre d'affaires
+          pre_revenus:
+            mode: variable
+            variable: Grandeurs qui feront le chiffre d'affaires une fois la vente engagée — population, adoption, prix, prise en charge
+          financiere:
+            mode: variable
+            variable: Niveau des taux, volume des encours et coût du risque
+
+      - id: me_5
+        enonce: Jusqu'où l'activité peut-elle croître sur son modèle actuel — quel marché, et quelle part déjà prise ?
+        chemin_indexation: modele_economique.espace_de_croissance
+        nature_attendue: interpretation
+        plancher_tier: B
+        motif_plancher: >-
+          La taille d'un marché adressable est une estimation, publiée par l'entreprise ou par des
+          observateurs ; aucun dépôt réglementaire ne la mesure.
+        rouverte_par: [reglementaire_favorable, reglementaire_defavorable]
+        sens_admis: [croissance_ample, croissance_bornee, marche_sature]
+        ingredients_requis:
+          - id: marche_adressable
+            libelle: Taille du marché que l'offre actuelle peut servir, avec sa source et sa méthode d'estimation
+            essentiel: true
+          - id: part_deja_prise
+            libelle: Part de ce marché déjà captée par l'entreprise
+            essentiel: true
+          - id: extensions_engagees
+            libelle: Extensions du marché servi que l'entreprise a engagées — nouveaux clients, usages, zones ou indications
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Marché adressable par l'offre actuelle et part déjà captée
+          pre_revenus:
+            mode: variable
+            variable: Population ou marché éligible à l'offre, et extensions engagées
+          financiere:
+            mode: variable
+            variable: Part de marché sur les clientèles et territoires servis, et marge de progression
+
+      - id: me_6
+        enonce: Le modèle dépend-il d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ?
+        chemin_indexation: modele_economique.dependances_critiques
+        nature_attendue: mesure
+        plancher_tier: A
+        rouverte_par: [accord_commercial, incident]
+        sens_admis: [dependance_faible, dependance_notable, dependance_critique]
+        ingredients_requis:
+          - id: poids_des_premiers_clients
+            libelle: Part du chiffre d'affaires réalisée avec les principaux clients
+            essentiel: true
+          - id: poids_du_premier_produit
+            libelle: Part du chiffre d'affaires réalisée par le premier produit ou la première ligne d'activité
+            essentiel: true
+          - id: fournisseurs_sans_substitut
+            libelle: Fournisseurs ou sous-traitants sans substitut rapide, et ce qui dépend d'eux
+            essentiel: true
+          - id: exposition_par_pays
+            libelle: Répartition de l'activité par pays et exposition aux restrictions d'un pays
+            essentiel: false
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Poids des premiers clients, du premier produit et des fournisseurs sans substitut
+          pre_revenus:
+            mode: variable
+            variable: Dépendance à un produit unique, à un partenaire ou à un sous-traitant de production
+          financiere:
+            mode: variable
+            variable: Concentration des encours par secteur, par contrepartie et par zone

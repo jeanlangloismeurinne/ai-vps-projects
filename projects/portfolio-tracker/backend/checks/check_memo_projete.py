@@ -436,7 +436,9 @@ check("aucun id de framework ni nom de chapitre dans le CODE du projecteur",
       not _trouves,
       f"→ {_trouves} : un nom en dur transforme « ajouter une méthodologie » en opération de code")
 check("… le dépouillement a bien retiré la prose (le check ne lit pas sa propre énonciation)",
-      all(t in inspect.getsource(proj) for t in _interdits[:1]),
+      # AU MOINS UN nom énoncé dans la prose — pas « le premier par ordre alphabétique », qui change
+      # dès qu'un framework s'ajoute (roadmap 05 : `business_model` est passé devant `defendabilite`).
+      any(t in inspect.getsource(proj) for t in _interdits),
       "→ si le source brut ne contient plus l'énonciation, ce test ne prouve plus rien")
 _doc = ast.get_docstring(_arbre) or ""
 check("… et la docstring, elle, DIT la règle et nomme son test",

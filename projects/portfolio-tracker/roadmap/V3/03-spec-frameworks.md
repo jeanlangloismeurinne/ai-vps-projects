@@ -759,6 +759,27 @@ graph TD
 **L'archétype ne change pas la question.** Il change ce qu'on va chercher pour y répondre — donc
 le **mandat de recherche**, pas le contrat.
 
+
+### 4.3 Framework « Modèle économique » — le premier après les pilotes (2026-09-28)
+
+Écrit sous la roadmap `05-frameworks-complets.md` (capacité 1), co-écrit question par question avec
+l'utilisateur. **Thèse méthodologique** (écoles « qualité » : Buffett / Fundsmith, Baillie Gifford) :
+avant de juger la barrière ou les chiffres, établir comment l'argent est gagné. Il écarte ce que les
+pilotes portent déjà (preuve de la barrière `mo_2`, conversion en cash `qf_2`, coût de la croissance
+`qf_3`). **Aucune question n'y est sans objet pour un émetteur sans ventes** : un modèle économique se
+décrit avant la première vente, on demande ce qui est visé.
+
+| id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89) |
+|---|---|---|---|---|
+| `me_1` | **Qui paie**, pour quoi, et pourquoi ce client-là plutôt qu'un autre fournisseur ? | `interpretation` | B | `accord_commercial`, `reglementaire_favorable`, `reglementaire_defavorable`, `surprise_concurrence` |
+| `me_2` | D'où vient chaque dollar de chiffre d'affaires, et quelle part **revient sans nouvel effort de vente** ? | `mesure` | A | `resultats`, `accord_commercial`, `integrite_comptes` |
+| `me_3` | Que rapporte **une unité vendue de plus**, une fois payés les coûts qu'elle entraîne ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `me_4` | Quels sont les deux ou trois **moteurs** qui font varier le chiffre d'affaires ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution` |
+| `me_5` | **Jusqu'où** l'activité peut-elle croître sur son modèle actuel — quel marché, quelle part déjà prise ? | `interpretation` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
+| `me_6` | Le modèle **dépend-il** d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ? | `mesure` | A | `accord_commercial`, `incident` |
+
+> Un changement de périmètre (`perimetre`, portée totale) rouvre les six sans qu'aucune ait à le
+> lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un dépôt.
 ---
 
 ## 5. Le modèle de stockage — ce qui remplace la grille de 19

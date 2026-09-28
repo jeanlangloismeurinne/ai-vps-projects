@@ -260,7 +260,9 @@ b.check(n1n.peut_on_decider.etat == "non_revalidable",
 import yaml  # noqa: E402
 ORDRE_YAML = [f["id"] for f in yaml.safe_load(
     Path("app/frameworks/frameworks.yaml").read_text(encoding="utf-8"))["frameworks"]]
-b.require(ORDRE_YAML, 2, "§4 l'ordre de référence est lu dans le fichier")
+# Garde contre la liste VIDE (5ᵉ faux vert), pas un décompte : le référentiel croît (roadmap 05).
+b.check(len(ORDRE_YAML) >= 2 and {"qualite_financiere", "defendabilite"} <= set(ORDRE_YAML),
+        f"§4 l'ordre de référence est lu dans le fichier, pilotes compris — obtenu {ORDRE_YAML}")
 b.check([s.framework_id for s in n1.frameworks] == ORDRE_YAML,
         "§4 les méthodologies suivent l'ordre du RÉFÉRENTIEL (ajouter un cadre = une donnée)")
 s_qf = next(s for s in n1k.frameworks if s.framework_id == "qualite_financiere")

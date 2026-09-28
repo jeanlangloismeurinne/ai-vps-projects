@@ -65,13 +65,18 @@ n'éprouve qu'une fois les quatre écrits, pour mesurer l'adaptation sur l'ensem
 framework isolé.
 
 ### 1. Framework « Modèle économique » (étape 3, bloc `business_model`) · contexte partagé : `frameworks.yaml`, contrat `framework_definition_schema.py`, benchmark Partie B
-- [ ] Questions proposées en termes de fonds, validées une à une par l'utilisateur
-- [ ] Écrit en YAML : énoncé, ingrédients, `rouverte_par`, `sens_admis`, variable par stade
-- [ ] `bash checks/run_all.sh` vert, dont `check_frameworks_definitions` et `check_memo_projete`
+- [x] Questions proposées en termes de fonds, validées une à une par l'utilisateur
+- [x] Écrit en YAML : énoncé, ingrédients, `rouverte_par`, `sens_admis`, variable par stade
+- [x] `bash checks/run_all.sh` vert, dont `check_frameworks_definitions` et `check_memo_projete`
 - **Acceptation** : le chapitre `business_model` du mémo projeté passe de l'état
   `pas_de_methodologie_approuvee` à `sans_acquittement` (« aucune réponse au dossier ») pour NVDA,
   MSFT et RVMD ; `git diff --stat` du lot ne
   touche **aucun** `.py` sous `app/` (la méthodologie est une donnée).
+
+- ✅ **Livré le 2026-09-28** : `me_1`…`me_6` (spec 03 §4.3). Acceptation mesurée par
+  `tools/montrer_memo_projete.sh` : `business_model` en `sans_acquittement` sur NVDA/MSFT/RVMD ;
+  contre-essai avec le référentiel d'avant → `pas_de_methodologie_approuvee`. Diff : YAML, spec,
+  checks — aucun `.py` sous `app/`. Suite 3556/0 sur 51.
 
 ### 2. Framework « Secteur et concurrence » (étape 7, bloc `industry`) · même contexte
 - [ ] Questions validées une à une (structure du secteur, position face aux pairs, cycle, menaces)

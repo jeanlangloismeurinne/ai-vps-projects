@@ -2326,6 +2326,28 @@ définition jamais planifiée satisferait un grep) + `negatif_note_flash_branche
 ⚠️ Trois mutations écrites d'abord sur deux lignes étaient CADUQUES : le harnais `_negatif.sh` ne convertit
 `\n` que dans le remplaçant, pas dans le motif — un motif d'une ligne, rendu unique par son commentaire.
 
+### #92 — ajouter un framework : le référentiel, sa table dans la spec, et aucune constante de décompte
+
+**Premier framework écrit après les pilotes** (roadmap 05, capacité 1, 2026-09-28) : « Modèle
+économique » (`me_1`…`me_6`, bloc `business_model`), co-écrit question par question avec l'utilisateur.
+Ce qu'il a coûté, et qui vaudra pour les trois suivants :
+- **Données** : le framework dans `frameworks.yaml` ; sa table en prose dans la spec 03 (§4.3, même
+  format que §4.1.1/§4.2.1 — `check_frameworks_definitions` §7 confronte nature, plancher et
+  `rouverte_par` question par question, pour tout préfixe `[a-z]{2}_`). Aucun `.py` sous `app/`.
+- **`schema_version` ne bouge PAS** : c'est la version du CONTRAT de définition (invariant [M]), et
+  elle clefe `framework_answers` — la monter pour un ajout rendrait non courantes toutes les réponses
+  des pilotes. Une question existante réécrite, elle, exigerait une version (#64).
+- **Trois gardes portaient la constante « 2 frameworks / 13 questions »** : le décompte de
+  `check_frameworks_definitions` §1, `check_parcours` §4 (une garde contre la liste vide écrite comme
+  une cardinalité exacte) et `check_memo_projete` (« le PREMIER nom par ordre alphabétique figure dans
+  la prose » — `business_model` est passé devant `defendabilite`). Réécrites en propriétés : pilotes
+  présents, décompte confronté à la SPEC lue indépendamment, « au moins un nom ». Un assert qui dépend
+  du nombre de frameworks est écrit depuis sa propre constante (4ᵉ faux vert) et casse à chaque ajout.
+- **Aucune question n'est `sans_objet` pour `pre_revenus`** : un modèle économique se décrit avant la
+  première vente ; on demande ce qui est VISÉ (arbitrage du 2026-09-28 : l'information attendue se
+  cherche, son absence ne bloquera pas — état « attendu » = capacité 7 de la roadmap 05, pas encore
+  construit : aujourd'hui une question sans matière s'affiche comme un manque).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

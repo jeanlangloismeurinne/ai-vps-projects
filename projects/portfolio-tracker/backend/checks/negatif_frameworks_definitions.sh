@@ -24,10 +24,12 @@ PONT="app/agents/v2/frameworks.py"
 mutations=(
 # §1 — le référentiel charge, et il charge inerte
 "$PONT¦    brut = yaml.safe_load(p.read_text(encoding=\"utf-8\"))¦    brut = yaml.load(p.read_text(encoding=\"utf-8\"), Loader=yaml.SafeLoader)¦le chargeur utilise \`yaml.safe_load\`"
+# Depuis la roadmap 05 (3ᵉ framework), le décompte n'est plus une constante du check : la question
+# surnuméraire est vue parce que le référentiel porte une question que la SPEC n'a pas (§7).
 # ⚠️ La question surnuméraire s'appelle `qf_8`, pas `qf_7_bis` : le `pattern` d'id du contrat
 # (`^[a-z]{2}_[0-9]+$`) refusait `qf_7_bis` AVANT que l'assert de comptage soit atteint — la
 # mutation prouvait le pattern, pas le comptage. Mesuré, pas prévu (1ᵉʳ faux vert, sens rouge).
-"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦le référentiel porte les 2 pilotes et leurs 13 questions"
+"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
 # §2 — le contrat refuse les définitions creuses
 "$DEF¦        if not any(i.essentiel for i in self.ingredients_requis):¦        if False:¦une question sans aucun ingrédient ESSENTIEL"
 "$DEF¦        if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:¦        if False:¦un plancher desserré SANS motif déclaré"
