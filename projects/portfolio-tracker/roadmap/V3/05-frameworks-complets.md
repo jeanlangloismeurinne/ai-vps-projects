@@ -140,17 +140,26 @@ prix, valeur des programmes pondérée par probabilité de succès) ; et, à l'i
 pour NVDA), revu par le directeur de la recherche, puis CONSERVÉ d'une révision à l'autre — ce sont les
 hypothèses qui changent, pas la mécanique. Le comité peut rouvrir le modèle et changer une hypothèse.
 
-**À instruire avec l'utilisateur en ouverture de lot (en termes de fonds)** : qui écrit le modèle
-propre à l'entreprise (l'agent, en code) et qui le valide (acte humain, comme l'admission d'une
-source ?) ; quand il est réécrit (changement de stade — RVMD en phase commerciale, capacité 7) ; où il
-s'exécute (isolé, sans réseau — sécurité du VPS).
+**Instruit avec l'utilisateur le 2026-09-29 (convention #96)** : l'agent PROPOSE la méthodologie
+(dont la segmentation du marché, qu'il complète quand de nouveaux produits sont lancés), le comité
+SIGNE ; mécanique LIBRE mais DÉCRITE par l'agent, le comité jugeant un tableau d'hypothèses chiffrées
+et sourcées ; exécution dans un bac à calcul Python très simple ; la mécanique est refondue sur
+changement de stade ou à la demande du comité, et un nouveau produit repéré en revue trimestrielle
+peut y être ajouté (choix non questionné, à confirmer : marqué « ajouté, non encore revu » jusqu'à la
+séance suivante).
 
 - [ ] Reprise des réponses acquittées : un ingrédient « repris de » n'est jamais recollecté ; une seule
   valeur par dossier (le coût du capital de va_1 EST celui de qf_1, même pièce)
 - [ ] Ordonnancement : la valorisation n'est instruite qu'après les frameworks dont elle reprend
-- [ ] Base commune de calculs fermés et testés (valeur sans croissance, DCF à trois scénarios, croissance
-  implicite dans le prix, valeur pondérée par probabilité, dilution, marge de sécurité)
-- [ ] Modèle propre à l'entreprise, exécutable, versionné, validé (arbitrage ci-dessus)
+- [x] Base commune de calculs fermés et testés (valeur sans croissance, DCF à trois scénarios, croissance
+  implicite dans le prix, valeur pondérée par probabilité, dilution, marge de sécurité) — ✅ 2026-09-29,
+  `app/valorisation/calculs.py`, #96
+- [x] Le bac à calcul où s'exécute la mécanique d'une entreprise (sous-ensemble de Python interprété,
+  tableau signé gelé, frontière de sécurité) — ✅ 2026-09-29, `app/valorisation/bac_a_calcul.py`, #96 ;
+  `check_bac_a_calcul.py` 255/0, négatif 26/0
+- [ ] Modèle propre à l'entreprise, exécutable, versionné, validé : le CONTRAT (mécanique décrite en
+  prose + segmentation + tableau d'hypothèses sourcées + code + version + signature du comité), sa
+  persistance (migration 051), l'agent qui l'écrit, l'acte de signature du comité
 - [ ] Réponse à PLUSIEURS nombres (le contrat de réponse n'en porte qu'un) — correspondance avec
   `Valuation` (§4.6 de la spec)
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)

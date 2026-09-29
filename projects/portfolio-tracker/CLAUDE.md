@@ -2406,6 +2406,57 @@ sous `app/` (les checks seulement).
 - `check_memo_projete` §4 (croissance en YAML seul) ne trouvait plus de chapitre libre : il en LIBÈRE
   un en retirant, d'une copie du référentiel réel, le framework qui le revendique.
 
+### #96 — l'atelier de valorisation : l'agent écrit la mécanique, le comité signe le tableau, le bac calcule
+
+**Arbitrage du 2026-09-29 (roadmap 05, ouverture de la capacité 4 bis), rendu comme un vrai fonds.**
+À l'initiation, l'analyste construit un modèle PROPRE au dossier (somme des programmes pour une biotech,
+segments pour NVDA), le directeur de la recherche le signe, et la mécanique est conservée d'une
+révision à l'autre. Réponses de l'utilisateur :
+- **Validation** : l'agent PROPOSE la méthodologie, dont la SEGMENTATION du marché ; le comité signe.
+  Charge à l'agent de compléter la segmentation quand de nouveaux produits sont lancés.
+- **Lisibilité** : mécanique LIBRE (la typologie des entreprises est trop large pour des gabarits
+  seuls), MAIS l'agent DÉCRIT la mécanique qu'il utilise et le comité juge un **tableau d'hypothèses
+  chiffrées et sourcées**. Exécution dans un « bac à calcul Python très simple » (opérations
+  mathématiques).
+- **Refonte de la mécanique** : sur changement de stade ou demande du comité. Si une revue
+  trimestrielle repère un nouveau produit, le système PEUT l'ajouter au modèle. ⚠️ Choix pris sans
+  question (à confirmer) : l'ajout est appliqué et marqué « ajouté, non encore revu » jusqu'à la
+  séance suivante du comité — un analyste met son modèle à jour, le comité le revoit ensuite.
+
+**Livré (`app/valorisation/`)** — rien ne l'appelle encore en production :
+- `calculs.py` : les **gabarits maison** (valeur sans croissance, actualisation, Gordon, DCF, croissance
+  implicite par bissection, valeur pondérée, dilution, par action diluée, marge de sécurité,
+  fourchette ordonnée). Chacun REFUSE son hors-domaine (`ErreurCalcul`, motif lisible) : taux ≤
+  croissance perpétuelle, probabilité hors [0,1], fourchette croisée. Un nombre faux mais plausible
+  est la pire issue d'un modèle de valorisation.
+- `bac_a_calcul.py` : **interpréteur d'un sous-ensemble de Python** — `ast.parse` puis parcours de
+  l'arbre, JAMAIS `eval`/`exec`. Liste blanche de constructions ; aucun attribut (donc aucun chemin vers
+  `__class__`) ; une fonction ne s'appelle que par son nom et n'est pas une valeur ; pas de `while`
+  (une boucle infinie n'existe pas, une boucle longue épuise le budget) ; puissance par `math.pow`
+  (jamais d'entier géant) ; comparaisons entre scalaires seulement (une structure qui se partage
+  elle-même se compare en temps exponentiel sans consommer le budget) ; un appel coûte la taille de
+  ses arguments (+ coût propre des gabarits itératifs) ; plafond de `range` AVANT allocation (le
+  budget ne voit une liste qu'une fois allouée — `range(10**9)` = 8 Go sur un VPS de 3,8 Go).
+  **Frontière de sécurité**, à l'inverse de `formule_grammaire` (#72) : la mécanique vient d'un agent
+  qui a lu du web. Contrat : un `ResultatCalcul` ou une `ErreurCalcul` située à sa ligne, JAMAIS une
+  autre exception.
+- **Le tableau signé est GELÉ** (dictionnaires `_Gele`, listes → tuples) : la mécanique ne réécrit une
+  hypothèse ni par son nom, ni par un alias (`x = marges; x["a"] = 0.9`), ni en variable de boucle.
+  Le gel a été préféré à la copie : il tient aussi les alias, qu'une copie à l'appel ne voit pas.
+
+⚠️ **Ce que le test négatif a trouvé** : (1) deux gardes qu'aucune mutation n'atteignait (division
+par zéro dans `_arith`, refus explicite d'écrire dans un `_Gele`) — RETIRÉES, leur rôle est tenu par
+le filet de `executer` et par le `_Gele` lui-même ; (2) le plafond de `range` restait vert sur trois
+fixtures successives, chaque fois subsumé par une autre garde (compte des sorties, coût d'appel,
+revalidation du résultat) — il ne se distingue que par le MOTIF d'un appel direct, parce que sa
+vraie fonction (refuser avant d'allouer) n'est pas observable sans risquer la mémoire du VPS ;
+(3) les mutations elles-mêmes ne doivent jamais rendre exécutable un cas qui ferait tomber la machine
+(`10 ** 10 ** 10` sans `math.pow`) — la mutation de la puissance passe par la racine d'un négatif.
+
+Gardes : `check_bac_a_calcul.py` **255/0** (valeurs à la main jamais recalculées par le gabarit ; deux
+mécaniques fictives forme RVMD/NVDA ; au cours du jour la marge change, la fourchette non ; 57 programmes
+hostiles) + `negatif_bac_a_calcul.sh` **26/0**. Suite **3821/0 sur 52**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

@@ -52,6 +52,7 @@ graph LR
 | `app/agents/v2/` | Le flux V2/V3 (Option C, chaîne de collecte, manager) | Ajouter un maillon du flux | `app/agents/v2/ARCHITECTURE.md` |
 | `app/contracts/` | Copies runtime des cartes figées (`provenance-cards/`) | Faire évoluer un contrat (#19) | `app/contracts/ARCHITECTURE.md` |
 | `app/api/` | Surface backend → frontend (routers `_v2`) | Exposer une info au frontend | `app/api/ARCHITECTURE.md` |
+| `app/valorisation/` | Atelier de valorisation : gabarits maison + bac à calcul où s'exécute le modèle propre à chaque entreprise (#96) | **Ajouter un gabarit maison** | `app/valorisation/ARCHITECTURE.md` |
 | `app/data_collection/` | ⚠️ **LEGACY V0/V1** — DataService marché | (pas d'extension V3) | `app/data_collection/ARCHITECTURE.md` |
 
 ## Les trois garde-fous (constitution — `principe-directeur.md`)

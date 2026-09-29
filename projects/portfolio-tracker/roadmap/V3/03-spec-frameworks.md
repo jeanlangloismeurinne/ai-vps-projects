@@ -856,6 +856,12 @@ que la barrière tient.
 > va_6 → `prix_actuel`, `iv_range`, `marge_securite_base_pct` (indicateur séparé, règle 4). Une réponse
 > de framework ne porte aujourd'hui qu'UN nombre : la réponse à plusieurs nombres est en 4 bis.
 
+> **L'atelier (capacité 4 bis, convention #96, 2026-09-29)** : l'agent propose la méthodologie propre
+> à l'entreprise (segmentation comprise), la décrit en prose et l'écrit en code ; le comité signe un
+> tableau d'hypothèses chiffrées et sourcées ; le code s'exécute dans un bac à calcul
+> (`app/valorisation/bac_a_calcul.py`) qui ne peut ni réécrire une hypothèse signée ni sortir des
+> gabarits maison (`app/valorisation/calculs.py`) et des opérations mathématiques simples.
+
 ## 5. Le modèle de stockage — ce qui remplace la grille de 19
 
 ### 5.1 Le principe
