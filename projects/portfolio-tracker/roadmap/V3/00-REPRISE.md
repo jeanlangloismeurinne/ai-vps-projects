@@ -30,11 +30,12 @@ role: >
 
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
-> sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96-#98, 2026-09-29) : gabarits maison, bac à
-> calcul, contrat + pont + évaluation du modèle d'entreprise, SIGNATURE + registres (051) et endpoints
-> livrés (`app/valorisation/`, `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore).
-> Prochain pas : la REPRISE des réponses — précédée d'un arbitrage métier (voir « Ce qui reste ouvert »,
-> coût du capital d'une biotech sans chiffre d'affaires).
+> sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96-#99, 2026-09-29) : gabarits maison, bac à
+> calcul, contrat + pont + évaluation du modèle d'entreprise, SIGNATURE + registres (051), endpoints, et
+> la REPRISE « un seul chiffre par dossier » (option c, #99) livrés (`app/valorisation/`,
+> `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). Prochain pas recommandé : la
+> RÉPONSE À PLUSIEURS NOMBRES — les réponses ne portent aujourd'hui aucun chiffre, ce qui bloque la reprise
+> par la valeur et l'agent qui écrira le modèle.
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -70,15 +71,16 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3943 assertions / 0 échec sur 55 scripts** (2026-09-29,
-  après #98 : `check_signature_modele` 46/0, `check_signature_modele_persist` 25/0 sur la vraie base). Réconciliation (`tools/reconcilier_vocabulaires.sh`) :
+- **Suite** `bash checks/run_all.sh` = **3961 assertions / 0 échec sur 55 scripts** (2026-09-29,
+  après #99 : `check_modele_valorisation` 57/0, `check_signature_modele_persist` 27/0 sur la vraie base). Réconciliation (`tools/reconcilier_vocabulaires.sh`) :
   6/6 chapitres adossés, T6/T7 toujours rouges (30 champs / 37 questions — capacité 9). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; la prochaine sera **052**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : backend sur **`9880731`** (#98, signature du modèle ; 6 frameworks / 37 questions,
-  catalogue d'événements 1.2.0). `GET /v2/tickers/RVMD/valorisation` → `aucun_modele_propose` ;
+- **Production** : backend sur **`ce8f1a6`** (#99, option c ; 6 frameworks / 37 questions, 6 ingrédients
+  repris déclarés, catalogue d'événements 1.2.0) — vérifié dans le conteneur (reprises chargées, va_1 ne
+  collecte plus que `valeur_des_actifs`). `GET /v2/tickers/RVMD/valorisation` → `aucun_modele_propose` ;
   refus vérifiés (404 version, 404 titre, 422 motif blanc) ; PV vide. Chapitres
   `business_model`, `industry`, `management`, `valuation` : `sans_acquittement` sur NVDA/MSFT/RVMD
   (aucune chaîne passée — attendu, capacité 5). **PV du comité en prod : 0 décision.**
@@ -139,6 +141,9 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
    comme pour écarter ; la fourchette signée est au PV ; seule la dernière proposition attend (une plus
    récente remplace l'autre) ; on ne signe pas un modèle qui ne tient plus contre le dossier du jour ;
    un modèle signé qui ne tient plus est « à revoir » mais sa fourchette signée reste affichée.
+8. **Un seul chiffre par dossier — option (c)** (#99) : la valorisation REPREND la réponse qui tient ; elle
+   porte son propre chiffre (pièce ou jugement ancré, signé par le comité) SEULEMENT si la question est sans
+   objet pour ce titre (le coût du capital de RVMD, pour qui qf_1 est sans objet) ; sinon elle attend.
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
@@ -170,13 +175,12 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 
 ## Ce qui reste ouvert
 
-**À arbitrer AVANT la case « reprise des réponses » de la 4 bis (mesuré le 2026-09-29, #98)**
-- **Le coût du capital d'une biotech sans chiffre d'affaires** : #95 dit « le coût du capital de va_1 EST
-  celui de qf_1 », mais sur RVMD qf_1 (« le capital employé rapporte-t-il plus que son coût ? ») est
-  **sans objet** — il n'y a aucun chiffre à reprendre. Question métier à poser : où le fonds fixe-t-il
-  alors le taux d'actualisation d'une biotech (hypothèse propre au modèle, sourcée ou jugement ancré ;
-  ou une question du framework valorisation) ? Plus largement, sur RVMD seule **1** réponse sur 12
-  acquittées est reprenable (qf_6) : 6 sont périmées depuis l'approbation FDA, 5 sans objet.
+**Mesuré le 2026-09-29 (#98/#99), à garder en tête pour la suite de la 4 bis**
+- **Les réponses ne portent aucun nombre** (`reponse.valeur` vide sur les réponses courantes) : la reprise
+  se vérifie par la référence, pas par la valeur ; l'agent qui écrira le modèle n'aura pas de chiffre à
+  reprendre tant que la case « plusieurs nombres » n'est pas faite.
+- Sur RVMD, seule qf_6 est reprenable ; sans objet : qf_1, qf_2, qf_3, qf_5, mo_6 ; mo_1…mo_5 et qf_4
+  sont périmées depuis l'approbation FDA — un modèle RVMD aujourd'hui ATTENDRAIT qf_4 (passage par action).
 
 **Remontés du jalon du lot 7 au 2026-09-28 (non traités, toujours vrais)**
 - **Mandats manager 983-986** (« question sans aucune réponse », ouverts avant #88) restent `ouvert`
@@ -326,7 +330,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #98** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #99** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -348,9 +352,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/05-frameworks-complets.md` — les quatre
 > frameworks manquants sont rédigés (#92-#95) ; capacité en cours **4 bis, l'atelier de valorisation**
 > — gabarits, bac à calcul, contrat + pont + évaluation du modèle, signature + registres 051 livrés
-> (#96-#98) ; reste : arbitrer le coût du capital d'une biotech (qf_1 sans objet sur RVMD) puis la
-> reprise des réponses, l'agent qui écrit le modèle, la réponse à plusieurs nombres, l'option 1 au cours
-> du jour ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
+> + reprise « un seul chiffre par dossier » (option c) (#96-#99) ; reste : la réponse à plusieurs nombres
+> (recommandée ensuite), l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute
 > ligne de base avant de s'en servir.

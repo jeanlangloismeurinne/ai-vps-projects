@@ -8,6 +8,19 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-29 (4) — ROADMAP 05, capacité 4 bis : un seul chiffre par dossier, option (c) (#99)
+
+Arbitrage demandé en termes de fonds à la fin du lot #98 (qf_1 sans objet sur RVMD : où fixer le taux ?) ;
+l'utilisateur retient l'option (c) : reprendre quand la réponse existe, chiffre propre au modèle seulement si
+la question est sans objet. En lisant le code avant d'écrire : « repris de » n'existait qu'en PROSE dans les
+libellés, et les réponses ne portent aucun nombre (valeur vide) — la reprise ne peut se vérifier que par la
+référence ; consigné. Livré : `repris_de` en données (6 ingrédients va_1/va_2, pas va_4/va_5 dont la reprise
+n'est qu'une étape de calcul), pont [S] (existe, pas soi, nommé dans le libellé) ; `ingredients_a_collecter`
+lu par le traducteur et le pont du plan ; modèle 1.1.0 `reprend` + pont [F] à trois branches ; dossier avec
+`questions_sans_objet` (stade + réponse hors-sujet qui tient) et `reprises_admises`, champs requis. Mesuré sur
+RVMD : qf_1 sans objet (par le stade), reprise admise. Test négatif : une étiquette attendue ne recopiait pas le
+libellé de l'assert (le bon assert rougissait). Déployé `ce8f1a6`, vérifié dans le conteneur. Suite 3961/0 sur 55.
+
 ## 2026-09-29 (3) — ROADMAP 05, capacité 4 bis : la signature du modèle de valorisation (#98, migration 051)
 
 Lot annoncé : « signature du comité + persistance (051) ». Contrat `signature_modele_schema.py` écrit
