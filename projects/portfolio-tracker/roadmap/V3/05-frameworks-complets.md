@@ -157,9 +157,12 @@ séance suivante).
 - [x] Le bac à calcul où s'exécute la mécanique d'une entreprise (sous-ensemble de Python interprété,
   tableau signé gelé, frontière de sécurité) — ✅ 2026-09-29, `app/valorisation/bac_a_calcul.py`, #96 ;
   `check_bac_a_calcul.py` 255/0, négatif 26/0
-- [ ] Modèle propre à l'entreprise, exécutable, versionné, validé : le CONTRAT (mécanique décrite en
-  prose + segmentation + tableau d'hypothèses sourcées + code + version + signature du comité), sa
-  persistance (migration 051), l'agent qui l'écrit, l'acte de signature du comité
+- [x] Le CONTRAT du modèle d'entreprise (mécanique décrite + segmentation + tableau d'hypothèses à trois
+  origines + forme de fourchette selon l'incertitude + code + version), son pont et son évaluation — ✅
+  2026-09-29, #97 ; `check_modele_valorisation.py` 51/0, négatif 29/0
+- [ ] La SIGNATURE du comité (acte au procès-verbal : proposé / signé / écarté, motif ; une nouvelle
+  version proposée laisse la signée affichée) et la persistance du modèle (migration 051)
+- [ ] L'agent qui écrit le modèle (méthodologie, segments, tableau, mécanique) à partir du dossier
 - [ ] Réponse à PLUSIEURS nombres (le contrat de réponse n'en porte qu'un) — correspondance avec
   `Valuation` (§4.6 de la spec)
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)

@@ -30,9 +30,9 @@ role: >
 
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
-> sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96, 2026-09-29) : arbitrage rendu, gabarits
-> maison et bac à calcul livrés (`app/valorisation/`, non branchés). Prochain pas : le CONTRAT du
-> modèle d'entreprise (première case non cochée de la roadmap).
+> sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96/#97, 2026-09-29) : gabarits maison, bac à
+> calcul, contrat + pont + évaluation du modèle d'entreprise livrés (`app/valorisation/`, non
+> branchés). Prochain pas : la SIGNATURE du comité et la persistance (migration 051).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -68,8 +68,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **3821 assertions / 0 échec sur 52 scripts** (2026-09-29,
-  après #96 : `check_bac_a_calcul` 255/0). Réconciliation (`tools/reconcilier_vocabulaires.sh`) :
+- **Suite** `bash checks/run_all.sh` = **3872 assertions / 0 échec sur 53 scripts** (2026-09-29,
+  après #97 : `check_bac_a_calcul` 255/0, `check_modele_valorisation` 51/0). Réconciliation (`tools/reconcilier_vocabulaires.sh`) :
   6/6 chapitres adossés, T6/T7 toujours rouges (30 champs / 37 questions — capacité 9). Les 3 checks « live » sont hors suite par
   conception. Un check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** : **050 appliquée** (notes flash) ; la prochaine sera **051**. Vérifier en base avant
@@ -124,8 +124,13 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
    comité juge un **tableau d'hypothèses chiffrées et sourcées** ; exécution dans un bac à calcul
    Python très simple.
 3. Mécanique refondue sur **changement de stade** ou **demande du comité** ; un nouveau produit repéré
-   en revue trimestrielle peut être ajouté par le système. ⚠️ Non questionné, à confirmer : l'ajout
-   est marqué « ajouté, non encore revu » jusqu'à la séance suivante du comité.
+   en revue trimestrielle peut être ajouté par le système — comme NOUVELLE VERSION proposée (point 6).
+4. **Jugement ancré** (#97) : une hypothèse sans pièce est admise, étiquetée, adossée à un taux de base
+   sourcé, écart justifié.
+5. **La forme de la fourchette dépend de l'entreprise** (#97) : scénarios nommés (incertitude continue)
+   ou arbre d'événements probabilisé (incertitude binaire), choisie par l'agent, signée par le comité.
+6. **Après signature, seuls les chiffres repris bougent seuls** (#97) ; un jugement changé ou un produit
+   ajouté = nouvelle version proposée, la signée reste affichée jusqu'à la décision du comité.
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
@@ -305,7 +310,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #96** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #97** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -325,9 +330,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > en termes métier ; chaque décision éclairée par la pratique d'un vrai fonds), puis
 > `roadmap/V3/00-REPRISE.md`. Roadmap active : `roadmap/V3/05-frameworks-complets.md` — les quatre
 > frameworks manquants sont rédigés (#92-#95) ; capacité en cours **4 bis, l'atelier de valorisation**
-> — arbitrage rendu et gabarits + bac à calcul livrés (#96) ; reste le contrat du modèle d'entreprise
-> (mécanique décrite, tableau d'hypothèses sourcées, signature du comité), la reprise des réponses
-> acquittées, la réponse à plusieurs nombres, l'option 1 au cours du jour ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
+> — gabarits, bac à calcul, contrat + pont + évaluation du modèle livrés (#96/#97) ; reste la signature
+> du comité et la persistance (051), l'agent qui écrit le modèle, la reprise des réponses acquittées en
+> base, la réponse à plusieurs nombres, l'option 1 au cours du jour ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute
 > ligne de base avant de s'en servir.

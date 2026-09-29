@@ -2457,6 +2457,46 @@ Gardes : `check_bac_a_calcul.py` **255/0** (valeurs à la main jamais recalculé
 mécaniques fictives forme RVMD/NVDA ; au cours du jour la marge change, la fourchette non ; 57 programmes
 hostiles) + `negatif_bac_a_calcul.sh` **26/0**. Suite **3821/0 sur 52**.
 
+### #97 — le modèle d'une entreprise : trois origines pour un chiffre, et une fourchette dont la forme dépend de l'incertitude
+
+**Arbitrages du 2026-09-29 (roadmap 05, capacité 4 bis), rendus comme un vrai fonds.**
+- **Un jugement est admis s'il est ANCRÉ** : une hypothèse sans pièce publiée (probabilité qu'une phase 2
+  aboutisse, ventes au pic) est étiquetée « jugement », adossée à un **taux de base sourcé** (classe de
+  référence + valeur + pièce) avec l'**écart justifié** par écrit. Le comité voit quelles lignes sont des
+  faits et lesquelles sont des paris, et de combien on s'écarte de la moyenne. Les deux autres origines :
+  `piece` et `reponse_reprise` (une réponse acquittée d'une autre méthodologie — un seul chiffre par
+  dossier, #95).
+- **La forme de la fourchette dépend de l'entreprise**, choisie par l'agent dans sa méthodologie et signée
+  avec elle : **scénarios nommés** pour une incertitude continue (MSFT, NVDA — trois récits, seules les
+  hypothèses décisives changent, le central EST le tableau signé) ; **arbre d'événements** pour une
+  incertitude binaire (RVMD — chaque événement a pour probabilité une hypothèse du tableau ; bas = tous
+  échouent, haut = tous réussissent, central = la valeur pondérée, qui n'est PAS un scénario ; et pour
+  chaque événement sa valeur en échec et en succès, les autres à leur probabilité : « que vaut le titre si
+  ce programme échoue ? »).
+- **Après signature, seuls les chiffres repris bougent seuls** : une hypothèse `reponse_reprise` suit la
+  réponse contrôlée qu'elle reprend, datée ; un jugement ou l'ajout d'un produit donne une NOUVELLE VERSION
+  proposée — la fourchette signée reste affichée, la proposition attend le comité avec l'écart chiffré.
+  (Tranche aussi la question laissée ouverte en #96 : un produit ajouté n'entre pas « non revu » dans la
+  fourchette affichée, il attend la signature.) — pas encore construit : lot de la signature.
+
+**Livré** : contrat `contracts/modele_valorisation_schema.py` (cohérence INTERNE : segment déclaré ET
+chiffré — un segment qu'aucune hypothèse ne chiffre est un découpage de façade ; clés uniques ; `segments`
+réservé ; trois rôles, central sans surcharge, bas/haut avec ; probabilités dans [0, 1], une par
+événement) ; pont + évaluation `valorisation/modele.py` : [A] réponse reprise acquittée DE CE TITRE et à
+la bonne question, [B] pièces (y compris celle du taux de base) au dossier, [C] la mécanique tourne et
+définit `valeur_action`, [D] **chaque ligne du tableau est LUE par la mécanique** (lecture d'AST : noms,
+et clés textuelles pour les hypothèses de segment — une ligne signée que le calcul ignore serait crue
+décisive par le comité, #68 [W] transposé), [E] fourchette ordonnée. Déterministe, sans modèle. La
+SIGNATURE (acte au procès-verbal, migration 051) n'est pas dans le contrat : ce n'est pas une propriété
+du modèle proposé.
+⚠️ La sortie s'appelle `valeur_action`, pas `valeur_par_action` : c'est le nom d'un gabarit du fonds, que le
+bac interdit de réaffecter — la mécanique n'aurait jamais pu la définir.
+⚠️ Garde fusionnée au test négatif : « réponse reprise non acquittée » était subsumée par « répond à une
+autre question » (`None ≠ qf_1`) ; une seule comparaison, deux motifs, et les asserts du pont lisent le motif.
+
+Gardes : `check_modele_valorisation.py` **51/0** + `negatif_modele_valorisation.sh` **29/0**. Suite
+**3872/0 sur 53**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

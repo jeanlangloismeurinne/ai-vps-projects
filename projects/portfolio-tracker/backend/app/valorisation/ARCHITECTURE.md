@@ -21,6 +21,15 @@ l'autre). Deux étages, comme dans un vrai fonds :
   blanche de constructions, pas d'attribut, budget d'opérations, tailles bornées. **C'est une
   frontière de sécurité** : la mécanique vient d'un agent qui a lu du web.
 
+- **`modele.py` — le modèle d'une entreprise** (#97) : le contrat `contracts/modele_valorisation_schema.py`
+  porte ce que l'agent PROPOSE et que le comité SIGNE — méthodologie décrite, segments, tableau
+  d'hypothèses (trois origines : pièce, réponse reprise, jugement ancré sur un taux de base sourcé),
+  forme de la fourchette (scénarios nommés pour une incertitude continue, arbre d'événements
+  probabilisé pour une incertitude binaire), mécanique. Le pont `valider_pont_modele` le confronte au
+  dossier et à l'exécution ([A] réponse reprise acquittée, [B] pièces au dossier, [C] exécution et
+  `valeur_action`, [D] chaque ligne du tableau est lue, [E] fourchette ordonnée) ; `evaluer_modele`
+  rend bas/central/haut (et, pour un arbre, chaque événement en échec et en succès), sans modèle.
+
 ## Ajouter un gabarit maison — le contrat
 
 Une fonction publique dans `calculs.py`, ajoutée à `CATALOGUE`, qui refuse son hors-domaine avec un
@@ -30,10 +39,9 @@ Un gabarit itératif déclare son coût dans `_COUT_APPEL` du bac.
 
 ## Pas encore construit (capacité 4 bis, suite)
 
-Le CONTRAT du modèle d'entreprise (mécanique décrite en prose + tableau d'hypothèses sourcées + code
-+ version + signature du comité), sa persistance, l'agent qui l'écrit, la reprise des réponses
-acquittées (`qf_1` → `va_1`), la réponse à plusieurs nombres, le recalcul de `va_4`-`va_6` au cours
-du jour. Rien n'appelle encore ce module en production.
+La SIGNATURE du comité et la persistance du modèle (migration 051), l'agent qui l'écrit, la lecture
+des réponses acquittées depuis la base (le pont les reçoit déjà de l'appelant), la réponse à plusieurs
+nombres, le recalcul de `va_4`-`va_6` au cours du jour. Rien n'appelle encore ce module en production.
 
 ## Cible → garde (réalisé)
 
@@ -44,3 +52,5 @@ du jour. Rien n'appelle encore ce module en production.
 | Le tableau signé est intouchable (nom, alias, variable de boucle) | `check_bac_a_calcul.py` §4 + `negatif_bac_a_calcul.sh` |
 | Toute mécanique hostile sort en `ErreurCalcul` nommée, en temps borné, jamais en succès ni en autre exception | `check_bac_a_calcul.py` §5 + `negatif_bac_a_calcul.sh` |
 | Pas d'`eval`/`exec`/`__import__`, imports déclarés, catalogue = gabarits publics | `check_bac_a_calcul.py` §6 + `negatif_bac_a_calcul.sh` |
+| Contrat du modèle : cohérence interne (segments chiffrés, scénarios bien formés, probabilités, jugement ancré) | `check_modele_valorisation.py` §1 + `negatif_modele_valorisation.sh` |
+| Pont du modèle [A]-[E] et évaluation (arbre : bas = tous échouent, haut = tous réussissent, détail par événement ; scénarios : le central est le tableau) | `check_modele_valorisation.py` §2-§3 + `negatif_modele_valorisation.sh` |
