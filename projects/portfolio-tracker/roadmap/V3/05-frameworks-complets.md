@@ -170,7 +170,24 @@ séance suivante).
   RVMD, qf_1 est `sans_objet` : le coût du capital n'a rien à reprendre — à trancher à la case suivante)
 - [ ] L'agent qui écrit le modèle (méthodologie, segments, tableau, mécanique) à partir du dossier
 - [ ] Réponse à PLUSIEURS nombres (le contrat de réponse n'en porte qu'un) — correspondance avec
-  `Valuation` (§4.6 de la spec)
+  `Valuation` (§4.6 de la spec). **Instruit avec l'utilisateur le 2026-09-29** (comme un vrai fonds : la
+  note d'analyste se clôt par un ENCADRÉ DE CHIFFRES CLÉS au format maison — valeur, unité, période —, et
+  c'est lui que relit le modèle de valorisation, jamais la prose) :
+  - chiffres rendus, déclarés en DONNÉES par question : qf_1 rendement du capital employé (%, moy. 5 ans),
+    coût du capital (%), résultat d'exploitation après impôt normalisé (M$) · qf_2 part du résultat
+    retrouvée en trésorerie (%, moy. 3 ans) · qf_3 capital supplémentaire par point de croissance (M$) ·
+    qf_4 dette brute, trésorerie et placements, dette nette (M$) · qf_5 pente du rendement (points/an) ·
+    qf_6 retraitements discrétionnaires du résultat (M$) · qf_7 trésorerie mobilisable (M$), consommation
+    annuelle (M$), autonomie (mois) · mo_4 durée retenue (années) · me_5 marché adressable (M$), part
+    déjà prise (%) · se_4 AUCUN chiffre (une position dans le cycle) ;
+  - trois corrections des liens « repris de » de #95 : le résultat normalisé vient de **qf_1** (ajusté par
+    qf_6 ; se_4 éclaire les scénarios, sans chiffre) ; le **nombre d'actions dilué** se relève AVEC LE
+    COURS COTÉ (même source, même date — comme va_4), pas de qf_4 ; la **dilution future** se reprend de
+    **qf_4** (instruments convertibles, options), qf_7 donnant le besoin de financement qui l'appelle ;
+  - pas de dette : les réponses au dossier qui n'ont pas l'encadré sont RÉÉMISES au nouveau format à partir
+    des MÊMES pièces (analyste relancé, aucune recollecte). Mesuré le 2026-09-29 : seul RVMD a des réponses
+    courantes, dont 2 à chiffrer (qf_4, qf_6) — les 5 autres sont sans objet. (Option « garder valide sans
+    chiffre » écartée par l'utilisateur : elle laissait une dette.)
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
   que la barrière tient)

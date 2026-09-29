@@ -33,9 +33,11 @@ role: >
 > sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96-#99, 2026-09-29) : gabarits maison, bac à
 > calcul, contrat + pont + évaluation du modèle d'entreprise, SIGNATURE + registres (051), endpoints, et
 > la REPRISE « un seul chiffre par dossier » (option c, #99) livrés (`app/valorisation/`,
-> `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). Prochain pas recommandé : la
-> RÉPONSE À PLUSIEURS NOMBRES — les réponses ne portent aujourd'hui aucun chiffre, ce qui bloque la reprise
-> par la valeur et l'agent qui écrira le modèle.
+> `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). **Prochain lot, INSTRUIT et
+> prêt à coder : la RÉPONSE À PLUSIEURS NOMBRES** — tout est dans la case correspondante de la roadmap 05
+> (chiffres par question validés, trois liens « repris de » corrigés, réémission de qf_4/qf_6 RVMD sur les
+> mêmes pièces). Contrat de réponse ⇒ règle #19 : prompt en base + exemple JSON + écran + import, et
+> `run_all.sh` en entier.
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -144,6 +146,10 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 8. **Un seul chiffre par dossier — option (c)** (#99) : la valorisation REPREND la réponse qui tient ; elle
    porte son propre chiffre (pièce ou jugement ancré, signé par le comité) SEULEMENT si la question est sans
    objet pour ce titre (le coût du capital de RVMD, pour qui qf_1 est sans objet) ; sinon elle attend.
+9. **L'encadré de chiffres clés** (instruit le 2026-09-29, à construire) : chaque réponse rend des chiffres
+   nommés déclarés par question ; le résultat normalisé vient de qf_1, le nombre d'actions dilué du cours
+   coté, la dilution de qf_4 ; les réponses existantes sont réémises au nouveau format sur les mêmes pièces
+   — « pas de dette » (l'utilisateur a écarté l'option de les garder valides sans chiffre).
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
