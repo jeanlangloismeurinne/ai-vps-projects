@@ -32,7 +32,8 @@ from app.valorisation.modele import Evaluation, ModeleRefuse, evaluer_modele, va
 
 __all__ = [
     "ActeRefuse", "DossierValorisation", "fourchette_de", "ecart_entre", "version_en_attente",
-    "derniere_signature", "servir_atelier", "reponses_reprenables", "charger_dossier_valorisation", "lire_atelier",
+    "derniere_signature", "servir_atelier", "reponses_reprenables", "questions_sans_objet", "reprises_admises",
+    "charger_dossier_valorisation", "lire_atelier",
     "proposer", "signer", "ecarter",
 ]
 
@@ -44,11 +45,14 @@ class ActeRefuse(ValueError):
 
 @dataclass(frozen=True)
 class DossierValorisation:
-    """Ce contre quoi un modèle se juge (le pont [A]/[B]) : les réponses ACQUITTÉES du titre
-    (answer_id → question_id) et les pièces COURANTES de son dossier."""
+    """Ce contre quoi un modèle se juge (le pont [A]/[B]/[F]) : les réponses REPRENABLES du titre
+    (answer_id → question_id), les pièces COURANTES de son dossier, les questions SANS OBJET pour lui, et
+    les questions que le référentiel déclare reprises par la valorisation."""
     ticker_id: str
     reponses_acquittees: Mapping[int, str]
     pieces_du_dossier: frozenset[int]
+    questions_sans_objet: frozenset[str]
+    reprises_admises: frozenset[str]
 
 
 # ── Règles PURES ───────────────────────────────────────────────────────────────────────────────
@@ -63,7 +67,9 @@ def _juger(modele: ModeleValorisation, dossier: DossierValorisation) -> tuple[Op
     try:
         ev = valider_pont_modele(modele, ticker_id=dossier.ticker_id,
                                  reponses_acquittees=dossier.reponses_acquittees,
-                                 pieces_du_dossier=set(dossier.pieces_du_dossier))
+                                 pieces_du_dossier=set(dossier.pieces_du_dossier),
+                                 questions_sans_objet=dossier.questions_sans_objet,
+                                 reprises_admises=dossier.reprises_admises)
         return fourchette_de(ev), None
     except ModeleRefuse as refus:
         try:
@@ -166,14 +172,35 @@ def reponses_reprenables(reponses) -> dict[int, str]:
             if reponse_tient(r) and r.servie.statut != "sans_objet"}
 
 
+def questions_sans_objet(etat) -> frozenset[str]:
+    """Les questions SANS OBJET pour ce titre (#99, option c) : celles que son stade écarte (référentiel,
+    `applicables`), et celles dont une réponse hors-sujet motivée TIENT aujourd'hui. Sans stade connu, on
+    ne sait rien écarter par le stade : seules les réponses comptent."""
+    from app.agents.v2.parcours import reponse_tient
+
+    par_stade = {q.id for f in etat.fichier.frameworks if etat.applicables.get(f.id) is not None
+                 for q in f.questions if q.id not in etat.applicables[f.id]}
+    par_reponse = {r.servie.question_id for r in etat.reponses
+                   if reponse_tient(r) and r.servie.statut == "sans_objet"}
+    return frozenset(par_stade | par_reponse)
+
+
+def reprises_admises(fichier) -> frozenset[str]:
+    """Les questions que le référentiel déclare reprises par un ingrédient de la valorisation."""
+    return frozenset(r for f in fichier.frameworks if f.bloc_memo == "valuation"
+                     for q in f.questions for i in q.ingredients_requis for r in i.repris_de)
+
+
 async def charger_dossier_valorisation(conn, ticker_id: str) -> DossierValorisation:
-    """Le dossier du jour : les réponses reprenables (`reponses_reprenables`) et les pièces courantes."""
+    """Le dossier du jour : réponses reprenables, pièces courantes, questions sans objet, reprises
+    admises par le référentiel."""
     from app.agents.v2.parcours import charger_etat_dossier
 
     etat = await charger_etat_dossier(conn, ticker_id)
-    acquittees = reponses_reprenables(etat.reponses)
     pieces = frozenset(r["id"] for r in await conn.fetch(_SQL_PIECES, ticker_id))
-    return DossierValorisation(ticker_id=ticker_id, reponses_acquittees=acquittees, pieces_du_dossier=pieces)
+    return DossierValorisation(ticker_id=ticker_id, reponses_acquittees=reponses_reprenables(etat.reponses),
+                               pieces_du_dossier=pieces, questions_sans_objet=questions_sans_objet(etat),
+                               reprises_admises=reprises_admises(etat.fichier))
 
 
 _COL_VERSIONS = "id, ticker_id, version, auteur, propose_le, contenu"

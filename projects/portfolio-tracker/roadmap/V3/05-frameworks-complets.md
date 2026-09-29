@@ -148,9 +148,13 @@ changement de stade ou à la demande du comité, et un nouveau produit repéré 
 peut y être ajouté (choix non questionné, à confirmer : marqué « ajouté, non encore revu » jusqu'à la
 séance suivante).
 
-- [ ] Reprise des réponses acquittées : un ingrédient « repris de » n'est jamais recollecté ; une seule
-  valeur par dossier (le coût du capital de va_1 EST celui de qf_1, même pièce)
-- [ ] Ordonnancement : la valorisation n'est instruite qu'après les frameworks dont elle reprend
+- [x] Reprise des réponses acquittées : un ingrédient « repris de » n'est jamais recollecté ; une seule
+  valeur par dossier (le coût du capital de va_1 EST celui de qf_1, même pièce) — ✅ 2026-09-29, #99,
+  arbitrage « option c » (reprendre ; chiffre propre au modèle seulement si la question est sans objet ;
+  sinon attendre). ⚠️ vérifié par la RÉFÉRENCE, pas par la valeur : les réponses ne portent pas encore de
+  nombre (case « plusieurs nombres »)
+- [ ] Ordonnancement : la valorisation n'est instruite qu'après les frameworks dont elle reprend — côté MODÈLE fait
+  (#99 : il attend une question ni instruite ni sans objet) ; reste l'ordre dans la chaîne d'instruction
 - [x] Base commune de calculs fermés et testés (valeur sans croissance, DCF à trois scénarios, croissance
   implicite dans le prix, valeur pondérée par probabilité, dilution, marge de sécurité) — ✅ 2026-09-29,
   `app/valorisation/calculs.py`, #96

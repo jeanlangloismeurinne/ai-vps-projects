@@ -154,6 +154,42 @@ for label, payload, dossier, ticker, code, fragment in cas_pont:
     b.check(m.startswith(code) and fragment in m,
             f"pont — « {label} » : refus {code} « {fragment} » attendu, obtenu « {m[:160]} »")
 
+# ── §2 bis Un seul chiffre par dossier — option (c) de l'utilisateur (#99) ─────────────────────
+print("§2 bis option (c)")
+# RVMD réelle : qf_1 est sans objet pour une biotech sans chiffre d'affaires. Le coût du capital du
+# modèle est alors un jugement ancré qui TIENT LA PLACE de qf_1.
+def taux_propre(base: dict) -> dict:
+    m = copy.deepcopy(base)
+    h = next(h for h in m["hypotheses"] if h["nom"] == "cout_du_capital")
+    h["origine"], h["reprend"] = jugement(503), "qf_1"
+    return m
+
+
+SANS_QF1 = {**DOSSIER_RVMD, "reponses_acquittees": {}, "questions_sans_objet": frozenset({"qf_1"})}
+b.check(refus_pont(taux_propre(ARBRE), SANS_QF1, "RVMD") == "PAS DE REFUS",
+        "qf_1 sans objet pour ce titre : le modèle porte son propre coût du capital (jugement ancré)")
+r = refus_pont(taux_propre(ARBRE), DOSSIER_RVMD, "RVMD")
+b.check("[F]" in r and "#901" in r and "doit la reprendre" in r,
+        f"qf_1 a une réponse qui tient : un coût du capital propre au modèle est un SECOND chiffre, refusé (servi : {r})")
+r = refus_pont(taux_propre(ARBRE), {**DOSSIER_RVMD, "reponses_acquittees": {}}, "RVMD")
+b.check("[F]" in r and "attend" in r,
+        f"qf_1 ni instruite ni sans objet : la valorisation ATTEND, elle ne comble pas le trou (servi : {r})")
+m = copy.deepcopy(ARBRE)
+next(h for h in m["hypotheses"] if h["nom"] == "tresorerie_nette")["reprend"] = "ma_1"
+r = refus_pont(m, DOSSIER_RVMD, "RVMD")
+b.check("[F]" in r and "ma_1" in r and "ne déclare reprise" in r,
+        f"une ligne qui tient la place d'une question que le référentiel ne fait pas reprendre est refusée (servi : {r})")
+m = copy.deepcopy(ARBRE)
+m["hypotheses"].append(hyp("taux_bis", 0.12, reprise("qf_1", 901)))
+m["mecanique"] += "\ntaux_inutile = taux_bis\n"
+b.check("deux lignes reprennent le même chiffre" in refus_contrat(m),
+        "deux lignes qui reprennent qf_1 au même endroit sont refusées : un seul chiffre par dossier")
+m = copy.deepcopy(ARBRE)
+next(h for h in m["hypotheses"] if h["nom"] == "cout_du_capital")["reprend"] = "qf_4"
+b.check("une ligne ne reprend qu'une question" in refus_contrat(m),
+        "une ligne qui reprend qf_1 en déclarant tenir la place de qf_4 est refusée")
+
+
 # ── §3 L'évaluation ──────────────────────────────────────────────────────────────────────────
 print("§3 évaluation")
 

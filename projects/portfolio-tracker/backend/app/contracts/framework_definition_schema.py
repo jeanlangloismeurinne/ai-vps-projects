@@ -27,7 +27,7 @@ visée par un `substitut_question_id`, et l'accord avec les vocabulaires détenu
 """
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import Field, model_validator
 
@@ -100,6 +100,18 @@ class IngredientRequis(Strict):
     # `essentiel` : son absence rend la question NON FONDABLE, elle ne la dégrade pas. C'est ce qui
     # sépare une lacune (qui produit un mandat) d'une réponse faible (qui produit un affichage).
     essentiel: bool
+    # `repris_de` (#99, capacité 4 bis) : l'ingrédient EST le chiffre déjà instruit par ces questions
+    # d'une autre méthodologie — un seul chiffre par dossier (#95). Il ne se collecte JAMAIS (le
+    # traducteur ne le voit pas, le pont du plan refuse sa ligne) ; la valorisation le reprend de la
+    # réponse qui tient, ou, si la question est sans objet pour ce titre, du modèle de l'entreprise
+    # (arbitrage « option c » du 2026-09-29). Vide = un ingrédient ordinaire, à collecter.
+    repris_de: list[Annotated[str, Field(pattern=r"^[a-z]{2}_[0-9]+$")]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _reprise_sans_doublon(self):
+        if len(set(self.repris_de)) != len(self.repris_de):
+            raise ValueError(f"ingrédient `{self.id}` : `repris_de` contient un doublon")
+        return self
 
 
 class VariableArchetype(Strict):

@@ -44,9 +44,13 @@ from app.valorisation.signature import (  # noqa: E402
     servir_atelier, signer)
 
 DOSSIER = DossierValorisation(ticker_id="RVMD", reponses_acquittees=DOSSIER_RVMD["reponses_acquittees"],
-                              pieces_du_dossier=frozenset(DOSSIER_RVMD["pieces_du_dossier"]))
+                              pieces_du_dossier=frozenset(DOSSIER_RVMD["pieces_du_dossier"]),
+                              questions_sans_objet=DOSSIER_RVMD["questions_sans_objet"],
+                              reprises_admises=DOSSIER_RVMD["reprises_admises"])
 SANS_PIECE = DossierValorisation(ticker_id="RVMD", reponses_acquittees=DOSSIER_RVMD["reponses_acquittees"],
-                                 pieces_du_dossier=frozenset({501, 502, 503}))
+                                 pieces_du_dossier=frozenset({501, 502, 503}),
+                                 questions_sans_objet=DOSSIER_RVMD["questions_sans_objet"],
+                                 reprises_admises=DOSSIER_RVMD["reprises_admises"])
 DEMANDE = DemandeDecisionModele(auteur="membre du comité", motif="hypothèses relues en séance, ancrées")
 
 
@@ -156,6 +160,13 @@ async def main() -> None:
                 f"aucune réponse reprenable ne porte sur une question que l'alerte dit manquante ({repris_en_manque})")
         b.check(len(en_manque & set(acquittees.values())) > 0,
                 "le dossier réel a des réponses acquittées mais périmées — le cas que la règle écarte est présent")
+        # Option (c), #99 : sur RVMD (biotech sans chiffre d'affaires), qf_1 est sans objet — le modèle
+        # portera son propre coût du capital ; qf_6, qui tient, doit être repris, jamais remplacé.
+        print(f"  mesuré : RVMD — sans objet : {sorted(reel.questions_sans_objet)}")
+        b.check("qf_1" in reel.questions_sans_objet and "qf_1" in reel.reprises_admises,
+                "RVMD : qf_1 est sans objet et reprise par la valorisation — le cas de l'option (c) est réel")
+        b.check(not (set(reel.reponses_acquittees.values()) & reel.questions_sans_objet),
+                "aucune question n'est à la fois reprenable et sans objet")
         n_pieces = await conn.fetchval(
             "SELECT count(*) FROM knowledge_entries WHERE ticker_id = 'RVMD' AND superseded_by IS NULL")
         b.check(len(reel.pieces_du_dossier) == n_pieces and n_pieces > 0,

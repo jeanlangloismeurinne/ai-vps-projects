@@ -83,6 +83,11 @@ mutations=(
 "$PONT¦    if portees.get(A_QUALIFIER) != \"toutes\":¦    if False:¦rétrogradé à une portée partielle"
 "$PONT¦                return frozenset(q.rouverte_par) | universels¦                return frozenset(q.rouverte_par)¦ses types déclarés ∪ les types de portée totale"
 "$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, ma_1, ma_3, va_1, va_2, va_4 et va_6"
+  # ── [S] ce qui se reprend (#99) ──
+"$PONT¦                if r not in ids_questions:¦                if False:¦question INCONNUE du référentiel"
+"$PONT¦                if r == q.id:¦                if False:¦de SA PROPRE question"
+"$PONT¦                if not re.search(rf\"\\b{r}\\b\", i.libelle):¦                if False:¦que son libellé ne NOMME pas"
+"$DEF¦        if len(set(self.repris_de)) != len(self.repris_de):¦        if False:¦un \`repris_de\` en double"
 )
 
 passes=0; ratees=0

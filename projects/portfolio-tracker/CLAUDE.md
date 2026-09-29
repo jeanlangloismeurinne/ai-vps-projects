@@ -2538,6 +2538,43 @@ Gardes : `check_signature_modele.py` **46/0** + `negatif_signature_modele.sh` **
 `check_signature_modele_persist.py` **25/0** (vraie base, ROLLBACK, zéro résidu) · `negatif_051.sh` **26/0** ·
 `negatif_parcours.sh` 21/0 après l'extraction · suite **3943/0 sur 55**.
 
+### #99 — un seul chiffre par dossier : la valorisation reprend, porte le sien si c'est sans objet, sinon attend
+
+**Arbitrage de l'utilisateur, 2026-09-29 (« option c »).** Question posée en termes de fonds : « le taux
+d'actualisation est celui de qf_1 — mais pour RVMD, sans chiffre d'affaires, qf_1 est sans objet ; où le
+fonds fixe-t-il le taux ? » Réponse : **reprendre la réponse de qf_1 quand elle existe, et seulement quand
+la question est sans objet pour ce titre, laisser l'analyste fixer le taux dans le modèle de l'entreprise**
+(pièce, ou jugement ancré sur un taux de base sourcé), signé par le comité avec le reste.
+
+**Ce qui l'applique.**
+- **En données** : `IngredientRequis.repris_de` (liste de questions) sur les 6 ingrédients de va_1/va_2 dont
+  la VALEUR est reprise (va_1 : résultat normalisé ← qf_6/qf_5/se_4, taux ← qf_1, passage par action ← qf_4 ;
+  va_2 : coût de la croissance ← qf_3/qf_2, durée et plafond ← mo_4/me_5, dilution ← qf_7). va_4/va_5
+  citent « repris de » pour un CALCUL qui s'appuie sur une reprise : pas marqués. Pont du référentiel [S] :
+  question existante, pas la sienne, et NOMMÉE dans le libellé (la prose du comité et la donnée du code ne
+  divergent pas).
+- **La collecte ne les cherche jamais** : `frameworks.ingredients_a_collecter` (détenteur unique) — le
+  traducteur ne les voit pas, le pont du plan refuse leur ligne ([P]) et ne les exige plus ([R]).
+- **Le modèle** (`modele-1.1.0`) : `Hypothese.reprend` = la question dont la ligne tient la place quand son
+  origine n'est pas déjà `reponse_reprise` ; le contrat refuse deux lignes qui reprennent la même question au
+  même endroit. Pont **[F]** : la question doit être déclarée reprise par le référentiel ; si elle a une
+  réponse qui tient, la ligne DOIT la reprendre (un chiffre propre serait le second) ; si elle est sans objet
+  pour ce titre (par son stade, ou par une réponse hors-sujet qui tient), le chiffre propre est admis ;
+  sinon le modèle **attend** (la valorisation s'instruit après, arbitrage du 28/09) — il ne comble pas le trou.
+- `DossierValorisation` porte désormais `questions_sans_objet` et `reprises_admises`, REQUIS (un dossier
+  incomplet ne passe pas en silence). Mesuré sur RVMD : sans objet = qf_1, qf_2, qf_3, qf_5, mo_6 ; reprenable
+  = qf_6 seule.
+
+⚠️ **Limite connue** : les réponses au dossier ne portent AUJOURD'HUI aucun nombre (`reponse.valeur` vide sur
+les réponses courantes). « Même chiffre que qf_1 » se vérifie donc par la RÉFÉRENCE (la ligne cite la réponse),
+pas par la VALEUR — celle-ci attend la case « réponse à plusieurs nombres ». De même, l'analyste qui répondrait
+à va_1 verrait des ingrédients essentiels jamais collectés : la réponse aux va_* viendra de l'atelier, pas de la
+chaîne de collecte (même case).
+
+Gardes : `check_modele_valorisation.py` **57/0** + négatif **35/0** · `check_frameworks_definitions` **66/0** +
+négatif **35/0** · `check_collection_plan_contract` **36/0** + négatif **20/0** · `check_signature_modele_persist`
+**27/0** · suite **3961/0 sur 55**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

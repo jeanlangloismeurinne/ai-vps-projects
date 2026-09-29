@@ -353,6 +353,31 @@ valide("[P] deux frameworks sur DEUX chapitres distincts passent",
                    questions=[q_base(id="zz_2", chemin_indexation="cadre_b.autre")])])))
 
 
+# ── [S] ce qui se reprend d'une autre méthodologie (#99) ────────────────────────────────────────
+def _avec_reprise(repris_de, libelle, question_id="zz_2"):
+    """Deux questions : `zz_1` (la base) et une seconde dont un ingrédient est repris."""
+    return fichier_base(frameworks=[fw_base(questions=[q_base(), q_base(
+        id=question_id, chemin_indexation="cadre_test.autre", ingredients_requis=[
+            {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True},
+            {"id": "repris", "libelle": libelle, "essentiel": False, "repris_de": repris_de}])])])
+
+
+valide("[S] un ingrédient repris d'une question existante, nommée dans son libellé, passe",
+       lambda: charge(_avec_reprise(["zz_1"], "Chiffre repris de zz_1, déjà instruit au dossier")))
+rejete("[S] un ingrédient repris d'une question INCONNUE du référentiel",
+       lambda: charge(_avec_reprise(["qf_2"], "Chiffre repris de qf_2, déjà instruit au dossier")),
+       "question inconnue du référentiel")
+rejete("[S] un ingrédient repris de SA PROPRE question",
+       lambda: charge(_avec_reprise(["zz_2"], "Chiffre repris de zz_2, sa propre question")),
+       "sa propre question")
+rejete("[S] un ingrédient repris d'une question que son libellé ne NOMME pas",
+       lambda: charge(_avec_reprise(["zz_1"], "Chiffre déjà instruit ailleurs au dossier")),
+       "que son libellé ne nomme pas")
+rejete("un `repris_de` en double",
+       lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
+           {"id": "r", "libelle": "Chiffre repris de qf_2 et de qf_2", "essentiel": True,
+            "repris_de": ["qf_2", "qf_2"]}])), "doublon")
+
 # ── [Q] et [R], ce qui rouvre quoi (#89) ─────────────────────────────────────────────────────────
 # Créer un framework, c'est décider ce qui rouvre chacune de ses questions : l'absence se REFUSE au
 # contrat, la faute de frappe et le type non listable au pont, et la table de FORME (code) doit

@@ -63,6 +63,11 @@ mutations=(
 "$PONT¦        if it.ingredient_id not in ingredients:¦        if False:¦[P] ingrédient inventé"
 "$PONT¦        if q.variables_par_archetype[plan.archetype].mode == \"sans_objet\":¦        if False:¦[Q] question SANS OBJET"
 "$PONT¦            if i.essentiel and (q.id, i.id) not in couples:¦            if False:¦[R] essentiel omis"
+  # ── un ingrédient repris ne se collecte jamais (#99) ──
+"app/agents/v2/frameworks.py¦    return [i for i in q.ingredients_requis if not i.repris_de]¦    return list(q.ingredients_requis)¦recollecte le coût du capital"
+"app/agents/v2/frameworks.py¦        if it.ingredient_id not in {i.id for i in ingredients_a_collecter(q)}:¦        if False:¦recollecte le coût du capital"
+"app/agents/v2/frameworks.py¦        for i in ingredients_a_collecter(q):¦        for i in q.ingredients_requis:¦SANS les ingrédients repris passe"
+"app/agents/v2/traducteur.py¦                    for i in ingredients_a_collecter(q)¦                    for i in q.ingredients_requis¦ne VOIT aucun ingrédient repris"
 )
 
 passes=0; ratees=0

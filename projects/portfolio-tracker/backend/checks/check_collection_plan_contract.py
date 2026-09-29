@@ -201,7 +201,9 @@ def plan_complet(framework_id, archetype, extra=None, drop_first=False):
         if q.variables_par_archetype[archetype].mode != "variable":
             continue
         for ing in q.ingredients_requis:
-            if ing.essentiel:
+            # Lu dans la DONNÉE (`repris_de`), pas via `ingredients_a_collecter` : la fixture ne se
+            # construit pas avec la règle qu'elle éprouve (4ᵉ faux vert).
+            if ing.essentiel and not ing.repris_de:
                 items.append(CollectionPlanItem(
                     question_id=q.id, ingredient_id=ing.id, statut="traduit",
                     metrique=f"métrique nommée pour {ing.id}", source_pressentie="10-Q",
@@ -285,6 +287,29 @@ refuse_pont("[R] essentiel omis → plan REFUSÉ (T1bis, le cœur)",
             plan_complet("qualite_financiere", "rentable", drop_first=True),
             "n'a AUCUNE ligne dans le plan")
 
+
+# ── §7 un ingrédient REPRIS ne se collecte jamais (#99) ─────────────────────────────────────────
+print("\n[7] un ingrédient repris d'une autre méthodologie ne se collecte jamais (#99)")
+_repris = [(q.id, i.id) for q in _FW["valorisation"].questions for i in q.ingredients_requis if i.repris_de]
+check("[réf] la valorisation déclare des ingrédients repris (sinon §7 ne discrimine rien)",
+      ("va_1", "taux_d_actualisation") in _repris, f"→ {_repris}")
+pont_ok("[R] un plan de valorisation SANS les ingrédients repris passe (ils ne sont pas exigés)",
+        plan_complet("valorisation", "rentable"))
+refuse_pont("[P] une ligne qui recollecte le coût du capital repris de qf_1 est refusée",
+            plan_complet("valorisation", "rentable", extra=[CollectionPlanItem(
+                question_id="va_1", ingredient_id="taux_d_actualisation", statut="traduit",
+                metrique="coût moyen pondéré du capital", source_pressentie="10-K",
+                ancre="clôture de l'exercice")]),
+            "est REPRIS d'une autre méthodologie")
+from app.agents.v2.traducteur import contexte_traducteur  # noqa: E402
+from app.knowledge.edgar_feed import IdentiteEmetteur  # noqa: E402
+_ctx = contexte_traducteur(_FICHIER, "valorisation", "rentable", "NVDA",
+                           emetteur=IdentiteEmetteur(symbole="NVDA", cik=1045810, raison_sociale="NVIDIA CORP"))
+_vus = {(q["id"], i["id"]) for q in _ctx["questions"] for i in q["ingredients"]}
+check("le traducteur ne VOIT aucun ingrédient repris (il ne peut pas le planifier)",
+      not (_vus & set(_repris)), f"→ {sorted(_vus & set(_repris))}")
+check("… mais voit toujours les ingrédients à collecter de la même question (va_1.valeur_des_actifs)",
+      ("va_1", "valeur_des_actifs") in _vus, f"→ {sorted(_vus)}")
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

@@ -41,7 +41,7 @@ from typing import Any, Optional
 from pydantic import Field
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
-from app.agents.v2.frameworks import load_frameworks, valider_pont_collection_plan
+from app.agents.v2.frameworks import ingredients_a_collecter, load_frameworks, valider_pont_collection_plan
 from app.agents.v2.runner import run_json_agent
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
@@ -102,7 +102,7 @@ def contexte_traducteur(
     (RVU120, CDK8/19). Un sigle n'est pas une identité ; la raison sociale et le CIK SEC en sont une.
 
     Ne porte QUE : l'entreprise (sigle, raison sociale, CIK), l'identité + la méthodologie du framework, l'archétype, et pour chaque
-    question applicable son énoncé, sa variable d'archétype, et ses ingrédients (`id`, `libelle`,
+    question applicable son énoncé, sa variable d'archétype, et ses ingrédients À COLLECTER (`id`, `libelle`,
     `essentiel`). **Aucun `plancher_tier`, aucun `nature_attendue`** : ce ne sont pas des leviers du
     traducteur (#59). `essentiel` reste montré — c'est une propriété du framework (quels ingrédients
     la question ne peut pas se passer), pas un curseur de « combien de preuve suffit ».
@@ -143,7 +143,7 @@ def contexte_traducteur(
                 "variable_archetype": q.variables_par_archetype[archetype].variable,
                 "ingredients": [
                     {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel}
-                    for i in q.ingredients_requis
+                    for i in ingredients_a_collecter(q)
                 ],
             }
             for q in applicables

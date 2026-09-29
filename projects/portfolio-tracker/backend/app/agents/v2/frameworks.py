@@ -39,6 +39,8 @@ mesurerait alors sa propre constante.
 """
 from __future__ import annotations
 
+import re
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
@@ -243,6 +245,26 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                 f"disparaîtrait de la note sans qu'aucun décompte ne bouge"
             )
         revendique[f.bloc_memo] = f.id
+
+    # ── [S] — ce qui se REPREND d'une autre méthodologie (#99) ─────────────────────────────────
+    #    Une question citée qui n'existe pas ne se reprendrait jamais : la valorisation attendrait une
+    #    réponse impossible, en silence. Se reprendre soi-même, c'est tourner en rond. Et la PROSE que
+    #    lisent le comité et les agents doit nommer ce que la donnée reprend — sinon le libellé dirait
+    #    « repris de qf_6 » pendant que le code reprend autre chose.
+    ids_questions = {q.id for _f, q in toutes}
+    for _f, q in toutes:
+        for i in q.ingredients_requis:
+            for r in i.repris_de:
+                if r not in ids_questions:
+                    raise FrameworkDefinitionRefused(
+                        f"[S] `{q.id}.{i.id}` est repris de `{r}`, question inconnue du référentiel")
+                if r == q.id:
+                    raise FrameworkDefinitionRefused(
+                        f"[S] `{q.id}.{i.id}` se reprend de sa propre question")
+                if not re.search(rf"\b{r}\b", i.libelle):
+                    raise FrameworkDefinitionRefused(
+                        f"[S] `{q.id}.{i.id}` est repris de `{r}`, que son libellé ne nomme pas — la "
+                        "prose lue par le comité et la donnée lue par le code divergeraient")
 
     # ── [Q] / [R] — ce qui rouvre quoi (#89) ───────────────────────────────────────────────────
     portees = {t.id: t.portee for t in fichier.types_evenement}
@@ -602,6 +624,14 @@ def servir_answer(
     return FrameworkAnswerServie(**donnees)
 
 
+def ingredients_a_collecter(q) -> list:
+    """DÉTENTEUR UNIQUE (#46, #99) de « quels ingrédients de cette question se COLLECTENT ? » : tous, sauf
+    ceux repris d'une autre méthodologie (`repris_de`) — un chiffre déjà instruit ne se recherche pas une
+    seconde fois, sinon le dossier aurait deux coûts du capital. Lu par le traducteur (ce qu'il planifie)
+    et par le pont du plan (ce qu'il exige, ce qu'il refuse)."""
+    return [i for i in q.ingredients_requis if not i.repris_de]
+
+
 def valider_pont_collection_plan(
     plan: CollectionPlan,
     *,
@@ -678,6 +708,10 @@ def valider_pont_collection_plan(
             raise CollectionPlanRefused(
                 f"[P] `{it.question_id}` n'a pas d'ingrédient `{it.ingredient_id}` "
                 f"({sorted(ingredients)}) : un ingrédient inventé écrirait le corrigé")
+        if it.ingredient_id not in {i.id for i in ingredients_a_collecter(q)}:
+            raise CollectionPlanRefused(
+                f"[P] `{it.question_id}.{it.ingredient_id}` est REPRIS d'une autre méthodologie : il ne "
+                "se collecte jamais — un second chiffre au dossier contredirait le premier (#95, #99)")
         if questions is not None and it.question_id not in questions:
             raise CollectionPlanRefused(
                 f"[P] la ligne vise `{it.question_id}`, HORS du scope de bouclage {sorted(questions)} : "
@@ -696,7 +730,7 @@ def valider_pont_collection_plan(
             continue
         if questions is not None and q.id not in questions:
             continue  # bouclage : seules les questions renvoyées sont exigées (les autres sont déjà traitées)
-        for i in q.ingredients_requis:
+        for i in ingredients_a_collecter(q):
             if i.essentiel and (q.id, i.id) not in couples:
                 raise CollectionPlanRefused(
                     f"[R] l'ingrédient essentiel `{q.id}.{i.id}` n'a AUCUNE ligne dans le plan : "

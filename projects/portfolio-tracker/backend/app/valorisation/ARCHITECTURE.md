@@ -27,7 +27,9 @@ l'autre). Deux étages, comme dans un vrai fonds :
   forme de la fourchette (scénarios nommés pour une incertitude continue, arbre d'événements
   probabilisé pour une incertitude binaire), mécanique. Le pont `valider_pont_modele` le confronte au
   dossier et à l'exécution ([A] réponse reprise acquittée, [B] pièces au dossier, [C] exécution et
-  `valeur_action`, [D] chaque ligne du tableau est lue, [E] fourchette ordonnée) ; `evaluer_modele`
+  `valeur_action`, [D] chaque ligne du tableau est lue, [E] fourchette ordonnée, [F] un seul chiffre par
+  dossier — reprendre la réponse qui tient, chiffre propre seulement si la question est sans objet, sinon
+  attendre, #99) ; `evaluer_modele`
   rend bas/central/haut (et, pour un arbre, chaque événement en échec et en succès), sans modèle.
 
 ## Ajouter un gabarit maison — le contrat
@@ -66,3 +68,4 @@ revoir »), la réponse à plusieurs nombres, le recalcul de `va_4`-`va_6` au co
 | Pont du modèle [A]-[E] et évaluation (arbre : bas = tous échouent, haut = tous réussissent, détail par événement ; scénarios : le central est le tableau) | `check_modele_valorisation.py` §2-§3 + `negatif_modele_valorisation.sh` |
 | Signature : signer ⟺ fourchette au PV ; en attente = dernière proposée non décidée ; la signée reste affichée ; « à revoir » nommé ; écart ligne à ligne ; réponses reprenables = qui tiennent ET chiffrées | `check_signature_modele.py` + `negatif_signature_modele.sh` |
 | Les registres s'écrivent et se relisent à l'identique ; refus nommés (version décidée, remplacée, inconnue, dossier qui ne tient plus) ; aucune réponse reprise sur une question que l'alerte dit manquante ; append-only | `check_signature_modele_persist.py` (vraie base, ROLLBACK) + `negatif_051.sh` |
+| Un seul chiffre par dossier (option c) : reprendre ce qui tient, chiffre propre si sans objet, sinon attendre ; deux lignes pour une même reprise refusées | `check_modele_valorisation.py` §2 bis + `negatif_modele_valorisation.sh` |

@@ -52,10 +52,11 @@ __all__ = [
     "MODELE_SCHEMA_VERSION", "NOM_RESERVE_SEGMENTS", "SORTIE_OBLIGATOIRE",
     "TauxDeBase", "OriginePiece", "OrigineReprise", "OrigineJugement", "Origine",
     "Segment", "Hypothese", "ScenarioNomme", "ScenariosNommes", "Evenement", "ArbreEvenements",
-    "ModeleValorisation", "cle_hypothese",
+    "ModeleValorisation", "cle_hypothese", "question_reprise",
 ]
 
-MODELE_SCHEMA_VERSION = "modele-1.0.0"
+# 1.1.0 (#99) : `Hypothese.reprend` — la ligne qui tient la place d'un chiffre d'une autre méthodologie.
+MODELE_SCHEMA_VERSION = "modele-1.1.0"
 # Les hypothèses PAR SEGMENT arrivent dans la mécanique sous `segments[<id>][<nom>]` : le nom est
 # donc réservé, une hypothèse globale qui le porterait masquerait tout le découpage.
 NOM_RESERVE_SEGMENTS = "segments"
@@ -111,6 +112,25 @@ class Hypothese(Strict):
     unite: Annotated[str, Field(min_length=1)]   # « % », « M$ », « années »
     valeur: float                           # la valeur CENTRALE
     origine: Origine
+    # La question d'une AUTRE méthodologie dont cette ligne tient la place (#99, option c) — quand
+    # l'origine n'est pas déjà `reponse_reprise` : le coût du capital d'une biotech pour qui qf_1 est
+    # sans objet porte `reprend: qf_1` et un jugement ancré. Le pont vérifie alors que la question est
+    # bien sans objet pour ce titre : sinon, c'est sa réponse qu'il fallait reprendre.
+    reprend: Optional[Annotated[str, Field(pattern=r"^[a-z]{2}_[0-9]+$")]] = None
+
+    @model_validator(mode="after")
+    def _une_seule_question_reprise(self) -> "Hypothese":
+        o = self.origine
+        if self.reprend is not None and isinstance(o, OrigineReprise) and o.question_id != self.reprend:
+            raise ValueError(f"`{self.nom}` reprend la réponse de {o.question_id} en déclarant tenir la place "
+                             f"de {self.reprend} : une ligne ne reprend qu'une question")
+        return self
+
+
+def question_reprise(h: Hypothese) -> Optional[str]:
+    """La question dont la ligne porte le chiffre — par son origine (`reponse_reprise`) ou par `reprend`.
+    Détentrice unique : le pont et le contrat lisent la même."""
+    return h.origine.question_id if isinstance(h.origine, OrigineReprise) else h.reprend
 
 
 def cle_hypothese(h: Hypothese) -> str:
@@ -157,7 +177,7 @@ Fourchette = Annotated[Union[ScenariosNommes, ArbreEvenements], Field(discrimina
 
 
 class ModeleValorisation(Strict):
-    schema_version: Literal["modele-1.0.0"] = "modele-1.0.0"
+    schema_version: Literal["modele-1.1.0"] = "modele-1.1.0"
     ticker_id: Annotated[str, Field(min_length=1)]
     version: Annotated[int, Field(ge=1)]
     methodologie: Annotated[str, Field(min_length=80)]
@@ -181,6 +201,12 @@ class ModeleValorisation(Strict):
                 raise ValueError(f"`{NOM_RESERVE_SEGMENTS}` est réservé au découpage du marché")
             if h.segment is not None and h.segment not in ids_segments:
                 raise ValueError(f"l'hypothèse `{cle_hypothese(h)}` vise un segment non déclaré")
+        # Un seul chiffre par dossier (#95, #99) : deux lignes qui reprennent la même question au même
+        # endroit (le dossier entier, ou le même segment) seraient deux coûts du capital.
+        reprises = [(question_reprise(h), h.segment) for h in self.hypotheses if question_reprise(h)]
+        doubles = sorted({f"{q}@{s or 'dossier'}" for q, s in reprises if reprises.count((q, s)) > 1})
+        if doubles:
+            raise ValueError(f"deux lignes reprennent le même chiffre : {doubles} — un seul chiffre par dossier")
         chiffres = {h.segment for h in self.hypotheses if h.segment is not None}
         orphelins = [s for s in ids_segments if s not in chiffres]
         if orphelins:

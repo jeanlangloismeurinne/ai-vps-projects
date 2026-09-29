@@ -52,7 +52,9 @@ def refus(cls, **champs) -> str:
 def dossier(d: dict, ticker: str, **surcharges) -> DossierValorisation:
     x = {**d, **surcharges}
     return DossierValorisation(ticker_id=ticker, reponses_acquittees=x["reponses_acquittees"],
-                               pieces_du_dossier=frozenset(x["pieces_du_dossier"]))
+                               pieces_du_dossier=frozenset(x["pieces_du_dossier"]),
+                               questions_sans_objet=frozenset(x["questions_sans_objet"]),
+                               reprises_admises=x["reprises_admises"])
 
 
 def version(base: dict, n: int, id_: int) -> VersionModele:

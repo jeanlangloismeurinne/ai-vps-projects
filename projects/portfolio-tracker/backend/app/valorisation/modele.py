@@ -11,7 +11,13 @@ deux (#37) :
       (une hypothèse au nom d'un gabarit du fonds est refusée par le bac lui-même, donc ici) ;
   [D] la mécanique LIT chaque ligne du tableau — une hypothèse signée que le calcul ignore serait une
       ligne de façade, que le comité croirait décisive (#68 [W] transposé : déclarée, pas employée) ;
-  [E] la fourchette est ORDONNÉE : un bas au-dessus du central dit que les scénarios sont croisés.
+  [E] la fourchette est ORDONNÉE : un bas au-dessus du central dit que les scénarios sont croisés ;
+  [F] UN SEUL CHIFFRE PAR DOSSIER, option (c) de l'utilisateur (2026-09-29, #99) : une ligne qui tient la
+      place d'une question d'une autre méthodologie (`question_reprise`) — question que le référentiel
+      déclare reprise (`repris_de`) — REPREND sa réponse si elle tient aujourd'hui ; porte son propre
+      chiffre (pièce ou jugement ancré) SEULEMENT si la question est sans objet pour ce titre (qf_1 d'une
+      biotech sans chiffre d'affaires) ; et sinon le modèle ATTEND : la valorisation s'instruit après
+      les méthodologies dont elle reprend (arbitrage du 2026-09-28).
 
 L'évaluation est DÉTERMINISTE et sans appel au modèle : changer une hypothèse recalcule (acceptation
 de la 4 bis). Scénarios nommés : trois exécutions, le central sur le tableau tel quel. Arbre
@@ -30,7 +36,7 @@ from typing import Any, Mapping
 
 from app.contracts.modele_valorisation_schema import (
     NOM_RESERVE_SEGMENTS, SORTIE_OBLIGATOIRE, ArbreEvenements, Hypothese, ModeleValorisation,
-    OrigineJugement, OriginePiece, OrigineReprise, cle_hypothese,
+    OrigineJugement, OriginePiece, OrigineReprise, cle_hypothese, question_reprise,
 )
 from app.valorisation.bac_a_calcul import ErreurCalcul, executer
 
@@ -110,10 +116,14 @@ def valider_pont_modele(
     ticker_id: str,
     reponses_acquittees: Mapping[int, str],
     pieces_du_dossier: set[int],
+    questions_sans_objet: set[str] | frozenset[str],
+    reprises_admises: set[str] | frozenset[str],
 ) -> Evaluation:
     """Refuse (`ModeleRefuse`) ou rend l'évaluation du modèle. `reponses_acquittees` : answer_id →
-    question_id des réponses courantes ACQUITTÉES de ce titre ; `pieces_du_dossier` : ids des pièces
-    courantes de ce titre."""
+    question_id des réponses de ce titre qui TIENNENT aujourd'hui et portent un chiffre ;
+    `pieces_du_dossier` : ids des pièces courantes de ce titre ; `questions_sans_objet` : questions sans
+    objet pour ce titre (par son stade, ou par une réponse hors-sujet qui tient) ; `reprises_admises` :
+    les questions que le référentiel déclare reprises par la valorisation (`repris_de`)."""
     if modele.ticker_id != ticker_id:
         raise ModeleRefuse("A", f"modèle de `{modele.ticker_id}` présenté pour `{ticker_id}`")
     for h in modele.hypotheses:
@@ -128,6 +138,25 @@ def valider_pont_modele(
         hors = sorted(set(_pieces_citees(h)) - pieces_du_dossier)
         if hors:
             raise ModeleRefuse("B", f"`{cle_hypothese(h)}` cite des pièces absentes du dossier de ce titre : {hors}")
+
+    tenues = {q: a for a, q in reponses_acquittees.items()}
+    for h in modele.hypotheses:
+        q = question_reprise(h)
+        if q is None:
+            continue
+        if q not in reprises_admises:
+            raise ModeleRefuse("F", f"`{cle_hypothese(h)}` tient la place de {q}, que le référentiel ne déclare "
+                                    "reprise par aucun ingrédient de la valorisation")
+        if isinstance(h.origine, OrigineReprise):
+            continue   # [A] a vérifié que la réponse reprise tient
+        if q in tenues:
+            raise ModeleRefuse("F", f"`{cle_hypothese(h)}` porte son propre chiffre alors que {q} a une réponse qui "
+                                    f"tient au dossier (#{tenues[q]}) : la ligne doit la reprendre — un seul "
+                                    "chiffre par dossier")
+        if q not in questions_sans_objet:
+            raise ModeleRefuse("F", f"`{cle_hypothese(h)}` tient la place de {q}, qui n'a aucune réponse qui tient "
+                                    "aujourd'hui et n'est pas sans objet pour ce titre : la valorisation attend "
+                                    f"que {q} soit instruite")
 
     noms, textes = _lectures(modele)
     ignorees = [cle_hypothese(h) for h in modele.hypotheses

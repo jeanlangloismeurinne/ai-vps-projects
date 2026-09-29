@@ -1209,11 +1209,13 @@ frameworks:
   # du jour suppose (va_4…va_6). Arbitrage « option 1 » : ce qui dépend du cours n'est jamais figé —
   # recalculé à la lecture au dernier cours coté, avec sa date (#81) ; construit en capacité 4 bis.
   #
-  # ⚠️ UN SEUL MODÈLE, JAMAIS DEUX CHIFFRES. Les ingrédients « repris de qf_x / mo_x / me_x / se_x »
-  # désignent la réponse ACQUITTÉE de cette question, pas une recherche nouvelle. Le mécanisme de
-  # reprise n'existe pas encore (capacité 4 bis) : aujourd'hui le collecteur les chercherait comme
-  # n'importe quel ingrédient. Arbitrage du 2026-09-28 : la valorisation s'instruit APRÈS les autres
-  # frameworks acquittés. Règle de Greenwald (à faire tenir par le manager en 4 bis) : la croissance
+  # ⚠️ UN SEUL MODÈLE, JAMAIS DEUX CHIFFRES. Un ingrédient qui porte `repris_de` EST le chiffre de la
+  # réponse qui tient à ces questions (#99) : il ne se collecte jamais, et le modèle de valorisation le
+  # reprend. Si la question est sans objet pour ce titre (qf_1 d'une biotech sans chiffre d'affaires),
+  # le modèle porte son propre chiffre, sourcé ou jugement ancré (arbitrage « option c », 2026-09-29).
+  # Ailleurs, « repris de » dans un libellé (va_4, va_5) décrit un CALCUL qui s'appuie sur une reprise,
+  # pas un ingrédient repris tel quel. Arbitrage du 2026-09-28 : la valorisation s'instruit APRÈS les
+  # autres frameworks acquittés. Règle de Greenwald (à faire tenir par le manager en 4 bis) : la croissance
   # ne vaut que si qf_1 crée de la valeur ET que la barrière (mo_*) tient.
   - id: valorisation
     libelle: Valorisation
@@ -1239,12 +1241,15 @@ frameworks:
           - id: resultat_normalise
             libelle: Résultat d'exploitation normalisé, de milieu de cycle — repris de qf_6, qf_5 et se_4
             essentiel: true
+            repris_de: [qf_6, qf_5, se_4]
           - id: taux_d_actualisation
             libelle: Coût du capital servant de taux d'actualisation — repris de qf_1
             essentiel: true
+            repris_de: [qf_1]
           - id: passage_a_la_valeur_par_action
             libelle: Dette nette, trésorerie excédentaire et nombre d'actions dilué — repris de qf_4
             essentiel: true
+            repris_de: [qf_4]
           - id: valeur_des_actifs
             libelle: Ce que coûterait la reconstitution des actifs, ou ce qu'un acquéreur paierait pour eux
             essentiel: false
@@ -1276,12 +1281,15 @@ frameworks:
           - id: cout_de_la_croissance
             libelle: Capital à réinvestir par point de croissance — repris de qf_3 ; cash réellement disponible — repris de qf_2
             essentiel: true
+            repris_de: [qf_3, qf_2]
           - id: duree_et_plafond_de_la_croissance
             libelle: Durée pendant laquelle la croissance peut durer — reprise de mo_4 — et son plafond — repris de me_5
             essentiel: true
+            repris_de: [mo_4, me_5]
           - id: dilution_future
             libelle: Dilution attendue des actionnaires pour financer le plan — reprise de qf_7
             essentiel: false
+            repris_de: [qf_7]
         variables_par_archetype:
           rentable:
             mode: variable

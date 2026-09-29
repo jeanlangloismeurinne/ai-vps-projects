@@ -57,6 +57,13 @@ mutations=(
   "$S¦                if not 0.0 <= h.valeur <= 1.0:¦                if False:¦probabilité hors [0,1]"
   "$S¦    ecart_justifie: Annotated[str, Field(min_length=30)]¦    ecart_justifie: str¦jugement sans écart justifié"
   "$S¦    methodologie: Annotated[str, Field(min_length=80)]¦    methodologie: str¦méthodologie non décrite"
+  # ── [F] un seul chiffre par dossier, option (c) (#99) ──
+"$M¦        if q not in reprises_admises:¦        if False:¦ne fait pas reprendre"
+"$M¦        if q in tenues:¦        if False:¦SECOND chiffre, refusé"
+"$M¦        if q not in questions_sans_objet:¦        if False:¦la valorisation ATTEND"
+"$M¦        if q not in questions_sans_objet:¦        if True:¦propre coût du capital (jugement ancré)"
+"$S¦        if doubles:¦        if False:¦deux lignes qui reprennent qf_1"
+"$S¦        if self.reprend is not None and isinstance(o, OrigineReprise) and o.question_id != self.reprend:¦        if False:¦en déclarant tenir la place de qf_4"
 )
 
 source "$(dirname "$0")/_negatif.sh"
