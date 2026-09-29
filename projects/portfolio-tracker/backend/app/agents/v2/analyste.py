@@ -58,6 +58,7 @@ que la synthèse, #54) ; sa resynchro en `agent_prompts` viendra avec le câblag
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
@@ -69,6 +70,7 @@ from app.agents.v2.common import TIER_ORDER, _TIER_RANK
 from app.agents.v2.frameworks import (
     FrameworkAnswerRefused,
     _plus_faible,
+    completer_encadre,
     load_frameworks,
     nature_effective_de,
     nature_satisfait,
@@ -386,9 +388,14 @@ def contexte_analyste(
             ],
             # L'encadré que la réponse doit rendre, id et unité IMPOSÉS (4 bis). Vide = la question ne
             # se chiffre pas. Ce n'est pas un levier d'exigence (#59) : c'est la forme de la réponse.
+            # Les chiffres CALCULÉS (#101) n'y sont pas : le code les calcule, on ne les demande pas.
             "chiffres_cles_demandes": [
                 {"id": c.id, "libelle": c.libelle, "unite": c.unite, "periode": c.periode}
-                for c in q.chiffres_cles
+                for c in q.chiffres_cles if c.calcul is None
+            ],
+            "chiffres_calcules_par_le_systeme": [
+                {"id": c.id, "libelle": c.libelle, "formule": c.calcul}
+                for c in q.chiffres_cles if c.calcul is not None
             ],
             "corpus": [
                 {
@@ -553,7 +560,10 @@ def assembler_answer(
         ticker_id=ticker_id,
         analyste=analyste,
         statut=brute.statut,
-        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles),
+        # Les chiffres CALCULÉS de l'encadré sont écrits ici, par leur détenteur (#101), jamais par le
+        # modèle : une ligne qu'il aurait fournie pour eux est écartée et remplacée par le calcul.
+        reponse=Reponse(verbatim=brute.verbatim,
+                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),
                         sens=brute.sens),
         fondation=Fondation(cited_entry_ids=cites, rang_derive=rang, nature_effective=nature),
         approximation=brute.approximation,
@@ -595,15 +605,25 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "L'ENCADRÉ DE CHIFFRES CLÉS. Chaque question porte `chiffres_cles_demandes` : les chiffres que ta "
     "réponse doit rendre, comme l'encadré qui clôt une note d'analyste. Sur `repondu` et `approxime`, "
     "`chiffres_cles` contient EXACTEMENT une ligne par chiffre demandé — ni plus, ni moins —, avec son "
-    "`id` et son `unite` recopiés tels quels. Une ligne porte soit `valeur` (un nombre, dans l'unité "
-    "demandée : 12.4 pour 12,4 %, 815.4 pour 815,4 M$) ET `date_ou_periode` (ce que ce chiffre mesure "
-    "réellement : « au 2026-06-30 », « exercice 2025 »), soit — si le corpus ne permet pas de "
-    "l'établir — `motif_absence` (ce qui manque, en une phrase) et rien d'autre. Zéro est une valeur, "
-    "pas une absence. Un chiffre de l'encadré obéit aux mêmes règles que ta réponse : relevé dans une "
-    "source citée, ou reconstruit et alors ta réponse est un `approxime`. Si `chiffres_cles_demandes` "
-    "est vide, `chiffres_cles` est vide. Exemple de ligne : "
-    "{\"id\": \"dette_nette\", \"unite\": \"M$\", \"valeur\": -328.0, "
-    "\"date_ou_periode\": \"au 2026-06-30\"}.\n\n"
+    "`id` et son `unite` recopiés tels quels. Une ligne porte soit `valeur` (un nombre LU DANS UNE "
+    "SOURCE CITÉE, converti dans l'unité demandée : 12.4 pour 12,4 %, 815.4 pour 815,4 M$) ET "
+    "`date_ou_periode` (ce que ce chiffre mesure réellement : « au 2026-06-30 », « exercice 2025 »), "
+    "soit `motif_absence` (ce qui manque, en une phrase) et rien d'autre. Zéro est une valeur, pas une "
+    "absence. Un chiffre de l'encadré obéit aux mêmes règles que ta réponse : relevé dans une source "
+    "citée, ou reconstruit et alors ta réponse est un `approxime`. Si `chiffres_cles_demandes` est vide, "
+    "`chiffres_cles` est vide.\n"
+    "UN CHIFFRE MANQUANT NE FAIT PAS TOMBER LA QUESTION. Si le corpus répond à la question mais ne "
+    "permet pas d'établir un chiffre de l'encadré, tu réponds quand même (`repondu` ou `approxime`) et "
+    "cette ligne porte son `motif_absence`. `sans_fondement` est réservé au cas où le corpus ne permet "
+    "de répondre à la QUESTION elle-même — jamais à un chiffre de l'encadré qui manque.\n"
+    "LES CHIFFRES CALCULÉS NE SONT PAS À TOI. `chiffres_calcules_par_le_systeme` liste les chiffres que "
+    "le système calcule lui-même à partir de tes lignes (par exemple une différence de deux chiffres "
+    "relevés) : tu ne les rends pas, tu ne les calcules pas, et tu n'as pas à citer de source qui les "
+    "calcule.\n"
+    "Forme d'une ligne : {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", "
+    "\"valeur\": <nombre lu dans une source citée>, \"date_ou_periode\": \"<ce qu'il mesure>\"} — "
+    "ou {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", \"motif_absence\": \"<ce qui "
+    "manque>\"}.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "
     "pas celles qui en parlent : un état financier qui donne le chiffre vaut citation ; un "
     "commentaire qui le mentionne n'en est pas la source. Si tu ne peux citer qu'un commentaire, "
@@ -660,6 +680,111 @@ async def _resolve_analyste_agent() -> ResolvedAgent:
         model=base.model,
         system_prompt=_ANALYSTE_SYSTEM_PROMPT,
     )
+
+
+@dataclass
+class _Refus:
+    """Un refus d'agent sur UNE question (contrat, pont, statut hors liste, omission) — jamais un gap."""
+    motif: str
+    brute: Optional[AnalysteReponse] = None
+
+
+def _traiter_sortie(
+    sortie: AnalysteSortie,
+    interrogeables: dict[str, QuestionDefinition],
+    admis: dict[str, list[str]],
+    *,
+    profils: dict[str, dict[str, Any]],
+    entries: dict[int, dict[str, Any]],
+    entete: dict[str, str],
+) -> tuple[dict[str, Any], list[tuple[str, str]]]:
+    """Une sortie du modèle → une ISSUE par question interrogée (`FrameworkAnswer` ou `_Refus`), + les
+    refus qui ne portent sur aucune question interrogée (question non posée, deuxième réponse). Pur."""
+    issues: dict[str, Any] = {}
+    hors: list[tuple[str, str]] = []
+    for brute in sortie.reponses:
+        q = interrogeables.get(brute.question_id)
+        if q is None:
+            hors.append((brute.question_id, (
+                "réponse à une question qui n'était pas posée (hors framework, sans objet pour "
+                "cet archétype, ou sans corpus citable)")))
+            continue
+        if brute.question_id in issues:
+            hors.append((brute.question_id,
+                         "deuxième réponse du même analyste à la même question — "
+                         "deux réponses ne se moyennent ni ne se remplacent (§3.4)"))
+            continue
+
+        if brute.statut not in admis[brute.question_id]:
+            # Le vocabulaire de statuts était FERMÉ et montré (même forme que `sens_admis`) : en
+            # sortir est une faute d'agent, nommée ici plutôt que laissée au pont, qui dirait « rang
+            # sous le plancher » là où la cause est « statut non ouvert ».
+            issues[brute.question_id] = _Refus(
+                f"statut `{brute.statut}` hors des statuts ouverts "
+                f"{admis[brute.question_id]} pour `{brute.question_id}` sur ce corpus", brute)
+            continue
+
+        if brute.statut == "sans_fondement":
+            issues[brute.question_id] = reponse_non_fondable(
+                q, **entete, manque=brute.verbatim,
+                citables=len(corpus_citable(q, entries)), fournies=len(entries))
+            continue
+
+        try:  # (4) contrat PUIS pont — un refus reste à sa question
+            answer = assembler_answer(brute, question=q, entries=entries, **entete)
+            valider_pont_framework_answer(answer, questions=profils, entries=entries)
+        except Exception as exc:  # noqa: BLE001 — contrat (ValidationError) ou pont (Refused)
+            issues[brute.question_id] = _Refus(f"{type(exc).__name__}: {exc}", brute)
+            continue
+        issues[brute.question_id] = answer
+
+    # Une question interrogée que le modèle n'a pas traitée est une OMISSION D'AGENT : elle sort en
+    # refus, jamais en `non_fondable` — le corpus, lui, était là.
+    for qid in interrogeables:
+        issues.setdefault(qid, _Refus(_MOTIF_OMISSION))
+    return issues, hors
+
+
+def _message_reprise(
+    a_reprendre: dict[str, _Refus],
+    admis: dict[str, list[str]],
+    interrogeables: dict[str, QuestionDefinition],
+    entries: dict[int, dict[str, Any]],
+) -> str:
+    """La remarque qui accompagne le renvoi : le motif, et — quand une réponse directe cite des sources
+    qui ne sont pas des relevés (le refus [E] mesuré sur RVMD qf_4/qf_7) — LESQUELLES. On dit ce qui ne
+    va pas dans ce qu'il a rendu, jamais combien de preuve suffirait (#59) : le vocabulaire de statuts
+    rappelé est celui qu'il avait déjà."""
+    lignes = []
+    for qid, refus in a_reprendre.items():
+        q = interrogeables[qid]
+        ligne = f"- `{qid}` : {refus.motif}"
+        brute = refus.brute
+        if brute is not None and brute.statut == "repondu":
+            non_releves = [i for i in dict.fromkeys(brute.cited_entry_ids) if i in entries and not
+                           nature_satisfait(nature_effective_de([entries[i].get("nature")], approximation=False),
+                                            q.nature_attendue)]
+            if non_releves:
+                ligne += (f"\n  Les sources {non_releves} ne sont pas des relevés (elles calculent ou "
+                          "commentent) : une réponse directe à cette question ne les cite pas. Retire-les ; "
+                          "un chiffre qu'elles seules établissent se rend avec son `motif_absence`"
+                          + (" — ou reconstruis la réponse en `approxime`." if "approxime" in admis[qid]
+                             else "."))
+        ligne += f"\n  Statuts ouverts : {admis[qid]}."
+        lignes.append(ligne)
+    return ("Certaines de tes réponses sont refusées. Reprends UNIQUEMENT ces questions, en corrigeant "
+            "ce qui est dit :\n" + "\n".join(lignes) + "\n\nRends l'objet JSON `{\"reponses\": [ ... ]}` "
+            "avec une réponse pour chacune de ces questions, et rien d'autre.")
+
+
+def _cumuler(premier: Any, second: Any) -> Any:
+    """Le passage coûte les DEUX appels (#41 : un échec, ou un renvoi, se comptabilise)."""
+    if dataclasses.is_dataclass(premier) and dataclasses.is_dataclass(second):
+        return dataclasses.replace(second, tokens_in=premier.tokens_in + second.tokens_in,
+                                   tokens_out=premier.tokens_out + second.tokens_out,
+                                   cost_usd=premier.cost_usd + second.cost_usd,
+                                   attempts=premier.attempts + second.attempts)
+    return second
 
 
 async def repondre(
@@ -729,53 +854,40 @@ async def repondre(
         messages = [{"role": "user", "content": _message_analyste(contexte)}]
         # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).
         run = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)  # (3)
+        profils = question_profiles(fichier)
+        issues, hors = _traiter_sortie(run.parsed, interrogeables, admis, profils=profils,
+                                       entries=entries, entete=entete)
+
+        # (3 bis) LE RENVOI UNIQUE (#101). Comme un directeur de la recherche qui rend une note avec sa
+        # remarque : une réponse refusée (contrat, pont, statut hors liste, omission) est renvoyée UNE
+        # fois au modèle avec son motif, au lieu d'être perdue — une question refusée ne produit aucun
+        # mandat, elle resterait sans réponse. Une fois, pas davantage : on ne relance pas jusqu'au vert
+        # (`feedback_jugement_modele_instable_entre_passages`). Seules les questions renvoyées sont
+        # relues au second tour ; ce qu'il redit des autres est ignoré (on ne le lui a pas demandé).
+        a_reprendre = {qid: r for qid, r in issues.items() if isinstance(r, _Refus)}
+        if a_reprendre:
+            messages = messages + [
+                {"role": "assistant", "content": getattr(run, "raw_content", None)
+                 or json.dumps(run.parsed.model_dump(mode="json"), ensure_ascii=False)},
+                {"role": "user", "content": _message_reprise(a_reprendre, admis, interrogeables, entries)},
+            ]
+            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)
+            issues2, _ = _traiter_sortie(run2.parsed, {q: interrogeables[q] for q in a_reprendre}, admis,
+                                         profils=profils, entries=entries, entete=entete)
+            for qid, premier in a_reprendre.items():
+                second = issues2[qid]
+                issues[qid] = second if not isinstance(second, _Refus) else _Refus(
+                    f"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : {second.motif}")
+            run = _cumuler(run, run2)
         resultat.run = run
 
-        profils = question_profiles(fichier)
-        vues: set[str] = set()
-        for brute in run.parsed.reponses:
-            q = interrogeables.get(brute.question_id)
-            if q is None:
-                resultat.refus.append((brute.question_id, (
-                    "réponse à une question qui n'était pas posée (hors framework, sans objet pour "
-                    "cet archétype, ou sans corpus citable)")))
-                continue
-            if brute.question_id in vues:
-                resultat.refus.append((brute.question_id,
-                                       "deuxième réponse du même analyste à la même question — "
-                                       "deux réponses ne se moyennent ni ne se remplacent (§3.4)"))
-                continue
-            vues.add(brute.question_id)
-
-            if brute.statut not in admis[brute.question_id]:
-                # Le vocabulaire de statuts était FERMÉ et montré (même forme que `sens_admis`) :
-                # en sortir est une faute d'agent, nommée ici plutôt que laissée au pont, qui
-                # dirait « rang sous le plancher » là où la cause est « statut non ouvert ».
-                resultat.refus.append((brute.question_id, (
-                    f"statut `{brute.statut}` hors des statuts ouverts "
-                    f"{admis[brute.question_id]} pour `{brute.question_id}` sur ce corpus")))
-                continue
-
-            if brute.statut == "sans_fondement":
-                citables = corpus_citable(q, entries)
-                resultat.answers.append(reponse_non_fondable(
-                    q, **entete, manque=brute.verbatim,
-                    citables=len(citables), fournies=len(entries)))
-                continue
-
-            try:  # (4) contrat PUIS pont — un refus reste à sa question
-                answer = assembler_answer(brute, question=q, entries=entries, **entete)
-                valider_pont_framework_answer(answer, questions=profils, entries=entries)
-            except Exception as exc:  # noqa: BLE001 — contrat (ValidationError) ou pont (Refused)
-                resultat.refus.append((brute.question_id, f"{type(exc).__name__}: {exc}"))
-                continue
-            resultat.answers.append(answer)
-
-        # Une question interrogée que le modèle n'a pas traitée est une OMISSION D'AGENT : elle sort
-        # en refus, jamais en `non_fondable` — le corpus, lui, était là.
         for qid in interrogeables:
-            if qid not in vues:
-                resultat.refus.append((qid, _MOTIF_OMISSION))
+            issue = issues[qid]
+            if isinstance(issue, _Refus):
+                resultat.refus.append((qid, issue.motif))
+            else:
+                resultat.answers.append(issue)
+        resultat.refus.extend(hors)
 
     # (5) aucune question ne s'évapore.
     traitees = {a.question_id for a in resultat.answers} | {qid for qid, _ in resultat.refus}

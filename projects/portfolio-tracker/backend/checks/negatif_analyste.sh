@@ -58,8 +58,8 @@ mutations=(
 "$PONT¦                profil[clef] = list(valeur) if isinstance(valeur, list) else valeur¦                profil[clef] = valeur¦sont des COPIES"
 # §7 — trois états nommés, et surtout : une panne d'agent n'est pas un manque de données
 "$SRC¦            remede=\"collecte\",¦            remede=\"rafraichissement\",¦avec le remède"
-"$SRC¦                resultat.refus.append((qid, _MOTIF_OMISSION))¦                resultat.answers.append(reponse_non_fondable(interrogeables[qid], **entete, manque=_MOTIF_OMISSION, citables=1, fournies=len(entries)))¦PAS en \`non_fondable\`"
-"$SRC¦            if brute.question_id in vues:¦            if False:¦DEUXIÈME réponse du même analyste"
+"$SRC¦        issues.setdefault(qid, _Refus(_MOTIF_OMISSION))¦        issues.setdefault(qid, reponse_non_fondable(interrogeables[qid], **entete, manque=_MOTIF_OMISSION, citables=1, fournies=len(entries)))¦PAS en \`non_fondable\`"
+"$SRC¦        if brute.question_id in issues:¦        if False:¦DEUXIÈME réponse du même analyste"
 "$SRC¦    if perdues:¦    if False:¦NI en réponse NI en refus fait LEVER"
 # §8 — les statuts admissibles, calculés AVANT la dépense (#40)
 "$SRC¦            ouverts.append(\"approxime\")¦            pass¦\`approxime\` reste OUVERT"
@@ -74,10 +74,21 @@ mutations=(
 "$SRC¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if aucune_reponse_possible(ouverts):¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if False:¦SANS aucun appel modèle"
 "$SRC¦        if not citables:¦        if False:¦DEUX causes ont DEUX motifs distincts"
 "$SRC¦                manque=(f\"aucune réponse recevable n'est possible sur ce corpus pour \"¦                manque=(f\"aucune source fournie ne fonde « {q.enonce} » — pour \"¦DEUX causes ont DEUX motifs distincts"
-"$SRC¦            if brute.statut not in admis[brute.question_id]:¦            if False:¦sort en refus nommé"
+"$SRC¦        if brute.statut not in admis[brute.question_id]:¦        if False:¦sort en refus nommé"
 # ── L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ──────────────────────────────────────────────────────────
-"$SRC¦            \"chiffres_cles_demandes\": [¦            \"chiffres_demandes_ailleurs\": [¦les chiffres DÉCLARÉS par le référentiel"
-"$SRC¦        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles),¦        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles)[:0],¦entre TEL QUEL dans la réponse"
+"$SRC¦            \"chiffres_cles_demandes\": [¦            \"chiffres_demandes_ailleurs\": [¦les chiffres RELEVÉS déclarés"
+"$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles))[:0],¦entre TEL QUEL dans la réponse"
+# ── #101 : les chiffres CALCULÉS sont au code, et le renvoi unique ───────────────────────────────
+"$SRC¦                for c in q.chiffres_cles if c.calcul is None\n            ],\n            \"chiffres_calcules¦                for c in q.chiffres_cles\n            ],\n            \"chiffres_calcules¦les chiffres RELEVÉS déclarés"
+"$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=list(brute.chiffres_cles),¦l'assemblage ÉCRIT le chiffre calculé"
+"$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
+"$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
+"$SRC¦            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦            await run_json_agent(agent, messages, AnalysteSortie, json_object=False)\n            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦une fois, pas davantage"
+"$SRC¦                {\"role\": \"user\", \"content\": _message_reprise(a_reprendre, admis, interrogeables, entries)},¦                {\"role\": \"user\", \"content\": _message_reprise({**{q: _Refus(\"déjà acquise\") for q in interrogeables}, **a_reprendre}, admis, interrogeables, entries)},¦ne redemande QUE la question refusée"
+"$SRC¦        ligne = f\"- \`{qid}\` : {refus.motif}\"¦        ligne = f\"- \`{qid}\` : refusée\"¦PORTE le motif du refus"
+"$SRC¦            if non_releves:¦            if False:¦en NOMMANT la pièce"
+"$SRC¦                    f\"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : {second.motif}\")¦                    second.motif)¦de nouveau refusée au renvoi reste REFUSÉE"
+"$SRC¦        return dataclasses.replace(second, tokens_in=premier.tokens_in + second.tokens_in,¦        return dataclasses.replace(second, tokens_in=second.tokens_in,¦COÛTE les deux appels"
 "$SRC¦            if self.chiffres_cles:¦            if False:¦qui porte un encadré est refusé"
 )
 

@@ -329,6 +329,7 @@ frameworks:
             libelle: Dette nette — dette brute moins trésorerie et placements (négative si trésorerie nette)
             unite: "M$"
             periode: à la date du dernier bilan
+            calcul: dette_brute - tresorerie_et_placements   # calculé par le code (#101), jamais par l'analyste
         variables_par_archetype:
           rentable:
             mode: variable
@@ -448,6 +449,7 @@ frameworks:
             libelle: Autonomie de financement — trésorerie mobilisable rapportée à la consommation
             unite: "mois"
             periode: à la date du dernier bilan
+            calcul: tresorerie_mobilisable / consommation_annuelle * 12   # en mois (#101)
         variables_par_archetype:
           rentable:
             mode: variable

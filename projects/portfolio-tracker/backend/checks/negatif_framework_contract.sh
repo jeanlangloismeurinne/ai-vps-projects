@@ -55,6 +55,13 @@ mutations=(
 "$PONT¦        if manquants or inventes:¦        if manquants:¦un chiffre NON déclaré est refusé"
 "$PONT¦        if mauvaises:¦        if False:¦dans une AUTRE unité"
 "$PONT¦        if declares is None:¦        if False:¦un profil sans déclaration d'encadré"
+# ── #101 : un chiffre CALCULÉ vaut sa formule (pont [K bis]) et c'est `completer_encadre` qui l'écrit ──
+"$PONT¦        if faux:¦        if False:¦NE vaut PAS sa formule est refusé"
+"$PONT¦            if (c.valeur is None) != (e.valeur is None) or (¦            if False or (¦ÉTABLI alors qu'un de ses termes ne l'est pas"
+"$PONT¦    releves = [c for c in lignes if c.id not in ids_calcules]¦    releves = list(lignes)¦rend UNE ligne par chiffre"
+"$PONT¦        absents = [n for n in noms if par_id.get(n) is None or par_id[n].valeur is None]¦        absents = [n for n in noms if par_id.get(n) is None]¦NON établi parce qu'un terme ne l'est pas"
+"$PONT¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f\"non calculable : {e}\"))¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, valeur=0.0, date_ou_periode=\"zéro\"))¦dénominateur NUL"
+"$PONT¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if len(periodes) == 1 else¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if True else¦deux périodes différentes"
 )
 
 source "$(dirname "$0")/_negatif.sh"

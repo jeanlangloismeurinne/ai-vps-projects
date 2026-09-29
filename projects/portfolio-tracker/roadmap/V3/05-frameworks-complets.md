@@ -199,6 +199,12 @@ séance suivante).
     `backend/tools/retraits/2026-09-29_reemission_qf_rvmd.sql`. Prochain geste : corriger EN AMONT (l'analyste
     doit rendre un chiffre calculé en `approxime`, et rendre l'encadré avec motif d'absence plutôt que
     tomber en `sans_fondement`), PUIS réémettre — jamais relancer jusqu'à obtenir le vert.
+  - ✅ **Retrait appliqué et correction en amont livrée le 2026-09-29 (#101)** : retrait sur décision de
+    l'utilisateur (469-474 de nouveau courantes) ; le code calcule les chiffres calculés de l'encadré
+    (dette nette, autonomie), un chiffre manquant ne fait plus tomber la question, une réponse refusée
+    est renvoyée une fois. Mesuré sans écriture : qf_4 3/3, qf_6 3/3, qf_7 1/3. **Reste : la réémission
+    (un passage, feu vert utilisateur).** Dette bloquante pour la production consignée au fichier de
+    reprise (une ré-analyse peut remplacer une réponse par une moins bonne).
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
   que la barrière tient)

@@ -277,13 +277,29 @@ leve("… et le pont la refuse bien",
      FrameworkAnswerRefused)
 
 
+def _pont_passe(answer, motif=False):
+    try:
+        valider_pont_framework_answer(answer, questions=question_profiles(F), entries=ENTRIES)
+        return "passe" if motif else True
+    except Exception as e:  # noqa: BLE001
+        return f"{type(e).__name__}: {str(e)[:200]}" if motif else False
+
+
 # ── §5 bis L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ─────────────────────────────────────────────────────
 print("\n[5 bis] l'ENCADRÉ : le modèle voit les chiffres demandés, les rend, et le code les recopie tels quels")
 _dem = {q["id"]: q.get("chiffres_cles_demandes") for q in CTX["questions"]}
-check("le contexte montre, par question, les chiffres DÉCLARÉS par le référentiel (id et unité imposés)",
+check("le contexte DEMANDE, par question, les chiffres RELEVÉS déclarés (id et unité imposés)",
       [(c["id"], c["unite"]) for c in (_dem.get("qf_4") or [])]
-      == [(c.id, c.unite) for c in Q["qf_4"].chiffres_cles] and len(_dem.get("qf_4") or []) == 3,
+      == [(c.id, c.unite) for c in Q["qf_4"].chiffres_cles if c.calcul is None]
+      and len(_dem.get("qf_4") or []) == 2,
       f"→ {_dem.get('qf_4')}")
+# #101 — la dette nette est CALCULÉE par le code : elle n'est pas demandée, elle est annoncée avec sa formule.
+_calc = {q["id"]: q.get("chiffres_calcules_par_le_systeme") for q in CTX["questions"]}
+check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés, formule comprise (#101)",
+      [c["id"] for c in (_calc.get("qf_4") or [])] == ["dette_nette"]
+      and (_calc.get("qf_4") or [{}])[0].get("formule") == "dette_brute - tresorerie_et_placements"
+      and "dette_nette" not in [c["id"] for c in (_dem.get("qf_4") or [])],
+      f"→ demandés {_dem.get('qf_4')} / calculés {_calc.get('qf_4')}")
 _a6 = A.assembler_answer(brute(), **_asm)
 check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre réécrit par le code)",
       [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles] == ENC_QF6,
@@ -291,6 +307,28 @@ check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre ré�
 leve("un `sans_fondement` qui porte un encadré est refusé (un manque qui donne ses chiffres est une réponse)",
      lambda: A.AnalysteReponse(question_id="qf_4", statut="sans_fondement", verbatim="il manque la dette",
                                chiffres_cles=ENC_QF4), ValidationError)
+# #101 — la dette nette RÉELLE de RVMD (487,43 − 3 937,969) contre la valeur que le modèle avait recopiée
+# de l'EXEMPLE du prompt (−328) : c'est le code qui l'écrit, la ligne du modèle est écartée.
+_ENC_RVMD = [{"id": "dette_brute", "unite": "M$", "valeur": 487.43, "date_ou_periode": "au 2026-06-30"},
+             {"id": "tresorerie_et_placements", "unite": "M$", "valeur": 3937.969, "date_ou_periode": "au 2026-06-30"},
+             {"id": "dette_nette", "unite": "M$", "valeur": -328.0, "date_ou_periode": "au 2026-06-30"}]
+_a4 = A.assembler_answer(A.AnalysteReponse(question_id="qf_4", statut="repondu", verbatim="dette convertible",
+                                           sens="aucune_contrainte", cited_entry_ids=[1],
+                                           chiffres_cles=_ENC_RVMD),
+                         question=Q["qf_4"], entries=ENTRIES, **_entete)
+_dn = {c.id: c for c in _a4.reponse.chiffres_cles}.get("dette_nette")
+check("l'assemblage ÉCRIT le chiffre calculé (−3 450,539) et écarte celui du modèle (−328) (#101)",
+      _dn is not None and _dn.valeur is not None and abs(_dn.valeur + 3450.539) < 1e-6,
+      f"→ {_dn}")
+check("… par le DÉTENTEUR unique `completer_encadre` (un `Call`), jamais un calcul recopié (#46)",
+      any(isinstance(n, ast.Call) and getattr(n.func, "id", None) == "completer_encadre"
+          for n in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(A.assembler_answer))))))
+check("… et la réponse assemblée passe le pont [K bis] (le calcul du code est celui que le pont attend)",
+      _pont_passe(_a4), f"→ {_pont_passe(_a4, motif=True)}")
+import re as _re
+check("l'exemple de ligne du prompt ne porte AUCUNE valeur chiffrée recopiable (le −328 du 2026-09-29)",
+      _re.search(r'"valeur\\?"\s*:\s*-?\d', A._ANALYSTE_SYSTEM_PROMPT) is None,
+      "→ un exemple chiffré est recopié par le modèle comme un fait (#39)")
 check("la consigne de l'analyste ENSEIGNE l'encadré : une ligne par chiffre demandé, absence motivée",
       "chiffres_cles_demandes" in A._ANALYSTE_SYSTEM_PROMPT and "motif_absence" in A._ANALYSTE_SYSTEM_PROMPT
       and "date_ou_periode" in A._ANALYSTE_SYSTEM_PROMPT)
@@ -474,6 +512,88 @@ check("une question qui ne sort NI en réponse NI en refus fait LEVER `AnalysteE
 check("… et le motif NOMME les questions perdues (un refus qui ne dit pas quoi ne se rouvre pas)",
       isinstance(_evap, A.AnalysteEvaporation)
       and all(q in str(_evap) for q in ("qf_1", "qf_2", "qf_3", "qf_5")), f"→ {_evap}")
+
+
+# ── §7 bis le RENVOI UNIQUE (#101) ────────────────────────────────────────────────────────────────
+print("\n[7 bis] une réponse refusée est renvoyée UNE fois au modèle avec son motif, jamais davantage")
+
+
+def passage_tours(tours, entries=ENTRIES):
+    """`repondre` hors-ligne, le faux modèle rendant `tours[k]` au k-ième appel — et en gardant les
+    messages reçus. Le nombre d'appels EST la mesure (« une fois, pas davantage »)."""
+    class _Run:
+        def __init__(self, parsed):
+            self.parsed = parsed
+
+    appels = []
+
+    async def _faux_run(agent, messages, modele, **kw):
+        appels.append(messages)
+        return _Run(modele(reponses=tours[min(len(appels) - 1, len(tours) - 1)]))
+
+    vrai_run, vrai_resolve = A.run_json_agent, A._resolve_analyste_agent
+    A.run_json_agent = _faux_run
+    A._resolve_analyste_agent = lambda: asyncio.sleep(0)
+    try:
+        return asyncio.get_event_loop().run_until_complete(
+            A.repondre(TICKER, "qualite_financiere", "pre_revenus",
+                       analyste="analyste_1", entries=entries, fichier=F)), appels
+    except Exception as exc:  # noqa: BLE001
+        return exc, appels
+    finally:
+        A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
+
+
+# Tour 1 : l'encadré de qf_4 est omis ([K]) ; tour 2 : il est rendu. qf_4 doit être ACQUISE, en 2 appels.
+_T1 = [{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:]
+_Rr, _ap_r = passage_tours([_T1, NOMINAL])
+check("une réponse refusée puis corrigée au renvoi est ACQUISE (qf_4), en exactement 2 appels",
+      "qf_4" in [a.question_id for a in _ans(_Rr) if a.statut == "repondu"] and _ref(_Rr) == []
+      and len(_ap_r) == 2, f"→ {len(_ap_r)} appel(s), refus {_ref(_Rr)}")
+check("… le renvoi PORTE le motif du refus (le modèle sait ce qu'il doit corriger)",
+      len(_ap_r) == 2 and "ne porte pas les chiffres que la question déclare" in _ap_r[1][-1]["content"]
+      and "qf_4" in _ap_r[1][-1]["content"], f"→ {(_ap_r[1][-1]['content'][:200] if len(_ap_r) == 2 else '')}")
+check("… et ne redemande QUE la question refusée (qf_6/qf_7, acquises, ne sont pas rouvertes)",
+      len(_ap_r) == 2 and "`qf_6`" not in _ap_r[1][-1]["content"] and "`qf_7`" not in _ap_r[1][-1]["content"]
+      and sorted(a.question_id for a in _ans(_Rr)) == sorted(Q))
+_Rn, _ap_n = passage_tours([NOMINAL])
+check("un passage sans refus ne renvoie RIEN (1 appel : le renvoi n'est pas une seconde lecture gratuite)",
+      len(_ap_n) == 1 and _ref(_Rn) == [], f"→ {len(_ap_n)} appel(s)")
+_Rd, _ap_d = passage_tours([_T1, _T1, NOMINAL])
+check("une réponse de nouveau refusée au renvoi reste REFUSÉE — une fois, pas davantage (2 appels, pas 3)",
+      len(_ap_d) == 2 and [q for q, _ in _ref(_Rd)] == ["qf_4"]
+      and "renvoyée une fois" in _ref(_Rd)[0][1], f"→ {len(_ap_d)} appel(s), {_ref(_Rd)}")
+check("… et ce double refus ne devient toujours PAS un gap (une panne d'agent reste une panne d'agent)",
+      not any(a.question_id == "qf_4" for a in _ans(_Rd)))
+# Le refus [E] mesuré sur RVMD : un `repondu` à une question de MESURE qui cite une pièce calculée. Le
+# renvoi NOMME la pièce qui n'est pas un relevé — sans montrer ni tier ni plancher (#59).
+_E_ENTRIES = {**ENTRIES, 6: {"reliability_tier": "A", "nature": "interpretation", "title": "guidance calculée",
+                             "content": "Calcul : dépenses GAAP moins rémunération en actions",
+                             "source_type": "company_ir_official", "source_date": "2026-08-05"}}
+_E1 = [{**NOMINAL[0], "cited_entry_ids": [1, 6]}] + NOMINAL[1:]
+_Re, _ap_e = passage_tours([_E1, NOMINAL], entries=_E_ENTRIES)
+check("un refus [E] (pièce calculée citée dans un `repondu`) est renvoyé en NOMMANT la pièce, puis acquis",
+      len(_ap_e) == 2 and "[6]" in _ap_e[1][-1]["content"] and "motif_absence" in _ap_e[1][-1]["content"]
+      and "qf_4" in [a.question_id for a in _ans(_Re)], f"→ {(_ap_e[1][-1]['content'][:300] if len(_ap_e) == 2 else _ref(_Re))}")
+check("… et le renvoi ne montre ni tier ni plancher (dire ce qui ne va pas ≠ dire combien de preuve suffit)",
+      len(_ap_e) == 2 and not any(t in _ap_e[1][-1]["content"] for t in ("plancher", "reliability_tier", "tier ")))
+
+
+from dataclasses import dataclass as _dc
+
+
+@_dc
+class _R:
+    tokens_in: int
+    tokens_out: int
+    cost_usd: float
+    attempts: int
+
+
+_cum = A._cumuler(_R(100, 10, 0.002, 1), _R(50, 5, 0.001, 1))
+check("le passage COÛTE les deux appels (#41 : un renvoi se comptabilise, il n'est pas gratuit)",
+      (_cum.tokens_in, _cum.tokens_out, round(_cum.cost_usd, 6), _cum.attempts) == (150, 15, 0.003, 2),
+      f"→ {_cum}")
 
 
 # ── §8 les statuts admissibles, calculés AVANT la dépense ─────────────────────────────────────────

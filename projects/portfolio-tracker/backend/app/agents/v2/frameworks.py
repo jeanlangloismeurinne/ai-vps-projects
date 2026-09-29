@@ -50,12 +50,21 @@ from pydantic import ValidationError
 
 from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
 from app.contracts.collection_plan_schema import CollectionPlan
+from app.contracts.formule_grammaire import (
+    FormuleInexecutable,
+    dimension_formule,
+    evaluer_formule,
+    noms_de_la_formule,
+    references_de_la_formule,
+)
 from app.contracts.framework_answer_schema import (
+    ChiffreCle,
     FrameworkAnswer,
     FrameworkAnswerServie,
 )
 from app.contracts.framework_definition_schema import (
     FRAMEWORK_DEFINITION_SCHEMA_VERSION,
+    ChiffreCleDeclare,
     FrameworksFile,
 )
 from app.contracts.memo_blocs import BLOCS_MEMO
@@ -273,6 +282,32 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                     raise FrameworkDefinitionRefused(
                         f"[S] `{q.id}.{i.id}` est repris de `{r}`, que son libellé ne nomme pas — la "
                         "prose lue par le comité et la donnée lue par le code divergeraient")
+
+    # ── [T] — un chiffre CALCULÉ de l'encadré (#101) ───────────────────────────────────────────
+    #    Sa formule ne lit que des chiffres RELEVÉS de la même question (un calculé qui en lit un
+    #    autre ferait dépendre le résultat de l'ordre de calcul), jamais un décalage d'exercice (tous
+    #    les chiffres d'un encadré se lisent à la même date), et ses additions portent sur une même
+    #    unité (dette brute − trésorerie : M$ − M$). Une formule qui ne se calcule pas sur l'encadré
+    #    rendrait une ligne toujours « non établie », en silence.
+    for _f, q in toutes:
+        unites = {c.id: c.unite for c in q.chiffres_cles}
+        releves = {c.id for c in q.chiffres_cles if c.calcul is None}
+        for c in q.chiffres_cles:
+            if c.calcul is None:
+                continue
+            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves)
+            if hors:
+                raise FrameworkDefinitionRefused(
+                    f"[T] `{q.id}.{c.id}` se calcule sur {hors}, qui ne sont pas des chiffres RELEVÉS de "
+                    f"`{q.id}` ({sorted(releves)}) — le code ne saurait pas le calculer")
+            decales = sorted(f"{n}[{k}]" for n, k in references_de_la_formule(c.calcul) if k != 0)
+            if decales:
+                raise FrameworkDefinitionRefused(
+                    f"[T] `{q.id}.{c.id}` lit {decales} : un encadré se lit à une seule date, pas d'exercice décalé")
+            try:
+                dimension_formule(c.calcul, unites)
+            except FormuleInexecutable as e:
+                raise FrameworkDefinitionRefused(f"[T] `{q.id}.{c.id}` : {e}") from e
 
     # ── [Q] / [R] — ce qui rouvre quoi (#89) ───────────────────────────────────────────────────
     portees = {t.id: t.portee for t in fichier.types_evenement}
@@ -599,11 +634,64 @@ def valider_pont_framework_answer(
             raise FrameworkAnswerRefused(
                 f"l'encadré de `{answer.question_id}` change l'unité déclarée : {mauvaises} — deux unités pour "
                 "un même chiffre font deux chiffres (#95)")
+        # K bis (#101). Un chiffre CALCULÉ vaut sa formule sur les chiffres RELEVÉS de ce même encadré —
+        # d'où qu'arrive la réponse : c'est le code qui calcule (`completer_encadre`), et une réponse qui
+        # porterait un autre nombre dirait autre chose que les chiffres qu'elle affiche à côté.
+        attendus = {c.id: c for c in completer_encadre(declares, answer.reponse.chiffres_cles)}
+        faux = []
+        for c in answer.reponse.chiffres_cles:
+            d = next((x for x in declares if x.id == c.id), None)
+            if d is None or d.calcul is None:
+                continue
+            e = attendus[c.id]
+            if (c.valeur is None) != (e.valeur is None) or (
+                    c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
+                faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({d.calcul})")
+        if faux:
+            raise FrameworkAnswerRefused(
+                f"l'encadré de `{answer.question_id}` porte un chiffre calculé qui ne vaut pas sa formule : "
+                f"{faux} — le calcul appartient au code, jamais à l'analyste (#101)")
 
     # F. un substitut pointe la réponse d'une AUTRE question.
     motif_substitut = motif_substitut_hors_sujet(answer, autres_reponses)
     if motif_substitut is not None:
         raise FrameworkAnswerRefused(motif_substitut)
+
+
+def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle]) -> list[ChiffreCle]:
+    """L'encadré COMPLÉTÉ de ses chiffres calculés (#101). DÉTENTEUR UNIQUE, lu par l'assemblage de
+    l'analyste (qui écrit) et par le pont [K] (qui vérifie) — deux lectures d'une même formule
+    divergeraient au premier correctif (#46). Pur.
+
+    Comme un vrai fonds : la dette nette de l'encadré est la différence des deux lignes au-dessus,
+    jamais un chiffre retapé à part. Les lignes RELEVÉES passent telles quelles ; une ligne qu'on
+    fournirait pour un chiffre calculé est ÉCARTÉE (ce n'est pas au rédacteur de la calculer) et
+    remplacée par le calcul. Trois issues, jamais un silence (#25/#44) : calculé (daté par les
+    périodes de ses termes, #42), ou non établi parce qu'un terme ne l'est pas (le terme est NOMMÉ),
+    ou non calculable (un dénominateur nul — une propriété de l'entreprise, pas un zéro).
+    """
+    calcules = [d for d in declares if d.calcul is not None]
+    ids_calcules = {d.id for d in calcules}
+    releves = [c for c in lignes if c.id not in ids_calcules]
+    par_id = {c.id: c for c in releves}
+    sortie = list(releves)
+    for d in calcules:
+        noms = sorted(noms_de_la_formule(d.calcul))
+        absents = [n for n in noms if par_id.get(n) is None or par_id[n].valeur is None]
+        if absents:
+            sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                f"non calculable ({d.calcul}) : {', '.join(absents)} non établi(s) dans l'encadré")))
+            continue
+        try:
+            valeur = evaluer_formule(d.calcul, {(n, 0): par_id[n].valeur for n in noms})
+        except FormuleInexecutable as e:
+            sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f"non calculable : {e}"))
+            continue
+        periodes = list(dict.fromkeys(par_id[n].date_ou_periode for n in noms))
+        date = (f"{periodes[0]} — calculé : {d.calcul}" if len(periodes) == 1 else
+                f"calculé : {d.calcul} — " + " ; ".join(f"{n} {par_id[n].date_ou_periode}" for n in noms))
+        sortie.append(ChiffreCle(id=d.id, unite=d.unite, valeur=round(valeur, 6), date_ou_periode=date))
+    return sortie
 
 
 def motif_substitut_hors_sujet(

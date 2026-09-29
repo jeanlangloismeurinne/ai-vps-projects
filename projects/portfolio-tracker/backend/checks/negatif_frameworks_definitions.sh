@@ -94,7 +94,16 @@ mutations=(
 "$PONT¦                if not questions_par_id[r].chiffres_cles:¦                if False:¦qui ne déclare AUCUN chiffre clé"
 # Mutation de DONNÉES : la dilution retombe sur qf_7 seule (le lien d'avant la correction du 2026-09-29).
 "$YAML¦            repris_de: [qf_4, qf_7]¦            repris_de: [qf_7]¦les trois liens « repris de » corrigés"
-"$YAML¦    - id: dette_brute¦    - id: dette_financiere_brute¦l'encadré instruit le 2026-09-29"
+# (#101) on renomme la ligne CALCULÉE : renommer un chiffre relevé fait refuser le chargement par [T] (sa
+# formule le lit), le script mourrait avant l'assert visé.
+"$YAML¦          - id: dette_nette¦          - id: dette_nette_bilan¦l'encadré instruit le 2026-09-29"
+# ── #101 : un chiffre CALCULÉ ne lit que des chiffres RELEVÉS de sa question, à une date, même unité ──
+"$PONT¦            if hors:¦            if False:¦lit un chiffre ABSENT de la question"
+"$PONT¦        releves = {c.id for c in q.chiffres_cles if c.calcul is None}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
+"$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
+"$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
+"$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
+"$YAML¦            calcul: tresorerie_mobilisable / consommation_annuelle * 12   # en mois (#101)¦¦la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES"
 )
 
 passes=0; ratees=0

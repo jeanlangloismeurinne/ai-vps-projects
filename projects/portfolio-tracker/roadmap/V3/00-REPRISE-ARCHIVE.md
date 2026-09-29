@@ -5833,3 +5833,36 @@ feuilles), spec §4.6. Suite 3991 (1 rouge attendu, la dette qf_6), négatifs 40
 Réémission RVMD × qualite_financiere sans collecte : ratée (voir reprise) — qf_6 approximée → non fondable,
 qf_4/qf_7 refusées par [E], mandats 1582/1583 à tort. Retrait préparé, refusé par le garde-fou de
 permissions, laissé à la décision de l'utilisateur.
+
+
+---
+
+## 2026-09-29 (6) — correction de l'analyste en amont (#101), retrait du passage raté
+
+Copie conforme de l'en-tête « Ce qui reste ouvert » avant sa résorption :
+
+**⚠️ EN TÊTE — la réémission du 2026-09-29 a dégradé le dossier RVMD (décision utilisateur en attente)**
+- Passage `executer_chaine RVMD qualite_financiere pre_revenus --sans-collecte` après `50286e2` : qf_6 #474
+  (approximée ; 151,0 M$ de juste valeur des warrants + 23,8 M$ d'intérêts non-cash identifiés) remplacée
+  par un `non_fondable` #897 sur les MÊMES pièces (instabilité du jugement du modèle) ; qf_4 et qf_7
+  REFUSÉES par [E] (#78) — le modèle, poussé à chiffrer l'encadré, a cité une pièce calculée à côté de
+  relevés dans un `repondu` au lieu d'`approxime` ; le manager a ouvert #1582 (qf_4, qui A une réponse
+  #473) et #1583 (qf_7) — même défaut que les mandats 983-986. Écrits : réponses 893-897, mandats 1582-1583.
+- **Mesuré ensuite** : RVMD n'a plus AUCUNE réponse reprenable (qf_6 était la seule).
+- **Retrait préparé, NON appliqué** (refusé par le garde-fou de permissions : écriture en base partagée —
+  c'est à l'utilisateur de décider) : `backend/tools/retraits/2026-09-29_reemission_qf_rvmd.sql` +
+  sauvegardes JSON. Il restaure 469-472/474 comme courantes et retire 893-897 et 1582-1583.
+- **Correction en amont avant de réessayer** (jamais relancer jusqu'au vert) : consigne de l'analyste — un
+  chiffre calculé d'une pièce ⟹ `approxime` ; un chiffre non établi ⟹ ligne avec `motif_absence`, pas un
+  `sans_fondement` de toute la question ; et sans doute le refus [E] d'un `repondu` à rendre au modèle UNE
+  fois (comme la note flash, #90) plutôt que de perdre la question. Et mesurer sur 2-3 passages (instabilité).
+- `mo_4` #693 (approximée, périmée depuis l'approbation FDA) n'a pas d'encadré : non reprenable tant qu'elle
+  est périmée ; elle sera réinstruite avec la défendabilité.
+
+Ce qui a été fait ensuite : mesure de la sortie BRUTE du modèle (la dette nette −328 M$ était l'exemple
+du prompt recopié ; qf_7 reprenait la guidance soustraite de #312) ; correction de forme en trois
+gestes (#101 : le code calcule les chiffres calculés de l'encadré, un chiffre manquant ne fait pas
+tomber la question, renvoi unique d'une réponse refusée) ; mesure sur 3 passages sans écriture (qf_4
+3/3, qf_6 3/3, qf_7 1/3) ; retrait appliqué sur décision de l'utilisateur (« restaurer à son état
+antérieur », 469-474 courantes, 893-897 et 1582-1583 retirés, sauvegardes JSON gardées) — le
+`check_comite_persist` que les deux mandats à tort faisaient rougir est revenu au vert (22/0).

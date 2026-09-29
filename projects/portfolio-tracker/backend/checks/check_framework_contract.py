@@ -54,6 +54,7 @@ from app.contracts.framework_answer_schema import (
     FRAMEWORK_SCHEMA_VERSION,
     STATUTS,
     Approximation,
+    ChiffreCle,
     Fondation,
     FondationServie,
     FrameworkAnswer,
@@ -66,6 +67,7 @@ from app.contracts.framework_answer_schema import (
 import app.agents.v2.frameworks as fwk
 from app.agents.v2.frameworks import (
     FrameworkAnswerRefused,
+    completer_encadre,
     servir_answer,
     valider_pont_framework_answer,
 )
@@ -482,6 +484,18 @@ QUESTIONS = {
                                           periode="à la date du dernier bilan"),
                         ChiffreCleDeclare(id="autonomie", libelle="Autonomie de financement", unite="mois",
                                           periode="à la date du dernier bilan")]},
+    # Un encadré à chiffre CALCULÉ (#101), comme qf_4 réel : la dette nette est la différence des deux
+    # lignes relevées, et c'est le code qui la calcule.
+    "qf_calc": {"plancher_tier": "B", "nature_attendue": "mesure",
+                "framework_version": FRAMEWORK_SCHEMA_VERSION,
+                "chiffres_cles": [
+                    ChiffreCleDeclare(id="dette_brute", libelle="Dette brute au bilan", unite="M$",
+                                      periode="à la date du dernier bilan"),
+                    ChiffreCleDeclare(id="tresorerie", libelle="Trésorerie et placements", unite="M$",
+                                      periode="à la date du dernier bilan"),
+                    ChiffreCleDeclare(id="dette_nette", libelle="Dette nette, calculée par le code", unite="M$",
+                                      periode="à la date du dernier bilan",
+                                      calcul="dette_brute - tresorerie")]},
     "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure", "chiffres_cles": [],
                 "framework_version": FRAMEWORK_SCHEMA_VERSION,
                 "sens_admis": ["cree_de_la_valeur", "detruit_de_la_valeur"]},
@@ -632,6 +646,57 @@ pont("[K] une question qui ne se chiffre pas refuse un encadré inventé",
 pont("[K] un profil sans déclaration d'encadré fait REFUSER, pas sauter le contrôle",
      rep(question_id="qf_nu"), "sans `chiffres_cles`",
      questions={**QUESTIONS, "qf_nu": {k: v for k, v in QUESTIONS["qf_1"].items() if k != "chiffres_cles"}})
+
+# [K bis] (#101) — un chiffre CALCULÉ vaut sa formule sur les chiffres relevés du MÊME encadré. Valeurs
+# copiées du cas réel RVMD au 2026-06-30 : 487,43 − 3 937,969 = −3 450,539 ; le modèle avait écrit −328.
+_DB = {"id": "dette_brute", "unite": "M$", "valeur": 487.43, "date_ou_periode": "au 2026-06-30"}
+_TR = {"id": "tresorerie", "unite": "M$", "valeur": 3937.969, "date_ou_periode": "au 2026-06-30"}
+_DNC = {"id": "dette_nette", "unite": "M$", "valeur": -3450.539, "date_ou_periode": "au 2026-06-30"}
+pont_ok("[K bis] un chiffre calculé qui vaut sa formule passe",
+        rep(question_id="qf_calc", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [_DB, _TR, _DNC]}}))
+pont("[K bis] un chiffre calculé qui NE vaut PAS sa formule est refusé (la dette nette à −328 du 2026-09-29)",
+     rep(question_id="qf_calc", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
+         _DB, _TR, {**_DNC, "valeur": -328.0}]}}), "ne vaut pas sa formule")
+pont("[K bis] un chiffre calculé ÉTABLI alors qu'un de ses termes ne l'est pas est refusé",
+     rep(question_id="qf_calc", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
+         _DB, {"id": "tresorerie", "unite": "M$", "motif_absence": "aucune pièce ne publie la trésorerie"},
+         _DNC]}}), "ne vaut pas sa formule")
+pont_ok("[K bis] … et le même, NON établi parce qu'un terme ne l'est pas, passe (trois états, #44)",
+        rep(question_id="qf_calc", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
+            _DB, {"id": "tresorerie", "unite": "M$", "motif_absence": "aucune pièce ne publie la trésorerie"},
+            {"id": "dette_nette", "unite": "M$", "motif_absence": "trésorerie non établie dans l'encadré"}]}}))
+_enc_l = completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [
+    ChiffreCle(**_DB), ChiffreCle(**_TR), ChiffreCle(**{**_DNC, "valeur": -328.0})])
+_enc = {c.id: c for c in _enc_l}
+check("`completer_encadre` rend UNE ligne par chiffre (la ligne fournie pour le calculé ne s'ajoute pas au calcul)",
+      sorted(c.id for c in _enc_l) == ["dette_brute", "dette_nette", "tresorerie"], f"→ {[c.id for c in _enc_l]}")
+check("`completer_encadre` ÉCARTE la ligne fournie pour un chiffre calculé et écrit le calcul (−3 450,539)",
+      _enc["dette_nette"].valeur is not None and abs(_enc["dette_nette"].valeur - (-3450.539)) < 1e-6,
+      f"→ {_enc['dette_nette']}")
+check("… daté par la période de ses termes, formule écrite en clair (#42)",
+      "au 2026-06-30" in (_enc["dette_nette"].date_ou_periode or "")
+      and "dette_brute - tresorerie" in (_enc["dette_nette"].date_ou_periode or ""),
+      f"→ {_enc['dette_nette'].date_ou_periode}")
+_enc_abs = {c.id: c for c in completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [ChiffreCle(**_DB)])}
+check("… un terme ABSENT de l'encadré rend le calcul non établi, en NOMMANT le terme",
+      _enc_abs["dette_nette"].valeur is None and "tresorerie" in (_enc_abs["dette_nette"].motif_absence or ""),
+      f"→ {_enc_abs['dette_nette']}")
+_DECL_AUTO = [ChiffreCleDeclare(id="tresorerie", libelle="Trésorerie mobilisable", unite="M$", periode="au bilan"),
+              ChiffreCleDeclare(id="conso", libelle="Consommation annuelle", unite="M$", periode="12 mois"),
+              ChiffreCleDeclare(id="autonomie", libelle="Autonomie de financement", unite="mois",
+                                periode="au bilan", calcul="tresorerie / conso * 12")]
+_enc_zero = {c.id: c for c in completer_encadre(_DECL_AUTO, [
+    ChiffreCle(id="tresorerie", unite="M$", valeur=100.0, date_ou_periode="au 2026-06-30"),
+    ChiffreCle(id="conso", unite="M$", valeur=0.0, date_ou_periode="exercice 2025")])}
+check("… un dénominateur NUL rend « non calculable », jamais `inf` ni 0 (#44)",
+      _enc_zero["autonomie"].valeur is None and "zéro" in (_enc_zero["autonomie"].motif_absence or ""),
+      f"→ {_enc_zero['autonomie']}")
+_enc_mix = {c.id: c for c in completer_encadre(_DECL_AUTO, [
+    ChiffreCle(id="tresorerie", unite="M$", valeur=120.0, date_ou_periode="au 2026-06-30"),
+    ChiffreCle(id="conso", unite="M$", valeur=60.0, date_ou_periode="exercice 2025")])}
+check("… et deux périodes différentes sont DÉCLARÉES toutes deux (un chiffre mixte le dit, #42)",
+      _enc_mix["autonomie"].valeur == 24.0 and "au 2026-06-30" in _enc_mix["autonomie"].date_ou_periode
+      and "exercice 2025" in _enc_mix["autonomie"].date_ou_periode, f"→ {_enc_mix['autonomie']}")
 
 _so = dict(sans_objet={"motif": "société sans stocks", "substitut_applique": "rotation",
                        "substitut_answer_id": 7, "aucun_substitut": False})

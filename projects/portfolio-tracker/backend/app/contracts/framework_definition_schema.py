@@ -127,6 +127,23 @@ class ChiffreCleDeclare(Strict):
     libelle: str = Field(min_length=10)
     unite: str = Field(min_length=1)     # « % », « M$ », « mois », « années », « points/an »
     periode: str = Field(min_length=3)   # « moyenne 5 ans », « dernier exercice », « à la date du bilan »
+    # `calcul` (#101) : le chiffre SE CALCULE à partir des autres chiffres de la même question (dette
+    # nette = dette brute − trésorerie ; autonomie = trésorerie ÷ consommation × 12). C'est le CODE qui
+    # le calcule, jamais le modèle (arbitrage #95 : « le calcul n'est pas fait par le modèle ») — mesuré
+    # le 2026-09-29 : laissé au modèle, la dette nette de RVMD sortait à −328 M$, la valeur de l'EXEMPLE
+    # du prompt, au lieu de −3 450,5. Grammaire fermée de `formule_grammaire` (#72), sans décalage
+    # d'exercice ; les noms référencés sont un invariant RELATIONNEL (pont du référentiel, [T]).
+    calcul: Optional[str] = Field(default=None, min_length=3)
+
+    @model_validator(mode="after")
+    def _le_calcul_est_une_formule(self):
+        if self.calcul is not None:
+            from app.contracts.formule_grammaire import FormuleInexecutable, analyser_formule
+            try:
+                analyser_formule(self.calcul)
+            except FormuleInexecutable as e:
+                raise ValueError(f"chiffre `{self.id}` : `calcul` hors de la grammaire fermée — {e}") from e
+        return self
 
 
 class VariableArchetype(Strict):

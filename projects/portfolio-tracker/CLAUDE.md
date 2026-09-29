@@ -2606,6 +2606,40 @@ mesuré avant de le retirer) est remplacée par `reponse.chiffres_cles`.
 ⚠️ `framework_version` NON montée (précédent #92/#99) : la monter aurait rendu non courantes toutes les réponses
 des pilotes pour un ajout de forme que la réémission solde question par question.
 
+### #101 — l'analyste relève, le code calcule ; un chiffre manquant ne fait pas tomber la question ; une réponse refusée est renvoyée UNE fois
+
+**Le défaut (réémission du 2026-09-29, mesuré sur la sortie BRUTE du modèle).** L'encadré de qf_4/qf_7
+demandait au modèle des chiffres CALCULÉS (dette nette, autonomie) sur des questions de mesure à
+plancher A, où `approxime` est fermé : il ne pouvait ni calculer (ce serait une reconstruction) ni
+s'abstenir. Résultat : qf_4 rendait une dette nette de **−328 M$ — la valeur de l'EXEMPLE du prompt,
+recopiée** (vrai : 487,43 − 3 937,969 = −3 450,5) ; qf_7 reprenait la « guidance en trésorerie »
+soustraite (#78) et en tirait l'autonomie ; toutes deux citaient une pièce calculée à côté des
+relevés → refus [E]. qf_6, faute de chiffrer une ligne, déclarait TOUTE la question sans fondement.
+
+**Trois remèdes, chacun de forme (#68) :**
+- **Le calcul appartient au code** (#95, #72). `ChiffreCleDeclare.calcul` = formule de
+  `formule_grammaire` sur les chiffres RELEVÉS de la même question (qf_4 `dette_nette`, qf_7
+  `autonomie`). Le modèle ne se les voit plus demander (`chiffres_calcules_par_le_systeme`, formule
+  en clair) ; `frameworks.completer_encadre` — **détenteur unique**, lu par l'assemblage ET par le pont
+  — écarte toute ligne fournie pour eux et écrit le calcul, daté par les périodes de ses termes (#42),
+  ou non établi en NOMMANT le terme manquant, ou non calculable sur dénominateur nul (#44). Pont [K bis]
+  : un calculé vaut sa formule sur l'encadré. Référentiel [T] : la formule ne lit que des relevés de sa
+  question, sans décalage d'exercice, additions de même unité.
+- **Un chiffre manquant ne fait pas tomber la question** (arbitrage utilisateur du 2026-09-29) : la
+  ligne porte son `motif_absence`, `sans_fondement` reste réservé à la question elle-même. L'exemple
+  du prompt ne porte plus AUCUNE valeur recopiable (#39 : l'exemple est une pièce du contrat).
+- **Le renvoi unique** (précédent de la note flash, #90) : une réponse refusée (contrat, pont, statut
+  hors liste, omission) est renvoyée UNE fois avec son motif — et, pour [E], les pièces citées qui ne
+  sont pas des relevés, NOMMÉES (ni tier ni plancher montrés, #59). Une fois, pas davantage ; le coût
+  des deux appels est cumulé (#41).
+
+**Mesuré contre le vrai modèle** (RVMD × qualite_financiere, 3 passages, rien écrit) : qf_4 **3/3**
+(dette nette juste), qf_6 **3/3** répondue (chiffre non établi motivé), qf_7 **1/3** — le modèle
+recite parfois la pièce qu'on vient de lui nommer : instabilité d'agent, laissée en refus, jamais
+relancée jusqu'au vert.
+Gardes : `check_analyste` **102/0** + négatif **45/0** · `check_framework_contract` **126/0** + négatif
+**39/0** · `check_frameworks_definitions` **79/0** + négatif **46/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

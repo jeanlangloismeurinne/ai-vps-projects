@@ -401,6 +401,46 @@ check("le référentiel réel : l'encadré instruit le 2026-09-29 (qf_4 = dette 
       [c.id for c in _reel_q["qf_4"].chiffres_cles] == ["dette_brute", "tresorerie_et_placements", "dette_nette"]
       and _reel_q["se_4"].chiffres_cles == [],
       f"→ qf_4 {[c.id for c in _reel_q['qf_4'].chiffres_cles]}, se_4 {_reel_q['se_4'].chiffres_cles}")
+# [T] (#101) : un chiffre CALCULÉ déclare sa formule sur les chiffres RELEVÉS de sa question — c'est le
+# code qui le calcule. Mesuré le 2026-09-29 : laissé au modèle, la dette nette de RVMD sortait à −328 M$
+# (la valeur de l'exemple du prompt) au lieu de −3 450,5.
+_REL = [{"id": "dette_brute", "libelle": "Dette financière brute au bilan", "unite": "M$",
+         "periode": "au dernier bilan"},
+        {"id": "tresorerie", "libelle": "Trésorerie et placements au bilan", "unite": "M$",
+         "periode": "au dernier bilan"}]
+
+
+def _avec_calcul(calcul, unite="M$", extra=()):
+    return fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=_REL + list(extra) + [
+        {"id": "dette_nette", "libelle": "Dette nette, calculée par le code", "unite": unite,
+         "periode": "au dernier bilan", "calcul": calcul}])])])
+
+
+valide("[T] un chiffre calculé sur deux chiffres relevés de la même question, même unité, passe",
+       lambda: charge(_avec_calcul("dette_brute - tresorerie")))
+rejete("[T] un calcul qui lit un chiffre ABSENT de la question (le code ne saurait pas le calculer)",
+       lambda: charge(_avec_calcul("dette_brute - tresorerie_inconnue")), "pas des chiffres RELEVÉS")
+rejete("[T] un calcul qui lit un AUTRE chiffre calculé (le résultat dépendrait de l'ordre de calcul)",
+       lambda: charge(_avec_calcul("dette_brute - tresorerie", extra=[
+           {"id": "levier", "libelle": "Levier calculé sur la dette nette", "unite": "x",
+            "periode": "au dernier bilan", "calcul": "dette_nette / tresorerie"}])), "pas des chiffres RELEVÉS")
+rejete("[T] un calcul à exercice DÉCALÉ (un encadré se lit à une seule date)",
+       lambda: charge(_avec_calcul("dette_brute - tresorerie[-1]")), "exercice décalé")
+rejete("[T] un calcul qui additionne deux unités différentes (M$ − mois ne veut rien dire)",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=[
+           _REL[0], {"id": "duree", "libelle": "Durée de financement restante", "unite": "mois",
+                     "periode": "au dernier bilan"},
+           {"id": "absurde", "libelle": "Somme sans objet économique", "unite": "M$",
+            "periode": "au dernier bilan", "calcul": "dette_brute + duree"}])])])), "[T]")
+rejete("un `calcul` hors de la grammaire fermée est refusé par le CONTRAT (avant tout pont)",
+       lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=_REL + [
+           {"id": "dette_nette", "libelle": "Dette nette, calculée par le code", "unite": "M$",
+            "periode": "au dernier bilan", "calcul": "dette_brute moins tresorerie"}])), "grammaire fermée")
+check("[T] le référentiel réel : la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES, rien d'autre",
+      {(q.id, c.id): c.calcul for q in _reel_q.values() for c in q.chiffres_cles if c.calcul}
+      == {("qf_4", "dette_nette"): "dette_brute - tresorerie_et_placements",
+          ("qf_7", "autonomie"): "tresorerie_mobilisable / consommation_annuelle * 12"},
+      f"→ {[(q.id, c.id, c.calcul) for q in _reel_q.values() for c in q.chiffres_cles if c.calcul]}")
 check("les trois liens « repris de » corrigés : résultat normalisé ← qf_1/qf_6, dilution ← qf_4/qf_7, "
       "actions diluées relevées avec le cours (jamais reprises)",
       {i.id: i.repris_de for i in _reel_q["va_1"].ingredients_requis}.get("resultat_normalise") == ["qf_1", "qf_6"]
