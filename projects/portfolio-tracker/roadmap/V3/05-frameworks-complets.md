@@ -188,6 +188,17 @@ séance suivante).
     des MÊMES pièces (analyste relancé, aucune recollecte). Mesuré le 2026-09-29 : seul RVMD a des réponses
     courantes, dont 2 à chiffrer (qf_4, qf_6) — les 5 autres sont sans objet. (Option « garder valide sans
     chiffre » écartée par l'utilisateur : elle laissait une dette.)
+  - ✅ **Construit et déployé le 2026-09-29 (`50286e2`, #100)** : encadré déclaré en données (37 questions,
+    `[]` hors des 10 chiffrées), `ChiffreCle` à trois états, pont [K], [S] durci, liens corrigés, modèle
+    1.2.0 (reprise vérifiée par la VALEUR), écran niveau 3. Suite 3991 ; négatifs 40/33/35/39/21/21.
+  - ❌ **Réémission NON acquise — la case reste ouverte.** Passage `executer_chaine RVMD qualite_financiere
+    --sans-collecte` : qf_6 #474 (approximée, 151,0 + 23,8 M$ identifiés) remplacée par un `non_fondable`
+    (#897) sur les mêmes pièces ; qf_4 et qf_7 REFUSÉES par [E] (#78 : pièce calculée citée à côté de
+    relevés dans un `repondu`) ; mandats #1582/#1583 ouverts à tort. RVMD n'a plus AUCUNE réponse reprenable.
+    Retrait proposé, non appliqué (refusé par le garde-fou de permissions — décision utilisateur) :
+    `backend/tools/retraits/2026-09-29_reemission_qf_rvmd.sql`. Prochain geste : corriger EN AMONT (l'analyste
+    doit rendre un chiffre calculé en `approxime`, et rendre l'encadré avec motif d'absence plutôt que
+    tomber en `sans_fondement`), PUIS réémettre — jamais relancer jusqu'à obtenir le vert.
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
   que la barrière tient)

@@ -5815,3 +5815,21 @@ migration. Reste non exercé : le comportement sous un corpus de plusieurs milli
 - Règle #19 : tout changement de contrat = 3 points de synchro (prompt agent · frontend · import).
 - Viz servie par un container nginx **hors Coolify** (`provenance-viz`, bind-mount) ; éditer le HTML
   suffit (live).
+
+
+---
+
+## 2026-09-29 (5) — roadmap 05, 4 bis : l'encadré de chiffres clés (#100)
+
+Repris depuis le fichier de reprise (lot annoncé : « réponse à plusieurs nombres »). Ligne de base
+re-mesurée sur un worktree propre : 3961/0 sur 55. Mesuré avant de toucher au contrat : 20/20 réponses
+jamais écrites portaient `valeur`/`unite` à `null` — le nombre unique n'a jamais servi, il est remplacé.
+Construit : `ChiffreCleDeclare` (référentiel, requis), `ChiffreCle` (réponse, trois états), pont [K], [S]
+durci (question reprise sans chiffre refusée), trois liens « repris de » corrigés + ingrédient
+`nombre_d_actions_dilue`, `OrigineReprise.chiffre` + [A] par la valeur (`modele-1.2.0`), analyste
+(contexte `chiffres_cles_demandes`, consigne, exemple de ligne), écran niveau 3 + maquette figée (39 → 42
+feuilles), spec §4.6. Suite 3991 (1 rouge attendu, la dette qf_6), négatifs 40/33/35/39/21/21 (dont
+3 mutations caduques réparées et un script qui mourait avant son bilan). Déployé `50286e2`.
+Réémission RVMD × qualite_financiere sans collecte : ratée (voir reprise) — qf_6 approximée → non fondable,
+qf_4/qf_7 refusées par [E], mandats 1582/1583 à tort. Retrait préparé, refusé par le garde-fou de
+permissions, laissé à la décision de l'utilisateur.
