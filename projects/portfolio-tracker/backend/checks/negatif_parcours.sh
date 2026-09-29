@@ -15,9 +15,9 @@ WITH_FRONT=1
 N3="FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/q/[question_id].js"
 P="app/agents/v2/parcours.py"
 mutations=(
-"$P¦            and a.fondation.actualite == \"courante\"¦            and True  # mutation: une réponse périmée tient¦fondée mais PÉRIMÉE"
+"$P¦        and a.fondation.actualite == \"courante\"¦        and True  # mutation: une réponse périmée tient¦fondée mais PÉRIMÉE"
 "$P¦    if not applicable or dispensee:¦    if not applicable:  # mutation: dispense ignorée¦DISPENSÉE"
-"$P¦        if r.verdict != \"acquitte\":¦        if False:  # mutation: l'avis ne compte pas¦personne n'a pu relire"
+"$P¦    if r.verdict != \"acquitte\":¦    if False:  # mutation: l'avis ne compte pas¦personne n'a pu relire"
 "$P¦    \"source_indisponible\", \"recherche_epuisee\", \"sans_source_possible\")¦    \"recherche_epuisee\", \"source_indisponible\", \"sans_source_possible\")  # mutation¦la cause en tête est la PANNE"
 "$P¦    if collecte is None or collecte.plan_id is None:¦    if collecte is None:  # mutation: plan absent lu comme recherche menée¦une collecte sans plan"
 "$P¦    if renvoyees:¦    if renvoyees and False:  # mutation: renvoi ignoré¦renvoyée → nature"

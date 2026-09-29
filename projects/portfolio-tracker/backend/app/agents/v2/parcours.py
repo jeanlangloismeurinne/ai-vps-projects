@@ -55,6 +55,7 @@ __all__ = [
     "ReponseLue",
     "charger_etat_dossier",
     "manque_de_la_question",
+    "reponse_tient",
     "dresser_niveau1",
     "dresser_niveau2",
     "dresser_niveau3",
@@ -144,6 +145,20 @@ def _cause_de_collecte(collecte: Optional[Collecte]) -> tuple[CauseManque, list[
     return tete, list(collecte.mandats)
 
 
+def reponse_tient(r: ReponseLue) -> bool:
+    """DÉTENTEUR UNIQUE (#46) de « cette réponse tient-elle AUJOURD'HUI ? » : acquittée par le contrôle,
+    ET fondée sur des pièces toujours courantes (un fait important publié depuis la rend périmée), ou
+    hors-sujet motivé. Lu par la règle du manque et par la valorisation, qui ne reprend que le chiffre
+    d'une réponse qui tient (`valorisation/signature.py`). Pure."""
+    a = r.servie
+    if r.verdict != "acquitte":
+        return False
+    if a.statut == "sans_objet":
+        return True
+    return a.statut in ("repondu", "approxime") and a.fondation is not None \
+        and a.fondation.actualite == "courante"
+
+
 def manque_de_la_question(
     *,
     framework_id: str,
@@ -175,16 +190,7 @@ def manque_de_la_question(
     if acceptation is not None and acceptation.etat == "en_vigueur":
         return None
 
-    def tient(r: ReponseLue) -> bool:
-        a = r.servie
-        if r.verdict != "acquitte":
-            return False
-        if a.statut == "sans_objet":
-            return True
-        return a.statut in ("repondu", "approxime") and a.fondation is not None \
-            and a.fondation.actualite == "courante"
-
-    if any(tient(r) for r in reponses):
+    if any(reponse_tient(r) for r in reponses):
         return None
 
     commun = dict(framework_id=framework_id, libelle_framework=libelle_framework,

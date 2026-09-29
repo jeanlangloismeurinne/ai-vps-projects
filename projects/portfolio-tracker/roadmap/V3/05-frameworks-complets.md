@@ -160,8 +160,10 @@ séance suivante).
 - [x] Le CONTRAT du modèle d'entreprise (mécanique décrite + segmentation + tableau d'hypothèses à trois
   origines + forme de fourchette selon l'incertitude + code + version), son pont et son évaluation — ✅
   2026-09-29, #97 ; `check_modele_valorisation.py` 51/0, négatif 29/0
-- [ ] La SIGNATURE du comité (acte au procès-verbal : proposé / signé / écarté, motif ; une nouvelle
-  version proposée laisse la signée affichée) et la persistance du modèle (migration 051)
+- [x] La SIGNATURE du comité (acte au procès-verbal : proposé / signé / écarté, motif ; une nouvelle
+  version proposée laisse la signée affichée) et la persistance du modèle (migration 051) — ✅ 2026-09-29,
+  #98, `valorisation/signature.py` + `api/valorisation_v2.py` ; reprenable = qui tient ET chiffrée (sur
+  RVMD, qf_1 est `sans_objet` : le coût du capital n'a rien à reprendre — à trancher à la case suivante)
 - [ ] L'agent qui écrit le modèle (méthodologie, segments, tableau, mécanique) à partir du dossier
 - [ ] Réponse à PLUSIEURS nombres (le contrat de réponse n'en porte qu'un) — correspondance avec
   `Valuation` (§4.6 de la spec)

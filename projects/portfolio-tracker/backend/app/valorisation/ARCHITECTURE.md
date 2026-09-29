@@ -37,11 +37,21 @@ motif lisible par le comité ; ses valeurs de référence **calculées à la mai
 en rappelant la fonction) et une mutation « formule fausse mais plausible » dans le test négatif.
 Un gabarit itératif déclare son coût dans `_COUT_APPEL` du bac.
 
+- **`signature.py` — la signature et les registres** (#98, migration 051) : l'analyste (ou un membre du
+  comité) PROPOSE une version ; le comité la SIGNE ou l'ÉCARTE, motif écrit, et le procès-verbal garde
+  la fourchette qu'il avait sous les yeux. Deux registres append-only (`modeles_valorisation`,
+  `modeles_valorisation_decisions`, une décision par version). `servir_atelier` (pur) rejoue tout contre
+  le dossier du jour : la dernière proposition non décidée est en attente (une plus récente remplace
+  celle qui attendait), la signée reste affichée tant qu'une autre n'est pas signée, un modèle signé qui
+  ne tient plus est « à revoir » avec son motif. Le dossier du jour = les réponses REPRENABLES
+  (`reponses_reprenables` : qui tiennent aujourd'hui selon `parcours.reponse_tient` et portent un
+  chiffre) et les pièces courantes. Endpoints : `api/valorisation_v2.py`.
+
 ## Pas encore construit (capacité 4 bis, suite)
 
-La SIGNATURE du comité et la persistance du modèle (migration 051), l'agent qui l'écrit, la lecture
-des réponses acquittées depuis la base (le pont les reçoit déjà de l'appelant), la réponse à plusieurs
-nombres, le recalcul de `va_4`-`va_6` au cours du jour. Rien n'appelle encore ce module en production.
+L'agent qui écrit le modèle (et donc le geste « proposer » exposé), l'écran de l'atelier, la reprise
+AUTOMATIQUE d'une réponse remplacée (aujourd'hui un modèle qui cite une réponse remplacée passe « à
+revoir »), la réponse à plusieurs nombres, le recalcul de `va_4`-`va_6` au cours du jour.
 
 ## Cible → garde (réalisé)
 
@@ -54,3 +64,5 @@ nombres, le recalcul de `va_4`-`va_6` au cours du jour. Rien n'appelle encore ce
 | Pas d'`eval`/`exec`/`__import__`, imports déclarés, catalogue = gabarits publics | `check_bac_a_calcul.py` §6 + `negatif_bac_a_calcul.sh` |
 | Contrat du modèle : cohérence interne (segments chiffrés, scénarios bien formés, probabilités, jugement ancré) | `check_modele_valorisation.py` §1 + `negatif_modele_valorisation.sh` |
 | Pont du modèle [A]-[E] et évaluation (arbre : bas = tous échouent, haut = tous réussissent, détail par événement ; scénarios : le central est le tableau) | `check_modele_valorisation.py` §2-§3 + `negatif_modele_valorisation.sh` |
+| Signature : signer ⟺ fourchette au PV ; en attente = dernière proposée non décidée ; la signée reste affichée ; « à revoir » nommé ; écart ligne à ligne ; réponses reprenables = qui tiennent ET chiffrées | `check_signature_modele.py` + `negatif_signature_modele.sh` |
+| Les registres s'écrivent et se relisent à l'identique ; refus nommés (version décidée, remplacée, inconnue, dossier qui ne tient plus) ; aucune réponse reprise sur une question que l'alerte dit manquante ; append-only | `check_signature_modele_persist.py` (vraie base, ROLLBACK) + `negatif_051.sh` |

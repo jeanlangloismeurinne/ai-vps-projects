@@ -311,7 +311,12 @@ du CATALOGUE D'ÉVÉNEMENTS (`types_evenement_version`, distincte de `schema_ver
 `(accession, catalogue_version)`, append-only (le rôle applicatif écrit et lit, trigger contre toute
 réécriture). Deux formes exclusives par CHECK : lisible (≥ 1 type, jamais `a_qualifier`) ou illisible
 (`{a_qualifier}` + motif). Éprouvée par `negatif_050.sh` (18/0) sur copie de la base.
-Prochaine migration : **051**.
+**Migration 051 = le modèle de valorisation (#98)** : `modeles_valorisation` (une ligne par VERSION proposée,
+le `ModeleValorisation` entier en JSONB, CHECK que la ligne et son contenu disent le même titre / la même
+version / le même schéma) et `modeles_valorisation_decisions` (PV : `signer` | `ecarter`, auteur et motif non
+blancs, fourchette signée ordonnée ssi signer, UNE décision par version). Append-only sur les deux (droits +
+trigger, garde `051/K1`). Appliquée le 2026-09-29, tables vides. Éprouvée par `negatif_051.sh` (26/0).
+Prochaine migration : **052**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -2496,6 +2501,42 @@ autre question » (`None ≠ qf_1`) ; une seule comparaison, deux motifs, et les
 
 Gardes : `check_modele_valorisation.py` **51/0** + `negatif_modele_valorisation.sh` **29/0**. Suite
 **3872/0 sur 53**.
+
+### #98 — la signature du modèle de valorisation : le comité signe ce qu'il voit, et la signée reste affichée
+
+**Choix pris « comme un vrai fonds » le 2026-09-29 (roadmap 05, capacité 4 bis), à confirmer par
+l'utilisateur** (aucune question posée : ils découlent de #84 et #97).
+- **Deux registres append-only** (051) : les versions proposées, et le PV — une décision par version,
+  signée OU écartée, motif obligatoire dans les deux cas, signataire en nom libre (comme #84).
+- **Le PV garde la fourchette signée** : six mois plus tard, « le comité a signé 38-61 $ le 29/09 » se
+  relit tel quel, même si les chiffres repris ont bougé.
+- **Seule la dernière proposition attend** : une proposition plus récente remplace celle qui attendait
+  (l'analyste a révisé avant la séance) ; la remplacée reste archivée, plus décidable.
+- **On signe ce qu'on voit** : la signature rejoue le pont contre le dossier DU JOUR ; un modèle qui ne tient
+  plus (pièce remplacée, réponse reprise qui ne tient plus) est refusé (409, motif). Un modèle SIGNÉ qui ne
+  tient plus est servi « à revoir » avec son motif, et sa fourchette signée RESTE la référence affichée — un
+  fonds ne retire pas sa valorisation parce qu'une pièce a été remplacée, il la fait mettre à jour.
+- **Écart entre versions** servi ligne à ligne (chiffre avant → après, lignes/segments ajoutés ou retirés,
+  origine changée à chiffre égal, mécanique ou forme changée) — ce que le comité relit d'abord.
+
+**Réponse REPRENABLE ≠ réponse acquittée (trouvé en mesurant RVMD).** Le premier chargeur prenait « acquittée
+par le contrôle » ; or une réponse acquittée peut être PÉRIMÉE par un fait publié depuis (mo_1…mo_5 après
+l'approbation FDA). Reprenable = qui TIENT aujourd'hui (`parcours.reponse_tient`, extrait de
+`manque_de_la_question`, détenteur unique désormais partagé) ET porte un chiffre (pas `sans_objet`). Une
+réponse seulement retenue par le comité (#85) n'est pas reprenable. Mesuré sur RVMD : 12 acquittées, **1
+reprenable** (qf_6) — 6 périmées ou en manque, 5 `sans_objet`, **dont qf_1** : pour une biotech sans chiffre
+d'affaires, « le coût du capital de va_1 EST celui de qf_1 » (#95) n'a rien à reprendre. À arbitrer avec la
+reprise des réponses (case suivante de la 4 bis).
+
+Endpoints `api/valorisation_v2.py` : `GET /v2/tickers/:id/valorisation`, `POST …/valorisation/v/:n/{signer,ecarter}`
+(409 motivé, 404 version ou titre inconnus). Pas de « proposer » exposé : c'est le geste de l'agent, à venir.
+⚠️ Test négatif : une mutation (« toute décision compte comme signature ») faisait LEVER le contrat de l'état
+servi — le check mourait avant son bilan. `servir_atelier` est appelé via un enveloppeur qui change une
+exception en FAIL nommé.
+
+Gardes : `check_signature_modele.py` **46/0** + `negatif_signature_modele.sh` **20/0** ·
+`check_signature_modele_persist.py` **25/0** (vraie base, ROLLBACK, zéro résidu) · `negatif_051.sh` **26/0** ·
+`negatif_parcours.sh` 21/0 après l'extraction · suite **3943/0 sur 55**.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
