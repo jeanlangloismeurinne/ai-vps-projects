@@ -8,6 +8,22 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+## 2026-09-29 (3) — ROADMAP 05, capacité 4 bis : la signature du modèle de valorisation (#98, migration 051)
+
+Lot annoncé : « signature du comité + persistance (051) ». Contrat `signature_modele_schema.py` écrit
+d'abord, puis `valorisation/signature.py` (pur `servir_atelier` + écritures `proposer`/`signer`/`ecarter`),
+puis la 051 comme projection du contrat — éprouvée sur copie (`negatif_051.sh` 26/0) et appliquée
+(tables vides). Choix pris comme un vrai fonds sans question (à confirmer, cf. #98) : PV append-only une
+décision par version, fourchette signée au PV, dernière proposition seule en attente, signature rejouée
+contre le dossier du jour, signé-qui-ne-tient-plus servi « à revoir » sans retirer la fourchette signée.
+Trouvé en MESURANT RVMD (§4 du check persist) : le chargeur prenait « acquittée » ; 12 acquittées dont
+mo_1…mo_5/qf_4 périmées par la FDA — rendues reprenables à tort. Règle `reponse_tient` extraite de
+`manque_de_la_question` et partagée ; reprenable = tient ET chiffrée → 1 seule sur RVMD (qf_6) ; qf_1 est
+`sans_objet` (biotech sans CA) : le « coût du capital de qf_1 » de #95 n'existe pas pour RVMD. Test
+négatif : une mutation faisait lever le contrat de l'état servi et tuait le check → enveloppeur `vu`.
+Mutation caduque (motif écrit autrement dans le source) corrigée. Déployé `9880731`, vérifié en prod par
+le GET (état nommé) et les refus (404/404/422), PV resté vide. Suite 3943/0 sur 55.
+
 ## 2026-09-26 (7) — LOT 7 : la note flash branchée au flux (#91, arbitrage option c)
 
 - **Arbitrage rendu** : l'analyste lit (a) chaque matin pour tout titre suivi, sous `v2_auto_enabled`, et
