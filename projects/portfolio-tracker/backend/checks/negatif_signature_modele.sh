@@ -35,14 +35,15 @@ mutations=(
   "$G¦        segments_ajoutes=sorted(seg_apres - seg_avant),¦        segments_ajoutes=[],¦un produit lancé"
   "$G¦        forme_changee=signee.fourchette != proposee.fourchette,¦        forme_changee=False,¦changement de forme"
   # ── Les réponses reprenables ───────────────────────────────────────────────────────────────
-  "$G¦            if reponse_tient(r) and r.servie.statut != \"sans_objet\"}¦            if r.verdict == \"acquitte\" and r.servie.statut != \"sans_objet\"}¦PÉRIMÉE par un fait publié depuis"
-  "$G¦            if reponse_tient(r) and r.servie.statut != \"sans_objet\"}¦            if reponse_tient(r)}¦ne porte aucun chiffre"
+  "$G¦            for r in reponses if reponse_tient(r) and r.servie.reponse is not None}¦            for r in reponses if r.verdict == \"acquitte\" and r.servie.reponse is not None}¦PÉRIMÉE par un fait publié depuis"
+  "$G¦            for r in reponses if reponse_tient(r) and r.servie.reponse is not None}¦            for r in reponses if reponse_tient(r)}¦ne porte aucun chiffre"
   # ── Le contrat ─────────────────────────────────────────────────────────────────────────────
   "$S¦        if (self.action == \"signer\") != (self.fourchette is not None):¦        if self.action == \"signer\" and self.fourchette is None:¦écarter AVEC une fourchette"
   "$S¦        if not self.bas <= self.central <= self.haut:¦        if not self.bas <= self.haut:¦croisée (bas > central)"
   "$S¦        if (self.modele.ticker_id, self.modele.version) != (self.ticker_id, self.version):¦        if self.modele.ticker_id != self.ticker_id:¦une ligne v2 qui porte le modèle v1"
   "$S¦        if self.signable != (self.motif_refus is None):¦        if False:¦malgré un motif de refus"
   "$S¦        if self.etat != attendu:¦        if False:¦sans version signée est refusé"
+  "$G¦                chiffres={c.id: (c.valeur, c.unite) for c in r.servie.reponse.chiffres_cles})¦                chiffres={})¦apporte son ENCADRÉ"
 )
 
 source "$(dirname "$0")/_negatif.sh"

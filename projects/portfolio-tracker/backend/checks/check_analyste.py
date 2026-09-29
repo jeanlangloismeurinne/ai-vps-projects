@@ -230,9 +230,15 @@ print("\n[5] `rang_derive` et `nature_effective` sont CALCULÉS depuis les entri
 _asm = dict(question=Q["qf_6"], entries=ENTRIES, **_entete)
 
 
+# L'ENCADRÉ que `qf_6` déclare dans le référentiel réel (4 bis) — lu, jamais recopié.
+ENC_QF6 = [{"id": "retraitements_discretionnaires", "unite": "M$", "valeur": 42.0, "date_ou_periode": "exercice 2025"}]
+ENC_QF4 = [{"id": c.id, "unite": c.unite, "valeur": 0.0, "date_ou_periode": "au 2026-06-30"}
+           for c in Q["qf_4"].chiffres_cles]
+
+
 def brute(**kw):
     base = dict(question_id="qf_6", statut="repondu", verbatim="12 %", sens="part_significative",
-                cited_entry_ids=[1])
+                cited_entry_ids=[1], chiffres_cles=ENC_QF6)
     return A.AnalysteReponse(**{**base, **kw})
 
 
@@ -269,6 +275,25 @@ check("… et son tier inconnu vaut le PIRE tier connu, jamais le meilleur",
 leve("… et le pont la refuse bien",
      lambda: valider_pont_framework_answer(_hors, questions=question_profiles(F), entries=ENTRIES),
      FrameworkAnswerRefused)
+
+
+# ── §5 bis L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ─────────────────────────────────────────────────────
+print("\n[5 bis] l'ENCADRÉ : le modèle voit les chiffres demandés, les rend, et le code les recopie tels quels")
+_dem = {q["id"]: q.get("chiffres_cles_demandes") for q in CTX["questions"]}
+check("le contexte montre, par question, les chiffres DÉCLARÉS par le référentiel (id et unité imposés)",
+      [(c["id"], c["unite"]) for c in (_dem.get("qf_4") or [])]
+      == [(c.id, c.unite) for c in Q["qf_4"].chiffres_cles] and len(_dem.get("qf_4") or []) == 3,
+      f"→ {_dem.get('qf_4')}")
+_a6 = A.assembler_answer(brute(), **_asm)
+check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre réécrit par le code)",
+      [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles] == ENC_QF6,
+      f"→ {_a6.reponse.chiffres_cles}")
+leve("un `sans_fondement` qui porte un encadré est refusé (un manque qui donne ses chiffres est une réponse)",
+     lambda: A.AnalysteReponse(question_id="qf_4", statut="sans_fondement", verbatim="il manque la dette",
+                               chiffres_cles=ENC_QF4), ValidationError)
+check("la consigne de l'analyste ENSEIGNE l'encadré : une ligne par chiffre demandé, absence motivée",
+      "chiffres_cles_demandes" in A._ANALYSTE_SYSTEM_PROMPT and "motif_absence" in A._ANALYSTE_SYSTEM_PROMPT
+      and "date_ou_periode" in A._ANALYSTE_SYSTEM_PROMPT)
 
 
 # ── §6 [S] contre les profils RÉELS ───────────────────────────────────────────────────────────────
@@ -330,9 +355,9 @@ APX = dict(methode="rapport sur le trimestre annualisé", ingredients_entry_ids=
            hypotheses_explicites=["rythme de dépense constant"], sensibilite="±2 trimestres")
 NOMINAL = [
     dict(question_id="qf_4", statut="repondu", verbatim="aucune dette financière",
-         sens="aucune_contrainte", cited_entry_ids=[1]),
+         sens="aucune_contrainte", cited_entry_ids=[1], chiffres_cles=ENC_QF4),
     dict(question_id="qf_6", statut="approxime", verbatim="~15 % du résultat publié",
-         sens="part_significative", cited_entry_ids=[1], approximation=APX),
+         sens="part_significative", cited_entry_ids=[1], approximation=APX, chiffres_cles=ENC_QF6),
     dict(question_id="qf_7", statut="sans_fondement",
          verbatim="la consommation de trésorerie des 4 derniers trimestres n'est dans aucune source"),
 ]
@@ -399,6 +424,10 @@ check("un passage nominal ne produit AUCUN refus",
       _ref(R) == [], f"→ {_ref(R)}")
 
 # Les pannes d'agent. Chacune sort en REFUS, et surtout : aucune ne produit de `gap`.
+_sans_enc = passage([{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:])
+check("un encadré OMIS par le modèle sort en refus NOMMÉ du pont [K], jamais en manque de données",
+      [q for q, m in _ref(_sans_enc) if "ne porte pas les chiffres que la question déclare" in m] == ["qf_4"]
+      and not any(a.question_id == "qf_4" for a in _ans(_sans_enc)), f"→ {_ref(_sans_enc)}")
 _omis = passage([r for r in NOMINAL if r["question_id"] != "qf_4"])
 check("une question OMISE par le modèle sort en refus, jamais en réponse",
       [q for q, _ in _ref(_omis)] == ["qf_4"]

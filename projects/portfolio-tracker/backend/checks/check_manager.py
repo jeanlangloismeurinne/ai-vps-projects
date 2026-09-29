@@ -60,7 +60,7 @@ def _repondu(qid, ticker, analyste="a", cites=(10,), rang="A", nature="mesure"):
     return FrameworkAnswer(
         framework_id="qualite_financiere", framework_version="v3.0.0", question_id=qid,
         ticker_id=ticker, analyste=analyste, statut="repondu",
-        reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+        reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
         fondation=Fondation(cited_entry_ids=list(cites), rang_derive=rang, nature_effective=nature))
 
 
@@ -68,7 +68,7 @@ def _approxime(qid, ticker, cites=(10, 11), rang="A-"):
     return FrameworkAnswer(
         framework_id="qualite_financiere", framework_version="v3.0.0", question_id=qid,
         ticker_id=ticker, analyste="a", statut="approxime",
-        reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+        reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
         fondation=Fondation(cited_entry_ids=list(cites), rang_derive=rang,
                             nature_effective="interpretation"),
         approximation=Approximation(methode="m", ingredients_entry_ids=list(cites),

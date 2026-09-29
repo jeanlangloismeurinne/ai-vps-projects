@@ -2575,6 +2575,37 @@ Gardes : `check_modele_valorisation.py` **57/0** + négatif **35/0** · `check_f
 négatif **35/0** · `check_collection_plan_contract` **36/0** + négatif **20/0** · `check_signature_modele_persist`
 **27/0** · suite **3961/0 sur 55**.
 
+### #100 — l'encadré de chiffres clés : la valorisation relit des chiffres déclarés, jamais la prose
+
+**Instruit avec l'utilisateur le 2026-09-29 (roadmap 05, capacité 4 bis), comme un vrai fonds** : la note
+d'analyste se clôt par un ENCADRÉ au format maison — valeur, unité, période — et c'est lui que relit le
+modèle de valorisation. La réponse à UN nombre (`reponse.valeur`/`unite`, jamais rempli : 20/20 à `null`,
+mesuré avant de le retirer) est remplacée par `reponse.chiffres_cles`.
+- **En données** : `QuestionDefinition.chiffres_cles` (id, libellé, unité, période) — REQUIS, sans défaut ;
+  une liste vide est une déclaration (« se_4 ne se chiffre pas »), jamais un oubli. Chiffres validés par
+  l'utilisateur : qf_1 (rendement du capital %, coût du capital %, résultat normalisé M$), qf_2, qf_3, qf_4
+  (dette brute, trésorerie et placements, dette nette), qf_5, qf_6, qf_7 (trésorerie mobilisable,
+  consommation, autonomie), mo_4, me_5 ; toutes les autres questions : `[]`.
+- **Trois liens « repris de » corrigés** : résultat normalisé ← qf_1 (ajusté par qf_6 ; se_4 éclaire les
+  scénarios sans chiffre) ; nombre d'actions dilué relevé AVEC LE COURS COTÉ (ingrédient à part, jamais
+  repris) ; dilution ← qf_4 (instruments) + qf_7 (besoin qui l'appelle). Pont du référentiel [S] durci : on
+  ne reprend pas une question qui ne déclare aucun chiffre — l'erreur « se_4 » devient infaisable.
+- **Une ligne = trois états** (`ChiffreCle`) : établie (valeur + `date_ou_periode`, ce qu'elle mesure
+  réellement, #42) ou non établie (`motif_absence`), jamais un silence ; zéro est une valeur (#47).
+- **Pont des réponses [K]** : l'encadré porte EXACTEMENT les chiffres déclarés, dans l'unité déclarée —
+  omis, inventé ou converti = refus nommé (une panne d'agent, jamais un manque de données). Un profil sans
+  déclaration fait refuser, pas sauter.
+- **Pont du modèle [A]** (`modele-1.2.0`, `OrigineReprise.chiffre`) : une ligne reprise porte la MÊME valeur
+  et la MÊME unité que la ligne de l'encadré — « même chiffre que qf_1 » se vérifie enfin par la VALEUR (#99
+  ne le vérifiait que par la référence). Une réponse d'avant l'encadré n'est pas reprenable : elle se réémet.
+- **Héritage lu, jamais avalé** : `Reponse` relit `valeur`/`unite` à `null` (forme exacte de l'historique)
+  et REFUSE un nombre à cet ancien format — il n'y en a jamais eu, le taire perdrait un chiffre.
+- **Pas de dette** (arbitrage) : les réponses reprenables sans encadré sont RÉÉMISES sur les mêmes pièces ;
+  `check_signature_modele_persist` le lit sur l'état réel (rouge sur qf_6 #474 avant la réémission).
+- Écran niveau 3 : l'encadré (5 feuilles) remplace « valeur » — bijection contrat ↔ pixels 39 → 42.
+⚠️ `framework_version` NON montée (précédent #92/#99) : la monter aurait rendu non courantes toutes les réponses
+des pilotes pour un ajout de forme que la réémission solde question par question.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

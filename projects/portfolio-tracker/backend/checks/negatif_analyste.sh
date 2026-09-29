@@ -75,6 +75,10 @@ mutations=(
 "$SRC¦        if not citables:¦        if False:¦DEUX causes ont DEUX motifs distincts"
 "$SRC¦                manque=(f\"aucune réponse recevable n'est possible sur ce corpus pour \"¦                manque=(f\"aucune source fournie ne fonde « {q.enonce} » — pour \"¦DEUX causes ont DEUX motifs distincts"
 "$SRC¦            if brute.statut not in admis[brute.question_id]:¦            if False:¦sort en refus nommé"
+# ── L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ──────────────────────────────────────────────────────────
+"$SRC¦            \"chiffres_cles_demandes\": [¦            \"chiffres_demandes_ailleurs\": [¦les chiffres DÉCLARÉS par le référentiel"
+"$SRC¦        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles),¦        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles)[:0],¦entre TEL QUEL dans la réponse"
+"$SRC¦            if self.chiffres_cles:¦            if False:¦qui porte un encadré est refusé"
 )
 
 passes=0; ratees=0

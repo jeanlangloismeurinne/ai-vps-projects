@@ -246,7 +246,7 @@ def lue(i, statut, *, verdict="acquitte", act="courante", qid="qf_7"):
         a = FrameworkAnswerServie(
             **commun, manager=(ManagerVerdict(verdict="acquitte", controles=OK4, motif="ok")
                                if verdict == "acquitte" else None),
-            reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+            reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
             fondation=FondationServie(cited_entry_ids=[10], rang_derive="A",
                                       nature_effective="mesure", actualite=act,
                                       motif_actualite=f"motif-{act}"))

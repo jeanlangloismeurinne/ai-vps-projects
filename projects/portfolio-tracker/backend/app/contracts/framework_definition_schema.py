@@ -36,7 +36,7 @@ from .analysis_v2_schemas import Strict, Tier
 __all__ = [
     "FRAMEWORK_DEFINITION_SCHEMA_VERSION",
     "MODES_ARCHETYPE", "PLANCHERS_DESSERRES", "PORTEES_EVENEMENT",
-    "TypeEvenement", "IngredientRequis", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
+    "TypeEvenement", "IngredientRequis", "ChiffreCleDeclare", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
     "FrameworksFile",
 ]
 
@@ -114,6 +114,21 @@ class IngredientRequis(Strict):
         return self
 
 
+class ChiffreCleDeclare(Strict):
+    """Un chiffre de l'ENCADRÉ DE CHIFFRES CLÉS que toute réponse à la question doit rendre (4 bis,
+    instruit avec l'utilisateur le 2026-09-29).
+
+    Comme un vrai fonds : la note d'analyste se clôt par un encadré au format maison — valeur, unité,
+    période —, et c'est LUI que relit le modèle de valorisation, jamais la prose. Le chiffre est
+    déclaré ici, en DONNÉES : l'analyste ne choisit ni ce qu'il chiffre, ni l'unité (un coût du capital
+    rendu en points par l'un et en fraction par l'autre ferait deux chiffres, #95).
+    """
+    id: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    libelle: str = Field(min_length=10)
+    unite: str = Field(min_length=1)     # « % », « M$ », « mois », « années », « points/an »
+    periode: str = Field(min_length=3)   # « moyenne 5 ans », « dernier exercice », « à la date du bilan »
+
+
 class VariableArchetype(Strict):
     """Comment la question s'instancie pour un archétype — ou pourquoi elle n'a pas d'objet.
 
@@ -179,6 +194,11 @@ class QuestionDefinition(Strict):
     sens_admis: list[str] = Field(min_length=2)
     ingredients_requis: list[IngredientRequis] = Field(min_length=1)
     variables_par_archetype: dict[str, VariableArchetype] = Field(min_length=1)
+    # L'encadré de chiffres clés (4 bis) — REQUIS, sans défaut, et une liste VIDE est une réponse :
+    # « se_4 ne rend AUCUN chiffre (une position dans le cycle) » doit s'écrire. Un défaut vide rendrait
+    # « cette question ne se chiffre pas » indiscernable de « on a oublié de déclarer ses chiffres », et
+    # la valorisation n'aurait rien à reprendre sans que rien ne le dise (`feedback_optional_schema_gate`).
+    chiffres_cles: list[ChiffreCleDeclare]
 
     @model_validator(mode="after")
     def _une_question_demande_quelque_chose(self):
@@ -190,6 +210,9 @@ class QuestionDefinition(Strict):
         ids = [i.id for i in self.ingredients_requis]
         if len(set(ids)) != len(ids):
             raise ValueError(f"{self.id} : deux ingrédients portent le même id — {sorted(ids)}")
+        chiffres = [c.id for c in self.chiffres_cles]
+        if len(set(chiffres)) != len(chiffres):
+            raise ValueError(f"{self.id} : deux chiffres clés portent le même id — {sorted(chiffres)}")
         if len(set(self.rouverte_par)) != len(self.rouverte_par):
             raise ValueError(f"{self.id} : `rouverte_par` contient un doublon")
         if len(set(self.sens_admis)) != len(self.sens_admis):

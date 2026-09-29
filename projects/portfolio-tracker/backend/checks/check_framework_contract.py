@@ -48,6 +48,7 @@ from typing import get_args
 from pydantic import ValidationError
 
 import app.contracts.framework_answer_schema as fw
+from app.contracts.framework_definition_schema import ChiffreCleDeclare
 from app.contracts.framework_answer_schema import (
     COLONNES_DENORMALISEES,
     FRAMEWORK_SCHEMA_VERSION,
@@ -169,11 +170,35 @@ rejete("un 5ᵉ statut (« partiellement répondu ») est refusé",
 rejete("un champ hors contrat est refusé, pas ignoré (extra='forbid')",
        lambda: FrameworkAnswer(**BASE, statut="non_fondable", gap=GAP, confiance=0.9),
        "Extra inputs are not permitted")
-valide("une réponse chiffrée porte son unité",
-       lambda: Reponse(verbatim="12,4 %", valeur=12.4, unite="%"))
-rejete("un nombre nu (valeur sans unité) est refusé (#45/#46)",
-       lambda: Reponse(verbatim="12,4", valeur=12.4),
-       "un nombre nu n'est pas une")
+# L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) : trois états par ligne — établi et daté, absent et motivé.
+_C = {"id": "dette_nette", "unite": "M$"}
+valide("un chiffre établi porte sa valeur, son unité et ce qu'il mesure réellement",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "valeur": -328.0, "date_ou_periode": "au 2026-06-30"}]))
+valide("… et zéro est une VALEUR (#47), pas une absence",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "valeur": 0.0, "date_ou_periode": "au 2026-06-30"}]))
+valide("un chiffre que le dossier n'établit pas se rend avec son motif",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "motif_absence": "aucune pièce ne publie la dette au bilan"}]))
+rejete("un chiffre ni établi ni motivé est refusé (#25)",
+       lambda: Reponse(verbatim="x", chiffres_cles=[_C]), "sans valeur ni `motif_absence`")
+rejete("un chiffre qui ne dit pas ce qu'il mesure est refusé (#42)",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "valeur": 1.0}]), "sans `date_ou_periode`")
+rejete("un chiffre établi ET motivé absent est refusé",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "valeur": 1.0, "date_ou_periode": "au 2026-06-30",
+                                                      "motif_absence": "aucune pièce ne publie la dette"}]),
+       "il faut choisir")
+rejete("un chiffre absent mais daté est refusé",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "date_ou_periode": "au 2026-06-30",
+                                                      "motif_absence": "aucune pièce ne publie la dette"}]),
+       "absent mais daté")
+rejete("deux lignes pour le même chiffre sont refusées (#95)",
+       lambda: Reponse(verbatim="x", chiffres_cles=[{**_C, "valeur": 1.0, "date_ou_periode": "au 2026-06-30"},
+                                                     {**_C, "valeur": 2.0, "date_ou_periode": "au 2026-03-31"}]),
+       "deux fois le même chiffre")
+# L'héritage du nombre unique : mesuré, les 20 réponses d'avant l'encadré portaient `valeur`/`unite` à null.
+valide("une réponse d'avant l'encadré (valeur et unité à null) se relit",
+       lambda: Reponse.model_validate({"verbatim": "x", "valeur": None, "unite": None, "sens": "s"}))
+rejete("… mais un nombre au format d'avant n'est jamais avalé en silence",
+       lambda: Reponse.model_validate({"verbatim": "x", "valeur": 12.4, "unite": "%"}), "jamais observé")
 rejete("un verbatim vide est refusé",
        lambda: Reponse(verbatim=""), "at least 1 character")
 
@@ -435,9 +460,9 @@ print("\n8. le PONT relationnel — ce qu'un contrat ne peut PAS vérifier (#37)
 # en Python. Les cas ci-dessous sont tous formellement VALIDES : s'ils passaient, ce serait la
 # démonstration que le contrat seul ne suffit pas — et c'est précisément pourquoi le pont existe.
 QUESTIONS = {
-    "qf_1": {"plancher_tier": "B", "nature_attendue": "mesure",
+    "qf_1": {"plancher_tier": "B", "nature_attendue": "mesure", "chiffres_cles": [],
              "framework_version": FRAMEWORK_SCHEMA_VERSION},
-    "qf_7": {"plancher_tier": "B+", "nature_attendue": "mesure",
+    "qf_7": {"plancher_tier": "B+", "nature_attendue": "mesure", "chiffres_cles": [],
              "framework_version": FRAMEWORK_SCHEMA_VERSION},
     # ⚠️ Une SEULE question porte `sens_admis` ici, et c'est délibéré : [S] se saute quand le profil
     # n'en déclare pas, donc les deux profils ci-dessus servent à éprouver A→F sans que [S] ne
@@ -446,9 +471,18 @@ QUESTIONS = {
     # et c'est `check_analyste.py` qui éprouve [S] contre les profils réels.
     # Une question de JUGEMENT (arbitrage du 2026-09-26) : sa nature attendue PERMET des opinions, elle
     # n'en EXIGE pas. Plancher `A-` pour qu'aucune des entries ci-dessous ne rougisse [D] avant [E].
-    "qf_itp": {"plancher_tier": "A-", "nature_attendue": "interpretation",
+    "qf_itp": {"plancher_tier": "A-", "nature_attendue": "interpretation", "chiffres_cles": [],
                "framework_version": FRAMEWORK_SCHEMA_VERSION},
-    "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure",
+    # L'encadré (4 bis) : une question qui déclare deux chiffres, comme qf_4 (profil tel que
+    # `question_profiles` le produit — des `ChiffreCleDeclare`, jamais des dicts).
+    "qf_chiffres": {"plancher_tier": "B", "nature_attendue": "mesure",
+                    "framework_version": FRAMEWORK_SCHEMA_VERSION,
+                    "chiffres_cles": [
+                        ChiffreCleDeclare(id="dette_nette", libelle="Dette nette au bilan", unite="M$",
+                                          periode="à la date du dernier bilan"),
+                        ChiffreCleDeclare(id="autonomie", libelle="Autonomie de financement", unite="mois",
+                                          periode="à la date du dernier bilan")]},
+    "qf_sens": {"plancher_tier": "B", "nature_attendue": "mesure", "chiffres_cles": [],
                 "framework_version": FRAMEWORK_SCHEMA_VERSION,
                 "sens_admis": ["cree_de_la_valeur", "detruit_de_la_valeur"]},
 }
@@ -577,6 +611,28 @@ pont("[S] … et le silence n'est pas une échappatoire : pas de `sens` du tout 
 pont_ok("[S] … un sens admis passe (sinon rien au-dessus ne discrimine)",
         rep(question_id="qf_sens",
             blocs={"reponse": {"verbatim": "12,4 %", "sens": "cree_de_la_valeur"}}))
+# [K] L'ENCADRÉ porte exactement les chiffres déclarés, dans l'unité déclarée (4 bis).
+_DN = {"id": "dette_nette", "unite": "M$", "valeur": -328.0, "date_ou_periode": "au 2026-06-30"}
+_AU = {"id": "autonomie", "unite": "mois", "motif_absence": "la consommation annuelle n'est publiée nulle part"}
+pont_ok("[K] un encadré qui porte les chiffres déclarés — l'un établi, l'autre motivé absent — passe",
+        rep(question_id="qf_chiffres", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [_DN, _AU]}}))
+pont("[K] un chiffre déclaré OMIS est refusé (l'absence se motive, elle ne s'omet pas)",
+     rep(question_id="qf_chiffres", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [_DN]}}),
+     "manquants ['autonomie']")
+pont("[K] un chiffre NON déclaré est refusé (la valorisation n'a pas de place pour lui)",
+     rep(question_id="qf_chiffres", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
+         _DN, _AU, {"id": "tresorerie_nette", "unite": "M$", "valeur": 1.0, "date_ou_periode": "au 2026-06-30"}]}}),
+     "non déclarés ['tresorerie_nette']")
+pont("[K] un chiffre dans une AUTRE unité que la déclarée est refusé (#95)",
+     rep(question_id="qf_chiffres", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
+         {**_DN, "unite": "Md$", "valeur": -0.328}, _AU]}}),
+     "change l'unité déclarée")
+pont("[K] une question qui ne se chiffre pas refuse un encadré inventé",
+     rep(blocs={"reponse": {"verbatim": "x", "chiffres_cles": [_DN]}}), "non déclarés ['dette_nette']")
+pont("[K] un profil sans déclaration d'encadré fait REFUSER, pas sauter le contrôle",
+     rep(question_id="qf_nu"), "sans `chiffres_cles`",
+     questions={**QUESTIONS, "qf_nu": {k: v for k, v in QUESTIONS["qf_1"].items() if k != "chiffres_cles"}})
+
 _so = dict(sans_objet={"motif": "société sans stocks", "substitut_applique": "rotation",
                        "substitut_answer_id": 7, "aucun_substitut": False})
 pont("[F] un substitut qui pointe une réponse à LA MÊME question (contrôle ④)",

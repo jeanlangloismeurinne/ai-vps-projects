@@ -68,7 +68,7 @@ FRAMEWORKS_YAML = Path(__file__).resolve().parents[2] / "frameworks" / "framewor
 # `question_profiles`). `framework_version` n'en fait PAS partie : elle vient de `fichier.
 # schema_version`, pas d'une `Question` — la distinguer évite un `getattr(q, "framework_version")`
 # qui lèverait `AttributeError`.
-CLEFS_PROFIL_QUESTION = ("plancher_tier", "nature_attendue", "sens_admis")
+CLEFS_PROFIL_QUESTION = ("plancher_tier", "nature_attendue", "sens_admis", "chiffres_cles")
 
 # TOUTES les clefs que le pont LIT dans un profil, `profil.get(...)` — celles de la question
 # ci-dessus ET celles du contrat (`framework_version`). Détenteur unique : `valider_pont_…` les
@@ -251,13 +251,21 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
     #    réponse impossible, en silence. Se reprendre soi-même, c'est tourner en rond. Et la PROSE que
     #    lisent le comité et les agents doit nommer ce que la donnée reprend — sinon le libellé dirait
     #    « repris de qf_6 » pendant que le code reprend autre chose.
-    ids_questions = {q.id for _f, q in toutes}
+    #    ⚠️ Et la question reprise doit DÉCLARER au moins un chiffre clé (4 bis) : la valorisation
+    #    relit l'encadré, jamais la prose. Reprendre une question qui ne se chiffre pas (se_4, une
+    #    position dans le cycle — trouvé en instruisant l'encadré le 2026-09-29) ferait attendre un
+    #    nombre que personne ne rendra jamais.
+    questions_par_id = {q.id: q for _f, q in toutes}
     for _f, q in toutes:
         for i in q.ingredients_requis:
             for r in i.repris_de:
-                if r not in ids_questions:
+                if r not in questions_par_id:
                     raise FrameworkDefinitionRefused(
                         f"[S] `{q.id}.{i.id}` est repris de `{r}`, question inconnue du référentiel")
+                if not questions_par_id[r].chiffres_cles:
+                    raise FrameworkDefinitionRefused(
+                        f"[S] `{q.id}.{i.id}` est repris de `{r}`, qui ne déclare aucun chiffre clé — "
+                        "la valorisation reprend l'encadré, il n'y aurait rien à reprendre")
                 if r == q.id:
                     raise FrameworkDefinitionRefused(
                         f"[S] `{q.id}.{i.id}` se reprend de sa propre question")
@@ -438,7 +446,7 @@ def valider_pont_framework_answer(
     entries: dict[int, dict[str, Any]],
     autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
 ) -> None:
-    """Vérifie A→F, S et V. Ne rend rien : le seul résultat possible est « pas de refus ».
+    """Vérifie A→F, K, S et V. Ne rend rien : le seul résultat possible est « pas de refus ».
 
     `questions` : `{question_id: {plancher_tier, nature_attendue, sens_admis, ...}}` — les DONNÉES
     du lot 2, telles que `question_profiles()` les produit.
@@ -563,6 +571,34 @@ def valider_pont_framework_answer(
                 f"`sens` = {answer.reponse.sens!r} hors du vocabulaire de `{answer.question_id}` "
                 f"({sorted(admis)}) : un sens libre rend la réponse incomparable à toutes les "
                 "autres réponses de la même question — l'écran la montre, et rien ne la range")
+
+    # K. L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) porte EXACTEMENT les chiffres que la question déclare, chacun
+    #    dans l'unité déclarée. Ni plus (un chiffre inventé par l'analyste n'a pas de place dans le
+    #    modèle de valorisation, qui relit l'encadré) ; ni moins (un chiffre omis se lirait « pas
+    #    demandé » — l'absence se MOTIVE, `ChiffreCle.motif_absence`) ; jamais une autre unité (un coût du
+    #    capital en fraction chez l'un et en % chez l'autre ferait deux chiffres, #95).
+    #    ⚠️ `chiffres_cles` absent du profil ⟹ refus, pas saut : une liste vide est une déclaration
+    #    (« ne se chiffre pas »), `None` serait un profil qui ne vient pas du référentiel — et un contrôle
+    #    sauté est un vert (`feedback_check_degrade_en_sortant_a_zero`).
+    if answer.reponse is not None:
+        declares = profil.get("chiffres_cles")
+        if declares is None:
+            raise FrameworkAnswerRefused(
+                f"profil de `{answer.question_id}` sans `chiffres_cles` : l'encadré ne peut pas être vérifié")
+        unites = {c.id: c.unite for c in declares}
+        rendus = {c.id: c.unite for c in answer.reponse.chiffres_cles}
+        manquants = sorted(set(unites) - set(rendus))
+        inventes = sorted(set(rendus) - set(unites))
+        if manquants or inventes:
+            raise FrameworkAnswerRefused(
+                f"l'encadré de `{answer.question_id}` ne porte pas les chiffres que la question déclare — "
+                f"manquants {manquants}, non déclarés {inventes}. Un chiffre que le dossier n'établit pas "
+                "se rend avec son motif d'absence, il ne s'omet pas")
+        mauvaises = sorted(f"{i} en {u!r} au lieu de {unites[i]!r}" for i, u in rendus.items() if u != unites[i])
+        if mauvaises:
+            raise FrameworkAnswerRefused(
+                f"l'encadré de `{answer.question_id}` change l'unité déclarée : {mauvaises} — deux unités pour "
+                "un même chiffre font deux chiffres (#95)")
 
     # F. un substitut pointe la réponse d'une AUTRE question.
     motif_substitut = motif_substitut_hors_sujet(answer, autres_reponses)

@@ -74,13 +74,13 @@ def _servie(qid, statut, *, fw="qualite_financiere", act="courante", analyste="a
                   analyste=analyste, statut=statut, manager=manager)
     if statut == "repondu":
         return FrameworkAnswerServie(
-            **commun, reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+            **commun, reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
             fondation=FondationServie(cited_entry_ids=list(cites), rang_derive="A",
                                       nature_effective="mesure", actualite=act,
                                       motif_actualite=f"motif-{act}"))
     if statut == "approxime":
         return FrameworkAnswerServie(
-            **commun, reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+            **commun, reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
             fondation=FondationServie(cited_entry_ids=list(cites), rang_derive="A-",
                                       nature_effective="interpretation", actualite=act,
                                       motif_actualite=f"motif-{act}"),
@@ -367,7 +367,7 @@ else:
     jsx = re.sub(r"/\*.*?\*/", "", N3.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-champ="([a-z_.]+)"', jsx))
-    b.require(attendus, 39, "§7 le contrat servi a ses 39 champs terminaux")
+    b.require(attendus, 42, "§7 le contrat servi a ses 42 champs terminaux (l’encadré : 5 feuilles remplacent valeur et unité)")
     b.check(not (attendus - marques),
             f"§7 tout champ du contrat a son pixel au niveau 3 — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),

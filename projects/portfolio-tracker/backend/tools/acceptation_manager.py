@@ -81,7 +81,7 @@ def _reponse_fabriquee(ticker, version):
     return FrameworkAnswer(
         framework_id=FW, framework_version=version, question_id=Q, ticker_id=ticker,
         analyste="analyste_1", statut="repondu",
-        reponse=Reponse(verbatim="ROIC de 24%", valeur=24.0, unite="%"),
+        reponse=Reponse(verbatim="ROIC de 24%", chiffres_cles=[{"id": "rendement_du_capital_employe", "unite": "%", "valeur": 24.0, "date_ou_periode": "moyenne 5 ans"}]),
         fondation=Fondation(cited_entry_ids=[_ENTRY], rang_derive="A", nature_effective="mesure"))
 
 

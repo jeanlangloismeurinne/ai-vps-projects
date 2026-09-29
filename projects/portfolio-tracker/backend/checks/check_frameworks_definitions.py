@@ -144,6 +144,9 @@ def q_base(**over):
                             "motif_gabarit": "Un résultat structurellement négatif ne se convertit pas",
                             "aucun_substitut": True},
         },
+        # Calqué sur `qf_2` : un chiffre clé déclaré (4 bis).
+        "chiffres_cles": [{"id": "part_en_tresorerie", "libelle": "Part du résultat retrouvée en trésorerie",
+                           "unite": "%", "periode": "moyenne 3 ans"}],
     }
     d.update(over)
     return d
@@ -373,6 +376,37 @@ rejete("[S] un ingrédient repris de SA PROPRE question",
 rejete("[S] un ingrédient repris d'une question que son libellé ne NOMME pas",
        lambda: charge(_avec_reprise(["zz_1"], "Chiffre déjà instruit ailleurs au dossier")),
        "que son libellé ne nomme pas")
+# L'encadré (4 bis) : la valorisation reprend un CHIFFRE, donc la question reprise doit en déclarer un.
+# La base `zz_1` en déclare un ; la mutation que ce cas éprouve est « se_4 » (une position dans le cycle).
+rejete("[S] un ingrédient repris d'une question qui ne déclare AUCUN chiffre clé",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=[]), q_base(
+           id="zz_2", chemin_indexation="cadre_test.autre", ingredients_requis=[
+               {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True},
+               {"id": "repris", "libelle": "Chiffre repris de zz_1, déjà instruit au dossier",
+                "essentiel": False, "repris_de": ["zz_1"]}])])])),
+       "qui ne déclare aucun chiffre clé")
+rejete("une question sans déclaration d'encadré (le silence ne vaut pas « ne se chiffre pas »)",
+       lambda: QuestionDefinition.model_validate({k: v for k, v in q_base().items() if k != "chiffres_cles"}),
+       "chiffres_cles")
+rejete("deux chiffres clés au même id",
+       lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=[
+           {"id": "x", "libelle": "Un premier chiffre clé", "unite": "%", "periode": "dernier exercice"},
+           {"id": "x", "libelle": "Un second chiffre clé", "unite": "M$", "periode": "dernier exercice"}])),
+       "deux chiffres clés portent le même id")
+valide("une question qui ne se chiffre pas DÉCLARE un encadré vide, et passe",
+       lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=[])))
+_reel_q = {q.id: q for f in load_frameworks().frameworks for q in f.questions}
+check("le référentiel réel : l'encadré instruit le 2026-09-29 (qf_4 = dette brute, trésorerie, dette nette ; "
+      "se_4 ne se chiffre pas)",
+      [c.id for c in _reel_q["qf_4"].chiffres_cles] == ["dette_brute", "tresorerie_et_placements", "dette_nette"]
+      and _reel_q["se_4"].chiffres_cles == [],
+      f"→ qf_4 {[c.id for c in _reel_q['qf_4'].chiffres_cles]}, se_4 {_reel_q['se_4'].chiffres_cles}")
+check("les trois liens « repris de » corrigés : résultat normalisé ← qf_1/qf_6, dilution ← qf_4/qf_7, "
+      "actions diluées relevées avec le cours (jamais reprises)",
+      {i.id: i.repris_de for i in _reel_q["va_1"].ingredients_requis}.get("resultat_normalise") == ["qf_1", "qf_6"]
+      and {i.id: i.repris_de for i in _reel_q["va_2"].ingredients_requis}.get("dilution_future") == ["qf_4", "qf_7"]
+      and {i.id: i.repris_de for i in _reel_q["va_1"].ingredients_requis}.get("nombre_d_actions_dilue") == [],
+      f"→ va_1 {[(i.id, i.repris_de) for i in _reel_q['va_1'].ingredients_requis]}")
 rejete("un `repris_de` en double",
        lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
            {"id": "r", "libelle": "Chiffre repris de qf_2 et de qf_2", "essentiel": True,

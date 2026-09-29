@@ -20,8 +20,8 @@ def jugement(ref: int) -> dict:
             "ecart_justifie": "Mécanisme d'action validé chez l'homme en phase 1, au-dessus de la classe."}
 
 
-def reprise(qid: str, aid: int) -> dict:
-    return {"type": "reponse_reprise", "question_id": qid, "answer_id": aid}
+def reprise(qid: str, aid: int, chiffre: str = "cout_du_capital") -> dict:
+    return {"type": "reponse_reprise", "question_id": qid, "answer_id": aid, "chiffre": chiffre}
 
 
 def hyp(nom: str, valeur: float, origine: dict, segment: str | None = None) -> dict:
@@ -105,10 +105,21 @@ valeur_action = dcf(flux, cout_du_capital, croissance_terminale) / actions
 }
 # Les reprises que le RÉFÉRENTIEL déclare (`repris_de`) — lues dans les données, jamais recopiées ici.
 from app.agents.v2.frameworks import load_frameworks  # noqa: E402
+from app.valorisation.modele import ReponseReprenable  # noqa: E402
 from app.valorisation.signature import reprises_admises  # noqa: E402
 
 REPRISES = reprises_admises(load_frameworks())
-DOSSIER_RVMD = {"reponses_acquittees": {901: "qf_1"}, "pieces_du_dossier": {501, 502, 503, 504},
+
+
+def reprenable(qid: str, **chiffres: tuple) -> ReponseReprenable:
+    """Une réponse reprenable et son ENCADRÉ (id → (valeur, unité))."""
+    return ReponseReprenable(question_id=qid, chiffres=chiffres)
+
+
+# Le coût du capital repris vaut EXACTEMENT celui de l'encadré de qf_1 (0,1 en « u », l'unité du fictif).
+DOSSIER_RVMD = {"reponses_acquittees": {901: reprenable("qf_1", cout_du_capital=(0.1, "u"))},
+                "pieces_du_dossier": {501, 502, 503, 504},
                 "questions_sans_objet": frozenset(), "reprises_admises": REPRISES}
-DOSSIER_NVDA = {"reponses_acquittees": {902: "qf_1"}, "pieces_du_dossier": {601, 602, 603},
+DOSSIER_NVDA = {"reponses_acquittees": {902: reprenable("qf_1", cout_du_capital=(0.1, "u"))},
+                "pieces_du_dossier": {601, 602, 603},
                 "questions_sans_objet": frozenset(), "reprises_admises": REPRISES}

@@ -41,6 +41,39 @@ function Val({ v }) {
   return <>{String(v)}</>
 }
 
+// L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) : ce que relit le modèle de valorisation, jamais la prose. Un
+// chiffre absent est MOTIVÉ, jamais un blanc ; un chiffre estimé ne se compose JAMAIS comme un
+// chiffre mesuré (grisé, suffixé « ~ »).
+function EncadreChiffres({ chiffres, approx }) {
+  if (vide(chiffres)) {
+    return <p className="text-xs text-gray-500">Aucun chiffre clé : la question ne se chiffre pas.</p>
+  }
+  return (
+    <table className="w-full text-sm border border-gray-800 rounded">
+      <caption className="text-left text-xs text-gray-500 pb-1">Chiffres clés{approx && ' — estimés'}</caption>
+      <tbody>
+        {chiffres.map(c => (
+          <tr key={c.id} className="border-t border-gray-800">
+            <td className="px-2 py-1 text-xs text-gray-400" data-champ="reponse.chiffres_cles.id">{c.id.replaceAll('_', ' ')}</td>
+            <td className="px-2 py-1 text-right font-mono">
+              <span data-champ="reponse.chiffres_cles.valeur" className={approx ? 'text-gray-400' : 'text-gray-100'}>
+                <Val v={c.valeur} />{approx && !vide(c.valeur) && ' ~'}
+              </span>{' '}
+              <span data-champ="reponse.chiffres_cles.unite" className="text-gray-400">{c.unite}</span>
+            </td>
+            <td className="px-2 py-1 text-xs text-gray-500">
+              <span data-champ="reponse.chiffres_cles.date_ou_periode"><Val v={c.date_ou_periode} /></span>
+              {c.motif_absence && (
+                <span className="text-amber-300" data-champ="reponse.chiffres_cles.motif_absence">non établi : {c.motif_absence}</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 function Piece({ p }) {
   return (
     <li className="text-xs flex gap-2 items-start">
@@ -80,14 +113,8 @@ function Preuve({ pr, tickerId }) {
         />
         <CardBody className="space-y-3">
           <p className="text-sm text-gray-100" data-champ="reponse.verbatim"><Val v={a.reponse?.verbatim} /></p>
+          <EncadreChiffres chiffres={a.reponse?.chiffres_cles} approx={approx} />
           <dl className="space-y-1.5">
-            <Ligne label="valeur">
-              {/* Un nombre estimé ne se compose JAMAIS comme un nombre mesuré. */}
-              <span data-champ="reponse.valeur" className={approx ? 'text-gray-400' : ''}>
-                <Val v={a.reponse?.valeur} />{approx && !vide(a.reponse?.valeur) && ' ~'}
-              </span>{' '}
-              <span data-champ="reponse.unite"><Val v={a.reponse?.unite} /></span>
-            </Ligne>
             <Ligne label="sens"><span data-champ="reponse.sens"><Val v={a.reponse?.sens} /></span></Ligne>
           </dl>
         </CardBody>

@@ -64,6 +64,11 @@ mutations=(
 "$M¦        if q not in questions_sans_objet:¦        if True:¦propre coût du capital (jugement ancré)"
 "$S¦        if doubles:¦        if False:¦deux lignes qui reprennent qf_1"
 "$S¦        if self.reprend is not None and isinstance(o, OrigineReprise) and o.question_id != self.reprend:¦        if False:¦en déclarant tenir la place de qf_4"
+# ── [A] la reprise se vérifie par la VALEUR de l'encadré (4 bis) ───────────────────────────────
+"$M¦            if o.chiffre not in rep.chiffres:¦            if False:¦réponse d'avant l'encadré"
+"$M¦            if valeur is None:¦            if False:¦chiffre déclaré non établi"
+"$M¦            if unite != h.unite or not math.isclose(valeur, h.valeur, rel_tol=1e-9, abs_tol=1e-12):¦            if not math.isclose(valeur, h.valeur, rel_tol=1e-9, abs_tol=1e-12):¦unité différente de l'encadré"
+"$M¦            if unite != h.unite or not math.isclose(valeur, h.valeur, rel_tol=1e-9, abs_tol=1e-12):¦            if unite != h.unite:¦valeur différente de l'encadré"
 )
 
 source "$(dirname "$0")/_negatif.sh"

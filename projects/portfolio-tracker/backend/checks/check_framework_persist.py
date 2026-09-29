@@ -100,7 +100,7 @@ async def run():
             rep1 = FrameworkAnswer(
                 framework_id="qualite_financiere", framework_version=FV, question_id="qf_1",
                 ticker_id=ticker, analyste="analyste_1", statut="repondu",
-                reponse=Reponse(verbatim="ROIC de 18%", valeur=18.0, unite="%"),
+                reponse=Reponse(verbatim="ROIC de 18%", chiffres_cles=[{"id": "rendement_du_capital_employe", "unite": "%", "valeur": 18.0, "date_ou_periode": "moyenne 2020-2024"}]),
                 fondation=Fondation(cited_entry_ids=[entry_id], rang_derive="A",
                                     nature_effective="mesure"))
             id1 = await persist_answer(conn, rep1)
@@ -128,7 +128,7 @@ async def run():
             # ── §2 une correction du MÊME analyste supersède ────────────────────────────────────
             print("\n[2] une correction du MÊME analyste supersède la ligne courante de sa lignée")
             rep2 = rep1.model_copy(update={
-                "reponse": Reponse(verbatim="ROIC de 19%", valeur=19.0, unite="%")})
+                "reponse": Reponse(verbatim="ROIC de 19%", chiffres_cles=[{"id": "rendement_du_capital_employe", "unite": "%", "valeur": 19.0, "date_ou_periode": "moyenne 2021-2025"}])})
             id2 = await persist_answer(conn, rep2)
             superseded_by = await conn.fetchval(
                 "SELECT superseded_by FROM framework_answers WHERE id = $1", id1)

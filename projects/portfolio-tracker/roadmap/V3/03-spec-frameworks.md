@@ -836,9 +836,13 @@ méthodologique** (Greenwald, Damodaran, Mauboussin) : une fourchette, jamais un
 (va_1-3) ne bouge que sur un fait nouveau, ce que le prix suppose (va_4-6) se recalcule à la lecture
 au dernier cours coté daté (**option 1**, arbitrage du 2026-09-28 — construit en capacité 4 bis).
 **Un seul modèle** : la valorisation REPREND les réponses acquittées des autres méthodologies
-(qf_1 coût du capital, qf_2 cash disponible, qf_3 coût de la croissance, qf_4 passage à la valeur par
-action, qf_5/qf_6/se_4 résultat normalisé, qf_7 dilution, mo_4 durée, me_5 plafond, se_3 pairs) et
-s'instruit **après** elles. Règle de Greenwald : la croissance ne vaut que si qf_1 crée de la valeur et
+(qf_1 coût du capital et résultat normalisé — ajusté des retraitements de qf_6 —, qf_2 cash disponible,
+qf_3 coût de la croissance, qf_4 dette nette et instruments dilutifs, qf_7 besoin de financement qui
+appelle la dilution, mo_4 durée, me_5 plafond, se_3 pairs ; se_4 éclaire les scénarios sans fournir de
+chiffre ; le nombre d'actions dilué se relève avec le cours coté, comme pour va_4 — liens corrigés le
+2026-09-29) et s'instruit **après** elles. Ce qu'elle reprend est l'**encadré de chiffres clés** de la
+réponse (4 bis) : chaque question déclare en données les chiffres qu'elle rend (valeur, unité, période),
+jamais la prose. Règle de Greenwald : la croissance ne vaut que si qf_1 crée de la valeur et
 que la barrière tient.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
@@ -854,7 +858,8 @@ que la barrière tient.
 > `debate`, `monitoring`, `exit`) : va_1 → `epv` · va_2 → `dcf_scenarios` (+ hypothèses de la thèse,
 > étape 10) · va_3 → `base_rate_anchor` (règle 2) · va_4 → `reverse_dcf` (règle 5) · va_5 → `relatif` ·
 > va_6 → `prix_actuel`, `iv_range`, `marge_securite_base_pct` (indicateur séparé, règle 4). Une réponse
-> de framework ne porte aujourd'hui qu'UN nombre : la réponse à plusieurs nombres est en 4 bis.
+> porte depuis le 2026-09-29 un ENCADRÉ de chiffres clés déclarés par question (4 bis) ; le raccordement
+> de ces chiffres au contrat aval chiffré est la capacité 9 de la roadmap 05.
 
 > **L'atelier (capacité 4 bis, convention #96, 2026-09-29)** : l'agent propose la méthodologie propre
 > à l'entreprise (segmentation comprise), la décrit en prose et l'écrit en code ; le comité signe un

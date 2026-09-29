@@ -44,9 +44,15 @@ jamais le nombre estimé comme s'il était mesuré. C'est le contrôle ④ port�
 ║  │                                                                              │    ║
 ║  │  « ROIC de l'ordre de 12 % sur 2024 » ⟦reponse.verbatim⟧                      │    ║
 ║  │                                                                              │    ║
-║  │      12,4 ⟦reponse.valeur⟧  %  ⟦reponse.unite⟧        élevé ⟦reponse.sens⟧    │    ║
-║  │      └─ grisé et suffixé « ~ » tant que le statut est `approximé` :           │    ║
-║  │         un nombre estimé ne se compose JAMAIS comme un nombre mesuré          │    ║
+║  │  CHIFFRES CLÉS (l'encadré que relit la valorisation, jamais la prose)         │    ║
+║  │   rendement du capital employé ⟦reponse.chiffres_cles.id⟧                     │    ║
+║  │        12,4 ~ ⟦reponse.chiffres_cles.valeur⟧ % ⟦reponse.chiffres_cles.unite⟧   │    ║
+║  │        moyenne 2020-2024 ⟦reponse.chiffres_cles.date_ou_periode⟧              │    ║
+║  │   coût du capital   non établi : aucune pièce ne publie la prime de risque    │    ║
+║  │                     ⟦reponse.chiffres_cles.motif_absence⟧                     │    ║
+║  │      └─ id et unité DÉCLARÉS par la question ; un chiffre absent est motivé ; │    ║
+║  │         grisé et suffixé « ~ » tant que le statut est `approximé`             │    ║
+║  │                                                   élevé ⟦reponse.sens⟧        │    ║
 ║  └──────────────────────────────────────────────────────────────────────────────┘    ║
 ║                                                                                      ║
 ║  ┌─ CE QUI LA FONDE ────────────────────────────────────────────────────────────┐    ║

@@ -39,7 +39,7 @@ def proche(a: object, attendu: float) -> bool:
 
 
 from _modeles_fictifs import (  # noqa: E402
-    ARBRE, DOSSIER_NVDA, DOSSIER_RVMD, METHODO, SCENARIOS, hyp, jugement, piece, reprise)
+    ARBRE, DOSSIER_NVDA, DOSSIER_RVMD, METHODO, SCENARIOS, hyp, jugement, piece, reprenable, reprise)
 
 
 
@@ -133,7 +133,12 @@ def remplace_hyp(base: dict, cle: tuple, **champs) -> dict:
 cas_pont = [
     ("modèle d'un autre titre", ARBRE, DOSSIER_RVMD, "NVDA", "[A]", "présenté pour"),
     ("réponse reprise non acquittée", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {}}, "RVMD", "[A]", "n'est pas une réponse acquittée"),
-    ("réponse reprise d'une autre question", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: "qf_2"}}, "RVMD", "[A]", "répond à qf_2"),
+    ("réponse reprise d'une autre question", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: reprenable("qf_2", cout_du_capital=(0.1, "u"))}}, "RVMD", "[A]", "répond à qf_2"),
+    # L'ENCADRÉ (4 bis) : la reprise se vérifie par la VALEUR, plus seulement par la référence.
+    ("réponse d'avant l'encadré", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: reprenable("qf_1")}}, "RVMD", "[A]", "ne porte pas ce chiffre"),
+    ("chiffre déclaré non établi", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: reprenable("qf_1", cout_du_capital=(None, "u"))}}, "RVMD", "[A]", "non établi"),
+    ("valeur différente de l'encadré", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: reprenable("qf_1", cout_du_capital=(0.095, "u"))}}, "RVMD", "[A]", "qui vaut 0.095 u"),
+    ("unité différente de l'encadré", ARBRE, {**DOSSIER_RVMD, "reponses_acquittees": {901: reprenable("qf_1", cout_du_capital=(0.1, "%"))}}, "RVMD", "[A]", "qui vaut 0.1 %"),
     ("pièce hors dossier", ARBRE, {**DOSSIER_RVMD, "pieces_du_dossier": {501, 503, 504}}, "RVMD", "[B]", "[502]"),
     ("taux de base hors dossier", ARBRE, {**DOSSIER_RVMD, "pieces_du_dossier": {501, 502, 504}}, "RVMD", "[B]", "[503]"),
     # Les fixtures [C] lisent tout le tableau : sinon [D] les arrête avant l'exécution (assert à côté).
@@ -148,7 +153,7 @@ cas_pont = [
         {**sc[0], "valeurs": {"centres_de_donnees.croissance": 0.3}}, sc[1],
         {**sc[2], "valeurs": {"centres_de_donnees.croissance": 0.0}}]}), DOSSIER_NVDA, "NVDA", "[E]", "croisés"),
 ]
-b.require(cas_pont, 12, "cas de refus du pont")
+b.require(cas_pont, 16, "cas de refus du pont")
 for label, payload, dossier, ticker, code, fragment in cas_pont:
     m = refus_pont(payload, dossier, ticker)
     b.check(m.startswith(code) and fragment in m,
@@ -243,7 +248,7 @@ for node in ast.walk(ast.parse(MODULE.read_text(encoding="utf-8"))):
         mods |= {a.name for a in node.names}
     elif isinstance(node, ast.ImportFrom):
         mods.add(node.module or "")
-b.check(mods == {"__future__", "ast", "dataclasses", "typing", "app.contracts.modele_valorisation_schema",
+b.check(mods == {"__future__", "ast", "dataclasses", "math", "typing", "app.contracts.modele_valorisation_schema",
                  "app.valorisation.bac_a_calcul"}, f"le module est pur : aucune base, aucun réseau, aucun agent ({sorted(mods)})")
 
 sys.exit(b.summary())

@@ -29,7 +29,7 @@ mutations=(
 # ⚠️ La question surnuméraire s'appelle `qf_8`, pas `qf_7_bis` : le `pattern` d'id du contrat
 # (`^[a-z]{2}_[0-9]+$`) refusait `qf_7_bis` AVANT que l'assert de comptage soit atteint — la
 # mutation prouvait le pattern, pas le comptage. Mesuré, pas prévu (1ᵉʳ faux vert, sens rouge).
-"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
+"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        chiffres_cles: []\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
 # §2 — le contrat refuse les définitions creuses
 "$DEF¦        if not any(i.essentiel for i in self.ingredients_requis):¦        if False:¦une question sans aucun ingrédient ESSENTIEL"
 "$DEF¦        if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:¦        if False:¦un plancher desserré SANS motif déclaré"
@@ -84,10 +84,17 @@ mutations=(
 "$PONT¦                return frozenset(q.rouverte_par) | universels¦                return frozenset(q.rouverte_par)¦ses types déclarés ∪ les types de portée totale"
 "$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, ma_1, ma_3, va_1, va_2, va_4 et va_6"
   # ── [S] ce qui se reprend (#99) ──
-"$PONT¦                if r not in ids_questions:¦                if False:¦question INCONNUE du référentiel"
+"$PONT¦                if r not in questions_par_id:¦                if False:¦question INCONNUE du référentiel"
 "$PONT¦                if r == q.id:¦                if False:¦de SA PROPRE question"
 "$PONT¦                if not re.search(rf\"\\b{r}\\b\", i.libelle):¦                if False:¦que son libellé ne NOMME pas"
 "$DEF¦        if len(set(self.repris_de)) != len(self.repris_de):¦        if False:¦un \`repris_de\` en double"
+# ── L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ──────────────────────────────────────────────────────────
+"$DEF¦            raise ValueError(f\"{self.id} : deux chiffres clés portent le même id — {sorted(chiffres)}\")¦            pass¦deux chiffres clés au même id"
+"$DEF¦    chiffres_cles: list[ChiffreCleDeclare]¦    chiffres_cles: list[ChiffreCleDeclare] = Field(default_factory=list)¦sans déclaration d'encadré"
+"$PONT¦                if not questions_par_id[r].chiffres_cles:¦                if False:¦qui ne déclare AUCUN chiffre clé"
+# Mutation de DONNÉES : la dilution retombe sur qf_7 seule (le lien d'avant la correction du 2026-09-29).
+"$YAML¦            repris_de: [qf_4, qf_7]¦            repris_de: [qf_7]¦les trois liens « repris de » corrigés"
+"$YAML¦    - id: dette_brute¦    - id: dette_financiere_brute¦l'encadré instruit le 2026-09-29"
 )
 
 passes=0; ratees=0

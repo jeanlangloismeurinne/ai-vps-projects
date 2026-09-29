@@ -28,7 +28,9 @@ from app.contracts.signature_modele_schema import (
     AtelierServi, DecisionModele, DemandeDecisionModele, EcartEntreVersions, Fourchette,
     LigneModifiee, PropositionServie, SigneeServie, VersionModele,
 )
-from app.valorisation.modele import Evaluation, ModeleRefuse, evaluer_modele, valider_pont_modele
+from app.valorisation.modele import (
+    Evaluation, ModeleRefuse, ReponseReprenable, evaluer_modele, valider_pont_modele,
+)
 
 __all__ = [
     "ActeRefuse", "DossierValorisation", "fourchette_de", "ecart_entre", "version_en_attente",
@@ -49,7 +51,7 @@ class DossierValorisation:
     (answer_id → question_id), les pièces COURANTES de son dossier, les questions SANS OBJET pour lui, et
     les questions que le référentiel déclare reprises par la valorisation."""
     ticker_id: str
-    reponses_acquittees: Mapping[int, str]
+    reponses_acquittees: Mapping[int, ReponseReprenable]
     pieces_du_dossier: frozenset[int]
     questions_sans_objet: frozenset[str]
     reprises_admises: frozenset[str]
@@ -159,8 +161,8 @@ def servir_atelier(
 _SQL_PIECES = "SELECT id FROM knowledge_entries WHERE ticker_id = $1 AND superseded_by IS NULL"
 
 
-def reponses_reprenables(reponses) -> dict[int, str]:
-    """answer_id → question_id des réponses dont la valorisation peut reprendre le chiffre : celles qui
+def reponses_reprenables(reponses) -> dict[int, ReponseReprenable]:
+    """answer_id → question + ENCADRÉ des réponses dont la valorisation peut reprendre le chiffre : celles qui
     TIENNENT aujourd'hui (`parcours.reponse_tient`, détenteur unique — acquittées ET courantes) et qui
     portent un chiffre (pas un hors-sujet). Un fonds ne reprend pas dans sa valorisation un chiffre que
     son propre dossier marque périmé par un fait publié depuis. ⚠️ Une réponse seulement RETENUE par
@@ -168,8 +170,10 @@ def reponses_reprenables(reponses) -> dict[int, str]:
     avoir passé le contrôle."""
     from app.agents.v2.parcours import reponse_tient
 
-    return {r.answer_id: r.servie.question_id for r in reponses
-            if reponse_tient(r) and r.servie.statut != "sans_objet"}
+    return {r.answer_id: ReponseReprenable(
+                question_id=r.servie.question_id,
+                chiffres={c.id: (c.valeur, c.unite) for c in r.servie.reponse.chiffres_cles})
+            for r in reponses if reponse_tient(r) and r.servie.reponse is not None}
 
 
 def questions_sans_objet(etat) -> frozenset[str]:

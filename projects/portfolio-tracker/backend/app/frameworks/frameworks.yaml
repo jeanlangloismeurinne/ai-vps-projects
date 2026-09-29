@@ -188,6 +188,19 @@ frameworks:
           - id: historique_cinq_exercices
             libelle: La même relation observée sur au moins cinq exercices consécutifs
             essentiel: false
+        chiffres_cles:
+          - id: rendement_du_capital_employe
+            libelle: Rendement du capital employé
+            unite: "%"
+            periode: moyenne 5 ans
+          - id: cout_du_capital
+            libelle: Coût du capital — rémunération exigée par les créanciers et les actionnaires
+            unite: "%"
+            periode: à la date de l'analyse
+          - id: resultat_operationnel_apres_impot_normalise
+            libelle: Résultat d'exploitation après impôt, normalisé des éléments non récurrents
+            unite: "M$"
+            periode: dernier exercice
         variables_par_archetype:
           rentable:
             mode: variable
@@ -222,6 +235,11 @@ frameworks:
           - id: charges_sans_decaissement
             libelle: Charges qui n'ont donné lieu à aucune sortie de trésorerie — amortissements, rémunération en actions, provisions
             essentiel: false
+        chiffres_cles:
+          - id: part_du_resultat_en_tresorerie
+            libelle: Part du résultat net retrouvée en trésorerie d'exploitation
+            unite: "%"
+            periode: moyenne 3 ans
         variables_par_archetype:
           rentable:
             mode: variable
@@ -256,6 +274,11 @@ frameworks:
           - id: variation_capital_employe
             libelle: Variation du capital immobilisé dans l'exploitation sur la période de croissance
             essentiel: false
+        chiffres_cles:
+          - id: capital_par_point_de_croissance
+            libelle: Capital supplémentaire investi par point de croissance de l'activité
+            unite: "M$"
+            periode: derniers exercices observés
         variables_par_archetype:
           rentable:
             mode: variable
@@ -293,6 +316,19 @@ frameworks:
           - id: couverture_des_interets
             libelle: Rapport entre le résultat d'exploitation et la charge d'intérêts
             essentiel: false
+        chiffres_cles:
+          - id: dette_brute
+            libelle: Dette financière brute, instruments convertibles compris
+            unite: "M$"
+            periode: à la date du dernier bilan
+          - id: tresorerie_et_placements
+            libelle: Trésorerie et placements financiers disponibles
+            unite: "M$"
+            periode: à la date du dernier bilan
+          - id: dette_nette
+            libelle: Dette nette — dette brute moins trésorerie et placements (négative si trésorerie nette)
+            unite: "M$"
+            periode: à la date du dernier bilan
         variables_par_archetype:
           rentable:
             mode: variable
@@ -321,6 +357,11 @@ frameworks:
           - id: comparaison_sectorielle
             libelle: Le même rendement chez des entreprises comparables, sur la même période
             essentiel: false
+        chiffres_cles:
+          - id: pente_du_rendement
+            libelle: Pente du rendement du capital employé
+            unite: "points/an"
+            periode: sur 5 ans ou plus
         variables_par_archetype:
           rentable:
             mode: variable
@@ -355,6 +396,11 @@ frameworks:
           - id: elements_non_recurrents
             libelle: Éléments présentés comme exceptionnels, et leur récurrence effective
             essentiel: false
+        chiffres_cles:
+          - id: retraitements_discretionnaires
+            libelle: Montant du résultat qui relève de choix discrétionnaires plutôt que de la performance économique
+            unite: "M$"
+            periode: dernier exercice
         variables_par_archetype:
           rentable:
             mode: variable
@@ -389,6 +435,19 @@ frameworks:
           - id: lignes_de_credit_non_tirees
             libelle: Capacité de financement disponible mais non utilisée
             essentiel: false
+        chiffres_cles:
+          - id: tresorerie_mobilisable
+            libelle: Trésorerie mobilisable sans recours au marché des capitaux
+            unite: "M$"
+            periode: à la date du dernier bilan
+          - id: consommation_annuelle
+            libelle: Consommation annuelle de trésorerie par l'exploitation et les investissements
+            unite: "M$"
+            periode: 12 derniers mois ou guidance de l'exercice
+          - id: autonomie
+            libelle: Autonomie de financement — trésorerie mobilisable rapportée à la consommation
+            unite: "mois"
+            periode: à la date du dernier bilan
         variables_par_archetype:
           rentable:
             mode: variable
@@ -435,6 +494,7 @@ frameworks:
           - id: tentatives_de_contournement_observees
             libelle: Tentatives réelles de concurrents pour contourner la barrière, et leur issue
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -466,6 +526,7 @@ frameworks:
           - id: cout_d_acquisition_compare
             libelle: Coût d'acquisition d'un client comparé à celui des concurrents
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -497,6 +558,7 @@ frameworks:
           - id: mouvements_concurrents_recents
             libelle: Entrées, sorties et repositionnements de concurrents sur la période récente
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -528,6 +590,11 @@ frameworks:
           - id: echeances_contractuelles_ou_legales
             libelle: Dates auxquelles une protection contractuelle ou légale s'éteint
             essentiel: false
+        chiffres_cles:
+          - id: duree_retenue
+            libelle: Durée pendant laquelle la barrière tient si rien ne change
+            unite: "années"
+            periode: à la date de l'analyse
         variables_par_archetype:
           rentable:
             mode: variable
@@ -559,6 +626,7 @@ frameworks:
           - id: etat_du_signal_precurseur
             libelle: L'état actuel de ce signal, mesuré et daté
             essentiel: true
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -587,6 +655,7 @@ frameworks:
           - id: prime_de_prix_face_aux_alternatives
             libelle: Écart de prix soutenu face aux solutions alternatives disponibles
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -643,6 +712,7 @@ frameworks:
           - id: motif_de_choix_observe
             libelle: Raison observée pour laquelle le client choisit cette offre plutôt que l'alternative
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -671,6 +741,7 @@ frameworks:
           - id: montant_engage_non_reconnu
             libelle: Montant déjà engagé par les clients et pas encore reconnu en chiffre d'affaires
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -699,6 +770,7 @@ frameworks:
           - id: marge_brute_sur_plusieurs_periodes
             libelle: Marge brute de l'activité et son évolution sur plusieurs périodes
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -730,6 +802,7 @@ frameworks:
           - id: sensibilite_passee
             libelle: Variation passée du chiffre d'affaires rapportée à celle de chacun de ces moteurs
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -761,6 +834,15 @@ frameworks:
           - id: extensions_engagees
             libelle: Extensions du marché servi que l'entreprise a engagées — nouveaux clients, usages, zones ou indications
             essentiel: false
+        chiffres_cles:
+          - id: marche_adressable
+            libelle: Taille du marché adressable par le modèle actuel
+            unite: "M$"
+            periode: à la date de l'analyse
+          - id: part_deja_prise
+            libelle: Part du marché adressable déjà prise par l'entreprise
+            unite: "%"
+            periode: dernier exercice
         variables_par_archetype:
           rentable:
             mode: variable
@@ -792,6 +874,7 @@ frameworks:
           - id: exposition_par_pays
             libelle: Répartition de l'activité par pays et exposition aux restrictions d'un pays
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -847,6 +930,7 @@ frameworks:
           - id: intermediaires
             libelle: Intermédiaires entre l'entreprise et le client final, et la part de valeur qu'ils prélèvent
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -875,6 +959,7 @@ frameworks:
           - id: entrants_recents
             libelle: Acteurs entrés sur le marché ou sortis de celui-ci récemment
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -903,6 +988,7 @@ frameworks:
           - id: evolution_de_l_ecart
             libelle: Évolution de l'écart entre l'entreprise et ses pairs sur plusieurs exercices
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -934,6 +1020,7 @@ frameworks:
           - id: position_actuelle
             libelle: Signaux récents qui situent le secteur dans son cycle — commandes, stocks, capacités, prix
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -965,6 +1052,7 @@ frameworks:
           - id: nouveaux_modeles
             libelle: Nouveaux modèles économiques ou nouveaux entrants qui pourraient déplacer la valeur du secteur
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -996,6 +1084,7 @@ frameworks:
           - id: reaction_de_l_entreprise
             libelle: La réaction annoncée ou observée de l'entreprise à ces mouvements
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1043,6 +1132,7 @@ frameworks:
           - id: politique_annoncee
             libelle: La politique d'allocation annoncée par la direction et ses priorités déclarées
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1074,6 +1164,7 @@ frameworks:
           - id: depreciations
             libelle: Dépréciations ou cessions ultérieures des actifs acquis
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1102,6 +1193,7 @@ frameworks:
           - id: dilution_par_la_remuneration
             libelle: Dilution créée par la rémunération en actions, que les rachats compensent le cas échéant
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1130,6 +1222,7 @@ frameworks:
           - id: cessions_et_achats_des_dirigeants
             libelle: Achats et ventes d'actions par les dirigeants sur les derniers exercices
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1161,6 +1254,7 @@ frameworks:
           - id: communication_des_echecs
             libelle: Manière dont la direction a présenté ses échecs ou ses retards — reconnus, minimisés ou passés sous silence
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1192,6 +1286,7 @@ frameworks:
           - id: desaccords_observes
             libelle: Désaccords observés entre le conseil, les actionnaires et la direction — votes contestés, départs, interventions d'actionnaires
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1239,20 +1334,24 @@ frameworks:
         sens_admis: [plancher_solide, plancher_fragile, pas_de_plancher]
         ingredients_requis:
           - id: resultat_normalise
-            libelle: Résultat d'exploitation normalisé, de milieu de cycle — repris de qf_6, qf_5 et se_4
+            libelle: Résultat d'exploitation après impôt normalisé — repris de qf_1, ajusté des retraitements discrétionnaires repris de qf_6 (la position dans le cycle, se_4, éclaire les scénarios sans fournir de chiffre)
             essentiel: true
-            repris_de: [qf_6, qf_5, se_4]
+            repris_de: [qf_1, qf_6]
           - id: taux_d_actualisation
             libelle: Coût du capital servant de taux d'actualisation — repris de qf_1
             essentiel: true
             repris_de: [qf_1]
           - id: passage_a_la_valeur_par_action
-            libelle: Dette nette, trésorerie excédentaire et nombre d'actions dilué — repris de qf_4
+            libelle: Dette nette et trésorerie excédentaire, pour passer de la valeur de l'entreprise à celle des actions — reprises de qf_4
             essentiel: true
             repris_de: [qf_4]
+          - id: nombre_d_actions_dilue
+            libelle: Nombre d'actions dilué, relevé avec le cours coté — même source et même date que le cours de va_4
+            essentiel: true
           - id: valeur_des_actifs
             libelle: Ce que coûterait la reconstitution des actifs, ou ce qu'un acquéreur paierait pour eux
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1287,9 +1386,10 @@ frameworks:
             essentiel: true
             repris_de: [mo_4, me_5]
           - id: dilution_future
-            libelle: Dilution attendue des actionnaires pour financer le plan — reprise de qf_7
+            libelle: Dilution attendue des actionnaires — instruments convertibles et options repris de qf_4, besoin de financement qui l'appelle repris de qf_7
             essentiel: false
-            repris_de: [qf_7]
+            repris_de: [qf_4, qf_7]
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1321,6 +1421,7 @@ frameworks:
           - id: position_dans_la_classe
             libelle: Où les scénarios de l'entreprise se situent dans cette distribution
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1349,6 +1450,7 @@ frameworks:
           - id: comparaison_aux_scenarios
             libelle: Position de ces attentes implicites face aux scénarios de va_2 et à la classe de référence de va_3
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1377,6 +1479,7 @@ frameworks:
           - id: explication_de_l_ecart
             libelle: Ce qui explique l'écart — croissance, rentabilité, risque — au regard des autres méthodologies
             essentiel: false
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable
@@ -1402,6 +1505,7 @@ frameworks:
           - id: hypothese_portante
             libelle: L'hypothèse dont dépend surtout la marge, et la marge si elle se révèle fausse
             essentiel: true
+        chiffres_cles: []
         variables_par_archetype:
           rentable:
             mode: variable

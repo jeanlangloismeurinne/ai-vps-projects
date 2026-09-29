@@ -45,6 +45,16 @@ mutations=(
 "$SRC¦    analyste: str = Field(min_length=1)¦    analyste: str = Field(min_length=1)\n    champ_fantome: Optional[str] = None¦tout champ du contrat a son pixel"
 "FROZEN:framework_screen_niveau3.md¦⟦manager.motif⟧¦⟦manager.motif_invente⟧¦tout pixel rend un champ RÉEL"
 "$PONT¦def _plus_faible(tiers: list[str]) -> str:¦_NOTCH_BELOW = {}\n\n\ndef _plus_faible(tiers: list[str]) -> str:¦le pont ne recopie pas la table des crans"
+# ── L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) — contrat, puis pont [K] ────────────────────────────────
+"$SRC¦            if self.date_ou_periode is None:¦            if False:¦ne dit pas ce qu'il mesure est refusé"
+"$SRC¦        elif self.motif_absence is None:¦        elif False:¦ni établi ni motivé est refusé"
+"$SRC¦        elif self.date_ou_periode is not None:¦        elif False:¦absent mais daté est refusé"
+"$SRC¦            if data.get(\"valeur\") is not None or data.get(\"unite\") is not None:¦            if False:¦jamais avalé en silence"
+"$SRC¦        if len(set(ids)) != len(ids):¦        if False:¦deux lignes pour le même chiffre"
+"$PONT¦        if manquants or inventes:¦        if inventes:¦un chiffre déclaré OMIS"
+"$PONT¦        if manquants or inventes:¦        if manquants:¦un chiffre NON déclaré est refusé"
+"$PONT¦        if mauvaises:¦        if False:¦dans une AUTRE unité"
+"$PONT¦        if declares is None:¦        if False:¦un profil sans déclaration d'encadré"
 )
 
 source "$(dirname "$0")/_negatif.sh"

@@ -80,6 +80,7 @@ from app.agents.v2.traducteur import questions_applicables
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.framework_answer_schema import (
     Approximation,
+    ChiffreCle,
     Fondation,
     FrameworkAnswer,
     Reponse,
@@ -144,8 +145,10 @@ class AnalysteReponse(Strict):
     # `verbatim` porte deux charges selon le statut : la réponse lisible, ou CE QUI MANQUE. Dans les
     # deux cas c'est du texte qu'un humain lit, jamais un code.
     verbatim: str = Field(min_length=1)
-    valeur: Optional[float] = None
-    unite: Optional[str] = Field(default=None, min_length=1)
+    # L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) : exactement les chiffres que la question déclare (montrés au
+    # contexte, `chiffres_cles_demandes`) — le pont [K] le vérifie, le contrat d'objet ne connaît pas la
+    # question (#37).
+    chiffres_cles: list[ChiffreCle] = Field(default_factory=list)
     # Le vocabulaire est CELUI DE LA QUESTION (`sens_admis`, montré au contexte) ; c'est le pont [S]
     # qui vérifie l'appartenance — le contrat d'objet ne connaît pas la question (#37).
     sens: Optional[str] = Field(default=None, min_length=1)
@@ -161,8 +164,9 @@ class AnalysteReponse(Strict):
         collecte pour un chiffre déjà fourni.
         """
         if self.statut == "sans_fondement":
-            sales = [n for n in ("valeur", "unite", "sens", "approximation")
-                     if getattr(self, n) is not None]
+            sales = [n for n in ("sens", "approximation") if getattr(self, n) is not None]
+            if self.chiffres_cles:
+                sales.append("chiffres_cles")
             if sales or self.cited_entry_ids:
                 raise ValueError(
                     f"`sans_fondement` portant {sales or 'des citations'} : un manque qui cite ses "
@@ -380,6 +384,12 @@ def contexte_analyste(
                 {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel}
                 for i in q.ingredients_requis
             ],
+            # L'encadré que la réponse doit rendre, id et unité IMPOSÉS (4 bis). Vide = la question ne
+            # se chiffre pas. Ce n'est pas un levier d'exigence (#59) : c'est la forme de la réponse.
+            "chiffres_cles_demandes": [
+                {"id": c.id, "libelle": c.libelle, "unite": c.unite, "periode": c.periode}
+                for c in q.chiffres_cles
+            ],
             "corpus": [
                 {
                     "entry_id": i,
@@ -543,7 +553,7 @@ def assembler_answer(
         ticker_id=ticker_id,
         analyste=analyste,
         statut=brute.statut,
-        reponse=Reponse(verbatim=brute.verbatim, valeur=brute.valeur, unite=brute.unite,
+        reponse=Reponse(verbatim=brute.verbatim, chiffres_cles=list(brute.chiffres_cles),
                         sens=brute.sens),
         fondation=Fondation(cited_entry_ids=cites, rang_derive=rang, nature_effective=nature),
         approximation=brute.approximation,
@@ -570,8 +580,8 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "  • `repondu` — le corpus établit la réponse. Remplis `verbatim` (la réponse en une ou deux "
     "phrases, lisible par un humain), `cited_entry_ids` (les `entry_id` du corpus qui la portent — "
     "AU MOINS UN, et uniquement des ids présents dans le corpus fourni), `sens` (obligatoirement "
-    "l'une des valeurs de `sens_admis` de la question, recopiée exactement), et si la réponse est "
-    "un nombre, `valeur` + `unite` (un nombre sans unité est illisible).\n"
+    "l'une des valeurs de `sens_admis` de la question, recopiée exactement), et `chiffres_cles` "
+    "(l'encadré, voir plus bas).\n"
     "  • `approxime` — le corpus ne donne pas la réponse, mais il donne de quoi la RECONSTRUIRE. "
     "Mêmes champs, plus le bloc `approximation` : `methode` (comment tu reconstruis), "
     "`ingredients_entry_ids` (les entries dont tu pars), `hypotheses_explicites` (ce que tu as dû "
@@ -582,6 +592,18 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "`verbatim` avec CE QUI MANQUE, précisément (quel ingrédient, pour quelle période), et rien "
     "d'autre : pas de citations, pas de valeur, pas de sens. Ce n'est pas un échec, c'est une "
     "commande de collecte.\n\n"
+    "L'ENCADRÉ DE CHIFFRES CLÉS. Chaque question porte `chiffres_cles_demandes` : les chiffres que ta "
+    "réponse doit rendre, comme l'encadré qui clôt une note d'analyste. Sur `repondu` et `approxime`, "
+    "`chiffres_cles` contient EXACTEMENT une ligne par chiffre demandé — ni plus, ni moins —, avec son "
+    "`id` et son `unite` recopiés tels quels. Une ligne porte soit `valeur` (un nombre, dans l'unité "
+    "demandée : 12.4 pour 12,4 %, 815.4 pour 815,4 M$) ET `date_ou_periode` (ce que ce chiffre mesure "
+    "réellement : « au 2026-06-30 », « exercice 2025 »), soit — si le corpus ne permet pas de "
+    "l'établir — `motif_absence` (ce qui manque, en une phrase) et rien d'autre. Zéro est une valeur, "
+    "pas une absence. Un chiffre de l'encadré obéit aux mêmes règles que ta réponse : relevé dans une "
+    "source citée, ou reconstruit et alors ta réponse est un `approxime`. Si `chiffres_cles_demandes` "
+    "est vide, `chiffres_cles` est vide. Exemple de ligne : "
+    "{\"id\": \"dette_nette\", \"unite\": \"M$\", \"valeur\": -328.0, "
+    "\"date_ou_periode\": \"au 2026-06-30\"}.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "
     "pas celles qui en parlent : un état financier qui donne le chiffre vaut citation ; un "
     "commentaire qui le mentionne n'en est pas la source. Si tu ne peux citer qu'un commentaire, "
@@ -620,7 +642,8 @@ def _message_analyste(contexte: dict[str, Any]) -> str:
         f"{json.dumps(contexte, ensure_ascii=False, indent=2)}\n\n"
         "Produis l'objet JSON `{\"reponses\": [ ... ]}` : une réponse par question ci-dessus, avec "
         "son `question_id` et un `statut` PRIS DANS LE `statuts_admis` DE CETTE QUESTION "
-        "(`repondu`/`approxime` avec citations et `sens`, ou `sans_fondement` avec ce qui manque). "
+        "(`repondu`/`approxime` avec citations, `sens` et l'encadré `chiffres_cles`, ou `sans_fondement` "
+        "avec ce qui manque). "
         "Aucune question ne doit rester sans réponse."
     )
 

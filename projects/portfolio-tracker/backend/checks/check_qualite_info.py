@@ -51,7 +51,7 @@ def _repondu(qid, *, act="courante", rang="A", fw="qualite_financiere", ver="v3.
     return FrameworkAnswerServie(
         framework_id=fw, framework_version=ver, question_id=qid, ticker_id="RVMD",
         analyste=analyste, statut="repondu",
-        reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+        reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
         fondation=FondationServie(cited_entry_ids=[10], rang_derive=rang, nature_effective="mesure",
                                   actualite=act, motif_actualite="m"))
 
@@ -60,7 +60,7 @@ def _approxime(qid, *, act="courante", rang="A-", fw="qualite_financiere", ver="
     return FrameworkAnswerServie(
         framework_id=fw, framework_version=ver, question_id=qid, ticker_id="RVMD",
         analyste="a", statut="approxime",
-        reponse=Reponse(verbatim="x", valeur=1.0, unite="%"),
+        reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
         fondation=FondationServie(cited_entry_ids=[10, 11], rang_derive=rang,
                                   nature_effective="interpretation", actualite=act,
                                   motif_actualite="m"),

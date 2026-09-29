@@ -151,8 +151,8 @@ async def main() -> int:
                 print(f"\n  · {a.question_id} [{a.statut}] rang {a.fondation.rang_derive} "
                       f"/ nature {a.fondation.nature_effective} / sens {a.reponse.sens}")
                 print(f"      {a.reponse.verbatim}")
-                if a.reponse.valeur is not None:
-                    print(f"      valeur : {a.reponse.valeur} {a.reponse.unite}")
+                for ligne in a.reponse.encadre_lisible():
+                    print(f"      chiffre : {ligne}")
                 print(f"      cite : {a.fondation.cited_entry_ids}")
             elif a.statut == "non_fondable":
                 print(f"\n  ⚠ {a.question_id} [non_fondable] remède {a.gap.remede}")

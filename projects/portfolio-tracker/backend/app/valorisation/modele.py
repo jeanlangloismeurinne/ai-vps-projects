@@ -4,8 +4,10 @@
 tient ce qui demande le dossier ou l'exécution — un contrat valide un objet, jamais la cohérence entre
 deux (#37) :
 
-  [A] une hypothèse `reponse_reprise` cite une réponse ACQUITTÉE de CE titre, à la bonne question —
-      sinon le « même chiffre que qf_1 » serait un second chiffre (#95) ;
+  [A] une hypothèse `reponse_reprise` cite une réponse ACQUITTÉE de CE titre, à la bonne question, et
+      porte la VALEUR et l'UNITÉ de la ligne de son encadré de chiffres clés — sinon le « même chiffre
+      que qf_1 » serait un second chiffre (#95). Jusqu'à l'encadré (4 bis), seule la référence se
+      vérifiait : une ligne pouvait citer qf_1 et porter un autre taux ;
   [B] toute pièce citée (hypothèse `piece`, taux de base d'un jugement) est au dossier de CE titre ;
   [C] la mécanique s'exécute dans le bac pour chaque scénario et définit un nombre `valeur_action`
       (une hypothèse au nom d'un gabarit du fonds est refusée par le bac lui-même, donc ici) ;
@@ -31,8 +33,9 @@ Module PUR : aucune IO. Le dossier (réponses acquittées, pièces) est passé p
 from __future__ import annotations
 
 import ast
+import math
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 from app.contracts.modele_valorisation_schema import (
     NOM_RESERVE_SEGMENTS, SORTIE_OBLIGATOIRE, ArbreEvenements, Hypothese, ModeleValorisation,
@@ -40,7 +43,16 @@ from app.contracts.modele_valorisation_schema import (
 )
 from app.valorisation.bac_a_calcul import ErreurCalcul, executer
 
-__all__ = ["ModeleRefuse", "Evaluation", "valider_pont_modele", "evaluer_modele", "hypotheses_pour_le_bac"]
+__all__ = ["ModeleRefuse", "Evaluation", "ReponseReprenable", "valider_pont_modele", "evaluer_modele",
+           "hypotheses_pour_le_bac"]
+
+
+@dataclass(frozen=True)
+class ReponseReprenable:
+    """Une réponse que la valorisation peut reprendre : sa question, et son ENCADRÉ (id du chiffre →
+    (valeur, unité) ; valeur `None` = chiffre que la réponse déclare non établi)."""
+    question_id: str
+    chiffres: Mapping[str, tuple[Optional[float], str]]
 
 
 class ModeleRefuse(Exception):
@@ -114,13 +126,13 @@ def valider_pont_modele(
     modele: ModeleValorisation,
     *,
     ticker_id: str,
-    reponses_acquittees: Mapping[int, str],
+    reponses_acquittees: Mapping[int, ReponseReprenable],
     pieces_du_dossier: set[int],
     questions_sans_objet: set[str] | frozenset[str],
     reprises_admises: set[str] | frozenset[str],
 ) -> Evaluation:
-    """Refuse (`ModeleRefuse`) ou rend l'évaluation du modèle. `reponses_acquittees` : answer_id →
-    question_id des réponses de ce titre qui TIENNENT aujourd'hui et portent un chiffre ;
+    """Refuse (`ModeleRefuse`) ou rend l'évaluation du modèle. `reponses_acquittees` : answer_id → la
+    réponse reprenable (question + encadré) de ce titre, qui TIENT aujourd'hui et n'est pas hors sujet ;
     `pieces_du_dossier` : ids des pièces courantes de ce titre ; `questions_sans_objet` : questions sans
     objet pour ce titre (par son stade, ou par une réponse hors-sujet qui tient) ; `reprises_admises` :
     les questions que le référentiel déclare reprises par la valorisation (`repris_de`)."""
@@ -129,17 +141,31 @@ def valider_pont_modele(
     for h in modele.hypotheses:
         o = h.origine
         if isinstance(o, OrigineReprise):
-            qid = reponses_acquittees.get(o.answer_id)
+            rep = reponses_acquittees.get(o.answer_id)
+            qid = rep.question_id if rep is not None else None
             if qid != o.question_id:   # une seule comparaison : « absente » est le cas qid = None
                 raise ModeleRefuse("A", f"`{cle_hypothese(h)}` reprend la réponse #{o.answer_id}, qui n'est pas "
                                         "une réponse acquittée de ce titre" if qid is None else
                                         f"`{cle_hypothese(h)}` dit reprendre {o.question_id}, mais la réponse "
                                         f"#{o.answer_id} répond à {qid}")
+            # Le chiffre se lit dans l'ENCADRÉ, jamais dans la prose : même valeur, même unité.
+            if o.chiffre not in rep.chiffres:
+                raise ModeleRefuse("A", f"`{cle_hypothese(h)}` reprend `{o.chiffre}` de la réponse #{o.answer_id}, "
+                                        f"dont l'encadré ne porte pas ce chiffre ({sorted(rep.chiffres)}) — une "
+                                        "réponse d'avant l'encadré se réémet avant d'être reprise")
+            valeur, unite = rep.chiffres[o.chiffre]
+            if valeur is None:
+                raise ModeleRefuse("A", f"`{cle_hypothese(h)}` reprend `{o.chiffre}` de la réponse #{o.answer_id}, "
+                                        "qui le déclare non établi : il n'y a pas de chiffre à reprendre")
+            if unite != h.unite or not math.isclose(valeur, h.valeur, rel_tol=1e-9, abs_tol=1e-12):
+                raise ModeleRefuse("A", f"`{cle_hypothese(h)}` porte {h.valeur:g} {h.unite} en disant reprendre "
+                                        f"`{o.chiffre}` de la réponse #{o.answer_id}, qui vaut {valeur:g} {unite} — "
+                                        "un seul chiffre par dossier (#95)")
         hors = sorted(set(_pieces_citees(h)) - pieces_du_dossier)
         if hors:
             raise ModeleRefuse("B", f"`{cle_hypothese(h)}` cite des pièces absentes du dossier de ce titre : {hors}")
 
-    tenues = {q: a for a, q in reponses_acquittees.items()}
+    tenues = {r.question_id: a for a, r in reponses_acquittees.items()}
     for h in modele.hypotheses:
         q = question_reprise(h)
         if q is None:

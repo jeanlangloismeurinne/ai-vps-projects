@@ -353,6 +353,7 @@ _FICTIF = """
           - id: intensite_concurrentielle
             libelle: Nombre et poids relatif des acteurs qui se disputent la même demande solvable
             essentiel: true
+        chiffres_cles: []
         variables_par_archetype:
 __ARCHETYPES__
 """

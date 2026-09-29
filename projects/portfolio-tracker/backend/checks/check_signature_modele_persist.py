@@ -144,18 +144,32 @@ async def main() -> None:
         en_manque = {m.question_id for m in alerte.manques}
         acquittees = {r.answer_id: r.servie.question_id for r in etat.reponses if r.verdict == "acquitte"}
         print(f"  mesuré : RVMD — {len(acquittees)} réponse(s) acquittée(s) par le contrôle, dont "
-              f"{len(reel.reponses_acquittees)} reprenable(s) {sorted(set(reel.reponses_acquittees.values()))} ; "
+              f"{len(reel.reponses_acquittees)} reprenable(s) {sorted({r.question_id for r in reel.reponses_acquittees.values()})} ; "
               f"alerte : {sorted(en_manque)} ; {len(reel.pieces_du_dossier)} pièce(s) courante(s)")
         courantes = {r["id"]: r["question_id"] for r in await conn.fetch(
             "SELECT id, question_id FROM framework_answers WHERE ticker_id = 'RVMD' AND superseded_by IS NULL")}
         # Non vide AVANT le `all(...)` : vert sur zéro élément, il ne prouverait rien (5ᵉ faux vert).
         b.check(len(reel.reponses_acquittees) > 0,
                 "au moins une réponse de RVMD est reprenable — sinon le §4 ne discrimine rien")
-        b.check(all(courantes.get(i) == q for i, q in reel.reponses_acquittees.items()),
+        b.check(all(courantes.get(i) == r.question_id for i, r in reel.reponses_acquittees.items()),
                 "les réponses reprenables sont des réponses COURANTES de RVMD, à leur question")
+        # PAS DE DETTE (arbitrage du 2026-09-29) : une réponse reprenable porte l'ENCADRÉ que sa question
+        # déclare — les réponses d'avant l'encadré ont été réémises sur les mêmes pièces. Lu sur l'état
+        # réel : c'est lui, pas une fixture, que la valorisation reprendra.
+        from app.agents.v2.frameworks import question_profiles
+        profils = question_profiles(etat.fichier)
+        sans_encadre = sorted(f"{r.question_id} (#{a}) : rend {sorted(r.chiffres)}, déclare "
+                              f"{sorted(c.id for c in profils[r.question_id]['chiffres_cles'])}"
+                              for a, r in reel.reponses_acquittees.items()
+                              if set(r.chiffres) != {c.id for c in profils[r.question_id]["chiffres_cles"]})
+        print(f"  mesuré : RVMD — encadrés repris : "
+              f"{ {r.question_id: dict(r.chiffres) for r in reel.reponses_acquittees.values()} }")
+        b.check(not sans_encadre,
+                f"toute réponse reprenable de RVMD porte l'encadré que sa question déclare — sinon : {sans_encadre}")
         # L'autre point de lecture : l'alerte « peut-on décider ? ». Une réponse dont la question y est
         # un manque (périmée par l'approbation FDA, renvoyée…) ne peut pas donner un chiffre à la valorisation.
-        repris_en_manque = sorted(q for q in reel.reponses_acquittees.values() if q in en_manque)
+        repris_en_manque = sorted(r.question_id for r in reel.reponses_acquittees.values()
+                                  if r.question_id in en_manque)
         b.check(not repris_en_manque,
                 f"aucune réponse reprenable ne porte sur une question que l'alerte dit manquante ({repris_en_manque})")
         b.check(len(en_manque & set(acquittees.values())) > 0,
@@ -165,7 +179,7 @@ async def main() -> None:
         print(f"  mesuré : RVMD — sans objet : {sorted(reel.questions_sans_objet)}")
         b.check("qf_1" in reel.questions_sans_objet and "qf_1" in reel.reprises_admises,
                 "RVMD : qf_1 est sans objet et reprise par la valorisation — le cas de l'option (c) est réel")
-        b.check(not (set(reel.reponses_acquittees.values()) & reel.questions_sans_objet),
+        b.check(not ({r.question_id for r in reel.reponses_acquittees.values()} & reel.questions_sans_objet),
                 "aucune question n'est à la fois reprenable et sans objet")
         n_pieces = await conn.fetchval(
             "SELECT count(*) FROM knowledge_entries WHERE ticker_id = 'RVMD' AND superseded_by IS NULL")

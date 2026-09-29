@@ -56,7 +56,9 @@ __all__ = [
 ]
 
 # 1.1.0 (#99) : `Hypothese.reprend` — la ligne qui tient la place d'un chiffre d'une autre méthodologie.
-MODELE_SCHEMA_VERSION = "modele-1.1.0"
+# 1.2.0 (4 bis, encadré de chiffres clés) : `OrigineReprise.chiffre` — la ligne de l'encadré reprise, dont
+# le pont vérifie la VALEUR et l'unité, plus seulement la référence.
+MODELE_SCHEMA_VERSION = "modele-1.2.0"
 # Les hypothèses PAR SEGMENT arrivent dans la mécanique sous `segments[<id>][<nom>]` : le nom est
 # donc réservé, une hypothèse globale qui le porterait masquerait tout le découpage.
 NOM_RESERVE_SEGMENTS = "segments"
@@ -84,10 +86,13 @@ class OriginePiece(Strict):
 
 
 class OrigineReprise(Strict):
-    """Le chiffre EST celui d'une réponse acquittée d'une autre méthodologie — jamais recollecté."""
+    """Le chiffre EST celui d'une réponse acquittée d'une autre méthodologie — jamais recollecté. Il se
+    lit dans l'ENCADRÉ de cette réponse (`chiffre` = l'id déclaré par la question), jamais dans sa prose :
+    le pont [A] exige la même valeur et la même unité."""
     type: Literal["reponse_reprise"]
     question_id: Annotated[str, Field(pattern=r"^[a-z]{2}_[0-9]+$")]
     answer_id: int
+    chiffre: Identifiant
 
 
 class OrigineJugement(Strict):
@@ -177,7 +182,7 @@ Fourchette = Annotated[Union[ScenariosNommes, ArbreEvenements], Field(discrimina
 
 
 class ModeleValorisation(Strict):
-    schema_version: Literal["modele-1.1.0"] = "modele-1.1.0"
+    schema_version: Literal["modele-1.2.0"] = "modele-1.2.0"
     ticker_id: Annotated[str, Field(min_length=1)]
     version: Annotated[int, Field(ge=1)]
     methodologie: Annotated[str, Field(min_length=80)]

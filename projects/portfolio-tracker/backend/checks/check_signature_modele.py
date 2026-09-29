@@ -224,12 +224,25 @@ from types import SimpleNamespace as NS  # noqa: E402
 
 
 def lue(aid: int, qid: str, verdict: str, statut: str, actualite: str | None):
+    # Une réponse porte son ENCADRÉ (4 bis) ; un hors-sujet n'a pas de bloc réponse.
+    encadre = [NS(id=f"chiffre_{aid}", valeur=float(aid), unite="M$")]
     return NS(answer_id=aid, verdict=verdict,
               servie=NS(question_id=qid, statut=statut,
+                        reponse=None if statut == "sans_objet" else NS(chiffres_cles=encadre),
                         fondation=None if actualite is None else NS(actualite=actualite)))
 
 
-rep = reponses_reprenables([
+def _reprenables(lues):
+    """Une exception est un FAIL NOMMÉ, jamais la mort du script (2ᵉ faux vert) : un hors-sujet laissé
+    passer n'a pas d'encadré à lire, et la lecture lève."""
+    try:
+        return reponses_reprenables(lues)
+    except Exception as e:  # noqa: BLE001
+        print(f"  (reponses_reprenables a levé : {type(e).__name__}: {e})")
+        return None
+
+
+rep = _reprenables([
     lue(1, "qf_1", "acquitte", "repondu", "courante"),
     lue(2, "qf_2", "acquitte", "approxime", "courante"),
     lue(3, "mo_1", "acquitte", "repondu", "perimee"),
@@ -238,10 +251,12 @@ rep = reponses_reprenables([
     lue(6, "qf_7", "acquitte", "sans_objet", None),
     lue(7, "qf_4", None, "repondu", "courante"),
 ])
-b.check(rep == {1: "qf_1", 2: "qf_2"},
+b.check(rep is not None and {a: r.question_id for a, r in rep.items()} == {1: "qf_1", 2: "qf_2"},
         f"seules les réponses acquittées ET courantes, qui portent un chiffre, sont reprenables (rendues : {rep})")
-b.check(3 not in rep, "une réponse acquittée mais PÉRIMÉE par un fait publié depuis n'est pas reprise")
-b.check(6 not in rep, "un hors-sujet motivé tient, mais ne porte aucun chiffre à reprendre")
+b.check(rep is not None and rep.get(1) is not None and dict(rep[1].chiffres) == {"chiffre_1": (1.0, "M$")},
+        f"une réponse reprenable apporte son ENCADRÉ, lu tel quel — valeur et unité (rendu : {(rep or {}).get(1)})")
+b.check(rep is not None and 3 not in rep, "une réponse acquittée mais PÉRIMÉE par un fait publié depuis n'est pas reprise")
+b.check(rep is not None and 6 not in rep, "un hors-sujet motivé tient, mais ne porte aucun chiffre à reprendre")
 
 
 # ── §3 Structure ─────────────────────────────────────────────────────────────────────────────

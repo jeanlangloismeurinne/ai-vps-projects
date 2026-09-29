@@ -63,7 +63,7 @@ from .readiness_report_schema import GapItem
 
 __all__ = [
     "FRAMEWORK_SCHEMA_VERSION", "STATUTS", "Statut",
-    "Reponse", "Fondation", "FondationServie", "Approximation", "SansObjet",
+    "ChiffreCle", "Reponse", "Fondation", "FondationServie", "Approximation", "SansObjet",
     "ControlesManager", "ManagerVerdict", "FrameworkAnswer", "FrameworkAnswerServie",
     "FrameworkMandate", "COLONNES_DENORMALISEES",
 ]
@@ -83,25 +83,84 @@ Statut = Literal["repondu", "approxime", "sans_objet", "non_fondable"]
 NatureEntry = Literal["mesure", "evenement", "interpretation"]
 
 
-class Reponse(Strict):
-    """La réponse elle-même. `verbatim` est ce qu'un lecteur lit ; le reste rend la réponse
-    comparable entre dossiers (spec §7, niveau 2)."""
-    verbatim: str = Field(min_length=1)
+class ChiffreCle(Strict):
+    """Une ligne de l'ENCADRÉ DE CHIFFRES CLÉS (4 bis, instruit avec l'utilisateur le 2026-09-29).
+
+    Comme un vrai fonds : la note d'analyste se clôt par un encadré au format maison — valeur, unité,
+    période —, et c'est lui que relit le modèle de valorisation, jamais la prose. L'`id` et l'`unite`
+    sont ceux que la question DÉCLARE (`QuestionDefinition.chiffres_cles`) — le pont le vérifie, le
+    contrat ne connaît pas la question (#37).
+
+    TROIS ÉTATS, jamais un silence (#25/#44) : un chiffre établi (`valeur` + la date ou la période
+    qu'il mesure réellement), ou un chiffre que le dossier ne permet pas d'établir (`motif_absence`).
+    Un `0` est une VALEUR (#47), jamais une absence.
+    """
+    id: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    unite: str = Field(min_length=1)
     valeur: Optional[float] = None
-    unite: Optional[str] = Field(default=None, min_length=1)
+    # Ce que le chiffre mesure RÉELLEMENT (« exercice 2025 », « au 2026-06-30 ») — la période déclarée
+    # par la question dit ce qu'on attend, celle-ci dit ce qu'on a (#42 : un chiffre se date).
+    date_ou_periode: Optional[str] = Field(default=None, min_length=3)
+    motif_absence: Optional[str] = Field(default=None, min_length=20)
+
+    @model_validator(mode="after")
+    def _etabli_ou_absent_motive(self):
+        if self.valeur is not None:
+            if self.motif_absence is not None:
+                raise ValueError(f"chiffre `{self.id}` : une valeur ET un motif d'absence — il faut choisir")
+            if self.date_ou_periode is None:
+                raise ValueError(f"chiffre `{self.id}` sans `date_ou_periode` : un chiffre qui ne dit pas ce "
+                                 "qu'il mesure se lit à la mauvaise date (#42)")
+        elif self.motif_absence is None:
+            raise ValueError(f"chiffre `{self.id}` sans valeur ni `motif_absence` : un chiffre absent se "
+                             "motive, il ne se tait pas (#25)")
+        elif self.date_ou_periode is not None:
+            raise ValueError(f"chiffre `{self.id}` absent mais daté : la période d'un chiffre inexistant "
+                             "n'a rien à dater")
+        return self
+
+
+class Reponse(Strict):
+    """La réponse elle-même. `verbatim` est ce qu'un lecteur lit ; l'ENCADRÉ de chiffres clés et le
+    `sens` rendent la réponse comparable entre dossiers (spec §7, niveau 2).
+
+    ⚠️ HÉRITAGE : jusqu'au 2026-09-29 la réponse portait UN nombre (`valeur` + `unite`). Mesuré avant de
+    le retirer : les 20 réponses jamais écrites le portaient à `null` (aucune n'a porté de nombre). Le
+    lecteur accepte donc ces deux clefs à `null` — la forme exacte de l'historique — et refuse un
+    nombre : il n'y en a jamais eu, et s'il en apparaissait un, le taire serait perdre un chiffre.
+    """
+    verbatim: str = Field(min_length=1)
+    # L'encadré. Vide par défaut parce qu'une question qui ne se chiffre pas (se_4) le rend vide ; le PONT
+    # exige que l'encadré porte EXACTEMENT les chiffres que la question déclare, ni plus, ni moins.
+    chiffres_cles: list[ChiffreCle] = Field(default_factory=list)
     # `sens` n'a PAS de vocabulaire fermé ici : la spec n'en fixe aucun (elle montre « eleve »), et
     # en inventer un au lot 1 serait induire le contrat de ce que le code fera — le 1er piège de
     # §12. Il se fermera au lot 2, quand les 13 questions diront ce que « sens » veut dire pour
     # chacune.
     sens: Optional[str] = Field(default=None, min_length=1)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _heritage_du_nombre_unique(cls, data):
+        if isinstance(data, dict) and ("valeur" in data or "unite" in data):
+            if data.get("valeur") is not None or data.get("unite") is not None:
+                raise ValueError("réponse au format d'avant l'encadré portant un nombre "
+                                 f"({data.get('valeur')!r} {data.get('unite')!r}) : jamais observé — la "
+                                 "reprendre en silence perdrait un chiffre")
+            data = {k: v for k, v in data.items() if k not in ("valeur", "unite")}
+        return data
+
+    def encadre_lisible(self) -> list[str]:
+        """L'encadré en lignes de texte, pour les outils de lecture — un seul rendu, jamais recopié."""
+        return [f"{c.id} = {c.valeur:g} {c.unite} ({c.date_ou_periode})" if c.valeur is not None
+                else f"{c.id} : non établi — {c.motif_absence}" for c in self.chiffres_cles]
+
     @model_validator(mode="after")
-    def _un_nombre_porte_son_unite(self):
-        # Un montant sans unité n'est pas imprécis, il est illisible : 15,99 lus « 0,0 » ont coûté
-        # la convention #46, et un ratio sans unité se lit indifféremment en points ou en pourcents.
-        if self.valeur is not None and not self.unite:
-            raise ValueError("`reponse.valeur` sans `reponse.unite` : un nombre nu n'est pas une "
-                             "réponse (#45/#46 — une grandeur porte son unité)")
+    def _un_chiffre_par_ligne(self):
+        ids = [c.id for c in self.chiffres_cles]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"l'encadré porte deux fois le même chiffre : {sorted(ids)} — un seul "
+                             "chiffre par dossier (#95)")
         return self
 
 
