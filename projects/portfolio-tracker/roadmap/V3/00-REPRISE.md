@@ -82,7 +82,9 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; la prochaine sera **052**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`50286e2`** (#100 : encadré, modèle `modele-1.2.0`, liens corrigés) — vérifié
+- **Production** : backend sur **`0e205ff`** (#101 : chiffres calculés par le code, renvoi unique — vérifié
+  dans le conteneur, dossier / niveau 2 / niveau 3 qf_4 / valorisation RVMD en 200) ; avant, `50286e2`
+  (#100 : encadré, modèle `modele-1.2.0`, liens corrigés) — vérifié
   dans le conteneur (qf_4 = dette brute / trésorerie / dette nette ; va_1 résultat normalisé ← qf_1, qf_6) ;
   niveau 3 qf_6, dossier et valorisation RVMD en 200 (les réponses d'avant l'encadré se relisent). `GET /v2/tickers/RVMD/valorisation` → `aucun_modele_propose` ;
   refus vérifiés (404 version, 404 titre, 422 motif blanc) ; PV vide. Chapitres
