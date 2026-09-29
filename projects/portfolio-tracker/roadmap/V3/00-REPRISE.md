@@ -35,9 +35,9 @@ role: >
 > la REPRISE « un seul chiffre par dossier » (option c, #99) livrés (`app/valorisation/`,
 > `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). **L'encadré de chiffres clés
 > est CONSTRUIT et déployé (`50286e2`, #100) ; la RÉÉMISSION ratée a été retirée et l'analyste
-> corrigé en amont (#101)** : **prochain geste = réémettre qf_4/qf_6/qf_7 RVMD** (feu vert utilisateur,
-> voir « Ce qui reste ouvert », en tête) — la case « plusieurs nombres » de la roadmap 05 reste ouverte
-> pour ça.
+> corrigé en amont (#101)** ; **réémission faite** (919-925, 0 refus) mais toutes trois périmées (pièces
+> d'héritage mal datées) ⟹ aucune réponse reprenable : prochain geste = re-collecter / redater le dossier
+> RVMD qualite_financiere (voir « Ce qui reste ouvert », en tête).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -185,19 +185,24 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 
 ## Ce qui reste ouvert
 
-**⚠️ EN TÊTE — prochain geste : RÉÉMETTRE qf_4/qf_6/qf_7 RVMD (analyste corrigé, #101)**
-- Dossier RVMD × `qualite_financiere` **restauré** le 2026-09-29 (décision utilisateur) : 469-474
-  courantes, le passage raté (893-897, mandats 1582-1583) retiré, sauvegardes dans
-  `backend/tools/retraits/`. `check_signature_modele_persist` nomme de nouveau la dette attendue
-  (qf_6 #474 sans encadré).
-- Correction en amont LIVRÉE (#101) : chiffres calculés par le code, chiffre manquant ≠ question
-  sans fondement, renvoi unique. Mesuré sans écriture sur 3 passages : qf_4 3/3, qf_6 3/3 (réponse
-  « faible », chiffre non établi motivé — **lecture différente de #474** qui approximait 151,0 + 23,8
-  M$ : à regarder par le comité), qf_7 1/3 (le modèle recite parfois la pièce écartée).
-- Réémission = UN passage `bash tools/executer_chaine.sh RVMD qualite_financiere pre_revenus
-  --sans-collecte` (il ÉCRIT en base, pas de ROLLBACK) — attendre le feu vert de l'utilisateur ;
-  jamais relancer jusqu'au vert. qf_4 restera PÉRIMÉE après réémission (mêmes pièces, financement du
-  27/08 postérieur) : la réponse reprenable attendue est qf_6, si son encadré est établi.
+**⚠️ EN TÊTE — réémission RVMD × qualite_financiere FAITE le 2026-09-29 (#101), relue ligne à ligne**
+- Un passage `executer_chaine … --sans-collecte` : réponses **919-925**, 0 refus, 7 acquittées, 0
+  mandat. qf_4 `repondu` (dette brute 487,43 · trésorerie 3 937,97 · dette nette −3 450,54 calculée
+  par le code) ; qf_6 `repondu` « part faible », chiffre non établi motivé ; qf_7 `repondu`
+  « autonomie longue », consommation annuelle non établie (la guidance est un calcul) ⟹ autonomie non
+  calculable, dit. Chaque chiffre retrouvé dans le corpus.
+- **Écart de traçabilité (non retiré, fait juste)** : la trésorerie 3 937,97 de l'encadré qf_4 vient
+  de #307/#296, **non cités** par qf_4 (cités : 297, 300, 341, 342). Aucune garde ne vérifie qu'un
+  chiffre établi figure dans une pièce CITÉE — à instruire (#78 a montré qu'une telle garde seule ne
+  suffit pas, mais elle aurait vu ce cas).
+- **Toutes trois PÉRIMÉES** (fait nouveau publié) ⟹ **aucune réponse RVMD reprenable** ;
+  `check_signature_modele_persist` le dit (1 rouge, c'est l'état réel, ne pas le verdir). qf_6 est
+  périmée par la pièce **#345** (« politique R&D, 10-Q T2 2026 ») **datée 2025-12-31**, héritage sans
+  datation (`portee_temporelle` NULL) : la réponse prend la date de sa pièce la plus ancienne, donc les
+  résultats du 05/08 la rouvrent. Remède = re-collecter/redater les pièces d'héritage (dette « 128
+  pièces »), jamais dater par modèle. Suite du lot : décider si l'on re-collecte le dossier RVMD
+  qualite_financiere (collecte payante autorisée en test, arbitrage du 22/09) avant la réponse à
+  plusieurs nombres suivante.
 
 **⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — à
 traiter quand la V3 sera quasiment finalisée**
@@ -381,8 +386,8 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > frameworks manquants sont rédigés (#92-#95) ; capacité en cours **4 bis, l'atelier de valorisation**
 > — gabarits, bac à calcul, contrat + pont + évaluation du modèle, signature + registres 051 livrés
 > + reprise « un seul chiffre par dossier » (option c) (#96-#99) + encadré de chiffres clés (#100, déployé)
-> + analyste corrigé en amont (#101) ; reste : réémettre qf_4/qf_6/qf_7 RVMD (feu vert utilisateur, en tête
-> de « Ce qui reste ouvert »), l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> + analyste corrigé en amont (#101) et réémission faite (919-925) ; reste : re-collecter/redater le dossier
+> RVMD qualite_financiere pour obtenir une réponse reprenable (en tête de « Ce qui reste ouvert »), l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute

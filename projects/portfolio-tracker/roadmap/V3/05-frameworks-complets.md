@@ -202,8 +202,9 @@ séance suivante).
   - ✅ **Retrait appliqué et correction en amont livrée le 2026-09-29 (#101)** : retrait sur décision de
     l'utilisateur (469-474 de nouveau courantes) ; le code calcule les chiffres calculés de l'encadré
     (dette nette, autonomie), un chiffre manquant ne fait plus tomber la question, une réponse refusée
-    est renvoyée une fois. Mesuré sans écriture : qf_4 3/3, qf_6 3/3, qf_7 1/3. **Reste : la réémission
-    (un passage, feu vert utilisateur).** Dette bloquante pour la production consignée au fichier de
+    est renvoyée une fois. Mesuré sans écriture : qf_4 3/3, qf_6 3/3, qf_7 1/3. **Réémission faite (919-925,
+    0 refus, 7 acquittées)** — mais les trois réponses sont périmées (pièce d'héritage #345 datée
+    2025-12-31) : aucune n'est reprenable ; la case reste ouverte jusqu'à une réponse reprenable. Dette bloquante pour la production consignée au fichier de
     reprise (une ré-analyse peut remplacer une réponse par une moins bonne).
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
