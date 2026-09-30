@@ -185,12 +185,20 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
   déposé avec lui). #103 : un fait postérieur aux comptes, LU dans le dépôt et chiffré par l'analyste, ne
   périme plus la réponse (`faits_posterieurs`, pont [P]). Passage `executer_chaine … --sans-collecte
   --questions=qf_4` : #963 à jour (lit les baux du 27/08 dans #296), acquittée, 0 mandat.
-- **Défaut de #963 à trancher (non retiré)** : sa PROSE dit « dette nette de −328 M$ » (dette brute −
-  trésorerie SEULE, chiffre porté tel quel par la pièce d'héritage #296) alors que son ENCADRÉ dit
-  −3 450,54 (avec les titres de placement) — la valorisation lit l'encadré, le comité lit les deux. Rien
-  ne vérifie que la prose ne contredit pas l'encadré. Pistes : consigne « la prose ne réécrit pas un
-  chiffre de l'encadré autrement » + renvoi unique ; ou retrait de 963 (923 redeviendrait courante mais
-  périmée). À proposer à l'utilisateur en termes métier.
+- **Défaut de #963 — DIAGNOSTIQUÉ le 2026-09-30 : c'est un défaut AMONT, pas de rédaction** (non retiré,
+  aucune règle de prose ajoutée — l'utilisateur préfère corriger en amont). Sa prose dit « dette nette
+  −328 M$ », son encadré −3 450,54. Le −328 = dette − trésorerie SEULE (815,4), sans les 3 122,5 M$ de
+  titres de placement. Il vient du système lui-même : `financials_feed.py` (bloc « levier ») calcule
+  `net_debt = debt - cash` avec `cash` = `CashAndCashEquivalents` seul, alors que le référentiel (qf_4,
+  `frameworks.yaml`) définit la dette nette « moins trésorerie ET placements ». Pièces tier A publiées
+  ainsi : RVMD #661 (−328), **MSFT #584 (+10,1 Md de dette nette, alors que 31,1 − 76,8 = −45,7 Md de
+  trésorerie nette : SIGNE INVERSÉ)**, NVDA #623 (+9,9 Md ; le poste `marketable_securities` n'est même
+  pas relevé pour NVDA — à mesurer). La pièce d'héritage #296 (search-worker, 12/09) recopie le même
+  −328 à côté du bon total 3 937,969 ; l'analyste l'a repris fidèlement. Même définition étroite dans le
+  capital investi du ROIC (`invested = equity + debt - cash`). Correction : le producteur prend
+  trésorerie + placements (poste déjà relevé par `edgar_feed`) et nomme ses composantes ; republier ;
+  #296 tombe avec la re-collecte prévue pour qf_6 ; puis `--questions=qf_4,qf_6`. Une garde « la prose
+  ne contredit pas l'encadré » n'est à reconsidérer QUE si la contradiction revient après correction.
 - **qf_6** : périmée par la seule pièce #345 (héritage daté 2025-12-31, contenu au 30/06) — désormais la
   re-collecte AIDE (#102 rend à jour un fait au 30/06) : re-collecter le dossier RVMD qualite_financiere
   (payant, autorisé en test le 22/09) puis `--questions=qf_6`.
