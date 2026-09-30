@@ -196,7 +196,23 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   du dossier), #977 cite le 10-K 2025 (#716, seul document rattaché) à côté du 10-Q qui le confirme (#717).
   #963 (à jour) est remplacée par #976 : aucune réponse RVMD reprenable à cet instant. **Pas de retrait**
   (l'utilisateur : « traiter le problème en amont car il va se reproduire »).
-- Corrigé en amont, NON ENCORE DÉPLOYÉ ni rejoué à la fin de session : #105 (qf_7 — autonomie sur la
+- **Relance du 2026-09-30 après #105/#106 (déployés `5f432ed`)** : plan #179, lecture du 8-K des baux
+  écrite (#733) et jointe ; réponses #984 (qf_4 `non_fondable`), #985 (qf_6 répondue, PÉRIMÉE — seul le
+  10-K #716 est encore rattaché à `politique_de_capitalisation`), #986 (qf_7 `non_fondable`). RVMD n'a
+  AUCUNE réponse qf_* reprenable (`check_signature_modele_persist` rouge pour cette raison). Les deux
+  non_fondable sont JUSTES sur le dossier servi — défauts de COLLECTE, à corriger en amont avant toute
+  relance : (a) FAUX APPARIEMENT — la ligne « cash, cash equivalents and marketable securities »
+  (`endettement_brut_et_net`, `tresorerie_disponible`) est liée au poste `cash_and_lt_debt` (#722 :
+  trésorerie SEULE + dette), famille #43/#60/#67 ; il faut la formule `Cash + MarketableSecuritiesCurrent`
+  (l'appariement sait l'exécuter, #72) — chercher pourquoi la recette du catalogue a gagné ; (b) PLAFOND
+  POLLUÉ — le relevé des placements #654 est laissé dehors par le plafond (40) pendant que 27 pièces hors
+  index sans rapport (données cliniques KRAS concurrentes, C+, collectées pour `defendabilite`) passent
+  par la seule date : le hors index d'un framework devrait privilégier les pièces de ses propres postes
+  (arbitrage métier possible : « le dossier d'une question joint-il d'abord les relevés financiers du
+  titre ? ») ; (c) `politique_de_capitalisation` : #717 (10-Q) toujours non rattaché — vérifier que la
+  collecte de cette ligne a bien rendu plusieurs entries cette fois (#106 ne vaut que si le worker les
+  rapporte ensemble). Retrait NON fait (l'utilisateur veut l'amont).
+- (historique de la même session) Corrigé en amont puis déployé : #105 (qf_7 — autonomie sur la
   consommation la plus prudente du constaté et de la prévision), #106 (lecture des dépôts postérieurs
   jointe d'office ; tous les documents d'un point rattachés). **Prochain geste** : suite + négatifs verts
   → déployer → `executer_chaine RVMD qualite_financiere pre_revenus --questions=qf_4,qf_6,qf_7` AVEC
