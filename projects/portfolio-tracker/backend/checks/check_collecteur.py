@@ -177,5 +177,26 @@ check("`LienCouverture` porte EXACTEMENT les colonnes métier de `question_cover
       f"→ {set(LienCouverture.model_fields)}")
 
 
+# ── §9 (#106) tous les documents rapportés pour un point y sont rattachés ─────────────────────────
+print("\n[9] une collecte qui rapporte PLUSIEURS documents les rattache TOUS au point (#106)")
+rejete("des entries supplémentaires sans entry principale → refusé",
+       lambda: ResultatCollecte(echec="rien trouvé", cause="recherche_epuisee", entry_ids_supplementaires=[7]),
+       "sans entry principale")
+
+
+def _deux_documents(ligne: LigneAveugle) -> ResultatCollecte:
+    if ligne.metrique.startswith("ECHEC"):
+        return ResultatCollecte(echec="la source pressentie n'a rien rendu", cause="recherche_epuisee")
+    # La forme RÉELLE du 2026-09-30 (ligne `politique_de_capitalisation` de RVMD) : le rapport annuel
+    # #716 rapporté d'abord, le trimestriel #717 qui confirme la même politique ensuite.
+    return ResultatCollecte(entry_id=716, entry_ids_supplementaires=[717, 716])
+
+
+R9 = aiguiller_plan(PLAN, collecter=_deux_documents)
+check("les DEUX documents sont rattachés au point, chacun une fois (le doublon ne fait pas deux liens)",
+      sorted(l.entry_id for l in R9.liens) == [716, 717]
+      and len({(l.question_id, l.ingredient_id) for l in R9.liens}) == 1,
+      f"→ {[(l.question_id, l.ingredient_id, l.entry_id) for l in R9.liens]}")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

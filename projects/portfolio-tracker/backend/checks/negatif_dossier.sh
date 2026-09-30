@@ -53,17 +53,25 @@ mutations=(
 # …et inversée : l'héritage passerait devant tout ce qui est qualifié.
 "$SRC¦1 if heritage else 0,¦0 if heritage else 1,  # mutation: héritage d'abord¦est en vigueur devant #296 (héritage"
 # ── §5 le plafond mord sur les pièces en vigueur au lieu du reste ──────────────────────────────────
-"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))[:plafond]¦plafond sous le nombre de pièces en vigueur"
+"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))[:plafond]¦plafond sous le nombre de pièces en vigueur"
 # ── §5bis une pièce qui sert DEUX points consomme deux places du plafond ───────────────────────────
 "$SRC¦    en_vigueur: list[int] = list(dict.fromkeys(c.en_vigueur for c in chemises))¦    en_vigueur: list[int] = [c.en_vigueur for c in chemises]¦ne consomme qu'une place du plafond"
 # ── §6 les pièces hors index sont écartées au lieu d'être jointes ──────────────────────────────────
-"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur]))¦hors index sont dans le dossier"
+"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))¦hors index sont dans le dossier"
 # ── §7 le décompte des antérieures compte deux fois une pièce partagée ─────────────────────────────
-"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}))¦        return tuple(sorted([i for ch in self.chemises for i in ch.anterieures]))¦elle ne compte qu'une fois"
+"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))¦        return tuple(sorted([i for ch in self.chemises for i in ch.anterieures]))¦elle ne compte qu'une fois"
 # ── §8 l'indéterminable se lit « rien à signaler » (#25/#44) ───────────────────────────────────────
 "$SRC¦        return bool(self.collecte)¦        return True¦un tuple vide ne doit pas se lire"
 # ── §9 un plafond nul rend un dossier vide au lieu de lever ────────────────────────────────────────
 "$SRC¦    if plafond < 1:¦    if False:¦plafond=0 doit LEVER"
+# ── #106 : les lectures des dépôts à lire sont jointes d'office ─────────────────────────────────────
+"$SRC¦    jointes = tuple(i for i in dict.fromkeys(joindre) if i in entries and i not in en_vigueur)¦    jointes = ()¦une pièce jointe d'office est remise"
+"$SRC¦    place_restante = max(0, plafond - len(en_vigueur) - len(jointes))¦    place_restante = max(0, plafond - len(en_vigueur))¦la place qu'elle prend est retirée"
+"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}))¦n'est plus annoncée « non remise »"
+"app/knowledge/lecture_depot.py¦        existant = await _deja_lu(conn, ticker_id, acc)¦        existant = None¦DÉJÀ lu n'est ni retéléchargé"
+"app/knowledge/lecture_depot.py¦            datation=constatee(date_du_fait=event.event_date, date_du_document=event.filing_date),¦            datation=constatee(date_du_fait=event.filing_date, date_du_document=event.filing_date),¦datée par le dépôt"
+"app/knowledge/lecture_depot.py¦    return f\"https://www.sec.gov/Archives/edgar/data/{cik}/{dossier}/{acc}-index.htm\"¦    return f\"https://www.sec.gov/cgi-bin/browse-edgar?CIK={cik}\"¦même quand le flux ne donne pas le document principal"
+"app/knowledge/lecture_depot.py¦            tags=[ETIQUETTE, acc, event.form],¦            tags=[acc, event.form],¦étiquetée « lecture du dépôt »"
 )
 
 source "$(dirname "$0")/_negatif.sh"

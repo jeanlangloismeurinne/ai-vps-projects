@@ -47,13 +47,13 @@ from typing import Any
 
 from app.agents.v2.analyste import repondre
 from app.agents.v2.collecte_executor import executer_collecte_framework
-from app.agents.v2.dossier import charger_dossier
 from app.agents.v2.framework_persist import persist_answer, read_dispenses
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager import reviser_framework
 from app.agents.v2.manager_persist import persist_review
 from app.agents.v2.note_flash import lire_les_depots_en_attente
-from app.agents.v2.parcours import faits_posterieurs_du_titre
+from app.agents.v2.preparation import preparer_dossier_analyste
+from app.knowledge.lecture_depot import resume_des_lectures
 from app.db.database import close_pool, get_db_session, init_pool
 
 # Même plafond que `tools/acceptation_analyste.py` — et pour la même raison : un dossier entier
@@ -135,20 +135,22 @@ async def main() -> int:
 
         # ── MAILLON 2 — l'analyste répond ───────────────────────────────────────
         _titre(2, "analyste — une réponse OU un refus nommé par question")
+        # Le dossier, les faits postérieurs aux comptes (#103) et la LECTURE de leurs dépôts, jointe
+        # d'office (#106) — un seul détenteur, partagé avec le bouclage.
         async with get_db_session() as conn:
-            dossier = await charger_dossier(
-                conn, ticker_id=ticker_id, framework_id=framework_id,
-                framework_version=fichier.schema_version, plafond=PLAFOND)
+            prepare = await preparer_dossier_analyste(
+                conn, ticker_id=ticker_id, framework_id=framework_id, fichier=fichier,
+                plafond=PLAFOND, questions=perimetre)
+        dossier, faits = prepare.dossier, prepare.faits
+        ecrits["lectures_de_depots"] = [x.entry_id for x in prepare.lectures if x.ecrite]
+        for ligne in resume_des_lectures(prepare.lectures):
+            print(ligne)
         entries = dossier.entries
         print(dossier.bilan())
         if not entries:
             print("  ⚠️ corpus VIDE : l'analyste ne peut que refuser. On s'arrête — un passage "
                   "sur zéro entry ne prouverait rien.")
             return 1
-
-        # Les faits postérieurs aux derniers comptes, par question (#103) — l'horloge même du dossier.
-        async with get_db_session() as conn:
-            faits = await faits_posterieurs_du_titre(conn, ticker_id, fichier, framework_id)
         for qid, evs in sorted(faits.items()):
             for e in evs:
                 print(f"  fait postérieur à lire · {qid} · {e.accession} · {e.resume()}")

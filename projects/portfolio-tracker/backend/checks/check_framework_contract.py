@@ -734,6 +734,78 @@ check("… et deux périodes différentes sont DÉCLARÉES toutes deux (un chiff
       _enc_mix["autonomie"].valeur == 24.0 and "au 2026-06-30" in _enc_mix["autonomie"].date_ou_periode
       and "exercice 2025" in _enc_mix["autonomie"].date_ou_periode, f"→ {_enc_mix['autonomie']}")
 
+# #105 — la règle de PRUDENCE : le chiffre retenu est le plus fort du constaté (obligatoire) et de la
+# prévision (facultative), et l'autonomie se calcule sur LUI. Chiffres de la forme RVMD (trésorerie
+# 3 937,969 M$ au 2026-06-30 ; prévision de dépenses 2,2 Md$ borne haute ; constaté fictif 900).
+_DECL_PRUD = [
+    ChiffreCleDeclare(id="tresorerie", libelle="Trésorerie mobilisable", unite="M$", periode="au bilan"),
+    ChiffreCleDeclare(id="constatee", libelle="Consommation constatée", unite="M$", periode="4 trimestres"),
+    ChiffreCleDeclare(id="prevue", libelle="Dépenses annoncées", unite="M$", periode="exercice",
+                      facultatif=True),
+    ChiffreCleDeclare(id="retenue", libelle="Consommation retenue, la plus prudente", unite="M$",
+                      periode="la plus prudente", le_plus_eleve_de=["constatee", "prevue"]),
+    ChiffreCleDeclare(id="autonomie", libelle="Autonomie de financement", unite="mois",
+                      periode="au bilan", calcul="tresorerie / retenue * 12")]
+class _Absent:
+    valeur = date_ou_periode = motif_absence = None
+
+
+def _prud(lignes):
+    """`completer_encadre` sur `_DECL_PRUD`, une exception devenant un FAIL NOMMÉ (le script atteint son
+    bilan : une mutation d'une autre garde ne doit pas le tuer avant l'assert qu'elle vise)."""
+    try:
+        return {c.id: c for c in completer_encadre(_DECL_PRUD, lignes)}
+    except Exception as e:  # noqa: BLE001
+        check(f"[#105] `completer_encadre` ne lève pas ({type(e).__name__}: {e})", False)
+        return {}
+
+
+def _l(d, i):
+    return d.get(i, _Absent())
+
+
+_TRE = ChiffreCle(id="tresorerie", unite="M$", valeur=3937.969, date_ou_periode="au 2026-06-30")
+_CON = ChiffreCle(id="constatee", unite="M$", valeur=900.0, date_ou_periode="4 trimestres au 2026-06-30")
+_PRE = ChiffreCle(id="prevue", unite="M$", valeur=2200.0, date_ou_periode="exercice 2026 (guidance du 2026-08-05)")
+_p1 = _prud([_TRE, _CON, _PRE])
+check("[#105] la prévision PLUS FORTE est retenue (la plus prudente), et le dit",
+      _l(_p1, "retenue").valeur == 2200.0 and "retenu : prevue" in (_l(_p1, "retenue").date_ou_periode or ""),
+      f"→ {_p1.get('retenue')}")
+check("[#105] … et l'autonomie se calcule sur le chiffre RETENU (3 937,969 / 2 200 × 12)",
+      _l(_p1, "autonomie").valeur is not None and abs(_l(_p1, "autonomie").valeur - 3937.969 / 2200 * 12) < 1e-6,
+      f"→ {_p1.get('autonomie')}")
+_p2 = _prud([_TRE, _CON,
+                                                       ChiffreCle(id="prevue", unite="M$", valeur=500.0,
+                                                                  date_ou_periode="exercice 2026")])
+check("[#105] un constaté plus fort que la prévision est retenu (la prévision optimiste est écartée)",
+      _l(_p2, "retenue").valeur == 900.0 and "retenu : constatee" in (_l(_p2, "retenue").date_ou_periode or ""),
+      f"→ {_p2.get('retenue')}")
+_p3 = _prud([_TRE, _CON,
+                                                       ChiffreCle(id="prevue", unite="M$",
+                                                                  motif_absence="aucune prévision publiée")])
+check("[#105] une prévision FACULTATIVE absente est sautée en le DISANT, le constaté est retenu",
+      _l(_p3, "retenue").valeur == 900.0 and "prevue non établi(s), facultatif(s)" in (_l(_p3, "retenue").date_ou_periode or "")
+      and _l(_p3, "autonomie").valeur is not None, f"→ {_p3.get('retenue')} / {_p3.get('autonomie')}")
+_p4 = _prud([_TRE, _PRE,
+                                                       ChiffreCle(id="constatee", unite="M$",
+                                                                  motif_absence="trimestres non publiés")])
+check("[#105] le constaté OBLIGATOIRE absent : rien n'est retenu (on ne retient pas une prévision seule), "
+      "et l'autonomie le NOMME",
+      _l(_p4, "retenue").valeur is None and "constatee" in (_l(_p4, "retenue").motif_absence or "")
+      and _l(_p4, "autonomie").valeur is None and "retenue" in (_l(_p4, "autonomie").motif_absence or ""),
+      f"→ {_p4.get('retenue')} / {_p4.get('autonomie')}")
+try:
+    _n_retenue = sum(1 for c in completer_encadre(_DECL_PRUD, [
+        _TRE, _CON, _PRE, ChiffreCle(id="retenue", unite="M$", valeur=900.0, date_ou_periode="choisi")])
+        if c.id == "retenue")
+except Exception:  # noqa: BLE001 — nommé par l'assert ci-dessous
+    _n_retenue = -1
+_p5 = _prud([
+    _TRE, _CON, _PRE, ChiffreCle(id="retenue", unite="M$", valeur=900.0, date_ou_periode="choisi par l'analyste")])
+check("[#105] une ligne fournie pour le chiffre RETENU est écartée : c'est le code qui retient",
+      _l(_p5, "retenue").valeur == 2200.0 and _n_retenue == 1,
+      f"→ {_p5.get('retenue')}")
+
 _so = dict(sans_objet={"motif": "société sans stocks", "substitut_applique": "rotation",
                        "substitut_answer_id": 7, "aucun_substitut": False})
 pont("[F] un substitut qui pointe une réponse à LA MÊME question (contrôle ④)",

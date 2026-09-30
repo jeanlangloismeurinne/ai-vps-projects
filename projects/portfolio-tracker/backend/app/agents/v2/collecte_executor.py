@@ -467,9 +467,10 @@ async def collecter_un(
         return ResultatCollecte(
             echec=f"search-worker: aucune entry persistée pour « {ligne.metrique} »",
             cause="recherche_epuisee")
-    # Une ligne → un lien. Le worker peut retenir plusieurs entries (Pareto) ; elles entrent toutes au
-    # corpus, mais la couverture de CET ingrédient est adossée à la première (la mieux classée).
-    return ResultatCollecte(entry_id=created[0]["id"])
+    # Une ligne → autant de liens que d'entries retenues (#106) : le worker peut en rapporter plusieurs
+    # sur le même point (Pareto), et c'est le dossier qui élit la plus récente — pas l'ordre du worker.
+    return ResultatCollecte(entry_id=created[0]["id"],
+                            entry_ids_supplementaires=[int(c["id"]) for c in created[1:]])
 
 
 def postes_edgar_du_plan(

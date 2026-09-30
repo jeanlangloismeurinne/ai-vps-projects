@@ -290,17 +290,40 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
     #    les chiffres d'un encadré se lisent à la même date), et ses additions portent sur une même
     #    unité (dette brute − trésorerie : M$ − M$). Une formule qui ne se calcule pas sur l'encadré
     #    rendrait une ligne toujours « non établie », en silence.
+    #    Un chiffre RETENU (`le_plus_eleve_de`, #105) compare des chiffres relevés de la même question,
+    #    dans SA propre unité, dont au moins un obligatoire (on ne retient jamais une prévision faute du
+    #    constaté). Une formule peut lire un chiffre retenu (l'autonomie se calcule sur la consommation
+    #    RETENUE) : il est établi avant elles, et ne lit lui-même que des relevés — aucun ordre caché.
     for _f, q in toutes:
         unites = {c.id: c.unite for c in q.chiffres_cles}
-        releves = {c.id for c in q.chiffres_cles if c.calcul is None}
+        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme}
+        facultatifs = {c.id for c in q.chiffres_cles if c.facultatif}
+        retenus = {c.id for c in q.chiffres_cles if c.le_plus_eleve_de}
+        for c in q.chiffres_cles:
+            if not c.le_plus_eleve_de:
+                continue
+            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)
+            if hors:
+                raise FrameworkDefinitionRefused(
+                    f"[T] `{q.id}.{c.id}` retient le plus élevé de {hors}, qui ne sont pas des chiffres RELEVÉS "
+                    f"de `{q.id}` ({sorted(releves)})")
+            autres = sorted(f"{n} en {unites[n]!r}" for n in c.le_plus_eleve_de if unites[n] != c.unite)
+            if autres:
+                raise FrameworkDefinitionRefused(
+                    f"[T] `{q.id}.{c.id}` ({c.unite!r}) compare {autres} : on ne retient pas le plus élevé de "
+                    "deux unités")
+            if all(n in facultatifs for n in c.le_plus_eleve_de):
+                raise FrameworkDefinitionRefused(
+                    f"[T] `{q.id}.{c.id}` ne compare que des chiffres facultatifs : il faut au moins un chiffre "
+                    "obligatoire, sinon le chiffre retenu pourrait reposer sur une seule prévision")
         for c in q.chiffres_cles:
             if c.calcul is None:
                 continue
-            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves)
+            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)
             if hors:
                 raise FrameworkDefinitionRefused(
-                    f"[T] `{q.id}.{c.id}` se calcule sur {hors}, qui ne sont pas des chiffres RELEVÉS de "
-                    f"`{q.id}` ({sorted(releves)}) — le code ne saurait pas le calculer")
+                    f"[T] `{q.id}.{c.id}` se calcule sur {hors}, qui ne sont pas des chiffres RELEVÉS ou RETENUS "
+                    f"de `{q.id}` ({sorted(releves | retenus)}) — le code ne saurait pas le calculer")
             decales = sorted(f"{n}[{k}]" for n, k in references_de_la_formule(c.calcul) if k != 0)
             if decales:
                 raise FrameworkDefinitionRefused(
@@ -650,12 +673,13 @@ def valider_pont_framework_answer(
         faux = []
         for c in answer.reponse.chiffres_cles:
             d = next((x for x in declares if x.id == c.id), None)
-            if d is None or d.calcul is None:
+            if d is None or not d.calcule_par_le_systeme:
                 continue
             e = attendus[c.id]
             if (c.valeur is None) != (e.valeur is None) or (
                     c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
-                faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({d.calcul})")
+                regle = d.calcul or f"le plus élevé de {', '.join(d.le_plus_eleve_de)}"
+                faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({regle})")
         if faux:
             raise FrameworkAnswerRefused(
                 f"l'encadré de `{answer.question_id}` porte un chiffre calculé qui ne vaut pas sa formule : "
@@ -699,12 +723,32 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     périodes de ses termes, #42), ou non établi parce qu'un terme ne l'est pas (le terme est NOMMÉ),
     ou non calculable (un dénominateur nul — une propriété de l'entreprise, pas un zéro).
     """
-    calcules = [d for d in declares if d.calcul is not None]
-    ids_calcules = {d.id for d in calcules}
-    releves = [c for c in lignes if c.id not in ids_calcules]
+    systeme = [d for d in declares if d.calcule_par_le_systeme]
+    ids_systeme = {d.id for d in systeme}
+    releves = [c for c in lignes if c.id not in ids_systeme]
     par_id = {c.id: c for c in releves}
     sortie = list(releves)
-    for d in calcules:
+    facultatifs = {d.id for d in declares if d.facultatif}
+    # Les chiffres RETENUS d'abord (#105) : une formule peut les lire, eux ne lisent que des relevés.
+    for d in (x for x in systeme if x.le_plus_eleve_de):
+        etablis = [par_id[n] for n in d.le_plus_eleve_de
+                   if par_id.get(n) is not None and par_id[n].valeur is not None]
+        absents = [n for n in d.le_plus_eleve_de if n not in {c.id for c in etablis}]
+        obligatoires_absents = [n for n in absents if n not in facultatifs]
+        if obligatoires_absents:
+            ligne = ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                f"non établi (le plus élevé de {', '.join(d.le_plus_eleve_de)}) : "
+                f"{', '.join(obligatoires_absents)} non établi(s) dans l'encadré — on ne retient pas une "
+                "prévision faute du constaté"))
+        else:
+            gagnant = max(etablis, key=lambda c: c.valeur)   # à égalité, le premier déclaré
+            saute = (f" ; {', '.join(absents)} non établi(s), facultatif(s)" if absents else "")
+            ligne = ChiffreCle(id=d.id, unite=d.unite, valeur=gagnant.valeur, date_ou_periode=(
+                f"{gagnant.date_ou_periode} — retenu : {gagnant.id}, le plus élevé de "
+                f"{', '.join(d.le_plus_eleve_de)}{saute}"))
+        sortie.append(ligne)
+        par_id[d.id] = ligne
+    for d in (x for x in systeme if x.calcul is not None):
         noms = sorted(noms_de_la_formule(d.calcul))
         absents = [n for n in noms if par_id.get(n) is None or par_id[n].valeur is None]
         if absents:

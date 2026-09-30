@@ -252,4 +252,100 @@ try:
 except ValueError:
     B.check(True, "plafond=0 lève — une erreur n'est jamais un résultat vide (#25)")
 
+print("\n§10 (#106) une lecture de dépôt à lire est JOINTE d'office au dossier")
+# #296 est ANTÉRIEURE dans sa chemise dès qu'une pièce qualifiée passe devant (§2bis) : jointe d'office,
+# elle reste au dossier — c'est ce qui a manqué à la réponse #976, née périmée faute de voir le 8-K.
+DJ = assembler_dossier(entries=QUALIFIEE, liens=LIENS, plafond=40, joindre=[296, 77777])
+B.check(296 in DJ.entries and 296 in DJ.jointes,
+        "une pièce jointe d'office est remise même si elle est antérieure dans sa chemise")
+B.check(296 not in DJ.anterieures_ecartees,
+        "…et elle n'est plus annoncée « non remise » (le bilan ne ment pas sur ce qui part)")
+B.check(77777 not in DJ.jointes, "un id absent du corpus n'est pas joint (lien mort toléré, pas fabriqué)")
+DJ_SERRE = assembler_dossier(entries=QUALIFIEE, liens=LIENS, plafond=4, joindre=[296])
+B.check(296 in DJ_SERRE.entries and all(c.en_vigueur in DJ_SERRE.entries for c in DJ_SERRE.chemises),
+        "à plafond serré, la jointe et les pièces en vigueur passent AVANT le hors index")
+B.check(len(DJ_SERRE.hors_index_retenues) == 0,
+        "…et la place qu'elle prend est retirée au hors index (4 en vigueur + 1 jointe > plafond 4)")
+
+print("\n§11 (#106) la LECTURE d'un dépôt : le texte déposé, daté par le dépôt, adressé dans son dossier")
+import asyncio  # noqa: E402
+from datetime import date as _d  # noqa: E402
+
+import app.knowledge.lecture_depot as ld  # noqa: E402
+from app.agents.v2.frameworks import provient_du_depot  # noqa: E402
+from app.agents.v2.note_flash import DocumentDepot, NoteFlashImpossible  # noqa: E402
+from app.knowledge.material_events import MaterialEvent  # noqa: E402
+
+# Le 8-K RÉEL des baux de RVMD (flux EDGAR du 2026-09-30).
+BAUX = MaterialEvent(form="8-K", event_date=_d(2026, 8, 27), filing_date=_d(2026, 9, 1),
+                     items=("1.01", "2.03"), accession="0001193125-26-377362",
+                     url="https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/rvmd-20260827.htm")
+B.check(provient_du_depot({"source_url": ld.adresse_du_depot(BAUX, 1628171)}, BAUX.accession),
+        "l'adresse de la lecture est DANS le dossier EDGAR du dépôt (c'est ce qui la dit « tirée du dépôt »)")
+SANS_URL = MaterialEvent(form="8-K", event_date=BAUX.event_date, filing_date=BAUX.filing_date,
+                         items=BAUX.items, accession=BAUX.accession, url=None)
+B.check(provient_du_depot({"source_url": ld.adresse_du_depot(SANS_URL, 1628171)}, BAUX.accession),
+        "…même quand le flux ne donne pas le document principal (index du dépôt)")
+B.check(ld.type_de_piece(BAUX) == "fact_financial",
+        "un 8-K portant un item de la section 2 (obligation financière) est une pièce financière")
+B.check(ld.type_de_piece(MaterialEvent(form="8-K", event_date=BAUX.event_date, filing_date=BAUX.filing_date,
+                                       items=("5.02",), accession="x")) == "fact_qualitative",
+        "…un changement de dirigeants (5.02) une pièce qualitative — la nomenclature de la SEC, pas un jugement")
+_DOC = DocumentDepot(type="8-K", nom="rvmd-20260827.htm",
+                     texte="Item 1.01 Entry into a Material Definitive Agreement. On August 27, 2026 …",
+                     taille=5000, tronque=True)
+_txt = ld.construire_contenu(BAUX, [_DOC])
+B.check("Item 1.01 Entry into a Material Definitive Agreement" in _txt and "TRONQUÉ" in _txt
+        and "0001193125-26-377362" in _txt,
+        "le contenu est le texte DÉPOSÉ, tel quel, avec l'accession et la troncature dite")
+
+
+class _ConnLecture:
+    def __init__(self, deja=None):
+        self.deja = deja
+
+    async def fetchval(self, *a):
+        return self.deja
+
+
+_ecrits: list[dict] = []
+
+
+async def _store(conn, **kw):
+    _ecrits.append(kw)
+    return {"id": 9001}
+
+
+async def _soumission(cik, acc):
+    return "soumission"
+
+
+_orig_ld = (ld.store_knowledge, ld.telecharger_soumission, ld.extraire_documents)
+ld.store_knowledge, ld.telecharger_soumission, ld.extraire_documents = _store, _soumission, lambda s: [_DOC]
+try:
+    L1 = asyncio.run(ld.assurer_lectures(_ConnLecture(), "RVMD", 1628171, [BAUX, BAUX]))
+    B.check([x.entry_id for x in L1] == [9001] and L1[0].ecrite and len(_ecrits) == 1,
+            "un dépôt se lit UNE fois, même cité par deux questions")
+    kw = _ecrits[0] if _ecrits else {}
+    B.check(kw.get("source_type") == "edgar_official" and ld.ETIQUETTE in (kw.get("tags") or [])
+            and BAUX.accession in (kw.get("tags") or []),
+            "la pièce est un dépôt officiel, étiquetée « lecture du dépôt » + accession")
+    B.check(kw.get("datation") is not None and kw["datation"].date_du_fait == _d(2026, 8, 27)
+            and kw["datation"].date_du_document == _d(2026, 9, 1),
+            "datée par le dépôt : le fait au 27/08 (reportDate), le document au 01/09 (filingDate) — #79")
+    L2 = asyncio.run(ld.assurer_lectures(_ConnLecture(deja=555), "RVMD", 1628171, [BAUX]))
+    B.check([x.entry_id for x in L2] == [555] and not L2[0].ecrite and len(_ecrits) == 1,
+            "un dépôt DÉJÀ lu n'est ni retéléchargé ni réécrit")
+
+    async def _panne(cik, acc):
+        raise NoteFlashImpossible("EDGAR 503 sur la soumission")
+    ld.telecharger_soumission = _panne
+    L3 = asyncio.run(ld.assurer_lectures(_ConnLecture(), "RVMD", 1628171, [BAUX]))
+    B.check(L3[0].entry_id is None and "503" in (L3[0].motif or "") and len(_ecrits) == 1,
+            "une panne n'écrit rien et est RENDUE nommée — jamais une pièce vide (#25)")
+    L4 = asyncio.run(ld.assurer_lectures(_ConnLecture(), "RVMD", None, [BAUX]))
+    B.check(L4[0].entry_id is None and "CIK" in (L4[0].motif or ""), "un titre hors EDGAR est dit, pas lu")
+finally:
+    ld.store_knowledge, ld.telecharger_soumission, ld.extraire_documents = _orig_ld
+
 sys.exit(B.summary())

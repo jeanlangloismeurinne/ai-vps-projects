@@ -58,7 +58,7 @@ mutations=(
 # ── #101 : un chiffre CALCULÉ vaut sa formule (pont [K bis]) et c'est `completer_encadre` qui l'écrit ──
 "$PONT¦        if faux:¦        if False:¦NE vaut PAS sa formule est refusé"
 "$PONT¦            if (c.valeur is None) != (e.valeur is None) or (¦            if False or (¦ÉTABLI alors qu'un de ses termes ne l'est pas"
-"$PONT¦    releves = [c for c in lignes if c.id not in ids_calcules]¦    releves = list(lignes)¦rend UNE ligne par chiffre"
+"$PONT¦    releves = [c for c in lignes if c.id not in ids_systeme]¦    releves = list(lignes)¦rend UNE ligne par chiffre"
 "$PONT¦        absents = [n for n in noms if par_id.get(n) is None or par_id[n].valeur is None]¦        absents = [n for n in noms if par_id.get(n) is None]¦NON établi parce qu'un terme ne l'est pas"
 "$PONT¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f\"non calculable : {e}\"))¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, valeur=0.0, date_ou_periode=\"zéro\"))¦dénominateur NUL"
 "$PONT¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if len(periodes) == 1 else¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if True else¦deux périodes différentes"
@@ -68,6 +68,12 @@ mutations=(
 "$PONT¦    return bool(depot) and depot.replace(\"-\", \"\") in str(entry.get(\"source_url\") or \"\")¦    return bool(depot)¦lu dans un ARTICLE qui parle du dépôt"
 "$SRC¦    effet: str = Field(min_length=20)¦    effet: str = Field(min_length=1)¦un effet non écrit"
 "$SRC¦        if len(set(depots)) != len(depots):¦        if False:¦le même dépôt lu deux fois"
+# ── #105 : la règle de PRUDENCE — le plus fort du constaté (obligatoire) et de la prévision (facultative) ──
+"$PONT¦            gagnant = max(etablis, key=lambda c: c.valeur)¦            gagnant = min(etablis, key=lambda c: c.valeur)¦la prévision PLUS FORTE est retenue"
+"$PONT¦        obligatoires_absents = [n for n in absents if n not in facultatifs]¦        obligatoires_absents = list(absents)¦sautée en le DISANT"
+"$PONT¦        obligatoires_absents = [n for n in absents if n not in facultatifs]¦        obligatoires_absents = []¦le constaté OBLIGATOIRE absent"
+"$PONT¦    ids_systeme = {d.id for d in systeme}¦    ids_systeme = {d.id for d in systeme if d.calcul}¦une ligne fournie pour le chiffre RETENU est écartée"
+"$PONT¦        par_id[d.id] = ligne¦        pass¦l'autonomie se calcule sur le chiffre RETENU"
 )
 
 source "$(dirname "$0")/_negatif.sh"

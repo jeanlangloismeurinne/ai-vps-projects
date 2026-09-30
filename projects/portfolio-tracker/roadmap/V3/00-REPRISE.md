@@ -34,9 +34,10 @@ role: >
 > calcul, contrat + pont + évaluation du modèle d'entreprise, SIGNATURE + registres (051), endpoints, et
 > la REPRISE « un seul chiffre par dossier » (option c, #99) livrés (`app/valorisation/`,
 > `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). **Encadré (#100), analyste
-> corrigé (#101), horloge des comptes (#102) et faits postérieurs lus (#103) déployés** : RVMD a sa
-> première réponse reprenable (qf_4 #963). Prochain geste : trancher le défaut de prose de #963, puis
-> qf_6 (re-collecte) et qf_7 (correction en amont) — voir « Ce qui reste ouvert », en tête.
+> corrigé (#101), horloge des comptes (#102) et faits postérieurs lus (#103) déployés** ; #104 (une
+> seule dette nette) déployé ; #105 (autonomie prudente) et #106 (lecture des dépôts postérieurs, tous les
+> documents d'un point) écrits le 2026-09-30, à déployer puis rejouer sur RVMD qf_4/qf_6/qf_7 — voir « Ce
+> qui reste ouvert », en tête (objectif : deux cas très différents, RVMD et NVDA, qui tournent juste).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -180,35 +181,34 @@ note de qualité (#82), rang d'une approximation « un cran sous la plus faible 
 
 ## Ce qui reste ouvert
 
-**⚠️ EN TÊTE — RVMD a UNE réponse reprenable : qf_4 #963 (2026-09-30, #102/#103)**
-- #102 : un communiqué de résultats ne périme plus les comptes qu'il publie (seuil = clôture du 10-Q/10-K
-  déposé avec lui). #103 : un fait postérieur aux comptes, LU dans le dépôt et chiffré par l'analyste, ne
-  périme plus la réponse (`faits_posterieurs`, pont [P]). Passage `executer_chaine … --sans-collecte
-  --questions=qf_4` : #963 à jour (lit les baux du 27/08 dans #296), acquittée, 0 mandat.
-- **Défaut de #963 — DIAGNOSTIQUÉ le 2026-09-30 : c'est un défaut AMONT, pas de rédaction** (non retiré,
-  aucune règle de prose ajoutée — l'utilisateur préfère corriger en amont). Sa prose dit « dette nette
-  −328 M$ », son encadré −3 450,54. Le −328 = dette − trésorerie SEULE (815,4), sans les 3 122,5 M$ de
-  titres de placement. Il vient du système lui-même : `financials_feed.py` (bloc « levier ») calcule
-  `net_debt = debt - cash` avec `cash` = `CashAndCashEquivalents` seul, alors que le référentiel (qf_4,
-  `frameworks.yaml`) définit la dette nette « moins trésorerie ET placements ». Pièces tier A publiées
-  ainsi : RVMD #661 (−328), **MSFT #584 (+10,1 Md de dette nette, alors que 31,1 − 76,8 = −45,7 Md de
-  trésorerie nette : SIGNE INVERSÉ)**, NVDA #623 (+9,9 Md ; le poste `marketable_securities` n'est même
-  pas relevé pour NVDA — à mesurer). La pièce d'héritage #296 (search-worker, 12/09) recopie le même
-  −328 à côté du bon total 3 937,969 ; l'analyste l'a repris fidèlement. Même définition étroite dans le
-  capital investi du ROIC (`invested = equity + debt - cash`). Correction : le producteur prend
-  trésorerie + placements (poste déjà relevé par `edgar_feed`) et nomme ses composantes ; republier ;
-  #296 tombe avec la re-collecte prévue pour qf_6 ; puis `--questions=qf_4,qf_6`. Une garde « la prose
-  ne contredit pas l'encadré » n'est à reconsidérer QUE si la contradiction revient après correction.
-- **qf_6** : périmée par la seule pièce #345 (héritage daté 2025-12-31, contenu au 30/06) — désormais la
-  re-collecte AIDE (#102 rend à jour un fait au 30/06) : re-collecter le dossier RVMD qualite_financiere
-  (payant, autorisé en test le 22/09) puis `--questions=qf_6`.
-- **qf_7** : 0/3 sur 3 passages (refus [E], la guidance #312 — interprétation — citée à côté des relevés ;
-  1/3 au #101). À corriger en amont avant toute réémission ; ne JAMAIS la réémettre avec le framework entier
-  (le refus ouvrirait un mandat à tort — utiliser `--questions`).
+**⚠️ EN TÊTE — OBJECTIF DE L'UTILISATEUR (2026-09-30) : « arriver rapidement à un système qui a tourné
+de façon correcte sur deux cas de figure très différents afin d'en valider la généralité » — RVMD
+(biotech pré-revenus) et NVDA (mature). Ordre retenu : finir la qualité financière RVMD, puis instruire
+les nouveaux chapitres sur RVMD ET NVDA (dont la qualité financière de NVDA, aucune réponse en vigueur),
+AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonder ses hypothèses).**
+
+**État RVMD qualite_financiere au 2026-09-30 (fin de session)**
+- #104 (déployé `5cfaf50`) : dette nette = dette brute − (trésorerie + placements) partout ; levier
+  republié RVMD #699 / NVDA #702 / MSFT #706 (MSFT et NVDA étaient de signe inversé) ; une pièce datée
+  passe devant l'héritage dans une chemise.
+- Re-collecte faite (plan #177) puis `--questions=qf_4,qf_6` : **#976 (qf_4) et #977 (qf_6) écrites,
+  acquittées, mais PÉRIMÉES** — #976 n'a pas vu le 8-K des baux (l'héritage #296 qui le portait est sorti
+  du dossier), #977 cite le 10-K 2025 (#716, seul document rattaché) à côté du 10-Q qui le confirme (#717).
+  #963 (à jour) est remplacée par #976 : aucune réponse RVMD reprenable à cet instant. **Pas de retrait**
+  (l'utilisateur : « traiter le problème en amont car il va se reproduire »).
+- Corrigé en amont, NON ENCORE DÉPLOYÉ ni rejoué à la fin de session : #105 (qf_7 — autonomie sur la
+  consommation la plus prudente du constaté et de la prévision), #106 (lecture des dépôts postérieurs
+  jointe d'office ; tous les documents d'un point rattachés). **Prochain geste** : suite + négatifs verts
+  → déployer → `executer_chaine RVMD qualite_financiere pre_revenus --questions=qf_4,qf_6,qf_7` AVEC
+  collecte (les rattachements #106 ne valent que pour une collecte neuve) → relire les trois réponses
+  contre leurs pièces et `montrer_parcours.sh RVMD` (elles doivent TENIR).
+- Résidu noté : #976 a additionné lui-même 815,4 + 3 120 (placements lus arrondis « 3,1 MdUSD » dans
+  #699 ; la ligne de plan « cash, cash equivalents and marketable securities » a été appariée au poste
+  trésorerie SEUL #711 — faux appariement de la famille #43/#60). Écart 2,6 M$ ; calcul fait par le modèle.
 - Écran niveau 3 : l'effet du fait lu est affiché deux fois (motif de fraîcheur + ligne « faits lus ») —
   cosmétique.
-- #103 vaut aussi pour la défendabilité (mo_* rouvertes par l'approbation FDA LUE) : les faits à lire
-  leur seront montrés dès qu'une pièce TIRÉE du 8-K du 26/08 sera au corpus.
+- #106 vaut aussi pour la défendabilité (mo_* rouvertes par l'approbation FDA LUE) : le 8-K du 26/08 sera
+  lu et joint à la prochaine chaîne `defendabilite`.
 
 **⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — à
 traiter quand la V3 sera quasiment finalisée**
@@ -393,8 +393,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > — gabarits, bac à calcul, contrat + pont + évaluation du modèle, signature + registres 051 livrés
 > + reprise « un seul chiffre par dossier » (option c) (#96-#99) + encadré de chiffres clés (#100, déployé)
 > + analyste corrigé en amont (#101) + horloge des comptes (#102) + faits postérieurs lus (#103) : qf_4 #963
-> est la première réponse RVMD reprenable ; reste : trancher le défaut de prose de #963 (−328 vs encadré),
-> qf_6 (re-collecte) et qf_7 (correction en amont) — en tête de « Ce qui reste ouvert » —, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> a été la première réponse RVMD reprenable ; #104-#106 (dette nette unique, autonomie prudente, lecture
+> des dépôts postérieurs) : rejouer RVMD qf_4/qf_6/qf_7 — en tête de « Ce qui reste ouvert » —, puis les
+> nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute

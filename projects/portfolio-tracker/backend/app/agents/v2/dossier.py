@@ -122,6 +122,8 @@ class Dossier:
     # sont absentes d'`entries` par construction, et c'est justement leur date de collecte qu'il
     # faut pour repérer une datation hétérogène. Vide si l'appelant n'a pas chargé `created_at`.
     collecte: dict[int, Any]
+    # Les pièces jointes d'office (#106) : lectures des dépôts postérieurs que l'analyste doit lire.
+    jointes: tuple[int, ...] = ()
 
     @property
     def anterieures_ecartees(self) -> tuple[int, ...]:
@@ -131,7 +133,7 @@ class Dossier:
         qf_4 et sous qf_7). La compter deux fois ferait lire « 10 versions écartées » là où il y en
         a 9 — un décompte de rendu qui se lit comme une propriété du corpus.
         """
-        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}))
+        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))
 
     @property
     def datation_suspecte(self) -> tuple[Chemise, ...]:
@@ -182,6 +184,7 @@ class Dossier:
             f"courante(s) · plafond {self.plafond}",
             f"  · {len(self.chemises)} chemise(s) — un point instruit chacune",
             f"  · {len(self.hors_index_retenues)} pièce(s) hors index retenue(s)",
+            f"  · {len(self.jointes)} lecture(s) de dépôt jointe(s) d'office : {list(self.jointes) or 'aucune'}",
             f"  · {len(self.anterieures_ecartees)} version(s) antérieure(s) gardée(s) en base, "
             f"non remise(s) : {list(self.anterieures_ecartees) or 'aucune'}",
             f"  · {len(self.laissees_dehors)} pièce(s) laissée(s) dehors par le plafond",
@@ -254,6 +257,7 @@ def assembler_dossier(
     liens: Iterable[Lien],
     plafond: int,
     total_courantes: Optional[int] = None,
+    joindre: Iterable[int] = (),
 ) -> Dossier:
     """Range les pièces par point instruit, la plus récente devant, puis joint le reste. PUR.
 
@@ -266,6 +270,11 @@ def assembler_dossier(
 
     `total_courantes` sert à dire la troncature quand l'appelant a compté le dossier complet avant
     d'en charger une partie. Absent, il vaut `len(entries)`.
+
+    `joindre` (#106) : des pièces que le dossier porte TOUJOURS, comme une pièce en vigueur — les
+    lectures des dépôts postérieurs aux comptes que l'analyste doit lire. Rangées dans une chemise
+    comme antérieures, ou hors index au-delà du plafond, elles disparaissaient du dossier, et le fait
+    qu'elles portent avec elles (réponse #976, née périmée).
     """
     if plafond < 1:
         raise ValueError(
@@ -296,16 +305,17 @@ def assembler_dossier(
     # est réclamé par qf_4 et par qf_7, et une seule entry les couvre). Elle ne compte qu'une fois
     # dans le dossier, mais elle ouvre bien deux chemises.
     en_vigueur: list[int] = list(dict.fromkeys(c.en_vigueur for c in chemises))
+    jointes = tuple(i for i in dict.fromkeys(joindre) if i in entries and i not in en_vigueur)
     rattachees = {i for c in chemises for i in (c.en_vigueur, *c.anterieures)}
     hors_index = sorted(
-        (i for i in entries if i not in rattachees), key=lambda i: _rang(entries[i])
+        (i for i in entries if i not in rattachees and i not in jointes), key=lambda i: _rang(entries[i])
     )
 
-    plafond_insuffisant = len(en_vigueur) > plafond
-    place_restante = max(0, plafond - len(en_vigueur))
+    plafond_insuffisant = len(en_vigueur) + len(jointes) > plafond
+    place_restante = max(0, plafond - len(en_vigueur) - len(jointes))
     hors_index_retenues = tuple(hors_index[:place_restante])
 
-    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))
+    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))
     laissees_dehors = tuple(sorted(set(entries) - set(retenues)))
 
     return Dossier(
@@ -317,6 +327,7 @@ def assembler_dossier(
         plafond=plafond,
         plafond_insuffisant=plafond_insuffisant,
         collecte={i: e["created_at"] for i, e in entries.items() if e.get("created_at") is not None},
+        jointes=jointes,
     )
 
 
@@ -343,6 +354,7 @@ async def charger_dossier(
     framework_id: str,
     framework_version: str,
     plafond: int,
+    joindre: Iterable[int] = (),
 ) -> Dossier:
     """Lit le corpus courant et l'index de couverture, puis délègue l'assemblage à la fonction pure.
 
@@ -357,4 +369,4 @@ async def charger_dossier(
     liens: Sequence[Lien] = [
         (r["question_id"], r["ingredient_id"], r["entry_id"]) for r in liens_rows
     ]
-    return assembler_dossier(entries=entries, liens=liens, plafond=plafond)
+    return assembler_dossier(entries=entries, liens=liens, plafond=plafond, joindre=joindre)

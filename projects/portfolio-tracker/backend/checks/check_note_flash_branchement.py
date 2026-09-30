@@ -257,11 +257,11 @@ async def main():
     racine = Path(__file__).resolve().parent.parent
     chaine = strip_code((racine / "tools/executer_chaine.py").read_text())
     b.check("lire_les_depots_en_attente(" in chaine
-            and chaine.index("lire_les_depots_en_attente(") < chaine.index("charger_dossier("),
+            and chaine.index("lire_les_depots_en_attente(") < chaine.index("preparer_dossier_analyste("),
             "§6 la chaîne lit les dépôts AVANT de charger le dossier")
     bouc = strip_code((racine / "app/agents/v2/bouclage.py").read_text())
     b.check("lire_les_depots_en_attente(" in bouc
-            and bouc.index("lire_les_depots_en_attente(") < bouc.index("charger_dossier(")
+            and bouc.index("lire_les_depots_en_attente(") < bouc.index("preparer_dossier_analyste(")
             and bouc.index("if not ouverts") < bouc.index("lire_les_depots_en_attente("),
             "§6 le bouclage lit AVANT le dossier, et seulement s'il y a un renvoi")
     b.check("sur_lecture=" in strip_code((racine / "tools/boucler_renvois.py").read_text()),

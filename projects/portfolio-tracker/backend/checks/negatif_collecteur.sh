@@ -29,6 +29,10 @@ mutations=(
 "$SRC¦        if (self.origine == \"inobtenable\") != (self.cause == CAUSE_INOBTENABLE):¦        if False:¦seul le traducteur le sait"
 "$SRC¦origine=\"echec_collecte\", cause=rc.cause))¦origine=\"echec_collecte\", cause=\"source_indisponible\"))¦DÉCLARÉE par l'exécuteur"
 "$SRC¦    entry_id: int¦    entry_id: int\n    colonne_en_trop: str = \"x\"¦EXACTEMENT les colonnes"
+# ── #106 : tous les documents rapportés pour un point y sont rattachés ─────────────────────────────
+"$SRC¦            for eid in dict.fromkeys([rc.entry_id, *rc.entry_ids_supplementaires]):¦            for eid in dict.fromkeys([rc.entry_id]):¦les DEUX documents sont rattachés"
+"$SRC¦            for eid in dict.fromkeys([rc.entry_id, *rc.entry_ids_supplementaires]):¦            for eid in [rc.entry_id, *rc.entry_ids_supplementaires]:¦chacun une fois"
+"$SRC¦        if self.entry_ids_supplementaires and self.entry_id is None:¦        if False:¦sans entry principale → refusé"
 )
 
 passes=0; ratees=0

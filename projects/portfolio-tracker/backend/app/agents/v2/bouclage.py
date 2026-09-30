@@ -42,7 +42,6 @@ import asyncpg
 
 from app.agents.v2.analyste import repondre
 from app.agents.v2.collecte_executor import executer_collecte_framework
-from app.agents.v2.dossier import charger_dossier
 from app.agents.v2.framework_persist import persist_answer, read_dispenses
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager_persist import (
@@ -51,7 +50,7 @@ from app.agents.v2.manager_persist import (
     serve_mandate,
 )
 from app.agents.v2.note_flash import LectureDesDepots, lire_les_depots_en_attente
-from app.agents.v2.parcours import faits_posterieurs_du_titre
+from app.agents.v2.preparation import preparer_dossier_analyste
 from app.contracts.bouclage_schema import CompteRenduBouclage, MandatBoucle, SortBouclage
 from app.contracts.framework_answer_schema import Statut
 from app.db.database import get_db_session
@@ -194,10 +193,11 @@ async def boucler_renvois(
     #    renvoyées — les réponses sont indépendantes par question, re-calculer les autres ne les change
     #    pas et on ne les re-persiste pas (le comité n'a renvoyé qu'elles).
     async with get_db_session() as conn:
-        dossier = await charger_dossier(
-            conn, ticker_id=ticker_id, framework_id=framework_id,
-            framework_version=version, plafond=plafond)
-        faits = await faits_posterieurs_du_titre(conn, ticker_id, fichier, framework_id)  # #103
+        # Dossier + faits postérieurs (#103) + lecture de leurs dépôts jointe d'office (#106).
+        prepare = await preparer_dossier_analyste(
+            conn, ticker_id=ticker_id, framework_id=framework_id, fichier=fichier,
+            plafond=plafond, questions=scope)
+    dossier, faits = prepare.dossier, prepare.faits
     resultat = await repondre(
         ticker_id, framework_id, archetype,
         analyste=analyste, entries=dossier.entries, fichier=fichier, faits=faits)

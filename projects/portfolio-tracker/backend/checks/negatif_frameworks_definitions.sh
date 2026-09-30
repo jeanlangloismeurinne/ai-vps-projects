@@ -98,12 +98,19 @@ mutations=(
 # formule le lit), le script mourrait avant l'assert visé.
 "$YAML¦          - id: dette_nette¦          - id: dette_nette_bilan¦l'encadré instruit le 2026-09-29"
 # ── #101 : un chiffre CALCULÉ ne lit que des chiffres RELEVÉS de sa question, à une date, même unité ──
-"$PONT¦            if hors:¦            if False:¦lit un chiffre ABSENT de la question"
-"$PONT¦        releves = {c.id for c in q.chiffres_cles if c.calcul is None}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
+"$PONT¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if hors:¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if False:¦lit un chiffre ABSENT de la question"
+"$PONT¦        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
 "$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
 "$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
 "$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
-"$YAML¦            calcul: tresorerie_mobilisable / consommation_annuelle * 12   # en mois (#101)¦¦la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES"
+"$YAML¦            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)¦¦la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES"
+# ── #105 : le chiffre RETENU (le plus prudent) ──────────────────────────────────────────────────────────
+"$PONT¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if hors:¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if False:¦retenu parmi des chiffres qui ne sont pas relevés"
+"$PONT¦            if autres:¦            if False:¦retenu entre deux unités"
+"$PONT¦            if all(n in facultatifs for n in c.le_plus_eleve_de):¦            if False:¦TOUS facultatifs"
+"$DEF¦        if self.calcul is not None and self.le_plus_eleve_de:¦        if False:¦à la fois calculé et retenu"
+"$DEF¦        if self.facultatif and self.calcule_par_le_systeme:¦        if False:¦calculé marqué facultatif"
+"$YAML¦            facultatif: true¦            facultatif: false¦la prévision seule est facultative"
 )
 
 passes=0; ratees=0

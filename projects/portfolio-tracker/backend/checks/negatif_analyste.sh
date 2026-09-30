@@ -79,7 +79,7 @@ mutations=(
 "$SRC¦            \"chiffres_cles_demandes\": [¦            \"chiffres_demandes_ailleurs\": [¦les chiffres RELEVÉS déclarés"
 "$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles))[:0],¦entre TEL QUEL dans la réponse"
 # ── #101 : les chiffres CALCULÉS sont au code, et le renvoi unique ───────────────────────────────
-"$SRC¦                for c in q.chiffres_cles if c.calcul is None\n            ],\n            \"chiffres_calcules¦                for c in q.chiffres_cles\n            ],\n            \"chiffres_calcules¦les chiffres RELEVÉS déclarés"
+"$SRC¦                for c in q.chiffres_cles if not c.calcule_par_le_systeme\n            ],\n            \"chiffres_calcules¦                for c in q.chiffres_cles\n            ],\n            \"chiffres_calcules¦les chiffres RELEVÉS déclarés"
 "$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=list(brute.chiffres_cles),¦l'assemblage ÉCRIT le chiffre calculé"
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"

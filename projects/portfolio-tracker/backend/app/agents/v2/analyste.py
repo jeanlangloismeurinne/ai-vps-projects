@@ -414,11 +414,12 @@ def contexte_analyste(
             # Les chiffres CALCULÉS (#101) n'y sont pas : le code les calcule, on ne les demande pas.
             "chiffres_cles_demandes": [
                 {"id": c.id, "libelle": c.libelle, "unite": c.unite, "periode": c.periode}
-                for c in q.chiffres_cles if c.calcul is None
+                for c in q.chiffres_cles if not c.calcule_par_le_systeme
             ],
             "chiffres_calcules_par_le_systeme": [
-                {"id": c.id, "libelle": c.libelle, "formule": c.calcul}
-                for c in q.chiffres_cles if c.calcul is not None
+                {"id": c.id, "libelle": c.libelle,
+                 "formule": c.calcul or f"le plus élevé de {', '.join(c.le_plus_eleve_de)}"}
+                for c in q.chiffres_cles if c.calcule_par_le_systeme
             ],
             # Les événements postérieurs aux derniers comptes qui rouvrent CETTE question (#103).
             "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), citables),

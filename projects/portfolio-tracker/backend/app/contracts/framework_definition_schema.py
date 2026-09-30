@@ -134,6 +134,40 @@ class ChiffreCleDeclare(Strict):
     # du prompt, au lieu de −3 450,5. Grammaire fermée de `formule_grammaire` (#72), sans décalage
     # d'exercice ; les noms référencés sont un invariant RELATIONNEL (pont du référentiel, [T]).
     calcul: Optional[str] = Field(default=None, min_length=3)
+    # `le_plus_eleve_de` (#105) : le chiffre RETIENT le plus élevé de plusieurs chiffres relevés de la
+    # même question, dans la même unité — la règle de PRUDENCE d'un fonds (arbitrage du 2026-09-30 : la
+    # consommation de trésorerie retenue pour l'autonomie est la plus forte du constaté et de la
+    # prévision de la direction ; sinon le comité se fonde sur une prévision optimiste, ce qui fausse
+    # toute société en accélération). Calculé par le code comme `calcul`, jamais par le modèle. Hors de
+    # la grammaire de formules à dessein : elle est partagée avec l'appariement (#72), qui n'a que
+    # faire d'un maximum.
+    le_plus_eleve_de: list[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]] = Field(default_factory=list)
+    # `facultatif` (#105) : un chiffre RELEVÉ que le dossier peut ne pas établir sans rien bloquer (la
+    # prévision de la direction). Dans `le_plus_eleve_de`, un terme facultatif absent est SAUTÉ en le
+    # disant ; un terme obligatoire absent rend le chiffre retenu non établi (on ne retient pas une
+    # prévision faute du constaté).
+    facultatif: bool = False
+
+    @property
+    def calcule_par_le_systeme(self) -> bool:
+        """Vrai si le CODE établit ce chiffre (formule ou règle de prudence) : il n'est pas demandé au
+        modèle, et une ligne fournie pour lui est écartée (#101). DÉTENTEUR UNIQUE de la distinction
+        relevé / calculé, lue par le référentiel, le pont, l'analyste et `completer_encadre` (#46)."""
+        return self.calcul is not None or bool(self.le_plus_eleve_de)
+
+    @model_validator(mode="after")
+    def _une_seule_facon_d_etre_etabli(self):
+        if self.calcul is not None and self.le_plus_eleve_de:
+            raise ValueError(f"chiffre `{self.id}` : `calcul` ET `le_plus_eleve_de` — un chiffre s'établit "
+                             "d'une seule façon")
+        if self.le_plus_eleve_de and (len(self.le_plus_eleve_de) < 2
+                                      or len(set(self.le_plus_eleve_de)) != len(self.le_plus_eleve_de)):
+            raise ValueError(f"chiffre `{self.id}` : `le_plus_eleve_de` compare au moins deux chiffres "
+                             "distincts")
+        if self.facultatif and self.calcule_par_le_systeme:
+            raise ValueError(f"chiffre `{self.id}` : seul un chiffre RELEVÉ peut être facultatif — un chiffre "
+                             "calculé s'établit ou dit pourquoi il ne s'établit pas")
+        return self
 
     @model_validator(mode="after")
     def _le_calcul_est_une_formule(self):

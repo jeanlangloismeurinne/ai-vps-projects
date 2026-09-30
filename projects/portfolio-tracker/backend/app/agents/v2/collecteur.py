@@ -76,6 +76,12 @@ class ResultatCollecte(Strict):
     motivé (`echec`) — jamais les deux, jamais aucun. Un échec de collecte est une information, pas
     un vide (#25) : il devra devenir un mandat, pas disparaître."""
     entry_id: Optional[int] = None
+    # Les AUTRES entries que la même collecte a produites pour la ligne (#106, arbitrage du
+    # 2026-09-30) : le worker peut rapporter plusieurs documents sur un point (le rapport annuel ET le
+    # trimestriel qui confirme la même politique). Comme un vrai fonds, le dossier les classe TOUS
+    # sous le point qu'ils instruisent ; le plus récent fait foi (`dossier._rang`), les autres restent
+    # antérieurs. N'en rattacher qu'un — le premier rapporté — faisait lire à l'analyste le plus ancien.
+    entry_ids_supplementaires: list[int] = Field(default_factory=list)
     echec: Optional[str] = Field(default=None, min_length=3)
     # La CAUSE de l'échec, déclarée par l'exécuteur qui seul la connaît (`cause_manque_schema`).
     # Présente ssi `echec` : un échec sans cause serait lu par l'écran comme une cause au hasard.
@@ -87,6 +93,8 @@ class ResultatCollecte(Strict):
             raise ValueError(
                 "ResultatCollecte porte SOIT `entry_id` SOIT `echec`, jamais les deux ni aucun : "
                 "une collecte a réussi (une entry) ou échoué (un motif), pas un état intermédiaire")
+        if self.entry_ids_supplementaires and self.entry_id is None:
+            raise ValueError("des entries supplémentaires sans entry principale : un échec n'en porte pas")
         if (self.echec is None) != (self.cause is None):
             raise ValueError(
                 "un échec porte sa `cause` (recherche épuisée / source indisponible), et une réussite "
@@ -176,7 +184,8 @@ def aiguiller_plan(
 
         rc = collecter(ligne_aveugle(item, plan.ticker_id))
         if rc.entry_id is not None:
-            res.liens.append(LienCouverture(**cle, entry_id=rc.entry_id))
+            for eid in dict.fromkeys([rc.entry_id, *rc.entry_ids_supplementaires]):
+                res.liens.append(LienCouverture(**cle, entry_id=eid))
         else:
             # Une source pressentie qui ne rend rien devient un mandat MOTIVÉ, jamais un silence (#25).
             res.mandats.append(MandatCollecte(**cle, motif=rc.echec, origine="echec_collecte", cause=rc.cause))  # type: ignore[arg-type]

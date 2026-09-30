@@ -439,8 +439,42 @@ rejete("un `calcul` hors de la grammaire fermée est refusé par le CONTRAT (ava
 check("[T] le référentiel réel : la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES, rien d'autre",
       {(q.id, c.id): c.calcul for q in _reel_q.values() for c in q.chiffres_cles if c.calcul}
       == {("qf_4", "dette_nette"): "dette_brute - tresorerie_et_placements",
-          ("qf_7", "autonomie"): "tresorerie_mobilisable / consommation_annuelle * 12"},
+          ("qf_7", "autonomie"): "tresorerie_mobilisable / consommation_retenue * 12"},
       f"→ {[(q.id, c.id, c.calcul) for q in _reel_q.values() for c in q.chiffres_cles if c.calcul]}")
+# #105 — la règle de PRUDENCE (arbitrage du 2026-09-30) : l'autonomie se calcule sur la plus forte du
+# constaté (obligatoire) et de la prévision de la direction (facultative).
+_q7 = {c.id: c for c in _reel_q["qf_7"].chiffres_cles}
+check("[T] qf_7 retient la plus forte du constaté et de la prévision ; la prévision seule est facultative",
+      _q7["consommation_retenue"].le_plus_eleve_de == ["consommation_constatee", "consommation_prevue"]
+      and _q7["consommation_prevue"].facultatif and not _q7["consommation_constatee"].facultatif
+      and {c.id for c in _reel_q["qf_7"].chiffres_cles if c.facultatif} == {"consommation_prevue"},
+      f"→ {[(c.id, c.le_plus_eleve_de, c.facultatif) for c in _reel_q['qf_7'].chiffres_cles]}")
+_PREV = {"id": "prevue", "libelle": "Dépenses annoncées par la direction", "unite": "M$",
+         "periode": "exercice en cours", "facultatif": True}
+rejete("[T] un chiffre retenu parmi des chiffres qui ne sont pas relevés",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=_REL + [
+           {"id": "retenu", "libelle": "Le plus élevé de deux chiffres", "unite": "M$",
+            "periode": "au dernier bilan", "le_plus_eleve_de": ["dette_brute", "inconnu"]}])])])), "RELEVÉS")
+rejete("[T] un chiffre retenu entre deux unités",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=_REL + [
+           {"id": "duree", "libelle": "Durée de financement restante", "unite": "mois",
+            "periode": "au dernier bilan"},
+           {"id": "retenu", "libelle": "Le plus élevé de deux chiffres", "unite": "M$",
+            "periode": "au dernier bilan", "le_plus_eleve_de": ["dette_brute", "duree"]}])])])), "deux unités")
+rejete("[T] un chiffre retenu parmi des chiffres TOUS facultatifs (il reposerait sur une prévision seule)",
+       lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=_REL + [
+           _PREV, dict(_PREV, id="prevue_bis"),
+           {"id": "retenu", "libelle": "Le plus élevé de deux chiffres", "unite": "M$",
+            "periode": "au dernier bilan", "le_plus_eleve_de": ["prevue", "prevue_bis"]}])])])), "obligatoire")
+rejete("un chiffre à la fois calculé et retenu est refusé par le CONTRAT",
+       lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=_REL + [
+           {"id": "x", "libelle": "Deux façons de s'établir", "unite": "M$", "periode": "au dernier bilan",
+            "calcul": "dette_brute - tresorerie", "le_plus_eleve_de": ["dette_brute", "tresorerie"]}])),
+       "une seule façon")
+rejete("un chiffre calculé marqué facultatif est refusé par le CONTRAT",
+       lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=_REL + [
+           {"id": "x", "libelle": "Calculé mais facultatif", "unite": "M$", "periode": "au dernier bilan",
+            "calcul": "dette_brute - tresorerie", "facultatif": True}])), "RELEVÉ peut être facultatif")
 check("les trois liens « repris de » corrigés : résultat normalisé ← qf_1/qf_6, dilution ← qf_4/qf_7, "
       "actions diluées relevées avec le cours (jamais reprises)",
       {i.id: i.repris_de for i in _reel_q["va_1"].ingredients_requis}.get("resultat_normalise") == ["qf_1", "qf_6"]

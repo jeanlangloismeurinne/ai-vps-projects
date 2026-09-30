@@ -2721,6 +2721,57 @@ Republié en base le 2026-09-30 (déterministe, sans modèle) : levier RVMD #699
 placements NVDA relevés. Gardes : `check_financials_feed` §11 (**121/0**) + `negatif_financials_feed.sh`
 **16/0** ; `check_dossier` §2bis (**28/0**) + `negatif_dossier.sh` **12/0**.
 
+### #105 — l'autonomie se calcule sur la consommation la plus prudente
+
+**Le défaut (qf_7 RVMD, 0/3 réussites).** La question exige des faits constatés (mesure, plancher A),
+mais un ingrédient essentiel (« charges à décaisser sur 12 mois ») et le chiffre « consommation
+annuelle » (« 12 derniers mois ou guidance ») étaient des PRÉVISIONS : l'analyste citait la guidance
+de la direction, le pont [E] la refusait à juste titre. Défaut du référentiel, pas de l'analyste.
+
+**Arbitrage de l'utilisateur (2026-09-30)** : on note le constaté (obligatoire) ET la prévision de la
+direction (facultative), et la réponse retient **la plus prudente des deux** — « sinon le comité / les
+agents de mémo en aval vont se fonder sur une prévision optimiste, ce qui fausse l'analyse de toute
+société en accélération ».
+
+**La règle.** `ChiffreCleDeclare.le_plus_eleve_de` (calculé par le CODE, comme `calcul`, hors de la
+grammaire de formules partagée avec l'appariement) et `facultatif` (relevés seulement). Détenteur
+unique de la distinction relevé / calculé : `calcule_par_le_systeme`. `completer_encadre` établit les
+chiffres retenus avant les formules (l'autonomie lit la consommation RETENUE) ; un terme facultatif
+absent est sauté en le disant ; un terme obligatoire absent rend le chiffre retenu non établi (on ne
+retient jamais une prévision faute du constaté). Référentiel [T] : termes relevés, même unité, au moins
+un obligatoire. qf_7 : `consommation_constatee` · `consommation_prevue` (facultative, borne haute, telle
+qu'annoncée, sans retraitement — la soustraction de #78 est ce qui rendait #312 non citable) ·
+`consommation_retenue` · `autonomie` ; `charges_fixes_decaissables` passe non essentiel, un ingrédient
+`prevision_de_consommation` (non essentiel) est ajouté. `framework_version` non montée (précédent
+#92/#99/#100). Gardes : `check_frameworks_definitions` (85/0), `check_framework_contract` (139/0).
+
+### #106 — l'analyste lit les dépôts postérieurs ; le dossier range tous les documents d'un point
+
+**Le défaut (2026-09-30, réponses RVMD #976/#977 nées périmées).** (1) Un fait postérieur aux comptes
+n'est montré à l'analyste que si une pièce TIRÉE du dépôt est au dossier (#103). Personne ne lisait un
+dépôt que sa forme qualifiait (1.01 + 2.03 = financement ; la note flash ne lit que les `a_qualifier`) ;
+la seule pièce du 8-K des baux était l'héritage #296, sorti du dossier dès que #104 a fait passer une
+pièce mieux datée devant lui. qf_4 a remplacé #963 (à jour) par #976 (périmée). (2) La collecte ne
+rattachait au point que le PREMIER document rapporté : pour `politique_de_capitalisation`, le rapport
+annuel 2025 (#716), pas le trimestriel du 30/06 qui la confirme (#717) — qf_6 datée de 2025.
+
+**Comme un vrai fonds** : avant de rédiger, l'analyste lit les dépôts publiés depuis les comptes qui
+rouvrent ses questions et les range au dossier ; le dossier classe tous les documents reçus sous le
+point qu'ils instruisent, le plus récent fait foi (arbitrage « tout rattacher », 2026-09-30).
+
+**Les règles.**
+- `knowledge/lecture_depot.py` : le texte DÉPOSÉ (extraction de la note flash), tel quel, sans modèle ;
+  daté par le dépôt (`constatee` : reportDate / filingDate) ; adressé dans le dossier EDGAR du dépôt
+  (`provient_du_depot`) ; étiqueté `lecture_du_depot` + accession ; `fact_financial` si un item de la
+  section 2 du 8-K (nomenclature SEC), sinon `fact_qualitative`. Lu une fois ; une panne n'écrit rien
+  et est rendue nommée (le fait reste non montré, la réponse reste périmée — ce qui est vrai).
+- `agents/v2/preparation.preparer_dossier_analyste` : DÉTENTEUR UNIQUE de « dossier + faits postérieurs
+  + lectures », partagé par `executer_chaine` et le bouclage. Les lectures sont JOINTES d'office
+  (`assembler_dossier(joindre=…)`, comptées dans le plafond avant le hors index).
+- `ResultatCollecte.entry_ids_supplementaires` : chaque document retenu par le worker pour une ligne est
+  rattaché au point ; `dossier._rang` élit le plus récent.
+Gardes : `check_dossier` §10/§11, `check_collecteur` §9 ; négatifs dossier 19/0, collecteur 12/0.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

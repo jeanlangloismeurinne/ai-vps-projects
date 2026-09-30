@@ -427,9 +427,14 @@ frameworks:
           - id: consommation_de_tresorerie_recente
             libelle: Trésorerie consommée ou générée sur les quatre derniers trimestres
             essentiel: true
+          # Non essentiel depuis #105 (arbitrage du 2026-09-30) : c'est une PRÉVISION ; la question exige
+          # le constaté, la prévision de la direction est notée à côté et la plus prudente est retenue.
           - id: charges_fixes_decaissables
             libelle: Charges qui devront être décaissées quoi qu'il arrive sur les douze prochains mois
-            essentiel: true
+            essentiel: false
+          - id: prevision_de_consommation
+            libelle: Dépenses annuelles annoncées par la direction pour l'exercice en cours, telles qu'annoncées
+            essentiel: false
           - id: echeances_a_douze_mois
             libelle: Dettes exigibles dans les douze prochains mois
             essentiel: true
@@ -441,15 +446,28 @@ frameworks:
             libelle: Trésorerie mobilisable sans recours au marché des capitaux
             unite: "M$"
             periode: à la date du dernier bilan
-          - id: consommation_annuelle
-            libelle: Consommation annuelle de trésorerie par l'exploitation et les investissements
+          # #105 (arbitrage du 2026-09-30) — le constaté est obligatoire, la prévision de la direction
+          # facultative, et l'autonomie se calcule sur la PLUS PRUDENTE des deux (la consommation la plus
+          # forte) : sinon le comité se fonderait sur une prévision optimiste chez toute société qui accélère.
+          - id: consommation_constatee
+            libelle: Trésorerie consommée par l'exploitation et les investissements sur les quatre derniers trimestres publiés
             unite: "M$"
-            periode: 12 derniers mois ou guidance de l'exercice
+            periode: quatre derniers trimestres publiés
+          - id: consommation_prevue
+            libelle: Dépenses annuelles annoncées par la direction pour l'exercice en cours — borne haute, telles qu'annoncées, sans retraitement
+            unite: "M$"
+            periode: exercice en cours (prévision de la direction)
+            facultatif: true
+          - id: consommation_retenue
+            libelle: Consommation retenue — la plus forte du constaté et de la prévision de la direction (la plus prudente)
+            unite: "M$"
+            periode: la plus prudente des deux
+            le_plus_eleve_de: [consommation_constatee, consommation_prevue]
           - id: autonomie
-            libelle: Autonomie de financement — trésorerie mobilisable rapportée à la consommation
+            libelle: Autonomie de financement — trésorerie mobilisable rapportée à la consommation retenue
             unite: "mois"
             periode: à la date du dernier bilan
-            calcul: tresorerie_mobilisable / consommation_annuelle * 12   # en mois (#101)
+            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)
         variables_par_archetype:
           rentable:
             mode: variable
