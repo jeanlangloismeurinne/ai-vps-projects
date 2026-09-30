@@ -138,6 +138,21 @@ function Preuve({ pr, tickerId }) {
               <span data-champ="fondation.actualite"><ActualiteBadge actualite={a.fondation?.actualite} />{vide(a.fondation?.actualite) && <Val v={null} />}</span>
               <p className="text-xs text-gray-500 mt-1" data-champ="fondation.motif_actualite"><Val v={a.fondation?.motif_actualite} /></p>
             </Ligne>
+            {/* Les événements postérieurs aux comptes que l'analyste a lus : l'effet est écrit, pas supposé (#103). */}
+            <Ligne label="faits lus depuis les comptes">
+              {(a.reponse?.faits_posterieurs || []).length === 0 ? <Val v={null} /> : (
+                <ul className="space-y-1.5">
+                  {a.reponse.faits_posterieurs.map(f => (
+                    <li key={f.depot} className="text-xs">
+                      <span className="font-mono text-gray-400" data-champ="reponse.faits_posterieurs.depot">{f.depot}</span>
+                      <span className="text-gray-500"> · lu dans </span>
+                      <span className="text-gray-400" data-champ="reponse.faits_posterieurs.cited_entry_ids">{f.cited_entry_ids.map(i => `#${i}`).join(', ')}</span>
+                      <p className="text-gray-200" data-champ="reponse.faits_posterieurs.effet">{f.effet}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Ligne>
             <Ligne label="pièces citées">
               <span className="hidden" data-champ="fondation.cited_entry_ids"><Val v={a.fondation?.cited_entry_ids} /></span>
               {citees.length === 0 ? <Val v={null} /> : <ul className="space-y-1">{citees.map(p => <Piece key={p.entry_id} p={p} />)}</ul>}

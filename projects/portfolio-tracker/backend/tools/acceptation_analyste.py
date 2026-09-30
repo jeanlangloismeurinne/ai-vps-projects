@@ -33,6 +33,7 @@ from app.agents.v2.analyste import (
 )
 from app.agents.v2.dossier import charger_dossier
 from app.agents.v2.frameworks import load_frameworks
+from app.agents.v2.parcours import faits_posterieurs_du_titre
 from app.agents.v2.traducteur import questions_applicables
 from app.db.database import close_pool, get_db_session, init_pool
 
@@ -90,6 +91,8 @@ def _montrer(resultat, ticker: str) -> None:
         print(f"      {a.reponse.verbatim}")
         for ligne in a.reponse.encadre_lisible():
             print(f"      chiffre : {ligne}")
+        for f in a.reponse.faits_posterieurs:
+            print(f"      fait postérieur lu : {f.depot} (pièces {f.cited_entry_ids}) — {f.effet}")
         print(f"      cite : {a.fondation.cited_entry_ids}")
         if a.approximation:
             print(f"      méthode : {a.approximation.methode}")
@@ -170,7 +173,11 @@ async def main() -> int:
                 dossier = await charger_dossier(
                     conn, ticker_id=ticker, framework_id=framework_id,
                     framework_version=fichier.schema_version, plafond=PLAFOND)
+                faits = await faits_posterieurs_du_titre(conn, ticker, fichier, framework_id)  # #103
             entries = dossier.entries
+            for qid, evs in sorted(faits.items()):
+                for e in evs:
+                    print(f"  fait postérieur à lire · {qid} · {e.accession} · {e.resume()}")
             tiers: dict[str, int] = {}
             for e in entries.values():
                 tiers[str(e.get("reliability_tier"))] = tiers.get(str(e.get("reliability_tier")), 0) + 1
@@ -184,7 +191,8 @@ async def main() -> int:
 
             try:
                 resultat = await repondre(ticker, framework_id, archetype,
-                                          analyste="acceptation", entries=entries, fichier=fichier)
+                                          analyste="acceptation", entries=entries, fichier=fichier,
+                                          faits=faits)
             except Exception as e:  # noqa: BLE001
                 fail += 1
                 print(f"  FAIL {type(e).__name__}: {e}")

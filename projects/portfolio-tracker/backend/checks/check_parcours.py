@@ -329,11 +329,18 @@ for mod, fn in (("app/agents/v2/projection_memo.py", "servir_memo"),
             f"§6 `{fn}` ne recopie plus la plomberie — obtenu {sorted(a)}")
 a_ch = appels("app/agents/v2/parcours.py", "charger_etat_dossier")
 for detenteur in ("reviser_framework", "servir_answer", "questions_applicables",
-                  "assemble_verdict", "read_answers_courantes", "material_anchor_for_ticker"):
+                  "assemble_verdict", "read_answers_courantes", "horloge_du_titre"):
     b.check(detenteur in a_ch, f"§6 l'assembleur APPELLE `{detenteur}` (jamais une ré-écriture)")
-b.check("ancre_substantielle" in a_ch,
+# L'horloge a un détenteur unique (#103) : l'assembleur ET l'analyste (`faits_posterieurs_du_titre`) la
+# lisent là — sinon l'analyste lirait des faits que la lecture ne retire pas, ou l'inverse.
+a_h = appels("app/agents/v2/parcours.py", "horloge_du_titre")
+b.check("material_anchor_for_ticker" in a_h,
+        "§6 l'horloge APPELLE `material_anchor_for_ticker` (jamais une ré-écriture)")
+b.check("ancre_substantielle" in a_h,
         "§6 l'actualité se juge contre l'ancre qui PÈSE (`ancre_substantielle`) : un 8-K de pure "
         "forme ne fait tomber aucune réponse (arbitrage du comité n°2, #54)")
+b.check("horloge_du_titre" in appels("app/agents/v2/parcours.py", "faits_posterieurs_du_titre"),
+        "§6 l'analyste lit ses faits postérieurs sur la MÊME horloge que la lecture du dossier (#103)")
 code = strip_code(Path("app/agents/v2/parcours.py").read_text(encoding="utf-8"))
 b.check("INSERT" not in code and "UPDATE" not in code and "DELETE" not in code,
         "§6 l'assembleur N'ÉCRIT RIEN (tout se recalcule à la lecture, #53/#54/#77)")
@@ -367,7 +374,8 @@ else:
     jsx = re.sub(r"/\*.*?\*/", "", N3.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-champ="([a-z_.]+)"', jsx))
-    b.require(attendus, 42, "§7 le contrat servi a ses 42 champs terminaux (l’encadré : 5 feuilles remplacent valeur et unité)")
+    b.require(attendus, 45, "§7 le contrat servi a ses 45 champs terminaux (l’encadré : 5 feuilles "
+                            "remplacent valeur et unité ; les faits postérieurs lus : 3, #103)")
     b.check(not (attendus - marques),
             f"§7 tout champ du contrat a son pixel au niveau 3 — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),

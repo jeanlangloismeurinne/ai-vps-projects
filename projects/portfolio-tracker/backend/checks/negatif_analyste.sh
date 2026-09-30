@@ -90,6 +90,11 @@ mutations=(
 "$SRC¦                    f\"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : {second.motif}\")¦                    second.motif)¦de nouveau refusée au renvoi reste REFUSÉE"
 "$SRC¦        return dataclasses.replace(second, tokens_in=premier.tokens_in + second.tokens_in,¦        return dataclasses.replace(second, tokens_in=second.tokens_in,¦COÛTE les deux appels"
 "$SRC¦            if self.chiffres_cles:¦            if False:¦qui porte un encadré est refusé"
+# ── #103 : les faits postérieurs aux comptes ─────────────────────────────────────────────────────
+"$SRC¦        if pieces:¦        if True:¦tait le fait dont aucune pièce"
+"$SRC¦            if self.faits_posterieurs:¦            if False:¦qui déclare un fait lu est refusé"
+"$SRC¦                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),¦                        sens=brute.sens),¦l'assemblage recopie les faits lus"
+"$SRC¦            \"faits_posterieurs_a_lire\": faits_montrables((faits or {}).get(q.id, []), citables),¦            \"faits_posterieurs_a_lire\": faits_montrables([], citables),¦le contexte montre à qf_4 le fait lisible"
 )
 
 passes=0; ratees=0

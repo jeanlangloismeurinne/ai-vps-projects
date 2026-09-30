@@ -62,6 +62,12 @@ mutations=(
 "$PONT¦        absents = [n for n in noms if par_id.get(n) is None or par_id[n].valeur is None]¦        absents = [n for n in noms if par_id.get(n) is None]¦NON établi parce qu'un terme ne l'est pas"
 "$PONT¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f\"non calculable : {e}\"))¦            sortie.append(ChiffreCle(id=d.id, unite=d.unite, valeur=0.0, date_ou_periode=\"zéro\"))¦dénominateur NUL"
 "$PONT¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if len(periodes) == 1 else¦        date = (f\"{periodes[0]} — calculé : {d.calcul}\" if True else¦deux périodes différentes"
+# ── #103 : un fait postérieur se lit DANS le dépôt (pont [P]) ; l'effet s'écrit (contrat) ──────────
+"$PONT¦            if not any(provient_du_depot(entries.get(i, {}), fait.depot) for i in fait.cited_entry_ids):¦            if False:¦lu dans un ARTICLE qui parle du dépôt"
+"$PONT¦            if hors_fondation:¦            if False:¦une lecture hors des citations"
+"$PONT¦    return bool(depot) and depot.replace(\"-\", \"\") in str(entry.get(\"source_url\") or \"\")¦    return bool(depot)¦lu dans un ARTICLE qui parle du dépôt"
+"$SRC¦    effet: str = Field(min_length=20)¦    effet: str = Field(min_length=1)¦un effet non écrit"
+"$SRC¦        if len(set(depots)) != len(depots):¦        if False:¦le même dépôt lu deux fois"
 )
 
 source "$(dirname "$0")/_negatif.sh"

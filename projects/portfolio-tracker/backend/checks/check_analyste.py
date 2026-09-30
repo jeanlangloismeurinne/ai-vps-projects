@@ -334,6 +334,49 @@ check("la consigne de l'analyste ENSEIGNE l'encadré : une ligne par chiffre dem
       and "date_ou_periode" in A._ANALYSTE_SYSTEM_PROMPT)
 
 
+print("\n[5 ter] les faits postérieurs aux comptes : montrés s'ils se lisent, lus dans le dépôt (#103)")
+from app.knowledge.material_events import MaterialEvent as _ME  # noqa: E402
+from datetime import date as _d  # noqa: E402
+_BAUX = _ME(form="8-K", event_date=_d(2026, 8, 27), filing_date=_d(2026, 9, 1), items=("1.01", "2.03"),
+            accession="0001193125-26-377362", types=("financement",))
+_SANS_PIECE = _ME(form="8-K", event_date=_d(2026, 9, 15), filing_date=_d(2026, 9, 15), items=("1.01", "2.03"),
+                  accession="0001193125-26-999999", types=("financement",))
+_E_BAUX = {**ENTRIES, 6: {"reliability_tier": "A", "nature": "mesure", "title": "8-K baux du siège",
+                          "content": "loyers ~2,7 M$/mois", "source_type": "edgar_official", "source_date": "2026-09-01",
+                          "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/rvmd-20260827.htm"}}
+_ctx_f = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, _E_BAUX,
+                             {"qf_4": [_BAUX, _SANS_PIECE]})
+_f4 = {q["id"]: q.get("faits_posterieurs_a_lire") for q in _ctx_f["questions"]}.get("qf_4")
+check("le contexte montre à qf_4 le fait lisible, avec les pièces TIRÉES du dépôt",
+      _f4 is not None and [(f["depot"], f["pieces_du_depot"]) for f in _f4] == [("0001193125-26-377362", [6])],
+      f"→ {_f4}")
+check("… et tait le fait dont aucune pièce n'est au dossier (rien à lire : on n'en dit pas l'effet de mémoire)",
+      _f4 is not None and all(f["depot"] != "0001193125-26-999999" for f in _f4), f"→ {_f4}")
+check("… sans faits fournis, chaque question porte une liste VIDE (la clef existe : le modèle sait qu'il n'y a rien)",
+      all(q.get("faits_posterieurs_a_lire") == [] for q in CTX["questions"]))
+leve("un `sans_fondement` qui déclare un fait lu est refusé (un manque qui a lu le dépôt n'est pas un manque)",
+     lambda: A.AnalysteReponse(question_id="qf_4", statut="sans_fondement", verbatim="il manque la dette",
+                               faits_posterieurs=[{"depot": "0001193125-26-377362",
+                                                   "effet": "loyers ~32 M$/an, non significatifs",
+                                                   "cited_entry_ids": [6]}]), ValidationError)
+_lu = A.assembler_answer(A.AnalysteReponse(
+    question_id="qf_4", statut="repondu", verbatim="dette convertible", sens="aucune_contrainte",
+    cited_entry_ids=[1, 6], chiffres_cles=_ENC_RVMD[:2],
+    faits_posterieurs=[{"depot": "0001193125-26-377362", "effet": "loyers ~32 M$/an dès 2027, non significatifs",
+                        "cited_entry_ids": [6]}]), question=Q["qf_4"], entries=_E_BAUX, **_entete)
+check("l'assemblage recopie les faits lus dans la réponse",
+      [f.depot for f in _lu.reponse.faits_posterieurs] == ["0001193125-26-377362"])
+try:
+    valider_pont_framework_answer(_lu, questions=question_profiles(F), entries=_E_BAUX)
+    _p_ok = "ok"
+except Exception as _e:  # noqa: BLE001
+    _p_ok = f"{type(_e).__name__}: {_e}"[:200]
+check("… et la réponse qui a lu les baux dans le 8-K passe le pont réel [P]", _p_ok == "ok", f"→ {_p_ok}")
+check("la consigne de l'analyste ENSEIGNE la lecture des faits postérieurs",
+      "faits_posterieurs_a_lire" in A._ANALYSTE_SYSTEM_PROMPT and "pieces_du_depot" in A._ANALYSTE_SYSTEM_PROMPT
+      and "effet" in A._ANALYSTE_SYSTEM_PROMPT)
+
+
 # ── §6 [S] contre les profils RÉELS ───────────────────────────────────────────────────────────────
 print("\n[6] le `sens` appartient au vocabulaire FERMÉ de la question — éprouvé sur les profils réels")
 PROFILS = question_profiles(F)

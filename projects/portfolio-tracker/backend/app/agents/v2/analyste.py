@@ -74,15 +74,18 @@ from app.agents.v2.frameworks import (
     load_frameworks,
     nature_effective_de,
     nature_satisfait,
+    provient_du_depot,
     question_profiles,
     valider_pont_framework_answer,
 )
+from app.knowledge.material_events import MaterialEvent
 from app.agents.v2.runner import run_json_agent
 from app.agents.v2.traducteur import questions_applicables
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.framework_answer_schema import (
     Approximation,
     ChiffreCle,
+    FaitPosterieurLu,
     Fondation,
     FrameworkAnswer,
     Reponse,
@@ -156,6 +159,9 @@ class AnalysteReponse(Strict):
     sens: Optional[str] = Field(default=None, min_length=1)
     cited_entry_ids: list[int] = Field(default_factory=list)
     approximation: Optional[Approximation] = None
+    # Les faits postérieurs aux comptes qu'il a lus, avec leur effet (#103) — seulement ceux que le
+    # contexte lui montre (`faits_posterieurs_a_lire`) ; le pont [P] vérifie qu'il les a lus dans le dépôt.
+    faits_posterieurs: list[FaitPosterieurLu] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _le_statut_porte_exactement_sa_charge(self):
@@ -169,6 +175,8 @@ class AnalysteReponse(Strict):
             sales = [n for n in ("sens", "approximation") if getattr(self, n) is not None]
             if self.chiffres_cles:
                 sales.append("chiffres_cles")
+            if self.faits_posterieurs:
+                sales.append("faits_posterieurs")
             if sales or self.cited_entry_ids:
                 raise ValueError(
                     f"`sans_fondement` portant {sales or 'des citations'} : un manque qui cite ses "
@@ -346,12 +354,27 @@ def aucune_reponse_possible(ouverts: list[str]) -> bool:
     return ouverts == ["sans_fondement"]
 
 
+def faits_montrables(
+    faits: list[MaterialEvent], citables: dict[int, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Les faits postérieurs aux comptes que l'analyste PEUT lire : ceux dont au moins une pièce citable
+    provient du dépôt (#103). Pur. Un fait sans pièce n'est pas montré — il n'y aurait rien à lire, et le
+    montrer inviterait à en dire l'effet de mémoire ; la réponse reste alors périmée, ce qui est vrai."""
+    montres = []
+    for e in faits:
+        pieces = sorted(i for i, x in citables.items() if provient_du_depot(x, e.accession or ""))
+        if pieces:
+            montres.append({"depot": e.accession, "fait": e.resume(), "pieces_du_depot": pieces})
+    return montres
+
+
 def contexte_analyste(
     fichier: FrameworksFile,
     framework_id: str,
     archetype: str,
     ticker_id: str,
     entries: dict[int, dict[str, Any]],
+    faits: Optional[dict[str, list[MaterialEvent]]] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free, et sans aucune métadonnée de valeur sur les sources.
 
@@ -397,6 +420,8 @@ def contexte_analyste(
                 {"id": c.id, "libelle": c.libelle, "formule": c.calcul}
                 for c in q.chiffres_cles if c.calcul is not None
             ],
+            # Les événements postérieurs aux derniers comptes qui rouvrent CETTE question (#103).
+            "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), citables),
             "corpus": [
                 {
                     "entry_id": i,
@@ -564,7 +589,7 @@ def assembler_answer(
         # modèle : une ligne qu'il aurait fournie pour eux est écartée et remplacée par le calcul.
         reponse=Reponse(verbatim=brute.verbatim,
                         chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),
-                        sens=brute.sens),
+                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),
         fondation=Fondation(cited_entry_ids=cites, rang_derive=rang, nature_effective=nature),
         approximation=brute.approximation,
     )
@@ -624,6 +649,16 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "\"valeur\": <nombre lu dans une source citée>, \"date_ou_periode\": \"<ce qu'il mesure>\"} — "
     "ou {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", \"motif_absence\": \"<ce qui "
     "manque>\"}.\n\n"
+    "LES FAITS POSTÉRIEURS AUX COMPTES. Une question peut porter `faits_posterieurs_a_lire` : des "
+    "événements publiés APRÈS les derniers comptes (un accord, un engagement, une décision), chacun avec "
+    "`pieces_du_depot` — les `entry_id` du corpus tirés de ce dépôt. Les comptes restent la base de ta "
+    "réponse ; ces faits, tu les LIS, comme un analyste lit les événements postérieurs à la clôture. Sur "
+    "`repondu` ou `approxime`, pour chaque fait lu, ajoute à `faits_posterieurs` la ligne {\"depot\": "
+    "\"<depot recopié tel quel>\", \"effet\": \"<ce que ce fait change à ta réponse, et de combien — ou "
+    "pourquoi il ne la change pas>\", \"cited_entry_ids\": [<une ou plusieurs de ses pieces_du_depot>]}, "
+    "et cite aussi ces pièces dans les `cited_entry_ids` de ta réponse. L'effet est un jugement, chiffré "
+    "à partir des sources quand elles le permettent, jamais une paraphrase du dépôt. Tu ne déclares lu que "
+    "ce qui figure dans `faits_posterieurs_a_lire` ; si la liste est vide, `faits_posterieurs` est vide.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "
     "pas celles qui en parlent : un état financier qui donne le chiffre vaut citation ; un "
     "commentaire qui le mentionne n'en est pas la source. Si tu ne peux citer qu'un commentaire, "
@@ -796,6 +831,7 @@ async def repondre(
     entries: dict[int, dict[str, Any]],
     fichier: Optional[FrameworksFile] = None,
     agent: Optional[ResolvedAgent] = None,
+    faits: Optional[dict[str, list[MaterialEvent]]] = None,
 ) -> ResultatAnalyste:
     """Répond à TOUTES les questions d'un (ticker × framework × archétype). Ne persiste rien.
 
@@ -849,7 +885,7 @@ async def repondre(
         admis[q.id] = ouverts
 
     if interrogeables:
-        contexte = contexte_analyste(fichier, framework_id, archetype, ticker_id, entries)
+        contexte = contexte_analyste(fichier, framework_id, archetype, ticker_id, entries, faits)
         agent = agent or await _resolve_analyste_agent()
         messages = [{"role": "user", "content": _message_analyste(contexte)}]
         # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).

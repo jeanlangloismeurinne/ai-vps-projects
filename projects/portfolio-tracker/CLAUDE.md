@@ -2663,6 +2663,33 @@ Hors du chemin par question (porte V2 `ancre_substantielle`, `staleness`, messag
 
 Gardes : `check_evenements` §8 (**66/0**, flux EDGAR réels) + négatif **26/0** (7 mutations neuves).
 
+### #103 — un fait postérieur aux comptes, LU et chiffré par l'analyste, ne périme plus sa réponse
+
+**Le défaut (2026-09-30, RVMD).** Une réponse se date par sa pièce la plus ANCIENNE (anti-blanchiment,
+`actualite.date_effective`). Après les comptes du 30/06, RVMD signe le 27/08 les baux de son siège (8-K
+1.01 + 2.03, donc `financement`) : qf_4/qf_7 étaient périmées jusqu'aux comptes de novembre, quoi que
+l'analyste lise. **Arbitrage utilisateur (comme un fonds)** : l'analyste lit l'événement postérieur à la
+clôture, en écrit l'effet, et sa note — bâtie sur les comptes du 30/06 — est à jour.
+
+**La règle.** `Reponse.faits_posterieurs` = [{`depot` (accession EDGAR), `effet` (≥ 20 car.), pièces}].
+Contexte : `faits_posterieurs_du_titre` (parcours, sur `horloge_du_titre` — DÉTENTEUR UNIQUE de l'ancre +
+notes flash, partagé avec `charger_etat_dossier`) → `faits_a_lire` = dépôts qui rouvrent la question au
+`seuil` > dernière clôture publiée, lisibles (`lisible_par_l_analyste` : jamais un dépôt qui rouvre au
+titre des `resultats` — de nouveaux comptes se refont, ils ne se résument pas) ; l'analyste ne voit que
+ceux dont une pièce citable PROVIENT du dépôt (`provient_du_depot` : l'accession dans l'adresse EDGAR —
+un article sur le dépôt n'est pas le dépôt). Pont **[P]** : pièces de la lecture ⊆ fondation, et au moins
+une tirée du dépôt. Lecture : `servir_answer` retire de l'horloge les dépôts lus (`retirer_faits_lus`) ;
+la date de la fondation ne bouge PAS ; un fait plus tardif non lu périme toujours ; le motif cite l'effet.
+Écran niveau 3 : « faits lus depuis les comptes » (45 feuilles).
+`executer_chaine --questions=qf_4` : n'écrit que ces questions, le manager ne compte pas les autres
+« sans réponse » (elles ont leur réponse en vigueur).
+
+**Mesuré contre le vrai modèle** (RVMD × qualite_financiere, 3 passages, rien écrit) : qf_4 **3/3** lit
+le 8-K dans #296 avec un effet écrit ; qf_6 3/3 répondue (reste périmée : #345 mal daté) ; qf_7 **0/3**
+(refus [E], la guidance #312 citée — défaut #101 préexistant, 1/3 alors).
+Gardes : `check_evenements` §9 · `check_framework_contract` [P] · `check_analyste` [5 ter] · `check_parcours`
+§6/§7 ; négatifs évènements **32/0**, contrat **44/0**, analyste **49/0**, parcours **21/0**. Suite **4065**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

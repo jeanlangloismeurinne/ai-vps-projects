@@ -509,6 +509,12 @@ ENTRIES = {
     # que [E] ne soit atteint — le contrôle passait pour gardé alors qu'il n'avait jamais tourné.
     # Une fixture qui déclenche deux contrôles ne dit pas lequel des deux discrimine (1ᵉʳ faux vert).
     193: {"reliability_tier": "A-", "nature": "interpretation"},
+    # [P] (#103) — une pièce TIRÉE du 8-K du 27/08 (adresse EDGAR réelle de #296), et un article qui en
+    # parle. Même tier, même nature : seule l'adresse les distingue, donc seule [P] peut discriminer.
+    194: {"reliability_tier": "A-", "nature": "mesure",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/rvmd-20260827.htm"},
+    195: {"reliability_tier": "A-", "nature": "mesure",
+          "source_url": "https://www.globenewswire.com/news-release/2026/09/01/rvmd-redwood-city-leases"},
 }
 
 
@@ -665,6 +671,36 @@ pont_ok("[K bis] … et le même, NON établi parce qu'un terme ne l'est pas, pa
         rep(question_id="qf_calc", blocs={"reponse": {"verbatim": "x", "chiffres_cles": [
             _DB, {"id": "tresorerie", "unite": "M$", "motif_absence": "aucune pièce ne publie la trésorerie"},
             {"id": "dette_nette", "unite": "M$", "motif_absence": "trésorerie non établie dans l'encadré"}]}}))
+# [P] (#103) — un fait postérieur se lit DANS le dépôt, et sa lecture fait partie de la fondation.
+_BAUX = "0001193125-26-377362"
+_EFFET = "baux du siège, ~32 M$/an dès 2027 : non significatif face à 3,9 Md$ de trésorerie"
+
+
+def _lu(cites_fait, cites_fondation):
+    return rep(blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
+                          {"depot": _BAUX, "effet": _EFFET, "cited_entry_ids": cites_fait}]},
+                      "fondation": {**FOND, "cited_entry_ids": cites_fondation, "rang_derive": "A-"}})
+
+
+pont_ok("[P] un fait postérieur lu dans une pièce TIRÉE du dépôt, citée par la réponse, passe",
+        _lu([194], [190, 194]))
+pont("[P] un fait lu dans un ARTICLE qui parle du dépôt est refusé — on ne lit pas un 8-K dans la presse",
+     _lu([195], [190, 195]), "ne provient de ce dépôt")
+pont("[P] une lecture hors des citations de la réponse est refusée — elle ne fonderait rien",
+     _lu([194], [190]), "absentes des citations de la réponse")
+rejete("[P] contrat — un effet non écrit (« RAS ») est refusé : l'effet s'écrit, il ne se suppose pas",
+       lambda: rep(blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
+           {"depot": _BAUX, "effet": "RAS", "cited_entry_ids": [194]}]}}), "at least 20 characters")
+rejete("[P] contrat — un dépôt désigné autrement que par son numéro d'accession est refusé",
+       lambda: rep(blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
+           {"depot": "8-K du 2026-08-27", "effet": _EFFET, "cited_entry_ids": [194]}]}}), "pattern")
+rejete("[P] contrat — le même dépôt lu deux fois est refusé",
+       lambda: rep(blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
+           {"depot": _BAUX, "effet": _EFFET, "cited_entry_ids": [194]},
+           {"depot": _BAUX, "effet": _EFFET + ".", "cited_entry_ids": [194]}]}}), "lu deux fois")
+valide("[P] contrat — une réponse écrite avant #103 (sans la clef) se relit, faits lus vides",
+       lambda: rep().reponse.faits_posterieurs == [] or (_ for _ in ()).throw(AssertionError("non vide")))
+
 _enc_l = completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [
     ChiffreCle(**_DB), ChiffreCle(**_TR), ChiffreCle(**{**_DNC, "valeur": -328.0})])
 _enc = {c.id: c for c in _enc_l}

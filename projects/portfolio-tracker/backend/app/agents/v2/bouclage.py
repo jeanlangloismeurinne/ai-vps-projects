@@ -51,6 +51,7 @@ from app.agents.v2.manager_persist import (
     serve_mandate,
 )
 from app.agents.v2.note_flash import LectureDesDepots, lire_les_depots_en_attente
+from app.agents.v2.parcours import faits_posterieurs_du_titre
 from app.contracts.bouclage_schema import CompteRenduBouclage, MandatBoucle, SortBouclage
 from app.contracts.framework_answer_schema import Statut
 from app.db.database import get_db_session
@@ -196,9 +197,10 @@ async def boucler_renvois(
         dossier = await charger_dossier(
             conn, ticker_id=ticker_id, framework_id=framework_id,
             framework_version=version, plafond=plafond)
+        faits = await faits_posterieurs_du_titre(conn, ticker_id, fichier, framework_id)  # #103
     resultat = await repondre(
         ticker_id, framework_id, archetype,
-        analyste=analyste, entries=dossier.entries, fichier=fichier)
+        analyste=analyste, entries=dossier.entries, fichier=fichier, faits=faits)
     reponses = {a.question_id: a for a in resultat.answers if a.question_id in scope}
 
     # 4. Persister les réponses renvoyées + lire les dispenses (le comité a-t-il classé sans suite ?).

@@ -69,6 +69,7 @@ from app.contracts.framework_definition_schema import (
 )
 from app.contracts.memo_blocs import BLOCS_MEMO
 from app.knowledge.actualite import MaterialEventLookup, etat_actualite_entry
+from app.knowledge.evenements import retirer_faits_lus
 from app.knowledge.synthesis_feed import derive_synthesis_reliability
 
 FRAMEWORKS_YAML = Path(__file__).resolve().parents[2] / "frameworks" / "frameworks.yaml"
@@ -474,6 +475,14 @@ def nature_satisfait(effective: str, attendue: str) -> bool:
     return effective == attendue
 
 
+def provient_du_depot(entry: dict[str, Any], depot: str) -> bool:
+    """La pièce a-t-elle été tirée de CE dépôt EDGAR ? DÉTENTEUR UNIQUE (#103), lu par le pont [P] et par
+    le contexte de l'analyste. EDGAR range chaque dépôt sous un dossier nommé par son numéro d'accession
+    sans tirets (`/Archives/edgar/data/<cik>/000119312526377362/…`) : c'est l'adresse qui le prouve, pas
+    le titre ni la date, qu'un article sur le dépôt porterait aussi."""
+    return bool(depot) and depot.replace("-", "") in str(entry.get("source_url") or "")
+
+
 def valider_pont_framework_answer(
     answer: FrameworkAnswer,
     *,
@@ -481,7 +490,7 @@ def valider_pont_framework_answer(
     entries: dict[int, dict[str, Any]],
     autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
 ) -> None:
-    """Vérifie A→F, K, S et V. Ne rend rien : le seul résultat possible est « pas de refus ».
+    """Vérifie A→F, K, P, S et V. Ne rend rien : le seul résultat possible est « pas de refus ».
 
     `questions` : `{question_id: {plancher_tier, nature_attendue, sens_admis, ...}}` — les DONNÉES
     du lot 2, telles que `question_profiles()` les produit.
@@ -652,6 +661,26 @@ def valider_pont_framework_answer(
                 f"l'encadré de `{answer.question_id}` porte un chiffre calculé qui ne vaut pas sa formule : "
                 f"{faux} — le calcul appartient au code, jamais à l'analyste (#101)")
 
+    # P. UN FAIT POSTÉRIEUR SE LIT DANS LE DÉPÔT MÊME (#103). Déclarer « lu » le 8-K du 27/08 retire ce
+    #    dépôt de l'horloge de la réponse (`servir_answer`) : c'est une déclaration qui rend À JOUR, donc
+    #    elle se prouve. Chaque lecture cite au moins une pièce TIRÉE DE CE DÉPÔT (son numéro d'accession
+    #    dans l'adresse de la pièce) — un article qui commente le dépôt n'est pas le dépôt ; et ces
+    #    pièces sont dans la fondation, qui porte alors leur rang et leur nature (on ne lit pas hors de
+    #    ce qu'on cite). Un effet non écrit est refusé par le contrat.
+    if answer.reponse is not None and answer.reponse.faits_posterieurs:
+        fondation = set(answer.fondation.cited_entry_ids) if answer.fondation else set()
+        for fait in answer.reponse.faits_posterieurs:
+            hors_fondation = sorted(set(fait.cited_entry_ids) - fondation)
+            if hors_fondation:
+                raise FrameworkAnswerRefused(
+                    f"le fait postérieur {fait.depot} est lu dans {hors_fondation}, absentes des citations de la "
+                    "réponse : une lecture qui ne fonde pas la réponse ne peut pas la rendre à jour")
+            if not any(provient_du_depot(entries.get(i, {}), fait.depot) for i in fait.cited_entry_ids):
+                raise FrameworkAnswerRefused(
+                    f"le fait postérieur {fait.depot} est déclaré lu, mais aucune pièce citée "
+                    f"({fait.cited_entry_ids}) ne provient de ce dépôt : on ne lit pas un dépôt dans une "
+                    "source qui en parle (#103)")
+
     # F. un substitut pointe la réponse d'une AUTRE question.
     motif_substitut = motif_substitut_hors_sujet(answer, autres_reponses)
     if motif_substitut is not None:
@@ -740,11 +769,22 @@ def servir_answer(
         "source_date": None,  # aucune date propre : la fondation se date par ses citations
         "content_structured": {"source_entry_refs": list(answer.fondation.cited_entry_ids)},
     }
-    act = etat_actualite_entry(pseudo_entry, ancre=ancre, corpus=entries)
+    # #103 — les faits postérieurs que la réponse a LUS ne la périment plus : elle en a écrit l'effet.
+    # La date de la fondation ne bouge pas (la plus ancienne pièce, jamais blanchie) ; c'est l'horloge
+    # qui perd les dépôts lus — et seulement ceux qu'un analyste peut lire (`retirer_faits_lus`).
+    lus = {f.depot: f.effet for f in answer.reponse.faits_posterieurs} if answer.reponse else {}
+    horloge = retirer_faits_lus(ancre, lus)
+    act = etat_actualite_entry(pseudo_entry, ancre=horloge, corpus=entries)
+    motif = act.motif
+    absorbes = [e for e in (ancre.recents if ancre.status == "found" else ())
+                if e not in horloge.recents and e.accession in lus]
+    if absorbes:
+        motif += " — fait(s) postérieur(s) lu(s) par l'analyste : " + " ; ".join(
+            f"{e.form} du {e.event_date.isoformat()} — effet : {lus[e.accession]}" for e in absorbes)
 
     donnees = answer.model_dump()
     donnees["fondation"] = {**donnees["fondation"], "actualite": act.etat,
-                            "motif_actualite": act.motif}
+                            "motif_actualite": motif}
     return FrameworkAnswerServie(**donnees)
 
 

@@ -64,6 +64,13 @@ jamais le nombre estimé comme s'il était mesuré. C'est le contrôle ④ port�
 ║  │            └─ l'état SANS son motif serait un verdict inattaquable :          │    ║
 ║  │               on ne peut pas contester ce qui ne dit pas d'où il vient        │    ║
 ║  │                                                                              │    ║
+║  │  Faits lus 0001193125-26-377362 ⟦reponse.faits_posterieurs.depot⟧            │    ║
+║  │  depuis    lu dans #296 ⟦reponse.faits_posterieurs.cited_entry_ids⟧           │    ║
+║  │  les       « baux du siège, ~32 M$/an dès 2027 : non significatif face à     │    ║
+║  │  comptes     3,9 Md$ de trésorerie » ⟦reponse.faits_posterieurs.effet⟧        │    ║
+║  │            └─ un fait postérieur à la clôture, lu DANS le dépôt et chiffré,   │    ║
+║  │               ne périme plus la réponse (#103) ; l'effet s'écrit              │    ║
+║  │                                                                              │    ║
 ║  │  Sources   #190  10-K FY2024 · tier A-        ⟦fondation.cited_entry_ids⟧     │    ║
 ║  │            #191  Presse spécialisée · tier B                                  │    ║
 ║  │            └─ cliquables : le niveau 3 se termine sur la source, pas sur      │    ║

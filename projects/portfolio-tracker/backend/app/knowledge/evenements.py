@@ -41,6 +41,7 @@ Fonctions PURES : aucune IO, aucune écriture — l'ancre se recalcule à chaque
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import date
 from typing import Mapping, Optional
 
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
@@ -48,6 +49,7 @@ from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
 __all__ = [
     "A_QUALIFIER", "ROUTINE", "RESULTATS", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME", "QualificationLue",
     "types_du_depot", "ancre_de_la_question",
+    "derniere_cloture_publiee", "lisible_par_l_analyste", "faits_a_lire", "retirer_faits_lus",
 ]
 
 # Le type d'un dépôt dont la forme ne décide pas. Son nom est aussi sa consigne : quelqu'un doit le
@@ -195,3 +197,57 @@ def ancre_de_la_question(
     gardes.sort(key=lambda e: (e.seuil, e.event_date, e.filing_date), reverse=True)
     return MaterialEventLookup(status="found", event=gardes[0], cik=lookup.cik,
                                recents=tuple(gardes), filtre=familles)
+
+
+# ── Les faits postérieurs aux comptes (#103) ─────────────────────────────────────────────────────────
+
+def derniere_cloture_publiee(lookup: MaterialEventLookup) -> Optional[date]:
+    """La clôture des derniers comptes publiés, lue sur les communiqués de résultats du flux (#102).
+    `None` quand aucun communiqué ne s'est rattaché à un rapport : on ne la devine pas."""
+    clotures = [e.periode_publiee for e in lookup.recents if e.periode_publiee is not None]
+    return max(clotures) if clotures else None
+
+
+def lisible_par_l_analyste(event: MaterialEvent) -> bool:
+    """Un dépôt dont l'analyste peut LIRE l'effet sans refaire ses comptes. Un dépôt qui rouvre la
+    question au titre des RÉSULTATS en est exclu : il publie de nouveaux comptes, qu'on ne remplace pas
+    par une phrase — l'analyse se refait sur eux (#102, revue trimestrielle du 22/09)."""
+    return event.accession is not None and RESULTATS not in event.types
+
+
+def faits_a_lire(ancre_question: MaterialEventLookup, *, cloture: Optional[date]) -> list[MaterialEvent]:
+    """Les faits qui rouvrent UNE question survenus APRÈS la clôture des derniers comptes, et que
+    l'analyste peut lire (#103). `ancre_question` sort de `ancre_de_la_question`. Pur.
+
+    Comme un vrai fonds : les « événements postérieurs à la clôture » sont ce que l'analyste doit
+    avoir lu pour que sa note, bâtie sur les comptes du 30/06, soit à jour le 30/09. Sans clôture
+    connue, la liste est vide — la réponse restera périmée plutôt que d'être dite à jour sur une
+    fenêtre devinée.
+    """
+    if ancre_question.status != "found" or cloture is None:
+        return []
+    return [e for e in ancre_question.recents if e.seuil > cloture and lisible_par_l_analyste(e)]
+
+
+def retirer_faits_lus(ancre_question: MaterialEventLookup,
+                      lus: Mapping[str, str]) -> MaterialEventLookup:
+    """L'horloge d'une RÉPONSE : celle de sa question, moins les dépôts qu'elle a lus (`lus` : accession
+    → effet écrit). Pur. Un dépôt lu ne la périme plus — elle en a dit l'effet ; les autres continuent.
+
+    Rien n'est retiré qui ne soit `lisible_par_l_analyste` : une réponse qui dirait avoir « lu » des
+    résultats ne les rend pas à jour sans les nouveaux comptes. Tout lu ⟹ `none` avec une phrase qui
+    dit POURQUOI plus rien ne la rouvre — jamais « l'émetteur n'a rien publié ».
+    """
+    if ancre_question.status != "found" or not lus:
+        return ancre_question
+    restants = tuple(e for e in ancre_question.recents
+                     if not (e.accession in lus and lisible_par_l_analyste(e)))
+    if len(restants) == len(ancre_question.recents):
+        return ancre_question
+    lus_ici = [e for e in ancre_question.recents if e not in restants]
+    if not restants:
+        return MaterialEventLookup(
+            status="none", cik=ancre_question.cik, recents=(),
+            filtre="l'analyste a lu et chiffré le(s) fait(s) qui rouvrai(en)t cette question ("
+                   + "; ".join(e.resume() for e in lus_ici) + ")")
+    return replace(ancre_question, event=restants[0], recents=restants)

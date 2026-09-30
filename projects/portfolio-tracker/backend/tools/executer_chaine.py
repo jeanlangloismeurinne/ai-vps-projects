@@ -32,12 +32,14 @@ Usage :
 
 `--sans-collecte` saute le maillon 1 (aucune dépense traducteur/web) et fait répondre l'analyste
 sur le corpus DÉJÀ en base : c'est le passage le moins cher pour voir si la seconde moitié tient.
+`--questions=qf_4[,qf_6]` n'écrit que ces questions ; les autres gardent leur réponse en vigueur.
 
 Codes : 0 = la chaîne est allée au bout · 1 = un maillon a refusé · 2 = pas exécutable (env).
 """
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import os
 import sys
 import traceback
@@ -51,6 +53,7 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager import reviser_framework
 from app.agents.v2.manager_persist import persist_review
 from app.agents.v2.note_flash import lire_les_depots_en_attente
+from app.agents.v2.parcours import faits_posterieurs_du_titre
 from app.db.database import close_pool, get_db_session, init_pool
 
 # Même plafond que `tools/acceptation_analyste.py` — et pour la même raison : un dossier entier
@@ -77,6 +80,13 @@ async def main() -> int:
         return 2
     ticker_id, framework_id, archetype = sys.argv[1], sys.argv[2], sys.argv[3]
     sans_collecte = "--sans-collecte" in sys.argv
+    # `--questions=qf_4[,qf_6]` : le passage ne porte QUE sur ces questions — les autres gardent leurs
+    # réponses en vigueur, on n'écrit rien pour elles, et le manager ne les compte pas « sans réponse »
+    # (elles en ont une). Comme un directeur de la recherche qui fait reprendre une note, pas le dossier :
+    # une ré-analyse de tout le framework peut remplacer une réponse instruite par une moins bonne
+    # (dette consignée le 2026-09-29).
+    perimetre = next((frozenset(a.split("=", 1)[1].split(",")) for a in sys.argv
+                      if a.startswith("--questions=")), None)
 
     # ⚠️ Les deux pré-requis se refusent AVANT toute dépense et avant la première écriture (#40) :
     # découvrir au maillon 2 qu'il manque une clef laisserait un plan et des entries à demi écrits.
@@ -136,9 +146,27 @@ async def main() -> int:
                   "sur zéro entry ne prouverait rien.")
             return 1
 
+        # Les faits postérieurs aux derniers comptes, par question (#103) — l'horloge même du dossier.
+        async with get_db_session() as conn:
+            faits = await faits_posterieurs_du_titre(conn, ticker_id, fichier, framework_id)
+        for qid, evs in sorted(faits.items()):
+            for e in evs:
+                print(f"  fait postérieur à lire · {qid} · {e.accession} · {e.resume()}")
+
         resultat = await repondre(
             ticker_id, framework_id, archetype,
-            analyste=ANALYSTE, entries=entries, fichier=fichier)
+            analyste=ANALYSTE, entries=entries, fichier=fichier, faits=faits)
+        if perimetre is not None:
+            inconnues = sorted(perimetre - {q.id for f in fichier.frameworks if f.id == framework_id
+                                            for q in f.questions})
+            if inconnues:
+                print(f"  ⚠️ --questions : {inconnues} inconnues de `{framework_id}`. On s'arrête AVANT d'écrire.")
+                return 1
+            hors = sorted({a.question_id for a in resultat.answers} - perimetre)
+            resultat.answers = [a for a in resultat.answers if a.question_id in perimetre]
+            resultat.refus = [(q, m) for q, m in resultat.refus if q in perimetre]
+            print(f"  périmètre {sorted(perimetre)} : réponses hors périmètre IGNORÉES, rien d'écrit "
+                  f"pour elles → {hors}")
 
         par_statut: dict[str, list] = {}
         for a in resultat.answers:
@@ -153,6 +181,8 @@ async def main() -> int:
                 print(f"      {a.reponse.verbatim}")
                 for ligne in a.reponse.encadre_lisible():
                     print(f"      chiffre : {ligne}")
+                for f in a.reponse.faits_posterieurs:
+                    print(f"      fait postérieur lu : {f.depot} (pièces {f.cited_entry_ids}) — {f.effet}")
                 print(f"      cite : {a.fondation.cited_entry_ids}")
             elif a.statut == "non_fondable":
                 print(f"\n  ⚠ {a.question_id} [non_fondable] remède {a.gap.remede}")
@@ -188,6 +218,11 @@ async def main() -> int:
             resultat.answers, fichier=fichier, framework_id=framework_id,
             archetype=archetype, ticker_id=ticker_id, entries=entries,
             dispenses=frozenset(dispenses))
+        if perimetre is not None:
+            # Les questions hors périmètre ont leur réponse en vigueur : ne pas les compter « sans réponse ».
+            review = dataclasses.replace(review, questions_manquantes=[
+                q for q in review.questions_manquantes if q in perimetre], mandats_manquantes=[
+                m for m in review.mandats_manquantes if m.question_id in perimetre])
 
         for (qid, analyste), d in sorted(review.decisions.items()):
             marque = "✓" if d.verdict == "acquitte" else "↩"

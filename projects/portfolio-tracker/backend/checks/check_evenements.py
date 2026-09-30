@@ -42,10 +42,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _harness import Bilan, strip_code  # noqa: E402
 
-from app.agents.v2.frameworks import load_frameworks, types_qui_rouvrent  # noqa: E402
+from app.agents.v2.frameworks import load_frameworks, servir_answer, types_qui_rouvrent  # noqa: E402
+from app.contracts.framework_answer_schema import FrameworkAnswer  # noqa: E402
 from app.knowledge.actualite import etat_actualite  # noqa: E402
 from app.knowledge.evenements import (  # noqa: E402
-    A_QUALIFIER, QualificationLue, ancre_de_la_question, types_du_depot)
+    A_QUALIFIER, QualificationLue, ancre_de_la_question, derniere_cloture_publiee, faits_a_lire,
+    retirer_faits_lus, types_du_depot)
 from app.knowledge.material_events import (  # noqa: E402
     MaterialEvent, MaterialEventLookup, parse_material_events)
 
@@ -313,6 +315,62 @@ b.check(a15.event.accession == "f"
         f"{a15.event.accession}")
 
 
+print("§9 un fait postérieur LU et chiffré ne périme plus la réponse ; un fait non lu, si (#103)")
+BAUX = "0001193125-26-377362"
+RES_T2 = "0001193125-26-335039"
+b.check(derniere_cloture_publiee(flux_reel) == date(2026, 6, 30),
+        f"la clôture des derniers comptes publiés est le 30/06 → {derniere_cloture_publiee(flux_reel)}")
+a_lire_q4 = [e.accession for e in faits_a_lire(q4, cloture=date(2026, 6, 30))]
+b.check(a_lire_q4 == [BAUX],
+        f"qf_4 : à lire depuis les comptes = les baux du 27/08, PAS les résultats qui les publient → {a_lire_q4}")
+a_lire_mo1 = [e.accession for e in faits_a_lire(ancre(flux_reel, "mo_1", LUE_FDA_REEL), cloture=date(2026, 6, 30))]
+b.check(a_lire_mo1 == ["acc-rvmd-fda"], f"mo_1 : l'approbation FDA lue est à lire → {a_lire_mo1}")
+b.check(faits_a_lire(q4, cloture=date(2026, 8, 30)) == [],
+        "des comptes clos APRÈS les baux les ont intégrés : le 8-K n'est plus un fait postérieur à lire")
+b.check(faits_a_lire(q4, cloture=None) == [],
+        "sans clôture connue, rien n'est proposé à la lecture (la réponse restera périmée, jamais devinée)")
+
+CORPUS_Q4 = {307: {"source_date": date(2026, 8, 5)}, 296: {"source_date": date(2026, 9, 1)}}
+
+
+def reponse_q4(faits=(), cites=(307, 296)):
+    return FrameworkAnswer(
+        framework_id="qualite_financiere", framework_version="x", question_id="qf_4", ticker_id="RVMD",
+        analyste="a", statut="repondu",
+        reponse={"verbatim": "trésorerie nette positive", "faits_posterieurs": [
+            {"depot": d, "effet": "engagement locatif ~32 M$/an dès 2027, non significatif face à 3,9 Md$",
+             "cited_entry_ids": [296]} for d in faits]},
+        fondation={"cited_entry_ids": list(cites), "rang_derive": "A", "nature_effective": "mesure"})
+
+
+s_sans = servir_answer(reponse_q4(), ancre=q4, entries=CORPUS_Q4).fondation
+s_lu = servir_answer(reponse_q4([BAUX]), ancre=q4, entries=CORPUS_Q4).fondation
+b.check(s_sans.actualite == "perimee",
+        f"témoin : sans lecture, les comptes du 30/06 sont PÉRIMÉS par les baux du 27/08 → {s_sans.actualite}")
+b.check(s_lu.actualite == "courante",
+        f"les baux LUS et chiffrés : la réponse est À JOUR → {s_lu.actualite} ({s_lu.motif_actualite[:160]!r})")
+b.check("lu(s) par l'analyste" in s_lu.motif_actualite and "32 M$/an" in s_lu.motif_actualite,
+        "le motif dit quel fait a été lu, et l'EFFET écrit")
+# Un communiqué de résultats « lu » ne remplace pas les nouveaux comptes.
+s_res = servir_answer(reponse_q4([RES_T2]), ancre=q6, entries={307: {"source_date": date(2026, 3, 31)},
+                                                                    296: {"source_date": date(2026, 9, 1)}})
+b.check(s_res.fondation.actualite == "perimee",
+        "des résultats déclarés « lus » ne rendent pas à jour des comptes du 31/03 — on refait l'analyse "
+        f"sur les nouveaux comptes → {s_res.fondation.actualite}")
+# Un fait lu ne masque pas un fait PLUS TARDIF non lu.
+FIN_15_09 = ("8-K", "2026-09-15", "2026-09-15", "1.01,2.03", "acc-fin-15-09")
+plus_tard = MaterialEventLookup(status="found", cik=1628171, recents=tuple(parse_material_events(
+    payload(FIN_15_09, *[tuple(l[i] for l in RVMD_REEL["filings"]["recent"].values())
+                         for i in range(len(RVMD_REEL["filings"]["recent"]["form"]))]), 1628171, limit=100)))
+s_tard = servir_answer(reponse_q4([BAUX]), ancre=ancre(plus_tard, "qf_4", LUE_FDA_REEL),
+                       entries=CORPUS_Q4).fondation
+b.check(s_tard.actualite == "perimee" and "2026-09-15" in s_tard.motif_actualite,
+        f"un financement du 15/09 NON lu périme toujours la réponse qui a lu les baux → {s_tard.actualite}")
+tout_lu = retirer_faits_lus(q4, {BAUX: "x"})
+b.check(tout_lu.status == "found" and tout_lu.event.accession == RES_T2,
+        "retirer les baux laisse l'horloge sur les résultats du 05/08 (clos le 30/06) — pas sur « rien »")
+
+
 print("§6 le point de lecture est branché (AST)")
 
 
@@ -378,9 +436,38 @@ def nourri_par(fn, nom_arg, producteur):
     return True
 
 
-b.check(nourri_par(charger, "qualifications", "qualifications_de_l_emetteur"),
+def horloge_depuis(fn, producteur):
+    """`fn` obtient ses notes par `… = await producteur(...)` — l'horloge du titre, détenteur unique."""
+    if fn is None:
+        return False
+    cibles = [kw(c, "qualifications") for c in appels(fn, "ancre_de_la_question")]
+    if not cibles or not all(isinstance(v, ast.Name) for v in cibles):
+        return False
+    noms = {v.id for v in cibles}
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Assign) and isinstance(n.value, ast.Await) and est_appel(n.value.value, producteur):
+            cible = n.targets[0]
+            elts = cible.elts if isinstance(cible, ast.Tuple) else [cible]
+            if noms & {e.id for e in elts if isinstance(e, ast.Name)}:
+                return True
+    return False
+
+
+horloge = fonction("agents/v2/parcours.py", "horloge_du_titre")
+b.check(horloge is not None and any(
+            isinstance(n, ast.Assign) and isinstance(n.value, ast.Await)
+            and est_appel(n.value.value, "qualifications_de_l_emetteur")
+            and any(isinstance(t, ast.Name) and t.id == "notes" for t in n.targets)
+            for n in ast.walk(horloge))
+        and any(isinstance(n, ast.Return) and isinstance(n.value, ast.Tuple)
+                and any(isinstance(e, ast.Name) and e.id == "notes" for e in n.value.elts)
+                for n in ast.walk(horloge)),
+        "l'horloge du titre rend les notes flash RELUES en base (`qualifications_de_l_emetteur`)")
+b.check(horloge_depuis(charger, "horloge_du_titre"),
         "l'assemblage du dossier nourrit l'horloge des notes flash RELUES en base "
-        "(`qualifications_de_l_emetteur`), jamais d'un `{}`")
+        "(`qualifications_de_l_emetteur`, via `horloge_du_titre`), jamais d'un `{}`")
+b.check(horloge_depuis(fonction("agents/v2/parcours.py", "faits_posterieurs_du_titre"), "horloge_du_titre"),
+        "l'analyste reçoit ses faits postérieurs de la même horloge, notes flash comprises (#103)")
 b.check(nourri_par(decider, "qualifications", "qualifications_de_l_emetteur"),
         "le PV du comité cite l'ancre calculée avec les notes flash relues")
 src = strip_code((APP / "knowledge/evenements.py").read_text(encoding="utf-8"))

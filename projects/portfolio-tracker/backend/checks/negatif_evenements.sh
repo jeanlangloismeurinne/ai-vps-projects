@@ -14,6 +14,7 @@ ME="app/knowledge/material_events.py"
 AC="app/knowledge/actualite.py"
 PA="app/agents/v2/parcours.py"
 API="app/api/parcours_v2.py"
+FW="app/agents/v2/frameworks.py"
 mutations=(
 # §1 — la forme ne décide que ce qu'elle décide
 "$EV¦        return frozenset({A_QUALIFIER})¦        return frozenset({ROUTINE})¦« sans item » n'est pas « sans substance »"
@@ -45,6 +46,13 @@ mutations=(
 "$EV¦    gardes.sort(key=lambda e: (e.seuil, e.event_date, e.filing_date), reverse=True)¦    gardes.sort(key=lambda e: (e.event_date, e.filing_date), reverse=True)¦un financement du 15/07 reste l'ancre de qf_4"
 "$AC¦    seuil = ancre.event.seuil¦    seuil = ancre.event.event_date¦un fait au 30/06 (les comptes publiés le 05/08) est À JOUR"
 "$ME¦            base = f\"{base}, publie les comptes clos le {self.date_d_effet.isoformat()}\"¦            base = base¦le motif dit que le seuil est la clôture publiée"
+# §9 — un fait postérieur lu ne périme plus ; un fait non lu, si (#103)
+"$EV¦    return event.accession is not None and RESULTATS not in event.types¦    return event.accession is not None¦des résultats déclarés « lus »"
+"$EV¦    return [e for e in ancre_question.recents if e.seuil > cloture and lisible_par_l_analyste(e)]¦    return [e for e in ancre_question.recents if lisible_par_l_analyste(e)]¦des comptes clos APRÈS les baux"
+"$EV¦    return replace(ancre_question, event=restants[0], recents=restants)¦    return replace(ancre_question, recents=restants)¦les baux LUS et chiffrés"
+"$FW¦    horloge = retirer_faits_lus(ancre, lus)¦    horloge = ancre¦les baux LUS et chiffrés"
+"$FW¦    if absorbes:¦    if False:¦le motif dit quel fait a été lu"
+"$PA¦    return ancre, notes¦    return ancre, {}¦l'horloge du titre rend les notes flash"
 # §5 — le motif dit pourquoi
 "$ME¦        base = f\"{base} — rouvre au titre de : {', '.join(self.types)}\"¦        base = base¦se nomme par son type"
 )

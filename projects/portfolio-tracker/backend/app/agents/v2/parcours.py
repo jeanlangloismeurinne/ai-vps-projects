@@ -417,6 +417,43 @@ async def _collectes(conn, ticker_id: str, version: str) -> dict[tuple[str, str]
     return out
 
 
+async def horloge_du_titre(conn, ticker_id: str, fichier) -> tuple[Any, dict[str, Any]]:
+    """L'ancre qui pèse + les notes flash relues — le montage de l'horloge, DÉTENTEUR UNIQUE : la lecture
+    du dossier (`charger_etat_dossier`) et l'analyste (`faits_posterieurs_du_titre`) doivent voir la même,
+    sinon l'analyste lirait des faits que la lecture ne retire pas, ou l'inverse (#46)."""
+    from app.agents.v2.note_flash import qualifications_de_l_emetteur
+    from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
+
+    # L'ancre qui PÈSE, jamais la dernière venue (#54, arbitrage du comité n°2 du 2026-09-25) : une
+    # information de routine — un 8-K de pure forme — ne remet pas une réponse en cause. Les deux
+    # assembleurs d'avant lisaient l'ancre brute, là où la porte de complétude lisait déjà celle-ci :
+    # un 8-K formel aurait périmé la note projetée sans périmer la readiness.
+    ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+    # ⚠️ CHAQUE QUESTION A SA PROPRE HORLOGE (#89) : son ancre est le dernier fait important d'un
+    # TYPE qui la rouvre (référentiel, `rouverte_par`). Juger toutes les questions contre le dernier
+    # fait venu fabriquait les deux erreurs : un financement périmait la barrière brevetaire, et —
+    # pire — dire « un financement ne périme pas le moat » contre le DERNIER fait aurait rendu à
+    # jour un moat que l'approbation FDA de la veille devait rouvrir.
+    # Ce que les notes flash ont LU des dépôts que la forme ne qualifie pas (maillon 2) : sans elles,
+    # chaque 8.01 rouvre tout ; avec elles, il rouvre ce qu'il touche. Relu à chaque assemblage.
+    notes = await qualifications_de_l_emetteur(conn, ancre.cik, fichier)
+    return ancre, notes
+
+
+async def faits_posterieurs_du_titre(conn, ticker_id: str, fichier, framework_id: str) -> dict[str, list]:
+    """Par question du framework : les faits postérieurs aux derniers comptes que l'analyste peut lire
+    (#103), contre l'horloge même qui servira ses réponses. N'écrit rien."""
+    from app.agents.v2.frameworks import types_qui_rouvrent
+    from app.knowledge.evenements import ancre_de_la_question, derniere_cloture_publiee, faits_a_lire
+
+    ancre, notes = await horloge_du_titre(conn, ticker_id, fichier)
+    cloture = derniere_cloture_publiee(ancre)
+    fw = next(f for f in fichier.frameworks if f.id == framework_id)
+    return {q.id: faits_a_lire(ancre_de_la_question(ancre, rouvrent=types_qui_rouvrent(fichier, q.id),
+                                                    qualifications=notes), cloture=cloture)
+            for q in fw.questions}
+
+
 async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     """Base → revue RECALCULÉE → réponses servies. N'écrit rien — ni verdict, ni mandat, ni note.
 
@@ -429,14 +466,12 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     from app.agents.v2.comite import lire_registre, position_du_comite
     from app.agents.v2.frameworks import servir_answer, types_qui_rouvrent
     from app.knowledge.evenements import ancre_de_la_question
-    from app.agents.v2.note_flash import qualifications_de_l_emetteur
     from app.knowledge.material_events import MaterialEventLookup
     from app.agents.v2.framework_persist import (
         read_answers_courantes, read_archetype, read_dispenses)
     from app.agents.v2.manager import reviser_framework
     from app.agents.v2.manager_persist import assemble_verdict
     from app.agents.v2.traducteur import questions_applicables
-    from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
 
     fichier = load_frameworks()
     version = fichier.schema_version
@@ -492,20 +527,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
         for i, a in du_framework:
             decisions[i] = revue.decisions.get((a.question_id, a.analyste))
 
-    # L'ancre qui PÈSE, jamais la dernière venue (#54, arbitrage du comité n°2 du 2026-09-25) : une
-    # information de routine — un 8-K de pure forme — ne remet pas une réponse en cause. Les deux
-    # assembleurs d'avant lisaient l'ancre brute, là où la porte de complétude lisait déjà celle-ci :
-    # un 8-K formel aurait périmé la note projetée sans périmer la readiness.
-    ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
-
-    # ⚠️ CHAQUE QUESTION A SA PROPRE HORLOGE (#89) : son ancre est le dernier fait important d'un
-    # TYPE qui la rouvre (référentiel, `rouverte_par`). Juger toutes les questions contre le dernier
-    # fait venu fabriquait les deux erreurs : un financement périmait la barrière brevetaire, et —
-    # pire — dire « un financement ne périme pas le moat » contre le DERNIER fait aurait rendu à
-    # jour un moat que l'approbation FDA de la veille devait rouvrir.
-    # Ce que les notes flash ont LU des dépôts que la forme ne qualifie pas (maillon 2) : sans elles,
-    # chaque 8.01 rouvre tout ; avec elles, il rouvre ce qu'il touche. Relu à chaque assemblage.
-    notes = await qualifications_de_l_emetteur(conn, ancre.cik, fichier)
+    ancre, notes = await horloge_du_titre(conn, ticker_id, fichier)
     ancres: dict[str, MaterialEventLookup] = {}
 
     def ancre_de(question_id: str) -> MaterialEventLookup:

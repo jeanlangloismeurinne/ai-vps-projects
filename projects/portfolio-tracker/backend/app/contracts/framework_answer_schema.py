@@ -63,7 +63,7 @@ from .readiness_report_schema import GapItem
 
 __all__ = [
     "FRAMEWORK_SCHEMA_VERSION", "STATUTS", "Statut",
-    "ChiffreCle", "Reponse", "Fondation", "FondationServie", "Approximation", "SansObjet",
+    "ChiffreCle", "FaitPosterieurLu", "Reponse", "Fondation", "FondationServie", "Approximation", "SansObjet",
     "ControlesManager", "ManagerVerdict", "FrameworkAnswer", "FrameworkAnswerServie",
     "FrameworkMandate", "COLONNES_DENORMALISEES",
 ]
@@ -120,6 +120,22 @@ class ChiffreCle(Strict):
         return self
 
 
+class FaitPosterieurLu(Strict):
+    """Un fait survenu APRÈS les comptes sur lesquels repose la réponse, que l'analyste a LU et dont il
+    dit l'effet (#103, arbitrage utilisateur du 2026-09-30).
+
+    Comme un vrai fonds : les comptes du 30/06 restent la référence jusqu'aux suivants ; un fait survenu
+    depuis (les baux du siège de RVMD, 27/08) est un ÉVÉNEMENT POSTÉRIEUR À LA CLÔTURE — l'analyste le
+    lit, en mesure l'effet, l'écrit, et sa note est à jour. Citer le dépôt ne suffit pas : l'effet
+    s'écrit. Le pont [P] vérifie qu'une pièce citée provient du dépôt MÊME (on ne lit pas un 8-K dans
+    un article qui en parle) ; le point de lecture n'absorbe qu'un dépôt nommé ici (`servir_answer`).
+    """
+    # Le numéro d'accession EDGAR du dépôt lu — l'identité du fait, pas sa date (deux dépôts le même jour).
+    depot: str = Field(pattern=r"^\d{10}-\d{2}-\d{6}$")
+    effet: str = Field(min_length=20)
+    cited_entry_ids: list[int] = Field(min_length=1, description="les pièces TIRÉES du dépôt lu")
+
+
 class Reponse(Strict):
     """La réponse elle-même. `verbatim` est ce qu'un lecteur lit ; l'ENCADRÉ de chiffres clés et le
     `sens` rendent la réponse comparable entre dossiers (spec §7, niveau 2).
@@ -138,6 +154,9 @@ class Reponse(Strict):
     # §12. Il se fermera au lot 2, quand les 13 questions diront ce que « sens » veut dire pour
     # chacune.
     sens: Optional[str] = Field(default=None, min_length=1)
+    # Les faits postérieurs aux comptes que la réponse a lus (#103). Vide par défaut : c'est la forme de
+    # toutes les réponses écrites avant, et d'une réponse qu'aucun fait n'est venu rouvrir.
+    faits_posterieurs: list[FaitPosterieurLu] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -161,6 +180,9 @@ class Reponse(Strict):
         if len(set(ids)) != len(ids):
             raise ValueError(f"l'encadré porte deux fois le même chiffre : {sorted(ids)} — un seul "
                              "chiffre par dossier (#95)")
+        depots = [f.depot for f in self.faits_posterieurs]
+        if len(set(depots)) != len(depots):
+            raise ValueError(f"le même dépôt est lu deux fois : {sorted(depots)} — un fait, un effet")
         return self
 
 
