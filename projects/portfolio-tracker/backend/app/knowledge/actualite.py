@@ -142,15 +142,22 @@ def etat_actualite(
         )
 
     assert ancre.event is not None  # garanti par `found` — les deux autres statuts sont traités
-    seuil = ancre.event.event_date
+    # #102 : le SEUIL, pas la date de l'événement — un communiqué de résultats ne périme pas les
+    # comptes qu'il publie ; hors ce cas, les deux dates sont la même.
+    seuil = ancre.event.seuil
     ecart = (seuil - source_date).days  # type: ignore[operator] — `source_date` non nul ici
+    if ancre.event.date_d_effet is not None:
+        repere = f"la clôture du {seuil.isoformat()} publiée par le {ancre.event.resume()}"
+        repere_court = repere
+    else:
+        repere = f"l'événement matériel du {seuil.isoformat()} ({ancre.event.resume()})"
+        repere_court = f"l'événement matériel du {seuil.isoformat()}"
 
     if source_date < seuil:  # type: ignore[operator]
         return Actualite(
             etat="perimee",
             motif=f"fait daté du {source_date.isoformat()}, antérieur de {ecart} jours à "  # type: ignore[union-attr]
-                  f"l'événement matériel du {seuil.isoformat()} ({ancre.event.resume()}). "
-                  "Il reste EXACT à sa date : périmé n'est pas faux.",
+                  f"{repere}. Il reste EXACT à sa date : périmé n'est pas faux.",
             seuil=seuil,
             source_date=source_date,
             jours_avant_evenement=ecart,
@@ -158,8 +165,8 @@ def etat_actualite(
 
     return Actualite(
         etat="courante",
-        motif=f"fait daté du {source_date.isoformat()}, à/après l'événement matériel du "  # type: ignore[union-attr]
-              f"{seuil.isoformat()} : il a pu en tenir compte.",
+        motif=f"fait daté du {source_date.isoformat()}, à/après {repere_court} : "  # type: ignore[union-attr]
+              "il a pu en tenir compte.",
         seuil=seuil,
         source_date=source_date,
         jours_avant_evenement=ecart,

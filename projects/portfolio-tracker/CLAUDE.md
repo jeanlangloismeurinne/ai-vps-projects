@@ -2640,6 +2640,29 @@ relancée jusqu'au vert.
 Gardes : `check_analyste` **102/0** + négatif **45/0** · `check_framework_contract` **126/0** + négatif
 **39/0** · `check_frameworks_definitions` **79/0** + négatif **46/0**.
 
+### #102 — un communiqué de résultats ne périme pas les comptes qu'il publie
+
+**Le défaut (2026-09-30, RVMD).** Toute question de qualité financière est rouverte par `resultats`
+(8-K 2.02). Le seuil de péremption était la date de l'ÉVÉNEMENT (05/08), et un fait correctement daté
+(#79 : date du dernier fait constaté) porte la CLÔTURE (30/06) : chaque réponse fondée sur les derniers
+comptes était donc périmée par le communiqué même qui les publie — pour tout émetteur. qf_6 n'avait paru
+à jour que grâce à des pièces d'héritage datées du jour de DÉPÔT ; re-collecter (payant) n'aurait rien
+changé. **Arbitrage utilisateur (comme un fonds)** : les comptes d'une période restent la référence
+jusqu'aux comptes suivants ; le communiqué de résultats rouvre la question (revue trimestrielle, 22/09)
+mais une analyse refaite sur les comptes qu'il publie est à jour.
+
+**La règle.** `MaterialEvent.periode_publiee` (parse du flux EDGAR) = la dernière clôture de 10-Q/10-K/
+20-F/40-F ANTÉRIEURE au communiqué, **seulement si ce rapport est déposé avec lui** (au plus 7 jours
+avant — même jour chez RVMD/NVDA, la veille chez MSFT, relevé EDGAR du 2026-09-30). Un communiqué publié
+AVANT son rapport ne se rattache à rien : le rattacher au trimestre précédent rendrait à jour les comptes
+qu'il vient de remplacer. `ancre_de_la_question` pose `date_d_effet` = cette clôture **seulement si le
+dépôt ne rouvre la question QU'au titre de `resultats`** (un 2.02 + 8.01 non lu garde sa date) ; l'ancre
+est le dépôt au `seuil` le plus TARDIF (un financement du 15/07 périme plus que des résultats du 05/08
+clos au 30/06) ; `etat_actualite` compare au `seuil` et le motif dit « la clôture du … publiée par le … ».
+Hors du chemin par question (porte V2 `ancre_substantielle`, `staleness`, message du worker) : inchangé.
+
+Gardes : `check_evenements` §8 (**66/0**, flux EDGAR réels) + négatif **26/0** (7 mutations neuves).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

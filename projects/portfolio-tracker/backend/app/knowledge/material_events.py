@@ -41,7 +41,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Optional
 
 import httpx
@@ -56,6 +56,12 @@ _SUBMISSIONS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 # Formes qui portent un événement matériel. Les périodiques (10-K/10-Q/20-F) en sont exclues **à
 # dessein** : elles sont déjà l'ancre existante, et les confondre rendrait l'extension no-op.
 MATERIAL_FORMS = frozenset({"8-K", "8-K/A", "6-K", "6-K/A"})
+
+# Les rapports périodiques ne sont pas des événements, mais ils disent QUELLE période un communiqué
+# de résultats publie (#102). Les amendements (/A) en sont exclus : ils ne publient pas une clôture.
+PERIODIC_FORMS = frozenset({"10-Q", "10-K", "20-F", "40-F"})
+ITEM_RESULTATS = "2.02"
+DELAI_RESULTATS_JOURS = 7
 
 # Items 8-K → libellé français. Un item ABSENT de cette table n'est jamais silencieux : il est
 # rendu tel quel (« item 3.03 (non répertorié) »). Une table de libellés qui filtre ce qu'elle ne
@@ -113,6 +119,19 @@ class MaterialEvent:
     # Ce que la note flash a lu de ce dépôt (maillon 2), quand elle existe : le motif dit alors d'où
     # vient le type — la LECTURE du communiqué, pas sa forme.
     note: Optional[str] = None
+    # Pour un communiqué de résultats (2.02) : la CLÔTURE des comptes qu'il publie, lue sur le rapport
+    # périodique déposé avec lui (`_periode_publiee`). `None` quand aucun rapport ne lui correspond.
+    periode_publiee: Optional[date] = None
+    # La date à laquelle ce dépôt périme les faits d'UNE question — posée par
+    # `evenements.ancre_de_la_question`, jamais ici : elle dépend du type au titre duquel il rouvre.
+    date_d_effet: Optional[date] = None
+
+    @property
+    def seuil(self) -> date:
+        """Date à partir de laquelle un fait est À JOUR face à ce dépôt (#102). C'est la date de
+        l'événement, sauf quand le dépôt ne rouvre une question qu'au titre des résultats : il publie
+        alors des comptes, et ne périme pas les faits de la période qu'il publie."""
+        return self.date_d_effet or self.event_date
 
     @property
     def items_substantiels(self) -> tuple[str, ...]:
@@ -134,6 +153,8 @@ class MaterialEvent:
         if not self.types:
             return base
         base = f"{base} — rouvre au titre de : {', '.join(self.types)}"
+        if self.date_d_effet is not None:
+            base = f"{base}, publie les comptes clos le {self.date_d_effet.isoformat()}"
         return f"{base} ({self.note})" if self.note else base
 
 
@@ -238,6 +259,12 @@ def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
     """
     recent = ((payload or {}).get("filings") or {}).get("recent") or {}
     formes = recent.get("form") or []
+    periodiques = [
+        (r, f) for i, forme in enumerate(formes) if forme in PERIODIC_FORMS
+        for r, f in [(_parse_date(_at(recent, "reportDate", i)),
+                      _parse_date(_at(recent, "filingDate", i)))]
+        if r is not None and f is not None
+    ]
     out: list[MaterialEvent] = []
     for i, forme in enumerate(formes):
         if forme not in MATERIAL_FORMS:
@@ -248,18 +275,45 @@ def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
         if filed is None and reported is None:
             continue
         accn = _at(recent, "accessionNumber", i)
+        items = _parse_items(_at(recent, "items", i))
+        event_date: date = reported or filed  # type: ignore[assignment]
         out.append(
             MaterialEvent(
                 form=forme,
-                event_date=reported or filed,      # type: ignore[arg-type]
+                event_date=event_date,
                 filing_date=filed or reported,     # type: ignore[arg-type]
-                items=_parse_items(_at(recent, "items", i)),
+                items=items,
                 accession=accn,
                 url=_filing_url(cik, accn),
+                periode_publiee=(_periode_publiee(periodiques, event_date)
+                                 if ITEM_RESULTATS in items else None),
             )
         )
     out.sort(key=lambda e: (e.event_date, e.filing_date), reverse=True)
     return out[:limit]
+
+
+def _periode_publiee(periodiques: list[tuple[date, date]], evenement: date) -> Optional[date]:
+    """La clôture des comptes que publie un communiqué de résultats daté `evenement` (#102). Pure.
+
+    `periodiques` = (clôture, dépôt) des rapports périodiques du flux. On retient la DERNIÈRE clôture
+    antérieure au communiqué, et seulement si son rapport a été déposé avec lui (au plus
+    `DELAI_RESULTATS_JOURS` avant) : chez RVMD, NVDA et MSFT, communiqué et 10-Q/10-K partent le même
+    jour ou à un jour d'écart (relevé EDGAR du 2026-09-30).
+
+    ⚠️ Un communiqué publié AVANT son rapport n'a encore rien à quoi se rattacher : la dernière clôture
+    antérieure est alors celle du trimestre PRÉCÉDENT, déposée des mois plus tôt — la rattacher
+    rendrait à jour les comptes que ce communiqué vient justement de remplacer. Le délai l'écarte ; le
+    dépôt garde sa date d'événement (dans le doute, on rouvre — arbitrage Q3) jusqu'au dépôt du rapport.
+    """
+    anterieurs = [(r, f) for r, f in periodiques if r < evenement]
+    if not anterieurs:
+        return None
+    cloture = max(r for r, _ in anterieurs)
+    depots = [f for r, f in anterieurs if r == cloture]
+    if any(evenement <= f + timedelta(days=DELAI_RESULTATS_JOURS) for f in depots):
+        return cloture
+    return None
 
 
 def _at(recent: dict[str, Any], key: str, i: int) -> Any:

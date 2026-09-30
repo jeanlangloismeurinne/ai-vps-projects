@@ -21,6 +21,11 @@ Ce que la capacité garantit, et ce que chaque section éprouve :
        l'approbation du 26/08 LUE rouvre toujours la barrière (mo_1) mais plus les choix comptables
        (qf_6), qui retombent sur les résultats du 05/08 ; le 7.01 MSFT lu comme routine ne rouvre plus
        rien. Le motif dit que le type vient de la lecture, passage à l'appui.
+  • §8 UN COMMUNIQUÉ DE RÉSULTATS NE PÉRIME PAS LES COMPTES QU'IL PUBLIE (#102) — sur les flux EDGAR
+       RÉELS (RVMD, NVDA, MSFT, relevés le 2026-09-30) : le 2.02 se rattache à la clôture du rapport
+       déposé avec lui ; un communiqué publié avant son rapport ne se rattache à rien ; qf_6 au 30/06
+       est à jour, au 31/03 périmé ; un motif non « résultats » garde la date d'événement ; l'ancre
+       est le seuil le plus tardif.
   • §6 LE POINT DE LECTURE EST BRANCHÉ (AST) — l'assemblage du dossier sert chaque réponse et chaque
        position du comité contre l'ancre de SA question, produite par `ancre_de_la_question` nourrie
        de `types_qui_rouvrent` ; l'endpoint de décision du comité aussi. Un assert de comportement ne
@@ -41,7 +46,8 @@ from app.agents.v2.frameworks import load_frameworks, types_qui_rouvrent  # noqa
 from app.knowledge.actualite import etat_actualite  # noqa: E402
 from app.knowledge.evenements import (  # noqa: E402
     A_QUALIFIER, QualificationLue, ancre_de_la_question, types_du_depot)
-from app.knowledge.material_events import MaterialEvent, MaterialEventLookup  # noqa: E402
+from app.knowledge.material_events import (  # noqa: E402
+    MaterialEvent, MaterialEventLookup, parse_material_events)
 
 b = Bilan()
 APP = Path(__file__).resolve().parent.parent / "app"
@@ -212,6 +218,99 @@ b.check("note flash" in (l_mo1.event.resume() if l_mo1.event else "")
         f"{l_mo1.event.resume() if l_mo1.event else None!r}")
 b.check("note flash" not in (a_qf4.event.resume() if a_qf4.event else "note flash"),
         "un type décidé par la forme ne se prétend pas lu")
+
+
+print("§8 un communiqué de résultats ne périme pas les comptes qu'il publie (#102)")
+
+
+def payload(*lignes):
+    """Flux `submissions` d'EDGAR, colonnes parallèles — lignes relevées le 2026-09-30, jamais inventées."""
+    cols = ("form", "reportDate", "filingDate", "items", "accessionNumber")
+    return {"filings": {"recent": {c: [l[i] for l in lignes] for i, c in enumerate(cols)}}}
+
+
+def par_acc(evts):
+    return {e.accession: e for e in evts}
+
+
+RVMD_REEL = payload(
+    ("8-K", "2026-08-27", "2026-09-01", "1.01,2.03", "0001193125-26-377362"),
+    ("8-K", "2026-08-26", "2026-08-26", "8.01", "acc-rvmd-fda"),
+    ("10-Q", "2026-06-30", "2026-08-05", "", "0001193125-26-335104"),
+    ("8-K", "2026-08-05", "2026-08-05", "2.02,9.01", "0001193125-26-335039"),
+    ("10-Q", "2026-03-31", "2026-05-06", "", "0001193125-26-208969"),
+    ("8-K", "2026-05-06", "2026-05-06", "2.02,9.01", "0001193125-26-208918"),
+)
+rv = par_acc(parse_material_events(RVMD_REEL, 1628171, limit=100))
+b.check(rv["0001193125-26-335039"].periode_publiee == date(2026, 6, 30),
+        "RVMD : le communiqué du 05/08 publie les comptes clos le 30/06 → "
+        f"{rv['0001193125-26-335039'].periode_publiee}")
+b.check(rv["0001193125-26-208918"].periode_publiee == date(2026, 3, 31),
+        f"RVMD : celui du 06/05 publie le 31/03 → {rv['0001193125-26-208918'].periode_publiee}")
+b.check(rv["0001193125-26-377362"].periode_publiee is None and rv["acc-rvmd-fda"].periode_publiee is None,
+        "un dépôt qui n'est pas un communiqué de résultats ne publie aucune clôture")
+nv = par_acc(parse_material_events(payload(
+    ("10-Q", "2026-07-26", "2026-08-26", "", "0001045810-26-000075"),
+    ("8-K", "2026-08-26", "2026-08-26", "2.02,9.01", "0001045810-26-000073")), 1045810, limit=10))
+b.check(nv["0001045810-26-000073"].periode_publiee == date(2026, 7, 26),
+        "NVDA : exercice décalé — la clôture est celle du 10-Q (26/07), pas une fin de trimestre civil")
+ms = par_acc(parse_material_events(payload(
+    ("10-Q", "2025-09-30", "2025-10-29", "", "0001193125-25-256321"),
+    ("8-K", "2025-10-28", "2025-10-29", "2.02,7.01,9.01", "0001193125-25-256310")), 789019, limit=10))
+b.check(ms["0001193125-25-256310"].periode_publiee == date(2025, 9, 30),
+        "MSFT 28/10/2025 : communiqué la veille du 10-Q — rattaché à la clôture du 30/09")
+# Communiqué du T3 publié AVANT son 10-Q : la dernière clôture déposée est celle du T2, des mois plus
+# tôt. La rattacher rendrait à jour les comptes du T2 que ce communiqué vient de remplacer.
+premature = par_acc(parse_material_events(payload(
+    ("8-K", "2026-11-04", "2026-11-04", "2.02,9.01", "acc-t3"),
+    ("10-Q", "2026-06-30", "2026-08-05", "", "0001193125-26-335104"),
+    ("8-K", "2026-08-05", "2026-08-05", "2.02,9.01", "0001193125-26-335039")), 1628171, limit=10))
+b.check(premature["acc-t3"].periode_publiee is None,
+        "un communiqué publié avant son rapport ne se rattache PAS au trimestre précédent → "
+        f"{premature['acc-t3'].periode_publiee}")
+
+LUE_FDA_REEL = {"acc-rvmd-fda": LUE_FDA}
+flux_reel = MaterialEventLookup(status="found", cik=1628171,
+                                recents=tuple(parse_material_events(RVMD_REEL, 1628171, limit=100)))
+q6 = ancre(flux_reel, "qf_6", LUE_FDA_REEL)
+b.check(q6.status == "found" and q6.event.seuil == date(2026, 6, 30),
+        f"qf_6 s'ancre aux résultats du 05/08, SEUIL 30/06 → {getattr(q6.event, 'seuil', None)}")
+e_30_06 = etat_actualite(source_date=date(2026, 6, 30), ancre=q6)
+e_31_03 = etat_actualite(source_date=date(2026, 3, 31), ancre=q6)
+b.check(e_30_06.etat == "courante",
+        f"un fait au 30/06 (les comptes publiés le 05/08) est À JOUR → {e_30_06.etat}")
+b.check(e_31_03.etat == "perimee",
+        f"un fait au 31/03 reste PÉRIMÉ par les résultats du 05/08 → {e_31_03.etat}")
+b.check(etat_actualite(source_date=date(2026, 6, 30), ancre=ancre(reel, "qf_6", notes_rvmd)).etat
+        == "perimee",
+        "témoin : sans la clôture publiée (fixture §2), le même fait au 30/06 était PÉRIMÉ par "
+        "le communiqué même qui le publie")
+b.check("publie les comptes clos le 2026-06-30" in e_31_03.motif
+        and "la clôture du 2026-06-30" in e_31_03.motif,
+        f"le motif dit que le seuil est la clôture publiée → {e_31_03.motif!r}")
+q4 = ancre(flux_reel, "qf_4", LUE_FDA_REEL)
+b.check(q4.event.seuil == date(2026, 8, 27)
+        and etat_actualite(source_date=date(2026, 6, 30), ancre=q4).etat == "perimee",
+        "qf_4 : le fait postérieur du 27/08 (financement) périme toujours les comptes du 30/06")
+# Un communiqué de résultats ACCOMPAGNÉ d'un 8.01 non lu : rouvre aussi au titre de « à qualifier »,
+# donc à sa date d'événement.
+mixte = MaterialEventLookup(status="found", cik=1, recents=tuple(parse_material_events(payload(
+    ("10-Q", "2026-06-30", "2026-08-05", "", "p"),
+    ("8-K", "2026-08-05", "2026-08-05", "2.02,8.01,9.01", "m")), 1, limit=10)))
+b.check(ancre(mixte, "qf_6").event.seuil == date(2026, 8, 5),
+        "résultats + autre événement non lu : le seuil reste la date de l'événement (dans le doute, "
+        f"on rouvre) → {ancre(mixte, 'qf_6').event.seuil}")
+# L'ancre est le SEUIL le plus tardif : un financement du 15/07 précède le communiqué du 05/08, mais il
+# périme les comptes du 30/06 que ce communiqué publie.
+fin_15_07 = MaterialEventLookup(status="found", cik=1, recents=tuple(parse_material_events(payload(
+    ("8-K", "2026-08-05", "2026-08-05", "2.02,9.01", "r"),
+    ("10-Q", "2026-06-30", "2026-08-05", "", "p"),
+    ("8-K", "2026-07-15", "2026-07-15", "1.01,2.03", "f")), 1, limit=10)))
+a15 = ancre(fin_15_07, "qf_4")
+b.check(a15.event.accession == "f"
+        and etat_actualite(source_date=date(2026, 6, 30), ancre=a15).etat == "perimee",
+        "un financement du 15/07 reste l'ancre de qf_4 face aux résultats du 05/08 (clos le 30/06) → "
+        f"{a15.event.accession}")
 
 
 print("§6 le point de lecture est branché (AST)")

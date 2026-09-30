@@ -37,6 +37,14 @@ mutations=(
 "$ME¦        return f\"{base} ({self.note})\" if self.note else base¦        return base¦le type vient de la LECTURE"
 "$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦l'assemblage du dossier nourrit l'horloge des notes flash"
 "$API¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦le PV du comité cite l'ancre calculée avec les notes flash"
+# §8 — un communiqué de résultats ne périme pas les comptes qu'il publie (#102)
+"$ME¦                periode_publiee=(_periode_publiee(periodiques, event_date)¦                periode_publiee=(None¦RVMD : le communiqué du 05/08 publie les comptes clos le 30/06"
+"$ME¦    if any(evenement <= f + timedelta(days=DELAI_RESULTATS_JOURS) for f in depots):¦    if True:¦ne se rattache PAS au trimestre précédent"
+"$ME¦    anterieurs = [(r, f) for r, f in periodiques if r < evenement]¦    anterieurs = [(r, f) for r, f in periodiques]¦RVMD : celui du 06/05 publie le 31/03"
+"$EV¦            effet = e.periode_publiee if touches == {RESULTATS} else None¦            effet = e.periode_publiee¦résultats + autre événement non lu"
+"$EV¦    gardes.sort(key=lambda e: (e.seuil, e.event_date, e.filing_date), reverse=True)¦    gardes.sort(key=lambda e: (e.event_date, e.filing_date), reverse=True)¦un financement du 15/07 reste l'ancre de qf_4"
+"$AC¦    seuil = ancre.event.seuil¦    seuil = ancre.event.event_date¦un fait au 30/06 (les comptes publiés le 05/08) est À JOUR"
+"$ME¦            base = f\"{base}, publie les comptes clos le {self.date_d_effet.isoformat()}\"¦            base = base¦le motif dit que le seuil est la clôture publiée"
 # §5 — le motif dit pourquoi
 "$ME¦        base = f\"{base} — rouvre au titre de : {', '.join(self.types)}\"¦        base = base¦se nomme par son type"
 )

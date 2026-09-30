@@ -46,7 +46,7 @@ from typing import Mapping, Optional
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
 
 __all__ = [
-    "A_QUALIFIER", "ROUTINE", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME", "QualificationLue",
+    "A_QUALIFIER", "ROUTINE", "RESULTATS", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME", "QualificationLue",
     "types_du_depot", "ancre_de_la_question",
 ]
 
@@ -55,6 +55,8 @@ __all__ = [
 A_QUALIFIER = "a_qualifier"
 # Le type d'un dépôt de pure forme (pièces jointes seules, vote ordinaire…) : il ne rouvre rien.
 ROUTINE = "routine"
+# Le type d'un communiqué de résultats : le seul dont l'effet ne date pas du jour du dépôt (#102).
+RESULTATS = "resultats"
 
 # Item 8-K → type, pour les seuls items dont la FORME décide la substance. Un item ABSENT de cette
 # table est `a_qualifier` — jamais ignoré (même doctrine que `ITEM_LABELS` : une table qui filtre ce
@@ -63,7 +65,7 @@ TYPE_PAR_ITEM: dict[str, str] = {
     "1.03": "existentiel",          # faillite / redressement
     "1.05": "incident",             # cybersécurité
     "2.01": "perimetre",            # acquisition ou cession d'actifs
-    "2.02": "resultats",            # résultats publiés (une SURPRISE ne se voit qu'à la lecture)
+    "2.02": RESULTATS,              # résultats publiés (une SURPRISE ne se voit qu'à la lecture)
     "2.03": "financement",          # obligation financière directe
     "2.04": "existentiel",          # exigibilité anticipée d'une dette
     "3.01": "existentiel",          # radiation / non-conformité de cotation
@@ -172,8 +174,13 @@ def ancre_de_la_question(
         types = types_du_depot(e, note)
         touches = types & rouvrent
         if touches:
+            # #102 — un communiqué qui ne rouvre la question QU'AU TITRE DES RÉSULTATS publie des
+            # comptes : il périme ce qui précède leur clôture, pas les comptes qu'il publie. Pour tout
+            # autre motif (seul ou à côté), il périme à sa date d'événement.
+            effet = e.periode_publiee if touches == {RESULTATS} else None
             gardes.append(replace(e, types=tuple(sorted(touches)),
-                                  note=note.resume if note is not None else None))
+                                  note=note.resume if note is not None else None,
+                                  date_d_effet=effet))
     if not gardes:
         n = len(lookup.recents)
         depuis: Optional[str] = (min(e.event_date for e in lookup.recents).isoformat()
@@ -183,5 +190,8 @@ def ancre_de_la_question(
             filtre=(f"aucun des {n} dépôts importants consultés"
                     + (f" (depuis le {depuis})" if depuis else "")
                     + f" n'est d'un type qui rouvre cette question ({familles})"))
+    # L'ancre est le dépôt au SEUIL le plus tardif, pas le plus récent : un financement du 15/07 périme
+    # davantage que les résultats du 05/08 qui publient des comptes clos le 30/06.
+    gardes.sort(key=lambda e: (e.seuil, e.event_date, e.filing_date), reverse=True)
     return MaterialEventLookup(status="found", event=gardes[0], cik=lookup.cik,
                                recents=tuple(gardes), filtre=familles)
