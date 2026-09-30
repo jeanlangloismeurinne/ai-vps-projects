@@ -5866,3 +5866,40 @@ tomber la question, renvoi unique d'une réponse refusée) ; mesure sur 3 passag
 3/3, qf_6 3/3, qf_7 1/3) ; retrait appliqué sur décision de l'utilisateur (« restaurer à son état
 antérieur », 469-474 courantes, 893-897 et 1582-1583 retirés, sauvegardes JSON gardées) — le
 `check_comite_persist` que les deux mandats à tort faisaient rougir est revenu au vert (22/0).
+
+
+---
+
+## 2026-09-30 — l'horloge des comptes (#102) et les faits postérieurs lus (#103)
+
+Copie conforme de l'en-tête « Ce qui reste ouvert » avant sa résorption :
+
+**⚠️ EN TÊTE — réémission RVMD × qualite_financiere FAITE le 2026-09-29 (#101), relue ligne à ligne**
+- Un passage `executer_chaine … --sans-collecte` : réponses **919-925**, 0 refus, 7 acquittées, 0
+  mandat. qf_4 `repondu` (dette brute 487,43 · trésorerie 3 937,97 · dette nette −3 450,54 calculée
+  par le code) ; qf_6 `repondu` « part faible », chiffre non établi motivé ; qf_7 `repondu`
+  « autonomie longue », consommation annuelle non établie (la guidance est un calcul) ⟹ autonomie non
+  calculable, dit. Chaque chiffre retrouvé dans le corpus.
+- **Écart de traçabilité (non retiré, fait juste)** : la trésorerie 3 937,97 de l'encadré qf_4 vient
+  de #307/#296, **non cités** par qf_4 (cités : 297, 300, 341, 342). Aucune garde ne vérifie qu'un
+  chiffre établi figure dans une pièce CITÉE — à instruire (#78 a montré qu'une telle garde seule ne
+  suffit pas, mais elle aurait vu ce cas).
+- **Toutes trois PÉRIMÉES** (fait nouveau publié) ⟹ **aucune réponse RVMD reprenable** ;
+  `check_signature_modele_persist` le dit (1 rouge, c'est l'état réel, ne pas le verdir). qf_6 est
+  périmée par la pièce **#345** (« politique R&D, 10-Q T2 2026 ») **datée 2025-12-31**, héritage sans
+  datation (`portee_temporelle` NULL) : la réponse prend la date de sa pièce la plus ancienne, donc les
+  résultats du 05/08 la rouvrent. Remède = re-collecter/redater les pièces d'héritage (dette « 128
+  pièces »), jamais dater par modèle. Suite du lot : décider si l'on re-collecte le dossier RVMD
+  qualite_financiere (collecte payante autorisée en test, arbitrage du 22/09) avant la réponse à
+  plusieurs nombres suivante.
+
+
+Ce qui a été fait ensuite : mesure à la lecture — seule qf_6 était périmée par #345 ; qf_4/qf_7 l'étaient
+par le 8-K du 27/08 (en fait quatre baux du siège, pièce #296 déjà au corpus), et SURTOUT tout fait daté
+à la clôture (#79) était périmé par le communiqué de résultats qui le publie : re-collecter n'aurait rien
+changé. Deux arbitrages utilisateur (comptes à jour jusqu'aux suivants ; l'analyste lit et chiffre le fait
+postérieur) → #102 (déployé `de4abf2`) et #103 (déployé `4e117fa`). Mesure 3 passages sans écriture :
+qf_4 3/3, qf_6 3/3 (périmée par #345), qf_7 0/3. Écrit : la seule qf_4 (`--questions=qf_4`), réponse
+**963** (supersede 923), acquittée, 0 mandat → À JOUR, reprenable ; `check_signature_modele_persist`
+vert pour la bonne raison ; suite 4066/0. Défaut relevé : la prose de 963 dit « dette nette −328 M$ »
+(définition trésorerie seule, portée par #296) contre −3 450,54 dans l'encadré.

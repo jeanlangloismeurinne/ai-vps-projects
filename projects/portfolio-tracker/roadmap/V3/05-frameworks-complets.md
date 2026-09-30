@@ -206,6 +206,11 @@ séance suivante).
     0 refus, 7 acquittées)** — mais les trois réponses sont périmées (pièce d'héritage #345 datée
     2025-12-31) : aucune n'est reprenable ; la case reste ouverte jusqu'à une réponse reprenable. Dette bloquante pour la production consignée au fichier de
     reprise (une ré-analyse peut remplacer une réponse par une moins bonne).
+  - ✅ **Première réponse reprenable le 2026-09-30 (#102, #103)** : les pièces n'étaient pas seules en cause —
+    un communiqué de résultats périmait les comptes qu'il publie (#102), et les baux du 27/08 périmaient
+    qf_4/qf_7 sans que l'analyste puisse les lire (#103). qf_4 #963 écrite seule (`--questions=qf_4`), à
+    jour, reprenable. **La case reste ouverte** : prose de #963 contradictoire avec son encadré (−328 vs
+    −3 450,54), qf_6 (re-collecte de #345), qf_7 (0/3, guidance #312).
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
   que la barrière tient)
