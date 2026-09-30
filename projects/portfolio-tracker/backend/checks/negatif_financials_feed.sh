@@ -98,6 +98,27 @@ mutations=(
 #    OPPOSÉ — et c'est pour ça que la garde ROIC avait manqué : on n'avait cherché que les nombres
 #    flatteurs.
 "$SRC¦        significatif = net_income > 0¦        significatif = True  # mutation: le quotient de deux négatifs redevient publiable¦fcf_conversion_pct est None, pas le quotient de deux négatifs"
+
+# ── §4 UNE SEULE DÉFINITION DE LA DETTE NETTE (#104, 2026-09-30) ──────────────────────────────────
+# 9. ⚠️ L'ÉTAT D'AVANT, RESTAURÉ : la trésorerie seule. MSFT redevient endetté (+10,1 Md$ publiés
+#    tier A) alors qu'il détient 36,5 Md$ de trésorerie nette — et RVMD retombe à −328 M$.
+"$SRC¦    liquidites = (cash + placements) if cash is not None and placements is not None else None¦    liquidites = cash  # mutation: la trésorerie seule¦MSFT : en TRÉSORERIE NETTE"
+# 10. Le « trou » des placements comblé par un ZÉRO : placements non relevés ⟹ trésorerie seule,
+#     sans le dire. C'est exactement le chiffre qui a trompé l'analyste de #963.
+"$SRC¦    liquidites = (cash + placements) if cash is not None and placements is not None else None¦    liquidites = (cash + (placements or 0.0)) if cash is not None else None  # mutation: absence = zéro¦dette nette NON ÉTABLIE"
+# 11. La part de dette à douze mois oubliée : la dette brute ne compte que le long terme.
+"$SRC¦    dette_brute = (debt + (dette_courante or 0.0)) if debt is not None else None¦    dette_brute = debt  # mutation: part à douze mois oubliée¦MSFT : dette brute = dette LT + part à douze mois"
+# 12. Les placements ne sont plus LUS au bilan : la dette nette devient « non établie » partout.
+"$SRC¦    facts[\"placements\"] = placements_rec[\"cs\"].get(\"value\") if placements_rec else None¦    facts[\"placements\"] = None  # mutation: placements jamais lus¦placements lus au même bilan que la trésorerie"
+# 13. Le capital investi du ROIC reste sur l'ancienne assiette (trésorerie seule).
+"$SRC¦        invested = equity + dette_brute - (liquidites if liquidites is not None else cash)¦        invested = equity + dette_brute - cash  # mutation: ancienne assiette¦roic ≈ 104,3 %"
+# 14. Le ROIC sur l'assiette « trésorerie seule » ne dit plus qu'il est minoré.
+"$SRC¦non opérationnel est significatif.{reserve}{reserve_placements}{mention_mixte}¦non opérationnel est significatif.{reserve}{mention_mixte}¦DIT que son capital investi est majoré"
+# 15. Capital investi NÉGATIF chiffré : RVMD à CA fictif publierait un ROIC de 134 % — une perte lue
+#     comme un rendement (#44).
+"$SRC¦        elif roic is None or invested < 0:¦        elif roic is None:  # mutation: dénominateur négatif accepté¦capital investi négatif"
+# 16. Le concept que NVDA dépose depuis fin 2025 retiré : son poste de placements redevient périmé.
+"app/knowledge/edgar_feed.py¦\"ShortTermInvestments\", \"OtherShortTermInvestments\", \"DebtSecuritiesCurrent\"],¦\"ShortTermInvestments\", \"OtherShortTermInvestments\"],  # mutation¦connaît \`DebtSecuritiesCurrent\`"
 )
 
 source "$(dirname "$0")/_negatif.sh"

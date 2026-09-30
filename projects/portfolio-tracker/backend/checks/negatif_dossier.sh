@@ -47,6 +47,11 @@ mutations=(
 "$SRC¦-d.toordinal() if d is not None else 0¦d.toordinal() if d is not None else 0¦AUCUNE antérieure n'est plus récente"
 # ── §4 ordre, 1ʳᵉ composante — une pièce non datée prétend être la plus fraîche ────────────────────
 "$SRC¦(0 if d is not None else 1,¦(1 if d is not None else 0,¦passe devant #999"
+# #104 — la préséance de la pièce DATÉE sur l'héritage retirée : une re-collecte correctement datée
+# ne passerait jamais devant #296, daté par la page d'un 8-K.
+"$SRC¦1 if heritage else 0,¦0,  # mutation: héritage à égalité¦est en vigueur devant #296 (héritage"
+# …et inversée : l'héritage passerait devant tout ce qui est qualifié.
+"$SRC¦1 if heritage else 0,¦0 if heritage else 1,  # mutation: héritage d'abord¦est en vigueur devant #296 (héritage"
 # ── §5 le plafond mord sur les pièces en vigueur au lieu du reste ──────────────────────────────────
 "$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *hors_index_retenues]))[:plafond]¦plafond sous le nombre de pièces en vigueur"
 # ── §5bis une pièce qui sert DEUX points consomme deux places du plafond ───────────────────────────

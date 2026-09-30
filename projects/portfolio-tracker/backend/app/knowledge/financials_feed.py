@@ -280,6 +280,14 @@ def extract_edgar_facts(entries: list[dict[str, Any]]) -> dict[str, Any]:
     else:
         facts["cash"] = facts.get("cash")
         facts["long_term_debt"] = facts.get("long_term_debt")
+    # Postes du MÊME bilan que la trésorerie (ancre stock) : les placements à court terme et la part
+    # de la dette exigible à douze mois. Sans eux, la « dette nette » était dette LT − trésorerie
+    # seule — mesuré le 2026-09-30 : RVMD −328 M$ au lieu de −3 450,5 M$, et MSFT (+10,1 Md$) comme
+    # NVDA (+9,9 Md$) publiés ENDETTÉS alors qu'ils sont en trésorerie nette (−36,5 / −23,2 Md$, part à douze mois comprise).
+    placements_rec = _at("marketable_securities")
+    facts["placements"] = placements_rec["cs"].get("value") if placements_rec else None
+    courante_rec = _at("long_term_debt_current")
+    facts["dette_courante"] = courante_rec["cs"].get("value") if courante_rec else None
     return facts
 
 
@@ -328,6 +336,22 @@ def build_financials_entries(
     cash = facts.get("cash")
     debt = facts.get("long_term_debt")
     capex = facts.get("capex")
+    placements = facts.get("placements")
+    dette_courante = facts.get("dette_courante")
+    # ⚠️ UNE SEULE DÉFINITION DE LA DETTE NETTE : celle du référentiel (qf_4, `frameworks.yaml` —
+    # « dette brute moins trésorerie ET placements »). Ce feed en tenait une seconde, plus étroite
+    # (trésorerie seule), publiée tier A : l'analyste l'a recopiée fidèlement dans la prose de #963
+    # pendant que l'encadré, calculé par le code, disait −3 450,5 M$ (#104). Deux définitions sous
+    # un même nom, c'est #46 appliqué à un chiffre.
+    #
+    # Comme un vrai fonds : on ne publie pas une trésorerie nette sans connaître le portefeuille de
+    # placements — chez un émetteur riche en cash, c'est lui qui porte l'essentiel (3,1 Md$ sur
+    # 3,9 chez RVMD, 55,9 Md$ sur 76,8 chez MSFT). Placements NON RELEVÉS ⟹ dette nette NON ÉTABLIE,
+    # nommée ; jamais recalculée sur la trésorerie seule. La part de dette à douze mois, elle, est
+    # un concept que l'émetteur ne dépose que s'il en a une : son absence, à côté d'une dette LT
+    # déposée, se lit « aucune échéance à douze mois » (RVMD : convertible unique, échéance 2033).
+    dette_brute = (debt + (dette_courante or 0.0)) if debt is not None else None
+    liquidites = (cash + placements) if cash is not None and placements is not None else None
 
     specs: list[FinancialsEntrySpec] = []
     unfounded: list[dict[str, str]] = []
@@ -362,30 +386,50 @@ def build_financials_entries(
 
     # ── levier : dette / capitaux propres + dette nette (tous EDGAR) ──────────
     if debt is not None and equity and cash is not None:
-        net_debt = debt - cash
-        d2e = debt / equity * 100
-        nd2e = net_debt / equity * 100
-        net_cash = net_debt < 0
+        d2e = dette_brute / equity * 100
+        net_debt = dette_brute - liquidites if liquidites is not None else None
+        nd2e = net_debt / equity * 100 if net_debt is not None else None
+        net_cash = net_debt < 0 if net_debt is not None else None
         structured = {
             "metric": "levier", "field": "levier",
-            "long_term_debt": debt, "cash": cash, "net_debt": net_debt,
+            "long_term_debt": debt, "long_term_debt_current": dette_courante,
+            "dette_brute": dette_brute, "cash": cash, "placements": placements,
+            "liquidites": liquidites, "net_debt": net_debt,
             "stockholders_equity": equity, "currency": cur,
-            "debt_to_equity_pct": round(d2e, 2), "net_debt_to_equity_pct": round(nd2e, 2),
+            "debt_to_equity_pct": round(d2e, 2),
+            "net_debt_to_equity_pct": round(nd2e, 2) if nd2e is not None else None,
             "net_cash_position": net_cash, "period": au_bilan,
             "period_end": str(balance_end) if balance_end else None,
             "poste_kind": "stock",
-            "method": "dette LT (non courante) / capitaux propres ; dette nette = dette LT − trésorerie",
+            "method": ("dette brute (LT non courante + part à douze mois) / capitaux propres ; "
+                       "dette nette = dette brute − (trésorerie + placements à court terme)"),
         }
+        courante_txt = (f" + part à douze mois {_md(dette_courante, cur)}" if dette_courante
+                        else " (aucune échéance à douze mois déposée)")
         content = (
-            f"Levier de {ticker_id} ({symbol}) — {au_bilan} : dette LT {_md(debt, cur)}, trésorerie "
-            f"{_md(cash, cur)} → dette nette {_md(net_debt, cur)}. Gearing (`levier`, dette/capitaux "
-            f"propres) = {_pct(d2e)} ; dette nette/capitaux propres = {_pct(nd2e)}. "
+            f"Levier de {ticker_id} ({symbol}) — {au_bilan} : dette brute {_md(dette_brute, cur)} "
+            f"(dette LT {_md(debt, cur)}{courante_txt}). Gearing (`levier`, dette brute/capitaux "
+            f"propres) = {_pct(d2e)}. "
         )
-        if net_cash:
+        if net_debt is None:
+            structured["net_debt_status"] = "placements_non_releves"
             content += (
-                "Position de trésorerie NETTE POSITIVE : dette nette négative, donc dette nette/EBITDA "
-                "négatif — le gearing (dette/capitaux propres) est ici la lecture pertinente du levier. "
+                f"Dette nette **NON ÉTABLIE** : trésorerie {_md(cash, cur)}, mais les placements à "
+                f"court terme ne sont pas relevés dans les dépôts — la dette nette ne se calcule pas "
+                f"sur la trésorerie seule (elle serait majorée de tout le portefeuille de placements). "
             )
+        else:
+            content += (
+                f"Dette nette {_md(net_debt, cur)} = dette brute − (trésorerie {_md(cash, cur)} + "
+                f"placements à court terme {_md(placements, cur)} = {_md(liquidites, cur)}) ; "
+                f"dette nette/capitaux propres = {_pct(nd2e)}. "
+            )
+            if net_cash:
+                content += (
+                    "Position de trésorerie NETTE POSITIVE : dette nette négative, donc dette nette/"
+                    "EBITDA négatif — le gearing (dette/capitaux propres) est ici la lecture pertinente "
+                    "du levier. "
+                )
         content += "Calculé depuis les postes de bilan déposés chez EDGAR (tier A)."
         specs.append(FinancialsEntrySpec(
             field="levier", entry_type="fact_financial",
@@ -423,7 +467,16 @@ def build_financials_entries(
         # Un refus muet aurait laissé #656 « courante » pour toujours — `ENTRIES_COURANTES` ne
         # connaît que `superseded_by`, et un stockage append-only ne supprime pas, il empile.
         operations = None if revenue is None else revenue > 0
-        invested = equity + debt - cash
+        # Même assiette que la dette nette (#104) : le capital investi est net de TOUTES les
+        # liquidités, placements compris. Placements non relevés ⟹ trésorerie seule, et le texte
+        # le DIT (le ROIC est déjà une approximation ; le refuser priverait tout émetteur dont le
+        # concept de placements n'a pas répondu).
+        invested = equity + dette_brute - (liquidites if liquidites is not None else cash)
+        reserve_placements = (
+            "" if liquidites is not None else
+            " ⚠️ Placements à court terme non relevés : capital investi net de la trésorerie SEULE, "
+            "donc majoré de tout portefeuille de placements (ROIC minoré d'autant)."
+        )
         roic = net_income / invested * 100 if invested else None
         if operations is False:
             structured = {
@@ -453,8 +506,15 @@ def build_financials_entries(
                 content=content, content_structured=structured,
                 fiscal_period=period, source_url=src, tags=_tags("roic_pct"),
             ))
-        elif roic is None:
-            _miss("roic_pct", "capital investi nul")
+        elif roic is None or invested < 0:
+            # Un capital investi NÉGATIF (liquidités > capitaux propres + dette) n'est pas un petit
+            # capital : le quotient changerait de signe avec lui et une perte se lirait en rendement
+            # (#44 — dénominateur ≤ 0, non calculable, jamais absent). Visible depuis que les
+            # placements entrent dans l'assiette (#104).
+            _miss("roic_pct",
+                  f"capital investi {'nul' if not invested else 'NÉGATIF (' + _md(invested, cur) + ')'} "
+                  f"— liquidités supérieures aux capitaux propres et à la dette : le quotient n'a pas "
+                  f"de sens de rendement", etat="non_defini")
         else:
             # `operations is None` : le poste CA n'a pas été résolu. On publie — refuser ici
             # priverait de ROIC tout émetteur dont le concept XBRL du CA n'a pas répondu — mais on
@@ -467,18 +527,20 @@ def build_financials_entries(
                 "metric": "roic", "field": "roic_pct",
                 "roic_pct": round(roic, 2), "net_income": net_income,
                 "invested_capital": invested, "stockholders_equity": equity,
-                "long_term_debt": debt, "cash": cash, "currency": cur, "period": period,
+                "long_term_debt": debt, "dette_brute": dette_brute, "cash": cash,
+                "placements": placements, "currency": cur, "period": period,
                 "nopat_approx": "net_income", "operations_etablies": operations,
                 "method": ("NOPAT ≈ résultat net (charge d'intérêts nette négligeable en position de "
-                           "trésorerie nette) ; capital investi = capitaux propres + dette LT − trésorerie"),
+                           "trésorerie nette) ; capital investi = capitaux propres + dette brute − "
+                           "(trésorerie + placements à court terme)"),
             }, mixte=True)
             content = (
                 f"ROIC de {ticker_id} ({symbol}) — {fy} : {_pct(roic)} (`roic_pct`). Capital investi "
-                f"{_md(invested, cur)} (capitaux propres {_md(equity, cur)} + dette LT {_md(debt, cur)} − trésorerie "
-                f"{_md(cash, cur)}), NOPAT approché par le résultat net {_md(net_income, cur)}. "
+                f"{_md(invested, cur)} (capitaux propres {_md(equity, cur)} + dette brute {_md(dette_brute, cur)} − "
+                f"trésorerie {_md(cash, cur)} − placements {_md(placements, cur) if placements is not None else 'non relevés'}), NOPAT approché par le résultat net {_md(net_income, cur)}. "
                 f"Approximation NOPAT ≈ résultat net justifiée par la position de trésorerie nette "
                 f"(intérêts nets négligeables) — elle peut LÉGÈREMENT majorer le ROIC si le résultat "
-                f"non opérationnel est significatif.{reserve}{mention_mixte} Calculé depuis les "
+                f"non opérationnel est significatif.{reserve}{reserve_placements}{mention_mixte} Calculé depuis les "
                 f"dépôts EDGAR (tier A)."
             )
             specs.append(FinancialsEntrySpec(

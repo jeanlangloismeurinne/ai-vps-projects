@@ -255,9 +255,13 @@ POSTES: list[Poste] = [
     Poste("ppe_net",
           ["PropertyPlantAndEquipmentNet"],
           ["financials", "balance_sheet", "edgar"], "Immobilisations corporelles nettes", flow=False),
+    # `DebtSecuritiesCurrent` (2026-09-30, #104) : NVDA a quitté `MarketableSecuritiesCurrent` après
+    # le 2025-10-26 et dépose depuis ses 34,1 Md$ de placements sous ce concept. Faute de lui, le poste
+    # restait périmé (donc absent à l'ancre bilan) et la dette nette NVDA sortait +9,9 Md$ au lieu de
+    # −23,2. La fraîcheur prime sur l'ordre : le concept du dernier bilan gagne.
     Poste("marketable_securities",
           ["MarketableSecuritiesCurrent", "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
-           "ShortTermInvestments", "OtherShortTermInvestments"],
+           "ShortTermInvestments", "OtherShortTermInvestments", "DebtSecuritiesCurrent"],
           ["financials", "balance_sheet", "edgar"], "Titres de placement à court terme", flow=False),
     # LE POSTE QUI MANQUAIT, ET QUI A COÛTÉ UN FAUX APPARIEMENT (mesure du 2026-09-14) :
     # l'ingrédient `qf_7.echeances_a_douze_mois` demandait la dette exigible sous 12 mois. Faute de

@@ -2690,6 +2690,37 @@ le 8-K dans #296 avec un effet écrit ; qf_6 3/3 répondue (reste périmée : #3
 Gardes : `check_evenements` §9 · `check_framework_contract` [P] · `check_analyste` [5 ter] · `check_parcours`
 §6/§7 ; négatifs évènements **32/0**, contrat **44/0**, analyste **49/0**, parcours **21/0**. Suite **4065**.
 
+### #104 — une seule définition de la dette nette, et une pièce d'héritage cède devant une pièce datée
+
+**Le défaut (2026-09-30, réponse RVMD qf_4 #963).** La prose disait « dette nette −328 M$ », l'encadré
+−3 450,5. L'analyste n'avait rien inventé : le producteur déterministe du levier
+(`financials_feed`) calculait « dette LT − trésorerie » **sans les placements à court terme**, et
+publiait ce chiffre tier A ; la pièce d'héritage #296 le recopiait. Le référentiel (qf_4) dit
+« dette brute − trésorerie ET placements ». Deux définitions sous un même nom (#46 appliqué à un
+chiffre). Même défaut ailleurs, **signe inversé** : MSFT publié endetté de 10,1 Md$ (réel : 36,5 Md$
+de trésorerie nette), NVDA de 9,9 Md$ (réel : 23,2 Md$ de trésorerie nette — son concept de
+placements, `DebtSecuritiesCurrent` depuis fin 2025, n'était pas relevé).
+
+**Ce que fait un vrai fonds** : il ne corrige pas une note incohérente par une consigne de rédaction,
+il corrige la définition maison, pour que tout le monde calcule la même chose. Aucune règle « la
+prose ne contredit pas l'encadré » : à ne reconsidérer que si la contradiction revient.
+
+**Les règles.**
+- Levier : dette brute = dette LT + part à douze mois (absente à côté d'une dette LT déposée = aucune
+  échéance) ; dette nette = dette brute − (trésorerie + placements). **Placements non relevés ⟹ dette
+  nette NON ÉTABLIE**, nommée, jamais recalculée sur la trésorerie seule ; le gearing reste publié.
+- ROIC : capital investi net des mêmes liquidités ; placements non relevés ⟹ publié AVEC la réserve
+  « capital investi majoré » ; capital investi **négatif** ⟹ `non_defini` motivé (#44 — le quotient
+  changerait de signe avec lui).
+- Dossier (`dossier._rang`) : parmi les pièces datées, une pièce qualifiée sous la 045 passe devant
+  l'**héritage** (`portee_temporelle IS NULL`), quelle que soit la date de celui-ci — application de
+  #79 (« gagner sur la date d'une page n'est pas honnête ») ; sans elle, une re-collecte correctement
+  datée ne pouvait jamais remplacer #296, daté par la page d'un 8-K.
+
+Republié en base le 2026-09-30 (déterministe, sans modèle) : levier RVMD #699, NVDA #702, MSFT #706 ;
+placements NVDA relevés. Gardes : `check_financials_feed` §11 (**121/0**) + `negatif_financials_feed.sh`
+**16/0** ; `check_dossier` §2bis (**28/0**) + `negatif_dossier.sh` **12/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

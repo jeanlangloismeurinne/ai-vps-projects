@@ -214,7 +214,7 @@ class Dossier:
         return "\n".join(lignes)
 
 
-def _rang(entry: dict[str, Any]) -> tuple[int, int, int]:
+def _rang(entry: dict[str, Any]) -> tuple[int, int, int, int]:
     """Ordre de fraîcheur d'une pièce : la plus récente d'abord, non datée en dernier. Croissant.
 
     ⚠️ La clef est `source_date` — ce que la pièce DIT du monde — et non `created_at`, la date à
@@ -231,9 +231,21 @@ def _rang(entry: dict[str, Any]) -> tuple[int, int, int]:
     C'est la LECTURE du dossier en texte qui l'a montrée — pas le code de sortie
     (`feedback_rendu_est_un_producteur`). D'où l'invariant d'ordre asserté en §3 de
     `checks/check_dossier.py`, qui mord sur une inversion de signe.
+
+    ⚠️ **Une pièce d'HÉRITAGE cède devant une pièce DATÉE (#104, application de #79).** Avant la 045,
+    `source_date` recevait indifféremment la date du fait ou celle du document (`portee_temporelle IS
+    NULL` = héritage, dénombré). Mesuré le 2026-09-30 : la chemise `qf_4.endettement_brut_et_net` de
+    RVMD servait #296 « au 2026-09-01 » — la date d'un 8-K cité dans sa prose — pour des chiffres au
+    2026-06-30, et aucune pièce correctement datée ne pouvait jamais passer devant elle. « Perdre
+    faute de date est honnête ; gagner sur la date d'une page ne l'est pas » (#79) : parmi les pièces
+    datées, les pièces qualifiées sous la 045 passent devant l'héritage, quelle que soit sa date ; une
+    pièce sans aucune date reste dernière. Une entry qui ne porte pas la clef (fixture, lecteur
+    ancien) est traitée en héritage : l'ordre d'avant est inchangé tant que personne n'est qualifié.
     """
     d: Optional[date] = entry.get("source_date")
-    return (0 if d is not None else 1, -d.toordinal() if d is not None else 0, -int(entry["id"]))
+    heritage = entry.get("portee_temporelle") is None
+    return (0 if d is not None else 1, 1 if heritage else 0,
+            -d.toordinal() if d is not None else 0, -int(entry["id"]))
 
 
 def assembler_dossier(
@@ -309,7 +321,8 @@ def assembler_dossier(
 
 
 _SQL_ENTRIES = """
-    SELECT id, title, content, source_type, source_url, source_date, reliability_tier, nature, created_at
+    SELECT id, title, content, source_type, source_url, source_date, reliability_tier, nature, created_at,
+           portee_temporelle
       FROM knowledge_entries
      WHERE ticker_id = $1 AND superseded_by IS NULL
 """

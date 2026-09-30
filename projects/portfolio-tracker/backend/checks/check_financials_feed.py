@@ -72,6 +72,9 @@ ENTRIES = [
     _fact("stockholders_equity", {"value": 157293000000}, eid=6),
     _fact("total_assets", {"value": 206803000000}, eid=7),
     _fact("cash_and_lt_debt", {"cash": 10605000000, "long_term_debt": 7469000000}, eid=8),
+    # Placements à court terme au même bilan — valeur RÉELLE (data.sec.gov, us-gaap:DebtSecuritiesCurrent
+    # au 2026-01-25, relevée le 2026-09-30). Sans eux la dette nette NVDA sortait au mauvais signe (#104).
+    _fact("marketable_securities", {"value": 39065000000}, eid=9),
 ]
 
 print("\n1. extract_edgar_facts — dernier exercice, poste composite, capex absent")
@@ -82,6 +85,9 @@ check("CA FY2026 pris (pas le comparatif FY2025)", facts["revenue"] == 215938000
 check("résultat net FY2026", facts["net_income"] == 120067000000)
 check("cash + dette LT lus depuis le poste composite",
       facts["cash"] == 10605000000 and facts["long_term_debt"] == 7469000000)
+check("placements lus au même bilan que la trésorerie", facts.get("placements") == 39065000000,
+      f"→ {facts.get('placements')}")
+check("part de dette à douze mois non déposée → None (jamais 0)", facts.get("dette_courante") is None)
 check("capex absent de la base = None (jamais 0)", facts.get("capex") is None)
 check("URL de provenance conservée (→ CIK)", facts["source_url"] == URL)
 
@@ -100,15 +106,18 @@ check("tous en entry_type fact_financial", all(s.entry_type == "fact_financial" 
 
 by = {s.field: s for s in specs}
 lev = by["levier"].content_structured
-check("levier : dette nette = dette LT − trésorerie", approx(lev["net_debt"], -3136000000.0, 1e6))
+check("levier : dette nette = dette brute − (trésorerie + placements)",
+      approx(lev["net_debt"], -42201000000.0, 1e6), f"→ {lev['net_debt']}")
 check("levier : position de trésorerie nette positive détectée", lev["net_cash_position"] is True)
 check("levier : gearing dette/capitaux propres ≈ 4,75 %", approx(lev["debt_to_equity_pct"], 4.75))
 check("levier : le content signale la trésorerie nette",
       "trésorerie nette" in by["levier"].content.lower())
 
 roic = by["roic_pct"].content_structured
-check("roic : capital investi = CP + dette LT − trésorerie", approx(roic["invested_capital"], 154157000000.0, 1e6))
-check("roic ≈ 77,9 %", approx(roic["roic_pct"], 77.88, 0.05), f"→ {roic['roic_pct']}")
+check("roic : capital investi = CP + dette brute − trésorerie − placements",
+      approx(roic["invested_capital"], 115092000000.0, 1e6), f"→ {roic['invested_capital']}")
+# 104,3 % et non plus 77,9 % : le capital investi est net des placements depuis #104 (115,1 Md$).
+check("roic ≈ 104,3 %", approx(roic["roic_pct"], 104.32, 0.05), f"→ {roic['roic_pct']}")
 check("roic : approximation NOPAT ≈ résultat net déclarée",
       roic["nopat_approx"] == "net_income" and "NOPAT" in by["roic_pct"].content)
 check("roic : tags ciblent le champ (curator + supersede)",
@@ -167,6 +176,7 @@ RVMD = {
     "total_assets": 2_354_508_000,
     "capex": 15_990_000,
     "cash": 383_745_000,
+    "placements": 1_641_934_000,       # us-gaap:MarketableSecuritiesCurrent au 2025-12-31 (10-K)
     "long_term_debt": 0,
 }
 specs_r, unf_r = build_financials_entries("RVMD", "RVMD", RVMD, as_of=AS_OF)
@@ -213,7 +223,10 @@ check("CA nul : le motif ne dit PAS « intrant manquant » (il l'a dit pendant 2
       f"→ {unf_by.get('intensite_capex_pct')}")
 check("CA nul : le motif dit `NUL (déposé, pas manquant)`",
       "NUL" in unf_by.get("intensite_capex_pct", ""), f"→ {unf_by.get('intensite_capex_pct')}")
-SANS_CA = dict(RVMD, revenue=None)
+# `placements=None` (#104) : avec ses 1,6 Md$ de placements, RVMD FY2025 a un capital investi
+# négatif, donc un ROIC non défini quel que soit le CA — la branche « CA non résolu » ne serait plus
+# atteinte. Elle s'exerce sur l'assiette « trésorerie seule », celle d'un émetteur sans placements relevés.
+SANS_CA = dict(RVMD, revenue=None, placements=None)
 specs_sans, unf_sans_r = build_financials_entries("RVMD", "RVMD", SANS_CA, as_of=AS_OF)
 unf_sans = {u["field"]: u["reason"] for u in unf_sans_r}
 check("CA réellement absent : le motif ne dit PAS `NUL`",
@@ -317,6 +330,7 @@ MIXTE = [
     _e("total_assets", end="2026-06-30", kind="stock", value=4_323_270_000.0, eid=106),
     _e("cash_and_lt_debt", end="2026-06-30", kind="stock", eid=107,
        cash=815_435_000.0, long_term_debt=487_434_000.0),
+    _e("marketable_securities", end="2026-06-30", kind="stock", value=3_122_534_000.0, eid=108),
 ]
 f_mix = extract_edgar_facts(MIXTE)
 check("les flux ne sont PAS vidés par un bilan plus récent",
@@ -345,7 +359,11 @@ by_mix = {s.field: s for s in specs_mix}
 # le CA passe à une valeur positive, parce que le mécanisme sous test est universel et que le cas
 # NORMAL d'un ratio mixte est un émetteur qui exploite. La valeur elle-même ne porte rien : aucun
 # assert ne la lit, seul son signe compte.
-f_mix_ca = dict(f_mix, revenue=1_000_000_000.0)
+# ⚠️ `placements=None` depuis #104 : avec ses 3,1 Md$ de placements, RVMD a un capital investi
+# NÉGATIF (−844 M$) et le ROIC est à juste titre non défini (§11) — la section ne mesurerait plus
+# l'ancre. Sans placements relevés, le ROIC se publie avec sa réserve : c'est une branche RÉELLE
+# (émetteur dont le concept de placements n'a pas répondu), pas une commodité.
+f_mix_ca = dict(f_mix, revenue=1_000_000_000.0, placements=None)
 by_mix_ca = {s.field: s for s in build_financials_entries("RVMD", "RVMD", f_mix_ca, as_of=AS_OF)[0]}
 check("le ROIC reste fondé malgré les deux ancres (il n'est pas devenu un trou)",
       "roic_pct" in by_mix_ca
@@ -359,9 +377,12 @@ check("le levier est calculé sur le bilan RÉCENT (dette convertible incluse)",
       f"→ {by_mix['levier'].content_structured['debt_to_equity_pct']}")
 # La trésorerie nette reste POSITIVE (RVMD a levé plus de cash que de dette) — l'enjeu n'est pas
 # le signe mais l'assiette : sur l'ancre périmée la dette était NON DÉTERMINÉE, donc `levier` était
-# non fondé. Le bilan frais le rend calculable, et la dette nette porte les deux jambes réelles.
-check("la dette nette est calculée sur les deux jambes du bilan frais",
-      approx(by_mix["levier"].content_structured["net_debt"], -328_001_000.0, 1e6),
+# non fondé. Le bilan frais le rend calculable, et la dette nette porte ses jambes réelles.
+# ⚠️ Cet assert disait −328 M$ jusqu'au 2026-09-30 : il était écrit depuis la sortie du producteur
+# (4ᵉ faux vert) et figeait une dette nette SANS les 3,1 Md$ de placements. −3 450,5 M$ est la valeur
+# que l'encadré de qf_4 calcule sur le même bilan (#101, réponse #963) — une seule définition (#104).
+check("la dette nette est calculée sur le bilan frais, placements compris",
+      approx(by_mix["levier"].content_structured["net_debt"], -3_450_535_000.0, 1e6),
       f"→ {by_mix['levier'].content_structured['net_debt']}")
 
 # Non-régression : ancres confondues (aucun trimestre déposé) → comportement strictement ancien.
@@ -430,7 +451,8 @@ check("un ratio MIXTE le dit AUSSI en toutes lettres (c'est le texte que l'agent
 
 # Non-régression : ancres confondues → aucune mention de mixité, et le levier redevient FY.
 specs_uni, _ = build_financials_entries("RVMD", "RVMD",
-                                        dict(f_uni, capex=15_990_000.0, revenue=1_000_000_000.0),
+                                        dict(f_uni, capex=15_990_000.0, revenue=1_000_000_000.0,
+                                             placements=None),   # même motif que `f_mix_ca` (#104)
                                         as_of=date(2026, 9, 4))
 by_uni = {s.field: s for s in specs_uni}
 check("ancres confondues → le ROIC ne déclare aucune mixité",
@@ -578,7 +600,9 @@ _ff.get_db_session = lambda *a, **k: _Ctx(_FakeConn())
 # `KeyError` loin d'ici, au lieu de dire lequel des deux socles a bougé.
 MIXTE_CA = [dict(e, content_structured=dict(e["content_structured"], value=1_000_000_000.0))
             if e["content_structured"]["metric"] == "revenue" else e
-            for e in MIXTE]
+            for e in MIXTE
+            # sans les placements, pour la même raison que `f_mix_ca` (#104 : capital investi négatif)
+            if e["content_structured"]["metric"] != "marketable_securities"]
 _ff.get_current_entries = _aw(MIXTE_CA)
 _ff.store_knowledge = _fake_store
 _ff._current_tagged_entry_id = _aw(None)
@@ -643,6 +667,78 @@ check("l'écriture délègue la datation au détenteur unique",
 check("aucun site de construction ne pose sa propre `source_date`",
       "source_date=" not in _src_ff.split("def build_financials_entries")[1].split("def ")[0],
       "→ un spec pose sa date lui-même : quatre détenteurs, donc zéro")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+print("\n11. UNE SEULE DÉFINITION DE LA DETTE NETTE — celle du référentiel (#104)")
+# Défaut mesuré le 2026-09-30 : le levier calculait « dette LT − trésorerie » sans les placements.
+# RVMD −328 M$ (au lieu de −3 450,5, que l'encadré de qf_4 calcule sur le même bilan), MSFT et NVDA
+# publiés ENDETTÉS alors qu'ils sont en trésorerie nette. Chiffres RÉELS du dernier bilan de chacun
+# (data.sec.gov, relevés le 2026-09-30) : c'est le SIGNE qui discrimine, et il n'est visible que chez
+# un émetteur dont les placements dépassent la dette — une fixture sans placements serait aveugle.
+MSFT_2606 = {"period": "AU 2026-06-30", "period_end": date(2026, 6, 30), "currency": "USD",
+             "source_url": URL, "stockholders_equity": 442_387_000_000, "cash": 20_935_000_000,
+             "long_term_debt": 31_067_000_000, "dette_courante": 9_227_000_000,
+             "placements": 55_908_000_000, "net_income": 101_832_000_000, "revenue": 281_724_000_000}
+lev_m = {s.field: s for s in build_financials_entries("MSFT", "MSFT", MSFT_2606, as_of=AS_OF)[0]}["levier"]
+cs_m = lev_m.content_structured
+check("MSFT : dette brute = dette LT + part à douze mois", cs_m["dette_brute"] == 40_294_000_000,
+      f"→ {cs_m['dette_brute']}")
+check("MSFT : en TRÉSORERIE NETTE (le levier publiait +10,1 Md$ de dette nette)",
+      cs_m["net_debt"] == -36_549_000_000 and cs_m["net_cash_position"] is True,
+      f"→ {cs_m['net_debt']} / {cs_m['net_cash_position']}")
+check("MSFT : le texte nomme les deux composantes des liquidités",
+      "placements à court terme" in lev_m.content and "part à douze mois" in lev_m.content)
+NVDA_2607 = dict(MSFT_2606, stockholders_equity=228_984_000_000, cash=22_443_000_000,
+                 long_term_debt=32_366_000_000, dette_courante=1_000_000_000,
+                 placements=34_143_000_000)
+cs_n = {s.field: s for s in build_financials_entries("NVDA", "NVDA", NVDA_2607, as_of=AS_OF)[0]}["levier"].content_structured
+check("NVDA : en TRÉSORERIE NETTE (le levier publiait +9,9 Md$ de dette nette)",
+      cs_n["net_debt"] == -23_220_000_000 and cs_n["net_cash_position"] is True,
+      f"→ {cs_n['net_debt']}")
+
+# Placements NON RELEVÉS : on ne sait pas, donc on ne publie PAS une dette nette sur la trésorerie
+# seule (elle serait majorée de tout le portefeuille). Le gearing, lui, ne dépend que de la dette.
+SANS_PLAC = dict(MSFT_2606, placements=None)
+lev_s = {s.field: s for s in build_financials_entries("MSFT", "MSFT", SANS_PLAC, as_of=AS_OF)[0]}.get("levier")
+check("placements non relevés : le levier reste publié (le gearing est fondé)",
+      lev_s is not None and approx(lev_s.content_structured["debt_to_equity_pct"], 9.11, 0.01),
+      f"→ {lev_s and lev_s.content_structured['debt_to_equity_pct']}")
+check("placements non relevés : dette nette NON ÉTABLIE, jamais trésorerie seule",
+      lev_s is not None and lev_s.content_structured["net_debt"] is None
+      and lev_s.content_structured["net_cash_position"] is None
+      and lev_s.content_structured.get("net_debt_status") == "placements_non_releves",
+      f"→ {lev_s and lev_s.content_structured}")
+check("placements non relevés : le texte le DIT, et ne publie aucun chiffre de dette nette",
+      lev_s is not None and "NON ÉTABLIE" in lev_s.content and "−10" not in lev_s.content
+      and "Dette nette -" not in lev_s.content and "Dette nette 1" not in lev_s.content,
+      f"→ {lev_s and lev_s.content}")
+roic_s = {s.field: s for s in build_financials_entries("MSFT", "MSFT", SANS_PLAC, as_of=AS_OF)[0]}.get("roic_pct")
+check("placements non relevés : le ROIC est chiffré mais DIT que son capital investi est majoré",
+      roic_s is not None and roic_s.content_structured.get("roic_pct") is not None
+      and "Placements à court terme non relevés" in roic_s.content,
+      f"→ {roic_s and roic_s.content[-300:]}")
+roic_m = {s.field: s for s in build_financials_entries("MSFT", "MSFT", MSFT_2606, as_of=AS_OF)[0]}["roic_pct"]
+check("placements relevés : aucune réserve sur le capital investi",
+      "non relevés" not in roic_m.content
+      and roic_m.content_structured["invested_capital"] == 442_387_000_000 + 40_294_000_000 - 76_843_000_000,
+      f"→ {roic_m.content_structured['invested_capital']}")
+
+# Capital investi NÉGATIF : RVMD au 2026-06-30 avec un CA fictif (seul le signe du CA compte) — ses
+# liquidités (3,9 Md$) dépassent capitaux propres + dette (3,1 Md$). Le quotient n'a pas de sens.
+_neg_specs, _neg_unf = build_financials_entries("RVMD", "RVMD", dict(f_mix, revenue=1_000_000_000.0),
+                                                as_of=AS_OF)
+check("capital investi négatif : le ROIC n'est PAS chiffré, état `non_defini` motivé",
+      "roic_pct" not in {s.field for s in _neg_specs}
+      and any(u["field"] == "roic_pct" and u.get("etat") == "non_defini" and "NÉGATIF" in u["reason"]
+              for u in _neg_unf),
+      f"→ {[u for u in _neg_unf if u['field'] == 'roic_pct']}")
+
+# Le poste de placements accepte le concept que NVDA dépose depuis fin 2025 (sinon il resterait
+# périmé à l'ancre bilan, donc absent, et la dette nette NVDA serait « non établie » à tort).
+from app.knowledge.edgar_feed import POSTES as _POSTES_F
+check("le poste `marketable_securities` connaît `DebtSecuritiesCurrent` (NVDA)",
+      "DebtSecuritiesCurrent" in next(p for p in _POSTES_F if p.metric == "marketable_securities").concepts)
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

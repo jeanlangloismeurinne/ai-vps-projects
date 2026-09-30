@@ -111,6 +111,31 @@ B.check(
     "(#443 et #340 à égalité de date, l'id le plus haut d'abord)",
 )
 
+print("\n§2bis une pièce d'HÉRITAGE cède devant une pièce DATÉE sous la 045 (#104, application de #79)")
+# Le cas RÉEL du 2026-09-30 : #296 (héritage, `source_date` 2026-09-01 = la date d'un 8-K cité dans sa
+# prose) pour des chiffres AU 2026-06-30. Une re-collecte datée au 2026-06-30 (#443 ici, qualifiée
+# `constatee`) doit passer devant — sinon re-collecter ne change jamais la pièce lue par l'analyste.
+QUALIFIEE = {**ENTRIES, 443: dict(ENTRIES[443], portee_temporelle="constatee")}
+DQ = assembler_dossier(entries=QUALIFIEE, liens=LIENS, plafond=40)
+PQ = {(c.question_id, c.ingredient_id): c for c in DQ.chemises}
+B.check(
+    PQ[("qf_4", "endettement_brut_et_net")].en_vigueur == 443,
+    "#443 (datée 2026-06-30 sous la 045) est en vigueur devant #296 (héritage « 2026-09-01 »)",
+)
+B.check(
+    PQ[("qf_4", "endettement_brut_et_net")].anterieures == (296, 340),
+    "…et l'héritage reste rangé par sa date parmi les antérieures, jamais perdu (#25)",
+)
+B.check(
+    PQ[("qf_6", "provisions_et_depreciations")].en_vigueur == 301,
+    "une pièce SANS AUCUNE date reste dernière même face à l'héritage (#999 derrière #301)",
+)
+B.check(
+    PAR_POINT[("qf_4", "endettement_brut_et_net")].en_vigueur == 296,
+    "sans pièce qualifiée, l'ordre d'avant est inchangé (tout le corpus RVMD qf_* est héritage)",
+)
+
+
 def _sd(i: int):
     """La `source_date` de la pièce #i selon la FIXTURE — `None` si la fixture ne la connaît pas.
 
