@@ -146,6 +146,7 @@ mutations=(
 "$PONT¦            mandats.append(motif)¦            pass¦quatre motifs comptés"
 "$PONT¦                      f\"web plutôt que de faire échouer la carte entière : {motif}\")¦                      f\"web plutôt que de faire échouer la carte entière\")¦porte le refus du pont, mot pour mot"
 "$PONT¦            motif=\"omis par le modèle : aucune ligne produite pour cet ingrédient après le tour de \"¦            motif=\"MOTIF NEUTRE : aucune ligne produite pour cet ingrédient après le tour de \"¦trou survivant au tour de réparation"
+"$PONT¦derniers trimestres d'un flux, ce n'est PAS un \`exact\`¦derniers trimestres d'un flux, ce peut être un exact¦la définition d'\`exact\` dit"
 )
 
 source "$(dirname "$0")/_negatif.sh"

@@ -1142,6 +1142,25 @@ check("§12 carte qui ne lit QUE des concepts de la recette → la recette garde
 check("§12 sans consigne → la recette (repli inchangé)",
       _mod.recette_retenue(_l_treso, None) == "cash_and_lt_debt")
 
+# Plan #200 (RVMD, 2026-10-03), recopié : « sur les quatre derniers trimestres », recette
+# `operating_cash_flow` (l'exercice clos). La carte qui lit le MÊME concept sur douze mois glissants
+# prolonge la recette dans le TEMPS : elle prend la main. Lu à l'exercice, le même concept la laisse.
+_l_conso = LigneAveugle(
+    ticker_id="RVMD",
+    metrique="Flux de trésorerie net provenant des activités d'exploitation sur les quatre derniers trimestres",
+    source_pressentie="10-K / 10-Q, tableau des flux de trésorerie", ancre="Clôture du dernier trimestre fiscal",
+    poste="operating_cash_flow")
+check("§12 (préalable) la recette `operating_cash_flow` lit bien le flux d'exploitation",
+      _mod.poste_retenu(_l_conso.poste, _l_conso.metrique) == "operating_cash_flow"
+      and "NetCashProvidedByUsedInOperatingActivities" in _mod._CONCEPTS_DU_POSTE["operating_cash_flow"])
+_r_ttm = _mod.recette_retenue(_l_conso, _cons_reelle("NetCashProvidedByUsedInOperatingActivities[ttm]"))
+check("§12 la carte lit le concept de la recette sur DOUZE MOIS (`[ttm]`) : une période que la recette "
+      "ne lit pas → la recette s'efface (sinon l'exercice clos répond aux « quatre derniers trimestres »)",
+      _r_ttm is None, f"→ {_r_ttm!r}")
+check("§12 le même concept lu à l'exercice → la recette garde la main (rien de plus à lire)",
+      _mod.recette_retenue(_l_conso, _cons_reelle("NetCashProvidedByUsedInOperatingActivities"))
+      == "operating_cash_flow")
+
 # Le CHEMIN réel : `collecter_un` doit exécuter l'appariement, pas le socle.
 _appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
 _mod.executer_appariement = _fake_executer

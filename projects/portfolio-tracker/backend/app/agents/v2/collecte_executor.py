@@ -86,6 +86,7 @@ from .apparieur import (
     dernier_depot_vu,
 )
 from .collecte_persist import persist_aiguillage, persist_plan
+from app.contracts.formule_grammaire import DOUZE_MOIS, references_de_la_formule
 
 logger = logging.getLogger(__name__)
 
@@ -246,12 +247,27 @@ def recette_retenue(ligne: LigneAveugle, consigne: Optional[ConsigneAppariement]
     « non fondé » (RVMD n'a pas de dette à court terme), ce qui est juste. Une carte qui ne lit que
     des concepts de la recette ne change rien : la recette garde la main et son choix par FRAÎCHEUR
     (#30), qu'une expression figée ne fait pas.
+
+    UNE PÉRIODE QUE LA RECETTE NE LIT PAS (2026-10-03). Une recette lit l'EXERCICE clos (ou le dernier
+    bilan) ; la carte qui lit un concept de la recette sur DOUZE MOIS GLISSANTS (`Concept[ttm]`) répond
+    à une période plus récente que la recette ne sait pas lire — elle la prolonge dans le temps comme
+    `… + MarketableSecuritiesCurrent` la prolongeait dans le périmètre. Mesuré sur RVMD (plan #200) :
+    « flux d'exploitation sur les quatre derniers trimestres », recette `operating_cash_flow` ⟹
+    publié l'exercice 2025 (−898 M$, #765), l'analyste a conclu `non_fondable` ; les douze mois
+    disaient −1 223 M$.
     """
     poste = poste_retenu(ligne.poste, ligne.metrique)
     if poste is None or consigne is None:
         return poste
     lus = _CONCEPTS_DU_POSTE[poste]
     demandes = concepts_de_la_formule(consigne.expression)
+    glissants = {c for c, k in references_de_la_formule(consigne.expression) if k == DOUZE_MOIS}
+    if glissants & lus:
+        logger.info(
+            "recette « %s » écartée pour « %s » : la carte lit %s sur douze mois glissants, période que "
+            "la recette ne lit pas — l'appariement « %s » s'exécute", poste, ligne.metrique,
+            sorted(glissants & lus), consigne.expression)
+        return None
     if demandes & lus and demandes - lus:
         logger.info(
             "recette « %s » écartée pour « %s » : la carte lit aussi %s, que la recette ne lit pas — "

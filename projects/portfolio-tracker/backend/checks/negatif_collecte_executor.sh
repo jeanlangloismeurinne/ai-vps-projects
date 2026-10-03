@@ -143,6 +143,8 @@ mutations=(
 "$SRC¦    if emetteur is None:\n        return ResultatCollecte(¦    if False:\n        return ResultatCollecte(¦identité NON RÉSOLUE → echec nommé"
 # Le geste « refaire la carte » ignoré : la carte à jour est relue, l'ancienne méthode reste servie.
 "$SRC¦        carte = None if refaire else await lire_carte(¦        carte = await lire_carte(  # mutation: refaire ignoré¦refaire=True sur une carte À JOUR"
+# La période glissante ignorée : la recette de l'exercice clos répond aux « quatre derniers trimestres ».
+"$SRC¦    if glissants & lus:¦    if False:  # mutation: la période ttm ne compte pas¦DOUZE MOIS (\`[ttm]\`)"
 )
 
 passes=0; ratees=0

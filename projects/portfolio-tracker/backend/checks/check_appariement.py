@@ -696,6 +696,9 @@ b.check(_sur(coefficients_choisis, "NetCashProvidedByUsedInOperatingActivities[t
 b.check("[ttm]" in SRC_APPARIEUR and "NetCashProvidedByUsedInOperatingActivities[ttm]" in SRC_APPARIEUR
         and "QUATRE DERNIERS TRIMESTRES" in SRC_APPARIEUR,
         "§11 bis le prompt ENSEIGNE `Champ[ttm]` pour les douze derniers mois d'un flux, exemple compris")
+b.check("ce n'est PAS un `exact`" in SRC_APPARIEUR,
+        "§11 bis la définition d'`exact` dit qu'un champ nu se lit à l'exercice clos : « quatre derniers "
+        "trimestres » n'est PAS un exact (mesuré plan #200 : la carte refaite l'avait classé `exact`)")
 
 
 # ── §12 LE REFUS PAR INGRÉDIENT (#75) — une bévue sur UN couple, jamais la carte entière ───────────
