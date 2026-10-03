@@ -61,7 +61,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Sequence
 
 from pydantic import Field, model_validator
 
@@ -831,6 +831,61 @@ def _cumuler(premier: Any, second: Any) -> Any:
     return second
 
 
+def citations_concurrencees(
+    issues: dict[str, Any], chemises: Sequence[Any], entries: dict[int, dict[str, Any]],
+) -> dict[str, list[tuple[int, int]]]:
+    """Par question répondue : les couples (pièce citée, pièce PLUS RÉCENTE du même point, remise au
+    dossier). Pur, sans jugement — dire que les deux portent la même information est le travail du
+    modèle (#68). « Plus récente » = `source_date` strictement postérieure."""
+    def _date(i: int) -> Optional[str]:
+        d = entries.get(i, {}).get("source_date")
+        return str(d) if d is not None else None
+
+    point_de: dict[int, list[tuple[int, ...]]] = {}
+    for ch in chemises:
+        remises = tuple(i for i in ch.remises if i in entries)
+        for i in remises:
+            point_de.setdefault(i, []).append(remises)
+    out: dict[str, list[tuple[int, int]]] = {}
+    for qid, issue in issues.items():
+        fondation = getattr(issue, "fondation", None)
+        if isinstance(issue, _Refus) or fondation is None:
+            continue
+        cites = list(dict.fromkeys(fondation.cited_entry_ids))
+        couples = []
+        for c in cites:
+            dc = _date(c)
+            if dc is None:
+                continue
+            for groupe in point_de.get(c, []):
+                plus_recentes = [r for r in groupe if r != c and _date(r) and _date(r) > dc]
+                if plus_recentes:
+                    r = max(plus_recentes, key=lambda i: (_date(i), i))
+                    if (c, r) not in couples:
+                        couples.append((c, r))
+        if couples:
+            out[qid] = couples
+    return out
+
+
+def _message_relecture(concurrences: dict[str, list[tuple[int, int]]],
+                       entries: dict[int, dict[str, Any]]) -> str:
+    """La question du relecteur — une remarque, pas un refus."""
+    lignes = []
+    for qid, couples in concurrences.items():
+        for c, r in couples:
+            lignes.append(
+                f"- `{qid}` : tu cites [{c}] (daté {entries[c].get('source_date')}) ; [{r}] (daté "
+                f"{entries[r].get('source_date')}) instruit le même point et est plus récente.")
+    return ("Relecture de tes citations. Chaque affirmation se cite par sa source la plus récente :\n"
+            + "\n".join(lignes)
+            + "\n\nPour chaque cas : si la source plus récente porte la même information, cite-la À LA "
+            "PLACE de l'ancienne (retire l'ancienne de `cited_entry_ids` et de ta fondation) ; si l'ancienne "
+            "établit seule quelque chose que la récente ne reprend pas, garde-la et dis-le dans ton "
+            "`verbatim`. Rends l'objet JSON `{\"reponses\": [ ... ]}` avec la réponse complète de "
+            "chacune de ces questions, et rien d'autre.")
+
+
 async def repondre(
     ticker_id: str,
     framework_id: str,
@@ -841,6 +896,7 @@ async def repondre(
     fichier: Optional[FrameworksFile] = None,
     agent: Optional[ResolvedAgent] = None,
     faits: Optional[dict[str, list[MaterialEvent]]] = None,
+    chemises: Sequence[Any],
 ) -> ResultatAnalyste:
     """Répond à TOUTES les questions d'un (ticker × framework × archétype). Ne persiste rien.
 
@@ -852,6 +908,10 @@ async def repondre(
     `analyste` n'a pas de défaut : §3.4 écrit la chaîne pour N analystes, et deux réponses
     anonymes à une même question sont indiscernables — le correctif naturel, le jour venu, serait de
     les moyenner, ce que §3.4 interdit.
+
+    `chemises` (#111) : les points du dossier et leurs pièces remises — de quoi repérer, sans jugement,
+    une citation à laquelle une pièce PLUS RÉCENTE du même point fait concurrence. Requis, sans
+    défaut : un appelant qui l'oublierait désarmerait la relecture en silence.
 
     Un refus de contrat ou de pont est ISOLÉ à sa question : il n'interrompt pas le passage et ne
     devient JAMAIS un `gap` (cf. en-tête — une panne d'agent n'est pas un manque de données).
@@ -899,6 +959,8 @@ async def repondre(
         messages = [{"role": "user", "content": _message_analyste(contexte)}]
         # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).
         run = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)  # (3)
+        brut_initial = getattr(run, "raw_content", None) or json.dumps(
+            run.parsed.model_dump(mode="json"), ensure_ascii=False)
         profils = question_profiles(fichier)
         issues, hors = _traiter_sortie(run.parsed, interrogeables, admis, profils=profils,
                                        entries=entries, entete=entete)
@@ -942,6 +1004,36 @@ async def repondre(
                         f"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : "
                         f"{second.motif}")
                 run = _cumuler(run, run2)
+
+        # (3 ter) LA RELECTURE DES CITATIONS (#111, arbitrage du 2026-10-03 : chaque affirmation se cite
+        # par sa source la plus récente, qui REMPLACE l'ancienne). Mesuré sur RVMD qf_6, 2 passages sur
+        # 2 : la consigne seule ne suffit pas — le 10-K de décembre reste cité à côté du 10-Q de juin
+        # qui dit « politique identique ». Que deux pièces portent la MÊME information ne se décide pas
+        # en code (#68) ; qu'une pièce plus récente instruise le MÊME POINT, si. Comme un directeur de la
+        # recherche qui demande « pourquoi citer le rapport annuel quand le trimestriel le reprend ? »,
+        # on pose la question UNE fois ; la réponse relue est acceptée quelle qu'elle soit (garder une
+        # source ancienne pour ce qu'elle seule établit est légitime), sauf si elle est refusée.
+        concurrences = citations_concurrencees(issues, chemises, entries)
+        if concurrences:
+            messages_r = messages + [
+                {"role": "assistant", "content": brut_initial},
+                {"role": "user", "content": _message_relecture(concurrences, entries)},
+            ]
+            try:
+                run3 = await run_json_agent(agent, messages_r, AnalysteSortie, json_object=False)
+            except AgentOutputInvalid as e:
+                if dataclasses.is_dataclass(run):
+                    run = dataclasses.replace(
+                        run, tokens_in=run.tokens_in + int(e.tokens_in or 0),
+                        tokens_out=run.tokens_out + int(e.tokens_out or 0),
+                        cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
+            else:
+                issues3, _ = _traiter_sortie(run3.parsed, {q: interrogeables[q] for q in concurrences},
+                                             admis, profils=profils, entries=entries, entete=entete)
+                for qid in concurrences:
+                    if not isinstance(issues3[qid], _Refus):
+                        issues[qid] = issues3[qid]   # relue ; sinon la première réponse tient
+                run = _cumuler(run, run3)
         resultat.run = run
 
         for qid in interrogeables:

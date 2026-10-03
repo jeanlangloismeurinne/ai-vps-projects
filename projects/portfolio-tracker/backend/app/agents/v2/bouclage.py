@@ -200,7 +200,8 @@ async def boucler_renvois(
     dossier, faits = prepare.dossier, prepare.faits
     resultat = await repondre(
         ticker_id, framework_id, archetype,
-        analyste=analyste, entries=dossier.entries, fichier=fichier, faits=faits)
+        analyste=analyste, entries=dossier.entries, fichier=fichier, faits=faits,
+        chemises=dossier.chemises)
     reponses = {a.question_id: a for a in resultat.answers if a.question_id in scope}
 
     # 4. Persister les réponses renvoyées + lire les dispenses (le comité a-t-il classé sans suite ?).

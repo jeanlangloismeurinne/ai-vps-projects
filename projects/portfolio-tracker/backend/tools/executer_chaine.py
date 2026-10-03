@@ -157,7 +157,8 @@ async def main() -> int:
 
         resultat = await repondre(
             ticker_id, framework_id, archetype,
-            analyste=ANALYSTE, entries=entries, fichier=fichier, faits=faits)
+            analyste=ANALYSTE, entries=entries, fichier=fichier, faits=faits,
+            chemises=dossier.chemises)
         if perimetre is not None:
             inconnues = sorted(perimetre - {q.id for f in fichier.frameworks if f.id == framework_id
                                             for q in f.questions})

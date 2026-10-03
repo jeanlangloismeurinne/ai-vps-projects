@@ -192,7 +192,7 @@ async def main() -> int:
             try:
                 resultat = await repondre(ticker, framework_id, archetype,
                                           analyste="acceptation", entries=entries, fichier=fichier,
-                                          faits=faits)
+                                          faits=faits, chemises=dossier.chemises)
             except Exception as e:  # noqa: BLE001
                 fail += 1
                 print(f"  FAIL {type(e).__name__}: {e}")

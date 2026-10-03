@@ -474,7 +474,7 @@ def passage(reponses):
     try:
         return asyncio.get_event_loop().run_until_complete(
             A.repondre(TICKER, "qualite_financiere", "pre_revenus",
-                       analyste="analyste_1", entries=ENTRIES, fichier=F))
+                       analyste="analyste_1", entries=ENTRIES, fichier=F, chemises=()))
     except Exception as exc:  # noqa: BLE001
         return exc
     finally:
@@ -572,7 +572,7 @@ check("… et le motif NOMME les questions perdues (un refus qui ne dit pas quoi
 print("\n[7 bis] une réponse refusée est renvoyée UNE fois au modèle avec son motif, jamais davantage")
 
 
-def passage_tours(tours, entries=ENTRIES):
+def passage_tours(tours, entries=ENTRIES, chemises=()):
     """`repondre` hors-ligne, le faux modèle rendant `tours[k]` au k-ième appel — et en gardant les
     messages reçus. Le nombre d'appels EST la mesure (« une fois, pas davantage »)."""
     class _Run:
@@ -591,7 +591,7 @@ def passage_tours(tours, entries=ENTRIES):
     try:
         return asyncio.get_event_loop().run_until_complete(
             A.repondre(TICKER, "qualite_financiere", "pre_revenus",
-                       analyste="analyste_1", entries=entries, fichier=F)), appels
+                       analyste="analyste_1", entries=entries, fichier=F, chemises=chemises)), appels
     except Exception as exc:  # noqa: BLE001
         return exc, appels
     finally:
@@ -650,6 +650,39 @@ check("le passage COÛTE les deux appels (#41 : un renvoi se comptabilise, il n'
       f"→ {_cum}")
 
 
+# ── #111 LA RELECTURE DES CITATIONS ────────────────────────────────────────────────────────────────
+# Forme RVMD qf_6 (2026-10-03) : le rapport annuel ET le trimestriel qui le confirme, même point, cités
+# ensemble. Le relecteur pose la question UNE fois ; la réponse relue est acceptée, sauf refusée.
+class _Ch:
+    def __init__(self, remises):
+        self.remises = remises
+
+
+_E_CONF = {**ENTRIES, 6: {"reliability_tier": "A", "nature": "mesure", "title": "dépôt trimestriel (confirme)",
+                          "content": "trésorerie 3 200 M$, inchangée", "source_type": "edgar_official",
+                          "source_date": "2025-08-01"}}
+_CH_CONF = [_Ch((6, 1))]
+_RELU = [{**NOMINAL[0], "cited_entry_ids": [6]}] + NOMINAL[1:]
+_Rl, _ap_l = passage_tours([NOMINAL, _RELU], entries=_E_CONF, chemises=_CH_CONF)
+_qf4_l = [a for a in _ans(_Rl) if a.question_id == "qf_4"] if not isinstance(_Rl, Exception) else []
+check("#111 une citation à laquelle une pièce PLUS RÉCENTE du même point fait concurrence est RELUE "
+      "(2 appels) et la réponse relue est retenue (qf_4 cite [6] au lieu de [1])",
+      len(_ap_l) == 2 and len(_qf4_l) == 1 and _qf4_l[0].fondation.cited_entry_ids == [6],
+      f"→ {len(_ap_l)} appel(s), {[a.fondation.cited_entry_ids for a in _qf4_l]}")
+check("… la remarque NOMME l'ancienne et la récente, avec leurs dates",
+      len(_ap_l) == 2 and "[1]" in _ap_l[1][-1]["content"] and "[6]" in _ap_l[1][-1]["content"]
+      and "2025-08-01" in _ap_l[1][-1]["content"], f"→ {(_ap_l[1][-1]['content'][:240] if len(_ap_l) == 2 else '')}")
+_Rk, _ap_k = passage_tours([NOMINAL, [{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:]],
+                           entries=_E_CONF, chemises=_CH_CONF)
+_qf4_k = [a for a in _ans(_Rk) if a.question_id == "qf_4"] if not isinstance(_Rk, Exception) else []
+check("… une relecture REFUSÉE ne coûte pas la réponse : la première tient (une remarque n'est pas un refus)",
+      len(_ap_k) == 2 and len(_qf4_k) == 1 and _qf4_k[0].fondation.cited_entry_ids == [1] and _ref(_Rk) == [],
+      f"→ {[a.fondation.cited_entry_ids for a in _qf4_k]}, refus {_ref(_Rk) if not isinstance(_Rk, Exception) else _Rk}")
+_Rs, _ap_s = passage_tours([NOMINAL], entries=_E_CONF, chemises=[_Ch((1,)), _Ch((6,))])
+check("… deux pièces de POINTS DIFFÉRENTS ne déclenchent rien (1 appel) : la relecture ne juge pas le sens",
+      len(_ap_s) == 1, f"→ {len(_ap_s)} appel(s)")
+
+
 # Mesuré le 2026-10-03 (RVMD qf_4/qf_7) : le RENVOI rend une sortie hors contrat (`sans_fondement`
 # portant ses chiffres) ; l'exception tuait le passage et jetait les réponses du premier tour.
 from app.agents.v2.runner import AgentOutputInvalid as _AOI  # noqa: E402
@@ -676,7 +709,7 @@ def passage_renvoi_invalide():
     try:
         return asyncio.get_event_loop().run_until_complete(
             A.repondre(TICKER, "qualite_financiere", "pre_revenus",
-                       analyste="analyste_1", entries=ENTRIES, fichier=F)), appels
+                       analyste="analyste_1", entries=ENTRIES, fichier=F, chemises=())), appels
     except Exception as exc:  # noqa: BLE001
         return exc, appels
     finally:
@@ -801,7 +834,7 @@ def passage_corpus(reponses, entries):
     try:
         return asyncio.get_event_loop().run_until_complete(
             A.repondre(TICKER, "qualite_financiere", "pre_revenus",
-                       analyste="analyste_1", entries=entries, fichier=F)), appels
+                       analyste="analyste_1", entries=entries, fichier=F, chemises=())), appels
     except Exception as exc:  # noqa: BLE001
         return exc, appels
     finally:

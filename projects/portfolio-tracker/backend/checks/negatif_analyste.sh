@@ -84,6 +84,11 @@ mutations=(
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
 "$SRC¦                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦                await run_json_agent(agent, messages, AnalysteSortie, json_object=False)\n                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦une fois, pas davantage"
+# #111 — la relecture des citations désarmée / une relecture refusée remplace la réponse / un point
+# différent déclenche la relecture
+"$SRC¦        if concurrences:¦        if False:¦PLUS RÉCENTE du même point fait concurrence est RELUE"
+"$SRC¦                    if not isinstance(issues3[qid], _Refus):¦                    if True:¦une relecture REFUSÉE ne coûte pas la réponse"
+"$SRC¦    for ch in chemises:\n        remises = tuple(i for i in ch.remises if i in entries)¦    for ch in [type(\"C\", (), {\"remises\": tuple(i for c in chemises for i in c.remises)})()]:\n        remises = tuple(i for i in ch.remises if i in entries)¦POINTS DIFFÉRENTS ne déclenchent rien"
 # #109 — un renvoi hors contrat tue le passage au lieu de devenir un refus nommé
 "$SRC¦            except AgentOutputInvalid as e:¦            except ZeroDivisionError as e:¦sort en refus NOMMÉ"
 "$SRC¦                {\"role\": \"user\", \"content\": _message_reprise(a_reprendre, admis, interrogeables, entries)},¦                {\"role\": \"user\", \"content\": _message_reprise({**{q: _Refus(\"déjà acquise\") for q in interrogeables}, **a_reprendre}, admis, interrogeables, entries)},¦ne redemande QUE la question refusée"
