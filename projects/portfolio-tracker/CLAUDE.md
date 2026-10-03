@@ -2814,6 +2814,33 @@ il reste un signal (`plafond_insuffisant`). ⚠️ Retire la règle « hors inde
 faits EDGAR non liés) : depuis #61 le socle est plan-dérivé, ses faits sont liés par le plan.
 Gardes : `check_dossier` §6 réécrit (la règle vaut même avec de la place : sujet, pas budget).
 
+### #109 — un solde déposé au 10-K reste un instant ; un renvoi raté n'emporte pas le passage
+
+**Trouvé en EXÉCUTANT le correctif #107 (2026-10-03).** Dès que l'appariement a pris la main, il a
+écrit la trésorerie + placements RVMD au 31/12/2025 (#741 : 2,03 Md$) au lieu du bilan du 30/06/2026
+(3,94 Md$), et une dette nette MIXTE (#734 : trésorerie de décembre − dette de juin = −1,54 au lieu de
+−3,45 Md$). `serie_du_concept` lisait comme « exercice » tout point `form=10-K, fp=FY` — or un solde du
+10-K porte aussi `fp=FY`. Le discriminant est la DURÉE (#42) : seuls les points `est_point_de_flux`
+entrent dans `points_annuels` (filtré chez l'appelant : `edgar_feed` s'appuie volontairement sur le
+comportement nu pour l'ancre des capitaux propres). ⚠️ La fixture n'avait que des soldes de 10-Q :
+plus commode que la prod, donc aveugle (§7 copiée du réel RVMD). La réexécution a supersédé #734/#741
+(#744 / #751, une ligne active chacun, vérifié).
+**Le renvoi de l'analyste** (#101) levait `AgentOutputInvalid` quand le second tour était hors contrat
+(`sans_fondement` portant ses chiffres) : le passage mourait et perdait le premier tour. Les questions
+renvoyées sortent désormais en refus NOMMÉS, le coût de l'appel raté est compté (#41).
+Gardes : `check_appariement_feed` §7, `check_analyste` §7 bis ; négatifs 20/0 et 50/0.
+
+### #110 — le texte d'un fait apparié dit ce que le système tamponne
+
+Après #109, RVMD qf_7 restait `non_fondable` avec #751 (trésorerie + placements, tier A, `mesure`) au
+dossier : son texte disait « Calculé depuis les dépôts SEC », et l'analyste applique — à la lettre — « une
+source qui annonce son propre calcul fonde un `approxime` », fermé à plancher A. Trois couches
+divergeaient (tampon `mesure`, prose « calculé », consigne). Selon #67 (2+2=4 n'est pas moins sûr que 2
+et 2), un agrégat DÉTERMINISTE de lignes déposées vaut relevé : il se présente « Relevé des dépôts SEC :
+agrégat DÉTERMINISTE … il vaut relevé » ; seul un calcul NON déterministe s'annonce « Calculé ». Les
+hypothèses restent affichées « à contester » (une consigne déterministe peut porter un vrai choix,
+indiscernable en code d'une simple correspondance — #68). Gardes : `check_appariement_feed` §8 ; négatif 21/0.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-09-30
+updated: 2026-10-03
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#103), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#110), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -35,9 +35,9 @@ role: >
 > la REPRISE « un seul chiffre par dossier » (option c, #99) livrés (`app/valorisation/`,
 > `api/valorisation_v2.py` ; aucun modèle en base, rien ne propose encore). **Encadré (#100), analyste
 > corrigé (#101), horloge des comptes (#102) et faits postérieurs lus (#103) déployés** ; #104 (une
-> seule dette nette) déployé ; #105 (autonomie prudente) et #106 (lecture des dépôts postérieurs, tous les
-> documents d'un point) écrits le 2026-09-30, à déployer puis rejouer sur RVMD qf_4/qf_6/qf_7 — voir « Ce
-> qui reste ouvert », en tête (objectif : deux cas très différents, RVMD et NVDA, qui tournent juste).
+> seule dette nette) déployé ; #105, #106, puis #107-#110 (2026-10-03 : recette vs appariement, sœurs, « chaque
+> framework ne lit que ses sujets », soldes du 10-K, prose des agrégats) déployés et rejoués sur RVMD
+> qf_4/qf_6/qf_7 — trois causes restent, dont UN ARBITRAGE à poser : voir « Ce qui reste ouvert », en tête (objectif : deux cas très différents, RVMD et NVDA, qui tournent juste).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -73,29 +73,19 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4066 assertions sur 55 scripts, 0 rouge** (2026-09-30, après
-  #103 et l'écriture de #963) : `check_signature_modele_persist` a reverdi pour la bonne raison (qf_4 #963
-  reprenable). Réconciliation (`tools/reconcilier_vocabulaires.sh`) : 6/6 chapitres adossés, T6/T7 toujours
-  rouges (30 champs / 37 questions — capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4143 assertions, 1 rouge attendu** (`check_signature_modele_persist` : aucune réponse RVMD reprenable) — 2026-10-03 après #110. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; la prochaine sera **052**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`4e117fa`** (#103 : faits postérieurs lus ; avant `de4abf2`, #102) — vérifié
-  dans le conteneur : dossier / niveau 2 / niveau 3 qf_4 / valorisation RVMD en 200 ; niveau 3 qf_4
-  « À jour » avec la ligne « faits lus depuis les comptes », capture headless regardée. `GET
-  /v2/tickers/RVMD/valorisation` → `aucun_modele_propose`. Chapitres `business_model`, `industry`,
-  `management`, `valuation` : `sans_acquittement` sur NVDA/MSFT/RVMD (capacité 5). **PV du comité : 0 décision.**
+- **Production** : stack sur **`22c722b`** (#110), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
 - **Notes flash en base** (catalogue d'événements **1.2.0**, relues le 2026-09-28 après #94) : RVMD
   #181-#186, NVDA #187-#188, MSFT #189 — mêmes types qu'en 1.1.0 (#80-#88), 0 refus, $0,0025 ; les
   lectures 1.0.0/1.1.0 restent conservées (append-only).
-- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, 2026-09-30) : 31 manques — qf_6 (périmée par
-  #345), qf_7 (périmée par les baux du 27/08, non lus : réponse #925), mo_1…mo_5 (approbation FDA LUE), et
-  les 24 questions des quatre nouveaux frameworks jamais collectées. **qf_4 #963 tient** (qualité
-  financière 0,33). Mandats 983-986 toujours ouverts sur des questions répondues (voir « Reste ouvert »).
+- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, 2026-10-03) : 32 manques — qf_4/qf_7 non fondées, qf_6 périmée (voir en tête), mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
 
 ---
 
@@ -187,44 +177,34 @@ de façon correcte sur deux cas de figure très différents afin d'en valider la
 les nouveaux chapitres sur RVMD ET NVDA (dont la qualité financière de NVDA, aucune réponse en vigueur),
 AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonder ses hypothèses).**
 
-**État RVMD qualite_financiere au 2026-09-30 (fin de session)**
-- #104 (déployé `5cfaf50`) : dette nette = dette brute − (trésorerie + placements) partout ; levier
-  republié RVMD #699 / NVDA #702 / MSFT #706 (MSFT et NVDA étaient de signe inversé) ; une pièce datée
-  passe devant l'héritage dans une chemise.
-- Re-collecte faite (plan #177) puis `--questions=qf_4,qf_6` : **#976 (qf_4) et #977 (qf_6) écrites,
-  acquittées, mais PÉRIMÉES** — #976 n'a pas vu le 8-K des baux (l'héritage #296 qui le portait est sorti
-  du dossier), #977 cite le 10-K 2025 (#716, seul document rattaché) à côté du 10-Q qui le confirme (#717).
-  #963 (à jour) est remplacée par #976 : aucune réponse RVMD reprenable à cet instant. **Pas de retrait**
-  (l'utilisateur : « traiter le problème en amont car il va se reproduire »).
-- **Relance du 2026-09-30 après #105/#106 (déployés `5f432ed`)** : plan #179, lecture du 8-K des baux
-  écrite (#733) et jointe ; réponses #984 (qf_4 `non_fondable`), #985 (qf_6 répondue, PÉRIMÉE — seul le
-  10-K #716 est encore rattaché à `politique_de_capitalisation`), #986 (qf_7 `non_fondable`). RVMD n'a
-  AUCUNE réponse qf_* reprenable (`check_signature_modele_persist` rouge pour cette raison). Les deux
-  non_fondable sont JUSTES sur le dossier servi — défauts de COLLECTE, à corriger en amont avant toute
-  relance : (a) FAUX APPARIEMENT — la ligne « cash, cash equivalents and marketable securities »
-  (`endettement_brut_et_net`, `tresorerie_disponible`) est liée au poste `cash_and_lt_debt` (#722 :
-  trésorerie SEULE + dette), famille #43/#60/#67 ; il faut la formule `Cash + MarketableSecuritiesCurrent`
-  (l'appariement sait l'exécuter, #72) — chercher pourquoi la recette du catalogue a gagné ; (b) PLAFOND
-  POLLUÉ — le relevé des placements #654 est laissé dehors par le plafond (40) pendant que 27 pièces hors
-  index sans rapport (données cliniques KRAS concurrentes, C+, collectées pour `defendabilite`) passent
-  par la seule date : le hors index d'un framework devrait privilégier les pièces de ses propres postes
-  (arbitrage métier possible : « le dossier d'une question joint-il d'abord les relevés financiers du
-  titre ? ») ; (c) `politique_de_capitalisation` : #717 (10-Q) toujours non rattaché — vérifier que la
-  collecte de cette ligne a bien rendu plusieurs entries cette fois (#106 ne vaut que si le worker les
-  rapporte ensemble). Retrait NON fait (l'utilisateur veut l'amont).
-- (historique de la même session) Corrigé en amont puis déployé : #105 (qf_7 — autonomie sur la
-  consommation la plus prudente du constaté et de la prévision), #106 (lecture des dépôts postérieurs
-  jointe d'office ; tous les documents d'un point rattachés). **Prochain geste** : suite + négatifs verts
-  → déployer → `executer_chaine RVMD qualite_financiere pre_revenus --questions=qf_4,qf_6,qf_7` AVEC
-  collecte (les rattachements #106 ne valent que pour une collecte neuve) → relire les trois réponses
-  contre leurs pièces et `montrer_parcours.sh RVMD` (elles doivent TENIR).
-- Résidu noté : #976 a additionné lui-même 815,4 + 3 120 (placements lus arrondis « 3,1 MdUSD » dans
-  #699 ; la ligne de plan « cash, cash equivalents and marketable securities » a été appariée au poste
-  trésorerie SEUL #711 — faux appariement de la famille #43/#60). Écart 2,6 M$ ; calcul fait par le modèle.
-- Écran niveau 3 : l'effet du fait lu est affiché deux fois (motif de fraîcheur + ligne « faits lus ») —
-  cosmétique.
-- #106 vaut aussi pour la défendabilité (mo_* rouvertes par l'approbation FDA LUE) : le 8-K du 26/08 sera
-  lu et joint à la prochaine chaîne `defendabilite`.
+**État RVMD qualite_financiere au 2026-10-03 (fin de session) — #107 à #110 déployés (`22c722b`)**
+- Corrigé en amont et déployé : #107 (la carte d'appariement qui PROLONGE la recette du catalogue prend
+  la main — trésorerie + placements ; les SŒURS d'une réponse partent avec la pièce élue ; 76 orphelines
+  d'avant #106 rattachées sans modèle, trace `tools/retraits/2026-10-03_rattachement_soeurs.txt`) ; #108
+  (arbitrage utilisateur : « chaque framework ne doit traiter que de ses sujets » — le dossier ne remet que
+  les pièces classées sous ses points, plus de « hors index ») ; #109 (un solde du 10-K reste un instant :
+  #741/#734 lisaient la trésorerie au 31/12/2025 → supersédées par #751 3,94 Md$ et #744 au 30/06 ; un
+  renvoi d'analyste hors contrat devient un refus nommé) ; #110 (un agrégat déterministe se présente en
+  « Relevé des dépôts SEC », plus en « Calculé »).
+- 3 passages réels `executer_chaine RVMD qualite_financiere pre_revenus --questions=qf_4,qf_6,qf_7`
+  (plans #186 crash au renvoi → #109 ; #189 réponses 1035-1037 ; #192 réponses **1050-1052**, en vigueur).
+  Résultat : **qf_6 #1051 `repondu` A**, mais servie PÉRIMÉE ; qf_4 #1050 et qf_7 #1052 `non_fondable`.
+  `check_signature_modele_persist` toujours rouge (aucune réponse RVMD reprenable).
+- **⚠️ EN TÊTE — trois causes, chacune À TRAITER EN AMONT avant de relancer :**
+  (1) **ARBITRAGE À POSER à l'utilisateur** — qf_6 cite le 10-K (#750, déc. 2025) ET le 10-Q qui le
+  confirme (#749, juin 2026), remis ensemble depuis #107 ; une réponse se date par sa pièce citée la PLUS
+  ANCIENNE (anti-blanchiment) ⟹ datée de décembre, périmée par les comptes de juin. Question métier :
+  « une note qui cite le rapport annuel ET le trimestriel qui le confirme est-elle à jour au 30/06 ? »
+  (un fonds date chaque affirmation par sa source ; le code ne sait pas quelle pièce porte quelle phrase).
+  (2) qf_7 : la consommation des **douze derniers mois au 30/06** (TTM = exercice 2025 + S1 2026 − S1 2025)
+  ne s'écrit pas dans la grammaire des formules (décalages d'EXERCICE seulement, #74) ⟹ l'apparieur a écrit
+  « flux d'exploitation + flux d'investissement FY2025 » (#760) en se déclarant DÉTERMINISTE — l'analyste l'a
+  justement écartée comme calcul. Deux pistes : grammaire TTM (`Concept@TTM` ou somme de fractions) ;
+  et le drapeau `deterministe` posé par le modèle sur un choix de modélisation (#68, non décidable en code).
+  #751 (trésorerie) garde l'ancienne prose « Calculé » jusqu'à sa prochaine réécriture.
+  (3) qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses
+  coupée par le budget 180 s (`source_indisponible`) ; échéancier : datation hétérogène signalée.
+- Résidu #107 : `rattacher_soeurs` a fait passer #664 (défendabilité mo_1) en antérieure (collecte précédente).
 
 **⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — à
 traiter quand la V3 sera quasiment finalisée**
@@ -385,7 +365,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #103** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #110** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -409,8 +389,9 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > — gabarits, bac à calcul, contrat + pont + évaluation du modèle, signature + registres 051 livrés
 > + reprise « un seul chiffre par dossier » (option c) (#96-#99) + encadré de chiffres clés (#100, déployé)
 > + analyste corrigé en amont (#101) + horloge des comptes (#102) + faits postérieurs lus (#103) : qf_4 #963
-> a été la première réponse RVMD reprenable ; #104-#106 (dette nette unique, autonomie prudente, lecture
-> des dépôts postérieurs) : rejouer RVMD qf_4/qf_6/qf_7 — en tête de « Ce qui reste ouvert » —, puis les
+> a été la première réponse RVMD reprenable ; #104-#110 (dette nette unique, autonomie prudente, lecture
+> des dépôts postérieurs, sœurs, « chaque framework ne lit que ses sujets », soldes du 10-K) : finir RVMD
+> qf_4/qf_6/qf_7 — trois causes en tête de « Ce qui reste ouvert », dont l'arbitrage sur la date d'une note —, puis les
 > nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de

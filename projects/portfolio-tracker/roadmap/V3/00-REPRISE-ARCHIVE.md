@@ -5903,3 +5903,46 @@ qf_4 3/3, qf_6 3/3 (périmée par #345), qf_7 0/3. Écrit : la seule qf_4 (`--qu
 **963** (supersede 923), acquittée, 0 mandat → À JOUR, reprenable ; `check_signature_modele_persist`
 vert pour la bonne raison ; suite 4066/0. Défaut relevé : la prose de 963 dit « dette nette −328 M$ »
 (définition trésorerie seule, portée par #296) contre −3 450,54 dans l'encadré.
+
+
+## 2026-10-03 — bloc « État RVMD qualite_financiere au 2026-09-30 » évincé du fichier de reprise (copie conforme)
+
+**État RVMD qualite_financiere au 2026-09-30 (fin de session)**
+- #104 (déployé `5cfaf50`) : dette nette = dette brute − (trésorerie + placements) partout ; levier
+  republié RVMD #699 / NVDA #702 / MSFT #706 (MSFT et NVDA étaient de signe inversé) ; une pièce datée
+  passe devant l'héritage dans une chemise.
+- Re-collecte faite (plan #177) puis `--questions=qf_4,qf_6` : **#976 (qf_4) et #977 (qf_6) écrites,
+  acquittées, mais PÉRIMÉES** — #976 n'a pas vu le 8-K des baux (l'héritage #296 qui le portait est sorti
+  du dossier), #977 cite le 10-K 2025 (#716, seul document rattaché) à côté du 10-Q qui le confirme (#717).
+  #963 (à jour) est remplacée par #976 : aucune réponse RVMD reprenable à cet instant. **Pas de retrait**
+  (l'utilisateur : « traiter le problème en amont car il va se reproduire »).
+- **Relance du 2026-09-30 après #105/#106 (déployés `5f432ed`)** : plan #179, lecture du 8-K des baux
+  écrite (#733) et jointe ; réponses #984 (qf_4 `non_fondable`), #985 (qf_6 répondue, PÉRIMÉE — seul le
+  10-K #716 est encore rattaché à `politique_de_capitalisation`), #986 (qf_7 `non_fondable`). RVMD n'a
+  AUCUNE réponse qf_* reprenable (`check_signature_modele_persist` rouge pour cette raison). Les deux
+  non_fondable sont JUSTES sur le dossier servi — défauts de COLLECTE, à corriger en amont avant toute
+  relance : (a) FAUX APPARIEMENT — la ligne « cash, cash equivalents and marketable securities »
+  (`endettement_brut_et_net`, `tresorerie_disponible`) est liée au poste `cash_and_lt_debt` (#722 :
+  trésorerie SEULE + dette), famille #43/#60/#67 ; il faut la formule `Cash + MarketableSecuritiesCurrent`
+  (l'appariement sait l'exécuter, #72) — chercher pourquoi la recette du catalogue a gagné ; (b) PLAFOND
+  POLLUÉ — le relevé des placements #654 est laissé dehors par le plafond (40) pendant que 27 pièces hors
+  index sans rapport (données cliniques KRAS concurrentes, C+, collectées pour `defendabilite`) passent
+  par la seule date : le hors index d'un framework devrait privilégier les pièces de ses propres postes
+  (arbitrage métier possible : « le dossier d'une question joint-il d'abord les relevés financiers du
+  titre ? ») ; (c) `politique_de_capitalisation` : #717 (10-Q) toujours non rattaché — vérifier que la
+  collecte de cette ligne a bien rendu plusieurs entries cette fois (#106 ne vaut que si le worker les
+  rapporte ensemble). Retrait NON fait (l'utilisateur veut l'amont).
+- (historique de la même session) Corrigé en amont puis déployé : #105 (qf_7 — autonomie sur la
+  consommation la plus prudente du constaté et de la prévision), #106 (lecture des dépôts postérieurs
+  jointe d'office ; tous les documents d'un point rattachés). **Prochain geste** : suite + négatifs verts
+  → déployer → `executer_chaine RVMD qualite_financiere pre_revenus --questions=qf_4,qf_6,qf_7` AVEC
+  collecte (les rattachements #106 ne valent que pour une collecte neuve) → relire les trois réponses
+  contre leurs pièces et `montrer_parcours.sh RVMD` (elles doivent TENIR).
+- Résidu noté : #976 a additionné lui-même 815,4 + 3 120 (placements lus arrondis « 3,1 MdUSD » dans
+  #699 ; la ligne de plan « cash, cash equivalents and marketable securities » a été appariée au poste
+  trésorerie SEUL #711 — faux appariement de la famille #43/#60). Écart 2,6 M$ ; calcul fait par le modèle.
+- Écran niveau 3 : l'effet du fait lu est affiché deux fois (motif de fraîcheur + ligne « faits lus ») —
+  cosmétique.
+- #106 vaut aussi pour la défendabilité (mo_* rouvertes par l'approbation FDA LUE) : le 8-K du 26/08 sera
+  lu et joint à la prochaine chaîne `defendabilite`.
+
