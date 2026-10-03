@@ -83,11 +83,13 @@ mutations=(
 "$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=list(brute.chiffres_cles),¦l'assemblage ÉCRIT le chiffre calculé"
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
-"$SRC¦            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦            await run_json_agent(agent, messages, AnalysteSortie, json_object=False)\n            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦une fois, pas davantage"
+"$SRC¦                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦                await run_json_agent(agent, messages, AnalysteSortie, json_object=False)\n                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦une fois, pas davantage"
+# #109 — un renvoi hors contrat tue le passage au lieu de devenir un refus nommé
+"$SRC¦            except AgentOutputInvalid as e:¦            except ZeroDivisionError as e:¦sort en refus NOMMÉ"
 "$SRC¦                {\"role\": \"user\", \"content\": _message_reprise(a_reprendre, admis, interrogeables, entries)},¦                {\"role\": \"user\", \"content\": _message_reprise({**{q: _Refus(\"déjà acquise\") for q in interrogeables}, **a_reprendre}, admis, interrogeables, entries)},¦ne redemande QUE la question refusée"
 "$SRC¦        ligne = f\"- \`{qid}\` : {refus.motif}\"¦        ligne = f\"- \`{qid}\` : refusée\"¦PORTE le motif du refus"
 "$SRC¦            if non_releves:¦            if False:¦en NOMMANT la pièce"
-"$SRC¦                    f\"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : {second.motif}\")¦                    second.motif)¦de nouveau refusée au renvoi reste REFUSÉE"
+"$SRC¦                        f\"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : \"¦                        \"\"¦de nouveau refusée au renvoi reste REFUSÉE"
 "$SRC¦        return dataclasses.replace(second, tokens_in=premier.tokens_in + second.tokens_in,¦        return dataclasses.replace(second, tokens_in=second.tokens_in,¦COÛTE les deux appels"
 "$SRC¦            if self.chiffres_cles:¦            if False:¦qui porte un encadré est refusé"
 # ── #103 : les faits postérieurs aux comptes ─────────────────────────────────────────────────────

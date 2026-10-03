@@ -639,6 +639,49 @@ check("le passage COÛTE les deux appels (#41 : un renvoi se comptabilise, il n'
       f"→ {_cum}")
 
 
+# Mesuré le 2026-10-03 (RVMD qf_4/qf_7) : le RENVOI rend une sortie hors contrat (`sans_fondement`
+# portant ses chiffres) ; l'exception tuait le passage et jetait les réponses du premier tour.
+from app.agents.v2.runner import AgentOutputInvalid as _AOI  # noqa: E402
+
+
+def passage_renvoi_invalide():
+    appels = []
+
+    class _Run:
+        def __init__(self, parsed):
+            self.parsed = parsed
+
+    async def _faux_run(agent, messages, modele, **kw):
+        appels.append(messages)
+        if len(appels) == 1:
+            return _Run(modele(reponses=_T1))
+        raise _AOI(agent_name="research-agent", schema_name="AnalysteSortie", attempts=2,
+                   last_error="`sans_fondement` portant ['sens', 'chiffres_cles']", raw_content="{}",
+                   tokens_in=65574, tokens_out=1518, cost_usd=0.005519)
+
+    vrai_run, vrai_resolve = A.run_json_agent, A._resolve_analyste_agent
+    A.run_json_agent = _faux_run
+    A._resolve_analyste_agent = lambda: asyncio.sleep(0)
+    try:
+        return asyncio.get_event_loop().run_until_complete(
+            A.repondre(TICKER, "qualite_financiere", "pre_revenus",
+                       analyste="analyste_1", entries=ENTRIES, fichier=F)), appels
+    except Exception as exc:  # noqa: BLE001
+        return exc, appels
+    finally:
+        A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
+
+
+_Ri, _ap_i = passage_renvoi_invalide()
+check("un renvoi à la sortie HORS CONTRAT ne tue pas le passage : la question renvoyée sort en refus NOMMÉ",
+      not isinstance(_Ri, Exception) and [q for q, _ in _ref(_Ri)] == ["qf_4"]
+      and "non conforme au contrat" in _ref(_Ri)[0][1], f"→ {_Ri if isinstance(_Ri, Exception) else _ref(_Ri)}")
+check("… et les réponses du PREMIER tour restent acquises (qf_6, qf_7)",
+      not isinstance(_Ri, Exception)
+      and sorted(a.question_id for a in _ans(_Ri)) == sorted(q for q in Q if q != "qf_4"),
+      f"→ {None if isinstance(_Ri, Exception) else sorted(a.question_id for a in _ans(_Ri))}")
+
+
 # ── §8 les statuts admissibles, calculés AVANT la dépense ─────────────────────────────────────────
 print("\n[8] une exigence que le modèle ne peut ni voir ni satisfaire se refuse AVANT l'appel (#40)")
 

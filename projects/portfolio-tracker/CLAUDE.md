@@ -2772,6 +2772,48 @@ point qu'ils instruisent, le plus récent fait foi (arbitrage « tout rattacher 
   rattaché au point ; `dossier._rang` élit le plus récent.
 Gardes : `check_dossier` §10/§11, `check_collecteur` §9 ; négatifs dossier 19/0, collecteur 12/0.
 
+### #107 — la recette qui lit moins que la carte s'efface ; les annexes d'une réponse partent avec elle
+
+**Trois défauts de collecte RVMD (2026-10-03), corrigés en amont avant toute relance.**
+- **Recette ou appariement** (`collecte_executor.recette_retenue`, détenteur unique lu par l'exécution
+  d'une ligne ET par `postes_edgar_du_plan`). Le traducteur nommait `cash_and_lt_debt` pour
+  « trésorerie, équivalents ET titres de placement » ; la recette ne lit que la trésorerie (815 M$),
+  la carte d'appariement écrite pour l'ingrédient disait trésorerie + placements (3,9 Md$). L'ordre
+  « recette d'abord » (#72) publiait le petit nombre sous le grand libellé, et l'analyste concluait
+  `non_fondable` sur un dossier juste. Règle : la carte qui PROLONGE la recette (au moins un concept
+  commun ET des concepts que la recette ne lit pas) prend la main. ⚠️ Le « commun » est MESURÉ, pas
+  prudent : sur la même carte, « dette à douze mois » est approchée par toute la dette convertible
+  (concept DISJOINT de `long_term_debt_current`) — là la carte contredit la recette, qui garde la main
+  et conclut « non fondé », juste.
+- **Les sœurs** (`dossier.Chemise.soeurs`). Une réponse du chercheur s'écrit en une transaction, ses
+  pièces partagent `created_at`. Ce ne sont pas des versions de la pièce élue mais ses ANNEXES :
+  MSFT qf_1 = résultat d'exploitation #355 + taux d'impôt #357 ; élire l'un rangeait l'autre en
+  « antérieure », non remise — #106 l'introduisait pour toute collecte neuve. **Un fonds archive la
+  note précédente, jamais les annexes de la dernière** : la pièce élue part avec ses sœurs, seules les
+  collectes précédentes sont antérieures. Sans `created_at` chargé, aucune sœur (jamais `None == None`).
+- **Les orphelines d'avant #106** : 76 pièces (RVMD/NVDA/MSFT) écrites par une réponse dont une seule
+  pièce était rattachée (dont #717, le 10-Q qui confirme la politique de capitalisation). Rattachées par
+  `tools/rattacher_soeurs.sh --ecrire` (77 liens, 2026-10-03), SANS modèle : la preuve est la trace
+  (même horodatage), un horodatage qui désignerait deux ingrédients est refusé, une entry du socle ou
+  d'un appariement n'est jamais une sœur. Trace de retrait : `tools/retraits/2026-10-03_rattachement_soeurs.txt`.
+Gardes : `check_collecte_executor` §12 (fixtures du plan #179 et de la carte réelle) ; `check_dossier`
+§12 ; mutations 3/3 et 3/3, `negatif_dossier.sh` 21/0.
+
+### #108 — chaque framework ne lit que ses sujets
+
+**Arbitrage de l'utilisateur (2026-10-03)** : « je ne comprends pas comment des enjeux de concurrence se
+retrouvent dans un dossier d'analyse financière ? Chaque framework ne doit traiter que de ses sujets. »
+Le dossier complétait ses places libres (plafond 40) par le « hors index » — toute pièce du titre non
+rattachée à CE framework — triée par la seule date : la qualité financière de RVMD recevait des études
+cliniques de concurrents KRAS et des pièces de valorisation, pendant que le relevé des placements de
+l'émetteur restait dehors. Désormais `assembler_dossier` ne remet que les pièces classées sous les
+points du framework (élue + sœurs) et les lectures jointes d'office (#106) ; les autres sont
+`non_classees`, COMPTÉES et nommées au bilan, jamais remises. Une donnée qui manque se signale par la
+collecte du framework (mandat), jamais par des pièces classées ailleurs. Le plafond ne coupe plus rien :
+il reste un signal (`plafond_insuffisant`). ⚠️ Retire la règle « hors index joint » d'origine (les
+faits EDGAR non liés) : depuis #61 le socle est plan-dérivé, ses faits sont liés par le plan.
+Gardes : `check_dossier` §6 réécrit (la règle vaut même avec de la place : sujet, pas budget).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

@@ -457,5 +457,31 @@ check("§6 un décalage POSITIF (`Revenues[1]`, un exercice futur) est refusé :
       _m is not None and ("POSITIF" in _m or "positif" in _m.lower()), f"→ {_m!r}")
 
 
+print("\n[7] un solde de bilan déposé au 10-K reste un INSTANT — le dernier bilan fait foi (#109)")
+# Forme RÉELLE RVMD (companyfacts, relevée le 2026-10-03) : les soldes du 10-K portent `form=10-K,
+# fp=FY` SANS `start`, exactement comme ceux d'un 10-Q portent `fp=Q2`. La fixture d'avant n'avait que
+# des soldes de 10-Q : elle ne pouvait pas voir le solde de décembre lu comme un « exercice ».
+_bilan_10k = [
+    {**_instant("2025-12-31", 383_750_000.0, form="10-K", accn="0001193125-26-071563"), "fp": "FY"},
+    _instant("2026-06-30", 815_435_000.0, accn="0001193125-26-335104"),
+]
+_ms_10k = [
+    {**_instant("2025-12-31", 1_640_000_000.0, form="10-K", accn="0001193125-26-071563"), "fp": "FY"},
+    _instant("2026-06-30", 3_122_534_000.0, accn="0001193125-26-335104"),
+]
+_sb, _ub, _cb = serie_du_concept(_bilan_10k, "CashAndCashEquivalentsAtCarryingValue")
+check("§7 un solde déposé au 10-K (fp=FY, sans durée) est lu comme un INSTANT, pas comme un exercice",
+      _cb == "instant", f"→ cadrage {_cb!r}")
+check("§7 …et le dernier point est le bilan du 2026-06-30 (815,4 M$), pas la clôture annuelle",
+      _sb and _sb[-1]["end"] == "2026-06-30" and _sb[-1]["val"] == 815_435_000.0,
+      f"→ {_sb[-1] if _sb else None}")
+_c7 = ConsigneAppariement(statut="approximation",
+                          expression="CashAndCashEquivalentsAtCarryingValue + MarketableSecuritiesCurrent",
+                          hypotheses=("trésorerie et placements",), deterministe=True, termes_web=())
+_pts7, _af7, _ab7 = resoudre_points(_c7, {"CashAndCashEquivalentsAtCarryingValue": _bilan_10k,
+                                          "MarketableSecuritiesCurrent": _ms_10k})
+check("§7 trésorerie + placements RVMD : ancre BILAN au 2026-06-30, aucune ancre de flux",
+      _ab7 == "2026-06-30" and _af7 is None, f"→ flux={_af7} bilan={_ab7}")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

@@ -79,6 +79,7 @@ from app.contracts.formule_grammaire import (
 from app.knowledge.edgar_facts import (
     duree_jours,
     point_pour_periode,
+    est_point_de_flux,
     points_annuels,
     points_instantanes,
 )
@@ -237,7 +238,13 @@ def serie_du_concept(
         return (max(str(p["end"]) for p in pts), len(pts), unite)
 
     unite, pts = max(par_unite.items(), key=rang)
-    annuels = points_annuels(pts)
+    # Un exercice ANNUEL est une DURÉE : seul un point qui porte `start` peut l'être (#42, détenteur
+    # unique `est_point_de_flux`). Mesuré le 2026-10-03 (RVMD, entries #734/#741) : le solde de
+    # trésorerie déposé au 10-K porte `form=10-K, fp=FY` comme un flux ; sans ce filtre il était lu
+    # en « flux », donc au 31/12/2025 (2,03 Md$), au lieu du dernier bilan au 30/06/2026 (3,94 Md$) —
+    # et la dette nette mélangeait une trésorerie de décembre à une dette de juin (−1,54 au lieu de
+    # −3,45 Md$). Tous les nombres justes, le fait faux.
+    annuels = points_annuels(p for p in pts if est_point_de_flux(p))
     if annuels:
         return annuels, unite, "flux"
     instants = points_instantanes(pts)

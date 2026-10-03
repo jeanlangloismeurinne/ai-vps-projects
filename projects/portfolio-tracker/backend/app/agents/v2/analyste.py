@@ -79,7 +79,7 @@ from app.agents.v2.frameworks import (
     valider_pont_framework_answer,
 )
 from app.knowledge.material_events import MaterialEvent
-from app.agents.v2.runner import run_json_agent
+from app.agents.v2.runner import AgentOutputInvalid, run_json_agent
 from app.agents.v2.traducteur import questions_applicables
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.framework_answer_schema import (
@@ -908,14 +908,32 @@ async def repondre(
                  or json.dumps(run.parsed.model_dump(mode="json"), ensure_ascii=False)},
                 {"role": "user", "content": _message_reprise(a_reprendre, admis, interrogeables, entries)},
             ]
-            run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)
-            issues2, _ = _traiter_sortie(run2.parsed, {q: interrogeables[q] for q in a_reprendre}, admis,
-                                         profils=profils, entries=entries, entete=entete)
-            for qid, premier in a_reprendre.items():
-                second = issues2[qid]
-                issues[qid] = second if not isinstance(second, _Refus) else _Refus(
-                    f"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : {second.motif}")
-            run = _cumuler(run, run2)
+            try:
+                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)
+            except AgentOutputInvalid as e:
+                # Le renvoi rend une sortie hors contrat (mesuré le 2026-10-03, RVMD qf_4/qf_7 :
+                # `sans_fondement` portant ses chiffres). C'est une faute d'AGENT sur les questions
+                # renvoyées, pas une panne du passage : elles sortent en refus NOMMÉS, les réponses
+                # du premier tour restent acquises, et l'appel raté est COMPTÉ (#41) — jamais une
+                # exception qui jette tout ce que le passage a déjà obtenu.
+                for qid, premier in a_reprendre.items():
+                    issues[qid] = _Refus(
+                        f"{premier.motif} — renvoyée une fois avec ce motif, sortie de nouveau non "
+                        f"conforme au contrat : {str(e)[:600]}")
+                if dataclasses.is_dataclass(run):
+                    run = dataclasses.replace(
+                        run, tokens_in=run.tokens_in + int(e.tokens_in or 0),
+                        tokens_out=run.tokens_out + int(e.tokens_out or 0),
+                        cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
+            else:
+                issues2, _ = _traiter_sortie(run2.parsed, {q: interrogeables[q] for q in a_reprendre},
+                                             admis, profils=profils, entries=entries, entete=entete)
+                for qid, premier in a_reprendre.items():
+                    second = issues2[qid]
+                    issues[qid] = second if not isinstance(second, _Refus) else _Refus(
+                        f"{premier.motif} — renvoyée une fois avec ce motif, de nouveau refusée : "
+                        f"{second.motif}")
+                run = _cumuler(run, run2)
         resultat.run = run
 
         for qid in interrogeables:

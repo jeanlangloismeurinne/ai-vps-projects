@@ -55,7 +55,9 @@ mutations=(
 "$SRC¦        return (max(str(p[\"end\"]) for p in pts), len(pts), unite)¦        return (max(str(p[\"end\"]) for p in pts), len(pts))  # mutation: plus de départage¦donnent le MÊME choix quel que soit l'ordre"
 # LE CADRAGE : tout est lu comme un instant. Un flux annuel devient un point de bilan, et le fait
 # rapporte un trimestre là où l'on attend un exercice — sans erreur visible.
-"$SRC¦    annuels = points_annuels(pts)¦    annuels = []  # mutation: plus aucun flux annuel reconnu¦lu comme un FLUX"
+"$SRC¦    annuels = points_annuels(p for p in pts if est_point_de_flux(p))¦    annuels = []  # mutation: plus aucun flux annuel reconnu¦lu comme un FLUX"
+# #109 — un solde déposé au 10-K (fp=FY, sans durée) relu comme un exercice
+"$SRC¦    annuels = points_annuels(p for p in pts if est_point_de_flux(p))¦    annuels = points_annuels(pts)¦est lu comme un INSTANT"
 
 # ── §3 LE FAIT PRODUIT ────────────────────────────────────────────────────────────────────────────
 # L'IDENTITÉ DU FAIT : le `metric` cesse d'être l'expression. Deux exécutions de la même formule
