@@ -2860,6 +2860,31 @@ Mesuré après déploiement : 2/2 passages citent #749 seul ; qf_6 #1080 `repond
 financière RVMD 0,00 → 0,33 ; `check_signature_modele_persist` vert (première réponse RVMD reprenable).
 Gardes : `check_analyste` §5 ter + relecture (117/0) ; `negatif_analyste.sh` 53/0.
 
+### #112 — les douze mois glissants : une PÉRIODE de la référence, lue au dépôt par les durées
+
+**Arbitrage de l'utilisateur (2026-10-03)** : « lorsqu'il y a une publication trimestrielle, il suffit de
+prendre les 4 derniers comptes ; hors résultats trimestriels, l'analyse construit une approximation — pas de
+règles rigides ». Un fonds juge la piste de trésorerie d'une société qui accélère sur ses douze derniers
+mois, pas sur l'exercice clos (RVMD : −1 223 M$ contre −898 M$).
+- **Grammaire** (`formule_grammaire`) : `Concept[ttm]` (`DOUZE_MOIS`) — comme le décalage, la période est une
+  propriété de la RÉFÉRENCE (#57/#74) ; `noms_de_la_formule` la projette, [V]/[W] inchangés. Une période est
+  `int | "ttm"` : tout tri passe par `cle_de_reference` (des types mêlés lèveraient).
+- **Producteur** (`appariement_feed.douze_mois_glissants`) : exercice clos + cumul de l'exercice en cours −
+  cumul de la même période l'an passé, chaque terme reconnu par sa DURÉE (#42), cumul = le plus LONG à la
+  clôture (MSFT dépose aussi le trimestre isolé), affirmation d'origine préférée ; dernier dépôt = 10-K ⟹
+  l'exercice. UNE fin pour tous les flux glissants (la plus récente) ; un terme absent = refus NOMMÉ, jamais
+  un repli sur l'exercice ni un recul de la fin (ce serait le chiffre optimiste qu'on retire). Douze mois +
+  exercice clos dans une formule = refus (deux intervalles) ; un solde de bilan reste admis (autonomie).
+  Provenance : les trois lectures, signes et accessions.
+- **Recette ou carte** (`recette_retenue`) : une carte qui lit un concept de la recette sur douze mois prend
+  la main (période que la recette ne lit pas — #107 étendu du périmètre au temps).
+- **Geste d'analyste** `assurer_carte(refaire=True)` / `executer_chaine --refaire-carte` : refaire une carte à
+  jour quand la MÉTHODE s'est enrichie ; jamais déclenché par le système.
+- ⚠️ **Mesuré, NON résolu** : l'apparieur classe « sur les quatre derniers trimestres » en `exact` 2/2 malgré
+  la consigne — la forme (période déclarée par le traducteur) est l'arbitrage en attente (00-REPRISE).
+Gardes : `check_appariement_feed` §9 (fixtures copiées des dépôts RVMD/MSFT) + négatif **30/0** ;
+`check_appariement` §11 bis + négatif **50/0** ; `check_collecte_executor` §10/§12 + négatif 40/2 (2 préexistants).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

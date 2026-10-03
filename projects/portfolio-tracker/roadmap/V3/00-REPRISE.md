@@ -8,7 +8,7 @@ role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#111), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#112), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -73,12 +73,12 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4150 assertions, 0 rouge** — 2026-10-03 après #111 (`check_signature_modele_persist` reverdi : qf_6 #1080 reprenable). Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4184 assertions, 0 rouge** — 2026-10-03 après #112. `negatif_collecte_executor.sh` 40/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; la prochaine sera **052**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`d1e4701`** (#111), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
+- **Production** : stack sur **`b9bdea6`** (#112), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
@@ -193,19 +193,26 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
 - **#111 déployé (`d1e4701`, arbitrage utilisateur)** : chaque affirmation se cite par sa source la plus
   récente, qui REMPLACE l'ancienne dans la citation (consigne + relecture du même point). **qf_6 #1080
   `repondu` A, À JOUR** — première réponse RVMD reprenable ; suite **4150/0, tout vert**.
-- **⚠️ EN TÊTE — PROCHAIN LOT : la consommation des douze derniers mois (qf_7).** Arbitrage utilisateur
-  du 2026-10-03 : « lorsqu'il y a une publication trimestrielle, il suffit de prendre les 4 derniers
-  comptes ; hors résultats trimestriels (événements), l'analyse construit une approximation — ATTENTION à
-  ne pas créer de règles rigides quand l'étendue des cas est énorme » (c'est pourquoi existent
-  l'approximation sur hypothèses et le bac à calcul Python de la valorisation). ⟹ (a) donner à la
-  grammaire des formules (#74) l'identité comptable des douze mois glissants pour un FLUX (exercice +
-  cumul de l'année en cours − cumul de la même période l'an passé, lus dans les 10-Q par leur durée,
-  #42) — un outil générique, pas une règle par cas ; un historique incomplet = refus NOMMÉ, jamais un
-  repli sur l'exercice ; (b) le reste (événement postérieur) passe par l'`approxime` de l'analyste,
-  déjà construit. Constat qui motive (a) : l'apparieur a écrit pour « 4 derniers trimestres »
-  `OCF + flux d'investissement FY2025` (#760) en se déclarant DÉTERMINISTE — l'analyste l'a justement
-  écartée. Le drapeau `deterministe` posé par le modèle sur un vrai choix de modélisation reste la
-  limite #68.
+- **#112 déployé (`6946c55`, `b9bdea6`) — les douze mois glissants.** La grammaire dit `Concept[ttm]`
+  (période de la référence, pas concept neuf) ; le producteur la lit au dépôt (exercice clos + cumul en
+  cours − cumul de la même période l'an passé, reconnus par leur durée ; dernier dépôt = 10-K ⟹
+  l'exercice) ; refus NOMMÉ si une lecture manque, jamais de repli sur l'exercice. Mesuré sur les vrais
+  dépôts : RVMD **−1 223 M$** sur douze mois au 30/06/2026 (exercice 2025 : −898 M$) ; NVDA 134,4 Md$ ;
+  MSFT = exercice (10-K dernier dépôt). Une carte qui lit le concept d'une recette sur douze mois prend
+  la main sur la recette (période que la recette ne lit pas). Geste `--refaire-carte` (executer_chaine).
+  Suite **4184/0**.
+- **⚠️ EN TÊTE — ARBITRAGE À POSER (qf_7 toujours `non_fondable`, réponses #1099, #1106).** Deux
+  passages réels avec carte refaite (plans #200, #202) : l'apparieur classe « flux d'exploitation sur
+  les quatre derniers trimestres » en `exact` (le champ nu = l'exercice clos) **2/2**, malgré la consigne
+  explicite — instabilité de modèle, la consigne seule ne tient pas. Pièce #774 : libellé « quatre
+  derniers trimestres », chiffre de l'exercice 2025 (bon libellé, mauvais nombre) — l'analyste l'a
+  écartée à juste titre ; **à retirer** (pollution, décision à prendre avec l'utilisateur). Remède de
+  FORME proposé : le traducteur (qui lit la question) déclare la PÉRIODE de chaque ligne dans un
+  vocabulaire fermé (exercice clos · douze derniers mois · dernier bilan), et le code l'exécute — un
+  `exact` sur un flux demandé « douze derniers mois » se lit alors `[ttm]` sans jugement de l'apparieur.
+  Coût : un champ au contrat du plan + migration 052. Alternatives : règle générale « un flux relevé à
+  la dernière clôture se lit sur douze mois dès qu'un trimestre est publié » (rigide : casse les
+  questions par exercice, qf_3) ; ou laisser l'apparieur (instable).
 - qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses coupée
   par le budget 180 s ; échéancier : datation hétérogène signalée. #751 garde l'ancienne prose « Calculé »
   jusqu'à sa prochaine réécriture (sans effet : #110 + la relecture).
@@ -370,7 +377,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #111** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #112** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
