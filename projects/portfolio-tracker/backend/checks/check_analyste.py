@@ -376,6 +376,17 @@ check("la consigne de l'analyste ENSEIGNE la lecture des faits postérieurs",
       "faits_posterieurs_a_lire" in A._ANALYSTE_SYSTEM_PROMPT and "pieces_du_depot" in A._ANALYSTE_SYSTEM_PROMPT
       and "effet" in A._ANALYSTE_SYSTEM_PROMPT)
 
+# #111 — arbitrage du 2026-10-03 : chaque affirmation se cite par sa source la plus récente ; une source
+# plus récente qui porte la même information REMPLACE l'ancienne dans la citation (qf_6 RVMD citait le
+# 10-K de décembre ET le 10-Q de juin qui le confirme, et naissait périmée). Consigne, pas garde : quelle
+# pièce porte quelle phrase n'est pas décidable en code (#68).
+check("§5 ter la consigne fait citer la source la PLUS RÉCENTE d'une même information, qui REMPLACE l'ancienne",
+      "SOURCE LA PLUS RÉCENTE" in A._ANALYSTE_SYSTEM_PROMPT and "REMPLACE l'ancienne" in A._ANALYSTE_SYSTEM_PROMPT)
+_corpus_vu = [e for q in CTX["questions"] for e in q.get("corpus", [])]
+check("§5 ter …et le corpus montré porte la DATE de chaque source (sans elle la consigne est inapplicable)",
+      len(_corpus_vu) > 0 and all(e.get("date") for e in _corpus_vu if ENTRIES.get(e.get("entry_id"), {}).get("source_date")),
+      f"→ {[(e.get('entry_id'), e.get('date')) for e in _corpus_vu][:6]}")
+
 
 # ── §6 [S] contre les profils RÉELS ───────────────────────────────────────────────────────────────
 print("\n[6] le `sens` appartient au vocabulaire FERMÉ de la question — éprouvé sur les profils réels")
