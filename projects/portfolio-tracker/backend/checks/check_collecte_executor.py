@@ -1077,5 +1077,100 @@ check("§11 le code de production APPELLE `collecter_un` en lui passant `consign
       len(_passes) >= 1 and any({"consigne", "inventaire"} <= s for s in _kw),
       f"→ {len(_passes)} appel(s), kwargs={_kw}")
 
+
+# ── §12 LA CARTE QUI PROLONGE UNE RECETTE PREND LA MAIN — CELLE QUI LA CONTREDIT, NON ────────────
+# Mesuré le 2026-10-03 sur RVMD (plan #179, carte `qualite_financiere`) : le traducteur nomme
+# `cash_and_lt_debt` pour « trésorerie, équivalents ET titres de placement » ; la recette ne lit que
+# la trésorerie (815 M$), la carte lit aussi les placements (3,9 Md$ au total). L'ordre « recette
+# d'abord » publiait le petit nombre sous le grand libellé (#43) et l'analyste concluait `non_fondable`.
+# Fixtures RECOPIÉES du plan #179 et de la carte en base (`feedback_fixture_copiee_du_reel`) — y
+# compris la ligne « échéances à douze mois », dont la carte CONTREDIT la recette : c'est le cas qui
+# discrimine « prolonge » de « diffère ».
+print("\n[12] recette ou appariement : la carte qui PROLONGE la recette prend la main (#107)")
+
+
+def _cons_reelle(expr):
+    return _mod.ConsigneAppariement(statut="approximation", expression=expr, hypotheses=(),
+                                    deterministe=True, termes_web=())
+
+
+_l_treso = LigneAveugle(
+    ticker_id="RVMD", metrique="Trésorerie, équivalents de trésorerie et titres de placement à court terme",
+    source_pressentie="10-K / 10-Q, bilan consolidé", ancre="clôture du trimestre", poste="cash_and_lt_debt")
+_l_dette = LigneAveugle(
+    ticker_id="RVMD",
+    metrique="Dette totale (y compris billets convertibles) et trésorerie, équivalents de trésorerie et "
+             "titres de placement à court terme",
+    source_pressentie="10-K / 10-Q, bilan consolidé et notes afférentes", ancre="clôture du trimestre",
+    poste="cash_and_lt_debt")
+_l_12m = LigneAveugle(
+    ticker_id="RVMD", metrique="Dette exigible dans les douze prochains mois",
+    source_pressentie="10-K / 10-Q, bilan consolidé et notes afférentes", ancre="clôture du trimestre",
+    poste="long_term_debt_current")
+_c_treso = _cons_reelle("CashAndCashEquivalentsAtCarryingValue + MarketableSecuritiesCurrent")
+_c_dette = _cons_reelle("ConvertibleLongTermNotesPayable - CashAndCashEquivalentsAtCarryingValue - "
+                        "MarketableSecuritiesCurrent")
+_c_12m = _cons_reelle("ConvertibleLongTermNotesPayable")
+
+check("§12 (préalable) les trois lignes ont une recette du catalogue — sans quoi la section ne "
+      "mesurerait pas l'arbitrage recette/appariement",
+      all(_mod.poste_retenu(l.poste, l.metrique) for l in (_l_treso, _l_dette, _l_12m)))
+check("§12 trésorerie + placements : la carte prolonge la recette `cash_and_lt_debt` → la recette "
+      "s'efface (None), l'appariement s'exécute",
+      _mod.recette_retenue(_l_treso, _c_treso) is None,
+      f"→ {_mod.recette_retenue(_l_treso, _c_treso)!r}")
+check("§12 dette nette (convertibles − trésorerie − placements) : idem, la recette s'efface",
+      _mod.recette_retenue(_l_dette, _c_dette) is None,
+      f"→ {_mod.recette_retenue(_l_dette, _c_dette)!r}")
+check("§12 dette à douze mois approchée par TOUTE la dette convertible : concept DISJOINT de la "
+      "recette, la carte la contredit → la recette garde la main (elle conclut « non fondé », juste)",
+      _mod.recette_retenue(_l_12m, _c_12m) == "long_term_debt_current",
+      f"→ {_mod.recette_retenue(_l_12m, _c_12m)!r}")
+check("§12 carte qui ne lit QUE des concepts de la recette → la recette garde la main (choix par "
+      "fraîcheur, #30)",
+      _mod.recette_retenue(_l_treso, _cons_reelle("CashAndCashEquivalentsAtCarryingValue"))
+      == "cash_and_lt_debt")
+check("§12 sans consigne → la recette (repli inchangé)",
+      _mod.recette_retenue(_l_treso, None) == "cash_and_lt_debt")
+
+# Le CHEMIN réel : `collecter_un` doit exécuter l'appariement, pas le socle.
+_appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
+_mod.executer_appariement = _fake_executer
+_r12 = asyncio.run(_mod.collecter_un(
+    _l_treso, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
+    consigne=_c_treso, inventaire=_inv, emetteur=None))
+check("§12 `collecter_un` (trésorerie RVMD) : l'appariement s'exécute, le socle n'est PAS interrogé",
+      _appar["n"] == 1 and _edgar_calls == [] and _r12.entry_id == 9001,
+      f"→ appariement={_appar['n']} socle={_edgar_calls} {_r12}")
+_appar["n"] = 0; _edgar_calls.clear()
+asyncio.run(_mod.collecter_un(
+    _l_treso, conn=_ConnFactice(), socle=_MockSocle(), carte_statut="approximation",
+    consigne=_c_treso, inventaire=None, emetteur=None))
+check("§12 consigne SANS inventaire (inexécutable) → la recette garde la main plutôt que de laisser "
+      "la ligne repartir au web", _edgar_calls == [("RVMD", "cash_and_lt_debt")] and _appar["n"] == 0,
+      f"→ socle={_edgar_calls} appariement={_appar['n']}")
+
+# Le socle ne doit pas collecter un poste dont la ligne s'exécute par appariement (#43 : deux entries).
+_items12 = [CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit", metrique=l.metrique,
+                               source_pressentie=l.source_pressentie, ancre=l.ancre, poste=l.poste)
+            for q, i, l in (("qf_7", "tresorerie_disponible", _l_treso),
+                            ("qf_4", "endettement_brut_et_net", _l_dette),
+                            ("qf_7", "echeances_a_douze_mois", _l_12m))]
+_plan12 = CollectionPlan(ticker_id="RVMD", framework_id="qualite_financiere", framework_version="v3.0.0",
+                         archetype="pre_revenus", items=_items12)
+_st12 = {(it.question_id, it.ingredient_id): "approximation" for it in _items12}
+_co12 = {("qf_7", "tresorerie_disponible"): _c_treso, ("qf_4", "endettement_brut_et_net"): _c_dette,
+         ("qf_7", "echeances_a_douze_mois"): _c_12m}
+_p_avec = postes_edgar_du_plan(_plan12, carte_statuts=_st12, consignes=_co12)
+check("§12 `postes_edgar_du_plan` avec consignes : seul `long_term_debt_current` est réclamé au socle "
+      "— `cash_and_lt_debt` ne l'est plus, ses deux lignes s'exécutent par appariement",
+      _p_avec == frozenset({"long_term_debt_current"}), f"→ {sorted(_p_avec)}")
+_appels_postes = [n for n in ast.walk(_ARBRE) if isinstance(n, ast.Call)
+                  and getattr(n.func, "id", None) == "postes_edgar_du_plan"]
+check("§12 le code de production passe `consignes` à `postes_edgar_du_plan` : le socle et "
+      "l'exécution lisent le MÊME arbitrage",
+      any("consignes" in {k.arg for k in n.keywords} for n in _appels_postes),
+      f"→ {len(_appels_postes)} appel(s)")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

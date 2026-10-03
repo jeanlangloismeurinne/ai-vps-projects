@@ -71,6 +71,10 @@ async def main() -> int:
             f"{e.get('reliability_tier')}  {e.get('nature')}  "
             f"{str(e.get('content') or '')[:88].replace(chr(10), ' ')}"
         )
+        for so in ch.soeurs:
+            es = dossier.entries[so]
+            print(f"      sœur        #{so}  {es.get('source_date')}  {es.get('reliability_tier')}  "
+                  f"{str(es.get('content') or '')[:88].replace(chr(10), ' ')}")
         for anc in ch.anterieures:
             print(f"      antérieure  #{anc}  (en base, non remise)")
 

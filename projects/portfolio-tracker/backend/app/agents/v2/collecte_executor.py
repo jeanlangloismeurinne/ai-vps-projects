@@ -82,6 +82,7 @@ from .apparieur import (
     AppariementRefuse,
     AppariementSansObjet,
     apparier,
+    concepts_de_la_formule,
     dernier_depot_vu,
 )
 from .collecte_persist import persist_aiguillage, persist_plan
@@ -91,6 +92,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "router_source",
     "poste_retenu",
+    "recette_retenue",
     "entry_type_pour_metrique",
     "construire_requete_web",
     "collecter_un",
@@ -211,6 +213,50 @@ def poste_retenu(poste: Optional[str], metrique: str) -> Optional[str]:
         logger.info(
             "poste « %s » nommé pour une métrique DÉRIVÉE (« %s ») — ligne routée au web : un poste "
             "est un niveau brut, pas son transformé (#43).", poste, metrique)
+        return None
+    return poste
+
+
+# Les concepts qu'une RECETTE du catalogue sait lire (ses candidats + ceux de son second terme
+# composite). Dérivé de `POSTES`, détenteur unique (#46) — jamais recopié.
+_CONCEPTS_DU_POSTE: dict[str, frozenset[str]] = {
+    p.metric: frozenset(p.concepts) | frozenset(p.composite_concepts) for p in POSTES}
+
+
+def recette_retenue(ligne: LigneAveugle, consigne: Optional[ConsigneAppariement]) -> Optional[str]:
+    """La recette du catalogue à exécuter pour cette ligne — ou None, qui laisse la main à la consigne
+    d'appariement (puis au repli web). Détenteur UNIQUE de « recette ou appariement ? », lu par
+    `collecter_un` (quoi exécuter) ET par `postes_edgar_du_plan` (quoi faire collecter au socle) :
+    deux lectures divergentes écriraient deux entries actives pour le même fait (#43).
+
+    LA RECETTE NE VAUT QUE SI ELLE LIT CE QUE LA CARTE A JUGÉ NÉCESSAIRE. Mesuré le 2026-10-03 sur
+    RVMD (plan #179) : le traducteur nomme `cash_and_lt_debt` pour « trésorerie, équivalents ET titres
+    de placement » ; la recette ne lit que `CashAndCashEquivalentsAtCarryingValue`, alors que la carte,
+    écrite pour CET ingrédient sur l'inventaire réel, disait `Cash… + MarketableSecuritiesCurrent`.
+    L'ordre « recette d'abord » publiait 815 M$ de trésorerie là où l'émetteur en déclare 3,9 Md$ —
+    le bon libellé en face du MAUVAIS nombre (#43, famille #60/#67), et l'analyste concluait
+    `non_fondable` sur un dossier juste.
+
+    D'où la règle, déterministe : la carte PROLONGE la recette (au moins un concept en commun, et des
+    concepts que la recette ne lit pas) ⟹ la recette répond à une question plus étroite, la consigne
+    s'exécute. Le « en commun » n'est pas une prudence de forme, il est MESURÉ : sur la même carte,
+    « dette exigible à douze mois » est approchée par `ConvertibleLongTermNotesPayable` (toute la
+    dette convertible, à long terme) — un concept DISJOINT de la recette `long_term_debt_current`.
+    Là, la carte ne complète pas la recette, elle la CONTREDIT ; la recette garde la main et conclut
+    « non fondé » (RVMD n'a pas de dette à court terme), ce qui est juste. Une carte qui ne lit que
+    des concepts de la recette ne change rien : la recette garde la main et son choix par FRAÎCHEUR
+    (#30), qu'une expression figée ne fait pas.
+    """
+    poste = poste_retenu(ligne.poste, ligne.metrique)
+    if poste is None or consigne is None:
+        return poste
+    lus = _CONCEPTS_DU_POSTE[poste]
+    demandes = concepts_de_la_formule(consigne.expression)
+    if demandes & lus and demandes - lus:
+        logger.info(
+            "recette « %s » écartée pour « %s » : la carte lit aussi %s, que la recette ne lit pas — "
+            "l'appariement « %s » s'exécute", poste, ligne.metrique, sorted(demandes - lus),
+            consigne.expression)
         return None
     return poste
 
@@ -380,7 +426,9 @@ async def collecter_un(
     lire « le dépôt ne porte pas ce nombre » là où la cause est « l'ancre commune manque »."""
     route = router_source(ligne, carte_statut=carte_statut)
     if route == "edgar":
-        poste = poste_retenu(ligne.poste, ligne.metrique)
+        # La consigne n'arbitre que si elle est EXÉCUTABLE (inventaire en main) — sinon la recette
+        # garde la main plutôt que de laisser la ligne repartir au web.
+        poste = recette_retenue(ligne, consigne if inventaire is not None else None)
         if poste is not None:
             return await socle.entry_id(ligne.ticker_id, poste)
         if consigne is not None and inventaire is not None:
@@ -477,6 +525,7 @@ def postes_edgar_du_plan(
     plan: CollectionPlan,
     *,
     carte_statuts: Optional[dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]] = None,
+    consignes: Optional[dict[tuple[str, str], ConsigneAppariement]] = None,
 ) -> frozenset[str]:
     """Les postes du socle EDGAR que CE plan réclame (maillon 5 / §3.6) : l'union des postes canoniques
     des lignes traduites routées vers EDGAR. C'est exactement ce que le socle collectera — « un poste
@@ -485,7 +534,11 @@ def postes_edgar_du_plan(
 
     `carte_statuts` (dict `(question_id, ingredient_id) → statut`) est fourni par `executer_plan_reel`
     lorsqu'une carte est disponible — il est transmis à `router_source` pour que les lignes `indisponible`
-    soient exclues du socle EDGAR, même si leur source pressentie nomme un dépôt réglementaire."""
+    soient exclues du socle EDGAR, même si leur source pressentie nomme un dépôt réglementaire.
+
+    `consignes` (mêmes clefs) n'est fourni que si l'inventaire est en main : une ligne dont la carte
+    PROLONGE la recette s'exécute par appariement (`recette_retenue`), son poste n'est donc pas
+    réclamé au socle."""
     postes: set[str] = set()
     for item in plan.items:
         if item.statut != "traduit":
@@ -493,9 +546,10 @@ def postes_edgar_du_plan(
         ligne = ligne_aveugle(item, plan.ticker_id)
         statut = carte_statuts.get((item.question_id, item.ingredient_id)) if carte_statuts else None
         if router_source(ligne, carte_statut=statut) == "edgar":
-            poste = poste_retenu(ligne.poste, ligne.metrique)
+            consigne = consignes.get((item.question_id, item.ingredient_id)) if consignes else None
+            poste = recette_retenue(ligne, consigne)
             if poste is None:
-                continue  # approximation sans poste catalogue : exclue du socle, partira au web
+                continue  # sans recette (ou recette prolongée par la carte) : appariement ou web
             postes.add(poste)
     return frozenset(postes)
 
@@ -790,7 +844,9 @@ async def executer_plan_reel(
             logger.warning("identité de %s non résolue (%s) — lignes web converties en mandats",
                            plan.ticker_id, e)
 
-    socle = _SocleEdgar(postes_edgar_du_plan(plan, carte_statuts=carte_statuts))
+    socle = _SocleEdgar(postes_edgar_du_plan(
+        plan, carte_statuts=carte_statuts,
+        consignes=carte.consignes if carte.inventaire is not None else None))
     resultats: dict[tuple[str, str, str, str], ResultatCollecte] = {}
     for item in plan.items:
         if item.statut != "traduit":

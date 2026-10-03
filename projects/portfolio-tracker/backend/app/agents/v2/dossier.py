@@ -94,12 +94,27 @@ Lien = tuple[str, str, int]  # (question_id, ingredient_id, entry_id)
 
 @dataclass(frozen=True)
 class Chemise:
-    """Les pièces d'UN point de la liste du comité, la plus récente devant."""
+    """Les pièces d'UN point de la liste du comité, la plus récente devant.
+
+    `soeurs` (#107) : les pièces écrites par la MÊME réponse que la pièce en vigueur (même
+    `created_at` — une réponse du chercheur s'écrit en une transaction). Ce ne sont pas des versions
+    de la pièce élue mais ses ANNEXES, et elles partent avec elle. Mesuré le 2026-10-03 : MSFT
+    `qf_1.resultat_operationnel_apres_impot` porte, de la même réponse, le résultat d'exploitation
+    (#355) ET le taux d'impôt effectif (#357) — élire l'un et ranger l'autre en « antérieure »
+    retirait au modèle la moitié de son calcul. Un fonds archive la note PRÉCÉDENTE d'un analyste,
+    jamais les annexes de la dernière. Les versions antérieures sont les pièces des collectes
+    précédentes, et elles seules."""
 
     question_id: str
     ingredient_id: str
     en_vigueur: int
     anterieures: tuple[int, ...]
+    soeurs: tuple[int, ...] = ()
+
+    @property
+    def remises(self) -> tuple[int, ...]:
+        """Ce que la chemise tend au modèle : la pièce élue, puis ses sœurs."""
+        return (self.en_vigueur, *self.soeurs)
 
     @property
     def profondeur(self) -> int:
@@ -133,7 +148,9 @@ class Dossier:
         qf_4 et sous qf_7). La compter deux fois ferait lire « 10 versions écartées » là où il y en
         a 9 — un décompte de rendu qui se lit comme une propriété du corpus.
         """
-        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))
+        remises = {i for ch in self.chemises for i in ch.remises}
+        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}
+                            - set(self.jointes) - remises))
 
     @property
     def datation_suspecte(self) -> tuple[Chemise, ...]:
@@ -292,21 +309,28 @@ def assembler_dossier(
         # `dict.fromkeys` plutôt que `set` : l'index peut porter deux fois le même lien, et on veut
         # un ordre déterministe avant le tri par fraîcheur.
         uniques = sorted(dict.fromkeys(ids), key=lambda i: _rang(entries[i]))
+        # Les sœurs de l'élue (#107) : même réponse, donc même `created_at`. Sans horodatage chargé,
+        # aucune sœur — jamais `None == None`, qui ferait de toutes les pièces non horodatées une
+        # seule réponse.
+        ecrite = entries[uniques[0]].get("created_at")
+        soeurs = tuple(i for i in uniques[1:]
+                       if ecrite is not None and entries[i].get("created_at") == ecrite)
         chemises.append(
             Chemise(
                 question_id=question_id,
                 ingredient_id=ingredient_id,
                 en_vigueur=uniques[0],
-                anterieures=tuple(uniques[1:]),
+                anterieures=tuple(i for i in uniques[1:] if i not in soeurs),
+                soeurs=soeurs,
             )
         )
 
     # Une même pièce peut être en vigueur sur DEUX points (mesuré : `lignes_de_credit_non_tirees`
     # est réclamé par qf_4 et par qf_7, et une seule entry les couvre). Elle ne compte qu'une fois
     # dans le dossier, mais elle ouvre bien deux chemises.
-    en_vigueur: list[int] = list(dict.fromkeys(c.en_vigueur for c in chemises))
+    en_vigueur: list[int] = list(dict.fromkeys(i for c in chemises for i in c.remises))
     jointes = tuple(i for i in dict.fromkeys(joindre) if i in entries and i not in en_vigueur)
-    rattachees = {i for c in chemises for i in (c.en_vigueur, *c.anterieures)}
+    rattachees = {i for c in chemises for i in (*c.remises, *c.anterieures)}
     hors_index = sorted(
         (i for i in entries if i not in rattachees and i not in jointes), key=lambda i: _rang(entries[i])
     )

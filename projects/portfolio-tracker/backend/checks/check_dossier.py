@@ -348,4 +348,50 @@ try:
 finally:
     ld.store_knowledge, ld.telecharger_soumission, ld.extraire_documents = _orig_ld
 
+print("\n§12 (#107) les SŒURS de la pièce élue partent avec elle ; seules les collectes précédentes sont antérieures")
+# Fixture RECOPIÉE de la base (2026-10-03). MSFT qf_1 : une réponse du chercheur a écrit #355, #356
+# et #357 dans la même transaction (même `created_at`), toutes au 2026-06-30, toutes d'héritage.
+# RVMD qf_6 : #716 (10-K, clos 2025-12-31) et #717 (10-Q, clos 2026-06-30) de la même réponse, et
+# #345 d'une collecte PRÉCÉDENTE (19/09) — le témoin qui doit rester antérieure.
+def _h(i, sd, collecte, heritage):
+    e = _e(i, sd, collecte)
+    e["portee_temporelle"] = None if heritage else "ponctuelle"
+    return e
+
+
+_ts_msft = "2026-09-19T13:02:08.673186"
+_ts_rvmd = "2026-09-30T08:21:35.604314"
+E12 = {
+    355: _h(355, date(2026, 6, 30), _ts_msft, True),
+    356: _h(356, date(2026, 6, 30), _ts_msft, True),
+    357: _h(357, date(2026, 6, 30), _ts_msft, True),
+    716: _h(716, date(2025, 12, 31), _ts_rvmd, False),
+    717: _h(717, date(2026, 6, 30), _ts_rvmd, False),
+    345: _h(345, date(2025, 12, 31), "2026-09-19T10:00:00", True),
+}
+L12 = [("qf_1", "resultat_operationnel_apres_impot", i) for i in (355, 356, 357)] + [
+    ("qf_6", "politique_de_capitalisation", i) for i in (716, 717, 345)]
+D12 = assembler_dossier(entries=E12, liens=L12, plafond=40)
+C12 = {c.question_id: c for c in D12.chemises}
+B.check(set(C12["qf_1"].remises) == {355, 356, 357} and C12["qf_1"].anterieures == (),
+        "MSFT qf_1 : les trois pièces d'une même réponse sont REMISES ensemble — aucune n'est "
+        f"rangée en version antérieure (→ remises={C12['qf_1'].remises}, "
+        f"antérieures={C12['qf_1'].anterieures})")
+B.check(C12["qf_6"].en_vigueur == 717 and C12["qf_6"].soeurs == (716,),
+        "RVMD qf_6 : le 10-Q #717 est élu, le 10-K #716 de la même réponse part avec lui "
+        f"(→ élue #{C12['qf_6'].en_vigueur}, sœurs {C12['qf_6'].soeurs})")
+B.check(C12["qf_6"].anterieures == (345,) and 345 not in D12.entries,
+        "…et #345, d'une collecte PRÉCÉDENTE, reste antérieure, non remise — la règle ne fait "
+        "pas tout partir")
+B.check({355, 356, 357, 716, 717} <= set(D12.entries),
+        "les sœurs sont dans le dossier remis (le point de lecture, pas seulement la chemise)")
+_sans_ts = {i: {**e, "created_at": None} for i, e in E12.items()}
+D12b = assembler_dossier(entries=_sans_ts, liens=L12, plafond=40)
+B.check(all(c.soeurs == () for c in D12b.chemises),
+        "sans horodatage chargé, AUCUNE sœur — `None == None` ne fabrique pas une réponse commune")
+D12c = assembler_dossier(entries=E12, liens=L12, plafond=1)
+B.check({355, 356, 357, 716, 717} <= set(D12c.entries) and D12c.plafond_insuffisant,
+        "le plafond ne coupe pas une sœur : elle est porteuse comme la pièce élue (et le plafond "
+        "insuffisant est DIT)")
+
 sys.exit(B.summary())
