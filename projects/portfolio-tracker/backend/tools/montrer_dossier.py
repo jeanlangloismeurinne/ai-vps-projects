@@ -78,15 +78,8 @@ async def main() -> int:
         for anc in ch.anterieures:
             print(f"      antérieure  #{anc}  (en base, non remise)")
 
-    print(f"\nHORS INDEX — {len(dossier.hors_index_retenues)} pièce(s) retenue(s)")
-    for i in dossier.hors_index_retenues[:12]:
-        e = dossier.entries[i]
-        print(
-            f"      #{i}  {e.get('source_date')}  {e.get('reliability_tier')}  "
-            f"{str(e.get('title') or e.get('content') or '')[:76].replace(chr(10), ' ')}"
-        )
-    if len(dossier.hors_index_retenues) > 12:
-        print(f"      … et {len(dossier.hors_index_retenues) - 12} autre(s)")
+    print(f"\nLECTURES JOINTES D'OFFICE — {len(dossier.jointes)} : {list(dossier.jointes) or 'aucune'}")
+    print(f"NON CLASSÉES DANS CE FRAMEWORK, non remises (#108) — {len(dossier.non_classees)} pièce(s)")
 
     print(f"\n{dossier.bilan()}\n")
 

@@ -52,22 +52,26 @@ mutations=(
 "$SRC¦1 if heritage else 0,¦0,  # mutation: héritage à égalité¦est en vigueur devant #296 (héritage"
 # …et inversée : l'héritage passerait devant tout ce qui est qualifié.
 "$SRC¦1 if heritage else 0,¦0 if heritage else 1,  # mutation: héritage d'abord¦est en vigueur devant #296 (héritage"
-# ── §5 le plafond mord sur les pièces en vigueur au lieu du reste ──────────────────────────────────
-"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))[:plafond]¦plafond sous le nombre de pièces en vigueur"
-# ── §5bis une pièce qui sert DEUX points consomme deux places du plafond ───────────────────────────
-"$SRC¦    en_vigueur: list[int] = list(dict.fromkeys(c.en_vigueur for c in chemises))¦    en_vigueur: list[int] = [c.en_vigueur for c in chemises]¦ne consomme qu'une place du plafond"
-# ── §6 les pièces hors index sont écartées au lieu d'être jointes ──────────────────────────────────
-"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))¦hors index sont dans le dossier"
+# ── §5 le plafond mord sur les pièces en vigueur ────────────────────────────────────────────────────
+"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))[:plafond]¦plafond sous le nombre de pièces en vigueur"
+# ── §5bis une pièce qui sert DEUX points compte deux fois au regard du plafond ──────────────────────
+"$SRC¦    en_vigueur: list[int] = list(dict.fromkeys(i for c in chemises for i in c.remises))¦    en_vigueur: list[int] = [i for c in chemises for i in c.remises]¦ne compte qu'UNE fois au regard du plafond"
+# ── §6 (#108) le complément « hors index » revient : une pièce non classée part au dossier ──────────
+"$SRC¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))¦    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *non_classees]))¦ne sont PAS remises"
+# …et les non classées sont tues au lieu d'être comptées
+"$SRC¦    non_classees = tuple(sorted(i for i in entries if i not in rattachees and i not in jointes))¦    non_classees = ()¦jamais tues"
 # ── §7 le décompte des antérieures compte deux fois une pièce partagée ─────────────────────────────
-"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))¦        return tuple(sorted([i for ch in self.chemises for i in ch.anterieures]))¦elle ne compte qu'une fois"
+"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}¦        return tuple(sorted([i for ch in self.chemises for i in ch.anterieures] + [] if True else {i for ch in self.chemises for i in ch.anterieures}¦elle ne compte qu'une fois"
 # ── §8 l'indéterminable se lit « rien à signaler » (#25/#44) ───────────────────────────────────────
 "$SRC¦        return bool(self.collecte)¦        return True¦un tuple vide ne doit pas se lire"
 # ── §9 un plafond nul rend un dossier vide au lieu de lever ────────────────────────────────────────
 "$SRC¦    if plafond < 1:¦    if False:¦plafond=0 doit LEVER"
 # ── #106 : les lectures des dépôts à lire sont jointes d'office ─────────────────────────────────────
 "$SRC¦    jointes = tuple(i for i in dict.fromkeys(joindre) if i in entries and i not in en_vigueur)¦    jointes = ()¦une pièce jointe d'office est remise"
-"$SRC¦    place_restante = max(0, plafond - len(en_vigueur) - len(jointes))¦    place_restante = max(0, plafond - len(en_vigueur))¦la place qu'elle prend est retirée"
-"$SRC¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures} - set(self.jointes)))¦        return tuple(sorted({i for ch in self.chemises for i in ch.anterieures}))¦n'est plus annoncée « non remise »"
+"$SRC¦                            - set(self.jointes) - remises))¦                            - remises))¦n'est plus annoncée « non remise »"
+# ── #107 les sœurs de la pièce élue partent avec elle ───────────────────────────────────────────────
+"$SRC¦                       if ecrite is not None and entries[i].get(\"created_at\") == ecrite)¦                       if False)¦les trois pièces d'une même réponse sont REMISES"
+"$SRC¦                       if ecrite is not None and entries[i].get(\"created_at\") == ecrite)¦                       if entries[i].get(\"created_at\") == ecrite)¦ne fabrique pas une réponse commune"
 "app/knowledge/lecture_depot.py¦        existant = await _deja_lu(conn, ticker_id, acc)¦        existant = None¦DÉJÀ lu n'est ni retéléchargé"
 "app/knowledge/lecture_depot.py¦            datation=constatee(date_du_fait=event.event_date, date_du_document=event.filing_date),¦            datation=constatee(date_du_fait=event.filing_date, date_du_document=event.filing_date),¦datée par le dépôt"
 "app/knowledge/lecture_depot.py¦    return f\"https://www.sec.gov/Archives/edgar/data/{cik}/{dossier}/{acc}-index.htm\"¦    return f\"https://www.sec.gov/cgi-bin/browse-edgar?CIK={cik}\"¦même quand le flux ne donne pas le document principal"

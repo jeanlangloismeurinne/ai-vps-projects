@@ -186,9 +186,12 @@ B.check(
     "3 pièces en vigueur distinctes pour un plafond de 5 : le plafond suffit",
 )
 B.check(
-    len(SERRE.entries) == 5 and len(SERRE.hors_index_retenues) == 2,
-    "une pièce en vigueur sur DEUX points ne consomme qu'une place du plafond — la compter deux "
-    "fois rognerait le dossier d'une pièce qu'on avait le budget de joindre",
+    len(SERRE.entries) == 3,
+    "une pièce en vigueur sur DEUX points n'est remise qu'UNE fois (3 pièces pour 4 chemises)",
+)
+B.check(
+    not assembler_dossier(entries=ENTRIES, liens=LIENS, plafond=3).plafond_insuffisant,
+    "une pièce en vigueur sur DEUX points ne compte qu'UNE fois au regard du plafond (3 pièces, plafond 3)",
 )
 ETRIQUE = assembler_dossier(entries=ENTRIES, liens=LIENS, plafond=2)
 B.check(
@@ -197,19 +200,22 @@ B.check(
     "couper ferait lire « le corpus ne fonde pas » là où c'est le budget qui a tranché",
 )
 
-print("\n§6 les pièces hors index sont JOINTES, jamais écartées")
+print("\n§6 (#108) une pièce que ce framework n'a classée sous AUCUN de ses points ne part pas")
+# Arbitrage du 2026-10-03 : « chaque framework ne doit traiter que de ses sujets ». Mesuré le même
+# jour : le dossier qualité financière de RVMD remettait des études cliniques de concurrents (classées
+# en défendabilité) au lieu des relevés de l'émetteur, au seul titre de leur date.
 B.check(
-    {282, 283, 284} <= set(D.entries),
-    "les faits déterministes hors index sont dans le dossier — les écarter ferait lire "
-    "« indisponible » là où il y a de la donnée",
+    not ({282, 283, 284} & set(D.entries)),
+    f"les pièces non classées dans ce framework ne sont PAS remises (→ {sorted({282, 283, 284} & set(D.entries))})",
 )
 B.check(
-    D.hors_index_retenues[0] == 282,
-    "…et ils sont joints du plus récent au plus ancien (#282 du 2026-06-30 en tête)",
+    D.non_classees == (282, 283, 284),
+    f"…mais elles sont COMPTÉES et nommées, jamais tues (→ {D.non_classees})",
 )
+_D_VASTE = assembler_dossier(entries=ENTRIES, liens=LIENS, plafond=10_000)
 B.check(
-    set(SERRE.laissees_dehors) and set(SERRE.laissees_dehors) <= set(ENTRIES),
-    "ce que le plafond laisse dehors est NOMMÉ, jamais tu",
+    not ({282, 283, 284} & set(_D_VASTE.entries)),
+    "même avec de la place, une pièce non classée ne part pas : c'est une règle de SUJET, pas de budget",
 )
 
 print("\n§7 les versions antérieures sont dédoublonnées au rendu")
@@ -264,8 +270,8 @@ B.check(77777 not in DJ.jointes, "un id absent du corpus n'est pas joint (lien m
 DJ_SERRE = assembler_dossier(entries=QUALIFIEE, liens=LIENS, plafond=4, joindre=[296])
 B.check(296 in DJ_SERRE.entries and all(c.en_vigueur in DJ_SERRE.entries for c in DJ_SERRE.chemises),
         "à plafond serré, la jointe et les pièces en vigueur passent AVANT le hors index")
-B.check(len(DJ_SERRE.hors_index_retenues) == 0,
-        "…et la place qu'elle prend est retirée au hors index (4 en vigueur + 1 jointe > plafond 4)")
+B.check(set(DJ_SERRE.entries) == {i for c in DJ_SERRE.chemises for i in c.remises} | {296},
+        "…et le dossier remis est EXACTEMENT : les pièces des points + la jointe, rien d'autre (#108)")
 
 print("\n§11 (#106) la LECTURE d'un dépôt : le texte déposé, daté par le dépôt, adressé dans son dossier")
 import asyncio  # noqa: E402

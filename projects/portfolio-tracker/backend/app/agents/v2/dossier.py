@@ -56,17 +56,21 @@ TROIS SORTES DE PIÈCES, JAMAIS DEUX (famille #25 / #44)
     reproduirait les trois réponses concurrentes qu'on vient de retirer. Son `id` n'est pas non
     plus annoncé au modèle — un id nommé mais absent du corpus se ferait citer, et le pont refuse
     les citations hors corpus (`frameworks.py`, contrôle B) : on fabriquerait un refus ;
-  · ``hors index``  — une pièce courante qu'aucun lien de couverture ne rattache à un point. Sur
-    RVMD, 35 des 57 (les faits déterministes du flux EDGAR). Elles ne sont PAS du bruit : les
-    écarter ferait lire « indisponible » là où il y a de la donnée
-    (`feedback_rendu_est_un_producteur`). Elles suivent les pièces en vigueur, dans la limite du
-    plafond.
+  · ``non classée`` — une pièce courante du titre qu'aucun lien ne rattache à un point DE CE
+    FRAMEWORK. Elle ne part PAS (#108, arbitrage du 2026-10-03 : « chaque framework ne doit traiter
+    que de ses sujets »). Elle partait jusque-là « dans la limite du plafond », triée par la seule
+    date : mesuré le 2026-10-03, le dossier qualité financière de RVMD remettait des études
+    cliniques de concurrents KRAS et des pièces de valorisation pendant que le relevé des placements
+    de l'émetteur restait dehors. Un fonds ne glisse pas dans la note financière les pièces du
+    dossier concurrence. Une donnée qui manque à ce framework se signale par SA collecte (un point
+    non fondé devient un mandat), jamais par des pièces classées ailleurs ou non classées du tout.
+    Elles sont COMPTÉES et nommées dans le bilan, jamais tues.
 
 LE PLAFOND NE PEUT PAS COUPER UNE PIÈCE EN VIGUEUR
 ---------------------------------------------------
 Le plafond existe pour une raison de coût (un dossier entier ferait un prompt de plusieurs
-centaines de milliers de tokens), pas de méthode. Il s'applique donc au RESTE, jamais au
-porteur : couper une pièce en vigueur ferait lire « le corpus ne fonde pas » là où c'est le budget
+centaines de milliers de tokens), pas de méthode. Depuis #108 il ne coupe plus rien — seules les
+pièces des points et les lectures jointes partent — et il reste un SIGNAL : couper une pièce en vigueur ferait lire « le corpus ne fonde pas » là où c'est le budget
 qui a tranché — exactement le faux négatif que la troncature par date produisait. Si les pièces en
 vigueur dépassent à elles seules le plafond, ce n'est pas un cas à absorber en silence :
 `plafond_insuffisant` est vrai, on DIT de combien, et on ne coupe toujours pas.
@@ -128,8 +132,9 @@ class Dossier:
 
     entries: dict[int, dict[str, Any]]
     chemises: tuple[Chemise, ...]
-    hors_index_retenues: tuple[int, ...]
-    laissees_dehors: tuple[int, ...]
+    # Les pièces courantes du titre que ce framework n'a classées sous aucun de ses points (#108) :
+    # comptées et nommées, jamais remises.
+    non_classees: tuple[int, ...]
     total_courantes: int
     plafond: int
     plafond_insuffisant: bool
@@ -200,11 +205,11 @@ class Dossier:
             f"dossier : {len(self.entries)} pièce(s) remise(s) sur {self.total_courantes} "
             f"courante(s) · plafond {self.plafond}",
             f"  · {len(self.chemises)} chemise(s) — un point instruit chacune",
-            f"  · {len(self.hors_index_retenues)} pièce(s) hors index retenue(s)",
+            f"  · {len(self.non_classees)} pièce(s) du titre non classée(s) dans ce framework, "
+            f"non remise(s) (#108)",
             f"  · {len(self.jointes)} lecture(s) de dépôt jointe(s) d'office : {list(self.jointes) or 'aucune'}",
             f"  · {len(self.anterieures_ecartees)} version(s) antérieure(s) gardée(s) en base, "
             f"non remise(s) : {list(self.anterieures_ecartees) or 'aucune'}",
-            f"  · {len(self.laissees_dehors)} pièce(s) laissée(s) dehors par le plafond",
         ]
         if profondes:
             detail = ", ".join(
@@ -331,22 +336,17 @@ def assembler_dossier(
     en_vigueur: list[int] = list(dict.fromkeys(i for c in chemises for i in c.remises))
     jointes = tuple(i for i in dict.fromkeys(joindre) if i in entries and i not in en_vigueur)
     rattachees = {i for c in chemises for i in (*c.remises, *c.anterieures)}
-    hors_index = sorted(
-        (i for i in entries if i not in rattachees and i not in jointes), key=lambda i: _rang(entries[i])
-    )
+    # #108 : une pièce que ce framework n'a classée sous aucun de ses points ne part pas.
+    non_classees = tuple(sorted(i for i in entries if i not in rattachees and i not in jointes))
 
     plafond_insuffisant = len(en_vigueur) + len(jointes) > plafond
-    place_restante = max(0, plafond - len(en_vigueur) - len(jointes))
-    hors_index_retenues = tuple(hors_index[:place_restante])
 
-    retenues = list(dict.fromkeys([*en_vigueur, *jointes, *hors_index_retenues]))
-    laissees_dehors = tuple(sorted(set(entries) - set(retenues)))
+    retenues = list(dict.fromkeys([*en_vigueur, *jointes]))
 
     return Dossier(
         entries={i: entries[i] for i in retenues},
         chemises=tuple(chemises),
-        hors_index_retenues=hors_index_retenues,
-        laissees_dehors=laissees_dehors,
+        non_classees=non_classees,
         total_courantes=int(total_courantes if total_courantes is not None else len(entries)),
         plafond=plafond,
         plafond_insuffisant=plafond_insuffisant,

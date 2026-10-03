@@ -1,0 +1,128 @@
+
+SŒURS ORPHELINES — 76 pièce(s), 77 lien(s) à écrire, 0 horodatage(s) ambigu(s)
+
+── MSFT · qualite_financiere v3.0.0 — 21 lien(s)
+     + #356 → qf_1.resultat_operationnel_apres_impot
+     + #357 → qf_1.resultat_operationnel_apres_impot
+     + #360 → qf_1.capital_employe
+     + #361 → qf_1.capital_employe
+     + #364 → qf_1.cout_du_capital
+     + #382 → qf_2.charges_sans_decaissement
+     + #384 → qf_3.investissement_de_maintien
+     + #386 → qf_3.investissement_de_croissance
+     + #393 → qf_4.echeancier_de_la_dette
+     + #400 → qf_4.lignes_de_credit_non_tirees
+     + #400 → qf_7.lignes_de_credit_non_tirees
+     + #411 → qf_5.decomposition_marge_rotation
+     + #416 → qf_5.comparaison_sectorielle
+     + #417 → qf_5.comparaison_sectorielle
+     + #419 → qf_6.provisions_et_depreciations
+     + #420 → qf_6.provisions_et_depreciations
+     + #422 → qf_6.politique_de_capitalisation
+     + #427 → qf_6.ecart_publie_ajuste
+     + #439 → qf_7.consommation_de_tresorerie_recente
+     + #440 → qf_7.consommation_de_tresorerie_recente
+     + #442 → qf_7.charges_fixes_decaissables
+   ⇄ qf_1.capital_employe : remises [359] → [361, 360, 359]
+   ⇄ qf_1.cout_du_capital : remises [363] → [363, 364]
+   ⇄ qf_1.resultat_operationnel_apres_impot : remises [355] → [357, 356, 355]
+   ⇄ qf_2.charges_sans_decaissement : remises [381] → [382, 381]
+   ⇄ qf_3.investissement_de_croissance : remises [385] → [386, 385]
+   ⇄ qf_3.investissement_de_maintien : remises [383] → [384, 383]
+   ⇄ qf_4.echeancier_de_la_dette : remises [392] → [393, 392]
+   ⇄ qf_4.lignes_de_credit_non_tirees : remises [399] → [400, 399]
+   ⇄ qf_5.comparaison_sectorielle : remises [415] → [417, 416, 415]
+   ⇄ qf_5.decomposition_marge_rotation : remises [410] → [411, 410]
+   ⇄ qf_6.ecart_publie_ajuste : remises [426] → [427, 426]
+   ⇄ qf_6.politique_de_capitalisation : remises [421] → [422, 421]
+   ⇄ qf_6.provisions_et_depreciations : remises [418] → [418, 420, 419]
+   ⇄ qf_7.charges_fixes_decaissables : remises [441] → [442, 441]
+   ⇄ qf_7.consommation_de_tresorerie_recente : remises [438] → [438, 439, 440]
+   ⇄ qf_7.lignes_de_credit_non_tirees : remises [399] → [400, 399]
+── NVDA · qualite_financiere v3.0.0 — 22 lien(s)
+     + #353 → qf_1.resultat_operationnel_apres_impot
+     + #354 → qf_1.resultat_operationnel_apres_impot
+     + #366 → qf_1.historique_cinq_exercices
+     + #367 → qf_1.historique_cinq_exercices
+     + #378 → qf_2.charges_sans_decaissement
+     + #379 → qf_2.charges_sans_decaissement
+     + #389 → qf_4.endettement_brut_et_net
+     + #390 → qf_4.endettement_brut_et_net
+     + #395 → qf_4.clauses_de_sauvegarde
+     + #402 → qf_5.serie_longue_du_rendement
+     + #406 → qf_5.decomposition_marge_rotation
+     + #408 → qf_5.comparaison_sectorielle
+     + #409 → qf_5.comparaison_sectorielle
+     + #413 → qf_6.provisions_et_depreciations
+     + #414 → qf_6.provisions_et_depreciations
+     + #424 → qf_6.ecart_publie_ajuste
+     + #425 → qf_6.ecart_publie_ajuste
+     + #429 → qf_6.elements_non_recurrents
+     + #432 → qf_7.consommation_de_tresorerie_recente
+     + #433 → qf_7.consommation_de_tresorerie_recente
+     + #436 → qf_7.charges_fixes_decaissables
+     + #437 → qf_7.charges_fixes_decaissables
+   ⇄ qf_1.historique_cinq_exercices : remises [365] → [365, 367, 366]
+   ⇄ qf_1.resultat_operationnel_apres_impot : remises [352] → [354, 353, 352]
+   ⇄ qf_2.charges_sans_decaissement : remises [377] → [379, 378, 377]
+   ⇄ qf_4.clauses_de_sauvegarde : remises [394] → [395, 394]
+   ⇄ qf_4.endettement_brut_et_net : remises [388] → [390, 389, 388]
+   ⇄ qf_5.comparaison_sectorielle : remises [407] → [408, 407, 409]
+   ⇄ qf_5.decomposition_marge_rotation : remises [405] → [406, 405]
+   ⇄ qf_5.serie_longue_du_rendement : remises [401] → [401, 402]
+   ⇄ qf_6.ecart_publie_ajuste : remises [423] → [425, 424, 423]
+   ⇄ qf_6.elements_non_recurrents : remises [428] → [429, 428]
+   ⇄ qf_6.provisions_et_depreciations : remises [412] → [414, 413, 412]
+   ⇄ qf_7.charges_fixes_decaissables : remises [435] → [437, 436, 435]
+   ⇄ qf_7.consommation_de_tresorerie_recente : remises [431] → [433, 432, 431]
+── RVMD · defendabilite v3.0.0 — 17 lien(s)
+     + #669 → mo_3.serie_du_signal
+     + #670 → mo_3.serie_du_signal
+     + #674 → mo_4.classe_de_reference
+     + #675 → mo_4.classe_de_reference
+     + #677 → mo_5.signal_precurseur
+     + #678 → mo_5.signal_precurseur
+     + #680 → mo_1.mecanisme_de_captation
+     + #681 → mo_1.mecanisme_de_captation
+     + #683 → mo_1.tentatives_de_contournement_observees
+     + #685 → mo_3.serie_du_signal
+     + #686 → mo_3.serie_du_signal
+     + #688 → mo_3.mouvements_concurrents_recents
+     + #689 → mo_3.mouvements_concurrents_recents
+     + #691 → mo_4.classe_de_reference
+     + #693 → mo_4.duree_observee_dans_la_classe
+     + #696 → mo_5.etat_du_signal_precurseur
+     + #697 → mo_5.etat_du_signal_precurseur
+   ⇄ mo_1.mecanisme_de_captation : remises [679] → [680, 679, 681]
+   ⇄ mo_1.tentatives_de_contournement_observees : remises [664] → [683, 682]  · passe(nt) en antérieure (collecte précédente) : [664]
+   ⇄ mo_3.mouvements_concurrents_recents : remises [687] → [687, 688, 689]
+   ⇄ mo_3.serie_du_signal : remises [684] → [686, 685, 684]
+   ⇄ mo_4.classe_de_reference : remises [673] → [675, 674, 673]
+   ⇄ mo_4.duree_observee_dans_la_classe : remises [692] → [693, 692]
+   ⇄ mo_5.etat_du_signal_precurseur : remises [695] → [696, 695, 697]
+   ⇄ mo_5.signal_precurseur : remises [676] → [677, 676, 678]
+── RVMD · qualite_financiere v3.0.0 — 17 lien(s)
+     + #299 → qf_4.clauses_de_sauvegarde
+     + #302 → qf_6.provisions_et_depreciations
+     + #303 → qf_6.provisions_et_depreciations
+     + #305 → qf_6.elements_non_recurrents
+     + #306 → qf_6.elements_non_recurrents
+     + #309 → qf_7.consommation_de_tresorerie_recente
+     + #310 → qf_7.consommation_de_tresorerie_recente
+     + #312 → qf_7.charges_fixes_decaissables
+     + #314 → qf_7.echeances_a_douze_mois
+     + #315 → qf_7.echeances_a_douze_mois
+     + #342 → qf_4.clauses_de_sauvegarde
+     + #346 → qf_6.politique_de_capitalisation
+     + #348 → qf_6.ecart_publie_ajuste
+     + #448 → qf_6.ecart_publie_ajuste
+     + #713 → qf_4.clauses_de_sauvegarde
+     + #717 → qf_6.politique_de_capitalisation
+     + #719 → qf_6.ecart_publie_ajuste
+   ⇄ qf_4.clauses_de_sauvegarde : remises [712] → [713, 712]
+   ⇄ qf_6.elements_non_recurrents : remises [304] → [306, 305, 304]
+   ⇄ qf_6.politique_de_capitalisation : remises [716] → [717, 716]
+   ⇄ qf_6.provisions_et_depreciations : remises [301] → [303, 302, 301]
+
+41 chemise(s) changent de pièces remises.
+ÉCRIT : 77 lien(s) de couverture.
