@@ -483,5 +483,22 @@ _pts7, _af7, _ab7 = resoudre_points(_c7, {"CashAndCashEquivalentsAtCarryingValue
 check("§7 trésorerie + placements RVMD : ancre BILAN au 2026-06-30, aucune ancre de flux",
       _ab7 == "2026-06-30" and _af7 is None, f"→ flux={_af7} bilan={_ab7}")
 
+print("\n[8] le texte dit ce que le système tamponne : un agrégat déterministe se présente en RELEVÉ (#110)")
+# Mesuré le 2026-10-03 : « Calculé depuis les dépôts SEC » sur #751 (trésorerie + placements, tier A,
+# `mesure`) a fait déclarer qf_7 non fondable — l'analyste applique « une source qui annonce son calcul
+# fonde un `approxime` », fermé à plancher A.
+_txt_det = _fait(_CONS_APPROX).contenu
+check("§8 approximation DÉTERMINISTE : le texte se présente en relevé et n'annonce pas un calcul",
+      "Relevé des dépôts SEC" in _txt_det and "Calculé" not in _txt_det, f"→ {_txt_det[:160]!r}")
+_c_nd = ConsigneAppariement(statut="approximation", expression=_CONS_APPROX.expression,
+                            hypotheses=_CONS_APPROX.hypotheses, deterministe=False)
+_txt_nd = _fait(_c_nd).contenu
+check("§8 approximation NON déterministe : le texte annonce son calcul (l'analyste en fera un `approxime`)",
+      "Calculé depuis les dépôts SEC" in _txt_nd and "NON DÉTERMINISTE" in _txt_nd
+      and "Relevé" not in _txt_nd, f"→ {_txt_nd[:160]!r}")
+_txt_ex = _fait(_CONS_EXACT).contenu
+check("§8 exact : relevé, recopié tel quel", "Relevé des dépôts SEC" in _txt_ex and "Calculé" not in _txt_ex,
+      f"→ {_txt_ex[:160]!r}")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

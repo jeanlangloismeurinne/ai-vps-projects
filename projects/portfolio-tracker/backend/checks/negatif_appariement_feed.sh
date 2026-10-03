@@ -56,6 +56,8 @@ mutations=(
 # LE CADRAGE : tout est lu comme un instant. Un flux annuel devient un point de bilan, et le fait
 # rapporte un trimestre là où l'on attend un exercice — sans erreur visible.
 "$SRC¦    annuels = points_annuels(p for p in pts if est_point_de_flux(p))¦    annuels = []  # mutation: plus aucun flux annuel reconnu¦lu comme un FLUX"
+# #110 — un agrégat déterministe s'annonce à nouveau comme un calcul
+"$SRC¦    elif consigne.deterministe:¦    elif False:¦se présente en relevé"
 # #109 — un solde déposé au 10-K (fp=FY, sans durée) relu comme un exercice
 "$SRC¦    annuels = points_annuels(p for p in pts if est_point_de_flux(p))¦    annuels = points_annuels(pts)¦est lu comme un INSTANT"
 

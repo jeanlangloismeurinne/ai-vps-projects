@@ -463,16 +463,28 @@ def construire_fait_apparie(
         for p in sorted(points.values(), key=lambda q: (q.concept, q.offset)))
     hypotheses = ("\nHypothèses, à contester : "
                   + " ; ".join(consigne.hypotheses)) if consigne.hypotheses else ""
-    if consigne.statut == "approximation":
-        qualif = (f"\n⚠️ Calcul {'DÉTERMINISTE' if consigne.deterministe else 'NON DÉTERMINISTE'} "
-                  f"sur {len(points)} concept(s) déposé(s). {fiabilite[2] if fiabilite else ''}")
+    # LE TEXTE DIT CE QUE LE SYSTÈME TAMPONNE (#110). Un agrégat DÉTERMINISTE de lignes déposées
+    # (trésorerie + placements) est un relevé de rang A (#67 : 2+2=4 n'est pas moins sûr que 2 et 2),
+    # et la base le tamponne `mesure`. L'écrire « Calculé depuis les dépôts » le faisait tomber sous la
+    # règle de l'analyste « une source qui annonce son propre calcul fonde un `approxime` » — fermé à
+    # plancher A : mesuré le 2026-10-03, RVMD qf_7 déclarée non fondable avec #751 (3,94 Md$) au
+    # dossier. Seul un calcul NON déterministe s'annonce comme un calcul.
+    if consigne.statut == "exact":
+        entete = "Relevé des dépôts SEC, EXACT : le concept déposé est recopié tel quel."
+        qualif = ""
+    elif consigne.deterministe:
+        entete = (f"Relevé des dépôts SEC : agrégat DÉTERMINISTE de {len(points)} ligne(s) déposée(s), "
+                  f"sans aucun paramètre choisi : il vaut relevé (ses hypothèses disent quelles lignes il lit). Expression : {consigne.expression}")
+        qualif = ""
     else:
-        qualif = "\nRelevé EXACT : le concept déposé est recopié tel quel, sans transformation."
+        entete = f"Calculé depuis les dépôts SEC. Expression : {consigne.expression}"
+        qualif = (f"\n⚠️ Calcul NON DÉTERMINISTE sur {len(points)} concept(s) déposé(s). "
+                  f"{fiabilite[2] if fiabilite else ''}")
 
     contenu = (
         f"{libelle} — {ticker_id} ({symbole}), {periode} : "
         f"{rendre_resultat(valeur, dimension, devise)}.\n"
-        f"Calculé depuis les dépôts SEC. Expression : {consigne.expression}\n{detail}"
+        f"{entete}\n{detail}"
         f"{hypotheses}{qualif}"
     )
     structure: dict[str, Any] = {
