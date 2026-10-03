@@ -2841,6 +2841,25 @@ agrégat DÉTERMINISTE … il vaut relevé » ; seul un calcul NON déterministe
 hypothèses restent affichées « à contester » (une consigne déterministe peut porter un vrai choix,
 indiscernable en code d'une simple correspondance — #68). Gardes : `check_appariement_feed` §8 ; négatif 21/0.
 
+### #111 — chaque affirmation se cite par sa source la plus récente
+
+**Arbitrage de l'utilisateur (2026-10-03)** : « le système doit dater chaque affirmation par sa propre
+source. Si une nouvelle source apporte la même information qu'une source précédente, elle est ajoutée à
+la base et vient REMPLACER l'ancienne dans la citation — je cite la dernière source disponible
+correspondant à mon affirmation. » La règle de datation ne change pas (une réponse est datée par la
+moins récente de ses sources citées, anti-blanchiment) : c'est la CITATION qui change.
+- **Consigne** de l'analyste (« CHAQUE AFFIRMATION SE CITE PAR SA SOURCE LA PLUS RÉCENTE ») — mesurée
+  insuffisante seule : RVMD qf_6 citait encore, 2 passages sur 2, le 10-K de décembre (#750) à côté du
+  10-Q de juin (#749) qui dit « politique identique ».
+- **Relecture** (`analyste.citations_concurrencees`, forme #68) : « deux pièces portent la même
+  information » ne se décide pas en code ; « une pièce PLUS RÉCENTE instruit le MÊME POINT » (même
+  chemise du dossier), si. L'analyste reçoit alors UNE remarque de relecteur ; sa réponse relue est
+  retenue sauf si elle est refusée — une remarque n'est pas un refus, et garder une source ancienne pour
+  ce qu'elle seule établit reste légitime. `repondre(…, chemises=)` est REQUIS, sans défaut.
+Mesuré après déploiement : 2/2 passages citent #749 seul ; qf_6 #1080 `repondu` A, À JOUR ; qualité
+financière RVMD 0,00 → 0,33 ; `check_signature_modele_persist` vert (première réponse RVMD reprenable).
+Gardes : `check_analyste` §5 ter + relecture (117/0) ; `negatif_analyste.sh` 53/0.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

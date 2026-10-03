@@ -8,7 +8,7 @@ role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#110), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#111), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -73,19 +73,19 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4143 assertions, 1 rouge attendu** (`check_signature_modele_persist` : aucune réponse RVMD reprenable) — 2026-10-03 après #110. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4150 assertions, 0 rouge** — 2026-10-03 après #111 (`check_signature_modele_persist` reverdi : qf_6 #1080 reprenable). Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; la prochaine sera **052**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`22c722b`** (#110), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
+- **Production** : stack sur **`d1e4701`** (#111), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
 - **Notes flash en base** (catalogue d'événements **1.2.0**, relues le 2026-09-28 après #94) : RVMD
   #181-#186, NVDA #187-#188, MSFT #189 — mêmes types qu'en 1.1.0 (#80-#88), 0 refus, $0,0025 ; les
   lectures 1.0.0/1.1.0 restent conservées (append-only).
-- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, 2026-10-03) : 32 manques — qf_4/qf_7 non fondées, qf_6 périmée (voir en tête), mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
+- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, 2026-10-03) : 31 manques — qf_4/qf_7 non fondées (voir en tête), qf_6 À JOUR (qualité financière 0,33), mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
 
 ---
 
@@ -190,20 +190,25 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   (plans #186 crash au renvoi → #109 ; #189 réponses 1035-1037 ; #192 réponses **1050-1052**, en vigueur).
   Résultat : **qf_6 #1051 `repondu` A**, mais servie PÉRIMÉE ; qf_4 #1050 et qf_7 #1052 `non_fondable`.
   `check_signature_modele_persist` toujours rouge (aucune réponse RVMD reprenable).
-- **⚠️ EN TÊTE — trois causes, chacune À TRAITER EN AMONT avant de relancer :**
-  (1) **ARBITRAGE À POSER à l'utilisateur** — qf_6 cite le 10-K (#750, déc. 2025) ET le 10-Q qui le
-  confirme (#749, juin 2026), remis ensemble depuis #107 ; une réponse se date par sa pièce citée la PLUS
-  ANCIENNE (anti-blanchiment) ⟹ datée de décembre, périmée par les comptes de juin. Question métier :
-  « une note qui cite le rapport annuel ET le trimestriel qui le confirme est-elle à jour au 30/06 ? »
-  (un fonds date chaque affirmation par sa source ; le code ne sait pas quelle pièce porte quelle phrase).
-  (2) qf_7 : la consommation des **douze derniers mois au 30/06** (TTM = exercice 2025 + S1 2026 − S1 2025)
-  ne s'écrit pas dans la grammaire des formules (décalages d'EXERCICE seulement, #74) ⟹ l'apparieur a écrit
-  « flux d'exploitation + flux d'investissement FY2025 » (#760) en se déclarant DÉTERMINISTE — l'analyste l'a
-  justement écartée comme calcul. Deux pistes : grammaire TTM (`Concept@TTM` ou somme de fractions) ;
-  et le drapeau `deterministe` posé par le modèle sur un choix de modélisation (#68, non décidable en code).
-  #751 (trésorerie) garde l'ancienne prose « Calculé » jusqu'à sa prochaine réécriture.
-  (3) qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses
-  coupée par le budget 180 s (`source_indisponible`) ; échéancier : datation hétérogène signalée.
+- **#111 déployé (`d1e4701`, arbitrage utilisateur)** : chaque affirmation se cite par sa source la plus
+  récente, qui REMPLACE l'ancienne dans la citation (consigne + relecture du même point). **qf_6 #1080
+  `repondu` A, À JOUR** — première réponse RVMD reprenable ; suite **4150/0, tout vert**.
+- **⚠️ EN TÊTE — PROCHAIN LOT : la consommation des douze derniers mois (qf_7).** Arbitrage utilisateur
+  du 2026-10-03 : « lorsqu'il y a une publication trimestrielle, il suffit de prendre les 4 derniers
+  comptes ; hors résultats trimestriels (événements), l'analyse construit une approximation — ATTENTION à
+  ne pas créer de règles rigides quand l'étendue des cas est énorme » (c'est pourquoi existent
+  l'approximation sur hypothèses et le bac à calcul Python de la valorisation). ⟹ (a) donner à la
+  grammaire des formules (#74) l'identité comptable des douze mois glissants pour un FLUX (exercice +
+  cumul de l'année en cours − cumul de la même période l'an passé, lus dans les 10-Q par leur durée,
+  #42) — un outil générique, pas une règle par cas ; un historique incomplet = refus NOMMÉ, jamais un
+  repli sur l'exercice ; (b) le reste (événement postérieur) passe par l'`approxime` de l'analyste,
+  déjà construit. Constat qui motive (a) : l'apparieur a écrit pour « 4 derniers trimestres »
+  `OCF + flux d'investissement FY2025` (#760) en se déclarant DÉTERMINISTE — l'analyste l'a justement
+  écartée. Le drapeau `deterministe` posé par le modèle sur un vrai choix de modélisation reste la
+  limite #68.
+- qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses coupée
+  par le budget 180 s ; échéancier : datation hétérogène signalée. #751 garde l'ancienne prose « Calculé »
+  jusqu'à sa prochaine réécriture (sans effet : #110 + la relecture).
 - Résidu #107 : `rattacher_soeurs` a fait passer #664 (défendabilité mo_1) en antérieure (collecte précédente).
 
 **⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — à
@@ -365,7 +370,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #110** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #111** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
