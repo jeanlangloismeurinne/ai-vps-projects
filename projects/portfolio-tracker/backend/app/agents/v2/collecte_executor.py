@@ -712,7 +712,9 @@ async def _servir_le_stock(
                          inventaire=inventaire)
 
 
-async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> CarteCourante:
+async def assurer_carte(
+    plan: CollectionPlan, *, conn: asyncpg.Connection, refaire: bool = False,
+) -> CarteCourante:
     """Rend la carte d'appariement de CE plan, à jour — en la RECONSTRUISANT si elle ne l'est pas.
 
     Ordre, et il n'est pas arbitraire : la frontière GRATUITE d'abord, la dépense ensuite (#63).
@@ -732,7 +734,12 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
 
     Aucun refus ne tue le lot : un `AppariementRefuse` (le modèle invente des noms de concepts deux
     fois de suite) ou un `AppariementSansObjet` (rien de traduit à apparier) retombe sur le stock,
-    puis sur `poste_retenu()` — en le DISANT à chaque marche."""
+    puis sur `poste_retenu()` — en le DISANT à chaque marche.
+
+    `refaire=True` : l'analyste fait REFAIRE la carte bien qu'elle soit à jour du dernier dépôt —
+    geste humain, explicite et journalisé, pour quand la MÉTHODE d'appariement s'est enrichie (les
+    douze mois glissants, 2026-10-03) : une carte écrite avant ne pouvait pas l'employer, et un
+    émetteur ne redépose qu'au trimestre suivant. Jamais déclenché par le système lui-même."""
     # ── (1) la frontière gratuite : l'inventaire réel, avant toute dépense ────────────────────────
     # ⚠️ Le symbole passe par `symbole_de_marche` (#11/#46) et non par `plan.ticker_id` : l'id peut
     # être `PUB-XXXXXXXX`. Résoudre le CIK depuis l'id ne marchait que tant que les deux coïncidaient.
@@ -752,8 +759,13 @@ async def assurer_carte(plan: CollectionPlan, *, conn: asyncpg.Connection) -> Ca
                                       inventaire=inventaire)
 
     # ── (3) la revérification d'âge, contre une date MESURÉE cette fois ───────────────────────────
+    if refaire:
+        logger.info(
+            "carte %s/%s %s REFAITE à la demande de l'analyste (méthode d'appariement enrichie) — "
+            "la carte en base n'est pas relue", plan.ticker_id, plan.framework_id,
+            plan.framework_version)
     try:
-        carte = await lire_carte(
+        carte = None if refaire else await lire_carte(
             conn,
             ticker_id=plan.ticker_id,
             framework_id=plan.framework_id,
@@ -876,7 +888,7 @@ async def executer_plan_reel(
 
 async def executer_collecte_framework(
     ticker_id: str, framework_id: str, archetype: str,
-    *, questions: Optional[frozenset[str]] = None,
+    *, questions: Optional[frozenset[str]] = None, refaire_carte: bool = False,
 ) -> dict[str, Any]:
     """Chaîne RUNTIME de bout en bout (spec §3.6) : traduire → persister le plan → collecter →
     persister liens + mandats. Le plan est persisté AVANT la collecte, pour que « mauvais plan ou
@@ -900,7 +912,7 @@ async def executer_collecte_framework(
             plan_id = await persist_plan(conn, plan)
 
     async with get_db_session() as conn:
-        carte = await assurer_carte(plan, conn=conn)         # inventaire + carte (modèle si besoin)
+        carte = await assurer_carte(plan, conn=conn, refaire=refaire_carte)  # inventaire + carte
         result = await executer_plan_reel(plan, conn=conn, carte=carte)  # réseau + entries
         async with conn.transaction():
             ecrits = await persist_aiguillage(conn, result, plan_id=plan_id)

@@ -124,6 +124,17 @@ mutations=(
 # La notation N'EST PLUS ENSEIGNÉE au modèle : sans elle, il ne peut pas exprimer une croissance et
 # réinvente `Revenues_previous_year`. C'est une garde sur l'ÉNONCÉ du prompt (comme la limite de §9).
 "$PONT¦(\`Revenues_previous_year\` n'existe¦(\`RevenuePrecedent\` n'existe¦le prompt ENSEIGNE"
+# ── §11 bis Les douze mois glissants `Concept[ttm]` (2026-10-03) ──────────────────────────────────
+# La grammaire ne reconnaît plus `ttm` : la consommation sur douze mois redevient inexprimable, et le
+# modèle retombe sur le flux de l'exercice présenté comme « quatre derniers trimestres » (#760).
+"$GRAM¦    if isinstance(sl, ast.Name) and sl.id == DOUZE_MOIS:¦    if False:  # mutation: ttm inconnu¦§11 bis une consommation"
+# La période glissante ÉCRASÉE en exercice courant au grain des références : l'évaluateur lirait
+# l'exercice sous le nom de douze mois.
+"$GRAM¦        return DOUZE_MOIS¦        return 0  # mutation: ttm lu comme l'exercice¦porte la période \`ttm\`"
+# La clef de tri ne sépare plus les périodes : deux périodes de types mêlés se comparent et lèvent.
+"$GRAM¦    return (concept, 1, 0) if periode == DOUZE_MOIS else (concept, 0, int(periode))¦    return (concept, periode)  # mutation¦se TRIE"
+# Le prompt n'enseigne plus quand employer `[ttm]` (« QUATRE DERNIERS TRIMESTRES »).
+"$PONT¦les QUATRE DERNIERS TRIMESTRES ou¦les derniers trimestres ou¦le prompt ENSEIGNE \`Champ[ttm]\`"
 # ── §12 Le refus PAR INGRÉDIENT (#75) — chaque mutation désarme UNE des cinq décisions de
 # `_repli_par_ingredient`, jamais la boucle entière : c'est le point qui a coulé NVDA (00-REPRISE,
 # 2026-09-19), donc c'est lui que ces mutations rejouent, une décision à la fois.

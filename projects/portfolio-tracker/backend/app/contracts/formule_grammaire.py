@@ -58,6 +58,25 @@ Deux décisions de forme, chacune contre une tentation plus simple et fausse :
 Un `Subscript` n'est admis que sur un NOM et avec un indice entier <= 0 : `(Assets - Cash)[-1]` ou
 `Revenues[k]` (k variable) sont refusés à la forme, avant toute évaluation.
 
+LES DOUZE MOIS GLISSANTS — `Concept[ttm]`, une autre PÉRIODE du même concept (2026-10-03)
+------------------------------------------------------------------------------------------
+Arbitrage de l'utilisateur, rendu comme un fonds : « lorsqu'il y a une publication trimestrielle, il
+suffit de prendre les 4 derniers comptes ». La consommation de trésorerie d'une biotech qui accélère
+se lit sur les douze derniers mois, pas sur l'exercice clos : RVMD au 30/06/2026 consomme 1,22 Md$
+sur douze mois glissants contre 0,90 Md$ sur l'exercice 2025 — l'exercice seul fait paraître la
+piste de trésorerie plus longue qu'elle n'est. Faute de savoir l'écrire, l'apparieur écrivait le
+flux de l'exercice en se déclarant déterministe (#760), ce que l'analyste a justement écarté.
+
+`Concept[ttm]` désigne le même concept sur les douze mois qui finissent à sa dernière clôture
+publiée. C'est la même décision de forme que le décalage : la période est une propriété de la
+RÉFÉRENCE, pas un concept neuf (#57) — `noms_de_la_formule` rend `Concept`, le pont [V]/[W] confronte
+donc un nom réellement déposé. Le calcul (l'identité comptable exercice + cumul de l'année − cumul de
+la même période l'an passé, lus par leur DURÉE, #42) n'est pas ici : ce module ne fait que DIRE la
+période ; c'est le producteur qui la lit au dépôt, et il refuse en le nommant quand une des trois
+lectures manque — jamais un repli sur l'exercice, qui serait exactement le chiffre optimiste qu'on
+retire. Un OUTIL générique, pas une règle par cas : quelle grandeur se lit sur douze mois reste le
+choix de l'apparieur, écrit et contestable.
+
 ⚠️ CE N'EST PAS UN BAC À SABLE D'EXÉCUTION, ET IL NE FAUT PAS LE LIRE COMME TEL. `evaluer_formule`
 n'appelle JAMAIS `eval()` : elle parcourt l'arbre et calcule elle-même. La liste blanche n'est donc
 pas une défense contre du code hostile (il n'y en a pas : la formule vient de notre propre modèle
@@ -85,6 +104,10 @@ from typing import Mapping, Optional
 __all__ = [
     "FormuleInexecutable",
     "DimensionIncoherente",
+    "DOUZE_MOIS",
+    "Periode",
+    "cle_de_reference",
+    "libelle_de_reference",
     "GRAMMAIRE_ADMISE",
     "analyser_formule",
     "noms_de_la_formule",
@@ -111,6 +134,30 @@ class DimensionIncoherente(FormuleInexecutable):
     incohérences d'unité dit quelque chose sur l'apparieur, pas sur l'émetteur."""
 
 
+# La période « douze mois glissants » d'une référence (`Concept[ttm]`). Le mot est celui que tout
+# lecteur financier reconnaît (trailing twelve months) : le modèle l'écrit sans qu'on l'invente pour lui.
+DOUZE_MOIS = "ttm"
+
+# Une période de référence : un décalage d'exercice (entier <= 0) ou les douze mois glissants.
+Periode = int | str
+
+
+def cle_de_reference(ref: tuple[str, "Periode"]) -> tuple[str, int, int]:
+    """Clef de TRI d'une référence (concept, période). Pure.
+
+    Une période est un entier OU `DOUZE_MOIS` : trier les couples bruts lèverait `TypeError` dès
+    qu'un même concept est lu à deux périodes de types différents — dans le module même dont la
+    sortie doit être reproductible. Les exercices d'abord (par décalage), les douze mois ensuite.
+    """
+    concept, periode = ref
+    return (concept, 1, 0) if periode == DOUZE_MOIS else (concept, 0, int(periode))
+
+
+def libelle_de_reference(concept: str, periode: "Periode") -> str:
+    """`Concept`, `Concept[-1]`, `Concept[ttm]` — comme la formule l'écrit. Pure."""
+    return concept if periode == 0 else f"{concept}[{periode}]"
+
+
 # La liste BLANCHE. `ast.Load` y figure parce que tout `Name` en porte un ; l'omettre ferait refuser
 # toutes les formules, et le message d'erreur parlerait d'un nœud que personne n'a écrit.
 _NOEUDS_ADMIS: tuple[type, ...] = (
@@ -124,8 +171,9 @@ _NOEUDS_ADMIS: tuple[type, ...] = (
 )
 
 GRAMMAIRE_ADMISE = (
-    "noms de concepts déposés (avec un décalage d'exercice optionnel `Concept[-1]`), nombres "
-    "littéraux, opérateurs `+ - * /`, signe unaire et parenthèses"
+    "noms de concepts déposés (avec un décalage d'exercice optionnel `Concept[-1]`, ou les douze "
+    "mois glissants `Concept[ttm]`), nombres littéraux, opérateurs `+ - * /`, signe unaire et "
+    "parenthèses"
 )
 
 
@@ -139,8 +187,9 @@ def _refuser_noeud(noeud: ast.AST, formule: str) -> FormuleInexecutable:
         "`hypotheses`, dont c'est exactement le rôle)")
 
 
-def _offset_du_subscript(noeud: ast.Subscript, formule: str) -> int:
-    """L'offset d'exercice d'une référence temporelle `Concept[k]`. Pur. Lève `FormuleInexecutable`.
+def _offset_du_subscript(noeud: ast.Subscript, formule: str) -> Periode:
+    """La PÉRIODE d'une référence temporelle : le décalage d'exercice de `Concept[k]`, ou `DOUZE_MOIS`
+    pour `Concept[ttm]`. Pur. Lève `FormuleInexecutable`.
 
     Détenteur UNIQUE de « ce qu'est une référence temporelle » : la validation de forme
     (`analyser_formule`), le relevé des références (`references_de_la_formule`), l'évaluation
@@ -157,6 +206,8 @@ def _offset_du_subscript(noeud: ast.Subscript, formule: str) -> int:
             "un décalage d'exercice (`Revenues[-1]`), jamais un calcul entre parenthèses")
     nom = noeud.value.id
     sl = noeud.slice
+    if isinstance(sl, ast.Name) and sl.id == DOUZE_MOIS:
+        return DOUZE_MOIS
     if (isinstance(sl, ast.UnaryOp) and isinstance(sl.op, ast.USub)
             and isinstance(sl.operand, ast.Constant)
             and isinstance(sl.operand.value, int) and not isinstance(sl.operand.value, bool)):
@@ -169,8 +220,9 @@ def _offset_du_subscript(noeud: ast.Subscript, formule: str) -> int:
                 "(`[0]` = dernier exercice, `[-1]` = précédent, `[-2]` celui d'avant)")
         return sl.value  # 0
     raise FormuleInexecutable(
-        f"« {formule} » indexe `{nom}` par autre chose qu'un entier d'exercice : un décalage temporel "
-        "est un entier <= 0 (`[-1]`, `[-2]`), jamais un nom, un décimal ni une expression")
+        f"« {formule} » indexe `{nom}` par autre chose qu'une période : un décalage d'exercice est un "
+        f"entier <= 0 (`[-1]`, `[-2]`), les douze mois glissants s'écrivent `[{DOUZE_MOIS}]` — jamais un "
+        "autre nom, un décimal ni une expression")
 
 
 def analyser_formule(formule: str) -> ast.Expression:
@@ -210,7 +262,7 @@ def analyser_formule(formule: str) -> ast.Expression:
     return arbre
 
 
-def _references(noeud: ast.AST, formule: str) -> set[tuple[str, int]]:
+def _references(noeud: ast.AST, formule: str) -> set[tuple[str, Periode]]:
     """Les couples (concept, offset) sous un nœud validé. Récursif, JAMAIS `ast.walk` : un
     `Subscript` porte un `Name` que `ast.walk` verrait à part, et le compterait alors deux fois — une
     fois comme référence temporelle, une fois comme offset 0. La descente contrôlée l'évite."""
@@ -227,10 +279,11 @@ def _references(noeud: ast.AST, formule: str) -> set[tuple[str, int]]:
     return set()   # inatteignable après `analyser_formule` — garde de forme
 
 
-def references_de_la_formule(formule: str) -> set[tuple[str, int]]:
+def references_de_la_formule(formule: str) -> set[tuple[str, Periode]]:
     """Les références (concept, offset d'exercice) d'une formule. Pure, lue depuis l'ARBRE.
 
-    `Revenues` → `(Revenues, 0)` ; `Revenues[-1]` → `(Revenues, -1)`. C'est le grain que l'évaluateur
+    `Revenues` → `(Revenues, 0)` ; `Revenues[-1]` → `(Revenues, -1)` ; `Revenues[ttm]` →
+    `(Revenues, DOUZE_MOIS)`. C'est le grain que l'évaluateur
     emploie : un même concept peut figurer à DEUX exercices (une croissance annuelle), et il faut
     alors deux valeurs distinctes. `noms_de_la_formule` en est la projection sur les concepts.
     """
@@ -250,7 +303,7 @@ def noms_de_la_formule(formule: str) -> set[str]:
     return {c for c, _ in references_de_la_formule(formule)}
 
 
-def evaluer_formule(formule: str, valeurs: Mapping[tuple[str, int], float]) -> float:
+def evaluer_formule(formule: str, valeurs: Mapping[tuple[str, Periode], float]) -> float:
     """Calcule la formule sur les valeurs fournies. Pure. Lève `FormuleInexecutable`.
 
     `valeurs` est keyée par (concept, offset) — le grain de `references_de_la_formule` : une même
@@ -265,11 +318,11 @@ def evaluer_formule(formule: str, valeurs: Mapping[tuple[str, int], float]) -> f
     return _calculer(analyser_formule(formule).body, valeurs, formule)
 
 
-def _valeur_reference(cle: tuple[str, int], valeurs: Mapping[tuple[str, int], float],
+def _valeur_reference(cle: tuple[str, Periode], valeurs: Mapping[tuple[str, Periode], float],
                       formule: str) -> float:
     concept, offset = cle
     if cle not in valeurs:
-        libelle = concept if offset == 0 else f"{concept}[{offset}]"
+        libelle = libelle_de_reference(concept, offset)
         raise FormuleInexecutable(
             f"« {formule} » référence `{libelle}`, sans valeur résolue. Ce n'est PAS un zéro : un "
             "concept qu'on n'a pas su lire dans le dépôt (ou pas à cet exercice-là) est un trou, et "
@@ -277,7 +330,7 @@ def _valeur_reference(cle: tuple[str, int], valeurs: Mapping[tuple[str, int], fl
     return float(valeurs[cle])
 
 
-def _calculer(noeud: ast.AST, valeurs: Mapping[tuple[str, int], float], formule: str) -> float:
+def _calculer(noeud: ast.AST, valeurs: Mapping[tuple[str, Periode], float], formule: str) -> float:
     if isinstance(noeud, ast.Constant):
         return float(noeud.value)
     if isinstance(noeud, ast.Subscript):

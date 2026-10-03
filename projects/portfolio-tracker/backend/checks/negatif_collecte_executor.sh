@@ -141,6 +141,8 @@ mutations=(
 "$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (cotée sous le symbole {emetteur.symbole}) \"¦            f\"Pour l'entreprise {emetteur.symbole} (cotée sous le symbole {emetteur.symbole}) \"¦NOMME l'entreprise par sa raison sociale"
 "$SRC¦            f\"Pour l'entreprise {emetteur.raison_sociale} (cotée sous le symbole {emetteur.symbole}) \"¦            f\"Pour l'entreprise {emetteur.raison_sociale} (symbole {emetteur.symbole}, CIK SEC {emetteur.cik}) \"¦AUCUN numéro d'identifiant"
 "$SRC¦    if emetteur is None:\n        return ResultatCollecte(¦    if False:\n        return ResultatCollecte(¦identité NON RÉSOLUE → echec nommé"
+# Le geste « refaire la carte » ignoré : la carte à jour est relue, l'ancienne méthode reste servie.
+"$SRC¦        carte = None if refaire else await lire_carte(¦        carte = await lire_carte(  # mutation: refaire ignoré¦refaire=True sur une carte À JOUR"
 )
 
 passes=0; ratees=0

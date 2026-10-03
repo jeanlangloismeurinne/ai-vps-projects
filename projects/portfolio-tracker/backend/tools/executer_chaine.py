@@ -33,6 +33,8 @@ Usage :
 `--sans-collecte` saute le maillon 1 (aucune dépense traducteur/web) et fait répondre l'analyste
 sur le corpus DÉJÀ en base : c'est le passage le moins cher pour voir si la seconde moitié tient.
 `--questions=qf_4[,qf_6]` n'écrit que ces questions ; les autres gardent leur réponse en vigueur.
+`--refaire-carte` fait refaire la carte d'appariement même à jour du dernier dépôt (geste d'analyste,
+quand la méthode d'appariement s'est enrichie — ex. les douze mois glissants du 2026-10-03).
 
 Codes : 0 = la chaîne est allée au bout · 1 = un maillon a refusé · 2 = pas exécutable (env).
 """
@@ -80,6 +82,13 @@ async def main() -> int:
         return 2
     ticker_id, framework_id, archetype = sys.argv[1], sys.argv[2], sys.argv[3]
     sans_collecte = "--sans-collecte" in sys.argv
+    # `--refaire-carte` : l'analyste fait refaire la carte d'appariement même à jour du dernier dépôt
+    # (méthode d'appariement enrichie — douze mois glissants, 2026-10-03). Sans collecte, rien à refaire.
+    refaire_carte = "--refaire-carte" in sys.argv
+    if refaire_carte and sans_collecte:
+        print("--refaire-carte et --sans-collecte s'excluent : la carte ne sert qu'à la collecte.",
+              file=sys.stderr)
+        return 2
     # `--questions=qf_4[,qf_6]` : le passage ne porte QUE sur ces questions — les autres gardent leurs
     # réponses en vigueur, on n'écrit rien pour elles, et le manager ne les compte pas « sans réponse »
     # (elles en ont une). Comme un directeur de la recherche qui fait reprendre une note, pas le dossier :
@@ -121,7 +130,8 @@ async def main() -> int:
             _titre(1, "collecte SAUTÉE (--sans-collecte) — corpus déjà en base")
         else:
             _titre(1, "traducteur → plan → collecte → liens de couverture + mandats collecteur")
-            rapport = await executer_collecte_framework(ticker_id, framework_id, archetype)
+            rapport = await executer_collecte_framework(
+                ticker_id, framework_id, archetype, refaire_carte=refaire_carte)
             ecrits["collection_plan_id"] = rapport["plan_id"]
             ecrits["liens"] = len(rapport["liens"])
             ecrits["mandats_collecteur"] = len(rapport["mandats"])

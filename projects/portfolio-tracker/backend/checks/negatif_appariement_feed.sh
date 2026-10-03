@@ -106,6 +106,27 @@ mutations=(
 # plus récent (`period_end=None` → `point_pour_periode` rend le dernier). Une croissance sur un seul
 # exercice devient alors 0 % au lieu d'un mandat — le fait faux et rassurant, jamais un « échec ».
 "$SRC¦        p = point_pour_periode(series[concept], cible, tol_days=TOLERANCE_ANCRE_J)¦        p = point_pour_periode(series[concept], None, tol_days=TOLERANCE_ANCRE_J)  # mutation: repli sur le point courant¦un exercice décalé ABSENT"
+
+# ── §9 LES DOUZE MOIS GLISSANTS (arbitrage du 2026-10-03) ─────────────────────────────────────────
+# LE REPLI INTERDIT : sans cumul comparable, on publie l'exercice clos sous le nom de douze mois —
+# la consommation de l'an passé pour une société qui accélère, exactement ce que la lecture retire.
+"$SRC¦    if not comparables:¦    if not comparables:\n        return float(ex[\"val\"]), (_composante(\"exercice\", +1, ex),)  # mutation: repli sur l'exercice¦même période l'an passé"
+# LE TRIMESTRE ISOLÉ au lieu du cumul : à une même clôture, le plus COURT est retenu.
+"$SRC¦    plus_long = max(duree_jours(p) or 0 for p in cumuls)¦    plus_long = min(duree_jours(p) or 0 for p in cumuls)  # mutation: le trimestre isolé¦le cumul le plus LONG"
+# LE SIGNE du comparable : additionné au lieu d'être retranché — la période comptée deux fois.
+"$SRC¦    valeur = float(ex[\"val\"]) + float(cumul[\"val\"]) - float(comp[\"val\"])¦    valeur = float(ex[\"val\"]) + float(cumul[\"val\"]) + float(comp[\"val\"])  # mutation¦−1 223,033 M\$"
+# L'AFFIRMATION D'ORIGINE : la préférence s'inverse, le dépôt le plus tardif (ou l'amendement) gagne.
+"$SRC¦    return min(points, key=lambda p: (str(p.get(\"form\") or \"\").endswith(\"/A\"),¦    return max(points, key=lambda p: (str(p.get(\"form\") or \"\").endswith(\"/A\"),  # mutation¦affirmation d'ORIGINE"
+# LE MÉLANGE douze mois + exercice clos n'est plus refusé.
+"$SRC¦    if glissantes and any(cadrages[c] == \"flux\" for c in directes):¦    if False:  # mutation: le mélange de périodes passe¦douze mois et exercice clos dans une même formule"
+# LE RECUL : la fin commune devient la plus ANCIENNE — on arrange le concept en retard.
+"$SRC¦        fin = date.fromisoformat(max(f for f in fins.values() if f))¦        fin = date.fromisoformat(min(f for f in fins.values() if f))  # mutation: recul¦pas de recul"
+# LE LIBELLÉ : les quatre derniers trimestres présentés comme l'exercice clos (#42).
+"$SRC¦    flux_libelle = f\"DOUZE MOIS AU {ancre_flux}\" if glissant else f\"EXERCICE CLOS LE {ancre_flux}\"¦    flux_libelle = f\"EXERCICE CLOS LE {ancre_flux}\"  # mutation¦DOUZE MOIS, jamais"
+# LA PROVENANCE : les trois lectures déposées disparaissent du structuré — un nombre à croire.
+"$SRC¦             **({\"composantes\": [dict(c) for c in p.composantes]} if p.composantes else {})}¦             **({})}  # mutation: plus de composantes¦TROIS lectures déposées"
+# `[ttm]` sur un solde de bilan : le refus devient un « rien à lire à cette date » muet de cause.
+"$SRC¦        sans = sorted(c for c, f in fins.items() if f is None)¦        sans = []  # mutation¦solde de bilan"
 )
 
 passes=0; ratees=0

@@ -705,6 +705,17 @@ _APPARIEUR_SYSTEM_PROMPT = (
     "est un entier NÉGATIF ou zéro — jamais positif (il n'y a pas d'exercice futur), jamais une "
     "année en clair (`[2024]` est refusé : écris le rang relatif).\n"
 
+    "LIRE UN FLUX SUR LES DOUZE DERNIERS MOIS — `Champ[ttm]`. Quand l'ingrédient demande les DOUZE "
+    "DERNIERS MOIS, les QUATRE DERNIERS TRIMESTRES ou une consommation « récente » d'un FLUX (flux de "
+    "trésorerie, charges, chiffre d'affaires), n'écris JAMAIS le champ de l'exercice clos en "
+    "prétendant qu'il couvre les douze derniers mois : écris `Champ[ttm]`. Le système le lit au "
+    "dépôt (exercice clos + cumul de l'exercice en cours − cumul de la même période l'an passé) et "
+    "refuse en le disant si une de ces lectures manque. Exemple : la trésorerie consommée par "
+    "l'exploitation sur douze mois s'écrit `NetCashProvidedByUsedInOperatingActivities[ttm]`. Dans une "
+    "même formule, lis TOUS les flux sur douze mois (`[ttm]`) ou TOUS sur l'exercice — jamais un "
+    "mélange ; un solde de bilan (trésorerie au dernier bilan) peut s'y ajouter. `[ttm]` ne s'emploie "
+    "jamais sur un solde de bilan (il n'a pas de durée).\n"
+
     "UN INGRÉDIENT QUI DEMANDE PLUSIEURS EXERCICES (« sur cinq exercices consécutifs », « par "
     "exercice », « évolution de… »). La table te dit, sur chaque champ, combien d'exercices annuels "
     "sont déposés (`+A×K`). Écris la relation UNE SEULE FOIS avec le décalage d'exercice "
@@ -804,7 +815,8 @@ def message_reparation(refus: str, absents: list[str], inventaire: Collection[st
           "français, jamais une énumération, jamais une explication (elle va dans `hypotheses`). "
           "Pour une croissance ou une variation, réfère le MÊME champ à l'exercice précédent avec "
           "`Champ[-1]` (`(Revenues[0] - Revenues[-1]) / Revenues[-1]`) — n'invente JAMAIS un champ "
-          "« exercice précédent ». Tout mot à majuscule y est cherché dans la table comme un champ.\n"
+          "« exercice précédent ». Pour les douze derniers mois d'un flux, écris `Champ[ttm]`. Tout "
+          "mot à majuscule y est cherché dans la table comme un champ.\n"
         + "\nRenvoie l'objet JSON COMPLET corrigé — tous les ingrédients, pas seulement les lignes "
           "fautives."
     )

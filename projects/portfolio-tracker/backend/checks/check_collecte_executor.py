@@ -799,6 +799,15 @@ check("§10 la carte reconstruite est datée du dépôt COURANT (elle ne renaît
       _c2.depot_courant == _DEPOT_REEL and _c2.cout_usd > 0,
       f"→ depot_courant={_c2.depot_courant}, cout={_c2.cout_usd}")
 
+# ── cas 2 bis : carte À JOUR mais l'analyste la fait REFAIRE (méthode enrichie, 2026-10-03) ──────────
+_installer(en_base=_carte_stockee(_DEPOT_REEL))
+_c2b = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None, refaire=True))
+check("§10 refaire=True sur une carte À JOUR → `reconstruite` (apparier + persister), la carte en base "
+      "n'est pas relue : un geste d'analyste quand la méthode d'appariement s'est enrichie",
+      _c2b.etat == "reconstruite" and _journal["apparier"] == 1 and _journal["persiste"] == 1
+      and _journal["depots_opposes"] == [],
+      f"→ etat={_c2b.etat}, apparier={_journal['apparier']}, lue={_journal['depots_opposes']}")
+
 # ── cas 3 : aucune carte en base → production initiale ────────────────────────────────────────────
 _installer(en_base=None)
 _c3 = asyncio.run(_mod.assurer_carte(_plan_carte, conn=None))

@@ -59,6 +59,8 @@ def leve(fn, *a, **kw):
         return None
     except AppariementInexecutable as e:
         return str(e)
+    except Exception as e:  # un refus INATTENDU est nommé, il ne tue pas le script avant son bilan
+        return f"EXCEPTION INATTENDUE (pas un refus nommé) : {e!r}"
 
 
 # ── LES FIXTURES : la FORME du réel, copiée de `companyfacts`, pas une forme plus commode ─────────
@@ -499,6 +501,160 @@ check("§8 approximation NON déterministe : le texte annonce son calcul (l'anal
 _txt_ex = _fait(_CONS_EXACT).contenu
 check("§8 exact : relevé, recopié tel quel", "Relevé des dépôts SEC" in _txt_ex and "Calculé" not in _txt_ex,
       f"→ {_txt_ex[:160]!r}")
+
+# ── §9 LES DOUZE MOIS GLISSANTS `Concept[ttm]` (arbitrage du 2026-10-03) ──────────────────────────
+# « Lorsqu'il y a une publication trimestrielle, il suffit de prendre les 4 derniers comptes. » Un
+# émetteur américain dépose un exercice puis des CUMULS : les douze mois sont l'identité comptable
+# exercice clos + cumul en cours − cumul de la même période l'an passé, chaque terme reconnu par sa
+# DURÉE. Fixtures COPIÉES du dépôt réel (`companyfacts`, relevé le 2026-10-03), comparatifs répétés
+# d'un dépôt à l'autre compris — c'est la forme que la prod lit (`feedback_fixture_copiee_du_reel`).
+print("\n[9] les douze mois glissants — l'identité comptable lue au dépôt, jamais un repli sur l'exercice")
+
+
+def _p(start, end, val, form, fp, accn, filed):
+    return {"start": start, "end": end, "val": val, "unit": "USD", "form": form, "fp": fp,
+            "accn": accn, "filed": filed}
+
+
+# RVMD — NetCashProvidedByUsedInOperatingActivities, exercice calendaire, dernier dépôt = 10-Q Q2 2026.
+_OCF_RVMD = [
+    _p("2024-01-01", "2024-06-30", -288727000.0, "10-Q", "Q2", "0000950170-24-092783", "2024-08-07"),
+    _p("2024-01-01", "2024-06-30", -288727000.0, "10-Q", "Q2", "0000950170-25-104022", "2025-08-06"),
+    _p("2024-01-01", "2024-12-31", -557436000.0, "10-K", "FY", "0000950170-25-027736", "2025-02-26"),
+    _p("2024-01-01", "2024-12-31", -557436000.0, "10-K", "FY", "0001193125-26-071563", "2026-02-25"),
+    _p("2025-01-01", "2025-03-31", -194435000.0, "10-Q", "Q1", "0000950170-25-065660", "2025-05-07"),
+    _p("2025-01-01", "2025-06-30", -416192000.0, "10-Q", "Q2", "0000950170-25-104022", "2025-08-06"),
+    _p("2025-01-01", "2025-06-30", -416192000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+    _p("2025-01-01", "2025-09-30", -623503000.0, "10-Q", "Q3", "0001193125-25-266923", "2025-11-05"),
+    _p("2025-01-01", "2025-12-31", -897741000.0, "10-K", "FY", "0001193125-26-071563", "2026-02-25"),
+    _p("2026-01-01", "2026-03-31", -354165000.0, "10-Q", "Q1", "0001193125-26-208969", "2026-05-06"),
+    _p("2026-01-01", "2026-06-30", -741484000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+]
+_CASH_RVMD = [_instant("2026-06-30", 815_430_000.0, accn="0001193125-26-335104", filed="2026-08-05")]
+_TTM = "NetCashProvidedByUsedInOperatingActivities[ttm]"
+
+
+def _cons_ttm(expr=_TTM):
+    return ConsigneAppariement(statut="approximation", expression=expr, deterministe=True,
+                               hypotheses=("les quatre derniers trimestres du flux d'exploitation",))
+
+
+def _fait_ttm(expr=_TTM, facts=None):
+    f = facts if facts is not None else {"NetCashProvidedByUsedInOperatingActivities": _OCF_RVMD,
+                                         "CashAndCashEquivalentsAtCarryingValue": _CASH_RVMD}
+    pts, af, ab = resoudre_points(_cons_ttm(expr), f)
+    return construire_fait_apparie("RVMD", "RVMD", 1628171, "consommation de trésorerie",
+                                   _cons_ttm(expr), pts, ancre_flux=af, ancre_bilan=ab)
+
+
+try:
+    _f9 = _fait_ttm()
+except Exception as e:                       # un refus inattendu est un FAIL nommé, pas la mort du script
+    _f9 = None
+    check("§9 la consommation RVMD sur douze mois s'exécute", False, repr(e)[:200])
+if _f9 is not None:
+    _v = _f9.structure["value"]
+    # −897,741 (exercice 2025) + −741,484 (cumul S1 2026) − (−416,192) (cumul S1 2025) = −1 223,033 M$
+    check("§9 RVMD : douze mois au 30/06/2026 = exercice 2025 + cumul S1 2026 − cumul S1 2025 = −1 223,033 M$",
+          abs(_v - (-1_223_033_000.0)) < 1.0, f"→ {_v}")
+    check("§9 la valeur n'est PAS l'exercice clos (−897,7 M$) : jamais un repli sur l'exercice",
+          abs(_v - (-897_741_000.0)) > 1.0)
+    _ing = _f9.structure["ingredients"][0]
+    _roles = [(c["role"], c["signe"], c["accn"]) for c in _ing.get("composantes", [])]
+    check("§9 la provenance porte les TROIS lectures déposées, leurs signes et leurs accessions",
+          _roles == [("exercice", 1, "0001193125-26-071563"), ("cumul", 1, "0001193125-26-335104"),
+                     ("cumul_comparable", -1, "0000950170-25-104022")], f"→ {_roles}")
+    check("§9 parmi deux dépôts du même comparatif, l'affirmation d'ORIGINE (déposée le plus tôt)",
+          _roles[-1:] == [("cumul_comparable", -1, "0000950170-25-104022")])
+    check("§9 la période dit DOUZE MOIS, jamais « exercice clos »",
+          _f9.fiscal_period == "DOUZE MOIS AU 2026-06-30" and "EXERCICE" not in _f9.fiscal_period,
+          f"→ {_f9.fiscal_period}")
+    check("§9 le contenu nomme les trois lectures (exercice, cumul, cumul comparable)",
+          all(m in _f9.contenu for m in ("exercice 2025-01-01", "cumul 2026-01-01", "cumul comparable 2025-01-01")))
+    check("§9 le fait est daté de la fin des douze mois, son document du dépôt le plus récent (#79)",
+          _f9.datation.date_du_fait == date(2026, 6, 30) and _f9.datation.date_du_document == date(2026, 8, 5),
+          f"→ {_f9.datation}")
+    check("§9 identité du fait : `metric` = l'expression `[ttm]`, un FLUX daté de sa fin (#43)",
+          _f9.metric == _TTM and _f9.flux and _f9.structure["poste_kind"] == "flow"
+          and _f9.structure["period_end"] == "2026-06-30")
+    check("§9 un agrégat déterministe de 3 lignes déposées se présente en RELEVÉ (#110)",
+          "Relevé des dépôts SEC" in _f9.contenu and "3 ligne(s)" in _f9.contenu)
+
+# Une autonomie = un solde de bilan ÷ une consommation sur douze mois : un cadrage mixte LÉGITIME.
+try:
+    _fa = _fait_ttm("CashAndCashEquivalentsAtCarryingValue / -" + _TTM)
+    check("§9 trésorerie ÷ consommation sur douze mois : mixte bilan + glissant, porté par les deux dates",
+          _fa.fiscal_period == "DOUZE MOIS AU 2026-06-30 + BILAN 2026-06-30"
+          and abs(_fa.structure["value"] - 815_430_000.0 / 1_223_033_000.0) < 1e-6,
+          f"→ {_fa.fiscal_period} {_fa.structure['value']}")
+except Exception as e:
+    check("§9 trésorerie ÷ consommation sur douze mois s'exécute", False, repr(e)[:200])
+
+# MSFT au 31/03/2026 (avant son 10-K) : un cumul de 9 mois ET un trimestre isolé se clôturent le même
+# jour. Le cumul est le plus LONG ; prendre le trimestre ferait chercher un exercice clos au 31/12.
+_OCF_MSFT = [
+    _p("2023-07-01", "2024-06-30", 118548000000.0, "10-K", "FY", "0000950170-24-087843", "2024-07-30"),
+    _p("2023-07-01", "2024-06-30", 118548000000.0, "8-K", "None", "0000950170-24-132722", "2024-12-03"),
+    _p("2024-07-01", "2025-03-31", 93515000000.0, "10-Q", "Q3", "0000950170-25-061046", "2025-04-30"),
+    _p("2025-01-01", "2025-03-31", 37044000000.0, "10-Q", "Q3", "0000950170-25-061046", "2025-04-30"),
+    _p("2024-07-01", "2025-06-30", 136162000000.0, "10-K", "FY", "0000950170-25-100235", "2025-07-30"),
+    _p("2025-07-01", "2026-03-31", 127494000000.0, "10-Q", "Q3", "0001193125-26-191507", "2026-04-29"),
+    _p("2026-01-01", "2026-03-31", 46679000000.0, "10-Q", "Q3", "0001193125-26-191507", "2026-04-29"),
+]
+_L_MSFT = ("§9 MSFT au 31/03/2026 : exercice 2025 136,162 + cumul 9 mois 127,494 − 93,515 = 170,141 Md$ "
+           "(le cumul le plus LONG, pas le trimestre isolé)")
+try:
+    _fm = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _OCF_MSFT})
+    check(_L_MSFT, abs(_fm.structure["value"] - 170_141_000_000.0) < 1.0, f"→ {_fm.structure['value']}")
+except Exception as e:
+    check(_L_MSFT, False, repr(e)[:200])
+
+# Le dernier dépôt est un 10-K : les douze mois SONT l'exercice, lu tel quel (une seule lecture).
+_OCF_10K = [p for p in _OCF_RVMD if p["end"] <= "2025-12-31"]
+try:
+    _fk = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _OCF_10K})
+    _cmp = _fk.structure["ingredients"][0].get("composantes", [])
+    check("§9 dernier dépôt = 10-K : douze mois = l'exercice (−897,741 M$), une seule lecture",
+          abs(_fk.structure["value"] - (-897_741_000.0)) < 1.0 and [c["role"] for c in _cmp] == ["exercice"],
+          f"→ {_fk.structure['value']} {[c['role'] for c in _cmp]}")
+except Exception as e:
+    check("§9 dernier dépôt = 10-K s'exécute", False, repr(e)[:200])
+
+# LES REFUS : un terme manquant est NOMMÉ, jamais remplacé par l'exercice clos.
+_sans_comp = [p for p in _OCF_RVMD if not (p["start"] == "2025-01-01" and p["end"] == "2025-06-30")]
+_m = leve(resoudre_points, _cons_ttm(), {"NetCashProvidedByUsedInOperatingActivities": _sans_comp})
+check("§9 cumul comparable absent → refus NOMMÉ (« même période l'an passé »), pas l'exercice clos",
+      _m is not None and "même période l'an passé" in _m, f"→ {_m!r}"[:200])
+_sans_ex = [p for p in _OCF_RVMD if not (p["start"] == "2025-01-01" and p["end"] == "2025-12-31")]
+_m = leve(resoudre_points, _cons_ttm(), {"NetCashProvidedByUsedInOperatingActivities": _sans_ex})
+check("§9 exercice clos qui précède le cumul absent → refus NOMMÉ, et le motif dit pourquoi l'exercice "
+      "le plus récent n'est pas un substitut", _m is not None and "PAS un substitut" in _m, f"→ {_m!r}"[:200])
+_m = leve(resoudre_points, _cons_ttm(_TTM + " - NetCashProvidedByUsedInOperatingActivities"),
+          {"NetCashProvidedByUsedInOperatingActivities": _OCF_RVMD})
+check("§9 douze mois et exercice clos dans une même formule → refus nommé (deux intervalles)",
+      _m is not None and "mêle des douze mois" in _m, f"→ {_m!r}"[:200])
+_m = leve(resoudre_points, _cons_ttm("CashAndCashEquivalentsAtCarryingValue[ttm]"),
+          {"CashAndCashEquivalentsAtCarryingValue": _CASH_RVMD})
+check("§9 `[ttm]` sur un solde de bilan → refus nommé (un solde n'a pas de durée)",
+      _m is not None and "solde de bilan" in _m, f"→ {_m!r}"[:200])
+# Deux flux glissants : UNE fin, la plus récente. Celui qui ne la publie pas fait refuser — on ne
+# recule pas à une fin plus ancienne pour l'arranger (ce serait le repli sous un autre nom).
+_m = leve(resoudre_points,
+          _cons_ttm(_TTM + " - PaymentsToAcquirePropertyPlantAndEquipment[ttm]"),
+          {"NetCashProvidedByUsedInOperatingActivities": _OCF_RVMD,
+           "PaymentsToAcquirePropertyPlantAndEquipment": _OCF_10K})
+check("§9 deux flux glissants : celui qui ne publie pas la fin la plus récente fait refuser (pas de recul)",
+      _m is not None and "2026-06-30" in _m and "PaymentsToAcquirePropertyPlantAndEquipment" in _m,
+      f"→ {_m!r}"[:200])
+# L'affirmation d'origine l'emporte sur un amendement, même chiffré autrement : choix reproductible.
+_amende = _OCF_RVMD + [_p("2025-01-01", "2025-12-31", -1.0, "10-K/A", "FY", "0001193125-26-999999", "2026-02-20")]
+try:
+    _fa2 = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _amende})
+    check("§9 un 10-K/A sur l'exercice ne remplace pas le 10-K d'origine (même préférence que `points_annuels`)",
+          abs(_fa2.structure["value"] - (-1_223_033_000.0)) < 1.0, f"→ {_fa2.structure['value']}")
+except Exception as e:
+    check("§9 exercice amendé s'exécute", False, repr(e)[:200])
+
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

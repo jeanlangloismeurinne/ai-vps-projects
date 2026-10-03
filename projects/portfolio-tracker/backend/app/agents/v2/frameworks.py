@@ -327,7 +327,8 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             decales = sorted(f"{n}[{k}]" for n, k in references_de_la_formule(c.calcul) if k != 0)
             if decales:
                 raise FrameworkDefinitionRefused(
-                    f"[T] `{q.id}.{c.id}` lit {decales} : un encadré se lit à une seule date, pas d'exercice décalé")
+                    f"[T] `{q.id}.{c.id}` lit {decales} : un encadré se lit à une seule date, ni exercice décalé "
+                    "ni douze mois glissants (ses chiffres portent déjà leur période)")
             try:
                 dimension_formule(c.calcul, unites)
             except FormuleInexecutable as e:

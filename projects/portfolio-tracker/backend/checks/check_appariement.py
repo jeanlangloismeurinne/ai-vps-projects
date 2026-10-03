@@ -79,7 +79,9 @@ from app.contracts.collection_plan_schema import (  # noqa: E402
     CollectionPlanItem,
 )
 from app.contracts.formule_grammaire import (  # noqa: E402
+    DOUZE_MOIS,
     FormuleInexecutable,
+    cle_de_reference,
     analyser_formule,
     noms_de_la_formule,
     references_de_la_formule,
@@ -650,6 +652,50 @@ b.check(coefficients_choisis("(Revenues[0] - Revenues[-1]) / Revenues[-1]") == [
 b.check("[-1]" in SRC_APPARIEUR and "Revenues_previous_year" in SRC_APPARIEUR,
         "§11 le prompt ENSEIGNE `Champ[-1]` ET nomme l'invention interdite (`Revenues_previous_year`) "
         ": sans la notation, le modèle ne peut pas exprimer une croissance et la réinvente")
+
+
+# ── §11 bis LES DOUZE MOIS GLISSANTS `Concept[ttm]` (arbitrage du 2026-10-03) ─────────────────────
+# « Lorsqu'il y a une publication trimestrielle, il suffit de prendre les 4 derniers comptes. » Faute
+# de notation, l'apparieur écrivait le flux de l'EXERCICE pour « 4 derniers trimestres » en se
+# déclarant déterministe (#760). La période glissante est une propriété de la RÉFÉRENCE, comme le
+# décalage : elle ne crée aucun concept, donc [V]/[W] confrontent un nom réellement déposé.
+print("\n§11 bis LES DOUZE MOIS GLISSANTS `Concept[ttm]` — une période de la référence, pas un concept")
+
+
+def _sur(fn, *a, **kw):
+    """Le résultat, ou l'exception NOMMÉE : un refus inattendu est un FAIL, jamais la mort du script."""
+    try:
+        return fn(*a, **kw)
+    except Exception as e:
+        return f"EXCEPTION INATTENDUE : {e!r}"
+
+
+CONSO_TTM = dict(
+    statut="approximation", question_id="qf_7", ingredient_id="consommation_douze_mois",
+    concepts=["NetCashProvidedByUsedInOperatingActivities"],
+    formule="NetCashProvidedByUsedInOperatingActivities[ttm]",
+    hypotheses=["la consommation est le flux de trésorerie d'exploitation des quatre derniers trimestres"],
+    deterministe=True)
+accepte("§11 bis une consommation `Champ[ttm]` passe le pont : le concept est déposé, `ttm` n'en "
+        "crée aucun", lambda: valider_pont_appariement(carte(ligne(**CONSO_TTM)), INVENTAIRE_NVDA))
+b.check(_sur(noms_de_la_formule, "NetCashProvidedByUsedInOperatingActivities[ttm]")
+        == {"NetCashProvidedByUsedInOperatingActivities"},
+        "§11 bis `noms_de_la_formule` PROJETTE la période : `ttm` n'est pas lu comme un concept")
+b.check(_sur(references_de_la_formule, "Cash / -Burn[ttm]") == {("Cash", 0), ("Burn", DOUZE_MOIS)},
+        "§11 bis `references_de_la_formule` porte la période `ttm` au grain (concept, période)")
+b.check(_sur(lambda: sorted(references_de_la_formule("Burn[ttm] - Burn - Burn[-1]"), key=cle_de_reference))
+        == [("Burn", -1), ("Burn", 0), ("Burn", DOUZE_MOIS)],
+        "§11 bis un même concept lu à un exercice ET sur douze mois se TRIE (une clef unique, pas "
+        "`sorted` sur des périodes de types mêlés, qui lèverait)")
+for mauvaise in ("Burn[tm]", "Burn[douze_mois]", "(Cash - Burn)[ttm]"):
+    msg = _refus_forme(mauvaise)
+    b.check(msg is not None and ("[ttm]" in msg or "pas un concept" in msg),
+            f"§11 bis `{mauvaise}` est refusé à la FORME, et le motif enseigne `[ttm]` → {msg!r}"[:170])
+b.check(_sur(coefficients_choisis, "NetCashProvidedByUsedInOperatingActivities[ttm]") == [],
+        "§11 bis `[ttm]` n'est pas un coefficient choisi : `[X]` laisse `deterministe` vrai")
+b.check("[ttm]" in SRC_APPARIEUR and "NetCashProvidedByUsedInOperatingActivities[ttm]" in SRC_APPARIEUR
+        and "QUATRE DERNIERS TRIMESTRES" in SRC_APPARIEUR,
+        "§11 bis le prompt ENSEIGNE `Champ[ttm]` pour les douze derniers mois d'un flux, exemple compris")
 
 
 # ── §12 LE REFUS PAR INGRÉDIENT (#75) — une bévue sur UN couple, jamais la carte entière ───────────
