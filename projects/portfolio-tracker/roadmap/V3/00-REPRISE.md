@@ -8,7 +8,7 @@ role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#113), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#114), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -37,7 +37,9 @@ role: >
 > corrigé (#101), horloge des comptes (#102) et faits postérieurs lus (#103) déployés** ; #104 (une
 > seule dette nette) déployé ; #105, #106, puis #107-#110 (2026-10-03 : recette vs appariement, sœurs, « chaque
 > framework ne lit que ses sujets », soldes du 10-K, prose des agrégats) déployés et rejoués sur RVMD
-> qf_4/qf_6/qf_7 — trois causes restent, dont UN ARBITRAGE à poser : voir « Ce qui reste ouvert », en tête (objectif : deux cas très différents, RVMD et NVDA, qui tournent juste).
+> qf_4/qf_6/qf_7 ; #111-#113 puis **#114 (2026-10-04, qf_4 scindée : faits / jugement) — qualité financière
+> RVMD COMPLÈTE (4/4, note 1,0)**. Prochain : la qualité financière de NVDA, puis les nouveaux chapitres
+> (objectif : deux cas très différents, RVMD et NVDA, qui tournent juste).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -73,19 +75,19 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4219 assertions, 0 rouge** — 2026-10-04 après #113 ter. `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4219 assertions, 0 rouge** — 2026-10-04 après #114. `negatif_analyste.sh` vert après #114 ; `negatif_frameworks_definitions.sh` dépasse 600 s (mutations vues rouges avant l'arrêt — à relancer sans borne). `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
   vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; la prochaine sera **053**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`b2e0f5f`** (#113 ter), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
+- **Production** : stack sur **`73b9cd5`** (#114), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
 - **Notes flash en base** (catalogue d'événements **1.2.0**, relues le 2026-09-28 après #94) : RVMD
   #181-#186, NVDA #187-#188, MSFT #189 — mêmes types qu'en 1.1.0 (#80-#88), 0 refus, $0,0025 ; les
   lectures 1.0.0/1.1.0 restent conservées (append-only).
-- **Dossier RVMD** (`bash tools/montrer_parcours.sh RVMD`, 2026-10-03) : 31 manques — qf_4/qf_7 non fondées (voir en tête), qf_6 À JOUR (qualité financière 0,33), mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
+- **Dossier RVMD** (2026-10-04 après #114) : qualité financière **1,0** — qf_4 #1156, qf_6 #1080, qf_7 #1143, qf_8 #1157, toutes `repondu`, à jour, acquittées. Reste (mesure du 2026-10-03) : mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
 
 ---
 
@@ -219,7 +221,26 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   corrigé) — une citation hors du corpus de SA question pourrait être refusée nommément avant le pont ;
   (c) cartes NVDA/MSFT écrites avant `[ttm]` et avant la période : `--refaire-carte` au prochain passage ;
   (d) `negatif_collecte_executor.sh` 42/2 (2 échecs PRÉEXISTANTS).
-- **PROCHAIN PAS** (objectif utilisateur du 2026-09-30) : qf_4 RVMD, puis la qualité financière de NVDA
+- **#114 déployé (`73b9cd5`, arbitrage utilisateur 2026-10-04) — qf_4 SCINDÉE « pour distinguer les faits
+  et le jugement »** : qf_4 = tableau de la dette (mesure, A) ; qf_8 = revue des clauses (jugement, A, sans
+  encadré). Cause : une clause est du texte, qf_4 (mesure) était infondable pour toute entreprise endettée.
+  13 liens d'index déplacés (`tools/retraits/2026-10-04_scission_qf4_qf8.sql`). Plan #210 : **qf_4 #1156**
+  `repondu` A/mesure `tresorerie_nette` (dette brute 487,4 M$ = valeur comptable, trésorerie 3 935,4 M$,
+  dette nette −3 448 M$) ; **qf_8 #1157** `repondu` A/interprétation `contrainte_moderee`. Relu contre les
+  pièces : juste. **À relire par le comité** : (i) qf_8 dit « engagements légers, aucun covenant financier »
+  mais classe `contrainte_moderee` — `aucune_contrainte` serait plus cohérent avec son propre texte ;
+  (ii) dette brute à la valeur comptable (487,4) plutôt qu'au nominal dû (500) — écart immatériel ici, mais
+  le pont vers la valeur par action devra trancher nominal vs comptable.
+- **Constat #114 (nommé, non corrigé)** : la nature d'une lecture de clause dépend de l'`entry_type` choisi
+  par le collecteur (#779/#780 `fact_financial` → mesure, #712/#713 `fact_qualitative` → interprétation) —
+  un texte étiqueté `fact_financial` hérite de l'autorité d'un relevé (trou latent de #51) ; #779/#780 sont
+  en plus datées au 31/12/2025 pour des obligations émises en avril 2026.
+- **Question de fond posée par l'utilisateur (2026-10-04), À INSTRUIRE** : « toutes les questions
+  financières devraient s'intégrer à un P&L reconstitué qui s'interface avec la valorisation » — les
+  questions savent-elles répondre sans vision globale des comptes ? Voir la réponse apportée en fin de
+  session (socle des comptes commun, questions = couche de jugement) ; à arbitrer avant l'agent qui écrit
+  le modèle.
+- **PROCHAIN PAS** (objectif utilisateur du 2026-09-30) : la qualité financière de NVDA
   (aucune réponse en vigueur) avec `--refaire-carte`, puis les nouveaux chapitres sur RVMD et NVDA.
 - qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses coupée
   par le budget 180 s ; échéancier : datation hétérogène signalée. #751 garde l'ancienne prose « Calculé »
@@ -385,7 +406,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #113** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #114** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -410,9 +431,10 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > + reprise « un seul chiffre par dossier » (option c) (#96-#99) + encadré de chiffres clés (#100, déployé)
 > + analyste corrigé en amont (#101) + horloge des comptes (#102) + faits postérieurs lus (#103) : qf_4 #963
 > a été la première réponse RVMD reprenable ; #104-#110 (dette nette unique, autonomie prudente, lecture
-> des dépôts postérieurs, sœurs, « chaque framework ne lit que ses sujets », soldes du 10-K) : finir RVMD
-> qf_4/qf_6/qf_7 — trois causes en tête de « Ce qui reste ouvert », dont l'arbitrage sur la date d'une note —, puis les
-> nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> des dépôts postérieurs, sœurs, « chaque framework ne lit que ses sujets », soldes du 10-K), #111-#113, #114
+> (qf_4 scindée faits / jugement, qf_8 neuve) : qualité financière RVMD COMPLÈTE (1,0) ; ensuite la qualité
+> financière de NVDA (`--refaire-carte`), l'arbitrage « socle des comptes » (question de l'utilisateur du
+> 2026-10-04), puis les nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute

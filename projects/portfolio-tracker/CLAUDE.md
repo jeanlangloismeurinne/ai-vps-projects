@@ -2908,6 +2908,30 @@ Gardes : `check_collection_plan_contract` (+ négatif 22/0), `check_appariement_
 `check_collecte_executor` §12, `check_analyste` §5/§13 (négatif 56/0), `check_collecteur`, `check_traducteur`,
 `check_collecte_persist`, `negatif_052.sh` 6/0. Suite **4219/0**.
 
+### #114 — distinguer les faits et le jugement : qf_4 scindée (tableau de la dette / revue des clauses)
+
+**Arbitrage de l'utilisateur (2026-10-04)** : « il faut scinder en deux questions pour distinguer les faits
+et le jugement ». Logique de fonds : la note crédit sépare le **tableau de la dette** (montants, échéances,
+trésorerie en face — un relevé) de la **revue des clauses** (lecture du contrat de prêt, conclusion de
+l'analyste). Le défaut : qf_4 (question de MESURE) portait l'ingrédient essentiel `clauses_de_sauvegarde`
+— une clause est du texte, donc jamais une `mesure` au sens de `derive_nature` (#51) ; depuis #113 bis
+l'analyste ne la voyait même plus. qf_4 était infondable pour TOUTE entreprise endettée (RVMD #1050).
+- **qf_4** « Combien l'entreprise doit-elle, à quelles échéances, et avec quelle trésorerie en face ? » —
+  mesure, A, `sens_admis` neufs (`tresorerie_nette`, `endettement_soutenable`, `endettement_lourd`),
+  encadré inchangé (reprise va_1/va_2 intacte).
+- **qf_8** « Les engagements envers les prêteurs et porteurs d'obligations contraignent-ils l'exploitation ? »
+  — `interpretation` à plancher **A** (la clause se lit dans le contrat DÉPOSÉ, jamais dans un commentaire),
+  `chiffres_cles: []`, rouverte par `financement`, `resultats`, `surprise_execution`, `integrite_comptes`.
+- Les 13 liens d'index `qf_4.clauses_de_sauvegarde` ont suivi l'ingrédient
+  (`tools/retraits/2026-10-04_scission_qf4_qf8.sql`, gardé, rejeu refusé). `framework_version` non montée
+  (précédent #100) : la réponse #1050 reste l'historique de qf_4.
+- ⚠️ **Constat en chemin (non corrigé, nommé)** : la même lecture de clause est `mesure` ou `interpretation`
+  selon l'`entry_type` que le collecteur a choisi (#779/#780 `fact_financial` → mesure ; #712/#713
+  `fact_qualitative` → interprétation). Un texte étiqueté `fact_financial` hérite de l'autorité d'un relevé
+  — trou latent de #51. Et #779/#780 sont datées au 31/12/2025 pour des obligations émises en avril 2026.
+Gardes : `check_frameworks_definitions` §7 (spec ↔ référentiel, rouge tant que qf_8 manquait à la spec),
+`check_analyste` §7 (8 questions, qf_8 sans encadré), `check_manager` §2/§4. Suite **4219/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
