@@ -107,6 +107,7 @@ __all__ = [
     "ResultatAnalyste",
     "questions_sans_objet",
     "corpus_citable",
+    "corpus_montre",
     "statuts_admissibles",
     "aucune_reponse_possible",
     "contexte_analyste",
@@ -338,6 +339,32 @@ def statuts_admissibles(
     return ouverts, ecartes
 
 
+def corpus_montre(
+    question: QuestionDefinition, citables: dict[int, dict[str, Any]], ouverts: list[str]
+) -> dict[int, dict[str, Any]]:
+    """Ce que l'analyste VOIT d'une question : les pièces qu'au moins un statut OUVERT peut citer. Pur.
+
+    Même doctrine que `corpus_citable`, prolongée de la fiabilité à la NATURE (#113 bis, 2026-10-04) :
+    ce qui n'est pas montré ne peut pas être cité. Sur une question qui exige des faits constatés,
+    quand l'approximation est fermée, une pièce d'interprétation ne fonde AUCUNE réponse ouverte —
+    citée seule elle ne vaut pas `mesure`, citée avec des relevés elle les fait tomber en
+    `interpretation` (`nature_effective_de`) et [E] refuse. La montrer n'apporte qu'une faute possible.
+    Mesuré RVMD qf_7 (plan #205) : la prévision de dépenses #789, qui recopie la soustraction de #78
+    (« en déduisant la rémunération en actions… »), citée à côté du relevé #787 → refus, même après le
+    renvoi unique. Le chiffre facultatif qu'elle aurait porté sort non établi, motivé — ce qui est vrai :
+    aucune pièce ne RELÈVE la prévision.
+
+    Interroge les détenteurs (`nature_effective_de`, `nature_satisfait`) — la porte des statuts lit
+    la même règle (#46). Quand `approxime` est ouvert, rien n'est retiré : une reconstruction peut
+    légitimement s'appuyer sur une interprétation.
+    """
+    if "approxime" in ouverts:
+        return citables
+    return {i: e for i, e in citables.items()
+            if nature_satisfait(nature_effective_de([e.get("nature")], approximation=False),
+                                question.nature_attendue)}
+
+
 def aucune_reponse_possible(ouverts: list[str]) -> bool:
     """Aucune réponse ne passerait le pont : il ne reste que la sortie honnête. DÉTENTEUR UNIQUE.
 
@@ -396,6 +423,7 @@ def contexte_analyste(
         ouverts, _ = statuts_admissibles(q, citables)
         if aucune_reponse_possible(ouverts):
             continue  # rien à demander : le code écrit le `non_fondable` (cf. `repondre`)
+        citables = corpus_montre(q, citables, ouverts)
         questions.append({
             "id": q.id,
             "enonce": q.enonce,

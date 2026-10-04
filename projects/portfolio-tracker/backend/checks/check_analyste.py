@@ -909,5 +909,29 @@ check("⚠️ … et ce refus ne produit AUCUN gap : désobéir au vocabulaire n
       "→ les deux sens comptent : ni blanchir une panne d'agent, ni imputer à l'agent un corpus muet")
 
 
+# ── §13 CE QUE L'ANALYSTE VOIT : les pièces qu'un statut OUVERT peut citer (#113 bis) ──────────────
+# Mesuré RVMD qf_7 (plan #205, 2026-10-04) : la prévision #789 (soustraction de #78, nature
+# interprétation) citée à côté du relevé #787 → refus [E], même après le renvoi. Sur une question de
+# MESURE où l'approximation est fermée, une interprétation ne fonde aucune réponse : on ne la montre pas.
+print("\n[13] l'analyste ne voit que ce qu'un statut ouvert peut citer (nature, comme le plancher)")
+_q7 = next(q for fw in F.frameworks for q in fw.questions if q.id == "qf_7")
+_e13 = {787: {"nature": "mesure", "reliability_tier": "A", "content": "relevé douze mois"},
+        789: {"nature": "interpretation", "reliability_tier": "A", "content": "en déduisant la SBC…"}}
+_ouv13, _ = A.statuts_admissibles(_q7, A.corpus_citable(_q7, _e13))
+check("§13 (préalable) qf_7 attend une MESURE et `approxime` y est fermé (plancher A)",
+      _q7.nature_attendue == "mesure" and "approxime" not in _ouv13 and "repondu" in _ouv13, f"→ {_ouv13}")
+check("§13 question de mesure, approximation fermée → l'interprétation #789 n'est PAS montrée, le relevé l'est",
+      set(A.corpus_montre(_q7, _e13, _ouv13)) == {787}, f"→ {set(A.corpus_montre(_q7, _e13, _ouv13))}")
+check("§13 approximation ouverte → rien n'est retiré (une reconstruction peut s'appuyer sur une interprétation)",
+      set(A.corpus_montre(_q7, _e13, ["repondu", "approxime", "sans_fondement"])) == {787, 789})
+_qi = next(q for fw in F.frameworks for q in fw.questions if q.nature_attendue == "interpretation")
+check(f"§13 question de JUGEMENT ({_qi.id}) → tout reste montré (#88 : un jugement s'appuie sur des faits "
+      "comme sur des opinions)", set(A.corpus_montre(_qi, _e13, ["repondu", "sans_fondement"])) == {787, 789})
+_ctx13 = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", "RVMD", _e13)
+_c13 = [x["entry_id"] for qq in _ctx13["questions"] if qq["id"] == "qf_7" for x in qq["corpus"]]
+check("§13 le CONTEXTE envoyé au modèle pour qf_7 ne porte que #787 (le filtre est au point de lecture)",
+      _c13 == [787], f"→ {_c13}")
+
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

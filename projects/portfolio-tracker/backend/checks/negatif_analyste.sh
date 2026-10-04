@@ -102,6 +102,10 @@ mutations=(
 "$SRC¦            if self.faits_posterieurs:¦            if False:¦qui déclare un fait lu est refusé"
 "$SRC¦                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),¦                        sens=brute.sens),¦l'assemblage recopie les faits lus"
 "$SRC¦            \"faits_posterieurs_a_lire\": faits_montrables((faits or {}).get(q.id, []), citables),¦            \"faits_posterieurs_a_lire\": faits_montrables([], citables),¦le contexte montre à qf_4 le fait lisible"
+# #113 bis — le filtre de nature retiré : l'interprétation reste montrée sur une question de mesure fermée à l'approximation.
+"$SRC¦    if \"approxime\" in ouverts:\n        return citables¦    if True:\n        return citables  # mutation¦l'interprétation #789 n'est PAS montrée"
+# #113 bis — le filtre n'est plus appliqué au point de lecture (contexte du modèle).
+"$SRC¦        citables = corpus_montre(q, citables, ouverts)¦        pass  # mutation¦le CONTEXTE envoyé au modèle"
 )
 
 passes=0; ratees=0
