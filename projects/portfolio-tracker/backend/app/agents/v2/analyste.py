@@ -596,7 +596,14 @@ def assembler_answer(
     rang. Lever ici rendrait le refus muet sur sa cause : « rang_derive invalide » au lieu de « cette
     entry, personne ne l'a chargée ».
     """
-    cites = list(dict.fromkeys(brute.cited_entry_ids))  # dédoublonne, ordre conservé
+    # Les pièces d'un FAIT POSTÉRIEUR LU sont des sources de la réponse, d'office (#113 ter) : une note
+    # qui écrit « j'ai lu le 8-K des baux » s'appuie sur ce 8-K, comme un fonds le lirait. Mesuré RVMD
+    # qf_7 (2026-10-04) : réponse juste (3,94 Md$, 1,22 Md$ sur douze mois), refusée par [P] parce que
+    # #723/#733 n'étaient citées QUE dans la lecture du fait. La forme rend l'oubli impossible au lieu
+    # de le refuser (#68) ; leur nature et leur rang comptent comme toute citation ([E]/[D] inchangés).
+    cites = list(dict.fromkeys(
+        list(brute.cited_entry_ids)
+        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]))  # dédoublonne, ordre conservé
     tiers = [_tier_reel(entries.get(i)) for i in cites]
     # Les DEUX axes interrogent leur détenteur unique, aucun n'est recopié ici (#46) : le rang via
     # `_plus_faible` / `derive_synthesis_reliability`, la nature via `nature_effective_de`. Cette
@@ -685,7 +692,7 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "`repondu` ou `approxime`, pour chaque fait lu, ajoute à `faits_posterieurs` la ligne {\"depot\": "
     "\"<depot recopié tel quel>\", \"effet\": \"<ce que ce fait change à ta réponse, et de combien — ou "
     "pourquoi il ne la change pas>\", \"cited_entry_ids\": [<une ou plusieurs de ses pieces_du_depot>]}, "
-    "et cite aussi ces pièces dans les `cited_entry_ids` de ta réponse. L'effet est un jugement, chiffré "
+    "(ces pièces comptent d'office parmi les sources de ta réponse). L'effet est un jugement, chiffré "
     "à partir des sources quand elles le permettent, jamais une paraphrase du dépôt. Tu ne déclares lu que "
     "ce qui figure dans `faits_posterieurs_a_lire` ; si la liste est vide, `faits_posterieurs` est vide.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "

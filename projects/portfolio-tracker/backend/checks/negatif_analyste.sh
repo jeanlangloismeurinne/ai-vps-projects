@@ -106,6 +106,8 @@ mutations=(
 "$SRC¦    if \"approxime\" in ouverts:\n        return citables¦    if True:\n        return citables  # mutation¦l'interprétation #789 n'est PAS montrée"
 # #113 bis — le filtre n'est plus appliqué au point de lecture (contexte du modèle).
 "$SRC¦        citables = corpus_montre(q, citables, ouverts)¦        pass  # mutation¦le CONTEXTE envoyé au modèle"
+# #113 ter — les pièces du fait postérieur lu ne rejoignent plus la fondation.
+"$SRC¦        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]))¦        + []))  # mutation¦entrent d'office dans la fondation"
 )
 
 passes=0; ratees=0

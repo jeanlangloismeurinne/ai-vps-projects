@@ -254,6 +254,14 @@ check("une approximation est rangée UN CRAN SOUS la plus faible citée (A → A
       _r2.fondation.rang_derive == "A-", f"→ {_r2.fondation.rang_derive}")
 check("… et sa nature est forcée à `interpretation` (une estimation n'est jamais une mesure, §1.5)",
       _r2.fondation.nature_effective == "interpretation")
+# #113 ter — les pièces d'un fait postérieur LU sont des sources de la réponse, d'office.
+_r3 = A.assembler_answer(brute(cited_entry_ids=[1], faits_posterieurs=[
+    {"depot": "0001193125-26-377362", "effet": "les baux ajoutent des charges fixes sans changer l'autonomie",
+     "cited_entry_ids": [2]}]), **_asm)
+check("§5 les pièces d'un fait postérieur lu entrent d'office dans la fondation (#113 ter) — et comptent "
+      "pour le rang (A + B+ → B+) comme pour la nature", _r3.fondation.cited_entry_ids == [1, 2]
+      and _r3.fondation.rang_derive == "B+" and _r3.fondation.nature_effective == "interpretation",
+      f"→ {_r3.fondation.cited_entry_ids} {_r3.fondation.rang_derive} {_r3.fondation.nature_effective}")
 check("la nature forte n'est concédée que si TOUTES les entries citées la portent",
       A.assembler_answer(brute(cited_entry_ids=[1]), **_asm).fondation.nature_effective == "mesure"
       and _r1.fondation.nature_effective == "interpretation",
