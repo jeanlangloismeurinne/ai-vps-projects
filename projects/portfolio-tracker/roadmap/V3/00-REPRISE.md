@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-03
+updated: 2026-10-04
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#112), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#113), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -73,12 +73,12 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4184 assertions, 0 rouge** — 2026-10-03 après #112. `negatif_collecte_executor.sh` 40/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4219 assertions, 0 rouge** — 2026-10-04 après #113 ter. `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
 - **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
-  vides) ; la prochaine sera **052**. Vérifier en base avant
+  vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; la prochaine sera **053**. Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`b9bdea6`** (#112), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
+- **Production** : stack sur **`b2e0f5f`** (#113 ter), vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
@@ -201,18 +201,26 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   MSFT = exercice (10-K dernier dépôt). Une carte qui lit le concept d'une recette sur douze mois prend
   la main sur la recette (période que la recette ne lit pas). Geste `--refaire-carte` (executer_chaine).
   Suite **4184/0**.
-- **⚠️ EN TÊTE — ARBITRAGE À POSER (qf_7 toujours `non_fondable`, réponses #1099, #1106).** Deux
-  passages réels avec carte refaite (plans #200, #202) : l'apparieur classe « flux d'exploitation sur
-  les quatre derniers trimestres » en `exact` (le champ nu = l'exercice clos) **2/2**, malgré la consigne
-  explicite — instabilité de modèle, la consigne seule ne tient pas. Pièce #774 : libellé « quatre
-  derniers trimestres », chiffre de l'exercice 2025 (bon libellé, mauvais nombre) — l'analyste l'a
-  écartée à juste titre ; **à retirer** (pollution, décision à prendre avec l'utilisateur). Remède de
-  FORME proposé : le traducteur (qui lit la question) déclare la PÉRIODE de chaque ligne dans un
-  vocabulaire fermé (exercice clos · douze derniers mois · dernier bilan), et le code l'exécute — un
-  `exact` sur un flux demandé « douze derniers mois » se lit alors `[ttm]` sans jugement de l'apparieur.
-  Coût : un champ au contrat du plan + migration 052. Alternatives : règle générale « un flux relevé à
-  la dernière clôture se lit sur douze mois dès qu'un trimestre est publié » (rigide : casse les
-  questions par exercice, qf_3) ; ou laisser l'apparieur (instable).
+- **#113 / bis / ter déployés (`3a1588f`, `efba39b`, `b2e0f5f`, 2026-10-04) — qf_7 RVMD RÉPONDUE.**
+  Arbitrages utilisateur du 2026-10-04 : (1) **la demande précise la période** — chaque ligne de plan
+  traduite déclare `periode` (exercice clos · douze mois glissants · dernier bilan · sans période,
+  migration **052**) et le code la respecte (un flux demandé sur douze mois se lit `[ttm]` quel que soit
+  le choix de l'apparieur, la recette de l'exercice s'efface, une carte contraire est refusée) ;
+  (2) **#774 écartée** au registre (`tools/retraits/2026-10-04_ecart_774.sql`). En chemin : l'analyste
+  ne voit plus, sur une question de mesure fermée à l'approximation, les pièces d'interprétation (#789,
+  la soustraction de #78 recopiée par le web) ; les pièces d'un fait postérieur lu entrent d'office dans
+  la fondation. Résultat (plan #205, réponse **#1143**) : `repondu` A / mesure — trésorerie 3 935 M$ (#786),
+  consommation **1 220 M$ sur douze mois** (#787 = 1 223,03 : l'analyste recopie l'arrondi « 1,22 Md$ »
+  du texte — résidu de rendu), aucune échéance à douze mois (#791), baux du 8-K lus (#723/#733),
+  autonomie **38,7 mois**. Qualité financière RVMD **0,33 → 0,67** (qf_4 reste `non_fondee`, clauses).
+- **Résidus nommés** : (a) le rendu d'un montant en Md$ à 2 décimales fait recopier un arrondi — afficher
+  le M$ exact dans la tête du fait (#45/#46) ; (b) l'analyste voit les corpus de TOUTES les questions
+  dans un même appel : au 1er tour il a cité pour qf_7 une interprétation montrée sous qf_6 (le renvoi l'a
+  corrigé) — une citation hors du corpus de SA question pourrait être refusée nommément avant le pont ;
+  (c) cartes NVDA/MSFT écrites avant `[ttm]` et avant la période : `--refaire-carte` au prochain passage ;
+  (d) `negatif_collecte_executor.sh` 42/2 (2 échecs PRÉEXISTANTS).
+- **PROCHAIN PAS** (objectif utilisateur du 2026-09-30) : qf_4 RVMD, puis la qualité financière de NVDA
+  (aucune réponse en vigueur) avec `--refaire-carte`, puis les nouveaux chapitres sur RVMD et NVDA.
 - qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses coupée
   par le budget 180 s ; échéancier : datation hétérogène signalée. #751 garde l'ancienne prose « Calculé »
   jusqu'à sa prochaine réécriture (sans effet : #110 + la relecture).
@@ -377,7 +385,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #112** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #113** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·

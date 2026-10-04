@@ -2885,6 +2885,29 @@ mois, pas sur l'exercice clos (RVMD : −1 223 M$ contre −898 M$).
 Gardes : `check_appariement_feed` §9 (fixtures copiées des dépôts RVMD/MSFT) + négatif **30/0** ;
 `check_appariement` §11 bis + négatif **50/0** ; `check_collecte_executor` §10/§12 + négatif 40/2 (2 préexistants).
 
+### #113 — la demande précise la période ; l'analyste ne voit que ce qu'il peut citer
+
+**Arbitrage de l'utilisateur (2026-10-04)** : « qui décide sur quelle période se lit un chiffre ? — la
+demande la précise », comme un gérant écrit « sur douze mois glissants » ou « sur l'exercice clos ».
+Mesuré : l'apparieur, seul juge, lisait « flux d'exploitation sur les quatre derniers trimestres » à
+l'exercice clos 2/2 malgré la consigne (pièce #774 : bon libellé, mauvais chiffre — écartée au registre).
+- **Contrat du plan** : `CollectionPlanItem.periode` ∈ `PERIODES` (`exercice_clos`, `douze_mois_glissants`,
+  `dernier_bilan`, `sans_periode`), REQUISE sur `traduit`, interdite sur `inobtenable` ; persistée
+  (migration **052**, nullable = plan antérieur) ; traverse la ligne aveugle (propriété de la lecture).
+- **Exécution** : `appariement_feed.appliquer_periode` (pur) — `douze_mois_glissants` réécrit chaque flux lu
+  à l'exercice courant en `[ttm]` (un `exact` devient l'agrégat déterministe et le DIT), refuse un flux
+  décalé ; `exercice_clos` refuse une carte `[ttm]` ; le cadrage vient de `serie_du_concept`. Une recette de
+  FLUX s'efface sur une demande douze mois, même sans carte (`recette_retenue`).
+- **#113 bis — `analyste.corpus_montre`** : sur une question de MESURE où `approxime` est fermé, une pièce
+  qui, citée seule, ne satisfait pas la nature attendue n'est pas montrée (doctrine de `corpus_citable`
+  étendue à la nature ; détenteurs `nature_effective_de` / `nature_satisfait`).
+- **#113 ter — fondation = citations ∪ pièces des faits postérieurs lus** (`assembler_answer`) : une note
+  qui lit le 8-K s'appuie sur lui ; l'oubli devient impossible au lieu d'être refusé par [P] (#68).
+Résultat : RVMD qf_7 #1143 `repondu` A/mesure, autonomie 38,7 mois ; qualité financière 0,33 → 0,67.
+Gardes : `check_collection_plan_contract` (+ négatif 22/0), `check_appariement_feed` §10 (négatif 35/0),
+`check_collecte_executor` §12, `check_analyste` §5/§13 (négatif 56/0), `check_collecteur`, `check_traducteur`,
+`check_collecte_persist`, `negatif_052.sh` 6/0. Suite **4219/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
