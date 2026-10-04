@@ -293,22 +293,26 @@ frameworks:
             mode: variable
             variable: Fonds propres réglementaires supplémentaires exigés par point de croissance des encours
 
+      # qf_4 / qf_8 — SCISSION du 2026-10-04 (arbitrage utilisateur, #114) : « distinguer les faits et le
+      # jugement ». Comme une note crédit : le TABLEAU DE LA DETTE (montants, échéances, trésorerie en
+      # face) est un relevé — qf_4, question de mesure ; la REVUE DES CLAUSES lit le contrat de prêt et
+      # conclut sur la contrainte — qf_8, jugement adossé aux seuls documents officiels. Avant, qf_4
+      # exigeait que les clauses soient des « mesures » : une clause est du texte, la question était
+      # infondable pour toute entreprise endettée (RVMD #1050 : « les covenants sont décrits par des
+      # commentaires »).
       - id: qf_4
-        enonce: La structure de financement contraint-elle les décisions d'exploitation ?
-        chemin_indexation: qualite_financiere.contrainte_de_financement
+        enonce: Combien l'entreprise doit-elle, à quelles échéances, et avec quelle trésorerie en face ?
+        chemin_indexation: qualite_financiere.poids_de_la_dette
         nature_attendue: mesure
         plancher_tier: A
         rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
-        sens_admis: [aucune_contrainte, contrainte_moderee, contrainte_forte]
+        sens_admis: [tresorerie_nette, endettement_soutenable, endettement_lourd]
         ingredients_requis:
           - id: endettement_brut_et_net
             libelle: Endettement financier, brut et net de trésorerie
             essentiel: true
           - id: echeancier_de_la_dette
             libelle: Répartition dans le temps des remboursements exigibles
-            essentiel: true
-          - id: clauses_de_sauvegarde
-            libelle: Engagements contractuels pris envers les prêteurs, et les seuils qui les déclenchent
             essentiel: true
           - id: lignes_de_credit_non_tirees
             libelle: Capacité de financement disponible mais non utilisée
@@ -333,13 +337,46 @@ frameworks:
         variables_par_archetype:
           rentable:
             mode: variable
-            variable: Endettement net rapporté à la capacité bénéficiaire, et marge disponible avant déclenchement des clauses
+            variable: Endettement net rapporté à la capacité bénéficiaire
           pre_revenus:
             mode: variable
-            variable: Dilution attendue et clauses attachées aux instruments convertibles
+            variable: Dette brute, instruments convertibles compris, et nombre d'actions qu'ils créeraient s'ils étaient convertis
           financiere:
             mode: variable
             variable: Ratios prudentiels et marge au-dessus des exigences réglementaires
+
+      - id: qf_8
+        enonce: Les engagements pris envers les prêteurs et les porteurs d'obligations contraignent-ils les décisions d'exploitation ?
+        chemin_indexation: qualite_financiere.contrainte_des_clauses
+        nature_attendue: interpretation
+        # Plancher A sur une question de JUGEMENT, à dessein : la clause se lit dans le contrat déposé
+        # (indenture, convention de prêt) — le document de référence, comme l'analyste crédit qui ne
+        # se fie pas à un commentaire de presse sur les covenants. Le jugement est de l'analyste,
+        # la matière est officielle.
+        plancher_tier: A
+        rouverte_par: [financement, resultats, surprise_execution, integrite_comptes]
+        sens_admis: [aucune_contrainte, contrainte_moderee, contrainte_forte]
+        ingredients_requis:
+          - id: clauses_de_sauvegarde
+            libelle: Engagements contractuels pris envers les prêteurs, et les seuils qui les déclenchent
+            essentiel: true
+          - id: marge_avant_declenchement
+            libelle: Écart entre la situation actuelle et les seuils qui déclencheraient ces engagements
+            essentiel: false
+          - id: remboursement_anticipe_et_defaut
+            libelle: Événements qui rendraient la dette exigible avant terme, ou forceraient un rachat ou une conversion
+            essentiel: false
+        chiffres_cles: []
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Marge disponible avant déclenchement des clauses financières, et restrictions sur les distributions et les acquisitions
+          pre_revenus:
+            mode: variable
+            variable: Clauses attachées aux instruments convertibles et aux prêts — conversion, remboursement anticipé, restrictions sur les opérations
+          financiere:
+            mode: variable
+            variable: Restrictions imposées par le régulateur ou les prêteurs sur les distributions et la croissance du bilan
 
       - id: qf_5
         enonce: Le rendement observé est-il stable, en amélioration, ou en érosion sur cinq ans ou plus ?
@@ -1119,8 +1156,8 @@ frameworks:
   # ═══════════════════════════════════════════════════════════════════════════════════════════
   # « Management et allocation du capital » — roadmap 05, capacité 3 (2026-09-28), co-écrit avec
   # l'utilisateur. Thorndike (The Outsiders) : on juge les dirigeants sur ce qu'ils FONT de l'argent.
-  # Il écarte ce que les autres portent : le rendement du capital (qf_1), la contrainte de la dette
-  # (qf_4), les choix comptables flatteurs (qf_6). Arbitrage du 2026-09-28 : une levée de fonds est
+  # Il écarte ce que les autres portent : le rendement du capital (qf_1), la dette et ses clauses
+  # (qf_4, qf_8), les choix comptables flatteurs (qf_6). Arbitrage du 2026-09-28 : une levée de fonds est
   # un acte d'allocation — `financement` rouvre ma_1 et ma_3 en plus de qf_4/qf_7 (#94).
   # Aucune question n'est sans objet pour un émetteur sans ventes.
   - id: management_capital

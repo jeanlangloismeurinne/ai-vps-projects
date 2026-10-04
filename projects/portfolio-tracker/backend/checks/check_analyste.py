@@ -321,7 +321,7 @@ _ENC_RVMD = [{"id": "dette_brute", "unite": "M$", "valeur": 487.43, "date_ou_per
              {"id": "tresorerie_et_placements", "unite": "M$", "valeur": 3937.969, "date_ou_periode": "au 2026-06-30"},
              {"id": "dette_nette", "unite": "M$", "valeur": -328.0, "date_ou_periode": "au 2026-06-30"}]
 _a4 = A.assembler_answer(A.AnalysteReponse(question_id="qf_4", statut="repondu", verbatim="dette convertible",
-                                           sens="aucune_contrainte", cited_entry_ids=[1],
+                                           sens="tresorerie_nette", cited_entry_ids=[1],
                                            chiffres_cles=_ENC_RVMD),
                          question=Q["qf_4"], entries=ENTRIES, **_entete)
 _dn = {c.id: c for c in _a4.reponse.chiffres_cles}.get("dette_nette")
@@ -368,7 +368,7 @@ leve("un `sans_fondement` qui déclare un fait lu est refusé (un manque qui a l
                                                    "effet": "loyers ~32 M$/an, non significatifs",
                                                    "cited_entry_ids": [6]}]), ValidationError)
 _lu = A.assembler_answer(A.AnalysteReponse(
-    question_id="qf_4", statut="repondu", verbatim="dette convertible", sens="aucune_contrainte",
+    question_id="qf_4", statut="repondu", verbatim="dette convertible", sens="tresorerie_nette",
     cited_entry_ids=[1, 6], chiffres_cles=_ENC_RVMD[:2],
     faits_posterieurs=[{"depot": "0001193125-26-377362", "effet": "loyers ~32 M$/an dès 2027, non significatifs",
                         "cited_entry_ids": [6]}]), question=Q["qf_4"], entries=_E_BAUX, **_entete)
@@ -455,7 +455,10 @@ APX = dict(methode="rapport sur le trimestre annualisé", ingredients_entry_ids=
            hypotheses_explicites=["rythme de dépense constant"], sensibilite="±2 trimestres")
 NOMINAL = [
     dict(question_id="qf_4", statut="repondu", verbatim="aucune dette financière",
-         sens="aucune_contrainte", cited_entry_ids=[1], chiffres_cles=ENC_QF4),
+         sens="tresorerie_nette", cited_entry_ids=[1], chiffres_cles=ENC_QF4),
+    # qf_8 (scission #114) : question de JUGEMENT sans encadré — une réponse sans chiffre est complète.
+    dict(question_id="qf_8", statut="repondu", verbatim="aucun covenant financier",
+         sens="aucune_contrainte", cited_entry_ids=[1]),
     dict(question_id="qf_6", statut="approxime", verbatim="~15 % du résultat publié",
          sens="part_significative", cited_entry_ids=[1], approximation=APX, chiffres_cles=ENC_QF6),
     dict(question_id="qf_7", statut="sans_fondement",
@@ -501,14 +504,14 @@ R = passage(NOMINAL)
 _par_statut = {}
 for a in _ans(R):
     _par_statut.setdefault(a.statut, []).append(a.question_id)
-check("les 7 questions du framework sont traitées, sans doublon",
+check("les 8 questions du framework sont traitées, sans doublon",
       sorted(a.question_id for a in _ans(R)) == sorted(Q),
       f"→ {sorted(a.question_id for a in _ans(R))} / refus {_ref(R)}")
 check("les 4 hors-sujet de l'archétype sortent en `sans_objet`, écrits par le code",
       sorted(_par_statut.get("sans_objet", [])) == ["qf_1", "qf_2", "qf_3", "qf_5"],
       f"→ {_par_statut}")
 check("la réponse directe et l'approximation sont acquittées par le pont",
-      _par_statut.get("repondu") == ["qf_4"] and _par_statut.get("approxime") == ["qf_6"],
+      sorted(_par_statut.get("repondu", [])) == ["qf_4", "qf_8"] and _par_statut.get("approxime") == ["qf_6"],
       f"→ {_par_statut}")
 _nf = [a for a in _ans(R) if a.statut == "non_fondable"]
 check("le `sans_fondement` du modèle devient un `non_fondable` PORTEUR DE SON GAP",
@@ -865,33 +868,35 @@ _A_OPINION = {8: {"reliability_tier": "A", "nature": "interpretation", "title": 
                   "content": "la structure de coûts restera maîtrisée", "source_type": "company_ir_official",
                   "source_date": "2025-07-01"}}
 _Rm, _appels = passage_corpus([], _B_MESURE)
-# qf_6 part au modèle (elle est ouverte) : le faux modèle y répond honnêtement `sans_fondement`, pour
-# que le passage aille à son terme et qu'on lise le motif de qf_4.
+# qf_6 et qf_8 partent au modèle (questions de JUGEMENT, ouvertes sur une source A) : le faux modèle y
+# répond honnêtement `sans_fondement`, pour que le passage aille à son terme et qu'on lise le motif de qf_4.
 _Ro, _appels_o = passage_corpus([dict(question_id="qf_6", statut="sans_fondement",
-                                      verbatim="aucune source ne chiffre la part non récurrente")],
+                                      verbatim="aucune source ne chiffre la part non récurrente"),
+                                 dict(question_id="qf_8", statut="sans_fondement",
+                                      verbatim="aucune source ne cite les clauses du contrat de prêt")],
                                 _A_OPINION)
 _morts_o = {a.question_id: a.gap.manque for a in _ans(_Ro) if a.statut == "non_fondable"}
 _morts = [a for a in _ans(_Rm) if a.statut == "non_fondable"]
 _nf_morts = sorted(a.question_id for a in _morts)
 check("les questions infondables sortent en `non_fondable`, SANS aucun appel modèle (#40)",
-      _nf_morts == ["qf_4", "qf_6", "qf_7"] and _appels == []
-      and sorted(_morts_o) == ["qf_4", "qf_6", "qf_7"] and len(_appels_o) == 1,
+      _nf_morts == ["qf_4", "qf_6", "qf_7", "qf_8"] and _appels == []
+      and sorted(_morts_o) == ["qf_4", "qf_6", "qf_7", "qf_8"] and len(_appels_o) == 1,
       f"→ non_fondable {_nf_morts} / {len(_appels)} appel(s) modèle sans corpus ; "
-      f"{len(_appels_o)} appel(s) (attendu 1, qf_6 seule) et non_fondable {sorted(_morts_o)} quand "
+      f"{len(_appels_o)} appel(s) (attendu 1, qf_6 et qf_8) et non_fondable {sorted(_morts_o)} quand "
       "qf_4/qf_7 ont un corpus mais aucune "
       "réponse recevable")
 # ⚠️ `_morts` est exigé NON VIDE : la 1ʳᵉ version de ces trois asserts était un `all(...)` sur une
 # liste vide — donc VERTE sur rien. C'est le faux vert que le FAIL ci-dessus a fait apparaître.
 check("… et c'est bien un MANQUE DE DONNÉES : chacune porte son gap en `collecte` (donc un mandat)",
-      len(_morts) == 3 and all(a.gap is not None and a.gap.remede == "collecte" for a in _morts),
+      len(_morts) == 4 and all(a.gap is not None and a.gap.remede == "collecte" for a in _morts),
       "→ c'est l'erreur symétrique de l'en-tête : imputer à l'agent un corpus qui ne pouvait pas "
       "fonder condamnerait la question au silence, faute de mandat")
 # Le CONTEXTE ne montre pas une question morte. ⚠️ L'assert discrimine les DEUX portes : qf_4/qf_7 ont
 # un corpus citable NON VIDE (donc la porte « pas de corpus » ne les aurait pas retirées) et sortent
-# quand même du contexte — c'est bien la porte des statuts qui les a fermées ; qf_6 y reste.
+# quand même du contexte — c'est bien la porte des statuts qui les a fermées ; qf_6 et qf_8 y restent.
 _CTX_MORT = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, _A_OPINION)
 check("une question dont AUCUN statut n'est ouvert n'est pas montrée au modèle (elle a pourtant un corpus)",
-      [q["id"] for q in _CTX_MORT["questions"]] == ["qf_6"]
+      sorted(q["id"] for q in _CTX_MORT["questions"]) == ["qf_6", "qf_8"]
       and len(A.corpus_citable(Q["qf_4"], _A_OPINION)) == 1
       and len(A.corpus_citable(Q["qf_7"], _A_OPINION)) == 1,
       f"→ contexte {[q['id'] for q in _CTX_MORT['questions']]} / "
@@ -899,7 +904,7 @@ check("une question dont AUCUN statut n'est ouvert n'est pas montrée au modèle
 
 _manques = {a.question_id: a.gap.manque for a in _morts}
 check("… et les DEUX causes ont DEUX motifs distincts (aucune source ≠ aucune réponse recevable)",
-      len(_morts) == 3
+      len(_morts) == 4
       and "aucune source fournie ne fonde" in _manques.get("qf_4", "")
       and "aucune réponse recevable" in _morts_o.get("qf_4", ""),
       f"→ sans source {_manques.get('qf_4', '')[:80]} / sans réponse recevable "

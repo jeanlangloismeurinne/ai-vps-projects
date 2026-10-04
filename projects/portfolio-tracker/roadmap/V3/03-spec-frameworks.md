@@ -343,8 +343,9 @@ nature admise sur le **framework** alors que §2.3, le contrat de définition et
 la portent sur la **question** (`nature_attendue`). Deux détenteurs pour une même règle : elle
 re-diverge au correctif suivant (convention #46, `feedback_correctif_regle_jumeaux`). **La question
 tranche**, parce que c'est elle que le contrat Pydantic et le pont valident déjà — et parce que
-`qf_4.clauses_de_sauvegarde` (un `evenement` contractuel) et `qf_1.capital_employe` (une `mesure`)
-vivent dans le même framework.
+`qf_8.clauses_de_sauvegarde` (une clause contractuelle, lue au contrat) et `qf_1.capital_employe` (une
+`mesure`) vivent dans le même framework. (Jusqu'au 2026-10-04 les clauses vivaient DANS `qf_4`, question
+de mesure : elles ne pouvaient jamais la fonder — d'où la scission #114.)
 
 ### 2.3 Anatomie d'une question
 
@@ -670,11 +671,16 @@ cash disponible. Les niveaux comptables ne disent rien seuls ; ce sont les **rel
 | `qf_1` | Le capital employé rapporte-t-il **durablement plus que son coût** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_2` | Le résultat comptable **se transforme-t-il en cash** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_3` | La croissance **coûte-t-elle** du capital, et combien par point de croissance ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
-| `qf_4` | La structure de financement **contraint-elle** les décisions d'exploitation ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_4` | **Combien** l'entreprise doit-elle, à quelles échéances, et avec quelle trésorerie en face ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_8` | Les engagements pris envers les prêteurs et les porteurs d'obligations **contraignent-ils** les décisions d'exploitation ? | `interpretation` | A | `financement`, `resultats`, `surprise_execution`, `integrite_comptes` |
 | `qf_5` | Le **rendement** observé est-il stable, en amélioration, ou en érosion sur ≥ 5 ans ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable` |
 
+> `qf_4` / `qf_8` : **scission du 2026-10-04** (arbitrage utilisateur, #114) — « distinguer les faits et
+> le jugement », comme une note crédit sépare le tableau de la dette (relevé) de la revue des clauses
+> (lecture du contrat de prêt, conclusion de l'analyste). Plancher A sur `qf_8` : la clause se lit dans
+> le contrat déposé, jamais dans un commentaire.
 > `qf_6` est `financials.earnings_quality`, aujourd'hui **sans chemin d'indexation** (§0.3).
 > `qf_7` est ce qui manquait totalement à RVMD (le *runway*) et qui est **aussi** pertinent sur
 > NVIDIA — c'est la démonstration qu'une question bien posée en substance économique est
@@ -813,7 +819,7 @@ d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
 Roadmap `05-frameworks-complets.md`, capacité 3, co-écrit avec l'utilisateur. **Thèse
 méthodologique** (Thorndike, *The Outsiders*) : on juge la direction sur ce qu'elle fait de l'argent,
 puis sur ce qui la motive, sa parole tenue et qui décide vraiment. Il écarte le rendement du capital
-(`qf_1`), la contrainte de la dette (`qf_4`), les choix comptables (`qf_6`). Aucune question n'est
+(`qf_1`), la dette et ses clauses (`qf_4`, `qf_8`), les choix comptables (`qf_6`). Aucune question n'est
 sans objet pour un émetteur sans ventes.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #94) |
@@ -1387,7 +1393,7 @@ provider ? — un « non » = lot non prêt.
 | **Une collecte pilotée par un seul agent** | **Refusé** (§3.6) | Un agent unique fusionne « mauvais plan » et « mauvaise collecte » en un verdict opaque. Deux agents, et le **plan est persisté** — sinon la question « lequel des deux a échoué ? » est indécidable. |
 | **Le modèle a un levier sur l'exigence** (`curator.py` peut RESSERRER `champs_requis` / `tier_plancher`) | **Retiré** au lot 2c (écart **V2**) | Sous le principe 1, un resserrement discrétionnaire est une question posée par le **modèle**, pas par le framework. Le traducteur dit **où chercher**, jamais **combien de preuve suffit**. |
 | **Dégrader le tier d'une source selon l'émetteur** (le 10-K de RVMD « vaut moins ») | **Refusé** (§3.6) | C'est de l'**actualité**, pas de la fiabilité : l'ancre de RVMD bouge, la source ne devient pas moins fiable. Le traducteur nomme l'**ancre** ; l'actualité reste calculée à la lecture (#53). |
-| **`natures_admises` au niveau framework** | **Retiré** (§2.2, écart **V3**) | Deux détenteurs pour une même règle (#46). La **question** tranche : `qf_4.clauses_de_sauvegarde` et `qf_1.capital_employe` n'ont pas la même nature dans le même framework. |
+| **`natures_admises` au niveau framework** | **Retiré** (§2.2, écart **V3**) | Deux détenteurs pour une même règle (#46). La **question** tranche : `qf_8.clauses_de_sauvegarde` et `qf_1.capital_employe` n'ont pas la même nature dans le même framework. |
 
 ---
 

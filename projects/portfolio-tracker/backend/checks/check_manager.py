@@ -131,17 +131,17 @@ b.check(c_ko.non_substitution == "ko", "④ ko : substitut vers une réponse à 
 
 # Acquittement : 4 contrôles au vert (une seule question applicable pour restreindre les manquantes).
 rev_ok = M.reviser_framework(
-    [_repondu(q, "MSFT") for q in ("qf_1", "qf_2", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7")],
+    [_repondu(q, "MSFT") for q in ("qf_1", "qf_2", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7", "qf_8")],
     fichier=FICH, framework_id="qualite_financiere", archetype="rentable", ticker_id="MSFT",
     entries=CORPUS)
 verdicts = [d.verdict for d in rev_ok.decisions.values()]
-b.require(verdicts, 7, "§2 sept réponses révisées")
+b.require(verdicts, 8, "§2 huit réponses révisées")
 b.check(all(v == "acquitte" for v in verdicts), "§2 toutes acquittées quand tout est au vert")
 b.check(not rev_ok.mandats(), "§2 aucun mandat quand tout est acquitté")
-b.check(not rev_ok.questions_manquantes, "§2 aucune question manquante quand les 7 sont répondues")
+b.check(not rev_ok.questions_manquantes, "§2 aucune question manquante quand les 8 sont répondues")
 
 # Renvoi : une réponse fondée hors corpus parmi des réponses saines.
-answers_mix = [_repondu(q, "MSFT") for q in ("qf_2", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7")]
+answers_mix = [_repondu(q, "MSFT") for q in ("qf_2", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7", "qf_8")]
 answers_mix.append(_repondu("qf_1", "MSFT", cites=(99,)))   # fondation ko
 rev_mix = M.reviser_framework(
     answers_mix, fichier=FICH, framework_id="qualite_financiere", archetype="rentable",
@@ -152,7 +152,7 @@ b.require(renvoyees, 1, "§2 exactement une réponse renvoyée (celle hors corpu
 # `renvoyees[:1]` plutôt que `[0]` : une mutation qui désarme un contrôle rend la liste vide, et le
 # check DOIT atteindre son bilan malgré tout (2ᵉ faux vert — script mort avant ses asserts).
 b.check(renvoyees[:1] == [("qf_1", "a")], "§2 c'est bien `qf_1` qui est renvoyée")
-b.check(len(acquittees) == 6, "§2 les six autres réponses restent acquittées (le renvoi est PAR réponse)")
+b.check(len(acquittees) == 7, "§2 les sept autres réponses restent acquittées (le renvoi est PAR réponse)")
 
 # ══ §3 — détenteurs uniques réutilisés, jamais recopiés (#46) ═══════════════════════════════════
 
@@ -191,9 +191,9 @@ b.check(rev_ok.decisions[("qf_1", "a")].mandat is None, "§4 un acquittement ne 
 rev_creux = M.reviser_framework(
     [_repondu("qf_2", "MSFT")], fichier=FICH, framework_id="qualite_financiere",
     archetype="rentable", ticker_id="MSFT", entries=CORPUS)
-b.check(set(rev_creux.questions_manquantes) == {"qf_1", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7"},
-        "§4 ① les six questions applicables sans réponse sont listées manquantes")
-b.require(rev_creux.mandats_manquantes, 6, "§4 ① un mandat par question manquante")
+b.check(set(rev_creux.questions_manquantes) == {"qf_1", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7", "qf_8"},
+        "§4 ① les sept questions applicables sans réponse sont listées manquantes")
+b.require(rev_creux.mandats_manquantes, 7, "§4 ① un mandat par question manquante")
 b.check(all(m.origine == "manager_renvoi" and m.etat == "ouvert"
             for m in rev_creux.mandats_manquantes),
         "§4 ① chaque question manquante produit un mandat ouvert (un blanc n'est pas un `sans_objet`)")
@@ -201,7 +201,7 @@ b.check(all(m.origine == "manager_renvoi" and m.etat == "ouvert"
 rev_disp = M.reviser_framework(
     [_repondu("qf_2", "MSFT")], fichier=FICH, framework_id="qualite_financiere",
     archetype="rentable", ticker_id="MSFT", entries=CORPUS,
-    dispenses=frozenset({"qf_1", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7"}))
+    dispenses=frozenset({"qf_1", "qf_3", "qf_4", "qf_5", "qf_6", "qf_7", "qf_8"}))
 b.check(not rev_disp.questions_manquantes and not rev_disp.mandats(),
         "§4 ① une question dispensée n'est ni manquante ni mandatée")
 
