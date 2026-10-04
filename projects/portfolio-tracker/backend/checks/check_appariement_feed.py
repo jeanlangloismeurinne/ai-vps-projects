@@ -32,6 +32,7 @@ from app.knowledge.appariement_feed import (
     AppariementInexecutable,
     ConsigneAppariement,
     ancre_commune,
+    appliquer_periode,
     construire_fait_apparie,
     resoudre_points,
     serie_du_concept,
@@ -654,6 +655,65 @@ try:
           abs(_fa2.structure["value"] - (-1_223_033_000.0)) < 1.0, f"→ {_fa2.structure['value']}")
 except Exception as e:
     check("§9 exercice amendé s'exécute", False, repr(e)[:200])
+
+
+# ── §10 LA DEMANDE PRÉCISE LA PÉRIODE (#113, arbitrage du 2026-10-04) ──────────────────────────────
+# Mesuré le 2026-10-03 (RVMD, plans #200/#202) : l'apparieur classait « flux d'exploitation sur les
+# quatre derniers trimestres » en `exact` (l'exercice clos) 2 fois sur 2 — pièce #774, bon libellé,
+# mauvais nombre. La ligne de plan DÉCLARE la période ; `appliquer_periode` la fait respecter.
+print("\n[10] la demande précise la période — un `exact` de flux demandé sur douze mois se lit `[ttm]`")
+_OCF = "NetCashProvidedByUsedInOperatingActivities"
+_F10 = {_OCF: _OCF_RVMD, "CashAndCashEquivalentsAtCarryingValue": _CASH_RVMD}
+
+
+def _exec10(consigne):
+    """(valeur, consigne appliquée) — ou le refus NOMMÉ ; jamais la mort du script."""
+    try:
+        c = appliquer_periode(consigne, _F10)
+        pts, af, ab = resoudre_points(c, _F10)
+        f = construire_fait_apparie("RVMD", "RVMD", 1628171, "consommation", c, pts,
+                                    ancre_flux=af, ancre_bilan=ab)
+        return f.structure["value"], c, f
+    except AppariementInexecutable as e:
+        return None, str(e), None
+    except Exception as e:
+        return None, f"EXCEPTION INATTENDUE : {e!r}", None
+
+
+_exact = ConsigneAppariement(statut="exact", expression=_OCF)
+_v, _c, _f = _exec10(_exact._replace(periode="douze_mois_glissants"))
+check("§10 `exact` + demande « douze mois glissants » → lu sur douze mois (−1 223,033 M$), pas l'exercice",
+      _v is not None and abs(_v - (-1_223_033_000.0)) < 1.0, f"→ {_v} {_c if _v is None else ''}")
+check("§10 la consigne devient l'agrégat déterministe `[ttm]` et le DIT (jamais « recopié tel quel »)",
+      _f is not None and _c.expression == _OCF + "[ttm]" and _c.statut == "approximation"
+      and _c.deterministe is True and "EXACT" not in _f.contenu and "période déclarée par la demande" in _f.contenu,
+      f"→ {getattr(_c, 'expression', _c)}")
+_v, _c, _f = _exec10(_exact._replace(periode="exercice_clos"))
+check("§10 `exact` + demande « exercice clos » → l'exercice 2025 (−897,741 M$), inchangé",
+      _v is not None and abs(_v - (-897_741_000.0)) < 1.0, f"→ {_v}")
+_v, _c, _f = _exec10(_exact)
+check("§10 plan antérieur (sans période) → comportement d'avant, inchangé", _v is not None
+      and abs(_v - (-897_741_000.0)) < 1.0, f"→ {_v}")
+_v, _c, _f = _exec10(ConsigneAppariement(statut="approximation", expression=_OCF + "[ttm]",
+                                         deterministe=True, periode="exercice_clos"))
+check("§10 carte `[ttm]` contre demande « exercice clos » → refus NOMMÉ (la demande fait foi)",
+      _v is None and "EXERCICE CLOS" in _c, f"→ {_c!r}"[:200])
+_v, _c, _f = _exec10(ConsigneAppariement(statut="approximation", expression=f"({_OCF} - {_OCF}[-1]) / {_OCF}[-1]",
+                                         deterministe=True, periode="douze_mois_glissants"))
+check("§10 progression d'exercice en exercice contre demande « douze mois » → refus NOMMÉ",
+      _v is None and "DOUZE MOIS GLISSANTS" in _c, f"→ {_c!r}"[:200])
+_v, _c, _f = _exec10(ConsigneAppariement(statut="approximation",
+                                         expression=f"CashAndCashEquivalentsAtCarryingValue / -{_OCF}",
+                                         deterministe=True, periode="douze_mois_glissants"))
+check("§10 autonomie (trésorerie ÷ −flux) sur douze mois : seul le FLUX glisse, le solde reste au bilan",
+      _v is not None and isinstance(_c, ConsigneAppariement)
+      and _c.expression == f"CashAndCashEquivalentsAtCarryingValue / -{_OCF}[ttm]"
+      and abs(_v - 815_430_000.0 / 1_223_033_000.0) < 1e-6, f"→ {getattr(_c, 'expression', _c)} {_v}")
+_v, _c, _f = _exec10(ConsigneAppariement(statut="exact", expression="CashAndCashEquivalentsAtCarryingValue",
+                                         periode="douze_mois_glissants"))
+check("§10 un solde seul demandé « douze mois » n'est pas réécrit (il n'a pas de durée)",
+      isinstance(_c, ConsigneAppariement) and _c.expression == "CashAndCashEquivalentsAtCarryingValue"
+      and _c.statut == "exact", f"→ {_c!r}"[:200])
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

@@ -62,6 +62,7 @@ from .analysis_v2_schemas import Strict
 __all__ = [
     "COLLECTION_PLAN_SCHEMA_VERSION",
     "STATUTS_LIGNE",
+    "PERIODES",
     "CollectionPlanItem",
     "CollectionPlan",
 ]
@@ -72,6 +73,16 @@ COLLECTION_PLAN_SCHEMA_VERSION = "v3.0.0"
 
 # Les deux statuts d'une LIGNE. `omis` n'y figure pas : c'est l'absence de ligne (cf. en-tête).
 STATUTS_LIGNE = ("traduit", "inobtenable")
+
+# La PÉRIODE sur laquelle se lit le chiffre demandé (arbitrage du 2026-10-04, convention #113). C'est
+# la DEMANDE qui la précise — comme un gérant écrit « sur douze mois glissants » ou « sur l'exercice
+# clos » — et le code la respecte : mesuré le 2026-10-03, l'apparieur laissé seul juge classait
+# « flux d'exploitation sur les quatre derniers trimestres » en lecture de l'exercice clos 2 fois sur 2.
+#   · exercice_clos         — un flux sur le dernier exercice publié (une progression annuelle) ;
+#   · douze_mois_glissants  — un flux sur les quatre derniers trimestres publiés ;
+#   · dernier_bilan         — un solde à la dernière date de bilan ;
+#   · sans_periode          — ni flux ni solde : une politique, une clause, une prévision, un texte.
+PERIODES = ("exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode")
 
 
 class CollectionPlanItem(Strict):
@@ -129,6 +140,14 @@ class CollectionPlanItem(Strict):
         description="Poste du socle EDGAR correspondant (vocabulaire fermé `edgar_feed.POSTES`), "
                     "ou absent si l'ingrédient n'est pas un niveau brut publié tel quel.")
 
+    # Présente SI ET SEULEMENT SI `traduit`, SANS défaut : une période absente se lirait comme
+    # « peu importe », et c'est exactement ce qui laissait l'aval publier l'exercice clos pour « les
+    # quatre derniers trimestres » (#113). Le traducteur, qui lit la question, est le seul à savoir.
+    periode: Optional[Literal["exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode"]] = Field(
+        default=None,
+        description="Période sur laquelle se lit le chiffre : exercice_clos | douze_mois_glissants | "
+                    "dernier_bilan | sans_periode.")
+
     # Présent SI ET SEULEMENT SI `inobtenable`. Une ligne inobtenable devient un mandat ouvert qui
     # NOMME l'ingrédient (§3.6) — jamais un trou. Le motif est ce que le mandat portera ; il doit
     # EXPLIQUER, comme un `motif_plancher` (même longueur minimale) : « aucune source connue ne le
@@ -155,6 +174,11 @@ class CollectionPlanItem(Strict):
                 raise ValueError(
                     "statut='traduit' porte un `motif` : le motif est la raison d'une "
                     "impossibilité ; une ligne traduite n'en a pas")
+            if self.periode is None:
+                raise ValueError(
+                    "statut='traduit' sans `periode` : dis sur quelle période se lit le chiffre "
+                    f"({' | '.join(PERIODES)}) — un flux « sur les quatre derniers trimestres » n'est "
+                    "pas un flux de l'exercice clos, et seule la demande peut le dire")
         else:  # inobtenable
             if not self.motif:
                 raise ValueError(
@@ -169,7 +193,8 @@ class CollectionPlanItem(Strict):
                       # opérationnel déposé chez EDGAR n'est pas « inobtenable ». Les deux ensemble
                       # seraient une ligne qui se contredit — on sait exactement où le prendre, et on
                       # déclare qu'aucune source ne le produit.
-                      ("poste", self.poste)) if val]
+                      ("poste", self.poste),
+                      ("periode", self.periode)) if val]
             if porte:
                 raise ValueError(
                     f"statut='inobtenable' porte {porte} : si l'ingrédient a une métrique, une "

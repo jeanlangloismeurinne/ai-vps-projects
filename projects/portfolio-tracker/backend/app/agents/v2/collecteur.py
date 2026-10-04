@@ -69,6 +69,10 @@ class LigneAveugle(Strict):
     # framework — le collecteur ne peut pas en déduire à quelle question il répond. C'est exactement
     # le statut de `metrique`, qui traverse déjà.
     poste: Optional[str] = None
+    # La période demandée (`collection_plan_schema.PERIODES`) — comme `poste`, une propriété de la
+    # LECTURE (exercice, douze mois, bilan), pas un vocabulaire de framework : elle ne perce pas la
+    # frontière aveugle. None = ligne d'un plan antérieur au #113 (comportement d'avant, inchangé).
+    periode: Optional[str] = None
 
 
 class ResultatCollecte(Strict):
@@ -159,6 +163,7 @@ def ligne_aveugle(item: CollectionPlanItem, ticker_id: str) -> LigneAveugle:
         source_pressentie=item.source_pressentie,  # type: ignore[arg-type]
         ancre=item.ancre,                # type: ignore[arg-type]
         poste=item.poste,
+        periode=item.periode,
     )
 
 

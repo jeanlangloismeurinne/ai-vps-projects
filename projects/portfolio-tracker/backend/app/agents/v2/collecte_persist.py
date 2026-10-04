@@ -35,10 +35,10 @@ async def persist_plan(conn: asyncpg.Connection, plan: CollectionPlan) -> int:
         await conn.execute(
             "INSERT INTO collection_plan_items "
             "(plan_id, question_id, ingredient_id, statut, metrique, source_pressentie, ancre, "
-            " motif, poste) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            " motif, poste, periode) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
             plan_id, it.question_id, it.ingredient_id, it.statut,
-            it.metrique, it.source_pressentie, it.ancre, it.motif, it.poste)
+            it.metrique, it.source_pressentie, it.ancre, it.motif, it.poste, it.periode)
     return plan_id
 
 

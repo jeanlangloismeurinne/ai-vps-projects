@@ -145,6 +145,10 @@ mutations=(
 "$SRC¦        carte = None if refaire else await lire_carte(¦        carte = await lire_carte(  # mutation: refaire ignoré¦refaire=True sur une carte À JOUR"
 # La période glissante ignorée : la recette de l'exercice clos répond aux « quatre derniers trimestres ».
 "$SRC¦    if glissants & lus:¦    if False:  # mutation: la période ttm ne compte pas¦DOUZE MOIS (\`[ttm]\`)"
+# #113 — la recette de flux garde la main sur une demande « douze mois » : l'exercice sous le nom de douze mois.
+"$SRC¦    if poste in _POSTES_DE_FLUX and ligne.periode == \"douze_mois_glissants\":¦    if False:  # mutation¦recette de flux, SANS carte"
+# #113 — la période ne voyage plus jusqu'à l'appariement.
+"$SRC¦                        consigne=consigne._replace(periode=ligne.periode),¦                        consigne=consigne,  # mutation¦la période voyage"
 )
 
 passes=0; ratees=0

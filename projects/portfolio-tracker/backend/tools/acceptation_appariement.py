@@ -80,7 +80,7 @@ async def _dernier_plan(conn) -> tuple[int, CollectionPlan]:
     if tete is None:
         raise RuntimeError("aucun plan persisté dans `collection_plans` — rien à apparier")
     lignes = await conn.fetch(
-        "SELECT question_id, ingredient_id, statut, metrique, source_pressentie, ancre, motif, poste "
+        "SELECT question_id, ingredient_id, statut, metrique, source_pressentie, ancre, motif, poste, periode "
         "FROM collection_plan_items WHERE plan_id = $1 ORDER BY id", tete["id"])
     items = [CollectionPlanItem(**{k: v for k, v in dict(r).items() if v is not None})
              for r in lignes]

@@ -33,6 +33,8 @@ mutations=(
 "$SRC¦            for eid in dict.fromkeys([rc.entry_id, *rc.entry_ids_supplementaires]):¦            for eid in dict.fromkeys([rc.entry_id]):¦les DEUX documents sont rattachés"
 "$SRC¦            for eid in dict.fromkeys([rc.entry_id, *rc.entry_ids_supplementaires]):¦            for eid in [rc.entry_id, *rc.entry_ids_supplementaires]:¦chacun une fois"
 "$SRC¦        if self.entry_ids_supplementaires and self.entry_id is None:¦        if False:¦sans entry principale → refusé"
+# #113 — la période n'est plus transmise à la ligne aveugle.
+"$SRC¦        periode=item.periode,¦        periode=None,  # mutation¦transmet la PÉRIODE"
 )
 
 passes=0; ratees=0

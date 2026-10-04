@@ -61,6 +61,7 @@ LE TIER SE DÉRIVE, ET LES DEUX CAS NE SONT PAS LE MÊME
 """
 from __future__ import annotations
 
+import ast
 import logging
 from datetime import date
 from typing import Any, NamedTuple, Optional
@@ -69,6 +70,7 @@ import asyncpg
 
 from app.contracts.formule_grammaire import (
     DOUZE_MOIS,
+    analyser_formule,
     DimensionIncoherente,
     Periode,
     cle_de_reference,
@@ -110,6 +112,7 @@ __all__ = [
     "douze_mois_glissants",
     "rendre_resultat",
     "ancre_commune",
+    "appliquer_periode",
     "resoudre_points",
     "construire_fait_apparie",
     "executer_appariement",
@@ -149,6 +152,9 @@ class ConsigneAppariement(NamedTuple):
     hypotheses: tuple[str, ...] = ()
     deterministe: Optional[bool] = None
     termes_web: tuple[str, ...] = ()
+    # La période DEMANDÉE par la ligne de plan (`collection_plan_schema.PERIODES`, #113), ou None pour
+    # un plan antérieur. Pas du vocabulaire de framework : une propriété de la lecture (comme `poste`).
+    periode: Optional[str] = None
 
 
 class PointRetenu(NamedTuple):
@@ -429,6 +435,76 @@ def _decaler_annees(iso: str, k: int) -> date:
         return d.replace(year=d.year + k)
     except ValueError:
         return d.replace(year=d.year + k, day=28)
+
+
+def appliquer_periode(
+    consigne: ConsigneAppariement, facts: dict[str, list[dict[str, Any]]]
+) -> ConsigneAppariement:
+    """La consigne RÉÉCRITE pour lire la période que la DEMANDE déclare (#113). Pure.
+
+    Arbitrage du 2026-10-04 : c'est la demande qui précise la période, comme un gérant écrit « sur
+    douze mois glissants ». Mesuré le 2026-10-03 : l'apparieur classait « flux d'exploitation sur les
+    quatre derniers trimestres » en `exact` (le champ nu, donc l'exercice clos) 2 fois sur 2, malgré
+    la consigne — la pièce #774 portait le bon libellé et le mauvais nombre. Le code tranche :
+
+      · `douze_mois_glissants` — chaque concept de FLUX lu à l'exercice courant (`Concept`) est lu
+        `Concept[ttm]` ; un `exact` devient l'agrégat déterministe des trois lectures déposées (le dire
+        « recopié tel quel » serait faux). Un flux à un exercice DÉCALÉ (`[-1]`) contredit la demande :
+        refus nommé. Un solde de bilan n'est pas touché (une autonomie = trésorerie ÷ douze mois).
+      · `exercice_clos` — une carte qui lit `[ttm]` contredit la demande : refus nommé.
+      · `dernier_bilan`, `sans_periode`, None (plan antérieur) — inchangé.
+
+    Le cadrage flux/instant vient de `serie_du_concept`, détenteur unique (#46) : on ne devine pas
+    qu'un concept est un flux à son nom.
+    """
+    if consigne.periode not in ("douze_mois_glissants", "exercice_clos"):
+        return consigne
+    try:
+        arbre = analyser_formule(consigne.expression)
+        references = references_de_la_formule(consigne.expression)
+    except FormuleInexecutable as e:
+        raise AppariementInexecutable(f"formule mal formée — {e}") from e
+    if consigne.periode == "exercice_clos":
+        glissants = sorted(c for c, k in references if k == DOUZE_MOIS)
+        if glissants:
+            raise AppariementInexecutable(
+                f"la demande porte sur l'EXERCICE CLOS, et la carte lit {glissants} sur douze mois "
+                f"glissants (« {consigne.expression} ») : deux périodes différentes, la demande fait foi")
+        return consigne
+
+    def cadrage(c: str) -> Optional[str]:
+        if c not in facts:
+            return None          # absent : `resoudre_points` le refusera en le nommant
+        try:
+            return serie_du_concept(facts[c], c)[2]
+        except AppariementInexecutable:
+            return None
+    flux = {c for c, _ in references if cadrage(c) == "flux"}
+    decales = sorted(f"{c}[{k}]" for c, k in references if c in flux and k not in (0, DOUZE_MOIS))
+    if decales:
+        raise AppariementInexecutable(
+            f"la demande porte sur les DOUZE MOIS GLISSANTS, et la carte lit {decales} à un exercice "
+            f"décalé (« {consigne.expression} ») : une progression d'exercice en exercice n'est pas une "
+            "lecture sur douze mois — la demande fait foi")
+    a_glisser = {c for c, k in references if c in flux and k == 0}
+    if not a_glisser:
+        return consigne
+
+    class _Glisser(ast.NodeTransformer):
+        def visit_Subscript(self, noeud: ast.Subscript) -> ast.AST:
+            return noeud                       # déjà une période explicite : on n'y touche pas
+
+        def visit_Name(self, noeud: ast.Name) -> ast.AST:
+            if noeud.id in a_glisser:
+                return ast.Subscript(value=ast.Name(id=noeud.id, ctx=ast.Load()),
+                                     slice=ast.Name(id=DOUZE_MOIS, ctx=ast.Load()), ctx=ast.Load())
+            return noeud
+    expression = ast.unparse(ast.fix_missing_locations(_Glisser().visit(arbre)).body)
+    hypothese = ("lu sur les douze mois glissants (exercice clos + cumul en cours − cumul de la même "
+                 "période l'an passé), période déclarée par la demande")
+    return consigne._replace(
+        statut="approximation", expression=expression, deterministe=True,
+        hypotheses=tuple(consigne.hypotheses) + (hypothese,))
 
 
 def resoudre_points(
@@ -743,6 +819,8 @@ async def executer_appariement(
 ) -> int:
     """Exécute UN appariement contre l'inventaire déjà lu et écrit l'entry. Rend son `id`.
 
+    La période DEMANDÉE (`consigne.periode`) est appliquée d'abord (`appliquer_periode`, #113).
+
     AUCUN APPEL RÉSEAU : `facts` arrive de `assurer_carte`, qui l'a lu une fois pour tout le plan.
     C'est ce qui rend ce producteur gratuit à l'exécution — la dépense a déjà eu lieu, et la refaire
     par ligne serait un appel `companyfacts` (1 à 5 Mo) par ingrédient.
@@ -750,6 +828,7 @@ async def executer_appariement(
     Lève `AppariementInexecutable` (motif nommé) sur les quatre refus de l'en-tête. L'appelant en
     fait un `echec`, donc un mandat — jamais un nombre approché.
     """
+    consigne = appliquer_periode(consigne, facts)
     points, ancre_flux, ancre_bilan = resoudre_points(consigne, facts)
     fait = construire_fait_apparie(
         ticker_id, symbole, cik, libelle, consigne, points,

@@ -101,7 +101,7 @@ async def run():
                 items=[
                     CollectionPlanItem(question_id="qf_1",
                                        ingredient_id="resultat_operationnel_apres_impot",
-                                       statut="traduit", metrique="résultat d'exploitation après impôt",
+                                       statut="traduit", periode="exercice_clos", metrique="résultat d'exploitation après impôt",
                                        source_pressentie="10-K", ancre="clôture de l'exercice"),
                     CollectionPlanItem(question_id="qf_1", ingredient_id="cout_du_capital",
                                        statut="inobtenable",
@@ -117,11 +117,14 @@ async def run():
                 "SELECT count(*) FROM collection_plan_items WHERE plan_id = $1", plan_id)
             check("les deux lignes sont écrites", n_items == 2, f"→ {n_items}")
             trad = await conn.fetchrow(
-                "SELECT metrique, motif FROM collection_plan_items "
+                "SELECT metrique, motif, periode FROM collection_plan_items "
                 "WHERE plan_id = $1 AND statut = 'traduit'", plan_id)
             check("la ligne traduite porte sa métrique, pas de motif",
                   trad is not None and trad["metrique"] is not None and trad["motif"] is None,
                   "→ ligne traduite absente" if trad is None else "")
+            check("la ligne traduite porte sa PÉRIODE persistée (#113)",
+                  trad is not None and trad["periode"] == "exercice_clos",
+                  f"→ {None if trad is None else trad['periode']!r}")
             inob = await conn.fetchrow(
                 "SELECT metrique, motif FROM collection_plan_items "
                 "WHERE plan_id = $1 AND statut = 'inobtenable'", plan_id)

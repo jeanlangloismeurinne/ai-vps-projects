@@ -133,6 +133,10 @@ except TypeError as e:
           "emetteur" in str(e), f"→ {e}")
 check("la consigne dit que l'entreprise est celle de la raison sociale, jamais celle du sigle",
       "JAMAIS CELLE QUE SUGGÈRE LE SIGLE" in T._TRADUCTEUR_SYSTEM_PROMPT)
+check("la consigne ENSEIGNE la période (#113) : les quatre valeurs, et « quatre derniers trimestres » ⟹ "
+      "douze_mois_glissants", all(v in T._TRADUCTEUR_SYSTEM_PROMPT for v in
+          ("`douze_mois_glissants`", "`exercice_clos`", "`dernier_bilan`", "`sans_periode`"))
+      and "jamais `exercice_clos`" in T._TRADUCTEUR_SYSTEM_PROMPT)
 _src_tr = inspect.getsource(T.traduire)
 _i_id, _i_run = _src_tr.find("identite_de_l_emetteur("), _src_tr.find("run_json_agent(")
 check("`traduire` résout l'identité par son détenteur unique AVANT la dépense modèle (#40/#46)",

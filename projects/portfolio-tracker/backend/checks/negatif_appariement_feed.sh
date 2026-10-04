@@ -127,6 +127,17 @@ mutations=(
 "$SRC¦             **({\"composantes\": [dict(c) for c in p.composantes]} if p.composantes else {})}¦             **({})}  # mutation: plus de composantes¦TROIS lectures déposées"
 # `[ttm]` sur un solde de bilan : le refus devient un « rien à lire à cette date » muet de cause.
 "$SRC¦        sans = sorted(c for c, f in fins.items() if f is None)¦        sans = []  # mutation¦solde de bilan"
+# ── §10 LA DEMANDE PRÉCISE LA PÉRIODE (#113) ──────────────────────────────────────────────────────
+# La période demandée ignorée : l'apparieur redevient seul juge, l'exercice part sous le nom de douze mois.
+"$SRC¦    if consigne.periode not in (\"douze_mois_glissants\", \"exercice_clos\"):¦    if True:  # mutation: la période demandée ignorée¦demande « douze mois glissants » → lu sur douze mois"
+# Le contrôle « carte [ttm] contre demande exercice clos » désarmé.
+"$SRC¦        if glissants:\n            raise AppariementInexecutable(\n                f\"la demande porte sur l'EXERCICE CLOS¦        if False:\n            raise AppariementInexecutable(\n                f\"la demande porte sur l'EXERCICE CLOS¦carte \`[ttm]\` contre demande « exercice clos »"
+# Le décalage d'exercice toléré sous une demande « douze mois ».
+"$SRC¦    if decales:\n        raise AppariementInexecutable(\n            f\"la demande porte sur les DOUZE MOIS¦    if False:\n        raise AppariementInexecutable(\n            f\"la demande porte sur les DOUZE MOIS¦progression d'exercice en exercice contre demande"
+# Le solde aussi glissé : le cadrage ignoré, tout concept devient [ttm].
+"$SRC¦    flux = {c for c, _ in references if cadrage(c) == \"flux\"}¦    flux = {c for c, _ in references}  # mutation: le cadrage ignoré¦seul le FLUX glisse"
+# L'exact réécrit garde son statut : « recopié tel quel » mentirait.
+"$SRC¦        statut=\"approximation\", expression=expression, deterministe=True,¦        expression=expression, deterministe=True,  # mutation: reste exact¦agrégat déterministe \`[ttm]\` et le DIT"
 )
 
 passes=0; ratees=0

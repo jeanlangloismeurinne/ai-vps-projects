@@ -66,10 +66,10 @@ def rejete(label, fn, motif):
 
 # ── fixtures : un plan minimal, 3 lignes couvrant les trois états ────────────────────────────────
 TRAD_OK = CollectionPlanItem(question_id="qf_1", ingredient_id="resultat_operationnel_apres_impot",
-                             statut="traduit", metrique="résultat d'exploitation après impôt",
+                             statut="traduit", periode="exercice_clos", metrique="résultat d'exploitation après impôt",
                              source_pressentie="10-K", ancre="clôture de l'exercice")
 TRAD_KO = CollectionPlanItem(question_id="qf_1", ingredient_id="capital_employe",
-                             statut="traduit", metrique="ECHEC capital employé net",
+                             statut="traduit", periode="exercice_clos", metrique="ECHEC capital employé net",
                              source_pressentie="10-K", ancre="clôture de l'exercice")
 INOB = CollectionPlanItem(question_id="qf_1", ingredient_id="cout_du_capital", statut="inobtenable",
                           motif="aucun poste EDGAR ne produit le coût du capital directement")
@@ -106,9 +106,13 @@ _la = ligne_aveugle(TRAD_OK, "NVDA")
 # et toujours rien du POURQUOI. La frontière du principe 2 sépare la question de la donnée, pas le
 # général du précis : nommer le poste rend la ligne plus précise sans la rendre moins aveugle.
 # C'est l'assert au-dessus qui garde la vraie frontière (aucun champ de question/ingrédient).
+# `periode` (2026-10-04, #113) traverse au même titre : « douze mois glissants » dit SUR QUELLE PÉRIODE
+# lire, jamais POURQUOI — c'est une propriété de la lecture, pas un vocabulaire de framework.
 check("`ligne_aveugle` produit bien un objet aveugle (le plan comptable, jamais la question)",
-      set(_la.model_dump()) == {"ticker_id", "metrique", "source_pressentie", "ancre", "poste"},
+      set(_la.model_dump()) == {"ticker_id", "metrique", "source_pressentie", "ancre", "poste", "periode"},
       f"→ {set(_la.model_dump())}")
+check("`ligne_aveugle` transmet la PÉRIODE demandée par le plan (#113)",
+      _la.periode == TRAD_OK.periode == "exercice_clos", f"→ {_la.periode!r}")
 rejete("`ligne_aveugle` refuse une ligne `inobtenable` (rien à collecter)",
        lambda: ligne_aveugle(INOB, "NVDA"), "seule une ligne traduite")
 

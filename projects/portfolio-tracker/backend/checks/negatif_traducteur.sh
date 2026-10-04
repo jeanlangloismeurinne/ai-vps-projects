@@ -41,6 +41,8 @@ mutations=(
 "$SRC¦        emetteur = await identite_de_l_emetteur(conn, ticker_id)¦        emetteur = IdentiteEmetteur(ticker_id, 0, ticker_id)¦AVANT la dépense modèle"
 "$SRC¦        fichier, framework_id, archetype, ticker_id, emetteur=emetteur,¦        fichier, framework_id, archetype, ticker_id, emetteur=IdentiteEmetteur(ticker_id, 0, ticker_id),¦et la passe au contexte"
 "app/knowledge/edgar_feed.py¦    return await resolve_identite(await symbole_de_marche(conn, ticker_id))¦    return await resolve_identite(ticker_id)¦passe par \`symbole_de_marche\`"
+# #113 — la consigne ne dit plus que « quatre derniers trimestres » ⟹ douze_mois_glissants.
+"$SRC¦\`douze_mois_glissants\` — jamais \`exercice_clos\`.¦\`douze_mois_glissants\`.¦ENSEIGNE la période"
 )
 
 passes=0; ratees=0

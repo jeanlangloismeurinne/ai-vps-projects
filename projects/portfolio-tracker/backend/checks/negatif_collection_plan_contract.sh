@@ -68,6 +68,10 @@ mutations=(
 "app/agents/v2/frameworks.py¦        if it.ingredient_id not in {i.id for i in ingredients_a_collecter(q)}:¦        if False:¦recollecte le coût du capital"
 "app/agents/v2/frameworks.py¦        for i in ingredients_a_collecter(q):¦        for i in q.ingredients_requis:¦SANS les ingrédients repris passe"
 "app/agents/v2/traducteur.py¦                    for i in ingredients_a_collecter(q)¦                    for i in q.ingredients_requis¦ne VOIT aucun ingrédient repris"
+# #113 — une ligne traduite sans période passe : la demande ne dit plus sur quelle période lire.
+"$SRC¦            if self.periode is None:¦            if False:  # mutation¦sans \`periode\`"
+# #113 — une ligne inobtenable peut porter une période.
+"$SRC¦                      (\"periode\", self.periode)) if val]¦                      ) if val]  # mutation¦qui porte une \`periode\`"
 )
 
 passes=0; ratees=0

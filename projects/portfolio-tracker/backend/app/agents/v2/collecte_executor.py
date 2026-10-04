@@ -222,6 +222,8 @@ def poste_retenu(poste: Optional[str], metrique: str) -> Optional[str]:
 # composite). Dérivé de `POSTES`, détenteur unique (#46) — jamais recopié.
 _CONCEPTS_DU_POSTE: dict[str, frozenset[str]] = {
     p.metric: frozenset(p.concepts) | frozenset(p.composite_concepts) for p in POSTES}
+# Les recettes de FLUX : elles lisent l'exercice clos, jamais les douze mois glissants (#113).
+_POSTES_DE_FLUX = frozenset(p.metric for p in POSTES if p.flow)
 
 
 def recette_retenue(ligne: LigneAveugle, consigne: Optional[ConsigneAppariement]) -> Optional[str]:
@@ -257,6 +259,13 @@ def recette_retenue(ligne: LigneAveugle, consigne: Optional[ConsigneAppariement]
     disaient −1 223 M$.
     """
     poste = poste_retenu(ligne.poste, ligne.metrique)
+    # LA DEMANDE DIT « DOUZE MOIS » (#113) : une recette de flux lit l'exercice clos — elle répondrait
+    # à une autre période que celle demandée. Elle s'efface, que la carte le dise ou non : l'appariement
+    # (lu sur douze mois) ou, à défaut, le repli web nommé — jamais l'exercice sous le nom de douze mois.
+    if poste in _POSTES_DE_FLUX and ligne.periode == "douze_mois_glissants":
+        logger.info("recette de flux « %s » écartée pour « %s » : la demande porte sur douze mois "
+                    "glissants, la recette lit l'exercice clos", poste, ligne.metrique)
+        return None
     if poste is None or consigne is None:
         return poste
     lus = _CONCEPTS_DU_POSTE[poste]
@@ -456,7 +465,9 @@ async def collecter_un(
                         symbole=inventaire.symbole,
                         cik=inventaire.cik,
                         libelle=ligne.metrique,
-                        consigne=consigne,
+                        # La période DEMANDÉE voyage avec la consigne (#113) : c'est elle, et non le
+                        # jugement de l'apparieur, qui décide si un flux se lit sur douze mois.
+                        consigne=consigne._replace(periode=ligne.periode),
                         facts=inventaire.facts,
                     )
             except AppariementInexecutable as e:

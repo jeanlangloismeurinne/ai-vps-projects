@@ -223,29 +223,29 @@ print("\n[5bis] `postes_edgar_du_plan` : un poste que nul plan ne réclame ne se
 # Le socle EDGAR data-first (8 postes en bloc) a disparu : `_SocleEdgar` ne collecte que l'union des
 # postes des lignes traduites routées EDGAR. Détenteur unique du dispatch (`router_source` +
 # `poste_pour_metrique`), jamais une seconde liste (#46).
-_it_rev = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net", statut="traduit",
+_it_rev = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net", statut="traduit", periode="exercice_clos",
                              metrique="chiffre d'affaires", source_pressentie="10-K",
                              ancre="clôture de l'exercice", poste="revenue")
-_it_ni = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net_2", statut="traduit",
+_it_ni = CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net_2", statut="traduit", periode="exercice_clos",
                             metrique="Net income (GAAP)", source_pressentie="10-K (Income Statement)",
                             ancre="clôture de l'exercice", poste="net_income")
 # Dépôt SEC, poste NOMMÉ et existant — mais métrique dérivée : le véto renvoie au web. C'est le cas
 # qui distingue « le plan a désigné un poste » de « ce poste est légitime pour cette métrique ».
-_it_web_derivee = CollectionPlanItem(question_id="qf_7", ingredient_id="fcf", statut="traduit",
+_it_web_derivee = CollectionPlanItem(question_id="qf_7", ingredient_id="fcf", statut="traduit", periode="exercice_clos",
                                      metrique="free cash flow", source_pressentie="10-K",
                                      ancre="clôture du trimestre", poste="operating_cash_flow")
 _it_web_marche = CollectionPlanItem(question_id="qf_1", ingredient_id="cout_du_capital",
-                                    statut="traduit", metrique="coût du capital (WACC)",
+                                    statut="traduit", periode="exercice_clos", metrique="coût du capital (WACC)",
                                     source_pressentie="données de marché", ancre="aujourd'hui")
 # ⚠️ Le cas DISCRIMINANT du routing : une métrique qui EST un poste (`marge brute` → gross_profit),
 # mais annoncée depuis un COMMUNIQUÉ (pas un dépôt SEC) → router = web. Correctement routée, elle ne
 # réclame PAS le poste EDGAR ; ignorer le routing ajouterait `gross_profit` (qui n'apparaît nulle part
 # ailleurs) et ferait rougir l'assert. Sans ce cas, un `postes_edgar_du_plan` aveugle au routing
 # passerait au vert (les autres lignes web portent des métriques dérivées, déjà exclues par le poste).
-_it_web_poste = CollectionPlanItem(question_id="qf_4", ingredient_id="marge", statut="traduit",
+_it_web_poste = CollectionPlanItem(question_id="qf_4", ingredient_id="marge", statut="traduit", periode="exercice_clos",
                                    metrique="marge brute", source_pressentie="communiqué de presse",
                                    ancre="clôture du trimestre", poste="gross_profit")
-_it_rev_bis = CollectionPlanItem(question_id="qf_3", ingredient_id="croissance", statut="traduit",
+_it_rev_bis = CollectionPlanItem(question_id="qf_3", ingredient_id="croissance", statut="traduit", periode="exercice_clos",
                                  metrique="chiffre d'affaires", source_pressentie="10-Q",
                                  ancre="clôture du trimestre", poste="revenue")  # dédup sur 'revenue'
 _it_inob = CollectionPlanItem(question_id="qf_1", ingredient_id="autre", statut="inobtenable",
@@ -1161,6 +1161,31 @@ check("§12 le même concept lu à l'exercice → la recette garde la main (rien
       _mod.recette_retenue(_l_conso, _cons_reelle("NetCashProvidedByUsedInOperatingActivities"))
       == "operating_cash_flow")
 
+# LA DEMANDE PRÉCISE LA PÉRIODE (#113). Une recette de FLUX lit l'exercice clos : si la demande dit
+# « douze mois glissants », elle s'efface — même SANS carte (sinon l'exercice part sous le nom de douze
+# mois, la pièce #774). Une recette de SOLDE n'a pas de période à trahir : elle garde la main.
+_l_conso12 = _l_conso.model_copy(update={"periode": "douze_mois_glissants"})
+check("§12 demande « douze mois » + recette de flux, SANS carte → la recette s'efface (None)",
+      _mod.recette_retenue(_l_conso12, None) is None,
+      f"→ {_mod.recette_retenue(_l_conso12, None)!r}")
+check("§12 demande « douze mois » + carte `exact` au champ nu → la recette s'efface aussi",
+      _mod.recette_retenue(_l_conso12, _cons_reelle("NetCashProvidedByUsedInOperatingActivities")) is None)
+check("§12 demande « exercice clos » + recette de flux → la recette garde la main",
+      _mod.recette_retenue(_l_conso.model_copy(update={"periode": "exercice_clos"}), None)
+      == "operating_cash_flow")
+check("§12 demande « douze mois » sur une recette de SOLDE → la recette garde la main (pas de période)",
+      _mod.recette_retenue(_l_treso.model_copy(update={"periode": "douze_mois_glissants"}), None)
+      == "cash_and_lt_debt")
+# La période doit VOYAGER jusqu'à l'exécution de l'appariement : sans elle, `appliquer_periode` ne
+# voit rien et l'apparieur redevient seul juge. Tenu sur l'AST : l'argument `consigne=` de l'appel à
+# `executer_appariement` est `consigne._replace(periode=ligne.periode)`.
+_appels_exec = [n for n in ast.walk(_ARBRE) if isinstance(n, ast.Call)
+                and getattr(n.func, "id", None) == "executer_appariement"]
+_kw_cons = [k.value for c in _appels_exec for k in c.keywords if k.arg == "consigne"]
+check("§12 `executer_appariement` reçoit `consigne._replace(periode=ligne.periode)` (la période voyage)",
+      len(_kw_cons) == 1 and ast.unparse(_kw_cons[0]) == "consigne._replace(periode=ligne.periode)",
+      f"→ {[ast.unparse(k) for k in _kw_cons]}")
+
 # Le CHEMIN réel : `collecter_un` doit exécuter l'appariement, pas le socle.
 _appar["n"] = 0; _edgar_calls.clear(); _web_calls.clear()
 _mod.executer_appariement = _fake_executer
@@ -1179,7 +1204,7 @@ check("§12 consigne SANS inventaire (inexécutable) → la recette garde la mai
       f"→ socle={_edgar_calls} appariement={_appar['n']}")
 
 # Le socle ne doit pas collecter un poste dont la ligne s'exécute par appariement (#43 : deux entries).
-_items12 = [CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit", metrique=l.metrique,
+_items12 = [CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit", periode="exercice_clos", metrique=l.metrique,
                                source_pressentie=l.source_pressentie, ancre=l.ancre, poste=l.poste)
             for q, i, l in (("qf_7", "tresorerie_disponible", _l_treso),
                             ("qf_4", "endettement_brut_et_net", _l_dette),

@@ -168,7 +168,7 @@ _V = FICH.schema_version
 # cout_du_capital. Un plan qui ne couvre QUE qf_1 doit passer quand le scope vaut {qf_1}, et échouer
 # sans scope (les autres questions ont des essentiels non couverts).
 _essentiels_qf1 = ("resultat_operationnel_apres_impot", "capital_employe", "cout_du_capital")
-_items_qf1 = [CollectionPlanItem(question_id="qf_1", ingredient_id=ing, statut="traduit",
+_items_qf1 = [CollectionPlanItem(question_id="qf_1", ingredient_id=ing, statut="traduit", periode="exercice_clos",
                                  metrique="résultat d'exploitation après impôt",
                                  source_pressentie="10-K", ancre="clôture de l'exercice")
               for ing in _essentiels_qf1]
@@ -186,7 +186,7 @@ _rejette("§5 le MÊME plan SANS scope est refusé ([R] exige toutes les questio
 _plan_deborde = CollectionPlan(
     ticker_id="RVMD", framework_id=FW, framework_version=_V, archetype="rentable",
     items=_items_qf1 + [CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net",
-                                           statut="traduit", metrique="résultat net",
+                                           statut="traduit", periode="exercice_clos", metrique="résultat net",
                                            source_pressentie="10-K", ancre="clôture de l'exercice")])
 _rejette("§5 une ligne HORS du scope de bouclage est refusée ([P])",
          lambda: valider_pont_collection_plan(_plan_deborde, fichier=FICH,

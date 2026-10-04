@@ -45,6 +45,7 @@ from app.agents.v2.frameworks import (
 )
 from app.contracts.collection_plan_schema import (
     COLLECTION_PLAN_SCHEMA_VERSION,
+    PERIODES,
     STATUTS_LIGNE,
     CollectionPlan,
     CollectionPlanItem,
@@ -104,7 +105,7 @@ def rejete(label, fn, motif):
 
 # ── fixtures : toutes valides par défaut, chaque cas n'en casse QU'UNE chose ────────────────────
 TRAD = dict(question_id="qf_7", ingredient_id="consommation_de_tresorerie_recente",
-            statut="traduit", metrique="cash burn trimestriel hors milestone",
+            statut="traduit", periode="exercice_clos", metrique="cash burn trimestriel hors milestone",
             source_pressentie="communiqués + call trimestriel", ancre="dernière lecture clinique")
 INOB = dict(question_id="qf_1", ingredient_id="cout_du_capital", statut="inobtenable",
             motif="aucun poste EDGAR ne produit le coût du capital ; une source web reste à ouvrir")
@@ -141,6 +142,16 @@ for champ in ("metrique", "source_pressentie", "ancre"):
 rejete("'traduit' qui porte un `motif` → le motif est une raison d'impossibilité",
        item(motif="ce motif fait bien plus de vingt caractères pour passer le min_length"),
        "statut='traduit' porte un `motif`")
+# LA PÉRIODE (#113) : obligatoire sur `traduit`, vocabulaire fermé, interdite sur `inobtenable`.
+rejete("'traduit' sans `periode` → la demande ne dit pas sur quelle période lire (#113)",
+       item(periode=None), "sans `periode`")
+rejete("`periode` hors vocabulaire → refusée", item(periode="trimestre"), "periode")
+for _p in PERIODES:
+    valide(f"`periode={_p}` se construit", item(periode=_p))
+rejete("'inobtenable' qui porte une `periode` → une ligne sans lecture n'a pas de période",
+       lambda: CollectionPlanItem(**INOB, periode="exercice_clos"), "['periode']")
+check("PERIODES == le Literal du champ `periode` (aucune période morte, aucune manquante)",
+      set(get_args(get_args(CollectionPlanItem.model_fields["periode"].annotation)[0])) == set(PERIODES))
 # obligation côté `inobtenable`
 rejete("'inobtenable' sans `motif` → trou déguisé",
        lambda: CollectionPlanItem(question_id="qf_1", ingredient_id="cout_du_capital",
@@ -205,7 +216,7 @@ def plan_complet(framework_id, archetype, extra=None, drop_first=False):
             # construit pas avec la règle qu'elle éprouve (4ᵉ faux vert).
             if ing.essentiel and not ing.repris_de:
                 items.append(CollectionPlanItem(
-                    question_id=q.id, ingredient_id=ing.id, statut="traduit",
+                    question_id=q.id, ingredient_id=ing.id, statut="traduit", periode="exercice_clos",
                     metrique=f"métrique nommée pour {ing.id}", source_pressentie="10-Q",
                     ancre="clôture du trimestre"))
     if drop_first:
@@ -254,7 +265,7 @@ def refuse_pont(label, plan, motif):
 
 
 _ITEM_QF1 = CollectionPlanItem(question_id="qf_1", ingredient_id="resultat_operationnel_apres_impot",
-                               statut="traduit", metrique="résultat d'exploitation après impôt",
+                               statut="traduit", periode="exercice_clos", metrique="résultat d'exploitation après impôt",
                                source_pressentie="10-K", ancre="clôture de l'exercice")
 
 pont_ok("[réf] un plan complet passe le pont (sinon rien ci-dessous ne discrimine)",
@@ -280,7 +291,7 @@ refuse_pont("[P] ingrédient inventé pour une vraie question",
 refuse_pont("[Q] question SANS OBJET planifiée quand même (fabrique une réponse, §0.2)",
             plan_complet("qualite_financiere", "pre_revenus", extra=[CollectionPlanItem(
                 question_id="qf_1", ingredient_id="resultat_operationnel_apres_impot",
-                statut="traduit", metrique="rendement du capital", source_pressentie="10-K",
+                statut="traduit", periode="exercice_clos", metrique="rendement du capital", source_pressentie="10-K",
                 ancre="clôture de l'exercice")]),
             "[Q] `qf_1` est SANS OBJET")
 refuse_pont("[R] essentiel omis → plan REFUSÉ (T1bis, le cœur)",
@@ -297,7 +308,7 @@ pont_ok("[R] un plan de valorisation SANS les ingrédients repris passe (ils ne 
         plan_complet("valorisation", "rentable"))
 refuse_pont("[P] une ligne qui recollecte le coût du capital repris de qf_1 est refusée",
             plan_complet("valorisation", "rentable", extra=[CollectionPlanItem(
-                question_id="va_1", ingredient_id="taux_d_actualisation", statut="traduit",
+                question_id="va_1", ingredient_id="taux_d_actualisation", statut="traduit", periode="exercice_clos",
                 metrique="coût moyen pondéré du capital", source_pressentie="10-K",
                 ancre="clôture de l'exercice")]),
             "est REPRIS d'une autre méthodologie")

@@ -355,7 +355,7 @@ PLAN = CollectionPlan(
     ticker_id="NVDA", framework_id="qualite_financiere", framework_version="v3.0.0",
     archetype="compounder_rentable",
     items=[
-        CollectionPlanItem(question_id="qf_1", ingredient_id="capital_employe", statut="traduit",
+        CollectionPlanItem(question_id="qf_1", ingredient_id="capital_employe", statut="traduit", periode="exercice_clos",
                            metrique="capitaux employés", source_pressentie="10-K",
                            ancre="clôture de l'exercice"),
         CollectionPlanItem(question_id="qf_2", ingredient_id="clauses_restrictives",
@@ -396,7 +396,7 @@ rejete("§8 [T] une ligne `traduit` SANS appariement — l'omission est une cart
                archetype="compounder_rentable",
                items=[PLAN.items[0],
                       CollectionPlanItem(question_id="qf_2",
-                                         ingredient_id="clauses_restrictives", statut="traduit",
+                                         ingredient_id="clauses_restrictives", statut="traduit", periode="exercice_clos",
                                          metrique="covenants", source_pressentie="10-K",
                                          ancre="clôture de l'exercice")])))
 
@@ -770,7 +770,7 @@ accepte("§12 la carte repliée reste CONSTRUCTIBLE (le contrat de carte ne revo
 PLAN_12 = CollectionPlan(
     ticker_id="NVDA", framework_id="qualite_financiere", framework_version="v3.0.0",
     archetype="compounder_rentable",
-    items=[CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit",
+    items=[CollectionPlanItem(question_id=q, ingredient_id=i, statut="traduit", periode="exercice_clos",
                               metrique="ingrédient de test", source_pressentie="10-K",
                               ancre="clôture de l'exercice")
            for (q, i) in sorted(TRADUITS_12)])
