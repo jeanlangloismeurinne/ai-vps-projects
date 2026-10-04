@@ -232,8 +232,23 @@ _asm = dict(question=Q["qf_6"], entries=ENTRIES, **_entete)
 
 # L'ENCADRÉ que `qf_6` déclare dans le référentiel réel (4 bis) — lu, jamais recopié.
 ENC_QF6 = [{"id": "retraitements_discretionnaires", "unite": "M$", "valeur": 42.0, "date_ou_periode": "exercice 2025"}]
+# qf_4 ne RELÈVE plus rien (2026-10-04) : sa dette brute et sa trésorerie se lisent dans le socle des
+# comptes, sa dette nette se calcule. Son encadré rendu par le modèle est donc vide.
 ENC_QF4 = [{"id": c.id, "unite": c.unite, "valeur": 0.0, "date_ou_periode": "au 2026-06-30"}
-           for c in Q["qf_4"].chiffres_cles]
+           for c in Q["qf_4"].chiffres_cles if not c.calcule_par_le_systeme]
+
+# Le SOCLE DES COMPTES de RVMD, reconstitué depuis l'inventaire RÉEL copié en fixture (jamais écrit à la
+# main) : une pièce de plus, jointe au dossier, que le code relit pour l'encadré.
+from pathlib import Path as _P  # noqa: E402
+from app.knowledge import socle_comptes as _SC  # noqa: E402
+_FX = json.loads((_P(__file__).resolve().parent / "fixtures" / "socle_comptes" / "RVMD.json").read_text())
+_GAB = _SC.charger_gabarit()
+SOCLE = _SC.structure_du_socle(_SC.reconstituer(
+    _FX["faits"], _GAB, reclassements=_SC.charger_reclassements(_FX["cik"], _GAB)))
+ENTRIES_S = {**ENTRIES, 7: {"reliability_tier": "A", "nature": "mesure", "title": "Socle des comptes — RVMD",
+                            "content": _SC.rendre_socle(SOCLE, _GAB, raison_sociale="Revolution Medicines, Inc."),
+                            "source_type": "edgar_official", "source_date": "2026-06-30",
+                            "content_structured": SOCLE}}
 
 
 def brute(**kw):
@@ -297,10 +312,21 @@ def _pont_passe(answer, motif=False):
 print("\n[5 bis] l'ENCADRÉ : le modèle voit les chiffres demandés, les rend, et le code les recopie tels quels")
 _dem = {q["id"]: q.get("chiffres_cles_demandes") for q in CTX["questions"]}
 check("le contexte DEMANDE, par question, les chiffres RELEVÉS déclarés (id et unité imposés)",
-      [(c["id"], c["unite"]) for c in (_dem.get("qf_4") or [])]
-      == [(c.id, c.unite) for c in Q["qf_4"].chiffres_cles if c.calcul is None]
-      and len(_dem.get("qf_4") or []) == 2,
-      f"→ {_dem.get('qf_4')}")
+      [(c["id"], c["unite"]) for c in (_dem.get("qf_6") or [])]
+      == [(c.id, c.unite) for c in Q["qf_6"].chiffres_cles if not c.calcule_par_le_systeme]
+      and len(_dem.get("qf_6") or []) == 1,
+      f"→ {_dem.get('qf_6')}")
+check("… et ne demande RIEN que le socle des comptes porte (qf_4 : dette brute et trésorerie se lisent)",
+      _dem.get("qf_4") == [], f"→ {_dem.get('qf_4')}")
+_CTX_S = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, ENTRIES_S)
+_lus = {q["id"]: q.get("chiffres_lus_dans_le_socle") for q in _CTX_S["questions"]}.get("qf_4") or []
+check("le contexte MONTRE les chiffres lus dans le socle, avec leur valeur exacte et la pièce (#7)",
+      [(c.get("id"), round(c["valeur"], 3) if c.get("valeur") is not None else None, c.get("piece")) for c in _lus]
+      == [("dette_brute", 1035.976, 7), ("tresorerie_et_placements", 3937.969, 7)], f"→ {_lus}")
+check("… et, sans socle au dossier, les montre NON ÉTABLIS avec leur motif (jamais un zéro)",
+      all(c.get("valeur") is None and "pas au dossier" in (c.get("periode_ou_motif") or "")
+          for c in ({q["id"]: q.get("chiffres_lus_dans_le_socle") for q in CTX["questions"]}.get("qf_4") or [{}])),
+      "→ un chiffre du socle sans socle se lirait « zéro dette »")
 # #101 — la dette nette est CALCULÉE par le code : elle n'est pas demandée, elle est annoncée avec sa formule.
 _calc = {q["id"]: q.get("chiffres_calcules_par_le_systeme") for q in CTX["questions"]}
 check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés, formule comprise (#101)",
@@ -313,8 +339,8 @@ check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre ré�
       [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles] == ENC_QF6,
       f"→ {_a6.reponse.chiffres_cles}")
 leve("un `sans_fondement` qui porte un encadré est refusé (un manque qui donne ses chiffres est une réponse)",
-     lambda: A.AnalysteReponse(question_id="qf_4", statut="sans_fondement", verbatim="il manque la dette",
-                               chiffres_cles=ENC_QF4), ValidationError)
+     lambda: A.AnalysteReponse(question_id="qf_6", statut="sans_fondement", verbatim="il manque le détail",
+                               chiffres_cles=ENC_QF6), ValidationError)
 # #101 — la dette nette RÉELLE de RVMD (487,43 − 3 937,969) contre la valeur que le modèle avait recopiée
 # de l'EXEMPLE du prompt (−328) : c'est le code qui l'écrit, la ligne du modèle est écartée.
 _ENC_RVMD = [{"id": "dette_brute", "unite": "M$", "valeur": 487.43, "date_ou_periode": "au 2026-06-30"},
@@ -323,16 +349,50 @@ _ENC_RVMD = [{"id": "dette_brute", "unite": "M$", "valeur": 487.43, "date_ou_per
 _a4 = A.assembler_answer(A.AnalysteReponse(question_id="qf_4", statut="repondu", verbatim="dette convertible",
                                            sens="tresorerie_nette", cited_entry_ids=[1],
                                            chiffres_cles=_ENC_RVMD),
-                         question=Q["qf_4"], entries=ENTRIES, **_entete)
-_dn = {c.id: c for c in _a4.reponse.chiffres_cles}.get("dette_nette")
-check("l'assemblage ÉCRIT le chiffre calculé (−3 450,539) et écarte celui du modèle (−328) (#101)",
-      _dn is not None and _dn.valeur is not None and abs(_dn.valeur + 3450.539) < 1e-6,
-      f"→ {_dn}")
+                         question=Q["qf_4"], entries=ENTRIES_S, **_entete)
+_enc4 = {c.id: c for c in _a4.reponse.chiffres_cles}
+_dn = _enc4.get("dette_nette")
+check("l'assemblage ÉCRIT la dette nette calculée sur les chiffres du SOCLE (1 035,976 − 3 937,969 = −2 901,993) "
+      "et écarte les lignes du modèle (487,43 ; −328)",
+      _dn is not None and _dn.valeur is not None and abs(_dn.valeur + 2901.993) < 1e-6
+      and _enc4.get("dette_brute") is not None and _enc4["dette_brute"].valeur is not None
+      and abs(_enc4["dette_brute"].valeur - 1035.976) < 1e-6, f"→ {_enc4}")
+check("… la dette brute du socle compte le financement Royalty Pharma (convention maison : il porte intérêt)",
+      _enc4.get("dette_brute") is not None and "socle des comptes" in (_enc4["dette_brute"].date_ou_periode or ""),
+      f"→ {_enc4.get('dette_brute')}")
+check("… et la pièce du socle entre D'OFFICE dans la fondation (#113 ter transposé)",
+      _a4.fondation.cited_entry_ids == [1, 7], f"→ {_a4.fondation.cited_entry_ids}")
+_a4_sans = A.assembler_answer(A.AnalysteReponse(question_id="qf_4", statut="repondu", verbatim="dette convertible",
+                                                sens="tresorerie_nette", cited_entry_ids=[1],
+                                                chiffres_cles=_ENC_RVMD),
+                              question=Q["qf_4"], entries=ENTRIES, **_entete)
+check("sans socle au dossier, la dette brute n'est PAS reprise des lignes du modèle : non établie, motivée",
+      ({c.id: c for c in _a4_sans.reponse.chiffres_cles}.get("dette_brute") is not None
+       and {c.id: c for c in _a4_sans.reponse.chiffres_cles}["dette_brute"].valeur is None)
+      and _a4_sans.fondation.cited_entry_ids == [1])
 check("… par le DÉTENTEUR unique `completer_encadre` (un `Call`), jamais un calcul recopié (#46)",
       any(isinstance(n, ast.Call) and getattr(n.func, "id", None) == "completer_encadre"
           for n in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(A.assembler_answer))))))
+def _pont_s(answer, motif=False):
+    try:
+        valider_pont_framework_answer(answer, questions=question_profiles(F), entries=ENTRIES_S)
+        return "passe" if motif else True
+    except Exception as e:  # noqa: BLE001
+        return f"{type(e).__name__}: {str(e)[:200]}" if motif else False
+
+
 check("… et la réponse assemblée passe le pont [K bis] (le calcul du code est celui que le pont attend)",
-      _pont_passe(_a4), f"→ {_pont_passe(_a4, motif=True)}")
+      _pont_s(_a4), f"→ {_pont_s(_a4, motif=True)}")
+_a4_faux = _a4.model_copy(deep=True)
+for _c in _a4_faux.reponse.chiffres_cles:
+    if _c.id == "dette_brute":
+        _c.valeur, _c.motif_absence, _c.date_ou_periode = 487.43, None, _c.date_ou_periode or "au 2026-06-30"
+check("le pont REFUSE une dette brute qui n'est pas celle du socle cité (le modèle ne recopie pas, il lit)",
+      not _pont_s(_a4_faux) and "socle" in str(_pont_s(_a4_faux, motif=True)), f"→ {_pont_s(_a4_faux, motif=True)}")
+_a4_sans_cite = _a4.model_copy(deep=True)
+_a4_sans_cite.fondation.cited_entry_ids = [1]
+check("… et refuse un chiffre du socle quand la réponse ne CITE pas le socle (on vérifie contre la pièce citée)",
+      not _pont_s(_a4_sans_cite), f"→ {_pont_s(_a4_sans_cite, motif=True)}")
 import re as _re
 check("l'exemple de ligne du prompt ne porte AUCUNE valeur chiffrée recopiable (le −328 du 2026-09-29)",
       _re.search(r'"valeur\\?"\s*:\s*-?\d', A._ANALYSTE_SYSTEM_PROMPT) is None,
@@ -527,10 +587,10 @@ check("un passage nominal ne produit AUCUN refus",
       _ref(R) == [], f"→ {_ref(R)}")
 
 # Les pannes d'agent. Chacune sort en REFUS, et surtout : aucune ne produit de `gap`.
-_sans_enc = passage([{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:])
+_sans_enc = passage(NOMINAL[:2] + [{**NOMINAL[2], "chiffres_cles": []}] + NOMINAL[3:])
 check("un encadré OMIS par le modèle sort en refus NOMMÉ du pont [K], jamais en manque de données",
-      [q for q, m in _ref(_sans_enc) if "ne porte pas les chiffres que la question déclare" in m] == ["qf_4"]
-      and not any(a.question_id == "qf_4" for a in _ans(_sans_enc)), f"→ {_ref(_sans_enc)}")
+      [q for q, m in _ref(_sans_enc) if "ne porte pas les chiffres que la question déclare" in m] == ["qf_6"]
+      and not any(a.question_id == "qf_6" for a in _ans(_sans_enc)), f"→ {_ref(_sans_enc)}")
 _omis = passage([r for r in NOMINAL if r["question_id"] != "qf_4"])
 check("une question OMISE par le modèle sort en refus, jamais en réponse",
       [q for q, _ in _ref(_omis)] == ["qf_4"]
@@ -609,27 +669,28 @@ def passage_tours(tours, entries=ENTRIES, chemises=()):
         A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
 
 
-# Tour 1 : l'encadré de qf_4 est omis ([K]) ; tour 2 : il est rendu. qf_4 doit être ACQUISE, en 2 appels.
-_T1 = [{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:]
+# Tour 1 : l'encadré de qf_6 est omis ([K]) ; tour 2 : il est rendu. qf_6 doit être ACQUISE, en 2 appels.
+# (qf_6 et non qf_4 depuis le 2026-10-04 : qf_4 ne relève plus rien, son encadré se lit dans le socle.)
+_T1 = NOMINAL[:2] + [{**NOMINAL[2], "chiffres_cles": []}] + NOMINAL[3:]
 _Rr, _ap_r = passage_tours([_T1, NOMINAL])
-check("une réponse refusée puis corrigée au renvoi est ACQUISE (qf_4), en exactement 2 appels",
-      "qf_4" in [a.question_id for a in _ans(_Rr) if a.statut == "repondu"] and _ref(_Rr) == []
+check("une réponse refusée puis corrigée au renvoi est ACQUISE (qf_6), en exactement 2 appels",
+      "qf_6" in [a.question_id for a in _ans(_Rr) if a.statut == "approxime"] and _ref(_Rr) == []
       and len(_ap_r) == 2, f"→ {len(_ap_r)} appel(s), refus {_ref(_Rr)}")
 check("… le renvoi PORTE le motif du refus (le modèle sait ce qu'il doit corriger)",
       len(_ap_r) == 2 and "ne porte pas les chiffres que la question déclare" in _ap_r[1][-1]["content"]
-      and "qf_4" in _ap_r[1][-1]["content"], f"→ {(_ap_r[1][-1]['content'][:200] if len(_ap_r) == 2 else '')}")
-check("… et ne redemande QUE la question refusée (qf_6/qf_7, acquises, ne sont pas rouvertes)",
-      len(_ap_r) == 2 and "`qf_6`" not in _ap_r[1][-1]["content"] and "`qf_7`" not in _ap_r[1][-1]["content"]
+      and "qf_6" in _ap_r[1][-1]["content"], f"→ {(_ap_r[1][-1]['content'][:200] if len(_ap_r) == 2 else '')}")
+check("… et ne redemande QUE la question refusée (qf_4/qf_7, acquises, ne sont pas rouvertes)",
+      len(_ap_r) == 2 and "`qf_4`" not in _ap_r[1][-1]["content"] and "`qf_7`" not in _ap_r[1][-1]["content"]
       and sorted(a.question_id for a in _ans(_Rr)) == sorted(Q))
 _Rn, _ap_n = passage_tours([NOMINAL])
 check("un passage sans refus ne renvoie RIEN (1 appel : le renvoi n'est pas une seconde lecture gratuite)",
       len(_ap_n) == 1 and _ref(_Rn) == [], f"→ {len(_ap_n)} appel(s)")
 _Rd, _ap_d = passage_tours([_T1, _T1, NOMINAL])
 check("une réponse de nouveau refusée au renvoi reste REFUSÉE — une fois, pas davantage (2 appels, pas 3)",
-      len(_ap_d) == 2 and [q for q, _ in _ref(_Rd)] == ["qf_4"]
+      len(_ap_d) == 2 and [q for q, _ in _ref(_Rd)] == ["qf_6"]
       and "renvoyée une fois" in _ref(_Rd)[0][1], f"→ {len(_ap_d)} appel(s), {_ref(_Rd)}")
 check("… et ce double refus ne devient toujours PAS un gap (une panne d'agent reste une panne d'agent)",
-      not any(a.question_id == "qf_4" for a in _ans(_Rd)))
+      not any(a.question_id == "qf_6" for a in _ans(_Rd)))
 # Le refus [E] mesuré sur RVMD : un `repondu` à une question de MESURE qui cite une pièce calculée. Le
 # renvoi NOMME la pièce qui n'est pas un relevé — sans montrer ni tier ni plancher (#59).
 _E_ENTRIES = {**ENTRIES, 6: {"reliability_tier": "A", "nature": "interpretation", "title": "guidance calculée",
@@ -683,7 +744,7 @@ check("#111 une citation à laquelle une pièce PLUS RÉCENTE du même point fai
 check("… la remarque NOMME l'ancienne et la récente, avec leurs dates",
       len(_ap_l) == 2 and "[1]" in _ap_l[1][-1]["content"] and "[6]" in _ap_l[1][-1]["content"]
       and "2025-08-01" in _ap_l[1][-1]["content"], f"→ {(_ap_l[1][-1]['content'][:240] if len(_ap_l) == 2 else '')}")
-_Rk, _ap_k = passage_tours([NOMINAL, [{**NOMINAL[0], "chiffres_cles": []}] + NOMINAL[1:]],
+_Rk, _ap_k = passage_tours([NOMINAL, [{**NOMINAL[0], "cited_entry_ids": [6], "sens": "plutot_bon"}] + NOMINAL[1:]],
                            entries=_E_CONF, chemises=_CH_CONF)
 _qf4_k = [a for a in _ans(_Rk) if a.question_id == "qf_4"] if not isinstance(_Rk, Exception) else []
 check("… une relecture REFUSÉE ne coûte pas la réponse : la première tient (une remarque n'est pas un refus)",
@@ -729,11 +790,11 @@ def passage_renvoi_invalide():
 
 _Ri, _ap_i = passage_renvoi_invalide()
 check("un renvoi à la sortie HORS CONTRAT ne tue pas le passage : la question renvoyée sort en refus NOMMÉ",
-      not isinstance(_Ri, Exception) and [q for q, _ in _ref(_Ri)] == ["qf_4"]
+      not isinstance(_Ri, Exception) and [q for q, _ in _ref(_Ri)] == ["qf_6"]
       and "non conforme au contrat" in _ref(_Ri)[0][1], f"→ {_Ri if isinstance(_Ri, Exception) else _ref(_Ri)}")
-check("… et les réponses du PREMIER tour restent acquises (qf_6, qf_7)",
+check("… et les réponses du PREMIER tour restent acquises (qf_4, qf_7)",
       not isinstance(_Ri, Exception)
-      and sorted(a.question_id for a in _ans(_Ri)) == sorted(q for q in Q if q != "qf_4"),
+      and sorted(a.question_id for a in _ans(_Ri)) == sorted(q for q in Q if q != "qf_6"),
       f"→ {None if isinstance(_Ri, Exception) else sorted(a.question_id for a in _ans(_Ri))}")
 
 

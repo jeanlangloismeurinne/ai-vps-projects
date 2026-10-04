@@ -163,6 +163,9 @@ frameworks:
     # nécessaire pour qu'un chapitre cesse d'être « sans méthodologie approuvée » : ajouter une
     # méthodologie est une opération de données, jamais de code.
     bloc_memo: financials
+    # Les comptes reconstitués de l'émetteur (socle des comptes, 2026-10-04) sont joints d'office au
+    # dossier : les chiffres de l'encadré et les ingrédients marqués `depuis_le_socle` s'y lisent.
+    lit_le_socle: true
     questions:
 
       - id: qf_1
@@ -226,15 +229,18 @@ frameworks:
           - id: resultat_net
             libelle: Résultat net de l'exercice
             essentiel: true
+            depuis_le_socle: true
           - id: tresorerie_generee_par_exploitation
             libelle: Trésorerie effectivement générée par l'exploitation sur le même exercice
             essentiel: true
+            depuis_le_socle: true
           - id: variation_besoin_fonds_roulement
             libelle: Variation du besoin en fonds de roulement — ce que la croissance immobilise en stocks et en créances
             essentiel: false
           - id: charges_sans_decaissement
             libelle: Charges qui n'ont donné lieu à aucune sortie de trésorerie — amortissements, rémunération en actions, provisions
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: part_du_resultat_en_tresorerie
             libelle: Part du résultat net retrouvée en trésorerie d'exploitation
@@ -265,6 +271,7 @@ frameworks:
           - id: croissance_activite_par_exercice
             libelle: Progression de l'activité, exercice par exercice
             essentiel: true
+            depuis_le_socle: true
           - id: investissement_de_maintien
             libelle: Part de l'investissement nécessaire au seul maintien de la capacité existante
             essentiel: true
@@ -311,6 +318,7 @@ frameworks:
           - id: endettement_brut_et_net
             libelle: Endettement financier, brut et net de trésorerie
             essentiel: true
+            depuis_le_socle: true
           - id: echeancier_de_la_dette
             libelle: Répartition dans le temps des remboursements exigibles
             essentiel: true
@@ -325,10 +333,12 @@ frameworks:
             libelle: Dette financière brute, instruments convertibles compris
             unite: "M$"
             periode: à la date du dernier bilan
+            socle: {formule: "dette_financiere_courante + dette_financiere_non_courante + financement_adosse_aux_redevances", periode: dernier_bilan}   # lu dans les comptes reconstitués
           - id: tresorerie_et_placements
             libelle: Trésorerie et placements financiers disponibles
             unite: "M$"
             periode: à la date du dernier bilan
+            socle: {formule: "tresorerie + placements_court_terme + placements_long_terme", periode: dernier_bilan}   # lu dans les comptes reconstitués
           - id: dette_nette
             libelle: Dette nette — dette brute moins trésorerie et placements (négative si trésorerie nette)
             unite: "M$"
@@ -461,9 +471,11 @@ frameworks:
           - id: tresorerie_disponible
             libelle: Trésorerie et placements immédiatement mobilisables
             essentiel: true
+            depuis_le_socle: true
           - id: consommation_de_tresorerie_recente
             libelle: Trésorerie consommée ou générée sur les quatre derniers trimestres
             essentiel: true
+            depuis_le_socle: true
           # Non essentiel depuis #105 (arbitrage du 2026-09-30) : c'est une PRÉVISION ; la question exige
           # le constaté, la prévision de la direction est notée à côté et la plus prudente est retenue.
           - id: charges_fixes_decaissables
@@ -483,6 +495,7 @@ frameworks:
             libelle: Trésorerie mobilisable sans recours au marché des capitaux
             unite: "M$"
             periode: à la date du dernier bilan
+            socle: {formule: "tresorerie + placements_court_terme + placements_long_terme", periode: dernier_bilan}   # lu dans les comptes reconstitués
           # #105 (arbitrage du 2026-09-30) — le constaté est obligatoire, la prévision de la direction
           # facultative, et l'autonomie se calcule sur la PLUS PRUDENTE des deux (la consommation la plus
           # forte) : sinon le comité se fonderait sur une prévision optimiste chez toute société qui accélère.
@@ -490,6 +503,7 @@ frameworks:
             libelle: Trésorerie consommée par l'exploitation et les investissements sur les quatre derniers trimestres publiés
             unite: "M$"
             periode: quatre derniers trimestres publiés
+            socle: {formule: "-flux_de_tresorerie_disponible", periode: douze_mois}   # lu dans les comptes reconstitués
           - id: consommation_prevue
             libelle: Dépenses annuelles annoncées par la direction pour l'exercice en cours — borne haute, telles qu'annoncées, sans retraitement
             unite: "M$"
@@ -528,6 +542,7 @@ frameworks:
       preuve observable et une trajectoire. Un moat affirmé sans preuve est une opinion.
     nature_dominante: interpretation
     bloc_memo: moat
+    lit_le_socle: false
     questions:
 
       - id: mo_1
@@ -744,6 +759,7 @@ frameworks:
       ce qui fait varier l'activité, jusqu'où elle peut croître, et de quoi elle dépend.
     nature_dominante: interpretation
     bloc_memo: business_model
+    lit_le_socle: false
     questions:
 
       - id: me_1
@@ -962,6 +978,7 @@ frameworks:
       changer les règles du secteur, et ce que font les concurrents en ce moment.
     nature_dominante: interpretation
     bloc_memo: industry
+    lit_le_socle: false
     questions:
 
       - id: se_1
@@ -1170,6 +1187,7 @@ frameworks:
       qui décide vraiment.
     nature_dominante: interpretation
     bloc_memo: management
+    lit_le_socle: false
     questions:
 
       - id: ma_1
@@ -1380,6 +1398,7 @@ frameworks:
       chiffres normalisés des autres méthodologies, il ne les recalcule pas.
     nature_dominante: mesure
     bloc_memo: valuation
+    lit_le_socle: true
     questions:
 
       - id: va_1

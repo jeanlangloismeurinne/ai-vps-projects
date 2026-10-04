@@ -106,11 +106,41 @@ class IngredientRequis(Strict):
     # réponse qui tient, ou, si la question est sans objet pour ce titre, du modèle de l'entreprise
     # (arbitrage « option c » du 2026-09-29). Vide = un ingrédient ordinaire, à collecter.
     repris_de: list[Annotated[str, Field(pattern=r"^[a-z]{2}_[0-9]+$")]] = Field(default_factory=list)
+    # `depuis_le_socle` (arbitrage du 2026-10-04 — « toutes les questions financières s'intègrent à un
+    # P&L reconstitué ») : l'ingrédient est une ligne des COMPTES RECONSTITUÉS de l'émetteur (le socle
+    # des comptes, une pièce jointe d'office au dossier des frameworks qui le lisent). Il ne se collecte
+    # JAMAIS ligne à ligne : le socle le porte déjà, bouclé avec le reste des comptes ; une seconde
+    # collecte ferait deux chiffres pour un même poste — exactement les défauts #104/#112.
+    depuis_le_socle: bool = False
 
     @model_validator(mode="after")
     def _reprise_sans_doublon(self):
         if len(set(self.repris_de)) != len(self.repris_de):
             raise ValueError(f"ingrédient `{self.id}` : `repris_de` contient un doublon")
+        if self.repris_de and self.depuis_le_socle:
+            raise ValueError(f"ingrédient `{self.id}` : repris d'une autre question ET lu dans le socle — "
+                             "un ingrédient a une seule origine")
+        return self
+
+
+class ChiffreDuSocle(Strict):
+    """Un chiffre de l'encadré LU dans les comptes reconstitués (arbitrage du 2026-10-04 : « repris du
+    socle »). Comme un fonds : le modèle des comptes est la seule source des chiffres, l'analyste juge
+    et commente ; il ne recopie pas (RVMD qf_7 recopiait « 1,22 Md$ » pour 1 223,03 M$).
+
+    `formule` : formule fermée (`formule_grammaire`) sur des LIGNES du gabarit maison — leur existence
+    est un invariant relationnel, vérifié par le pont du référentiel ([U]). `periode` : vocabulaire
+    fermé de `socle_comptes.PERIODES_DE_CHIFFRE`."""
+    formule: str = Field(min_length=3)
+    periode: Literal["dernier_bilan", "douze_mois", "dernier_exercice"]
+
+    @model_validator(mode="after")
+    def _formule_fermee(self):
+        from app.contracts.formule_grammaire import FormuleInexecutable, analyser_formule
+        try:
+            analyser_formule(self.formule)
+        except FormuleInexecutable as e:
+            raise ValueError(f"`socle.formule` hors de la grammaire fermée — {e}") from e
         return self
 
 
@@ -147,19 +177,25 @@ class ChiffreCleDeclare(Strict):
     # disant ; un terme obligatoire absent rend le chiffre retenu non établi (on ne retient pas une
     # prévision faute du constaté).
     facultatif: bool = False
+    # `socle` (2026-10-04) : le chiffre est LU dans les comptes reconstitués, par le code.
+    socle: Optional[ChiffreDuSocle] = None
 
     @property
     def calcule_par_le_systeme(self) -> bool:
-        """Vrai si le CODE établit ce chiffre (formule ou règle de prudence) : il n'est pas demandé au
-        modèle, et une ligne fournie pour lui est écartée (#101). DÉTENTEUR UNIQUE de la distinction
-        relevé / calculé, lue par le référentiel, le pont, l'analyste et `completer_encadre` (#46)."""
-        return self.calcul is not None or bool(self.le_plus_eleve_de)
+        """Vrai si le CODE établit ce chiffre (formule, règle de prudence ou lecture du socle) : il n'est
+        pas demandé au modèle, et une ligne fournie pour lui est écartée (#101). DÉTENTEUR UNIQUE de la
+        distinction relevé / calculé, lue par le référentiel, le pont, l'analyste et `completer_encadre`
+        (#46)."""
+        return self.calcul is not None or bool(self.le_plus_eleve_de) or self.socle is not None
 
     @model_validator(mode="after")
     def _une_seule_facon_d_etre_etabli(self):
-        if self.calcul is not None and self.le_plus_eleve_de:
-            raise ValueError(f"chiffre `{self.id}` : `calcul` ET `le_plus_eleve_de` — un chiffre s'établit "
-                             "d'une seule façon")
+        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None)) > 1:
+            raise ValueError(f"chiffre `{self.id}` : deux façons d'être établi (calcul, le plus élevé de, "
+                             "socle) — un chiffre s'établit d'une seule façon")
+        if self.socle is not None and self.unite != "M$":
+            raise ValueError(f"chiffre `{self.id}` : un chiffre lu dans le socle est un montant en M$ "
+                             f"(unité déclarée {self.unite!r}) — un ratio se CALCULE sur ces montants")
         if self.le_plus_eleve_de and (len(self.le_plus_eleve_de) < 2
                                       or len(set(self.le_plus_eleve_de)) != len(self.le_plus_eleve_de)):
             raise ValueError(f"chiffre `{self.id}` : `le_plus_eleve_de` compare au moins deux chiffres "
@@ -306,6 +342,11 @@ class FrameworkDefinition(Strict):
     # deux (#37). C'est l'invariant relationnel [O] de `frameworks._valider_pont_definitions`, qui
     # confronte la valeur à `contracts.memo_blocs.BLOCS_MEMO`.
     bloc_memo: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    # `lit_le_socle` (2026-10-04) : le dossier de ce framework porte d'office les COMPTES RECONSTITUÉS de
+    # l'émetteur (une pièce, `socle_feed`). REQUIS, sans défaut : « ce framework ne lit pas les comptes »
+    # ne doit pas se confondre avec « on a oublié de le dire » (`feedback_optional_schema_gate`). Un
+    # framework qui ne le lit pas ne voit pas les comptes : chaque framework ne lit que ses sujets (#108).
+    lit_le_socle: bool
     questions: list[QuestionDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")

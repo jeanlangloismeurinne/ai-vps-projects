@@ -168,6 +168,7 @@ def fw_base(**over):
         "methodologie": "Méthodologie de test, assez longue pour passer la longueur minimale.",
         "nature_dominante": "mesure",
         "bloc_memo": "business_model",
+        "lit_le_socle": False,
         "questions": [q_base()],
     }
     d.update(over)
@@ -653,6 +654,53 @@ check("`PLANCHERS_DESSERRES` est un sous-ensemble STRICT de `TIER_ORDER`",
       "→ un tier desserré hors du référentiel de tiers ne serait jamais atteint")
 check("les planchers réellement employés appartiennent tous à `TIER_ORDER`",
       all(q.plancher_tier in TIER_ORDER for q in _questions))
+
+
+print("\n6 bis. [U] le SOCLE DES COMPTES (2026-10-04) : un chiffre ou un ingrédient s'y adosse dans les règles")
+_SOCLE_DB = {"id": "dette_brute", "libelle": "Dette brute lue dans les comptes reconstitués", "unite": "M$",
+             "periode": "au dernier bilan",
+             "socle": {"formule": "dette_financiere_courante + dette_financiere_non_courante", "periode": "dernier_bilan"}}
+
+
+def _avec_socle(chiffre=None, lit=True, ingredient_socle=False):
+    q = q_base(chiffres_cles=[chiffre or _SOCLE_DB],
+               ingredients_requis=[{"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré",
+                                    "essentiel": True, "depuis_le_socle": ingredient_socle}])
+    return fichier_base(frameworks=[fw_base(lit_le_socle=lit, questions=[q])])
+
+
+valide("[U] un chiffre lu dans le socle, sur des lignes du gabarit, dans un framework qui le lit, passe",
+       lambda: charge(_avec_socle()))
+rejete("[U] un chiffre du socle qui nomme une ligne ABSENTE du gabarit maison",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "dette_cachee", "periode": "dernier_bilan"}})),
+       "ce ne sont pas des lignes du gabarit")
+rejete("[U] un chiffre du socle dans un framework qui ne LIT PAS le socle (la pièce ne serait jamais au dossier)",
+       lambda: charge(_avec_socle(lit=False)), "ne le lit pas")
+rejete("[U] un ingrédient « lu dans le socle » dans un framework qui ne le lit pas",
+       lambda: charge(_avec_socle(chiffre={k: v for k, v in _SOCLE_DB.items() if k != "socle"}, lit=False,
+                                  ingredient_socle=True)), "ne le lit pas")
+rejete("[U] un chiffre du socle à exercice DÉCALÉ (sa période est sa `periode`)",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "dette_financiere_non_courante[-1]",
+                                                          "periode": "dernier_bilan"}})), "la période d'un chiffre du socle")
+rejete("un chiffre du socle hors M$ est refusé par le CONTRAT (un ratio se calcule sur ces montants)",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "unite": "%"})), "un chiffre lu dans le socle est un montant en M$")
+rejete("un chiffre du socle ET calculé est refusé par le CONTRAT (une seule façon d'être établi)",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "calcul": "a - b"})), "deux façons d'être établi")
+rejete("une période de socle hors vocabulaire est refusée par le CONTRAT",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "tresorerie", "periode": "moyenne_5_ans"}})),
+       "periode")
+_lus_socle = {(q.id, c.id): (c.socle.formule, c.socle.periode) for q in _reel_q.values() for c in q.chiffres_cles
+              if c.socle}
+check("[U] le référentiel réel lit dans le socle la dette brute, la trésorerie et la consommation — et la dette "
+      "brute compte le financement adossé aux redevances (convention maison)",
+      set(_lus_socle) == {("qf_4", "dette_brute"), ("qf_4", "tresorerie_et_placements"),
+                          ("qf_7", "tresorerie_mobilisable"), ("qf_7", "consommation_constatee")}
+      and "financement_adosse_aux_redevances" in _lus_socle[("qf_4", "dette_brute")][0]
+      and _lus_socle[("qf_7", "consommation_constatee")] == ("-flux_de_tresorerie_disponible", "douze_mois"),
+      f"→ {_lus_socle}")
+_fw_reels = {f.id: f.lit_le_socle for f in load_frameworks().frameworks}
+check("[U] la qualité financière et la valorisation lisent le socle ; les autres frameworks, non (#108)",
+      {f for f, lit in _fw_reels.items() if lit} == {"qualite_financiere", "valorisation"}, f"→ {_fw_reels}")
 
 
 print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1 / §4.3 …)")

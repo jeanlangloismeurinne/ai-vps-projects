@@ -1,0 +1,364 @@
+# Le GABARIT MAISON des comptes — le socle commun que lisent toutes les questions financières.
+#
+# Arbitrage de l'utilisateur (2026-10-04) : « toutes les questions financières devraient s'intégrer à
+# un P&L reconstitué qui s'interface avec le schéma de valorisation ». Comme un vrai fonds : l'analyste
+# construit D'ABORD le modèle des comptes de l'entreprise (résultat, bilan, flux, reliés entre eux,
+# sur cinq exercices), au format maison qui est le même pour toutes les sociétés ; les questions
+# d'analyse sont des LECTURES de ce modèle, et le modèle de valorisation en est la projection.
+#
+# Ce fichier est une DONNÉE : ajouter une ligne ou un concept candidat ne touche aucun code
+# (`socle_comptes.py` le lit). Ce qu'il déclare :
+#
+#   · des LIGNES, chacune avec ses RECETTES : listes de concepts us-gaap, essayées dans l'ordre pour
+#     CHAQUE période (la fraîcheur se juge période par période : MSFT dépose `Revenues` jusqu'en
+#     2010 puis le concept ASC 606) ; une recette à plusieurs concepts est leur SOMME et n'est
+#     retenue que si tous sont déposés pour la période ;
+#   · des ÉQUATIONS de bouclage : total = Σ signe × composante (+ reste). Le RESTE est la ligne
+#     « autres … » calculée par différence — elle rend visible ce que le gabarit ne nomme pas, au lieu
+#     de le perdre ; une équation SANS reste est un CONTRÔLE : si les deux côtés sont déposés et
+#     diffèrent, l'écart est publié avec son montant, jamais absorbé ;
+#   · des lignes CALCULÉES (`calcul`), qui ne sont pas des bouclages mais des définitions maison
+#     (flux de trésorerie disponible) ;
+#   · des lignes `recettes_par_emetteur` : un poste que la convention maison range toujours au même
+#     endroit, mais que chaque émetteur dépose sous un concept qui, ailleurs, veut dire autre chose. Sa
+#     recette n'est PAS ici : elle est un reclassement d'analyste propre à l'émetteur, écrit avec son
+#     motif et sa pièce dans `socle_comptes_emetteurs.yaml`.
+#
+# CONVENTIONS MAISON (le directeur de la recherche les écrit une fois, chaque modèle les applique ; ce
+# n'est pas un vote du comité — arbitrage de l'utilisateur, 2026-10-04) :
+#   · tout financement qui porte intérêt est de la DETTE, quelle que soit sa présentation (un
+#     financement adossé aux redevances futures compris) ; les obligations locatives n'en sont pas ;
+#   · le libellé d'une ligne « solde du bouclage » ne dit jamais « par différence » : c'est un agrégat
+#     déterministe de lignes déposées (#110), il vaut relevé.
+#
+# Conventions de signe : chaque montant est gardé TEL QUE DÉPOSÉ (une charge est positive, un
+# décaissement d'investissement aussi) ; c'est l'équation qui porte le signe.
+#
+# `absent_vaut_zero` : dans une équation, une ligne non déposée compte pour zéro (une société sans
+# activité à l'étranger ne dépose pas d'effet de change). La cellule, elle, reste « non déposée » :
+# le zéro est une hypothèse de l'équation, jamais un chiffre publié.
+
+version: 1.0.0
+
+etats:
+
+  - id: compte_de_resultat
+    libelle: Compte de résultat
+    cadrage: flux
+    lignes:
+      - id: chiffre_affaires
+        libelle: Chiffre d'affaires
+        recettes:
+          - [RevenueFromContractWithCustomerExcludingAssessedTax]
+          - [Revenues]
+          - [RevenueFromContractWithCustomerIncludingAssessedTax]
+          - [SalesRevenueNet]
+        absent_vaut_zero: true
+      - id: cout_des_ventes
+        libelle: Coût des ventes
+        recettes:
+          - [CostOfRevenue]
+          - [CostOfGoodsAndServicesSold]
+          - [CostOfGoodsSold]
+        absent_vaut_zero: true
+      - id: marge_brute
+        libelle: Marge brute
+        recettes:
+          - [GrossProfit]
+      - id: recherche_developpement
+        libelle: Recherche et développement
+        recettes:
+          - [ResearchAndDevelopmentExpense]
+          - [ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost]
+        absent_vaut_zero: true
+      - id: frais_commerciaux_administratifs
+        libelle: Frais commerciaux, généraux et administratifs
+        recettes:
+          - [SellingGeneralAndAdministrativeExpense]
+          - [GeneralAndAdministrativeExpense, SellingAndMarketingExpense]
+          - [GeneralAndAdministrativeExpense]
+        absent_vaut_zero: true
+      - id: autres_charges_exploitation
+        libelle: Autres charges d'exploitation (solde du bouclage)
+      - id: resultat_exploitation
+        libelle: Résultat d'exploitation
+        recettes:
+          - [OperatingIncomeLoss]
+      - id: produits_financiers
+        libelle: Produits financiers (intérêts reçus)
+        recettes:
+          - [InvestmentIncomeInterest]
+          - [InvestmentIncomeInterestAndDividend]
+        absent_vaut_zero: true
+      - id: charges_financieres
+        libelle: Charges d'intérêts
+        recettes:
+          - [InterestExpense]
+          - [InterestExpenseNonoperating]
+          - [InterestExpenseDebt]
+        absent_vaut_zero: true
+      - id: autres_elements_financiers
+        libelle: Autres produits et charges hors exploitation (solde du bouclage)
+      - id: resultat_avant_impot
+        libelle: Résultat avant impôt
+        recettes:
+          - [IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest]
+          - [IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments]
+      - id: impot
+        libelle: Impôt sur les résultats
+        recettes:
+          - [IncomeTaxExpenseBenefit]
+        absent_vaut_zero: true
+      - id: autres_elements_apres_impot
+        libelle: Activités abandonnées, minoritaires et autres (solde du bouclage)
+      - id: resultat_net
+        libelle: Résultat net part du groupe
+        recettes:
+          - [NetIncomeLoss]
+          - [ProfitLoss]
+    equations:
+      - total: marge_brute
+        composantes: [+chiffre_affaires, -cout_des_ventes]
+      - total: resultat_exploitation
+        composantes: [+marge_brute, -recherche_developpement, -frais_commerciaux_administratifs]
+        reste: -autres_charges_exploitation
+      - total: resultat_avant_impot
+        composantes: [+resultat_exploitation, +produits_financiers, -charges_financieres]
+        reste: +autres_elements_financiers
+      - total: resultat_net
+        composantes: [+resultat_avant_impot, -impot]
+        reste: +autres_elements_apres_impot
+
+  - id: bilan
+    libelle: Bilan
+    cadrage: instant
+    lignes:
+      - id: tresorerie
+        libelle: Trésorerie et équivalents
+        recettes:
+          - [CashAndCashEquivalentsAtCarryingValue]
+        absent_vaut_zero: true
+      - id: placements_court_terme
+        libelle: Placements financiers à court terme
+        recettes:
+          - [ShortTermInvestments]
+          - [MarketableSecuritiesCurrent]
+          - [AvailableForSaleSecuritiesDebtSecuritiesCurrent]
+          - [AvailableForSaleSecuritiesCurrent]
+          - [DebtSecuritiesCurrent]
+        absent_vaut_zero: true
+      - id: creances_clients
+        libelle: Créances clients
+        recettes:
+          - [AccountsReceivableNetCurrent]
+        absent_vaut_zero: true
+      - id: stocks
+        libelle: Stocks
+        recettes:
+          - [InventoryNet]
+        absent_vaut_zero: true
+      - id: autres_actifs_courants
+        libelle: Autres actifs courants (solde du bouclage)
+      - id: actif_courant
+        libelle: Actif courant
+        recettes:
+          - [AssetsCurrent]
+      - id: placements_long_terme
+        libelle: Placements financiers à long terme
+        recettes:
+          - [LongTermInvestments]
+          - [MarketableSecuritiesNoncurrent]
+          - [AvailableForSaleSecuritiesDebtSecuritiesNoncurrent]
+        absent_vaut_zero: true
+      - id: immobilisations_corporelles
+        libelle: Immobilisations corporelles nettes
+        recettes:
+          - [PropertyPlantAndEquipmentNet]
+          - [PropertyPlantAndEquipmentAndFinanceLeaseRightOfUseAssetAfterAccumulatedDepreciationAndAmortization]
+        absent_vaut_zero: true
+      - id: droits_d_utilisation
+        libelle: Droits d'utilisation (baux)
+        recettes:
+          - [OperatingLeaseRightOfUseAsset]
+        absent_vaut_zero: true
+      - id: ecarts_d_acquisition
+        libelle: Écarts d'acquisition
+        recettes:
+          - [Goodwill]
+        absent_vaut_zero: true
+      - id: incorporels
+        libelle: Immobilisations incorporelles
+        recettes:
+          - [IntangibleAssetsNetExcludingGoodwill]
+          - [FiniteLivedIntangibleAssetsNet]
+        absent_vaut_zero: true
+      - id: autres_actifs_non_courants
+        libelle: Autres actifs non courants (solde du bouclage)
+      - id: total_actif
+        libelle: Total de l'actif
+        recettes:
+          - [Assets]
+      - id: fournisseurs
+        libelle: Dettes fournisseurs
+        recettes:
+          - [AccountsPayableCurrent]
+        absent_vaut_zero: true
+      - id: dette_financiere_courante
+        libelle: Dette financière à moins d'un an
+        recettes:
+          - [LongTermDebtCurrent]
+          - [DebtCurrent]
+          - [ConvertibleNotesPayableCurrent]
+        absent_vaut_zero: true
+      - id: autres_passifs_courants
+        libelle: Autres passifs courants (solde du bouclage)
+      - id: passif_courant
+        libelle: Passif courant
+        recettes:
+          - [LiabilitiesCurrent]
+      - id: dette_financiere_non_courante
+        libelle: Dette financière à plus d'un an
+        recettes:
+          - [LongTermDebtNoncurrent]
+          - [ConvertibleLongTermNotesPayable]
+          - [ConvertibleNotesPayableNoncurrent]
+          - [ConvertibleDebtNoncurrent]
+        absent_vaut_zero: true
+      - id: financement_adosse_aux_redevances
+        libelle: Financement adossé aux redevances futures (dette)
+        recettes_par_emetteur: true
+        absent_vaut_zero: true
+      - id: obligations_locatives_non_courantes
+        libelle: Obligations locatives à plus d'un an
+        recettes:
+          - [OperatingLeaseLiabilityNoncurrent]
+        absent_vaut_zero: true
+      - id: autres_passifs_non_courants
+        libelle: Autres passifs non courants (solde du bouclage)
+      - id: total_passif
+        libelle: Total des dettes
+        recettes:
+          - [Liabilities]
+      - id: capitaux_propres
+        libelle: Capitaux propres (minoritaires compris)
+        recettes:
+          - [StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest]
+          - [StockholdersEquity]
+      - id: total_passif_et_capitaux_propres
+        libelle: Total du passif et des capitaux propres
+        recettes:
+          - [LiabilitiesAndStockholdersEquity]
+    equations:
+      - total: actif_courant
+        composantes: [+tresorerie, +placements_court_terme, +creances_clients, +stocks]
+        reste: +autres_actifs_courants
+      - total: total_actif
+        composantes: [+actif_courant, +placements_long_terme, +immobilisations_corporelles,
+                      +droits_d_utilisation, +ecarts_d_acquisition, +incorporels]
+        reste: +autres_actifs_non_courants
+      - total: passif_courant
+        composantes: [+fournisseurs, +dette_financiere_courante]
+        reste: +autres_passifs_courants
+      - total: total_passif_et_capitaux_propres
+        composantes: [+total_passif, +capitaux_propres]
+      - total: total_passif
+        composantes: [+passif_courant, +dette_financiere_non_courante, +financement_adosse_aux_redevances,
+                      +obligations_locatives_non_courantes]
+        reste: +autres_passifs_non_courants
+      - total: total_actif
+        composantes: [+total_passif_et_capitaux_propres]
+
+  - id: flux_de_tresorerie
+    libelle: Tableau des flux de trésorerie
+    cadrage: flux
+    lignes:
+      - id: amortissements
+        libelle: Dotations aux amortissements
+        recettes:
+          - [DepreciationDepletionAndAmortization]
+          - [DepreciationAmortizationAndAccretionNet]
+          - [DepreciationAndAmortization]
+          - [Depreciation]
+        absent_vaut_zero: true
+      - id: remuneration_en_actions
+        libelle: Rémunération en actions
+        recettes:
+          - [ShareBasedCompensation]
+          - [AllocatedShareBasedCompensationExpense]
+        absent_vaut_zero: true
+      - id: autres_elements_exploitation
+        libelle: Variation du besoin en fonds de roulement et autres éléments (solde du bouclage)
+      - id: flux_exploitation
+        libelle: Flux de trésorerie d'exploitation
+        recettes:
+          - [NetCashProvidedByUsedInOperatingActivities]
+          - [NetCashProvidedByUsedInOperatingActivitiesContinuingOperations]
+      - id: investissements_corporels
+        libelle: Investissements corporels (décaissés)
+        recettes:
+          - [PaymentsToAcquirePropertyPlantAndEquipment]
+          - [PaymentsToAcquireProductiveAssets]
+        absent_vaut_zero: true
+      - id: acquisitions
+        libelle: Acquisitions de sociétés, nettes de la trésorerie acquise
+        recettes:
+          - [PaymentsToAcquireBusinessesNetOfCashAcquired]
+        absent_vaut_zero: true
+      - id: autres_flux_investissement
+        libelle: Autres flux d'investissement, dont placements (solde du bouclage)
+      - id: flux_investissement
+        libelle: Flux de trésorerie d'investissement
+        recettes:
+          - [NetCashProvidedByUsedInInvestingActivities]
+          - [NetCashProvidedByUsedInInvestingActivitiesContinuingOperations]
+      - id: emissions_d_actions
+        libelle: Émissions d'actions
+        recettes:
+          - [ProceedsFromIssuanceOfCommonStock]
+          - [ProceedsFromStockPlans]
+        absent_vaut_zero: true
+      - id: rachats_d_actions
+        libelle: Rachats d'actions
+        recettes:
+          - [PaymentsForRepurchaseOfCommonStock]
+        absent_vaut_zero: true
+      - id: dividendes_verses
+        libelle: Dividendes versés
+        recettes:
+          - [PaymentsOfDividends]
+          - [PaymentsOfDividendsCommonStock]
+        absent_vaut_zero: true
+      - id: autres_flux_financement
+        libelle: Autres flux de financement, dont dette (solde du bouclage)
+      - id: flux_financement
+        libelle: Flux de trésorerie de financement
+        recettes:
+          - [NetCashProvidedByUsedInFinancingActivities]
+          - [NetCashProvidedByUsedInFinancingActivitiesContinuingOperations]
+      - id: effet_de_change
+        libelle: Effet des variations de change
+        recettes:
+          - [EffectOfExchangeRateOnCashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents]
+          - [EffectOfExchangeRateOnCashAndCashEquivalents]
+          - [EffectOfExchangeRateOnCashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsIncludingDisposalGroupAndDiscontinuedOperations]
+        absent_vaut_zero: true
+      - id: variation_de_tresorerie
+        libelle: Variation de la trésorerie
+        recettes:
+          - [CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect]
+          - [CashAndCashEquivalentsPeriodIncreaseDecrease]
+      - id: flux_de_tresorerie_disponible
+        libelle: Flux de trésorerie disponible (exploitation − investissements corporels)
+        calcul: [+flux_exploitation, -investissements_corporels]
+    equations:
+      - total: flux_exploitation
+        composantes: [+resultat_net, +amortissements, +remuneration_en_actions]
+        reste: +autres_elements_exploitation
+      - total: flux_investissement
+        composantes: [-investissements_corporels, -acquisitions]
+        reste: +autres_flux_investissement
+      - total: flux_financement
+        composantes: [+emissions_d_actions, -rachats_d_actions, -dividendes_verses]
+        reste: +autres_flux_financement
+      - total: variation_de_tresorerie
+        composantes: [+flux_exploitation, +flux_investissement, +flux_financement, +effet_de_change]

@@ -64,7 +64,7 @@ mutations=(
 "$PONT¦        if q.variables_par_archetype[plan.archetype].mode == \"sans_objet\":¦        if False:¦[Q] question SANS OBJET"
 "$PONT¦            if i.essentiel and (q.id, i.id) not in couples:¦            if False:¦[R] essentiel omis"
   # ── un ingrédient repris ne se collecte jamais (#99) ──
-"app/agents/v2/frameworks.py¦    return [i for i in q.ingredients_requis if not i.repris_de]¦    return list(q.ingredients_requis)¦recollecte le coût du capital"
+"app/agents/v2/frameworks.py¦    return [i for i in q.ingredients_requis if not i.repris_de and not i.depuis_le_socle]¦    return [i for i in q.ingredients_requis if not i.depuis_le_socle]¦recollecte le coût du capital"
 "app/agents/v2/frameworks.py¦        if it.ingredient_id not in {i.id for i in ingredients_a_collecter(q)}:¦        if False:¦recollecte le coût du capital"
 "app/agents/v2/frameworks.py¦        for i in ingredients_a_collecter(q):¦        for i in q.ingredients_requis:¦SANS les ingrédients repris passe"
 "app/agents/v2/traducteur.py¦                    for i in ingredients_a_collecter(q)¦                    for i in q.ingredients_requis¦ne VOIT aucun ingrédient repris"
@@ -72,6 +72,8 @@ mutations=(
 "$SRC¦            if self.periode is None:¦            if False:  # mutation¦sans \`periode\`"
 # #113 — une ligne inobtenable peut porter une période.
 "$SRC¦                      (\"periode\", self.periode)) if val]¦                      ) if val]  # mutation¦qui porte une \`periode\`"
+# Le socle des comptes (2026-10-04) : un ingrédient lu dans le socle redevient collectable.
+"$PONT¦    return [i for i in q.ingredients_requis if not i.repris_de and not i.depuis_le_socle]¦    return [i for i in q.ingredients_requis if not i.repris_de]¦recollecte la dette brute"
 )
 
 passes=0; ratees=0

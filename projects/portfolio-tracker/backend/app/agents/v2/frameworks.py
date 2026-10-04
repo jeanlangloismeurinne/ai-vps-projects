@@ -43,7 +43,7 @@ import re
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import yaml
 from pydantic import ValidationError
@@ -296,7 +296,9 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
     #    RETENUE) : il est établi avant elles, et ne lit lui-même que des relevés — aucun ordre caché.
     for _f, q in toutes:
         unites = {c.id: c.unite for c in q.chiffres_cles}
-        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme}
+        # Un chiffre LU DANS LE SOCLE (2026-10-04) se lit comme un relevé : il est établi avant tout
+        # calcul et ne lit aucun autre chiffre de l'encadré.
+        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None}
         facultatifs = {c.id for c in q.chiffres_cles if c.facultatif}
         retenus = {c.id for c in q.chiffres_cles if c.le_plus_eleve_de}
         for c in q.chiffres_cles:
@@ -333,6 +335,33 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                 dimension_formule(c.calcul, unites)
             except FormuleInexecutable as e:
                 raise FrameworkDefinitionRefused(f"[T] `{q.id}.{c.id}` : {e}") from e
+
+    # ── [U] — le SOCLE DES COMPTES (2026-10-04) ──────────────────────────────────────────────────
+    #    Un chiffre lu dans le socle ne nomme que des LIGNES du gabarit maison (une ligne inventée
+    #    rendrait le chiffre « non établi » à chaque dossier, en silence), et seule une question d'un
+    #    framework qui LIT le socle peut s'y adosser — chiffre ou ingrédient : sans la pièce au dossier,
+    #    l'ingrédient ne serait ni collecté ni montré.
+    from app.knowledge.socle_comptes import charger_gabarit
+    lignes_du_socle = set(charger_gabarit().lignes)
+    for f, q in toutes:
+        adosses = [c.id for c in q.chiffres_cles if c.socle is not None] + [
+            i.id for i in q.ingredients_requis if i.depuis_le_socle]
+        if adosses and not f.lit_le_socle:
+            raise FrameworkDefinitionRefused(
+                f"[U] `{q.id}` lit {adosses} dans le socle des comptes, mais le framework `{f.id}` ne le lit "
+                "pas (`lit_le_socle: false`) : la pièce ne serait jamais au dossier")
+        for c in q.chiffres_cles:
+            if c.socle is None:
+                continue
+            inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)
+            if inconnues:
+                raise FrameworkDefinitionRefused(
+                    f"[U] `{q.id}.{c.id}` lit {inconnues} dans le socle : ce ne sont pas des lignes du gabarit "
+                    "maison")
+            decales = sorted(f"{n}[{k}]" for n, k in references_de_la_formule(c.socle.formule) if k != 0)
+            if decales:
+                raise FrameworkDefinitionRefused(
+                    f"[U] `{q.id}.{c.id}` lit {decales} : la période d'un chiffre du socle est sa `periode`")
 
     # ── [Q] / [R] — ce qui rouvre quoi (#89) ───────────────────────────────────────────────────
     portees = {t.id: t.portee for t in fichier.types_evenement}
@@ -670,7 +699,11 @@ def valider_pont_framework_answer(
         # K bis (#101). Un chiffre CALCULÉ vaut sa formule sur les chiffres RELEVÉS de ce même encadré —
         # d'où qu'arrive la réponse : c'est le code qui calcule (`completer_encadre`), et une réponse qui
         # porterait un autre nombre dirait autre chose que les chiffres qu'elle affiche à côté.
-        attendus = {c.id: c for c in completer_encadre(declares, answer.reponse.chiffres_cles)}
+        # Le socle que la réponse CITE (2026-10-04) : un chiffre lu dans les comptes se vérifie contre la
+        # pièce même que la note s'approprie — jamais contre un socle que la réponse n'a pas cité.
+        cite = socle_au_dossier(entries, answer.fondation.cited_entry_ids if answer.fondation else ())
+        attendus = {c.id: c for c in completer_encadre(declares, answer.reponse.chiffres_cles,
+                                                       socle=cite[1] if cite else None)}
         faux = []
         for c in answer.reponse.chiffres_cles:
             d = next((x for x in declares if x.id == c.id), None)
@@ -679,7 +712,8 @@ def valider_pont_framework_answer(
             e = attendus[c.id]
             if (c.valeur is None) != (e.valeur is None) or (
                     c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
-                regle = d.calcul or f"le plus élevé de {', '.join(d.le_plus_eleve_de)}"
+                regle = d.calcul or (f"socle : {d.socle.formule} ({d.socle.periode})" if d.socle else
+                                     f"le plus élevé de {', '.join(d.le_plus_eleve_de)}")
                 faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({regle})")
         if faux:
             raise FrameworkAnswerRefused(
@@ -712,7 +746,21 @@ def valider_pont_framework_answer(
         raise FrameworkAnswerRefused(motif_substitut)
 
 
-def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle]) -> list[ChiffreCle]:
+def socle_au_dossier(entries: dict[int, dict[str, Any]], ids: Optional[Iterable[int]] = None
+                     ) -> Optional[tuple[int, dict[str, Any]]]:
+    """La pièce « socle des comptes » parmi `entries` (restreintes à `ids` si donné) : `(id, structure)`,
+    ou None. DÉTENTEUR UNIQUE de la reconnaissance de la pièce (sa `metric`), lu par l'assemblage de
+    l'analyste (dossier) et par le pont (fondation)."""
+    from app.knowledge.socle_comptes import METRIC
+    candidats = [(i, e.get("content_structured")) for i, e in entries.items()
+                 if (ids is None or i in set(ids))
+                 and isinstance(e.get("content_structured"), dict)
+                 and e["content_structured"].get("metric") == METRIC]
+    return max(candidats, key=lambda c: c[0]) if candidats else None
+
+
+def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle], *,
+                      socle: Optional[dict[str, Any]]) -> list[ChiffreCle]:
     """L'encadré COMPLÉTÉ de ses chiffres calculés (#101). DÉTENTEUR UNIQUE, lu par l'assemblage de
     l'analyste (qui écrit) et par le pont [K] (qui vérifie) — deux lectures d'une même formule
     divergeraient au premier correctif (#46). Pur.
@@ -730,6 +778,20 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     par_id = {c.id: c for c in releves}
     sortie = list(releves)
     facultatifs = {d.id for d in declares if d.facultatif}
+    # Les chiffres LUS DANS LE SOCLE d'abord (2026-10-04) : ils ne lisent rien de l'encadré, et les
+    # calculs et les chiffres retenus peuvent les lire. `socle` est la structure de la pièce au dossier ;
+    # absente, le chiffre n'est pas établi et le DIT — jamais un relevé de substitution.
+    from app.knowledge.socle_comptes import valeur_du_socle
+    for d in (x for x in systeme if x.socle is not None):
+        if socle is None:
+            ligne = ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                "non établi : le socle des comptes de l'émetteur n'est pas au dossier"))
+        else:
+            v, periode = valeur_du_socle(socle, d.socle.formule, d.socle.periode)
+            ligne = (ChiffreCle(id=d.id, unite=d.unite, motif_absence=periode) if v is None else
+                     ChiffreCle(id=d.id, unite=d.unite, valeur=round(v / 1e6, 6), date_ou_periode=periode))
+        sortie.append(ligne)
+        par_id[d.id] = sortie[-1]
     # Les chiffres RETENUS d'abord (#105) : une formule peut les lire, eux ne lisent que des relevés.
     for d in (x for x in systeme if x.le_plus_eleve_de):
         etablis = [par_id[n] for n in d.le_plus_eleve_de
@@ -836,9 +898,10 @@ def servir_answer(
 def ingredients_a_collecter(q) -> list:
     """DÉTENTEUR UNIQUE (#46, #99) de « quels ingrédients de cette question se COLLECTENT ? » : tous, sauf
     ceux repris d'une autre méthodologie (`repris_de`) — un chiffre déjà instruit ne se recherche pas une
-    seconde fois, sinon le dossier aurait deux coûts du capital. Lu par le traducteur (ce qu'il planifie)
+    seconde fois, sinon le dossier aurait deux coûts du capital — et ceux que porte le socle des comptes
+    (`depuis_le_socle`, 2026-10-04 : une ligne des comptes reconstitués ne se recollecte pas seule). Lu par le traducteur (ce qu'il planifie)
     et par le pont du plan (ce qu'il exige, ce qu'il refuse)."""
-    return [i for i in q.ingredients_requis if not i.repris_de]
+    return [i for i in q.ingredients_requis if not i.repris_de and not i.depuis_le_socle]
 
 
 def valider_pont_collection_plan(
@@ -918,9 +981,12 @@ def valider_pont_collection_plan(
                 f"[P] `{it.question_id}` n'a pas d'ingrédient `{it.ingredient_id}` "
                 f"({sorted(ingredients)}) : un ingrédient inventé écrirait le corrigé")
         if it.ingredient_id not in {i.id for i in ingredients_a_collecter(q)}:
+            origine = ("se LIT dans le socle des comptes reconstitués (joint d'office au dossier)"
+                       if next(i for i in q.ingredients_requis if i.id == it.ingredient_id).depuis_le_socle else
+                       "est REPRIS d'une autre méthodologie")
             raise CollectionPlanRefused(
-                f"[P] `{it.question_id}.{it.ingredient_id}` est REPRIS d'une autre méthodologie : il ne "
-                "se collecte jamais — un second chiffre au dossier contredirait le premier (#95, #99)")
+                f"[P] `{it.question_id}.{it.ingredient_id}` {origine} : il ne se collecte jamais — un second "
+                "chiffre au dossier contredirait le premier (#95, #99)")
         if questions is not None and it.question_id not in questions:
             raise CollectionPlanRefused(
                 f"[P] la ligne vise `{it.question_id}`, HORS du scope de bouclage {sorted(questions)} : "

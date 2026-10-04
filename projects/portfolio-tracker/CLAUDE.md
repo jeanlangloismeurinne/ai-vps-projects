@@ -2932,6 +2932,59 @@ l'analyste ne la voyait même plus. qf_4 était infondable pour TOUTE entreprise
 Gardes : `check_frameworks_definitions` §7 (spec ↔ référentiel, rouge tant que qf_8 manquait à la spec),
 `check_analyste` §7 (8 questions, qf_8 sans encadré), `check_manager` §2/§4. Suite **4219/0**.
 
+### #115 — le socle des comptes : un modèle des comptes commun, les questions sont la couche de jugement
+
+**Arbitrage de l'utilisateur (2026-10-04)** : « toutes les questions financières devraient s'intégrer à un
+P&L reconstitué qui s'interface avec la valorisation » ; puis « réalise le socle commun des comptes avant de
+poursuivre de RVMD vers NVDA ». Logique de fonds : l'analyste construit D'ABORD le modèle des comptes
+(résultat, bilan, flux, reliés et bouclés, cinq exercices), au format maison commun à toutes les sociétés ;
+les questions en sont des lectures, la valorisation la projection. Les correctifs #104-#113 portaient
+presque tous sur la cohérence ENTRE questions (deux dettes nettes, deux périodes, un arrondi recopié) :
+c'est le symptôme d'un système où chaque question va chercher ses propres chiffres.
+
+- **Le gabarit est une DONNÉE** (`knowledge/socle_comptes.yaml`) : lignes à recettes (concepts us-gaap
+  essayés dans l'ordre, PÉRIODE PAR PÉRIODE — NVDA change de concept de placements fin 2025), équations de
+  bouclage (`total = Σ composantes + reste`), lignes calculées. Un « solde du bouclage » rend visible ce que
+  le gabarit ne nomme pas (la charge Arm de NVDA, 1 353 M$) ; une équation SANS reste est un CONTRÔLE : un
+  écart se PUBLIE avec son montant, il ne s'absorbe jamais (l'effet de change MSFT non lu : −196 M$).
+  Le libellé d'un solde ne dit jamais « par différence » (marqueur #78) : agrégat déterministe, il vaut
+  relevé (#110).
+- **Six états d'une cellule, jamais un zéro inventé** : déposé · solde · par somme · calculé · compté zéro
+  (le gabarit dit que l'absence vaut zéro DANS LES ÉQUATIONS — la cellule publiée reste vide) · non déposé.
+- **Périodes lues par leurs détenteurs** : `points_annuels`/`serie_du_concept` (exercices),
+  `douze_mois_glissants` (#112, jamais de repli sur l'exercice), `points_instantanes` (dernier bilan) —
+  importés, jamais recopiés (tenu en AST).
+- **Conventions maison, pas votes du comité** (arbitrage du 2026-10-04 : « ce n'est pas de niveau comité
+  d'arbitrer les choix de reconstitution des comptes ») : le directeur de la recherche les écrit une fois,
+  chaque modèle les applique. (1) Tout financement qui porte intérêt est de la DETTE — les obligations
+  locatives n'en sont pas. (2) Un reclassement propre à un émetteur (`socle_comptes_emetteurs.yaml`, clé
+  CIK) porte la ligne maison, les concepts, un MOTIF et une PIÈCE, sinon il est refusé au chargement :
+  le même concept veut dire autre chose ailleurs (`AccruedRoyaltiesCurrentAndNoncurrent` = la dette
+  Royalty Pharma chez RVMD, 548,5 M$ au 30/06/2026, des redevances fournisseur chez un industriel).
+  (3) Capital employé (pour NVDA, lot suivant — PROPOSÉ le 2026-10-04, appliqué sauf objection de
+  l'utilisateur) : un actif dont le revenu est sous le résultat
+  d'exploitation SORT (trésorerie, placements, participations) ; les écarts d'acquisition RESTENT ; le
+  rendement hors écarts d'acquisition est publié en second chiffre.
+- **Une pièce du dossier** (`socle_feed.publier_socle`) : `metric = socle_comptes`, `fact_financial` ×
+  `edgar_official` ⟹ tier A, `mesure` ; datée du dernier fait constaté et du dépôt (#79) ; UNE pièce
+  courante par titre, versionnée (A1) à chaque dépôt qui change un chiffre, idempotente sinon.
+- **Jointe d'office** (`preparation`) aux frameworks qui déclarent `lit_le_socle: true` (champ REQUIS) —
+  qualité financière et valorisation ; les autres ne la voient pas (#108).
+- **Les chiffres de l'encadré viennent du socle** (arbitrage « repris du socle ») : `ChiffreCleDeclare.socle
+  = {formule sur des lignes du gabarit, periode ∈ dernier_bilan|douze_mois|dernier_exercice}`, en M$ ;
+  `completer_encadre(…, socle=)` (paramètre REQUIS) les établit avant les calculs ; l'analyste les VOIT avec
+  leur valeur (`chiffres_lus_dans_le_socle`) et ne les rend pas ; la pièce entre d'office dans la fondation ;
+  le pont [K] les revérifie contre le socle que la réponse CITE (jamais un autre). Sans socle au dossier :
+  non établis, motivés — jamais repris des lignes du modèle.
+- **Un ingrédient `depuis_le_socle` ne se collecte jamais** (`ingredients_a_collecter`, détenteur unique) :
+  le traducteur ne le voit pas, le pont du plan refuse sa ligne en le nommant.
+- Référentiel [U] : un chiffre du socle ne nomme que des lignes du gabarit, sans décalage ; chiffre ou
+  ingrédient adossé au socle seulement dans un framework qui le lit.
+Gardes : `check_socle_comptes.py` (fixtures `companyfacts` RVMD/NVDA/MSFT copiées du réel) +
+`negatif_socle_comptes.sh` ; `check_socle_persist.py` (vraie base, ROLLBACK) + `negatif_socle_persist.sh` ;
+`check_frameworks_definitions` §6 bis ; `check_analyste` §5 bis ; `check_dossier` §13 ;
+`check_collection_plan_contract` §7 bis. Outil de lecture gratuite : `bash tools/montrer_socle.sh RVMD NVDA MSFT`.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

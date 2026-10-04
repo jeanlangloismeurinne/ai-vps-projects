@@ -77,10 +77,10 @@ mutations=(
 "$SRC¦        if brute.statut not in admis[brute.question_id]:¦        if False:¦sort en refus nommé"
 # ── L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) ──────────────────────────────────────────────────────────
 "$SRC¦            \"chiffres_cles_demandes\": [¦            \"chiffres_demandes_ailleurs\": [¦les chiffres RELEVÉS déclarés"
-"$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles))[:0],¦entre TEL QUEL dans la réponse"
+"$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=encadre[:0],¦entre TEL QUEL dans la réponse"
 # ── #101 : les chiffres CALCULÉS sont au code, et le renvoi unique ───────────────────────────────
-"$SRC¦                for c in q.chiffres_cles if not c.calcule_par_le_systeme\n            ],\n            \"chiffres_calcules¦                for c in q.chiffres_cles\n            ],\n            \"chiffres_calcules¦les chiffres RELEVÉS déclarés"
-"$SRC¦                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),¦                        chiffres_cles=list(brute.chiffres_cles),¦l'assemblage ÉCRIT le chiffre calculé"
+"$SRC¦                for c in q.chiffres_cles if not c.calcule_par_le_systeme¦                for c in q.chiffres_cles¦ne demande RIEN que le socle"
+"$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=list(brute.chiffres_cles),¦ÉCRIT la dette nette calculée"
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
 "$SRC¦                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦                await run_json_agent(agent, messages, AnalysteSortie, json_object=False)\n                run2 = await run_json_agent(agent, messages, AnalysteSortie, json_object=False)¦une fois, pas davantage"
@@ -107,7 +107,12 @@ mutations=(
 # #113 bis — le filtre n'est plus appliqué au point de lecture (contexte du modèle).
 "$SRC¦        citables = corpus_montre(q, citables, ouverts)¦        pass  # mutation¦le CONTEXTE envoyé au modèle"
 # #113 ter — les pièces du fait postérieur lu ne rejoignent plus la fondation.
-"$SRC¦        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]))¦        + []))  # mutation¦entrent d'office dans la fondation"
+"$SRC¦        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]¦        + []  # mutation¦entrent d'office dans la fondation"
+# Le socle des comptes (2026-10-04)
+"$SRC¦        + ([socle[0]] if socle and lus_au_socle else [])))¦        + []))  # mutation¦entre D'OFFICE dans la fondation"
+"$SRC¦            \"chiffres_lus_dans_le_socle\": chiffres_du_socle(q, entries),¦            \"chiffres_lus_dans_le_socle\": [],¦MONTRE les chiffres lus dans le socle"
+"$PONT¦        if socle is None:¦        if True:¦ÉCRIT la dette nette calculée sur les chiffres du SOCLE"
+"$PONT¦        cite = socle_au_dossier(entries, answer.fondation.cited_entry_ids if answer.fondation else ())¦        cite = socle_au_dossier(entries)¦ne CITE pas le socle"
 )
 
 passes=0; ratees=0

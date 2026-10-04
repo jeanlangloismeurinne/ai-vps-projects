@@ -29,7 +29,7 @@ mutations=(
 # ⚠️ La question surnuméraire s'appelle `qf_8`, pas `qf_7_bis` : le `pattern` d'id du contrat
 # (`^[a-z]{2}_[0-9]+$`) refusait `qf_7_bis` AVANT que l'assert de comptage soit atteint — la
 # mutation prouvait le pattern, pas le comptage. Mesuré, pas prévu (1ᵉʳ faux vert, sens rouge).
-"$YAML¦      - id: qf_7¦      - id: qf_8\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        chiffres_cles: []\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
+"$YAML¦      - id: qf_7¦      - id: qf_9\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        chiffres_cles: []\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
 # §2 — le contrat refuse les définitions creuses
 "$DEF¦        if not any(i.essentiel for i in self.ingredients_requis):¦        if False:¦une question sans aucun ingrédient ESSENTIEL"
 "$DEF¦        if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:¦        if False:¦un plancher desserré SANS motif déclaré"
@@ -82,7 +82,7 @@ mutations=(
 "$PONT¦            if portees[t] != \"questions_declarees\":¦            if t in portees and False:¦un type qui ne rouvre RIEN"
 "$PONT¦    if portees.get(A_QUALIFIER) != \"toutes\":¦    if False:¦rétrogradé à une portée partielle"
 "$PONT¦                return frozenset(q.rouverte_par) | universels¦                return frozenset(q.rouverte_par)¦ses types déclarés ∪ les types de portée totale"
-"$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, ma_1, ma_3, va_1, va_2, va_4 et va_6"
+"$YAML¦        rouverte_par: [surprise_concurrence, reglementaire_favorable¦        rouverte_par: [financement, surprise_concurrence, reglementaire_favorable¦un FINANCEMENT rouvre qf_4, qf_7, qf_8, ma_1, ma_3"
   # ── [S] ce qui se reprend (#99) ──
 "$PONT¦                if r not in questions_par_id:¦                if False:¦question INCONNUE du référentiel"
 "$PONT¦                if r == q.id:¦                if False:¦de SA PROPRE question"
@@ -99,7 +99,7 @@ mutations=(
 "$YAML¦          - id: dette_nette¦          - id: dette_nette_bilan¦l'encadré instruit le 2026-09-29"
 # ── #101 : un chiffre CALCULÉ ne lit que des chiffres RELEVÉS de sa question, à une date, même unité ──
 "$PONT¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if hors:¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if False:¦lit un chiffre ABSENT de la question"
-"$PONT¦        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
+"$PONT¦        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
 "$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
 "$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
 "$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
@@ -108,9 +108,15 @@ mutations=(
 "$PONT¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if hors:¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if False:¦retenu parmi des chiffres qui ne sont pas relevés"
 "$PONT¦            if autres:¦            if False:¦retenu entre deux unités"
 "$PONT¦            if all(n in facultatifs for n in c.le_plus_eleve_de):¦            if False:¦TOUS facultatifs"
-"$DEF¦        if self.calcul is not None and self.le_plus_eleve_de:¦        if False:¦à la fois calculé et retenu"
+"$DEF¦        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None)) > 1:¦        if False:¦à la fois calculé et retenu"
 "$DEF¦        if self.facultatif and self.calcule_par_le_systeme:¦        if False:¦calculé marqué facultatif"
 "$YAML¦            facultatif: true¦            facultatif: false¦la prévision seule est facultative"
+# ── [U] le socle des comptes (2026-10-04) ──
+"$PONT¦        if adosses and not f.lit_le_socle:¦        if False:¦ne LIT PAS le socle"
+"$PONT¦            inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)¦            inconnues = []¦ABSENTE du gabarit"
+"$PONT¦            decales = sorted(f\"{n}[{k}]\" for n, k in references_de_la_formule(c.socle.formule) if k != 0)¦            decales = []¦DÉCALÉ (sa période"
+"$DEF¦        if self.socle is not None and self.unite != \"M$\":¦        if False:¦hors M$"
+"$YAML¦    lit_le_socle: false¦    lit_le_socle: true¦les autres frameworks, non"
 )
 
 passes=0; ratees=0

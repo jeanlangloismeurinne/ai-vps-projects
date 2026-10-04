@@ -1,0 +1,29 @@
+# RECLASSEMENTS PROPRES À UN ÉMETTEUR — le complément du gabarit maison (`socle_comptes.yaml`).
+#
+# Comme dans un fonds : la convention est maison et commune (« tout financement qui porte intérêt est
+# de la dette »), mais l'analyste qui construit le modèle d'une société reclasse les postes qu'ELLE
+# présente de façon atypique, et l'écrit dans sa note ; le directeur de la recherche le revoit. Ce n'est
+# pas un vote du comité (arbitrage de l'utilisateur, 2026-10-04).
+#
+# Pourquoi un fichier à part et non une recette du gabarit (#31) : le même concept comptable veut dire
+# autre chose chez un autre émetteur. `AccruedRoyaltiesCurrentAndNoncurrent` est, chez RVMD, la dette
+# née de la cession de ses redevances futures à Royalty Pharma ; chez un industriel, ce sont des
+# redevances dues à un concédant de licence — un passif d'exploitation. L'écrire dans le gabarit ferait
+# de la dette chez tout le monde.
+#
+# Clé : le CIK (l'identité de l'émetteur à la SEC, jamais un sigle — #86). Chaque reclassement porte
+# la ligne du gabarit qu'il alimente (une ligne `recettes_par_emetteur`), les concepts déposés, le
+# MOTIF et la PIÈCE qui le justifient : un reclassement sans motif ni pièce est refusé au chargement.
+
+emetteurs:
+
+  "1628171":   # Revolution Medicines, Inc. (RVMD)
+    - ligne: financement_adosse_aux_redevances
+      concepts: [AccruedRoyaltiesCurrentAndNoncurrent]
+      motif: >-
+        Accord avec Royalty Pharma (2025) : les fonds reçus contre une part des redevances futures
+        sont comptabilisés comme une dette (cession de revenus futurs, ASC 470-10), qui porte des
+        intérêts non décaissés capitalisés — 24,2 M$ en 2025 (PaidInKindInterest), avant toute
+        autre dette. Convention maison : un financement qui porte intérêt est de la dette. Inscrit en
+        non courant (aucune échéance à douze mois déposée).
+      piece: https://www.sec.gov/Archives/edgar/data/1628171/000119312526071563/0001193125-26-071563-index.htm

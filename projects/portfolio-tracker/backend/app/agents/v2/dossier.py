@@ -357,7 +357,7 @@ def assembler_dossier(
 
 _SQL_ENTRIES = """
     SELECT id, title, content, source_type, source_url, source_date, reliability_tier, nature, created_at,
-           portee_temporelle
+           portee_temporelle, content_structured
       FROM knowledge_entries
      WHERE ticker_id = $1 AND superseded_by IS NULL
 """

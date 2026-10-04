@@ -340,6 +340,7 @@ _FICTIF = """
       approuvée par une opération de DONNÉES, sans diff de code.
     nature_dominante: interpretation
     bloc_memo: __CIBLE__
+    lit_le_socle: false
     questions:
 
       - id: cx_1

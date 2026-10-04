@@ -211,6 +211,18 @@ séance suivante).
     qf_4/qf_7 sans que l'analyste puisse les lire (#103). qf_4 #963 écrite seule (`--questions=qf_4`), à
     jour, reprenable. **La case reste ouverte** : prose de #963 contradictoire avec son encadré (−328 vs
     −3 450,54), qf_6 (re-collecte de #345), qf_7 (0/3, guidance #312).
+- [x] **Le socle des comptes** (arbitrage du 2026-10-04 : « toutes les questions financières s'intègrent à un
+  P&L reconstitué qui s'interface avec la valorisation ») — ✅ 2026-10-04, #115. Comme un fonds : le modèle des
+  comptes d'abord (résultat, bilan, flux, cinq exercices + douze mois + dernier bilan, bouclés), les questions
+  en sont la couche de jugement. Gabarit maison en données, reclassements propres à l'émetteur motivés et
+  sourcés (RVMD : dette Royalty Pharma), une pièce du dossier jointe d'office aux frameworks `lit_le_socle`,
+  chiffres de l'encadré LUS dans le socle par le code (qf_4 dette brute / trésorerie, qf_7 trésorerie /
+  consommation sur douze mois), ingrédients `depuis_le_socle` jamais collectés. RVMD/NVDA/MSFT bouclent à 0 écart.
+- [ ] **Les ratios maison sur le socle** — prérequis de la qualité financière de NVDA : capital employé
+  (convention proposée le 2026-10-04 : trésorerie, placements et participations sortent, écarts d'acquisition
+  restent), résultat d'exploitation après impôt, rendement du capital sur cinq exercices (qf_1/qf_5),
+  conversion en cash sur trois ans (qf_2), capital par point de croissance (qf_3) — calculés par le code sur
+  le socle, jamais par le modèle ; la normalisation (éléments non récurrents) reste le jugement de l'analyste
 - [ ] Option 1 : va_4-6 recalculés à la lecture au dernier cours coté daté (#81)
 - [ ] Règle de Greenwald tenue par le manager (la croissance ne vaut que si qf_1 crée de la valeur et
   que la barrière tient)

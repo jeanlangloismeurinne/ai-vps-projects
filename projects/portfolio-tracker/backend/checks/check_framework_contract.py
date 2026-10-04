@@ -702,7 +702,7 @@ valide("[P] contrat — une réponse écrite avant #103 (sans la clef) se relit,
        lambda: rep().reponse.faits_posterieurs == [] or (_ for _ in ()).throw(AssertionError("non vide")))
 
 _enc_l = completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [
-    ChiffreCle(**_DB), ChiffreCle(**_TR), ChiffreCle(**{**_DNC, "valeur": -328.0})])
+    ChiffreCle(**_DB), ChiffreCle(**_TR), ChiffreCle(**{**_DNC, "valeur": -328.0})], socle=None)
 _enc = {c.id: c for c in _enc_l}
 check("`completer_encadre` rend UNE ligne par chiffre (la ligne fournie pour le calculé ne s'ajoute pas au calcul)",
       sorted(c.id for c in _enc_l) == ["dette_brute", "dette_nette", "tresorerie"], f"→ {[c.id for c in _enc_l]}")
@@ -713,7 +713,7 @@ check("… daté par la période de ses termes, formule écrite en clair (#42)",
       "au 2026-06-30" in (_enc["dette_nette"].date_ou_periode or "")
       and "dette_brute - tresorerie" in (_enc["dette_nette"].date_ou_periode or ""),
       f"→ {_enc['dette_nette'].date_ou_periode}")
-_enc_abs = {c.id: c for c in completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [ChiffreCle(**_DB)])}
+_enc_abs = {c.id: c for c in completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [ChiffreCle(**_DB)], socle=None)}
 check("… un terme ABSENT de l'encadré rend le calcul non établi, en NOMMANT le terme",
       _enc_abs["dette_nette"].valeur is None and "tresorerie" in (_enc_abs["dette_nette"].motif_absence or ""),
       f"→ {_enc_abs['dette_nette']}")
@@ -723,13 +723,13 @@ _DECL_AUTO = [ChiffreCleDeclare(id="tresorerie", libelle="Trésorerie mobilisabl
                                 periode="au bilan", calcul="tresorerie / conso * 12")]
 _enc_zero = {c.id: c for c in completer_encadre(_DECL_AUTO, [
     ChiffreCle(id="tresorerie", unite="M$", valeur=100.0, date_ou_periode="au 2026-06-30"),
-    ChiffreCle(id="conso", unite="M$", valeur=0.0, date_ou_periode="exercice 2025")])}
+    ChiffreCle(id="conso", unite="M$", valeur=0.0, date_ou_periode="exercice 2025")], socle=None)}
 check("… un dénominateur NUL rend « non calculable », jamais `inf` ni 0 (#44)",
       _enc_zero["autonomie"].valeur is None and "zéro" in (_enc_zero["autonomie"].motif_absence or ""),
       f"→ {_enc_zero['autonomie']}")
 _enc_mix = {c.id: c for c in completer_encadre(_DECL_AUTO, [
     ChiffreCle(id="tresorerie", unite="M$", valeur=120.0, date_ou_periode="au 2026-06-30"),
-    ChiffreCle(id="conso", unite="M$", valeur=60.0, date_ou_periode="exercice 2025")])}
+    ChiffreCle(id="conso", unite="M$", valeur=60.0, date_ou_periode="exercice 2025")], socle=None)}
 check("… et deux périodes différentes sont DÉCLARÉES toutes deux (un chiffre mixte le dit, #42)",
       _enc_mix["autonomie"].valeur == 24.0 and "au 2026-06-30" in _enc_mix["autonomie"].date_ou_periode
       and "exercice 2025" in _enc_mix["autonomie"].date_ou_periode, f"→ {_enc_mix['autonomie']}")
@@ -754,7 +754,7 @@ def _prud(lignes):
     """`completer_encadre` sur `_DECL_PRUD`, une exception devenant un FAIL NOMMÉ (le script atteint son
     bilan : une mutation d'une autre garde ne doit pas le tuer avant l'assert qu'elle vise)."""
     try:
-        return {c.id: c for c in completer_encadre(_DECL_PRUD, lignes)}
+        return {c.id: c for c in completer_encadre(_DECL_PRUD, lignes, socle=None)}
     except Exception as e:  # noqa: BLE001
         check(f"[#105] `completer_encadre` ne lève pas ({type(e).__name__}: {e})", False)
         return {}
@@ -796,7 +796,7 @@ check("[#105] le constaté OBLIGATOIRE absent : rien n'est retenu (on ne retient
       f"→ {_p4.get('retenue')} / {_p4.get('autonomie')}")
 try:
     _n_retenue = sum(1 for c in completer_encadre(_DECL_PRUD, [
-        _TRE, _CON, _PRE, ChiffreCle(id="retenue", unite="M$", valeur=900.0, date_ou_periode="choisi")])
+        _TRE, _CON, _PRE, ChiffreCle(id="retenue", unite="M$", valeur=900.0, date_ou_periode="choisi")], socle=None)
         if c.id == "retenue")
 except Exception:  # noqa: BLE001 — nommé par l'assert ci-dessous
     _n_retenue = -1

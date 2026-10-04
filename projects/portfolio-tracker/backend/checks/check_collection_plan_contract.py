@@ -214,7 +214,7 @@ def plan_complet(framework_id, archetype, extra=None, drop_first=False):
         for ing in q.ingredients_requis:
             # Lu dans la DONNÉE (`repris_de`), pas via `ingredients_a_collecter` : la fixture ne se
             # construit pas avec la règle qu'elle éprouve (4ᵉ faux vert).
-            if ing.essentiel and not ing.repris_de:
+            if ing.essentiel and not ing.repris_de and not ing.depuis_le_socle:
                 items.append(CollectionPlanItem(
                     question_id=q.id, ingredient_id=ing.id, statut="traduit", periode="exercice_clos",
                     metrique=f"métrique nommée pour {ing.id}", source_pressentie="10-Q",
@@ -312,6 +312,17 @@ refuse_pont("[P] une ligne qui recollecte le coût du capital repris de qf_1 est
                 metrique="coût moyen pondéré du capital", source_pressentie="10-K",
                 ancre="clôture de l'exercice")]),
             "est REPRIS d'une autre méthodologie")
+# ── §7 bis un ingrédient LU DANS LE SOCLE ne se collecte jamais (2026-10-04) ────────────────────
+_socle = [(q.id, i.id) for q in _FW["qualite_financiere"].questions for i in q.ingredients_requis
+          if i.depuis_le_socle]
+check("[réf] la qualité financière déclare des ingrédients lus dans le socle (sinon §7 bis ne discrimine rien)",
+      ("qf_4", "endettement_brut_et_net") in _socle, f"→ {_socle}")
+refuse_pont("[P] une ligne qui recollecte la dette brute (lue dans le socle des comptes) est refusée",
+            plan_complet("qualite_financiere", "pre_revenus", extra=[CollectionPlanItem(
+                question_id="qf_4", ingredient_id="endettement_brut_et_net", statut="traduit",
+                periode="dernier_bilan", metrique="dette financière brute", source_pressentie="10-Q",
+                ancre="clôture du trimestre")]),
+            "se LIT dans le socle des comptes")
 from app.agents.v2.traducteur import contexte_traducteur  # noqa: E402
 from app.knowledge.edgar_feed import IdentiteEmetteur  # noqa: E402
 _ctx = contexte_traducteur(_FICHIER, "valorisation", "rentable", "NVDA",

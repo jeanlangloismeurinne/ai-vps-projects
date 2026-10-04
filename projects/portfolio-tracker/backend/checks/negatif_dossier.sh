@@ -76,6 +76,10 @@ mutations=(
 "app/knowledge/lecture_depot.py¦            datation=constatee(date_du_fait=event.event_date, date_du_document=event.filing_date),¦            datation=constatee(date_du_fait=event.filing_date, date_du_document=event.filing_date),¦datée par le dépôt"
 "app/knowledge/lecture_depot.py¦    return f\"https://www.sec.gov/Archives/edgar/data/{cik}/{dossier}/{acc}-index.htm\"¦    return f\"https://www.sec.gov/cgi-bin/browse-edgar?CIK={cik}\"¦même quand le flux ne donne pas le document principal"
 "app/knowledge/lecture_depot.py¦            tags=[ETIQUETTE, acc, event.form],¦            tags=[acc, event.form],¦étiquetée « lecture du dépôt »"
+# Le socle des comptes (2026-10-04) — jointure d'office par `preparation`.
+"app/agents/v2/preparation.py¦    if fw.lit_le_socle:¦    if True:¦la défendabilité ne le reçoit pas"
+"app/agents/v2/preparation.py¦        joindre=[*ids_des_lectures(lectures), *([socle.entry_id] if socle else [])])¦        joindre=[*ids_des_lectures(lectures)])¦reçoit le socle joint"
+"app/agents/v2/preparation.py¦            socle_motif = str(e)¦            pass¦EDGAR injoignable"
 )
 
 source "$(dirname "$0")/_negatif.sh"

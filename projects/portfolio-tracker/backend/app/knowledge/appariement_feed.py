@@ -248,6 +248,13 @@ def _unite_retenue(bruts: list[dict[str, Any]], concept: str) -> tuple[str, list
     return max(par_unite.items(), key=rang)
 
 
+def points_de_l_unite_retenue(bruts: list[dict[str, Any]], concept: str
+                              ) -> tuple[str, list[dict[str, Any]]]:
+    """Accès public au choix d'unité (`_unite_retenue`, détenteur unique) — pour le socle des comptes,
+    qui lit les douze mois glissants sur les MÊMES points que l'appariement."""
+    return _unite_retenue(bruts, concept)
+
+
 def serie_du_concept(
     bruts: list[dict[str, Any]], concept: str
 ) -> tuple[list[dict[str, Any]], str, str]:

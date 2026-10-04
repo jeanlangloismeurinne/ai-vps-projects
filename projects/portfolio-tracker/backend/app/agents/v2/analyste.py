@@ -71,6 +71,7 @@ from app.agents.v2.frameworks import (
     FrameworkAnswerRefused,
     _plus_faible,
     completer_encadre,
+    socle_au_dossier,
     load_frameworks,
     nature_effective_de,
     nature_satisfait,
@@ -395,6 +396,21 @@ def faits_montrables(
     return montres
 
 
+def chiffres_du_socle(q, entries: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Les chiffres de l'encadré de `q` lus dans le socle au dossier, tels que le code les établira
+    (`completer_encadre`, détenteur unique) — montrés à l'analyste AVANT qu'il rédige."""
+    declares = [c for c in q.chiffres_cles if c.socle is not None]
+    if not declares:
+        return []
+    socle = socle_au_dossier(entries)
+    lus = {c.id: c for c in completer_encadre(declares, [], socle=socle[1] if socle else None)}
+    return [{"id": d.id, "libelle": d.libelle, "unite": d.unite,
+             "valeur": lus[d.id].valeur,
+             "periode_ou_motif": lus[d.id].date_ou_periode or lus[d.id].motif_absence,
+             "piece": socle[0] if socle else None}
+            for d in declares]
+
+
 def contexte_analyste(
     fichier: FrameworksFile,
     framework_id: str,
@@ -447,8 +463,11 @@ def contexte_analyste(
             "chiffres_calcules_par_le_systeme": [
                 {"id": c.id, "libelle": c.libelle,
                  "formule": c.calcul or f"le plus élevé de {', '.join(c.le_plus_eleve_de)}"}
-                for c in q.chiffres_cles if c.calcule_par_le_systeme
+                for c in q.chiffres_cles if c.calcule_par_le_systeme and c.socle is None
             ],
+            # Les chiffres LUS DANS LES COMPTES RECONSTITUÉS (2026-10-04), avec leur valeur : la note
+            # les commente, elle ne les recopie pas — et sa prose ne peut pas en dire un autre.
+            "chiffres_lus_dans_le_socle": chiffres_du_socle(q, entries),
             # Les événements postérieurs aux derniers comptes qui rouvrent CETTE question (#103).
             "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), citables),
             "corpus": [
@@ -601,9 +620,19 @@ def assembler_answer(
     # qf_7 (2026-10-04) : réponse juste (3,94 Md$, 1,22 Md$ sur douze mois), refusée par [P] parce que
     # #723/#733 n'étaient citées QUE dans la lecture du fait. La forme rend l'oubli impossible au lieu
     # de le refuser (#68) ; leur nature et leur rang comptent comme toute citation ([E]/[D] inchangés).
+    # Le SOCLE DES COMPTES (2026-10-04) : un chiffre de l'encadré lu dans les comptes reconstitués
+    # s'appuie sur eux — la pièce entre d'office dans la fondation dès qu'un tel chiffre est établi
+    # (même forme que les faits lus, #113 ter : l'oubli est impossible plutôt que refusé).
+    socle = socle_au_dossier(entries)
+    encadre = completer_encadre(question.chiffres_cles, list(brute.chiffres_cles),
+                                socle=socle[1] if socle else None)
+    lus_au_socle = [c for c in encadre
+                    if c.valeur is not None and any(d.id == c.id and d.socle is not None
+                                                    for d in question.chiffres_cles)]
     cites = list(dict.fromkeys(
         list(brute.cited_entry_ids)
-        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]))  # dédoublonne, ordre conservé
+        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]
+        + ([socle[0]] if socle and lus_au_socle else [])))  # dédoublonne, ordre conservé
     tiers = [_tier_reel(entries.get(i)) for i in cites]
     # Les DEUX axes interrogent leur détenteur unique, aucun n'est recopié ici (#46) : le rang via
     # `_plus_faible` / `derive_synthesis_reliability`, la nature via `nature_effective_de`. Cette
@@ -624,7 +653,7 @@ def assembler_answer(
         # Les chiffres CALCULÉS de l'encadré sont écrits ici, par leur détenteur (#101), jamais par le
         # modèle : une ligne qu'il aurait fournie pour eux est écartée et remplacée par le calcul.
         reponse=Reponse(verbatim=brute.verbatim,
-                        chiffres_cles=completer_encadre(question.chiffres_cles, list(brute.chiffres_cles)),
+                        chiffres_cles=encadre,
                         sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),
         fondation=Fondation(cited_entry_ids=cites, rang_derive=rang, nature_effective=nature),
         approximation=brute.approximation,
@@ -681,6 +710,13 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "le système calcule lui-même à partir de tes lignes (par exemple une différence de deux chiffres "
     "relevés) : tu ne les rends pas, tu ne les calcules pas, et tu n'as pas à citer de source qui les "
     "calcule.\n"
+    "LES COMPTES RECONSTITUÉS. Le corpus peut porter une pièce « Socle des comptes » : le compte de "
+    "résultat, le bilan et les flux de trésorerie de l'entreprise, reconstitués depuis ses dépôts et "
+    "bouclés. `chiffres_lus_dans_le_socle` donne les chiffres de l'encadré que le système LIT dans ces "
+    "comptes, avec leur valeur : tu ne les rends pas ; ta réponse s'appuie sur EUX, exactement — tu ne "
+    "les arrondis pas, tu n'en cites pas un autre pour le même poste. Pour un poste des comptes, cite "
+    "le socle plutôt qu'une source qui en recopie une ligne ; garde les autres sources pour ce que les "
+    "comptes ne disent pas (une échéance, une clause, une prévision de la direction).\n"
     "Forme d'une ligne : {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", "
     "\"valeur\": <nombre lu dans une source citée>, \"date_ou_periode\": \"<ce qu'il mesure>\"} — "
     "ou {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", \"motif_absence\": \"<ce qui "

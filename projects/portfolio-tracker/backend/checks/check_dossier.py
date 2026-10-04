@@ -400,4 +400,49 @@ B.check({355, 356, 357, 716, 717} <= set(D12c.entries) and D12c.plafond_insuffis
         "le plafond ne coupe pas une sœur : elle est porteuse comme la pièce élue (et le plafond "
         "insuffisant est DIT)")
 
+
+print("\n§13 (2026-10-04) le SOCLE DES COMPTES est joint d'office aux frameworks qui le lisent — et à eux seuls")
+import asyncio  # noqa: E402
+from app.agents.v2 import preparation as _P  # noqa: E402
+from app.agents.v2.frameworks import load_frameworks as _lf  # noqa: E402
+from app.knowledge.socle_feed import SocleIndisponible as _SI, SoclePublie as _SP  # noqa: E402
+
+_appels: list = []
+
+
+async def _faits(conn, t, f, fid):
+    return {}
+
+
+async def _socle(conn, t):
+    _appels.append(t)
+    if t == "PANNE":
+        raise _SI("EDGAR injoignable")
+    return _SP(entry_id=4242, statut="a_jour", structure={})
+
+
+async def _dossier(conn, **kw):
+    return kw
+
+
+_vrais = (_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier)
+_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier = _faits, _socle, _dossier
+try:
+    _F = _lf()
+    _qf = asyncio.run(_P.preparer_dossier_analyste(None, ticker_id="RVMD", framework_id="qualite_financiere",
+                                                    fichier=_F, plafond=40))
+    _mo = asyncio.run(_P.preparer_dossier_analyste(None, ticker_id="RVMD", framework_id="defendabilite",
+                                                    fichier=_F, plafond=40))
+    _pa = asyncio.run(_P.preparer_dossier_analyste(None, ticker_id="PANNE", framework_id="qualite_financiere",
+                                                    fichier=_F, plafond=40))
+finally:
+    _P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier = _vrais
+B.check(4242 in list(_qf.dossier["joindre"]) and _qf.socle is not None and _qf.socle.entry_id == 4242,
+        f"la qualité financière reçoit le socle joint d'office (→ joindre={list(_qf.dossier['joindre'])})")
+B.check(4242 not in list(_mo.dossier["joindre"]) and _mo.socle is None and _appels.count("RVMD") == 1,
+        "la défendabilité ne le reçoit pas, et le socle n'est même pas reconstitué pour elle (#108)")
+B.check(_pa.socle is None and _pa.socle_motif and "injoignable" in _pa.socle_motif
+        and list(_pa.dossier["joindre"]) == [],
+        "EDGAR injoignable : le dossier part SANS socle et le motif est rendu, jamais un silence")
+
 sys.exit(B.summary())

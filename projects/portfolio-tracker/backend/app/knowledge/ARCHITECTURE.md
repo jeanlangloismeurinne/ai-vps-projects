@@ -44,6 +44,8 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | `datation.py` | Détenteur unique de la datation d'une pièce : portée fermée (`constatee`/`prospective`/`indatable`), **deux dates nommées** (fait, document), `source_date` DÉRIVÉE (#79). Moitié ÉCRITURE de ce dont `actualite.py` est la moitié LECTURE |
 | `edgar_facts.py` · `synthesis_feed.py` | Extraction EDGAR · synthèses grounded |
 | `appariement_feed.py` | Exécute une formule d'appariement sur les concepts XBRL **déjà lus** — produit un fait calculé, sa provenance concept par concept et son tier dérivé (#72) |
+| `socle_comptes.py` · `socle_comptes.yaml` · `socle_comptes_emetteurs.yaml` | Le **socle des comptes** (#115) : compte de résultat, bilan et flux reconstitués au format maison depuis `companyfacts`, cinq exercices + douze mois glissants + dernier bilan, bouclés (un écart se publie), reclassements d'analyste propres à l'émetteur. Pur ; le gabarit est une DONNÉE |
+| `socle_feed.py` | Publie le socle comme UNE pièce du dossier (`metric = socle_comptes`), versionnée à chaque nouveau dépôt, idempotente ; jointe d'office aux frameworks `lit_le_socle` |
 
 ## Cible → garde (réalisé)
 
@@ -55,6 +57,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Registre : standing par couple (source × nature) | `check_source_registry.py` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
 | Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |
+| Le socle des comptes : périodes lues par leurs détenteurs, recette choisie période par période, un écart de bouclage PUBLIÉ jamais absorbé, jamais de zéro fabriqué, reclassement propre à l'émetteur motivé et sourcé, texte tamponné `mesure` (#115) | `check_socle_comptes.py` + `negatif_socle_comptes.sh` ; la publication (une pièce courante, idempotente, remplacée par un dépôt neuf, jointe au dossier) : `check_socle_persist.py` |
 | Une formule d'appariement s'EXÉCUTE sur le dépôt : 4 refus nommés, ancre commune par cadrage, tier dérivé du déterminisme (#67/#72) | `check_appariement_feed.py` + `negatif_appariement_feed.sh` (le câblage amont est chez `check_collecte_executor.py` §11) |
 | Actualité calculée à la lecture, jamais persistée | `check_actualite.py`, `check_material_events.py` |
 | Une note flash ne remplace que la part `a_qualifier` d'un dépôt ; illisible, elle le laisse rouvert ; l'horloge la reçoit en paramètre REQUIS (#90) | `check_evenements.py` §7 + `negatif_evenements.sh` ; l'agent chez `check_note_flash.py` |

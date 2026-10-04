@@ -87,10 +87,16 @@ check("le contexte ne contient pas `nature_attendue` (idem — c'est la méthode
 
 # ── §3 le contexte est complet ────────────────────────────────────────────────────────────────────
 print("\n[3] le modèle ne peut planifier que ce qu'on lui montre — donc on montre tout le requis")
-_essentiels = {(q.id, i.id) for q in _appl_rt for i in q.ingredients_requis if i.essentiel}
+# Lu dans la DONNÉE (pas via `ingredients_a_collecter`, la règle éprouvée) : un ingrédient repris ou lu
+# dans le socle des comptes ne se planifie pas — il n'a pas à figurer au contexte.
+_essentiels = {(q.id, i.id) for q in _appl_rt for i in q.ingredients_requis
+               if i.essentiel and not i.repris_de and not i.depuis_le_socle}
+_socle_vus = {(q.id, i.id) for q in _appl_rt for i in q.ingredients_requis if i.depuis_le_socle}
 _ctx_couples = {(qq["id"], ii["id"]) for qq in CTX["questions"] for ii in qq["ingredients"]}
 check("tous les ingrédients essentiels des questions applicables figurent au contexte",
       _essentiels <= _ctx_couples, f"→ manquants : {sorted(_essentiels - _ctx_couples)}")
+check("… et AUCUN ingrédient lu dans le socle des comptes (il ne se collecte pas ligne à ligne)",
+      bool(_socle_vus) and not (_socle_vus & _ctx_couples), f"→ {sorted(_socle_vus & _ctx_couples)}")
 check("chaque question porte sa VARIABLE d'archétype (ce que la question devient pour ce type)",
       all(qq.get("variable_archetype") for qq in CTX["questions"]))
 check("le contexte nomme le ticker et la méthodologie (le modèle traduit pour CETTE entreprise)",
