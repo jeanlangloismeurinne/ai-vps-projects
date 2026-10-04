@@ -5946,3 +5946,17 @@ vert pour la bonne raison ; suite 4066/0. Défaut relevé : la prose de 963 dit 
 - #106 vaut aussi pour la défendabilité (mo_* rouvertes par l'approbation FDA LUE) : le 8-K du 26/08 sera
   lu et joint à la prochaine chaîne `defendabilite`.
 
+
+## 2026-10-04 (2) — #115, le socle des comptes
+
+Question de l'utilisateur pendant #114 : « toutes les questions financières devraient s'intégrer à un P&L
+reconstitué qui s'interface avec la valorisation ». Arbitrage du jour : « réalise le socle commun des comptes
+avant de poursuivre de RVMD vers NVDA ». Mesuré AVANT tout branchement, gratuitement (`tools/montrer_socle.sh`) :
+RVMD 18 contrôles, NVDA 24, MSFT 20 — un seul écart, l'effet de change MSFT (concept non lu, −141 à −210 M$/an),
+corrigé dans le gabarit ; le solde « autres passifs non courants » RVMD (737,8 M$) a révélé la dette Royalty
+Pharma (548,5 M$) que qf_4 #1156 ignorait. Trois questions posées : « repris du socle » choisi ; Royalty Pharma
+et capital employé renvoyés par l'utilisateur à la pratique d'un fonds (conventions maison, pas votes du
+comité) — dette retenue, capital employé proposé. Branchement : contrat (`lit_le_socle`, `depuis_le_socle`,
+`ChiffreCleDeclare.socle`), pont [U], `completer_encadre(socle=)`, jointure dans `preparation`, prompt de
+l'analyste. Deux mutations de `negatif_frameworks_definitions.sh` étaient caduques depuis #114 (qf_8) :
+réparées. Déployé `2837d08` ; réémission RVMD qf_4 #1176 / qf_7 #1177, 0 refus, relues contre les pièces.

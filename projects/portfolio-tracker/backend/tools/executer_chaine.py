@@ -153,6 +153,14 @@ async def main() -> int:
                 plafond=PLAFOND, questions=perimetre)
         dossier, faits = prepare.dossier, prepare.faits
         ecrits["lectures_de_depots"] = [x.entry_id for x in prepare.lectures if x.ecrite]
+        # Le socle des comptes (#115) : une pièce publiée est un ÉCRIT (clef de retrait, #78) ; une pièce
+        # « à jour » n'en est pas un ; un socle indisponible est DIT, jamais tu.
+        if prepare.socle is not None:
+            ecrits["socle_des_comptes"] = ([prepare.socle.entry_id] if prepare.socle.statut == "publie" else [])
+            print(f"  socle des comptes : pièce #{prepare.socle.entry_id} ({prepare.socle.statut}"
+                  + (f", remplace {list(prepare.socle.remplace)}" if prepare.socle.remplace else "") + ")")
+        elif prepare.socle_motif:
+            print(f"  ⚠️ socle des comptes NON joint : {prepare.socle_motif}")
         for ligne in resume_des_lectures(prepare.lectures):
             print(ligne)
         entries = dossier.entries
