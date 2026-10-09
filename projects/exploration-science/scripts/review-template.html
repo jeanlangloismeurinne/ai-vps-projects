@@ -1,0 +1,749 @@
+<title>Revue des scènes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: sticky control bar (node, level), tab strip, one reading column of cards. */
+:root {
+  --paper: #f3f5f8;
+  --surface: #ffffff;
+  --sunk: #e9edf2;
+  --ink: #17202b;
+  --muted: #5a6677;
+  --line: #d7dde5;
+  --accent: #b87400;
+  --accent-ink: #1b1300;
+  --accent-soft: #fdf0d4;
+  --ok: #1d7446; --ok-soft: #dcf1e4;
+  --info: #2a5fb0; --info-soft: #e0eafa;
+  --warn: #9a5c00; --warn-soft: #fbecd2;
+  --bad: #ad2a20; --bad-soft: #fbe2df;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1218; --surface: #151c25; --sunk: #1b2430; --ink: #e5eaf0; --muted: #94a1b2; --line: #273241;
+    --accent: #ffb000; --accent-ink: #1b1300; --accent-soft: #33280f;
+    --ok: #62cb8f; --ok-soft: #173426; --info: #84aef2; --info-soft: #1a2a45;
+    --warn: #f2b65a; --warn-soft: #3a2c12; --bad: #f2897e; --bad-soft: #3e1d1a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1218; --surface: #151c25; --sunk: #1b2430; --ink: #e5eaf0; --muted: #94a1b2; --line: #273241;
+  --accent: #ffb000; --accent-ink: #1b1300; --accent-soft: #33280f;
+  --ok: #62cb8f; --ok-soft: #173426; --info: #84aef2; --info-soft: #1a2a45;
+  --warn: #f2b65a; --warn-soft: #3a2c12; --bad: #f2897e; --bad-soft: #3e1d1a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 1.35rem; font-weight: 700; }
+h2 { font-size: 1.3rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+a { color: var(--info); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 12px 8px; }
+.brand { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.brand small { color: var(--muted); font-size: 0.8rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.control { display: flex; align-items: center; gap: 8px; }
+.control > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.seg { display: inline-flex; background: var(--sunk); border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 6px; cursor: pointer; font-size: 0.88rem; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs button { border: 0; background: none; padding: 9px 12px 10px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; font-size: 0.92rem; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+main { padding-block: 20px 60px; display: flex; flex-direction: column; gap: 18px; }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.section { display: flex; flex-direction: column; gap: 12px; }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.section-head .meta { color: var(--muted); font-size: 0.88rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.chip.accent { background: var(--accent-soft); color: var(--warn); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.info { background: var(--info-soft); color: var(--info); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.id { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius); font-size: 0.9rem; }
+.banner.ok { background: var(--ok-soft); color: var(--ok); }
+.banner.bad { background: var(--bad-soft); color: var(--bad); }
+.banner ul { margin: 4px 0 0; padding-left: 18px; }
+
+/* Storyboard */
+.timeline { display: flex; height: 30px; border-radius: 8px; overflow: hidden; gap: 2px; background: var(--line); }
+.timeline button { border: 0; background: var(--sunk); cursor: pointer; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); min-width: 0; overflow: hidden; }
+.timeline button:hover, .timeline button.on { background: var(--accent-soft); color: var(--warn); }
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step { display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 0.9fr); gap: 14px 18px; }
+.step-num { display: flex; flex-direction: column; gap: 2px; }
+.step-num b { font-family: var(--display); font-size: 1.6rem; line-height: 1; color: var(--accent); }
+.step-num .t { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.say { font-size: 1.02rem; line-height: 1.55; margin: 0; max-width: 62ch; }
+.say-meta { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.say-meta .warn { color: var(--warn); font-weight: 600; }
+.formula { margin-top: 8px; padding: 8px 12px; background: var(--sunk); border-radius: 8px; overflow-x: auto; font-size: 1.1rem; }
+.formula math { font-size: 1.1em; }
+.direction { display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem; border-left: 1px solid var(--line); padding-left: 16px; }
+.direction h4 { margin: 0 0 2px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.direction ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.direction li::before { content: "›"; color: var(--accent); margin-right: 6px; font-weight: 700; }
+.step:target, .step.flash { outline: 2px solid var(--accent); }
+
+/* Texts */
+.tgroup { display: flex; flex-direction: column; gap: 0; }
+.trow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.trow:first-of-type { border-top: 0; }
+.tkey { grid-column: 1 / -1; padding: 10px 0 2px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tcell { padding: 4px 14px 12px 0; font-size: 0.92rem; min-width: 0; }
+.tcell.inherited { color: var(--muted); }
+.tcell.current { background: linear-gradient(var(--accent-soft), var(--accent-soft)) no-repeat left top / 3px 100%; padding-left: 10px; }
+.thead { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+
+/* Tables */
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+
+details.entity { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+details.entity > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+details.entity > summary::-webkit-details-marker { display: none; }
+details.entity > summary::before { content: "▸"; color: var(--muted); width: 10px; }
+details.entity[open] > summary::before { content: "▾"; }
+details.entity .body { padding: 0 14px 14px 34px; display: flex; flex-direction: column; gap: 10px; }
+.child { margin-left: 26px; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; font-size: 0.88rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; border: 1px solid var(--line); margin-right: 4px; }
+
+.check { color: var(--ok); font-weight: 600; }
+.dash { color: var(--line); }
+
+/* Format reference */
+.schema-tree { font-size: 0.88rem; }
+.schema-tree .f { display: grid; grid-template-columns: minmax(150px, max-content) minmax(0, 1fr); gap: 2px 16px; padding: 6px 0; border-top: 1px solid var(--line); }
+.schema-tree .f:first-child { border-top: 0; }
+.schema-tree .name { font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; }
+.schema-tree .name .req { color: var(--accent); }
+.schema-tree .type { font-family: var(--mono); font-size: 0.75rem; color: var(--info); }
+.schema-tree .fr { margin: 2px 0 0; }
+.schema-tree .en { color: var(--muted); font-size: 0.8rem; margin: 2px 0 0; }
+.schema-tree .nest { grid-column: 1 / -1; margin-left: 18px; border-left: 2px solid var(--sunk); padding-left: 12px; }
+.variant { margin-top: 6px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+footer { color: var(--muted); font-size: 0.8rem; }
+
+@media (max-width: 760px) {
+  .step { grid-template-columns: minmax(0, 1fr); }
+  .step-num { flex-direction: row; align-items: baseline; gap: 10px; }
+  .direction { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 10px; }
+  .trow, .thead { grid-template-columns: minmax(0, 1fr); }
+  .thead { display: none; }
+  .tcell::before { content: attr(data-level); display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .schema-tree .f { grid-template-columns: minmax(0, 1fr); }
+  details.entity .body { padding-left: 14px; }
+  .child { margin-left: 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .step { transition: outline-color 0.3s; }
+}
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="bar-top">
+      <div class="brand">
+        <h1>Revue des scènes</h1>
+        <small id="build-info"></small>
+      </div>
+      <div class="controls">
+        <div class="control"><span>Nœud</span><div class="seg" id="node-seg" role="group" aria-label="Nœud"></div></div>
+        <div class="control"><span>Niveau</span><div class="seg" id="level-seg" role="group" aria-label="Niveau d'explication"></div></div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Vues"></nav>
+  </div>
+</header>
+<main class="wrap" id="view"></main>
+<footer class="wrap" id="foot"></footer>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const LEVELS = [
+  { id: "discovery", fr: "Découverte" },
+  { id: "essential", fr: "Essentiel" },
+  { id: "advanced", fr: "Approfondi" },
+];
+const TABS = [
+  { id: "visite", fr: "Visite guidée" },
+  { id: "textes", fr: "Textes par niveau" },
+  { id: "scene", fr: "Scène" },
+  { id: "physique", fr: "Simulation et curseurs" },
+  { id: "sources", fr: "Sources" },
+  { id: "catalogue", fr: "Catalogue" },
+  { id: "format", fr: "Format" },
+];
+const NODE_NAMES = { "starlink-terminal": "Terminal Starlink", "blue-sky": "Ciel bleu" };
+// Speech pace used to check that a step's text fits its duration (French narration ~150 words/min).
+const WPM_MAX = 175;
+const ORDER = Object.keys(NODE_NAMES);
+DATA.nodes.sort((a, b) => (ORDER.indexOf(a.dir) + 1 || 99) - (ORDER.indexOf(b.dir) + 1 || 99));
+
+const store = {
+  get(k, d) { try { return localStorage.getItem("review." + k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("review." + k, v); } catch {} },
+};
+const hashTab = location.hash.slice(1);
+const state = {
+  node: store.get("node", DATA.nodes[0].dir),
+  level: store.get("level", "essential"),
+  tab: TABS.some((t) => t.id === hashTab) ? hashTab : store.get("tab", "visite"),
+};
+if (!DATA.nodes.some((n) => n.dir === state.node)) state.node = DATA.nodes[0].dir;
+
+const h = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const node = () => DATA.nodes.find((n) => n.dir === state.node);
+const texts = () => node().texts.fr;
+const levelFr = (id) => LEVELS.find((l) => l.id === id)?.fr ?? id;
+const cat = (kind, id) => DATA.catalogue[kind].find((e) => e.id === id);
+
+function resolve(key, level = state.level) {
+  const t = texts();
+  if (key in t.levels[level]) return { value: t.levels[level][key], inherited: false };
+  if (key in t.common) return { value: t.common[key], inherited: true };
+  return { value: undefined, inherited: false };
+}
+const plain = (entry) => (entry === undefined ? "" : typeof entry === "string" ? entry : entry.text);
+const formulaOf = (entry) => (entry && typeof entry === "object" ? entry.formula : undefined);
+const mathml = (tex) => `<div class="formula">${DATA.formulas[tex] ?? h(tex)}</div>`;
+
+const entityById = (id) => node().scene.entities.find((e) => e.id === id);
+function entityName(id, level) {
+  const e = entityById(id);
+  if (!e) return id;
+  return e.labelKey ? plain(resolve(e.labelKey, level).value) || id : id;
+}
+function entityRef(id) {
+  const e = entityById(id);
+  const named = e?.labelKey;
+  return named ? `<span title="${h(id)}">${h(entityName(id))}</span>` : `<span class="mono">${h(id)}</span>`;
+}
+
+function fmtDuration(s) {
+  const m = Math.floor(s / 60), r = Math.round(s % 60);
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+function fmtNum(v, digits = 3) {
+  return Number(v).toLocaleString("fr-FR", { maximumSignificantDigits: digits });
+}
+function fmtQty(v, unit, metersPerUnit = 1) {
+  if (typeof v !== "number") return h(v);
+  switch (unit) {
+    case "Hz": return v >= 1e9 ? `${fmtNum(v / 1e9)} GHz` : v >= 1e6 ? `${fmtNum(v / 1e6)} MHz` : `${fmtNum(v)} Hz`;
+    case "m": return v >= 1000 ? `${fmtNum(v / 1000)} km` : v < 0.01 ? `${fmtNum(v * 1000)} mm` : v < 1 ? `${fmtNum(v * 100)} cm` : `${fmtNum(v)} m`;
+    case "scene": return `${fmtNum(v)} u. <span class="muted">(${fmtQty(v * metersPerUnit, "m")})</span>`;
+    case "deg": return `${fmtNum(v)}°`;
+    case "1": case undefined: return fmtNum(v, 4);
+    default: return `${fmtNum(v)} ${h(unit)}`;
+  }
+}
+const fmtVal = (v, unit) => (typeof v === "boolean" ? (v ? "oui" : "non") : typeof v === "string" ? `<span class="mono">${h(v)}</span>` : fmtQty(v, unit, node().scene.scale.metersPerUnit));
+function fmtRange(spec) {
+  if (spec.enum) return spec.enum.map((v) => `<span class="mono">${h(v)}</span>`).join(" · ");
+  if (spec.minimum === undefined && spec.maximum === undefined) return '<span class="dash">—</span>';
+  return `${spec.minimum !== undefined ? fmtQty(spec.minimum, spec["x-unit"]) : "…"} → ${spec.maximum !== undefined ? fmtQty(spec.maximum, spec["x-unit"]) : "…"}`;
+}
+const wordCount = (s) => (s.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) ?? []).length;
+
+function paramLabel(simId, param) {
+  for (const lens of node().scene.lenses ?? []) {
+    const c = lens.controls.find((c) => c.target === simId && c.param === param);
+    if (c) return `« ${h(plain(resolve(c.labelKey).value))} »`;
+  }
+  return `<span class="mono">${h(param)}</span>`;
+}
+function simParamSpec(simId, param) {
+  const inst = node().scene.simulators?.find((s) => s.id === simId);
+  return inst && cat("simulators", inst.simulator)?.params.properties[param];
+}
+function lensName(id) {
+  const l = node().scene.lenses?.find((l) => l.id === id);
+  return l?.labelKey ? plain(resolve(l.labelKey).value) : id;
+}
+const list = (ids) => ids.map(entityRef).join(", ");
+
+function describeAction(a) {
+  switch (a.type) {
+    case "highlight": return `Met en surbrillance : ${list(a.targets)}`;
+    case "label": return `Affiche les étiquettes : ${list(a.targets)}`;
+    case "show": return `Fait apparaître : ${list(a.targets)}`;
+    case "hide": return `Fait disparaître : ${list(a.targets)}`;
+    case "reveal":
+      return a.mode === "none" ? `Referme ${entityRef(a.target)}` : `${a.mode === "cutaway" ? "Vue en coupe" : "Vue éclatée"} de ${entityRef(a.target)}`;
+    case "lens": return `${a.on ? "Active" : "Désactive"} la lentille ${h(lensName(a.lens))}`;
+    case "timeScale": return a.value === 1 ? "Temps réel" : `Accélère le temps ×${fmtNum(a.value)}`;
+    case "setParam": {
+      const spec = simParamSpec(a.target, a.param);
+      const value = spec?.["x-ref"] === "entity" ? entityRef(a.value) : fmtVal(a.value, spec?.["x-unit"]);
+      return `Règle ${paramLabel(a.target, a.param)} sur ${value}${a.overS ? ` <span class="muted">(en ${fmtNum(a.overS)} s)</span>` : ""}`;
+    }
+    default: return h(JSON.stringify(a));
+  }
+}
+function describeShot(shot, transitionS) {
+  const mpu = node().scene.scale.metersPerUnit;
+  return `${entityRef(shot.target)} · azimut ${fmtNum(shot.azimuthDeg)}° · élévation ${fmtNum(shot.elevationDeg)}° · à ${fmtQty(shot.distance * mpu, "m")}` +
+    (transitionS !== undefined ? ` <span class="muted">· transition ${fmtNum(transitionS)} s</span>` : "");
+}
+
+// ---------- Views ----------
+
+function viewTour() {
+  const scene = node().scene;
+  const out = [`<p class="lede">Le déroulé tel que le moteur le jouera : texte lu à voix haute au niveau <b>${levelFr(state.level)}</b>, mouvement de caméra et actions de chaque étape. Changez de niveau en haut : la mise en scène reste la même, seul le texte change.</p>`];
+  for (const tour of scene.tours) {
+    const total = tour.steps.reduce((s, x) => s + x.durationS, 0);
+    const title = tour.autoStart ? "Visite d'arrivée" : tour.id === "main" ? "Play" : tour.id;
+    const kind = tour.autoStart ? '<span class="chip accent">se lance à l\'arrivée</span>' : '<span class="chip">à la demande</span>';
+    let t = 0;
+    const bar = tour.steps.map((s, i) => `<button style="flex:${s.durationS}" data-jump="${tour.id}-${s.id}" title="${h(s.id)} · ${s.durationS} s">${i + 1}</button>`).join("");
+    const cards = tour.steps.map((s, i) => {
+      const start = t; t += s.durationS;
+      const entry = resolve(s.textKey).value;
+      const say = plain(entry);
+      const words = wordCount(say);
+      const wpm = Math.round(words / (s.durationS / 60));
+      const formula = formulaOf(entry);
+      const actions = (s.actions ?? []).map((a) => `<li>${describeAction(a)}</li>`).join("");
+      return `<article class="card step" id="${tour.id}-${s.id}">
+        <div class="step-num"><b>${i + 1}</b><span class="t">${fmtDuration(start)} → ${fmtDuration(t)}</span><span class="id">${h(s.id)}</span></div>
+        <div class="stack">
+          <p class="say">${h(say) || '<span class="muted">(texte manquant)</span>'}</p>
+          ${formula ? mathml(formula) : ""}
+          <div class="say-meta">${words} mots en ${s.durationS} s · <span class="${wpm > WPM_MAX ? "warn" : ""}">${wpm} mots/min${wpm > WPM_MAX ? " — trop dense pour être lu dans la durée" : ""}</span> · <span class="mono">${h(s.textKey)}</span></div>
+        </div>
+        <div class="direction">
+          ${s.camera ? `<div><h4>Caméra</h4>${describeShot(s.camera.shot, s.camera.transitionS)}</div>` : '<div><h4>Caméra</h4><span class="muted">inchangée</span></div>'}
+          <div><h4>Actions</h4>${actions ? `<ul>${actions}</ul>` : '<span class="muted">aucune</span>'}</div>
+        </div>
+      </article>`;
+    }).join("");
+    out.push(`<section class="section">
+      <div class="section-head"><h2>${h(title)}</h2>${kind}<span class="meta">${tour.steps.length} étapes · ${fmtDuration(total)}</span></div>
+      <div class="timeline" aria-label="Durée relative des étapes">${bar}</div>
+      <div class="steps">${cards}</div>
+    </section>`);
+  }
+  return out.join("");
+}
+
+function textGroups() {
+  const scene = node().scene;
+  const groups = [];
+  for (const tour of scene.tours) {
+    groups.push({ title: tour.autoStart ? "Visite d'arrivée" : tour.id === "main" ? "Play" : tour.id, keys: tour.steps.map((s) => [s.textKey, `Étape ${tour.steps.indexOf(s) + 1}`]) });
+  }
+  const ent = [];
+  for (const e of scene.entities) {
+    if (e.labelKey) ent.push([e.labelKey, "Étiquette"]);
+    if (e.descriptionKey) ent.push([e.descriptionKey, "Description au clic"]);
+  }
+  groups.push({ title: "Objets de la scène", keys: ent });
+  const ui = [];
+  for (const l of scene.lenses ?? []) {
+    if (l.labelKey) ui.push([l.labelKey, "Lentille"]);
+    for (const c of l.controls) ui.push([c.labelKey, "Curseur"]);
+  }
+  groups.push({ title: "Lentilles et curseurs", keys: ui });
+  for (const g of groups) {
+    const seen = new Set();
+    g.keys = g.keys.filter(([k]) => !seen.has(k) && seen.add(k));
+  }
+  return groups;
+}
+
+function viewTexts() {
+  const t = texts();
+  const head = `<div class="thead">${LEVELS.map((l) => `<div>${l.fr}</div>`).join("")}</div>`;
+  const groups = textGroups().map((g) => {
+    const rows = g.keys.map(([key, role]) => {
+      const cells = LEVELS.map((l) => {
+        const r = resolve(key, l.id);
+        const f = formulaOf(r.value);
+        return `<div class="tcell ${r.inherited ? "inherited" : ""} ${l.id === state.level ? "current" : ""}" data-level="${l.fr}">${h(plain(r.value)) || '<span class="chip bad">manquant</span>'}${r.inherited ? ' <span class="chip">commun</span>' : ""}${f ? mathml(f) : ""}</div>`;
+      }).join("");
+      return `<div class="trow"><div class="tkey"><b class="small">${h(role)}</b><span class="id">${h(key)}</span></div>${cells}</div>`;
+    }).join("");
+    return `<section class="section"><div class="section-head"><h2>${h(g.title)}</h2><span class="meta">${g.keys.length} textes</span></div><div class="card tgroup">${head}${rows}</div></section>`;
+  }).join("");
+  const aliases = (t.aliases ?? []).map((a) => `<li>${h(a)}</li>`).join("");
+  return `<p class="lede">Chaque texte du nœud sur les trois niveaux, côte à côte. Un texte grisé marqué <span class="chip">commun</span> n'est pas écrit pour ce niveau : il est repris de la partie commune.</p>
+    <div class="card"><div class="kv"><dt>Question d'origine</dt><dd><b>${h(t.question)}</b></dd><dt>Autres formulations</dt><dd>${aliases ? `<ul style="margin:0;padding-left:18px">${aliases}</ul>` : '<span class="muted">aucune</span>'}</dd></div></div>
+    ${groups}`;
+}
+
+function paramsTable(plugin, values, { showUnset = false } = {}) {
+  const props = plugin.params.properties;
+  const names = Object.keys(props).filter((n) => showUnset || n in values);
+  if (!names.length) return '<p class="muted small">Aucun paramètre.</p>';
+  const rows = names.map((n) => {
+    const spec = props[n];
+    const set = n in values;
+    const v = set ? values[n] : spec.default;
+    const shown = spec["x-ref"] === "entity" && set ? entityRef(v) : v === undefined ? '<span class="dash">—</span>' : fmtVal(v, spec["x-unit"]);
+    return `<tr><td class="mono">${h(n)}${(plugin.params.required ?? []).includes(n) ? '<span style="color:var(--accent)">*</span>' : ""}</td>
+      <td class="num">${shown}${!set && v !== undefined ? ' <span class="chip">défaut</span>' : ""}</td>
+      <td class="num">${fmtRange(spec)}</td>
+      <td class="muted">${h(spec.description)}${spec["x-alternativeTo"] ? ` <span class="chip info">alternative à ${h(spec["x-alternativeTo"])}</span>` : ""}</td></tr>`;
+  }).join("");
+  return `<div class="tablebox"><table><thead><tr><th>Paramètre</th><th>Valeur</th><th>Plage valide</th><th>Rôle</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+const LINK_FR = { composedOf: "Plonger vers", reliesOn: "Repose sur le principe", freeQuestion: "Question libre", derivedFrom: "Dérivé de" };
+
+function viewScene() {
+  const scene = node().scene;
+  const n = scene.node;
+  const mpu = scene.scale.metersPerUnit;
+  const cam = scene.camera;
+  const summary = `<div class="grid2">
+    <div class="card"><h3>Nœud</h3><dl class="kv" style="margin-top:8px">
+      <dt>Identifiant</dt><dd class="mono">${h(n.id)}</dd>
+      <dt>Type</dt><dd>${n.kind === "system" ? "Système" : "Principe"}</dd>
+      <dt>Version</dt><dd>${n.version} · <span class="chip ${n.status === "published" ? "ok" : "warn"}">${{ draft: "brouillon", review: "à revoir", published: "publié" }[n.status]}</span></dd>
+      <dt>Parent</dt><dd>${n.parent ? `<span class="mono">${h(n.parent.node)}</span> → <span class="mono">${h(n.parent.entity)}</span>` : '<span class="muted">aucun (nœud racine)</span>'}</dd>
+      <dt>Wikidata</dt><dd>${n.wikidata ? h(n.wikidata) : '<span class="muted">—</span>'}</dd>
+    </dl></div>
+    <div class="card"><h3>Monde</h3><dl class="kv" style="margin-top:8px">
+      <dt>Échelle</dt><dd>1 unité = ${fmtQty(mpu, "m")}</dd>
+      <dt>Éclairage</dt><dd>${h({ daylight: "plein jour", dusk: "crépuscule", space: "espace", studio: "studio" }[scene.environment.lighting])}</dd>
+      <dt>Fond</dt><dd><span class="swatch" style="background:${h(scene.environment.background)}"></span><span class="mono">${h(scene.environment.background)}</span></dd>
+      <dt>Style</dt><dd>${scene.style ? `<span class="mono">${h(scene.style.theme)}</span>${scene.style.accent ? ` · <span class="swatch" style="background:${h(scene.style.accent)}"></span><span class="mono">${h(scene.style.accent)}</span>` : ""}` : '<span class="muted">hérité du parent</span>'}</dd>
+      <dt>Budget</dt><dd>${scene.performance?.triangleBudget ? `${fmtNum(scene.performance.triangleBudget, 6)} triangles` : '<span class="muted">—</span>'}</dd>
+      <dt>Temps</dt><dd>${scene.clock ? `×${fmtNum(scene.clock.timeScale)}` : "temps réel"}</dd>
+    </dl></div>
+    <div class="card"><h3>Caméra</h3><dl class="kv" style="margin-top:8px">
+      <dt>Position d'accueil</dt><dd>${describeShot(cam.home)}</dd>
+      <dt>Distance</dt><dd>${fmtQty(cam.constraints.minDistance * mpu, "m")} → ${fmtQty(cam.constraints.maxDistance * mpu, "m")}</dd>
+      <dt>Élévation</dt><dd>${cam.constraints.minElevationDeg ?? -90}° → ${cam.constraints.maxElevationDeg ?? 90}°</dd>
+      <dt>Mode</dt><dd>orbite autour de la cible, pas de vol libre</dd>
+    </dl></div>
+  </div>`;
+
+  const children = new Map();
+  for (const e of scene.entities) {
+    const p = e.parent ?? "";
+    if (!children.has(p)) children.set(p, []);
+    children.get(p).push(e);
+  }
+  const linksFrom = (id) => (scene.links ?? []).filter((l) => l.from === id);
+  const renderEntity = (e, depth) => {
+    const comp = cat("components", e.component);
+    const flags = [
+      e.selectable ? '<span class="chip info">cliquable</span>' : "",
+      e.notToScale ? '<span class="chip warn">pas à l\'échelle</span>' : "",
+      e.visible === false ? '<span class="chip">masqué au départ</span>' : "",
+      ...linksFrom(e.id).filter((l) => l.kind === "composedOf").map((l) => `<span class="chip accent">plonge vers ${h(l.to)}</span>`),
+    ].join("");
+    const desc = e.descriptionKey ? plain(resolve(e.descriptionKey).value) : "";
+    const tf = e.transform;
+    const links = linksFrom(e.id).map((l) => `<li>${LINK_FR[l.kind]} <span class="mono">${h(l.to)}</span> ${l.available ? '<span class="chip ok">écrit</span>' : '<span class="chip">à écrire</span>'}</li>`).join("");
+    const kids = (children.get(e.id) ?? []).map((c) => renderEntity(c, depth + 1)).join("");
+    return `<details class="entity ${depth ? "child" : ""}">
+      <summary><b>${h(entityName(e.id))}</b><span class="id">${h(e.id)}</span><span class="chip">${h(e.component)}</span>${flags}</summary>
+      <div class="body">
+        ${desc ? `<p style="margin:0">${h(desc)}</p>` : ""}
+        <dl class="kv"><dt>Position</dt><dd class="mono">[${tf.position.map((v) => fmtNum(v, 4)).join(", ")}]${e.parent ? ` <span class="muted">relative à ${entityRef(e.parent)}</span>` : ""}</dd>
+          ${tf.rotationDeg ? `<dt>Rotation</dt><dd class="mono">[${tf.rotationDeg.join("°, ")}°]</dd>` : ""}
+          ${tf.scale ? `<dt>Échelle</dt><dd>×${fmtNum(tf.scale)}</dd>` : ""}
+          ${comp?.capabilities?.length ? `<dt>Sait faire</dt><dd>${comp.capabilities.map((c) => `<span class="chip">${{ cutaway: "vue en coupe", explode: "vue éclatée", lod: "niveaux de détail" }[c]}</span>`).join(" ")}</dd>` : ""}
+        </dl>
+        ${comp ? paramsTable(comp, e.params) : '<p class="chip bad">composant inconnu</p>'}
+        ${links ? `<ul class="small" style="margin:0;padding-left:18px">${links}</ul>` : ""}
+      </div>
+      ${kids ? `<div class="stack" style="padding:0 10px 10px">${kids}</div>` : ""}
+    </details>`;
+  };
+  const tree = (children.get("") ?? []).map((e) => renderEntity(e, 0)).join("");
+
+  const linkRows = (scene.links ?? []).map((l) => `<tr><td>${LINK_FR[l.kind]}</td><td>${l.from ? entityRef(l.from) : '<span class="muted">tout le nœud</span>'}</td><td class="mono">${h(l.to)}</td><td>${l.available ? '<span class="chip ok">écrit</span>' : '<span class="chip">à écrire</span>'}</td></tr>`).join("");
+
+  return `<p class="lede">Ce que le moteur affichera : les objets, leur hiérarchie (un enfant est placé par rapport à son parent), leurs paramètres et les liens vers d'autres nœuds. Cliquez un objet pour le déplier.</p>
+    ${summary}
+    <section class="section"><div class="section-head"><h2>Objets</h2><span class="meta">${scene.entities.length} objets · ${scene.entities.filter((e) => e.selectable).length} cliquables</span></div><div class="stack">${tree}</div></section>
+    <section class="section"><div class="section-head"><h2>Liens vers d'autres nœuds</h2></div><div class="card tablebox"><table><thead><tr><th>Lien</th><th>Depuis</th><th>Vers</th><th>État</th></tr></thead><tbody>${linkRows}</tbody></table></div></section>`;
+}
+
+function viewPhysics() {
+  const scene = node().scene;
+  const sims = (scene.simulators ?? []).map((s) => {
+    const plugin = cat("simulators", s.simulator);
+    const binds = Object.entries(s.bind).map(([role, v]) => `<dt class="mono">${h(role)}</dt><dd>${list([].concat(v))}</dd>`).join("");
+    return `<article class="card stack">
+      <div class="row"><h3>${h(s.id)}</h3><span class="chip">${h(s.simulator)}</span></div>
+      <p class="muted small" style="margin:0">${h(plugin?.description)}</p>
+      ${(plugin?.equations ?? []).map(mathml).join("")}
+      <div><h4 class="small muted" style="margin:6px 0 4px">Agit sur</h4><dl class="kv">${binds}</dl></div>
+      ${plugin ? paramsTable(plugin, s.params, { showUnset: true }) : ""}
+    </article>`;
+  }).join("");
+  const lenses = (scene.lenses ?? []).map((l) => {
+    const plugin = cat("lenses", l.lens);
+    const rows = l.controls.map((c) => {
+      const spec = simParamSpec(c.target, c.param) ?? {};
+      const unit = spec["x-unit"];
+      const cells = LEVELS.map((lv) => c.levels.includes(lv.id) ? `<td><span class="check">✓</span> ${h(plain(resolve(c.labelKey, lv.id).value))}</td>` : '<td><span class="dash">—</span></td>').join("");
+      return `<tr><td class="mono">${h(c.target)}.${h(c.param)}</td><td class="num">${fmtQty(c.min ?? spec.minimum, unit)} → ${fmtQty(c.max ?? spec.maximum, unit)}<div class="muted small">catalogue : ${fmtRange(spec)}</div></td>${cells}</tr>`;
+    }).join("");
+    return `<article class="card stack">
+      <div class="row"><h3>Lentille ${h(lensName(l.id))}</h3><span class="chip">${h(l.lens)}</span><span class="muted small">affiche : ${l.sources.map((s) => `<span class="mono">${h(s)}</span>`).join(", ")}</span></div>
+      <p class="muted small" style="margin:0">${h(plugin?.description)}</p>
+      <div class="tablebox"><table><thead><tr><th>Paramètre piloté</th><th>Course du curseur</th>${LEVELS.map((lv) => `<th>${lv.fr}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+    </article>`;
+  }).join("");
+  return `<p class="lede">La simulation est la même pour les trois niveaux. Ce qui change, c'est la liste des curseurs exposés et leur nom : le tableau des lentilles montre, pour chaque niveau, quels curseurs l'utilisateur voit et sous quel libellé.</p>
+    <section class="section"><div class="section-head"><h2>Lentilles et curseurs</h2></div>${lenses || '<p class="muted">Aucune lentille.</p>'}</section>
+    <section class="section"><div class="section-head"><h2>Simulateurs</h2><span class="meta">calculés à partir des équations, jamais dessinés</span></div>${sims || '<p class="muted">Aucun simulateur.</p>'}</section>`;
+}
+
+const STATUS_FR = {
+  verified: ["vérifié", "ok"],
+  computed: ["calculé", "info"],
+  "order-of-magnitude": ["ordre de grandeur", "warn"],
+  unverified: ["non vérifié", "bad"],
+};
+function viewSources() {
+  const src = node().sources;
+  const byId = Object.fromEntries(src.sources.map((s) => [s.id, s]));
+  const counts = Object.keys(STATUS_FR).map((k) => [k, src.facts.filter((f) => f.status === k).length]);
+  const facts = src.facts.map((f) => {
+    const [label, tone] = STATUS_FR[f.status];
+    const refs = f.sources.map((id) => byId[id] ? `<li><a href="${h(byId[id].url)}" target="_blank" rel="noopener">${h(byId[id].title)}</a> <span class="muted">· ${h(byId[id].publisher ?? "")}</span> ${byId[id].access === "opened" ? '<span class="chip ok">page ouverte</span>' : '<span class="chip">vue en recherche</span>'}</li>` : `<li class="chip bad">${h(id)} inconnue</li>`).join("");
+    const value = f.value !== undefined ? (typeof f.value === "number" ? fmtQty(f.value, f.unit) : h(f.value) + (f.unit ? " " + h(f.unit) : "")) : "";
+    return `<article class="card stack">
+      <div class="row"><span class="chip ${tone}">${label}</span>${value ? `<b class="num">${value}</b>` : ""}<span class="id">${h(f.id)}</span></div>
+      <p style="margin:0">${h(f.claim)}</p>
+      ${f.formula ? `<p class="mono small muted" style="margin:0">${h(f.formula)}</p>` : ""}
+      ${f.note ? `<p class="small" style="margin:0"><b>Note :</b> ${h(f.note)}</p>` : ""}
+      ${refs ? `<ul class="small" style="margin:0;padding-left:18px">${refs}</ul>` : '<p class="small muted" style="margin:0">Pas de source externe.</p>'}
+      ${f.usedBy?.length ? `<div class="row small muted">Utilisé par ${f.usedBy.map((u) => `<span class="mono">${h(u)}</span>`).join(" · ")}</div>` : ""}
+    </article>`;
+  }).join("");
+  return `<p class="lede">Chaque chiffre du nœud, avec son statut. Un chiffre <span class="chip bad">non vérifié</span> ne doit pas être énoncé comme précis dans les textes. Les liens s'ouvrent dans un nouvel onglet.</p>
+    <div class="row">${counts.map(([k, n]) => `<span class="chip ${STATUS_FR[k][1]}">${n} ${STATUS_FR[k][0]}</span>`).join("")}<span class="muted small">${src.sources.length} pages citées</span></div>
+    <div class="stack">${facts}</div>`;
+}
+
+function usedBy(kind, id) {
+  const field = { components: "entities", simulators: "simulators", lenses: "lenses" }[kind];
+  const key = { components: "component", simulators: "simulator", lenses: "lens" }[kind];
+  return DATA.nodes.filter((n) => (n.scene[field] ?? []).some((x) => x[key] === id)).map((n) => NODE_NAMES[n.dir] ?? n.dir);
+}
+function viewCatalogue() {
+  const c = DATA.catalogue;
+  const status = (s) => s === "implemented" ? '<span class="chip ok">écrit</span>' : '<span class="chip">prévu</span>';
+  const uses = (kind, id) => { const u = usedBy(kind, id); return u.length ? `<span class="muted small">utilisé par ${h(u.join(", "))}</span>` : '<span class="chip warn">inutilisé</span>'; };
+  const comps = c.components.map((p) => `<article class="card stack">
+      <div class="row"><h3 class="mono" style="font-family:var(--mono);font-size:0.95rem">${h(p.id)}</h3>${status(p.status)}${(p.capabilities ?? []).map((x) => `<span class="chip">${h(x)}</span>`).join("")}</div>
+      <p class="muted small" style="margin:0">${h(p.description)}</p>
+      ${paramsTable(p, {}, { showUnset: true })}
+      <div>${uses("components", p.id)}</div>
+    </article>`).join("");
+  const sims = c.simulators.map((p) => `<article class="card stack">
+      <div class="row"><h3 class="mono" style="font-family:var(--mono);font-size:0.95rem">${h(p.id)}</h3>${status(p.status)}${p.provides.map((x) => `<span class="chip info">fournit ${h(x)}</span>`).join("")}</div>
+      <p class="muted small" style="margin:0">${h(p.description)}</p>
+      ${p.equations.map(mathml).join("")}
+      <dl class="kv small"><dt>Rôles</dt><dd>${Object.entries(p.roles).map(([r, s]) => `<span class="mono">${h(r)}</span> : ${s.components.map(h).join(" | ")}${s.multiple ? " (plusieurs)" : ""}${s.optional ? " (facultatif)" : ""}`).join("<br>")}</dd>
+        <dt>Sorties</dt><dd>${p.outputs.map((o) => `<span class="mono">${h(o.id)}</span>${o["x-unit"] ? ` (${h(o["x-unit"])})` : ""}`).join(", ")}</dd></dl>
+      ${paramsTable(p, {}, { showUnset: true })}
+      <div>${uses("simulators", p.id)}</div>
+    </article>`).join("");
+  const lenses = c.lenses.map((p) => `<article class="card stack">
+      <div class="row"><h3 class="mono" style="font-family:var(--mono);font-size:0.95rem">${h(p.id)}</h3>${status(p.status)}${p.consumes.map((x) => `<span class="chip info">lit ${h(x)}</span>`).join("")}</div>
+      <p class="muted small" style="margin:0">${h(p.description)}</p>
+      <div>${uses("lenses", p.id)}</div>
+    </article>`).join("");
+  return `<p class="lede">Tout ce qu'une scène a le droit d'utiliser, commun à tous les nœuds. Chaque paramètre a une plage de validité : une scène ou un curseur ne peut pas en sortir. « Prévu » veut dire que le contrat est fixé mais que le code du plugin n'est pas encore écrit. Les descriptions techniques sont en anglais (code).</p>
+    <section class="section"><div class="section-head"><h2>Simulateurs</h2><span class="meta">${c.simulators.length}</span></div><div class="stack">${sims}</div></section>
+    <section class="section"><div class="section-head"><h2>Lentilles</h2><span class="meta">${c.lenses.length}</span></div><div class="stack">${lenses}</div></section>
+    <section class="section"><div class="section-head"><h2>Composants 3D</h2><span class="meta">${c.components.length}</span></div><div class="grid2">${comps}</div></section>`;
+}
+
+// French notes for the format reference, keyed by schema path.
+const FR = {
+  "scene.formatVersion": "Version du format. Toute évolution du schéma la fait changer.",
+  "scene.node": "Carte d'identité du nœud.",
+  "scene.node.kind": "Système (un objet ou un phénomène, exploré par « comment ? ») ou Principe (un mécanisme réutilisable, exploré par « pourquoi ? »).",
+  "scene.node.status": "Brouillon, à revoir, publié.",
+  "scene.node.wikidata": "Identifiant Wikidata, surtout pour les principes.",
+  "scene.node.parent": "Pour un nœud enfant : le nœud parent et l'objet dans lequel on plonge. L'enfant en hérite la géométrie et le style.",
+  "scene.scale": "Taille réelle d'une unité de la scène. Sert à la barre d'échelle.",
+  "scene.environment": "Éclairage et couleur de fond.",
+  "scene.style": "Thème visuel. Un enfant l'omet pour hériter de celui de son parent.",
+  "scene.performance": "Budget de détail, pour tenir 60 images par seconde sur iPad.",
+  "scene.clock": "Vitesse du temps simulé (un passage de satellite dure plusieurs minutes).",
+  "scene.camera": "Position d'accueil et limites de la caméra contrainte.",
+  "scene.camera.home": "Plan de départ : on vise un objet, on tourne autour.",
+  "scene.entities": "Les objets 3D. Chacun instancie un composant du catalogue.",
+  "scene.entities[].component": "Identifiant d'un composant du catalogue.",
+  "scene.entities[].params": "Paramètres du composant, contrôlés par le schéma déclaré dans le catalogue.",
+  "scene.entities[].parent": "Objet parent : la position devient relative à lui.",
+  "scene.entities[].selectable": "Cliquable par l'utilisateur.",
+  "scene.entities[].notToScale": "Distance ou taille comprimée pour la lisibilité (satellite, Soleil). Exclu de la barre d'échelle.",
+  "scene.entities[].labelKey": "Clé du nom affiché. Le texte est dans texts.fr.json, jamais dans la scène.",
+  "scene.entities[].descriptionKey": "Clé de la description affichée au clic.",
+  "scene.simulators": "Les simulations physiques. Chacune est rattachée à des objets par rôle.",
+  "scene.simulators[].bind": "Rôle déclaré par le simulateur → objet(s) de la scène.",
+  "scene.lenses": "Les lentilles disponibles et leurs curseurs.",
+  "scene.lenses[].sources": "Simulations dont la lentille montre le résultat.",
+  "scene.lenses[].controls": "Les curseurs. Chacun dit à quels niveaux il est visible.",
+  "scene.lenses[].controls[].levels": "Niveaux où le curseur est exposé.",
+  "scene.lenses[].controls[].min": "Peut resserrer la plage du catalogue, jamais l'élargir.",
+  "scene.links": "Liens vers d'autres nœuds du graphe.",
+  "scene.links[].kind": "Se compose de (plonger) · Repose sur (principe) · Question libre · Dérivé de.",
+  "scene.links[].available": "Faux tant que le nœud cible n'est pas écrit.",
+  "scene.tours": "Les visites guidées : celle d'arrivée (20 à 30 s) et le Play.",
+  "scene.tours[].autoStart": "Se lance à l'arrivée sur la scène.",
+  "scene.tours[].steps[].textKey": "Clé du sous-titre, écrit pour être lu à voix haute.",
+  "scene.tours[].steps[].durationS": "Durée estimée. Sera alignée sur l'audio plus tard.",
+  "scene.tours[].steps[].actions": "Actions génériques du moteur : surbrillance, étiquettes, apparition, vue en coupe, lentille, réglage d'un paramètre, vitesse du temps.",
+  "texts": "Tous les textes d'un nœud pour une langue.",
+  "texts.common": "Textes communs aux trois niveaux.",
+  "texts.levels": "Textes propres à chaque niveau. Un texte absent d'un niveau est repris de la partie commune.",
+  "texts.aliases": "Autres formulations de la question qui mènent à ce nœud.",
+  "catalogue.components": "Les composants 3D paramétriques.",
+  "catalogue.components[].params": "Schéma des paramètres : type, unité, plage de validité, valeur par défaut.",
+  "catalogue.components[].capabilities": "Ce que le composant sait faire : vue en coupe, vue éclatée, niveaux de détail.",
+  "catalogue.simulators": "Les simulateurs physiques, écrits à la main.",
+  "catalogue.simulators[].equations": "Relations calculées. Chacune sera couverte par un test.",
+  "catalogue.simulators[].roles": "Les objets sur lesquels le simulateur agit, et les composants acceptés pour chacun.",
+  "catalogue.simulators[].provides": "Types de données produites, que les lentilles savent afficher.",
+  "catalogue.lenses[].consumes": "Une lentille fonctionne avec tout simulateur qui produit l'un de ces types.",
+  "sources.facts": "Chaque chiffre du nœud.",
+  "sources.facts[].status": "Vérifié, calculé (avec formule), ordre de grandeur, non vérifié.",
+  "sources.sources[].access": "Page réellement ouverte, ou seulement vue dans un résultat de recherche.",
+};
+
+function deref(schema, root) {
+  if (schema && schema.$ref && schema.$ref.startsWith("#/$defs/")) return deref(root.$defs[schema.$ref.slice(8)], root);
+  return schema;
+}
+function typeLabel(s, root) {
+  s = deref(s, root);
+  if (!s) return "";
+  if (s.const !== undefined) return `= ${JSON.stringify(s.const)}`;
+  if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(" | ");
+  if (s.oneOf) return s.oneOf.map((x) => typeLabel(x, root)).join(" ou ");
+  if (s.type === "array") return `liste de ${typeLabel(s.items, root) || "…"}`;
+  if (s.type === "object" && !s.properties && s.additionalProperties && typeof s.additionalProperties === "object") return `table clé → ${typeLabel(s.additionalProperties, root)}`;
+  if (s.type === "object" && !s.properties) return "objet libre";
+  if (s.type === "object") return "objet";
+  const parts = [[].concat(s.type ?? []).join(" | ")];
+  if (s.minimum !== undefined || s.exclusiveMinimum !== undefined) parts.push(`≥ ${s.minimum ?? s.exclusiveMinimum}`);
+  if (s.maximum !== undefined) parts.push(`≤ ${s.maximum}`);
+  return parts.filter(Boolean).join(" ");
+}
+function schemaFields(s, root, path, depth) {
+  s = deref(s, root);
+  if (!s || depth > 6) return "";
+  if (s.type === "array") return schemaFields(s.items, root, path + "[]", depth);
+  if (s.oneOf && s.oneOf.some((x) => deref(x, root).properties)) {
+    return s.oneOf.map((x, i) => {
+      const v = deref(x, root);
+      const t = v.properties?.type;
+      const name = t ? (t.const ? JSON.stringify(t.const) : t.enum?.map((e) => JSON.stringify(e)).join(" | ")) : `variante ${i + 1}`;
+      return `<div class="variant">Variante ${h(name)}</div>${schemaFields(v, root, path, depth + 1)}`;
+    }).join("");
+  }
+  if (!s.properties) return "";
+  const req = new Set(s.required ?? []);
+  return Object.entries(s.properties).map(([name, sub]) => {
+    const p = `${path}.${name}`;
+    const d = deref(sub, root);
+    const nested = schemaFields(sub, root, p, depth + 1);
+    const fr = FR[p];
+    return `<div class="f"><div class="name">${h(name)}${req.has(name) ? '<span class="req" title="obligatoire"> *</span>' : ""}</div>
+      <div><div class="type">${h(typeLabel(sub, root))}</div>${fr ? `<p class="fr">${h(fr)}</p>` : ""}${d?.description ? `<p class="en">${h(d.description)}</p>` : ""}</div>
+      ${nested ? `<div class="nest">${nested}</div>` : ""}</div>`;
+  }).join("");
+}
+function viewFormat() {
+  const blocks = [
+    ["scene", "Format de scène", "scene.json", "Un fichier par nœud. Décrit ce que le moteur affiche, sans aucun texte."],
+    ["texts", "Textes", "texts.fr.json", "Un fichier par nœud et par langue."],
+    ["sources", "Sources", "sources.json", "Un fichier par nœud. Proposé en plus des trois schémas prévus."],
+    ["catalogue", "Catalogue", "catalogue.json", "Un seul fichier pour tout le produit."],
+  ];
+  return `<p class="lede">La référence des quatre schémas, générée depuis les fichiers JSON Schema. <span style="color:var(--accent)">*</span> = champ obligatoire. Les explications en français sont celles de cette page ; les lignes grises en anglais sont les descriptions inscrites dans les schémas.</p>
+    ${blocks.map(([id, title, file, lede]) => `<section class="section"><div class="section-head"><h2>${title}</h2><span class="mono meta">${file}</span><span class="meta">${h(lede)}</span></div>
+      <div class="card schema-tree">${schemaFields(DATA.schemas[id], DATA.schemas[id], id, 0)}</div></section>`).join("")}`;
+}
+
+function banner() {
+  const errs = [...DATA.catalogueErrors.map((e) => `catalogue : ${e}`), ...node().errors];
+  if (!errs.length) return `<div class="banner ok"><span>✓</span><span>Ce nœud et le catalogue passent toutes les vérifications automatiques : schémas, références au catalogue, plages de validité, textes présents sur les trois niveaux, sources des chiffres vérifiés.</span></div>`;
+  return `<div class="banner bad"><span>✕</span><div>${errs.length} erreur(s) de validation<ul>${errs.map((e) => `<li class="mono">${h(e)}</li>`).join("")}</ul></div></div>`;
+}
+
+const VIEWS = { visite: viewTour, textes: viewTexts, scene: viewScene, physique: viewPhysics, sources: viewSources, catalogue: viewCatalogue, format: viewFormat };
+const NODE_INDEPENDENT = new Set(["catalogue", "format"]);
+
+function renderControls() {
+  document.getElementById("node-seg").innerHTML = DATA.nodes.map((n) => `<button type="button" id="node-${n.dir}" data-node="${n.dir}" aria-pressed="${n.dir === state.node}">${h(NODE_NAMES[n.dir] ?? n.dir)}${n.dir === "blue-sky" ? ' <span class="chip">ébauche</span>' : ""}</button>`).join("");
+  document.getElementById("level-seg").innerHTML = LEVELS.map((l) => `<button type="button" id="level-${l.id}" data-level="${l.id}" aria-pressed="${l.id === state.level}">${l.fr}</button>`).join("");
+  document.getElementById("tabs").innerHTML = TABS.map((t) => `<button type="button" role="tab" id="tab-${t.id}" data-tab="${t.id}" aria-selected="${t.id === state.tab}">${t.fr}</button>`).join("");
+}
+function render() {
+  renderControls();
+  const view = document.getElementById("view");
+  view.innerHTML = (NODE_INDEPENDENT.has(state.tab) ? "" : banner()) + VIEWS[state.tab]();
+}
+
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  if (b.dataset.node) { state.node = b.dataset.node; store.set("node", state.node); render(); }
+  else if (b.dataset.level) { state.level = b.dataset.level; store.set("level", state.level); render(); }
+  else if (b.dataset.tab) {
+    state.tab = b.dataset.tab; store.set("tab", state.tab);
+    try { history.replaceState(null, "", "#" + state.tab); } catch {}
+    render(); window.scrollTo({ top: 0 });
+  } else if (b.dataset.jump) {
+    const el = document.getElementById(b.dataset.jump);
+    if (el) {
+      el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+      el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200);
+    }
+  }
+});
+
+const when = new Date(DATA.generatedAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+document.getElementById("build-info").textContent = `Explorateur de systèmes · format de scène v${DATA.schemas.scene.properties.formatVersion.const}`;
+document.getElementById("foot").textContent = `Page générée depuis le dépôt le ${when}${DATA.commit ? ` (commit ${DATA.commit})` : ""} — npm run review.`;
+render();
+</script>

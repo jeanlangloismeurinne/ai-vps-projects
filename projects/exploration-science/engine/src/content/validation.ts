@@ -3,10 +3,10 @@
 // checks a JSON Schema cannot express (catalogue references, text keys, sources).
 import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
-import sceneSchema from "../../../schemas/scene.schema.json";
-import catalogueSchema from "../../../schemas/catalogue.schema.json";
-import textsSchema from "../../../schemas/texts.schema.json";
-import sourcesSchema from "../../../schemas/sources.schema.json";
+import sceneSchema from "../../../schemas/scene.schema.json" with { type: "json" };
+import catalogueSchema from "../../../schemas/catalogue.schema.json" with { type: "json" };
+import textsSchema from "../../../schemas/texts.schema.json" with { type: "json" };
+import sourcesSchema from "../../../schemas/sources.schema.json" with { type: "json" };
 
 export const LEVELS = ["discovery", "essential", "advanced"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -45,7 +45,11 @@ export class ContentValidator {
   private readonly validateSources = this.ajv.compile<unknown>(sourcesSchema);
   private readonly paramValidators = new Map<string, ValidateFunction>();
 
-  constructor(private readonly catalogue: Json) {}
+  private readonly catalogue: Json;
+
+  constructor(catalogue: Json) {
+    this.catalogue = catalogue;
+  }
 
   catalogueErrors(): string[] {
     if (!this.validateCatalogue(this.catalogue)) return formatErrors(this.validateCatalogue);
