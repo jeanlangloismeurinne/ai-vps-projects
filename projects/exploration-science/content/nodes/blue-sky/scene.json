@@ -1,0 +1,164 @@
+{
+  "formatVersion": "0.1",
+  "node": {
+    "id": "blue-sky",
+    "kind": "system",
+    "version": 1,
+    "status": "draft"
+  },
+  "scale": { "metersPerUnit": 1 },
+  "environment": { "lighting": "daylight", "background": "#000000" },
+  "style": { "theme": "branch-default", "accent": "#4da3ff" },
+  "performance": { "triangleBudget": 200000 },
+  "camera": {
+    "home": { "target": "observer", "azimuthDeg": 200, "elevationDeg": 12, "distance": 14 },
+    "constraints": { "minDistance": 1, "maxDistance": 600, "minElevationDeg": 0, "maxElevationDeg": 85 }
+  },
+  "entities": [
+    {
+      "id": "ground",
+      "component": "terrain",
+      "params": { "size": 800, "surface": "grass" },
+      "transform": { "position": [0, 0, 0] }
+    },
+    {
+      "id": "observer",
+      "component": "observer",
+      "params": { "height": 1.7 },
+      "transform": { "position": [0, 0, 0] },
+      "selectable": true,
+      "labelKey": "entity.observer.label",
+      "descriptionKey": "entity.observer.description"
+    },
+    {
+      "id": "sun",
+      "component": "star",
+      "params": { "displayRadius": 12, "colorTemperatureK": 5772 },
+      "transform": { "position": [180, 140, -260] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.sun.label",
+      "descriptionKey": "entity.sun.description"
+    },
+    {
+      "id": "atmosphere",
+      "component": "atmosphere-layer",
+      "params": { "radius": 300, "thickness": 40 },
+      "transform": { "position": [0, 0, 0] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.atmosphere.label",
+      "descriptionKey": "entity.atmosphere.description"
+    },
+    {
+      "id": "air",
+      "component": "molecule-cloud",
+      "params": { "species": "mixed-air", "count": 40, "bubbleRadius": 3 },
+      "transform": { "position": [6, 12, -10] },
+      "notToScale": true,
+      "visible": false,
+      "selectable": true,
+      "labelKey": "entity.air.label",
+      "descriptionKey": "entity.air.description"
+    }
+  ],
+  "simulators": [
+    {
+      "id": "scattering",
+      "simulator": "rayleigh-scattering",
+      "params": { "sunElevationDeg": 45, "wavelengthNm": 450, "airDensityFactor": 1 },
+      "bind": { "sun": "sun", "atmosphere": "atmosphere", "molecules": ["air"], "observer": "observer" }
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves-lens",
+      "lens": "waves",
+      "labelKey": "lens.waves.label",
+      "sources": ["scattering"],
+      "controls": [
+        { "id": "sun-height", "target": "scattering", "param": "sunElevationDeg", "labelKey": "control.sun-height", "levels": ["discovery", "essential", "advanced"], "min": -2, "max": 90, "step": 1 },
+        { "id": "air-density", "target": "scattering", "param": "airDensityFactor", "labelKey": "control.air-density", "levels": ["essential", "advanced"], "min": 0, "max": 2, "step": 0.1 },
+        { "id": "wavelength", "target": "scattering", "param": "wavelengthNm", "labelKey": "control.wavelength", "levels": ["advanced"], "min": 380, "max": 750, "step": 5 }
+      ]
+    }
+  ],
+  "links": [
+    { "kind": "reliesOn", "from": "air", "to": "rayleigh-scattering" },
+    { "kind": "reliesOn", "from": "sun", "to": "visible-spectrum" },
+    { "kind": "freeQuestion", "to": "why-sunset-red" }
+  ],
+  "tours": [
+    {
+      "id": "intro",
+      "autoStart": true,
+      "steps": [
+        {
+          "id": "arrival",
+          "textKey": "intro.arrival",
+          "durationS": 10,
+          "camera": { "shot": { "target": "observer", "azimuthDeg": 200, "elevationDeg": 12, "distance": 14 }, "transitionS": 0 },
+          "actions": [{ "type": "highlight", "targets": ["sun", "atmosphere"] }]
+        },
+        {
+          "id": "zoom-air",
+          "textKey": "intro.zoom-air",
+          "durationS": 10,
+          "camera": { "shot": { "target": "air", "azimuthDeg": 200, "elevationDeg": 0, "distance": 8 }, "transitionS": 3 },
+          "actions": [{ "type": "show", "targets": ["air"] }]
+        },
+        {
+          "id": "handover-to-user",
+          "textKey": "intro.handover-to-user",
+          "durationS": 6,
+          "camera": { "shot": { "target": "observer", "azimuthDeg": 200, "elevationDeg": 12, "distance": 14 }, "transitionS": 2 }
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "steps": [
+        {
+          "id": "white-light",
+          "textKey": "play.white-light",
+          "durationS": 20,
+          "camera": { "shot": { "target": "sun", "azimuthDeg": 220, "elevationDeg": 10, "distance": 120 }, "transitionS": 3 },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": true },
+            { "type": "highlight", "targets": ["sun"] }
+          ]
+        },
+        {
+          "id": "scattering",
+          "textKey": "play.scattering",
+          "durationS": 22,
+          "camera": { "shot": { "target": "air", "azimuthDeg": 200, "elevationDeg": 0, "distance": 6 }, "transitionS": 3 },
+          "actions": [
+            { "type": "show", "targets": ["air"] },
+            { "type": "setParam", "target": "scattering", "param": "wavelengthNm", "value": 700, "overS": 6 }
+          ]
+        },
+        {
+          "id": "blue-everywhere",
+          "textKey": "play.blue-everywhere",
+          "durationS": 20,
+          "camera": { "shot": { "target": "observer", "azimuthDeg": 200, "elevationDeg": 12, "distance": 14 }, "transitionS": 3 },
+          "actions": [
+            { "type": "hide", "targets": ["air"] },
+            { "type": "setParam", "target": "scattering", "param": "wavelengthNm", "value": 450 },
+            { "type": "highlight", "targets": ["atmosphere", "observer"] }
+          ]
+        },
+        {
+          "id": "sunset",
+          "textKey": "play.sunset",
+          "durationS": 22,
+          "camera": { "shot": { "target": "observer", "azimuthDeg": 210, "elevationDeg": 5, "distance": 20 }, "transitionS": 3 },
+          "actions": [
+            { "type": "setParam", "target": "scattering", "param": "sunElevationDeg", "value": 2, "overS": 8 }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "formatVersion": "0.1",
+  "nodeId": "blue-sky",
+  "lang": "fr",
+  "question": "Pourquoi le ciel est-il bleu ?",
+  "aliases": ["D'où vient la couleur bleue du ciel ?", "Pourquoi le ciel n'est-il pas blanc ?"],
+  "common": {
+    "entity.observer.label": "Observateur",
+    "entity.sun.label": "Soleil",
+    "entity.atmosphere.label": "Atmosphère",
+    "entity.air.label": "Molécules de l'air",
+    "lens.waves.label": "Ondes",
+    "control.sun-height": "Hauteur du Soleil",
+    "control.air-density": "Quantité d'air",
+    "control.wavelength": "Longueur d'onde",
+    "entity.observer.description": "Ce que voit cette personne, c'est la lumière qui arrive jusqu'à ses yeux.",
+    "entity.sun.description": "Le Soleil envoie une lumière blanche, mélange de toutes les couleurs.",
+    "entity.atmosphere.description": "Une couche d'air de quelques dizaines de kilomètres d'épaisseur qui entoure la Terre.",
+    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière."
+  },
+  "levels": {
+    "discovery": {
+      "control.sun-height": "Heure de la journée",
+      "intro.arrival": "Lève les yeux : le ciel est bleu. Pourtant, la lumière du Soleil est blanche. D'où vient ce bleu ?",
+      "intro.zoom-air": "Approchons-nous tout près de l'air. Il est fait de minuscules grains, bien trop petits pour être vus.",
+      "intro.handover-to-user": "Touche le Soleil, l'air ou le ciel, ou appuie sur Play.",
+      "play.white-light": "La lumière du Soleil, c'est toutes les couleurs mélangées. Ensemble, elles font du blanc.",
+      "play.scattering": "Quand la lumière rencontre les grains d'air, le bleu rebondit dans tous les sens, beaucoup plus que le rouge.",
+      "play.blue-everywhere": "Ce bleu qui rebondit arrive dans tes yeux de partout à la fois. Alors tout le ciel te paraît bleu.",
+      "play.sunset": "Le soir, la lumière traverse beaucoup plus d'air. Le bleu s'est perdu en route, et il reste surtout le rouge et l'orange."
+    },
+    "essential": {
+      "intro.arrival": "Le ciel est bleu, alors que la lumière du Soleil est blanche. La réponse se cache dans l'air lui-même.",
+      "intro.zoom-air": "Zoomons sur l'air : des molécules d'azote et d'oxygène, environ mille fois plus petites que la longueur d'onde de la lumière.",
+      "intro.handover-to-user": "Touchez un élément pour l'explorer, ou lancez la visite guidée.",
+      "play.white-light": "La lumière du Soleil contient toutes les couleurs, du violet au rouge. Chaque couleur est une onde de longueur différente.",
+      "play.scattering": "Les molécules de l'air renvoient une partie de la lumière dans toutes les directions. Et elles renvoient bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
+      "play.blue-everywhere": "Cette lumière bleue diffusée nous parvient de toutes les directions du ciel. Voilà pourquoi il paraît bleu, et pas blanc.",
+      "play.sunset": "Quand le Soleil est bas, sa lumière traverse une couche d'air bien plus épaisse. Le bleu est diffusé en chemin, et il nous reste surtout du rouge et de l'orange."
+    },
+    "advanced": {
+      "intro.arrival": "Le ciel diurne est bleu par diffusion Rayleigh de la lumière solaire sur les molécules de l'atmosphère.",
+      "intro.zoom-air": "Molécules de diazote et de dioxygène, de taille très inférieure à la longueur d'onde visible : c'est le régime de Rayleigh.",
+      "intro.handover-to-user": "Sélectionnez un élément, ou lancez la visite.",
+      "play.white-light": "Le spectre solaire couvre tout le visible, d'environ 380 à 750 nanomètres.",
+      "play.scattering": {
+        "text": "En régime de Rayleigh, l'intensité diffusée varie comme l'inverse de la puissance quatre de la longueur d'onde. Entre 450 et 700 nanomètres, le rapport vaut environ six.",
+        "formula": "I_s \\propto \\frac{I_0}{\\lambda^4}"
+      },
+      "play.blue-everywhere": "Le ciel est la somme de cette lumière diffusée, intégrée le long de chaque ligne de visée. Le violet est encore plus diffusé, mais le spectre solaire en contient moins et l'œil y est moins sensible.",
+      "play.sunset": {
+        "text": "Le long du trajet, l'intensité directe décroît exponentiellement, avec un coefficient d'extinction proportionnel à lambda puissance moins quatre. Au coucher du Soleil, le chemin optique s'allonge fortement, et le bleu est éliminé du rayonnement direct.",
+        "formula": "I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda)\\, s}"
+      }
+    }
+  }
+}

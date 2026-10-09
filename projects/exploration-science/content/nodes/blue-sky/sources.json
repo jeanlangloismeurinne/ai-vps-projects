@@ -1,0 +1,144 @@
+{
+  "formatVersion": "0.1",
+  "nodeId": "blue-sky",
+  "facts": [
+    {
+      "id": "rayleigh-law",
+      "claim": "Pour des diffuseurs très petits devant la longueur d'onde, l'intensité diffusée est proportionnelle à λ⁻⁴.",
+      "status": "verified",
+      "sources": [
+        "unsw-sky-colour",
+        "metoffice-blue-sky"
+      ],
+      "usedBy": [
+        "play.scattering",
+        "simulators.scattering"
+      ]
+    },
+    {
+      "id": "blue-red-ratio",
+      "claim": "Le bleu (450 nm) est diffusé environ 6 fois plus que le rouge (700 nm).",
+      "value": 5.86,
+      "unit": "1",
+      "status": "computed",
+      "formula": "(700 / 450)^4",
+      "sources": [],
+      "usedBy": [
+        "play.scattering"
+      ],
+      "note": "Certaines vulgarisations disent « 16 fois » en supposant un rapport de longueurs d'onde de 2 : à ne pas reprendre."
+    },
+    {
+      "id": "visible-range",
+      "claim": "Le visible s'étend d'environ 380 à 750 nm.",
+      "status": "order-of-magnitude",
+      "sources": [],
+      "usedBy": [
+        "play.white-light",
+        "catalogue.rayleigh-scattering.wavelengthNm"
+      ],
+      "note": "Bornes conventionnelles, à sourcer lors de la rédaction complète."
+    },
+    {
+      "id": "air-composition",
+      "claim": "Les diffuseurs sont surtout les molécules d'azote et d'oxygène.",
+      "status": "verified",
+      "sources": [
+        "metoffice-blue-sky"
+      ],
+      "usedBy": [
+        "entity.air.description",
+        "intro.zoom-air"
+      ]
+    },
+    {
+      "id": "molecule-size",
+      "claim": "Une molécule d'azote ou d'oxygène (~0,3 nm) est environ mille fois plus petite que la longueur d'onde visible (~500 nm).",
+      "value": 1700,
+      "unit": "1",
+      "status": "order-of-magnitude",
+      "formula": "500 nm / 0.3 nm",
+      "sources": [],
+      "usedBy": [
+        "levels.essential.intro.zoom-air",
+        "entity.air.description"
+      ],
+      "note": "Taille moléculaire ~0,3 nm : ordre de grandeur à sourcer."
+    },
+    {
+      "id": "violet",
+      "claim": "Le ciel n'est pas violet car le spectre solaire contient moins de violet et l'œil y est moins sensible.",
+      "status": "verified",
+      "sources": [
+        "space-blue-sky"
+      ],
+      "usedBy": [
+        "play.blue-everywhere"
+      ]
+    },
+    {
+      "id": "sunset",
+      "claim": "Au coucher, la lumière traverse beaucoup plus d'atmosphère ; le bleu en est diffusé et il reste surtout du rouge.",
+      "status": "verified",
+      "sources": [
+        "metoffice-sunset",
+        "timeanddate-red-sunset"
+      ],
+      "usedBy": [
+        "play.sunset"
+      ]
+    },
+    {
+      "id": "atmosphere-thickness",
+      "claim": "Couche d'air de quelques dizaines de kilomètres d'épaisseur.",
+      "status": "unverified",
+      "sources": [],
+      "usedBy": [
+        "entity.atmosphere.description"
+      ],
+      "note": "Ordre de grandeur à sourcer (l'essentiel de la masse sous ~30 km)."
+    }
+  ],
+  "sources": [
+    {
+      "id": "metoffice-blue-sky",
+      "title": "Why the sky is blue and sunsets red",
+      "url": "https://weather.metoffice.gov.uk/learn-about/weather/optical-effects/why-is-the-sky-blue",
+      "publisher": "Met Office",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    },
+    {
+      "id": "metoffice-sunset",
+      "title": "Why is the sunset red?",
+      "url": "https://metoffice.gov.uk/learning/optics/why-is-the-sunset-red",
+      "publisher": "Met Office",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    },
+    {
+      "id": "unsw-sky-colour",
+      "title": "Colour of the sky",
+      "url": "https://animations.physics.unsw.edu.au/jw/light/colour-of-sky.htm",
+      "publisher": "UNSW Physics",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    },
+    {
+      "id": "space-blue-sky",
+      "title": "Why is the sky blue?",
+      "url": "https://www.space.com/why-is-the-sky-blue",
+      "publisher": "Space.com",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    },
+    {
+      "id": "timeanddate-red-sunset",
+      "title": "Red sunset",
+      "url": "https://www.timeanddate.com/astronomy/red-sunset.html",
+      "publisher": "timeanddate.com",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    }
+  ]
+}
