@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/scene.schema.json",
+  "title": "Scene (format v0)",
+  "description": "Describes one node's 3D scene. Contains no human-readable text: only text keys, resolved in texts.<lang>.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "node", "scale", "environment", "camera", "entities", "tours"],
+  "properties": {
+    "formatVersion": { "const": "0.1" },
+    "node": { "$ref": "#/$defs/nodeHeader" },
+    "scale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metersPerUnit"],
+      "description": "Real size of one scene unit. Drives the scale bar. Entities flagged notToScale are excluded from it.",
+      "properties": {
+        "metersPerUnit": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lighting", "background"],
+      "properties": {
+        "lighting": { "enum": ["daylight", "dusk", "space", "studio"] },
+        "background": { "$ref": "#/$defs/color" }
+      }
+    },
+    "style": {
+      "description": "Visual style. A child node omits it to inherit its parent's style (design rule 9).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["theme"],
+      "properties": {
+        "theme": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "accent": { "$ref": "#/$defs/color" }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "triangleBudget": { "type": "integer", "minimum": 1000 }
+      }
+    },
+    "clock": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Simulation time. timeScale > 1 speeds up slow phenomena (a satellite pass lasts minutes).",
+      "properties": {
+        "timeScale": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["home", "constraints"],
+      "properties": {
+        "home": { "$ref": "#/$defs/shot" },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minDistance", "maxDistance"],
+          "properties": {
+            "minDistance": { "type": "number", "exclusiveMinimum": 0 },
+            "maxDistance": { "type": "number", "exclusiveMinimum": 0 },
+            "minElevationDeg": { "type": "number", "minimum": -90, "maximum": 90 },
+            "maxElevationDeg": { "type": "number", "minimum": -90, "maximum": 90 }
+          }
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entity" }
+    },
+    "simulators": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/simulatorInstance" }
+    },
+    "lenses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/lensInstance" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/link" }
+    },
+    "tours": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/tour" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "textKey": { "type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" },
+    "level": { "enum": ["discovery", "essential", "advanced"] },
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "vec3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "nodeHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "version", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["system", "principle"] },
+        "version": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["draft", "review", "published"] },
+        "wikidata": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "parent": {
+          "description": "Set on a child node: the parent node and the entity it zooms into. The child inherits that entity's geometry and style (rule 9) and its origin is aligned on it during the dive.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["node", "entity"],
+          "properties": {
+            "node": { "$ref": "#/$defs/id" },
+            "entity": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
+    "shot": {
+      "description": "Constrained camera position: orbit around a target entity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "azimuthDeg", "elevationDeg", "distance"],
+      "properties": {
+        "target": { "$ref": "#/$defs/id" },
+        "azimuthDeg": { "type": "number", "minimum": -360, "maximum": 360 },
+        "elevationDeg": { "type": "number", "minimum": -90, "maximum": 90 },
+        "distance": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "component", "params", "transform"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "component": { "$ref": "#/$defs/id", "description": "Catalogue component id." },
+        "params": { "type": "object", "description": "Validated against the component's params schema in the catalogue." },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["position"],
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "rotationDeg": { "$ref": "#/$defs/vec3" },
+            "scale": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "parent": { "$ref": "#/$defs/id", "description": "Entity id; transform is then relative to it." },
+        "visible": { "type": "boolean", "default": true },
+        "selectable": { "type": "boolean", "default": false },
+        "notToScale": { "type": "boolean", "default": false },
+        "labelKey": { "$ref": "#/$defs/textKey" },
+        "descriptionKey": { "$ref": "#/$defs/textKey" }
+      }
+    },
+    "simulatorInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "simulator", "params", "bind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "simulator": { "$ref": "#/$defs/id", "description": "Catalogue simulator id." },
+        "params": { "type": "object", "description": "Validated against the simulator's params schema in the catalogue." },
+        "bind": {
+          "description": "Role name (declared by the simulator in the catalogue) -> entity id or list of entity ids.",
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "$ref": "#/$defs/id" },
+              { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 }
+            ]
+          }
+        }
+      }
+    },
+    "lensInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "lens", "sources", "controls"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "lens": { "$ref": "#/$defs/id", "description": "Catalogue lens id." },
+        "labelKey": { "$ref": "#/$defs/textKey" },
+        "sources": {
+          "description": "Simulator instances whose outputs the lens displays.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "controls": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/control" }
+        }
+      }
+    },
+    "control": {
+      "description": "A slider exposed to the user. Same simulation for all levels; only the exposed controls change.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target", "param", "labelKey", "levels"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "target": { "$ref": "#/$defs/id", "description": "Simulator instance id." },
+        "param": { "type": "string" },
+        "labelKey": { "$ref": "#/$defs/textKey" },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/level" }
+        },
+        "min": { "type": "number", "description": "Narrows the catalogue validity range; never widens it." },
+        "max": { "type": "number" },
+        "step": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "to"],
+      "properties": {
+        "kind": { "enum": ["composedOf", "reliesOn", "freeQuestion", "derivedFrom"] },
+        "from": { "$ref": "#/$defs/id", "description": "Entity the link starts from (click target). Omitted: the whole node." },
+        "to": { "$ref": "#/$defs/id", "description": "Target node id." },
+        "available": { "type": "boolean", "default": false, "description": "false: node planned, not written yet." }
+      }
+    },
+    "tour": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "steps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "autoStart": { "type": "boolean", "default": false, "description": "Played on arrival (20-30 s), then the user takes over." },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "textKey", "durationS"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "textKey": { "$ref": "#/$defs/textKey", "description": "Subtitle, written to be read aloud." },
+        "durationS": { "type": "number", "exclusiveMinimum": 0, "description": "Estimate. Will be aligned on the audio duration later." },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shot"],
+          "properties": {
+            "shot": { "$ref": "#/$defs/shot" },
+            "transitionS": { "type": "number", "minimum": 0 }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/action" }
+        }
+      }
+    },
+    "action": {
+      "description": "Generic engine primitives. Effects of highlight/label last for the step only; the others persist until changed.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "targets"],
+          "properties": {
+            "type": { "enum": ["highlight", "label", "show", "hide"] },
+            "targets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "mode"],
+          "properties": {
+            "type": { "const": "reveal" },
+            "target": { "$ref": "#/$defs/id" },
+            "mode": { "enum": ["cutaway", "explode", "none"], "description": "Requires the matching capability on the component." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "lens", "on"],
+          "properties": {
+            "type": { "const": "lens" },
+            "lens": { "$ref": "#/$defs/id", "description": "Lens instance id." },
+            "on": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target", "param", "value"],
+          "properties": {
+            "type": { "const": "setParam" },
+            "target": { "$ref": "#/$defs/id", "description": "Simulator instance id." },
+            "param": { "type": "string" },
+            "value": { "type": ["number", "string", "boolean"] },
+            "overS": { "type": "number", "minimum": 0, "description": "Animate the slider over this duration." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value"],
+          "properties": {
+            "type": { "const": "timeScale" },
+            "value": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      ]
+    }
+  }
+}

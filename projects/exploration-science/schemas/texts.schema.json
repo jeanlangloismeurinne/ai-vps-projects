@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/texts.schema.json",
+  "title": "Node texts for one language (format v0)",
+  "description": "All human-readable text of a node, for one language. A key is looked up in levels[<level>] first, then in common.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "nodeId", "lang", "question", "common", "levels"],
+  "properties": {
+    "formatVersion": { "const": "0.1" },
+    "nodeId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "lang": { "type": "string", "pattern": "^[a-z]{2}$" },
+    "question": { "type": "string", "minLength": 1, "description": "Canonical question of the node." },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Other phrasings that lead to this node."
+    },
+    "common": { "$ref": "#/$defs/entries" },
+    "levels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discovery", "essential", "advanced"],
+      "properties": {
+        "discovery": { "$ref": "#/$defs/entries" },
+        "essential": { "$ref": "#/$defs/entries" },
+        "advanced": { "$ref": "#/$defs/entries" }
+      }
+    }
+  },
+  "$defs": {
+    "entries": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/entry" }
+    },
+    "entry": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1, "description": "Read aloud and shown as subtitle." },
+            "formula": { "type": "string", "minLength": 1, "description": "LaTeX, displayed next to the subtitle, never read." }
+          }
+        }
+      ]
+    }
+  }
+}

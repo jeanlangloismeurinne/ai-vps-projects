@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/catalogue.schema.json",
+  "title": "Plugin catalogue (format v0)",
+  "description": "Everything a scene may use. The engine registers one plugin per entry; the generator may only use what is listed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "components", "simulators", "lenses"],
+  "properties": {
+    "formatVersion": { "const": "0.1" },
+    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+    "simulators": { "type": "array", "items": { "$ref": "#/$defs/simulator" } },
+    "lenses": { "type": "array", "items": { "$ref": "#/$defs/lens" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "status": {
+      "enum": ["implemented", "planned"],
+      "description": "planned: declared contract, plugin not written yet. Scenes may reference it; the engine shows a placeholder."
+    },
+    "channel": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "paramsSchema": {
+      "description": "Restricted JSON Schema describing the plugin's parameters. minimum/maximum are the validity range.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "properties", "additionalProperties"],
+      "properties": {
+        "type": { "const": "object" },
+        "additionalProperties": { "const": false },
+        "required": { "type": "array", "items": { "type": "string" } },
+        "properties": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/param" }
+        }
+      }
+    },
+    "param": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "description"],
+      "properties": {
+        "type": { "enum": ["number", "integer", "string", "boolean"] },
+        "description": { "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "enum": { "type": "array", "minItems": 1 },
+        "default": {},
+        "x-unit": { "type": "string", "description": "SI unit, or '1' for dimensionless." },
+        "x-ref": { "const": "entity", "description": "The value is an entity id of the same scene." },
+        "x-alternativeTo": { "type": "string", "description": "Another parameter of the same plugin that this one can drive instead (the other is then derived)." }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "description", "params"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "$ref": "#/$defs/status" },
+        "description": { "type": "string" },
+        "params": { "$ref": "#/$defs/paramsSchema" },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["cutaway", "explode", "lod"] }
+        }
+      }
+    },
+    "simulator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "description", "equations", "params", "roles", "outputs", "provides"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "$ref": "#/$defs/status" },
+        "description": { "type": "string" },
+        "equations": {
+          "description": "LaTeX of the relations the simulator computes. Each must be covered by a test.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "params": { "$ref": "#/$defs/paramsSchema" },
+        "roles": {
+          "description": "Entities the simulator acts on: role name -> accepted components.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["components", "multiple"],
+            "properties": {
+              "components": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+              "multiple": { "type": "boolean" },
+              "optional": { "type": "boolean" }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "description"],
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" },
+              "x-unit": { "type": "string" }
+            }
+          }
+        },
+        "provides": {
+          "description": "Data channels lenses can consume.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/channel" }
+        }
+      }
+    },
+    "lens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "description", "consumes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "$ref": "#/$defs/status" },
+        "description": { "type": "string" },
+        "consumes": {
+          "description": "A lens works on any simulator providing one of these channels.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/channel" }
+        }
+      }
+    }
+  }
+}

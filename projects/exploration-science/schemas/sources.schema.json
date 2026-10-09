@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/sources.schema.json",
+  "title": "Node sources (format v0)",
+  "description": "Every technical figure used by a node's scene or texts, with its status and the pages it comes from.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "nodeId", "facts", "sources"],
+  "properties": {
+    "formatVersion": { "const": "0.1" },
+    "nodeId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "claim", "status", "sources"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "claim": { "type": "string", "minLength": 1 },
+          "value": { "type": ["number", "string"] },
+          "unit": { "type": "string" },
+          "status": {
+            "enum": ["verified", "order-of-magnitude", "computed", "unverified"],
+            "description": "computed: derived from other facts by a stated formula. unverified: must not be stated as precise in texts."
+          },
+          "formula": { "type": "string" },
+          "sources": { "type": "array", "items": { "type": "string" } },
+          "usedBy": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Text keys or scene paths that rely on this fact."
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "url", "accessed", "access"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "publisher": { "type": "string" },
+          "accessed": { "type": "string", "format": "date" },
+          "access": {
+            "enum": ["opened", "search-result"],
+            "description": "opened: page read in full. search-result: only seen through a search engine excerpt."
+          }
+        }
+      }
+    }
+  }
+}
