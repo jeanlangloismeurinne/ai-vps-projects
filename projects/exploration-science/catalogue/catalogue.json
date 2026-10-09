@@ -1,0 +1,869 @@
+{
+  "formatVersion": "0.1",
+  "components": [
+    {
+      "id": "terrain",
+      "status": "planned",
+      "description": "Flat stylised ground patch.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "size"
+        ],
+        "properties": {
+          "size": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000,
+            "x-unit": "scene",
+            "description": "Side of the square patch."
+          },
+          "surface": {
+            "type": "string",
+            "enum": [
+              "grass",
+              "concrete",
+              "sand"
+            ],
+            "default": "grass",
+            "description": "Surface style."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "house",
+      "status": "planned",
+      "description": "Stylised house with a pitched roof. Decor.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "width",
+          "depth",
+          "wallHeight"
+        ],
+        "properties": {
+          "width": {
+            "type": "number",
+            "minimum": 3,
+            "maximum": 30,
+            "x-unit": "m",
+            "description": "Facade width."
+          },
+          "depth": {
+            "type": "number",
+            "minimum": 3,
+            "maximum": 30,
+            "x-unit": "m",
+            "description": "Depth."
+          },
+          "wallHeight": {
+            "type": "number",
+            "minimum": 2,
+            "maximum": 15,
+            "x-unit": "m",
+            "description": "Height of the walls under the roof."
+          },
+          "roofPitchDeg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 50,
+            "default": 30,
+            "x-unit": "deg",
+            "description": "Roof slope."
+          }
+        }
+      },
+      "capabilities": [
+        "cutaway",
+        "lod"
+      ]
+    },
+    {
+      "id": "flat-panel-terminal",
+      "status": "planned",
+      "description": "Flat rectangular satellite user terminal (radome + housing) on a mount. Children entities sit inside and appear on cutaway.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "width",
+          "height",
+          "thickness"
+        ],
+        "properties": {
+          "width": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 2,
+            "x-unit": "m",
+            "description": "Panel long side."
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 2,
+            "x-unit": "m",
+            "description": "Panel short side."
+          },
+          "thickness": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 0.2,
+            "x-unit": "m",
+            "description": "Panel thickness."
+          },
+          "mount": {
+            "type": "string",
+            "enum": [
+              "kickstand",
+              "pipe",
+              "none"
+            ],
+            "default": "pipe",
+            "description": "Mount style."
+          },
+          "tiltDeg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 90,
+            "default": 20,
+            "x-unit": "deg",
+            "description": "Tilt from horizontal (fixed, not motorised)."
+          }
+        }
+      },
+      "capabilities": [
+        "cutaway",
+        "explode",
+        "lod"
+      ]
+    },
+    {
+      "id": "antenna-element-array",
+      "status": "planned",
+      "description": "Planar array of identical radiating elements (patches), on a lattice. Represents the visible layer; the wave simulator works on a linear cut of it.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lattice",
+          "count",
+          "spacing"
+        ],
+        "properties": {
+          "lattice": {
+            "type": "string",
+            "enum": [
+              "square",
+              "hexagonal"
+            ],
+            "description": "Element lattice."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 4,
+            "maximum": 5000,
+            "x-unit": "1",
+            "description": "Number of elements displayed."
+          },
+          "spacing": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.1,
+            "x-unit": "m",
+            "description": "Centre-to-centre element spacing."
+          },
+          "elementShape": {
+            "type": "string",
+            "enum": [
+              "square-patch",
+              "circular-patch"
+            ],
+            "default": "circular-patch",
+            "description": "Element shape."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "ic-chip-grid",
+      "status": "planned",
+      "description": "Grid of identical integrated circuits on a board (e.g. beamformer chips).",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "count",
+          "chipSize"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "x-unit": "1",
+            "description": "Number of chips displayed."
+          },
+          "chipSize": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.05,
+            "x-unit": "m",
+            "description": "Chip side."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "electronics-module",
+      "status": "planned",
+      "description": "Generic board area with a few chips and connectors, tinted by role.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "width",
+          "depth"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "modem",
+              "power",
+              "heater",
+              "generic"
+            ],
+            "description": "Visual variant."
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0.005,
+            "maximum": 1,
+            "x-unit": "m",
+            "description": "Width."
+          },
+          "depth": {
+            "type": "number",
+            "minimum": 0.005,
+            "maximum": 1,
+            "x-unit": "m",
+            "description": "Depth."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "wifi-router",
+      "status": "planned",
+      "description": "Indoor Wi-Fi router box.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "height"
+        ],
+        "properties": {
+          "height": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 0.5,
+            "x-unit": "m",
+            "description": "Box height."
+          },
+          "showRadiation": {
+            "type": "boolean",
+            "default": false,
+            "description": "Draw stylised Wi-Fi rings."
+          }
+        }
+      }
+    },
+    {
+      "id": "cable",
+      "status": "planned",
+      "description": "Cable between two entities, routed along a sagging curve.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "x-ref": "entity",
+            "description": "Start entity."
+          },
+          "to": {
+            "type": "string",
+            "x-ref": "entity",
+            "description": "End entity."
+          },
+          "sag": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.2,
+            "x-unit": "1",
+            "description": "Sag relative to length."
+          }
+        }
+      }
+    },
+    {
+      "id": "leo-satellite",
+      "status": "planned",
+      "description": "Flat-pack low-orbit satellite: bus + single solar wing.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "busLength"
+        ],
+        "properties": {
+          "busLength": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 20,
+            "x-unit": "m",
+            "description": "Bus length (as displayed)."
+          },
+          "solarSpan": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 60,
+            "default": 8,
+            "x-unit": "m",
+            "description": "Solar wing span (as displayed)."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "ground-station",
+      "status": "planned",
+      "description": "Gateway site: a few radome-covered antennas on a fenced pad.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "antennaCount"
+        ],
+        "properties": {
+          "antennaCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16,
+            "x-unit": "1",
+            "description": "Number of radomes."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "datacenter",
+      "status": "planned",
+      "description": "Stylised data centre building standing for 'the Internet'.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "width"
+        ],
+        "properties": {
+          "width": {
+            "type": "number",
+            "minimum": 2,
+            "maximum": 200,
+            "x-unit": "scene",
+            "description": "Building width."
+          }
+        }
+      },
+      "capabilities": [
+        "lod"
+      ]
+    },
+    {
+      "id": "data-link",
+      "status": "planned",
+      "description": "Animated path of data pulses between two entities. Not a physical simulation: it shows where data goes.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "medium"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "x-ref": "entity",
+            "description": "Start entity."
+          },
+          "to": {
+            "type": "string",
+            "x-ref": "entity",
+            "description": "End entity."
+          },
+          "medium": {
+            "type": "string",
+            "enum": [
+              "radio",
+              "fiber",
+              "laser"
+            ],
+            "description": "Visual style of the link."
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "default": true,
+            "description": "Pulses both ways."
+          }
+        }
+      }
+    },
+    {
+      "id": "star",
+      "status": "planned",
+      "description": "Glowing star disc with corona (e.g. the Sun), always rendered not to scale.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayRadius"
+        ],
+        "properties": {
+          "displayRadius": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1000,
+            "x-unit": "scene",
+            "description": "Displayed radius."
+          },
+          "colorTemperatureK": {
+            "type": "number",
+            "minimum": 2000,
+            "maximum": 30000,
+            "default": 5772,
+            "x-unit": "K",
+            "description": "Black-body temperature used for its colour."
+          }
+        }
+      }
+    },
+    {
+      "id": "atmosphere-layer",
+      "status": "planned",
+      "description": "Translucent dome or slab of atmosphere above the ground. Its colour is set by a scattering simulator when bound.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "radius",
+          "thickness"
+        ],
+        "properties": {
+          "radius": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000,
+            "x-unit": "scene",
+            "description": "Dome radius."
+          },
+          "thickness": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 10000,
+            "x-unit": "scene",
+            "description": "Layer thickness."
+          }
+        }
+      }
+    },
+    {
+      "id": "molecule-cloud",
+      "status": "planned",
+      "description": "Cluster of ball-and-stick small molecules, shown in a magnified bubble.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "species",
+          "count"
+        ],
+        "properties": {
+          "species": {
+            "type": "string",
+            "enum": [
+              "N2",
+              "O2",
+              "H2O",
+              "mixed-air"
+            ],
+            "description": "Molecule species."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "x-unit": "1",
+            "description": "Displayed molecules."
+          },
+          "bubbleRadius": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 100,
+            "default": 2,
+            "x-unit": "scene",
+            "description": "Radius of the magnifying bubble."
+          }
+        }
+      }
+    },
+    {
+      "id": "observer",
+      "status": "planned",
+      "description": "Stylised person standing on the ground, looking at the sky.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "height"
+        ],
+        "properties": {
+          "height": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 2.5,
+            "x-unit": "m",
+            "description": "Height."
+          }
+        }
+      }
+    }
+  ],
+  "simulators": [
+    {
+      "id": "phased-array-wave",
+      "status": "planned",
+      "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes.",
+      "equations": [
+        "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta_0}{\\lambda}",
+        "AF(\\theta) = \\left|\\sum_{n=0}^{N-1} e^{\\, i n \\left(\\frac{2\\pi d}{\\lambda}\\sin\\theta - \\Delta\\varphi\\right)}\\right|",
+        "\\sin\\theta_m = \\sin\\theta_0 + m\\,\\frac{\\lambda}{d},\\quad m \\in \\mathbb{Z}",
+        "\\lambda = c / f"
+      ],
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "frequencyHz",
+          "elementCount",
+          "spacingOverLambda"
+        ],
+        "properties": {
+          "frequencyHz": {
+            "type": "number",
+            "minimum": 100000000.0,
+            "maximum": 100000000000.0,
+            "x-unit": "Hz",
+            "description": "Carrier frequency."
+          },
+          "elementCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "x-unit": "1",
+            "description": "Elements in the simulated linear cut."
+          },
+          "spacingOverLambda": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 2,
+            "x-unit": "1",
+            "description": "Element spacing d / lambda."
+          },
+          "steeringAngleDeg": {
+            "type": "number",
+            "minimum": -80,
+            "maximum": 80,
+            "default": 0,
+            "x-unit": "deg",
+            "description": "Main beam direction from broadside."
+          },
+          "phaseStepDeg": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "x-unit": "deg",
+            "x-alternativeTo": "steeringAngleDeg",
+            "description": "Phase shift between neighbours; when driven, the steering angle is derived from it."
+          },
+          "trackTarget": {
+            "type": "string",
+            "x-ref": "entity",
+            "description": "Entity the beam points at while tracking is true."
+          },
+          "tracking": {
+            "type": "boolean",
+            "default": true,
+            "description": "When true and trackTarget is set, the steering angle follows the target; when false, it is driven by steeringAngleDeg or phaseStepDeg."
+          },
+          "showField": {
+            "type": "boolean",
+            "default": true,
+            "description": "Expose the field on the 'wave-field' channel."
+          }
+        }
+      },
+      "roles": {
+        "array": {
+          "components": [
+            "antenna-element-array"
+          ],
+          "multiple": false
+        }
+      },
+      "outputs": [
+        {
+          "id": "wavelength",
+          "description": "c / f.",
+          "x-unit": "m"
+        },
+        {
+          "id": "steeringAngleDeg",
+          "description": "Main beam direction.",
+          "x-unit": "deg"
+        },
+        {
+          "id": "phaseStepDeg",
+          "description": "Neighbour phase shift.",
+          "x-unit": "deg"
+        },
+        {
+          "id": "gratingLobesDeg",
+          "description": "Directions of grating lobes inside visible space (empty below the d/lambda limit)."
+        },
+        {
+          "id": "arrayFactor",
+          "description": "Normalised AF(theta) sampled over [-90, 90] deg."
+        }
+      ],
+      "provides": [
+        "wave-field",
+        "beam"
+      ]
+    },
+    {
+      "id": "orbital-pass",
+      "status": "planned",
+      "description": "Circular-orbit kinematics of satellites passing over an observer. Physical motion is computed at true altitude, then mapped onto a display arc (not to scale).",
+      "equations": [
+        "v = \\sqrt{\\frac{\\mu}{R_\\oplus + h}}",
+        "T = 2\\pi \\sqrt{\\frac{(R_\\oplus + h)^3}{\\mu}}",
+        "\\psi = \\arccos\\!\\left(\\frac{R_\\oplus \\cos\\varepsilon}{R_\\oplus + h}\\right) - \\varepsilon,\\quad t_{pass} = \\frac{2\\psi}{2\\pi} T"
+      ],
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "altitudeM",
+          "displayRadius"
+        ],
+        "properties": {
+          "altitudeM": {
+            "type": "number",
+            "minimum": 160000,
+            "maximum": 2000000,
+            "x-unit": "m",
+            "description": "True orbital altitude."
+          },
+          "minElevationDeg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 60,
+            "default": 25,
+            "x-unit": "deg",
+            "description": "Lowest elevation at which a satellite is usable."
+          },
+          "displayRadius": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000,
+            "x-unit": "scene",
+            "description": "Radius of the display arc above the observer."
+          },
+          "spacingS": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3600,
+            "default": 60,
+            "x-unit": "s",
+            "description": "Time between successive satellites on the arc."
+          }
+        }
+      },
+      "roles": {
+        "satellites": {
+          "components": [
+            "leo-satellite"
+          ],
+          "multiple": true
+        },
+        "observer": {
+          "components": [
+            "flat-panel-terminal",
+            "observer"
+          ],
+          "multiple": false
+        }
+      },
+      "outputs": [
+        {
+          "id": "speed",
+          "description": "Orbital speed.",
+          "x-unit": "m/s"
+        },
+        {
+          "id": "period",
+          "description": "Orbital period.",
+          "x-unit": "s"
+        },
+        {
+          "id": "passDuration",
+          "description": "Time above minElevationDeg for an overhead pass.",
+          "x-unit": "s"
+        },
+        {
+          "id": "visibleSatellite",
+          "description": "Entity id of the highest satellite above minElevationDeg."
+        }
+      ],
+      "provides": [
+        "trajectory"
+      ]
+    },
+    {
+      "id": "rayleigh-scattering",
+      "status": "planned",
+      "description": "Single-scattering of sunlight by air molecules (Rayleigh regime). Computes sky colour and the spectrum reaching an observer for a given sun elevation.",
+      "equations": [
+        "I_s(\\lambda) \\propto \\frac{I_0(\\lambda)}{\\lambda^4}",
+        "I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda) s},\\quad \\beta(\\lambda) \\propto \\lambda^{-4}"
+      ],
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sunElevationDeg"
+        ],
+        "properties": {
+          "sunElevationDeg": {
+            "type": "number",
+            "minimum": -5,
+            "maximum": 90,
+            "x-unit": "deg",
+            "description": "Sun elevation above the horizon."
+          },
+          "wavelengthNm": {
+            "type": "number",
+            "minimum": 380,
+            "maximum": 750,
+            "default": 550,
+            "x-unit": "nm",
+            "description": "Wavelength shown by the wave lens."
+          },
+          "airDensityFactor": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "default": 1,
+            "x-unit": "1",
+            "description": "Multiplier on sea-level molecular density ('what if there were no air')."
+          }
+        }
+      },
+      "roles": {
+        "sun": {
+          "components": [
+            "star"
+          ],
+          "multiple": false
+        },
+        "atmosphere": {
+          "components": [
+            "atmosphere-layer"
+          ],
+          "multiple": false
+        },
+        "molecules": {
+          "components": [
+            "molecule-cloud"
+          ],
+          "multiple": true,
+          "optional": true
+        },
+        "observer": {
+          "components": [
+            "observer"
+          ],
+          "multiple": false
+        }
+      },
+      "outputs": [
+        {
+          "id": "skyColor",
+          "description": "sRGB colour of the sky at the zenith."
+        },
+        {
+          "id": "sunColor",
+          "description": "sRGB colour of the direct sunlight reaching the observer."
+        },
+        {
+          "id": "spectrum",
+          "description": "Relative scattered intensity sampled over 380-750 nm."
+        }
+      ],
+      "provides": [
+        "wave-field",
+        "spectrum"
+      ]
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves",
+      "status": "planned",
+      "description": "Reveals wave fields on the real object: animated wavefronts (phase colour map) on a plane, plus beam/lobe markers when available.",
+      "consumes": [
+        "wave-field"
+      ]
+    }
+  ]
+}
