@@ -1,0 +1,101 @@
+{
+  "formatVersion": "0.1",
+  "nodeId": "starlink-terminal",
+  "lang": "fr",
+  "question": "Comment fonctionne l'antenne Starlink ?",
+  "aliases": [
+    "Comment marche une parabole Starlink ?",
+    "Comment l'antenne Starlink capte-t-elle Internet par satellite ?",
+    "Comment fonctionne Starlink ?"
+  ],
+  "common": {
+    "entity.terminal.label": "Antenne Starlink",
+    "entity.phased-array.label": "Réseau d'éléments rayonnants",
+    "entity.beamformers.label": "Puces de formation de faisceau",
+    "entity.modem.label": "Modem",
+    "entity.power.label": "Alimentation et dégivrage",
+    "entity.router.label": "Routeur Wi-Fi",
+    "entity.satellite.label": "Satellite Starlink",
+    "entity.gateway.label": "Station au sol",
+    "entity.internet.label": "Internet",
+    "lens.waves.label": "Ondes",
+    "control.steer": "Angle du faisceau",
+    "control.count": "Nombre d'éléments",
+    "control.phase": "Déphasage entre voisins",
+    "control.spacing": "Espacement d / λ",
+
+    "entity.terminal.description": "Un panneau plat et fixe qui échange des ondes radio avec les satellites qui passent au-dessus de lui.",
+    "entity.phased-array.description": "Des centaines de petites antennes identiques. Ensemble, elles forment un faisceau qu'on oriente sans rien bouger.",
+    "entity.beamformers.description": "Des puces qui décalent très légèrement le signal de chaque petite antenne. C'est ce décalage qui oriente le faisceau.",
+    "entity.modem.description": "Il transforme les ondes reçues en données, et les données à envoyer en ondes.",
+    "entity.power.description": "Il alimente l'antenne et peut chauffer sa surface pour faire fondre la neige.",
+    "entity.router.description": "Il distribue la connexion dans la maison, par Wi-Fi.",
+    "entity.satellite.description": "Un satellite en orbite basse, l'un des milliers de la constellation. Il relaie les données entre les antennes et les stations au sol.",
+    "entity.gateway.description": "Une station équipée de grandes antennes, reliée à Internet par la fibre optique. Elle échange les données avec les satellites.",
+    "entity.internet.description": "Le reste du réseau mondial : serveurs, sites, services."
+  },
+  "levels": {
+    "discovery": {
+      "entity.phased-array.label": "Les petites antennes",
+      "entity.beamformers.label": "Les puces chefs d'orchestre",
+      "entity.power.label": "Alimentation et chauffage",
+      "entity.router.label": "La boîte Wi-Fi",
+      "control.steer": "Direction du faisceau",
+      "entity.terminal.description": "Une antenne toute plate qui ne bouge jamais, et qui parle pourtant avec des satellites qui filent dans le ciel.",
+      "entity.phased-array.description": "Des centaines de toutes petites antennes. Elles travaillent ensemble, comme une chorale.",
+      "entity.beamformers.description": "Elles disent à chaque petite antenne quand « chanter », un tout petit peu avant ou après sa voisine.",
+      "entity.modem.description": "Un traducteur : il change les ondes en messages, et les messages en ondes.",
+      "entity.power.description": "Il donne de l'énergie à l'antenne, et la chauffe quand il neige.",
+
+      "intro.arrival": "Regarde ce toit : il y a une antenne toute plate. Elle discute avec un satellite, tout là-haut dans l'espace.",
+      "intro.subsystems": "Dedans, il y a des centaines de minuscules antennes, des puces qui les commandent, un traducteur appelé modem, et de quoi chauffer l'antenne quand il neige.",
+      "intro.handover-to-user": "Touche une pièce pour aller voir dedans, ou appuie sur Play pour la visite.",
+
+      "play.contact": "Cette antenne parle avec un satellite qui vole environ cinquante fois plus haut qu'un avion. Il va si vite qu'il fait le tour de la Terre en une heure et demie !",
+      "play.problem": "Mais il y a un problème : le satellite traverse le ciel en quelques minutes. L'antenne doit le suivre sans jamais bouger. Essaie de suivre un oiseau du regard sans tourner la tête ni les yeux : impossible ! L'antenne, elle, a une astuce.",
+      "play.cutaway": "Ouvrons-la ! Dedans, il y a des centaines de toutes petites antennes, rangées bien serrées les unes à côté des autres. Derrière elles, des puces leur donnent des ordres.",
+      "play.beam-steering": "Jette plein de cailloux dans une mare, un peu l'un après l'autre : les vagues s'additionnent dans une seule direction. L'antenne fait pareil avec des ondes radio.",
+      "play.handover": "Quand le satellite s'en va vers l'horizon, l'antenne se tourne vers le suivant, toujours sans bouger. Comme dans une course de relais : le témoin passe d'un coureur à l'autre sans s'arrêter.",
+      "play.data-path": "Ensuite, tes messages voyagent : de l'antenne jusqu'au satellite, du satellite jusqu'à une grande station au sol, puis par des câbles jusqu'à Internet. Et tout ça en un clin d'œil !",
+      "play.other-subsystems": "Il reste trois aides. Le modem traduit les ondes en messages. Un chauffage fait fondre la neige sur l'antenne. Et la boîte Wi-Fi envoie Internet partout dans la maison."
+    },
+    "essential": {
+      "intro.arrival": "Sur ce toit, une antenne plate, à peine plus grande qu'un écran d'ordinateur, échange des données avec un satellite qui file au-dessus de nos têtes.",
+      "intro.subsystems": "Sous son capot : un réseau de petites antennes, les puces qui forment le faisceau, le modem, l'alimentation avec son dégivrage. Et dans la maison, le routeur Wi-Fi.",
+      "intro.handover-to-user": "Touchez une pièce pour plonger à l'intérieur, ou lancez la visite guidée.",
+
+      "play.contact": "Cette antenne communique avec un satellite Starlink situé à un peu moins de 500 kilomètres d'altitude. Il se déplace à plus de 27 000 kilomètres par heure : il fait le tour de la Terre en une heure et demie.",
+      "play.problem": "Voilà le problème. Vu d'ici, le satellite traverse le ciel en quelques minutes. Il faut le viser en permanence, avec précision. Et l'antenne n'a aucune pièce mobile : elle ne tourne pas, elle ne s'incline pas.",
+      "play.cutaway": "Ouvrons le capot. Sous la surface lisse, des centaines de petites antennes identiques sont serrées les unes contre les autres. Juste derrière, des puces pilotent chacune un petit groupe d'antennes.",
+      "play.beam-steering": "Chaque petite antenne émet la même onde avec un léger décalage sur sa voisine. Les ondes s'additionnent dans une direction et s'annulent ailleurs. On oriente ainsi le faisceau électroniquement, sans rien bouger.",
+      "play.handover": "Le satellite finit par descendre vers l'horizon. Avant de le perdre, l'antenne bascule son faisceau vers un autre satellite, plus haut dans le ciel. Le réseau réorganise d'ailleurs ces liaisons environ toutes les quinze secondes, et la connexion continue.",
+      "play.data-path": "Les données font ensuite le voyage : du toit au satellite, du satellite à une station au sol équipée de grandes antennes, puis par la fibre optique jusqu'à Internet. Le tout prend une fraction de seconde.",
+      "play.other-subsystems": "Trois autres sous-systèmes complètent l'ensemble. Le modem transforme les ondes reçues en données, et l'inverse. L'alimentation fournit environ une centaine de watts et peut chauffer l'antenne pour faire fondre la neige. Enfin, le routeur Wi-Fi distribue la connexion dans la maison."
+    },
+    "advanced": {
+      "entity.phased-array.description": "Antenne réseau plane : des éléments imprimés identiques, espacés d'environ une demi-longueur d'onde. Leur rayonnement combiné forme un faisceau orientable par la phase.",
+      "entity.beamformers.description": "Circuits intégrés qui appliquent à chaque élément un déphasage et un gain. Le déphasage entre voisins fixe la direction du faisceau.",
+      "entity.modem.description": "Module et démodule le signal en bande Ku, et gère l'accès au réseau.",
+      "entity.power.description": "Environ 75 à 100 watts en moyenne sur le modèle Standard. Un mode de fonte de neige chauffe le panneau.",
+      "entity.satellite.description": "Satellite en orbite basse circulaire, vers 480 kilomètres d'altitude depuis l'abaissement de 2026. Liaison utilisateur en bande Ku, liaison vers les passerelles en bande Ka.",
+
+      "intro.arrival": "Un terminal Starlink à antenne réseau plane, fixe sur son toit, en liaison bande Ku avec un satellite en orbite basse.",
+      "intro.subsystems": "Cinq sous-systèmes : le réseau d'éléments rayonnants, les circuits de formation de faisceau, le modem, l'alimentation et le dégivrage, et le routeur Wi-Fi.",
+      "intro.handover-to-user": "Sélectionnez un sous-système pour descendre d'un niveau, ou lancez la visite.",
+
+      "play.contact": {
+        "text": "Le terminal est en liaison avec un satellite à environ 480 kilomètres d'altitude, celle de la couche principale depuis son abaissement en 2026. En orbite circulaire, la vitesse vaut la racine de mu sur r : environ 7,6 kilomètres par seconde, soit plus de 27 000 kilomètres par heure, pour une période d'environ 94 minutes.",
+        "formula": "v = \\sqrt{\\frac{\\mu}{R_\\oplus + h}} \\approx 7{,}6\\ \\mathrm{km/s}"
+      },
+      "play.problem": "En prenant 25 degrés d'élévation minimale, un passage au zénith ne dure qu'environ quatre minutes. Le champ de vision du terminal couvre environ 110 degrés. Suivre une telle cible avec une parabole motorisée serait lent et fragile : ici, le pointage est entièrement électronique.",
+      "play.cutaway": "En coupe : la surface est un réseau plan d'éléments rayonnants imprimés, plus d'un millier sur les premiers modèles démontés. Derrière, des circuits de formation de faisceau appliquent à chaque élément son propre déphasage.",
+      "play.beam-steering": {
+        "text": "Si chaque élément est déphasé de delta phi par rapport à son voisin, le faisceau s'oriente d'un angle thêta tel que delta phi égale deux pi d sinus thêta sur lambda. En bande Ku, vers 12 gigahertz, lambda vaut environ 2,5 centimètres, d'où un espacement d'environ lambda sur deux, soit 1,25 centimètre. Au-delà de lambda sur deux, des faisceaux parasites apparaissent : les lobes de réseau.",
+        "formula": "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta}{\\lambda}"
+      },
+      "play.handover": "Quand l'élévation du satellite décroît, le terminal commute vers un autre satellite, sans repointage mécanique. Des mesures publiées montrent une réaffectation des liaisons, synchronisée à l'échelle mondiale, toutes les 15 secondes, visible comme un bref pic de latence.",
+      "play.data-path": "Liaison utilisateur en bande Ku : réception de 10,7 à 12,7 gigahertz, émission de 14 à 14,5 gigahertz. Le satellite relaie vers une station passerelle en bande Ka, puis le trafic rejoint Internet par la fibre optique.",
+      "play.other-subsystems": "Le modem module et démodule le signal et gère l'accès au réseau. L'alimentation consomme en moyenne 75 à 100 watts sur le modèle Standard, et un mode de fonte de neige chauffe le panneau. Le routeur Wi-Fi 6 distribue le débit dans le logement."
+    }
+  }
+}

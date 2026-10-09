@@ -1,0 +1,191 @@
+{
+  "formatVersion": "0.1",
+  "nodeId": "starlink-terminal",
+  "facts": [
+    {
+      "id": "altitude",
+      "claim": "Altitude de la couche principale de satellites Starlink : environ 480 km depuis l'abaissement de 2026 (environ 550 km auparavant).",
+      "value": 480000,
+      "unit": "m",
+      "status": "verified",
+      "sources": ["nicolls-x-2026", "gizmodo-lowering-2026", "rcr-lowering-2026", "azmth-tracker"],
+      "usedBy": ["simulators.orbit.params.altitudeM", "play.contact", "entity.satellite.description"],
+      "note": "Annonce SpaceX (janvier 2026) : ~4 400 satellites de ~550 km vers ~480 km au cours de 2026. Un traqueur tiers (CelesTrak) donne la majorité entre 450 et 490 km au 14/09/2026 ; abaissement pas forcément terminé. La spec indiquait 550 km : chiffre dépassé."
+    },
+    {
+      "id": "airliner-ratio",
+      "claim": "Environ 50 fois l'altitude de croisière d'un avion de ligne (~10 km).",
+      "value": 48,
+      "unit": "1",
+      "status": "order-of-magnitude",
+      "formula": "480 km / 10 km",
+      "sources": [],
+      "usedBy": ["levels.discovery.play.contact"],
+      "note": "Altitude de croisière ~10 km : ordre de grandeur courant, non sourcé ici."
+    },
+    {
+      "id": "orbital-speed",
+      "claim": "Vitesse orbitale à 480 km : environ 7,6 km/s, soit environ 27 500 km/h (plus de 27 000 km/h).",
+      "value": 7628,
+      "unit": "m/s",
+      "status": "computed",
+      "formula": "v = sqrt(mu / (R + h)), mu = 398600.4418 km^3/s^2, R = 6371 km, h = 480 km",
+      "sources": [],
+      "usedBy": ["play.contact"],
+      "note": "À 550 km : 7,59 km/s (27 320 km/h). Le chiffre de la spec (~27 000 km/h) tient dans les deux cas. Sera vérifié par le test du simulateur orbital-pass."
+    },
+    {
+      "id": "orbital-period",
+      "claim": "Période orbitale à 480 km : environ 94 minutes (« une heure et demie »).",
+      "value": 5646,
+      "unit": "s",
+      "status": "computed",
+      "formula": "T = 2 pi sqrt((R + h)^3 / mu)",
+      "sources": [],
+      "usedBy": ["play.contact"]
+    },
+    {
+      "id": "pass-duration",
+      "claim": "Durée d'un passage au zénith au-dessus de 25° d'élévation, à 480 km : environ 4 minutes.",
+      "value": 237,
+      "unit": "s",
+      "status": "computed",
+      "formula": "psi = arccos(R cos(eps) / (R + h)) - eps ; t = (2 psi / 2 pi) T, eps = 25°",
+      "sources": [],
+      "usedBy": ["play.problem"],
+      "note": "Élévation minimale de 25° : hypothèse de modélisation, non sourcée. Rotation de la Terre négligée."
+    },
+    {
+      "id": "ku-band",
+      "claim": "Terminal utilisateur : réception 10,7–12,7 GHz, émission 14,0–14,5 GHz (bande Ku).",
+      "value": "10.7-12.7 GHz / 14.0-14.5 GHz",
+      "status": "verified",
+      "sources": ["fcc-ut-271541", "mic-japan-spacex"],
+      "usedBy": ["play.data-path", "simulators.beam.params.frequencyHz"],
+      "note": "Les bornes de bande concordent entre sources ; les largeurs de canal citées par des tiers divergent et ne sont pas utilisées."
+    },
+    {
+      "id": "ka-gateway",
+      "claim": "Les liaisons satellite–passerelle utilisent la bande Ka (par exemple 17,8–18,6 GHz en descente).",
+      "value": "17.8-18.6 GHz",
+      "status": "verified",
+      "sources": ["mic-japan-spacex"],
+      "usedBy": ["play.data-path", "entity.satellite.description"]
+    },
+    {
+      "id": "wavelength",
+      "claim": "À 12 GHz, λ ≈ 2,5 cm ; λ/2 ≈ 1,25 cm.",
+      "value": 0.02498,
+      "unit": "m",
+      "status": "computed",
+      "formula": "lambda = c / f, c = 299 792 458 m/s",
+      "sources": [],
+      "usedBy": ["play.beam-steering"]
+    },
+    {
+      "id": "element-spacing",
+      "claim": "Espacement des éléments d'environ λ/2.",
+      "value": 0.0125,
+      "unit": "m",
+      "status": "order-of-magnitude",
+      "sources": [],
+      "usedBy": ["entities.phased-array.params.spacing", "play.beam-steering", "entity.phased-array.description"],
+      "note": "Règle de conception générale des réseaux à balayage (pas de lobes de réseau sur tout le demi-espace). Espacement réel du terminal Starlink non vérifié."
+    },
+    {
+      "id": "element-count",
+      "claim": "Plus d'un millier d'éléments rayonnants (1 280) sur la première antenne ronde démontée en 2020.",
+      "value": 1280,
+      "unit": "1",
+      "status": "unverified",
+      "sources": ["linkedin-dishy-overview", "rpa-intern-starlink", "hackaday-teardown", "cybertruck-xray-relay"],
+      "usedBy": ["play.cutaway", "entities.phased-array.params.count"],
+      "note": "Uniquement des sources secondaires ; source primaire probable : vidéo The Signal Path TSP #181, non consultée. Le modèle Standard actuel n'est pas documenté. Les niveaux Découverte et Essentiel disent « des centaines ». Le count de la scène (1200) est une valeur d'affichage."
+    },
+    {
+      "id": "beamformer-count",
+      "claim": "Nombre de puces de formation de faisceau.",
+      "value": 64,
+      "unit": "1",
+      "status": "unverified",
+      "sources": ["hackaday-teardown"],
+      "usedBy": ["entities.beamformers.params.count"],
+      "note": "Valeur d'affichage seulement, aucune source ne donne le nombre. Aucun texte ne cite de chiffre."
+    },
+    {
+      "id": "dish-dimensions",
+      "claim": "Antenne Standard (V4) : 594 × 383 × 39,7 mm, 2,9 kg.",
+      "value": "0.594 x 0.383 x 0.0397 m",
+      "status": "verified",
+      "sources": ["speedcast-standard", "overtons-standard"],
+      "usedBy": ["entities.terminal.params", "intro.arrival"],
+      "note": "Sources revendeurs concordantes ; la fiche officielle starlink.com n'a pas pu être ouverte."
+    },
+    {
+      "id": "field-of-view",
+      "claim": "Champ de vision de l'antenne Standard : environ 110°.",
+      "value": 110,
+      "unit": "deg",
+      "status": "verified",
+      "sources": ["speedcast-standard"],
+      "usedBy": ["play.problem"],
+      "note": "Une ancienne fiche Starlink (génération motorisée) indique 100°."
+    },
+    {
+      "id": "power",
+      "claim": "Consommation moyenne de l'antenne Standard : 75 à 100 W.",
+      "value": "75-100",
+      "unit": "W",
+      "status": "verified",
+      "sources": ["speedcast-standard"],
+      "usedBy": ["play.other-subsystems", "entity.power.description"],
+      "note": "Source revendeur ; ancienne fiche officielle : 50–75 W (génération précédente)."
+    },
+    {
+      "id": "snow-melt",
+      "claim": "L'antenne a un mode de fonte de neige (jusqu'à ~40 mm de neige par heure selon des revendeurs).",
+      "value": 40,
+      "unit": "mm/h",
+      "status": "unverified",
+      "sources": ["signalboosters-standard"],
+      "usedBy": ["play.other-subsystems", "entity.power.description"],
+      "note": "L'existence du mode est cohérente entre sources ; le débit de 40 mm/h n'est pas cité dans les textes."
+    },
+    {
+      "id": "router-wifi6",
+      "claim": "Le routeur fourni avec le kit Standard actuel est Wi-Fi 6.",
+      "value": "Wi-Fi 6",
+      "status": "verified",
+      "sources": ["signalboosters-standard"],
+      "usedBy": ["play.other-subsystems"]
+    },
+    {
+      "id": "reallocation-15s",
+      "claim": "Starlink réaffecte les liaisons terminal–satellite–passerelle selon un cycle global de 15 secondes.",
+      "value": 15,
+      "unit": "s",
+      "status": "verified",
+      "sources": ["conext23-multifaceted", "classmethod-15s"],
+      "usedBy": ["play.handover"],
+      "note": "Effet bien mesuré ; sa nature exacte (changement de satellite ou réordonnancement des ressources) est discutée dans l'article. Les textes disent « réaffectation », pas « changement de satellite »."
+    }
+  ],
+  "sources": [
+    { "id": "nicolls-x-2026", "title": "Michael Nicolls (VP Starlink Engineering) — annonce de l'abaissement des satellites de ~550 km à ~480 km", "url": "https://x.com/michaelnicollsx/status/2006790372681220530", "publisher": "X", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "gizmodo-lowering-2026", "title": "SpaceX Will Move Thousands of Starlinks Closer to Earth in 2026. Here's Why", "url": "https://gizmodo.com/spacex-will-move-thousands-of-starlinks-closer-to-earth-in-2026-heres-why-2000704872", "publisher": "Gizmodo", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "rcr-lowering-2026", "title": "Starlink to lower satellite orbit for space safety", "url": "https://www.rcrwireless.com/20260106/networks/starlink-to-descend-satellites-for-space-safety", "publisher": "RCR Wireless", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "azmth-tracker", "title": "Starlink Tracker: Live Starlink Satellite Map in 3D", "url": "https://azmth.space/tracker/starlink", "publisher": "azmth.space", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "fcc-ut-271541", "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)", "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541", "publisher": "FCC", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "mic-japan-spacex", "title": "SpaceX — document fourni au ministère japonais des Affaires intérieures et des Communications (bandes Ku utilisateur, Ka passerelles)", "url": "https://www.soumu.go.jp/main_content/000660088.pdf", "publisher": "MIC Japon", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "speedcast-standard", "title": "Starlink Standard Kit — Product Specifications", "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/", "publisher": "Speedcast", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "overtons-standard", "title": "Starlink Standard Kit", "url": "https://www.overtons.com/starlink-standard-kit-154373.html", "publisher": "Overton's", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "signalboosters-standard", "title": "Starlink Standard Kit Satellite Internet", "url": "https://www.signalboosters.com/starlink-standard-kit-satellite-internet/", "publisher": "SignalBoosters", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "starlink-spec-pdf", "title": "Starlink Product Specifications — Standard (ancienne génération)", "url": "https://api.starlink.com/public-files/Starlink%20Product%20Specifications_Standard.pdf", "publisher": "Starlink", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "conext23-multifaceted", "title": "A Multifaceted Look at Starlink Performance (CoNEXT 2023)", "url": "https://arxiv.org/pdf/2310.09242", "publisher": "arXiv", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "classmethod-15s", "title": "I actually tried to observe satellite handover on Starlink Mini", "url": "https://dev.classmethod.jp/en/articles/starlink-mini-15-second-handover/", "publisher": "Classmethod", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "linkedin-dishy-overview", "title": "An overview of how Starlink's Phased Array Antenna \"Dishy McFlatface\" works", "url": "https://www.linkedin.com/pulse/overview-how-starlinks-phased-array-antenna-dishy-works-curtis-arnold", "publisher": "LinkedIn", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "rpa-intern-starlink", "title": "An Intern's Perspective: Starlink's Megaconstellation", "url": "https://rpaengr.com/an-interns-perspective-starlinks-megaconstellation/", "publisher": "RPA Engineering", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "hackaday-teardown", "title": "Literally Tearing Apart A SpaceX Starlink Antenna", "url": "https://hackaday.com/blog/page/2642", "publisher": "Hackaday", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "cybertruck-xray-relay", "title": "Starlink Satellite Dish X-Rayed To Unlock RF Magic Inside (relais de l'article Hackaday)", "url": "https://www.cybertruckownersclub.com/forum/threads/starlink-satellite-dish-x-rayed-to-unlock-rf-magic-inside.3380/", "publisher": "Cybertruck Owners Club", "accessed": "2026-10-09", "access": "search-result" }
+  ]
+}

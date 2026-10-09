@@ -1,0 +1,348 @@
+{
+  "formatVersion": "0.1",
+  "node": {
+    "id": "starlink-terminal",
+    "kind": "system",
+    "version": 1,
+    "status": "draft"
+  },
+  "scale": { "metersPerUnit": 1 },
+  "environment": { "lighting": "daylight", "background": "#9fc8ee" },
+  "style": { "theme": "branch-default", "accent": "#ffb000" },
+  "performance": { "triangleBudget": 400000 },
+  "clock": { "timeScale": 1 },
+  "camera": {
+    "home": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 4 },
+    "constraints": { "minDistance": 0.4, "maxDistance": 180, "minElevationDeg": -5, "maxElevationDeg": 85 }
+  },
+  "entities": [
+    {
+      "id": "ground",
+      "component": "terrain",
+      "params": { "size": 400, "surface": "grass" },
+      "transform": { "position": [0, 0, 0] }
+    },
+    {
+      "id": "house",
+      "component": "house",
+      "params": { "width": 10, "depth": 8, "wallHeight": 3, "roofPitchDeg": 30 },
+      "transform": { "position": [0, 0, 0] }
+    },
+    {
+      "id": "terminal",
+      "component": "flat-panel-terminal",
+      "params": { "width": 0.594, "height": 0.383, "thickness": 0.0397, "mount": "pipe", "tiltDeg": 20 },
+      "transform": { "position": [2, 5.6, 0] },
+      "selectable": true,
+      "labelKey": "entity.terminal.label",
+      "descriptionKey": "entity.terminal.description"
+    },
+    {
+      "id": "phased-array",
+      "component": "antenna-element-array",
+      "parent": "terminal",
+      "params": { "lattice": "hexagonal", "count": 1200, "spacing": 0.0125, "elementShape": "circular-patch" },
+      "transform": { "position": [0, 0.012, 0] },
+      "selectable": true,
+      "labelKey": "entity.phased-array.label",
+      "descriptionKey": "entity.phased-array.description"
+    },
+    {
+      "id": "beamformers",
+      "component": "ic-chip-grid",
+      "parent": "terminal",
+      "params": { "count": 64, "chipSize": 0.008 },
+      "transform": { "position": [0, 0.004, 0] },
+      "selectable": true,
+      "labelKey": "entity.beamformers.label",
+      "descriptionKey": "entity.beamformers.description"
+    },
+    {
+      "id": "modem",
+      "component": "electronics-module",
+      "parent": "terminal",
+      "params": { "role": "modem", "width": 0.12, "depth": 0.08 },
+      "transform": { "position": [0.18, -0.006, 0.1] },
+      "selectable": true,
+      "labelKey": "entity.modem.label",
+      "descriptionKey": "entity.modem.description"
+    },
+    {
+      "id": "power",
+      "component": "electronics-module",
+      "parent": "terminal",
+      "params": { "role": "power", "width": 0.1, "depth": 0.07 },
+      "transform": { "position": [-0.18, -0.006, 0.1] },
+      "selectable": true,
+      "labelKey": "entity.power.label",
+      "descriptionKey": "entity.power.description"
+    },
+    {
+      "id": "router",
+      "component": "wifi-router",
+      "params": { "height": 0.2, "showRadiation": false },
+      "transform": { "position": [-2, 1, 1.5] },
+      "selectable": true,
+      "labelKey": "entity.router.label",
+      "descriptionKey": "entity.router.description"
+    },
+    {
+      "id": "terminal-cable",
+      "component": "cable",
+      "params": { "from": "terminal", "to": "router", "sag": 0.1 },
+      "transform": { "position": [0, 0, 0] }
+    },
+    {
+      "id": "sat-a",
+      "component": "leo-satellite",
+      "params": { "busLength": 3, "solarSpan": 10 },
+      "transform": { "position": [-30, 55, -10] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.satellite.label",
+      "descriptionKey": "entity.satellite.description"
+    },
+    {
+      "id": "sat-b",
+      "component": "leo-satellite",
+      "params": { "busLength": 3, "solarSpan": 10 },
+      "transform": { "position": [-80, 25, -20] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.satellite.label",
+      "descriptionKey": "entity.satellite.description"
+    },
+    {
+      "id": "sat-c",
+      "component": "leo-satellite",
+      "params": { "busLength": 3, "solarSpan": 10 },
+      "transform": { "position": [-120, 5, -30] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.satellite.label",
+      "descriptionKey": "entity.satellite.description"
+    },
+    {
+      "id": "gateway",
+      "component": "ground-station",
+      "params": { "antennaCount": 4 },
+      "transform": { "position": [-90, 0, -60] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.gateway.label",
+      "descriptionKey": "entity.gateway.description"
+    },
+    {
+      "id": "internet",
+      "component": "datacenter",
+      "params": { "width": 20 },
+      "transform": { "position": [-130, 0, -90] },
+      "notToScale": true,
+      "selectable": true,
+      "labelKey": "entity.internet.label",
+      "descriptionKey": "entity.internet.description"
+    },
+    {
+      "id": "link-user-a",
+      "component": "data-link",
+      "params": { "from": "terminal", "to": "sat-a", "medium": "radio" },
+      "transform": { "position": [0, 0, 0] },
+      "visible": false
+    },
+    {
+      "id": "link-user-b",
+      "component": "data-link",
+      "params": { "from": "terminal", "to": "sat-b", "medium": "radio" },
+      "transform": { "position": [0, 0, 0] },
+      "visible": false
+    },
+    {
+      "id": "link-feeder",
+      "component": "data-link",
+      "params": { "from": "sat-b", "to": "gateway", "medium": "radio" },
+      "transform": { "position": [0, 0, 0] },
+      "visible": false
+    },
+    {
+      "id": "link-backbone",
+      "component": "data-link",
+      "params": { "from": "gateway", "to": "internet", "medium": "fiber" },
+      "transform": { "position": [0, 0, 0] },
+      "visible": false
+    }
+  ],
+  "simulators": [
+    {
+      "id": "beam",
+      "simulator": "phased-array-wave",
+      "params": {
+        "frequencyHz": 12000000000,
+        "elementCount": 16,
+        "spacingOverLambda": 0.5,
+        "steeringAngleDeg": 0,
+        "trackTarget": "sat-a",
+        "tracking": true
+      },
+      "bind": { "array": "phased-array" }
+    },
+    {
+      "id": "orbit",
+      "simulator": "orbital-pass",
+      "params": { "altitudeM": 480000, "minElevationDeg": 25, "displayRadius": 60, "spacingS": 90 },
+      "bind": { "satellites": ["sat-a", "sat-b", "sat-c"], "observer": "terminal" }
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves-lens",
+      "lens": "waves",
+      "labelKey": "lens.waves.label",
+      "sources": ["beam"],
+      "controls": [
+        { "id": "steer", "target": "beam", "param": "steeringAngleDeg", "labelKey": "control.steer", "levels": ["discovery", "essential"], "min": -60, "max": 60, "step": 1 },
+        { "id": "count", "target": "beam", "param": "elementCount", "labelKey": "control.count", "levels": ["essential", "advanced"], "min": 2, "max": 32, "step": 1 },
+        { "id": "phase", "target": "beam", "param": "phaseStepDeg", "labelKey": "control.phase", "levels": ["advanced"], "min": -180, "max": 180, "step": 1 },
+        { "id": "spacing", "target": "beam", "param": "spacingOverLambda", "labelKey": "control.spacing", "levels": ["advanced"], "min": 0.25, "max": 1.5, "step": 0.05 }
+      ]
+    }
+  ],
+  "links": [
+    { "kind": "composedOf", "from": "phased-array", "to": "starlink-phased-array" },
+    { "kind": "composedOf", "from": "beamformers", "to": "starlink-beamformer" },
+    { "kind": "composedOf", "from": "modem", "to": "starlink-modem" },
+    { "kind": "composedOf", "from": "power", "to": "starlink-power-deicing" },
+    { "kind": "composedOf", "from": "router", "to": "starlink-wifi-router" },
+    { "kind": "reliesOn", "from": "phased-array", "to": "wave-interference" },
+    { "kind": "reliesOn", "from": "sat-a", "to": "circular-orbit" },
+    { "kind": "freeQuestion", "from": "terminal", "to": "why-flat-antenna" }
+  ],
+  "tours": [
+    {
+      "id": "intro",
+      "autoStart": true,
+      "steps": [
+        {
+          "id": "arrival",
+          "textKey": "intro.arrival",
+          "durationS": 9,
+          "camera": { "shot": { "target": "house", "azimuthDeg": 40, "elevationDeg": 15, "distance": 90 }, "transitionS": 0 },
+          "actions": [
+            { "type": "show", "targets": ["link-user-a"] },
+            { "type": "highlight", "targets": ["terminal", "sat-a"] }
+          ]
+        },
+        {
+          "id": "subsystems",
+          "textKey": "intro.subsystems",
+          "durationS": 10,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 30, "elevationDeg": 45, "distance": 1.6 }, "transitionS": 3 },
+          "actions": [
+            { "type": "reveal", "target": "terminal", "mode": "cutaway" },
+            { "type": "label", "targets": ["phased-array", "beamformers", "modem", "power"] }
+          ]
+        },
+        {
+          "id": "handover-to-user",
+          "textKey": "intro.handover-to-user",
+          "durationS": 6,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 4 }, "transitionS": 2 },
+          "actions": [
+            { "type": "reveal", "target": "terminal", "mode": "none" },
+            { "type": "hide", "targets": ["link-user-a"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "steps": [
+        {
+          "id": "contact",
+          "textKey": "play.contact",
+          "durationS": 20,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 60, "elevationDeg": 10, "distance": 80 }, "transitionS": 3 },
+          "actions": [
+            { "type": "timeScale", "value": 1 },
+            { "type": "show", "targets": ["link-user-a"] },
+            { "type": "highlight", "targets": ["terminal", "sat-a"] },
+            { "type": "label", "targets": ["terminal", "sat-a"] }
+          ]
+        },
+        {
+          "id": "problem",
+          "textKey": "play.problem",
+          "durationS": 22,
+          "camera": { "shot": { "target": "house", "azimuthDeg": 90, "elevationDeg": 5, "distance": 120 }, "transitionS": 3 },
+          "actions": [
+            { "type": "timeScale", "value": 30 },
+            { "type": "highlight", "targets": ["sat-a"] }
+          ]
+        },
+        {
+          "id": "cutaway",
+          "textKey": "play.cutaway",
+          "durationS": 18,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 20, "elevationDeg": 55, "distance": 1.2 }, "transitionS": 4 },
+          "actions": [
+            { "type": "timeScale", "value": 1 },
+            { "type": "reveal", "target": "terminal", "mode": "cutaway" },
+            { "type": "highlight", "targets": ["phased-array"] },
+            { "type": "label", "targets": ["phased-array", "beamformers"] }
+          ]
+        },
+        {
+          "id": "beam-steering",
+          "textKey": "play.beam-steering",
+          "durationS": 25,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 90, "elevationDeg": 8, "distance": 2.5 }, "transitionS": 3 },
+          "actions": [
+            { "type": "reveal", "target": "terminal", "mode": "none" },
+            { "type": "lens", "lens": "waves-lens", "on": true },
+            { "type": "setParam", "target": "beam", "param": "tracking", "value": false },
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 35, "overS": 5 }
+          ]
+        },
+        {
+          "id": "handover",
+          "textKey": "play.handover",
+          "durationS": 22,
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 70, "elevationDeg": 12, "distance": 70 }, "transitionS": 3 },
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "tracking", "value": true },
+            { "type": "timeScale", "value": 30 },
+            { "type": "setParam", "target": "beam", "param": "trackTarget", "value": "sat-b" },
+            { "type": "hide", "targets": ["link-user-a"] },
+            { "type": "show", "targets": ["link-user-b"] },
+            { "type": "highlight", "targets": ["sat-a", "sat-b"] }
+          ]
+        },
+        {
+          "id": "data-path",
+          "textKey": "play.data-path",
+          "durationS": 22,
+          "camera": { "shot": { "target": "house", "azimuthDeg": 120, "elevationDeg": 25, "distance": 170 }, "transitionS": 3 },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": false },
+            { "type": "timeScale", "value": 1 },
+            { "type": "show", "targets": ["link-feeder", "link-backbone"] },
+            { "type": "highlight", "targets": ["sat-b", "gateway", "internet"] },
+            { "type": "label", "targets": ["gateway", "internet"] }
+          ]
+        },
+        {
+          "id": "other-subsystems",
+          "textKey": "play.other-subsystems",
+          "durationS": 25,
+          "camera": { "shot": { "target": "house", "azimuthDeg": 30, "elevationDeg": 35, "distance": 14 }, "transitionS": 4 },
+          "actions": [
+            { "type": "hide", "targets": ["link-user-b", "link-feeder", "link-backbone"] },
+            { "type": "reveal", "target": "house", "mode": "cutaway" },
+            { "type": "reveal", "target": "terminal", "mode": "cutaway" },
+            { "type": "highlight", "targets": ["modem", "power", "router"] },
+            { "type": "label", "targets": ["modem", "power", "router"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
