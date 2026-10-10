@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
 import type { SimulatorPlugin } from "../../core/registry";
+import { WAVE_FIELD, type WaveField } from "../channels";
 
 // Linear phased array: N point sources, spacing d, with a phase step Δφ between
 // neighbours (catalogue equations). Pure functions first; the plugin wires them
@@ -71,6 +72,9 @@ export const phasedArrayWave: SimulatorPlugin = {
     const origin = new Vector3();
     /** Unit vector in the array plane along which the linear cut is taken (towards the target). */
     const cutAxis = new Vector3(1, 0, 0);
+    // Until a target is tracked, the cut runs along the array's own x axis.
+    array.node.updateWorldMatrix(true, false);
+    cutAxis.transformDirection(array.node.matrixWorld);
 
     const track = () => {
       if (!params.tracking || !params.trackTarget) return;
@@ -97,13 +101,34 @@ export const phasedArrayWave: SimulatorPlugin = {
     return {
       params,
       set(param, value) {
-        (params as Record<string, unknown>)[param] = value;
+        // Element count is an integer even while a slider or a tour animates it.
+        (params as Record<string, unknown>)[param] = param === "elementCount" && typeof value === "number" ? Math.max(1, Math.round(value)) : value;
+        // Steering by hand takes over from tracking.
+        if (param === "phaseStepDeg" || param === "steeringAngleDeg") params.tracking = false;
         if (param === "phaseStepDeg") driver = "phase";
         if (param === "steeringAngleDeg") driver = "angle";
         track();
       },
       update() {
         track();
+      },
+      channel(name) {
+        if (name !== WAVE_FIELD) return undefined;
+        const { steering, phase } = derived();
+        const lambda = ctx.metres(wavelength(params.frequencyHz));
+        array.node.updateWorldMatrix(true, false);
+        const field: WaveField = {
+          wavelength: lambda,
+          origin: array.node.getWorldPosition(new Vector3()),
+          normal: new Vector3(0, 1, 0).transformDirection(array.node.matrixWorld),
+          axis: cutAxis.clone(),
+          count: params.elementCount,
+          spacing: lambda * params.spacingOverLambda,
+          phaseStep: phase * DEG,
+          steeringDeg: steering,
+          gratingLobesDeg: steering === null ? [] : gratingLobesDeg(steering, params.spacingOverLambda),
+        };
+        return field;
       },
       outputs() {
         const { steering, phase } = derived();
