@@ -17,7 +17,11 @@ const engine = new Engine(app, source, registry);
 const overlay = new Overlay(app, source.nodeIds(), {
   onHome: () => engine.goHome(),
   onNode: (id) => {
-    history.replaceState(null, "", `?node=${id}`);
+    try {
+      history.replaceState(null, "", `?node=${id}`);
+    } catch {
+      // Sandboxed previews may refuse URL changes; the picker still works.
+    }
     void open(id);
   },
 });
