@@ -1,5 +1,5 @@
 {
-  "formatVersion": "0.1",
+  "formatVersion": "0.2",
   "nodeId": "starlink-terminal",
   "lang": "fr",
   "question": "Comment fonctionne l'antenne Starlink ?",
@@ -67,7 +67,12 @@
       "play.contact": "Cette antenne communique avec un satellite Starlink situé à un peu moins de 500 kilomètres d'altitude. Il se déplace à plus de 27 000 kilomètres par heure : il fait le tour de la Terre en une heure et demie.",
       "play.problem": "Voilà le problème. Vu d'ici, le satellite traverse le ciel en quelques minutes. Il faut le viser en permanence, avec précision. Et l'antenne n'a aucune pièce mobile : elle ne tourne pas, elle ne s'incline pas.",
       "play.cutaway": "Ouvrons le capot. Sous la surface lisse, des centaines de petites antennes identiques sont serrées les unes contre les autres. Juste derrière, des puces pilotent chacune un petit groupe d'antennes.",
-      "play.beam-steering": "Chaque petite antenne émet la même onde avec un léger décalage sur sa voisine. Les ondes s'additionnent dans une direction et s'annulent ailleurs. On oriente ainsi le faisceau électroniquement, sans rien bouger.",
+      "play.beam-steering": {
+        "text": "Chaque petite antenne émet la même onde avec un léger décalage sur sa voisine. Les ondes s'additionnent dans une direction et s'annulent ailleurs. On oriente ainsi le faisceau électroniquement, sans rien bouger.",
+        "links": [
+          {"phrase": "Les ondes s'additionnent dans une direction et s'annulent ailleurs", "node": "wave-interference"}
+        ]
+      },
       "play.handover": "Le satellite finit par descendre vers l'horizon. Avant de le perdre, l'antenne bascule son faisceau vers un autre satellite, plus haut dans le ciel. Le réseau réorganise d'ailleurs ces liaisons environ toutes les quinze secondes, et la connexion continue.",
       "play.data-path": "Les données font ensuite le voyage : du toit au satellite, du satellite à une station au sol équipée de grandes antennes, puis par la fibre optique jusqu'à Internet. Le tout prend une fraction de seconde.",
       "play.other-subsystems": "Trois autres sous-systèmes complètent l'ensemble. Le modem transforme les ondes reçues en données, et l'inverse. L'alimentation fournit environ une centaine de watts et peut chauffer l'antenne pour faire fondre la neige. Enfin, le routeur Wi-Fi distribue la connexion dans la maison."
@@ -84,14 +89,33 @@
       "intro.handover-to-user": "Sélectionnez un sous-système pour descendre d'un niveau, ou lancez la visite.",
 
       "play.contact": {
-        "text": "Le terminal est en liaison avec un satellite à environ 480 kilomètres d'altitude, celle de la couche principale depuis son abaissement en 2026. En orbite circulaire, la vitesse vaut la racine de mu sur r : environ 7,6 kilomètres par seconde, soit plus de 27 000 kilomètres par heure, pour une période d'environ 94 minutes.",
-        "formula": "v = \\sqrt{\\frac{\\mu}{R_\\oplus + h}} \\approx 7{,}6\\ \\mathrm{km/s}"
+        "text": "Le satellite est à environ 480 kilomètres d'altitude. En orbite circulaire, sa vitesse est la racine carrée de mu divisé par r, où mu est la constante gravitationnelle de la Terre, et r la distance au centre de la Terre, c'est-à-dire son rayon plus l'altitude. On trouve environ 7,6 kilomètres par seconde, plus de 27 000 kilomètres par heure, et un tour de la Terre en 94 minutes environ.",
+        "subtitle": "Le satellite est à environ 480 km d'altitude. En orbite circulaire, $v = \\sqrt{\\dfrac{\\mu}{R_\\oplus + h}} \\approx 7{,}6\\ \\text{km/s}$, soit plus de 27 000 km/h, et une période $T \\approx 94\\ \\text{min}$.",
+        "terms": [
+          {"symbol": "v", "meaning": "vitesse orbitale", "unit": "km/s"},
+          {"symbol": "\\mu", "meaning": "constante gravitationnelle de la Terre", "unit": "≈ 398 600 km³/s²"},
+          {"symbol": "R_\\oplus", "meaning": "rayon moyen de la Terre", "unit": "≈ 6 371 km"},
+          {"symbol": "h", "meaning": "altitude du satellite", "unit": "≈ 480 km"},
+          {"symbol": "T", "meaning": "période orbitale : durée d'un tour de la Terre", "unit": "min"}
+        ],
+        "links": [
+          {"phrase": "orbite circulaire", "node": "circular-orbit"}
+        ]
       },
       "play.problem": "En prenant 25 degrés d'élévation minimale, un passage au zénith ne dure qu'environ quatre minutes. Le champ de vision du terminal couvre environ 110 degrés. Suivre une telle cible avec une parabole motorisée serait lent et fragile : ici, le pointage est entièrement électronique.",
       "play.cutaway": "En coupe : la surface est un réseau plan d'éléments rayonnants imprimés, plus d'un millier sur les premiers modèles démontés. Derrière, des circuits de formation de faisceau appliquent à chaque élément son propre déphasage.",
       "play.beam-steering": {
-        "text": "Si chaque élément est déphasé de delta phi par rapport à son voisin, le faisceau s'oriente d'un angle thêta tel que delta phi égale deux pi d sinus thêta sur lambda. En bande Ku, vers 12 gigahertz, lambda vaut environ 2,5 centimètres, d'où un espacement d'environ lambda sur deux, soit 1,25 centimètre. Au-delà de lambda sur deux, des faisceaux parasites apparaissent : les lobes de réseau.",
-        "formula": "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta}{\\lambda}"
+        "text": "Chaque élément est déphasé de delta phi par rapport à son voisin. Le faisceau s'oriente alors d'un angle thêta, mesuré depuis la perpendiculaire au panneau, tel que delta phi égale deux pi fois d sinus thêta, divisé par lambda, où d est l'espacement entre deux éléments et lambda la longueur d'onde. En bande Ku, vers 12 gigahertz, lambda vaut environ 2,5 centimètres, d'où un espacement d'environ lambda sur deux, soit 1,25 centimètre. Au-delà, des faisceaux parasites apparaissent : les lobes de réseau.",
+        "subtitle": "Chaque élément est déphasé de $\\Delta\\varphi$ par rapport à son voisin. Le faisceau s'oriente d'un angle $\\theta$ tel que $\\Delta\\varphi = \\dfrac{2\\pi\\, d \\sin\\theta}{\\lambda}$. En bande Ku (≈ 12 GHz), $\\lambda \\approx 2{,}5\\ \\text{cm}$, d'où $d \\approx \\lambda / 2 \\approx 1{,}25\\ \\text{cm}$. Au-delà de $\\lambda / 2$, des faisceaux parasites apparaissent : les lobes de réseau.",
+        "terms": [
+          {"symbol": "\\Delta\\varphi", "meaning": "déphasage entre deux éléments voisins", "unit": "rad"},
+          {"symbol": "\\theta", "meaning": "direction du faisceau, mesurée depuis la perpendiculaire au panneau", "unit": "°"},
+          {"symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "cm"},
+          {"symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "cm"}
+        ],
+        "links": [
+          {"phrase": "déphasé", "node": "wave-interference"}
+        ]
       },
       "play.handover": "Quand l'élévation du satellite décroît, le terminal commute vers un autre satellite, sans repointage mécanique. Des mesures publiées montrent une réaffectation des liaisons, synchronisée à l'échelle mondiale, toutes les 15 secondes, visible comme un bref pic de latence.",
       "play.data-path": "Liaison utilisateur en bande Ku : réception de 10,7 à 12,7 gigahertz, émission de 14 à 14,5 gigahertz. Le satellite relaie vers une station passerelle en bande Ka, puis le trafic rejoint Internet par la fibre optique.",

@@ -1,5 +1,5 @@
 {
-  "formatVersion": "0.1",
+  "formatVersion": "0.2",
   "nodeId": "blue-sky",
   "lang": "fr",
   "question": "Pourquoi le ciel est-il bleu ?",
@@ -34,23 +34,53 @@
       "intro.zoom-air": "Zoomons sur l'air : des molécules d'azote et d'oxygène, environ mille fois plus petites que la longueur d'onde de la lumière.",
       "intro.handover-to-user": "Touchez un élément pour l'explorer, ou lancez la visite guidée.",
       "play.white-light": "La lumière du Soleil contient toutes les couleurs, du violet au rouge. Chaque couleur est une onde de longueur différente.",
-      "play.scattering": "Les molécules de l'air renvoient une partie de la lumière dans toutes les directions. Et elles renvoient bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
+      "play.scattering": {
+        "text": "Les molécules de l'air renvoient une partie de la lumière dans toutes les directions. Et elles renvoient bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
+        "links": [
+          {"phrase": "renvoient une partie de la lumière dans toutes les directions", "node": "rayleigh-scattering"}
+        ]
+      },
       "play.blue-everywhere": "Cette lumière bleue diffusée nous parvient de toutes les directions du ciel. Voilà pourquoi il paraît bleu, et pas blanc.",
       "play.sunset": "Quand le Soleil est bas, sa lumière traverse une couche d'air bien plus épaisse. Le bleu est diffusé en chemin, et il nous reste surtout du rouge et de l'orange."
     },
     "advanced": {
-      "intro.arrival": "Le ciel diurne est bleu par diffusion Rayleigh de la lumière solaire sur les molécules de l'atmosphère.",
+      "intro.arrival": {
+        "text": "Le ciel diurne est bleu par diffusion Rayleigh de la lumière solaire sur les molécules de l'atmosphère.",
+        "links": [
+          {"phrase": "diffusion Rayleigh", "node": "rayleigh-scattering"}
+        ]
+      },
       "intro.zoom-air": "Molécules de diazote et de dioxygène, de taille très inférieure à la longueur d'onde visible : c'est le régime de Rayleigh.",
       "intro.handover-to-user": "Sélectionnez un élément, ou lancez la visite.",
-      "play.white-light": "Le spectre solaire couvre tout le visible, d'environ 380 à 750 nanomètres.",
+      "play.white-light": {
+        "text": "Le spectre solaire couvre tout le visible, d'environ 380 à 750 nanomètres.",
+        "links": [
+          {"phrase": "tout le visible", "node": "visible-spectrum"}
+        ]
+      },
       "play.scattering": {
-        "text": "En régime de Rayleigh, l'intensité diffusée varie comme l'inverse de la puissance quatre de la longueur d'onde. Entre 450 et 700 nanomètres, le rapport vaut environ six.",
-        "formula": "I_s \\propto \\frac{I_0}{\\lambda^4}"
+        "text": "En régime de Rayleigh, l'intensité diffusée par les molécules est proportionnelle à l'intensité de la lumière du Soleil, divisée par la longueur d'onde à la puissance quatre. Entre 450 et 700 nanomètres, le rapport vaut environ six.",
+        "subtitle": "En régime de Rayleigh, $I_s \\propto \\dfrac{I_0}{\\lambda^4}$. Entre 450 et 700 nm : $(700/450)^4 \\approx 6$.",
+        "terms": [
+          {"symbol": "I_s", "meaning": "intensité diffusée par les molécules de l'air"},
+          {"symbol": "I_0", "meaning": "intensité de la lumière du Soleil qui arrive"},
+          {"symbol": "\\lambda", "meaning": "longueur d'onde de la lumière", "unit": "nm"}
+        ],
+        "links": [
+          {"phrase": "régime de Rayleigh", "node": "rayleigh-scattering"}
+        ]
       },
       "play.blue-everywhere": "Le ciel est la somme de cette lumière diffusée, intégrée le long de chaque ligne de visée. Le violet est encore plus diffusé, mais le spectre solaire en contient moins et l'œil y est moins sensible.",
       "play.sunset": {
-        "text": "Le long du trajet, l'intensité directe décroît exponentiellement, avec un coefficient d'extinction proportionnel à lambda puissance moins quatre. Au coucher du Soleil, le chemin optique s'allonge fortement, et le bleu est éliminé du rayonnement direct.",
-        "formula": "I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda)\\, s}"
+        "text": "Le long d'un trajet de longueur s dans l'air, l'intensité de la lumière directe décroît exponentiellement, avec un coefficient d'extinction bêta proportionnel à la longueur d'onde lambda à la puissance moins quatre. Au coucher du Soleil, ce trajet s'allonge fortement, et le bleu est éliminé de la lumière directe.",
+        "subtitle": "Le long d'un trajet $s$ dans l'air, $I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda)\\, s}$, avec $\\beta \\propto \\lambda^{-4}$. Au coucher du Soleil, $s$ s'allonge fortement : le bleu est éliminé de la lumière directe.",
+        "terms": [
+          {"symbol": "I", "meaning": "intensité de la lumière directe après le trajet s"},
+          {"symbol": "I_0", "meaning": "intensité de la lumière du Soleil à l'entrée dans l'atmosphère"},
+          {"symbol": "\\lambda", "meaning": "longueur d'onde de la lumière", "unit": "nm"},
+          {"symbol": "s", "meaning": "longueur du trajet dans l'air", "unit": "km"},
+          {"symbol": "\\beta", "meaning": "coefficient d'extinction de l'air : part de lumière retirée par unité de longueur", "unit": "1/km"}
+        ]
       }
     }
   }

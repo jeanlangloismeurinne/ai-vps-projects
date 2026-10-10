@@ -1,5 +1,5 @@
 {
-  "formatVersion": "0.1",
+  "formatVersion": "0.2",
   "node": {
     "id": "starlink-terminal",
     "kind": "system",
@@ -259,7 +259,7 @@
         {
           "id": "contact",
           "textKey": "play.contact",
-          "durationS": 20,
+          "durationS": 24,
           "camera": { "shot": { "target": "terminal", "azimuthDeg": 60, "elevationDeg": 10, "distance": 80 }, "transitionS": 3 },
           "actions": [
             { "type": "timeScale", "value": 1 },
@@ -293,7 +293,7 @@
         {
           "id": "beam-steering",
           "textKey": "play.beam-steering",
-          "durationS": 25,
+          "durationS": 30,
           "camera": { "shot": { "target": "terminal", "azimuthDeg": 90, "elevationDeg": 8, "distance": 2.5 }, "transitionS": 3 },
           "actions": [
             { "type": "reveal", "target": "terminal", "mode": "none" },

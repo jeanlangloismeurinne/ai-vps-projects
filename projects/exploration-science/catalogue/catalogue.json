@@ -1,5 +1,5 @@
 {
-  "formatVersion": "0.1",
+  "formatVersion": "0.2",
   "components": [
     {
       "id": "terrain",
@@ -574,10 +574,117 @@
       "status": "planned",
       "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes.",
       "equations": [
-        "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta_0}{\\lambda}",
-        "AF(\\theta) = \\left|\\sum_{n=0}^{N-1} e^{\\, i n \\left(\\frac{2\\pi d}{\\lambda}\\sin\\theta - \\Delta\\varphi\\right)}\\right|",
-        "\\sin\\theta_m = \\sin\\theta_0 + m\\,\\frac{\\lambda}{d},\\quad m \\in \\mathbb{Z}",
-        "\\lambda = c / f"
+        {
+          "tex": "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta_0}{\\lambda}",
+          "terms": [
+            {
+              "symbol": "\\Delta\\varphi",
+              "meaning": "phase shift between neighbouring elements",
+              "unit": "rad"
+            },
+            {
+              "symbol": "d",
+              "meaning": "spacing between neighbouring elements",
+              "unit": "m"
+            },
+            {
+              "symbol": "\\theta_0",
+              "meaning": "main beam direction, from the array normal",
+              "unit": "rad"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "tex": "\\mathrm{AF}(\\theta) = \\left|\\sum_{n=0}^{N-1} e^{\\, i n \\left(\\frac{2\\pi d}{\\lambda}\\sin\\theta - \\Delta\\varphi\\right)}\\right|",
+          "terms": [
+            {
+              "symbol": "\\mathrm{AF}",
+              "meaning": "array factor: relative field radiated in direction θ"
+            },
+            {
+              "symbol": "\\theta",
+              "meaning": "observation direction, from the array normal",
+              "unit": "rad"
+            },
+            {
+              "symbol": "n",
+              "meaning": "element index, from 0 to N − 1"
+            },
+            {
+              "symbol": "N",
+              "meaning": "number of elements"
+            },
+            {
+              "symbol": "d",
+              "meaning": "spacing between neighbouring elements",
+              "unit": "m"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            },
+            {
+              "symbol": "\\Delta\\varphi",
+              "meaning": "phase shift between neighbouring elements",
+              "unit": "rad"
+            }
+          ]
+        },
+        {
+          "tex": "\\sin\\theta_m = \\sin\\theta_0 + m\\,\\frac{\\lambda}{d},\\quad m \\in \\mathbb{Z}",
+          "terms": [
+            {
+              "symbol": "\\theta_m",
+              "meaning": "direction of the beam of order m (m ≠ 0: grating lobe)",
+              "unit": "rad"
+            },
+            {
+              "symbol": "\\theta_0",
+              "meaning": "main beam direction, from the array normal",
+              "unit": "rad"
+            },
+            {
+              "symbol": "m",
+              "meaning": "beam order, an integer"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            },
+            {
+              "symbol": "d",
+              "meaning": "spacing between neighbouring elements",
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "tex": "\\lambda = c / f",
+          "terms": [
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            },
+            {
+              "symbol": "c",
+              "meaning": "speed of light",
+              "unit": "299 792 458 m/s"
+            },
+            {
+              "symbol": "f",
+              "meaning": "carrier frequency",
+              "unit": "Hz"
+            }
+          ]
+        }
       ],
       "params": {
         "type": "object",
@@ -685,9 +792,91 @@
       "status": "planned",
       "description": "Circular-orbit kinematics of satellites passing over an observer. Physical motion is computed at true altitude, then mapped onto a display arc (not to scale).",
       "equations": [
-        "v = \\sqrt{\\frac{\\mu}{R_\\oplus + h}}",
-        "T = 2\\pi \\sqrt{\\frac{(R_\\oplus + h)^3}{\\mu}}",
-        "\\psi = \\arccos\\!\\left(\\frac{R_\\oplus \\cos\\varepsilon}{R_\\oplus + h}\\right) - \\varepsilon,\\quad t_{pass} = \\frac{2\\psi}{2\\pi} T"
+        {
+          "tex": "v = \\sqrt{\\frac{\\mu}{R_\\oplus + h}}",
+          "terms": [
+            {
+              "symbol": "v",
+              "meaning": "orbital speed",
+              "unit": "m/s"
+            },
+            {
+              "symbol": "\\mu",
+              "meaning": "Earth's standard gravitational parameter",
+              "unit": "≈ 3.986 × 10¹⁴ m³/s²"
+            },
+            {
+              "symbol": "R_\\oplus",
+              "meaning": "Earth's mean radius",
+              "unit": "≈ 6 371 km"
+            },
+            {
+              "symbol": "h",
+              "meaning": "orbital altitude",
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "tex": "T = 2\\pi \\sqrt{\\frac{(R_\\oplus + h)^3}{\\mu}}",
+          "terms": [
+            {
+              "symbol": "T",
+              "meaning": "orbital period",
+              "unit": "s"
+            },
+            {
+              "symbol": "R_\\oplus",
+              "meaning": "Earth's mean radius",
+              "unit": "≈ 6 371 km"
+            },
+            {
+              "symbol": "h",
+              "meaning": "orbital altitude",
+              "unit": "m"
+            },
+            {
+              "symbol": "\\mu",
+              "meaning": "Earth's standard gravitational parameter",
+              "unit": "≈ 3.986 × 10¹⁴ m³/s²"
+            }
+          ]
+        },
+        {
+          "tex": "\\psi = \\arccos\\!\\left(\\frac{R_\\oplus \\cos\\varepsilon}{R_\\oplus + h}\\right) - \\varepsilon,\\quad t_{\\mathrm{pass}} = \\frac{2\\psi}{2\\pi} T",
+          "terms": [
+            {
+              "symbol": "\\psi",
+              "meaning": "Earth central angle between the overhead point and the point where the satellite sinks below ε",
+              "unit": "rad"
+            },
+            {
+              "symbol": "R_\\oplus",
+              "meaning": "Earth's mean radius",
+              "unit": "≈ 6 371 km"
+            },
+            {
+              "symbol": "\\varepsilon",
+              "meaning": "lowest usable elevation",
+              "unit": "rad"
+            },
+            {
+              "symbol": "h",
+              "meaning": "orbital altitude",
+              "unit": "m"
+            },
+            {
+              "symbol": "t_{\\mathrm{pass}}",
+              "meaning": "duration of an overhead pass above ε",
+              "unit": "s"
+            },
+            {
+              "symbol": "T",
+              "meaning": "orbital period",
+              "unit": "s"
+            }
+          ]
+        }
       ],
       "params": {
         "type": "object",
@@ -774,8 +963,52 @@
       "status": "planned",
       "description": "Single-scattering of sunlight by air molecules (Rayleigh regime). Computes sky colour and the spectrum reaching an observer for a given sun elevation.",
       "equations": [
-        "I_s(\\lambda) \\propto \\frac{I_0(\\lambda)}{\\lambda^4}",
-        "I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda) s},\\quad \\beta(\\lambda) \\propto \\lambda^{-4}"
+        {
+          "tex": "I_s(\\lambda) \\propto \\frac{I_0(\\lambda)}{\\lambda^4}",
+          "terms": [
+            {
+              "symbol": "I_s",
+              "meaning": "intensity scattered by the molecules"
+            },
+            {
+              "symbol": "I_0",
+              "meaning": "incident sunlight intensity"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "tex": "I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda) s},\\quad \\beta(\\lambda) \\propto \\lambda^{-4}",
+          "terms": [
+            {
+              "symbol": "I",
+              "meaning": "direct sunlight intensity left after a path s"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "wavelength",
+              "unit": "m"
+            },
+            {
+              "symbol": "s",
+              "meaning": "path length through the air",
+              "unit": "m"
+            },
+            {
+              "symbol": "I_0",
+              "meaning": "incident sunlight intensity"
+            },
+            {
+              "symbol": "\\beta",
+              "meaning": "extinction coefficient of the air",
+              "unit": "1/m"
+            }
+          ]
+        }
       ],
       "params": {
         "type": "object",
