@@ -117,3 +117,14 @@ describe("phased-array-wave wave-field channel", () => {
     lens.dispose?.();
   });
 });
+
+describe("catalogue status", () => {
+  it("says 'implemented' exactly for the plugins that exist", async () => {
+    const { COMPONENTS } = await import("../engine/src/plugins/components");
+    const { SIMULATORS } = await import("../engine/src/plugins/simulators");
+    const written = new Set([...COMPONENTS, ...SIMULATORS, ...LENSES].map((p) => p.id));
+    for (const entry of [...catalogue.components, ...catalogue.simulators, ...catalogue.lenses]) {
+      expect(entry.status === "implemented", entry.id).toBe(written.has(entry.id));
+    }
+  });
+});

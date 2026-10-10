@@ -9,6 +9,7 @@ import { groundStation } from "./groundStation";
 import { house } from "./house";
 import { icChipGrid } from "./icChipGrid";
 import { leoSatellite } from "./leoSatellite";
+import { patchElement } from "./patchElement";
 import { terrain } from "./terrain";
 import { wifiRouter } from "./wifiRouter";
 
@@ -25,6 +26,7 @@ export const COMPONENTS = [
   datacenter,
   cable,
   dataLink,
+  patchElement,
 ];
 
 export function registerComponents(registry: PluginRegistry): void {

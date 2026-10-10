@@ -3,7 +3,7 @@
   "components": [
     {
       "id": "terrain",
-      "status": "planned",
+      "status": "implemented",
       "description": "Flat stylised ground patch.",
       "params": {
         "type": "object",
@@ -37,7 +37,7 @@
     },
     {
       "id": "house",
-      "status": "planned",
+      "status": "implemented",
       "description": "Stylised house with a pitched roof. Decor.",
       "params": {
         "type": "object",
@@ -86,7 +86,7 @@
     },
     {
       "id": "flat-panel-terminal",
-      "status": "planned",
+      "status": "implemented",
       "description": "Flat rectangular satellite user terminal (radome + housing) on a mount. Children entities sit inside and appear on cutaway.",
       "params": {
         "type": "object",
@@ -146,7 +146,7 @@
     },
     {
       "id": "antenna-element-array",
-      "status": "planned",
+      "status": "implemented",
       "description": "Planar array of identical radiating elements (patches), on a lattice. Represents the visible layer; the wave simulator works on a linear cut of it.",
       "params": {
         "type": "object",
@@ -195,8 +195,58 @@
       ]
     },
     {
+      "id": "patch-element",
+      "status": "implemented",
+      "description": "One radiating element: square copper patch on an insulating tile, copper ground plane underneath, optional probe feed through the tile. Lies in the (x, z) plane, radiates towards +y. Cutaway removes the front half to show the feed.",
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "patchSize",
+          "tileSize",
+          "substrateThickness"
+        ],
+        "properties": {
+          "patchSize": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.05,
+            "x-unit": "m",
+            "description": "Side of the square copper patch."
+          },
+          "tileSize": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.1,
+            "x-unit": "m",
+            "description": "Side of the insulating tile (usually the array spacing)."
+          },
+          "substrateThickness": {
+            "type": "number",
+            "minimum": 0.0001,
+            "maximum": 0.01,
+            "x-unit": "m",
+            "description": "Thickness of the insulating layer between patch and ground plane."
+          },
+          "feed": {
+            "type": "string",
+            "enum": [
+              "probe",
+              "none"
+            ],
+            "default": "probe",
+            "description": "How the signal reaches the patch."
+          }
+        }
+      },
+      "capabilities": [
+        "cutaway",
+        "lod"
+      ]
+    },
+    {
       "id": "ic-chip-grid",
-      "status": "planned",
+      "status": "implemented",
       "description": "Grid of identical integrated circuits on a board (e.g. beamformer chips).",
       "params": {
         "type": "object",
@@ -228,7 +278,7 @@
     },
     {
       "id": "electronics-module",
-      "status": "planned",
+      "status": "implemented",
       "description": "Generic board area with a few chips and connectors, tinted by role.",
       "params": {
         "type": "object",
@@ -271,7 +321,7 @@
     },
     {
       "id": "wifi-router",
-      "status": "planned",
+      "status": "implemented",
       "description": "Indoor Wi-Fi router box.",
       "params": {
         "type": "object",
@@ -297,7 +347,7 @@
     },
     {
       "id": "cable",
-      "status": "planned",
+      "status": "implemented",
       "description": "Cable between two entities, routed along a sagging curve.",
       "params": {
         "type": "object",
@@ -330,7 +380,7 @@
     },
     {
       "id": "leo-satellite",
-      "status": "planned",
+      "status": "implemented",
       "description": "Flat-pack low-orbit satellite: bus + single solar wing.",
       "params": {
         "type": "object",
@@ -362,7 +412,7 @@
     },
     {
       "id": "ground-station",
-      "status": "planned",
+      "status": "implemented",
       "description": "Gateway site: a few radome-covered antennas on a fenced pad.",
       "params": {
         "type": "object",
@@ -386,7 +436,7 @@
     },
     {
       "id": "datacenter",
-      "status": "planned",
+      "status": "implemented",
       "description": "Stylised data centre building standing for 'the Internet'.",
       "params": {
         "type": "object",
@@ -410,7 +460,7 @@
     },
     {
       "id": "data-link",
-      "status": "planned",
+      "status": "implemented",
       "description": "Animated path of data pulses between two entities. Not a physical simulation: it shows where data goes.",
       "params": {
         "type": "object",
@@ -571,8 +621,8 @@
   "simulators": [
     {
       "id": "phased-array-wave",
-      "status": "planned",
-      "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes.",
+      "status": "implemented",
+      "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes. The array role may also be a single element: the line of sources is then centred on it.",
       "equations": [
         {
           "tex": "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta_0}{\\lambda}",
@@ -740,7 +790,7 @@
           "tracking": {
             "type": "boolean",
             "default": true,
-            "description": "When true and trackTarget is set, the steering angle follows the target; when false, it is driven by steeringAngleDeg or phaseStepDeg."
+            "description": "When true and trackTarget is set, the steering angle follows the target. Setting steeringAngleDeg or phaseStepDeg turns it off."
           },
           "showField": {
             "type": "boolean",
@@ -752,7 +802,8 @@
       "roles": {
         "array": {
           "components": [
-            "antenna-element-array"
+            "antenna-element-array",
+            "patch-element"
           ],
           "multiple": false
         }
@@ -789,7 +840,7 @@
     },
     {
       "id": "orbital-pass",
-      "status": "planned",
+      "status": "implemented",
       "description": "Circular-orbit kinematics of satellites passing over an observer. Physical motion is computed at true altitude, then mapped onto a display arc (not to scale).",
       "equations": [
         {
@@ -1092,7 +1143,7 @@
   "lenses": [
     {
       "id": "waves",
-      "status": "planned",
+      "status": "implemented",
       "description": "Reveals wave fields on the real object: animated wavefronts (phase colour map) on a plane, plus beam/lobe markers when available.",
       "consumes": [
         "wave-field"

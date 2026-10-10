@@ -1,5 +1,4 @@
 import {
-  AdditiveBlending,
   Color,
   CylinderGeometry,
   DoubleSide,
@@ -21,9 +20,10 @@ import { WAVE_FIELD, type WaveField } from "../channels";
 // from the sum. Also marks the main beam and the grating lobes the simulator
 // predicts, so the two can be compared.
 
-/** Size of the field slice, in wavelengths (along the line, along the normal). */
-const SLICE_WIDTH_L = 28;
-const SLICE_HEIGHT_L = 18;
+/** Field slice: at least this many wavelengths wide, and this many times the line of sources. */
+const SLICE_MIN_WIDTH_L = 10;
+const SLICE_WIDTH_PER_LINE = 5;
+const SLICE_ASPECT = 0.7; // height / width
 /** Visual frequency of the wave animation: the real 12 GHz is slowed ~10^10 times. */
 const VISUAL_HZ = 0.8;
 const MAX_SOURCES = 64;
@@ -79,7 +79,7 @@ void main() {
   float wave = (re * cos(uTime) - im * sin(uTime)) / max(amp, 1e-6);
   vec3 color = mix(uTrough, uCrest, 0.5 + 0.5 * wave);
   float edge = smoothstep(0.0, 0.08, min(min(vPos.x / uSize.x + 0.5, 0.5 - vPos.x / uSize.x), min(vPos.y / uSize.y, 1.0 - vPos.y / uSize.y)) * 2.0);
-  float alpha = smoothstep(0.04, 0.55, strength) * edge * 0.85;
+  float alpha = (0.12 + 0.8 * smoothstep(0.03, 0.45, strength)) * edge;
   gl_FragColor = vec4(color * (0.55 + 0.6 * clamp(strength, 0.0, 1.0)), alpha);
 }`;
 
@@ -119,7 +119,7 @@ export const waves: LensPlugin = {
     // Beam markers: a thin rod along each predicted beam.
     const rodGeometry = new CylinderGeometry(1, 1, 1, 8);
     rodGeometry.translate(0, 0.5, 0);
-    const mainMaterial = new MeshBasicMaterial({ color: ctx.palette.accent, transparent: true, opacity: 0.9, blending: AdditiveBlending, depthWrite: false });
+    const mainMaterial = new MeshBasicMaterial({ color: ctx.palette.accent, transparent: true, opacity: 0.95, depthWrite: false });
     const lobeMaterial = new MeshBasicMaterial({ color: LOBE_COLOR, transparent: true, opacity: 0.9, depthWrite: false });
     const rods: Mesh[] = [];
     const rod = (i: number) => {
@@ -163,8 +163,8 @@ export const waves: LensPlugin = {
         }
         group.visible = true;
         phase = (phase + dt * 2 * Math.PI * VISUAL_HZ) % (2 * Math.PI);
-        const w = SLICE_WIDTH_L * f.wavelength;
-        const h = SLICE_HEIGHT_L * f.wavelength;
+        const w = Math.max(SLICE_MIN_WIDTH_L * f.wavelength, SLICE_WIDTH_PER_LINE * f.count * f.spacing);
+        const h = w * SLICE_ASPECT;
         uniforms.uWavelength.value = f.wavelength;
         uniforms.uSpacing.value = f.spacing;
         uniforms.uCount.value = Math.min(f.count, MAX_SOURCES);
@@ -183,7 +183,7 @@ export const waves: LensPlugin = {
           ...(f.steeringDeg === null ? [] : [{ deg: f.steeringDeg, main: true }]),
           ...f.gratingLobesDeg.map((deg) => ({ deg, main: false })),
         ];
-        const radius = f.wavelength * 0.05;
+        const radius = f.wavelength * 0.08;
         beams.forEach((b, i) => {
           const r = rod(i);
           r.visible = true;
