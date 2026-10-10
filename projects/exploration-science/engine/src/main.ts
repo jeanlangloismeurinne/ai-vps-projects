@@ -33,8 +33,11 @@ let catalogue: Catalogue | null = null;
 let path: string[] = [];
 /** A dive or a climb is running: ignore further navigation until it lands. */
 let navigating = false;
+/** Casing opened to show a selected inner component, closed again when the selection moves on. */
+let openedCasing: string | null = null;
 
 const DIVE_FLIGHT_S = 0.9;
+const INSIDE_VIEW_ELEVATION_DEG = 55;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const engine = new Engine(app, source, registry, {
@@ -154,10 +157,34 @@ function startMainTour(): void {
   player.play(tour);
 }
 
+/** The nearest ancestor of an entity whose component can be cut away (its casing), if any. */
+function casingOf(id: string): string | null {
+  let parent = scene?.entities.find((e) => e.id === id)?.parent;
+  while (parent) {
+    const entity = scene?.entities.find((e) => e.id === parent);
+    if (!entity) return null;
+    if (catalogue?.components.find((c) => c.id === entity.component)?.capabilities?.includes("cutaway")) return entity.id;
+    parent = entity.parent;
+  }
+  return null;
+}
+
+// An inner component is shown with its casing open; outside a tour, the user's selection drives it.
+function showInside(id: string | null): void {
+  if (player.state !== "idle") return;
+  const casing = id ? casingOf(id) : null;
+  if (casing === openedCasing) return;
+  if (openedCasing) engine.reveal(openedCasing, "none");
+  if (casing) engine.reveal(casing, "cutaway");
+  openedCasing = casing;
+}
+
 function select(id: string | null): void {
   if (id === selected) return;
   selected = id;
-  engine.select(id);
+  showInside(id);
+  // Inside an opened casing, look from above so the inside is in view.
+  engine.select(id, id && casingOf(id) ? { minElevationDeg: INSIDE_VIEW_ELEVATION_DEG } : {});
   showCard();
   refreshLabels();
 }
@@ -328,6 +355,7 @@ async function contentErrors(bundle: NodeBundle): Promise<string[]> {
 async function open(id: string, arrival: { comingBackFrom?: string } = {}): Promise<void> {
   try {
     player.stop();
+    openedCasing = null;
     catalogue ??= await source.catalogue();
     const { bundle, built, simulation, missingLenses } = await engine.load(id);
     scene = bundle.scene;

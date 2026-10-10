@@ -206,17 +206,15 @@ export class Engine implements Stage {
   }
 
   /** Selects an entity (glow + camera orbit around it), or clears the selection. */
-  select(id: string | null): void {
+  select(id: string | null, options: { minElevationDeg?: number } = {}): void {
     this.selected = id;
     this.refreshHighlights();
     if (!id || !this.current) return;
     const { rig, built } = this.current;
     const sphere = new Box3().setFromObject(built.entities.get(id)!.node).getBoundingSphere(new Sphere());
     const fit = sphere.radius / Math.sin(MathUtils.degToRad(this.camera.fov / 2));
-    rig.flyTo(
-      { target: id, azimuthDeg: MathUtils.radToDeg(rig.view.azimuth), elevationDeg: MathUtils.radToDeg(rig.view.elevation), distance: fit * SELECT_MARGIN },
-      SELECT_FLIGHT_S,
-    );
+    const elevation = Math.max(MathUtils.radToDeg(rig.view.elevation), options.minElevationDeg ?? -90);
+    rig.flyTo({ target: id, azimuthDeg: MathUtils.radToDeg(rig.view.azimuth), elevationDeg: elevation, distance: fit * SELECT_MARGIN }, SELECT_FLIGHT_S);
   }
 
   /** Where an entity's centre is on the canvas, in CSS pixels; null when behind the camera. */
