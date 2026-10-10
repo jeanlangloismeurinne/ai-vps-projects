@@ -7,6 +7,7 @@ import { StaticContentSource } from "../engine/src/content/staticContentSource";
 import { PluginRegistry } from "../engine/src/core/registry";
 import { buildScene, withDefaults } from "../engine/src/core/sceneBuilder";
 import { COMPONENTS, registerComponents } from "../engine/src/plugins/components";
+import { latticePositions } from "../engine/src/plugins/components/antennaElementArray";
 
 const ROOT = join(import.meta.dirname, "..");
 const readJson = (path: string) => JSON.parse(readFileSync(join(ROOT, path), "utf8"));
@@ -48,7 +49,35 @@ describe("buildScene on the Starlink node", () => {
     const expected = [...new Set(starlink.entities.map((e) => e.component))].filter((c) => !implemented.has(c)).sort();
     expect(built.missingComponents).toEqual(expected);
     expect(built.entities.get("terminal")!.placeholder).toBe(false);
-    expect(built.entities.get("router")!.placeholder).toBe(true);
+    expect(built.missingComponents).toEqual([]);
+  });
+
+  it("opens the terminal and the house on cutaway, and closes them back", () => {
+    const meshes = (id: string) => {
+      const list: Object3D[] = [];
+      built.entities.get(id)!.instance.object.traverseVisible((o) => list.push(o));
+      return list.length;
+    };
+    for (const id of ["terminal", "house"]) {
+      const { instance } = built.entities.get(id)!;
+      const closed = meshes(id);
+      instance.reveal!("cutaway");
+      expect(meshes(id), id).not.toBe(closed);
+      instance.reveal!("none");
+      expect(meshes(id), id).toBe(closed);
+    }
+  });
+
+  it("lays out exactly the requested number of radiating elements", () => {
+    for (const lattice of ["square", "hexagonal"] as const) {
+      const positions = latticePositions(lattice, 1200, 0.0125);
+      expect(positions).toHaveLength(1200);
+      const xs = positions.map(([x]) => x);
+      const zs = positions.map(([, z]) => z);
+      // Fits the Starlink panel (0.594 m x 0.383 m).
+      expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(0.594);
+      expect(Math.max(...zs) - Math.min(...zs)).toBeLessThan(0.383);
+    }
   });
 
   it("puts the terminal on the roof, not inside it", () => {

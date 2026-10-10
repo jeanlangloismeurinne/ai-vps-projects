@@ -8,6 +8,8 @@ export interface ComponentContext {
   metres(m: number): number;
 }
 
+export type RevealMode = "cutaway" | "explode" | "none";
+
 export interface ComponentInstance {
   object: Object3D;
   /** Where child entities attach (e.g. a tilted panel). Defaults to `object`. */
@@ -18,6 +20,8 @@ export interface ComponentInstance {
    */
   resolve?(entity: (id: string) => Object3D | undefined): void;
   update?(dt: number): void;
+  /** Present when the catalogue grants the component a cutaway or explode capability. */
+  reveal?(mode: RevealMode): void;
   dispose?(): void;
 }
 

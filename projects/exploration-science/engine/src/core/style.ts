@@ -14,7 +14,12 @@ export type Surface =
   | "plastic-dark"
   | "metal"
   | "solar-cell"
-  | "cable";
+  | "cable"
+  | "floor"
+  | "copper"
+  | "circuit-board"
+  | "chip"
+  | "glass";
 
 interface SurfaceSpec {
   color: string;
@@ -34,6 +39,11 @@ const THEMES: Record<string, Record<Exclude<Surface, "accent">, SurfaceSpec>> = 
     metal: { color: "#a9b1bb", roughness: 0.35, metalness: 0.8 },
     "solar-cell": { color: "#1f3a6b", roughness: 0.3, metalness: 0.4 },
     cable: { color: "#222428", roughness: 0.7 },
+    floor: { color: "#c9a77c", roughness: 0.8 },
+    copper: { color: "#d08a4a", roughness: 0.35, metalness: 0.7 },
+    "circuit-board": { color: "#2f7a4f", roughness: 0.6 },
+    chip: { color: "#1c1f24", roughness: 0.4, metalness: 0.2 },
+    glass: { color: "#7fa8c9", roughness: 0.15, metalness: 0.3 },
   },
 };
 
