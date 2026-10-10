@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["formatVersion", "nodeId", "facts", "sources"],
   "properties": {
-    "formatVersion": { "const": "0.1" },
+    "formatVersion": { "const": "0.2" },
     "nodeId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "facts": {
       "type": "array",

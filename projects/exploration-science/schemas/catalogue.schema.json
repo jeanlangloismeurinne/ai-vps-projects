@@ -7,12 +7,28 @@
   "additionalProperties": false,
   "required": ["formatVersion", "components", "simulators", "lenses"],
   "properties": {
-    "formatVersion": { "const": "0.1" },
+    "formatVersion": { "const": "0.2" },
     "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
     "simulators": { "type": "array", "items": { "$ref": "#/$defs/simulator" } },
     "lenses": { "type": "array", "items": { "$ref": "#/$defs/lens" } }
   },
   "$defs": {
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "meaning"],
+      "properties": {
+        "symbol": { "type": "string", "minLength": 1, "description": "LaTeX of the symbol, exactly as written in the equation (e.g. R_\\oplus)." },
+        "meaning": { "type": "string", "minLength": 1, "description": "What the symbol stands for, in the text's language." },
+        "unit": { "type": "string", "description": "Unit or typical value (e.g. 'km', '≈ 398 600 km³/s²'). Omitted for dimensionless terms." }
+      }
+    },
+    "terms": {
+      "description": "Definition of every symbol used in the equations. Required as soon as there is an equation.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/term" }
+    },
     "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "status": {
       "enum": ["implemented", "planned"],
@@ -75,10 +91,18 @@
         "status": { "$ref": "#/$defs/status" },
         "description": { "type": "string" },
         "equations": {
-          "description": "LaTeX of the relations the simulator computes. Each must be covered by a test.",
+          "description": "Relations the simulator computes, each with the definition of its terms. Each must be covered by a test.",
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string" }
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tex", "terms"],
+            "properties": {
+              "tex": { "type": "string", "minLength": 1, "description": "LaTeX." },
+              "terms": { "$ref": "#/$defs/terms" }
+            }
+          }
         },
         "params": { "$ref": "#/$defs/paramsSchema" },
         "roles": {

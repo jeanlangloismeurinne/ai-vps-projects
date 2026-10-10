@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["formatVersion", "node", "scale", "environment", "camera", "entities", "tours"],
   "properties": {
-    "formatVersion": { "const": "0.1" },
+    "formatVersion": { "const": "0.2" },
     "node": { "$ref": "#/$defs/nodeHeader" },
     "scale": {
       "type": "object",

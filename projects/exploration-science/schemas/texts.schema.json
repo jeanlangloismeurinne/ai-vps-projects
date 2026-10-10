@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["formatVersion", "nodeId", "lang", "question", "common", "levels"],
   "properties": {
-    "formatVersion": { "const": "0.1" },
+    "formatVersion": { "const": "0.2" },
     "nodeId": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "lang": { "type": "string", "pattern": "^[a-z]{2}$" },
     "question": { "type": "string", "minLength": 1, "description": "Canonical question of the node." },
@@ -29,6 +29,22 @@
     }
   },
   "$defs": {
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "meaning"],
+      "properties": {
+        "symbol": { "type": "string", "minLength": 1, "description": "LaTeX of the symbol, exactly as written in the equation (e.g. R_\\oplus)." },
+        "meaning": { "type": "string", "minLength": 1, "description": "What the symbol stands for, in the text's language." },
+        "unit": { "type": "string", "description": "Unit or typical value (e.g. 'km', '≈ 398 600 km³/s²'). Omitted for dimensionless terms." }
+      }
+    },
+    "terms": {
+      "description": "Definition of every symbol used in the equations. Required as soon as there is an equation.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/term" }
+    },
     "entries": {
       "type": "object",
       "propertyNames": { "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" },
@@ -42,8 +58,23 @@
           "additionalProperties": false,
           "required": ["text"],
           "properties": {
-            "text": { "type": "string", "minLength": 1, "description": "Read aloud and shown as subtitle." },
-            "formula": { "type": "string", "minLength": 1, "description": "LaTeX, displayed next to the subtitle, never read." }
+            "text": { "type": "string", "minLength": 1, "description": "Spoken version, read aloud. Plain words only: no symbols, every term defined in words." },
+            "subtitle": { "type": "string", "minLength": 1, "description": "Displayed version, when it differs from the spoken one. Equations inline between $...$ (LaTeX)." },
+            "terms": { "$ref": "#/$defs/terms" },
+            "links": {
+              "description": "Explorable terms: a phrase of the displayed text that opens another node. The node must be declared in the scene's links. Not clickable during an autoStart tour.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["phrase", "node"],
+                "properties": {
+                  "phrase": { "type": "string", "minLength": 1, "description": "Exact substring of the displayed text, outside equations." },
+                  "node": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+                }
+              }
+            }
           }
         }
       ]
