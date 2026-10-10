@@ -23,6 +23,8 @@ export interface BuiltEntity {
 export interface BuiltScene {
   root: Group;
   entities: Map<string, BuiltEntity>;
+  /** Materials of the scene's style, shared with lenses. */
+  palette: Palette;
   /** Components referenced by the scene but not implemented yet. */
   missingComponents: string[];
   update(dt: number): void;
@@ -102,6 +104,7 @@ export function buildScene(scene: Scene, catalogue: Catalogue, registry: PluginR
   return {
     root,
     entities,
+    palette,
     missingComponents: [...missing].sort(),
     update(dt) {
       for (const built of entities.values()) built.instance.update?.(dt);
