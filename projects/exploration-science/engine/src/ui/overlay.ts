@@ -17,6 +17,36 @@ export interface OverlayHandlers {
   onCloseCard(): void;
   /** A pinned label was clicked. */
   onLabel(id: string): void;
+  onLens(id: string, on: boolean): void;
+  onControl(id: string, value: number): void;
+  /** Breadcrumb: back up to an ancestor node. */
+  onAscend(nodeId: string): void;
+  /** Selection card: dive into the child node. */
+  onDive(): void;
+}
+
+export interface LensView {
+  id: string;
+  label: string;
+  on: boolean;
+}
+
+export interface ControlView {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  /** Catalogue unit ("deg", "1"…) used to format the value. */
+  unit?: string;
+}
+
+export interface CrumbView {
+  nodeId: string;
+  label: string;
+  /** Unit the level is named after (m, cm, mm). */
+  unit: string;
 }
 
 export interface PlayerView {
@@ -68,6 +98,25 @@ const CSS = `
 .xs-card .xs-close { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; }
 .xs-card .xs-dive { margin-top: 10px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #10151c; color: #fff; font-weight: 600; }
 .xs-card .xs-dive:disabled { background: rgba(0,0,0,.12); color: #5a6370; }
+.xs-card .xs-dive:not(:disabled) { cursor: pointer; background: #b87400; }
+.xs-lenses { display: flex; gap: 6px; }
+.xs-lenses button { pointer-events: auto; min-height: 40px; padding: 0 14px; border: 0; border-radius: 20px; font-weight: 600; cursor: pointer; background: rgba(255,255,255,.88); box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+.xs-lenses button[aria-pressed="true"] { background: #3a7bd5; color: #fff; }
+.xs-controls { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 260px; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.xs-control label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; }
+.xs-control output { font-variant-numeric: tabular-nums; font-weight: 500; color: #3a4350; }
+.xs-control input { width: 100%; min-height: 32px; accent-color: #3a7bd5; }
+.xs-where { position: absolute; left: 16px; bottom: 72px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.xs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 6px; font-size: 13px; }
+.xs-crumbs button { min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-weight: 600; color: #b87400; }
+.xs-crumbs span.here { padding: 0 8px; font-weight: 600; }
+.xs-crumbs small { margin-left: 4px; font-weight: 500; color: #5a6370; }
+.xs-crumbs .sep { color: #8a93a0; }
+.xs-scale { display: flex; flex-direction: column; gap: 2px; padding: 5px 10px 6px; font-size: 12px; font-weight: 600; }
+.xs-scale i { display: block; height: 6px; border: 2px solid #10151c; border-top: 0; }
+.xs-fade { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s ease; background: #0d1218; }
+.xs-fade.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .xs-fade { transition: none; } }
 [hidden] { display: none !important; }
 @media (max-width: 640px) {
   .xs-title { max-width: calc(100% - 32px); font-size: 15px; }
@@ -77,6 +126,8 @@ const CSS = `
   .xs-overlay:has(.xs-card:not([hidden])) .xs-subtitle { display: none; }
   .xs-bar { left: auto; right: 16px; transform: none; }
   .xs-dots { display: none; }
+  .xs-controls { top: 112px; transform: none; left: 16px; right: 16px; width: auto; max-height: 40%; overflow: auto; }
+  .xs-where { bottom: 72px; }
 }
 `;
 
@@ -101,6 +152,14 @@ export class Overlay {
   private readonly labelLayer = el("div", { className: "xs-labels" });
   private readonly labels = new Map<string, HTMLDivElement>();
   private readonly card = el("aside", { className: "xs-card xs-panel", hidden: true });
+  private readonly lensBar = el("div", { className: "xs-lenses" });
+  private readonly controls = el("div", { className: "xs-controls xs-panel", hidden: true });
+  private readonly controlInputs = new Map<string, { input: HTMLInputElement; output: HTMLOutputElement; unit?: string }>();
+  private readonly crumbs = el("nav", { className: "xs-crumbs xs-panel", ariaLabel: "Niveaux de zoom" });
+  private readonly scale = el("div", { className: "xs-scale xs-panel", ariaHidden: "true" });
+  private readonly scaleLabel = el("span");
+  private readonly scaleRule = el("i");
+  private readonly fade = el("div", { className: "xs-fade" });
 
   constructor(container: HTMLElement, nodeIds: string[], private readonly handlers: OverlayHandlers) {
     document.head.appendChild(el("style", { textContent: CSS }));
@@ -119,7 +178,10 @@ export class Overlay {
       levels.append(button);
     }
     const topRight = el("div", { className: "xs-top-right" });
-    topRight.append(this.picker, levels);
+    topRight.append(this.picker, levels, this.lensBar);
+    this.scale.append(this.scaleLabel, this.scaleRule);
+    const where = el("div", { className: "xs-where" });
+    where.append(this.crumbs, this.scale);
 
     this.previous.addEventListener("click", () => handlers.onPrevious());
     this.play.addEventListener("click", () => handlers.onPlayPause());
@@ -131,7 +193,7 @@ export class Overlay {
     close.addEventListener("click", () => handlers.onCloseCard());
     this.card.append(close);
 
-    root.append(this.labelLayer, this.title, this.notice, topRight, this.subtitle, this.card, home, this.bar);
+    root.append(this.labelLayer, this.title, this.notice, topRight, this.controls, where, this.subtitle, this.card, home, this.bar, this.fade);
     container.appendChild(root);
   }
 
@@ -208,8 +270,92 @@ export class Overlay {
     if (!view) return;
     this.card.append(el("h2", { textContent: view.title }), renderEntry(view.description));
     if (view.dive) {
-      // Diving into child nodes arrives with milestone 4.
-      this.card.append(el("button", { type: "button", className: "xs-dive", disabled: true, textContent: view.dive.available ? "Plonger à l'intérieur" : "Plonger à l'intérieur (à venir)" }));
+      const dive = el("button", { type: "button", className: "xs-dive", disabled: !view.dive.available, textContent: view.dive.available ? "Plonger à l'intérieur" : "Plonger à l'intérieur (à venir)" });
+      dive.addEventListener("click", () => this.handlers.onDive());
+      this.card.append(dive);
     }
   }
+
+  setLenses(lenses: LensView[]): void {
+    this.lensBar.replaceChildren(
+      ...lenses.map((lens) => {
+        const button = el("button", { type: "button", textContent: lens.label, ariaPressed: String(lens.on), title: lens.on ? "Masquer la lentille" : "Afficher la lentille" });
+        button.addEventListener("click", () => this.handlers.onLens(lens.id, !lens.on));
+        return button;
+      }),
+    );
+  }
+
+  /** Sliders of the active lenses for the current level; empty hides the panel. */
+  setControls(controls: ControlView[]): void {
+    this.controlInputs.clear();
+    this.controls.hidden = controls.length === 0;
+    this.controls.replaceChildren(
+      ...controls.map((c) => {
+        const id = `xs-control-${c.id}`;
+        const wrap = el("div", { className: "xs-control" });
+        const output = el("output", { htmlFor: id });
+        const label = el("label", { htmlFor: id });
+        label.append(el("span", { textContent: c.label }), output);
+        const input = el("input", { type: "range", id, min: String(c.min), max: String(c.max), step: String(c.step), value: String(c.value) });
+        input.addEventListener("input", () => {
+          output.textContent = formatValue(Number(input.value), c.unit, c.step);
+          this.handlers.onControl(c.id, Number(input.value));
+        });
+        output.textContent = formatValue(c.value, c.unit, c.step);
+        this.controlInputs.set(c.id, { input, output, unit: c.unit });
+        wrap.append(label, input);
+        return wrap;
+      }),
+    );
+  }
+
+  /** Follows values changed elsewhere (a tour animating a slider). Call once per frame. */
+  updateControls(value: (id: string) => number | undefined): void {
+    for (const [id, { input, output, unit }] of this.controlInputs) {
+      if (document.activeElement === input) continue;
+      const v = value(id);
+      if (v === undefined || !Number.isFinite(v)) continue;
+      input.value = String(v);
+      output.textContent = formatValue(v, unit, Number(input.step));
+    }
+  }
+
+  setBreadcrumb(crumbs: CrumbView[]): void {
+    this.crumbs.hidden = crumbs.length <= 1;
+    const items: Node[] = [];
+    crumbs.forEach((c, i) => {
+      if (i > 0) items.push(el("span", { className: "sep", textContent: "›" }));
+      const last = i === crumbs.length - 1;
+      const item = last ? el("span", { className: "here" }) : el("button", { type: "button", title: `Remonter à ${c.label}` });
+      item.append(document.createTextNode(c.label), el("small", { textContent: c.unit }));
+      if (!last) item.addEventListener("click", () => this.handlers.onAscend(c.nodeId));
+      items.push(item);
+    });
+    this.crumbs.replaceChildren(...items);
+  }
+
+  setScale(bar: { pixels: number; label: string } | null): void {
+    this.scale.hidden = bar === null;
+    if (!bar) return;
+    this.scaleLabel.textContent = bar.label;
+    this.scaleRule.style.width = `${bar.pixels.toFixed(1)}px`;
+  }
+
+  /** Covers the view (true) or reveals it, for the cut between two nodes. */
+  setFade(on: boolean, color?: string): void {
+    if (color) this.fade.style.background = color;
+    this.fade.classList.toggle("on", on);
+  }
+}
+
+const FADE_MS = 300;
+export const fadeDuration = () => (matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : FADE_MS);
+
+function formatValue(value: number, unit: string | undefined, step: number): string {
+  const decimals = step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step)));
+  const text = value.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  if (unit === "deg") return `${text}°`;
+  if (unit && unit !== "1" && unit !== "scene") return `${text} ${unit}`;
+  return text;
 }
