@@ -12,7 +12,7 @@
   "performance": { "triangleBudget": 400000 },
   "clock": { "timeScale": 1 },
   "camera": {
-    "home": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 4 },
+    "home": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 9 },
     "constraints": { "minDistance": 0.4, "maxDistance": 180, "minElevationDeg": -5, "maxElevationDeg": 85 }
   },
   "entities": [
@@ -95,7 +95,7 @@
     {
       "id": "sat-a",
       "component": "leo-satellite",
-      "params": { "busLength": 3, "solarSpan": 10 },
+      "params": { "busLength": 4, "solarSpan": 14 },
       "transform": { "position": [-30, 55, -10] },
       "notToScale": true,
       "selectable": true,
@@ -105,7 +105,7 @@
     {
       "id": "sat-b",
       "component": "leo-satellite",
-      "params": { "busLength": 3, "solarSpan": 10 },
+      "params": { "busLength": 4, "solarSpan": 14 },
       "transform": { "position": [-80, 25, -20] },
       "notToScale": true,
       "selectable": true,
@@ -115,7 +115,7 @@
     {
       "id": "sat-c",
       "component": "leo-satellite",
-      "params": { "busLength": 3, "solarSpan": 10 },
+      "params": { "busLength": 4, "solarSpan": 14 },
       "transform": { "position": [-120, 5, -30] },
       "notToScale": true,
       "selectable": true,
@@ -188,7 +188,7 @@
     {
       "id": "orbit",
       "simulator": "orbital-pass",
-      "params": { "altitudeM": 480000, "minElevationDeg": 25, "displayRadius": 60, "spacingS": 230 },
+      "params": { "altitudeM": 480000, "minElevationDeg": 25, "displayRadius": 30, "spacingS": 230 },
       "bind": { "satellites": ["sat-a", "sat-b", "sat-c"], "observer": "terminal" }
     }
   ],
@@ -225,7 +225,7 @@
           "id": "arrival",
           "textKey": "intro.arrival",
           "durationS": 9,
-          "camera": { "shot": { "target": "house", "azimuthDeg": 40, "elevationDeg": 15, "distance": 90 }, "transitionS": 0 },
+          "camera": { "shot": { "target": "house", "azimuthDeg": 40, "elevationDeg": 8, "distance": 110 }, "transitionS": 0 },
           "actions": [
             { "type": "show", "targets": ["link-user-a"] },
             { "type": "highlight", "targets": ["terminal", "sat-a"] }
@@ -245,7 +245,7 @@
           "id": "handover-to-user",
           "textKey": "intro.handover-to-user",
           "durationS": 6,
-          "camera": { "shot": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 4 }, "transitionS": 2 },
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 35, "elevationDeg": 25, "distance": 9 }, "transitionS": 2 },
           "actions": [
             { "type": "reveal", "target": "terminal", "mode": "none" },
             { "type": "hide", "targets": ["link-user-a"] }
@@ -260,7 +260,7 @@
           "id": "contact",
           "textKey": "play.contact",
           "durationS": 24,
-          "camera": { "shot": { "target": "terminal", "azimuthDeg": 60, "elevationDeg": 10, "distance": 80 }, "transitionS": 3 },
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 60, "elevationDeg": 8, "distance": 100 }, "transitionS": 3 },
           "actions": [
             { "type": "timeScale", "value": 1 },
             { "type": "show", "targets": ["link-user-a"] },
@@ -272,9 +272,9 @@
           "id": "problem",
           "textKey": "play.problem",
           "durationS": 22,
-          "camera": { "shot": { "target": "house", "azimuthDeg": 90, "elevationDeg": 5, "distance": 120 }, "transitionS": 3 },
+          "camera": { "shot": { "target": "house", "azimuthDeg": 90, "elevationDeg": 5, "distance": 90 }, "transitionS": 3 },
           "actions": [
-            { "type": "timeScale", "value": 30 },
+            { "type": "timeScale", "value": 10 },
             { "type": "highlight", "targets": ["sat-a"] }
           ]
         },
@@ -306,10 +306,10 @@
           "id": "handover",
           "textKey": "play.handover",
           "durationS": 22,
-          "camera": { "shot": { "target": "terminal", "azimuthDeg": 70, "elevationDeg": 12, "distance": 70 }, "transitionS": 3 },
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 70, "elevationDeg": 10, "distance": 80 }, "transitionS": 3 },
           "actions": [
             { "type": "setParam", "target": "beam", "param": "tracking", "value": true },
-            { "type": "timeScale", "value": 30 },
+            { "type": "timeScale", "value": 5 },
             { "type": "setParam", "target": "beam", "param": "trackTarget", "value": "sat-b" },
             { "type": "hide", "targets": ["link-user-a"] },
             { "type": "show", "targets": ["link-user-b"] },

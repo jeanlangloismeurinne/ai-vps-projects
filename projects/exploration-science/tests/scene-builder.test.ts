@@ -150,3 +150,36 @@ describe("StaticContentSource", () => {
     await expect(source.node("nowhere")).rejects.toThrow(/unknown node/);
   });
 });
+
+describe("picking a selectable entity", () => {
+  it("returns the innermost selectable entity under the pointer, through an open casing only", async () => {
+    const { PerspectiveCamera } = await import("three");
+    const { pickEntity } = await import("../engine/src/core/picking");
+    const built = buildScene(starlink, catalogue, registry);
+    const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
+    // Straight down the panel normal, onto a radiating element near the centre.
+    const terminal = built.entities.get("terminal")!;
+    const panel = terminal.instance.anchor!;
+    built.root.updateMatrixWorld(true);
+    const normal = new Vector3(0, 1, 0).transformDirection(panel.matrixWorld);
+    const centre = panel.getWorldPosition(new Vector3());
+    camera.position.copy(centre).addScaledVector(normal, 1);
+    camera.lookAt(centre);
+    camera.updateMatrixWorld(true);
+    expect(pickEntity(built, camera, 0, 0)).toBe("terminal");
+    terminal.instance.reveal!("cutaway");
+    built.root.updateMatrixWorld(true);
+    // Now aim at one radiating element: it is what the pointer gets.
+    const [x, z] = latticePositions("hexagonal", 1200, 0.0125)[600]!;
+    const element = built.entities.get("phased-array")!.node.localToWorld(new Vector3(x, 0, z));
+    camera.position.copy(element).addScaledVector(normal, 1);
+    camera.lookAt(element);
+    camera.updateMatrixWorld(true);
+    expect(pickEntity(built, camera, 0, 0)).toBe("phased-array");
+    // The sky: nothing.
+    camera.position.set(0, 50, 0);
+    camera.lookAt(0, 100, 0);
+    camera.updateMatrixWorld(true);
+    expect(pickEntity(built, camera, 0, 0)).toBeNull();
+  });
+});

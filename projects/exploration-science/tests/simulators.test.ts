@@ -95,9 +95,10 @@ describe("orbital-pass", () => {
     const terminal = built.entities.get("terminal")!.node.getWorldPosition(new Vector3());
     const satA = built.entities.get("sat-a")!;
     // t = 0: the first satellite culminates, straight above the terminal.
+    const radius = (starlink.simulators!.find((s) => s.id === "orbit")!.params as { displayRadius: number }).displayRadius;
     const offset = satA.node.position.clone().sub(terminal);
-    expect(offset.length()).toBeCloseTo(60, 6);
-    expect(offset.y).toBeCloseTo(60, 6);
+    expect(offset.length()).toBeCloseTo(radius, 6);
+    expect(offset.y).toBeCloseTo(radius, 6);
     sim.advance(120);
     const el = (sim.instances.get("orbit")!.outputs().elevationsDeg as Record<string, number>)["sat-a"]!;
     const now = satA.node.position.clone().sub(terminal);

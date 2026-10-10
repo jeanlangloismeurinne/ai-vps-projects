@@ -1,10 +1,27 @@
-import { BufferAttribute, BufferGeometry, Group, InstancedMesh, Line, LineBasicMaterial, Matrix4, MeshBasicMaterial, SphereGeometry, Vector3, type Object3D } from "three";
+import { BufferAttribute, BufferGeometry, DataTexture, Group, Line, LineBasicMaterial, Points, PointsMaterial, Vector3, type Object3D } from "three";
 import type { ComponentPlugin } from "../../core/registry";
 
 const MEDIUM_COLOURS: Record<string, string> = { fiber: "#3fd0ff", laser: "#ff4d6d" };
 const PULSES_PER_WAY = 6;
 const PULSE_SPEED = 0.35; // path lengths per second: a display rhythm, not the speed of light
-const PULSE_SIZE = 0.012; // pulse radius as a fraction of the path length
+const PULSE_PX = 9; // pulses keep the same size on screen at every zoom level
+
+// A soft round dot, built without a canvas so the plugin also runs in tests.
+function dotTexture(): DataTexture {
+  const n = 32;
+  const data = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+      const i = (y * n + x) * 4;
+      data[i] = data[i + 1] = data[i + 2] = 255;
+      data[i + 3] = Math.round(255 * Math.min(1, Math.max(0, (1 - r) * 4)));
+    }
+  }
+  const texture = new DataTexture(data, n, n);
+  texture.needsUpdate = true;
+  return texture;
+}
 
 // Path between two entities, kept up to date as they move (satellites), with
 // pulses running along it to show where data goes (both ways unless told otherwise).
@@ -23,9 +40,12 @@ export const dataLink: ComponentPlugin = {
     line.frustumCulled = false;
 
     const ways = p.bidirectional ? 2 : 1;
-    const pulseGeometry = new SphereGeometry(1, 10, 8);
-    const pulseMaterial = new MeshBasicMaterial({ color: colour });
-    const pulses = new InstancedMesh(pulseGeometry, pulseMaterial, PULSES_PER_WAY * ways);
+    const pulseGeometry = new BufferGeometry();
+    const pulsePositions = new BufferAttribute(new Float32Array(PULSES_PER_WAY * ways * 3), 3);
+    pulseGeometry.setAttribute("position", pulsePositions);
+    const dot = dotTexture();
+    const pulseMaterial = new PointsMaterial({ color: colour, size: PULSE_PX, sizeAttenuation: false, map: dot, transparent: true, alphaTest: 0.1, depthWrite: false });
+    const pulses = new Points(pulseGeometry, pulseMaterial);
     pulses.frustumCulled = false;
     group.add(line, pulses);
 
@@ -34,7 +54,6 @@ export const dataLink: ComponentPlugin = {
     const a = new Vector3();
     const b = new Vector3();
     const at = new Vector3();
-    const m = new Matrix4();
 
     const refresh = () => {
       if (!ends) return;
@@ -43,18 +62,16 @@ export const dataLink: ComponentPlugin = {
       positions.setXYZ(0, a.x, a.y, a.z);
       positions.setXYZ(1, b.x, b.y, b.z);
       positions.needsUpdate = true;
-      const radius = a.distanceTo(b) * PULSE_SIZE;
       for (let way = 0; way < ways; way++) {
         for (let i = 0; i < PULSES_PER_WAY; i++) {
           // The return way is shifted by half a gap so pulses never overlap.
           let t = (phase + (i + way * 0.5) / PULSES_PER_WAY) % 1;
           if (way === 1) t = 1 - t;
           at.lerpVectors(a, b, t);
-          m.makeScale(radius, radius, radius).setPosition(at);
-          pulses.setMatrixAt(way * PULSES_PER_WAY + i, m);
+          pulsePositions.setXYZ(way * PULSES_PER_WAY + i, at.x, at.y, at.z);
         }
       }
-      pulses.instanceMatrix.needsUpdate = true;
+      pulsePositions.needsUpdate = true;
     };
 
     return {
@@ -75,6 +92,7 @@ export const dataLink: ComponentPlugin = {
         lineMaterial.dispose();
         pulseGeometry.dispose();
         pulseMaterial.dispose();
+        dot.dispose();
       },
     };
   },
