@@ -32,8 +32,8 @@ export interface BuiltScene {
 }
 
 /** Catalogue defaults first, scene values over them. */
-export function withDefaults(catalogue: Catalogue, componentId: string, params: Params): Params {
-  const spec = catalogue.components.find((c) => c.id === componentId);
+export function withDefaults(catalogue: Catalogue, pluginId: string, params: Params, kind: "components" | "simulators" = "components"): Params {
+  const spec = catalogue[kind].find((c) => c.id === pluginId);
   const merged: Params = {};
   for (const [name, p] of Object.entries(spec?.params.properties ?? {})) {
     if (p.default !== undefined) merged[name] = p.default;

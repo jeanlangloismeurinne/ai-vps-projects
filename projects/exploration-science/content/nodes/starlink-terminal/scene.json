@@ -188,7 +188,7 @@
     {
       "id": "orbit",
       "simulator": "orbital-pass",
-      "params": { "altitudeM": 480000, "minElevationDeg": 25, "displayRadius": 60, "spacingS": 90 },
+      "params": { "altitudeM": 480000, "minElevationDeg": 25, "displayRadius": 60, "spacingS": 230 },
       "bind": { "satellites": ["sat-a", "sat-b", "sat-c"], "observer": "terminal" }
     }
   ],

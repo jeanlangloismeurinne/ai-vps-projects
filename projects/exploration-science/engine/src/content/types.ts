@@ -47,12 +47,66 @@ export interface Scene {
   clock?: { timeScale?: number };
   camera: { home: Shot; constraints: CameraConstraints };
   entities: Entity[];
-  // Simulators, lenses, links and tours are read by later milestones.
-  simulators?: unknown[];
-  lenses?: unknown[];
-  links?: unknown[];
-  tours: unknown[];
+  simulators?: SimulatorInstanceSpec[];
+  lenses?: LensInstanceSpec[];
+  links?: Link[];
+  tours: Tour[];
 }
+
+export interface SimulatorInstanceSpec {
+  id: string;
+  simulator: string;
+  params: Params;
+  bind: Record<string, string | string[]>;
+}
+
+export interface LensInstanceSpec {
+  id: string;
+  lens: string;
+  labelKey?: string;
+  sources: string[];
+  controls: { id: string; target: string; param: string; labelKey: string; levels: Level[]; min?: number; max?: number; step?: number }[];
+}
+
+export interface Link {
+  kind: "composedOf" | "reliesOn" | "freeQuestion" | "derivedFrom";
+  from?: string;
+  to: string;
+  available?: boolean;
+}
+
+export type RevealModeSpec = "cutaway" | "explode" | "none";
+
+export type Action =
+  | { type: "highlight" | "label" | "show" | "hide"; targets: string[] }
+  | { type: "reveal"; target: string; mode: RevealModeSpec }
+  | { type: "lens"; lens: string; on: boolean }
+  | { type: "setParam"; target: string; param: string; value: number | string | boolean; overS?: number }
+  | { type: "timeScale"; value: number };
+
+export interface Step {
+  id: string;
+  textKey: string;
+  durationS: number;
+  camera?: { shot: Shot; transitionS?: number };
+  actions?: Action[];
+}
+
+export interface Tour {
+  id: string;
+  autoStart?: boolean;
+  steps: Step[];
+}
+
+/** A text entry: plain string, or spoken text with a displayed variant, terms and explorable links. */
+export type TextEntry =
+  | string
+  | {
+      text: string;
+      subtitle?: string;
+      terms?: { symbol: string; meaning: string; unit?: string }[];
+      links?: { phrase: string; node: string }[];
+    };
 
 export interface Texts {
   nodeId: string;
