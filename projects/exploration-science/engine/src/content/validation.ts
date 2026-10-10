@@ -402,3 +402,41 @@ function sourcesErrors(sources: Json): string[] {
   }
   return errors;
 }
+
+/**
+ * Checks across nodes: a child names its parent and the entity it zooms into, the
+ * parent links back, and the child shows that same component so the dive keeps
+ * visual continuity (design rule 9). A child inherits its parent's style.
+ */
+export function graphErrors(nodes: NodeFiles[]): string[] {
+  const errors: string[] = [];
+  const byId = new Map(nodes.map((n) => [n.scene.node.id as string, n.scene]));
+  for (const { scene } of nodes) {
+    const id: string = scene.node.id;
+    const parentRef = scene.node.parent;
+    if (parentRef) {
+      const parent = byId.get(parentRef.node);
+      if (!parent) {
+        errors.push(`${id}: parent node '${parentRef.node}' does not exist`);
+      } else {
+        const entity = parent.entities.find((e: Json) => e.id === parentRef.entity);
+        if (!entity) errors.push(`${id}: parent entity '${parentRef.entity}' not in '${parentRef.node}'`);
+        else if (!scene.entities.some((e: Json) => e.component === entity.component)) {
+          errors.push(`${id}: no '${entity.component}' entity, so the dive from '${parentRef.node}' breaks visual continuity`);
+        }
+        const linked = (parent.links ?? []).some((l: Json) => l.kind === "composedOf" && l.from === parentRef.entity && l.to === id);
+        if (!linked) errors.push(`${id}: '${parentRef.node}' has no composedOf link from '${parentRef.entity}' to it`);
+      }
+      if (scene.style) errors.push(`${id}: a child node inherits its parent's style and must not declare one`);
+    }
+    for (const link of scene.links ?? []) {
+      if (link.kind !== "composedOf" || !link.available) continue;
+      const child = byId.get(link.to);
+      if (!child) errors.push(`${id}: link to '${link.to}' is marked available but the node does not exist`);
+      else if (child.node.parent?.node !== id || child.node.parent?.entity !== link.from) {
+        errors.push(`${id}: '${link.to}' does not name '${id}' / '${link.from}' as its parent`);
+      }
+    }
+  }
+  return errors;
+}

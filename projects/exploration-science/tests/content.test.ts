@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ContentValidator, type NodeFiles } from "../engine/src/content/validation";
+import { ContentValidator, graphErrors, type NodeFiles } from "../engine/src/content/validation";
 
 const ROOT = join(import.meta.dirname, "..");
 const NODES_DIR = join(ROOT, "content", "nodes");
@@ -45,6 +45,20 @@ describe("nodes", () => {
     it("is valid against schemas and catalogue", () => {
       expect(validator.nodeErrors(loadNode(dir))).toEqual([]);
     });
+  });
+});
+
+describe("graph of nodes", () => {
+  it("links every child to its parent, with visual continuity (rule 9)", () => {
+    expect(graphErrors(nodeDirs.map(loadNode))).toEqual([]);
+  });
+
+  it("catches a child whose parent does not link back", () => {
+    const child = structuredClone(loadNode("starlink-terminal"));
+    child.scene.node.id = "orphan";
+    delete child.scene.style;
+    child.scene.node.parent = { node: "starlink-terminal", entity: "router" };
+    expect(graphErrors([loadNode("starlink-terminal"), child]).join("\n")).toMatch(/no composedOf link/);
   });
 });
 
