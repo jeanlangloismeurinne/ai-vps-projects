@@ -112,7 +112,7 @@ La scène montre l'antenne sur un toit, un satellite en orbite basse, la station
 
 Le Play compte 7 étapes, pour environ 2 à 3 minutes :
 
-1. L'antenne communique avec un satellite situé à environ 550 km, qui se déplace à environ 27 000 km/h.
+1. L'antenne communique avec un satellite situé à environ 480 km (altitude de la couche principale depuis son abaissement en 2026 ; environ 550 km auparavant), qui se déplace à environ 27 000 km/h.
 2. Le problème : viser une cible qui traverse le ciel en quelques minutes, sans aucune pièce mobile.
 3. Vue en coupe : des centaines de petites antennes sous le capot.
 4. Le faisceau se forme et s'oriente (curseur).
