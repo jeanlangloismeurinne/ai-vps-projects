@@ -169,6 +169,8 @@ describe("picking a selectable entity", () => {
     expect(pickEntity(built, camera, 0, 0)).toBe("terminal");
     terminal.instance.reveal!("cutaway");
     built.root.updateMatrixWorld(true);
+    // Opened: whatever surface the ray meets in the tray, the array layer it crossed first wins.
+    for (const [dx, dy] of [[0, 0], [0.004, 0.003], [-0.006, 0.002]] as const) expect(pickEntity(built, camera, dx, dy)).toBe("phased-array");
     // Now aim at one radiating element: it is what the pointer gets.
     const [x, z] = latticePositions("hexagonal", 1200, 0.0125)[600]!;
     const element = built.entities.get("phased-array")!.node.localToWorld(new Vector3(x, 0, z));

@@ -56,7 +56,9 @@ export const flatPanelTerminal: ComponentPlugin = {
       pipe.translate(0, -pipeLength / 2, 0);
       geometries.push(pipe);
       group.add(new Mesh(pipe, ctx.palette.material("metal")));
+      // Under the panel, so it never pokes through the radome.
       const collar = new CylinderGeometry(mastRadius * 1.6, mastRadius * 1.6, t * 1.5, 16);
+      collar.translate(0, -t * 0.75, 0);
       geometries.push(collar);
       group.add(new Mesh(collar, ctx.palette.material("plastic-dark")));
     } else if (p.mount === "kickstand") {

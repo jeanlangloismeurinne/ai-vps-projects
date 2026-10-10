@@ -15,6 +15,8 @@ export interface OverlayHandlers {
   onNext(): void;
   onStop(): void;
   onCloseCard(): void;
+  /** A pinned label was clicked. */
+  onLabel(id: string): void;
 }
 
 export interface PlayerView {
@@ -59,7 +61,7 @@ const CSS = `
 .xs-terms dt { text-align: right; } .xs-terms dd { margin: 0; color: #3a4350; }
 .xs-term { text-decoration: underline dotted 2px; text-underline-offset: 3px; text-decoration-color: #d18a00; }
 .xs-labels { position: absolute; inset: 0; overflow: hidden; }
-.xs-label { position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 10px)); padding: 3px 10px; border-radius: 12px; background: #10151c; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.xs-label { pointer-events: auto; cursor: pointer; position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 10px)); padding: 3px 10px; border-radius: 12px; background: #10151c; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .xs-label::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: var(--leader, 10px); margin-left: -1px; background: #10151c; }
 .xs-card { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: min(320px, calc(100% - 32px)); padding: 14px 16px; }
 .xs-card h2 { margin: 0 32px 6px 0; font-size: 17px; }
@@ -97,7 +99,7 @@ export class Overlay {
   private readonly labels = new Map<string, HTMLDivElement>();
   private readonly card = el("aside", { className: "xs-card xs-panel", hidden: true });
 
-  constructor(container: HTMLElement, nodeIds: string[], handlers: OverlayHandlers) {
+  constructor(container: HTMLElement, nodeIds: string[], private readonly handlers: OverlayHandlers) {
     document.head.appendChild(el("style", { textContent: CSS }));
     const root = el("div", { className: "xs-overlay" });
 
@@ -166,6 +168,7 @@ export class Overlay {
       let div = this.labels.get(id);
       if (!div) {
         div = el("div", { className: "xs-label" });
+        div.addEventListener("click", () => this.handlers.onLabel(id));
         this.labels.set(id, div);
         this.labelLayer.append(div);
       }

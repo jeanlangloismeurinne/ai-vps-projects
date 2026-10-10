@@ -84,6 +84,10 @@ const overlay = new Overlay(app, source.nodeIds(), {
   onNext: () => player.next(),
   onStop: () => player.stop(),
   onCloseCard: () => select(null),
+  onLabel: (id) => {
+    yieldToUser();
+    select(id);
+  },
 });
 
 function bindStage() {
