@@ -104,6 +104,17 @@ main { padding-block: 20px 60px; display: flex; flex-direction: column; gap: 18p
 .say-meta .warn { color: var(--warn); font-weight: 600; }
 .formula { margin-top: 8px; padding: 8px 12px; background: var(--sunk); border-radius: 8px; overflow-x: auto; font-size: 1.1rem; }
 .formula math { font-size: 1.1em; }
+.imath math { font-size: 1.08em; }
+.xlink { text-decoration-line: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+.xlink.live { text-decoration-color: var(--accent); cursor: pointer; }
+.xlink.idle { text-decoration-style: dotted; text-decoration-color: var(--muted); }
+.terms { display: flex; gap: 10px; font-size: 0.86rem; align-items: baseline; }
+.terms .where { color: var(--muted); font-style: italic; }
+.terms ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.terms li { display: grid; grid-template-columns: minmax(48px, max-content) minmax(0, 1fr); gap: 10px; }
+.terms .sym { text-align: right; }
+.spoken { margin: 0; font-size: 0.84rem; color: var(--muted); max-width: 70ch; }
+.spoken span { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .direction { display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem; border-left: 1px solid var(--line); padding-left: 16px; }
 .direction h4 { margin: 0 0 2px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 .direction ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
@@ -239,8 +250,46 @@ function resolve(key, level = state.level) {
   return { value: undefined, inherited: false };
 }
 const plain = (entry) => (entry === undefined ? "" : typeof entry === "string" ? entry : entry.text);
-const formulaOf = (entry) => (entry && typeof entry === "object" ? entry.formula : undefined);
-const mathml = (tex) => `<div class="formula">${DATA.formulas[tex] ?? h(tex)}</div>`;
+const shownOf = (entry) => (entry && typeof entry === "object" ? entry.subtitle ?? entry.text : entry ?? "");
+const hasSubtitle = (entry) => Boolean(entry && typeof entry === "object" && entry.subtitle);
+const math = (tex) => DATA.formulas[tex] ?? h(tex);
+const mathml = (tex) => `<div class="formula">${math(tex)}</div>`;
+const sceneLink = (nodeId) => (node().scene.links ?? []).find((l) => l.to === nodeId);
+
+// Displayed text: inline equations rendered, explorable phrases marked.
+function richText(entry, { clickable = true } = {}) {
+  const links = (entry && typeof entry === "object" && entry.links) || [];
+  return shownOf(entry).split(/(\$[^$]+\$)/).map((part) => {
+    if (part.length > 1 && part.startsWith("$") && part.endsWith("$")) return `<span class="imath">${math(part.slice(1, -1))}</span>`;
+    let html = h(part);
+    for (const l of links) {
+      const ready = Boolean(sceneLink(l.node)?.available);
+      const live = clickable && ready;
+      const why = !clickable ? "non cliquable pendant la visite d'arrivée" : ready ? "touchez pour explorer" : "nœud à écrire, pas encore cliquable";
+      html = html.split(h(l.phrase)).join(`<span class="xlink ${live ? "live" : "idle"}" title="${h(`${l.node} — ${why}`)}">${h(l.phrase)}</span>`);
+    }
+    return html;
+  }).join("");
+}
+function termsLegend(terms) {
+  if (!terms?.length) return "";
+  return `<div class="terms"><span class="where">où</span><ul>${terms.map((t) => `<li><span class="sym">${math(t.symbol)}</span><span>${h(t.meaning)}${t.unit ? ` <span class="muted">· ${h(t.unit)}</span>` : ""}</span></li>`).join("")}</ul></div>`;
+}
+function linksLegend(entry, clickable = true) {
+  const links = (entry && typeof entry === "object" && entry.links) || [];
+  if (!links.length) return "";
+  return `<div class="row small">${links.map((l) => {
+    const target = sceneLink(l.node);
+    const state = !target?.available ? '<span class="chip">à écrire</span>' : clickable ? '<span class="chip ok">cliquable</span>' : '<span class="chip">visible, non cliquable ici</span>';
+    return `<span class="muted">« ${h(l.phrase)} » →</span> <span class="mono">${h(l.node)}</span> ${state}`;
+  }).join(" ")}</div>`;
+}
+function spokenNote(entry) {
+  return hasSubtitle(entry) ? `<p class="spoken"><span>Lu à voix haute</span>${h(entry.text)}</p>` : "";
+}
+function richBlock(entry, clickable = true) {
+  return `<p class="say">${richText(entry, { clickable }) || '<span class="muted">(texte manquant)</span>'}</p>${termsLegend(entry?.terms)}${linksLegend(entry, clickable)}${spokenNote(entry)}`;
+}
 
 const entityById = (id) => node().scene.entities.find((e) => e.id === id);
 function entityName(id, level) {
@@ -325,7 +374,7 @@ function describeShot(shot, transitionS) {
 
 function viewTour() {
   const scene = node().scene;
-  const out = [`<p class="lede">Le déroulé tel que le moteur le jouera : texte lu à voix haute au niveau <b>${levelFr(state.level)}</b>, mouvement de caméra et actions de chaque étape. Changez de niveau en haut : la mise en scène reste la même, seul le texte change.</p>`];
+  const out = [`<p class="lede">Le déroulé tel que le moteur le jouera : sous-titre affiché au niveau <b>${levelFr(state.level)}</b> (avec sa version lue à voix haute quand elle diffère), mouvement de caméra et actions de chaque étape. Les termes <span class="xlink live">soulignés</span> ouvrent un autre nœud ; en pointillés gris, ce nœud n'est pas encore écrit. Changez de niveau en haut : la mise en scène reste la même, seul le texte change.</p>`];
   for (const tour of scene.tours) {
     const total = tour.steps.reduce((s, x) => s + x.durationS, 0);
     const title = tour.autoStart ? "Visite d'arrivée" : tour.id === "main" ? "Play" : tour.id;
@@ -338,14 +387,12 @@ function viewTour() {
       const say = plain(entry);
       const words = wordCount(say);
       const wpm = Math.round(words / (s.durationS / 60));
-      const formula = formulaOf(entry);
       const actions = (s.actions ?? []).map((a) => `<li>${describeAction(a)}</li>`).join("");
       return `<article class="card step" id="${tour.id}-${s.id}">
         <div class="step-num"><b>${i + 1}</b><span class="t">${fmtDuration(start)} → ${fmtDuration(t)}</span><span class="id">${h(s.id)}</span></div>
         <div class="stack">
-          <p class="say">${h(say) || '<span class="muted">(texte manquant)</span>'}</p>
-          ${formula ? mathml(formula) : ""}
-          <div class="say-meta">${words} mots en ${s.durationS} s · <span class="${wpm > WPM_MAX ? "warn" : ""}">${wpm} mots/min${wpm > WPM_MAX ? " — trop dense pour être lu dans la durée" : ""}</span> · <span class="mono">${h(s.textKey)}</span></div>
+          ${richBlock(entry, !tour.autoStart)}
+          <div class="say-meta">${words} mots lus en ${s.durationS} s · <span class="${wpm > WPM_MAX ? "warn" : ""}">${wpm} mots/min${wpm > WPM_MAX ? " — trop dense pour être lu dans la durée" : ""}</span> · <span class="mono">${h(s.textKey)}</span></div>
         </div>
         <div class="direction">
           ${s.camera ? `<div><h4>Caméra</h4>${describeShot(s.camera.shot, s.camera.transitionS)}</div>` : '<div><h4>Caméra</h4><span class="muted">inchangée</span></div>'}
@@ -394,8 +441,8 @@ function viewTexts() {
     const rows = g.keys.map(([key, role]) => {
       const cells = LEVELS.map((l) => {
         const r = resolve(key, l.id);
-        const f = formulaOf(r.value);
-        return `<div class="tcell ${r.inherited ? "inherited" : ""} ${l.id === state.level ? "current" : ""}" data-level="${l.fr}">${h(plain(r.value)) || '<span class="chip bad">manquant</span>'}${r.inherited ? ' <span class="chip">commun</span>' : ""}${f ? mathml(f) : ""}</div>`;
+        const body = r.value === undefined ? '<span class="chip bad">manquant</span>' : richText(r.value);
+        return `<div class="tcell ${r.inherited ? "inherited" : ""} ${l.id === state.level ? "current" : ""}" data-level="${l.fr}">${body}${r.inherited ? ' <span class="chip">commun</span>' : ""}${termsLegend(r.value?.terms)}${linksLegend(r.value)}${spokenNote(r.value)}</div>`;
       }).join("");
       return `<div class="trow"><div class="tkey"><b class="small">${h(role)}</b><span class="id">${h(key)}</span></div>${cells}</div>`;
     }).join("");
@@ -507,7 +554,7 @@ function viewPhysics() {
     return `<article class="card stack">
       <div class="row"><h3>${h(s.id)}</h3><span class="chip">${h(s.simulator)}</span></div>
       <p class="muted small" style="margin:0">${h(plugin?.description)}</p>
-      ${(plugin?.equations ?? []).map(mathml).join("")}
+      ${(plugin?.equations ?? []).map((eq) => mathml(eq.tex) + termsLegend(eq.terms)).join("")}
       <div><h4 class="small muted" style="margin:6px 0 4px">Agit sur</h4><dl class="kv">${binds}</dl></div>
       ${plugin ? paramsTable(plugin, s.params, { showUnset: true }) : ""}
     </article>`;
@@ -577,7 +624,7 @@ function viewCatalogue() {
   const sims = c.simulators.map((p) => `<article class="card stack">
       <div class="row"><h3 class="mono" style="font-family:var(--mono);font-size:0.95rem">${h(p.id)}</h3>${status(p.status)}${p.provides.map((x) => `<span class="chip info">fournit ${h(x)}</span>`).join("")}</div>
       <p class="muted small" style="margin:0">${h(p.description)}</p>
-      ${p.equations.map(mathml).join("")}
+      ${p.equations.map((eq) => mathml(eq.tex) + termsLegend(eq.terms)).join("")}
       <dl class="kv small"><dt>Rôles</dt><dd>${Object.entries(p.roles).map(([r, s]) => `<span class="mono">${h(r)}</span> : ${s.components.map(h).join(" | ")}${s.multiple ? " (plusieurs)" : ""}${s.optional ? " (facultatif)" : ""}`).join("<br>")}</dd>
         <dt>Sorties</dt><dd>${p.outputs.map((o) => `<span class="mono">${h(o.id)}</span>${o["x-unit"] ? ` (${h(o["x-unit"])})` : ""}`).join(", ")}</dd></dl>
       ${paramsTable(p, {}, { showUnset: true })}
@@ -640,7 +687,14 @@ const FR = {
   "catalogue.components[].params": "Schéma des paramètres : type, unité, plage de validité, valeur par défaut.",
   "catalogue.components[].capabilities": "Ce que le composant sait faire : vue en coupe, vue éclatée, niveaux de détail.",
   "catalogue.simulators": "Les simulateurs physiques, écrits à la main.",
-  "catalogue.simulators[].equations": "Relations calculées. Chacune sera couverte par un test.",
+  "catalogue.simulators[].equations": "Relations calculées, chacune avec la définition de ses termes. Chacune sera couverte par un test.",
+  "catalogue.simulators[].equations[].terms": "Définition de chaque symbole de l'équation : symbole, signification, unité.",
+  "texts.common.*": "Un texte : soit une simple phrase, soit un objet quand il contient une équation ou un terme explorable.",
+  "texts.common.*.text": "Version lue à voix haute : des mots seulement, chaque terme défini en toutes lettres.",
+  "texts.common.*.subtitle": "Version affichée à l'écran quand elle diffère : équations en notation mathématique, entre $…$.",
+  "texts.common.*.terms": "Définition de chaque symbole des équations : symbole, signification, unité. Obligatoire dès qu'il y a une équation.",
+  "texts.common.*.links": "Termes explorables : un passage du texte affiché qui ouvre un autre nœud. Ce nœud doit être déclaré dans les liens de la scène. Pas cliquables pendant la visite d'arrivée.",
+  "texts.common.*.links[].phrase": "Passage exact du texte affiché, hors équation.",
   "catalogue.simulators[].roles": "Les objets sur lesquels le simulateur agit, et les composants acceptés pour chacun.",
   "catalogue.simulators[].provides": "Types de données produites, que les lentilles savent afficher.",
   "catalogue.lenses[].consumes": "Une lentille fonctionne avec tout simulateur qui produit l'un de ces types.",
@@ -668,16 +722,23 @@ function typeLabel(s, root) {
   if (s.maximum !== undefined) parts.push(`≤ ${s.maximum}`);
   return parts.filter(Boolean).join(" ");
 }
-function schemaFields(s, root, path, depth) {
+function schemaFields(s, root, path, depth, seen = new Map()) {
+  if (s?.$ref) {
+    if (seen.has(s.$ref)) return `<p class="en">Même structure que <span class="mono">${h(seen.get(s.$ref))}</span>.</p>`;
+    seen.set(s.$ref, path);
+  }
   s = deref(s, root);
-  if (!s || depth > 6) return "";
-  if (s.type === "array") return schemaFields(s.items, root, path + "[]", depth);
+  if (!s || depth > 7) return "";
+  if (s.type === "array") return schemaFields(s.items, root, path + "[]", depth, seen);
+  if (s.type === "object" && !s.properties && s.additionalProperties && typeof s.additionalProperties === "object") {
+    return schemaFields(s.additionalProperties, root, path + ".*", depth + 1, seen);
+  }
   if (s.oneOf && s.oneOf.some((x) => deref(x, root).properties)) {
     return s.oneOf.map((x, i) => {
       const v = deref(x, root);
       const t = v.properties?.type;
       const name = t ? (t.const ? JSON.stringify(t.const) : t.enum?.map((e) => JSON.stringify(e)).join(" | ")) : `variante ${i + 1}`;
-      return `<div class="variant">Variante ${h(name)}</div>${schemaFields(v, root, path, depth + 1)}`;
+      return `<div class="variant">Variante ${h(name)}</div>${schemaFields(v, root, path, depth + 1, seen)}`;
     }).join("");
   }
   if (!s.properties) return "";
@@ -685,7 +746,7 @@ function schemaFields(s, root, path, depth) {
   return Object.entries(s.properties).map(([name, sub]) => {
     const p = `${path}.${name}`;
     const d = deref(sub, root);
-    const nested = schemaFields(sub, root, p, depth + 1);
+    const nested = schemaFields(sub, root, p, depth + 1, seen);
     const fr = FR[p];
     return `<div class="f"><div class="name">${h(name)}${req.has(name) ? '<span class="req" title="obligatoire"> *</span>' : ""}</div>
       <div><div class="type">${h(typeLabel(sub, root))}</div>${fr ? `<p class="fr">${h(fr)}</p>` : ""}${d?.description ? `<p class="en">${h(d.description)}</p>` : ""}</div>

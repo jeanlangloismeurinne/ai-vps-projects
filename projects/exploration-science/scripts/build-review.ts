@@ -19,7 +19,15 @@ function collectFormula(tex: string): void {
 
 const catalogue = readJson("catalogue/catalogue.json");
 const validator = new ContentValidator(catalogue);
-for (const sim of catalogue.simulators) sim.equations.forEach(collectFormula);
+function collectTerms(terms: { symbol: string }[] | undefined): void {
+  for (const t of terms ?? []) collectFormula(t.symbol);
+}
+for (const sim of catalogue.simulators) {
+  for (const eq of sim.equations) {
+    collectFormula(eq.tex);
+    collectTerms(eq.terms);
+  }
+}
 
 const nodes = readdirSync(join(ROOT, "content/nodes"), { withFileTypes: true })
   .filter((d) => d.isDirectory())
@@ -34,7 +42,11 @@ const nodes = readdirSync(join(ROOT, "content/nodes"), { withFileTypes: true })
     const node = { dir, scene: readJson(`${base}/scene.json`), texts, sources: readJson(`${base}/sources.json`) };
     for (const t of Object.values(texts)) {
       for (const entries of [t.common, ...Object.values<any>(t.levels)]) {
-        for (const entry of Object.values<any>(entries)) if (typeof entry === "object" && entry.formula) collectFormula(entry.formula);
+        for (const entry of Object.values<any>(entries)) {
+          if (typeof entry !== "object") continue;
+          for (const m of (entry.subtitle ?? "").matchAll(/\$([^$]+)\$/g)) collectFormula(m[1]);
+          collectTerms(entry.terms);
+        }
       }
     }
     return { ...node, errors: validator.nodeErrors(node) };
