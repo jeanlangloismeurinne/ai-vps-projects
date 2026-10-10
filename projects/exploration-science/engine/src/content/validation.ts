@@ -75,6 +75,9 @@ export class ContentValidator {
           if (!this.find("components", c)) errors.push(`${sim.id}.roles.${role}: unknown component '${c}'`);
         }
       }
+      sim.equations.forEach((eq: Json, i: number) => {
+        errors.push(...termErrors([eq.tex], eq.terms).map((e) => `${sim.id}.equations[${i}]: ${e}`));
+      });
     }
     return errors;
   }
@@ -99,6 +102,7 @@ export class ContentValidator {
       if (texts.nodeId !== nodeId) errors.push(`texts.${lang}.nodeId '${texts.nodeId}' != '${nodeId}'`);
       if (texts.lang !== lang) errors.push(`texts.${lang}.lang is '${texts.lang}'`);
       errors.push(...textKeyErrors(scene, texts).map((e) => `texts.${lang}: ${e}`));
+      errors.push(...textEntryErrors(scene, texts).map((e) => `texts.${lang}: ${e}`));
     }
     errors.push(...sourcesErrors(sources));
     return errors;
@@ -310,6 +314,73 @@ function textKeyErrors(scene: Json, texts: Json): string[] {
   const defined = new Set([...Object.keys(texts.common), ...LEVELS.flatMap((l) => Object.keys(texts.levels[l]))]);
   for (const key of defined) {
     if (!used.has(key)) errors.push(`key '${key}' is not used by the scene`);
+  }
+  return errors;
+}
+
+// LaTeX commands that are operators, functions or layout, not symbols needing a definition.
+const LATEX_NON_SYMBOLS = new Set([
+  "sin", "cos", "tan", "arcsin", "arccos", "arctan", "exp", "ln", "log", "sqrt", "frac", "dfrac", "tfrac",
+  "left", "right", "sum", "prod", "int", "cdot", "times", "approx", "propto", "simeq", "quad", "qquad",
+  "in", "le", "ge", "leq", "geq", "neq", "infty", "pm", "to",
+]);
+// Mathematical constants that need no definition.
+const LATEX_CONSTANTS = new Set(["\\pi", "e", "i"]);
+const SYMBOL_PATTERN =
+  /(\\Delta\s*)?(\\mathrm\{[^{}]*\}|\\[a-zA-Z]+|[A-Za-z])(_(?:\{(?:[^{}]|\{[^{}]*\})*\}|\\[a-zA-Z]+|[A-Za-z0-9]))?/g;
+const normalize = (symbol: string) => symbol.replace(/\s+/g, "");
+
+/** Symbols an equation uses, e.g. "\\Delta\\varphi", "R_\\oplus", "t_{\\mathrm{pass}}". Units go in \\text{...}. */
+export function equationSymbols(tex: string): Set<string> {
+  const stripped = tex.replace(/\\(text|mathbb)\{[^{}]*\}/g, " ");
+  const symbols = new Set<string>();
+  for (const m of stripped.matchAll(SYMBOL_PATTERN)) {
+    const base = m[2]!;
+    if (base.startsWith("\\") && !base.startsWith("\\mathrm") && LATEX_NON_SYMBOLS.has(base.slice(1))) continue;
+    const symbol = normalize(m[0]);
+    if (!LATEX_CONSTANTS.has(symbol)) symbols.add(symbol);
+  }
+  return symbols;
+}
+
+/** Every symbol used must be defined, and every definition must be used. */
+function termErrors(equations: string[], terms: Json[] | undefined): string[] {
+  const used = new Set(equations.flatMap((tex) => [...equationSymbols(tex)]));
+  if (used.size === 0) return terms ? ["terms given without any equation"] : [];
+  if (!terms) return ["equation without terms"];
+  const defined = new Set(terms.map((t) => normalize(t.symbol)));
+  const errors: string[] = [];
+  for (const s of used) if (!defined.has(s)) errors.push(`symbol '${s}' is not defined in terms`);
+  for (const s of defined) if (!used.has(s)) errors.push(`term '${s}' does not appear in the equations`);
+  return errors;
+}
+
+const MATH_SEGMENT = /\$([^$]+)\$/g;
+
+/** Subtitles: equations defined, spoken text free of notation, explorable phrases present and declared. */
+function textEntryErrors(scene: Json, texts: Json): string[] {
+  const errors: string[] = [];
+  const linkedNodes = new Set((scene.links ?? []).map((l: Json) => l.to));
+  const sections: [string, Json][] = [["common", texts.common], ...LEVELS.map((l): [string, Json] => [l, texts.levels[l]])];
+  for (const [section, entries] of sections) {
+    for (const [key, raw] of Object.entries<unknown>(entries)) {
+      if (typeof raw === "string") {
+        if (raw.includes("$")) errors.push(`${section}.${key}: equations go in a subtitle, not in the spoken text`);
+        continue;
+      }
+      const entry = raw as Json;
+      const where = `${section}.${key}`;
+      if (/[$\\]/.test(entry.text)) errors.push(`${where}: spoken text must not contain notation`);
+      const shown: string = entry.subtitle ?? entry.text;
+      const equations = [...shown.matchAll(MATH_SEGMENT)].map((m) => m[1]!);
+      if ((shown.match(/\$/g)?.length ?? 0) % 2 !== 0) errors.push(`${where}: unbalanced $ in subtitle`);
+      errors.push(...termErrors(equations, entry.terms).map((e) => `${where}: ${e}`));
+      const prose = shown.replace(MATH_SEGMENT, "\u0000");
+      for (const link of entry.links ?? []) {
+        if (!prose.includes(link.phrase)) errors.push(`${where}: phrase '${link.phrase}' not found in the displayed text`);
+        if (!linkedNodes.has(link.node)) errors.push(`${where}: node '${link.node}' is not declared in the scene links`);
+      }
+    }
   }
   return errors;
 }

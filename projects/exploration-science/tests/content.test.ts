@@ -58,7 +58,7 @@ describe("validator catches broken content", () => {
 
   it.each<[string, (node: NodeFiles) => void, RegExp]>([
     ["raw text in a scene", (n) => (entity(n, "terminal").label = "Antenne"), /additional properties/],
-    ["wrong formatVersion", (n) => (n.scene.formatVersion = "0.2"), /constant/],
+    ["wrong formatVersion", (n) => (n.scene.formatVersion = "0.1"), /constant/],
     ["unknown component", (n) => (entity(n, "house").component = "castle"), /unknown component 'castle'/],
     ["param outside validity range", (n) => (entity(n, "terminal").params.tiltDeg = 120), /must be <= 90/],
     ["dangling entity reference", (n) => (entity(n, "terminal-cable").params.to = "nowhere"), /unknown entity 'nowhere'/],
@@ -69,8 +69,22 @@ describe("validator catches broken content", () => {
     ["missing text for a level", (n) => delete n.texts.fr!.levels.essential["play.contact"], /'play.contact' missing for level 'essential'/],
     ["unused text key", (n) => (n.texts.fr!.common["orphan.key"] = "x"), /'orphan.key' is not used/],
     ["intro tour too long", (n) => (n.scene.tours[0].steps[0].durationS = 40), /expected 20-30 s/],
+    ["equation without terms", (n) => delete n.texts.fr!.levels.advanced["play.contact"].terms, /equation without terms/],
+    ["undefined symbol", (n) => n.texts.fr!.levels.advanced["play.contact"].terms.pop(), /symbol 'T' is not defined/],
+    ["unused term", (n) => n.texts.fr!.levels.advanced["play.contact"].terms.push({ symbol: "x", meaning: "x" }), /term 'x' does not appear/],
+    ["notation in spoken text", (n) => (n.texts.fr!.levels.advanced["play.contact"].text = "v = $\\sqrt{\\mu}$"), /must not contain notation/],
+    ["explorable phrase absent", (n) => (n.texts.fr!.levels.advanced["play.contact"].links[0].phrase = "orbite elliptique"), /not found in the displayed text/],
+    ["explorable node undeclared", (n) => (n.texts.fr!.levels.advanced["play.contact"].links[0].node = "kepler-laws"), /not declared in the scene links/],
     ["verified fact without source", (n) => (n.sources.facts[0].sources = []), /verified without source/],
   ])("%s", (_name, mutate, expected) => {
     expect(broken(mutate).join("\n")).toMatch(expected);
+  });
+});
+
+describe("validator catches broken catalogue", () => {
+  it("rejects an equation term that is not defined", () => {
+    const broken = structuredClone(catalogue);
+    broken.simulators[0].equations[0].terms.pop();
+    expect(new ContentValidator(broken).catalogueErrors().join("\n")).toMatch(/is not defined in terms/);
   });
 });
