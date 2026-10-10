@@ -67,6 +67,8 @@ tests/
 
 Tout chiffre technique d'une scène (altitude, vitesse, fréquence, dimensions) est sourcé dans le `sources.json` du nœud. Un chiffre non vérifié est marqué comme tel. En cas de doute, préfère un ordre de grandeur sourcé à une valeur précise inventée.
 
+Toute équation, dans un texte comme dans le catalogue, définit chacun de ses termes (symbole, signification, unité), y compris dans la version lue à voix haute.
+
 ## Façon de travailler
 
 - Avance par jalons, et arrête-toi pour validation à chacun :
