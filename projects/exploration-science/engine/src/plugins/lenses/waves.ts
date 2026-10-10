@@ -28,6 +28,7 @@ const SLICE_ASPECT = 0.7; // height / width
 const VISUAL_HZ = 0.8;
 const MAX_SOURCES = 64;
 const LOBE_COLOR = "#ff4d6d";
+const ROD_RADIUS = 0.003; // beam marker radius, as a fraction of the slice height
 
 /** Complex amplitude Σ e^{-i(k r_n + n Δφ)} / √r_n at (u, v) in the slice plane (u along the line). */
 export function fieldAt(f: Pick<WaveField, "wavelength" | "count" | "spacing" | "phaseStep">, u: number, v: number): { re: number; im: number } {
@@ -84,9 +85,11 @@ void main() {
 }`;
 
 const VERTEX = /* glsl */ `
+uniform vec2 uSize;
 varying vec2 vPos;
 void main() {
-  vPos = position.xy;
+  // The geometry is a unit plane scaled by uSize: the field is computed in scene units.
+  vPos = position.xy * uSize;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
@@ -183,7 +186,7 @@ export const waves: LensPlugin = {
           ...(f.steeringDeg === null ? [] : [{ deg: f.steeringDeg, main: true }]),
           ...f.gratingLobesDeg.map((deg) => ({ deg, main: false })),
         ];
-        const radius = f.wavelength * 0.08;
+        const radius = h * ROD_RADIUS;
         beams.forEach((b, i) => {
           const r = rod(i);
           r.visible = true;

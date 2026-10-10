@@ -1,4 +1,4 @@
-import { BoxGeometry, CylinderGeometry, InstancedMesh, Matrix4, type BufferGeometry } from "three";
+import { BoxGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, type BufferGeometry } from "three";
 import type { ComponentPlugin } from "../../core/registry";
 
 // Radiating elements laid out in the panel plane (x, z), facing +y. The catalogue
@@ -7,6 +7,8 @@ import type { ComponentPlugin } from "../../core/registry";
 const ASPECT = 1.5;
 const PATCH_FILL = 0.6; // patch size / spacing: leaves gaps through which the layers below show
 const PATCH_THICKNESS_M = 0.0008;
+// Display convention: the patches sit on an insulating sheet, one spacing wider than the lattice.
+const SHEET_THICKNESS_M = 0.0015;
 
 export function latticePositions(lattice: "square" | "hexagonal", count: number, spacing: number): [number, number][] {
   const rowPitch = lattice === "hexagonal" ? (spacing * Math.sqrt(3)) / 2 : spacing;
@@ -37,6 +39,19 @@ export const antennaElementArray: ComponentPlugin = {
     positions.forEach(([x, z], i) => mesh.setMatrixAt(i, m.makeTranslation(x, 0, z)));
     mesh.computeBoundingSphere();
     mesh.computeBoundingBox();
-    return { object: mesh, dispose: () => geometry.dispose() };
+    const box = mesh.boundingBox!;
+    const sheetThickness = ctx.metres(SHEET_THICKNESS_M);
+    const sheetGeometry = new BoxGeometry(box.max.x - box.min.x + spacing, sheetThickness, box.max.z - box.min.z + spacing);
+    sheetGeometry.translate(0, -thickness / 2 - sheetThickness / 2, 0);
+    const sheet = new Mesh(sheetGeometry, ctx.palette.material("plastic-light"));
+    const group = new Group();
+    group.add(sheet, mesh);
+    return {
+      object: group,
+      dispose: () => {
+        geometry.dispose();
+        sheetGeometry.dispose();
+      },
+    };
   },
 };

@@ -152,3 +152,16 @@ function stageScale(tour: Tour, index: number): number {
   const action = tour.steps[index]!.actions?.find((a) => a.type === "timeScale");
   return action && action.type === "timeScale" ? action.value : 1;
 }
+
+describe("jumping into a step without its own shot", () => {
+  it("frames the scene with the last shot set before it", () => {
+    const element: Scene = JSON.parse(readFileSync(join(ROOT, "content/nodes/starlink-radiating-element/scene.json"), "utf8"));
+    const tour = element.tours.find((t) => t.id === "main")!;
+    const index = tour.steps.findIndex((s) => s.id === "delay");
+    expect(tour.steps[index]!.camera).toBeUndefined();
+    const stage = new FakeStage();
+    new TourPlayer(stage).play(tour, index);
+    const last = tour.steps.slice(0, index).reverse().find((s) => s.camera)!.camera!.shot;
+    expect(stage.shot).toEqual(last);
+  });
+});

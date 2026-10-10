@@ -69,7 +69,7 @@ const CSS = `
 .xs-overlay button, .xs-overlay select { font: inherit; color: inherit; }
 .xs-panel { pointer-events: auto; background: rgba(255,255,255,.88); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
 .xs-title { position: absolute; top: 12px; left: 16px; max-width: calc(100% - 330px); margin: 0; padding: 6px 14px; font-size: 17px; font-weight: 600; }
-.xs-notice { position: absolute; top: 60px; left: 16px; max-width: 340px; padding: 8px 12px; border-radius: 8px; background: rgba(16,21,28,.75); color: #fff; font-size: 12px; }
+.xs-notice { position: absolute; top: 150px; left: 16px; max-width: 340px; padding: 8px 12px; border-radius: 8px; background: rgba(16,21,28,.75); color: #fff; font-size: 12px; }
 .xs-notice:empty { display: none; }
 .xs-top-right { position: absolute; top: 12px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .xs-node { pointer-events: auto; min-height: 36px; border-radius: 8px; }
@@ -106,7 +106,7 @@ const CSS = `
 .xs-control label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; }
 .xs-control output { font-variant-numeric: tabular-nums; font-weight: 500; color: #3a4350; }
 .xs-control input { width: 100%; min-height: 32px; accent-color: #3a7bd5; }
-.xs-where { position: absolute; left: 16px; bottom: 72px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.xs-where { position: absolute; left: 16px; top: 60px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .xs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 6px; font-size: 13px; }
 .xs-crumbs button { min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-weight: 600; color: #b87400; }
 .xs-crumbs span.here { padding: 0 8px; font-weight: 600; }
@@ -126,8 +126,9 @@ const CSS = `
   .xs-overlay:has(.xs-card:not([hidden])) .xs-subtitle { display: none; }
   .xs-bar { left: auto; right: 16px; transform: none; }
   .xs-dots { display: none; }
-  .xs-controls { top: 112px; transform: none; left: 16px; right: 16px; width: auto; max-height: 40%; overflow: auto; }
-  .xs-where { bottom: 72px; }
+  .xs-controls { top: 186px; transform: none; left: 16px; right: 16px; width: auto; max-height: 40%; overflow: auto; }
+  .xs-where { top: 112px; }
+  .xs-notice { top: 200px; }
 }
 `;
 

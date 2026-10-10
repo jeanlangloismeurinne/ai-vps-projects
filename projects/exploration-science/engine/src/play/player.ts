@@ -135,7 +135,9 @@ export class TourPlayer {
     this.index = index;
     this.elapsed = 0;
     const step = tour.steps[index]!;
-    if (step.camera) this.stage.flyTo(step.camera.shot, step.camera.transitionS ?? 0);
+    // A step without its own shot keeps the last one set before it: fly there when jumping in.
+    const framing = tour.steps.slice(0, index + 1).reverse().find((st) => st.camera)?.camera;
+    if (framing) this.stage.flyTo(framing.shot, step.camera ? (step.camera.transitionS ?? 0) : RESUME_FLIGHT_S);
     this.stage.setHighlights([]);
     this.stage.setLabels([]);
     for (const action of step.actions ?? []) this.apply(action, false);
