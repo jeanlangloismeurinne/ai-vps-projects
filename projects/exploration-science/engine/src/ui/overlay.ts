@@ -74,6 +74,9 @@ const CSS = `
   .xs-top-right { top: 64px; }
   .xs-subtitle { font-size: 15px; bottom: 72px; }
   .xs-card { top: auto; bottom: 76px; transform: none; }
+  .xs-overlay:has(.xs-card:not([hidden])) .xs-subtitle { display: none; }
+  .xs-bar { left: auto; right: 16px; transform: none; }
+  .xs-dots { display: none; }
 }
 `;
 

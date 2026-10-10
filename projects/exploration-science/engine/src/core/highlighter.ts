@@ -34,7 +34,7 @@ export class Highlighter {
 
   update(dt: number): void {
     this.time += dt;
-    const intensity = 0.35 + 0.25 * Math.sin(2 * Math.PI * PULSE_HZ * this.time);
+    const intensity = 0.25 + 0.15 * Math.sin(2 * Math.PI * PULSE_HZ * this.time);
     for (const clone of this.clones.values()) clone.emissiveIntensity = intensity;
   }
 
