@@ -1,0 +1,129 @@
+{
+  "formatVersion": "0.2",
+  "nodeId": "starlink-phased-array",
+  "lang": "fr",
+  "question": "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?",
+  "aliases": ["Comment fonctionne une antenne réseau à commande de phase ?", "Comment l'antenne Starlink vise-t-elle le satellite sans bouger ?"],
+  "common": {
+    "entity.array.label": "Réseau d'éléments rayonnants",
+    "entity.array.description": "Des centaines d'éléments identiques, espacés d'environ un centimètre. Chacun émet la même onde ; c'est leur décalage qui oriente le faisceau.",
+    "entity.beamformers.label": "Puces de formation de faisceau",
+    "entity.beamformers.description": "Sous le réseau, ces puces envoient le signal à chaque élément, avec un léger décalage réglable.",
+    "entity.element.label": "Un élément rayonnant",
+    "entity.element.description": "Une petite antenne imprimée : une pastille de cuivre sur une couche isolante. Touchez « Plonger » pour la voir de près.",
+    "lens.waves.label": "Ondes",
+    "control.steer": "Angle du faisceau",
+    "control.count": "Nombre d'éléments",
+    "control.phase": "Déphasage entre voisins",
+    "control.spacing": "Espacement d / λ"
+  },
+  "levels": {
+    "discovery": {
+      "entity.array.label": "Les petites antennes",
+      "entity.array.description": "Des centaines de petites antennes toutes pareilles, rangées bien serrées.",
+      "entity.beamformers.label": "Les puces chefs d'orchestre",
+      "entity.beamformers.description": "Elles disent à chaque petite antenne à quel moment envoyer son onde.",
+      "entity.element.label": "Une petite antenne",
+      "entity.element.description": "Une seule petite antenne. Touche « Plonger » pour la voir de tout près.",
+      "control.steer": "Direction du faisceau",
+      "intro.arrival": "Nous voilà sous le capot ! Voici des centaines de petites antennes, toutes pareilles, rangées bien serrées.",
+      "intro.beam": "Ensemble, elles envoient une onde radio. Regarde : les vagues partent toutes dans la même direction.",
+      "intro.handover-to-user": "Touche une petite antenne pour aller voir encore plus près, ou appuie sur Play.",
+      "play.same-wave": "Quand toutes les petites antennes envoient leur onde exactement en même temps, les vagues s'additionnent droit devant. Le faisceau part tout droit vers le ciel.",
+      "play.steer": "Maintenant, chaque antenne attend un tout petit peu avant d'envoyer son onde, un peu plus que sa voisine. Et hop, le faisceau penche sur le côté !",
+      "play.few-elements": "Avec seulement quatre petites antennes, le faisceau est très large. C'est comme une lampe de poche qui éclaire tout autour.",
+      "play.many-elements": "Avec beaucoup d'antennes, le faisceau devient fin comme un pinceau de lumière. Il va droit vers le satellite, sans gaspiller d'énergie ailleurs.",
+      "play.spacing": "Si on écarte trop les petites antennes, un deuxième faisceau apparaît, dans une mauvaise direction. Il ne sert à rien ! C'est pour ça qu'elles sont si serrées.",
+      "play.chips": "Sous les antennes, des puces jouent les chefs d'orchestre. Elles disent à chaque antenne exactement quand envoyer son onde."
+    },
+    "essential": {
+      "intro.arrival": "Sous le capot, voici le réseau d'éléments rayonnants : des centaines de petites antennes identiques, espacées d'environ un centimètre.",
+      "intro.beam": "Ensemble, elles émettent la même onde radio. Leurs ondes s'additionnent pour former un faisceau étroit.",
+      "intro.handover-to-user": "Touchez un élément pour plonger à l'intérieur, ou lancez la visite guidée.",
+      "play.same-wave": {
+        "text": "Quand tous les éléments émettent en même temps, les crêtes de leurs ondes s'alignent droit devant le panneau. Le faisceau part perpendiculairement à la surface.",
+        "links": [
+          { "phrase": "les crêtes de leurs ondes s'alignent", "node": "wave-interference" }
+        ]
+      },
+      "play.steer": "Décalons maintenant chaque élément d'une fraction de période par rapport à son voisin. Les crêtes s'alignent alors dans une direction inclinée : le faisceau tourne, sans que rien ne bouge.",
+      "play.few-elements": "Avec seulement quatre éléments, le faisceau est large : environ vingt-cinq degrés. L'énergie part dans une grande partie du ciel.",
+      "play.many-elements": "Plus il y a d'éléments, plus le faisceau est étroit : environ trois degrés avec trente-deux éléments alignés. L'énergie va presque toute vers le satellite.",
+      "play.spacing": "Les éléments sont espacés d'environ une demi-longueur d'onde, un peu plus d'un centimètre. Si on les écarte davantage, un second faisceau parasite apparaît, dans une mauvaise direction : un lobe de réseau. D'où ce rangement serré.",
+      "play.chips": "Sous le réseau, les puces de formation de faisceau distribuent le signal aux éléments, chacun avec le bon décalage. Elles recalculent ces décalages en continu pour suivre le satellite."
+    },
+    "advanced": {
+      "intro.arrival": {
+        "text": "Réseau plan d'éléments rayonnants imprimés, espacés d'environ une demi-longueur d'onde : 1,25 centimètre à 12 gigahertz.",
+        "subtitle": "Réseau plan d'éléments rayonnants imprimés, au pas $d \\approx \\lambda / 2 \\approx 1{,}25\\ \\text{cm}$ à 12 GHz.",
+        "terms": [
+          { "symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "cm" },
+          { "symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "≈ 2,5 cm" }
+        ]
+      },
+      "intro.beam": "Le champ rayonné est la somme des ondes de chaque élément : le faisceau se forme là où elles arrivent en phase.",
+      "intro.handover-to-user": "Sélectionnez un élément pour descendre d'un niveau, ou lancez la visite.",
+      "play.same-wave": {
+        "text": "Sans déphasage, les contributions de tous les éléments sont en phase dans la direction perpendiculaire au panneau : le faisceau est dans l'axe, à un angle thêta nul.",
+        "subtitle": "Sans déphasage ($\\Delta\\varphi = 0$), toutes les contributions sont en phase dans l'axe du panneau : le faisceau part à $\\theta = 0$.",
+        "terms": [
+          { "symbol": "\\Delta\\varphi", "meaning": "déphasage entre deux éléments voisins", "unit": "°" },
+          { "symbol": "\\theta", "meaning": "direction du faisceau, mesurée depuis la perpendiculaire au panneau", "unit": "°" }
+        ],
+        "links": [
+          { "phrase": "toutes les contributions sont en phase", "node": "wave-interference" }
+        ]
+      },
+      "play.steer": {
+        "text": "Avec un déphasage delta phi entre voisins, le faisceau pointe dans la direction thêta telle que delta phi égale deux pi fois d sinus thêta, divisé par lambda, où d est l'espacement et lambda la longueur d'onde. Pour trente-cinq degrés à une demi-longueur d'onde, delta phi vaut environ cent trois degrés.",
+        "subtitle": "Avec un déphasage $\\Delta\\varphi$ entre voisins, le faisceau pointe vers $\\theta$ tel que $\\Delta\\varphi = \\dfrac{2\\pi\\, d \\sin\\theta}{\\lambda}$. Pour $\\theta = 35^\\circ$ et $d = \\lambda / 2$ : $\\Delta\\varphi \\approx 103^\\circ$.",
+        "terms": [
+          { "symbol": "\\Delta\\varphi", "meaning": "déphasage entre deux éléments voisins", "unit": "°" },
+          { "symbol": "\\theta", "meaning": "direction du faisceau, mesurée depuis la perpendiculaire au panneau", "unit": "°" },
+          { "symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "cm" },
+          { "symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "≈ 2,5 cm" }
+        ]
+      },
+      "play.few-elements": {
+        "text": "La largeur du faisceau à mi-puissance vaut environ zéro virgule huit cent quatre-vingt-six fois lambda, divisé par N fois d, où N est le nombre d'éléments. Avec quatre éléments au pas d'une demi-longueur d'onde, elle atteint environ vingt-cinq degrés.",
+        "subtitle": "Largeur à mi-puissance : $\\theta_{3\\mathrm{dB}} \\approx \\dfrac{0{,}886\\,\\lambda}{N d}$. Pour $N = 4$ et $d = \\lambda / 2$ : $\\theta_{3\\mathrm{dB}} \\approx 25^\\circ$.",
+        "terms": [
+          {
+            "symbol": "\\theta_{3\\mathrm{dB}}",
+            "meaning": "largeur du faisceau là où sa puissance tombe à la moitié",
+            "unit": "rad ou °"
+          },
+          { "symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "≈ 2,5 cm" },
+          { "symbol": "N", "meaning": "nombre d'éléments alignés" },
+          { "symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "cm" }
+        ]
+      },
+      "play.many-elements": {
+        "text": "Avec trente-deux éléments, la même formule donne environ trois degrés : un faisceau huit fois plus étroit qu'avec quatre. Le panneau entier, plus large encore, affine davantage le faisceau.",
+        "subtitle": "Pour $N = 32$ : $\\theta_{3\\mathrm{dB}} \\approx 3^\\circ$, huit fois plus étroit qu'avec $N = 4$. Le panneau entier, plus large encore, affine davantage le faisceau.",
+        "terms": [
+          {
+            "symbol": "\\theta_{3\\mathrm{dB}}",
+            "meaning": "largeur du faisceau là où sa puissance tombe à la moitié",
+            "unit": "rad ou °"
+          },
+          { "symbol": "N", "meaning": "nombre d'éléments alignés" }
+        ]
+      },
+      "play.spacing": {
+        "text": "Il n'y a pas de lobe de réseau tant que d reste inférieur à lambda divisé par un plus le sinus du plus grand angle de dépointage. Pour pointer jusqu'à cinquante-cinq degrés, la moitié du champ de vision, il faut d inférieur à environ zéro virgule cinquante-cinq lambda. Ici, avec d égal à lambda, un lobe parasite apparaît vers moins vingt-cinq degrés.",
+        "subtitle": "Pas de lobe de réseau tant que $d < \\dfrac{\\lambda}{1 + |\\sin\\theta_{\\max}|}$. Pour $\\theta_{\\max} = 55^\\circ$ (la moitié du champ de vision de 110°) : $d < 0{,}55\\,\\lambda$. Ici, avec $d = \\lambda$, un lobe apparaît vers $-25^\\circ$.",
+        "terms": [
+          { "symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "cm" },
+          { "symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "≈ 2,5 cm" },
+          {
+            "symbol": "\\theta_{\\max}",
+            "meaning": "plus grand angle de dépointage voulu",
+            "unit": "°"
+          }
+        ]
+      },
+      "play.chips": "Chaque puce de formation de faisceau applique un déphasage et un gain réglables aux éléments qu'elle alimente. En recalculant ces déphasages en continu, le réseau suit le satellite. Le nombre exact de puces n'est pas vérifié ici."
+    }
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "formatVersion": "0.2",
+  "nodeId": "starlink-radiating-element",
+  "facts": [
+    {
+      "id": "patch-structure",
+      "claim": "Une antenne imprimée est une pastille métallique sur un substrat diélectrique, avec un plan de masse sur l'autre face.",
+      "status": "verified",
+      "sources": ["antenna-theory-patch", "mcmaster-patch"],
+      "usedBy": ["intro.arrival", "intro.cutaway", "entity.element.description"],
+      "note": "Principe général. Le type exact d'élément du terminal Starlink n'est pas vérifié : la scène montre une antenne imprimée classique."
+    },
+    {
+      "id": "probe-feed",
+      "claim": "Une pastille peut être alimentée par une sonde coaxiale qui traverse le substrat.",
+      "status": "verified",
+      "sources": ["antenna-theory-patch"],
+      "usedBy": ["play.stack", "intro.cutaway", "entities.element.params.feed"],
+      "note": "Mode d'alimentation réel de Starlink non vérifié."
+    },
+    {
+      "id": "edge-radiation",
+      "claim": "La pastille rayonne surtout par les champs de bord à ses extrémités, vers l'avant (rayonnement dans l'axe).",
+      "status": "verified",
+      "sources": ["antenna-theory-patch", "mcmaster-patch"],
+      "usedBy": ["levels.advanced.play.stack", "levels.essential.play.resonance"]
+    },
+    {
+      "id": "resonant-length",
+      "claim": "Longueur résonante ≈ demi-longueur d'onde dans le substrat : L ≈ λ0 / (2 √εr).",
+      "status": "verified",
+      "sources": ["antenna-theory-design", "mcmaster-patch"],
+      "usedBy": ["play.resonance"],
+      "note": "Approximation : les champs de bord allongent la longueur électrique (L_eff = L + 2ΔL)."
+    },
+    {
+      "id": "permittivity",
+      "claim": "Permittivité relative du substrat prise égale à 3.",
+      "value": 3,
+      "unit": "1",
+      "status": "unverified",
+      "sources": [],
+      "usedBy": ["levels.advanced.play.resonance", "entities.element.params.patchSize"],
+      "note": "Valeur typique des substrats hyperfréquences ; matériau réel du terminal non vérifié. Le texte le dit."
+    },
+    {
+      "id": "patch-size",
+      "claim": "Côté de la pastille ≈ 7 mm.",
+      "value": 0.0072,
+      "unit": "m",
+      "status": "computed",
+      "formula": "25 mm / (2 √3) = 7,2 mm",
+      "sources": [],
+      "usedBy": ["entities.element.params.patchSize", "intro.arrival", "entity.element.description"]
+    },
+    {
+      "id": "substrate-thickness",
+      "claim": "Épaisseur du substrat de l'ordre du millimètre (1,5 mm affiché).",
+      "value": 0.0015,
+      "unit": "m",
+      "status": "unverified",
+      "sources": [],
+      "usedBy": ["entities.element.params.substrateThickness", "levels.advanced.intro.cutaway"],
+      "note": "Valeur d'affichage."
+    },
+    {
+      "id": "spacing",
+      "claim": "Voisins à λ/2 ≈ 12,5 mm.",
+      "value": 0.0125,
+      "unit": "m",
+      "status": "order-of-magnitude",
+      "sources": ["mwrf-grating-lobes"],
+      "usedBy": ["entities.left.transform", "entities.right.transform", "levels.essential.play.neighbours"],
+      "note": "Règle de conception générale ; espacement réel non vérifié."
+    },
+    {
+      "id": "oscillation-rate",
+      "claim": "Le champ oscille environ douze milliards de fois par seconde (12 GHz, bande Ku).",
+      "value": 12000000000,
+      "unit": "Hz",
+      "status": "verified",
+      "sources": ["fcc-ut-271541"],
+      "usedBy": ["levels.essential.play.stack"],
+      "note": "Réception 10,7–12,7 GHz ; 12 GHz est une valeur représentative."
+    },
+    {
+      "id": "point-sources",
+      "claim": "Le simulateur représente chaque élément par une source ponctuelle ; une vraie pastille rayonne surtout vers l'avant.",
+      "status": "order-of-magnitude",
+      "sources": ["antenna-theory-patch"],
+      "usedBy": ["simulators.beam", "levels.advanced.play.neighbours"],
+      "note": "Simplification assumée : la direction du faisceau et la largeur du lobe principal n'en dépendent pas ; le niveau des lobes sur les côtés, si."
+    },
+    {
+      "id": "phase-90",
+      "claim": "Δφ = 90° à d = λ/2 : θ = 30°.",
+      "value": 30,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "asin(90° / (360° × 0,5))",
+      "sources": [],
+      "usedBy": ["levels.essential.play.delay", "levels.advanced.play.delay"]
+    },
+    {
+      "id": "fingernail",
+      "claim": "« Pas plus grand qu'un ongle » : environ un centimètre.",
+      "status": "order-of-magnitude",
+      "sources": [],
+      "usedBy": ["levels.discovery.intro.arrival"]
+    }
+  ],
+  "sources": [
+    {
+      "id": "antenna-theory-patch",
+      "title": "Microstrip (Patch) Antennas",
+      "url": "https://www.antenna-theory.com/antennas/patches/antenna.php",
+      "publisher": "antenna-theory.com",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "antenna-theory-design",
+      "title": "Microstrip Antenna - Design Parameters and Tradeoffs",
+      "url": "https://antenna-theory.com/antennas/patches/patch4.php",
+      "publisher": "antenna-theory.com",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "mcmaster-patch",
+      "title": "Lecture 21: Microstrip Antennas - Part II",
+      "url": "https://www.ece.mcmaster.ca/faculty/nikolova/antenna_dload/current_lectures/L21_Mstrip2.pdf",
+      "publisher": "McMaster University",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "mwrf-grating-lobes",
+      "title": "Phased-Array Antenna Patterns (Part 4)—Grating Lobes",
+      "url": "https://www.mwrf.com/technologies/systems/article/21141406/phasedarray-antenna-patterns-part4grating-lobes",
+      "publisher": "Microwaves & RF",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "fcc-ut-271541",
+      "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)",
+      "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541",
+      "publisher": "FCC",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    }
+  ]
+}

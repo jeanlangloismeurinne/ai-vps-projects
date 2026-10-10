@@ -1,0 +1,83 @@
+{
+  "formatVersion": "0.2",
+  "nodeId": "starlink-radiating-element",
+  "lang": "fr",
+  "question": "Comment une seule petite antenne du réseau Starlink émet-elle son onde ?",
+  "aliases": ["Comment fonctionne une antenne imprimée ?", "Qu'y a-t-il dans un élément rayonnant ?"],
+  "common": {
+    "entity.element.label": "Élément rayonnant",
+    "entity.element.description": "Une pastille de cuivre carrée d'environ sept millimètres, sur une couche isolante posée sur un plan de métal.",
+    "entity.neighbour.label": "Élément voisin",
+    "entity.chip.label": "Puce de formation de faisceau",
+    "entity.chip.description": "Elle envoie à cet élément sa propre copie du signal, avec le décalage voulu.",
+    "lens.waves.label": "Ondes",
+    "control.phase": "Décalage entre voisins",
+    "control.count": "Éléments actifs",
+    "control.spacing": "Espacement d / λ"
+  },
+  "levels": {
+    "discovery": {
+      "entity.element.label": "La petite antenne",
+      "entity.element.description": "Un petit carré de cuivre posé sur une couche qui ne laisse pas passer l'électricité.",
+      "entity.neighbour.label": "Sa voisine",
+      "entity.chip.label": "La puce chef d'orchestre",
+      "entity.chip.description": "Elle dit à la petite antenne quand envoyer son onde.",
+      "control.phase": "Décalage",
+      "intro.arrival": "Voici une seule petite antenne, vue de tout près. C'est un petit carré de cuivre, pas plus grand qu'un ongle.",
+      "intro.cutaway": "Coupons-la en deux. Sous le cuivre, il y a une couche qui ne laisse pas passer l'électricité, puis une plaque de métal.",
+      "intro.handover-to-user": "Touche une pièce, ou appuie sur Play pour la visite.",
+      "play.stack": "Un petit fil tout droit traverse la couche du milieu. C'est par là que le signal monte jusqu'au carré de cuivre.",
+      "play.resonance": "Le carré a juste la bonne taille pour vibrer avec l'onde radio, comme une corde de guitare a juste la bonne longueur pour sa note. Tout seul, il envoie ses vagues un peu partout.",
+      "play.neighbours": "Avec ses deux voisines, les vagues s'additionnent devant les antennes. Ensemble, elles visent mieux qu'une seule.",
+      "play.delay": "Si chaque antenne attend un peu plus que sa voisine, les vagues penchent d'un côté. C'est tout le secret pour viser le satellite !",
+      "play.feed": "Sous chaque antenne, une puce lui envoie son signal au bon moment. Remonte d'un niveau pour voir toutes les antennes travailler ensemble."
+    },
+    "essential": {
+      "intro.arrival": "Voici un seul élément rayonnant : une pastille de cuivre d'environ sept millimètres, posée sur une couche isolante au-dessus d'un plan de métal.",
+      "intro.cutaway": "En coupe, on voit la couche isolante, le plan de métal dessous, et la petite tige qui amène le signal.",
+      "intro.handover-to-user": "Touchez un élément pour l'explorer, ou lancez la visite guidée.",
+      "play.stack": "Le signal monte par une tige de cuivre qui traverse la couche isolante. Entre la pastille et le plan de métal, il fait naître un champ électrique qui oscille douze milliards de fois par seconde.",
+      "play.resonance": "La pastille mesure environ une demi-longueur d'onde dans le matériau isolant : elle résonne à la fréquence du signal, comme une corde accordée sur sa note. Seule, elle rayonne dans une large zone devant elle.",
+      "play.neighbours": {
+        "text": "Avec ses deux voisins, à une demi-longueur d'onde de distance, les ondes s'additionnent devant le panneau et s'affaiblissent sur les côtés : le faisceau se resserre.",
+        "links": [
+          { "phrase": "les ondes s'additionnent devant le panneau", "node": "wave-interference" }
+        ]
+      },
+      "play.delay": "Décalons le signal de chaque élément d'un quart de période par rapport à son voisin. Les crêtes s'alignent alors en biais : le faisceau penche d'environ trente degrés.",
+      "play.feed": "Ce décalage est fixé par la puce de formation de faisceau, sous le plan de métal. Chaque élément reçoit sa propre copie du signal, avec son propre décalage. Remontez d'un niveau pour voir le réseau entier."
+    },
+    "advanced": {
+      "intro.arrival": "Élément rayonnant imprimé : une pastille de cuivre sur un substrat diélectrique, au-dessus d'un plan de masse, alimentée par une sonde.",
+      "intro.cutaway": "En coupe : la sonde d'alimentation traverse le substrat, épais de l'ordre du millimètre, jusqu'à la pastille.",
+      "intro.handover-to-user": "Sélectionnez un élément, ou lancez la visite.",
+      "play.stack": "Entre la pastille et le plan de masse, le substrat forme une cavité résonante. Le rayonnement s'échappe surtout par les champs de bord, aux deux extrémités de la pastille.",
+      "play.resonance": {
+        "text": "La longueur résonante vaut environ lambda zéro divisé par deux fois la racine de epsilon r, où lambda zéro est la longueur d'onde dans le vide et epsilon r la permittivité relative du substrat. Avec une permittivité typique de trois, on trouve environ sept millimètres à douze gigahertz.",
+        "subtitle": "Longueur résonante : $L \\approx \\dfrac{\\lambda_0}{2\\sqrt{\\varepsilon_r}}$. Avec $\\varepsilon_r \\approx 3$ (valeur typique, non vérifiée pour Starlink) et $\\lambda_0 \\approx 25\\ \\text{mm}$ : $L \\approx 7\\ \\text{mm}$.",
+        "terms": [
+          { "symbol": "L", "meaning": "côté résonant de la pastille", "unit": "mm" },
+          { "symbol": "\\lambda_0", "meaning": "longueur d'onde dans le vide", "unit": "≈ 25 mm à 12 GHz" },
+          { "symbol": "\\varepsilon_r", "meaning": "permittivité relative du substrat : de combien il ralentit l'onde, au carré" }
+        ]
+      },
+      "play.neighbours": {
+        "text": "Modélisés ici comme des sources ponctuelles, trois éléments au pas d'une demi-longueur d'onde donnent déjà un faisceau plus étroit dans l'axe : leurs contributions s'additionnent en phase devant le panneau.",
+        "links": [
+          { "phrase": "leurs contributions s'additionnent en phase", "node": "wave-interference" }
+        ]
+      },
+      "play.delay": {
+        "text": "Un déphasage delta phi de quatre-vingt-dix degrés entre voisins, avec un espacement d égal à la moitié de la longueur d'onde lambda, oriente le faisceau à trente degrés de l'axe : delta phi égale deux pi d sinus thêta sur lambda, donc sinus thêta vaut un demi.",
+        "subtitle": "$\\Delta\\varphi = 90^\\circ$ et $d = \\lambda / 2$ dans $\\Delta\\varphi = \\dfrac{2\\pi\\, d \\sin\\theta}{\\lambda}$ donnent $\\sin\\theta = 1/2$, soit $\\theta = 30^\\circ$.",
+        "terms": [
+          { "symbol": "\\Delta\\varphi", "meaning": "déphasage entre deux éléments voisins", "unit": "°" },
+          { "symbol": "d", "meaning": "espacement entre deux éléments voisins", "unit": "mm" },
+          { "symbol": "\\lambda", "meaning": "longueur d'onde du signal", "unit": "≈ 25 mm" },
+          { "symbol": "\\theta", "meaning": "direction du faisceau, mesurée depuis la perpendiculaire au panneau", "unit": "°" }
+        ]
+      },
+      "play.feed": "La puce de formation de faisceau, sous le plan de masse, impose à chaque élément son déphasage et son gain. Remontez d'un niveau pour voir l'effet de centaines d'éléments réunis."
+    }
+  }
+}

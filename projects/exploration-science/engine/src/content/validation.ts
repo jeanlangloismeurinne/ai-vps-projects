@@ -322,7 +322,7 @@ function textKeyErrors(scene: Json, texts: Json): string[] {
 const LATEX_NON_SYMBOLS = new Set([
   "sin", "cos", "tan", "arcsin", "arccos", "arctan", "exp", "ln", "log", "sqrt", "frac", "dfrac", "tfrac",
   "left", "right", "sum", "prod", "int", "cdot", "times", "approx", "propto", "simeq", "quad", "qquad",
-  "in", "le", "ge", "leq", "geq", "neq", "infty", "pm", "to",
+  "in", "le", "ge", "leq", "geq", "neq", "infty", "pm", "to", "circ", "max", "min",
 ]);
 // Mathematical constants that need no definition.
 const LATEX_CONSTANTS = new Set(["\\pi", "e", "i"]);

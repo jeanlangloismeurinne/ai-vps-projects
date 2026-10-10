@@ -41,7 +41,7 @@
       "id": "phased-array",
       "component": "antenna-element-array",
       "parent": "terminal",
-      "params": { "lattice": "hexagonal", "count": 1200, "spacing": 0.0125, "elementShape": "circular-patch" },
+      "params": { "lattice": "hexagonal", "count": 1200, "spacing": 0.0125, "elementShape": "square-patch" },
       "transform": { "position": [0, 0.012, 0] },
       "selectable": true,
       "labelKey": "entity.phased-array.label",
@@ -207,7 +207,7 @@
     }
   ],
   "links": [
-    { "kind": "composedOf", "from": "phased-array", "to": "starlink-phased-array" },
+    { "kind": "composedOf", "from": "phased-array", "to": "starlink-phased-array", "available": true },
     { "kind": "composedOf", "from": "beamformers", "to": "starlink-beamformer" },
     { "kind": "composedOf", "from": "modem", "to": "starlink-modem" },
     { "kind": "composedOf", "from": "power", "to": "starlink-power-deicing" },
@@ -294,11 +294,12 @@
           "id": "beam-steering",
           "textKey": "play.beam-steering",
           "durationS": 30,
-          "camera": { "shot": { "target": "terminal", "azimuthDeg": 90, "elevationDeg": 8, "distance": 2.5 }, "transitionS": 3 },
+          "camera": { "shot": { "target": "terminal", "azimuthDeg": 90, "elevationDeg": 10, "distance": 1.8 }, "transitionS": 3 },
           "actions": [
             { "type": "reveal", "target": "terminal", "mode": "none" },
             { "type": "lens", "lens": "waves-lens", "on": true },
             { "type": "setParam", "target": "beam", "param": "tracking", "value": false },
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 0 },
             { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 35, "overS": 5 }
           ]
         },

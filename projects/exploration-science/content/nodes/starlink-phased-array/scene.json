@@ -1,0 +1,228 @@
+{
+  "formatVersion": "0.2",
+  "node": {
+    "id": "starlink-phased-array",
+    "kind": "system",
+    "version": 1,
+    "status": "draft",
+    "parent": { "node": "starlink-terminal", "entity": "phased-array" }
+  },
+  "scale": { "metersPerUnit": 0.01 },
+  "environment": { "lighting": "studio", "background": "#1d2733" },
+  "performance": { "triangleBudget": 400000 },
+  "camera": {
+    "home": { "target": "array", "azimuthDeg": 25, "elevationDeg": 35, "distance": 80 },
+    "constraints": { "minDistance": 2, "maxDistance": 220, "minElevationDeg": -40, "maxElevationDeg": 85 }
+  },
+  "entities": [
+    {
+      "id": "array",
+      "component": "antenna-element-array",
+      "params": { "lattice": "hexagonal", "count": 1200, "spacing": 0.0125, "elementShape": "square-patch" },
+      "transform": { "position": [0, 0, 0] },
+      "selectable": true,
+      "labelKey": "entity.array.label",
+      "descriptionKey": "entity.array.description"
+    },
+    {
+      "id": "beamformers",
+      "component": "ic-chip-grid",
+      "params": { "count": 64, "chipSize": 0.008 },
+      "transform": { "position": [0, -2, 0] },
+      "selectable": true,
+      "labelKey": "entity.beamformers.label",
+      "descriptionKey": "entity.beamformers.description"
+    },
+    {
+      "id": "element",
+      "component": "patch-element",
+      "params": { "patchSize": 0.0072, "tileSize": 0.0125, "substrateThickness": 0.0015, "feed": "probe" },
+      "transform": { "position": [0, 0.05, 0] },
+      "selectable": true,
+      "labelKey": "entity.element.label",
+      "descriptionKey": "entity.element.description"
+    }
+  ],
+  "simulators": [
+    {
+      "id": "beam",
+      "simulator": "phased-array-wave",
+      "params": { "frequencyHz": 12000000000, "elementCount": 16, "spacingOverLambda": 0.5, "steeringAngleDeg": 0, "tracking": false },
+      "bind": { "array": "array" }
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves-lens",
+      "lens": "waves",
+      "labelKey": "lens.waves.label",
+      "sources": ["beam"],
+      "controls": [
+        {
+          "id": "steer",
+          "target": "beam",
+          "param": "steeringAngleDeg",
+          "labelKey": "control.steer",
+          "levels": ["discovery", "essential"],
+          "min": -60,
+          "max": 60,
+          "step": 1
+        },
+        {
+          "id": "count",
+          "target": "beam",
+          "param": "elementCount",
+          "labelKey": "control.count",
+          "levels": ["essential", "advanced"],
+          "min": 2,
+          "max": 32,
+          "step": 1
+        },
+        {
+          "id": "phase",
+          "target": "beam",
+          "param": "phaseStepDeg",
+          "labelKey": "control.phase",
+          "levels": ["advanced"],
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "id": "spacing",
+          "target": "beam",
+          "param": "spacingOverLambda",
+          "labelKey": "control.spacing",
+          "levels": ["advanced"],
+          "min": 0.25,
+          "max": 1.5,
+          "step": 0.05
+        }
+      ]
+    }
+  ],
+  "links": [
+    { "kind": "composedOf", "from": "element", "to": "starlink-radiating-element", "available": true },
+    { "kind": "reliesOn", "from": "array", "to": "wave-interference" }
+  ],
+  "tours": [
+    {
+      "id": "intro",
+      "autoStart": true,
+      "steps": [
+        {
+          "id": "arrival",
+          "textKey": "intro.arrival",
+          "durationS": 9,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 25, "elevationDeg": 35, "distance": 80 },
+            "transitionS": 0
+          },
+          "actions": [
+            { "type": "highlight", "targets": ["array"] }
+          ]
+        },
+        {
+          "id": "beam",
+          "textKey": "intro.beam",
+          "durationS": 9,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 0, "elevationDeg": 12, "distance": 95 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": true }
+          ]
+        },
+        {
+          "id": "handover-to-user",
+          "textKey": "intro.handover-to-user",
+          "durationS": 7,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 25, "elevationDeg": 35, "distance": 80 },
+            "transitionS": 2
+          },
+          "actions": [
+            { "type": "label", "targets": ["element", "beamformers"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "steps": [
+        {
+          "id": "same-wave",
+          "textKey": "play.same-wave",
+          "durationS": 20,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 0, "elevationDeg": 12, "distance": 95 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": true },
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 0 }
+          ]
+        },
+        {
+          "id": "steer",
+          "textKey": "play.steer",
+          "durationS": 22,
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 35, "overS": 5 }
+          ]
+        },
+        {
+          "id": "few-elements",
+          "textKey": "play.few-elements",
+          "durationS": 18,
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 0 },
+            { "type": "setParam", "target": "beam", "param": "elementCount", "value": 4 }
+          ]
+        },
+        {
+          "id": "many-elements",
+          "textKey": "play.many-elements",
+          "durationS": 20,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 0, "elevationDeg": 12, "distance": 160 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "elementCount", "value": 32, "overS": 5 }
+          ]
+        },
+        {
+          "id": "spacing",
+          "textKey": "play.spacing",
+          "durationS": 26,
+          "camera": {
+            "shot": { "target": "array", "azimuthDeg": 0, "elevationDeg": 12, "distance": 110 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "elementCount", "value": 16 },
+            { "type": "setParam", "target": "beam", "param": "steeringAngleDeg", "value": 35 },
+            { "type": "setParam", "target": "beam", "param": "spacingOverLambda", "value": 1, "overS": 5 }
+          ]
+        },
+        {
+          "id": "chips",
+          "textKey": "play.chips",
+          "durationS": 22,
+          "camera": {
+            "shot": { "target": "beamformers", "azimuthDeg": 30, "elevationDeg": -25, "distance": 70 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": false },
+            { "type": "setParam", "target": "beam", "param": "spacingOverLambda", "value": 0.5 },
+            { "type": "highlight", "targets": ["beamformers"] },
+            { "type": "label", "targets": ["beamformers", "element"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

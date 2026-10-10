@@ -1,0 +1,213 @@
+{
+  "formatVersion": "0.2",
+  "node": {
+    "id": "starlink-radiating-element",
+    "kind": "system",
+    "version": 1,
+    "status": "draft",
+    "parent": { "node": "starlink-phased-array", "entity": "element" }
+  },
+  "scale": { "metersPerUnit": 0.001 },
+  "environment": { "lighting": "studio", "background": "#1d2733" },
+  "performance": { "triangleBudget": 100000 },
+  "camera": {
+    "home": { "target": "element", "azimuthDeg": 30, "elevationDeg": 30, "distance": 60 },
+    "constraints": { "minDistance": 8, "maxDistance": 600, "minElevationDeg": -40, "maxElevationDeg": 85 }
+  },
+  "entities": [
+    {
+      "id": "element",
+      "component": "patch-element",
+      "params": { "patchSize": 0.0072, "tileSize": 0.0125, "substrateThickness": 0.0015, "feed": "probe" },
+      "transform": { "position": [0, 0, 0] },
+      "selectable": true,
+      "labelKey": "entity.element.label",
+      "descriptionKey": "entity.element.description"
+    },
+    {
+      "id": "left",
+      "component": "patch-element",
+      "params": { "patchSize": 0.0072, "tileSize": 0.0125, "substrateThickness": 0.0015, "feed": "probe" },
+      "transform": { "position": [-12.5, 0, 0] },
+      "labelKey": "entity.neighbour.label"
+    },
+    {
+      "id": "right",
+      "component": "patch-element",
+      "params": { "patchSize": 0.0072, "tileSize": 0.0125, "substrateThickness": 0.0015, "feed": "probe" },
+      "transform": { "position": [12.5, 0, 0] },
+      "labelKey": "entity.neighbour.label"
+    },
+    {
+      "id": "chip",
+      "component": "ic-chip-grid",
+      "params": { "count": 1, "chipSize": 0.004 },
+      "transform": { "position": [0, -5, 0] },
+      "selectable": true,
+      "labelKey": "entity.chip.label",
+      "descriptionKey": "entity.chip.description"
+    }
+  ],
+  "simulators": [
+    {
+      "id": "beam",
+      "simulator": "phased-array-wave",
+      "params": { "frequencyHz": 12000000000, "elementCount": 3, "spacingOverLambda": 0.5, "steeringAngleDeg": 0, "tracking": false },
+      "bind": { "array": "element" }
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves-lens",
+      "lens": "waves",
+      "labelKey": "lens.waves.label",
+      "sources": ["beam"],
+      "controls": [
+        {
+          "id": "phase",
+          "target": "beam",
+          "param": "phaseStepDeg",
+          "labelKey": "control.phase",
+          "levels": ["discovery", "essential", "advanced"],
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "id": "count",
+          "target": "beam",
+          "param": "elementCount",
+          "labelKey": "control.count",
+          "levels": ["essential", "advanced"],
+          "min": 1,
+          "max": 3,
+          "step": 1
+        },
+        {
+          "id": "spacing",
+          "target": "beam",
+          "param": "spacingOverLambda",
+          "labelKey": "control.spacing",
+          "levels": ["advanced"],
+          "min": 0.25,
+          "max": 1.5,
+          "step": 0.05
+        }
+      ]
+    }
+  ],
+  "links": [
+    { "kind": "reliesOn", "from": "element", "to": "electromagnetic-wave" },
+    { "kind": "reliesOn", "from": "element", "to": "wave-interference" }
+  ],
+  "tours": [
+    {
+      "id": "intro",
+      "autoStart": true,
+      "steps": [
+        {
+          "id": "arrival",
+          "textKey": "intro.arrival",
+          "durationS": 9,
+          "camera": {
+            "shot": { "target": "element", "azimuthDeg": 30, "elevationDeg": 30, "distance": 60 },
+            "transitionS": 0
+          },
+          "actions": [
+            { "type": "highlight", "targets": ["element"] }
+          ]
+        },
+        {
+          "id": "cutaway",
+          "textKey": "intro.cutaway",
+          "durationS": 9,
+          "camera": {
+            "shot": { "target": "element", "azimuthDeg": 15, "elevationDeg": 12, "distance": 32 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "reveal", "target": "element", "mode": "cutaway" },
+            { "type": "label", "targets": ["chip"] }
+          ]
+        },
+        {
+          "id": "handover-to-user",
+          "textKey": "intro.handover-to-user",
+          "durationS": 7,
+          "camera": {
+            "shot": { "target": "element", "azimuthDeg": 30, "elevationDeg": 30, "distance": 60 },
+            "transitionS": 2
+          },
+          "actions": [
+            { "type": "reveal", "target": "element", "mode": "none" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "steps": [
+        {
+          "id": "stack",
+          "textKey": "play.stack",
+          "durationS": 22,
+          "camera": {
+            "shot": { "target": "element", "azimuthDeg": 15, "elevationDeg": 12, "distance": 32 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "reveal", "target": "element", "mode": "cutaway" },
+            { "type": "highlight", "targets": ["element"] }
+          ]
+        },
+        {
+          "id": "resonance",
+          "textKey": "play.resonance",
+          "durationS": 24,
+          "camera": {
+            "shot": { "target": "element", "azimuthDeg": 0, "elevationDeg": 10, "distance": 320 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "reveal", "target": "element", "mode": "none" },
+            { "type": "setParam", "target": "beam", "param": "elementCount", "value": 1 },
+            { "type": "lens", "lens": "waves-lens", "on": true }
+          ]
+        },
+        {
+          "id": "neighbours",
+          "textKey": "play.neighbours",
+          "durationS": 20,
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "elementCount", "value": 3 },
+            { "type": "label", "targets": ["left", "right"] }
+          ]
+        },
+        {
+          "id": "delay",
+          "textKey": "play.delay",
+          "durationS": 24,
+          "actions": [
+            { "type": "setParam", "target": "beam", "param": "phaseStepDeg", "value": 0 },
+            { "type": "setParam", "target": "beam", "param": "phaseStepDeg", "value": 90, "overS": 5 }
+          ]
+        },
+        {
+          "id": "feed",
+          "textKey": "play.feed",
+          "durationS": 22,
+          "camera": {
+            "shot": { "target": "chip", "azimuthDeg": 30, "elevationDeg": -20, "distance": 45 },
+            "transitionS": 3
+          },
+          "actions": [
+            { "type": "lens", "lens": "waves-lens", "on": false },
+            { "type": "reveal", "target": "element", "mode": "cutaway" },
+            { "type": "highlight", "targets": ["chip"] },
+            { "type": "label", "targets": ["chip", "element"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
