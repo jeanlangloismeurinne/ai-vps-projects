@@ -8,15 +8,15 @@
       "status": "verified",
       "sources": ["antenna-theory-patch", "mcmaster-patch"],
       "usedBy": ["intro.arrival", "intro.cutaway", "entity.element.description"],
-      "note": "Principe général. Le type exact d'élément du terminal Starlink n'est pas vérifié : la scène montre une antenne imprimée classique."
+      "note": "Principe général. Le type exact d'élément du terminal Starlink n'est pas vérifié : la scène montre une antenne imprimée classique. Pages ouvertes le 2026-10-11 : microwaves101-starlink décrit des patchs empilés (stacked patch) à éléments ronds sur maille hexagonale ; radiowalkietalkie-teardown décrit un élément inférieur + un élément de couplage, des cavités d'air et une structure à bande interdite entre éléments. Diffère de la pastille simple carrée montrée par la scène."
     },
     {
       "id": "probe-feed",
       "claim": "Une pastille peut être alimentée par une sonde coaxiale qui traverse le substrat.",
       "status": "verified",
-      "sources": ["antenna-theory-patch"],
+      "sources": ["antenna-theory-feeds"],
       "usedBy": ["play.stack", "intro.cutaway", "entities.element.params.feed"],
-      "note": "Mode d'alimentation réel de Starlink non vérifié."
+      "note": "Mode d'alimentation réel de Starlink non vérifié. La sonde coaxiale est décrite sur la page « Feeding Methods » (antenna-theory-feeds), pas sur antenna-theory-patch. radiowalkietalkie-teardown (ouvert 2026-10-11) indique pour Starlink une alimentation par fente couplée (« coupled slot feeding »), pas une sonde."
     },
     {
       "id": "edge-radiation",
@@ -41,7 +41,7 @@
       "status": "unverified",
       "sources": [],
       "usedBy": ["levels.advanced.play.resonance", "entities.element.params.patchSize"],
-      "note": "Valeur typique des substrats hyperfréquences ; matériau réel du terminal non vérifié. Le texte le dit."
+      "note": "Valeur typique des substrats hyperfréquences ; matériau réel du terminal non vérifié. Le texte le dit. Recherche 2026-10-11 : aucune page n'indique la permittivité ; radiowalkietalkie-teardown parle d'une conception à cavités d'air sous les éléments (permittivité effective plus proche de 1 pour cette partie de l'empilement)."
     },
     {
       "id": "patch-size",
@@ -61,7 +61,7 @@
       "status": "unverified",
       "sources": [],
       "usedBy": ["entities.element.params.substrateThickness", "levels.advanced.intro.cutaway"],
-      "note": "Valeur d'affichage."
+      "note": "Valeur d'affichage. Recherche 2026-10-11 : aucune page trouvée n'indique l'épaisseur."
     },
     {
       "id": "spacing",
@@ -71,7 +71,7 @@
       "status": "order-of-magnitude",
       "sources": ["mwrf-grating-lobes"],
       "usedBy": ["entities.left.transform", "entities.right.transform", "levels.essential.play.neighbours"],
-      "note": "Règle de conception générale ; espacement réel non vérifié."
+      "note": "Règle de conception générale ; espacement réel non vérifié. Recherche 2026-10-11 : aucune page ouverte n'indique l'espacement Starlink (maille hexagonale seulement, microwaves101-starlink)."
     },
     {
       "id": "oscillation-rate",
@@ -115,40 +115,64 @@
       "title": "Microstrip (Patch) Antennas",
       "url": "https://www.antenna-theory.com/antennas/patches/antenna.php",
       "publisher": "antenna-theory.com",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "antenna-theory-feeds",
+      "title": "Rectangular Microstrip (Patch) Antenna - Feeding Methods",
+      "url": "https://www.antenna-theory.com/antennas/patches/patch3.php",
+      "publisher": "antenna-theory.com",
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "antenna-theory-design",
       "title": "Microstrip Antenna - Design Parameters and Tradeoffs",
       "url": "https://antenna-theory.com/antennas/patches/patch4.php",
       "publisher": "antenna-theory.com",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "mcmaster-patch",
       "title": "Lecture 21: Microstrip Antennas - Part II",
       "url": "https://www.ece.mcmaster.ca/faculty/nikolova/antenna_dload/current_lectures/L21_Mstrip2.pdf",
       "publisher": "McMaster University",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "mwrf-grating-lobes",
       "title": "Phased-Array Antenna Patterns (Part 4)—Grating Lobes",
       "url": "https://www.mwrf.com/technologies/systems/article/21141406/phasedarray-antenna-patterns-part4grating-lobes",
       "publisher": "Microwaves & RF",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "fcc-ut-271541",
-      "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)",
+      "title": "SpaceX — FCC Special Temporary Authority request 0566-EX-ST-2021, user terminal (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)",
       "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541",
       "publisher": "FCC",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "microwaves101-starlink",
+      "title": "Starlink (encyclopedia entry: Ken Keiter and The Signal Path teardowns)",
+      "url": "https://www.microwaves101.com/encyclopedias/starlink",
+      "publisher": "Microwaves101",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "radiowalkietalkie-teardown",
+      "title": "Learn About Starlink Phased Array Antenna Terminal",
+      "url": "https://www.radiowalkietalkie.com/news/learn-about-starlink-phased-array-antenna-term-85224216.html",
+      "publisher": "radiowalkietalkie.com",
+      "accessed": "2026-10-11",
+      "access": "opened"
     }
   ]
 }

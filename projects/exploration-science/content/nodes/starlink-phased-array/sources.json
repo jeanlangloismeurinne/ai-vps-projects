@@ -20,7 +20,7 @@
       "status": "order-of-magnitude",
       "sources": ["mwrf-grating-lobes", "adi-phased-array-2"],
       "usedBy": ["entities.array.params.spacing", "intro.arrival", "play.spacing"],
-      "note": "Règle de conception générale des réseaux à balayage électronique. Espacement réel du terminal Starlink non vérifié."
+      "note": "Règle de conception générale des réseaux à balayage électronique. Espacement réel du terminal Starlink non vérifié. Recherche 2026-10-11 : aucune page ouverte n'indique l'espacement ; microwaves101-starlink dit seulement que le réseau est sur une maille hexagonale (éléments ronds, patchs empilés)."
     },
     {
       "id": "grating-lobe-condition",
@@ -102,18 +102,18 @@
       "id": "beamformer-role",
       "claim": "Les puces de formation de faisceau appliquent à chaque élément un déphasage et un gain réglables.",
       "status": "verified",
-      "sources": ["adi-phased-array-2"],
+      "sources": ["adi-phased-array-2", "mwj-beamforming-ics"],
       "usedBy": ["play.chips", "entity.beamformers.description"],
-      "note": "Principe général des réseaux à commande de phase. L'architecture interne des puces Starlink n'est pas vérifiée."
+      "note": "Principe général des réseaux à commande de phase. L'architecture interne des puces Starlink n'est pas vérifiée. adi-phased-array-2 refuse l'accès (HTTP 403) ; mwj-beamforming-ics (même sujet, Analog Devices) l'énonce : déphaseur par élément + atténuateur, réglage de phase et d'amplitude dans un même circuit."
     },
     {
       "id": "element-count",
       "claim": "Nombre d'éléments et de puces affichés.",
       "value": "1200 / 64",
       "status": "unverified",
-      "sources": [],
+      "sources": ["microwaves101-starlink", "radiowalkietalkie-teardown"],
       "usedBy": ["entities.array.params.count", "entities.beamformers.params.count"],
-      "note": "Valeurs d'affichage reprises du nœud parent. Les textes disent « des centaines » et ne citent aucun nombre de puces."
+      "note": "Valeurs d'affichage reprises du nœud parent. Les textes disent « des centaines » et ne citent aucun nombre de puces. Pages ouvertes le 2026-10-11 : microwaves101-starlink (première génération, d'après The Signal Path) donne « 1200 éléments (estimé) » et « un FEM pour deux éléments » ; radiowalkietalkie-teardown donne 1 280 éléments (éléments factices de bord compris) et « 80 grosses puces RF + 640 petites », génération non précisée. Le nombre de puces affiché (64) est contredit ; le nombre d'éléments (1200) reste une estimation."
     }
   ],
   "sources": [
@@ -122,8 +122,8 @@
       "title": "Phased-Array Antenna Patterns (Part 4)—Grating Lobes",
       "url": "https://www.mwrf.com/technologies/systems/article/21141406/phasedarray-antenna-patterns-part4grating-lobes",
       "publisher": "Microwaves & RF",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "adi-phased-array-2",
@@ -138,16 +138,16 @@
       "title": "What is the element spacing requirement for a phased array to avoid grating lobes?",
       "url": "https://rfessentials.com/rf-knowledge-base/what-is-the-element-spacing-requirement-for-a-phased-array-to-avoid-grating-lobe/",
       "publisher": "RF Essentials",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "rfessentials-broadside",
       "title": "Broadside Array",
       "url": "https://rfessentials.com/resources/rf-glossary/broadside-array/",
       "publisher": "RF Essentials",
-      "accessed": "2026-10-10",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "tuberlin-ula",
@@ -162,8 +162,32 @@
       "title": "Starlink Standard Kit — Product Specifications",
       "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/",
       "publisher": "Speedcast",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "mwj-beamforming-ics",
+      "title": "Beamforming ICs Simplify Phased Array Antenna Design (page 2)",
+      "url": "https://www.microwavejournal.com/articles/30994-beamforming-ics-simplify-phased-array-antenna-design?page=2",
+      "publisher": "Microwave Journal",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "microwaves101-starlink",
+      "title": "Starlink (encyclopedia entry: Ken Keiter and The Signal Path teardowns)",
+      "url": "https://www.microwaves101.com/encyclopedias/starlink",
+      "publisher": "Microwaves101",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "radiowalkietalkie-teardown",
+      "title": "Learn About Starlink Phased Array Antenna Terminal",
+      "url": "https://www.radiowalkietalkie.com/news/learn-about-starlink-phased-array-antenna-term-85224216.html",
+      "publisher": "radiowalkietalkie.com",
+      "accessed": "2026-10-11",
+      "access": "opened"
     }
   ]
 }
