@@ -97,10 +97,10 @@
       "claim": "Plus d'un millier d'éléments rayonnants (1 280) sur la première antenne ronde démontée en 2020.",
       "value": 1280,
       "unit": "1",
-      "status": "unverified",
-      "sources": ["linkedin-dishy-overview", "rpa-intern-starlink", "hackaday-teardown", "cybertruck-xray-relay"],
+      "status": "verified",
+      "sources": ["linkedin-dishy-overview", "rpa-intern-starlink", "hackaday-teardown", "hackaday-teardown-2020", "cybertruck-xray-relay"],
       "usedBy": ["play.cutaway", "entities.phased-array.params.count"],
-      "note": "Uniquement des sources secondaires ; source primaire probable : vidéo The Signal Path TSP #181, non consultée. Le modèle Standard actuel n'est pas documenté. Les niveaux Découverte et Essentiel disent « des centaines ». Le count de la scène (1200) est une valeur d'affichage."
+      "note": "Uniquement des sources secondaires ; source primaire probable : vidéo The Signal Path TSP #181, non consultée. Le modèle Standard actuel n'est pas documenté. Les niveaux Découverte et Essentiel disent « des centaines ». Le count de la scène (1200) est une valeur d'affichage. Vérification 2026-10-11 : les pages LinkedIn et RPA Engineering (ouvertes) citent bien 1 280 antennes ; l'article Hackaday de 2020 (ouvert) ne donne pas de nombre ; la page hackaday.com/blog/page/2642 est une page de liste sans l'article."
     },
     {
       "id": "beamformer-count",
@@ -108,9 +108,9 @@
       "value": 64,
       "unit": "1",
       "status": "unverified",
-      "sources": ["hackaday-teardown"],
+      "sources": ["hackaday-teardown", "linkedin-dishy-overview", "rpa-intern-starlink"],
       "usedBy": ["entities.beamformers.params.count"],
-      "note": "Valeur d'affichage seulement, aucune source ne donne le nombre. Aucun texte ne cite de chiffre."
+      "note": "Valeur d'affichage seulement. Aucun texte ne cite de chiffre. Contradiction relevée le 2026-10-11 : LinkedIn (Curtis Arnold) indique 20 puces de formation de faisceau (« beamformers »), chacune pilotant 32 modules frontaux qui gèrent 2 antennes chacun ; RPA Engineering indique 20 grosses puces et 640 petites (https://www.linkedin.com/pulse/overview-how-starlinks-phased-array-antenna-dishy-works-curtis-arnold, https://rpaengr.com/an-interns-perspective-starlinks-megaconstellation/). Valeur 64 non modifiée."
     },
     {
       "id": "dish-dimensions",
@@ -127,7 +127,7 @@
       "value": 110,
       "unit": "deg",
       "status": "verified",
-      "sources": ["speedcast-standard"],
+      "sources": ["speedcast-standard", "overtons-standard", "signalboosters-standard"],
       "usedBy": ["play.problem"],
       "note": "Une ancienne fiche Starlink (génération motorisée) indique 100°."
     },
@@ -137,7 +137,7 @@
       "value": "75-100",
       "unit": "W",
       "status": "verified",
-      "sources": ["speedcast-standard"],
+      "sources": ["speedcast-standard", "overtons-standard", "signalboosters-standard"],
       "usedBy": ["play.other-subsystems", "entity.power.description"],
       "note": "Source revendeur ; ancienne fiche officielle : 50–75 W (génération précédente)."
     },
@@ -146,17 +146,17 @@
       "claim": "L'antenne a un mode de fonte de neige (jusqu'à ~40 mm de neige par heure selon des revendeurs).",
       "value": 40,
       "unit": "mm/h",
-      "status": "unverified",
-      "sources": ["signalboosters-standard"],
+      "status": "verified",
+      "sources": ["signalboosters-standard", "speedcast-standard", "starlink-spec-pdf"],
       "usedBy": ["play.other-subsystems", "entity.power.description"],
-      "note": "L'existence du mode est cohérente entre sources ; le débit de 40 mm/h n'est pas cité dans les textes."
+      "note": "L'existence du mode est cohérente entre sources ; le débit de 40 mm/h n'est pas cité dans les textes. Débit « Up to 40 mm / hour » confirmé sur les pages ouvertes SignalBoosters, Speedcast et l'ancienne fiche Starlink."
     },
     {
       "id": "router-wifi6",
       "claim": "Le routeur fourni avec le kit Standard actuel est Wi-Fi 6.",
       "value": "Wi-Fi 6",
       "status": "verified",
-      "sources": ["signalboosters-standard"],
+      "sources": ["signalboosters-standard", "overtons-standard"],
       "usedBy": ["play.other-subsystems"]
     },
     {
@@ -171,21 +171,22 @@
     }
   ],
   "sources": [
-    { "id": "nicolls-x-2026", "title": "Michael Nicolls (VP Starlink Engineering) — annonce de l'abaissement des satellites de ~550 km à ~480 km", "url": "https://x.com/michaelnicollsx/status/2006790372681220530", "publisher": "X", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "gizmodo-lowering-2026", "title": "SpaceX Will Move Thousands of Starlinks Closer to Earth in 2026. Here's Why", "url": "https://gizmodo.com/spacex-will-move-thousands-of-starlinks-closer-to-earth-in-2026-heres-why-2000704872", "publisher": "Gizmodo", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "rcr-lowering-2026", "title": "Starlink to lower satellite orbit for space safety", "url": "https://www.rcrwireless.com/20260106/networks/starlink-to-descend-satellites-for-space-safety", "publisher": "RCR Wireless", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "azmth-tracker", "title": "Starlink Tracker: Live Starlink Satellite Map in 3D", "url": "https://azmth.space/tracker/starlink", "publisher": "azmth.space", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "fcc-ut-271541", "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)", "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541", "publisher": "FCC", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "mic-japan-spacex", "title": "SpaceX — document fourni au ministère japonais des Affaires intérieures et des Communications (bandes Ku utilisateur, Ka passerelles)", "url": "https://www.soumu.go.jp/main_content/000660088.pdf", "publisher": "MIC Japon", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "speedcast-standard", "title": "Starlink Standard Kit — Product Specifications", "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/", "publisher": "Speedcast", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "overtons-standard", "title": "Starlink Standard Kit", "url": "https://www.overtons.com/starlink-standard-kit-154373.html", "publisher": "Overton's", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "signalboosters-standard", "title": "Starlink Standard Kit Satellite Internet", "url": "https://www.signalboosters.com/starlink-standard-kit-satellite-internet/", "publisher": "SignalBoosters", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "starlink-spec-pdf", "title": "Starlink Product Specifications — Standard (ancienne génération)", "url": "https://api.starlink.com/public-files/Starlink%20Product%20Specifications_Standard.pdf", "publisher": "Starlink", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "conext23-multifaceted", "title": "A Multifaceted Look at Starlink Performance (CoNEXT 2023)", "url": "https://arxiv.org/pdf/2310.09242", "publisher": "arXiv", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "classmethod-15s", "title": "I actually tried to observe satellite handover on Starlink Mini", "url": "https://dev.classmethod.jp/en/articles/starlink-mini-15-second-handover/", "publisher": "Classmethod", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "linkedin-dishy-overview", "title": "An overview of how Starlink's Phased Array Antenna \"Dishy McFlatface\" works", "url": "https://www.linkedin.com/pulse/overview-how-starlinks-phased-array-antenna-dishy-works-curtis-arnold", "publisher": "LinkedIn", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "rpa-intern-starlink", "title": "An Intern's Perspective: Starlink's Megaconstellation", "url": "https://rpaengr.com/an-interns-perspective-starlinks-megaconstellation/", "publisher": "RPA Engineering", "accessed": "2026-10-09", "access": "search-result" },
+    { "id": "nicolls-x-2026", "title": "Michael Nicolls (VP Starlink Engineering) — annonce de l'abaissement des satellites de ~550 km à ~480 km", "url": "https://x.com/michaelnicollsx/status/2006790372681220530", "publisher": "X", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "gizmodo-lowering-2026", "title": "SpaceX Will Move Thousands of Starlinks Closer to Earth in 2026. Here's Why", "url": "https://gizmodo.com/spacex-will-move-thousands-of-starlinks-closer-to-earth-in-2026-heres-why-2000704872", "publisher": "Gizmodo", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "rcr-lowering-2026", "title": "Starlink to lower satellite orbit for space safety", "url": "https://www.rcrwireless.com/20260106/networks/starlink-to-descend-satellites-for-space-safety", "publisher": "RCR Wireless", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "azmth-tracker", "title": "Starlink Tracker: Live Starlink Satellite Map in 3D", "url": "https://azmth.space/tracker/starlink", "publisher": "azmth.space", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "fcc-ut-271541", "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)", "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541", "publisher": "FCC", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "mic-japan-spacex", "title": "SpaceX — document fourni au ministère japonais des Affaires intérieures et des Communications (bandes Ku utilisateur, Ka passerelles)", "url": "https://www.soumu.go.jp/main_content/000660088.pdf", "publisher": "MIC Japon", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "speedcast-standard", "title": "Starlink Standard Kit — Product Specifications", "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/", "publisher": "Speedcast", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "overtons-standard", "title": "Starlink Standard Kit", "url": "https://www.overtons.com/starlink-standard-kit-154373.html", "publisher": "Overton's", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "signalboosters-standard", "title": "Starlink Standard Kit Satellite Internet", "url": "https://www.signalboosters.com/starlink-standard-kit-satellite-internet/", "publisher": "SignalBoosters", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "starlink-spec-pdf", "title": "Starlink Product Specifications — Standard (ancienne génération)", "url": "https://api.starlink.com/public-files/Starlink%20Product%20Specifications_Standard.pdf", "publisher": "Starlink", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "conext23-multifaceted", "title": "A Multifaceted Look at Starlink Performance (CoNEXT 2023)", "url": "https://arxiv.org/pdf/2310.09242", "publisher": "arXiv", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "classmethod-15s", "title": "I actually tried to observe satellite handover on Starlink Mini", "url": "https://dev.classmethod.jp/en/articles/starlink-mini-15-second-handover/", "publisher": "Classmethod", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "linkedin-dishy-overview", "title": "An overview of how Starlink's Phased Array Antenna \"Dishy McFlatface\" works", "url": "https://www.linkedin.com/pulse/overview-how-starlinks-phased-array-antenna-dishy-works-curtis-arnold", "publisher": "LinkedIn", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "rpa-intern-starlink", "title": "An Intern's Perspective: Starlink's Megaconstellation", "url": "https://rpaengr.com/an-interns-perspective-starlinks-megaconstellation/", "publisher": "RPA Engineering", "accessed": "2026-10-11", "access": "opened" },
     { "id": "hackaday-teardown", "title": "Literally Tearing Apart A SpaceX Starlink Antenna", "url": "https://hackaday.com/blog/page/2642", "publisher": "Hackaday", "accessed": "2026-10-09", "access": "search-result" },
-    { "id": "cybertruck-xray-relay", "title": "Starlink Satellite Dish X-Rayed To Unlock RF Magic Inside (relais de l'article Hackaday)", "url": "https://www.cybertruckownersclub.com/forum/threads/starlink-satellite-dish-x-rayed-to-unlock-rf-magic-inside.3380/", "publisher": "Cybertruck Owners Club", "accessed": "2026-10-09", "access": "search-result" }
+    { "id": "hackaday-teardown-2020", "title": "Literally Tearing Apart A SpaceX Starlink Antenna", "url": "https://hackaday.com/2020/11/25/literally-tearing-apart-a-spacex-starlink-antenna/", "publisher": "Hackaday", "accessed": "2026-10-11", "access": "opened" },
+    { "id": "cybertruck-xray-relay", "title": "Starlink Satellite Dish X-Rayed To Unlock RF Magic Inside (relais de l'article Hackaday)", "url": "https://www.cybertruckownersclub.com/forum/threads/starlink-satellite-dish-x-rayed-to-unlock-rf-magic-inside.3380/", "publisher": "Cybertruck Owners Club", "accessed": "2026-10-11", "access": "opened" }
   ]
 }
