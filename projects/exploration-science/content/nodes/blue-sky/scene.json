@@ -115,13 +115,12 @@
       },
       "transform": {
         "position": [
-          6,
-          12,
-          -10
+          3,
+          3.4,
+          -6
         ]
       },
       "notToScale": true,
-      "visible": false,
       "selectable": true,
       "labelKey": "entity.air.label",
       "descriptionKey": "entity.air.description"
@@ -247,20 +246,12 @@
           "camera": {
             "shot": {
               "target": "air",
-              "azimuthDeg": -18,
-              "elevationDeg": 43,
+              "azimuthDeg": -106,
+              "elevationDeg": 19,
               "distance": 9
             },
             "transitionS": 3
-          },
-          "actions": [
-            {
-              "type": "show",
-              "targets": [
-                "air"
-              ]
-            }
-          ]
+          }
         },
         {
           "id": "handover-to-user",
@@ -274,15 +265,7 @@
               "distance": 12
             },
             "transitionS": 2
-          },
-          "actions": [
-            {
-              "type": "hide",
-              "targets": [
-                "air"
-              ]
-            }
-          ]
+          }
         }
       ]
     },
@@ -318,19 +301,13 @@
           "camera": {
             "shot": {
               "target": "air",
-              "azimuthDeg": -18,
-              "elevationDeg": 43,
+              "azimuthDeg": -106,
+              "elevationDeg": 19,
               "distance": 9
             },
             "transitionS": 3
           },
           "actions": [
-            {
-              "type": "show",
-              "targets": [
-                "air"
-              ]
-            },
             {
               "type": "lens",
               "lens": "waves-lens",

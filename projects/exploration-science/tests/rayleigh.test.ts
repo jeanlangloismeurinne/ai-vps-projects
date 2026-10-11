@@ -113,6 +113,7 @@ describe("rayleigh-scattering", () => {
     sim.set("sunElevationDeg", 10);
     expect((Math.atan2(sun.y, Math.hypot(sun.x, sun.z)) * 180) / Math.PI).toBeCloseTo(10, 6);
 
+    built.entities.get("air")!.node.visible = false;
     expect(sim.channel!(WAVE_FIELD)).toBeUndefined(); // the bubble is hidden
     built.entities.get("air")!.node.visible = true;
     const field = sim.channel!(WAVE_FIELD) as WaveField;
