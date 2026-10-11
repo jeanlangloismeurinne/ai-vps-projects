@@ -218,7 +218,7 @@ séance suivante).
   sourcés (RVMD : dette Royalty Pharma), une pièce du dossier jointe d'office aux frameworks `lit_le_socle`,
   chiffres de l'encadré LUS dans le socle par le code (qf_4 dette brute / trésorerie, qf_7 trésorerie /
   consommation sur douze mois), ingrédients `depuis_le_socle` jamais collectés. RVMD/NVDA/MSFT bouclent à 0 écart.
-- [ ] **Les ratios maison sur le socle** — prérequis de la qualité financière de NVDA : capital employé
+- [x] **Les ratios maison sur le socle** — ✅ 2026-10-04, #116 (gabarit 1.1.0, `ratios_maison.py`, encadré qf_1/qf_2/qf_3/qf_5 lu par le code ; autonomie non calculable sur une trésorerie générée). Prérequis de la qualité financière de NVDA : capital employé
   (convention proposée le 2026-10-04 : trésorerie, placements et participations sortent, écarts d'acquisition
   restent), résultat d'exploitation après impôt, rendement du capital sur cinq exercices (qf_1/qf_5),
   conversion en cash sur trois ans (qf_2), capital par point de croissance (qf_3) — calculés par le code sur

@@ -2985,6 +2985,46 @@ Gardes : `check_socle_comptes.py` (fixtures `companyfacts` RVMD/NVDA/MSFT copié
 `check_frameworks_definitions` §6 bis ; `check_analyste` §5 bis ; `check_dossier` §13 ;
 `check_collection_plan_contract` §7 bis. Outil de lecture gratuite : `bash tools/montrer_socle.sh RVMD NVDA MSFT`.
 
+### #116 — les ratios maison : définis une fois, lus dans le socle par le code
+
+**Roadmap 05, capacité 4 bis (2026-10-04), prérequis de la qualité financière de NVDA.** Comme un fonds :
+le modèle des comptes porte un onglet de RATIOS dont le directeur de la recherche écrit les définitions
+une fois ; chaque analyste les lit, aucun ne les recalcule à sa façon (« le calcul n'est pas fait par le
+modèle », arbitrage du 2026-09-28). Conventions maison (pas de niveau comité, arbitrage du 2026-10-04),
+appliquées sauf objection de l'utilisateur :
+- **Gabarit 1.1.0** : `capital_employe` (ligne calculée) = actif − trésorerie − placements −
+  participations − droits d'utilisation − fournisseurs − autres passifs courants (loyers à un an exceptés,
+  ligne `obligations_locatives_courantes`) ; les écarts d'acquisition RESTENT, `capital_employe_hors_ecarts_d_acquisition`
+  à côté. Le bail n'étant pas une dette, le loyer est une charge d'exploitation : le droit d'utilisation sort.
+  **Participations** = lignes `recettes_par_emetteur` : NVDA (CIK 1045810) reclasse
+  `EquitySecuritiesWithoutReadilyDeterminableFairValueAmount` (47,9 Md$) et `EquitySecuritiesFvNi`
+  (cotées, 42,8 Md$, à l'actif courant) ; chez MSFT les mêmes titres sont déjà dans `LongTermInvestments` —
+  une recette commune les compterait deux fois. **Bilan d'ouverture** (nature `ouverture`) : le bilan qui
+  précède le premier exercice, pour que le capital MOYEN du premier exercice existe.
+- **`knowledge/ratios_maison.py`** (pur, recalculé à la lecture, seule `VERSION_RATIOS` est persistée —
+  dans l'empreinte, en changer republie la pièce) : taux d'impôt = impôt ÷ résultat avant impôt borné à
+  [0 ; 1] (zéro sur une perte) ; résultat d'exploitation après impôt TEL QUE DÉPOSÉ (la normalisation reste
+  le jugement de l'analyste, qf_6) ; rendement = ce résultat ÷ capital employé MOYEN (ouverture + clôture) ;
+  capital moyen ≤ 0 ⟹ `non défini` (#104) ; conversion = Σ flux d'exploitation ÷ Σ résultat net sur trois
+  exercices (rapport des sommes) ; capital par point de croissance = Δ capital employé ÷ croissance du CA en
+  points, premier → dernier exercice ; pente = moindres carrés des cinq rendements. Trois issues, jamais un
+  zéro.
+- **L'encadré** : `ChiffreDuSocle` porte une `formule` (montant, M$, à une `periode`) OU un `ratio`
+  (`RATIOS`, unité vérifiée au référentiel [U]) ; qf_1/qf_2/qf_3/qf_5 lisent les leurs ; leurs ingrédients
+  calculables (capital employé, taux d'impôt, série cinq ans, variation du capital, décomposition marge ×
+  rotation) sont `depuis_le_socle`.
+- **#44 dans l'encadré** : un `calcul` dont un dénominateur est NÉGATIF est non calculable, la valeur
+  nommée (`denominateurs_de_la_formule`) — l'autonomie de NVDA (« consommation » −127 006 M$ : il génère de
+  la trésorerie) sortait sinon en mois négatifs.
+Mesuré sur les vrais dépôts (`bash tools/montrer_socle.sh NVDA MSFT RVMD`, gratuit) : NVDA rendement moyen
+111,9 %, pente +37,9 pts/an, conversion 87,5 % ; MSFT 41,0 %, pente −6,3 pts/an (le capital croît plus vite
+que le résultat), conversion 135,2 %, 4 657 M$ par point ; RVMD : capital moyen négatif en 2024-2025 ⟹ aucun
+rendement, motivé. Fixtures régénérées par `tools/fixtures_socle.sh` (0 point changé). ⚠️ Mesuré avant
+d'écrire : une capacité « plusieurs recettes par reclassement » a été retirée — le premier concept NVDA
+couvre toute la série, le symptôme n'existait pas.
+Gardes : `check_ratios_maison.py` + `negatif_ratios_maison.sh` ; `check_socle_comptes` §12 (+4 mutations) ;
+`check_frameworks_definitions` [U] (+6 mutations) ; `check_framework_contract` (dénominateur négatif).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
