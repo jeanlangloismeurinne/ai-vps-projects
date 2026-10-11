@@ -3,8 +3,8 @@ project: exploration-science
 updated: 2026-10-11
 role: >
   Reprise du prototype « Explorateur de systèmes » (Phase 0). Jalons 1 à 5 validés (le 5 : scène de
-  contrôle ciel bleu, format 0.2 inchangé). Jalon 5 bis (termes explorables cliquables + nœud principe
-  `wave-interference`) livré le 2026-10-11, en attente de validation.
+  contrôle ciel bleu, format 0.2 inchangé), 5 bis (termes explorables + `wave-interference`) validé le
+  2026-10-11. Jalon 6 (aperçu statique déployable) : configuration écrite, déploiement à lancer depuis le VPS.
 ---
 
 # Prompt de reprise — exploration-science
@@ -19,7 +19,8 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - [x] 3. Niveau 1 Starlink complet, avec le Play — **livré et validé (2026-10-10)**
 - [x] 4. Plongée vers les niveaux 2 et 3, lentille Ondes et curseurs — **livré 2026-10-10, validé 2026-10-11**
 - [x] 5. Scène de contrôle ciel bleu — **livré et validé (2026-10-11)**. Le format `0.2` a suffi : aucun schéma modifié.
-- [ ] 5 bis. Termes explorables cliquables + nœud principe `wave-interference` — **livré 2026-10-11, en attente de validation**. Test d'acceptation : depuis le Play Starlink (n'importe quel niveau), toucher un terme souligné → Play en pause, carte (question du nœud + définition du niveau) ; « Plus tard » → reprise du Play, le terme apparaît dans « À explorer » en fin de Play ; « Explorer » → fondu vers `wave-interference` ; « ↩ Reprendre la visite (étape n/N) » → retour au nœud d'origine, Play relancé à l'étape interrompue. `docs/SPEC.md` (ligne Termes explorables) mis à jour.
+- [x] 5 bis. Termes explorables cliquables + nœud principe `wave-interference` — **livré et validé (2026-10-11)**. Test d'acceptation : depuis le Play Starlink (n'importe quel niveau), toucher un terme souligné → Play en pause, carte (question du nœud + définition du niveau) ; « Plus tard » → reprise du Play, le terme apparaît dans « À explorer » en fin de Play ; « Explorer » → fondu vers `wave-interference` ; « ↩ Reprendre la visite (étape n/N) » → retour au nœud d'origine, Play relancé à l'étape interrompue. `docs/SPEC.md` (ligne Termes explorables) mis à jour.
+- [ ] 6. Aperçu statique déployable (ordinateur + iPad Safari) — **configuration écrite le 2026-10-11, pas encore déployée**. Test d'acceptation : `https://explorer.jlmvpscode.duckdns.org/` répond 200 en HTTPS, la visite Starlink se joue de bout en bout sur ordinateur et sur un vrai iPad (gestes, fluidité), `?node=blue-sky` et `?node=wave-interference` s'ouvrent.
 
 ## État
 - `schemas/` : scene, catalogue, texts, sources — format `0.2`, JSON Schema 2020-12. Seul ajout depuis le jalon 1 : `node.summaryKey` (facultatif, additif, validé le 2026-10-11 → `formatVersion` laissé à `0.2`). Le validateur exige un `summaryKey` sur tout nœud visé par un terme explorable, et un lien `available` vers tout nœud cible existant (`graphErrors`).
@@ -43,9 +44,11 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - Aperçu publié : https://claude.ai/artifact/1vtLmqzT4kfUU7j3q33FLo (version 8 = jalon 5 bis, `?node=wave-interference` ou sélecteur). Republier après chaque jalon : `npm run build`, copier `dist/assets` (js, css, woff2) + page sans `<html>` vers le scratchpad, même URL, en supprimant les anciens fichiers hachés.
 - Page de revue : `npm run review` → `dist-review/index.html` (4 nœuds). Publiée sur https://claude.ai/artifact/9TpKGxucXtCtH5uMRcBGPo, **mais bloquée depuis le jalon 4** : l'outil de publication la refuse (y compris à une nouvelle adresse) en la prenant pour une page « artifact-pr-review ». La version en ligne date du jalon 3.
 - Dev : en mode `vite`, `window.xs` expose `engine`, `player`, `scene()`, `select`, `setLevel`, `startMainTour` (pilotage headless, captures Playwright).
-- Pas encore de déploiement (aperçu statique prévu en fin de Phase 0 ; il faudra alors un compose + entrée dans `compose-deploy.sh`).
+- Déploiement (jalon 6) : `Dockerfile` (build Vite sous node:22-alpine → nginx:1.27-alpine), `deploy/nginx.conf` (assets hachés en cache immuable, page en `no-cache`, `/health`, `X-Robots-Tag: noindex`), `docker-compose.yml` (conteneur `exploration-science`, réseau `coolify`, middlewares `xsgzip`/`xsredirect`, domaine `explorer.jlmvpscode.duckdns.org`, public sans auth : aucune donnée privée), entrée dans les tables de `infrastructure/compose-deploy.sh` (pas de `.env`). Build de production vérifié en local (`vite preview` + Chromium headless, aucune erreur) ; image Docker **pas construite** (pas de démon Docker dans la session cloud).
 
 ## Reste à faire / dettes ouvertes
+- **Déployer depuis le VPS** : `git pull` puis `infrastructure/compose-deploy.sh exploration-science --rebuild-only` (la config est déjà committée). Le sous-domaine DuckDNS résout déjà vers le VPS (joker) ; Let's Encrypt émet le certificat au premier appel.
+- `_KNOWN_PROJECTS` (`projects/assistant-ia/app/slack_app.py`) n'a pas `exploration-science` : à ajouter au prochain déploiement d'assistant-ia si on veut `/feature` sur ce projet.
 - Termes vers des nœuds pas encore écrits (`rayleigh-scattering`, `visible-spectrum`, `circular-orbit`…) : soulignés, non cliquables.
 - `wave-interference` : curseur d/λ (Approfondi) déplace les sources du champ mais pas les petits carrés qui les repèrent (positions fixes dans la scène). Sources consultées en résultats de recherche seulement ; identifiant Wikidata non renseigné.
 - Mobile : la barre d'échelle chevauche le choix du niveau (préexistant, vu en capture 390 px).
@@ -65,4 +68,4 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - Couleur du ciel : diffusion simple seulement (pas de diffusion multiple ni d'ozone) ; l'horizon blanchit moins que le vrai.
 
 ## Où démarrer
-Validation du jalon 5 bis (essayer le parcours sur l'aperçu). Ensuite : aperçu statique déployable (compose + `compose-deploy.sh`) et tests utilisateurs. Après tout changement de contenu : `npm run review`.
+Déployer le jalon 6 depuis le VPS (commande ci-dessus), vérifier sur iPad, puis tests utilisateurs (une dizaine de personnes). Après tout changement de contenu : `npm run review`.

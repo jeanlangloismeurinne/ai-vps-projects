@@ -59,11 +59,13 @@ declare -A STACK_DIR=(
   [portfolio-tracker]=projects/portfolio-tracker
   [portfolio-backend]=projects/portfolio-tracker
   [portfolio-frontend]=projects/portfolio-tracker
+  [exploration-science]=projects/exploration-science
 )
 declare -A SERVICE=(
   [ev-prices]=- [bank-review]=- [hub]=- [assistant-ia]=- [tool-file-intake]=-
   [comms-gateway]=- [portfolio-tracker]=-
   [portfolio-backend]=backend [portfolio-frontend]=frontend
+  [exploration-science]=-
 )
 declare -A ENV_FILE=(
   [ev-prices]=projects/ev-prices/.env
@@ -75,6 +77,7 @@ declare -A ENV_FILE=(
   [portfolio-backend]=projects/portfolio-tracker/backend/.env
   [portfolio-frontend]=projects/portfolio-tracker/frontend/.env
   # portfolio-tracker : volontairement absent — la stack a DEUX .env, il faut viser le service.
+  # exploration-science : aucun .env (site statique, pas de secret) — `-e` refusé.
 )
 # Sonde de vitalité. On teste ce que voit un utilisateur — donc via le domaine public quand il y
 # en a un, c'est-à-dire la chaîne complète Traefik + TLS + app, pas seulement le process.
@@ -92,6 +95,7 @@ declare -A PROBE=(
   [portfolio-tracker]=https://portfolio.jlmvpscode.duckdns.org/api/health
   [portfolio-backend]=https://portfolio.jlmvpscode.duckdns.org/api/health
   [portfolio-frontend]=https://portfolio.jlmvpscode.duckdns.org/
+  [exploration-science]=https://explorer.jlmvpscode.duckdns.org/
 )
 # Code ATTENDU, pas « code non catastrophique ».
 # Un « tout sauf 5xx » avait laissé passer un 404 sur /api/health : pendant la recréation du
@@ -107,6 +111,7 @@ declare -A EXPECT=(
   [portfolio-tracker]='^200$'
   [portfolio-backend]='^200$'
   [portfolio-frontend]='^200$'
+  [exploration-science]='^200$'
 )
 # Conteneurs à attendre « running (et healthy si un healthcheck est déclaré) » avant de sonder.
 declare -A CONTAINERS=(
@@ -119,6 +124,7 @@ declare -A CONTAINERS=(
   [portfolio-tracker]="portfolio-backend portfolio-frontend"
   [portfolio-backend]="portfolio-backend"
   [portfolio-frontend]="portfolio-frontend"
+  [exploration-science]="exploration-science"
 )
 # Domaine servi, pour le contrôle d'unicité du § 5 ('-' = pas d'exposition publique).
 declare -A DOMAIN=(
@@ -131,6 +137,7 @@ declare -A DOMAIN=(
   [portfolio-tracker]=portfolio.jlmvpscode.duckdns.org
   [portfolio-backend]=portfolio.jlmvpscode.duckdns.org
   [portfolio-frontend]=portfolio.jlmvpscode.duckdns.org
+  [exploration-science]=explorer.jlmvpscode.duckdns.org
 )
 # Notifications Slack de fin de déploiement. Reprend à l'identique ce que faisait le
 # `post_deployment_command` de Coolify (cf. CLAUDE.md § Notification de déploiement) : un

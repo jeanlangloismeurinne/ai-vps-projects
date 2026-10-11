@@ -1,0 +1,41 @@
+# exploration-science — static preview of the Phase 0 prototype (Vite build served by nginx).
+#
+#   Internet --443--> coolify-proxy (TLS) --> exploration-science:80
+#
+# No backend, no secret, no `.env`: the content is bundled into the build.
+# Deploy: infrastructure/compose-deploy.sh exploration-science -m "..." -f "..."
+
+name: exploration-science
+
+networks:
+  coolify:
+    external: true
+
+services:
+  web:
+    build: .
+    container_name: exploration-science
+    restart: unless-stopped
+    networks: [coolify]
+    mem_limit: 32m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.xsgzip.compress=true
+      - traefik.http.middlewares.xsredirect.redirectscheme.scheme=https
+      - traefik.http.routers.xs-http.entryPoints=http
+      - traefik.http.routers.xs-http.middlewares=xsredirect
+      - traefik.http.routers.xs-http.rule=Host(`explorer.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.xs-http.service=xs
+      - traefik.http.routers.xs-https.entryPoints=https
+      - traefik.http.routers.xs-https.middlewares=xsgzip
+      - traefik.http.routers.xs-https.rule=Host(`explorer.jlmvpscode.duckdns.org`)
+      - traefik.http.routers.xs-https.service=xs
+      - traefik.http.routers.xs-https.tls=true
+      - traefik.http.routers.xs-https.tls.certresolver=letsencrypt
+      - traefik.http.services.xs.loadbalancer.server.port=80
