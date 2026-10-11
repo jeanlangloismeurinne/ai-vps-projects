@@ -230,12 +230,25 @@ function casingOf(id: string): string | null {
   return null;
 }
 
-// An inner component is shown with its casing open; outside a tour, the user's selection drives it.
+/** Selectable entities directly inside an entity. */
+function partsOf(id: string): string[] {
+  return (scene?.entities ?? []).filter((e) => e.parent === id && e.selectable).map((e) => e.id);
+}
+
+/** A casing that can be cut away and holds selectable parts: selecting it reveals them (spec, Parcours type). */
+function opensOnSelect(id: string): boolean {
+  const entity = scene?.entities.find((e) => e.id === id);
+  const cutaway = catalogue?.components.find((c) => c.id === entity?.component)?.capabilities?.includes("cutaway");
+  return Boolean(cutaway) && partsOf(id).length > 0;
+}
+
+// An inner component is shown with its casing open, and so is a selected casing
+// that holds parts; outside a tour, the user's selection drives it.
 function showInside(id: string | null): void {
   if (player.state !== "idle") return;
-  const casing = id ? casingOf(id) : null;
-  if (casing === openedCasing) return;
-  if (openedCasing) engine.reveal(openedCasing, "none");
+  const casing = id ? (opensOnSelect(id) ? id : casingOf(id)) : null;
+  // A tour resets every reveal when it ends: open again even if this casing was the last one opened.
+  if (openedCasing && openedCasing !== casing) engine.reveal(openedCasing, "none");
   if (casing) engine.reveal(casing, "cutaway");
   openedCasing = casing;
 }
@@ -245,7 +258,7 @@ function select(id: string | null): void {
   selected = id;
   showInside(id);
   // Inside an opened casing, look from above so the inside is in view.
-  engine.select(id, id && casingOf(id) ? { minElevationDeg: INSIDE_VIEW_ELEVATION_DEG } : {});
+  engine.select(id, id && (casingOf(id) || opensOnSelect(id)) ? { minElevationDeg: INSIDE_VIEW_ELEVATION_DEG } : {});
   showCard();
   refreshLabels();
 }
@@ -272,6 +285,8 @@ function textOf(key: string | undefined): string {
 function refreshLabels(): void {
   const ids = new Set(tourLabels);
   if (selected) ids.add(selected);
+  // An opened casing names its parts: they are what one taps next.
+  if (openedCasing && player.state === "idle") for (const part of partsOf(openedCasing)) ids.add(part);
   const labelKey = (id: string) => scene?.entities.find((e) => e.id === id)?.labelKey;
   overlay.setLabels([...ids].map((id) => ({ id, text: textOf(labelKey(id)) || id })));
 }

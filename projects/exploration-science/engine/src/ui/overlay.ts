@@ -87,8 +87,9 @@ export interface CardView {
 }
 
 const CSS = `
-.xs-overlay { position: absolute; inset: 0; pointer-events: none; font: 15px/1.45 system-ui, -apple-system, sans-serif; color: #10151c; }
-.xs-overlay button, .xs-overlay select { font: inherit; color: inherit; }
+/* Inside the safe area (iPad home indicator, rounded corners): the page uses viewport-fit=cover. */
+.xs-overlay { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); pointer-events: none; font: 15px/1.45 system-ui, -apple-system, sans-serif; color: #10151c; }
+.xs-overlay button, .xs-overlay select { font: inherit; color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .xs-panel { pointer-events: auto; background: rgba(255,255,255,.88); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
 /* Left column: its panels stack, whatever the height of the question. */
 .xs-left { position: absolute; top: 12px; left: 16px; right: 370px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -103,7 +104,7 @@ const CSS = `
 .xs-home { position: absolute; left: 16px; bottom: 16px; min-width: 44px; min-height: 44px; padding: 0 16px; border: 0; font-weight: 600; cursor: pointer; }
 .xs-bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 4px; }
 .xs-bar button { min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; font-size: 17px; }
-.xs-bar button:hover { background: rgba(0,0,0,.07); }
+@media (hover: hover) { .xs-bar button:hover { background: rgba(0,0,0,.07); } }
 .xs-bar .xs-play { min-width: 96px; font-weight: 600; font-size: 15px; }
 .xs-dots { display: flex; gap: 5px; padding: 0 8px; }
 .xs-dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(0,0,0,.2); }
@@ -115,7 +116,8 @@ const CSS = `
 .xs-terms dt { text-align: right; } .xs-terms dd { margin: 0; color: #3a4350; }
 .xs-term { text-decoration: underline dotted 2px; text-underline-offset: 3px; text-decoration-color: #d18a00; }
 button.xs-term { pointer-events: auto; display: inline; margin: 0; padding: 0 1px; border: 0; border-radius: 3px; background: rgba(209,138,0,.12); font: inherit; color: inherit; cursor: pointer; text-decoration: underline solid 2px; text-decoration-color: #d18a00; text-underline-offset: 3px; }
-button.xs-term:hover, button.xs-term:focus-visible { background: rgba(209,138,0,.28); }
+button.xs-term:focus-visible { background: rgba(209,138,0,.28); }
+@media (hover: hover) { button.xs-term:hover { background: rgba(209,138,0,.28); } }
 .xs-term-card .xs-actions, .xs-saved .xs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .xs-term-card .xs-actions button, .xs-saved li button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; font-weight: 600; cursor: pointer; background: rgba(0,0,0,.08); }
 .xs-term-card .xs-actions .xs-primary, .xs-saved li .xs-primary { background: #b87400; color: #fff; }
