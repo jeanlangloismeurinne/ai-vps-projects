@@ -131,3 +131,46 @@ def test_anthropic_runner_without_a_key_says_what_to_do(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
     with pytest.raises(GeneratorError, match="no ANTHROPIC_API_KEY"):
         AnthropicRunner()
+
+
+def test_env_file_fills_missing_variables_only(tmp_path, monkeypatch):
+    from xs_generator.cli import load_env
+
+    env = tmp_path / ".env"
+    env.write_text("# comment\nXS_TEST_A='from-file'\nXS_TEST_B=from-file\n", encoding="utf-8")
+    monkeypatch.delenv("XS_TEST_A", raising=False)
+    monkeypatch.setenv("XS_TEST_B", "from-shell")
+    load_env(env)
+    import os
+
+    assert os.environ["XS_TEST_A"] == "from-file"
+    assert os.environ["XS_TEST_B"] == "from-shell"
+    monkeypatch.delenv("XS_TEST_A")
+
+
+def test_anthropic_runner_sends_the_documented_request(monkeypatch, tmp_path):
+    import httpx2 as httpx  # the HTTP client the anthropic 1.x SDK is built on
+
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["headers"] = dict(request.headers)
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(400, json={"type": "error", "error": {"type": "invalid_request_error", "message": "stop here"}})
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("XS_ANTHROPIC_BASE_URL", raising=False)
+    runner = AnthropicRunner(http_client=httpx.Client(transport=httpx.MockTransport(handler)))
+    request = Request("node", "claude-opus-5-5", "high", 64000, "the system prompt", ({"role": "user", "content": "q"},))
+    with pytest.raises(GeneratorError, match="API error 400"):
+        runner.complete(request, tmp_path / "call")
+    body = seen["body"]
+    assert seen["url"].startswith("https://api.anthropic.com/v1/messages")
+    assert "server-side-fallback-2026-07-01" in seen["headers"]["anthropic-beta"]
+    assert body["model"] == "claude-opus-5-5" and body["max_tokens"] == 64000 and body["stream"] is True
+    assert body["thinking"] == {"type": "adaptive"}
+    assert body["output_config"] == {"effort": "high"}
+    assert body["fallbacks"] == "default"
+    assert body["system"] == [{"type": "text", "text": "the system prompt", "cache_control": {"type": "ephemeral"}}]
+    assert body["messages"] == [{"role": "user", "content": "q"}]

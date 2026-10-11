@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,17 @@ from .pipeline import PROJECT, NodeTask, generate_node
 from .runners import AnthropicRunner, ManualRunner, PendingManualStep, ReplayRunner
 
 RUNS = Path(__file__).resolve().parents[1] / "runs"
+ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+
+
+def load_env(path: Path = ENV_FILE) -> None:
+    """KEY=VALUE lines of generator/.env (chmod 600, never committed); the shell environment wins."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and key and not key.startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -33,6 +45,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    load_env()
     try:
         if args.runner == "anthropic":
             runner = AnthropicRunner()

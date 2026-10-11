@@ -23,7 +23,7 @@ class AnthropicRunner:
     name = "anthropic"
     reproducible = True  # once recorded: a replay of the run returns the same bytes
 
-    def __init__(self) -> None:
+    def __init__(self, http_client=None) -> None:
         import anthropic
 
         if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
@@ -35,7 +35,8 @@ class AnthropicRunner:
         # for their own tooling, and generator calls must not silently go through it.
         base_url = os.environ.get("XS_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
         self._anthropic = anthropic
-        self._client = anthropic.Anthropic(base_url=base_url)
+        # http_client: tests plug a fake transport here.
+        self._client = anthropic.Anthropic(base_url=base_url, http_client=http_client)
 
     def complete(self, request: Request, call_dir: Path) -> Response:
         anthropic = self._anthropic
