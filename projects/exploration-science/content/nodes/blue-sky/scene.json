@@ -187,6 +187,8 @@
           "param": "wavelengthNm",
           "labelKey": "control.wavelength",
           "levels": [
+            "discovery",
+            "essential",
             "advanced"
           ],
           "min": 380,

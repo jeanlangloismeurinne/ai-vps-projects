@@ -19,7 +19,7 @@
     "entity.observer.description": "Ce que voit cette personne, c'est la lumière qui arrive jusqu'à ses yeux.",
     "entity.sun.description": "Le Soleil envoie une lumière blanche, mélange de toutes les couleurs.",
     "entity.atmosphere.description": "Une couche d'air de quelques dizaines de kilomètres d'épaisseur qui entoure la Terre.",
-    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière : dans la loupe, elles sont encore grossies, sinon on ne les verrait pas. Avec les ondes lumineuses, la flèche blanche est la lumière du Soleil, la flèche colorée celle que la molécule renvoie vers les yeux de l'observateur."
+    "entity.air.description": "Surtout de l'azote et de l'oxygène, des molécules bien plus petites que la longueur d'onde de la lumière : dans la loupe, elles sont encore grossies. Avec les ondes lumineuses : les anneaux ont la couleur de la lumière reçue, et plus ils sont marqués, plus la molécule en renvoie. Les deux ondes multicolores montrent la lumière blanche qui arrive du Soleil, et celle qui repart vers les yeux, surtout bleue."
   },
   "levels": {
     "discovery": {
@@ -28,10 +28,11 @@
       "intro.zoom-air": "Approchons-nous tout près de l'air. Il est fait de minuscules grains, bien trop petits pour être vus.",
       "intro.handover-to-user": "Touche le Soleil, l'air ou le ciel, ou appuie sur Play.",
       "play.white-light": "La lumière du Soleil, c'est toutes les couleurs mélangées. Ensemble, elles font du blanc.",
-      "play.scattering": "Regarde dans la loupe : la lumière arrive sur un grain d'air, qui la renvoie tout autour de lui. Le bleu rebondit beaucoup plus que le rouge.",
+      "play.scattering": "Regarde dans la loupe : la lumière blanche du Soleil arrive sur un grain d'air, qui la renvoie tout autour de lui. Le bleu rebondit très fort ; quand la lumière devient rouge, les vagues pâlissent.",
       "play.blue-everywhere": "Ce bleu qui rebondit arrive dans tes yeux de partout à la fois. Alors tout le ciel te paraît bleu.",
       "play.sunset": "Le soir, la lumière traverse beaucoup plus d'air. Le bleu s'est perdu en route, et il reste surtout le rouge et l'orange.",
-      "play.no-air": "Et s'il n'y avait pas d'air ? Plus rien pour faire rebondir la lumière. Le ciel serait noir, même en plein jour, comme sur la Lune."
+      "play.no-air": "Et s'il n'y avait pas d'air ? Plus rien pour faire rebondir la lumière. Le ciel serait noir, même en plein jour, comme sur la Lune.",
+      "control.wavelength": "Couleur de la lumière"
     },
     "essential": {
       "intro.arrival": "Le ciel est bleu, alors que la lumière du Soleil est blanche. La réponse se cache dans l'air lui-même.",
@@ -39,7 +40,7 @@
       "intro.handover-to-user": "Touchez un élément pour l'explorer, ou lancez la visite guidée.",
       "play.white-light": "La lumière du Soleil contient toutes les couleurs, du violet au rouge. Chaque couleur est une onde de longueur différente.",
       "play.scattering": {
-        "text": "Dans la loupe, la lumière arrive sur une molécule. Les molécules de l'air renvoient une partie de la lumière dans toutes les directions, et bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
+        "text": "Dans la loupe, la lumière blanche arrive sur une molécule. Les molécules de l'air renvoient une partie de la lumière dans toutes les directions, et bien plus le bleu que le rouge : environ six fois plus. Les anneaux bleus sont bien marqués ; en passant au rouge, ils pâlissent.",
         "links": [
           {
             "phrase": "renvoient une partie de la lumière dans toutes les directions",
@@ -49,7 +50,8 @@
       },
       "play.blue-everywhere": "Cette lumière bleue diffusée nous parvient de toutes les directions du ciel. Voilà pourquoi il paraît bleu, et pas blanc.",
       "play.sunset": "Quand le Soleil est bas, sa lumière traverse une couche d'air bien plus épaisse. Le bleu est diffusé en chemin, et il nous reste surtout du rouge et de l'orange.",
-      "play.no-air": "Retirons l'air. Plus rien ne renvoie la lumière vers nous : le ciel devient noir en plein jour, et le Soleil paraît tout blanc. C'est le ciel que voient les astronautes sur la Lune."
+      "play.no-air": "Retirons l'air. Plus rien ne renvoie la lumière vers nous : le ciel devient noir en plein jour, et le Soleil paraît tout blanc. C'est le ciel que voient les astronautes sur la Lune.",
+      "control.wavelength": "Couleur de la lumière"
     },
     "advanced": {
       "intro.arrival": {

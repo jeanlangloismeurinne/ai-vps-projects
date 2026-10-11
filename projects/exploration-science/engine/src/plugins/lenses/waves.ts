@@ -14,6 +14,7 @@ import {
 } from "three";
 import type { LensPlugin } from "../../core/registry";
 import { WAVE_FIELD, type WaveField } from "../channels";
+import { createRibbon } from "./spectralRibbon";
 
 // Ondes lens: reveals the wave field of a line of sources on the real object.
 // With a disc (a scatterer seen in a magnifier), it shows the wave arriving and
@@ -36,7 +37,9 @@ const TROUGH = "#3a7bd5";
 /** In the colour of the light, troughs are the crest colour this much darker. */
 const TROUGH_SHADE = 0.12;
 const ROD_RADIUS = 0.003;
-const RAY_RADIUS = 0.006; // light-path markers around a scatterer, as a fraction of the disc diameter // beam marker radius, as a fraction of the slice height
+const RAY_RADIUS = 0.006;
+const RIBBON_HALF_WIDTH = 0.09; // multicolour wave along a ray, as a fraction of the disc radius
+const INCOMING_WAVE_RADII = 2.5; // length of the incoming wave drawn before the molecule, in disc radii // light-path markers around a scatterer, as a fraction of the disc diameter // beam marker radius, as a fraction of the slice height
 
 /**
  * Scattered wave around a single source driven by an incident plane wave, at
@@ -91,7 +94,8 @@ void main() {
     float r = length(vPos);
     float inside = 1.0 - smoothstep(0.9 * R, R, r);
     float c = r > 1e-6 ? dot(vPos / r, uIncident) : 1.0;
-    float scattered = uAmplitude * sqrt(0.5 * (1.0 + c * c)) * smoothstep(0.0, uWavelength * 0.25, r);
+    // Opacity follows the scattered intensity: amplitude² × the Rayleigh pattern (1 + cos²Θ)/2.
+    float scattered = uAmplitude * uAmplitude * 0.5 * (1.0 + c * c) * smoothstep(0.0, uWavelength * 0.25, r);
     float sWave = cos(uTime - k * r);
     float iWave = cos(uTime - k * dot(vPos, uIncident));
     float aS = clamp(0.9 * scattered, 0.0, 0.9);
@@ -204,6 +208,11 @@ export const waves: LensPlugin = {
     };
     const incoming = makeRay(incomingMaterial);
     const outgoing = makeRay(outgoingMaterial);
+    // The light itself along the rays, colour band by colour band.
+    const incomingWave = createRibbon();
+    const outgoingWave = createRibbon();
+    rays.add(incomingWave.mesh, outgoingWave.mesh);
+    (outgoing.children[0] as Mesh).visible = false; // the wave is the shaft
     const placeRay = (ray: Group, from: Vector3, to: Vector3, radius: number, headLength: number) => {
       const d = to.clone().sub(from);
       const length = d.length();
@@ -274,12 +283,29 @@ export const waves: LensPlugin = {
         rays.visible = disc;
         if (disc) {
           const r = h * RAY_RADIUS;
+          const R = f.discRadius!;
           incomingMaterial.color.setRGB(1, 1, 1);
-          outgoingMaterial.color.copy(uniforms.uCrest.value);
-          if (f.from) placeRay(incoming, f.from, f.origin, r, f.discRadius! * 0.15);
+          if (f.towardsColour) outgoingMaterial.color.setRGB(...f.towardsColour);
+          else outgoingMaterial.color.copy(uniforms.uCrest.value);
+          if (f.from) placeRay(incoming, f.from, f.origin, r, R * 0.15);
           incoming.visible = f.from !== undefined;
-          if (f.towards) placeRay(outgoing, f.origin, f.towards, r, f.discRadius! * 0.15);
+          if (f.towards) placeRay(outgoing, f.origin, f.towards, r, R * 0.15);
           outgoing.visible = f.towards !== undefined;
+          const bands = f.bands ?? [];
+          incomingWave.mesh.visible = f.from !== undefined && bands.length > 0;
+          outgoingWave.mesh.visible = f.towards !== undefined && bands.length > 0;
+          const half = R * RIBBON_HALF_WIDTH;
+          if (f.from && bands.length > 0) {
+            // Only the stretch nearest the molecule: from the Sun, the threads would be too fine to see.
+            const start = f.from.clone().sub(f.origin).setLength(Math.min(R * INCOMING_WAVE_RADII, f.from.distanceTo(f.origin))).add(f.origin);
+            incomingWave.place(start, f.origin, half, bands.map((b) => ({ colour: b.colour, wavelength: b.wavelength, intensity: b.incoming })));
+          }
+          if (f.towards && bands.length > 0) {
+            const end = f.towards.clone().sub(f.origin).setLength(Math.max(f.towards.distanceTo(f.origin) - R * 0.15, 0)).add(f.origin);
+            outgoingWave.place(f.origin, end, half, bands.map((b) => ({ colour: b.colour, wavelength: b.wavelength, intensity: b.outgoing })));
+          }
+          incomingWave.tick(phase);
+          outgoingWave.tick(phase);
         }
         plane.scale.set(w, h, 1);
         plane.position.set(0, disc ? -h / 2 : 0, 0);
@@ -313,6 +339,8 @@ export const waves: LensPlugin = {
         rodGeometry.dispose();
         coneGeometry.dispose();
         incomingMaterial.dispose();
+        incomingWave.dispose();
+        outgoingWave.dispose();
         outgoingMaterial.dispose();
         mainMaterial.dispose();
         lobeMaterial.dispose();

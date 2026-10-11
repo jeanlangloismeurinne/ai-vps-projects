@@ -25,7 +25,7 @@ export interface WaveField {
   /** Main beam direction from the normal, towards +axis; null when no real direction matches. */
   steeringDeg: number | null;
   gratingLobesDeg: number[];
-  /** Relative amplitude of the sources, 1 by default (a weak scatterer shows faint ripples). */
+  /** Relative amplitude of the sources, 1 by default; ripples are drawn with an opacity ∝ amplitude² (the intensity). */
   amplitude?: number;
   /** Linear sRGB colour of the crests (the colour of the light); the lens default otherwise. */
   colour?: [number, number, number];
@@ -45,6 +45,13 @@ export interface WaveField {
   from?: Vector3;
   /** World point the scattered light of interest goes to (the observer's eyes), drawn as a ray. */
   towards?: Vector3;
+  /**
+   * Colour bands of the light along those rays, for a multicolour wave: relative
+   * intensity of each band arriving (from) and leaving (towards), 0 to 1.
+   */
+  bands?: { colour: [number, number, number]; wavelength: number; incoming: number; outgoing: number }[];
+  /** Linear sRGB of all the light leaving towards `towards`, mixed (e.g. the sky's blue). */
+  towardsColour?: [number, number, number];
 }
 
 export const WAVE_FIELD = "wave-field";

@@ -1,7 +1,7 @@
 import { Box3, BufferAttribute, Mesh, Vector3, type Object3D } from "three";
 import type { BoundEntity, SimulatorPlugin } from "../../core/registry";
 import { WAVE_FIELD, type WaveField } from "../channels";
-import { normalised, planck, spectrumToXyz, toHex, VISIBLE_MIN_NM, WAVELENGTHS_NM, wavelengthColour, xyzToLinearRgb } from "../light";
+import { normalised, planck, spectrumToXyz, toHex, WAVELENGTHS_NM, wavelengthColour, xyzToLinearRgb } from "../light";
 import { tint } from "../tint";
 
 // Single scattering of sunlight by air molecules (Rayleigh regime), catalogue
@@ -107,8 +107,26 @@ export function exposed(rgb: readonly number[]): [number, number, number] {
   return [scaled[0]! / m, scaled[1]! / m, scaled[2]! / m];
 }
 
-/** Scattered amplitude of one molecule, relative to the shortest visible wavelength: ∝ 1/λ² (intensity ∝ 1/λ⁴). */
-export const scatteredAmplitude = (wavelengthNm: number) => (VISIBLE_MIN_NM / wavelengthNm) ** 2;
+/** Scattered amplitude of one molecule, relative to violet (400 nm): ∝ 1/λ² (intensity ∝ 1/λ⁴). */
+export const scatteredAmplitude = (wavelengthNm: number) => (BAND_REFERENCE_NM / wavelengthNm) ** 2;
+
+/** Colour bands shown along the light paths, nm. */
+export const BANDS_NM = [400, 450, 500, 550, 600, 650, 700];
+const BAND_REFERENCE_NM = 400;
+
+/**
+ * Relative intensity of each band in the sunlight arriving (I0) and in the light
+ * one molecule sends back (I0/λ⁴), each scaled to its strongest band.
+ */
+export function bandIntensities(): { incoming: number[]; outgoing: number[] } {
+  const incoming = BANDS_NM.map((nm) => planck(nm, SUN_TEMPERATURE_K));
+  const outgoing = BANDS_NM.map((nm, i) => incoming[i]! / nm ** 4);
+  const scale = (v: number[]) => v.map((x) => x / Math.max(...v));
+  return { incoming: scale(incoming), outgoing: scale(outgoing) };
+}
+const BANDS = bandIntensities();
+/** Linear sRGB of the light scattered by one molecule (sunlight × 1/λ⁴), at full brightness. */
+const SCATTERED_COLOUR = normalised(xyzToLinearRgb(spectrumToXyz(WAVELENGTHS_NM.map((nm, i) => I0[i]! / nm ** 4))));
 
 interface SkyMesh {
   colours: BufferAttribute;
@@ -236,10 +254,18 @@ export const rayleighScattering: SimulatorPlugin = {
           gratingLobesDeg: [],
           amplitude: scatteredAmplitude(params.wavelengthNm),
           colour: wavelengthColour(params.wavelengthNm),
-          incident: { direction: incident, amplitude: 1 },
+          // The arriving light is drawn along its ray (bands), not across the disc.
+          incident: { direction: incident, amplitude: 0 },
           discRadius: bubble.magnifier.radius,
           from: sunAt,
           towards: eyes,
+          bands: BANDS_NM.map((nm, i) => ({
+            colour: wavelengthColour(nm),
+            wavelength: (nm * 1e-9) / bubble.magnifier!.metersPerUnit,
+            incoming: BANDS.incoming[i]!,
+            outgoing: BANDS.outgoing[i]!,
+          })),
+          towardsColour: SCATTERED_COLOUR,
         };
         return field;
       },

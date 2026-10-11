@@ -14,6 +14,8 @@ import { cmf, wavelengthColour } from "../engine/src/plugins/light";
 import { registerSimulators } from "../engine/src/plugins/simulators";
 import {
   airMass,
+  bandIntensities,
+  BANDS_NM,
   litFraction,
   opticalDepth,
   scatteredAmplitude,
@@ -60,6 +62,15 @@ describe("rayleigh-scattering", () => {
     expect(opticalDepth(450) / opticalDepth(700)).toBeCloseTo((700 / 450) ** 4, 9);
     expect(opticalDepth(450) / opticalDepth(700)).toBeCloseTo(5.86, 2);
     expect((scatteredAmplitude(450) / scatteredAmplitude(700)) ** 2).toBeCloseTo(5.86, 2);
+  });
+
+  it("sends back white sunlight as mostly blue light (band by band: I0/λ⁴)", () => {
+    const { incoming, outgoing } = bandIntensities();
+    expect(Math.min(...incoming)).toBeGreaterThan(0.6); // sunlight: every colour about as strong
+    const blue = BANDS_NM.indexOf(450);
+    const red = BANDS_NM.indexOf(700);
+    expect(outgoing[blue]! / outgoing[red]! / (incoming[blue]! / incoming[red]!)).toBeCloseTo((700 / 450) ** 4, 9);
+    expect(outgoing[red]).toBeLessThan(0.2);
   });
 
   it("removes direct light as I = I0 e^(−β s)", () => {
