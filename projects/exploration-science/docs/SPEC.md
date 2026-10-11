@@ -41,7 +41,7 @@ L'utilisateur reste dans un seul monde 3D continu : il zoome d'une échelle à l
 | Mode Play | Visite guidée : mouvements de caméra, mises en surbrillance, réglages de curseurs, texte en sous-titres. Disponible à tout moment. |
 | Lentilles | Filtres qui révèlent la physique invisible sur l'objet réel (ondes, électricité, chaleur), avec leurs curseurs. |
 | Laboratoire | Espace abstrait atteint depuis une lentille, pour descendre vers la physique fondamentale, puis revenir à la scène. |
-| Termes explorables | Dans un sous-titre, un terme qui a son propre nœud est souligné. Le toucher met le Play en pause et ouvre une carte (définition en une phrase, « Explorer » ou « Plus tard ») ; « Explorer » plonge vers ce nœud, « Retour » reprend le Play à l'étape interrompue, « Plus tard » le garde dans une liste « À explorer » proposée en fin de Play. Visibles mais non cliquables pendant la visite d'arrivée. |
+| Termes explorables | Dans un sous-titre, un terme qui a son propre nœud est souligné. Le toucher met le Play en pause et ouvre une carte (définition en une phrase, portée par le nœud cible à chaque niveau, « Explorer » ou « Plus tard ») ; « Explorer » plonge vers ce nœud, « Retour » reprend le Play à l'étape interrompue, « Plus tard » le garde dans une liste « À explorer » proposée en fin de Play. Visibles mais non cliquables pendant la visite d'arrivée, ni tant que le nœud cible n'est pas écrit. |
 | Menu au clic | « Comment ça marche ? » par défaut, « Pourquoi comme ça ? », « Et si on l'enlevait ? » et une question libre. |
 | Barre d'échelle | Sert de fil d'Ariane (mètre, centimètre, millimètre) et permet de remonter d'un niveau. |
 | Signalement | Un geste sur l'objet concerné, avec ou sans commentaire. |
