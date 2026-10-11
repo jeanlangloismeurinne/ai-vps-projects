@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://exploration-science/schemas/scene.schema.json",
   "title": "Scene (format v0)",
-  "description": "Describes one node's 3D scene. Contains no human-readable text: only text keys, resolved in texts.<lang>.json.",
+  "description": "Describes one node's 3D scene. Contains no human-readable text: only text keys, resolved in texts.<lang>.json. Coordinates: right-handed, y up, lengths in scene units (scale.metersPerUnit); the ground, when the scene has one, is the plane y = 0, and the camera never goes below it.",
   "type": "object",
   "additionalProperties": false,
   "required": ["formatVersion", "node", "scale", "environment", "camera", "entities", "tours"],
@@ -156,7 +156,7 @@
           "additionalProperties": false,
           "required": ["position"],
           "properties": {
-            "position": { "$ref": "#/$defs/vec3" },
+            "position": { "$ref": "#/$defs/vec3", "description": "[x, y, z] in scene units, relative to the parent entity's attachment frame when there is a parent; y is up." },
             "rotationDeg": { "$ref": "#/$defs/vec3" },
             "scale": { "type": "number", "exclusiveMinimum": 0 }
           }
