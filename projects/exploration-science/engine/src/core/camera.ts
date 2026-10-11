@@ -11,7 +11,9 @@ export interface OrbitView {
   distance: number; // scene units
 }
 
-const MAX_ELEVATION_DEG = 89; // never straight up or down: the orbit would flip.
+const MAX_ELEVATION_DEG = 89;
+/** Smallest camera height over the ground, as a fraction of its distance to the target. */
+const GROUND_CLEARANCE = 0.005; // never straight up or down: the orbit would flip.
 
 export function viewFromShot(shot: Pick<Shot, "azimuthDeg" | "elevationDeg" | "distance">): OrbitView {
   return {
@@ -35,6 +37,19 @@ export function clampView(view: OrbitView, c: CameraConstraints): OrbitView {
     elevation: MathUtils.clamp(view.elevation, minEl, maxEl),
     distance: MathUtils.clamp(view.distance, c.minDistance, c.maxDistance),
   };
+}
+
+/**
+ * Scenes are y-up with the ground at y = 0. A scene may allow looking up from
+ * below a target (negative elevation, e.g. at the sky from the ground), but the
+ * camera never sinks under the ground: the elevation is raised just enough.
+ */
+export function aboveGround(view: OrbitView, targetY: number): OrbitView {
+  const floor = view.distance * GROUND_CLEARANCE;
+  if (targetY + Math.sin(view.elevation) * view.distance >= floor) return view;
+  const s = (floor - targetY) / view.distance;
+  if (s >= 1) return view; // the target itself is underground: nothing sensible to do
+  return { ...view, elevation: Math.max(view.elevation, Math.asin(s)) };
 }
 
 /** Angle in (-π, π]. */
@@ -74,6 +89,8 @@ const ORBIT_DAMPING = 6; // 1/s, decay rate of the drag inertia
 export class CameraRig {
   view: OrbitView;
   readonly target = new Vector3();
+  /** Entity the camera orbits (or flies to). */
+  targetId: string;
   private follow: TargetProvider;
   private flight: Flight | null = null;
   private readonly velocity = { azimuth: 0, elevation: 0 };
@@ -87,6 +104,7 @@ export class CameraRig {
     private readonly resolve: (entityId: string) => TargetProvider,
   ) {
     this.follow = resolve(shot.target);
+    this.targetId = shot.target;
     this.view = clampView(viewFromShot(shot), constraints);
     this.target.copy(this.follow());
     this.apply();
@@ -100,6 +118,7 @@ export class CameraRig {
   flyTo(shot: Shot, durationS: number): void {
     const toView = clampView(viewFromShot(shot), this.constraints);
     this.follow = this.resolve(shot.target);
+    this.targetId = shot.target;
     this.velocity.azimuth = this.velocity.elevation = 0;
     if (durationS <= 0) {
       this.flight = null;
@@ -167,6 +186,7 @@ export class CameraRig {
   }
 
   private apply(): void {
+    this.view = aboveGround(this.view, this.target.y);
     this.camera.position.copy(this.target).add(orbitOffset(this.view, this.offset));
     // Depth range follows the distance, so the roof and the satellites both stay sharp.
     this.camera.near = Math.max(this.view.distance * 0.01, 1e-4);

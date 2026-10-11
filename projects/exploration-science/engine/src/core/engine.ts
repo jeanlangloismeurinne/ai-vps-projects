@@ -135,13 +135,21 @@ export class Engine implements Stage {
     return this.current?.bundle.scene.scale.metersPerUnit ?? 1;
   }
 
-  /** Metres per CSS pixel at the depth of what the camera looks at (for the scale bar). */
-  metresPerPixel(): number | null {
+  /**
+   * Metres per CSS pixel at the depth of what the camera looks at (for the scale bar).
+   * Looking at a magnifier, the scale is the one inside it; looking at an entity
+   * that is not to scale, there is no scale to give (null).
+   */
+  scaleAtTarget(): { metresPerPixel: number; magnified: boolean } | null {
     const c = this.current;
     const h = this.renderer.domElement.clientHeight;
     if (!c || h === 0) return null;
     const visible = 2 * c.rig.view.distance * Math.tan(MathUtils.degToRad(this.camera.fov / 2));
-    return (visible / h) * c.bundle.scene.scale.metersPerUnit;
+    const target = c.built.entities.get(c.rig.targetId);
+    const magnifier = target?.instance.magnifier;
+    if (magnifier && target.node.visible && !c.rig.flying) return { metresPerPixel: (visible / h) * magnifier.metersPerUnit, magnified: true };
+    if (target?.entity.notToScale) return null;
+    return { metresPerPixel: (visible / h) * c.bundle.scene.scale.metersPerUnit, magnified: false };
   }
 
   /** Flies close to an entity, as the first half of a dive into its child node. */

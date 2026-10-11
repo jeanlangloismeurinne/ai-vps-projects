@@ -10,6 +10,16 @@ export interface ComponentContext {
 
 export type RevealMode = "cutaway" | "explode" | "none";
 
+/**
+ * A component that shows its inside magnified (a magnifying bubble): the real
+ * size of one scene unit inside it, and its radius in scene units. The scale bar
+ * switches to it when the camera looks at the entity; simulators may draw in it.
+ */
+export interface Magnifier {
+  metersPerUnit: number;
+  radius: number;
+}
+
 export interface ComponentInstance {
   object: Object3D;
   /** Where child entities attach (e.g. a tilted panel). Defaults to `object`. */
@@ -22,6 +32,7 @@ export interface ComponentInstance {
   update?(dt: number): void;
   /** Present when the catalogue grants the component a cutaway or explode capability. */
   reveal?(mode: RevealMode): void;
+  magnifier?: Magnifier;
   dispose?(): void;
 }
 
@@ -39,6 +50,7 @@ export interface BoundEntity {
   node: Object3D;
   /** The component's own object, inside `node`. A simulator may hide it (a satellite below the horizon). */
   object: Object3D;
+  magnifier?: Magnifier;
 }
 
 export interface SimulatorContext {

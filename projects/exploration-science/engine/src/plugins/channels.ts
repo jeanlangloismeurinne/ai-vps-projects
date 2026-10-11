@@ -25,6 +25,22 @@ export interface WaveField {
   /** Main beam direction from the normal, towards +axis; null when no real direction matches. */
   steeringDeg: number | null;
   gratingLobesDeg: number[];
+  /** Relative amplitude of the sources, 1 by default (a weak scatterer shows faint ripples). */
+  amplitude?: number;
+  /** Linear sRGB colour of the crests (the colour of the light); the lens default otherwise. */
+  colour?: [number, number, number];
+  /** A plane wave driving the sources (light arriving on a molecule). */
+  incident?: {
+    /** World unit vector the wave travels along. */
+    direction: Vector3;
+    amplitude: number;
+  };
+  /**
+   * The field around the sources, on a disc of this radius (scene units), instead of
+   * the half-plane in front of them. With an incident wave, the scattered amplitude
+   * follows the Rayleigh pattern √((1 + cos²Θ) / 2), Θ from the incident direction.
+   */
+  discRadius?: number;
 }
 
 export const WAVE_FIELD = "wave-field";

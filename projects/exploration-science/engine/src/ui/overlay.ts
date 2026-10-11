@@ -114,6 +114,7 @@ const CSS = `
 .xs-crumbs .sep { color: #8a93a0; }
 .xs-scale { display: flex; flex-direction: column; gap: 2px; padding: 5px 10px 6px; font-size: 12px; font-weight: 600; }
 .xs-scale i { display: block; height: 6px; border: 2px solid #10151c; border-top: 0; }
+.xs-scale.magnified i { border-color: var(--xs-accent, #4da3ff); }
 .xs-fade { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s ease; background: #0d1218; }
 .xs-fade.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .xs-fade { transition: none; } }
@@ -336,10 +337,12 @@ export class Overlay {
     this.crumbs.replaceChildren(...items);
   }
 
-  setScale(bar: { pixels: number; label: string } | null): void {
+  /** null hides the bar (the camera looks at something not to scale); magnified: the scale inside a magnifier. */
+  setScale(bar: { pixels: number; label: string; magnified?: boolean } | null): void {
     this.scale.hidden = bar === null;
     if (!bar) return;
-    this.scaleLabel.textContent = bar.label;
+    this.scaleLabel.textContent = bar.magnified ? `🔍 dans la loupe : ${bar.label}` : bar.label;
+    this.scale.classList.toggle("magnified", bar.magnified ?? false);
     this.scaleRule.style.width = `${bar.pixels.toFixed(1)}px`;
   }
 

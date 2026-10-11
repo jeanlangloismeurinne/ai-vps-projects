@@ -3,7 +3,10 @@
   "nodeId": "blue-sky",
   "lang": "fr",
   "question": "Pourquoi le ciel est-il bleu ?",
-  "aliases": ["D'où vient la couleur bleue du ciel ?", "Pourquoi le ciel n'est-il pas blanc ?"],
+  "aliases": [
+    "D'où vient la couleur bleue du ciel ?",
+    "Pourquoi le ciel n'est-il pas blanc ?"
+  ],
   "common": {
     "entity.observer.label": "Observateur",
     "entity.sun.label": "Soleil",
@@ -16,7 +19,7 @@
     "entity.observer.description": "Ce que voit cette personne, c'est la lumière qui arrive jusqu'à ses yeux.",
     "entity.sun.description": "Le Soleil envoie une lumière blanche, mélange de toutes les couleurs.",
     "entity.atmosphere.description": "Une couche d'air de quelques dizaines de kilomètres d'épaisseur qui entoure la Terre.",
-    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière."
+    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière : dans la loupe, elles sont encore grossies, sinon on ne les verrait pas."
   },
   "levels": {
     "discovery": {
@@ -25,9 +28,10 @@
       "intro.zoom-air": "Approchons-nous tout près de l'air. Il est fait de minuscules grains, bien trop petits pour être vus.",
       "intro.handover-to-user": "Touche le Soleil, l'air ou le ciel, ou appuie sur Play.",
       "play.white-light": "La lumière du Soleil, c'est toutes les couleurs mélangées. Ensemble, elles font du blanc.",
-      "play.scattering": "Quand la lumière rencontre les grains d'air, le bleu rebondit dans tous les sens, beaucoup plus que le rouge.",
+      "play.scattering": "Regarde dans la loupe : la lumière arrive sur un grain d'air, qui la renvoie tout autour de lui. Le bleu rebondit beaucoup plus que le rouge.",
       "play.blue-everywhere": "Ce bleu qui rebondit arrive dans tes yeux de partout à la fois. Alors tout le ciel te paraît bleu.",
-      "play.sunset": "Le soir, la lumière traverse beaucoup plus d'air. Le bleu s'est perdu en route, et il reste surtout le rouge et l'orange."
+      "play.sunset": "Le soir, la lumière traverse beaucoup plus d'air. Le bleu s'est perdu en route, et il reste surtout le rouge et l'orange.",
+      "play.no-air": "Et s'il n'y avait pas d'air ? Plus rien pour faire rebondir la lumière. Le ciel serait noir, même en plein jour, comme sur la Lune."
     },
     "essential": {
       "intro.arrival": "Le ciel est bleu, alors que la lumière du Soleil est blanche. La réponse se cache dans l'air lui-même.",
@@ -35,19 +39,26 @@
       "intro.handover-to-user": "Touchez un élément pour l'explorer, ou lancez la visite guidée.",
       "play.white-light": "La lumière du Soleil contient toutes les couleurs, du violet au rouge. Chaque couleur est une onde de longueur différente.",
       "play.scattering": {
-        "text": "Les molécules de l'air renvoient une partie de la lumière dans toutes les directions. Et elles renvoient bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
+        "text": "Dans la loupe, la lumière arrive sur une molécule. Les molécules de l'air renvoient une partie de la lumière dans toutes les directions, et bien plus les ondes courtes, le bleu, que les ondes longues, le rouge : environ six fois plus.",
         "links": [
-          {"phrase": "renvoient une partie de la lumière dans toutes les directions", "node": "rayleigh-scattering"}
+          {
+            "phrase": "renvoient une partie de la lumière dans toutes les directions",
+            "node": "rayleigh-scattering"
+          }
         ]
       },
       "play.blue-everywhere": "Cette lumière bleue diffusée nous parvient de toutes les directions du ciel. Voilà pourquoi il paraît bleu, et pas blanc.",
-      "play.sunset": "Quand le Soleil est bas, sa lumière traverse une couche d'air bien plus épaisse. Le bleu est diffusé en chemin, et il nous reste surtout du rouge et de l'orange."
+      "play.sunset": "Quand le Soleil est bas, sa lumière traverse une couche d'air bien plus épaisse. Le bleu est diffusé en chemin, et il nous reste surtout du rouge et de l'orange.",
+      "play.no-air": "Retirons l'air. Plus rien ne renvoie la lumière vers nous : le ciel devient noir en plein jour, et le Soleil paraît tout blanc. C'est le ciel que voient les astronautes sur la Lune."
     },
     "advanced": {
       "intro.arrival": {
         "text": "Le ciel diurne est bleu par diffusion Rayleigh de la lumière solaire sur les molécules de l'atmosphère.",
         "links": [
-          {"phrase": "diffusion Rayleigh", "node": "rayleigh-scattering"}
+          {
+            "phrase": "diffusion Rayleigh",
+            "node": "rayleigh-scattering"
+          }
         ]
       },
       "intro.zoom-air": "Molécules de diazote et de dioxygène, de taille très inférieure à la longueur d'onde visible : c'est le régime de Rayleigh.",
@@ -55,19 +66,35 @@
       "play.white-light": {
         "text": "Le spectre solaire couvre tout le visible, d'environ 380 à 750 nanomètres.",
         "links": [
-          {"phrase": "tout le visible", "node": "visible-spectrum"}
+          {
+            "phrase": "tout le visible",
+            "node": "visible-spectrum"
+          }
         ]
       },
       "play.scattering": {
         "text": "En régime de Rayleigh, l'intensité diffusée par les molécules est proportionnelle à l'intensité de la lumière du Soleil, divisée par la longueur d'onde à la puissance quatre. Entre 450 et 700 nanomètres, le rapport vaut environ six.",
         "subtitle": "En régime de Rayleigh, $I_s \\propto \\dfrac{I_0}{\\lambda^4}$. Entre 450 et 700 nm : $(700/450)^4 \\approx 6$.",
         "terms": [
-          {"symbol": "I_s", "meaning": "intensité diffusée par les molécules de l'air"},
-          {"symbol": "I_0", "meaning": "intensité de la lumière du Soleil qui arrive"},
-          {"symbol": "\\lambda", "meaning": "longueur d'onde de la lumière", "unit": "nm"}
+          {
+            "symbol": "I_s",
+            "meaning": "intensité diffusée par les molécules de l'air"
+          },
+          {
+            "symbol": "I_0",
+            "meaning": "intensité de la lumière du Soleil qui arrive"
+          },
+          {
+            "symbol": "\\lambda",
+            "meaning": "longueur d'onde de la lumière",
+            "unit": "nm"
+          }
         ],
         "links": [
-          {"phrase": "régime de Rayleigh", "node": "rayleigh-scattering"}
+          {
+            "phrase": "régime de Rayleigh",
+            "node": "rayleigh-scattering"
+          }
         ]
       },
       "play.blue-everywhere": "Le ciel est la somme de cette lumière diffusée, intégrée le long de chaque ligne de visée. Le violet est encore plus diffusé, mais le spectre solaire en contient moins et l'œil y est moins sensible.",
@@ -75,13 +102,32 @@
         "text": "Le long d'un trajet de longueur s dans l'air, l'intensité de la lumière directe décroît exponentiellement, avec un coefficient d'extinction bêta proportionnel à la longueur d'onde lambda à la puissance moins quatre. Au coucher du Soleil, ce trajet s'allonge fortement, et le bleu est éliminé de la lumière directe.",
         "subtitle": "Le long d'un trajet $s$ dans l'air, $I(\\lambda, s) = I_0(\\lambda)\\, e^{-\\beta(\\lambda)\\, s}$, avec $\\beta \\propto \\lambda^{-4}$. Au coucher du Soleil, $s$ s'allonge fortement : le bleu est éliminé de la lumière directe.",
         "terms": [
-          {"symbol": "I", "meaning": "intensité de la lumière directe après le trajet s"},
-          {"symbol": "I_0", "meaning": "intensité de la lumière du Soleil à l'entrée dans l'atmosphère"},
-          {"symbol": "\\lambda", "meaning": "longueur d'onde de la lumière", "unit": "nm"},
-          {"symbol": "s", "meaning": "longueur du trajet dans l'air", "unit": "km"},
-          {"symbol": "\\beta", "meaning": "coefficient d'extinction de l'air : part de lumière retirée par unité de longueur", "unit": "1/km"}
+          {
+            "symbol": "I",
+            "meaning": "intensité de la lumière directe après le trajet s"
+          },
+          {
+            "symbol": "I_0",
+            "meaning": "intensité de la lumière du Soleil à l'entrée dans l'atmosphère"
+          },
+          {
+            "symbol": "\\lambda",
+            "meaning": "longueur d'onde de la lumière",
+            "unit": "nm"
+          },
+          {
+            "symbol": "s",
+            "meaning": "longueur du trajet dans l'air",
+            "unit": "km"
+          },
+          {
+            "symbol": "\\beta",
+            "meaning": "coefficient d'extinction de l'air : part de lumière retirée par unité de longueur",
+            "unit": "1/km"
+          }
         ]
-      }
+      },
+      "play.no-air": "Avec une densité d'air nulle, l'épaisseur optique s'annule. Aucune lumière n'est diffusée : le ciel est noir, et la lumière directe arrive sans perte, avec le spectre du Soleil hors atmosphère."
     }
   }
 }

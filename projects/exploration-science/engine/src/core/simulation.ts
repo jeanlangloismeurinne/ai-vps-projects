@@ -23,7 +23,7 @@ export interface Simulation {
 export function buildSimulation(scene: Scene, catalogue: Catalogue, registry: PluginRegistry, built: BuiltScene): Simulation {
   const bound = (id: string): BoundEntity | undefined => {
     const e = built.entities.get(id);
-    return e && { id, node: e.node, object: e.instance.object };
+    return e && { id, node: e.node, object: e.instance.object, magnifier: e.instance.magnifier };
   };
   const specs = scene.simulators ?? [];
   const missing = [...new Set(specs.filter((s) => !registry.simulator(s.simulator)).map((s) => s.simulator))].sort();

@@ -500,7 +500,7 @@
     },
     {
       "id": "star",
-      "status": "planned",
+      "status": "implemented",
       "description": "Glowing star disc with corona (e.g. the Sun), always rendered not to scale.",
       "params": {
         "type": "object",
@@ -529,7 +529,7 @@
     },
     {
       "id": "atmosphere-layer",
-      "status": "planned",
+      "status": "implemented",
       "description": "Translucent dome or slab of atmosphere above the ground. Its colour is set by a scattering simulator when bound.",
       "params": {
         "type": "object",
@@ -558,7 +558,7 @@
     },
     {
       "id": "molecule-cloud",
-      "status": "planned",
+      "status": "implemented",
       "description": "Cluster of ball-and-stick small molecules, shown in a magnified bubble.",
       "params": {
         "type": "object",
@@ -598,7 +598,7 @@
     },
     {
       "id": "observer",
-      "status": "planned",
+      "status": "implemented",
       "description": "Stylised person standing on the ground, looking at the sky.",
       "params": {
         "type": "object",
@@ -1011,7 +1011,7 @@
     },
     {
       "id": "rayleigh-scattering",
-      "status": "planned",
+      "status": "implemented",
       "description": "Single-scattering of sunlight by air molecules (Rayleigh regime). Computes sky colour and the spectrum reaching an observer for a given sun elevation.",
       "equations": [
         {

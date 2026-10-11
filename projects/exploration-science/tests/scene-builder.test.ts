@@ -107,7 +107,7 @@ describe("buildScene stays subject-agnostic (design rule 1)", () => {
     const sky: Scene = readJson("content/nodes/blue-sky/scene.json");
     const built = buildScene(sky, catalogue, registry);
     expect(built.entities.size).toBe(sky.entities.length);
-    expect(built.missingComponents).toContain("star");
+    expect(built.missingComponents).toEqual([]);
   });
 
   it("rejects a parent cycle", () => {

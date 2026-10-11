@@ -15,6 +15,8 @@ import type { LensPlugin } from "../../core/registry";
 import { WAVE_FIELD, type WaveField } from "../channels";
 
 // Ondes lens: reveals the wave field of a line of sources on the real object.
+// With a disc (a scatterer seen in a magnifier), it shows the wave arriving and
+// the wave the source sends back all around it, in the colour of the light.
 // The field is computed per pixel from the sources (superposition of cylindrical
 // waves, amplitude ∝ 1/√r), never drawn: beams, nulls and grating lobes emerge
 // from the sum. Also marks the main beam and the grating lobes the simulator
@@ -28,7 +30,23 @@ const SLICE_ASPECT = 0.7; // height / width
 const VISUAL_HZ = 0.8;
 const MAX_SOURCES = 64;
 const LOBE_COLOR = "#ff4d6d";
+const CREST = "#ffd27a";
+const TROUGH = "#3a7bd5";
+/** In the colour of the light, troughs are the crest colour this much darker. */
+const TROUGH_SHADE = 0.12;
 const ROD_RADIUS = 0.003; // beam marker radius, as a fraction of the slice height
+
+/**
+ * Scattered wave around a single source driven by an incident plane wave, at
+ * (u, v) in the slice plane: relative amplitude × √((1 + cos²Θ)/2), the Rayleigh
+ * pattern for unpolarised light, Θ between the incident direction and the
+ * direction from the source. Same formula as the disc branch of the shader.
+ */
+export function scatteredAt(f: Pick<WaveField, "amplitude">, incident: { u: number; v: number }, u: number, v: number): number {
+  const r = Math.hypot(u, v);
+  const cos = r === 0 ? 1 : (u * incident.u + v * incident.v) / r;
+  return (f.amplitude ?? 1) * Math.sqrt((1 + cos * cos) / 2);
+}
 
 /** Complex amplitude Σ e^{-i(k r_n + n Δφ)} / √r_n at (u, v) in the slice plane (u along the line). */
 export function fieldAt(f: Pick<WaveField, "wavelength" | "count" | "spacing" | "phaseStep">, u: number, v: number): { re: number; im: number } {
@@ -57,10 +75,32 @@ uniform float uTime;
 uniform vec2 uSize;
 uniform vec3 uCrest;
 uniform vec3 uTrough;
+uniform float uDisc;
+uniform float uAmplitude;
+uniform vec2 uIncident;
+uniform float uIncidentAmp;
 varying vec2 vPos;
 const float TAU = 6.283185307;
 void main() {
   float k = TAU / uWavelength;
+  if (uDisc > 0.5) {
+    // A single scatterer at the centre, driven by a plane wave travelling along uIncident.
+    float R = 0.5 * uSize.x;
+    float r = length(vPos);
+    float inside = 1.0 - smoothstep(0.9 * R, R, r);
+    float c = r > 1e-6 ? dot(vPos / r, uIncident) : 1.0;
+    float scattered = uAmplitude * sqrt(0.5 * (1.0 + c * c)) * smoothstep(0.0, uWavelength * 0.25, r);
+    float sWave = cos(uTime - k * r);
+    float iWave = cos(uTime - k * dot(vPos, uIncident));
+    float aS = clamp(0.9 * scattered, 0.0, 0.9);
+    float aI = 0.3 * uIncidentAmp;
+    vec3 cS = mix(uTrough, uCrest, 0.5 + 0.5 * sWave);
+    vec3 cI = mix(uTrough, uCrest, 0.5 + 0.5 * iWave) * 0.7;
+    float a = aS + aI * (1.0 - aS);
+    vec3 col = (cS * aS + cI * aI * (1.0 - aS)) / max(a, 1e-4);
+    gl_FragColor = vec4(col, a * inside);
+    return;
+  }
   float rMin = uWavelength / 8.0;
   float re = 0.0;
   float im = 0.0;
@@ -86,10 +126,11 @@ void main() {
 
 const VERTEX = /* glsl */ `
 uniform vec2 uSize;
+uniform float uCentre;
 varying vec2 vPos;
 void main() {
   // The geometry is a unit plane scaled by uSize: the field is computed in scene units.
-  vPos = position.xy * uSize;
+  vPos = (position.xy - vec2(0.0, uCentre)) * uSize;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
@@ -108,8 +149,13 @@ export const waves: LensPlugin = {
       uPhaseStep: { value: 0 },
       uTime: { value: 0 },
       uSize: { value: [1, 1] as [number, number] },
-      uCrest: { value: new Color("#ffd27a") },
-      uTrough: { value: new Color("#3a7bd5") },
+      uCrest: { value: new Color(CREST) },
+      uTrough: { value: new Color(TROUGH) },
+      uDisc: { value: 0 },
+      uCentre: { value: 0 },
+      uAmplitude: { value: 1 },
+      uIncident: { value: [1, 0] as [number, number] },
+      uIncidentAmp: { value: 0 },
     };
     // Unit plane spanning u in [-0.5, 0.5], v in [0, 1]; scaled per frame to the wavelength.
     const planeGeometry = new PlaneGeometry(1, 1);
@@ -166,8 +212,19 @@ export const waves: LensPlugin = {
         }
         group.visible = true;
         phase = (phase + dt * 2 * Math.PI * VISUAL_HZ) % (2 * Math.PI);
-        const w = Math.max(SLICE_MIN_WIDTH_L * f.wavelength, SLICE_WIDTH_PER_LINE * f.count * f.spacing);
-        const h = w * SLICE_ASPECT;
+        const disc = f.discRadius !== undefined;
+        const w = disc ? 2 * f.discRadius! : Math.max(SLICE_MIN_WIDTH_L * f.wavelength, SLICE_WIDTH_PER_LINE * f.count * f.spacing);
+        const h = disc ? w : w * SLICE_ASPECT;
+        uniforms.uDisc.value = disc ? 1 : 0;
+        uniforms.uCentre.value = disc ? 0.5 : 0;
+        uniforms.uAmplitude.value = f.amplitude ?? 1;
+        if (f.colour) {
+          uniforms.uCrest.value.setRGB(...f.colour);
+          uniforms.uTrough.value.setRGB(...(f.colour.map((c) => c * TROUGH_SHADE) as [number, number, number]));
+        } else {
+          uniforms.uCrest.value.set(CREST);
+          uniforms.uTrough.value.set(TROUGH);
+        }
         uniforms.uWavelength.value = f.wavelength;
         uniforms.uSpacing.value = f.spacing;
         uniforms.uCount.value = Math.min(f.count, MAX_SOURCES);
@@ -180,7 +237,14 @@ export const waves: LensPlugin = {
         group.matrix.copy(basis);
         group.matrixWorldNeedsUpdate = true;
         plane.scale.set(w, h, 1);
-        plane.position.set(0, 0, 0);
+        plane.position.set(0, disc ? -h / 2 : 0, 0);
+        // The incident wave, in slice coordinates (x along the axis, y along the normal).
+        if (f.incident) {
+          uniforms.uIncident.value = [f.incident.direction.dot(f.axis), f.incident.direction.dot(f.normal)];
+          const n = Math.hypot(...uniforms.uIncident.value) || 1;
+          uniforms.uIncident.value = [uniforms.uIncident.value[0] / n, uniforms.uIncident.value[1] / n];
+          uniforms.uIncidentAmp.value = f.incident.amplitude;
+        } else uniforms.uIncidentAmp.value = 0;
 
         const beams = [
           ...(f.steeringDeg === null ? [] : [{ deg: f.steeringDeg, main: true }]),

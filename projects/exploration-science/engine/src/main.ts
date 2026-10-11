@@ -77,8 +77,8 @@ engine.addFrameListener((dt) => player.update(dt));
 engine.onFrame = () => {
   overlay.placeLabels((id) => engine.screenPosition(id), engine.cameraFlying);
   overlay.updateControls(controlValue);
-  const mpp = engine.metresPerPixel();
-  overlay.setScale(mpp === null ? null : scaleBar(mpp));
+  const scale = engine.scaleAtTarget();
+  overlay.setScale(scale === null ? null : { ...scaleBar(scale.metresPerPixel), magnified: scale.magnified });
 };
 engine.onLensChange = () => refreshLenses();
 

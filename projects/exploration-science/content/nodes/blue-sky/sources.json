@@ -97,6 +97,84 @@
         "entity.atmosphere.description"
       ],
       "note": "Ordre de grandeur à sourcer (l'essentiel de la masse sous ~30 km)."
+    },
+    {
+      "id": "rayleigh-optical-depth",
+      "claim": "Épaisseur optique de Rayleigh de toute l'atmosphère, à la verticale, au niveau de la mer : environ 0,097 à 550 nm.",
+      "value": 0.0973,
+      "unit": "1",
+      "status": "order-of-magnitude",
+      "sources": [
+        "bodhaine-1999"
+      ],
+      "usedBy": [
+        "simulators.scattering"
+      ],
+      "note": "Valeur de mémoire de l'article de Bodhaine et al. ; à confirmer en ouvrant l'article (seul le résumé a été vu)."
+    },
+    {
+      "id": "scale-height",
+      "claim": "La densité de l'air décroît à peu près exponentiellement avec l'altitude, avec une hauteur d'échelle d'environ 8 km.",
+      "value": 8000,
+      "unit": "m",
+      "status": "verified",
+      "sources": [
+        "utexas-scale-height"
+      ],
+      "usedBy": [
+        "simulators.scattering"
+      ],
+      "note": "Modèle isotherme : sert seulement à l'ombre de la Terre quand le Soleil est sous l'horizon."
+    },
+    {
+      "id": "air-mass",
+      "claim": "Masse d'air relative en fonction de la hauteur h du Soleil : 1 / (sin h + 0,50572 (h + 6,07995)^-1,6364), environ 38 à l'horizon.",
+      "status": "verified",
+      "sources": [
+        "kasten-young-1989"
+      ],
+      "usedBy": [
+        "simulators.scattering"
+      ],
+      "note": "Coefficients lus sur des sources secondaires (Wikipédia, pvlib), pas dans l'article."
+    },
+    {
+      "id": "sun-temperature",
+      "claim": "Température effective nominale du Soleil : 5772 K ; sa lumière est approchée par celle d'un corps noir à cette température.",
+      "value": 5772,
+      "unit": "K",
+      "status": "verified",
+      "sources": [
+        "iau-2015-b3"
+      ],
+      "usedBy": [
+        "simulators.scattering",
+        "entities.sun"
+      ]
+    },
+    {
+      "id": "colour-matching",
+      "claim": "Les couleurs affichées sont calculées depuis les spectres par les fonctions colorimétriques CIE 1931, approchées par des gaussiennes par morceaux.",
+      "status": "verified",
+      "sources": [
+        "wyman-2013"
+      ],
+      "usedBy": [
+        "simulators.scattering",
+        "entities.sun"
+      ],
+      "note": "Coefficients de l'équation 4 de l'article, non revérifiés sur le PDF."
+    },
+    {
+      "id": "magnifier-scale",
+      "claim": "La loupe montre une sphère de 2 µm de rayon : à cette échelle, 450 nm et 700 nm sont visibles comme des ondes ; les molécules y sont encore grossies, et 60 seulement sont montrées.",
+      "status": "order-of-magnitude",
+      "sources": [],
+      "usedBy": [
+        "entity.air.description",
+        "simulators.scattering"
+      ],
+      "note": "Convention d'affichage, pas une donnée."
     }
   ],
   "sources": [
@@ -138,6 +216,46 @@
       "url": "https://www.timeanddate.com/astronomy/red-sunset.html",
       "publisher": "timeanddate.com",
       "accessed": "2026-10-09",
+      "access": "search-result"
+    },
+    {
+      "id": "bodhaine-1999",
+      "title": "On Rayleigh Optical Depth Calculations",
+      "url": "https://reef.atmos.colostate.edu/~odell/at721/resources/rayleighOpticalDepth.pdf",
+      "publisher": "Journal of Atmospheric and Oceanic Technology 16, 1854-1861",
+      "accessed": "2026-10-11",
+      "access": "search-result"
+    },
+    {
+      "id": "utexas-scale-height",
+      "title": "Isothermal atmosphere (Statistical Mechanics lectures)",
+      "url": "https://farside.ph.utexas.edu/teaching/sm1/lectures/node55.html",
+      "publisher": "University of Texas at Austin",
+      "accessed": "2026-10-11",
+      "access": "search-result"
+    },
+    {
+      "id": "kasten-young-1989",
+      "title": "Revised optical air mass tables and approximation formula",
+      "url": "https://pvlib-python.readthedocs.io/en/v0.9.5/reference/generated/pvlib.atmosphere.get_relative_airmass.html",
+      "publisher": "Applied Optics 28, 4735-4738 (via pvlib)",
+      "accessed": "2026-10-11",
+      "access": "search-result"
+    },
+    {
+      "id": "iau-2015-b3",
+      "title": "IAU 2015 Resolution B3 on recommended nominal conversion constants",
+      "url": "https://ui.adsabs.harvard.edu/abs/2015arXiv151007674M",
+      "publisher": "International Astronomical Union",
+      "accessed": "2026-10-11",
+      "access": "search-result"
+    },
+    {
+      "id": "wyman-2013",
+      "title": "Simple Analytic Approximations to the CIE XYZ Color Matching Functions",
+      "url": "https://research.nvidia.com/labs/rtr/publication/wyman2013simple/",
+      "publisher": "Journal of Computer Graphics Techniques 2(2)",
+      "accessed": "2026-10-11",
       "access": "search-result"
     }
   ]
