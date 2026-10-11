@@ -182,20 +182,24 @@ frameworks:
           - id: capital_employe
             libelle: Capital immobilisé dans l'exploitation — actifs productifs et besoin en fonds de roulement, hors trésorerie excédentaire
             essentiel: true
+            depuis_le_socle: true
           - id: taux_imposition_effectif
             libelle: Taux d'imposition réellement supporté sur le résultat d'exploitation
             essentiel: false
+            depuis_le_socle: true
           - id: cout_du_capital
             libelle: Coût moyen des ressources qui financent ce capital — rémunération exigée par les créanciers et par les actionnaires
             essentiel: true
           - id: historique_cinq_exercices
             libelle: La même relation observée sur au moins cinq exercices consécutifs
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: rendement_du_capital_employe
             libelle: Rendement du capital employé
             unite: "%"
             periode: moyenne 5 ans
+            socle: {ratio: rendement_du_capital_employe_moyen}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
           - id: cout_du_capital
             libelle: Coût du capital — rémunération exigée par les créanciers et les actionnaires
             unite: "%"
@@ -246,6 +250,7 @@ frameworks:
             libelle: Part du résultat net retrouvée en trésorerie d'exploitation
             unite: "%"
             periode: moyenne 3 ans
+            socle: {ratio: part_du_resultat_en_tresorerie}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable
@@ -281,11 +286,13 @@ frameworks:
           - id: variation_capital_employe
             libelle: Variation du capital immobilisé dans l'exploitation sur la période de croissance
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: capital_par_point_de_croissance
             libelle: Capital supplémentaire investi par point de croissance de l'activité
             unite: "M$"
             periode: derniers exercices observés
+            socle: {ratio: capital_par_point_de_croissance}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable
@@ -399,9 +406,11 @@ frameworks:
           - id: serie_longue_du_rendement
             libelle: Le rendement du capital observé sur au moins cinq exercices consécutifs
             essentiel: true
+            depuis_le_socle: true
           - id: decomposition_marge_rotation
             libelle: Décomposition du rendement entre marge dégagée et rotation du capital
             essentiel: true
+            depuis_le_socle: true
           - id: comparaison_sectorielle
             libelle: Le même rendement chez des entreprises comparables, sur la même période
             essentiel: false
@@ -410,6 +419,7 @@ frameworks:
             libelle: Pente du rendement du capital employé
             unite: "points/an"
             periode: sur 5 ans ou plus
+            socle: {ratio: pente_du_rendement}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable

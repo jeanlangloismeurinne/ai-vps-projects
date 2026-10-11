@@ -27,3 +27,23 @@ emetteurs:
         autre dette. Convention maison : un financement qui porte intérêt est de la dette. Inscrit en
         non courant (aucune échéance à douze mois déposée).
       piece: https://www.sec.gov/Archives/edgar/data/1628171/000119312526071563/0001193125-26-071563-index.htm
+
+  "1045810":   # NVIDIA Corporation (NVDA)
+    - ligne: participations
+      concepts: [EquitySecuritiesWithoutReadilyDeterminableFairValueAmount]
+      motif: >-
+        NVIDIA présente ses participations non cotées (dont OpenAI et des sociétés de son écosystème) dans
+        les « autres actifs » non courants, sans ligne propre au bilan : 22,3 Md$ au 25/01/2026, 47,9 Md$
+        au 26/07/2026 (concept déposé sans interruption depuis le 29/01/2023). Leurs réévaluations et
+        plus-values sont sous le résultat d'exploitation (« autres produits », 9,0 Md$ sur l'exercice
+        2026) : convention maison, elles sortent du capital employé. Ce n'est pas une recette du gabarit :
+        chez Microsoft, les mêmes titres sont déjà dans les placements à long terme.
+      piece: https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm
+    - ligne: participations_courantes
+      concepts: [EquitySecuritiesFvNi]
+      motif: >-
+        NVIDIA range ses titres de participation COTÉS dans les « charges payées d'avance et autres actifs
+        courants » : 12,9 Md$ au 25/01/2026, 42,8 Md$ au 26/07/2026 (le solde des autres actifs courants,
+        une fois ces titres retirés, retombe sur les charges payées d'avance déposées). Leurs variations de
+        valeur sont hors exploitation : convention maison, ils sortent du capital employé.
+      piece: https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm

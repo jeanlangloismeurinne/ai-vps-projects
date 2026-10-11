@@ -128,19 +128,32 @@ class ChiffreDuSocle(Strict):
     socle »). Comme un fonds : le modèle des comptes est la seule source des chiffres, l'analyste juge
     et commente ; il ne recopie pas (RVMD qf_7 recopiait « 1,22 Md$ » pour 1 223,03 M$).
 
-    `formule` : formule fermée (`formule_grammaire`) sur des LIGNES du gabarit maison — leur existence
-    est un invariant relationnel, vérifié par le pont du référentiel ([U]). `periode` : vocabulaire
-    fermé de `socle_comptes.PERIODES_DE_CHIFFRE`."""
-    formule: str = Field(min_length=3)
-    periode: Literal["dernier_bilan", "douze_mois", "dernier_exercice"]
+    Deux formes, exclusives :
+      · un MONTANT — `formule` : formule fermée (`formule_grammaire`) sur des LIGNES du gabarit maison
+        (leur existence est un invariant relationnel, vérifié par le pont du référentiel, [U]), lue à
+        une `periode` du vocabulaire fermé de `socle_comptes.PERIODES_DE_CHIFFRE` ;
+      · un RATIO MAISON — `ratio` : l'identifiant d'une définition de `ratios_maison.RATIOS` (rendement
+        du capital sur cinq exercices, conversion en trésorerie…), qui porte sa propre fenêtre
+        d'exercices ; son existence et son unité sont vérifiées par le pont du référentiel ([U])."""
+    formule: Optional[str] = Field(default=None, min_length=3)
+    periode: Optional[Literal["dernier_bilan", "douze_mois", "dernier_exercice"]] = None
+    ratio: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
 
     @model_validator(mode="after")
     def _formule_fermee(self):
-        from app.contracts.formule_grammaire import FormuleInexecutable, analyser_formule
-        try:
-            analyser_formule(self.formule)
-        except FormuleInexecutable as e:
-            raise ValueError(f"`socle.formule` hors de la grammaire fermée — {e}") from e
+        if (self.formule is None) == (self.ratio is None):
+            raise ValueError("`socle` porte une `formule` (un montant) OU un `ratio` maison, exactement l'un des "
+                             "deux")
+        if self.ratio is not None and self.periode is not None:
+            raise ValueError(f"`socle.ratio` {self.ratio} porte sa propre fenêtre d'exercices : pas de `periode`")
+        if self.formule is not None:
+            if self.periode is None:
+                raise ValueError("`socle.formule` sans `periode` : un montant du socle se lit à une date")
+            from app.contracts.formule_grammaire import FormuleInexecutable, analyser_formule
+            try:
+                analyser_formule(self.formule)
+            except FormuleInexecutable as e:
+                raise ValueError(f"`socle.formule` hors de la grammaire fermée — {e}") from e
         return self
 
 
@@ -193,9 +206,9 @@ class ChiffreCleDeclare(Strict):
         if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None)) > 1:
             raise ValueError(f"chiffre `{self.id}` : deux façons d'être établi (calcul, le plus élevé de, "
                              "socle) — un chiffre s'établit d'une seule façon")
-        if self.socle is not None and self.unite != "M$":
-            raise ValueError(f"chiffre `{self.id}` : un chiffre lu dans le socle est un montant en M$ "
-                             f"(unité déclarée {self.unite!r}) — un ratio se CALCULE sur ces montants")
+        if self.socle is not None and self.socle.formule is not None and self.unite != "M$":
+            raise ValueError(f"chiffre `{self.id}` : un montant lu dans le socle est en M$ (unité déclarée "
+                             f"{self.unite!r}) — un ratio est un RATIO MAISON (`socle.ratio`), défini une fois")
         if self.le_plus_eleve_de and (len(self.le_plus_eleve_de) < 2
                                       or len(set(self.le_plus_eleve_de)) != len(self.le_plus_eleve_de)):
             raise ValueError(f"chiffre `{self.id}` : `le_plus_eleve_de` compare au moins deux chiffres "

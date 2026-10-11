@@ -52,6 +52,7 @@ from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
 from app.contracts.collection_plan_schema import CollectionPlan
 from app.contracts.formule_grammaire import (
     FormuleInexecutable,
+    denominateurs_de_la_formule,
     dimension_formule,
     evaluer_formule,
     noms_de_la_formule,
@@ -341,6 +342,7 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
     #    rendrait le chiffre « non établi » à chaque dossier, en silence), et seule une question d'un
     #    framework qui LIT le socle peut s'y adosser — chiffre ou ingrédient : sans la pièce au dossier,
     #    l'ingrédient ne serait ni collecté ni montré.
+    from app.knowledge.ratios_maison import RATIOS
     from app.knowledge.socle_comptes import charger_gabarit
     lignes_du_socle = set(charger_gabarit().lignes)
     for f, q in toutes:
@@ -352,6 +354,17 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                 "pas (`lit_le_socle: false`) : la pièce ne serait jamais au dossier")
         for c in q.chiffres_cles:
             if c.socle is None:
+                continue
+            if c.socle.ratio is not None:
+                r = RATIOS.get(c.socle.ratio)
+                if r is None:
+                    raise FrameworkDefinitionRefused(
+                        f"[U] `{q.id}.{c.id}` lit le ratio maison `{c.socle.ratio}`, qui n'est pas défini "
+                        f"({sorted(RATIOS)}) — le chiffre ne s'établirait jamais")
+                if r.unite != c.unite:
+                    raise FrameworkDefinitionRefused(
+                        f"[U] `{q.id}.{c.id}` est déclaré en {c.unite!r}, le ratio maison `{r.id}` se lit en "
+                        f"{r.unite!r} — une unité convertie en silence ferait deux chiffres (#95)")
                 continue
             inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)
             if inconnues:
@@ -712,7 +725,8 @@ def valider_pont_framework_answer(
             e = attendus[c.id]
             if (c.valeur is None) != (e.valeur is None) or (
                     c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
-                regle = d.calcul or (f"socle : {d.socle.formule} ({d.socle.periode})" if d.socle else
+                regle = d.calcul or ((f"socle : ratio maison {d.socle.ratio}" if d.socle.ratio else
+                                      f"socle : {d.socle.formule} ({d.socle.periode})") if d.socle else
                                      f"le plus élevé de {', '.join(d.le_plus_eleve_de)}")
                 faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({regle})")
         if faux:
@@ -781,15 +795,22 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     # Les chiffres LUS DANS LE SOCLE d'abord (2026-10-04) : ils ne lisent rien de l'encadré, et les
     # calculs et les chiffres retenus peuvent les lire. `socle` est la structure de la pièce au dossier ;
     # absente, le chiffre n'est pas établi et le DIT — jamais un relevé de substitution.
+    # Un RATIO MAISON (`socle.ratio`) se lit par son détenteur, dans l'unité du ratio ; un MONTANT
+    # (`socle.formule`), en $, se rend en M$.
+    from app.knowledge.ratios_maison import ratio_du_socle
     from app.knowledge.socle_comptes import valeur_du_socle
     for d in (x for x in systeme if x.socle is not None):
         if socle is None:
             ligne = ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
                 "non établi : le socle des comptes de l'émetteur n'est pas au dossier"))
         else:
-            v, periode = valeur_du_socle(socle, d.socle.formule, d.socle.periode)
+            if d.socle.ratio is not None:
+                v, periode = ratio_du_socle(socle, d.socle.ratio)
+            else:
+                v, periode = valeur_du_socle(socle, d.socle.formule, d.socle.periode)
+                v = None if v is None else v / 1e6
             ligne = (ChiffreCle(id=d.id, unite=d.unite, motif_absence=periode) if v is None else
-                     ChiffreCle(id=d.id, unite=d.unite, valeur=round(v / 1e6, 6), date_ou_periode=periode))
+                     ChiffreCle(id=d.id, unite=d.unite, valeur=round(v, 6), date_ou_periode=periode))
         sortie.append(ligne)
         par_id[d.id] = sortie[-1]
     # Les chiffres RETENUS d'abord (#105) : une formule peut les lire, eux ne lisent que des relevés.
@@ -818,8 +839,21 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
             sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
                 f"non calculable ({d.calcul}) : {', '.join(absents)} non établi(s) dans l'encadré")))
             continue
+        valeurs = {(n, 0): par_id[n].valeur for n in noms}
         try:
-            valeur = evaluer_formule(d.calcul, {(n, 0): par_id[n].valeur for n in noms})
+            # Un quotient sur un dénominateur NÉGATIF n'est pas un niveau (#44) : l'autonomie d'un
+            # émetteur qui GÉNÈRE de la trésorerie (NVDA : −127 006 M$ « consommés » sur douze mois)
+            # sortirait en mois négatifs. Non calculable, le dénominateur nommé avec sa valeur ; le nul
+            # est refusé par la grammaire elle-même.
+            negatifs = [(den, v) for den in denominateurs_de_la_formule(d.calcul)
+                        if (v := evaluer_formule(den, valeurs)) < 0]
+            if negatifs:
+                sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                    f"non calculable ({d.calcul}) : " + " ; ".join(
+                        f"{den} vaut {v:,.1f}".replace(",", " ") for den, v in negatifs)
+                    + " — un quotient sur un dénominateur négatif n'est pas un niveau (#44)")))
+                continue
+            valeur = evaluer_formule(d.calcul, valeurs)
         except FormuleInexecutable as e:
             sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f"non calculable : {e}"))
             continue

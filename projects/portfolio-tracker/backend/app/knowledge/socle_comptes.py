@@ -74,7 +74,7 @@ TOLERANCE_RELATIVE = 0.001
 TOLERANCE_ABSOLUE = 500_000.0
 
 EtatCellule = Literal["depose", "par_difference", "par_somme", "calcule", "compte_zero", "non_depose"]
-NaturePeriode = Literal["exercice", "douze_mois", "dernier_bilan"]
+NaturePeriode = Literal["exercice", "douze_mois", "dernier_bilan", "ouverture"]
 
 
 class GabaritInvalide(Exception):
@@ -334,17 +334,26 @@ def periodes_du_socle(faits: dict[str, list[dict[str, Any]]], gabarit: Gabarit
 
     Les exercices s'ancrent sur le RÉSULTAT NET (toute société qui dépose publie son résultat ; le
     chiffre d'affaires manque chez une pré-revenus), le dernier bilan sur le TOTAL DE L'ACTIF.
+
+    Le BILAN D'OUVERTURE (1.1.0) : le bilan de clôture de l'exercice qui précède le premier, quand il
+    est déposé. Un rendement du capital se rapporte au capital MOYEN de l'exercice (ouverture et
+    clôture) : sans lui, le premier des cinq exercices n'aurait pas de rendement.
     """
     refus: list[str] = []
     ancre_flux = [c for r in gabarit.lignes["resultat_net"].recettes for c in r]
-    fins = _series_flux(faits, ancre_flux)[-NB_EXERCICES:]
+    toutes = _series_flux(faits, ancre_flux)
+    fins = toutes[-NB_EXERCICES:]
     if not fins:
         return [], ["aucun exercice annuel du résultat net n'est déposé : pas de socle sans exercice"]
+    ouverture = toutes[-NB_EXERCICES - 1] if len(toutes) > NB_EXERCICES else None
     periodes = [Periode(f"FY{f}", "exercice", "flux", f, f"Exercice clos le {f}") for f in fins]
     derniere = _derniere_fin_de_flux(faits, ancre_flux[0])
     if derniere and derniere > fins[-1]:
         periodes.append(Periode(f"TTM{derniere}", "douze_mois", "flux", derniere,
                                 f"Douze mois au {derniere}"))
+    if ouverture is not None:
+        periodes.append(Periode(f"B{ouverture}", "ouverture", "instant", ouverture,
+                                f"Bilan d'ouverture au {ouverture}"))
     periodes += [Periode(f"B{f}", "exercice", "instant", f, f"Bilan au {f}") for f in fins]
     ancre_bilan = [c for r in gabarit.lignes["total_actif"].recettes for c in r][0]
     dernier = _dernier_instant(faits, ancre_bilan)
@@ -522,13 +531,17 @@ PERIODES_DE_CHIFFRE = ("dernier_bilan", "douze_mois", "dernier_exercice")
 
 
 def structure_du_socle(socle: SocleComptes) -> dict[str, Any]:
-    """Le socle en JSON (le `content_structured` de la pièce). Pur."""
+    """Le socle en JSON (le `content_structured` de la pièce). Pur. Les ratios maison n'y sont PAS : ils
+    se recalculent à la lecture depuis les cellules (`ratios_maison`) ; seule la VERSION de leurs
+    définitions y est, pour qu'en changer republie la pièce (`empreinte`)."""
+    from app.knowledge.ratios_maison import VERSION_RATIOS
     fins = [p.fin for p in socle.periodes]
     return {
         "metric": METRIC,
         "poste_kind": "stock",                       # un seul socle courant par émetteur (#43)
         "period_end": max(fins) if fins else None,
         "version_gabarit": socle.version_gabarit,
+        "version_ratios": VERSION_RATIOS,
         "dernier_depot": socle.dernier_depot,
         "periodes": [p.__dict__ for p in socle.periodes],
         "cellules": {
@@ -548,10 +561,11 @@ def structure_du_socle(socle: SocleComptes) -> dict[str, Any]:
 
 
 def empreinte(structure: dict[str, Any]) -> tuple:
-    """Ce qui fait qu'un socle publié est le MÊME qu'un autre : gabarit, dernier dépôt, cellules,
-    reclassements. Deux passages sur le même dépôt ne créent pas de version (idempotence)."""
+    """Ce qui fait qu'un socle publié est le MÊME qu'un autre : gabarit, définitions des ratios, dernier
+    dépôt, cellules, reclassements. Deux passages sur le même dépôt ne créent pas de version (idempotence)."""
     cel = structure.get("cellules") or {}
-    return (structure.get("version_gabarit"), (structure.get("dernier_depot") or {}).get("accn"),
+    return (structure.get("version_gabarit"), structure.get("version_ratios"),
+            (structure.get("dernier_depot") or {}).get("accn"),
             tuple(sorted((k, v.get("v"), v.get("e")) for k, v in cel.items())),
             tuple(sorted(r.get("ligne", "") + "|" + ",".join(r.get("concepts", ()))
                          for r in structure.get("reclassements") or [])))
@@ -638,6 +652,8 @@ def rendre_socle(structure: dict[str, Any], gabarit: Gabarit, *, raison_sociale:
                 v = c.get("v")
                 vals.append("n.d." if v is None else f"{v / 1e6:,.1f}".replace(",", " "))
             out.append(f"  {l.libelle} : " + " | ".join(vals))
+    from app.knowledge.ratios_maison import rendre_ratios
+    out += rendre_ratios(structure)
     ecarts = [c for c in structure.get("controles") or [] if c["statut"] == "ecart"]
     out.append("")
     out.append(f"Bouclages : {len(structure.get('controles') or [])} contrôles, "

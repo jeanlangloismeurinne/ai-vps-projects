@@ -56,12 +56,15 @@ def _boucle(sort, avant, apres, mid=1, qid="qf_1"):
                         statut_avant=avant, statut_apres=apres, motif="m")
 
 
-def _rejette(label, fn):
+def _rejette(label, fn, motif=None):
+    """Un refus attendu. `motif` : le refus doit venir de CETTE règle — un refus prononcé par une autre
+    est un FAIL nommé (4ᵉ faux vert : la fixture déclenche une autre garde que celle qu'on éprouve)."""
     try:
         fn()
         b.check(False, f"{label} — accepté à tort")
-    except Exception:
-        b.check(True, label)
+    except Exception as e:
+        b.check(motif is None or motif in str(e), f"{label}" + ("" if motif is None or motif in str(e)
+                                                                 else f" — refusé, mais pas par la règle visée : {e}"))
 
 
 # ── §1 LE CONTRAT PORTE EXACTEMENT SA CHARGE ────────────────────────────────────────────────────
@@ -164,10 +167,11 @@ for _nom in ("serve_mandate", "read_open_mandates", "id_du_mandat_ouvert"):
 # ── §5 LE MÊME PROCESSUS, SCOPÉ ─────────────────────────────────────────────────────────────────
 print("\n[5] la collecte scopée : même pont, restreint aux questions renvoyées (#46)")
 _V = FICH.schema_version
-# qf_1 sous `rentable` est `variable`, essentiels : resultat_operationnel_apres_impot, capital_employe,
-# cout_du_capital. Un plan qui ne couvre QUE qf_1 doit passer quand le scope vaut {qf_1}, et échouer
-# sans scope (les autres questions ont des essentiels non couverts).
-_essentiels_qf1 = ("resultat_operationnel_apres_impot", "capital_employe", "cout_du_capital")
+# qf_1 sous `rentable` est `variable`, essentiels À COLLECTER : resultat_operationnel_apres_impot,
+# cout_du_capital (`capital_employe` se lit dans le socle depuis #116, il ne se collecte plus). Un plan
+# qui ne couvre QUE qf_1 doit passer quand le scope vaut {qf_1}, et échouer sans scope (les autres
+# questions ont des essentiels non couverts).
+_essentiels_qf1 = ("resultat_operationnel_apres_impot", "cout_du_capital")
 _items_qf1 = [CollectionPlanItem(question_id="qf_1", ingredient_id=ing, statut="traduit", periode="exercice_clos",
                                  metrique="résultat d'exploitation après impôt",
                                  source_pressentie="10-K", ancre="clôture de l'exercice")
@@ -182,15 +186,18 @@ except CollectionPlanRefused as e:
 _rejette("§5 le MÊME plan SANS scope est refusé ([R] exige toutes les questions applicables)",
          lambda: valider_pont_collection_plan(_plan_qf1, fichier=FICH))
 
-# une ligne HORS scope est refusée ([P]).
+# une ligne HORS scope est refusée ([P]). ⚠️ L'ingrédient débordant doit être COLLECTABLE : depuis #115,
+# `qf_2.resultat_net` se lit dans le socle et serait refusé pour CETTE raison, quel que soit le scope —
+# la mutation « [P] tolère hors scope » restait verte (fixture non discriminante, 1ᵉʳ faux vert).
 _plan_deborde = CollectionPlan(
     ticker_id="RVMD", framework_id=FW, framework_version=_V, archetype="rentable",
-    items=_items_qf1 + [CollectionPlanItem(question_id="qf_2", ingredient_id="resultat_net",
-                                           statut="traduit", periode="exercice_clos", metrique="résultat net",
+    items=_items_qf1 + [CollectionPlanItem(question_id="qf_2", ingredient_id="variation_besoin_fonds_roulement",
+                                           statut="traduit", periode="exercice_clos",
+                                           metrique="variation du besoin en fonds de roulement",
                                            source_pressentie="10-K", ancre="clôture de l'exercice")])
 _rejette("§5 une ligne HORS du scope de bouclage est refusée ([P])",
          lambda: valider_pont_collection_plan(_plan_deborde, fichier=FICH,
-                                              questions=frozenset({"qf_1"})))
+                                              questions=frozenset({"qf_1"})), motif="HORS du scope")
 
 # Identité copiée du registre SEC réel (`resolve_identite("RVMD")`, relevé le 2026-09-26).
 _RVMD = IdentiteEmetteur(symbole="RVMD", cik=1628171, raison_sociale="Revolution Medicines, Inc.")

@@ -74,6 +74,8 @@ mutations=(
 "$PONT¦        obligatoires_absents = [n for n in absents if n not in facultatifs]¦        obligatoires_absents = []¦le constaté OBLIGATOIRE absent"
 "$PONT¦    ids_systeme = {d.id for d in systeme}¦    ids_systeme = {d.id for d in systeme if d.calcul}¦une ligne fournie pour le chiffre RETENU est écartée"
 "$PONT¦        par_id[d.id] = ligne¦        pass¦l'autonomie se calcule sur le chiffre RETENU"
+# #44 dans l'encadré : un quotient sur un dénominateur NÉGATIF publierait une autonomie en mois négatifs (NVDA).
+"$PONT¦            if negatifs:¦            if False:¦dénominateur NÉGATIF"
 )
 
 source "$(dirname "$0")/_negatif.sh"

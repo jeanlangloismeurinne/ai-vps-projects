@@ -38,6 +38,14 @@ mutations=(
 "$SRC¦    if derniere and derniere > fins[-1]:¦    if False:¦flux d'exploitation sur douze mois"
 # Données : le gabarit perd la recette des convertibles.
 "$GAB¦          - [ConvertibleLongTermNotesPayable]¦¦convertibles au dernier bilan"
+# 1.1.0 — Le capital employé garde les participations (leur revenu est hors exploitation).
+"$GAB¦                 -participations_courantes, -participations, -droits_d_utilisation,¦                 -droits_d_utilisation,¦capital employé NVDA au 25/01/2026"
+# 1.1.0 — Les loyers à un an ne sortent plus du solde des autres passifs courants (ligne hors équation ; sans recette, le chargeur la refuse déjà).
+"$GAB¦        composantes: [+fournisseurs, +dette_financiere_courante, +obligations_locatives_courantes]¦        composantes: [+fournisseurs, +dette_financiere_courante]¦les loyers à un an SORTENT"
+# 1.1.0 — Plus de bilan d'ouverture : le premier exercice n'a plus de capital moyen.
+"$SRC¦    ouverture = toutes[-NB_EXERCICES - 1] if len(toutes) > NB_EXERCICES else None¦    ouverture = None¦BILAN D'OUVERTURE"
+# 1.1.0 — Un bilan d'ouverture INVENTÉ quand aucun exercice antérieur n'est déposé.
+"$SRC¦    ouverture = toutes[-NB_EXERCICES - 1] if len(toutes) > NB_EXERCICES else None¦    ouverture = toutes[-NB_EXERCICES - 1] if len(toutes) > NB_EXERCICES else toutes[0]¦pas de bilan d'ouverture inventé"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

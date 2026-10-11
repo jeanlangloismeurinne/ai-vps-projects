@@ -115,8 +115,15 @@ mutations=(
 "$PONT¦        if adosses and not f.lit_le_socle:¦        if False:¦ne LIT PAS le socle"
 "$PONT¦            inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)¦            inconnues = []¦ABSENTE du gabarit"
 "$PONT¦            decales = sorted(f\"{n}[{k}]\" for n, k in references_de_la_formule(c.socle.formule) if k != 0)¦            decales = []¦DÉCALÉ (sa période"
-"$DEF¦        if self.socle is not None and self.unite != \"M$\":¦        if False:¦hors M$"
+"$DEF¦        if self.socle is not None and self.socle.formule is not None and self.unite != \"M$\":¦        if False:¦hors M$"
 "$YAML¦    lit_le_socle: false¦    lit_le_socle: true¦les autres frameworks, non"
+# ── [U] les ratios maison (2026-10-04) ──
+"$PONT¦                if r is None:¦                if False:¦ratio maison INCONNU"
+"$PONT¦                if r.unite != c.unite:¦                if False:¦AUTRE unité que la sienne"
+"$DEF¦        if (self.formule is None) == (self.ratio is None):¦        if False:¦porte AUSSI une formule"
+"$DEF¦        if self.ratio is not None and self.periode is not None:¦        if False:¦porte une période est refusé"
+"$DEF¦            if self.periode is None:¦            if False:¦SANS période est refusé"
+"$YAML¦            socle: {ratio: rendement_du_capital_employe_moyen}¦¦QUATRE ratios maison"
 )
 
 passes=0; ratees=0

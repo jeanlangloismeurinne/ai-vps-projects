@@ -303,6 +303,15 @@ def noms_de_la_formule(formule: str) -> set[str]:
     return {c for c, _ in references_de_la_formule(formule)}
 
 
+def denominateurs_de_la_formule(formule: str) -> list[str]:
+    """Les DÉNOMINATEURS de la formule (chaque opérande droit d'une division), en texte de formule,
+    dans l'ordre de l'arbre. Pure. Sert à qui veut juger le SIGNE d'un quotient avant de le publier
+    (l'encadré : un quotient sur un dénominateur négatif n'est pas un niveau, #44) — la grammaire ne
+    le juge pas elle-même, une division par un négatif étant licite dans un appariement."""
+    return [ast.unparse(n.right) for n in ast.walk(analyser_formule(formule).body)
+            if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div)]
+
+
 def evaluer_formule(formule: str, valeurs: Mapping[tuple[str, Periode], float]) -> float:
     """Calcule la formule sur les valeurs fournies. Pure. Lève `FormuleInexecutable`.
 

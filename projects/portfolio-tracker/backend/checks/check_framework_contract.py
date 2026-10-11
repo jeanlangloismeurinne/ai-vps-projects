@@ -727,6 +727,15 @@ _enc_zero = {c.id: c for c in completer_encadre(_DECL_AUTO, [
 check("… un dénominateur NUL rend « non calculable », jamais `inf` ni 0 (#44)",
       _enc_zero["autonomie"].valeur is None and "zéro" in (_enc_zero["autonomie"].motif_absence or ""),
       f"→ {_enc_zero['autonomie']}")
+# Forme NVDA réelle (socle au 26/07/2026) : trésorerie et placements 56 586 M$, flux disponible sur douze
+# mois +127 006 M$, donc une « consommation » de −127 006 M$ — l'émetteur GÉNÈRE de la trésorerie.
+_enc_neg = {c.id: c for c in completer_encadre(_DECL_AUTO, [
+    ChiffreCle(id="tresorerie", unite="M$", valeur=56586.0, date_ou_periode="au 2026-07-26"),
+    ChiffreCle(id="conso", unite="M$", valeur=-127006.0, date_ou_periode="douze mois au 2026-07-26")], socle=None)}
+check("… un dénominateur NÉGATIF (trésorerie générée, pas consommée) rend « non calculable » en nommant sa "
+      "valeur — jamais une autonomie en mois négatifs (#44)",
+      _enc_neg["autonomie"].valeur is None and "non calculable" in (_enc_neg["autonomie"].motif_absence or "")
+      and "-127 006.0" in (_enc_neg["autonomie"].motif_absence or ""), f"→ {_enc_neg['autonomie']}")
 _enc_mix = {c.id: c for c in completer_encadre(_DECL_AUTO, [
     ChiffreCle(id="tresorerie", unite="M$", valeur=120.0, date_ou_periode="au 2026-06-30"),
     ChiffreCle(id="conso", unite="M$", valeur=60.0, date_ou_periode="exercice 2025")], socle=None)}

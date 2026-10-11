@@ -27,8 +27,9 @@ from typing import Any
 
 from app.knowledge.edgar_facts import fetch_company_facts
 from app.knowledge.edgar_feed import resolve_cik
+from app.knowledge.ratios_maison import rendre_ratios
 from app.knowledge.socle_comptes import (
-    SocleComptes, charger_gabarit, charger_reclassements, reconstituer,
+    SocleComptes, charger_gabarit, charger_reclassements, reconstituer, structure_du_socle,
 )
 
 _MARQUE = {"depose": " ", "par_difference": "≈", "par_somme": "Σ", "calcule": "ƒ",
@@ -54,6 +55,9 @@ def imprimer(nom: str, socle: SocleComptes, provenance: list[str]) -> None:
             cells = [socle.cellules[(l.id, p.id)] for p in ps]
             txt = "".join(f"{_m(c.valeur):>13} {_MARQUE[c.etat]}" for c in cells)
             print(f"  {l.libelle[:46]:<46}{txt}")
+    # Les ratios maison : le texte même que lira l'analyste (`rendre_ratios`, détenteur unique).
+    for ligne in rendre_ratios(structure_du_socle(socle)):
+        print(ligne)
     ecarts = socle.ecarts()
     print(f"\n  Contrôles : {len(socle.controles)} dont {len(ecarts)} écart(s)")
     for c in ecarts:

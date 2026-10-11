@@ -682,15 +682,39 @@ rejete("[U] un ingrédient « lu dans le socle » dans un framework qui ne le li
 rejete("[U] un chiffre du socle à exercice DÉCALÉ (sa période est sa `periode`)",
        lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "dette_financiere_non_courante[-1]",
                                                           "periode": "dernier_bilan"}})), "la période d'un chiffre du socle")
-rejete("un chiffre du socle hors M$ est refusé par le CONTRAT (un ratio se calcule sur ces montants)",
-       lambda: charge(_avec_socle({**_SOCLE_DB, "unite": "%"})), "un chiffre lu dans le socle est un montant en M$")
+rejete("un MONTANT du socle hors M$ est refusé par le CONTRAT (un ratio est un ratio maison)",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "unite": "%"})), "un montant lu dans le socle est en M$")
+_RATIO_DB = {"id": "rendement_du_capital_employe", "libelle": "Rendement du capital employé sur cinq ans",
+             "unite": "%", "periode": "moyenne 5 ans", "socle": {"ratio": "rendement_du_capital_employe_moyen"}}
+valide("[U] un RATIO MAISON défini, dans son unité, dans un framework qui lit le socle, passe",
+       lambda: charge(_avec_socle(_RATIO_DB)))
+rejete("[U] un ratio maison INCONNU (le chiffre ne s'établirait jamais)",
+       lambda: charge(_avec_socle({**_RATIO_DB, "socle": {"ratio": "rendement_invente"}})), "qui n'est pas défini")
+rejete("[U] un ratio maison déclaré dans une AUTRE unité que la sienne (conversion silencieuse)",
+       lambda: charge(_avec_socle({**_RATIO_DB, "unite": "points/an"})), "une unité convertie en silence")
+rejete("un ratio maison qui porte AUSSI une formule est refusé par le CONTRAT",
+       lambda: charge(_avec_socle({**_RATIO_DB, "socle": {"ratio": "pente_du_rendement", "formule": "tresorerie",
+                                                         "periode": "dernier_bilan"}})), "exactement l'un des deux")
+rejete("un ratio maison qui porte une période est refusé par le CONTRAT (il porte sa propre fenêtre)",
+       lambda: charge(_avec_socle({**_RATIO_DB, "socle": {"ratio": "pente_du_rendement",
+                                                         "periode": "dernier_exercice"}})), "sa propre fenêtre")
+rejete("un montant du socle SANS période est refusé par le CONTRAT",
+       lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "tresorerie"}})), "se lit à une date")
 rejete("un chiffre du socle ET calculé est refusé par le CONTRAT (une seule façon d'être établi)",
        lambda: charge(_avec_socle({**_SOCLE_DB, "calcul": "a - b"})), "deux façons d'être établi")
 rejete("une période de socle hors vocabulaire est refusée par le CONTRAT",
        lambda: charge(_avec_socle({**_SOCLE_DB, "socle": {"formule": "tresorerie", "periode": "moyenne_5_ans"}})),
        "periode")
 _lus_socle = {(q.id, c.id): (c.socle.formule, c.socle.periode) for q in _reel_q.values() for c in q.chiffres_cles
-              if c.socle}
+              if c.socle and c.socle.formule}
+_ratios_lus = {(q.id, c.id): c.socle.ratio for q in _reel_q.values() for c in q.chiffres_cles
+               if c.socle and c.socle.ratio}
+check("[U] le référentiel réel lit QUATRE ratios maison : rendement moyen (qf_1), conversion (qf_2), capital par "
+      "point de croissance (qf_3), pente (qf_5)",
+      _ratios_lus == {("qf_1", "rendement_du_capital_employe"): "rendement_du_capital_employe_moyen",
+                      ("qf_2", "part_du_resultat_en_tresorerie"): "part_du_resultat_en_tresorerie",
+                      ("qf_3", "capital_par_point_de_croissance"): "capital_par_point_de_croissance",
+                      ("qf_5", "pente_du_rendement"): "pente_du_rendement"}, f"→ {_ratios_lus}")
 check("[U] le référentiel réel lit dans le socle la dette brute, la trésorerie et la consommation — et la dette "
       "brute compte le financement adossé aux redevances (convention maison)",
       set(_lus_socle) == {("qf_4", "dette_brute"), ("qf_4", "tresorerie_et_placements"),

@@ -16,7 +16,9 @@ attendues ci-dessous ont été relues contre les dépôts — jamais recalculée
   §9 détenteurs uniques des règles de période, appelés et non recopiés ;
   §10 un reclassement d'analyste est PROPRE À L'ÉMETTEUR, motivé et sourcé (RVMD : Royalty Pharma) ;
   §11 la forme persistée : ce que relit le code (`valeur_du_socle`) et ce que lit l'analyste (le texte,
-      tamponné `mesure` — un agrégat déterministe vaut relevé, #110).
+      tamponné `mesure` — un agrégat déterministe vaut relevé, #110) ;
+  §12 gabarit 1.1.0 : le BILAN D'OUVERTURE, le CAPITAL EMPLOYÉ (convention maison) et les
+      PARTICIPATIONS de NVDA reclassées (deux recettes, période par période) — valeurs à la main.
 """
 from __future__ import annotations
 
@@ -80,7 +82,7 @@ def refuse(label: str, texte: str, motif: str) -> None:
 # ── §1 Le gabarit ──────────────────────────────────────────────────────────────────────────────────
 print("§1 le gabarit maison")
 gab = charger_gabarit()
-b.check(gab.version == "1.0.0", f"§1 version du gabarit lue ({gab.version})")
+b.check(gab.version == "1.1.0", f"§1 version du gabarit lue ({gab.version})")
 b.require([e for e in gab.etats], 3, "§1 trois états (résultat, bilan, flux)")
 b.check({e[0] for e in gab.etats} == {"compte_de_resultat", "bilan", "flux_de_tresorerie"},
         "§1 les trois états nommés")
@@ -94,7 +96,7 @@ refuse("reste partagé par deux équations",
        t.replace("reste: +autres_elements_financiers", "reste: +autres_elements_apres_impot"),
        "est déjà le reste")
 refuse("flux et instant mêlés",
-       t.replace("composantes: [+fournisseurs, +dette_financiere_courante]",
+       t.replace("composantes: [+fournisseurs, +dette_financiere_courante, +obligations_locatives_courantes]",
                  "composantes: [+fournisseurs, +dette_financiere_courante, +impot]"), "mêle un flux")
 refuse("ligne toujours vide (ni recette, ni calcul, ni reste)",
        t.replace("reste: -autres_charges_exploitation\n", "\n"), "toujours vides")
@@ -104,8 +106,10 @@ print("§2 RVMD — pré-revenus, dernier dépôt 10-Q")
 rv = reconstituer(faits("RVMD"))
 ids = [p.id for p in rv.periodes]
 b.check(ids == ["FY2021-12-31", "FY2022-12-31", "FY2023-12-31", "FY2024-12-31", "FY2025-12-31",
-                "TTM2026-06-30", "B2021-12-31", "B2022-12-31", "B2023-12-31", "B2024-12-31",
-                "B2025-12-31", "B2026-06-30"], f"§2 périodes lues au dépôt : {ids}")
+                "TTM2026-06-30", "B2020-12-31", "B2021-12-31", "B2022-12-31", "B2023-12-31",
+                "B2024-12-31", "B2025-12-31", "B2026-06-30"], f"§2 périodes lues au dépôt : {ids}")
+b.check([p.nature for p in rv.periodes if p.id == "B2020-12-31"] == ["ouverture"],
+        "§2 le bilan qui précède le premier exercice est le BILAN D'OUVERTURE (nature `ouverture`)")
 b.check(rv.ecarts() == [], f"§2 aucun écart de bouclage ({[c.equation for c in rv.ecarts()]})")
 b.check(len(rv.controles) >= 15, f"§2 les bouclages sont réellement exercés ({len(rv.controles)})")
 # Douze mois au 30/06/2026 : −1 223,03 M$ (pièce #787, relue au dépôt le 2026-10-04) — et non
@@ -234,8 +238,9 @@ b.check(proche(rv10.valeur("autres_passifs_non_courants", "B2026-06-30"), 189.3 
         and rv10.ecarts() == [], "§10 le reclassement SORT du solde (737,8 → 189,3 M$) et le bilan boucle toujours")
 b.check(cellule(rv, "financement_adosse_aux_redevances", "B2026-06-30").etat == "compte_zero",
         "§10 sans reclassement, la ligne n'existe pas pour l'émetteur (comptée zéro, jamais devinée)")
-b.check(charger_reclassements(1045810, gab) == () and charger_reclassements(None, gab) == (),
-        "§10 un reclassement ne vaut que pour SON émetteur (NVDA n'en hérite pas)")
+b.check(charger_reclassements(789019, gab) == () and charger_reclassements(None, gab) == ()
+        and "financement_adosse_aux_redevances" not in {r.ligne for r in charger_reclassements(1045810, gab)},
+        "§10 un reclassement ne vaut que pour SON émetteur (ni MSFT ni NVDA n'héritent de celui de RVMD)")
 with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8") as _f:
     _f.write('emetteurs:\n  "1": [{ligne: financement_adosse_aux_redevances, concepts: [X], motif: court, piece: x}]\n'
              '  "2": [{ligne: tresorerie, concepts: [X], motif: "un motif suffisamment long pour être lu comme écrit", '
@@ -274,5 +279,49 @@ b.check(derive_nature(entry_type="fact_financial", source_type="edgar_official",
         "§11 le texte du socle est tamponné `mesure` (aucun marqueur de dérivation, #78/#110)")
 b.check("1 296.3" in texte and "548.5" in texte and "Royalty Pharma" in texte,
         "§11 le texte montre les montants au dixième de million et le reclassement motivé")
+
+# ── §12 Gabarit 1.1.0 : ouverture, capital employé, participations ──────────────────────────────────
+print("§12 bilan d'ouverture, capital employé, participations")
+CIK_NVDA = json.loads((FIX / "NVDA.json").read_text(encoding="utf-8"))["cik"]
+rec_nv = charger_reclassements(CIK_NVDA, gab)
+b.check({r.ligne for r in rec_nv} == {"participations", "participations_courantes"},
+        f"§12 NVDA porte DEUX reclassements de participations ({[r.ligne for r in rec_nv]})")
+nv12 = reconstituer(faits("NVDA"), reclassements=rec_nv)
+b.check(nv12.ecarts() == [], f"§12 NVDA boucle toujours avec ses participations ({[c.equation for c in nv12.ecarts()]})")
+b.check(proche(nv12.valeur("participations", "B2026-07-26"), 47898 * M)
+        and proche(nv12.valeur("participations", "B2026-01-25"), 22251 * M)
+        and proche(nv12.valeur("participations", "B2024-01-28"), 1321 * M)
+        and cellule(nv12, "participations", "B2022-01-30").etat == "compte_zero",
+        "§12 participations non cotées : 1 321 (2024) · 22 251 · 47 898 M$ ; comptées zéro avant 2023")
+b.check(proche(nv12.valeur("participations_courantes", "B2026-07-26"), 42783 * M)
+        and cellule(nv12, "participations_courantes", "B2025-01-26").etat == "compte_zero",
+        "§12 participations cotées : 42 783 M$ au 26/07/2026, comptées zéro avant leur premier dépôt")
+# Capital employé au 25/01/2026, à la main : actif 206 803 − trésorerie 10 605 − placements 39 065
+# − participations 12 886 + 22 251 − droits d'utilisation 2 867 − fournisseurs 9 812 − autres passifs
+# courants (32 163 − 9 812 − 999 − loyers à un an 372 = 20 980) = 88 337 M$.
+ce26 = cellule(nv12, "capital_employe", "B2026-01-25")
+b.check(ce26.etat == "calcule" and proche(ce26.valeur, 88337 * M),
+        f"§12 capital employé NVDA au 25/01/2026 = 88 337 M$ ({ce26.valeur})")
+b.check(proche(nv12.valeur("capital_employe_hors_ecarts_d_acquisition", "B2026-01-25"), (88337 - 20832) * M),
+        "§12 hors écarts d'acquisition : 88 337 − 20 832 = 67 505 M$")
+b.check(proche(nv12.valeur("obligations_locatives_courantes", "B2026-01-25"), 372 * M)
+        and proche(nv12.valeur("autres_passifs_courants", "B2026-01-25"), 20980 * M),
+        "§12 les loyers à un an SORTENT du solde des autres passifs courants (372 M$)")
+nv_sans = reconstituer(faits("NVDA"))
+b.check(proche(nv_sans.valeur("capital_employe", "B2026-01-25"), (88337 + 12886 + 22251) * M),
+        "§12 sans reclassement, les participations restent DANS le capital employé (la convention ne devine pas)")
+ouv = [p for p in nv12.periodes if p.nature == "ouverture"]
+b.check([p.id for p in ouv] == ["B2021-01-31"] and proche(nv12.valeur("total_actif", "B2021-01-31"), 28791 * M),
+        f"§12 NVDA : bilan d'ouverture au 31/01/2021, total de l'actif 28 791 M$ ({[p.id for p in ouv]})")
+ms12 = reconstituer(faits("MSFT"))
+# MSFT au 30/06/2026 : 758 376 − 20 935 − 55 908 − 36 348 − 24 177 − 42 416 − 117 182 = 461 410 M$.
+b.check(proche(ms12.valeur("capital_employe", "B2026-06-30"), 461410 * M),
+        f"§12 capital employé MSFT au 30/06/2026 = 461 410 M$ ({ms12.valeur('capital_employe', 'B2026-06-30')})")
+b.check([p.id for p in ms12.periodes if p.nature == "ouverture"] == ["B2021-06-30"],
+        "§12 MSFT : bilan d'ouverture au 30/06/2021")
+fx = dict(faits("RVMD"))
+fx = {c: [p for p in pts if (p.get("end") or "") >= "2021-06-01"] for c, pts in fx.items()}
+b.check(not any(p.nature == "ouverture" for p in reconstituer(fx).periodes),
+        "§12 sans exercice antérieur déposé, pas de bilan d'ouverture inventé")
 
 sys.exit(b.summary())
