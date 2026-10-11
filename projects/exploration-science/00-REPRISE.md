@@ -1,9 +1,10 @@
 ---
 project: exploration-science
-updated: 2026-10-10
+updated: 2026-10-11
 role: >
-  Reprise du prototype « Explorateur de systèmes » (Phase 0). Jalons 1 à 3 validés, jalon 4
-  (plongée niveaux 2 et 3, lentille Ondes, curseurs, barre d'échelle) livré, en attente de validation.
+  Reprise du prototype « Explorateur de systèmes » (Phase 0). Jalons 1 à 4 validés (le 4 :
+  plongée niveaux 2 et 3, lentille Ondes, curseurs, barre d'échelle). Format des termes explorables
+  soumis, en attente d'arbitrage.
 ---
 
 # Prompt de reprise — exploration-science
@@ -16,7 +17,7 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - [x] 1. Schémas et exemples de contenu — **livré et validé (2026-10-10), format `0.2`**
 - [x] 2. Moteur affichant une scène de test, avec caméra contrainte — **livré et validé (2026-10-10)**
 - [x] 3. Niveau 1 Starlink complet, avec le Play — **livré et validé (2026-10-10)**
-- [x] 4. Plongée vers les niveaux 2 et 3, lentille Ondes et curseurs — **livré 2026-10-10, à valider**
+- [x] 4. Plongée vers les niveaux 2 et 3, lentille Ondes et curseurs — **livré 2026-10-10, validé 2026-10-11**
 - [ ] 5. Scène de contrôle (ciel bleu : ébauche déjà au format). À traiter ici : plan de caméra « depuis l'observateur, vers le ciel » (la caméra ne sait qu'orbiter) et barre d'échelle quand molécules agrandies et atmosphère cohabitent.
 
 ## État
@@ -54,4 +55,4 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - `blue-sky` : sources partielles (bornes du visible, taille des molécules, épaisseur de l'atmosphère).
 
 ## Où démarrer
-Attendre la validation du jalon 4 et la réponse sur `node.summaryKey`, puis jalon 5 : scène de contrôle ciel bleu (composants `star`, `atmosphere-layer`, `molecule-cloud`, `observer`, simulateur `rayleigh-scattering` qui alimente la lentille `waves` via `wave-field`, plan « depuis l'observateur », barre d'échelle avec objets agrandis). Après tout changement de contenu : `npm run review`.
+Attendre la réponse sur `node.summaryKey` (expliquée le 2026-10-11 : où vit la définition, que faire quand le nœud cible n'est pas écrit), puis jalon 5 : scène de contrôle ciel bleu (composants `star`, `atmosphere-layer`, `molecule-cloud`, `observer`, simulateur `rayleigh-scattering` qui alimente la lentille `waves` via `wave-field`, plan « depuis l'observateur », barre d'échelle avec objets agrandis). Après tout changement de contenu : `npm run review`.
