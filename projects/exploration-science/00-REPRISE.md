@@ -10,7 +10,8 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous).**
+> **Roadmap active : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous)** — reste le jalon 6 (déploiement, essai iPad, tests utilisateurs : hors de l'agent).
+> **En parallèle : `roadmap/phase1-generator.md`** (validée le 2026-10-11) — capacité en cours : §2 (essai de génération).
 
 Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Brief initial : `PREMIER-MESSAGE.md`.
 
@@ -50,6 +51,15 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - Page de revue : `npm run review` → `dist-review/index.html` (5 nœuds). `content/validation.ts` doit rester sans import relatif : le script tourne sous Node sans bundler. Publiée sur https://claude.ai/artifact/9TpKGxucXtCtH5uMRcBGPo, **mais bloquée depuis le jalon 4** : l'outil de publication la refuse (y compris à une nouvelle adresse) en la prenant pour une page « artifact-pr-review ». La version en ligne date du jalon 3.
 - Dev : en mode `vite`, `window.xs` expose `engine`, `player`, `scene()`, `select`, `setLevel`, `startMainTour` (pilotage headless, captures Playwright).
 - Déploiement (jalon 6) : `Dockerfile` (build Vite sous node:22-alpine → nginx:1.27-alpine), `deploy/nginx.conf` (assets hachés en cache immuable, page en `no-cache`, `/health`, `X-Robots-Tag: noindex`), `docker-compose.yml` (conteneur `exploration-science`, réseau `coolify`, middlewares `xsgzip`/`xsredirect`, domaine `explorer.jlmvpscode.duckdns.org`, public sans auth : aucune donnée privée), entrée dans les tables de `infrastructure/compose-deploy.sh` (pas de `.env`). Build de production vérifié en local (`vite preview` + Chromium headless, aucune erreur) ; image Docker **pas construite** (pas de démon Docker dans la session cloud).
+
+## Générateur (Phase 1, `generator/`)
+- Python 3.12+, SDK `anthropic` 1.x (client HTTP `httpx2`). Venv local : `.venv/` à la racine du projet (ignoré). `pip install -e "generator[test]"`, tests : `cd generator && ../.venv/bin/python -m pytest`.
+- Principe : le générateur est du code qui appelle l'API ; une réponse écrite dans Claude Code passe par l'exécuteur `manual` et le run est marqué `reproducible: false`. Exécuteurs : `anthropic` (streaming, réflexion adaptative, effort par étape, cache du prompt système, repli serveur `fallbacks: "default"`), `manual` (écrit `request.md`, attend `response.txt`), `replay` (rejoue un run, refuse si l'empreinte de la requête diffère). Un appel déjà enregistré avec la même empreinte n'est pas refait (reprise sans repayer).
+- Journal : `generator/runs/<run>/calls/<nn>-<étape>/{request.json,response.json}`, `run.json` (exécuteur, reproductible, coût total, erreurs), `output/<nœud>/`. Les runs sont committés : c'est la trace reproductible.
+- Étape `node` : prompts `generator/prompts/node.*.md` (système stable = schémas + catalogue + exemples, mis en cache ; utilisateur = question, parent, nœuds existants, sources). Sortie validée par `scripts/validate-node.ts` (même validateur que les tests, dans le contexte du graphe fait main) ; erreurs renvoyées au modèle, 2 réparations au plus. Le nœud cible n'est jamais montré en exemple.
+- Clé : `generator/.env` (`ANTHROPIC_API_KEY=…`, chmod 600, ignoré), lu par la CLI. L'URL de l'API est épinglée (`XS_ANTHROPIC_BASE_URL` pour la changer) : un `ANTHROPIC_BASE_URL` de l'environnement de dev n'est pas suivi.
+- Lancer l'essai réel sur le VPS (Node + Python requis) :
+  `python3 -m venv .venv && .venv/bin/pip install -e generator && npm ci && .venv/bin/python -m xs_generator node --id starlink-phased-array --question "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?" --parent starlink-terminal:phased-array --sources content/nodes/starlink-phased-array/sources.json --runner anthropic --run-id <date>-phased-array-anthropic`
 
 ## Reste à faire / dettes ouvertes
 - **Déployer depuis le VPS** : `git pull` puis `infrastructure/compose-deploy.sh exploration-science --rebuild-only` (la config est déjà committée). Le sous-domaine DuckDNS résout déjà vers le VPS (joker) ; Let's Encrypt émet le certificat au premier appel.
