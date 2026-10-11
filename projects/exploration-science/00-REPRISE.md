@@ -2,8 +2,8 @@
 project: exploration-science
 updated: 2026-10-11
 role: >
-  Reprise du prototype « Explorateur de systèmes » (Phase 0). Jalons 1 à 4 validés ; jalon 5 (scène
-  de contrôle ciel bleu) livré, à valider. Termes explorables : format `summaryKey` validé, à
+  Reprise du prototype « Explorateur de systèmes » (Phase 0). Jalons 1 à 5 validés (le 5 : scène de
+  contrôle ciel bleu, format 0.2 inchangé). Termes explorables : format `summaryKey` validé, à
   implémenter avec un nœud `wave-interference` minimal (jalon 5 bis).
 ---
 
@@ -18,7 +18,7 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - [x] 2. Moteur affichant une scène de test, avec caméra contrainte — **livré et validé (2026-10-10)**
 - [x] 3. Niveau 1 Starlink complet, avec le Play — **livré et validé (2026-10-10)**
 - [x] 4. Plongée vers les niveaux 2 et 3, lentille Ondes et curseurs — **livré 2026-10-10, validé 2026-10-11**
-- [x] 5. Scène de contrôle ciel bleu — **livré 2026-10-11, à valider**. Le format `0.2` a suffi : aucun schéma modifié.
+- [x] 5. Scène de contrôle ciel bleu — **livré et validé (2026-10-11)**. Le format `0.2` a suffi : aucun schéma modifié.
 - [ ] 5 bis. Termes explorables cliquables : champ `node.summaryKey` (validé le 2026-10-11 : la définition vit dans le nœud cible, 3 niveaux) + nœud principe `wave-interference` minimal (réutilise `phased-array-wave` et la lentille Ondes, cité 6 fois depuis Starlink). Parcours à éprouver : pause, carte, Explorer, Retour à l'étape, liste « À explorer » en fin de Play. Mettre à jour `docs/SPEC.md` (ligne Termes explorables) une fois livré.
 
 ## État
@@ -62,4 +62,4 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - Couleur du ciel : diffusion simple seulement (pas de diffusion multiple ni d'ozone) ; l'horizon blanchit moins que le vrai.
 
 ## Où démarrer
-Attendre la validation du jalon 5, puis jalon 5 bis (termes explorables + `wave-interference`). Ensuite : aperçu statique déployable (compose + `compose-deploy.sh`) et tests utilisateurs. Après tout changement de contenu : `npm run review`.
+Jalon 5 bis (termes explorables + `wave-interference`). Ensuite : aperçu statique déployable (compose + `compose-deploy.sh`) et tests utilisateurs. Après tout changement de contenu : `npm run review`.
