@@ -60,6 +60,19 @@ describe("graph of nodes", () => {
     child.scene.node.parent = { node: "starlink-terminal", entity: "router" };
     expect(graphErrors([loadNode("starlink-terminal"), child]).join("\n")).toMatch(/no composedOf link/);
   });
+
+  it("requires a summaryKey on a node reached by an explorable term", () => {
+    const principle = structuredClone(loadNode("wave-interference"));
+    delete principle.scene.node.summaryKey;
+    expect(graphErrors([loadNode("starlink-terminal"), principle]).join("\n")).toMatch(/wave-interference: explorable from 'starlink-terminal' but has no summaryKey/);
+  });
+
+  it("requires the link to an existing explorable node to be available", () => {
+    const terminal = structuredClone(loadNode("starlink-terminal"));
+    const link = terminal.scene.links.find((l: { to: string }) => l.to === "wave-interference");
+    delete link.available;
+    expect(graphErrors([terminal, loadNode("wave-interference")]).join("\n")).toMatch(/mark its link available/);
+  });
 });
 
 describe("validator catches broken content", () => {

@@ -39,7 +39,15 @@ export interface Style {
 
 export interface Scene {
   formatVersion: string;
-  node: { id: string; kind: "system" | "principle"; version: number; status: string; parent?: { node: string; entity: string } };
+  node: {
+    id: string;
+    kind: "system" | "principle";
+    version: number;
+    status: string;
+    parent?: { node: string; entity: string };
+    /** One-sentence definition, shown on the card of an explorable term leading here. */
+    summaryKey?: string;
+  };
   scale: { metersPerUnit: number };
   environment: { lighting: "daylight" | "dusk" | "space" | "studio"; background: string };
   style?: Style;

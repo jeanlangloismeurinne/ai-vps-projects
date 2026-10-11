@@ -286,6 +286,7 @@ export class ContentValidator {
 /** Every text key the scene references. */
 export function sceneTextKeys(scene: Json): Set<string> {
   const keys = new Set<string>();
+  if (scene.node.summaryKey) keys.add(scene.node.summaryKey);
   for (const e of scene.entities) {
     if (e.labelKey) keys.add(e.labelKey);
     if (e.descriptionKey) keys.add(e.descriptionKey);
@@ -430,13 +431,36 @@ export function graphErrors(nodes: NodeFiles[]): string[] {
       if (scene.style) errors.push(`${id}: a child node inherits its parent's style and must not declare one`);
     }
     for (const link of scene.links ?? []) {
-      if (link.kind !== "composedOf" || !link.available) continue;
+      if (!link.available) continue;
       const child = byId.get(link.to);
       if (!child) errors.push(`${id}: link to '${link.to}' is marked available but the node does not exist`);
-      else if (child.node.parent?.node !== id || child.node.parent?.entity !== link.from) {
+      else if (link.kind === "composedOf" && (child.node.parent?.node !== id || child.node.parent?.entity !== link.from)) {
         errors.push(`${id}: '${link.to}' does not name '${id}' / '${link.from}' as its parent`);
       }
     }
   }
+  // Explorable terms (spec): the card shows the target's own one-sentence definition.
+  for (const { scene, texts } of nodes) {
+    const available = new Set((scene.links ?? []).filter((l: Json) => l.available).map((l: Json) => l.to));
+    for (const target of explorableTargets(texts)) {
+      const node = byId.get(target);
+      if (available.has(target) && !node) continue; // reported above
+      if (node && !available.has(target)) errors.push(`${scene.node.id}: '${target}' exists, mark its link available so its terms become clickable`);
+      if (node && !node.node.summaryKey) errors.push(`${target}: explorable from '${scene.node.id}' but has no summaryKey`);
+    }
+  }
   return errors;
+}
+
+/** Nodes the explorable terms of a node's texts point to. */
+function explorableTargets(texts: Record<string, Json>): Set<string> {
+  const targets = new Set<string>();
+  for (const t of Object.values(texts)) {
+    for (const entries of [t.common, ...LEVELS.map((l) => t.levels[l])]) {
+      for (const entry of Object.values<any>(entries)) {
+        if (typeof entry === "object") for (const link of entry.links ?? []) targets.add(link.node);
+      }
+    }
+  }
+  return targets;
 }

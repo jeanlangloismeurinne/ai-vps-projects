@@ -115,6 +115,10 @@
         "version": { "type": "integer", "minimum": 1 },
         "status": { "enum": ["draft", "review", "published"] },
         "wikidata": { "type": "string", "pattern": "^Q[0-9]+$" },
+        "summaryKey": {
+          "$ref": "#/$defs/textKey",
+          "description": "One-sentence definition of the node, resolved per level in its own texts. Shown on the card of an explorable term that leads here, from any other node. Required as soon as a term points to the node."
+        },
         "parent": {
           "description": "Set on a child node: the parent node and the entity it zooms into. The child inherits that entity's geometry and style (rule 9) and its origin is aligned on it during the dive.",
           "type": "object",
