@@ -7,7 +7,6 @@ import sceneSchema from "../../../schemas/scene.schema.json" with { type: "json"
 import catalogueSchema from "../../../schemas/catalogue.schema.json" with { type: "json" };
 import textsSchema from "../../../schemas/texts.schema.json" with { type: "json" };
 import sourcesSchema from "../../../schemas/sources.schema.json" with { type: "json" };
-import { derivedTextKey } from "../ui/texts";
 
 export const LEVELS = ["discovery", "essential", "advanced"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -318,6 +317,14 @@ export function resolveText(texts: Json, level: Level, key: string): unknown {
   return texts.levels[level][key] ?? texts.common[key];
 }
 
+
+/**
+ * Text naming the value a control drives in turn (optional), e.g. steeringAngleDeg -> derived.steering-angle-deg.
+ * Same rule as ui/texts.ts: this module stays free of relative imports so Node runs it (npm run review).
+ */
+export function derivedTextKey(param: string): string {
+  return `derived.${param.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+}
 
 function textKeyErrors(scene: Json, texts: Json, optional: Set<string>): string[] {
   const errors: string[] = [];

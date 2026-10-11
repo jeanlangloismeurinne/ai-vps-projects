@@ -115,3 +115,11 @@ describe("validator catches broken catalogue", () => {
     expect(new ContentValidator(broken).catalogueErrors().join("\n")).toMatch(/is not defined in terms/);
   });
 });
+
+describe("derived value texts", () => {
+  it("are named the same way by the engine and the validator", async () => {
+    const ui = await import("../engine/src/ui/texts");
+    const validation = await import("../engine/src/content/validation");
+    for (const param of ["steeringAngleDeg", "phaseStepDeg", "x"]) expect(ui.derivedTextKey(param)).toBe(validation.derivedTextKey(param));
+  });
+});
