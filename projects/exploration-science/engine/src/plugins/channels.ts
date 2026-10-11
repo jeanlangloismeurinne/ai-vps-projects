@@ -41,6 +41,10 @@ export interface WaveField {
    * follows the Rayleigh pattern √((1 + cos²Θ) / 2), Θ from the incident direction.
    */
   discRadius?: number;
+  /** World point the incident light comes from (the Sun), drawn as a ray into the sources. */
+  from?: Vector3;
+  /** World point the scattered light of interest goes to (the observer's eyes), drawn as a ray. */
+  towards?: Vector3;
 }
 
 export const WAVE_FIELD = "wave-field";

@@ -19,7 +19,7 @@
     "entity.observer.description": "Ce que voit cette personne, c'est la lumière qui arrive jusqu'à ses yeux.",
     "entity.sun.description": "Le Soleil envoie une lumière blanche, mélange de toutes les couleurs.",
     "entity.atmosphere.description": "Une couche d'air de quelques dizaines de kilomètres d'épaisseur qui entoure la Terre.",
-    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière : dans la loupe, elles sont encore grossies, sinon on ne les verrait pas."
+    "entity.air.description": "Surtout de l'azote et de l'oxygène. Des molécules bien plus petites que la longueur d'onde de la lumière : dans la loupe, elles sont encore grossies, sinon on ne les verrait pas. Avec les ondes lumineuses, la flèche blanche est la lumière du Soleil, la flèche colorée celle que la molécule renvoie vers les yeux de l'observateur."
   },
   "levels": {
     "discovery": {

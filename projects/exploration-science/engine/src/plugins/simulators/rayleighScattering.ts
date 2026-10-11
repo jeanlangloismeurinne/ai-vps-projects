@@ -1,4 +1,4 @@
-import { BufferAttribute, Mesh, Vector3, type Object3D } from "three";
+import { Box3, BufferAttribute, Mesh, Vector3, type Object3D } from "three";
 import type { BoundEntity, SimulatorPlugin } from "../../core/registry";
 import { WAVE_FIELD, type WaveField } from "../channels";
 import { normalised, planck, spectrumToXyz, toHex, VISIBLE_MIN_NM, WAVELENGTHS_NM, wavelengthColour, xyzToLinearRgb } from "../light";
@@ -131,6 +131,8 @@ export const rayleighScattering: SimulatorPlugin = {
     const world = new Vector3();
     observer.node.updateWorldMatrix(true, true);
     observer.node.getWorldPosition(eye);
+    // The eyes, near the top of the observer (for the ray drawn to them).
+    const eyes = eye.clone().setY(eye.y + new Box3().setFromObject(observer.object).max.y * 0.93);
     // The Sun keeps the azimuth and distance the scene gives it; the simulator sets its elevation.
     sun.node.updateWorldMatrix(true, false);
     const initialOffset = sun.node.getWorldPosition(new Vector3()).sub(eye);
@@ -215,9 +217,10 @@ export const rayleighScattering: SimulatorPlugin = {
         const bubble = visibleBubble();
         if (!bubble?.magnifier || params.airDensityFactor <= 0) return undefined;
         const origin = bubble.node.getWorldPosition(new Vector3());
-        const incident = origin.clone().sub(sun.node.getWorldPosition(new Vector3())).normalize();
+        const sunAt = sun.node.getWorldPosition(new Vector3());
+        const incident = origin.clone().sub(sunAt).normalize();
         // The slice holds the incoming light and the line towards the observer: the light that reaches the eye.
-        const normal = eye.clone().sub(origin).normalize();
+        const normal = eyes.clone().sub(origin).normalize();
         const axis = incident.clone().addScaledVector(normal, -incident.dot(normal));
         if (axis.lengthSq() < 1e-9) axis.set(1, 0, 0).addScaledVector(normal, -normal.x);
         axis.normalize();
@@ -235,6 +238,8 @@ export const rayleighScattering: SimulatorPlugin = {
           colour: wavelengthColour(params.wavelengthNm),
           incident: { direction: incident, amplitude: 1 },
           discRadius: bubble.magnifier.radius,
+          from: sunAt,
+          towards: eyes,
         };
         return field;
       },

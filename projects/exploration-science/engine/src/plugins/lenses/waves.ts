@@ -1,5 +1,6 @@
 import {
   Color,
+  ConeGeometry,
   CylinderGeometry,
   DoubleSide,
   Group,
@@ -34,7 +35,8 @@ const CREST = "#ffd27a";
 const TROUGH = "#3a7bd5";
 /** In the colour of the light, troughs are the crest colour this much darker. */
 const TROUGH_SHADE = 0.12;
-const ROD_RADIUS = 0.003; // beam marker radius, as a fraction of the slice height
+const ROD_RADIUS = 0.003;
+const RAY_RADIUS = 0.006; // light-path markers around a scatterer, as a fraction of the disc diameter // beam marker radius, as a fraction of the slice height
 
 /**
  * Scattered wave around a single source driven by an incident plane wave, at
@@ -137,10 +139,15 @@ void main() {
 export const waves: LensPlugin = {
   id: "waves",
   create(ctx) {
+    // The lens object stays in world space; the field slice has its own frame.
     const group = new Group();
     group.name = "lens:waves";
     group.visible = false;
-    group.matrixAutoUpdate = false;
+    const slice = new Group();
+    slice.matrixAutoUpdate = false;
+    group.add(slice);
+    const rays = new Group();
+    group.add(rays);
 
     const uniforms = {
       uWavelength: { value: 1 },
@@ -163,7 +170,7 @@ export const waves: LensPlugin = {
     const planeMaterial = new ShaderMaterial({ uniforms, vertexShader: VERTEX, fragmentShader: FRAGMENT, transparent: true, depthWrite: false, side: DoubleSide });
     const plane = new Mesh(planeGeometry, planeMaterial);
     plane.renderOrder = 10;
-    group.add(plane);
+    slice.add(plane);
 
     // Beam markers: a thin rod along each predicted beam.
     const rodGeometry = new CylinderGeometry(1, 1, 1, 8);
@@ -176,9 +183,36 @@ export const waves: LensPlugin = {
         const r = new Mesh(rodGeometry, mainMaterial);
         r.renderOrder = 11;
         rods.push(r);
-        group.add(r);
+        slice.add(r);
       }
       return rods[i]!;
+    };
+
+    // A ray: a thin rod from one world point to another, with an arrowhead at the end.
+    const coneGeometry = new ConeGeometry(1, 1, 12);
+    coneGeometry.translate(0, -0.5, 0);
+    const incomingMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+    const outgoingMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false });
+    const makeRay = (material: MeshBasicMaterial) => {
+      const ray = new Group();
+      const shaft = new Mesh(rodGeometry, material);
+      const head = new Mesh(coneGeometry, material);
+      shaft.renderOrder = head.renderOrder = 13;
+      ray.add(shaft, head);
+      rays.add(ray);
+      return ray;
+    };
+    const incoming = makeRay(incomingMaterial);
+    const outgoing = makeRay(outgoingMaterial);
+    const placeRay = (ray: Group, from: Vector3, to: Vector3, radius: number, headLength: number) => {
+      const d = to.clone().sub(from);
+      const length = d.length();
+      ray.position.copy(from);
+      ray.quaternion.copy(q.setFromUnitVectors(up, d.normalize()));
+      const [shaft, head] = ray.children as [Mesh, Mesh];
+      shaft.scale.set(radius, Math.max(length - headLength, 0), radius);
+      head.scale.set(radius * 3, headLength, radius * 3);
+      head.position.set(0, length, 0);
     };
 
     const basis = new Matrix4();
@@ -234,8 +268,19 @@ export const waves: LensPlugin = {
         // Slice plane: x along the line of sources, y along the normal.
         side.crossVectors(f.axis, f.normal).normalize();
         basis.makeBasis(f.axis, f.normal, side).setPosition(f.origin);
-        group.matrix.copy(basis);
-        group.matrixWorldNeedsUpdate = true;
+        slice.matrix.copy(basis);
+        slice.matrixWorldNeedsUpdate = true;
+        // Light paths around a scatterer: where the light comes from, where the scattered light we follow goes.
+        rays.visible = disc;
+        if (disc) {
+          const r = h * RAY_RADIUS;
+          incomingMaterial.color.setRGB(1, 1, 1);
+          outgoingMaterial.color.copy(uniforms.uCrest.value);
+          if (f.from) placeRay(incoming, f.from, f.origin, r, f.discRadius! * 0.15);
+          incoming.visible = f.from !== undefined;
+          if (f.towards) placeRay(outgoing, f.origin, f.towards, r, f.discRadius! * 0.15);
+          outgoing.visible = f.towards !== undefined;
+        }
         plane.scale.set(w, h, 1);
         plane.position.set(0, disc ? -h / 2 : 0, 0);
         // The incident wave, in slice coordinates (x along the axis, y along the normal).
@@ -266,6 +311,9 @@ export const waves: LensPlugin = {
         planeGeometry.dispose();
         planeMaterial.dispose();
         rodGeometry.dispose();
+        coneGeometry.dispose();
+        incomingMaterial.dispose();
+        outgoingMaterial.dispose();
         mainMaterial.dispose();
         lobeMaterial.dispose();
       },
