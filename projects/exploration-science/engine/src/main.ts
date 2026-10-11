@@ -14,6 +14,7 @@ import { lookup } from "./ui/texts";
 const DEFAULT_NODE = "starlink-terminal";
 const LANG = "fr";
 const LEVEL_STORAGE_KEY = "xs-level";
+const SAVED_STORAGE_KEY = "xs-to-explore";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const source = new StaticContentSource();
@@ -35,6 +36,12 @@ let path: string[] = [];
 let navigating = false;
 /** Casing opened to show a selected inner component, closed again when the selection moves on. */
 let openedCasing: string | null = null;
+/** Explorable term whose card is open; resume: the card paused the Play. */
+let termCard: { node: string; resume: boolean } | null = null;
+/** Where « Retour » leads after « Explorer »: the node, and the Play step interrupted (spec, Termes explorables). */
+let returns: { node: string; tourId?: string; index?: number; label: string }[] = [];
+/** « Plus tard »: nodes kept for the end of the Play. */
+let saved: string[] = readSaved();
 
 const DIVE_FLIGHT_S = 0.9;
 const INSIDE_VIEW_ELEVATION_DEG = 55;
@@ -66,9 +73,10 @@ const player = new TourPlayer(
       refreshPlayer();
     },
     onState: () => refreshPlayer(),
-    onEnd: () => {
+    onEnd: (tour, completed) => {
       overlay.setSubtitle(undefined);
       refreshPlayer();
+      if (completed && !tour.autoStart) void showSaved();
     },
   },
 );
@@ -84,7 +92,10 @@ engine.onLensChange = () => refreshLenses();
 
 const overlay = new Overlay(app, source.nodeIds(), {
   onHome: () => engine.goHome(),
-  onNode: (id) => void open(id),
+  onNode: (id) => {
+    returns = [];
+    void open(id);
+  },
   onLevel: (l) => setLevel(l),
   onPlayPause: () => {
     const current = player.current;
@@ -110,6 +121,27 @@ const overlay = new Overlay(app, source.nodeIds(), {
   },
   onDive: () => void dive(),
   onAscend: (id) => void climb(id),
+  onTerm: (id) => void openTerm(id),
+  onExplore: () => {
+    const card = termCard;
+    if (card) void explore(card.node, true);
+  },
+  onLater: () => {
+    if (!termCard) return;
+    if (!saved.includes(termCard.node)) saved = [...saved, termCard.node];
+    writeSaved();
+    closeTerm();
+  },
+  onCloseTerm: () => closeTerm(),
+  onReturn: () => void goBack(),
+  onExploreSaved: (id) => void explore(id, false),
+  onCloseSaved: () => overlay.showSaved(null),
+});
+
+overlay.setTermOptions({
+  live: (node) => !introPlaying() && explorable(node),
+  offReason: (node) => (explorable(node) ? "À explorer après la visite d'arrivée" : "Notion à explorer (nœud pas encore écrit)"),
+  onTerm: (node) => void openTerm(node),
 });
 
 function bindStage() {
@@ -142,6 +174,24 @@ function setLevel(l: Level): void {
   overlay.setSubtitle(current ? lookup(texts, level, current.step.textKey) : undefined);
   refreshLabels();
   showCard();
+  if (termCard) void renderTermCard(termCard.node);
+}
+
+function readSaved(): string[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(SAVED_STORAGE_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSaved(): void {
+  try {
+    localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(saved));
+  } catch {
+    // Kept for this visit only.
+  }
 }
 
 function yieldToUser(): void {
@@ -230,6 +280,94 @@ function diveTarget(entityId: string): { node: string; available: boolean } | un
   const link = scene?.links?.find((l) => l.kind === "composedOf" && l.from === entityId);
   if (!link) return undefined;
   return { node: link.to, available: (link.available ?? false) && source.nodeIds().includes(link.to) };
+}
+
+// ---- Explorable terms (spec, Briques d'interaction) ----
+
+function introPlaying(): boolean {
+  return player.state !== "idle" && (player.current?.tour.autoStart ?? false);
+}
+
+/** A term can be opened once its link is available and the node is in the content. */
+function explorable(node: string): boolean {
+  const linked = scene?.links?.some((l) => l.to === node && l.available) ?? false;
+  return linked && source.nodeIds().includes(node);
+}
+
+async function nodeTitle(id: string): Promise<string> {
+  return (await source.node(id)).texts[LANG]?.question ?? id;
+}
+
+async function renderTermCard(node: string): Promise<void> {
+  const bundle = await source.node(node);
+  if (termCard?.node !== node) return;
+  overlay.showTermCard({
+    title: bundle.texts[LANG]?.question ?? node,
+    summary: lookup(bundle.texts[LANG], level, bundle.scene.node.summaryKey),
+    saved: saved.includes(node),
+  });
+}
+
+/** Touching a term pauses the Play and opens its card. */
+async function openTerm(node: string): Promise<void> {
+  if (navigating || introPlaying() || !explorable(node)) return;
+  const resume = termCard?.resume ?? player.state === "playing";
+  if (player.state === "playing") player.pause();
+  select(null);
+  overlay.showSaved(null);
+  termCard = { node, resume };
+  await renderTermCard(node);
+}
+
+function closeTerm(): void {
+  const card = termCard;
+  termCard = null;
+  overlay.showTermCard(null);
+  if (card?.resume && player.state === "paused") player.resume();
+}
+
+/** Opens the node a term leads to; « Retour » comes back to the Play step left. */
+async function explore(node: string, fromTerm: boolean): Promise<void> {
+  if (navigating || !scene) return;
+  const current = fromTerm ? player.current : null;
+  returns = [
+    ...returns,
+    {
+      node: scene.node.id,
+      tourId: current?.tour.id,
+      index: current?.index,
+      label: current ? `↩ Reprendre la visite (étape ${current.index + 1}/${current.tour.steps.length})` : `↩ Revenir à « ${texts?.question ?? scene.node.id} »`,
+    },
+  ];
+  saved = saved.filter((id) => id !== node);
+  writeSaved();
+  termCard = null;
+  overlay.showTermCard(null);
+  overlay.showSaved(null);
+  navigating = true;
+  try {
+    player.stop();
+    await cut(() => open(node));
+  } finally {
+    navigating = false;
+  }
+}
+
+async function goBack(): Promise<void> {
+  const back = returns.at(-1);
+  if (navigating || !back) return;
+  returns = returns.slice(0, -1);
+  navigating = true;
+  try {
+    await cut(() => open(back.node, { resume: back.tourId === undefined ? undefined : { tourId: back.tourId, index: back.index ?? 0 } }));
+  } finally {
+    navigating = false;
+  }
+}
+
+async function showSaved(): Promise<void> {
+  const items = await Promise.all(saved.filter((id) => source.nodeIds().includes(id)).map(async (id) => ({ nodeId: id, title: await nodeTitle(id) })));
+  if (player.state === "idle") overlay.showSaved(items);
 }
 
 // ---- Lenses and sliders ----
@@ -352,10 +490,13 @@ async function contentErrors(bundle: NodeBundle): Promise<string[]> {
   return validator.nodeErrors({ dir, scene: bundle.scene, texts: bundle.texts, sources: bundle.sources as Record<string, unknown> });
 }
 
-async function open(id: string, arrival: { comingBackFrom?: string } = {}): Promise<void> {
+async function open(id: string, arrival: { comingBackFrom?: string; resume?: { tourId: string; index: number } } = {}): Promise<void> {
   try {
     player.stop();
     openedCasing = null;
+    termCard = null;
+    overlay.showTermCard(null);
+    overlay.showSaved(null);
     catalogue ??= await source.catalogue();
     const { bundle, built, simulation, missingLenses } = await engine.load(id);
     scene = bundle.scene;
@@ -379,6 +520,7 @@ async function open(id: string, arrival: { comingBackFrom?: string } = {}): Prom
     } catch {
       // Sandboxed previews may refuse URL changes.
     }
+    overlay.setReturn(returns.at(-1)?.label ?? null);
     path = await ancestry(id);
     void refreshBreadcrumb();
     refreshLenses();
@@ -389,6 +531,13 @@ async function open(id: string, arrival: { comingBackFrom?: string } = {}): Prom
       engine.jumpTo(close);
       select(back);
       refreshPlayer();
+      return;
+    }
+    // Back from an explored term: the Play picks up at the step it left (spec, Termes explorables).
+    const resume = arrival.resume;
+    const resumed = resume && scene.tours.find((t) => t.id === resume.tourId);
+    if (resume && resumed) {
+      player.play(resumed, Math.min(resume.index, resumed.steps.length - 1));
       return;
     }
     const intro: Tour | undefined = scene.tours.find((t) => t.autoStart);
@@ -404,4 +553,4 @@ overlay.setLevel(level);
 void open(new URLSearchParams(location.search).get("node") ?? DEFAULT_NODE);
 
 // Dev only: a handle for driving the app from the console or a headless browser.
-if (import.meta.env.DEV) Object.assign(window, { xs: { engine, player, scene: () => scene, select, setLevel, startMainTour } });
+if (import.meta.env.DEV) Object.assign(window, { xs: { engine, player, scene: () => scene, select, setLevel, startMainTour, openTerm, explore, goBack } });

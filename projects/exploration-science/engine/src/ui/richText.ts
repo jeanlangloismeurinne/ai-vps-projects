@@ -9,8 +9,17 @@ const math = (tex: string) => {
   return span;
 };
 
+/** How explorable terms behave where the text is shown. */
+export interface TermOptions {
+  /** Clickable now: the target node exists and no arrival tour is playing. */
+  live(node: string): boolean;
+  /** Why a term is not clickable, as a tooltip. */
+  offReason(node: string): string;
+  onTerm(node: string): void;
+}
+
 /** Plain text with the explorable phrases wrapped (first occurrence of each). */
-function textWithLinks(text: string, links: { phrase: string; node: string }[]): Node[] {
+function textWithLinks(text: string, links: { phrase: string; node: string }[], options?: TermOptions): Node[] {
   const nodes: Node[] = [];
   let rest = text;
   while (rest.length > 0) {
@@ -21,10 +30,21 @@ function textWithLinks(text: string, links: { phrase: string; node: string }[]):
     }
     if (!first) break;
     nodes.push(document.createTextNode(rest.slice(0, first.at)));
-    const term = Object.assign(document.createElement("span"), { className: "xs-term", textContent: first.link.phrase });
-    term.dataset.node = first.link.node;
-    // Spec, Termes explorables: the card needs the target node, not written yet.
-    term.title = "Notion à explorer (nœud pas encore écrit)";
+    const node = first.link.node;
+    const live = options?.live(node) ?? false;
+    // Spec, Termes explorables: a button when the target can be opened, else underlined only.
+    const term = Object.assign(document.createElement(live ? "button" : "span"), { className: live ? "xs-term live" : "xs-term", textContent: first.link.phrase });
+    term.dataset.node = node;
+    if (live) {
+      (term as HTMLButtonElement).type = "button";
+      term.title = "Toucher pour explorer cette notion";
+      term.addEventListener("click", (event) => {
+        event.stopPropagation();
+        options!.onTerm(node);
+      });
+    } else {
+      term.title = options?.offReason(node) ?? "Notion à explorer (nœud pas encore écrit)";
+    }
     nodes.push(term);
     rest = rest.slice(first.at + first.link.phrase.length);
     links = links.filter((l) => l !== first!.link);
@@ -34,7 +54,7 @@ function textWithLinks(text: string, links: { phrase: string; node: string }[]):
 }
 
 /** Displayed text: `$…$` segments typeset with KaTeX, explorable phrases marked. */
-export function renderEntry(entry: TextEntry | undefined): HTMLElement {
+export function renderEntry(entry: TextEntry | undefined, options?: TermOptions): HTMLElement {
   const root = document.createElement("div");
   const text = displayed(entry);
   const links = typeof entry === "object" ? (entry.links ?? []) : [];
@@ -42,7 +62,7 @@ export function renderEntry(entry: TextEntry | undefined): HTMLElement {
   body.className = "xs-text";
   text.split(/(\$[^$]+\$)/).forEach((part) => {
     if (part.startsWith("$") && part.endsWith("$") && part.length > 1) body.append(math(part.slice(1, -1)));
-    else body.append(...textWithLinks(part, links));
+    else body.append(...textWithLinks(part, links, options));
   });
   root.append(body);
 

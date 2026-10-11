@@ -1,5 +1,5 @@
 import type { Level, TextEntry } from "../content/types";
-import { renderEntry } from "./richText";
+import { renderEntry, type TermOptions } from "./richText";
 import { LEVELS } from "./texts";
 
 // DOM overlay above the canvas: question, level, node picker, Play bar,
@@ -23,6 +23,26 @@ export interface OverlayHandlers {
   onAscend(nodeId: string): void;
   /** Selection card: dive into the child node. */
   onDive(): void;
+  /** An explorable term was touched (spec, Termes explorables). */
+  onTerm(nodeId: string): void;
+  /** Term card: open the node now. */
+  onExplore(): void;
+  /** Term card: keep it in the "À explorer" list. */
+  onLater(): void;
+  onCloseTerm(): void;
+  /** Back to the node (and Play step) the exploration started from. */
+  onReturn(): void;
+  /** "À explorer" list: open one of the saved nodes. */
+  onExploreSaved(nodeId: string): void;
+  onCloseSaved(): void;
+}
+
+export interface TermCardView {
+  /** The target node's question. */
+  title: string;
+  /** Its one-sentence definition, at the current level (node.summaryKey). */
+  summary: TextEntry | undefined;
+  saved: boolean;
 }
 
 export interface LensView {
@@ -90,6 +110,18 @@ const CSS = `
 .xs-terms { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 10px 0 0; padding-top: 8px; border-top: 1px solid rgba(0,0,0,.12); font-size: 13px; }
 .xs-terms dt { text-align: right; } .xs-terms dd { margin: 0; color: #3a4350; }
 .xs-term { text-decoration: underline dotted 2px; text-underline-offset: 3px; text-decoration-color: #d18a00; }
+button.xs-term { pointer-events: auto; display: inline; margin: 0; padding: 0 1px; border: 0; border-radius: 3px; background: rgba(209,138,0,.12); font: inherit; color: inherit; cursor: pointer; text-decoration: underline solid 2px; text-decoration-color: #d18a00; text-underline-offset: 3px; }
+button.xs-term:hover, button.xs-term:focus-visible { background: rgba(209,138,0,.28); }
+.xs-term-card .xs-actions, .xs-saved .xs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.xs-term-card .xs-actions button, .xs-saved li button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; font-weight: 600; cursor: pointer; background: rgba(0,0,0,.08); }
+.xs-term-card .xs-actions .xs-primary, .xs-saved li .xs-primary { background: #b87400; color: #fff; }
+.xs-term-card .xs-kicker, .xs-saved .xs-kicker { margin: 0 32px 4px 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #b87400; }
+.xs-return { pointer-events: auto; min-height: 40px; padding: 0 16px; border: 0; font-weight: 600; cursor: pointer; color: #fff; background: #b87400; }
+.xs-saved { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: 14px 16px; }
+.xs-saved h2 { margin: 0 32px 8px 0; font-size: 17px; }
+.xs-saved ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.xs-saved li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.xs-saved .xs-close, .xs-term-card .xs-close { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; }
 .xs-labels { position: absolute; inset: 0; overflow: hidden; }
 .xs-label { pointer-events: auto; cursor: pointer; position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 10px)); padding: 3px 10px; border-radius: 12px; background: #10151c; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .xs-label::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: var(--leader, 10px); margin-left: -1px; background: #10151c; }
@@ -162,6 +194,10 @@ export class Overlay {
   private readonly scaleLabel = el("span");
   private readonly scaleRule = el("i");
   private readonly fade = el("div", { className: "xs-fade" });
+  private readonly termCard = el("aside", { className: "xs-card xs-term-card xs-panel", hidden: true, ariaLive: "polite" });
+  private readonly returnButton = el("button", { type: "button", className: "xs-return xs-panel", hidden: true });
+  private readonly saved = el("section", { className: "xs-saved xs-panel", hidden: true, ariaLabel: "À explorer" });
+  private terms: TermOptions | undefined;
 
   constructor(container: HTMLElement, nodeIds: string[], private readonly handlers: OverlayHandlers) {
     document.head.appendChild(el("style", { textContent: CSS }));
@@ -183,7 +219,7 @@ export class Overlay {
     topRight.append(this.picker, levels, this.lensBar);
     this.scale.append(this.scaleLabel, this.scaleRule);
     const where = el("div", { className: "xs-where" });
-    where.append(this.crumbs, this.scale);
+    where.append(this.returnButton, this.crumbs, this.scale);
 
     this.previous.addEventListener("click", () => handlers.onPrevious());
     this.play.addEventListener("click", () => handlers.onPlayPause());
@@ -195,7 +231,9 @@ export class Overlay {
     close.addEventListener("click", () => handlers.onCloseCard());
     this.card.append(close);
 
-    root.append(this.labelLayer, this.title, this.notice, topRight, this.controls, where, this.subtitle, this.card, home, this.bar, this.fade);
+    this.returnButton.addEventListener("click", () => handlers.onReturn());
+
+    root.append(this.labelLayer, this.title, this.notice, topRight, this.controls, where, this.subtitle, this.card, this.termCard, this.saved, home, this.bar, this.fade);
     container.appendChild(root);
   }
 
@@ -218,8 +256,58 @@ export class Overlay {
     this.dots.replaceChildren(...Array.from({ length: full ? view.count : 0 }, (_, i) => el("span", { className: i <= view.index ? "on" : "" })));
   }
 
+  /** How explorable terms behave in subtitles and cards rendered from now on. */
+  setTermOptions(options: TermOptions): void {
+    this.terms = options;
+  }
+
   setSubtitle(entry: TextEntry | undefined): void {
-    this.subtitle.replaceChildren(...(entry === undefined ? [] : [renderEntry(entry)]));
+    this.subtitle.replaceChildren(...(entry === undefined ? [] : [renderEntry(entry, this.terms)]));
+  }
+
+  /** The card of an explorable term: definition, « Explorer », « Plus tard ». */
+  showTermCard(view: TermCardView | null): void {
+    this.termCard.hidden = view === null;
+    if (!view) {
+      this.termCard.replaceChildren();
+      return;
+    }
+    const close = el("button", { type: "button", className: "xs-close", textContent: "✕", ariaLabel: "Fermer" });
+    close.addEventListener("click", () => this.handlers.onCloseTerm());
+    const explore = el("button", { type: "button", className: "xs-primary", textContent: "Explorer" });
+    explore.addEventListener("click", () => this.handlers.onExplore());
+    const later = el("button", { type: "button", textContent: view.saved ? "✓ Dans « À explorer »" : "Plus tard", disabled: view.saved });
+    later.addEventListener("click", () => this.handlers.onLater());
+    const actions = el("div", { className: "xs-actions" });
+    actions.append(explore, later);
+    // The definition is shown without its own terms: one card at a time.
+    this.termCard.replaceChildren(close, el("p", { className: "xs-kicker", textContent: "Notion" }), el("h2", { textContent: view.title }), renderEntry(view.summary), actions);
+  }
+
+  /** null hides the button; label says where it goes back to. */
+  setReturn(label: string | null): void {
+    this.returnButton.hidden = label === null;
+    this.returnButton.textContent = label ?? "";
+  }
+
+  /** The "À explorer" list proposed at the end of the Play; null or empty hides it. */
+  showSaved(items: { nodeId: string; title: string }[] | null): void {
+    this.saved.hidden = !items || items.length === 0;
+    if (!items || items.length === 0) {
+      this.saved.replaceChildren();
+      return;
+    }
+    const close = el("button", { type: "button", className: "xs-close", textContent: "✕", ariaLabel: "Fermer" });
+    close.addEventListener("click", () => this.handlers.onCloseSaved());
+    const list = el("ul");
+    for (const item of items) {
+      const li = el("li");
+      const go = el("button", { type: "button", className: "xs-primary", textContent: "Explorer" });
+      go.addEventListener("click", () => this.handlers.onExploreSaved(item.nodeId));
+      li.append(el("span", { textContent: item.title }), go);
+      list.append(li);
+    }
+    this.saved.replaceChildren(close, el("p", { className: "xs-kicker", textContent: "Fin de la visite" }), el("h2", { textContent: "À explorer" }), list);
   }
 
   /** Labels to pin, by entity id. */
@@ -270,7 +358,7 @@ export class Overlay {
     const close = this.card.firstElementChild!;
     this.card.replaceChildren(close);
     if (!view) return;
-    this.card.append(el("h2", { textContent: view.title }), renderEntry(view.description));
+    this.card.append(el("h2", { textContent: view.title }), renderEntry(view.description, this.terms));
     if (view.dive) {
       const dive = el("button", { type: "button", className: "xs-dive", disabled: !view.dive.available, textContent: view.dive.available ? "Plonger à l'intérieur" : "Plonger à l'intérieur (à venir)" });
       dive.addEventListener("click", () => this.handlers.onDive());
