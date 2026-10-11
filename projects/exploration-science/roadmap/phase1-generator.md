@@ -21,6 +21,10 @@ role: >
   que le catalogue déclare, et sa sortie passe par le même validateur que le contenu fait main.
 - **Rien qui fige le format v1** : les scènes sont stockées et validées telles quelles ; un
   changement de format après les tests coûte une mise à jour du prompt, pas une réécriture.
+- **Plusieurs API, une référence.** Un profil (`generator/profiles.toml`) choisit le fournisseur, le
+  modèle, ses paramètres, ses prix et au besoin une variante de prompts ; un objet fournisseur par API
+  encapsule ce qu'il faut pour qu'elle réponde au niveau de la référence (Anthropic). Comparer deux
+  profils = deux runs du même nœud, notés par le même banc (capacité 3).
 - Hors périmètre : questions libres, signalements, administration, quotas (Phase 2).
 
 Ordre : le socle reproductible d'abord (sans lui, aucun essai n'est mesurable) ; puis l'essai sur
@@ -40,7 +44,9 @@ amont en dernier, parce qu'elles exigent l'accès web du VPS.
 ### 2. Essai de génération sur `starlink-phased-array` · contexte partagé : catalogue, schémas, nœud parent
 - [x] Étape `node` : à partir de la question, du nœud parent et de l'entité visée, écrire `scene.json` + `texts.fr.json` (sources fournies en entrée, l'étape « sources » n'existant pas encore)
 - [x] Un run `manual` à l'aveugle (sous-agent qui ne voit que la demande écrite), enregistré
-- [ ] Un run `anthropic` sur le VPS (clé dans le `.env`), enregistré, avec son coût
+- [x] Profils et fournisseurs : `anthropic` (référence) et `openai-compatible` (DeepInfra, DeepSeek V4.1 Flash), variantes de prompts par profil
+- [ ] Un run `api` profil `anthropic-opus` sur le VPS (clé dans `generator/.env`), enregistré, avec son coût
+- [ ] Un run `api` profil `deepinfra-deepseek-v4.1-flash` (identifiant du modèle et prix vérifiés d'abord avec `models`), enregistré, avec son coût
 - [x] Rapport : ce que le modèle a su écrire, ce qui a cassé, ce que ça dit du format v1
 - **Acceptation** : le nœud généré passe le validateur (0 erreur) et s'affiche dans le moteur (capture headless) ; le rapport liste les écarts avec la référence faite main.
 

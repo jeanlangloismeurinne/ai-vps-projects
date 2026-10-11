@@ -1,0 +1,33 @@
+# Model profiles: which API, which model, with which parameters and prices.
+# A step names a profile (pipeline.py); `--profile` overrides it for a run.
+# Every field except secrets ends up in the recorded request, so a replay refuses
+# a run whose profile changed. Keys never go here: `api_key_env` names the variable
+# that holds them (generator/.env, chmod 600).
+#
+# provider = "anthropic"          -> official Anthropic SDK (the reference)
+# provider = "openai-compatible"  -> any Chat Completions API (DeepInfra, …)
+# prompt_variant = "<dir>"        -> prompts/<dir>/<file> replaces prompts/<file> when present
+# prices: USD per million tokens; a profile without prices has an unknown cost.
+
+[anthropic-opus]
+provider = "anthropic"
+model = "claude-opus-5-5"
+max_tokens = 64000
+effort = "high"
+api_key_env = "ANTHROPIC_API_KEY"
+prices = { input = 4.00, output = 20.00, cache_read = 0.20, cache_write = 5.00 }
+
+["deepinfra-deepseek-v4.1-flash"]
+provider = "openai-compatible"
+base_url = "https://api.deepinfra.com/v1/openai"
+api_key_env = "DEEPINFRA_API_KEY"
+# To verify on the VPS: `python -m xs_generator models --profile deepinfra-deepseek-v4.1-flash`
+# (lists the ids the API serves). Pattern of DeepInfra's V4-Flash page; not confirmed for V4.1.
+model = "deepseek-ai/DeepSeek-V4.1-Flash"
+max_tokens = 64000
+# The answer must be one JSON object: ask the API to enforce it.
+json_mode = true
+timeout_s = 1800
+# DeepInfra "Standard" tier per its V4.1 Flash pricing guide (2026-10, read in search results only:
+# to verify). When the API reports its own cost (usage.estimated_cost), that figure is used instead.
+prices = { input = 0.20, output = 0.60, cache_read = 0.006 }

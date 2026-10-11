@@ -9,8 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .calls import GeneratorError
-from .pipeline import PROJECT, NodeTask, generate_node
-from .runners import AnthropicRunner, ManualRunner, PendingManualStep, ReplayRunner
+from .pipeline import NODE_STEP, PROJECT, NodeTask, generate_node
+from .profiles import get_profile, load_profiles
+from .providers import make_provider
+from .runners import ApiRunner, ManualRunner, PendingManualStep, ReplayRunner
 
 RUNS = Path(__file__).resolve().parents[1] / "runs"
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
@@ -36,10 +38,14 @@ def _parser() -> argparse.ArgumentParser:
     node.add_argument("--parent", help="parent node and entity, as <node>:<entity>")
     node.add_argument("--sources", required=True, type=Path, help="sources.json to use (until the sources step exists)")
     node.add_argument("--example", action="append", default=None, help="finished node shown as an example (repeatable)")
-    node.add_argument("--runner", choices=["anthropic", "manual", "replay"], required=True)
+    node.add_argument("--runner", choices=["api", "manual", "replay"], required=True, help="api: call the profile's API; manual: a person answers; replay: a recorded run answers")
+    node.add_argument("--profile", default=NODE_STEP.profile, help=f"model profile from profiles.toml (default: {NODE_STEP.profile})")
     node.add_argument("--replay-from", type=Path, help="recorded run folder, with --runner replay")
     node.add_argument("--run-id", help="run folder name under generator/runs (default: timestamp); reuse it to resume")
     node.add_argument("--max-repairs", type=int, default=2)
+    models = commands.add_parser("models", help="list the model ids a profile's API serves (to check its `model`)")
+    models.add_argument("--profile", required=True)
+    commands.add_parser("profiles", help="list the profiles of profiles.toml")
     return parser
 
 
@@ -47,8 +53,19 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     load_env()
     try:
-        if args.runner == "anthropic":
-            runner = AnthropicRunner()
+        if args.command == "profiles":
+            for name, p in load_profiles().items():
+                print(f"{name}: {p.provider} {p.model}{'' if p.prices else ' (no prices: cost unknown)'}")
+            return 0
+        if args.command == "models":
+            profile = get_profile(args.profile)
+            served = make_provider(profile).models()
+            print("\n".join(served))
+            print(f"-- profile model '{profile.model}' is {'served' if profile.model in served else 'NOT served'} by this API", file=sys.stderr)
+            return 0
+        profile = get_profile(args.profile)
+        if args.runner == "api":
+            runner = ApiRunner(make_provider(profile))
         elif args.runner == "manual":
             runner = ManualRunner()
         else:
@@ -69,8 +86,8 @@ def main(argv: list[str] | None = None) -> int:
             parent=parent,
             examples=tuple(args.example) if args.example else NodeTask.examples,
         )
-        run_id = args.run_id or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{args.id}-{args.runner}"
-        result = generate_node(task, runner, RUNS / run_id, max_repairs=args.max_repairs)
+        run_id = args.run_id or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{args.id}-{args.profile}-{args.runner}"
+        result = generate_node(task, runner, RUNS / run_id, profile, max_repairs=args.max_repairs)
     except PendingManualStep as pending:
         print(f"PENDING: {pending}")
         return 3

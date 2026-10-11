@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .calls import GeneratorError, Request, Response, load_response, record, write_json
+from .profiles import Profile
 from .runners import Runner
 
 PROJECT = Path(__file__).resolve().parents[2]
@@ -24,13 +25,19 @@ LANG = "fr"
 @dataclass(frozen=True)
 class StepConfig:
     name: str
-    model: str
-    effort: str
-    max_tokens: int
+    #: Default profile (generator/profiles.toml); a run may choose another one.
+    profile: str
 
 
-# One model per step (spec): the scene is the hardest, most structured output of the pipeline.
-NODE_STEP = StepConfig(name="node", model="claude-opus-5-5", effort="high", max_tokens=64000)
+# One profile per step (spec): the reference is Anthropic's; others are measured against it.
+NODE_STEP = StepConfig(name="node", profile="anthropic-opus")
+
+
+def prompt_file(name: str, variant: str | None = None) -> Path:
+    """prompts/<variant>/<name> when the profile's variant overrides it, else prompts/<name>."""
+    if variant and (PROMPTS / variant / name).exists():
+        return PROMPTS / variant / name
+    return PROMPTS / name
 
 
 @dataclass(frozen=True)
@@ -95,13 +102,13 @@ def existing_nodes() -> list[str]:
     return sorted(d.name for d in (PROJECT / "content" / "nodes").iterdir() if d.is_dir())
 
 
-def system_prompt(task: NodeTask) -> str:
+def system_prompt(task: NodeTask, variant: str | None = None) -> str:
     """Stable across calls of a run (and across runs with the same examples): cached by the API."""
     examples = list(dict.fromkeys(([task.parent[0]] if task.parent else []) + list(task.examples)))
     if task.node_id in examples:
         raise GeneratorError(f"'{task.node_id}' cannot be its own example: the model would copy the answer")
     return _fill(
-        _read(PROMPTS / "node.system.md"),
+        _read(prompt_file("node.system.md", variant)),
         {
             "scene_schema": _read(PROJECT / "schemas" / "scene.schema.json").strip(),
             "texts_schema": _read(PROJECT / "schemas" / "texts.schema.json").strip(),
@@ -111,7 +118,7 @@ def system_prompt(task: NodeTask) -> str:
     )
 
 
-def user_prompt(task: NodeTask) -> str:
+def user_prompt(task: NodeTask, variant: str | None = None) -> str:
     parent_line = (
         f"- Child node of `{task.parent[0]}`: the user dives into its entity `{task.parent[1]}`."
         if task.parent
@@ -126,7 +133,7 @@ def user_prompt(task: NodeTask) -> str:
 
     others = [n for n in existing_nodes() if n != task.node_id] + [task.node_id]
     return _fill(
-        _read(PROMPTS / "node.user.md"),
+        _read(prompt_file("node.user.md", variant)),
         {
             "node_id": task.node_id,
             "question": task.question,
@@ -174,15 +181,16 @@ def _call(runner: Runner, request: Request, call_dir: Path) -> Response:
     return response
 
 
-def generate_node(task: NodeTask, runner: Runner, run_dir: Path, max_repairs: int = 2, step: StepConfig = NODE_STEP) -> RunResult:
+def generate_node(task: NodeTask, runner: Runner, run_dir: Path, profile: Profile, max_repairs: int = 2, step: StepConfig = NODE_STEP) -> RunResult:
     output = run_dir / "output" / task.node_id
     result = RunResult(run_dir=run_dir, output_dir=output, errors=[])
-    system = system_prompt(task)
-    messages: list[dict] = [{"role": "user", "content": user_prompt(task)}]
+    variant = profile.prompt_variant
+    system = system_prompt(task, variant)
+    messages: list[dict] = [{"role": "user", "content": user_prompt(task, variant)}]
 
     for attempt in range(max_repairs + 1):
         name = f"{attempt + 1:02d}-{step.name}" if attempt == 0 else f"{attempt + 1:02d}-{step.name}-repair"
-        request = Request(step.name, step.model, step.effort, step.max_tokens, system, tuple(messages))
+        request = Request(step.name, profile.name, profile.settings(), system, tuple(messages))
         response = _call(runner, request, run_dir / "calls" / name)
         result.calls.append(CallLog(name, request.fingerprint(), response.runner, response.model, asdict(response.usage), response.cost_usd))
         try:
@@ -200,7 +208,7 @@ def generate_node(task: NodeTask, runner: Runner, run_dir: Path, max_repairs: in
         # Append-only conversation: the model sees its answer and what was wrong with it.
         messages += [
             {"role": "assistant", "content": response.text},
-            {"role": "user", "content": _fill(_read(PROMPTS / "node.repair.md"), {"errors": "\n".join(f"- {e}" for e in errors)})},
+            {"role": "user", "content": _fill(_read(prompt_file("node.repair.md", variant)), {"errors": "\n".join(f"- {e}" for e in errors)})},
         ]
 
     costs = [c.cost_usd for c in result.calls]
@@ -208,7 +216,9 @@ def generate_node(task: NodeTask, runner: Runner, run_dir: Path, max_repairs: in
         run_dir / "run.json",
         {
             "task": {**asdict(task), "sources": str(task.sources.relative_to(PROJECT)) if task.sources.is_relative_to(PROJECT) else str(task.sources)},
-            "step": asdict(step),
+            "step": step.name,
+            "profile": profile.name,
+            "settings": profile.settings(),
             "runner": runner.name,
             # A manual answer stays manual when replayed: no model produced it.
             "reproducible": all(c.runner != "manual" for c in result.calls),

@@ -14,12 +14,15 @@ class GeneratorError(Exception):
 
 @dataclass(frozen=True)
 class Request:
-    """Everything that decides a model's answer. Its fingerprint keys the replay."""
+    """Everything that decides a model's answer. Its fingerprint keys the replay.
+
+    `settings` is the profile without secrets (provider, model, parameters, prices):
+    changing any of them changes the fingerprint.
+    """
 
     step: str
-    model: str
-    effort: str
-    max_tokens: int
+    profile: str
+    settings: dict
     system: str
     messages: tuple[dict, ...]
 
@@ -40,32 +43,27 @@ class Usage:
 class Response:
     text: str
     runner: str
+    profile: str | None = None
     model: str | None = None
     stop_reason: str | None = None
     usage: Usage = field(default_factory=Usage)
     cost_usd: float | None = None
 
 
-# USD per million tokens (Claude API, 2026-10). Cache writes use the 5-minute TTL rate
-# (1.25 x input). Thinking tokens are billed as output and are included in output_tokens.
-PRICES = {
-    "claude-opus-5-5": {"input": 4.00, "output": 20.00, "cache_read": 0.20},
-    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_read": 0.20},
-    "claude-haiku-5-5": {"input": 0.10, "output": 0.50, "cache_read": 0.01},
-}
+def cost_usd(prices: dict | None, usage: Usage) -> float | None:
+    """Cost of one call from the profile's prices (USD per million tokens); None when unknown, never guessed.
 
-
-def cost_usd(model: str, usage: Usage) -> float | None:
-    """Cost of one call; None for a model without a known price (never guessed)."""
-    price = PRICES.get(model)
-    if price is None:
+    `input_tokens` counts only uncached input; cache writes default to 1.25 x input, cache reads
+    to the input price when the profile gives no specific rate.
+    """
+    if not prices:
         return None
     per_token = 1e-6
     return round(
-        usage.input_tokens * price["input"] * per_token
-        + usage.cache_creation_input_tokens * price["input"] * 1.25 * per_token
-        + usage.cache_read_input_tokens * price["cache_read"] * per_token
-        + usage.output_tokens * price["output"] * per_token,
+        usage.input_tokens * prices["input"] * per_token
+        + usage.cache_creation_input_tokens * prices.get("cache_write", prices["input"] * 1.25) * per_token
+        + usage.cache_read_input_tokens * prices.get("cache_read", prices["input"]) * per_token
+        + usage.output_tokens * prices["output"] * per_token,
         6,
     )
 
@@ -89,4 +87,5 @@ def load_response(call_dir: Path) -> tuple[str, Response]:
     except FileNotFoundError as error:
         raise GeneratorError(f"replay: no recorded call in {call_dir} ({error.filename} missing)") from None
     data["usage"] = Usage(**data.get("usage") or {})
+    data = {k: v for k, v in data.items() if k in Response.__dataclass_fields__}
     return request["fingerprint"], Response(**data)

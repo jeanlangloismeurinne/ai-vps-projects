@@ -3,7 +3,7 @@ name = "xs-generator"
 version = "0.1.0"
 description = "Explorateur de systèmes: node generator (Phase 1). Each step is JSON in, JSON out; every model call is recorded and replayable."
 requires-python = ">=3.12"
-dependencies = ["anthropic>=1.13,<2"]
+dependencies = ["anthropic>=1.13,<2", "openai>=3.28,<4"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
