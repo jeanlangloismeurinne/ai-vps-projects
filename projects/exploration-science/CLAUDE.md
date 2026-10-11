@@ -26,7 +26,7 @@ Objectif : une expérience Starlink complète, écrite à la main, jouée par le
 - Front : TypeScript, Vite, Three.js. Pas de framework UI tant qu'un besoin n'est pas démontré ; l'interface superposée (sous-titres, curseurs, menu au clic, barre d'échelle) reste en TypeScript et DOM.
 - Schémas : JSON Schema comme source de vérité, validés avec Ajv. Le choix de JSON Schema est volontaire : le backend futur sera en Python et validera les mêmes fichiers.
 - Tests : Vitest.
-- Plus tard (pas en Phase 0) : backend Python (FastAPI, Pydantic AI), Postgres avec pgvector, déploiement via Coolify sur un VPS Hetzner.
+- Plus tard (pas en Phase 0) : backend Python (FastAPI, Pydantic AI), Postgres avec pgvector, déploiement en stack `docker compose` sur le VPS Hetzner (via `infrastructure/compose-deploy.sh`).
 
 ## Arborescence cible
 

@@ -1,0 +1,22 @@
+[project]
+name = "xs-generator"
+version = "0.1.0"
+description = "Explorateur de systèmes: node generator (Phase 1). Each step is JSON in, JSON out; every model call is recorded and replayable."
+requires-python = ">=3.12"
+dependencies = ["anthropic>=1.13,<2"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+xs-generate = "xs_generator.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["xs_generator"]

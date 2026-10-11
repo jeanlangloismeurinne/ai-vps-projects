@@ -197,7 +197,7 @@ Le moteur ne sait qu'afficher une scène ; le générateur ne sait que produire 
 
 ### Infrastructure minimale
 
-- Un monolithe modulaire : un backend, un worker et un front statique, soit trois conteneurs sur Coolify. Pas de microservices.
+- Un monolithe modulaire : un backend, un worker et un front statique, soit trois conteneurs dans une stack `docker compose` sur le VPS. Pas de microservices.
 - Postgres fait tout : graphe, vecteurs (pgvector), versions, file de tâches (SKIP LOCKED). Ni Redis ni base de graphes au départ.
 - Stockage objet derrière un CDN pour les fichiers 3D.
 - Rendu 3D côté client : aucun GPU serveur nécessaire.
