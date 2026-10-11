@@ -3,6 +3,7 @@
   "node": {
     "id": "wave-interference",
     "kind": "principle",
+    "wikidata": "Q136980",
     "version": 1,
     "status": "review",
     "summaryKey": "node.summary"

@@ -234,6 +234,7 @@ def test_openai_compatible_provider_sends_system_first_and_enforces_json(monkeyp
     assert body["model"] == DEEPINFRA.model and body["max_tokens"] == DEEPINFRA.max_tokens
     assert body["messages"] == [{"role": "system", "content": "the system prompt"}, {"role": "user", "content": "q"}]
     assert body["response_format"] == {"type": "json_object"}
+    assert body["reasoning_effort"] == "high" and body["temperature"] == 1.0
     assert response.text == '{"scene": {}, "texts": {}}' and response.runner == "api" and response.profile == DEEPINFRA.name
     # 30 000 prompt tokens of which 20 000 cached: 10 000 uncached input, 20 000 cache reads.
     assert (response.usage.input_tokens, response.usage.cache_read_input_tokens, response.usage.output_tokens) == (10000, 20000, 8000)
