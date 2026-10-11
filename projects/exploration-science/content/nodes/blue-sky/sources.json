@@ -31,13 +31,15 @@
     {
       "id": "visible-range",
       "claim": "Le visible s'étend d'environ 380 à 750 nm.",
-      "status": "order-of-magnitude",
-      "sources": [],
+      "status": "verified",
+      "sources": [
+        "wikipedia-visible-spectrum"
+      ],
       "usedBy": [
         "play.white-light",
         "catalogue.rayleigh-scattering.wavelengthNm"
       ],
-      "note": "Bornes conventionnelles, à sourcer lors de la rédaction complète."
+      "note": "Wikipedia (Visible spectrum) : « about 380 to about 750 nanometers », bornes non nettes et variables selon les individus. D'autres conventions existent (NASA science.nasa.gov/ems/09_visiblelight : 380 à 700 nm)."
     },
     {
       "id": "air-composition",
@@ -58,12 +60,14 @@
       "unit": "1",
       "status": "order-of-magnitude",
       "formula": "500 nm / 0.3 nm",
-      "sources": [],
+      "sources": [
+        "wikipedia-kinetic-diameter"
+      ],
       "usedBy": [
         "levels.essential.intro.zoom-air",
         "entity.air.description"
       ],
-      "note": "Taille moléculaire ~0,3 nm : ordre de grandeur à sourcer."
+      "note": "Diamètres cinétiques lus sur Wikipedia (Kinetic diameter) : N₂ 364 pm, O₂ 346 pm, soit ~0,35 nm plutôt que 0,3 nm ; le rapport à 500 nm serait alors ~1400 au lieu de 1700. L'ordre de grandeur « environ mille fois » reste juste."
     },
     {
       "id": "violet",
@@ -81,22 +85,26 @@
       "claim": "Au coucher, la lumière traverse beaucoup plus d'atmosphère ; le bleu en est diffusé et il reste surtout du rouge.",
       "status": "verified",
       "sources": [
+        "metoffice-blue-sky",
         "metoffice-sunset",
         "timeanddate-red-sunset"
       ],
       "usedBy": [
         "play.sunset"
-      ]
+      ],
+      "note": "La page metoffice-sunset renvoie 404 (2026-10-11) ; la page Met Office « Why the sky is blue and sunsets red » couvre aussi le coucher de soleil."
     },
     {
       "id": "atmosphere-thickness",
       "claim": "Couche d'air de quelques dizaines de kilomètres d'épaisseur.",
-      "status": "unverified",
-      "sources": [],
+      "status": "verified",
+      "sources": [
+        "wikipedia-atmosphere"
+      ],
       "usedBy": [
         "entity.atmosphere.description"
       ],
-      "note": "Ordre de grandeur à sourcer (l'essentiel de la masse sous ~30 km)."
+      "note": "Wikipedia (Atmosphere of Earth) : 99 % de la masse sous 30 km, trois quarts sous ~11 km, 50 % sous ~5,5 km."
     },
     {
       "id": "rayleigh-optical-depth",
@@ -110,7 +118,7 @@
       "usedBy": [
         "simulators.scattering"
       ],
-      "note": "Valeur de mémoire de l'article de Bodhaine et al. ; à confirmer en ouvrant l'article (seul le résumé a été vu)."
+      "note": "Article ouvert (2026-10-11) : la Table 3 de Bodhaine et al. donne τR = 9.7069E-02 (0,09707) à 0,550 µm, au niveau de la mer, 1013,25 mb, 45° N, air sec à 360 ppm CO₂ — et non 0,0973. L'arrondi « environ 0,097 » du texte est conforme ; la valeur 0,0973 (aussi dans le code moteur) diffère de 0,3 %."
     },
     {
       "id": "scale-height",
@@ -124,19 +132,20 @@
       "usedBy": [
         "simulators.scattering"
       ],
-      "note": "Modèle isotherme : sert seulement à l'ombre de la Terre quand le Soleil est sous l'horizon."
+      "note": "Modèle isotherme : sert seulement à l'ombre de la Terre quand le Soleil est sous l'horizon. La page utexas donne ≈ 8,4 km (T = 288 K, M = 29) ; « environ 8 km » en est un arrondi."
     },
     {
       "id": "air-mass",
       "claim": "Masse d'air relative en fonction de la hauteur h du Soleil : 1 / (sin h + 0,50572 (h + 6,07995)^-1,6364), environ 38 à l'horizon.",
       "status": "verified",
       "sources": [
-        "kasten-young-1989"
+        "kasten-young-1989",
+        "pvlib-atmosphere-source"
       ],
       "usedBy": [
         "simulators.scattering"
       ],
-      "note": "Coefficients lus sur des sources secondaires (Wikipédia, pvlib), pas dans l'article."
+      "note": "Coefficients 0,50572 / 6,07995 / 1,6364 confirmés dans le code source de pvlib (modèle kastenyoung1989, écrit en angle zénithal z = 90° − h), pas dans l'article original (non ouvert). La valeur ≈ 38 à l'horizon se recalcule : 1 / (0,50572 × 6,07995^-1,6364) ≈ 37,9."
     },
     {
       "id": "sun-temperature",
@@ -145,25 +154,28 @@
       "unit": "K",
       "status": "verified",
       "sources": [
-        "iau-2015-b3"
+        "iau-2015-b3",
+        "iau-2015-b3-arxiv"
       ],
       "usedBy": [
         "simulators.scattering",
         "entities.sun"
-      ]
+      ],
+      "note": "ADS injoignable (connexion fermée) ; texte de la résolution lu sur arXiv : T_eff⊙ nominale = 5772 K (meilleure estimation 5772,0 ± 0,8 K)."
     },
     {
       "id": "colour-matching",
       "claim": "Les couleurs affichées sont calculées depuis les spectres par les fonctions colorimétriques CIE 1931, approchées par des gaussiennes par morceaux.",
       "status": "verified",
       "sources": [
-        "wyman-2013"
+        "wyman-2013",
+        "wyman-2013-jcgt"
       ],
       "usedBy": [
         "simulators.scattering",
         "entities.sun"
       ],
-      "note": "Coefficients de l'équation 4 de l'article, non revérifiés sur le PDF."
+      "note": "Coefficients de l'équation 4 (Table 1) vérifiés sur le PDF JCGT le 2026-10-11 : α, β identiques au code ; le code exprime les largeurs en nm (1/γ, 1/δ arrondis), cohérentes avec la table. La page NVIDIA renvoie une redirection 302 inexploitable."
     },
     {
       "id": "magnifier-scale",
@@ -183,8 +195,8 @@
       "title": "Why the sky is blue and sunsets red",
       "url": "https://weather.metoffice.gov.uk/learn-about/weather/optical-effects/why-is-the-sky-blue",
       "publisher": "Met Office",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "metoffice-sunset",
@@ -199,24 +211,24 @@
       "title": "Colour of the sky",
       "url": "https://animations.physics.unsw.edu.au/jw/light/colour-of-sky.htm",
       "publisher": "UNSW Physics",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "space-blue-sky",
       "title": "Why is the sky blue?",
       "url": "https://www.space.com/why-is-the-sky-blue",
       "publisher": "Space.com",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "timeanddate-red-sunset",
       "title": "Red sunset",
       "url": "https://www.timeanddate.com/astronomy/red-sunset.html",
       "publisher": "timeanddate.com",
-      "accessed": "2026-10-09",
-      "access": "search-result"
+      "accessed": "2026-10-11",
+      "access": "opened"
     },
     {
       "id": "bodhaine-1999",
@@ -224,7 +236,7 @@
       "url": "https://reef.atmos.colostate.edu/~odell/at721/resources/rayleighOpticalDepth.pdf",
       "publisher": "Journal of Atmospheric and Oceanic Technology 16, 1854-1861",
       "accessed": "2026-10-11",
-      "access": "search-result"
+      "access": "opened"
     },
     {
       "id": "utexas-scale-height",
@@ -232,7 +244,7 @@
       "url": "https://farside.ph.utexas.edu/teaching/sm1/lectures/node55.html",
       "publisher": "University of Texas at Austin",
       "accessed": "2026-10-11",
-      "access": "search-result"
+      "access": "opened"
     },
     {
       "id": "kasten-young-1989",
@@ -257,6 +269,54 @@
       "publisher": "Journal of Computer Graphics Techniques 2(2)",
       "accessed": "2026-10-11",
       "access": "search-result"
+    },
+    {
+      "id": "wikipedia-visible-spectrum",
+      "title": "Visible spectrum",
+      "url": "https://en.wikipedia.org/wiki/Visible_spectrum",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "wikipedia-kinetic-diameter",
+      "title": "Kinetic diameter",
+      "url": "https://en.wikipedia.org/wiki/Kinetic_diameter",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "wikipedia-atmosphere",
+      "title": "Atmosphere of Earth",
+      "url": "https://en.wikipedia.org/wiki/Atmosphere_of_Earth",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "pvlib-atmosphere-source",
+      "title": "Source code for pvlib.atmosphere (get_relative_airmass, model kastenyoung1989)",
+      "url": "https://pvlib-python.readthedocs.io/en/v0.9.5/_modules/pvlib/atmosphere.html",
+      "publisher": "pvlib python",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "iau-2015-b3-arxiv",
+      "title": "IAU 2015 Resolution B3 on recommended nominal conversion constants for selected solar and planetary properties",
+      "url": "https://arxiv.org/pdf/1510.07674",
+      "publisher": "International Astronomical Union (arXiv:1510.07674)",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "wyman-2013-jcgt",
+      "title": "Simple Analytic Approximations to the CIE XYZ Color Matching Functions",
+      "url": "https://jcgt.org/published/0002/02/01/paper.pdf",
+      "publisher": "Journal of Computer Graphics Techniques 2(2), 1-11",
+      "accessed": "2026-10-11",
+      "access": "opened"
     }
   ]
 }
