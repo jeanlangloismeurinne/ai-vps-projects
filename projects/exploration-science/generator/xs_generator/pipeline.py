@@ -117,6 +117,13 @@ def user_prompt(task: NodeTask) -> str:
         if task.parent
         else "- Root node: no parent."
     )
+    # A term can only lead to a node that carries its own one-sentence summary (node.summaryKey).
+    def describe(node_id: str) -> str:
+        if node_id == task.node_id:
+            return f"`{node_id}` (this node)"
+        scene = json.loads(_read(PROJECT / "content" / "nodes" / node_id / "scene.json"))
+        return f"`{node_id}` ({'explorable terms may point to it' if scene['node'].get('summaryKey') else 'no summaryKey: links only, no explorable term'})"
+
     others = [n for n in existing_nodes() if n != task.node_id] + [task.node_id]
     return _fill(
         _read(PROMPTS / "node.user.md"),
@@ -125,7 +132,7 @@ def user_prompt(task: NodeTask) -> str:
             "question": task.question,
             "kind": task.kind,
             "parent_line": parent_line,
-            "existing_nodes": ", ".join(f"`{n}`" for n in sorted(others)),
+            "existing_nodes": "; ".join(describe(n) for n in sorted(others)),
             "sources": _read(task.sources).strip(),
         },
     )

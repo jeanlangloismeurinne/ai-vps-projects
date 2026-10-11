@@ -31,17 +31,17 @@ amont en dernier, parce qu'elles exigent l'accès web du VPS.
 ## Capacités (ordre imposé)
 
 ### 1. Socle reproductible du générateur · contexte partagé : `generator/`, spec § Pipeline
-- [ ] Paquet Python `generator/` : contrat d'étape (entrée JSON → sortie JSON, modèle et effort par étape)
-- [ ] Exécuteurs `anthropic` (SDK officiel, streaming), `manual` (demande écrite sur disque, réponse fournie par un humain), `replay` (réponse enregistrée, refus si le prompt diffère)
-- [ ] Journal de chaque appel dans `generator/runs/<run>/` : requête, empreinte, réponse, usage, coût, exécuteur
-- [ ] Validation de la sortie par le validateur existant (CLI Node) ; boucle de réparation bornée (erreurs renvoyées au modèle)
+- [x] Paquet Python `generator/` : contrat d'étape (entrée JSON → sortie JSON, modèle et effort par étape)
+- [x] Exécuteurs `anthropic` (SDK officiel, streaming), `manual` (demande écrite sur disque, réponse fournie par un humain), `replay` (réponse enregistrée, refus si le prompt diffère)
+- [x] Journal de chaque appel dans `generator/runs/<run>/` : requête, empreinte, réponse, usage, coût, exécuteur
+- [x] Validation de la sortie par le validateur existant (CLI Node) ; boucle de réparation bornée (erreurs renvoyées au modèle)
 - **Acceptation** : `pytest` vert ; un run enregistré rejoué avec `--runner replay` redonne des fichiers identiques octet pour octet ; modifier le prompt fait échouer le rejeu avec un message qui le dit ; `--runner anthropic` sans clé échoue avec un message explicite (pas une trace).
 
 ### 2. Essai de génération sur `starlink-phased-array` · contexte partagé : catalogue, schémas, nœud parent
-- [ ] Étape `node` : à partir de la question, du nœud parent et de l'entité visée, écrire `scene.json` + `texts.fr.json` (sources fournies en entrée, l'étape « sources » n'existant pas encore)
-- [ ] Un run `manual` à l'aveugle (sous-agent qui ne voit que la demande écrite), enregistré
+- [x] Étape `node` : à partir de la question, du nœud parent et de l'entité visée, écrire `scene.json` + `texts.fr.json` (sources fournies en entrée, l'étape « sources » n'existant pas encore)
+- [x] Un run `manual` à l'aveugle (sous-agent qui ne voit que la demande écrite), enregistré
 - [ ] Un run `anthropic` sur le VPS (clé dans le `.env`), enregistré, avec son coût
-- [ ] Rapport : ce que le modèle a su écrire, ce qui a cassé, ce que ça dit du format v1
+- [x] Rapport : ce que le modèle a su écrire, ce qui a cassé, ce que ça dit du format v1
 - **Acceptation** : le nœud généré passe le validateur (0 erreur) et s'affiche dans le moteur (capture headless) ; le rapport liste les écarts avec la référence faite main.
 
 ### 3. Banc de non-régression · contexte partagé : nœuds faits main = référence

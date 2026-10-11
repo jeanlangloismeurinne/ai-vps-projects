@@ -1,0 +1,169 @@
+{
+  "formatVersion": "0.2",
+  "nodeId": "starlink-phased-array",
+  "facts": [
+    {
+      "id": "wavelength",
+      "claim": "À 12 GHz, λ ≈ 2,5 cm ; λ/2 ≈ 1,25 cm.",
+      "value": 0.02498,
+      "unit": "m",
+      "status": "computed",
+      "formula": "lambda = c / f, c = 299 792 458 m/s, f = 12 GHz",
+      "sources": [],
+      "usedBy": ["levels.advanced.intro.arrival", "simulators.beam.params.frequencyHz"]
+    },
+    {
+      "id": "element-spacing",
+      "claim": "Éléments espacés d'environ une demi-longueur d'onde, environ un centimètre.",
+      "value": 0.0125,
+      "unit": "m",
+      "status": "order-of-magnitude",
+      "sources": ["mwrf-grating-lobes", "adi-phased-array-2"],
+      "usedBy": ["entities.array.params.spacing", "intro.arrival", "play.spacing"],
+      "note": "Règle de conception générale des réseaux à balayage électronique. Espacement réel du terminal Starlink non vérifié."
+    },
+    {
+      "id": "grating-lobe-condition",
+      "claim": "Pas de lobe de réseau sur un dépointage ±θmax tant que d < λ / (1 + |sin θmax|) ; à d = λ/2, aucun lobe sur tout l'horizon.",
+      "status": "verified",
+      "sources": ["mwrf-grating-lobes", "adi-phased-array-2", "rfessentials-spacing"],
+      "usedBy": ["play.spacing"]
+    },
+    {
+      "id": "scan-limit",
+      "claim": "Dépointage maximal pris égal à la moitié du champ de vision de 110° du terminal Standard : 55°.",
+      "value": 55,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "110° / 2",
+      "sources": ["speedcast-standard"],
+      "usedBy": ["levels.advanced.play.spacing"],
+      "note": "Hypothèse : le champ de vision est symétrique autour de l'axe du panneau."
+    },
+    {
+      "id": "spacing-limit",
+      "claim": "Pour 55°, d < 0,55 λ.",
+      "value": 0.55,
+      "unit": "1",
+      "status": "computed",
+      "formula": "1 / (1 + sin 55°) = 0,550",
+      "sources": [],
+      "usedBy": ["levels.advanced.play.spacing"]
+    },
+    {
+      "id": "lobe-at-lambda",
+      "claim": "Avec d = λ et un faisceau à 35°, le lobe de réseau est vers −25°.",
+      "value": -25.2,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "asin(sin 35° − λ/d) avec d = λ",
+      "sources": [],
+      "usedBy": ["levels.advanced.play.spacing"]
+    },
+    {
+      "id": "beamwidth-formula",
+      "claim": "Largeur à mi-puissance d'un réseau linéaire uniforme dans l'axe : θ3dB ≈ 0,886 λ / (N d) radians.",
+      "status": "verified",
+      "sources": ["rfessentials-broadside", "tuberlin-ula"],
+      "usedBy": ["levels.advanced.play.few-elements", "levels.advanced.play.many-elements"],
+      "note": "Approximation valable quand N n'est pas trop petit ; à N = 4 elle reste correcte à quelques degrés près (vérifié par le test du champ de la lentille)."
+    },
+    {
+      "id": "beamwidth-4",
+      "claim": "N = 4, d = λ/2 : environ 25°.",
+      "value": 25.4,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "0,886 / (4 × 0,5) rad",
+      "sources": [],
+      "usedBy": ["levels.essential.play.few-elements", "levels.advanced.play.few-elements"]
+    },
+    {
+      "id": "beamwidth-32",
+      "claim": "N = 32, d = λ/2 : environ 3°.",
+      "value": 3.2,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "0,886 / (32 × 0,5) rad",
+      "sources": [],
+      "usedBy": ["levels.essential.play.many-elements", "levels.advanced.play.many-elements"]
+    },
+    {
+      "id": "phase-35",
+      "claim": "Faisceau à 35° avec d = λ/2 : Δφ ≈ 103°.",
+      "value": 103.2,
+      "unit": "deg",
+      "status": "computed",
+      "formula": "360° × 0,5 × sin 35°",
+      "sources": [],
+      "usedBy": ["levels.advanced.play.steer"]
+    },
+    {
+      "id": "beamformer-role",
+      "claim": "Les puces de formation de faisceau appliquent à chaque élément un déphasage et un gain réglables.",
+      "status": "verified",
+      "sources": ["adi-phased-array-2"],
+      "usedBy": ["play.chips", "entity.beamformers.description"],
+      "note": "Principe général des réseaux à commande de phase. L'architecture interne des puces Starlink n'est pas vérifiée."
+    },
+    {
+      "id": "element-count",
+      "claim": "Nombre d'éléments et de puces affichés.",
+      "value": "1200 / 64",
+      "status": "unverified",
+      "sources": [],
+      "usedBy": ["entities.array.params.count", "entities.beamformers.params.count"],
+      "note": "Valeurs d'affichage reprises du nœud parent. Les textes disent « des centaines » et ne citent aucun nombre de puces."
+    }
+  ],
+  "sources": [
+    {
+      "id": "mwrf-grating-lobes",
+      "title": "Phased-Array Antenna Patterns (Part 4)—Grating Lobes",
+      "url": "https://www.mwrf.com/technologies/systems/article/21141406/phasedarray-antenna-patterns-part4grating-lobes",
+      "publisher": "Microwaves & RF",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "adi-phased-array-2",
+      "title": "Phased Array Antenna Patterns—Part 2: Grating Lobes and Beam Squint",
+      "url": "https://www.analog.com/en/resources/analog-dialogue/articles/phased-array-antenna-patterns-part2.html",
+      "publisher": "Analog Devices",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "rfessentials-spacing",
+      "title": "What is the element spacing requirement for a phased array to avoid grating lobes?",
+      "url": "https://rfessentials.com/rf-knowledge-base/what-is-the-element-spacing-requirement-for-a-phased-array-to-avoid-grating-lobe/",
+      "publisher": "RF Essentials",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "rfessentials-broadside",
+      "title": "Broadside Array",
+      "url": "https://rfessentials.com/resources/rf-glossary/broadside-array/",
+      "publisher": "RF Essentials",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "tuberlin-ula",
+      "title": "Antenna Arrays: Uniform Linear Arrays",
+      "url": "https://platform.commit.tu-berlin.de/en/book/telecom/chapter/ch07/section/s02",
+      "publisher": "TU Berlin",
+      "accessed": "2026-10-10",
+      "access": "search-result"
+    },
+    {
+      "id": "speedcast-standard",
+      "title": "Starlink Standard Kit — Product Specifications",
+      "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/",
+      "publisher": "Speedcast",
+      "accessed": "2026-10-09",
+      "access": "search-result"
+    }
+  ]
+}

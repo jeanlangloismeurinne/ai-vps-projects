@@ -174,3 +174,11 @@ def test_anthropic_runner_sends_the_documented_request(monkeypatch, tmp_path):
     assert body["fallbacks"] == "default"
     assert body["system"] == [{"type": "text", "text": "the system prompt", "cache_control": {"type": "ephemeral"}}]
     assert body["messages"] == [{"role": "user", "content": "q"}]
+
+
+def test_manual_answer_to_an_older_request_is_refused(tmp_path):
+    with pytest.raises(PendingManualStep):
+        generate_node(TASK, ManualRunner(), tmp_path / "run")
+    (tmp_path / "run" / "calls" / "01-node" / "response.txt").write_text(reference_answer(), encoding="utf-8")
+    with pytest.raises(GeneratorError, match="older request"):
+        generate_node(replace(TASK, question="Une autre question ?"), ManualRunner(), tmp_path / "run")

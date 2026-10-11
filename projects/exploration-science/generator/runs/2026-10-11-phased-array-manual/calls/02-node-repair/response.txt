@@ -1,0 +1,719 @@
+{
+  "scene": {
+    "formatVersion": "0.2",
+    "node": {
+      "id": "starlink-phased-array",
+      "kind": "system",
+      "version": 1,
+      "status": "draft",
+      "summaryKey": "node.summary",
+      "parent": {
+        "node": "starlink-terminal",
+        "entity": "phased-array"
+      }
+    },
+    "scale": {
+      "metersPerUnit": 0.001
+    },
+    "environment": {
+      "lighting": "studio",
+      "background": "#1d2733"
+    },
+    "performance": {
+      "triangleBudget": 300000
+    },
+    "clock": {
+      "timeScale": 1
+    },
+    "camera": {
+      "home": {
+        "target": "array",
+        "azimuthDeg": 35,
+        "elevationDeg": 30,
+        "distance": 700
+      },
+      "constraints": {
+        "minDistance": 20,
+        "maxDistance": 1500,
+        "minElevationDeg": -40,
+        "maxElevationDeg": 89
+      }
+    },
+    "entities": [
+      {
+        "id": "array",
+        "component": "antenna-element-array",
+        "params": {
+          "lattice": "hexagonal",
+          "count": 1200,
+          "spacing": 0.0125,
+          "elementShape": "square-patch"
+        },
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ]
+        },
+        "selectable": true,
+        "labelKey": "entity.array.label",
+        "descriptionKey": "entity.array.description"
+      },
+      {
+        "id": "beamformers",
+        "component": "ic-chip-grid",
+        "parent": "array",
+        "params": {
+          "count": 64,
+          "chipSize": 0.008
+        },
+        "transform": {
+          "position": [
+            0,
+            -8,
+            0
+          ]
+        },
+        "selectable": true,
+        "labelKey": "entity.beamformers.label",
+        "descriptionKey": "entity.beamformers.description"
+      },
+      {
+        "id": "element",
+        "component": "patch-element",
+        "parent": "array",
+        "params": {
+          "patchSize": 0.008,
+          "tileSize": 0.0125,
+          "substrateThickness": 0.0015,
+          "feed": "probe"
+        },
+        "transform": {
+          "position": [
+            0,
+            20,
+            0
+          ]
+        },
+        "visible": false,
+        "selectable": true,
+        "labelKey": "entity.element.label",
+        "descriptionKey": "entity.element.description"
+      }
+    ],
+    "simulators": [
+      {
+        "id": "beam",
+        "simulator": "phased-array-wave",
+        "params": {
+          "frequencyHz": 12000000000,
+          "elementCount": 16,
+          "spacingOverLambda": 0.5,
+          "steeringAngleDeg": 0,
+          "tracking": false
+        },
+        "bind": {
+          "array": "array"
+        }
+      }
+    ],
+    "lenses": [
+      {
+        "id": "waves-lens",
+        "lens": "waves",
+        "labelKey": "lens.waves.label",
+        "sources": [
+          "beam"
+        ],
+        "controls": [
+          {
+            "id": "steer",
+            "target": "beam",
+            "param": "steeringAngleDeg",
+            "labelKey": "control.steer",
+            "levels": [
+              "discovery",
+              "essential",
+              "advanced"
+            ],
+            "min": -60,
+            "max": 60,
+            "step": 1
+          },
+          {
+            "id": "count",
+            "target": "beam",
+            "param": "elementCount",
+            "labelKey": "control.count",
+            "levels": [
+              "discovery",
+              "essential",
+              "advanced"
+            ],
+            "min": 2,
+            "max": 32,
+            "step": 1
+          },
+          {
+            "id": "phase",
+            "target": "beam",
+            "param": "phaseStepDeg",
+            "labelKey": "control.phase",
+            "levels": [
+              "advanced"
+            ],
+            "min": -180,
+            "max": 180,
+            "step": 1
+          },
+          {
+            "id": "spacing",
+            "target": "beam",
+            "param": "spacingOverLambda",
+            "labelKey": "control.spacing",
+            "levels": [
+              "essential",
+              "advanced"
+            ],
+            "min": 0.25,
+            "max": 1.5,
+            "step": 0.05
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "kind": "composedOf",
+        "from": "element",
+        "to": "starlink-radiating-element",
+        "available": true
+      },
+      {
+        "kind": "composedOf",
+        "from": "beamformers",
+        "to": "starlink-beamformer"
+      },
+      {
+        "kind": "reliesOn",
+        "from": "array",
+        "to": "wave-interference",
+        "available": true
+      },
+      {
+        "kind": "reliesOn",
+        "to": "electromagnetic-wave"
+      }
+    ],
+    "tours": [
+      {
+        "id": "intro",
+        "autoStart": true,
+        "steps": [
+          {
+            "id": "arrival",
+            "textKey": "intro.arrival",
+            "durationS": 9,
+            "camera": {
+              "shot": {
+                "target": "array",
+                "azimuthDeg": 35,
+                "elevationDeg": 30,
+                "distance": 700
+              },
+              "transitionS": 0
+            },
+            "actions": [
+              {
+                "type": "highlight",
+                "targets": [
+                  "array"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "layers",
+            "textKey": "intro.layers",
+            "durationS": 10,
+            "camera": {
+              "shot": {
+                "target": "beamformers",
+                "azimuthDeg": 20,
+                "elevationDeg": -20,
+                "distance": 450
+              },
+              "transitionS": 3
+            },
+            "actions": [
+              {
+                "type": "highlight",
+                "targets": [
+                  "beamformers"
+                ]
+              },
+              {
+                "type": "label",
+                "targets": [
+                  "array",
+                  "beamformers"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "handover-to-user",
+            "textKey": "intro.handover-to-user",
+            "durationS": 7,
+            "camera": {
+              "shot": {
+                "target": "array",
+                "azimuthDeg": 35,
+                "elevationDeg": 30,
+                "distance": 700
+              },
+              "transitionS": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "main",
+        "steps": [
+          {
+            "id": "elements",
+            "textKey": "play.elements",
+            "durationS": 20,
+            "camera": {
+              "shot": {
+                "target": "element",
+                "azimuthDeg": 30,
+                "elevationDeg": 35,
+                "distance": 120
+              },
+              "transitionS": 3
+            },
+            "actions": [
+              {
+                "type": "show",
+                "targets": [
+                  "element"
+                ]
+              },
+              {
+                "type": "highlight",
+                "targets": [
+                  "element"
+                ]
+              },
+              {
+                "type": "label",
+                "targets": [
+                  "element"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "chips",
+            "textKey": "play.chips",
+            "durationS": 22,
+            "camera": {
+              "shot": {
+                "target": "beamformers",
+                "azimuthDeg": 60,
+                "elevationDeg": -25,
+                "distance": 400
+              },
+              "transitionS": 3
+            },
+            "actions": [
+              {
+                "type": "hide",
+                "targets": [
+                  "element"
+                ]
+              },
+              {
+                "type": "highlight",
+                "targets": [
+                  "beamformers"
+                ]
+              },
+              {
+                "type": "label",
+                "targets": [
+                  "beamformers"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "steer",
+            "textKey": "play.steer",
+            "durationS": 32,
+            "camera": {
+              "shot": {
+                "target": "array",
+                "azimuthDeg": 0,
+                "elevationDeg": 8,
+                "distance": 900
+              },
+              "transitionS": 3
+            },
+            "actions": [
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "elementCount",
+                "value": 16
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "spacingOverLambda",
+                "value": 0.5
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "steeringAngleDeg",
+                "value": 0
+              },
+              {
+                "type": "lens",
+                "lens": "waves-lens",
+                "on": true
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "steeringAngleDeg",
+                "value": 35,
+                "overS": 5
+              }
+            ]
+          },
+          {
+            "id": "few-elements",
+            "textKey": "play.few-elements",
+            "durationS": 24,
+            "actions": [
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "steeringAngleDeg",
+                "value": 0
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "elementCount",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "id": "many-elements",
+            "textKey": "play.many-elements",
+            "durationS": 24,
+            "actions": [
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "elementCount",
+                "value": 32
+              }
+            ]
+          },
+          {
+            "id": "spacing",
+            "textKey": "play.spacing",
+            "durationS": 40,
+            "camera": {
+              "shot": {
+                "target": "array",
+                "azimuthDeg": 0,
+                "elevationDeg": 10,
+                "distance": 1000
+              },
+              "transitionS": 2
+            },
+            "actions": [
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "elementCount",
+                "value": 16
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "steeringAngleDeg",
+                "value": 35
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "spacingOverLambda",
+                "value": 0.5
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "spacingOverLambda",
+                "value": 1,
+                "overS": 6
+              }
+            ]
+          },
+          {
+            "id": "wrap",
+            "textKey": "play.wrap",
+            "durationS": 12,
+            "camera": {
+              "shot": {
+                "target": "array",
+                "azimuthDeg": 35,
+                "elevationDeg": 30,
+                "distance": 700
+              },
+              "transitionS": 3
+            },
+            "actions": [
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "spacingOverLambda",
+                "value": 0.5
+              },
+              {
+                "type": "setParam",
+                "target": "beam",
+                "param": "steeringAngleDeg",
+                "value": 0
+              },
+              {
+                "type": "lens",
+                "lens": "waves-lens",
+                "on": false
+              },
+              {
+                "type": "show",
+                "targets": [
+                  "element"
+                ]
+              },
+              {
+                "type": "highlight",
+                "targets": [
+                  "element"
+                ]
+              },
+              {
+                "type": "label",
+                "targets": [
+                  "element"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "texts": {
+    "formatVersion": "0.2",
+    "nodeId": "starlink-phased-array",
+    "lang": "fr",
+    "question": "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?",
+    "aliases": [
+      "Comment l'antenne Starlink vise-t-elle un satellite sans bouger ?",
+      "Comment fonctionne une antenne à balayage électronique ?",
+      "Qu'est-ce qu'une antenne réseau à commande de phase ?"
+    ],
+    "common": {
+      "derived.steering-angle-deg": "Direction du faisceau",
+      "entity.array.label": "Réseau d'éléments rayonnants",
+      "entity.beamformers.label": "Puces de formation de faisceau",
+      "entity.element.label": "Élément rayonnant",
+      "lens.waves.label": "Ondes",
+      "control.steer": "Angle du faisceau",
+      "control.count": "Nombre d'éléments (coupe)",
+      "control.phase": "Déphasage entre voisins",
+      "control.spacing": "Espacement d / λ",
+      "entity.array.description": "Des centaines de petites antennes identiques, espacées d'environ un centimètre. Ensemble, elles forment un faisceau qu'on oriente sans rien bouger.",
+      "entity.beamformers.description": "Des puces qui règlent, pour chaque petite antenne, un léger décalage et une puissance. C'est ce décalage qui oriente le faisceau.",
+      "entity.element.description": "Une seule petite antenne : un carré de cuivre posé sur une couche isolante, au-dessus d'un plan de cuivre."
+    },
+    "levels": {
+      "discovery": {
+        "node.summary": "Des centaines de petites antennes qui chantent ensemble, chacune un tout petit peu après sa voisine : c'est comme ça que l'antenne vise le satellite sans bouger.",
+        "entity.array.label": "Les petites antennes",
+        "entity.beamformers.label": "Les puces chefs d'orchestre",
+        "entity.element.label": "Une petite antenne",
+        "control.steer": "Direction du faisceau",
+        "control.count": "Nombre d'antennes",
+        "entity.array.description": "Des centaines de toutes petites antennes, rangées comme les cases d'un nid d'abeilles. Elles travaillent ensemble, comme une chorale.",
+        "entity.beamformers.description": "Elles disent à chaque petite antenne quand « chanter », un tout petit peu avant ou après sa voisine.",
+        "entity.element.description": "Une seule petite antenne : un carré de métal posé sur une plaque, pas plus grand qu'un ongle.",
+        "intro.arrival": "Nous voici sous la surface de l'antenne Starlink. Regarde : des centaines de toutes petites antennes, rangées serrées comme les cases d'un nid d'abeilles.",
+        "intro.layers": "Juste en dessous, des puces leur donnent des ordres. Ensemble, elles fabriquent un faisceau d'ondes radio qu'on peut tourner sans rien bouger.",
+        "intro.handover-to-user": "Touche une pièce pour aller voir dedans, ou appuie sur Play pour la visite.",
+        "play.elements": "Chacune de ces petites antennes envoie des ondes radio vers le ciel. Toute seule, elle est très faible, et ses ondes partent un peu partout. Mais elles sont des centaines, et elles travaillent ensemble, comme une chorale.",
+        "play.chips": "Sous les antennes, il y a des puces. Ce sont les chefs d'orchestre : elles disent à chaque petite antenne quand chanter, un tout petit peu avant ou après sa voisine.",
+        "play.steer": "Voici les ondes. Quand toutes les petites antennes chantent en même temps, le faisceau part tout droit vers le haut. Maintenant, chaque antenne attend un tout petit peu plus que sa voisine. Regarde : le faisceau penche sur le côté ! Rien n'a bougé, seul le moment où chaque onde part a changé.",
+        "play.few-elements": "Avec seulement quatre petites antennes, le faisceau est très large, comme une lampe de poche sans miroir. On éclaire partout, mais pas très fort.",
+        "play.many-elements": "Avec beaucoup plus d'antennes, le faisceau devient fin comme le rayon d'un phare. Presque toute l'énergie part dans la même direction, vers le satellite.",
+        "play.spacing": "Et si on écartait les petites antennes ? Regarde : un deuxième faisceau apparaît, et il part dans la mauvaise direction ! Une partie des ondes est gâchée. C'est pour ça que les antennes sont serrées : environ un centimètre entre deux voisines.",
+        "play.wrap": "Voilà l'astuce de l'antenne plate : des centaines de petites voix bien réglées. Touche une petite antenne pour voir comment elle est faite."
+      },
+      "essential": {
+        "node.summary": "Des centaines de petites antennes émettent la même onde avec un léger décalage de l'une à l'autre : leurs ondes s'additionnent dans une seule direction, qu'on change électroniquement.",
+        "intro.arrival": "Sous le capot de l'antenne Starlink : des centaines d'éléments rayonnants identiques, espacés d'environ un centimètre, soit une demi-longueur d'onde.",
+        "intro.layers": "Derrière eux, des puces règlent le signal de chaque élément. C'est ce réglage qui oriente le faisceau, sans aucune pièce mobile.",
+        "intro.handover-to-user": "Touchez une pièce pour plonger à l'intérieur, ou lancez la visite guidée.",
+        "play.elements": "Chaque élément est une petite antenne plate, qui émet et reçoit des ondes radio vers 12 gigahertz. Seul, il rayonne dans presque toutes les directions du ciel. Le faisceau étroit naît du travail d'équipe de tous les éléments.",
+        "play.chips": "Juste derrière, des puces de formation de faisceau appliquent à chaque élément deux réglages : un léger décalage dans le temps, qu'on appelle un déphasage, et une puissance. Leur conception exacte chez Starlink n'est pas connue en détail, mais le principe est celui de toutes les antennes de ce type.",
+        "play.steer": {
+          "text": "Allumons la lentille Ondes, sur une coupe de seize éléments. Tous en phase : les ondes s'additionnent droit vers le haut. Décalons maintenant chaque élément un peu plus que son voisin. Les crêtes s'alignent dans une direction inclinée, et le faisceau tourne jusqu'à 35 degrés. Le panneau, lui, n'a pas bougé.",
+          "links": [
+            {
+              "phrase": "Les crêtes s'alignent dans une direction inclinée",
+              "node": "wave-interference"
+            }
+          ]
+        },
+        "play.few-elements": "Le nombre d'éléments compte. Avec une coupe de seulement quatre éléments, le faisceau est large : environ 25 degrés. L'énergie s'étale sur une grande partie du ciel, et une petite part seulement va vers le satellite.",
+        "play.many-elements": "Avec 32 éléments, le faisceau ne fait plus qu'environ 3 degrés de large. Plus il y a d'éléments alignés, plus le faisceau est fin, et plus le signal est concentré vers le satellite. Le vrai panneau en compte des centaines.",
+        "play.spacing": "Pourquoi les éléments sont-ils si serrés ? Écartons-les jusqu'à une longueur d'onde entière, avec le faisceau toujours à 35 degrés. Un second faisceau apparaît, vers environ 25 degrés de l'autre côté : c'est un lobe de réseau. Il gaspille de l'énergie dans une direction inutile. Avec un écart d'une demi-longueur d'onde, environ un centimètre, aucun lobe de ce genre n'apparaît, quelle que soit la direction visée.",
+        "play.wrap": "Des centaines d'éléments, un décalage réglé pour chacun : voilà comment l'antenne vise sans bouger. Touchez un élément pour voir comment il est fait."
+      },
+      "advanced": {
+        "node.summary": "Antenne réseau à commande de phase : une progression linéaire de phase entre éléments espacés d'environ une demi-longueur d'onde oriente le lobe principal, sans lobe de réseau dans l'espace visible.",
+        "entity.array.description": "Réseau plan à maille hexagonale d'éléments imprimés, au pas d'environ une demi-longueur d'onde (≈ 1,25 cm à 12 GHz). Pas réel du terminal Starlink non vérifié.",
+        "entity.beamformers.description": "Circuits intégrés appliquant à chaque élément un déphasage et un gain réglables. Architecture interne des puces Starlink non vérifiée.",
+        "entity.element.description": "Élément patch imprimé : carré de cuivre sur substrat diélectrique, plan de masse dessous, alimenté par une sonde à travers le substrat.",
+        "intro.arrival": "Réseau plan d'éléments imprimés, en bande Ku. À 12 gigahertz, la longueur d'onde vaut environ 2,5 centimètres ; le pas, environ la moitié.",
+        "intro.layers": "Sous le réseau, les circuits de formation de faisceau appliquent à chaque élément un déphasage et un gain.",
+        "intro.handover-to-user": "Sélectionnez un sous-ensemble pour descendre d'un niveau, ou lancez la visite.",
+        "play.elements": "Chaque élément, une antenne imprimée, rayonne seul un diagramme large vers le ciel. La directivité du terminal vient de la somme cohérente des champs de tous les éléments : c'est le facteur de réseau.",
+        "play.chips": "Les circuits de formation de faisceau appliquent à chaque élément un déphasage et un gain réglables. Le gain pondère l'amplitude de chaque élément ; le déphasage fixe la direction du lobe principal. L'architecture interne des puces Starlink, et le nombre d'éléments servis par chaque puce, ne sont pas vérifiés.",
+        "play.steer": {
+          "text": "Avec un déphasage delta phi constant entre voisins, le lobe principal pointe dans la direction thêta zéro, mesurée depuis la normale au panneau, telle que delta phi égale deux pi fois d fois sinus thêta zéro, divisé par lambda, où d est le pas entre éléments et lambda la longueur d'onde. Avec un pas d'une demi-longueur d'onde, viser 35 degrés demande un déphasage d'environ 103 degrés.",
+          "subtitle": "Déphasage constant $\\Delta\\varphi$ entre voisins : le lobe principal pointe vers $\\theta_0$ tel que $\\Delta\\varphi = \\dfrac{2\\pi\\, d \\sin\\theta_0}{\\lambda}$. Avec $d = \\lambda/2$, viser $\\theta_0 = 35^\\circ$ demande $\\Delta\\varphi \\approx 103^\\circ$.",
+          "terms": [
+            {
+              "symbol": "\\Delta\\varphi",
+              "meaning": "déphasage entre deux éléments voisins",
+              "unit": "rad ou °"
+            },
+            {
+              "symbol": "\\theta_0",
+              "meaning": "direction du lobe principal, mesurée depuis la normale au panneau",
+              "unit": "°"
+            },
+            {
+              "symbol": "d",
+              "meaning": "pas entre deux éléments voisins",
+              "unit": "≈ 1,25 cm"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "longueur d'onde",
+              "unit": "≈ 2,5 cm à 12 GHz"
+            }
+          ],
+          "links": [
+            {
+              "phrase": "Déphasage constant",
+              "node": "wave-interference"
+            }
+          ]
+        },
+        "play.few-elements": {
+          "text": "Dans l'axe, la largeur du lobe à mi-puissance vaut environ 0,886 fois lambda, divisé par N fois d, en radians, où lambda est la longueur d'onde, N le nombre d'éléments de la coupe et d le pas. Avec quatre éléments au pas d'une demi-longueur d'onde, on trouve environ 25 degrés.",
+          "subtitle": "Largeur à mi-puissance dans l'axe : $\\theta_{3\\,\\mathrm{dB}} \\approx 0{,}886\\,\\dfrac{\\lambda}{N d}$ rad. Pour $N = 4$ et $d = \\lambda/2$ : $\\theta_{3\\,\\mathrm{dB}} \\approx 25^\\circ$.",
+          "terms": [
+            {
+              "symbol": "\\theta_{3\\,\\mathrm{dB}}",
+              "meaning": "largeur du lobe principal à mi-puissance",
+              "unit": "rad"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "longueur d'onde",
+              "unit": "≈ 2,5 cm"
+            },
+            {
+              "symbol": "N",
+              "meaning": "nombre d'éléments de la coupe linéaire"
+            },
+            {
+              "symbol": "d",
+              "meaning": "pas entre deux éléments voisins",
+              "unit": "cm"
+            }
+          ]
+        },
+        "play.many-elements": {
+          "text": "Avec 32 éléments au même pas, la même formule, 0,886 fois lambda divisé par N fois d, donne environ 3 degrés, lambda étant la longueur d'onde, N le nombre d'éléments et d le pas. La largeur du lobe varie comme l'inverse de la longueur du réseau, N fois d.",
+          "subtitle": "$N = 32$, $d = \\lambda/2$ : $\\theta_{3\\,\\mathrm{dB}} \\approx 0{,}886\\,\\dfrac{\\lambda}{N d} = \\dfrac{0{,}886}{16}\\ \\text{rad} \\approx 3^\\circ$. La largeur varie comme $1/(N d)$.",
+          "terms": [
+            {
+              "symbol": "\\theta_{3\\,\\mathrm{dB}}",
+              "meaning": "largeur du lobe principal à mi-puissance",
+              "unit": "rad"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "longueur d'onde",
+              "unit": "≈ 2,5 cm"
+            },
+            {
+              "symbol": "N",
+              "meaning": "nombre d'éléments de la coupe linéaire"
+            },
+            {
+              "symbol": "d",
+              "meaning": "pas entre deux éléments voisins",
+              "unit": "cm"
+            }
+          ]
+        },
+        "play.spacing": {
+          "text": "Le réseau rayonne aussi dans les directions thêta m telles que sinus thêta m égale sinus thêta zéro plus m fois lambda sur d, où m est un entier, lambda la longueur d'onde et d le pas. Pour m non nul, ce sont des lobes de réseau. Avec d égal à lambda et un faisceau à 35 degrés, l'un d'eux apparaît vers moins 25 degrés. Pour n'en avoir aucun jusqu'à 55 degrés de dépointage, moitié du champ de vision de 110 degrés supposé symétrique, il faut d inférieur à lambda sur un plus sinus 55 degrés, soit environ 0,55 lambda.",
+          "subtitle": "Lobes de réseau : $\\sin\\theta_m = \\sin\\theta_0 + m\\,\\dfrac{\\lambda}{d}$, $m \\neq 0$. Avec $d = \\lambda$ et $\\theta_0 = 35^\\circ$ : un lobe vers $-25^\\circ$. Aucun lobe jusqu'à $\\pm 55^\\circ$ (moitié du champ de vision de 110°, supposé symétrique) si $d < \\dfrac{\\lambda}{1 + \\sin 55^\\circ} \\approx 0{,}55\\,\\lambda$.",
+          "terms": [
+            {
+              "symbol": "\\theta_m",
+              "meaning": "direction du lobe d'ordre m (m non nul : lobe de réseau), depuis la normale au panneau",
+              "unit": "°"
+            },
+            {
+              "symbol": "\\theta_0",
+              "meaning": "direction du lobe principal, depuis la normale au panneau",
+              "unit": "°"
+            },
+            {
+              "symbol": "m",
+              "meaning": "ordre du lobe, un entier"
+            },
+            {
+              "symbol": "\\lambda",
+              "meaning": "longueur d'onde",
+              "unit": "≈ 2,5 cm"
+            },
+            {
+              "symbol": "d",
+              "meaning": "pas entre deux éléments voisins",
+              "unit": "cm"
+            }
+          ]
+        },
+        "play.wrap": "Pointage purement électronique : une progression linéaire de phase, et un pas sous la limite d'apparition des lobes de réseau. Sélectionnez un élément pour descendre d'un niveau."
+      }
+    }
+  }
+}

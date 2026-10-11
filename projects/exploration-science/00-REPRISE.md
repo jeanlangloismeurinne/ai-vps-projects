@@ -11,7 +11,7 @@ role: >
 # Prompt de reprise — exploration-science
 
 > **Roadmap active : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous)** — reste le jalon 6 (déploiement, essai iPad, tests utilisateurs : hors de l'agent).
-> **En parallèle : `roadmap/phase1-generator.md`** (validée le 2026-10-11) — capacité en cours : §2 (essai de génération).
+> **En parallèle : `roadmap/phase1-generator.md`** (validée le 2026-10-11) — capacité en cours : §2 (reste le run `anthropic` sur le VPS), puis §3 (banc).
 
 Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Brief initial : `PREMIER-MESSAGE.md`.
 
@@ -58,6 +58,8 @@ Lire d'abord `CLAUDE.md` du projet puis `docs/SPEC.md` (source de vérité). Bri
 - Journal : `generator/runs/<run>/calls/<nn>-<étape>/{request.json,response.json}`, `run.json` (exécuteur, reproductible, coût total, erreurs), `output/<nœud>/`. Les runs sont committés : c'est la trace reproductible.
 - Étape `node` : prompts `generator/prompts/node.*.md` (système stable = schémas + catalogue + exemples, mis en cache ; utilisateur = question, parent, nœuds existants, sources). Sortie validée par `scripts/validate-node.ts` (même validateur que les tests, dans le contexte du graphe fait main) ; erreurs renvoyées au modèle, 2 réparations au plus. Le nœud cible n'est jamais montré en exemple.
 - Clé : `generator/.env` (`ANTHROPIC_API_KEY=…`, chmod 600, ignoré), lu par la CLI. L'URL de l'API est épinglée (`XS_ANTHROPIC_BASE_URL` pour la changer) : un `ANTHROPIC_BASE_URL` de l'environnement de dev n'est pas suivi.
+- **Essai §2 (2026-10-11), run `generator/runs/2026-10-11-phased-array-manual`** — exécuteur `manual` à l'aveugle (sous-agent qui ne voyait que `request.md`), donc `reproducible: false`, coût inconnu. Résultat : 1 erreur au premier jet (terme explorable vers `starlink-radiating-element`, qui n'a pas de `summaryKey` — le prompt ne le disait pas ; corrigé : la liste des nœuds existants précise désormais lesquels acceptent un terme), valide après 1 réparation, rejoué à l'identique, joué dans le moteur sans erreur (7 étapes, lentille, curseurs, faisceau, lobe de réseau). Même structure que la référence (3 composants, 1 simulateur, mêmes liens disponibles), mais Play plus long (174 s contre 128 s) et ~1,7× plus de mots.
+  Enseignements pour le format v1 (à trancher avec les tests utilisateurs) : (1) une seule durée par étape pour les 3 niveaux → l'Approfondi impose son tempo, la Découverte attend ; (2) le réseau dessiné (1 200 éléments) ne suit pas le curseur d/λ et rien ne montre quelle ligne d'éléments le simulateur calcule ; (3) `antenna-element-array` n'a pas de `cutaway` → les puces dessous ne se voient pas (plan par la tranche) — question de catalogue, pas de format ; (4) aucun moyen de lier un texte à l'état de la lentille (« 25° » ne vaut que faisceau droit).
 - Lancer l'essai réel sur le VPS (Node + Python requis) :
   `python3 -m venv .venv && .venv/bin/pip install -e generator && npm ci && .venv/bin/python -m xs_generator node --id starlink-phased-array --question "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?" --parent starlink-terminal:phased-array --sources content/nodes/starlink-phased-array/sources.json --runner anthropic --run-id <date>-phased-array-anthropic`
 

@@ -78,10 +78,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 
-    cost = sum(c.cost_usd or 0 for c in result.calls)
+    costs = [c.cost_usd for c in result.calls]
+    cost = "cost unknown (no priced model call)" if any(c is None for c in costs) else f"cost ${sum(costs):.4f}"
     where = result.output_dir.relative_to(PROJECT)
     if result.ok:
-        print(f"OK: {where} valid after {len(result.calls)} call(s), cost ${cost:.4f}")
+        print(f"OK: {where} valid after {len(result.calls)} call(s), {cost}")
         return 0
     print(f"INVALID: {where} still has {len(result.errors)} error(s) after {len(result.calls)} call(s):")
     for error in result.errors:

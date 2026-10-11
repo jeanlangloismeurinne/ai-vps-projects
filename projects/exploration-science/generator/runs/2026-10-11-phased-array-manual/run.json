@@ -1,0 +1,54 @@
+{
+  "task": {
+    "node_id": "starlink-phased-array",
+    "question": "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?",
+    "kind": "system",
+    "sources": "content/nodes/starlink-phased-array/sources.json",
+    "parent": [
+      "starlink-terminal",
+      "phased-array"
+    ],
+    "examples": [
+      "wave-interference"
+    ]
+  },
+  "step": {
+    "name": "node",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "max_tokens": 64000
+  },
+  "runner": "manual",
+  "reproducible": false,
+  "calls": [
+    {
+      "name": "01-node",
+      "fingerprint": "b861a68fa98f1cbb9f828cd1b6149021006089490309b3370436c7d59022d780",
+      "runner": "manual",
+      "model": null,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost_usd": null
+    },
+    {
+      "name": "02-node-repair",
+      "fingerprint": "c9b59b580d240465eacf1d737c91004e5aaf8bab71fe78ce93a5bbf44cdf8375",
+      "runner": "manual",
+      "model": null,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      },
+      "cost_usd": null
+    }
+  ],
+  "total_cost_usd": null,
+  "valid": true,
+  "errors": []
+}
