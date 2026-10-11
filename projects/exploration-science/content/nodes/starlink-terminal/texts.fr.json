@@ -90,7 +90,7 @@
       "intro.handover-to-user": "Sélectionnez un sous-système pour descendre d'un niveau, ou lancez la visite.",
 
       "play.contact": {
-        "text": "Le satellite est à environ 480 kilomètres d'altitude. En orbite circulaire, sa vitesse est la racine carrée de mu divisé par r, où mu est la constante gravitationnelle de la Terre, et r la distance au centre de la Terre, c'est-à-dire son rayon plus l'altitude. On trouve environ 7,6 kilomètres par seconde, plus de 27 000 kilomètres par heure, et un tour de la Terre en 94 minutes environ.",
+        "text": "Le satellite est à environ 480 kilomètres d'altitude. En orbite circulaire, sa vitesse est la racine carrée de mu sur r : mu, la constante gravitationnelle de la Terre, et r, la distance au centre de la Terre, soit son rayon plus l'altitude. On trouve 7,6 kilomètres par seconde, plus de 27 000 kilomètres par heure : un tour de la Terre en 94 minutes.",
         "subtitle": "Le satellite est à environ 480 km d'altitude. En orbite circulaire, $v = \\sqrt{\\dfrac{\\mu}{R_\\oplus + h}} \\approx 7{,}6\\ \\text{km/s}$, soit plus de 27 000 km/h, et une période $T \\approx 94\\ \\text{min}$.",
         "terms": [
           {"symbol": "v", "meaning": "vitesse orbitale", "unit": "km/s"},
