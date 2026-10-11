@@ -5,6 +5,7 @@ import type { Stage } from "../play/player";
 import { CameraRig, type TargetProvider } from "./camera";
 import { attachCameraInput, type InputHandlers } from "./cameraInput";
 import { backgroundColor, createLighting } from "./environment";
+import { AdaptiveResolution } from "./detail";
 import { Highlighter } from "./highlighter";
 import { pickEntity } from "./picking";
 import type { LensInstance, PluginRegistry } from "./registry";
@@ -54,6 +55,7 @@ export class Engine implements Stage {
   private tourHighlights: string[] = [];
   private selected: string | null = null;
   private frameListeners: ((dt: number) => void)[] = [];
+  private readonly resolution: AdaptiveResolution;
 
   constructor(
     private readonly container: HTMLElement,
@@ -62,7 +64,8 @@ export class Engine implements Stage {
     private readonly input: InputHandlers = {},
   ) {
     this.renderer = new WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.resolution = new AdaptiveResolution(Math.min(window.devicePixelRatio, 2), Math.min(window.devicePixelRatio, 1));
+    this.renderer.setPixelRatio(this.resolution.ratio);
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     container.appendChild(this.renderer.domElement);
@@ -128,6 +131,12 @@ export class Engine implements Stage {
   /** Current outputs of a simulator instance (catalogue `outputs`). */
   simulatorOutputs(id: string): Record<string, unknown> | undefined {
     return this.current?.simulation.instances.get(id)?.outputs();
+  }
+
+  /** What a frame costs, for the `?perf` counter. */
+  stats(): { fps: number; pixelRatio: number; triangles: number; calls: number } {
+    const { triangles, calls } = this.renderer.info.render;
+    return { fps: this.resolution.fps, pixelRatio: this.resolution.ratio, triangles, calls };
   }
 
   /** Real size of one scene unit, in metres. */
@@ -349,7 +358,9 @@ export class Engine implements Stage {
 
   private frame(time: number): void {
     this.timer.update(time);
-    const dt = Math.min(this.timer.getDelta(), 0.1);
+    const realDt = this.timer.getDelta();
+    if (this.resolution.sample(realDt)) this.renderer.setPixelRatio(this.resolution.ratio);
+    const dt = Math.min(realDt, 0.1);
     for (const listener of this.frameListeners) listener(dt);
     const c = this.current;
     if (c) {

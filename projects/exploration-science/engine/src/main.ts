@@ -90,6 +90,17 @@ engine.onFrame = () => {
 };
 engine.onLensChange = () => refreshLenses();
 
+// `?perf`: frames per second, resolution and what a frame draws (iPad checks).
+if (new URLSearchParams(location.search).has("perf")) {
+  const counter = document.createElement("div");
+  counter.style.cssText = "position:fixed;left:50%;top:4px;transform:translateX(-50%);z-index:50;padding:2px 8px;border-radius:6px;background:#000a;color:#9f9;font:12px/1.4 ui-monospace,monospace;pointer-events:none";
+  document.body.appendChild(counter);
+  setInterval(() => {
+    const s = engine.stats();
+    counter.textContent = `${s.fps.toFixed(0)} i/s · ×${s.pixelRatio.toFixed(2)} · ${(s.triangles / 1000).toFixed(1)} k tri · ${s.calls} appels`;
+  }, 500);
+}
+
 const overlay = new Overlay(app, source.nodeIds(), {
   onHome: () => engine.goHome(),
   onNode: (id) => {
@@ -550,6 +561,14 @@ async function open(id: string, arrival: { comingBackFrom?: string; resume?: { t
 }
 
 overlay.setLevel(level);
+// The picker shows each node's question rather than its id.
+for (const id of source.nodeIds()) {
+  source.node(id).then(
+    (bundle) => overlay.nameNode(id, bundle.texts[LANG]?.question ?? id),
+    () => {},
+  );
+}
+
 void open(new URLSearchParams(location.search).get("node") ?? DEFAULT_NODE);
 
 // Dev only: a handle for driving the app from the console or a headless browser.

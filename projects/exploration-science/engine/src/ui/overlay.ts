@@ -88,8 +88,10 @@ const CSS = `
 .xs-overlay { position: absolute; inset: 0; pointer-events: none; font: 15px/1.45 system-ui, -apple-system, sans-serif; color: #10151c; }
 .xs-overlay button, .xs-overlay select { font: inherit; color: inherit; }
 .xs-panel { pointer-events: auto; background: rgba(255,255,255,.88); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
-.xs-title { position: absolute; top: 12px; left: 16px; max-width: calc(100% - 330px); margin: 0; padding: 6px 14px; font-size: 17px; font-weight: 600; }
-.xs-notice { position: absolute; top: 150px; left: 16px; max-width: 340px; padding: 8px 12px; border-radius: 8px; background: rgba(16,21,28,.75); color: #fff; font-size: 12px; }
+/* Left column: its panels stack, whatever the height of the question. */
+.xs-left { position: absolute; top: 12px; left: 16px; right: 370px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.xs-title { max-width: 100%; box-sizing: border-box; margin: 0; padding: 6px 14px; font-size: 17px; font-weight: 600; }
+.xs-notice { max-width: 340px; padding: 8px 12px; border-radius: 8px; background: rgba(16,21,28,.75); color: #fff; font-size: 12px; }
 .xs-notice:empty { display: none; }
 .xs-top-right { position: absolute; top: 12px; right: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .xs-node { pointer-events: auto; min-height: 36px; border-radius: 8px; }
@@ -134,11 +136,11 @@ button.xs-term:hover, button.xs-term:focus-visible { background: rgba(209,138,0,
 .xs-lenses { display: flex; gap: 6px; }
 .xs-lenses button { pointer-events: auto; min-height: 40px; padding: 0 14px; border: 0; border-radius: 20px; font-weight: 600; cursor: pointer; background: rgba(255,255,255,.88); box-shadow: 0 2px 10px rgba(0,0,0,.18); }
 .xs-lenses button[aria-pressed="true"] { background: #3a7bd5; color: #fff; }
-.xs-controls { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 260px; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.xs-controls { width: 260px; box-sizing: border-box; max-height: 50vh; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
 .xs-control label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; }
 .xs-control output { font-variant-numeric: tabular-nums; font-weight: 500; color: #3a4350; }
 .xs-control input { width: 100%; min-height: 32px; accent-color: #3a7bd5; }
-.xs-where { position: absolute; left: 16px; top: 60px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.xs-where { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .xs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 6px; font-size: 13px; }
 .xs-crumbs button { min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-weight: 600; color: #b87400; }
 .xs-crumbs span.here { padding: 0 8px; font-weight: 600; }
@@ -151,17 +153,24 @@ button.xs-term:hover, button.xs-term:focus-visible { background: rgba(209,138,0,
 .xs-fade.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .xs-fade { transition: none; } }
 [hidden] { display: none !important; }
+/* Phones: the panels flow in one column (their heights vary with the text), the Play bar and Retour stay pinned below. */
 @media (max-width: 640px) {
-  .xs-title { max-width: calc(100% - 32px); font-size: 15px; }
-  .xs-top-right { top: 64px; }
-  .xs-subtitle { font-size: 15px; bottom: 72px; }
-  .xs-card { top: auto; bottom: 76px; transform: none; }
+  .xs-overlay { display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 72px; box-sizing: border-box; }
+  .xs-left { display: contents; }
+  .xs-title { order: 1; font-size: 15px; }
+  .xs-top-right { position: static; order: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .xs-node { max-width: 45%; }
+  .xs-levels button { padding: 0 9px; }
+  .xs-where { order: 3; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .xs-crumbs { font-size: 12px; }
+  .xs-notice { order: 4; }
+  .xs-controls { order: 5; width: auto; align-self: stretch; max-height: 26vh; overflow: auto; gap: 6px; padding: 8px 12px; }
+  .xs-subtitle { position: static; order: 6; margin-top: auto; transform: none; width: auto; max-height: 34vh; font-size: 15px; }
+  .xs-card { top: auto; bottom: 72px; transform: none; }
   .xs-overlay:has(.xs-card:not([hidden])) .xs-subtitle { display: none; }
-  .xs-bar { left: auto; right: 16px; transform: none; }
+  .xs-home { left: 12px; bottom: 12px; }
+  .xs-bar { left: auto; right: 12px; bottom: 12px; transform: none; }
   .xs-dots { display: none; }
-  .xs-controls { top: 186px; transform: none; left: 16px; right: 16px; width: auto; max-height: 40%; overflow: auto; }
-  .xs-where { top: 112px; }
-  .xs-notice { top: 200px; }
 }
 `;
 
@@ -233,8 +242,16 @@ export class Overlay {
 
     this.returnButton.addEventListener("click", () => handlers.onReturn());
 
-    root.append(this.labelLayer, this.title, this.notice, topRight, this.controls, where, this.subtitle, this.card, this.termCard, this.saved, home, this.bar, this.fade);
+    const left = el("div", { className: "xs-left" });
+    left.append(this.title, where, this.notice, this.controls);
+    root.append(this.labelLayer, left, topRight, this.subtitle, this.card, this.termCard, this.saved, home, this.bar, this.fade);
     container.appendChild(root);
+  }
+
+  /** Names a node in the picker (its question, once its texts are loaded). */
+  nameNode(nodeId: string, name: string): void {
+    const option = [...this.picker.options].find((o) => o.value === nodeId);
+    if (option) option.textContent = name;
   }
 
   show(nodeId: string, question: string, notices: string[]): void {
