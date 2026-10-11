@@ -65,6 +65,20 @@ export const phasedArrayWave: SimulatorPlugin = {
     };
     const [array] = ctx.bound("array");
     if (!array) throw new Error("phased-array-wave: no array bound");
+    // Markers sit on the sources at the spacing in force when the source count was
+    // last set (their scene positions); changing the spacing alone stretches them
+    // about the array, so they stay on the sources the field is computed from.
+    const centre = array.node.getWorldPosition(new Vector3());
+    const markers = ctx.bound("markers").map((m) => ({ node: m.node, local: m.node.position.clone(), world: m.node.getWorldPosition(new Vector3()) }));
+    let layoutSpacing = params.spacingOverLambda;
+    const placed = new Vector3();
+    const placeMarkers = () => {
+      const k = params.spacingOverLambda / layoutSpacing;
+      for (const m of markers) {
+        placed.copy(m.world).sub(centre).multiplyScalar(k).add(centre);
+        m.node.position.copy(m.node.parent ? m.node.parent.worldToLocal(placed) : placed);
+      }
+    };
     // Which of steering angle / phase step was set last drives the other.
     let driver: "angle" | "phase" = initial.phaseStepDeg !== undefined && initial.steeringAngleDeg === undefined ? "phase" : "angle";
     const normal = new Vector3();
@@ -107,6 +121,8 @@ export const phasedArrayWave: SimulatorPlugin = {
         if (param === "phaseStepDeg" || param === "steeringAngleDeg") params.tracking = false;
         if (param === "phaseStepDeg") driver = "phase";
         if (param === "steeringAngleDeg") driver = "angle";
+        if (param === "elementCount") layoutSpacing = params.spacingOverLambda;
+        if (param === "elementCount" || param === "spacingOverLambda") placeMarkers();
         track();
       },
       update() {
@@ -129,6 +145,9 @@ export const phasedArrayWave: SimulatorPlugin = {
           gratingLobesDeg: steering === null ? [] : gratingLobesDeg(steering, params.spacingOverLambda),
         };
         return field;
+      },
+      dispose() {
+        for (const m of markers) m.node.position.copy(m.local);
       },
       outputs() {
         const { steering, phase } = derived();

@@ -60,6 +60,8 @@ export interface ControlView {
   value: number;
   /** Catalogue unit ("deg", "1"…) used to format the value. */
   unit?: string;
+  /** The value this control drives in turn (a beam angle set through the phase), shown under it. */
+  derived?: { label: string; unit?: string };
 }
 
 export interface CrumbView {
@@ -139,6 +141,8 @@ button.xs-term:hover, button.xs-term:focus-visible { background: rgba(209,138,0,
 .xs-controls { width: 260px; box-sizing: border-box; max-height: 50vh; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
 .xs-control label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; }
 .xs-control output { font-variant-numeric: tabular-nums; font-weight: 500; color: #3a4350; }
+.xs-derived { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #3a4350; }
+.xs-derived output { font-variant-numeric: tabular-nums; font-weight: 600; color: #3a7bd5; }
 .xs-control input { width: 100%; min-height: 32px; accent-color: #3a7bd5; }
 .xs-where { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .xs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 6px; font-size: 13px; }
@@ -197,7 +201,7 @@ export class Overlay {
   private readonly card = el("aside", { className: "xs-card xs-panel", hidden: true });
   private readonly lensBar = el("div", { className: "xs-lenses" });
   private readonly controls = el("div", { className: "xs-controls xs-panel", hidden: true });
-  private readonly controlInputs = new Map<string, { input: HTMLInputElement; output: HTMLOutputElement; unit?: string }>();
+  private readonly controlInputs = new Map<string, { input: HTMLInputElement; output: HTMLOutputElement; unit?: string; derived?: { output: HTMLOutputElement; unit?: string } }>();
   private readonly crumbs = el("nav", { className: "xs-crumbs xs-panel", ariaLabel: "Niveaux de zoom" });
   private readonly scale = el("div", { className: "xs-scale xs-panel", ariaHidden: "true" });
   private readonly scaleLabel = el("span");
@@ -410,16 +414,28 @@ export class Overlay {
           this.handlers.onControl(c.id, Number(input.value));
         });
         output.textContent = formatValue(c.value, c.unit, c.step);
-        this.controlInputs.set(c.id, { input, output, unit: c.unit });
         wrap.append(label, input);
+        let derived: { output: HTMLOutputElement; unit?: string } | undefined;
+        if (c.derived) {
+          derived = { output: el("output"), unit: c.derived.unit };
+          const line = el("div", { className: "xs-derived" });
+          line.append(el("span", { textContent: `→ ${c.derived.label}` }), derived.output);
+          wrap.append(line);
+        }
+        this.controlInputs.set(c.id, { input, output, unit: c.unit, derived });
         return wrap;
       }),
     );
   }
 
   /** Follows values changed elsewhere (a tour animating a slider). Call once per frame. */
-  updateControls(value: (id: string) => number | undefined): void {
-    for (const [id, { input, output, unit }] of this.controlInputs) {
+  updateControls(value: (id: string) => number | undefined, derivedValue?: (id: string) => number | null | undefined): void {
+    for (const [id, { input, output, unit, derived }] of this.controlInputs) {
+      if (derived) {
+        const d = derivedValue?.(id);
+        // null: the derived quantity has no value (no real beam direction for this phase).
+        derived.output.textContent = d === null ? "aucune" : d === undefined || !Number.isFinite(d) ? "" : formatValue(d, derived.unit, 0.1);
+      }
       if (document.activeElement === input) continue;
       const v = value(id);
       if (v === undefined || !Number.isFinite(v)) continue;

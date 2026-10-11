@@ -5,6 +5,7 @@
   "question": "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?",
   "aliases": ["Comment fonctionne une antenne réseau à commande de phase ?", "Comment l'antenne Starlink vise-t-elle le satellite sans bouger ?"],
   "common": {
+    "derived.steering-angle-deg": "Direction du faisceau",
     "entity.array.label": "Réseau d'éléments rayonnants",
     "entity.array.description": "Des centaines d'éléments identiques, espacés d'environ un centimètre. Chacun émet la même onde ; c'est leur décalage qui oriente le faisceau.",
     "entity.beamformers.label": "Puces de formation de faisceau",

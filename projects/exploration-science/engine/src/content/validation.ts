@@ -7,6 +7,7 @@ import sceneSchema from "../../../schemas/scene.schema.json" with { type: "json"
 import catalogueSchema from "../../../schemas/catalogue.schema.json" with { type: "json" };
 import textsSchema from "../../../schemas/texts.schema.json" with { type: "json" };
 import sourcesSchema from "../../../schemas/sources.schema.json" with { type: "json" };
+import { derivedTextKey } from "../ui/texts";
 
 export const LEVELS = ["discovery", "essential", "advanced"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -101,11 +102,24 @@ export class ContentValidator {
     for (const [lang, texts] of Object.entries(node.texts)) {
       if (texts.nodeId !== nodeId) errors.push(`texts.${lang}.nodeId '${texts.nodeId}' != '${nodeId}'`);
       if (texts.lang !== lang) errors.push(`texts.${lang}.lang is '${texts.lang}'`);
-      errors.push(...textKeyErrors(scene, texts).map((e) => `texts.${lang}: ${e}`));
+      errors.push(...textKeyErrors(scene, texts, this.derivedTextKeys(scene)).map((e) => `texts.${lang}: ${e}`));
       errors.push(...textEntryErrors(scene, texts).map((e) => `texts.${lang}: ${e}`));
     }
     errors.push(...sourcesErrors(sources));
     return errors;
+  }
+
+  /** Optional keys naming what a control drives in turn (`derived.<param>`, see derivedTextKey). */
+  private derivedTextKeys(scene: Json): Set<string> {
+    const keys = new Set<string>();
+    for (const l of scene.lenses ?? []) {
+      for (const c of l.controls) {
+        const simulator = (scene.simulators ?? []).find((s: Json) => s.id === c.target)?.simulator;
+        const alternative = this.find("simulators", simulator)?.params.properties[c.param]?.["x-alternativeTo"];
+        if (alternative) keys.add(derivedTextKey(alternative));
+      }
+    }
+    return keys;
   }
 
   private find(kind: "components" | "simulators" | "lenses", id: string): Json | undefined {
@@ -304,7 +318,8 @@ export function resolveText(texts: Json, level: Level, key: string): unknown {
   return texts.levels[level][key] ?? texts.common[key];
 }
 
-function textKeyErrors(scene: Json, texts: Json): string[] {
+
+function textKeyErrors(scene: Json, texts: Json, optional: Set<string>): string[] {
   const errors: string[] = [];
   const used = sceneTextKeys(scene);
   for (const key of used) {
@@ -314,7 +329,7 @@ function textKeyErrors(scene: Json, texts: Json): string[] {
   }
   const defined = new Set([...Object.keys(texts.common), ...LEVELS.flatMap((l) => Object.keys(texts.levels[l]))]);
   for (const key of defined) {
-    if (!used.has(key)) errors.push(`key '${key}' is not used by the scene`);
+    if (!used.has(key) && !optional.has(key)) errors.push(`key '${key}' is not used by the scene`);
   }
   return errors;
 }

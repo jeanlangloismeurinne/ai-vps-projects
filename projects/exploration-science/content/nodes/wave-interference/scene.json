@@ -232,7 +232,17 @@
         "tracking": false
       },
       "bind": {
-        "array": "centre"
+        "array": "centre",
+        "markers": [
+          "source-1",
+          "source-2",
+          "source-3",
+          "source-4",
+          "source-5",
+          "source-6",
+          "source-7",
+          "source-8"
+        ]
       }
     }
   ],

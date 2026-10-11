@@ -17,3 +17,8 @@ export function displayed(entry: TextEntry | undefined): string {
   if (entry === undefined) return "";
   return typeof entry === "string" ? entry : (entry.subtitle ?? entry.text);
 }
+
+/** Text naming the value a control drives in turn, e.g. steeringAngleDeg -> derived.steering-angle-deg (optional). */
+export function derivedTextKey(param: string): string {
+  return `derived.${param.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+}

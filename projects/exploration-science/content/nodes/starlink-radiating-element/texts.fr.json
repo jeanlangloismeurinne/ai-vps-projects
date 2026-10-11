@@ -5,6 +5,7 @@
   "question": "Comment une seule petite antenne du réseau Starlink émet-elle son onde ?",
   "aliases": ["Comment fonctionne une antenne imprimée ?", "Qu'y a-t-il dans un élément rayonnant ?"],
   "common": {
+    "derived.steering-angle-deg": "Direction du faisceau",
     "entity.element.label": "Élément rayonnant",
     "entity.element.description": "Une pastille de cuivre carrée d'environ sept millimètres, sur une couche isolante posée sur un plan de métal.",
     "entity.neighbour.label": "Élément voisin",

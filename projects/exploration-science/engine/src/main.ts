@@ -9,7 +9,7 @@ import { registerLenses } from "./plugins/lenses";
 import { registerSimulators } from "./plugins/simulators";
 import { fadeDuration, Overlay, type ControlView } from "./ui/overlay";
 import { scaleBar, scaleUnit } from "./ui/scale";
-import { lookup } from "./ui/texts";
+import { derivedTextKey, lookup } from "./ui/texts";
 
 const DEFAULT_NODE = "starlink-terminal";
 const LANG = "fr";
@@ -84,7 +84,7 @@ engine.addFrameListener((dt) => player.update(dt));
 // Labels wait for the camera to land: during a flight they would slide across the screen.
 engine.onFrame = () => {
   overlay.placeLabels((id) => engine.screenPosition(id), engine.cameraFlying);
-  overlay.updateControls(controlValue);
+  overlay.updateControls(controlValue, derivedValue);
   const scale = engine.scaleAtTarget();
   overlay.setScale(scale === null ? null : { ...scaleBar(scale.metresPerPixel), magnified: scale.magnified });
 };
@@ -405,6 +405,21 @@ function controlValue(id: string): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
+/** Catalogue param a control's param is an alternative to (`x-alternativeTo`): the phase step drives the beam angle. */
+function alternativeOf(target: string, param: string): string | undefined {
+  const simulator = scene?.simulators?.find((s) => s.id === target)?.simulator;
+  const spec = catalogue?.simulators.find((s) => s.id === simulator)?.params.properties[param] as { "x-alternativeTo"?: string } | undefined;
+  return spec?.["x-alternativeTo"];
+}
+
+function derivedValue(id: string): number | null | undefined {
+  const control = controlSpec(id);
+  const alternative = control && alternativeOf(control.target, control.param);
+  if (!control || !alternative) return undefined;
+  const output = engine.simulatorOutputs(control.target)?.[alternative];
+  return output === null ? null : typeof output === "number" ? output : undefined;
+}
+
 function refreshLenses(): void {
   const labels = new Map((scene?.lenses ?? []).map((l) => [l.id, textOf(l.labelKey) || l.id]));
   overlay.setLenses(engine.lensStates().map((l) => ({ ...l, label: labels.get(l.id) ?? l.id })));
@@ -419,7 +434,13 @@ function refreshLenses(): void {
       const min = c.min ?? spec?.minimum ?? 0;
       const max = c.max ?? spec?.maximum ?? 1;
       const step = c.step ?? (spec?.type === "integer" ? 1 : (max - min) / 100);
-      controls.push({ id: c.id, label: textOf(c.labelKey) || c.param, min, max, step, value: controlValue(c.id) ?? min, unit: spec?.["x-unit"] });
+      // The value it drives is shown under it (optional text, derivedTextKey), unless a slider for it is shown too.
+      const alternative = alternativeOf(c.target, c.param);
+      const derivedLabel = alternative ? textOf(derivedTextKey(alternative)) : "";
+      const alongside = lens.controls.some((o) => o.target === c.target && o.param === alternative && o.levels.includes(level));
+      const altUnit = alternative ? (catalogue?.simulators.find((s) => s.id === simulator)?.params.properties[alternative] as { "x-unit"?: string } | undefined)?.["x-unit"] : undefined;
+      const derived = derivedLabel && !alongside ? { label: derivedLabel, unit: altUnit } : undefined;
+      controls.push({ id: c.id, label: textOf(c.labelKey) || c.param, min, max, step, value: controlValue(c.id) ?? min, unit: spec?.["x-unit"], derived });
     }
   }
   overlay.setControls(controls);

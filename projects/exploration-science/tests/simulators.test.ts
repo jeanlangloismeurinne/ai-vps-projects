@@ -139,3 +139,33 @@ describe("orbital-pass", () => {
     expect(sim.instances.get("beam")!.params.tracking).toBe(true);
   });
 });
+
+describe("phased-array-wave markers", () => {
+  const scene: Scene = readJson("content/nodes/wave-interference/scene.json");
+  const x = (built: ReturnType<typeof buildScene>, id: string) => built.entities.get(id)!.node.position.x;
+
+  it("stay on the sources when the spacing alone changes, and go back on reset", () => {
+    const built = buildScene(scene, catalogue, registry);
+    const sim = buildSimulation(scene, catalogue, registry, built);
+    const field = sim.instances.get("field")!;
+    // Two sources at 1.5 λ (λ = 25 mm at 12 GHz): ±18.75 mm.
+    expect(x(built, "source-6")).toBeCloseTo(18.75, 6);
+    field.set("spacingOverLambda", 1);
+    expect(x(built, "source-6")).toBeCloseTo(12.5, 6);
+    expect(x(built, "source-3")).toBeCloseTo(-12.5, 6);
+    sim.reset();
+    expect(x(built, "source-6")).toBeCloseTo(18.75, 6);
+  });
+
+  it("keep the eight-source layout once the count is set at λ/2, then stretch with d", () => {
+    const built = buildScene(scene, catalogue, registry);
+    const sim = buildSimulation(scene, catalogue, registry, built);
+    const field = sim.instances.get("field")!;
+    field.set("spacingOverLambda", 0.5);
+    field.set("elementCount", 8);
+    expect(x(built, "source-8")).toBeCloseTo(43.75, 6); // 3.5 × 12.5 mm
+    field.set("spacingOverLambda", 1);
+    expect(x(built, "source-8")).toBeCloseTo(87.5, 6);
+    expect(x(built, "source-5")).toBeCloseTo(12.5, 6);
+  });
+});

@@ -622,7 +622,7 @@
     {
       "id": "phased-array-wave",
       "status": "implemented",
-      "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes. The array role may also be a single element: the line of sources is then centred on it.",
+      "description": "Linear phased array: superposition of N point sources with a linear phase progression. Computes the field on a plane, the array factor, the main beam and grating lobes. The array role may also be a single element: the line of sources is then centred on it. Optional markers show where the sources are: they keep their scene positions for the spacing in force when the source count was last set, and stretch about the array when only the spacing changes.",
       "equations": [
         {
           "tex": "\\Delta\\varphi = \\frac{2\\pi\\, d\\, \\sin\\theta_0}{\\lambda}",
@@ -806,6 +806,13 @@
             "patch-element"
           ],
           "multiple": false
+        },
+        "markers": {
+          "components": [
+            "patch-element"
+          ],
+          "multiple": true,
+          "optional": true
         }
       },
       "outputs": [

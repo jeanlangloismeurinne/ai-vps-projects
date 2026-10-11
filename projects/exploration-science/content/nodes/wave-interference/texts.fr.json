@@ -8,6 +8,7 @@
     "Comment des ondes s'additionnent-elles ?"
   ],
   "common": {
+    "derived.steering-angle-deg": "Direction du faisceau",
     "entity.source.label": "Source",
     "lens.waves.label": "Ondes",
     "control.phase": "Décalage entre sources",

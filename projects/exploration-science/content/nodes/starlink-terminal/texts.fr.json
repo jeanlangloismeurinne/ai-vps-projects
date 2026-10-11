@@ -9,6 +9,7 @@
     "Comment fonctionne Starlink ?"
   ],
   "common": {
+    "derived.steering-angle-deg": "Direction du faisceau",
     "entity.terminal.label": "Antenne Starlink",
     "entity.phased-array.label": "Réseau d'éléments rayonnants",
     "entity.beamformers.label": "Puces de formation de faisceau",
