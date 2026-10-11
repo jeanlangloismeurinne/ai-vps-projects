@@ -98,7 +98,7 @@
   ],
   "links": [
     { "kind": "reliesOn", "from": "element", "to": "electromagnetic-wave" },
-    { "kind": "reliesOn", "from": "element", "to": "wave-interference" }
+    { "kind": "reliesOn", "from": "element", "to": "wave-interference", "available": true }
   ],
   "tours": [
     {

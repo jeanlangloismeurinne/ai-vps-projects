@@ -1,0 +1,536 @@
+{
+  "formatVersion": "0.2",
+  "node": {
+    "id": "wave-interference",
+    "kind": "principle",
+    "version": 1,
+    "status": "review",
+    "summaryKey": "node.summary"
+  },
+  "scale": {
+    "metersPerUnit": 0.001
+  },
+  "environment": {
+    "lighting": "studio",
+    "background": "#1d2733"
+  },
+  "performance": {
+    "triangleBudget": 60000
+  },
+  "camera": {
+    "home": {
+      "target": "frame",
+      "azimuthDeg": 20,
+      "elevationDeg": 25,
+      "distance": 340
+    },
+    "constraints": {
+      "minDistance": 40,
+      "maxDistance": 900,
+      "minElevationDeg": 0,
+      "maxElevationDeg": 85
+    }
+  },
+  "entities": [
+    {
+      "id": "frame",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          0,
+          100,
+          0
+        ]
+      },
+      "visible": false
+    },
+    {
+      "id": "centre",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ]
+      },
+      "visible": false,
+      "labelKey": "entity.source.label"
+    },
+    {
+      "id": "source-1",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          -43.75,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    },
+    {
+      "id": "source-2",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          -31.25,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    },
+    {
+      "id": "source-3",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          -18.75,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label"
+    },
+    {
+      "id": "source-4",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          -6.25,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    },
+    {
+      "id": "source-5",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          6.25,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    },
+    {
+      "id": "source-6",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          18.75,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label"
+    },
+    {
+      "id": "source-7",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          31.25,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    },
+    {
+      "id": "source-8",
+      "component": "patch-element",
+      "params": {
+        "patchSize": 0.005,
+        "tileSize": 0.008,
+        "substrateThickness": 0.0015,
+        "feed": "none"
+      },
+      "transform": {
+        "position": [
+          43.75,
+          0,
+          0
+        ]
+      },
+      "labelKey": "entity.source.label",
+      "visible": false
+    }
+  ],
+  "simulators": [
+    {
+      "id": "field",
+      "simulator": "phased-array-wave",
+      "params": {
+        "frequencyHz": 12000000000,
+        "elementCount": 2,
+        "spacingOverLambda": 1.5,
+        "phaseStepDeg": 0,
+        "tracking": false
+      },
+      "bind": {
+        "array": "centre"
+      }
+    }
+  ],
+  "lenses": [
+    {
+      "id": "waves-lens",
+      "lens": "waves",
+      "labelKey": "lens.waves.label",
+      "sources": [
+        "field"
+      ],
+      "controls": [
+        {
+          "id": "phase",
+          "target": "field",
+          "param": "phaseStepDeg",
+          "labelKey": "control.phase",
+          "levels": [
+            "discovery",
+            "essential",
+            "advanced"
+          ],
+          "min": -180,
+          "max": 180,
+          "step": 1
+        },
+        {
+          "id": "spacing",
+          "target": "field",
+          "param": "spacingOverLambda",
+          "labelKey": "control.spacing",
+          "levels": [
+            "advanced"
+          ],
+          "min": 0.25,
+          "max": 2,
+          "step": 0.05
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "kind": "reliesOn",
+      "to": "electromagnetic-wave"
+    }
+  ],
+  "tours": [
+    {
+      "id": "intro",
+      "autoStart": true,
+      "steps": [
+        {
+          "id": "arrival",
+          "textKey": "intro.arrival",
+          "durationS": 9,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 20,
+              "elevationDeg": 25,
+              "distance": 340
+            },
+            "transitionS": 0
+          },
+          "actions": [
+            {
+              "type": "lens",
+              "lens": "waves-lens",
+              "on": true
+            },
+            {
+              "type": "highlight",
+              "targets": [
+                "source-3",
+                "source-6"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bands",
+          "textKey": "intro.bands",
+          "durationS": 9,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 0,
+              "elevationDeg": 8,
+              "distance": 300
+            },
+            "transitionS": 3
+          }
+        },
+        {
+          "id": "handover-to-user",
+          "textKey": "intro.handover-to-user",
+          "durationS": 7,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 20,
+              "elevationDeg": 25,
+              "distance": 340
+            },
+            "transitionS": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "main",
+      "steps": [
+        {
+          "id": "one",
+          "textKey": "play.one",
+          "durationS": 18,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 0,
+              "elevationDeg": 8,
+              "distance": 300
+            },
+            "transitionS": 2
+          },
+          "actions": [
+            {
+              "type": "show",
+              "targets": [
+                "centre"
+              ]
+            },
+            {
+              "type": "hide",
+              "targets": [
+                "source-3",
+                "source-6"
+              ]
+            },
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "elementCount",
+              "value": 1
+            },
+            {
+              "type": "lens",
+              "lens": "waves-lens",
+              "on": true
+            },
+            {
+              "type": "highlight",
+              "targets": [
+                "centre"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "two",
+          "textKey": "play.two",
+          "durationS": 22,
+          "actions": [
+            {
+              "type": "hide",
+              "targets": [
+                "centre"
+              ]
+            },
+            {
+              "type": "show",
+              "targets": [
+                "source-3",
+                "source-6"
+              ]
+            },
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "elementCount",
+              "value": 2
+            },
+            {
+              "type": "highlight",
+              "targets": [
+                "source-3",
+                "source-6"
+              ]
+            },
+            {
+              "type": "label",
+              "targets": [
+                "source-3",
+                "source-6"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bands",
+          "textKey": "play.bands",
+          "durationS": 24,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 0,
+              "elevationDeg": 10,
+              "distance": 260
+            },
+            "transitionS": 2
+          }
+        },
+        {
+          "id": "shift",
+          "textKey": "play.shift",
+          "durationS": 22,
+          "actions": [
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "phaseStepDeg",
+              "value": 0
+            },
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "phaseStepDeg",
+              "value": 120,
+              "overS": 5
+            },
+            {
+              "type": "highlight",
+              "targets": [
+                "source-6"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "many",
+          "textKey": "play.many",
+          "durationS": 24,
+          "camera": {
+            "shot": {
+              "target": "frame",
+              "azimuthDeg": 0,
+              "elevationDeg": 12,
+              "distance": 480
+            },
+            "transitionS": 3
+          },
+          "actions": [
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "phaseStepDeg",
+              "value": 0
+            },
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "spacingOverLambda",
+              "value": 0.5
+            },
+            {
+              "type": "setParam",
+              "target": "field",
+              "param": "elementCount",
+              "value": 8
+            },
+            {
+              "type": "show",
+              "targets": [
+                "source-1",
+                "source-2",
+                "source-4",
+                "source-5",
+                "source-7",
+                "source-8"
+              ]
+            },
+            {
+              "type": "highlight",
+              "targets": [
+                "source-3",
+                "source-6",
+                "source-1",
+                "source-2",
+                "source-4",
+                "source-5",
+                "source-7",
+                "source-8"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

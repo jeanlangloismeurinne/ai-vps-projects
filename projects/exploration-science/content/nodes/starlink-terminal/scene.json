@@ -212,7 +212,7 @@
     { "kind": "composedOf", "from": "modem", "to": "starlink-modem" },
     { "kind": "composedOf", "from": "power", "to": "starlink-power-deicing" },
     { "kind": "composedOf", "from": "router", "to": "starlink-wifi-router" },
-    { "kind": "reliesOn", "from": "phased-array", "to": "wave-interference" },
+    { "kind": "reliesOn", "from": "phased-array", "to": "wave-interference", "available": true },
     { "kind": "reliesOn", "from": "sat-a", "to": "circular-orbit" },
     { "kind": "freeQuestion", "from": "terminal", "to": "why-flat-antenna" }
   ],

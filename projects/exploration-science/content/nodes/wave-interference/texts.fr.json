@@ -1,0 +1,135 @@
+{
+  "formatVersion": "0.2",
+  "nodeId": "wave-interference",
+  "lang": "fr",
+  "question": "Pourquoi deux ondes peuvent-elles se renforcer ou s'annuler ?",
+  "aliases": [
+    "Que sont les interférences ?",
+    "Comment des ondes s'additionnent-elles ?"
+  ],
+  "common": {
+    "entity.source.label": "Source",
+    "lens.waves.label": "Ondes",
+    "control.phase": "Décalage entre sources",
+    "control.spacing": "Espacement d / λ"
+  },
+  "levels": {
+    "discovery": {
+      "node.summary": "Quand deux vagues se rencontrent, elles s'additionnent : parfois elles deviennent plus grandes, parfois elles s'effacent.",
+      "control.phase": "Décalage",
+      "intro.arrival": "Voici deux petites sources qui font des vagues en même temps, comme deux cailloux tombés ensemble dans une mare.",
+      "intro.bands": "Regarde bien : à certains endroits les vagues deviennent plus grandes, à d'autres elles disparaissent presque.",
+      "intro.handover-to-user": "Joue avec le curseur de la lentille Ondes, ou appuie sur Play pour la visite.",
+      "play.one": "D'abord, une seule source. Ses vagues partent en cercles : une bosse, un creux, une bosse, comme dans une mare.",
+      "play.two": "Ajoutons une deuxième source. Quand deux bosses arrivent au même endroit, la vague devient deux fois plus haute. Quand une bosse tombe sur un creux, elles s'effacent.",
+      "play.bands": "C'est pour ça qu'on voit des rayons : des chemins où les vagues s'aident, et entre eux, des chemins où elles s'annulent.",
+      "play.shift": "Si une source attend un tout petit peu avant de faire sa vague, tous les rayons tournent. Rien n'a bougé, sauf le moment où chaque vague part !",
+      "play.many": "Avec beaucoup de sources serrées les unes contre les autres, il ne reste qu'un seul grand rayon. C'est exactement ce que fait l'antenne Starlink pour viser le satellite."
+    },
+    "essential": {
+      "node.summary": "Deux ondes qui se croisent s'additionnent : elles se renforcent là où leurs crêtes coïncident et s'annulent là où une crête rencontre un creux.",
+      "intro.arrival": "Deux sources émettent la même onde radio, au même rythme. Leurs ondes se croisent et s'additionnent en chaque point.",
+      "intro.bands": "Résultat : des directions où l'onde est renforcée et, entre elles, des directions où elle s'éteint presque. Ce sont des interférences.",
+      "intro.handover-to-user": "Réglez le décalage dans la lentille Ondes, ou lancez la visite guidée.",
+      "play.one": "Une seule source d'abord. Elle émet des ondes circulaires : une crête, un creux, une crête, espacées d'une longueur d'onde, ici deux centimètres et demi.",
+      "play.two": "Une deuxième source, à une longueur d'onde et demie de la première. Là où deux crêtes se rencontrent, l'onde est deux fois plus forte. Là où une crête rencontre un creux, les deux s'annulent.",
+      "play.bands": "Tout dépend de la différence de trajet. Si un point est plus loin d'une source que de l'autre d'un nombre entier de longueurs d'onde, les crêtes arrivent ensemble. Avec une demi-longueur d'onde de plus, elles s'opposent.",
+      "play.shift": "Retardons maintenant une source d'un tiers de période. Toutes les directions renforcées tournent d'un bloc : on oriente l'onde sans rien bouger, simplement en décalant son départ.",
+      "play.many": "Avec huit sources espacées d'une demi-longueur d'onde, une seule direction reste renforcée : un faisceau. C'est le principe du réseau d'antennes de Starlink."
+    },
+    "advanced": {
+      "node.summary": "Superposition d'ondes cohérentes : l'amplitude résultante dépend de leur différence de phase, maximale pour un multiple de deux pi, nulle pour un multiple impair de pi.",
+      "intro.arrival": "Deux sources ponctuelles cohérentes, en phase, à douze gigahertz : longueur d'onde d'environ vingt-cinq millimètres. Le champ affiché est la somme des deux ondes.",
+      "intro.bands": "Les maxima et minima d'intensité dessinent des directions fixes : la figure d'interférence de deux sources.",
+      "intro.handover-to-user": "Lentille Ondes : réglez le déphasage et l'espacement, ou lancez la visite.",
+      "play.one": {
+        "text": "Une source seule émet des ondes cylindriques dont l'amplitude décroît comme l'inverse de la racine de la distance r. Leur longueur d'onde lambda vaut c sur f, la vitesse de la lumière divisée par la fréquence : vingt-cinq millimètres à douze gigahertz.",
+        "subtitle": "Source seule : ondes cylindriques, amplitude $\\propto 1/\\sqrt{r}$. Longueur d'onde $\\lambda = c/f \\approx 25\\ \\text{mm}$ à $f = 12\\ \\text{GHz}$.",
+        "terms": [
+          {
+            "symbol": "r",
+            "meaning": "distance à la source",
+            "unit": "mm"
+          },
+          {
+            "symbol": "\\lambda",
+            "meaning": "longueur d'onde",
+            "unit": "mm"
+          },
+          {
+            "symbol": "c",
+            "meaning": "vitesse de la lumière",
+            "unit": "≈ 3 × 10⁸ m/s"
+          },
+          {
+            "symbol": "f",
+            "meaning": "fréquence de l'onde",
+            "unit": "Hz"
+          }
+        ]
+      },
+      "play.two": "Deux sources en phase, espacées d'une longueur d'onde et demie. En chaque point, les deux champs s'additionnent : en phase, ils doublent l'amplitude ; en opposition de phase, ils s'annulent.",
+      "play.bands": {
+        "text": "Loin des sources, la différence de trajet delta vaut d sinus thêta, où d est l'espacement et thêta la direction mesurée depuis la perpendiculaire à la ligne des sources. L'intensité est maximale quand delta vaut un nombre entier m de longueurs d'onde lambda, nulle quand il vaut m plus un demi.",
+        "subtitle": "Différence de trajet $\\delta = d \\sin\\theta$. Maxima : $\\delta = m\\lambda$ ; minima : $\\delta = (m + \\tfrac{1}{2})\\lambda$. Avec $d = 1{,}5\\,\\lambda$ : maxima à $0^\\circ$ et $\\pm 41{,}8^\\circ$.",
+        "terms": [
+          {
+            "symbol": "\\delta",
+            "meaning": "différence de trajet entre les deux sources",
+            "unit": "mm"
+          },
+          {
+            "symbol": "d",
+            "meaning": "espacement des sources",
+            "unit": "mm"
+          },
+          {
+            "symbol": "\\theta",
+            "meaning": "direction, mesurée depuis la perpendiculaire à la ligne des sources",
+            "unit": "°"
+          },
+          {
+            "symbol": "m",
+            "meaning": "ordre du maximum, un entier"
+          },
+          {
+            "symbol": "\\lambda",
+            "meaning": "longueur d'onde",
+            "unit": "≈ 25 mm"
+          }
+        ]
+      },
+      "play.shift": {
+        "text": "Un déphasage delta phi de cent vingt degrés entre les deux sources décale toutes les directions de maximum : d sinus thêta égale m plus delta phi sur deux pi, le tout multiplié par lambda. Le maximum central passe de zéro à environ treize degrés.",
+        "subtitle": "Déphasage $\\Delta\\varphi = 120^\\circ$ : maxima pour $d \\sin\\theta = \\left(m + \\dfrac{\\Delta\\varphi}{2\\pi}\\right)\\lambda$. Le maximum central passe de $0^\\circ$ à $\\approx 12{,}8^\\circ$.",
+        "terms": [
+          {
+            "symbol": "\\Delta\\varphi",
+            "meaning": "déphasage entre les deux sources",
+            "unit": "°"
+          },
+          {
+            "symbol": "d",
+            "meaning": "espacement des sources",
+            "unit": "mm"
+          },
+          {
+            "symbol": "\\theta",
+            "meaning": "direction d'un maximum, depuis la perpendiculaire",
+            "unit": "°"
+          },
+          {
+            "symbol": "m",
+            "meaning": "ordre du maximum, un entier"
+          },
+          {
+            "symbol": "\\lambda",
+            "meaning": "longueur d'onde",
+            "unit": "≈ 25 mm"
+          }
+        ]
+      },
+      "play.many": "Huit sources au pas d'une demi-longueur d'onde : la condition de maximum n'a plus qu'une solution dans l'espace visible, et le lobe central s'affine quand le nombre de sources augmente. Au-delà d'une demi-longueur d'onde d'espacement, orienter le faisceau fait apparaître des lobes de réseau : essayez le curseur."
+    }
+  }
+}

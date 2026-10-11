@@ -103,7 +103,7 @@
   ],
   "links": [
     { "kind": "composedOf", "from": "element", "to": "starlink-radiating-element", "available": true },
-    { "kind": "reliesOn", "from": "array", "to": "wave-interference" }
+    { "kind": "reliesOn", "from": "array", "to": "wave-interference", "available": true }
   ],
   "tours": [
     {
