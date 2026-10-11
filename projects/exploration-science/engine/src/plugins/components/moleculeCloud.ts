@@ -1,4 +1,4 @@
-import { Color, Group, Mesh, MeshStandardMaterial, ShaderMaterial, SphereGeometry, AdditiveBlending, type BufferGeometry } from "three";
+import { BackSide, Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, ShaderMaterial, SphereGeometry, AdditiveBlending, type BufferGeometry } from "three";
 import type { ComponentPlugin } from "../../core/registry";
 
 // A magnifying bubble with small molecules inside. The bubble is a magnifier:
@@ -13,6 +13,7 @@ const ATOM_RADIUS = 0.035; // displayed, as a fraction of the bubble radius
 const BOND = 1.6; // distance between the two atoms, in atom radii
 const FILL = 0.85; // molecules stay inside this fraction of the radius
 const JIGGLE = 0.04; // amplitude of the thermal jiggle, as a fraction of the radius
+const BACKDROP = "#0b1220";
 const ELEMENT_COLOURS = { N: "#3050f8", O: "#ff0d0d" } as const;
 type Species = "N2" | "O2" | "H2O" | "mixed-air";
 
@@ -70,6 +71,11 @@ export const moleculeCloud: ComponentPlugin = {
     const bubble = new Mesh(bubbleGeometry, bubbleMaterial);
     bubble.renderOrder = 12;
     group.add(bubble);
+    // A dark backdrop inside the bubble: what is magnified stands out from the scene behind.
+    const backdropMaterial = new MeshBasicMaterial({ color: BACKDROP, side: BackSide, transparent: true, opacity: 0.88, depthWrite: false });
+    const backdrop = new Mesh(bubbleGeometry, backdropMaterial);
+    backdrop.renderOrder = 9;
+    group.add(backdrop);
 
     const molecules = new Group();
     group.add(molecules);
@@ -138,6 +144,7 @@ export const moleculeCloud: ComponentPlugin = {
       dispose() {
         geometries.forEach((g) => g.dispose());
         bubbleMaterial.dispose();
+        backdropMaterial.dispose();
         Object.values(materials).forEach((m) => m.dispose());
       },
     };
