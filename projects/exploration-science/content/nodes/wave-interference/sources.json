@@ -8,6 +8,7 @@
       "status": "verified",
       "sources": [
         "uconn-interference",
+        "wikipedia-wave-interference",
         "oregonstate-two-source"
       ],
       "usedBy": [
@@ -22,17 +23,19 @@
       "claim": "Loin des sources, la différence de trajet vaut d sin θ.",
       "status": "verified",
       "sources": [
-        "oregonstate-two-source"
+        "wikipedia-double-slit"
       ],
       "usedBy": [
         "levels.advanced.play.bands"
-      ]
+      ],
+      "note": "Source ouverte : Wikipedia « Double-slit experiment » (far field : différence de trajet d sin θ, maxima pour un nombre entier de λ). Le PDF Oregon State, ouvert le 2026-10-11, ne donne pas d sin θ dans son texte extractible (équations en images) : retiré de ce fait."
     },
     {
       "id": "phase-shift",
       "claim": "Un déphasage Δφ entre sources décale les maxima : d sin θ = (m + Δφ/2π) λ ; c'est le principe des réseaux d'antennes orientables.",
       "status": "verified",
       "sources": [
+        "wikipedia-phased-array",
         "gpsworld-physics",
         "oregonstate-two-source"
       ],
@@ -40,7 +43,7 @@
         "play.shift",
         "play.many"
       ],
-      "note": "Même relation que Δφ = 2π d sin θ / λ du nœud starlink-phased-array (m = 0)."
+      "note": "Même relation que Δφ = 2π d sin θ / λ du nœud starlink-phased-array (m = 0). Wikipedia « Phased array » : maxima pour k d sin θ + β = ±2mπ (β = déphasage progressif, k = 2π/λ), soit la même relation avec Δφ = −β (convention de signe). GPS World ne donne que le principe qualitatif (phasage des antennes → orientation du diagramme), sans formule."
     },
     {
       "id": "wavelength-12ghz",
@@ -81,12 +84,12 @@
       "claim": "Les sources sont modélisées comme ponctuelles, amplitude ∝ 1/√r (ondes cylindriques dans le plan de coupe).",
       "status": "verified",
       "sources": [
-        "uconn-interference"
+        "utexas-cylindrical-waves"
       ],
       "usedBy": [
         "levels.advanced.play.one"
       ],
-      "note": "Choix de modélisation du simulateur phased-array-wave ; les petits carrés de la scène ne servent qu'à repérer les sources."
+      "note": "Choix de modélisation du simulateur phased-array-wave ; les petits carrés de la scène ne servent qu'à repérer les sources. Amplitude ∝ ρ^(−1/2) d'une onde cylindrique : UT Austin (Fitzpatrick, « Cylindrical Waves »). La page UConn, ouverte le 2026-10-11, ne traite pas de la décroissance d'amplitude : retirée de ce fait."
     }
   ],
   "sources": [
@@ -96,7 +99,7 @@
       "url": "https://www.phys.uconn.edu/~gibson/Notes/Section5_2/Sec5_2.htm",
       "publisher": "University of Connecticut",
       "accessed": "2026-10-11",
-      "access": "search-result"
+      "access": "opened"
     },
     {
       "id": "oregonstate-two-source",
@@ -104,7 +107,7 @@
       "url": "https://boxsand.physics.oregonstate.edu/sites/boxsand.physics.oregonstate.edu/files/Media-3/Ryan/ph202_su18/lecture_complete/oscillation_wave/General%20two%20source%20interference.pdf",
       "publisher": "Oregon State University",
       "accessed": "2026-10-11",
-      "access": "search-result"
+      "access": "opened"
     },
     {
       "id": "gpsworld-physics",
@@ -112,7 +115,39 @@
       "url": "https://www.gpsworld.com/innovation-insights-it-starts-with-the-physics/",
       "publisher": "GPS World",
       "accessed": "2026-10-11",
-      "access": "search-result"
+      "access": "opened"
+    },
+    {
+      "id": "wikipedia-wave-interference",
+      "title": "Wave interference",
+      "url": "https://en.wikipedia.org/wiki/Wave_interference",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "wikipedia-double-slit",
+      "title": "Double-slit experiment",
+      "url": "https://en.wikipedia.org/wiki/Double-slit_experiment",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "wikipedia-phased-array",
+      "title": "Phased array",
+      "url": "https://en.wikipedia.org/wiki/Phased_array",
+      "publisher": "Wikipedia",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "utexas-cylindrical-waves",
+      "title": "Cylindrical Waves (Oscillations and Waves, R. Fitzpatrick)",
+      "url": "https://farside.ph.utexas.edu/teaching/315/Waves/node54.html",
+      "publisher": "University of Texas at Austin",
+      "accessed": "2026-10-11",
+      "access": "opened"
     }
   ]
 }
