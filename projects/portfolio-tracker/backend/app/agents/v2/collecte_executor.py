@@ -56,7 +56,7 @@ from app.agents.v2.collecteur import (
 )
 from app.agents.v2.traducteur import traduire
 from app.agents.v2.worker import WORKER_NAME, persist_worker_entries, run_search_worker
-from app.contracts.collection_plan_schema import CollectionPlan
+from app.contracts.collection_plan_schema import PERIODES, CollectionPlan
 from app.config import settings
 from app.contracts.worker_delegation_schema import EntryType, OutputSchema, WorkerRequest
 from app.db.database import get_db_session
@@ -343,6 +343,29 @@ def entry_type_pour_metrique(metrique: str) -> EntryType:
     return "fact_qualitative"
 
 
+# La PÉRIODE en phrase pour le search-worker (#119) — détenteur unique (#46), couverture totale de
+# `PERIODES` vérifiée au chargement du module : une valeur ajoutée à `PERIODES` sans phrase ici
+# planterait au premier plan traduit qui l'emploie, plutôt que de se perdre en silence comme avant
+# #119 (où `ligne.periode` n'était lu par AUCUNE ligne web, quelle que soit sa valeur).
+_PHRASE_PERIODE: dict[str, str] = {
+    "exercice_clos": "Période demandée : le DERNIER EXERCICE CLOS publié — pas un trimestre, pas un cumul intermédiaire.",
+    "douze_mois_glissants": (
+        "Période demandée : les DOUZE DERNIERS MOIS glissants (les quatre derniers trimestres "
+        "publiés, additionnés)."),
+    "dernier_bilan": "Période demandée : la DERNIÈRE DATE DE BILAN publiée — un solde, pas un flux.",
+    "sans_periode": "Aucune période particulière (une politique, une clause, un texte).",
+    "cumul_publie": (
+        "Période demandée : le CUMUL TEL QUE L'ÉMETTEUR LE PUBLIE dans son dernier dépôt "
+        "intermédiaire (par exemple les six mois écoulés depuis le début de l'exercice), AVEC son "
+        "comparatif à la MÊME période l'an dernier, dans les MÊMES colonnes du MÊME tableau. Ne "
+        "recalcule RIEN : si le tableau a plusieurs colonnes (trois mois, six mois…), ne retiens que "
+        "la colonne CUMULÉE et sa comparable N-1, jamais la colonne trimestrielle seule."),
+}
+assert set(_PHRASE_PERIODE) == set(PERIODES), (
+    f"_PHRASE_PERIODE désynchronisée de PERIODES : {set(PERIODES) - set(_PHRASE_PERIODE)} sans phrase, "
+    f"{set(_PHRASE_PERIODE) - set(PERIODES)} en trop")
+
+
 def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -> WorkerRequest:
     """Construit la requête du search-worker depuis la ligne AVEUGLE — sans jamais nommer la question.
 
@@ -357,7 +380,14 @@ def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -
     site d'émetteur, un numéro d'identifiant ne ramène pas de contenu de qualité — un analyste nomme la
     société, il ne cherche pas son numéro de déposant.
     `reliability_min=0.40` : plancher permissif — le collecteur ne juge pas la valeur d'une source
-    (#59), il ramène la matière ; la suffisance est jugée plus tard par le manager du framework."""
+    (#59), il ramène la matière ; la suffisance est jugée plus tard par le manager du framework.
+    ⚠️ `ligne.periode` (#119) : AVANT ce correctif, la période n'atteignait JAMAIS une ligne web — même
+    `douze_mois_glissants` était silencieusement perdu dès qu'une ligne partait vers le search-worker
+    plutôt que vers l'appariement EDGAR (`appliquer_periode`). Mesuré en production (NVDA qf_6,
+    réponse #1270, retirée) : un tableau de rapprochement GAAP/non-GAAP à cinq colonnes a été lu sur
+    sa colonne trimestrielle, présentée comme un cumul semestriel. `None` (plan antérieur à #113) ne
+    produit aucune phrase — absence délibérée, pas un repli sur une période par défaut."""
+    phrase_periode = f" {_PHRASE_PERIODE[ligne.periode]}" if ligne.periode is not None else ""
     return WorkerRequest(
         requester="knowledge-curator",
         worker=WORKER_NAME,
@@ -368,7 +398,7 @@ def construire_requete_web(ligne: LigneAveugle, *, emetteur: IdentiteEmetteur) -
             f"suivante : {ligne.metrique}. "
             f"Formule tes recherches web avec la raison sociale, jamais avec le sigle seul. "
             f"Cherche en priorité dans : {ligne.source_pressentie}. "
-            f"Date le fait par rapport à l'événement : {ligne.ancre}."
+            f"Date le fait par rapport à l'événement : {ligne.ancre}.{phrase_periode}"
         ),
         output_schema=OutputSchema(entry_type=entry_type_pour_metrique(ligne.metrique)),
         reliability_min=0.40,

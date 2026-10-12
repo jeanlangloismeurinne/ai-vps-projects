@@ -339,19 +339,21 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   un chiffre sans aucun support, pas une pièce mal lue. Même famille que #78. **Retiré** —
   `tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql` (DELETE #1270, restaure #1269 `non établi`,
   honnête, courante) — suite revérifiée **4399/0** après retrait.
-  **Cause probable, NON corrigée, à ARBITRER** : le vocabulaire `PERIODES` (migration 052 —
-  `exercice_clos` | `douze_mois_glissants` | `dernier_bilan` | `sans_periode`) n'a **aucune valeur pour
-  « cumul d'une période intermédiaire » (semestre, etc.)** — la demande de collecte (#113, « la demande
-  précise la période ») ne peut donc pas désigner précisément ce que l'encadré qf_6 exige réellement
-  (cumul semestriel + comparatif N-1, mêmes colonnes). Le traducteur a bien récupéré LE document qui
-  porte les deux colonnes (le fetch a atteint la bonne page), mais rien dans la demande ne cadrait sur la
-  bonne colonne — à la différence de #112 (douze mois glissants) qui, lui, a sa valeur dans `PERIODES`.
-  **Décision à prendre avant de retenter** : (a) ajouter une valeur à `PERIODES` (migration + grammaire +
-  `appliquer_periode`) — coût : capacité cross-module, à instruire comme #112/#113 ; (b) ou un remède plus
-  léger côté encadré/analyste (ex. exiger explicitement les DEUX colonnes « Three/Six Months » dans le
-  motif de l'ingrédient qf_6.ecart_publie_ajuste sans toucher au vocabulaire général). Ne PAS re-durcir un
-  prompt ponctuel (`feedback_jugement_modele_instable_entre_passages`) sans ce choix. **Pas retenté tant
-  que l'option n'est pas tranchée.**
+  **Cause ARBITRÉE et CORRIGÉE (option A choisie par l'utilisateur, 2026-10-12)** : migration **053** —
+  `cumul_publie`, cinquième valeur de `PERIODES` (un cumul TEL QUE L'ÉMETTEUR LE PUBLIE, avec son
+  comparatif N-1, JAMAIS recalculé — distinct de `douze_mois_glissants`, que LE SYSTÈME reconstruit).
+  **Second défaut trouvé en traçant la cause** : `construire_requete_web` ne lisait JAMAIS `ligne.periode`
+  — même `douze_mois_glissants` était perdu dès qu'une ligne partait au web. Corrigé : `_PHRASE_PERIODE`
+  (détenteur unique, couverture de `PERIODES` vérifiée par `assert`) traduit chaque valeur en phrase
+  explicite dans la requête ; le prompt du traducteur enseigne la 5ᵉ valeur et la distingue de
+  `douze_mois_glissants`. Vérifié par mutation (retirer le câblage fait rougir 6 asserts nommés de
+  `check_collecte_executor §5ter`). Au passage : 2 mutations de `negatif_collecte_executor.sh` réparées
+  (« ni inventaire ni carte » — `\n` dans le motif, jamais converti par le harnais ; « passe devant la
+  consigne » — indentation obsolète) ; 1 échec préexistant documenté et laissé tel quel (« aucune VALEUR
+  de consigne » — script mort, sans rapport avec #119). Détail : convention **#119** du `CLAUDE.md`.
+  Suite **4410/0 sur 56 scripts**. **Pas encore relancé contre le vrai modèle** — prochain pas : relancer
+  NVDA qf_6 (solo, vérifier `ps aux`/`docker ps` d'abord) et relire le verbatim contre le vrai 8-K comme
+  cette fois.
   **(3) PAS FAIT — qf_8 NVDA** : la revue des clauses cite le prospectus de juin, antérieur à la clôture ;
   chercher pourquoi le 10-Q du trimestre (« aucun changement, aucun covenant financier ») n'est pas au
   dossier de qf_8 avant de payer une collecte. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**

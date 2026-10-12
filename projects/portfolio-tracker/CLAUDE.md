@@ -317,6 +317,9 @@ version / le même schéma) et `modeles_valorisation_decisions` (PV : `signer` |
 blancs, fourchette signée ordonnée ssi signer, UNE décision par version). Append-only sur les deux (droits +
 trigger, garde `051/K1`). Appliquée le 2026-09-29, tables vides. Éprouvée par `negatif_051.sh` (26/0).
 Prochaine migration : **052**.
+**Migration 052 = la période d'une ligne de plan (#113)** : `collection_plan_items.periode` (nullable,
+quatre valeurs). **Migration 053 = `cumul_publie`, cinquième valeur (#119)** : un cumul tel que publié
+par l'émetteur, jamais recalculé — détail convention #119. Prochaine migration : **054**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -3099,14 +3102,37 @@ valeur du comparatif N-1 : 263) — même famille que #78, « tous les nombres j
 quatre contrôles du manager gardent la structure, jamais le sens. **Retiré**
 (`tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql`).
 
-**Cause probable, NON corrigée** : `PERIODES` (migration 052 : `exercice_clos` | `douze_mois_glissants` |
-`dernier_bilan` | `sans_periode`) n'a aucune valeur pour « cumul semestriel + comparatif N-1, mêmes
-colonnes » — la demande de collecte (#113, « la demande précise la période ») ne peut donc pas désigner
-précisément ce que l'encadré qf_6 exige. Le fetch a atteint la bonne page (les deux colonnes y sont), mais
-rien dans la demande ne cadrait sur la bonne colonne. **À arbitrer avant de retenter** : ajouter une
-valeur à `PERIODES` (migration + grammaire + `appliquer_periode`, coût cross-module comme #112/#113) vs.
-un remède plus léger côté motif de l'ingrédient seul. Ne pas re-durcir un prompt ponctuel
-(`feedback_jugement_modele_instable_entre_passages`) sans ce choix.
+**Cause, et choix de l'utilisateur (option A, 2026-10-12)** : `PERIODES` (migration 052) n'avait aucune
+valeur pour « cumul semestriel + comparatif N-1, mêmes colonnes » — la demande de collecte (#113, « la
+demande précise la période ») ne pouvait donc pas désigner précisément ce que l'encadré qf_6 exige. Le
+fetch avait atteint la bonne page (les deux colonnes y sont), mais rien dans la demande ne cadrait sur la
+bonne colonne. **Corrigé, migration 053 : `cumul_publie`, cinquième valeur de `PERIODES`** — un cumul TEL
+QUE L'ÉMETTEUR LE PUBLIE dans son dépôt intermédiaire, avec son comparatif N-1, JAMAIS recalculé ;
+distinct de `douze_mois_glissants`, qui est une fenêtre que LE SYSTÈME reconstruit lui-même depuis des
+concepts XBRL de flux (`appariement_feed.appliquer_periode` ne traite pas `cumul_publie` : elle tombe dans
+sa branche « inchangé », comme `dernier_bilan`/`sans_periode` — ce n'est pas un oubli, cette valeur ne
+concerne QUE les lignes web).
+
+**Second défaut trouvé en traçant la cause jusqu'au bout** : `construire_requete_web` (le point qui
+fabrique la requête du search-worker) ne lisait **jamais** `ligne.periode` — même la valeur
+`douze_mois_glissants`, qui existait déjà, était silencieusement perdue dès qu'une ligne partait vers le
+web plutôt que vers l'appariement EDGAR. Ajouter `cumul_publie` au vocabulaire sans réparer ce câblage
+n'aurait rien changé. **Corrigé** : `_PHRASE_PERIODE` (détenteur unique, #46, couverture de `PERIODES`
+vérifiée par un `assert` au chargement du module) traduit chaque valeur en une phrase explicite ajoutée à
+la requête web ; pour `cumul_publie`, la phrase dit explicitement « ne recalcule RIEN » et nomme le risque
+de colonne (trimestre vs cumul). Le prompt du traducteur (`traducteur.py`) enseigne désormais la
+cinquième valeur et la distinction `cumul_publie`/`douze_mois_glissants` (reconstruit vs publié) — jamais
+un durcissement de formulation sans garantie de code (`feedback_jugement_modele_instable_entre_passages`) :
+la garantie est que `_PHRASE_PERIODE` couvre toujours exactement `PERIODES`, pas le choix de mots du
+modèle. Vérifié par mutation : retirer `phrase_periode` de la requête fait rougir 6 asserts nommés de
+`check_collecte_executor.py §5ter` (89/0, sur une copie, avant de réappliquer le correctif).
+
+⚠️ **Deux mutations de `negatif_collecte_executor.sh` réparées au passage, sans rapport avec #119** :
+« ni inventaire ni carte » (le motif portait un `\n` dans le MOTIF, que le harnais ne convertit jamais —
+règle de l'en-tête de `_negatif.sh` — donc ne matchait jamais rien ; réduit à une ligne) et « passe devant
+la consigne » (indentation du motif obsolète depuis un refactor antérieur, 8 espaces au lieu de 4). Un
+troisième échec préexistant, documenté et laissé tel quel : « aucune VALEUR de consigne ne contient un
+fragment » (script mort avant son bilan — débogué ailleurs, pas un effet de #119).
 
 **Incident de méthode, à ne pas reproduire.** Un premier essai (`timeout 300 bash … | tail`) a rendu
 exit 143 mais le `docker run --rm` sous-jacent a continué seul, détaché ; une relance `nohup … &` lancée

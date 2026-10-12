@@ -28,6 +28,7 @@ import json
 import sys
 
 from app.agents.v2 import traducteur as T
+from app.contracts.collection_plan_schema import PERIODES
 from app.knowledge.edgar_feed import IdentiteEmetteur, identite_de_l_emetteur
 from app.agents.v2.frameworks import load_frameworks
 
@@ -139,10 +140,14 @@ except TypeError as e:
           "emetteur" in str(e), f"→ {e}")
 check("la consigne dit que l'entreprise est celle de la raison sociale, jamais celle du sigle",
       "JAMAIS CELLE QUE SUGGÈRE LE SIGLE" in T._TRADUCTEUR_SYSTEM_PROMPT)
-check("la consigne ENSEIGNE la période (#113) : les quatre valeurs, et « quatre derniers trimestres » ⟹ "
-      "douze_mois_glissants", all(v in T._TRADUCTEUR_SYSTEM_PROMPT for v in
-          ("`douze_mois_glissants`", "`exercice_clos`", "`dernier_bilan`", "`sans_periode`"))
+check("la consigne ENSEIGNE la période (#113) : TOUTES les valeurs de PERIODES (détenteur unique, "
+      "#46 — pas une liste recopiée ici), et « quatre derniers trimestres » ⟹ douze_mois_glissants",
+      all(f"`{v}`" in T._TRADUCTEUR_SYSTEM_PROMPT for v in PERIODES)
       and "jamais `exercice_clos`" in T._TRADUCTEUR_SYSTEM_PROMPT)
+check("la consigne distingue `cumul_publie` (lu tel quel) de `douze_mois_glissants` (reconstruit) — "
+      "#119, sinon un rapprochement non-GAAP se fait recalculer comme une fenêtre glissante",
+      "jamais `douze_mois_glissants`" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "JAMAIS recalculé" in T._TRADUCTEUR_SYSTEM_PROMPT)
 _src_tr = inspect.getsource(T.traduire)
 _i_id, _i_run = _src_tr.find("identite_de_l_emetteur("), _src_tr.find("run_json_agent(")
 check("`traduire` résout l'identité par son détenteur unique AVANT la dépense modèle (#40/#46)",

@@ -80,7 +80,10 @@ mutations=(
 "$SRC¦    return CarteCourante(_statuts(carte), \"non_reverifiable\", None,¦    return CarteCourante(_statuts(carte), \"fraiche\", None,  # mutation: l'aveu effacé¦inventaire injoignable"
 # §10 ─ le repli nommé cesse de se distinguer : `statuts` vide au lieu de None. L'aval retombe bien
 # sur `poste_retenu()`, mais « carte sans aucune ligne » et « aucune carte » se confondent.
-"$SRC¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante(None, \"aucune\", None)¦            plan.ticker_id, plan.framework_id, plan.framework_version, motif)\n        return CarteCourante({}, \"aucune\", None)  # mutation: repli indistinct¦ni inventaire ni carte"
+# Motif réécrit sur une ligne unique (#119, règle de l'en-tête de `_negatif.sh` : `\n` n'est converti
+# que dans le REMPLAÇANT, le motif précédent — avec un `\n` dans le MOTIF — ne matchait jamais rien,
+# et cette mutation a été caduque sans discontinuer plutôt que de rougir.
+"$SRC¦        return CarteCourante(None, \"aucune\", None, motif=f\"{motif} ; aucune carte en stock\")¦        return CarteCourante({}, \"aucune\", None, motif=f\"{motif} ; aucune carte en stock\")  # mutation: repli indistinct¦ni inventaire ni carte"
 # §10 ─ un refus définitif du modèle se maquille en reconstruction réussie : on servirait une carte
 # vide en la présentant comme neuve.
 "$SRC¦        return await _servir_le_stock(conn, plan, motif=f\"appariement REFUSÉ après réparation : {e}\",\n                                      inventaire=inventaire)¦        return CarteCourante(None, \"reconstruite\", depot_courant)  # mutation: le refus maquillé¦appariement REFUSÉ après réparation"
@@ -112,7 +115,7 @@ mutations=(
 # §11 ─ l'ordre inversé : la consigne passe devant la recette du catalogue. Fonctionnellement ça
 # « marche » — et ça écrit deux producteurs actifs pour un même fait (#43), en perdant le choix par
 # fraîcheur entre concepts candidats (#30).
-"$SRC¦        poste = poste_retenu(ligne.poste, ligne.metrique)¦        poste = None  # mutation: la recette ne passe plus devant¦passe devant la consigne"
+"$SRC¦    poste = poste_retenu(ligne.poste, ligne.metrique)¦    poste = None  # mutation: la recette ne passe plus devant¦passe devant la consigne"
 # §11 ─ le refus perd son motif : l'echec ne nomme plus ni la cause ni l'expression. La ligne devient
 # un mandat illisible, et l'analyste lira « le dépôt ne porte pas ce nombre » là où l'ancre manquait.
 "$SRC¦                    echec=f\"appariement « {consigne.expression} » inexécutable sur le dépôt : {e}\",¦                    echec=\"collecte impossible\",  # mutation: le refus perd son motif¦NOMME la cause et l'expression"
