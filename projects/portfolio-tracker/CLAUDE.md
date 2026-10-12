@@ -3134,6 +3134,15 @@ la consigne » (indentation du motif obsolète depuis un refactor antérieur, 8 
 troisième échec préexistant, documenté et laissé tel quel : « aucune VALEUR de consigne ne contient un
 fragment » (script mort avant son bilan — débogué ailleurs, pas un effet de #119).
 
+**Vérifié contre le vrai modèle** (NVDA qf_6, plan #233, réponse #1289) : le traducteur emploie la 5ᵉ
+valeur (`periode="cumul_publie"` posée sur `ecart_publie_ajuste`), et l'analyste rend désormais
+`repondu` A **honnête** — « il ne donne que le rapprochement du seul T2 FY2027 … sans le cumul
+semestriel » → les chiffres cumulés sortent `non établi`, jamais un trimestre recopié sous l'étiquette
+semestrielle comme #1270. Résidu nommé, de moindre sévérité : le search-worker a épuisé ses 6
+itérations sans re-extraire la colonne Six Months du tableau réel — il a réutilisé l'entry déjà en
+base (Three Months seulement). Ce n'est plus un risque de fabrication (l'analyste le voit et le dit),
+c'est une limite de profondeur de collecte, à reprendre séparément si le chiffre exact importe.
+
 **Incident de méthode, à ne pas reproduire.** Un premier essai (`timeout 300 bash … | tail`) a rendu
 exit 143 mais le `docker run --rm` sous-jacent a continué seul, détaché ; une relance `nohup … &` lancée
 en parallèle a produit DEUX collectes concurrentes (plans #227/#228) écrivant dans la MÊME base en même

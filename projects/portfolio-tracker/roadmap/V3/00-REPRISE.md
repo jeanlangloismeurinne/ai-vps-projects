@@ -351,9 +351,20 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   (« ni inventaire ni carte » — `\n` dans le motif, jamais converti par le harnais ; « passe devant la
   consigne » — indentation obsolète) ; 1 échec préexistant documenté et laissé tel quel (« aucune VALEUR
   de consigne » — script mort, sans rapport avec #119). Détail : convention **#119** du `CLAUDE.md`.
-  Suite **4410/0 sur 56 scripts**. **Pas encore relancé contre le vrai modèle** — prochain pas : relancer
-  NVDA qf_6 (solo, vérifier `ps aux`/`docker ps` d'abord) et relire le verbatim contre le vrai 8-K comme
-  cette fois.
+  Suite **4410/0 sur 56 scripts**. **✅ VÉRIFIÉ CONTRE LE VRAI MODÈLE (2026-10-12, plan #233, réponse
+  #1289, solo, `ps aux`/`docker ps` vérifiés propres avant et après)** : le traducteur a choisi
+  `periode="cumul_publie"` pour `ecart_publie_ajuste` (la 5ᵉ valeur est EMPLOYÉE, pas seulement
+  acceptée) ; qf_6 ressort `repondu` A — mais cette fois **honnête** : « il ne donne que le
+  rapprochement du seul T2 FY2027 … sans le cumul semestriel » → `retraitements_cumul_en_cours`/
+  `cumul_an_passe` **non établis**, jamais un chiffre trimestriel mislabellé en semestriel comme #1270.
+  **Le défaut #119 est fermé** : le système échoue maintenant PROPREMENT (silence nommé) plutôt que de
+  fabriquer. **Résidu, nommé, séparé et de moindre sévérité** : le search-worker a épuisé ses 6
+  itérations d'outils (« clôture sur ce qui a été collecté ») sans re-extraire la colonne Six Months du
+  tableau réel (469/263, vérifiées contre EDGAR le 2026-10-12) — il a réutilisé l'entry #896 déjà en
+  base (Three Months seulement). Ce n'est plus un risque de donnée fausse (l'analyste le voit et le dit),
+  c'est une limite de PROFONDEUR de collecte — à reprendre un jour si le chiffre exact importe (budget
+  d'itérations, ou une requête qui cible explicitement « relis la section RECONCILIATION et donne les
+  DEUX colonnes Six Months »). Pas de dette bloquante : qf_6 NVDA est `repondu`, acquitté, honnête.
   **(3) PAS FAIT — qf_8 NVDA** : la revue des clauses cite le prospectus de juin, antérieur à la clôture ;
   chercher pourquoi le 10-Q du trimestre (« aucun changement, aucun covenant financier ») n'est pas au
   dossier de qf_8 avant de payer une collecte. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
