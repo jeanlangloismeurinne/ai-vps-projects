@@ -887,6 +887,15 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
                         f"{den} vaut {v:,.1f}".replace(",", " ") for den, v in negatifs)
                     + " — un quotient sur un dénominateur négatif n'est pas un niveau (#44)")))
                 continue
+            # Un terme NOMMÉ négatif rend le résultat non significatif (déclaré par chiffre, 2026-10-12) :
+            # une couverture des intérêts sur une perte d'exploitation n'est pas un niveau.
+            ns = [(n, valeurs[(n, 0)]) for n in d.non_significatif_si_negatif if valeurs[(n, 0)] < 0]
+            if ns:
+                sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                    f"non significatif ({d.calcul}) : " + " ; ".join(
+                        f"{n} vaut {v:,.1f}".replace(",", " ") for n, v in ns)
+                    + " — un terme négatif retire son sens au résultat")))
+                continue
             valeur = evaluer_formule(d.calcul, valeurs)
         except FormuleInexecutable as e:
             sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f"non calculable : {e}"))

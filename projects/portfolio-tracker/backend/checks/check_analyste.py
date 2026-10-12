@@ -322,7 +322,9 @@ _CTX_S = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, ENT
 _lus = {q["id"]: q.get("chiffres_lus_dans_le_socle") for q in _CTX_S["questions"]}.get("qf_4") or []
 check("le contexte MONTRE les chiffres lus dans le socle, avec leur valeur exacte et la pièce (#7)",
       [(c.get("id"), round(c["valeur"], 3) if c.get("valeur") is not None else None, c.get("piece")) for c in _lus]
-      == [("dette_brute", 1035.976, 7), ("tresorerie_et_placements", 3937.969, 7)], f"→ {_lus}")
+      == [("dette_brute", 1035.976, 7), ("tresorerie_et_placements", 3937.969, 7),
+          ("resultat_exploitation_douze_mois", -1627.249, 7), ("charges_interets_douze_mois", 59.342, 7)],
+      f"→ {_lus}")
 check("… et, sans socle au dossier, les montre NON ÉTABLIS avec leur motif (jamais un zéro)",
       all(c.get("valeur") is None and "pas au dossier" in (c.get("periode_ou_motif") or "")
           for c in ({q["id"]: q.get("chiffres_lus_dans_le_socle") for q in CTX["questions"]}.get("qf_4") or [{}])),
@@ -330,7 +332,7 @@ check("… et, sans socle au dossier, les montre NON ÉTABLIS avec leur motif (j
 # #101 — la dette nette est CALCULÉE par le code : elle n'est pas demandée, elle est annoncée avec sa formule.
 _calc = {q["id"]: q.get("chiffres_calcules_par_le_systeme") for q in CTX["questions"]}
 check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés, formule comprise (#101)",
-      [c["id"] for c in (_calc.get("qf_4") or [])] == ["dette_nette"]
+      [c["id"] for c in (_calc.get("qf_4") or [])] == ["dette_nette", "couverture_des_interets"]
       and (_calc.get("qf_4") or [{}])[0].get("formule") == "dette_brute - tresorerie_et_placements"
       and "dette_nette" not in [c["id"] for c in (_dem.get("qf_4") or [])],
       f"→ demandés {_dem.get('qf_4')} / calculés {_calc.get('qf_4')}")

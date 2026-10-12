@@ -335,6 +335,7 @@ frameworks:
           - id: couverture_des_interets
             libelle: Rapport entre le résultat d'exploitation et la charge d'intérêts
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: dette_brute
             libelle: Dette financière brute, instruments convertibles compris
@@ -351,6 +352,26 @@ frameworks:
             unite: "M$"
             periode: à la date du dernier bilan
             calcul: dette_brute - tresorerie_et_placements   # calculé par le code (#101), jamais par l'analyste
+          # La couverture des intérêts se lit sur les DOUZE DERNIERS MOIS du modèle des comptes, comme le
+          # fait un analyste crédit — jamais recopiée du ratio d'un 10-K (2026-10-12 : NVDA qf_4 citait
+          # 503,4 fois sur l'exercice clos, pièce #843, et naissait périmée ; le socle donne
+          # 197 579 / 464 sur douze mois au 26/07/2026).
+          - id: resultat_exploitation_douze_mois
+            libelle: Résultat d'exploitation sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "resultat_exploitation", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: charges_interets_douze_mois
+            libelle: Charge d'intérêts sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "charges_financieres", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: couverture_des_interets
+            libelle: Couverture des intérêts — résultat d'exploitation rapporté à la charge d'intérêts
+            unite: "fois"
+            periode: douze mois glissants
+            calcul: resultat_exploitation_douze_mois / charges_interets_douze_mois   # calculé par le code (#101)
+            non_significatif_si_negatif: [resultat_exploitation_douze_mois]   # perte d'exploitation : « n.s. »
         variables_par_archetype:
           rentable:
             mode: variable

@@ -397,9 +397,11 @@ rejete("deux chiffres clés au même id",
 valide("une question qui ne se chiffre pas DÉCLARE un encadré vide, et passe",
        lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=[])))
 _reel_q = {q.id: q for f in load_frameworks().frameworks for q in f.questions}
-check("le référentiel réel : l'encadré instruit le 2026-09-29 (qf_4 = dette brute, trésorerie, dette nette ; "
-      "se_4 ne se chiffre pas)",
-      [c.id for c in _reel_q["qf_4"].chiffres_cles] == ["dette_brute", "tresorerie_et_placements", "dette_nette"]
+check("le référentiel réel : l'encadré instruit le 2026-09-29 (qf_4 = dette brute, trésorerie, dette nette, "
+      "et depuis le 2026-10-12 la couverture des intérêts sur douze mois ; se_4 ne se chiffre pas)",
+      [c.id for c in _reel_q["qf_4"].chiffres_cles] == ["dette_brute", "tresorerie_et_placements", "dette_nette",
+                                                       "resultat_exploitation_douze_mois",
+                                                       "charges_interets_douze_mois", "couverture_des_interets"]
       and _reel_q["se_4"].chiffres_cles == [],
       f"→ qf_4 {[c.id for c in _reel_q['qf_4'].chiffres_cles]}, se_4 {_reel_q['se_4'].chiffres_cles}")
 # [T] (#101) : un chiffre CALCULÉ déclare sa formule sur les chiffres RELEVÉS de sa question — c'est le
@@ -437,9 +439,11 @@ rejete("un `calcul` hors de la grammaire fermée est refusé par le CONTRAT (ava
        lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=_REL + [
            {"id": "dette_nette", "libelle": "Dette nette, calculée par le code", "unite": "M$",
             "periode": "au dernier bilan", "calcul": "dette_brute moins tresorerie"}])), "grammaire fermée")
-check("[T] le référentiel réel : la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES, rien d'autre",
+check("[T] le référentiel réel : la dette nette et la couverture des intérêts (qf_4), l'autonomie (qf_7) sont "
+      "CALCULÉES, rien d'autre",
       {(q.id, c.id): c.calcul for q in _reel_q.values() for c in q.chiffres_cles if c.calcul}
       == {("qf_4", "dette_nette"): "dette_brute - tresorerie_et_placements",
+          ("qf_4", "couverture_des_interets"): "resultat_exploitation_douze_mois / charges_interets_douze_mois",
           ("qf_7", "autonomie"): "tresorerie_mobilisable / consommation_retenue * 12"},
       f"→ {[(q.id, c.id, c.calcul) for q in _reel_q.values() for c in q.chiffres_cles if c.calcul]}")
 # #105 — la règle de PRUDENCE (arbitrage du 2026-09-30) : l'autonomie se calcule sur la plus forte du
@@ -715,9 +719,10 @@ check("[U] le référentiel réel lit QUATRE ratios maison : rendement moyen (qf
                       ("qf_2", "part_du_resultat_en_tresorerie"): "part_du_resultat_en_tresorerie",
                       ("qf_3", "capital_par_point_de_croissance"): "capital_par_point_de_croissance",
                       ("qf_5", "pente_du_rendement"): "pente_du_rendement"}, f"→ {_ratios_lus}")
-check("[U] le référentiel réel lit dans le socle la dette brute, la trésorerie et la consommation — et la dette "
-      "brute compte le financement adossé aux redevances (convention maison)",
+check("[U] le référentiel réel lit dans le socle la dette brute, la trésorerie, le résultat d'exploitation et les "
+      "intérêts sur douze mois, la consommation — et la dette brute compte le financement adossé aux redevances",
       set(_lus_socle) == {("qf_4", "dette_brute"), ("qf_4", "tresorerie_et_placements"),
+                          ("qf_4", "resultat_exploitation_douze_mois"), ("qf_4", "charges_interets_douze_mois"),
                           ("qf_7", "tresorerie_mobilisable"), ("qf_7", "consommation_constatee")}
       and "financement_adosse_aux_redevances" in _lus_socle[("qf_4", "dette_brute")][0]
       and _lus_socle[("qf_7", "consommation_constatee")] == ("-flux_de_tresorerie_disponible", "douze_mois"),

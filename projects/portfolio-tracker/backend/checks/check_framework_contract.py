@@ -748,6 +748,34 @@ check("… un dénominateur NÉGATIF (trésorerie générée, pas consommée) re
       "valeur — jamais une autonomie en mois négatifs (#44)",
       _enc_neg["autonomie"].valeur is None and "non calculable" in (_enc_neg["autonomie"].motif_absence or "")
       and "-127 006.0" in (_enc_neg["autonomie"].motif_absence or ""), f"→ {_enc_neg['autonomie']}")
+# 2026-10-12 — un numérateur NOMMÉ négatif rend le résultat NON SIGNIFICATIF (déclaré par chiffre). Formes
+# réelles du socle sur douze mois : RVMD (perte d'exploitation −1 627,249 M$, intérêts 59,342 M$) et NVDA
+# (résultat d'exploitation 197 579 M$, intérêts 464 M$).
+_DECL_COUV = [ChiffreCleDeclare(id="ebit", libelle="Résultat d'exploitation", unite="M$", periode="12 mois"),
+              ChiffreCleDeclare(id="interets", libelle="Charge d'intérêts", unite="M$", periode="12 mois"),
+              ChiffreCleDeclare(id="couverture", libelle="Couverture des intérêts", unite="fois",
+                                periode="12 mois", calcul="ebit / interets",
+                                non_significatif_si_negatif=["ebit"])]
+_enc_ns = {c.id: c for c in completer_encadre(_DECL_COUV, [
+    ChiffreCle(id="ebit", unite="M$", valeur=-1627.249, date_ou_periode="douze mois au 2026-06-30"),
+    ChiffreCle(id="interets", unite="M$", valeur=59.342, date_ou_periode="douze mois au 2026-06-30")], socle=None)}
+check("… une couverture des intérêts sur une PERTE d'exploitation est « non significatif », la perte nommée — "
+      "jamais −27,4 fois",
+      _enc_ns["couverture"].valeur is None and "non significatif" in (_enc_ns["couverture"].motif_absence or "")
+      and "-1 627.2" in (_enc_ns["couverture"].motif_absence or ""), f"→ {_enc_ns['couverture']}")
+_enc_ok = {c.id: c for c in completer_encadre(_DECL_COUV, [
+    ChiffreCle(id="ebit", unite="M$", valeur=197579.0, date_ou_periode="douze mois au 2026-07-26"),
+    ChiffreCle(id="interets", unite="M$", valeur=464.0, date_ou_periode="douze mois au 2026-07-26")], socle=None)}
+check("… et sur un résultat positif, elle se calcule (NVDA : 425,8 fois sur douze mois)",
+      _enc_ok["couverture"].valeur is not None and abs(_enc_ok["couverture"].valeur - 197579.0 / 464.0) < 1e-6,
+      f"→ {_enc_ok['couverture']}")
+rejete("`non_significatif_si_negatif` sur un chiffre RELEVÉ est refusé (il ne vaut que pour un calcul)",
+       lambda: ChiffreCleDeclare(id="ebit", libelle="Résultat d'exploitation", unite="M$", periode="12 mois",
+                                 non_significatif_si_negatif=["ebit"]), "CALCULÉ")
+rejete("`non_significatif_si_negatif` qui nomme un terme absent du calcul est refusé (la règle ne mordrait jamais)",
+       lambda: ChiffreCleDeclare(id="couverture", libelle="Couverture des intérêts", unite="fois",
+                                 periode="12 mois", calcul="ebit / interets",
+                                 non_significatif_si_negatif=["resultat"]), "absents de son calcul")
 _enc_mix = {c.id: c for c in completer_encadre(_DECL_AUTO, [
     ChiffreCle(id="tresorerie", unite="M$", valeur=120.0, date_ou_periode="au 2026-06-30"),
     ChiffreCle(id="conso", unite="M$", valeur=60.0, date_ou_periode="exercice 2025")], socle=None)}

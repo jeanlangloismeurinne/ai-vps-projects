@@ -79,6 +79,11 @@ mutations=(
 "$PONT¦        par_id[d.id] = ligne¦        pass¦l'autonomie se calcule sur le chiffre RETENU"
 # #44 dans l'encadré : un quotient sur un dénominateur NÉGATIF publierait une autonomie en mois négatifs (NVDA).
 "$PONT¦            if negatifs:¦            if False:¦dénominateur NÉGATIF"
+# 2026-10-12 — un terme NOMMÉ négatif rend le résultat non significatif (couverture des intérêts sur une perte).
+"$PONT¦            if ns:¦            if False:¦sur une PERTE d'exploitation est « non significatif »"
+"$PONT¦if valeurs[(n, 0)] < 0]¦if valeurs[(n, 0)] > 0]¦sur une PERTE d'exploitation est « non significatif »"
+"app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦sur un chiffre RELEVÉ est refusé"
+"app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦nomme un terme absent du calcul"
 )
 
 source "$(dirname "$0")/_negatif.sh"

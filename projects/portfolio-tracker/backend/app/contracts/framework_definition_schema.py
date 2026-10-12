@@ -192,6 +192,13 @@ class ChiffreCleDeclare(Strict):
     facultatif: bool = False
     # `socle` (2026-10-04) : le chiffre est LU dans les comptes reconstitués, par le code.
     socle: Optional[ChiffreDuSocle] = None
+    # `non_significatif_si_negatif` (2026-10-12) : les termes d'un CALCUL dont le signe négatif rend le
+    # résultat non significatif — la pratique d'un analyste crédit, qui écrit « n.s. » plutôt qu'une
+    # couverture des intérêts de −27,4 fois quand l'entreprise perd de l'argent en exploitation (RVMD :
+    # −1 627 M$ sur douze mois). Déclaré par chiffre, jamais généralisé : une marge négative, elle, est un
+    # niveau. Prolonge #44 (le dénominateur négatif) aux numérateurs NOMMÉS.
+    non_significatif_si_negatif: list[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]] = Field(
+        default_factory=list)
 
     @property
     def calcule_par_le_systeme(self) -> bool:
@@ -226,6 +233,15 @@ class ChiffreCleDeclare(Strict):
                 analyser_formule(self.calcul)
             except FormuleInexecutable as e:
                 raise ValueError(f"chiffre `{self.id}` : `calcul` hors de la grammaire fermée — {e}") from e
+        if self.non_significatif_si_negatif:
+            if self.calcul is None:
+                raise ValueError(f"chiffre `{self.id}` : `non_significatif_si_negatif` ne vaut que pour un chiffre "
+                                 "CALCULÉ (`calcul`)")
+            from app.contracts.formule_grammaire import noms_de_la_formule
+            hors = sorted(set(self.non_significatif_si_negatif) - noms_de_la_formule(self.calcul))
+            if hors:
+                raise ValueError(f"chiffre `{self.id}` : `non_significatif_si_negatif` nomme {hors}, absents de "
+                                 f"son calcul « {self.calcul} » — la règle ne s'appliquerait jamais")
         return self
 
 
