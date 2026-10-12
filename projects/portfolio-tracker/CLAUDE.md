@@ -3025,6 +3025,33 @@ couvre toute la série, le symptôme n'existait pas.
 Gardes : `check_ratios_maison.py` + `negatif_ratios_maison.sh` ; `check_socle_comptes` §12 (+4 mutations) ;
 `check_frameworks_definitions` [U] (+6 mutations) ; `check_framework_contract` (dénominateur négatif).
 
+### #117 — lire et annoter : un texte postérieur aux comptes ne périme pas une mesure, il s'annote
+
+**Arbitrage de l'utilisateur du 2026-10-12** (« lire et annoter ; NVDA n'est qu'un exemple, le système doit
+s'appliquer à toute situation ou entreprise »). Comme un fonds : NVIDIA annonce le rachat de Hugging Face
+le 02/09, après ses comptes du 26/07. Le rendement du capital des cinq exercices passés n'en devient ni faux
+ni périmé — l'analyste lit l'annonce, écrit qu'elle ne change pas les exercices passés (et ce qu'elle
+changera une fois consolidée), et sa note est à jour. Avant : la lecture d'un fait entrait d'office dans la
+fondation (#113 ter) ; sur une question de MESURE, un texte la faisait tomber en `interpretation`, [E]
+refusait, donc `corpus_montre` cachait le fait — et TOUTE annonce gelait les mesures jusqu'aux comptes
+suivants (NVDA : 5 réponses nées périmées, note de qualité 0,00).
+- **Détenteur unique `frameworks.piece_fonde_la_reponse(nature_piece, nature_attendue, approximation=)`** :
+  une pièce d'un fait lu FONDE si sa nature satisfait la nature attendue (un relevé pour une mesure — les
+  baux chiffrés RVMD de #113 ter restent dans la fondation) ou si la réponse est une approximation ; sinon
+  elle ANNOTE : prouvée tirée du dépôt ([P]), elle lève la péremption par ce dépôt (`retirer_faits_lus`,
+  inchangé), sans faire ni le rang ni la nature du chiffre.
+- Lu par **trois sites** : `analyste.contexte_analyste` (`faits_montrables(faits, lisibles, montrees)` joint
+  les pièces non montrées avec leur contenu sous `pieces_a_lire_seulement` ; consigne : les citer dans la
+  ligne du fait, jamais dans `cited_entry_ids`) ; `analyste.assembler_answer` (seules les pièces qui fondent
+  rejoignent la fondation) ; pont **[P]** (seules elles doivent y être ; une pièce lue ABSENTE du dossier est
+  refusée — sa provenance ne se prouverait pas).
+Mesuré NVDA (`--sans-collecte --questions=qf_1,qf_2,qf_3,qf_4,qf_5,qf_7`, réponses 1209-1214) : 6 `repondu`
+A / mesure, chiffres identiques, chaque réponse porte l'effet du rachat ; note 0,00 → **0,62**. Gardes :
+`check_analyste` §5 ter (+3) ; `check_framework_contract` [P] (+3) ; négatifs analyste 62/0, contrat 52/0.
+⚠️ Faux vert de harnais rencontré : une mutation par motif textuel vise la PREMIÈRE occurrence — `if
+inconnues:` existait plus haut dans `frameworks.py`, la mutation y tombait et le check restait vert. Une
+garde neuve prend un nom de variable unique dans son fichier.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
