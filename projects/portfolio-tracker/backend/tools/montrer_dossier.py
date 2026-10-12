@@ -88,7 +88,7 @@ async def main() -> int:
     echecs: list[str] = []
     if dossier.plafond_insuffisant:
         echecs.append(
-            f"plafond insuffisant : {len(dossier.chemises)} chemise(s) pour un plafond de {plafond}"
+            f"plafond insuffisant : {len(dossier.entries)} pièce(s) remise(s) pour un plafond de {plafond}"
         )
     coupees_en_vigueur = {c.en_vigueur for c in dossier.chemises} - set(dossier.entries)
     if coupees_en_vigueur:

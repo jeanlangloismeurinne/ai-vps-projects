@@ -154,7 +154,10 @@ async def run():
                   sup3 is None and sup2 is None, f"→ sup3={sup3} sup2={sup2}")
             n_courantes_totales = await conn.fetchval(
                 "SELECT count(*) FROM framework_answers WHERE ticker_id = $1 AND framework = $2 "
-                "AND framework_version = $3 AND question_id = $4 AND superseded_by IS NULL",
+                "AND framework_version = $3 AND question_id = $4 AND superseded_by IS NULL "
+                # Les seules lignées de CE test : NVDA porte depuis le 2026-10-12 une vraie réponse qf_1
+                # (`passage_manuel_v3`, #1190), qui faisait compter 3 — l'assert lisait la prod, pas sa fixture.
+                "AND analyste IN ('analyste_1', 'analyste_2')",
                 ticker, "qualite_financiere", FV, "qf_1")
             check("deux lignes courantes coexistent (une par analyste)", n_courantes_totales == 2,
                   f"→ {n_courantes_totales}")

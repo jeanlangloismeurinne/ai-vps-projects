@@ -541,6 +541,29 @@ def nature_satisfait(effective: str, attendue: str) -> bool:
     return effective == attendue
 
 
+def piece_fonde_la_reponse(nature_piece: Any, nature_attendue: Optional[str], *, approximation: bool) -> bool:
+    """Une pièce d'un FAIT POSTÉRIEUR LU fonde-t-elle la réponse, ou ne fait-elle que l'ANNOTER ?
+    DÉTENTEUR UNIQUE (#46), lu par le contexte de l'analyste (ce qu'il voit), par l'assemblage (ce qui
+    entre dans la fondation) et par le pont [P] (ce qu'il exige d'y trouver). Pur.
+
+    ARBITRAGE DE L'UTILISATEUR DU 2026-10-12 (« lire et annoter »), rendu comme un vrai fonds : NVIDIA
+    annonce le rachat de Hugging Face le 02/09, après ses comptes du 26/07. Le rendement du capital des
+    cinq derniers exercices n'en devient pas faux ni périmé — l'analyste lit l'annonce, écrit qu'elle ne
+    change pas les exercices passés (et ce qu'elle changera une fois consolidée), et sa note est à jour.
+    Jusque-là, la lecture entrait d'office dans la fondation (#113 ter) : sur une question de MESURE, un
+    texte faisait tomber le relevé en `interpretation` et [E] refusait — donc le contexte ne montrait
+    même pas le fait (`corpus_montre`), et TOUTE annonce postérieure gelait les mesures jusqu'aux comptes
+    suivants (NVDA : 5 réponses nées périmées, note de qualité 0).
+
+    RÈGLE : la pièce fonde la réponse si sa nature satisfait celle que la question attend (un relevé
+    pour une mesure — les baux chiffrés du 8-K RVMD, #113 ter, restent dans la fondation), ou si la
+    réponse est une approximation (tout peut l'appuyer). Sinon elle ANNOTE : prouvée tirée du dépôt
+    ([P]), elle lève la péremption par ce dépôt, mais ne fait ni le rang ni la nature du chiffre."""
+    if approximation or nature_attendue is None:
+        return True
+    return nature_satisfait(nature_effective_de([nature_piece], approximation=False), nature_attendue)
+
+
 def provient_du_depot(entry: dict[str, Any], depot: str) -> bool:
     """La pièce a-t-elle été tirée de CE dépôt EDGAR ? DÉTENTEUR UNIQUE (#103), lu par le pont [P] et par
     le contexte de l'analyste. EDGAR range chaque dépôt sous un dossier nommé par son numéro d'accession
@@ -740,10 +763,21 @@ def valider_pont_framework_answer(
     #    dans l'adresse de la pièce) — un article qui commente le dépôt n'est pas le dépôt ; et ces
     #    pièces sont dans la fondation, qui porte alors leur rang et leur nature (on ne lit pas hors de
     #    ce qu'on cite). Un effet non écrit est refusé par le contrat.
+    #    ⚠️ 2026-10-12 (« lire et annoter ») : seules les pièces qui FONDENT (`piece_fonde_la_reponse`)
+    #    doivent être dans la fondation ; une pièce qui annote une mesure n'y est pas, mais elle doit
+    #    exister au dossier — sinon sa provenance ne se prouverait pas.
     if answer.reponse is not None and answer.reponse.faits_posterieurs:
         fondation = set(answer.fondation.cited_entry_ids) if answer.fondation else set()
         for fait in answer.reponse.faits_posterieurs:
-            hors_fondation = sorted(set(fait.cited_entry_ids) - fondation)
+            hors_dossier = sorted(i for i in fait.cited_entry_ids if i not in entries)
+            if hors_dossier:
+                raise FrameworkAnswerRefused(
+                    f"le fait postérieur {fait.depot} est lu dans {hors_dossier}, absentes du dossier : une "
+                    "lecture se prouve sur des pièces que le dossier porte")
+            hors_fondation = sorted(
+                i for i in set(fait.cited_entry_ids) - fondation
+                if piece_fonde_la_reponse(entries[i].get("nature"), profil.get("nature_attendue"),
+                                          approximation=answer.statut == "approxime"))
             if hors_fondation:
                 raise FrameworkAnswerRefused(
                     f"le fait postérieur {fait.depot} est lu dans {hors_fondation}, absentes des citations de la "

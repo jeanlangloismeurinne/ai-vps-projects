@@ -65,6 +65,9 @@ mutations=(
 # ── #103 : un fait postérieur se lit DANS le dépôt (pont [P]) ; l'effet s'écrit (contrat) ──────────
 "$PONT¦            if not any(provient_du_depot(entries.get(i, {}), fait.depot) for i in fait.cited_entry_ids):¦            if False:¦lu dans un ARTICLE qui parle du dépôt"
 "$PONT¦            if hors_fondation:¦            if False:¦une lecture hors des citations"
+# « Lire et annoter » (2026-10-12) — une pièce de texte annote une mesure ; une pièce hors dossier est refusée.
+"$PONT¦    if approximation or nature_attendue is None:¦    if True:¦annote hors de la fondation"
+"$PONT¦            if hors_dossier:¦            if False:¦ABSENTE du dossier"
 "$PONT¦    return bool(depot) and depot.replace(\"-\", \"\") in str(entry.get(\"source_url\") or \"\")¦    return bool(depot)¦lu dans un ARTICLE qui parle du dépôt"
 "$SRC¦    effet: str = Field(min_length=20)¦    effet: str = Field(min_length=1)¦un effet non écrit"
 "$SRC¦        if len(set(depots)) != len(depots):¦        if False:¦le même dépôt lu deux fois"

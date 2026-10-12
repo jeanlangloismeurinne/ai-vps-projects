@@ -75,6 +75,7 @@ from app.agents.v2.frameworks import (
     load_frameworks,
     nature_effective_de,
     nature_satisfait,
+    piece_fonde_la_reponse,
     provient_du_depot,
     question_profiles,
     valider_pont_framework_answer,
@@ -383,16 +384,30 @@ def aucune_reponse_possible(ouverts: list[str]) -> bool:
 
 
 def faits_montrables(
-    faits: list[MaterialEvent], citables: dict[int, dict[str, Any]]
+    faits: list[MaterialEvent], citables: dict[int, dict[str, Any]],
+    montrees: Optional[dict[int, dict[str, Any]]] = None,
 ) -> list[dict[str, Any]]:
     """Les faits postérieurs aux comptes que l'analyste PEUT lire : ceux dont au moins une pièce citable
     provient du dépôt (#103). Pur. Un fait sans pièce n'est pas montré — il n'y aurait rien à lire, et le
-    montrer inviterait à en dire l'effet de mémoire ; la réponse reste alors périmée, ce qui est vrai."""
+    montrer inviterait à en dire l'effet de mémoire ; la réponse reste alors périmée, ce qui est vrai.
+
+    `montrees` (2026-10-12, « lire et annoter ») : le corpus que la question MONTRE (`corpus_montre`).
+    Une pièce du dépôt qui n'y figure pas — un texte, sur une question de mesure — est jointe ICI avec
+    son contenu, sous `pieces_a_lire_seulement` : l'analyste la lit et en écrit l'effet, elle ne fonde
+    pas le chiffre (`piece_fonde_la_reponse`). Avant, le fait disparaissait avec la pièce, et toute
+    annonce postérieure gelait les mesures jusqu'aux comptes suivants."""
     montres = []
     for e in faits:
         pieces = sorted(i for i, x in citables.items() if provient_du_depot(x, e.accession or ""))
         if pieces:
-            montres.append({"depot": e.accession, "fait": e.resume(), "pieces_du_depot": pieces})
+            fait = {"depot": e.accession, "fait": e.resume(), "pieces_du_depot": pieces}
+            a_lire = [i for i in pieces if montrees is not None and i not in montrees]
+            if a_lire:
+                fait["pieces_a_lire_seulement"] = [
+                    {"entry_id": i, "titre": citables[i].get("title"),
+                     "date": str(citables[i].get("source_date")) if citables[i].get("source_date") else None,
+                     "contenu": citables[i].get("content")} for i in a_lire]
+            montres.append(fait)
     return montres
 
 
@@ -439,7 +454,7 @@ def contexte_analyste(
         ouverts, _ = statuts_admissibles(q, citables)
         if aucune_reponse_possible(ouverts):
             continue  # rien à demander : le code écrit le `non_fondable` (cf. `repondre`)
-        citables = corpus_montre(q, citables, ouverts)
+        lisibles, citables = citables, corpus_montre(q, citables, ouverts)
         questions.append({
             "id": q.id,
             "enonce": q.enonce,
@@ -469,7 +484,7 @@ def contexte_analyste(
             # les commente, elle ne les recopie pas — et sa prose ne peut pas en dire un autre.
             "chiffres_lus_dans_le_socle": chiffres_du_socle(q, entries),
             # Les événements postérieurs aux derniers comptes qui rouvrent CETTE question (#103).
-            "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), citables),
+            "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), lisibles, citables),
             "corpus": [
                 {
                     "entry_id": i,
@@ -623,6 +638,9 @@ def assembler_answer(
     # Le SOCLE DES COMPTES (2026-10-04) : un chiffre de l'encadré lu dans les comptes reconstitués
     # s'appuie sur eux — la pièce entre d'office dans la fondation dès qu'un tel chiffre est établi
     # (même forme que les faits lus, #113 ter : l'oubli est impossible plutôt que refusé).
+    # « Lire et annoter » (2026-10-12) : une pièce d'un fait lu qui ne satisfait pas la nature attendue
+    # (un texte, sur une mesure) ANNOTE la réponse sans la fonder — détenteur `piece_fonde_la_reponse`.
+    approx = brute.statut == "approxime"
     socle = socle_au_dossier(entries)
     encadre = completer_encadre(question.chiffres_cles, list(brute.chiffres_cles),
                                 socle=socle[1] if socle else None)
@@ -631,14 +649,15 @@ def assembler_answer(
                                                     for d in question.chiffres_cles)]
     cites = list(dict.fromkeys(
         list(brute.cited_entry_ids)
-        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]
+        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids
+           if piece_fonde_la_reponse(entries.get(i, {}).get("nature"), question.nature_attendue,
+                                     approximation=approx)]
         + ([socle[0]] if socle and lus_au_socle else [])))  # dédoublonne, ordre conservé
     tiers = [_tier_reel(entries.get(i)) for i in cites]
     # Les DEUX axes interrogent leur détenteur unique, aucun n'est recopié ici (#46) : le rang via
     # `_plus_faible` / `derive_synthesis_reliability`, la nature via `nature_effective_de`. Cette
     # dernière était une expression EN LIGNE jusqu'au 2026-09-21 ; le pont [E] devant appliquer la
     # même règle, la laisser ici en aurait fait un jumeau (`feedback_correctif_regle_jumeaux`).
-    approx = brute.statut == "approxime"
     rang = derive_synthesis_reliability(tiers)[1] if approx else _plus_faible(tiers)
     nature = nature_effective_de(
         [entries.get(i, {}).get("nature") for i in cites], approximation=approx,
@@ -728,7 +747,9 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "`repondu` ou `approxime`, pour chaque fait lu, ajoute à `faits_posterieurs` la ligne {\"depot\": "
     "\"<depot recopié tel quel>\", \"effet\": \"<ce que ce fait change à ta réponse, et de combien — ou "
     "pourquoi il ne la change pas>\", \"cited_entry_ids\": [<une ou plusieurs de ses pieces_du_depot>]}, "
-    "(ces pièces comptent d'office parmi les sources de ta réponse). L'effet est un jugement, chiffré "
+    "(ces pièces comptent d'office parmi les sources de ta réponse). Un fait peut aussi porter "
+    "`pieces_a_lire_seulement` (leur contenu est joint) : ce sont des textes qui ne fondent pas le chiffre "
+    "demandé — tu les lis, tu les cites dans la ligne du fait, JAMAIS dans `cited_entry_ids`. L'effet est un jugement, chiffré "
     "à partir des sources quand elles le permettent, jamais une paraphrase du dépôt. Tu ne déclares lu que "
     "ce qui figure dans `faits_posterieurs_a_lire` ; si la liste est vide, `faits_posterieurs` est vide.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "

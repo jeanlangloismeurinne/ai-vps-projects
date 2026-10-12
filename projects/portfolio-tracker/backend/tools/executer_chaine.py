@@ -137,6 +137,8 @@ async def main() -> int:
             ecrits["mandats_collecteur"] = len(rapport["mandats"])
             print(f"  plan #{rapport['plan_id']} · carte {rapport['carte_etat']} "
                   f"(dépôt {rapport['carte_depot_courant']}, {rapport['carte_lignes']} ligne(s))")
+            if rapport.get("carte_motif"):
+                print(f"  ⚠️ carte de repli — motif : {rapport['carte_motif']}")
             print(f"  {rapport['lignes_vues']} ligne(s) de plan · {len(rapport['liens'])} lien(s) "
                   f"· {len(rapport['mandats'])} mandat(s) collecteur")
             print(f"  écrits : {rapport['ecrits']}")

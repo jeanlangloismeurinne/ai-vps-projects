@@ -659,6 +659,11 @@ class CarteCourante(NamedTuple):
     cout_usd: float = 0.0
     consignes: Optional[dict[tuple[str, str], ConsigneAppariement]] = None
     inventaire: Optional[InventaireTicker] = None
+    # Pourquoi la carte est servie du stock ou absente (`non_reverifiable`, `aucune`). Il n'existait
+    # qu'au journal, de niveau info : le passage NVDA du 2026-10-12 a imprimé « carte aucune » sans
+    # pouvoir dire pourquoi, alors que l'appariement rejoué à part réussissait. Un repli nommé dans un
+    # journal que personne ne lit n'est pas nommé.
+    motif: Optional[str] = None
 
 
 def _statuts(carte) -> dict[tuple[str, str], Literal["exact", "approximation", "indisponible"]]:
@@ -723,12 +728,13 @@ async def _servir_le_stock(
         logger.warning(
             "lecture carte %s/%s %s échouée (%s: %s) — repli sur poste_retenu() (repli nommé)",
             plan.ticker_id, plan.framework_id, plan.framework_version, type(e).__name__, e)
-        return CarteCourante(None, "aucune", None)
+        return CarteCourante(None, "aucune", None,
+                             motif=f"{motif} ; lecture du stock échouée ({type(e).__name__}: {e})")
     if carte is None:
         logger.info(
             "aucune carte d'appariement pour %s/%s %s (%s) — repli sur poste_retenu() (repli nommé)",
             plan.ticker_id, plan.framework_id, plan.framework_version, motif)
-        return CarteCourante(None, "aucune", None)
+        return CarteCourante(None, "aucune", None, motif=f"{motif} ; aucune carte en stock")
     logger.warning(
         "carte %s/%s %s servie SANS revérification d'âge (%s) — %d ligne(s), depot_vu=%s : le "
         "verdict servi reste celui d'un dépôt réel, seulement peut-être plus ancien",
@@ -736,7 +742,7 @@ async def _servir_le_stock(
         len(carte.items), carte.dernier_depot_vu)
     return CarteCourante(_statuts(carte), "non_reverifiable", None,
                          consignes=_consignes(carte) if inventaire else None,
-                         inventaire=inventaire)
+                         inventaire=inventaire, motif=motif)
 
 
 async def assurer_carte(
@@ -958,6 +964,7 @@ async def executer_collecte_framework(
         "carte_etat": carte.etat,
         "carte_depot_courant": carte.depot_courant,
         "carte_lignes": len(carte.statuts) if carte.statuts else 0,
+        "carte_motif": carte.motif,
         "lignes_vues": result.lignes_vues,
         "liens": [l.model_dump() for l in result.liens],
         "mandats": [m.model_dump() for m in result.mandats],

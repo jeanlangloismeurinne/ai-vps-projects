@@ -515,6 +515,10 @@ ENTRIES = {
           "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/rvmd-20260827.htm"},
     195: {"reliability_tier": "A-", "nature": "mesure",
           "source_url": "https://www.globenewswire.com/news-release/2026/09/01/rvmd-redwood-city-leases"},
+    # « Lire et annoter » (2026-10-12) — la LECTURE d'un dépôt (copiée de NVDA #865 : interpretation, tirée
+    # du 8-K) : même adresse que 194, seule la nature diffère — donc seule la règle d'annotation discrimine.
+    196: {"reliability_tier": "A-", "nature": "interpretation",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/ex99-1.htm"},
 }
 
 
@@ -688,6 +692,14 @@ pont("[P] un fait lu dans un ARTICLE qui parle du dépôt est refusé — on ne 
      _lu([195], [190, 195]), "ne provient de ce dépôt")
 pont("[P] une lecture hors des citations de la réponse est refusée — elle ne fonderait rien",
      _lu([194], [190]), "absentes des citations de la réponse")
+pont_ok("[P] sur une MESURE, une pièce de TEXTE tirée du dépôt annote hors de la fondation — elle passe "
+        "(lire et annoter, 2026-10-12)", _lu([196], [190]))
+pont("[P] … mais sur une question de JUGEMENT, la même pièce fonde : hors des citations, refusée",
+     rep(question_id="qf_itp", blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
+         {"depot": _BAUX, "effet": _EFFET, "cited_entry_ids": [196]}]},
+         "fondation": {**FOND, "cited_entry_ids": [190]}}), "absentes des citations de la réponse")
+pont("[P] une lecture dans une pièce ABSENTE du dossier est refusée — sa provenance ne se prouverait pas",
+     _lu([194, 999], [190, 194]), "absentes du dossier")
 rejete("[P] contrat — un effet non écrit (« RAS ») est refusé : l'effet s'écrit, il ne se suppose pas",
        lambda: rep(blocs={"reponse": {"verbatim": "x", "faits_posterieurs": [
            {"depot": _BAUX, "effet": "RAS", "cited_entry_ids": [194]}]}}), "at least 20 characters")

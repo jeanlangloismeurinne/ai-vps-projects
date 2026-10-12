@@ -440,6 +440,34 @@ try:
 except Exception as _e:  # noqa: BLE001
     _p_ok = f"{type(_e).__name__}: {_e}"[:200]
 check("… et la réponse qui a lu les baux dans le 8-K passe le pont réel [P]", _p_ok == "ok", f"→ {_p_ok}")
+# « Lire et annoter » (arbitrage du 2026-10-12) — NVDA : le 8-K du rachat de Hugging Face (#865, une
+# LECTURE de dépôt, nature `interpretation`) périmait cinq mesures que l'analyste n'avait pas le droit de
+# lire. Pièce 7 copiée du réel (#865 : tier A, interpretation, tirée du dépôt), rattachée au même dépôt.
+_E_ANNOT = {**_E_BAUX, 7: {"reliability_tier": "A", "nature": "interpretation", "title": "lecture du 8-K",
+                           "content": "accord définitif de rachat, prix ~11,9 Md$ en numéraire",
+                           "source_type": "edgar_official", "source_date": "2026-09-02",
+                           "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/ex99.htm"}}
+_fm = A.faits_montrables([_BAUX], _E_ANNOT, {6: _E_ANNOT[6]})
+check("une pièce du dépôt ABSENTE du corpus montré est jointe à lire, avec son contenu (lire et annoter)",
+      len(_fm) == 1 and _fm[0]["pieces_du_depot"] == [6, 7]
+      and [x["entry_id"] for x in _fm[0].get("pieces_a_lire_seulement", [])] == [7]
+      and _fm[0]["pieces_a_lire_seulement"][0]["contenu"] == _E_ANNOT[7]["content"], f"→ {_fm}")
+check("… et un fait dont toutes les pièces sont montrées n'en joint aucune à part",
+      "pieces_a_lire_seulement" not in A.faits_montrables([_BAUX], _E_ANNOT, _E_ANNOT)[0])
+_ann = A.assembler_answer(A.AnalysteReponse(
+    question_id="qf_4", statut="repondu", verbatim="dette convertible", sens="tresorerie_nette",
+    cited_entry_ids=[1, 6], chiffres_cles=_ENC_RVMD[:2],
+    faits_posterieurs=[{"depot": "0001193125-26-377362", "effet": "rachat payé en numéraire, sans effet sur la dette",
+                        "cited_entry_ids": [6, 7]}]), question=Q["qf_4"], entries=_E_ANNOT, **_entete)
+check("sur une MESURE, la pièce de texte d'un fait lu ANNOTE sans fonder : hors fondation, nature intacte",
+      _ann.fondation.cited_entry_ids == [1, 6] and _ann.fondation.nature_effective == "mesure",
+      f"→ {_ann.fondation.cited_entry_ids} {_ann.fondation.nature_effective}")
+try:
+    valider_pont_framework_answer(_ann, questions=question_profiles(F), entries=_E_ANNOT)
+    _p_ann = "ok"
+except Exception as _e:  # noqa: BLE001
+    _p_ann = f"{type(_e).__name__}: {_e}"[:200]
+check("… et cette réponse annotée passe le pont réel ([P] et [E])", _p_ann == "ok", f"→ {_p_ann}")
 check("la consigne de l'analyste ENSEIGNE la lecture des faits postérieurs",
       "faits_posterieurs_a_lire" in A._ANALYSTE_SYSTEM_PROMPT and "pieces_du_depot" in A._ANALYSTE_SYSTEM_PROMPT
       and "effet" in A._ANALYSTE_SYSTEM_PROMPT)
