@@ -103,7 +103,7 @@ mutations=(
 "$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
 "$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
 "$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
-"$YAML¦            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)¦¦la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES"
+"$YAML¦            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)¦¦l'autonomie (qf_7) sont CALCULÉS"
 # ── #105 : le chiffre RETENU (le plus prudent) ──────────────────────────────────────────────────────────
 "$PONT¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if hors:¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if False:¦retenu parmi des chiffres qui ne sont pas relevés"
 "$PONT¦            if autres:¦            if False:¦retenu entre deux unités"

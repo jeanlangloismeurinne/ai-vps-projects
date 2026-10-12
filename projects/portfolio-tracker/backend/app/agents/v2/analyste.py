@@ -471,8 +471,11 @@ def contexte_analyste(
             # L'encadré que la réponse doit rendre, id et unité IMPOSÉS (4 bis). Vide = la question ne
             # se chiffre pas. Ce n'est pas un levier d'exigence (#59) : c'est la forme de la réponse.
             # Les chiffres CALCULÉS (#101) n'y sont pas : le code les calcule, on ne les demande pas.
+            # `facultatif` (#105) est MONTRÉ (2026-10-12) : RVMD qf_7 #1234 est sortie « sans fondement » faute
+            # de la prévision de la direction — un chiffre facultatif que le modèle ne savait pas tel.
             "chiffres_cles_demandes": [
-                {"id": c.id, "libelle": c.libelle, "unite": c.unite, "periode": c.periode}
+                {"id": c.id, "libelle": c.libelle, "unite": c.unite, "periode": c.periode,
+                 "facultatif": c.facultatif}
                 for c in q.chiffres_cles if not c.calcule_par_le_systeme
             ],
             "chiffres_calcules_par_le_systeme": [
@@ -724,7 +727,9 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "UN CHIFFRE MANQUANT NE FAIT PAS TOMBER LA QUESTION. Si le corpus répond à la question mais ne "
     "permet pas d'établir un chiffre de l'encadré, tu réponds quand même (`repondu` ou `approxime`) et "
     "cette ligne porte son `motif_absence`. `sans_fondement` est réservé au cas où le corpus ne permet "
-    "de répondre à la QUESTION elle-même — jamais à un chiffre de l'encadré qui manque.\n"
+    "de répondre à la QUESTION elle-même — jamais à un chiffre de l'encadré qui manque. Un chiffre marqué "
+    "`facultatif: true` (une prévision de la direction, par exemple) peut ne pas être publié : son absence "
+    "ne dit RIEN contre la question, rends sa ligne avec son `motif_absence`.\n"
     "LES CHIFFRES CALCULÉS NE SONT PAS À TOI. `chiffres_calcules_par_le_systeme` liste les chiffres que "
     "le système calcule lui-même à partir de tes lignes (par exemple une différence de deux chiffres "
     "relevés) : tu ne les rends pas, tu ne les calcules pas, et tu n'as pas à citer de source qui les "

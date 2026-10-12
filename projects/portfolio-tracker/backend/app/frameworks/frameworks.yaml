@@ -475,11 +475,42 @@ frameworks:
           - id: elements_non_recurrents
             libelle: Éléments présentés comme exceptionnels, et leur récurrence effective
             essentiel: false
+        # Arbitrages de l'utilisateur du 2026-10-12 (comme un fonds qui fait une revue de qualité des
+        # résultats) : (1) la mesure porte sur les DOUZE DERNIERS MOIS, refaite à chaque publication — sur
+        # l'exercice clos, NVDA qf_6 restait périmée de la publication du T1 au rapport annuel suivant ;
+        # (2) chaque retraitement compte pour sa TAILLE, sans compensation — NVDA « 2,6 % » était un solde
+        # où +6,4 Md$ de rémunérations en actions et ≈ −10 Md$ de plus-values sur participations
+        # s'annulaient (≈ 14 % poste par poste). L'analyste RELÈVE trois sommes dans les rapprochements
+        # publiés ; le CODE en tire les douze mois et la part (#101).
         chiffres_cles:
-          - id: retraitements_discretionnaires
-            libelle: Montant du résultat qui relève de choix discrétionnaires plutôt que de la performance économique
+          - id: retraitements_exercice_clos
+            libelle: Somme des retraitements entre résultat publié et résultat ajusté sur le dernier exercice clos, chaque poste compté pour sa taille sans compensation
             unite: "M$"
-            periode: dernier exercice
+            periode: dernier exercice clos
+          - id: retraitements_cumul_en_cours
+            libelle: La même somme sur le cumul de l'exercice en cours au dernier trimestre publié — zéro si le dernier rapport publié est le rapport annuel
+            unite: "M$"
+            periode: cumul de l'exercice en cours
+          - id: retraitements_cumul_an_passe
+            libelle: La même somme sur la même période de l'exercice précédent — zéro si le dernier rapport publié est le rapport annuel
+            unite: "M$"
+            periode: même cumul, exercice précédent
+          - id: retraitements_discretionnaires
+            libelle: Retraitements sur les douze derniers mois, chaque poste compté pour sa taille sans compensation
+            unite: "M$"
+            periode: douze mois glissants
+            calcul: retraitements_exercice_clos + retraitements_cumul_en_cours - retraitements_cumul_an_passe   # calculé par le code (#101)
+          - id: resultat_net_douze_mois
+            libelle: Résultat net publié sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "resultat_net", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: part_des_retraitements
+            libelle: Part du résultat net des douze derniers mois que représentent les retraitements
+            unite: "%"
+            periode: douze mois glissants
+            # une perte nette (dénominateur négatif) rend la part non calculable (#44)
+            calcul: (retraitements_exercice_clos + retraitements_cumul_en_cours - retraitements_cumul_an_passe) / resultat_net_douze_mois * 100
         variables_par_archetype:
           rentable:
             mode: variable

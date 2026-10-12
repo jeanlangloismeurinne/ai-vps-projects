@@ -439,11 +439,15 @@ rejete("un `calcul` hors de la grammaire fermée est refusé par le CONTRAT (ava
        lambda: QuestionDefinition.model_validate(q_base(chiffres_cles=_REL + [
            {"id": "dette_nette", "libelle": "Dette nette, calculée par le code", "unite": "M$",
             "periode": "au dernier bilan", "calcul": "dette_brute moins tresorerie"}])), "grammaire fermée")
-check("[T] le référentiel réel : la dette nette et la couverture des intérêts (qf_4), l'autonomie (qf_7) sont "
-      "CALCULÉES, rien d'autre",
+check("[T] le référentiel réel : la dette nette et la couverture des intérêts (qf_4), les retraitements sur douze "
+      "mois et leur part (qf_6), l'autonomie (qf_7) sont CALCULÉS, rien d'autre",
       {(q.id, c.id): c.calcul for q in _reel_q.values() for c in q.chiffres_cles if c.calcul}
       == {("qf_4", "dette_nette"): "dette_brute - tresorerie_et_placements",
           ("qf_4", "couverture_des_interets"): "resultat_exploitation_douze_mois / charges_interets_douze_mois",
+          ("qf_6", "retraitements_discretionnaires"):
+              "retraitements_exercice_clos + retraitements_cumul_en_cours - retraitements_cumul_an_passe",
+          ("qf_6", "part_des_retraitements"): "(retraitements_exercice_clos + retraitements_cumul_en_cours - "
+                                              "retraitements_cumul_an_passe) / resultat_net_douze_mois * 100",
           ("qf_7", "autonomie"): "tresorerie_mobilisable / consommation_retenue * 12"},
       f"→ {[(q.id, c.id, c.calcul) for q in _reel_q.values() for c in q.chiffres_cles if c.calcul]}")
 # #105 — la règle de PRUDENCE (arbitrage du 2026-09-30) : l'autonomie se calcule sur la plus forte du
@@ -723,6 +727,7 @@ check("[U] le référentiel réel lit dans le socle la dette brute, la trésorer
       "intérêts sur douze mois, la consommation — et la dette brute compte le financement adossé aux redevances",
       set(_lus_socle) == {("qf_4", "dette_brute"), ("qf_4", "tresorerie_et_placements"),
                           ("qf_4", "resultat_exploitation_douze_mois"), ("qf_4", "charges_interets_douze_mois"),
+                          ("qf_6", "resultat_net_douze_mois"),
                           ("qf_7", "tresorerie_mobilisable"), ("qf_7", "consommation_constatee")}
       and "financement_adosse_aux_redevances" in _lus_socle[("qf_4", "dette_brute")][0]
       and _lus_socle[("qf_7", "consommation_constatee")] == ("-flux_de_tresorerie_disponible", "douze_mois"),

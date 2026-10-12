@@ -3052,6 +3052,39 @@ A / mesure, chiffres identiques, chaque réponse porte l'effet du rachat ; note 
 inconnues:` existait plus haut dans `frameworks.py`, la mutation y tombait et le check restait vert. Une
 garde neuve prend un nom de variable unique dans son fichier.
 
+### #118 — une mesure rouverte chaque trimestre se lit sur douze mois ; un terme négatif rend un calcul « non significatif »
+
+**Le défaut (2026-10-12, NVDA, deux réponses nées ou restées périmées).** Une réponse est datée par sa pièce
+la plus ancienne ; les résultats trimestriels rouvrent toute la qualité financière (#102). Une mesure qui se
+lit sur l'EXERCICE CLOS cite donc forcément le rapport annuel, et reste périmée de la publication du T1 au
+rapport annuel suivant, quoi que relise l'analyste. qf_4 citait la couverture des intérêts de l'exercice
+(503,4 fois, pièce #843) ; qf_6 mesurait les retraitements sur l'exercice clos en janvier.
+- **qf_4 (opération de données)** : `couverture_des_interets` passe `depuis_le_socle`, et l'encadré lit
+  `resultat_exploitation_douze_mois` et `charges_interets_douze_mois` dans le socle ; la couverture est
+  calculée par le code (NVDA : 197 579 / 464 = 425,8 fois au 26/07/2026).
+- **qf_6 (arbitrages de l'utilisateur, 2026-10-12, comme un fonds qui fait une revue de qualité des
+  résultats)** : (1) la mesure porte sur les **douze derniers mois**, refaite à chaque publication ; (2) chaque
+  retraitement compte pour sa **taille, sans compensation** : NVDA « 2,6 % » était un solde où +6,4 Md$ de
+  rémunérations en actions et ≈ −10 Md$ de plus-values sur participations s'annulaient (≈ 14 % poste par
+  poste). L'analyste RELÈVE trois sommes dans les rapprochements publiés (exercice clos, cumul en cours, même
+  cumul l'an passé ; zéro pour les deux derniers si le dernier rapport est l'annuel) ; le code en tire les
+  douze mois et la part du résultat net des douze mois (lu dans le socle). Convention maison : la somme
+  « sans compensation » se fait PAR PÉRIODE (un poste qui change de signe d'une période à l'autre est une
+  approximation assumée).
+- **`ChiffreCleDeclare.non_significatif_si_negatif`** (liste de termes d'un `calcul`) : prolonge #44 du
+  dénominateur aux termes NOMMÉS. Une couverture des intérêts sur une perte d'exploitation (RVMD : −1 627 M$
+  sur douze mois, 59 M$ d'intérêts) sort « non significatif », la perte nommée, jamais −27,4 fois. Déclaré par
+  chiffre, jamais généralisé : une marge négative, elle, est un niveau. Contrat : seulement sur un chiffre
+  calculé, termes présents dans la formule.
+- **`facultatif` est MONTRÉ à l'analyste** dans `chiffres_cles_demandes` (+ consigne) : RVMD qf_7 #1234 est
+  sortie « sans fondement » faute de la prévision de la direction, un chiffre facultatif que le modèle ne
+  savait pas tel. Relancée une fois après le correctif : #1235 `repondu` A (38,4 mois). Un passage n'est pas
+  une preuve de stabilité, et c'est la dette bloquante de la production qui l'a rendu possible : la réponse
+  moins bonne a remplacé la bonne.
+Gardes : `check_framework_contract` (+4) + négatif **56/0** ; `check_analyste` (+2) + négatif ;
+`check_frameworks_definitions` (référentiel réel) ; `check_signature_modele_persist` reste ROUGE tant que RVMD
+qf_6 #1080 n'est pas réémise au nouvel encadré (garde « pas de dette », #100).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

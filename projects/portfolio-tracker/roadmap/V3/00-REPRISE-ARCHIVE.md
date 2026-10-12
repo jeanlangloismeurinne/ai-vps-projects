@@ -5960,3 +5960,25 @@ comité) — dette retenue, capital employé proposé. Branchement : contrat (`l
 `ChiffreCleDeclare.socle`), pont [U], `completer_encadre(socle=)`, jointure dans `preparation`, prompt de
 l'analyste. Deux mutations de `negatif_frameworks_definitions.sh` étaient caduques depuis #114 (qf_8) :
 réparées. Déployé `2837d08` ; réémission RVMD qf_4 #1176 / qf_7 #1177, 0 refus, relues contre les pièces.
+
+## 2026-10-12 (2) — #118, les douze mois ; arrêt sur le crédit DeepInfra
+
+- **qf_4 NVDA** : la réponse #1212 citait la couverture des intérêts de l'exercice clos (#843, 503,4 fois) et
+  naissait périmée. Cause : l'ingrédient `couverture_des_interets` n'était pas `depuis_le_socle`, la seule
+  source au dossier était la pièce annuelle. Correctif de données : l'encadré lit le résultat d'exploitation et
+  les intérêts sur douze mois dans le socle, le code calcule la couverture. Déployé `1adeb17`. Réémission
+  `--sans-collecte --questions=qf_4,qf_8` : qf_4 #1236 (425,8 fois), qf_8 #1237 (`aucune_contrainte`, encore
+  périmée : prospectus du 16/06). NVDA 0,62 → **0,75**.
+- **RVMD** : `--sans-collecte --questions=qf_4,qf_7` : socle republié en 1.1.0 (#876), qf_4 #1233 juste
+  (couverture « non significatif », règle `non_significatif_si_negatif` ajoutée pour ce cas : −1 627 M$ de
+  résultat d'exploitation sur douze mois) ; **qf_7 #1234 a RÉGRESSÉ** en « sans fondement » (motif : la
+  prévision de la direction manque — un chiffre FACULTATIF). `facultatif` désormais montré à l'analyste ;
+  relance unique : qf_7 #1235 `repondu` A, 38,4 mois. RVMD reste **1,0**.
+- **Arbitrages de l'utilisateur sur qf_6** (posés en termes de fonds) : douze derniers mois, refaite à chaque
+  publication ; somme des retraitements poste par poste sans compensation. Référentiel modifié en fin de
+  session (3 relevés, 2 calculés, résultat net sur douze mois lu dans le socle). Suite 4398, seul rouge :
+  RVMD qf_6 #1080 à réémettre.
+- **Collecte NVDA qf_8** (`executer_chaine … --questions=qf_8`, AVEC collecte) : plan #221 sur les 8 questions
+  (le périmètre ne restreint pas la collecte — constat), 8 liens, 12 mandats ; qf_8 web « recherche épuisée » ;
+  3 lignes en échec **402** ; l'analyste est mort sur le 402 (« You need positive balance »), aucune réponse
+  écrite. Session arrêtée là sur les appels modèle.

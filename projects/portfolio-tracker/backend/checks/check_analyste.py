@@ -231,7 +231,11 @@ _asm = dict(question=Q["qf_6"], entries=ENTRIES, **_entete)
 
 
 # L'ENCADRÉ que `qf_6` déclare dans le référentiel réel (4 bis) — lu, jamais recopié.
-ENC_QF6 = [{"id": "retraitements_discretionnaires", "unite": "M$", "valeur": 42.0, "date_ou_periode": "exercice 2025"}]
+# Depuis le 2026-10-12, qf_6 RELÈVE trois sommes (exercice clos, cumul en cours, même cumul l'an passé) ;
+# les douze mois et la part sont calculés par le code.
+ENC_QF6 = [{"id": c.id, "unite": c.unite, "valeur": v, "date_ou_periode": p}
+           for c, v, p in zip([c for c in Q["qf_6"].chiffres_cles if not c.calcule_par_le_systeme],
+                              (42.0, 20.0, 12.0), ("exercice 2025", "semestre 2026", "semestre 2025"))]
 # qf_4 ne RELÈVE plus rien (2026-10-04) : sa dette brute et sa trésorerie se lisent dans le socle des
 # comptes, sa dette nette se calcule. Son encadré rendu par le modèle est donc vide.
 ENC_QF4 = [{"id": c.id, "unite": c.unite, "valeur": 0.0, "date_ou_periode": "au 2026-06-30"}
@@ -314,8 +318,13 @@ _dem = {q["id"]: q.get("chiffres_cles_demandes") for q in CTX["questions"]}
 check("le contexte DEMANDE, par question, les chiffres RELEVÉS déclarés (id et unité imposés)",
       [(c["id"], c["unite"]) for c in (_dem.get("qf_6") or [])]
       == [(c.id, c.unite) for c in Q["qf_6"].chiffres_cles if not c.calcule_par_le_systeme]
-      and len(_dem.get("qf_6") or []) == 1,
+      and len(_dem.get("qf_6") or []) == 3,
       f"→ {_dem.get('qf_6')}")
+_dem7 = {c["id"]: c.get("facultatif") for c in (_dem.get("qf_7") or [])}
+check("le contexte MARQUE le chiffre facultatif (qf_7 : la prévision de la direction) — et lui seul",
+      _dem7.get("consommation_prevue") is True
+      and [i for i, f in _dem7.items() if f is True] == ["consommation_prevue"]
+      and all(f is False for i, f in _dem7.items() if i != "consommation_prevue"), f"→ {_dem7}")
 check("… et ne demande RIEN que le socle des comptes porte (qf_4 : dette brute et trésorerie se lisent)",
       _dem.get("qf_4") == [], f"→ {_dem.get('qf_4')}")
 _CTX_S = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, ENTRIES_S)
@@ -338,8 +347,15 @@ check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés,
       f"→ demandés {_dem.get('qf_4')} / calculés {_calc.get('qf_4')}")
 _a6 = A.assembler_answer(brute(), **_asm)
 check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre réécrit par le code)",
-      [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles] == ENC_QF6,
+      [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles
+       if c.id in {e["id"] for e in ENC_QF6}] == ENC_QF6,
       f"→ {_a6.reponse.chiffres_cles}")
+_a6c = {c.id: c for c in _a6.reponse.chiffres_cles}
+check("… et le code en tire les DOUZE MOIS (42 + 20 − 12 = 50), la part restant non établie sans socle au dossier",
+      len(ENC_QF6) == 3 and getattr(_a6c.get("retraitements_discretionnaires"), "valeur", None) == 50.0
+      and "part_des_retraitements" in _a6c and _a6c["part_des_retraitements"].valeur is None
+      and "resultat_net_douze_mois" in (_a6c["part_des_retraitements"].motif_absence or ""),
+      f"→ {_a6c.get('retraitements_discretionnaires')} / {_a6c.get('part_des_retraitements')}")
 leve("un `sans_fondement` qui porte un encadré est refusé (un manque qui donne ses chiffres est une réponse)",
      lambda: A.AnalysteReponse(question_id="qf_6", statut="sans_fondement", verbatim="il manque le détail",
                                chiffres_cles=ENC_QF6), ValidationError)

@@ -80,6 +80,7 @@ mutations=(
 "$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=encadre[:0],¦entre TEL QUEL dans la réponse"
 # ── #101 : les chiffres CALCULÉS sont au code, et le renvoi unique ───────────────────────────────
 "$SRC¦                for c in q.chiffres_cles if not c.calcule_par_le_systeme¦                for c in q.chiffres_cles¦ne demande RIEN que le socle"
+"$SRC¦                 \"facultatif\": c.facultatif}¦                 \"facultatif\": False}¦MARQUE le chiffre facultatif"
 "$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=list(brute.chiffres_cles),¦ÉCRIT la dette nette calculée"
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
