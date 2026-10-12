@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-12
+updated: 2026-10-12 (session Sonnet — crédit rétabli, #118 fermé, RVMD qf_6 réémise, défaut NVDA qf_6 trouvé et retiré)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -312,15 +312,49 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   **Arbitrages utilisateur du 2026-10-12 sur qf_6** : douze derniers mois (refaite à chaque publication) ;
   somme des retraitements poste par poste, sans compensation. Référentiel modifié (3 relevés + 2 calculés + 1
   lu dans le socle), suite verte sauf RVMD qf_6 à réémettre.
-- **⛔ PROCHAIN PAS — BLOQUÉ PAR LE CRÉDIT DEEPINFRA (402 « positive balance », constaté le 2026-10-12 en
-  plein passage NVDA qf_8 : aucune réponse écrite, plan #221 écrit).** Une fois le crédit rétabli :
-  (1) RVMD `--sans-collecte --questions=qf_6` (nouvel encadré ; remet `check_signature_modele_persist` au vert) ;
-  (2) NVDA qf_6 : la collecte doit ramener le rapprochement du communiqué du T2 FY2027 (cumul du semestre ET
-  comparatif de l'an passé, mêmes colonnes) — 2 lignes « 402 » du plan #221 à relancer — puis réémettre ;
-  (3) qf_8 NVDA : la revue des clauses cite le prospectus de juin, antérieur à la clôture ; le web n'a rien
-  rapporté de plus récent (« recherche épuisée »). Un fonds relit la note « dette » du 10-Q du trimestre
-  (« aucun changement, aucun covenant financier ») : chercher pourquoi le 10-Q n'est pas au dossier de qf_8
-  avant de payer une collecte ; (4) puis les nouveaux chapitres sur RVMD et NVDA.
+- **✅ CRÉDIT DEEPINFRA RÉTABLI (2026-10-12, vérifié par un appel minimal avant toute dépense) — (1) FAIT :
+  RVMD qf_6 réémise `--sans-collecte --questions=qf_6`** (réponse #1256, `repondu` A, cite [784, 785, 771,
+  303, 304, 305, 876], relue fidèle) — **`check_signature_modele_persist` au vert, suite 4399/0.**
+  **(2) FAIT, avec incident et correctif en chemin — NVDA qf_6.**
+  **Constat #118 fermé en code** (`tools/executer_chaine.py`) : `--questions=` restreint maintenant AUSSI
+  la collecte (maillon 1), pas seulement l'analyse — `executer_collecte_framework`/`traduire` savaient déjà
+  le faire (lot 5, bouclage), seul ce passage ne le branchait pas. Un relaunch scopé `--questions=qf_6` ne
+  replanifie/recollecte plus les 8 questions du framework pour relancer une seule.
+  **Incident (leçon de méthode, pas un défaut du projet)** : un premier essai (`timeout 300 | tail`) a
+  semblé « Terminated » (exit 143) mais le `docker run --rm` sous-jacent a continué seul ; une relance
+  nohup lancée en parallèle a produit DEUX collectes NVDA/qf_6 concurrentes (plans #227 et #228) écrivant
+  dans la même base en même temps. **Toujours vérifier `ps aux`/`docker ps` avant toute relance**, et
+  utiliser le `run_in_background` du Bash tool plutôt qu'un `nohup … &` imbriqué (qui double le
+  backgrounding et rend le process réel introuvable). Les deux plans concurrents ont tous deux CRU réussir
+  (0 mandat pour le #228) mais produit un `repondu` (#1270) avec des chiffres **FAUX**.
+  **Défaut trouvé en relisant le verbatim contre la vraie pièce EDGAR** (`feedback_garde_structure_pas_sens`
+  — exactement ce que le bandeau de sortie de l'outil demande de faire) : #1270 citait
+  `retraitements_cumul_en_cours = 222 M$ (« cumul S1 FY2027 »)` et `retraitements_cumul_an_passe = 0 M$`.
+  Vérifié contre le vrai 8-K (accession `0001045810-26-000073`, EX-99.1 `q2fy27pr.htm`, table
+  « RECONCILIATION OF GAAP TO NON-GAAP… » — fetch direct `data.sec.gov`/`sec.gov`, hors de toute
+  dépense modèle) : le tableau réel a CINQ colonnes (Three Months : 2026-07-26/04-26/2025-07-27 ; Six
+  Months : 2026-07-26/2025-07-27) ; la ligne « Total impact of non-GAAP adjustments to operating income »
+  vaut 222 / 247 / 101 / **469** / **263**. **222 est la colonne TROIS MOIS, pas SIX MOIS** (vraie valeur
+  semestrielle : 469) ; **0 n'existe NULLE PART dans le tableau** (vraie valeur du comparatif N-1 : 263) —
+  un chiffre sans aucun support, pas une pièce mal lue. Même famille que #78. **Retiré** —
+  `tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql` (DELETE #1270, restaure #1269 `non établi`,
+  honnête, courante) — suite revérifiée **4399/0** après retrait.
+  **Cause probable, NON corrigée, à ARBITRER** : le vocabulaire `PERIODES` (migration 052 —
+  `exercice_clos` | `douze_mois_glissants` | `dernier_bilan` | `sans_periode`) n'a **aucune valeur pour
+  « cumul d'une période intermédiaire » (semestre, etc.)** — la demande de collecte (#113, « la demande
+  précise la période ») ne peut donc pas désigner précisément ce que l'encadré qf_6 exige réellement
+  (cumul semestriel + comparatif N-1, mêmes colonnes). Le traducteur a bien récupéré LE document qui
+  porte les deux colonnes (le fetch a atteint la bonne page), mais rien dans la demande ne cadrait sur la
+  bonne colonne — à la différence de #112 (douze mois glissants) qui, lui, a sa valeur dans `PERIODES`.
+  **Décision à prendre avant de retenter** : (a) ajouter une valeur à `PERIODES` (migration + grammaire +
+  `appliquer_periode`) — coût : capacité cross-module, à instruire comme #112/#113 ; (b) ou un remède plus
+  léger côté encadré/analyste (ex. exiger explicitement les DEUX colonnes « Three/Six Months » dans le
+  motif de l'ingrédient qf_6.ecart_publie_ajuste sans toucher au vocabulaire général). Ne PAS re-durcir un
+  prompt ponctuel (`feedback_jugement_modele_instable_entre_passages`) sans ce choix. **Pas retenté tant
+  que l'option n'est pas tranchée.**
+  **(3) PAS FAIT — qf_8 NVDA** : la revue des clauses cite le prospectus de juin, antérieur à la clôture ;
+  chercher pourquoi le 10-Q du trimestre (« aucun changement, aucun covenant financier ») n'est pas au
+  dossier de qf_8 avant de payer une collecte. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
 - **Constat #118 — `executer_chaine --questions=` ne restreint PAS la collecte** : seule l'analyse est
   restreinte ; le plan #221 a porté sur les 8 questions pour qf_8 seule. Le bouclage sait déjà planifier sur un
   périmètre (pont [P] « HORS du scope ») : à brancher au maillon 1 de `executer_chaine`.

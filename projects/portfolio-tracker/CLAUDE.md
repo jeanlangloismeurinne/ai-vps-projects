@@ -3085,6 +3085,40 @@ Gardes : `check_framework_contract` (+4) + négatif **56/0** ; `check_analyste` 
 `check_frameworks_definitions` (référentiel réel) ; `check_signature_modele_persist` reste ROUGE tant que RVMD
 qf_6 #1080 n'est pas réémise au nouvel encadré (garde « pas de dette », #100).
 
+### #119 — `PERIODES` n'a pas de valeur « cumul d'une période intermédiaire », et une collecte deux fois
+lancée par erreur double-écrit en prod
+
+**Le défaut (2026-10-12, NVDA qf_6, réponse #1270).** Une fois le crédit DeepInfra rétabli, la réémission
+NVDA qf_6 a produit `retraitements_cumul_en_cours = 222 M$ (« cumul S1 FY2027 »)` et
+`retraitements_cumul_an_passe = 0 M$` — **vérifié FAUX contre le vrai 8-K** (accession
+`0001045810-26-000073`, EX-99.1 `q2fy27pr.htm`, fetch direct `sec.gov`/`data.sec.gov`, hors dépense
+modèle) : le tableau réel a cinq colonnes (Three Months : 07-26/04-26/07-27(N-1) ; Six Months :
+07-26/07-27(N-1)) et la ligne « Total impact… » vaut 222/247/101/**469**/**263**. 222 est la colonne
+TROIS MOIS, pas SIX MOIS (vraie valeur semestrielle 469) ; 0 n'existe NULLE PART dans le tableau (vraie
+valeur du comparatif N-1 : 263) — même famille que #78, « tous les nombres justes, le fait faux », les
+quatre contrôles du manager gardent la structure, jamais le sens. **Retiré**
+(`tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql`).
+
+**Cause probable, NON corrigée** : `PERIODES` (migration 052 : `exercice_clos` | `douze_mois_glissants` |
+`dernier_bilan` | `sans_periode`) n'a aucune valeur pour « cumul semestriel + comparatif N-1, mêmes
+colonnes » — la demande de collecte (#113, « la demande précise la période ») ne peut donc pas désigner
+précisément ce que l'encadré qf_6 exige. Le fetch a atteint la bonne page (les deux colonnes y sont), mais
+rien dans la demande ne cadrait sur la bonne colonne. **À arbitrer avant de retenter** : ajouter une
+valeur à `PERIODES` (migration + grammaire + `appliquer_periode`, coût cross-module comme #112/#113) vs.
+un remède plus léger côté motif de l'ingrédient seul. Ne pas re-durcir un prompt ponctuel
+(`feedback_jugement_modele_instable_entre_passages`) sans ce choix.
+
+**Incident de méthode, à ne pas reproduire.** Un premier essai (`timeout 300 bash … | tail`) a rendu
+exit 143 mais le `docker run --rm` sous-jacent a continué seul, détaché ; une relance `nohup … &` lancée
+en parallèle a produit DEUX collectes concurrentes (plans #227/#228) écrivant dans la MÊME base en même
+temps — chacune a cru réussir. **Toujours vérifier `ps aux` / `docker ps` avant toute relance** d'un
+outil qui écrit en prod, et utiliser le `run_in_background` du harnais plutôt qu'un `nohup … &` imbriqué
+(qui double le backgrounding et rend le process réel introuvable depuis l'extérieur).
+
+**Constat #118 fermé en code** (`tools/executer_chaine.py`, maillon 1) : `--questions=` restreint
+désormais AUSSI la collecte, pas seulement l'analyse — `executer_collecte_framework`/`traduire`
+savaient déjà le faire (lot 5, bouclage), seul ce passage ne le branchait pas.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
