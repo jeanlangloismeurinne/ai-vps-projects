@@ -43,7 +43,7 @@ role: >
 > MAISON** (gabarit 1.1.0 : capital employé, participations NVDA, bilan d'ouverture ; `ratios_maison.py` ; encadré
 > de qf_1/qf_2/qf_3/qf_5 lu par le code ; autonomie non calculable sur une trésorerie générée) ; puis **#117
 > (déployé 2026-10-12, `91e7cef`) — LIRE ET ANNOTER** : qualité financière NVDA instruite (8/8 répondues,
-> note **0,62**). Prochain : solder les 3 réponses NVDA périmées (dont l'arbitrage qf_8 en attente), puis les
+> note **0,62**). Prochain : solder les 3 réponses NVDA périmées (qf_4, qf_6, qf_8), puis les
 > nouveaux chapitres sur RVMD ET NVDA (objectif : deux cas très différents qui tournent juste).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
@@ -294,19 +294,17 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   `--refaire-carte` (plan #216, réponses 1190-1197, 0 refus) relu contre le socle : chiffres justes ; mais 8/8
   nées périmées (rachat Hugging Face 8-K 02/09, type `perimetre`, que les mesures n'avaient pas le droit de
   lire). Arbitrage utilisateur « lire et annoter » → relance `--sans-collecte` qf_1-5,7 → note 0,62.
-- **PROCHAIN PAS** : (1) **re-poser l'arbitrage qf_8** (voir ci-dessous) ; (2) qf_4 NVDA : sa couverture des
+- **PROCHAIN PAS** : (1) qf_8 NVDA : relecture de routine `--sans-collecte` (arbitrage ci-dessous) ; (2) qf_4 NVDA : sa couverture des
   intérêts se lit sur douze mois dans le socle (EBIT 197 579 / intérêts 464) — pourquoi l'analyste cite #843
   (annuelle) ? lire avant de réémettre ; (3) qf_6 NVDA : rapprochement sur douze mois (communiqué T2 #861/#862) ;
   (4) puis les nouveaux chapitres sur RVMD et NVDA.
-- **⚠️ ARBITRAGE qf_8 EN ATTENTE (2026-10-12).** Question posée : « les résultats trimestriels doivent-ils
-  rouvrir la revue des clauses de la dette ? » Réponse : « uniquement sur financement SI on a bien accès aux
-  événements de financement ; sinon à chaque trimestre ». Condition MESURÉE vraie : 3/3 financements réels
-  repérés (NVDA 8-K 8.01 du 18/06 → `financement` à la lecture ; RVMD 8.01 du 16/04 et 1.01+2.03 du 17/04) et
-  un dépôt non lu rouvre tout. **MAIS la question était mal posée** : qf_8 porte aussi
-  `marge_avant_declenchement` — pour un émetteur à covenants financiers (levier maximal…), la marge bouge à
-  chaque trimestre avec le résultat. Rien n'a été modifié. À re-poser en termes de fonds : un analyste crédit
-  revoit la conformité aux ratios chaque trimestre pour un emprunteur à covenants, jamais pour un émetteur
-  qui n'en a pas (NVDA : « aucun covenant financier »).
+- **✅ ARBITRAGE qf_8 RENDU (2026-10-12) — les résultats trimestriels continuent de rouvrir la revue des clauses
+  (vérification de routine), rien à changer.** Règle de l'utilisateur : « selon l'émetteur si la vérification
+  coûte, sauf si la complexité induit un risque d'erreur ; sinon chaque trimestre ». Mesuré : coût < 1 cent
+  par émetteur et par trimestre (ordre de grandeur du traducteur, $0,002 pour ~18 k jetons) ; et la règle
+  conditionnelle serait une garde nourrie de sa propre réponse (un covenant manqué une fois ne serait plus
+  jamais relu avant le financement suivant). Condition « accès aux financements » mesurée vraie au passage
+  (3/3 repérés), utile si la question revient. qf_8 NVDA se soldera donc par sa relecture `--sans-collecte`.
 - **À relire par le comité (NVDA)** : (i) qf_6 conclut « part faible, 2,6 % » sur un SOLDE net de −3 070 M$
   qui compense les rémunérations en actions (+6 386, que NVIDIA a cessé d'exclure au T1 FY2027) par des
   plus-values sur participations (≈ −10 Md$) — en brut ≈ 14 % du résultat ; une précision de la question
@@ -512,8 +510,8 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > des dépôts postérieurs, sœurs, « chaque framework ne lit que ses sujets », soldes du 10-K), #111-#113, #114
 > (qf_4 scindée faits / jugement, qf_8 neuve) : qualité financière RVMD COMPLÈTE (1,0) ; #115 le SOCLE DES
 > COMPTES (comptes reconstitués et bouclés, encadré lu dans le socle) ; #116 les ratios maison sur le
-> socle ; #117 lire et annoter (qualité financière NVDA 0,62, 3 réponses périmées à solder, arbitrage qf_8 à
-> re-poser), puis les nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> socle ; #117 lire et annoter (qualité financière NVDA 0,62, 3 réponses périmées à solder, arbitrage qf_8
+> rendu : relecture trimestrielle), puis les nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute
