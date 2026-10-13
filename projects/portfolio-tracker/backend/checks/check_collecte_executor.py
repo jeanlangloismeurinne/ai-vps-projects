@@ -24,6 +24,7 @@ import sys
 
 from app.agents.v2.collecteur import LigneAveugle
 from app.agents.v2.collecte_executor import (
+    _PHRASE_PERIODE,
     construire_requete_web,
     entry_type_pour_metrique,
     poste_retenu,
@@ -31,7 +32,7 @@ from app.agents.v2.collecte_executor import (
     router_source,
 )
 from app.agents.v2.traducteur import _TRADUCTEUR_SYSTEM_PROMPT, _catalogue_postes
-from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
+from app.contracts.collection_plan_schema import PERIODES, CollectionPlan, CollectionPlanItem
 from app.knowledge.edgar_feed import POSTES, IdentiteEmetteur
 
 # Identités copiées du registre SEC réel (`edgar_feed.resolve_identite`, relevé le 2026-09-26).
@@ -216,6 +217,39 @@ check("la requête porte la métrique, la source ET l'ancre de la ligne",
       all(x in req.query for x in (_ligne.metrique, _ligne.source_pressentie, _ligne.ancre)))
 check("le type d'entry de la requête suit la déduction (#4) : 'free cash flow' → fact_financial",
       req.output_schema.entry_type == entry_type_pour_metrique(_ligne.metrique))
+check("§5 une ligne SANS période (plan antérieur à #113, None) ne porte AUCUNE phrase de période",
+      "Période demandée" not in req.query and "Aucune période" not in req.query, f"→ {req.query[-160:]}")
+
+
+# ── §5ter la PÉRIODE atteint enfin la requête web (#119) ───────────────────────────────────────────
+print("\n[5ter] `ligne.periode` atteint la requête web (#119) — AVANT, même `douze_mois_glissants` "
+      "était perdu dès qu'une ligne partait vers le search-worker")
+check("`_PHRASE_PERIODE` couvre EXACTEMENT `PERIODES` — aucune valeur morte, aucune manquante (#46)",
+      set(_PHRASE_PERIODE) == set(PERIODES), f"→ {set(PERIODES) ^ set(_PHRASE_PERIODE)}")
+for _p in PERIODES:
+    _ligne_p = LigneAveugle(ticker_id="NVDA", metrique="free cash flow",
+                             source_pressentie="10-K + communiqué", ancre="clôture du trimestre",
+                             periode=_p)
+    _req_p = construire_requete_web(_ligne_p, emetteur=_EMETTEUR[_ligne_p.ticker_id])
+    check(f"§5ter periode={_p} : sa phrase dédiée apparaît dans la requête",
+          _PHRASE_PERIODE[_p] in _req_p.query, f"→ {_req_p.query[-220:]}")
+# Le défaut mesuré en production (NVDA qf_6, #1270, retiré) : un tableau GAAP/non-GAAP à cinq
+# colonnes lu sur sa colonne trimestrielle, présenté comme un cumul semestriel — parce que rien ne
+# demandait explicitement la colonne cumulée. `cumul_publie` doit dire NE RECALCULE RIEN et nommer
+# le risque de colonne (trimestre vs cumul), `douze_mois_glissants` ne doit jamais mentionner cette
+# confusion — ce sont deux objets différents (reconstruit vs publié), pas deux synonymes.
+_req_cumul = construire_requete_web(
+    LigneAveugle(ticker_id="NVDA", metrique="rapprochement GAAP/non-GAAP",
+                 source_pressentie="communiqué trimestriel", ancre="clôture du trimestre",
+                 periode="cumul_publie"),
+    emetteur=_EMETTEUR["NVDA"])
+check("§5ter cumul_publie : la requête interdit de recalculer et nomme le risque de colonne",
+      "recalcule RIEN" in _req_cumul.query and "colonne CUMULÉE" in _req_cumul.query,
+      f"→ {_req_cumul.query[-300:]}")
+check("§5ter douze_mois_glissants ≠ cumul_publie : deux objets différents (reconstruit vs publié), "
+      "jamais la même phrase recopiée pour les deux",
+      _PHRASE_PERIODE["douze_mois_glissants"] != _PHRASE_PERIODE["cumul_publie"]
+      and "colonne CUMULÉE" not in _PHRASE_PERIODE["douze_mois_glissants"])
 
 
 # ── §5bis POSTES dérivé du plan : le socle ne collecte QUE les postes réclamés (maillon 5, §3.6) ──

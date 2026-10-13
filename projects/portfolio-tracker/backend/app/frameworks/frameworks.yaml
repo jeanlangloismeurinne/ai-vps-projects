@@ -182,20 +182,24 @@ frameworks:
           - id: capital_employe
             libelle: Capital immobilisé dans l'exploitation — actifs productifs et besoin en fonds de roulement, hors trésorerie excédentaire
             essentiel: true
+            depuis_le_socle: true
           - id: taux_imposition_effectif
             libelle: Taux d'imposition réellement supporté sur le résultat d'exploitation
             essentiel: false
+            depuis_le_socle: true
           - id: cout_du_capital
             libelle: Coût moyen des ressources qui financent ce capital — rémunération exigée par les créanciers et par les actionnaires
             essentiel: true
           - id: historique_cinq_exercices
             libelle: La même relation observée sur au moins cinq exercices consécutifs
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: rendement_du_capital_employe
             libelle: Rendement du capital employé
             unite: "%"
             periode: moyenne 5 ans
+            socle: {ratio: rendement_du_capital_employe_moyen}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
           - id: cout_du_capital
             libelle: Coût du capital — rémunération exigée par les créanciers et les actionnaires
             unite: "%"
@@ -246,6 +250,7 @@ frameworks:
             libelle: Part du résultat net retrouvée en trésorerie d'exploitation
             unite: "%"
             periode: moyenne 3 ans
+            socle: {ratio: part_du_resultat_en_tresorerie}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable
@@ -281,11 +286,13 @@ frameworks:
           - id: variation_capital_employe
             libelle: Variation du capital immobilisé dans l'exploitation sur la période de croissance
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: capital_par_point_de_croissance
             libelle: Capital supplémentaire investi par point de croissance de l'activité
             unite: "M$"
             periode: derniers exercices observés
+            socle: {ratio: capital_par_point_de_croissance}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable
@@ -328,6 +335,7 @@ frameworks:
           - id: couverture_des_interets
             libelle: Rapport entre le résultat d'exploitation et la charge d'intérêts
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles:
           - id: dette_brute
             libelle: Dette financière brute, instruments convertibles compris
@@ -344,6 +352,26 @@ frameworks:
             unite: "M$"
             periode: à la date du dernier bilan
             calcul: dette_brute - tresorerie_et_placements   # calculé par le code (#101), jamais par l'analyste
+          # La couverture des intérêts se lit sur les DOUZE DERNIERS MOIS du modèle des comptes, comme le
+          # fait un analyste crédit — jamais recopiée du ratio d'un 10-K (2026-10-12 : NVDA qf_4 citait
+          # 503,4 fois sur l'exercice clos, pièce #843, et naissait périmée ; le socle donne
+          # 197 579 / 464 sur douze mois au 26/07/2026).
+          - id: resultat_exploitation_douze_mois
+            libelle: Résultat d'exploitation sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "resultat_exploitation", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: charges_interets_douze_mois
+            libelle: Charge d'intérêts sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "charges_financieres", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: couverture_des_interets
+            libelle: Couverture des intérêts — résultat d'exploitation rapporté à la charge d'intérêts
+            unite: "fois"
+            periode: douze mois glissants
+            calcul: resultat_exploitation_douze_mois / charges_interets_douze_mois   # calculé par le code (#101)
+            non_significatif_si_negatif: [resultat_exploitation_douze_mois]   # perte d'exploitation : « n.s. »
         variables_par_archetype:
           rentable:
             mode: variable
@@ -399,9 +427,11 @@ frameworks:
           - id: serie_longue_du_rendement
             libelle: Le rendement du capital observé sur au moins cinq exercices consécutifs
             essentiel: true
+            depuis_le_socle: true
           - id: decomposition_marge_rotation
             libelle: Décomposition du rendement entre marge dégagée et rotation du capital
             essentiel: true
+            depuis_le_socle: true
           - id: comparaison_sectorielle
             libelle: Le même rendement chez des entreprises comparables, sur la même période
             essentiel: false
@@ -410,6 +440,7 @@ frameworks:
             libelle: Pente du rendement du capital employé
             unite: "points/an"
             periode: sur 5 ans ou plus
+            socle: {ratio: pente_du_rendement}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
         variables_par_archetype:
           rentable:
             mode: variable
@@ -444,11 +475,42 @@ frameworks:
           - id: elements_non_recurrents
             libelle: Éléments présentés comme exceptionnels, et leur récurrence effective
             essentiel: false
+        # Arbitrages de l'utilisateur du 2026-10-12 (comme un fonds qui fait une revue de qualité des
+        # résultats) : (1) la mesure porte sur les DOUZE DERNIERS MOIS, refaite à chaque publication — sur
+        # l'exercice clos, NVDA qf_6 restait périmée de la publication du T1 au rapport annuel suivant ;
+        # (2) chaque retraitement compte pour sa TAILLE, sans compensation — NVDA « 2,6 % » était un solde
+        # où +6,4 Md$ de rémunérations en actions et ≈ −10 Md$ de plus-values sur participations
+        # s'annulaient (≈ 14 % poste par poste). L'analyste RELÈVE trois sommes dans les rapprochements
+        # publiés ; le CODE en tire les douze mois et la part (#101).
         chiffres_cles:
-          - id: retraitements_discretionnaires
-            libelle: Montant du résultat qui relève de choix discrétionnaires plutôt que de la performance économique
+          - id: retraitements_exercice_clos
+            libelle: Somme des retraitements entre résultat publié et résultat ajusté sur le dernier exercice clos, chaque poste compté pour sa taille sans compensation
             unite: "M$"
-            periode: dernier exercice
+            periode: dernier exercice clos
+          - id: retraitements_cumul_en_cours
+            libelle: La même somme sur le cumul de l'exercice en cours au dernier trimestre publié — zéro si le dernier rapport publié est le rapport annuel
+            unite: "M$"
+            periode: cumul de l'exercice en cours
+          - id: retraitements_cumul_an_passe
+            libelle: La même somme sur la même période de l'exercice précédent — zéro si le dernier rapport publié est le rapport annuel
+            unite: "M$"
+            periode: même cumul, exercice précédent
+          - id: retraitements_discretionnaires
+            libelle: Retraitements sur les douze derniers mois, chaque poste compté pour sa taille sans compensation
+            unite: "M$"
+            periode: douze mois glissants
+            calcul: retraitements_exercice_clos + retraitements_cumul_en_cours - retraitements_cumul_an_passe   # calculé par le code (#101)
+          - id: resultat_net_douze_mois
+            libelle: Résultat net publié sur les douze derniers mois
+            unite: "M$"
+            periode: douze mois glissants
+            socle: {formule: "resultat_net", periode: douze_mois}   # lu dans les comptes reconstitués
+          - id: part_des_retraitements
+            libelle: Part du résultat net des douze derniers mois que représentent les retraitements
+            unite: "%"
+            periode: douze mois glissants
+            # une perte nette (dénominateur négatif) rend la part non calculable (#44)
+            calcul: (retraitements_exercice_clos + retraitements_cumul_en_cours - retraitements_cumul_an_passe) / resultat_net_douze_mois * 100
         variables_par_archetype:
           rentable:
             mode: variable

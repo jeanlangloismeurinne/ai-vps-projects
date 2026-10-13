@@ -459,7 +459,11 @@ def appliquer_periode(
         « recopié tel quel » serait faux). Un flux à un exercice DÉCALÉ (`[-1]`) contredit la demande :
         refus nommé. Un solde de bilan n'est pas touché (une autonomie = trésorerie ÷ douze mois).
       · `exercice_clos` — une carte qui lit `[ttm]` contredit la demande : refus nommé.
-      · `dernier_bilan`, `sans_periode`, None (plan antérieur) — inchangé.
+      · `dernier_bilan`, `sans_periode`, `cumul_publie`, None (plan antérieur) — inchangé. `cumul_publie`
+        (#119) ne concerne QUE les lignes routées vers le web (un rapprochement non-GAAP, une note de
+        segment) : un concept XBRL de flux que le système sait déjà agréger lui-même relève de
+        `douze_mois_glissants`, jamais de `cumul_publie` — l'appariement EDGAR n'a donc rien à faire
+        de cette valeur, et ce n'est pas un oubli.
 
     Le cadrage flux/instant vient de `serie_du_concept`, détenteur unique (#46) : on ne devine pas
     qu'un concept est un flux à son nom.

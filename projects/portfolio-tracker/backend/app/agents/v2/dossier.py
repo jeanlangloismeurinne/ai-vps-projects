@@ -233,8 +233,9 @@ class Dossier:
             )
         if self.plafond_insuffisant:
             lignes.append(
-                f"  ⚠️ PLAFOND INSUFFISANT — {len(self.chemises)} pièce(s) en vigueur pour un "
-                f"plafond de {self.plafond} : aucune n'a été coupée, le plafond est le problème."
+                f"  ⚠️ PLAFOND INSUFFISANT — {len(self.entries)} pièce(s) remise(s) (en vigueur, "
+                f"sœurs et lectures jointes) pour un plafond de {self.plafond} : aucune n'a été "
+                f"coupée, le plafond est le problème."
             )
         return "\n".join(lignes)
 

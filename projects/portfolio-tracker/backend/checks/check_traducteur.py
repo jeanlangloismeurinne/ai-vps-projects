@@ -26,8 +26,10 @@ Cible : pydantic v2 (container backend). Tester en container, **pas** le python 
 import inspect
 import json
 import sys
+from datetime import date
 
 from app.agents.v2 import traducteur as T
+from app.contracts.collection_plan_schema import PERIODES
 from app.knowledge.edgar_feed import IdentiteEmetteur, identite_de_l_emetteur
 from app.agents.v2.frameworks import load_frameworks
 
@@ -78,7 +80,9 @@ check("un archétype rentable garde les questions applicables (le filtre ne vide
 print("\n[2] ce que le modèle voit ne porte AUCUN levier d'exigence (#59)")
 # Identité copiée du registre SEC réel (`edgar_feed.resolve_identite("NVDA")`, relevé le 2026-09-26).
 NVDA = IdentiteEmetteur(symbole="NVDA", cik=1045810, raison_sociale="NVIDIA CORP")
-CTX = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA)
+# Clôture copiée du réel : 10-Q NVDA du trimestre clos le 2026-07-26 (accession 0001045810-26-000075).
+H_NVDA = T.HorlogeDuPlan(date_du_jour=date(2026, 10, 13), derniere_cloture=date(2026, 7, 26))
+CTX = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA, horloge=H_NVDA)
 _ser = json.dumps(CTX, ensure_ascii=False)
 check("le contexte ne contient pas `plancher_tier` (le modèle ne fixe pas le niveau de preuve)",
       "plancher_tier" not in _ser)
@@ -122,7 +126,7 @@ refuse_tot("[O-tôt] archétype inconnu → TraducteurInapplicable",
            lambda: T.questions_applicables(F, "qualite_financiere", "archetype_bidon"))
 refuse_tot("[tôt] le contexte lui-même lève sur un archétype inconnu (pas de contexte muet)",
            lambda: T.contexte_traducteur(F, "qualite_financiere", "archetype_bidon", "NVDA",
-                                         emetteur=NVDA))
+                                         emetteur=NVDA, horloge=H_NVDA))
 
 # ── §6 l'entreprise est NOMMÉE, pas devinée depuis son sigle (lot 7, 2026-09-26) ─────────────────
 print("\n[6] le modèle reçoit la raison sociale et le CIK — un sigle n'est pas une identité")
@@ -132,17 +136,21 @@ check("le contexte porte la raison sociale ET le CIK SEC de l'entreprise",
       CTX.get("entreprise") == {"raison_sociale": "NVIDIA CORP", "symbole": "NVDA", "cik_sec": 1045810},
       f"→ {CTX.get('entreprise')}")
 try:
-    T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA")
+    T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", horloge=H_NVDA)
     check("le contexte REFUSE de se construire sans identité (aucun défaut silencieux)", False)
 except TypeError as e:
     check("le contexte REFUSE de se construire sans identité (aucun défaut silencieux)",
           "emetteur" in str(e), f"→ {e}")
 check("la consigne dit que l'entreprise est celle de la raison sociale, jamais celle du sigle",
       "JAMAIS CELLE QUE SUGGÈRE LE SIGLE" in T._TRADUCTEUR_SYSTEM_PROMPT)
-check("la consigne ENSEIGNE la période (#113) : les quatre valeurs, et « quatre derniers trimestres » ⟹ "
-      "douze_mois_glissants", all(v in T._TRADUCTEUR_SYSTEM_PROMPT for v in
-          ("`douze_mois_glissants`", "`exercice_clos`", "`dernier_bilan`", "`sans_periode`"))
+check("la consigne ENSEIGNE la période (#113) : TOUTES les valeurs de PERIODES (détenteur unique, "
+      "#46 — pas une liste recopiée ici), et « quatre derniers trimestres » ⟹ douze_mois_glissants",
+      all(f"`{v}`" in T._TRADUCTEUR_SYSTEM_PROMPT for v in PERIODES)
       and "jamais `exercice_clos`" in T._TRADUCTEUR_SYSTEM_PROMPT)
+check("la consigne distingue `cumul_publie` (lu tel quel) de `douze_mois_glissants` (reconstruit) — "
+      "#119, sinon un rapprochement non-GAAP se fait recalculer comme une fenêtre glissante",
+      "jamais `douze_mois_glissants`" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "JAMAIS recalculé" in T._TRADUCTEUR_SYSTEM_PROMPT)
 _src_tr = inspect.getsource(T.traduire)
 _i_id, _i_run = _src_tr.find("identite_de_l_emetteur("), _src_tr.find("run_json_agent(")
 check("`traduire` résout l'identité par son détenteur unique AVANT la dépense modèle (#40/#46)",
@@ -152,6 +160,46 @@ check("… et la passe au contexte (pas une identité résolue puis oubliée)",
 _src_id = inspect.getsource(identite_de_l_emetteur)
 check("l'identité passe par `symbole_de_marche` (#11) — jamais l'id interne chez la SEC",
       "symbole_de_marche(conn, ticker_id)" in _src_id and "resolve_identite(" in _src_id)
+
+# ── §7 le traducteur reçoit l'horloge — il n'en a pas (#120, 2026-10-13) ─────────────────────────
+print("\n[7] la date du jour et la clôture des derniers comptes publiés sont DONNÉES au modèle")
+# Le défaut mesuré : plan #221 (NVDA × qualite_financiere) — 19 lignes sur 19 ancrées « clôture du
+# dernier exercice fiscal », source « 10-K », six semaines après le dépôt du 10-Q clos le 2026-07-26 ;
+# la revue des clauses (qf_8) naît périmée à chaque trimestre.
+_cal = CTX.get("calendrier") or {}
+check("le contexte porte la clôture des derniers comptes publiés, datée",
+      _cal.get("cloture_des_derniers_comptes_publies") == "2026-07-26", f"→ {_cal}")
+check("le contexte porte la date du jour (un modèle sans date fournie date à sa coupure)",
+      _cal.get("date_du_jour") == "2026-10-13", f"→ {_cal}")
+check("la lecture rendue au modèle nomme la clôture (pas seulement un champ brut)",
+      "2026-07-26" in (_cal.get("lecture") or ""), f"→ {_cal.get('lecture')}")
+_ctx_inconnue = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA,
+                                      horloge=T.HorlogeDuPlan(date(2026, 10, 13), None))
+_cal_i = _ctx_inconnue.get("calendrier") or {}
+check("clôture inconnue : la clé est PRÉSENTE à null et la lecture dit INCONNUE (jamais omise ni devinée)",
+      "cloture_des_derniers_comptes_publies" in _cal_i
+      and _cal_i["cloture_des_derniers_comptes_publies"] is None
+      and "INCONNUE" in (_cal_i.get("lecture") or ""), f"→ {_cal_i}")
+try:
+    T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA)
+    check("le contexte REFUSE de se construire sans horloge (aucun défaut silencieux)", False)
+except TypeError as e:
+    check("le contexte REFUSE de se construire sans horloge (aucun défaut silencieux)",
+          "horloge" in str(e), f"→ {e}")
+check("la consigne enseigne la RÈGLE DE FRAÎCHEUR : viser le rapport périodique qui couvre la clôture, "
+      "y compris pour une clause (`sans_periode`)",
+      "RÈGLE DE FRAÎCHEUR" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "LE RAPPORT PÉRIODIQUE QUI COUVRE CETTE CLÔTURE" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "AUSSI pour une clause" in T._TRADUCTEUR_SYSTEM_PROMPT)
+_i_h, _i_run = _src_tr.find("horloge_du_plan("), _src_tr.find("run_json_agent(")
+check("`traduire` lit l'horloge AVANT la dépense modèle", 0 <= _i_h < _i_run,
+      f"→ positions {_i_h} / {_i_run}")
+check("… et la passe au contexte du modèle (#120)", "horloge=horloge" in _src_tr)
+_src_h = inspect.getsource(T.horloge_du_plan)
+check("l'horloge du plan est celle qui servira les réponses (`horloge_du_titre` + "
+      "`derniere_cloture_publiee`, détenteurs uniques — #46)",
+      "horloge_du_titre(conn, ticker_id, fichier)" in _src_h
+      and "derniere_cloture_publiee(ancre)" in _src_h)
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

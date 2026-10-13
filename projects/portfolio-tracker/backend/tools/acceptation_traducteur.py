@@ -19,7 +19,7 @@ import os
 import sys
 import traceback
 
-from app.agents.v2.frameworks import CollectionPlanRefused, load_frameworks
+from app.agents.v2.frameworks import CollectionPlanRefused, ingredients_a_collecter, load_frameworks
 from app.agents.v2.traducteur import questions_applicables, traduire
 from app.db.database import close_pool, init_pool
 
@@ -40,9 +40,13 @@ _AUTRE_EMETTEUR = {"RVMD": ("rvu120", "révatiglimab", "revatiglimab", "cdk8", "
 
 
 def _essentiels(fichier, framework_id, archetype) -> set[tuple[str, str]]:
+    # Le détenteur unique de « ce qui se collecte » (#46) : un ingrédient lu dans le socle des comptes
+    # ou repris d'une autre méthodologie n'a pas de ligne de plan, par construction (#99, #115).
+    # Recalculé ici sur `ingredients_requis`, ce critère virait au rouge sur les 9 ingrédients du socle
+    # NVDA (mesuré le 2026-10-12) — un jumeau resté en arrière du correctif.
     return {(q.id, i.id)
             for q in questions_applicables(fichier, framework_id, archetype)
-            for i in q.ingredients_requis if i.essentiel}
+            for i in ingredients_a_collecter(q) if i.essentiel}
 
 
 async def main() -> int:

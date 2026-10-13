@@ -79,10 +79,20 @@ STATUTS_LIGNE = ("traduit", "inobtenable")
 # clos » — et le code la respecte : mesuré le 2026-10-03, l'apparieur laissé seul juge classait
 # « flux d'exploitation sur les quatre derniers trimestres » en lecture de l'exercice clos 2 fois sur 2.
 #   · exercice_clos         — un flux sur le dernier exercice publié (une progression annuelle) ;
-#   · douze_mois_glissants  — un flux sur les quatre derniers trimestres publiés ;
+#   · douze_mois_glissants  — un flux sur les quatre derniers trimestres publiés, RECONSTRUIT par le
+#                             système depuis des faits déposés (#112) — jamais une colonne que
+#                             l'émetteur publie lui-même ;
 #   · dernier_bilan         — un solde à la dernière date de bilan ;
-#   · sans_periode          — ni flux ni solde : une politique, une clause, une prévision, un texte.
-PERIODES = ("exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode")
+#   · sans_periode          — ni flux ni solde : une politique, une clause, une prévision, un texte ;
+#   · cumul_publie          — un cumul TEL QUE L'ÉMETTEUR LE PUBLIE dans son dernier dépôt
+#                             intermédiaire (le semestre écoulé, par exemple), avec son comparatif à
+#                             la MÊME période l'an dernier — jamais recalculé (#119, arbitrage
+#                             utilisateur du 2026-10-12). Distinct de `douze_mois_glissants` : celui-ci
+#                             est une fenêtre que LE SYSTÈME reconstruit depuis des concepts XBRL de
+#                             flux ; `cumul_publie` est ce que l'émetteur a DÉJÀ mis en colonnes dans
+#                             son tableau (rapprochement GAAP/non-GAAP, segment, etc.) — le système ne
+#                             doit jamais essayer de recalculer un cumul publié, seulement le LIRE.
+PERIODES = ("exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode", "cumul_publie")
 
 
 class CollectionPlanItem(Strict):
@@ -143,10 +153,11 @@ class CollectionPlanItem(Strict):
     # Présente SI ET SEULEMENT SI `traduit`, SANS défaut : une période absente se lirait comme
     # « peu importe », et c'est exactement ce qui laissait l'aval publier l'exercice clos pour « les
     # quatre derniers trimestres » (#113). Le traducteur, qui lit la question, est le seul à savoir.
-    periode: Optional[Literal["exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode"]] = Field(
+    periode: Optional[Literal["exercice_clos", "douze_mois_glissants", "dernier_bilan", "sans_periode",
+                               "cumul_publie"]] = Field(
         default=None,
         description="Période sur laquelle se lit le chiffre : exercice_clos | douze_mois_glissants | "
-                    "dernier_bilan | sans_periode.")
+                    "dernier_bilan | sans_periode | cumul_publie.")
 
     # Présent SI ET SEULEMENT SI `inobtenable`. Une ligne inobtenable devient un mandat ouvert qui
     # NOMME l'ingrédient (§3.6) — jamais un trou. Le motif est ce que le mandat portera ; il doit

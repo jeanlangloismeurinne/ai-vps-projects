@@ -33,7 +33,9 @@ import asyncpg  # noqa: E402
 
 from app.agents.v2.dossier import charger_dossier  # noqa: E402
 from app.agents.v2.frameworks import socle_au_dossier  # noqa: E402
-from app.knowledge.socle_comptes import METRIC, valeur_du_socle  # noqa: E402
+from app.knowledge.socle_comptes import (  # noqa: E402
+    METRIC, charger_gabarit, charger_reclassements, empreinte, reconstituer, structure_du_socle, valeur_du_socle,
+)
 from app.knowledge.socle_feed import publier_socle  # noqa: E402
 
 FIX = json.loads((Path(__file__).resolve().parent / "fixtures" / "socle_comptes" / "RVMD.json").read_text())
@@ -63,7 +65,12 @@ async def main():
         rows = await courants(conn)
         b.require(rows, 1, "§1 une seule pièce « socle des comptes » courante pour le titre")
         r = rows[0] if rows else {}
-        b.check(p1.statut == ("a_jour" if avant else "publie"), f"§1 statut {p1.statut}")
+        # « à jour » seulement si la pièce en base est la MÊME (empreinte : gabarit, ratios, dépôt, cellules) ;
+        # une pièce d'un gabarit antérieur est remplacée par une version (#116 : 1.0.0 → 1.1.0).
+        meme = bool(avant) and empreinte(avant[0]["content_structured"] or {}) == empreinte(
+            structure_du_socle(reconstituer(FIX["faits"], reclassements=charger_reclassements(
+                FIX["cik"], charger_gabarit()))))
+        b.check(p1.statut == ("a_jour" if meme else "publie"), f"§1 statut {p1.statut} (même pièce en base : {meme})")
         b.check(r.get("reliability_tier") == "A" and r.get("nature") == "mesure",
                 f"§1 tier A et nature `mesure` dérivés au guichet ({r.get('reliability_tier')}, {r.get('nature')})")
         b.check(r.get("portee_temporelle") == "constatee" and r.get("date_du_fait") == date(2026, 6, 30)

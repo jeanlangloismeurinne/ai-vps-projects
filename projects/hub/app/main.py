@@ -1,6 +1,7 @@
 import secrets as _secrets
+from urllib.parse import quote, urlsplit
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic_settings import BaseSettings
 from app.auth import (
     COOKIE_NAME, COOKIE_MAX_AGE,
@@ -65,6 +66,14 @@ SERVICES = [
         "desc": "Suivi investissement long terme · Agents IA · 3 régimes d'analyse",
         "url": "https://portfolio.jlmvpscode.duckdns.org/",
         "color": "#7c3aed",
+    },
+    {
+        "id": "exploration-science",
+        "emoji": "🔭",
+        "name": "Explorateur de systèmes",
+        "desc": "Outil pédagogique 3D · Starlink, ciel bleu · Prototype Phase 0",
+        "url": "https://explorer.jlmvpscode.duckdns.org/",
+        "color": "#14b8a6",
     },
     {
         "id": "newsletter",
@@ -198,10 +207,38 @@ async def root(request: Request):
     return HTMLResponse(_homepage())
 
 
+HUB_DOMAIN = "jlmvpscode.duckdns.org"
+HUB_LOGIN_URL = f"https://{HUB_DOMAIN}/login"
+
+
+def _safe_next(next_url: str) -> str:
+    """Destination après login : chemin local du hub, ou URL d'un sous-domaine du hub
+    (http accepté : ev-prices envoie son `request.url` vu derrière le proxy).
+    Tout le reste (autre domaine, `//evil`, autre schéma) retombe sur « / » — pas de redirection ouverte."""
+    if next_url.startswith("/") and not next_url.startswith("//") and "\\" not in next_url:
+        return next_url
+    u = urlsplit(next_url)
+    if u.scheme in ("http", "https") and (u.hostname == HUB_DOMAIN or (u.hostname or "").endswith("." + HUB_DOMAIN)):
+        return next_url
+    return "/"
+
+
+@app.get("/auth/verify")
+async def auth_verify(request: Request):
+    """forwardAuth Traefik pour les apps statiques (exploration-science) : elles ne savent pas
+    vérifier `hub_session` elles-mêmes. 200 = Traefik laisse passer ; sinon le 302 vers le login
+    du hub est renvoyé tel quel au navigateur, avec l'URL d'origine en `next`."""
+    if get_session(request, settings.SESSION_SECRET):
+        return Response(status_code=200)
+    h = request.headers
+    origin = f"{h.get('x-forwarded-proto', 'https')}://{h.get('x-forwarded-host', '')}{h.get('x-forwarded-uri', '/')}"
+    return RedirectResponse(f"{HUB_LOGIN_URL}?next={quote(origin, safe='')}", status_code=302)
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
     if get_session(request, settings.SESSION_SECRET):
-        return RedirectResponse("/", 302)
+        return RedirectResponse(_safe_next(request.query_params.get("next", "")), 302)
     return HTMLResponse(_login_page())
 
 
@@ -218,8 +255,7 @@ async def login_post(
         return HTMLResponse(_login_page("Identifiant ou mot de passe incorrect."), status_code=401)
 
     token = make_cookie_value(username, settings.SESSION_SECRET)
-    dest = next or "/"
-    response = RedirectResponse(dest, status_code=302)
+    response = RedirectResponse(_safe_next(next), status_code=302)
     response.set_cookie(
         COOKIE_NAME,
         token,

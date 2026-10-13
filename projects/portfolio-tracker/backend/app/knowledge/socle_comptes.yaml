@@ -28,6 +28,13 @@
 # n'est pas un vote du comité — arbitrage de l'utilisateur, 2026-10-04) :
 #   · tout financement qui porte intérêt est de la DETTE, quelle que soit sa présentation (un
 #     financement adossé aux redevances futures compris) ; les obligations locatives n'en sont pas ;
+#   · le CAPITAL EMPLOYÉ (1.1.0, convention du 2026-10-04) est ce que l'exploitation immobilise : un
+#     actif dont le revenu est SOUS le résultat d'exploitation en sort (trésorerie, placements,
+#     participations) ; les droits d'utilisation en sortent aussi — le loyer est une charge
+#     d'exploitation, puisque le bail n'est pas une dette ; les passifs d'exploitation sans intérêt
+#     (fournisseurs et autres passifs courants, loyers à douze mois exceptés) viennent en déduction ;
+#     les écarts d'acquisition RESTENT (le prix payé pour une acquisition est du capital engagé), et
+#     le capital hors écarts d'acquisition est publié à côté ;
 #   · le libellé d'une ligne « solde du bouclage » ne dit jamais « par différence » : c'est un agrégat
 #     déterministe de lignes déposées (#110), il vaut relevé.
 #
@@ -38,7 +45,7 @@
 # activité à l'étranger ne dépose pas d'effet de change). La cellule, elle, reste « non déposée » :
 # le zéro est une hypothèse de l'équation, jamais un chiffre publié.
 
-version: 1.0.0
+version: 1.1.0
 
 etats:
 
@@ -157,6 +164,10 @@ etats:
         recettes:
           - [InventoryNet]
         absent_vaut_zero: true
+      - id: participations_courantes
+        libelle: Participations cotées détenues, présentées à l'actif courant
+        recettes_par_emetteur: true
+        absent_vaut_zero: true
       - id: autres_actifs_courants
         libelle: Autres actifs courants (solde du bouclage)
       - id: actif_courant
@@ -192,6 +203,10 @@ etats:
           - [IntangibleAssetsNetExcludingGoodwill]
           - [FiniteLivedIntangibleAssetsNet]
         absent_vaut_zero: true
+      - id: participations
+        libelle: Participations non cotées et titres détenus à long terme
+        recettes_par_emetteur: true
+        absent_vaut_zero: true
       - id: autres_actifs_non_courants
         libelle: Autres actifs non courants (solde du bouclage)
       - id: total_actif
@@ -209,6 +224,11 @@ etats:
           - [LongTermDebtCurrent]
           - [DebtCurrent]
           - [ConvertibleNotesPayableCurrent]
+        absent_vaut_zero: true
+      - id: obligations_locatives_courantes
+        libelle: Obligations locatives à moins d'un an
+        recettes:
+          - [OperatingLeaseLiabilityCurrent]
         absent_vaut_zero: true
       - id: autres_passifs_courants
         libelle: Autres passifs courants (solde du bouclage)
@@ -248,16 +268,25 @@ etats:
         libelle: Total du passif et des capitaux propres
         recettes:
           - [LiabilitiesAndStockholdersEquity]
+      - id: capital_employe
+        libelle: Capital employé dans l'exploitation (convention maison)
+        calcul: [+total_actif, -tresorerie, -placements_court_terme, -placements_long_terme,
+                 -participations_courantes, -participations, -droits_d_utilisation,
+                 -fournisseurs, -autres_passifs_courants]
+      - id: capital_employe_hors_ecarts_d_acquisition
+        libelle: Capital employé hors écarts d'acquisition
+        calcul: [+capital_employe, -ecarts_d_acquisition]
     equations:
       - total: actif_courant
-        composantes: [+tresorerie, +placements_court_terme, +creances_clients, +stocks]
+        composantes: [+tresorerie, +placements_court_terme, +participations_courantes, +creances_clients,
+                      +stocks]
         reste: +autres_actifs_courants
       - total: total_actif
         composantes: [+actif_courant, +placements_long_terme, +immobilisations_corporelles,
-                      +droits_d_utilisation, +ecarts_d_acquisition, +incorporels]
+                      +participations, +droits_d_utilisation, +ecarts_d_acquisition, +incorporels]
         reste: +autres_actifs_non_courants
       - total: passif_courant
-        composantes: [+fournisseurs, +dette_financiere_courante]
+        composantes: [+fournisseurs, +dette_financiere_courante, +obligations_locatives_courantes]
         reste: +autres_passifs_courants
       - total: total_passif_et_capitaux_propres
         composantes: [+total_passif, +capitaux_propres]

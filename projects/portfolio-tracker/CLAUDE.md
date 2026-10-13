@@ -317,6 +317,9 @@ version / le même schéma) et `modeles_valorisation_decisions` (PV : `signer` |
 blancs, fourchette signée ordonnée ssi signer, UNE décision par version). Append-only sur les deux (droits +
 trigger, garde `051/K1`). Appliquée le 2026-09-29, tables vides. Éprouvée par `negatif_051.sh` (26/0).
 Prochaine migration : **052**.
+**Migration 052 = la période d'une ligne de plan (#113)** : `collection_plan_items.periode` (nullable,
+quatre valeurs). **Migration 053 = `cumul_publie`, cinquième valeur (#119)** : un cumul tel que publié
+par l'émetteur, jamais recalculé — détail convention #119. Prochaine migration : **054**.
 
 ### Deux espaces disjoints V1 / V2 (2026-08-22)
 
@@ -2984,6 +2987,241 @@ Gardes : `check_socle_comptes.py` (fixtures `companyfacts` RVMD/NVDA/MSFT copié
 `negatif_socle_comptes.sh` ; `check_socle_persist.py` (vraie base, ROLLBACK) + `negatif_socle_persist.sh` ;
 `check_frameworks_definitions` §6 bis ; `check_analyste` §5 bis ; `check_dossier` §13 ;
 `check_collection_plan_contract` §7 bis. Outil de lecture gratuite : `bash tools/montrer_socle.sh RVMD NVDA MSFT`.
+
+### #116 — les ratios maison : définis une fois, lus dans le socle par le code
+
+**Roadmap 05, capacité 4 bis (2026-10-04), prérequis de la qualité financière de NVDA.** Comme un fonds :
+le modèle des comptes porte un onglet de RATIOS dont le directeur de la recherche écrit les définitions
+une fois ; chaque analyste les lit, aucun ne les recalcule à sa façon (« le calcul n'est pas fait par le
+modèle », arbitrage du 2026-09-28). Conventions maison (pas de niveau comité, arbitrage du 2026-10-04),
+appliquées sauf objection de l'utilisateur :
+- **Gabarit 1.1.0** : `capital_employe` (ligne calculée) = actif − trésorerie − placements −
+  participations − droits d'utilisation − fournisseurs − autres passifs courants (loyers à un an exceptés,
+  ligne `obligations_locatives_courantes`) ; les écarts d'acquisition RESTENT, `capital_employe_hors_ecarts_d_acquisition`
+  à côté. Le bail n'étant pas une dette, le loyer est une charge d'exploitation : le droit d'utilisation sort.
+  **Participations** = lignes `recettes_par_emetteur` : NVDA (CIK 1045810) reclasse
+  `EquitySecuritiesWithoutReadilyDeterminableFairValueAmount` (47,9 Md$) et `EquitySecuritiesFvNi`
+  (cotées, 42,8 Md$, à l'actif courant) ; chez MSFT les mêmes titres sont déjà dans `LongTermInvestments` —
+  une recette commune les compterait deux fois. **Bilan d'ouverture** (nature `ouverture`) : le bilan qui
+  précède le premier exercice, pour que le capital MOYEN du premier exercice existe.
+- **`knowledge/ratios_maison.py`** (pur, recalculé à la lecture, seule `VERSION_RATIOS` est persistée —
+  dans l'empreinte, en changer republie la pièce) : taux d'impôt = impôt ÷ résultat avant impôt borné à
+  [0 ; 1] (zéro sur une perte) ; résultat d'exploitation après impôt TEL QUE DÉPOSÉ (la normalisation reste
+  le jugement de l'analyste, qf_6) ; rendement = ce résultat ÷ capital employé MOYEN (ouverture + clôture) ;
+  capital moyen ≤ 0 ⟹ `non défini` (#104) ; conversion = Σ flux d'exploitation ÷ Σ résultat net sur trois
+  exercices (rapport des sommes) ; capital par point de croissance = Δ capital employé ÷ croissance du CA en
+  points, premier → dernier exercice ; pente = moindres carrés des cinq rendements. Trois issues, jamais un
+  zéro.
+- **L'encadré** : `ChiffreDuSocle` porte une `formule` (montant, M$, à une `periode`) OU un `ratio`
+  (`RATIOS`, unité vérifiée au référentiel [U]) ; qf_1/qf_2/qf_3/qf_5 lisent les leurs ; leurs ingrédients
+  calculables (capital employé, taux d'impôt, série cinq ans, variation du capital, décomposition marge ×
+  rotation) sont `depuis_le_socle`.
+- **#44 dans l'encadré** : un `calcul` dont un dénominateur est NÉGATIF est non calculable, la valeur
+  nommée (`denominateurs_de_la_formule`) — l'autonomie de NVDA (« consommation » −127 006 M$ : il génère de
+  la trésorerie) sortait sinon en mois négatifs.
+Mesuré sur les vrais dépôts (`bash tools/montrer_socle.sh NVDA MSFT RVMD`, gratuit) : NVDA rendement moyen
+111,9 %, pente +37,9 pts/an, conversion 87,5 % ; MSFT 41,0 %, pente −6,3 pts/an (le capital croît plus vite
+que le résultat), conversion 135,2 %, 4 657 M$ par point ; RVMD : capital moyen négatif en 2024-2025 ⟹ aucun
+rendement, motivé. Fixtures régénérées par `tools/fixtures_socle.sh` (0 point changé). ⚠️ Mesuré avant
+d'écrire : une capacité « plusieurs recettes par reclassement » a été retirée — le premier concept NVDA
+couvre toute la série, le symptôme n'existait pas.
+Gardes : `check_ratios_maison.py` + `negatif_ratios_maison.sh` ; `check_socle_comptes` §12 (+4 mutations) ;
+`check_frameworks_definitions` [U] (+6 mutations) ; `check_framework_contract` (dénominateur négatif).
+
+### #117 — lire et annoter : un texte postérieur aux comptes ne périme pas une mesure, il s'annote
+
+**Arbitrage de l'utilisateur du 2026-10-12** (« lire et annoter ; NVDA n'est qu'un exemple, le système doit
+s'appliquer à toute situation ou entreprise »). Comme un fonds : NVIDIA annonce le rachat de Hugging Face
+le 02/09, après ses comptes du 26/07. Le rendement du capital des cinq exercices passés n'en devient ni faux
+ni périmé — l'analyste lit l'annonce, écrit qu'elle ne change pas les exercices passés (et ce qu'elle
+changera une fois consolidée), et sa note est à jour. Avant : la lecture d'un fait entrait d'office dans la
+fondation (#113 ter) ; sur une question de MESURE, un texte la faisait tomber en `interpretation`, [E]
+refusait, donc `corpus_montre` cachait le fait — et TOUTE annonce gelait les mesures jusqu'aux comptes
+suivants (NVDA : 5 réponses nées périmées, note de qualité 0,00).
+- **Détenteur unique `frameworks.piece_fonde_la_reponse(nature_piece, nature_attendue, approximation=)`** :
+  une pièce d'un fait lu FONDE si sa nature satisfait la nature attendue (un relevé pour une mesure — les
+  baux chiffrés RVMD de #113 ter restent dans la fondation) ou si la réponse est une approximation ; sinon
+  elle ANNOTE : prouvée tirée du dépôt ([P]), elle lève la péremption par ce dépôt (`retirer_faits_lus`,
+  inchangé), sans faire ni le rang ni la nature du chiffre.
+- Lu par **trois sites** : `analyste.contexte_analyste` (`faits_montrables(faits, lisibles, montrees)` joint
+  les pièces non montrées avec leur contenu sous `pieces_a_lire_seulement` ; consigne : les citer dans la
+  ligne du fait, jamais dans `cited_entry_ids`) ; `analyste.assembler_answer` (seules les pièces qui fondent
+  rejoignent la fondation) ; pont **[P]** (seules elles doivent y être ; une pièce lue ABSENTE du dossier est
+  refusée — sa provenance ne se prouverait pas).
+Mesuré NVDA (`--sans-collecte --questions=qf_1,qf_2,qf_3,qf_4,qf_5,qf_7`, réponses 1209-1214) : 6 `repondu`
+A / mesure, chiffres identiques, chaque réponse porte l'effet du rachat ; note 0,00 → **0,62**. Gardes :
+`check_analyste` §5 ter (+3) ; `check_framework_contract` [P] (+3) ; négatifs analyste 62/0, contrat 52/0.
+⚠️ Faux vert de harnais rencontré : une mutation par motif textuel vise la PREMIÈRE occurrence — `if
+inconnues:` existait plus haut dans `frameworks.py`, la mutation y tombait et le check restait vert. Une
+garde neuve prend un nom de variable unique dans son fichier.
+
+### #118 — une mesure rouverte chaque trimestre se lit sur douze mois ; un terme négatif rend un calcul « non significatif »
+
+**Le défaut (2026-10-12, NVDA, deux réponses nées ou restées périmées).** Une réponse est datée par sa pièce
+la plus ancienne ; les résultats trimestriels rouvrent toute la qualité financière (#102). Une mesure qui se
+lit sur l'EXERCICE CLOS cite donc forcément le rapport annuel, et reste périmée de la publication du T1 au
+rapport annuel suivant, quoi que relise l'analyste. qf_4 citait la couverture des intérêts de l'exercice
+(503,4 fois, pièce #843) ; qf_6 mesurait les retraitements sur l'exercice clos en janvier.
+- **qf_4 (opération de données)** : `couverture_des_interets` passe `depuis_le_socle`, et l'encadré lit
+  `resultat_exploitation_douze_mois` et `charges_interets_douze_mois` dans le socle ; la couverture est
+  calculée par le code (NVDA : 197 579 / 464 = 425,8 fois au 26/07/2026).
+- **qf_6 (arbitrages de l'utilisateur, 2026-10-12, comme un fonds qui fait une revue de qualité des
+  résultats)** : (1) la mesure porte sur les **douze derniers mois**, refaite à chaque publication ; (2) chaque
+  retraitement compte pour sa **taille, sans compensation** : NVDA « 2,6 % » était un solde où +6,4 Md$ de
+  rémunérations en actions et ≈ −10 Md$ de plus-values sur participations s'annulaient (≈ 14 % poste par
+  poste). L'analyste RELÈVE trois sommes dans les rapprochements publiés (exercice clos, cumul en cours, même
+  cumul l'an passé ; zéro pour les deux derniers si le dernier rapport est l'annuel) ; le code en tire les
+  douze mois et la part du résultat net des douze mois (lu dans le socle). Convention maison : la somme
+  « sans compensation » se fait PAR PÉRIODE (un poste qui change de signe d'une période à l'autre est une
+  approximation assumée).
+- **`ChiffreCleDeclare.non_significatif_si_negatif`** (liste de termes d'un `calcul`) : prolonge #44 du
+  dénominateur aux termes NOMMÉS. Une couverture des intérêts sur une perte d'exploitation (RVMD : −1 627 M$
+  sur douze mois, 59 M$ d'intérêts) sort « non significatif », la perte nommée, jamais −27,4 fois. Déclaré par
+  chiffre, jamais généralisé : une marge négative, elle, est un niveau. Contrat : seulement sur un chiffre
+  calculé, termes présents dans la formule.
+- **`facultatif` est MONTRÉ à l'analyste** dans `chiffres_cles_demandes` (+ consigne) : RVMD qf_7 #1234 est
+  sortie « sans fondement » faute de la prévision de la direction, un chiffre facultatif que le modèle ne
+  savait pas tel. Relancée une fois après le correctif : #1235 `repondu` A (38,4 mois). Un passage n'est pas
+  une preuve de stabilité, et c'est la dette bloquante de la production qui l'a rendu possible : la réponse
+  moins bonne a remplacé la bonne.
+Gardes : `check_framework_contract` (+4) + négatif **56/0** ; `check_analyste` (+2) + négatif ;
+`check_frameworks_definitions` (référentiel réel) ; `check_signature_modele_persist` reste ROUGE tant que RVMD
+qf_6 #1080 n'est pas réémise au nouvel encadré (garde « pas de dette », #100).
+
+### #119 — `PERIODES` n'a pas de valeur « cumul d'une période intermédiaire », et une collecte deux fois
+lancée par erreur double-écrit en prod
+
+**Le défaut (2026-10-12, NVDA qf_6, réponse #1270).** Une fois le crédit DeepInfra rétabli, la réémission
+NVDA qf_6 a produit `retraitements_cumul_en_cours = 222 M$ (« cumul S1 FY2027 »)` et
+`retraitements_cumul_an_passe = 0 M$` — **vérifié FAUX contre le vrai 8-K** (accession
+`0001045810-26-000073`, EX-99.1 `q2fy27pr.htm`, fetch direct `sec.gov`/`data.sec.gov`, hors dépense
+modèle) : le tableau réel a cinq colonnes (Three Months : 07-26/04-26/07-27(N-1) ; Six Months :
+07-26/07-27(N-1)) et la ligne « Total impact… » vaut 222/247/101/**469**/**263**. 222 est la colonne
+TROIS MOIS, pas SIX MOIS (vraie valeur semestrielle 469) ; 0 n'existe NULLE PART dans le tableau (vraie
+valeur du comparatif N-1 : 263) — même famille que #78, « tous les nombres justes, le fait faux », les
+quatre contrôles du manager gardent la structure, jamais le sens. **Retiré**
+(`tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql`).
+
+**Cause, et choix de l'utilisateur (option A, 2026-10-12)** : `PERIODES` (migration 052) n'avait aucune
+valeur pour « cumul semestriel + comparatif N-1, mêmes colonnes » — la demande de collecte (#113, « la
+demande précise la période ») ne pouvait donc pas désigner précisément ce que l'encadré qf_6 exige. Le
+fetch avait atteint la bonne page (les deux colonnes y sont), mais rien dans la demande ne cadrait sur la
+bonne colonne. **Corrigé, migration 053 : `cumul_publie`, cinquième valeur de `PERIODES`** — un cumul TEL
+QUE L'ÉMETTEUR LE PUBLIE dans son dépôt intermédiaire, avec son comparatif N-1, JAMAIS recalculé ;
+distinct de `douze_mois_glissants`, qui est une fenêtre que LE SYSTÈME reconstruit lui-même depuis des
+concepts XBRL de flux (`appariement_feed.appliquer_periode` ne traite pas `cumul_publie` : elle tombe dans
+sa branche « inchangé », comme `dernier_bilan`/`sans_periode` — ce n'est pas un oubli, cette valeur ne
+concerne QUE les lignes web).
+
+**Second défaut trouvé en traçant la cause jusqu'au bout** : `construire_requete_web` (le point qui
+fabrique la requête du search-worker) ne lisait **jamais** `ligne.periode` — même la valeur
+`douze_mois_glissants`, qui existait déjà, était silencieusement perdue dès qu'une ligne partait vers le
+web plutôt que vers l'appariement EDGAR. Ajouter `cumul_publie` au vocabulaire sans réparer ce câblage
+n'aurait rien changé. **Corrigé** : `_PHRASE_PERIODE` (détenteur unique, #46, couverture de `PERIODES`
+vérifiée par un `assert` au chargement du module) traduit chaque valeur en une phrase explicite ajoutée à
+la requête web ; pour `cumul_publie`, la phrase dit explicitement « ne recalcule RIEN » et nomme le risque
+de colonne (trimestre vs cumul). Le prompt du traducteur (`traducteur.py`) enseigne désormais la
+cinquième valeur et la distinction `cumul_publie`/`douze_mois_glissants` (reconstruit vs publié) — jamais
+un durcissement de formulation sans garantie de code (`feedback_jugement_modele_instable_entre_passages`) :
+la garantie est que `_PHRASE_PERIODE` couvre toujours exactement `PERIODES`, pas le choix de mots du
+modèle. Vérifié par mutation : retirer `phrase_periode` de la requête fait rougir 6 asserts nommés de
+`check_collecte_executor.py §5ter` (89/0, sur une copie, avant de réappliquer le correctif).
+
+⚠️ **Deux mutations de `negatif_collecte_executor.sh` réparées au passage, sans rapport avec #119** :
+« ni inventaire ni carte » (le motif portait un `\n` dans le MOTIF, que le harnais ne convertit jamais —
+règle de l'en-tête de `_negatif.sh` — donc ne matchait jamais rien ; réduit à une ligne) et « passe devant
+la consigne » (indentation du motif obsolète depuis un refactor antérieur, 8 espaces au lieu de 4). Un
+troisième échec préexistant, documenté et laissé tel quel : « aucune VALEUR de consigne ne contient un
+fragment » (script mort avant son bilan — débogué ailleurs, pas un effet de #119).
+
+**Vérifié contre le vrai modèle** (NVDA qf_6, plan #233, réponse #1289) : le traducteur emploie la 5ᵉ
+valeur (`periode="cumul_publie"` posée sur `ecart_publie_ajuste`), et l'analyste rend désormais
+`repondu` A **honnête** — « il ne donne que le rapprochement du seul T2 FY2027 … sans le cumul
+semestriel » → les chiffres cumulés sortent `non établi`, jamais un trimestre recopié sous l'étiquette
+semestrielle comme #1270. Résidu nommé, de moindre sévérité : le search-worker a épuisé ses 6
+itérations sans re-extraire la colonne Six Months du tableau réel — il a réutilisé l'entry déjà en
+base (Three Months seulement). Ce n'est plus un risque de fabrication (l'analyste le voit et le dit),
+c'est une limite de profondeur de collecte, à reprendre séparément si le chiffre exact importe.
+
+**Incident de méthode, à ne pas reproduire.** Un premier essai (`timeout 300 bash … | tail`) a rendu
+exit 143 mais le `docker run --rm` sous-jacent a continué seul, détaché ; une relance `nohup … &` lancée
+en parallèle a produit DEUX collectes concurrentes (plans #227/#228) écrivant dans la MÊME base en même
+temps — chacune a cru réussir. **Toujours vérifier `ps aux` / `docker ps` avant toute relance** d'un
+outil qui écrit en prod, et utiliser le `run_in_background` du harnais plutôt qu'un `nohup … &` imbriqué
+(qui double le backgrounding et rend le process réel introuvable depuis l'extérieur).
+
+**Constat #118 fermé en code** (`tools/executer_chaine.py`, maillon 1) : `--questions=` restreint
+désormais AUSSI la collecte, pas seulement l'analyse — `executer_collecte_framework`/`traduire`
+savaient déjà le faire (lot 5, bouclage), seul ce passage ne le branchait pas.
+
+### #120 — le traducteur reçoit l'horloge : la date du jour et la clôture des derniers comptes publiés
+
+**Défaut mesuré (2026-10-13, en cherchant pourquoi qf_8 NVDA #1237 était périmée).** Plan #221 (NVDA ×
+qualite_financiere, 2026-10-12) : **19 lignes sur 19** ancrées « clôture du dernier exercice fiscal »,
+source « 10-K », six semaines après le dépôt du 10-Q clos le 2026-07-26 — y compris les lignes
+`dernier_bilan`. Le traducteur n'avait ni date ni connaissance du dernier dépôt
+(`feedback_agent_sans_horloge`). Les chiffres s'en sortaient par le socle (qui lit le dernier dépôt) ;
+la revue des clauses (qf_8) non : ses pièces (10-K de janvier, prospectus du 16/06) précèdent la clôture,
+et une réponse a l'âge de sa plus ancienne pièce citée (`actualite.date_effective`) — qf_8 naissait
+périmée à chaque trimestre que les résultats rouvrent (arbitrage qf_8 du 2026-10-12). Le vrai 10-Q dit
+pourtant « As of July 26, 2026, we complied with the required covenants under the outstanding notes ».
+
+**Ce que ferait un vrai fonds** : l'analyste crédit qui met à jour sa revue des clauses après le T2 lit
+le 10-Q du T2 (conformité déclarée à la clôture, financements nouveaux), pas le rapport annuel.
+Correctif technique, aucun arbitrage métier.
+
+**Correctif** (`traducteur.py`) : `HorlogeDuPlan(date_du_jour, derniere_cloture)` est un paramètre
+REQUIS de `contexte_traducteur` (sans défaut, comme `emetteur`) ; `horloge_du_plan` la lit sur
+`horloge_du_titre` + `derniere_cloture_publiee` (détenteurs uniques : le plan vise le dépôt contre lequel
+la réponse sera jugée). Le contexte porte `calendrier` (clôture `null` + « INCONNUE » dite, jamais
+devinée). Consigne : RÈGLE DE FRAÎCHEUR — `source_pressentie` nomme d'abord le rapport périodique qui
+couvre cette clôture, `ancre` la clôture DATÉE, y compris pour une clause (`sans_periode`) ; seule
+exception `exercice_clos`. Checks : `check_traducteur §7` (10 asserts), négatif 22/0 (9 mutations
+neuves + 1 réalignée) ; horloge réelle lue gratuitement : NVDA 2026-07-26, RVMD 2026-06-30, MSFT
+2026-06-30 (sa clôture d'exercice — le 10-K, à juste titre).
+
+**Vérifié contre le vrai modèle** (plan #235, `--questions=qf_8`, $0,0004 de traducteur) : les 3 lignes
+visent « 10-Q du trimestre clos le 2026-07-26 », ancre « Clôture du 2026-07-26 ». La pièce #905 (10-Q,
+Note 9, citation exacte de la conformité au 26/07, vérifiée contre EDGAR) remplace #395 dans
+`clauses_de_sauvegarde`. **Mais qf_8 #1296 reste périmée** : les deux autres lignes ont échoué au
+collecteur (mandats 2612/2613, voir ci-dessous) ; `marge_avant_declenchement` garde #845 (16/06) en
+vigueur, que l'analyste cite légitimement (#111 joue par point).
+
+**Défaut distinct, préexistant, nommé (non corrigé)** : le search-worker omet `portee_temporelle` sur
+les longs passages (70-190 k jetons après 6 itérations d'outils) et ne se corrige pas en relance (5 à 8
+tentatives) — **15 mandats `echec_collecte` sur ce motif depuis le 2026-09-25**. La règle de datation vit
+en suffixe de code (`worker.py`), la consigne en base n'en dit rien. Le contrat refuse à juste titre
+(rien de faux n'est écrit), mais la collecte se perd. Résidu de #905 : sa prose attribue au 10-Q la
+formule « covenants protecteurs limités » du prospectus (même famille que #848).
+
+### #121 — l'exemple de sortie d'une consigne est un point de contrat : il se valide contre le contrat
+
+**Cause du « défaut distinct » de #120.** Le collecteur ne rendait pas `portee_temporelle` parce que
+l'EXEMPLE JSON de sa consigne en base (`agent_prompts`, `search-worker` et `ingestion-agent`, v2) portait
+encore `"source_date"`, retiré du contrat par la 045 (#79, 2026-09-23) — et la consigne dit « aucune clef
+hors de l'exemple ». La règle de datation, ajoutée en suffixe de code (`worker.py`), était contredite par
+l'exemple ; sur les longs passages, le modèle suivait l'exemple (erreur Pydantic exacte des mandats
+2612/2613 : `portee_temporelle` manquant + `source_date` interdit). 15 mandats `echec_collecte` perdus du
+2026-09-25 au 2026-10-13. Même panne que la 037 (`covers`), un cran plus loin : **le troisième point de
+synchro de la règle #19/#39 n'avait aucune garde.**
+
+**Correctif.** (1) Exemples corrigés dans `provenance-cards/prompts/10-ingestion-agent.md` et
+`11-search-worker.md` (constatée, deux dates distinctes) + phrase « plus de `source_date` » ; (2) migration
+**054** générée par `_gen_054.py` (relit les fichiers committés ; la base était leur miroir exact,
+vérifié avant), garde `054/K` éprouvée en négatif sur la base d'avant (lève « 0 sur 2 ») puis appliquée ;
+(3) **`check_prompts_exemples.py`** : chaque pièce de l'exemple de sortie est validée par `ProducedEntry`
+au FICHIER (§1) et EN BASE (§2, lecture seule, `CHECK_DB_URL`). Négatifs : rouge sur les fichiers d'avant
+correction et sur la base d'avant la 054, sur exactement les deux champs du refus de production. Ferme la
+classe (tout champ futur retiré du contrat), pas seulement ce cas. Rattaché à `app/knowledge/ARCHITECTURE.md`.
+
+**Vérifié contre le vrai modèle** (plan #237, NVDA `--questions=qf_8`) : aucun échec de validation ;
+pièces #907 (marge avant déclenchement : aucun seuil, conformité au 26/07) et #908 (aucun défaut au
+26/07), datées au 26/07 ; réponse **#1303** `repondu` A `aucune_contrainte`, cite [907, 905, 847, 865, 866],
+**courante**. Qualité financière NVDA **1,00** (8/8 courantes). Relu contre le 10-Q : 33 366 M$, 25,0 Md$
+en sept tranches, 1 000 M$ à moins d'un an, phrase de conformité — justes. Résidu nommé : la prose
+attribue au 10-Q la date de l'indenture (16/09/2016), « covenants protecteurs limités » et « aucune clause
+de changement de contrôle activée », absentes de ce dépôt (reprises du prospectus/10-K) — même famille que
+#848 ; sans effet sur la conclusion.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

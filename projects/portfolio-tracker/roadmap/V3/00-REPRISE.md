@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-04
+updated: 2026-10-13 (#120 horloge du traducteur ; #121 exemple des consignes resynchronisé, migration 054 ; qualité financière NVDA 1,00)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#115), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#121), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -39,9 +39,16 @@ role: >
 > framework ne lit que ses sujets », soldes du 10-K, prose des agrégats) déployés et rejoués sur RVMD
 > qf_4/qf_6/qf_7 ; #111-#113 puis **#114 (2026-10-04, qf_4 scindée : faits / jugement) — qualité financière
 > RVMD COMPLÈTE (4/4, note 1,0)** ; puis **#115 (2026-10-04) — LE SOCLE DES COMPTES** (comptes reconstitués,
-> bouclés, une pièce du dossier ; l'encadré de qf_4/qf_7 lu dans le socle). Prochain : les RATIOS MAISON sur le
-> socle (prérequis de la qualité financière de NVDA), puis NVDA, puis les nouveaux chapitres (objectif : deux
-> cas très différents, RVMD et NVDA, qui tournent juste).
+> bouclés, une pièce du dossier ; l'encadré de qf_4/qf_7 lu dans le socle) ; puis **#116 (déployé 2026-10-11) — LES RATIOS
+> MAISON** (gabarit 1.1.0 : capital employé, participations NVDA, bilan d'ouverture ; `ratios_maison.py` ; encadré
+> de qf_1/qf_2/qf_3/qf_5 lu par le code ; autonomie non calculable sur une trésorerie générée) ; puis **#117
+> (déployé 2026-10-12, `91e7cef`) — LIRE ET ANNOTER** : qualité financière NVDA instruite (8/8 répondues,
+> note **0,62**) ; puis **#118 (2026-10-12) — LES DOUZE MOIS** : couverture des intérêts lue dans le socle
+> sur douze mois (qf_4), qf_6 redéfinie sur douze mois et sans compensation (arbitrages utilisateur),
+> « non significatif » sur un terme négatif. NVDA **0,75** (qf_4 soldée), RVMD **1,0** (socle 1.1.0, qf_4/qf_7
+> réémises). ⛔ **BLOQUÉ : crédit DeepInfra épuisé (402)** — prochain : réémettre RVMD qf_6, collecter et
+> réémettre NVDA qf_6, dater qf_8 NVDA, puis les nouveaux chapitres sur RVMD ET NVDA (objectif : deux cas
+> très différents qui tournent juste).
 
 **Pourquoi elle a pris la place du lot 7 de la spec 03 (arbitrage du 2026-09-28).** Interrogé sur la
 grille vers laquelle reclasser RVMD après l'approbation de RASONQUE, l'utilisateur a déplacé la
@@ -77,21 +84,44 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4321 assertions, 0 rouge** — 2026-10-04 après #115 (négatifs des modules
-  touchés tous verts : socle 12/0, socle persisté 3/0, analyste 60/0, contrat 49/0, plan 23/0, dossier 24/0,
-  référentiel 56/0 + 2 mutations rendues caduques par #114 réparées). Avant : 4219 après #114. `negatif_analyste.sh` vert après #114 ; `negatif_frameworks_definitions.sh` dépasse 600 s (mutations vues rouges avant l'arrêt — à relancer sans borne). `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
+- **Suite** `bash checks/run_all.sh` = **4430 assertions, 59 scripts, 0 rouge** — 2026-10-13 après #121
+  (`check_prompts_exemples` neuf). Avant : 4419 / 58 après #120
+  (négatif traducteur 22/0). Avant : **4398 assertions, 1 rouge ATTENDU** — 2026-10-12 après #118 :
+  `check_signature_modele_persist` (RVMD qf_6 #1080 porte l'ancien encadré — se solde par sa réémission
+  `--sans-collecte --questions=qf_6`, bloquée par le 402). Négatifs : contrat 56/0, analyste et référentiel
+  rejoués (voir convention #118). Avant : **4389 assertions, 0 rouge** — 2026-10-12 après #117 (négatifs analyste
+  62/0, contrat 52/0 ; `check_framework_persist` borné à ses analystes : la vraie réponse NVDA #1190 le
+  faisait compter 3). Avant : 4381 le 2026-10-11 après #116 (négatifs des modules
+  touchés tous verts : ratios maison 15/0 (neuf), socle 16/0, socle persisté 3/0, contrat 50/0, bouclage 11/0,
+  référentiel **63/0** (relancé sans borne : il passe désormais au bout). Le faux vert de `negatif_bouclage.sh`
+  (ligne hors scope refusée par la règle socle depuis #115, pas par la garde visée) est réparé : fixture
+  discriminante + motif « HORS du scope » exigé). Avant : 4321 après #115. `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
-- **Migrations** (aucune au lot #100) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
-  vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; la prochaine sera **053**. Vérifier en base avant
+- **Migrations** : **054 appliquée le 2026-10-13** (#121, consignes resynchronisées) ; la prochaine sera
+  **055**. (aucune aux lots #100 et #116) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
+  vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; 053 appliquée le 2026-10-12 (#119). Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
-- **Production** : stack sur **`2837d08`** (#115), vérifiée dans le conteneur, vérifiée dans le conteneur après chaque déploiement (#107-#110). Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
+- **Production** : #119 n'était PAS dans le conteneur le 2026-10-13 (commité, non déployé) — déployé avec
+  #120 ce jour-là (commit dans `git log`). Avant : `1adeb17` (#118 première moitié : qf_4 douze mois + `non_significatif_si_negatif`) puis le
+  déploiement de fin de session (qf_6 + `facultatif` montré) — commit dans `git log`, vérifié dans le conteneur ;
+  auparavant **`91e7cef`** (#117), `c55db45` (#116) ; vérifiée dans le conteneur après chaque déploiement. Chapitres `business_model`, `industry`, `management`, `valuation` : jamais collectés. **PV du comité : 0 décision.**
 - **Réglage `v2_auto_enabled` = FALSE** : le passage du matin ne fait que RECENSER. Recensement réel du
   2026-09-26 : RVMD/NVDA/MSFT à jour ; AMZN 9, GOOG 9, AstraZeneca 125, Novo Nordisk 73 dépôts à lire ;
   9 titres hors EDGAR.
 - **Notes flash en base** (catalogue d'événements **1.2.0**, relues le 2026-09-28 après #94) : RVMD
   #181-#186, NVDA #187-#188, MSFT #189 — mêmes types qu'en 1.1.0 (#80-#88), 0 refus, $0,0025 ; les
   lectures 1.0.0/1.1.0 restent conservées (append-only).
-- **Dossier RVMD** (2026-10-04 après #115) : qualité financière **1,0** — qf_4 **#1176**, qf_6 #1080, qf_7 **#1177**, qf_8 #1157 ; socle des comptes **#814** (tier A, `mesure`, au 30/06/2026), toutes `repondu`, à jour, acquittées. Reste (mesure du 2026-10-03) : mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
+- **Dossier NVDA** (2026-10-13 après #121) : qualité financière **1,00** (8/8 courantes ; qf_8 **#1303**) ;
+  qf_6 #1289. Avant (2026-10-12 après #118) : qualité financière **0,75** — qf_1 #1209, qf_2 #1210, qf_3 #1211,
+  **qf_4 #1236** (couverture 425,8 fois sur douze mois, ne cite plus #843), qf_5 #1213, qf_7 #1214, qf_6 #1196
+  (approximée, ANCIEN encadré, périmée), **qf_8 #1237** (`aucune_contrainte`, périmée : cite le prospectus du
+  16/06 #845, antérieur à la clôture du 26/07) ; socle **#867** ; plan **#221** (collecte du 2026-10-12,
+  19 lignes sur TOUT le framework, 12 mandats dont 3 « 402 » relançables : qf_6 ×2, qf_7 ×1).
+- **Dossier RVMD** (2026-10-12 après #118) : qualité financière **1,0** — **qf_4 #1233** (dette brute 1 036,0 M$,
+  trésorerie nette 2 902,0 M$, couverture « non significatif » : perte d'exploitation −1 627 M$ sur douze mois),
+  **qf_7 #1235** (autonomie 38,4 mois ; #1234 « sans fondement » intermédiaire, supersédée), qf_6 #1080
+  (ANCIEN encadré : à réémettre), qf_8 #1157 ; socle **#876** (1.1.0, remplace #814).
+  Reste (mesure du 2026-10-03) : mo_1…mo_5, et les 24 questions des quatre nouveaux frameworks jamais collectées. Mandats 983-986 toujours ouverts.
 
 ---
 
@@ -260,13 +290,127 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   `participations` est à créer AVEC les ratios maison ; (d) émetteurs hors USD / 20-F non éprouvés ;
   (e) le reclassement d'émetteur est écrit à la main (le jour venu, un agent le PROPOSE en lisant les notes,
   le directeur de la recherche le valide).
-- **PROCHAIN PAS** : les **ratios maison sur le socle** (roadmap 05, case suivante de la 4 bis) — capital
-  employé, résultat d'exploitation après impôt, rendement du capital sur cinq exercices, conversion en cash,
-  capital par point de croissance — lus dans le socle par le code, déclarés en chiffres `socle`/`calcul`
-  de qf_1/qf_2/qf_3/qf_5 ; PUIS la qualité financière de NVDA (aucune réponse en vigueur ; `--refaire-carte`
-  pour les ingrédients encore collectés), puis les nouveaux chapitres sur RVMD et NVDA. ⚠️ qf_7 chez un
-  émetteur qui GÉNÈRE de la trésorerie (NVDA) : la consommation sur douze mois est négative et l'autonomie
-  sortirait négative — à traiter avant NVDA (variable `rentable` de qf_7 ≠ autonomie).
+- **#116 déployé (`c55db45`, 2026-10-11 ; écrit le 2026-10-04) — LES RATIOS MAISON** (détail : convention #116). Mesuré sur les vrais dépôts,
+  gratuit (`bash tools/montrer_socle.sh NVDA MSFT RVMD`) : NVDA rendement du capital employé moyen 5 ans
+  **111,9 %** (2026 : 165,4 %), pente +37,9 pts/an, conversion 3 ans 87,5 %, 100 M$ par point de croissance ;
+  MSFT **41,0 %**, pente **−6,3 pts/an** (le capital croît plus vite que le résultat : 57 % → 31 %), conversion
+  135,2 %, 4 657 M$/pt ; RVMD : capital moyen négatif en 2024-2025 ⟹ aucun rendement (motivé). qf_7 :
+  l'autonomie d'un émetteur qui génère de la trésorerie est « non calculable », dénominateur nommé (#44).
+  **Conventions maison appliquées sauf objection de l'utilisateur** (non demandées, « pas de niveau
+  comité ») : capital MOYEN (ouverture + clôture) ; taux d'impôt effectif borné [0 ; 1] ; droits d'utilisation
+  hors du capital (le loyer est une charge) ; conversion = rapport des sommes sur 3 ans ; capital par point =
+  premier → dernier exercice du socle ; résultat après impôt TEL QUE DÉPOSÉ (la normalisation reste qf_6).
+  ⚠️ La pièce socle RVMD #814 est au gabarit 1.0.0 : le prochain passage de chaîne RVMD la republiera (1.1.0)
+  et qf_4 #1176 / qf_7 #1177, qui la citent, seront à réémettre (`--sans-collecte --questions=qf_4,qf_7`).
+- **Résidus #116** : (a) MSFT ne dépose pas `OperatingLeaseLiabilityCurrent` : ses loyers à un an restent
+  dans « autres passifs courants » alors que ses droits d'utilisation (24 Md$) sortent — écart ~5 % du capital ;
+  (b) `resultat_operationnel_apres_impot_normalise` (qf_1) reste RELEVÉ par l'analyste sur une question de
+  mesure à plancher A — la normalisation est un jugement : forme à trancher sur la mesure NVDA ;
+  (c) pas de ratios sur douze mois glissants (exercices seulement) ; (d) une ligne « mois de charges
+  couverts » pour qf_7 `rentable` (sa variable) n'existe pas.
+- **#117 (2026-10-12) — qualité financière NVDA instruite, puis LIRE ET ANNOTER** (convention #117). Passage
+  `--refaire-carte` (plan #216, réponses 1190-1197, 0 refus) relu contre le socle : chiffres justes ; mais 8/8
+  nées périmées (rachat Hugging Face 8-K 02/09, type `perimetre`, que les mesures n'avaient pas le droit de
+  lire). Arbitrage utilisateur « lire et annoter » → relance `--sans-collecte` qf_1-5,7 → note 0,62.
+- **#118 (2026-10-12) — les douze mois** (convention #118). qf_4 NVDA citait #843 parce que l'ingrédient
+  « couverture des intérêts » n'était pas lu dans le socle : il l'est, l'encadré la calcule sur douze mois.
+  **Arbitrages utilisateur du 2026-10-12 sur qf_6** : douze derniers mois (refaite à chaque publication) ;
+  somme des retraitements poste par poste, sans compensation. Référentiel modifié (3 relevés + 2 calculés + 1
+  lu dans le socle), suite verte sauf RVMD qf_6 à réémettre.
+- **✅ CRÉDIT DEEPINFRA RÉTABLI (2026-10-12, vérifié par un appel minimal avant toute dépense) — (1) FAIT :
+  RVMD qf_6 réémise `--sans-collecte --questions=qf_6`** (réponse #1256, `repondu` A, cite [784, 785, 771,
+  303, 304, 305, 876], relue fidèle) — **`check_signature_modele_persist` au vert, suite 4399/0.**
+  **(2) FAIT, avec incident et correctif en chemin — NVDA qf_6.**
+  **Constat #118 fermé en code** (`tools/executer_chaine.py`) : `--questions=` restreint maintenant AUSSI
+  la collecte (maillon 1), pas seulement l'analyse — `executer_collecte_framework`/`traduire` savaient déjà
+  le faire (lot 5, bouclage), seul ce passage ne le branchait pas. Un relaunch scopé `--questions=qf_6` ne
+  replanifie/recollecte plus les 8 questions du framework pour relancer une seule.
+  **Incident (leçon de méthode, pas un défaut du projet)** : un premier essai (`timeout 300 | tail`) a
+  semblé « Terminated » (exit 143) mais le `docker run --rm` sous-jacent a continué seul ; une relance
+  nohup lancée en parallèle a produit DEUX collectes NVDA/qf_6 concurrentes (plans #227 et #228) écrivant
+  dans la même base en même temps. **Toujours vérifier `ps aux`/`docker ps` avant toute relance**, et
+  utiliser le `run_in_background` du Bash tool plutôt qu'un `nohup … &` imbriqué (qui double le
+  backgrounding et rend le process réel introuvable). Les deux plans concurrents ont tous deux CRU réussir
+  (0 mandat pour le #228) mais produit un `repondu` (#1270) avec des chiffres **FAUX**.
+  **Défaut trouvé en relisant le verbatim contre la vraie pièce EDGAR** (`feedback_garde_structure_pas_sens`
+  — exactement ce que le bandeau de sortie de l'outil demande de faire) : #1270 citait
+  `retraitements_cumul_en_cours = 222 M$ (« cumul S1 FY2027 »)` et `retraitements_cumul_an_passe = 0 M$`.
+  Vérifié contre le vrai 8-K (accession `0001045810-26-000073`, EX-99.1 `q2fy27pr.htm`, table
+  « RECONCILIATION OF GAAP TO NON-GAAP… » — fetch direct `data.sec.gov`/`sec.gov`, hors de toute
+  dépense modèle) : le tableau réel a CINQ colonnes (Three Months : 2026-07-26/04-26/2025-07-27 ; Six
+  Months : 2026-07-26/2025-07-27) ; la ligne « Total impact of non-GAAP adjustments to operating income »
+  vaut 222 / 247 / 101 / **469** / **263**. **222 est la colonne TROIS MOIS, pas SIX MOIS** (vraie valeur
+  semestrielle : 469) ; **0 n'existe NULLE PART dans le tableau** (vraie valeur du comparatif N-1 : 263) —
+  un chiffre sans aucun support, pas une pièce mal lue. Même famille que #78. **Retiré** —
+  `tools/retraits/2026-10-12_nvda_qf6_cumul_errone.sql` (DELETE #1270, restaure #1269 `non établi`,
+  honnête, courante) — suite revérifiée **4399/0** après retrait.
+  **Cause ARBITRÉE et CORRIGÉE (option A choisie par l'utilisateur, 2026-10-12)** : migration **053** —
+  `cumul_publie`, cinquième valeur de `PERIODES` (un cumul TEL QUE L'ÉMETTEUR LE PUBLIE, avec son
+  comparatif N-1, JAMAIS recalculé — distinct de `douze_mois_glissants`, que LE SYSTÈME reconstruit).
+  **Second défaut trouvé en traçant la cause** : `construire_requete_web` ne lisait JAMAIS `ligne.periode`
+  — même `douze_mois_glissants` était perdu dès qu'une ligne partait au web. Corrigé : `_PHRASE_PERIODE`
+  (détenteur unique, couverture de `PERIODES` vérifiée par `assert`) traduit chaque valeur en phrase
+  explicite dans la requête ; le prompt du traducteur enseigne la 5ᵉ valeur et la distingue de
+  `douze_mois_glissants`. Vérifié par mutation (retirer le câblage fait rougir 6 asserts nommés de
+  `check_collecte_executor §5ter`). Au passage : 2 mutations de `negatif_collecte_executor.sh` réparées
+  (« ni inventaire ni carte » — `\n` dans le motif, jamais converti par le harnais ; « passe devant la
+  consigne » — indentation obsolète) ; 1 échec préexistant documenté et laissé tel quel (« aucune VALEUR
+  de consigne » — script mort, sans rapport avec #119). Détail : convention **#119** du `CLAUDE.md`.
+  Suite **4410/0 sur 56 scripts**. **✅ VÉRIFIÉ CONTRE LE VRAI MODÈLE (2026-10-12, plan #233, réponse
+  #1289, solo, `ps aux`/`docker ps` vérifiés propres avant et après)** : le traducteur a choisi
+  `periode="cumul_publie"` pour `ecart_publie_ajuste` (la 5ᵉ valeur est EMPLOYÉE, pas seulement
+  acceptée) ; qf_6 ressort `repondu` A — mais cette fois **honnête** : « il ne donne que le
+  rapprochement du seul T2 FY2027 … sans le cumul semestriel » → `retraitements_cumul_en_cours`/
+  `cumul_an_passe` **non établis**, jamais un chiffre trimestriel mislabellé en semestriel comme #1270.
+  **Le défaut #119 est fermé** : le système échoue maintenant PROPREMENT (silence nommé) plutôt que de
+  fabriquer. **Résidu, nommé, séparé et de moindre sévérité** : le search-worker a épuisé ses 6
+  itérations d'outils (« clôture sur ce qui a été collecté ») sans re-extraire la colonne Six Months du
+  tableau réel (469/263, vérifiées contre EDGAR le 2026-10-12) — il a réutilisé l'entry #896 déjà en
+  base (Three Months seulement). Ce n'est plus un risque de donnée fausse (l'analyste le voit et le dit),
+  c'est une limite de PROFONDEUR de collecte — à reprendre un jour si le chiffre exact importe (budget
+  d'itérations, ou une requête qui cible explicitement « relis la section RECONCILIATION et donne les
+  DEUX colonnes Six Months »). Pas de dette bloquante : qf_6 NVDA est `repondu`, acquitté, honnête.
+  **(3) INSTRUIT le 2026-10-13 — qf_8 NVDA → #120** (convention #120) : le traducteur, sans horloge,
+  envoyait 19/19 lignes au 10-K « dernier exercice » ; il reçoit désormais la date du jour et la clôture des
+  derniers comptes publiés. Vérifié (plan #235) : lignes ancrées sur le 10-Q du 26/07 ; pièce **#905**
+  (conformité aux covenants au 26/07, citation exacte du 10-Q). **qf_8 #1296 reste PÉRIMÉE** : la ligne
+  `marge_avant_declenchement` a échoué au collecteur (mandats **2612/2613** ouverts, `portee_temporelle`
+  omise), #845 (16/06) y reste en vigueur. **→ #121 (même jour)** : cause = l'exemple de la consigne du
+  collecteur en base portait encore `source_date` ; migration **054** + `check_prompts_exemples`. Relance
+  (plan #237) : **qf_8 #1303 courante**, qualité financière NVDA **1,00**. Mandats 2612/2613 encore
+  `ouvert` (la question a trouvé sa réponse — même famille que 983-986).
+  **(2 bis) À FAIRE** : RVMD — même vérification de l'actualité de ses 8 réponses avant les nouveaux chapitres. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
+- **Constat #118 — `executer_chaine --questions=` ne restreint PAS la collecte** : seule l'analyse est
+  restreinte ; le plan #221 a porté sur les 8 questions pour qf_8 seule. Le bouclage sait déjà planifier sur un
+  périmètre (pont [P] « HORS du scope ») : à brancher au maillon 1 de `executer_chaine`.
+- **✅ ARBITRAGE qf_8 RENDU (2026-10-12) — les résultats trimestriels continuent de rouvrir la revue des clauses
+  (vérification de routine), rien à changer.** Règle de l'utilisateur : « selon l'émetteur si la vérification
+  coûte, sauf si la complexité induit un risque d'erreur ; sinon chaque trimestre ». Mesuré : coût < 1 cent
+  par émetteur et par trimestre (ordre de grandeur du traducteur, $0,002 pour ~18 k jetons) ; et la règle
+  conditionnelle serait une garde nourrie de sa propre réponse (un covenant manqué une fois ne serait plus
+  jamais relu avant le financement suivant). Condition « accès aux financements » mesurée vraie au passage
+  (3/3 repérés), utile si la question revient. qf_8 NVDA se soldera donc par sa relecture `--sans-collecte`.
+- **À relire par le comité (NVDA)** : (i) qf_6 conclut « part faible, 2,6 % » sur un SOLDE net de −3 070 M$
+  qui compense les rémunérations en actions (+6 386, que NVIDIA a cessé d'exclure au T1 FY2027) par des
+  plus-values sur participations (≈ −10 Md$) — en brut ≈ 14 % du résultat ; une précision de la question
+  (somme des retraitements en valeur absolue) serait une opération de données ; (ii) qf_1 rend désormais
+  `resultat_operationnel_apres_impot_normalise` = 110 676 M$, qui est le résultat TEL QUE DÉPOSÉ du socle,
+  pas un normalisé (résidu #116 b) ; (iii) coût du capital non établi : les trois estimations tierces
+  (10,9 / 12 / 13 %, #833-835, tier C) sont sous le plancher A de qf_1 — **qui fixe le coût du capital du
+  fonds ?** (un fonds le fixe en interne, commun au portefeuille) : arbitrage à poser avant la valorisation ;
+  (iv) garanties de valeur résiduelle SB Energy jusqu'à 105 Md$ dès 2028 (8-K 17/08) : engagement hors bilan
+  lu par qf_4/qf_7/qf_8, non chiffré.
+- **Constat #117** : l'appariement NVDA a échoué de façon intermittente pendant le passage (rejoué seul : 20
+  lignes, $0,003) ; son motif n'existait qu'au journal (niveau info) — désormais porté par la carte et
+  imprimé. Aucune carte NVDA en base : le prochain passage avec collecte la construira.
+- **✅ RÉSOLU (#121) —** ~~Collecteur — datation omise sur les longs passages (constaté #120, 2026-10-13)~~ : le search-worker
+  rend des pièces sans `portee_temporelle` après 6 itérations d'outils (70-190 k jetons) et ne se corrige
+  pas en 5 à 8 relances ; **15 mandats `echec_collecte` sur ce motif depuis le 2026-09-25** (≈ 15 % des
+  échecs). La règle vit en suffixe de code (`worker.py` ~l.110), la consigne en base (`agent_prompts` id 5)
+  n'en dit rien. Le contrat refuse justement (rien de faux écrit), mais la collecte se perd et des réponses
+  restent périmées. Ce que ferait un fonds : un document reçu sans date n'entre pas au dossier — mais on
+  redemande la date, on ne jette pas la recherche. Pistes : rappel de la règle EN FIN de conversation
+  (près de la sortie), ou relance ciblée sur le seul champ manquant. À éprouver contre le vrai modèle.
 - qf_4 : covenants (#712/#713) en `interpretation` (prose d'indenture) et collecte web des clauses coupée
   par le budget 180 s ; échéancier : datation hétérogène signalée. #751 garde l'ancienne prose « Calculé »
   jusqu'à sa prochaine réécriture (sans effet : #110 + la relecture).
@@ -431,7 +575,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #115** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #121** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
@@ -458,8 +602,10 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 > a été la première réponse RVMD reprenable ; #104-#110 (dette nette unique, autonomie prudente, lecture
 > des dépôts postérieurs, sœurs, « chaque framework ne lit que ses sujets », soldes du 10-K), #111-#113, #114
 > (qf_4 scindée faits / jugement, qf_8 neuve) : qualité financière RVMD COMPLÈTE (1,0) ; #115 le SOCLE DES
-> COMPTES (comptes reconstitués et bouclés, encadré lu dans le socle) ; ensuite les ratios maison sur le
-> socle, la qualité financière de NVDA (`--refaire-carte`), puis les nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
+> COMPTES (comptes reconstitués et bouclés, encadré lu dans le socle) ; #116 les ratios maison sur le
+> socle ; #117 lire et annoter (qualité financière NVDA 0,62) ; #118 les douze mois (couverture des intérêts,
+> qf_6 sur douze mois et sans compensation ; NVDA 0,75, RVMD 1,0 ; RVMD qf_6 à réémettre, NVDA qf_6/qf_8 à
+> dater — BLOQUÉ par le crédit DeepInfra), puis les nouveaux chapitres sur RVMD ET NVDA, l'ordre dans la chaîne d'instruction, l'agent qui écrit le modèle, l'option 1 au
 > cours du jour, Greenwald, la dépendance va_1/va_2 → va_6 ; puis éprouver les six frameworks sur NVDA/MSFT/RVMD
 > + un 4ᵉ titre, et décider à quel niveau vit l'adaptation à l'entreprise. Lots 0-6 de
 > la spec 03 clos ; lot 7 suspendu (son reste = capacités 7-9 de la roadmap 05). Re-requêter toute

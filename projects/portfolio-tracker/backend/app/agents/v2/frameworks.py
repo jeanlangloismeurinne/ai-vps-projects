@@ -52,6 +52,7 @@ from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
 from app.contracts.collection_plan_schema import CollectionPlan
 from app.contracts.formule_grammaire import (
     FormuleInexecutable,
+    denominateurs_de_la_formule,
     dimension_formule,
     evaluer_formule,
     noms_de_la_formule,
@@ -341,6 +342,7 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
     #    rendrait le chiffre « non établi » à chaque dossier, en silence), et seule une question d'un
     #    framework qui LIT le socle peut s'y adosser — chiffre ou ingrédient : sans la pièce au dossier,
     #    l'ingrédient ne serait ni collecté ni montré.
+    from app.knowledge.ratios_maison import RATIOS
     from app.knowledge.socle_comptes import charger_gabarit
     lignes_du_socle = set(charger_gabarit().lignes)
     for f, q in toutes:
@@ -352,6 +354,17 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
                 "pas (`lit_le_socle: false`) : la pièce ne serait jamais au dossier")
         for c in q.chiffres_cles:
             if c.socle is None:
+                continue
+            if c.socle.ratio is not None:
+                r = RATIOS.get(c.socle.ratio)
+                if r is None:
+                    raise FrameworkDefinitionRefused(
+                        f"[U] `{q.id}.{c.id}` lit le ratio maison `{c.socle.ratio}`, qui n'est pas défini "
+                        f"({sorted(RATIOS)}) — le chiffre ne s'établirait jamais")
+                if r.unite != c.unite:
+                    raise FrameworkDefinitionRefused(
+                        f"[U] `{q.id}.{c.id}` est déclaré en {c.unite!r}, le ratio maison `{r.id}` se lit en "
+                        f"{r.unite!r} — une unité convertie en silence ferait deux chiffres (#95)")
                 continue
             inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)
             if inconnues:
@@ -526,6 +539,29 @@ def nature_satisfait(effective: str, attendue: str) -> bool:
     if attendue == "interpretation":
         return effective in NATURES
     return effective == attendue
+
+
+def piece_fonde_la_reponse(nature_piece: Any, nature_attendue: Optional[str], *, approximation: bool) -> bool:
+    """Une pièce d'un FAIT POSTÉRIEUR LU fonde-t-elle la réponse, ou ne fait-elle que l'ANNOTER ?
+    DÉTENTEUR UNIQUE (#46), lu par le contexte de l'analyste (ce qu'il voit), par l'assemblage (ce qui
+    entre dans la fondation) et par le pont [P] (ce qu'il exige d'y trouver). Pur.
+
+    ARBITRAGE DE L'UTILISATEUR DU 2026-10-12 (« lire et annoter »), rendu comme un vrai fonds : NVIDIA
+    annonce le rachat de Hugging Face le 02/09, après ses comptes du 26/07. Le rendement du capital des
+    cinq derniers exercices n'en devient pas faux ni périmé — l'analyste lit l'annonce, écrit qu'elle ne
+    change pas les exercices passés (et ce qu'elle changera une fois consolidée), et sa note est à jour.
+    Jusque-là, la lecture entrait d'office dans la fondation (#113 ter) : sur une question de MESURE, un
+    texte faisait tomber le relevé en `interpretation` et [E] refusait — donc le contexte ne montrait
+    même pas le fait (`corpus_montre`), et TOUTE annonce postérieure gelait les mesures jusqu'aux comptes
+    suivants (NVDA : 5 réponses nées périmées, note de qualité 0).
+
+    RÈGLE : la pièce fonde la réponse si sa nature satisfait celle que la question attend (un relevé
+    pour une mesure — les baux chiffrés du 8-K RVMD, #113 ter, restent dans la fondation), ou si la
+    réponse est une approximation (tout peut l'appuyer). Sinon elle ANNOTE : prouvée tirée du dépôt
+    ([P]), elle lève la péremption par ce dépôt, mais ne fait ni le rang ni la nature du chiffre."""
+    if approximation or nature_attendue is None:
+        return True
+    return nature_satisfait(nature_effective_de([nature_piece], approximation=False), nature_attendue)
 
 
 def provient_du_depot(entry: dict[str, Any], depot: str) -> bool:
@@ -712,7 +748,8 @@ def valider_pont_framework_answer(
             e = attendus[c.id]
             if (c.valeur is None) != (e.valeur is None) or (
                     c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
-                regle = d.calcul or (f"socle : {d.socle.formule} ({d.socle.periode})" if d.socle else
+                regle = d.calcul or ((f"socle : ratio maison {d.socle.ratio}" if d.socle.ratio else
+                                      f"socle : {d.socle.formule} ({d.socle.periode})") if d.socle else
                                      f"le plus élevé de {', '.join(d.le_plus_eleve_de)}")
                 faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({regle})")
         if faux:
@@ -726,10 +763,21 @@ def valider_pont_framework_answer(
     #    dans l'adresse de la pièce) — un article qui commente le dépôt n'est pas le dépôt ; et ces
     #    pièces sont dans la fondation, qui porte alors leur rang et leur nature (on ne lit pas hors de
     #    ce qu'on cite). Un effet non écrit est refusé par le contrat.
+    #    ⚠️ 2026-10-12 (« lire et annoter ») : seules les pièces qui FONDENT (`piece_fonde_la_reponse`)
+    #    doivent être dans la fondation ; une pièce qui annote une mesure n'y est pas, mais elle doit
+    #    exister au dossier — sinon sa provenance ne se prouverait pas.
     if answer.reponse is not None and answer.reponse.faits_posterieurs:
         fondation = set(answer.fondation.cited_entry_ids) if answer.fondation else set()
         for fait in answer.reponse.faits_posterieurs:
-            hors_fondation = sorted(set(fait.cited_entry_ids) - fondation)
+            hors_dossier = sorted(i for i in fait.cited_entry_ids if i not in entries)
+            if hors_dossier:
+                raise FrameworkAnswerRefused(
+                    f"le fait postérieur {fait.depot} est lu dans {hors_dossier}, absentes du dossier : une "
+                    "lecture se prouve sur des pièces que le dossier porte")
+            hors_fondation = sorted(
+                i for i in set(fait.cited_entry_ids) - fondation
+                if piece_fonde_la_reponse(entries[i].get("nature"), profil.get("nature_attendue"),
+                                          approximation=answer.statut == "approxime"))
             if hors_fondation:
                 raise FrameworkAnswerRefused(
                     f"le fait postérieur {fait.depot} est lu dans {hors_fondation}, absentes des citations de la "
@@ -781,15 +829,22 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     # Les chiffres LUS DANS LE SOCLE d'abord (2026-10-04) : ils ne lisent rien de l'encadré, et les
     # calculs et les chiffres retenus peuvent les lire. `socle` est la structure de la pièce au dossier ;
     # absente, le chiffre n'est pas établi et le DIT — jamais un relevé de substitution.
+    # Un RATIO MAISON (`socle.ratio`) se lit par son détenteur, dans l'unité du ratio ; un MONTANT
+    # (`socle.formule`), en $, se rend en M$.
+    from app.knowledge.ratios_maison import ratio_du_socle
     from app.knowledge.socle_comptes import valeur_du_socle
     for d in (x for x in systeme if x.socle is not None):
         if socle is None:
             ligne = ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
                 "non établi : le socle des comptes de l'émetteur n'est pas au dossier"))
         else:
-            v, periode = valeur_du_socle(socle, d.socle.formule, d.socle.periode)
+            if d.socle.ratio is not None:
+                v, periode = ratio_du_socle(socle, d.socle.ratio)
+            else:
+                v, periode = valeur_du_socle(socle, d.socle.formule, d.socle.periode)
+                v = None if v is None else v / 1e6
             ligne = (ChiffreCle(id=d.id, unite=d.unite, motif_absence=periode) if v is None else
-                     ChiffreCle(id=d.id, unite=d.unite, valeur=round(v / 1e6, 6), date_ou_periode=periode))
+                     ChiffreCle(id=d.id, unite=d.unite, valeur=round(v, 6), date_ou_periode=periode))
         sortie.append(ligne)
         par_id[d.id] = sortie[-1]
     # Les chiffres RETENUS d'abord (#105) : une formule peut les lire, eux ne lisent que des relevés.
@@ -818,8 +873,30 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
             sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
                 f"non calculable ({d.calcul}) : {', '.join(absents)} non établi(s) dans l'encadré")))
             continue
+        valeurs = {(n, 0): par_id[n].valeur for n in noms}
         try:
-            valeur = evaluer_formule(d.calcul, {(n, 0): par_id[n].valeur for n in noms})
+            # Un quotient sur un dénominateur NÉGATIF n'est pas un niveau (#44) : l'autonomie d'un
+            # émetteur qui GÉNÈRE de la trésorerie (NVDA : −127 006 M$ « consommés » sur douze mois)
+            # sortirait en mois négatifs. Non calculable, le dénominateur nommé avec sa valeur ; le nul
+            # est refusé par la grammaire elle-même.
+            negatifs = [(den, v) for den in denominateurs_de_la_formule(d.calcul)
+                        if (v := evaluer_formule(den, valeurs)) < 0]
+            if negatifs:
+                sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                    f"non calculable ({d.calcul}) : " + " ; ".join(
+                        f"{den} vaut {v:,.1f}".replace(",", " ") for den, v in negatifs)
+                    + " — un quotient sur un dénominateur négatif n'est pas un niveau (#44)")))
+                continue
+            # Un terme NOMMÉ négatif rend le résultat non significatif (déclaré par chiffre, 2026-10-12) :
+            # une couverture des intérêts sur une perte d'exploitation n'est pas un niveau.
+            ns = [(n, valeurs[(n, 0)]) for n in d.non_significatif_si_negatif if valeurs[(n, 0)] < 0]
+            if ns:
+                sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                    f"non significatif ({d.calcul}) : " + " ; ".join(
+                        f"{n} vaut {v:,.1f}".replace(",", " ") for n, v in ns)
+                    + " — un terme négatif retire son sens au résultat")))
+                continue
+            valeur = evaluer_formule(d.calcul, valeurs)
         except FormuleInexecutable as e:
             sortie.append(ChiffreCle(id=d.id, unite=d.unite, motif_absence=f"non calculable : {e}"))
             continue

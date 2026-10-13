@@ -103,7 +103,7 @@ mutations=(
 "$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
 "$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
 "$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
-"$YAML¦            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)¦¦la dette nette (qf_4) et l'autonomie (qf_7) sont CALCULÉES"
+"$YAML¦            calcul: tresorerie_mobilisable / consommation_retenue * 12   # en mois (#101)¦¦l'autonomie (qf_7) sont CALCULÉS"
 # ── #105 : le chiffre RETENU (le plus prudent) ──────────────────────────────────────────────────────────
 "$PONT¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if hors:¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if False:¦retenu parmi des chiffres qui ne sont pas relevés"
 "$PONT¦            if autres:¦            if False:¦retenu entre deux unités"
@@ -115,8 +115,15 @@ mutations=(
 "$PONT¦        if adosses and not f.lit_le_socle:¦        if False:¦ne LIT PAS le socle"
 "$PONT¦            inconnues = sorted(n for n in noms_de_la_formule(c.socle.formule) if n not in lignes_du_socle)¦            inconnues = []¦ABSENTE du gabarit"
 "$PONT¦            decales = sorted(f\"{n}[{k}]\" for n, k in references_de_la_formule(c.socle.formule) if k != 0)¦            decales = []¦DÉCALÉ (sa période"
-"$DEF¦        if self.socle is not None and self.unite != \"M$\":¦        if False:¦hors M$"
+"$DEF¦        if self.socle is not None and self.socle.formule is not None and self.unite != \"M$\":¦        if False:¦hors M$"
 "$YAML¦    lit_le_socle: false¦    lit_le_socle: true¦les autres frameworks, non"
+# ── [U] les ratios maison (2026-10-04) ──
+"$PONT¦                if r is None:¦                if False:¦ratio maison INCONNU"
+"$PONT¦                if r.unite != c.unite:¦                if False:¦AUTRE unité que la sienne"
+"$DEF¦        if (self.formule is None) == (self.ratio is None):¦        if False:¦porte AUSSI une formule"
+"$DEF¦        if self.ratio is not None and self.periode is not None:¦        if False:¦porte une période est refusé"
+"$DEF¦            if self.periode is None:¦            if False:¦SANS période est refusé"
+"$YAML¦            socle: {ratio: rendement_du_capital_employe_moyen}¦¦QUATRE ratios maison"
 )
 
 passes=0; ratees=0

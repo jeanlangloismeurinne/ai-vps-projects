@@ -3,6 +3,9 @@
 #   Internet --443--> coolify-proxy (TLS) --> exploration-science:80
 #
 # No backend, no secret, no `.env`: the content is bundled into the build.
+# Access: behind the hub's global login. Traefik forwardAuth asks the hub (`homepage:8000/auth/verify`)
+# whether the `hub_session` cookie (domain .jlmvpscode.duckdns.org) is valid; if not, the hub's
+# 302 to its login page reaches the browser, with this URL as `next`. Auth comes BEFORE gzip.
 # Deploy: infrastructure/compose-deploy.sh exploration-science -m "..." -f "..."
 
 name: exploration-science
@@ -26,6 +29,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=coolify
+      - traefik.http.middlewares.xsauth.forwardauth.address=http://homepage:8000/auth/verify
       - traefik.http.middlewares.xsgzip.compress=true
       - traefik.http.middlewares.xsredirect.redirectscheme.scheme=https
       - traefik.http.routers.xs-http.entryPoints=http
@@ -33,7 +37,7 @@ services:
       - traefik.http.routers.xs-http.rule=Host(`explorer.jlmvpscode.duckdns.org`)
       - traefik.http.routers.xs-http.service=xs
       - traefik.http.routers.xs-https.entryPoints=https
-      - traefik.http.routers.xs-https.middlewares=xsgzip
+      - traefik.http.routers.xs-https.middlewares=xsauth,xsgzip
       - traefik.http.routers.xs-https.rule=Host(`explorer.jlmvpscode.duckdns.org`)
       - traefik.http.routers.xs-https.service=xs
       - traefik.http.routers.xs-https.tls=true

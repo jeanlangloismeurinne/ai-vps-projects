@@ -231,7 +231,11 @@ _asm = dict(question=Q["qf_6"], entries=ENTRIES, **_entete)
 
 
 # L'ENCADRÉ que `qf_6` déclare dans le référentiel réel (4 bis) — lu, jamais recopié.
-ENC_QF6 = [{"id": "retraitements_discretionnaires", "unite": "M$", "valeur": 42.0, "date_ou_periode": "exercice 2025"}]
+# Depuis le 2026-10-12, qf_6 RELÈVE trois sommes (exercice clos, cumul en cours, même cumul l'an passé) ;
+# les douze mois et la part sont calculés par le code.
+ENC_QF6 = [{"id": c.id, "unite": c.unite, "valeur": v, "date_ou_periode": p}
+           for c, v, p in zip([c for c in Q["qf_6"].chiffres_cles if not c.calcule_par_le_systeme],
+                              (42.0, 20.0, 12.0), ("exercice 2025", "semestre 2026", "semestre 2025"))]
 # qf_4 ne RELÈVE plus rien (2026-10-04) : sa dette brute et sa trésorerie se lisent dans le socle des
 # comptes, sa dette nette se calcule. Son encadré rendu par le modèle est donc vide.
 ENC_QF4 = [{"id": c.id, "unite": c.unite, "valeur": 0.0, "date_ou_periode": "au 2026-06-30"}
@@ -314,15 +318,22 @@ _dem = {q["id"]: q.get("chiffres_cles_demandes") for q in CTX["questions"]}
 check("le contexte DEMANDE, par question, les chiffres RELEVÉS déclarés (id et unité imposés)",
       [(c["id"], c["unite"]) for c in (_dem.get("qf_6") or [])]
       == [(c.id, c.unite) for c in Q["qf_6"].chiffres_cles if not c.calcule_par_le_systeme]
-      and len(_dem.get("qf_6") or []) == 1,
+      and len(_dem.get("qf_6") or []) == 3,
       f"→ {_dem.get('qf_6')}")
+_dem7 = {c["id"]: c.get("facultatif") for c in (_dem.get("qf_7") or [])}
+check("le contexte MARQUE le chiffre facultatif (qf_7 : la prévision de la direction) — et lui seul",
+      _dem7.get("consommation_prevue") is True
+      and [i for i, f in _dem7.items() if f is True] == ["consommation_prevue"]
+      and all(f is False for i, f in _dem7.items() if i != "consommation_prevue"), f"→ {_dem7}")
 check("… et ne demande RIEN que le socle des comptes porte (qf_4 : dette brute et trésorerie se lisent)",
       _dem.get("qf_4") == [], f"→ {_dem.get('qf_4')}")
 _CTX_S = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, ENTRIES_S)
 _lus = {q["id"]: q.get("chiffres_lus_dans_le_socle") for q in _CTX_S["questions"]}.get("qf_4") or []
 check("le contexte MONTRE les chiffres lus dans le socle, avec leur valeur exacte et la pièce (#7)",
       [(c.get("id"), round(c["valeur"], 3) if c.get("valeur") is not None else None, c.get("piece")) for c in _lus]
-      == [("dette_brute", 1035.976, 7), ("tresorerie_et_placements", 3937.969, 7)], f"→ {_lus}")
+      == [("dette_brute", 1035.976, 7), ("tresorerie_et_placements", 3937.969, 7),
+          ("resultat_exploitation_douze_mois", -1627.249, 7), ("charges_interets_douze_mois", 59.342, 7)],
+      f"→ {_lus}")
 check("… et, sans socle au dossier, les montre NON ÉTABLIS avec leur motif (jamais un zéro)",
       all(c.get("valeur") is None and "pas au dossier" in (c.get("periode_ou_motif") or "")
           for c in ({q["id"]: q.get("chiffres_lus_dans_le_socle") for q in CTX["questions"]}.get("qf_4") or [{}])),
@@ -330,14 +341,21 @@ check("… et, sans socle au dossier, les montre NON ÉTABLIS avec leur motif (j
 # #101 — la dette nette est CALCULÉE par le code : elle n'est pas demandée, elle est annoncée avec sa formule.
 _calc = {q["id"]: q.get("chiffres_calcules_par_le_systeme") for q in CTX["questions"]}
 check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés, formule comprise (#101)",
-      [c["id"] for c in (_calc.get("qf_4") or [])] == ["dette_nette"]
+      [c["id"] for c in (_calc.get("qf_4") or [])] == ["dette_nette", "couverture_des_interets"]
       and (_calc.get("qf_4") or [{}])[0].get("formule") == "dette_brute - tresorerie_et_placements"
       and "dette_nette" not in [c["id"] for c in (_dem.get("qf_4") or [])],
       f"→ demandés {_dem.get('qf_4')} / calculés {_calc.get('qf_4')}")
 _a6 = A.assembler_answer(brute(), **_asm)
 check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre réécrit par le code)",
-      [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles] == ENC_QF6,
+      [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles
+       if c.id in {e["id"] for e in ENC_QF6}] == ENC_QF6,
       f"→ {_a6.reponse.chiffres_cles}")
+_a6c = {c.id: c for c in _a6.reponse.chiffres_cles}
+check("… et le code en tire les DOUZE MOIS (42 + 20 − 12 = 50), la part restant non établie sans socle au dossier",
+      len(ENC_QF6) == 3 and getattr(_a6c.get("retraitements_discretionnaires"), "valeur", None) == 50.0
+      and "part_des_retraitements" in _a6c and _a6c["part_des_retraitements"].valeur is None
+      and "resultat_net_douze_mois" in (_a6c["part_des_retraitements"].motif_absence or ""),
+      f"→ {_a6c.get('retraitements_discretionnaires')} / {_a6c.get('part_des_retraitements')}")
 leve("un `sans_fondement` qui porte un encadré est refusé (un manque qui donne ses chiffres est une réponse)",
      lambda: A.AnalysteReponse(question_id="qf_6", statut="sans_fondement", verbatim="il manque le détail",
                                chiffres_cles=ENC_QF6), ValidationError)
@@ -440,6 +458,34 @@ try:
 except Exception as _e:  # noqa: BLE001
     _p_ok = f"{type(_e).__name__}: {_e}"[:200]
 check("… et la réponse qui a lu les baux dans le 8-K passe le pont réel [P]", _p_ok == "ok", f"→ {_p_ok}")
+# « Lire et annoter » (arbitrage du 2026-10-12) — NVDA : le 8-K du rachat de Hugging Face (#865, une
+# LECTURE de dépôt, nature `interpretation`) périmait cinq mesures que l'analyste n'avait pas le droit de
+# lire. Pièce 7 copiée du réel (#865 : tier A, interpretation, tirée du dépôt), rattachée au même dépôt.
+_E_ANNOT = {**_E_BAUX, 7: {"reliability_tier": "A", "nature": "interpretation", "title": "lecture du 8-K",
+                           "content": "accord définitif de rachat, prix ~11,9 Md$ en numéraire",
+                           "source_type": "edgar_official", "source_date": "2026-09-02",
+                           "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526377362/ex99.htm"}}
+_fm = A.faits_montrables([_BAUX], _E_ANNOT, {6: _E_ANNOT[6]})
+check("une pièce du dépôt ABSENTE du corpus montré est jointe à lire, avec son contenu (lire et annoter)",
+      len(_fm) == 1 and _fm[0]["pieces_du_depot"] == [6, 7]
+      and [x["entry_id"] for x in _fm[0].get("pieces_a_lire_seulement", [])] == [7]
+      and _fm[0]["pieces_a_lire_seulement"][0]["contenu"] == _E_ANNOT[7]["content"], f"→ {_fm}")
+check("… et un fait dont toutes les pièces sont montrées n'en joint aucune à part",
+      "pieces_a_lire_seulement" not in A.faits_montrables([_BAUX], _E_ANNOT, _E_ANNOT)[0])
+_ann = A.assembler_answer(A.AnalysteReponse(
+    question_id="qf_4", statut="repondu", verbatim="dette convertible", sens="tresorerie_nette",
+    cited_entry_ids=[1, 6], chiffres_cles=_ENC_RVMD[:2],
+    faits_posterieurs=[{"depot": "0001193125-26-377362", "effet": "rachat payé en numéraire, sans effet sur la dette",
+                        "cited_entry_ids": [6, 7]}]), question=Q["qf_4"], entries=_E_ANNOT, **_entete)
+check("sur une MESURE, la pièce de texte d'un fait lu ANNOTE sans fonder : hors fondation, nature intacte",
+      _ann.fondation.cited_entry_ids == [1, 6] and _ann.fondation.nature_effective == "mesure",
+      f"→ {_ann.fondation.cited_entry_ids} {_ann.fondation.nature_effective}")
+try:
+    valider_pont_framework_answer(_ann, questions=question_profiles(F), entries=_E_ANNOT)
+    _p_ann = "ok"
+except Exception as _e:  # noqa: BLE001
+    _p_ann = f"{type(_e).__name__}: {_e}"[:200]
+check("… et cette réponse annotée passe le pont réel ([P] et [E])", _p_ann == "ok", f"→ {_p_ann}")
 check("la consigne de l'analyste ENSEIGNE la lecture des faits postérieurs",
       "faits_posterieurs_a_lire" in A._ANALYSTE_SYSTEM_PROMPT and "pieces_du_depot" in A._ANALYSTE_SYSTEM_PROMPT
       and "effet" in A._ANALYSTE_SYSTEM_PROMPT)

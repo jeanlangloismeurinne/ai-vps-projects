@@ -111,7 +111,7 @@ declare -A EXPECT=(
   [portfolio-tracker]='^200$'
   [portfolio-backend]='^200$'
   [portfolio-frontend]='^200$'
-  [exploration-science]='^200$'
+  [exploration-science]='^302$'   # derrière le login du hub (forwardAuth) : sans cookie, 302 attendu
 )
 # Conteneurs à attendre « running (et healthy si un healthcheck est déclaré) » avant de sonder.
 declare -A CONTAINERS=(

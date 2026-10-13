@@ -36,13 +36,23 @@ mutations=(
 "$SRC¦    valider_pont_collection_plan(plan, fichier=fichier, questions=questions)¦    None  # pont retiré¦passe le plan au pont"
 # ── l'identité de l'émetteur (lot 7, 2026-09-26 — le plan RVMD rédigé sur Ryvu) ──────────────────
 "$SRC¦            \"raison_sociale\": emetteur.raison_sociale,¦            \"raison_sociale\": emetteur.symbole,¦porte la raison sociale ET le CIK"
-"$SRC¦    *, emetteur: IdentiteEmetteur, questions:¦    *, emetteur: IdentiteEmetteur = IdentiteEmetteur(\"?\", 0, \"?\"), questions:¦REFUSE de se construire sans identité"
+"$SRC¦    *, emetteur: IdentiteEmetteur, horloge:¦    *, emetteur: IdentiteEmetteur = IdentiteEmetteur(\"?\", 0, \"?\"), horloge:¦REFUSE de se construire sans identité"
 "$SRC¦JAMAIS CELLE QUE SUGGÈRE LE \"¦\"¦la consigne dit que l'entreprise"
 "$SRC¦        emetteur = await identite_de_l_emetteur(conn, ticker_id)¦        emetteur = IdentiteEmetteur(ticker_id, 0, ticker_id)¦AVANT la dépense modèle"
 "$SRC¦        fichier, framework_id, archetype, ticker_id, emetteur=emetteur,¦        fichier, framework_id, archetype, ticker_id, emetteur=IdentiteEmetteur(ticker_id, 0, ticker_id),¦et la passe au contexte"
 "app/knowledge/edgar_feed.py¦    return await resolve_identite(await symbole_de_marche(conn, ticker_id))¦    return await resolve_identite(ticker_id)¦passe par \`symbole_de_marche\`"
 # #113 — la consigne ne dit plus que « quatre derniers trimestres » ⟹ douze_mois_glissants.
 "$SRC¦\`douze_mois_glissants\` — jamais \`exercice_clos\`.¦\`douze_mois_glissants\`.¦ENSEIGNE la période"
+# #120 — l'horloge du traducteur (plan #221 : 19/19 lignes ancrées sur le 10-K, qf_8 née périmée).
+"$SRC¦                horloge.derniere_cloture.isoformat() if horloge.derniere_cloture else None),¦                None),¦porte la clôture des derniers comptes publiés"
+"$SRC¦            \"date_du_jour\": horloge.date_du_jour.isoformat(),¦            \"date_du_jour\": None,¦porte la date du jour"
+"$SRC¦\"Clôture des derniers comptes publiés INCONNUE du système¦\"Clôture des derniers comptes publiés pas connue du système¦clôture inconnue : la clé"
+"$SRC¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan,¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan = HorlogeDuPlan(date(2000, 1, 1), None),¦REFUSE de se construire sans horloge"
+"$SRC¦    \"RÈGLE DE FRAÎCHEUR — tu n'as¦    \"RÈGLE — tu n'as¦consigne enseigne la RÈGLE"
+"$SRC¦Cela vaut AUSSI pour une clause¦Cela vaut pour une clause¦consigne enseigne la RÈGLE"
+"$SRC¦        horloge = await horloge_du_plan(conn, ticker_id, fichier)¦        horloge = HorlogeDuPlan(date.today(), None)¦lit l'horloge AVANT"
+"$SRC¦emetteur=emetteur, horloge=horloge,¦emetteur=emetteur, horloge=HorlogeDuPlan(date.today(), None),¦contexte du modèle (#120)"
+"$SRC¦derniere_cloture=derniere_cloture_publiee(ancre))¦derniere_cloture=None)¦l'horloge du plan est celle"
 )
 
 passes=0; ratees=0

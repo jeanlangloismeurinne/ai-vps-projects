@@ -80,6 +80,7 @@ mutations=(
 "$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=encadre[:0],¦entre TEL QUEL dans la réponse"
 # ── #101 : les chiffres CALCULÉS sont au code, et le renvoi unique ───────────────────────────────
 "$SRC¦                for c in q.chiffres_cles if not c.calcule_par_le_systeme¦                for c in q.chiffres_cles¦ne demande RIEN que le socle"
+"$SRC¦                 \"facultatif\": c.facultatif}¦                 \"facultatif\": False}¦MARQUE le chiffre facultatif"
 "$SRC¦                        chiffres_cles=encadre,¦                        chiffres_cles=list(brute.chiffres_cles),¦ÉCRIT la dette nette calculée"
 "$SRC¦    \"Forme d'une ligne : ¦    \"Exemple : {\\\"valeur\\\": -328.0}. Forme d'une ligne : ¦AUCUNE valeur chiffrée recopiable"
 "$SRC¦        if a_reprendre:¦        if False:¦refusée puis corrigée au renvoi est ACQUISE"
@@ -101,13 +102,16 @@ mutations=(
 "$SRC¦        if pieces:¦        if True:¦tait le fait dont aucune pièce"
 "$SRC¦            if self.faits_posterieurs:¦            if False:¦qui déclare un fait lu est refusé"
 "$SRC¦                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),¦                        sens=brute.sens),¦l'assemblage recopie les faits lus"
-"$SRC¦            \"faits_posterieurs_a_lire\": faits_montrables((faits or {}).get(q.id, []), citables),¦            \"faits_posterieurs_a_lire\": faits_montrables([], citables),¦le contexte montre à qf_4 le fait lisible"
+"$SRC¦            \"faits_posterieurs_a_lire\": faits_montrables((faits or {}).get(q.id, []), lisibles, citables),¦            \"faits_posterieurs_a_lire\": faits_montrables([], lisibles, citables),¦le contexte montre à qf_4 le fait lisible"
 # #113 bis — le filtre de nature retiré : l'interprétation reste montrée sur une question de mesure fermée à l'approximation.
 "$SRC¦    if \"approxime\" in ouverts:\n        return citables¦    if True:\n        return citables  # mutation¦l'interprétation #789 n'est PAS montrée"
 # #113 bis — le filtre n'est plus appliqué au point de lecture (contexte du modèle).
-"$SRC¦        citables = corpus_montre(q, citables, ouverts)¦        pass  # mutation¦le CONTEXTE envoyé au modèle"
+"$SRC¦        lisibles, citables = citables, corpus_montre(q, citables, ouverts)¦        lisibles = citables  # mutation¦le CONTEXTE envoyé au modèle"
 # #113 ter — les pièces du fait postérieur lu ne rejoignent plus la fondation.
-"$SRC¦        + [i for fp in brute.faits_posterieurs for i in fp.cited_entry_ids]¦        + []  # mutation¦entrent d'office dans la fondation"
+"$SRC¦           if piece_fonde_la_reponse(entries.get(i, {}).get(\"nature\"), question.nature_attendue,¦           if False and piece_fonde_la_reponse(entries.get(i, {}).get(\"nature\"), question.nature_attendue,¦entrent d'office dans la fondation"
+# « Lire et annoter » (2026-10-12) — toute pièce d'un fait lu refondée, ou les pièces de texte plus jointes à lire.
+"$SRC¦           if piece_fonde_la_reponse(entries.get(i, {}).get(\"nature\"), question.nature_attendue,¦           if True or piece_fonde_la_reponse(entries.get(i, {}).get(\"nature\"), question.nature_attendue,¦ANNOTE sans fonder"
+"$SRC¦            if a_lire:¦            if False:¦jointe à lire, avec son contenu"
 # Le socle des comptes (2026-10-04)
 "$SRC¦        + ([socle[0]] if socle and lus_au_socle else [])))¦        + []))  # mutation¦entre D'OFFICE dans la fondation"
 "$SRC¦            \"chiffres_lus_dans_le_socle\": chiffres_du_socle(q, entries),¦            \"chiffres_lus_dans_le_socle\": [],¦MONTRE les chiffres lus dans le socle"

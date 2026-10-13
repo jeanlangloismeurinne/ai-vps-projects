@@ -73,7 +73,11 @@ Un `IngestionJob` + le texte du segment :
       "lang": "en",
       "source_type": "edgar_official",
       "source_url": null,
-      "source_date": "2026-02-26",
+      "portee_temporelle": "constatee",
+      "date_du_document": "2026-02-26",
+      "date_du_fait": "2026-01-25",
+      "periode_visee": null,
+      "datation_motif": null,
       "fiscal_period": "FY-2026",
       "reliability_score": 0.95,
       "reliability_tier": "A",
@@ -113,6 +117,8 @@ Un `IngestionJob` + le texte du segment :
    ce qu'une entry couvre est une propriété du lien entre elle et une question, pas de l'entry, et
    ce lien est établi en aval — pas déclaré par toi. Le contrat refuse tout champ inconnu : une
    seule clef en trop fait rejeter **l'entry entière**, pas seulement le champ.
+   **Plus de `source_date` non plus** (retiré le 2026-09-23) : une entry se date par `portee_temporelle` +
+   `date_du_document` + `date_du_fait` (ou `periode_visee` si prospective, `datation_motif` si indatable).
 8. **`fiscal_period`** obligatoire sur toute entry rattachée à une période (propagé pour le
    vieillissement −0.05/an).
 

@@ -65,6 +65,9 @@ mutations=(
 # ── #103 : un fait postérieur se lit DANS le dépôt (pont [P]) ; l'effet s'écrit (contrat) ──────────
 "$PONT¦            if not any(provient_du_depot(entries.get(i, {}), fait.depot) for i in fait.cited_entry_ids):¦            if False:¦lu dans un ARTICLE qui parle du dépôt"
 "$PONT¦            if hors_fondation:¦            if False:¦une lecture hors des citations"
+# « Lire et annoter » (2026-10-12) — une pièce de texte annote une mesure ; une pièce hors dossier est refusée.
+"$PONT¦    if approximation or nature_attendue is None:¦    if True:¦annote hors de la fondation"
+"$PONT¦            if hors_dossier:¦            if False:¦ABSENTE du dossier"
 "$PONT¦    return bool(depot) and depot.replace(\"-\", \"\") in str(entry.get(\"source_url\") or \"\")¦    return bool(depot)¦lu dans un ARTICLE qui parle du dépôt"
 "$SRC¦    effet: str = Field(min_length=20)¦    effet: str = Field(min_length=1)¦un effet non écrit"
 "$SRC¦        if len(set(depots)) != len(depots):¦        if False:¦le même dépôt lu deux fois"
@@ -74,6 +77,13 @@ mutations=(
 "$PONT¦        obligatoires_absents = [n for n in absents if n not in facultatifs]¦        obligatoires_absents = []¦le constaté OBLIGATOIRE absent"
 "$PONT¦    ids_systeme = {d.id for d in systeme}¦    ids_systeme = {d.id for d in systeme if d.calcul}¦une ligne fournie pour le chiffre RETENU est écartée"
 "$PONT¦        par_id[d.id] = ligne¦        pass¦l'autonomie se calcule sur le chiffre RETENU"
+# #44 dans l'encadré : un quotient sur un dénominateur NÉGATIF publierait une autonomie en mois négatifs (NVDA).
+"$PONT¦            if negatifs:¦            if False:¦dénominateur NÉGATIF"
+# 2026-10-12 — un terme NOMMÉ négatif rend le résultat non significatif (couverture des intérêts sur une perte).
+"$PONT¦            if ns:¦            if False:¦sur une PERTE d'exploitation est « non significatif »"
+"$PONT¦if valeurs[(n, 0)] < 0]¦if valeurs[(n, 0)] > 0]¦sur une PERTE d'exploitation est « non significatif »"
+"app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦sur un chiffre RELEVÉ est refusé"
+"app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦nomme un terme absent du calcul"
 )
 
 source "$(dirname "$0")/_negatif.sh"

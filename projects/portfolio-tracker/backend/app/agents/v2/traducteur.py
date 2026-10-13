@@ -36,6 +36,8 @@ l'exige ; sa resynchro en `agent_prompts` viendra avec le câblage runtime (#19/
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
+from datetime import date
 from typing import Any, Optional
 
 from pydantic import Field
@@ -58,6 +60,8 @@ __all__ = [
     "TraducteurInapplicable",
     "questions_applicables",
     "contexte_traducteur",
+    "HorlogeDuPlan",
+    "horloge_du_plan",
     "traduire",
 ]
 
@@ -66,6 +70,25 @@ class TraducteurInapplicable(Exception):
     """La demande de traduction n'a pas d'objet AVANT tout appel modèle : framework ou archétype
     inconnu du référentiel. Refusé ici, pas dans le pont (#40) — on ne paie pas un appel pour
     apprendre ce qu'une lecture du référentiel dit gratuitement."""
+
+
+@dataclass(frozen=True)
+class HorlogeDuPlan:
+    """CE QUE LE TRADUCTEUR NE PEUT PAS SAVOIR SEUL (#120) — la date du jour et la clôture des derniers
+    comptes publiés, calculées par le CODE et montrées au modèle.
+
+    Le défaut mesuré (plan #221, NVDA × qualite_financiere, 2026-10-12) : 19 lignes sur 19 ancrées
+    « clôture du dernier exercice fiscal », source « 10-K », alors que le 10-Q du trimestre clos le
+    2026-07-26 était déposé depuis six semaines. Les chiffres s'en sont sortis par le socle (qui lit
+    le dernier dépôt) ; la revue des clauses (qf_8) non : ses pièces — le 10-K de janvier, le
+    prospectus de juin — précèdent la clôture, et la réponse naît périmée à chaque trimestre que les
+    résultats rouvrent. Un modèle sans date fournie date « aujourd'hui » à sa coupure.
+
+    `derniere_cloture` vaut `None` quand aucun communiqué de résultats ne s'est rattaché à un rapport
+    (`derniere_cloture_publiee`, détenteur unique) : le contexte le DIT, il ne la devine pas.
+    """
+    date_du_jour: date
+    derniere_cloture: Optional[date]
 
 
 class TraducteurSortie(Strict):
@@ -93,7 +116,8 @@ def questions_applicables(
 
 def contexte_traducteur(
     fichier: FrameworksFile, framework_id: str, archetype: str, ticker_id: str,
-    *, emetteur: IdentiteEmetteur, questions: Optional[frozenset[str]] = None,
+    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan,
+    questions: Optional[frozenset[str]] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free par construction.
 
@@ -101,11 +125,15 @@ def contexte_traducteur(
     seul SIGLE, et le modèle a planifié la défendabilité de RVMD sur les produits de Ryvu Therapeutics
     (RVU120, CDK8/19). Un sigle n'est pas une identité ; la raison sociale et le CIK SEC en sont une.
 
-    Ne porte QUE : l'entreprise (sigle, raison sociale, CIK), l'identité + la méthodologie du framework, l'archétype, et pour chaque
+    Ne porte QUE : l'entreprise (sigle, raison sociale, CIK), le calendrier (date du jour, clôture des
+    derniers comptes publiés — #120), l'identité + la méthodologie du framework, l'archétype, et pour chaque
     question applicable son énoncé, sa variable d'archétype, et ses ingrédients À COLLECTER (`id`, `libelle`,
     `essentiel`). **Aucun `plancher_tier`, aucun `nature_attendue`** : ce ne sont pas des leviers du
     traducteur (#59). `essentiel` reste montré — c'est une propriété du framework (quels ingrédients
     la question ne peut pas se passer), pas un curseur de « combien de preuve suffit ».
+
+    `horloge` est REQUISE, sans défaut, pour la même raison que `emetteur` (#120) : sans elle le
+    modèle planifie sur le rapport annuel par réflexe, et ce qu'il fait collecter naît périmé.
 
     `questions` (optionnel) RESTREINT le contexte à un sous-ensemble d'ids — le cas du BOUCLAGE (lot
     5) : rejouer UN renvoi ne re-planifie pas tout le framework. Un id hors des questions applicables
@@ -133,6 +161,18 @@ def contexte_traducteur(
             "raison_sociale": emetteur.raison_sociale,
             "symbole": emetteur.symbole,
             "cik_sec": emetteur.cik,
+        },
+        "calendrier": {
+            "date_du_jour": horloge.date_du_jour.isoformat(),
+            "cloture_des_derniers_comptes_publies": (
+                horloge.derniere_cloture.isoformat() if horloge.derniere_cloture else None),
+            "lecture": (
+                f"Les derniers comptes publiés par l'entreprise couvrent la période close le "
+                f"{horloge.derniere_cloture.isoformat()} : c'est le rapport périodique qui la couvre "
+                "qu'on lit d'abord."
+                if horloge.derniere_cloture else
+                "Clôture des derniers comptes publiés INCONNUE du système (aucun communiqué de "
+                "résultats rattaché à un rapport) : ne la devine pas."),
         },
         "framework": {"id": fw.id, "libelle": fw.libelle, "methodologie": fw.methodologie},
         "archetype": archetype,
@@ -194,19 +234,29 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "  • `inobtenable` — aucune source connue ne produit cet ingrédient pour cette entreprise. "
     "Remplis alors `motif` (POURQUOI, en une phrase — il deviendra un mandat de recherche), et "
     "laisse `metrique`/`source_pressentie`/`ancre`/`poste`/`periode` vides.\n\n"
-    "LA PÉRIODE — `periode`, OBLIGATOIRE sur une ligne `traduit`, une valeur parmi quatre. C'est toi qui "
+    "LA PÉRIODE — `periode`, OBLIGATOIRE sur une ligne `traduit`, une valeur parmi cinq. C'est toi qui "
     "la fixes, parce que toi seul lis la question ; le système la respecte à la lettre :\n"
     "  • `douze_mois_glissants` — un FLUX (trésorerie consommée ou générée, charges, chiffre d'affaires) "
-    "mesuré sur les quatre derniers trimestres publiés. C'est la bonne période dès que la question porte "
-    "sur le rythme ACTUEL d'une société (consommation de trésorerie, autonomie, niveau d'activité "
-    "récent) : l'exercice clos peut avoir un an de retard sur une société qui accélère.\n"
+    "mesuré sur les quatre derniers trimestres publiés, RECONSTRUIT par le système depuis des concepts "
+    "comptables de flux qu'il agrège lui-même. C'est la bonne période dès que la question porte sur le "
+    "rythme ACTUEL d'une société (consommation de trésorerie, autonomie, niveau d'activité récent) : "
+    "l'exercice clos peut avoir un an de retard sur une société qui accélère.\n"
     "  • `exercice_clos` — un flux sur le dernier exercice publié, quand la question raisonne par "
     "EXERCICE (une progression d'une année sur l'autre, une moyenne sur plusieurs exercices).\n"
     "  • `dernier_bilan` — un SOLDE à la dernière date de bilan (trésorerie, dette, capitaux propres).\n"
     "  • `sans_periode` — ni flux ni solde : une politique comptable, une clause de contrat, une "
     "prévision de la direction, un texte.\n"
+    "  • `cumul_publie` — un cumul TEL QUE L'ÉMETTEUR LE PUBLIE dans son dernier dépôt intermédiaire "
+    "(le semestre écoulé, par exemple), AVEC son comparatif à la MÊME période l'an dernier, dans les "
+    "mêmes colonnes du même tableau — JAMAIS recalculé. C'est la bonne période pour un tableau de "
+    "rapprochement GAAP/non-GAAP, une note de segment, ou tout chiffre que l'émetteur ne publie QUE "
+    "sous forme cumulée : contrairement à `douze_mois_glissants` (que LE SYSTÈME reconstruit lui-même "
+    "depuis des concepts bruts), un cumul publié n'existe que dans la forme où l'émetteur le dépose — "
+    "lis-le, ne le recalcule jamais.\n"
     "Si ta `metrique` dit « sur les quatre derniers trimestres » ou « sur douze mois », `periode` est "
-    "`douze_mois_glissants` — jamais `exercice_clos`.\n\n"
+    "`douze_mois_glissants` — jamais `exercice_clos`. Si ta `metrique` demande un rapprochement ou un "
+    "cumul que seul l'émetteur publie (semestre, trimestre à trimestre), `periode` est `cumul_publie` — "
+    "jamais `douze_mois_glissants`, qui ferait recalculer ce qui doit être lu tel quel.\n\n"
     "NOMMER LE POSTE COMPTABLE, QUAND IL Y EN A UN. Les émetteurs américains déposent auprès de la "
     "SEC des états financiers balisés : chaque ligne du compte de résultat, du bilan et du tableau de "
     "flux y porte une étiquette normalisée, et se lit alors sans interprétation ni recherche. Voici "
@@ -273,6 +323,18 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "société très endettée. Une bonne ancre est celle par rapport à laquelle « ce chiffre est-il "
     "encore d'actualité ? » a la réponse la plus informative. Ne mets pas « clôture du trimestre » "
     "par réflexe si un événement plus parlant existe.\n\n"
+    "RÈGLE DE FRAÎCHEUR — tu n'as pas d'horloge : le contexte te donne `calendrier`, calculé par le "
+    "système (la date du jour et la CLÔTURE DES DERNIERS COMPTES PUBLIÉS). Ne date rien toi-même. Une "
+    "pièce qui décrit la situation AVANT cette clôture naîtra périmée. Donc, pour tout ingrédient qui se "
+    "lit dans les dépôts de l'entreprise : `source_pressentie` nomme d'abord LE RAPPORT PÉRIODIQUE QUI "
+    "COUVRE CETTE CLÔTURE (le rapport trimestriel du trimestre, ou le rapport annuel si cette clôture est "
+    "celle de l'exercice), avec sa date — un rapport annuel plus ancien ne vient qu'en complément ; et, "
+    "sauf événement plus parlant (règle d'ancrage), `ancre` nomme cette clôture DATÉE, jamais « la "
+    "clôture du dernier exercice » par réflexe. Cela vaut AUSSI pour une clause, une politique ou un "
+    "texte (`sans_periode`) : le contrat d'origine peut être ancien, mais son état à jour — "
+    "l'engagement toujours en vigueur, son respect déclaré à la clôture, un changement — se lit dans le "
+    "dernier rapport périodique, et c'est lui qu'on demande. Seule exception : `exercice_clos`, dont les "
+    "chiffres sont ceux du rapport annuel de l'exercice. Clôture inconnue (`null`) : ne la devine pas.\n\n"
     "RÈGLE ABSOLUE — un ingrédient marqué `essentiel: true` DOIT avoir une ligne, `traduit` ou "
     "`inobtenable`, JAMAIS aucune. Un essentiel omis fait rejeter tout le plan : c'est le mode de "
     "panne qu'on combat (un dossier qui paraît complet en ayant tu ce qu'il ne trouvait pas). Un "
@@ -314,6 +376,17 @@ async def _resolve_traducteur_agent() -> ResolvedAgent:
     )
 
 
+async def horloge_du_plan(conn, ticker_id: str, fichier: FrameworksFile) -> HorlogeDuPlan:
+    """La date du jour et la clôture des derniers comptes publiés (#120), lues sur l'horloge MÊME qui
+    servira les réponses (`horloge_du_titre`, détenteur unique — #46) : le plan vise le dépôt contre
+    lequel la réponse sera jugée, pas un autre. Flux injoignable ⟹ clôture `None`, dite au modèle."""
+    from app.agents.v2.parcours import horloge_du_titre
+    from app.knowledge.evenements import derniere_cloture_publiee
+
+    ancre, _notes = await horloge_du_titre(conn, ticker_id, fichier)
+    return HorlogeDuPlan(date_du_jour=date.today(), derniere_cloture=derniere_cloture_publiee(ancre))
+
+
 async def traduire(
     ticker_id: str,
     framework_id: str,
@@ -338,8 +411,9 @@ async def traduire(
     # rédigé sur un sigle ambigu collecte pour une autre société (Ryvu pour RVMD, 2026-09-25).
     async with get_db_session() as conn:
         emetteur = await identite_de_l_emetteur(conn, ticker_id)
+        horloge = await horloge_du_plan(conn, ticker_id, fichier)
     contexte = contexte_traducteur(
-        fichier, framework_id, archetype, ticker_id, emetteur=emetteur,
+        fichier, framework_id, archetype, ticker_id, emetteur=emetteur, horloge=horloge,
         questions=questions)  # (1)+(2), lève tôt
     agent = agent or await _resolve_traducteur_agent()
 

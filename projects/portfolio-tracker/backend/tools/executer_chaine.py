@@ -32,7 +32,9 @@ Usage :
 
 `--sans-collecte` saute le maillon 1 (aucune dépense traducteur/web) et fait répondre l'analyste
 sur le corpus DÉJÀ en base : c'est le passage le moins cher pour voir si la seconde moitié tient.
-`--questions=qf_4[,qf_6]` n'écrit que ces questions ; les autres gardent leur réponse en vigueur.
+`--questions=qf_4[,qf_6]` restreint LE PLAN (sans collection) ET l'écriture à ces questions ; les
+autres gardent leur réponse en vigueur. (Avant #118 : seule l'analyse était restreinte, la collecte
+replanifiait et recollectait les 8 questions du framework même pour relancer une seule.)
 `--refaire-carte` fait refaire la carte d'appariement même à jour du dernier dépôt (geste d'analyste,
 quand la méthode d'appariement s'est enrichie — ex. les douze mois glissants du 2026-10-03).
 
@@ -130,13 +132,20 @@ async def main() -> int:
             _titre(1, "collecte SAUTÉE (--sans-collecte) — corpus déjà en base")
         else:
             _titre(1, "traducteur → plan → collecte → liens de couverture + mandats collecteur")
+            # `--questions=` restreint aussi la COLLECTE (#118) : sans ça, un passage scopé sur une
+            # seule question (relance d'un mandat « 402 ») replanifie et recollecte les 8 questions
+            # du framework. `executer_collecte_framework`/`traduire` savent déjà le faire (lot 5,
+            # bouclage) — seul ce passage ne le branchait pas.
             rapport = await executer_collecte_framework(
-                ticker_id, framework_id, archetype, refaire_carte=refaire_carte)
+                ticker_id, framework_id, archetype, refaire_carte=refaire_carte,
+                questions=perimetre)
             ecrits["collection_plan_id"] = rapport["plan_id"]
             ecrits["liens"] = len(rapport["liens"])
             ecrits["mandats_collecteur"] = len(rapport["mandats"])
             print(f"  plan #{rapport['plan_id']} · carte {rapport['carte_etat']} "
                   f"(dépôt {rapport['carte_depot_courant']}, {rapport['carte_lignes']} ligne(s))")
+            if rapport.get("carte_motif"):
+                print(f"  ⚠️ carte de repli — motif : {rapport['carte_motif']}")
             print(f"  {rapport['lignes_vues']} ligne(s) de plan · {len(rapport['liens'])} lien(s) "
                   f"· {len(rapport['mandats'])} mandat(s) collecteur")
             print(f"  écrits : {rapport['ecrits']}")
