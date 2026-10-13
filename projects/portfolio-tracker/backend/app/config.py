@@ -56,7 +56,15 @@ class Settings(BaseSettings):
     # blocage un `echec` MOTIVÉ → mandat (#25) au lieu d'un silence infini — c'est le détenteur unique
     # (#46) de la durée max d'une ligne web, lu à la fois par le chien de garde `asyncio.wait_for` et
     # par le `timeout` passé au worker (borne interne redondante mais utile si le garde disparaît).
-    WEB_LINE_BUDGET_S: int = 180
+    # ⚠️ RECALIBRÉ 180 → 360 s le 2026-10-13 (jalon A1 bis), sur MESURE (`tools/mesurer_ligne_web.sh`,
+    # RVMD plan #242) : 180 s n'avait jamais été calibré, il bornait l'infini (#73) et coupait 12 lignes
+    # sur 19 en recherche normale. Une ligne saine prend 144 à 246 s (dont ~85 % d'écriture du modèle) ;
+    # le pire cas est borné par construction depuis `WEB_TOUR_MAX_TOKENS` (6 tours plafonnés + clôture).
+    WEB_LINE_BUDGET_S: int = 360
+    # Plafond d'écriture d'un tour de RECHERCHE du search-worker (jalon A1 bis, `runner._tool_loop`),
+    # jamais de la clôture. Mesuré le 2026-10-13 : un tour qui appelle des outils écrit ≤ 1 300 jetons ;
+    # le tour qui cesse de chercher en écrivait jusqu'à 7 677 (185 s) que la clôture jette.
+    WEB_TOUR_MAX_TOKENS: int = 2048
 
     class Config:
         env_file = None  # Coolify injecte les variables

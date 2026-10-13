@@ -76,6 +76,7 @@ from app.contracts import (
     WorkerRequest,
     WorkerResponse,
 )
+from app.config import settings
 from app.db.database import get_db_session
 from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
@@ -605,6 +606,9 @@ async def run_search_worker(
         max_iterations=max_iterations,
         temperature=0.2,
         timeout=timeout,
+        # Jalon A1 bis : un tour de recherche ne porte que des appels d'outils ; plafonné, il ne
+        # rédige plus un brouillon que la clôture jette (détenteur unique du plafond : `settings`).
+        max_tokens_recherche=settings.WEB_TOUR_MAX_TOKENS,
     )
 
     corrected = _apply_deterministic_overrides(

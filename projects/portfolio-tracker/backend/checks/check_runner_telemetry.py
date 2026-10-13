@@ -24,6 +24,9 @@ modèle, aucune DB. Le check tourne avec `--network none`.
     `raw_content` reste celui de la clôture, pas celui de la boucle.
 §8  `__str__` après `add_upstream` : le total Y FIGURE (message recalculé, pas figé).
 §9  Non-régression de `run_tool_json_agent` en succès : boucle + clôture cumulés.
+§10 Plafond d'écriture des tours de RECHERCHE (jalon A1 bis) : demandé à chaque tour de boucle,
+    JAMAIS à la clôture ; un tour coupé par le plafond clôt la recherche sans exécuter ses outils ;
+    le search-worker passe bien le plafond de `settings` (AST).
 """
 import asyncio
 import sys
@@ -82,6 +85,8 @@ class _FakeProvider(AgentProvider):
 
     def __init__(self, reponses: list[CompletionResult]) -> None:
         self._reponses = iter(reponses)
+        # (outils présents ?, max_tokens reçu) par appel — §10 lit ce que le runner a DEMANDÉ.
+        self.appels: list[tuple[bool, Optional[int]]] = []
 
     async def complete(
         self,
@@ -96,6 +101,7 @@ class _FakeProvider(AgentProvider):
         max_tokens: Optional[int] = None,
         timeout: int = 720,
     ) -> CompletionResult:
+        self.appels.append((tools is not None, max_tokens))
         return next(self._reponses)
 
     async def stream(self, **kwargs: Any):  # type: ignore[override]
@@ -130,6 +136,7 @@ def _cr(
     tokens_out: int,
     cost_usd: float,
     tool_calls: Optional[list[dict[str, Any]]] = None,
+    finish_reason: Optional[str] = None,
 ) -> CompletionResult:
     """Construit un `CompletionResult` avec les champs exacts définis dans `base.py`."""
     return CompletionResult(
@@ -139,6 +146,7 @@ def _cr(
         tokens_out=tokens_out,
         cost_usd=cost_usd,
         tool_calls=tool_calls,
+        finish_reason=finish_reason,
     )
 
 
@@ -646,6 +654,81 @@ if resultat_s9 is not None:
 else:
     for lbl in ("tokens_in", "tokens_out", "cost_usd", "parsed.valeur", "raw_content"):
         check(lbl, False, "— résultat non disponible")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+print("\n§10 — Plafond d'écriture des tours de recherche (jalon A1 bis)")
+# ══════════════════════════════════════════════════════════════════════════════
+# Mesuré le 2026-10-13 (`tools/mesurer_ligne_web.sh`, RVMD plan #242) : le tour où le modèle cesse
+# de chercher écrivait 7 677 jetons en 185 s, que la clôture jette. Le plafond porte sur la
+# RECHERCHE ; plafonner la clôture couperait le JSON contractuel lui-même.
+PLAFOND = 2048
+appels_outil: list[dict[str, Any]] = []
+
+
+async def _outil_compte(args: dict[str, Any]) -> dict[str, Any]:
+    appels_outil.append(args)
+    return {"résultat": "données factices"}
+
+
+agent_s10 = _agent(
+    [
+        _cr("", tokens_in=100, tokens_out=50, cost_usd=0.0001, tool_calls=_tool_call_fake),
+        _cr("", tokens_in=150, tokens_out=60, cost_usd=0.0001, tool_calls=None),
+        _cr(_JSON_OK, tokens_in=200, tokens_out=40, cost_usd=0.0001),
+    ],
+    avec_outils=True,
+)
+try:
+    asyncio.run(run_tool_json_agent(
+        agent_s10, MESSAGES, {"outil_fake": _outil_compte}, ContratOk,
+        closing_instruction="Synthétise en JSON.", max_tokens_recherche=PLAFOND))
+    appels_s10 = agent_s10.provider.appels  # type: ignore[attr-defined]
+except Exception as exc:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
+    appels_s10 = []
+    check("§10 nominal exécuté", False, f"— exception : {exc}")
+recherche = [m for outils, m in appels_s10 if outils]
+cloture = [m for outils, m in appels_s10 if not outils]
+check("chaque tour de recherche reçoit le plafond",
+      len(recherche) == 2 and all(m == PLAFOND for m in recherche), f"— reçu {recherche}")
+check("la clôture ne reçoit AUCUN plafond (le JSON contractuel n'est jamais coupé)",
+      cloture == [None], f"— reçu {cloture}")
+
+# Un tour COUPÉ par le plafond porte des appels d'outils aux arguments possiblement tronqués :
+# il clôt la recherche, ses outils ne sont PAS exécutés.
+appels_outil.clear()
+agent_s10b = _agent(
+    [
+        _cr("", tokens_in=100, tokens_out=PLAFOND, cost_usd=0.0001,
+            tool_calls=_tool_call_fake, finish_reason="length"),
+        _cr(_JSON_OK, tokens_in=200, tokens_out=40, cost_usd=0.0001),
+    ],
+    avec_outils=True,
+)
+try:
+    res_s10b = asyncio.run(run_tool_json_agent(
+        agent_s10b, MESSAGES, {"outil_fake": _outil_compte}, ContratOk,
+        closing_instruction="Synthétise en JSON.", max_tokens_recherche=PLAFOND))
+    valeur_s10b: Optional[int] = res_s10b.parsed.valeur
+except Exception as exc:  # noqa: BLE001
+    valeur_s10b = None
+    check("§10 tour coupé exécuté", False, f"— exception : {exc}")
+check("un tour coupé par le plafond n'exécute pas ses outils",
+      appels_outil == [], f"— outils appelés : {appels_outil}")
+check("un tour coupé par le plafond mène directement à la clôture (rendue)",
+      valeur_s10b == 42, f"— reçu {valeur_s10b}")
+
+# Le search-worker passe le plafond de `settings` (détenteur unique) — lu sur l'AST, car aucun
+# test de comportement hors ligne n'appelle le vrai worker.
+import ast as _ast
+from pathlib import Path as _Path
+_arbre = _ast.parse(_Path("app/agents/v2/worker.py").read_text())
+_kw = [k for n in _ast.walk(_arbre) if isinstance(n, _ast.Call)
+       and getattr(n.func, "id", None) == "run_tool_json_agent"
+       for k in n.keywords if k.arg == "max_tokens_recherche"]
+check("le search-worker passe `max_tokens_recherche=settings.WEB_TOUR_MAX_TOKENS`",
+      len(_kw) == 1 and _ast.unparse(_kw[0].value) == "settings.WEB_TOUR_MAX_TOKENS",
+      f"— trouvé {[_ast.unparse(k.value) for k in _kw]}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

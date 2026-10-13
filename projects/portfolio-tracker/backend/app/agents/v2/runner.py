@@ -228,11 +228,21 @@ async def _tool_loop(
     max_iterations: int,
     temperature: float,
     timeout: int,
+    max_tokens_recherche: Optional[int] = None,
 ) -> _ToolLoopState:
     """Tant que le modèle émet des tool_calls : exécuter, réinjecter en `role=tool`, reboucler.
 
     Un exécuteur qui lève ne casse PAS la boucle — l'erreur est rendue au modèle comme résultat
     d'outil, à lui d'en tirer les conséquences (chercher autrement, ou déclarer non couvert).
+
+    `max_tokens_recherche` (jalon A1 bis, 2026-10-13) PLAFONNE l'écriture de chaque tour de RECHERCHE
+    — jamais la clôture. Mesuré sur RVMD (`tools/mesurer_ligne_web.sh`) : les outils prennent 15 % du
+    temps d'une ligne, l'écriture du modèle le reste (~35-40 jetons/s), et le tour où le modèle cesse
+    de chercher a écrit 7 677 jetons en 185 s de texte libre — que la clôture JETTE (voir
+    `run_tool_json_agent`). Un tour de recherche ne porte que des appels d'outils : plafonné, il ne
+    perd rien d'utile. Un tour COUPÉ par le plafond (`finish_reason == "length"`) clôt la recherche
+    SANS exécuter ses appels d'outils : leurs arguments peuvent être tronqués, et un outil appelé sur
+    un argument amputé chercherait autre chose que ce que le modèle voulait.
     """
     convo = list(messages)
     total_in = total_out = 0
@@ -242,12 +252,14 @@ async def _tool_loop(
     exhausted = True
 
     for iterations in range(1, max_iterations + 1):
-        last = await agent.complete(convo, temperature=temperature, timeout=timeout)
+        last = await agent.complete(
+            convo, temperature=temperature, timeout=timeout, max_tokens=max_tokens_recherche)
         total_in += last.tokens_in
         total_out += last.tokens_out
         total_cost += last.cost_usd
 
-        if not last.tool_calls:
+        tour_coupe = max_tokens_recherche is not None and last.finish_reason == "length"
+        if tour_coupe or not last.tool_calls:
             exhausted = False
             break
 
@@ -318,6 +330,7 @@ async def run_tool_json_agent(
     temperature: float = 0.2,
     max_repair: int = 1,
     timeout: int = 720,
+    max_tokens_recherche: Optional[int] = None,
 ) -> AgentRunResult:
     """Boucle d'outils PUIS tour de clôture en JSON strict validé contre `schema`.
 
@@ -333,6 +346,7 @@ async def run_tool_json_agent(
     st = await _tool_loop(
         agent, messages, tool_executors,
         max_iterations=max_iterations, temperature=temperature, timeout=timeout,
+        max_tokens_recherche=max_tokens_recherche,
     )
     if st.exhausted:
         logger.warning(
