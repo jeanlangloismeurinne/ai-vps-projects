@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-13 (#120 horloge du traducteur ; #121 exemple des consignes resynchronisé, migration 054 ; qualité financière NVDA 1,00)
+updated: 2026-10-13 (#120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#121), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#122), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -84,7 +84,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4430 assertions, 59 scripts, 0 rouge** — 2026-10-13 après #121
+- **Suite** `bash checks/run_all.sh` = **4434 assertions, 59 scripts, 0 rouge** — 2026-10-13 après #122. Avant : 4430 après #121
   (`check_prompts_exemples` neuf). Avant : 4419 / 58 après #120
   (négatif traducteur 22/0). Avant : **4398 assertions, 1 rouge ATTENDU** — 2026-10-12 après #118 :
   `check_signature_modele_persist` (RVMD qf_6 #1080 porte l'ancien encadré — se solde par sa réémission
@@ -176,6 +176,19 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
    nommés déclarés par question ; le résultat normalisé vient de qf_1, le nombre d'actions dilué du cours
    coté, la dilution de qf_4 ; les réponses existantes sont réémises au nouveau format sur les mêmes pièces
    — « pas de dette » (l'utilisateur a écarté l'option de les garder valides sans chiffre).
+
+**2026-10-13 — les descriptions juridiques (brevets, contrats)**
+« À jour jusqu'au rapport annuel » : une description juridique (portefeuille de brevets, contrat de dette,
+clauses) tirée du rapport annuel reste à jour jusqu'au rapport annuel suivant ou jusqu'à un fait qui la
+TOUCHE (litige, nouveau brevet, nouveau financement) — comme un fonds qui revoit les brevets une fois par an.
+Les faits importants qui ne la touchent pas (résultats de phase 3, comptes trimestriels) ne la périment pas.
+**NON CONSTRUIT, à dessein** : mesuré le jour même sur RVMD, la règle ne rendrait à jour qu'au mieux 1 réponse
+de défendabilité sur 5 — les autres sont périmées par des pièces NON juridiques (liste des concurrents du
+10-K, description du coût de développement, données cliniques du 31/05). À construire quand une réponse
+n'est périmée QUE par une pièce juridique. Esquisse : le référentiel déclare par ingrédient (et au besoin
+par stade) qu'il est juridique et quels types d'événements le touchent ; `servir_answer` juge les pièces
+juridiques contre cette horloge propre (types qui touchent + clôture publiée ≥ date + 1 an). Manque au
+catalogue un type « contestation de propriété intellectuelle / litige ».
 
 **2026-09-22 — l'ordre du chantier**
 1. **On finit l'AMONT** (faire tourner la V3 complète sur un cas sans difficulté), **ensuite
@@ -379,7 +392,17 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   collecteur en base portait encore `source_date` ; migration **054** + `check_prompts_exemples`. Relance
   (plan #237) : **qf_8 #1303 courante**, qualité financière NVDA **1,00**. Mandats 2612/2613 encore
   `ouvert` (la question a trouvé sa réponse — même famille que 983-986).
-  **(2 bis) À FAIRE** : RVMD — même vérification de l'actualité de ses 8 réponses avant les nouveaux chapitres. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
+  **(2 bis) FAIT (2026-10-13)** : RVMD qualité financière **1,00, 4/4 courantes** — vérifié pièce par pièce
+  (toutes ≥ 30/06) et contre EDGAR (rien de nouveau depuis le 01/09 hors formulaires 4/144).
+  **Défendabilité RVMD refaite** (rouverte par l'approbation FDA du 26/08) : un premier passage (plan #238)
+  a tourné sur l'horloge de SILEXION → **#122** (CIK lu au registre, jamais déduit du dossier ; retrait
+  `tools/retraits/2026-10-13_rvmd_identite_silexion.sql`), puis relance `--sans-collecte` : réponses
+  **#1316-#1321** (mo_1 `barriere_structurelle`, mo_2 approximée, mo_3 `en_elargissement`, mo_4
+  approximée `duree_longue` **19 ans** = dernière expiration 2045 — le passage faussé disait 5 ans = première
+  expiration 2031 : **à relire par le comité**, quelle échéance de brevet fait la durée de la barrière ?, mo_5
+  `vecteur_en_mouvement` sur Silexion seul). Chiffres relus contre les pièces (#697, #923, #695). Restent
+  **5/5 périmées**, pour de bonnes raisons (voir l'arbitrage ci-dessous) : remède = une collecte de
+  défendabilité plus fraîche (paysage concurrentiel postérieur au 30/06), pas un correctif de règle. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
 - **Constat #118 — `executer_chaine --questions=` ne restreint PAS la collecte** : seule l'analyse est
   restreinte ; le plan #221 a porté sur les 8 questions pour qf_8 seule. Le bouclage sait déjà planifier sur un
   périmètre (pont [P] « HORS du scope ») : à brancher au maillon 1 de `executer_chaine`.
@@ -428,6 +451,12 @@ traiter quand la V3 sera quasiment finalisée**
   que les mandats 983-986) ; un geste « retirer un passage » tracé, au lieu du SQL à la main.
 
 **Remontés du jalon du lot 7 au 2026-09-28 (non traités, toujours vrais)**
+- **Résidus #122** : (a) #695 (daté 05/08) cite un communiqué du 14/09 et l'approbation du 26/08, #697 (daté
+  31/05) parle de « septembre 2026 » — pièces d'héritage à datation mêlée ; (b) mo_3/mo_5 fondent le
+  « vecteur en mouvement » sur Silexion (microcapitalisation, deux avis de radiation Nasdaq) alors que le dossier
+  porte Roche divarasib (phase 3 positive, 02/07) et les revues FDA du 07/10 (doutes d'efficacité, −6,3 % le
+  08/10, #929-#931), non cités — à relire par le comité ; (c) la date d'ingrédient des pièces web (#929-#931)
+  n'entre dans aucune horloge : un fait public non déposé à l'EDGAR ne rouvre rien (veilleur à construire).
 - **Mandats manager 983-986** (« question sans aucune réponse », ouverts avant #88) restent `ouvert`
   alors que mo_1/3/4/5 sont répondus et acquittés — le parcours affiche encore « repartie en
   recherche : mandat #983 ». `persist_review` n'en ferme aucun sur un acquittement. Un fonds clôt la
@@ -575,7 +604,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #121** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #122** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·
