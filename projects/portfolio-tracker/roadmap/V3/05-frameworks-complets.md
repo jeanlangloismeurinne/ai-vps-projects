@@ -83,6 +83,18 @@ aucune réponse en vigueur** ; modèle économique, secteur, management, valoris
 Ordre (la PREMIÈRE case non cochée est le prochain pas) :
 - [ ] A1. Modèle économique sur RVMD et NVDA — à blanc d'abord (plan lu en texte, admissibilité),
   puis passage réel relu pièce par pièce (capacité 5)
+  - ✅ 2026-10-13 : lecture à blanc → **#123** (horloge PAR QUESTION du traducteur, garde « exercice
+    clos », le modèle économique lit le socle) ; plans RVMD/NVDA justes, déployé (`2348099`).
+  - ✅ RVMD passage réel (plan #242, réponses **#1334-#1339**) : me_1/me_2/me_4 `repondu`, me_3 `approxime`,
+    **4/4 fondées À JOUR** (note 0,67), relues contre les pièces (#944 prix 39 800 $/30 j, #952/#961
+    aucun revenu au 30/06) ; me_5/me_6 `non_fondable` — **12 lignes sur 19 coupées par le budget web de
+    180 s** (`source_indisponible`, panne d'outil, pas absence d'information).
+  - [ ] **A1 bis (PROCHAIN PAS) — la collecte web ne tient pas dans son budget** : mesurer d'abord (durée
+    réelle d'une ligne, itérations, jetons par tour — #73 : le garde borne l'infini, pas la lenteur),
+    puis corriger EN AMONT (budget par ligne, itérations, parallélisme des lignes, ou requête plus
+    ciblée) ; relancer RVMD me_5/me_6 (`--questions=me_5,me_6`) ; critère : ≤ 2 lignes sur 19 en
+    `source_indisponible` sur un passage complet.
+  - [ ] NVDA passage réel (après A1 bis)
 - [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA

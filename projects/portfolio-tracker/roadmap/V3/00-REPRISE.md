@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-13 (#120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-13 (#123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,9 +28,11 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-13) : jalon « note d'initiation sur 3-4 titres » en tête de la roadmap
-> 05, première case non cochée (A1 : modèle économique sur RVMD et NVDA).** MSFT : aucune réponse en
-> vigueur (mesuré le 2026-10-13).
+> **➜ PROCHAIN PAS (2026-10-13, fin de session) : jalon « note d'initiation sur 3-4 titres » en tête de la
+> roadmap 05 — case A1 bis : la collecte web dépasse son budget de 180 s sur 12 lignes sur 19 (RVMD ×
+> modèle économique, plan #242).** Fait ce jour : #123 (horloge par question du traducteur, déployé
+> `2348099`) ; RVMD modèle économique 4/6 fondées et À JOUR (#1334-#1339), me_5/me_6 non fondables
+> faute de collecte. NVDA modèle économique : pas encore lancé. MSFT : aucune réponse en vigueur.
 >
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
