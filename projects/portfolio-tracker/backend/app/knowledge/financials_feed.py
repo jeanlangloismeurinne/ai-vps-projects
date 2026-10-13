@@ -34,7 +34,7 @@ from typing import Any, Optional
 
 from app.data_collection.data_service import DataService  # noqa: F401  (parité d'accès quant, non requis ici)
 from app.db.database import get_db_session
-from app.knowledge.edgar_facts import EdgarUnavailable, cik_from_url, fetch_annual_value
+from app.knowledge.edgar_facts import EdgarUnavailable, fetch_annual_value
 # L'identité d'un fait EDGAR (quelle entrée courante un nouveau fait remplace) est une règle
 # UNIQUE, tenue par edgar_feed. Ce module écrit lui aussi un `capital_expenditure` : lui donner
 # son propre appariement, c'est écrire deux fois le même fait sous deux jeux de tags — cf. F6.
@@ -744,13 +744,15 @@ async def run_financials_feed(
             f"(10-K) avant de dériver les ratios `financials`"
         )
 
-    # CIK depuis la provenance réelle d'un dépôt EDGAR en base (aucune table de correspondance).
-    cik = cik_from_url(facts.get("source_url"))
-    if cik is None:
-        for e in entries:
-            cik = cik_from_url(e.get("source_url"))
-            if cik:
-                break
+    # CIK lu au REGISTRE SEC depuis le symbole (#122) — jamais déduit d'une pièce du dossier : un dépôt
+    # de concurrent rangé sous ce titre ferait lire le capex d'une autre société (jumeau de
+    # `material_events.resolve_cik_for_ticker`, même défaut, même correctif).
+    from app.knowledge.edgar_feed import EdgarFeedUnavailable, resolve_cik
+    try:
+        cik: Optional[int] = await resolve_cik(str(symbol))
+    except EdgarFeedUnavailable as e:
+        logger.info("financials_feed %s : CIK non résolu (%s)", ticker_id, e)
+        cik = None
 
     # ── Capex : fondation depuis EDGAR si absent de la base (ou refresh) ──────
     capex_source = "kb" if facts.get("capex") is not None else "absent"

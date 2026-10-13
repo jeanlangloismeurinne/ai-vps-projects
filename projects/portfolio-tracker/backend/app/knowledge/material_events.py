@@ -47,7 +47,7 @@ from typing import Any, Optional
 import httpx
 
 from app.config import settings
-from app.knowledge.edgar_facts import _UA, cik_from_url
+from app.knowledge.edgar_facts import _UA
 
 logger = logging.getLogger(__name__)
 
@@ -363,40 +363,27 @@ def ancre_substantielle(lookup: MaterialEventLookup) -> MaterialEventLookup:
 
 
 async def resolve_cik_for_ticker(conn, ticker_id: str) -> Optional[int]:
-    """CIK de l'émetteur, au coût le plus bas d'abord.
+    """CIK de l'émetteur, lu au REGISTRE de la SEC depuis son symbole de marché (#11, #122).
 
-    1. Relu d'une `source_url` EDGAR **déjà écrite** dans le corpus (`/data/<cik>/`, cf. #43) —
-       gratuit, aucun appel réseau ;
-    2. à défaut, résolu depuis `tickers.ticker_symbol` (convention #11 : jamais `tickers.id`).
+    ⚠️ JAMAIS déduit d'une pièce du dossier. Jusqu'au 2026-10-13 le CIK était « relu gratuitement »
+    dans la `source_url` EDGAR la plus récente du corpus du titre. Ce raccourci supposait que le
+    dossier ne contient que des dépôts de l'émetteur ; la collecte de défendabilité y range aussi
+    ceux des CONCURRENTS (option A, #93). Mesuré : un communiqué de Silexion (CIK 2022416) déposé le
+    2026-09-30 et classé sous RVMD est devenu la pièce EDGAR la plus récente — toute l'horloge de RVMD
+    a basculé en silence sur Silexion (11 de ses 8-K lus comme « faits postérieurs » de RVMD, plan
+    #238). Un fonds ne déduit pas l'identité d'un émetteur des documents de son dossier : c'est une
+    donnée de référence.
 
-    `None` = émetteur non résolvable (ticker privé, symbole absent). L'appelant traite ce cas comme
-    `unavailable`, **pas** comme « aucun événement ».
+    `symbole_de_marche` (détenteur unique, #11) puis `resolve_cik` (registre officiel, mémoïsé par
+    processus). `None` = émetteur non résolvable (privé, sans symbole, registre injoignable) ; l'appelant
+    le traite comme `unavailable`, **pas** comme « aucun événement ».
     """
-    row = await conn.fetchrow(
-        """
-        SELECT source_url
-          FROM knowledge_entries
-         WHERE ticker_id = $1
-           AND source_type = 'edgar_official'
-           AND source_url LIKE '%/data/%'
-         ORDER BY source_date DESC NULLS LAST, id DESC
-         LIMIT 1
-        """,
-        ticker_id,
-    )
-    cik = cik_from_url(row["source_url"]) if row else None
-    if cik:
-        return cik
-
-    symbole = await conn.fetchval("SELECT ticker_symbol FROM tickers WHERE id = $1", ticker_id)
-    if not symbole:
-        return None
     # Import tardif : `edgar_feed` importe ce module en aval, l'importer en tête créerait un cycle.
-    from app.knowledge.edgar_feed import resolve_cik
+    from app.knowledge.edgar_feed import EdgarFeedUnavailable, resolve_cik, symbole_de_marche
 
     try:
-        return await resolve_cik(str(symbole))
-    except Exception as e:  # noqa: BLE001 — résolution best-effort, l'appelant dira « inconnu »
+        return await resolve_cik(await symbole_de_marche(conn, ticker_id))
+    except EdgarFeedUnavailable as e:
         logger.warning("material_events: CIK non résolu pour %s (%s)", ticker_id, e)
         return None
 

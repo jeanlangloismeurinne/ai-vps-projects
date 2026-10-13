@@ -401,5 +401,56 @@ check("le statut de l'ancre est exposé à l'écran",
       "ancre_statut" in _src_api,
       "→ l'écran ne pourrait pas distinguer « périmé » de « pas pu vérifier » (#49)")
 
+# ── L'IDENTITÉ DE L'ÉMETTEUR NE SE DÉDUIT PAS DU DOSSIER (#122, 2026-10-13) ─────────────────────
+print("\n[#122] le CIK de l'émetteur vient du registre SEC, jamais d'une pièce de son dossier")
+# Le défaut mesuré : plan #238 (RVMD × defendabilite) — un communiqué de Silexion (CIK 2022416) rangé
+# sous RVMD est devenu la pièce EDGAR la plus récente ; l'horloge de RVMD a basculé sur Silexion.
+import app.knowledge.edgar_feed as _ef  # noqa: E402
+sys.path.insert(0, "checks")
+from _harness import strip_code  # noqa: E402
+
+
+class _ConnDossierContamine:
+    """Un dossier RVMD dont la pièce EDGAR la plus récente est celle d'un CONCURRENT. URL copiée du
+    réel (pièce #917, 2026-10-13). Toute lecture du corpus rend cette URL — une résolution qui s'y
+    fierait rendrait 2022416."""
+    async def fetchrow(self, sql, *args):
+        if "FROM tickers" in sql:
+            return {"ticker_symbol": "RVMD", "company_type": "public"}
+        return {"source_url": "https://www.sec.gov/Archives/edgar/data/2022416/000117891326004666/exhibit_99-1.htm"}
+
+    async def fetchval(self, sql, *args):
+        if "FROM tickers" in sql:
+            return "RVMD"
+        return "https://www.sec.gov/Archives/edgar/data/2022416/000117891326004666/exhibit_99-1.htm"
+
+
+_vu_symbole: list[str] = []
+_vrai_resolve = _ef.resolve_cik
+
+
+async def _registre(sym):  # registre SEC réel, relevé le 2026-10-13 (company_tickers.json)
+    _vu_symbole.append(sym)
+    return {"RVMD": 1628171, "NVDA": 1045810}[sym]
+
+
+_ef.resolve_cik = _registre
+try:
+    _cik = asyncio.run(_me.resolve_cik_for_ticker(_ConnDossierContamine(), "RVMD"))
+finally:
+    _ef.resolve_cik = _vrai_resolve
+check("dossier contaminé par un dépôt de concurrent : le CIK rendu est celui de RVMD (1628171), "
+      "pas celui de Silexion (2022416)", _cik == 1628171, f"→ {_cik}")
+check("… et il vient du registre, interrogé avec le SYMBOLE de marché (#11)", _vu_symbole == ["RVMD"],
+      f"→ {_vu_symbole}")
+_code_res = strip_code(inspect.getsource(_me.resolve_cik_for_ticker))
+check("`resolve_cik_for_ticker` ne lit plus aucune pièce du dossier (ni `knowledge_entries` ni "
+      "`cik_from_url`) — code dépouillé de sa prose", "knowledge_entries" not in _code_res
+      and "cik_from_url" not in _code_res)
+import app.knowledge.financials_feed as _ff  # noqa: E402
+_code_ff = strip_code(inspect.getsource(_ff.run_financials_feed))
+check("jumeau `run_financials_feed` : CIK lu au registre (`resolve_cik(`), plus jamais par "
+      "`cik_from_url` sur les pièces", "resolve_cik(" in _code_ff and "cik_from_url" not in _code_ff)
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

@@ -3223,6 +3223,34 @@ attribue au 10-Q la date de l'indenture (16/09/2016), « covenants protecteurs l
 de changement de contrôle activée », absentes de ce dépôt (reprises du prospectus/10-K) — même famille que
 #848 ; sans effet sur la conclusion.
 
+### #122 — l'identité de l'émetteur est une donnée de référence : jamais déduite d'une pièce de son dossier
+
+**Défaut mesuré (2026-10-13, relance de la défendabilité RVMD après l'approbation FDA, plan #238).**
+`material_events.resolve_cik_for_ticker` relisait le CIK dans la `source_url` EDGAR la PLUS RÉCENTE du
+corpus du titre (« gratuit, sans appel réseau »). La collecte de défendabilité range légitimement sous
+RVMD des dépôts de CONCURRENTS (option A, #93) : un communiqué Silexion (CIK 2022416, pièce #917, 30/09)
+est devenu la pièce la plus récente, et au maillon 2 toute l'horloge de RVMD a été celle de Silexion —
+11 de ses 8-K (dont deux avis de radiation Nasdaq) lus et écrits comme « lectures de dépôts » DE RVMD
+(#932-#942), joints d'office comme faits postérieurs de l'émetteur, tandis que l'approbation FDA (26/08)
+et les baux (27/08) de RVMD disparaissaient de l'horloge. Silencieux : aucun contrôle ne compare le
+CIK lu à celui du symbole. Le maillon 0 du même passage avait encore le bon CIK (avant la collecte).
+Jumeau, même défaut : `financials_feed.run_financials_feed` (CIK du capex pris sur la première pièce
+financière à adresse EDGAR).
+
+**Ce que ferait un vrai fonds** : l'identité d'un émetteur vient du référentiel (registre de la SEC),
+pas des documents rangés dans son dossier — un dossier contient par construction des pièces sur
+d'autres sociétés (concurrents, clients, partenaires).
+
+**Correctif** : les deux jumeaux lisent le CIK au registre via `symbole_de_marche` (#11) + `resolve_cik`
+(mémoïsé par processus) ; plus aucune lecture du corpus. `None` (privé, sans symbole, registre
+injoignable) reste `unavailable`, jamais « aucun événement ». Check : `check_material_events` §#122 (un
+dossier RVMD dont la pièce la plus récente est l'URL réelle de #917 doit rendre 1628171), négatif sur le
+code d'avant : rend 2022416, 4 FAIL nommés. Mesuré avant correctif : seul RVMD était touché (NVDA, MSFT
+justes par chance).
+
+**Retrait** : `tools/retraits/2026-10-13_rvmd_identite_silexion.sql` — réponses #1304-#1309 (restaure
+#689-#694) et pièces #932-#942 ; trace JSON/TXT à côté. #917/#920 (pièce de concurrent) conservées.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
