@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Prototypes de rendu</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0d1218; overflow: hidden; font: 14px system-ui, sans-serif; }
+      #app { position: fixed; inset: 0; }
+      #bar { position: fixed; left: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2; }
+      #bar a { padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.85); color: #10151c; text-decoration: none; font-weight: 600; }
+      #bar a.on { background: #10151c; color: #fff; }
+      body.capture #bar { display: none; }
+    </style>
+  </head>
+  <body>
+    <nav id="bar"></nav>
+    <div id="app"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
