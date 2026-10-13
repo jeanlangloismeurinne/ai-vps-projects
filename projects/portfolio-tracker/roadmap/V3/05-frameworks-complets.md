@@ -64,6 +64,51 @@ disent le rendement. La valorisation vient en dernier, parce qu'elle consomme to
 n'éprouve qu'une fois les quatre écrits, pour mesurer l'adaptation sur l'ensemble, pas sur un
 framework isolé.
 
+## 🎯 Jalon en cours — la note d'initiation sur 3-4 titres très différents (arbitrage du 2026-10-13)
+
+**Arbitrage de l'utilisateur (2026-10-13)** : « bout en bout » s'entend **jusqu'au suivi de la
+position** ; mais d'abord, faire tourner le système **jusqu'à la note d'initiation de l'analyste**
+(six chapitres instruits + fourchette de valeur) sur des cas très différents, pour en valider le
+fonctionnement ET la reproductibilité. Le cycle de vie de la position (décision, suivi, sortie —
+capacités 7 à 9) vient ensuite.
+
+**Ce que ferait un vrai fonds** : avant de confier un titre au suivi, l'analyste publie une note
+d'initiation complète ; le directeur de la recherche juge la méthode sur plusieurs notes de
+profils différents, et vérifie qu'un autre analyste, sur les mêmes pièces, arriverait au même dossier.
+
+**État mesuré le 2026-10-13** (`tools/montrer_qualite_info.sh`) : NVDA qualité financière 8/8 à jour,
+rien d'autre ; RVMD qualité financière 4/4 à jour (4 sans objet), défendabilité 5/5 PÉRIMÉES ; **MSFT :
+aucune réponse en vigueur** ; modèle économique, secteur, management, valorisation : jamais instruits.
+
+Ordre (la PREMIÈRE case non cochée est le prochain pas) :
+- [ ] A1. Modèle économique sur RVMD et NVDA — à blanc d'abord (plan lu en texte, admissibilité),
+  puis passage réel relu pièce par pièce (capacité 5)
+- [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
+- [ ] A3. Secteur et concurrence sur RVMD et NVDA
+- [ ] A4. Management et allocation du capital sur RVMD et NVDA
+- [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
+  sous le plancher A ; un fonds le fixe en interne, commun au portefeuille) — prérequis de A6
+- [ ] A6. Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
+  l'ordre d'instruction, va_4-6 au cours du jour, Greenwald, dépendance va_1/va_2 → va_6 ; acceptation
+  sur RVMD (somme des programmes) et NVDA (segments)
+- [ ] A7. **Ré-analyse sans danger** — PRÉREQUIS du test de reproductibilité (la dette « bloquante pour la
+  production » du fichier de reprise est avancée ici) : une ré-analyse sur les mêmes pièces ne remplace
+  plus une réponse en vigueur par une moins fondée sans lecture ; un refus d'agent ne devient pas une
+  demande de recherche ; une demande de recherche se clôt quand la question a trouvé sa réponse (mandats
+  983-986, 2612/2613)
+- [ ] A8. Élargir : MSFT (à reprendre de zéro, cartes à refaire) ; un 4ᵉ titre de profil `financiere`
+  (banque/assureur — le modèle des comptes, conçu pour un industriel, n'est pas éprouvé sur un bilan
+  financier ; penser `_ISSUER_DOMAINS`, `_TICKER_SECTEURS`) ; décider avec l'utilisateur si un émetteur
+  étranger (20-F) entre dans le jalon
+- [ ] A9. RVMD reclassée « commerciale » proposée au comité (capacité 7) — sans elle, des questions
+  restent « sans objet » sur un titre qui vend désormais
+- [ ] A10. L'outil du test : table de mesure versionnée par titre × chapitre (capacité 5) **et
+  comparaison de deux passages identiques** (reproductibilité : mêmes statuts, mêmes chiffres de
+  l'encadré, écarts nommés)
+- [ ] A11. Le test : note d'initiation complète sur les 3-4 titres, deux passages, écarts lus
+- Ensuite : capacité 6 (où vit l'adaptation), puis 7-9 (décision → suivi : raccorder la note projetée
+  à bull/bear → décision → suivi → sortie, T6/T7 aujourd'hui rouges ; position sous revue).
+
 ### 1. Framework « Modèle économique » (étape 3, bloc `business_model`) · contexte partagé : `frameworks.yaml`, contrat `framework_definition_schema.py`, benchmark Partie B
 - [x] Questions proposées en termes de fonds, validées une à une par l'utilisateur
 - [x] Écrit en YAML : énoncé, ingrédients, `rouverte_par`, `sens_admis`, variable par stade

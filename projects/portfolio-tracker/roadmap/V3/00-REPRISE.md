@@ -28,6 +28,10 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
+> **➜ PROCHAIN PAS (2026-10-13) : jalon « note d'initiation sur 3-4 titres » en tête de la roadmap
+> 05, première case non cochée (A1 : modèle économique sur RVMD et NVDA).** MSFT : aucune réponse en
+> vigueur (mesuré le 2026-10-13).
+>
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
 > sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96-#99, 2026-09-29) : gabarits maison, bac à
@@ -176,6 +180,13 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
    nommés déclarés par question ; le résultat normalisé vient de qf_1, le nombre d'actions dilué du cours
    coté, la dilution de qf_4 ; les réponses existantes sont réémises au nouveau format sur les mêmes pièces
    — « pas de dette » (l'utilisateur a écarté l'option de les garder valides sans chiffre).
+
+**2026-10-13 — le périmètre du « bout en bout »**
+« Bout en bout » = jusqu'au SUIVI de la position ; mais d'abord, faire tourner le système jusqu'à la
+**note d'initiation de l'analyste** (six chapitres + fourchette de valeur) sur 3-4 titres très
+différents, fonctionnement ET reproductibilité. Plan ordonné : **jalon « note d'initiation »** en tête
+de `05-frameworks-complets.md` (A1…A11) — la dette « ré-analyse qui remplace une meilleure réponse »
+y est avancée en prérequis du test de reproductibilité (A7).
 
 **2026-10-13 — les descriptions juridiques (brevets, contrats)**
 « À jour jusqu'au rapport annuel » : une description juridique (portefeuille de brevets, contrat de dette,
@@ -439,8 +450,8 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   jusqu'à sa prochaine réécriture (sans effet : #110 + la relecture).
 - Résidu #107 : `rattacher_soeurs` a fait passer #664 (défendabilité mo_1) en antérieure (collecte précédente).
 
-**⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — à
-traiter quand la V3 sera quasiment finalisée**
+**⚠️ DETTE BLOQUANTE POUR LA PRODUCTION (consignée à la demande de l'utilisateur, 2026-09-29) — AVANCÉE
+le 2026-10-13 en prérequis du test de reproductibilité (jalon A7 de la roadmap 05)**
 - Une ré-analyse sur les MÊMES pièces peut REMPLACER une réponse instruite par une moins bonne
   (qf_6 approximée → « sans fondement » le 29/09), et un refus d'agent devient un renvoi du manager
   (« question sans réponse ») donc une demande de recherche à tort. Le seul retour arrière est un
