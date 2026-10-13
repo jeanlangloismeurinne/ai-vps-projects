@@ -31,7 +31,7 @@ Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Hi
 - **Moteur** (`engine/src/`) : cœur sans logique de sujet (`core/`), plugins (`plugins/`), lecteur Play (`play/`), interface DOM (`ui/`). Budget de détail testé par scène, résolution adaptative, `?perf` (i/s, rapport de pixels, triangles), `?node=<id>`. En dev, `window.xs` pilote l'app (captures Playwright).
 - **Tests** : 116 Vitest (`npm test`) + 20 pytest du générateur. Page de revue : `npm run review` (5 nœuds, 0 erreur).
 - **Déploiement** : `Dockerfile` (Vite → nginx), `deploy/nginx.conf`, `docker-compose.yml` (conteneur `exploration-science`, `explorer.jlmvpscode.duckdns.org`, public, sans `.env`), entrée dans `infrastructure/compose-deploy.sh`. Image jamais construite (pas de Docker dans la session cloud).
-- **Aperçu en ligne** : https://claude.ai/artifact/1vtLmqzT4kfUU7j3q33FLo (version 9 = jalon 6). Republier : `npm run build`, copier `dist/assets` (js, css, woff2) + page sans `<html>` vers le scratchpad, même URL, en supprimant les anciens fichiers hachés.
+- **Aperçu en ligne** : https://claude.ai/artifact/1vtLmqzT4kfUU7j3q33FLo (version 10 = jalon 6 + sources vérifiées, 2026-10-13). Republier : `npm run build`, copier `dist/assets` (js, css, woff2) + page sans `<html>` vers le scratchpad, même URL, en supprimant les anciens fichiers hachés.
 - **Sources** : vérifiées le 2026-10-11 (≈ 35 pages ouvertes, ≈ 15 ajoutées) via le connecteur **Parallel** (`mcp__Parallel_Search__web_fetch` / `web_search`, à charger par ToolSearch) — WebFetch et curl restent bloqués dans la session cloud.
 
 ## Générateur (Phase 1, `generator/`)
