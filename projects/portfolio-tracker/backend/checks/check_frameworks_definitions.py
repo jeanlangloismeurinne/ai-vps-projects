@@ -733,8 +733,12 @@ check("[U] le référentiel réel lit dans le socle la dette brute, la trésorer
       and _lus_socle[("qf_7", "consommation_constatee")] == ("-flux_de_tresorerie_disponible", "douze_mois"),
       f"→ {_lus_socle}")
 _fw_reels = {f.id: f.lit_le_socle for f in load_frameworks().frameworks}
-check("[U] la qualité financière et la valorisation lisent le socle ; les autres frameworks, non (#108)",
-      {f for f, lit in _fw_reels.items() if lit} == {"qualite_financiere", "valorisation"}, f"→ {_fw_reels}")
+# Jalon A (2026-10-13) : le modèle économique lit aussi le socle — l'historique de marge brute se tire du
+# modèle des comptes (une pièce datée du dernier dépôt), pas d'un rapport annuel qui naîtrait périmé.
+check("[U] la qualité financière, le modèle économique et la valorisation lisent le socle ; les autres "
+      "frameworks, non (#108)",
+      {f for f, lit in _fw_reels.items() if lit} == {"qualite_financiere", "modele_economique", "valorisation"},
+      f"→ {_fw_reels}")
 
 
 print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1 / §4.3 …)")

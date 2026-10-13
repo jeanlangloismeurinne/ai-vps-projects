@@ -324,11 +324,13 @@ refuse_pont("[P] une ligne qui recollecte la dette brute (lue dans le socle des 
                 ancre="clôture du trimestre")]),
             "se LIT dans le socle des comptes")
 from datetime import date  # noqa: E402
-from app.agents.v2.traducteur import HorlogeDuPlan, contexte_traducteur  # noqa: E402
+from app.agents.v2.traducteur import FraicheurQuestion, HorlogeDuPlan, contexte_traducteur  # noqa: E402
 from app.knowledge.edgar_feed import IdentiteEmetteur  # noqa: E402
 _ctx = contexte_traducteur(_FICHIER, "valorisation", "rentable", "NVDA",
                            emetteur=IdentiteEmetteur(symbole="NVDA", cik=1045810, raison_sociale="NVIDIA CORP"),
-                           horloge=HorlogeDuPlan(date(2026, 10, 13), date(2026, 7, 26)))
+                           horloge=HorlogeDuPlan(date(2026, 10, 13), date(2026, 7, 26),
+                                                 {q.id: FraicheurQuestion("aucun_fait", None, "témoin")
+                                                  for f in _FICHIER.frameworks for q in f.questions}))
 _vus = {(q["id"], i["id"]) for q in _ctx["questions"] for i in q["ingredients"]}
 check("le traducteur ne VOIT aucun ingrédient repris (il ne peut pas le planifier)",
       not (_vus & set(_repris)), f"→ {sorted(_vus & set(_repris))}")

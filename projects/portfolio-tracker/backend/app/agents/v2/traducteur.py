@@ -35,15 +35,17 @@ l'exige ; sa resynchro en `agent_prompts` viendra avec le câblage runtime (#19/
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from pydantic import Field
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
-from app.agents.v2.frameworks import ingredients_a_collecter, load_frameworks, valider_pont_collection_plan
+from app.agents.v2.frameworks import (
+    CollectionPlanRefused, ingredients_a_collecter, load_frameworks, valider_pont_collection_plan)
 from app.agents.v2.runner import run_json_agent
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.collection_plan_schema import CollectionPlan, CollectionPlanItem
@@ -61,7 +63,10 @@ __all__ = [
     "questions_applicables",
     "contexte_traducteur",
     "HorlogeDuPlan",
+    "FraicheurQuestion",
+    "fraicheur_des_questions",
     "horloge_du_plan",
+    "lignes_exercice_clos_perimees",
     "traduire",
 ]
 
@@ -70,6 +75,91 @@ class TraducteurInapplicable(Exception):
     """La demande de traduction n'a pas d'objet AVANT tout appel modèle : framework ou archétype
     inconnu du référentiel. Refusé ici, pas dans le pont (#40) — on ne paie pas un appel pour
     apprendre ce qu'une lecture du référentiel dit gratuitement."""
+
+
+@dataclass(frozen=True)
+class FraicheurQuestion:
+    """L'horloge d'UNE question montrée au traducteur (2026-10-13, jalon « note d'initiation »).
+
+    Le défaut mesuré à blanc (modèle économique, NVDA et RVMD) : la clôture des derniers comptes
+    (#120) ne suffit pas. Une réponse est jugée contre le dernier fait important d'un type qui ROUVRE
+    sa question (#89) — l'approbation FDA du 26/08 pour « qui paie, pour quoi » chez RVMD, les comptes
+    clos le 26/07 pour « d'où vient chaque dollar » chez NVDA. Sans cette date, le plan visait le
+    rapport annuel et la réponse naissait périmée (même cause que la défendabilité RVMD, 5/5 périmées).
+
+    `etat` ∈ {`fait_important`, `aucun_fait`, `inconnu`} — trois états, jamais un défaut silencieux
+    (#49) : `inconnu` (flux illisible) n'est pas « rien ne rouvre ». `depuis` n'existe que sur
+    `fait_important` : c'est le SEUIL du dépôt (#102), la date avant laquelle une pièce naît périmée.
+
+    ⚠️ `a_lire` : les faits postérieurs aux derniers comptes que l'analyste LIT et annote (#103/#117,
+    `evenements.faits_a_lire`, détenteur unique). Ils ne fixent PAS la date minimale — une réponse bâtie
+    sur les derniers comptes et qui en écrit l'effet est à jour. Les compter dans `depuis` (1ʳᵉ version,
+    mesurée le 2026-10-13) ancrait les 20 lignes NVDA sur le rachat de Hugging Face du 02/09.
+    """
+    etat: str
+    depuis: Optional[date]
+    motif: str
+    a_lire: tuple[str, ...] = ()
+
+
+def fraicheur_des_questions(ancre, notes, fichier: FrameworksFile) -> dict[str, FraicheurQuestion]:
+    """Par question du référentiel : son horloge, lue par `ancre_de_la_question` sur l'ancre et les notes
+    flash MÊMES qui serviront les réponses (`horloge_du_titre`, détenteur unique — #46). Pur."""
+    from app.agents.v2.frameworks import types_qui_rouvrent
+    from app.knowledge.evenements import ancre_de_la_question, derniere_cloture_publiee, faits_a_lire
+
+    cloture = derniere_cloture_publiee(ancre)
+    out: dict[str, FraicheurQuestion] = {}
+    for f in fichier.frameworks:
+        for q in f.questions:
+            lk = ancre_de_la_question(ancre, rouvrent=types_qui_rouvrent(fichier, q.id),
+                                      qualifications=notes)
+            if lk.status == "found":
+                lus = faits_a_lire(lk, cloture=cloture)
+                lus_ids = {id(e) for e in lus}
+                reste = [e for e in lk.recents if id(e) not in lus_ids]
+                a_lire = tuple(e.resume() for e in lus)
+                if reste:
+                    pese = max(reste, key=lambda e: (e.seuil, e.event_date, e.filing_date))
+                    out[q.id] = FraicheurQuestion("fait_important", pese.seuil, pese.resume(), a_lire)
+                else:
+                    out[q.id] = FraicheurQuestion(
+                        "aucun_fait", None, "seuls des faits postérieurs aux derniers comptes la "
+                        "rouvrent, et l'analyste les lit", a_lire)
+            elif lk.status == "none":
+                out[q.id] = FraicheurQuestion(
+                    "aucun_fait", None, lk.filtre or "l'émetteur n'a publié aucun fait important")
+            else:
+                out[q.id] = FraicheurQuestion(
+                    "inconnu", None, "flux des faits importants illisible : on ne sait pas ce qui "
+                    "rouvre cette question")
+    return out
+
+
+def _lecture_fraicheur(fq: FraicheurQuestion) -> dict[str, Any]:
+    lus = {}
+    if fq.a_lire:
+        lus = {"faits_a_lire_depuis_les_comptes": list(fq.a_lire),
+               "lecture_des_faits": (
+                   "Le dépôt de chacun de ces faits sera lu et joint au dossier ; l'analyste en écrira "
+                   "l'effet — ils ne périment PAS les pièces des derniers comptes. Mais si un fait CHANGE "
+                   "ce que la question décrit (une autorisation de mise sur le marché pour « qui paie et "
+                   "combien », un rachat qui ajoute une activité), demande EN PLUS la matière publiée "
+                   "depuis qui en décrit les conséquences, ancrée sur ce fait daté.")}
+    if fq.etat == "fait_important":
+        lecture = (
+            f"Toute pièce qui décrit la situation AVANT le {fq.depuis.isoformat()} naîtra PÉRIMÉE pour "
+            f"cette question : le dernier fait important qui la rouvre est {fq.motif}. Demande la "
+            "matière qui couvre la situation à cette date ou après (le rapport périodique qui la couvre, "
+            "le dépôt ou le communiqué du fait) et ancre sur cette date.")
+    elif fq.etat == "aucun_fait":
+        lecture = (f"Aucun fait important ne rouvre cette question ({fq.motif}) : le dernier rapport "
+                   "périodique, ou le rapport annuel pour une description, convient.")
+    else:
+        lecture = (f"INCONNU — {fq.motif}. Ne devine pas : applique la règle de fraîcheur générale.")
+    return {"etat": fq.etat,
+            "date_minimale_des_pieces": fq.depuis.isoformat() if fq.depuis else None,
+            "lecture": lecture, **lus}
 
 
 @dataclass(frozen=True)
@@ -89,6 +179,12 @@ class HorlogeDuPlan:
     """
     date_du_jour: date
     derniere_cloture: Optional[date]
+    # Par question : son horloge propre (`fraicheur_des_questions`). REQUISE, sans défaut — une question
+    # absente lève au contexte : la taire ferait planifier sur le rapport annuel par réflexe.
+    fraicheur: Mapping[str, FraicheurQuestion]
+    # La clôture du dernier EXERCICE publié — une ligne `exercice_clos` se lit au rapport annuel de cet
+    # exercice ; `None` = inconnue (aucun rapport annuel rattaché à un communiqué dans le flux).
+    derniere_cloture_annuelle: Optional[date] = None
 
 
 class TraducteurSortie(Strict):
@@ -164,6 +260,9 @@ def contexte_traducteur(
         },
         "calendrier": {
             "date_du_jour": horloge.date_du_jour.isoformat(),
+            "cloture_du_dernier_exercice_publie": (
+                horloge.derniere_cloture_annuelle.isoformat()
+                if horloge.derniere_cloture_annuelle else None),
             "cloture_des_derniers_comptes_publies": (
                 horloge.derniere_cloture.isoformat() if horloge.derniere_cloture else None),
             "lecture": (
@@ -181,6 +280,7 @@ def contexte_traducteur(
                 "id": q.id,
                 "enonce": q.enonce,
                 "variable_archetype": q.variables_par_archetype[archetype].variable,
+                "fraicheur": _lecture_fraicheur(horloge.fraicheur[q.id]),
                 "ingredients": [
                     {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel}
                     for i in ingredients_a_collecter(q)
@@ -334,7 +434,17 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "texte (`sans_periode`) : le contrat d'origine peut être ancien, mais son état à jour — "
     "l'engagement toujours en vigueur, son respect déclaré à la clôture, un changement — se lit dans le "
     "dernier rapport périodique, et c'est lui qu'on demande. Seule exception : `exercice_clos`, dont les "
-    "chiffres sont ceux du rapport annuel de l'exercice. Clôture inconnue (`null`) : ne la devine pas.\n\n"
+    "chiffres sont ceux du rapport annuel de l'exercice. Clôture inconnue (`null`) : ne la devine pas.\n"
+    "  — CHAQUE QUESTION porte en plus sa propre `fraicheur`, calculée par le système sur les faits "
+    "importants qui la ROUVRENT (une approbation, un accord, de nouveaux comptes…). Quand elle donne une "
+    "`date_minimale_des_pieces`, elle PRIME sur la clôture : une pièce qui décrit la situation avant cette "
+    "date rend la réponse périmée, quelle que soit sa qualité — y compris une ligne `exercice_clos` ou une "
+    "description tirée d'un rapport annuel plus ancien. Elle peut aussi nommer des "
+    "`faits_a_lire_depuis_les_comptes` : ceux-là seront lus par l'analyste et ne périment rien ; mais ne "
+    "décris jamais un état qu'ils ont changé (par exemple « produit non encore commercialisé » après une "
+    "autorisation de mise sur le marché) — demande alors aussi la matière qui en décrit les conséquences. "
+    "`exercice_clos` est REFUSÉ sur une question dont la date minimale est postérieure à "
+    "`cloture_du_dernier_exercice_publie` : demande alors `cumul_publie` ou `douze_mois_glissants`.\n\n"
     "RÈGLE ABSOLUE — un ingrédient marqué `essentiel: true` DOIT avoir une ligne, `traduit` ou "
     "`inobtenable`, JAMAIS aucune. Un essentiel omis fait rejeter tout le plan : c'est le mode de "
     "panne qu'on combat (un dossier qui paraît complet en ayant tu ce qu'il ne trouvait pas). Un "
@@ -381,10 +491,40 @@ async def horloge_du_plan(conn, ticker_id: str, fichier: FrameworksFile) -> Horl
     servira les réponses (`horloge_du_titre`, détenteur unique — #46) : le plan vise le dépôt contre
     lequel la réponse sera jugée, pas un autre. Flux injoignable ⟹ clôture `None`, dite au modèle."""
     from app.agents.v2.parcours import horloge_du_titre
-    from app.knowledge.evenements import derniere_cloture_publiee
+    from app.knowledge.evenements import derniere_cloture_annuelle_publiee, derniere_cloture_publiee
 
-    ancre, _notes = await horloge_du_titre(conn, ticker_id, fichier)
-    return HorlogeDuPlan(date_du_jour=date.today(), derniere_cloture=derniere_cloture_publiee(ancre))
+    ancre, notes = await horloge_du_titre(conn, ticker_id, fichier)
+    return HorlogeDuPlan(date_du_jour=date.today(), derniere_cloture=derniere_cloture_publiee(ancre),
+                         fraicheur=fraicheur_des_questions(ancre, notes, fichier),
+                         derniere_cloture_annuelle=derniere_cloture_annuelle_publiee(ancre))
+
+
+def lignes_exercice_clos_perimees(plan: CollectionPlan, horloge: HorlogeDuPlan) -> list[str]:
+    """Les lignes `exercice_clos` qui feraient naître leur réponse PÉRIMÉE (jalon A, 2026-10-13). Pur.
+
+    Une ligne `exercice_clos` se lit au rapport annuel du dernier exercice, daté de sa clôture. Si la
+    question exige des pièces postérieures (`date_minimale_des_pieces` : de nouveaux comptes
+    trimestriels l'ont rouverte), ce rapport est par construction trop ancien. Mesuré à blanc : NVDA ×
+    modèle économique, 6 lignes `exercice_clos` sur des questions que les comptes du 26/07 rouvrent,
+    plan pourtant ancré au 26/07 — la consigne seule ne tient pas
+    (`feedback_jugement_modele_instable_entre_passages`). Clôture annuelle inconnue : on ne suppose pas
+    que la date minimale en est une.
+    """
+    fautives: list[str] = []
+    annuelle = horloge.derniere_cloture_annuelle
+    for it in plan.items:
+        if it.statut != "traduit" or it.periode != "exercice_clos":
+            continue
+        fq = horloge.fraicheur.get(it.question_id)
+        if fq is None or fq.depuis is None:
+            continue
+        if annuelle is None or fq.depuis > annuelle:
+            fautives.append(
+                f"{it.question_id}.{it.ingredient_id} : `exercice_clos` se lit au rapport annuel clos le "
+                f"{annuelle.isoformat() if annuelle else '(inconnu)'}, antérieur à la date minimale des "
+                f"pièces de la question ({fq.depuis.isoformat()}) — demande `cumul_publie` ou "
+                "`douze_mois_glissants` dans le rapport qui couvre cette date")
+    return fautives
 
 
 async def traduire(
@@ -422,12 +562,33 @@ async def traduire(
     run = await run_json_agent(agent, messages, TraducteurSortie, json_object=False)  # (3)
 
     # (4) l'en-tête est un fait de la requête, pas un jugement de modèle : le code le pose.
-    plan = CollectionPlan(
-        ticker_id=ticker_id,
-        framework_id=framework_id,
-        framework_version=fichier.schema_version,
-        archetype=archetype,
-        items=run.parsed.items,
-    )
+    def _plan(items) -> CollectionPlan:
+        return CollectionPlan(ticker_id=ticker_id, framework_id=framework_id,
+                              framework_version=fichier.schema_version, archetype=archetype, items=items)
+
+    plan = _plan(run.parsed.items)
     valider_pont_collection_plan(plan, fichier=fichier, questions=questions)  # (5) lève si incohérent
+    # (6) jalon A — une ligne `exercice_clos` sur une question rouverte par des comptes plus récents
+    # naîtrait périmée : renvoyée UNE fois avec son motif (précédent #101), puis refus nommé.
+    fautives = lignes_exercice_clos_perimees(plan, horloge)
+    if fautives:
+        messages = messages + [
+            {"role": "assistant", "content": run.raw_content},
+            {"role": "user", "content": (
+                "Plan refusé — ces lignes feraient naître leur réponse périmée :\n- "
+                + "\n- ".join(fautives)
+                + "\nRends le plan COMPLET corrigé (même format), en changeant la période et la source "
+                "de ces lignes.")}]
+        second = await run_json_agent(agent, messages, TraducteurSortie, json_object=False)
+        run = dataclasses.replace(second, tokens_in=run.tokens_in + second.tokens_in,
+                                  tokens_out=run.tokens_out + second.tokens_out,
+                                  cost_usd=run.cost_usd + second.cost_usd,
+                                  attempts=run.attempts + second.attempts)
+        plan = _plan(run.parsed.items)
+        valider_pont_collection_plan(plan, fichier=fichier, questions=questions)
+        fautives = lignes_exercice_clos_perimees(plan, horloge)
+        if fautives:
+            raise CollectionPlanRefused(
+                "après un renvoi, des lignes `exercice_clos` feraient encore naître leur réponse "
+                "périmée : " + " | ".join(fautives))
     return run, plan

@@ -821,7 +821,10 @@ frameworks:
       ce qui fait varier l'activité, jusqu'où elle peut croître, et de quoi elle dépend.
     nature_dominante: interpretation
     bloc_memo: business_model
-    lit_le_socle: false
+    # Jalon A (2026-10-13) : l'historique de marge se lit dans le modèle des comptes de l'analyste
+    # (cinq exercices + douze mois, une pièce datée du dernier dépôt), jamais collecté à part — une
+    # série tirée du rapport annuel faisait naître la réponse périmée (NVDA, plan lu à blanc).
+    lit_le_socle: true
     questions:
 
       - id: me_1
@@ -905,6 +908,7 @@ frameworks:
           - id: marge_brute_sur_plusieurs_periodes
             libelle: Marge brute de l'activité et son évolution sur plusieurs périodes
             essentiel: false
+            depuis_le_socle: true
         chiffres_cles: []
         variables_par_archetype:
           rentable:

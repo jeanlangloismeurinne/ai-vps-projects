@@ -39,7 +39,7 @@ mutations=(
 "$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦l'assemblage du dossier nourrit l'horloge des notes flash"
 "$API¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications={})¦le PV du comité cite l'ancre calculée avec les notes flash"
 # §8 — un communiqué de résultats ne périme pas les comptes qu'il publie (#102)
-"$ME¦                periode_publiee=(_periode_publiee(periodiques, event_date)¦                periode_publiee=(None¦RVMD : le communiqué du 05/08 publie les comptes clos le 30/06"
+"$ME¦        publiee = _periode_publiee(periodiques, event_date) if ITEM_RESULTATS in items else None¦        publiee = None¦RVMD : le communiqué du 05/08 publie les comptes clos le 30/06"
 "$ME¦    if any(evenement <= f + timedelta(days=DELAI_RESULTATS_JOURS) for f in depots):¦    if True:¦ne se rattache PAS au trimestre précédent"
 "$ME¦    anterieurs = [(r, f) for r, f in periodiques if r < evenement]¦    anterieurs = [(r, f) for r, f in periodiques]¦RVMD : celui du 06/05 publie le 31/03"
 "$EV¦            effet = e.periode_publiee if touches == {RESULTATS} else None¦            effet = e.periode_publiee¦résultats + autre événement non lu"
@@ -55,6 +55,9 @@ mutations=(
 "$PA¦    return ancre, notes¦    return ancre, {}¦l'horloge du titre rend les notes flash"
 # §5 — le motif dit pourquoi
 "$ME¦        base = f\"{base} — rouvre au titre de : {', '.join(self.types)}\"¦        base = base¦se nomme par son type"
+# Jalon A (2026-10-13) — clôture d'exercice vs de trimestre
+"$ME¦                periode_publiee_annuelle=publiee is not None and publiee in clotures_annuelles,¦                periode_publiee_annuelle=publiee is not None,¦ne publie PAS un exercice"
+"$EV¦                if e.periode_publiee is not None and e.periode_publiee_annuelle]¦                if e.periode_publiee is not None]¦clôture d'exercice INCONNUE"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

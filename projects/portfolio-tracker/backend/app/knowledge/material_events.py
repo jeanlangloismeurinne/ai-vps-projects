@@ -60,6 +60,9 @@ MATERIAL_FORMS = frozenset({"8-K", "8-K/A", "6-K", "6-K/A"})
 # Les rapports périodiques ne sont pas des événements, mais ils disent QUELLE période un communiqué
 # de résultats publie (#102). Les amendements (/A) en sont exclus : ils ne publient pas une clôture.
 PERIODIC_FORMS = frozenset({"10-Q", "10-K", "20-F", "40-F"})
+# Rapports qui closent un EXERCICE (jalon A, 2026-10-13) : distinguer la clôture d'un exercice de celle
+# d'un trimestre — NVDA publie au 26/07 un trimestre, MSFT au 30/06 son exercice.
+ANNUAL_FORMS = frozenset({"10-K", "20-F", "40-F"})
 ITEM_RESULTATS = "2.02"
 DELAI_RESULTATS_JOURS = 7
 
@@ -122,6 +125,8 @@ class MaterialEvent:
     # Pour un communiqué de résultats (2.02) : la CLÔTURE des comptes qu'il publie, lue sur le rapport
     # périodique déposé avec lui (`_periode_publiee`). `None` quand aucun rapport ne lui correspond.
     periode_publiee: Optional[date] = None
+    # Cette clôture est-elle celle d'un EXERCICE (rapport 10-K/20-F/40-F déposé à cette date de clôture) ?
+    periode_publiee_annuelle: bool = False
     # La date à laquelle ce dépôt périme les faits d'UNE question — posée par
     # `evenements.ancre_de_la_question`, jamais ici : elle dépend du type au titre duquel il rouvre.
     date_d_effet: Optional[date] = None
@@ -265,6 +270,9 @@ def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
                       _parse_date(_at(recent, "filingDate", i)))]
         if r is not None and f is not None
     ]
+    clotures_annuelles = {
+        r for i, forme in enumerate(formes) if forme in ANNUAL_FORMS
+        for r in [_parse_date(_at(recent, "reportDate", i))] if r is not None}
     out: list[MaterialEvent] = []
     for i, forme in enumerate(formes):
         if forme not in MATERIAL_FORMS:
@@ -277,6 +285,7 @@ def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
         accn = _at(recent, "accessionNumber", i)
         items = _parse_items(_at(recent, "items", i))
         event_date: date = reported or filed  # type: ignore[assignment]
+        publiee = _periode_publiee(periodiques, event_date) if ITEM_RESULTATS in items else None
         out.append(
             MaterialEvent(
                 form=forme,
@@ -285,8 +294,8 @@ def parse_material_events(payload: dict[str, Any], cik: int, *, limit: int = 10
                 items=items,
                 accession=accn,
                 url=_filing_url(cik, accn),
-                periode_publiee=(_periode_publiee(periodiques, event_date)
-                                 if ITEM_RESULTATS in items else None),
+                periode_publiee=publiee,
+                periode_publiee_annuelle=publiee is not None and publiee in clotures_annuelles,
             )
         )
     out.sort(key=lambda e: (e.event_date, e.filing_date), reverse=True)

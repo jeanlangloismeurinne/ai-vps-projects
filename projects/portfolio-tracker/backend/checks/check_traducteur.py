@@ -81,7 +81,11 @@ print("\n[2] ce que le modèle voit ne porte AUCUN levier d'exigence (#59)")
 # Identité copiée du registre SEC réel (`edgar_feed.resolve_identite("NVDA")`, relevé le 2026-09-26).
 NVDA = IdentiteEmetteur(symbole="NVDA", cik=1045810, raison_sociale="NVIDIA CORP")
 # Clôture copiée du réel : 10-Q NVDA du trimestre clos le 2026-07-26 (accession 0001045810-26-000075).
-H_NVDA = T.HorlogeDuPlan(date_du_jour=date(2026, 10, 13), derniere_cloture=date(2026, 7, 26))
+# Horloge par question NEUTRE ici (« aucun fait ») : §8 éprouve la fraîcheur sur le flux réel.
+SANS_FAIT = {q.id: T.FraicheurQuestion("aucun_fait", None, "aucun dépôt ne rouvre (témoin)")
+             for f in F.frameworks for q in f.questions}
+H_NVDA = T.HorlogeDuPlan(date_du_jour=date(2026, 10, 13), derniere_cloture=date(2026, 7, 26),
+                         fraicheur=SANS_FAIT)
 CTX = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA, horloge=H_NVDA)
 _ser = json.dumps(CTX, ensure_ascii=False)
 check("le contexte ne contient pas `plancher_tier` (le modèle ne fixe pas le niveau de preuve)",
@@ -115,8 +119,9 @@ check("`traduire` valide la sortie modèle contre `TraducteurSortie`, pas contre
       "TraducteurSortie" in _src and "run_json_agent" in _src)
 check("… et pose lui-même `framework_version` depuis le référentiel (pas depuis le modèle)",
       "framework_version=fichier.schema_version" in _src)
-check("… puis passe le plan au pont avant de le rendre (jamais un plan non validé)",
-      "valider_pont_collection_plan" in _src)
+check("… puis passe le plan au pont avant de le rendre (jamais un plan non validé) — au premier tour "
+      "ET après le renvoi",
+      _src.count("valider_pont_collection_plan(plan, fichier=fichier, questions=questions)") == 2)
 
 # ── §5 l'inapplicable est refusé AVANT toute dépense ──────────────────────────────────────────────
 print("\n[5] framework ou archétype inconnu lève AVANT l'appel modèle (#40)")
@@ -174,7 +179,7 @@ check("le contexte porte la date du jour (un modèle sans date fournie date à s
 check("la lecture rendue au modèle nomme la clôture (pas seulement un champ brut)",
       "2026-07-26" in (_cal.get("lecture") or ""), f"→ {_cal.get('lecture')}")
 _ctx_inconnue = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA,
-                                      horloge=T.HorlogeDuPlan(date(2026, 10, 13), None))
+                                      horloge=T.HorlogeDuPlan(date(2026, 10, 13), None, SANS_FAIT))
 _cal_i = _ctx_inconnue.get("calendrier") or {}
 check("clôture inconnue : la clé est PRÉSENTE à null et la lecture dit INCONNUE (jamais omise ni devinée)",
       "cloture_des_derniers_comptes_publies" in _cal_i
@@ -183,9 +188,9 @@ check("clôture inconnue : la clé est PRÉSENTE à null et la lecture dit INCON
 try:
     T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA)
     check("le contexte REFUSE de se construire sans horloge (aucun défaut silencieux)", False)
-except TypeError as e:
+except Exception as e:  # noqa: BLE001 — une autre exception est un FAIL nommé, jamais la mort du script
     check("le contexte REFUSE de se construire sans horloge (aucun défaut silencieux)",
-          "horloge" in str(e), f"→ {e}")
+          isinstance(e, TypeError) and "horloge" in str(e), f"→ {type(e).__name__}: {e}")
 check("la consigne enseigne la RÈGLE DE FRAÎCHEUR : viser le rapport périodique qui couvre la clôture, "
       "y compris pour une clause (`sans_periode`)",
       "RÈGLE DE FRAÎCHEUR" in T._TRADUCTEUR_SYSTEM_PROMPT
@@ -200,6 +205,146 @@ check("l'horloge du plan est celle qui servira les réponses (`horloge_du_titre`
       "`derniere_cloture_publiee`, détenteurs uniques — #46)",
       "horloge_du_titre(conn, ticker_id, fichier)" in _src_h
       and "derniere_cloture_publiee(ancre)" in _src_h)
+
+
+# ── §8 chaque question porte SA fraîcheur — le fait qui la rouvre (jalon A, 2026-10-13) ────────────
+print("\n[8] la date avant laquelle une pièce naît périmée est donnée PAR QUESTION au modèle")
+# Le défaut mesuré à blanc (modèle économique, 2026-10-13) : NVDA ancré au rapport annuel du 26/01 sur
+# des questions que les comptes du 26/07 rouvrent ; RVMD décrit « produit non encore commercialisé »
+# sur le rapport annuel 2025, alors que l'approbation FDA du 26/08 rouvre me_1/me_5. Flux RÉEL RVMD
+# (relevé EDGAR du 2026-09-30, `check_evenements`), note flash réelle du 8.01 FDA (#80).
+from app.knowledge.evenements import QualificationLue  # noqa: E402
+from app.knowledge.material_events import MaterialEventLookup, parse_material_events  # noqa: E402
+
+_cols = ("form", "reportDate", "filingDate", "items", "accessionNumber")
+_lignes = (("8-K", "2026-08-27", "2026-09-01", "1.01,2.03", "0001193125-26-377362"),
+           ("8-K", "2026-08-26", "2026-08-26", "8.01", "acc-rvmd-fda"),
+           ("10-Q", "2026-06-30", "2026-08-05", "", "0001193125-26-335104"),
+           ("8-K", "2026-08-05", "2026-08-05", "2.02,9.01", "0001193125-26-335039"))
+_flux = MaterialEventLookup(status="found", cik=1628171, recents=tuple(parse_material_events(
+    {"filings": {"recent": {c: [l[i] for l in _lignes] for i, c in enumerate(_cols)}}},
+    1628171, limit=100)))
+_notes = {"acc-rvmd-fda": QualificationLue(
+    types=frozenset({"reglementaire_favorable"}),
+    resume="note flash du 2026-09-26 : « the U.S. Food and Drug Administration approved RASONQUE™ »")}
+try:
+    FQ = T.fraicheur_des_questions(_flux, _notes, F)
+except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
+    FQ = {}
+    check("fraicheur_des_questions rend une horloge", False, f"→ LÈVE {e!r}")
+_toutes = {q.id for f in F.frameworks for q in f.questions}
+check("une horloge pour CHAQUE question du référentiel (aucune tue)", set(FQ) == _toutes,
+      f"→ manquent {sorted(_toutes - set(FQ))[:5]}")
+_m1, _m2, _m6 = FQ.get("me_1"), FQ.get("me_2"), FQ.get("me_6")
+check("me_1 (rouverte par l'approbation du 26/08, POSTÉRIEURE aux comptes) : un fait À LIRE, nommé — "
+      "il ne fixe pas de date minimale (#117, lire et annoter)",
+      _m1 is not None and _m1.depuis is None and len(_m1.a_lire) == 1
+      and "reglementaire_favorable" in _m1.a_lire[0], f"→ {_m1}")
+check("me_2 (rouverte par les résultats) : date minimale = la CLÔTURE publiée (30/06), pas le 05/08 (#102)",
+      _m2 is not None and _m2.etat == "fait_important" and _m2.depuis == date(2026, 6, 30), f"→ {_m2}")
+check("me_6 (ni accord ni incident au flux) : `aucun_fait`, sans date inventée ni fait à lire",
+      _m6 is not None and _m6.etat == "aucun_fait" and _m6.depuis is None and _m6.a_lire == (),
+      f"→ {_m6}")
+_q4 = FQ.get("qf_4")
+check("qf_4 (rouverte par le financement du 27/08 ET les résultats) : date minimale = la clôture 30/06, "
+      "le financement postérieur est À LIRE, jamais la date minimale",
+      _q4 is not None and _q4.depuis == date(2026, 6, 30)
+      and any("financement" in x for x in _q4.a_lire), f"→ {_q4}")
+_fq_inc = T.fraicheur_des_questions(MaterialEventLookup(status="unavailable", raison="EDGAR 503"), {}, F)
+check("flux illisible : `inconnu` — jamais « aucun fait » (#49)",
+      _fq_inc.get("me_1") is not None and _fq_inc["me_1"].etat == "inconnu", f"→ {_fq_inc.get('me_1')}")
+if FQ:
+    _H_RVMD = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 6, 30), FQ)
+    _ctx_me = T.contexte_traducteur(F, "modele_economique", "pre_revenus", "RVMD", emetteur=IdentiteEmetteur(
+        symbole="RVMD", cik=1628171, raison_sociale="Revolution Medicines, Inc."), horloge=_H_RVMD)
+    _fr = {qq["id"]: qq.get("fraicheur") or {} for qq in _ctx_me["questions"]}
+    check("le contexte porte la date minimale de me_2 ET la lecture la nomme",
+          _fr.get("me_2", {}).get("date_minimale_des_pieces") == "2026-06-30"
+          # la PHRASE du seuil, pas la date nue : un résumé de dépôt peut la porter (faux vert mesuré)
+          and "AVANT le 2026-06-30" in (_fr.get("me_2", {}).get("lecture") or ""), f"→ {_fr.get('me_2')}")
+    check("le contexte de me_1 nomme l'approbation comme fait À LIRE, et dit qu'il ne périme rien",
+          len(_fr.get("me_1", {}).get("faits_a_lire_depuis_les_comptes") or []) == 1
+          and "ne périment PAS" in (_fr.get("me_1", {}).get("lecture_des_faits") or ""),
+          f"→ {_fr.get('me_1')}")
+    check("une question sans fait porte sa fraîcheur À null, dite (clé présente, jamais omise)",
+          "date_minimale_des_pieces" in _fr.get("me_6", {})
+          and _fr["me_6"]["date_minimale_des_pieces"] is None, f"→ {_fr.get('me_6')}")
+try:
+    T.contexte_traducteur(F, "modele_economique", "pre_revenus", "RVMD", emetteur=NVDA,
+                          horloge=T.HorlogeDuPlan(date(2026, 10, 13), None, {}))
+    check("une question SANS horloge fait refuser le contexte (pas de défaut silencieux)", False)
+except KeyError:
+    check("une question SANS horloge fait refuser le contexte (pas de défaut silencieux)", True)
+check("la consigne dit que la date minimale PRIME sur la clôture, `exercice_clos` compris",
+      "`date_minimale_des_pieces`" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "PRIME sur la clôture" in T._TRADUCTEUR_SYSTEM_PROMPT
+      and "y compris une ligne `exercice_clos`" in T._TRADUCTEUR_SYSTEM_PROMPT)
+_src_h8 = inspect.getsource(T.horloge_du_plan)
+check("l'horloge par question est lue sur l'ancre ET les notes de `horloge_du_titre` (#46)",
+      "fraicheur_des_questions(ancre, notes, fichier)" in _src_h8)
+_src_fq = inspect.getsource(T.fraicheur_des_questions)
+check("… par les détenteurs uniques `ancre_de_la_question` et `types_qui_rouvrent` (#89)",
+      "ancre_de_la_question(ancre, rouvrent=types_qui_rouvrent(fichier, q.id)" in _src_fq)
+check("… la date est le SEUIL du dépôt (#102), et les faits à lire viennent de `faits_a_lire` (#103)",
+      "pese.seuil" in _src_fq and "faits_a_lire(lk, cloture=cloture)" in _src_fq)
+
+
+# ── §9 une ligne `exercice_clos` sur une question rouverte par des comptes plus récents est refusée ──
+print("\n[9] `exercice_clos` ne vise pas un rapport antérieur à la date minimale de la question")
+# Mesuré à blanc (2026-10-13) : NVDA × modèle économique, 6 lignes `exercice_clos` (rapport annuel
+# clos le 25/01) sur me_2/me_3/me_6, que les comptes du 26/07 rouvrent — plan ancré au 26/07 malgré tout.
+from app.contracts.collection_plan_schema import CollectionPlan  # noqa: E402
+
+
+def _ligne(qid, iid, periode):
+    # Forme copiée du plan NVDA lu à blanc le 2026-10-13.
+    return {"question_id": qid, "ingredient_id": iid, "statut": "traduit", "periode": periode,
+            "metrique": "Revenus par segment (Compute & Networking, Graphics)",
+            "source_pressentie": "10-K (notes aux états financiers - information sectorielle), 10-Q",
+            "ancre": "2026-07-26"}
+
+
+_FQ9 = dict(SANS_FAIT)
+_FQ9["me_2"] = T.FraicheurQuestion("fait_important", date(2026, 7, 26), "8-K du 2026-08-26 (résultats)")
+_plan9 = CollectionPlan(ticker_id="NVDA", framework_id="modele_economique", framework_version=F.schema_version,
+                        archetype="rentable", items=[
+                            _ligne("me_2", "repartition_du_chiffre_d_affaires", "exercice_clos"),
+                            _ligne("me_2", "part_engagee_ou_repetee", "cumul_publie"),
+                            _ligne("me_1", "client_payeur", "exercice_clos")])
+_nvda9 = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 7, 26), _FQ9, derniere_cloture_annuelle=None)
+def _fautives(plan, horloge):
+    try:
+        return T.lignes_exercice_clos_perimees(plan, horloge)
+    except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
+        return [f"LÈVE : {e!r}"]
+
+
+_f9 = _fautives(_plan9, _nvda9)
+check("NVDA (dernière clôture = un trimestre) : la seule ligne `exercice_clos` d'une question à date "
+      "minimale est refusée, nommée — pas `cumul_publie`, pas une question sans date minimale",
+      len(_f9) == 1 and _f9[0].startswith("me_2.repartition_du_chiffre_d_affaires"), f"→ {_f9}")
+_nvda9b = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 7, 26), _FQ9,
+                          derniere_cloture_annuelle=date(2026, 1, 25))
+check("NVDA, exercice clos le 25/01 connu : toujours refusée (25/01 < 26/07)",
+      len(_fautives(_plan9, _nvda9b)) == 1)
+_FQ9m = dict(SANS_FAIT)
+_FQ9m["me_2"] = T.FraicheurQuestion("fait_important", date(2026, 6, 30), "8-K du 2026-07-29 (résultats)")
+_msft9 = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 6, 30), _FQ9m, derniere_cloture_annuelle=date(2026, 6, 30))
+check("MSFT (la dernière clôture EST l'exercice, 30/06) : `exercice_clos` est la bonne lecture — admise",
+      _fautives(_plan9, _msft9) == [], f"→ {_fautives(_plan9, _msft9)}")
+_ctx9 = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA, horloge=_nvda9b)
+check("le contexte montre la clôture du dernier exercice, datée (et à null, clé présente, si inconnue)",
+      _ctx9["calendrier"].get("cloture_du_dernier_exercice_publie") == "2026-01-25"
+      and CTX["calendrier"].get("cloture_du_dernier_exercice_publie", "ABSENTE") is None,
+      f"→ {_ctx9['calendrier']}")
+_src_tr9 = inspect.getsource(T.traduire)
+check("`traduire` applique la garde APRÈS le pont, renvoie UNE fois, puis refuse nommément",
+      _src_tr9.count("lignes_exercice_clos_perimees(plan, horloge)") == 2
+      and "raise CollectionPlanRefused(" in _src_tr9 and _src_tr9.count("run_json_agent(") == 2)
+check("… et le passage coûte les DEUX appels (#41)",
+      "cost_usd=run.cost_usd + second.cost_usd" in _src_tr9)
+check("`horloge_du_plan` lit la clôture d'exercice sur le flux (`derniere_cloture_annuelle_publiee`)",
+      "derniere_cloture_annuelle=derniere_cloture_annuelle_publiee(ancre)" in inspect.getsource(T.horloge_du_plan))
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

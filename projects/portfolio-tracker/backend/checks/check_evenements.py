@@ -261,6 +261,26 @@ ms = par_acc(parse_material_events(payload(
     ("8-K", "2025-10-28", "2025-10-29", "2.02,7.01,9.01", "0001193125-25-256310")), 789019, limit=10))
 b.check(ms["0001193125-25-256310"].periode_publiee == date(2025, 9, 30),
         "MSFT 28/10/2025 : communiqué la veille du 10-Q — rattaché à la clôture du 30/09")
+# Jalon A (2026-10-13) — une clôture d'EXERCICE se distingue d'une clôture de trimestre (relevé EDGAR
+# MSFT du 2026-10-13 : 10-K clos le 30/06/2026 déposé le 29/07 avec son communiqué).
+ms_an = par_acc(parse_material_events(payload(
+    ("10-K", "2026-06-30", "2026-07-29", "", "0001193125-26-323660"),
+    ("8-K", "2026-07-29", "2026-07-29", "2.02,9.01", "0001193125-26-323632"),
+    ("10-Q", "2026-03-31", "2026-04-29", "", "0001193125-26-191507"),
+    ("8-K", "2026-04-29", "2026-04-29", "2.02,9.01", "0001193125-26-191457")), 789019, limit=10))
+b.check(ms_an["0001193125-26-323632"].periode_publiee_annuelle is True,
+        "MSFT 29/07/2026 : le communiqué publie un EXERCICE (10-K clos le 30/06) → "
+        f"{ms_an['0001193125-26-323632'].periode_publiee_annuelle}")
+b.check(ms_an["0001193125-26-191457"].periode_publiee_annuelle is False
+        and nv["0001045810-26-000073"].periode_publiee_annuelle is False,
+        "un communiqué qui publie un 10-Q (MSFT 29/04, NVDA 26/08) ne publie PAS un exercice")
+from app.knowledge.evenements import derniere_cloture_annuelle_publiee  # noqa: E402
+_lk_ms = MaterialEventLookup(status="found", cik=789019, recents=tuple(ms_an.values()))
+b.check(derniere_cloture_annuelle_publiee(_lk_ms) == date(2026, 6, 30),
+        f"la dernière clôture d'exercice MSFT est le 30/06/2026 → {derniere_cloture_annuelle_publiee(_lk_ms)}")
+_lk_nv = MaterialEventLookup(status="found", cik=1045810, recents=tuple(nv.values()))
+b.check(derniere_cloture_annuelle_publiee(_lk_nv) is None,
+        "NVDA (seul le 10-Q au flux) : clôture d'exercice INCONNUE, jamais le trimestre pris pour l'exercice")
 # Communiqué du T3 publié AVANT son 10-Q : la dernière clôture déposée est celle du T2, des mois plus
 # tôt. La rattacher rendrait à jour les comptes du T2 que ce communiqué vient de remplacer.
 premature = par_acc(parse_material_events(payload(

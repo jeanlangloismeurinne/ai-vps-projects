@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lanceur de l'acceptation du traducteur contre le VRAI modèle (`tools/acceptation_traducteur.py`).
 #
-#   bash tools/acceptation_traducteur.sh
+#   bash tools/acceptation_traducteur.sh [TICKER:framework:archetype …]
 #
 # ⚠️ Appelle DeepSeek (DeepInfra) et lit `agent_prompts` en DB — d'où réseau `coolify` + le vrai
 # `.env`. Ordre des `--env-file` load-bearing : `checks/env.checks` porte une DATABASE_URL bidon que
@@ -13,4 +13,4 @@ cd "$(dirname "$0")/.." || exit 2
 IMG=$(docker inspect portfolio-backend --format '{{.Config.Image}}')
 exec docker run --rm --network coolify -v "$PWD:/app:ro" \
   -w /app -e PYTHONPATH=/app \
-  --env-file checks/env.checks --env-file .env "$IMG" python tools/acceptation_traducteur.py
+  --env-file checks/env.checks --env-file .env "$IMG" python tools/acceptation_traducteur.py "$@"

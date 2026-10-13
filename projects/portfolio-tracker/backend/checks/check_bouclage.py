@@ -36,7 +36,8 @@ from app.agents.v2.frameworks import (
 )
 from datetime import date
 
-from app.agents.v2.traducteur import HorlogeDuPlan, TraducteurInapplicable, contexte_traducteur
+from app.agents.v2.traducteur import (FraicheurQuestion, HorlogeDuPlan, TraducteurInapplicable,
+                                      contexte_traducteur)
 from app.knowledge.edgar_feed import IdentiteEmetteur
 from app.contracts.bouclage_schema import (
     SORTS_BOUCLAGE,
@@ -204,7 +205,9 @@ _rejette("§5 une ligne HORS du scope de bouclage est refusée ([P])",
 # Identité copiée du registre SEC réel (`resolve_identite("RVMD")`, relevé le 2026-09-26).
 _RVMD = IdentiteEmetteur(symbole="RVMD", cik=1628171, raison_sociale="Revolution Medicines, Inc.")
 # Clôture copiée du réel (10-Q RVMD du trimestre clos le 2026-06-30) — #120.
-_H_RVMD = HorlogeDuPlan(date_du_jour=date(2026, 10, 13), derniere_cloture=date(2026, 6, 30))
+_H_RVMD = HorlogeDuPlan(date_du_jour=date(2026, 10, 13), derniere_cloture=date(2026, 6, 30),
+                        fraicheur={q.id: FraicheurQuestion("aucun_fait", None, "témoin")
+                                   for f in FICH.frameworks for q in f.questions})
 # le contexte du traducteur refuse un scope hors des questions applicables (#32).
 _rejette("§5 un scope nommant une question SANS OBJET (qf_1 sous pre_revenus) est refusé (#32)",
          lambda: contexte_traducteur(FICH, FW, "pre_revenus", "RVMD", emetteur=_RVMD, horloge=_H_RVMD,

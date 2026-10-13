@@ -49,7 +49,22 @@ def _essentiels(fichier, framework_id, archetype) -> set[tuple[str, str]]:
             for i in ingredients_a_collecter(q) if i.essentiel}
 
 
+def _cas_demandes(argv: list[str]) -> list[tuple[str, str, str]]:
+    # `TICKER:framework:archetype` en arguments remplace la liste par défaut (jalon A, 2026-10-13 :
+    # lire le plan des nouveaux frameworks sans écrire en base). Une forme fautive est refusée nommément.
+    if not argv:
+        return CAS
+    cas = []
+    for a in argv:
+        morceaux = a.split(":")
+        if len(morceaux) != 3 or not all(morceaux):
+            raise SystemExit(f"argument « {a} » : forme attendue TICKER:framework:archetype")
+        cas.append(tuple(morceaux))
+    return cas
+
+
 async def main() -> int:
+    cas_demandes = _cas_demandes(sys.argv[1:])
     url = os.environ.get("DATABASE_URL") or ""
     if not url or not os.environ.get("DEEPINFRA_API_KEY"):
         print("DATABASE_URL / DEEPINFRA_API_KEY manquantes — l'acceptation appelle le VRAI modèle, "
@@ -60,9 +75,20 @@ async def main() -> int:
     await init_pool(url)
     ok = fail = 0
     try:
-        for ticker, framework_id, archetype in CAS:
+        for ticker, framework_id, archetype in cas_demandes:
             print(f"\n{'='*72}\n{ticker} · {framework_id} · archétype « {archetype} »\n{'='*72}")
             ess = _essentiels(fichier, framework_id, archetype)
+            # L'horloge montrée au modèle, question par question (jalon A, 2026-10-13) — lue gratuitement.
+            from app.agents.v2.traducteur import horloge_du_plan
+            from app.db.database import get_db_session
+            async with get_db_session() as conn:
+                h = await horloge_du_plan(conn, ticker, fichier)
+            print(f"  clôture des derniers comptes publiés : {h.derniere_cloture}")
+            for q in questions_applicables(fichier, framework_id, archetype):
+                fq = h.fraicheur[q.id]
+                print(f"  horloge {q.id} : {fq.etat} · date minimale {fq.depuis} · {fq.motif[:110]}")
+                for x in fq.a_lire:
+                    print(f"      à lire : {x[:130]}")
             try:
                 run, plan = await traduire(ticker, framework_id, archetype, fichier=fichier)
             except CollectionPlanRefused as e:
@@ -82,7 +108,7 @@ async def main() -> int:
                 if it.statut == "traduit":
                     print(f"{marque} {it.question_id}.{it.ingredient_id}")
                     print(f"      → {it.metrique}")
-                    print(f"        [source pressentie : {it.source_pressentie} · ancre : {it.ancre}]")
+                    print(f"        [source pressentie : {it.source_pressentie} · ancre : {it.ancre} · période : {it.periode}]")
                 else:
                     print(f"{marque} {it.question_id}.{it.ingredient_id}")
                     print(f"      ⚠ INOBTENABLE → mandat : {it.motif}")

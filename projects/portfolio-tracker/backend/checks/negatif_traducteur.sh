@@ -47,12 +47,35 @@ mutations=(
 "$SRC¦                horloge.derniere_cloture.isoformat() if horloge.derniere_cloture else None),¦                None),¦porte la clôture des derniers comptes publiés"
 "$SRC¦            \"date_du_jour\": horloge.date_du_jour.isoformat(),¦            \"date_du_jour\": None,¦porte la date du jour"
 "$SRC¦\"Clôture des derniers comptes publiés INCONNUE du système¦\"Clôture des derniers comptes publiés pas connue du système¦clôture inconnue : la clé"
-"$SRC¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan,¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan = HorlogeDuPlan(date(2000, 1, 1), None),¦REFUSE de se construire sans horloge"
+"$SRC¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan,¦    *, emetteur: IdentiteEmetteur, horloge: HorlogeDuPlan = HorlogeDuPlan(date(2000, 1, 1), None, {}),¦REFUSE de se construire sans horloge"
 "$SRC¦    \"RÈGLE DE FRAÎCHEUR — tu n'as¦    \"RÈGLE — tu n'as¦consigne enseigne la RÈGLE"
 "$SRC¦Cela vaut AUSSI pour une clause¦Cela vaut pour une clause¦consigne enseigne la RÈGLE"
 "$SRC¦        horloge = await horloge_du_plan(conn, ticker_id, fichier)¦        horloge = HorlogeDuPlan(date.today(), None)¦lit l'horloge AVANT"
 "$SRC¦emetteur=emetteur, horloge=horloge,¦emetteur=emetteur, horloge=HorlogeDuPlan(date.today(), None),¦contexte du modèle (#120)"
-"$SRC¦derniere_cloture=derniere_cloture_publiee(ancre))¦derniere_cloture=None)¦l'horloge du plan est celle"
+"$SRC¦derniere_cloture=derniere_cloture_publiee(ancre),¦derniere_cloture=None,¦l'horloge du plan est celle"
+# Jalon A (2026-10-13) — la fraîcheur PAR QUESTION (modèle économique : NVDA au 10-K du 26/01, RVMD
+# « non commercialisé » après l'approbation du 26/08).
+"$SRC¦FraicheurQuestion(\"fait_important\", pese.seuil, pese.resume(), a_lire)¦FraicheurQuestion(\"fait_important\", pese.event_date, pese.resume(), a_lire)¦date minimale = la CLÔTURE publiée"
+"$SRC¦                lus = faits_a_lire(lk, cloture=cloture)¦                lus = []¦un fait À LIRE, nommé"
+"$SRC¦                reste = [e for e in lk.recents if id(e) not in lus_ids]¦                reste = list(lk.recents)¦le financement postérieur est À LIRE"
+"$SRC¦            elif lk.status == \"none\":¦            elif lk.status in (\"none\", \"unavailable\"):¦flux illisible"
+"$SRC¦rouvrent=types_qui_rouvrent(fichier, q.id),¦rouvrent=frozenset(t.id for t in fichier.types_evenement),¦me_6 (ni accord ni incident"
+"$SRC¦                \"fraicheur\": _lecture_fraicheur(horloge.fraicheur[q.id]),¦                \"fraicheur\": {},¦porte la date minimale de me_2"
+"$SRC¦_lecture_fraicheur(horloge.fraicheur[q.id])¦_lecture_fraicheur(horloge.fraicheur.get(q.id, FraicheurQuestion(\"aucun_fait\", None, \"?\")))¦SANS horloge fait refuser"
+"$SRC¦situation AVANT le {fq.depuis.isoformat()} naîtra¦situation AVANT ce fait naîtra¦porte la date minimale de me_2"
+"$SRC¦l'effet — ils ne périment PAS les pièces¦l'effet — ils périment les pièces¦nomme l'approbation comme fait À LIRE"
+"$SRC¦            \"date_minimale_des_pieces\": fq.depuis.isoformat() if fq.depuis else None,¦            **({\"date_minimale_des_pieces\": fq.depuis.isoformat()} if fq.depuis else {}),¦clé présente, jamais omise"
+"$SRC¦elle PRIME sur la clôture¦elle complète la clôture¦date minimale PRIME"
+"$SRC¦fraicheur=fraicheur_des_questions(ancre, notes, fichier),¦fraicheur=fraicheur_des_questions(ancre, {}, fichier),¦lue sur l'ancre ET les notes"
+# Jalon A — la garde `exercice_clos`
+"$SRC¦        if annuelle is None or fq.depuis > annuelle:¦        if annuelle is not None and fq.depuis > annuelle:¦clôture = un trimestre"
+"$SRC¦        if annuelle is None or fq.depuis > annuelle:¦        if annuelle is None or fq.depuis >= annuelle:¦la dernière clôture EST l'exercice"
+"$SRC¦        if it.statut != \"traduit\" or it.periode != \"exercice_clos\":¦        if it.statut != \"traduit\":¦pas \`cumul_publie\`"
+"$SRC¦        if fq is None or fq.depuis is None:¦        if fq is None:¦pas une question sans date minimale"
+"$SRC¦    fautives = lignes_exercice_clos_perimees(plan, horloge)¦    fautives = []¦renvoie UNE fois"
+"$SRC¦                                  cost_usd=run.cost_usd + second.cost_usd,¦                                  cost_usd=second.cost_usd,¦coûte les DEUX appels"
+"$SRC¦                horloge.derniere_cloture_annuelle.isoformat()¦                None and horloge.derniere_cloture_annuelle.isoformat()¦clôture du dernier exercice, datée"
+"$SRC¦                         derniere_cloture_annuelle=derniere_cloture_annuelle_publiee(ancre))¦                         derniere_cloture_annuelle=None)¦lit la clôture d'exercice sur le flux"
 )
 
 passes=0; ratees=0

@@ -49,7 +49,7 @@ from app.knowledge.material_events import MaterialEvent, MaterialEventLookup
 __all__ = [
     "A_QUALIFIER", "ROUTINE", "RESULTATS", "TYPE_PAR_ITEM", "TYPES_DE_LA_FORME", "QualificationLue",
     "types_du_depot", "ancre_de_la_question",
-    "derniere_cloture_publiee", "lisible_par_l_analyste", "faits_a_lire", "retirer_faits_lus",
+    "derniere_cloture_publiee", "derniere_cloture_annuelle_publiee", "lisible_par_l_analyste", "faits_a_lire", "retirer_faits_lus",
 ]
 
 # Le type d'un dépôt dont la forme ne décide pas. Son nom est aussi sa consigne : quelqu'un doit le
@@ -200,6 +200,14 @@ def ancre_de_la_question(
 
 
 # ── Les faits postérieurs aux comptes (#103) ─────────────────────────────────────────────────────────
+
+def derniere_cloture_annuelle_publiee(lookup: MaterialEventLookup) -> Optional[date]:
+    """La clôture du dernier EXERCICE publié (rapport annuel déposé avec son communiqué), lue comme
+    `derniere_cloture_publiee`. `None` quand aucune ne s'est rattachée : on ne la devine pas."""
+    clotures = [e.periode_publiee for e in lookup.recents
+                if e.periode_publiee is not None and e.periode_publiee_annuelle]
+    return max(clotures) if clotures else None
+
 
 def derniere_cloture_publiee(lookup: MaterialEventLookup) -> Optional[date]:
     """La clôture des derniers comptes publiés, lue sur les communiqués de résultats du flux (#102).
