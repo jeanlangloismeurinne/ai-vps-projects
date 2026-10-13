@@ -3251,6 +3251,38 @@ justes par chance).
 **Retrait** : `tools/retraits/2026-10-13_rvmd_identite_silexion.sql` — réponses #1304-#1309 (restaure
 #689-#694) et pièces #932-#942 ; trace JSON/TXT à côté. #917/#920 (pièce de concurrent) conservées.
 
+### #123 — le plan de collecte vise l'horloge de CHAQUE question, pas seulement la dernière clôture
+
+**Défaut mesuré à blanc (2026-10-13, jalon « note d'initiation », modèle économique, aucune écriture).**
+NVDA : lignes ancrées au rapport annuel du 26/01 sur des questions (me_2/me_3/me_4) que les comptes du
+26/07 rouvrent ; RVMD : « produit non encore commercialisé » lu au rapport annuel 2025, alors que
+l'approbation FDA du 26/08 rouvre me_1/me_5. La clôture des derniers comptes (#120) ne suffit pas : une
+réponse est jugée contre le dernier fait qui rouvre SA question (#89). Même cause que la défendabilité RVMD
+(5/5 périmées).
+
+**Comme un fonds** : l'analyste qui met une section à jour sait ce qui l'a rouverte — de nouveaux comptes
+imposent de relire le dernier rapport ; un fait postérieur aux comptes (approbation, rachat) se lit et
+s'annote (#117), il n'oblige pas à jeter les pièces des comptes, mais s'il change ce que la section décrit,
+on en cherche les conséquences (prix de lancement après une autorisation).
+
+**La règle** (`traducteur.fraicheur_des_questions`, pur, sur l'ancre et les notes de `horloge_du_titre`) :
+par question, `depuis` = SEUIL (#102) du dernier dépôt qui la rouvre et que l'analyste ne peut pas
+simplement lire (nouveaux comptes, faits antérieurs à la clôture) ; `a_lire` = les faits postérieurs aux
+comptes (`faits_a_lire`, détenteur unique) — ils ne fixent JAMAIS la date minimale (1ʳᵉ version mesurée :
+20 lignes NVDA ancrées sur le rachat de Hugging Face). Trois états (`fait_important` / `aucun_fait` /
+`inconnu`). `HorlogeDuPlan.fraicheur` est requis : une question absente fait refuser le contexte.
+**Garde en code** (`lignes_exercice_clos_perimees`) : une ligne `exercice_clos` sur une question dont la
+date minimale dépasse la clôture du dernier EXERCICE publié (`derniere_cloture_annuelle_publiee`, lue sur
+le flux : `MaterialEvent.periode_publiee_annuelle`, rapport 10-K/20-F/40-F déposé avec le communiqué) est
+renvoyée UNE fois au modèle, puis le plan est refusé nommément ; le coût des deux appels est cumulé (#41).
+NVDA (clôture = trimestre) refusé, MSFT (30/06 = exercice) admis. La consigne seule ne tenait pas.
+**Le modèle économique lit le socle** (`lit_le_socle: true`, `me_3.marge_brute_sur_plusieurs_periodes`
+`depuis_le_socle`) : une série pluriannuelle tirée du rapport annuel naissait périmée, la pièce du socle
+est datée du dernier dépôt (choix pris comme un fonds — le modèle des comptes sert toute la note).
+Gardes : `check_traducteur` §8/§9 (54) + négatif **42/0** ; `check_evenements` (clôture d'exercice, dépôts
+MSFT réels) + négatif **34/0** ; `check_frameworks_definitions` [U]. Outil : `tools/acceptation_traducteur.sh
+TICKER:framework:archetype …` imprime l'horloge par question et le plan, sans écrire.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
