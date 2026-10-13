@@ -3194,6 +3194,35 @@ en suffixe de code (`worker.py`), la consigne en base n'en dit rien. Le contrat 
 (rien de faux n'est écrit), mais la collecte se perd. Résidu de #905 : sa prose attribue au 10-Q la
 formule « covenants protecteurs limités » du prospectus (même famille que #848).
 
+### #121 — l'exemple de sortie d'une consigne est un point de contrat : il se valide contre le contrat
+
+**Cause du « défaut distinct » de #120.** Le collecteur ne rendait pas `portee_temporelle` parce que
+l'EXEMPLE JSON de sa consigne en base (`agent_prompts`, `search-worker` et `ingestion-agent`, v2) portait
+encore `"source_date"`, retiré du contrat par la 045 (#79, 2026-09-23) — et la consigne dit « aucune clef
+hors de l'exemple ». La règle de datation, ajoutée en suffixe de code (`worker.py`), était contredite par
+l'exemple ; sur les longs passages, le modèle suivait l'exemple (erreur Pydantic exacte des mandats
+2612/2613 : `portee_temporelle` manquant + `source_date` interdit). 15 mandats `echec_collecte` perdus du
+2026-09-25 au 2026-10-13. Même panne que la 037 (`covers`), un cran plus loin : **le troisième point de
+synchro de la règle #19/#39 n'avait aucune garde.**
+
+**Correctif.** (1) Exemples corrigés dans `provenance-cards/prompts/10-ingestion-agent.md` et
+`11-search-worker.md` (constatée, deux dates distinctes) + phrase « plus de `source_date` » ; (2) migration
+**054** générée par `_gen_054.py` (relit les fichiers committés ; la base était leur miroir exact,
+vérifié avant), garde `054/K` éprouvée en négatif sur la base d'avant (lève « 0 sur 2 ») puis appliquée ;
+(3) **`check_prompts_exemples.py`** : chaque pièce de l'exemple de sortie est validée par `ProducedEntry`
+au FICHIER (§1) et EN BASE (§2, lecture seule, `CHECK_DB_URL`). Négatifs : rouge sur les fichiers d'avant
+correction et sur la base d'avant la 054, sur exactement les deux champs du refus de production. Ferme la
+classe (tout champ futur retiré du contrat), pas seulement ce cas. Rattaché à `app/knowledge/ARCHITECTURE.md`.
+
+**Vérifié contre le vrai modèle** (plan #237, NVDA `--questions=qf_8`) : aucun échec de validation ;
+pièces #907 (marge avant déclenchement : aucun seuil, conformité au 26/07) et #908 (aucun défaut au
+26/07), datées au 26/07 ; réponse **#1303** `repondu` A `aucune_contrainte`, cite [907, 905, 847, 865, 866],
+**courante**. Qualité financière NVDA **1,00** (8/8 courantes). Relu contre le 10-Q : 33 366 M$, 25,0 Md$
+en sept tranches, 1 000 M$ à moins d'un an, phrase de conformité — justes. Résidu nommé : la prose
+attribue au 10-Q la date de l'indenture (16/09/2016), « covenants protecteurs limités » et « aucune clause
+de changement de contrôle activée », absentes de ce dépôt (reprises du prospectus/10-K) — même famille que
+#848 ; sans effet sur la conclusion.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

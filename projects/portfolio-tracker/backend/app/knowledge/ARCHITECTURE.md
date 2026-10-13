@@ -55,6 +55,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Score/tier calculés, jamais fournis ; passage obligé | `check_provenance.py`, `check_synthesis_feed.py` |
 | Nature dérivée (`metric` structuré ⟹ `mesure`) | `check_entry_nature.py` §7 (état persisté) |
 | Datation : deux dates nommées, `source_date` dérivée, confusion fait/document INEXPRIMABLE (#79) | `check_datation.py` + `negatif_datation.sh` |
+| L'exemple de sortie des consignes `search-worker`/`ingestion-agent` se valide contre `ProducedEntry`, au fichier ET en base (#121 — l'exemple portait `source_date` après la 045) | `check_prompts_exemples.py` (négatif : rejoué sur les fichiers d'avant correction et la base d'avant la 054) |
 | Registre : standing par couple (source × nature) | `check_source_registry.py` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
 | Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |

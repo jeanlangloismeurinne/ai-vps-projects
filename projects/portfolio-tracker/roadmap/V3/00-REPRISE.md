@@ -2,13 +2,13 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-13 (#120 — le traducteur reçoit l'horloge ; qf_8 NVDA instruite, reste périmée par un défaut distinct du collecteur ; #119+#120 déployés)
+updated: 2026-10-13 (#120 horloge du traducteur ; #121 exemple des consignes resynchronisé, migration 054 ; qualité financière NVDA 1,00)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
   reste ouvert et les pièges. Le récit des lots livrés est dans `00-REPRISE-ARCHIVE.md` (l'état
   complet de ce fichier avant son délestage du 2026-09-25 y est copié tel quel, section
-  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#120), la
+  « 2026-09-25 (4) »), les règles durables dans le `CLAUDE.md` du projet (conventions #25…#121), la
   PREUVE de ce qui existe dans `backend/checks/` — qu'on exécute.
 ---
 
@@ -84,7 +84,8 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4419 assertions, 58 scripts, 0 rouge** — 2026-10-13 après #120
+- **Suite** `bash checks/run_all.sh` = **4430 assertions, 59 scripts, 0 rouge** — 2026-10-13 après #121
+  (`check_prompts_exemples` neuf). Avant : 4419 / 58 après #120
   (négatif traducteur 22/0). Avant : **4398 assertions, 1 rouge ATTENDU** — 2026-10-12 après #118 :
   `check_signature_modele_persist` (RVMD qf_6 #1080 porte l'ancien encadré — se solde par sa réémission
   `--sans-collecte --questions=qf_6`, bloquée par le 402). Négatifs : contrat 56/0, analyste et référentiel
@@ -96,8 +97,9 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
   (ligne hors scope refusée par la règle socle depuis #115, pas par la garde visée) est réparé : fixture
   discriminante + motif « HORS du scope » exigé). Avant : 4321 après #115. `negatif_collecte_executor.sh` 42/2 : les 2 échecs (mutation caduque « passe devant la consigne », script mort « aucune VALEUR de consigne ») PRÉEXISTAIENT (38/2 mesuré avant #112) — à réparer. Réconciliation : T6/T7 toujours rouges (capacité 9). Les 3 checks « live » sont hors suite par conception. Un
   check lancé à la main sans les montages de `run_all.sh` sort un faux FAIL.
-- **Migrations** (aucune aux lots #100 et #116) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
-  vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; la prochaine sera **053**. Vérifier en base avant
+- **Migrations** : **054 appliquée le 2026-10-13** (#121, consignes resynchronisées) ; la prochaine sera
+  **055**. (aucune aux lots #100 et #116) : **051 appliquée** le 2026-09-29 (modèle de valorisation : versions + PV, tables
+  vides) ; 052 appliquée le 2026-10-04 (période d'une ligne de plan) ; 053 appliquée le 2026-10-12 (#119). Vérifier en base avant
   d'écrire, jamais se fier à un tableau.
 - **Production** : #119 n'était PAS dans le conteneur le 2026-10-13 (commité, non déployé) — déployé avec
   #120 ce jour-là (commit dans `git log`). Avant : `1adeb17` (#118 première moitié : qf_4 douze mois + `non_significatif_si_negatif`) puis le
@@ -109,7 +111,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 - **Notes flash en base** (catalogue d'événements **1.2.0**, relues le 2026-09-28 après #94) : RVMD
   #181-#186, NVDA #187-#188, MSFT #189 — mêmes types qu'en 1.1.0 (#80-#88), 0 refus, $0,0025 ; les
   lectures 1.0.0/1.1.0 restent conservées (append-only).
-- **Dossier NVDA** (2026-10-13) : qualité financière **0,88** (7 courantes, qf_8 #1296 périmée) ;
+- **Dossier NVDA** (2026-10-13 après #121) : qualité financière **1,00** (8/8 courantes ; qf_8 **#1303**) ;
   qf_6 #1289. Avant (2026-10-12 après #118) : qualité financière **0,75** — qf_1 #1209, qf_2 #1210, qf_3 #1211,
   **qf_4 #1236** (couverture 425,8 fois sur douze mois, ne cite plus #843), qf_5 #1213, qf_7 #1214, qf_6 #1196
   (approximée, ANCIEN encadré, périmée), **qf_8 #1237** (`aucune_contrainte`, périmée : cite le prospectus du
@@ -373,8 +375,11 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
   derniers comptes publiés. Vérifié (plan #235) : lignes ancrées sur le 10-Q du 26/07 ; pièce **#905**
   (conformité aux covenants au 26/07, citation exacte du 10-Q). **qf_8 #1296 reste PÉRIMÉE** : la ligne
   `marge_avant_declenchement` a échoué au collecteur (mandats **2612/2613** ouverts, `portee_temporelle`
-  omise), #845 (16/06) y reste en vigueur. **Prochain pas** : le défaut du collecteur (15 échecs de ce motif
-  depuis le 25/09 — voir « Ce qui reste ouvert »), PUIS relancer `--questions=qf_8` NVDA. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
+  omise), #845 (16/06) y reste en vigueur. **→ #121 (même jour)** : cause = l'exemple de la consigne du
+  collecteur en base portait encore `source_date` ; migration **054** + `check_prompts_exemples`. Relance
+  (plan #237) : **qf_8 #1303 courante**, qualité financière NVDA **1,00**. Mandats 2612/2613 encore
+  `ouvert` (la question a trouvé sa réponse — même famille que 983-986).
+  **(2 bis) À FAIRE** : RVMD — même vérification de l'actualité de ses 8 réponses avant les nouveaux chapitres. **(4) PAS FAIT — nouveaux chapitres sur RVMD et NVDA.**
 - **Constat #118 — `executer_chaine --questions=` ne restreint PAS la collecte** : seule l'analyse est
   restreinte ; le plan #221 a porté sur les 8 questions pour qf_8 seule. Le bouclage sait déjà planifier sur un
   périmètre (pont [P] « HORS du scope ») : à brancher au maillon 1 de `executer_chaine`.
@@ -398,7 +403,7 @@ AVANT l'agent qui écrit le modèle de valorisation (il n'aurait rien pour fonde
 - **Constat #117** : l'appariement NVDA a échoué de façon intermittente pendant le passage (rejoué seul : 20
   lignes, $0,003) ; son motif n'existait qu'au journal (niveau info) — désormais porté par la carte et
   imprimé. Aucune carte NVDA en base : le prochain passage avec collecte la construira.
-- **⚠️ Collecteur — datation omise sur les longs passages (constaté #120, 2026-10-13)** : le search-worker
+- **✅ RÉSOLU (#121) —** ~~Collecteur — datation omise sur les longs passages (constaté #120, 2026-10-13)~~ : le search-worker
   rend des pièces sans `portee_temporelle` après 6 itérations d'outils (70-190 k jetons) et ne se corrige
   pas en 5 à 8 relances ; **15 mandats `echec_collecte` sur ce motif depuis le 2026-09-25** (≈ 15 % des
   échecs). La règle vit en suffixe de code (`worker.py` ~l.110), la consigne en base (`agent_prompts` id 5)
@@ -570,7 +575,7 @@ remèdes (#54). Un verdict persisté n'est pas un verdict servi : on rejoue à l
 1. **`roadmap/V3/PRINCIPES-FONDATEURS.md`** — toujours en premier.
 2. Ce fichier, puis **`roadmap/V3/05-frameworks-complets.md`** (la roadmap active), puis
    `roadmap/V3/03-spec-frameworks.md` §1 (ce qui n'est PAS défait), §2 (l'objet framework), §9.3.
-3. **`CLAUDE.md` du projet** — conventions **#25 → #120** ; pour le lot 6 : #53/#54 (recalcul à la
+3. **`CLAUDE.md` du projet** — conventions **#25 → #121** ; pour le lot 6 : #53/#54 (recalcul à la
    lecture), #76/#77 (manager, mandat), #82 (`qualite_info`), #83 (parcours), #84 (registre du
    comité), et `feedback_controle_au_point_de_lecture`.
 4. `roadmap/V3/principe-directeur.md` (constitution) · `doctrine-trois-axes.md` (close) ·

@@ -54,13 +54,17 @@ scorée ou n'entre pas**.
     {
       "entry_type": "fact_qualitative",
       "title": "Verrouillage écosystème CUDA",
-      "content": "Documentation et retours développeurs indiquent un coût de migration élevé hors CUDA (réécriture de kernels, outillage propriétaire) — source de switching cost.",
+      "content": "Une enquête auprès de développeurs publiée le 2026-07-14 (menée jusqu'au 2026-06-30) indique un coût de migration élevé hors CUDA (réécriture de kernels, outillage propriétaire) — source de switching cost.",
       "content_structured": null,
       "tags": ["cuda", "switching_costs", "moat"],
       "lang": "en",
       "source_type": "web_search_reputable",
       "source_url": "https://…",
-      "source_date": "2026-07-14",
+      "portee_temporelle": "constatee",
+      "date_du_document": "2026-07-14",
+      "date_du_fait": "2026-06-30",
+      "periode_visee": null,
+      "datation_motif": null,
       "fiscal_period": null,
       "reliability_score": 0.65,
       "reliability_tier": "B",
@@ -93,6 +97,8 @@ scorée ou n'entre pas**.
    `reliability_note` justifie systématiquement.
 5. **`max_entries` respecté.** Arrêt de Pareto : ne dépasse pas le plafond, garde les meilleures.
 6. **Aucune clef hors de l'exemple** — en particulier **plus de `covers` ni de `question_status`**.
+   **Plus de `source_date` non plus** (retiré le 2026-09-23) : une entry se date par `portee_temporelle` +
+   `date_du_document` + `date_du_fait` (ou `periode_visee` si prospective, `datation_motif` si indatable).
    Le champ visé reste dans `output_schema.field_path` de la requête ; ce qu'une entry couvre est
    une propriété du LIEN entre elle et la question, établi en aval à partir du mandat, pas déclaré
    par toi. Le contrat refuse tout champ inconnu : une clef en trop rejette **l'entry entière**.
