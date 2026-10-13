@@ -89,12 +89,16 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     **4/4 fondées À JOUR** (note 0,67), relues contre les pièces (#944 prix 39 800 $/30 j, #952/#961
     aucun revenu au 30/06) ; me_5/me_6 `non_fondable` — **12 lignes sur 19 coupées par le budget web de
     180 s** (`source_indisponible`, panne d'outil, pas absence d'information).
-  - [ ] **A1 bis (PROCHAIN PAS) — la collecte web ne tient pas dans son budget** : mesurer d'abord (durée
+  - [x] **A1 bis — la collecte web ne tient pas dans son budget** — ✅ 2026-10-13, **#124** : mesuré
+    (85 % du temps = écriture du modèle, un brouillon jeté de 185 s), tours de recherche plafonnés, budget
+    360 s ; 0 ligne coupée sur 18 (6 réelles plan #245 + 12 à blanc). RVMD me_6 #1353 `repondu` A, relue
+    fidèle ; me_5 #1352 `non_fondable` (taille de marché trouvée seulement en sources C+, sous le plancher B :
+    limite de qualité de collecte, pas de temps). Énoncé d'origine : mesurer d'abord (durée
     réelle d'une ligne, itérations, jetons par tour — #73 : le garde borne l'infini, pas la lenteur),
     puis corriger EN AMONT (budget par ligne, itérations, parallélisme des lignes, ou requête plus
     ciblée) ; relancer RVMD me_5/me_6 (`--questions=me_5,me_6`) ; critère : ≤ 2 lignes sur 19 en
     `source_indisponible` sur un passage complet.
-  - [ ] NVDA passage réel (après A1 bis)
+  - [ ] **NVDA passage réel (PROCHAIN PAS)**
 - [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA

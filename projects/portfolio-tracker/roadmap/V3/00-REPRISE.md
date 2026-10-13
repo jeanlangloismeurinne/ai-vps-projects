@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-13 (#123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,11 +28,22 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-13, fin de session) : jalon « note d'initiation sur 3-4 titres » en tête de la
-> roadmap 05 — case A1 bis : la collecte web dépasse son budget de 180 s sur 12 lignes sur 19 (RVMD ×
-> modèle économique, plan #242).** Fait ce jour : #123 (horloge par question du traducteur, déployé
-> `2348099`) ; RVMD modèle économique 4/6 fondées et À JOUR (#1334-#1339), me_5/me_6 non fondables
-> faute de collecte. NVDA modèle économique : pas encore lancé. MSFT : aucune réponse en vigueur.
+> **➜ PROCHAIN PAS (2026-10-13, fin de session 2) : jalon « note d'initiation » — A1, passage réel NVDA ×
+> modèle économique** (`bash tools/executer_chaine.sh NVDA modele_economique rentable`, relu pièce par pièce).
+> Fait ce jour : **#124 / A1 bis** (la collecte web tient dans son budget : tours de recherche plafonnés,
+> budget 180 → 360 s sur mesure ; 0 ligne coupée sur 18) ; RVMD modèle économique **5/6** (me_6 #1353
+> `repondu` A ; me_5 #1352 `non_fondable` : taille de marché seulement en sources C+). ⚠️ **#124 commité
+> (`69a7cb7` + doc), PAS DÉPLOYÉ** : le déploiement a été refusé par le classifieur de permissions — à
+> faire par l'utilisateur ou à relancer (`compose-deploy.sh portfolio-backend`). Sans effet sur les passages
+> de chaîne (instance neuve de l'image, dépôt monté).
+> ⚠️ **FAIT NOUVEAU RVMD (8-K déposé le 2026-10-13, accession 0001628171-26-000004, items 2.03 + 8.01)** :
+> tirage le 08/10 de la tranche A du prêt garanti Royalty Pharma, **250 M$**, SOFR 3 mois (plancher 3,5 %)
+> + 5,75 %, intérêts seuls, échéance 08/10/2032, commission de tirage 5 M$, déclenché par l'approbation FDA.
+> Effet mesuré : TOUT le dossier RVMD est périmé (le 8.01 non lu rouvre tout, Q3) et
+> `check_signature_modele_persist` est ROUGE (« aucune réponse RVMD reprenable ») — attendu, pas une
+> régression. Remède : note flash du dépôt (`bash tools/rediger_notes_flash.sh RVMD --ecrire`), puis
+> lire et annoter / réémettre qf_4, qf_7, qf_8 (la dette brute passe de 1 036 à ~1 286 M$) — à faire
+> avant de reprendre RVMD ; ne PAS verdir le check autrement.
 >
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
@@ -90,7 +101,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4434 assertions, 59 scripts, 0 rouge** — 2026-10-13 après #122. Avant : 4430 après #121
+- **Suite** `bash checks/run_all.sh` = **4463 assertions, 1 rouge ATTENDU** (`check_signature_modele_persist`, 8-K RVMD du 13/10 non lu — voir le prochain pas) — 2026-10-13 après #124 (négatif runner 5/0 neuf ; `negatif_collecte_executor.sh` 43/1, l'échec préexistant « script mort »). Avant : 4434 / 59 après #122. Avant : 4430 après #121
   (`check_prompts_exemples` neuf). Avant : 4419 / 58 après #120
   (négatif traducteur 22/0). Avant : **4398 assertions, 1 rouge ATTENDU** — 2026-10-12 après #118 :
   `check_signature_modele_persist` (RVMD qf_6 #1080 porte l'ancien encadré — se solde par sa réémission

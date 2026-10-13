@@ -3283,6 +3283,36 @@ Gardes : `check_traducteur` §8/§9 (54) + négatif **42/0** ; `check_evenements
 MSFT réels) + négatif **34/0** ; `check_frameworks_definitions` [U]. Outil : `tools/acceptation_traducteur.sh
 TICKER:framework:archetype …` imprime l'horloge par question et le plan, sans écrire.
 
+### #124 — un budget de temps se calibre sur une mesure, et le temps d'une recherche est dans l'écriture du modèle
+
+**Le défaut (2026-10-13, RVMD × modèle économique, plan #242).** 12 lignes web sur 19 coupées par le chien
+de garde de 180 s (#73), donc 12 mandats `source_indisponible` et deux questions `non_fondable` faute de
+collecte. Le garde bornait l'infini ; ses 180 s n'avaient jamais été confrontés à une ligne saine.
+
+**Mesuré avant de corriger** (`tools/mesurer_ligne_web.sh <plan> <ligne>…`, sans écriture, requête
+rebâtie par les détenteurs de production) : les outils (recherche, lecture de page) pèsent ~15 % du
+temps ; le reste est l'ÉCRITURE du modèle (~30-40 jetons/s). Le pire tour : celui où le modèle cesse de
+chercher a écrit 7 677 jetons en 185 s de texte libre — que `run_tool_json_agent` JETTE avant de refaire
+une clôture JSON. Une ligne saine prend 144 à 251 s.
+
+**Ce que ferait un vrai fonds** : on donne à l'analyste le temps de chercher, pas celui de rédiger un
+brouillon qu'on jette ; et on fixe ce temps sur ce que prend une recherche normale, pas au jugé.
+
+**Les règles.**
+- `run_tool_json_agent(…, max_tokens_recherche=)` plafonne chaque tour de RECHERCHE, jamais la clôture
+  (le JSON contractuel n'est pas coupé). Un tour coupé (`finish_reason == "length"`) clôt la recherche
+  SANS exécuter ses appels d'outils (arguments possiblement tronqués). Détenteur unique du plafond :
+  `settings.WEB_TOUR_MAX_TOKENS` (2048 ; un tour qui appelle un outil écrit ≤ 1 300 jetons, mesuré).
+- `settings.WEB_LINE_BUDGET_S` recalibré 180 → **360 s** (≈ 1,5 × le maximum mesuré) ; le pire cas est
+  désormais borné par construction (6 tours plafonnés + clôture).
+- Résultat : sur les 18 lignes à collecter du plan, 6 en passage réel (plan #245) + 12 mesurées à blanc,
+  **0 coupée** (critère A1 bis : ≤ 2/19). Une ligne (1013) a rendu une sortie hors contrat 1 fois sur 5 :
+  instabilité de modèle, mandat nommé relançable, sans rapport avec le budget.
+- ⚠️ Non traité : les lignes s'exécutent en SÉRIE (19 × ~3,5 min ≈ 1 h par framework) ; paralléliser
+  exige une connexion par ligne (une connexion asyncpg ne se partage pas) — chantier distinct.
+Gardes : `check_runner_telemetry` §10 (plafond aux tours de recherche, jamais à la clôture, tour coupé sans
+outils, `settings` lu par le worker en AST) + `negatif_runner_telemetry.sh` **5/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

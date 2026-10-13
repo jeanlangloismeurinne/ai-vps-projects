@@ -30,6 +30,7 @@ from app.agents.providers import ResolvedAgent
 from app.agents.v2 import worker as worker_mod
 from app.agents.v2.collecte_executor import construire_requete_web
 from app.agents.v2.collecteur import ligne_aveugle
+from app.config import settings
 from app.contracts.collection_plan_schema import CollectionPlanItem
 from app.db.database import get_db_session, init_pool
 from app.knowledge.edgar_feed import identite_de_l_emetteur
@@ -113,7 +114,7 @@ async def _mesurer(plan_id: int, item_id: int, plafond: int) -> None:
     except (asyncio.TimeoutError, TimeoutError):
         issue, detail = "plafond_de_mesure", f"> {plafond} s"
     except Exception as e:  # noqa: BLE001
-        issue, detail = "leve", f"{type(e).__name__}: {str(e)[:200]}"
+        issue, detail = "leve", f"{type(e).__name__}: {str(e)[:1500]}"
     total = _horodater()
     print(f"\n=== ligne {item_id} ({row['question_id']}.{row['ingredient_id']}, période {row['periode']})")
     print(f"    métrique : {row['metrique'][:110]}")
@@ -130,7 +131,7 @@ async def _mesurer(plan_id: int, item_id: int, plafond: int) -> None:
           f"{len(mod)} appels modèle = {round(sum(j['duree_s'] for j in mod), 1)} s · "
           f"{len(out)} outils = {round(sum(j['duree_s'] for j in out), 1)} s · "
           f"jetons d'entrée cumulés {sum(j['jetons_entree'] for j in mod)} · "
-          f"coût ${round(sum(j['cout_usd'] for j in mod), 4)} · dépasse 180 s : {'OUI' if total > 180 else 'non'}")
+          f"coût ${round(sum(j['cout_usd'] for j in mod), 4)} · dépasse le budget de {settings.WEB_LINE_BUDGET_S} s : {'OUI' if total > settings.WEB_LINE_BUDGET_S else 'non'}")
 
 
 async def main() -> int:
