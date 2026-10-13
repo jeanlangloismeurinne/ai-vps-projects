@@ -3154,6 +3154,46 @@ outil qui écrit en prod, et utiliser le `run_in_background` du harnais plutôt 
 désormais AUSSI la collecte, pas seulement l'analyse — `executer_collecte_framework`/`traduire`
 savaient déjà le faire (lot 5, bouclage), seul ce passage ne le branchait pas.
 
+### #120 — le traducteur reçoit l'horloge : la date du jour et la clôture des derniers comptes publiés
+
+**Défaut mesuré (2026-10-13, en cherchant pourquoi qf_8 NVDA #1237 était périmée).** Plan #221 (NVDA ×
+qualite_financiere, 2026-10-12) : **19 lignes sur 19** ancrées « clôture du dernier exercice fiscal »,
+source « 10-K », six semaines après le dépôt du 10-Q clos le 2026-07-26 — y compris les lignes
+`dernier_bilan`. Le traducteur n'avait ni date ni connaissance du dernier dépôt
+(`feedback_agent_sans_horloge`). Les chiffres s'en sortaient par le socle (qui lit le dernier dépôt) ;
+la revue des clauses (qf_8) non : ses pièces (10-K de janvier, prospectus du 16/06) précèdent la clôture,
+et une réponse a l'âge de sa plus ancienne pièce citée (`actualite.date_effective`) — qf_8 naissait
+périmée à chaque trimestre que les résultats rouvrent (arbitrage qf_8 du 2026-10-12). Le vrai 10-Q dit
+pourtant « As of July 26, 2026, we complied with the required covenants under the outstanding notes ».
+
+**Ce que ferait un vrai fonds** : l'analyste crédit qui met à jour sa revue des clauses après le T2 lit
+le 10-Q du T2 (conformité déclarée à la clôture, financements nouveaux), pas le rapport annuel.
+Correctif technique, aucun arbitrage métier.
+
+**Correctif** (`traducteur.py`) : `HorlogeDuPlan(date_du_jour, derniere_cloture)` est un paramètre
+REQUIS de `contexte_traducteur` (sans défaut, comme `emetteur`) ; `horloge_du_plan` la lit sur
+`horloge_du_titre` + `derniere_cloture_publiee` (détenteurs uniques : le plan vise le dépôt contre lequel
+la réponse sera jugée). Le contexte porte `calendrier` (clôture `null` + « INCONNUE » dite, jamais
+devinée). Consigne : RÈGLE DE FRAÎCHEUR — `source_pressentie` nomme d'abord le rapport périodique qui
+couvre cette clôture, `ancre` la clôture DATÉE, y compris pour une clause (`sans_periode`) ; seule
+exception `exercice_clos`. Checks : `check_traducteur §7` (10 asserts), négatif 22/0 (9 mutations
+neuves + 1 réalignée) ; horloge réelle lue gratuitement : NVDA 2026-07-26, RVMD 2026-06-30, MSFT
+2026-06-30 (sa clôture d'exercice — le 10-K, à juste titre).
+
+**Vérifié contre le vrai modèle** (plan #235, `--questions=qf_8`, $0,0004 de traducteur) : les 3 lignes
+visent « 10-Q du trimestre clos le 2026-07-26 », ancre « Clôture du 2026-07-26 ». La pièce #905 (10-Q,
+Note 9, citation exacte de la conformité au 26/07, vérifiée contre EDGAR) remplace #395 dans
+`clauses_de_sauvegarde`. **Mais qf_8 #1296 reste périmée** : les deux autres lignes ont échoué au
+collecteur (mandats 2612/2613, voir ci-dessous) ; `marge_avant_declenchement` garde #845 (16/06) en
+vigueur, que l'analyste cite légitimement (#111 joue par point).
+
+**Défaut distinct, préexistant, nommé (non corrigé)** : le search-worker omet `portee_temporelle` sur
+les longs passages (70-190 k jetons après 6 itérations d'outils) et ne se corrige pas en relance (5 à 8
+tentatives) — **15 mandats `echec_collecte` sur ce motif depuis le 2026-09-25**. La règle de datation vit
+en suffixe de code (`worker.py`), la consigne en base n'en dit rien. Le contrat refuse à juste titre
+(rien de faux n'est écrit), mais la collecte se perd. Résidu de #905 : sa prose attribue au 10-Q la
+formule « covenants protecteurs limités » du prospectus (même famille que #848).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
