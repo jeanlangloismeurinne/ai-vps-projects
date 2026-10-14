@@ -1,6 +1,6 @@
 ---
 project: newsletter-summary
-updated: 2026-09-25
+updated: 2026-10-14
 role: >
   Prompt de reprise du moteur de résumé de mails. État : en production ; la newsletter (8h) et les alias
   à la demande (`summary@…`) passent par un moteur unique. Aucun chantier en cours — un 360° est proposé.
@@ -30,6 +30,12 @@ objet « 📬 Résumé hebdo-news — N newsletter(s) », cartes séparées, auc
 `select status, count(*) from emails where alias_id = 1 group by 1;`
 
 ## Reste à faire / dettes ouvertes
+
+- **2026-10-14 — destinataires fixes par alias (livré, déployé)** : `aliases.recipients` (liste, 50 max) ; vide = réponse à
+  l'expéditeur. Un lot part en **un seul e-mail** (gateway : `to` en tableau, commit 777226a) ; en mode dev, une seule copie au
+  compte Resend. Vérifié en prod par refus (API 400 sur l'alias par défaut / adresse invalide ; gateway 400 liste hors email).
+  **Non éprouvé** : un vrai envoi multi-destinataires chez Resend (masqué tant que `RESEND_DEV_MODE=1`) — à observer le jour où
+  le domaine est vérifié.
 
 - **Hypothèse non vérifiable depuis le VPS** : que Resend accepte *n'importe quelle* partie locale — dont `summary` et
   `aaa+bbb` — sur `*.resend.app` (seul `newsletter@` a été observé en prod ; le webhook synthétique ne teste pas Resend).
