@@ -122,6 +122,29 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
       du manager (renvoi) ou correction de la citation ; mesurer d'abord la fréquence sur les réponses en vigueur.
       Ce que ferait un fonds : le contrôle de la note avant comité renvoie à l'analyste tout chiffre sans référence.
 - [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
+  - 2026-10-14 : lecture à blanc juste (NVDA 19 lignes au 10-Q du 26/07 ; RVMD 12 lignes + 4 mo_2
+    `inobtenable`, aucun marqueur Ryvu). Passage réel : RVMD plan #253, réponses **#1399-#1404** (6 acquittées) ;
+    NVDA plan #254, réponses **#1405-#1409** (mo_4 `non_fondable` → mandat 2849 ; **mo_2 REFUS** [E] — panne
+    d'agent, aucun mandat : cas A7).
+  - ⛔ **NON ACQUIS — relu contre EDGAR, le défaut est dans les PIÈCES du collecteur, que l'analyste recopie
+    fidèlement** (les 4 contrôles du manager ne peuvent pas le voir) :
+    (i) RVMD #1028 (`fact_financial`, `mesure`, A, « 10-Q ») : R&D 738,9 M$ juste, puis « un programme complet
+    représenterait 2 à 4 Md$ sur 6-8 ans » — extrapolation du collecteur, reprise par mo_1/mo_2 ; le guichet #78 ne
+    la voit pas (« représenterait », « de l'ordre de » hors des 11 marqueurs) ;
+    (ii) RVMD #1025 (`mesure`, A) attribue au 10-Q du 30/06 les échéances de brevets 2031-2045 — elles sont au 10-K
+    2025, pas au 10-Q (vérifié) ; elle ajoute « la société indique NCE 2031 / ODE 2033 », impossible avant
+    l'approbation. Fausse attribution = fausse fraîcheur (#79) ;
+    (iii) RVMD mo_4 retient **19 ans** (borne haute de 5-19) alors que la famille qui couvre RASONQUE n'est pas
+    établie — non prudent (cf. #105) ;
+    (iv) NVDA #1087 (CFO Commentary, A) : « ASP plus élevé », « demande excédant l'offre » absents du document ;
+    #1086 lit « elevated memory and systems prices » (prix des composants) comme une réaction des volumes aux prix
+    de NVIDIA → mo_6 faux dans son raisonnement ;
+    (v) NVDA #1069 (Reuters, B+, `mesure`) mêle trois documents (article, 10-K, entry #1019) — une entrée = un
+    document (#28) ; la charge Chine 4,5 Md$ y revient sans sa pièce (D-me6 récidive, mo_5) ;
+    (vi) mo_3 NVDA : « exercice 2025 (215,94 Md$) » = exercice clos le 25/01/2026 (libellé faux, chiffre juste).
+    mo_3/mo_5 RVMD : fidèles, mais la concurrence repose sur Silexion et ignore Lilly/Merck/Roche/BMS (#682).
+  - **Arbitrage à poser** (retrait des réponses fautives ; remède de forme au collecteur : extraits littéraux
+    vérifiés contre le document récupéré, commentaire séparé — précédent : passages cités de la note flash #90).
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers

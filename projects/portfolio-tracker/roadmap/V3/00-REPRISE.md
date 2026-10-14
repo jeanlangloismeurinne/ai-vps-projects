@@ -28,8 +28,10 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-14, fin de session) : jalon « note d'initiation » — A2, défendabilité** (NVDA :
-> première instruction ; RVMD : collecte postérieure au 30/06).
+> **➜ PROCHAIN PAS (2026-10-14, soir) : A2 défendabilité — passages réels faits (RVMD #1399-#1404, NVDA #1405-#1409),
+> NON ACQUIS : relus contre EDGAR, des pièces du collecteur tier A disent plus que leur document (extrapolation,
+> fausse attribution, paraphrase inventée) — arbitrage utilisateur en attente (retrait + remède de forme au
+> collecteur). Détail sous A2 dans la roadmap.**
 > Fait ce jour : **A1 coché** — NVDA modèle économique (plan #248, réponses #1366-#1371) **1,00, 6/6 à jour**,
 > deux réserves pour le comité (me_5 marché des seuls CPU, me_6 citation manquante — voir la roadmap) ;
 > **8-K RVMD du 13/10 soldé** : qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage 250 M$ lu et
@@ -37,8 +39,8 @@ role: >
 > distinguer nouveau / rappelé, débrayable — principe fondateur n° 3 NEUF) : catalogue **1.4.0**, notes
 > relues ; me_1 RVMD de nouveau à jour. État : RVMD qualité financière **1,00**, modèle économique **0,83**
 > (me_5 non fondée), défendabilité 5/5 périmées ; NVDA qualité financière 1,00, modèle économique 1,00.
-> Suite **4487/0**. ⚠️ **#124 et #125 NON DÉPLOYÉS** (classifieur, 2 refus) — à lancer par l'utilisateur
-> (`infrastructure/compose-deploy.sh portfolio-backend`). Sans effet sur les passages de chaîne.
+> Suite **4487/0**. **#124 et #125 DÉPLOYÉS le 2026-10-14** (`compose-deploy.sh portfolio-backend
+> --rebuild-only`, HEAD `a9454d6`, marqueurs `WEB_TOUR_MAX_TOKENS`/`rappels_ecartes` lus dans le conteneur).
 > ⚠️ **À surveiller (#125)** : à chaque relecture de notes, vérifier qu'aucun fait NOUVEAU n'a été omis ou
 > admis comme rappel ; au premier cas non corrigeable par réglage → `rappels_ecartes: false` + version
 > montée + relecture (procédure dans la convention #125).
