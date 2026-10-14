@@ -72,7 +72,10 @@ def normalize_sender(from_addr: str) -> str:
     return addr if _EMAIL_RE.match(addr) else ""
 
 
-def parse_allowed_senders(value) -> list[str]:
+MAX_RECIPIENTS = 50   # plafond Resend du champ `to`
+
+
+def parse_allowed_senders(value, *, what: str = "expéditeur") -> list[str]:
     """Liste (ou texte, un par ligne / séparé par `,` `;`) → adresses normalisées, dédupliquées.
 
     Lève ValueError sur une entrée qui n'est pas une adresse : une faute de frappe dans une liste
@@ -88,10 +91,29 @@ def parse_allowed_senders(value) -> list[str]:
             continue
         addr = normalize_sender(item)
         if not addr:
-            raise ValueError(f"adresse d'expéditeur invalide : {item!r}")
+            raise ValueError(f"adresse de {what} invalide : {item!r}")
         if addr not in out:
             out.append(addr)
     return out
+
+
+def parse_recipients(value) -> list[str]:
+    """Destinataires fixes d'un alias (même syntaxe que la liste blanche). Vide = l'expéditeur."""
+    out = parse_allowed_senders(value, what="destinataire")
+    if len(out) > MAX_RECIPIENTS:
+        raise ValueError(f"{len(out)} destinataires : {MAX_RECIPIENTS} au plus")
+    return out
+
+
+def destinations(alias: Alias, from_addr: str) -> list[str]:
+    """À qui part le résumé : adresse fixe de l'alias par défaut, sinon la liste de l'alias, sinon
+    l'expéditeur. Liste vide = expéditeur illisible (le moteur échoue le mail en le nommant)."""
+    if alias.recipient:
+        return [alias.recipient]
+    if alias.recipients:
+        return list(alias.recipients)
+    sender = normalize_sender(from_addr)
+    return [sender] if sender else []
 
 
 def recipient_local_parts(to_addr: str) -> list[str]:
@@ -155,7 +177,7 @@ async def get_alias(db, alias_id: int) -> Alias | None:
 
 
 async def create_alias(db, local_part: str, *, frequency: str = "minute", allowed_senders=None,
-                       open_senders: bool = False, enabled: bool = True) -> Alias:
+                       open_senders: bool = False, enabled: bool = True, recipients=None) -> Alias:
     """Crée un alias et lui donne un prompt v1 = copie du prompt actif de la newsletter."""
     from app import prompts  # import tardif : prompts n'a pas besoin d'aliases
 
@@ -163,10 +185,11 @@ async def create_alias(db, local_part: str, *, frequency: str = "minute", allowe
     if frequency not in FREQUENCIES:
         raise ValueError(f"fréquence invalide : {frequency!r} (attendu : {', '.join(FREQUENCIES)})")
     allowed = parse_allowed_senders(allowed_senders)
+    dest = parse_recipients(recipients)
     exists = await db.execute(select(Alias.id).where(Alias.local_part == lp))
     if exists.scalars().first() is not None:
         raise ValueError(f"l'alias {lp!r} existe déjà")
-    alias = Alias(local_part=lp, frequency=frequency, allowed_senders=allowed,
+    alias = Alias(local_part=lp, frequency=frequency, allowed_senders=allowed, recipients=dest,
                   open_senders=bool(open_senders), enabled=bool(enabled), is_default=False)
     db.add(alias)
     await db.commit()
@@ -177,7 +200,7 @@ async def create_alias(db, local_part: str, *, frequency: str = "minute", allowe
 
 
 async def update_alias(db, alias_id: int, *, frequency=None, allowed_senders=None,
-                       open_senders=None, enabled=None) -> Alias | None:
+                       open_senders=None, enabled=None, recipients=None) -> Alias | None:
     """Met à jour la politique d'un alias. La partie locale est IMMUABLE (changer l'adresse
     orphelinerait les mails et les versions de prompt déjà rattachés)."""
     alias = await db.get(Alias, alias_id)
@@ -193,6 +216,11 @@ async def update_alias(db, alias_id: int, *, frequency=None, allowed_senders=Non
         alias.open_senders = bool(open_senders)
     if enabled is not None:
         alias.enabled = bool(enabled)
+    if recipients is not None:
+        dest = parse_recipients(recipients)
+        if alias.is_default and dest:   # son destinataire est RECIPIENT_EMAIL : une liste ici serait ignorée sans un mot
+            raise ValueError("l'alias par défaut envoie à RECIPIENT_EMAIL : ses destinataires ne se règlent pas ici")
+        alias.recipients = dest
     await db.commit()
     await db.refresh(alias)
     return alias

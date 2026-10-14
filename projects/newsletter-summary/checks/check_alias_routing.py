@@ -120,6 +120,26 @@ async def main():
     else:
         raise AssertionError("une entrée qui n'est pas une adresse doit être REFUSÉE à la saisie, pas ignorée")
     assert al.parse_allowed_senders("A@x.fr, b@y.fr;\n a@X.fr") == ["a@x.fr", "b@y.fr"], "normalisation + dédoublonnage"
+    # ── destinataires fixes : même rigueur de saisie ; l'alias par défaut garde RECIPIENT_EMAIL ──
+    assert al.parse_recipients("B@x.fr\na@y.fr, b@x.fr") == ["b@x.fr", "a@y.fr"], "destinataires : normalisation + ordre + dédoublonnage"
+    for bad in ("a@x.fr\nfaute", "\n".join(f"u{i}@x.fr" for i in range(al.MAX_RECIPIENTS + 1))):
+        try:
+            al.parse_recipients(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"liste de destinataires invalide acceptée : {bad[:30]!r}")
+    assert al.destinations(summary, "Jean <JEAN@exemple.fr>") == ["jean@exemple.fr"], "sans liste : réponse à l'expéditeur"
+    async with AsyncSessionLocal() as db:
+        upd = await al.update_alias(db, summary.id, recipients="x@liste.fr\ny@liste.fr")
+        assert al.destinations(upd, "jean@exemple.fr") == ["x@liste.fr", "y@liste.fr"], "liste : remplace l'expéditeur"
+        upd = await al.update_alias(db, summary.id, recipients="")
+        assert al.destinations(upd, "jean@exemple.fr") == ["jean@exemple.fr"], "liste vidée : retour à l'expéditeur"
+        try:
+            await al.update_alias(db, default.id, recipients="x@liste.fr")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("une liste posée sur l'alias par défaut serait ignorée sans un mot : refus attendu")
     async with AsyncSessionLocal() as db:
         for args, msg in (({"local_part": "summary"}, "doublon"), ({"local_part": "x", "frequency": "hebdo"}, "fréquence")):
             try:

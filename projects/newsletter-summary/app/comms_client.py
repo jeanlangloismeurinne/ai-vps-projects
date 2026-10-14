@@ -47,14 +47,17 @@ class CommsClient:
     async def send(
         self,
         channel: str,
-        to: str,
+        to: str | list[str],
         *,
         subject: str | None = None,
         body: str | None = None,
         html: str | None = None,
         attachments: list[dict] | None = None,
     ) -> dict:
-        """POST /v1/send — lève CommsError si rejeté (policy/rate-limit) ou en échec."""
+        """POST /v1/send — lève CommsError si rejeté (policy/rate-limit) ou en échec.
+
+        Email : `to` peut être une liste → UN seul e-mail, tous en destinataires (50 max).
+        """
         payload: dict = {"channel": channel, "to": to}
         if subject:
             payload["subject"] = subject
@@ -83,7 +86,7 @@ class CommsClient:
         reason = data.get("reason") or data.get("error") or f"HTTP {r.status_code}"
         raise CommsError(reason)
 
-    async def send_email(self, to: str, subject: str, body: str, html: str | None = None, **kw) -> dict:
+    async def send_email(self, to: str | list[str], subject: str, body: str, html: str | None = None, **kw) -> dict:
         return await self.send("email", to, subject=subject, body=body, html=html, **kw)
 
     async def send_slack(self, to: str, body: str, **kw) -> dict:

@@ -2,7 +2,7 @@
 
 > **Alias (2026-09-25)** — la newsletter n'est plus un cas à part : c'est l'**alias par défaut** d'un moteur
 > unique. On peut aussi créer des alias (`summary@…`, `aaa+bbb@…`) : un mail envoyé à l'alias est résumé et le
-> résumé **revient à l'expéditeur**. Voir § Alias.
+> résumé **revient à l'expéditeur**, ou part à une **liste de destinataires** fixée sur l'alias. Voir § Alias.
 
 Reçoit les newsletters transférées vers `*@oozeenaru.resend.app` (inbound Resend), les stocke
 dans PostgreSQL, et envoie chaque matin à **8h (Europe/Paris)** un digest récapitulant toutes
@@ -60,10 +60,11 @@ Un alias = une adresse de réception + sa politique, configurés dans le Hub (`/
 | Fréquence | `minute` : vérification chaque minute, **un e-mail par mail reçu, jamais de lot** · `morning` (8h) / `evening` (18h) : un **lot par destinataire**. |
 | Expéditeurs autorisés | Liste blanche. Vide = personne (défaut sûr). « Tous » = case explicite. Refusé → ligne `rejected` (raison stockée), **ni LLM ni réponse**. |
 | Prompt | Versionné **par alias** (copie du prompt newsletter à la création). |
-| Destinataire | Alias à la demande : l'expéditeur. Newsletter : `RECIPIENT_EMAIL` (synchronisé à chaque démarrage). |
+| Destinataires | Alias à la demande : liste fixe (un par ligne, 50 max) → **un seul e-mail** à toute la liste, quel que soit l'expéditeur ; liste vide = l'expéditeur. Newsletter : `RECIPIENT_EMAIL` (synchronisé à chaque démarrage ; une liste y est refusée). |
 
 - **Mode développement** : rien à faire ici. Le gateway (`RESEND_DEV_MODE=1`) redirige tout envoi vers l'adresse du compte
-  Resend ; le jour où il est retiré, les réponses partent réellement aux expéditeurs sans changer une ligne.
+  Resend — une liste de destinataires s'y réduit à **une** copie ; le jour où il est retiré, les e-mails partent réellement
+  aux expéditeurs / listes sans changer une ligne. La liste exige le gateway ≥ 2026-10-14 (`to` en tableau).
 - **Mail réduit à un lien** : la page est récupérée et résumée. Garde SSRF (`app/urlfetch.py`) : http/https, ports 80/443, hôte
   résolu puis refusé si une IP n'est pas publique, redirections revalidées une à une, 2 Mo / 30 s / 30 000 caractères max.
   « Une phrase + un lien » n'est **pas** un lien seul. Risque résiduel : ré-résolution DNS entre validation et connexion.

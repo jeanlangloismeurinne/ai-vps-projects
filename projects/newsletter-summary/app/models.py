@@ -55,6 +55,9 @@ class Alias(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     # NULL = répondre à l'expéditeur ; sinon adresse fixe (la newsletter → RECIPIENT_EMAIL).
     recipient: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Alias à la demande : liste fixe de destinataires (un seul e-mail, tous en `to`). Vide/NULL = l'expéditeur.
+    # Ignorée sur l'alias par défaut, dont `recipient` reste synchronisé sur RECIPIENT_EMAIL.
+    recipients: Mapped[list | None] = mapped_column(JSON, nullable=True)
     # False (défaut sûr) : seuls `allowed_senders` sont acceptés — liste vide = personne.
     open_senders: Mapped[bool] = mapped_column(Boolean, default=False)
     allowed_senders: Mapped[list | None] = mapped_column(JSON, nullable=True)

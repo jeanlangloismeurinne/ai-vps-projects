@@ -26,6 +26,7 @@ _MIGRATIONS = [
     "ALTER TABLE emails ADD COLUMN IF NOT EXISTS last_error TEXT",
     "ALTER TABLE emails ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMP",
     "ALTER TABLE prompt_versions ADD COLUMN IF NOT EXISTS alias_id INTEGER",
+    "ALTER TABLE aliases ADD COLUMN IF NOT EXISTS recipients JSON",
     "CREATE INDEX IF NOT EXISTS ix_emails_alias_id ON emails (alias_id)",
     "CREATE INDEX IF NOT EXISTS ix_prompt_versions_alias_id ON prompt_versions (alias_id)",
 ]

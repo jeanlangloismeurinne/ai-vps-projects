@@ -15,6 +15,7 @@ tentatives et le rendu sont RÉELS. Chaque scénario porte l'exigence qu'il prot
   S8  run interrompu             — les `processing` orphelins sont récupérés, les récents laissés
   S9  mail réduit à un lien      — la page est résumée ; « phrase + lien » ne l'est PAS ; échec nommé
   S10 KB                         — chaque résumé est écrit avec le nom de l'alias
+  S11 destinataires fixes        — une liste reçoit UN e-mail (tous en `to`), quel que soit l'expéditeur
 """
 import asyncio
 
@@ -208,7 +209,23 @@ async def main():
     kb = {(k["alias"], k["source_url"]) for k in d.kb}
     assert ("summary", None) in kb and ("lien", "https://exemple.org/article") in kb, f"S10 : écritures KB {sorted(kb, key=str)}"
     assert all(k["alias"] for k in d.kb), "S10 : une écriture KB sans nom d'alias"
-    print("OK — S0-S10 : cadences, lots, réservation, plafond, échecs nommés, récupération, mails-lien, KB")
+
+    # ── S11 destinataires fixes : la liste remplace l'expéditeur ; un lot = UN e-mail à toute la liste ──
+    d.gateway.sent.clear()
+    LISTE = ["a@liste.fr", "b@liste.fr"]
+    diff = await make_alias("diffusion", frequency="evening", allowed_senders=both, recipients="A@liste.fr\nb@liste.fr")
+    ids = [await add_email(diff.id, frm=JEAN, subject="L1"), await add_email(diff.id, frm=MARIE, subject="L2")]
+    await alias_digest.run_alias_digests("evening")
+    sent = d.gateway.sent
+    assert len(sent) == 1 and sent[0]["to"] == LISTE, f"S11 : un seul e-mail à la liste attendu, reçu {[m['to'] for m in sent]}"
+    assert sent[0]["html"].count(CARD) == 2 and await statuses(ids) == ["summarized"] * 2, "S11 : les 2 mails dans le lot"
+    d.gateway.sent.clear()
+    flash = await make_alias("flash", frequency="minute", allowed_senders=JEAN, recipients=["seul@liste.fr"])
+    ids = [await add_email(flash.id, frm=JEAN, subject=f"F{i}") for i in range(2)]
+    await alias_digest.run_alias_digests("minute")
+    mine = [m["to"] for m in d.gateway.sent if m["subject"] in ("📬 Résumé : F0", "📬 Résumé : F1")]   # d'autres alias `minute` ont du reliquat
+    assert mine == ["seul@liste.fr"] * 2, f"S11 minute : un e-mail par mail, à la liste : {mine}"
+    print("OK — S0-S11 : cadences, lots, réservation, plafond, échecs nommés, récupération, mails-lien, KB, destinataires fixes")
 
 
 asyncio.run(main())

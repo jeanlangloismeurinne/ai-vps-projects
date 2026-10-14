@@ -40,6 +40,11 @@ MUTATIONS = [
     ("liste vide = tout le monde", A, "return bool(sender) and sender in {normalize_sender(s) for s in (alias.allowed_senders or [])}", "return not alias.allowed_senders or (bool(sender) and sender in {normalize_sender(s) for s in (alias.allowed_senders or [])})", "check_alias_routing", "liste blanche vide"),
     ("From vide refusé à la réception", A, "if not sender_known and not normalize_sender(from_addr):\n        return True, \"\"", "pass", "check_alias_routing", "From vide"),
     ("alias désactivé accepté", A, "if not alias.enabled:\n        return False", "if False:\n        return False", "check_alias_routing", "désactivé"),
+    # ── destinataires fixes ──
+    ("liste de destinataires ignorée", A, "    if alias.recipients:\n        return list(alias.recipients)", "    if False:\n        return list(alias.recipients)", "check_alias_routing", "liste : remplace"),
+    ("liste réduite à sa 1re adresse", AD, "to=recipient[0] if len(recipient) == 1 else list(recipient),", "to=recipient[0],", "check_engine", "S11"),
+    ("liste posée sur l'alias par défaut", A, "if alias.is_default and dest:", "if False:", "check_alias_routing", "alias par défaut"),
+    ("plafond de destinataires supprimé", A, "if len(out) > MAX_RECIPIENTS:", "if False:", "check_alias_routing", "destinataires invalide"),
     # ── portée des prompts ──
     ("création désactive TOUS les prompts", P, "update(PromptVersion).where(_scope(alias_id)).values(is_active=False))\n    row = PromptVersion(", "update(PromptVersion).values(is_active=False))\n    row = PromptVersion(", "check_prompt_scope", "désactivé par un autre alias"),
     ("activation inter-alias permise", P, "select(PromptVersion).where(PromptVersion.id == version_id, _scope(alias_id))", "select(PromptVersion).where(PromptVersion.id == version_id)", "check_prompt_scope", "AUTRE alias"),

@@ -161,12 +161,12 @@ async def _prepare(db, alias: Alias, email: Email) -> _Prepared:
                      source_url=page.url)
 
 
-def _group(alias: Alias, mails: list[Email]) -> list[tuple[str, list[Email]]]:
-    """Regroupe par destinataire. Cadence `minute` : un groupe PAR mail (une réponse par mail reçu)."""
-    groups: dict[str, list[Email]] = {}
-    out: list[tuple[str, list[Email]]] = []
+def _group(alias: Alias, mails: list[Email]) -> list[tuple[tuple[str, ...], list[Email]]]:
+    """Regroupe par destinataire(s). Cadence `minute` : un groupe PAR mail (une réponse par mail reçu)."""
+    groups: dict[tuple[str, ...], list[Email]] = {}
+    out: list[tuple[tuple[str, ...], list[Email]]] = []
     for e in mails:
-        recipient = alias.recipient or al.normalize_sender(e.from_addr)
+        recipient = tuple(al.destinations(alias, e.from_addr))
         if not recipient:
             e.status, e.last_error, e.claimed_at = "failed", "expéditeur illisible : pas d'adresse de réponse", None
             logger.error("Mail %s : %s", e.id, e.last_error)
@@ -187,7 +187,7 @@ def _release(email: Email, reason: str) -> None:
     email.status = "failed" if email.attempts >= settings.ALIAS_MAX_ATTEMPTS else "new"
 
 
-async def _process_group(db, alias: Alias, recipient: str, mails: list[Email], prompt: str, pres: dict, stats: dict) -> None:
+async def _process_group(db, alias: Alias, recipient: tuple[str, ...], mails: list[Email], prompt: str, pres: dict, stats: dict) -> None:
     items: list[digest.Item] = []
     finals: dict[int, tuple[str, str | None]] = {}   # id → (statut final, last_error)
     sources: dict[int, str | None] = {}
@@ -237,13 +237,14 @@ async def _process_group(db, alias: Alias, recipient: str, mails: list[Email], p
     single = alias.frequency == "minute"
     try:
         await comms_client.get_client().send_email(
-            to=recipient,
+            # Une adresse reste une chaîne (e-mail newsletter inchangé) ; une liste part en UN e-mail.
+            to=recipient[0] if len(recipient) == 1 else list(recipient),
             subject=digest.render_subject(items, pres, today, single),
             body=digest.render_text(items, pres, today),
             html=digest.render_html(items, pres, today),
         )
     except Exception as exc:
-        logger.exception("Envoi à %s échoué (%d mail(s))", recipient, len(items))
+        logger.exception("Envoi à %s échoué (%d mail(s))", ", ".join(recipient), len(items))
         for it in items:
             _release(it.email, f"envoi : {exc}")
         stats["released"] += len(items)
@@ -257,7 +258,7 @@ async def _process_group(db, alias: Alias, recipient: str, mails: list[Email], p
         stats["failed" if status == "failed" else "summarized"] += 1
     stats["sent"] += 1
     await db.commit()
-    logger.info("Alias %s : e-mail envoyé à %s (%d mail(s)).", alias.local_part, recipient, len(items))
+    logger.info("Alias %s : e-mail envoyé à %s (%d mail(s)).", alias.local_part, ", ".join(recipient), len(items))
 
 
 async def _run_alias(alias: Alias) -> dict:
@@ -277,7 +278,7 @@ async def _run_alias(alias: Alias) -> dict:
             try:
                 await _process_group(db, alias, recipient, mails, prompt, pres, stats)
             except Exception as exc:  # un groupe qui explose ne bloque ni les autres ni l'alias suivant
-                logger.exception("Alias %s : groupe %s en échec", alias.local_part, recipient)
+                logger.exception("Alias %s : groupe %s en échec", alias.local_part, ", ".join(recipient))
                 await db.rollback()
                 for m in mails:
                     await db.refresh(m)

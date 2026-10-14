@@ -212,7 +212,7 @@ def _alias_json(a, counts: dict) -> dict:
         "id": a.id, "local_part": a.local_part, "address": al.full_address(a),
         "enabled": a.enabled, "frequency": a.frequency, "is_default": a.is_default,
         "recipient": a.recipient, "open_senders": a.open_senders,
-        "allowed_senders": a.allowed_senders or [], "counts": counts,
+        "allowed_senders": a.allowed_senders or [], "recipients": a.recipients or [], "counts": counts,
     }
 
 
@@ -235,7 +235,7 @@ async def api_alias_create(payload: dict, _auth: bool = Depends(require_hub_toke
             a = await al.create_alias(
                 db, payload.get("local_part", ""), frequency=payload.get("frequency", "minute"),
                 allowed_senders=payload.get("allowed_senders"), open_senders=bool(payload.get("open_senders", False)),
-                enabled=bool(payload.get("enabled", True)),
+                enabled=bool(payload.get("enabled", True)), recipients=payload.get("recipients"),
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
@@ -249,6 +249,7 @@ async def api_alias_update(alias_id: int, payload: dict, _auth: bool = Depends(r
             a = await al.update_alias(
                 db, alias_id, frequency=payload.get("frequency"), allowed_senders=payload.get("allowed_senders"),
                 open_senders=payload.get("open_senders"), enabled=payload.get("enabled"),
+                recipients=payload.get("recipients"),
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
