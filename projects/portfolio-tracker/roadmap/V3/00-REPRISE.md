@@ -495,6 +495,13 @@ le 2026-10-13 en prérequis du test de reproductibilité (jalon A7 de la roadmap
 
 
 **Dettes à décider (chacune est un lot en soi, à arbitrer en termes métier)**
+- **D-me5 et D-me6 — modèle économique, révélées par NVDA** (consignées le 2026-10-14 à la demande de
+  l'utilisateur, à instruire ultérieurement ; détail et cases dans `05-frameworks-complets.md` sous A1) :
+  (i) me_5 #1370 chiffre le marché des seuls processeurs centraux (200 Md$, extension annoncée) au lieu de
+  celui des accélérateurs (modèle actuel), et sa « part prise » de 10 % rapporte des revenus FUTURS annoncés à
+  ce marché. Reprise telle quelle par va_2, elle fausserait le plafond de croissance. **Prérequis de A6.**
+  (ii) me_6 #1371 cite une charge Chine de 4,5 Md$ exacte sans citer sa pièce (#1019) : aucun contrôle
+  « chaque chiffre a sa pièce ».
 - **Chaîne complète vs acceptation du comité** (#84) : `executer_chaine` → `persist_review` ne consulte
   pas le PV ; un re-run refait l'analyse (l'acceptation tombe, « analyse refaite ») et peut rouvrir un
   mandat que le comité avait arrêté. Honnête (le dossier a changé) mais coûteux — lié à l'arbitrage B.

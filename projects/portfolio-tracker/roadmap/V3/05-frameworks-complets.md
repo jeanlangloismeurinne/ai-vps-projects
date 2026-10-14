@@ -105,12 +105,28 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     CPU, #1004), extension annoncée — pas le marché du modèle actuel (accélérateurs) ; la « part prise » rapporte une
     visibilité de revenus FUTURS à ce marché. Repris par va_2 (durée/plafond de croissance) tel quel, ce serait faux ;
     (ii) me_6 cite une charge Chine de 4,5 Md$ tirée de #1019, pièce non citée (juste, mais la citation manque).
+  - **Deux dettes ouvertes par le cas NVDA** (consignées à la demande de l'utilisateur le 2026-10-14, à instruire
+    ultérieurement ; chacune s'arbitre en termes métier avant tout correctif) :
+    - [ ] **D-me5 — le marché adressable et la part prise.** me_5 #1370 (`approxime`, #1004/#1010) donne la taille
+      du marché des seuls processeurs centraux (200 Md$, Vera CPU), une EXTENSION annoncée, et non celle des
+      accélérateurs, qui sont le modèle ACTUEL ; sa « part prise » de 10 % rapporte en outre des revenus FUTURS
+      annoncés (~20 Md$ de visibilité) à ce marché, au lieu de revenus constatés. Reprise telle quelle par la
+      valorisation (va_2, plafond de croissance), elle fausserait le plafond. À instruire : la question doit-elle
+      séparer marché du modèle actuel et marchés d'extension, et la part prise se mesurer sur des revenus
+      constatés ? Une garde à la reprise par va_2 ? **Prérequis de A6** (va_2 ne reprend pas me_5 NVDA en l'état).
+      Ce que ferait un fonds : l'analyste chiffre le marché du métier actuel, traite une extension annoncée comme
+      une option distincte (scénario), et ne calcule une part de marché que sur du chiffre d'affaires réalisé.
+    - [ ] **D-me6 — un chiffre sans sa pièce.** me_6 #1371 (`repondu`) cite une charge Chine de 4,5 Md$, exacte,
+      tirée de #1019, absente de ses pièces citées (#1013/#1014/#1015/#1017/#1010). Aucun contrôle ne vérifie
+      aujourd'hui que chaque chiffre de la réponse rédigée est adossé à une pièce citée. À instruire : contrôle
+      du manager (renvoi) ou correction de la citation ; mesurer d'abord la fréquence sur les réponses en vigueur.
+      Ce que ferait un fonds : le contrôle de la note avant comité renvoie à l'analyste tout chiffre sans référence.
 - [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
   sous le plancher A ; un fonds le fixe en interne, commun au portefeuille) — prérequis de A6
-- [ ] A6. Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
+- [ ] A6. (prérequis : dette D-me5 sous A1) Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
   l'ordre d'instruction, va_4-6 au cours du jour, Greenwald, dépendance va_1/va_2 → va_6 ; acceptation
   sur RVMD (somme des programmes) et NVDA (segments)
 - [ ] A7. **Ré-analyse sans danger** — PRÉREQUIS du test de reproductibilité (la dette « bloquante pour la
