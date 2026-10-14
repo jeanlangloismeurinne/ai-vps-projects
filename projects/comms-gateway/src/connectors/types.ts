@@ -9,7 +9,8 @@ export interface Attachment {
 }
 
 export interface SendOptions {
-  to: string;
+  /** Liste admise pour l'email seulement (validée par la route d'envoi). */
+  to: string | string[];
   subject?: string | null;
   /** Corps texte brut — utilisé comme `text`/fallback chez le provider. */
   body?: string | null;

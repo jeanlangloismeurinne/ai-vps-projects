@@ -22,7 +22,7 @@ export class SlackConnector implements Connector {
       return { ok: false, error: "SLACK_BOT_TOKEN absent (gateway non configuré)" };
     }
     const channel = opts.to; // `to` = channel id ou #channel
-    if (!channel) {
+    if (!channel || typeof channel !== "string") {
       return { ok: false, error: "`to` (channel) requis pour Slack" };
     }
     const res = await fetch(CHAT_POST, {

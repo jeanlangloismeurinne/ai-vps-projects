@@ -19,7 +19,18 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: "authentification requise (client inconnu ou désactivé)" }) as unknown as SendReply;
     }
 
-    const { channel, to, subject, body, html, attachments } = request.body ?? {};
+    const { channel, to: rawTo, subject, body, html, attachments } = request.body ?? {};
+    // `to` en liste : email seulement, adresses non vides, plafond Resend (50). L'audit garde
+    // une chaîne (`a, b`) — la colonne `to_addr` ne change pas.
+    if (Array.isArray(rawTo)) {
+      const bad =
+        channel !== "email" ? "`to` en liste n'est admis que pour l'email"
+        : !rawTo.length || rawTo.length > 50 ? "`to` : 1 à 50 adresses"
+        : rawTo.some((a) => typeof a !== "string" || !a.trim()) ? "`to` : adresse vide ou non textuelle"
+        : null;
+      if (bad) return reply.code(400).send({ error: bad }) as unknown as SendReply;
+    }
+    const to = Array.isArray(rawTo) ? rawTo.map((a) => a.trim()).join(", ") : rawTo;
 
     // L'audit conserve le corps (texte si présent, sinon le HTML) — traçable sans exposer
     // la mise en page. Le HTML complet part au connecteur via `html`.
@@ -77,7 +88,8 @@ export async function registerSendRoute(app: FastifyInstance): Promise<void> {
 
     // Envoi effectif via le connecteur du canal
     const { connector, creds, from } = await resolveChannel(policy);
-    const result = await connector.send({ to, subject, body, html, attachments }, creds, from);
+    const sendTo = Array.isArray(rawTo) ? rawTo.map((a) => a.trim()) : rawTo;
+    const result = await connector.send({ to: sendTo, subject, body, html, attachments }, creds, from);
 
     if (!result.ok) {
       await logMessage({

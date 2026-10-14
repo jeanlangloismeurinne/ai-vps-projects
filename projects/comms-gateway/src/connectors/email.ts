@@ -32,19 +32,21 @@ export class EmailConnector implements Connector {
     // Mode développement Resend (TEMPORAIRE) : tant qu'aucun domaine d'envoi n'est
     // vérifié, resend.dev n'est livrable que sur l'adresse du compte Resend. On écrase
     // `from` et `to` quoi que demande le client. Retirer dès qu'un domaine est vérifié.
+    // Une liste de destinataires part en UN seul e-mail ; en mode dev elle se réduit à
+    // l'adresse du compte (une copie, pas une par destinataire).
     const devMode = config.RESEND_DEV_MODE === "1" || config.RESEND_DEV_MODE === "true";
-    let toAddr = opts.to;
+    let toAddrs = (Array.isArray(opts.to) ? opts.to : [opts.to]).filter(Boolean);
     if (devMode) {
       from = "onboarding@resend.dev";
-      toAddr = config.RESEND_DEV_TO || opts.to;
+      if (config.RESEND_DEV_TO) toAddrs = [config.RESEND_DEV_TO];
     }
 
-    if (!toAddr || !from) {
+    if (!toAddrs.length || !from) {
       return { ok: false, error: "`to` et `from` requis pour l'email" };
     }
     const payload: Record<string, unknown> = {
       from,
-      to: [toAddr],
+      to: toAddrs,
       subject: opts.subject ?? "",
     };
     if (opts.body) payload.text = opts.body;

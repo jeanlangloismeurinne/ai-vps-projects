@@ -16,7 +16,8 @@ export async function authenticate(
 
 export type SendBody = {
   channel: Channel;
-  to: string;
+  /** Email : une adresse ou une liste (un seul e-mail, tous en `to`). Autres canaux : une chaîne. */
+  to: string | string[];
   subject?: string | null;
   body?: string | null;
   /** Corps HTML (email) — transmis au provider en plus du `text` (fallback). */

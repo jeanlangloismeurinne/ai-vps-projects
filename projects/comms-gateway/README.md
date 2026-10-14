@@ -24,6 +24,8 @@ providers aux services appelants.
 ```
 
 - **API v1 (interne)** : `POST /v1/send`, `GET /v1/messages`, `POST|PATCH /v1/admin/*`.
+  `POST /v1/send` email : `to` = une adresse **ou une liste** (1 à 50) → un seul e-mail, une unité de quota ;
+  en `RESEND_DEV_MODE` la liste se réduit à `RESEND_DEV_TO`. Liste refusée (400) sur les autres canaux.
 - **Webhooks publics** : `/webhooks/resend` (email entrant), `/webhooks/slack`
   (événements Slack entrants) — seuls ces chemins sont exposés par Traefik (PathPrefix),
   le reste reste sur le réseau interne Coolify.
