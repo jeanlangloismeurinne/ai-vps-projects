@@ -423,7 +423,9 @@ def _page_aliases(data: dict, flash_html: str = "", error: str = "") -> str:
     for a in aliases:
         state = "" if a.get("enabled") else ' <span class="badge" style="color:#6b7280">désactivé</span>'
         default = ' <span class="badge" style="color:#4f6ef7">par défaut</span>' if a.get("is_default") else ""
-        dest = f'envoi à {_e(a["recipient"])}' if a.get("recipient") else "réponse à l'expéditeur"
+        n_dest = len(a.get("recipients") or [])
+        dest = (f'envoi à {_e(a["recipient"])}' if a.get("recipient")
+                else f"envoi à {n_dest} destinataire(s)" if n_dest else "réponse à l'expéditeur")
         cards += f"""
 <a class="al-card" href="/newsletter/aliases/{a['id']}">
   <div class="al-addr">{_e(a['address'])}{default}{state}</div>
@@ -470,8 +472,17 @@ def _page_alias(alias: dict, prompt_data: dict, mails: list, flash_html: str = "
         f'<label class="check"><input type="checkbox" name="enabled"{" checked" if alias.get("enabled") else ""}> Alias actif</label>'
         '<div class="hint" style="margin-top:-.2rem">Désactivé : les mails reçus sont rejetés (conservés, sans réponse).</div>'
     )
+    recipients = "\n".join(alias.get("recipients") or [])
     dest = (f"Le digest est envoyé à <strong>{_e(alias['recipient'])}</strong>." if alias.get("recipient")
+            else "Le résumé est envoyé aux <strong>destinataires</strong> ci-dessous." if recipients
             else "La réponse est envoyée à <strong>l'expéditeur</strong> du mail.")
+    # L'alias par défaut envoie à RECIPIENT_EMAIL (variable du service) : pas de champ, il serait refusé.
+    recipients_box = "" if alias.get("is_default") else f"""
+    <input type="hidden" name="recipients_present" value="1">
+    <label style="margin-top:.9rem">Destinataires du résumé (un par ligne)</label>
+    <textarea name="recipients" rows="3" placeholder="vide = réponse à l'expéditeur">{_e(recipients)}</textarea>
+    <div class="hint">Vide : le résumé revient à l'expéditeur. Sinon il part en <strong>un seul e-mail</strong> à toute la liste, quel que soit l'expéditeur.
+    Tant que le gateway est en mode développement, il est redirigé vers l'adresse du compte Resend.</div>"""
     rows = ""
     for m in mails:
         err = f'<div class="err">{_e(m["last_error"])}</div>' if m.get("last_error") else ""
@@ -496,6 +507,7 @@ def _page_alias(alias: dict, prompt_data: dict, mails: list, flash_html: str = "
     <div class="hint">Les mails d'une autre adresse sont rejetés sans réponse. {dest}</div>
     <label class="check" style="margin-top:.7rem"><input type="checkbox" name="open_senders"{" checked" if alias.get("open_senders") else ""}> Accepter tous les expéditeurs</label>
     <div class="warn">⚠ À éviter sur un alias qui répond à l'expéditeur : l'adresse d'un expéditeur est facile à usurper.</div>
+    {recipients_box}
     {enabled_box}
     <button type="submit" class="btn btn-primary" style="margin-top:.8rem">💾 Enregistrer les réglages</button>
   </div>
@@ -570,12 +582,15 @@ async def alias_view(request: Request, aid: int, saved: str = "", created: str =
 
 @router.post("/aliases/{aid}/save")
 async def alias_save(request: Request, aid: int, frequency: str = Form(""), allowed_senders: str = Form(""),
-                     open_senders: str = Form(""), enabled: str = Form(""), enabled_present: str = Form("")):
+                     open_senders: str = Form(""), enabled: str = Form(""), enabled_present: str = Form(""),
+                     recipients: str = Form(""), recipients_present: str = Form("")):
     from app.main import settings
     from app.roadmap import _require_auth
     if r := _require_auth(request, settings):
         return r
     payload = {"frequency": frequency, "allowed_senders": allowed_senders, "open_senders": bool(open_senders)}
+    if recipients_present:   # absent pour l'alias par défaut (destinataire = RECIPIENT_EMAIL)
+        payload["recipients"] = recipients
     if enabled_present:   # absent pour l'alias par défaut : la case n'est pas affichée, on ne le désactive jamais par oubli
         payload["enabled"] = bool(enabled)
     try:

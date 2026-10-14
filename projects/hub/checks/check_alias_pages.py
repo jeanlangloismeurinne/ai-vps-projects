@@ -21,7 +21,8 @@ LIST = {"domain": "oozeenaru.resend.app", "aliases": [
     {"id": 1, "local_part": "newsletter", "address": "newsletter@oozeenaru.resend.app", "enabled": True, "frequency": "morning",
      "is_default": True, "recipient": "jean@mailbox.org", "open_senders": True, "allowed_senders": [], "counts": {"summarized": 115, "ignored": 4}},
     {"id": 2, "local_part": "summary", "address": "summary@oozeenaru.resend.app", "enabled": True, "frequency": "minute",
-     "is_default": False, "recipient": None, "open_senders": False, "allowed_senders": ["jean@exemple.fr"], "counts": {"new": 1, "failed": 2, "rejected": 3}},
+     "is_default": False, "recipient": None, "open_senders": False, "allowed_senders": ["jean@exemple.fr"], "counts": {"new": 1, "failed": 2, "rejected": 3},
+     "recipients": ["a@liste.fr", f"b@liste.fr{XSS}"]},
     {"id": 3, "local_part": "vide", "address": "vide@oozeenaru.resend.app", "enabled": False, "frequency": "evening",
      "is_default": False, "recipient": None, "open_senders": False, "allowed_senders": [], "counts": {}},
 ]}
@@ -43,9 +44,12 @@ assert 'action="/newsletter/aliases/2/save"' in det and 'action="/newsletter/ali
     and 'action="/newsletter/aliases/2/prompt/activate"' in det, "détail : les 3 formulaires doivent cibler CET alias"
 assert re.search(r'<option value="minute" selected>', det) and "jean@exemple.fr" in det, "détail : réglages courants préremplis"
 assert 'name="enabled_present"' in det and 'name="enabled"' in det, "détail : case « actif » attendue sur un alias non défaut"
+assert 'name="recipients"' in det and "a@liste.fr" in det and "destinataires</strong> ci-dessous" in det, "détail : destinataires préremplis"
+assert "envoi à 2 destinataire(s)" in lst and "réponse à l'expéditeur" in lst, "liste : destinataires fixes vs expéditeur"
 assert "3 essai(s)" in det and "page bloquée (403)" in det, "détail : statut, essais et erreur nommée visibles"
 
 dft = nl._page_alias(LIST["aliases"][0], PROMPT, [])
+assert 'name="recipients' not in dft, "alias par défaut : pas de champ destinataires (RECIPIENT_EMAIL fait foi)"
 assert 'name="enabled"' not in dft and 'name="enabled_present"' not in dft, "alias par défaut : pas de case « actif » (foot-gun)"
 assert "jean@mailbox.org" in dft and "checked" in dft.split('name="open_senders"')[1][:20], "alias par défaut : destinataire fixe + tous expéditeurs"
 
@@ -60,9 +64,11 @@ class Req:  # `_require_auth` n'est pas testé ici : on le neutralise
 import app.roadmap as roadmap  # noqa: E402
 import app.main as hubmain  # noqa: E402
 roadmap._require_auth = lambda request, settings: None
-asyncio.run(nl.alias_save(Req(), 1, frequency="morning", allowed_senders="", open_senders="on", enabled="", enabled_present=""))
-assert "enabled" not in sent["payload"], f"un enregistrement de l'alias par défaut a envoyé enabled={sent['payload']}"
-asyncio.run(nl.alias_save(Req(), 2, frequency="minute", allowed_senders="a@b.fr", open_senders="", enabled="", enabled_present="1"))
+asyncio.run(nl.alias_save(Req(), 1, frequency="morning", allowed_senders="", open_senders="on", enabled="", enabled_present="", recipients="", recipients_present=""))
+assert "enabled" not in sent["payload"] and "recipients" not in sent["payload"], f"un enregistrement de l'alias par défaut a envoyé enabled ou recipients : {sent['payload']}"
+asyncio.run(nl.alias_save(Req(), 2, frequency="minute", allowed_senders="a@b.fr", open_senders="", enabled="", enabled_present="1",
+                          recipients="x@liste.fr\ny@liste.fr", recipients_present="1"))
+assert sent["payload"]["recipients"] == "x@liste.fr\ny@liste.fr", sent
 assert sent["payload"]["enabled"] is False and sent["payload"]["open_senders"] is False, sent
 # ── `_api` : l'erreur du service arrive lisible (le `detail` de FastAPI), pas en JSON brut ──
 import httpx  # noqa: E402
