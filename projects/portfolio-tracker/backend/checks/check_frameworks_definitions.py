@@ -188,6 +188,7 @@ def fichier_base(**over):
         "archetypes": list(ARCHETYPES),
         "types_evenement_version": yaml.safe_load(
             FRAMEWORKS_YAML.read_text(encoding="utf-8"))["types_evenement_version"],
+        "rappels_ecartes": True,
         "types_evenement": _catalogue_reel(),
         "frameworks": [fw_base()],
     }

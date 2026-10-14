@@ -108,6 +108,10 @@ class QualificationLue:
     # Écrite sous une AUTRE version du catalogue d'événements : elle compte encore (mieux vaut une
     # lecture d'hier que pas de lecture), mais le dépôt est à relire contre la grille du jour.
     a_relire: bool = False
+    # #125 — pour vérifier un rappel dans une note ULTÉRIEURE : la date de l'événement lu, et les types que
+    # la note a ANNONCÉS (ses éléments hors rappels admis), quel que soit l'interrupteur.
+    date_evenement: Optional[date] = None
+    types_annonces: frozenset[str] = frozenset()
 
 
 def types_du_depot(event: MaterialEvent,

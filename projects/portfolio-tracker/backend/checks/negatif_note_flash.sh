@@ -14,14 +14,14 @@ SC="app/contracts/note_flash_schema.py"
 mutations=(
 # §1/§2 — le contrat, le type dérivé
 "$SC¦            if self.cause is None:¦            if False:¦une surprise SANS cause est refusée"
-"$SC¦    return \"surprise_\" + (\"concurrence\" if element.cause == \"non_dite\" else element.cause)¦    return \"surprise_\" + element.cause¦cause non dite ⟹ \`surprise_concurrence\`"
+"$SC¦    return \"surprise_\" + (\"concurrence\" if cause == \"non_dite\" else cause)¦    return \"surprise_\" + cause¦cause non dite ⟹ \`surprise_concurrence\`"
 # §3 — ce qu'on lit
 "$NF¦_TYPES_LUS = re.compile(r\"^(8-K|8-K/A|6-K|6-K/A|EX-99(\\.\\d+)?)\$\")¦_TYPES_LUS = re.compile(r\"^(8-K|8-K/A|6-K|6-K/A|EX-99(\\.\\d+)?|EX-5\\.1)\$\")¦l'avis juridique EX-5.1"
 "$NF¦        brut = _EN_TETE_XBRL.sub(\" \", brut)¦        pass¦un 6-K (sans item) : l'en-tête XBRL masqué"
 "$NF¦            texte = texte[debut.start():] if debut else texte¦            pass¦la page de garde du formulaire"
 # §4 — ce que le modèle voit
 "$NF¦    out = [{\"id\": t.id, \"libelle\": t.libelle} for t in fichier.types_evenement¦    out = [{\"id\": t.id, \"libelle\": t.libelle, \"portee\": t.portee} for t in fichier.types_evenement¦le modèle ne voit NI la portée"
-"$NF¦           if t.id != A_QUALIFIER and not t.id.startswith(\"surprise_\")]¦           if not t.id.startswith(\"surprise_\")]¦catalogue proposé"
+"$NF¦           and t.id != A_QUALIFIER and not t.id.startswith(\"surprise_\")]¦           and not t.id.startswith(\"surprise_\")]¦catalogue proposé"
 # §5 — le pont
 "$NF¦            if cite is not None and _normaliser(cite) not in corpus:¦            if False:¦une PARAPHRASE est refusée"
 "$NF¦    return re.sub(r\"\\s+\", \" \", t).strip().casefold()¦    return t.strip().casefold()¦une citation littérale (espaces normalisés) passe"
@@ -38,6 +38,18 @@ mutations=(
 # §8 — la rédaction
 "$NF¦    for essai in (1, 2):¦    for essai in (2,):¦renvoyée UNE fois"
 "$NF¦    if not documents:¦    if False:¦AVANT tout appel modèle"
+# §9 — le rappel (#125) : l'admission (détenteur `verdict_rappel`), la lecture sous l'interrupteur
+"$SC¦        if self.type == SURPRISE and self.rappel_du is not None:¦        if False:¦un écart aux attentes n'est jamais un rappel"
+"$NF¦        if n.date_evenement == rappel_du and n.date_evenement < event_date and type_ in n.types_annonces:¦        if n.date_evenement == rappel_du:¦un autre type à la bonne date"
+"$NF¦        if n.date_evenement == rappel_du and n.date_evenement < event_date and type_ in n.types_annonces:¦        if type_ in n.types_annonces:¦une date sans note"
+"$NF¦    if rappel_du >= event_date:¦    if False:¦une date non antérieure"
+"$NF¦           and q.date_evenement < event.event_date and q.types_annonces]¦           and q.types_annonces]¦ni la note du dépôt lu ni une note POSTÉRIEURE"
+"$NF¦                              for n in precedentes],¦                              for n in []],¦le modèle VOIT les notes précédentes"
+"$NF¦    if fichier.rappels_ecartes and annonces != types:¦    if annonces != types:¦interrupteur OFF : l'ordre 0 EXACT"
+"$NF¦        lus = annonces or frozenset({\"routine\"})¦        lus = annonces¦une note faite que de rappels se lit"
+"$NF¦                     if not el.get(\"rappel_admis\"))¦                     )¦interrupteur ON : le rappel admis ne rouvre rien"
+"$NF¦    types = tuple(sorted({type_derive(el) for el in sortie.elements}))   # ordre 0 : tout type cité¦    types = tuple(sorted({type_derive(el) for el in sortie.elements if el.rappel_du is None}))¦les types PERSISTÉS restent ceux de l'ordre 0"
+"$NF¦    vues = precedentes if fichier.rappels_ecartes else []¦    vues = precedentes¦interrupteur OFF : le modèle ne voit PAS l'historique"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

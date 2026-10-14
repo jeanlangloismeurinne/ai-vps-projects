@@ -75,3 +75,21 @@ cette situation ?** Et on s'en sert pour orienter la conception.
 3. **Consigner les arbitrages rendus** dans le fichier de reprise et, s'ils sont durables, dans une
    convention du `CLAUDE.md` projet — en rappelant la **logique de fonds** qui les a fondés, pas
    seulement la règle technique qui en résulte.
+
+## 3. Un raffinement ne se défend pas contre la règle simple qu'il raffine
+
+Quand un module (ordre 1) raffine une règle plus simple et plus stricte qui fonctionne déjà (ordre 0),
+**on ne s'épuise pas à faire marcher l'ordre 1** : si, à l'usage, il laisse passer des cas problématiques
+et qu'aucun réglage atteignable ne les corrige, on revient à l'ordre 0. (Posé par l'utilisateur le
+2026-10-14, à propos de la note flash qui distingue un fait nouveau d'un fait rappelé.)
+
+- **Le retour à l'ordre 0 est un interrupteur, pas un chantier** : une seule donnée à basculer, sans
+  réécrire de code ni relire l'historique. La donnée persistée reste celle de l'ordre 0 ; le raffinement
+  s'applique à la LECTURE.
+- **L'ordre 0 est le côté prudent** : le raffinement n'a le droit que d'alléger ce que l'ordre 0
+  imposerait (rouvrir moins), et seulement quand une vérification en code l'y autorise ; dans le doute,
+  c'est l'ordre 0 qui s'applique.
+- **Le raffinement nomme son coût d'erreur** : quel cas il laisserait passer à tort, et comment on le verrait.
+- Ce que ferait un vrai fonds : une procédure allégée (« rappel, rien de nouveau ») n'existe que tant
+  qu'elle ne fait pas rater un fait ; au premier raté, le directeur de la recherche rétablit la procédure
+  complète, sans débat.

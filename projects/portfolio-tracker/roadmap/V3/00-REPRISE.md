@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 catalogue 1.3.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,21 +28,21 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-14) : jalon « note d'initiation » — A2, défendabilité** (NVDA : première
-> instruction ; RVMD : collecte postérieure au 30/06). **Avant**, faire trancher par l'utilisateur
-> l'arbitrage « fait rappelé ≠ fait nouveau » ci-dessous.
+> **➜ PROCHAIN PAS (2026-10-14, fin de session) : jalon « note d'initiation » — A2, défendabilité** (NVDA :
+> première instruction ; RVMD : collecte postérieure au 30/06).
 > Fait ce jour : **A1 coché** — NVDA modèle économique (plan #248, réponses #1366-#1371) **1,00, 6/6 à jour**,
 > deux réserves pour le comité (me_5 marché des seuls CPU, me_6 citation manquante — voir la roadmap) ;
-> **8-K RVMD du 13/10 soldé** : note flash, qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage
-> 250 M$ lu et annoté : dette brute ~1 286 M$, autonomie ~38 → ~40 mois) — qualité financière RVMD **1,00** ;
-> suite **4465/0**. ⚠️ **#124 TOUJOURS PAS DÉPLOYÉ** (classifieur, 2ᵉ refus) — à lancer par l'utilisateur.
-> ⚠️ **ARBITRAGE EN ATTENTE — #125, la note flash range un dépôt par ce qu'il RAPPELLE.** La note du tirage
-> RVMD retient « réglementaire favorable » parce que le 8-K rappelle l'approbation FDA du 26/08 comme
-> condition du tirage : me_1 RVMD est périmée à tort. Catalogue 1.3.0 (libellés « annoncé par ce dépôt ») +
-> consigne : **insuffisants**, mesuré (#503 identique à #498). Options : (a) rouvrir large et laisser
-> l'analyste annoter (`--sans-collecte` me_1, quelques centimes à chaque fois) ; (b) donner à la note une
-> case « rappelé » par passage cité, que le code exclut des types (forme #68, contrat de la note).
->
+> **8-K RVMD du 13/10 soldé** : qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage 250 M$ lu et
+> annoté : dette brute ~1 286 M$, autonomie ~38 → ~40 mois) ; **#125 le rappel** (arbitrage utilisateur :
+> distinguer nouveau / rappelé, débrayable — principe fondateur n° 3 NEUF) : catalogue **1.4.0**, notes
+> relues ; me_1 RVMD de nouveau à jour. État : RVMD qualité financière **1,00**, modèle économique **0,83**
+> (me_5 non fondée), défendabilité 5/5 périmées ; NVDA qualité financière 1,00, modèle économique 1,00.
+> Suite **4487/0**. ⚠️ **#124 et #125 NON DÉPLOYÉS** (classifieur, 2 refus) — à lancer par l'utilisateur
+> (`infrastructure/compose-deploy.sh portfolio-backend`). Sans effet sur les passages de chaîne.
+> ⚠️ **À surveiller (#125)** : à chaque relecture de notes, vérifier qu'aucun fait NOUVEAU n'a été omis ou
+> admis comme rappel ; au premier cas non corrigeable par réglage → `rappels_ecartes: false` + version
+> montée + relecture (procédure dans la convention #125).
+
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres
 > sur 6 ont une méthodologie. La 4 bis est OUVERTE (#96-#99, 2026-09-29) : gabarits maison, bac à

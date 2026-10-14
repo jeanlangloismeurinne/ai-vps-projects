@@ -24,9 +24,18 @@ référentiel : ce sont des faits du dossier et du référentiel, pas de la form
 `note_flash.valider_note` les tient. Qu'un passage cité justifie VRAIMENT le type choisi : aucune
 garde ne le peut (`feedback_garde_structure_pas_sens`) — la preuve de sens est la LECTURE des notes en
 texte (`tools/rediger_notes_flash.sh`).
+
+Le RAPPEL (#125, ordre 1 sur la règle « tout type cité rouvre ») — `rappel_du`
+------------------------------------------------------------------------------
+Un communiqué rappelle souvent un fait déjà publié (« in connection with the FDA's approval… ») : un
+analyste écrit alors « rappel », il ne rouvre rien. Le modèle peut marquer un élément `rappel_du` = la
+date de l'événement rappelé. Ce n'est qu'une DEMANDE : le pont ne l'admet que si une note antérieure du
+même émetteur a annoncé ce type à cette date ; sinon l'élément compte comme NOUVEAU (dans le doute, on
+rouvre). Un écart aux attentes n'est jamais un rappel (il est nouveau par nature).
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import Field, model_validator
@@ -35,6 +44,7 @@ from app.contracts.analysis_v2_schemas import Strict
 
 __all__ = [
     "CAUSES_SURPRISE", "SURPRISE", "ElementNoteFlash", "NoteFlashSortie", "type_derive",
+    "type_derive_de",
 ]
 
 # Le pseudo-type par lequel le modèle signale un écart aux attentes. Il n'est PAS au catalogue : seul
@@ -55,6 +65,8 @@ class ElementNoteFlash(Strict):
     # Pour `surprise` seulement : la cause que donne le communiqué, et le passage qui la dit.
     cause: Optional[Cause] = None
     passage_cause: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
+    # La DEMANDE de rappel (#125) : la date de l'événement que ce passage rappelle. Admise ou non par le pont.
+    rappel_du: Optional[date] = None
 
     @model_validator(mode="after")
     def _la_cause_appartient_a_la_surprise(self) -> "ElementNoteFlash":
@@ -69,6 +81,8 @@ class ElementNoteFlash(Strict):
                                  "(`passage_cause`) ; sinon elle est `non_dite`")
         elif self.cause is not None or self.passage_cause is not None:
             raise ValueError(f"`cause` n'a de sens que pour `{SURPRISE}` (reçu sur `{self.type}`)")
+        if self.type == SURPRISE and self.rappel_du is not None:
+            raise ValueError("un écart aux attentes est nouveau par nature : il n'est jamais un rappel")
         if self.type.startswith("surprise_"):
             raise ValueError(f"`{self.type}` : dis `{SURPRISE}` et sa cause, le type s'en déduit")
         return self
@@ -94,6 +108,11 @@ class NoteFlashSortie(Strict):
 def type_derive(element: ElementNoteFlash) -> str:
     """Le type d'événement d'un élément, tel que le CODE le fixe. `surprise` + cause non dite ⟹
     `surprise_concurrence` (arbitrage Q2 : par prudence, la barrière est mise en doute)."""
-    if element.type != SURPRISE:
-        return element.type
-    return "surprise_" + ("concurrence" if element.cause == "non_dite" else element.cause)
+    return type_derive_de(element.type, element.cause)
+
+
+def type_derive_de(type_: str, cause: Optional[str]) -> str:
+    """DÉTENTEUR UNIQUE de la dérivation (#46) — sur les champs nus, pour relire un élément PERSISTÉ."""
+    if type_ != SURPRISE:
+        return type_
+    return "surprise_" + ("concurrence" if cause == "non_dite" else cause)

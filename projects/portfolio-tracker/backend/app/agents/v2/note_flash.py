@@ -32,6 +32,23 @@ CE QUE LE CODE TIENT (le pont `valider_note`)
   · une note refusée par le pont n'est PAS persistée : le dépôt reste `a_qualifier`, il rouvre tout.
     L'échec se dit ; il ne devient jamais « ne rouvre rien ».
 
+LE RAPPEL (#125) — un raffinement d'ordre 1, débrayable
+------------------------------------------------------
+L'ordre 0 : tout type cité rouvre ses questions. Un communiqué qui RAPPELLE un fait déjà publié (le
+tirage RVMD du 08/10 « in connection with the FDA's approval » du 26/08) rouvrait donc à tort ce que le
+fait rappelé rouvre. Le modèle voit les notes PRÉCÉDENTES de l'émetteur (date, types annoncés, extrait —
+l'information qui lui manquait : le texte ne dit pas toujours « previously disclosed ») et peut marquer
+un élément `rappel_du`. Le pont (`verdict_rappel`) n'ADMET le rappel que si une note antérieure de cet
+émetteur a annoncé CE type à CETTE date ; sinon l'élément compte comme nouveau (dans le doute on rouvre).
+Les `types` persistés restent ceux de l'ordre 0 ; l'écartement des rappels admis se fait à la LECTURE
+(`relire_note`), sous l'interrupteur `rappels_ecartes` du référentiel : le remettre à False rétablit
+l'ordre 0 pour les rappels MARQUÉS sans rien relire (principe fondateur n° 3). Mais voir l'historique peut
+aussi faire OMETTRE un type au modèle (mesuré sur le réel, #521) : interrupteur coupé, l'historique n'est
+plus montré, et défaire les omissions passées demande une relecture (version du catalogue montée).
+Risques résiduels nommés : un fait NOUVEAU du même type et de la même date qu'un fait déjà noté
+passerait pour un rappel ; un fait nouveau OMIS par le modèle parce qu'il le croit déjà publié ne se
+voit qu'à la lecture des notes.
+
 Ce qui est persisté (migration 050, `notes_flash`) : la note, une fois par dépôt et par version du
 catalogue, append-only. La PORTÉE ne l'est jamais : `evenements.ancre_de_la_question` la recalcule à
 chaque lecture contre le référentiel du jour (#53), à partir de `qualifications_de_l_emetteur`.
@@ -55,7 +72,7 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.config import settings
 from app.contracts.framework_definition_schema import FrameworksFile
-from app.contracts.note_flash_schema import SURPRISE, NoteFlashSortie, type_derive
+from app.contracts.note_flash_schema import SURPRISE, NoteFlashSortie, type_derive, type_derive_de
 from app.db.database import get_db_session
 from app.knowledge.edgar_facts import _UA
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, IdentiteEmetteur, identite_de_l_emetteur
@@ -71,7 +88,8 @@ __all__ = [
     "extraire_documents", "types_proposables", "contexte_note_flash", "valider_note",
     "depots_a_lire", "telecharger_soumission", "rediger_note_flash", "persister_note",
     "qualifications_de_l_emetteur", "LectureDesDepots", "DepotTraite", "lire_les_depots_en_attente",
-    "titres_suivis", "lecture_du_matin",
+    "titres_suivis", "lecture_du_matin", "NotePrecedente", "precedentes_de", "types_annonces",
+    "verdict_rappel",
 ]
 
 
@@ -210,15 +228,39 @@ def types_proposables(fichier: FrameworksFile) -> list[dict[str, str]]:
     return out
 
 
+@dataclass(frozen=True)
+class NotePrecedente:
+    """Une note DÉJÀ écrite sur un dépôt antérieur du même émetteur : ce qu'un rappel peut citer."""
+    accession: str
+    date_evenement: date
+    types_annonces: frozenset[str]
+    resume: str
+
+
+def precedentes_de(qualifications: dict[str, QualificationLue], event: MaterialEvent
+                   ) -> list[NotePrecedente]:
+    """Les notes des dépôts dont l'événement est STRICTEMENT antérieur à celui qu'on lit. Fonction PURE."""
+    out = [NotePrecedente(acc, q.date_evenement, q.types_annonces, q.resume)
+           for acc, q in qualifications.items()
+           if q.date_evenement is not None and acc != event.accession
+           and q.date_evenement < event.event_date and q.types_annonces]
+    return sorted(out, key=lambda n: (n.date_evenement, n.accession), reverse=True)
+
+
 def contexte_note_flash(event: MaterialEvent, emetteur: IdentiteEmetteur,
-                        documents: list[DocumentDepot], fichier: FrameworksFile) -> dict[str, Any]:
-    """CE QUE LE MODÈLE VOIT — déterministe, lisible en texte avant toute dépense."""
+                        documents: list[DocumentDepot], fichier: FrameworksFile, *,
+                        precedentes: list[NotePrecedente]) -> dict[str, Any]:
+    """CE QUE LE MODÈLE VOIT — déterministe, lisible en texte avant toute dépense. `precedentes` est
+    REQUIS, sans défaut : un lecteur qui l'oublierait ne pourrait plus jamais reconnaître un rappel."""
     return {
         "entreprise": {"raison_sociale": emetteur.raison_sociale, "symbole": emetteur.symbole},
         "depot": {"formulaire": event.form, "date_evenement": event.event_date.isoformat(),
                   "date_depot": event.filing_date.isoformat(),
                   "items": [{"item": i, "libelle": lib} for i, lib in _libelles(event)]},
         "types_evenement": types_proposables(fichier),
+        "notes_precedentes": [{"date_evenement": n.date_evenement.isoformat(),
+                               "types": sorted(n.types_annonces), "note": n.resume}
+                              for n in precedentes],
         "documents": [{"type": d.type, "nom": d.nom, "tronque": d.tronque, "texte": d.texte}
                       for d in documents],
     }
@@ -241,11 +283,13 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "ANNONCÉE (accord signé, même non encore conclu) est un `perimetre`. Un dépôt qui ne porte "
     "aucune information de fond (présentation sans chiffre neuf, calendrier, pure formalité) est "
     "`routine`.\n\n"
-    "CE QUI EST NOUVEAU, PAS CE QUI EST RAPPELÉ. Un type se retient pour ce que CE dépôt annonce "
-    "à la date de son événement. Un fait antérieur qu'il rappelle comme contexte ou comme condition "
-    "(« as previously disclosed », « in connection with the approval of… », une approbation, un "
-    "contrat ou un financement déjà publiés) n'est PAS un type de ce dépôt : il a eu sa propre note "
-    "le jour où il a été publié.\n\n"
+    "CE QUI EST NOUVEAU, ET CE QUI EST RAPPELÉ. `notes_precedentes` liste les notes déjà écrites sur "
+    "les dépôts antérieurs de l'entreprise. Si un passage ne fait que RAPPELER un fait déjà annoncé "
+    "(« as previously disclosed », « in connection with the approval of… ») et qui figure dans "
+    "`notes_precedentes`, garde l'élément avec son type et ajoute `rappel_du` = la `date_evenement` de "
+    "cette note. Ne mets `rappel_du` QUE si tu retrouves ce fait, ce type et cette date dans "
+    "`notes_precedentes` ; un fait nouveau (une deuxième approbation, une autre indication, un nouveau "
+    "tirage) n'est jamais un rappel. Dans le doute, n'en mets pas.\n\n"
     "L'ÉCART AUX ATTENTES. Si le dépôt révèle des résultats ou une prévision qui s'écartent de ce "
     "qu'annonçait la direction ou de ce qu'attendait le marché, utilise le type `surprise` et dis sa "
     "`cause`. La question à te poser : « est-ce l'entreprise, ou tout le secteur ? ». Ne choisis "
@@ -259,6 +303,7 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "ouvert, ce qui est le bon résultat quand on ne sait pas.\n\n"
     "FORMAT. Réponds UNIQUEMENT par un objet JSON :\n"
     '{"lisible": true, "elements": [{"type": "<id>", "passage": "<citation>"}, '
+    '{"type": "<id>", "passage": "<citation>", "rappel_du": "<AAAA-MM-JJ>"}, '
     '{"type": "surprise", "passage": "<citation>", "cause": "execution", '
     '"passage_cause": "<citation>"}]}\n'
     'ou {"lisible": false, "elements": [], "motif": "<pourquoi>"}'
@@ -292,9 +337,31 @@ class NoteValidee:
     motif: Optional[str]
 
 
+def verdict_rappel(type_: str, rappel_du: date, *, event_date: date,
+                   precedentes: list[NotePrecedente]) -> tuple[bool, str]:
+    """DÉTENTEUR UNIQUE de l'admission d'un rappel (#125). Admis ⟺ une note d'un dépôt antérieur a
+    ANNONCÉ ce type, pour un événement de cette date, strictement avant le dépôt lu. Fonction PURE."""
+    if rappel_du >= event_date:
+        return False, (f"rappel du {rappel_du} refusé : pas antérieur à l'événement lu ({event_date}) — "
+                       "compte comme nouveau")
+    for n in precedentes:
+        if n.date_evenement == rappel_du and n.date_evenement < event_date and type_ in n.types_annonces:
+            return True, f"rappel de la note du {rappel_du} ({n.accession})"
+    return False, (f"rappel du {rappel_du} refusé : aucune note antérieure n'annonce `{type_}` à cette "
+                   "date — compte comme nouveau")
+
+
+def types_annonces(elements: list[dict[str, Any]]) -> frozenset[str]:
+    """Les types qu'une note ANNONCE : ceux de ses éléments hors rappels ADMIS. Fonction PURE."""
+    return frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements
+                     if not el.get("rappel_admis"))
+
+
 def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
-                 fichier: FrameworksFile) -> NoteValidee:
-    """Le PONT de la note flash (cf. module). Lève `NoteFlashRefusee` en nommant CHAQUE défaut."""
+                 fichier: FrameworksFile, *, event_date: date,
+                 precedentes: list[NotePrecedente]) -> NoteValidee:
+    """Le PONT de la note flash (cf. module). Lève `NoteFlashRefusee` en nommant CHAQUE défaut. Un rappel
+    non vérifié n'est PAS un défaut : l'élément compte comme nouveau (`rappel_admis: false`, motif)."""
     if not sortie.lisible:
         return NoteValidee(lisible=False, types=(A_QUALIFIER,), elements=[], motif=sortie.motif)
     permis = {t["id"] for t in types_proposables(fichier)}
@@ -309,10 +376,15 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
                 defauts.append(f"élément {n} : `{champ}` introuvable dans le dépôt (« {cite[:80]}… »)")
     if defauts:
         raise NoteFlashRefusee(" ; ".join(defauts))
-    types = tuple(sorted({type_derive(el) for el in sortie.elements}))
-    return NoteValidee(lisible=True, types=types, motif=None,
-                       elements=[el.model_dump(mode="json", exclude_none=True)
-                                 for el in sortie.elements])
+    types = tuple(sorted({type_derive(el) for el in sortie.elements}))   # ordre 0 : tout type cité
+    elements = []
+    for el in sortie.elements:
+        d = el.model_dump(mode="json", exclude_none=True)
+        if el.rappel_du is not None:
+            d["rappel_admis"], d["rappel_motif"] = verdict_rappel(
+                type_derive(el), el.rappel_du, event_date=event_date, precedentes=precedentes)
+        elements.append(d)
+    return NoteValidee(lisible=True, types=types, motif=None, elements=elements)
 
 
 # ── 5. Rédiger, persister, relire ───────────────────────────────────────────────────────────────────
@@ -340,7 +412,8 @@ async def _resoudre_agent() -> ResolvedAgent:
 async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
                              emetteur: IdentiteEmetteur, fichier: Optional[FrameworksFile] = None,
                              agent: Optional[ResolvedAgent] = None,
-                             soumission: Optional[str] = None) -> NoteRedigee:
+                             soumission: Optional[str] = None,
+                             precedentes: list[NotePrecedente]) -> NoteRedigee:
     """Lit UN dépôt et rend sa note VALIDÉE (non persistée). Ordre : (1) télécharger et extraire —
     échec ⟹ `NoteFlashImpossible` AVANT toute dépense ; (2) le modèle lit ; (3) le pont ; un refus du
     pont est renvoyé UNE fois au modèle avec ses défauts, puis `NoteFlashRefusee`."""
@@ -353,15 +426,21 @@ async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
     if not documents:
         raise NoteFlashImpossible(f"{event.accession} : aucun document lisible (formulaire ou EX-99)")
     agent = agent or await _resoudre_agent()
+    # Interrupteur coupé (ordre 0) : le modèle ne voit PAS l'historique. Le voir peut lui faire OMETTRE un
+    # type (mesuré : #521 a retiré le passage rappelé au lieu de le marquer) — une omission échappe à tout
+    # contrôle, et l'écarter à la lecture ne la défait pas. Le retour COMPLET à l'ordre 0 est donc :
+    # interrupteur à false + version du catalogue montée + relecture des notes (quelques dixièmes de cent).
+    vues = precedentes if fichier.rappels_ecartes else []
     messages = [{"role": "user", "content": _message(
-        contexte_note_flash(event, emetteur, documents, fichier))}]
+        contexte_note_flash(event, emetteur, documents, fichier, precedentes=vues))}]
     runs: list[AgentRunResult] = []
     for essai in (1, 2):
         run = await run_json_agent(agent, messages, NoteFlashSortie, json_object=False,
                                    temperature=0.0)
         runs.append(run)
         try:
-            note = valider_note(run.parsed, documents, fichier)
+            note = valider_note(run.parsed, documents, fichier, event_date=event.event_date,
+                                precedentes=vues)
             break
         except NoteFlashRefusee as e:
             if essai == 2:
@@ -404,6 +483,9 @@ def relire_note(row: dict[str, Any], fichier: FrameworksFile) -> QualificationLu
     disparu ne doit jamais devenir « ne rouvre rien » (même doctrine que `TYPE_PAR_ITEM`)."""
     connus = {t.id for t in fichier.types_evenement}
     types = frozenset(row["types"])
+    elements = row.get("elements") or []
+    ev = row.get("event_date")
+    annonces = types_annonces(elements) if row.get("lisible") else frozenset()
     date_note = row["redigee_le"].date().isoformat() if row.get("redigee_le") else "?"
     version = row.get("catalogue_version")
     a_relire = version != fichier.types_evenement_version
@@ -412,15 +494,25 @@ def relire_note(row: dict[str, Any], fichier: FrameworksFile) -> QualificationLu
         inconnus = ", ".join(sorted(types - connus))
         return QualificationLue(types=frozenset({A_QUALIFIER}), a_relire=True, resume=(
             f"note flash du {date_note} sur des types que le référentiel ne connaît plus "
-            f"({inconnus}) — à relire"))
+            f"({inconnus}) — à relire"), date_evenement=ev)
     if not row["lisible"]:
         return QualificationLue(types=types, a_relire=a_relire, resume=(
-            f"note flash du {date_note} : dépôt lu, portée indéterminable — {row['motif']}{ancienne}"))
-    elements = row["elements"] or []
-    passage = elements[0]["passage"] if elements else ""
+            f"note flash du {date_note} : dépôt lu, portée indéterminable — {row['motif']}{ancienne}"),
+            date_evenement=ev)
+    nouveaux = [el for el in elements if not el.get("rappel_admis")]
+    passage = (nouveaux or elements)[0]["passage"] if elements else ""
     extrait = passage if len(passage) <= _EXTRAIT else passage[:_EXTRAIT].rstrip() + "…"
-    return QualificationLue(types=types, a_relire=a_relire,
-                            resume=f"note flash du {date_note} : « {extrait} »{ancienne}")
+    lus, ecartes = types, ""
+    if fichier.rappels_ecartes and annonces != types:
+        # Ordre 1 (#125) : les rappels ADMIS ne rouvrent rien. Une note faite QUE de rappels n'annonce
+        # rien de neuf : elle se lit `routine` (portée aucune), jamais un ensemble vide.
+        lus = annonces or frozenset({"routine"})
+        rappels = sorted({(el["type"], el.get("rappel_du", "?")) for el in elements
+                          if el.get("rappel_admis")})
+        ecartes = " · rappel(s) écarté(s) : " + ", ".join(f"{t} (fait du {d})" for t, d in rappels)
+    return QualificationLue(types=lus, a_relire=a_relire,
+                            resume=f"note flash du {date_note} : « {extrait} »{ecartes}{ancienne}",
+                            date_evenement=ev, types_annonces=annonces)
 
 
 async def qualifications_de_l_emetteur(conn, cik: Optional[int],
@@ -433,7 +525,7 @@ async def qualifications_de_l_emetteur(conn, cik: Optional[int],
     rows = await conn.fetch(
         """
         SELECT DISTINCT ON (accession) accession, catalogue_version, lisible, types, elements,
-               motif, redigee_le
+               motif, redigee_le, event_date
           FROM notes_flash
          WHERE cik = $1
          ORDER BY accession, (catalogue_version = $2) DESC, redigee_le DESC, id DESC
@@ -527,7 +619,11 @@ class LectureDesDepots:
                 if d.note.lisible:
                     for el in d.note.elements:
                         cause = f" · cause {el['cause']}" if el.get("cause") else ""
-                        lignes.append(f"    → {el['type']}{cause} : « {el['passage'][:220]} »")
+                        rap = ""
+                        if el.get("rappel_du"):
+                            rap = (f" [RAPPEL ADMIS du {el['rappel_du']}]" if el.get("rappel_admis")
+                                   else f" [rappel refusé : {el.get('rappel_motif', '')}]")
+                        lignes.append(f"    → {el['type']}{cause}{rap} : « {el['passage'][:220]} »")
                         if el.get("passage_cause"):
                             lignes.append(f"        cause citée : « {el['passage_cause'][:200]} »")
                 else:
@@ -601,7 +697,8 @@ async def lire_les_depots_en_attente(
             etape = "lecture par le modèle"
             red = await asyncio.wait_for(
                 rediger_note_flash(e, ticker_id=ticker_id, cik=flux.cik, emetteur=emetteur,
-                                   fichier=fichier, agent=agent, soumission=soum),
+                                   fichier=fichier, agent=agent, soumission=soum,
+                                   precedentes=precedentes_de(deja, e)),
                 BORNE_PAR_ETAPE_S)
             lecture.cout_usd += sum(r.cost_usd for r in red.runs)
             d.note, d.corrigee = red.note, len(red.runs) > 1

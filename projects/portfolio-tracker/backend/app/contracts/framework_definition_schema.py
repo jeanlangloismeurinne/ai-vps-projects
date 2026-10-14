@@ -403,6 +403,10 @@ class FrameworksFile(Strict):
     # est la lecture d'un dépôt contre CE catalogue. Corriger un libellé d'événement ne change aucune
     # question ; le faire sous `schema_version` invaliderait toutes les réponses pour relire un 8-K.
     types_evenement_version: str = Field(min_length=1)
+    # L'INTERRUPTEUR du rappel (#125, principe fondateur n° 3) : True = un passage dont le rappel a été
+    # VÉRIFIÉ ne rouvre rien (ordre 1) ; False = tout type cité rouvre, rappel ou non (ordre 0, la règle
+    # d'avant). Requis, sans défaut. Lu à la LECTURE des notes : le basculer ne demande aucune relecture.
+    rappels_ecartes: bool
     types_evenement: list[TypeEvenement] = Field(min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 

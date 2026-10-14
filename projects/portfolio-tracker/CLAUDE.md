@@ -3313,20 +3313,33 @@ brouillon qu'on jette ; et on fixe ce temps sur ce que prend une recherche norma
 Gardes : `check_runner_telemetry` §10 (plafond aux tours de recherche, jamais à la clôture, tour coupé sans
 outils, `settings` lu par le worker en AST) + `negatif_runner_telemetry.sh` **5/0**.
 
-### #125 — une note flash range un dépôt par ce qu'il ANNONCE, pas par ce qu'il RAPPELLE (catalogue 1.3.0)
+### #125 — le rappel : un raffinement d'ordre 1, débrayable (catalogue 1.4.0, principe fondateur n° 3)
 
 **Le défaut (2026-10-14, RVMD, 8-K du 08/10 — tirage de 250 M$ du prêt Royalty Pharma).** La note #498
-retient `financement` (juste) ET `reglementaire_favorable`, en citant « in connection with the FDA's
-approval of RASONQUE » — l'approbation du 26/08, déjà notée (#504), rappelée comme CONDITION du tirage.
-Effet : me_1 RVMD (rouverte par `reglementaire_favorable`) périmée à tort au 08/10. Un fonds range un
-communiqué par ce qu'il annonce de nouveau ; le fait rappelé a eu sa note le jour de sa publication.
-**Tenté, mesuré INSUFFISANT** : libellés des deux types réglementaires « ANNONCÉ PAR CE DÉPÔT » (catalogue
-**1.3.0**, 10 notes relues : RVMD #503-#509, NVDA #510-#511, MSFT #512, $0,003, toutes identiques en
-substance) + consigne « CE QUI EST NOUVEAU, PAS CE QUI EST RAPPELÉ » dans `note_flash.py`. La note #503
-cite la même phrase de rappel et garde le type. Aucune garde de sens n'est possible
-(`feedback_garde_structure_pas_sens`) ; la consigne reste (inoffensive), elle ne garantit rien.
-**Arbitrage en attente** (00-REPRISE) : rouvrir large et laisser l'analyste annoter (#117), ou une case
-« rappelé » par passage cité, exclue des types par le code (forme #68).
+retenait `financement` (juste) ET `reglementaire_favorable`, en citant « in connection with the FDA's
+approval of RASONQUE » — l'approbation du 26/08, déjà notée, RAPPELÉE comme condition du tirage. me_1 RVMD
+était périmée à tort. Libellés « annoncé par ce dépôt » + consigne (1.3.0) : **mesurés insuffisants**
+(#503 identique) — le modèle ne pouvait pas savoir que le fait était déjà publié.
+**Arbitrage de l'utilisateur (2026-10-14)** : distinguer nouveau / rappelé, SANS qu'un fait nouveau puisse
+passer pour un rappel, et avec un retour rapide à la règle simple si le module laisse passer des cas
+problématiques (principe fondateur n° 3 : ne pas s'épuiser sur un ordre 1 qu'un ordre 0 gère).
+**La règle** (`note_flash.py`, contrat `note_flash_schema.py`) :
+- le modèle VOIT les notes précédentes de l'émetteur (`precedentes_de`, date + types ANNONCÉS + extrait) et
+  peut marquer un élément `rappel_du` ; jamais sur une `surprise` ;
+- `verdict_rappel` (détenteur unique) n'ADMET le rappel que si une note d'un dépôt antérieur a annoncé CE
+  type à CETTE date ; sinon l'élément compte comme NOUVEAU, motif nommé (dans le doute on rouvre) ;
+- les `types` persistés restent ceux de l'ordre 0 ; `relire_note` écarte les rappels admis À LA LECTURE,
+  sous l'interrupteur `rappels_ecartes` de `frameworks.yaml` (requis) ; une note faite que de rappels se
+  lit `routine`, jamais un ensemble vide ; le résumé DIT le rappel écarté.
+- **Mesuré sur le réel** (RVMD #521) : avec l'historique sous les yeux, le modèle a OMIS le passage
+  rappelé au lieu de le marquer — résultat juste (financement seul, me_1 de nouveau à jour), mais la
+  vérification n'a pas joué, et une omission échappe à tout contrôle. D'où : interrupteur coupé ⟹
+  l'historique n'est plus montré. **Retour à l'ordre 0** = `rappels_ecartes: false` (rappels marqués :
+  effet immédiat, aucune relecture) + version du catalogue montée + relecture des notes (omissions passées,
+  ~0,3 cent pour RVMD/NVDA/MSFT). Risques résiduels nommés : un fait nouveau du même type et de la même date
+  qu'un fait noté ; un fait nouveau omis parce que cru déjà publié — ne se voit qu'à la lecture des notes.
+Gardes : `check_note_flash` §9 (74/0, fixture du 8-K réel du 08/10) + `negatif_note_flash.sh` **30/0**
+(dont 2 mutations caduques réparées, préexistantes). Notes 1.4.0 : RVMD #521-#527, NVDA #528-#529, MSFT #530.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

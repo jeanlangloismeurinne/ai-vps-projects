@@ -61,13 +61,21 @@ archetypes:
 #           (8-K du 08/10, tirage Royalty Pharma) rangeait en « réglementaire favorable » l'approbation FDA
 #           du 26/08 que le dépôt RAPPELAIT comme condition du tirage — et rouvrait à tort le modèle
 #           économique. Un fonds range un communiqué par ce qu'il annonce de nouveau, pas par ce qu'il rappelle.
+#           MESURÉ INSUFFISANT (#503 identique) : le modèle ne savait pas que le fait était déjà publié.
+#   1.4.0 — le lecteur voit les notes PRÉCÉDENTES de l'émetteur et peut marquer un passage « rappel du
+#           <date> », admis par le code seulement si une note antérieure a annoncé ce type à cette date (#125).
 #   Ajout des types d'origine `exterieur` (#93, sous 1.1.0) SANS changer la version : la version date ce que le
 #   LECTEUR d'un dépôt voit, et il ne voit que les types `emetteur` — inchangés. Les monter aurait
 #   fait relire les dépôts pour un catalogue identique à leurs yeux.
 #
 # `origine` (#93) : `emetteur` = publié par l'entreprise elle-même, lu par la note flash ;
 # `exterieur` = survenu chez un concurrent ou dans le secteur, toujours `questions_declarees`.
-types_evenement_version: "1.3.0"
+types_evenement_version: "1.4.0"
+# L'INTERRUPTEUR du rappel (#125, principe fondateur n° 3). true = un passage dont le rappel est VÉRIFIÉ
+# (une note antérieure a annoncé ce type à cette date) ne rouvre rien. false = ORDRE 0, la règle d'avant :
+# tout type cité rouvre ses questions, rappel ou non. Le basculer ne demande AUCUNE relecture de note :
+# les types persistés sont ceux de l'ordre 0, l'écartement se fait à la lecture.
+rappels_ecartes: true
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
