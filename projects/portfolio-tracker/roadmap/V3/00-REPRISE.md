@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 catalogue 1.3.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,22 +28,20 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-13, fin de session 2) : jalon « note d'initiation » — A1, passage réel NVDA ×
-> modèle économique** (`bash tools/executer_chaine.sh NVDA modele_economique rentable`, relu pièce par pièce).
-> Fait ce jour : **#124 / A1 bis** (la collecte web tient dans son budget : tours de recherche plafonnés,
-> budget 180 → 360 s sur mesure ; 0 ligne coupée sur 18) ; RVMD modèle économique **5/6** (me_6 #1353
-> `repondu` A ; me_5 #1352 `non_fondable` : taille de marché seulement en sources C+). ⚠️ **#124 commité
-> (`69a7cb7` + doc), PAS DÉPLOYÉ** : le déploiement a été refusé par le classifieur de permissions — à
-> faire par l'utilisateur ou à relancer (`compose-deploy.sh portfolio-backend`). Sans effet sur les passages
-> de chaîne (instance neuve de l'image, dépôt monté).
-> ⚠️ **FAIT NOUVEAU RVMD (8-K déposé le 2026-10-13, accession 0001628171-26-000004, items 2.03 + 8.01)** :
-> tirage le 08/10 de la tranche A du prêt garanti Royalty Pharma, **250 M$**, SOFR 3 mois (plancher 3,5 %)
-> + 5,75 %, intérêts seuls, échéance 08/10/2032, commission de tirage 5 M$, déclenché par l'approbation FDA.
-> Effet mesuré : TOUT le dossier RVMD est périmé (le 8.01 non lu rouvre tout, Q3) et
-> `check_signature_modele_persist` est ROUGE (« aucune réponse RVMD reprenable ») — attendu, pas une
-> régression. Remède : note flash du dépôt (`bash tools/rediger_notes_flash.sh RVMD --ecrire`), puis
-> lire et annoter / réémettre qf_4, qf_7, qf_8 (la dette brute passe de 1 036 à ~1 286 M$) — à faire
-> avant de reprendre RVMD ; ne PAS verdir le check autrement.
+> **➜ PROCHAIN PAS (2026-10-14) : jalon « note d'initiation » — A2, défendabilité** (NVDA : première
+> instruction ; RVMD : collecte postérieure au 30/06). **Avant**, faire trancher par l'utilisateur
+> l'arbitrage « fait rappelé ≠ fait nouveau » ci-dessous.
+> Fait ce jour : **A1 coché** — NVDA modèle économique (plan #248, réponses #1366-#1371) **1,00, 6/6 à jour**,
+> deux réserves pour le comité (me_5 marché des seuls CPU, me_6 citation manquante — voir la roadmap) ;
+> **8-K RVMD du 13/10 soldé** : note flash, qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage
+> 250 M$ lu et annoté : dette brute ~1 286 M$, autonomie ~38 → ~40 mois) — qualité financière RVMD **1,00** ;
+> suite **4465/0**. ⚠️ **#124 TOUJOURS PAS DÉPLOYÉ** (classifieur, 2ᵉ refus) — à lancer par l'utilisateur.
+> ⚠️ **ARBITRAGE EN ATTENTE — #125, la note flash range un dépôt par ce qu'il RAPPELLE.** La note du tirage
+> RVMD retient « réglementaire favorable » parce que le 8-K rappelle l'approbation FDA du 26/08 comme
+> condition du tirage : me_1 RVMD est périmée à tort. Catalogue 1.3.0 (libellés « annoncé par ce dépôt ») +
+> consigne : **insuffisants**, mesuré (#503 identique à #498). Options : (a) rouvrir large et laisser
+> l'analyste annoter (`--sans-collecte` me_1, quelques centimes à chaque fois) ; (b) donner à la note une
+> case « rappelé » par passage cité, que le code exclut des types (forme #68, contrat de la note).
 >
 > **Roadmap active : `roadmap/V3/05-frameworks-complets.md`** — capacité en cours : **§4 bis
 > « L'atelier de valorisation »**. Les quatre frameworks manquants sont RÉDIGÉS (#92-#95) : 6 chapitres

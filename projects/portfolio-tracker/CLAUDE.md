@@ -3313,6 +3313,21 @@ brouillon qu'on jette ; et on fixe ce temps sur ce que prend une recherche norma
 Gardes : `check_runner_telemetry` §10 (plafond aux tours de recherche, jamais à la clôture, tour coupé sans
 outils, `settings` lu par le worker en AST) + `negatif_runner_telemetry.sh` **5/0**.
 
+### #125 — une note flash range un dépôt par ce qu'il ANNONCE, pas par ce qu'il RAPPELLE (catalogue 1.3.0)
+
+**Le défaut (2026-10-14, RVMD, 8-K du 08/10 — tirage de 250 M$ du prêt Royalty Pharma).** La note #498
+retient `financement` (juste) ET `reglementaire_favorable`, en citant « in connection with the FDA's
+approval of RASONQUE » — l'approbation du 26/08, déjà notée (#504), rappelée comme CONDITION du tirage.
+Effet : me_1 RVMD (rouverte par `reglementaire_favorable`) périmée à tort au 08/10. Un fonds range un
+communiqué par ce qu'il annonce de nouveau ; le fait rappelé a eu sa note le jour de sa publication.
+**Tenté, mesuré INSUFFISANT** : libellés des deux types réglementaires « ANNONCÉ PAR CE DÉPÔT » (catalogue
+**1.3.0**, 10 notes relues : RVMD #503-#509, NVDA #510-#511, MSFT #512, $0,003, toutes identiques en
+substance) + consigne « CE QUI EST NOUVEAU, PAS CE QUI EST RAPPELÉ » dans `note_flash.py`. La note #503
+cite la même phrase de rappel et garde le type. Aucune garde de sens n'est possible
+(`feedback_garde_structure_pas_sens`) ; la consigne reste (inoffensive), elle ne garantit rien.
+**Arbitrage en attente** (00-REPRISE) : rouvrir large et laisser l'analyste annoter (#117), ou une case
+« rappelé » par passage cité, exclue des types par le code (forme #68).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

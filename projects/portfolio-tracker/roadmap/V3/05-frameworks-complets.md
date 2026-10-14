@@ -81,7 +81,7 @@ rien d'autre ; RVMD qualité financière 4/4 à jour (4 sans objet), défendabil
 aucune réponse en vigueur** ; modèle économique, secteur, management, valorisation : jamais instruits.
 
 Ordre (la PREMIÈRE case non cochée est le prochain pas) :
-- [ ] A1. Modèle économique sur RVMD et NVDA — à blanc d'abord (plan lu en texte, admissibilité),
+- [x] A1. Modèle économique sur RVMD et NVDA — à blanc d'abord (plan lu en texte, admissibilité),
   puis passage réel relu pièce par pièce (capacité 5)
   - ✅ 2026-10-13 : lecture à blanc → **#123** (horloge PAR QUESTION du traducteur, garde « exercice
     clos », le modèle économique lit le socle) ; plans RVMD/NVDA justes, déployé (`2348099`).
@@ -98,7 +98,13 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     puis corriger EN AMONT (budget par ligne, itérations, parallélisme des lignes, ou requête plus
     ciblée) ; relancer RVMD me_5/me_6 (`--questions=me_5,me_6`) ; critère : ≤ 2 lignes sur 19 en
     `source_indisponible` sur un passage complet.
-  - [ ] **NVDA passage réel (PROCHAIN PAS)**
+  - [x] **NVDA passage réel** — ✅ 2026-10-14 (plan #248, réponses **#1366-#1371**) : 6/6 acquittées, **note 1,00, 6/6
+    à jour**, 0 mandat collecteur, 0 ligne coupée (#124 tient). Relues contre les pièces : part du Data Center 92,4 %,
+    +104,8 %, marges brutes 71,1 % / 74,7 % (socle), clients 22/14/13/11/10 % = 70 %. **À relire par le comité** :
+    (i) me_5 répond « marché adressable 200 Md$, part prise 10 % » sur le seul marché des processeurs centraux (Vera
+    CPU, #1004), extension annoncée — pas le marché du modèle actuel (accélérateurs) ; la « part prise » rapporte une
+    visibilité de revenus FUTURS à ce marché. Repris par va_2 (durée/plafond de croissance) tel quel, ce serait faux ;
+    (ii) me_6 cite une charge Chine de 4,5 Md$ tirée de #1019, pièce non citée (juste, mais la citation manque).
 - [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
