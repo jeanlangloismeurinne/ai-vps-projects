@@ -28,11 +28,13 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-15, soir) : A3 secteur et concurrence sur RVMD et NVDA** — à blanc d'abord
-> (`tools/acceptation_traducteur.sh TICKER:secteur_concurrence:archetype`), puis passage réel. **#127 : toute
-> réponse marquée « standard antérieur » est provisoire — ne jamais remonter son fil** ; la reconstruction est
-> le premier passage d'A11. A2 coché sur la mécanique (RVMD #1416-#1421 ; NVDA lancé le 15/10 au soir, à
-> vérifier : réponses écrites, marque servie).
+> **➜ PROCHAIN PAS (2026-10-15, nuit) : A3 secteur et concurrence — passage réel LANCÉ** (RVMD puis NVDA,
+> `tools/executer_chaine.sh … secteur_concurrence …`, plans lus à blanc et justes : bonne société, concurrents
+> Amgen/BMS/Roche pour RVMD, ancres à l'horloge). À la reprise : vérifier en base (plans, réponses, mandats),
+> relire les réponses — elles ne citent que des fiches à extraits (chapitre jamais instruit, #108) : leur
+> contenu se relit contre EDGAR. **#127 : une réponse « standard antérieur » ne se relit pas.**
+> A2 clos : RVMD #1416-#1421, NVDA #1434-#1439 (passage NVDA d'abord mort sur une réponse hors contrat →
+> **#128** lecture tolérante, déployé `7aa9188`, analyse relancée `--sans-collecte`).
 > Fait le 2026-10-15 : **#127 standard de collecte** (déployé `345b021`, arbitrage : ni réinstruction ni
 > requalification avant A11) ; **arbitrage A2 rendu** (« tout retirer » + « citation + commentaire ») ; retrait
 > (`tools/retraits/2026-10-15_defendabilite_pieces_infideles.sql` : 5 fiches au registre des pièces écartées,
