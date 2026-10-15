@@ -121,7 +121,12 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
       aujourd'hui que chaque chiffre de la réponse rédigée est adossé à une pièce citée. À instruire : contrôle
       du manager (renvoi) ou correction de la citation ; mesurer d'abord la fréquence sur les réponses en vigueur.
       Ce que ferait un fonds : le contrôle de la note avant comité renvoie à l'analyste tout chiffre sans référence.
-- [ ] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
+- [x] A2. Défendabilité : NVDA (première instruction) ; RVMD (collecte postérieure au 30/06)
+  - ✅ 2026-10-15 — **coché sur la MÉCANIQUE, pas sur le contenu** (arbitrage du 2026-10-15, #127) : la règle
+    #126 tourne en production (RVMD plan #257 : fiches à extraits + lectures séparées, réponses #1416-#1421,
+    6 acquittées ; NVDA en cours le 2026-10-15 au soir). Les réponses citent encore des fiches d'avant #126
+    (dont #1057, jumelle de #1025) : elles sont marquées « standard antérieur » et seront refaites à la
+    reconstruction (premier passage d'A11) — on ne les relit PAS pièce par pièce d'ici là.
   - 2026-10-14 : lecture à blanc juste (NVDA 19 lignes au 10-Q du 26/07 ; RVMD 12 lignes + 4 mo_2
     `inobtenable`, aucun marqueur Ryvu). Passage réel : RVMD plan #253, réponses **#1399-#1404** (6 acquittées) ;
     NVDA plan #254, réponses **#1405-#1409** (mo_4 `non_fondable` → mandat 2849 ; **mo_2 REFUS** [E] — panne
@@ -148,9 +153,8 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     registre des pièces écartées, réponses #1399-#1409 retirées ; RVMD réaffiche #1316-#1321, périmées ; NVDA non
     instruit). Règle de forme livrée : **#126** (extraits littéraux vérifiés contre le texte rapporté, lecture du
     collecteur rangée à part en interprétation B-), migration 055.
-  - [ ] Réinstruire la défendabilité RVMD et NVDA sous #126 (collecte + analyse), relire pièce par pièce
-    contre EDGAR ; points (iii) RVMD mo_4 « 19 ans » non prudent et (vi) libellé d'exercice NVDA à revoir
-    à la relecture (défauts d'analyste, pas de collecteur).
+  - Réinstruction lancée sous #126 le 2026-10-15 ; la relecture pièce par pièce est REPORTÉE à la
+    reconstruction (#127). Points (iii) mo_4 « 19 ans » et (vi) libellé d'exercice : à revoir alors.
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
@@ -172,7 +176,9 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
 - [ ] A10. L'outil du test : table de mesure versionnée par titre × chapitre (capacité 5) **et
   comparaison de deux passages identiques** (reproductibilité : mêmes statuts, mêmes chiffres de
   l'encadré, écarts nommés)
-- [ ] A11. Le test : note d'initiation complète sur les 3-4 titres, deux passages, écarts lus
+- [ ] A11. Le test : note d'initiation complète sur les 3-4 titres, deux passages, écarts lus — **le premier
+  passage EST la reconstruction au standard figé** (#127) : il refait toutes les réponses marquées
+  « standard antérieur » ; critère préalable : `n_standard_anterieur` = 0 partout après ce passage.
 - Ensuite : capacité 6 (où vit l'adaptation), puis 7-9 (décision → suivi : raccorder la note projetée
   à bull/bear → décision → suivi → sortie, T6/T7 aujourd'hui rouges ; position sous revue).
 

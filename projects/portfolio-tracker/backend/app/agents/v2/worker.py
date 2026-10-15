@@ -81,6 +81,7 @@ from app.config import settings
 from app.db.database import get_db_session
 from app.contracts.worker_delegation_schema import TAG_LECTURE
 from app.knowledge.citation import EXTRAIT_MIN_CARS, extrait_introuvable
+from app.knowledge.standard_collecte import PREFIXE_FICHE
 from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
@@ -244,7 +245,7 @@ def _contenu_du_releve(url: Optional[str], extraits: list[str]) -> str:
     """Le texte de la fiche : les extraits, et rien d'autre (#126). Composé par le code — ce que le
     collecteur en comprend va dans la ligne de lecture, jamais ici."""
     corps = "\n\n".join(f"« {e} »" for e in extraits)
-    return (f"Extraits littéraux du document {url} (vérifiés mot pour mot contre le texte récupéré "
+    return (f"{PREFIXE_FICHE} {url} (vérifiés mot pour mot contre le texte récupéré "
             f"pendant la recherche) :\n\n{corps}")
 
 

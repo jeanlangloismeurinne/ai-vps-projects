@@ -3388,6 +3388,36 @@ Gardes : `check_search_worker` §11 (cas réels du CFO Commentary NVIDIA copiés
 ⚠️ Faux vert trouvé par le test négatif : une garde « clef `extraits` absente » était subsumée par « liste
 vide » — aucune mutation ne l'atteignait ; fusionnée.
 
+### #127 — le standard de collecte : une note se date par le standard sous lequel elle a été instruite
+
+**Arbitrage de l'utilisateur (2026-10-15)**, après #126 : ~390 fiches du collecteur écrites AVANT les
+extraits vérifiés restaient citables, et 21 des 28 réponses fondées en vigueur (RVMD/NVDA) s'appuyaient sur
+au moins une — dont #1057, jumelle de la #1025 retirée, citée le soir même par 4 réponses de défendabilité
+RVMD. L'utilisateur veut aller vite au bout (note de comité), ne pas chercher des erreurs que la règle
+corrige déjà, ne pas réinstruire deux fois, et ne pas laisser des données obsolètes brouiller les prochains
+correctifs. **Comme un fonds** : pendant la mise au point de la méthode, on DATE chaque note par le standard
+sous lequel elle a été instruite, on la laisse affichée « à refaire au standard courant », et on refait tout
+le dossier une fois la méthode figée — ici le premier passage du test A11, qui EST la reconstruction.
+Retenu : ni réinstruction ni requalification maintenant (requalifier ferait chuter toutes les notes en
+pleine série de correctifs, pour un résultat que la reconstruction produira de toute façon).
+
+**La règle** (`knowledge/standard_collecte.py`, détenteur unique) : une pièce est AU STANDARD si elle est
+produite par le code (`content_structured.metric` — aucune fiche du collecteur n'en porte, mesuré sur toute
+la base ; impossible depuis #126), une lecture de dépôt (`lecture_du_depot`), une pièce sans document
+(`agent_synthesis`, `llm_memory`), ou une fiche à extraits (`PREFIXE_FICHE`, que le worker écrit) ; sinon
+elle est au standard ANTÉRIEUR. Recalculée à la LECTURE, jamais stockée (#53) : la marque disparaît quand la
+note est refaite. Servie aux trois niveaux (`PieceCitee.au_standard`, `ReponseResumee.standard_anterieur`,
+`SyntheseFramework.n_standard_anterieur`, requis sans défaut) et LUE par les trois écrans.
+**Règle de conduite** : une réponse marquée « standard antérieur » est provisoire — on ne remonte JAMAIS son
+fil pour en tirer une erreur à corriger (ni à la relecture d'un chapitre, ni quand la valorisation en reprend
+un chiffre). Les chapitres jamais instruits (secteur, management, valorisation) sont propres d'office : un
+framework ne lit que les pièces classées sous ses questions (#108).
+Gardes : `check_parcours` §5bis + §7 (point de lecture des écrans) ; `negatif_parcours.sh` **32/0** (dont deux
+mutations rendues caduques par ce lot, réparées, et une garde d'écran verte sous mutation — le nom du champ
+apparaissait deux fois : le jeton porte désormais la condition).
+Mesure réelle (`tools/montrer_parcours.sh`) le 2026-10-15 : RVMD 4/5/5 réponses au standard antérieur
+(qualité financière / défendabilité / modèle économique), NVDA 3/·/5.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

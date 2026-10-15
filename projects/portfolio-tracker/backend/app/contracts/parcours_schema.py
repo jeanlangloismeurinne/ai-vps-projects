@@ -142,6 +142,8 @@ class SyntheseFramework(Strict):
     # Questions dont l'acceptation du COMITÉ tient aujourd'hui. Compté À PART des acquittements du
     # manager : deux acteurs, deux décisions, jamais fondues (le comité passe outre, il ne relit pas).
     n_acceptees_comite: int = Field(default=0, ge=0)
+    # #127 — réponses en vigueur qui citent au moins une pièce au standard antérieur.
+    n_standard_anterieur: int = Field(ge=0)
 
 
 class DossierTitre(Strict):
@@ -166,6 +168,8 @@ class ReponseResumee(Strict):
     actualite: Optional[Literal["courante", "perimee", "indeterminable"]] = None
     verdict: Optional[Literal["acquitte", "renvoye"]] = None
     controles: Optional[ControlesManager] = None
+    # #127 — la réponse cite au moins une pièce au standard antérieur : provisoire, à refaire.
+    standard_anterieur: bool
 
 
 class LigneQuestion(Strict):
@@ -203,6 +207,9 @@ class PieceCitee(Strict):
     reliability_tier: Optional[Tier] = None
     nature: Optional[NatureEntry] = None
     remplacee: bool = False                    # supersédée depuis la réponse
+    # #127 — False = fiche du collecteur écrite avant le standard courant (sans extraits vérifiés) ;
+    # None = pièce absente du corpus. Requis, sans défaut : un assembleur qui l'oublierait lèverait.
+    au_standard: Optional[bool]
 
 
 class RenvoiAEmettre(Strict):

@@ -277,12 +277,25 @@ b.check(lq7.manque is not None and lq7.reponses and lq7.reponses[0].verdict == "
 
 # ══ §5 NIVEAU 3 ═══════════════════════════════════════════════════════════════════════════════
 print("[5] niveau 3 — la preuve")
+# #127 — les champs que lit la règle du standard, copiés des formes RÉELLES du 2026-10-15 : #10 est une
+# fiche à extraits (#1143), #11 une fiche du collecteur d'avant #126 (forme de #1057), #13 une pièce
+# produite par le code (socle, `metric`), #14 une lecture de dépôt (#944).
 pieces = {10: dict(title="10-K FY2025", source_type="edgar_official", source_url="u",
                    source_date=None, date_du_fait=None, reliability_tier="A",
-                   nature="mesure", superseded_by=None),
+                   nature="mesure", superseded_by=None, tags=["moat"], metric=None,
+                   debut_contenu="Extraits littéraux du document https://www.sec.gov/Archives/edgar/d"),
           11: dict(title="presse", source_type="web_search_reputable", source_url=None,
                    source_date=None, date_du_fait=None, reliability_tier="B+",
-                   nature="interpretation", superseded_by=99)}
+                   nature="interpretation", superseded_by=99, tags=["moat"], metric=None,
+                   debut_contenu="La FDA accorde une **New Chemical Entity (NCE) exclusivity de 5 a"),
+          13: dict(title="socle", source_type="edgar_official", source_url="s",
+                   source_date=None, date_du_fait=None, reliability_tier="A",
+                   nature="mesure", superseded_by=None, tags=["socle"], metric="socle_comptes",
+                   debut_contenu="Modèle des comptes de RVMD"),
+          14: dict(title="Lecture du dépôt 8-K", source_type="edgar_official", source_url="d",
+                   source_date=None, date_du_fait=None, reliability_tier="A",
+                   nature="interpretation", superseded_by=None, tags=["lecture_du_depot"], metric=None,
+                   debut_contenu="Dépôt EDGAR 8-K du 2026-08-26 (déposé le 2026-08-26, accessi")}
 e3 = etat([_lue(5, "qf_6", "approxime", cites=(10, 11))], pieces=pieces)
 n3 = dresser_niveau3(e3, "qualite_financiere", "qf_6")
 b.require(n3.preuves, 1, "§5 une preuve par réponse")
@@ -296,6 +309,39 @@ b.check(p is not None and any(x.entry_id == 11 and x.remplacee for x in p.pieces
         "§5 une pièce REMPLACÉE depuis la réponse est signalée")
 b.check(p is not None and p.rang_plus_faible_cite == "B+",
         f"§5 le rang le plus faible CITÉ est publié (le rang dérivé se conteste) — obtenu {p and p.rang_plus_faible_cite}")
+# ══ §5bis LE STANDARD DE COLLECTE (#127) ═══════════════════════════════════════════════════════
+print("[5bis] le standard de collecte d'une pièce — recalculé à la lecture, aux trois niveaux")
+from app.knowledge.standard_collecte import PREFIXE_FICHE, piece_au_standard  # noqa: E402
+from app.agents.v2 import worker as _worker  # noqa: E402
+
+_std = {x.entry_id: x.au_standard for x in p.pieces} if p else {}
+b.check(_std.get(10) is True, f"§5bis une fiche à extraits est AU STANDARD — obtenu {_std.get(10)}")
+b.check(_std.get(11) is False,
+        f"§5bis une fiche du collecteur sans extraits (forme de #1057) est au standard ANTÉRIEUR — obtenu {_std.get(11)}")
+b.check(_std.get(12, "absente") is None, "§5bis une pièce absente du corpus n'a pas de standard (None, jamais False)")
+for _cas, _kw, _att in (
+        ("pièce produite par le code (`metric`)", pieces[13], True),
+        ("lecture de dépôt (texte déposé)", pieces[14], True),
+        ("lecture du collecteur (agent_synthesis)", dict(pieces[11], source_type="agent_synthesis"), True),
+        ("aveu de mémoire (llm_memory)", dict(pieces[11], source_type="llm_memory"), True)):
+    _v = piece_au_standard(source_type=_kw["source_type"], tags=_kw["tags"], metric=_kw["metric"],
+                           debut_contenu=_kw["debut_contenu"])
+    b.check(_v is _att, f"§5bis {_cas} → au standard={_att} — obtenu {_v}")
+b.check(_worker._contenu_du_releve("u", ["un extrait de plus de vingt caractères"]).startswith(PREFIXE_FICHE),
+        "§5bis détenteur unique : le texte que le worker COMPOSE commence par le préfixe que la règle reconnaît")
+e5 = etat([_lue(5, "qf_6", "approxime", cites=(10, 11)), _lue(7, "qf_4", "repondu", cites=(10, 13, 14))],
+          pieces=pieces)
+n5 = dresser_niveau2(e5, "qualite_financiere")
+_marque = {r.answer_id: r.standard_anterieur for lq in n5.questions for r in lq.reponses}
+b.check(_marque == {5: True, 7: False},
+        f"§5bis niveau 2 : seule la réponse qui cite une pièce antérieure est marquée — obtenu {_marque}")
+b.check(n5.synthese.n_standard_anterieur == 1,
+        f"§5bis niveau 2 : la synthèse compte les réponses au standard antérieur — obtenu {n5.synthese.n_standard_anterieur}")
+_n1 = dresser_niveau1(e5, memo_de(e5))
+_s1 = next((x for x in _n1.frameworks if x.framework_id == "qualite_financiere"), None)
+b.check(_s1 is not None and _s1.n_standard_anterieur == 1,
+        f"§5bis niveau 1 : le même décompte dans le dossier du titre — obtenu {_s1 and _s1.n_standard_anterieur}")
+
 e3r = etat([_lue(6, "qf_7", "repondu", verdict="renvoye")])
 p_r = dresser_niveau3(e3r, "qualite_financiere", "qf_7").preuves[0]
 b.check(p_r.etat_revue == "renvoi_a_emettre" and p_r.answer.manager is None
@@ -389,5 +435,18 @@ else:
     ordre = [ret.find(t) for t in ("<Alerte", "<NotesQualite", "<Conclusions")]
     b.check(all(x >= 0 for x in ordre) and ordre == sorted(ordre),
             f"§7 l'ordre du niveau 1 est alerte → notes de qualité → conclusions — obtenu {ordre}")
+
+    # #127 — la marque « standard antérieur » est LUE par les trois écrans (un champ servi qu'aucun
+    # écran ne lit est un affichage absent, `feedback_controle_au_point_de_lecture`), sur le JSX
+    # dépouillé de ses commentaires.
+    def _code(path):
+        t = re.sub(r"/\*.*?\*/", "", path.read_text(encoding="utf-8"), flags=re.S)
+        return re.sub(r"(?m)^\s*//.*$", "", t)
+    N2 = FRONT / "pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/index.js"
+    for _f, _jeton, _niv in ((N3, "p.au_standard === false", "3 (la pièce)"),
+                             (N2, "r.standard_anterieur", "2 (la réponse)"),
+                             (N2, "{s.n_standard_anterieur}</p>", "2 (la synthèse)"),
+                             (DOSSIER, "{s.n_standard_anterieur > 0 &&", "1 (le dossier)")):
+        b.check(_jeton in _code(_f), f"§7 #127 le niveau {_niv} lit la marque du standard (`{_jeton}`)")
 
 sys.exit(b.summary())

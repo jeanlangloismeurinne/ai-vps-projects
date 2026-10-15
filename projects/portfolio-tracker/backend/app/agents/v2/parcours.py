@@ -33,6 +33,7 @@ from app.contracts.cause_manque_schema import CauseManqueCollecte
 from app.contracts.comite_schema import AcceptationServie, DecisionComite, PositionComite
 from app.contracts.framework_answer_schema import FrameworkAnswer, FrameworkAnswerServie
 from app.contracts.framework_definition_schema import FrameworksFile
+from app.knowledge.standard_collecte import COLONNES_SQL, piece_au_standard
 from app.contracts.parcours_schema import (
     CauseManque,
     DossierTitre,
@@ -257,7 +258,8 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 answer_id=r.answer_id, analyste=r.servie.analyste, statut=r.servie.statut,
                 rang_derive=r.servie.fondation.rang_derive if r.servie.fondation else None,
                 actualite=r.servie.fondation.actualite if r.servie.fondation else None,
-                verdict=r.verdict, controles=r.controles) for r in reps],
+                verdict=r.verdict, controles=r.controles,
+                standard_anterieur=standard_anterieur(etat, r.servie)) for r in reps],
         ))
     return lignes
 
@@ -278,6 +280,7 @@ def _synthese(etat: EtatDossier, f, lignes: list[LigneQuestion]) -> SyntheseFram
         n_renvoyees=sum(1 for r in reps if r.verdict == "renvoye"),
         n_manques=sum(1 for lq in lignes if lq.manque is not None),
         n_acceptees_comite=sum(1 for lq in lignes if lq.applicable and _acceptee(lq)),
+        n_standard_anterieur=sum(1 for lq in lignes for r in lq.reponses if r.standard_anterieur),
     )
 
 
@@ -341,15 +344,23 @@ def _pieces(etat: EtatDossier, a: FrameworkAnswer) -> list[PieceCitee]:
         deja.add((i, role))
         p = etat.pieces.get(i)
         if p is None:
-            pieces.append(PieceCitee(entry_id=i, role=role, present_au_corpus=False))
+            pieces.append(PieceCitee(entry_id=i, role=role, present_au_corpus=False, au_standard=None))
             continue
         pieces.append(PieceCitee(
             entry_id=i, role=role, present_au_corpus=True, titre=p["title"],
             source_type=p["source_type"], source_url=p["source_url"],
             source_date=p["source_date"], date_du_fait=p["date_du_fait"],
             reliability_tier=p["reliability_tier"], nature=p["nature"],
-            remplacee=p["superseded_by"] is not None))
+            remplacee=p["superseded_by"] is not None,
+            au_standard=piece_au_standard(source_type=p["source_type"], tags=p["tags"],
+                                          metric=p["metric"], debut_contenu=p["debut_contenu"])))
     return pieces
+
+
+def standard_anterieur(etat: EtatDossier, a: FrameworkAnswer) -> bool:
+    """La réponse s'appuie-t-elle sur au moins une pièce au standard antérieur (#127) ? Lue sur les
+    pièces que `_pieces` sert — un seul assemblage, donc les trois niveaux disent la même chose."""
+    return any(p.au_standard is False for p in _pieces(etat, a))
 
 
 def dresser_niveau3(etat: EtatDossier, framework_id: str, question_id: str) -> PreuvesQuestion:
@@ -488,7 +499,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     if cites:
         rows = await conn.fetch(
             "SELECT id, title, source_type, source_url, source_date, date_du_fait, "
-            "reliability_tier, nature, superseded_by FROM knowledge_entries "
+            f"reliability_tier, nature, superseded_by, {COLONNES_SQL} FROM knowledge_entries "
             "WHERE id = ANY($1::int[])", sorted(cites))
         pieces = {r["id"]: dict(r) for r in rows}
     # Le corpus des RÈGLES : exactement les deux colonnes que lisent l'actualité et le contrôle ③.

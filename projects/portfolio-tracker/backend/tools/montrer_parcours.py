@@ -46,7 +46,8 @@ def _texte(n1) -> None:
         score = "n/d" if q is None or q.score is None else f"{q.score:.2f}"
         print(f"  ▸ {s.libelle} — qualité {score} · rang moyen {q.rang_moyen if q else None} · "
               f"{s.n_applicables}/{s.n_questions} applicables · {s.n_acquittees} acquittée(s) · "
-              f"{s.n_renvoyees} renvoyée(s) · {s.n_manques} manque(s)")
+              f"{s.n_renvoyees} renvoyée(s) · {s.n_manques} manque(s) · "
+              f"{s.n_standard_anterieur} au standard antérieur (#127)")
     print(f"\n{'─' * L}\nBILAN — niveau 1 dressé pour {n1.ticker_id} : {len(p.manques)} manque(s)\n{'─' * L}\n")
 
 

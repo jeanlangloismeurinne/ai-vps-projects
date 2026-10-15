@@ -89,6 +89,8 @@ function Piece({ p }) {
             {' '}· source {p.reliability_tier} · {p.nature} · datée {p.date_du_fait || p.source_date || 'non datée'}
           </span>
           {p.remplacee && <Badge variant="amber" className="ml-2">remplacée depuis</Badge>}
+          {p.au_standard === false && (
+            <Badge variant="amber" className="ml-2">fiche au standard antérieur (sans extraits vérifiés)</Badge>)}
         </span>
       )}
     </li>
