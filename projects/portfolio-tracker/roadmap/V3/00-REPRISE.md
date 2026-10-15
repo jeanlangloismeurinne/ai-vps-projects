@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-15 (A2 : retrait défendabilité, #126 extraits littéraux, migration 055) · 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,19 +28,19 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-14, soir) : A2 défendabilité — passages réels faits (RVMD #1399-#1404, NVDA #1405-#1409),
-> NON ACQUIS : relus contre EDGAR, des pièces du collecteur tier A disent plus que leur document (extrapolation,
-> fausse attribution, paraphrase inventée) — arbitrage utilisateur en attente (retrait + remède de forme au
-> collecteur). Détail sous A2 dans la roadmap.**
-> Fait ce jour : **A1 coché** — NVDA modèle économique (plan #248, réponses #1366-#1371) **1,00, 6/6 à jour**,
-> deux réserves pour le comité (me_5 marché des seuls CPU, me_6 citation manquante — voir la roadmap) ;
-> **8-K RVMD du 13/10 soldé** : qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage 250 M$ lu et
-> annoté : dette brute ~1 286 M$, autonomie ~38 → ~40 mois) ; **#125 le rappel** (arbitrage utilisateur :
-> distinguer nouveau / rappelé, débrayable — principe fondateur n° 3 NEUF) : catalogue **1.4.0**, notes
-> relues ; me_1 RVMD de nouveau à jour. État : RVMD qualité financière **1,00**, modèle économique **0,83**
-> (me_5 non fondée), défendabilité 5/5 périmées ; NVDA qualité financière 1,00, modèle économique 1,00.
-> Suite **4487/0**. **#124 et #125 DÉPLOYÉS le 2026-10-14** (`compose-deploy.sh portfolio-backend
-> --rebuild-only`, HEAD `a9454d6`, marqueurs `WEB_TOUR_MAX_TOKENS`/`rappels_ecartes` lus dans le conteneur).
+> **➜ PROCHAIN PAS (2026-10-15) : A2 défendabilité — relire la réinstruction RVMD/NVDA faite sous #126**
+> (collecte + analyse lancées le 2026-10-15 au soir via `tools/executer_chaine.sh`, RVMD puis NVDA ; vérifier
+> en base le plan, les réponses, puis relire chaque réponse contre ses fiches et EDGAR — points (iii) mo_4
+> « 19 ans » et (vi) libellé d'exercice à revoir). Détail sous A2 dans la roadmap.
+> Fait le 2026-10-15 : **arbitrage A2 rendu** (« tout retirer » + « citation + commentaire ») ; retrait
+> (`tools/retraits/2026-10-15_defendabilite_pieces_infideles.sql` : 5 fiches au registre des pièces écartées,
+> réponses #1399-#1409 retirées, RVMD réaffiche #1316-#1321 périmées, NVDA non instruit) ; **#126** livré et
+> déployé (`05e83d7` puis `ae4ed70`) : extraits littéraux vérifiés contre le texte rapporté par les outils,
+> lecture du collecteur rangée à part (agent_synthesis B-), titre de fiche composé par le code ; migration
+> **055** appliquée. Un premier passage RVMD (plan #256) a été INTERROMPU volontairement : les titres rédigés
+> par le collecteur affirmaient ce que les extraits ne disaient pas — titres des 25 fiches #1093-#1141
+> corrigés (`2026-10-15_titres_fiches_1093-1142.sql`, trace JSON). Suite **4516**, 1 rouge attendu avant la 055
+> (vert depuis). Prochaine migration : **056**.
 > ⚠️ **À surveiller (#125)** : à chaque relecture de notes, vérifier qu'aucun fait NOUVEAU n'a été omis ou
 > admis comme rappel ; au premier cas non corrigeable par réglage → `rappels_ecartes: false` + version
 > montée + relecture (procédure dans la convention #125).

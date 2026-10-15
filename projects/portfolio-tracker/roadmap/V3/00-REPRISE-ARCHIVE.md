@@ -5982,3 +5982,20 @@ réparées. Déployé `2837d08` ; réémission RVMD qf_4 #1176 / qf_7 #1177, 0 r
   (le périmètre ne restreint pas la collecte — constat), 8 liens, 12 mandats ; qf_8 web « recherche épuisée » ;
   3 lignes en échec **402** ; l'analyste est mort sur le 402 (« You need positive balance »), aucune réponse
   écrite. Session arrêtée là sur les appels modèle.
+
+
+## 2026-10-15 — bloc « prochain pas » du 2026-10-14 (copie conforme, évincé)
+
+> **➜ PROCHAIN PAS (2026-10-14, soir) : A2 défendabilité — passages réels faits (RVMD #1399-#1404, NVDA #1405-#1409),
+> NON ACQUIS : relus contre EDGAR, des pièces du collecteur tier A disent plus que leur document (extrapolation,
+> fausse attribution, paraphrase inventée) — arbitrage utilisateur en attente (retrait + remède de forme au
+> collecteur). Détail sous A2 dans la roadmap.**
+> Fait ce jour : **A1 coché** — NVDA modèle économique (plan #248, réponses #1366-#1371) **1,00, 6/6 à jour**,
+> deux réserves pour le comité (me_5 marché des seuls CPU, me_6 citation manquante — voir la roadmap) ;
+> **8-K RVMD du 13/10 soldé** : qf_4/qf_7/qf_8 réémises `--sans-collecte` (#1378-#1380, tirage 250 M$ lu et
+> annoté : dette brute ~1 286 M$, autonomie ~38 → ~40 mois) ; **#125 le rappel** (arbitrage utilisateur :
+> distinguer nouveau / rappelé, débrayable — principe fondateur n° 3 NEUF) : catalogue **1.4.0**, notes
+> relues ; me_1 RVMD de nouveau à jour. État : RVMD qualité financière **1,00**, modèle économique **0,83**
+> (me_5 non fondée), défendabilité 5/5 périmées ; NVDA qualité financière 1,00, modèle économique 1,00.
+> Suite **4487/0**. **#124 et #125 DÉPLOYÉS le 2026-10-14** (`compose-deploy.sh portfolio-backend
+> --rebuild-only`, HEAD `a9454d6`, marqueurs `WEB_TOUR_MAX_TOKENS`/`rappels_ecartes` lus dans le conteneur).
