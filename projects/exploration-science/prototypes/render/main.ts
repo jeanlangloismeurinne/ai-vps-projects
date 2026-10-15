@@ -56,7 +56,7 @@ function controls(stage: Stage, target: Shot): void {
 
 async function outdoor(): Promise<void> {
   // A photographed ground only holds near the photo's eye height: arrive at street level.
-  const shot = option === "e" || option === "d" ? { ...SHOTS[shotName]!, ...(shotName === "arrival" ? { elevationDeg: 2, distance: 26 } : {}) } : (SHOTS[shotName] ?? SHOTS.arrival!);
+  const shot = option === "e" || option === "d" ? { ...SHOTS[shotName]!, ...(shotName === "arrival" ? { elevationDeg: 2, distance: 26 } : option === "d" ? { elevationDeg: 24, distance: 5.5 } : {}) } : (SHOTS[shotName] ?? SHOTS.arrival!);
   const fov = shotName === "arrival" ? 50 : 45;
   const stage = createStage(app, { ao: option !== "now" && option !== "e" && !q.has("noao"), bloom: 0, exposure: option === "b" ? 0.85 : option === "now" ? 1 : option === "e" || option === "d" ? 1 : 0.62, fov });
   hide(stage, ["gateway", "internet"]);
@@ -117,7 +117,7 @@ function orbit(): void {
   });
 }
 
-async function lab(): Promise<void> {
+async function lab(near = false): Promise<void> {
   const better = option !== "now";
   const stage = createStage(app, { ao: better, bloom: 0, exposure: better ? 0.8 : 1, fov: 45 });
   // Swap the Starlink scene for the level-2 one (the lab views).
@@ -162,7 +162,7 @@ async function lab(): Promise<void> {
     scene.background = backgroundColor(file.environment);
   }
   // A lower angle than the home shot, so depth (layers, chips, shadows) reads in a still image.
-  const shot = { ...file.camera.home, elevationDeg: 22, distance: 70 };
+  const shot = near ? { ...file.camera.home, azimuthDeg: file.camera.home.azimuthDeg + 20, elevationDeg: 28, distance: 14 } : { ...file.camera.home, elevationDeg: 22, distance: 70 };
   shoot(stage, shot);
   controls(stage, shot);
   if (option === "studio") cameraLook(stage, {});
@@ -172,5 +172,5 @@ async function lab(): Promise<void> {
 }
 
 if (shotName === "orbit") orbit();
-else if (shotName === "lab") void lab();
+else if (shotName === "lab" || shotName === "labnear") void lab(shotName === "labnear");
 else void outdoor();
