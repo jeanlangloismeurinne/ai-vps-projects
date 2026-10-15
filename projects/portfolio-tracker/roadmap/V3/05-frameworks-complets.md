@@ -143,8 +143,14 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     document (#28) ; la charge Chine 4,5 Md$ y revient sans sa pièce (D-me6 récidive, mo_5) ;
     (vi) mo_3 NVDA : « exercice 2025 (215,94 Md$) » = exercice clos le 25/01/2026 (libellé faux, chiffre juste).
     mo_3/mo_5 RVMD : fidèles, mais la concurrence repose sur Silexion et ignore Lilly/Merck/Roche/BMS (#682).
-  - **Arbitrage à poser** (retrait des réponses fautives ; remède de forme au collecteur : extraits littéraux
-    vérifiés contre le document récupéré, commentaire séparé — précédent : passages cités de la note flash #90).
+  - ✅ **Arbitrage rendu le 2026-10-15** : « tout retirer » + « citation + commentaire ». Retrait fait
+    (`tools/retraits/2026-10-15_defendabilite_pieces_infideles.sql` : fiches #1025/#1028/#1069/#1086/#1087 au
+    registre des pièces écartées, réponses #1399-#1409 retirées ; RVMD réaffiche #1316-#1321, périmées ; NVDA non
+    instruit). Règle de forme livrée : **#126** (extraits littéraux vérifiés contre le texte rapporté, lecture du
+    collecteur rangée à part en interprétation B-), migration 055.
+  - [ ] Réinstruire la défendabilité RVMD et NVDA sous #126 (collecte + analyse), relire pièce par pièce
+    contre EDGAR ; points (iii) RVMD mo_4 « 19 ans » non prudent et (vi) libellé d'exercice NVDA à revoir
+    à la relecture (défauts d'analyste, pas de collecteur).
 - [ ] A3. Secteur et concurrence sur RVMD et NVDA
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers

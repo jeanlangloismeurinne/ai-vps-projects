@@ -59,7 +59,6 @@ import asyncio
 import json
 import logging
 import re
-import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any, Optional
@@ -74,6 +73,7 @@ from app.config import settings
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.contracts.note_flash_schema import SURPRISE, NoteFlashSortie, type_derive, type_derive_de
 from app.db.database import get_db_session
+from app.knowledge.citation import normaliser
 from app.knowledge.edgar_facts import _UA
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, IdentiteEmetteur, identite_de_l_emetteur
 from app.knowledge.evenements import A_QUALIFIER, QualificationLue, types_du_depot
@@ -318,15 +318,8 @@ def _message(contexte: dict[str, Any]) -> str:
 
 # ── 4. Le pont ──────────────────────────────────────────────────────────────────────────────────────
 
-_GUILLEMETS = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"',
-                             "–": "-", "—": "-", " ": " "})
-
-
-def _normaliser(texte: str) -> str:
-    """Normalisation minimale pour comparer une citation au texte : forme Unicode, guillemets et
-    tirets typographiques, espaces, casse. Rien d'autre — une paraphrase ne doit pas passer."""
-    t = unicodedata.normalize("NFKC", texte).translate(_GUILLEMETS)
-    return re.sub(r"\s+", " ", t).strip().casefold()
+# La normalisation d'une citation a un détenteur unique, partagé avec le collecteur web (#126).
+_normaliser = normaliser
 
 
 @dataclass(frozen=True)

@@ -24,7 +24,7 @@ mutations=(
 "$NF¦           and t.id != A_QUALIFIER and not t.id.startswith(\"surprise_\")]¦           and not t.id.startswith(\"surprise_\")]¦catalogue proposé"
 # §5 — le pont
 "$NF¦            if cite is not None and _normaliser(cite) not in corpus:¦            if False:¦une PARAPHRASE est refusée"
-"$NF¦    return re.sub(r\"\\s+\", \" \", t).strip().casefold()¦    return t.strip().casefold()¦une citation littérale (espaces normalisés) passe"
+"app/knowledge/citation.py¦    return re.sub(r\"\\s+\", \" \", t).strip().casefold()¦    return t.strip().casefold()¦une citation littérale (espaces normalisés) passe"
 "$NF¦    permis = {t[\"id\"] for t in types_proposables(fichier)}¦    permis = {t.id for t in fichier.types_evenement}¦\`a_qualifier\` n'est pas un type"
 "$NF¦    types = tuple(sorted({type_derive(el) for el in sortie.elements}))¦    types = tuple(sorted({el.type for el in sortie.elements}))¦les types retenus sont ceux que le CODE dérive"
 # §6 — quels dépôts lire

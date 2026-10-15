@@ -79,6 +79,9 @@ Un `IngestionJob` + le texte du segment :
       "periode_visee": null,
       "datation_motif": null,
       "fiscal_period": "FY-2026",
+      "extraits": [
+        "a limited number of customers account for a significant portion of our data center revenue"
+      ],
       "reliability_score": 0.95,
       "reliability_tier": "A",
       "reliability_note": "Facteur de risque déclaré dans un 10-K SEC audité (edgar_official).",
@@ -119,6 +122,9 @@ Un `IngestionJob` + le texte du segment :
    seule clef en trop fait rejeter **l'entry entière**, pas seulement le champ.
    **Plus de `source_date` non plus** (retiré le 2026-09-23) : une entry se date par `portee_temporelle` +
    `date_du_document` + `date_du_fait` (ou `periode_visee` si prospective, `datation_motif` si indatable).
+9. **`extraits` (#126)** : un à quelques passages du document, recopiés **mot pour mot** (au moins
+   20 caractères chacun), qui fondent l'entry. `content` reste ta lecture ; un passage qui n'est pas
+   littéralement dans le document fait rejeter l'entry.
 8. **`fiscal_period`** obligatoire sur toute entry rattachée à une période (propagé pour le
    vieillissement −0.05/an).
 

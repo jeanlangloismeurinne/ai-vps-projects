@@ -13,7 +13,11 @@ from app.agents.v2.worker import (
 )
 # Les 8 colonnes archivées par la 036, lues sur leur détenteur (#46).
 from app.db.migrations._gen_036 import COLONNES_RETIREES
+from app.agents.v2.tools import RetrievalLog
+from pydantic import ValidationError
+
 from app.contracts import OutputSchema, WorkerExchange, WorkerRequest, WorkerResponse
+from app.contracts.worker_delegation_schema import TAG_LECTURE, est_lecture_du_collecteur
 from app.knowledge.websearch import (
     SearchUnavailable, classify_source_type, get_search_backend, html_to_text,
     issuer_domains_for,
@@ -144,6 +148,7 @@ req = WorkerRequest(
                                field_path="moat.preuves"),
     reliability_min=0.60, max_entries=2,
 )
+_TEXTES_LUS = {'https://blog.random-guy.dev/cuda': 'developers told us they feel locked into the CUDA ecosystem', 'https://www.reuters.com/tech/cuda': 'rewriting kernels away from CUDA carries significant engineering costs', 'https://www.sec.gov/x': 'revenue for fiscal year 2026 was $130.5 billion', 'https://ir.nvidia.com/ecosystem': 'the CUDA developer ecosystem now counts millions of developers', 'https://lesechos.fr/cuda': "l'outillage propriétaire de NVIDIA reste difficile à répliquer"}
 hostile = {
     "request_hash": "peu importe",
     "worker": "search-worker",
@@ -157,6 +162,7 @@ hostile = {
         # a) source surqualifiée + score gonflé sur un blog → doit tomber sous le plancher
         {"entry_type": "fact_qualitative", "title": "CUDA lock-in", "content": "Blog affirmant un lock-in.",
          "source_type": "edgar_official", "source_url": "https://blog.random-guy.dev/cuda",
+         "extraits": ["developers told us they feel locked into the CUDA ecosystem"],
          "portee_temporelle": "constatee", "date_du_fait": "2026-06-30",
          "date_du_document": "2026-07-02",
          "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "source officielle"},
@@ -164,12 +170,14 @@ hostile = {
         {"entry_type": "fact_qualitative", "title": "Coût de migration hors CUDA",
          "content": "Reuters rapporte des coûts de réécriture de kernels significatifs.",
          "source_type": "financial_press", "source_url": "https://www.reuters.com/tech/cuda",
+         "extraits": ["rewriting kernels away from CUDA carries significant engineering costs"],
          "portee_temporelle": "constatee", "date_du_fait": "2026-07-10",
          "date_du_document": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
          "reliability_note": "je suis confiant"},
         # c) mauvais entry_type → rejet
         {"entry_type": "fact_financial", "title": "CA FY26", "content": "130 Md$",
          "source_type": "edgar_official", "source_url": "https://www.sec.gov/x",
+         "extraits": ["revenue for fiscal year 2026 was $130.5 billion"],
          "portee_temporelle": "constatee", "date_du_fait": "2026-01-25",
          "date_du_document": "2026-02-25",
          "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "10-K"},
@@ -177,6 +185,7 @@ hostile = {
         {"entry_type": "fact_qualitative", "title": "Coût de migration hors CUDA",
          "content": "Reuters rapporte des coûts de réécriture de kernels significatifs.",
          "source_type": "financial_press", "source_url": "https://www.reuters.com/tech/cuda",
+         "extraits": ["rewriting kernels away from CUDA carries significant engineering costs"],
          "portee_temporelle": "constatee", "date_du_fait": "2026-07-10",
          "date_du_document": "2026-07-14", "reliability_score": 0.99, "reliability_tier": "A",
          "reliability_note": "doublon"},
@@ -188,6 +197,7 @@ hostile = {
         {"entry_type": "fact_qualitative", "title": "Écosystème CUDA",
          "content": "Page IR NVIDIA décrivant l'ampleur de l'écosystème développeurs.",
          "source_type": "web_search_generic", "source_url": "https://ir.nvidia.com/ecosystem",
+         "extraits": ["the CUDA developer ecosystem now counts millions of developers"],
          "portee_temporelle": "indatable", "date_du_document": "2026-06-01",
          "datation_motif": "description stable d'un écosystème, aucune date de fait affirmée",
          "reliability_score": 0.50, "reliability_tier": "C+", "reliability_note": "prudent"},
@@ -195,6 +205,7 @@ hostile = {
         {"entry_type": "fact_qualitative", "title": "Barrière outillage",
          "content": "Les Échos : outillage propriétaire difficile à répliquer.",
          "source_type": "financial_press", "source_url": "https://lesechos.fr/cuda",
+         "extraits": ["l'outillage propriétaire de NVIDIA reste difficile à répliquer"],
          "portee_temporelle": "constatee", "date_du_fait": "2026-04-02",
          "date_du_document": "2026-04-08",
          "reliability_score": 0.75, "reliability_tier": "B+", "reliability_note": "presse"},
@@ -203,11 +214,21 @@ hostile = {
     "execution": {"tier": "ouvrier", "model_used": "je-mens", "tokens_in": 999999,
                   "tokens_out": 999999, "cost_usd": 42.0},
 }
+# #126 — le journal du run : chaque adresse a rapporté un texte qui CONTIENT l'extrait de son entry
+# (le refus des entries (a)/(c) doit rester prononcé par SA règle — plancher, type —, jamais par les
+# extraits : un refus prononcé par une autre règle est un faux vert, #56).
+LOG = RetrievalLog()
+for _u, _q in _TEXTES_LUS.items():
+    LOG.record(_u, "full")
+    LOG.record_text(_u, f"Préambule de la page. {_q}. Suite de la page.")
 out = _apply_deterministic_overrides(
     hostile, req, model_used="deepseek-ai/DeepSeek-V4-Flash-0731",
-    tokens_in=1200, tokens_out=800, cost_usd=0.000240,
+    tokens_in=1200, tokens_out=800, cost_usd=0.000240, log=LOG,
 )
-entries = out["entries"]
+# Chaque fiche est suivie de la LECTURE du collecteur, rangée à part (#126) : les asserts de cette
+# section portent sur les fiches ; les lectures ont leur section (§3bis).
+toutes = out["entries"]
+entries = [e for e in toutes if TAG_LECTURE not in e["tags"]]
 check(f"plafond max_entries=2 respecté (obtenu {len(entries)})", len(entries) == 2)
 urls = [e["source_url"] for e in entries]
 check("blog surqualifié écarté (score 0.50 < plancher 0.60)",
@@ -231,7 +252,7 @@ check("troncature = les 2 MIEUX notées, pas les 2 premières venues",
 # Même sortie, plafond desserré : on voit alors le recalcul de score sur chaque entry retenue.
 large = _apply_deterministic_overrides(
     hostile, req.model_copy(update={"max_entries": 10}),
-    model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0,
+    model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG,
 )
 reuters = next((e for e in large["entries"] if "reuters" in (e["source_url"] or "")), None)
 check("score Reuters gonflé 0.99 → recalculé à la baseline presse, décote d'âge comprise",
@@ -249,7 +270,7 @@ check("aucun score conservé du modèle dans la sortie élargie",
 # et se met en défaut sur elle (#56). C'est la STRUCTURE de l'entry produite — le worker rend une
 # ligne de `knowledge_entries` telle que la 036 la laisse, et le contrat `ProducedEntry` est
 # `extra="forbid"`, donc y remettre une clef ferait rejeter TOUTE entry par le filet de validation.
-_COUVERTURE_NON_CABLEE = sorted(set(COLONNES_RETIREES) & set().union(*(set(e) for e in entries)))
+_COUVERTURE_NON_CABLEE = sorted(set(COLONNES_RETIREES) & set().union(*(set(e) for e in toutes)))
 check("aucune entry produite ne porte une colonne archivée par la 036",
       _COUVERTURE_NON_CABLEE == [], f"→ {_COUVERTURE_NON_CABLEE}")
 check("le mandat porte toujours son champ (le worker SAIT ce qu'il couvre, il ne l'écrit plus)",
@@ -263,21 +284,31 @@ check("exécution mesurée, pas déclarée (le modèle disait 42 $)",
 check("status recalculé = found", out["status"] == "found", f"→ {out['status']}")
 
 print("\n4. Validation de contrat (le filet, après correction)")
-resp = WorkerResponse.model_validate(out)
-exch = WorkerExchange(request=req, response=resp)
-check("WorkerResponse + WorkerExchange valident", exch.response.status == "found")
+# Un refus du filet est un FAIL NOMMÉ, jamais la mort du script avant son bilan (2ᵉ faux vert).
+try:
+    resp = WorkerResponse.model_validate(out)
+    exch = WorkerExchange(request=req, response=resp)
+    _filet = exch.response.status == "found"
+except ValidationError as e:
+    _filet = False
+    print(f"       refus du filet : {str(e)[:300]}")
+check("WorkerResponse + WorkerExchange valident", _filet)
 check("request_hash stable", request_hash(req) == request_hash(req.model_copy(deep=True)))
 
 print("\n5. Tout écarté → not_found explicite (jamais muet, A6)")
 req_div = req.model_copy(update={"divergent": True, "reliability_min": 0.99})
 out2 = _apply_deterministic_overrides(
-    dict(hostile), req_div, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0,
+    dict(hostile), req_div, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG,
 )
 check("status not_found", out2["status"] == "not_found", f"→ {out2['status']}")
 check("uncovered_fields renseigné", out2["uncovered_fields"] == ["moat.preuves"],
       f"→ {out2['uncovered_fields']}")
-WorkerExchange(request=req_div, response=WorkerResponse.model_validate(out2))
-check("mandat divergent sans résultat : l'invariant croisé A6 passe", True)
+try:
+    WorkerExchange(request=req_div, response=WorkerResponse.model_validate(out2))
+    _a6 = True
+except ValidationError as e:
+    _a6 = str(e)[:300]
+check("mandat divergent sans résultat : l'invariant croisé A6 passe", _a6 is True, f"→ {_a6}")
 
 print("\n6. llm_memory — P2 imposé même si le modèle l'oublie")
 req_mem = req.model_copy(update={"reliability_min": 0.0})
@@ -286,12 +317,13 @@ out3 = _apply_deterministic_overrides(
     # et aucune décote d'âge — le 0.40 lu plus bas est le plancher llm_memory, rien d'autre.
     {"entries": [{"entry_type": "fact_qualitative", "title": "De mémoire",
                   "content": "CUDA domine depuis longtemps.", "source_type": "llm_memory",
+                  "extraits": [],
                   "portee_temporelle": "indatable",
                   "datation_motif": "restitution de mémoire, aucune date affirmée",
                   "reliability_score": 0.9, "reliability_tier": "A", "reliability_note": "sûr",
                   "requires_human_review": False}],
      "uncovered_fields": []},
-    req_mem, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0,
+    req_mem, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=RetrievalLog(),
 )
 e = out3["entries"][0]
 check("requires_human_review forcé", e["requires_human_review"] is True)
@@ -410,6 +442,215 @@ _kw_mortes = sorted(set(COLONNES_RETIREES) & _kw_store)
 _params_morts = sorted(set(COLONNES_RETIREES) & set(_params_store))
 check("aucune colonne archivée n'est transmise au stockage", _kw_mortes == [], f"→ {_kw_mortes}")
 check("… et `store_knowledge` n'en accepte plus aucune", _params_morts == [], f"→ {_params_morts}")
+
+
+print("\n11. EXTRAITS LITTÉRAUX (#126) — une fiche ne dit que ce que son document écrit")
+# Arbitrage du 2026-10-15 : une fiche tirée d'un document porte des extraits mot pour mot, vérifiés
+# contre le texte que les outils ont RÉELLEMENT rapporté pour son adresse ; un seul extrait
+# introuvable la fait refuser ; la lecture du collecteur est rangée à part, sans l'autorité du
+# document. Texte copié du document RÉEL (CFO Commentary NVIDIA du T2 de l'exercice 2027, lu sur
+# EDGAR le 2026-10-15) : la pièce #1087 lui faisait dire « demande excédant l'offre », #1086 lisait
+# sa dernière phrase comme une réaction des volumes aux prix de NVIDIA.
+import inspect  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+from pydantic import ValidationError  # noqa: E402
+
+from app.agents.v2 import note_flash as _nf  # noqa: E402
+from app.agents.v2 import worker as _w  # noqa: E402
+from app.agents.v2.common import derive_nature  # noqa: E402
+from app.contracts.worker_delegation_schema import ProducedEntry  # noqa: E402
+from app.knowledge import citation as _cit  # noqa: E402
+
+_CFO_URL = "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/q2fy27cfocommentary.htm"
+_CFO_TEXTE = (
+    "Revenue for the second quarter was a record $96.2 billion, up 106% from a year ago and up 18% "
+    "sequentially. Data Center revenue for the second quarter was a record $89.0 billion, up 117% from "
+    "a year ago and up 18% sequentially, driven by the ramp of our Blackwell Ultra infrastructure. "
+    "Hyperscale revenue more than doubled from a year ago and increased 13% sequentially on the "
+    "strength of Blackwell Ultra. […] for the second quarter was $7.2 billion, up 27% from a year ago "
+    "and up 13% sequentially. The increases were driven by strong sales of Blackwell workstations, "
+    "partially offset by slower consumer PC sales that were tempered by elevated memory and systems "
+    "prices. […] We’ve partnered with our extensive network of suppliers to secure the critical "
+    "components needed.")
+_BON_1 = "Data Center revenue for the second quarter was a record $89.0 billion, up 117% from a year ago"
+_BON_2 = "slower consumer PC sales that were tempered by elevated memory and systems prices"
+req_q = WorkerRequest(
+    requester="knowledge-curator", worker="search-worker", ticker_id="NVDA",
+    query="Réaction des volumes aux prix", output_schema=OutputSchema(entry_type="fact_qualitative"),
+    reliability_min=0.40, max_entries=1)
+log_q = RetrievalLog()
+log_q.record(_CFO_URL, "full")
+log_q.record_text(_CFO_URL, _CFO_TEXTE)
+
+
+def _fiche(extraits, url=_CFO_URL, **kw):
+    base = {"entry_type": "fact_qualitative", "title": "CFO Commentary T2",
+            "content": "Lecture : la croissance vient de Blackwell Ultra ; la demande excède l'offre.",
+            "content_structured": {"metric": "data_center_revenue", "value": 89.0},
+            "source_type": "edgar_official", "source_url": url, "extraits": extraits,
+            "portee_temporelle": "constatee", "date_du_fait": "2026-07-26",
+            "date_du_document": "2026-08-26",
+            "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "CFO commentary"}
+    base.update(kw)
+    return base
+
+
+def _passe(raw, log=log_q, r=req_q):
+    try:
+        return _apply_deterministic_overrides({"entries": [raw], "uncovered_fields": []}, r,
+                                              model_used="m", tokens_in=1, tokens_out=1,
+                                              cost_usd=0.0, log=log)
+    except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
+        return {"entries": [], "status": f"LEVÉ : {e!r}"}
+
+
+def _refusee(label, raw, log=log_q):
+    o = _passe(raw, log)
+    check(label, o["entries"] == [] and o["status"] == "not_found",
+          f"→ status={o['status']} · {len(o['entries'])} ligne(s)")
+
+
+o = _passe(_fiche([_BON_1, _BON_2]))
+_fs = [e for e in o["entries"] if TAG_LECTURE not in e["tags"]]
+_ls = [e for e in o["entries"] if TAG_LECTURE in e["tags"]]
+check("deux extraits RÉELS du document → la fiche passe, suivie de sa lecture",
+      len(_fs) == 1 and len(_ls) == 1, f"→ {o['status']} · {len(_fs)} fiche(s), {len(_ls)} lecture(s)")
+_f = _fs[0] if _fs else {}
+_l = _ls[0] if _ls else {}
+check("le texte de la fiche porte les extraits…",
+      _BON_1 in _f.get("content", "") and _BON_2 in _f.get("content", ""))
+check("… et RIEN de la lecture du collecteur (« la demande excède l'offre » n'y est pas)",
+      "demande excède" not in _f.get("content", ""), f"→ {_f.get('content', '')[:200]!r}")
+check("les valeurs structurées du collecteur ne sont PAS sous l'autorité du document",
+      _f.get("content_structured") is None, f"→ {_f.get('content_structured')}")
+check("la fiche garde ses extraits et la source de son domaine (tier A)",
+      _f.get("extraits") == [_BON_1, _BON_2] and _f.get("source_type") == "edgar_official"
+      and _f.get("reliability_tier") == "A")
+check("la lecture est une synthèse d'agent, tier B-, sans adresse, étiquetée",
+      _l.get("source_type") == "agent_synthesis" and _l.get("reliability_tier") == "B-"
+      and _l.get("source_url") is None
+      and est_lecture_du_collecteur(SimpleNamespace(source_type=_l.get("source_type"), tags=_l.get("tags"))),
+      f"→ {_l.get('source_type')} {_l.get('reliability_tier')} {_l.get('source_url')}")
+check("la lecture porte la prose et les valeurs structurées du collecteur, sans extrait",
+      "demande excède" in _l.get("content", "") and _l.get("content_structured") == {
+          "metric": "data_center_revenue", "value": 89.0} and _l.get("extraits") == [])
+_nat_f, _ = derive_nature(entry_type="fact_qualitative", source_type="agent_synthesis",
+                          content=_l.get("content"))
+check("au guichet, la lecture est une INTERPRÉTATION (jamais un relevé)", _nat_f == "interpretation",
+      f"→ {_nat_f}")
+try:
+    WorkerExchange(request=req_q, response=WorkerResponse.model_validate(o))
+    _exch_ok = True
+except ValidationError as e:
+    _exch_ok = f"{e}"[:200]
+check("max_entries=1 se compte en FICHES : 1 fiche + sa lecture passent l'invariant croisé",
+      _exch_ok is True, f"→ {_exch_ok}")
+
+# Les refus — chacun prononcé par la règle #126, sur un défaut RÉEL du 2026-10-14.
+_refusee("paraphrase inventée (#1087 : « demand exceeded supply ») → fiche ENTIÈRE refusée",
+         _fiche([_BON_1, "demand for Blackwell continued to exceed supply in the quarter"]))
+_refusee("chiffre arrondi ($89 billion pour $89.0 billion) → refusée",
+         _fiche(["Data Center revenue for the second quarter was a record $89 billion"]))
+_refusee("extrapolation du collecteur (#1028, son texte réel) → refusée",
+         _fiche(["à ce rythme, un programme complet de Phase 1 à 3 sur 6-8 ans représenterait un "
+                 "investissement de l'ordre de 2 à 4 Md$ pour un seul actif"]))
+_log_2 = RetrievalLog()
+_log_2.record(_CFO_URL, "full")
+_log_2.record_text(_CFO_URL, _CFO_TEXTE)
+_AUTRE = "https://www.reuters.com/world/french-competition-authoritys-nvidia-probe-nearing-end-2026-07-09/"
+_log_2.record(_AUTRE, "full")
+_log_2.record_text(_AUTRE, "France's competition authority is nearing the end of its probe into Nvidia.")
+_refusee("phrase d'un AUTRE document lu pendant le run (#1069) → refusée",
+         _fiche(["France's competition authority is nearing the end of its probe into Nvidia"]), log=_log_2)
+_refusee("adresse jamais lue (aucun texte rapporté) → refusée, plus rétrogradée en mémoire",
+         _fiche([_BON_1], url="https://www.sec.gov/Archives/edgar/data/1045810/autre.htm"))
+_sans = _fiche([_BON_1])
+del _sans["extraits"]
+_refusee("clef `extraits` absente → refusée (même garde que la liste vide)", _sans)
+_refusee("liste d'extraits vide sur un document → refusée", _fiche([]))
+_refusee("extrait de moins de 20 caractères (non discriminant) → refusé", _fiche(["elevated memory"]))
+
+o = _passe(_fiche(["We've partnered with our extensive network of suppliers",
+                   "DATA CENTER revenue for the  second quarter was a record $89.0 billion"]))
+check("typographie, espaces et casse normalisés (apostrophe droite contre courbe) → acceptée",
+      o["status"] == "found", f"→ {o['status']}")
+o = _passe(_fiche([_BON_1]), r=req_q.model_copy(update={"reliability_min": 0.65}))
+check("lecture sous le plancher du mandat (0.60 < 0.65) → la fiche reste, la lecture tombe",
+      len(o["entries"]) == 1 and TAG_LECTURE not in o["entries"][0]["tags"],
+      f"→ {[e['source_type'] for e in o['entries']]}")
+o = _passe(_fiche(["n'importe quoi de plus de vingt caractères"], source_type="llm_memory",
+                  model_cutoff="2026-01"), log=RetrievalLog(),
+           r=req_q.model_copy(update={"reliability_min": 0.0}))  # 0.40 décoté par l'âge du fait
+check("aveu llm_memory : pas de document, donc ni extrait ni lecture séparée",
+      len(o["entries"]) == 1 and o["entries"][0]["extraits"] == []
+      and o["entries"][0]["source_type"] == "llm_memory", f"→ {o['status']}")
+
+# Le contrat redit la règle (le filet derrière le worker).
+def _contrat(**kw):
+    try:
+        ProducedEntry(**{**{k: v for k, v in _f.items()}, **kw})
+        return "ACCEPTÉ"
+    except ValidationError as e:
+        return str(e)
+
+
+check("contrat : une fiche de document sans extrait est refusée",
+      "au moins un extrait" in _contrat(extraits=[]), f"→ {_contrat(extraits=[])[:160]}")
+check("contrat : une lecture (agent_synthesis) qui porterait un extrait est refusée",
+      "aucun extrait" in _contrat(source_type="agent_synthesis", extraits=[_BON_1]))
+check("contrat : un extrait de moins de 20 caractères est refusé",
+      "non discriminant" in _contrat(extraits=["elevated memory"]))
+check("contrat : `extraits` est REQUIS, sans défaut", ProducedEntry.model_fields["extraits"].is_required())
+
+# Le journal se remplit au point de récupération RÉEL : les deux exécuteurs d'outils, bouchonnés au
+# niveau du réseau seulement. Sans ce câblage, toute fiche serait refusée en production alors que les
+# fixtures ci-dessus, qui remplissent le journal à la main, resteraient vertes.
+async def _stub_fetch(url, *, query=None, ticker_id=None, max_chars=None):
+    return {"url": url, "final_url": url + "?redirige", "status": 200, "title": "CFO Commentary",
+            "text": _CFO_TEXTE, "via": "direct"}
+
+
+async def _stub_search(query, max_results=5):
+    return [SearchHit(title="Article", url="https://www.reuters.com/x", snippet="accroche seule",
+                      text="Full excerpt text returned by the search backend for this article."),
+            SearchHit(title="Lien", url="https://www.ft.com/y", snippet="accroche d'un simple lien")]
+
+
+_reels = (_tools.fetch_url, _tools.web_search)
+_tools.fetch_url, _tools.web_search = _stub_fetch, _stub_search
+try:
+    _lg = RetrievalLog()
+    _ex = _tools.build_tool_executors(ticker_id="NVDA", query="volumes", log=_lg)
+    asyncio.run(_ex["fetch_url"]({"url": _CFO_URL}))
+    asyncio.run(_ex["web_search"]({"query": "nvidia"}))
+    check("fetch_url : le texte rapporté est journalisé sous l'adresse demandée…",
+          _extrait_ok := (_cit.extrait_introuvable([_BON_1], _lg.textes_de(_CFO_URL)) is None))
+    check("… et sous l'adresse finale (redirection)",
+          _cit.extrait_introuvable([_BON_1], _lg.textes_de(_CFO_URL + "?redirige")) is None)
+    check("web_search : le texte d'extrait d'un résultat est journalisé",
+          _cit.extrait_introuvable(["Full excerpt text returned by the search backend"],
+                                   _lg.textes_de("https://www.reuters.com/x")) is None)
+    check("web_search : une simple accroche de lien n'est PAS un texte citable",
+          _lg.textes_de("https://www.ft.com/y") == [], f"→ {_lg.textes_de('https://www.ft.com/y')}")
+finally:
+    _tools.fetch_url, _tools.web_search = _reels
+
+# Le journal est REQUIS : sans lui aucun extrait ne se vérifie (un appelant qui l'oublie ne doit pas
+# faire passer des fiches non vérifiées).
+check("`_normalise_entry` exige le journal (aucun défaut)",
+      inspect.signature(_w._normalise_entry).parameters["log"].default is inspect.Parameter.empty)
+check("`_apply_deterministic_overrides` exige le journal (aucun défaut)",
+      inspect.signature(_w._apply_deterministic_overrides).parameters["log"].default
+      is inspect.Parameter.empty)
+_run = next((n for n in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(_w.run_search_worker))))
+             if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "_apply_deterministic_overrides"),
+            None)
+_kw_log = next((k.value for k in (_run.keywords if _run else []) if k.arg == "log"), None)
+check("en production, le journal du run est celui passé à la vérification",
+      isinstance(_kw_log, ast.Name) and _kw_log.id == "retrieval_log", f"→ {ast.dump(_kw_log) if _kw_log else None}")
+check("détenteur unique : la note flash compare ses citations avec la même normalisation",
+      _nf._normaliser is _cit.normaliser)
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

@@ -1,0 +1,648 @@
+[
+    {
+        "id": 1399,
+        "motif": "Aucun prix n'est encore pratiqué. Le pouvoir de prix futur est une hypothèse de valorisation, pas une observation de défendabilité.",
+        "statut": "sans_objet",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "sans_objet",
+            "manager": null,
+            "reponse": null,
+            "analyste": "passage_manuel_v3",
+            "fondation": null,
+            "ticker_id": "RVMD",
+            "sans_objet": {
+                "motif": "Aucun prix n'est encore pratiqué. Le pouvoir de prix futur est une hypothèse de valorisation, pas une observation de défendabilité.",
+                "aucun_substitut": true,
+                "substitut_applique": null,
+                "substitut_answer_id": null
+            },
+            "question_id": "mo_6",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_6",
+        "rang_degrade": null,
+        "superseded_by": null,
+        "cited_entry_ids": null,
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1400,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "barriere_structurelle",
+                "verbatim": "La barrière repose sur un portefeuille de brevets de composition de matière sur les inhibiteurs RAS(ON) tri-complex (expirations entre 2031 et 2045) et sur les exclusivités réglementaires de RASONQUE (NCE 5 ans jusqu'au 2031-08-26, ODE 7 ans jusqu'au 2033-08-26), qui empêchent un générique d'entrer sur le même principe actif. Un concurrent devrait reproduire un mécanisme d'action distinct (inhibiteurs RAS(ON) ciblant la forme active de KRAS, vs inhibiteurs RAS(OFF) approuvés) et engager un coût de développement de l'ordre de 2 à 4 Md$ sur 6-8 ans pour un seul actif, comme l'indiquent les dépenses R&D réelles de RVMD (738,9 M$ au S1 2026).",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001193125-26-366931",
+                        "effet": "L'approbation FDA de RASONQUE le 2026-08-26 active les exclusivités réglementaires (NCE 5 ans, ODE 7 ans) qui renforcent la barrière en empêchant l'entrée de génériques sur le même principe actif jusqu'en 2031 et 2033 respectivement, en plus des brevets.",
+                        "cited_entry_ids": [
+                            944
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A",
+                "cited_entry_ids": [
+                    1025,
+                    1057,
+                    682,
+                    1028,
+                    944
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "RVMD",
+            "sans_objet": null,
+            "question_id": "mo_1",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_1",
+        "rang_degrade": "A",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1025,
+            1057,
+            682,
+            1028,
+            944
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1401,
+        "motif": null,
+        "statut": "approxime",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "approxime",
+            "manager": null,
+            "reponse": {
+                "sens": "preuve_indirecte",
+                "verbatim": "La preuve de la barrière de réplication clinique est indirecte : le corpus ne fournit pas de mesure directe de la part de marché ou des marges, mais il établit que les concurrents directs (inhibiteurs RAS(OFF) approuvés) ciblent une forme différente de KRAS, et que le coût de développement d'un inhibiteur RAS(ON) est de l'ordre de 2 à 4 Md$ sur 6-8 ans, comme l'indiquent les dépenses R&D réelles de RVMD (738,9 M$ au S1 2026).",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001193125-26-366931",
+                        "effet": "L'approbation FDA de RASONQUE le 2026-08-26 constitue un fait postérieur qui renforce la preuve de la barrière de réplication clinique : elle démontre que RVMD a franchi avec succès les essais cliniques de Phase 3, mais elle ne fournit pas de mesure directe de la part de marché ou des marges, donc elle ne change pas la nature indirecte de la preuve.",
+                        "cited_entry_ids": [
+                            944
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A-",
+                "cited_entry_ids": [
+                    682,
+                    1028,
+                    944
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "RVMD",
+            "sans_objet": null,
+            "question_id": "mo_2",
+            "framework_id": "defendabilite",
+            "approximation": {
+                "methode": "La preuve est reconstruite à partir de deux éléments : (1) la différenciation mécanistique entre les inhibiteurs RAS(OFF) approuvés et les RAS(ON) de RVMD, qui montre qu'aucun concurrent n'a encore reproduit le mécanisme ; (2) le coût de développement estimé à partir des dépenses R&D réelles de RVMD, qui sert de proxy du coût de réplication pour un entrant.",
+                "sensibilite": "Si les dépenses R&D de RVMD étaient plus élevées que la moyenne du secteur, le coût de réplication serait surestimé ; si un concurrent développait un inhibiteur RAS(ON) à moindre coût, la barrière serait plus faible que l'estimation.",
+                "hypotheses_explicites": [
+                    "Les dépenses R&D de RVMD (738,9 M$ au S1 2026) sont représentatives du coût qu'un concurrent devrait engager pour développer un inhibiteur RAS(ON) similaire.",
+                    "La différenciation mécanistique entre RAS(OFF) et RAS(ON) constitue une barrière de réplication clinique, car aucun concurrent n'a encore démontré la capacité à développer un inhibiteur RAS(ON)."
+                ],
+                "ingredients_entry_ids": [
+                    682,
+                    1028
+                ]
+            },
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": [
+            682,
+            1028
+        ],
+        "question_id": "mo_2",
+        "rang_degrade": "A-",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            682,
+            1028,
+            944
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": "La preuve est reconstruite à partir de deux éléments : (1) la différenciation mécanistique entre les inhibiteurs RAS(OFF) approuvés et les RAS(ON) de RVMD, qui montre qu'aucun concurrent n'a encore reproduit le mécanisme ; (2) le coût de développement estimé à partir des dépenses R&D réelles de RVMD, qui sert de proxy du coût de réplication pour un entrant."
+    },
+    {
+        "id": 1402,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "en_elargissement",
+                "verbatim": "La barrière s'élargit : l'approbation FDA de RASONQUE le 2026-08-26 (premier inhibiteur RAS(ON) approuvé) ajoute une exclusivité réglementaire (NCE jusqu'en 2031, ODE jusqu'en 2033) à la protection par brevet existante (jusqu'en 2045), et les concurrents directs en Phase 3 dans le même usage (cancer du pancréas KRAS mutant) sont encore à un stade précoce (Silexion SIL204 premier patient dosé en Phase 2/3 le 2026-09-30).",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001193125-26-366931",
+                        "effet": "L'approbation FDA de RASONQUE élargit la barrière en ajoutant des exclusivités réglementaires (NCE 5 ans, ODE 7 ans) qui s'ajoutent à la protection par brevet, prolongeant la durée de protection contre les génériques.",
+                        "cited_entry_ids": [
+                            944
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A",
+                "cited_entry_ids": [
+                    944,
+                    1057,
+                    1025,
+                    920
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "RVMD",
+            "sans_objet": null,
+            "question_id": "mo_3",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_3",
+        "rang_degrade": "A",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            944,
+            1057,
+            1025,
+            920
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1403,
+        "motif": null,
+        "statut": "approxime",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "approxime",
+            "manager": null,
+            "reponse": {
+                "sens": "duree_longue",
+                "verbatim": "La barrière tient environ 5 à 19 ans selon la famille de brevets, avec une protection réglementaire minimale jusqu'en 2031 (NCE) et 2033 (ODE) pour RASONQUE, et une protection par brevet s'étendant jusqu'en 2045 pour certaines familles. La classe de référence est celle des inhibiteurs KRAS approuvés (sotorasib approuvé 2021, adagrasib 2022), dont la durée d'exclusivité réglementaire standard est de 5 ans (NCE) et 7 ans (ODE).",
+                "chiffres_cles": [
+                    {
+                        "id": "duree_retenue",
+                        "unite": "années",
+                        "valeur": 19.0,
+                        "motif_absence": null,
+                        "date_ou_periode": "à la date de l'analyse (2026-10-14), durée maximale jusqu'en 2045"
+                    }
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001193125-26-366931",
+                        "effet": "L'approbation FDA de RASONQUE le 2026-08-26 déclenche les exclusivités réglementaires (NCE 5 ans jusqu'en 2031, ODE 7 ans jusqu'en 2033), qui constituent la protection minimale de la barrière, en plus des brevets.",
+                        "cited_entry_ids": [
+                            944
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A-",
+                "cited_entry_ids": [
+                    1025,
+                    1057,
+                    921,
+                    944
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "RVMD",
+            "sans_objet": null,
+            "question_id": "mo_4",
+            "framework_id": "defendabilite",
+            "approximation": {
+                "methode": "La durée retenue est la durée maximale de protection par brevet (jusqu'en 2045) moins l'année de l'analyse (2026), soit 19 ans, car c'est la protection la plus longue qui ancre la barrière. La durée minimale est de 5 ans (jusqu'en 2031, NCE).",
+                "sensibilite": "Si les extensions de terme de brevet (PTA/PTE) étaient accordées, la durée pourrait dépasser 19 ans ; si les brevets les plus longs étaient invalidés ou contournés, la durée pourrait tomber à 5 ans (NCE).",
+                "hypotheses_explicites": [
+                    "La durée de protection par brevet s'étend jusqu'en 2045 pour certaines familles, sans tenir compte des ajustements ou extensions de terme (PTA/PTE).",
+                    "La durée de l'analyse est fixée au 2026-10-14, date de la note flash citée dans le corpus."
+                ],
+                "ingredients_entry_ids": [
+                    1025,
+                    1057
+                ]
+            },
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": [
+            1025,
+            1057
+        ],
+        "question_id": "mo_4",
+        "rang_degrade": "A-",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1025,
+            1057,
+            921,
+            944
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": "La durée retenue est la durée maximale de protection par brevet (jusqu'en 2045) moins l'année de l'analyse (2026), soit 19 ans, car c'est la protection la plus longue qui ancre la barrière. La durée minimale est de 5 ans (jusqu'en 2031, NCE)."
+    },
+    {
+        "id": 1404,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "RVMD",
+        "created_at": "2026-10-14T21:34:08.266478+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "vecteur_en_mouvement",
+                "verbatim": "Le vecteur principal de destruction serait l'arrivée d'une modalité concurrente ciblant le même usage thérapeutique (cancer du pancréas KRAS mutant) avec un mécanisme différent, comme la thérapie RNAi de Silexion (SIL204), qui a franchi des jalons réglementaires (autorisation Israël 2026-03-24, Allemagne BfArM) et dosé son premier patient en Phase 2/3 le 2026-09-30. Ce vecteur est en mouvement : le signal précurseur (avancement des programmes concurrents vers la même indication) est observé avec le premier patient dosé de SIL204, mais ce concurrent est encore à un stade précoce (Phase 2/3, ~166 patients) et n'a pas encore de données d'efficacité publiées.",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001193125-26-366931",
+                        "effet": "L'approbation FDA de RASONQUE ne change pas ce vecteur : elle renforce la barrière réglementaire de RVMD, mais le concurrent Silexion (SIL204) poursuit son avancement en Phase 2/3, ce qui maintient le vecteur en mouvement.",
+                        "cited_entry_ids": [
+                            944
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A",
+                "cited_entry_ids": [
+                    917,
+                    920,
+                    944
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "RVMD",
+            "sans_objet": null,
+            "question_id": "mo_5",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_5",
+        "rang_degrade": "A",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            917,
+            920,
+            944
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1405,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "NVDA",
+        "created_at": "2026-10-14T21:40:00.471313+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "barriere_structurelle",
+                "verbatim": "La barrière repose sur la dépendance du marché à CUDA, seul toolkit pleinement compatible avec les GPU essentiels à l'entraînement des grands modèles d'IA, ce qui constitue un coût de transfert et un effet de réseau pour les développeurs. Un concurrent devrait reproduire cet écosystème logiciel et son réseau d'adoption, ce qui représente un coût de réplication élevé en temps et en argent.",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001045810-26-000078",
+                        "effet": "L'acquisition de Hugging Face, plateforme communautaire de modèles ouverts, ne change pas la barrière identifiée (CUDA) mais pourrait la renforcer en élargissant l'écosystème de développeurs autour des produits NVIDIA, sans toutefois créer d'exclusivité puisque NVIDIA s'engage à maintenir la plateforme ouverte et à soutenir d'autres fournisseurs de silicium.",
+                        "cited_entry_ids": [
+                            865
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "B+",
+                "cited_entry_ids": [
+                    1069,
+                    865
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "NVDA",
+            "sans_objet": null,
+            "question_id": "mo_1",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_1",
+        "rang_degrade": "B+",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1069,
+            865
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1406,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "NVDA",
+        "created_at": "2026-10-14T21:40:00.471313+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "en_elargissement",
+                "verbatim": "La barrière s'élargit : le chiffre d'affaires sur douze mois au 2026-07-26 atteint 302,97 MdUSD, en croissance par rapport à l'exercice 2025 (215,94 MdUSD), et le segment Data Center croît porté par la montée en charge de Blackwell Ultra avec une demande excédant l'offre. Le signal de trajectoire est la croissance du chiffre d'affaires total, faute de détail par segment dans les champs déposés.",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001045810-26-000078",
+                        "effet": "L'acquisition de Hugging Face, plateforme communautaire de modèles ouverts, ne change pas la trajectoire de la barrière (CUDA) mais pourrait la renforcer en élargissant l'écosystème de développeurs autour des produits NVIDIA, sans toutefois créer d'exclusivité puisque NVIDIA s'engage à maintenir la plateforme ouverte et à soutenir d'autres fournisseurs de silicium.",
+                        "cited_entry_ids": [
+                            865
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A",
+                "cited_entry_ids": [
+                    1046,
+                    1087,
+                    865
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "NVDA",
+            "sans_objet": null,
+            "question_id": "mo_3",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_3",
+        "rang_degrade": "A",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1046,
+            1087,
+            865
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1407,
+        "motif": null,
+        "statut": "non_fondable",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "NVDA",
+        "created_at": "2026-10-14T21:40:00.471313+00:00",
+        "answer_json": {
+            "gap": {
+                "manque": "Le corpus ne fournit ni la classe de référence d'entreprises comparables, ni la durée observée de persistance des rendements excédentaires dans cette classe, ni d'échéances contractuelles ou légales qui permettraient d'ancrer une durée. Il manque ces ingrédients pour estimer la durée de la barrière.",
+                "remede": "collecte",
+                "origine": "curator",
+                "priorite": "haute",
+                "dimension": "defendabilite.duree_de_la_barriere",
+                "champs_cibles": [
+                    "mo_4"
+                ],
+                "coverage_actuelle": "7 entry citable(s) sur 42 fournie(s) pour `mo_4`",
+                "queries_suggerees": [
+                ]
+            },
+            "statut": "non_fondable",
+            "manager": null,
+            "reponse": null,
+            "analyste": "passage_manuel_v3",
+            "fondation": null,
+            "ticker_id": "NVDA",
+            "sans_objet": null,
+            "question_id": "mo_4",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_4",
+        "rang_degrade": null,
+        "superseded_by": null,
+        "cited_entry_ids": null,
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1408,
+        "motif": null,
+        "statut": "repondu",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "NVDA",
+        "created_at": "2026-10-14T21:40:00.471313+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "repondu",
+            "manager": null,
+            "reponse": {
+                "sens": "vecteur_en_mouvement",
+                "verbatim": "Le vecteur dominant de destruction est le changement réglementaire : l'enquête antitrust française, en phase de décision (le rapporteur général déclarant le 2026-07-09 « We are nearing the end of the investigation »), cible la dépendance du marché à CUDA et le réseau d'investissements de NVIDIA dans des fournisseurs de cloud IA. Ce vecteur est déjà en mouvement, l'enquête étant ouverte depuis septembre 2023 et les export controls ayant déjà eu un impact matériel (charge de 4,5 Mds USD au T1 FY2026 liée aux produits H20).",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001045810-26-000078",
+                        "effet": "L'acquisition de Hugging Face, plateforme communautaire de modèles ouverts, ne change pas le vecteur de destruction identifié (changement réglementaire) mais pourrait l'atténuer en élargissant l'écosystème de développeurs autour des produits NVIDIA, sans toutefois créer d'exclusivité puisque NVIDIA s'engage à maintenir la plateforme ouverte et à soutenir d'autres fournisseurs de silicium.",
+                        "cited_entry_ids": [
+                            865
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "B+",
+                "cited_entry_ids": [
+                    1069,
+                    865
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "NVDA",
+            "sans_objet": null,
+            "question_id": "mo_5",
+            "framework_id": "defendabilite",
+            "approximation": null,
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": null,
+        "question_id": "mo_5",
+        "rang_degrade": "B+",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1069,
+            865
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": null
+    },
+    {
+        "id": 1409,
+        "motif": null,
+        "statut": "approxime",
+        "analyste": "passage_manuel_v3",
+        "framework": "defendabilite",
+        "ticker_id": "NVDA",
+        "created_at": "2026-10-14T21:40:00.471313+00:00",
+        "answer_json": {
+            "gap": null,
+            "statut": "approxime",
+            "manager": null,
+            "reponse": {
+                "sens": "pouvoir_exerce_et_absorbe",
+                "verbatim": "Le pouvoir de fixation des prix est exercé et absorbé dans le segment Data Center : la croissance des volumes (ramp de Blackwell Ultra) s'accompagne d'une amélioration du mix prix (ASP plus élevé) sans réduction des volumes, la demande excédant l'offre. En revanche, dans le segment Edge Computing, la hausse des prix de la mémoire et des systèmes a réduit les volumes de ventes de PC grand public, montrant une résistance sur ce segment.",
+                "chiffres_cles": [
+                ],
+                "faits_posterieurs": [
+                    {
+                        "depot": "0001045810-26-000078",
+                        "effet": "L'acquisition de Hugging Face, plateforme communautaire de modèles ouverts, ne change pas le pouvoir de fixation des prix identifié (Data Center) mais pourrait le renforcer en élargissant l'écosystème de développeurs autour des produits NVIDIA, sans toutefois créer d'exclusivité puisque NVIDIA s'engage à maintenir la plateforme ouverte et à soutenir d'autres fournisseurs de silicium.",
+                        "cited_entry_ids": [
+                            865
+                        ]
+                    }
+                ]
+            },
+            "analyste": "passage_manuel_v3",
+            "fondation": {
+                "rang_derive": "A-",
+                "cited_entry_ids": [
+                    1087,
+                    1086,
+                    865
+                ],
+                "nature_effective": "interpretation"
+            },
+            "ticker_id": "NVDA",
+            "sans_objet": null,
+            "question_id": "mo_6",
+            "framework_id": "defendabilite",
+            "approximation": {
+                "methode": "La réponse s'appuie sur le CFO Commentary de NVIDIA qui décrit la réaction des volumes aux prix dans les segments Data Center et Edge Computing, sans fournir de données chiffrées sur les prix pratiqués.",
+                "sensibilite": "Si la demande excédentaire dans le Data Center venait à se résorber, le pouvoir de fixation des prix pourrait diminuer, et la résistance dans le segment Edge Computing pourrait s'étendre.",
+                "hypotheses_explicites": [
+                    "L'amélioration du mix prix (ASP plus élevé) est interprétée comme une hausse des prix pratiqués.",
+                    "La demande excédant l'offre dans le Data Center est interprétée comme une absorption complète de la hausse des prix par les clients.",
+                    "La réduction des volumes de PC grand public est attribuée à la hausse des prix, sans quantification."
+                ],
+                "ingredients_entry_ids": [
+                    1087,
+                    1086
+                ]
+            },
+            "schema_version": "v3.0.0",
+            "framework_version": "v3.0.0"
+        },
+        "ingredients": [
+            1087,
+            1086
+        ],
+        "question_id": "mo_6",
+        "rang_degrade": "A-",
+        "superseded_by": null,
+        "cited_entry_ids": [
+            1087,
+            1086,
+            865
+        ],
+        "framework_version": "v3.0.0",
+        "methode_approximation": "La réponse s'appuie sur le CFO Commentary de NVIDIA qui décrit la réaction des volumes aux prix dans les segments Data Center et Edge Computing, sans fournir de données chiffrées sur les prix pratiqués."
+    }
+]

@@ -78,6 +78,8 @@ from app.contracts import (
 )
 from app.config import settings
 from app.db.database import get_db_session
+from app.contracts.worker_delegation_schema import TAG_LECTURE
+from app.knowledge.citation import EXTRAIT_MIN_CARS, extrait_introuvable
 from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
@@ -227,10 +229,32 @@ def _parse_iso_date(value: Any) -> Optional[date]:
         return None
 
 
+def _extraits_bruts(raw: dict[str, Any]) -> list[str]:
+    """Les extraits déclarés par le modèle ; clef absente ou mal formée ⟹ aucun (#126). Pour une fiche
+    tirée d'un document, « aucun » est un refus — c'est la même garde, un seul motif (une seconde
+    garde « clef absente » était subsumée par elle : aucune mutation ne l'atteignait)."""
+    ex = raw.get("extraits")
+    if not isinstance(ex, list) or not all(isinstance(x, str) for x in ex):
+        return []
+    return [x.strip() for x in ex if x.strip()]
+
+
+def _contenu_du_releve(url: Optional[str], extraits: list[str]) -> str:
+    """Le texte de la fiche : les extraits, et rien d'autre (#126). Composé par le code — ce que le
+    collecteur en comprend va dans la ligne de lecture, jamais ici."""
+    corps = "\n\n".join(f"« {e} »" for e in extraits)
+    return (f"Extraits littéraux du document {url} (vérifiés mot pour mot contre le texte récupéré "
+            f"pendant la recherche) :\n\n{corps}")
+
+
 def _normalise_entry(
-    raw: Any, req: WorkerRequest, log: Optional[RetrievalLog] = None
+    raw: Any, req: WorkerRequest, log: RetrievalLog
 ) -> Optional[dict[str, Any]]:
-    """Corrige une entry brute du modèle, ou None si elle est irrécupérable (rejet tracé)."""
+    """La FICHE de document d'une entry brute du modèle, ou None si elle est irrécupérable (rejet tracé).
+
+    `log` est REQUIS, sans défaut : sans journal, aucun extrait ne se vérifie, et une fiche non vérifiée
+    ne doit pas pouvoir passer parce qu'un appelant a oublié de le fournir (#126).
+    """
     if not isinstance(raw, dict):
         return None
     content = (raw.get("content") or "").strip()
@@ -262,16 +286,44 @@ def _normalise_entry(
         return None
     source_date = datation.source_date()
 
+    # ── #126 : une fiche tirée d'un document se fonde sur des EXTRAITS LITTÉRAUX de ce document ──
+    # Vérifiés contre le texte que les outils ont réellement rapporté pour CETTE adresse : un extrait
+    # tiré d'un autre document, une paraphrase, une extrapolation (« un programme représenterait 2 à
+    # 4 Md$ ») ne s'y trouvent pas. Un seul extrait introuvable fait refuser la fiche entière : elle
+    # dirait plus que son document. La recherche reste ouverte (la ligne finit en mandat, #25).
+    # L'aveu `llm_memory` n'a pas de document, donc pas d'extrait.
+    extraits = _extraits_bruts(raw)
+    if source_type == "llm_memory":
+        extraits = []
+    else:
+        if not extraits:
+            logger.info("search-worker: fiche refusée (#126) — aucun extrait littéral (clef absente, "
+                        "vide ou mal formée) (%s)", url)
+            return None
+        court = next((e for e in extraits if len(e) < EXTRAIT_MIN_CARS), None)
+        if court is not None:
+            logger.info("search-worker: fiche refusée (#126) — extrait non discriminant %r (%s)",
+                        court[:80], url)
+            return None
+        manquant = extrait_introuvable(extraits, log.textes_de(url))
+        if manquant is not None:
+            logger.info(
+                "search-worker: fiche refusée (#126) — extrait introuvable dans le texte rapporté pour "
+                "%s (%s) : %r", url,
+                "aucun texte de cette adresse n'a été lu" if not log.textes_de(url) else "texte lu",
+                manquant[:160],
+            )
+            return None
+
+    releve = _contenu_du_releve(url, extraits) if extraits else content
+
+    # Provenance (#28). Une fiche dont tous les extraits ont été retrouvés a été lue — au moins en
+    # extrait de recherche —, donc elle n'est jamais « non vérifiée » ici ; reste le cas de la source
+    # lue en extrait seulement, qui exige une revue humaine.
     caveats: list[str] = []
-    unverified, provenance_note = _verify_provenance(url, log)
-    if provenance_note:
+    _unverified, provenance_note = _verify_provenance(url, log)
+    if provenance_note and source_type != "llm_memory":
         caveats.append(provenance_note)
-    if unverified and source_type != "llm_memory":
-        logger.info(
-            "search-worker: provenance non vérifiée pour %s — %s → llm_memory",
-            url, source_type,
-        )
-        source_type = "llm_memory"
 
     # Registre nominatif (capacité 2) — APRÈS la rétrogradation de provenance : une source dont
     # l'URL n'a jamais été rapportée par un outil ne doit pas être promue parce que son domaine
@@ -289,7 +341,7 @@ def _normalise_entry(
     # d'avoir UNE seule fonction était censé rendre impossible (#46).
     source_type, _nature, motif_qualif = qualify(
         source_type=source_type, url=url, ticker_id=req.ticker_id, entry_type=want,
-        content=content,
+        content=releve,
     )
     logger.debug("search-worker: qualification %s → %s (%s)", url, source_type, motif_qualif)
 
@@ -299,7 +351,9 @@ def _normalise_entry(
     # scinder l'entry sans réécrire son contenu (ce que le worker n'a pas le droit de faire, G3),
     # donc on la laisse entrer en la marquant : la base est append-only, une provenance douteuse
     # tracée vaut mieux qu'une provenance douteuse muette.
-    cited = _cited_documents(content)
+    # Des extraits vérifiés contre UNE adresse ne peuvent pas mêler deux documents (#126) : la règle
+    # ne garde plus que la restitution de mémoire, dont la prose est le seul contenu.
+    cited = [] if extraits else _cited_documents(content)
     if len(cited) > 1:
         caveats.append(
             f"contenu adossé à plusieurs documents ({', '.join(cited)}) pour un seul source_url "
@@ -319,8 +373,12 @@ def _normalise_entry(
     entry: dict[str, Any] = {
         "entry_type": want,
         "title": (raw.get("title") or "").strip() or None,
-        "content": content,
-        "content_structured": raw.get("content_structured") if isinstance(raw.get("content_structured"), dict) else None,
+        "content": releve,
+        # #126 : les valeurs structurées sont ce que le collecteur a EXTRAIT — une lecture, rangée
+        # avec elle (`_lecture_du_collecteur`), jamais sous l'autorité du document.
+        "content_structured": None if extraits else (
+            raw.get("content_structured") if isinstance(raw.get("content_structured"), dict) else None),
+        "extraits": extraits,
         "tags": [str(t)[:60] for t in (raw.get("tags") or []) if str(t).strip()][:12],
         "lang": (raw.get("lang") or "fr")[:8],
         "source_type": source_type,
@@ -347,6 +405,49 @@ def _normalise_entry(
     return entry
 
 
+def _lecture_du_collecteur(raw: dict[str, Any], fiche: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """La LECTURE du collecteur, rangée à côté de la fiche de son document (#126), ou None.
+
+    Ce que le collecteur COMPREND d'un document (sa prose, ses valeurs structurées) n'a pas l'autorité
+    du document : la ligne est de source `agent_synthesis` — donc `interpretation` au guichet (#51) et
+    tier B- — étiquetée `TAG_LECTURE`, sans adresse (elle ne prouve pas qu'un dépôt a été lu, #103).
+    Une restitution de mémoire (`llm_memory`, aucun extrait) n'a pas de lecture distincte : sa prose
+    EST son contenu.
+    """
+    if not fiche.get("extraits"):
+        return None
+    lecture = (raw.get("content") or "").strip()
+    if not lecture:
+        return None
+    datation = Datation(
+        portee=fiche["portee_temporelle"],
+        date_du_document=_parse_iso_date(fiche["date_du_document"]),
+        date_du_fait=_parse_iso_date(fiche["date_du_fait"]),
+        periode_visee=_parse_iso_date(fiche["periode_visee"]),
+        motif=fiche["datation_motif"],
+    )
+    score, tier, note = compute_reliability(
+        "agent_synthesis", entry_type=fiche["entry_type"], source_date=datation.source_date(),
+    )
+    return {
+        **{k: fiche[k] for k in ("entry_type", "lang", "portee_temporelle", "date_du_document",
+                                 "date_du_fait", "periode_visee", "datation_motif", "fiscal_period")},
+        "title": f"Lecture du collecteur — {fiche['title'] or fiche['source_url']}",
+        "content": (f"Lecture du collecteur (interprétation, SANS l'autorité du document) du document "
+                    f"{fiche['source_url']} :\n\n{lecture}"),
+        "content_structured": raw.get("content_structured") if isinstance(raw.get("content_structured"), dict) else None,
+        "tags": [*fiche["tags"][:11], TAG_LECTURE],
+        "source_type": "agent_synthesis",
+        "source_url": None,
+        "extraits": [],
+        "reliability_score": score,
+        "reliability_tier": tier,
+        "reliability_note": f"{note} | lecture du collecteur, rangée à part de la fiche (#126)",
+        "requires_human_review": True,
+        "model_cutoff": None,
+    }
+
+
 def _apply_deterministic_overrides(
     data: dict[str, Any],
     req: WorkerRequest,
@@ -355,12 +456,14 @@ def _apply_deterministic_overrides(
     tokens_in: int,
     tokens_out: int,
     cost_usd: float,
-    log: Optional[RetrievalLog] = None,
+    log: RetrievalLog,
 ) -> dict[str, Any]:
-    """Recalcule tout ce qui est dérivable de la requête et des sources. Cf. docstring du module."""
+    """Recalcule tout ce qui est dérivable de la requête et des sources. Cf. docstring du module.
+
+    `log` est REQUIS (#126) : c'est contre lui que se vérifient les extraits des fiches."""
     raw_entries = data.get("entries") if isinstance(data.get("entries"), list) else []
 
-    kept: list[dict[str, Any]] = []
+    kept: list[tuple[dict[str, Any], dict[str, Any]]] = []
     seen: set[tuple[Optional[str], str]] = set()
     n_rejected = n_below_floor = n_dup = 0
 
@@ -379,12 +482,19 @@ def _apply_deterministic_overrides(
             n_dup += 1
             continue
         seen.add(key)
-        kept.append(entry)
+        kept.append((entry, raw))
 
-    # Arrêt de Pareto : on garde les mieux notées, pas les premières venues.
-    kept.sort(key=lambda e: e["reliability_score"], reverse=True)
+    # Arrêt de Pareto : on garde les mieux notées, pas les premières venues — compté en FICHES.
+    kept.sort(key=lambda p: p[0]["reliability_score"], reverse=True)
     n_truncated = max(0, len(kept) - req.max_entries)
-    kept = kept[: req.max_entries]
+    fiches = kept[: req.max_entries]
+    # Chaque fiche est suivie de la lecture du collecteur (#126), si elle passe le plancher du mandat.
+    kept = []
+    for fiche, raw in fiches:
+        kept.append(fiche)
+        lecture = _lecture_du_collecteur(raw, fiche)
+        if lecture is not None and lecture["reliability_score"] >= req.reliability_min:
+            kept.append(lecture)
 
     uncovered = [str(u) for u in (data.get("uncovered_fields") or []) if str(u).strip()]
     target = req.output_schema.field_path or req.output_schema.dimension or req.query[:120]

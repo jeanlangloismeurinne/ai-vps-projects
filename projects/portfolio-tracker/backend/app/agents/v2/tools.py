@@ -77,6 +77,10 @@ class RetrievalLog:
     domaine fixer le score.
     """
     seen: dict[str, str] = field(default_factory=dict)
+    # Le TEXTE que les outils ont mis sous les yeux du modèle, par URL (#126). C'est la référence
+    # contre laquelle un extrait « littéral » se vérifie : ce que le modèle a lu, pas la page entière
+    # (que `fetch_url` a réduite à ses passages pertinents) ni ce qu'il croit se rappeler.
+    textes: dict[str, list[str]] = field(default_factory=dict)
 
     def record(self, url: Optional[str], depth: str) -> None:
         key = canonical_url(url)
@@ -85,6 +89,16 @@ class RetrievalLog:
         current = self.seen.get(key)
         if current is None or _DEPTHS.index(depth) > _DEPTHS.index(current):
             self.seen[key] = depth
+
+    def record_text(self, url: Optional[str], texte: Optional[str]) -> None:
+        key = canonical_url(url)
+        if key and texte and texte.strip():
+            self.textes.setdefault(key, []).append(texte)
+
+    def textes_de(self, url: Optional[str]) -> list[str]:
+        """Les textes rapportés par les outils pour cette URL (vide si jamais lue)."""
+        key = canonical_url(url)
+        return list(self.textes.get(key, [])) if key else []
 
     def depth_of(self, url: Optional[str]) -> Optional[str]:
         """`full` | `excerpt` | `link`, ou None si cette URL n'a jamais été rapportée par un outil."""
@@ -127,6 +141,9 @@ async def exec_web_search(
         # titre et URL ne fondent aucune citation.
         for h in hits:
             log.record(h.url, "excerpt" if h.text else "link")
+            # Le texte d'extrait seul : un titre ou une accroche de lien ne fondent aucune citation
+            # (même règle que la profondeur `link`), donc pas d'extrait vérifiable non plus (#126).
+            log.record_text(h.url, h.text)
 
     if not hits:
         return {"query": query, "results": [], "note": "Aucun résultat — la recherche a bien abouti."}
@@ -162,6 +179,9 @@ async def exec_fetch_url(
         # modèle citera parfois l'une, parfois l'autre.
         log.record(url, "full")
         log.record(result.get("final_url"), "full")
+        for u in (url, result.get("final_url")):
+            log.record_text(u, result.get("title"))
+            log.record_text(u, result.get("text"))
     return result
 
 

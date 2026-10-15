@@ -104,31 +104,40 @@ raw_edgar = {
     "reliability_note": "dépôt officiel",
 }
 
+_EXTRAIT = "Two direct customers accounted for 22% and 14% of total revenue"
+raw_edgar["extraits"] = [_EXTRAIT]
+
 e = _normalise_entry(dict(raw_edgar), req, log)
-check("URL jamais récupérée → source_type ramené à llm_memory", e["source_type"] == "llm_memory",
-      f"→ {e['source_type']}")
-# 0.40 de base moins la décote d'âge (0.02/an sur du qualitatif) — d'où le ≤, pas le ==.
-check("score effondré au plancher llm_memory (au lieu de 0.94 tier A)",
-      e["reliability_score"] <= 0.40 and e["reliability_tier"] == "C",
-      f"→ {e['reliability_score']} {e['reliability_tier']}")
-check("revue humaine exigée", e["requires_human_review"] is True)
-check("motif tracé dans la note", "provenance" in e["reliability_note"])
+# #126 (2026-10-15) : une citation dont le document n'a pas été lu n'est plus rétrogradée en
+# `llm_memory` — elle est REFUSÉE, parce que ses extraits ne se retrouvent dans aucun texte rapporté.
+# La protection de #28 tient toujours, plus strictement : une adresse plausible n'entre plus du tout.
+check("URL jamais récupérée → fiche refusée (ses extraits ne se vérifient contre rien)", e is None,
+      f"→ {e and e['source_type']}")
 
 log2 = RetrievalLog()
 log2.record(EDGAR, "full")
-e = _normalise_entry(dict(raw_edgar), req, log2)
-check("URL réellement récupérée → edgar_official conservé", e["source_type"] == "edgar_official")
-check("score plein rendu", e["reliability_score"] > 0.90, f"→ {e['reliability_score']}")
-check("aucune revue humaine imposée", e["requires_human_review"] is False)
+log2.record_text(EDGAR, f"Concentration of revenue. {_EXTRAIT}, primarily attributable to the "
+                        "Compute & Networking segment.")
+e = _normalise_entry(dict(raw_edgar), req, log2) or {}
+check("URL réellement récupérée, extrait retrouvé → edgar_official conservé",
+      e.get("source_type") == "edgar_official")
+check("score plein rendu", e.get("reliability_score", 0) > 0.90, f"→ {e.get('reliability_score')}")
+check("aucune revue humaine imposée", e.get("requires_human_review") is False)
 
-multi = dict(raw_edgar)
-multi["content"] = "Le 10-K FY2026 et la mise à jour Q1 FY2027 (10-Q) indiquent : 'Some of our customers…'"
-e = _normalise_entry(multi, req, log2)
-check("multi-documents → revue humaine", e["requires_human_review"] is True)
-check("multi-documents → score NON pénalisé (la source est réelle)",
-      e["reliability_score"] > 0.90, f"→ {e['reliability_score']}")
+# Une entrée = un document (#28) : des extraits vérifiés contre UNE adresse ne peuvent pas mêler deux
+# documents, même s'ils NOMMENT un autre dépôt (un 10-Q renvoie couramment au 10-K) ; la règle ne
+# garde plus que la restitution de mémoire, dont la prose est le seul contenu.
+renvoi = dict(raw_edgar, extraits=[f"{_EXTRAIT}"],
+              content="Le 10-K FY2026 et la mise à jour Q1 FY2027 (10-Q) indiquent la concentration.")
+e = _normalise_entry(renvoi, req, log2) or {}
+check("fiche à extraits vérifiés → jamais marquée multi-documents",
+      e.get("requires_human_review") is False, f"→ {e.get('reliability_note')}")
+multi = dict(raw_edgar, source_type="llm_memory", extraits=[], model_cutoff="2026-01",
+             content="Le 10-K FY2026 et la mise à jour Q1 FY2027 (10-Q) indiquent : 'Some of our customers…'")
+e = _normalise_entry(multi, req, log2) or {}
+check("restitution de mémoire multi-documents → revue humaine", e.get("requires_human_review") is True)
 check("désignations listées dans la note",
-      "10-K" in e["reliability_note"] and "10-Q" in e["reliability_note"])
+      "10-K" in e.get("reliability_note", "") and "10-Q" in e.get("reliability_note", ""))
 
 print("\n6. select_relevant — l'information est atteinte où qu'elle soit")
 # Document synthétique calqué sur la structure d'un 10-K : l'information utile au tiers du texte.

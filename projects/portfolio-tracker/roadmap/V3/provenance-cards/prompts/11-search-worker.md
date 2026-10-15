@@ -54,7 +54,7 @@ scorée ou n'entre pas**.
     {
       "entry_type": "fact_qualitative",
       "title": "Verrouillage écosystème CUDA",
-      "content": "Une enquête auprès de développeurs publiée le 2026-07-14 (menée jusqu'au 2026-06-30) indique un coût de migration élevé hors CUDA (réécriture de kernels, outillage propriétaire) — source de switching cost.",
+      "content": "Lecture : l'enquête (publiée le 2026-07-14, menée jusqu'au 2026-06-30) décrit un coût de migration élevé hors CUDA — réécriture de kernels, outillage propriétaire —, ce qui plaide pour un coût de changement.",
       "content_structured": null,
       "tags": ["cuda", "switching_costs", "moat"],
       "lang": "en",
@@ -66,6 +66,10 @@ scorée ou n'entre pas**.
       "periode_visee": null,
       "datation_motif": null,
       "fiscal_period": null,
+      "extraits": [
+        "porting existing CUDA kernels to another stack required a substantial rewrite for most respondents",
+        "proprietary profiling and debugging tools were cited as the main reason teams stayed on CUDA"
+      ],
       "reliability_score": 0.65,
       "reliability_tier": "B",
       "reliability_note": "Source réputée (media/site technique identifié) mais interprétation — non document primaire.",
@@ -110,6 +114,17 @@ scorée ou n'entre pas**.
 9. **Filet mémoire modèle.** N'utilise ta propre mémoire qu'en **dernier recours** et seulement si
    `reliability_min ≤ 0.40` : alors `source_type='llm_memory'`, `reliability_score=0.40`,
    `requires_human_review=true`, `model_cutoff` renseigné.
+
+10. **EXTRAITS LITTÉRAUX (#126, vérifiés côté serveur).** Une entry tirée d'un document porte
+    `extraits` : un à quelques passages **recopiés mot pour mot** du texte que `fetch_url` (ou la
+    recherche) t'a rapporté pour **ce** `source_url`, dans la langue du document, au moins 20
+    caractères chacun. Le serveur les cherche dans ce texte ; **un seul extrait introuvable fait
+    refuser l'entry entière** — paraphrase, traduction, chiffre arrondi, phrase d'un autre document
+    ou conclusion que le document n'écrit pas ne s'y trouvent pas. `content` est **ta lecture** du
+    document : le serveur la range À PART, comme une interprétation, sans l'autorité du document ;
+    ton calcul, ton estimation ou ton rapprochement avec d'autres sources n'y vaut jamais un relevé.
+    Le texte de l'entry, celui qu'un analyste citera, est composé par le serveur avec tes seuls
+    extraits. Sans document (`llm_memory`) : `"extraits": []`.
 
 ## Mandat divergent (A6) — `divergent=true`
 

@@ -3341,6 +3341,50 @@ problématiques (principe fondateur n° 3 : ne pas s'épuiser sur un ordre 1 qu'
 Gardes : `check_note_flash` §9 (74/0, fixture du 8-K réel du 08/10) + `negatif_note_flash.sh` **30/0**
 (dont 2 mutations caduques réparées, préexistantes). Notes 1.4.0 : RVMD #521-#527, NVDA #528-#529, MSFT #530.
 
+### #126 — une fiche du collecteur ne dit que ce que son document écrit : extraits littéraux vérifiés, lecture à part
+
+**Le défaut (2026-10-14, défendabilité RVMD/NVDA, relue contre EDGAR).** Cinq fiches du collecteur web
+disaient PLUS que leur document : une extrapolation (#1028 : « un programme complet représenterait 2 à
+4 Md$ » sous l'autorité du 10-Q, tier A), une fausse attribution (#1025 : échéances de brevets du 10-K
+prêtées au 10-Q), deux paraphrases inventées (#1087 « demande excédant l'offre », #1086 prix des composants
+lus comme une réaction des volumes), une fiche mêlant trois documents (#1069). L'analyste les a recopiées
+fidèlement ; les quatre contrôles du manager ne pouvaient pas le voir (#78 : structure, jamais sens). Le
+guichet #78 non plus (« représenterait » hors des 11 marqueurs).
+
+**Arbitrage de l'utilisateur (2026-10-15), comme un fonds** : une fiche de lecture qui fait dire au document
+ce qu'il ne dit pas est retirée, avec les notes qui s'appuient dessus (`tools/retraits/2026-10-15_
+defendabilite_pieces_infideles.sql` : 5 fiches au registre des pièces écartées, 11 réponses retirées) ; et le
+directeur de la recherche impose une règle de FORME — l'extrait entre guillemets, vérifiable mot pour mot,
+le commentaire de l'assistant à part, sans l'autorité du document. Préféré à une liste de mots suspects (ne
+voit ni fausse attribution ni paraphrase) et à un second agent relecteur (jugement instable, #68).
+
+**La règle (`worker.py`, contrat `ProducedEntry`, `knowledge/citation.py`) :**
+- `ProducedEntry.extraits` REQUIS, sans défaut : ≥ 1 extrait de ≥ 20 caractères pour toute fiche tirée d'un
+  document ; vide seulement pour `llm_memory` (aveu, pas de document) et `agent_synthesis` (`SOURCES_SANS_EXTRAIT`).
+- `RetrievalLog.textes` garde le TEXTE que les outils ont mis sous les yeux du modèle, par adresse (texte de
+  `fetch_url`, adresse demandée ET finale ; texte d'extrait d'un résultat de recherche — jamais une accroche
+  de lien). `_normalise_entry` vérifie chaque extrait contre les textes de SA `source_url`
+  (`citation.extrait_introuvable`, détenteur unique de la normalisation — typographie, espaces, casse,
+  rien d'autre — partagé avec la note flash #90) ; un seul introuvable ⟹ la fiche ENTIÈRE est refusée,
+  motif journalisé, la ligne finit en mandat (#25). Une adresse jamais lue n'est plus rétrogradée en
+  `llm_memory` (#28) : elle est refusée. `log` est un paramètre REQUIS des deux fonctions.
+- Le texte stocké de la fiche est COMPOSÉ par le code avec les seuls extraits ; ses valeurs structurées
+  partent avec la lecture. La prose du collecteur devient une ligne SÉPARÉE (`_lecture_du_collecteur`) :
+  `agent_synthesis` (donc `interpretation` au guichet, tier B-), étiquetée `lecture_du_collecteur`, sans
+  adresse (elle ne prouve pas qu'un dépôt a été lu, #103), écrite dans la même transaction que sa fiche (donc
+  sa SŒUR au dossier, #107) ; elle tombe si elle est sous le plancher du mandat. `max_entries` se compte en
+  FICHES (`WorkerExchange`). Une fiche à extraits vérifiés contre UNE adresse ne peut pas mêler deux
+  documents : la règle multi-documents ne garde plus que la restitution de mémoire.
+- Prompts `search-worker`/`ingestion-agent` : exemple + règle 10 (migration **055**, générée par `_gen_055.py`
+  depuis les fichiers ; la base était leur miroir exact, vérifié ; garde `055/K` éprouvée sur la base d'avant).
+⚠️ Effet attendu : moins de fiches, des fiches plus sèches (citations en anglais) ; une question de jugement
+se fonde sur les extraits (#88), le jugement est celui de l'analyste. Coût d'erreur nommé : un extrait exact
+sorti de son contexte (négation, conditionnel dans la phrase voisine) passe — il se voit à la relecture.
+Gardes : `check_search_worker` §11 (cas réels du CFO Commentary NVIDIA copiés d'EDGAR) + `negatif_search_worker.sh`
+**21/0** ; `check_provenance` §5 réécrit ; `check_prompts_exemples` (rouge sur la base d'avant la 055).
+⚠️ Faux vert trouvé par le test négatif : une garde « clef `extraits` absente » était subsumée par « liste
+vide » — aucune mutation ne l'atteignait ; fusionnée.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

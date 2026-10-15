@@ -276,11 +276,16 @@ check("… sans toucher au `source_type` (donc au tier) : deux axes, jamais mél
 # jusqu'à lui DEPUIS les deux sites d'appel. Un paramètre ajouté au détenteur et non transmis par
 # l'appelant est un décideur sans producteur : 0 appel, 0 ligne, garde verte
 # (`feedback_controle_au_point_de_lecture`).
-for _nom, _fn in (("store_knowledge", store_knowledge),
-                  ("_normalise_entry (search-worker)", _normalise_entry)):
+# Le search-worker qualifie le TEXTE QU'IL ÉCRIRA — depuis #126, la fiche composée de ses seuls
+# extraits (`releve`), pas la prose du collecteur, qui part dans une ligne de lecture à part.
+for _nom, _fn, _var in (("store_knowledge", store_knowledge, "content"),
+                        ("_normalise_entry (search-worker)", _normalise_entry, "releve")):
     check(f"`{_nom}` transmet `content=` à `qualify`",
-          "content=content" in inspect.getsource(_fn),
+          f"content={_var}" in inspect.getsource(_fn),
           "→ la garde est écrite chez son détenteur et jamais atteinte depuis ce chemin")
+check("… et le search-worker écrit ce même texte (`\"content\": releve`)",
+      '"content": releve' in inspect.getsource(_normalise_entry),
+      "→ il qualifierait un texte et en stockerait un autre")
 
 print("\n6. détenteur unique (#46) — la nature n'est pas un paramètre d'écriture")
 sig = inspect.signature(store_knowledge).parameters

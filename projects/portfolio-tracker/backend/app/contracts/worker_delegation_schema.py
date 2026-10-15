@@ -34,6 +34,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.knowledge.citation import EXTRAIT_MIN_CARS
 from app.knowledge.datation import Datation, DatationInvalide
 
 
@@ -136,6 +137,20 @@ class WorkerRequest(Strict):
     check_existing_first: bool = True        # anti-doublon : query_knowledge avant store (gap-intake)
 
 
+# ─────────────────── extraits et lecture du collecteur (#126) ───────────────────
+# Une fiche de lecture tirée d'un document porte des extraits littéraux ; ce que le collecteur en
+# COMPREND est rangé dans une ligne à part, de source `agent_synthesis` (donc interprétation, tier
+# B-) et étiquetée `TAG_LECTURE` — jamais avec l'autorité du document. Ces deux sources n'ont pas de
+# document propre, donc pas d'extrait.
+SOURCES_SANS_EXTRAIT = frozenset({"llm_memory", "agent_synthesis"})
+TAG_LECTURE = "lecture_du_collecteur"
+
+
+def est_lecture_du_collecteur(entry) -> bool:
+    """La ligne qui porte la lecture d'un collecteur, rangée à côté de la fiche de son document."""
+    return entry.source_type == "agent_synthesis" and TAG_LECTURE in (entry.tags or [])
+
+
 # ─────────────────── entry produite (PARTAGÉE avec C2 ingestion) ───────────────────
 class ProducedEntry(Strict):
     """Sous-ensemble des colonnes de `knowledge_entries` (migration 024) qu'un agent remplit à la
@@ -160,6 +175,12 @@ class ProducedEntry(Strict):
     periode_visee: Optional[str] = None      # ISO — borne de FIN de la période annoncée (prospective)
     datation_motif: Optional[str] = None     # obligatoire si `indatable` : pourquoi pas de date
     fiscal_period: Optional[str] = None
+    # ── extraits LITTÉRAUX du document cité (#126) ─────────────────────────────────────────────
+    # REQUIS, sans défaut (`feedback_optional_schema_gate`) : une fiche tirée d'un document porte les
+    # passages qui la fondent, recopiés mot pour mot, et le serveur les vérifie contre le texte que
+    # les outils ont réellement rapporté pour `source_url`. Vide seulement quand il n'y a pas de
+    # document : l'aveu `llm_memory`, ou la lecture du collecteur que le serveur range à part.
+    extraits: list[str]
     reliability_score: float = Field(ge=0, le=1)
     reliability_tier: Tier
     reliability_note: str = Field(min_length=1)  # pourquoi ce score — jamais muet
@@ -191,6 +212,18 @@ class ProducedEntry(Strict):
         # transaction. `Datation.__post_init__` lève `DatationInvalide`, que Pydantic remonte comme
         # erreur de validation du champ — le motif nommé remonte avec (#54).
         self.datation()
+        # #126 : un document se cite par ses extraits ; une absence de document n'en a pas.
+        sans_document = self.source_type in SOURCES_SANS_EXTRAIT
+        if sans_document and self.extraits:
+            raise ValueError(f"{self.source_type} : aucun document cité, donc aucun extrait (#126)")
+        if not sans_document:
+            if not self.extraits:
+                raise ValueError(f"{self.source_type} : une fiche tirée d'un document porte au moins "
+                                 "un extrait littéral (#126)")
+            courts = [e for e in self.extraits if len(e.strip()) < EXTRAIT_MIN_CARS]
+            if courts:
+                raise ValueError(f"extrait de moins de {EXTRAIT_MIN_CARS} caractères, non discriminant "
+                                 f"(#126) : {courts[0]!r}")
         # P2 (§6.4) : mémoire modèle -> revue humaine + cutoff obligatoires
         if self.source_type == "llm_memory":
             if not self.requires_human_review:
@@ -259,9 +292,11 @@ class WorkerExchange(Strict):
                 raise ValueError(
                     f"entry score {e.reliability_score} < reliability_min {req.reliability_min}"
                 )
-        # plafond de retour (arrêt de Pareto / coût)
-        if len(resp.entries) > req.max_entries:
-            raise ValueError(f"{len(resp.entries)} entries > max_entries {req.max_entries}")
+        # plafond de retour (arrêt de Pareto / coût) — compté en FICHES : la lecture du collecteur
+        # rangée à part (#126) est une ligne de plus pour le même document, pas un document de plus.
+        n_fiches = sum(1 for e in resp.entries if not est_lecture_du_collecteur(e))
+        if n_fiches > req.max_entries:
+            raise ValueError(f"{n_fiches} fiches > max_entries {req.max_entries}")
         # type attendu respecté : le contrat de sortie n'est pas décoratif
         want = req.output_schema.entry_type
         mauvais = sorted({e.entry_type for e in resp.entries if e.entry_type != want})
