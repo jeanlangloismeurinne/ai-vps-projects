@@ -21,8 +21,8 @@ import hdrUrl from "./assets/quarry_01_1k.hdr?url";
 import { random, type Stage } from "./common";
 
 /** Direction of the brightest pixel of an equirectangular HDR: the sun. */
-async function sunDirection(): Promise<Vector3> {
-  const tex = await new HDRLoader().loadAsync(hdrUrl);
+export async function sunDirection(url = hdrUrl): Promise<Vector3> {
+  const tex = await new HDRLoader().loadAsync(url);
   const { data, width, height } = tex.image as { data: ArrayLike<number>; width: number; height: number };
   const half = data instanceof Uint16Array;
   const f = (v: number) => (half ? halfToFloat(v) : v);
@@ -60,7 +60,7 @@ function canvasTexture(size: number, draw: (g: CanvasRenderingContext2D, s: numb
 }
 
 /** Rendered plaster and clay tiles, drawn procedurally (no texture file). */
-function houseMaterials(): { wall: Material; roof: Material } {
+export function houseMaterials(): { wall: Material; roof: Material } {
   const rnd = random(3);
   const plaster = canvasTexture(512, (g, s) => {
     g.fillStyle = "#e8dfd0";

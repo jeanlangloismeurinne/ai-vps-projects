@@ -25,7 +25,7 @@ function load(name: string): Promise<Object3D> {
 }
 
 /** A copy of a model, scaled so its largest horizontal side (or its height) measures `metres`. */
-async function place(name: string, metres: number, by: "width" | "height", at: [number, number, number], rotationY = 0): Promise<Object3D> {
+export async function place(name: string, metres: number, by: "width" | "height", at: [number, number, number], rotationY = 0): Promise<Object3D> {
   const model = (await load(name)).clone(true);
   const size = new Box3().setFromObject(model).getSize(new Vector3());
   model.scale.setScalar(metres / (by === "width" ? Math.max(size.x, size.z) : size.y));

@@ -1,6 +1,6 @@
 // Render prototypes for the arrival on the Starlink scene. ?option = now | a | b | c,
 // ?shot = arrival | roof (all options), orbit (option c), lab (?option = now | better).
-import { Color, Fog, Mesh, MeshStandardMaterial, PCFSoftShadowMap, PlaneGeometry, PMREMGenerator, ShadowMaterial, DirectionalLight, HemisphereLight, type Scene } from "three";
+import { type Texture, Color, Fog, Mesh, MeshStandardMaterial, PCFSoftShadowMap, PlaneGeometry, PMREMGenerator, ShadowMaterial, DirectionalLight, HemisphereLight, type Scene } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import phasedArrayJson from "../../content/nodes/starlink-phased-array/scene.json";
@@ -15,6 +15,7 @@ import { addProceduralNeighbourhood } from "./neighbourhood";
 import { buildOrbitScene } from "./orbit";
 import { addClouds, addGround, addSkyAndLight, enableShadows } from "./outdoor";
 import { addPhotographedSky, realisticMaterials } from "./photo";
+import { addPhotographedPlace, cameraLook, groundAtCamera, loadPanorama, pathTrace, photographedMaterials, PANORAMAS } from "./mockups";
 
 // ?option=…&shot=… in dev; #option-shot (e.g. #c-orbit) where only the hash reaches the page (published preview).
 const q = new URLSearchParams(location.search);
@@ -37,6 +38,8 @@ for (const [o, s, label] of [
   ["now", "arrival", "Actuel"], ["a", "arrival", "A · maquette"], ["b", "arrival", "B · photo"], ["c", "arrival", "C · hybride"],
   ["now", "roof", "Actuel (toit)"], ["a", "roof", "A (toit)"], ["b", "roof", "B (toit)"], ["c", "roof", "C (toit)"],
   ["c", "orbit", "C · orbite"], ["now", "lab", "Labo actuel"], ["better", "lab", "Labo amélioré"],
+  ["e", "arrival", "E+F+G"], ["e", "roof", "E+F+G (toit)"], ["d", "arrival", "D tracé"], ["d", "roof", "D tracé (toit)"],
+  ["studio", "lab", "Labo studio"], ["dpt", "lab", "Labo tracé"],
 ] as const) {
   const a = Object.assign(document.createElement("a"), { href: `#${o}-${s}`, textContent: label });
   if (o === option && s === shotName) a.className = "on";
@@ -52,10 +55,12 @@ function controls(stage: Stage, target: Shot): void {
 }
 
 async function outdoor(): Promise<void> {
-  const shot = SHOTS[shotName] ?? SHOTS.arrival!;
+  // A photographed ground only holds near the photo's eye height: arrive at street level.
+  const shot = option === "e" || option === "d" ? { ...SHOTS[shotName]!, ...(shotName === "arrival" ? { elevationDeg: 2, distance: 26 } : {}) } : (SHOTS[shotName] ?? SHOTS.arrival!);
   const fov = shotName === "arrival" ? 50 : 45;
-  const stage = createStage(app, { ao: option !== "now" && !q.has("noao"), bloom: 0, exposure: option === "b" ? 0.85 : option === "now" ? 1 : 0.62, fov });
+  const stage = createStage(app, { ao: option !== "now" && option !== "e" && !q.has("noao"), bloom: 0, exposure: option === "b" ? 0.85 : option === "now" ? 1 : option === "e" || option === "d" ? 1 : 0.62, fov });
   hide(stage, ["gateway", "internet"]);
+  let pano: Texture | undefined;
   entity(stage, "link-user-a").visible = true;
   if (option === "now") {
     stage.scene.add(createLighting(starlink.environment));
@@ -66,7 +71,16 @@ async function outdoor(): Promise<void> {
     // Far in the sky, along one track: the serving satellite, the next one following lower.
     placeSatellites(stage, { azimuthDeg: 205, elevationsDeg: [19, 9], distance: 700, scale: 4 });
     enableShadows(stage.built.root);
-    {
+    if (option === "e" || option === "d") {
+      pano = await addPhotographedPlace(stage, { pathTraced: option === "d" });
+      await photographedMaterials(stage);
+      stage.scene.traverse((o) => {
+        if (o instanceof Mesh && !(o.material instanceof ShadowMaterial) && o.name !== "grounded-sky") {
+          o.receiveShadow = true;
+          o.castShadow = o.geometry.type !== "PlaneGeometry";
+        }
+      });
+    } else {
       if (option === "b") await addPhotographedSky(stage);
       else addSkyAndLight(stage);
       if (q.has("nofog")) stage.scene.fog = null;
@@ -86,6 +100,9 @@ async function outdoor(): Promise<void> {
   }
   shoot(stage, shot);
   controls(stage, shot);
+  if (option === "e" && pano) groundAtCamera(stage, pano);
+  if (option === "e") cameraLook(stage, { focus: shotName === "roof" ? shot.distance : undefined });
+  if (option === "d") return pathTrace(stage, Number(q.get("samples") ?? 64), ready);
   let frames = 0;
   run(stage, () => ++frames === 40 && ready());
 }
@@ -100,8 +117,8 @@ function orbit(): void {
   });
 }
 
-function lab(): void {
-  const better = option === "better";
+async function lab(): Promise<void> {
+  const better = option !== "now";
   const stage = createStage(app, { ao: better, bloom: 0, exposure: better ? 0.8 : 1, fov: 45 });
   // Swap the Starlink scene for the level-2 one (the lab views).
   stage.scene.remove(stage.built.root);
@@ -113,9 +130,15 @@ function lab(): void {
   const scene: Scene = stage.scene;
   scene.add(built.root);
   if (better) {
-    const pmrem = new PMREMGenerator(stage.renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environmentIntensity = 0.45;
+    if (option === "better") {
+      const pmrem = new PMREMGenerator(stage.renderer);
+      scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      scene.environmentIntensity = 0.45;
+    } else {
+      // A photographed studio as the only light, as in a product shot.
+      scene.environment = await loadPanorama(PANORAMAS.studio);
+      scene.environmentIntensity = 0.9;
+    }
     scene.background = new Color("#1b2532");
     scene.fog = new Fog("#1b2532", 150, 420);
     const key = new DirectionalLight("#ffffff", 1.6);
@@ -128,7 +151,7 @@ function lab(): void {
     const floor = new Mesh(new PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new ShadowMaterial({ opacity: 0.35 }));
     floor.position.y = -4;
     floor.receiveShadow = true;
-    const stage2 = new Mesh(new PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: "#26303d", roughness: 0.9 }));
+    const stage2 = new Mesh(new PlaneGeometry(600, 600).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: option === "better" ? "#26303d" : "#8d939b", roughness: 0.9 }));
     stage2.position.y = -4.02;
     stage2.receiveShadow = true;
     scene.add(stage2, floor);
@@ -142,10 +165,12 @@ function lab(): void {
   const shot = { ...file.camera.home, elevationDeg: 22, distance: 70 };
   shoot(stage, shot);
   controls(stage, shot);
+  if (option === "studio") cameraLook(stage, {});
+  if (option === "dpt") return pathTrace(stage, Number(q.get("samples") ?? 64), ready);
   let frames = 0;
   run(stage, () => ++frames === 40 && ready());
 }
 
 if (shotName === "orbit") orbit();
-else if (shotName === "lab") lab();
+else if (shotName === "lab") void lab();
 else void outdoor();
