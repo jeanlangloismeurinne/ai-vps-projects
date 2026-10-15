@@ -3368,7 +3368,10 @@ voit ni fausse attribution ni paraphrase) et à un second agent relecteur (jugem
   rien d'autre — partagé avec la note flash #90) ; un seul introuvable ⟹ la fiche ENTIÈRE est refusée,
   motif journalisé, la ligne finit en mandat (#25). Une adresse jamais lue n'est plus rétrogradée en
   `llm_memory` (#28) : elle est refusée. `log` est un paramètre REQUIS des deux fonctions.
-- Le texte stocké de la fiche est COMPOSÉ par le code avec les seuls extraits ; ses valeurs structurées
+- Le texte stocké de la fiche est COMPOSÉ par le code avec les seuls extraits, et son TITRE aussi
+  (`titre_de_fiche` : « Extraits — <document> », il nomme, n'affirme rien — trouvé en production le
+  2026-10-15 : #1133 titrée « RASolute 302 n'a PAS échoué », que ses extraits ne disaient pas ; l'analyste
+  lit le titre) ; le doublon se juge sur le contenu ; ses valeurs structurées
   partent avec la lecture. La prose du collecteur devient une ligne SÉPARÉE (`_lecture_du_collecteur`) :
   `agent_synthesis` (donc `interpretation` au guichet, tier B-), étiquetée `lecture_du_collecteur`, sans
   adresse (elle ne prouve pas qu'un dépôt a été lu, #103), écrite dans la même transaction que sa fiche (donc

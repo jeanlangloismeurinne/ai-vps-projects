@@ -524,6 +524,16 @@ check("… et RIEN de la lecture du collecteur (« la demande excède l'offre »
       "demande excède" not in _f.get("content", ""), f"→ {_f.get('content', '')[:200]!r}")
 check("les valeurs structurées du collecteur ne sont PAS sous l'autorité du document",
       _f.get("content_structured") is None, f"→ {_f.get('content_structured')}")
+check("le titre de la fiche NOMME le document et n'affirme rien (le titre du collecteur part avec la lecture)",
+      _f.get("title") == _w.titre_de_fiche(_CFO_URL) and "CFO Commentary T2" in _l.get("title", ""),
+      f"→ {_f.get('title')!r} / {_l.get('title')!r}")
+o2b = _apply_deterministic_overrides(
+    {"entries": [_fiche([_BON_1]), _fiche([_BON_2])], "uncovered_fields": []},
+    req_q.model_copy(update={"max_entries": 3}), model_used="m", tokens_in=1, tokens_out=1,
+    cost_usd=0.0, log=log_q)
+check("deux fiches d'un même document, extraits différents → deux fiches (pas un doublon)",
+      sum(1 for e in o2b["entries"] if TAG_LECTURE not in e["tags"]) == 2,
+      f"→ {[e['title'] for e in o2b['entries']]}")
 check("la fiche garde ses extraits et la source de son domaine (tier A)",
       _f.get("extraits") == [_BON_1, _BON_2] and _f.get("source_type") == "edgar_official"
       and _f.get("reliability_tier") == "A")

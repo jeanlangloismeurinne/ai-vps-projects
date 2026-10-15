@@ -32,6 +32,8 @@ mutations=(
 "$W¦        if lecture is not None and lecture[\"reliability_score\"] >= req.reliability_min:¦        if lecture is not None:¦lecture sous le plancher du mandat"
 "$W¦    raw: Any, req: WorkerRequest, log: RetrievalLog¦    raw: Any, req: WorkerRequest, log: RetrievalLog = None¦\`_normalise_entry\` exige le journal"
 "$W¦        log=retrieval_log,¦        log=RetrievalLog(),¦en production, le journal du run"
+"$W¦        \"title\": titre_de_fiche(url) if extraits else ((raw.get(\"title\") or \"\").strip() or None),¦        \"title\": (raw.get(\"title\") or \"\").strip() or None,¦le titre de la fiche NOMME le document"
+"$W¦        key = (entry[\"source_url\"], (entry[\"title\"] or \"\").lower(), entry[\"content\"].lower())¦        key = (entry[\"source_url\"], (entry[\"title\"] or \"\").lower())¦deux fiches d'un même document"
 # le journal, au point de récupération réel
 "$T¦        return list(self.textes.get(key, [])) if key else []¦        return [t for v in self.textes.values() for t in v]¦phrase d'un AUTRE document"
 "$T¦            log.record_text(u, result.get(\"text\"))¦            pass¦fetch_url : le texte rapporté est journalisé"

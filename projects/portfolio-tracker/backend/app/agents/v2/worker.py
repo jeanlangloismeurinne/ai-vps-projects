@@ -66,6 +66,7 @@ import logging
 import re
 from datetime import date, datetime
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import asyncpg
 
@@ -247,6 +248,16 @@ def _contenu_du_releve(url: Optional[str], extraits: list[str]) -> str:
             f"pendant la recherche) :\n\n{corps}")
 
 
+def titre_de_fiche(url: Optional[str]) -> str:
+    """Le titre d'une fiche tirée d'un document : composé par le code, il NOMME le document et
+    n'affirme rien (#126). Le titre rédigé par le collecteur est une affirmation comme sa prose
+    (« RASolute 302 n'a PAS échoué », mesuré le 2026-10-15 sur une fiche dont les extraits ne le
+    disaient pas) : il part avec la lecture, jamais sous l'autorité du document."""
+    p = urlparse(url or "")
+    chemin = p.path if len(p.path) <= 80 else "…" + p.path[-79:]
+    return f"Extraits — {(p.netloc or '').removeprefix('www.')}{chemin}"
+
+
 def _normalise_entry(
     raw: Any, req: WorkerRequest, log: RetrievalLog
 ) -> Optional[dict[str, Any]]:
@@ -372,7 +383,7 @@ def _normalise_entry(
 
     entry: dict[str, Any] = {
         "entry_type": want,
-        "title": (raw.get("title") or "").strip() or None,
+        "title": titre_de_fiche(url) if extraits else ((raw.get("title") or "").strip() or None),
         "content": releve,
         # #126 : les valeurs structurées sont ce que le collecteur a EXTRAIT — une lecture, rangée
         # avec elle (`_lecture_du_collecteur`), jamais sous l'autorité du document.
@@ -432,7 +443,7 @@ def _lecture_du_collecteur(raw: dict[str, Any], fiche: dict[str, Any]) -> Option
     return {
         **{k: fiche[k] for k in ("entry_type", "lang", "portee_temporelle", "date_du_document",
                                  "date_du_fait", "periode_visee", "datation_motif", "fiscal_period")},
-        "title": f"Lecture du collecteur — {fiche['title'] or fiche['source_url']}",
+        "title": f"Lecture du collecteur — {(raw.get('title') or '').strip() or fiche['source_url']}",
         "content": (f"Lecture du collecteur (interprétation, SANS l'autorité du document) du document "
                     f"{fiche['source_url']} :\n\n{lecture}"),
         "content_structured": raw.get("content_structured") if isinstance(raw.get("content_structured"), dict) else None,
@@ -477,7 +488,9 @@ def _apply_deterministic_overrides(
             # a dit que la donnée ne l'intéressait pas — elle devient un champ non couvert.
             n_below_floor += 1
             continue
-        key = (entry["source_url"], (entry["title"] or entry["content"][:120]).lower())
+        # Le contenu, pas le titre : depuis #126 le titre d'une fiche nomme son DOCUMENT, deux fiches
+        # d'un même document (extraits différents) n'en sont pas des doublons.
+        key = (entry["source_url"], (entry["title"] or "").lower(), entry["content"].lower())
         if key in seen:
             n_dup += 1
             continue
