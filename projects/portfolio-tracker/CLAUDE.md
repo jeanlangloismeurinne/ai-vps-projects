@@ -3418,6 +3418,21 @@ apparaissait deux fois : le jeton porte désormais la condition).
 Mesure réelle (`tools/montrer_parcours.sh`) le 2026-10-15 : RVMD 4/5/5 réponses au standard antérieur
 (qualité financière / défendabilité / modèle économique), NVDA 3/·/5.
 
+### #128 — une réponse hors contrat ne fait plus tomber le lot : lecture tolérante du premier tour
+
+**Le défaut (2026-10-15, NVDA × défendabilité, réinstruction sous #126).** L'enveloppe `AnalysteSortie`
+valide toutes les réponses d'un coup : une seule réponse fautive (mo_4, `sans_fondement` portant ses
+chiffres) faisait LEVER le premier appel — le passage est mort APRÈS la collecte (payée, persistée), sans
+aucune réponse écrite. Le renvoi unique (#101) et sa protection (#109) ne couvraient que le SECOND tour.
+**La règle** (`analyste._lecture_tolerante`) : sur `AgentOutputInvalid` au premier tour, la sortie brute est
+relue question par question ; les réponses conformes sont gardées telles quelles (aucune réparée), chaque
+question fautive devient un refus NOMMÉ portant l'erreur du contrat, qui suit le renvoi unique ; sortie
+illisible ⟹ chaque question interrogée en refus nommé. Le coût des appels ratés est porté (#41). Comme un
+fonds : une note dont un paragraphe est mal rédigé revient à l'analyste pour CE paragraphe, on ne jette
+pas les autres. Gardes : `check_analyste` §7 quater (143/0) + `negatif_analyste.sh` **67/0** (dont une
+mutation d'abord verte : sans la surcharge, la question revenait quand même — mais « omise », pas « hors
+contrat » ; le motif est désormais asserté).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

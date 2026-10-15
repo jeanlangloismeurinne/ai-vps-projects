@@ -28,11 +28,13 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-15) : A2 défendabilité — relire la réinstruction RVMD/NVDA faite sous #126**
-> (collecte + analyse lancées le 2026-10-15 au soir via `tools/executer_chaine.sh`, RVMD puis NVDA ; vérifier
-> en base le plan, les réponses, puis relire chaque réponse contre ses fiches et EDGAR — points (iii) mo_4
-> « 19 ans » et (vi) libellé d'exercice à revoir). Détail sous A2 dans la roadmap.
-> Fait le 2026-10-15 : **arbitrage A2 rendu** (« tout retirer » + « citation + commentaire ») ; retrait
+> **➜ PROCHAIN PAS (2026-10-15, soir) : A3 secteur et concurrence sur RVMD et NVDA** — à blanc d'abord
+> (`tools/acceptation_traducteur.sh TICKER:secteur_concurrence:archetype`), puis passage réel. **#127 : toute
+> réponse marquée « standard antérieur » est provisoire — ne jamais remonter son fil** ; la reconstruction est
+> le premier passage d'A11. A2 coché sur la mécanique (RVMD #1416-#1421 ; NVDA lancé le 15/10 au soir, à
+> vérifier : réponses écrites, marque servie).
+> Fait le 2026-10-15 : **#127 standard de collecte** (déployé `345b021`, arbitrage : ni réinstruction ni
+> requalification avant A11) ; **arbitrage A2 rendu** (« tout retirer » + « citation + commentaire ») ; retrait
 > (`tools/retraits/2026-10-15_defendabilite_pieces_infideles.sql` : 5 fiches au registre des pièces écartées,
 > réponses #1399-#1409 retirées, RVMD réaffiche #1316-#1321 périmées, NVDA non instruit) ; **#126** livré et
 > déployé (`05e83d7` puis `ae4ed70`) : extraits littéraux vérifiés contre le texte rapporté par les outils,

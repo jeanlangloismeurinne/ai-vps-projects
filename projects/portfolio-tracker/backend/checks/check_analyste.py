@@ -844,6 +844,76 @@ check("… et les réponses du PREMIER tour restent acquises (qf_4, qf_7)",
       f"→ {None if isinstance(_Ri, Exception) else sorted(a.question_id for a in _ans(_Ri))}")
 
 
+# ── §7 quater LA LECTURE TOLÉRANTE du premier tour (#128) ─────────────────────────────────────────
+print("\n[7 quater] une réponse hors contrat ne fait plus tomber tout le lot du premier tour")
+# Mesuré le 2026-10-15 (NVDA × défendabilité) : le contrat de l'enveloppe valide toutes les réponses
+# d'un coup ; une seule fautive (`sans_fondement` portant ses chiffres) faisait LEVER le premier appel,
+# et le passage mourait après la collecte, sans aucune réponse écrite.
+import json as _json  # noqa: E402
+
+from app.agents.v2.runner import AgentOutputInvalid as _AOI  # noqa: E402
+
+
+def passage_lever(tours, entries=ENTRIES):
+    """Comme `passage_tours`, mais un tour qui est une CHAÎNE est rendu par un échec de contrat
+    (`AgentOutputInvalid` portant ce texte brut) — exactement ce que lève le runner."""
+    class _Run:
+        def __init__(self, parsed):
+            self.parsed = parsed
+
+    appels = []
+
+    async def _faux_run(agent, messages, modele, **kw):
+        appels.append(messages)
+        t = tours[min(len(appels) - 1, len(tours) - 1)]
+        if isinstance(t, str):
+            raise _AOI(agent_name="analyste", schema_name="AnalysteSortie", attempts=2, last_error="contrat",
+                       raw_content=t, tokens_in=100, tokens_out=50, cost_usd=0.001)
+        return _Run(modele(reponses=t))
+
+    vrai_run, vrai_resolve = A.run_json_agent, A._resolve_analyste_agent
+    A.run_json_agent = _faux_run
+    A._resolve_analyste_agent = lambda: asyncio.sleep(0)
+    try:
+        return asyncio.get_event_loop().run_until_complete(
+            A.repondre(TICKER, "qualite_financiere", "pre_revenus",
+                       analyste="analyste_1", entries=entries, fichier=F, chemises=())), appels
+    except Exception as exc:  # noqa: BLE001
+        return exc, appels
+    finally:
+        A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
+
+
+_FAUTIF = [r if r["question_id"] != "qf_6" else
+           dict(question_id="qf_6", statut="sans_fondement", verbatim="il manque le détail",
+                chiffres_cles=ENC_QF6) for r in NOMINAL]
+_BRUT = _json.dumps({"reponses": _FAUTIF}, ensure_ascii=False)
+_Rt, _ap_t = passage_lever([_BRUT, NOMINAL])
+check("premier tour hors contrat sur UNE question : le passage NE MEURT PAS",
+      not isinstance(_Rt, Exception), f"→ {_Rt!r}"[:300])
+_qt = sorted(a.question_id for a in _ans(_Rt)) if not isinstance(_Rt, Exception) else []
+check("… les réponses conformes du premier tour sont gardées, la fautive est renvoyée puis ACQUISE "
+      "(2 appels, toutes les questions répondues)",
+      _qt == sorted(Q) and len(_ap_t) == 2, f"→ {len(_ap_t)} appel(s), réponses {_qt}")
+check("… le renvoi porte l'erreur du contrat et ne redemande QUE la question fautive",
+      len(_ap_t) == 2 and "`qf_6`" in _ap_t[1][-1]["content"] and "`qf_4`" not in _ap_t[1][-1]["content"]
+      and "hors contrat" in _ap_t[1][-1]["content"],
+      f"→ {(_ap_t[1][-1]['content'][:200] if len(_ap_t) == 2 else '')}")
+_Rt2, _ap_t2 = passage_lever([_BRUT, _BRUT])
+check("fautive de nouveau au renvoi : refus NOMMÉ sur elle seule, les autres restent répondues",
+      not isinstance(_Rt2, Exception) and [q for q, _ in _ref(_Rt2)] == ["qf_6"]
+      and sorted(a.question_id for a in _ans(_Rt2)) == sorted(set(Q) - {"qf_6"}),
+      f"→ {_Rt2!r}"[:300] if isinstance(_Rt2, Exception) else f"→ refus {_ref(_Rt2)}")
+_Rt3, _ap_t3 = passage_lever(["pas du JSON du tout", "pas du JSON du tout"])
+check("sortie illisible : chaque question interrogée sort en refus nommé, le passage ne meurt pas",
+      not isinstance(_Rt3, Exception) and _ref(_Rt3) and not _ans(_Rt3) or (
+          not isinstance(_Rt3, Exception) and all("illisible" in m or "renvoyée" in m for _, m in _ref(_Rt3))),
+      f"→ {_Rt3!r}"[:300] if isinstance(_Rt3, Exception) else f"→ {_ref(_Rt3)}")
+check("… et le coût des DEUX appels ratés est porté par le résultat (#41)",
+      not isinstance(_Rt2, Exception) and abs(getattr(_Rt2.run, "cost_usd", 0) - 0.002) < 1e-9,
+      f"→ {getattr(getattr(_Rt2, 'run', None), 'cost_usd', None)}")
+
+
 # ── §8 les statuts admissibles, calculés AVANT la dépense ─────────────────────────────────────────
 print("\n[8] une exigence que le modèle ne peut ni voir ni satisfaire se refuse AVANT l'appel (#40)")
 
