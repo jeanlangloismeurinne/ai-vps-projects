@@ -155,7 +155,13 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     collecteur rangée à part en interprétation B-), migration 055.
   - Réinstruction lancée sous #126 le 2026-10-15 ; la relecture pièce par pièce est REPORTÉE à la
     reconstruction (#127). Points (iii) mo_4 « 19 ans » et (vi) libellé d'exercice : à revoir alors.
-- [ ] A3. Secteur et concurrence sur RVMD et NVDA
+- [x] A3. Secteur et concurrence sur RVMD et NVDA
+  - ✅ 2026-10-15/16 — plans lus à blanc puis passage réel, premier chapitre instruit ENTIÈREMENT sous #126
+    (marque « standard antérieur » à 0 sur les deux titres). RVMD plan → réponses #1440-#1444 (se_3 REFUS
+    [E] : pièce d'interprétation citée sur une question de mesure, renvoi sans effet, aucun mandat — cas A7) ;
+    NVDA #1445-#1450 (se_2 `non_fondable`). Relu par recoupement automatique de CHAQUE nombre des réponses
+    avec le texte des pièces citées : tous présents, sauf RVMD se_4 « 3,9 Md$ de trésorerie au 30/06 » (juste,
+    mais absent des pièces citées — **D-me6 récidive**) et « FY2027 » (libellé).
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
   sous le plancher A ; un fonds le fixe en interne, commun au portefeuille) — prérequis de A6

@@ -28,7 +28,10 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-15, nuit) : A3 secteur et concurrence — passage réel LANCÉ** (RVMD puis NVDA,
+> **➜ PROCHAIN PAS (2026-10-16) : A4 management et allocation du capital sur RVMD et NVDA** (à blanc puis
+> réel, même méthode qu'A3 : relecture par recoupement automatique des nombres avec les pièces citées). A3 ✅
+> (RVMD #1440-#1444, NVDA #1445-#1450, 0 réponse au standard antérieur). Ancien texte ci-dessous :
+> **(ex) A3 secteur et concurrence — passage réel LANCÉ** (RVMD puis NVDA,
 > `tools/executer_chaine.sh … secteur_concurrence …`, plans lus à blanc et justes : bonne société, concurrents
 > Amgen/BMS/Roche pour RVMD, ancres à l'horloge). À la reprise : vérifier en base (plans, réponses, mandats),
 > relire les réponses — elles ne citent que des fiches à extraits (chapitre jamais instruit, #108) : leur
