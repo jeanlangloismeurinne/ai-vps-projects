@@ -1,6 +1,6 @@
 ---
 id: regle-fraicheur
-status: proposition — arbitrages à rendre
+status: arbitrages 1-3 rendus le 2026-10-16 ; recommandation 4 proposée
 created: 2026-10-16
 project: portfolio-tracker
 role: >
@@ -180,3 +180,74 @@ trimestriels imposent une nouvelle mesure (ou une confirmation si rien n'a boug�
 5. Prochain rendez-vous dérivé, servi par réponse ; branchement au calendrier selon la réponse à Q4.
 6. Acceptation : RVMD ma_1-ma_3 à jour sans réécriture ; NVDA plan management admis et à jour ;
    test négatif : un solde de trésorerie de décembre cité après les comptes de juin reste périmé.
+
+## 8. Arbitrages rendus (2026-10-16)
+
+1. **Quatre durées de vie** — retenu (chiffre courant · historique · description annuelle · jugement).
+2. **La confirmation vaut mise à jour, mais pas pour tout ni à tout moment.** Un ingrédient dont on SAIT
+   qu'une publication le prolonge (le chiffre d'affaires d'un émetteur à reporting trimestriel, à chaque
+   trimestre) ne peut pas être « confirmé » : il doit être **complété**. D'où une précision du
+   référentiel : chiffres courants et historiques portent leur **cadence** (trimestrielle ou annuelle,
+   celle du document qui les publie), et le geste admis dépend du couple durée de vie × moment :
+
+   | Durée de vie | À une publication de SA cadence | À une autre publication | Revue annuelle |
+   |---|---|---|---|
+   | Chiffre courant | **réécrire** (confirmer interdit) | non touché | réécrire |
+   | Historique | **compléter** (zéro est une valeur : « aucun rachat ce trimestre ») | non touché | compléter |
+   | Description annuelle | — | non touchée, sauf fait qui la touche | **relire** : confirmer (en citant le nouveau document) ou réécrire |
+   | Jugement | revu si un ingrédient qui le fonde a bougé : réécrire ou confirmer | non touché | réécrire ou confirmer |
+
+3. **Ce que le trimestre ne touche pas ne se rouvre qu'annuellement** (ou sur un fait qui le touche,
+   `rouverte_par` inchangé pour les faits autres que les résultats). Les résultats trimestriels ne
+   rouvrent donc plus une QUESTION entière : ils rouvrent ses ingrédients de cadence trimestrielle, et le
+   jugement qui s'appuie dessus. La revue annuelle devient le rendez-vous de tout le reste.
+
+## 9. Recommandation sur le calendrier (question 4)
+
+**Ce que fait un fonds** : le calendrier de l'analyste n'est pas une liste de réponses à revoir, c'est
+une liste d'**événements datés**, chacun avec ce qu'il va rouvrir : dates de résultats, assemblée et
+proxy, et surtout les **catalyseurs** — jalons annoncés par l'entreprise (lecture d'essai « au
+premier semestre 2027 », date de décision FDA, lancement) et rendez-vous du secteur propices aux
+annonces (ASCO, ESMO, AACR pour RVMD ; GTC, Computex pour NVDA).
+
+**Recommandation** : chaque réponse alimente le calendrier, mais **par l'intermédiaire d'événements**,
+jamais une ligne par réponse. Trois sources :
+1. **la cadence des publications** (dérivée des durées de vie) : résultats trimestriels, rapport annuel,
+   proxy — l'essentiel du volume, comme vous le prévoyez ;
+2. **les jalons annoncés par l'entreprise**, saisis **pendant la recherche** quand une pièce les
+   annonce (date ou fenêtre, ce qui est promis, pièce citée, questions qu'il rouvrira) — c'est
+   exactement « le calendrier défini à chaque fois qu'on recherche des informations ». Un jalon dont la
+   date passe sans annonce est lui-même une information (ma_5, parole tenue ; à la manière d'un 8-K
+   attendu qui ne vient pas) ;
+3. **les rendez-vous du secteur**, déclarés par secteur (une donnée, comme les domaines d'émetteur),
+   qui ouvrent une fenêtre de veille : ce n'est pas une revue, c'est une lecture attentive des
+   communiqués de la période (et, à terme, le « veilleur » des événements extérieurs, #93).
+
+La revue annuelle reste le filet : tout ce qui n'a pas été revu dans l'année l'est ce jour-là.
+
+## 10. Essai de classement — management et allocation du capital (à valider)
+
+| Ingrédient | Durée de vie | Cadence |
+|---|---|---|
+| ma_1 répartition des usages (plusieurs exercices) | historique | trimestrielle |
+| ma_1 rendement des usages | historique | annuelle |
+| ma_1 politique annoncée | description annuelle | — |
+| ma_2 acquisitions réalisées | historique | annuelle (+ fait `perimetre`) |
+| ma_2 résultat obtenu | historique | annuelle |
+| ma_2 dépréciations | historique | trimestrielle |
+| ma_3 opérations sur le capital | historique | trimestrielle |
+| ma_3 valeur au moment de l'opération | historique | trimestrielle |
+| ma_3 dilution par la rémunération | historique | trimestrielle |
+| ma_4 critères de rémunération | description annuelle | — |
+| ma_4 détention des dirigeants | description annuelle | — |
+| ma_4 achats et cessions des dirigeants | historique | trimestrielle |
+| ma_5 objectifs annoncés | historique | trimestrielle |
+| ma_5 réalisation | historique | trimestrielle |
+| ma_5 communication des échecs | jugement | — |
+| ma_6 contrôle des droits de vote | description annuelle | — |
+| ma_6 indépendance du conseil | description annuelle | — |
+| ma_6 désaccords observés | historique | annuelle (+ fait `gouvernance`) |
+
+Conséquence lisible : après les résultats de novembre, ma_1/ma_3/ma_5 de NVDA se **complètent** (rachats
+du trimestre, objectifs du trimestre), ma_4/ma_6 ne bougent pas, ma_2 attend le rapport annuel sauf
+acquisition annoncée. Aucune réponse ne naît plus périmée parce qu'elle cite l'histoire.

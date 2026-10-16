@@ -28,7 +28,7 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-16, soir) : ARBITRAGES de `roadmap/V3/06-regle-fraicheur.md`** (refonte de la
+> **➜ PROCHAIN PAS : règle de fraîcheur — arbitrages 1-3 RENDUS le 2026-10-16 (§8 de `06-regle-fraicheur.md`) ; reste à valider la recommandation calendrier (§9) et le classement des ingrédients (§10, management en essai), puis construire** — ex-énoncé : ARBITRAGES de `roadmap/V3/06-regle-fraicheur.md` (refonte de la
 > règle de fraîcheur demandée par l'utilisateur : durée de vie par ingrédient, revue = réécrire/compléter/
 > confirmer, modes initiation/suivi, prochain rendez-vous par réponse) — A4 en dépend. État A4 : RVMD passage
 > réel fait (plan #263, réponses **#1451-#1456**, 5 répondues + ma_4 `non_fondable`, 6 acquittées) mais
