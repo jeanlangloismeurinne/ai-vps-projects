@@ -310,3 +310,35 @@ comparaison pairs et historique **lecture** · explication de l'écart J. va_6 :
 **lecture** · hypothèse portante J.
 
 **Management** — §10.
+
+## 13. Diagnostic de l'instabilité de lecture des communiqués de résultats (2026-10-16)
+
+Protocole : message construit UNE fois (empreinte vérifiée identique), envoyé 5 fois tel quel au modèle,
+température 0 ; trois communiqués (NVDA 19/11/2025 et 26/08/2026, RVMD 05/08/2026). Aucune écriture.
+
+| Communiqué | Sorties distinctes / 5 | Types retenus | Constat |
+|---|---|---|---|
+| NVDA 19/11/2025 | **1** (5 identiques) | résultats + `surprise` (prévision « 65 Md$ ») | stable… et FAUX : la prévision habituelle du trimestre lue comme écart |
+| NVDA 26/08/2026 | 3 | 4/5 surprise (« engagements 119 → 279 Md$ », ou la prévision), 1/5 `accord_commercial` (garanties de crédit) | le modèle choisit UN « fait marquant » parmi plusieurs candidats faibles |
+| RVMD 05/08/2026 | 4 | 5/5 mêmes types | les éléments secondaires varient (EMA, Swissmedic) ; `survenu_le` OMIS 2/5 → refus du pont → second tirage |
+
+**Causes, de la plus à la moins lourde :**
+1. **La question est sans réponse dans le document** : « écart à ce qu'attendait le marché » — le communiqué
+   ne dit pas ce que le marché attendait. Le modèle comble avec ce qui ressemble à une annonce chiffrée
+   (prévision, engagements). Erreur SYSTÉMATIQUE quand un seul candidat existe (NVDA 19/11, 5/5), aléatoire
+   quand plusieurs se valent (NVDA 26/08). Amplifiée par la règle « cause non dite = concurrence » (Q2) :
+   chaque fausse surprise rouvre la défendabilité.
+2. **Le fournisseur n'est pas déterministe à température 0** (pas de graine, pas d'empreinte système,
+   aucun jeton de raisonnement) : invisible quand la décision est nette (5/5), décisif aux quasi-égalités.
+3. **La liste n'est pas exhaustive** : rien n'oblige à rapporter TOUS les faits ; le modèle en retient
+   quelques-uns, pas toujours les mêmes — sans effet sur les types tant qu'un même type revient, avec effet
+   quand le seul élément d'un type change (NVDA 2/5).
+4. **Un champ requis par le pont mais facultatif dans la forme** (`survenu_le`) est omis 2 fois sur 5 :
+   chaque refus ajoute un tirage.
+5. Troncature à 15 000 caractères sur chaque communiqué (19 à 23 000) : mesurée, elle coupe surtout les
+   tableaux de fin ; le paragraphe de prévision RVMD est entamé. Déterministe, sans effet sur l'instabilité.
+
+**Remèdes de FORME envisagés (non construits)** : une `surprise` sur un communiqué de résultats cite AUSSI
+la référence dont elle s'écarte (la prévision précédente, dans le document ou dans la note précédente),
+sinon elle n'existe pas — supprime l'erreur systématique ; liste exhaustive par type ; `survenu_le` dans
+l'exemple de chaque élément.
