@@ -385,6 +385,8 @@ async def web_search(query: str, max_results: int = 5) -> list[SearchHit]:
 # ── fetch_url ────────────────────────────────────────────────────────────────
 _SKIP_TAGS = {"script", "style", "noscript", "svg", "head", "nav", "footer", "form", "template"}
 _BLOCK_TAGS = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article"}
+_CELL_TAGS = {"td", "th"}
+_ROW_TAGS = {"tr", "table"}
 _WS = re.compile(r"[ \t\x0b\f\r]+")
 _BLANKS = re.compile(r"\n{3,}")
 
@@ -400,22 +402,38 @@ class _TextExtractor(HTMLParser):
         self.title: str = ""
         self._skip = 0
         self._in_title = False
+        # Profondeur de cellule de tableau (td/th). Trouvé le 2026-10-16 sur la circulaire DEF 14A de
+        # NVIDIA : les cellules étaient COLLÉES (« Jen-Hsun Huang870,604,104 »), donc aucune citation
+        # propre d'une ligne de tableau ne passait la vérification mot pour mot (#126) — la fiche ne
+        # gardait que la phrase d'en-tête, sans un chiffre. Une cellule s'ouvre sur une tabulation (la
+        # normalisation des citations ramène tout blanc à une espace) et un bloc DANS une cellule
+        # (`<div>(1)</div>`, renvoi de note) n'y coupe pas la ligne : une ligne de tableau = une ligne.
+        self._cell = 0
 
     def handle_starttag(self, tag: str, attrs: Any) -> None:
         if tag in _SKIP_TAGS:
             self._skip += 1
         elif tag == "title":
             self._in_title = True
-        if tag in _BLOCK_TAGS:
-            self.parts.append("\n")
+        if tag in _ROW_TAGS:
+            self._cell = 0  # une cellule non fermée (HTML implicite) ne déborde pas sur la ligne suivante
+        if tag in _CELL_TAGS:
+            self._cell += 1
+            self.parts.append("\t")
+        elif tag in _BLOCK_TAGS:
+            self.parts.append(" " if self._cell else "\n")
 
     def handle_endtag(self, tag: str) -> None:
         if tag in _SKIP_TAGS and self._skip:
             self._skip -= 1
         elif tag == "title":
             self._in_title = False
-        if tag in _BLOCK_TAGS:
-            self.parts.append("\n")
+        if tag in _ROW_TAGS:
+            self._cell = 0  # fin de ligne ou de tableau : plus aucune cellule ouverte
+        if tag in _CELL_TAGS:
+            self._cell = max(0, self._cell - 1)
+        elif tag in _BLOCK_TAGS:
+            self.parts.append(" " if self._cell else "\n")
 
     def handle_data(self, data: str) -> None:
         if self._in_title and not self.title:

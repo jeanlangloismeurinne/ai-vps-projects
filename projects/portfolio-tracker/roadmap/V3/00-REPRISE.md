@@ -51,6 +51,14 @@ role: >
 >    (d) ma_3 : cours au moment des rachats seulement en B (newsroom) / C+ sous B+, NVIDIA ne tague plus les
 >    actions rachetées en XBRL depuis 2019 ; (e) ma_1 née `repondu`, désormais PÉRIMÉE : elle cite aussi le
 >    communiqué de rachat du 18/05, antérieur à l'émission obligataire du 15/06, alors que celui du 28/09 est cité.
+>    **Relancé le 16/10 après #131** (plan **#270**, réponses **#1499-#1505**, relues) : **ma_6 `repondu`**
+>    (9 indépendants sur 10, une voix par action, pas de vote cumulatif — fidèle à #1518/#1470) et **ma_7
+>    `repondu` `dirigeants_alignes`** (CA, résultat opérationnel non-GAAP, TSR relatif — fidèle à #1504) ;
+>    ma_1-ma_5 `non_fondable`. ⚠️ **ma_1 a RÉGRESSÉ** (#1475 `repondu` mais périmée → #1499 `non_fondable` :
+>    « pas de série pluriannuelle ») — cas de la dette bloquante A7, non retiré. ma_4 : table de détention
+>    toujours sans chiffres — passage lancé AVANT **#132** (tableaux) : à relancer `--questions=ma_4` après
+>    déploiement. ma_5 : prévisions sur un miroir (C+) → **arbitrage à poser** : le système lit lui-même le
+>    communiqué déposé à l'EDGAR (comme #106) plutôt que de le chercher au web ?
 >    Puis relire :
 >    `bash tools/recouper_nombres.sh NVDA management_capital` (outil neuf, lecture seule). RVMD A4 : réponses
 >    #1451-#1456 (ma_4 non fondée) ; recoupement : « 2023 » (EQRx) et « 1,4 % » (détention PDG) absents des pièces

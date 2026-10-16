@@ -3543,6 +3543,20 @@ concurrentielle : `surprise_execution` retiré de mo_5 et se_3 — une érosion 
 marges suivantes, qui rouvrent déjà ces questions. Données seules ; spec 03 §4.2/§4.4/§4.5 alignée.
 Gardes : `check_frameworks_definitions` (#94 : gouvernance rouvre ma_4-ma_7) ; suite **4671/0**.
 
+### #132 — un tableau converti en texte garde ses colonnes : une ligne de tableau doit pouvoir se citer
+
+**Le défaut (2026-10-16, diagnostic A4 NVDA).** `html_to_text` collait les cellules d'un tableau
+(« Jen-Hsun Huang870,604,104 ») : aucune citation propre d'une ligne de tableau ne passait la vérification
+mot pour mot (#126), la fiche ne gardait que la phrase d'en-tête — la détention des dirigeants (#1452)
+sortait « sans les montants ». Même conversion pour la note flash (texte des 8-K). Comme un fonds : on
+recopie la ligne du tableau telle qu'imprimée, chiffres compris. **La règle** : une cellule (`td`/`th`)
+s'ouvre sur une tabulation (la normalisation des citations ramène tout blanc à une espace), un bloc DANS
+une cellule (renvoi de note) n'y coupe pas la ligne, et la profondeur de cellule retombe à zéro à chaque
+ligne et fin de tableau (HTML à cellules non fermées). Gardes : `check_search_worker` §7bis (ligne réelle de
+la circulaire DEF 14A NVIDIA, assert au point de lecture = la vérification de citation) +
+`negatif_search_worker.sh` **27/0** (dont une mutation d'abord verte : la fixture ne distinguait pas les
+deux remises à zéro — rendue discriminante). Suite **4677/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

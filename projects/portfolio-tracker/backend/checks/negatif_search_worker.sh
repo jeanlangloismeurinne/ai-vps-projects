@@ -16,6 +16,7 @@ T="app/agents/v2/tools.py"
 C="app/contracts/worker_delegation_schema.py"
 CIT="app/knowledge/citation.py"
 NF="app/agents/v2/note_flash.py"
+WS="app/knowledge/websearch.py"
 mutations=(
 # la règle, chez son détenteur
 "$CIT¦        if not any(n in c for c in corpus):¦        if False:¦paraphrase inventée"
@@ -43,6 +44,11 @@ mutations=(
 "$C¦            if not self.extraits:¦            if False:¦contrat : une fiche de document sans extrait"
 "$C¦        if sans_document and self.extraits:¦        if False:¦contrat : une lecture (agent_synthesis)"
 "$C¦            courts = [e for e in self.extraits if len(e.strip()) < EXTRAIT_MIN_CARS]¦            courts = []¦contrat : un extrait de moins de 20 caractères"
+# #132 — les tableaux, au point de conversion en texte (détenteur : websearch.html_to_text)
+"$WS¦            self.parts.append(\"\\t\")¦            pass¦les cellules d'en-tête ne sont plus collées"
+"$WS¦            self.parts.append(\" \" if self._cell else \"\\n\")¦            self.parts.append(chr(10))¦tient sur une ligne"
+"$WS¦            self._cell = 0  # une cellule non fermée¦            pass  # une cellule non fermée¦ne fait pas déborder une ligne sur la suivante"
+"$WS¦            self._cell = 0  # fin de ligne¦            pass  # fin de ligne¦ne déborde pas sur le paragraphe suivant"
 # le détenteur unique, partagé avec la note flash
 "$NF¦_normaliser = normaliser¦_normaliser = lambda t: normaliser(t)¦détenteur unique : la note flash"
 )

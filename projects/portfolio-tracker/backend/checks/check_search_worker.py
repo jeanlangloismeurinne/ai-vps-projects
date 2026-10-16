@@ -348,6 +348,39 @@ check("contenu et entités conservés",
       "130" in text and "Md$" in text and "75" in text, f"→ {text!r}")
 check("blocs séparés en lignes", text.count("\n") >= 2, f"→ {text!r}")
 
+# 7bis — un TABLEAU (#132). Ligne COPIÉE du réel (circulaire DEF 14A NVIDIA du 2026-05-12, accession
+# 0001045810-26-000036, styles retirés) : cellules vides, renvoi de note dans un <div>, espaces
+# insécables. Avant : « Jen-Hsun Huang870,604,104 » — aucune citation propre d'une ligne de tableau ne
+# passait la vérification mot pour mot, la fiche ne gardait que la phrase d'en-tête.
+from app.knowledge.citation import extrait_introuvable  # noqa: E402
+_LIGNE_DEF14A = (
+    '<tr><td colspan="3"><span>Jen-Hsun Huang</span></td><td colspan="3"/><td colspan="2">'
+    '<span>870,604,104&#160;</span></td><td/><td colspan="3"><div><span>(1)</span></div></td>'
+    '<td colspan="3"/><td colspan="2"><span>&#8212;&#160;</span></td><td/><td colspan="3"/>'
+    '<td colspan="2"><span>870,604,104&#160;</span></td><td/><td colspan="3"/><td colspan="3">'
+    '<span>3.58%</span></td></tr>')
+_, ttab = html_to_text(
+    "<html><body><p>Percentages are based on 24,312,141,810 shares.</p><table>"
+    "<tr><th>Name of Beneficial Owner</th><th>Shares Owned</th><th>Percent</th></tr>"
+    + _LIGNE_DEF14A + "</table><p>* Represents less than 1%.</p>"
+    # cellule jamais fermée (HTML implicite) : elle ne doit pas avaler les sauts de ligne qui suivent
+    "<table><tr><td>Colette M. Kress<td>4,443,523<tr><td>Ajay K. Puri<td>3,266,897</table>"
+    "<p>Paragraphe suivant.</p></body></html>")
+check("#132 : une citation d'une ligne de tableau passe la vérification mot pour mot",
+      extrait_introuvable(["Jen-Hsun Huang 870,604,104 (1) — 870,604,104 3.58%"], [ttab]) is None,
+      f"→ {ttab!r}")
+check("#132 : les cellules d'en-tête ne sont plus collées",
+      extrait_introuvable(["Name of Beneficial Owner Shares Owned Percent"], [ttab]) is None, f"→ {ttab!r}")
+check("#132 : une ligne de tableau tient sur une ligne (le renvoi de note ne la coupe pas)",
+      any("Jen-Hsun Huang" in ln and "3.58%" in ln for ln in ttab.split("\n")), f"→ {ttab!r}")
+check("#132 : une cellule non fermée ne fait pas déborder une ligne sur la suivante",
+      not any("Colette M. Kress" in ln and "Ajay K. Puri" in ln for ln in ttab.split("\n")),
+      f"→ {ttab!r}")
+check("#132 : une cellule non fermée ne déborde pas sur le paragraphe suivant",
+      "Paragraphe suivant." in ttab.split("\n"), f"→ {ttab!r}")
+check("#132 : le texte hors tableau garde ses sauts de ligne",
+      "* Represents less than 1%." in ttab.split("\n"), f"→ {ttab!r}")
+
 print("\n8. Absence de clé = échec EXPLICITE (jamais 0 résultat muet)")
 try:
     get_search_backend()
