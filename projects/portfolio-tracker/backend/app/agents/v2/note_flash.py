@@ -599,6 +599,9 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
     return NoteValidee(lisible=True, types=types, motif=None, elements=elements)
 
 
+_ANNEE = re.compile(r"\b(?:19|20)\d{2}\b")
+
+
 def _ecart_non_etabli(el, corpus: str, references: str) -> Optional[str]:
     """Pourquoi un écart lu sur un communiqué de résultats n'est pas établi, ou `None`. Fonction PURE."""
     ref = el.passage_reference
@@ -610,6 +613,9 @@ def _ecart_non_etabli(el, corpus: str, references: str) -> Optional[str]:
     if nref == _normaliser(el.passage):
         return "la référence répète le passage : ce n'est pas l'ancienne prévision"
     per = _normaliser(el.periode_prevue or "")
+    if not _ANNEE.search(per):
+        return (f"période visée « {el.periode_prevue or ''} » non datée : une révision vise une période "
+                "DATÉE (« full year 2026 », « third quarter of fiscal 2027 »), jamais « the quarter »")
     if not per or per not in _normaliser(el.passage) or per not in nref:
         return (f"période visée « {el.periode_prevue or ''} » absente de l'une des deux citations : deux "
                 "prévisions de périodes différentes ne font pas une révision")
@@ -871,6 +877,7 @@ class DepotTraite:
     note: Optional[NoteValidee] = None
     note_id: Optional[int] = None
     corrigee: bool = False
+    vote: Optional[str] = None
     refus: Optional[str] = None
 
 
@@ -935,8 +942,12 @@ class LectureDesDepots:
                 else:
                     lignes.append(f"    → ILLISIBLE : {d.note.motif}")
             if d.note_id is not None:
-                lignes.append(f"    ✔ note #{d.note_id} — types retenus : {', '.join(d.note.types)}"
+                lignes.append(f"    ✔ note #{d.note_id} — types cités : {', '.join(d.note.types)} · annoncés "
+                              f"(hors rappels, faits couverts, écarts non établis) : "
+                              f"{', '.join(sorted(types_annonces(d.note.elements)))}"
                               f"{' (après une correction)' if d.corrigee else ''}")
+                if d.vote:
+                    lignes.append(f"      vote : {d.vote}")
             if d.refus:
                 lignes.append(f"    ✘ {d.refus} — le dépôt reste à qualifier")
         lignes.append(f"\n{'─' * L}\nINVENTAIRE — {len(self.ecrits)} note(s) écrite(s), {len(self.refus)} "
@@ -1008,7 +1019,9 @@ async def lire_les_depots_en_attente(
                                    precedent_resultats=communique_de_resultats_precedent(flux, e)),
                 BORNE_PAR_ETAPE_S)
             lecture.cout_usd += sum(r.cost_usd for r in red.runs)
-            d.note, d.corrigee = red.note, len(red.runs) > 1
+            # Une lecture votée fait plusieurs appels par construction : « corrigée » = un renvoi a eu lieu.
+            d.note, d.vote = red.note, red.vote
+            d.corrigee = len(red.runs) > (LECTURES_PAR_COMMUNIQUE_DE_RESULTATS if red.vote else 1)
             etape = "écriture"
             async with conn.transaction():
                 d.note_id = await persister_note(conn, red)

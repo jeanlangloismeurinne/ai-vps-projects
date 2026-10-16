@@ -63,6 +63,7 @@ mutations=(
 "$NF¦    seuil = len(lectures) // 2 + 1¦    seuil = 1¦majorité stricte, jamais l'union"
 "$NF¦    return max(vues, default=None)¦    return min(vues, default=None)¦la date écrite dans une phrase se LIT"
 "$NF¦                or (fichier.fraicheur_par_duree_de_vie and bool(el.get(\"couvert_par_les_comptes\"))))¦                or False)¦relue (interrupteur actif)"
+"$NF¦    if not _ANNEE.search(per):¦    if False:¦une période GÉNÉRIQUE (sans année)"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

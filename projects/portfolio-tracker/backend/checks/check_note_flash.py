@@ -571,6 +571,11 @@ v_per = pont_r(examen(**{f"n{N_GUI}": {**SUR, "periode_prevue": "second quarter 
 g3 = next((e for e in getattr(v_per, "elements", []) if "updating" in e["passage"]), {})
 b.check("période visée" in (g3.get("ecart_non_etabli") or ""),
         f"deux prévisions de périodes différentes ne font pas une révision → {g3.get('ecart_non_etabli')}")
+v_gen = pont_r(examen(**{f"n{N_GUI}": {**SUR, "periode_prevue": "the company"}}))
+g5 = next((e for e in getattr(v_gen, "elements", []) if "updating" in e["passage"]), {})
+b.check("non datée" in (g5.get("ecart_non_etabli") or ""),
+        f"une période GÉNÉRIQUE (sans année) n'établit rien — MSFT #580 passait avec « the quarter » → "
+        f"{g5.get('ecart_non_etabli')}")
 v_ref = pont_r(examen(**{f"n{N_GUI}": SUR}), refs=[])
 g4 = next((e for e in getattr(v_ref, "elements", []) if "updating" in e["passage"]), {})
 b.check("introuvable" in (g4.get("ecart_non_etabli") or ""),
