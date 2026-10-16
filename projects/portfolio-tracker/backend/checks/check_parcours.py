@@ -388,8 +388,24 @@ for mod, fn in (("app/agents/v2/projection_memo.py", "servir_memo"),
             f"§6 `{fn}` ne recopie plus la plomberie — obtenu {sorted(a)}")
 a_ch = appels("app/agents/v2/parcours.py", "charger_etat_dossier")
 for detenteur in ("reviser_framework", "servir_answer", "questions_applicables",
-                  "assemble_verdict", "read_answers_courantes", "horloge_du_titre"):
+                  "assemble_verdict", "read_answers_courantes", "horloge_du_titre", "corpus_des_regles"):
     b.check(detenteur in a_ch, f"§6 l'assembleur APPELLE `{detenteur}` (jamais une ré-écriture)")
+# #136 — les règles du point de lecture lisent le TEXTE des pièces (mesuré au déploiement : sans lui, 38 chiffres
+# « sans pièce » sur NVDA qualité financière contre 2) ; et les pièces d'un fait lu sont chargées.
+import inspect as _insp  # noqa: E402
+from app.agents.v2 import parcours as _parc  # noqa: E402
+from app.agents.v2.recoupement import recouper as _recouper  # noqa: E402
+
+_row = {"source_date": None, "reliability_tier": "A", "title": "10-Q", "content": "charge de 4.5 billion"}
+_cr = _parc.corpus_des_regles({1: _row})
+_rep = {"reponse": {"verbatim": "une charge de 4,5 Md$"}, "fondation": {"cited_entry_ids": [1]}}
+b.check(not _recouper(_rep, _cr).sans_piece,
+        f"§6 #136 le corpus des règles porte le texte des pièces : un chiffre de la pièce citée est retrouvé — {_cr}")
+_src_ch = strip_code(_insp.getsource(_parc.charger_etat_dossier))
+b.check("SELECT id, title, content," in _src_ch,
+        "§6 #136 l'assembleur CHARGE le texte des pièces (la colonne `content` est lue)")
+b.check("f.cited_entry_ids" in _src_ch,
+        "§6 #136 l'assembleur charge aussi les pièces d'un fait postérieur lu (l'effet se recoupe contre elles)")
 # L'horloge a un détenteur unique (#103) : l'assembleur ET l'analyste (`faits_posterieurs_du_titre`) la
 # lisent là — sinon l'analyste lirait des faits que la lecture ne retire pas, ou l'inverse.
 a_h = appels("app/agents/v2/parcours.py", "horloge_du_titre")

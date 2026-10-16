@@ -48,6 +48,11 @@ mutations=(
 "$N3¦          {p.au_standard === false && (¦          {false && (¦§7 #127 le niveau 3"
 "FRONT:components/v2/DossierComite.js¦                {s.n_standard_anterieur > 0 && (¦                {false && (¦§7 #127 le niveau 1"
 "FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/index.js¦>{s.n_standard_anterieur}</p></div>¦>—</p></div>¦§7 #127 le niveau 2 (la synthèse)"
+# #136 — le point de lecture recoupe contre le TEXTE des pièces, celles d'un fait lu comprises.
+"$P¦                \"title\": p[\"title\"], \"content\": p[\"content\"]} for i, p in pieces.items()}¦                } for i, p in pieces.items()}¦§6 #136 le corpus des règles porte le texte"
+"$P¦            \"SELECT id, title, content, source_type¦            \"SELECT id, title, source_type¦§6 #136 l'assembleur CHARGE le texte"
+"$P¦                cites.update(f.cited_entry_ids)¦                pass¦§6 #136 l'assembleur charge aussi les pièces d'un fait"
+"$P¦    entries = corpus_des_regles(pieces)¦    entries = {i: dict(p) for i, p in pieces.items()}¦l'assembleur APPELLE \`corpus_des_regles\`"
 # #136 — les chiffres sans pièce : comptés par réponse, additionnés, et lus par les trois écrans.
 "$P¦                n_chiffres_sans_piece=len(r.servie.chiffres_sans_piece)) for r in reps],¦                n_chiffres_sans_piece=0) for r in reps],¦§5ter #136 niveau 2 : chaque réponse"
 "$P¦        n_chiffres_sans_piece=sum(r.n_chiffres_sans_piece for lq in lignes for r in lq.reponses),¦        n_chiffres_sans_piece=0,¦§5ter #136 niveau 2 : la synthèse"

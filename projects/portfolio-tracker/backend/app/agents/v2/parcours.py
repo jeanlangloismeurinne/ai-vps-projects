@@ -359,6 +359,15 @@ def _pieces(etat: EtatDossier, a: FrameworkAnswer) -> list[PieceCitee]:
     return pieces
 
 
+def corpus_des_regles(pieces: dict[int, dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    """Le corpus que lisent les RÈGLES au point de lecture : la date (actualité), le rang (contrôle ③) et le
+    TEXTE (le recoupement des chiffres, #136). Sans le texte, chaque chiffre de chaque réponse passait
+    pour « sans pièce » (mesuré au déploiement de #136 : 38 sur NVDA qualité financière, contre 2). Une
+    colonne non chargée lève ici, elle ne se lit jamais comme un texte vide."""
+    return {i: {"source_date": p["source_date"], "reliability_tier": p["reliability_tier"],
+                "title": p["title"], "content": p["content"]} for i, p in pieces.items()}
+
+
 def standard_anterieur(etat: EtatDossier, a: FrameworkAnswer) -> bool:
     """La réponse s'appuie-t-elle sur au moins une pièce au standard antérieur (#127) ? Lue sur les
     pièces que `_pieces` sert — un seul assemblage, donc les trois niveaux disent la même chose."""
@@ -540,17 +549,18 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
             cites.update(a.fondation.cited_entry_ids)
         if a.approximation is not None:
             cites.update(a.approximation.ingredients_entry_ids)
+        if a.reponse is not None:  # #136 — les pièces d'un fait lu fondent aussi les chiffres de son effet
+            for f in a.reponse.faits_posterieurs:
+                cites.update(f.cited_entry_ids)
 
     pieces: dict[int, dict[str, Any]] = {}
     if cites:
         rows = await conn.fetch(
-            "SELECT id, title, source_type, source_url, source_date, date_du_fait, "
+            "SELECT id, title, content, source_type, source_url, source_date, date_du_fait, "
             f"reliability_tier, nature, superseded_by, {COLONNES_SQL} FROM knowledge_entries "
             "WHERE id = ANY($1::int[])", sorted(cites))
         pieces = {r["id"]: dict(r) for r in rows}
-    # Le corpus des RÈGLES : exactement les deux colonnes que lisent l'actualité et le contrôle ③.
-    entries = {i: {"source_date": p["source_date"], "reliability_tier": p["reliability_tier"]}
-               for i, p in pieces.items()}
+    entries = corpus_des_regles(pieces)
 
     classement = await read_archetype(conn, ticker_id=ticker_id)
     archetype = classement[0] if classement is not None else None
