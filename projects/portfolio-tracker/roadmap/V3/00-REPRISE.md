@@ -28,7 +28,18 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS (2026-10-16) : A4 management et allocation du capital sur RVMD et NVDA** (à blanc puis
+> **➜ PROCHAIN PAS (2026-10-16, soir) : ARBITRAGES de `roadmap/V3/06-regle-fraicheur.md`** (refonte de la
+> règle de fraîcheur demandée par l'utilisateur : durée de vie par ingrédient, revue = réécrire/compléter/
+> confirmer, modes initiation/suivi, prochain rendez-vous par réponse) — A4 en dépend. État A4 : RVMD passage
+> réel fait (plan #263, réponses **#1451-#1456**, 5 répondues + ma_4 `non_fondable`, 6 acquittées) mais
+> ma_1/ma_2/ma_3 **nées périmées** ; NVDA **plan refusé par la garde #123** (7 lignes `exercice_clos` pour un
+> historique pluriannuel, renvoi sans effet), rien écrit. Même cause : une réponse prend la date de sa pièce
+> la plus ancienne, un historique vieillit donc comme un solde. Outil neuf **`tools/recouper_nombres.sh TICKER
+> framework`** (lecture seule) : recoupe chaque nombre des réponses avec leurs pièces citées — RVMD
+> management : 2 absents (« 2023 » EQRx, « 1,4 % » détention du PDG) à lire ; il a aussi trouvé NVDA se_4
+> « +85,4 Md$ » (différence calculée par l'analyste, dans aucune pièce) que la relecture manuelle d'A3 avait
+> manqué. À relire aussi : RVMD ma_2 cite « Kura Oncology en 2025 » comme acquisition — à vérifier.
+> **(ex) A4 management et allocation du capital sur RVMD et NVDA** (à blanc puis
 > réel, même méthode qu'A3 : relecture par recoupement automatique des nombres avec les pièces citées). A3 ✅
 > (RVMD #1440-#1444, NVDA #1445-#1450, 0 réponse au standard antérieur). Ancien texte ci-dessous :
 > **(ex) A3 secteur et concurrence — passage réel LANCÉ** (RVMD puis NVDA,

@@ -163,6 +163,10 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     avec le texte des pièces citées : tous présents, sauf RVMD se_4 « 3,9 Md$ de trésorerie au 30/06 » (juste,
     mais absent des pièces citées — **D-me6 récidive**) et « FY2027 » (libellé).
 - [ ] A4. Management et allocation du capital sur RVMD et NVDA
+  - 2026-10-16 — à blanc juste (18 lignes chacun, 12/12 essentiels, bonne société). Réel : RVMD plan #263,
+    réponses #1451-#1456 (ma_4 `non_fondable`), mais ma_1-ma_3 nées périmées ; NVDA plan refusé par #123
+    (historique pluriannuel au rapport annuel). **Bloqué par la refonte de la règle de fraîcheur**
+    (`06-regle-fraicheur.md`, arbitrages en attente).
 - [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
   sous le plancher A ; un fonds le fixe en interne, commun au portefeuille) — prérequis de A6
 - [ ] A6. (prérequis : dette D-me5 sous A1) Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
