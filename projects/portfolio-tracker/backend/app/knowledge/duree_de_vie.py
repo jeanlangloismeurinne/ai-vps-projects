@@ -39,7 +39,7 @@ Fonctions PURES, sans IO : la fraîcheur se recalcule à chaque lecture (#53), r
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Mapping, Optional, Sequence
 
 from app.knowledge.evenements import RESULTATS
@@ -89,13 +89,22 @@ def fait_qui_rouvre(horloge: MaterialEventLookup) -> Optional[MaterialEvent]:
     return max(faits, key=lambda e: (e.seuil, e.event_date), default=None)
 
 
+# Une échéance ANNUELLE se juge avec une tolérance d'un trimestre : les pairs n'arrêtent pas leurs comptes
+# à la même date (mesuré le 2026-10-16 : les concurrents de NVDA clos au 31/12/2025 « avant » son exercice
+# clos le 25/01/2026), et un document annuel (proxy, rapport) se date à quelques semaines près de
+# l'exercice qu'il décrit. Coût d'erreur nommé : une pièce jusqu'à 92 jours antérieure à la dernière clôture
+# d'exercice compte pour cet exercice ; celle de l'exercice d'avant (≈ 365 jours) reste périmée.
+TOLERANCE_ANNUELLE = timedelta(days=92)
+
+
 def _seuil_de_cadence(d: DureeIngredient, clotures: Clotures) -> Optional[date]:
     exercice = clotures.exercice or clotures.derniere
     if d.duree_de_vie in _SANS_DUREE:
         return None
+    annuel = exercice - TOLERANCE_ANNUELLE if exercice is not None else None
     if d.duree_de_vie == "description_annuelle":
-        return exercice
-    return clotures.derniere if d.cadence == "trimestrielle" else exercice
+        return annuel
+    return clotures.derniere if d.cadence == "trimestrielle" else annuel
 
 
 def juger_fondation(

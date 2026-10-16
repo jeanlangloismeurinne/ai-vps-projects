@@ -110,6 +110,12 @@ b.check(etat(juge([1], {1: K10}, {1: [CC_A("resultat_net")]})) == "courante",
 b.check(etat(juge([1], {1: date(2024, 12, 31)}, {1: [CC_A("resultat_net")]})) == "perimee",
         "un chiffre courant annuel d'un exercice dépassé est périmé")
 
+b.check(etat(juge([1], {1: date(2025, 12, 31)}, {1: [H_A("rentabilite_des_acteurs")]},
+                clot=Clotures(date(2026, 7, 26), date(2026, 1, 25)))) == "courante",
+        "tolérance annuelle : les pairs clos au 31/12/2025 valent pour l'exercice NVDA clos le 25/01/2026")
+b.check(etat(juge([1], {1: date(2024, 12, 31)}, {1: [H_A("rentabilite_des_acteurs")]},
+                clot=Clotures(date(2026, 7, 26), date(2026, 1, 25)))) == "perimee",
+        "…mais l'exercice d'AVANT (≈ 13 mois) reste périmé")
 print("§3 une description annuelle couvre le dernier exercice")
 b.check(etat(juge([3], {3: PROXY}, {3: [DA("independance_du_conseil")]})) == "courante",
         "le proxy 2026 (exercice 2025) est à jour")
@@ -196,6 +202,19 @@ b.check(_off is None, "interrupteur coupé : aucun contexte, l'ordre 0 s'appliqu
 b.check(_on is not None and _on.clotures.derniere == Q2
         and [i.duree_de_vie for i in _on.ingredients_des_pieces.get("ma_3", {}).get(1, [])] == ["historique"],
         f"interrupteur actif : clôture lue sur l'horloge du titre, durée lue au référentiel → {_on}")
+
+class _ConnVoisine:
+    """La pièce #7 a été collectée pour ma_1 (historique) ; ma_3 la cite (mesuré : RVMD ma_3 cite #1368)."""
+    async def fetch(self, *_a, **_k):
+        return [{"question_id": "ma_1", "ingredient_id": "repartition_des_usages", "entry_id": 7}]
+
+
+_v = asyncio.run(contexte_durees(_ConnVoisine(), fichier=_F, version="v3.0.0", ancre_titre=_lk, cites={7}))
+b.check([i.ingredient_id for i in _v.ingredients_des_pieces.get("ma_3", {}).get(7, [])] == ["repartition_des_usages"],
+        "une pièce citée par ma_3 mais collectée pour ma_1 (même chapitre) prend la durée de vie de ce pour quoi "
+        "elle a été collectée")
+b.check(7 not in _v.ingredients_des_pieces.get("qf_1", {}),
+        "…jamais celle d'un AUTRE chapitre (la pièce reste non rattachée pour qf_1 : durée la plus courte)")
 
 src = strip_code((APP / "agents" / "v2" / "parcours.py").read_text(encoding="utf-8"))
 arbre = ast.parse((APP / "agents" / "v2" / "parcours.py").read_text(encoding="utf-8"))

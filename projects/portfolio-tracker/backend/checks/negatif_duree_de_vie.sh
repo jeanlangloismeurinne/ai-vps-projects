@@ -13,8 +13,8 @@ PA="app/agents/v2/parcours.py"
 mutations=(
 # la règle, durée par durée
 "$DV¦        plus_recente = max(datees)¦        plus_recente = min(datees)¦rapport annuel + 10-Q du 30/06 sur le même historique"
-"$DV¦    return clotures.derniere if d.cadence == \"trimestrielle\" else exercice¦    return clotures.derniere¦un chiffre courant ANNUEL au dernier exercice"
-"$DV¦        return exercice¦        return None¦le proxy 2025 cède"
+"$DV¦    return clotures.derniere if d.cadence == \"trimestrielle\" else annuel¦    return clotures.derniere¦un chiffre courant ANNUEL au dernier exercice"
+"$DV¦        return annuel¦        return None¦le proxy 2025 cède"
 "$DV¦        if seuil_fait is not None and d_piece < seuil_fait:¦        if False:¦l'approbation du 26/08 rouvre le jugement"
 "$DV¦        ings = list(ingredients_des_pieces.get(p) or ()) or [PAR_DEFAUT]¦        ings = list(ingredients_des_pieces.get(p) or ()) or [DureeIngredient(\"x\", \"jugement\")]¦une pièce non rattachée"
 "$DV¦    exercice = clotures.exercice or clotures.derniere¦    exercice = clotures.exercice¦exercice inconnu"
@@ -25,6 +25,10 @@ mutations=(
 "$FW¦        if j is not None:¦        if False:¦servir_answer, interrupteur actif"
 "$PA¦    if not fichier.fraicheur_par_duree_de_vie:¦    if False:¦interrupteur coupé"
 "$PA¦                                              durees=durees),¦                                              durees=None),¦parcours passe \`durees=durees\`"
+"$DV¦    annuel = exercice - TOLERANCE_ANNUELLE if exercice is not None else None¦    annuel = exercice¦tolérance annuelle : les pairs clos"
+"$DV¦TOLERANCE_ANNUELLE = timedelta(days=92)¦TOLERANCE_ANNUELLE = timedelta(days=400)¦l'exercice d'AVANT"
+"$PA¦            ings = propres.get((qid, e)) or du_chapitre.get((fid, e))¦            ings = propres.get((qid, e))¦collectée pour ma_1 (même chapitre)"
+"$PA¦            ings = propres.get((qid, e)) or du_chapitre.get((fid, e))¦            ings = propres.get((qid, e)) or next((v for (_f, _e), v in du_chapitre.items() if _e == e), None)¦jamais celle d'un AUTRE chapitre"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

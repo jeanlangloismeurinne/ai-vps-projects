@@ -477,7 +477,14 @@ async def contexte_durees(conn, *, fichier, version: str, ancre_titre, cites: se
         return None
     definitions = {(q.id, i.id): i for f in fichier.frameworks for q in f.questions
                    for i in q.ingredients_requis}
-    par_question: dict[str, dict[int, list]] = {}
+    framework_de = {q.id: f.id for f in fichier.frameworks for q in f.questions}
+    # La durée de vie est une propriété de la MATIÈRE — ce pour quoi la pièce a été collectée —, pas de la
+    # question qui la cite : l'analyste voit tout le dossier de son chapitre (#108) et cite à bon droit une
+    # pièce collectée pour une question voisine (mesuré le 2026-10-16 : RVMD ma_3 cite #1368, collectée
+    # pour ma_1). Rattachée à la question qui la cite : ses ingrédients-là ; sinon, ceux du MÊME chapitre ;
+    # rattachée nulle part (socle, lecture de dépôt) : aucune, la règle prend la durée la plus courte.
+    propres: dict[tuple[str, int], list] = {}
+    du_chapitre: dict[tuple[str, int], list] = {}
     if cites:
         rows = await conn.fetch(
             "SELECT DISTINCT question_id, ingredient_id, entry_id FROM question_coverage "
@@ -486,8 +493,15 @@ async def contexte_durees(conn, *, fichier, version: str, ancre_titre, cites: se
             ing = definitions.get((r["question_id"], r["ingredient_id"]))
             if ing is None:
                 continue
-            par_question.setdefault(r["question_id"], {}).setdefault(r["entry_id"], []).append(
-                DureeIngredient(ingredient_id=ing.id, duree_de_vie=ing.duree_de_vie, cadence=ing.cadence))
+            d = DureeIngredient(ingredient_id=ing.id, duree_de_vie=ing.duree_de_vie, cadence=ing.cadence)
+            propres.setdefault((r["question_id"], r["entry_id"]), []).append(d)
+            du_chapitre.setdefault((framework_de[r["question_id"]], r["entry_id"]), []).append(d)
+    par_question: dict[str, dict[int, list]] = {}
+    for qid, fid in framework_de.items():
+        for e in cites:
+            ings = propres.get((qid, e)) or du_chapitre.get((fid, e))
+            if ings:
+                par_question.setdefault(qid, {})[e] = ings
     lk = ancre_titre if ancre_titre.status == "found" else None
     return ContexteDurees(
         clotures=Clotures(derniere=derniere_cloture_publiee(lk) if lk else None,
