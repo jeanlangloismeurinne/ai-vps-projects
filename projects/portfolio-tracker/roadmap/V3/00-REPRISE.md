@@ -17,12 +17,11 @@ role: >
 
 ## ➜ Prochain pas
 
-1. **Valider et ORDONNER avec l'utilisateur l'inventaire `roadmap/V3/07-avant-comite.md`** (demandé le
-   2026-10-16 : « regardons d'abord tous les sujets pour faire la liste de ce qu'il faut traiter avant
-   d'avoir un système fonctionnel avant passage en comité »). L'ordre retenu remplace la checklist A4-A11
-   de `05-frameworks-complets.md` (jalon « note d'initiation »).
-2. Premier candidat déjà arbitré : **la source d'origine d'abord** (07 §1.1 — « idéalement sur le site de
-   l'émetteur, à défaut ailleurs ») ; puis la sélection des passages selon la langue (07 §1.2).
+Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplace la checklist A4-A11 de
+`05-frameworks-complets.md`) : (1) la matière — 1.1 ✅ (#133), **1.2 sélection des passages selon la langue
+(EN COURS)**, 1.4 instabilité du collecteur (mesurer d'abord), 1.6 « tout chiffre renvoie à une pièce » ;
+(2) arbitrages groupés en une séance (9, 10, 11, 12, 15, 17, 20, 21) ; (3) tenue du dossier ; (4) valorisation ;
+(5) test. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 
 ## Où on en est (mesuré le 2026-10-16 — RE-REQUÊTER avant de s'en servir)
 
@@ -34,9 +33,9 @@ role: >
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4683/0** (2026-10-16, après #132).
-- **Production** : dernier déploiement `4f40604` (#132), vérifié dans le conteneur.
-- **Prochaine migration : 056.** Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
+- **Suite** `bash backend/checks/run_all.sh` = **4695/0** (2026-10-16, après #133).
+- **Production** : dernier déploiement `9c7152b` (#133), vérifié dans le conteneur.
+- **Prochaine migration : 057** (056 = prompt search-worker v5, source d'origine). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
   NVDA #623-#628, MSFT #629-#633.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
