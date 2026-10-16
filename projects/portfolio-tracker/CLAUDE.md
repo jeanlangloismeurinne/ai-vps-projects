@@ -3433,6 +3433,47 @@ pas les autres. Gardes : `check_analyste` §7 quater (143/0) + `negatif_analyste
 mutation d'abord verte : sans la surcharge, la question revenait quand même — mais « omise », pas « hors
 contrat » ; le motif est désormais asserté).
 
+### #129 — la fraîcheur se juge dans la DURÉE DE VIE de ce que chaque pièce fonde ; le communiqué de résultats se LIT
+
+**Le défaut (2026-10-16, A4 management).** Une réponse prenait la date de sa pièce la plus ANCIENNE ; toute
+question rouverte par les résultats devait donc être refondée chaque trimestre sur des pièces du trimestre.
+Un historique (rachats sur cinq ans, acquisitions passées) vieillissait comme un solde : RVMD ma_1-ma_3
+(#1451-#1453) sont nées périmées, le plan NVDA × management a été refusé par la garde #123 (7 lignes
+« exercice clos » pour un historique pluriannuel).
+
+**Arbitrages de l'utilisateur (2026-10-16, `roadmap/V3/06-regle-fraicheur.md`), comme un fonds** : la note
+d'initiation cite des documents de tous âges, elle est à jour parce qu'elle intègre la dernière publication ;
+chaque trimestre l'analyste met à jour ses chiffres et COMPLÈTE l'historique ; ce que le trimestre ne touche
+pas ne se rouvre qu'annuellement (ou sur un fait qui le touche) ; la confirmation vaut mise à jour, mais pas
+pour un ingrédient qu'on sait devoir compléter.
+
+**La règle.**
+- **Référentiel** : chaque ingrédient porte `duree_de_vie` (REQUIS, sans défaut) ∈ `chiffre_courant` ·
+  `historique` · `description_annuelle` · `jugement` · `reprise` (⟺ `repris_de`) · `au_cours_du_jour`, et une
+  `cadence` (trimestrielle/annuelle) pour les deux premiers seulement ; un ingrédient du socle est un chiffre.
+  129 ingrédients classés (§10/§12 du document, à corriger par exception).
+- **Lecture** (`knowledge/duree_de_vie.juger_fondation`, pur, appelé par `servir_answer`) : chiffre courant
+  et description jugés PIÈCE PAR PIÈCE contre la clôture de leur cadence (anti-blanchiment gardé) ;
+  historique jugé par sa pièce la PLUS RÉCENTE (il se complète) ; jugement : seul le fait qui rouvre la
+  question le touche (hors part « résultats », qui passe par les cadences) ; pièce non rattachée = chiffre
+  courant trimestriel ; exercice inconnu = dernière clôture ; aucune clôture = abstention (ordre 0).
+  Contexte produit par `parcours.contexte_durees` (index `question_coverage`), `durees=` REQUIS sans défaut.
+- **Interrupteur** `fraicheur_par_duree_de_vie` (frameworks.yaml, principe n° 3) : `false` = ordre 0 exact,
+  rien à réécrire.
+- **Traducteur** : il voit durée et cadence ; la garde #123 ne refuse plus `exercice_clos` que pour un
+  chiffre courant trimestriel.
+- **Condition de l'arbitrage 3 — le communiqué de résultats se LIT** (`evenements.a_lire_par_la_note`,
+  détenteur unique) : non lu, il rouvre large (`a_qualifier`) ; lu, il garde `resultats` et AJOUTE ce qu'il
+  annonce de plus (jamais `routine`) ; un communiqué MIXTE est SCINDÉ sur l'horloge — sa part « résultats » à
+  la clôture qu'il publie, ses autres annonces à leur date, lisibles et annotables par l'analyste (#117) ;
+  sans scission, un rachat annoncé avec les résultats aurait périmé jusqu'au trimestre suivant une analyse
+  refaite sur les comptes publiés.
+- **Pas encore construit** : le geste « confirmer » au-delà de #117, le calendrier (publications + jalons
+  annoncés + rendez-vous du secteur, §9), la revue trimestrielle légère des jugements d'une position détenue.
+  ⚠️ La position du comité (#84) tombe encore sur tout fait qui rouvre la question, résultats compris.
+Gardes : `check_duree_de_vie.py` + `negatif_duree_de_vie.sh` (12/0) ; `check_frameworks_definitions` (durée,
+cadence) ; `check_evenements` §10 ; `check_traducteur` (garde, contexte, consigne) ; `check_note_flash_branchement`.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

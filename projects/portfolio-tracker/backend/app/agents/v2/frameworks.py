@@ -43,7 +43,7 @@ import re
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 import yaml
 from pydantic import ValidationError
@@ -116,6 +116,10 @@ class CollectionPlanRefused(Exception):
     (`FrameworkDefinitionRefused`), ni qu'une réponse l'est (`FrameworkAnswerRefused`), mais que le
     PLAN l'est.
     """
+
+
+if TYPE_CHECKING:  # import tardif à l'exécution (servir_answer) : pas de cycle au chargement
+    from app.knowledge.duree_de_vie import ContexteDurees
 
 
 def _valider_pont_definitions(fichier: FrameworksFile) -> None:
@@ -937,6 +941,7 @@ def servir_answer(
     *,
     ancre: MaterialEventLookup,
     entries: dict[int, dict[str, Any]],
+    durees: Optional["ContexteDurees"],
 ) -> FrameworkAnswerServie:
     """LE POINT DE LECTURE : la réponse persistée + l'axe actualité RECALCULÉ. N'écrit rien.
 
@@ -959,7 +964,21 @@ def servir_answer(
     lus = {f.depot: f.effet for f in answer.reponse.faits_posterieurs} if answer.reponse else {}
     horloge = retirer_faits_lus(ancre, lus)
     act = etat_actualite_entry(pseudo_entry, ancre=horloge, corpus=entries)
-    motif = act.motif
+    etat, motif = act.etat, act.motif
+    # Règle de fraîcheur par durée de vie (2026-10-16) : `durees` REQUIS, sans défaut — `None` dit
+    # explicitement « ordre 0 » (interrupteur coupé). La règle s'abstient sans clôture connue : l'ordre 0
+    # reste alors en place (le côté prudent, principe n° 3).
+    if durees is not None:
+        from app.knowledge.duree_de_vie import fait_qui_rouvre, juger_fondation
+        cites = list(answer.fondation.cited_entry_ids)
+        j = juger_fondation(
+            cites, dates={i: (entries.get(i) or {}).get("source_date") for i in cites},
+            ingredients_des_pieces=durees.ingredients_des_pieces.get(answer.question_id, {}),
+            clotures=durees.clotures, fait=fait_qui_rouvre(horloge),
+            horloge_indisponible=(ancre.raison or "raison non donnée") if ancre.status == "unavailable"
+            else None)
+        if j is not None:
+            etat, motif = j.etat, j.motif
     absorbes = [e for e in (ancre.recents if ancre.status == "found" else ())
                 if e not in horloge.recents and e.accession in lus]
     if absorbes:
@@ -967,7 +986,7 @@ def servir_answer(
             f"{e.form} du {e.event_date.isoformat()} — effet : {lus[e.accession]}" for e in absorbes)
 
     donnees = answer.model_dump()
-    donnees["fondation"] = {**donnees["fondation"], "actualite": act.etat,
+    donnees["fondation"] = {**donnees["fondation"], "actualite": etat,
                             "motif_actualite": motif}
     return FrameworkAnswerServie(**donnees)
 

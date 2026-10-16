@@ -136,7 +136,7 @@ def q_base(**over):
         "sens_admis": ["fort", "faible"],
         "ingredients_requis": [
             {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré",
-             "essentiel": True},
+             "essentiel": True, "duree_de_vie": "jugement"},
         ],
         "variables_par_archetype": {
             "rentable": {"mode": "variable", "variable": "Part du résultat retrouvée en cash"},
@@ -189,6 +189,7 @@ def fichier_base(**over):
         "types_evenement_version": yaml.safe_load(
             FRAMEWORKS_YAML.read_text(encoding="utf-8"))["types_evenement_version"],
         "rappels_ecartes": True,
+        "fraicheur_par_duree_de_vie": True,
         "types_evenement": _catalogue_reel(),
         "frameworks": [fw_base()],
     }
@@ -228,18 +229,18 @@ print("\n2. le contrat REFUSE les définitions creuses")
 rejete("une question sans aucun ingrédient ESSENTIEL",
        lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
            {"id": "accessoire", "libelle": "Un ingrédient utile mais pas indispensable",
-            "essentiel": False}])),
+            "essentiel": False, "duree_de_vie": "jugement"}])),
        "sa couverture serait satisfaite par le corpus vide")
 rejete("deux ingrédients qui portent le même id",
        lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
            {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré",
-            "essentiel": True},
+            "essentiel": True, "duree_de_vie": "jugement"},
            {"id": "resultat_net", "libelle": "Résultat net, une seconde fois par mégarde",
-            "essentiel": True}])),
+            "essentiel": True, "duree_de_vie": "jugement"}])),
        "deux ingrédients portent le même id")
 rejete("un ingrédient dont le libellé tient en trois mots",
        lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
-           {"id": "roic", "libelle": "Le ROIC", "essentiel": True}])),
+           {"id": "roic", "libelle": "Le ROIC", "essentiel": True, "duree_de_vie": "jugement"}])),
        "at least 20 characters")
 rejete("un énoncé écrit en artefact comptable (« Quel est le ROIC ? »)",
        lambda: QuestionDefinition.model_validate(q_base(enonce="Quel est le ROIC ?")),
@@ -363,8 +364,8 @@ def _avec_reprise(repris_de, libelle, question_id="zz_2"):
     """Deux questions : `zz_1` (la base) et une seconde dont un ingrédient est repris."""
     return fichier_base(frameworks=[fw_base(questions=[q_base(), q_base(
         id=question_id, chemin_indexation="cadre_test.autre", ingredients_requis=[
-            {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True},
-            {"id": "repris", "libelle": libelle, "essentiel": False, "repris_de": repris_de}])])])
+            {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True, "duree_de_vie": "jugement"},
+            {"id": "repris", "libelle": libelle, "essentiel": False, "repris_de": repris_de, "duree_de_vie": "reprise"}])])])
 
 
 valide("[S] un ingrédient repris d'une question existante, nommée dans son libellé, passe",
@@ -383,9 +384,9 @@ rejete("[S] un ingrédient repris d'une question que son libellé ne NOMME pas",
 rejete("[S] un ingrédient repris d'une question qui ne déclare AUCUN chiffre clé",
        lambda: charge(fichier_base(frameworks=[fw_base(questions=[q_base(chiffres_cles=[]), q_base(
            id="zz_2", chemin_indexation="cadre_test.autre", ingredients_requis=[
-               {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True},
+               {"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré", "essentiel": True, "duree_de_vie": "jugement"},
                {"id": "repris", "libelle": "Chiffre repris de zz_1, déjà instruit au dossier",
-                "essentiel": False, "repris_de": ["zz_1"]}])])])),
+                "essentiel": False, "repris_de": ["zz_1"], "duree_de_vie": "reprise"}])])])),
        "qui ne déclare aucun chiffre clé")
 rejete("une question sans déclaration d'encadré (le silence ne vaut pas « ne se chiffre pas »)",
        lambda: QuestionDefinition.model_validate({k: v for k, v in q_base().items() if k != "chiffres_cles"}),
@@ -493,8 +494,36 @@ check("les trois liens « repris de » corrigés : résultat normalisé ← qf_1
       f"→ va_1 {[(i.id, i.repris_de) for i in _reel_q['va_1'].ingredients_requis]}")
 rejete("un `repris_de` en double",
        lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[
-           {"id": "r", "libelle": "Chiffre repris de qf_2 et de qf_2", "essentiel": True,
+           {"id": "r", "libelle": "Chiffre repris de qf_2 et de qf_2", "essentiel": True, "duree_de_vie": "reprise",
             "repris_de": ["qf_2", "qf_2"]}])), "doublon")
+
+# ── Durée de vie et cadence d'un ingrédient (règle de fraîcheur, 06-regle-fraicheur.md, 2026-10-16) ──
+def _ing(**kw):
+    base = {"id": "x", "libelle": "Un ingrédient dont le libellé est assez long", "essentiel": True}
+    base.update(kw)
+    return lambda: QuestionDefinition.model_validate(q_base(ingredients_requis=[base]))
+
+rejete("un ingrédient SANS durée de vie (requise, sans défaut)", _ing(), "duree_de_vie")
+rejete("une durée de vie hors vocabulaire", _ing(duree_de_vie="eternelle"), "duree_de_vie")
+rejete("un chiffre courant sans cadence", _ing(duree_de_vie="chiffre_courant"), "porte sa `cadence`")
+rejete("un historique sans cadence", _ing(duree_de_vie="historique"), "porte sa `cadence`")
+rejete("un jugement AVEC une cadence", _ing(duree_de_vie="jugement", cadence="annuelle"), "sans objet")
+rejete("une description annuelle AVEC une cadence",
+       _ing(duree_de_vie="description_annuelle", cadence="annuelle"), "sans objet")
+rejete("un ingrédient repris sans la durée `reprise`",
+       _ing(repris_de=["qf_2"], duree_de_vie="jugement"), "va avec `repris_de`")
+rejete("la durée `reprise` sans `repris_de`", _ing(duree_de_vie="reprise"), "va avec `repris_de`")
+rejete("un ingrédient du socle classé jugement", _ing(depuis_le_socle=True, duree_de_vie="jugement"),
+       "c'est un chiffre")
+check("un historique à cadence annuelle passe", QuestionDefinition.model_validate(q_base(ingredients_requis=[
+    {"id": "x", "libelle": "Un ingrédient dont le libellé est assez long", "essentiel": True,
+     "duree_de_vie": "historique", "cadence": "annuelle"}])) is not None)
+_toutes = [i for f in load_frameworks().frameworks for q in f.questions for i in q.ingredients_requis]
+check(f"le référentiel réel porte ses ingrédients ({len(_toutes)})", len(_toutes) >= 129)
+_durees = {i.duree_de_vie for i in _toutes}
+check(f"le référentiel réel emploie les six durées de vie (atteignabilité) : {sorted(_durees)}",
+      _durees == {"chiffre_courant", "historique", "description_annuelle", "jugement", "reprise",
+                  "au_cours_du_jour"})
 
 # ── [Q] et [R], ce qui rouvre quoi (#89) ─────────────────────────────────────────────────────────
 # Créer un framework, c'est décider ce qui rouvre chacune de ses questions : l'absence se REFUSE au
@@ -674,7 +703,8 @@ _SOCLE_DB = {"id": "dette_brute", "libelle": "Dette brute lue dans les comptes r
 def _avec_socle(chiffre=None, lit=True, ingredient_socle=False):
     q = q_base(chiffres_cles=[chiffre or _SOCLE_DB],
                ingredients_requis=[{"id": "resultat_net", "libelle": "Résultat net de l'exercice considéré",
-                                    "essentiel": True, "depuis_le_socle": ingredient_socle}])
+                                    "essentiel": True, "depuis_le_socle": ingredient_socle,
+                                    "duree_de_vie": "chiffre_courant", "cadence": "trimestrielle"}])
     return fichier_base(frameworks=[fw_base(lit_le_socle=lit, questions=[q])])
 
 

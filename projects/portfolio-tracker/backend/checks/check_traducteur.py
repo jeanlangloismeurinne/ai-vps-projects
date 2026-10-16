@@ -226,7 +226,10 @@ _flux = MaterialEventLookup(status="found", cik=1628171, recents=tuple(parse_mat
     1628171, limit=100)))
 _notes = {"acc-rvmd-fda": QualificationLue(
     types=frozenset({"reglementaire_favorable"}),
-    resume="note flash du 2026-09-26 : « the U.S. Food and Drug Administration approved RASONQUE™ »")}
+    resume="note flash du 2026-09-26 : « the U.S. Food and Drug Administration approved RASONQUE™ »"),
+          # condition 1 (2026-10-16) : le communiqué de résultats est LU — ici, rien de plus que les comptes
+          "0001193125-26-335039": QualificationLue(types=frozenset({"routine"}),
+                                                   resume="note flash : rien de plus que les comptes")}
 try:
     FQ = T.fraicheur_des_questions(_flux, _notes, F)
 except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
@@ -309,12 +312,15 @@ _FQ9["me_2"] = T.FraicheurQuestion("fait_important", date(2026, 7, 26), "8-K du 
 _plan9 = CollectionPlan(ticker_id="NVDA", framework_id="modele_economique", framework_version=F.schema_version,
                         archetype="rentable", items=[
                             _ligne("me_2", "repartition_du_chiffre_d_affaires", "exercice_clos"),
-                            _ligne("me_2", "part_engagee_ou_repetee", "cumul_publie"),
-                            _ligne("me_1", "client_payeur", "exercice_clos")])
+                            # chiffres courants TRIMESTRIELS (2026-10-16) : seuls ceux-là restent jugés par
+                            # la garde sous la règle de durée de vie — une fixture d'historiques ou de
+                            # descriptions ne discriminerait plus « cumul_publie » ni « sans date minimale »
+                            _ligne("me_2", "montant_engage_non_reconnu", "cumul_publie"),
+                            _ligne("me_6", "poids_des_premiers_clients", "exercice_clos")])
 _nvda9 = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 7, 26), _FQ9, derniere_cloture_annuelle=None)
-def _fautives(plan, horloge):
+def _fautives(plan, horloge, fichier=F):
     try:
-        return T.lignes_exercice_clos_perimees(plan, horloge)
+        return T.lignes_exercice_clos_perimees(plan, horloge, fichier=fichier)
     except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
         return [f"LÈVE : {e!r}"]
 
@@ -332,6 +338,36 @@ _FQ9m["me_2"] = T.FraicheurQuestion("fait_important", date(2026, 6, 30), "8-K du
 _msft9 = T.HorlogeDuPlan(date(2026, 10, 13), date(2026, 6, 30), _FQ9m, derniere_cloture_annuelle=date(2026, 6, 30))
 check("MSFT (la dernière clôture EST l'exercice, 30/06) : `exercice_clos` est la bonne lecture — admise",
       _fautives(_plan9, _msft9) == [], f"→ {_fautives(_plan9, _msft9)}")
+# Règle de fraîcheur par durée de vie (2026-10-16) — le cas qui a fait refuser le plan NVDA × management :
+# un historique pluriannuel et une description annuelle se lisent au rapport annuel.
+_FQma = dict(SANS_FAIT)
+for _q in ("ma_1", "ma_2", "ma_6"):
+    _FQma[_q] = T.FraicheurQuestion("fait_important", date(2026, 7, 26), "8-K du 2026-08-26 (résultats)")
+_nvda_ma = T.HorlogeDuPlan(date(2026, 10, 16), date(2026, 7, 26), _FQma, derniere_cloture_annuelle=date(2026, 1, 25))
+_plan_ma = CollectionPlan(ticker_id="NVDA", framework_id="management_capital", framework_version=F.schema_version,
+                          archetype="rentable", items=[
+                              _ligne("ma_1", "repartition_des_usages", "exercice_clos"),
+                              _ligne("ma_2", "acquisitions_realisees", "exercice_clos"),
+                              _ligne("ma_6", "independance_du_conseil", "exercice_clos")])
+check("durée de vie : historiques et description annuelle à l'exercice clos sont ADMIS (interrupteur actif)",
+      _fautives(_plan_ma, _nvda_ma) == [], f"→ {_fautives(_plan_ma, _nvda_ma)}")
+_off = F.model_copy(update={"fraicheur_par_duree_de_vie": False})
+check("témoin ordre 0 (interrupteur coupé, ou fichier absent) : les trois lignes sont refusées",
+      len(_fautives(_plan_ma, _nvda_ma, _off)) == 3 and len(_fautives(_plan_ma, _nvda_ma, None)) == 3,
+      f"→ {_fautives(_plan_ma, _nvda_ma, _off)}")
+_ctx_ma = T.contexte_traducteur(F, "management_capital", "rentable", "NVDA", emetteur=NVDA, horloge=_nvda_ma)
+_ing_ma = {i["id"]: i for q in _ctx_ma["questions"] for i in q["ingredients"]}
+check("le contexte montre la durée de vie et la cadence de chaque ingrédient (interrupteur actif)",
+      _ing_ma.get("repartition_des_usages", {}).get("duree_de_vie") == "historique"
+      and _ing_ma.get("repartition_des_usages", {}).get("cadence") == "trimestrielle"
+      and _ing_ma.get("independance_du_conseil", {}).get("duree_de_vie") == "description_annuelle",
+      f"→ {_ing_ma.get('repartition_des_usages')}")
+_ctx_off = T.contexte_traducteur(_off, "management_capital", "rentable", "NVDA", emetteur=NVDA, horloge=_nvda_ma)
+check("interrupteur coupé : la durée de vie n'est pas montrée (la consigne traite tout en chiffre courant)",
+      all("duree_de_vie" not in i for q in _ctx_off["questions"] for i in q["ingredients"]))
+check("la consigne enseigne la durée de vie (historique complété, description au document annuel)",
+      "DURÉE DE VIE" in T._TRADUCTEUR_SYSTEM_PROMPT and "se complète de la dernière période publiée"
+      in T._TRADUCTEUR_SYSTEM_PROMPT)
 _ctx9 = T.contexte_traducteur(F, "qualite_financiere", "rentable", "NVDA", emetteur=NVDA, horloge=_nvda9b)
 check("le contexte montre la clôture du dernier exercice, datée (et à null, clé présente, si inconnue)",
       _ctx9["calendrier"].get("cloture_du_dernier_exercice_publie") == "2026-01-25"
@@ -339,7 +375,7 @@ check("le contexte montre la clôture du dernier exercice, datée (et à null, c
       f"→ {_ctx9['calendrier']}")
 _src_tr9 = inspect.getsource(T.traduire)
 check("`traduire` applique la garde APRÈS le pont, renvoie UNE fois, puis refuse nommément",
-      _src_tr9.count("lignes_exercice_clos_perimees(plan, horloge)") == 2
+      _src_tr9.count("lignes_exercice_clos_perimees(plan, horloge, fichier=fichier)") == 2
       and "raise CollectionPlanRefused(" in _src_tr9 and _src_tr9.count("run_json_agent(") == 2)
 check("… et le passage coûte les DEUX appels (#41)",
       "cost_usd=run.cost_usd + second.cost_usd" in _src_tr9)

@@ -67,6 +67,11 @@ class ElementNoteFlash(Strict):
     passage_cause: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
     # La DEMANDE de rappel (#125) : la date de l'événement que ce passage rappelle. Admise ou non par le pont.
     rappel_du: Optional[date] = None
+    # Sur un communiqué de RÉSULTATS (règle de fraîcheur, 2026-10-16) : la date du fait que l'élément
+    # rapporte. Un fait survenu au plus tard à la clôture publiée est DANS les comptes (le communiqué le
+    # récapitule) : le pont le marque « couvert par les comptes », la lecture l'écarte. Requis par le
+    # pont sur un communiqué de résultats (sauf l'élément `resultats`), sans objet ailleurs.
+    survenu_le: Optional[date] = None
 
     @model_validator(mode="after")
     def _la_cause_appartient_a_la_surprise(self) -> "ElementNoteFlash":

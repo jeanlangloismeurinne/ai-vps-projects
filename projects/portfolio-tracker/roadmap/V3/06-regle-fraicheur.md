@@ -251,3 +251,62 @@ La revue annuelle reste le filet : tout ce qui n'a pas été revu dans l'année 
 Conséquence lisible : après les résultats de novembre, ma_1/ma_3/ma_5 de NVDA se **complètent** (rachats
 du trimestre, objectifs du trimestre), ma_4/ma_6 ne bougent pas, ma_2 attend le rapport annuel sauf
 acquisition annoncée. Aucune réponse ne naît plus périmée parce qu'elle cite l'histoire.
+
+## 11. Conditions de l'arbitrage 3 (validées le 2026-10-16)
+
+1. **Le communiqué de résultats est LU** (note flash), en plus de son classement « résultats » par la
+   forme. Mesuré dans le code le 2026-10-16 : un 8-K 2.02 + 9.01 est entièrement décidé par sa forme,
+   donc jamais lu — une surprise, une prévision révisée, un programme de rachat ou un nouveau découpage
+   annoncés le jour des résultats ne rouvrent aujourd'hui rien de plus que les chiffres. Sans cette
+   lecture, l'arbitrage 3 laisserait un jugement « à jour » jusqu'à un an après un fait qui le touche.
+   **Prérequis : l'arbitrage 3 n'entre pas en vigueur avant elle.**
+2. **Position détenue** : revue trimestrielle légère de chaque jugement (confirmer ou rouvrir, une phrase
+   motivée) — prolonge Q5 du 26/09 ; reportée au chantier du suivi (hors note d'initiation).
+
+## 12. Classement des ingrédients (proposé le 2026-10-16, à corriger par exception)
+
+Légende : **CC** chiffre courant · **H** historique · **DA** description annuelle · **J** jugement ;
+cadence **T** trimestrielle / **A** annuelle. « +ext » : prolongé aussi par les événements extérieurs
+(concurrents, régulation — veilleur à construire). Deux mécanismes déjà arbitrés, qui ne sont pas des
+catégories : **repris** (hérite de la réponse reprise, #99) et **lecture** (recalculé au dernier cours
+coté daté, option 1 du 28/09). La cadence est celle du document qui publie usuellement l'ingrédient ;
+un émetteur qui le publie plus souvent pourra la resserrer (exception par émetteur, plus tard).
+
+**Qualité financière** — qf_1 : résultat d'exploitation après impôt CC-T · capital employé CC-T · taux
+d'impôt CC-T · coût du capital J (A5) · historique cinq exercices H-A. qf_2 (« de l'exercice ») :
+résultat net, trésorerie d'exploitation, variation du BFR, charges sans décaissement CC-A. qf_3 :
+croissance par exercice H-A · investissement de maintien J · de croissance J · variation du capital
+employé H-A. qf_4 : endettement, échéancier, lignes non tirées, couverture des intérêts CC-T. qf_8 :
+clauses DA (+ fait `financement`) · marge avant déclenchement CC-T · remboursement anticipé et défaut DA.
+qf_5 : série longue H-A · marge × rotation H-A · comparaison sectorielle H-A. qf_6 : provisions CC-T ·
+politique de capitalisation DA · écart publié/ajusté CC-T · éléments non récurrents H-T. qf_7 : tout
+CC-T (trésorerie, consommation, charges fixes, prévision de la direction, échéances, lignes).
+
+**Défendabilité** — mo_1 : mécanisme J · coût de réplication J · tentatives de contournement H-A +ext.
+mo_2 : marges relatives aux pairs, parts de marché, rétention, coût d'acquisition H-A. mo_3 : signal
+nommé J · série du signal H-T · mouvements concurrents H-A +ext. mo_4 : classe de référence J · durée
+observée J · échéances contractuelles ou légales DA. mo_5 : vecteur J · signal précurseur J · état du
+signal CC-T. mo_6 : prix pratiqués H-T · réaction des volumes H-T · prime de prix H-A.
+
+**Modèle économique** — me_1 : client payeur, besoin servi, alternatives DA · motif de choix J. me_2 :
+répartition du CA CC-T · part engagée ou répétée CC-A · montant engagé non reconnu CC-T. me_3 : prix
+par unité CC-A · coûts par unité CC-A · marge brute H-T (socle). me_4 : moteurs J · part maîtrisée J ·
+sensibilité passée H-A. me_5 : marché adressable DA (+ faits réglementaires) · part déjà prise CC-A ·
+extensions engagées DA. me_6 : premiers clients CC-T · premier produit CC-T · fournisseurs sans
+substitut DA · exposition par pays CC-A.
+
+**Secteur et concurrence** — se_1 : rentabilité des acteurs H-A · pouvoir des clients, des
+fournisseurs, intermédiaires DA. se_2 : acteurs et parts CC-A · évolution des parts H-A · entrants
+H-A +ext. se_3 : pairs directs J · indicateurs comparés CC-A · évolution de l'écart H-A. se_4 :
+historique de la demande H-A · moteur du cycle J · position actuelle CC-T. se_5 : substituts H-A +ext
+· évolutions réglementaires H-A +ext · nouveaux modèles J. se_6 : mouvements récents H-A +ext ·
+conséquence pour l'entreprise J · réaction de l'entreprise H-T.
+
+**Valorisation** — va_1 : résultat normalisé, taux, passage par action **repris** · nombre d'actions
+dilué **lecture** · valeur des actifs J. va_2 : hypothèses décisives J · coût de la croissance, durée et
+plafond, dilution future **repris**. va_3 : classe, distribution, position J. va_4 : cours coté,
+croissance implicite **lecture** · comparaison aux scénarios J. va_5 : multiple pertinent J ·
+comparaison pairs et historique **lecture** · explication de l'écart J. va_6 : prix et fourchette
+**lecture** · hypothèse portante J.
+
+**Management** — §10.

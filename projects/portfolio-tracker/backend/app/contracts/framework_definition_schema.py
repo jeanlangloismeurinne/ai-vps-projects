@@ -112,6 +112,19 @@ class IngredientRequis(Strict):
     # JAMAIS ligne à ligne : le socle le porte déjà, bouclé avec le reste des comptes ; une seconde
     # collecte ferait deux chiffres pour un même poste — exactement les défauts #104/#112.
     depuis_le_socle: bool = False
+    # `duree_de_vie` / `cadence` (règle de fraîcheur, arbitrages du 2026-10-16, `roadmap/V3/
+    # 06-regle-fraicheur.md`) : combien de temps une pièce qui fonde cet ingrédient reste valable.
+    # REQUIS, sans défaut — comme `rouverte_par`, une absence rendrait « valable pour toujours »
+    # indiscernable de « on a oublié ». Un CHIFFRE COURANT est remplacé par les comptes suivants ; un
+    # HISTORIQUE ne vieillit pas, il se COMPLÈTE de la période nouvelle ; une DESCRIPTION ANNUELLE cède
+    # au document annuel suivant ; un JUGEMENT n'a pas de durée propre (seuls les faits qui rouvrent la
+    # question le touchent). Deux mécanismes déjà arbitrés ferment la liste : `reprise` (hérite de la
+    # réponse reprise, #99 — ⟺ `repris_de`) et `au_cours_du_jour` (recalculé à la lecture au dernier
+    # cours coté daté, option 1 du 28/09). La `cadence` (trimestrielle / annuelle : celle du document
+    # qui publie usuellement l'ingrédient) n'existe que pour un chiffre courant ou un historique.
+    duree_de_vie: Literal["chiffre_courant", "historique", "description_annuelle", "jugement", "reprise",
+                          "au_cours_du_jour"]
+    cadence: Optional[Literal["trimestrielle", "annuelle"]] = None
 
     @model_validator(mode="after")
     def _reprise_sans_doublon(self):
@@ -120,7 +133,25 @@ class IngredientRequis(Strict):
         if self.repris_de and self.depuis_le_socle:
             raise ValueError(f"ingrédient `{self.id}` : repris d'une autre question ET lu dans le socle — "
                              "un ingrédient a une seule origine")
+        if (self.duree_de_vie == "reprise") != bool(self.repris_de):
+            raise ValueError(f"ingrédient `{self.id}` : la durée de vie `reprise` va avec `repris_de`, et "
+                             "seulement avec lui (un ingrédient repris hérite de la réponse qu'il reprend)")
+        a_cadence = self.duree_de_vie in DUREES_A_CADENCE
+        if self.depuis_le_socle and not a_cadence:
+            raise ValueError(f"ingrédient `{self.id}` : lu dans le socle des comptes, c'est un chiffre — sa "
+                             f"durée de vie est un chiffre courant ou un historique, pas `{self.duree_de_vie}`")
+        if a_cadence and self.cadence is None:
+            raise ValueError(f"ingrédient `{self.id}` : un {self.duree_de_vie} porte sa `cadence` "
+                             "(trimestrielle ou annuelle) — c'est elle qui dit quelle publication le prolonge")
+        if not a_cadence and self.cadence is not None:
+            raise ValueError(f"ingrédient `{self.id}` : `cadence` sans objet pour la durée de vie "
+                             f"`{self.duree_de_vie}`")
         return self
+
+
+# Détenteur unique : les durées de vie qu'une publication périodique prolonge (et qui portent donc une
+# cadence) — lu par le contrat et, à la lecture, par la règle de fraîcheur.
+DUREES_A_CADENCE = ("chiffre_courant", "historique")
 
 
 class ChiffreDuSocle(Strict):
@@ -407,6 +438,12 @@ class FrameworksFile(Strict):
     # VÉRIFIÉ ne rouvre rien (ordre 1) ; False = tout type cité rouvre, rappel ou non (ordre 0, la règle
     # d'avant). Requis, sans défaut. Lu à la LECTURE des notes : le basculer ne demande aucune relecture.
     rappels_ecartes: bool
+    # L'INTERRUPTEUR de la règle de fraîcheur par durée de vie (2026-10-16, `06-regle-fraicheur.md`,
+    # principe fondateur n° 3) : True = chaque pièce citée est jugée dans la durée de vie de
+    # l'ingrédient qu'elle fonde (ordre 1) ; False = ORDRE 0, la règle d'avant (la réponse a l'âge de sa
+    # pièce la plus ancienne, tout fait qui rouvre la question la périme). Requis, sans défaut ; lu à la
+    # LECTURE, rien n'est stocké : le basculer ne demande aucune réécriture.
+    fraicheur_par_duree_de_vie: bool
     types_evenement: list[TypeEvenement] = Field(min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 

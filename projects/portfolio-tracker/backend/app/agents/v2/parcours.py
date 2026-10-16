@@ -465,6 +465,36 @@ async def faits_posterieurs_du_titre(conn, ticker_id: str, fichier, framework_id
             for q in fw.questions}
 
 
+async def contexte_durees(conn, *, fichier, version: str, ancre_titre, cites: set[int]):
+    """DÉTENTEUR UNIQUE du contexte de la règle de fraîcheur par durée de vie (2026-10-16) : les
+    clôtures lues sur l'horloge du TITRE, et — question par question — les ingrédients que fonde chaque
+    pièce citée (index de couverture `question_coverage`, à la version du référentiel). `None` quand
+    l'interrupteur `fraicheur_par_duree_de_vie` est coupé : le point de lecture applique l'ordre 0."""
+    from app.knowledge.duree_de_vie import Clotures, ContexteDurees, DureeIngredient
+    from app.knowledge.evenements import derniere_cloture_annuelle_publiee, derniere_cloture_publiee
+
+    if not fichier.fraicheur_par_duree_de_vie:
+        return None
+    definitions = {(q.id, i.id): i for f in fichier.frameworks for q in f.questions
+                   for i in q.ingredients_requis}
+    par_question: dict[str, dict[int, list]] = {}
+    if cites:
+        rows = await conn.fetch(
+            "SELECT DISTINCT question_id, ingredient_id, entry_id FROM question_coverage "
+            "WHERE framework_version = $1 AND entry_id = ANY($2::int[])", version, sorted(cites))
+        for r in rows:
+            ing = definitions.get((r["question_id"], r["ingredient_id"]))
+            if ing is None:
+                continue
+            par_question.setdefault(r["question_id"], {}).setdefault(r["entry_id"], []).append(
+                DureeIngredient(ingredient_id=ing.id, duree_de_vie=ing.duree_de_vie, cadence=ing.cadence))
+    lk = ancre_titre if ancre_titre.status == "found" else None
+    return ContexteDurees(
+        clotures=Clotures(derniere=derniere_cloture_publiee(lk) if lk else None,
+                          exercice=derniere_cloture_annuelle_publiee(lk) if lk else None),
+        ingredients_des_pieces=par_question)
+
+
 async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     """Base → revue RECALCULÉE → réponses servies. N'écrit rien — ni verdict, ni mandat, ni note.
 
@@ -547,6 +577,9 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
                 ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)
         return ancres[question_id]
 
+    durees = await contexte_durees(conn, fichier=fichier, version=version, ancre_titre=ancre,
+                                   cites=cites)
+
     reponses: list[ReponseLue] = []
     for i, a in brutes:
         d = decisions.get(i)
@@ -563,7 +596,8 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
             else:
                 etat_revue = "renvoi_a_emettre"
         reponses.append(ReponseLue(
-            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),
+            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries,
+                                              durees=durees),
             verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue))
 
     # Le COMITÉ : son PV, et sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage

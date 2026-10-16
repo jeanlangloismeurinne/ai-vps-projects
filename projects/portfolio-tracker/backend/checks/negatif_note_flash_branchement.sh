@@ -31,6 +31,8 @@ mutations=(
 "tools/executer_chaine.py¦            lecture = await lire_les_depots_en_attente(conn, ticker_id, ecrire=True, fichier=fichier)¦            lecture = None¦la chaîne lit les dépôts AVANT"
 "app/agents/v2/bouclage.py¦            sur_lecture(await lire_les_depots_en_attente(conn, ticker_id, ecrire=True, fichier=fichier))¦            pass¦le bouclage lit AVANT le dossier"
 "app/main.py¦        _notes_flash_matin,¦        _daily_check_v2,¦le job du matin est planifié"
+# Condition 1 (2026-10-16) : le communiqué de résultats est dans la liste des dépôts à lire
+"$NF¦            and a_lire_par_la_note(e)]¦            and False]¦le communiqué de résultats est à lire"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

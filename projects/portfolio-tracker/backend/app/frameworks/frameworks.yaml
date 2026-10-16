@@ -76,6 +76,12 @@ types_evenement_version: "1.4.0"
 # tout type cité rouvre ses questions, rappel ou non. Le basculer ne demande AUCUNE relecture de note :
 # les types persistés sont ceux de l'ordre 0, l'écartement se fait à la lecture.
 rappels_ecartes: true
+# L'INTERRUPTEUR de la règle de fraîcheur par durée de vie (2026-10-16, roadmap/V3/06-regle-fraicheur.md).
+# true = une pièce citée reste valable dans la durée de vie de l'ingrédient qu'elle fonde (`duree_de_vie`
+# / `cadence` ci-dessous) : un historique se COMPLÈTE, une description annuelle cède au document annuel
+# suivant, les résultats trimestriels ne rouvrent que ce qu'ils prolongent. false = ORDRE 0, la règle
+# d'avant : une réponse a l'âge de sa pièce la plus ancienne. Lu à la lecture, rien à réécrire.
+fraicheur_par_duree_de_vie: true
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts
@@ -191,20 +197,29 @@ frameworks:
           - id: resultat_operationnel_apres_impot
             libelle: Résultat d'exploitation après impôt, normalisé des éléments non récurrents
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: capital_employe
             libelle: Capital immobilisé dans l'exploitation — actifs productifs et besoin en fonds de roulement, hors trésorerie excédentaire
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
           - id: taux_imposition_effectif
             libelle: Taux d'imposition réellement supporté sur le résultat d'exploitation
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
           - id: cout_du_capital
             libelle: Coût moyen des ressources qui financent ce capital — rémunération exigée par les créanciers et par les actionnaires
             essentiel: true
+            duree_de_vie: jugement
           - id: historique_cinq_exercices
             libelle: La même relation observée sur au moins cinq exercices consécutifs
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
             depuis_le_socle: true
         chiffres_cles:
           - id: rendement_du_capital_employe
@@ -245,17 +260,25 @@ frameworks:
           - id: resultat_net
             libelle: Résultat net de l'exercice
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
             depuis_le_socle: true
           - id: tresorerie_generee_par_exploitation
             libelle: Trésorerie effectivement générée par l'exploitation sur le même exercice
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
             depuis_le_socle: true
           - id: variation_besoin_fonds_roulement
             libelle: Variation du besoin en fonds de roulement — ce que la croissance immobilise en stocks et en créances
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: charges_sans_decaissement
             libelle: Charges qui n'ont donné lieu à aucune sortie de trésorerie — amortissements, rémunération en actions, provisions
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
             depuis_le_socle: true
         chiffres_cles:
           - id: part_du_resultat_en_tresorerie
@@ -288,16 +311,22 @@ frameworks:
           - id: croissance_activite_par_exercice
             libelle: Progression de l'activité, exercice par exercice
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
             depuis_le_socle: true
           - id: investissement_de_maintien
             libelle: Part de l'investissement nécessaire au seul maintien de la capacité existante
             essentiel: true
+            duree_de_vie: jugement
           - id: investissement_de_croissance
             libelle: Part de l'investissement engagée pour accroître la capacité
             essentiel: true
+            duree_de_vie: jugement
           - id: variation_capital_employe
             libelle: Variation du capital immobilisé dans l'exploitation sur la période de croissance
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
             depuis_le_socle: true
         chiffres_cles:
           - id: capital_par_point_de_croissance
@@ -337,16 +366,24 @@ frameworks:
           - id: endettement_brut_et_net
             libelle: Endettement financier, brut et net de trésorerie
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
           - id: echeancier_de_la_dette
             libelle: Répartition dans le temps des remboursements exigibles
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: lignes_de_credit_non_tirees
             libelle: Capacité de financement disponible mais non utilisée
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: couverture_des_interets
             libelle: Rapport entre le résultat d'exploitation et la charge d'intérêts
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
         chiffres_cles:
           - id: dette_brute
@@ -410,12 +447,16 @@ frameworks:
           - id: clauses_de_sauvegarde
             libelle: Engagements contractuels pris envers les prêteurs, et les seuils qui les déclenchent
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: marge_avant_declenchement
             libelle: Écart entre la situation actuelle et les seuils qui déclencheraient ces engagements
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: remboursement_anticipe_et_defaut
             libelle: Événements qui rendraient la dette exigible avant terme, ou forceraient un rachat ou une conversion
             essentiel: false
+            duree_de_vie: description_annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -439,14 +480,20 @@ frameworks:
           - id: serie_longue_du_rendement
             libelle: Le rendement du capital observé sur au moins cinq exercices consécutifs
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
             depuis_le_socle: true
           - id: decomposition_marge_rotation
             libelle: Décomposition du rendement entre marge dégagée et rotation du capital
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
             depuis_le_socle: true
           - id: comparaison_sectorielle
             libelle: Le même rendement chez des entreprises comparables, sur la même période
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles:
           - id: pente_du_rendement
             libelle: Pente du rendement du capital employé
@@ -478,15 +525,22 @@ frameworks:
           - id: provisions_et_depreciations
             libelle: Provisions constituées ou reprises, et dépréciations d'actifs, avec leur justification
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: politique_de_capitalisation
             libelle: Dépenses portées à l'actif plutôt qu'en charges, et la règle qui décide du partage
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: ecart_publie_ajuste
             libelle: Écart entre le résultat publié et le résultat présenté comme ajusté, poste par poste
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: elements_non_recurrents
             libelle: Éléments présentés comme exceptionnels, et leur récurrence effective
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
         # Arbitrages de l'utilisateur du 2026-10-12 (comme un fonds qui fait une revue de qualité des
         # résultats) : (1) la mesure porte sur les DOUZE DERNIERS MOIS, refaite à chaque publication — sur
         # l'exercice clos, NVDA qf_6 restait périmée de la publication du T1 au rapport annuel suivant ;
@@ -545,25 +599,37 @@ frameworks:
           - id: tresorerie_disponible
             libelle: Trésorerie et placements immédiatement mobilisables
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
           - id: consommation_de_tresorerie_recente
             libelle: Trésorerie consommée ou générée sur les quatre derniers trimestres
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
             depuis_le_socle: true
           # Non essentiel depuis #105 (arbitrage du 2026-09-30) : c'est une PRÉVISION ; la question exige
           # le constaté, la prévision de la direction est notée à côté et la plus prudente est retenue.
           - id: charges_fixes_decaissables
             libelle: Charges qui devront être décaissées quoi qu'il arrive sur les douze prochains mois
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: prevision_de_consommation
             libelle: Dépenses annuelles annoncées par la direction pour l'exercice en cours, telles qu'annoncées
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: echeances_a_douze_mois
             libelle: Dettes exigibles dans les douze prochains mois
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: lignes_de_credit_non_tirees
             libelle: Capacité de financement disponible mais non utilisée
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
         chiffres_cles:
           - id: tresorerie_mobilisable
             libelle: Trésorerie mobilisable sans recours au marché des capitaux
@@ -634,12 +700,16 @@ frameworks:
           - id: mecanisme_de_captation
             libelle: Le mécanisme précis par lequel le profit est retenu — ce qu'un concurrent devrait reproduire pour le capter
             essentiel: true
+            duree_de_vie: jugement
           - id: cout_de_replication
             libelle: Ce qu'il en coûterait à un entrant pour reproduire ce mécanisme, en argent et en temps
             essentiel: true
+            duree_de_vie: jugement
           - id: tentatives_de_contournement_observees
             libelle: Tentatives réelles de concurrents pour contourner la barrière, et leur issue
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -663,15 +733,23 @@ frameworks:
           - id: marges_relatives_aux_pairs
             libelle: Niveau de marge comparé à celui d'entreprises comparables, à activité équivalente
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: evolution_des_parts_de_marche
             libelle: Évolution de la part de marché sur plusieurs périodes
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: retention_de_la_clientele
             libelle: Part de la clientèle conservée d'une période à l'autre, et valeur conservée
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
           - id: cout_d_acquisition_compare
             libelle: Coût d'acquisition d'un client comparé à celui des concurrents
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -698,12 +776,17 @@ frameworks:
           - id: signal_de_trajectoire_nomme
             libelle: L'indicateur précis sur lequel l'élargissement ou l'érosion se lirait en premier
             essentiel: true
+            duree_de_vie: jugement
           - id: serie_du_signal
             libelle: Ce même indicateur observé sur plusieurs périodes successives
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: mouvements_concurrents_recents
             libelle: Entrées, sorties et repositionnements de concurrents sur la période récente
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -730,12 +813,15 @@ frameworks:
           - id: classe_de_reference
             libelle: La population d'entreprises comparables dont la durée observée sert d'ancre — obligatoire, une durée sans ancre est une opinion chiffrée
             essentiel: true
+            duree_de_vie: jugement
           - id: duree_observee_dans_la_classe
             libelle: Durée pendant laquelle des barrières de même nature ont tenu dans cette population
             essentiel: true
+            duree_de_vie: jugement
           - id: echeances_contractuelles_ou_legales
             libelle: Dates auxquelles une protection contractuelle ou légale s'éteint
             essentiel: false
+            duree_de_vie: description_annuelle
         chiffres_cles:
           - id: duree_retenue
             libelle: Durée pendant laquelle la barrière tient si rien ne change
@@ -766,12 +852,16 @@ frameworks:
           - id: vecteur_nomme
             libelle: Le scénario précis qui ferait disparaître la barrière — nommé, pas une liste de risques génériques
             essentiel: true
+            duree_de_vie: jugement
           - id: signal_precurseur
             libelle: Ce qu'on observerait en premier si ce scénario était déjà en train de se réaliser
             essentiel: true
+            duree_de_vie: jugement
           - id: etat_du_signal_precurseur
             libelle: L'état actuel de ce signal, mesuré et daté
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -795,12 +885,18 @@ frameworks:
           - id: evolution_des_prix_pratiques
             libelle: Évolution des prix effectivement pratiqués sur plusieurs périodes
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: reaction_des_volumes
             libelle: Comment les volumes ont réagi à ces mouvements de prix
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: prime_de_prix_face_aux_alternatives
             libelle: Écart de prix soutenu face aux solutions alternatives disponibles
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -853,15 +949,19 @@ frameworks:
           - id: client_payeur
             libelle: Qui paie effectivement — le client qui signe et règle, distinct le cas échéant de l'utilisateur
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: besoin_servi
             libelle: Le besoin ou le problème que l'offre résout pour ce client payeur
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: alternatives_du_client
             libelle: Ce que le client utiliserait à défaut — offre concurrente, solution interne, ou ne rien faire
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: motif_de_choix_observe
             libelle: Raison observée pour laquelle le client choisit cette offre plutôt que l'alternative
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -885,12 +985,18 @@ frameworks:
           - id: repartition_du_chiffre_d_affaires
             libelle: Répartition du chiffre d'affaires par source — produits, services, zones, catégories de clients
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: part_engagee_ou_repetee
             libelle: Part du chiffre d'affaires adossée à des contrats, abonnements ou achats répétés, et durée de ces engagements
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: montant_engage_non_reconnu
             libelle: Montant déjà engagé par les clients et pas encore reconnu en chiffre d'affaires
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -914,12 +1020,18 @@ frameworks:
           - id: prix_par_unite
             libelle: Prix obtenu par unité vendue — produit, abonnement, contrat ou traitement
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: couts_entraines_par_unite
             libelle: Coûts directement entraînés par une unité vendue de plus — production, livraison, service, redevances
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: marge_brute_sur_plusieurs_periodes
             libelle: Marge brute de l'activité et son évolution sur plusieurs périodes
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
             depuis_le_socle: true
         chiffres_cles: []
         variables_par_archetype:
@@ -947,12 +1059,16 @@ frameworks:
           - id: moteurs_nommes
             libelle: Les deux ou trois grandeurs dont les variations expliquent l'essentiel de celles du chiffre d'affaires
             essentiel: true
+            duree_de_vie: jugement
           - id: part_maitrisee_des_moteurs
             libelle: Part de ces moteurs que l'entreprise contrôle elle-même, par opposition à ceux qu'elle subit — cycle, taux, réglementation
             essentiel: true
+            duree_de_vie: jugement
           - id: sensibilite_passee
             libelle: Variation passée du chiffre d'affaires rapportée à celle de chacun de ces moteurs
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -979,12 +1095,16 @@ frameworks:
           - id: marche_adressable
             libelle: Taille du marché que l'offre actuelle peut servir, avec sa source et sa méthode d'estimation
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: part_deja_prise
             libelle: Part de ce marché déjà captée par l'entreprise
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: extensions_engagees
             libelle: Extensions du marché servi que l'entreprise a engagées — nouveaux clients, usages, zones ou indications
             essentiel: false
+            duree_de_vie: description_annuelle
         chiffres_cles:
           - id: marche_adressable
             libelle: Taille du marché adressable par le modèle actuel
@@ -1016,15 +1136,22 @@ frameworks:
           - id: poids_des_premiers_clients
             libelle: Part du chiffre d'affaires réalisée avec les principaux clients
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: poids_du_premier_produit
             libelle: Part du chiffre d'affaires réalisée par le premier produit ou la première ligne d'activité
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
           - id: fournisseurs_sans_substitut
             libelle: Fournisseurs ou sous-traitants sans substitut rapide, et ce qui dépend d'eux
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: exposition_par_pays
             libelle: Répartition de l'activité par pays et exposition aux restrictions d'un pays
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1073,15 +1200,20 @@ frameworks:
           - id: rentabilite_des_acteurs
             libelle: Rentabilité des principaux acteurs du secteur sur un cycle complet, pas seulement celle de l'entreprise
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: pouvoir_des_clients
             libelle: Poids et pouvoir de négociation des clients ou des payeurs — concentration, capacité à imposer leurs prix
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: pouvoir_des_fournisseurs
             libelle: Poids et pouvoir de négociation des fournisseurs clés — fournisseur unique, intrant rare
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: intermediaires
             libelle: Intermédiaires entre l'entreprise et le client final, et la part de valeur qu'ils prélèvent
             essentiel: false
+            duree_de_vie: description_annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1105,12 +1237,18 @@ frameworks:
           - id: acteurs_et_parts
             libelle: Les principaux acteurs du marché et la part que chacun détient, avec la source de l'estimation
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: evolution_des_parts
             libelle: Évolution de ces parts sur les dernières années — qui gagne, qui perd
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: entrants_recents
             libelle: Acteurs entrés sur le marché ou sortis de celui-ci récemment
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1134,12 +1272,17 @@ frameworks:
           - id: pairs_directs
             libelle: Les pairs directs retenus pour la comparaison, et pourquoi ceux-là
             essentiel: true
+            duree_de_vie: jugement
           - id: indicateurs_compares
             libelle: Croissance, marges et intensité d'investissement de l'entreprise et de chaque pair, sur la même période
             essentiel: true
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
           - id: evolution_de_l_ecart
             libelle: Évolution de l'écart entre l'entreprise et ses pairs sur plusieurs exercices
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1166,12 +1309,17 @@ frameworks:
           - id: historique_de_la_demande
             libelle: Évolution de la demande du secteur sur au moins un cycle complet, creux et pics compris
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: moteur_du_cycle
             libelle: Ce qui fait tourner le cycle — investissement des clients, crédit, stocks, prix d'une matière
             essentiel: true
+            duree_de_vie: jugement
           - id: position_actuelle
             libelle: Signaux récents qui situent le secteur dans son cycle — commandes, stocks, capacités, prix
             essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1198,12 +1346,17 @@ frameworks:
           - id: substituts
             libelle: Offres ou technologies de substitution qui répondent au même besoin autrement, et leur avancement
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: evolutions_reglementaires
             libelle: Évolutions réglementaires en cours ou annoncées qui touchent les prix ou les règles de tout le secteur
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: nouveaux_modeles
             libelle: Nouveaux modèles économiques ou nouveaux entrants qui pourraient déplacer la valeur du secteur
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1230,12 +1383,17 @@ frameworks:
           - id: mouvements_recents
             libelle: Mouvements récents des principaux concurrents — lancements, approbations, prix, capacités, échecs, retraits
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: consequence_pour_l_entreprise
             libelle: Ce que ces mouvements changent pour l'entreprise — clients, prix, calendrier, part de marché visée
             essentiel: true
+            duree_de_vie: jugement
           - id: reaction_de_l_entreprise
             libelle: La réaction annoncée ou observée de l'entreprise à ces mouvements
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1279,12 +1437,17 @@ frameworks:
           - id: repartition_des_usages
             libelle: Répartition sur plusieurs exercices de l'argent généré ou levé entre réinvestissement, acquisitions, rachats d'actions, dividendes et remboursement de dette
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: rendement_des_usages
             libelle: Ce que chaque usage a rapporté — croissance ou rendement obtenus au regard des montants engagés
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: politique_annoncee
             libelle: La politique d'allocation annoncée par la direction et ses priorités déclarées
             essentiel: false
+            duree_de_vie: description_annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1311,12 +1474,18 @@ frameworks:
           - id: acquisitions_realisees
             libelle: Acquisitions significatives des dix dernières années, avec leur prix et la justification donnée à l'époque
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: resultat_obtenu
             libelle: Ce que chaque acquisition a effectivement rapporté au regard de ce qui avait été promis
             essentiel: true
+            duree_de_vie: historique
+            cadence: annuelle
           - id: depreciations
             libelle: Dépréciations ou cessions ultérieures des actifs acquis
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1340,12 +1509,18 @@ frameworks:
           - id: operations_sur_le_capital
             libelle: Rachats et émissions d'actions des dernières années, avec leurs montants, dates et prix
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: valeur_au_moment_de_l_operation
             libelle: Niveau de valorisation de l'action au moment de chaque opération, comparé à son historique ou à une estimation de sa valeur
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: dilution_par_la_remuneration
             libelle: Dilution créée par la rémunération en actions, que les rachats compensent le cas échéant
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1369,12 +1544,16 @@ frameworks:
           - id: criteres_de_remuneration
             libelle: Ce que mesurent les objectifs de la rémunération variable des dirigeants — taille, croissance, rendement du capital, cours de bourse
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: detention_des_dirigeants
             libelle: Actions détenues par les dirigeants à titre personnel, rapportées à leur rémunération annuelle
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: cessions_et_achats_des_dirigeants
             libelle: Achats et ventes d'actions par les dirigeants sur les derniers exercices
             essentiel: false
+            duree_de_vie: historique
+            cadence: trimestrielle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1401,12 +1580,17 @@ frameworks:
           - id: objectifs_annonces
             libelle: Objectifs chiffrés ou datés annoncés par la direction sur les derniers exercices
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: realisation
             libelle: Ce qui a été effectivement réalisé face à chacun de ces objectifs
             essentiel: true
+            duree_de_vie: historique
+            cadence: trimestrielle
           - id: communication_des_echecs
             libelle: Manière dont la direction a présenté ses échecs ou ses retards — reconnus, minimisés ou passés sous silence
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1433,12 +1617,16 @@ frameworks:
           - id: controle_des_droits_de_vote
             libelle: Qui contrôle les droits de vote — actionnaire de référence, fondateurs, actions à droits de vote multiples
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: independance_du_conseil
             libelle: Composition du conseil, part d'administrateurs indépendants, et séparation entre présidence et direction générale
             essentiel: true
+            duree_de_vie: description_annuelle
           - id: desaccords_observes
             libelle: Désaccords observés entre le conseil, les actionnaires et la direction — votes contestés, départs, interventions d'actionnaires
             essentiel: false
+            duree_de_vie: historique
+            cadence: annuelle
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1490,21 +1678,26 @@ frameworks:
           - id: resultat_normalise
             libelle: Résultat d'exploitation après impôt normalisé — repris de qf_1, ajusté des retraitements discrétionnaires repris de qf_6 (la position dans le cycle, se_4, éclaire les scénarios sans fournir de chiffre)
             essentiel: true
+            duree_de_vie: reprise
             repris_de: [qf_1, qf_6]
           - id: taux_d_actualisation
             libelle: Coût du capital servant de taux d'actualisation — repris de qf_1
             essentiel: true
+            duree_de_vie: reprise
             repris_de: [qf_1]
           - id: passage_a_la_valeur_par_action
             libelle: Dette nette et trésorerie excédentaire, pour passer de la valeur de l'entreprise à celle des actions — reprises de qf_4
             essentiel: true
+            duree_de_vie: reprise
             repris_de: [qf_4]
           - id: nombre_d_actions_dilue
             libelle: Nombre d'actions dilué, relevé avec le cours coté — même source et même date que le cours de va_4
             essentiel: true
+            duree_de_vie: au_cours_du_jour
           - id: valeur_des_actifs
             libelle: Ce que coûterait la reconstitution des actifs, ou ce qu'un acquéreur paierait pour eux
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1531,17 +1724,21 @@ frameworks:
           - id: hypotheses_decisives
             libelle: Les deux ou trois hypothèses qui font varier la valeur, avec leur valeur dans chaque scénario et ce qui les fonde
             essentiel: true
+            duree_de_vie: jugement
           - id: cout_de_la_croissance
             libelle: Capital à réinvestir par point de croissance — repris de qf_3 ; cash réellement disponible — repris de qf_2
             essentiel: true
+            duree_de_vie: reprise
             repris_de: [qf_3, qf_2]
           - id: duree_et_plafond_de_la_croissance
             libelle: Durée pendant laquelle la croissance peut durer — reprise de mo_4 — et son plafond — repris de me_5
             essentiel: true
+            duree_de_vie: reprise
             repris_de: [mo_4, me_5]
           - id: dilution_future
             libelle: Dilution attendue des actionnaires — instruments convertibles et options repris de qf_4, besoin de financement qui l'appelle repris de qf_7
             essentiel: false
+            duree_de_vie: reprise
             repris_de: [qf_4, qf_7]
         chiffres_cles: []
         variables_par_archetype:
@@ -1569,12 +1766,15 @@ frameworks:
           - id: classe_retenue
             libelle: La classe d'entreprises comparables retenue, et pourquoi celle-là
             essentiel: true
+            duree_de_vie: jugement
           - id: distribution_des_issues
             libelle: Distribution observée des issues dans cette classe — croissance réalisée, taux de succès, rendement pour l'actionnaire
             essentiel: true
+            duree_de_vie: jugement
           - id: position_dans_la_classe
             libelle: Où les scénarios de l'entreprise se situent dans cette distribution
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1598,12 +1798,15 @@ frameworks:
           - id: cours_cote_date
             libelle: Dernier cours coté et sa date, et nombre d'actions dilué
             essentiel: true
+            duree_de_vie: au_cours_du_jour
           - id: croissance_implicite
             libelle: Croissance et rentabilité que le prix suppose, au coût du capital repris de qf_1
             essentiel: true
+            duree_de_vie: au_cours_du_jour
           - id: comparaison_aux_scenarios
             libelle: Position de ces attentes implicites face aux scénarios de va_2 et à la classe de référence de va_3
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1627,12 +1830,15 @@ frameworks:
           - id: multiple_pertinent
             libelle: Le multiple pertinent pour ce secteur, et pourquoi celui-là
             essentiel: true
+            duree_de_vie: jugement
           - id: comparaison_pairs_et_historique
             libelle: Ce multiple pour l'entreprise, ses pairs directs — ceux de se_3 — et son propre historique, à une même date
             essentiel: true
+            duree_de_vie: au_cours_du_jour
           - id: explication_de_l_ecart
             libelle: Ce qui explique l'écart — croissance, rentabilité, risque — au regard des autres méthodologies
             essentiel: false
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:
@@ -1656,9 +1862,11 @@ frameworks:
           - id: prix_et_fourchette
             libelle: Dernier cours coté et sa date, face à la fourchette de valeur de va_1 et va_2
             essentiel: true
+            duree_de_vie: au_cours_du_jour
           - id: hypothese_portante
             libelle: L'hypothèse dont dépend surtout la marge, et la marge si elle se révèle fausse
             essentiel: true
+            duree_de_vie: jugement
         chiffres_cles: []
         variables_par_archetype:
           rentable:

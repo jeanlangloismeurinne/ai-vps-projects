@@ -873,7 +873,7 @@ pont_ok("[F] … et un substitut vers une AUTRE question passe",
 
 # Le POINT DE LECTURE. Un axe calculé mais non servi est un axe qui n'existe pas.
 _ancre = MaterialEventLookup(status="unavailable", raison="flux injoignable (check hors-ligne)")
-_servie = servir_answer(rep(), ancre=_ancre, entries=ENTRIES)
+_servie = servir_answer(rep(), ancre=_ancre, entries=ENTRIES, durees=None)
 check("`servir_answer` rend bien une réponse SERVIE, porteuse de l'axe",
       isinstance(_servie, FrameworkAnswerServie) and _servie.fondation.actualite in ETATS,
       f"→ {type(_servie).__name__}")

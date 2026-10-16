@@ -129,9 +129,25 @@ def types_du_depot(event: MaterialEvent,
       ignore la note ; un dépôt mixte garde ses types de forme.
     """
     forme = _types_de_la_forme(event)
+    if RESULTATS in forme and A_QUALIFIER not in forme:
+        # Condition 1 de la règle de fraîcheur (06-regle-fraicheur.md §11, 2026-10-16) : un communiqué
+        # de résultats annonce souvent plus que ses comptes (prévision révisée, écart aux attentes,
+        # rachat, réorganisation). Tant qu'il n'est pas LU, on ne sait pas ce qu'il touche : il rouvre
+        # large (Q3). Lu, il garde `resultats` et AJOUTE ce que la note y a trouvé (jamais `routine`,
+        # qui dit « rien de plus que les comptes ») ; une note illisible garde `a_qualifier`.
+        if qualification is None:
+            return forme | {A_QUALIFIER}
+        return forme | (qualification.types - {ROUTINE})
     if qualification is None or A_QUALIFIER not in forme:
         return forme
     return ((forme - {A_QUALIFIER}) | qualification.types) or frozenset({A_QUALIFIER})
+
+
+def a_lire_par_la_note(event: MaterialEvent) -> bool:
+    """DÉTENTEUR UNIQUE de « ce dépôt doit être lu par une note flash » : sa forme ne décide pas sa
+    substance (`a_qualifier`), ou c'est un communiqué de résultats (condition 1, 2026-10-16)."""
+    forme = _types_de_la_forme(event)
+    return A_QUALIFIER in forme or RESULTATS in forme
 
 
 def _types_de_la_forme(event: MaterialEvent) -> frozenset[str]:
@@ -183,10 +199,23 @@ def ancre_de_la_question(
             # #102 — un communiqué qui ne rouvre la question QU'AU TITRE DES RÉSULTATS publie des
             # comptes : il périme ce qui précède leur clôture, pas les comptes qu'il publie. Pour tout
             # autre motif (seul ou à côté), il périme à sa date d'événement.
+            resume = note.resume if note is not None else None
+            if RESULTATS in touches and touches != {RESULTATS} and e.periode_publiee is not None:
+                # Un communiqué de résultats qui annonce AUSSI autre chose (un rachat, une prévision
+                # révisée) est deux faits : les comptes qu'il publie (à jour dès leur clôture, #102,
+                # refaits sur les nouveaux comptes) et ses autres annonces (à leur date, que l'analyste
+                # peut lire et chiffrer, #103/#117). Les fondre ferait périmer jusqu'au trimestre
+                # suivant une analyse refaite sur les comptes publiés.
+                gardes.append(replace(e, types=(RESULTATS,), note=resume,
+                                      date_d_effet=e.periode_publiee))
+                autres = tuple(sorted(touches - {RESULTATS}))
+                gardes.append(replace(e, types=autres, note=resume, date_d_effet=None))  # à sa date
+                continue
+            # #102 — un communiqué qui ne rouvre la question QU'AU TITRE DES RÉSULTATS périme ce qui précède
+            # la clôture qu'il publie. S'il la rouvre à un autre titre seulement (un communiqué NON LU, à
+            # qualifier, sur une question que les résultats ne rouvrent pas), il périme à sa date.
             effet = e.periode_publiee if touches == {RESULTATS} else None
-            gardes.append(replace(e, types=tuple(sorted(touches)),
-                                  note=note.resume if note is not None else None,
-                                  date_d_effet=effet))
+            gardes.append(replace(e, types=tuple(sorted(touches)), note=resume, date_d_effet=effet))
     if not gardes:
         n = len(lookup.recents)
         depuis: Optional[str] = (min(e.event_date for e in lookup.recents).isoformat()

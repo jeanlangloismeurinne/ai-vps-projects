@@ -46,7 +46,9 @@ HIER = ev(date(2026, 9, 25), ("8.01",), 925)
 FDA = ev(date(2026, 8, 26), ("8.01",), 826)
 SEPT = ev(date(2026, 9, 2), ("7.01",), 902)
 AVRIL = ev(date(2026, 4, 13), ("8.01",), 413)
-RES = ev(date(2026, 8, 5), ("2.02", "9.01"), 805)      # la forme décide : jamais lu
+RES = ev(date(2026, 8, 5), ("1.01", "2.03"), 805)      # la forme décide (financement) : jamais lu
+# Condition 1 de la règle de fraîcheur (2026-10-16) : un communiqué de résultats, lui, SE LIT.
+RESULTATS = ev(date(2026, 8, 5), ("2.02", "9.01"), 806)
 TOUS = (HIER, SEPT, FDA, RES, AVRIL)
 
 
@@ -173,13 +175,17 @@ async def main():
     # ── §1 recenser ne coûte rien ────────────────────────────────────────────────────────────────
     j = Journal(); monter(j)
     l = await lire(j, ecrire=False, limite=3)
-    b.check(l.en_attente == 4, f"§1 4 dépôts à qualifier dans la fenêtre (2.02 exclu) — {l.en_attente}")
+    b.check(l.en_attente == 4, f"§1 4 dépôts à qualifier dans la fenêtre (financement décidé par la forme exclu) — {l.en_attente}")
     b.require(l.depots, 3, "§1 la limite du passage s'applique")
     b.check([d.event.accession for d in l.depots] == [HIER.accession, SEPT.accession, FDA.accession],
             "§1 du plus récent au plus ancien")
     b.check(l.reportes == 1, f"§1 l'arriéré au-delà de la limite est COMPTÉ reporté — {l.reportes}")
     b.check(not j.telecharges and not j.rediges and not j.persistes,
             f"§1 recensement : 0 téléchargement, 0 modèle, 0 écriture — {j.telecharges} {j.rediges}")
+    from app.knowledge.material_events import MaterialEventLookup
+    _lk = MaterialEventLookup(status="found", cik=1, recents=(RESULTATS, RES))
+    b.check([e.accession for e in nf.depots_a_lire(_lk, {}, depuis=date(2026, 1, 1))] == [RESULTATS.accession],
+            "§1 le communiqué de résultats est à lire (condition 1) ; le financement décidé ne l'est pas")
     j = Journal(); monter(j)
     l = await lire(j, ecrire=False, apercu=True, limite=2)
     b.check(len(j.telecharges) == 2 and not j.rediges and not j.persistes,

@@ -82,10 +82,28 @@ GOUV_18_06 = ev("2026-06-18", ["5.02", "5.07"], filed="2026-06-22")
 fichier = load_frameworks()
 
 
-def ancre(lk, qid, notes=None):
+# Condition 1 de la règle de fraîcheur (2026-10-16) : un communiqué de résultats NON LU rouvre large.
+# Les sections qui éprouvent autre chose (#102, #103, #123) le supposent LU et sans annonce de plus
+# (`LUE_RESULTATS`) — c'est l'état réel après le maillon 0 de la chaîne ; §10 éprouve le non-lu.
+LUE_RESULTATS = QualificationLue(types=frozenset({"routine"}),
+                                 resume="note flash : rien de plus que les comptes")
+
+
+def resultats_lus(lk, notes):
+    """`notes` + une note « rien de plus » sur chaque communiqué PUREMENT de résultats non noté."""
+    out = dict(notes or {})
+    for e in getattr(lk, "recents", ()) or ():
+        if (e.accession and e.accession not in out and "2.02" in e.items
+                and set(e.items) <= {"2.02", "7.01", "9.01"}):
+            out[e.accession] = LUE_RESULTATS
+    return out
+
+
+def ancre(lk, qid, notes=None, lire_resultats=True):
     try:
         return ancre_de_la_question(lk, rouvrent=types_qui_rouvrent(fichier, qid),
-                                    qualifications=notes or {})
+                                    qualifications=resultats_lus(lk, notes) if lire_resultats
+                                    else (notes or {}))
     except Exception as e:  # noqa: BLE001
         return MaterialEventLookup(status="unavailable", raison=f"LÈVE : {e!r}")
 
@@ -94,13 +112,15 @@ print("§1 la forme ne décide que ce qu'elle décide (formes réelles RVMD/NVDA
 for items, attendu, label in [
     (["1.01", "2.03"], ["financement"], "RVMD 27/08 — accord + obligation financière"),
     (["8.01"], [A_QUALIFIER], "RVMD 26/08 — approbation FDA publiée en « autre événement »"),
-    (["2.02", "9.01"], ["resultats"], "RVMD 05/08 — résultats + pièces jointes"),
+    (["2.02", "9.01"], [A_QUALIFIER, "resultats"],
+     "RVMD 05/08 — résultats + pièces jointes, NON LU : on ne sait pas ce qu'il annonce de plus"),
     (["5.02", "5.07"], ["gouvernance", "routine"], "RVMD 18/06 — dirigeants + vote d'AG"),
     (["1.01", "2.03", "8.01", "9.01"], [A_QUALIFIER, "financement"],
      "RVMD 14/04 — financement ACCOMPAGNÉ d'un 8.01 : dans le doute, à qualifier aussi"),
     (["1.01", "2.03", "7.01"], ["financement"], "NVDA 17/08 — 7.01 accessoire du financement"),
     (["7.01", "9.01"], [A_QUALIFIER], "MSFT 02/09 — 7.01 SEUL (peut être un avertissement)"),
-    (["2.02", "7.01", "9.01"], ["resultats"], "MSFT 28/10/2025 — 7.01 accessoire des résultats"),
+    (["2.02", "7.01", "9.01"], [A_QUALIFIER, "resultats"],
+     "MSFT 28/10/2025 — 7.01 accessoire des résultats (non lu)"),
     (["9.01"], ["routine"], "9.01 seul — pure forme"),
     ([], [A_QUALIFIER], "6-K sans item — « sans item » n'est pas « sans substance »"),
     (["1.01"], [A_QUALIFIER], "1.01 SANS obligation ni émission — peut-être une licence"),
@@ -193,8 +213,8 @@ b.check(types_lus(FDA_26_08, LUE_FDA) == ["reglementaire_favorable"],
 b.check(types_lus(FIN_MIXTE_14_04, LUE_ROUTINE) == ["financement", "routine"],
         "un dépôt mixte garde son type de FORME (financement) quoi que dise la note de son 8.01 → "
         f"{types_lus(FIN_MIXTE_14_04, LUE_ROUTINE)}")
-b.check(types_lus(RES_05_08, LUE_ROUTINE) == ["resultats"],
-        f"un dépôt que la forme a DÉCIDÉ ignore la note → {types_lus(RES_05_08, LUE_ROUTINE)}")
+b.check(types_lus(GOUV_18_06, LUE_FDA) == ["gouvernance", "routine"],
+        f"un dépôt que la forme a DÉCIDÉ ignore la note → {types_lus(GOUV_18_06, LUE_FDA)}")
 b.check(types_lus(FDA_26_08, ILLISIBLE) == [A_QUALIFIER],
         f"une note ILLISIBLE laisse le dépôt à qualifier (rouvre tout, Q3) → "
         f"{types_lus(FDA_26_08, ILLISIBLE)}")
@@ -363,8 +383,8 @@ def reponse_q4(faits=(), cites=(307, 296)):
         fondation={"cited_entry_ids": list(cites), "rang_derive": "A", "nature_effective": "mesure"})
 
 
-s_sans = servir_answer(reponse_q4(), ancre=q4, entries=CORPUS_Q4).fondation
-s_lu = servir_answer(reponse_q4([BAUX]), ancre=q4, entries=CORPUS_Q4).fondation
+s_sans = servir_answer(reponse_q4(), ancre=q4, entries=CORPUS_Q4, durees=None).fondation
+s_lu = servir_answer(reponse_q4([BAUX]), ancre=q4, entries=CORPUS_Q4, durees=None).fondation
 b.check(s_sans.actualite == "perimee",
         f"témoin : sans lecture, les comptes du 30/06 sont PÉRIMÉS par les baux du 27/08 → {s_sans.actualite}")
 b.check(s_lu.actualite == "courante",
@@ -373,7 +393,7 @@ b.check("lu(s) par l'analyste" in s_lu.motif_actualite and "32 M$/an" in s_lu.mo
         "le motif dit quel fait a été lu, et l'EFFET écrit")
 # Un communiqué de résultats « lu » ne remplace pas les nouveaux comptes.
 s_res = servir_answer(reponse_q4([RES_T2]), ancre=q6, entries={307: {"source_date": date(2026, 3, 31)},
-                                                                    296: {"source_date": date(2026, 9, 1)}})
+                                                                    296: {"source_date": date(2026, 9, 1)}}, durees=None)
 b.check(s_res.fondation.actualite == "perimee",
         "des résultats déclarés « lus » ne rendent pas à jour des comptes du 31/03 — on refait l'analyse "
         f"sur les nouveaux comptes → {s_res.fondation.actualite}")
@@ -383,12 +403,58 @@ plus_tard = MaterialEventLookup(status="found", cik=1628171, recents=tuple(parse
     payload(FIN_15_09, *[tuple(l[i] for l in RVMD_REEL["filings"]["recent"].values())
                          for i in range(len(RVMD_REEL["filings"]["recent"]["form"]))]), 1628171, limit=100)))
 s_tard = servir_answer(reponse_q4([BAUX]), ancre=ancre(plus_tard, "qf_4", LUE_FDA_REEL),
-                       entries=CORPUS_Q4).fondation
+                       entries=CORPUS_Q4, durees=None).fondation
 b.check(s_tard.actualite == "perimee" and "2026-09-15" in s_tard.motif_actualite,
         f"un financement du 15/09 NON lu périme toujours la réponse qui a lu les baux → {s_tard.actualite}")
 tout_lu = retirer_faits_lus(q4, {BAUX: "x"})
 b.check(tout_lu.status == "found" and tout_lu.event.accession == RES_T2,
         "retirer les baux laisse l'horloge sur les résultats du 05/08 (clos le 30/06) — pas sur « rien »")
+
+
+print("§10 le communiqué de résultats se LIT (condition 1 de la règle de fraîcheur, 2026-10-16)")
+LUE_RACHAT = QualificationLue(types=frozenset({"financement"}),
+                              resume="note flash : « authorized an additional $60 billion »")
+b.check(types_lus(RES_05_08, None) == [A_QUALIFIER, "resultats"],
+        f"NON LU : il rouvre large (on ne sait pas ce qu'il annonce de plus) → {types_lus(RES_05_08, None)}")
+b.check(types_lus(RES_05_08, LUE_ROUTINE) == ["resultats"],
+        f"lu, rien de plus que les comptes : `resultats` seul (jamais `routine`) → {types_lus(RES_05_08, LUE_ROUTINE)}")
+b.check(types_lus(RES_05_08, LUE_RACHAT) == ["financement", "resultats"],
+        f"lu, un rachat annoncé AJOUTE `financement`, garde `resultats` → {types_lus(RES_05_08, LUE_RACHAT)}")
+b.check(types_lus(RES_05_08, ILLISIBLE) == [A_QUALIFIER, "resultats"],
+        f"lu mais illisible : reste à qualifier (Q3) → {types_lus(RES_05_08, ILLISIBLE)}")
+from app.knowledge.evenements import a_lire_par_la_note, retirer_faits_lus  # noqa: E402
+b.check(a_lire_par_la_note(RES_05_08) and a_lire_par_la_note(FDA_26_08)
+        and not a_lire_par_la_note(FIN_27_08) and not a_lire_par_la_note(GOUV_18_06),
+        "à lire : le communiqué de résultats et le 8.01 ; pas un financement ni une gouvernance décidés")
+# Le cas qui fermait la porte : un communiqué de résultats qui annonce AUSSI un rachat. Sans scission,
+# le seuil serait le 05/08 (date de l'annonce) et l'analyste ne pourrait pas le « lire » (#117 exclut
+# les résultats) : une analyse refaite sur les comptes du 30/06 resterait périmée jusqu'au trimestre
+# suivant. Scindé : la part « résultats » au seuil 30/06, la part « rachat » lisible à sa date.
+n_rachat = {"0001193125-26-335039": LUE_RACHAT, "acc-rvmd-fda": LUE_FDA}
+m3 = ancre(flux_reel, "ma_3", n_rachat, lire_resultats=False)
+parts = sorted((e.types, e.seuil) for e in m3.recents if e.accession == "0001193125-26-335039")
+b.check(parts == [(("financement",), date(2026, 8, 5)), (("resultats",), date(2026, 6, 30))],
+        f"ma_3 : le communiqué mixte est SCINDÉ — résultats au 30/06, rachat au 05/08 → {parts}")
+a_lire_m3 = [(e.accession, e.types) for e in faits_a_lire(m3, cloture=date(2026, 6, 30))]
+b.check(("0001193125-26-335039", ("financement",)) in a_lire_m3
+        and ("0001193125-26-335039", ("resultats",)) not in a_lire_m3,
+        f"la part « rachat » est un fait à LIRE, la part « résultats » non → {a_lire_m3}")
+apres = retirer_faits_lus(m3, {"0001193125-26-335039": "rachat lu et chiffré", BAUX: "baux lus"})
+b.check(etat_actualite(source_date=date(2026, 6, 30), ancre=apres).etat == "courante",
+        "lu et chiffré, le rachat ne périme plus une analyse sur les comptes du 30/06 → "
+        f"{etat_actualite(source_date=date(2026, 6, 30), ancre=apres).etat}")
+b.check(etat_actualite(source_date=date(2026, 3, 31), ancre=apres).etat == "perimee",
+        "…mais la part « résultats » reste : des comptes au 31/03 sont toujours périmés")
+_mo1_nl = ancre(MaterialEventLookup(status="found", cik=1628171, recents=tuple(
+    e for e in flux_reel.recents if e.accession != "acc-rvmd-fda")), "mo_1", {}, lire_resultats=False)
+b.check(_mo1_nl.status == "found" and _mo1_nl.event.seuil == date(2026, 8, 5)
+        and _mo1_nl.event.types == (A_QUALIFIER,),
+        "NON LU, sur une question que les résultats ne rouvrent pas (mo_1) : il la rouvre « à qualifier », "
+        f"à SA date (05/08), jamais à la clôture qu'il publie → {getattr(_mo1_nl.event, 'seuil', None)} "
+        f"{getattr(_mo1_nl.event, 'types', None)}")
+b.check(etat_actualite(source_date=date(2026, 6, 30), ancre=ancre(flux_reel, "ma_3", {"acc-rvmd-fda": LUE_FDA},
+                                                                  lire_resultats=False)).etat == "perimee",
+        "témoin : NON LU, le communiqué périme à sa date une analyse sur les comptes du 30/06")
 
 
 print("§6 le point de lecture est branché (AST)")

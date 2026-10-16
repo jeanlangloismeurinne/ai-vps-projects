@@ -76,7 +76,7 @@ from app.db.database import get_db_session
 from app.knowledge.citation import normaliser
 from app.knowledge.edgar_facts import _UA
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, IdentiteEmetteur, identite_de_l_emetteur
-from app.knowledge.evenements import A_QUALIFIER, QualificationLue, types_du_depot
+from app.knowledge.evenements import A_QUALIFIER, RESULTATS, QualificationLue, a_lire_par_la_note
 from app.knowledge.material_events import (
     MaterialEvent, MaterialEventLookup, material_anchor_for_ticker)
 from app.knowledge.websearch import html_to_text
@@ -192,8 +192,8 @@ async def telecharger_soumission(cik: int, accession: str) -> str:
 
 def depots_a_lire(lookup: MaterialEventLookup, qualifications: dict[str, QualificationLue], *,
                   depuis: date) -> list[MaterialEvent]:
-    """Les dépôts dont la forme ne décide pas la substance (`a_qualifier`) et qu'aucune note ne
-    qualifie encore, publiés depuis `depuis`, du plus récent au plus ancien. Fonction PURE.
+    """Les dépôts à lire (`a_lire_par_la_note` : forme qui ne décide pas, ou communiqué de résultats)
+    qu'aucune note ne qualifie encore, publiés depuis `depuis`, du plus récent au plus ancien. Fonction PURE.
 
     Un dépôt lu mais jugé illisible porte une note (`{a_qualifier}`) : il n'est pas relu — le relire
     donnerait le même texte au même modèle. Une note écrite sous une AUTRE version du catalogue est à
@@ -203,7 +203,7 @@ def depots_a_lire(lookup: MaterialEventLookup, qualifications: dict[str, Qualifi
     return [e for e in lookup.recents
             if e.event_date >= depuis and e.accession
             and (e.accession not in qualifications or qualifications[e.accession].a_relire)
-            and A_QUALIFIER in types_du_depot(e)]
+            and a_lire_par_la_note(e)]
 
 
 # ── 3. Ce que le modèle voit ────────────────────────────────────────────────────────────────────────
@@ -256,6 +256,10 @@ def contexte_note_flash(event: MaterialEvent, emetteur: IdentiteEmetteur,
         "entreprise": {"raison_sociale": emetteur.raison_sociale, "symbole": emetteur.symbole},
         "depot": {"formulaire": event.form, "date_evenement": event.event_date.isoformat(),
                   "date_depot": event.filing_date.isoformat(),
+                  # un communiqué de résultats publie les comptes d'une période close : ce qui précède
+                  # cette clôture est DANS les comptes (règle de fraîcheur, 2026-10-16)
+                  **({"cloture_publiee": event.periode_publiee.isoformat()}
+                     if event.periode_publiee is not None else {}),
                   "items": [{"item": i, "libelle": lib} for i, lib in _libelles(event)]},
         "types_evenement": types_proposables(fichier),
         "notes_precedentes": [{"date_evenement": n.date_evenement.isoformat(),
@@ -290,6 +294,21 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "cette note. Ne mets `rappel_du` QUE si tu retrouves ce fait, ce type et cette date dans "
     "`notes_precedentes` ; un fait nouveau (une deuxième approbation, une autre indication, un nouveau "
     "tirage) n'est jamais un rappel. Dans le doute, n'en mets pas.\n\n"
+    "UN COMMUNIQUÉ DE RÉSULTATS (item 2.02). Il publie les comptes de la période close le "
+    "`depot.cloture_publiee` ; le type `resultats` est déjà retenu par la forme. Un tel communiqué "
+    "RÉCAPITULE la période : ce qui s'y est passé AVANT la clôture (levées, tranches reçues, accords, "
+    "approbations, dépôts réglementaires, nominations du trimestre) est déjà dans les comptes — NE LE "
+    "RETIENS PAS. Ne retiens que : (1) un fait SURVENU APRÈS la clôture (le communiqué le date après "
+    "elle, ou le dit « subsequent to », « since quarter end », « recently » avec une date postérieure), "
+    "avec son type ; (2) une PRÉVISION DE LA DIRECTION RÉVISÉE par rapport à sa prévision précédente "
+    "(relevée, abaissée, retirée), ou un écart que le communiqué RECONNAÎT lui-même par rapport à un "
+    "objectif annoncé : type `surprise`. Une variation par rapport à la période comparable (perte plus "
+    "lourde, charge en hausse, chiffre d'affaires en baisse sur un an) N'EST PAS une surprise : c'est le "
+    "contenu des comptes. Si rien de tout cela, rends le seul élément `resultats`. Sur un communiqué de "
+    "résultats, CHAQUE élément autre que `resultats` porte `survenu_le` : la date (AAAA-MM-JJ) du fait "
+    "qu'il rapporte telle que le texte la donne (le premier jour du mois si seul le mois est donné ; la "
+    "date du communiqué pour une prévision qu'il révise). Un fait survenu avant la clôture sera écarté "
+    "par le système : ne le cache pas, date-le.\n\n"
     "L'ÉCART AUX ATTENTES. Si le dépôt révèle des résultats ou une prévision qui s'écartent de ce "
     "qu'annonçait la direction ou de ce qu'attendait le marché, utilise le type `surprise` et dis sa "
     "`cause`. La question à te poser : « est-ce l'entreprise, ou tout le secteur ? ». Ne choisis "
@@ -305,7 +324,7 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     '{"lisible": true, "elements": [{"type": "<id>", "passage": "<citation>"}, '
     '{"type": "<id>", "passage": "<citation>", "rappel_du": "<AAAA-MM-JJ>"}, '
     '{"type": "surprise", "passage": "<citation>", "cause": "execution", '
-    '"passage_cause": "<citation>"}]}\n'
+    '"passage_cause": "<citation>", "survenu_le": "<AAAA-MM-JJ, sur un communiqué de résultats>"}]}\n'
     'ou {"lisible": false, "elements": [], "motif": "<pourquoi>"}'
 )
 
@@ -345,14 +364,16 @@ def verdict_rappel(type_: str, rappel_du: date, *, event_date: date,
 
 
 def types_annonces(elements: list[dict[str, Any]]) -> frozenset[str]:
-    """Les types qu'une note ANNONCE : ceux de ses éléments hors rappels ADMIS. Fonction PURE."""
+    """Les types qu'une note ANNONCE : ceux de ses éléments hors rappels ADMIS et hors faits COUVERTS
+    PAR LES COMPTES qu'un communiqué de résultats récapitule. Fonction PURE."""
     return frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements
-                     if not el.get("rappel_admis"))
+                     if not el.get("rappel_admis") and not el.get("couvert_par_les_comptes"))
 
 
 def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
                  fichier: FrameworksFile, *, event_date: date,
-                 precedentes: list[NotePrecedente]) -> NoteValidee:
+                 precedentes: list[NotePrecedente],
+                 cloture_publiee: Optional[date]) -> NoteValidee:
     """Le PONT de la note flash (cf. module). Lève `NoteFlashRefusee` en nommant CHAQUE défaut. Un rappel
     non vérifié n'est PAS un défaut : l'élément compte comme nouveau (`rappel_admis: false`, motif)."""
     if not sortie.lisible:
@@ -367,6 +388,11 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
             cite = getattr(el, champ)
             if cite is not None and _normaliser(cite) not in corpus:
                 defauts.append(f"élément {n} : `{champ}` introuvable dans le dépôt (« {cite[:80]}… »)")
+        # Règle de fraîcheur (2026-10-16) : sur un communiqué de résultats, chaque fait rapporté se
+        # date — sans quoi un récapitulatif du trimestre se lirait comme une annonce nouvelle.
+        if cloture_publiee is not None and el.type != RESULTATS and el.survenu_le is None:
+            defauts.append(f"élément {n} (`{el.type}`) : sur un communiqué de résultats, `survenu_le` "
+                           "(la date du fait rapporté) est requis")
     if defauts:
         raise NoteFlashRefusee(" ; ".join(defauts))
     types = tuple(sorted({type_derive(el) for el in sortie.elements}))   # ordre 0 : tout type cité
@@ -376,6 +402,11 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
         if el.rappel_du is not None:
             d["rappel_admis"], d["rappel_motif"] = verdict_rappel(
                 type_derive(el), el.rappel_du, event_date=event_date, precedentes=precedentes)
+        if (cloture_publiee is not None and el.type != RESULTATS and el.survenu_le is not None
+                and el.survenu_le <= cloture_publiee):
+            d["couvert_par_les_comptes"] = True
+            d["couvert_motif"] = (f"survenu le {el.survenu_le.isoformat()}, au plus tard à la clôture "
+                                  f"publiée du {cloture_publiee.isoformat()} : dans les comptes")
         elements.append(d)
     return NoteValidee(lisible=True, types=types, motif=None, elements=elements)
 
@@ -433,6 +464,7 @@ async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
         runs.append(run)
         try:
             note = valider_note(run.parsed, documents, fichier, event_date=event.event_date,
+                                cloture_publiee=event.periode_publiee,
                                 precedentes=vues)
             break
         except NoteFlashRefusee as e:
@@ -492,17 +524,30 @@ def relire_note(row: dict[str, Any], fichier: FrameworksFile) -> QualificationLu
         return QualificationLue(types=types, a_relire=a_relire, resume=(
             f"note flash du {date_note} : dépôt lu, portée indéterminable — {row['motif']}{ancienne}"),
             date_evenement=ev)
-    nouveaux = [el for el in elements if not el.get("rappel_admis")]
+    nouveaux = [el for el in elements if not el.get("rappel_admis") and not el.get("couvert_par_les_comptes")]
     passage = (nouveaux or elements)[0]["passage"] if elements else ""
     extrait = passage if len(passage) <= _EXTRAIT else passage[:_EXTRAIT].rstrip() + "…"
+    # Deux raffinements d'ordre 1, chacun sous SON interrupteur (principe n° 3) : les rappels ADMIS
+    # (#125, `rappels_ecartes`) et les faits qu'un communiqué de résultats récapitule mais qui sont
+    # survenus avant la clôture qu'il publie (règle de fraîcheur, `fraicheur_par_duree_de_vie`).
+    def _ecarte(el) -> bool:
+        return ((fichier.rappels_ecartes and bool(el.get("rappel_admis")))
+                or (fichier.fraicheur_par_duree_de_vie and bool(el.get("couvert_par_les_comptes"))))
+    gardes = frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements if not _ecarte(el))
     lus, ecartes = types, ""
-    if fichier.rappels_ecartes and annonces != types:
-        # Ordre 1 (#125) : les rappels ADMIS ne rouvrent rien. Une note faite QUE de rappels n'annonce
-        # rien de neuf : elle se lit `routine` (portée aucune), jamais un ensemble vide.
-        lus = annonces or frozenset({"routine"})
+    if any(_ecarte(el) for el in elements) and gardes != types:
+        # Une note faite QUE d'éléments écartés n'annonce rien de neuf : elle se lit `routine` (portée
+        # aucune), jamais un ensemble vide.
+        lus = gardes or frozenset({"routine"})
         rappels = sorted({(el["type"], el.get("rappel_du", "?")) for el in elements
-                          if el.get("rappel_admis")})
-        ecartes = " · rappel(s) écarté(s) : " + ", ".join(f"{t} (fait du {d})" for t, d in rappels)
+                          if el.get("rappel_admis") and fichier.rappels_ecartes})
+        couverts = sorted({(el["type"], el.get("survenu_le", "?")) for el in elements
+                           if el.get("couvert_par_les_comptes") and fichier.fraicheur_par_duree_de_vie})
+        if rappels:
+            ecartes += " · rappel(s) écarté(s) : " + ", ".join(f"{t} (fait du {d})" for t, d in rappels)
+        if couverts:
+            ecartes += " · couvert(s) par les comptes : " + ", ".join(f"{t} (survenu le {d})"
+                                                                      for t, d in couverts)
     return QualificationLue(types=lus, a_relire=a_relire,
                             resume=f"note flash du {date_note} : « {extrait} »{ecartes}{ancienne}",
                             date_evenement=ev, types_annonces=annonces)

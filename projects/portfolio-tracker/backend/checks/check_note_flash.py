@@ -187,7 +187,7 @@ def pont(**kw):
     if isinstance(s, str):
         return s
     try:
-        return valider_note(s, d_fda, fichier, event_date=EV_FDA.event_date, precedentes=[])
+        return valider_note(s, d_fda, fichier, event_date=EV_FDA.event_date, precedentes=[], cloture_publiee=None)
     except NoteFlashRefusee as e:
         return f"REFUSÉ : {e}"
 
@@ -391,7 +391,7 @@ def pont_t(elements, precedentes=precs):
     if isinstance(s_, str):
         return s_
     try:
-        return valider_note(s_, d_tir, fichier, event_date=EV_TIRAGE.event_date, precedentes=precedentes)
+        return valider_note(s_, d_tir, fichier, event_date=EV_TIRAGE.event_date, precedentes=precedentes, cloture_publiee=None)
     except NoteFlashRefusee as e:
         return f"REFUSÉ : {e}"
 

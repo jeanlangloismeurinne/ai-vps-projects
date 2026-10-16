@@ -282,7 +282,11 @@ def contexte_traducteur(
                 "variable_archetype": q.variables_par_archetype[archetype].variable,
                 "fraicheur": _lecture_fraicheur(horloge.fraicheur[q.id]),
                 "ingredients": [
-                    {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel}
+                    {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel,
+                     # règle de fraîcheur par durée de vie (2026-10-16) : montrée seulement sous
+                     # l'interrupteur ; sans elle, la consigne traite l'ingrédient en chiffre courant
+                     **({"duree_de_vie": i.duree_de_vie, "cadence": i.cadence}
+                        if fichier.fraicheur_par_duree_de_vie else {})}
                     for i in ingredients_a_collecter(q)
                 ],
             }
@@ -444,7 +448,16 @@ _TRADUCTEUR_SYSTEM_PROMPT = (
     "décris jamais un état qu'ils ont changé (par exemple « produit non encore commercialisé » après une "
     "autorisation de mise sur le marché) — demande alors aussi la matière qui en décrit les conséquences. "
     "`exercice_clos` est REFUSÉ sur une question dont la date minimale est postérieure à "
-    "`cloture_du_dernier_exercice_publie` : demande alors `cumul_publie` ou `douze_mois_glissants`.\n\n"
+    "`cloture_du_dernier_exercice_publie` : demande alors `cumul_publie` ou `douze_mois_glissants`.\n"
+    "  — DURÉE DE VIE. Quand un ingrédient porte `duree_de_vie` (et `cadence`), la règle ci-dessus ne vaut "
+    "QUE pour un `chiffre_courant` de cadence `trimestrielle` (et pour la ligne qui complète un historique "
+    "trimestriel). Un `historique` se lit sur plusieurs exercices — les rapports annuels, `exercice_clos` "
+    "admis — ET se complète de la dernière période publiée : planifie alors les deux (l'historique au "
+    "rapport annuel, la période récente au dernier rapport périodique). Une `description_annuelle` se lit "
+    "au dernier document annuel (rapport annuel, ou proxy pour la rémunération, le conseil, le contrôle). "
+    "Un `chiffre_courant` de cadence `annuelle` se lit au rapport du dernier exercice. Un `jugement` "
+    "demande la matière qui permet de juger, sans date propre. Sans `duree_de_vie` : un chiffre courant "
+    "trimestriel.\n\n"
     "RÈGLE ABSOLUE — un ingrédient marqué `essentiel: true` DOIT avoir une ligne, `traduit` ou "
     "`inobtenable`, JAMAIS aucune. Un essentiel omis fait rejeter tout le plan : c'est le mode de "
     "panne qu'on combat (un dossier qui paraît complet en ayant tu ce qu'il ne trouvait pas). Un "
@@ -499,7 +512,8 @@ async def horloge_du_plan(conn, ticker_id: str, fichier: FrameworksFile) -> Horl
                          derniere_cloture_annuelle=derniere_cloture_annuelle_publiee(ancre))
 
 
-def lignes_exercice_clos_perimees(plan: CollectionPlan, horloge: HorlogeDuPlan) -> list[str]:
+def lignes_exercice_clos_perimees(plan: CollectionPlan, horloge: HorlogeDuPlan, *,
+                                  fichier: Optional[FrameworksFile]) -> list[str]:
     """Les lignes `exercice_clos` qui feraient naître leur réponse PÉRIMÉE (jalon A, 2026-10-13). Pur.
 
     Une ligne `exercice_clos` se lit au rapport annuel du dernier exercice, daté de sa clôture. Si la
@@ -509,11 +523,24 @@ def lignes_exercice_clos_perimees(plan: CollectionPlan, horloge: HorlogeDuPlan) 
     plan pourtant ancré au 26/07 — la consigne seule ne tient pas
     (`feedback_jugement_modele_instable_entre_passages`). Clôture annuelle inconnue : on ne suppose pas
     que la date minimale en est une.
+
+    Règle de fraîcheur par durée de vie (2026-10-16) : `fichier` REQUIS, sans défaut — sous
+    l'interrupteur `fraicheur_par_duree_de_vie`, seul un CHIFFRE COURANT TRIMESTRIEL est fautif à
+    l'exercice clos ; un historique, une description annuelle, un chiffre de cadence annuelle se lisent
+    légitimement au rapport annuel (la lecture juge ensuite chaque pièce dans sa durée de vie). `None`
+    ou interrupteur coupé : ordre 0, toute ligne `exercice_clos` est jugée.
     """
     fautives: list[str] = []
     annuelle = horloge.derniere_cloture_annuelle
+    par_duree = fichier is not None and fichier.fraicheur_par_duree_de_vie
+    definitions = ({(q.id, i.id): i for f in fichier.frameworks for q in f.questions
+                    for i in q.ingredients_requis} if par_duree else {})
     for it in plan.items:
         if it.statut != "traduit" or it.periode != "exercice_clos":
+            continue
+        ing = definitions.get((it.question_id, it.ingredient_id))
+        if par_duree and ing is not None and not (ing.duree_de_vie == "chiffre_courant"
+                                                  and ing.cadence == "trimestrielle"):
             continue
         fq = horloge.fraicheur.get(it.question_id)
         if fq is None or fq.depuis is None:
@@ -570,7 +597,7 @@ async def traduire(
     valider_pont_collection_plan(plan, fichier=fichier, questions=questions)  # (5) lève si incohérent
     # (6) jalon A — une ligne `exercice_clos` sur une question rouverte par des comptes plus récents
     # naîtrait périmée : renvoyée UNE fois avec son motif (précédent #101), puis refus nommé.
-    fautives = lignes_exercice_clos_perimees(plan, horloge)
+    fautives = lignes_exercice_clos_perimees(plan, horloge, fichier=fichier)
     if fautives:
         messages = messages + [
             {"role": "assistant", "content": run.raw_content},
@@ -586,7 +613,7 @@ async def traduire(
                                   attempts=run.attempts + second.attempts)
         plan = _plan(run.parsed.items)
         valider_pont_collection_plan(plan, fichier=fichier, questions=questions)
-        fautives = lignes_exercice_clos_perimees(plan, horloge)
+        fautives = lignes_exercice_clos_perimees(plan, horloge, fichier=fichier)
         if fautives:
             raise CollectionPlanRefused(
                 "après un renvoi, des lignes `exercice_clos` feraient encore naître leur réponse "

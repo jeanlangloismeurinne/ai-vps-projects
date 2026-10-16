@@ -24,7 +24,7 @@ mutations=(
 "$EV¦_ACCESSOIRES = frozenset({\"9.01\", \"7.01\"})¦_ACCESSOIRES = frozenset({\"9.01\"})¦7.01 accessoire du financement"
 # §2/§3 — l'horloge par question
 "$EV¦        touches = types & rouvrent¦        touches = types¦mo_1 (la barrière) s'ancre au 8.01 du 26/08"
-"$PA¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),¦            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries),¦chaque réponse est servie contre l'ancre de SA question"
+"$PA¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries,¦            answer_id=i, servie=servir_answer(a, ancre=ancre, entries=entries,¦chaque réponse est servie contre l'ancre de SA question"
 "$PA¦                                      ancre=ancre_de(cle[1]))¦                                      ancre=ancre)¦la position du comité se juge contre l'ancre de SA question"
 "$PA¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=frozenset({\"financement\"}), qualifications=notes)¦filtrée par \`types_qui_rouvrent\`"
 "$API¦                ancre, rouvrent=types_qui_rouvrent(fichier, question_id), qualifications=notes)¦                ancre, rouvrent=frozenset(), qualifications=notes)¦inscrit au PV l'ancre de SA question"
@@ -42,7 +42,8 @@ mutations=(
 "$ME¦        publiee = _periode_publiee(periodiques, event_date) if ITEM_RESULTATS in items else None¦        publiee = None¦RVMD : le communiqué du 05/08 publie les comptes clos le 30/06"
 "$ME¦    if any(evenement <= f + timedelta(days=DELAI_RESULTATS_JOURS) for f in depots):¦    if True:¦ne se rattache PAS au trimestre précédent"
 "$ME¦    anterieurs = [(r, f) for r, f in periodiques if r < evenement]¦    anterieurs = [(r, f) for r, f in periodiques]¦RVMD : celui du 06/05 publie le 31/03"
-"$EV¦            effet = e.periode_publiee if touches == {RESULTATS} else None¦            effet = e.periode_publiee¦résultats + autre événement non lu"
+"$EV¦                gardes.append(replace(e, types=autres, note=resume, date_d_effet=None))  # à sa date¦                gardes.append(replace(e, types=autres, note=resume, date_d_effet=e.periode_publiee))¦résultats + autre événement non lu"
+"$EV¦            effet = e.periode_publiee if touches == {RESULTATS} else None¦            effet = e.periode_publiee¦NON LU, sur une question que les résultats ne rouvrent pas"
 "$EV¦    gardes.sort(key=lambda e: (e.seuil, e.event_date, e.filing_date), reverse=True)¦    gardes.sort(key=lambda e: (e.event_date, e.filing_date), reverse=True)¦un financement du 15/07 reste l'ancre de qf_4"
 "$AC¦    seuil = ancre.event.seuil¦    seuil = ancre.event.event_date¦un fait au 30/06 (les comptes publiés le 05/08) est À JOUR"
 "$ME¦            base = f\"{base}, publie les comptes clos le {self.date_d_effet.isoformat()}\"¦            base = base¦le motif dit que le seuil est la clôture publiée"
@@ -58,6 +59,11 @@ mutations=(
 # Jalon A (2026-10-13) — clôture d'exercice vs de trimestre
 "$ME¦                periode_publiee_annuelle=publiee is not None and publiee in clotures_annuelles,¦                periode_publiee_annuelle=publiee is not None,¦ne publie PAS un exercice"
 "$EV¦                if e.periode_publiee is not None and e.periode_publiee_annuelle]¦                if e.periode_publiee is not None]¦clôture d'exercice INCONNUE"
+# Condition 1 de la règle de fraîcheur (2026-10-16) — le communiqué de résultats se lit
+"$EV¦            return forme | {A_QUALIFIER}¦            return forme¦NON LU : il rouvre large"
+"$EV¦        return forme | (qualification.types - {ROUTINE})¦        return forme¦un rachat annoncé AJOUTE"
+"$EV¦    return A_QUALIFIER in forme or RESULTATS in forme¦    return A_QUALIFIER in forme¦à lire : le communiqué de résultats"
+"$EV¦            if RESULTATS in touches and touches != {RESULTATS} and e.periode_publiee is not None:¦            if False:¦communiqué mixte est SCINDÉ"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

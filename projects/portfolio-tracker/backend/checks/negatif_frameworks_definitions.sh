@@ -29,7 +29,7 @@ mutations=(
 # ⚠️ La question surnuméraire s'appelle `qf_8`, pas `qf_7_bis` : le `pattern` d'id du contrat
 # (`^[a-z]{2}_[0-9]+$`) refusait `qf_7_bis` AVANT que l'assert de comptage soit atteint — la
 # mutation prouvait le pattern, pas le comptage. Mesuré, pas prévu (1ᵉʳ faux vert, sens rouge).
-"$YAML¦      - id: qf_7¦      - id: qf_9\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n        chiffres_cles: []\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
+"$YAML¦      - id: qf_7¦      - id: qf_9\n        enonce: Une quatorzième question surnuméraire glissée dans le référentiel\n        chemin_indexation: qualite_financiere.surnumeraire\n        nature_attendue: mesure\n        plancher_tier: A\n        rouverte_par: [resultats]\n        sens_admis: [oui, non]\n        ingredients_requis:\n          - id: quelque_chose\n            libelle: Un ingrédient dont le libellé est assez long pour passer\n            essentiel: true\n            duree_de_vie: jugement\n        chiffres_cles: []\n        variables_par_archetype:\n          rentable: {mode: variable, variable: Une variable licite}\n          pre_revenus: {mode: variable, variable: Une variable licite}\n          financiere: {mode: variable, variable: Une variable licite}\n      - id: qf_7¦portent autant de questions que le référentiel"
 # §2 — le contrat refuse les définitions creuses
 "$DEF¦        if not any(i.essentiel for i in self.ingredients_requis):¦        if False:¦une question sans aucun ingrédient ESSENTIEL"
 "$DEF¦        if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:¦        if False:¦un plancher desserré SANS motif déclaré"
@@ -124,6 +124,12 @@ mutations=(
 "$DEF¦        if self.ratio is not None and self.periode is not None:¦        if False:¦porte une période est refusé"
 "$DEF¦            if self.periode is None:¦            if False:¦SANS période est refusé"
 "$YAML¦            socle: {ratio: rendement_du_capital_employe_moyen}¦¦QUATRE ratios maison"
+# Durée de vie et cadence (règle de fraîcheur, 2026-10-16) — une mutation par règle du contrat
+"$DEF¦                          \"au_cours_du_jour\"]¦                          \"au_cours_du_jour\"] = \"jugement\"¦un ingrédient SANS durée de vie"
+"$DEF¦        if (self.duree_de_vie == \"reprise\") != bool(self.repris_de):¦        if False:¦un ingrédient repris sans la durée"
+"$DEF¦        if a_cadence and self.cadence is None:¦        if False:¦un chiffre courant sans cadence"
+"$DEF¦        if not a_cadence and self.cadence is not None:¦        if False:¦un jugement AVEC une cadence"
+"$DEF¦        if self.depuis_le_socle and not a_cadence:¦        if False:¦un ingrédient du socle classé jugement"
 )
 
 passes=0; ratees=0
