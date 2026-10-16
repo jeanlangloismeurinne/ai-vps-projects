@@ -51,6 +51,52 @@ def extract_json(content: str) -> dict[str, Any]:
         raise
 
 
+@dataclass
+class LectureTolerante:
+    """Résultat d'une lecture tolérante d'une sortie que le contrat d'ENSEMBLE a refusée en bloc
+    (#128). Partagée entre `analyste._lecture_tolerante` (clef `reponses`, questions) et le
+    search-worker (clef `entries`, fiches) : dans les deux cas, un item fautif ne doit pas faire
+    tomber tous les autres, et un item fautif n'est JAMAIS réparé — il est écarté, ou renvoyé.
+
+    `valides` porte les items BRUTS (dicts), pas des objets validés : l'appelant sait déjà quoi en
+    faire (les re-valider pour construire sa propre enveloppe, ou les passer tels quels à un
+    pipeline qui fait sa propre vérification, cf. `_apply_deterministic_overrides`)."""
+    valides: list[Any]
+    erreurs: list[tuple[Any, str]]   # (item brut fautif, erreur de contrat Pydantic)
+    lisible: bool                    # False = JSON illisible, ou `cle` absente/pas une liste
+    data: Optional[dict[str, Any]] = None  # le JSON parsé en entier, si `lisible`
+
+
+def lecture_tolerante_liste(
+    raw_content: str, *, cle: str, schema: Type[BaseModel],
+) -> LectureTolerante:
+    """Relit, ITEM PAR ITEM, une sortie que le contrat d'ensemble a refusée en bloc (#128).
+
+    Chaque item de `data[cle]` est validé SEUL contre `schema` : les conformes sont gardés BRUTS
+    (aucun n'est réparé), les fautifs portent l'erreur de contrat qui les a fait échouer. Sortie
+    illisible (pas de JSON exploitable, ou `cle` absente / pas une liste) ⟹ `lisible=False`, les
+    deux listes vides — c'est à l'APPELANT de décider quoi en faire : chaque question interrogée en
+    refus nommé pour l'analyste, l'exception d'origine relevée pour le worker (une fiche fautive
+    s'isole, un LOT illisible reste un échec nommé)."""
+    try:
+        data = extract_json(raw_content or "")
+    except Exception:  # noqa: BLE001 — JSON illisible : capturé ici, pas relevé (l'appelant décide)
+        return LectureTolerante([], [], False)
+    items = data.get(cle) if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        return LectureTolerante([], [], False, data if isinstance(data, dict) else None)
+    valides: list[Any] = []
+    erreurs: list[tuple[Any, str]] = []
+    for it in items:
+        try:
+            schema.model_validate(it)
+        except ValidationError as v:
+            erreurs.append((it, str(v)))
+        else:
+            valides.append(it)
+    return LectureTolerante(valides, erreurs, True, data)
+
+
 class AgentOutputInvalid(RuntimeError):
     """Sortie non conforme au contrat après épuisement des réparations — AVEC la télémétrie.
 

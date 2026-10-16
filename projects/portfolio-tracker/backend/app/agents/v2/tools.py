@@ -81,6 +81,16 @@ class RetrievalLog:
     # contre laquelle un extrait « littéral » se vérifie : ce que le modèle a lu, pas la page entière
     # (que `fetch_url` a réduite à ses passages pertinents) ni ce qu'il croit se rappeler.
     textes: dict[str, list[str]] = field(default_factory=dict)
+    # Compteur d'appels PAR OUTIL, indépendant du résultat (#B) : un `not_found` sans aucun appel
+    # `web_search`/`fetch_url` n'est pas une recherche épuisée, c'est une recherche jamais tentée.
+    # Compté même en cas d'échec de l'outil — un appel RATÉ reste un appel, le modèle a essayé.
+    appels: dict[str, int] = field(default_factory=dict)
+
+    def record_call(self, name: str) -> None:
+        self.appels[name] = self.appels.get(name, 0) + 1
+
+    def appels_de(self, name: str) -> int:
+        return self.appels.get(name, 0)
 
     def record(self, url: Optional[str], depth: str) -> None:
         key = canonical_url(url)
@@ -262,9 +272,13 @@ def build_tool_executors(
     """
 
     async def _fetch(args: dict[str, Any]) -> dict[str, Any]:
+        if log is not None:
+            log.record_call("fetch_url")  # avant l'appel : compté même si l'outil échoue (#B)
         return await exec_fetch_url(args, query=query, log=log, ticker_id=ticker_id)
 
     async def _search(args: dict[str, Any]) -> dict[str, Any]:
+        if log is not None:
+            log.record_call("web_search")
         return await exec_web_search(args, log=log, ticker_id=ticker_id)
 
     return {

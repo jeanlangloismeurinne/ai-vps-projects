@@ -760,5 +760,276 @@ _consigne = (_PROMPTS / "11-search-worker.md").read_text()
 check("la consigne du collecteur nomme la règle (site_emetteur, à défaut une reprise)",
       "`site_emetteur: true`" in _consigne and "ne se cite qu'à défaut" in _consigne)
 
+print("\n13. Lecture tolérante entry par entry (#128) + relance sans recherche web (#B)")
+# Mesuré sur l'historique de production (2026-10-12→16, 11 échecs) et un replay : (A) une seule
+# fiche fautive (extrait trop court) faisait LEVER toute la WorkerResponse, perdant les bonnes
+# entries avec elle — même défaut que #128 (analyste), transposé au worker ; (B) un replay a
+# répondu `not_found` après deux appels `query_knowledge` SEULS, sans aucun `web_search`/
+# `fetch_url`, alors que la même ligne trouvait 4-6 entries sur deux autres replays.
+#
+# `run_search_worker` est exécuté pour de vrai ; seuls les points de contact avec le réseau/la DB/le
+# modèle sont bouchonnés (comme §2bis/§11/§12) : `run_tool_json_agent` (tel qu'IMPORTÉ dans worker.py),
+# `get_agent_provider`, `get_db_session`, `ancre_temporelle`, `material_anchor_for_ticker`,
+# `search_is_configured`, et — au niveau outil — `_tools.fetch_url`/`_tools.web_search`, pour que les
+# appels simulés traversent le VRAI `RetrievalLog` du run (compteurs ET textes).
+import contextlib  # noqa: E402
+import json as _json  # noqa: E402
+
+from app.agents.v2.runner import AgentOutputInvalid as _AOI13  # noqa: E402
+
+req13 = WorkerRequest(
+    requester="knowledge-curator", worker="search-worker", ticker_id="NVDA",
+    query="Marge opérationnelle du trimestre",
+    output_schema=OutputSchema(entry_type="fact_qualitative", field_path="qf.marge_operationnelle"),
+    reliability_min=0.40, max_entries=5,
+)
+_U13 = "https://www.sec.gov/Archives/edgar/data/1045810/x13.htm"
+_AUTRE_U13 = "https://www.sec.gov/Archives/edgar/data/1045810/autre13.htm"
+_REUTERS_U13 = "https://www.reuters.com/x13"
+_TXT13 = ("Operating margin expanded to 62 percentage points in the quarter, driven by strong "
+          "Data Center demand.")
+_BON13 = "Operating margin expanded to 62 percentage points in the quarter"
+_TEXTES13 = {
+    _U13: _TXT13,
+    _REUTERS_U13: ("Analysts noted that margins are expanding faster than peers according to "
+                   "analysts surveyed in a recent report."),
+}
+
+
+def _entree13(extraits, **kw):
+    base = {"entry_type": "fact_qualitative", "title": "10-Q marge",
+            "content": "Lecture : la marge s'améliore.",
+            "source_type": "edgar_official", "source_url": _U13, "extraits": extraits,
+            "portee_temporelle": "constatee", "date_du_fait": "2026-07-26",
+            "date_du_document": "2026-08-26",
+            "reliability_score": 0.95, "reliability_tier": "A", "reliability_note": "10-Q"}
+    base.update(kw)
+    return base
+
+
+# Structurellement correcte (extrait ≥ 20 caractères) SAUF le plafond de score (financial_press
+# plafonne à 0.85 = baseline 0.75 + cross-val 0.10) : `ProducedEntry` la refuse (#128), mais
+# `_normalise_entry` ne regarde JAMAIS le score déclaré — il le RECALCULE — donc rien, en aval, ne
+# la retiendrait si la lecture tolérante la laissait passer. C'est le cas qui démasque « entrée
+# fautive gardée » : les autres gardes du worker sont redondantes avec #128 sur ce point, celle-ci
+# ne l'est pas.
+_ENTREE_SURQUALIFIEE13 = {
+    "entry_type": "fact_qualitative", "title": "Presse", "content": "Reuters commente la marge.",
+    "source_type": "financial_press", "source_url": _REUTERS_U13,
+    "extraits": ["margins are expanding faster than peers according to analysts surveyed"],
+    "portee_temporelle": "constatee", "date_du_fait": "2026-07-20", "date_du_document": "2026-07-21",
+    "reliability_score": 0.99, "reliability_tier": "A", "reliability_note": "je suis confiant",
+}
+_ENTREE_MEMOIRE13 = {
+    "entry_type": "fact_qualitative", "title": "De mémoire", "content": "La marge s'améliore.",
+    "source_type": "llm_memory", "extraits": [], "portee_temporelle": "indatable",
+    "datation_motif": "restitution de mémoire, aucune date affirmée",
+    "reliability_score": 0.9, "reliability_tier": "A", "reliability_note": "sûr",
+    "requires_human_review": True, "model_cutoff": "2026-01",
+}
+
+
+class _FauxResult13:
+    """Imite `AgentRunResult` côté champs lus par `_executer_tour` — rien de plus."""
+
+    def __init__(self, data, raw_content, *, tokens_in=10, tokens_out=5, cost_usd=0.001, model="m13"):
+        self.data = data
+        self.raw_content = raw_content
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        self.cost_usd = cost_usd
+        self.completion = SimpleNamespace(model=model)
+
+
+def _succes13(entries, *, uncovered=None, appeler=None, **kw):
+    """Un tour qui RÉUSSIT la clôture — éventuellement après avoir appelé UN outil (pour simuler
+    une recherche web effectivement tentée)."""
+    async def _action(executors):
+        if appeler:
+            nom, args = appeler
+            await executors[nom](args)
+        data = {"entries": entries, "uncovered_fields": uncovered or []}
+        return _FauxResult13(data, _json.dumps(data, ensure_ascii=False), **kw)
+    return _action
+
+
+def _leve13(raw_content, *, population=None, **kw):
+    """Un tour dont la clôture ÉCHOUE (`AgentOutputInvalid`), portant `raw_content` brut — après
+    avoir, éventuellement, fait passer du texte sous les yeux du modèle (pour peupler le `RetrievalLog`
+    AVANT le refus, exactement comme un run réel l'aurait fait pendant la boucle d'outils)."""
+    async def _action(executors):
+        for nom, args in (population or []):
+            await executors[nom](args)
+        raise _AOI13(agent_name="search-worker", schema_name="WorkerResponse", attempts=2,
+                     last_error="hors contrat (#128)", raw_content=raw_content,
+                     tokens_in=kw.get("tokens_in", 10), tokens_out=kw.get("tokens_out", 5),
+                     cost_usd=kw.get("cost_usd", 0.001))
+    return _action
+
+
+def _stub_run13(sequence):
+    """Un appel par TOUR — indexation STRICTE (`sequence[len(appels)-1]`) : un tour EN TROP lève
+    `IndexError` plutôt que de boucler indéfiniment si une mutation transforme la relance unique en
+    boucle (sans cette garde, une mutation « ça boucle » ferait tourner le check indéfiniment au
+    lieu de rougir)."""
+    appels: list = []
+
+    async def _run(agent, messages, executors, schema, *, closing_instruction, max_iterations,
+                   temperature, timeout, max_tokens_recherche=None):
+        appels.append(messages)
+        action = sequence[len(appels) - 1]
+        return await action(executors)
+    return _run, appels
+
+
+@contextlib.asynccontextmanager
+async def _fake_db13():
+    yield None
+
+
+async def _stub_ancre13(conn, ticker_id):
+    return None
+
+
+async def _stub_materiel13(conn, ticker_id):
+    return None
+
+
+async def _stub_agent_provider13(name, version):
+    return SimpleNamespace(model="stub-agent-13")
+
+
+async def _stub_fetch13(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
+    return {"url": url, "final_url": url, "status": 200, "title": "Doc",
+            "text": _TEXTES13.get(url, _TXT13), "via": "direct"}
+
+
+async def _stub_search13(query, max_results=5, ticker_id=None):
+    return []
+
+
+def _run_worker13(sequence, *, allow_without_web=False):
+    stub_run, appels = _stub_run13(sequence)
+    vrais = (_w.run_tool_json_agent, _w.get_agent_provider, _w.get_db_session,
+             _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured)
+    _w.run_tool_json_agent = stub_run
+    _w.get_agent_provider = _stub_agent_provider13
+    _w.get_db_session = _fake_db13
+    _w.ancre_temporelle = _stub_ancre13
+    _w.material_anchor_for_ticker = _stub_materiel13
+    _w.search_is_configured = lambda: True  # EXA_API_KEY absente du check (§8) — ce point le contourne
+    _reel_fetch, _reel_search = _tools.fetch_url, _tools.web_search
+    _tools.fetch_url, _tools.web_search = _stub_fetch13, _stub_search13
+    try:
+        resultat = asyncio.run(_w.run_search_worker(req13, allow_without_web=allow_without_web))
+        return resultat, appels
+    except Exception as exc:  # noqa: BLE001 — un FAIL nommé, pas la mort du script
+        return exc, appels
+    finally:
+        (_w.run_tool_json_agent, _w.get_agent_provider, _w.get_db_session,
+         _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured) = vrais
+        _tools.fetch_url, _tools.web_search = _reel_fetch, _reel_search
+
+
+# ── A1 : une fiche fautive (extrait court) ET une fiche fautive (score au-delà du plafond) sont
+#    écartées ; la bonne survit — jamais réparée (#128) ──────────────────────────────────────────
+_RAW_A1 = _json.dumps({
+    "entries": [_entree13([_BON13]), _entree13(["Revenue"], title="bad-court"),
+                _ENTREE_SURQUALIFIEE13],
+    "uncovered_fields": [],
+}, ensure_ascii=False)
+_res_a1, _ap_a1 = _run_worker13([
+    _leve13(_RAW_A1, population=[("fetch_url", {"url": _U13}), ("fetch_url", {"url": _REUTERS_U13})]),
+])
+_fiches_a1 = ([e for e in _res_a1.response.entries if TAG_LECTURE not in e.tags]
+              if not isinstance(_res_a1, Exception) else [])
+check("A1 : lecture tolérante entry par entry — la bonne fiche survit, les deux fautives sont "
+      "écartées (#128)",
+      not isinstance(_res_a1, Exception) and len(_ap_a1) == 1 and len(_fiches_a1) == 1
+      and _fiches_a1[0].source_url == _U13,
+      f"→ {_res_a1!r}"[:300] if isinstance(_res_a1, Exception) else f"→ {len(_fiches_a1)} fiche(s)")
+
+# ── A2 : toutes les entries sont fautives → not_found, le champ part en uncovered_fields ─────────
+_RAW_A2 = _json.dumps({
+    "entries": [_entree13(["Revenue"]), _entree13(["X Director"], title="bad2")],
+    "uncovered_fields": [],
+}, ensure_ascii=False)
+_res_a2, _ap_a2 = _run_worker13([
+    # Un appel web est simulé ici uniquement pour ne pas déclencher la relance #B — hors sujet pour A2.
+    _leve13(_RAW_A2, population=[("fetch_url", {"url": _U13})]),
+])
+check("A2 : toutes les entries fautives (#128) → not_found, champ non couvert déclaré",
+      not isinstance(_res_a2, Exception) and len(_ap_a2) == 1
+      and _res_a2.response.status == "not_found" and _res_a2.response.entries == []
+      and "qf.marge_operationnelle" in _res_a2.response.uncovered_fields,
+      f"→ {_res_a2!r}"[:300] if isinstance(_res_a2, Exception)
+      else f"→ status={_res_a2.response.status} uncovered={_res_a2.response.uncovered_fields}")
+
+# ── A3 : sortie brute illisible (pas de JSON exploitable) → l'exception d'origine est relevée ────
+_res_a3, _ap_a3 = _run_worker13([_leve13("pas du JSON du tout")])
+check("A3 : sortie brute illisible → l'exception d'origine (`AgentOutputInvalid`) est relevée, "
+      "comme avant #128",
+      isinstance(_res_a3, _AOI13) and _res_a3.raw_content == "pas du JSON du tout" and len(_ap_a3) == 1,
+      f"→ {_res_a3!r}"[:300])
+
+# ── A4 : entrée tolérée (conforme à ProducedEntry) reste soumise à #126 — extrait absent du
+#    journal du run → refusée malgré tout ─────────────────────────────────────────────────────────
+_RAW_A4 = _json.dumps({"entries": [_entree13([_BON13])], "uncovered_fields": []}, ensure_ascii=False)
+_res_a4, _ap_a4 = _run_worker13([
+    _leve13(_RAW_A4, population=[("fetch_url", {"url": _AUTRE_U13})]),  # PAS l'URL de l'entrée
+])
+check("A4 : entrée tolérée par #128 reste vérifiée par #126 — extrait absent du journal du run → "
+      "refusée malgré tout",
+      not isinstance(_res_a4, Exception) and len(_ap_a4) == 1
+      and _res_a4.response.status == "not_found" and _res_a4.response.entries == [],
+      f"→ {_res_a4!r}"[:300] if isinstance(_res_a4, Exception) else f"→ {_res_a4.response.status}")
+
+# ── B1 : zéro entrée et AUCUN appel web pendant le tour → relance UNIQUE, avec le rappel ─────────
+_res_b1, _ap_b1 = _run_worker13([
+    _succes13([], uncovered=[], tokens_in=11, tokens_out=6, cost_usd=0.0011, model="m1"),
+    _succes13([_ENTREE_MEMOIRE13], uncovered=[], tokens_in=22, tokens_out=9, cost_usd=0.0022, model="m2"),
+])
+check("B1 : zéro entrée et AUCUN appel web_search/fetch_url pendant le tour → relance UNIQUE, "
+      "le rappel est bien dans le message (#B)",
+      not isinstance(_res_b1, Exception) and len(_ap_b1) == 2
+      and "jamais tentée" in _ap_b1[1][-1]["content"],
+      f"→ {_res_b1!r}"[:300] if isinstance(_res_b1, Exception) else f"→ {len(_ap_b1)} tour(s)")
+check("B1 : le second tour est pris pour FINAL quel qu'il soit",
+      not isinstance(_res_b1, Exception) and _res_b1.response.status == "found"
+      and len(_res_b1.response.entries) == 1,
+      f"→ {_res_b1!r}"[:300] if isinstance(_res_b1, Exception) else f"→ {_res_b1.response.status}")
+check("B1 : le coût (et les tokens) des DEUX tours sont cumulés dans l'exécution (#41/#B)",
+      not isinstance(_res_b1, Exception)
+      and abs(_res_b1.response.execution.cost_usd - (0.0011 + 0.0022)) < 1e-9
+      and _res_b1.response.execution.tokens_in == 11 + 22
+      and _res_b1.response.execution.tokens_out == 6 + 9,
+      f"→ {_res_b1!r}"[:300] if isinstance(_res_b1, Exception) else f"→ {_res_b1.response.execution}")
+
+# ── B2 : zéro entrée MAIS un appel `web_search` a eu lieu → AUCUNE relance ────────────────────────
+_res_b2, _ap_b2 = _run_worker13([
+    _succes13([], uncovered=[], appeler=("web_search", {"query": "marge opérationnelle"})),
+])
+check("B2 : zéro entrée MAIS un appel `web_search` a eu lieu pendant le tour → AUCUNE relance (#B)",
+      not isinstance(_res_b2, Exception) and len(_ap_b2) == 1 and _res_b2.response.status == "not_found",
+      f"→ {_res_b2!r}"[:300] if isinstance(_res_b2, Exception) else f"→ {len(_ap_b2)} tour(s)")
+
+# ── B3 : des entrées sont trouvées sans AUCUN appel web (ex. llm_memory) → AUCUNE relance ────────
+_res_b3, _ap_b3 = _run_worker13([
+    _succes13([_ENTREE_MEMOIRE13], uncovered=[]),
+])
+check("B3 : des entrées trouvées sans aucun appel web_search/fetch_url (restitution llm_memory) → "
+      "AUCUNE relance (#B)",
+      not isinstance(_res_b3, Exception) and len(_ap_b3) == 1 and _res_b3.response.status == "found",
+      f"→ {_res_b3!r}"[:300] if isinstance(_res_b3, Exception) else f"→ {len(_ap_b3)} tour(s)")
+
+# ── B4 : le second tour est AUSSI vide → pas de troisième tour (la relance reste UNIQUE) ─────────
+_res_b4, _ap_b4 = _run_worker13([
+    _succes13([], uncovered=[]),
+    _succes13([], uncovered=[]),
+])
+check("B4 : le second tour est aussi vide → pas de troisième tour",
+      not isinstance(_res_b4, Exception) and len(_ap_b4) == 2 and _res_b4.response.status == "not_found",
+      f"→ {_res_b4!r}"[:300] if isinstance(_res_b4, Exception) else f"→ {len(_ap_b4)} tour(s)")
+
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

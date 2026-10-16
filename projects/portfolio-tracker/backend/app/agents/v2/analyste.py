@@ -63,7 +63,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, Sequence
 
-from pydantic import Field, ValidationError, model_validator
+from pydantic import Field, model_validator
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
 from app.agents.v2.common import TIER_ORDER, _TIER_RANK
@@ -81,7 +81,9 @@ from app.agents.v2.frameworks import (
     valider_pont_framework_answer,
 )
 from app.knowledge.material_events import MaterialEvent
-from app.agents.v2.runner import AgentOutputInvalid, AgentRunResult, extract_json, run_json_agent
+from app.agents.v2.runner import (
+    AgentOutputInvalid, AgentRunResult, lecture_tolerante_liste, run_json_agent,
+)
 from app.agents.v2.traducteur import questions_applicables
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.framework_answer_schema import (
@@ -926,21 +928,18 @@ def _lecture_tolerante(e: AgentOutputInvalid,
     invalidait tout le lot, et le passage mourait. Ici chaque réponse est validée seule ; les
     conformes sont gardées telles quelles (aucune n'est réparée), chaque question fautive — ou
     illisible, ou absente d'une sortie illisible — sort en refus NOMMÉ avec l'erreur du contrat. Le
-    coût de l'appel raté est porté par le résultat (#41)."""
-    try:
-        data = extract_json(e.raw_content or "")
-    except Exception:  # noqa: BLE001
-        data = None
-    items = data.get("reponses") if isinstance(data, dict) else None
-    valides: list[AnalysteReponse] = []
+    coût de l'appel raté est porté par le résultat (#41).
+
+    La relecture item par item est ARBITRÉE par `runner.lecture_tolerante_liste` (#128bis) : même
+    principe partagé avec le search-worker, qui l'applique à ses `entries` plutôt qu'à des
+    `reponses` — seul ce qui suit (le mappage question_id → refus) reste propre à l'analyste."""
+    lect = lecture_tolerante_liste(e.raw_content or "", cle="reponses", schema=AnalysteReponse)
+    valides: list[AnalysteReponse] = [AnalysteReponse.model_validate(it) for it in lect.valides]
     refus: dict[str, str] = {}
-    for it in (items if isinstance(items, list) else []):
-        try:
-            valides.append(AnalysteReponse.model_validate(it))
-        except ValidationError as v:
-            qid = it.get("question_id") if isinstance(it, dict) else None
-            if isinstance(qid, str) and qid in interrogeables:
-                refus[qid] = f"réponse hors contrat : {str(v)[:600]}"
+    for it, err in lect.erreurs:
+        qid = it.get("question_id") if isinstance(it, dict) else None
+        if isinstance(qid, str) and qid in interrogeables:
+            refus[qid] = f"réponse hors contrat : {err[:600]}"
     if not valides and not refus:
         refus = {qid: f"sortie illisible, refusée par le contrat : {(e.last_error or '')[:600]}"
                  for qid in interrogeables}

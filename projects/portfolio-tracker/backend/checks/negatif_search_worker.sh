@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # TEST NÉGATIF de `check_search_worker.py`, section 11 — les EXTRAITS LITTÉRAUX d'une fiche (#126) —
-# et section 12 — la source d'origine d'abord (site de l'émetteur, à défaut ailleurs).
+# section 12 — la source d'origine d'abord (site de l'émetteur, à défaut ailleurs) — et section 13 —
+# la lecture tolérante entry par entry (#128) et la relance sans recherche web (#B).
 # Une mutation par DÉCISION, chacune exigeant exit≠0 + FAIL sur l'assert NOMMÉ + bilan atteint
 # (harnais `_negatif.sh`).
 #
@@ -8,7 +9,9 @@
 #
 # La comparaison littérale est DÉLÉGUÉE à `app/knowledge/citation.py` : elle se mute chez son
 # détenteur (#72), pas dans le worker — sinon la mutation mesurerait le câblage et croirait mesurer
-# la règle. Le câblage, lui, a ses propres mutations (worker, outils).
+# la règle. Le câblage, lui, a ses propres mutations (worker, outils). Même principe pour #128 : la
+# relecture item par item est DÉLÉGUÉE à `runner.lecture_tolerante_liste` (partagée avec l'analyste) —
+# ses deux mutations visent donc `runner.py`, pas `worker.py`.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 CHECK="checks/check_search_worker.py"
@@ -18,6 +21,7 @@ C="app/contracts/worker_delegation_schema.py"
 CIT="app/knowledge/citation.py"
 NF="app/agents/v2/note_flash.py"
 WS="app/knowledge/websearch.py"
+R="app/agents/v2/runner.py"
 mutations=(
 # la règle, chez son détenteur
 "$CIT¦        if not any(n in c for c in corpus):¦        if False:¦paraphrase inventée"
@@ -61,6 +65,19 @@ mutations=(
 "$T¦        hits = await web_search(query, n, ticker_id=ticker_id)¦        hits = await web_search(query, n)¦le site de l'émetteur est interrogé"
 # le détenteur unique, partagé avec la note flash
 "$NF¦_normaliser = normaliser¦_normaliser = lambda t: normaliser(t)¦détenteur unique : la note flash"
+# #128 — lecture tolérante entry par entry, DÉLÉGUÉE à runner.lecture_tolerante_liste (partagée
+# avec l'analyste) : ses deux mutations visent donc runner.py, pas worker.py.
+"$R¦            erreurs.append((it, str(v)))¦            valides.append(it)¦la bonne fiche survit, les deux fautives sont écartées"
+"$R¦            valides.append(it)¦            pass¦la bonne fiche survit, les deux fautives sont écartées"
+# le câblage dans le worker : tolérance de FORME (sortie illisible toujours relevée) et #126
+# toujours vérifié même pour une entry tolérée
+"$W¦        if not lect.lisible:¦        if True:¦la bonne fiche survit, les deux fautives sont écartées"
+"$W¦        manquant = extrait_introuvable(extraits, log.textes_de(url))¦        manquant = None¦entrée tolérée par #128 reste vérifiée par #126"
+# #B — la relance unique sans recherche web
+"$W¦    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦    if False:¦relance UNIQUE, le rappel est bien dans le message"
+"$W¦    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦    while _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦le second tour est aussi vide"
+"$W¦    return log.appels_de(\"web_search\") == 0 and log.appels_de(\"fetch_url\") == 0¦    return True¦MAIS un appel \`web_search\` a eu lieu pendant le tour"
+"$W¦            cost_usd=cost1 + cost2, log=retrieval_log,¦            cost_usd=cost2, log=retrieval_log,¦coût (et les tokens) des DEUX tours sont cumulés"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

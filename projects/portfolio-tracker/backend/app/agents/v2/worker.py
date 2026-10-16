@@ -79,7 +79,7 @@ from app.contracts import (
 )
 from app.config import settings
 from app.db.database import get_db_session
-from app.contracts.worker_delegation_schema import TAG_LECTURE
+from app.contracts.worker_delegation_schema import TAG_LECTURE, ProducedEntry
 from app.knowledge.citation import EXTRAIT_MIN_CARS, extrait_introuvable
 from app.knowledge.standard_collecte import PREFIXE_FICHE
 from app.knowledge.datation import Datation, DatationInvalide
@@ -88,7 +88,7 @@ from app.knowledge.service import compute_reliability, store_knowledge
 from app.knowledge.source_registry import qualify
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
-from .runner import run_tool_json_agent
+from .runner import AgentOutputInvalid, lecture_tolerante_liste, run_tool_json_agent
 from .tools import RetrievalLog, build_tool_executors
 
 logger = logging.getLogger(__name__)
@@ -683,6 +683,80 @@ def _build_user_message(req: WorkerRequest, ancre: Optional[dict] = None,
     return "\n".join(lignes)
 
 
+# ── #128 : une entry hors contrat ne fait plus tomber le lot entier ──────────────────────────────
+async def _executer_tour(
+    agent: Any,
+    messages: list[dict[str, Any]],
+    executors: dict[str, Any],
+    req: WorkerRequest,
+    *,
+    max_iterations: int,
+    timeout: int,
+) -> tuple[list[Any], list[str], str, int, int, float, str]:
+    """Un tour complet (boucle d'outils + clôture JSON), avec LECTURE TOLÉRANTE (#128) si la clôture
+    échoue — même principe que `analyste._lecture_tolerante`, générisé dans
+    `runner.lecture_tolerante_liste` : chaque entry conforme à `ProducedEntry` est gardée BRUTE,
+    jamais réparée ; chaque entry fautive est écartée, son erreur de contrat journalisée. Si aucune
+    entry ne survit, le `field_path` du mandat part non couvert (via `_apply_deterministic_overrides`,
+    qui lit `entries=[]` comme un manque). Sortie illisible (pas de JSON, ou pas de liste `entries`)
+    ⟹ l'exception d'origine est relevée telle quelle, comme avant #128 : un LOT illisible reste un
+    échec nommé, seule une entrée FAUTIVE s'isole.
+
+    Renvoie (entries_brutes, uncovered_bruts, model_used, tokens_in, tokens_out, cost_usd, raw) —
+    jamais un `WorkerResponse` corrigé : c'est `_apply_deterministic_overrides` qui le produit, une
+    fois pour l'éventuelle paire de tours cumulés (#B)."""
+    try:
+        result = await run_tool_json_agent(
+            agent, messages, executors, WorkerResponse,
+            closing_instruction=_CLOSING_INSTRUCTION, max_iterations=max_iterations,
+            temperature=0.2, timeout=timeout,
+            # Jalon A1 bis : un tour de recherche ne porte que des appels d'outils ; plafonné, il ne
+            # rédige plus un brouillon que la clôture jette (détenteur unique : `settings`).
+            max_tokens_recherche=settings.WEB_TOUR_MAX_TOKENS,
+        )
+    except AgentOutputInvalid as e:
+        lect = lecture_tolerante_liste(e.raw_content or "", cle="entries", schema=ProducedEntry)
+        if not lect.lisible:
+            raise
+        for _item, err in lect.erreurs:
+            logger.info("search-worker[%s]: entry rejetée (#128, lecture tolérante) — %s",
+                        req.output_schema.field_path or req.query[:40], err[:300])
+        uncovered = [str(u) for u in (lect.data or {}).get("uncovered_fields", []) if str(u).strip()]
+        return (lect.valides, uncovered, agent.model or WORKER_NAME, int(e.tokens_in or 0),
+                int(e.tokens_out or 0), float(e.cost_usd or 0.0), e.raw_content or "")
+    return (result.data.get("entries") or [], result.data.get("uncovered_fields") or [],
+            agent.model or result.completion.model, result.tokens_in, result.tokens_out,
+            result.cost_usd, result.raw_content)
+
+
+# ── #B : un `not_found` sans AUCUN appel web n'est pas une recherche épuisée ─────────────────────
+_RELANCE_SANS_WEB = (
+    "Ta réponse ne couvre aucune entrée ET tu n'as appelé NI `web_search` NI `fetch_url` pendant ce "
+    "tour (seul `query_knowledge`, s'il a été appelé, ne cherche QUE dans la base déjà connue) : un "
+    "`not_found` sans avoir cherché sur le web n'est pas une recherche épuisée, c'est une recherche "
+    "jamais tentée. Cherche RÉELLEMENT sur le web (`web_search`/`fetch_url`) avant de répondre, et "
+    "rends la même WorkerRequest avec ce que tu as trouvé — ou, si tu as vraiment cherché et que "
+    "rien n'existe, dis-le dans `uncovered_fields`."
+)
+
+
+def _doit_relancer_sans_web(
+    corrected: dict[str, Any], log: RetrievalLog, *, allow_without_web: bool,
+) -> bool:
+    """§B (mesuré sur replay, 2026-10-16) : un modèle qui n'a appelé QUE `query_knowledge` deux fois
+    et conclu `not_found`, alors que la même ligne trouvait 4-6 entries sur deux autres replays. Un
+    champ non couvert déclaré sans AUCUN appel `web_search`/`fetch_url` pendant le run n'a rien
+    d'une recherche exhaustive. On ne relance QUE sur ce diagnostic précis : des entries trouvées
+    sans appel web (restitution `llm_memory`) ne sont jamais rouvertes — le contrat (P2) les traite
+    déjà en revue humaine, ce n'est pas le défaut ici. `allow_without_web` ou recherche non
+    configurée ⟹ jamais de relance (c'est précisément le mode sans web, assumé)."""
+    if allow_without_web or not search_is_configured():
+        return False
+    if corrected["entries"]:
+        return False
+    return log.appels_de("web_search") == 0 and log.appels_de("fetch_url") == 0
+
+
 async def run_search_worker(
     req: WorkerRequest,
     *,
@@ -721,29 +795,40 @@ async def run_search_worker(
         # et c'est précisément le cas qu'on veut couvrir. Un appel EDGAR, zéro token de modèle.
         materiel = await material_anchor_for_ticker(conn, req.ticker_id)
 
-    result = await run_tool_json_agent(
-        agent,
-        [{"role": "user", "content": _build_user_message(req, ancre, materiel)}],
-        executors,
-        WorkerResponse,
-        closing_instruction=_CLOSING_INSTRUCTION,
-        max_iterations=max_iterations,
-        temperature=0.2,
-        timeout=timeout,
-        # Jalon A1 bis : un tour de recherche ne porte que des appels d'outils ; plafonné, il ne
-        # rédige plus un brouillon que la clôture jette (détenteur unique du plafond : `settings`).
-        max_tokens_recherche=settings.WEB_TOUR_MAX_TOKENS,
+    messages = [{"role": "user", "content": _build_user_message(req, ancre, materiel)}]
+    entries1, uncovered1, model_used1, tin1, tout1, cost1, raw1 = await _executer_tour(
+        agent, messages, executors, req, max_iterations=max_iterations, timeout=timeout,
     )
-
     corrected = _apply_deterministic_overrides(
-        result.data,
-        req,
-        model_used=agent.model or result.completion.model,
-        tokens_in=result.tokens_in,
-        tokens_out=result.tokens_out,
-        cost_usd=result.cost_usd,
+        {"entries": entries1, "uncovered_fields": uncovered1},
+        req, model_used=model_used1, tokens_in=tin1, tokens_out=tout1, cost_usd=cost1,
         log=retrieval_log,
     )
+
+    # §B : un `not_found` (zéro entry retenue) sans AUCUN appel web pendant ce tour est une
+    # recherche jamais tentée, pas une recherche épuisée — on relève ONE fois, avec un rappel, et
+    # on prend le second résultat pour FINAL quel qu'il soit (#41 : les deux tours sont facturés).
+    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):
+        logger.warning(
+            "search-worker[%s]: not_found sans aucun appel web_search/fetch_url — relance unique "
+            "avec rappel (#B)", req.output_schema.field_path or req.query[:40],
+        )
+        messages2 = messages + [
+            {"role": "assistant", "content": raw1},
+            {"role": "user", "content": _RELANCE_SANS_WEB},
+        ]
+        try:
+            entries2, uncovered2, model_used2, tin2, tout2, cost2, _raw2 = await _executer_tour(
+                agent, messages2, executors, req, max_iterations=max_iterations, timeout=timeout,
+            )
+        except AgentOutputInvalid as e:
+            raise e.add_upstream(tin1, tout1, cost1, 0)
+        corrected = _apply_deterministic_overrides(
+            {"entries": entries2, "uncovered_fields": uncovered2},
+            req, model_used=model_used2, tokens_in=tin1 + tin2, tokens_out=tout1 + tout2,
+            cost_usd=cost1 + cost2, log=retrieval_log,
+        )
+
     logger.info(
         "search-worker[%s]: %d URL rapportée(s) par les outils (%s)",
         req.output_schema.field_path or req.query[:40],

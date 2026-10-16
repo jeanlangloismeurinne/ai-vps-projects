@@ -3209,6 +3209,26 @@ passé de lui-même l'intitulé, la fiche cite « Jen-Hsun Huang 870,604,104 …
 #126), $0,009. `tools/mesurer_ligne_web.py` affiche désormais `chercher` et les fiches avec leurs extraits.
 Gardes : `check_provenance` §9-12 + `negatif_provenance.sh` **9/9**. Suite **4712/0**.
 
+### #135 — l'instabilité du collecteur : une fiche fautive s'isole, un « rien trouvé » sans recherche se relance
+
+**Mesuré le 2026-10-16** (historique des plans ≥ 240 + 18 rejeux à blanc, 0,27 $). Trois familles :
+(1) **délai dépassé** — presque tous antérieurs au passage 180 → 360 s (#124, 13/10 19:50), deux depuis :
+rien à faire ; (2) **hors contrat** — 11 cas du 12 au 16/10, une seule cause : un extrait trop court
+(cellule de tableau « Revenue », #126) faisait refuser la réponse ENTIÈRE, toutes ses bonnes fiches avec ;
+(3) **« rien trouvé » non reproductible** — la même ligne alterne trouvé / rien / trouvé ; le seul « rien »
+rejoué était un passage SANS AUCUNE recherche web (deux `query_knowledge` puis abandon). Un seul « rien »
+stable (RVMD coûts unitaires, 3/3) : une vraie absence. Comme un fonds : une fiche mal rédigée revient,
+les autres restent au dossier ; un analyste qui n'a pas cherché n'a pas le droit d'écrire « introuvable ».
+**La règle** : (a) `runner.lecture_tolerante_liste` (détenteur unique, partagé avec l'analyste #128) —
+sur `AgentOutputInvalid`, chaque entry est relue seule contre `ProducedEntry`, les conformes passent
+BRUTES par `_apply_deterministic_overrides` (donc par la vérification mot pour mot #126), les fautives sont
+écartées et journalisées ; sortie illisible ⟹ l'exception d'origine ; (b) `RetrievalLog.appels` compte
+chaque appel d'outil, réussi ou non ; zéro fiche retenue ET zéro `web_search`/`fetch_url` ⟹ UNE relance avec
+rappel, le second résultat est final, les deux tours facturés (#41) ; jamais en mode sans web. Gardes :
+`check_search_worker` §13 + `negatif_search_worker.sh` **43/0** ; `negatif_analyste.sh` **67/0** (la mutation
+« réponses conformes gardées » vise désormais l'assert « ne redemande QUE la question fautive » : l'assert
+de bout de parcours était aveugle — une réponse conforme perdue est redemandée et revient). Suite **4722/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

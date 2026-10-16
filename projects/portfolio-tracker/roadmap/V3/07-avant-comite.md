@@ -34,9 +34,9 @@ role: >
    de tableau sans sens propre. Remède : le collecteur dit ce qu'il cherche DANS le document (`chercher`,
    intitulé de section) ; rejeu NVDA ma_4 → la fiche cite le tableau de détention.
 3. **Tableaux** ✅ #132 (cellules séparées, une ligne de tableau se cite).
-4. **Instabilité du collecteur** [C/P] — une même ligne rend « rien trouvé » puis des pièces au passage
-   suivant (NVDA ma_4/ma_6 le 16/10) ; et des sorties hors contrat après 8 tentatives (NVDA
-   `cessions_et_achats`, 0,019 $ perdus). Mesurer la fréquence avant de choisir un remède.
+4. ~~Instabilité du collecteur~~ ✅ **Fait le 2026-10-16 (#135)** — mesuré : délais réglés par #124 ;
+   hors contrat = un extrait trop court faisait tomber toute la réponse (lecture fiche par fiche) ; « rien
+   trouvé » instable = un passage sans recherche web (relancé une fois). Reste un « rien » stable légitime.
 5. **Prix au moment des rachats** [A/C] — NVIDIA ne publie plus en données structurées les actions
    rachetées ; le cours historique n'est pris qu'au web (rangs faibles). Un fonds prend l'historique de
    cours dans sa base de marché : faut-il en faire une source du système ? Cas : NVDA ma_3.

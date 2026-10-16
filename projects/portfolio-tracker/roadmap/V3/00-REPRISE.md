@@ -19,7 +19,7 @@ role: >
 
 Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplace la checklist A4-A11 de
 `05-frameworks-complets.md`) : (1) la matière — 1.1 ✅ (#133), 1.2 ✅ (#134, ce n'était pas la langue),
-**1.4 instabilité du collecteur (PROCHAIN — mesurer d'abord)**, 1.6 « tout chiffre renvoie à une pièce » ;
+1.4 ✅ (#135), **1.6 « tout chiffre renvoie à une pièce » (PROCHAIN)** ;
 (2) arbitrages groupés en une séance (9, 10, 11, 12, 15, 17, 20, 21) ; (3) tenue du dossier ; (4) valorisation ;
 (5) test. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 
@@ -33,8 +33,8 @@ Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplac
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4712/0** (2026-10-16, après #134).
-- **Production** : dernier déploiement (#134), vérifié dans le conteneur.
+- **Suite** `bash backend/checks/run_all.sh` = **4722/0** (2026-10-16, après #135).
+- **Production** : dernier déploiement (#135), vérifié dans le conteneur.
 - **Prochaine migration : 058** (056/057 = prompt search-worker v5/v6 : source d'origine, `chercher`). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
   NVDA #623-#628, MSFT #629-#633.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par

@@ -118,7 +118,7 @@ mutations=(
 "$PONT¦        if socle is None:¦        if True:¦ÉCRIT la dette nette calculée sur les chiffres du SOCLE"
 "$PONT¦        cite = socle_au_dossier(entries, answer.fondation.cited_entry_ids if answer.fondation else ())¦        cite = socle_au_dossier(entries)¦ne CITE pas le socle"
 "$SRC¦            run, refus_contrat = _lecture_tolerante(e, interrogeables)¦            raise¦premier tour hors contrat sur UNE question"
-"$SRC¦            valides.append(AnalysteReponse.model_validate(it))¦            raise ValueError(\"mutation\")¦les réponses conformes du premier tour sont gardées"
+"$SRC¦    valides: list[AnalysteReponse] = [AnalysteReponse.model_validate(it) for it in lect.valides]¦    valides: list[AnalysteReponse] = []¦ne redemande QUE la question fautive"
 "$SRC¦            issues[qid] = _Refus(motif)¦            pass¦le renvoi porte l'erreur du contrat"
 "$SRC¦                          tokens_out=int(e.tokens_out or 0), cost_usd=float(e.cost_usd or 0.0),¦                          tokens_out=int(e.tokens_out or 0), cost_usd=0.0,¦le coût des DEUX appels ratés"
 )
