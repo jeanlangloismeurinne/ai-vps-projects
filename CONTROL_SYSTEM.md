@@ -189,6 +189,59 @@ données. Pas la taille, pas le thème. Exécuter un lot ne doit pas recharger d
 se recouvre. C'est pour ça que le gabarit de roadmap fait écrire `· contexte partagé : {quoi}` sur
 chaque capacité : c'est ce champ qui rend le lot planifiable sans relire tout le code.
 
+### L'inventaire d'actions — deux déclencheurs
+
+Une capacité de roadmap dit **quoi** obtenir ; elle ne dit pas la liste des actions qui y mènent.
+Cette liste s'écrit dans **deux** moments, et seulement ceux-là :
+
+1. **Au départ d'un bout de spec** (une capacité, un jalon) : inventaire des actions à prendre pour
+   l'exécuter.
+2. **Quand l'objectif résiste — pour reprendre de la hauteur.** Signaux : plusieurs lots sur la même
+   capacité sans la cocher ; des défauts découverts plus vite qu'ils ne se ferment ; une suite de
+   correctifs locaux qui ne rapproche pas du test d'acceptation. On s'arrête alors pour inventorier
+   **tout le reste à faire** jusqu'au jalon, au lieu de traiter le défaut suivant.
+
+Forme de l'inventaire — chaque ligne porte :
+- ce qui ne va pas **en termes métier** (principes fondateurs du projet, s'il en a) ;
+- **un cas réel** (le ticker, la page, la requête qui le montre) ;
+- sa **nature** : **[A]** arbitrage de l'utilisateur · **[C]** correctif à construire · **[D]** donnée à
+  écrire · **[P]** passage à refaire (dépense).
+
+L'agent propose un ordre ; **l'utilisateur le valide**. Les **[A]** sont **groupés en une séance**
+d'arbitrage, pour que l'exécution des [C] ne s'interrompe pas à chaque question. L'inventaire n'est
+pas un artefact de plus : une fois ordonné, **il devient la checklist de la roadmap et remplace celle
+qu'il re-planifie** (il vit dans la roadmap, ou dans un fichier `roadmap/` pointé par le fichier de
+reprise).
+
+Mesuré sur portfolio-tracker (2026-10-16) : l'inventaire « avant comité » (23 points), validé en
+début de conversation, a permis de livrer **trois points en une conversation** (#133-#135), là où
+chaque conversation précédente traitait un seul sujet. Les cas réels venaient des lots précédents :
+un sprint qui découvre beaucoup de défauts prépare le sprint qui en ferme beaucoup.
+
+### Mesurer avant de choisir le remède
+
+Tout **[C]** commence par une **mesure de la ligne de base** sur son cas réel, qui peut **réfuter**
+l'hypothèse de l'inventaire : d'abord gratuite (historique en base, exécution à blanc des producteurs
+déterministes), ensuite payante sous un plafond annoncé. Le remède se choisit sur la mesure, jamais
+sur le libellé de l'inventaire. Mesuré (2026-10-16) : sur trois correctifs, deux hypothèses de
+l'inventaire étaient **fausses** (« la sélection des passages dépend de la langue » — non, une
+traduction fidèle échoue pareil ; « le collecteur dépasse son délai » — déjà réglé depuis trois jours).
+Codés sans mesure, les deux remèdes auraient été faux.
+
+L'acceptation se fait ensuite **sur le même cas réel**, par un **rejeu à blanc** : un outil du projet
+qui exécute le chemin réel sans rien écrire, pour quelques centimes, et **affiche ce qui est à lire**
+(les fiches produites, leurs sources, leurs extraits) — pas seulement un « OK ». Un projet qui n'a
+pas cet outil le construit au premier [C] qui en a besoin.
+
+### Un lot = plusieurs points, et un critère d'arrêt explicite
+
+Le lot enchaîne les points de l'inventaire dans l'ordre validé : pour chacun mesure → remède →
+contrôle + test négatif → rejeu réel → déploiement → coche. Il **s'arrête** quand :
+- le point suivant est un **[A]** non encore arbitré (on prépare la question, on ne la tranche pas) ;
+- ou le contexte devient lourd (les points restants sont autonomes et l'état est consigné).
+
+Ne pas finir l'inventaire dans la conversation n'est pas un échec : c'est l'optimum de contexte.
+
 **Déclencheur unique, côté terminal :**
 
 > **« reprends le projet {X} à partir du fichier de reprise »**
@@ -212,6 +265,7 @@ quelle une fois l'utilisateur d'accord — pas une description de ce qu'elle dev
 - les **tickets ouverts** (`feedback-tickets/`) — le seul canal où la friction utilisateur remonte
   non filtrée, et le meilleur rapport signal/coût de la liste (~1 Ko) ;
 - la section **« Reste à faire / dettes ouvertes »** du fichier de reprise — pas le reste.
+- l'existence d'un **outil de rejeu à blanc** (§3) : son absence est un axe candidat en soi.
 
 **Exclu : l'historique des MàJ du fichier de reprise.** C'est de la mémoire d'implémentation
 (unités d'arrondi, clefs de supersedage, regex) : indispensable pour reprendre le code, sans valeur
@@ -285,7 +339,7 @@ Conclure par une recommandation explicite, jamais implicite :
 
 ```
 {capacité} : livrée. {état du fichier de reprise}.
-Recommandation : {nouvelle conversation | poursuivre ici} — {une ligne de justification}.
+Recommandation : {nouvelle conversation | poursuivre ici} · {Opus | Sonnet} — {une ligne de justification}.
 ```
 
 Arbitrer **contexte chaud réutilisable** (lot suivant petit et dépendant des gotchas fraîchement
@@ -294,19 +348,44 @@ consigné → *nouvelle conversation*).
 
 ---
 
-## 6. Délégation — le plancher
+## 6. Délégation — le jugement reste, l'exécution part
 
 **On ne délègue que si ça coûte moins qu'une exécution inline.** La délégation a une taxe fixe :
-re-énoncer le contexte au worker + lire son compte-rendu + revérifier. Elle ne rapporte que sur des
-unités **indépendantes, auto-suffisantes, à faible couplage**, lancées en parallèle.
+re-énoncer le contexte au worker + lire son compte-rendu + revérifier. Le discriminant est
+**l'énonçabilité du critère de succès en trois lignes**, pas le volume de sortie.
 
-- Le discriminant réel est **l'énonçabilité du critère de succès en trois lignes**, pas le volume de
-  sortie attendu. On délègue une **recherche** (« trouve où X est défini »), jamais un **jugement**.
-- Travail **couplé** (partage un contrat/schéma) → la taxe dépasse le gain → **inline**.
-- Devant un mur de sortie, le réflexe est « quel est le `tail -1` ? », pas « je délègue » : un
-  filtre shell bat un sous-agent sur tout ce qui est mécanique.
-- Sur un chantier de design/doc/code fortement couplé et à fort jugement, la bonne réponse est
-  souvent **zéro délégation**. Ce n'est pas un échec : c'est le plancher qui joue.
+**Trois classes délégables :**
+1. **La recherche** — trouver où X est défini, balayer N fichiers.
+2. **La mesure** — une ligne de base (§3) avec son protocole, son plafond de dépense et la consigne
+   **« faits seulement, pas de remède »** : le remède est un jugement, il reste à l'orchestrateur. Elle
+   garde aussi les sorties volumineuses (documents, journaux) hors du contexte de la session.
+3. **L'exécution d'une spec écrite APRÈS diagnostic** — l'orchestrateur a mesuré, choisi le remède,
+   et écrit : les fichiers, la règle, les vérifications nommées du contrôle, une mutation par décision
+   pour le test négatif, et ce qui doit rester inchangé.
+
+**Non délégables :** le diagnostic, le choix du remède, la revue. Avant le diagnostic,
+l'implémentation est un jugement ; après, elle devient une spec énonçable. Mesuré : six conversations
+consécutives sans aucun sous-agent sur portfolio-tracker, quand l'implémentation était rangée côté
+jugement ; puis, le 2026-10-16, trois mesures et deux implémentations déléguées dans la même
+conversation, trois points livrés.
+
+- Devant un mur de sortie mécanique, le réflexe reste « quel est le `tail -1` ? » : un filtre shell bat
+  un sous-agent.
+- Les délégations indépendantes se lancent en arrière-plan ; l'orchestrateur avance en parallèle
+  (documentation, préparation du point suivant).
+
+### Revue après délégation — liste fixe
+
+Les sous-agents écrivent, **l'orchestrateur vérifie mécaniquement**, à chaque fois :
+1. `git status` — fichiers parasites (mesuré : un `=240` laissé par une redirection ratée) ;
+2. **le diff relu**, en priorité les écarts que le worker déclare à la spec ;
+3. **les tests et mutations qu'il a modifiés** — un worker peut, de bonne foi, affaiblir une mutation
+   ou la pointer vers un contrôle aveugle (mesuré : 1 cas sur 2 implémentations) ;
+4. **la suite complète** et les tests négatifs, relancés par l'orchestrateur ;
+5. **le rejeu réel** (§3) avant déploiement.
+
+Mesuré sur deux implémentations déléguées : **deux défauts trouvés par cette revue**, aucun par le
+compte-rendu du worker.
 
 ### Contrat du sous-agent worker
 
@@ -352,8 +431,11 @@ roadmap : la checklist de la roadmap est la seule liste exhaustive.
 
 ## 8. Effort / modèles
 
-- Session : **Opus** par défaut.
-- Worker délégué : **Sonnet 4.6** (`model: sonnet`). `Haiku` réservé au trivial (libellé, config).
+- Session (orchestrateur) : **Opus** — inventaire, diagnostic, choix du remède, spec, revue.
+- Worker délégué : **Sonnet** (`model: sonnet`) — recherche, mesure, exécution d'une spec écrite.
+  `Haiku` réservé au trivial (libellé, config).
+- Recommandation de fin de lot (§5) : conversation suivante **et** modèle (Opus si le point suivant
+  demande un diagnostic ou un choix ; Sonnet seul si c'est une exécution déjà spécifiée).
 - Effort par défaut (élevé) ; effort maximal réservé aux choix architecturaux.
 
 ---
@@ -373,13 +455,18 @@ réponse HTTP qui fait foi.
   capacité a un ordre justifié, un test d'acceptation observable et une checklist.
 - **Activation = inscription** dans le `00-REPRISE.md`, et **seulement** pour une roadmap `figée`.
   Nulle part ailleurs.
-- **Lot de conversation** auto-planifié, découpé par **contexte partagé**, annoncé en une ligne.
+- **Lot de conversation** auto-planifié, découpé par **contexte partagé**, annoncé en une ligne ;
+  il enchaîne plusieurs points et s'arrête sur un [A] non arbitré ou un contexte lourd.
+- **Inventaire d'actions** au départ d'un bout de spec, et de nouveau quand l'objectif résiste (reprendre
+  de la hauteur) ; ordonné par l'utilisateur, [A] groupés ; il devient la checklist de la roadmap.
+- **Mesurer avant le remède** sur un cas réel ; **accepter par un rejeu à blanc** du même cas.
 - **Déclencheur unique** : « reprends le projet {X} à partir du fichier de reprise ».
 - **Pas de roadmap inscrite** → proposer le 360°, annoncer l'entrée réellement lue, sortir N axes
   dont **l'axe 0 sur le cadre lui-même**, puis **stop**.
 - **Archiver quand une capacité est cochée** — jamais sur une impression ; sortir le durable
   d'abord, remonter les dettes ouvertes avant d'évincer.
 - **Committer la doc** en fin de conversation même sans déploiement.
-- **Déléguer** une recherche, jamais un jugement ; vérifier mécaniquement ce que rend un worker.
+- **Déléguer** recherche, mesure et exécution d'une spec écrite après diagnostic ; garder diagnostic,
+  remède et revue ; revue fixe en cinq points après chaque délégation.
 - **Ajouter sans retirer est le mode de panne de ce repo** : un lot qui n'a rien supprimé n'est pas
   terminé.
