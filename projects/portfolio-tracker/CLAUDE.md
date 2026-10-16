@@ -3528,6 +3528,21 @@ Gardes : `check_note_flash` §11 (113/0) + `negatif_note_flash.sh` **54/0** (don
 caduques par la réécriture de la dérivation, réparées, et un accès non tolérant qui tuait le script sous
 mutation) ; `check_frameworks_definitions` [V] (125/0) + `negatif_frameworks_definitions.sh` **77/0**. Suite **4671/0**.
 
+### #131 — les faits des dirigeants et le jugement sur leur rémunération se séparent ; un dérapage d'exécution ne rouvre pas la concurrence
+
+**Arbitrages de l'utilisateur (2026-10-16), comme un fonds.** (1) La note sur les dirigeants relève d'abord
+ce qu'ils ont en jeu (actions détenues, achats et ventes), puis apprécie les critères de leur rémunération
+variable, lus dans la circulaire déposée. ma_4 mélangeait les deux en question de MESURE à plancher A : un
+critère de rémunération est du texte (`interpretation`, #51), donc jamais citable — ma_4 était infondable
+pour TOUTE entreprise (diagnostic A4 NVDA : #1478). Même geste que qf_4/qf_8 (#114) : **ma_4** = l'argent en
+jeu (mesure, A) ; **ma_7** neuve = les critères (interprétation, plancher A comme qf_8 : la circulaire est le
+document de référence), toutes deux rouvertes par `gouvernance`. Aucun lien d'index à déplacer (0 pièce sur
+les critères en base). `framework_version` non montée (précédent #100/#114). (2) Un dérapage d'exécution
+(révision de dépenses, #130) dit quelque chose de la direction et du coût, pas de la position
+concurrentielle : `surprise_execution` retiré de mo_5 et se_3 — une érosion se verra aux ventes ou aux
+marges suivantes, qui rouvrent déjà ces questions. Données seules ; spec 03 §4.2/§4.4/§4.5 alignée.
+Gardes : `check_frameworks_definitions` (#94 : gouvernance rouvre ma_4-ma_7) ; suite **4671/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

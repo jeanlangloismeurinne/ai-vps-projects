@@ -595,8 +595,8 @@ check("un événement extérieur ne rouvre que les questions qui le déclarent",
           fwk.types_qui_rouvrent(_reel, _q.id) & _ext == frozenset(_q.rouverte_par) & _ext
           for _q in _questions), "")
 _univ = {t.id for t in _reel.types_evenement if t.portee == "toutes"}
-check("#94 : un départ ou une nomination de dirigeants rouvre ma_4, ma_5 et ma_6, et aucune autre",
-      sorted(q.id for q in _questions if "gouvernance" in q.rouverte_par) == ["ma_4", "ma_5", "ma_6"],
+check("#94 : un départ ou une nomination de dirigeants rouvre ma_4, ma_5, ma_6 et ma_7 (scission du 2026-10-16), et aucune autre",
+      sorted(q.id for q in _questions if "gouvernance" in q.rouverte_par) == ["ma_4", "ma_5", "ma_6", "ma_7"],
       f"→ {sorted(q.id for q in _questions if 'gouvernance' in q.rouverte_par)}")
 check("les types de portée totale du référentiel réel sont exactement a_qualifier, perimetre, "
       "existentiel", _univ == {"a_qualifier", "perimetre", "existentiel"}, f"→ {sorted(_univ)}")

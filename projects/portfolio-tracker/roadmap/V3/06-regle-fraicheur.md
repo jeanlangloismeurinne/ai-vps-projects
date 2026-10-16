@@ -395,4 +395,6 @@ exécution (plus la concurrence) — me_1, mo_1-mo_4, mo_6, se_2, se_6 ne sont p
 le sont. **Reste ouvert** : mo_5 (« qu'est-ce qui la détruirait ? ») et se_3 (rang face aux pairs) listent
 `surprise_execution` et restent donc rouvertes par une dérive des coûts. Défendable (un essai allongé laisse
 passer un concurrent), mais contraire à la cible « ne rouvre plus défendabilité/secteur » — question posée à
-l'utilisateur.
+l'utilisateur. **Tranché le 2026-10-16 : ne plus les rouvrir** — un dérapage d'exécution dit quelque chose de
+la direction et du coût, pas de la position concurrentielle ; une érosion se verra aux ventes ou aux marges
+suivantes, qui rouvrent déjà ces deux questions. `surprise_execution` retiré de mo_5 et se_3 (données).

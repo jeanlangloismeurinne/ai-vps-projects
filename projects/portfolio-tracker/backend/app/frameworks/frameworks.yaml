@@ -903,7 +903,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1. Une pré-mortem se nourrit d'observations de terrain,
           jamais du document où l'entreprise décrit ses propres risques.
-        rouverte_par: [surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, incident]
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial, incident]
         sens_admis: [vecteur_en_mouvement, vecteur_latent, aucun_vecteur_identifie]
         ingredients_requis:
           - id: vecteur_nomme
@@ -1323,7 +1323,7 @@ frameworks:
         chemin_indexation: secteur_concurrence.rang_face_aux_pairs
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_concurrence, surprise_execution, concurrent_offensive, concurrent_revers]
+        rouverte_par: [resultats, surprise_concurrence, concurrent_offensive, concurrent_revers]
         sens_admis: [devant_ses_pairs, au_niveau_de_ses_pairs, derriere_ses_pairs]
         ingredients_requis:
           - id: pairs_directs
@@ -1591,17 +1591,17 @@ frameworks:
             variable: Prix des rachats et des émissions comparé à la valeur comptable des fonds propres
 
       - id: ma_4
-        enonce: La rémunération des dirigeants récompense-t-elle ce qui crée de la valeur pour l'actionnaire, et ont-ils leur propre argent en jeu ?
-        chemin_indexation: management_capital.alignement_des_dirigeants
+        # Scindée le 2026-10-16 (arbitrage de l'utilisateur, même geste que qf_4/qf_8, #114) : les
+        # FAITS (ce que les dirigeants détiennent, achètent, vendent) restent ici, en mesure ; le
+        # JUGEMENT sur les critères de leur rémunération part en ma_7. Un critère de rémunération est
+        # du texte : il ne fondait jamais une question de mesure, ma_4 était infondable par construction.
+        enonce: Les dirigeants ont-ils leur propre argent en jeu — combien d'actions détiennent-ils, et qu'en ont-ils acheté ou vendu ?
+        chemin_indexation: management_capital.argent_en_jeu
         nature_attendue: mesure
         plancher_tier: A
         rouverte_par: [gouvernance]
-        sens_admis: [dirigeants_alignes, alignement_partiel, dirigeants_non_alignes]
+        sens_admis: [engagement_fort, engagement_modere, engagement_faible]
         ingredients_requis:
-          - id: criteres_de_remuneration
-            libelle: Ce que mesurent les objectifs de la rémunération variable des dirigeants — taille, croissance, rendement du capital, cours de bourse
-            essentiel: true
-            duree_de_vie: description_annuelle
           - id: detention_des_dirigeants
             libelle: Actions détenues par les dirigeants à titre personnel, rapportées à leur rémunération annuelle
             essentiel: true
@@ -1615,13 +1615,40 @@ frameworks:
         variables_par_archetype:
           rentable:
             mode: variable
-            variable: Critères de la rémunération variable et détention personnelle des dirigeants
+            variable: Détention personnelle des dirigeants rapportée à leur rémunération, et leurs achats et ventes récents
           pre_revenus:
             mode: variable
-            variable: Critères de la rémunération — étapes cliniques, trésorerie, cours — et détention personnelle des dirigeants
+            variable: Détention personnelle des dirigeants (actions et options) rapportée à leur rémunération, et leurs achats et ventes récents
           financiere:
             mode: variable
-            variable: Critères de la rémunération au regard du risque pris, et détention personnelle des dirigeants
+            variable: Détention personnelle des dirigeants rapportée à leur rémunération, et leurs achats et ventes récents
+
+      - id: ma_7
+        enonce: La rémunération variable des dirigeants récompense-t-elle ce qui crée de la valeur pour l'actionnaire ?
+        chemin_indexation: management_capital.criteres_de_remuneration
+        nature_attendue: interpretation
+        # Plancher A sur une question de JUGEMENT, à dessein (comme qf_8) : les critères se lisent
+        # dans la circulaire déposée pour l'assemblée, le document de référence — jamais dans un
+        # commentaire de presse. Le jugement est de l'analyste, la matière est officielle.
+        plancher_tier: A
+        rouverte_par: [gouvernance]
+        sens_admis: [dirigeants_alignes, alignement_partiel, dirigeants_non_alignes]
+        ingredients_requis:
+          - id: criteres_de_remuneration
+            libelle: Ce que mesurent les objectifs de la rémunération variable des dirigeants — taille, croissance, rendement du capital, cours de bourse
+            essentiel: true
+            duree_de_vie: description_annuelle
+        chiffres_cles: []
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Critères de la rémunération variable des dirigeants — croissance, rendement du capital, cours
+          pre_revenus:
+            mode: variable
+            variable: Critères de la rémunération — étapes cliniques, trésorerie, cours
+          financiere:
+            mode: variable
+            variable: Critères de la rémunération au regard du risque pris
 
       - id: ma_5
         enonce: La direction fait-elle ce qu'elle dit — objectifs annoncés tenus, franchise sur ses échecs ?

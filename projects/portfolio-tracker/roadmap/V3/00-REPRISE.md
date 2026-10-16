@@ -31,8 +31,9 @@ role: >
 > **➜ PROCHAIN PAS (reprise après le 2026-10-16) — LIRE D'ABORD `roadmap/V3/06-regle-fraicheur.md` (§8-§14).**
 > 1. ✅ **Table des causes de révision CONSTRUITE (#130, catalogue 1.6.0, 2026-10-16)** — notes RVMD #613-#622,
 >    NVDA #623-#628, MSFT #629-#633 ($0,043). RVMD 05/08 rouvre allocation + exécution, plus la concurrence.
->    **Question posée à l'utilisateur** : mo_5 et se_3 restent rouvertes par la cause « exécution » — les retirer
->    de `surprise_execution` (donnée) ou les garder ? **Piste neuve (remarque de l'utilisateur, 2026-10-16)** : le
+>    **Tranché le 16/10 (#131)** : mo_5 et se_3 ne sont plus rouvertes par un dérapage d'exécution ; **ma_4
+>    scindée** (argent en jeu des dirigeants = mesure / critères de rémunération = ma_7, jugement à plancher A).
+>    **Piste neuve (remarque de l'utilisateur, 2026-10-16)** : le
 >    vote de 3 lectures triple le coût ; DeepInfra propose depuis le 08/10 des MODÈLES DE DÉCISION (`nace-ai/drex-v1.5`,
 >    9 B, une passe sans génération, probabilité calibrée par option, $0,04/M jetons d'entrée, sortie gratuite ; se
 >    compare à « Jev 1.13.0 » ; aussi `Cloudflare/clef`) et des rerankers (`Qwen/Qwen3-Reranker-0.6B`, $0,01/M) —
@@ -40,8 +41,17 @@ role: >
 >    phrase des 12 communiqués (`phrases_a_examiner`) avant de rien remplacer.
 > 2. **A4 NVDA** : passage réel TERMINÉ le 16/10 — plan **#267** (garde #123 passée, 18 lignes), réponses
 >    **#1475-#1480** : ma_1 `repondu` (allocation créatrice), **ma_2…ma_6 `non_fondable`** (remède collecte, 3 mandats
->    collecteur, 0 mandat manager). À instruire : pourquoi 5/6 non fondées (pièces trop maigres ? lignes web
->    coupées ? `bash tools/montrer_parcours.sh NVDA` + mandats du plan #267). Puis relire :
+>    collecteur, 0 mandat manager). **INSTRUIT le 2026-10-16 (gratuit + 2 lignes rejouées à blanc, $0,02)** :
+>    (a) ma_2/ma_4/ma_6 « recherche épuisée » NON reproductible — rejouées (`mesurer_ligne_web.sh 267 1247 1254`),
+>    les deux lignes rendent des pièces tirées de la circulaire DEF 14A (instabilité du collecteur → relancer) ;
+>    (b) **ma_4 est une question de MESURE à plancher A, mais ses critères de rémunération sont du TEXTE**
+>    (→ `interpretation`, jamais citable sur une mesure) : infondable par construction, même défaut que qf_4
+>    avant #114 → **arbitrage à poser (scinder faits / jugement ?)** ; (c) ma_5 : la prévision trouvée
+>    seulement sur un miroir brésilien (C+, sous le plancher B) alors qu'elle est dans le 8-K de NVIDIA ;
+>    (d) ma_3 : cours au moment des rachats seulement en B (newsroom) / C+ sous B+, NVIDIA ne tague plus les
+>    actions rachetées en XBRL depuis 2019 ; (e) ma_1 née `repondu`, désormais PÉRIMÉE : elle cite aussi le
+>    communiqué de rachat du 18/05, antérieur à l'émission obligataire du 15/06, alors que celui du 28/09 est cité.
+>    Puis relire :
 >    `bash tools/recouper_nombres.sh NVDA management_capital` (outil neuf, lecture seule). RVMD A4 : réponses
 >    #1451-#1456 (ma_4 non fondée) ; recoupement : « 2023 » (EQRx) et « 1,4 % » (détention PDG) absents des pièces
 >    citées ; « Kura Oncology 2025 » cité comme acquisition — À VÉRIFIER. Cocher A4 après relecture.

@@ -735,7 +735,7 @@ est une opinion.
 | `mo_2` | Quelle **preuve observable** soutient cette barrière — prix, parts, rétention, marges relatives ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable`, `accord_commercial` |
 | `mo_3` | La barrière **s'élargit-elle ou s'érode-t-elle** ? Sur quel signal le voit-on ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `reglementaire_favorable`, `incident` |
 | `mo_4` | Combien de temps tient-elle **si rien ne change** ? Quelle classe de référence l'ancre ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable` |
-| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `incident` |
+| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `incident` |
 | `mo_6` | Le **pouvoir de fixation des prix** est-il exercé, et supporté par le client ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable` |
 
 > `mo_1`/`mo_3`/`mo_4` sont respectivement `moat.type`, `moat.trend`, `moat.durabilite_ans` —
@@ -801,7 +801,7 @@ d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
 |---|---|---|---|---|
 | `se_1` | Le secteur dans son ensemble **gagne-t-il de l'argent**, et qui capte la valeur entre clients, fournisseurs et intermédiaires ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `regulation_du_secteur`, `concurrent_rapprochement` |
 | `se_2` | Comment le marché est-il **partagé**, et ce partage bouge-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
-| `se_3` | Face à ses **pairs directs**, l'entreprise fait-elle mieux ou moins bien, et l'écart se creuse-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `surprise_execution`, `concurrent_offensive`, `concurrent_revers` |
+| `se_3` | Face à ses **pairs directs**, l'entreprise fait-elle mieux ou moins bien, et l'écart se creuse-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `concurrent_offensive`, `concurrent_revers` |
 | `se_4` | La demande du secteur est-elle **cyclique**, et où en est-on du cycle ? | `interpretation` | B | `resultats`, `surprise_secteur` |
 | `se_5` | Qu'est-ce qui pourrait **changer les règles** du secteur — substitut, régulation des prix, nouveau modèle ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `regulation_du_secteur`, `concurrent_offensive` |
 | `se_6` | Que font les **concurrents** en ce moment, et qu'est-ce que ça change pour l'entreprise ? | `interpretation` | B | `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
@@ -827,13 +827,18 @@ sans objet pour un émetteur sans ventes.
 | `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats`, `surprise_allocation` |
 | `ma_2` | Les **acquisitions** passées ont-elles rapporté ce qu'elles ont coûté ? | `interpretation` | B | `resultats`, `integrite_comptes` |
 | `ma_3` | Les **rachats et émissions** d'actions se font-ils au bon prix ? | `mesure` | B+ | `financement`, `resultats` |
-| `ma_4` | La **rémunération** des dirigeants récompense-t-elle la création de valeur, et ont-ils leur argent en jeu ? | `mesure` | A | `gouvernance` |
+| `ma_4` | Les dirigeants ont-ils **leur propre argent en jeu** — combien détiennent-ils, qu'ont-ils acheté ou vendu ? | `mesure` | A | `gouvernance` |
+| `ma_7` | La **rémunération variable** des dirigeants récompense-t-elle ce qui crée de la valeur pour l'actionnaire ? | `interpretation` | A | `gouvernance` |
 | `ma_5` | La direction **fait-elle ce qu'elle dit** ? | `interpretation` | B | `resultats`, `surprise_execution`, `integrite_comptes`, `gouvernance`, `surprise_allocation` |
 | `ma_6` | **Qui décide vraiment**, et le conseil peut-il s'opposer à la direction ? | `interpretation` | B | `gouvernance` |
 
 > **Arbitrages du 2026-09-28 (#94)** : `gouvernance` passe de portée `aucune` à `questions_declarees`
 > (catalogue d'événements 1.2.0) ; une levée de fonds est un acte d'allocation — `financement`
 > rouvre `ma_1` et `ma_3` en plus de `qf_4`/`qf_7` (arbitrage du 2026-09-26 étendu).
+> **Arbitrage du 2026-10-16** : `ma_4` scindée — les faits (détention, achats et ventes des dirigeants)
+> restent en `ma_4` (mesure) ; le jugement sur les critères de rémunération part en `ma_7`
+> (interprétation à plancher A : la circulaire déposée est le document de référence, comme `qf_8`).
+> Un critère de rémunération est du texte : il ne fondait jamais une question de mesure.
 
 ### 4.6 Framework « Valorisation » (2026-09-28)
 
