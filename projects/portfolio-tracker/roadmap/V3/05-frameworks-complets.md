@@ -64,6 +64,9 @@ disent le rendement. La valorisation vient en dernier, parce qu'elle consomme to
 n'éprouve qu'une fois les quatre écrits, pour mesurer l'adaptation sur l'ensemble, pas sur un
 framework isolé.
 
+> **2026-10-16** : l'ordre de la suite est à re-décider avec l'utilisateur à partir de l'inventaire
+> `07-avant-comite.md` (tous les sujets avant un système présentable au comité).
+
 ## 🎯 Jalon en cours — la note d'initiation sur 3-4 titres très différents (arbitrage du 2026-10-13)
 
 **Arbitrage de l'utilisateur (2026-10-13)** : « bout en bout » s'entend **jusqu'au suivi de la
@@ -172,7 +175,7 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
 - [ ] A6. (prérequis : dette D-me5 sous A1) Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
   l'ordre d'instruction, va_4-6 au cours du jour, Greenwald, dépendance va_1/va_2 → va_6 ; acceptation
   sur RVMD (somme des programmes) et NVDA (segments)
-- [ ] A7. **Ré-analyse sans danger** — PRÉREQUIS du test de reproductibilité (la dette « bloquante pour la
+- [ ] A7. ⚠️ **Règle proposée ÉCARTÉE par l'utilisateur le 2026-10-16, sujet laissé en dette (voir `07-avant-comite.md` §3.13).** **Ré-analyse sans danger** — PRÉREQUIS du test de reproductibilité (la dette « bloquante pour la
   production » du fichier de reprise est avancée ici) : une ré-analyse sur les mêmes pièces ne remplace
   plus une réponse en vigueur par une moins fondée sans lecture ; un refus d'agent ne devient pas une
   demande de recherche ; une demande de recherche se clôt quand la question a trouvé sa réponse (mandats
