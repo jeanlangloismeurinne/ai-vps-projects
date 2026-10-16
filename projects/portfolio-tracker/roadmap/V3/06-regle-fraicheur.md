@@ -352,3 +352,40 @@ lectures votées. Mesure finale : 5 communiqués × 3 procédures complètes, le
 réglementaire + révision des dépenses (référence de mai, même période) ; RVMD 06/05 : levée d'avril
 (postérieure au 31/03) + révision ; NVDA 20/05 : rachat de 80 Md$ et dividende du 18/05 ; NVDA 26/08 et
 19/11 : rien de plus que les comptes. Résidu à arbitrer : cause non dite ⟹ « surprise concurrentielle » (Q2).
+
+## 14. Révision de prévision sans cause dite — les causes probables (proposé le 2026-10-16, à valider)
+
+Demande de l'utilisateur : « liste toutes les causes probables pour les principales révisions afin de bien
+rouvrir tous les chapitres potentiellement concernés ». La règle du 26/09 (Q2 : cause non dite = concurrence)
+visait l'avertissement sur résultats ; appliquée au relèvement de dépenses de RVMD (05/08), elle rouvre la
+barrière et le secteur et rate le management. Proposition : le lecteur dit QUEL CHIFFRE est révisé et dans
+quel SENS (lu dans la phrase, vérifiable) ; le code rouvre l'UNION des chapitres de ses causes probables.
+
+**Cause neuve : `allocation`** — un choix de la direction d'investir davantage ou d'économiser (lancement,
+nouveaux programmes, plan d'économies). Elle rouvrirait : l'usage du capital (ma_1), la tenue des promesses
+(ma_5), le coût de la croissance (qf_3), l'autonomie (qf_7), l'économie d'une unité vendue (me_3) et la
+valorisation (va_1, va_2, va_6).
+
+| Chiffre révisé | Sens | Causes probables si le communiqué ne la dit pas | Chapitres rouverts |
+|---|---|---|---|
+| Chiffre d'affaires, volumes | baisse | demande ou cycle du secteur, change · parts perdues, prix cassés · retard, production · décision réglementaire | qualité financière, défendabilité, modèle économique, secteur, valorisation, + réglementaire défavorable |
+| Chiffre d'affaires | hausse | demande du secteur · gain de parts · exécution meilleure | qualité financière, défendabilité, modèle économique, secteur, valorisation |
+| Marges | baisse ou hausse | prix (pouvoir de marché) · coût des intrants · mix, production | idem (secteur, concurrence, exécution) |
+| Dépenses d'exploitation (R&D, commerciales, total) | hausse | lancement ou programmes choisis (allocation) · dérive des coûts, retard, essais allongés (exécution) | qualité financière, management, modèle économique (coûts), valorisation |
+| Dépenses | baisse | plan d'économies (allocation) · abandon ou retard de programme (exécution) | idem |
+| Investissements (capex) | hausse ou baisse | demande anticipée du secteur · choix d'allocation | qualité financière, secteur (cycle), management, valorisation |
+| Résultat, BPA (seuls) | l'un ou l'autre | ses composantes ne sont pas dites : union des lignes ci-dessus | tous les chapitres financiers, défendabilité, secteur, management |
+| Consommation de trésorerie | l'un ou l'autre | dépenses (allocation, exécution) | qualité financière, management, valorisation |
+| Autre, indéterminé | — | ordre 0 prudent | secteur + concurrence + exécution + allocation |
+
+Point à trancher : un relèvement de DÉPENSES COMMERCIALES peut aussi répondre à un concurrent (défense de
+parts). Inclure la concurrence pour ce seul cas rouvrirait la barrière à chaque lancement ; l'exclure ferait
+manquer une guerre commerciale non dite. Proposition : l'exclure — une défense de parts se verrait au
+chiffre d'affaires ou aux marges du trimestre suivant, qui eux rouvrent la barrière.
+
+**✅ Table validée par l'utilisateur le 2026-10-16**, avec l'exclusion : un relèvement de dépenses
+commerciales ne rouvre PAS la concurrence (« il y aura très probablement d'autres signes si c'est un sujet de
+concurrence » — chiffre d'affaires, marges). NON CONSTRUITE : cause `allocation` + type `surprise_allocation`
+au catalogue (et `rouverte_par` de ma_1, ma_5, qf_3, qf_7, me_3, va_1, va_2, va_6) ; champs `chiffre_revise`
+/ `sens` sur l'écart (lus dans la phrase) ; table (chiffre × sens → causes) en DONNÉES dans frameworks.yaml ;
+le code dérive les types à rouvrir quand la cause n'est pas dite ; catalogue 1.6.0 et relecture des notes.

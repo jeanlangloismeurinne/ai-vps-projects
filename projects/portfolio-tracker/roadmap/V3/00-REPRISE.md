@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-15 (A2 : retrait défendabilité, #126 extraits littéraux, migration 055) · 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-16 (#129 règle de fraîcheur par durée de vie, lecture des communiqués de résultats ; A4 RVMD) · 2026-10-15 (A2 : retrait défendabilité, #126 extraits littéraux, migration 055) · 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -28,17 +28,36 @@ role: >
 
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
-> **➜ PROCHAIN PAS : règle de fraîcheur — arbitrages 1-3 RENDUS le 2026-10-16 (§8 de `06-regle-fraicheur.md`) ; reste à valider la recommandation calendrier (§9) et le classement des ingrédients (§10, management en essai), puis construire** — ex-énoncé : ARBITRAGES de `roadmap/V3/06-regle-fraicheur.md` (refonte de la
-> règle de fraîcheur demandée par l'utilisateur : durée de vie par ingrédient, revue = réécrire/compléter/
-> confirmer, modes initiation/suivi, prochain rendez-vous par réponse) — A4 en dépend. État A4 : RVMD passage
-> réel fait (plan #263, réponses **#1451-#1456**, 5 répondues + ma_4 `non_fondable`, 6 acquittées) mais
-> ma_1/ma_2/ma_3 **nées périmées** ; NVDA **plan refusé par la garde #123** (7 lignes `exercice_clos` pour un
-> historique pluriannuel, renvoi sans effet), rien écrit. Même cause : une réponse prend la date de sa pièce
-> la plus ancienne, un historique vieillit donc comme un solde. Outil neuf **`tools/recouper_nombres.sh TICKER
-> framework`** (lecture seule) : recoupe chaque nombre des réponses avec leurs pièces citées — RVMD
-> management : 2 absents (« 2023 » EQRx, « 1,4 % » détention du PDG) à lire ; il a aussi trouvé NVDA se_4
-> « +85,4 Md$ » (différence calculée par l'analyste, dans aucune pièce) que la relecture manuelle d'A3 avait
-> manqué. À relire aussi : RVMD ma_2 cite « Kura Oncology en 2025 » comme acquisition — à vérifier.
+> **➜ PROCHAIN PAS (reprise après le 2026-10-16) — LIRE D'ABORD `roadmap/V3/06-regle-fraicheur.md` (§8-§14).**
+> 1. **Construire la table des causes de révision (§14, VALIDÉE le 16/10)** : cause `allocation` + type
+>    `surprise_allocation` (rouvre ma_1, ma_5, qf_3, qf_7, me_3, va_1, va_2, va_6) ; l'écart déclare
+>    `chiffre_revise` + `sens` (vérifiés dans la phrase) ; table chiffre × sens → causes probables EN DONNÉES ;
+>    cause non dite ⟹ union des types de ses causes probables (dépenses commerciales : JAMAIS la concurrence) ;
+>    catalogue 1.6.0 puis `bash tools/rediger_notes_flash.sh RVMD|NVDA|MSFT --ecrire` (≈ 4 cents). Remplace la
+>    règle Q2 pour les révisions. Mesurer : RVMD 05/08 ne rouvre plus défendabilité/secteur.
+> 2. **A4 NVDA** : la chaîne `executer_chaine.sh NVDA management_capital rentable` a été LANCÉE le 16/10 vers
+>    10 h 45 (sortie : scratchpad de la session, perdue à la reprise) — vérifier EN BASE (`framework_answers`
+>    NVDA management_capital, `collection_plans` > #263) ; si rien, relancer. Puis relire :
+>    `bash tools/recouper_nombres.sh NVDA management_capital` (outil neuf, lecture seule). RVMD A4 : réponses
+>    #1451-#1456 (ma_4 non fondée) ; recoupement : « 2023 » (EQRx) et « 1,4 % » (détention PDG) absents des pièces
+>    citées ; « Kura Oncology 2025 » cité comme acquisition — À VÉRIFIER. Cocher A4 après relecture.
+> 3. NVDA se_4 « +85,4 Md$ » : différence calculée par l'analyste, dans aucune pièce (trouvé par l'outil, A3).
+>
+> **Fait le 2026-10-16 (#129, déployé `cefeb01`, suite 4636/0)** — règle de fraîcheur refondue (arbitrages de
+> l'utilisateur, §8-§11) : durée de vie + cadence sur les 129 ingrédients ; jugement pièce par pièce à la lecture
+> (`knowledge/duree_de_vie.py`, interrupteur `fraicheur_par_duree_de_vie: true`) ; historique « complété »,
+> description annuelle, tolérance annuelle 92 j (pairs à exercice décalé) ; une pièce citée par une question
+> voisine prend la durée de ce pour quoi elle a été collectée (même chapitre) ; garde #123 restreinte aux
+> chiffres courants trimestriels. **Le communiqué de résultats se LIT** (catalogue **1.5.1**) : phrases relevées
+> par le code + verdict par phrase, date lue dans la phrase / récapitulatif couvert par les comptes, écart établi
+> seulement face à une référence de même période DATÉE, vote de 3 lectures — 12 communiqués RVMD/NVDA/MSFT 3/3
+> identiques. Notes 1.5.1 : RVMD #584-#593, NVDA #594-#599, MSFT #600-#604. Effet mesuré : NVDA secteur 0,17 → 0,50 ;
+> les péremptions restantes sont nommées et légitimes (historiques non complétés, Hugging Face), sauf la
+> révision RVMD lue « concurrentielle » (→ point 1). **Non construit** : le geste « confirmer » au-delà de #117,
+> le calendrier (publications + jalons annoncés + rendez-vous du secteur, §9), la revue trimestrielle légère d'une
+> position détenue (§11), la position du comité (#84) qui tombe encore sur des résultats sans surprise.
+> Leçons (mémoire) : une consigne seule ne fiabilise pas une lecture ; changer la FORME (le code relève, le modèle
+> juge chaque item ; la date se lit ; la référence se cite) puis voter contre le non-déterminisme du fournisseur.
 > **(ex) A4 management et allocation du capital sur RVMD et NVDA** (à blanc puis
 > réel, même méthode qu'A3 : relecture par recoupement automatique des nombres avec les pièces citées). A3 ✅
 > (RVMD #1440-#1444, NVDA #1445-#1450, 0 réponse au standard antérieur). Ancien texte ci-dessous :
