@@ -35,9 +35,10 @@ role: >
 >    cause non dite ⟹ union des types de ses causes probables (dépenses commerciales : JAMAIS la concurrence) ;
 >    catalogue 1.6.0 puis `bash tools/rediger_notes_flash.sh RVMD|NVDA|MSFT --ecrire` (≈ 4 cents). Remplace la
 >    règle Q2 pour les révisions. Mesurer : RVMD 05/08 ne rouvre plus défendabilité/secteur.
-> 2. **A4 NVDA** : la chaîne `executer_chaine.sh NVDA management_capital rentable` a été LANCÉE le 16/10 vers
->    10 h 45 (sortie : scratchpad de la session, perdue à la reprise) — vérifier EN BASE (`framework_answers`
->    NVDA management_capital, `collection_plans` > #263) ; si rien, relancer. Puis relire :
+> 2. **A4 NVDA** : passage réel TERMINÉ le 16/10 — plan **#267** (garde #123 passée, 18 lignes), réponses
+>    **#1475-#1480** : ma_1 `repondu` (allocation créatrice), **ma_2…ma_6 `non_fondable`** (remède collecte, 3 mandats
+>    collecteur, 0 mandat manager). À instruire : pourquoi 5/6 non fondées (pièces trop maigres ? lignes web
+>    coupées ? `bash tools/montrer_parcours.sh NVDA` + mandats du plan #267). Puis relire :
 >    `bash tools/recouper_nombres.sh NVDA management_capital` (outil neuf, lecture seule). RVMD A4 : réponses
 >    #1451-#1456 (ma_4 non fondée) ; recoupement : « 2023 » (EQRx) et « 1,4 % » (détention PDG) absents des pièces
 >    citées ; « Kura Oncology 2025 » cité comme acquisition — À VÉRIFIER. Cocher A4 après relecture.
