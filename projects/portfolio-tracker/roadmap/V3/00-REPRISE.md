@@ -57,7 +57,11 @@ role: >
 >    ma_1-ma_5 `non_fondable`. ⚠️ **ma_1 a RÉGRESSÉ** (#1475 `repondu` mais périmée → #1499 `non_fondable` :
 >    « pas de série pluriannuelle ») — cas de la dette bloquante A7, non retiré. ma_4 : table de détention
 >    toujours sans chiffres — passage lancé AVANT **#132** (tableaux) : à relancer `--questions=ma_4` après
->    déploiement. ma_5 : prévisions sur un miroir (C+) → **arbitrage à poser** : le système lit lui-même le
+>    déploiement. **Fait (plan #272, réponse #1506)** : toujours `non_fondable` — le collecteur n'a rien
+>    rapporté. Mesuré à blanc : la sélection des passages de la circulaire (255 k car. → 22 k) N'INCLUT PAS
+>    le tableau de détention quand la question est posée en français, l'inclut en anglais ; #132 est
+>    nécessaire (le tableau se cite) mais pas suffisant. Piste : la question de sélection d'un document en
+>    anglais se formule en anglais (ou en deux langues) — à mesurer. ma_5 : prévisions sur un miroir (C+) → **arbitrage à poser** : le système lit lui-même le
 >    communiqué déposé à l'EDGAR (comme #106) plutôt que de le chercher au web ?
 >    Puis relire :
 >    `bash tools/recouper_nombres.sh NVDA management_capital` (outil neuf, lecture seule). RVMD A4 : réponses
