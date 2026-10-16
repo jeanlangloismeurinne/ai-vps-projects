@@ -117,7 +117,7 @@ from app.knowledge.websearch import SearchHit  # noqa: E402
 _IR_MSFT = "https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4"
 
 
-async def _stub_web_search(query, max_results=5):
+async def _stub_web_search(query, max_results=5, ticker_id=None):
     return [SearchHit(title="Earnings", url=_IR_MSFT, snippet="…")]
 
 
@@ -654,7 +654,7 @@ async def _stub_fetch(url, *, query=None, ticker_id=None, max_chars=None):
             "text": _CFO_TEXTE, "via": "direct"}
 
 
-async def _stub_search(query, max_results=5):
+async def _stub_search(query, max_results=5, ticker_id=None):
     return [SearchHit(title="Article", url="https://www.reuters.com/x", snippet="accroche seule",
                       text="Full excerpt text returned by the search backend for this article."),
             SearchHit(title="Lien", url="https://www.ft.com/y", snippet="accroche d'un simple lien")]
@@ -694,6 +694,71 @@ check("en production, le journal du run est celui passé à la vérification",
       isinstance(_kw_log, ast.Name) and _kw_log.id == "retrieval_log", f"→ {ast.dump(_kw_log) if _kw_log else None}")
 check("détenteur unique : la note flash compare ses citations avec la même normalisation",
       _nf._normaliser is _cit.normaliser)
+
+print("\n12. La source d'origine d'abord (arbitrage du 2026-10-16) — le site de l'émetteur, à défaut ailleurs")
+# Cas réel : la prévision de NVIDIA (ma_5, plan #267) n'a été trouvée que sur un miroir brésilien alors
+# que le communiqué est sur nvidia.com. Le backend est bouchonné au niveau du réseau ; `web_search` est
+# le détenteur unique de l'ordre, l'exécuteur d'outils ne fait que lui passer le ticker.
+from app.knowledge import websearch as _ws  # noqa: E402
+
+_ORIG = "https://investor.nvidia.com/news/press-release-details/2026/Q2-FY2027/"
+_MIROIR = "https://www.miroir.com.br/nvidia-previsao"
+
+
+class _BackendEspion(_ws.SearchBackend):
+    name = "espion"
+
+    def __init__(self):
+        self.appels = []
+
+    async def search(self, query, max_results, include_domains=()):
+        self.appels.append(tuple(include_domains))
+        if include_domains:
+            return [SearchHit(title="Communiqué", url=_ORIG, text="Revenue is expected to be $54.0 billion.")]
+        return [SearchHit(title="Miroir", url=_MIROIR, text="Receita esperada de US$ 54 bilhões."),
+                SearchHit(title="Communiqué", url=_ORIG, text="Revenue is expected to be $54.0 billion.")]
+
+
+_espion = _BackendEspion()
+_get_reel = _ws.get_search_backend
+_ws.get_search_backend = lambda: _espion
+try:
+    _ex12 = _tools.build_tool_executors(ticker_id="NVDA", query="prévision du trimestre")
+    _r12 = asyncio.run(_ex12["web_search"]({"query": "NVIDIA outlook next quarter"})).get("results") or []
+    check("émetteur enregistré : le site de l'émetteur est interrogé, restreint à SES domaines",
+          ("nvidia.com",) in _espion.appels, f"→ appels {_espion.appels}")
+    check("… et le web ouvert l'est aussi (une taille de marché n'est pas sur le site de l'émetteur)",
+          () in _espion.appels, f"→ appels {_espion.appels}")
+    check("les pages de l'émetteur passent EN TÊTE des résultats",
+          bool(_r12) and _r12[0]["url"] == _ORIG, f"→ {[r['url'] for r in _r12]}")
+    check("une page déjà rendue par le site de l'émetteur n'est pas répétée",
+          [r["url"] for r in _r12].count(_ORIG) == 1, f"→ {[r['url'] for r in _r12]}")
+    check("le résultat dit au modèle qu'une page vient du site de l'émetteur…",
+          bool(_r12) and _r12[0].get("site_emetteur") is True, f"→ {_r12[:1]}")
+    check("… et qu'une reprise n'en vient pas",
+          any(r["url"] == _MIROIR and r.get("site_emetteur") is False for r in _r12), f"→ {_r12}")
+
+    _espion.appels.clear()
+    _ex_inconnu = _tools.build_tool_executors(ticker_id="ZZZZ", query="prévision")
+    _r_inc = asyncio.run(_ex_inconnu["web_search"]({"query": "outlook"})).get("results") or []
+    check("émetteur sans site enregistré : une seule recherche, ouverte (aucun domaine deviné)",
+          _espion.appels == [()], f"→ appels {_espion.appels}")
+    check("… et aucune page n'y est annoncée comme site de l'émetteur",
+          not any(r.get("site_emetteur") for r in _r_inc), f"→ {_r_inc}")
+finally:
+    _ws.get_search_backend = _get_reel
+
+check("site de l'émetteur : un sous-domaine compte (investor.nvidia.com pour NVDA)",
+      _ws.est_site_emetteur("https://investor.nvidia.com/x", "NVDA"))
+check("site de l'émetteur : un domaine qui se termine pareil ne compte pas (notnvidia.com)",
+      not _ws.est_site_emetteur("https://notnvidia.com/x", "NVDA"))
+check("site de l'émetteur : nvidia.com n'est pas le site de l'émetteur d'une analyse MSFT",
+      not _ws.est_site_emetteur("https://investor.nvidia.com/x", "MSFT"))
+from app.db.migrations._gen_025 import PROMPTS as _PROMPTS  # noqa: E402
+
+_consigne = (_PROMPTS / "11-search-worker.md").read_text()
+check("la consigne du collecteur nomme la règle (site_emetteur, à défaut une reprise)",
+      "`site_emetteur: true`" in _consigne and "ne se cite qu'à défaut" in _consigne)
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
 sys.exit(1 if fail else 0)

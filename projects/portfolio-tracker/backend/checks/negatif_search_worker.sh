@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# TEST NÉGATIF de `check_search_worker.py`, section 11 — les EXTRAITS LITTÉRAUX d'une fiche (#126).
+# TEST NÉGATIF de `check_search_worker.py`, section 11 — les EXTRAITS LITTÉRAUX d'une fiche (#126) —
+# et section 12 — la source d'origine d'abord (site de l'émetteur, à défaut ailleurs).
 # Une mutation par DÉCISION, chacune exigeant exit≠0 + FAIL sur l'assert NOMMÉ + bilan atteint
 # (harnais `_negatif.sh`).
 #
@@ -49,6 +50,15 @@ mutations=(
 "$WS¦            self.parts.append(\" \" if self._cell else \"\\n\")¦            self.parts.append(chr(10))¦tient sur une ligne"
 "$WS¦            self._cell = 0  # une cellule non fermée¦            pass  # une cellule non fermée¦ne fait pas déborder une ligne sur la suivante"
 "$WS¦            self._cell = 0  # fin de ligne¦            pass  # fin de ligne¦ne déborde pas sur le paragraphe suivant"
+# la source d'origine d'abord (2026-10-16), chez son détenteur (websearch.web_search) puis au câblage
+"$WS¦    origine = await backend.search(q, n, include_domains=domaines) if domaines else []¦    origine = []¦le site de l'émetteur est interrogé"
+"$WS¦    ouvert = await backend.search(q, n)¦    ouvert = []¦et le web ouvert l'est aussi"
+"$WS¦    hits = origine + [h for h in ouvert if h.url not in vus]¦    hits = [h for h in ouvert if h.url not in vus] + origine¦passent EN TÊTE"
+"$WS¦    hits = origine + [h for h in ouvert if h.url not in vus]¦    hits = origine + ouvert¦n'est pas répétée"
+"$WS¦    domaines = issuer_domains_for(ticker_id)¦    domaines = (\"nvidia.com\",)¦aucun domaine deviné"
+"$WS¦            \"site_emetteur\": est_site_emetteur(self.url, ticker_id),¦            \"site_emetteur\": True,¦et qu'une reprise n'en vient pas"
+"$WS¦    return bool(host) and any(host == d or host.endswith(\".\" + d) for d in issuer_domains_for(ticker_id))¦    return bool(host) and any(host.endswith(d) for d in issuer_domains_for(ticker_id))¦notnvidia.com"
+"$T¦        hits = await web_search(query, n, ticker_id=ticker_id)¦        hits = await web_search(query, n)¦le site de l'émetteur est interrogé"
 # le détenteur unique, partagé avec la note flash
 "$NF¦_normaliser = normaliser¦_normaliser = lambda t: normaliser(t)¦détenteur unique : la note flash"
 )

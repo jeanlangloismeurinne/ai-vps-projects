@@ -128,7 +128,7 @@ async def exec_web_search(
     n = max(1, min(n, _MAX_SEARCH_RESULTS))
 
     try:
-        hits = await web_search(query, n)
+        hits = await web_search(query, n, ticker_id=ticker_id)
     except SearchUnavailable as e:
         return {"error": f"recherche web indisponible : {e}", "retryable": False}
     except Exception as e:  # noqa: BLE001

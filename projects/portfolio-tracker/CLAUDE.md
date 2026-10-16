@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #132) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #133) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
 > | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
@@ -181,3 +181,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #130 une révision de prévision sans cause dite rouvre les causes PROBABLES du chiffre révisé
 - #131 les faits des dirigeants et le jugement sur leur rémunération se séparent ; un dérapage d'exécution ne rouvre pas la concurrence
 - #132 un tableau converti en texte garde ses colonnes : une ligne de tableau doit pouvoir se citer
+- #133 la source d'origine d'abord : le site de l'émetteur, à défaut ailleurs

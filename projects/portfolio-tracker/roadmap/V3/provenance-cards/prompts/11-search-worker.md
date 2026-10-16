@@ -125,6 +125,14 @@ scorée ou n'entre pas**.
     ton calcul, ton estimation ou ton rapprochement avec d'autres sources n'y vaut jamais un relevé.
     Le texte de l'entry, celui qu'un analyste citera, est composé par le serveur avec tes seuls
     extraits. Sans document (`llm_memory`) : `"extraits": []`.
+11. **LA SOURCE D'ORIGINE D'ABORD, À DÉFAUT AILLEURS.** Les résultats de `web_search` marqués
+    `site_emetteur: true` viennent du site de l'émetteur analysé (relations investisseurs, salle de
+    presse) ; ils sont rendus en tête. Un fait sur l'émetteur — ses résultats, ses prévisions, ses
+    annonces, sa gouvernance — se cite sur la page d'origine quand elle le porte : ouvre-la
+    (`fetch_url`) plutôt que de citer une reprise (presse, agrégateur, site miroir, traduction). Une
+    reprise ne se cite qu'à défaut, et `reliability_note` le dit (« original introuvable sur le site
+    de l'émetteur »). Un fait qui n'est pas celui de l'émetteur (taille d'un marché, annonce d'un
+    concurrent) a son origine ailleurs : la règle ne s'y applique pas.
 
 ## Mandat divergent (A6) — `divergent=true`
 

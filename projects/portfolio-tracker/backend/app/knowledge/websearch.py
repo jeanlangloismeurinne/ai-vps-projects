@@ -70,6 +70,7 @@ class SearchHit:
             "published_date": self.published_date,
             "domain": urlparse(self.url).netloc.lower().removeprefix("www."),
             "source_type_max": source_type_max(self.url, ticker_id),
+            "site_emetteur": est_site_emetteur(self.url, ticker_id),
         }
         if self.text:
             d["text"] = self.text
@@ -149,6 +150,12 @@ def issuer_domains_for(ticker_id: Optional[str]) -> tuple[str, ...]:
     return _ISSUER_DOMAINS.get((ticker_id or "").strip().upper(), ())
 
 
+def est_site_emetteur(url: Optional[str], ticker_id: Optional[str]) -> bool:
+    """Vrai si l'URL est sur un domaine (ou sous-domaine) enregistré pour CET émetteur."""
+    host = (urlparse(url or "").netloc or "").lower().removeprefix("www.")
+    return bool(host) and any(host == d or host.endswith("." + d) for d in issuer_domains_for(ticker_id))
+
+
 def classify_source_type(url: Optional[str], ticker_id: Optional[str] = None) -> str:
     """`source_type` le plus favorable qu'un domaine puisse justifier. Sans URL → llm_memory.
 
@@ -165,8 +172,7 @@ def classify_source_type(url: Optional[str], ticker_id: Optional[str] = None) ->
     if not host:
         return "llm_memory"
     bare = host.removeprefix("www.")
-    mine = issuer_domains_for(ticker_id)
-    is_issuer_site = any(bare == d or bare.endswith("." + d) for d in mine)
+    is_issuer_site = est_site_emetteur(url, ticker_id)
 
     if host in _OFFICIAL_DOMAINS or bare in _OFFICIAL_DOMAINS:
         return _OFFICIAL_DOMAINS.get(host) or _OFFICIAL_DOMAINS[bare]
@@ -218,7 +224,10 @@ class SearchBackend(abc.ABC):
     name: str = "base"
 
     @abc.abstractmethod
-    async def search(self, query: str, max_results: int) -> list[SearchHit]:
+    async def search(
+        self, query: str, max_results: int, include_domains: tuple[str, ...] = ()
+    ) -> list[SearchHit]:
+        """`include_domains` non vide : seuls ces domaines ET LEURS SOUS-DOMAINES sont interrogés."""
         ...
 
     async def fetch_contents(self, urls: list[str], *, max_chars: int) -> dict[str, dict[str, Any]]:
@@ -242,13 +251,18 @@ class ExaBackend(SearchBackend):
         self._key = api_key
         self._text_chars = text_chars
 
-    async def search(self, query: str, max_results: int) -> list[SearchHit]:
-        payload = {
+    async def search(
+        self, query: str, max_results: int, include_domains: tuple[str, ...] = ()
+    ) -> list[SearchHit]:
+        payload: dict[str, Any] = {
             "query": query,
             "numResults": max_results,
             "type": "auto",
             "contents": {"text": {"maxCharacters": self._text_chars, "includeHtmlTags": False}},
         }
+        if include_domains:
+            # Mesuré le 2026-10-16 : `nvidia.com` rend aussi `investor.` et `nvidianews.nvidia.com`.
+            payload["includeDomains"] = list(include_domains)
         async with httpx.AsyncClient(timeout=settings.SEARCH_TIMEOUT_S) as client:
             try:
                 r = await client.post(
@@ -318,7 +332,11 @@ class SerperBackend(SearchBackend):
     def __init__(self, api_key: str) -> None:
         self._key = api_key
 
-    async def search(self, query: str, max_results: int) -> list[SearchHit]:
+    async def search(
+        self, query: str, max_results: int, include_domains: tuple[str, ...] = ()
+    ) -> list[SearchHit]:
+        if include_domains:
+            query = f"{query} ({' OR '.join('site:' + d for d in include_domains)})"
         async with httpx.AsyncClient(timeout=settings.SEARCH_TIMEOUT_S) as client:
             try:
                 r = await client.post(
@@ -374,11 +392,27 @@ def search_is_configured() -> bool:
         return False
 
 
-async def web_search(query: str, max_results: int = 5) -> list[SearchHit]:
-    """Recherche web via le backend courant. Lève `SearchUnavailable` (jamais une liste vide muette)."""
+async def web_search(
+    query: str, max_results: int = 5, ticker_id: Optional[str] = None
+) -> list[SearchHit]:
+    """Recherche web via le backend courant. Lève `SearchUnavailable` (jamais une liste vide muette).
+
+    **La source d'origine d'abord** (arbitrage du 2026-10-16) : pour un émetteur au site enregistré,
+    le site de l'émetteur est interrogé PUIS le web ouvert, et ses pages passent en tête. Sans ça, la
+    prévision de NVIDIA n'a été trouvée que sur un miroir brésilien (C+, sous le plancher) alors que
+    le communiqué est sur `nvidia.com`. Le web ouvert reste interrogé à chaque fois : le site de
+    l'émetteur n'est pas l'origine d'une taille de marché ou d'un fait sur un concurrent, et « à
+    défaut ailleurs » ne se juge pas en code — c'est le modèle qui voit si la page d'origine porte le fait.
+    """
     backend = get_search_backend()
-    hits = await backend.search(query.strip(), max(1, min(max_results, 10)))
-    logger.info("web_search[%s] %r → %d résultat(s)", backend.name, query[:80], len(hits))
+    q, n = query.strip(), max(1, min(max_results, 10))
+    domaines = issuer_domains_for(ticker_id)
+    origine = await backend.search(q, n, include_domains=domaines) if domaines else []
+    ouvert = await backend.search(q, n)
+    vus = {h.url for h in origine}
+    hits = origine + [h for h in ouvert if h.url not in vus]
+    logger.info("web_search[%s] %r → %d du site de l'émetteur + %d du web ouvert",
+                backend.name, query[:80], len(origine), len(hits) - len(origine))
     return hits
 
 

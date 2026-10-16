@@ -3171,6 +3171,25 @@ la circulaire DEF 14A NVIDIA, assert au point de lecture = la vérification de c
 `negatif_search_worker.sh` **27/0** (dont une mutation d'abord verte : la fixture ne distinguait pas les
 deux remises à zéro — rendue discriminante). Suite **4677/0**.
 
+### #133 — la source d'origine d'abord : le site de l'émetteur, à défaut ailleurs
+
+**Le défaut (2026-10-16, diagnostic A4 NVDA, ma_5).** La prévision de NVIDIA n'a été rapportée que par un
+miroir brésilien (C+, sous le plancher B) alors que le communiqué est sur `nvidia.com` et au 8-K : la
+question a paru infondable faute d'original. Comme un fonds : l'analyste va chercher le communiqué sur le
+site de la société, et ne cite une reprise qu'à défaut, en le disant. **Arbitrage de l'utilisateur
+(2026-10-16)** : « idéalement sur le site de l'émetteur, à défaut ailleurs ». **La règle** : détenteur
+unique `websearch.web_search(query, n, ticker_id)` — pour un émetteur au site ENREGISTRÉ (`_ISSUER_DOMAINS`,
+#33 ; aucun domaine deviné), une recherche restreinte à ses domaines (Exa `includeDomains`, sous-domaines
+compris — mesuré : `nvidia.com` rend `investor.` et `nvidianews.` ; Serper : `site:`) PUIS la recherche
+ouverte, pages de l'émetteur en tête, sans doublon ; chaque résultat porte `site_emetteur`
+(`est_site_emetteur`, détenteur partagé avec `classify_source_type`). Le web ouvert reste interrogé à chaque
+fois : le site de l'émetteur n'est pas l'origine d'une taille de marché ni d'un fait sur un concurrent, et
+« à défaut » ne se juge pas en code (#68) — c'est la règle 11 du prompt `search-worker` (migration **056**,
+version 5) qui dit au modèle de citer la page d'origine quand elle porte le fait. Coût : deux recherches au
+lieu d'une pour un émetteur enregistré (~0,007 $ chacune). Gardes : `check_search_worker` §12 +
+`negatif_search_worker.sh` **35/0** (8 mutations : appel restreint, appel ouvert, ordre, doublon, domaine
+deviné, drapeau, frontière de sous-domaine, câblage du ticker).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont
