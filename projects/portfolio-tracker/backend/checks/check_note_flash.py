@@ -26,6 +26,12 @@ Ce que la capacité garantit, et ce que chaque section éprouve :
        cette date (sinon il compte comme nouveau) ; les types persistés restent ceux de l'ordre 0 ;
        interrupteur à True ⟹ le rappel admis ne rouvre rien, à False ⟹ l'ordre 0 exact ; une note faite
        que de rappels se lit `routine` ; une surprise n'est jamais un rappel.
+  • §10 LE COMMUNIQUÉ DE RÉSULTATS (diagnostic §13) — phrases relevées, référence, date lue, vote.
+  • §11 LA RÉVISION SANS CAUSE DITE (table des causes, catalogue 1.6.0, §14 de `06-regle-fraicheur.md`) —
+       sur la vraie révision RVMD du 05/08 : le chiffre déclaré se VÉRIFIE dans la phrase, le sens dans les
+       montants des deux prévisions ; vérifiés, ils resserrent sur les causes probables (allocation,
+       exécution — jamais la concurrence) ; invérifiables, le côté prudent (tous les chiffres nommés, les
+       deux sens, ou toute la table) ; un élément persisté avant la table garde la règle Q2.
 
 Cible : pydantic v2 (container backend). Tester en container, **pas** le python hôte.
 """
@@ -232,8 +238,11 @@ b.check(refuse(pont(lisible=True, elements=[{"type": "surprise", "passage": cite
                "passage_cause"), "une cause citée à faux est refusée")
 v2 = pont(lisible=True, elements=[{"type": "surprise", "passage": cite_normalisee, "cause": "non_dite"},
                                   {"type": "reglementaire_favorable", "passage": cite_normalisee}])
-b.check(not isinstance(v2, str) and v2.types == ("reglementaire_favorable", "surprise_concurrence"),
-        f"les types retenus sont ceux que le CODE dérive → {v2 if isinstance(v2, str) else v2.types}")
+b.check(not isinstance(v2, str) and v2.types == ("reglementaire_defavorable", "reglementaire_favorable",
+                                                 "surprise_allocation", "surprise_concurrence",
+                                                 "surprise_execution", "surprise_secteur"),
+        f"les types retenus sont ceux que le CODE dérive (révision sans cause ni chiffre déclaré : toute la "
+        f"table, côté prudent) → {v2 if isinstance(v2, str) else v2.types}")
 vi = pont(lisible=False, motif="le texte ne contient que la page de signature du dépôt")
 b.check(not isinstance(vi, str) and vi.types == (A_QUALIFIER,) and not vi.lisible and vi.motif,
         "une note illisible devient `{a_qualifier}` avec son motif (rouvre tout, Q3)")
@@ -514,7 +523,8 @@ b.check(any("In May 2026, the company received a $250.0 million payment" in p fo
 N_ROY = next((i for i, p in enumerate(ph, 1) if "In May 2026, the company received" in p), 1)
 N_GUI = next((i for i, p in enumerate(ph, 1) if "updating its full year 2026 GAAP operating expense" in p), 1)
 N_COL = next((i for i, p in enumerate(ph, 1) if p.startswith("Clinical Collaborations")), 1)
-REF = "Revolution Medicines is updating its full year 2026 GAAP operating expenses guidance to a range of $1.7 to $1.8"
+REF = ("Revolution Medicines is updating its full year 2026 GAAP operating expenses guidance to a range of "
+       "$1.7 to $1.8 billion")
 b.check(_norm(REF) in _norm("\n".join(ref_mai)),
         "les prévisions du communiqué PRÉCÉDENT (06/05) portent la fourchette de mai (1,7-1,8 Md$)")
 b.check(NF.date_du_passage("In May 2026, the company received") == date(2026, 5, 1)
@@ -544,7 +554,8 @@ def pont_r(ex, refs=None):
         return f"REFUS {e}"
 
 
-SUR = {"type": "surprise", "cause": "non_dite", "passage_reference": REF, "periode_prevue": "full year 2026"}
+SUR = {"type": "surprise", "cause": "non_dite", "passage_reference": REF, "periode_prevue": "full year 2026",
+       "chiffre_revise": "depenses_exploitation", "sens": "hausse"}
 v_ok = pont_r(examen(**{f"n{N_ROY}": {"type": "financement"}, f"n{N_GUI}": SUR,
                         f"n{N_COL}": {"type": "accord_commercial"}}))
 els = {e["passage"][:30]: e for e in getattr(v_ok, "elements", [])}
@@ -559,13 +570,15 @@ b.check(gui.get("survenu_le") == "2026-08-05" and not gui.get("couvert_par_les_c
         f"la RÉVISION établie (référence de mai, même période) est datée du communiqué et compte → {gui}")
 b.check(col.get("couvert_par_les_comptes") is True and col.get("survenu_le_source") == "récapitulatif de la période",
         f"un fait NON daté d'un communiqué de résultats appartient à la période publiée → {col}")
-b.check(not isinstance(v_ok, str) and "surprise_concurrence" in v_ok.types
-        and NF.types_annonces(v_ok.elements) == frozenset({"resultats", "surprise_concurrence"}),
-        f"types annoncés : résultats + la révision (cause non dite, Q2) → {getattr(v_ok, 'types', v_ok)}")
+b.check(not isinstance(v_ok, str) and "surprise_concurrence" not in v_ok.types
+        and NF.types_annonces(v_ok.elements) == frozenset({"resultats", "surprise_allocation", "surprise_execution"}),
+        f"types annoncés : résultats + la révision de dépenses (causes probables allocation, exécution — "
+        f"jamais la concurrence) → {getattr(v_ok, 'types', v_ok)}")
 
 v_sans = pont_r(examen(**{f"n{N_GUI}": {k: v for k, v in SUR.items() if k != "passage_reference"}}))
 g2 = next((e for e in getattr(v_sans, "elements", []) if "updating" in e["passage"]), {})
-b.check("aucune référence" in (g2.get("ecart_non_etabli") or "") and "surprise_concurrence" not in v_sans.types,
+b.check("aucune référence" in (g2.get("ecart_non_etabli") or "")
+        and not any(t.startswith("surprise_") for t in getattr(v_sans, "types", ("?",))),
         f"une prévision SANS référence n'est pas un écart : gardée, motif écrit, ne compte pas → {g2}")
 v_per = pont_r(examen(**{f"n{N_GUI}": {**SUR, "periode_prevue": "second quarter of 2026"}}))
 g3 = next((e for e in getattr(v_per, "elements", []) if "updating" in e["passage"]), {})
@@ -632,5 +645,105 @@ b.check(lu_on.types == frozenset({"resultats"}) and "couvert(s) par les comptes"
         f"relue (interrupteur actif) : la tranche de mai est écartée, et c'est DIT → {lu_on.types} {lu_on.resume[-80:]}")
 b.check(lu_off.types == frozenset({"financement", "resultats"}),
         f"interrupteur coupé : ordre 0, tout type cité compte → {lu_off.types}")
+
+
+print("§11 la révision sans cause dite : ses causes probables (table, catalogue 1.6.0)")
+from app.contracts.note_flash_schema import ElementNoteFlash, types_de_l_element  # noqa: E402
+
+PH_GUI = ph[N_GUI - 1] if len(ph) >= N_GUI else ""   # accès TOLÉRANT : sous mutation, un FAIL nommé
+b.check("operating expense guidance" in PH_GUI and "$2.1 to $2.2 billion" in PH_GUI,
+        f"la phrase RÉELLE de la révision RVMD du 05/08 (2,1-2,2 Md$) → « {PH_GUI[:120]}… »")
+
+
+def rev(**kw):
+    """`causes_de_la_revision` sur un élément ; un refus du contrat est une VALEUR (FAIL nommé)."""
+    try:
+        el = ElementNoteFlash.model_validate({"type": "surprise", "cause": "non_dite", **kw})
+        return NF.causes_de_la_revision(el, fichier)
+    except Exception as e:  # noqa: BLE001
+        return (("REFUS",), (), repr(e))
+
+
+# Toute la table, dans le sens VÉRIFIÉ (hausse : la décision réglementaire ne s'y ajoute pas).
+TOUTE = ("surprise_allocation", "surprise_concurrence", "surprise_execution", "surprise_secteur")
+r_ok = rev(passage=PH_GUI, passage_reference=REF, periode_prevue="full year 2026",
+           chiffre_revise="depenses_exploitation", sens="hausse")
+b.check(r_ok[0] == ("surprise_allocation", "surprise_execution") and r_ok[1] == ("allocation", "execution")
+        and "lu dans la phrase" in r_ok[2] and "vérifié dans les montants" in r_ok[2],
+        f"RVMD 05/08 : dépenses (lues dans la phrase) en HAUSSE (1,75 → 2,15 Md$, vérifiée) ⟹ allocation + "
+        f"exécution, PAS la concurrence → {r_ok}")
+r_cnd = rev(passage=PH_GUI, passage_reference=REF, periode_prevue="full year 2026",
+            chiffre_revise="chiffre_affaires", sens="hausse")
+b.check(r_cnd[0] == TOUTE and "introuvable dans la phrase" in r_cnd[2],
+        f"un chiffre déclaré que la phrase ne NOMME pas (chiffre d'affaires sur une phrase de dépenses) ⟹ toute "
+        f"la table → {r_cnd[0]} / {r_cnd[2][:90]}")
+r_abs = rev(passage=PH_GUI, passage_reference=REF, periode_prevue="full year 2026", sens="hausse")
+b.check(r_abs[0] == TOUTE and "non déclaré" in r_abs[2],
+        f"un chiffre NON déclaré ⟹ toute la table (côté prudent) → {r_abs[0]}")
+r_hors = rev(passage=PH_GUI, passage_reference=REF, periode_prevue="full year 2026",
+             chiffre_revise="carnet_de_commandes", sens="hausse")
+b.check(r_hors[0] == TOUTE and "hors de la table" in r_hors[2],
+        f"un chiffre HORS de la table ⟹ toute la table → {r_hors[0]}")
+
+# Le sens : une forme minimale construite (la règle, pas un dépôt) — sur le chiffre d'affaires, le seul
+# chiffre de la table dont les deux sens ne rouvrent pas la même chose.
+CA_NEUF = "The company now expects full year 2026 revenue of $900 million to $950 million."
+CA_ANCIEN = "The company expects full year 2026 revenue of $1.0 billion to $1.1 billion."
+CA_HAUT = "The company now expects full year 2026 revenue of $1.2 billion to $1.3 billion."
+r_b = rev(passage=CA_NEUF, passage_reference=CA_ANCIEN, periode_prevue="full year 2026",
+          chiffre_revise="chiffre_affaires", sens="baisse")
+r_h = rev(passage=CA_HAUT, passage_reference=CA_ANCIEN, periode_prevue="full year 2026",
+          chiffre_revise="chiffre_affaires", sens="hausse")
+r_x = rev(passage=CA_NEUF, passage_reference=CA_ANCIEN, periode_prevue="full year 2026",
+          chiffre_revise="chiffre_affaires", sens="hausse")
+r_n = rev(passage=CA_HAUT, chiffre_revise="chiffre_affaires", sens="hausse")
+b.check("reglementaire_defavorable" in r_b[0] and "vérifié" in r_b[2],
+        f"chiffre d'affaires en BAISSE vérifiée (1,05 Md$ → 925 M$) ⟹ la décision réglementaire s'ajoute → {r_b}")
+b.check(r_h[0] == ("surprise_concurrence", "surprise_execution", "surprise_secteur") and "vérifié" in r_h[2],
+        f"chiffre d'affaires en HAUSSE vérifiée ⟹ secteur, concurrence, exécution, sans le réglementaire → {r_h}")
+b.check("reglementaire_defavorable" in r_x[0] and "contredit" in r_x[2],
+        f"un sens déclaré que les montants CONTREDISENT ⟹ les deux sens (côté prudent) → {r_x[2][:120]}")
+b.check("reglementaire_defavorable" in r_n[0] and "invérifiable" in r_n[2],
+        f"sans prévision précédente citée (un 8-K d'avertissement), le sens ne se vérifie pas ⟹ les deux sens → "
+        f"{r_n[2][:120]}")
+b.check(NF.sens_lu(PH_GUI, "guidance to a range of $1.7 to $1.8", "full year 2026")[0] is None,
+        "deux montants d'échelles différentes (Md$ contre un nombre nu) ne se comparent pas")
+DEUX = ("The company now expects full year 2026 revenue of $1.2 billion and operating expenses of "
+        "$800 million.")
+r_2 = rev(passage=DEUX, passage_reference=CA_ANCIEN, periode_prevue="full year 2026",
+          chiffre_revise="chiffre_affaires", sens="hausse")
+b.check(set(r_2[1]) == {"allocation", "concurrence", "execution", "secteur"} and "nomme aussi" in r_2[2],
+        f"une phrase qui nomme DEUX chiffres : leurs causes s'ajoutent → {r_2[1]} / {r_2[2][:100]}")
+
+_noms = lambda t: [c.id for c in NF.chiffres_nommes(t, fichier)]  # noqa: E731
+b.check(_noms("We expect to reach profitability in 2027.") == []
+        and _noms("Net losses widened; R&D expenses rose.") == ["depenses_exploitation", "resultat"],
+        f"un terme se lit en MOT ENTIER (« profitability » n'est pas « profit »), pluriel admis → "
+        f"{_noms('We expect to reach profitability in 2027.')} / {_noms('Net losses widened; R&D expenses rose.')}")
+
+# Ce que la note PERSISTE, et ce qu'un élément persisté rouvre.
+b.check(gui.get("types_derives") == ["surprise_allocation", "surprise_execution"]
+        and gui.get("causes_probables") == ["allocation", "execution"] and gui.get("revision_motif"),
+        f"l'élément PERSISTÉ porte les types dérivés, les causes et le motif écrit → {gui.get('revision_motif')}")
+b.check(types_de_l_element({"type": "surprise", "cause": "non_dite"}) == frozenset({"surprise_concurrence"}),
+        "un élément persisté AVANT la table (sans types dérivés) garde la règle Q2 jusqu'à sa relecture")
+b.check(types_de_l_element({"type": "surprise", "cause": "allocation"}) == frozenset({"surprise_allocation"}),
+        "une cause DITE `allocation` ⟹ `surprise_allocation`")
+b.check(refuse(sortie(lisible=True, elements=[{"type": "resultats", "passage": PASS_FDA,
+                                                "chiffre_revise": "marge"}]), "n'ont de sens que"),
+        "un chiffre révisé hors d'un écart aux attentes est refusé")
+b.check(refuse(sortie(lisible=True, elements=[{"type": "surprise", "passage": PASS_FDA,
+                                                "cause": "allocation"}]), "passage_cause"),
+        "une cause `allocation` DITE se prouve par le passage qui la dit")
+
+# Ce que le modèle voit de la table : les chiffres, jamais leurs causes (#59).
+_ctx11 = contexte_note_flash(RES_AOUT, RVMD, d_aout, fichier, precedentes=[])
+_vus11 = _ctx11.get("chiffres_revisables", [])
+b.check(len(_vus11) == len(fichier.revisions_de_prevision) and all(set(c) == {"id", "libelle"} for c in _vus11),
+        f"le modèle voit les chiffres révisables par identifiant et libellé, JAMAIS leurs causes ni leurs termes → "
+        f"{[c.get('id') for c in _vus11]}")
+_sur = next((t for t in _ctx11["types_evenement"] if t["id"] == "surprise"), {})
+b.check("`allocation`" in _sur.get("libelle", "") and "`chiffre_revise`" in _sur.get("libelle", ""),
+        "le libellé de l'écart propose la cause `allocation` et demande le chiffre révisé")
 
 sys.exit(b.summary())

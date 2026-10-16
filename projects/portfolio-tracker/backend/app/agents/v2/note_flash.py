@@ -70,9 +70,9 @@ from app.agents.providers import ResolvedAgent, get_agent_provider
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.config import settings
-from app.contracts.framework_definition_schema import FrameworksFile
+from app.contracts.framework_definition_schema import SENS_REVISION, ChiffreRevisable, FrameworksFile
 from app.contracts.note_flash_schema import (SURPRISE, ElementNoteFlash, NoteFlashSortie, type_derive,
-                                            type_derive_de)
+                                            types_de_l_element)
 from app.db.database import get_db_session
 from app.knowledge.citation import normaliser
 from app.knowledge.edgar_facts import _UA
@@ -90,7 +90,7 @@ __all__ = [
     "depots_a_lire", "telecharger_soumission", "rediger_note_flash", "persister_note",
     "qualifications_de_l_emetteur", "LectureDesDepots", "DepotTraite", "lire_les_depots_en_attente",
     "titres_suivis", "lecture_du_matin", "NotePrecedente", "precedentes_de", "types_annonces",
-    "verdict_rappel",
+    "verdict_rappel", "causes_de_la_revision", "chiffres_nommes", "sens_lu",
 ]
 
 
@@ -333,8 +333,17 @@ def types_proposables(fichier: FrameworksFile) -> list[dict[str, str]]:
         "est PAS un (c'est un type réglementaire). Donne sa `cause` : "
         "`secteur` (demande, cycle, change — commun aux concurrents), `concurrence` (propre à "
         "l'entreprise : parts perdues, prix cassés, client qui internalise), `execution` (retard, "
-        "usine, produit), ou `non_dite` si le communiqué ne la donne pas")})
+        "usine, produit), `allocation` (un choix de la direction : investir davantage — lancement, "
+        "nouveaux programmes — ou économiser), ou `non_dite` si le communiqué ne la donne pas. Avec "
+        "`non_dite`, dis QUEL chiffre est révisé (`chiffre_revise`, un identifiant de "
+        "`chiffres_revisables`) et dans quel `sens` (`hausse` ou `baisse`)")})
     return out
+
+
+def chiffres_revisables(fichier: FrameworksFile) -> list[dict[str, str]]:
+    """La table des causes de révision telle que le modèle la voit : identifiant et libellé du chiffre,
+    JAMAIS ses causes ni ce qu'elles rouvrent (aucun levier sur l'exigence, #59)."""
+    return [{"id": c.id, "libelle": c.libelle} for c in fichier.revisions_de_prevision]
 
 
 @dataclass(frozen=True)
@@ -373,6 +382,7 @@ def contexte_note_flash(event: MaterialEvent, emetteur: IdentiteEmetteur,
                      if event.periode_publiee is not None else {}),
                   "items": [{"item": i, "libelle": lib} for i, lib in _libelles(event)]},
         "types_evenement": types_proposables(fichier),
+        "chiffres_revisables": chiffres_revisables(fichier),
         "notes_precedentes": [{"date_evenement": n.date_evenement.isoformat(),
                                "types": sorted(n.types_annonces), "note": n.resume}
                               for n in precedentes],
@@ -438,8 +448,11 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "L'ÉCART AUX ATTENTES. Si le dépôt révèle des résultats ou une prévision qui s'écartent de ce "
     "qu'annonçait la direction ou de ce qu'attendait le marché, utilise le type `surprise` et dis sa "
     "`cause`. La question à te poser : « est-ce l'entreprise, ou tout le secteur ? ». Ne choisis "
-    "`secteur`, `concurrence` ou `execution` que si le dépôt DIT la cause — cite alors ce passage "
-    "dans `passage_cause`. Sinon la cause est `non_dite` (sans `passage_cause`).\n\n"
+    "`secteur`, `concurrence`, `execution` ou `allocation` que si le dépôt DIT la cause — cite alors ce "
+    "passage dans `passage_cause`. Sinon la cause est `non_dite` (sans `passage_cause`) ; dis alors "
+    "`chiffre_revise` — l'identifiant, dans `chiffres_revisables`, du chiffre que la phrase révise "
+    "(omets-le si aucun ne convient) — et `sens` : `hausse` si la nouvelle prévision est au-dessus de "
+    "l'ancienne, `baisse` si elle est au-dessous.\n\n"
     "CHAQUE TYPE SE CITE. Pour chaque élément, `passage` est une citation LITTÉRALE du texte des "
     "documents (au moins une phrase, copiée mot pour mot dans sa langue d'origine, sans traduction "
     "ni coupure au milieu). Une citation qui n'est pas dans le texte fait refuser ta note.\n\n"
@@ -457,7 +470,8 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     'Sur un communiqué de résultats : {"lisible": true, "elements": [{"type": "resultats", "passage": '
     '"<phrase de l\'Item 2.02>"}], "examen": [{"n": 1, "type": null}, {"n": 2, "type": "financement", '
     '"survenu_le": "<AAAA-MM-JJ>"}, {"n": 3, "type": "surprise", "cause": "non_dite", "passage_reference": '
-    '"<citation de la prévision PRÉCÉDENTE>", "periode_prevue": "<la même période>"}]}\n'
+    '"<citation de la prévision PRÉCÉDENTE>", "periode_prevue": "<la même période>", '
+    '"chiffre_revise": "<id de chiffres_revisables>", "sens": "<hausse ou baisse>"}]}\n'
     'ou {"lisible": false, "elements": [], "motif": "<pourquoi>"}'
 )
 
@@ -499,9 +513,10 @@ def verdict_rappel(type_: str, rappel_du: date, *, event_date: date,
 def types_annonces(elements: list[dict[str, Any]]) -> frozenset[str]:
     """Les types qu'une note ANNONCE : ceux de ses éléments hors rappels ADMIS et hors faits COUVERTS
     PAR LES COMPTES qu'un communiqué de résultats récapitule. Fonction PURE."""
-    return frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements
+    return frozenset(t for el in elements
                      if not el.get("rappel_admis") and not el.get("couvert_par_les_comptes")
-                     and not el.get("ecart_non_etabli"))
+                     and not el.get("ecart_non_etabli")
+                     for t in types_de_l_element(el))
 
 
 def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
@@ -548,7 +563,7 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
                 derives.append(ElementNoteFlash(
                     type=x.type, passage=phrases[x.n - 1], cause=x.cause, passage_cause=x.passage_cause,
                     passage_reference=x.passage_reference, periode_prevue=x.periode_prevue,
-                    survenu_le=x.survenu_le))
+                    chiffre_revise=x.chiffre_revise, sens=x.sens, survenu_le=x.survenu_le))
             except ValueError as e:
                 defauts.append(f"phrase {x.n} : {e}")
             if x.passage_cause is not None and _normaliser(x.passage_cause) not in corpus:
@@ -589,14 +604,125 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
                 d["couvert_par_les_comptes"] = True
                 d["couvert_motif"] = (f"survenu le {retenue.isoformat()}, au plus tard à la clôture "
                                       f"publiée du {cloture_publiee.isoformat()} : dans les comptes")
+        if el.type == SURPRISE and el.cause == "non_dite":
+            # La table des causes de révision (§14, validée le 2026-10-16) remplace la règle Q2 : le code
+            # rouvre l'union des types des causes PROBABLES du chiffre révisé, dans le sens révisé.
+            types_r, causes_r, motif_r = causes_de_la_revision(el, fichier)
+            d["types_derives"], d["causes_probables"], d["revision_motif"] = list(types_r), list(causes_r), motif_r
         if el.rappel_du is not None:
             d["rappel_admis"], d["rappel_motif"] = verdict_rappel(
                 type_derive(el), el.rappel_du, event_date=event_date, precedentes=precedentes)
         elements.append(d)
     # Ordre 0 : tout type cité — sauf un écart NON ÉTABLI, qui n'est pas un fait mais une lecture refusée.
-    types = tuple(sorted({type_derive_de(d["type"], d.get("cause")) for d in elements
-                          if not d.get("ecart_non_etabli")}))
+    types = tuple(sorted({t for d in elements if not d.get("ecart_non_etabli")
+                          for t in types_de_l_element(d)}))
     return NoteValidee(lisible=True, types=types, motif=None, elements=elements)
+
+
+# ── 4 bis. La révision sans cause dite : ses causes probables (§14 de `06-regle-fraicheur.md`) ─────
+#
+# Ce que ferait un vrai fonds : devant « nous relevons notre prévision de dépenses » sans un mot
+# d'explication, l'analyste ne présume pas une guerre des prix — il rouvre les chapitres que les causes
+# PLAUSIBLES de ce chiffre touchent (un lancement financé, une dérive des coûts). Le lecteur DÉCLARE le
+# chiffre et le sens ; le code les VÉRIFIE (le chiffre se lit dans la phrase, le sens dans les montants
+# des deux prévisions) et ne fait que RESSERRER sur ce qu'il a vérifié : tout ce qui ne se vérifie pas
+# retombe sur le côté prudent — tous les chiffres que la phrase nomme, les deux sens, ou toute la table.
+# Coût d'erreur nommé : un relèvement de dépenses commerciales qui répond en fait à un concurrent ne
+# rouvre pas la concurrence (arbitrage du 2026-10-16 : elle se verra au chiffre d'affaires ou aux
+# marges du trimestre suivant, qui, eux, la rouvrent).
+
+def chiffres_nommes(passage: str, fichier: FrameworksFile) -> list[ChiffreRevisable]:
+    """Les chiffres de la table dont un terme figure dans la phrase (mot entier, pluriel admis), dans
+    l'ordre de la table. Fonction PURE."""
+    t = normaliser(passage)
+    return [c for c in fichier.revisions_de_prevision
+            if any(re.search(rf"(?<![a-z0-9]){re.escape(normaliser(m))}(?:s|es)?(?![a-z0-9])", t)
+                   for m in c.termes)]
+
+
+_NOMBRE = r"(\d[\d,]*(?:\.\d+)?)"
+_ECHELLE = {"billion": 1e9, "million": 1e6, "thousand": 1e3}
+_MONTANT = re.compile(rf"\$\s?{_NOMBRE}\s*(billion|million|thousand)?"
+                      rf"(?:\s*(?:to|and|-)\s*\$?\s?{_NOMBRE}\s*(billion|million|thousand)?)?")
+_POURCENT = re.compile(rf"{_NOMBRE}\s?%(?:\s*(?:to|and|-)\s*{_NOMBRE}\s?%)?")
+
+
+def _valeur_annoncee(texte: str, periode: Optional[str]) -> Optional[tuple[str, float]]:
+    """Le premier montant (en dollars, à défaut en pour cent) d'une citation, APRÈS la période visée si
+    elle y figure — le milieu d'une fourchette, à son échelle — et sa nature (`usd`, `usd_sans_echelle`,
+    `pct`). Fonction PURE."""
+    t = normaliser(texte)
+    if periode:
+        i = t.find(normaliser(periode))
+        if i >= 0:
+            t = t[i:]
+    m = _MONTANT.search(t)
+    if m:
+        e1, e2 = m.group(2), m.group(4)
+        bornes = [(m.group(1), e1 or e2)] + ([(m.group(3), e2 or e1)] if m.group(3) else [])
+        vals = [float(n.replace(",", "")) * _ECHELLE.get(e or "", 1.0) for n, e in bornes]
+        return ("usd" if (e1 or e2) else "usd_sans_echelle"), sum(vals) / len(vals)
+    m = _POURCENT.search(t)
+    if m:
+        vals = [float(n.replace(",", "")) for n in (m.group(1), m.group(2)) if n]
+        return "pct", sum(vals) / len(vals)
+    return None
+
+
+def sens_lu(passage: str, reference: Optional[str], periode: Optional[str]) -> tuple[Optional[str], str]:
+    """Le sens d'une révision LU dans les montants des deux prévisions (la nouvelle : `passage`,
+    l'ancienne : `reference`), et ce qui a été lu. `None` si les montants ne se comparent pas. PURE."""
+    if not reference:
+        return None, "aucune prévision précédente citée : le sens ne se lit pas dans les montants"
+    neuf, ancien = _valeur_annoncee(passage, periode), _valeur_annoncee(reference, periode)
+    if neuf is None or ancien is None:
+        return None, "pas de montant comparable dans les deux prévisions"
+    if neuf[0] != ancien[0]:
+        return None, f"montants de natures différentes ({ancien[0]} → {neuf[0]})"
+    lu = f"{ancien[1]:,.6g} → {neuf[1]:,.6g}"
+    if neuf[1] == ancien[1]:
+        return None, f"montants égaux ({lu})"
+    return ("hausse" if neuf[1] > ancien[1] else "baisse"), lu
+
+
+def causes_de_la_revision(el: ElementNoteFlash, fichier: FrameworksFile
+                          ) -> tuple[tuple[str, ...], tuple[str, ...], str]:
+    """DÉTENTEUR UNIQUE (#46) de « que rouvre une révision dont le communiqué ne dit pas la cause ? » :
+    les types (triés), les causes probables (triées) et le motif écrit. Fonction PURE (cf. 4 bis)."""
+    table = fichier.revisions_de_prevision
+    nommes = chiffres_nommes(el.passage, fichier)
+    ids_nommes = [c.id for c in nommes]
+    if el.chiffre_revise is None:
+        retenus, mc = table, "chiffre révisé non déclaré : toute la table (côté prudent)"
+    elif el.chiffre_revise not in {c.id for c in table}:
+        retenus, mc = table, f"chiffre « {el.chiffre_revise} » hors de la table : toute la table (côté prudent)"
+    elif el.chiffre_revise not in ids_nommes:
+        retenus, mc = table, (f"chiffre « {el.chiffre_revise} » introuvable dans la phrase : toute la table "
+                              "(côté prudent)")
+    else:
+        retenus = nommes
+        autres = [i for i in ids_nommes if i != el.chiffre_revise]
+        mc = (f"chiffre « {el.chiffre_revise} » lu dans la phrase"
+              + (f" — elle nomme aussi {', '.join(autres)}, leurs causes s'ajoutent" if autres else ""))
+    lu, ce_qui_est_lu = sens_lu(el.passage, el.passage_reference, el.periode_prevue)
+    if el.sens is None:
+        sens, ms = SENS_REVISION, "sens non déclaré : les deux sens"
+    elif lu is None:
+        sens, ms = SENS_REVISION, f"sens « {el.sens} » invérifiable ({ce_qui_est_lu}) : les deux sens"
+    elif lu != el.sens:
+        sens, ms = SENS_REVISION, (f"sens « {el.sens} » contredit par les montants ({ce_qui_est_lu}, {lu}) : "
+                                   "les deux sens")
+    else:
+        sens, ms = (el.sens,), f"sens « {el.sens} » vérifié dans les montants ({ce_qui_est_lu})"
+    causes: set[str] = set()
+    types: set[str] = set()
+    for c in retenus:
+        for s_ in sens:
+            cp = getattr(c, s_)
+            causes.update(cp.causes)
+            types.update(cp.types)
+    types.update(f"surprise_{x}" for x in causes)
+    return tuple(sorted(types)), tuple(sorted(causes)), f"{mc} ; {ms} ⟹ causes probables {', '.join(sorted(causes))}"
 
 
 _ANNEE = re.compile(r"\b(?:19|20)\d{2}\b")
@@ -807,7 +933,7 @@ def relire_note(row: dict[str, Any], fichier: FrameworksFile) -> QualificationLu
     def _ecarte(el) -> bool:
         return ((fichier.rappels_ecartes and bool(el.get("rappel_admis")))
                 or (fichier.fraicheur_par_duree_de_vie and bool(el.get("couvert_par_les_comptes"))))
-    gardes = frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements if not _ecarte(el))
+    gardes = frozenset(t for el in elements if not _ecarte(el) for t in types_de_l_element(el))
     lus, ecartes = types, ""
     if any(_ecarte(el) for el in elements) and gardes != types:
         # Une note faite QUE d'éléments écartés n'annonce rien de neuf : elle se lit `routine` (portée
@@ -939,6 +1065,9 @@ class LectureDesDepots:
                         lignes.append(f"    → {el['type']}{cause}{rap} : « {el['passage'][:220]} »")
                         if el.get("passage_cause"):
                             lignes.append(f"        cause citée : « {el['passage_cause'][:200]} »")
+                        if el.get("revision_motif"):
+                            lignes.append(f"        révision sans cause : {el['revision_motif']} → "
+                                          f"{', '.join(el.get('types_derives', []))}")
                 else:
                     lignes.append(f"    → ILLISIBLE : {d.note.motif}")
             if d.note_id is not None:

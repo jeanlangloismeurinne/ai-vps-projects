@@ -130,6 +130,16 @@ mutations=(
 "$DEF¦        if a_cadence and self.cadence is None:¦        if False:¦un chiffre courant sans cadence"
 "$DEF¦        if not a_cadence and self.cadence is not None:¦        if False:¦un jugement AVEC une cadence"
 "$DEF¦        if self.depuis_le_socle and not a_cadence:¦        if False:¦un ingrédient du socle classé jugement"
+# ── [V] la table des causes de révision (2026-10-16) — une mutation par règle, et les DONNÉES ──
+"$PONT¦    if surprises != attendus:¦    if False:¦le catalogue perd \`surprise_allocation\`"
+"$PONT¦            hors = sorted(set(cp.causes) - set(dites))¦            hors = []¦une cause que le lecteur ne peut pas dire"
+"$PONT¦                if (t not in portees or portees[t] != \"questions_declarees\" or origine[t] != \"emetteur\"¦                if (t not in portees or portees[t] != \"questions_declarees\"¦un type ajouté d'origine extérieure"
+"$PONT¦                        or t.startswith(\"surprise_\")):¦                        or False):¦un \`surprise_*\` ajouté directement"
+"$PONT¦    if len(set(ids)) != len(ids):¦    if False:¦deux lignes pour le même chiffre"
+"$DEF¦        if any(t != t.lower() for t in self.termes):¦        if False:¦un terme en majuscules"
+"$YAML¦    hausse: {causes: [allocation, execution], types: []}¦    hausse: {causes: [allocation, execution, concurrence], types: []}¦ne rouvre jamais la concurrence"
+"$YAML¦    baisse: {causes: [secteur, concurrence, execution], types: [reglementaire_defavorable]}¦    baisse: {causes: [secteur, concurrence, execution], types: []}¦une BAISSE du chiffre d'affaires"
+"$YAML¦        rouverte_par: [financement, resultats, surprise_allocation]¦        rouverte_par: [financement, resultats]¦ALLOCATION rouvre ma_1"
 )
 
 passes=0; ratees=0

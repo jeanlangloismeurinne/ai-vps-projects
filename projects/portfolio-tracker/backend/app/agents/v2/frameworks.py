@@ -414,6 +414,36 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             f"[R] `{A_QUALIFIER}` est de portée `{portees.get(A_QUALIFIER)}` au lieu de `toutes` — "
             f"un communiqué que personne n'a lu doit rouvrir tout (arbitrage Q3 du 2026-09-26)")
 
+    # ── [V] — la table des causes de révision (§14 de `06-regle-fraicheur.md`) ─────────────────
+    # Chaque cause est une cause que le LECTEUR peut dire (le vocabulaire du contrat de la note flash),
+    # et chaque cause a son type `surprise_<cause>` au catalogue — ni cause sans type (elle ne rouvrirait
+    # rien), ni type `surprise_*` sans cause (aucune lecture ne pourrait le produire).
+    from app.contracts.note_flash_schema import CAUSES_SURPRISE
+    dites = [c for c in CAUSES_SURPRISE if c != "non_dite"]
+    surprises = {t.id for t in fichier.types_evenement if t.id.startswith("surprise_")}
+    attendus = {f"surprise_{c}" for c in dites}
+    if surprises != attendus:
+        raise FrameworkDefinitionRefused(
+            f"[V] le catalogue porte {sorted(surprises)} et le lecteur peut dire les causes {dites} : "
+            f"manquent {sorted(attendus - surprises)}, sans cause {sorted(surprises - attendus)}")
+    ids = [c.id for c in fichier.revisions_de_prevision]
+    if len(set(ids)) != len(ids):
+        raise FrameworkDefinitionRefused(f"[V] `revisions_de_prevision` contient un doublon ({ids})")
+    origine = {t.id: t.origine for t in fichier.types_evenement}
+    for c in fichier.revisions_de_prevision:
+        for sens in ("hausse", "baisse"):
+            cp = getattr(c, sens)
+            hors = sorted(set(cp.causes) - set(dites))
+            if hors:
+                raise FrameworkDefinitionRefused(
+                    f"[V] `{c.id}.{sens}` cite les causes {hors}, que le lecteur ne peut pas dire ({dites})")
+            for t in cp.types:
+                if (t not in portees or portees[t] != "questions_declarees" or origine[t] != "emetteur"
+                        or t.startswith("surprise_")):
+                    raise FrameworkDefinitionRefused(
+                        f"[V] `{c.id}.{sens}` ajoute `{t}` : un type du catalogue, publié par l'émetteur, "
+                        "de portée `questions_declarees`, et jamais un `surprise_*` (ceux-là viennent des causes)")
+
 
 @lru_cache(maxsize=1)
 def load_frameworks(chemin: Optional[str] = None) -> FrameworksFile:

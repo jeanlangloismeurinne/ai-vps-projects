@@ -425,6 +425,38 @@ class FrameworkDefinition(Strict):
         return self
 
 
+# Les deux sens d'une révision de prévision (§14 de `roadmap/V3/06-regle-fraicheur.md`).
+SENS_REVISION = ("hausse", "baisse")
+
+
+class CausesProbables(Strict):
+    """Ce qu'un chiffre révisé dans UN sens peut vouloir dire quand le communiqué ne dit pas pourquoi :
+    les CAUSES probables (chacune dérive son type `surprise_<cause>`) et les types qui s'y AJOUTENT
+    (une baisse du chiffre d'affaires peut venir d'une décision réglementaire)."""
+    causes: list[str] = Field(min_length=1)
+    types: list[str]
+
+
+class ChiffreRevisable(Strict):
+    """Une ligne de la TABLE DES CAUSES DE RÉVISION (validée par l'utilisateur le 2026-10-16) : un
+    chiffre que la direction peut réviser, les mots par lesquels un communiqué le NOMME (lus dans la
+    phrase, en minuscules — la vérification de la déclaration du lecteur), et ses causes probables par
+    sens. Ce que ferait un vrai fonds : devant une prévision relevée sans explication, l'analyste rouvre
+    tous les chapitres que les causes PLAUSIBLES de ce chiffre touchent, pas un seul par convention."""
+    id: str = Field(min_length=1, pattern=r"^[a-z][a-z0-9_]*$")
+    libelle: str = Field(min_length=5)
+    termes: list[Annotated[str, Field(min_length=2)]] = Field(min_length=1)
+    hausse: CausesProbables
+    baisse: CausesProbables
+
+    @model_validator(mode="after")
+    def _des_termes_en_minuscules(self):
+        if any(t != t.lower() for t in self.termes):
+            raise ValueError(f"`{self.id}.termes` : en minuscules (la phrase est lue en minuscules — un "
+                             "terme en majuscules ne serait jamais trouvé)")
+        return self
+
+
 class FrameworksFile(Strict):
     """Le fichier entier. `archetypes` y est déclaré UNE fois : c'est le détenteur, et chaque
     question doit couvrir exactement cette liste — vérifié par le pont, pas ici (#37)."""
@@ -445,6 +477,12 @@ class FrameworksFile(Strict):
     # LECTURE, rien n'est stocké : le basculer ne demande aucune réécriture.
     fraicheur_par_duree_de_vie: bool
     types_evenement: list[TypeEvenement] = Field(min_length=1)
+    # La TABLE DES CAUSES DE RÉVISION (§14 de `06-regle-fraicheur.md`, catalogue 1.6.0) : quand un
+    # communiqué révise une prévision SANS dire pourquoi, le code rouvre l'union des types des causes
+    # probables du chiffre révisé, dans le sens révisé. Requise, sans défaut : sans elle, une révision
+    # sans cause ne rouvrirait rien de vérifiable. Sa cohérence avec le catalogue est un invariant
+    # RELATIONNEL (pont, [S] de `frameworks.py`).
+    revisions_de_prevision: list[ChiffreRevisable] = Field(min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")

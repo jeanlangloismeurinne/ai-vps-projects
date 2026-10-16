@@ -670,12 +670,12 @@ cash disponible. Les niveaux comptables ne disent rien seuls ; ce sont les **rel
 |---|---|---|---|---|
 | `qf_1` | Le capital employé rapporte-t-il **durablement plus que son coût** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_2` | Le résultat comptable **se transforme-t-il en cash** ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
-| `qf_3` | La croissance **coûte-t-elle** du capital, et combien par point de croissance ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `qf_3` | La croissance **coûte-t-elle** du capital, et combien par point de croissance ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `surprise_allocation` |
 | `qf_4` | **Combien** l'entreprise doit-elle, à quelles échéances, et avec quelle trésorerie en face ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_8` | Les engagements pris envers les prêteurs et les porteurs d'obligations **contraignent-ils** les décisions d'exploitation ? | `interpretation` | A | `financement`, `resultats`, `surprise_execution`, `integrite_comptes` |
 | `qf_5` | Le **rendement** observé est-il stable, en amélioration, ou en érosion sur ≥ 5 ans ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
-| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable` |
+| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable`, `surprise_allocation` |
 
 > `qf_4` / `qf_8` : **scission du 2026-10-04** (arbitrage utilisateur, #114) — « distinguer les faits et
 > le jugement », comme une note crédit sépare le tableau de la dette (relevé) de la revue des clauses
@@ -779,7 +779,7 @@ décrit avant la première vente, on demande ce qui est visé.
 |---|---|---|---|---|
 | `me_1` | **Qui paie**, pour quoi, et pourquoi ce client-là plutôt qu'un autre fournisseur ? | `interpretation` | B | `accord_commercial`, `reglementaire_favorable`, `reglementaire_defavorable`, `surprise_concurrence` |
 | `me_2` | D'où vient chaque dollar de chiffre d'affaires, et quelle part **revient sans nouvel effort de vente** ? | `mesure` | A | `resultats`, `accord_commercial`, `integrite_comptes` |
-| `me_3` | Que rapporte **une unité vendue de plus**, une fois payés les coûts qu'elle entraîne ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
+| `me_3` | Que rapporte **une unité vendue de plus**, une fois payés les coûts qu'elle entraîne ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `surprise_allocation` |
 | `me_4` | Quels sont les deux ou trois **moteurs** qui font varier le chiffre d'affaires ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution` |
 | `me_5` | **Jusqu'où** l'activité peut-elle croître sur son modèle actuel — quel marché, quelle part déjà prise ? | `interpretation` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
 | `me_6` | Le modèle **dépend-il** d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ? | `mesure` | A | `accord_commercial`, `incident` |
@@ -824,11 +824,11 @@ sans objet pour un émetteur sans ventes.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #94) |
 |---|---|---|---|---|
-| `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats` |
+| `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats`, `surprise_allocation` |
 | `ma_2` | Les **acquisitions** passées ont-elles rapporté ce qu'elles ont coûté ? | `interpretation` | B | `resultats`, `integrite_comptes` |
 | `ma_3` | Les **rachats et émissions** d'actions se font-ils au bon prix ? | `mesure` | B+ | `financement`, `resultats` |
 | `ma_4` | La **rémunération** des dirigeants récompense-t-elle la création de valeur, et ont-ils leur argent en jeu ? | `mesure` | A | `gouvernance` |
-| `ma_5` | La direction **fait-elle ce qu'elle dit** ? | `interpretation` | B | `resultats`, `surprise_execution`, `integrite_comptes`, `gouvernance` |
+| `ma_5` | La direction **fait-elle ce qu'elle dit** ? | `interpretation` | B | `resultats`, `surprise_execution`, `integrite_comptes`, `gouvernance`, `surprise_allocation` |
 | `ma_6` | **Qui décide vraiment**, et le conseil peut-il s'opposer à la direction ? | `interpretation` | B | `gouvernance` |
 
 > **Arbitrages du 2026-09-28 (#94)** : `gouvernance` passe de portée `aucune` à `questions_declarees`
@@ -853,12 +853,12 @@ que la barrière tient.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
 |---|---|---|---|---|
-| `va_1` | Combien vaut l'entreprise **sans supposer aucune croissance** ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `financement` |
-| `va_2` | Quelle **fourchette** donnent trois scénarios, et quelles hypothèses les séparent ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `concurrent_offensive`, `concurrent_revers` |
+| `va_1` | Combien vaut l'entreprise **sans supposer aucune croissance** ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `financement`, `surprise_allocation` |
+| `va_2` | Quelle **fourchette** donnent trois scénarios, et quelles hypothèses les séparent ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation` |
 | `va_3` | Qu'ont valu des entreprises **dans une situation comparable** ? | `mesure` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
 | `va_4` | Que faut-il **croire pour justifier le prix** actuel ? | `mesure` | B+ | `resultats`, `financement`, `integrite_comptes` |
 | `va_5` | Le prix est-il élevé ou bas **face aux pairs et à l'historique** ? | `mesure` | B+ | `resultats`, `integrite_comptes` |
-| `va_6` | Quelle **marge de sécurité** sépare le prix de la fourchette, et sur quelle hypothèse repose-t-elle ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `integrite_comptes`, `concurrent_offensive`, `concurrent_revers` |
+| `va_6` | Quelle **marge de sécurité** sépare le prix de la fourchette, et sur quelle hypothèse repose-t-elle ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `integrite_comptes`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation` |
 
 > **Correspondance avec le contrat aval** (`analysis_v2_schemas.Valuation`, lu par `decision`,
 > `debate`, `monitoring`, `exit`) : va_1 → `epv` · va_2 → `dcf_scenarios` (+ hypothèses de la thèse,

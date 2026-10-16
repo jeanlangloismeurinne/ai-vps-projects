@@ -71,13 +71,17 @@ archetypes:
 #           citée de la MÊME période, et vote trois lectures. Mesuré : 5 communiqués × 3, lectures identiques.
 #   1.5.1 — la période visée par une révision est DATÉE (une année) : MSFT 29/07 passait avec « the quarter »,
 #           libellé générique présent dans n'importe quelle phrase (note #580).
+#   1.6.0 — la RÉVISION SANS CAUSE DITE rouvre les causes PROBABLES du chiffre révisé (table validée par
+#           l'utilisateur le 2026-10-16, §14 de roadmap/V3/06-regle-fraicheur.md, `revisions_de_prevision`
+#           ci-dessous) au lieu de la seule concurrence (règle Q2 du 26/09) ; cause neuve `allocation` (un
+#           choix de la direction d'investir ou d'économiser) ; le lecteur déclare le chiffre et le sens.
 #   Ajout des types d'origine `exterieur` (#93, sous 1.1.0) SANS changer la version : la version date ce que le
 #   LECTEUR d'un dépôt voit, et il ne voit que les types `emetteur` — inchangés. Les monter aurait
 #   fait relire les dépôts pour un catalogue identique à leurs yeux.
 #
 # `origine` (#93) : `emetteur` = publié par l'entreprise elle-même, lu par la note flash ;
 # `exterieur` = survenu chez un concurrent ou dans le secteur, toujours `questions_declarees`.
-types_evenement_version: "1.5.1"
+types_evenement_version: "1.6.0"
 # L'INTERRUPTEUR du rappel (#125, principe fondateur n° 3). true = un passage dont le rappel est VÉRIFIÉ
 # (une note antérieure a annoncé ce type à cette date) ne rouvre rien. false = ORDRE 0, la règle d'avant :
 # tout type cité rouvre ses questions, rappel ou non. Le basculer ne demande AUCUNE relecture de note :
@@ -123,11 +127,15 @@ types_evenement:
     portee: questions_declarees
     origine: emetteur
   - id: surprise_concurrence
-    libelle: Écart aux attentes propre à l'entreprise — parts perdues, prix cassés, client qui internalise ; aussi quand la cause n'est pas dite
+    libelle: Écart aux attentes propre à l'entreprise — parts perdues, prix cassés, client qui internalise
     portee: questions_declarees
     origine: emetteur
   - id: surprise_execution
     libelle: Écart aux attentes dû à l'exécution interne — retard, usine, produit
+    portee: questions_declarees
+    origine: emetteur
+  - id: surprise_allocation
+    libelle: Écart aux prévisions dû à un choix de la direction — investir davantage (lancement, nouveaux programmes) ou économiser
     portee: questions_declarees
     origine: emetteur
   - id: reglementaire_favorable
@@ -171,6 +179,48 @@ types_evenement:
     libelle: Dans le secteur — réforme qui touche les prix ou les règles de tous les acteurs (négociation des prix, restriction d'exportation, nouvelle norme)
     portee: questions_declarees
     origine: exterieur
+
+# ── La table des causes de révision (catalogue 1.6.0 ; validée par l'utilisateur le 2026-10-16, §14 de
+# roadmap/V3/06-regle-fraicheur.md) ─────────────────────────────────────────────────────────────────────
+# Quand un communiqué révise une prévision SANS dire pourquoi, le lecteur dit quel CHIFFRE est révisé et
+# dans quel SENS ; le code vérifie le chiffre dans la phrase (`termes`, en minuscules, mot entier, pluriel
+# admis) et le sens dans les montants des deux prévisions, puis rouvre l'UNION des types des causes
+# probables (`surprise_<cause>`) et des types ajoutés (`types`). Invérifiable ⟹ côté prudent : tous les
+# chiffres nommés par la phrase, les deux sens, ou toute la table. Ajouter une ligne est une opération
+# de DONNÉES (pont [V] : causes que le lecteur peut dire, types du catalogue de l'émetteur).
+# Arbitrage du 2026-10-16 : un relèvement de dépenses (commerciales comprises) ne rouvre PAS la
+# concurrence — une défense de parts se verrait au chiffre d'affaires ou aux marges suivants.
+revisions_de_prevision:
+  - id: chiffre_affaires
+    libelle: Chiffre d'affaires, ventes, volumes
+    termes: [revenue, sales, shipment, volume, bookings]
+    hausse: {causes: [secteur, concurrence, execution], types: []}
+    baisse: {causes: [secteur, concurrence, execution], types: [reglementaire_defavorable]}
+  - id: marge
+    libelle: Marge (brute, d'exploitation)
+    termes: [margin]
+    hausse: {causes: [secteur, concurrence, execution], types: []}
+    baisse: {causes: [secteur, concurrence, execution], types: []}
+  - id: depenses_exploitation
+    libelle: Dépenses d'exploitation (recherche, commerciales, total)
+    termes: [operating expense, operating cost, research and development, r&d, "selling, general and administrative", sg&a, opex]
+    hausse: {causes: [allocation, execution], types: []}
+    baisse: {causes: [allocation, execution], types: []}
+  - id: investissements
+    libelle: Investissements (dépenses d'investissement)
+    termes: [capital expenditure, capex, capital spending, purchases of property]
+    hausse: {causes: [secteur, allocation], types: []}
+    baisse: {causes: [secteur, allocation], types: []}
+  - id: resultat
+    libelle: Résultat, bénéfice par action (seuls)
+    termes: [net income, net loss, earnings per share, eps, operating income, operating loss, net earnings, profit]
+    hausse: {causes: [secteur, concurrence, execution, allocation], types: []}
+    baisse: {causes: [secteur, concurrence, execution, allocation], types: [reglementaire_defavorable]}
+  - id: tresorerie
+    libelle: Consommation ou génération de trésorerie
+    termes: [cash burn, cash used, free cash flow, operating cash flow, cash flow]
+    hausse: {causes: [allocation, execution], types: []}
+    baisse: {causes: [allocation, execution], types: []}
 
 frameworks:
 
@@ -312,7 +362,7 @@ frameworks:
         chemin_indexation: qualite_financiere.cout_de_la_croissance
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, surprise_allocation]
         sens_admis: [croissance_peu_capitalistique, croissance_capitalistique, croissance_destructrice]
         ingredients_requis:
           - id: croissance_activite_par_exercice
@@ -600,7 +650,7 @@ frameworks:
         chemin_indexation: qualite_financiere.autonomie_de_financement
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, reglementaire_defavorable]
+        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, reglementaire_defavorable, surprise_allocation]
         sens_admis: [autonomie_longue, autonomie_limitee, autonomie_critique]
         ingredients_requis:
           - id: tresorerie_disponible
@@ -1021,7 +1071,7 @@ frameworks:
         chemin_indexation: modele_economique.economie_unitaire
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, surprise_allocation]
         sens_admis: [economie_unitaire_forte, economie_unitaire_faible, economie_unitaire_negative, economie_unitaire_non_etablie]
         ingredients_requis:
           - id: prix_par_unite
@@ -1438,7 +1488,7 @@ frameworks:
         chemin_indexation: management_capital.usage_du_capital
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [financement, resultats]
+        rouverte_par: [financement, resultats, surprise_allocation]
         sens_admis: [allocation_creatrice, allocation_neutre, allocation_destructrice]
         ingredients_requis:
           - id: repartition_des_usages
@@ -1581,7 +1631,7 @@ frameworks:
         motif_plancher: >-
           La parole tenue se juge en rapprochant des annonces successives de leur réalisation ; ce
           rapprochement n'est publié par personne, il se construit.
-        rouverte_par: [resultats, surprise_execution, integrite_comptes, gouvernance]
+        rouverte_par: [resultats, surprise_execution, integrite_comptes, gouvernance, surprise_allocation]
         sens_admis: [parole_tenue, parole_inegale, parole_non_tenue]
         ingredients_requis:
           - id: objectifs_annonces
@@ -1679,7 +1729,7 @@ frameworks:
         chemin_indexation: valorisation.valeur_sans_croissance
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, financement]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, financement, surprise_allocation]
         sens_admis: [plancher_solide, plancher_fragile, pas_de_plancher]
         ingredients_requis:
           - id: resultat_normalise
@@ -1725,7 +1775,7 @@ frameworks:
         motif_plancher: >-
           Un scénario est un jugement sur l'avenir ; ses hypothèses se fondent sur des pièces de tout
           rang, et c'est leur ancrage explicite — pas le rang de la source — qui le rend contestable.
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, concurrent_offensive, concurrent_revers]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, concurrent_offensive, concurrent_revers, surprise_allocation]
         sens_admis: [fourchette_resserree, fourchette_large, fourchette_indeterminable]
         ingredients_requis:
           - id: hypotheses_decisives
@@ -1863,7 +1913,7 @@ frameworks:
         chemin_indexation: valorisation.marge_de_securite
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, integrite_comptes, concurrent_offensive, concurrent_revers]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, integrite_comptes, concurrent_offensive, concurrent_revers, surprise_allocation]
         sens_admis: [marge_confortable, marge_mince, marge_negative]
         ingredients_requis:
           - id: prix_et_fourchette

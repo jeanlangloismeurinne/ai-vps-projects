@@ -389,3 +389,10 @@ concurrence » — chiffre d'affaires, marges). NON CONSTRUITE : cause `allocati
 au catalogue (et `rouverte_par` de ma_1, ma_5, qf_3, qf_7, me_3, va_1, va_2, va_6) ; champs `chiffre_revise`
 / `sens` sur l'écart (lus dans la phrase) ; table (chiffre × sens → causes) en DONNÉES dans frameworks.yaml ;
 le code dérive les types à rouvrir quand la cause n'est pas dite ; catalogue 1.6.0 et relecture des notes.
+
+**✅ CONSTRUITE le 2026-10-16 (convention #130, catalogue 1.6.0).** Mesure : RVMD 05/08 rouvre allocation +
+exécution (plus la concurrence) — me_1, mo_1-mo_4, mo_6, se_2, se_6 ne sont plus rouvertes ; ma_1, ma_5, qf_8
+le sont. **Reste ouvert** : mo_5 (« qu'est-ce qui la détruirait ? ») et se_3 (rang face aux pairs) listent
+`surprise_execution` et restent donc rouvertes par une dérive des coûts. Défendable (un essai allongé laisse
+passer un concurrent), mais contraire à la cible « ne rouvre plus défendabilité/secteur » — question posée à
+l'utilisateur.

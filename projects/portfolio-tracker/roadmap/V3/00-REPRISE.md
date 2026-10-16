@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-16 (#129 règle de fraîcheur par durée de vie, lecture des communiqués de résultats ; A4 RVMD) · 2026-10-15 (A2 : retrait défendabilité, #126 extraits littéraux, migration 055) · 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
+updated: 2026-10-16 (#130 table des causes de révision, catalogue 1.6.0 ; #129 règle de fraîcheur par durée de vie, lecture des communiqués de résultats ; A4 RVMD) · 2026-10-15 (A2 : retrait défendabilité, #126 extraits littéraux, migration 055) · 2026-10-14 (A1 NVDA ; 8-K RVMD soldé ; #125 le rappel, catalogue 1.4.0) · 2026-10-13 (#124 budget de la collecte web ; #123 horloge par question ; RVMD modèle économique 4/6 ; #120 horloge du traducteur ; #121 consignes resynchronisées (054) ; #122 identité de l'émetteur lue au registre ; NVDA qf 1,00 ; RVMD qf 1,00, défendabilité refaite ; arbitrage « descriptions juridiques »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3 (frameworks). Il ne porte que l'ÉTAT, le PROCHAIN JALON, ce qui
@@ -29,12 +29,15 @@ role: >
 ## 🎯 Roadmap active — `roadmap/V3/05-frameworks-complets.md` (ouverte le 2026-09-28)
 
 > **➜ PROCHAIN PAS (reprise après le 2026-10-16) — LIRE D'ABORD `roadmap/V3/06-regle-fraicheur.md` (§8-§14).**
-> 1. **Construire la table des causes de révision (§14, VALIDÉE le 16/10)** : cause `allocation` + type
->    `surprise_allocation` (rouvre ma_1, ma_5, qf_3, qf_7, me_3, va_1, va_2, va_6) ; l'écart déclare
->    `chiffre_revise` + `sens` (vérifiés dans la phrase) ; table chiffre × sens → causes probables EN DONNÉES ;
->    cause non dite ⟹ union des types de ses causes probables (dépenses commerciales : JAMAIS la concurrence) ;
->    catalogue 1.6.0 puis `bash tools/rediger_notes_flash.sh RVMD|NVDA|MSFT --ecrire` (≈ 4 cents). Remplace la
->    règle Q2 pour les révisions. Mesurer : RVMD 05/08 ne rouvre plus défendabilité/secteur.
+> 1. ✅ **Table des causes de révision CONSTRUITE (#130, catalogue 1.6.0, 2026-10-16)** — notes RVMD #613-#622,
+>    NVDA #623-#628, MSFT #629-#633 ($0,043). RVMD 05/08 rouvre allocation + exécution, plus la concurrence.
+>    **Question posée à l'utilisateur** : mo_5 et se_3 restent rouvertes par la cause « exécution » — les retirer
+>    de `surprise_execution` (donnée) ou les garder ? **Piste neuve (remarque de l'utilisateur, 2026-10-16)** : le
+>    vote de 3 lectures triple le coût ; DeepInfra propose depuis le 08/10 des MODÈLES DE DÉCISION (`nace-ai/drex-v1.5`,
+>    9 B, une passe sans génération, probabilité calibrée par option, $0,04/M jetons d'entrée, sortie gratuite ; se
+>    compare à « Jev 1.13.0 » ; aussi `Cloudflare/clef`) et des rerankers (`Qwen/Qwen3-Reranker-0.6B`, $0,01/M) —
+>    déterministes par construction, ils supprimeraient la raison d'être du vote. À éprouver sur le verdict par
+>    phrase des 12 communiqués (`phrases_a_examiner`) avant de rien remplacer.
 > 2. **A4 NVDA** : passage réel TERMINÉ le 16/10 — plan **#267** (garde #123 passée, 18 lignes), réponses
 >    **#1475-#1480** : ma_1 `repondu` (allocation créatrice), **ma_2…ma_6 `non_fondable`** (remède collecte, 3 mandats
 >    collecteur, 0 mandat manager). À instruire : pourquoi 5/6 non fondées (pièces trop maigres ? lignes web
@@ -139,7 +142,7 @@ Détail de chaque lot : archive (entrées datées) + conventions #57 → #91 du 
 
 (`feedback_ligne_de_base_est_une_mesure` : aucun de ces chiffres ne se cite sans être re-mesuré.)
 
-- **Suite** `bash checks/run_all.sh` = **4463 assertions, 1 rouge ATTENDU** (`check_signature_modele_persist`, 8-K RVMD du 13/10 non lu — voir le prochain pas) — 2026-10-13 après #124 (négatif runner 5/0 neuf ; `negatif_collecte_executor.sh` 43/1, l'échec préexistant « script mort »). Avant : 4434 / 59 après #122. Avant : 4430 après #121
+- **Suite** `bash checks/run_all.sh` = **4671/0** le 2026-10-16 après #130. Avant : **4463 assertions, 1 rouge ATTENDU** (`check_signature_modele_persist`, 8-K RVMD du 13/10 non lu — voir le prochain pas) — 2026-10-13 après #124 (négatif runner 5/0 neuf ; `negatif_collecte_executor.sh` 43/1, l'échec préexistant « script mort »). Avant : 4434 / 59 après #122. Avant : 4430 après #121
   (`check_prompts_exemples` neuf). Avant : 4419 / 58 après #120
   (négatif traducteur 22/0). Avant : **4398 assertions, 1 rouge ATTENDU** — 2026-10-12 après #118 :
   `check_signature_modele_persist` (RVMD qf_6 #1080 porte l'ancien encadré — se solde par sa réémission

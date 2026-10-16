@@ -182,6 +182,12 @@ def _catalogue_reel():
     return [dict(t) for t in brut["types_evenement"]]
 
 
+def _table_reelle():
+    """La table des causes de révision COPIÉE du référentiel réel (même raison que le catalogue)."""
+    brut = yaml.safe_load(FRAMEWORKS_YAML.read_text(encoding="utf-8"))
+    return [dict(c) for c in brut["revisions_de_prevision"]]
+
+
 def fichier_base(**over):
     d = {
         "schema_version": FRAMEWORK_DEFINITION_SCHEMA_VERSION,
@@ -191,6 +197,7 @@ def fichier_base(**over):
         "rappels_ecartes": True,
         "fraicheur_par_duree_de_vie": True,
         "types_evenement": _catalogue_reel(),
+        "revisions_de_prevision": _table_reelle(),
         "frameworks": [fw_base()],
     }
     d.update(over)
@@ -606,6 +613,58 @@ check("les arbitrages : un FINANCEMENT rouvre qf_4, qf_7, qf_8, ma_1, ma_3, va_1
       sorted(q.id for q in _questions if "financement" in q.rouverte_par)
       == ["ma_1", "ma_3", "qf_4", "qf_7", "qf_8", "va_1", "va_2", "va_4", "va_6"],
       f"→ {sorted(q.id for q in _questions if 'financement' in q.rouverte_par)}")
+
+# [V] — la table des causes de révision (§14 de `06-regle-fraicheur.md`, validée le 2026-10-16).
+check("l'arbitrage du 16/10 : un écart dû à un choix d'ALLOCATION rouvre ma_1, ma_5, qf_3, qf_7, me_3, va_1, "
+      "va_2 et va_6, et aucune autre question",
+      sorted(q.id for q in _questions if "surprise_allocation" in q.rouverte_par)
+      == ["ma_1", "ma_5", "me_3", "qf_3", "qf_7", "va_1", "va_2", "va_6"],
+      f"→ {sorted(q.id for q in _questions if 'surprise_allocation' in q.rouverte_par)}")
+_dep = next((c for c in _reel.revisions_de_prevision if c.id == "depenses_exploitation"), None)
+check("l'arbitrage du 16/10 : un relèvement (ou une baisse) de DÉPENSES ne rouvre jamais la concurrence",
+      _dep is not None and "concurrence" not in _dep.hausse.causes + _dep.baisse.causes
+      and set(_dep.hausse.causes) == {"allocation", "execution"},
+      f"→ {_dep}")
+_ca = next((c for c in _reel.revisions_de_prevision if c.id == "chiffre_affaires"), None)
+check("une BAISSE du chiffre d'affaires peut venir d'une décision réglementaire (type ajouté), pas une hausse",
+      _ca is not None and _ca.baisse.types == ["reglementaire_defavorable"] and _ca.hausse.types == [],
+      f"→ {_ca}")
+
+
+def _table(**chg):
+    """La table réelle, la ligne `depenses_exploitation` modifiée par `chg` (sens → dict)."""
+    return [dict(c, **chg) if c["id"] == "depenses_exploitation" else c for c in _table_reelle()]
+
+
+rejete("[V] une table des causes de révision ABSENTE",
+       lambda: charge({k: v for k, v in fichier_base().items() if k != "revisions_de_prevision"}),
+       "revisions_de_prevision")
+rejete("[V] une cause que le lecteur ne peut pas dire",
+       lambda: charge(fichier_base(revisions_de_prevision=_table(
+           hausse={"causes": ["allocation", "hasard"], "types": []}))),
+       "que le lecteur ne peut pas dire")
+rejete("[V] un type ajouté hors du catalogue",
+       lambda: charge(fichier_base(revisions_de_prevision=_table(
+           hausse={"causes": ["allocation"], "types": ["lancement"]}))),
+       "ajoute `lancement`")
+rejete("[V] un type ajouté d'origine extérieure (une révision de l'émetteur n'est pas un fait de concurrent)",
+       lambda: charge(fichier_base(revisions_de_prevision=_table(
+           hausse={"causes": ["allocation"], "types": ["concurrent_offensive"]}))),
+       "ajoute `concurrent_offensive`")
+rejete("[V] un `surprise_*` ajouté directement (il vient des causes)",
+       lambda: charge(fichier_base(revisions_de_prevision=_table(
+           hausse={"causes": ["allocation"], "types": ["surprise_concurrence"]}))),
+       "ajoute `surprise_concurrence`")
+rejete("[V] le catalogue perd `surprise_allocation` (une cause sans type ne rouvrirait rien)",
+       lambda: charge(fichier_base(types_evenement=[t for t in _catalogue_reel()
+                                                    if t["id"] != "surprise_allocation"])),
+       "manquent ['surprise_allocation']")
+rejete("[V] deux lignes pour le même chiffre",
+       lambda: charge(fichier_base(revisions_de_prevision=_table_reelle() + _table_reelle()[:1])),
+       "doublon")
+rejete("[V] un terme en majuscules (jamais trouvé dans une phrase lue en minuscules)",
+       lambda: charge(fichier_base(revisions_de_prevision=_table(termes=["R&D"]))),
+       "minuscules")
 
 
 print("\n4. les profils portent EXACTEMENT les clefs que le pont lit")

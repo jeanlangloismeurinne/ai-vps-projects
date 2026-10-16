@@ -26,7 +26,7 @@ mutations=(
 "$NF¦            if cite is not None and _normaliser(cite) not in corpus:¦            if False:¦une PARAPHRASE est refusée"
 "app/knowledge/citation.py¦    return re.sub(r\"\\s+\", \" \", t).strip().casefold()¦    return t.strip().casefold()¦une citation littérale (espaces normalisés) passe"
 "$NF¦    permis = {t[\"id\"] for t in types_proposables(fichier)}¦    permis = {t.id for t in fichier.types_evenement}¦\`a_qualifier\` n'est pas un type"
-"$NF¦    types = tuple(sorted({type_derive_de(d[\"type\"], d.get(\"cause\")) for d in elements¦    types = tuple(sorted({d[\"type\"] for d in elements¦les types retenus sont ceux que le CODE dérive"
+"$NF¦                          for t in types_de_l_element(d)}))¦                          for t in {d[\"type\"]}}))¦les types retenus sont ceux que le CODE dérive"
 # §6 — quels dépôts lire
 "$NF¦            and (e.accession not in qualifications or qualifications[e.accession].a_relire)¦            and True¦un dépôt déjà lu"
 "$NF¦            if e.event_date >= depuis and e.accession¦            if e.accession¦depuis la date"
@@ -48,7 +48,7 @@ mutations=(
 "$NF¦        return ((fichier.rappels_ecartes and bool(el.get(\"rappel_admis\")))¦        return ((bool(el.get(\"rappel_admis\")))¦interrupteur OFF : l'ordre 0 EXACT"
 "$NF¦        lus = gardes or frozenset({\"routine\"})¦        lus = gardes¦une note faite que de rappels se lit"
 "$NF¦        return ((fichier.rappels_ecartes and bool(el.get(\"rappel_admis\")))¦        return ((fichier.rappels_ecartes and False)¦interrupteur ON : le rappel admis ne rouvre rien"
-"$NF¦    types = tuple(sorted({type_derive_de(d[\"type\"], d.get(\"cause\")) for d in elements¦    types = tuple(sorted({type_derive_de(d[\"type\"], d.get(\"cause\")) for d in elements if d.get(\"rappel_du\") is None¦les types PERSISTÉS restent ceux de l'ordre 0"
+"$NF¦    types = tuple(sorted({t for d in elements if not d.get(\"ecart_non_etabli\")¦    types = tuple(sorted({t for d in elements if not d.get(\"ecart_non_etabli\") and d.get(\"rappel_du\") is None¦les types PERSISTÉS restent ceux de l'ordre 0"
 "$NF¦    vues = precedentes if fichier.rappels_ecartes else []¦    vues = precedentes¦interrupteur OFF : le modèle ne voit PAS l'historique"
 # Le communiqué de résultats (diagnostic §13, 2026-10-16) — une mutation par règle
 "$NF¦            out.append(ph)¦            pass¦le CODE relève la tranche de mai"
@@ -64,6 +64,18 @@ mutations=(
 "$NF¦    return max(vues, default=None)¦    return min(vues, default=None)¦la date écrite dans une phrase se LIT"
 "$NF¦                or (fichier.fraicheur_par_duree_de_vie and bool(el.get(\"couvert_par_les_comptes\"))))¦                or False)¦relue (interrupteur actif)"
 "$NF¦    if not _ANNEE.search(per):¦    if False:¦une période GÉNÉRIQUE (sans année)"
+# La révision sans cause dite (table des causes, catalogue 1.6.0) — une mutation par décision
+"$NF¦        if el.type == SURPRISE and el.cause == \"non_dite\":¦        if False:¦l'élément PERSISTÉ porte les types dérivés"
+"$SC¦    if el.get(\"types_derives\"):¦    if False:¦résultats + la révision de dépenses"
+"$NF¦                    chiffre_revise=x.chiffre_revise, sens=x.sens, survenu_le=x.survenu_le))¦                    survenu_le=x.survenu_le))¦résultats + la révision de dépenses"
+"$NF¦    elif el.chiffre_revise not in ids_nommes:¦    elif False:¦un chiffre déclaré que la phrase ne NOMME pas"
+"$NF¦        retenus = nommes¦        retenus = [c for c in nommes if c.id == el.chiffre_revise]¦une phrase qui nomme DEUX chiffres"
+"$NF¦    elif lu != el.sens:¦    elif False:¦un sens déclaré que les montants CONTREDISENT"
+"$NF¦    elif lu is None:¦    elif False:¦le sens ne se vérifie pas"
+"$NF¦            types.update(cp.types)¦            pass¦chiffre d'affaires en BAISSE vérifiée"
+"$NF¦    if neuf[0] != ancien[0]:¦    if False:¦d'échelles différentes"
+"$NF¦    return [{\"id\": c.id, \"libelle\": c.libelle} for c in fichier.revisions_de_prevision]¦    return [{\"id\": c.id, \"libelle\": c.libelle, \"causes\": c.hausse.causes} for c in fichier.revisions_de_prevision]¦JAMAIS leurs causes"
+"$NF¦            if any(re.search(rf\"(?<![a-z0-9]){re.escape(normaliser(m))}(?:s|es)?(?![a-z0-9])\", t)¦            if any(re.search(rf\"(?<![a-z0-9]){re.escape(normaliser(m))}\", t)¦MOT ENTIER"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

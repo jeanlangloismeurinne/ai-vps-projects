@@ -3491,6 +3491,43 @@ cadence, 68/0) ; `check_evenements` §10 (39/0) ; `check_traducteur` (44/0) ; `c
 réelles des communiqués RVMD 06/05 et 05/08, NVDA 25/02 et 20/05 ; 42/0) ; `check_note_flash_branchement` (16/0).
 Suite 4631/0.
 
+### #130 — une révision de prévision sans cause dite rouvre les causes PROBABLES du chiffre révisé
+
+**Arbitrage de l'utilisateur (2026-10-16, §14 de `roadmap/V3/06-regle-fraicheur.md`), comme un fonds** : devant
+« nous relevons notre prévision de dépenses » sans un mot d'explication, l'analyste ne présume pas une guerre des
+prix ; il rouvre les chapitres que les causes PLAUSIBLES de ce chiffre touchent. La règle Q2 du 26/09 (« cause non
+dite = concurrence ») visait l'avertissement sur résultats ; appliquée au relèvement de dépenses de RVMD (05/08),
+elle rouvrait barrière et secteur et ratait le management. Exclusion validée : un relèvement de dépenses
+(commerciales comprises) ne rouvre jamais la concurrence — une défense de parts se verrait au chiffre d'affaires
+ou aux marges suivants.
+
+**La règle (catalogue 1.6.0).**
+- Cause neuve `allocation` (un choix de la direction d'investir ou d'économiser), type `surprise_allocation`,
+  qui rouvre ma_1, ma_5, qf_3, qf_7, me_3, va_1, va_2, va_6.
+- **La table est une DONNÉE** (`frameworks.yaml: revisions_de_prevision`, requise) : par chiffre révisable,
+  ses `termes` (minuscules) et, par sens, ses causes probables + les types ajoutés (une baisse du chiffre
+  d'affaires ou du résultat ajoute `reglementaire_defavorable`). Pont **[V]** : causes que le lecteur peut
+  dire ; un type `surprise_<cause>` au catalogue par cause et réciproquement ; types ajoutés = du catalogue,
+  de l'émetteur, `questions_declarees`, jamais un `surprise_*`.
+- **Le lecteur déclare, le code vérifie et ne fait que resserrer** (`note_flash.causes_de_la_revision`,
+  détenteur unique) : `chiffre_revise` doit se LIRE dans la phrase (terme en mot entier, pluriel admis ;
+  la phrase nomme d'autres chiffres ⟹ leurs causes s'ajoutent) ; `sens` doit se lire dans les MONTANTS des
+  deux prévisions (premier montant après la période visée, milieu de fourchette, même échelle). Absent,
+  hors table, introuvable, invérifiable ou contredit ⟹ côté prudent : toute la table, les deux sens.
+  L'élément persiste `types_derives`, `causes_probables`, `revision_motif` ; `types_de_l_element` (contrat,
+  détenteur unique) lit ces types, et retombe sur la règle Q2 pour un élément écrit avant la table.
+- Le modèle voit les chiffres révisables par identifiant et libellé, jamais leurs causes (#59).
+
+**Mesuré (notes 1.6.0 : RVMD #613-#622, NVDA #623-#628, MSFT #629-#633 ; $0,043 ; 0 refus).** RVMD 05/08 et
+06/05 : dépenses en hausse, vérifiées (1,75 → 2,15 Md$ ; 1,65 → 1,75 Md$) ⟹ allocation + exécution. Ne rouvre
+plus me_1, mo_1-mo_4, mo_6, se_2, se_6 ; rouvre en plus ma_1, ma_5, qf_8. **mo_5 et se_3 restent rouvertes**,
+par la cause « exécution » (elles listent `surprise_execution`) — à trancher. NVDA/MSFT : aucune révision
+établie (inchangé). Résidu nommé : une PERTE qui se creuse se lit « hausse » dans les montants et « baisse »
+du résultat par le modèle (RVMD 25/02) — contradiction ⟹ les deux sens, prudent (et l'écart n'y était pas établi).
+Gardes : `check_note_flash` §11 (113/0) + `negatif_note_flash.sh` **54/0** (dont deux mutations rendues
+caduques par la réécriture de la dérivation, réparées, et un accès non tolérant qui tuait le script sous
+mutation) ; `check_frameworks_definitions` [V] (125/0) + `negatif_frameworks_definitions.sh` **77/0**. Suite **4671/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

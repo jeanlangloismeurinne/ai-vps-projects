@@ -14,8 +14,15 @@ Ce que le MODÈLE produit, et ce que le CODE en dérive
 Le modèle ne rend que sa LECTURE (`NoteFlashSortie`) : des éléments « type + passage cité », ou un
 constat d'illisibilité motivé. Il ne rend jamais le type `surprise_*` lui-même : il dit `surprise` et
 une CAUSE, et le code dérive le type (`type_derive`) — même forme que le rang d'une réponse, dérivé et
-non déclaré (#57). Une cause `non_dite` devient `surprise_concurrence` PAR LE CODE : laisser le modèle
-choisir le type ferait de l'arbitrage Q2 une consigne qu'il peut oublier.
+non déclaré (#57). Laisser le modèle choisir le type ferait de la règle une consigne qu'il peut oublier.
+
+Une cause `non_dite` (catalogue 1.6.0, table des causes de révision validée le 2026-10-16, §14 de
+`roadmap/V3/06-regle-fraicheur.md`) : le lecteur dit QUEL CHIFFRE est révisé (`chiffre_revise`) et dans
+quel SENS (`sens`) ; le pont vérifie le chiffre dans la phrase et le sens dans les montants des deux
+prévisions, puis rouvre l'UNION des types des causes probables de ce chiffre dans ce sens (persistée sur
+l'élément, `types_derives`). Ce qui ne se vérifie pas retombe sur le côté prudent : tous les chiffres
+nommés, les deux sens, ou toute la table. Elle remplace, pour les révisions, la règle Q2 du 26/09 (« cause
+non dite = concurrence ») ; un élément persisté AVANT elle (sans `types_derives`) garde la règle Q2.
 
 Ce que le contrat NE PEUT PAS vérifier — et qui l'est ailleurs
 --------------------------------------------------------------
@@ -44,14 +51,17 @@ from app.contracts.analysis_v2_schemas import Strict
 
 __all__ = [
     "CAUSES_SURPRISE", "SURPRISE", "ElementNoteFlash", "NoteFlashSortie", "type_derive",
-    "type_derive_de",
+    "type_derive_de", "types_de_l_element",
 ]
 
 # Le pseudo-type par lequel le modèle signale un écart aux attentes. Il n'est PAS au catalogue : seul
 # le code le traduit en `surprise_<cause>`.
 SURPRISE = "surprise"
-CAUSES_SURPRISE = ("secteur", "concurrence", "execution", "non_dite")
-Cause = Literal["secteur", "concurrence", "execution", "non_dite"]
+# `allocation` (2026-10-16) : un choix de la direction d'investir davantage ou d'économiser (lancement,
+# nouveaux programmes, plan d'économies) — ni le secteur, ni la concurrence, ni un raté d'exécution.
+CAUSES_SURPRISE = ("secteur", "concurrence", "execution", "allocation", "non_dite")
+Cause = Literal["secteur", "concurrence", "execution", "allocation", "non_dite"]
+Sens = Literal["hausse", "baisse"]
 
 # Une citation plus courte ne prouve rien (« FDA », « agreement ») : elle se trouverait dans n'importe
 # quel dépôt. 30 caractères ≈ une proposition complète.
@@ -82,6 +92,11 @@ class ElementNoteFlash(Strict):
     # révision de celle du trimestre d'avant (NVDA, diagnostic §13). Le pont exige qu'elle figure mot
     # pour mot dans `passage` ET dans `passage_reference`.
     periode_prevue: Optional[str] = Field(default=None, min_length=4)
+    # Pour `surprise` seulement (table des causes de révision, 2026-10-16) : QUEL chiffre est révisé
+    # (identifiant de `revisions_de_prevision`) et dans quel SENS. Facultatifs : absents ou invérifiables,
+    # le code retombe sur le côté prudent (tout ce que la table peut rouvrir) — jamais sur moins.
+    chiffre_revise: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    sens: Optional[Sens] = None
 
     @model_validator(mode="after")
     def _la_cause_appartient_a_la_surprise(self) -> "ElementNoteFlash":
@@ -96,9 +111,10 @@ class ElementNoteFlash(Strict):
                                  "(`passage_cause`) ; sinon elle est `non_dite`")
         elif self.cause is not None or self.passage_cause is not None:
             raise ValueError(f"`cause` n'a de sens que pour `{SURPRISE}` (reçu sur `{self.type}`)")
-        if (self.passage_reference is not None or self.periode_prevue is not None) and self.type != SURPRISE:
-            raise ValueError(f"`passage_reference` / `periode_prevue` n'ont de sens que pour `{SURPRISE}` "
-                             f"(reçus sur `{self.type}`)")
+        if (self.passage_reference is not None or self.periode_prevue is not None
+                or self.chiffre_revise is not None or self.sens is not None) and self.type != SURPRISE:
+            raise ValueError(f"`passage_reference` / `periode_prevue` / `chiffre_revise` / `sens` n'ont de "
+                             f"sens que pour `{SURPRISE}` (reçus sur `{self.type}`)")
         if self.type == SURPRISE and self.rappel_du is not None:
             raise ValueError("un écart aux attentes est nouveau par nature : il n'est jamais un rappel")
         if self.type.startswith("surprise_"):
@@ -117,6 +133,8 @@ class ExamenPhrase(Strict):
     passage_cause: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
     passage_reference: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
     periode_prevue: Optional[str] = Field(default=None, min_length=4)
+    chiffre_revise: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    sens: Optional[Sens] = None
     survenu_le: Optional[date] = None
 
 
@@ -141,13 +159,23 @@ class NoteFlashSortie(Strict):
 
 
 def type_derive(element: ElementNoteFlash) -> str:
-    """Le type d'événement d'un élément, tel que le CODE le fixe. `surprise` + cause non dite ⟹
-    `surprise_concurrence` (arbitrage Q2 : par prudence, la barrière est mise en doute)."""
+    """Le type d'événement d'un élément HORS révision sans cause : le type lui-même, ou `surprise_<cause>`
+    pour une cause dite. (Une cause non dite passe par la table des causes de révision : `types_derives`.)"""
     return type_derive_de(element.type, element.cause)
 
 
 def type_derive_de(type_: str, cause: Optional[str]) -> str:
-    """DÉTENTEUR UNIQUE de la dérivation (#46) — sur les champs nus, pour relire un élément PERSISTÉ."""
+    """La dérivation d'AVANT la table des causes de révision, sur les champs nus. `surprise` + cause non
+    dite ⟹ `surprise_concurrence` (arbitrage Q2 du 26/09) : c'est encore ce que vaut un élément persisté
+    sans `types_derives` (notes antérieures au catalogue 1.6.0, jusqu'à leur relecture)."""
     if type_ != SURPRISE:
         return type_
     return "surprise_" + ("concurrence" if cause == "non_dite" else cause)
+
+
+def types_de_l_element(el: dict) -> frozenset[str]:
+    """DÉTENTEUR UNIQUE (#46) des types qu'un élément PERSISTÉ rouvre : ceux que le pont a dérivés de la
+    table des causes de révision s'il les a écrits (`types_derives`), sinon la dérivation d'avant."""
+    if el.get("types_derives"):
+        return frozenset(el["types_derives"])
+    return frozenset({type_derive_de(el["type"], el.get("cause"))})
