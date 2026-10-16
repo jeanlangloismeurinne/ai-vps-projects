@@ -84,10 +84,12 @@ from app.knowledge.material_events import MaterialEvent
 from app.agents.v2.runner import (
     AgentOutputInvalid, AgentRunResult, lecture_tolerante_liste, run_json_agent,
 )
+from app.agents.v2.recoupement import recouper
 from app.agents.v2.traducteur import questions_applicables
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.framework_answer_schema import (
     Approximation,
+    CalculMontre,
     ChiffreCle,
     FaitPosterieurLu,
     Fondation,
@@ -167,6 +169,8 @@ class AnalysteReponse(Strict):
     # Les faits postérieurs aux comptes qu'il a lus, avec leur effet (#103) — seulement ceux que le
     # contexte lui montre (`faits_posterieurs_a_lire`) ; le pont [P] vérifie qu'il les a lus dans le dépôt.
     faits_posterieurs: list[FaitPosterieurLu] = Field(default_factory=list)
+    # Les calculs que son texte avance, montrés (#136) — le contrôle avant comité les refait.
+    calculs: list[CalculMontre] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _le_statut_porte_exactement_sa_charge(self):
@@ -182,6 +186,8 @@ class AnalysteReponse(Strict):
                 sales.append("chiffres_cles")
             if self.faits_posterieurs:
                 sales.append("faits_posterieurs")
+            if self.calculs:
+                sales.append("calculs")
             if sales or self.cited_entry_ids:
                 raise ValueError(
                     f"`sans_fondement` portant {sales or 'des citations'} : un manque qui cite ses "
@@ -678,7 +684,8 @@ def assembler_answer(
         # modèle : une ligne qu'il aurait fournie pour eux est écartée et remplacée par le calcul.
         reponse=Reponse(verbatim=brute.verbatim,
                         chiffres_cles=encadre,
-                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),
+                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs),
+                        calculs=list(brute.calculs)),
         fondation=Fondation(cited_entry_ids=cites, rang_derive=rang, nature_effective=nature),
         approximation=brute.approximation,
     )
@@ -759,6 +766,16 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "demandé — tu les lis, tu les cites dans la ligne du fait, JAMAIS dans `cited_entry_ids`. L'effet est un jugement, chiffré "
     "à partir des sources quand elles le permettent, jamais une paraphrase du dépôt. Tu ne déclares lu que "
     "ce qui figure dans `faits_posterieurs_a_lire` ; si la liste est vide, `faits_posterieurs` est vide.\n\n"
+    "TOUT CHIFFRE DE TA RÉPONSE RENVOIE À UNE PIÈCE. Avant le comité, chaque nombre de ton `verbatim`, "
+    "de l'effet d'un fait postérieur et de ta méthode d'approximation est recherché dans les sources que "
+    "tu cites. Un chiffre juste tiré d'une source que tu ne cites pas te sera renvoyé : cite la source qui "
+    "le porte. Si tu CALCULES un chiffre (une part, une progression, une somme, une différence), montre le "
+    "calcul dans `calculs` : {\"libelle\": \"<ce que le chiffre mesure>\", \"formule\": \"<opération sur les "
+    "noms des termes, avec + - * / et des parenthèses, par exemple data_center / total * 100>\", "
+    "\"termes\": [{\"nom\": \"<nom en minuscules>\", \"valeur\": <nombre tel que la source l'écrit>, "
+    "\"entry_id\": <la source citée qui le porte>}]}. Le système refait le calcul ; un pourcentage s'écrit "
+    "« * 100 ». Les hypothèses d'une approximation ne sont pas concernées : ce sont des hypothèses. Si "
+    "rien de ce que tu cites ne porte un chiffre, retire-le.\n\n"
     "CITER, C'EST DÉSIGNER CE QUI PORTE LE FAIT. Cite les sources qui ÉTABLISSENT ce que tu dis, "
     "pas celles qui en parlent : un état financier qui donne le chiffre vaut citation ; un "
     "commentaire qui le mentionne n'en est pas la source. Si tu ne peux citer qu'un commentaire, "
@@ -1015,6 +1032,38 @@ def _message_relecture(concurrences: dict[str, list[tuple[int, int]]],
             "chacune de ces questions, et rien d'autre.")
 
 
+def chiffres_a_renvoyer(issues: dict[str, Any], entries: dict[int, dict[str, Any]]
+                        ) -> dict[str, tuple[list[str], list[str]]]:
+    """Par question répondue : (chiffres sans pièce, calculs écartés) — le contrôle avant comité (#136),
+    par son détenteur (`recoupement.recouper`). Pur. Une question sans défaut n'apparaît pas."""
+    out: dict[str, tuple[list[str], list[str]]] = {}
+    for qid, issue in issues.items():
+        if isinstance(issue, _Refus) or getattr(issue, "reponse", None) is None:
+            continue
+        r = recouper(issue, entries)
+        if r.sans_piece or r.calculs_refuses:
+            out[qid] = ([c.lisible() for c in r.sans_piece], list(r.calculs_refuses))
+    return out
+
+
+def _message_controle_chiffres(defauts: dict[str, tuple[list[str], list[str]]], issues: dict[str, Any]) -> str:
+    """La remarque du contrôle avant comité — une remarque, pas un refus. On dit QUEL chiffre n'a pas de
+    pièce, jamais quelle pièce le porte : un chiffre que plusieurs pièces portent ne dit pas laquelle
+    fonde l'affirmation, et c'est à l'analyste de la désigner (#136)."""
+    lignes = []
+    for qid, (sans_piece, calculs) in defauts.items():
+        a = issues[qid]
+        lignes.append(f"- `{qid}` (ta réponse actuelle cite {list(a.fondation.cited_entry_ids)}) :")
+        lignes += [f"    · {c} — ne figure dans aucune source citée" for c in sans_piece]
+        lignes += [f"    · {m}" for m in calculs]
+    return ("Contrôle de ta note avant le comité. Chaque chiffre de ta réponse doit se retrouver dans une "
+            "source que tu cites, ou dans un calcul que tu montres :\n" + "\n".join(lignes)
+            + "\n\nPour chaque chiffre : cite la source qui le porte (ajoute-la à `cited_entry_ids`) ; ou, si "
+            "tu l'as calculé, montre le calcul dans `calculs` (chaque terme avec sa valeur et la source CITÉE "
+            "qui la porte) ; ou retire-le de ta réponse. Ne change rien d'autre. Rends l'objet JSON "
+            "`{\"reponses\": [ ... ]}` avec la réponse complète de chacune de ces questions, et rien d'autre.")
+
+
 async def repondre(
     ticker_id: str,
     framework_id: str,
@@ -1173,6 +1222,35 @@ async def repondre(
                     if not isinstance(issues3[qid], _Refus):
                         issues[qid] = issues3[qid]   # relue ; sinon la première réponse tient
                 run = _cumuler(run, run3)
+
+        # (3 quater) LE CONTRÔLE AVANT COMITÉ : TOUT CHIFFRE RENVOIE À UNE PIÈCE (#136, arbitrage du
+        # 2026-10-16). Mesuré sur les 50 réponses en vigueur de NVDA et RVMD : 36 nombres sur 371 ne se
+        # retrouvaient dans aucune pièce citée — 19 tirés d'une pièce du dossier non citée (NVDA me_6,
+        # « charge Chine 4,5 Md$ »), 16 calculés sans que le calcul soit montré, 1 introuvable. Comme le
+        # contrôle d'une note dans un fonds : la remarque part UNE fois ; la réponse relue est retenue
+        # sauf si elle est refusée ; ce qui reste sans pièce est signalé au comité à la lecture
+        # (`servir_answer`), jamais rattaché par le code à une pièce qu'il aurait devinée.
+        defauts = chiffres_a_renvoyer(issues, entries)
+        if defauts:
+            messages_c = messages + [
+                {"role": "assistant", "content": brut_initial},
+                {"role": "user", "content": _message_controle_chiffres(defauts, issues)},
+            ]
+            try:
+                run4 = await run_json_agent(agent, messages_c, AnalysteSortie, json_object=False)
+            except AgentOutputInvalid as e:
+                if dataclasses.is_dataclass(run):
+                    run = dataclasses.replace(
+                        run, tokens_in=run.tokens_in + int(e.tokens_in or 0),
+                        tokens_out=run.tokens_out + int(e.tokens_out or 0),
+                        cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
+            else:
+                issues4, _ = _traiter_sortie(run4.parsed, {q: interrogeables[q] for q in defauts},
+                                             admis, profils=profils, entries=entries, entete=entete)
+                for qid in defauts:
+                    if not isinstance(issues4[qid], _Refus):
+                        issues[qid] = issues4[qid]   # relue ; sinon la réponse d'avant tient, signalée
+                run = _cumuler(run, run4)
         resultat.run = run
 
         for qid in interrogeables:

@@ -9,122 +9,22 @@ chaque nombre contre chaque pièce ne se refait pas deux fois de la même façon
     bash tools/recouper_nombres.sh RVMD management_capital          # réponses courantes du chapitre
     bash tools/recouper_nombres.sh RVMD management_capital --ids 1451,1452
 
-Pour chaque réponse : les nombres du texte rédigé (verbatim, effets des faits postérieurs, méthode
-d'approximation) — chacun « retrouvé » dans une pièce citée, ou « ABSENT des pièces citées » avec,
-s'il existe, l'id d'une pièce COURANTE du titre qui le porte (signe d'une citation manquante). Les
-chiffres de l'encadré ne sont PAS recoupés : ceux du socle et les calculs sont produits par le code.
+La règle n'est PAS ici : elle vit dans `app.agents.v2.recoupement` (#136), le détenteur unique que lisent
+aussi l'analyste (la remarque renvoyée une fois) et le point de lecture (le signalement au comité).
+L'outil n'ajoute que la lecture : pour chaque chiffre « ABSENT des pièces citées », l'id des pièces
+COURANTES du titre qui le portent (signe d'une citation manquante — jamais une citation à rattacher :
+un chiffre porté par plusieurs pièces ne dit pas laquelle le fonde).
 
-Tolérance : un nombre écrit avec d décimales est retrouvé si une pièce porte une valeur qui
-l'arrondit à ±½ unité de sa dernière décimale, à un facteur d'unité près (k, M, Md). Un entier
-qui est l'id d'une pièce citée est un renvoi (« source 1296 »), pas un chiffre. Les entiers
-< 10 ne sont pas recoupés (trop communs) ; les années (1900-2100) le sont à l'identique.
-
-⚠️ Il n'asserte rien : un ABSENT est une ligne À LIRE, pas un verdict (un pourcentage calculé par
-l'analyste et annoncé comme tel est légitime). Codes : 0 = recoupé · 2 = pas lisible.
+⚠️ Il n'asserte rien : un ABSENT est une ligne À LIRE, pas un verdict. Codes : 0 = recoupé · 2 = pas lisible.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import os
-import re
 import sys
 
-_GROUPES = re.compile(r"\d{1,3}(?:[   ]\d{3})+(?:,\d+)?")
-_SIMPLE = re.compile(r"\d+(?:[.,]\d+)*")
-_FACTEURS = (1, 1e3, 1e-3, 1e6, 1e-6, 1e9, 1e-9)
-
-
-def _valeurs(jeton: str, francais: bool) -> list[tuple[float, int]]:
-    """(valeur, nombre de décimales écrites) — plusieurs lectures si le séparateur est ambigu."""
-    t = re.sub(r"[   ]", "", jeton)
-    out: list[tuple[float, int]] = []
-    if "," in t and "." in t:
-        dec = "," if t.rfind(",") > t.rfind(".") else "."
-        mil = "." if dec == "," else ","
-        ent, _, fr = t.replace(mil, "").partition(dec)
-        out.append((float(f"{ent}.{fr}"), len(fr)))
-    elif "," in t or "." in t:
-        sep = "," if "," in t else "."
-        parts = t.split(sep)
-        milliers = len(parts) > 1 and all(len(p) == 3 for p in parts[1:])
-        if len(parts) == 2:
-            # le séparateur décimal de la langue : virgule en français, point en anglais ;
-            # l'autre ne sépare QUE des milliers (« 394,919 » anglais n'est jamais 394,919 décimal)
-            decimal = (sep == ",") == francais
-            if decimal:
-                out.append((float(f"{parts[0]}.{parts[1]}"), len(parts[1])))
-            elif milliers:
-                out.append((float("".join(parts)), 0))
-        elif milliers:
-            out.append((float("".join(parts)), 0))
-    else:
-        out.append((float(t), 0))
-    return out
-
-
-def nombres(texte: str, francais: bool) -> list[tuple[str, list[tuple[float, int]]]]:
-    vus: list[tuple[str, list[tuple[float, int]]]] = []
-    pris = [False] * len(texte)
-    for rx in (_GROUPES, _SIMPLE):
-        for m in rx.finditer(texte):
-            if any(pris[m.start():m.end()]):
-                continue
-            # un séparateur final (« 2026. ») n'appartient pas au nombre
-            jeton = m.group().rstrip(".,")
-            for i in range(m.start(), m.end()):
-                pris[i] = True
-            v = _valeurs(jeton, francais)
-            if v:
-                vus.append((jeton, v))
-    return vus
-
-
-def _recoupable(v: float, d: int) -> bool:
-    return not (d == 0 and v < 10)
-
-
-def _annee(v: float, d: int) -> bool:
-    return d == 0 and 1900 <= v <= 2100
-
-
-def retrouve(cible: list[tuple[float, int]], candidats: list[float]) -> bool:
-    for x, d in cible:
-        if _annee(x, d):
-            if x in candidats:
-                return True
-            continue
-        demi = 0.5 * 10 ** (-d) + 1e-9
-        for y in candidats:
-            for f in _FACTEURS:
-                if abs(x - y * f) <= demi:
-                    return True
-    return False
-
-
-def _texte_redige(a: dict) -> list[tuple[str, str]]:
-    r = a.get("reponse") or {}
-    parts = [("verbatim", r.get("verbatim") or "")]
-    for f in r.get("faits_posterieurs") or []:
-        parts.append((f"fait {f.get('depot')}", f.get("effet") or ""))
-    ap = a.get("approximation") or {}
-    for k in ("methode", "hypotheses", "verbatim"):
-        v = ap.get(k)
-        if isinstance(v, list):
-            v = " ".join(map(str, v))
-        if v:
-            parts.append((f"approximation.{k}", str(v)))
-    so = a.get("sans_objet") or {}
-    if so.get("motif"):
-        parts.append(("sans_objet", so["motif"]))
-    return [p for p in parts if p[1]]
-
-
-def _cites(a: dict) -> list[int]:
-    ids = list((a.get("fondation") or {}).get("cited_entry_ids") or [])
-    for f in (a.get("reponse") or {}).get("faits_posterieurs") or []:
-        ids += f.get("cited_entry_ids") or []
-    return sorted(set(ids))
+from app.agents.v2.recoupement import pieces_citees, pieces_qui_portent, recouper
 
 
 async def main() -> int:
@@ -152,38 +52,34 @@ async def main() -> int:
                 "SELECT id, question_id, statut, answer_json FROM framework_answers "
                 "WHERE ticker_id=$1 AND framework=$2 AND superseded_by IS NULL ORDER BY question_id",
                 ticker, fw)
-        corpus = await conn.fetch(
-            "SELECT id, coalesce(title,'') || ' ' || coalesce(content,'') AS t FROM knowledge_entries "
-            "WHERE ticker_id=$1 AND superseded_by IS NULL", ticker)
-        idx = {r["id"]: [v for _, vs in nombres(r["t"], francais=False) for v, _ in vs]
-               for r in corpus}
-        n_abs = n_tot = 0
+        corpus = {r["id"]: dict(r) for r in await conn.fetch(
+            "SELECT id, title, content FROM knowledge_entries WHERE ticker_id=$1 AND superseded_by IS NULL",
+            ticker)}
+        n_abs = n_tot = n_enc = n_calc = n_lib = 0
         for row in rows:
             a = row["answer_json"]
             if isinstance(a, str):
                 a = json.loads(a)
-            cites = _cites(a)
+            cites = pieces_citees(a)
             print(f"\n── #{row['id']} {row['question_id']} [{row['statut']}] cite {cites}")
-            manq = [c for c in cites if c not in idx]
+            manq = [c for c in cites if c not in corpus]
             if manq:
                 print(f"   ⚠ pièces citées hors du corpus courant du titre : {manq}")
-            vals_cites = [v for c in cites for v in idx.get(c, [])]
-            for lieu, txt in _texte_redige(a):
-                for jeton, lect in nombres(txt, francais=True):
-                    if not any(_recoupable(v, d) for v, d in lect):
-                        continue
-                    if any(d == 0 and int(v) in cites for v, d in lect):
-                        continue
-                    n_tot += 1
-                    if retrouve(lect, vals_cites):
-                        continue
-                    n_abs += 1
-                    ailleurs = [i for i, vs in idx.items() if i not in cites and retrouve(lect, vs)]
-                    i0 = txt.find(jeton)
-                    ctx = txt[max(0, i0 - 50): i0 + len(jeton) + 30].replace("\n", " ")
-                    note = f" — porté par #{', #'.join(map(str, ailleurs[:4]))} (non citée)" if ailleurs else ""
-                    print(f"   ABSENT [{lieu}] {jeton!r}{note}\n          « …{ctx}… »")
-        print(f"\nBILAN — {len(rows)} réponse(s), {n_tot} nombre(s) recoupé(s), {n_abs} absent(s) des pièces citées")
+            r = recouper(a, corpus)
+            for motif in r.calculs_refuses:
+                print(f"   CALCUL ÉCARTÉ — {motif}")
+            for c in r.sans_piece:
+                ailleurs = pieces_qui_portent(c.jeton, corpus, exclure=cites)
+                note = f" — porté par #{', #'.join(map(str, ailleurs[:4]))} (non citée)" if ailleurs else ""
+                print(f"   ABSENT [{c.lieu}] {c.jeton!r}{note}\n          « …{c.extrait}… »")
+            n_tot += r.n_recoupes
+            n_abs += len(r.sans_piece)
+            n_enc += r.n_encadre
+            n_calc += r.n_calcul
+            n_lib += r.n_libelle
+        print(f"\nBILAN — {len(rows)} réponse(s), {n_tot} nombre(s) recoupé(s), {n_abs} absent(s) des pièces "
+              f"citées ({n_enc} repris de l'encadré, {n_calc} calcul(s) montré(s), {n_lib} libellé(s) ou "
+              "date(s) — non comptés absents)")
     finally:
         await conn.close()
     return 0

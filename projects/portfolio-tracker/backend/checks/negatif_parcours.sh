@@ -28,7 +28,7 @@ mutations=(
 "$P¦            pieces.append(PieceCitee(entry_id=i, role=role, present_au_corpus=False, au_standard=None))¦            pass  # mutation: pièce absente omise¦ABSENTE du corpus"
 "$P¦            remplacee=p[\"superseded_by\"] is not None,¦            remplacee=False,¦REMPLACÉE"
 "$P¦            rang_plus_faible_cite=_plus_faible(tiers) if tiers else None))¦            rang_plus_faible_cite=tiers[0] if tiers else None))¦rang le plus faible CITÉ"
-"$P¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries),¦            answer_id=i, servie=FrameworkAnswerServie(**a.model_dump()),¦APPELLE \`servir_answer\`"
+"$P¦            answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries,¦            answer_id=i, servie=(lambda *_, **__: FrameworkAnswerServie(**a.model_dump()))(a, ancre=ancre_de(a.question_id), entries=entries,¦APPELLE \`servir_answer\`"
 "$P¦    syntheses, manques, acceptees = [], [], 0¦    syntheses, manques, acceptees = [], [], 0\n    etat.fichier.frameworks.sort(key=lambda f: f.id)  # mutation: ordre alphabétique¦l'ordre du RÉFÉRENTIEL"
 "$P¦    ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))¦    ancre = await material_anchor_for_ticker(conn, ticker_id)  # mutation: ancre brute¦l'ancre qui PÈSE"
 # §7 — le point de lecture : un champ perdu, un pixel inventé, l'alerte descendue sous l'identité.
@@ -48,6 +48,13 @@ mutations=(
 "$N3¦          {p.au_standard === false && (¦          {false && (¦§7 #127 le niveau 3"
 "FRONT:components/v2/DossierComite.js¦                {s.n_standard_anterieur > 0 && (¦                {false && (¦§7 #127 le niveau 1"
 "FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/index.js¦>{s.n_standard_anterieur}</p></div>¦>—</p></div>¦§7 #127 le niveau 2 (la synthèse)"
+# #136 — les chiffres sans pièce : comptés par réponse, additionnés, et lus par les trois écrans.
+"$P¦                n_chiffres_sans_piece=len(r.servie.chiffres_sans_piece)) for r in reps],¦                n_chiffres_sans_piece=0) for r in reps],¦§5ter #136 niveau 2 : chaque réponse"
+"$P¦        n_chiffres_sans_piece=sum(r.n_chiffres_sans_piece for lq in lignes for r in lq.reponses),¦        n_chiffres_sans_piece=0,¦§5ter #136 niveau 2 : la synthèse"
+"$N3¦              <div data-champ=\"chiffres_sans_piece\">¦              <div>¦tout champ du contrat a son pixel"
+"FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/index.js¦          {r.n_chiffres_sans_piece > 0 && (¦          {false && (¦§7 #136 le niveau 2 (la réponse)"
+"FRONT:pages/v2/tickers/[ticker_id]/frameworks/[framework_id]/index.js¦>{s.n_chiffres_sans_piece}</p></div>¦>—</p></div>¦§7 #136 le niveau 2 (la synthèse)"
+"FRONT:components/v2/DossierComite.js¦                {s.n_chiffres_sans_piece > 0 && (¦                {false && (¦§7 #136 le niveau 1"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

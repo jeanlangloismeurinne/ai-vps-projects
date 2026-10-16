@@ -101,7 +101,7 @@ mutations=(
 # ── #103 : les faits postérieurs aux comptes ─────────────────────────────────────────────────────
 "$SRC¦        if pieces:¦        if True:¦tait le fait dont aucune pièce"
 "$SRC¦            if self.faits_posterieurs:¦            if False:¦qui déclare un fait lu est refusé"
-"$SRC¦                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs)),¦                        sens=brute.sens),¦l'assemblage recopie les faits lus"
+"$SRC¦                        sens=brute.sens, faits_posterieurs=list(brute.faits_posterieurs),¦                        sens=brute.sens,¦l'assemblage recopie les faits lus"
 "$SRC¦            \"faits_posterieurs_a_lire\": faits_montrables((faits or {}).get(q.id, []), lisibles, citables),¦            \"faits_posterieurs_a_lire\": faits_montrables([], lisibles, citables),¦le contexte montre à qf_4 le fait lisible"
 # #113 bis — le filtre de nature retiré : l'interprétation reste montrée sur une question de mesure fermée à l'approximation.
 "$SRC¦    if \"approxime\" in ouverts:\n        return citables¦    if True:\n        return citables  # mutation¦l'interprétation #789 n'est PAS montrée"
@@ -121,6 +121,12 @@ mutations=(
 "$SRC¦    valides: list[AnalysteReponse] = [AnalysteReponse.model_validate(it) for it in lect.valides]¦    valides: list[AnalysteReponse] = []¦ne redemande QUE la question fautive"
 "$SRC¦            issues[qid] = _Refus(motif)¦            pass¦le renvoi porte l'erreur du contrat"
 "$SRC¦                          tokens_out=int(e.tokens_out or 0), cost_usd=float(e.cost_usd or 0.0),¦                          tokens_out=int(e.tokens_out or 0), cost_usd=0.0,¦le coût des DEUX appels ratés"
+# #136 — le contrôle avant comité désarmé / une relecture refusée remplace la réponse / la remarque désigne
+# la pièce / un manque qui calcule
+"$SRC¦        defauts = chiffres_a_renvoyer(issues, entries)¦        defauts = {}¦#136 un chiffre sans pièce citée déclenche UNE remarque"
+"$SRC¦                for qid in defauts:\n                    if not isinstance(issues4[qid], _Refus):\n                        issues[qid] = issues4[qid]¦                for qid in defauts:\n                    if True:\n                        issues[qid] = issues4[qid]¦une relecture REFUSÉE ne coûte pas la réponse : celle d'avant"
+"$SRC¦        lignes.append(f\"- \`{qid}\` (ta réponse actuelle cite {list(a.fondation.cited_entry_ids)}) :\")¦        lignes.append(f\"- \`{qid}\` (ta réponse actuelle cite {list(a.fondation.cited_entry_ids) + [5]}) :\")¦ne désigne PAS la pièce"
+"$SRC¦            if self.calculs:\n                sales.append(\"calculs\")¦            pass¦un \`sans_fondement\` qui montre un calcul"
 )
 
 passes=0; ratees=0

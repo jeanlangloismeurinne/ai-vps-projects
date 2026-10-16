@@ -259,7 +259,8 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 rang_derive=r.servie.fondation.rang_derive if r.servie.fondation else None,
                 actualite=r.servie.fondation.actualite if r.servie.fondation else None,
                 verdict=r.verdict, controles=r.controles,
-                standard_anterieur=standard_anterieur(etat, r.servie)) for r in reps],
+                standard_anterieur=standard_anterieur(etat, r.servie),
+                n_chiffres_sans_piece=len(r.servie.chiffres_sans_piece)) for r in reps],
         ))
     return lignes
 
@@ -281,6 +282,7 @@ def _synthese(etat: EtatDossier, f, lignes: list[LigneQuestion]) -> SyntheseFram
         n_manques=sum(1 for lq in lignes if lq.manque is not None),
         n_acceptees_comite=sum(1 for lq in lignes if lq.applicable and _acceptee(lq)),
         n_standard_anterieur=sum(1 for lq in lignes for r in lq.reponses if r.standard_anterieur),
+        n_chiffres_sans_piece=sum(r.n_chiffres_sans_piece for lq in lignes for r in lq.reponses),
     )
 
 

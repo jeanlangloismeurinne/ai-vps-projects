@@ -65,6 +65,8 @@ function NotesQualite({ d }) {
                 {s.n_renvoyees > 0 && <span className="text-red-300"> · {s.n_renvoyees} renvoyée(s)</span>}
                 {s.n_standard_anterieur > 0 && (
                   <span className="text-amber-300"> · {s.n_standard_anterieur} au standard antérieur (à refaire)</span>)}
+                {s.n_chiffres_sans_piece > 0 && (
+                  <span className="text-amber-300"> · {s.n_chiffres_sans_piece} chiffre(s) sans pièce</span>)}
               </p>
             </div>
             <div className="flex items-center gap-4 shrink-0">

@@ -32,6 +32,7 @@ import ast
 import asyncio
 import inspect
 import json
+import re
 import sys
 import textwrap
 from typing import get_args
@@ -565,7 +566,7 @@ NOMINAL = [
     # qf_8 (scission #114) : question de JUGEMENT sans encadré — une réponse sans chiffre est complète.
     dict(question_id="qf_8", statut="repondu", verbatim="aucun covenant financier",
          sens="aucune_contrainte", cited_entry_ids=[1]),
-    dict(question_id="qf_6", statut="approxime", verbatim="~15 % du résultat publié",
+    dict(question_id="qf_6", statut="approxime", verbatim="retraitements d'environ 42 M$, part significative du résultat publié",
          sens="part_significative", cited_entry_ids=[1], approximation=APX, chiffres_cles=ENC_QF6),
     dict(question_id="qf_7", statut="sans_fondement",
          verbatim="la consommation de trésorerie des 4 derniers trimestres n'est dans aucune source"),
@@ -799,6 +800,40 @@ check("… une relecture REFUSÉE ne coûte pas la réponse : la première tient
 _Rs, _ap_s = passage_tours([NOMINAL], entries=_E_CONF, chemises=[_Ch((1,)), _Ch((6,))])
 check("… deux pièces de POINTS DIFFÉRENTS ne déclenchent rien (1 appel) : la relecture ne juge pas le sens",
       len(_ap_s) == 1, f"→ {len(_ap_s)} appel(s)")
+
+
+# ── #136 LE CONTRÔLE AVANT COMITÉ : TOUT CHIFFRE RENVOIE À UNE PIÈCE ─────────────────────────────
+# Forme NVDA me_6 #1371 : un chiffre juste, présent dans une pièce du dossier (#5 porte « 48 M$ »), que la
+# réponse ne cite pas. La remarque part UNE fois, nomme le chiffre, jamais la pièce qui le porte.
+_SP = [NOMINAL[0], {**NOMINAL[1], "verbatim": "aucun covenant financier ; charges de structure de 48 M$"}] + NOMINAL[2:]
+_SP_RELU = [NOMINAL[0], NOMINAL[1]] + NOMINAL[2:]
+_Rc, _ap_c = passage_tours([_SP, _SP_RELU])
+_qf8_c = [a for a in _ans(_Rc) if a.question_id == "qf_8"]
+check("#136 un chiffre sans pièce citée déclenche UNE remarque (2 appels) et la réponse relue est retenue",
+      len(_ap_c) == 2 and len(_qf8_c) == 1 and _qf8_c[0].reponse is not None and "48" not in _qf8_c[0].reponse.verbatim and _ref(_Rc) == [],
+      f"→ {len(_ap_c)} appel(s), {[getattr(a.reponse, 'verbatim', a.statut) for a in _qf8_c]}, refus {_ref(_Rc)}")
+_msg_c = _ap_c[1][-1]["content"] if len(_ap_c) == 2 else ""
+check("… la remarque NOMME le chiffre et son extrait, et ne demande que la question en défaut",
+      "`qf_8`" in _msg_c and "48" in _msg_c and "`qf_4`" not in _msg_c and "`qf_6`" not in _msg_c,
+      f"→ {_msg_c[:300]}")
+check("… et ne désigne PAS la pièce qui porte le chiffre (c'est à l'analyste de la citer, jamais au code)",
+      bool(_msg_c) and not re.search(r"(?<![\d,])5(?![\d,])", _msg_c), f"→ {_msg_c[:300]}")
+_Rk2, _ap_k2 = passage_tours([_SP, [NOMINAL[0], {**NOMINAL[1], "sens": "plutot_bon"}] + NOMINAL[2:]])
+_qf8_k = [a for a in _ans(_Rk2) if a.question_id == "qf_8"]
+check("… une relecture REFUSÉE ne coûte pas la réponse : celle d'avant tient, signalée à la lecture",
+      len(_ap_k2) == 2 and len(_qf8_k) == 1 and _qf8_k[0].reponse is not None and "48" in _qf8_k[0].reponse.verbatim and _ref(_Rk2) == [],
+      f"→ {[getattr(a.reponse, 'verbatim', a.statut) for a in _qf8_k]}, refus {_ref(_Rk2)}")
+_CALC = {"libelle": "moitié de la trésorerie", "formule": "tresorerie / 2",
+         "termes": [{"nom": "tresorerie", "valeur": 3200, "entry_id": 1}]}
+_Rm, _ap_m = passage_tours([[NOMINAL[0], {**NOMINAL[1], "verbatim": "aucun covenant ; la moitié de la "
+                             "trésorerie, 1 600 M$, couvre tout", "calculs": [_CALC]}] + NOMINAL[2:]])
+_qf8_m = [a for a in _ans(_Rm) if a.question_id == "qf_8"]
+check("… un calcul MONTRÉ et juste ne déclenche rien (1 appel), et il est porté par la réponse",
+      len(_ap_m) == 1 and len(_qf8_m) == 1 and _qf8_m[0].reponse is not None and len(_qf8_m[0].reponse.calculs) == 1,
+      f"→ {len(_ap_m)} appel(s), {[getattr(a.reponse, 'calculs', a.statut) for a in _qf8_m]}")
+leve("… un `sans_fondement` qui montre un calcul est hors contrat (un manque ne calcule rien)",
+     lambda: A.AnalysteReponse(question_id="qf_7", statut="sans_fondement", verbatim="rien",
+                               calculs=[_CALC]), ValidationError)
 
 
 # Mesuré le 2026-10-03 (RVMD qf_4/qf_7) : le RENVOI rend une sortie hors contrat (`sans_fondement`

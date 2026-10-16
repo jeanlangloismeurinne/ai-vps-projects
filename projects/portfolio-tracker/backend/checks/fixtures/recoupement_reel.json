@@ -1,0 +1,183 @@
+{
+ "_origine": "copié de db_portfolio le 2026-10-16 (#136) : réponses en vigueur et le titre+contenu de leurs pièces citées, + #1088 (porte « 70 % » sans rapport)",
+ "reponses": {
+  "1371": {
+   "gap": null,
+   "statut": "repondu",
+   "manager": null,
+   "reponse": {
+    "sens": "dependance_notable",
+    "verbatim": "Le modèle dépend notablement de quelques clients directs : pour FY2026, un client direct représentait 22 % du revenu total et un autre 14 %, tous deux dans le segment Compute & Networking ; au 2026-07-26, cinq clients directs concentraient 70 % des comptes clients. Le premier produit (Data Center) représente 92,4 % du chiffre d'affaires S1 FY2027. La dépendance aux fournisseurs est critique : NVIDIA dépend de fournisseurs tiers (fonderies, mémoire) sans substitut rapide, sécurisés par 279 Md$ d'engagements d'approvisionnement, et les restrictions à l'exportation ont déjà exclu NVIDIA du marché chinois du calcul data center (charge de 4,5 Md$ en FY2026).",
+    "chiffres_cles": [],
+    "faits_posterieurs": [
+     {
+      "depot": "0001045810-26-000078",
+      "effet": "L'acquisition de Hugging Face diversifie la clientèle vers l'écosystème open-source (200 000 entreprises), réduisant potentiellement la dépendance aux premiers clients directs, mais sans effet chiffré sur la concentration actuelle.",
+      "cited_entry_ids": [
+       1010
+      ]
+     }
+    ]
+   },
+   "analyste": "passage_manuel_v3",
+   "fondation": {
+    "rang_derive": "A",
+    "cited_entry_ids": [
+     1013,
+     1014,
+     1015,
+     1017,
+     1010
+    ],
+    "nature_effective": "mesure"
+   },
+   "ticker_id": "NVDA",
+   "sans_objet": null,
+   "question_id": "me_6",
+   "framework_id": "modele_economique",
+   "approximation": null,
+   "schema_version": "v3.0.0",
+   "framework_version": "v3.0.0"
+  },
+  "1378": {
+   "gap": null,
+   "statut": "repondu",
+   "manager": null,
+   "reponse": {
+    "sens": "tresorerie_nette",
+    "verbatim": "Au 30 juin 2026, la dette financière brute s'élève à 1 036,0 M$, composée des obligations convertibles senior 0,50 % 2033 (principal 500,0 M$, valeur comptable 487,4 M$) et du financement adossé aux redevances futures Royalty Pharma (548,5 M$). La trésorerie et les placements s'élèvent à 3 938,0 M$, soit une trésorerie nette de 2 902,0 M$. Aucune échéance de dette n'est exigible dans les douze prochains mois : les obligations convertibles arrivent à échéance unique le 1er mai 2033, et le financement Royalty Pharma n'a pas d'échéance à douze mois déposée. Le 8 octobre 2026, la société a tiré 250,0 M$ sur la Tranche A du Term Loan Facility Royalty Pharma (échéance 8 octobre 2032), portant la dette brute à environ 1 286,0 M$.",
+    "chiffres_cles": [
+     {
+      "id": "dette_brute",
+      "unite": "M$",
+      "valeur": 1035.976,
+      "motif_absence": null,
+      "date_ou_periode": "Dernier bilan au 2026-06-30 — socle des comptes : dette_financiere_courante + dette_financiere_non_courante + financement_adosse_aux_redevances"
+     },
+     {
+      "id": "tresorerie_et_placements",
+      "unite": "M$",
+      "valeur": 3937.969,
+      "motif_absence": null,
+      "date_ou_periode": "Dernier bilan au 2026-06-30 — socle des comptes : tresorerie + placements_court_terme + placements_long_terme"
+     },
+     {
+      "id": "resultat_exploitation_douze_mois",
+      "unite": "M$",
+      "valeur": -1627.249,
+      "motif_absence": null,
+      "date_ou_periode": "Douze mois au 2026-06-30 — socle des comptes : resultat_exploitation"
+     },
+     {
+      "id": "charges_interets_douze_mois",
+      "unite": "M$",
+      "valeur": 59.342,
+      "motif_absence": null,
+      "date_ou_periode": "Douze mois au 2026-06-30 — socle des comptes : charges_financieres"
+     },
+     {
+      "id": "dette_nette",
+      "unite": "M$",
+      "valeur": -2901.993,
+      "motif_absence": null,
+      "date_ou_periode": "calculé : dette_brute - tresorerie_et_placements — dette_brute Dernier bilan au 2026-06-30 — socle des comptes : dette_financiere_courante + dette_financiere_non_courante + financement_adosse_aux_redevances ; tresorerie_et_placements Dernier bilan au 2026-06-30 — socle des comptes : tresorerie + placements_court_terme + placements_long_terme"
+     },
+     {
+      "id": "couverture_des_interets",
+      "unite": "fois",
+      "valeur": null,
+      "motif_absence": "non significatif (resultat_exploitation_douze_mois / charges_interets_douze_mois) : resultat_exploitation_douze_mois vaut -1 627.2 — un terme négatif retire son sens au résultat",
+      "date_ou_periode": null
+     }
+    ],
+    "faits_posterieurs": [
+     {
+      "depot": "0001628171-26-000004",
+      "effet": "Le 8 octobre 2026, la société a tiré 250,0 M$ sur la Tranche A du Term Loan Facility Royalty Pharma (échéance 8 octobre 2032, intérêts à Term SOFR 3 mois plancher 3,50 % + 5,75 %). Cela augmente la dette brute d'environ 250,0 M$ (à ~1 286,0 M$) et réduit la trésorerie nette d'autant, mais la trésorerie disponible reste très largement supérieure à la dette.",
+      "cited_entry_ids": [
+       1021
+      ]
+     },
+     {
+      "depot": "0001193125-26-377362",
+      "effet": "La conclusion de quatre baux d'exploitation pour le siège social (loyers ~2,7 M$/mois à pleine occupation, échéance 2042) crée une obligation locative hors bilan qui n'est pas une dette financière au bilan et n'introduit aucun covenant financier ; elle ne change pas la position de trésorerie nette.",
+      "cited_entry_ids": [
+       723,
+       733
+      ]
+     }
+    ]
+   },
+   "analyste": "passage_manuel_v3",
+   "fondation": {
+    "rang_derive": "A",
+    "cited_entry_ids": [
+     876,
+     724,
+     791,
+     1021,
+     723,
+     733
+    ],
+    "nature_effective": "mesure"
+   },
+   "ticker_id": "RVMD",
+   "sans_objet": null,
+   "question_id": "qf_4",
+   "framework_id": "qualite_financiere",
+   "approximation": null,
+   "schema_version": "v3.0.0",
+   "framework_version": "v3.0.0"
+  }
+ },
+ "pieces": {
+  "1010": {
+   "title": "NVIDIA CORP — Acquisition Hugging Face (8-K du 2026-09-02) : extension vers l'écosystème open-source et les développeurs",
+   "content": "Le 8-K de NVIDIA Corporation déposé le 2026-09-03 (événement du 2026-09-02) annonce un accord définitif pour acquérir Hugging Face, Inc., plateforme et communauté open-source de modèles IA, datasets et applications. La transaction comprend un prix d'achat d'environ **$11,9 milliards** payable aux actionnaires de Hugging Face, plus un programme de rétention en actions d'environ **$1,0 milliard** pour les employés rejoignant NVIDIA. La clôture est attendue au premier semestre 2027, sous réserve des conditions de clôture habituelles et des approbations réglementaires.\n\nCette acquisition étend la portée de NVIDIA vers :\n- **Nouveaux segments** : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ;\n- **Nouveaux clients** : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ;\n- **Nouvelles zones** : portée mondiale de la communauté open-source.\n\nNVIDIA s'engage à maintenir la plateforme Hugging Face ouverte, multi-cloud et multi-accélérateur, sans exiger de calcul NVIDIA pour construire ou déployer via Hugging Face."
+  },
+  "1013": {
+   "title": "NVIDIA CORP — Concentration du chiffre d'affaires FY2026 : un client direct 22%, un autre 14% du revenu total (10-K FY2026, section Concentration of Revenue)",
+   "content": "Le 10-K de NVIDIA Corporation pour l'exercice clos le 2026-01-25 (déposé le 2026-02-25), section « Concentration of Revenue », indique : pour l'exercice fiscal 2026, les ventes à **un client direct ont représenté 22 % du revenu total** et les ventes à **un autre client direct ont représenté 14 % du revenu total**, principalement attribuables au segment Compute & Networking. Pour comparaison, FY2025 : un client direct 12 %, deux clients directs 11 % chacun ; FY2024 : un client direct 13 %. Les clients directs incluent AIBs, distributeurs, ODMs, OEMs, CSPs, AI model makers et intégrateurs de systèmes. Le revenu des clients indirects (CSPs, Neocloud builders, AI model makers, entreprises, secteur public) est estimé à partir de multiples facteurs ; certains clients indirects représentent individuellement 10 % ou plus du revenu. Une AI research and deployment company a contribué de manière significative au revenu FY2026 via l'achat de services cloud auprès des clients de NVIDIA."
+  },
+  "1014": {
+   "title": "NVIDIA CORP — Revenue Data Center (market platform) S1 FY2027 vs S1 FY2026, colonne cumulée du 10-Q T2 FY2027",
+   "content": "Le 10-Q de NVIDIA Corporation pour le trimestre clos le 2026-07-26 (déposé le 2026-08-26) présente dans la note « Revenue by Market Platform » le tableau suivant, colonne **Six Months Ended** (cumul) :\n\n| Market Platform | S1 FY2027 (six mois clos 2026-07-26) | S1 FY2026 (six mois clos 2025-07-27) |\n|---|---|---|\n| **Data Center** | **164 269 MUSD** | **80 208 MUSD** |\n| Hyperscale | 91 761 MUSD | 46 428 MUSD |\n| AI Clouds, Industrial, & Enterprise | 72 508 MUSD | 33 780 MUSD |\n| Edge Computing | 13 568 MUSD | 10 597 MUSD |\n| **Total revenue** | **177 837 MUSD** | **90 805 MUSD** |\n\n**Part du Data Center dans le chiffre d'affaires total** (colonne cumulée) :\n- S1 FY2027 : 164 269 / 177 837 = **92,4 %**\n- S1 FY2026 : 80 208 / 90 805 = **88,3 %**\n\nLe Data Center est la première market platform par chiffre d'affaires. Ce tableau est distinct de la note Segment Information (Note 13) qui ventile par segments opérationnels (Compute & Networking, Graphics)."
+  },
+  "1015": {
+   "title": "NVIDIA CORP — Dépendance aux fournisseurs tiers (fonderies, mémoire) confirmée au 2026-07-26 (10-Q T2 FY2027, Item 1A)",
+   "content": "Le 10-Q de NVIDIA Corporation pour le trimestre clos le 2026-07-26 (déposé le 2026-08-26, accession 0001045810-26-000075), Part II, Item 1A « Risk Factors », déclare : « Other than the risk factors listed below, there have been no material changes from the risk factors previously described under Item 1A of our Annual Report on Form 10-K for the fiscal year ended January 25, 2026 and Item 1A of our Quarterly Report on Form 10-Q for the fiscal quarter ended April 26, 2026. » Cette déclaration confirme que le facteur de risque de dépendance aux fournisseurs tiers — incluant « limited number and geographic concentration of global suppliers, foundries, contract manufacturers, assembly and test providers and memory manufacturers » — reste en vigueur sans changement matériel au 2026-07-26. Le 10-Q Note 9 « Commitments and Contingencies » précise que les engagements d'approvisionnement de 279 Mds USD au 2026-07-26 sont « primarily memory and manufacturing facilities », confirmant la matérialité de la dépendance aux fonderies et fournisseurs de mémoire. Les dépôts SEC de NVIDIA ne nomment pas explicitement TSMC, Samsung, SK Hynix ou Micron dans les facteurs de risque."
+  },
+  "1017": {
+   "title": "NVIDIA CORP — Répartition du chiffre d'affaires par zone géographique, S1 FY2027 vs S1 FY2026 (10-Q T2 FY2027, Note 13)",
+   "content": "Le 10-Q de NVIDIA Corporation pour le trimestre clos le 2026-07-26 (déposé le 2026-08-26) présente dans la note Segment Information (Note 13) le revenu par zone géographique (basée sur le siège des clients directs) pour le semestre clos le 2026-07-26 (S1 FY2027) vs le semestre clos le 2025-07-27 (S1 FY2026) : **United States** : S1 FY2027 = 123 843 MUSD ; S1 FY2026 = 58 582 MUSD — **Taiwan** : S1 FY2027 = 38 991 MUSD ; S1 FY2026 = 16 550 MUSD — **China (including Hong Kong)** : S1 FY2027 = 12 430 MUSD ; S1 FY2026 = 8 500 MUSD (estimation basée sur les données disponibles). Total S1 FY2027 : 177 837 MUSD. La part de la Chine dans le revenu semestriel reste faible (~7 %) sous l'effet persistant des restrictions à l'exportation."
+  },
+  "1088": {
+   "title": "NVIDIA CORP — Réaction des volumes aux prix : tension volume vs ASP, trajectoire ASP $19K→$27K→$34K et doublement des unités 2027 vs croissance revenue ~70% FY2028 (Plutux Insights, 2026-09-17)",
+   "content": "L'analyse Plutux Insights (publiée le 2026-09-17) documente la relation volume-prix chez NVIDIA Corporation sur la période récente. Le prix moyen de vente (ASP) des GPU data center est passé d'environ $19 000 en 2025 à ~$27 000 en 2026, avec une projection ~$34 000 pour 2027 (suivi Tom's Hardware). Parallèlement, le CEO Jensen Huang a déclaré le 2026-09-17 que les ventes de puces 2027 doubleraient celles de 2026, tandis que la guidance officielle FY2028 est d'environ 70 % de croissance de revenu. L'écart entre ces deux chiffres implique que soit le doublement concerne les unités (volumes) et non les dollars, soit la croissance réelle dépassera la guidance. L'article note que la demande excédentaire (supply-constrained) signifie que les volumes ne réagissent pas négativement aux hausses de prix — au contraire, les hyperscalers et AI clouds continuent d'acheter des volumes croissants à des ASP en hausse. L'article mentionne également des hausses de prix de 15 %+ sur certains produits AI signalées par les serveur makers fin août 2026, en partie répercutées par les coûts mémoire."
+  },
+  "723": {
+   "title": "Nouvelle obligation locative — baux Seaport Boulevard (RVMD, 8-K du 2026-08-27)",
+   "content": "Le 2026-08-27, Revolution Medicines a conclu quatre baux (leases) portant sur les bâtiments 1600, 1700, 1800 et 1900 Seaport Boulevard à Redwood City, CA (≈672 000 pieds carrés), pour son futur siège social. **Échéancier** : entrées en jouissance échelonnées du 2026-09-26 au 2028-09-01 ; durée initiale de chaque bail jusqu'en **septembre 2042** ; options de prolongation de 3 × 5 ans. **Loyer** : à pleine occupation, loyer mensuel de base ≈2,7 MUSD, augmentant de ≈3 % par an ; abattements de loyer cumulés ≈23,1 MUSD jusqu'en janvier 2030. **Allocations d'aménagement** : ≈115,9 MUSD fournies par les bailleurs, plus option ≈40,3 MUSD additionnels (amortis sur la durée initiale à 10 % par an, payés comme loyer supplémentaire). **Condition suspensive** : acquisition des propriétés par les bailleurs (Phase II Closing) avant le 2026-12-31, sinon résiliation possible ; résiliation automatique si non réalisée avant le 2027-04-29. **Partie liée** : Farallon Capital Management (≈6,4 % du capital au 2026-06-30) détient indirectement une participation majoritaire dans les bailleurs. Cette obligation locative est une obligation financière directe au sens de l'item 2.03 du 8-K, mais ne constitue pas une dette financière au bilan (IFRS/US GAAP : hors bilan, comptabilisée en charges locatives)."
+  },
+  "724": {
+   "title": "Échéancier de la dette — obligations convertibles senior 0,50 % 2033 (RVMD, AU 2026-06-30)",
+   "content": "Au 2026-06-30 (10-Q déposé le 2026-08-05, accession 0001193125-26-335104), RVMD n'a qu'un seul instrument de dette : les obligations convertibles senior à 0,50 % échéance 2033, principal 500,0 MUSD, émises le 2026-04-17. **Échéancier** : montant total de 500,0 MUSD dû à l'échéance unique du **1er mai 2033** (sauf conversion, rachat ou remboursement anticipé). Intérêts à 0,50 % par an, payables semestriellement à terme échu les 1er mai et 1er novembre, à compter du 1er novembre 2026. **Conversion** : avant le 1er février 2033, les porteurs peuvent convertir uniquement sous certaines conditions : (i) prix de vente > 130 % du prix de conversion pendant au moins 20 jours de bourse sur 30 consécutifs, (ii) prix de négociation < 98 % du produit prix × taux de conversion, (iii) événements d'entreprise spécifiés, ou (iv) pendant la période de 5 jours ouvrés précédant une date de rachat. Après le 1er février 2033, conversion libre jusqu'à l'échéance. **Rachat** : la société peut racheter les notes au pair plus intérêts courus à compter du 1er mai 2030, sous conditions de prix. **Aucun autre emprunt** (crédit revolving, dette bancaire) n'est présent au bilan. Les obligations de location (leases) ne constituent pas une dette financière au sens des notes aux états financiers."
+  },
+  "733": {
+   "title": "Lecture du dépôt 8-K du 2026-08-27 (RVMD) — 0001193125-26-377362",
+   "content": "Dépôt EDGAR 8-K du 2026-08-27 (déposé le 2026-09-01, accession 0001193125-26-377362), items 1.01, 2.03 — texte tel que déposé, sans résumé ni traduction.\n\n[8-K — rvmd-20260827.htm]\nItem 1.01 Entry into a Material Definitive Agreement.\nOn August 27, 2026, Revolution Medicines, Inc. (the “Company”) agreed to lease the entirety of four buildings located at 1600, 1700, 1800 and 1900 Seaport Boulevard in Redwood City, California, comprising an aggregate of approximately 672,000 rentable square feet (collectively, the “Premises”). The Company intends to use the Premises as its new headquarters. The transaction was structured as four separate lease agreements (collectively, the “Leases”) with four separate (but affiliated) landlords (collectively, the “Landlords”), who are subsidiaries of Pacific Shores Phase II Associates, LLC.\nThe Leases have staggered commencement dates beginning on September 26, 2027 and extending through September 1, 2028, with initial terms each ending in September 2042, unless earlier terminated. The Company has options to extend the terms of each Lease for up to three additional five-year periods. Base rent during an extension period will be determined based on fair market rent.\nAt full commencement of all Leases, the aggregate scheduled monthly base rent will begin at approximately $2.7 million and will increase by approximately 3% annually. The Leases include rent-abatement periods extending through January 2030 representing an aggregate base rent abatement of approximately $23.1 million. The Company will also be responsible for its proportionate share of operating expenses, insurance expenses, taxes and certain other costs and expenses under the Leases.\nThe Landlords have agreed to provide aggregate tenant improvement allowances of approximately $115.9 million. The Company may also elect to receive up to an aggregate of approximately $40.3 million in additional tenant improvement allowances. To the extent used, the additional tenant improvement allowances will be amortized over the applicable initial lease terms at an annual rate of 10% and payable as additional rent.\nThe effectiveness of the Leases is subject to the acquisition by the Landlords of the properties subject to the Leases (the “Phase II Closing”). If the Phase II Closing occurs after November 24, 2026 but on or before December 31, 2026, base rent will be reduced by $0.02 per rentable square foot per month. If the Phase II Closing occurs after December 31, 2026 and the Leases remain in effect, base rent will instead be reduced by an aggregate of $0.10 per rentable square foot per month. If the Phase II Closing does not occur by December 31, 2026, the Company may terminate each Lease by delivering termination notice within five business days after December 31, 2026. Further, each Lease automatically terminates if the Phase II Closing has not occurred by April 29, 2027, absent a mutually agreed extension. The Leases contain customary representations, warranties, covenants, indemnification obligations, events of default and remedies.\nFarallon Capital Management, L.L.C. (“Farallon”) reported beneficial ownership of approximately 6.4% of the Company’s outstanding common stock as of June 30, 2026. Investment funds managed by Farallon indirectly own a majority interest in the Landlords.\nThe foregoing description of the Leases does not purport to be complete and is qualified in its entirety by reference to the full text of the Leases, which will be filed as exhibits to the Company’s Quarterly Report on Form 10-Q for the quarter ending September 30, 2026.\nItem 2.03 Creation of a Direct Financial Obligation or an Obligation under an Off-Balance Sheet Arrangement of a Registrant.\nThe information set forth under Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference.\nForward-Looking Statements\nThis Current Report on Form 8-K contains forward-looking statements within the meaning of the U.S. Private Securities Litigation Reform Act of 1995, including statements regarding the expected timing of the Phase II Closing, commencement and occupancy of the Leases, the Company’s intended use of the Premises and anticipated build-out, relocation and occupancy costs. These forward-looking statements are subject to risks and uncertainties that could cause actual events, timing or costs to differ materially, including delays or failure to satisfy conditions to the Phase II Closing, delays in delivery or construction of the Premises, permitting and regulatory requirements, construction cost increases or overruns, landlord performance and changes in the Company’s business or space requirements. Additional risks and uncertainties are described under the caption “Risk Factors” in the Company’s most recent Quarterly Report on Form 10-Q filed with the Securities and Exchange Commission on August 5, 2026 and in the Company’s subsequent filings with the Securities and Exchange Commission. Except as required by applicable law, the Company undertakes no obligation to update any forward-looking statement.\nSIGNATURES\nPursuant to the requirements of the Securities Exchange Act of 1934, the registrant has duly caused this report to be signed on its behalf by the undersigned hereunto duly authorized.\nREVOLUTION MEDICINES, INC.\nDate:\nSeptember 1, 2026\nBy:\n/s/ Mark A. Goldsmith\nMark A. Goldsmith, M.D., Ph.D.\nPresident and Chief Executive Officer"
+  },
+  "791": {
+   "title": "Part de la dette à long terme exigible dans les 12 prochains mois — Revolution Medicines, Inc. au 2026-06-30",
+   "content": "Au 30 juin 2026 (10-Q déposé le 2026-08-05, accession 0001193125-26-335104), Revolution Medicines, Inc. ne présente **aucune part de dette à long terme exigible dans les douze prochains mois** (current portion of long-term debt = **0 MUSD**). L'unique instrument de dette est constitué des obligations convertibles senior à 0,50 % échéance 2033 (principal 500,0 MUSD, valeur comptable 487,434 MUSD), avec une **échéance unique au 1er mai 2033**. Aucun montant n'était tiré sur le Term Loan Facility (750 MUSD disponibles) au 2026-06-30. Aucune finance lease liability n'est présentée au bilan ; seules des operating lease liabilities figurent (current 16,753 MUSD ; noncurrent 137,741 MUSD). Par conséquent, la part de la dette à long terme exigible dans les douze prochains mois est **zéro** au 2026-06-30."
+  },
+  "876": {
+   "title": "Socle des comptes — Revolution Medicines, Inc. — 13 périodes jusqu'au 2026-06-30 (dernier dépôt 10-Q du 2026-08-05)",
+   "content": "Comptes de Revolution Medicines, Inc. reconstitués au format maison depuis les dépôts SEC (gabarit 1.1.0, dernier dépôt lu : 10-Q déposé le 2026-08-05). Montants en millions de dollars, tels que déposés (une charge est positive). Une ligne « solde du bouclage » est l'écart déterministe entre un total déposé et les lignes nommées au-dessus. « n.d. » : ligne non déposée par l'émetteur.\nReclassement d'analyste — Financement adossé aux redevances futures (dette) : AccruedRoyaltiesCurrentAndNoncurrent. Accord avec Royalty Pharma (2025) : les fonds reçus contre une part des redevances futures sont comptabilisés comme une dette (cession de revenus futurs, ASC 470-10), qui porte des intérêts non décaissés capitalisés — 24,2 M$ en 2025 (PaidInKindInterest), avant toute autre dette. Convention maison : un financement qui porte intérêt est de la dette. Inscrit en non courant (aucune échéance à douze mois déposée). (pièce : https://www.sec.gov/Archives/edgar/data/1628171/000119312526071563/0001193125-26-071563-index.htm)\n\nCompte de résultat — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31 | Douze mois au 2026-06-30\n  Chiffre d'affaires : 29.4 | 35.4 | 11.6 | 0.0 | 0.0 | n.d.\n  Coût des ventes : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Marge brute : 29.4 | 35.4 | 11.6 | -0.0 | -0.0 | -0.0\n  Recherche et développement : 186.9 | 253.1 | 423.1 | 592.2 | 987.3 | 1 296.3\n  Frais commerciaux, généraux et administratifs : 30.4 | 40.6 | 75.6 | 97.3 | 195.0 | 330.9\n  Autres charges d'exploitation (solde du bouclage) : -0.0 | -0.0 | -0.0 | -0.0 | -0.0 | -0.0\n  Résultat d'exploitation : -188.0 | -258.3 | -487.2 | -689.5 | -1 182.4 | -1 627.2\n  Produits financiers (intérêts reçus) : 0.9 | 9.2 | 47.5 | 86.9 | 90.7 | 98.5\n  Charges d'intérêts : 0.0 | 0.0 | 0.0 | 0.0 | 24.2 | 59.3\n  Autres produits et charges hors exploitation (solde du bouclage) : 0.0 | 0.0 | -0.2 | 1.8 | -15.4 | -180.2\n  Résultat avant impôt : -187.1 | -249.1 | -439.9 | -600.8 | -1 131.3 | -1 768.3\n  Impôt sur les résultats : 0.0 | -0.4 | -3.5 | -0.8 | 0.0 | n.d.\n  Activités abandonnées, minoritaires et autres (solde du bouclage) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0\n  Résultat net part du groupe : -187.1 | -248.7 | -436.4 | -600.1 | -1 131.3 | -1 768.3\n\nBilan — Bilan d'ouverture au 2020-12-31 | Bilan au 2021-12-31 | Bilan au 2022-12-31 | Bilan au 2023-12-31 | Bilan au 2024-12-31 | Bilan au 2025-12-31 | Dernier bilan au 2026-06-30\n  Trésorerie et équivalents : 104.3 | 108.5 | 161.4 | 696.1 | 543.1 | 383.7 | 815.4\n  Placements financiers à court terme : 336.5 | 468.6 | 483.5 | 1 156.8 | 1 746.2 | 1 641.9 | 3 122.5\n  Créances clients : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Stocks : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Participations cotées détenues, présentées à l'actif courant : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Autres actifs courants (solde du bouclage) : 13.4 | 12.7 | 15.2 | 26.3 | 38.3 | 49.4 | 90.4\n  Actif courant : 454.1 | 589.8 | 660.2 | 1 879.3 | 2 327.6 | 2 075.0 | 4 028.3\n  Placements financiers à long terme : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Immobilisations corporelles nettes : 8.9 | 11.5 | 18.7 | 22.9 | 24.3 | 33.2 | 34.6\n  Droits d'utilisation (baux) : 27.4 | 59.7 | 55.1 | 77.1 | 117.5 | 132.1 | 127.8\n  Écarts d'acquisition : 14.6 | 14.6 | 14.6 | 14.6 | 14.6 | 14.6 | 14.6\n  Immobilisations incorporelles : 60.9 | 59.9 | 58.8 | 57.7 | 56.7 | 55.8 | 55.8\n  Participations non cotées et titres détenus à long terme : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Autres actifs non courants (solde du bouclage) : 1.4 | 2.5 | 4.6 | 10.1 | 17.6 | 43.8 | 62.1\n  Total de l'actif : 567.4 | 738.0 | 811.9 | 2 061.7 | 2 558.3 | 2 354.5 | 4 323.3\n  Dettes fournisseurs : 12.6 | 14.1 | 21.3 | 61.8 | 54.4 | 64.6 | 88.4\n  Dette financière à moins d'un an : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Obligations locatives à moins d'un an : 3.7 | 6.2 | 6.8 | 7.4 | 12.9 | 16.5 | 16.8\n  Autres passifs courants (solde du bouclage) : 30.9 | 40.1 | 33.9 | 74.7 | 96.6 | 209.3 | 248.9\n  Passif courant : 47.2 | 60.4 | 62.0 | 143.9 | 163.9 | 290.4 | 354.1\n  Dette financière à plus d'un an : n.d. | n.d. | n.d. | n.d. | n.d. | 0.0 | 487.4\n  Financement adossé aux redevances futures (dette) : n.d. | n.d. | n.d. | n.d. | 0.0 | 268.4 | 548.5\n  Obligations locatives à plus d'un an : 29.0 | 60.4 | 57.4 | 80.6 | 123.0 | 142.2 | 137.7\n  Autres passifs non courants (solde du bouclage) : 16.6 | 14.7 | 7.3 | 11.1 | 6.2 | 22.1 | 189.3\n  Total des dettes : 92.7 | 135.4 | 126.7 | 235.5 | 293.1 | 723.2 | 1 717.0\n  Capitaux propres (minoritaires compris) : 474.7 | 602.6 | 685.2 | 1 826.2 | 2 265.2 | 1 631.3 | 2 606.2\n  Total du passif et des capitaux propres : 567.4 | 738.0 | 811.9 | 2 061.7 | 2 558.3 | 2 354.5 | 4 323.3\n  Capital employé dans l'exploitation (convention maison) : 55.7 | 47.1 | 56.7 | -4.9 | 0.4 | -77.2 | -79.9\n  Capital employé hors écarts d'acquisition : 41.1 | 32.5 | 42.1 | -19.5 | -14.2 | -91.8 | -94.5\n\nTableau des flux de trésorerie — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31 | Douze mois au 2026-06-30\n  Dotations aux amortissements : 3.1 | 4.0 | 5.0 | 6.6 | 7.8 | 9.1\n  Rémunération en actions : 20.7 | 31.2 | 61.8 | 79.2 | 118.4 | 218.8\n  Variation du besoin en fonds de roulement et autres éléments (solde du bouclage) : 16.1 | -10.9 | 19.0 | -43.1 | 107.4 | 317.4\n  Flux de trésorerie d'exploitation : -147.2 | -224.4 | -350.6 | -557.4 | -897.7 | -1 223.0\n  Investissements corporels (décaissés) : 6.5 | 10.8 | 7.7 | 10.3 | 16.0 | 9.1\n  Acquisitions de sociétés, nettes de la trésorerie acquise : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Autres flux d'investissement, dont placements (solde du bouclage) : -135.6 | -13.3 | -334.9 | -544.1 | 134.0 | -1 377.2\n  Flux de trésorerie d'investissement : -142.1 | -24.1 | -342.6 | -554.4 | 118.1 | -1 386.3\n  Émissions d'actions : 281.1 | 248.1 | 323.7 | 727.6 | 0.0 | 1 651.4\n  Rachats d'actions : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Dividendes versés : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Autres flux de financement, dont dette (solde du bouclage) : 13.0 | 53.3 | 905.5 | 231.8 | 621.5 | 1 371.9\n  Flux de trésorerie de financement : 294.2 | 301.4 | 1 229.2 | 959.4 | 621.5 | 3 023.3\n  Effet des variations de change : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.\n  Variation de la trésorerie : 4.9 | 52.9 | 536.0 | -152.4 | -158.2 | 413.9\n  Flux de trésorerie disponible (exploitation − investissements corporels) : -153.7 | -235.2 | -358.3 | -567.7 | -913.7 | -1 232.1\n\nRatios maison (définitions 1.0.0, communes à toutes les sociétés) — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31\n  Taux d'impôt retenu (%) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0\n  Résultat d'exploitation après impôt (M$) : -188.0 | -258.3 | -487.2 | -689.5 | -1 182.4\n  Capital employé moyen de l'exercice (M$) : 51.4 | 51.9 | 25.9 | -2.2 | -38.4\n  Rendement du capital employé (%) : -365.7 | -497.6 | -1 880.4 | n.d. | n.d.\n  Rendement hors écarts d'acquisition (%) : -510.8 | -692.5 | -4 311.0 | n.d. | n.d.\n  Marge d'exploitation après impôt (%) : -639.7 | -730.0 | -4 207.1 | n.d. | n.d.\n  Rotation du capital employé (fois) : 0.57 | 0.68 | 0.45 | n.d. | n.d.\n  Rendement du capital employé, moyenne des cinq exercices (%) : non établi : rendement absent pour l'exercice clos le 2024-12-31 (non défini : capital employé moyen nul ou négatif (-2.2 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104)) ; l'exercice clos le 2025-12-31 (non défini : capital employé moyen nul ou négatif (-38.4 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104))\n  Pente du rendement du capital employé sur cinq exercices (points/an) : non établi : rendement absent pour l'exercice clos le 2024-12-31 (non défini : capital employé moyen nul ou négatif (-2.2 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104)) ; l'exercice clos le 2025-12-31 (non défini : capital employé moyen nul ou négatif (-38.4 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104))\n  Part du résultat net retrouvée en trésorerie d'exploitation, trois exercices (%) : non calculable : résultat net cumulé nul ou négatif sur les exercices clos du 2023-12-31 au 2025-12-31 (-2 167.8 M$) — une perte ne se convertit pas en trésorerie\n  Capital employé supplémentaire par point de croissance du chiffre d'affaires (M$) : non calculable : le chiffre d'affaires n'a pas crû sur les exercices clos du 2021-12-31 au 2025-12-31 (-100.0 points) — aucun point de croissance à financer\n\nBouclages : 20 contrôles, aucun écart."
+  },
+  "1021": {
+   "title": "Lecture du dépôt 8-K du 2026-10-08 (RVMD) — 0001628171-26-000004",
+   "content": "Dépôt EDGAR 8-K du 2026-10-08 (déposé le 2026-10-13, accession 0001628171-26-000004), items 2.03, 8.01 — texte tel que déposé, sans résumé ni traduction.\n\n[8-K — rvmd-20261008.htm]\nItem 2.03 Creation of a Direct Financial Obligation or an Obligation under an Off-Balance Sheet Arrangement of a Registrant.\nThe information set forth under Item 8.01 below under the heading “Royalty Pharma Tranche A Loan” is incorporated by reference into this Item 2.03.\nItem 8.01 Other Events.\nRoyalty Pharma Tranche A Loan\nAs previously disclosed, on June 23, 2025, Revolution Medicines, Inc. (the “Company”), as borrower, entered into a loan agreement (the “Loan Agreement”) with Wilmington Trust, National Association, as administrative agent (the “Administrative Agent”), and Royalty Pharma Development Funding, LLC, as a lender (the “Lender”). The Loan Agreement provides for a senior secured term loan facility of up to $750.0 million, consisting of three tranches of up to $250.0 million each.\nOn October 8, 2026 (the “Tranche A Closing Date”), in connection with the U.S. Food and Drug Administration’s (the “FDA”) approval of RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”), the Lender advanced the Tranche A Loan in an aggregate principal amount of $250.0 million. As required by the terms of the Loan Agreement, the Company borrowed the Tranche A Loan and paid the Lender a $5.0 million draw fee.\nThe Tranche A Loan bears interest at a floating rate per annum equal to three-month Term SOFR, subject to a floor of 3.50%, plus 5.75%. Interest is payable quarterly in arrears. The Tranche A Loan is interest-only, with the outstanding principal due on October 8, 2032. The Company may voluntarily prepay all, but not less than all, of the Tranche A Loan. Any prepayment before the second anniversary of the Tranche A Closing Date requires payment of a make-whole amount equal to the interest that would have accrued on the prepaid principal through that anniversary, plus a 3.0% prepayment premium. A prepayment on or after the second anniversary but before the third anniversary requires a 3.0% prepayment premium, and a prepayment on or after the third anniversary but before maturity requires a 1.0% prepayment premium, in each case as specified in the Loan Agreement.\nFollowing the funding of the Tranche A Loan, up to an additional $500.0 million of loans remains potentially available at the Company’s election, subject to the achievement of the applicable milestones and the satisfaction or waiver of the conditions specified in the Loan Agreement.\nRoyalty Pharma Tranche 3 Royalty\nAs previously disclosed, on June 23, 2025, the Company entered into a Revenue Participation Right Purchase and Sale Agreement (the “Royalty Purchase Agreement”) with Royalty Pharma Investments 2019 ICAV (“Royalty Pharma”).\nUnder the Royalty Purchase Agreement, the FDA Approval constituted the “Tranche 3 Trigger.” Following the occurrence of the Tranche 3 Trigger, the Company had the option, but not the obligation, to deliver an irrevocable “Tranche 3 Notice” to Royalty Pharma no later than October 10, 2026. Pursuant to a Tranche 3 Notice, the Company could require Royalty Pharma to pay the Company a “Tranche 3 Purchase Price” of up to $250.0 million in exchange for the Company’s sale to Royalty Pharma of the corresponding “Tranche 3 Incremental Revenue Participation Right.”\nThe Company elected not to take Tranche 3 and did not deliver the Tranche 3 Notice. Accordingly, the Company will not receive a Tranche 3 Purchase Price, and Royalty Pharma will not receive the Tranche 3 Incremental Revenue Participation Right. Following this election, up to an additional $500.0 million of purchase price payments remain potentially available at the Company’s election, subject to the achievement of the applicable milestones and the satisfaction or waiver of the conditions specified in the Royalty Purchase Agreement.\nSIGNATURES\nPursuant to the requirements of the Securities Exchange Act of 1934, the registrant has duly caused this report to be signed on its behalf by the undersigned hereunto duly authorized.\nREVOLUTION MEDICINES, INC.\nDate:\nOctober 13, 2026\nBy:\n/s/ Mark A. Goldsmith\nMark A. Goldsmith, M.D., Ph.D.\nPresident and Chief Executive Officer"
+  }
+ }
+}

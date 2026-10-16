@@ -53,6 +53,16 @@ jamais le nombre estimé comme s'il était mesuré. C'est le contrôle ④ port�
 ║  │      └─ id et unité DÉCLARÉS par la question ; un chiffre absent est motivé ; │    ║
 ║  │         grisé et suffixé « ~ » tant que le statut est `approximé`             │    ║
 ║  │                                                   élevé ⟦reponse.sens⟧        │    ║
+║  │                                                                              │    ║
+║  │  CALCULS MONTRÉS (#136 — le contrôle avant comité les refait)                │    ║
+║  │   part du Data Center ⟦reponse.calculs.libelle⟧                               │    ║
+║  │     = data_center / total * 100 ⟦reponse.calculs.formule⟧                     │    ║
+║  │     data_center ⟦reponse.calculs.termes.nom⟧ = 164269                         │    ║
+║  │       ⟦reponse.calculs.termes.valeur⟧ (#1014 ⟦reponse.calculs.termes.entry_id⟧)│    ║
+║  │  CHIFFRES SANS PIÈCE   4,5 — « …charge de 4,5 Md$ en FY2026… »                │    ║
+║  │                        ⟦chiffres_sans_piece⟧                                  │    ║
+║  │      └─ recalculés à la lecture contre le dossier du moment ; signalés,      │    ║
+║  │         jamais rattachés par le code à une pièce devinée                     │    ║
 ║  └──────────────────────────────────────────────────────────────────────────────┘    ║
 ║                                                                                      ║
 ║  ┌─ CE QUI LA FONDE ────────────────────────────────────────────────────────────┐    ║

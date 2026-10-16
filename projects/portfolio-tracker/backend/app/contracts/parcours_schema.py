@@ -144,6 +144,8 @@ class SyntheseFramework(Strict):
     n_acceptees_comite: int = Field(default=0, ge=0)
     # #127 — réponses en vigueur qui citent au moins une pièce au standard antérieur.
     n_standard_anterieur: int = Field(ge=0)
+    # #136 — chiffres des réponses en vigueur qu'aucune pièce citée ne porte (signalés au comité).
+    n_chiffres_sans_piece: int = Field(ge=0)
 
 
 class DossierTitre(Strict):
@@ -170,6 +172,8 @@ class ReponseResumee(Strict):
     controles: Optional[ControlesManager] = None
     # #127 — la réponse cite au moins une pièce au standard antérieur : provisoire, à refaire.
     standard_anterieur: bool
+    # #136 — combien de chiffres de la réponse n'ont pas de pièce (le détail : niveau 3, la réponse servie).
+    n_chiffres_sans_piece: int = Field(ge=0)
 
 
 class LigneQuestion(Strict):

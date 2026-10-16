@@ -118,6 +118,41 @@ function Preuve({ pr, tickerId }) {
           <EncadreChiffres chiffres={a.reponse?.chiffres_cles} approx={approx} />
           <dl className="space-y-1.5">
             <Ligne label="sens"><span data-champ="reponse.sens"><Val v={a.reponse?.sens} /></span></Ligne>
+            {/* #136 — les calculs que le texte avance, montrés : le contrôle avant comité les a refaits. */}
+            <Ligne label="calculs montrés">
+              {(a.reponse?.calculs || []).length === 0 ? <Val v={null} /> : (
+                <ul className="space-y-1.5">
+                  {a.reponse.calculs.map((c, k) => (
+                    <li key={k} className="text-xs">
+                      <span className="text-gray-200" data-champ="reponse.calculs.libelle">{c.libelle}</span>
+                      <span className="text-gray-500"> = </span>
+                      <span className="font-mono text-gray-300" data-champ="reponse.calculs.formule">{c.formule}</span>
+                      <p className="text-gray-500">
+                        {c.termes.map(t => (
+                          <span key={t.nom} className="mr-3">
+                            <span className="font-mono" data-champ="reponse.calculs.termes.nom">{t.nom}</span>
+                            {' = '}<span data-champ="reponse.calculs.termes.valeur">{t.valeur}</span>
+                            {' ('}<span data-champ="reponse.calculs.termes.entry_id">#{t.entry_id}</span>{')'}
+                          </span>
+                        ))}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Ligne>
+            {/* #136 — signalé au comité : un chiffre du texte qu'aucune pièce citée ne porte. */}
+            <Ligne label="chiffres sans pièce">
+              <div data-champ="chiffres_sans_piece">
+                {(a.chiffres_sans_piece || []).length === 0
+                  ? <span className="text-xs text-gray-500">aucun — chaque chiffre renvoie à une pièce citée</span>
+                  : (
+                    <ul className="space-y-1">
+                      {a.chiffres_sans_piece.map((c, k) => <li key={k} className="text-xs text-amber-300">{c}</li>)}
+                    </ul>
+                  )}
+              </div>
+            </Ligne>
           </dl>
         </CardBody>
       </Card>

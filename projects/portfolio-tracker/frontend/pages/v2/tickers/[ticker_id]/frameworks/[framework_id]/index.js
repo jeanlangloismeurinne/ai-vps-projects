@@ -38,6 +38,8 @@ function LigneQuestion({ lq, tickerId, frameworkId }) {
           <ActualiteBadge actualite={r.actualite} />
           {r.standard_anterieur && (
             <Badge variant="amber">standard antérieur — à refaire</Badge>)}
+          {r.n_chiffres_sans_piece > 0 && (
+            <Badge variant="amber">{r.n_chiffres_sans_piece} chiffre(s) sans pièce</Badge>)}
           <span className="text-gray-600">·</span>
           {r.verdict === 'acquitte' && <Badge variant="emerald">acquittée par le contrôle</Badge>}
           {r.verdict === 'renvoye' && <Badge variant="red">renvoyée par le contrôle</Badge>}
@@ -102,6 +104,8 @@ export default function FrameworkNiveau2() {
             <p className="text-sm text-gray-200">{s.n_acceptees_comite}</p></div>
           <div><p className="text-[10px] uppercase text-gray-500">au standard antérieur</p>
             <p className={`text-sm ${s.n_standard_anterieur ? 'text-amber-300' : 'text-gray-200'}`}>{s.n_standard_anterieur}</p></div>
+          <div><p className="text-[10px] uppercase text-gray-500">chiffres sans pièce</p>
+            <p className={`text-sm ${s.n_chiffres_sans_piece ? 'text-amber-300' : 'text-gray-200'}`}>{s.n_chiffres_sans_piece}</p></div>
           <div><p className="text-[10px] uppercase text-gray-500">manques</p>
             <p className={`text-sm ${s.n_manques ? 'text-amber-300' : 'text-gray-200'}`}>{s.n_manques}</p></div>
         </CardBody>

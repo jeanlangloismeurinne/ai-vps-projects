@@ -50,6 +50,7 @@ from pydantic import ValidationError
 
 from app.agents.v2.common import NATURES, TIER_ORDER, _TIER_RANK
 from app.contracts.collection_plan_schema import CollectionPlan
+from app.agents.v2.recoupement import recouper
 from app.contracts.formule_grammaire import (
     FormuleInexecutable,
     denominateurs_de_la_formule,
@@ -1018,6 +1019,8 @@ def servir_answer(
     donnees = answer.model_dump()
     donnees["fondation"] = {**donnees["fondation"], "actualite": etat,
                             "motif_actualite": motif}
+    # #136 — le signalement au comité : les chiffres sans pièce, recalculés contre le dossier du moment.
+    donnees["chiffres_sans_piece"] = [c.lisible() for c in recouper(answer, entries).sans_piece]
     return FrameworkAnswerServie(**donnees)
 
 

@@ -69,9 +69,9 @@ KO1 = ControlesManager(completude="ko", fondation="ok", honnetete_approximation=
 
 
 def _servie(qid, statut, *, fw="qualite_financiere", act="courante", analyste="a", cites=(10,),
-            manager=None):
+            manager=None, sans_piece=()):
     commun = dict(framework_id=fw, framework_version=VER, question_id=qid, ticker_id="RVMD",
-                  analyste=analyste, statut=statut, manager=manager)
+                  analyste=analyste, statut=statut, manager=manager, chiffres_sans_piece=list(sans_piece))
     if statut == "repondu":
         return FrameworkAnswerServie(
             **commun, reponse=Reponse(verbatim="x", chiffres_cles=[{"id": "chiffre", "unite": "%", "valeur": 1.0, "date_ou_periode": "exercice 2025"}]),
@@ -342,6 +342,19 @@ _s1 = next((x for x in _n1.frameworks if x.framework_id == "qualite_financiere")
 b.check(_s1 is not None and _s1.n_standard_anterieur == 1,
         f"§5bis niveau 1 : le même décompte dans le dossier du titre — obtenu {_s1 and _s1.n_standard_anterieur}")
 
+# #136 — les chiffres sans pièce de la réponse SERVIE (recalculés par `servir_answer`, check_recoupement §4)
+# remontent aux niveaux 2 et 1, comme la marque du standard.
+e6 = etat([_lue(5, "qf_6", "approxime", cites=(10, 11), sans_piece=("70 — « …70 %… »", "4,5 — « …4,5 Md$… »")),
+           _lue(7, "qf_4", "repondu", cites=(10, 13, 14))], pieces=pieces)
+n6 = dresser_niveau2(e6, "qualite_financiere")
+_sp = {r.answer_id: r.n_chiffres_sans_piece for lq in n6.questions for r in lq.reponses}
+b.check(_sp == {5: 2, 7: 0}, f"§5ter #136 niveau 2 : chaque réponse dit combien de chiffres sont sans pièce — obtenu {_sp}")
+b.check(n6.synthese.n_chiffres_sans_piece == 2,
+        f"§5ter #136 niveau 2 : la synthèse les additionne — obtenu {n6.synthese.n_chiffres_sans_piece}")
+_s6 = next((x for x in dresser_niveau1(e6, memo_de(e6)).frameworks if x.framework_id == "qualite_financiere"), None)
+b.check(_s6 is not None and _s6.n_chiffres_sans_piece == 2,
+        f"§5ter #136 niveau 1 : le même décompte dans le dossier du titre — obtenu {_s6 and _s6.n_chiffres_sans_piece}")
+
 e3r = etat([_lue(6, "qf_7", "repondu", verdict="renvoye")])
 p_r = dresser_niveau3(e3r, "qualite_financiere", "qf_7").preuves[0]
 b.check(p_r.etat_revue == "renvoi_a_emettre" and p_r.answer.manager is None
@@ -420,8 +433,9 @@ else:
     jsx = re.sub(r"/\*.*?\*/", "", N3.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-champ="([a-z_.]+)"', jsx))
-    b.require(attendus, 45, "§7 le contrat servi a ses 45 champs terminaux (l’encadré : 5 feuilles "
-                            "remplacent valeur et unité ; les faits postérieurs lus : 3, #103)")
+    b.require(attendus, 51, "§7 le contrat servi a ses 51 champs terminaux (l’encadré : 5 feuilles "
+                            "remplacent valeur et unité ; les faits postérieurs lus : 3, #103 ; les "
+                            "calculs montrés : 5 et les chiffres sans pièce : 1, #136)")
     b.check(not (attendus - marques),
             f"§7 tout champ du contrat a son pixel au niveau 3 — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),
@@ -448,5 +462,10 @@ else:
                              (N2, "{s.n_standard_anterieur}</p>", "2 (la synthèse)"),
                              (DOSSIER, "{s.n_standard_anterieur > 0 &&", "1 (le dossier)")):
         b.check(_jeton in _code(_f), f"§7 #127 le niveau {_niv} lit la marque du standard (`{_jeton}`)")
+    # #136 — le signalement « chiffre sans pièce », lu par les trois écrans comme la marque du standard.
+    for _f, _jeton, _niv in ((N2, "r.n_chiffres_sans_piece > 0 &&", "2 (la réponse)"),
+                             (N2, "{s.n_chiffres_sans_piece}</p>", "2 (la synthèse)"),
+                             (DOSSIER, "{s.n_chiffres_sans_piece > 0 &&", "1 (le dossier)")):
+        b.check(_jeton in _code(_f), f"§7 #136 le niveau {_niv} lit les chiffres sans pièce (`{_jeton}`)")
 
 sys.exit(b.summary())

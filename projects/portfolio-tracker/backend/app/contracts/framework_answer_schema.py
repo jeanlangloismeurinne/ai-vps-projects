@@ -136,6 +136,28 @@ class FaitPosterieurLu(Strict):
     cited_entry_ids: list[int] = Field(min_length=1, description="les pièces TIRÉES du dépôt lu")
 
 
+class TermeDuCalcul(Strict):
+    """Un terme d'un calcul montré : sa valeur ET la pièce citée qui la porte (#136)."""
+    nom: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    valeur: float
+    entry_id: int
+
+
+class CalculMontre(Strict):
+    """Un chiffre que l'analyste a CALCULÉ dans son texte, calcul montré (#136, arbitrage du 2026-10-16).
+
+    Comme un vrai fonds : la note peut dire « le Data Center fait 92,4 % du chiffre d'affaires », à
+    condition de montrer l'opération et d'où vient chaque terme — le contrôle avant comité refait le
+    calcul. Le contrat ne vérifie que la FORME : que la formule s'exécute, que chaque terme est dans sa
+    pièce et que la pièce est citée, c'est `recoupement.recouper` qui le juge (il connaît le dossier,
+    le contrat non — #37). Un calcul faux n'invalide pas la réponse : ses chiffres restent « sans pièce ».
+    """
+    libelle: str = Field(min_length=3)
+    # Grammaire de `formule_grammaire` sur les `nom` des termes (« data_center / total * 100 »).
+    formule: str = Field(min_length=1)
+    termes: list[TermeDuCalcul] = Field(min_length=1)
+
+
 class Reponse(Strict):
     """La réponse elle-même. `verbatim` est ce qu'un lecteur lit ; l'ENCADRÉ de chiffres clés et le
     `sens` rendent la réponse comparable entre dossiers (spec §7, niveau 2).
@@ -157,6 +179,9 @@ class Reponse(Strict):
     # Les faits postérieurs aux comptes que la réponse a lus (#103). Vide par défaut : c'est la forme de
     # toutes les réponses écrites avant, et d'une réponse qu'aucun fait n'est venu rouvrir.
     faits_posterieurs: list[FaitPosterieurLu] = Field(default_factory=list)
+    # Les calculs que le texte avance, montrés (#136). Vide par défaut : la forme de toutes les réponses
+    # écrites avant, et d'une réponse qui ne calcule rien.
+    calculs: list[CalculMontre] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -386,6 +411,10 @@ class FrameworkAnswerServie(FrameworkAnswer):
     voir.
     """
     fondation: Optional[FondationServie] = None
+    # #136 — les chiffres du texte qu'aucune pièce citée ne porte et qu'aucun calcul montré n'établit,
+    # RECALCULÉS à la lecture contre le dossier du moment (comme l'actualité, #53/#77) : ce que le
+    # contrôle avant comité signale. Un extrait par chiffre (« 4,5 — …charge de 4,5 Md$ en FY2026… »).
+    chiffres_sans_piece: list[str] = Field(default_factory=list)
 
 
 class FrameworkMandate(Strict):
