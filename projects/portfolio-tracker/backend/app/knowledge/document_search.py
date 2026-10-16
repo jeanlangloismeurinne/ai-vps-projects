@@ -110,6 +110,27 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return num / (na * nb) if na and nb else 0.0
 
 
+def _lexical_score_list(chunks: list[Chunk], query: str) -> list[float]:
+    """Comme `_lexical_scores`, mais REND les scores au lieu de les écrire sur les chunks — il en
+    faut deux listes indépendantes quand un même chunk est noté à la fois contre `query` et contre
+    `focus` (sélection par pertinence, §12 du prompt search-worker) : écrire sur `c.score` à deux
+    reprises écraserait la première notation.
+    """
+    terms = {w.lower() for w in _WORD.findall(query)}
+    if not terms:
+        return [0.0] * len(chunks)
+    scores: list[float] = []
+    for c in chunks:
+        words = [w.lower() for w in _WORD.findall(c.text)]
+        if not words:
+            scores.append(0.0)
+            continue
+        hits = sum(1 for w in words if w in terms)
+        distinct = len({w for w in words if w in terms})
+        scores.append((hits / len(words)) + 0.1 * distinct)
+    return scores
+
+
 def _lexical_scores(chunks: list[Chunk], query: str) -> None:
     """Repli sans embedding : recouvrement de termes, normalisé par la longueur du chunk.
 
@@ -117,40 +138,92 @@ def _lexical_scores(chunks: list[Chunk], query: str) -> None:
     fusionner dégrade le résultat) — c'est ce qui reste quand l'embedding est indisponible, et il
     vaut mieux qu'une troncature en tête, qui elle ne regarde pas la question du tout.
     """
-    terms = {w.lower() for w in _WORD.findall(query)}
-    if not terms:
-        for c in chunks:
-            c.score = 0.0
-        return
-    for c in chunks:
-        words = [w.lower() for w in _WORD.findall(c.text)]
-        if not words:
-            c.score = 0.0
-            continue
-        hits = sum(1 for w in words if w in terms)
-        distinct = len({w for w in words if w in terms})
-        c.score = (hits / len(words)) + 0.1 * distinct
+    for c, s in zip(chunks, _lexical_score_list(chunks, query)):
+        c.score = s
 
 
-async def _embed_scores(chunks: list[Chunk], query: str) -> bool:
-    """Classe les chunks par similarité cosinus avec la question. Rend False si indisponible."""
+async def _embed_scores(chunks: list[Chunk], queries: list[str]) -> Optional[list[list[float]]]:
+    """Classe les chunks par similarité cosinus avec CHAQUE requête de `queries`.
+
+    Les chunks ne sont embeddés qu'UNE fois quel que soit le nombre de requêtes ; les requêtes partent
+    dans leur propre appel, avec l'instruction de requête (`is_query=True`) que certains modèles exigent.
+
+    Rend `None` si l'embedding est indisponible (repli lexical), sinon une matrice
+    `[query_idx][chunk_idx]` de scores cosinus.
+    """
     if not embeddings.is_configured() or not chunks:
-        return False
+        return None
     sample = chunks[:_MAX_CHUNKS_EMBEDDED]
     try:
-        qvec = await embeddings.embed_one(query, is_query=True)
-        vecs = await embeddings.embed_texts([c.text for c in sample])
+        qvecs = await embeddings.embed_texts(list(queries), is_query=True)
+        sample_vecs = await embeddings.embed_texts([c.text for c in sample])
     except Exception as e:  # noqa: BLE001
         logger.warning("document_search: embedding indisponible (%s) — repli lexical", e)
+        return None
+    if len(qvecs) != len(queries) or len(sample_vecs) != len(sample):
+        logger.warning("document_search: %d+%d vecteurs pour %d requête(s) et %d chunk(s) — repli lexical",
+                       len(qvecs), len(sample_vecs), len(queries), len(sample))
+        return None
+    pad = [0.0] * (len(chunks) - len(sample))
+    return [[_cosine(qv, v) for v in sample_vecs] + pad for qv in qvecs]
+
+
+def _allouer_par_classements(
+    rankings: list[tuple[str, list[tuple[Chunk, float]]]],
+    *,
+    max_chars: int,
+    min_score: float,
+) -> tuple[list[Chunk], dict[int, str], dict[int, float]]:
+    """Alloue le budget en ALTERNANT entre les classements — jamais en fusionnant leurs scores en un
+    seul (#22 : un co-classement dégrade le résultat mesuré). À chaque tour, chaque classement actif
+    cède son prochain chunk NON ENCORE retenu qui rentre dans le budget restant ; un chunk sous
+    `min_score` désactive SON classement, pas les autres (chaque file a sa propre pertinence) ; le
+    budget global s'arrête comme la sélection à un seul classement (`_CHUNK_CHARS // 2`).
+
+    `rankings` : `[(label, chunks_triés_par_score_desc), …]`. Rend les chunks retenus, et pour
+    chacun (par `id()`) le label du classement qui l'a pris et le score associé.
+    """
+    budget = max_chars
+    selected: list[Chunk] = []
+    taken: set[int] = set()
+    origine_de: dict[int, str] = {}
+    score_de: dict[int, float] = {}
+    pos = [0] * len(rankings)
+    active = [True] * len(rankings)
+
+    def essaie(i: int) -> bool:
+        nonlocal budget
+        label, ordered = rankings[i]
+        while pos[i] < len(ordered):
+            c, s = ordered[pos[i]]
+            pos[i] += 1
+            if id(c) in taken:
+                continue  # déjà pris par l'autre classement — pas de double compte dans le budget
+            if s <= min_score and selected:
+                active[i] = False
+                return False
+            cost = len(c.text) + _MARKER_CHARS
+            if cost > budget:
+                continue  # ne rentre pas : on essaie le candidat suivant du MÊME classement
+            selected.append(c)
+            taken.add(id(c))
+            origine_de[id(c)] = label
+            score_de[id(c)] = s
+            budget -= cost
+            return True
+        active[i] = False
         return False
-    if len(vecs) != len(sample):
-        logger.warning("document_search: %d vecteurs pour %d chunks — repli lexical", len(vecs), len(sample))
-        return False
-    for c, v in zip(sample, vecs):
-        c.score = _cosine(qvec, v)
-    for c in chunks[_MAX_CHUNKS_EMBEDDED:]:
-        c.score = 0.0
-    return True
+
+    while any(active) and budget >= _CHUNK_CHARS // 2:
+        progres = False
+        for i in range(len(rankings)):
+            if not active[i] or budget < _CHUNK_CHARS // 2:
+                continue
+            if essaie(i):
+                progres = True
+        if not progres:
+            break  # aucun classement n'a pu placer de chunk ce tour-ci : on n'avancera plus
+    return selected, origine_de, score_de
 
 
 def _assemble(selected: list[Chunk], total_chars: int) -> str:
@@ -180,23 +253,40 @@ async def select_relevant(
     *,
     max_chars: int,
     min_score: float = 0.0,
+    focus: Optional[str] = None,
 ) -> dict[str, object]:
     """Rend les passages de `text` qui répondent à `query`, dans la limite de `max_chars`.
 
-    Retour : `{mode, text, chars_total, chars_returned, chunks_total, chunks_selected, spans}`.
+    `focus` (facultatif) est ce que l'APPELANT dit chercher DANS le document, dans les mots du
+    document (un intitulé de section, un titre de tableau) — complément de `query`, jamais un
+    remplacement. Raison d'être : une ligne de tableau (noms, chiffres) n'a presque aucune sémantique
+    propre, seul l'intitulé qui la précède la rend trouvable par similarité — mesuré sur la table
+    d'actionnariat NVIDIA, rang 126/288 sur le mandat, rang 4 sur le titre de section. Avec `focus`,
+    deux classements (par `query`, par `focus`) se PARTAGENT le budget en alternance (#22 : jamais
+    fusionnés en un score unique) plutôt que de se faire concurrence dans un seul tri.
+
+    `focus` None/vide : comportement STRICTEMENT inchangé (aucune clé ajoutée au retour). `focus`
+    donné : le retour ajoute `"focus"` et chaque span porte `"origine"` (`"question"` ou
+    `"chercher"`), le score étant celui du classement qui l'a retenu.
+
+    Retour : `{mode, text, chars_total, chars_returned, chunks_total, chunks_selected, spans[, focus]}`.
     `mode` ∈ `relevance` | `lexical` | `head` | `whole` — toujours renseigné, pour que l'appelant et
     le modèle sachent comment le texte a été obtenu.
     """
     text = text or ""
     total = len(text)
+    query_clean = (query or "").strip()
+    focus_clean = (focus or "").strip() or None
+
     if total <= max_chars:
         return {
             "mode": "whole", "text": text, "chars_total": total, "chars_returned": total,
             "chunks_total": 1, "chunks_selected": 1, "spans": [{"start": 0, "end": total}],
         }
 
-    if not (query or "").strip():
-        # Sans question, il n'y a pas de pertinence à mesurer : la tête est le seul choix honnête.
+    if not query_clean and not focus_clean:
+        # Ni question ni consigne de recherche : pas de pertinence à mesurer, la tête est le seul
+        # choix honnête.
         return {
             "mode": "head", "text": text[:max_chars], "chars_total": total,
             "chars_returned": max_chars, "chunks_total": 1, "chunks_selected": 1,
@@ -211,9 +301,20 @@ async def select_relevant(
             "spans": [],
         }
 
-    mode = "relevance" if await _embed_scores(chunks, query) else "lexical"
-    if mode == "lexical":
-        _lexical_scores(chunks, query)
+    if focus_clean:
+        return await _select_relevant_avec_focus(
+            chunks, query_clean, focus_clean, text=text, total=total,
+            max_chars=max_chars, min_score=min_score,
+        )
+
+    matrice = await _embed_scores(chunks, [query_clean])
+    if matrice is not None:
+        mode = "relevance"
+        for c, s in zip(chunks, matrice[0]):
+            c.score = s
+    else:
+        mode = "lexical"
+        _lexical_scores(chunks, query_clean)
 
     # Chaque passage retenu coûte, en plus de son texte, un marqueur de coupure. On le provisionne,
     # sinon le texte assemblé dépasse le budget annoncé — mesuré : 20 333 caractères rendus pour un
@@ -252,6 +353,74 @@ async def select_relevant(
         "chunks_selected": len(selected),
         "spans": [
             {"start": c.start, "end": c.end, "score": round(c.score, 4)}
+            for c in sorted(selected, key=lambda c: c.start)
+        ],
+    }
+
+
+async def _select_relevant_avec_focus(
+    chunks: list[Chunk],
+    query_clean: str,
+    focus_clean: str,
+    *,
+    text: str,
+    total: int,
+    max_chars: int,
+    min_score: float,
+) -> dict[str, object]:
+    """Branche `focus` de `select_relevant` — deux classements, budget alloué en alternance.
+
+    Séparée pour ne pas alourdir le chemin sans `focus` (qui doit rester identique bit à bit à avant
+    son introduction) ; `query_clean` vide = « chercher seul » (un seul classement), cf. docstring de
+    `select_relevant`.
+    """
+    requetes: list[tuple[str, str]] = []
+    if query_clean:
+        requetes.append(("question", query_clean))
+    requetes.append(("chercher", focus_clean))
+
+    matrice = await _embed_scores(chunks, [q for _, q in requetes])
+    if matrice is not None:
+        mode = "relevance"
+        listes_scores = matrice
+    else:
+        mode = "lexical"
+        listes_scores = [_lexical_score_list(chunks, q) for _, q in requetes]
+
+    rankings = [
+        (label, sorted(zip(chunks, scores), key=lambda t: t[1], reverse=True))
+        for (label, _), scores in zip(requetes, listes_scores)
+    ]
+    selected, origine_de, score_de = _allouer_par_classements(
+        rankings, max_chars=max_chars, min_score=min_score
+    )
+
+    if not selected:  # tous les chunks dépassent le budget : on rabat sur la tête, en le disant
+        return {
+            "mode": "head", "text": text[:max_chars], "chars_total": total,
+            "chars_returned": max_chars, "chunks_total": len(chunks), "chunks_selected": 0,
+            "spans": [{"start": 0, "end": max_chars}], "focus": focus_clean,
+        }
+
+    assembled = _assemble(selected, total)
+    logger.info(
+        "document_search[%s]: %d car. → %d chunk(s) sur %d, %d car. rendus (focus=%r)",
+        mode, total, len(selected), len(chunks), len(assembled), focus_clean[:60],
+    )
+    return {
+        "mode": mode,
+        "text": assembled,
+        "chars_total": total,
+        "chars_returned": len(assembled),
+        "chunks_total": len(chunks),
+        "chunks_selected": len(selected),
+        "focus": focus_clean,
+        "spans": [
+            {
+                "start": c.start, "end": c.end,
+                "score": round(score_de[id(c)], 4),
+                "origine": origine_de[id(c)],
+            }
             for c in sorted(selected, key=lambda c: c.start)
         ],
     }

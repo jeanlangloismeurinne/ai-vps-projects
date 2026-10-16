@@ -29,9 +29,10 @@ role: >
    NVDA ma_5 → communiqué `investor.nvidia.com` + commentaire CFO `sec.gov`. Reste (non bloquant) : la
    transcription officielle est hébergée chez le prestataire IR (`s201.q4cdn.com/141608511/…`), domaine
    partagé entre émetteurs donc non enregistrable tel quel — le collecteur a lu une copie (`earningscalls.dev`).
-2. **Sélection des passages selon la langue** [C] — sur un long document (circulaire de 255 k
-   caractères), l'outil n'en transmet que 22 k ; posée en français, la question n'atteint pas le tableau
-   de détention, posée en anglais si. Cas : NVDA ma_4.
+2. ~~Sélection des passages selon la langue~~ ✅ **Fait le 2026-10-16 (#134)** — la langue n'était pas la
+   cause (traduction anglaise fidèle : même échec) ; c'est un mandat long qui dilue la question et une ligne
+   de tableau sans sens propre. Remède : le collecteur dit ce qu'il cherche DANS le document (`chercher`,
+   intitulé de section) ; rejeu NVDA ma_4 → la fiche cite le tableau de détention.
 3. **Tableaux** ✅ #132 (cellules séparées, une ligne de tableau se cite).
 4. **Instabilité du collecteur** [C/P] — une même ligne rend « rien trouvé » puis des pièces au passage
    suivant (NVDA ma_4/ma_6 le 16/10) ; et des sorties hors contrat après 8 tentatives (NVDA

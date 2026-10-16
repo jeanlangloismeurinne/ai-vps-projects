@@ -82,7 +82,8 @@ def _build_mesure(**kw):  # type: ignore[no-untyped-def]
                 _JOURNAL.append({
                     "t": _horodater(), "quoi": nom, "duree_s": round(time.monotonic() - debut, 1),
                     "etat": etat, "caracteres_rendus": taille,
-                    "arg": (args.get("query") or args.get("url") or "")[:90],
+                    "arg": (args.get("query") or args.get("url") or "")[:90]
+                           + (f"  ⟨chercher : {args['chercher'][:80]}⟩" if args.get("chercher") else ""),
                 })
             return res
         return _exec
@@ -107,10 +108,11 @@ async def _mesurer(plan_id: int, item_id: int, plafond: int) -> None:
     req = construire_requete_web(ligne_aveugle(item, row["ticker_id"]), emetteur=emetteur)
     _JOURNAL.clear()
     _T0[0] = time.monotonic()
-    issue = "rendu"
+    issue, fiches = "rendu", []
     try:
         ex = await asyncio.wait_for(worker_mod.run_search_worker(req), timeout=plafond)
         detail = f"status={ex.response.status} entries={len(ex.response.entries)}"
+        fiches = ex.response.entries
     except (asyncio.TimeoutError, TimeoutError):
         issue, detail = "plafond_de_mesure", f"> {plafond} s"
     except Exception as e:  # noqa: BLE001
@@ -125,6 +127,12 @@ async def _mesurer(plan_id: int, item_id: int, plafond: int) -> None:
         else:
             print(f"  t={j['t']:>6}  {j['quoi']:<15} {j['duree_s']:>5} s  {j['etat']:<8} "
                   f"{j['caracteres_rendus']:>8} car.  {j['arg']}")
+    # Le verdict est à la LECTURE : chaque fiche, sa source et ses extraits, tels que le serveur les a admis.
+    for k, e in enumerate(fiches, 1):
+        print(f"  fiche {k} [{e.source_type}] {e.source_url or '—'}")
+        print(f"      titre : {(e.title or '')[:150]}")
+        for x in (getattr(e, "extraits", None) or [])[:4]:
+            print(f"      « {' '.join(x.split())[:200]} »")
     mod = [j for j in _JOURNAL if j["quoi"] in ("modele", "cloture")]
     out = [j for j in _JOURNAL if j["quoi"] not in ("modele", "cloture")]
     print(f"  BILAN ligne {item_id} : issue={issue} ({detail}) · total {total} s · "

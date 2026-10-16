@@ -157,17 +157,22 @@ async def exec_fetch_url(
     log: Optional[RetrievalLog] = None,
     ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """`fetch_url(url)` → passages de la page qui répondent à la question du mandat.
+    """`fetch_url(url, chercher?)` → passages de la page qui répondent à la question du mandat.
 
     `query` n'est PAS un argument du modèle : c'est le mandat du worker, injecté par
     `build_tool_executors`. L'ouvrier sait déjà ce qu'il cherche — le lui redemander à chaque appel
     ajouterait un argument qu'il peut oublier, sur un outil que le run C montre déjà sous-utilisé.
+
+    `chercher`, lui, EST un argument du modèle : son complément facultatif, DANS ce document précis
+    (intitulé de section, titre de tableau, dans les mots du document — prompt search-worker §12).
+    L'oublier reproduit exactement le comportement d'avant son introduction.
     """
     url = (args.get("url") or "").strip()
     if not url:
         return {"error": "fetch_url : argument 'url' vide."}
+    chercher = (args.get("chercher") or "").strip()[:200] or None
     try:
-        result = await fetch_url(url, query=query, ticker_id=ticker_id)
+        result = await fetch_url(url, query=query, chercher=chercher, ticker_id=ticker_id)
     except ValueError as e:
         return {"error": str(e), "retryable": False}
     except Exception as e:  # noqa: BLE001

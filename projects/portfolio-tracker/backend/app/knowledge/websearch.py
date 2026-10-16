@@ -588,16 +588,19 @@ _EXTRACT_NOTE = {
 
 
 async def _finalise(
-    payload: dict[str, Any], *, query: Optional[str], limit: int
+    payload: dict[str, Any], *, query: Optional[str], limit: int, chercher: Optional[str] = None
 ) -> dict[str, Any]:
-    """Réduit le texte récupéré aux passages qui répondent à `query`, et le DIT.
+    """Réduit le texte récupéré aux passages qui répondent à `query` (et, le cas échéant, à
+    `chercher`), et le DIT.
 
     C'est ici que le plafond arbitraire disparaît : au lieu de couper à `limit` caractères depuis le
     début, on cherche dans le document et on rend les passages utiles. Cf. `document_search` pour les
-    mesures qui condamnent la troncature en tête (données clés du 10-K NVDA à 37,5 % du texte).
+    mesures qui condamnent la troncature en tête (données clés du 10-K NVDA à 37,5 % du texte), et
+    pour ce que `chercher` ajoute (prompt search-worker §12 : une ligne de tableau se retrouve par
+    l'intitulé qui la précède, pas par elle-même).
     """
     full = payload.get("text") or ""
-    sel = await select_relevant(full, query, max_chars=limit)
+    sel = await select_relevant(full, query, max_chars=limit, focus=chercher)
     mode = str(sel["mode"])
 
     payload["text"] = sel["text"]
@@ -605,6 +608,7 @@ async def _finalise(
     payload["extract"] = {
         "mode": mode,
         "query": query or None,
+        "chercher": chercher or None,
         "chars_total": sel["chars_total"],
         "chars_returned": sel["chars_returned"],
         "chunks_total": sel["chunks_total"],
@@ -625,6 +629,7 @@ async def fetch_url(
     *,
     max_chars: Optional[int] = None,
     query: Optional[str] = None,
+    chercher: Optional[str] = None,
     ticker_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Récupère une URL et en extrait les passages qui répondent à `query`. Renvoie {url, final_url,
@@ -645,6 +650,12 @@ async def fetch_url(
     mandat du worker (cf. `build_tool_executors`) : l'ouvrier sait déjà ce qu'il cherche, et un
     argument de plus est un argument qu'il peut oublier de passer.
 
+    `chercher` (facultatif, lui, EST un argument du modèle) complète `query` : ce que le modèle dit
+    chercher DANS ce document précis, dans les mots du document (intitulé de section, titre de
+    tableau). La moitié du budget de restitution lui est dédiée (`document_search.select_relevant`,
+    prompt search-worker §12) — sans lui, une ligne de tableau (noms, chiffres) n'a presque aucune
+    sémantique propre et se perd dans le classement par `query` seul.
+
     `via` dit lequel des deux chemins a rendu le texte : le modèle doit pouvoir distinguer une page
     lue à l'instant d'un extrait de cache, et le champ remonte jusqu'au log du worker.
 
@@ -659,7 +670,7 @@ async def fetch_url(
 
     try:
         return await _finalise(
-            await _fetch_url_direct(url, ticker_id), query=query, limit=limit
+            await _fetch_url_direct(url, ticker_id), query=query, limit=limit, chercher=chercher
         )
     except _DirectFetchFailed as direct_error:
         if not direct_error.recoverable:
@@ -702,6 +713,7 @@ async def fetch_url(
             },
             query=query,
             limit=limit,
+            chercher=chercher,
         )
 
 

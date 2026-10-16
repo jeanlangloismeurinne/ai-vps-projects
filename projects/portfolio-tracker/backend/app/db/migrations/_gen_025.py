@@ -63,7 +63,19 @@ SEARCH_WORKER_TOOLS = [
             "description": "Récupère le contenu texte d'une URL (page IR, communiqué, article).",
             "parameters": {
                 "type": "object",
-                "properties": {"url": {"type": "string", "description": "URL à récupérer."}},
+                "properties": {
+                    "url": {"type": "string", "description": "URL à récupérer."},
+                    "chercher": {
+                        "type": "string",
+                        "description": (
+                            "Facultatif. Ce que tu cherches DANS ce document, dans sa langue et "
+                            "avec ses mots : intitulé de section, titre de tableau, libellé de "
+                            "poste (ex. « Security Ownership of Certain Beneficial Owners and "
+                            "Management »). La moitié des passages rendus suivent ce texte, "
+                            "l'autre moitié la question du mandat."
+                        ),
+                    },
+                },
                 "required": ["url"],
             },
         },

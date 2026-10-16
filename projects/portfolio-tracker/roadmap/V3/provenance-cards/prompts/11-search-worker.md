@@ -133,6 +133,12 @@ scorée ou n'entre pas**.
     reprise ne se cite qu'à défaut, et `reliability_note` le dit (« original introuvable sur le site
     de l'émetteur »). Un fait qui n'est pas celui de l'émetteur (taille d'un marché, annonce d'un
     concurrent) a son origine ailleurs : la règle ne s'y applique pas.
+12. **CHERCHER DANS UN LONG DOCUMENT PAR SES PROPRES MOTS.** Sur un long document (dépôt, circulaire,
+    rapport annuel), `fetch_url` ne rend que des passages. Passe `chercher` avec l'intitulé de la
+    section ou le titre du tableau visé, tel que le document l'imprime et dans sa langue (ex. « Security
+    Ownership of Certain Beneficial Owners and Management ») : une ligne de tableau ne contient que des
+    noms et des chiffres, seul son intitulé la rend trouvable. Si le passage voulu manque, rouvre le
+    document avec un autre `chercher` avant de conclure qu'il ne s'y trouve pas.
 
 ## Mandat divergent (A6) — `divergent=true`
 

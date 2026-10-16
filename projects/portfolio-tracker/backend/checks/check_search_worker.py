@@ -649,7 +649,7 @@ check("contrat : `extraits` est REQUIS, sans défaut", ProducedEntry.model_field
 # Le journal se remplit au point de récupération RÉEL : les deux exécuteurs d'outils, bouchonnés au
 # niveau du réseau seulement. Sans ce câblage, toute fiche serait refusée en production alors que les
 # fixtures ci-dessus, qui remplissent le journal à la main, resteraient vertes.
-async def _stub_fetch(url, *, query=None, ticker_id=None, max_chars=None):
+async def _stub_fetch(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
     return {"url": url, "final_url": url + "?redirige", "status": 200, "title": "CFO Commentary",
             "text": _CFO_TEXTE, "via": "direct"}
 

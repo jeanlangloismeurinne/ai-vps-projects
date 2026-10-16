@@ -3190,6 +3190,25 @@ lieu d'une pour un émetteur enregistré (~0,007 $ chacune). Gardes : `check_sea
 `negatif_search_worker.sh` **35/0** (8 mutations : appel restreint, appel ouvert, ordre, doublon, domaine
 deviné, drapeau, frontière de sous-domaine, câblage du ticker).
 
+### #134 — dans un long document, on cherche par les mots du document : `chercher`
+
+**Le défaut (2026-10-16, NVDA ma_4).** Sur la circulaire DEF 14A (259 k car., 288 passages, 19 rendus),
+le tableau de détention des dirigeants ne sortait jamais. Mesuré : rang 126/288 sur le mandat français,
+**131 sur sa traduction anglaise fidèle** — la langue n'était PAS la cause (l'hypothèse de l'inventaire
+était fausse) —, 59 sur la seule métrique en anglais, **4 sur l'intitulé de la section**. Un mandat long
+(identité, consignes, datation) dilue la question, et une ligne de tableau (noms, chiffres) n'a presque
+aucun sens propre : seul l'intitulé imprimé au-dessus la rend trouvable. Comme un fonds : l'analyste qui
+ouvre une circulaire va à la section dont il connaît le titre. **La règle** : `fetch_url` prend un argument
+FACULTATIF du modèle, `chercher` (intitulé de section, titre de tableau, dans la langue du document,
+≤ 200 car.) ; `document_search.select_relevant(focus=…)` construit deux classements (mandat, `chercher`)
+et leur ALLOUE le budget en alternance — jamais une fusion des scores (#22) ; chaque passage rendu dit son
+`origine`. Les passages sont embeddés une fois, les requêtes avec l'instruction de requête. Sans
+`chercher`, sortie strictement identique à avant (ordre 0, principe n° 3). Règle 12 du prompt
+`search-worker` + `tools_json` (migration **057**, version 6). Rejeu à blanc ligne 1283 : le collecteur a
+passé de lui-même l'intitulé, la fiche cite « Jen-Hsun Huang 870,604,104 … 3.58% » (vérifié mot pour mot,
+#126), $0,009. `tools/mesurer_ligne_web.py` affiche désormais `chercher` et les fiches avec leurs extraits.
+Gardes : `check_provenance` §9-12 + `negatif_provenance.sh` **9/9**. Suite **4712/0**.
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

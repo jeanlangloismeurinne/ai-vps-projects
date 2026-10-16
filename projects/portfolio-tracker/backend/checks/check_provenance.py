@@ -1,21 +1,27 @@
 """Provenance vérifiée + recherche intra-document — hors ligne, aucune clé ni réseau.
 
-Trois blocs :
+Quatre blocs :
   1. `RetrievalLog` : ce que les outils ont réellement rapporté, et sa forme canonique d'URL.
   2. `_verify_provenance` / `_cited_documents` : les deux garde-fous appliqués dans `_normalise_entry`.
   3. `document_search.select_relevant` : la sélection par pertinence, en mode dégradé lexical
      (l'embedding n'est pas joignable hors ligne — c'est justement le repli qu'on veut voir marcher).
+  4. `focus` (§9-§12) : l'ouvrier dit ce qu'il cherche DANS le document, dans les mots du document —
+     et la moitié du budget de restitution lui est dédiée (prompt search-worker §12).
 """
 import asyncio
+import hashlib
 import sys
 
 sys.path.insert(0, ".")
 
+import app.agents.v2.tools as tools_mod  # noqa: E402
+import app.knowledge.websearch as websearch_mod  # noqa: E402
 from app.agents.v2.common import FIELD_PROFILES  # noqa: E402
 from app.agents.v2.curator import _tier_ge  # noqa: E402
 from app.agents.v2.tools import RetrievalLog, canonical_url  # noqa: E402
 from app.agents.v2.worker import _cited_documents, _normalise_entry, _verify_provenance  # noqa: E402
 from app.contracts import WorkerRequest  # noqa: E402
+from app.db.migrations._gen_025 import PROMPTS, SEARCH_WORKER_TOOLS  # noqa: E402
 from app.knowledge import document_search  # noqa: E402
 from app.knowledge.service import compute_reliability  # noqa: E402
 from app.knowledge.websearch import classify_source_type  # noqa: E402
@@ -30,7 +36,10 @@ def check(label, cond, detail=""):
         print(f"  ✓ {label}")
     else:
         fail += 1
-        print(f"  ✗ {label} {detail}")
+        # "FAIL" (pas seulement "✗") : c'est le motif que `checks/_negatif.sh` grep pour vérifier
+        # qu'une mutation rougit sur l'assert NOMMÉ — sans lui, ce fichier resterait indétectable
+        # par le harnais de test négatif quel que soit l'assert visé.
+        print(f"  ✗ FAIL {label} {detail}")
 
 
 EDGAR = "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm"
@@ -207,6 +216,148 @@ check("un blog quelconque reste generic (la liste n'est pas un passe-droit)",
 check("la presse financière garde la priorité sur la liste réputée",
       classify_source_type("https://www.reuters.com/technology/cloud") == "financial_press")
 check("un dépôt EDGAR reste au-dessus de tout", classify_source_type(EDGAR) == "edgar_official")
+
+print("\n9. select_relevant — `focus` : chercher DANS le document par ses propres mots (#27, §12)")
+# Document synthétique calqué en FORME sur le cas réel (circulaire DEF 14A NVIDIA, 2026-10-16) :
+# beaucoup de prose qui partage des mots avec le mandat (compensation, directors, executives,
+# NVIDIA…), PUIS une ligne de tableau d'actionnariat qui n'en partage PRESQUE AUCUN — seul son
+# intitulé (« Security Ownership of Certain Beneficial Owners and Management ») la rend trouvable.
+_MANDAT_9 = (
+    "compensation des dirigeants NVIDIA, composition du comite de remuneration, administrateurs, "
+    "say-on-pay, indemnites de depart, actions attribuees aux cadres executifs"
+)
+_TITRE_TABLEAU = "Security Ownership of Certain Beneficial Owners and Management"
+_LIGNE_TABLEAU = "Jen-Hsun Huang\t\t870,604,104\t\t—\t\t870,604,104\t\t3.58%"
+_NARRATION_9 = (
+    "The Compensation Committee reviewed executive compensation for the named executive "
+    "officers. The Board of Directors approved the compensation program for NVIDIA's "
+    "management team, including say-on-pay provisions and severance arrangements for "
+    "senior executives. "
+) * 10
+_DOC_9 = _NARRATION_9 * 3 + "\n\n" + _TITRE_TABLEAU + ".\n" + _LIGNE_TABLEAU + "\n\n" + _NARRATION_9 * 3
+
+sans_focus = asyncio.run(document_search.select_relevant(_DOC_9, _MANDAT_9, max_chars=3000))
+check("a. sans `focus`, la ligne de tableau N'EST PAS sélectionnée (fixture discriminante)",
+      _LIGNE_TABLEAU not in sans_focus["text"])
+
+avec_focus = asyncio.run(
+    document_search.select_relevant(_DOC_9, _MANDAT_9, max_chars=3000, focus=_TITRE_TABLEAU)
+)
+check("b. avec `focus` = l'intitulé, la ligne de tableau EST sélectionnée",
+      _LIGNE_TABLEAU in avec_focus["text"])
+_origines_9 = {s.get("origine") for s in avec_focus["spans"]}
+check("c. au moins un span vient de la question ET un du focus (budget partagé, pas fusionné)",
+      "question" in _origines_9 and "chercher" in _origines_9, f"→ {_origines_9}")
+check("d. `focus=None` rend un résultat IDENTIQUE à un appel sans le paramètre",
+      asyncio.run(document_search.select_relevant(_DOC_9, _MANDAT_9, max_chars=3000, focus=None))
+      == sans_focus)
+check("e. `chars_returned` reste sous le budget avec `focus`",
+      avec_focus["chars_returned"] <= 3000, f"→ {avec_focus['chars_returned']}")
+
+print("\n10. select_relevant — chemin relevance (embedding bouchonné, déterministe, hors ligne)")
+# bge-m3 n'est pas joignable hors ligne : on bouchonne `embeddings` par un bag-of-words haché dans un
+# petit vecteur — assez pour discriminer la fixture, et ça permet de COMPTER les appels HTTP évités.
+_DIM_10 = 32
+
+
+def _vecteur_bow(texte: str) -> list:
+    vec = [0.0] * _DIM_10
+    for w in document_search._WORD.findall(texte.lower()):
+        vec[int(hashlib.md5(w.encode()).hexdigest(), 16) % _DIM_10] += 1.0
+    return vec
+
+
+_appels_embed_texts: list = []
+
+
+async def _faux_embed_texts(textes, **kw):
+    _appels_embed_texts.append((len(textes), bool(kw.get("is_query"))))
+    return [_vecteur_bow(t) for t in textes]
+
+
+async def _faux_embed_one(texte, **kw):
+    return _vecteur_bow(texte)
+
+
+_vrai_cfg = document_search.embeddings.is_configured
+_vrai_et = document_search.embeddings.embed_texts
+_vrai_eo = document_search.embeddings.embed_one
+document_search.embeddings.is_configured = lambda: True
+document_search.embeddings.embed_texts = _faux_embed_texts
+document_search.embeddings.embed_one = _faux_embed_one
+try:
+    _appels_embed_texts.clear()
+    relevance = asyncio.run(
+        document_search.select_relevant(_DOC_9, _MANDAT_9, max_chars=3000, focus=_TITRE_TABLEAU)
+    )
+    check("f. chemin relevance : mode déclaré 'relevance'", relevance["mode"] == "relevance")
+    check("f. chemin relevance : ligne de tableau sélectionnée", _LIGNE_TABLEAU in relevance["text"])
+    _chunks_9 = [a for a in _appels_embed_texts if not a[1]]
+    check("f. chemin relevance : les chunks ne sont embeddés qu'UNE fois pour deux requêtes",
+          len(_chunks_9) == 1, f"→ appels {_appels_embed_texts}")
+    check("f. chemin relevance : les requêtes portent l'instruction de requête (is_query)",
+          (2, True) in _appels_embed_texts, f"→ appels {_appels_embed_texts}")
+finally:
+    document_search.embeddings.is_configured = _vrai_cfg
+    document_search.embeddings.embed_texts = _vrai_et
+    document_search.embeddings.embed_one = _vrai_eo
+
+print("\n11. exec_fetch_url / fetch_url / _finalise — `chercher` transmis de bout en bout")
+_captures_11: dict = {}
+
+
+async def _stub_fetch_url_g(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
+    _captures_11["chercher"] = chercher
+    return {"url": url, "final_url": url, "status": 200, "title": "", "text": "x", "via": "direct"}
+
+
+_reel_fetch = tools_mod.fetch_url
+tools_mod.fetch_url = _stub_fetch_url_g
+try:
+    asyncio.run(tools_mod.exec_fetch_url(
+        {"url": "https://x.com/a", "chercher": _TITRE_TABLEAU}, query=_MANDAT_9
+    ))
+    check("g. exec_fetch_url : `chercher` transmis tel quel à fetch_url",
+          _captures_11.get("chercher") == _TITRE_TABLEAU)
+    asyncio.run(tools_mod.exec_fetch_url({"url": "https://x.com/a", "chercher": "   "}, query=_MANDAT_9))
+    check("g. exec_fetch_url : `chercher` blanc devient None", _captures_11.get("chercher") is None)
+    asyncio.run(tools_mod.exec_fetch_url({"url": "https://x.com/a"}, query=_MANDAT_9))
+    check("g. exec_fetch_url : `chercher` absent devient None", _captures_11.get("chercher") is None)
+finally:
+    tools_mod.fetch_url = _reel_fetch
+
+
+async def _stub_direct_h(url, ticker_id=None):
+    return {
+        "url": url, "final_url": url, "status": 200, "content_type": "text/html",
+        "title": "Titre", "text": _DOC_9, "source_type_max": "web_search_generic", "via": "direct",
+    }
+
+
+_reel_direct = websearch_mod._fetch_url_direct
+websearch_mod._fetch_url_direct = _stub_direct_h
+try:
+    out_h = asyncio.run(
+        websearch_mod.fetch_url(
+            "https://x.com/doc", query=_MANDAT_9, chercher=_TITRE_TABLEAU, max_chars=3000
+        )
+    )
+    check("h. fetch_url/_finalise : `chercher` atteint select_relevant (ligne de tableau rendue)",
+          _LIGNE_TABLEAU in out_h["text"])
+    check("h. fetch_url/_finalise : `extract.chercher` rapporte ce qui a été demandé",
+          out_h["extract"].get("chercher") == _TITRE_TABLEAU, f"→ {out_h['extract'].get('chercher')}")
+finally:
+    websearch_mod._fetch_url_direct = _reel_direct
+
+print("\n12. tools_json (migration 025) et prompt (règle 12) portent `chercher`")
+_fetch_tool_12 = next(t for t in SEARCH_WORKER_TOOLS if t["function"]["name"] == "fetch_url")
+check("i. tools_json fetch_url déclare `chercher`",
+      "chercher" in _fetch_tool_12["function"]["parameters"]["properties"])
+check("i. `chercher` reste FACULTATIF (absent de `required`)",
+      "chercher" not in _fetch_tool_12["function"]["parameters"].get("required", []))
+_consigne_12 = (PROMPTS / "11-search-worker.md").read_text()
+check("j. le prompt search-worker porte la règle 12 (marqueur)",
+      "CHERCHER DANS UN LONG DOCUMENT" in _consigne_12)
 
 print(f"\n{'='*60}\n{ok} OK / {fail} KO")
 sys.exit(1 if fail else 0)
