@@ -184,3 +184,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #133 la source d'origine d'abord : le site de l'émetteur, à défaut ailleurs
 - #134 dans un long document, on cherche par les mots du document : `chercher`
 - #135 l'instabilité du collecteur : une fiche fautive s'isole, un « rien trouvé » sans recherche se relance
+- #136 tout chiffre renvoie à une pièce : renvoyé une fois, le calcul se montre, le reste est signalé

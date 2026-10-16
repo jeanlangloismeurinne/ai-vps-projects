@@ -40,8 +40,11 @@ role: >
 5. **Prix au moment des rachats** [A/C] — NVIDIA ne publie plus en données structurées les actions
    rachetées ; le cours historique n'est pris qu'au web (rangs faibles). Un fonds prend l'historique de
    cours dans sa base de marché : faut-il en faire une source du système ? Cas : NVDA ma_3.
-6. **Le chiffre sans sa pièce** (D-me6) [A/C] — une réponse cite un chiffre juste tiré d'une pièce
-   qu'elle ne cite pas (NVDA me_6, RVMD se_4). Contrôle avant comité : tout chiffre renvoie à une pièce.
+6. ~~**Le chiffre sans sa pièce** (D-me6)~~ ✅ **Fait le 2026-10-16 (#136)** — mesuré sur les 50 réponses en
+   vigueur : 19 chiffres sur 371 sans pièce citée, dans 12 réponses (10 calculs non montrés, 8 tirés d'une pièce
+   non citée, 1 année). Arbitrage : **renvoi puis signalement**, et **le calcul se montre**. Le chiffre sans pièce
+   est renvoyé UNE fois à l'analyste (jamais rattaché par le code : « 70 % » est dans 4 pièces de NVDA sans
+   rapport) ; ce qui reste est signalé au comité aux trois niveaux, recalculé à la lecture.
 7. **Événements extérieurs** [C] — les annonces de concurrents ne rouvrent rien faute de veilleur
    (RVMD : revue FDA d'un concurrent le 07/10, non vue).
 8. **Pièces d'héritage** [P] — ~130 pièces sans datation et les réponses « standard antérieur » :
@@ -57,7 +60,8 @@ role: >
 11. **Réponses à relire par le comité** [A] — NVDA qf_6 (part des retraitements en solde net 2,6 % vs
     ≈ 14 % poste par poste), qf_1 (résultat « normalisé » = résultat déposé), RVMD mo_4 (« 19 ans » de
     barrière = dernière échéance de brevet, non prudent), qf_8 RVMD (classement vs son propre texte),
-    MSFT note flash (nouveaux segments lus comme routine).
+    MSFT note flash (nouveaux segments lus comme routine). NVDA me_6 #1597 (comptes clients 22/14/13/11/10 %
+    justes mais cités sur #1013, qui parle d'autre chose — à citer sur #980/#1308 ; limite du contrôle #136).
 12. **Acquisitions passées** [A/D] — « ce qu'elles ont rapporté » n'est publié par personne ; la question
     ma_2 est-elle instruisable telle quelle, ou se juge-t-elle sur l'évolution des segments acquis ?
 

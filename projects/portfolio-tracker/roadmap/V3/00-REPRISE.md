@@ -19,8 +19,9 @@ role: >
 
 Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplace la checklist A4-A11 de
 `05-frameworks-complets.md`) : (1) la matière — 1.1 ✅ (#133), 1.2 ✅ (#134, ce n'était pas la langue),
-1.4 ✅ (#135), **1.6 « tout chiffre renvoie à une pièce » (PROCHAIN)** ;
-(2) arbitrages groupés en une séance (9, 10, 11, 12, 15, 17, 20, 21) ; (3) tenue du dossier ; (4) valorisation ;
+1.4 ✅ (#135), 1.6 ✅ (#136) — **la matière est close** ;
+(2) **arbitrages groupés en une séance (9, 10, 11, 12, 15, 17, 20, 21) — PROCHAIN** : préparer la séance
+(une question métier par point, cas réel, « ce que ferait un fonds ») ; (3) tenue du dossier ; (4) valorisation ;
 (5) test. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 
 ## Où on en est (mesuré le 2026-10-16 — RE-REQUÊTER avant de s'en servir)
@@ -33,8 +34,10 @@ Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplac
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4722/0** (2026-10-16, après #135).
-- **Production** : dernier déploiement (#135), vérifié dans le conteneur.
+- **Suite** `bash backend/checks/run_all.sh` = **4760/0** (2026-10-16, après #136).
+- **Chiffres sans pièce (#136)** : 19 sur les réponses en vigueur NVDA+RVMD (`montrer_parcours.sh`, colonne
+  « sans pièce ») ; NVDA me_6 refaite (#1597, 0 sans pièce — mais comptes clients cités sur la mauvaise pièce).
+- **Production** : dernier déploiement (#136 bis, `a78cc9c`), vérifié dans les conteneurs et par l'API du dossier.
 - **Prochaine migration : 058** (056/057 = prompt search-worker v5/v6 : source d'origine, `chercher`). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
   NVDA #623-#628, MSFT #629-#633.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
@@ -42,6 +45,8 @@ Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplac
 
 ## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#132, `06-regle-fraicheur.md` §8-§14)
 
+- **2026-10-16** — **tout chiffre renvoie à une pièce** (#136) : un chiffre sans pièce citée est renvoyé UNE fois à
+  l'analyste, jamais rattaché par le code ; le calcul se MONTRE ; le reste est signalé au comité.
 - **2026-10-16** — mo_5/se_3 ne sont plus rouvertes par un dérapage d'exécution ; ma_4 scindée (argent en
   jeu des dirigeants = mesure / ma_7 critères de rémunération = jugement à plancher A) (#131) ; source :
   **d'abord le site de l'émetteur, à défaut ailleurs** (à construire) ; **la règle « une ré-analyse
@@ -57,7 +62,7 @@ Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplac
 
 - `montrer_parcours.sh TICKER` (dossier, manques, notes de qualité) · `montrer_socle.sh TICKER…` (comptes
   reconstitués) · `recouper_nombres.sh TICKER framework` (chaque nombre d'une réponse retrouvé dans ses
-  pièces) · `acceptation_analyste.sh --admissibilite` avec `ACCEPTATION_CAS=TICKER:framework:archetype`
+  pièces ; même règle que le contrôle #136) · `acceptation_analyste.sh --admissibilite` avec `ACCEPTATION_CAS=TICKER:framework:archetype`
   (ce que le corpus permet, sans appel modèle).
 - Payants : `executer_chaine.sh TICKER framework archetype [--questions=…] [--sans-collecte]` (ÉCRIT en
   prod, ~1 h par chapitre, imprime l'inventaire de ses écrits) · `mesurer_ligne_web.sh PLAN LIGNE…`

@@ -6741,3 +6741,14 @@ réparées. Déployé `2837d08` ; réémission RVMD qf_4 #1176 / qf_7 #1177, 0 r
 > (me_5 non fondée), défendabilité 5/5 périmées ; NVDA qualité financière 1,00, modèle économique 1,00.
 > Suite **4487/0**. **#124 et #125 DÉPLOYÉS le 2026-10-14** (`compose-deploy.sh portfolio-backend
 > --rebuild-only`, HEAD `a9454d6`, marqueurs `WEB_TOUR_MAX_TOKENS`/`rappels_ecartes` lus dans le conteneur).
+
+## 2026-10-16 — #136 tout chiffre renvoie à une pièce (inventaire 1.6, D-me6)
+
+Mesure d'abord (outil gratuit) : 36 « absents » bruts → 19 réels après correction de l'outil (encadré, libellés,
+jour des dates, fiches françaises lues en anglais). Arbitrage de l'utilisateur : renvoi puis signalement ; le
+calcul se montre. Livré : `recoupement.py` (détenteur unique), `Reponse.calculs`, étape 3 quater de l'analyste,
+`FrameworkAnswerServie.chiffres_sans_piece` + décomptes niveaux 2/1 + trois écrans. Au déploiement, le dossier
+affichait 38 sans pièce sur NVDA qf au lieu de 2 : le parcours ne chargeait pas le texte des pièces
+(`corpus_des_regles`, #136 bis). Rejeu NVDA me_6 → #1597 : charge Chine citée sur #1019 ; comptes clients
+justes mais cités sur #1013 (coïncidence de nombres, limite #68 assumée, à relire au comité). Trois mutations
+caduques antérieures réparées. Commits `c28715e`, `a78cc9c`.

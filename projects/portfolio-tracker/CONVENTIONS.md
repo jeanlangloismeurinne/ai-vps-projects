@@ -3229,6 +3229,44 @@ rappel, le second résultat est final, les deux tours facturés (#41) ; jamais e
 « réponses conformes gardées » vise désormais l'assert « ne redemande QUE la question fautive » : l'assert
 de bout de parcours était aveugle — une réponse conforme perdue est redemandée et revient). Suite **4722/0**.
 
+### #136 — tout chiffre renvoie à une pièce : renvoyé une fois, le calcul se montre, le reste est signalé
+
+**Mesuré le 2026-10-16** (`tools/recouper_nombres.sh`, gratuit) sur les 50 réponses en vigueur NVDA + RVMD :
+**19 chiffres sur 371 sans pièce citée, dans 12 réponses** — 10 calculs non montrés (NVDA me_2 « 92,4 % »,
+RVMD qf_4 « trésorerie nette 2 902 M$ »), 8 tirés d'une pièce du dossier non citée (NVDA me_6 « charge Chine
+4,5 Md$ », RVMD se_4 « 3,9 Md$ »), 1 année. La première mesure disait 36 : l'outil comptait à tort les chiffres
+de l'encadré (produits par le code), les libellés (« FY2025 », « 10-K »), le jour d'une date, et lisait en
+anglais les fiches rédigées en français (#1014 porte « 92,4 % »). **Arbitrage** : renvoi puis signalement ;
+le calcul se montre. Comme un fonds : le contrôle de la note renvoie à l'analyste tout chiffre sans
+référence ; personne ne pose la note de bas de page à sa place — « 70 % » figure dans 4 pièces de NVDA qui
+parlent d'autre chose.
+**La règle** — `agents/v2/recoupement.py`, **détenteur unique** (sorti de l'outil, qui le lit) : chaque
+nombre du texte rédigé (verbatim, effet d'un fait lu, méthode d'approximation ; PAS les hypothèses ni la
+sensibilité, déclarées comme telles) doit se retrouver dans une pièce citée (titre + contenu, deux
+conventions décimales, arrondi de ses décimales, facteur d'unité), dans l'encadré, ou comme résultat d'un
+**calcul montré** (`Reponse.calculs` : libellé, formule de `formule_grammaire` sans décalage, termes valeur +
+pièce citée ou encadré ; refait par le code). Garde de STRUCTURE (#68) : le chiffre est dans la pièce, pas
+« la pièce dit la même chose ». (a) **L'analyste** (`repondre`, étape 3 quater) : une remarque, UNE fois,
+nommant le chiffre et son extrait, jamais la pièce qui le porte ; relue retenue sauf refusée (forme #111).
+(b) **Le point de lecture** (`servir_answer`) : `FrameworkAnswerServie.chiffres_sans_piece`, recalculé contre
+le dossier du moment (#77), compté aux niveaux 2 et 1 (`n_chiffres_sans_piece`) et affiché aux trois écrans.
+⚠️ **Mesuré au déploiement** : le parcours ne chargeait des pièces que la date et le rang — le dossier
+affichait 38 chiffres sans pièce sur NVDA qualité financière au lieu de 2. `parcours.corpus_des_regles`
+(date, rang, titre, contenu ; une colonne absente LÈVE) + les pièces d'un fait lu chargées. Le check §4
+appelait `servir_answer` avec un dossier complet, jamais celui que le parcours lui passe
+(`feedback_controle_au_point_de_lecture`). Au passage : trois mutations caduques réparées (parcours
+`servir_answer`, contrat « panne de flux », analyste « faits lus ») — celle de parcours, réparée, restait
+VERTE tant qu'elle gardait un appel dans une branche morte. Gardes : `check_recoupement` **22/0** (fixture
+copiée du réel) + `negatif_recoupement.sh` **16/0** ; `check_analyste` §#136 + négatif **71/0** ;
+`check_parcours` §5ter/§6 + négatif **42/0** ; contrat négatif **56/0**. Suite **4760/0**.
+**Acceptation contre le vrai modèle** (NVDA me_6, `--questions=me_6 --sans-collecte`, réponse **#1597**) :
+0 chiffre sans pièce sur 22 ; la charge Chine de 4,5 Md$ cite enfin sa pièce (#1019), la répartition par pays
+la sienne (#1018). ⚠️ **Limite observée, assumée (#68)** : « cinq clients directs : 22 %, 14 %, 13 %, 11 % et
+10 % des comptes clients » — juste (note 7 du 10-Q, #980/#1308) mais NON cité, et le contrôle passe parce que
+les cinq nombres figurent tous dans #1013, qui parle du chiffre d'affaires d'exercices antérieurs. Même un
+contrôle « une phrase, une pièce » ne le verrait pas : le chiffre est dans la pièce, le sens ne l'est pas. Le
+sens reste à la lecture (07 §2.11, réponses à relire).
+
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.
 ⚠️ La dégradation n'est pas toujours un 429 : elle prend aussi la forme d'une **série complète dont

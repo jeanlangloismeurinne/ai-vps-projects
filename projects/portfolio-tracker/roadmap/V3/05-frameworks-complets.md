@@ -119,7 +119,8 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
       constatés ? Une garde à la reprise par va_2 ? **Prérequis de A6** (va_2 ne reprend pas me_5 NVDA en l'état).
       Ce que ferait un fonds : l'analyste chiffre le marché du métier actuel, traite une extension annoncée comme
       une option distincte (scénario), et ne calcule une part de marché que sur du chiffre d'affaires réalisé.
-    - [ ] **D-me6 — un chiffre sans sa pièce.** me_6 #1371 (`repondu`) cite une charge Chine de 4,5 Md$, exacte,
+    - [x] ✅ **2026-10-16, #136** (renvoi puis signalement ; le calcul se montre — détail : `CONVENTIONS.md` #136,
+      `07-avant-comite.md` 1.6). **D-me6 — un chiffre sans sa pièce.** me_6 #1371 (`repondu`) cite une charge Chine de 4,5 Md$, exacte,
       tirée de #1019, absente de ses pièces citées (#1013/#1014/#1015/#1017/#1010). Aucun contrôle ne vérifie
       aujourd'hui que chaque chiffre de la réponse rédigée est adossé à une pièce citée. À instruire : contrôle
       du manager (renvoi) ou correction de la citation ; mesurer d'abord la fréquence sur les réponses en vigueur.
