@@ -144,8 +144,17 @@ b.check(d_6k and d_6k[0].type == "6-K" and "Hugging Face" in d_6k[0].texte
         "un 6-K (sans item) : l'en-tête XBRL masqué n'est pas du texte")
 b.check([d.type for d in d_msft] == ["8-K", "EX-99.1"],
         f"MSFT 02/09 : le formulaire et son communiqué EX-99.1 → {[d.type for d in d_msft]}")
-b.check(len(d_msft) == 2 and d_msft[1].tronque and d_msft[1].taille > len(d_msft[1].texte),
-        "MSFT 02/09 : la présentation dépasse le budget, la troncature est DITE")
+# Budget desserré le 2026-10-16 (30 000 par pièce) : la présentation MSFT tient désormais ; la troncature
+# s'éprouve sous un budget abaissé, sur la même soumission réelle.
+import app.agents.v2.note_flash as _nf_mod  # noqa: E402
+_budget = _nf_mod._MAX_PIECE
+_nf_mod._MAX_PIECE = 5_000
+try:
+    _d_court = extraire_documents(soumission("0001193125-26-380280"))
+finally:
+    _nf_mod._MAX_PIECE = _budget
+b.check(len(_d_court) == 2 and _d_court[1].tronque and _d_court[1].taille > len(_d_court[1].texte),
+        "MSFT 02/09 : une pièce qui dépasse le budget est tronquée, et la troncature est DITE")
 b.check([d.type for d in d_fin] == ["8-K"],
         f"RVMD 14/04 : l'avis juridique EX-5.1 et le XBRL ne sont pas lus → {[d.type for d in d_fin]}")
 b.check(sum(len(d.texte) for d in d_msft) <= 45_000, "le budget total est tenu")
@@ -187,7 +196,7 @@ def pont(**kw):
     if isinstance(s, str):
         return s
     try:
-        return valider_note(s, d_fda, fichier, event_date=EV_FDA.event_date, precedentes=[], cloture_publiee=None)
+        return valider_note(s, d_fda, fichier, event_date=EV_FDA.event_date, precedentes=[], cloture_publiee=None, reference_precedente=[], phrases=[])
     except NoteFlashRefusee as e:
         return f"REFUSÉ : {e}"
 
@@ -328,7 +337,7 @@ def rediger(contenus, soum):
     try:
         r = asyncio.run(rediger_note_flash(EV_FDA, ticker_id="RVMD", cik=1628171, emetteur=RVMD,
                                            fichier=fichier, agent=a, soumission=soum,
-                                           precedentes=[]))
+                                           precedentes=[], precedent_resultats=None))
         return p, r
     except (NoteFlashRefusee, NoteFlashImpossible) as e:
         return p, f"{type(e).__name__} : {e}"
@@ -391,7 +400,7 @@ def pont_t(elements, precedentes=precs):
     if isinstance(s_, str):
         return s_
     try:
-        return valider_note(s_, d_tir, fichier, event_date=EV_TIRAGE.event_date, precedentes=precedentes, cloture_publiee=None)
+        return valider_note(s_, d_tir, fichier, event_date=EV_TIRAGE.event_date, precedentes=precedentes, cloture_publiee=None, reference_precedente=[], phrases=[])
     except NoteFlashRefusee as e:
         return f"REFUSÉ : {e}"
 
@@ -475,7 +484,7 @@ def _message_vu(fich):
         asyncio.run(rediger_note_flash(EV_TIRAGE, ticker_id="RVMD", cik=1628171, emetteur=RVMD,
                                        fichier=fich, agent=agent([])[1],
                                        soumission=soumission("0001628171-26-000004"),
-                                       precedentes=precs))
+                                       precedentes=precs, precedent_resultats=None))
     except Exception:  # noqa: BLE001
         pass
     finally:
@@ -486,5 +495,137 @@ def _message_vu(fich):
 m_on, m_off = _message_vu(ON), _message_vu(OFF)
 b.check("2026-08-26" in m_on and "2026-08-26" not in m_off and '"notes_precedentes": []' in m_off,
         "interrupteur OFF : le modèle ne voit PAS l'historique (ON : il le voit)")
+
+
+print("§10 le communiqué de résultats : phrases relevées, référence, date lue, vote (diagnostic §13)")
+import app.agents.v2.note_flash as NF  # noqa: E402
+from app.knowledge.citation import normaliser as _norm  # noqa: E402
+
+RES_AOUT = MaterialEvent(form="8-K", event_date=date(2026, 8, 5), filing_date=date(2026, 8, 5),
+                         items=("2.02", "9.01"), accession="0001193125-26-335039",
+                         periode_publiee=date(2026, 6, 30))
+d_aout = extraire_documents(soumission("0001193125-26-335039"))
+d_mai = extraire_documents(soumission("0001193125-26-208918"))
+ph = NF.phrases_a_examiner(d_aout)
+ref_mai = NF.extraits_de_prevision(d_mai)
+b.check(any("In May 2026, the company received a $250.0 million payment" in p for p in ph)
+        and any("updating its full year 2026 GAAP operating expense guidance" in p for p in ph),
+        f"RVMD 05/08 : le CODE relève la tranche de mai et la révision de prévision ({len(ph)} phrases)")
+N_ROY = next((i for i, p in enumerate(ph, 1) if "In May 2026, the company received" in p), 1)
+N_GUI = next((i for i, p in enumerate(ph, 1) if "updating its full year 2026 GAAP operating expense" in p), 1)
+N_COL = next((i for i, p in enumerate(ph, 1) if p.startswith("Clinical Collaborations")), 1)
+REF = "Revolution Medicines is updating its full year 2026 GAAP operating expenses guidance to a range of $1.7 to $1.8"
+b.check(_norm(REF) in _norm("\n".join(ref_mai)),
+        "les prévisions du communiqué PRÉCÉDENT (06/05) portent la fourchette de mai (1,7-1,8 Md$)")
+b.check(NF.date_du_passage("In May 2026, the company received") == date(2026, 5, 1)
+        and NF.date_du_passage("On May 18, 2026, the Board approved, and in June 2026 it") == date(2026, 6, 1)
+        and NF.date_du_passage("the company remains well capitalized") is None,
+        "la date écrite dans une phrase se LIT (jour, mois, la plus tardive), sinon aucune")
+
+ITEM = ("On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results "
+        "for the quarter ended June 30, 2026.")
+
+
+def examen(**surcharges):
+    v = {n: {"n": n, "type": None} for n in range(1, len(ph) + 1)}
+    for n, x in surcharges.items():
+        v[int(n[1:])] = {"n": int(n[1:]), **x}
+    return list(v.values())
+
+
+def pont_r(ex, refs=None):
+    try:
+        s_ = NoteFlashSortie.model_validate({"lisible": True, "examen": ex,
+                                             "elements": [{"type": "resultats", "passage": ITEM}]})
+        return valider_note(s_, d_aout, fichier, event_date=RES_AOUT.event_date, precedentes=[],
+                            cloture_publiee=RES_AOUT.periode_publiee,
+                            reference_precedente=ref_mai if refs is None else refs, phrases=ph)
+    except Exception as e:  # noqa: BLE001 — un refus est un FAIL nommé, pas la mort du script
+        return f"REFUS {e}"
+
+
+SUR = {"type": "surprise", "cause": "non_dite", "passage_reference": REF, "periode_prevue": "full year 2026"}
+v_ok = pont_r(examen(**{f"n{N_ROY}": {"type": "financement"}, f"n{N_GUI}": SUR,
+                        f"n{N_COL}": {"type": "accord_commercial"}}))
+els = {e["passage"][:30]: e for e in getattr(v_ok, "elements", [])}
+roy = next((e for e in getattr(v_ok, "elements", []) if "Royalty" in e["passage"]), {})
+gui = next((e for e in getattr(v_ok, "elements", []) if "updating its full year" in e["passage"]), {})
+col = next((e for e in getattr(v_ok, "elements", []) if e["passage"].startswith("Clinical Collab")), {})
+b.check(not isinstance(v_ok, str) and roy.get("couvert_par_les_comptes") is True
+        and roy.get("survenu_le") == "2026-05-01" and roy.get("survenu_le_source") == "lue dans la phrase",
+        f"la tranche de MAI (date lue) est couverte par les comptes du 30/06 → {roy or v_ok}")
+b.check(gui.get("survenu_le") == "2026-08-05" and not gui.get("couvert_par_les_comptes")
+        and not gui.get("ecart_non_etabli"),
+        f"la RÉVISION établie (référence de mai, même période) est datée du communiqué et compte → {gui}")
+b.check(col.get("couvert_par_les_comptes") is True and col.get("survenu_le_source") == "récapitulatif de la période",
+        f"un fait NON daté d'un communiqué de résultats appartient à la période publiée → {col}")
+b.check(not isinstance(v_ok, str) and "surprise_concurrence" in v_ok.types
+        and NF.types_annonces(v_ok.elements) == frozenset({"resultats", "surprise_concurrence"}),
+        f"types annoncés : résultats + la révision (cause non dite, Q2) → {getattr(v_ok, 'types', v_ok)}")
+
+v_sans = pont_r(examen(**{f"n{N_GUI}": {k: v for k, v in SUR.items() if k != "passage_reference"}}))
+g2 = next((e for e in getattr(v_sans, "elements", []) if "updating" in e["passage"]), {})
+b.check("aucune référence" in (g2.get("ecart_non_etabli") or "") and "surprise_concurrence" not in v_sans.types,
+        f"une prévision SANS référence n'est pas un écart : gardée, motif écrit, ne compte pas → {g2}")
+v_per = pont_r(examen(**{f"n{N_GUI}": {**SUR, "periode_prevue": "second quarter of 2026"}}))
+g3 = next((e for e in getattr(v_per, "elements", []) if "updating" in e["passage"]), {})
+b.check("période visée" in (g3.get("ecart_non_etabli") or ""),
+        f"deux prévisions de périodes différentes ne font pas une révision → {g3.get('ecart_non_etabli')}")
+v_ref = pont_r(examen(**{f"n{N_GUI}": SUR}), refs=[])
+g4 = next((e for e in getattr(v_ref, "elements", []) if "updating" in e["passage"]), {})
+b.check("introuvable" in (g4.get("ecart_non_etabli") or ""),
+        "une référence absente du dépôt ET des prévisions précédentes n'établit rien (jamais la mémoire du modèle)")
+v_manque = pont_r(examen()[:-2])
+b.check(isinstance(v_manque, str) and "aucun verdict" in v_manque,
+        f"une phrase relevée SANS verdict fait refuser la note (aucune omission possible) → {str(v_manque)[:120]}")
+v_dbl = pont_r(examen() + [{"n": 1, "type": None}])
+b.check(isinstance(v_dbl, str) and "double" in v_dbl, "une phrase jugée deux fois fait refuser la note")
+
+# Marqueur d'après-clôture (forme minimale construite : la règle, pas un dépôt)
+DOC_M = [NF.DocumentDepot(type="EX-99.1", nom="x", texte=(
+    "Subsequent to quarter end, the company entered into a definitive agreement to acquire Example Corp. "
+    "The company remains focused on its pipeline."), taille=0, tronque=False)]
+ph_m = NF.phrases_a_examiner(DOC_M)
+try:
+    v_m = valider_note(NoteFlashSortie.model_validate({"lisible": True, "elements": [
+        {"type": "resultats", "passage": "Subsequent to quarter end, the company entered into a definitive agreement"}],
+        "examen": [{"n": 1, "type": "perimetre"}]}), DOC_M, fichier, event_date=date(2026, 8, 5),
+        precedentes=[], cloture_publiee=date(2026, 6, 30), reference_precedente=[], phrases=ph_m)
+    e_m = next(e for e in v_m.elements if e["type"] == "perimetre")
+except Exception as e:  # noqa: BLE001
+    e_m = {"erreur": repr(e)}
+b.check(len(ph_m) == 1 and e_m.get("survenu_le") == "2026-08-05" and not e_m.get("couvert_par_les_comptes")
+        and e_m.get("survenu_le_source") == "marqueur d'après-clôture",
+        f"« subsequent to quarter end » : le fait est postérieur à la clôture, il compte → {e_m}")
+
+# Le vote
+def _nv(types_):
+    return NF.NoteValidee(lisible=True, types=tuple(sorted(types_)), motif=None,
+                          elements=[{"type": t, "passage": "x" * 30} for t in types_])
+lect = [_nv({"resultats"}), _nv({"resultats", "financement"}), _nv({"resultats", "financement"})]
+choisie, vote = NF.voter_lectures(lect)
+b.check(set(choisie.types) == {"resultats", "financement"} and "2/3" in vote and "n°2" in vote,
+        f"le vote garde la PREMIÈRE lecture dont les types sont la majorité → {vote}")
+choisie2, vote2 = NF.voter_lectures([_nv({"resultats", "perimetre"}), _nv({"resultats", "financement"}),
+                                      _nv({"resultats", "gouvernance"})])
+b.check(set(choisie2.types) == {"resultats", "perimetre"} and "0/3" in vote2 and "n°1" in vote2,
+        f"sans lecture exactement majoritaire, celle qui s'en écarte le moins, la première à égalité → {vote2}")
+choisie3, vote3 = NF.voter_lectures([_nv({"resultats"}), _nv({"resultats"}), _nv({"resultats", "perimetre"})])
+b.check(set(choisie3.types) == {"resultats"} and "n°1" in vote3,
+        f"un type annoncé par UNE lecture sur trois ne passe pas : majorité stricte, jamais l'union → {vote3}")
+b.check(NF.LECTURES_PAR_COMMUNIQUE_DE_RESULTATS == 3, "trois lectures par communiqué de résultats")
+
+# La relecture : le fait couvert est écarté sous l'interrupteur, compté sans lui
+row = {"types": ["financement", "resultats"], "lisible": True, "event_date": date(2026, 8, 5),
+       "redigee_le": datetime(2026, 10, 16, tzinfo=timezone.utc), "catalogue_version": fichier.types_evenement_version,
+       "elements": [{"type": "resultats", "passage": ITEM},
+                    {"type": "financement", "passage": "In May 2026, the company received a $250.0 million payment",
+                     "survenu_le": "2026-05-01", "couvert_par_les_comptes": True}]}
+lu_on = NF.relire_note(row, fichier)
+lu_off = NF.relire_note(row, fichier.model_copy(update={"fraicheur_par_duree_de_vie": False}))
+b.check(lu_on.types == frozenset({"resultats"}) and "couvert(s) par les comptes" in lu_on.resume,
+        f"relue (interrupteur actif) : la tranche de mai est écartée, et c'est DIT → {lu_on.types} {lu_on.resume[-80:]}")
+b.check(lu_off.types == frozenset({"financement", "resultats"}),
+        f"interrupteur coupé : ordre 0, tout type cité compte → {lu_off.types}")
 
 sys.exit(b.summary())

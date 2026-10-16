@@ -3468,11 +3468,28 @@ pour un ingrédient qu'on sait devoir compléter.
   la clôture qu'il publie, ses autres annonces à leur date, lisibles et annotables par l'analyste (#117) ;
   sans scission, un rachat annoncé avec les résultats aurait périmé jusqu'au trimestre suivant une analyse
   refaite sur les comptes publiés.
+- **La lecture du communiqué de résultats, fiabilisée (diagnostic §13 de `06-regle-fraicheur.md`, catalogue
+  1.5.0).** Mesuré d'abord : une « surprise » sur une prévision publiée comme chaque trimestre (NVDA 5/5, stable
+  et FAUX), des faits de la période datés du jour du communiqué, des omissions (le rachat de 80 Md$ NVDA 2/3),
+  et un fournisseur non déterministe à température 0 aux quasi-égalités. Remèdes, tous de FORME : (1) le CODE
+  relève les phrases à examiner (`phrases_a_examiner`) et le lecteur rend UN verdict par phrase (`examen`) —
+  omission impossible, citation exacte par construction ; (2) la date d'un fait se LIT dans la phrase
+  (`date_du_passage`), sinon un marqueur d'après-clôture la fixe au communiqué, sinon le fait appartient à la
+  période publiée (couvert) — la date déclarée par le lecteur ne décide pas ; (3) un écart n'est ÉTABLI que
+  face à une référence citée mot pour mot (ce communiqué ou les `extraits_de_prevision` du communiqué de
+  résultats précédent, choisis par le code) visant la MÊME période (`periode_prevue` dans les deux
+  citations) — sinon il reste dans la note, motif écrit, sans compter (pas de renvoi : un second tirage
+  retirait aussi le reste) ; une révision établie est datée du communiqué ; (4) trois lectures, vote à la
+  majorité stricte des types (`voter_lectures`). Résultat mesuré : 5 communiqués RVMD/NVDA × 3 procédures,
+  lectures identiques et justes. ⚠️ Résidu : une révision sans cause dite devient « surprise concurrentielle »
+  (règle Q2 du 26/09) — discutable pour une hausse de dépenses de lancement (RVMD), à arbitrer.
 - **Pas encore construit** : le geste « confirmer » au-delà de #117, le calendrier (publications + jalons
   annoncés + rendez-vous du secteur, §9), la revue trimestrielle légère des jugements d'une position détenue.
   ⚠️ La position du comité (#84) tombe encore sur tout fait qui rouvre la question, résultats compris.
 Gardes : `check_duree_de_vie.py` + `negatif_duree_de_vie.sh` (12/0) ; `check_frameworks_definitions` (durée,
-cadence) ; `check_evenements` §10 ; `check_traducteur` (garde, contexte, consigne) ; `check_note_flash_branchement`.
+cadence, 68/0) ; `check_evenements` §10 (39/0) ; `check_traducteur` (44/0) ; `check_note_flash` §10 (fixtures EDGAR
+réelles des communiqués RVMD 06/05 et 05/08, NVDA 25/02 et 20/05 ; 42/0) ; `check_note_flash_branchement` (16/0).
+Suite 4631/0.
 
 ### yfinance rate limiting
 Yahoo Finance (Fastly CDN) : ~500 calls/h avec 1s de délai. En cas de 429, le crumb CSRF est corrompu → toutes les requêtes suivantes échouent. Le cache Redis/DB couvre la production normale.

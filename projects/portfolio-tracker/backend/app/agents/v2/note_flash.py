@@ -71,7 +71,8 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.config import settings
 from app.contracts.framework_definition_schema import FrameworksFile
-from app.contracts.note_flash_schema import SURPRISE, NoteFlashSortie, type_derive, type_derive_de
+from app.contracts.note_flash_schema import (SURPRISE, ElementNoteFlash, NoteFlashSortie, type_derive,
+                                            type_derive_de)
 from app.db.database import get_db_session
 from app.knowledge.citation import normaliser
 from app.knowledge.edgar_facts import _UA
@@ -109,8 +110,10 @@ class NoteFlashRefusee(Exception):
 # les avis juridiques (EX-5), ni le XBRL ou les images : un analyste lit le communiqué, pas l'indenture.
 _TYPES_LUS = re.compile(r"^(8-K|8-K/A|6-K|6-K/A|EX-99(\.\d+)?)$")
 _MAX_FORMULAIRE = 20_000
-_MAX_PIECE = 15_000
-_MAX_TOTAL = 45_000
+# Desserrés le 2026-10-16 (diagnostic §13) : les communiqués de résultats font 19 à 23 000 caractères ;
+# à 15 000, le paragraphe de prévision de RVMD était entamé.
+_MAX_PIECE = 30_000
+_MAX_TOTAL = 70_000
 
 _BLOC = re.compile(r"<DOCUMENT>(.*?)</DOCUMENT>", re.S | re.I)
 _CHAMP = re.compile(r"<(TYPE|FILENAME)>([^\n<]*)", re.I)
@@ -170,6 +173,112 @@ def extraire_documents(soumission: str) -> list[DocumentDepot]:
                                   tronque=len(texte) > plafond))
         reste -= min(len(texte), plafond)
     return docs
+
+
+_PREVISION = re.compile(r"outlook|guidance|expects?\b|expected to|forecast|anticipat|"
+                        r"previously (?:announced|provided|expected|stated)", re.I)
+_FENETRE_PREVISION = 700
+_MAX_EXTRAITS = 8_000
+
+
+_INDICE_D_EVENEMENT = re.compile(
+    r"repurchas|buyback|dividend|acqui|merger|divest|definitive agreement|agreement|partnership|"
+    r"collaborat|approv|designation|authoriz|clearance|offering|notes due|senior notes|credit facility|"
+    r"financing|royalt|guidance|outlook|appoint|resign|retire|restat|impair|restructur|layoff|recall|"
+    r"litigation|settle|investigation|launch", re.I)
+_PHRASE = re.compile(r"(?<=[.!?])\s+(?=[A-Z“\"(])|\s*[•▪●]\s*")
+_MAX_PHRASES = 80
+
+
+def phrases_a_examiner(documents: list[DocumentDepot]) -> list[str]:
+    """Les phrases d'un communiqué (pièces EX-99) qui portent un INDICE d'événement — rachat, dividende,
+    acquisition, accord, autorisation, émission, prévision, nomination, dépréciation… Fonction PURE.
+    C'est le CODE qui dresse la liste : le lecteur se prononce sur chacune, il ne peut plus en omettre
+    une (diagnostic §13). Dans l'ordre du document, sans doublon, 80 au plus."""
+    out: list[str] = []
+    vus: set[str] = set()
+    for d in documents:
+        if not d.type.startswith("EX-"):
+            continue
+        for brut in _PHRASE.split(d.texte):
+            ph = brut.strip()
+            if not (40 <= len(ph) <= 700) or not _INDICE_D_EVENEMENT.search(ph):
+                continue
+            cle = _normaliser(ph)
+            if cle in vus:
+                continue
+            vus.add(cle)
+            out.append(ph)
+            if len(out) >= _MAX_PHRASES:
+                return out
+    return out
+
+
+def extraits_de_prevision(documents: list[DocumentDepot]) -> list[str]:
+    """Les passages d'un communiqué qui portent ses PRÉVISIONS (« outlook », « guidance », « expected
+    to »…), fenêtres de ±700 caractères fusionnées, bornées à 8 000 caractères. Fonction PURE : c'est le
+    CODE qui choisit la référence montrée au modèle, jamais le modèle qui la retrouve de mémoire."""
+    out: list[str] = []
+    reste = _MAX_EXTRAITS
+    for d in documents:
+        if not d.type.startswith("EX-"):
+            continue
+        zones: list[list[int]] = []
+        for m in _PREVISION.finditer(d.texte):
+            a, b = max(0, m.start() - _FENETRE_PREVISION), min(len(d.texte), m.end() + _FENETRE_PREVISION)
+            if zones and a <= zones[-1][1]:
+                zones[-1][1] = max(zones[-1][1], b)
+            else:
+                zones.append([a, b])
+        for a, b in zones:
+            if reste <= 0:
+                return out
+            morceau = d.texte[a:b][:reste]
+            out.append(morceau)
+            reste -= len(morceau)
+    return out
+
+
+def communique_de_resultats_precedent(lookup: MaterialEventLookup,
+                                      event: MaterialEvent) -> Optional[MaterialEvent]:
+    """Le communiqué de résultats qui précède `event` (référence des prévisions). Fonction PURE."""
+    if lookup.status != "found" or "2.02" not in event.items:
+        return None
+    avant = [e for e in lookup.recents if "2.02" in e.items and e.accession
+             and e.event_date < event.event_date]
+    return max(avant, key=lambda e: e.event_date, default=None)
+
+
+_MOIS = {m: i for i, m in enumerate(("january", "february", "march", "april", "may", "june", "july",
+                                      "august", "september", "october", "november", "december"), 1)}
+_DATE_COMPLETE = re.compile(r"\b(" + "|".join(_MOIS) + r")\s+(\d{1,2}),\s*(\d{4})\b", re.I)
+_DATE_MOIS = re.compile(r"\b(" + "|".join(_MOIS) + r")\s+(\d{4})\b", re.I)
+_DATE_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+
+
+_APRES_CLOTURE = re.compile(r"subsequent to|since the (?:end|close) of|after the (?:end|close) of|"
+                           r"following the (?:end|close) of|\btoday\b|this week", re.I)
+
+
+def date_du_passage(passage: str) -> Optional[date]:
+    """La date la plus TARDIVE écrite dans une citation (« May 18, 2026 », « May 2026 » → le 1er, « 2026-05-18 »).
+    Fonction PURE. Diagnostic §13 : le modèle datait « In May 2026, … » du jour du communiqué, 5 fois sur 5,
+    malgré la consigne — une date écrite dans le texte se LIT, elle ne se déclare pas."""
+    vues: list[date] = []
+    for m in _DATE_COMPLETE.finditer(passage):
+        try:
+            vues.append(date(int(m.group(3)), _MOIS[m.group(1).lower()], int(m.group(2))))
+        except ValueError:
+            pass
+    reste = _DATE_COMPLETE.sub(" ", passage)
+    for m in _DATE_MOIS.finditer(reste):
+        vues.append(date(int(m.group(2)), _MOIS[m.group(1).lower()], 1))
+    for m in _DATE_ISO.finditer(passage):
+        try:
+            vues.append(date(int(m.group(1)), int(m.group(2)), int(m.group(3))))
+        except ValueError:
+            pass
+    return max(vues, default=None)
 
 
 async def telecharger_soumission(cik: int, accession: str) -> str:
@@ -249,7 +358,9 @@ def precedentes_de(qualifications: dict[str, QualificationLue], event: MaterialE
 
 def contexte_note_flash(event: MaterialEvent, emetteur: IdentiteEmetteur,
                         documents: list[DocumentDepot], fichier: FrameworksFile, *,
-                        precedentes: list[NotePrecedente]) -> dict[str, Any]:
+                        precedentes: list[NotePrecedente],
+                        reference: Optional[tuple[MaterialEvent, list[str]]] = None,
+                        phrases: Optional[list[str]] = None) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — déterministe, lisible en texte avant toute dépense. `precedentes` est
     REQUIS, sans défaut : un lecteur qui l'oublierait ne pourrait plus jamais reconnaître un rappel."""
     return {
@@ -267,6 +378,14 @@ def contexte_note_flash(event: MaterialEvent, emetteur: IdentiteEmetteur,
                               for n in precedentes],
         "documents": [{"type": d.type, "nom": d.nom, "tronque": d.tronque, "texte": d.texte}
                       for d in documents],
+        # Sur un communiqué de résultats : les prévisions du communiqué PRÉCÉDENT, choisies par le code —
+        # la seule référence dont une `surprise` puisse s'écarter, avec celles du communiqué lui-même.
+        **({"communique_de_resultats_precedent": {
+            "date": reference[0].event_date.isoformat(), "extraits_de_prevision": reference[1]}}
+           if reference is not None else {}),
+        # …et les phrases que le CODE y a relevées : un verdict par phrase, aucune omise (diagnostic §13).
+        **({"phrases_a_examiner": [{"n": i, "phrase": p} for i, p in enumerate(phrases, 1)]}
+           if phrases else {}),
     }
 
 
@@ -295,20 +414,27 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "`notes_precedentes` ; un fait nouveau (une deuxième approbation, une autre indication, un nouveau "
     "tirage) n'est jamais un rappel. Dans le doute, n'en mets pas.\n\n"
     "UN COMMUNIQUÉ DE RÉSULTATS (item 2.02). Il publie les comptes de la période close le "
-    "`depot.cloture_publiee` ; le type `resultats` est déjà retenu par la forme. Un tel communiqué "
-    "RÉCAPITULE la période : ce qui s'y est passé AVANT la clôture (levées, tranches reçues, accords, "
-    "approbations, dépôts réglementaires, nominations du trimestre) est déjà dans les comptes — NE LE "
-    "RETIENS PAS. Ne retiens que : (1) un fait SURVENU APRÈS la clôture (le communiqué le date après "
-    "elle, ou le dit « subsequent to », « since quarter end », « recently » avec une date postérieure), "
-    "avec son type ; (2) une PRÉVISION DE LA DIRECTION RÉVISÉE par rapport à sa prévision précédente "
-    "(relevée, abaissée, retirée), ou un écart que le communiqué RECONNAÎT lui-même par rapport à un "
-    "objectif annoncé : type `surprise`. Une variation par rapport à la période comparable (perte plus "
-    "lourde, charge en hausse, chiffre d'affaires en baisse sur un an) N'EST PAS une surprise : c'est le "
-    "contenu des comptes. Si rien de tout cela, rends le seul élément `resultats`. Sur un communiqué de "
-    "résultats, CHAQUE élément autre que `resultats` porte `survenu_le` : la date (AAAA-MM-JJ) du fait "
-    "qu'il rapporte telle que le texte la donne (le premier jour du mois si seul le mois est donné ; la "
-    "date du communiqué pour une prévision qu'il révise). Un fait survenu avant la clôture sera écarté "
-    "par le système : ne le cache pas, date-le.\n\n"
+    "`depot.cloture_publiee` ; le type `resultats` est déjà retenu par la forme — pour son élément, cite "
+    "la phrase de l'Item 2.02 du formulaire 8-K (« On <date>, … announced/issued … results … »), telle "
+    "quelle. Un tel communiqué "
+    "RÉCAPITULE la période. Le système a relevé dans le communiqué les phrases qui portent un indice "
+    "d'événement (`phrases_a_examiner`, numérotées) : rends `examen` avec UN verdict PAR phrase, sans en "
+    "omettre aucune — `{\"n\": <numéro>, \"type\": \"<id>\"}` si la phrase rapporte un fait de fond de ce "
+    "type, `{\"n\": <numéro>, \"type\": null}` sinon (une phrase de contexte, un chiffre des comptes, une "
+    "mention légale). Tu n'as pas à recopier la phrase. Ajoute `survenu_le` (AAAA-MM-JJ) si tu connais la "
+    "date du fait ; le système lit d'abord la date écrite dans la phrase et écarte lui-même ce qui est "
+    "survenu avant la clôture. `elements` ne contient alors que l'élément `resultats`.\n"
+    "  — UN ÉCART (`surprise`, dans `examen`) sur un communiqué de résultats n'existe que face à une "
+    "RÉFÉRENCE : la "
+    "prévision ou l'objectif que la direction avait annoncé AVANT. Cite cette référence mot pour mot dans "
+    "`passage_reference` — dans le communiqué lui-même (« previously expected… », « compared with our prior "
+    "outlook… ») ou dans `communique_de_resultats_precedent.extraits_de_prevision`. La nouvelle prévision "
+    "est la phrase examinée. Une révision compare deux prévisions DE LA MÊME PÉRIODE : `periode_prevue` est "
+    "cette période telle qu'écrite (« full year 2026 », « third quarter of fiscal 2027 ») et doit figurer "
+    "dans les deux citations — la prévision du trimestre suivant comparée à celle du trimestre d'avant "
+    "n'est PAS une révision. Si tu ne trouves pas de référence citable, il n'y a PAS d'écart : une prévision "
+    "publiée comme chaque trimestre, une hausse sur un an, des engagements en hausse ne sont pas des "
+    "surprises. Une prévision INCHANGÉE n'en est pas une non plus.\n\n"
     "L'ÉCART AUX ATTENTES. Si le dépôt révèle des résultats ou une prévision qui s'écartent de ce "
     "qu'annonçait la direction ou de ce qu'attendait le marché, utilise le type `surprise` et dis sa "
     "`cause`. La question à te poser : « est-ce l'entreprise, ou tout le secteur ? ». Ne choisis "
@@ -321,10 +447,17 @@ _NOTE_FLASH_SYSTEM_PROMPT = (
     "un type), ne devine pas : rends `lisible: false` et un `motif` d'une phrase. Le point restera "
     "ouvert, ce qui est le bon résultat quand on ne sait pas.\n\n"
     "FORMAT. Réponds UNIQUEMENT par un objet JSON :\n"
-    '{"lisible": true, "elements": [{"type": "<id>", "passage": "<citation>"}, '
+    '{"lisible": true, "elements": [{"type": "<id>", "passage": "<citation>", '
+    '"survenu_le": "<AAAA-MM-JJ, sur un communiqué de résultats>"}, '
     '{"type": "<id>", "passage": "<citation>", "rappel_du": "<AAAA-MM-JJ>"}, '
     '{"type": "surprise", "passage": "<citation>", "cause": "execution", '
-    '"passage_cause": "<citation>", "survenu_le": "<AAAA-MM-JJ, sur un communiqué de résultats>"}]}\n'
+    '"passage_cause": "<citation>", "passage_reference": "<citation de la prévision PRÉCÉDENTE, sur un '
+    'communiqué de résultats>", "periode_prevue": "<la même période, écrite dans les deux citations>", '
+    '"survenu_le": "<AAAA-MM-JJ>"}]}\n'
+    'Sur un communiqué de résultats : {"lisible": true, "elements": [{"type": "resultats", "passage": '
+    '"<phrase de l\'Item 2.02>"}], "examen": [{"n": 1, "type": null}, {"n": 2, "type": "financement", '
+    '"survenu_le": "<AAAA-MM-JJ>"}, {"n": 3, "type": "surprise", "cause": "non_dite", "passage_reference": '
+    '"<citation de la prévision PRÉCÉDENTE>", "periode_prevue": "<la même période>"}]}\n'
     'ou {"lisible": false, "elements": [], "motif": "<pourquoi>"}'
 )
 
@@ -367,19 +500,23 @@ def types_annonces(elements: list[dict[str, Any]]) -> frozenset[str]:
     """Les types qu'une note ANNONCE : ceux de ses éléments hors rappels ADMIS et hors faits COUVERTS
     PAR LES COMPTES qu'un communiqué de résultats récapitule. Fonction PURE."""
     return frozenset(type_derive_de(el["type"], el.get("cause")) for el in elements
-                     if not el.get("rappel_admis") and not el.get("couvert_par_les_comptes"))
+                     if not el.get("rappel_admis") and not el.get("couvert_par_les_comptes")
+                     and not el.get("ecart_non_etabli"))
 
 
 def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
                  fichier: FrameworksFile, *, event_date: date,
                  precedentes: list[NotePrecedente],
-                 cloture_publiee: Optional[date]) -> NoteValidee:
+                 cloture_publiee: Optional[date],
+                 reference_precedente: list[str],
+                 phrases: list[str]) -> NoteValidee:
     """Le PONT de la note flash (cf. module). Lève `NoteFlashRefusee` en nommant CHAQUE défaut. Un rappel
     non vérifié n'est PAS un défaut : l'élément compte comme nouveau (`rappel_admis: false`, motif)."""
     if not sortie.lisible:
         return NoteValidee(lisible=False, types=(A_QUALIFIER,), elements=[], motif=sortie.motif)
     permis = {t["id"] for t in types_proposables(fichier)}
     corpus = _normaliser("\n".join(d.texte for d in documents))
+    references = _normaliser("\n".join(reference_precedente))
     defauts: list[str] = []
     for n, el in enumerate(sortie.elements, 1):
         if el.type not in permis:
@@ -388,27 +525,95 @@ def valider_note(sortie: NoteFlashSortie, documents: list[DocumentDepot],
             cite = getattr(el, champ)
             if cite is not None and _normaliser(cite) not in corpus:
                 defauts.append(f"élément {n} : `{champ}` introuvable dans le dépôt (« {cite[:80]}… »)")
-        # Règle de fraîcheur (2026-10-16) : sur un communiqué de résultats, chaque fait rapporté se
-        # date — sans quoi un récapitulatif du trimestre se lirait comme une annonce nouvelle.
-        if cloture_publiee is not None and el.type != RESULTATS and el.survenu_le is None:
-            defauts.append(f"élément {n} (`{el.type}`) : sur un communiqué de résultats, `survenu_le` "
-                           "(la date du fait rapporté) est requis")
+    # Diagnostic §13 : sur un communiqué de résultats, un verdict par phrase relevée par le code — aucune
+    # omise, aucune en double ; chaque phrase typée devient un élément cité mot pour mot par construction.
+    derives: list[ElementNoteFlash] = []
+    if phrases:
+        vus = [x.n for x in sortie.examen]
+        manquantes = sorted(set(range(1, len(phrases) + 1)) - set(vus))
+        doubles = sorted({n for n in vus if vus.count(n) > 1})
+        hors = sorted({n for n in vus if n > len(phrases)})
+        if manquantes:
+            defauts.append(f"`examen` : aucun verdict pour la(les) phrase(s) {manquantes} — chaque phrase de "
+                           "`phrases_a_examiner` reçoit un type ou `null`")
+        if doubles or hors:
+            defauts.append(f"`examen` : phrase(s) en double {doubles} ou inexistante(s) {hors}")
+        for x in sortie.examen:
+            if x.type is None or x.n > len(phrases):
+                continue
+            if x.type not in permis:
+                defauts.append(f"phrase {x.n} : type `{x.type}` absent du catalogue proposé")
+                continue
+            try:
+                derives.append(ElementNoteFlash(
+                    type=x.type, passage=phrases[x.n - 1], cause=x.cause, passage_cause=x.passage_cause,
+                    passage_reference=x.passage_reference, periode_prevue=x.periode_prevue,
+                    survenu_le=x.survenu_le))
+            except ValueError as e:
+                defauts.append(f"phrase {x.n} : {e}")
+            if x.passage_cause is not None and _normaliser(x.passage_cause) not in corpus:
+                defauts.append(f"phrase {x.n} : `passage_cause` introuvable dans le dépôt")
+    elif sortie.examen:
+        defauts.append("`examen` sans objet : aucune phrase n'était à examiner")
     if defauts:
         raise NoteFlashRefusee(" ; ".join(defauts))
-    types = tuple(sorted({type_derive(el) for el in sortie.elements}))   # ordre 0 : tout type cité
     elements = []
-    for el in sortie.elements:
+    for el in list(sortie.elements) + derives:
         d = el.model_dump(mode="json", exclude_none=True)
+        if cloture_publiee is not None and el.type == SURPRISE:
+            # Diagnostic §13 : sur un communiqué de résultats, un écart se prouve par la référence dont il
+            # s'écarte — citée mot pour mot (ce communiqué ou les prévisions du précédent), distincte du
+            # passage, et visant la MÊME période. Sinon l'écart n'est pas ÉTABLI : l'élément reste dans la
+            # note, motif écrit, et ne compte pas — sans renvoi (un second tirage retirait aussi le reste).
+            motif = _ecart_non_etabli(el, corpus, references)
+            if motif:
+                d["ecart_non_etabli"] = motif
+        if cloture_publiee is not None and el.type != RESULTATS:
+            # Un communiqué de résultats RÉCAPITULE la période qu'il publie (diagnostic §13 — mesuré : le
+            # lecteur datait du jour du communiqué les « faits marquants du trimestre », 15 lectures sur 15,
+            # et sa date déclarée ne décide donc plus). La date écrite dans la phrase fait foi ; à défaut,
+            # un marqueur d'après-clôture (« subsequent to quarter end », « today »…) la fixe au jour du
+            # communiqué ; à défaut, le fait appartient à la période publiée — couvert par les comptes.
+            # Coût d'erreur nommé : un fait postérieur ni daté ni marqué serait manqué ICI ; il reste vu
+            # s'il fait l'objet de son propre 8-K, l'usage pour un fait important.
+            # Une RÉVISION de prévision (écart établi) est l'acte du communiqué lui-même : datée de lui.
+            revision = el.type == SURPRISE and not d.get("ecart_non_etabli")
+            lue = None if revision else date_du_passage(el.passage)
+            apres = revision or _APRES_CLOTURE.search(el.passage) is not None
+            retenue = lue or (event_date if apres else cloture_publiee)
+            d["survenu_le"] = retenue.isoformat()
+            d["survenu_le_source"] = ("révision publiée par le communiqué" if revision else
+                                      "lue dans la phrase" if lue else
+                                      "marqueur d'après-clôture" if apres else "récapitulatif de la période")
+            if retenue <= cloture_publiee:
+                d["couvert_par_les_comptes"] = True
+                d["couvert_motif"] = (f"survenu le {retenue.isoformat()}, au plus tard à la clôture "
+                                      f"publiée du {cloture_publiee.isoformat()} : dans les comptes")
         if el.rappel_du is not None:
             d["rappel_admis"], d["rappel_motif"] = verdict_rappel(
                 type_derive(el), el.rappel_du, event_date=event_date, precedentes=precedentes)
-        if (cloture_publiee is not None and el.type != RESULTATS and el.survenu_le is not None
-                and el.survenu_le <= cloture_publiee):
-            d["couvert_par_les_comptes"] = True
-            d["couvert_motif"] = (f"survenu le {el.survenu_le.isoformat()}, au plus tard à la clôture "
-                                  f"publiée du {cloture_publiee.isoformat()} : dans les comptes")
         elements.append(d)
+    # Ordre 0 : tout type cité — sauf un écart NON ÉTABLI, qui n'est pas un fait mais une lecture refusée.
+    types = tuple(sorted({type_derive_de(d["type"], d.get("cause")) for d in elements
+                          if not d.get("ecart_non_etabli")}))
     return NoteValidee(lisible=True, types=types, motif=None, elements=elements)
+
+
+def _ecart_non_etabli(el, corpus: str, references: str) -> Optional[str]:
+    """Pourquoi un écart lu sur un communiqué de résultats n'est pas établi, ou `None`. Fonction PURE."""
+    ref = el.passage_reference
+    if ref is None:
+        return "aucune référence citée (prévision ou objectif précédent) : pas d'écart"
+    nref = _normaliser(ref)
+    if nref not in corpus and nref not in references:
+        return "référence introuvable dans le dépôt ni dans les prévisions du communiqué précédent"
+    if nref == _normaliser(el.passage):
+        return "la référence répète le passage : ce n'est pas l'ancienne prévision"
+    per = _normaliser(el.periode_prevue or "")
+    if not per or per not in _normaliser(el.passage) or per not in nref:
+        return (f"période visée « {el.periode_prevue or ''} » absente de l'une des deux citations : deux "
+                "prévisions de périodes différentes ne font pas une révision")
+    return None
 
 
 # ── 5. Rédiger, persister, relire ───────────────────────────────────────────────────────────────────
@@ -423,6 +628,7 @@ class NoteRedigee:
     documents: list[dict[str, Any]]
     modele: str
     runs: list[AgentRunResult] = field(default_factory=list)
+    vote: Optional[str] = None   # le vote des lectures d'un communiqué de résultats (diagnostic §13)
 
 
 async def _resoudre_agent() -> ResolvedAgent:
@@ -437,7 +643,9 @@ async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
                              emetteur: IdentiteEmetteur, fichier: Optional[FrameworksFile] = None,
                              agent: Optional[ResolvedAgent] = None,
                              soumission: Optional[str] = None,
-                             precedentes: list[NotePrecedente]) -> NoteRedigee:
+                             precedentes: list[NotePrecedente],
+                             precedent_resultats: Optional[MaterialEvent],
+                             soumission_precedente: Optional[str] = None) -> NoteRedigee:
     """Lit UN dépôt et rend sa note VALIDÉE (non persistée). Ordre : (1) télécharger et extraire —
     échec ⟹ `NoteFlashImpossible` AVANT toute dépense ; (2) le modèle lit ; (3) le pont ; un refus du
     pont est renvoyé UNE fois au modèle avec ses défauts, puis `NoteFlashRefusee`."""
@@ -449,6 +657,19 @@ async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
     documents = extraire_documents(soumission)
     if not documents:
         raise NoteFlashImpossible(f"{event.accession} : aucun document lisible (formulaire ou EX-99)")
+    # La référence des prévisions (diagnostic §13) : les extraits du communiqué de résultats précédent,
+    # choisis par le code. Indisponible (pas de précédent, téléchargement en échec) ⟹ liste vide : une
+    # surprise ne pourra alors se référer qu'au communiqué lui-même — jamais à la mémoire du modèle.
+    reference: Optional[tuple[MaterialEvent, list[str]]] = None
+    if precedent_resultats is not None and event.periode_publiee is not None:
+        try:
+            brut = soumission_precedente if soumission_precedente is not None else await telecharger_soumission(
+                cik, precedent_resultats.accession)
+            reference = (precedent_resultats, extraits_de_prevision(extraire_documents(brut)))
+        except Exception:  # noqa: BLE001 — la note se lit sans référence, la vérification reste stricte
+            logger.warning("note flash %s : communiqué précédent %s illisible", event.accession,
+                           precedent_resultats.accession)
+    phrases = phrases_a_examiner(documents) if event.periode_publiee is not None else []
     agent = agent or await _resoudre_agent()
     # Interrupteur coupé (ordre 0) : le modèle ne voit PAS l'historique. Le voir peut lui faire OMETTRE un
     # type (mesuré : #521 a retiré le passage rappelé au lieu de le marquer) — une omission échappe à tout
@@ -456,29 +677,76 @@ async def rediger_note_flash(event: MaterialEvent, *, ticker_id: str, cik: int,
     # interrupteur à false + version du catalogue montée + relecture des notes (quelques dixièmes de cent).
     vues = precedentes if fichier.rappels_ecartes else []
     messages = [{"role": "user", "content": _message(
-        contexte_note_flash(event, emetteur, documents, fichier, precedentes=vues))}]
+        contexte_note_flash(event, emetteur, documents, fichier, precedentes=vues,
+                            reference=reference, phrases=phrases))}]
+    async def _une_lecture() -> tuple[NoteValidee, list[AgentRunResult]]:
+        msgs, runs_ = list(messages), []
+        for essai in (1, 2):
+            run = await run_json_agent(agent, msgs, NoteFlashSortie, json_object=False, temperature=0.0)
+            runs_.append(run)
+            try:
+                return valider_note(run.parsed, documents, fichier, event_date=event.event_date,
+                                    cloture_publiee=event.periode_publiee,
+                                    reference_precedente=reference[1] if reference else [],
+                                    phrases=phrases, precedentes=vues), runs_
+            except NoteFlashRefusee as e:
+                if essai == 2:
+                    e.runs = runs_  # type: ignore[attr-defined] — le coût d'une lecture refusée se compte
+                    raise
+                msgs = msgs + [
+                    {"role": "assistant", "content": run.raw_content},
+                    {"role": "user", "content": f"Ta note est refusée : {e}. Corrige : chaque passage doit "
+                                                "être copié mot pour mot du texte, chaque type pris dans "
+                                                "`types_evenement`. Rends l'objet JSON complet."}]
+        raise AssertionError("inatteignable")
+
+    # Diagnostic §13 : à température 0, le fournisseur n'est pas déterministe ; sur un élément limite (des
+    # partenariats énumérés dans un communiqué NVDA), deux lectures sur cinq différaient. Un communiqué de
+    # résultats se lit donc TROIS fois et les types se votent (`voter_lectures`) ; les autres dépôts, une.
+    n = LECTURES_PAR_COMMUNIQUE_DE_RESULTATS if event.periode_publiee is not None else 1
+    lectures: list[NoteValidee] = []
     runs: list[AgentRunResult] = []
-    for essai in (1, 2):
-        run = await run_json_agent(agent, messages, NoteFlashSortie, json_object=False,
-                                   temperature=0.0)
-        runs.append(run)
+    dernier_refus: Optional[NoteFlashRefusee] = None
+    for _ in range(n):
         try:
-            note = valider_note(run.parsed, documents, fichier, event_date=event.event_date,
-                                cloture_publiee=event.periode_publiee,
-                                precedentes=vues)
-            break
+            note_i, runs_i = await _une_lecture()
+            lectures.append(note_i)
+            runs.extend(runs_i)
         except NoteFlashRefusee as e:
-            if essai == 2:
-                raise
-            messages = messages + [
-                {"role": "assistant", "content": run.raw_content},
-                {"role": "user", "content": f"Ta note est refusée : {e}. Corrige : chaque passage doit "
-                                            "être copié mot pour mot du texte, chaque type pris dans "
-                                            "`types_evenement`. Rends l'objet JSON complet."}]
+            dernier_refus = e
+            runs.extend(getattr(e, "runs", []))
+    if not lectures:
+        raise dernier_refus or NoteFlashRefusee("aucune lecture aboutie")
+    note, vote = voter_lectures(lectures) if n > 1 else (lectures[0], None)
     return NoteRedigee(ticker_id=ticker_id, cik=cik, event=event,
                        catalogue_version=fichier.types_evenement_version, note=note,
                        documents=[d.meta() for d in documents],
-                       modele=runs[-1].completion.model or agent.model, runs=runs)
+                       modele=runs[-1].completion.model or agent.model, runs=runs, vote=vote)
+
+
+LECTURES_PAR_COMMUNIQUE_DE_RESULTATS = 3
+
+
+def voter_lectures(lectures: list[NoteValidee]) -> tuple[NoteValidee, str]:
+    """Le vote à la MAJORITÉ des lectures abouties d'un même dépôt. Fonction PURE.
+
+    Un type est retenu s'il est annoncé (hors rappels, faits couverts et écarts non établis) par une
+    majorité stricte des lectures. La note gardée est la PREMIÈRE dont les types annoncés sont exactement
+    la majorité ; à défaut, celle qui s'en écarte le moins (première à égalité) — une note est une lecture
+    entière, citée d'un bout à l'autre : on ne recoud pas des éléments de lectures différentes."""
+    annonces = [types_annonces(l.elements) if l.lisible else frozenset({A_QUALIFIER}) for l in lectures]
+    seuil = len(lectures) // 2 + 1
+    compte: dict[str, int] = {}
+    for a in annonces:
+        for t in a:
+            compte[t] = compte.get(t, 0) + 1
+    majorite = frozenset(t for t, c in compte.items() if c >= seuil)
+    ecarts = [len(a ^ majorite) for a in annonces]
+    choisie = ecarts.index(min(ecarts))
+    accord = sum(1 for a in annonces if a == majorite)
+    return lectures[choisie], (f"{len(lectures)} lecture(s), types majoritaires {sorted(majorite)} — "
+                               f"{accord}/{len(lectures)} lecture(s) exactement d'accord, la n°{choisie + 1} "
+                               "est gardée")
 
 
 async def persister_note(conn, redigee: NoteRedigee) -> int:
@@ -736,7 +1004,8 @@ async def lire_les_depots_en_attente(
             red = await asyncio.wait_for(
                 rediger_note_flash(e, ticker_id=ticker_id, cik=flux.cik, emetteur=emetteur,
                                    fichier=fichier, agent=agent, soumission=soum,
-                                   precedentes=precedentes_de(deja, e)),
+                                   precedentes=precedentes_de(deja, e),
+                                   precedent_resultats=communique_de_resultats_precedent(flux, e)),
                 BORNE_PAR_ETAPE_S)
             lecture.cout_usd += sum(r.cost_usd for r in red.runs)
             d.note, d.corrigee = red.note, len(red.runs) > 1

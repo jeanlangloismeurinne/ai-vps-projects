@@ -342,3 +342,13 @@ température 0 ; trois communiqués (NVDA 19/11/2025 et 26/08/2026, RVMD 05/08/2
 la référence dont elle s'écarte (la prévision précédente, dans le document ou dans la note précédente),
 sinon elle n'existe pas — supprime l'erreur systématique ; liste exhaustive par type ; `survenu_le` dans
 l'exemple de chaque élément.
+
+**Construits et mesurés le 2026-10-16 (catalogue 1.5.0)** — les remèdes ci-dessus, plus deux trouvés en
+mesurant : la date d'un fait se LIT dans la phrase (le lecteur datait « In May 2026 » du jour du communiqué,
+5/5), un fait non daté d'un communiqué de résultats appartient à la période publiée sauf marqueur
+d'après-clôture (le lecteur datait les « faits marquants du trimestre » du communiqué, 15/15) ; un écart
+non établi reste dans la note sans compter, sans renvoi (le renvoi faisait retirer le reste) ; trois
+lectures votées. Mesure finale : 5 communiqués × 3 procédures complètes, lectures IDENTIQUES — RVMD 05/08 :
+réglementaire + révision des dépenses (référence de mai, même période) ; RVMD 06/05 : levée d'avril
+(postérieure au 31/03) + révision ; NVDA 20/05 : rachat de 80 Md$ et dividende du 18/05 ; NVDA 26/08 et
+19/11 : rien de plus que les comptes. Résidu à arbitrer : cause non dite ⟹ « surprise concurrentielle » (Q2).

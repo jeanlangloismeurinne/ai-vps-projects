@@ -72,6 +72,16 @@ class ElementNoteFlash(Strict):
     # récapitule) : le pont le marque « couvert par les comptes », la lecture l'écarte. Requis par le
     # pont sur un communiqué de résultats (sauf l'élément `resultats`), sans objet ailleurs.
     survenu_le: Optional[date] = None
+    # Pour `surprise` sur un communiqué de RÉSULTATS (2026-10-16, diagnostic §13) : la citation LITTÉRALE
+    # de la référence dont le fait s'écarte — la prévision ou l'objectif précédemment annoncé, dans ce
+    # communiqué ou dans les extraits du communiqué de résultats précédent. Sans référence, il n'y a pas
+    # d'écart : une prévision publiée comme chaque trimestre n'est pas une surprise.
+    passage_reference: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
+    # …et la PÉRIODE que les deux prévisions visent (« full year 2026 »), telle qu'écrite : une révision
+    # compare deux prévisions DE LA MÊME PÉRIODE — la prévision du trimestre suivant n'est pas une
+    # révision de celle du trimestre d'avant (NVDA, diagnostic §13). Le pont exige qu'elle figure mot
+    # pour mot dans `passage` ET dans `passage_reference`.
+    periode_prevue: Optional[str] = Field(default=None, min_length=4)
 
     @model_validator(mode="after")
     def _la_cause_appartient_a_la_surprise(self) -> "ElementNoteFlash":
@@ -86,11 +96,28 @@ class ElementNoteFlash(Strict):
                                  "(`passage_cause`) ; sinon elle est `non_dite`")
         elif self.cause is not None or self.passage_cause is not None:
             raise ValueError(f"`cause` n'a de sens que pour `{SURPRISE}` (reçu sur `{self.type}`)")
+        if (self.passage_reference is not None or self.periode_prevue is not None) and self.type != SURPRISE:
+            raise ValueError(f"`passage_reference` / `periode_prevue` n'ont de sens que pour `{SURPRISE}` "
+                             f"(reçus sur `{self.type}`)")
         if self.type == SURPRISE and self.rappel_du is not None:
             raise ValueError("un écart aux attentes est nouveau par nature : il n'est jamais un rappel")
         if self.type.startswith("surprise_"):
             raise ValueError(f"`{self.type}` : dis `{SURPRISE}` et sa cause, le type s'en déduit")
         return self
+
+
+class ExamenPhrase(Strict):
+    """Le verdict du lecteur sur UNE phrase que le code a relevée dans un communiqué de résultats
+    (diagnostic §13 : le modèle OMETTAIT des faits — le rachat de 80 Md$ de NVDA 2 lectures sur 3).
+    `type` = un identifiant du catalogue, ou `None` pour « aucun fait de fond ». La citation n'est pas
+    redemandée : c'est la phrase elle-même. Les autres champs sont ceux d'un élément."""
+    n: int = Field(ge=1)
+    type: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    cause: Optional[Cause] = None
+    passage_cause: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
+    passage_reference: Optional[str] = Field(default=None, min_length=PASSAGE_MIN)
+    periode_prevue: Optional[str] = Field(default=None, min_length=4)
+    survenu_le: Optional[date] = None
 
 
 class NoteFlashSortie(Strict):
@@ -99,6 +126,9 @@ class NoteFlashSortie(Strict):
     · `lisible=False` — aucun élément, et un motif : le dépôt reste rouvert sur tout (Q3)."""
     lisible: bool
     elements: list[ElementNoteFlash] = Field(default_factory=list)
+    # Sur un communiqué de résultats seulement : un verdict par phrase relevée par le code (le pont exige
+    # qu'aucune ne manque). Vide ailleurs.
+    examen: list[ExamenPhrase] = Field(default_factory=list)
     motif: Optional[str] = Field(default=None, min_length=20)
 
     @model_validator(mode="after")
