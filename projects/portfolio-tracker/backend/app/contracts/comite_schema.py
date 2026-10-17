@@ -10,12 +10,15 @@ PV ne se réécrit pas : une décision nouvelle s'AJOUTE, elle n'efface pas l'an
 append-only (`DecisionComite`, une ligne par décision), jamais une colonne « acceptée » sur la
 réponse.
 
-Les deux gestes (§8.2) :
+Les trois gestes (§8.2, puis #137) :
   · ACQUITTER — « je prends la réponse telle qu'elle est, avec son rang ». Porte sur UNE réponse
     précise (`answer_id`) : c'est la « version du dossier » que le comité a lue.
   · RENVOYER  — « va chercher ceci ». Emprunte le MÊME canal que le renvoi du manager (un
     `framework_mandate` d'origine `comite`, #46) ; le registre garde le PV, le mandat garde l'ordre
     exécutable.
+  · REINITIALISER — « remets cette question à zéro » (#137, point 17-bis), même acceptée. Aucun
+    mandat : la question repart par la relance bornée de l'analyse. Renvoyer et réinitialiser
+    ROUVRENT la question jusqu'à la première réponse écrite après eux (`ACTIONS_OUVRANTES`).
 
 LES ARBITRAGES DU COMITÉ QUI GOUVERNENT CE CONTRAT (2026-09-25)
 --------------------------------------------------------------
@@ -70,13 +73,18 @@ __all__ = [
     "FaitImportant",
     "DemandeAcquittement",
     "DemandeRenvoi",
+    "DemandeReinitialisation",
+    "ACTIONS_OUVRANTES",
     "DecisionComite",
     "AcceptationServie",
     "PositionComite",
 ]
 
-ACTIONS_COMITE = ("acquitter", "renvoyer")
-ActionComite = Literal["acquitter", "renvoyer"]
+ACTIONS_COMITE = ("acquitter", "renvoyer", "reinitialiser")
+ActionComite = Literal["acquitter", "renvoyer", "reinitialiser"]
+# Les décisions qui ROUVRENT une question (#137, point 17) : tant qu'aucune réponse n'a été écrite
+# APRÈS elles, la question est ouverte, et les réponses antérieures ne la ferment plus.
+ACTIONS_OUVRANTES = ("renvoyer", "reinitialiser")
 
 # L'état de l'ancre matérielle AU MOMENT de la décision — le vocabulaire EXACT de
 # `MaterialEventLookup.status` (détenteur : `knowledge/material_events.py`). `none` = on SAIT
@@ -129,6 +137,15 @@ class DemandeRenvoi(Strict):
     answer_id: Optional[int] = None
 
 
+class DemandeReinitialisation(Strict):
+    """« Je remets cette question (ou ce chapitre) à zéro. » Acte HUMAIN du gérant (#137, point
+    17-bis) : même une réponse acceptée par le comité repart en analyse. Signé et motivé comme une
+    décision — c'est une décision. `answer_id` n'est pas demandé : la réponse mise de côté est relevée
+    par l'agent (la réponse courante au moment du geste), jamais saisie."""
+    auteur: Texte = Field(max_length=120)
+    motif: Texte = Field(max_length=4000)
+
+
 # ── Une ligne du REGISTRE (ce que la base garde) ──────────────────────────────────────────────
 
 class DecisionComite(Strict):
@@ -161,6 +178,10 @@ class DecisionComite(Strict):
                 raise ValueError("acquitter avec une ancre `unavailable` : sans savoir quel fait "
                                  "important était connu, l'acceptation ne pourrait jamais tomber "
                                  "(arbitrage n°2) — la décision doit être refusée, pas archivée")
+        elif self.action == "reinitialiser":
+            if self.mandat_id is not None:  # une remise à zéro n'ouvre aucune recherche
+                raise ValueError("reinitialiser avec un `mandat_id` : la question repart par la "
+                                 "relance bornée de l'analyse, pas par un mandat de recherche")
         else:  # renvoyer
             if self.mandat_id is None:
                 raise ValueError("renvoyer sans `mandat_id` : un renvoi qui ne produit aucun mandat "

@@ -20,6 +20,12 @@ CE QUE FERAIT UN VRAI FONDS, ET LES CHOIX QUI EN DÉCOULENT
    passé `abandonne` (jamais supprimé) et le PV garde son id (`mandat_remplace_id`).
 5. Renvoyer emprunte le MÊME canal que le manager (`persist_mandate`, origine `comite`) : le
    bouclage le consomme comme les autres, aucun chemin de recherche parallèle (#46).
+6. RÉINITIALISER (#137, point 17-bis) : le gérant remet à zéro une question ou un chapitre de son
+   choix, même accepté. C'est une décision du PV (signée, motivée) ; la recherche en cours s'arrête ;
+   la réponse courante est relevée (`answer_id`) mais jamais retirée — elle reste au dossier comme
+   archive et ne ferme plus la question (`parcours.manque_de_la_question`). Aucun mandat : la question
+   repart par la relance bornée (`tools/executer_chaine.py`). Le chapitre = une ligne par question
+   applicable, dans UNE transaction.
 
 ⚠️ ATOMICITÉ (#35). `get_db_session()` n'ouvre aucune transaction : `acquitter`/`renvoyer` ouvrent la
 leur (abandon du mandat + nouveau mandat + ligne de PV, tout ou rien).
@@ -33,6 +39,7 @@ from app.contracts.comite_schema import (
     AcceptationServie,
     DecisionComite,
     DemandeAcquittement,
+    DemandeReinitialisation,
     DemandeRenvoi,
     EtatAncre,
     FaitImportant,
@@ -49,6 +56,8 @@ __all__ = [
     "lire_registre",
     "acquitter",
     "renvoyer",
+    "reinitialiser",
+    "reinitialiser_chapitre",
 ]
 
 
@@ -290,3 +299,64 @@ async def renvoyer(
             question_id=question_id, action="renvoyer", answer_id=demande.answer_id,
             mandat_id=mandat_id, mandat_remplace_id=remplace, auteur=demande.auteur,
             motif=demande.motif, ancre=ancre)
+
+
+async def _reponse_courante(conn, *, ticker_id, framework_id, version, question_id) -> Optional[int]:
+    return await conn.fetchval(
+        "SELECT max(id) FROM framework_answers WHERE ticker_id = $1 AND framework = $2 "
+        "AND framework_version = $3 AND question_id = $4 AND superseded_by IS NULL",
+        ticker_id, framework_id, version, question_id)
+
+
+async def _reinitialiser_une(conn, *, ticker_id, framework_id, version, question_id, demande, ancre):
+    arrete = await _arreter_la_recherche_en_cours(  # remise à zéro : la recherche en cours s'arrête
+        conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+        question_id=question_id)
+    courante = await _reponse_courante(
+        conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+        question_id=question_id)
+    return await _inscrire(
+        conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+        question_id=question_id, action="reinitialiser", answer_id=courante,
+        mandat_id=None, mandat_remplace_id=arrete, auteur=demande.auteur,
+        motif=demande.motif, ancre=ancre)
+
+
+async def reinitialiser(
+    conn, *, ticker_id: str, framework_id: str, question_id: str,
+    demande: DemandeReinitialisation, ancre: Any, fichier: Optional[FrameworksFile] = None,
+) -> DecisionComite:
+    """Le gérant remet UNE question à zéro (#137, point 17-bis) : la recherche en cours s'arrête, le
+    PV relève la réponse courante qu'il met de côté — tout ou rien. Les faits illisibles n'empêchent
+    pas de réinitialiser (rien ne doit « tomber » ensuite : la question est déjà rouverte)."""
+    from app.agents.v2.frameworks import load_frameworks
+
+    fichier = fichier or load_frameworks()
+    version = fichier.schema_version
+    _question(fichier, framework_id, question_id)
+    async with conn.transaction():
+        return await _reinitialiser_une(
+            conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+            question_id=question_id, demande=demande, ancre=ancre)
+
+
+async def reinitialiser_chapitre(
+    conn, *, ticker_id: str, framework_id: str, questions: list[str],
+    demande: DemandeReinitialisation, ancre: Any, fichier: Optional[FrameworksFile] = None,
+) -> list[DecisionComite]:
+    """Le gérant remet un CHAPITRE à zéro : une ligne de PV par question (le PV est par question),
+    dans UNE transaction. `questions` = les questions APPLICABLES à l'émetteur, fournies par
+    l'appelant (une ligne de PV sur une question hors sujet serait du bruit indélébile). Une liste
+    vide est REFUSÉE : un geste qui n'inscrit rien laisserait croire au gérant qu'il a agi."""
+    from app.agents.v2.frameworks import load_frameworks
+
+    fichier = fichier or load_frameworks()
+    version = fichier.schema_version
+    if not questions:
+        raise DecisionRefusee(f"aucune question applicable dans `{framework_id}` : rien à réinitialiser")
+    for qid in questions:
+        _question(fichier, framework_id, qid)
+    async with conn.transaction():
+        return [await _reinitialiser_une(
+            conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+            question_id=qid, demande=demande, ancre=ancre) for qid in questions]

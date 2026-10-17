@@ -43,12 +43,13 @@ from app.contracts.qualite_info_schema import QualiteInfo
 
 # ── Le manque, et sa cause ─────────────────────────────────────────────────────────────────────
 
-# CE QUI MANQUE. Quatre formes, parce qu'elles appellent quatre gestes différents au comité.
+# CE QUI MANQUE. Cinq formes, parce qu'elles appellent cinq gestes différents au comité.
 NatureManque = Literal[
     "sans_reponse",   # question applicable, aucune réponse au dossier
     "non_fondee",     # l'analyste a répondu « je ne peux pas fonder » (non_fondable)
     "perimee",        # fondée, mais sur des pièces qu'un fait postérieur a rendues caduques
     "renvoyee",       # le contrôle du manager a refusé la réponse
+    "rouverte_comite",  # le comité l'a renvoyée ou le gérant l'a remise à zéro, rien d'écrit depuis (#137)
 ]
 
 # POURQUOI LE SYSTÈME N'A PAS PU L'OBTENIR. Les trois premières sont celles du collecteur, mot pour
@@ -62,6 +63,8 @@ CauseManque = Literal[
     "fait_nouveau_publie",     # un fait important publié depuis rend les pièces caduques
     "actualite_indeterminable",  # les pièces ne sont pas datables : la fraîcheur n'est pas prouvée
     "controle_ko",             # le manager a refusé la réponse (contrôle nommé dans l'explication)
+    "renvoi_comite",           # le comité a renvoyé la question en recherche (#137)
+    "reinitialisation",        # le gérant a remis la question à zéro (#137, point 17-bis)
 ]
 
 

@@ -12,10 +12,15 @@ migration 048). Tout se joue dans UNE transaction annulée à la fin : zéro ré
   • §4 LA LECTURE : `lire_registre` rend le PV le plus récent d'abord, et une acceptation sur une
        réponse remplacée depuis TOMBE à la lecture.
   • §5 LE PV NE SE RÉÉCRIT PAS : le rôle applicatif ne peut ni modifier ni supprimer une décision.
+  • §6 RÉINITIALISER (#137, migration 058) : le PV relève la réponse courante mise de côté et arrête la
+       recherche en cours ; LU PAR LE DOSSIER (`charger_etat_dossier`), la question est rouverte et la
+       relance la refait ; une réponse écrite APRÈS la referme ; le chapitre = une ligne par question ;
+       un chapitre vide est refusé.
 
 Lancer : `bash checks/avec_base.sh check_comite_persist` (jamais dans `portfolio-backend`).
 """
 import asyncio
+import json
 import os
 import sys
 from datetime import date
@@ -34,12 +39,15 @@ if not _db_url or "@" not in _db_url:
 import asyncpg  # noqa: E402
 
 from app.agents.v2.comite import (  # noqa: E402
-    DecisionRefusee, acquitter, lire_registre, position_du_comite, renvoyer)
+    DecisionRefusee, acquitter, lire_registre, position_du_comite, reinitialiser,
+    reinitialiser_chapitre, renvoyer)
 from app.agents.v2.frameworks import load_frameworks  # noqa: E402
 from app.agents.v2.manager_persist import (  # noqa: E402
     id_du_mandat_ouvert, persist_mandate, read_open_mandates)
-from app.agents.v2.parcours import ReferenceInconnue  # noqa: E402
-from app.contracts.comite_schema import DemandeAcquittement, DemandeRenvoi  # noqa: E402
+from app.agents.v2.parcours import (  # noqa: E402
+    ReferenceInconnue, _lignes, charger_etat_dossier, questions_a_relancer)
+from app.contracts.comite_schema import (  # noqa: E402
+    DemandeAcquittement, DemandeReinitialisation, DemandeRenvoi)
 from app.contracts.framework_answer_schema import FrameworkMandate  # noqa: E402
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup  # noqa: E402
 
@@ -69,6 +77,9 @@ async def refus(conn, label, attendu, exc, coro):
 
 async def main() -> None:
     conn = await asyncpg.connect(_db_url.replace("+asyncpg", ""))
+    # Le décodage JSON du pool applicatif (`db/database.py`) : §6 lit le dossier par son vrai chargeur.
+    for t in ("jsonb", "json"):
+        await conn.set_type_codec(t, encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
     tr = conn.transaction()
     await tr.start()
     try:
@@ -192,10 +203,82 @@ async def main() -> None:
                 b.check(False, f"§5 {label} refusé par autre chose que le droit : {e}")
             finally:
                 await sp.rollback()
+
+        # ══ §6 RÉINITIALISER ═══════════════════════════════════════════════════════════════════
+        print("[6] réinitialiser — écrit au PV, lu par le dossier, refermé par une réponse postérieure")
+        # Une question APPLICABLE à l'émetteur, avec une réponse courante, autre que celle des §1-§4 :
+        # choisie dans le dossier réel (une question hors sujet ne s'ouvre ni ne se ferme).
+        etat0 = await charger_etat_dossier(conn, tk)
+        candidates = [r for r in etat0.reponses
+                      if r.servie.question_id != qid and r.answer_id != aid
+                      and r.servie.question_id in (etat0.applicables.get(r.servie.framework_id) or ())]
+        b.check(bool(candidates), f"§6 fixture : {tk} a une réponse courante sur une question applicable")
+        if not candidates:
+            return
+        q2, a2, fw2 = (candidates[0].servie.question_id, candidates[0].answer_id,
+                       candidates[0].servie.framework_id)
+        a2 = await conn.fetchval(
+            "SELECT max(id) FROM framework_answers WHERE ticker_id = $1 AND framework = $2 "
+            "AND framework_version = $3 AND question_id = $4 AND superseded_by IS NULL",
+            tk, fw2, VER, q2)
+        cle2 = dict(ticker_id=tk, framework_id=fw2, question_id=q2)
+        print(f"  (question réinitialisée : {tk} · {fw2} · {q2}, réponse courante #{a2})")
+        m2 = await persist_mandate(conn, FrameworkMandate(
+            framework_id=fw2, question_id=q2, ticker_id=tk, origine="manager_renvoi",
+            motif="renvoi manager (check)", mandat="re-collecter (check)", etat="ouvert"),
+            framework_version=VER)
+        d6 = await reinitialiser(conn, **cle2, ancre=INJOIGNABLE, demande=DemandeReinitialisation(
+            auteur="gérant (check)", motif="reconstruction du test (#127)"))
+        st6 = await conn.fetchval("SELECT statut FROM framework_mandates WHERE id = $1", m2)
+        b.check((d6.action, d6.answer_id, d6.mandat_id) == ("reinitialiser", a2, None),
+                f"§6 le PV relève la réponse COURANTE mise de côté (#{a2}) et n'ouvre aucun mandat — "
+                f"obtenu {d6.action}/#{d6.answer_id}/{d6.mandat_id}")
+        b.check(st6 == "abandonne" and d6.mandat_remplace_id == m2,
+                f"§6 la recherche en cours est ARRÊTÉE (mandat #{m2} → {st6})")
+        b.check(d6.ancre_etat == "unavailable",
+                "§6 EDGAR illisible n'empêche pas de réinitialiser (rien ne doit tomber ensuite)")
+
+        etat = await charger_etat_dossier(conn, tk)
+        f2 = next(f for f in etat.fichier.frameworks if f.id == fw2)
+        ligne = next(lq for lq in _lignes(etat, f2) if lq.question_id == q2)
+        b.check(ligne.applicable is True, f"§6 fixture : {tk} · {q2} est applicable — obtenu {ligne.applicable}")
+        b.check(ligne.manque is not None and (ligne.manque.nature, ligne.manque.cause)
+                == ("rouverte_comite", "reinitialisation"),
+                f"§6 LU PAR LE DOSSIER, la question est rouverte — obtenu "
+                f"{ligne.manque and (ligne.manque.nature, ligne.manque.cause)}")
+        b.check(q2 in questions_a_relancer(etat, fw2).ouvertes,
+                "§6 la relance du chapitre REFAIT la question réinitialisée")
+
+        # L'analyse est refaite APRÈS le geste (une transaction plus tard, en réel : ici l'instant est
+        # posé explicitement, `now()` étant figé pour toute la transaction).
+        apres = await conn.fetchval(
+            "INSERT INTO framework_answers (framework, framework_version, question_id, ticker_id, "
+            "analyste, statut, answer_json, cited_entry_ids, rang_degrade, methode_approximation, "
+            "ingredients, motif, created_at) SELECT framework, framework_version, question_id, "
+            "ticker_id, analyste, statut, answer_json, cited_entry_ids, rang_degrade, "
+            "methode_approximation, ingredients, motif, now() + interval '1 minute' "
+            "FROM framework_answers WHERE id = $1 RETURNING id", a2)
+        await conn.execute("UPDATE framework_answers SET superseded_by = $2 WHERE id = $1", a2, apres)
+        etat2 = await charger_etat_dossier(conn, tk)
+        ligne2 = next(lq for lq in _lignes(etat2, f2) if lq.question_id == q2)
+        b.check(ligne2.manque is None or ligne2.manque.nature != "rouverte_comite",
+                f"§6 une réponse écrite APRÈS la réinitialisation la consomme — obtenu "
+                f"{ligne2.manque and (ligne2.manque.nature, ligne2.manque.cause)}")
+
+        await refus(conn, "§6 un chapitre SANS question applicable est refusé", "rien à réinitialiser",
+                    DecisionRefusee, reinitialiser_chapitre(
+                        conn, ticker_id=tk, framework_id=fw2, questions=[], ancre=ANCRE,
+                        demande=DemandeReinitialisation(auteur="gérant (check)", motif="x")))
+        qs = [q.id for q in f2.questions][:2]
+        dch = await reinitialiser_chapitre(
+            conn, ticker_id=tk, framework_id=fw2, questions=qs, ancre=ANCRE,
+            demande=DemandeReinitialisation(auteur="gérant (check)", motif="chapitre (check)"))
+        b.check([d.question_id for d in dch] == qs and all(d.action == "reinitialiser" for d in dch),
+                f"§6 le chapitre inscrit UNE ligne par question — obtenu {[d.question_id for d in dch]}")
     finally:
         await tr.rollback()
         reste = await conn.fetchval("SELECT count(*) FROM comite_decisions WHERE auteur LIKE "
-                                    "'membre du comité%' OR auteur = 'm'")
+                                    "'membre du comité%' OR auteur IN ('m', 'gérant (check)')")
         b.check(reste == 0, f"§fin zéro résidu en base après ROLLBACK — {reste} ligne(s)")
         await conn.close()
 

@@ -1,8 +1,10 @@
 /**
  * LA DÉCISION DU COMITÉ sur une question — niveau 3 du parcours (chantier V3, lot 6 maillon 3,
- * spec §8.2). Deux gestes, tracés au procès-verbal :
+ * spec §8.2). Trois gestes, tracés au procès-verbal :
  *   · ACCEPTER une réponse telle qu'elle est, avec sa faiblesse — signé et motivé (arbitrage n°1) ;
- *   · RENVOYER la question en recherche, avec une consigne — le même canal que le contrôle qualité.
+ *   · RENVOYER la question en recherche, avec une consigne — le même canal que le contrôle qualité ;
+ *   · REMETTRE À ZÉRO la question, même acceptée (#137, point 17-bis) — elle repart à la prochaine
+ *     relance de l'analyse ; la réponse actuelle reste au dossier, mais ne ferme plus la question.
  *
  * ⚠️ CHAQUE CHAMP DU PROCÈS-VERBAL A SON PIXEL : tout champ terminal de `DecisionComite` est rendu
  * dans un élément `data-pv="<chemin>"`, et l'état servi d'une acceptation dans `data-pv="acceptation.*"`.
@@ -33,6 +35,7 @@ function date(iso) {
 const ACTIONS = {
   acquitter: { label: 'Acceptée telle quelle', variant: 'emerald' },
   renvoyer: { label: 'Renvoyée en recherche', variant: 'sky' },
+  reinitialiser: { label: 'Remise à zéro', variant: 'amber' },
 }
 
 // Une ligne du procès-verbal — tous ses champs, toujours rendus (un « — » dit l'absence).
@@ -76,9 +79,10 @@ function Position({ pos }) {
   if (!pos) return <p className="text-sm text-gray-500">Le comité ne s'est pas encore prononcé sur cette question.</p>
   const acc = pos.acceptation
   if (!acc) {
+    const verbe = pos.derniere.action === 'reinitialiser' ? 'Remise à zéro' : 'Renvoyée en recherche'
     return (
       <p className="text-sm text-sky-300">
-        Renvoyée en recherche par {pos.derniere.auteur} le {date(pos.derniere.decide_le)}.
+        {verbe} par {pos.derniere.auteur} le {date(pos.derniere.decide_le)}.
       </p>
     )
   }
@@ -97,7 +101,7 @@ function Position({ pos }) {
 const champ = 'w-full rounded-md bg-gray-950 border border-gray-700 px-2.5 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none'
 
 export default function RegistreComite({ d, onRecalcule }) {
-  const [geste, setGeste] = useState(null)          // 'acquitter' | 'renvoyer' | null
+  const [geste, setGeste] = useState(null)          // 'acquitter' | 'renvoyer' | 'reinitialiser' | null
   const [auteur, setAuteur] = useState('')
   const [answerId, setAnswerId] = useState(d.preuves[0]?.answer_id ?? null)
   const [motif, setMotif] = useState('')
@@ -107,7 +111,8 @@ export default function RegistreComite({ d, onRecalcule }) {
 
   useEffect(() => { setAuteur(lireAuteur()) }, [])
 
-  const pret = auteur.trim() && motif.trim() && (geste === 'acquitter' ? answerId : mandat.trim())
+  const pret = auteur.trim() && motif.trim()
+    && (geste === 'acquitter' ? answerId : geste === 'renvoyer' ? mandat.trim() : true)
 
   async function envoyer(e) {
     e.preventDefault()
@@ -115,7 +120,7 @@ export default function RegistreComite({ d, onRecalcule }) {
     setEnvoi(true); setErreur(null)
     const corps = geste === 'acquitter'
       ? { answer_id: answerId, auteur, motif }
-      : { auteur, motif, mandat, answer_id: answerId }
+      : geste === 'renvoyer' ? { auteur, motif, mandat, answer_id: answerId } : { auteur, motif }
     try {
       const r = await fetch(`${API}/v2/tickers/${d.ticker_id}/frameworks/${d.framework_id}/q/${d.question_id}/${geste}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps),
@@ -154,6 +159,10 @@ export default function RegistreComite({ d, onRecalcule }) {
                     className="rounded-md border border-sky-700 px-3 py-1.5 text-sm text-sky-200 hover:bg-sky-900/40">
               Renvoyer en recherche
             </button>
+            <button type="button" onClick={() => setGeste('reinitialiser')}
+                    className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/40">
+              Remettre à zéro
+            </button>
           </div>
         )}
 
@@ -162,9 +171,11 @@ export default function RegistreComite({ d, onRecalcule }) {
             <p className="text-sm text-gray-200">
               {geste === 'acquitter'
                 ? "Accepter : le comité prend la réponse avec sa faiblesse. L'acceptation tombera d'elle-même si un fait important est publié ou si l'analyse est refaite."
-                : 'Renvoyer : la question repart en recherche avec votre consigne ; elle remplace la recherche en cours.'}
+                : geste === 'renvoyer'
+                  ? 'Renvoyer : la question repart en recherche avec votre consigne ; elle remplace la recherche en cours.'
+                  : "Remettre à zéro : la question sera refaite à la prochaine relance de l'analyse, même si le comité l'avait acceptée. La réponse actuelle reste consultable au dossier ; la recherche en cours s'arrête."}
             </p>
-            {d.preuves.length > 0 && (
+            {d.preuves.length > 0 && geste !== 'reinitialiser' && (
               <label className="block space-y-1">
                 <span className="text-xs text-gray-400">{geste === 'acquitter' ? 'Réponse acceptée' : 'Réponse concernée (facultatif)'}</span>
                 <select className={champ} value={answerId ?? ''} onChange={e => setAnswerId(e.target.value ? Number(e.target.value) : null)}>
@@ -182,9 +193,9 @@ export default function RegistreComite({ d, onRecalcule }) {
               <input className={champ} value={auteur} onChange={e => setAuteur(e.target.value)} placeholder="Nom de la personne qui décide" maxLength={120} />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs text-gray-400">{geste === 'acquitter' ? 'Pourquoi le comité passe outre (obligatoire)' : 'Ce qui ne va pas (obligatoire)'}</span>
+              <span className="text-xs text-gray-400">{geste === 'acquitter' ? 'Pourquoi le comité passe outre (obligatoire)' : geste === 'renvoyer' ? 'Ce qui ne va pas (obligatoire)' : 'Pourquoi remettre à zéro (obligatoire)'}</span>
               <textarea className={champ} rows={3} value={motif} onChange={e => setMotif(e.target.value)}
-                        placeholder={geste === 'acquitter' ? 'Ex. : la marge des pairs manque, mais la thèse repose sur la trésorerie, pas sur la rentabilité.' : 'Ex. : la marge citée date de 2024.'} />
+                        placeholder={geste === 'acquitter' ? 'Ex. : la marge des pairs manque, mais la thèse repose sur la trésorerie, pas sur la rentabilité.' : geste === 'renvoyer' ? 'Ex. : la marge citée date de 2024.' : "Ex. : reconstruction du test — la réponse cite des pièces au standard antérieur."} />
             </label>
             {geste === 'renvoyer' && (
               <label className="block space-y-1">

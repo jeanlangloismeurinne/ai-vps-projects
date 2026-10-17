@@ -5,8 +5,11 @@
   GET /v2/tickers/{ticker_id}/frameworks/{framework_id}/q/{question_id} NIVEAU 3 — la preuve
   POST …/q/{question_id}/acquitter   le comité accepte UNE réponse telle qu'elle est (PV, maillon 3)
   POST …/q/{question_id}/renvoyer    le comité renvoie la question en recherche (PV + mandat)
+  POST …/q/{question_id}/reinitialiser   le gérant remet UNE question à zéro, même acceptée (#137)
+  POST …/frameworks/{framework_id}/reinitialiser   … ou tout un CHAPITRE (une ligne de PV par question
+                                                   applicable) — rend le niveau 2 recalculé
 
-Les deux POST sont les SEULES écritures du parcours ; elles passent par `agents/v2/comite.py`
+Ces POST sont les SEULES écritures du parcours ; elles passent par `agents/v2/comite.py`
 (détenteur unique du procès-verbal) et rendent le niveau 3 RECALCULÉ — le comité voit tout de suite
 l'effet de sa décision, lu au même point de lecture que le reste. Un refus (réponse remplacée
 entre-temps, réponse d'une autre question, EDGAR illisible pour une acceptation) est un 409 qui dit
@@ -24,11 +27,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.agents.v2.comite import DecisionRefusee, acquitter, renvoyer
+from app.agents.v2.comite import (
+    DecisionRefusee, acquitter, reinitialiser, reinitialiser_chapitre, renvoyer)
 from app.agents.v2.parcours import (
     ReferenceInconnue, charger_etat_dossier, dresser_niveau1, dresser_niveau2, dresser_niveau3)
 from app.agents.v2.projection_memo import memo_de_l_etat
-from app.contracts.comite_schema import DemandeAcquittement, DemandeRenvoi
+from app.contracts.comite_schema import DemandeAcquittement, DemandeReinitialisation, DemandeRenvoi
 from app.contracts.parcours_schema import DossierTitre, FrameworkDuDossier, PreuvesQuestion
 from app.db.database import get_db_session
 
@@ -110,3 +114,45 @@ async def comite_acquitter(ticker_id: str, framework_id: str, question_id: str,
 async def comite_renvoyer(ticker_id: str, framework_id: str, question_id: str,
                           demande: DemandeRenvoi) -> PreuvesQuestion:
     return await _decider(ticker_id, framework_id, question_id, renvoyer, demande)
+
+
+@router.post("/v2/tickers/{ticker_id}/frameworks/{framework_id}/q/{question_id}/reinitialiser",
+             response_model=PreuvesQuestion)
+async def comite_reinitialiser(ticker_id: str, framework_id: str, question_id: str,
+                               demande: DemandeReinitialisation) -> PreuvesQuestion:
+    return await _decider(ticker_id, framework_id, question_id, reinitialiser, demande)
+
+
+@router.post("/v2/tickers/{ticker_id}/frameworks/{framework_id}/reinitialiser",
+             response_model=FrameworkDuDossier)
+async def comite_reinitialiser_chapitre(ticker_id: str, framework_id: str,
+                                        demande: DemandeReinitialisation) -> FrameworkDuDossier:
+    """Tout un chapitre remis à zéro : les questions APPLICABLES à l'émetteur, une ligne de PV
+    chacune. Émetteur non classé → 409 (on ne sait pas quelles questions s'appliquent). L'ancre
+    citée au PV est celle du TITRE : une réinitialisation ne tombe jamais, elle trace seulement le
+    dernier fait connu."""
+    from app.agents.v2.framework_persist import read_archetype
+    from app.agents.v2.frameworks import load_frameworks
+    from app.agents.v2.traducteur import questions_applicables
+    from app.knowledge.material_events import ancre_substantielle, material_anchor_for_ticker
+
+    fichier = load_frameworks()
+    if not any(f.id == framework_id for f in fichier.frameworks):
+        raise HTTPException(status_code=404, detail=f"framework `{framework_id}` absent du référentiel")
+    async with get_db_session() as conn:
+        if not await conn.fetchval("SELECT 1 FROM tickers WHERE id = $1", ticker_id):
+            raise HTTPException(status_code=404, detail=f"Titre `{ticker_id}` inconnu.")
+        classement = await read_archetype(conn, ticker_id=ticker_id)
+        if classement is None:
+            raise HTTPException(status_code=409, detail=(
+                f"`{ticker_id}` n'est pas classé : on ne sait pas quelles questions de "
+                f"`{framework_id}` s'appliquent — classer l'émetteur d'abord"))
+        questions = [q.id for q in questions_applicables(fichier, framework_id, classement[0])]
+        ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))
+        try:
+            await reinitialiser_chapitre(conn, ticker_id=ticker_id, framework_id=framework_id,
+                                         questions=questions, demande=demande, ancre=ancre,
+                                         fichier=fichier)
+        except DecisionRefusee as e:
+            raise HTTPException(status_code=409, detail=str(e))
+    return await dossier_niveau2(ticker_id, framework_id)

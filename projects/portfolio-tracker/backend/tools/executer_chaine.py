@@ -32,13 +32,22 @@ Usage :
 
 `--sans-collecte` saute le maillon 1 (aucune dépense traducteur/web) et fait répondre l'analyste
 sur le corpus DÉJÀ en base : c'est le passage le moins cher pour voir si la seconde moitié tient.
-`--questions=qf_4[,qf_6]` restreint LE PLAN (sans collection) ET l'écriture à ces questions ; les
-autres gardent leur réponse en vigueur. (Avant #118 : seule l'analyse était restreinte, la collecte
-replanifiait et recollectait les 8 questions du framework même pour relancer une seule.)
+LA RELANCE EST BORNÉE (#137, point 17). Sans `--questions=`, le passage ne porte QUE sur les questions
+OUVERTES du chapitre (`parcours.questions_a_relancer`, détenteur unique) : sans réponse, non fondée,
+périmée, renvoyée, réinitialisée. Une question close — à jour, acceptée par le comité, dispensée —
+n'est jamais refaite : un fonds ne défait pas une décision du comité en refaisant le travail. Pour
+rouvrir une question close, le gérant la RÉINITIALISE (PV du comité, `POST …/reinitialiser`) ; c'est
+aussi la voie de la reconstruction du test (#127) : un chapitre réinitialisé, puis relancé.
+Le périmètre est imprimé (ouvertes / closes et pourquoi) AVANT toute dépense ; s'il est vide, le
+passage s'arrête sans rien dépenser (code 0).
+`--questions=qf_4[,qf_6]` restreint encore ce périmètre (plan, collecte, écriture) ; une question
+close nommée là est REFUSÉE avant toute dépense, avec sa raison. (Avant #118 : seule l'analyse était
+restreinte, la collecte replanifiait et recollectait les 8 questions du framework.)
 `--refaire-carte` fait refaire la carte d'appariement même à jour du dernier dépôt (geste d'analyste,
 quand la méthode d'appariement s'est enrichie — ex. les douze mois glissants du 2026-10-03).
 
-Codes : 0 = la chaîne est allée au bout · 1 = un maillon a refusé · 2 = pas exécutable (env).
+Codes : 0 = la chaîne est allée au bout (ou rien d'ouvert) · 1 = un maillon a refusé · 2 = pas
+exécutable (env, émetteur non classé, archétype contraire au classement).
 """
 from __future__ import annotations
 
@@ -56,6 +65,7 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager import reviser_framework
 from app.agents.v2.manager_persist import persist_review
 from app.agents.v2.note_flash import lire_les_depots_en_attente
+from app.agents.v2.parcours import EmetteurNonClasse, charger_etat_dossier, questions_a_relancer
 from app.agents.v2.preparation import preparer_dossier_analyste
 from app.knowledge.lecture_depot import resume_des_lectures
 from app.db.database import close_pool, get_db_session, init_pool
@@ -74,7 +84,7 @@ PLAFOND = int(os.environ.get("CHAINE_CORPUS_MAX", "40"))
 ANALYSTE = os.environ.get("CHAINE_ANALYSTE", "passage_manuel_v3")
 
 
-def _titre(n: int, texte: str) -> None:
+def _titre(n: object, texte: str) -> None:
     print(f"\n{'─'*78}\nMAILLON {n} — {texte}\n{'─'*78}")
 
 
@@ -96,7 +106,7 @@ async def main() -> int:
     # (elles en ont une). Comme un directeur de la recherche qui fait reprendre une note, pas le dossier :
     # une ré-analyse de tout le framework peut remplacer une réponse instruite par une moins bonne
     # (dette consignée le 2026-09-29).
-    perimetre = next((frozenset(a.split("=", 1)[1].split(",")) for a in sys.argv
+    demandees = next((frozenset(a.split("=", 1)[1].split(",")) for a in sys.argv
                       if a.startswith("--questions=")), None)
 
     # ⚠️ Les deux pré-requis se refusent AVANT toute dépense et avant la première écriture (#40) :
@@ -126,6 +136,47 @@ async def main() -> int:
             lecture = await lire_les_depots_en_attente(conn, ticker_id, ecrire=True, fichier=fichier)
         print(lecture.texte())
         ecrits["notes_flash"] = [d.note_id for d in lecture.ecrits]
+
+        # ── LE PÉRIMÈTRE — la relance ne refait que l'OUVERT (#137, point 17) ──────────────────
+        # Calculé APRÈS la lecture des dépôts (maillon 0) — un dépôt non lu rouvrirait TOUTES les
+        # questions, et la relance referait du clos — mais AVANT la collecte et l'analyste (#40), par
+        # le même détenteur que l'alerte du dossier : ce que le comité voit « manquer » est exactement
+        # ce qui est refait.
+        _titre("·", "périmètre de la relance — l'ouvert seulement, le clos n'est jamais refait")
+        async with get_db_session() as conn:
+            etat = await charger_etat_dossier(conn, ticker_id)
+        if etat.archetype is not None and etat.archetype != archetype:
+            print(f"  ⚠️ archétype « {archetype} » demandé, mais {ticker_id} est classé « "
+                  f"{etat.archetype} » : le périmètre serait faux. On s'arrête.", file=sys.stderr)
+            return 2
+        try:
+            relance = questions_a_relancer(etat, framework_id)
+        except EmetteurNonClasse as e:
+            print(f"  ⚠️ {e}", file=sys.stderr)
+            return 2
+        for qid in relance.ouvertes:
+            print(f"  ↻ {qid} ouverte")
+        for qid, pourquoi in relance.closes.items():
+            print(f"  ■ {qid} close — {pourquoi}")
+        if demandees is not None:
+            connues = set(relance.ouvertes) | set(relance.closes)
+            inconnues = sorted(demandees - connues)
+            fermees = sorted(demandees & set(relance.closes))
+            if inconnues:
+                print(f"  ⚠️ --questions : {inconnues} inconnues de `{framework_id}`. On s'arrête.")
+                return 1
+            if fermees:
+                print(f"  ⚠️ --questions : {fermees} sont CLOSES — une relance ne les refait pas. "
+                      "Pour les rouvrir, le gérant les réinitialise (PV du comité). On s'arrête.")
+                return 1
+            perimetre = demandees
+        else:
+            perimetre = frozenset(relance.ouvertes)
+        if not perimetre:
+            print("  rien d'ouvert dans ce chapitre : ni collecte ni analyste. Seuls écrits : les notes "
+                  f"flash du maillon 0 {ecrits['notes_flash']}.")
+            return 0
+        print(f"  → périmètre : {sorted(perimetre)}")
 
         # ── MAILLON 1 — le plan, la collecte, les liens ─────────────────────────
         if sans_collecte:
@@ -187,11 +238,6 @@ async def main() -> int:
             analyste=ANALYSTE, entries=entries, fichier=fichier, faits=faits,
             chemises=dossier.chemises)
         if perimetre is not None:
-            inconnues = sorted(perimetre - {q.id for f in fichier.frameworks if f.id == framework_id
-                                            for q in f.questions})
-            if inconnues:
-                print(f"  ⚠️ --questions : {inconnues} inconnues de `{framework_id}`. On s'arrête AVANT d'écrire.")
-                return 1
             hors = sorted({a.question_id for a in resultat.answers} - perimetre)
             resultat.answers = [a for a in resultat.answers if a.question_id in perimetre]
             resultat.refus = [(q, m) for q, m in resultat.refus if q in perimetre]

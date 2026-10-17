@@ -48,15 +48,26 @@ export const CAUSES = {
     geste: 'Le contrôle de qualité a refusé la réponse ; la question repart en recherche.',
     variant: 'red',
   },
+  renvoi_comite: {
+    titre: 'Renvoyée par le comité',
+    geste: "Le comité a renvoyé la question en recherche ; aucune nouvelle réponse n'a encore été écrite.",
+    variant: 'sky',
+  },
+  reinitialisation: {
+    titre: 'Remise à zéro',
+    geste: "La question a été remise à zéro ; elle sera refaite à la prochaine relance de l'analyse.",
+    variant: 'sky',
+  },
 }
 
-const AVEC_FAIT = new Set(['fait_nouveau_publie', 'actualite_indeterminable', 'controle_ko'])
+const AVEC_FAIT = new Set(['fait_nouveau_publie', 'actualite_indeterminable', 'controle_ko', 'renvoi_comite', 'reinitialisation'])
 
 export const NATURES_MANQUE = {
   sans_reponse: 'Sans réponse',
   non_fondee: 'Non fondée',
   perimee: 'Périmée',
   renvoyee: 'Renvoyée',
+  rouverte_comite: 'Rouverte par le comité',
 }
 
 export const STATUTS = {
@@ -84,7 +95,9 @@ export const ETATS_ACCEPTATION = {
 // Le badge du comité sur une ligne de question (niveau 2) : sa dernière décision, servie.
 export function ComiteBadge({ pos }) {
   if (!pos) return null
-  if (!pos.acceptation) return <Badge variant="sky">renvoyée par le comité</Badge>
+  if (!pos.acceptation) {
+    return <Badge variant="sky">{pos.derniere.action === 'reinitialiser' ? 'remise à zéro' : 'renvoyée par le comité'}</Badge>
+  }
   const e = ETATS_ACCEPTATION[pos.acceptation.etat] || { label: pos.acceptation.etat, variant: 'gray' }
   return <Badge variant={e.variant}>{e.label}</Badge>
 }

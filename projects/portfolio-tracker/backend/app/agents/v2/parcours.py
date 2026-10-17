@@ -30,7 +30,8 @@ from typing import Any, Optional
 
 from app.agents.v2.frameworks import _plus_faible, load_frameworks
 from app.contracts.cause_manque_schema import CauseManqueCollecte
-from app.contracts.comite_schema import AcceptationServie, DecisionComite, PositionComite
+from app.contracts.comite_schema import (
+    ACTIONS_OUVRANTES, AcceptationServie, DecisionComite, PositionComite)
 from app.contracts.framework_answer_schema import FrameworkAnswer, FrameworkAnswerServie
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.knowledge.standard_collecte import COLONNES_SQL, piece_au_standard
@@ -57,6 +58,9 @@ __all__ = [
     "charger_etat_dossier",
     "manque_de_la_question",
     "reponse_tient",
+    "PerimetreRelance",
+    "EmetteurNonClasse",
+    "questions_a_relancer",
     "dresser_niveau1",
     "dresser_niveau2",
     "dresser_niveau3",
@@ -89,6 +93,9 @@ class ReponseLue:
     controles: Any = None                    # ControlesManager | None
     motif_revue: Optional[str] = None
     etat_revue: str = "non_revalidable"      # revue | renvoi_a_emettre | non_revalidable
+    # L'instant d'écriture (`framework_answers.created_at`) : une réponse écrite AVANT un renvoi ou une
+    # réinitialisation du comité ne ferme plus la question (#137). Inconnu (None) = antérieure.
+    cree_le: Optional[datetime] = None
 
 
 @dataclass
@@ -133,6 +140,10 @@ _EXPLICATION: dict[CauseManque, str] = {
     "fait_nouveau_publie": "un fait important publié depuis rend les pièces caduques",
     "actualite_indeterminable": "les pièces ne sont pas datables : leur fraîcheur n'est pas prouvée",
     "controle_ko": "le contrôle du manager a refusé la réponse",
+    "renvoi_comite": "le comité a renvoyé la question en recherche ; aucune réponse n'a encore été "
+                     "écrite depuis",
+    "reinitialisation": "la question a été remise à zéro ; aucune réponse n'a encore été écrite "
+                        "depuis",
 }
 
 
@@ -172,6 +183,7 @@ def manque_de_la_question(
     collecte: Optional[Collecte],
     mandat_ouvert_id: Optional[int],
     acceptation: Optional[AcceptationServie] = None,
+    decision_ouvrante: Optional[DecisionComite] = None,
 ) -> Optional[Manque]:
     """DÉTENTEUR UNIQUE (#46) de « cette question manque-t-elle au dossier, et pourquoi ? ». Pure.
 
@@ -180,6 +192,9 @@ def manque_de_la_question(
       1bis. une ACCEPTATION DU COMITÉ en vigueur → pas un manque : le comité a lu la réponse et passé
          outre sa faiblesse, par écrit (arbitrage n°1). Tombée, elle ne protège plus rien, et le
          manque la PORTE pour dire pourquoi la question repasse devant le comité (arbitrage n°2) ;
+      1ter. la dernière décision du comité ROUVRE la question (renvoi, réinitialisation — #137) :
+         seules les réponses écrites APRÈS elle comptent ; s'il n'y en a aucune, la question est
+         ouverte (`rouverte_comite`), même si une réponse antérieure « tenait » ;
       2. une réponse acquittée qui tient AUJOURD'HUI (fondée et courante, ou hors-sujet motivé) →
          pas un manque — deux analystes sont deux points : il suffit qu'un point tienne ;
       3. sinon, le manque le plus actionnable : une réponse RENVOYÉE (le contrôle nomme sa cause),
@@ -191,12 +206,24 @@ def manque_de_la_question(
     if acceptation is not None and acceptation.etat == "en_vigueur":
         return None
 
-    if any(reponse_tient(r) for r in reponses):
-        return None
-
     commun = dict(framework_id=framework_id, libelle_framework=libelle_framework,
                   question_id=question_id, enonce=enonce, mandat_ouvert_id=mandat_ouvert_id,
                   acceptation_tombee=acceptation)
+
+    if decision_ouvrante is not None:
+        if decision_ouvrante.action not in ACTIONS_OUVRANTES:
+            raise ValueError(f"décision `{decision_ouvrante.action}` passée comme ouvrante")
+        reponses = [r for r in reponses
+                    if r.cree_le is not None and r.cree_le > decision_ouvrante.decide_le]
+        if not reponses:
+            cause = "renvoi_comite" if decision_ouvrante.action == "renvoyer" else "reinitialisation"
+            return Manque(nature="rouverte_comite", cause=cause,
+                          explication=f"{_EXPLICATION[cause]} ({decision_ouvrante.auteur}, "
+                                      f"{decision_ouvrante.decide_le:%Y-%m-%d} : "
+                                      f"{decision_ouvrante.motif})", **commun)
+
+    if any(reponse_tient(r) for r in reponses):
+        return None
 
     renvoyees = [r for r in reponses if r.verdict == "renvoye"]
     if renvoyees:
@@ -250,7 +277,9 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 enonce=q.enonce, applicable=applicable, dispensee=q.id in dispenses,
                 reponses=reps, collecte=etat.collecte.get((f.id, q.id)),
                 mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)),
-                acceptation=position.acceptation if position else None)
+                acceptation=position.acceptation if position else None,
+                decision_ouvrante=(position.derniere if position is not None
+                                   and position.derniere.action in ACTIONS_OUVRANTES else None))
         lignes.append(LigneQuestion(
             question_id=q.id, enonce=q.enonce, applicable=applicable,
             dispensee=q.id in dispenses, manque=manque, comite=position,
@@ -263,6 +292,52 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 n_chiffres_sans_piece=len(r.servie.chiffres_sans_piece)) for r in reps],
         ))
     return lignes
+
+
+class EmetteurNonClasse(LookupError):
+    """Sans classement de l'émetteur, on ne sait pas quelles questions s'appliquent, donc pas ce qui
+    est ouvert : la relance bornée refuse plutôt que de tout refaire (ou de ne rien faire)."""
+
+
+@dataclass(frozen=True)
+class PerimetreRelance:
+    """Ce qu'une relance d'un chapitre refait, et pourquoi elle laisse le reste (#137, point 17)."""
+    framework_id: str
+    ouvertes: tuple[str, ...]                 # dans l'ordre du référentiel
+    closes: dict[str, str]                    # question → pourquoi on n'y touche pas
+
+
+def questions_a_relancer(etat: EtatDossier, framework_id: str) -> PerimetreRelance:
+    """DÉTENTEUR UNIQUE (#46) de « que refait une relance de ce chapitre ? » (#137, point 17). Pure.
+
+    Une relance ne porte QUE sur les questions OUVERTES — celles dont `manque_de_la_question` dit
+    qu'elles manquent : sans réponse, non fondée, périmée, renvoyée (manager ou comité), réinitialisée.
+    Une question CLOSE (à jour, acceptée par le comité, dispensée) n'est jamais refaite : un fonds ne
+    défait pas une décision du comité en refaisant le travail ; seul le gérant la rouvre, par une
+    réinitialisation tracée au PV. Une question hors sujet pour l'émetteur n'est ni l'une ni l'autre.
+    """
+    f = _framework(etat, framework_id)
+    if etat.applicables.get(f.id) is None:
+        raise EmetteurNonClasse(
+            f"`{etat.ticker_id}` n'est pas classé : on ne sait pas quelles questions de "
+            f"`{framework_id}` s'appliquent, donc pas lesquelles sont ouvertes — classer l'émetteur "
+            "d'abord (`tools/classer_emetteur.sh`)")
+    ouvertes, closes = [], {}
+    for lq in _lignes(etat, f):
+        if lq.manque is not None:
+            ouvertes.append(lq.question_id)
+        elif not lq.applicable:
+            closes[lq.question_id] = "hors sujet pour cet émetteur"
+        elif lq.dispensee:
+            closes[lq.question_id] = "dispensée"
+        elif _acceptee(lq):
+            d = lq.comite.derniere
+            closes[lq.question_id] = (f"acceptée par le comité ({d.auteur}, "
+                                      f"{d.decide_le:%Y-%m-%d}, réponse #{d.answer_id})")
+        else:
+            tient = [r.answer_id for r in lq.reponses if r.verdict == "acquitte"]
+            closes[lq.question_id] = f"à jour (réponse #{tient[0] if tient else '?'} acquittée et courante)"
+    return PerimetreRelance(framework_id=f.id, ouvertes=tuple(ouvertes), closes=closes)
 
 
 def _synthese(etat: EtatDossier, f, lignes: list[LigneQuestion]) -> SyntheseFramework:
@@ -606,6 +681,9 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     durees = await contexte_durees(conn, fichier=fichier, version=version, ancre_titre=ancre,
                                    cites=cites)
 
+    cree_le = {r["id"]: r["created_at"] for r in await conn.fetch(
+        "SELECT id, created_at FROM framework_answers WHERE id = ANY($1::int[])",
+        [i for i, _a in brutes])}
     reponses: list[ReponseLue] = []
     for i, a in brutes:
         d = decisions.get(i)
@@ -624,7 +702,8 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
         reponses.append(ReponseLue(
             answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries,
                                               durees=durees),
-            verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue))
+            verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue,
+            cree_le=cree_le.get(i)))
 
     # Le COMITÉ : son PV, et sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage
     # n°2) et les réponses COURANTES (une réponse refaite n'est pas celle que le comité a lue).

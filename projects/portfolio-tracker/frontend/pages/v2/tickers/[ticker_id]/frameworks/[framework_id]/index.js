@@ -2,6 +2,9 @@
  * NIVEAU 2 du parcours du comité — une méthodologie : ses questions, le statut de chacune, l'avis du
  * contrôle et ses quatre vérifications. `GET /v2/tickers/:id/frameworks/:fid`, recalculé à la lecture.
  * Un niveau peut RÉSUMER, jamais ARRONDIR : une approximation reste « approximé ~ ».
+ *
+ * Le gérant peut REMETTRE TOUT LE CHAPITRE À ZÉRO (#137, point 17-bis) : une ligne de PV par question
+ * applicable, signée et motivée ; le POST rend le niveau 2 recalculé.
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
@@ -59,6 +62,66 @@ function LigneQuestion({ lq, tickerId, frameworkId }) {
   )
 }
 
+const champ = 'w-full rounded-md bg-gray-950 border border-gray-700 px-2.5 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-amber-500 focus:outline-none'
+
+function ReinitialiserChapitre({ d, onRecalcule }) {
+  const [ouvert, setOuvert] = useState(false)
+  const [auteur, setAuteur] = useState('')
+  const [motif, setMotif] = useState('')
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState(null)
+  const pret = auteur.trim() && motif.trim()
+
+  async function envoyer(e) {
+    e.preventDefault()
+    if (!pret) return
+    setEnvoi(true); setErreur(null)
+    try {
+      const r = await fetch(`${API}/v2/tickers/${d.ticker_id}/frameworks/${d.synthese.framework_id}/reinitialiser`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auteur, motif }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : `HTTP ${r.status}`)
+      setOuvert(false); setMotif('')
+      onRecalcule(j)
+    } catch (e2) {
+      setErreur(String(e2.message || e2))
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  if (!ouvert) {
+    return (
+      <button type="button" onClick={() => setOuvert(true)}
+              className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/40">
+        Remettre le chapitre à zéro
+      </button>
+    )
+  }
+  return (
+    <form onSubmit={envoyer} className="space-y-3 rounded-lg border border-gray-800 p-3 max-w-2xl">
+      <p className="text-sm text-gray-200">
+        Toutes les questions applicables de ce chapitre seront refaites à la prochaine relance de l'analyse,
+        même celles que le comité avait acceptées. Les réponses actuelles restent consultables ; chaque
+        question reçoit une ligne au procès-verbal.
+      </p>
+      <input className={champ} value={auteur} onChange={e => setAuteur(e.target.value)} placeholder="Nom de la personne qui décide" maxLength={120} />
+      <textarea className={champ} rows={2} value={motif} onChange={e => setMotif(e.target.value)}
+                placeholder="Pourquoi remettre à zéro (obligatoire) — ex. : reconstruction du test." />
+      {erreur && <p className="text-sm text-red-300">{erreur}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={!pret || envoi}
+                className="rounded-md bg-amber-700 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+          {envoi ? 'Inscription…' : 'Inscrire au procès-verbal'}
+        </button>
+        <button type="button" onClick={() => { setOuvert(false); setErreur(null) }}
+                className="rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200">Annuler</button>
+      </div>
+    </form>
+  )
+}
+
 export default function FrameworkNiveau2() {
   const router = useRouter()
   const { ticker_id, framework_id } = router.query
@@ -88,6 +151,7 @@ export default function FrameworkNiveau2() {
         </Link>
         <h1 className="text-xl font-bold text-white mt-1">{s.libelle}</h1>
         <p className="text-xs text-gray-500 mt-1 max-w-3xl">{s.methodologie}</p>
+        <div className="mt-3"><ReinitialiserChapitre d={d} onRecalcule={setD} /></div>
       </div>
 
       <Card>
