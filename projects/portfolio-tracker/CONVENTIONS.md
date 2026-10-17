@@ -3274,3 +3274,45 @@ certaines clôtures sont vides** — cadre plein, valeurs absentes. Cf. **#81**.
 
 ---
 
+
+### #137 — séance d'arbitrages du 2026-10-17 : marchés visés, taux exigé unique, relance bornée, réinitialisation
+
+**Arbitrages rendus en une séance** (dossier : `roadmap/V3/08-seance-arbitrages.md`, cas relevés en base le
+jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au moment où elles sont écrites.
+- **Les marchés visés (point 9)** — la question « marché adressable » devient la LISTE des marchés visés :
+  statut (métier actuel / extension annoncée / en développement), taille, part prise mesurée sur des ventes
+  CONSTATÉES seulement. **L'estimation interne prime** (construite dans le bac à calcul #96, hypothèses
+  sourcées) ; une taille publiée n'est qu'un point de comparaison — « on ne sait jamais de façon fiable ce
+  qu'elle recouvre ». Un seul tableau signé sert l'analyse ET la valorisation (jamais deux chiffres, #95).
+  Comme un fonds : la liste des marchés de la note et la décomposition du chiffre d'affaires du modèle sont
+  le même objet ; une extension est une option (scénario haut), pas le plafond. Cas : NVDA me_5 #1370.
+- **Le taux exigé (point 10)** — **UN taux pour tout le fonds : 10 %**, décision du comité, datée, revue une
+  fois l'an ; la note affiche la sensibilité à ±1 point. Le risque propre d'un titre va dans ses scénarios
+  et probabilités, jamais dans une prime de taux (biotech : programmes pondérés par leur probabilité de
+  succès — monter aussi le taux compterait le risque deux fois). Logique de fonds : coût d'opportunité
+  (taux sans risque ~4 % + prime actions 4-6 points) ; la cohérence entre titres prime sur la précision.
+  Les estimations de tiers ne sont qu'un point de comparaison.
+- **Le défaut relevé par le comité (point 11)** — il annote ; la réponse reste affichée avec la remarque ;
+  l'annotation est remise à l'analyste au premier passage du test (la reconstruction, #127). Piste à
+  MESURER avant de construire : une réponse ne peut être « répondue » si le chiffre sur lequel porte la
+  question n'est pas établi (NVDA qf_6 #1289 conclut « part faible » sans aucun chiffre).
+- **Les acquisitions (point 12)** — ma_2 se juge sur des indices observables : prix payé rapporté aux
+  ventes acquises, évolution du segment d'accueil, dépréciations d'écart d'acquisition, cessions ou
+  abandons ; jamais sur « ce qu'elle a rapporté », que personne ne publie.
+- **La fraîcheur (point 15)** — sujet par sujet, seule la pièce la plus RÉCENTE juge si une réponse est à
+  jour ; une pièce remplacée par une plus récente sur le même sujet reste citée comme contexte et ne périme
+  rien. Cas : NVDA ma_1 #1475 (rachats 18/05 + 28/09, émission du 15/06).
+- **La relance (point 17)** — l'ajout d'un titre lance l'analyse complète ; ensuite, toute relance ne porte
+  QUE sur les questions ouvertes, renvoyées par le comité ou rouvertes par un fait nouveau. Une question
+  close (à jour, acceptée, ou recherche arrêtée par le comité) n'est jamais refaite ; si un fait nouveau
+  touche une réponse acceptée, l'analyste propose, le comité tranche. **Réinitialisation par l'utilisateur**
+  (demandée en séance) : il peut remettre à zéro UNE question ou UN chapitre de son choix, même accepté par
+  le comité — acte humain, tracé au procès-verbal comme une décision. Exception nommée : la reconstruction
+  du test (#127). Relevé du code au 2026-10-17 : le passage de chapitre refait toutes les questions et le
+  registre fait tomber une acceptation dès que l'analyse est refaite — écart à combler.
+- **Le périmètre du test (point 20)** — jalon 1 = NVDA + RVMD jusqu'au comité ; puis une financière
+  américaine, puis un émetteur étranger ; MSFT en contrôle de reproduction (tech voisine de NVDA). **Tout
+  développement reste GÉNÉRIQUE** (aucune règle propre à un titre) pour que l'extension ne coûte rien.
+- **RVMD (point 21)** — reclassement « commerciale » proposé au comité au premier trimestre de ventes
+  publié (T3 2026, début novembre) ; d'ici là, seul le pouvoir de prix est rouvert (« aucun prix pratiqué »
+  est faux depuis l'approbation du 26/08).

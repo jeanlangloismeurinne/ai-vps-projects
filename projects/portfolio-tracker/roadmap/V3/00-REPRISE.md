@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -17,16 +17,23 @@ role: >
 
 ## ➜ Prochain pas
 
-Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplace la checklist A4-A11 de
-`05-frameworks-complets.md`) : (1) la matière — 1.1 ✅ (#133), 1.2 ✅ (#134, ce n'était pas la langue),
-1.4 ✅ (#135), 1.6 ✅ (#136) — **la matière est close** ;
-(2) **arbitrages groupés en une séance (9, 10, 11, 12, 15, 17, 20, 21) — PROCHAIN** : préparer la séance
-(une question métier par point, cas réel, « ce que ferait un fonds ») ; (3) tenue du dossier ; (4) valorisation ;
-(5) test. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
+Ordre de `07-avant-comite.md` : (1) la matière — **close** (#133-#136) ; (2) arbitrages groupés —
+**rendus le 2026-10-17** (`08-seance-arbitrages.md`, CONVENTIONS **#137**) ; (3) **tenue du dossier — PROCHAIN**,
+augmentée de ce que la séance a décidé. Ordre proposé (à valider avec l'utilisateur au démarrage) :
+(a) **relance bornée + réinitialisation** (#137 point 17 : une relance ne refait que l'ouvert/renvoyé/rouvert ;
+l'utilisateur réinitialise une question ou un chapitre, même accepté, tracé au PV) — prérequis de tout rejeu ;
+(b) fraîcheur par la pièce la plus récente, sujet par sujet (15) ; (c) mandats jamais clos (14) et dette de la
+ré-analyse qui dégrade (13) ; (d) données : ma_2 reformulée (12), taux exigé 10 % (10), me_5 → liste des
+marchés visés (9) ; (e) mesurer « répondu sans le chiffre-objet » (11, cas qf_6) ; puis (4) valorisation,
+(5) test. **Jalon 1 = NVDA + RVMD** ; code générique (aucune règle par titre). Modèle : Opus pour la
+conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
+**Daté** : RVMD — proposer le reclassement « commerciale » au 10-Q du T3 (début novembre 2026) ; rouvrir
+mo_6 (pouvoir de prix) d'ici là.
 
 ## Où on en est (mesuré le 2026-10-16 — RE-REQUÊTER avant de s'en servir)
 
-- **Jalon** : note d'initiation (6 chapitres + fourchette) sur 3-4 titres très différents, fonctionnement
+- **Jalon** (réduit le 2026-10-17 : **NVDA + RVMD** d'abord, puis financière US, puis étranger, MSFT en
+  contrôle de reproduction) : note d'initiation (6 chapitres + fourchette), fonctionnement
   ET reproductibilité ; roadmap active `05-frameworks-complets.md` (A1-A3 cochés, A4 en cours).
 - **Chapitres instruits** (`bash backend/tools/montrer_parcours.sh <TICKER>`, gratuit) :
   NVDA qualité financière 1,00 · défendabilité 0,17 · modèle économique 0,83 · secteur 0,50 ·
@@ -43,7 +50,12 @@ Ordre de l'inventaire `07-avant-comite.md` **validé le 2026-10-16** (il remplac
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
 
-## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#132, `06-regle-fraicheur.md` §8-§14)
+## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#137, `06-regle-fraicheur.md` §8-§14)
+
+- **2026-10-17** — séance groupée (#137) : marchés visés listés, **estimation interne d'abord** (bac à
+  calcul) ; **taux exigé unique 10 %**, sensibilité ±1 pt, risque propre dans les scénarios ; défaut du comité
+  annoté, repris à la reconstruction ; ma_2 sur indices observables ; fraîcheur = pièce la plus récente par
+  sujet ; relance bornée + réinitialisation par l'utilisateur ; RVMD reclassée au 1er trimestre de ventes.
 
 - **2026-10-16** — **tout chiffre renvoie à une pièce** (#136) : un chiffre sans pièce citée est renvoyé UNE fois à
   l'analyste, jamais rattaché par le code ; le calcul se MONTRE ; le reste est signalé au comité.

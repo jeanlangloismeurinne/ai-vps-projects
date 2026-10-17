@@ -110,7 +110,8 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     (ii) me_6 cite une charge Chine de 4,5 Md$ tirée de #1019, pièce non citée (juste, mais la citation manque).
   - **Deux dettes ouvertes par le cas NVDA** (consignées à la demande de l'utilisateur le 2026-10-14, à instruire
     ultérieurement ; chacune s'arbitre en termes métier avant tout correctif) :
-    - [ ] **D-me5 — le marché adressable et la part prise.** me_5 #1370 (`approxime`, #1004/#1010) donne la taille
+    - [ ] **D-me5 — le marché adressable et la part prise.** ⚖️ **Arbitré le 2026-10-17 (#137)** : liste des
+      marchés visés, estimation interne d'abord (bac à calcul), part sur ventes constatées — reste à construire. me_5 #1370 (`approxime`, #1004/#1010) donne la taille
       du marché des seuls processeurs centraux (200 Md$, Vera CPU), une EXTENSION annoncée, et non celle des
       accélérateurs, qui sont le modèle ACTUEL ; sa « part prise » de 10 % rapporte en outre des revenus FUTURS
       annoncés (~20 Md$ de visibilité) à ce marché, au lieu de revenus constatés. Reprise telle quelle par la
@@ -171,7 +172,7 @@ Ordre (la PREMIÈRE case non cochée est le prochain pas) :
     réponses #1451-#1456 (ma_4 `non_fondable`), mais ma_1-ma_3 nées périmées ; NVDA plan refusé par #123
     (historique pluriannuel au rapport annuel). **Bloqué par la refonte de la règle de fraîcheur**
     (`06-regle-fraicheur.md`, arbitrages en attente).
-- [ ] A5. **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
+- [x] A5. ✅ **Tranché le 2026-10-17 (#137) : taux exigé UNIQUE du fonds, 10 %, sensibilité ±1 pt.** **Arbitrage à poser : qui fixe le coût du capital ?** (NVDA : seules des estimations de tiers
   sous le plancher A ; un fonds le fixe en interne, commun au portefeuille) — prérequis de A6
 - [ ] A6. (prérequis : dette D-me5 sous A1) Fin de l'atelier de valorisation (capacité 4 bis) : l'agent qui écrit le modèle de l'entreprise,
   l'ordre d'instruction, va_4-6 au cours du jour, Greenwald, dépendance va_1/va_2 → va_6 ; acceptation

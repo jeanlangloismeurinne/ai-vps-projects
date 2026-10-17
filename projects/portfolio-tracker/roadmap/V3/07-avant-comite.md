@@ -13,6 +13,9 @@ role: >
 
 # Avant le comité — inventaire
 
+> **Arbitrages groupés rendus le 2026-10-17** (`08-seance-arbitrages.md`, CONVENTIONS #137) : 9, 10, 11, 12,
+> 15, 17, 20, 21 tranchés ; restent à CONSTRUIRE. Jalon 1 réduit à **NVDA + RVMD**.
+
 > **Ordre validé le 2026-10-16** : (1) la matière — 1.1, 1.2, 1.4, 1.6 ; (2) les arbitrages groupés en une
 > séance — 9, 10, 11, 12, 15, 17, 20, 21 ; (3) la tenue du dossier — 14, 16, 17, 13 ; (4) la valorisation —
 > 18 ; (5) le test — 22, 19, 23.
