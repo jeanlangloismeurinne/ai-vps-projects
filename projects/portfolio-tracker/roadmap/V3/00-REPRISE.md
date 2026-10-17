@@ -27,10 +27,16 @@ dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
 la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 **Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
 la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
-**Daté** : RVMD — reclassement « commerciale » au 10-Q du T3 (début novembre 2026). ⚠️ **Rouvrir mo_6 (pouvoir
-de prix) d'ici là est BLOQUÉ** : pour l'archétype « sans revenus », mo_6 est hors sujet par construction du
-référentiel ; ni la relance ni la remise à zéro ne la rendent applicable. Question posée à l'utilisateur le
-2026-10-17 (voir sa réponse, sinon la reposer).
+**Daté — RVMD, point 21 ROUVERT par l'utilisateur le 2026-10-17.** mo_6 (pouvoir de prix) est hors sujet par
+construction pour « sans revenus » : ni relance ni remise à zéro ne la rouvrent. L'utilisateur ne veut PAS
+reposer sur le gérant pour ouvrir des questions hors grille (risque d'oubli) ; il penche pour ouvrir TOUTE la
+grille commerciale plus tôt (dès le fait qui change le modèle économique — l'approbation), À CONDITION que
+l'agent sache dire « pas de réponse fondée à date » plutôt que fabriquer. **Préalable, à faire AVANT le point
+(b)** : `ACCEPTATION_CAS=RVMD:<framework>:rentable bash tools/acceptation_analyste.sh` (n'écrit rien, quelques
+cents) sur les chapitres où la grille diffère, et LIRE chaque réponse : un ratio sur quelques semaines de ventes
+doit sortir « non fondable » / « non significatif », jamais « répondu ». Tient → règle générique « une
+approbation/un lancement reclasse l'émetteur », proposée au comité ; ne tient pas → c'est le défaut du point 11
+(qf_6) à corriger d'abord. Le 10-Q du T3 (début novembre) reste l'échéance.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 

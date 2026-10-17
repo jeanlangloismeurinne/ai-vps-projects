@@ -197,6 +197,11 @@ trimestre publié pour les chiffres, tout en rouvrant tout de suite ce qui est o
   MSFT en contrôle de reproduction. Consigne : tout développement reste GÉNÉRIQUE (aucune règle par titre).
 - **21 — au premier trimestre de ventes publié** (T3, début novembre), proposé au comité ; d'ici là,
   rouvrir le seul pouvoir de prix.
+  **21 ROUVERT le 2026-10-17** (après la relance bornée) : « rouvrir le seul pouvoir de prix » est impossible
+  sans un geste du gérant hors grille (mo_6 hors sujet pour « sans revenus »). L'utilisateur : « reposer le
+  moins possible sur la relecture du gérant et le plus possible sur la fiabilité du système » — préfère ouvrir
+  toute la grille plus tôt SI l'agent sait dire « pas de réponse à date ». À MESURER avant de trancher
+  (acceptation de l'analyste sur RVMD en grille « rentable », sans écriture).
 
 
 **Séance close le 2026-10-17** — règle durable : `CONVENTIONS.md` #137.
