@@ -81,8 +81,11 @@ role: >
 16. **Calendrier et revue trimestrielle** [C] — non construits (publications, jalons annoncés,
     rendez-vous du secteur ; revue légère des jugements d'une position détenue) ; la position du comité
     tombe encore sur des résultats sans surprise.
-17. **Re-run vs acceptation du comité** [A] — une chaîne relancée refait l'analyse et fait tomber une
-    acceptation du comité, voire rouvre une recherche qu'il avait arrêtée.
+17. ~~**Re-run vs acceptation du comité**~~ ✅ **Fait le 2026-10-17 (#137 point 17, `c2bc1af`, migration 058)** —
+    une relance de chapitre ne refait que l'ouvert (calculé après la lecture des dépôts) ; une question
+    close nommée est refusée avant dépense ; le gérant remet à zéro une question ou un chapitre (PV, signé,
+    motivé) ; un renvoi ou une remise à zéro rouvre la question jusqu'à la première réponse écrite après.
+    Périmètre réel au 17/10 : NVDA 22 questions ouvertes, RVMD 27 (valorisation comprise).
 
 ## 4. La valorisation (aucune réponse aujourd'hui)
 

@@ -3310,6 +3310,19 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
   le comité — acte humain, tracé au procès-verbal comme une décision. Exception nommée : la reconstruction
   du test (#127). Relevé du code au 2026-10-17 : le passage de chapitre refait toutes les questions et le
   registre fait tomber une acceptation dès que l'analyse est refaite — écart à combler.
+  **CONSTRUIT le 2026-10-17 (`c2bc1af`, migration 058)** : `parcours.questions_a_relancer` (détenteur unique,
+  dérivé de `manque_de_la_question` — ce que le comité voit manquer est exactement ce qui est refait) ;
+  `executer_chaine` le calcule APRÈS le maillon 0 (un dépôt non lu rouvrirait tout) et AVANT la collecte, et
+  refuse une question close nommée dans `--questions=` ; geste `reinitialiser` (`comite.reinitialiser` /
+  `reinitialiser_chapitre`, POST `…/q/{q}/reinitialiser` et `…/frameworks/{f}/reinitialiser`), sans mandat,
+  qui arrête la recherche en cours et relève la réponse mise de côté ; `ACTIONS_OUVRANTES` = renvoyer +
+  réinitialiser : la question est rouverte (`rouverte_comite`) tant qu'aucune réponse n'est écrite
+  STRICTEMENT après (`ReponseLue.cree_le`), et une réponse antérieure ne la ferme plus — cela corrige aussi
+  un écart muet : un renvoi du comité sur une réponse qui tenait ne rouvrait rien. La reconstruction du test
+  (#127) n'est plus une exception de code : c'est un chapitre remis à zéro, puis relancé. Une remise à zéro
+  ne rend PAS applicable une question hors sujet pour l'archétype (cas RVMD mo_6, point 21 — à trancher).
+  Preuve : `check_relance.py` + `negatif_relance.sh` (18/0), `check_comite_persist.py` §6 +
+  `negatif_comite_persist.sh` (9/0), `negatif_058.sh` (12/0).
 - **Le périmètre du test (point 20)** — jalon 1 = NVDA + RVMD jusqu'au comité ; puis une financière
   américaine, puis un émetteur étranger ; MSFT en contrôle de reproduction (tech voisine de NVDA). **Tout
   développement reste GÉNÉRIQUE** (aucune règle propre à un titre) pour que l'extension ne coûte rien.

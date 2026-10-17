@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -17,20 +17,22 @@ role: >
 
 ## ➜ Prochain pas
 
-Ordre de `07-avant-comite.md` : (1) la matière — **close** (#133-#136) ; (2) arbitrages groupés —
-**rendus le 2026-10-17** (`08-seance-arbitrages.md`, CONVENTIONS **#137**) ; (3) **tenue du dossier — PROCHAIN**,
-augmentée de ce que la séance a décidé. Ordre proposé (à valider avec l'utilisateur au démarrage) :
-(a) **relance bornée + réinitialisation** (#137 point 17 : une relance ne refait que l'ouvert/renvoyé/rouvert ;
-l'utilisateur réinitialise une question ou un chapitre, même accepté, tracé au PV) — prérequis de tout rejeu ;
-(b) fraîcheur par la pièce la plus récente, sujet par sujet (15) ; (c) mandats jamais clos (14) et dette de la
-ré-analyse qui dégrade (13) ; (d) données : ma_2 reformulée (12), taux exigé 10 % (10), me_5 → liste des
-marchés visés (9) ; (e) mesurer « répondu sans le chiffre-objet » (11, cas qf_6) ; puis (4) valorisation,
-(5) test. **Jalon 1 = NVDA + RVMD** ; code générique (aucune règle par titre). Modèle : Opus pour la
-conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
-**Daté** : RVMD — proposer le reclassement « commerciale » au 10-Q du T3 (début novembre 2026) ; rouvrir
-mo_6 (pouvoir de prix) d'ici là.
+Ordre de `07-avant-comite.md` : (1) la matière — **close** ; (2) arbitrages — **rendus** (#137) ; (3) **tenue du
+dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
+(a) ✅ **relance bornée + réinitialisation** (fait le 2026-10-17, `c2bc1af`, migration 058 — CONVENTIONS #137
+« CONSTRUIT ») ; (b) **fraîcheur par la pièce la plus récente, sujet par sujet (15) — PROCHAIN** (cas NVDA ma_1
+#1475) ; (c) mandats jamais clos (14) et dette de la ré-analyse qui dégrade (13) ; (d) données : ma_2 reformulée
+(12), taux exigé 10 % (10), me_5 → liste des marchés visés (9) ; (e) mesurer « répondu sans le chiffre-objet »
+(11, cas qf_6) ; puis (4) valorisation, (5) test. **Jalon 1 = NVDA + RVMD** ; code générique. Modèle : Opus pour
+la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
+**Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
+la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
+**Daté** : RVMD — reclassement « commerciale » au 10-Q du T3 (début novembre 2026). ⚠️ **Rouvrir mo_6 (pouvoir
+de prix) d'ici là est BLOQUÉ** : pour l'archétype « sans revenus », mo_6 est hors sujet par construction du
+référentiel ; ni la relance ni la remise à zéro ne la rendent applicable. Question posée à l'utilisateur le
+2026-10-17 (voir sa réponse, sinon la reposer).
 
-## Où on en est (mesuré le 2026-10-16 — RE-REQUÊTER avant de s'en servir)
+## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
 - **Jalon** (réduit le 2026-10-17 : **NVDA + RVMD** d'abord, puis financière US, puis étranger, MSFT en
   contrôle de reproduction) : note d'initiation (6 chapitres + fourchette), fonctionnement
@@ -41,16 +43,20 @@ mo_6 (pouvoir de prix) d'ici là.
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4760/0** (2026-10-16, après #136).
+- **Suite** `bash backend/checks/run_all.sh` = **4817/0** (2026-10-17, après la relance bornée).
+- **Périmètre d'une relance** (2026-10-17, `questions_a_relancer`, lecture seule) : NVDA 22 ouvertes (qualité
+  financière : 0, tout est à jour), RVMD 27. **RVMD qualité financière : ses 4 réponses sont désormais
+  PÉRIMÉES** (fait publié depuis — à regarder avec le point 15). PV du comité : **0 décision** en base.
 - **Chiffres sans pièce (#136)** : 19 sur les réponses en vigueur NVDA+RVMD (`montrer_parcours.sh`, colonne
   « sans pièce ») ; NVDA me_6 refaite (#1597, 0 sans pièce — mais comptes clients cités sur la mauvaise pièce).
-- **Production** : dernier déploiement (#136 bis, `a78cc9c`), vérifié dans les conteneurs et par l'API du dossier.
-- **Prochaine migration : 058** (056/057 = prompt search-worker v5/v6 : source d'origine, `chercher`). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
+- **Production** : dernier déploiement `c2bc1af` (relance bornée + réinitialisation), vérifié dans les conteneurs
+  et par un refus de l'API (422 sur motif blanc — aucune écriture d'essai au PV, append-only).
+- **Prochaine migration : 059** (058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
   NVDA #623-#628, MSFT #629-#633.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
 
-## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#137, `06-regle-fraicheur.md` §8-§14)
+## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#137 ; #129/#130 : fraîcheur par durée de vie, causes de révision, `06-regle-fraicheur.md` §8-§14)
 
 - **2026-10-17** — séance groupée (#137) : marchés visés listés, **estimation interne d'abord** (bac à
   calcul) ; **taux exigé unique 10 %**, sensibilité ±1 pt, risque propre dans les scénarios ; défaut du comité
@@ -64,8 +70,6 @@ mo_6 (pouvoir de prix) d'ici là.
   **d'abord le site de l'émetteur, à défaut ailleurs** (à construire) ; **la règle « une ré-analyse
   n'entre en vigueur que si au moins aussi fondée » est ÉCARTÉE** — la dégradation par ré-analyse reste
   une dette, à repenser (07 §3.13).
-- **2026-10-16** — fraîcheur par durée de vie des ingrédients (#129) ; table des causes de révision
-  (#130) ; lecture fiabilisée des communiqués de résultats (vote de 3 lectures).
 - Arbitrages plus anciens (périmètre EDGAR seul, « on rachète tout » en test, ajouter une méthodologie =
   opération de données, valorisation option (c), encadré de chiffres clés, signature du comité…) :
   archive, section COPIE CONFORME, « Arbitrages de l'utilisateur qui commandent la suite ».

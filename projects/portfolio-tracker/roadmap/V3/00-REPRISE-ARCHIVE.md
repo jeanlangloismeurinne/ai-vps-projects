@@ -6752,3 +6752,18 @@ affichait 38 sans pièce sur NVDA qf au lieu de 2 : le parcours ne chargeait pas
 (`corpus_des_regles`, #136 bis). Rejeu NVDA me_6 → #1597 : charge Chine citée sur #1019 ; comptes clients
 justes mais cités sur #1013 (coïncidence de nombres, limite #68 assumée, à relire au comité). Trois mutations
 caduques antérieures réparées. Commits `c28715e`, `a78cc9c`.
+
+
+## 2026-10-17 — relance bornée + réinitialisation (#137 point 17, `c2bc1af`)
+
+Ordre de la tenue du dossier validé par l'utilisateur au démarrage (a→e). Mesure de départ : PV du comité vide,
+aucune dispense, 6 renvois du manager ouverts. Conception : la règle « la question est-elle ouverte ? » avait déjà
+un détenteur (`manque_de_la_question`) — le périmètre d'une relance en DÉRIVE (`questions_a_relancer`) au lieu de
+recopier la règle. Deux pièges évités en concevant : (1) le périmètre calculé AVANT la lecture des dépôts aurait
+compté comme ouvertes des questions closes (un dépôt non lu rouvre tout) → calculé après le maillon 0 ; (2) dans un
+check sous transaction, `now()` est figé : une réponse « postérieure » au geste doit y porter son instant
+explicitement. Écart muet découvert et corrigé au passage : un renvoi du comité sur une réponse qui tenait ne
+rouvrait pas la question. Test négatif : 4 mutations d'abord ratées par la faute du MOTIF (syntaxe cassée, motif
+non unique qui mutait la garde voisine, mutation qui tuait le script, mutation qui laissait le texte cherché) —
+corrigées, 18/0. Conséquence relevée : RVMD mo_6 ne peut pas être « rouverte » en restant « sans revenus »
+(hors sujet par construction) — question à l'utilisateur.
