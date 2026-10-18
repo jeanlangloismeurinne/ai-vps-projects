@@ -60,9 +60,9 @@ from typing import Any
 
 from app.agents.v2.analyste import repondre
 from app.agents.v2.collecte_executor import executer_collecte_framework
-from app.agents.v2.framework_persist import persist_answer, read_dispenses
+from app.agents.v2.framework_persist import persist_answer_detail, read_dispenses
 from app.agents.v2.frameworks import load_frameworks
-from app.agents.v2.manager import reviser_framework
+from app.agents.v2.manager import ManagerReview, reviser_framework
 from app.agents.v2.manager_persist import persist_review
 from app.agents.v2.note_flash import lire_les_depots_en_attente
 from app.agents.v2.parcours import EmetteurNonClasse, charger_etat_dossier, questions_a_relancer
@@ -86,6 +86,32 @@ ANALYSTE = os.environ.get("CHAINE_ANALYSTE", "passage_manuel_v3")
 
 def _titre(n: object, texte: str) -> None:
     print(f"\n{'─'*78}\nMAILLON {n} — {texte}\n{'─'*78}")
+
+
+def _retirer_refus_des_mandats_manquants(
+    review: ManagerReview, refus: list[tuple[str, str]],
+) -> tuple[ManagerReview, list[str]]:
+    """Un refus d'AGENT (panne au maillon 2, `resultat.refus`) n'est JAMAIS une demande de recherche
+    (addendum spec point 14, même lot — 2026-10-18). Constat : une question refusée n'entre jamais
+    dans `resultat.answers`, donc `reviser_framework` (pur, lu ailleurs — on ne le touche pas) la
+    compte comme « question applicable sans aucune réponse » (contrôle ①, §3.2) et lui ouvre un
+    mandat — alors que le script imprimait « AUCUN mandat n'en sort » pour elle (maillon 2) : la
+    sortie imprimée mentait. Ce filtre PUR, appliqué juste avant la persistance (maillon 4), retire
+    de `questions_manquantes`/`mandats_manquantes` toute question présente dans `refus` : une panne
+    d'agent n'est pas traitée comme une collecte insuffisante, elle sera retentée au prochain passage,
+    sans qu'aucun mandat n'en garde une trace périmée.
+
+    Rend `(revue nettoyée, question_id des refus effectivement retirés)` — la seconde valeur sert
+    uniquement à l'impression (nommer ce qu'on a retiré, jamais le taire).
+    """
+    refus_qids = {q for q, _ in refus}
+    retires = sorted(set(review.questions_manquantes) & refus_qids)
+    nettoyee = dataclasses.replace(
+        review,
+        questions_manquantes=[q for q in review.questions_manquantes if q not in refus_qids],
+        mandats_manquantes=[m for m in review.mandats_manquantes if m.question_id not in refus_qids],
+    )
+    return nettoyee, retires
 
 
 async def main() -> int:
@@ -277,14 +303,21 @@ async def main() -> int:
             return 1
 
         # ── MAILLON 3 — persistance des réponses ────────────────────────────────
-        _titre(3, "persistance des réponses (`framework_answers`)")
+        _titre(3, "persistance des réponses (`framework_answers`) — ferme aussi tout mandat "
+                  "manager/comité ouvert sur la question répondue (point 14)")
         ids_answers: list[int] = []
+        mandats_servis: list[int] = []
         async with get_db_session() as conn:
             async with conn.transaction():
                 for a in resultat.answers:
-                    ids_answers.append(await persist_answer(conn, a))
+                    persiste = await persist_answer_detail(conn, a)
+                    ids_answers.append(persiste.id)
+                    if persiste.mandat_servi_id is not None:
+                        mandats_servis.append(persiste.mandat_servi_id)
         ecrits["framework_answers"] = ids_answers
+        ecrits["framework_mandates_servis"] = mandats_servis
         print(f"  {len(ids_answers)} réponse(s) écrite(s) : {ids_answers}")
+        print(f"  {len(mandats_servis)} mandat(s) FERMÉ(S) par ces réponses : {mandats_servis}")
 
         # ── MAILLON 4 — le manager relit, et ses renvois deviennent des mandats ──
         _titre(4, "manager — 4 contrôles par réponse ; l'avis se recalcule, le MANDAT se persiste")
@@ -301,6 +334,14 @@ async def main() -> int:
             review = dataclasses.replace(review, questions_manquantes=[
                 q for q in review.questions_manquantes if q in perimetre], mandats_manquantes=[
                 m for m in review.mandats_manquantes if m.question_id in perimetre])
+
+        # Un refus d'AGENT n'est jamais une demande de recherche (addendum point 14) : la question
+        # refusée n'est dans AUCUN de `resultat.answers`, donc `reviser_framework` la compte à tort
+        # comme « applicable sans réponse » et lui ouvrirait un mandat — faux, elle sera retentée.
+        review, refus_sans_mandat = _retirer_refus_des_mandats_manquants(review, resultat.refus)
+        for qid in refus_sans_mandat:
+            print(f"  ✗ {qid} [REFUS — pas de mandat, retenté au prochain passage, pas une demande "
+                  "de recherche]")
 
         for (qid, analyste), d in sorted(review.decisions.items()):
             marque = "✓" if d.verdict == "acquitte" else "↩"

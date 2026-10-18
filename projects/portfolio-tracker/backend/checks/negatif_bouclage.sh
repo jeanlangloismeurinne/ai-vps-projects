@@ -14,6 +14,7 @@ SCH="app/contracts/bouclage_schema.py"
 BCL="app/agents/v2/bouclage.py"
 FWK="app/agents/v2/frameworks.py"
 TRA="app/agents/v2/traducteur.py"
+FP="app/agents/v2/framework_persist.py"  # point 14 : serve_mandate y a migré, bouclage.py ne l'appelle plus
 
 mutations=(
 # ── §1 CONTRAT : `acquis` avec statut_apres non_fondable n'est plus refusé ─────────────────────────
@@ -26,8 +27,9 @@ mutations=(
 "$BCL¦    return \"mandat_non_executable\"¦    return \"collecte_insuffisante\"  # mutation: mandat_non_executable inatteignable¦les quatre sorts sont atteignables"
 # ── §3 ORIGINE : une source qui a déçu (echec_collecte) n'est plus « tentée » ──────────────────────
 "$BCL¦            tente[qid] = True¦            tente[qid] = False  # mutation: echec_collecte non tenté¦echec_collecte→tenté"
-# ── §4 EXERCÉ : l'appel de production à serve_mandate disparaît ────────────────────────────────────
-"$BCL¦                await serve_mandate(¦                await serve_mandate_DESARME(¦serve_mandate\` a un appelant de production"
+# ── §4 EXERCÉ : l'appel de production à serve_mandate disparaît (point 14 : il vit désormais dans
+#    framework_persist.py — `persist_answer`, le seul fermeur — pas dans bouclage.py) ──────────────
+"$FP¦        servi = await serve_mandate(¦        servi = await serve_mandate_DESARME(¦serve_mandate\` a un appelant de production"
 # ── §4 EXERCÉ : l'appel de production à read_open_mandates disparaît ───────────────────────────────
 "$BCL¦        ouverts = await read_open_mandates(¦        ouverts = await read_open_mandates_DESARME(¦read_open_mandates\` a un appelant de production"
 # ── §5 SCOPE [R] : le scope n'allège plus l'exigence (toutes les questions redeviennent requises) ──
@@ -38,6 +40,8 @@ mutations=(
 "$TRA¦        if hors:¦        if False:  # mutation: scope hors-applicable toléré¦un scope nommant une question SANS OBJET"
 # ── §6 MOTIFS : deux sorts partagent un motif (un lecteur ne peut plus dire POURQUOI) ──────────────
 "$BCL¦    \"acquis\": \"la re-collecte a fondé la question (statut passé au-dessus de non_fondable)\",¦    \"acquis\": \"le comité a accepté le trou — une dispense active couvre la question\",  # mutation: motif dupliqué¦les quatre motifs sont distincts"
+# ── §7 POINT 14 : bouclage.py se remet à servir lui-même (régression du double chemin, #46) ────────
+"$BCL¦                    mandat_ids[qid] = mid¦                    mandat_ids[qid] = mid\n                    await serve_mandate(conn, mid, statut_avant=\"x\", statut_apres=\"y\", entry_ids_produits=[])  # mutation: bouclage re-sert lui-même¦n'APPELLE plus"
 )
 
 source "$(dirname "$0")/_negatif.sh"

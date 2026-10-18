@@ -36,6 +36,10 @@ mutations=(
 "$SRC¦        answer.model_dump(mode=\"json\"), valeurs[\"cited_entry_ids\"]¦        {}, valeurs[\"cited_entry_ids\"]¦porte le contrat complet (le bloc \`reponse\`)"
 "$SRC¦        valeurs[\"methode_approximation\"], valeurs[\"ingredients\"], valeurs[\"motif\"])¦        valeurs[\"methode_approximation\"], valeurs[\"ingredients\"], \"forced-leak\")¦restent NULL"
 "$CHECK¦ 'a', 'invalide', '{}'::jsonb)\",¦ 'a', 'repondu', '{}'::jsonb)\",¦hors vocabulaire fermé est REFUSÉ"
+# ── §14 : la réponse écrite ne sert plus JAMAIS le mandat ouvert de sa question ────────────────
+"$SRC¦    if mandat_id is not None:¦    if False:  # mutation: point 14 désarmé, aucun mandat n'est plus servi¦SERT le mandat qf_2"
+# ── §14 : la trace du mandat servi ignore les entries réellement produites ────────────────────
+"$SRC¦            entry_ids_produits=entries)¦            entry_ids_produits=[])  # mutation: trace toujours vide¦entries = cited_entry_ids de la réponse"
 )
 
 passes=0; ratees=0

@@ -21,6 +21,13 @@ nouvelles questions pour éviter de créer des chemins de recherche parallèles 
 mêmes, scopés. AUCUN nouveau chemin de collecte, AUCUN nouvel input du search-worker (le mandat
 re-rentre par le traducteur, pas par un prompt élargi — les #19/#39 ne sont donc PAS touchés).
 
+⚠️ QUI SERT LE MANDAT (point 14, séance du 2026-10-18). `persist_answer` (`framework_persist.py`)
+est désormais le DÉTENTEUR UNIQUE de la fermeture d'un mandat manager/comité — un seul chemin de
+clôture, qu'on vienne de la chaîne ou du bouclage. Ce module ne sert donc plus lui-même : il récupère
+l'id du mandat ouvert AVANT d'appeler `persist_answer` (même transaction), lui passe les entries que
+SA re-collecte a produites (`entry_ids_produits`, distinctes de ce que l'analyste a cité), puis
+assemble la note avec cet id — `persist_answer` a déjà fait le travail de fermeture.
+
 LA NOTE HONNÊTE — QUATRE SORTS (voir `contracts/bouclage_schema.py`)
 -------------------------------------------------------------------
 Après le passage, chaque renvoi rejoué reçoit son SORT, DÉRIVÉ (aucun appel de modèle) :
@@ -47,7 +54,6 @@ from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.manager_persist import (
     id_du_mandat_ouvert,
     read_open_mandates,
-    serve_mandate,
 )
 from app.agents.v2.note_flash import LectureDesDepots, lire_les_depots_en_attente
 from app.agents.v2.preparation import preparer_dossier_analyste
@@ -204,44 +210,51 @@ async def boucler_renvois(
         chemises=dossier.chemises, classement=prepare.classement)
     reponses = {a.question_id: a for a in resultat.answers if a.question_id in scope}
 
-    # 4. Persister les réponses renvoyées + lire les dispenses (le comité a-t-il classé sans suite ?).
+    # 4. Persister les réponses renvoyées — `persist_answer` SERT lui-même le mandat manager/comité
+    #    de sa lignée (point 14, détenteur unique) : récupérer l'id AVANT de l'appeler, dans la MÊME
+    #    transaction — une fois la réponse écrite, `id_du_mandat_ouvert` ne le retrouverait plus (il
+    #    est déjà 'servi'), et l'assemblage de la note (étape 5) en aurait besoin pour le nommer.
+    #    On lui passe `entry_ids_produits` : ce que SA re-collecte a produit (`rapport["liens"]`),
+    #    distinct de ce que l'analyste a cité dans sa réponse (le défaut de `persist_answer`).
+    #    + lire les dispenses (le comité a-t-il classé sans suite ?).
+    mandat_ids: dict[str, int] = {}
     async with get_db_session() as conn:
         dispenses = await read_dispenses(
             conn, ticker_id=ticker_id, framework_id=framework_id, framework_version=version)
         async with conn.transaction():
-            for a in reponses.values():
-                await persist_answer(conn, a)
+            for qid, a in reponses.items():
+                mid = await id_du_mandat_ouvert(
+                    conn, ticker_id=ticker_id, framework_id=framework_id,
+                    framework_version=version, question_id=qid)
+                if mid is not None:
+                    mandat_ids[qid] = mid
+                entry_ids = sorted({lien["entry_id"] for lien in rapport["liens"]
+                                    if lien["question_id"] == qid})
+                await persist_answer(conn, a, entry_ids_produits=entry_ids)
 
-    # 5. SERVIR chaque mandat et ASSEMBLER la note honnête, sort par sort.
+    # 5. ASSEMBLER la note honnête, sort par sort — `persist_answer` a déjà SERVI le mandat (4).
     boucles: list[MandatBoucle] = []
-    async with get_db_session() as conn:
-        for m in ouverts:
-            qid = m.question_id
-            a = reponses.get(qid)
-            if a is None:
-                # La question n'est plus applicable / pas re-répondue : hors compte rendu. Servir sur
-                # rien serait un faux vert (#54) — on préfère la dire absente en la taisant.
-                continue
-            mandat_id = await id_du_mandat_ouvert(
-                conn, ticker_id=ticker_id, framework_id=framework_id,
-                framework_version=version, question_id=qid)
-            if mandat_id is None:
-                continue  # servi entre-temps par un autre passage
-            statut_avant = statuts_avant.get(qid, "non_fondable")
-            statut_apres: Statut = a.statut
-            entry_ids = sorted({lien["entry_id"] for lien in rapport["liens"]
-                                if lien["question_id"] == qid})
-            async with conn.transaction():
-                await serve_mandate(
-                    conn, mandat_id, statut_avant=statut_avant, statut_apres=statut_apres,
-                    entry_ids_produits=entry_ids)
-            sort = classer_sort(
-                statut_avant, statut_apres,
-                a_tente_collecte=tente.get(qid, False), dispensee=qid in dispenses)
-            boucles.append(MandatBoucle(
-                question_id=qid, mandat_id=mandat_id, sort=sort,
-                statut_avant=statut_avant, statut_apres=statut_apres,
-                entry_ids_produits=entry_ids, motif=_MOTIF_DU_SORT[sort]))
+    for m in ouverts:
+        qid = m.question_id
+        a = reponses.get(qid)
+        if a is None:
+            # La question n'est plus applicable / pas re-répondue : hors compte rendu. Servir sur
+            # rien serait un faux vert (#54) — on préfère la dire absente en la taisant.
+            continue
+        mandat_id = mandat_ids.get(qid)
+        if mandat_id is None:
+            continue  # servi entre-temps par un autre passage
+        statut_avant = statuts_avant.get(qid, "non_fondable")
+        statut_apres: Statut = a.statut
+        entry_ids = sorted({lien["entry_id"] for lien in rapport["liens"]
+                            if lien["question_id"] == qid})
+        sort = classer_sort(
+            statut_avant, statut_apres,
+            a_tente_collecte=tente.get(qid, False), dispensee=qid in dispenses)
+        boucles.append(MandatBoucle(
+            question_id=qid, mandat_id=mandat_id, sort=sort,
+            statut_avant=statut_avant, statut_apres=statut_apres,
+            entry_ids_produits=entry_ids, motif=_MOTIF_DU_SORT[sort]))
 
     return CompteRenduBouclage(
         ticker_id=ticker_id, framework_id=framework_id, framework_version=version,

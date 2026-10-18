@@ -12,9 +12,27 @@ ont déjà jugé l'objet ; ici on l'écrit, sans re-juger. Deux destinations :
     jamais n'en duplique la ligne.
 
 ⚠️ ATOMICITÉ EXPLICITE (#35). `get_db_session()` n'ouvre AUCUNE transaction : chaque `execute` part
-en autocommit. `persist_answer` fait DEUX écritures liées (l'INSERT neuf, puis l'UPDATE qui ferme
-l'ancienne ligne) : l'appelant DOIT les envelopper dans `async with conn.transaction():`, sinon une
-panne entre les deux laisserait deux lignes courantes actives sur la même lignée.
+en autocommit. `persist_answer` fait PLUSIEURS écritures liées (l'INSERT neuf, l'UPDATE qui ferme
+l'ancienne ligne, et désormais le SERVICE du mandat de sa lignée, §14 ci-dessous) : l'appelant DOIT
+les envelopper dans `async with conn.transaction():`, sinon une panne entre deux laisserait deux
+lignes courantes actives sur la même lignée, ou un mandat fermé sans réponse écrite.
+
+UNE DEMANDE DE RECHERCHE SE FERME QUAND LA RÉPONSE EST LIVRÉE (règle d'un fonds, point 14, séance du
+2026-10-18). Diagnostic qui a motivé ce §14 : les mandats manager/comité (`origine IN
+('manager_renvoi','comite')`) n'étaient servis QUE par le bouclage (`bouclage.py`), jamais par la
+chaîne (`tools/executer_chaine.py`), qui est pourtant le chemin réel de TOUTES les réponses — 0 ligne
+`servi`/`abandonne` en base avant correctif, et un dossier qui affichait « repartie en recherche »
+sur un mandat dont le motif était déjà périmé (`persist_review` étant idempotent PAR QUESTION, un
+nouveau renvoi du manager se serait absorbé dans l'ancien mandat sans jamais réapparaître).
+
+Donc : `persist_answer` est désormais le DÉTENTEUR UNIQUE (#46) de la clôture d'un mandat manager/
+comité — dans la MÊME transaction que l'écriture de la réponse. Une demande de recherche du gérant/
+comité est CLOSE dès qu'une réponse (de N'IMPORTE QUEL analyste — un mandat est PAR QUESTION, pas
+rattaché à un analyste, §3.4) est écrite pour sa question, quelle qu'en soit l'issue (`repondu` comme
+`non_fondable`) : si la réponse ne satisfait pas, c'est le manager (`persist_review`) qui rouvrira
+une demande NEUVE, avec son propre motif — jamais l'ancienne qui ressert. Le bouclage (`bouclage.py`)
+ne sert donc plus lui-même (un seul chemin de clôture) : il récupère l'id du mandat ouvert AVANT
+d'appeler `persist_answer`, pour pouvoir nommer le mandat dans sa note.
 """
 from __future__ import annotations
 
@@ -24,10 +42,11 @@ from typing import Any, Optional
 
 import asyncpg
 
-from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES, FrameworkAnswer
+from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES, FrameworkAnswer, Statut
 
-__all__ = ["Classement", "persist_answer", "persist_archetype", "persist_dispense",
-           "read_answers_courantes", "read_archetype", "read_classement", "read_dispenses"]
+__all__ = ["AnswerPersistee", "Classement", "persist_answer", "persist_answer_detail",
+           "persist_archetype", "persist_dispense", "read_answers_courantes", "read_archetype",
+           "read_classement", "read_dispenses"]
 
 
 def _lire_chemin(answer: FrameworkAnswer, chemin: str) -> Any:
@@ -41,22 +60,49 @@ def _lire_chemin(answer: FrameworkAnswer, chemin: str) -> Any:
     return obj
 
 
-async def persist_answer(conn: asyncpg.Connection, answer: FrameworkAnswer) -> int:
-    """Écrit une réponse, supersède l'éventuelle ligne courante de la MÊME lignée. Rend l'`id` neuf.
+@dataclass(frozen=True)
+class AnswerPersistee:
+    """Le résultat COMPLET d'une écriture de réponse (§14) : l'`id` neuf, et l'éventuel mandat
+    manager/comité SERVI comme EFFET de cette écriture — `None` si aucun mandat n'était ouvert sur
+    la lignée (le cas courant : la plupart des réponses ne répondent à aucun renvoi)."""
+    id: int
+    mandat_servi_id: Optional[int]
+
+
+async def persist_answer_detail(
+    conn: asyncpg.Connection,
+    answer: FrameworkAnswer,
+    *,
+    entry_ids_produits: Optional[list[int]] = None,
+) -> AnswerPersistee:
+    """Écrit une réponse, supersède l'éventuelle ligne courante de la MÊME lignée, et SERT le mandat
+    manager/comité ouvert sur sa question (§14 ci-dessus) — DÉTENTEUR UNIQUE de cette fermeture.
+    Rend `AnswerPersistee(id, mandat_servi_id)`.
 
     À appeler DANS une transaction (#35). Les colonnes dénormalisées sont lues par le CHEMIN DU
     CONTRAT (`COLONNES_DENORMALISEES`, détenteur unique, #46) — jamais recopiées ici : le jour où
     le contrat gagne un bloc, cette fonction n'a rien à savoir de son existence.
+
+    `entry_ids_produits` (mot-clé, optionnel) — les entries à inscrire sur le mandat servi (T8) :
+    par défaut, les `cited_entry_ids` de LA RÉPONSE (ou `[]` si la réponse n'en cite aucune, ex. un
+    `non_fondable`). Un appelant qui connaît de MEILLEURES entries pour la trace du mandat (le
+    bouclage, qui sait ce que sa re-collecte a produit, distinct de ce que l'analyste a cité) les
+    passe explicitement.
     """
     valeurs = {colonne: _lire_chemin(answer, chemin)
                for colonne, chemin in COLONNES_DENORMALISEES.items()}
 
-    ancien_id = await conn.fetchval(
-        "SELECT id FROM framework_answers "
+    ancien = await conn.fetchrow(
+        "SELECT id, statut FROM framework_answers "
         "WHERE ticker_id = $1 AND framework = $2 AND framework_version = $3 "
         "AND question_id = $4 AND analyste = $5 AND superseded_by IS NULL",
         valeurs["ticker_id"], valeurs["framework"], answer.framework_version,
         valeurs["question_id"], valeurs["analyste"])
+    ancien_id = ancien["id"] if ancien is not None else None
+    # Même convention que `bouclage._statuts_avant` : une question jamais répondue (par CET
+    # analyste) n'a pas de ligne antérieure, et son statut avant est `non_fondable` — elle n'était
+    # pas fondée, et c'est plus honnête que de prétendre un état inexistant.
+    statut_avant_ligne: Statut = ancien["statut"] if ancien is not None else "non_fondable"
 
     nouveau_id = await conn.fetchval(
         "INSERT INTO framework_answers "
@@ -73,7 +119,42 @@ async def persist_answer(conn: asyncpg.Connection, answer: FrameworkAnswer) -> i
             "UPDATE framework_answers SET superseded_by = $1 WHERE id = $2",
             nouveau_id, ancien_id)
 
-    return nouveau_id
+    # §14 : une réponse ÉCRITE ferme toute demande de recherche manager/comité ouverte sur CETTE
+    # question — quel que soit l'analyste qui répond (le mandat n'est pas rattaché à un analyste,
+    # il est PAR QUESTION). Import LOCAL : cycle potentiel avec `manager_persist` (import de
+    # `manager`, qui importe `frameworks`/`traducteur` — aucun des deux n'importe ce module
+    # aujourd'hui, mais la prudence déjà en vigueur dans `read_classement` ci-dessous s'applique
+    # pareillement ici).
+    from app.agents.v2.manager_persist import id_du_mandat_ouvert, serve_mandate
+
+    mandat_id = await id_du_mandat_ouvert(
+        conn, ticker_id=valeurs["ticker_id"], framework_id=valeurs["framework"],
+        framework_version=answer.framework_version, question_id=valeurs["question_id"])
+    mandat_servi_id: Optional[int] = None
+    if mandat_id is not None:
+        entries = (entry_ids_produits if entry_ids_produits is not None
+                   else list(valeurs["cited_entry_ids"] or []))
+        servi = await serve_mandate(
+            conn, mandat_id, statut_avant=statut_avant_ligne, statut_apres=valeurs["statut"],
+            entry_ids_produits=entries)
+        if servi:
+            mandat_servi_id = mandat_id
+
+    return AnswerPersistee(id=nouveau_id, mandat_servi_id=mandat_servi_id)
+
+
+async def persist_answer(
+    conn: asyncpg.Connection,
+    answer: FrameworkAnswer,
+    *,
+    entry_ids_produits: Optional[list[int]] = None,
+) -> int:
+    """Écrit une réponse (voir `persist_answer_detail`) ; rend SEULEMENT l'`id` neuf — compatibilité
+    ascendante des appelants existants. Un appelant qui a besoin de savoir quel mandat a été SERVI
+    comme effet de cette écriture (ex. l'inventaire imprimé par `tools/executer_chaine.py`) appelle
+    `persist_answer_detail` à la place."""
+    return (await persist_answer_detail(
+        conn, answer, entry_ids_produits=entry_ids_produits)).id
 
 
 async def read_answers_courantes(

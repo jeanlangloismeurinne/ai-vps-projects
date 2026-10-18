@@ -24,10 +24,10 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | `manager.py` | **Manager** d'un framework — 4 contrôles déterministes (complétude · fondation · honnêteté · non-substitution), acquitte ou renvoie ; un renvoi PRODUIT un mandat (ferme l'Écart B, §3) |
 | `apparieur.py` · `appariement_persist.py` | Appariement questions↔champs-EDGAR (3 états) ; persistance UPSERT + revérification à la lecture (#54) |
 | `curator.py` | Porte de complétude à 3 états + rôle de manager ; **aucun levier de modèle sur l'exigence** (#62) |
-| `framework_persist.py` | Écriture append-only versionnée des réponses/dispenses (#64) |
+| `framework_persist.py` | Écriture append-only versionnée des réponses/dispenses (#64) ; `persist_answer` SERT en plus (point 14, même transaction) le mandat manager/comité ouvert de la question répondue — détenteur unique de la fermeture d'une demande de recherche |
 | `note_flash.py` | **Note flash** (#90, branchée au flux #91) : lit un dépôt « à qualifier » (formulaire + communiqués EX-99), le range dans le catalogue d'événements en citant le passage ; pont de citation littérale ; persistance append-only (migration 050) et relecture pour l'horloge par question |
 | `manager_persist.py` | Persistance du **mandat** du manager + son cycle de vie (ouvert→servi) ; l'avis se **recalcule** à la lecture, jamais stocké (#53/#54, arbitrage 2026-09-21) — migration 043 (#77) ; `id_du_mandat_ouvert` détenteur unique du handle à servir |
-| `bouclage.py` | **Bouclage comité → collecte** (lot 5, #71) — lit les renvois ouverts (`read_open_mandates`), refait la recherche PAR LE MÊME PROCESSUS scopé aux questions renvoyées (`executer_collecte_framework(questions=…)`, #46 : pas de chemin parallèle), re-répond, SERT les mandats (`serve_mandate`) et rend une note à 4 sorts (`classer_sort`, détenteur unique) |
+| `bouclage.py` | **Bouclage comité → collecte** (lot 5, #71) — lit les renvois ouverts (`read_open_mandates`), refait la recherche PAR LE MÊME PROCESSUS scopé aux questions renvoyées (`executer_collecte_framework(questions=…)`, #46 : pas de chemin parallèle), re-répond, PERSISTE les réponses (`persist_answer` sert lui-même le mandat de sa lignée, point 14) et rend une note à 4 sorts (`classer_sort`, détenteur unique) |
 | `common.py` | `MVDD_SPEC`, `FIELD_PROFILES`, `derive_nature` (détenteurs uniques) |
 | `runner.py` | Boucle d'outils + tour de clôture JSON validé ; télémétrie de coût exacte (#41) |
 | `worker.py` · `tools.py` | `search-worker` + exécuteurs des 3 outils |
@@ -59,3 +59,4 @@ La couche 2 (agents), provider-agnostique. Deux boucles :
 | Décision contrainte par l'analyse (G2, #36) | `check_decision_validate.py` |
 | Réfutation bear→bull + anti-complaisance | `check_exit_debate.py`, `check_monitoring_v2.py` |
 | Télémétrie de coût (un abandon est facturé comme un succès) | `check_runner_telemetry.py` |
+| Point 14 : une demande de recherche manager/comité se FERME quand une réponse est écrite sur sa question (n'importe quel analyste, quelle que soit l'issue) — `persist_answer` détenteur unique, un seul chemin (chaîne et bouclage) ; un refus d'agent n'en est jamais une | `check_framework_persist.py` §6 + `negatif_framework_persist.sh` · `check_bouclage.py` §7 + `negatif_bouclage.sh` · `check_executer_chaine.py` + `negatif_executer_chaine.sh` |

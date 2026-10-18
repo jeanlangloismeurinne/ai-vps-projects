@@ -17,6 +17,11 @@ dépense et écrit — elle se prouve à l'ACCEPTATION réelle (`tools/acceptati
   • §4 EXERCÉ, PAS SEULEMENT VERT (#71, `feedback_controle_au_point_de_lecture`). On COMPTE les
        APPELANTS de `serve_mandate` ET `read_open_mandates` dans `app/` (AST) : le décideur avait 0
        appelant en production le 2026-09-25, garde verte. Retirer le câblage doit rougir ICI.
+  • §7 POINT 14 (séance du 2026-10-18) : `bouclage.py` ne SERT plus lui-même les mandats —
+       `persist_answer` (`framework_persist.py`) est le SEUL appelant de `serve_mandate` ; le
+       bouclage ne garde que `id_du_mandat_ouvert`, pour NOMMER le mandat dans sa note AVANT que
+       `persist_answer` ne le ferme. Un seul chemin de clôture (#46), que la réponse vienne de la
+       chaîne ou du bouclage.
   • §5 LE MÊME PROCESSUS, SCOPÉ (#46 : pas de chemin de recherche parallèle). Le pont ne réclame que
        les questions du scope (`[R]`), refuse une ligne hors scope (`[P]`) ; le contexte du traducteur
        refuse un scope hors des questions applicables (#32).
@@ -162,10 +167,24 @@ def _appelants(nom: str) -> list[str]:
     return out
 
 
+_APPELANTS: dict[str, list[str]] = {}
 for _nom in ("serve_mandate", "read_open_mandates", "id_du_mandat_ouvert"):
     _app = _appelants(_nom)
+    _APPELANTS[_nom] = _app
     b.check(len(_app) >= 1,
             f"§4 `{_nom}` a un appelant de production dans app/ (exercé, pas seulement testé) → {_app}")
+
+# ── §7 POINT 14 : UN SEUL chemin de clôture — `bouclage.py` ne SERT plus lui-même ────────────────
+print("\n[7] `bouclage.py` ne sert plus lui-même (point 14) : `persist_answer` est le SEUL fermeur")
+b.check("bouclage.py" not in _APPELANTS["serve_mandate"],
+        f"§7 `bouclage.py` n'APPELLE plus `serve_mandate` directement (un seul chemin, #46) "
+        f"→ appelants actuels {_APPELANTS['serve_mandate']}")
+b.check("framework_persist.py" in _APPELANTS["serve_mandate"],
+        f"§7 `framework_persist.py` (`persist_answer`) est bien l'appelant de `serve_mandate` "
+        f"→ {_APPELANTS['serve_mandate']}")
+b.check("bouclage.py" in _APPELANTS["id_du_mandat_ouvert"],
+        "§7 `bouclage.py` continue d'appeler `id_du_mandat_ouvert` (pour NOMMER le mandat dans sa "
+        f"note AVANT que `persist_answer` ne le ferme) → {_APPELANTS['id_du_mandat_ouvert']}")
 
 # ── §5 LE MÊME PROCESSUS, SCOPÉ ─────────────────────────────────────────────────────────────────
 print("\n[5] la collecte scopée : même pont, restreint aux questions renvoyées (#46)")

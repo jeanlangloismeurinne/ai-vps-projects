@@ -16,6 +16,12 @@ mesurée → SORT EN ÉCHEC, jamais un saut de section (`feedback_check_degrade_
        `sans_objet`/`approximation` restent NULL — aucun bloc étranger ne fuit dans une colonne ;
   • §5 DERNIER REMPART — la base REFUSE un statut hors vocabulaire fermé : le CHECK SQL redit le
        contrat, éprouvé en négatif ici même.
+  • §6 POINT 14 (séance du 2026-10-18) — une réponse ÉCRITE sert le mandat manager/comité OUVERT de
+       SA question (`persist_answer_detail`, trace correcte avant/après/entries) ; un mandat d'une
+       AUTRE question, d'un AUTRE ticker, ou d'origine COLLECTEUR n'est PAS touché.
+  • §7 après cette fermeture, un NOUVEAU renvoi (`persist_review`) sur la MÊME question crée un
+       mandat NEUF (id différent, SON PROPRE motif) — l'ancien, servi, garde son motif périmé intact ;
+       jamais une vieille demande n'absorbe un motif neuf.
 """
 import asyncio
 import os
@@ -43,10 +49,17 @@ if not _db_url or "@" not in _db_url:
 
 import asyncpg  # noqa: E402
 
-from app.agents.v2.framework_persist import persist_answer, persist_dispense  # noqa: E402
+from app.agents.v2.framework_persist import (  # noqa: E402
+    persist_answer,
+    persist_answer_detail,
+    persist_dispense,
+)
+from app.agents.v2.manager import ManagerReview  # noqa: E402
+from app.agents.v2.manager_persist import persist_mandate, persist_review  # noqa: E402
 from app.contracts.framework_answer_schema import (  # noqa: E402
     Fondation,
     FrameworkAnswer,
+    FrameworkMandate,
     Reponse,
 )
 from app.contracts.readiness_report_schema import GapItem  # noqa: E402
@@ -212,6 +225,102 @@ async def run():
                 "(framework, framework_version, question_id, ticker_id, analyste, statut, "
                 " answer_json) VALUES ('f', $1, 'q', $2, 'a', 'invalide', '{}'::jsonb)",
                 FV, ticker)
+
+            # ── §6 POINT 14 : une réponse écrite SERT le mandat ouvert de SA question ───────────
+            print("\n[6] `persist_answer` ferme le mandat manager/comité ouvert de SA question (point 14)")
+            mandat_qf2 = await persist_mandate(
+                conn, FrameworkMandate(
+                    framework_id="qualite_financiere", question_id="qf_2", ticker_id=ticker,
+                    origine="manager_renvoi", motif="renvoi manager : test §6",
+                    mandat="qf_2 : re-collecter", etat="ouvert"),
+                framework_version=FV)
+            # Un mandat sur une AUTRE question (même ticker) — ne doit PAS être touché.
+            mandat_qf3 = await persist_mandate(
+                conn, FrameworkMandate(
+                    framework_id="qualite_financiere", question_id="qf_3", ticker_id=ticker,
+                    origine="manager_renvoi", motif="renvoi manager : test §6 (autre question)",
+                    mandat="qf_3 : re-collecter", etat="ouvert"),
+                framework_version=FV)
+            # Un mandat sur la MÊME question mais un AUTRE ticker — ne doit pas être touché non plus.
+            ticker2 = await conn.fetchval("SELECT id FROM tickers WHERE id <> $1 LIMIT 1", ticker)
+            mandat_qf2_autre_ticker = None
+            if ticker2 is not None:
+                mandat_qf2_autre_ticker = await persist_mandate(
+                    conn, FrameworkMandate(
+                        framework_id="qualite_financiere", question_id="qf_2", ticker_id=ticker2,
+                        origine="manager_renvoi", motif="renvoi manager : test §6 (autre ticker)",
+                        mandat="qf_2 : re-collecter", etat="ouvert"),
+                    framework_version=FV)
+            # Un mandat COLLECTEUR, MÊME question/ticker, mais hors du canal manager/comité — exclu
+            # par construction (`id_du_mandat_ouvert` ne lit QUE `manager_renvoi`/`comite`).
+            await conn.execute(
+                "INSERT INTO framework_mandates (framework_id, framework_version, question_id, "
+                "ticker_id, ingredient_id, motif, origine, cause) "
+                "VALUES ($1, $2, 'qf_2', $3, 'ing_test_6', 'échec collecte test §6', "
+                "'echec_collecte', 'recherche_epuisee')",
+                "qualite_financiere", FV, ticker)
+
+            rep6 = FrameworkAnswer(
+                framework_id="qualite_financiere", framework_version=FV, question_id="qf_2",
+                ticker_id=ticker, analyste="analyste_6", statut="repondu",
+                reponse=Reponse(verbatim="marge de 22%", chiffres_cles=[]),
+                fondation=Fondation(cited_entry_ids=[entry_id], rang_derive="A",
+                                    nature_effective="mesure"))
+            persiste6 = await persist_answer_detail(conn, rep6)
+            check("la réponse écrite sur qf_2 SERT le mandat qf_2 (`mandat_servi_id` rendu)",
+                  persiste6.mandat_servi_id == mandat_qf2,
+                  f"→ {persiste6.mandat_servi_id} attendu {mandat_qf2}")
+            row_mandat_qf2 = await conn.fetchrow(
+                "SELECT statut, statut_avant, statut_apres, consomme_at, entry_ids_produits "
+                "FROM framework_mandates WHERE id = $1", mandat_qf2)
+            check("trace correcte : avant=non_fondable (rien avant), après=repondu, instant posé, "
+                  "entries = cited_entry_ids de la réponse",
+                  row_mandat_qf2 is not None and row_mandat_qf2["statut"] == "servi"
+                  and row_mandat_qf2["statut_avant"] == "non_fondable"
+                  and row_mandat_qf2["statut_apres"] == "repondu"
+                  and row_mandat_qf2["consomme_at"] is not None
+                  and list(row_mandat_qf2["entry_ids_produits"]) == [entry_id],
+                  f"→ {None if row_mandat_qf2 is None else tuple(row_mandat_qf2)}")
+
+            statut_qf3 = await conn.fetchval(
+                "SELECT statut FROM framework_mandates WHERE id = $1", mandat_qf3)
+            check("un mandat d'une AUTRE question n'est pas touché", statut_qf3 == "ouvert",
+                  f"→ {statut_qf3}")
+            if mandat_qf2_autre_ticker is not None:
+                statut_autre_ticker = await conn.fetchval(
+                    "SELECT statut FROM framework_mandates WHERE id = $1", mandat_qf2_autre_ticker)
+                check("un mandat de la MÊME question mais un AUTRE ticker n'est pas touché",
+                      statut_autre_ticker == "ouvert", f"→ {statut_autre_ticker}")
+            statut_collecteur = await conn.fetchval(
+                "SELECT statut FROM framework_mandates WHERE origine = 'echec_collecte' "
+                "AND question_id = 'qf_2' AND ticker_id = $1 ORDER BY id DESC LIMIT 1", ticker)
+            check("un mandat COLLECTEUR (même question/ticker, autre origine) n'est pas touché",
+                  statut_collecteur == "ouvert", f"→ {statut_collecteur}")
+
+            # ── §7 un NOUVEAU renvoi sur la MÊME question crée un mandat NEUF ───────────────────
+            print("\n[7] après la fermeture, un NOUVEAU renvoi sur la MÊME question ouvre un mandat NEUF")
+            mandat_neuf_obj = FrameworkMandate(
+                framework_id="qualite_financiere", question_id="qf_2", ticker_id=ticker,
+                origine="manager_renvoi", motif="renvoi manager : motif NEUF test §7",
+                mandat="qf_2 : re-collecter (second renvoi)", etat="ouvert")
+            review_neuve = ManagerReview(decisions={}, questions_manquantes=["qf_2"],
+                                        mandats_manquantes=[mandat_neuf_obj])
+            bilan7 = await persist_review(conn, review_neuve, framework_version=FV)
+            check("le second renvoi ÉCRIT (l'ancien mandat est SERVI, pas 'ouvert' : pas d'idempotence)",
+                  bilan7["mandats_ecrits"] == 1 and bilan7["mandats_deja_ouverts"] == 0,
+                  f"→ {bilan7}")
+            mandat_qf2_neuf = bilan7["ids"][0]
+            check("le mandat NEUF a un id DIFFÉRENT de l'ancien (servi)",
+                  mandat_qf2_neuf != mandat_qf2, f"→ neuf={mandat_qf2_neuf} ancien={mandat_qf2}")
+            motif_neuf = await conn.fetchval(
+                "SELECT motif FROM framework_mandates WHERE id = $1", mandat_qf2_neuf)
+            check("le mandat NEUF porte SON PROPRE motif, jamais celui de l'ancien",
+                  motif_neuf == "renvoi manager : motif NEUF test §7", f"→ {motif_neuf}")
+            ancien_motif_toujours = await conn.fetchval(
+                "SELECT motif FROM framework_mandates WHERE id = $1", mandat_qf2)
+            check("l'ANCIEN mandat (servi) garde intact son motif périmé — jamais réécrit, "
+                  "jamais absorbé par le neuf",
+                  ancien_motif_toujours == "renvoi manager : test §6", f"→ {ancien_motif_toujours}")
         finally:
             await tr.rollback()  # AUCUN résidu : la vérification ne pollue pas le réel
     finally:
