@@ -653,7 +653,7 @@ async def contexte_durees(conn, *, fichier, version: str, ancre_titre, cites: se
     return ContexteDurees(
         clotures=Clotures(derniere=derniere_cloture_publiee(lk) if lk else None,
                           exercice=derniere_cloture_annuelle_publiee(lk) if lk else None),
-        ingredients_des_pieces=par_question)
+        ingredients_des_pieces=par_question, par_sujet=fichier.fraicheur_par_sujet)
 
 
 async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:

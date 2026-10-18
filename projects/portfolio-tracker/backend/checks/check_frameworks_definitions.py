@@ -197,6 +197,7 @@ def fichier_base(**over):
             FRAMEWORKS_YAML.read_text(encoding="utf-8"))["types_evenement_version"],
         "rappels_ecartes": True,
         "fraicheur_par_duree_de_vie": True,
+        "fraicheur_par_sujet": True,
         "types_evenement": _catalogue_reel(),
         "revisions_de_prevision": _table_reelle(),
         "frameworks": [fw_base()],

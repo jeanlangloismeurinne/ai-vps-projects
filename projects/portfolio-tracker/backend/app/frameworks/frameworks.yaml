@@ -99,6 +99,11 @@ rappels_ecartes: true
 # suivant, les résultats trimestriels ne rouvrent que ce qu'ils prolongent. false = ORDRE 0, la règle
 # d'avant : une réponse a l'âge de sa pièce la plus ancienne. Lu à la lecture, rien à réécrire.
 fraicheur_par_duree_de_vie: true
+# L'INTERRUPTEUR de la fraîcheur SUJET PAR SUJET (point 15, arbitrage du 2026-10-17). true = sur un même
+# ingrédient, seule la pièce la plus récente juge si la réponse est à jour ; une pièce remplacée par une plus
+# récente sur le même sujet reste citée comme contexte et ne périme rien (cas NVDA ma_1 : rachats du 18/05
+# et du 28/09, émission obligataire du 15/06). false = ORDRE 0 : chaque pièce citée est jugée seule.
+fraicheur_par_sujet: true
 types_evenement:
   - id: routine
     libelle: Dépôt de pure forme — pièces jointes, vote ordinaire, statuts

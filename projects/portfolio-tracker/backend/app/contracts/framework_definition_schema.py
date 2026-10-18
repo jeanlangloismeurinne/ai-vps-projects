@@ -507,6 +507,12 @@ class FrameworksFile(Strict):
     # pièce la plus ancienne, tout fait qui rouvre la question la périme). Requis, sans défaut ; lu à la
     # LECTURE, rien n'est stocké : le basculer ne demande aucune réécriture.
     fraicheur_par_duree_de_vie: bool
+    # L'INTERRUPTEUR de la fraîcheur SUJET PAR SUJET (point 15, arbitrage du 2026-10-17, #137 ; principe
+    # fondateur n° 3), lu seulement sous `fraicheur_par_duree_de_vie` : True = sur un même ingrédient, seule
+    # la pièce la plus RÉCENTE juge la fraîcheur, les plus anciennes sont du contexte (ordre 1) ; False =
+    # chaque pièce est jugée seule (ordre 0 : une pièce remplacée citée en contexte périme la réponse).
+    # Requis, sans défaut ; lu à la LECTURE : le basculer ne demande aucune réécriture.
+    fraicheur_par_sujet: bool
     types_evenement: list[TypeEvenement] = Field(min_length=1)
     # La TABLE DES CAUSES DE RÉVISION (§14 de `06-regle-fraicheur.md`, catalogue 1.6.0) : quand un
     # communiqué révise une prévision SANS dire pourquoi, le code rouvre l'union des types des causes

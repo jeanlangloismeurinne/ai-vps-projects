@@ -3302,6 +3302,19 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
 - **La fraîcheur (point 15)** — sujet par sujet, seule la pièce la plus RÉCENTE juge si une réponse est à
   jour ; une pièce remplacée par une plus récente sur le même sujet reste citée comme contexte et ne périme
   rien. Cas : NVDA ma_1 #1475 (rachats 18/05 + 28/09, émission du 15/06).
+  **CONSTRUIT le 2026-10-18** : le sujet est l'INGRÉDIENT que la pièce fonde (index de couverture) ;
+  `duree_de_vie.juger_fondation(par_sujet=…)` juge, pour chaque ingrédient, sa SEULE pièce la plus récente
+  (cadence et fait qui rouvre) ; les remplacées sont nommées « citées comme contexte » dans le motif servi au
+  comité. L'anti-blanchiment tient ENTRE sujets et pour une pièce non rattachée (son propre sujet : on ne
+  devine pas de quoi elle parle) ; une pièce sans date dans un sujet le rend indéterminable ; un historique
+  complété n'a pas de « remplacée ». Interrupteur `fraicheur_par_sujet` (référentiel, requis, lu à la lecture —
+  principe n° 3 ; coupé = chaque pièce jugée seule). Coût d'erreur nommé : une réponse qui cite la pièce
+  récente mais calcule sur l'ancienne du même sujet passe pour à jour — c'est le sens, la fraîcheur ne le
+  juge pas ; le recoupement #136 montre d'où vient chaque nombre. Il écarte la règle du 16/10 « un chiffre
+  courant se juge pièce par pièce » (désormais l'ordre 0). Mesuré avant livraison sur les 53 réponses fondées
+  en vigueur (NVDA 25, RVMD 28, MSFT 0) : **0 changement d'état** ; #1475 (remplacée) perd le motif
+  « #1438 précède l'émission » mais reste périmée à bon droit (historiques de l'allocation non complétés des
+  deux derniers trimestres). Preuve : `check_duree_de_vie.py` §8 (46) + `negatif_duree_de_vie.sh` (23/0).
 - **La relance (point 17)** — l'ajout d'un titre lance l'analyse complète ; ensuite, toute relance ne porte
   QUE sur les questions ouvertes, renvoyées par le comité ou rouvertes par un fait nouveau. Une question
   close (à jour, acceptée, ou recherche arrêtée par le comité) n'est jamais refaite ; si un fait nouveau

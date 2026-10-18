@@ -8,8 +8,9 @@ Dates copiées du dossier RVMD réel : 10-K clos le 31/12/2025, 10-Q clos le 30/
   • §1 LE CAS QUI A OUVERT LA QUESTION (A4) — un historique cité depuis le rapport annuel ET complété
        du dernier trimestre est À JOUR ; sans la pièce du trimestre, il n'est « pas complété ».
        Témoin : sous l'ordre 0 (`durees=None`), la même réponse est PÉRIMÉE.
-  • §2 UN CHIFFRE COURANT se juge pièce par pièce, contre la clôture de SA cadence (trimestrielle ou
-       annuelle) — l'anti-blanchiment tient : une pièce récente à côté n'en rajeunit pas une vieille.
+  • §2 UN CHIFFRE COURANT se juge contre la clôture de SA cadence (trimestrielle ou annuelle) ; sous
+       l'ordre 0 du point 15 (`par_sujet=False`), pièce par pièce : une pièce récente à côté n'en
+       rajeunit pas une vieille.
   • §3 UNE DESCRIPTION ANNUELLE couvre le dernier exercice publié ; celle de l'année d'avant cède.
   • §4 UN JUGEMENT n'a pas de durée propre : seul le fait qui rouvre la question le touche — et un
        fait LU (#103/#117) ne le touche plus. Un historique se COMPLÈTE face à un fait (acquisition).
@@ -21,6 +22,11 @@ Dates copiées du dossier RVMD réel : 10-K clos le 31/12/2025, 10-Q clos le 30/
   • §7 LE POINT DE LECTURE EST BRANCHÉ (AST) — `parcours` passe à `servir_answer` le contexte produit
        par `contexte_durees`, et rien d'autre ; `contexte_durees` rend `None` quand l'interrupteur est
        coupé ; le référentiel réel l'a ACTIF.
+  • §8 SUJET PAR SUJET (point 15, 2026-10-17) — cas NVDA ma_1 #1475 copié du réel : rachats annoncés le
+       18/05 (#1438) et le 28/09 (#1436) sur « politique_annoncee », émission obligataire du 15/06 entre
+       les deux : À JOUR, #1438 citée comme contexte ; ordre 0 : PÉRIMÉE. L'anti-blanchiment tient ENTRE
+       sujets et pour les pièces non rattachées ; une pièce sans date dans un sujet le rend indéterminable ;
+       l'interrupteur va du référentiel au jugement.
 
 Cible : pydantic v2 (container backend). Tester en container, **pas** le python hôte.
 """
@@ -75,10 +81,11 @@ def lk(*evts):
     return MaterialEventLookup(status="found", event=evs[0], cik=1, recents=evs)
 
 
-def juge(cites, dates, ings, clot=CLOT, horloge=None, indispo=None):
+def juge(cites, dates, ings, clot=CLOT, horloge=None, indispo=None, par_sujet=True):
     try:
         j = juger_fondation(cites, dates=dates, ingredients_des_pieces=ings, clotures=clot,
-                            fait=fait_qui_rouvre(horloge or lk()), horloge_indisponible=indispo)
+                            fait=fait_qui_rouvre(horloge or lk()), horloge_indisponible=indispo,
+                            par_sujet=par_sujet)
         return j
     except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort
         return f"LÈVE {e!r}"
@@ -99,10 +106,10 @@ j1c = juge([1], {1: K10}, {1: [H_A("rendement_des_usages")]})
 b.check(etat(j1c) == "courante",
         f"un historique ANNUEL au dernier exercice reste à jour après un trimestre → {etat(j1c)}")
 
-print("§2 un chiffre courant, pièce par pièce, contre la clôture de sa cadence")
-j2 = juge([1, 2], {1: K10, 2: Q2}, {1: [CC_T("tresorerie")], 2: [CC_T("tresorerie")]})
+print("§2 un chiffre courant contre la clôture de sa cadence")
+j2 = juge([1, 2], {1: K10, 2: Q2}, {1: [CC_T("tresorerie")], 2: [CC_T("tresorerie")]}, par_sujet=False)
 b.check(etat(j2) == "perimee" and "#1" in j2.motif,
-        f"anti-blanchiment : une pièce au 30/06 ne rajeunit pas celle au 31/12 → {getattr(j2, 'motif', j2)}")
+        f"ordre 0 : une pièce au 30/06 ne rajeunit pas celle au 31/12 → {getattr(j2, 'motif', j2)}")
 b.check(etat(juge([2], {2: Q2}, {2: [CC_T("tresorerie")]})) == "courante",
         "un chiffre courant au 30/06 est à jour")
 b.check(etat(juge([1], {1: K10}, {1: [CC_A("resultat_net")]})) == "courante",
@@ -173,7 +180,7 @@ def rep(cites):
         fondation={"cited_entry_ids": cites, "rang_derive": "A", "nature_effective": "mesure"})
 
 
-CTX = ContexteDurees(clotures=CLOT, ingredients_des_pieces={"ma_3": ma3})
+CTX = ContexteDurees(clotures=CLOT, ingredients_des_pieces={"ma_3": ma3}, par_sujet=True)
 ENT = {1: {"source_date": K10}, 2: {"source_date": Q2}}
 try:
     neuf = servir_answer(rep([1, 2]), ancre=lk(RES), entries=ENT, durees=CTX).fondation.actualite
@@ -229,5 +236,48 @@ prod = [n for n in ast.walk(arbre) if isinstance(n, ast.Assign)
 b.check(len(prod) == 1 and isinstance(prod[0].value, ast.Await)
         and getattr(prod[0].value.value.func, "id", None) == "contexte_durees",
         "`durees` est produit par `contexte_durees(...)` et par rien d'autre")
+
+print("§8 sujet par sujet (point 15) — le cas NVDA ma_1 #1475")
+N_CLOT = Clotures(derniere=date(2026, 7, 26), exercice=date(2026, 1, 25))
+EMISSION = ev(date(2026, 6, 15), ["8.01", "9.01"], "acc-emission", ["financement"])
+MA1 = {1438: [DA("politique_annoncee")], 1436: [DA("politique_annoncee")]}
+D_MA1 = {1438: date(2026, 5, 18), 1436: date(2026, 9, 28)}
+j8 = juge([1438, 1436], D_MA1, MA1, clot=N_CLOT, horloge=lk(EMISSION))
+b.check(etat(j8) == "courante" and "contexte : #1438" in j8.motif,
+        f"rachats du 18/05 + du 28/09, émission du 15/06 : À JOUR, #1438 en contexte → {getattr(j8, 'motif', j8)}")
+j8o = juge([1438, 1436], D_MA1, MA1, clot=N_CLOT, horloge=lk(EMISSION), par_sujet=False)
+b.check(etat(j8o) == "perimee" and "#1438" in j8o.motif,
+        f"témoin ordre 0 : la pièce du 18/05 périme la réponse → {getattr(j8o, 'motif', j8o)}")
+j8b = juge([1, 2], {1: K10, 2: Q2}, {1: [CC_T("tresorerie")], 2: [CC_T("tresorerie")]})
+b.check(etat(j8b) == "courante" and "contexte : #1" in j8b.motif,
+        f"même chiffre courant au 31/12 puis au 30/06 : le 30/06 le tient à jour → {getattr(j8b, 'motif', j8b)}")
+j8c = juge([1438, 9], {1438: date(2026, 5, 18), 9: date(2026, 9, 28)},
+           {1438: [DA("politique_annoncee")], 9: [DA("independance_du_conseil")]}, clot=N_CLOT, horloge=lk(EMISSION))
+b.check(etat(j8c) == "perimee" and "#1438" in j8c.motif,
+        f"anti-blanchiment ENTRE sujets : une pièce fraîche sur un autre ingrédient ne sauve rien → {etat(j8c)}")
+b.check(etat(juge([1438, 1436], D_MA1, {}, clot=N_CLOT, horloge=lk(EMISSION))) == "perimee",
+        "deux pièces NON RATTACHÉES : chacune est son propre sujet, l'ancienne périme")
+b.check(etat(juge([1438, 1436], {1438: None, 1436: date(2026, 9, 28)}, MA1, clot=N_CLOT)) == "indeterminable",
+        "une pièce sans date dans un sujet : on ne sait pas laquelle est la plus récente → indéterminable")
+j8h = juge([1, 2], {1: K10, 2: Q2}, ma3)
+b.check(etat(j8h) == "courante" and "contexte" not in j8h.motif,
+        "un historique complété n'a pas de pièce « remplacée » : rien n'est déclaré contexte")
+j8m = juge([1438, 1436], D_MA1, {1438: [DA("politique_annoncee"), J("mecanisme")], 1436: [DA("politique_annoncee")]},
+           clot=N_CLOT, horloge=lk(EMISSION))
+b.check(etat(j8m) == "perimee" and "contexte" not in j8m.motif,
+        "une pièce remplacée sur un sujet mais seule sur un autre se juge sur ce dernier (et n'est pas contexte)")
+b.check(load_frameworks().fraicheur_par_sujet is True, "l'interrupteur `fraicheur_par_sujet` du référentiel réel est ACTIF")
+_s_off = asyncio.run(contexte_durees(_Conn(), fichier=_F.model_copy(update={"fraicheur_par_sujet": False}),
+                                     version="v3.0.0", ancre_titre=_lk, cites={1}))
+b.check(_on.par_sujet is True and _s_off is not None and _s_off.par_sujet is False,
+        "contexte_durees porte l'interrupteur `fraicheur_par_sujet` du référentiel")
+_CTX8 = lambda ps: ContexteDurees(clotures=N_CLOT, ingredients_des_pieces={"ma_3": MA1}, par_sujet=ps)  # noqa: E731
+_ENT8 = {k: {"source_date": v} for k, v in D_MA1.items()}
+try:
+    s8 = [servir_answer(rep([1438, 1436]), ancre=lk(EMISSION), entries=_ENT8, durees=_CTX8(ps)).fondation.actualite
+          for ps in (True, False)]
+except Exception as e:  # noqa: BLE001
+    s8 = [f"LÈVE {e!r}"] * 2
+b.check(s8 == ["courante", "perimee"], f"servir_answer suit l'interrupteur du contexte (actif, coupé) → {s8}")
 
 sys.exit(b.summary())

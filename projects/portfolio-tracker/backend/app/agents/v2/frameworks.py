@@ -1066,7 +1066,7 @@ def servir_answer(
             ingredients_des_pieces=durees.ingredients_des_pieces.get(answer.question_id, {}),
             clotures=durees.clotures, fait=fait_qui_rouvre(horloge),
             horloge_indisponible=(ancre.raison or "raison non donnée") if ancre.status == "unavailable"
-            else None)
+            else None, par_sujet=durees.par_sujet)
         if j is not None:
             etat, motif = j.etat, j.motif
     absorbes = [e for e in (ancre.recents if ancre.status == "found" else ())
