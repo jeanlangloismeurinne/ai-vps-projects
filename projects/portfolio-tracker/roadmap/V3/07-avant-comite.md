@@ -76,7 +76,8 @@ role: >
     le 2026-10-16** : sujet laissé en dette, à repenser. Prérequis du test de reproductibilité.
 14. **Demandes de recherche jamais closes** [C] — mandats 983-986, 2612/2613, 2975-2977 restent
     ouverts quand la question a trouvé sa réponse.
-15. **Une pièce ancienne périme une réponse à jour** [A] — NVDA ma_1 citait le communiqué de rachat du
+15. ~~**Une pièce ancienne périme une réponse à jour**~~ ✅ **Fait le 2026-10-18 (#137 point 15, `331aa7c`)** —
+    sujet = ingrédient, seule la pièce la plus récente juge ; interrupteur `fraicheur_par_sujet`. [A] — NVDA ma_1 citait le communiqué de rachat du
     18/05 en plus de celui du 28/09 ; le plus ancien la rend périmée (émission obligataire du 15/06).
 16. **Calendrier et revue trimestrielle** [C] — non construits (publications, jalons annoncés,
     rendez-vous du secteur ; revue légère des jugements d'une position détenue) ; la position du comité
