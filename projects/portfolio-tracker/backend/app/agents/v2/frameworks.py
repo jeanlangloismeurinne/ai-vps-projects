@@ -89,6 +89,41 @@ CLEFS_PROFIL_QUESTION = ("plancher_tier", "nature_attendue", "sens_admis", "chif
 # (`feedback_check_degrade_en_sortant_a_zero`). `check_frameworks_definitions.py` vérifie que les
 # profils produits portent exactement ces clefs, non nulles.
 CLEFS_PROFIL_LUES = CLEFS_PROFIL_QUESTION + ("framework_version",)
+# Les clefs lues que la question porte FACULTATIVEMENT (#139 ter) : PRÉSENTES dans chaque profil (une faute
+# d'orthographe rendrait encore `None` et sauterait le contrôle — c'est la présence qui se vérifie), nulles
+# quand la question ne déclare rien.
+CLEFS_PROFIL_FACULTATIVES = ("sens_lu_sur",)
+
+
+def motif_verdict_contredit_son_chiffre(answer: Any, sens_lu_sur: Optional[str]) -> Optional[str]:
+    """DÉTENTEUR UNIQUE (#46, #139 ter) de « le verdict contredit-il le chiffre qui le porte ? », lu par le
+    pont (à l'écriture) ET par le contrôleur (à chaque lecture). Vérifie une RELATION, jamais le sens (#68).
+
+    Comme une note d'analyse : cellule « n.s. » ⟹ verdict « n.s. » ; cellule vide ⟹ pas de verdict ;
+    cellule chiffrée ⟹ un vrai verdict, jamais « n.s. ». L'issue d'une cellule vide se lit sur son motif
+    (`ratios_maison.issue_du_motif`, détenteur unique). `None` = cohérent (ou question sans `sens_lu_sur`)."""
+    from app.contracts.framework_definition_schema import SENS_NON_SIGNIFICATIF
+    from app.knowledge.ratios_maison import NON_SIGNIFICATIF, issue_du_motif
+
+    if not sens_lu_sur or answer.reponse is None or answer.statut not in ("repondu", "approxime"):
+        return None
+    ligne = next((c for c in answer.reponse.chiffres_cles if c.id == sens_lu_sur), None)
+    if ligne is None:
+        return None  # un encadré incomplet est refusé par [K], nommément
+    sens = answer.reponse.sens
+    if ligne.valeur is not None:
+        if sens == SENS_NON_SIGNIFICATIF:
+            return (f"`{answer.question_id}` : verdict « non significatif » alors que `{sens_lu_sur}` est "
+                    f"établi ({ligne.valeur}) — un chiffre établi porte un vrai verdict")
+        return None
+    if issue_du_motif(ligne.motif_absence) == NON_SIGNIFICATIF:
+        if sens != SENS_NON_SIGNIFICATIF:
+            return (f"`{answer.question_id}` : verdict « {sens} » lu sur `{sens_lu_sur}`, qui est NON "
+                    f"SIGNIFICATIF ({ligne.motif_absence}) — le verdict ne peut être que « non significatif »")
+        return None
+    return (f"`{answer.question_id}` : verdict « {sens} » alors que `{sens_lu_sur}`, qui le porte, n'est pas "
+            f"établi ({ligne.motif_absence}) — sans lui aucun verdict ne se conclut : la question est non "
+            "fondée (à collecter) ou pas encore observable")
 
 
 class FrameworkAnswerRefused(Exception):
@@ -502,6 +537,9 @@ def question_profiles(fichier: Optional[FrameworksFile] = None) -> dict[str, dic
                 valeur = getattr(q, clef)
                 profil[clef] = list(valeur) if isinstance(valeur, list) else valeur
             profil.update({
+                # #139 ter — optionnel PAR CONSTRUCTION (la plupart des verdicts ne lisent pas un seul
+                # chiffre) : hors de `CLEFS_PROFIL_LUES`, qui exige des clefs non nulles.
+                "sens_lu_sur": q.sens_lu_sur,
                 "framework_id": f.id,
                 "framework_version": fichier.schema_version,
                 "chemin_indexation": q.chemin_indexation,
@@ -755,6 +793,11 @@ def valider_pont_framework_answer(
                 f"`sens` = {answer.reponse.sens!r} hors du vocabulaire de `{answer.question_id}` "
                 f"({sorted(admis)}) : un sens libre rend la réponse incomparable à toutes les "
                 "autres réponses de la même question — l'écran la montre, et rien ne la range")
+    # S bis (#139 ter). Le verdict ne contredit pas le chiffre qui le porte — détenteur unique, partagé
+    # avec le contrôleur. `sens_lu_sur` absent du profil = la question n'en déclare pas (légitime).
+    contradiction = motif_verdict_contredit_son_chiffre(answer, profil.get("sens_lu_sur"))
+    if contradiction:
+        raise FrameworkAnswerRefused(f"[S bis] {contradiction}")
 
     # K. L'ENCADRÉ DE CHIFFRES CLÉS (4 bis) porte EXACTEMENT les chiffres que la question déclare, chacun
     #    dans l'unité déclarée. Ni plus (un chiffre inventé par l'analyste n'a pas de place dans le

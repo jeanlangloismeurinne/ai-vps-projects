@@ -378,7 +378,8 @@ frameworks:
         nature_attendue: mesure
         plancher_tier: A
         rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, surprise_allocation]
-        sens_admis: [croissance_peu_capitalistique, croissance_capitalistique, croissance_destructrice]
+        sens_admis: [croissance_peu_capitalistique, croissance_capitalistique, croissance_destructrice, non_significatif]
+        sens_lu_sur: capital_par_point_de_croissance   # #139 ter : le verdict EST la lecture de ce chiffre
         ingredients_requis:
           - id: croissance_activite_par_exercice
             libelle: Progression de l'activité, exercice par exercice
@@ -547,7 +548,8 @@ frameworks:
         nature_attendue: mesure
         plancher_tier: A
         rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
-        sens_admis: [en_amelioration, stable, en_erosion]
+        sens_admis: [en_amelioration, stable, en_erosion, non_significatif]
+        sens_lu_sur: pente_du_rendement   # #139 ter : le verdict EST la lecture de ce chiffre
         ingredients_requis:
           - id: serie_longue_du_rendement
             libelle: Le rendement du capital observé sur au moins cinq exercices consécutifs

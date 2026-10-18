@@ -99,6 +99,7 @@ from app.contracts.framework_answer_schema import (
     SansObjet,
 )
 from app.contracts.framework_definition_schema import (
+    SENS_NON_SIGNIFICATIF,
     FrameworkDefinition,
     FrameworksFile,
     QuestionDefinition,
@@ -506,6 +507,36 @@ def chiffres_du_socle(q, entries: dict[int, dict[str, Any]]) -> list[dict[str, A
             for d in declares]
 
 
+def lecture_du_chiffre_du_verdict(q, entries: dict[int, dict[str, Any]]) -> Optional[tuple[str, Optional[str], Optional[int]]]:
+    """#139 ter — l'issue du chiffre qui PORTE le verdict (`sens_lu_sur`) : `(issue, motif, pièce)`, issue
+    ∈ `etabli` / `manque` / `non_significatif` (`ratios_maison.issue_du_motif`, détenteur unique). `None`
+    quand la question n'en déclare pas. Lue par le contexte ET par `repondre` — une seule décision (#46)."""
+    from app.knowledge.ratios_maison import issue_du_motif
+    if not getattr(q, "sens_lu_sur", None):
+        return None
+    lu = next((c for c in chiffres_du_socle(q, entries) if c["id"] == q.sens_lu_sur), None)
+    if lu is None or lu["piece"] is None:
+        return ("manque", "les comptes reconstitués ne sont pas au dossier", None)
+    if lu["valeur"] is not None:
+        return ("etabli", None, lu["piece"])
+    return (issue_du_motif(lu["periode_ou_motif"]), lu["periode_ou_motif"], lu["piece"])
+
+
+def statuts_ouverts(q, citables: dict[int, dict[str, Any]],
+                    entries: dict[int, dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """`statuts_admissibles`, plus la RELATION verdict ↔ chiffre (#139 ter) : quand le chiffre qui porte le
+    verdict MANQUE, aucun verdict ne se conclut — `repondu` / `approxime` ferment AVANT l'appel (#40) ;
+    restent la sortie honnête (`sans_fondement`) et l'attente. Détenteur unique pour le contexte et `repondre`."""
+    ouverts, ecartes = statuts_admissibles(q, citables)
+    lecture = lecture_du_chiffre_du_verdict(q, entries)
+    if lecture is not None and lecture[0] == "manque":
+        fermes = [s for s in ouverts if s in ("repondu", "approxime")]
+        ouverts = [s for s in ouverts if s not in fermes]
+        ecartes = ecartes + [f"`{s}` : le chiffre qui porte le verdict ({q.sens_lu_sur}) n'est pas établi — "
+                             f"{lecture[1]}" for s in fermes]
+    return ouverts, ecartes
+
+
 def contexte_analyste(
     fichier: FrameworksFile,
     framework_id: str,
@@ -533,15 +564,21 @@ def contexte_analyste(
     questions = []
     for q in questions_applicables(fichier, framework_id, archetype):
         citables = corpus_citable(q, entries)
-        ouverts, _ = statuts_admissibles(q, citables)
-        if aucune_reponse_possible(ouverts):
+        lecture = lecture_du_chiffre_du_verdict(q, entries)
+        if lecture is not None and lecture[0] == "non_significatif":
+            continue  # #139 ter : le code écrit le verdict « non significatif » (cf. `repondre`)
+        # La porte se juge AVANT la relation verdict ↔ chiffre : fermer `repondu` faute de chiffre ne doit
+        # pas priver le modèle de l'attente (« pas encore observable ») en concluant « rien à demander ».
+        if aucune_reponse_possible(statuts_admissibles(q, citables)[0]):
             continue  # rien à demander : le code écrit le `non_fondable` (cf. `repondre`)
+        ouverts, _ = statuts_ouverts(q, citables, entries)
         lisibles, citables = citables, corpus_montre(q, citables, ouverts)
         questions.append({
             "id": q.id,
             "enonce": q.enonce,
             "variable_archetype": q.variables_par_archetype[archetype].variable,
-            "sens_admis": list(q.sens_admis),
+            # « non significatif » n'est jamais montré : seul le code l'écrit (#139 ter).
+            "sens_admis": [s for s in q.sens_admis if s != SENS_NON_SIGNIFICATIF],
             # Vocabulaire FERMÉ de statuts, même forme que `sens_admis` : une propriété de la
             # question sur ce corpus, jamais un curseur. Le modèle ne voit toujours ni
             # `plancher_tier` ni `nature_attendue` (#59) — seulement ce qui lui reste ouvert.
@@ -1237,6 +1274,25 @@ async def repondre(
     admis: dict[str, list[str]] = {}
     for q in questions_applicables(fichier, framework_id, archetype):
         citables = corpus_citable(q, entries)
+        lecture = lecture_du_chiffre_du_verdict(q, entries)
+        if lecture is not None and lecture[0] == "non_significatif":
+            # (2 ter, #139 ter) le chiffre qui PORTE le verdict est non significatif — une propriété de
+            # l'entreprise, établie par le code : la note dit « n.s. », sans appel au modèle (un verdict
+            # lui serait inventé). Même assemblage et même pont qu'une réponse du modèle.
+            brute = AnalysteReponse(
+                question_id=q.id, statut="repondu", sens=SENS_NON_SIGNIFICATIF,
+                cited_entry_ids=[lecture[2]],
+                verbatim=(f"Non significatif pour cette entreprise : "
+                          f"{next(c.libelle for c in q.chiffres_cles if c.id == q.sens_lu_sur).lower()} — {lecture[1]}. "
+                          "Aucun verdict ne se lit sur ce chiffre ; la question se rouvrira aux comptes suivants."))
+            try:
+                answer = assembler_answer(brute, question=q, entries=entries, **entete)
+                valider_pont_framework_answer(answer, questions=question_profiles(fichier), entries=entries)
+            except Exception as exc:  # noqa: BLE001 — un refus reste à sa question, nommé
+                resultat.refus.append((q.id, f"verdict « non significatif » refusé : {type(exc).__name__}: {exc}"))
+                continue
+            resultat.answers.append(answer)
+            continue
         if not citables:
             # (2a) aucune source n'atteint le plancher : c'est le CORPUS qui manque, et on ne paie
             #      pas un appel pour l'apprendre.
@@ -1246,7 +1302,7 @@ async def repondre(
                         f"attendus : {[i.id for i in q.ingredients_requis if i.essentiel]}"),
                 citables=0, fournies=len(entries)))
             continue
-        ouverts, ecartes = statuts_admissibles(q, citables)
+        ouverts, ecartes = statuts_admissibles(q, citables)  # la porte : avant la relation (cf. contexte)
         if aucune_reponse_possible(ouverts):
             # (2b) des sources atteignent le plancher, mais AUCUNE réponse ne pourrait passer le
             #      pont : la question est infondable sur ce corpus. On le dit ici, gratuitement,
@@ -1259,7 +1315,7 @@ async def repondre(
                 citables=len(citables), fournies=len(entries)))
             continue
         interrogeables[q.id] = q
-        admis[q.id] = statuts_montres(ouverts)
+        admis[q.id] = statuts_montres(statuts_ouverts(q, citables, entries)[0])
     aujourd_hui = aujourd_hui or date.today()
 
     if interrogeables:

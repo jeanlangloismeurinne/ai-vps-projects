@@ -55,6 +55,7 @@ from app.contracts.framework_definition_schema import (
     VariableArchetype,
 )
 from app.agents.v2.frameworks import (
+    CLEFS_PROFIL_FACULTATIVES,
     CLEFS_PROFIL_LUES,
     FRAMEWORKS_YAML,
     FrameworkDefinitionRefused,
@@ -678,12 +679,16 @@ check("un profil est produit pour chacune des 13 questions",
       f"→ {len(_profils)} profils pour {len(_questions)} questions")
 _src_valid = inspect.getsource(fwk.valider_pont_framework_answer)
 _lues_reellement = set(re.findall(r'profil\.get\(\s*"([a-z_]+)"', _src_valid))
-check("les clefs réellement lues par le pont sont celles déclarées dans `CLEFS_PROFIL_LUES`",
-      _lues_reellement == set(CLEFS_PROFIL_LUES),
-      f"→ le pont lit {sorted(_lues_reellement)}, la table déclare {sorted(CLEFS_PROFIL_LUES)}")
-check("chaque profil porte ces clefs, non nulles",
-      all(p.get(c) is not None for p in _profils.values() for c in _lues_reellement),
+check("les clefs réellement lues par le pont sont celles déclarées (`CLEFS_PROFIL_LUES` + facultatives)",
+      _lues_reellement == set(CLEFS_PROFIL_LUES) | set(CLEFS_PROFIL_FACULTATIVES),
+      f"→ le pont lit {sorted(_lues_reellement)}, la table déclare "
+      f"{sorted(set(CLEFS_PROFIL_LUES) | set(CLEFS_PROFIL_FACULTATIVES))}")
+check("chaque profil porte les clefs obligatoires, non nulles",
+      all(p.get(c) is not None for p in _profils.values() for c in CLEFS_PROFIL_LUES),
       "→ une clef nulle fait SAUTER les contrôles D/E sans rien signaler")
+check("chaque profil porte les clefs facultatives (présentes, nulles admises)",
+      all(c in p for p in _profils.values() for c in CLEFS_PROFIL_FACULTATIVES),
+      "→ une clef facultative absente se lit `None` : une faute d'orthographe sauterait [S bis]")
 check("chaque profil porte au moins un ingrédient essentiel",
       all(p["ingredients_essentiels"] for p in _profils.values()),
       "→ une question qui n'exige rien est couverte par le corpus vide")

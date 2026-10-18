@@ -135,7 +135,10 @@ v, motif = ratio(RV, "rendement_du_capital_employe_moyen")
 b.check(v is None and "2024-12-31" in motif and "2025-12-31" in motif,
         f"§3 la moyenne cinq ans n'est pas établie et NOMME les exercices sans rendement ({motif[:90]})")
 v, motif = ratio(RV, "pente_du_rendement")
-b.check(v is None and motif.startswith("non établi"), "§3 pas de pente sans les cinq rendements")
+# #139 ter — une année NON DÉFINIE (capital négatif) est une propriété de l'entreprise : la pente est « non
+# défini », jamais « non établi » (qui l'envoyait en collecte, RVMD qf_5 du 2026-10-18).
+b.check(v is None and motif.startswith("non défini") and rm.issue_du_motif(motif) == rm.NON_SIGNIFICATIF,
+        f"§3 pas de pente sans les cinq rendements — et l'absence est NON SIGNIFICATIVE ({motif[:70]})")
 v, motif = ratio(RV, "part_du_resultat_en_tresorerie")
 b.check(v is None and "non calculable" in motif and "perte" in motif,
         f"§3 une perte cumulée ne se convertit pas en trésorerie ({motif[:80]})")
@@ -148,6 +151,9 @@ ancien = {**MS, "cellules": {k: v for k, v in MS["cellules"].items() if not k.st
 v, motif = ratio(ancien, "rendement_du_capital_employe_moyen")
 b.check(v is None and "capital_employe" in motif,
         f"§4 socle sans capital employé (gabarit 1.0.0) : non établi, la ligne NOMMÉE ({motif[:80]})")
+v, motif = ratio(ancien, "pente_du_rendement")
+b.check(v is None and motif.startswith("non établi") and rm.issue_du_motif(motif) == rm.MANQUE,
+        f"§4 … et sa pente reste « non établi » : une cellule MANQUE, une collecte peut la ramener ({motif[:60]})")
 v, motif = ratio(ancien, "capital_par_point_de_croissance")
 b.check(v is None and "capital_employe" in motif, "§4 idem pour le capital par point de croissance")
 court = {**MS, "periodes": [p for p in MS["periodes"] if not (p["cadrage"] == "flux" and p["fin"] < "2024-01-01")]}
@@ -189,8 +195,8 @@ for (qid, cid), rid in attendus.items():
 q1 = qf.get("qf_1")
 enc_rv = {c.id: c for c in completer_encadre(list(q1.chiffres_cles), [], socle=RV)} if q1 else {}
 c = enc_rv.get("rendement_du_capital_employe")
-b.check(c is not None and c.valeur is None and "non établi" in (c.motif_absence or ""),
-        "§5 RVMD qf_1 : le chiffre n'est pas établi et le DIT (jamais un zéro)")
+b.check(c is not None and c.valeur is None and (c.motif_absence or "").startswith("non défini"),
+        "§5 RVMD qf_1 : le chiffre n'est pas établi et le DIT (jamais un zéro) — non défini, capital négatif (#139 ter)")
 
 # ── §6 Forme persistée et texte ────────────────────────────────────────────────────────────────────
 print("§6 la version des définitions, le texte de l'analyste")

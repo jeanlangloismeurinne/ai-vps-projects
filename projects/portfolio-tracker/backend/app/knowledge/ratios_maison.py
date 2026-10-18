@@ -208,6 +208,21 @@ def _libelle_fenetre(exs: list[dict[str, Any]]) -> str:
     return f"exercices clos du {exs[0]['fin']} au {exs[-1]['fin']}"
 
 
+# L'ISSUE d'un chiffre absent, lue sur le PRÉFIXE de son motif (les trois issues ci-dessus) — DÉTENTEUR
+# UNIQUE (#139 ter). `manque` : une cellule manque, une collecte peut la ramener ; `non_significatif` : une
+# propriété de l'entreprise (dénominateur négatif, aucune croissance) — aucune collecte ne la changera, et
+# un verdict lu sur ce chiffre serait inventé (mesuré RVMD qf_3/qf_5, 2026-10-18).
+MANQUE, NON_SIGNIFICATIF = "manque", "non_significatif"
+_PREFIXES_NON_SIGNIFICATIF = ("non calculable", "non défini")
+
+
+def issue_du_motif(motif: Optional[str]) -> str:
+    """`non_significatif` si le motif dit une propriété de l'entreprise, sinon `manque` (prudent : dans le
+    doute, on cherche — une absence non qualifiée reste une donnée à collecter)."""
+    m = (motif or "").strip().lower()
+    return NON_SIGNIFICATIF if m.startswith(_PREFIXES_NON_SIGNIFICATIF) else MANQUE
+
+
 def ratio_du_socle(structure: dict[str, Any], ratio_id: str) -> tuple[Optional[float], str]:
     """Un ratio maison LU dans le socle : (valeur dans l'unité du ratio, période — ou motif d'absence).
     Pur. DÉTENTEUR UNIQUE, lu par l'encadré de l'analyste et par le pont qui le vérifie (#46)."""
@@ -225,8 +240,13 @@ def ratio_du_socle(structure: dict[str, Any], ratio_id: str) -> tuple[Optional[f
         absents = [(l.fin, l.rendement_du_capital_employe.motif) for l in lignes
                    if l.rendement_du_capital_employe.valeur is None]
         if absents:
-            return None, ("non établi : rendement absent pour " + " ; ".join(f"l'exercice clos le {f} ({m})"
-                                                                        for f, m in absents))
+            detail = " ; ".join(f"l'exercice clos le {f} ({m})" for f, m in absents)
+            # #139 ter — un rendement NON DÉFINI (capital moyen négatif) est une propriété de l'entreprise :
+            # la série ne s'établira pas en collectant. Le dire « non établi » l'envoyait en collecte (RVMD
+            # qf_5, 2026-10-18). Une seule année non définie suffit : la série de cinq ne peut pas exister.
+            if any(issue_du_motif(m) == NON_SIGNIFICATIF for _f, m in absents):
+                return None, "non défini : rendement non défini pour " + detail
+            return None, "non établi : rendement absent pour " + detail
         rdts = [l.rendement_du_capital_employe.valeur for l in lignes]
         if ratio_id == "rendement_du_capital_employe_moyen":
             return sum(rdts) / len(rdts), f"moyenne des {_libelle_fenetre(exs)} — {source}"

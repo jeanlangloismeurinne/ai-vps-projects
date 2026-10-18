@@ -51,6 +51,7 @@ from app.agents.v2.frameworks import (
     _plus_faible,
     _TIER_RANK,
     motif_substitut_hors_sujet,
+    motif_verdict_contredit_son_chiffre,
 )
 from app.agents.v2.traducteur import questions_applicables
 from app.contracts.framework_answer_schema import (
@@ -120,7 +121,8 @@ def _completude(answer: FrameworkAnswer, *, applicable: bool) -> tuple[str, str]
     return "ok", ""
 
 
-def _fondation(answer: FrameworkAnswer, *, entries: dict[int, dict[str, Any]]) -> tuple[str, str]:
+def _fondation(answer: FrameworkAnswer, *, entries: dict[int, dict[str, Any]],
+               sens_lu_sur: Optional[str] = None) -> tuple[str, str]:
     """② Le grounding, re-vérifié contre le corpus FOURNI AU MANAGER — qui peut avoir maigri depuis
     l'analyse (une entry supersédée). Détenteur unique `validate_grounding` : la même fonction que
     la synthèse, délibérément (#46/#28). Une citation hors corpus = une source apportée de mémoire."""
@@ -135,6 +137,12 @@ def _fondation(answer: FrameworkAnswer, *, entries: dict[int, dict[str, Any]]) -
     violations = validate_grounding(claims, citable, approx or None)
     if violations:
         return "ko", " ; ".join(violations)
+    # #139 ter — le verdict est-il fondé par le chiffre qui le porte ? Même détenteur que le pont [S bis],
+    # relu À CHAQUE LECTURE : une réponse écrite avant la règle (RVMD qf_3/qf_5 #1687/#1688, verdict sur un
+    # chiffre non significatif) se rouvre d'elle-même, sans geste.
+    contradiction = motif_verdict_contredit_son_chiffre(answer, sens_lu_sur)
+    if contradiction:
+        return "ko", contradiction
     return "ok", ""
 
 
@@ -191,13 +199,14 @@ def controles_de_la_reponse(
     applicable: bool,
     entries: dict[int, dict[str, Any]],
     autres_reponses: Optional[dict[int, FrameworkAnswer]] = None,
+    sens_lu_sur: Optional[str] = None,
 ) -> tuple[ControlesManager, str]:
     """Les quatre contrôles d'UNE réponse → `(ControlesManager, motif_agrégé)`. Pur.
 
     `motif_agrégé` concatène les motifs des contrôles `ko` : c'est ce qui nourrit le `motif` du
     verdict et du mandat, pour qu'un renvoi nomme SA cause et non « le manager a renvoyé »."""
     c_comp, m_comp = _completude(answer, applicable=applicable)
-    c_fond, m_fond = _fondation(answer, entries=entries)
+    c_fond, m_fond = _fondation(answer, entries=entries, sens_lu_sur=sens_lu_sur)
     c_honn, m_honn = _honnetete(answer, entries=entries)
     c_nsub, m_nsub = _non_substitution(answer, autres_reponses=autres_reponses)
 
@@ -258,8 +267,10 @@ def reviser_framework(
     decisions: dict[tuple[str, str], Decision] = {}
     for a in answers:
         applicable = a.question_id in applicables_by_id
+        qdef_lue = applicables_by_id.get(a.question_id)
         controles, motif = controles_de_la_reponse(
             a, applicable=applicable, entries=entries, autres_reponses=autres_reponses,
+            sens_lu_sur=qdef_lue.sens_lu_sur if qdef_lue is not None else None,
         )
         kos = controles.kos()
         if kos:

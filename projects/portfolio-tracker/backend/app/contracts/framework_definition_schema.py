@@ -331,6 +331,10 @@ class VariableArchetype(Strict):
         return self
 
 
+# #139 ter — le verdict d'une question dont le chiffre qui le porte est non significatif (« n.s. »).
+SENS_NON_SIGNIFICATIF = "non_significatif"
+
+
 class QuestionDefinition(Strict):
     """Une question universelle. Les six propriétés de §2.3, aucune facultative par accident."""
     id: str = Field(min_length=1, pattern=r"^[a-z]{2}_[0-9]+$")
@@ -355,6 +359,14 @@ class QuestionDefinition(Strict):
     # « cette question ne se chiffre pas » indiscernable de « on a oublié de déclarer ses chiffres », et
     # la valorisation n'aurait rien à reprendre sans que rien ne le dise (`feedback_optional_schema_gate`).
     chiffres_cles: list[ChiffreCleDeclare]
+    # #139 ter — LE VERDICT EST LA LECTURE D'UN SEUL CHIFFRE : `sens_lu_sur` nomme ce chiffre de l'encadré
+    # (lu dans les comptes reconstitués). Comme une note d'analyse : quand la cellule porte « n.s. », la
+    # case verdict aussi ; quand elle est vide, il n'y a pas de verdict. Le sens `non_significatif` est
+    # alors au vocabulaire, et SEUL le code l'écrit (le chiffre est non significatif) ; un chiffre qui
+    # manque n'admet aucun verdict. Mesuré RVMD qf_3/qf_5 (2026-10-18) : texte « non mesurable », verdict
+    # « en érosion » — inventé, il changeait d'un passage à l'autre. Optionnel : la plupart des verdicts
+    # se fondent sur plusieurs éléments (qf_1 « détruit de la valeur » tient sur les pertes).
+    sens_lu_sur: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
 
     @model_validator(mode="after")
     def _une_question_demande_quelque_chose(self):
@@ -373,6 +385,16 @@ class QuestionDefinition(Strict):
             raise ValueError(f"{self.id} : `rouverte_par` contient un doublon")
         if len(set(self.sens_admis)) != len(self.sens_admis):
             raise ValueError(f"{self.id} : `sens_admis` contient un doublon")
+        if self.sens_lu_sur is not None:
+            lu = next((c for c in self.chiffres_cles if c.id == self.sens_lu_sur), None)
+            if lu is None or lu.socle is None:
+                raise ValueError(
+                    f"{self.id} : `sens_lu_sur` = {self.sens_lu_sur!r} doit nommer un chiffre de l'encadré "
+                    "lu dans les comptes reconstitués — c'est le code qui en établit l'issue")
+        if (self.sens_lu_sur is not None) != (SENS_NON_SIGNIFICATIF in self.sens_admis):
+            raise ValueError(
+                f"{self.id} : le sens `{SENS_NON_SIGNIFICATIF}` va avec `sens_lu_sur` — sans chiffre qui "
+                "porte le verdict, personne ne peut établir qu'il est non significatif")
         if self.plancher_tier in PLANCHERS_DESSERRES and not self.motif_plancher:
             raise ValueError(
                 f"{self.id} : plancher {self.plancher_tier} sans `motif_plancher`. Un desserrage "
