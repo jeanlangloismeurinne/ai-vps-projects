@@ -514,6 +514,7 @@ def contexte_analyste(
     entries: dict[int, dict[str, Any]],
     faits: Optional[dict[str, list[MaterialEvent]]] = None,
     aujourd_hui: Optional[date] = None,
+    classement: Optional[Any] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free, et sans aucune métadonnée de valeur sur les sources.
 
@@ -587,8 +588,20 @@ def contexte_analyste(
         "date_du_jour": (aujourd_hui or date.today()).isoformat(),
         "framework": {"id": fw.id, "libelle": fw.libelle, "methodologie": fw.methodologie},
         "archetype": archetype,
+        **({"classement_de_l_emetteur": fiche_du_classement(classement)}
+           if classement is not None and getattr(classement, "declencheur_accession", None) else {}),
         "questions": questions,
     }
+
+
+def fiche_du_classement(classement: Any) -> dict[str, Any]:
+    """#139 — la fiche signalétique en tête du dossier : le classement DÉCIDÉ par le comité, sa date, son
+    motif et la pièce du dépôt qui l'a justifié. Une information, pas une consigne : c'est à l'analyste
+    d'appliquer LE TEST de `pas_encore_observable` aux questions que ce reclassement a rendues
+    applicables. Un classement d'origine (sans décision) n'en a pas : rien à dire de neuf."""
+    return {"archetype": classement.archetype, "decide_le": classement.effective_from.isoformat(),
+            "motif": classement.motif, "piece_du_depot": classement.piece_id,
+            "depot": classement.declencheur_accession}
 
 
 def reponse_sans_objet(
@@ -818,7 +831,12 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "`historique_requis` (ce qu'il faudra avoir observé pour répondre, par exemple « quatre "
     "trimestres de ventes publiés »), `revoir_le` (la date, AAAA-MM-JJ, à partir de laquelle cet "
     "historique existera, postérieure à `date_du_jour` et à moins de trois ans). Pas de "
-    "`cited_entry_ids`, pas de valeur, pas de sens. Ce statut est toujours dans `statuts_admis`.\n\n"
+    "`cited_entry_ids`, pas de valeur, pas de sens. Ce statut est toujours dans `statuts_admis`.\n"
+    "  ⚠️ `classement_de_l_emetteur`, quand il est présent : le comité a RECLASSÉ l'émetteur à cette "
+    "date, au vu du dépôt dont `piece_du_depot` est la pièce (citable comme `piece_du_fait`). Les "
+    "questions que ce reclassement a rendues applicables mesurent souvent une activité qui COMMENCE "
+    "(des ratios sur exercices, une tendance, un pouvoir de prix) : applique-leur LE TEST ci-dessus. "
+    "Une information qui existe déjà (la trésorerie, la dette, une politique comptable) reste due.\n\n"
     "L'ENCADRÉ DE CHIFFRES CLÉS. Chaque question porte `chiffres_cles_demandes` : les chiffres que ta "
     "réponse doit rendre, comme l'encadré qui clôt une note d'analyste. Sur `repondu` et `approxime`, "
     "`chiffres_cles` contient EXACTEMENT une ligne par chiffre demandé — ni plus, ni moins —, avec son "
@@ -1186,6 +1204,7 @@ async def repondre(
     faits: Optional[dict[str, list[MaterialEvent]]] = None,
     chemises: Sequence[Any],
     aujourd_hui: Optional[date] = None,
+    classement: Optional[Any] = None,
 ) -> ResultatAnalyste:
     """Répond à TOUTES les questions d'un (ticker × framework × archétype). Ne persiste rien.
 
@@ -1245,7 +1264,7 @@ async def repondre(
 
     if interrogeables:
         contexte = contexte_analyste(fichier, framework_id, archetype, ticker_id, entries, faits,
-                                     aujourd_hui=aujourd_hui)
+                                     aujourd_hui=aujourd_hui, classement=classement)
         agent = agent or await _resolve_analyste_agent()
         messages = [{"role": "user", "content": _message_analyste(contexte)}]
         # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).

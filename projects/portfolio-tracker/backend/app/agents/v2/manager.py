@@ -110,6 +110,13 @@ def _completude(answer: FrameworkAnswer, *, applicable: bool) -> tuple[str, str]
         return "ko", (f"`{answer.question_id}` est sans objet pour l'archétype, mais la réponse la "
                       f"traite en `{answer.statut}` : une réponse fabriquée à une question qui n'a "
                       "pas de sens (défaut T4, entry #190)")
+    # Le MIROIR (#139) : seul le code écrit un `sans_objet`, et seulement pour une question hors sujet
+    # (`analyste.reponse_sans_objet` refuse une question applicable). Un `sans_objet` sur une question
+    # APPLICABLE vient donc d'un classement antérieur — RVMD reclassée « commerciale » gardait ses
+    # `sans_objet` de septembre (#919-#922), acquittés, et le reclassement ne rouvrait rien.
+    if applicable and answer.statut == "sans_objet":
+        return "ko", (f"`{answer.question_id}` a été déclarée sans objet sous un classement antérieur ; "
+                      "l'émetteur a été reclassé et la question a désormais un objet — elle est à instruire")
     return "ok", ""
 
 

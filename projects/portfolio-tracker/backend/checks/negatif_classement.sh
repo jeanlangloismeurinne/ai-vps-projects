@@ -44,6 +44,11 @@ mutations=(
 "$P¦    elif etat.recommandation is not None:¦    elif False:  # mutation¦empêche « dossier complet »"
 "$P¦                        reclassement_recommande=_recommandation_servie(etat.recommandation))¦                        reclassement_recommande=None)  # mutation¦sont SERVIS au niveau 1"
 "$P¦                           auteur=c.auteur, piece_id=c.piece_id,¦                           auteur=None, piece_id=c.piece_id,¦servie avec sa pièce, son auteur"
+# ── l'analyste lit la fiche (§6) ──────────────────────────────────────────────────────────────
+"app/agents/v2/analyste.py¦           if classement is not None and getattr(classement, \"declencheur_accession\", None) else {}),¦           if False else {}),¦figure en tête du contexte"
+"app/agents/v2/analyste.py¦           if classement is not None and getattr(classement, \"declencheur_accession\", None) else {}),¦           if classement is not None else {}),¦classement d'origine n'y figure pas"
+"app/agents/v2/analyste.py¦\"Une information qui existe déjà (la trésorerie, la dette, une politique comptable) reste due.¦\"Une information qui existe déjà.¦l'existant reste dû"
+"tools/executer_chaine.py¦            chemises=dossier.chemises, classement=prepare.classement)¦            chemises=dossier.chemises)¦executer_chaine.py\` remet la fiche"
 # ── l'écran ───────────────────────────────────────────────────────────────────────────────────
 "$ECR¦          <p className=\"text-xs text-gray-400 italic\">{r.resume}</p>¦¦l'écran rend \`r.resume\`"
 "$ECR¦geste === 'reclasser' ? r.vers : r.de¦r.vers¦envoie reclasser (vers) ou maintenir"

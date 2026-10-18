@@ -252,4 +252,27 @@ else:
     b.check("/classement`" in src and "geste === 'reclasser' ? r.vers : r.de" in src,
             "§5 l'écran envoie reclasser (vers) ou maintenir (de) au geste du comité")
 
+# ══ §6 L'ANALYSTE LIT LA FICHE DU CLASSEMENT ════════════════════════════════════════════════════
+print("[6] l'analyste lit la fiche du classement")
+# Mesuré le 2026-10-18 : RVMD reclassée, pièce #944 jointe et citable, l'analyste a pourtant déclaré
+# qf_1/2/3/5 « à collecter » — rien ne lui disait que l'émetteur venait d'être reclassé, ni pourquoi.
+from app.agents.v2 import analyste as AN  # noqa: E402
+_ctx_d = AN.contexte_analyste(FICHIER, "qualite_financiere", "rentable", "RVMD", {}, classement=RECLASSE)
+_ctx_o = AN.contexte_analyste(FICHIER, "qualite_financiere", "pre_revenus", "RVMD", {}, classement=ORIGINE)
+_fiche = _ctx_d.get("classement_de_l_emetteur") or {}
+b.check(_fiche.get("piece_du_depot") == 944 and _fiche.get("depot") == ACC_FDA
+        and _fiche.get("decide_le") == "2026-10-18" and _fiche.get("archetype") == "rentable",
+        f"§6 un classement DÉCIDÉ figure en tête du contexte, avec sa pièce et son dépôt (→ {_fiche})")
+b.check("classement_de_l_emetteur" not in _ctx_o,
+        "§6 un classement d'origine n'y figure pas (rien de neuf à dire)")
+b.check("`classement_de_l_emetteur`" in AN._ANALYSTE_SYSTEM_PROMPT
+        and "piece_du_depot" in AN._ANALYSTE_SYSTEM_PROMPT and "reste due" in AN._ANALYSTE_SYSTEM_PROMPT,
+        "§6 la consigne dit ce qu'est la fiche, que sa pièce se cite, et que l'existant reste dû")
+_racine = Path(__file__).resolve().parent.parent
+for _f, _motif in (("tools/executer_chaine.py", "classement=prepare.classement"),
+                   ("app/agents/v2/bouclage.py", "classement=prepare.classement"),
+                   ("tools/acceptation_analyste.py", "classement=classement")):
+    b.check(_motif in (_racine / _f).read_text(encoding="utf-8"),
+            f"§6 `{_f}` remet la fiche du classement à l'analyste")
+
 sys.exit(b.summary())

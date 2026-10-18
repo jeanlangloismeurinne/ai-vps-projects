@@ -81,7 +81,8 @@ mutations=(
 "app/agents/v2/preparation.py¦        joindre=[*ids_des_lectures(lectures), *([socle.entry_id] if socle else []),¦        joindre=[*ids_des_lectures(lectures),¦reçoit le socle joint"
 # #139 — la pièce du classement suit TOUS les chapitres.
 "app/agents/v2/preparation.py¦                 *([piece_du_classement] if piece_du_classement is not None else [])])¦                 ])¦la pièce du classement est jointe"
-"app/agents/v2/preparation.py¦    piece_du_classement = classement.piece_id if classement is not None else None¦    piece_du_classement = classement.piece_id if fw.lit_le_socle and classement is not None else None¦la pièce du classement est jointe"
+"app/agents/v2/preparation.py¦    piece_du_classement = await piece_du_classement_de(conn, ticker_id)¦    piece_du_classement = await piece_du_classement_de(conn, ticker_id) if fw.lit_le_socle else None¦la pièce du classement est jointe"
+"tools/acceptation_analyste.py¦                joindre=[piece] if piece is not None else [])¦                )¦l'outil d'acceptation mesure le dossier de la chaîne"
 "app/agents/v2/preparation.py¦            socle_motif = str(e)¦            pass¦EDGAR injoignable"
 )
 

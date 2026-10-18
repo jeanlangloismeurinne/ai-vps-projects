@@ -22,6 +22,8 @@ MGR="app/agents/v2/manager.py"
 FWK="app/agents/v2/frameworks.py"
 
 mutations=(
+# #139 — le miroir du contrôle ① : un `sans_objet` sur une question devenue applicable
+"app/agents/v2/manager.py¦    if applicable and answer.statut == \"sans_objet\":¦    if False:  # mutation¦classement antérieur) est à instruire"
 # ── ① COMPLÉTUDE — une question inapplicable répondue passe (le défaut T4, entry #190) ─────────────
 "$MGR¦    if not applicable and answer.statut != \"sans_objet\":¦    if False:  # mutation: une question inapplicable répondue passe¦question inapplicable répondue"
 # ── ② FONDATION — le grounding ne refuse plus une citation hors corpus ────────────────────────────

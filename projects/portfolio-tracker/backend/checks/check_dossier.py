@@ -469,5 +469,10 @@ B.check(944 in list(_qf.dossier["joindre"]) and 944 in list(_mo.dossier["joindre
         f"(→ qf={list(_qf.dossier['joindre'])}, mo={list(_mo.dossier['joindre'])})")
 B.check(_pa.piece_du_classement is None and 944 not in list(_pa.dossier["joindre"]),
         "un classement d'origine, sans pièce, ne joint rien (et rien d'inventé)")
+_acc = Path("tools/acceptation_analyste.py").read_text(encoding="utf-8")
+B.check(_acc.count("piece_du_classement_de(conn, ticker)") == 2
+        and _acc.count("joindre=[piece] if piece is not None else []") == 2,
+        "l'outil d'acceptation mesure le dossier de la chaîne : il joint la pièce du classement par le "
+        "MÊME détenteur, à ses deux lectures (sans quoi il éprouverait l'analyste sur un autre dossier)")
 
 sys.exit(B.summary())

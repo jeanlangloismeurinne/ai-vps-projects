@@ -236,7 +236,7 @@ async def main() -> int:
         resultat = await repondre(
             ticker_id, framework_id, archetype,
             analyste=ANALYSTE, entries=entries, fichier=fichier, faits=faits,
-            chemises=dossier.chemises)
+            chemises=dossier.chemises, classement=prepare.classement)
         if perimetre is not None:
             hors = sorted({a.question_id for a in resultat.answers} - perimetre)
             resultat.answers = [a for a in resultat.answers if a.question_id in perimetre]

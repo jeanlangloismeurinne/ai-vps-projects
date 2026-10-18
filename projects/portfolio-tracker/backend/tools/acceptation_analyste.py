@@ -32,6 +32,8 @@ from app.agents.v2.analyste import (
     statuts_admissibles,
 )
 from app.agents.v2.dossier import charger_dossier
+from app.agents.v2.framework_persist import read_classement
+from app.agents.v2.preparation import piece_du_classement_de
 from app.agents.v2.frameworks import load_frameworks
 from app.agents.v2.parcours import faits_posterieurs_du_titre
 from app.agents.v2.traducteur import questions_applicables
@@ -121,9 +123,11 @@ async def _admissibilite(fichier) -> int:
     for ticker, framework_id, archetype in CAS:
         print(f"\n{'='*78}\n{ticker} · {framework_id} · archétype « {archetype} »\n{'='*78}")
         async with get_db_session() as conn:
+            piece = await piece_du_classement_de(conn, ticker)  # #139 — le dossier de la chaîne
             dossier = await charger_dossier(
                 conn, ticker_id=ticker, framework_id=framework_id,
-                framework_version=fichier.schema_version, plafond=PLAFOND)
+                framework_version=fichier.schema_version, plafond=PLAFOND,
+                joindre=[piece] if piece is not None else [])
         entries = dossier.entries
         print(dossier.bilan())
         for q in questions_applicables(fichier, framework_id, archetype):
@@ -172,9 +176,12 @@ async def main() -> int:
         for ticker, framework_id, archetype in CAS:
             print(f"\n{'='*78}\n{ticker} · {framework_id} · archétype « {archetype} »\n{'='*78}")
             async with get_db_session() as conn:
+                piece = await piece_du_classement_de(conn, ticker)  # #139 — le dossier de la chaîne
+                classement = await read_classement(conn, ticker_id=ticker)
                 dossier = await charger_dossier(
                     conn, ticker_id=ticker, framework_id=framework_id,
-                    framework_version=fichier.schema_version, plafond=PLAFOND)
+                    framework_version=fichier.schema_version, plafond=PLAFOND,
+                    joindre=[piece] if piece is not None else [])
                 faits = await faits_posterieurs_du_titre(conn, ticker, fichier, framework_id)  # #103
             entries = dossier.entries
             for qid, evs in sorted(faits.items()):
@@ -194,7 +201,7 @@ async def main() -> int:
             try:
                 resultat = await repondre(ticker, framework_id, archetype,
                                           analyste="acceptation", entries=entries, fichier=fichier,
-                                          faits=faits, chemises=dossier.chemises)
+                                          faits=faits, chemises=dossier.chemises, classement=classement)
             except Exception as e:  # noqa: BLE001
                 fail += 1
                 print(f"  FAIL {type(e).__name__}: {e}")

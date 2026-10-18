@@ -100,6 +100,11 @@ b.check(c_ko.completude == "ko", "① ko : question inapplicable répondue `repo
 #    l'applicabilité, pas au statut (sinon le contrôle refuserait toute réponse).
 c_appl, _ = _controles(_repondu("qf_1", "MSFT"), applicable=True)
 b.check(c_appl.completude == "ok", "① ok : la même réponse sur une question applicable passe")
+# #139 — le MIROIR : un `sans_objet` sur une question devenue APPLICABLE (émetteur reclassé) ne ferme
+#    plus rien. Cas réel : RVMD reclassée « commerciale » gardait ses `sans_objet` #919-#922, acquittés.
+c_recl, m_recl = _controles(_sans_objet("qf_1", "RVMD"), applicable=True)
+b.check(c_recl.completude == "ko" and "classement antérieur" in m_recl,
+        "① ko : un `sans_objet` sur une question APPLICABLE (classement antérieur) est à instruire")
 
 # ② FONDATION — une citation hors du corpus fourni au manager (une entry supersédée depuis l'analyse).
 c_ok, _ = _controles(_repondu("qf_2", "MSFT", cites=(10,)), applicable=True)

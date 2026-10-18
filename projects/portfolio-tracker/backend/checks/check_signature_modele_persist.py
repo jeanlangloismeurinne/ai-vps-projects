@@ -177,8 +177,18 @@ async def main() -> None:
         # Option (c), #99 : sur RVMD (biotech sans chiffre d'affaires), qf_1 est sans objet — le modèle
         # portera son propre coût du capital ; qf_6, qui tient, doit être repris, jamais remplacé.
         print(f"  mesuré : RVMD — sans objet : {sorted(reel.questions_sans_objet)}")
-        b.check("qf_1" in reel.questions_sans_objet and "qf_1" in reel.reprises_admises,
-                "RVMD : qf_1 est sans objet et reprise par la valorisation — le cas de l'option (c) est réel")
+        # #139 — RVMD a été reclassée « commerciale » par le comité le 2026-10-18 : le cas dépend du
+        # CLASSEMENT EN VIGUEUR, lu ici plutôt que supposé. Classée sans revenus → l'option (c) est exercée
+        # sur le réel ; classée commerciale → qf_1 a un objet, la valorisation ne doit plus la lire
+        # « sans objet » (le reclassement porte aussi à ce point de lecture). Jamais un saut muet.
+        if etat.archetype == "pre_revenus":
+            b.check("qf_1" in reel.questions_sans_objet and "qf_1" in reel.reprises_admises,
+                    "RVMD : qf_1 est sans objet et reprise par la valorisation — le cas de l'option (c) est réel")
+        else:
+            print(f"  ⚠️ RVMD classée « {etat.archetype} » : l'option (c) n'est plus exercée sur le réel "
+                  "(elle reste gardée hors ligne par check_signature_modele)")
+            b.check("qf_1" not in reel.questions_sans_objet,
+                    f"RVMD classée « {etat.archetype} » : qf_1 n'est plus lue « sans objet » par la valorisation")
         b.check(not ({r.question_id for r in reel.reponses_acquittees.values()} & reel.questions_sans_objet),
                 "aucune question n'est à la fois reprenable et sans objet")
         n_pieces = await conn.fetchval(
