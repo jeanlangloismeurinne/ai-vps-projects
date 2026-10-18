@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #137) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #139) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
 > | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
@@ -187,3 +187,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #136 tout chiffre renvoie à une pièce : renvoyé une fois, le calcul se montre, le reste est signalé
 - #137 séance du 2026-10-17 : marchés visés (estimation interne), taux exigé unique 10 %, relance bornée + réinitialisation, test NVDA+RVMD générique
 - #138 « pas encore observable » : une attente se justifie (cause, fait daté + pièce, historique, revue), le comité en juge la cause
+- #139 le changement de stade : le système recommande (catalogue 1.7.0), le comité reclasse ou maintient ; la pièce du classement suit tous les chapitres

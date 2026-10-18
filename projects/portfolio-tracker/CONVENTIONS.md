@@ -3363,3 +3363,43 @@ conteste.
 - Preuve : `check_analyste` §14 (+ `negatif_analyste`, 10 mutations), `check_relance` §5/§6
   (+ `negatif_relance`, 7 mutations), `check_parcours` §7 / `check_framework_contract` §9 (chaque champ a son
   pixel, maquette niveau 3 mise à jour).
+
+### #139 — le changement de stade : le système recommande, le comité reclasse ; la pièce du classement suit tous les chapitres
+
+**Arbitrage du 2026-10-18** (07 point 21, suite de #138). « Le système détecte le changement de stade, mais il
+faut voir ce qui mérite d'être rouvert ; le comité valide toujours ensuite, mais il y a une recommandation
+claire. » Comme un fonds : le stade de la société est écrit en tête de chaque dossier ; l'analyste propose de
+reclasser une biotech « commerciale » à l'autorisation de son premier produit, le directeur de la recherche
+décide, date, signe et cite l'événement — et tous les analystes le voient, quel que soit leur chapitre.
+- **Mesuré avant** : RVMD porte six notes « réglementaire favorable » en un an (essais, désignations,
+  approbation) ; seule celle du 26/08 change la nature de l'entreprise. Le type existant ne la distinguait pas.
+- **Catalogue 1.7.0** : type `changement_de_stade` (premier produit autorisé à la vente ou premières ventes,
+  ANNONCÉ PAR CE DÉPÔT ; ni produit supplémentaire, ni extension, ni rappel), portée `questions_declarees`,
+  champ `reclasse: {pre_revenus: rentable}` (pont [W] : archétypes déclarés, distincts ; contrat : origine
+  émetteur seulement).
+- **Ce qu'il rouvre** (table validée par l'utilisateur) : ce que rouvre déjà l'approbation (toute la
+  défendabilité, me_1, me_5, se_1, se_5, va_2, va_3, va_6) PLUS qf_6, qf_7, me_2, me_3, me_4, me_6, se_2, se_3,
+  ma_1, va_1, va_4, va_5. Pas : qf_4/qf_8 (le financement lié arrive par son propre dépôt), se_4/se_6, ma_2-ma_7.
+  qf_1/2/3/5 et mo_6 s'ouvrent par le reclassement lui-même.
+- **Les pairs** (consigne de l'utilisateur, ingrédient `se_3.pairs_directs`, repris par va_5) : ceux qui
+  vendent, ou vendront, sur le même marché ou un marché analogue ; un changement de stade POSE la question des
+  pairs sans la trancher — un acteur juste derrière en calendrier reste un pair.
+- **La recommandation** (`classement.recommandation_de_classement`, PURE, recalculée à la lecture) : le premier
+  dépôt lu sous un type qui `reclasse` l'archétype en vigueur et qu'aucune DÉCISION n'a tranché. ⚠️ Un
+  classement d'origine ne tranche rien : RVMD a été classée « sans revenus » le 24/09, APRÈS l'approbation du
+  26/08 — une règle « fait postérieur au classement » n'aurait jamais rien recommandé. Une décision ferme les
+  faits survenus jusqu'à sa date ; un fait ultérieur du même ordre rouvre. En suspens, elle empêche « dossier
+  complet » au niveau 1 (la grille elle-même est à revoir).
+- **Le geste** (`classement.decider_classement`, `POST /v2/tickers/{id}/classement`, bloc « Classement de la
+  société » du niveau 1) : reclasser OU maintenir, signé, motivé, adossé au dépôt (sa lecture devient la pièce,
+  écrite si elle manque). Relations vérifiées : archétype déclaré, dépôt du fil EDGAR de l'émetteur et pas
+  dans le futur, décision postérieure au classement en vigueur (une seconde le même jour réécrirait la
+  première), lecture obtenue. Effet le jour du geste ; la date du fait reste celle de la pièce (c'est elle
+  que l'attente cite, #138).
+- **Migration 059** : `ticker_archetypes.piece_id` / `auteur` / `declencheur_accession`, tout ou rien
+  (`ticker_archetypes_decision`) ; les trois classements d'origine restent sans.
+- **La pièce du classement en vigueur est jointe d'office à TOUS les chapitres** (`preparation`,
+  `DossierPrepare.piece_du_classement`) : fait de l'émetteur, pas d'un sujet (#108). Contrairement aux lectures
+  des faits postérieurs (#106), elle reste au dossier après la publication des comptes suivants.
+- Preuve : `check_classement` (+ `negatif_classement`, 21 mutations), `check_dossier` §14 (+ `negatif_dossier`),
+  `negatif_059.sh` (table, sur copie). Spec : colonne « rouverte par » de `03-spec-frameworks.md`.

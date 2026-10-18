@@ -6767,3 +6767,14 @@ rouvrait pas la question. Test négatif : 4 mutations d'abord ratées par la fau
 non unique qui mutait la garde voisine, mutation qui tuait le script, mutation qui laissait le texte cherché) —
 corrigées, 18/0. Conséquence relevée : RVMD mo_6 ne peut pas être « rouverte » en restant « sans revenus »
 (hors sujet par construction) — question à l'utilisateur.
+
+
+## 2026-10-18 — sortis du fichier de reprise à la clôture de #139
+
+- **2026-10-16** — **tout chiffre renvoie à une pièce** (#136) : un chiffre sans pièce citée est renvoyé UNE fois à
+  l'analyste, jamais rattaché par le code ; le calcul se MONTRE ; le reste est signalé au comité.
+- **2026-10-16** — mo_5/se_3 ne sont plus rouvertes par un dérapage d'exécution ; ma_4 scindée (argent en
+  jeu des dirigeants = mesure / ma_7 critères de rémunération = jugement à plancher A) (#131) ; source :
+  **d'abord le site de l'émetteur, à défaut ailleurs** (à construire) ; **la règle « une ré-analyse
+  n'entre en vigueur que si au moins aussi fondée » est ÉCARTÉE** — la dégradation par ré-analyse reste
+  une dette, à repenser (07 §3.13).

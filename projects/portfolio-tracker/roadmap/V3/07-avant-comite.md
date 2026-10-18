@@ -109,10 +109,12 @@ role: >
     mo_5 dit le concurrent « adjacent (pancréas) » alors que RASONQUE est approuvé dans le pancréas
     (erreur de lecture, pièces 917/920/682).
     *Arbitrage du 2026-10-18 : option A* — **CONSTRUIT** (#138) : troisième remède « attendre », justification
-    obligatoire (cause, fait daté + pièce, historique, revue), jugée par le comité. **Reste** : (a) la règle
-    « une approbation / un lancement reclasse l'émetteur », dont le fait déclencheur doit être joint à
-    TOUS les chapitres (aujourd'hui seul le modèle économique range #944/#973 — sans lui, ni qf ni mo ne
-    peuvent prouver leur attente) ; (b) le collecteur a daté #1057 (note du 14/10 sur l'approbation du
+    obligatoire (cause, fait daté + pièce, historique, revue), jugée par le comité. (a) ✅ **CONSTRUIT le
+    2026-10-18 (#139)** : type « changement de stade » (catalogue 1.7.0) qui rouvre la table validée et
+    recommande le reclassement ; le comité reclasse ou maintient (geste adossé à la lecture du dépôt) ; la
+    pièce du classement suit tous les chapitres. Arbitrage : on ne relance QUE la qualité financière de RVMD
+    maintenant (ratios attendus « pas encore observables ») ; les autres chapitres attendent le 10-Q du T3.
+    **Reste** : (b) le collecteur a daté #1057 (note du 14/10 sur l'approbation du
     26/08) au 5 août : datation d'une note de synthèse à corriger (rejoint la « datation hétérogène »).
 22. **L'outil du test** [C] — table de mesure par titre × chapitre, et comparaison de deux passages
     identiques (mêmes statuts, mêmes chiffres de l'encadré, écarts nommés).

@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -27,13 +27,16 @@ dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
 la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 **Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
 la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
-**RVMD, point 21 — option A CONSTRUITE le 2026-10-18 (#138)** : « pas encore observable » = remède
-« attendre », justification obligatoire en 4 morceaux jugée par le comité ; l'attente reste à l'alerte,
-fermée à la relance jusqu'à sa date de revue. Mesuré : NVDA 0 attente (pas d'abus) ; RVMD mo_6 tentée mais
-refusée à bon droit (seule pièce citable #1057 mal datée). **PROCHAIN PAS, avant (b)** : la règle « une
-approbation/un lancement reclasse l'émetteur » — le fait déclencheur (#944/#973) est un fait de
-l'ÉMETTEUR et doit être joint à tous les chapitres, sinon aucune attente ne peut se prouver hors modèle
-économique ; puis reclasser RVMD et relancer. Le 10-Q du T3 (début novembre) reste l'échéance.
+**RVMD, point 21 — #138 + #139 CONSTRUITS le 2026-10-18** : « pas encore observable » (attente justifiée,
+jugée par le comité) ; type « changement de stade » (catalogue 1.7.0) qui rouvre la table validée et
+RECOMMANDE le reclassement ; le comité reclasse/maintient (bloc « Classement de la société », niveau 1) ;
+la pièce du classement suit tous les chapitres. Notes relues sous 1.7.0 (RVMD #730-#739, NVDA #740-#745,
+MSFT #746-#750) : seule RVMD #731 (8-K du 26/08) est un changement de stade — recommandation affichée.
+**PROCHAIN PAS, avant (b)** : (1) l'utilisateur RECLASSE RVMD « commerciale » par le bouton (acte humain —
+ne pas le faire à sa place) ; (2) relancer la SEULE qualité financière de RVMD
+(`executer_chaine.sh RVMD qualite_financiere rentable`, ~1 h) et LIRE chaque réponse : qf_1/2/3/5 doivent
+sortir « pas encore observable » citant la pièce du classement (lecture du 8-K, #944), jamais chiffrées ;
+(3) arbitrage : les autres chapitres RVMD attendent le 10-Q du T3 (début novembre).
 ⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`, `montrer_dossier.sh`
 ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18.
 
@@ -48,33 +51,31 @@ ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4849/0** (2026-10-18, après #138).
+- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-18, après #139 ; check_classement 45, négatifs classement 21/0, dossier 26/0, 059 9/0).
 - **Périmètre d'une relance** (2026-10-17, `questions_a_relancer`, lecture seule) : NVDA 22 ouvertes (qualité
   financière : 0, tout est à jour), RVMD 27. **RVMD qualité financière : ses 4 réponses sont désormais
   PÉRIMÉES** (fait publié depuis — à regarder avec le point 15). PV du comité : **0 décision** en base.
 - **Chiffres sans pièce (#136)** : 19 sur les réponses en vigueur NVDA+RVMD (`montrer_parcours.sh`, colonne
   « sans pièce ») ; NVDA me_6 refaite (#1597, 0 sans pièce — mais comptes clients cités sur la mauvaise pièce).
-- **Production** : dernier déploiement `c2bc1af` (relance bornée + réinitialisation), vérifié dans les conteneurs
-  et par un refus de l'API (422 sur motif blanc — aucune écriture d'essai au PV, append-only).
-- **Prochaine migration : 059** (058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.6.0** ; notes flash 1.6.0 : RVMD #613-#622,
-  NVDA #623-#628, MSFT #629-#633.
+- **Production** : dernier déploiement `f36cfea` (#139), vérifié dans les conteneurs et par le niveau 1 RVMD
+  (recommandation servie). Migration 059 appliquée (3 classements d'origine intacts).
+- **Prochaine migration : 060** (059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+  NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
 
-## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#137 ; #129/#130 : fraîcheur par durée de vie, causes de révision, `06-regle-fraicheur.md` §8-§14)
+## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#139 ; #129/#130 : fraîcheur par durée de vie, causes de révision, `06-regle-fraicheur.md` §8-§14)
 
+- **2026-10-18** — **changement de stade** (#139) : le système détecte et RECOMMANDE, le comité reclasse
+  ou maintient ; table de réouverture validée ; les pairs : même marché ou analogue, un changement de stade
+  pose la question sans la trancher. Seule la qualité financière RVMD se relance avant le 10-Q du T3.
 - **2026-10-17** — séance groupée (#137) : marchés visés listés, **estimation interne d'abord** (bac à
   calcul) ; **taux exigé unique 10 %**, sensibilité ±1 pt, risque propre dans les scénarios ; défaut du comité
   annoté, repris à la reconstruction ; ma_2 sur indices observables ; fraîcheur = pièce la plus récente par
   sujet ; relance bornée + réinitialisation par l'utilisateur ; RVMD reclassée au 1er trimestre de ventes.
 
-- **2026-10-16** — **tout chiffre renvoie à une pièce** (#136) : un chiffre sans pièce citée est renvoyé UNE fois à
-  l'analyste, jamais rattaché par le code ; le calcul se MONTRE ; le reste est signalé au comité.
-- **2026-10-16** — mo_5/se_3 ne sont plus rouvertes par un dérapage d'exécution ; ma_4 scindée (argent en
-  jeu des dirigeants = mesure / ma_7 critères de rémunération = jugement à plancher A) (#131) ; source :
-  **d'abord le site de l'émetteur, à défaut ailleurs** (à construire) ; **la règle « une ré-analyse
-  n'entre en vigueur que si au moins aussi fondée » est ÉCARTÉE** — la dégradation par ré-analyse reste
-  une dette, à repenser (07 §3.13).
+- **2026-10-16** — tout chiffre renvoie à une pièce (#136) ; ma_4 scindée, mo_5/se_3 hors dérapage (#131) :
+  détail dans `CONVENTIONS.md` et l'archive (section du 2026-10-18).
 - Arbitrages plus anciens (périmètre EDGAR seul, « on rachète tout » en test, ajouter une méthodologie =
   opération de données, valorisation option (c), encadré de chiffres clés, signature du comité…) :
   archive, section COPIE CONFORME, « Arbitrages de l'utilisateur qui commandent la suite ».
