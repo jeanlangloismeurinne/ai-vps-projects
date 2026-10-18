@@ -3403,3 +3403,19 @@ décide, date, signe et cite l'événement — et tous les analystes le voient, 
   des faits postérieurs (#106), elle reste au dossier après la publication des comptes suivants.
 - Preuve : `check_classement` (+ `negatif_classement`, 21 mutations), `check_dossier` §14 (+ `negatif_dossier`),
   `negatif_059.sh` (table, sur copie). Spec : colonne « rouverte par » de `03-spec-frameworks.md`.
+- **#139 bis — exécuté sur RVMD le 2026-10-18 (reclassée « commerciale » par l'utilisateur, pièce #944).**
+  (1) **Le reclassement ne rouvrait rien** : les `sans_objet` de septembre (#919-#922) restaient acquittés.
+  Miroir du contrôle ① (`manager._completude`) : seul le code écrit un `sans_objet`, et seulement hors sujet ;
+  un `sans_objet` sur une question APPLICABLE vient d'un classement antérieur → `ko`, à instruire.
+  (2) **L'outil d'acceptation mesurait un autre dossier** que la chaîne (ni pièce du classement, ni socle, ni
+  lectures) : la pièce passe par le détenteur `preparation.piece_du_classement_de` ; ⚠️ le socle et les
+  lectures y manquent ENCORE (écart antérieur, nommé — une mesure d'acceptation sur un chapitre qui lit le
+  socle n'est pas la chaîne). (3) **L'analyste lit la fiche du classement** (`classement_de_l_emetteur` :
+  date, motif, pièce, dépôt). (4) **Mesuré** : qf_4/6/7/8 répondues (#1677-#1680, l'approbation lue comme
+  fait postérieur) ; qf_1/2/3/5 : jamais « pas encore observable » sur trois passages — deux fois « à
+  collecter » (#1681-#1684), puis « répondu » (#1685-#1688) : qf_1 « détruit de la valeur » et qf_2
+  « conversion absente » se défendent (vraies mesures 2021-2025) ; **qf_3 et qf_5 sont fautives** — le
+  texte dit « non mesurable » et la réponse porte un sens (« croissance destructrice », « en érosion ») :
+  le contrat impose un sens à tout `repondu`, le modèle l'invente quand le chiffre-objet est « non établi »
+  (rejoint le point 11 de 07, « répondu sans le chiffre-objet »). Jugement instable entre passages : la
+  consigne n'est pas le levier.
