@@ -6778,3 +6778,20 @@ corrigées, 18/0. Conséquence relevée : RVMD mo_6 ne peut pas être « rouvert
   **d'abord le site de l'émetteur, à défaut ailleurs** (à construire) ; **la règle « une ré-analyse
   n'entre en vigueur que si au moins aussi fondée » est ÉCARTÉE** — la dégradation par ré-analyse reste
   une dette, à repenser (07 §3.13).
+
+
+## 2026-10-18 — sortis du fichier de reprise à la clôture du point 14
+
+**RVMD, point 21 — #138 + #139 CONSTRUITS le 2026-10-18** : « pas encore observable » (attente justifiée,
+jugée par le comité) ; type « changement de stade » (catalogue 1.7.0) qui rouvre la table validée et
+RECOMMANDE le reclassement ; le comité reclasse/maintient (bloc « Classement de la société », niveau 1) ;
+la pièce du classement suit tous les chapitres. Notes relues sous 1.7.0 (RVMD #730-#739, NVDA #740-#745,
+MSFT #746-#750) : seule RVMD #731 (8-K du 26/08) est un changement de stade — recommandation affichée.
+RVMD **reclassée « commerciale »** par l'utilisateur le 2026-10-18 (pièce #944) ; **qualité financière RVMD
+8/8 acquittée et à jour** (#1677-#1680, #1685/#1686, « n.s. » #1712/#1713 écrits par le code — #139 ter :
+un verdict ne contredit jamais le chiffre qui le porte). Les autres chapitres RVMD attendent le 10-Q du T3.
+**Point 15 CONSTRUIT le 2026-10-18** : sujet = ingrédient ; seule sa pièce la plus récente juge, les remplacées
+sont « citées comme contexte » ; interrupteur `fraicheur_par_sujet`. Mesuré : 0 changement d'état sur les 53
+réponses fondées en vigueur ; NVDA ma_1 #1475 reste périmée À BON DROIT (historiques de l'allocation sans les
+10-Q T1/T2) — ce n'était pas qu'un problème de point 15. À regarder : une émission obligataire (financement)
+exige de compléter l'historique « rendement des usages » de ma_1 — vérifier que ce type doit le rouvrir.

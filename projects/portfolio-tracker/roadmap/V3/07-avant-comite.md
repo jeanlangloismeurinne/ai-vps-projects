@@ -74,7 +74,16 @@ role: >
     passage suivant ; un refus d'agent ne doit pas devenir une demande de recherche. ⚠️ La règle proposée
     (« la nouvelle n'entre en vigueur que si au moins aussi fondée ») a été **écartée par l'utilisateur
     le 2026-10-16** : sujet laissé en dette, à repenser. Prérequis du test de reproductibilité.
-14. **Demandes de recherche jamais closes** [C] — mandats 983-986, 2612/2613, 2975-2977 restent
+    **Causes profondes établies le 2026-10-18 (demande de l'utilisateur : bug corrigé ≠ instabilité) — aucune
+    des deux n'est une instabilité du modèle.** NVDA ma_1 : l'ANCIENNE (#1475) était fondée à tort — la pièce
+    #1429 s'intitule « sur les exercices 2022 à 2026 » mais ne relève qu'UN exercice (clos le 2026-01-25) : le
+    titre d'une fiche du relevé des dépôts recopie le libellé DEMANDÉ par le plan (`appariement_feed`, `libelle`),
+    pas la période MESURÉE ; #1499 a lu juste. Défaut toujours présent (1 pièce touchée aujourd'hui).
+    RVMD qf_6 (29/09) : la NOUVELLE (#897, effacée par retrait) était refusée à tort — encadré de chiffres clés
+    (#100) déployé 2 min avant, « un chiffre manquant fait tomber la question », corrigé le soir même (#101,
+    mesuré 3/3) puis réémise #924 `repondu`. Arbitrage de la règle de gouvernance EN ATTENTE de l'utilisateur.
+14. ~~**Demandes de recherche jamais closes**~~ ✅ **Fait le 2026-10-18 (#137 point 14, `8af6f4a`)** — une réponse écrite
+    sert la demande ouverte de sa question ; un refus d'agent n'ouvre plus de demande ; rattrapage 983-986, 2849. [C] — mandats 983-986, 2612/2613, 2975-2977 restent
     ouverts quand la question a trouvé sa réponse.
 15. ~~**Une pièce ancienne périme une réponse à jour**~~ ✅ **Fait le 2026-10-18 (#137 point 15, `331aa7c`)** —
     sujet = ingrédient, seule la pièce la plus récente juge ; interrupteur `fraicheur_par_sujet`. [A] — NVDA ma_1 citait le communiqué de rachat du

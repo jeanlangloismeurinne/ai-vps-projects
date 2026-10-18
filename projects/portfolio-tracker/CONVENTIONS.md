@@ -3336,6 +3336,23 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
   ne rend PAS applicable une question hors sujet pour l'archétype (cas RVMD mo_6, point 21 — à trancher).
   Preuve : `check_relance.py` + `negatif_relance.sh` (18/0), `check_comite_persist.py` §6 +
   `negatif_comite_persist.sh` (9/0), `negatif_058.sh` (12/0).
+- **Les demandes de recherche (point 14, inventaire 07 §3)** — **CONSTRUIT le 2026-10-18 (`8af6f4a`)**. Ce
+  que ferait un fonds : une demande de recherche du gérant ou du comité est CLOSE dès que l'analyste livre une
+  nouvelle version de la réponse, quelle qu'en soit l'issue ; si elle ne satisfait pas, le contrôle émet une
+  demande NEUVE avec son propre motif. Diagnostic : 0 mandat servi en base — seule la boucle des renvois
+  servait, jamais la chaîne (chemin réel de toutes les réponses) ; le dossier affichait « repartie en
+  recherche : mandat #983 » (motif « sans aucune réponse » du 26/09) sur des questions répondues depuis ; et
+  l'idempotence par question faisait absorber un renvoi du jour par ce vieux motif. Construit :
+  `framework_persist.persist_answer` (détenteur unique) sert, DANS la même transaction, le mandat
+  manager/comité ouvert de la question, quel que soit l'analyste (`statut_avant` = ligne supersédée ou
+  `non_fondable`) ; le bouclage ne sert plus lui-même (il lit l'id avant d'écrire, pour sa note). **Un refus
+  d'agent n'est jamais une demande de recherche** : `executer_chaine._retirer_refus_des_mandats_manquants`
+  (le script imprimait « aucun mandat n'en sort » alors que le manager en ouvrait un). Les constats du
+  collecteur (`inobtenable`/`echec_collecte`) restent hors du cycle : ils se lisent PAR COLLECTE (la dernière
+  de la question), leur `statut` n'est lu par personne. Rattrapage : `tools/retraits/2026-10-18_mandats_caducs.sql`
+  (983-986, 2849 servis ; 2918 RVMD se_3 reste ouvert à bon droit). Preuve : `check_framework_persist.py`
+  §6-§7 + `negatif_framework_persist.sh` (8/0), `check_bouclage.py` §7 + `negatif_bouclage.sh` (12/0),
+  `check_executer_chaine.py` + `negatif_executer_chaine.sh` (3/0).
 - **Le périmètre du test (point 20)** — jalon 1 = NVDA + RVMD jusqu'au comité ; puis une financière
   américaine, puis un émetteur étranger ; MSFT en contrôle de reproduction (tech voisine de NVDA). **Tout
   développement reste GÉNÉRIQUE** (aucune règle propre à un titre) pour que l'extension ne coûte rien.
