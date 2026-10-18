@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardBody, Badge, ErrorState } from './index'
 import { API, ManqueBloc, ScoreQualite, StatutBadge } from './parcours'
+import ClassementEmetteur from './ClassementEmetteur'
 
 function Alerte({ d }) {
   const p = d.peut_on_decider
@@ -154,6 +155,7 @@ export default function DossierComite({ tickerId }) {
   if (!d) return <p className="text-sm text-gray-500">Dossier du comité en cours de recalcul…</p>
   return (
     <div className="space-y-4" data-testid="dossier-comite">
+      <ClassementEmetteur d={d} onRecalcule={setD} />
       <Alerte d={d} />
       <NotesQualite d={d} />
       <Conclusions d={d} />

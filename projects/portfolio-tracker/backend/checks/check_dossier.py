@@ -425,8 +425,22 @@ async def _dossier(conn, **kw):
     return kw
 
 
-_vrais = (_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier)
-_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier = _faits, _socle, _dossier
+# #139 — le classement en vigueur : RVMD reclassée par le comité (pièce #944, la lecture du 8-K
+# d'approbation) ; PANNE garde un classement d'origine, sans pièce.
+from app.agents.v2.framework_persist import Classement as _Cl  # noqa: E402
+from datetime import date as _d  # noqa: E402
+
+
+async def _classement(conn, *, ticker_id, a_la_date=None):
+    if ticker_id == "RVMD":
+        return _Cl(archetype="rentable", motif="premier produit approuvé", effective_from=_d(2026, 10, 18),
+                   piece_id=944, auteur="gérant", declencheur_accession="0001193125-26-366931")
+    return _Cl(archetype="pre_revenus", motif="classement d'origine", effective_from=_d(2026, 9, 24))
+
+
+_vrais = (_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier, _P.read_classement)
+(_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier,
+ _P.read_classement) = _faits, _socle, _dossier, _classement
 try:
     _F = _lf()
     _qf = asyncio.run(_P.preparer_dossier_analyste(None, ticker_id="RVMD", framework_id="qualite_financiere",
@@ -436,7 +450,7 @@ try:
     _pa = asyncio.run(_P.preparer_dossier_analyste(None, ticker_id="PANNE", framework_id="qualite_financiere",
                                                     fichier=_F, plafond=40))
 finally:
-    _P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier = _vrais
+    (_P.faits_posterieurs_du_titre, _P.assurer_socle, _P.charger_dossier, _P.read_classement) = _vrais
 B.check(4242 in list(_qf.dossier["joindre"]) and _qf.socle is not None and _qf.socle.entry_id == 4242,
         f"la qualité financière reçoit le socle joint d'office (→ joindre={list(_qf.dossier['joindre'])})")
 B.check(4242 not in list(_mo.dossier["joindre"]) and _mo.socle is None and _appels.count("RVMD") == 1,
@@ -444,5 +458,16 @@ B.check(4242 not in list(_mo.dossier["joindre"]) and _mo.socle is None and _appe
 B.check(_pa.socle is None and _pa.socle_motif and "injoignable" in _pa.socle_motif
         and list(_pa.dossier["joindre"]) == [],
         "EDGAR injoignable : le dossier part SANS socle et le motif est rendu, jamais un silence")
+
+print("\n§14 (#139) la pièce du CLASSEMENT suit tous les chapitres")
+# Le classement gouverne la grille de CHAQUE chapitre : la pièce qui le fonde (la lecture du dépôt qui a
+# décidé le comité) est un fait de l'ÉMETTEUR, pas d'un sujet (#108). Sans elle, la qualité financière ne
+# peut prouver aucune attente « pas encore observable » (#138, mesuré le 2026-10-18 sur RVMD).
+B.check(944 in list(_qf.dossier["joindre"]) and 944 in list(_mo.dossier["joindre"])
+        and _qf.piece_du_classement == 944 and _mo.piece_du_classement == 944,
+        f"la pièce du classement est jointe à la qualité financière ET à la défendabilité "
+        f"(→ qf={list(_qf.dossier['joindre'])}, mo={list(_mo.dossier['joindre'])})")
+B.check(_pa.piece_du_classement is None and 944 not in list(_pa.dossier["joindre"]),
+        "un classement d'origine, sans pièce, ne joint rien (et rien d'inventé)")
 
 sys.exit(B.summary())

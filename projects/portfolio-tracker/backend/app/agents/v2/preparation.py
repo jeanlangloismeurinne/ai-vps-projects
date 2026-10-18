@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
 from app.agents.v2.dossier import Dossier, charger_dossier
+from app.agents.v2.framework_persist import read_classement
 from app.agents.v2.parcours import faits_posterieurs_du_titre, horloge_du_titre
 from app.knowledge.lecture_depot import Lecture, assurer_lectures, ids_des_lectures
 from app.knowledge.socle_feed import SocleIndisponible, SoclePublie, assurer_socle
@@ -34,6 +35,10 @@ class DossierPrepare:
     # motif pour lequel il ne l'est pas (EDGAR injoignable) — jamais un silence.
     socle: Optional[SoclePublie] = None
     socle_motif: Optional[str] = None
+    # #139 — la pièce qui fonde le classement EN VIGUEUR de l'émetteur, jointe d'office à TOUS les
+    # chapitres : le classement gouverne la grille de chacun (#108 range les pièces par sujet ; celle-ci
+    # est un fait de l'émetteur). `None` : classement d'origine, sans pièce.
+    piece_du_classement: Optional[int] = None
 
 
 async def preparer_dossier_analyste(
@@ -59,9 +64,12 @@ async def preparer_dossier_analyste(
             socle = await assurer_socle(conn, ticker_id)
         except SocleIndisponible as e:
             socle_motif = str(e)
+    classement = await read_classement(conn, ticker_id=ticker_id)
+    piece_du_classement = classement.piece_id if classement is not None else None
     dossier = await charger_dossier(
         conn, ticker_id=ticker_id, framework_id=framework_id,
         framework_version=fichier.schema_version, plafond=plafond,
-        joindre=[*ids_des_lectures(lectures), *([socle.entry_id] if socle else [])])
+        joindre=[*ids_des_lectures(lectures), *([socle.entry_id] if socle else []),
+                 *([piece_du_classement] if piece_du_classement is not None else [])])
     return DossierPrepare(dossier=dossier, faits=faits, lectures=lectures, socle=socle,
-                          socle_motif=socle_motif)
+                          socle_motif=socle_motif, piece_du_classement=piece_du_classement)

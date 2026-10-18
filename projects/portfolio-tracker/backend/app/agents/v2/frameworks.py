@@ -415,6 +415,22 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             f"[R] `{A_QUALIFIER}` est de portée `{portees.get(A_QUALIFIER)}` au lieu de `toutes` — "
             f"un communiqué que personne n'a lu doit rouvrir tout (arbitrage Q3 du 2026-09-26)")
 
+    # ── [W] — ce qu'un fait recommande au comité (#139) ────────────────────────────────────────
+    # Chaque clef et chaque cible de `reclasse` est un archétype déclaré, et distinctes : un archétype
+    # inconnu ferait recommander une grille qui n'existe pas (le geste du comité la refuserait), une
+    # cible égale à sa clef recommanderait de ne rien changer — une alerte sans objet.
+    declares = set(fichier.archetypes)
+    for t in fichier.types_evenement:
+        for de, vers in (t.reclasse or {}).items():
+            if de not in declares or vers not in declares:
+                raise FrameworkDefinitionRefused(
+                    f"[W] `{t.id}` recommande `{de}` → `{vers}`, hors des archétypes déclarés "
+                    f"{sorted(declares)}")
+            if de == vers:
+                raise FrameworkDefinitionRefused(
+                    f"[W] `{t.id}` recommande de reclasser `{de}` en `{vers}` — une recommandation "
+                    f"de ne rien changer n'en est pas une")
+
     # ── [V] — la table des causes de révision (§14 de `06-regle-fraicheur.md`) ─────────────────
     # Chaque cause est une cause que le LECTEUR peut dire (le vocabulaire du contrat de la note flash),
     # et chaque cause a son type `surprise_<cause>` au catalogue — ni cause sans type (elle ne rouvrirait

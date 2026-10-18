@@ -164,6 +164,30 @@ class SyntheseFramework(Strict):
     n_pas_encore_observable: int = Field(default=0, ge=0)
 
 
+class ClassementServi(Strict):
+    """Le classement EN VIGUEUR, en tête du dossier (#139) : il décide de la grille de chaque chapitre.
+    `auteur` / `piece_id` / `declencheur_accession` : présents quand c'est une décision du comité ;
+    absents pour un classement d'origine."""
+    archetype: str = Field(min_length=1)
+    depuis: date
+    motif: str = Field(min_length=1)
+    auteur: Optional[str] = None
+    piece_id: Optional[int] = None
+    declencheur_accession: Optional[str] = None
+
+
+class ReclassementRecommande(Strict):
+    """Ce que le système RECOMMANDE au comité (#139) — recalculé à la lecture, jamais stocké : reclasser
+    `de` → `vers` au vu du dépôt `accession` (fait du `fait_du`), lu sous le type `type_id`. Reste au
+    dossier jusqu'à ce que le comité reclasse ou maintienne."""
+    de: str = Field(min_length=1)
+    vers: str = Field(min_length=1)
+    fait_du: date
+    accession: str = Field(min_length=1)
+    type_id: str = Field(min_length=1)
+    resume: str = Field(min_length=1)
+
+
 class DossierTitre(Strict):
     """NIVEAU 1 — `/v2/tickers/:id/dossier`."""
     schema_version: Literal["v3.0.0"] = "v3.0.0"
@@ -173,6 +197,8 @@ class DossierTitre(Strict):
     peut_on_decider: PeutOnDecider
     frameworks: list[SyntheseFramework]
     memo: MemoProjete
+    classement: Optional[ClassementServi] = None
+    reclassement_recommande: Optional[ReclassementRecommande] = None
 
 
 # ── NIVEAU 2 ───────────────────────────────────────────────────────────────────────────────────

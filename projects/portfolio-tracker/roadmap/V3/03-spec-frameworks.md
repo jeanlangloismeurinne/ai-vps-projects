@@ -674,8 +674,8 @@ cash disponible. Les niveaux comptables ne disent rien seuls ; ce sont les **rel
 | `qf_4` | **Combien** l'entreprise doit-elle, à quelles échéances, et avec quelle trésorerie en face ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
 | `qf_8` | Les engagements pris envers les prêteurs et les porteurs d'obligations **contraignent-ils** les décisions d'exploitation ? | `interpretation` | A | `financement`, `resultats`, `surprise_execution`, `integrite_comptes` |
 | `qf_5` | Le **rendement** observé est-il stable, en amélioration, ou en érosion sur ≥ 5 ans ? | `mesure` | A | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
-| `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes` |
-| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable`, `surprise_allocation` |
+| `qf_6` | Quelle est la part du résultat qui est **discrétionnaire** (choix comptables, provisions, capitalisations) ? | `interpretation` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `changement_de_stade` |
+| `qf_7` | Combien de temps l'entreprise peut-elle **tenir sans accès au marché des capitaux** ? | `mesure` | A | `financement`, `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `reglementaire_defavorable`, `surprise_allocation`, `changement_de_stade` |
 
 > `qf_4` / `qf_8` : **scission du 2026-10-04** (arbitrage utilisateur, #114) — « distinguer les faits et
 > le jugement », comme une note crédit sépare le tableau de la dette (relevé) de la revue des clauses
@@ -731,12 +731,12 @@ est une opinion.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89) |
 |---|---|---|---|---|
-| `mo_1` | Qu'est-ce qui **empêche** concrètement un concurrent de capter ce profit ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial` |
-| `mo_2` | Quelle **preuve observable** soutient cette barrière — prix, parts, rétention, marges relatives ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable`, `accord_commercial` |
-| `mo_3` | La barrière **s'élargit-elle ou s'érode-t-elle** ? Sur quel signal le voit-on ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `reglementaire_favorable`, `incident` |
-| `mo_4` | Combien de temps tient-elle **si rien ne change** ? Quelle classe de référence l'ancre ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable` |
-| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `incident` |
-| `mo_6` | Le **pouvoir de fixation des prix** est-il exercé, et supporté par le client ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable` |
+| `mo_1` | Qu'est-ce qui **empêche** concrètement un concurrent de capter ce profit ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `changement_de_stade` |
+| `mo_2` | Quelle **preuve observable** soutient cette barrière — prix, parts, rétention, marges relatives ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable`, `accord_commercial`, `changement_de_stade` |
+| `mo_3` | La barrière **s'élargit-elle ou s'érode-t-elle** ? Sur quel signal le voit-on ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `reglementaire_favorable`, `incident`, `changement_de_stade` |
+| `mo_4` | Combien de temps tient-elle **si rien ne change** ? Quelle classe de référence l'ancre ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `changement_de_stade` |
+| `mo_5` | **Qu'est-ce qui la détruirait ?** Ce vecteur est-il déjà en mouvement ? | `interpretation` | B | `surprise_concurrence`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `incident`, `changement_de_stade` |
+| `mo_6` | Le **pouvoir de fixation des prix** est-il exercé, et supporté par le client ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `reglementaire_favorable`, `changement_de_stade` |
 
 > `mo_1`/`mo_3`/`mo_4` sont respectivement `moat.type`, `moat.trend`, `moat.durabilite_ans` —
 > **les trois sans chemin d'indexation** aujourd'hui (§0.3). `mo_4` porte l'ancre base-rate
@@ -777,12 +777,12 @@ décrit avant la première vente, on demande ce qui est visé.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89) |
 |---|---|---|---|---|
-| `me_1` | **Qui paie**, pour quoi, et pourquoi ce client-là plutôt qu'un autre fournisseur ? | `interpretation` | B | `accord_commercial`, `reglementaire_favorable`, `reglementaire_defavorable`, `surprise_concurrence` |
-| `me_2` | D'où vient chaque dollar de chiffre d'affaires, et quelle part **revient sans nouvel effort de vente** ? | `mesure` | A | `resultats`, `accord_commercial`, `integrite_comptes` |
-| `me_3` | Que rapporte **une unité vendue de plus**, une fois payés les coûts qu'elle entraîne ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `surprise_allocation` |
-| `me_4` | Quels sont les deux ou trois **moteurs** qui font varier le chiffre d'affaires ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution` |
-| `me_5` | **Jusqu'où** l'activité peut-elle croître sur son modèle actuel — quel marché, quelle part déjà prise ? | `interpretation` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
-| `me_6` | Le modèle **dépend-il** d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ? | `mesure` | A | `accord_commercial`, `incident` |
+| `me_1` | **Qui paie**, pour quoi, et pourquoi ce client-là plutôt qu'un autre fournisseur ? | `interpretation` | B | `accord_commercial`, `reglementaire_favorable`, `reglementaire_defavorable`, `surprise_concurrence`, `changement_de_stade` |
+| `me_2` | D'où vient chaque dollar de chiffre d'affaires, et quelle part **revient sans nouvel effort de vente** ? | `mesure` | A | `resultats`, `accord_commercial`, `integrite_comptes`, `changement_de_stade` |
+| `me_3` | Que rapporte **une unité vendue de plus**, une fois payés les coûts qu'elle entraîne ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `surprise_allocation`, `changement_de_stade` |
+| `me_4` | Quels sont les deux ou trois **moteurs** qui font varier le chiffre d'affaires ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `changement_de_stade` |
+| `me_5` | **Jusqu'où** l'activité peut-elle croître sur son modèle actuel — quel marché, quelle part déjà prise ? | `interpretation` | B | `reglementaire_favorable`, `reglementaire_defavorable`, `changement_de_stade` |
+| `me_6` | Le modèle **dépend-il** d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ? | `mesure` | A | `accord_commercial`, `incident`, `changement_de_stade` |
 
 > Un changement de périmètre (`perimetre`, portée totale) rouvre les six sans qu'aucune ait à le
 > lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un dépôt.
@@ -799,11 +799,11 @@ d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
 |---|---|---|---|---|
-| `se_1` | Le secteur dans son ensemble **gagne-t-il de l'argent**, et qui capte la valeur entre clients, fournisseurs et intermédiaires ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `regulation_du_secteur`, `concurrent_rapprochement` |
-| `se_2` | Comment le marché est-il **partagé**, et ce partage bouge-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
-| `se_3` | Face à ses **pairs directs**, l'entreprise fait-elle mieux ou moins bien, et l'écart se creuse-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `concurrent_offensive`, `concurrent_revers` |
+| `se_1` | Le secteur dans son ensemble **gagne-t-il de l'argent**, et qui capte la valeur entre clients, fournisseurs et intermédiaires ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `regulation_du_secteur`, `concurrent_rapprochement`, `changement_de_stade` |
+| `se_2` | Comment le marché est-il **partagé**, et ce partage bouge-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement`, `changement_de_stade` |
+| `se_3` | Face à ses **pairs directs**, l'entreprise fait-elle mieux ou moins bien, et l'écart se creuse-t-il ? | `mesure` | B+ | `resultats`, `surprise_concurrence`, `concurrent_offensive`, `concurrent_revers`, `changement_de_stade` |
 | `se_4` | La demande du secteur est-elle **cyclique**, et où en est-on du cycle ? | `interpretation` | B | `resultats`, `surprise_secteur` |
-| `se_5` | Qu'est-ce qui pourrait **changer les règles** du secteur — substitut, régulation des prix, nouveau modèle ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `regulation_du_secteur`, `concurrent_offensive` |
+| `se_5` | Qu'est-ce qui pourrait **changer les règles** du secteur — substitut, régulation des prix, nouveau modèle ? | `interpretation` | B | `surprise_secteur`, `reglementaire_favorable`, `reglementaire_defavorable`, `regulation_du_secteur`, `concurrent_offensive`, `changement_de_stade` |
 | `se_6` | Que font les **concurrents** en ce moment, et qu'est-ce que ça change pour l'entreprise ? | `interpretation` | B | `surprise_concurrence`, `accord_commercial`, `concurrent_offensive`, `concurrent_revers`, `concurrent_rapprochement` |
 
 > **Événements extérieurs à l'émetteur (#93, arbitrage A)** : `concurrent_offensive`,
@@ -824,7 +824,7 @@ sans objet pour un émetteur sans ventes.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #94) |
 |---|---|---|---|---|
-| `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats`, `surprise_allocation` |
+| `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats`, `surprise_allocation`, `changement_de_stade` |
 | `ma_2` | Les **acquisitions** passées ont-elles rapporté ce qu'elles ont coûté ? | `interpretation` | B | `resultats`, `integrite_comptes` |
 | `ma_3` | Les **rachats et émissions** d'actions se font-ils au bon prix ? | `mesure` | B+ | `financement`, `resultats` |
 | `ma_4` | Les dirigeants ont-ils **leur propre argent en jeu** — combien détiennent-ils, qu'ont-ils acheté ou vendu ? | `mesure` | A | `gouvernance` |
@@ -858,12 +858,12 @@ que la barrière tient.
 
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #93) |
 |---|---|---|---|---|
-| `va_1` | Combien vaut l'entreprise **sans supposer aucune croissance** ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `financement`, `surprise_allocation` |
-| `va_2` | Quelle **fourchette** donnent trois scénarios, et quelles hypothèses les séparent ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation` |
-| `va_3` | Qu'ont valu des entreprises **dans une situation comparable** ? | `mesure` | B | `reglementaire_favorable`, `reglementaire_defavorable` |
-| `va_4` | Que faut-il **croire pour justifier le prix** actuel ? | `mesure` | B+ | `resultats`, `financement`, `integrite_comptes` |
-| `va_5` | Le prix est-il élevé ou bas **face aux pairs et à l'historique** ? | `mesure` | B+ | `resultats`, `integrite_comptes` |
-| `va_6` | Quelle **marge de sécurité** sépare le prix de la fourchette, et sur quelle hypothèse repose-t-elle ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `integrite_comptes`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation` |
+| `va_1` | Combien vaut l'entreprise **sans supposer aucune croissance** ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `integrite_comptes`, `financement`, `surprise_allocation`, `changement_de_stade` |
+| `va_2` | Quelle **fourchette** donnent trois scénarios, et quelles hypothèses les séparent ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation`, `changement_de_stade` |
+| `va_3` | Qu'ont valu des entreprises **dans une situation comparable** ? | `mesure` | B | `reglementaire_favorable`, `reglementaire_defavorable`, `changement_de_stade` |
+| `va_4` | Que faut-il **croire pour justifier le prix** actuel ? | `mesure` | B+ | `resultats`, `financement`, `integrite_comptes`, `changement_de_stade` |
+| `va_5` | Le prix est-il élevé ou bas **face aux pairs et à l'historique** ? | `mesure` | B+ | `resultats`, `integrite_comptes`, `changement_de_stade` |
+| `va_6` | Quelle **marge de sécurité** sépare le prix de la fourchette, et sur quelle hypothèse repose-t-elle ? | `mesure` | B+ | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `financement`, `integrite_comptes`, `concurrent_offensive`, `concurrent_revers`, `surprise_allocation`, `changement_de_stade` |
 
 > **Correspondance avec le contrat aval** (`analysis_v2_schemas.Valuation`, lu par `decision`,
 > `debate`, `monitoring`, `exit`) : va_1 → `epv` · va_2 → `dcf_scenarios` (+ hypothèses de la thèse,

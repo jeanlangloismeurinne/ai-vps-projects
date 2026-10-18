@@ -8,6 +8,8 @@
   POST …/q/{question_id}/reinitialiser   le gérant remet UNE question à zéro, même acceptée (#137)
   POST …/frameworks/{framework_id}/reinitialiser   … ou tout un CHAPITRE (une ligne de PV par question
                                                    applicable) — rend le niveau 2 recalculé
+  POST /v2/tickers/{ticker_id}/classement   le comité RECLASSE ou MAINTIENT l'émetteur au vu d'un dépôt
+                                            (#139) — rend le niveau 1 recalculé
 
 Ces POST sont les SEULES écritures du parcours ; elles passent par `agents/v2/comite.py`
 (détenteur unique du procès-verbal) et rendent le niveau 3 RECALCULÉ — le comité voit tout de suite
@@ -32,7 +34,8 @@ from app.agents.v2.comite import (
 from app.agents.v2.parcours import (
     ReferenceInconnue, charger_etat_dossier, dresser_niveau1, dresser_niveau2, dresser_niveau3)
 from app.agents.v2.projection_memo import memo_de_l_etat
-from app.contracts.comite_schema import DemandeAcquittement, DemandeReinitialisation, DemandeRenvoi
+from app.contracts.comite_schema import (
+    DemandeAcquittement, DemandeClassement, DemandeReinitialisation, DemandeRenvoi)
 from app.contracts.parcours_schema import DossierTitre, FrameworkDuDossier, PreuvesQuestion
 from app.db.database import get_db_session
 
@@ -156,3 +159,31 @@ async def comite_reinitialiser_chapitre(ticker_id: str, framework_id: str,
         except DecisionRefusee as e:
             raise HTTPException(status_code=409, detail=str(e))
     return await dossier_niveau2(ticker_id, framework_id)
+
+
+@router.post("/v2/tickers/{ticker_id}/classement", response_model=DossierTitre)
+async def comite_classer(ticker_id: str, demande: DemandeClassement) -> DossierTitre:
+    """Le comité reclasse (ou maintient) l'émetteur au vu d'un dépôt (#139). La lecture du dépôt devient
+    la pièce du classement, jointe à tous les chapitres. Refus (dépôt hors du fil de l'émetteur,
+    archétype inconnu, seconde décision le même jour, lecture impossible) : 409 qui dit pourquoi."""
+    from app.agents.v2.classement import ClassementRefuse, decider_classement
+    from app.agents.v2.frameworks import load_frameworks
+    from app.knowledge.material_events import material_anchor_for_ticker
+
+    fichier = load_frameworks()
+    async with get_db_session() as conn:
+        if not await conn.fetchval("SELECT 1 FROM tickers WHERE id = $1", ticker_id):
+            raise HTTPException(status_code=404, detail=f"Titre `{ticker_id}` inconnu.")
+        # Le fil BRUT, pas l'ancre substantielle : la décision cite le dépôt tel que l'émetteur l'a publié.
+        ancre = await material_anchor_for_ticker(conn, ticker_id)
+        if ancre.status == "unavailable":
+            raise HTTPException(status_code=409, detail=(
+                f"le fil EDGAR de `{ticker_id}` est injoignable ({ancre.raison}) : le dépôt cité ne "
+                "peut pas être vérifié — reprendre plus tard"))
+        try:
+            await decider_classement(conn, ticker_id=ticker_id, archetype=demande.archetype,
+                                     accession=demande.accession, motif=demande.motif,
+                                     auteur=demande.auteur, fichier=fichier, ancre=ancre)
+        except ClassementRefuse as e:
+            raise HTTPException(status_code=409, detail=str(e))
+    return await dossier_niveau1(ticker_id)

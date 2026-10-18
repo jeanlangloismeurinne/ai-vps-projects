@@ -137,6 +137,16 @@ class DemandeRenvoi(Strict):
     answer_id: Optional[int] = None
 
 
+class DemandeClassement(Strict):
+    """« Je reclasse (ou je maintiens) cet émetteur au vu de ce dépôt. » Acte HUMAIN du comité (#139) :
+    le système recommande, le comité décide. `accession` = le dépôt qui justifie la décision (celui de la
+    recommandation, par défaut) ; sa lecture devient la pièce du classement, jointe à tous les chapitres."""
+    archetype: Texte = Field(max_length=60)
+    accession: Texte = Field(max_length=40)
+    auteur: Texte = Field(max_length=120)
+    motif: Texte = Field(max_length=4000)
+
+
 class DemandeReinitialisation(Strict):
     """« Je remets cette question (ou ce chapitre) à zéro. » Acte HUMAIN du gérant (#137, point
     17-bis) : même une réponse acceptée par le comité repart en analyse. Signé et motivé comme une

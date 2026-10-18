@@ -37,6 +37,7 @@ from app.contracts.framework_definition_schema import FrameworksFile
 from app.knowledge.standard_collecte import COLONNES_SQL, piece_au_standard
 from app.contracts.parcours_schema import (
     CauseManque,
+    ClassementServi,
     DossierTitre,
     FrameworkDuDossier,
     IngredientManquant,
@@ -46,6 +47,7 @@ from app.contracts.parcours_schema import (
     PieceCitee,
     PreuveReponse,
     PreuvesQuestion,
+    ReclassementRecommande,
     RenvoiAEmettre,
     ReponseResumee,
     SyntheseFramework,
@@ -118,6 +120,10 @@ class EtatDossier:
     # jour, SERVIE par `comite.position_du_comite` au chargement (recalculée, jamais lue en base).
     registre: dict[tuple[str, str], list[DecisionComite]] = field(default_factory=dict)
     comite: dict[tuple[str, str], PositionComite] = field(default_factory=dict)
+    # #139 — le classement en vigueur (pièce et auteur quand c'est une décision du comité) et la
+    # recommandation de le revoir, RECALCULÉE à chaque lecture (`classement.recommandation_de_classement`).
+    classement: Optional[Any] = None
+    recommandation: Optional[Any] = None
 
 
 # ── La règle du manque (PURE) ──────────────────────────────────────────────────────────────────
@@ -417,6 +423,16 @@ def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
                    "n'a pas pu les obtenir" if n > 1 else
                    "1 question applicable sans réponse qui tienne aujourd'hui — le système n'a "
                    "pas pu l'obtenir"))
+    elif etat.recommandation is not None:
+        # #139 — un reclassement en suspens change la GRILLE : les questions applicables d'aujourd'hui
+        # ne sont peut-être plus les bonnes. « Complet » sur une grille que le comité doit revoir
+        # tairait l'alerte ; le dossier attend sa décision.
+        r = etat.recommandation
+        pod = PeutOnDecider(
+            etat="non_revalidable",
+            motif=(f"toutes les questions de la grille « {r.de} » ont une réponse qui tient, mais le "
+                   f"dépôt du {r.fait_du.strftime('%d/%m/%Y')} recommande de reclasser l'émetteur "
+                   f"« {r.vers} » : le comité doit reclasser ou maintenir avant de conclure"))
     else:
         # Le comité doit savoir que la complétude repose en partie sur SES acceptations : un dossier
         # complet « parce que le comité a passé outre » ne se lit pas comme un dossier sans faiblesse.
@@ -426,7 +442,24 @@ def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
                                               "leur faiblesse" if acceptees else ""))
     return DossierTitre(ticker_id=etat.ticker_id, archetype=etat.archetype,
                         genere_le=etat.genere_le, peut_on_decider=pod,
-                        frameworks=syntheses, memo=memo)
+                        frameworks=syntheses, memo=memo,
+                        classement=_classement_servi(etat.classement),
+                        reclassement_recommande=_recommandation_servie(etat.recommandation))
+
+
+def _classement_servi(c) -> Optional[ClassementServi]:
+    if c is None:
+        return None
+    return ClassementServi(archetype=c.archetype, depuis=c.effective_from, motif=c.motif,
+                           auteur=c.auteur, piece_id=c.piece_id,
+                           declencheur_accession=c.declencheur_accession)
+
+
+def _recommandation_servie(r) -> Optional[ReclassementRecommande]:
+    if r is None:
+        return None
+    return ReclassementRecommande(de=r.de, vers=r.vers, fait_du=r.fait_du, accession=r.accession,
+                                  type_id=r.type_id, resume=r.resume)
 
 
 def dresser_niveau2(etat: EtatDossier, framework_id: str) -> FrameworkDuDossier:
@@ -637,7 +670,8 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     from app.knowledge.evenements import ancre_de_la_question
     from app.knowledge.material_events import MaterialEventLookup
     from app.agents.v2.framework_persist import (
-        read_answers_courantes, read_archetype, read_dispenses)
+        read_answers_courantes, read_classement, read_dispenses)
+    from app.agents.v2.classement import recommandation_de_classement
     from app.agents.v2.manager import reviser_framework
     from app.agents.v2.manager_persist import assemble_verdict
     from app.agents.v2.traducteur import questions_applicables
@@ -665,8 +699,8 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
         pieces = {r["id"]: dict(r) for r in rows}
     entries = corpus_des_regles(pieces)
 
-    classement = await read_archetype(conn, ticker_id=ticker_id)
-    archetype = classement[0] if classement is not None else None
+    classement = await read_classement(conn, ticker_id=ticker_id)
+    archetype = classement.archetype if classement is not None else None
 
     ouverts = await conn.fetch(
         "SELECT framework_id, question_id, min(id) AS id FROM framework_mandates "
@@ -748,4 +782,5 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
         ticker_id=ticker_id, fichier=fichier, archetype=archetype, reponses=reponses,
         pieces=pieces, applicables=applicables, dispenses=dispenses,
         mandats_ouverts=mandats_ouverts, collecte=await _collectes(conn, ticker_id, version),
-        registre=registre, comite=comite)
+        registre=registre, comite=comite, classement=classement,
+        recommandation=recommandation_de_classement(classement, notes, fichier))

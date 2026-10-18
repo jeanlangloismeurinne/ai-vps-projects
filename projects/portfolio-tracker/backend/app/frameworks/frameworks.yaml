@@ -75,13 +75,19 @@ archetypes:
 #           l'utilisateur le 2026-10-16, §14 de roadmap/V3/06-regle-fraicheur.md, `revisions_de_prevision`
 #           ci-dessous) au lieu de la seule concurrence (règle Q2 du 26/09) ; cause neuve `allocation` (un
 #           choix de la direction d'investir ou d'économiser) ; le lecteur déclare le chiffre et le sens.
+#   1.7.0 — CHANGEMENT DE STADE (#139, arbitrage du 2026-10-18, 07 point 21) : le premier produit autorisé à la
+#           vente, ou les premières ventes, change le modèle économique de l'émetteur. Type neuf, détecté par le
+#           lecteur ; il rouvre ce qu'il touche (table validée par l'utilisateur, `rouverte_par`) et RECOMMANDE au
+#           comité un reclassement (`reclasse`) — le comité reclasse ou maintient, jamais le code. Mesuré avant :
+#           RVMD porte six notes « réglementaire favorable » en un an (essais, désignations, approbation) ; seule
+#           celle du 26/08 change la nature de l'entreprise — le type d'événement existant ne la distinguait pas.
 #   Ajout des types d'origine `exterieur` (#93, sous 1.1.0) SANS changer la version : la version date ce que le
 #   LECTEUR d'un dépôt voit, et il ne voit que les types `emetteur` — inchangés. Les monter aurait
 #   fait relire les dépôts pour un catalogue identique à leurs yeux.
 #
 # `origine` (#93) : `emetteur` = publié par l'entreprise elle-même, lu par la note flash ;
 # `exterieur` = survenu chez un concurrent ou dans le secteur, toujours `questions_declarees`.
-types_evenement_version: "1.6.0"
+types_evenement_version: "1.7.0"
 # L'INTERRUPTEUR du rappel (#125, principe fondateur n° 3). true = un passage dont le rappel est VÉRIFIÉ
 # (une note antérieure a annoncé ce type à cette date) ne rouvre rien. false = ORDRE 0, la règle d'avant :
 # tout type cité rouvre ses questions, rappel ou non. Le basculer ne demande AUCUNE relecture de note :
@@ -142,6 +148,15 @@ types_evenement:
     libelle: Approbation d'un produit, décision réglementaire favorable, ou essai clinique qui atteint son objectif — ANNONCÉ PAR CE DÉPÔT (une approbation déjà publiée, rappelée comme contexte ou comme condition, n'en est pas une)
     portee: questions_declarees
     origine: emetteur
+  # #139 — `reclasse` : l'archétype que ce fait RECOMMANDE au comité, par archétype en vigueur. Une
+  # recommandation, jamais un reclassement : c'est le comité qui classe l'émetteur (geste signé, motivé,
+  # adossé à la pièce du dépôt), et un fonds n'automatise pas ce qui change la grille de tout le dossier.
+  - id: changement_de_stade
+    libelle: Changement de stade — le PREMIER produit de l'entreprise autorisé à la vente, ou ses premières ventes commerciales — ANNONCÉ PAR CE DÉPÔT (une entreprise qui vend déjà, un produit supplémentaire, une extension d'indication, ou une approbation déjà publiée rappelée comme contexte n'en sont pas)
+    portee: questions_declarees
+    origine: emetteur
+    reclasse:
+      pre_revenus: rentable
   - id: reglementaire_defavorable
     libelle: Refus, échec d'essai, retrait ou rappel d'un produit — ANNONCÉ PAR CE DÉPÔT (une décision déjà publiée, rappelée comme contexte, n'en est pas une)
     portee: questions_declarees
@@ -576,7 +591,7 @@ frameworks:
         chemin_indexation: qualite_financiere.discretion_comptable
         nature_attendue: interpretation
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, changement_de_stade]
         sens_admis: [part_faible, part_significative, part_dominante]
         ingredients_requis:
           - id: provisions_et_depreciations
@@ -650,7 +665,7 @@ frameworks:
         chemin_indexation: qualite_financiere.autonomie_de_financement
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, reglementaire_defavorable, surprise_allocation]
+        rouverte_par: [financement, resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, reglementaire_defavorable, surprise_allocation, changement_de_stade]
         sens_admis: [autonomie_longue, autonomie_limitee, autonomie_critique]
         ingredients_requis:
           - id: tresorerie_disponible
@@ -751,7 +766,7 @@ frameworks:
           Sur un champ d'interprétation, un dépôt réglementaire est du boilerplate juridique malgré
           son tier A (convention #50). Le desserrage est DÉCLARÉ, jamais tacite, et n'admet
           personne de nouveau sans passage par le registre nominatif des sources (#52).
-        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial]
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial, changement_de_stade]
         sens_admis: [barriere_structurelle, barriere_contestable, aucune_barriere]
         ingredients_requis:
           - id: mecanisme_de_captation
@@ -784,7 +799,7 @@ frameworks:
         chemin_indexation: defendabilite.preuve_observable
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable, accord_commercial]
+        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable, accord_commercial, changement_de_stade]
         sens_admis: [preuve_directe, preuve_indirecte, aucune_preuve]
         ingredients_requis:
           - id: marges_relatives_aux_pairs
@@ -827,7 +842,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1 : la trajectoire d'une barrière se lit dans des
           observations de terrain qu'aucun dépôt réglementaire ne porte.
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, reglementaire_favorable, incident]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, reglementaire_favorable, incident, changement_de_stade]
         sens_admis: [en_elargissement, stable, en_erosion]
         ingredients_requis:
           - id: signal_de_trajectoire_nomme
@@ -864,7 +879,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1. La durée d'une barrière est un jugement ancré, pas une
           donnée déposée.
-        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable]
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, changement_de_stade]
         sens_admis: [duree_longue, duree_moyenne, duree_courte]
         ingredients_requis:
           - id: classe_de_reference
@@ -903,7 +918,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1. Une pré-mortem se nourrit d'observations de terrain,
           jamais du document où l'entreprise décrit ses propres risques.
-        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial, incident]
+        rouverte_par: [surprise_concurrence, reglementaire_favorable, reglementaire_defavorable, accord_commercial, incident, changement_de_stade]
         sens_admis: [vecteur_en_mouvement, vecteur_latent, aucun_vecteur_identifie]
         ingredients_requis:
           - id: vecteur_nomme
@@ -936,7 +951,7 @@ frameworks:
         chemin_indexation: defendabilite.pouvoir_de_prix
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable]
+        rouverte_par: [resultats, surprise_concurrence, reglementaire_favorable, changement_de_stade]
         sens_admis: [pouvoir_exerce_et_absorbe, pouvoir_exerce_avec_resistance, pouvoir_absent]
         ingredients_requis:
           - id: evolution_des_prix_pratiques
@@ -1000,7 +1015,7 @@ frameworks:
         motif_plancher: >-
           Même desserrage déclaré que mo_1 : la raison pour laquelle un client choisit une offre se
           lit dans des observations de terrain, qu'un dépôt réglementaire ne porte qu'en boilerplate.
-        rouverte_par: [accord_commercial, reglementaire_favorable, reglementaire_defavorable, surprise_concurrence]
+        rouverte_par: [accord_commercial, reglementaire_favorable, reglementaire_defavorable, surprise_concurrence, changement_de_stade]
         sens_admis: [proposition_distinctive, proposition_banalisee, proposition_non_etablie]
         ingredients_requis:
           - id: client_payeur
@@ -1036,7 +1051,7 @@ frameworks:
         chemin_indexation: modele_economique.sources_de_revenus
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [resultats, accord_commercial, integrite_comptes]
+        rouverte_par: [resultats, accord_commercial, integrite_comptes, changement_de_stade]
         sens_admis: [revenus_recurrents, revenus_mixtes, revenus_transactionnels, revenus_non_etablis]
         ingredients_requis:
           - id: repartition_du_chiffre_d_affaires
@@ -1071,7 +1086,7 @@ frameworks:
         chemin_indexation: modele_economique.economie_unitaire
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, surprise_allocation]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, surprise_allocation, changement_de_stade]
         sens_admis: [economie_unitaire_forte, economie_unitaire_faible, economie_unitaire_negative, economie_unitaire_non_etablie]
         ingredients_requis:
           - id: prix_par_unite
@@ -1110,7 +1125,7 @@ frameworks:
         motif_plancher: >-
           Nommer les moteurs d'une activité est un raisonnement sur des séries publiées ; les
           explications de la direction et des observateurs en font partie, pas seulement les dépôts.
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, changement_de_stade]
         sens_admis: [moteurs_maitrises, moteurs_subis, moteurs_indetermines]
         ingredients_requis:
           - id: moteurs_nommes
@@ -1146,7 +1161,7 @@ frameworks:
         motif_plancher: >-
           La taille d'un marché adressable est une estimation, publiée par l'entreprise ou par des
           observateurs ; aucun dépôt réglementaire ne la mesure.
-        rouverte_par: [reglementaire_favorable, reglementaire_defavorable]
+        rouverte_par: [reglementaire_favorable, reglementaire_defavorable, changement_de_stade]
         sens_admis: [croissance_ample, croissance_bornee, marche_sature]
         ingredients_requis:
           - id: marche_adressable
@@ -1187,7 +1202,7 @@ frameworks:
         chemin_indexation: modele_economique.dependances_critiques
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [accord_commercial, incident]
+        rouverte_par: [accord_commercial, incident, changement_de_stade]
         sens_admis: [dependance_faible, dependance_notable, dependance_critique]
         ingredients_requis:
           - id: poids_des_premiers_clients
@@ -1251,7 +1266,7 @@ frameworks:
         motif_plancher: >-
           La répartition de la valeur dans une chaîne se lit dans des études sectorielles et des
           comparaisons entre acteurs ; un dépôt de l'émetteur n'en porte que sa propre part.
-        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, accord_commercial, regulation_du_secteur, concurrent_rapprochement]
+        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, accord_commercial, regulation_du_secteur, concurrent_rapprochement, changement_de_stade]
         sens_admis: [secteur_structurellement_rentable, secteur_ordinaire, secteur_structurellement_pauvre]
         ingredients_requis:
           - id: rentabilite_des_acteurs
@@ -1288,7 +1303,7 @@ frameworks:
         chemin_indexation: secteur_concurrence.partage_du_marche
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_concurrence, accord_commercial, concurrent_offensive, concurrent_revers, concurrent_rapprochement]
+        rouverte_par: [resultats, surprise_concurrence, accord_commercial, concurrent_offensive, concurrent_revers, concurrent_rapprochement, changement_de_stade]
         sens_admis: [marche_concentre, marche_disperse, marche_en_recomposition]
         ingredients_requis:
           - id: acteurs_et_parts
@@ -1323,11 +1338,11 @@ frameworks:
         chemin_indexation: secteur_concurrence.rang_face_aux_pairs
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_concurrence, concurrent_offensive, concurrent_revers]
+        rouverte_par: [resultats, surprise_concurrence, concurrent_offensive, concurrent_revers, changement_de_stade]
         sens_admis: [devant_ses_pairs, au_niveau_de_ses_pairs, derriere_ses_pairs]
         ingredients_requis:
           - id: pairs_directs
-            libelle: Les pairs directs retenus pour la comparaison, et pourquoi ceux-là
+            libelle: Les pairs directs retenus pour la comparaison, et pourquoi ceux-là — ceux qui vendent, ou vendront, sur le même marché ou un marché analogue ; un changement de stade de l'entreprise pose la question des pairs sans la trancher (un acteur juste derrière en calendrier reste un pair)
             essentiel: true
             duree_de_vie: jugement
           - id: indicateurs_compares
@@ -1397,7 +1412,7 @@ frameworks:
         motif_plancher: >-
           Une menace sur le secteur entier s'instruit dans des analyses de la technologie, de la
           régulation et des concurrents ; un dépôt de l'émetteur n'en porte que les facteurs de risque.
-        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, regulation_du_secteur, concurrent_offensive]
+        rouverte_par: [surprise_secteur, reglementaire_favorable, reglementaire_defavorable, regulation_du_secteur, concurrent_offensive, changement_de_stade]
         sens_admis: [regles_stables, menace_identifiee, regles_en_train_de_changer]
         ingredients_requis:
           - id: substituts
@@ -1488,7 +1503,7 @@ frameworks:
         chemin_indexation: management_capital.usage_du_capital
         nature_attendue: mesure
         plancher_tier: A
-        rouverte_par: [financement, resultats, surprise_allocation]
+        rouverte_par: [financement, resultats, surprise_allocation, changement_de_stade]
         sens_admis: [allocation_creatrice, allocation_neutre, allocation_destructrice]
         ingredients_requis:
           - id: repartition_des_usages
@@ -1756,7 +1771,7 @@ frameworks:
         chemin_indexation: valorisation.valeur_sans_croissance
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, financement, surprise_allocation]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, financement, surprise_allocation, changement_de_stade]
         sens_admis: [plancher_solide, plancher_fragile, pas_de_plancher]
         ingredients_requis:
           - id: resultat_normalise
@@ -1802,7 +1817,7 @@ frameworks:
         motif_plancher: >-
           Un scénario est un jugement sur l'avenir ; ses hypothèses se fondent sur des pièces de tout
           rang, et c'est leur ancrage explicite — pas le rang de la source — qui le rend contestable.
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, concurrent_offensive, concurrent_revers, surprise_allocation]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, concurrent_offensive, concurrent_revers, surprise_allocation, changement_de_stade]
         sens_admis: [fourchette_resserree, fourchette_large, fourchette_indeterminable]
         ingredients_requis:
           - id: hypotheses_decisives
@@ -1844,7 +1859,7 @@ frameworks:
         motif_plancher: >-
           Une classe de référence se mesure dans des études et des bases historiques d'observateurs,
           jamais dans les dépôts de l'émetteur.
-        rouverte_par: [reglementaire_favorable, reglementaire_defavorable]
+        rouverte_par: [reglementaire_favorable, reglementaire_defavorable, changement_de_stade]
         sens_admis: [classe_favorable, classe_neutre, classe_defavorable]
         ingredients_requis:
           - id: classe_retenue
@@ -1876,7 +1891,7 @@ frameworks:
         chemin_indexation: valorisation.ce_que_suppose_le_prix
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, financement, integrite_comptes]
+        rouverte_par: [resultats, financement, integrite_comptes, changement_de_stade]
         sens_admis: [attentes_modestes, attentes_exigeantes, attentes_irrealistes]
         ingredients_requis:
           - id: cours_cote_date
@@ -1908,7 +1923,7 @@ frameworks:
         chemin_indexation: valorisation.comparaison_relative
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, integrite_comptes]
+        rouverte_par: [resultats, integrite_comptes, changement_de_stade]
         sens_admis: [decote, en_ligne, prime]
         ingredients_requis:
           - id: multiple_pertinent
@@ -1940,7 +1955,7 @@ frameworks:
         chemin_indexation: valorisation.marge_de_securite
         nature_attendue: mesure
         plancher_tier: B+
-        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, integrite_comptes, concurrent_offensive, concurrent_revers, surprise_allocation]
+        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, reglementaire_favorable, reglementaire_defavorable, accord_commercial, financement, integrite_comptes, concurrent_offensive, concurrent_revers, surprise_allocation, changement_de_stade]
         sens_admis: [marge_confortable, marge_mince, marge_negative]
         ingredients_requis:
           - id: prix_et_fourchette

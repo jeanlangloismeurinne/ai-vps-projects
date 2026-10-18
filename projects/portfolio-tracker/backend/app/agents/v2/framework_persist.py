@@ -18,6 +18,7 @@ panne entre les deux laisserait deux lignes courantes actives sur la même lign�
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from typing import Any, Optional
 
@@ -25,8 +26,8 @@ import asyncpg
 
 from app.contracts.framework_answer_schema import COLONNES_DENORMALISEES, FrameworkAnswer
 
-__all__ = ["persist_answer", "persist_archetype", "persist_dispense",
-           "read_answers_courantes", "read_archetype", "read_dispenses"]
+__all__ = ["Classement", "persist_answer", "persist_archetype", "persist_dispense",
+           "read_answers_courantes", "read_archetype", "read_classement", "read_dispenses"]
 
 
 def _lire_chemin(answer: FrameworkAnswer, chemin: str) -> Any:
@@ -104,6 +105,21 @@ async def read_answers_courantes(
     return [(row["id"], FrameworkAnswer.model_validate(row["answer_json"])) for row in rows]
 
 
+@dataclass(frozen=True)
+class Classement:
+    """Le classement EN VIGUEUR d'un émetteur, tel qu'on le relit (migrations 046, 059).
+
+    `piece_id` / `auteur` / `declencheur_accession` : présents ensemble quand le classement est une
+    DÉCISION du comité (#139) — la pièce suit alors tous les chapitres ; absents ensemble pour les
+    classements d'origine (contrainte `ticker_archetypes_decision`)."""
+    archetype: str
+    motif: str
+    effective_from: date
+    piece_id: Optional[int] = None
+    auteur: Optional[str] = None
+    declencheur_accession: Optional[str] = None
+
+
 async def read_archetype(
     conn: asyncpg.Connection,
     *,
@@ -126,8 +142,21 @@ async def read_archetype(
     non classé alors qu'il l'est — un contrôle qui dégrade en sortant à zéro est un vert
     (`feedback_check_degrade_en_sortant_a_zero`).
     """
+    c = await read_classement(conn, ticker_id=ticker_id, a_la_date=a_la_date)
+    return None if c is None else (c.archetype, c.motif)
+
+
+async def read_classement(
+    conn: asyncpg.Connection,
+    *,
+    ticker_id: str,
+    a_la_date: Optional[date] = None,
+) -> Optional[Classement]:
+    """Le classement entier — DÉTENTEUR UNIQUE de la lecture (`read_archetype` en est la projection).
+    Même règle d'« en vigueur » et même confrontation au référentiel que décrites ci-dessus."""
     row = await conn.fetchrow(
-        "SELECT archetype, motif FROM ticker_archetypes "
+        "SELECT archetype, motif, effective_from, piece_id, auteur, declencheur_accession "
+        "FROM ticker_archetypes "
         "WHERE ticker_id = $1 AND effective_from <= $2 "
         "ORDER BY effective_from DESC LIMIT 1",
         ticker_id, a_la_date or date.today())
@@ -143,7 +172,9 @@ async def read_archetype(
             f"`{ticker_id}` est classé `{row['archetype']}`, qui n'est plus un archétype déclaré "
             f"({sorted(declares)}) — un classement périmé rendrait hors-sujet des questions qui "
             "s'appliquent, et le manager acquitterait des `sans_objet` fabriqués")
-    return row["archetype"], row["motif"]
+    return Classement(archetype=row["archetype"], motif=row["motif"],
+                      effective_from=row["effective_from"], piece_id=row["piece_id"],
+                      auteur=row["auteur"], declencheur_accession=row["declencheur_accession"])
 
 
 async def persist_archetype(
@@ -153,6 +184,9 @@ async def persist_archetype(
     archetype: str,
     motif: str,
     effective_from: Optional[date] = None,
+    piece_id: Optional[int] = None,
+    auteur: Optional[str] = None,
+    declencheur_accession: Optional[str] = None,
 ) -> int:
     """Classe un émetteur à une date d'effet. APPEND-ONLY : ne met jamais à jour la ligne courante.
 
@@ -162,14 +196,20 @@ async def persist_archetype(
 
     Rejouer le MÊME jour d'effet met à jour le classement de ce jour (`ON CONFLICT`) : c'est une
     correction de saisie, pas un empilement, et l'index unique la rend explicite.
+
+    Une DÉCISION du comité (#139) porte `piece_id`, `auteur` et `declencheur_accession` ensemble — la
+    base refuse un mélange (`ticker_archetypes_decision`) ; le geste vit dans `agents/v2/classement.py`.
     """
     return await conn.fetchval(
-        "INSERT INTO ticker_archetypes (ticker_id, archetype, effective_from, motif) "
-        "VALUES ($1, $2, $3, $4) "
+        "INSERT INTO ticker_archetypes (ticker_id, archetype, effective_from, motif, piece_id, auteur, "
+        "declencheur_accession) VALUES ($1, $2, $3, $4, $5, $6, $7) "
         "ON CONFLICT (ticker_id, effective_from) "
-        "DO UPDATE SET archetype = EXCLUDED.archetype, motif = EXCLUDED.motif "
+        "DO UPDATE SET archetype = EXCLUDED.archetype, motif = EXCLUDED.motif, "
+        "piece_id = EXCLUDED.piece_id, auteur = EXCLUDED.auteur, "
+        "declencheur_accession = EXCLUDED.declencheur_accession "
         "RETURNING id",
-        ticker_id, archetype, effective_from or date.today(), motif)
+        ticker_id, archetype, effective_from or date.today(), motif, piece_id, auteur,
+        declencheur_accession)
 
 
 async def read_dispenses(

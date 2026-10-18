@@ -74,6 +74,11 @@ class TypeEvenement(Strict):
     # la partie concurrence du dossier sans attendre que l'émetteur en parle. REQUIS, sans défaut :
     # une origine omise ferait proposer un événement de concurrent au lecteur d'un 8-K de l'émetteur.
     origine: Literal["emetteur", "exterieur"]
+    # CE QUE LE FAIT RECOMMANDE AU COMITÉ (#139, arbitrage du 2026-10-18) : par archétype en vigueur,
+    # l'archétype vers lequel reclasser l'émetteur (« premier produit autorisé » : pre_revenus → rentable).
+    # Une RECOMMANDATION affichée au dossier, jamais un reclassement : le comité reclasse ou maintient.
+    # Optionnel : la plupart des faits ne changent pas la grille. Cohérence avec `archetypes` : pont [W].
+    reclasse: Optional[dict[str, str]] = None
 
     @model_validator(mode="after")
     def _un_evenement_exterieur_rouvre_des_questions_nommees(self):
@@ -85,6 +90,10 @@ class TypeEvenement(Strict):
                 f"`{self.id}` est un événement extérieur de portée `{self.portee}` : un fait survenu "
                 f"chez un concurrent ou dans le secteur rouvre les questions qui le déclarent, "
                 f"jamais tout le dossier, et jamais rien")
+        if self.reclasse is not None and self.origine != "emetteur":
+            raise ValueError(
+                f"`{self.id}` recommande un reclassement mais est d'origine `{self.origine}` : la "
+                f"décision d'un concurrent ne change pas le stade de l'émetteur analysé")
         return self
 
 
