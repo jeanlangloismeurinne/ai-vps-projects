@@ -26,6 +26,7 @@ Cible : pydantic v2 (container backend 2.13.4). Le python hôte a v1 → tester 
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -178,6 +179,41 @@ class IndicateursReadiness(Strict):
 
 
 # ─────────────────────────── gaps & incertitudes ────────────────────────────
+class AttenteObservation(Strict):
+    """#138 — « pas encore observable » : l'information N'EXISTE PAS ENCORE dans le monde (quelques
+    semaines de ventes ne font pas un pouvoir de prix), ce qui n'est pas « on ne l'a pas trouvée ».
+
+    Un fonds écrit « non significatif à ce stade, à revoir après quatre trimestres de ventes » ; il
+    ne demande pas au middle-office de chercher ce qui n'est pas encore advenu. La justification est
+    OBLIGATOIRE et en quatre morceaux, pour que le gérant juge la CAUSE — et qu'un défaut de recherche
+    ne puisse pas se déguiser en attente : la cause (dans le monde, pas dans le dossier), le fait daté
+    qui a ouvert la situation et la pièce qui le prouve, l'historique qu'il faudra avoir vu, la date
+    de revue. Les relations entre dates et pièce sont vérifiées par le code (`analyste`), le SENS de
+    la cause par le comité : une attente ne ferme rien d'elle-même (`parcours`).
+    """
+    cause: str = Field(min_length=1)            # pourquoi ça n'existe pas encore DANS LE MONDE
+    fait_declencheur: str = Field(min_length=1)  # le fait daté qui a ouvert la situation
+    depuis: date                                 # date de ce fait
+    piece_du_fait: int                           # l'entry du dossier qui le prouve
+    historique_requis: str = Field(min_length=1)  # ce qu'il faudra avoir observé
+    revoir_le: date                              # quand la question redevient cherchable
+
+    def lignes_lisibles(self) -> list[str]:
+        """Le rendu texte de la justification, UN détenteur pour tous les outils (#69)."""
+        return [f"cause : {self.cause}",
+                f"fait déclencheur : {self.fait_declencheur} ({self.depuis}, pièce #{self.piece_du_fait})",
+                f"il faudra : {self.historique_requis}",
+                f"revue le : {self.revoir_le}"]
+
+    @model_validator(mode="after")
+    def _la_revue_suit_le_fait(self):
+        if self.revoir_le <= self.depuis:
+            raise ValueError(
+                f"revue au {self.revoir_le} ≤ fait déclencheur du {self.depuis} : une information qui "
+                "n'est pas encore advenue ne devient pas observable AVANT le fait qui l'a ouverte")
+        return self
+
+
 class GapItem(Strict):
     """DÉRIVÉ : émis pour chaque champ factual non fondable (colonne « Gap si non-fondable » des
     cartes). §7 : 2 sources (curator | gap-intake NL) convergent dans UN pipeline de même schéma.
@@ -195,7 +231,19 @@ class GapItem(Strict):
     # inversement, un rafraîchissement lancé sur un champ vide ne rapporterait rien.
     # Défaut `collecte` : un gap venu de `gap_intake` (langage naturel) décrit un manque, pas une
     # péremption — le sens sûr est de collecter, jamais de supposer qu'une entry existe déjà.
-    remede: Literal["collecte", "rafraichissement"] = "collecte"
+    # #138 — troisième remède : ATTENDRE. Ni collecte ni rafraîchissement : l'information n'existe pas
+    # encore. Il porte OBLIGATOIREMENT sa justification (`attente`), et seulement lui.
+    remede: Literal["collecte", "rafraichissement", "attente"] = "collecte"
+    attente: Optional[AttenteObservation] = None
+
+    @model_validator(mode="after")
+    def _attendre_se_justifie(self):
+        if (self.remede == "attente") != (self.attente is not None):
+            raise ValueError(
+                f"remède `{self.remede}` {'avec' if self.attente else 'sans'} justification d'attente : "
+                "« pas encore observable » exige sa cause, son fait daté, sa pièce et sa date de revue "
+                "— et un autre remède n'en porte pas (#138)")
+        return self
 
 
 class IncertitudeBloquante(Strict):

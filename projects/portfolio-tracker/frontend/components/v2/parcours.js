@@ -58,6 +58,12 @@ export const CAUSES = {
     geste: "La question a été remise à zéro ; elle sera refaite à la prochaine relance de l'analyse.",
     variant: 'sky',
   },
+  // #138 — l'analyste juge l'information pas encore advenue : le comité juge la CAUSE.
+  pas_encore_observable: {
+    titre: 'Pas encore observable',
+    geste: "L'analyste juge que l'information n'existe pas encore. Aucune recherche n'est relancée avant la date de revue. Si la cause vous paraît fondée, acceptez la question ; sinon renvoyez-la en recherche.",
+    variant: 'violet',
+  },
 }
 
 const AVEC_FAIT = new Set(['fait_nouveau_publie', 'actualite_indeterminable', 'controle_ko', 'renvoi_comite', 'reinitialisation'])
@@ -68,6 +74,7 @@ export const NATURES_MANQUE = {
   perimee: 'Périmée',
   renvoyee: 'Renvoyée',
   rouverte_comite: 'Rouverte par le comité',
+  pas_encore_observable: 'Pas encore observable',
 }
 
 export const STATUTS = {
@@ -140,6 +147,20 @@ export function ScoreQualite({ qualite }) {
   return <span className={`text-lg font-bold ${couleur}`}>{pct} %</span>
 }
 
+// #138 — la justification d'une attente, ENTIÈRE : le comité juge la cause sur pièce, pas sur un résumé.
+export function AttenteBloc({ a }) {
+  const date = d => new Date(d).toLocaleDateString('fr-FR')
+  return (
+    <dl className="text-xs grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 rounded border border-violet-900/60 bg-violet-950/20 px-2.5 py-2">
+      <dt className="text-gray-500">Cause</dt><dd className="text-gray-200">{a.cause}</dd>
+      <dt className="text-gray-500">Fait déclencheur</dt>
+      <dd className="text-gray-300">{a.fait_declencheur} — le {date(a.depuis)} (pièce #{a.piece_du_fait})</dd>
+      <dt className="text-gray-500">Il faudra</dt><dd className="text-gray-300">{a.historique_requis}</dd>
+      <dt className="text-gray-500">Revue</dt><dd className="text-violet-300">le {date(a.revoir_le)}</dd>
+    </dl>
+  )
+}
+
 // Une ligne de l'alerte : ce qui manque, et pourquoi. Le motif du producteur est rendu tel quel.
 export function ManqueBloc({ m, tickerId, lien = true }) {
   const c = CAUSES[m.cause] || { titre: m.cause, geste: '', variant: 'gray' }
@@ -165,6 +186,7 @@ export function ManqueBloc({ m, tickerId, lien = true }) {
           contrôle refusé) ; pour une cause de collecte elle répète la phrase de la cause, et la
           preuve est la liste des ingrédients ci-dessous (mesuré à la capture du 2026-09-25). */}
       {AVEC_FAIT.has(m.cause) && <p className="text-xs text-gray-500">{m.explication}</p>}
+      {m.attente && <AttenteBloc a={m.attente} />}
       {/* La question REPASSE devant le comité : il l'avait acceptée, et l'alerte dit pourquoi
           l'acceptation ne tient plus (arbitrage n°2). */}
       {m.acceptation_tombee && (

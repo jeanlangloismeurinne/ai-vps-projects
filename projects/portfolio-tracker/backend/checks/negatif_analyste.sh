@@ -46,7 +46,7 @@ mutations=(
 "$SRC¦        if _TIER_RANK.get(str(e.get(\"reliability_tier\")), len(TIER_ORDER)) <= plafond¦        if _TIER_RANK.get(str(e.get(\"reliability_tier\")), len(TIER_ORDER)) <= plafond + 1¦plancher A ne voit QUE"
 "$SRC¦        if _TIER_RANK.get(str(e.get(\"reliability_tier\")), len(TIER_ORDER)) <= plafond¦        if _TIER_RANK.get(str(e.get(\"reliability_tier\")), 0) <= plafond¦SANS tier connu compte pour le pire"
 # §4 — ce que le modèle ne peut pas émettre
-"$SRC¦    statut: Literal[\"repondu\", \"approxime\", \"sans_fondement\"]¦    statut: Literal[\"repondu\", \"approxime\", \"sans_fondement\", \"non_fondable\"]¦ne peut émettre NI"
+"$SRC¦    statut: Literal[\"repondu\", \"approxime\", \"sans_fondement\", \"pas_encore_observable\"]¦    statut: Literal[\"repondu\", \"approxime\", \"sans_fondement\", \"pas_encore_observable\", \"non_fondable\"]¦ne peut émettre NI"
 "$SRC¦        if not self.cited_entry_ids:¦        if False:¦réponse SANS citation est refusée"
 # §5 — les deux axes sont dérivés, par leurs détenteurs
 "$SRC¦    rang = derive_synthesis_reliability(tiers)[1] if approx else _plus_faible(tiers)¦    rang = _plus_faible(tiers)¦UN CRAN SOUS"
@@ -57,7 +57,7 @@ mutations=(
 "$PONT¦        if answer.reponse.sens not in admis:¦        if False:¦un sens plausible mais hors vocabulaire"
 "$PONT¦                profil[clef] = list(valeur) if isinstance(valeur, list) else valeur¦                profil[clef] = valeur¦sont des COPIES"
 # §7 — trois états nommés, et surtout : une panne d'agent n'est pas un manque de données
-"$SRC¦            remede=\"collecte\",¦            remede=\"rafraichissement\",¦avec le remède"
+"$SRC¦            remede=\"attente\" if attente is not None else \"collecte\",¦            remede=\"attente\" if attente is not None else \"rafraichissement\",¦avec le remède"
 "$SRC¦        issues.setdefault(qid, _Refus(_MOTIF_OMISSION))¦        issues.setdefault(qid, reponse_non_fondable(interrogeables[qid], **entete, manque=_MOTIF_OMISSION, citables=1, fournies=len(entries)))¦PAS en \`non_fondable\`"
 "$SRC¦        if brute.question_id in issues:¦        if False:¦DEUXIÈME réponse du même analyste"
 "$SRC¦    if perdues:¦    if False:¦NI en réponse NI en refus fait LEVER"
@@ -69,7 +69,7 @@ mutations=(
 "$SRC¦    ouverts.append(\"sans_fondement\")¦    pass¦reste ouvert dans TOUS les cas"
 "$SRC¦        _, cran, _ = derive_synthesis_reliability([meilleur])¦        cran = TIER_ORDER[min(_TIER_RANK[meilleur] + 1, len(TIER_ORDER) - 1)]¦règle du cran est réellement APPELÉE"
 "$SRC¦    ouverts.append(\"sans_fondement\")¦    _cran_en_dur = \"A-\"\n    ouverts.append(\"sans_fondement\")¦aucun tier n'est écrit EN DUR"
-"$SRC¦            \"statuts_admis\": ouverts,¦¦contexte porte \`statuts_admis\`"
+"$SRC¦            \"statuts_admis\": statuts_montres(ouverts),¦¦contexte porte \`statuts_admis\`"
 "$SRC¦        ouverts, _ = statuts_admissibles(q, citables)\n        if aucune_reponse_possible(ouverts):¦        ouverts, _ = statuts_admissibles(q, citables)\n        if False:¦n'est pas montrée au modèle"
 "$SRC¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if aucune_reponse_possible(ouverts):¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if False:¦SANS aucun appel modèle"
 "$SRC¦        if not citables:¦        if False:¦DEUX causes ont DEUX motifs distincts"
@@ -127,6 +127,17 @@ mutations=(
 "$SRC¦                for qid in defauts:\n                    if not isinstance(issues4[qid], _Refus):\n                        issues[qid] = issues4[qid]¦                for qid in defauts:\n                    if True:\n                        issues[qid] = issues4[qid]¦une relecture REFUSÉE ne coûte pas la réponse : celle d'avant"
 "$SRC¦        lignes.append(f\"- \`{qid}\` (ta réponse actuelle cite {list(a.fondation.cited_entry_ids)}) :\")¦        lignes.append(f\"- \`{qid}\` (ta réponse actuelle cite {list(a.fondation.cited_entry_ids) + [5]}) :\")¦ne désigne PAS la pièce"
 "$SRC¦            if self.calculs:\n                sales.append(\"calculs\")¦            pass¦un \`sans_fondement\` qui montre un calcul"
+# §14 — « pas encore observable » (#138) : les relations d'une attente, et le remède qu'elle porte
+"$SRC¦    if piece is None:\n        return (f\"la pièce du fait¦    if False:\n        return (f\"la pièce du fait¦pièce absente du dossier"
+"$SRC¦    if attente.depuis > aujourd_hui:¦    if False:  # mutation¦fait déclencheur dans le futur"
+"$SRC¦    if date_piece is not None and date_piece < attente.depuis:¦    if False:  # mutation¦pièce ANTÉRIEURE au fait"
+"$SRC¦    if attente.revoir_le <= aujourd_hui:¦    if attente.revoir_le < aujourd_hui:  # mutation¦revue déjà échue"
+"$SRC¦    d = entry.get(\"date_du_document\") or entry.get(\"source_date\")¦    d = entry.get(\"source_date\")¦la date qui compte est la PUBLICATION"
+"$SRC¦DELAI_MAX_ATTENTE = timedelta(days=3 * 365)¦DELAI_MAX_ATTENTE = timedelta(days=30 * 365)¦revue au-delà de trois ans"
+"$SRC¦            remede=\"attente\" if attente is not None else \"collecte\",\n            attente=attente,¦            remede=\"collecte\",¦justification ENTIÈRE conservée"
+"$SRC¦    return [*ouverts, PAS_ENCORE_OBSERVABLE]¦    return list(ouverts)¦est montré dans les statuts de CHAQUE question"
+"$SRC¦        \"date_du_jour\": (aujourd_hui or date.today()).isoformat(),¦¦porte la DATE DU JOUR"
+"$SRC¦        if (self.statut == PAS_ENCORE_OBSERVABLE) != (self.attente is not None):¦        if False:  # mutation¦sans bloc \`attente\` refusé"
 )
 
 passes=0; ratees=0

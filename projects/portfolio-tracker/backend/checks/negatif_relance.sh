@@ -27,9 +27,9 @@ mutations=(
 "$P¦            raise ValueError(f\"décision \`{decision_ouvrante.action}\` passée comme ouvrante\")¦            pass  # mutation¦passée comme décision ouvrante est refusée"
 "$P¦            cause = \"renvoi_comite\" if decision_ouvrante.action == \"renvoyer\" else \"reinitialisation\"¦            cause = \"reinitialisation\"  # mutation: le renvoi perd sa cause¦RENVOYÉE PAR LE COMITÉ"
 "$P¦                                      f\"{decision_ouvrante.decide_le:%Y-%m-%d} : \"¦                                      f\"{decision_ouvrante.decide_le:%Y} : \"  # mutation: la date du geste est tronquée¦dit QUI, QUAND et POURQUOI"
-"$P¦                                   and position.derniere.action in ACTIONS_OUVRANTES else None))¦                                   and False else None))  # mutation: l'alerte ignore le geste¦la question RÉINITIALISÉE est refaite"
+"$P¦                                   and position.derniere.action in ACTIONS_OUVRANTES else None),¦                                   and False else None),  # mutation: l'alerte ignore le geste¦la question RÉINITIALISÉE est refaite"
 # ── le périmètre ──────────────────────────────────────────────────────────────────────────────
-"$P¦        if lq.manque is not None:¦        if lq.applicable:  # mutation: tout l'applicable est refait¦ouvertes = non fondée + réinitialisée"
+"$P¦        elif lq.manque is not None:¦        elif lq.applicable:  # mutation: tout l'applicable est refait¦ouvertes = non fondée + réinitialisée"
 "$P¦        elif _acceptee(lq):¦        elif False:  # mutation: l'acceptation n'est pas dite¦la question ACCEPTÉE n'est pas refaite"
 "$P¦    if etat.applicables.get(f.id) is None:¦    if False:  # mutation: non classé lu comme « rien d'applicable »¦un émetteur NON CLASSÉ est refusé"
 # ── le contrat ────────────────────────────────────────────────────────────────────────────────
@@ -45,6 +45,14 @@ mutations=(
 # ── les écrans ────────────────────────────────────────────────────────────────────────────────
 "$REG¦  reinitialiser: { label: 'Remise à zéro', variant: 'amber' },¦¦nomme la réinitialisation"
 "$PAR¦  rouverte_comite: 'Rouverte par le comité',¦¦nomme la question rouverte"
+# ── #138 « pas encore observable » ────────────────────────────────────────────────────────────
+"$P¦                and r.servie.gap.attente.revoir_le > jour]¦                and True]  # mutation: une attente ne s'échoit jamais¦au jour de la revue, l'attente est ÉCHUE"
+"$P¦    if attentes:¦    if False:  # mutation: l'attente se confond avec la collecte¦une attente non échue RESTE à l'alerte"
+"$P¦                                   f\"#{att.piece_du_fait}). Il faudra : {att.historique_requis}. \"¦                                   f\"). Il faudra : {att.historique_requis}. \"  # mutation: la pièce disparaît¦porte la justification ENTIÈRE"
+"$P¦        if lq.manque is not None and lq.manque.nature == \"pas_encore_observable\":¦        if False:  # mutation: la relance recollecte l'attente¦NE recollecte PAS une attente"
+"$PAR¦      {m.attente && <AttenteBloc a={m.attente} />}¦¦montre la justification ENTIÈRE d'une attente"
+"$PAR¦      <dt className=\"text-gray-500\">Cause</dt><dd className=\"text-gray-200\">{a.cause}</dd>¦¦montre la justification ENTIÈRE d'une attente"
+"$P¦        n_pas_encore_observable=sum(1 for lq in lignes if lq.manque is not None¦        n_pas_encore_observable=0 * sum(1 for lq in lignes if lq.manque is not None¦COMPTE ses attentes"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

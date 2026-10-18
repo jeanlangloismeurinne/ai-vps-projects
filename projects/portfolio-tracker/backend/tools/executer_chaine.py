@@ -263,6 +263,8 @@ async def main() -> int:
             elif a.statut == "non_fondable":
                 print(f"\n  ⚠ {a.question_id} [non_fondable] remède {a.gap.remede}")
                 print(f"      manque : {a.gap.manque}")
+                for ligne in (a.gap.attente.lignes_lisibles() if a.gap.attente else []):
+                    print(f"      ⏳ {ligne}")
             elif a.statut == "sans_objet":
                 print(f"\n  ∅ {a.question_id} [sans_objet → "
                       f"{a.sans_objet.substitut_applique or 'aucun substitut'}]")

@@ -449,9 +449,10 @@ else:
     jsx = re.sub(r"/\*.*?\*/", "", N3.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-champ="([a-z_.]+)"', jsx))
-    b.require(attendus, 51, "§7 le contrat servi a ses 51 champs terminaux (l’encadré : 5 feuilles "
+    b.require(attendus, 57, "§7 le contrat servi a ses 57 champs terminaux (l’encadré : 5 feuilles "
                             "remplacent valeur et unité ; les faits postérieurs lus : 3, #103 ; les "
-                            "calculs montrés : 5 et les chiffres sans pièce : 1, #136)")
+                            "calculs montrés : 5 et les chiffres sans pièce : 1, #136 ; la "
+                            "justification d'une attente : 6, #138)")
     b.check(not (attendus - marques),
             f"§7 tout champ du contrat a son pixel au niveau 3 — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),

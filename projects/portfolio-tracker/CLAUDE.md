@@ -186,3 +186,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #135 l'instabilité du collecteur : une fiche fautive s'isole, un « rien trouvé » sans recherche se relance
 - #136 tout chiffre renvoie à une pièce : renvoyé une fois, le calcul se montre, le reste est signalé
 - #137 séance du 2026-10-17 : marchés visés (estimation interne), taux exigé unique 10 %, relance bornée + réinitialisation, test NVDA+RVMD générique
+- #138 « pas encore observable » : une attente se justifie (cause, fait daté + pièce, historique, revue), le comité en juge la cause

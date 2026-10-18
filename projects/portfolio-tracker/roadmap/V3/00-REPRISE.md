@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -27,18 +27,15 @@ dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
 la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
 **Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
 la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
-**Daté — RVMD, point 21 ROUVERT par l'utilisateur le 2026-10-17.** mo_6 (pouvoir de prix) est hors sujet par
-construction pour « sans revenus » : ni relance ni remise à zéro ne la rouvrent. L'utilisateur ne veut PAS
-reposer sur le gérant pour ouvrir des questions hors grille (risque d'oubli) ; il penche pour ouvrir TOUTE la
-grille commerciale plus tôt (dès le fait qui change le modèle économique — l'approbation), À CONDITION que
-l'agent sache dire « pas de réponse fondée à date » plutôt que fabriquer. **Préalable MESURÉ le 2026-10-18**
-(07 point 21) : l'analyste ne fabrique pas (ratios et pouvoir de prix → « non fondable ») ; mais le manque sort
-« à collecter, priorité haute » faute d'une case « pas encore advenu » → mandats impossibles. **Arbitrage
-posé à l'utilisateur** (réponse à consigner ici) : ajouter « pas encore observable — revoir à telle date »
-avant d'adopter la règle « une approbation reclasse l'émetteur ». Le 10-Q du T3 (début novembre) reste
-l'échéance. ⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`,
-`montrer_dossier.sh` ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18 :
-une mesure lancée PAR CES LANCEURS avec `ACCEPTATION_CAS`/`CHAINE_*`/`DOSSIER_PLAFOND` a tourné sur les défauts.
+**RVMD, point 21 — option A CONSTRUITE le 2026-10-18 (#138)** : « pas encore observable » = remède
+« attendre », justification obligatoire en 4 morceaux jugée par le comité ; l'attente reste à l'alerte,
+fermée à la relance jusqu'à sa date de revue. Mesuré : NVDA 0 attente (pas d'abus) ; RVMD mo_6 tentée mais
+refusée à bon droit (seule pièce citable #1057 mal datée). **PROCHAIN PAS, avant (b)** : la règle « une
+approbation/un lancement reclasse l'émetteur » — le fait déclencheur (#944/#973) est un fait de
+l'ÉMETTEUR et doit être joint à tous les chapitres, sinon aucune attente ne peut se prouver hors modèle
+économique ; puis reclasser RVMD et relancer. Le 10-Q du T3 (début novembre) reste l'échéance.
+⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`, `montrer_dossier.sh`
+ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
@@ -51,7 +48,7 @@ une mesure lancée PAR CES LANCEURS avec `ACCEPTATION_CAS`/`CHAINE_*`/`DOSSIER_P
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` = **4817/0** (2026-10-17, après la relance bornée).
+- **Suite** `bash backend/checks/run_all.sh` = **4849/0** (2026-10-18, après #138).
 - **Périmètre d'une relance** (2026-10-17, `questions_a_relancer`, lecture seule) : NVDA 22 ouvertes (qualité
   financière : 0, tout est à jour), RVMD 27. **RVMD qualité financière : ses 4 réponses sont désormais
   PÉRIMÉES** (fait publié depuis — à regarder avec le point 15). PV du comité : **0 décision** en base.

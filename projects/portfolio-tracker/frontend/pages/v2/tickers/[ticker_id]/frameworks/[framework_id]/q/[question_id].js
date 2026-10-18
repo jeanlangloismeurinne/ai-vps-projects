@@ -251,9 +251,22 @@ function Preuve({ pr, tickerId }) {
                 <span data-champ="gap.remede">
                   {a.gap.remede === 'rafraichissement'
                     ? <Badge variant="sky">rafraîchir (une date postérieure suffit)</Badge>
-                    : <Badge variant="amber">collecter (l'information manque)</Badge>}
+                    : a.gap.remede === 'attente'
+                      ? <Badge variant="violet">attendre (l'information n'existe pas encore)</Badge>
+                      : <Badge variant="amber">collecter (l'information manque)</Badge>}
                 </span>
               </Ligne>
+              {/* #138 — la justification ENTIÈRE d'une attente : le comité juge la cause sur pièce. */}
+              {a.gap.attente && (<>
+                <Ligne label="cause"><span data-champ="gap.attente.cause" className="text-violet-200">{a.gap.attente.cause}</span></Ligne>
+                <Ligne label="fait déclencheur">
+                  <span data-champ="gap.attente.fait_declencheur">{a.gap.attente.fait_declencheur}</span>
+                  {' — le '}<span data-champ="gap.attente.depuis">{new Date(a.gap.attente.depuis).toLocaleDateString('fr-FR')}</span>
+                  {' (pièce #'}<span data-champ="gap.attente.piece_du_fait">{a.gap.attente.piece_du_fait}</span>{')'}
+                </Ligne>
+                <Ligne label="il faudra"><span data-champ="gap.attente.historique_requis">{a.gap.attente.historique_requis}</span></Ligne>
+                <Ligne label="revue le"><span data-champ="gap.attente.revoir_le" className="text-violet-300">{new Date(a.gap.attente.revoir_le).toLocaleDateString('fr-FR')}</span></Ligne>
+              </>)}
               <Ligne label="pistes"><span data-champ="gap.queries_suggerees"><Val v={a.gap.queries_suggerees} /></span></Ligne>
             </dl>
           </CardBody>

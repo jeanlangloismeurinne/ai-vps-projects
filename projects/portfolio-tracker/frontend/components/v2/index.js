@@ -48,6 +48,7 @@ const BADGE_VARIANTS = {
   amber:    'bg-amber-900/50 text-amber-300 border border-amber-700',
   red:      'bg-red-900/50 text-red-300 border border-red-700',
   gray:     'bg-gray-800 text-gray-400 border border-gray-700',
+  violet:   'bg-violet-900/50 text-violet-300 border border-violet-700',
 }
 
 export function Badge({ variant = 'gray', children, className = '' }) {

@@ -40,16 +40,20 @@ from app.contracts.framework_answer_schema import (
 )
 from app.contracts.memo_projete_schema import MemoProjete
 from app.contracts.qualite_info_schema import QualiteInfo
+from app.contracts.readiness_report_schema import AttenteObservation
 
 # ── Le manque, et sa cause ─────────────────────────────────────────────────────────────────────
 
-# CE QUI MANQUE. Cinq formes, parce qu'elles appellent cinq gestes différents au comité.
+# CE QUI MANQUE. Six formes, parce qu'elles appellent six gestes différents au comité.
 NatureManque = Literal[
     "sans_reponse",   # question applicable, aucune réponse au dossier
     "non_fondee",     # l'analyste a répondu « je ne peux pas fonder » (non_fondable)
     "perimee",        # fondée, mais sur des pièces qu'un fait postérieur a rendues caduques
     "renvoyee",       # le contrôle du manager a refusé la réponse
     "rouverte_comite",  # le comité l'a renvoyée ou le gérant l'a remise à zéro, rien d'écrit depuis (#137)
+    # #138 — l'analyste dit l'information pas encore advenue : le comité JUGE la cause (il l'accepte
+    # ou la renvoie) ; d'ici là la question reste à l'alerte, mais aucune recherche n'est relancée.
+    "pas_encore_observable",
 ]
 
 # POURQUOI LE SYSTÈME N'A PAS PU L'OBTENIR. Les trois premières sont celles du collecteur, mot pour
@@ -65,6 +69,7 @@ CauseManque = Literal[
     "controle_ko",             # le manager a refusé la réponse (contrôle nommé dans l'explication)
     "renvoi_comite",           # le comité a renvoyé la question en recherche (#137)
     "reinitialisation",        # le gérant a remis la question à zéro (#137, point 17-bis)
+    "pas_encore_observable",   # l'information n'existe pas encore ; revue datée (#138)
 ]
 
 
@@ -95,9 +100,14 @@ class Manque(Strict):
     # important publié depuis, ou vérification impossible) : la question REPASSE devant lui, et
     # l'alerte dit pourquoi (arbitrage n°2). Une acceptation EN VIGUEUR n'est jamais un manque.
     acceptation_tombee: Optional[AcceptationServie] = None
+    # #138 — la justification ENTIÈRE, pour que le comité juge la cause sur pièce, pas sur un résumé.
+    attente: Optional[AttenteObservation] = None
 
     @model_validator(mode="after")
     def _une_cause_de_collecte_se_prouve(self):
+        if (self.nature == "pas_encore_observable") != (self.attente is not None):
+            raise ValueError("« pas encore observable » se montre avec sa justification, et elle "
+                             "seule la porte (#138)")
         # Dire « recherche épuisée » sans montrer ce qui a été cherché serait un verdict
         # inattaquable (maquette niveau 3, règle 3). La cause de collecte exige sa preuve.
         if self.cause in ("recherche_epuisee", "source_indisponible", "sans_source_possible"):
@@ -149,6 +159,9 @@ class SyntheseFramework(Strict):
     n_standard_anterieur: int = Field(ge=0)
     # #136 — chiffres des réponses en vigueur qu'aucune pièce citée ne porte (signalés au comité).
     n_chiffres_sans_piece: int = Field(ge=0)
+    # #138 — combien de questions l'analyste dit « pas encore observables » : un compteur qui se voit,
+    # pour que l'abus (l'attente comme paresse de recherche) se repère au niveau du chapitre.
+    n_pas_encore_observable: int = Field(default=0, ge=0)
 
 
 class DossierTitre(Strict):

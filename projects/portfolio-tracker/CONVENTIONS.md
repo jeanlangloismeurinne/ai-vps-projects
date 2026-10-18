@@ -3329,3 +3329,37 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
 - **RVMD (point 21)** — reclassement « commerciale » proposé au comité au premier trimestre de ventes
   publié (T3 2026, début novembre) ; d'ici là, seul le pouvoir de prix est rouvert (« aucun prix pratiqué »
   est faux depuis l'approbation du 26/08).
+
+### #138 — « pas encore observable » : une attente se justifie, le comité en juge la cause
+
+**Arbitrage du 2026-10-18** (option A, 07 point 21). Une information qui N'EXISTE PAS ENCORE dans le monde
+(quelques semaines de ventes de RVMD ne font ni un pouvoir de prix ni une rentabilité du capital) ne se
+collecte pas : c'est un troisième remède du manque, **attendre** (`GapItem.remede = "attente"`), à côté de
+collecter et rafraîchir. Comme un fonds : l'analyste écrit « non significatif à ce stade, à revoir après
+quatre trimestres de ventes », le middle-office ne cherche pas, le gérant lit la raison et l'accepte ou la
+conteste.
+- **Exigence de l'utilisateur** : la RAISON est obligatoire, pour que l'humain juge la cause et que
+  l'attente ne devienne pas le refuge d'une recherche bâclée. Justification en quatre morceaux
+  (`AttenteObservation`) : cause (dans le monde, pas dans le dossier), fait déclencheur daté + la pièce du
+  dossier qui le prouve, historique requis, date de revue.
+- **Le code vérifie les RELATIONS, jamais le sens (#68)** — `analyste.motif_refus_attente` : pièce au
+  dossier ; fait déclencheur ≤ aujourd'hui ; pièce PUBLIÉE (`date_du_document`, #79, repli `source_date`)
+  au plus tôt le jour du fait ; aujourd'hui < revue ≤ aujourd'hui + 3 ans. Une attente irrecevable est un
+  REFUS d'agent (renvoyé une fois, #101), jamais requalifiée par le code. L'analyste reçoit `date_du_jour`.
+- **Une attente ne ferme rien d'elle-même** (`parcours.manque_de_la_question`) : nature de manque
+  `pas_encore_observable`, à l'alerte avec la justification entière, jusqu'à ce que le COMITÉ l'accepte
+  (ferme) ou la renvoie (rouvre en recherche). Fermée à la relance (`questions_a_relancer`) jusqu'à la date
+  de revue ; échue, elle redevient « non fondée » à collecter, sans geste. Compteur
+  `n_pas_encore_observable` par chapitre : l'abus se voit.
+- **Consigne** : test de l'enquêteur — « avec accès à tous les documents du monde, on ne la trouverait pas
+  aujourd'hui » ; une information probablement publiée ailleurs reste `sans_fondement`.
+- **Mesuré le 2026-10-18 contre le vrai modèle** (sans écriture) : NVDA qualité financière + défendabilité
+  → 0 attente (pas d'abus) ; RVMD mo_6 → attente tentée (approbation du 26/08) mais REFUSÉE à bon droit :
+  la seule pièce citable, #1057, est une note du collecteur publiée « le 5 août » qui rapporte l'approbation
+  du 26 (pièce mal datée). RVMD qf_1/2/3/5 restent « à collecter » : aucun chapitre sauf le modèle
+  économique ne range le fait déclencheur (#944 lecture du 8-K d'approbation, #973) — chaque framework ne
+  lit que ses sujets (#108). Le fait qui reclasse l'émetteur est un fait de l'ÉMETTEUR, pas d'un chapitre :
+  c'est l'étape suivante (règle « une approbation reclasse l'émetteur »).
+- Preuve : `check_analyste` §14 (+ `negatif_analyste`, 10 mutations), `check_relance` §5/§6
+  (+ `negatif_relance`, 7 mutations), `check_parcours` §7 / `check_framework_contract` §9 (chaque champ a son
+  pixel, maquette niveau 3 mise à jour).

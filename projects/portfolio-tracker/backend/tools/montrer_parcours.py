@@ -35,7 +35,11 @@ def _texte(n1) -> None:
     for m in p.manques:
         print(f"\n  ▸ {m.libelle_framework} · {m.question_id} [{m.nature}] cause = {m.cause}")
         print(f"      « {m.enonce[:120]} »")
-        print(f"      {m.explication[:300]}")
+        if m.attente is not None:  # #138 — la justification entière : le comité juge la cause
+            for ligne in m.attente.lignes_lisibles():
+                print(f"      ⏳ {ligne}")
+        else:
+            print(f"      {m.explication[:300]}")
         for i in m.ingredients:
             print(f"        - {i.ingredient_id} [{i.cause}] {i.motif[:110]}")
         if m.mandat_ouvert_id:
@@ -48,7 +52,8 @@ def _texte(n1) -> None:
               f"{s.n_applicables}/{s.n_questions} applicables · {s.n_acquittees} acquittée(s) · "
               f"{s.n_renvoyees} renvoyée(s) · {s.n_manques} manque(s) · "
               f"{s.n_standard_anterieur} au standard antérieur (#127) · "
-              f"{s.n_chiffres_sans_piece} chiffre(s) sans pièce (#136)")
+              f"{s.n_chiffres_sans_piece} chiffre(s) sans pièce (#136) · "
+              f"{s.n_pas_encore_observable} pas encore observable(s) (#138)")
     print(f"\n{'─' * L}\nBILAN — niveau 1 dressé pour {n1.ticker_id} : {len(p.manques)} manque(s)\n{'─' * L}\n")
 
 

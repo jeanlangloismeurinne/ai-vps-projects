@@ -259,7 +259,83 @@ else:
     b.check("/reinitialiser`" in n2, "§5 le niveau 2 offre la réinitialisation du chapitre")
     b.check(re.search(r"rouverte_comite:\s*'", par) is not None,
             "§5 l'alerte nomme la question rouverte par le comité")
-    for cause in ("renvoi_comite", "reinitialisation"):
+    # #138 — l'attente se NOMME et se JUSTIFIE à l'écran (le comité juge la cause sur pièce).
+    b.check(re.search(r"pas_encore_observable:\s*'", par) is not None,
+            "§5 l'alerte nomme la question « pas encore observable »")
+    b.check("{m.attente && <AttenteBloc a={m.attente} />}" in par
+            and all(f"a.{c}" in par for c in ("cause", "fait_declencheur", "depuis", "piece_du_fait",
+                                               "historique_requis", "revoir_le")),
+            "§5 l'alerte montre la justification ENTIÈRE d'une attente")
+    b.check("s.n_pas_encore_observable" in n2, "§5 le niveau 2 compte les attentes du chapitre")
+    for cause in ("renvoi_comite", "reinitialisation", "pas_encore_observable"):
         b.check(re.search(rf"{cause}:\s*\{{", par) is not None, f"§5 l'alerte explique la cause `{cause}`")
+
+# ══ §6 « PAS ENCORE OBSERVABLE » (#138) ═══════════════════════════════════════════════════════
+# Arbitrage du 2026-10-18 : une attente ne ferme RIEN d'elle-même — elle reste à l'alerte (le comité
+# juge la cause), mais aucune relance ne la recollecte avant sa date de revue ; échue, elle redevient
+# une question à collecter sans geste. Forme du réel : RVMD mo_6 en grille rentable (2026-10-18).
+print("[6] « pas encore observable » : à l'alerte, fermée à la relance, rouverte par sa date")
+from app.agents.v2.parcours import dresser_niveau2  # noqa: E402
+from app.contracts.readiness_report_schema import AttenteObservation  # noqa: E402
+
+
+def lue_att(i, *, qid="qf_6", revoir="2027-11-15"):
+    att = AttenteObservation(
+        cause="RASONQUE n'est vendu que depuis le 26 août : aucun prix n'a encore été éprouvé",
+        fait_declencheur="approbation de la FDA", depuis="2026-08-26", piece_du_fait=1147,
+        historique_requis="quatre trimestres de ventes publiés", revoir_le=revoir)
+    a = FrameworkAnswerServie(
+        framework_id="qualite_financiere", framework_version=VER, question_id=qid, ticker_id="NVDA",
+        analyste="a", statut="non_fondable",
+        manager=ManagerVerdict(verdict="acquitte", controles=OK4, motif="ok"),
+        gap=GapItem(dimension="d", champs_cibles=[qid], manque="pouvoir de prix non mesurable",
+                    priorite="haute", coverage_actuelle="1/1", remede="attente", attente=att))
+    return ReponseLue(answer_id=i, servie=a, verdict="acquitte", controles=OK4, motif_revue="ok",
+                      etat_revue="revue", cree_le=T_REP)
+
+
+def manque_j(reponses, jour, **kw):
+    return manque_de_la_question(
+        framework_id="qualite_financiere", libelle_framework="Qualité financière",
+        question_id="qf_6", enonce="e", applicable=True, dispensee=False, reponses=list(reponses),
+        collecte=None, mandat_ouvert_id=None, aujourd_hui=jour, **kw)
+
+
+ATT = lue_att(1800)
+m_att = manque_j([ATT], APRES.date())
+b.check(m_att is not None and (m_att.nature, m_att.cause) == ("pas_encore_observable", "pas_encore_observable"),
+        f"§6 une attente non échue RESTE à l'alerte, sous sa nature — obtenu {m_att and (m_att.nature, m_att.cause)}")
+b.check(m_att is not None and m_att.attente is not None and "26 août" in m_att.attente.cause
+        and "Revue le 2027-11-15" in m_att.explication and "#1147" in m_att.explication,
+        "§6 l'alerte porte la justification ENTIÈRE : cause, fait, pièce, date de revue (le comité juge sur pièce)")
+m_ech = manque_j([ATT], datetime(2027, 11, 15).date())
+b.check(m_ech is not None and m_ech.nature == "non_fondee" and m_ech.attente is None,
+        f"§6 au jour de la revue, l'attente est ÉCHUE : la question redevient à collecter — obtenu "
+        f"{m_ech and m_ech.nature}")
+m_rv6 = manque_j([ATT], APRES.date(), decision_ouvrante=decision(30, "renvoyer", mandat_id=701))
+b.check(m_rv6 is not None and m_rv6.nature == "rouverte_comite",
+        "§6 le comité qui CONTESTE la cause (renvoi) rouvre la question en recherche")
+pos6 = position_du_comite([decision(31, "acquitter", answer_id=1800, quand=APRES)],
+                          reponses_courantes=frozenset({1800}), ancre=AUCUN_FAIT)
+b.check(pos6 is not None and manque_j([ATT], APRES.date(), acceptation=pos6.acceptation) is None,
+        "§6 le comité qui ACCEPTE la cause ferme la question (c'est lui, pas l'analyste, qui ferme)")
+
+q_att, q_ech = ids[6], ids[7]
+b.require(ids[:8], 8, "§6 qualité financière a au moins huit questions (fixture)")
+rep6 = rep + [lue_att(15, qid=q_att), lue_att(16, qid=q_ech, revoir="2026-10-17")]
+etat6 = EtatDossier(
+    ticker_id="NVDA", fichier=FICHIER, archetype="rentable", reponses=rep6, pieces={},
+    applicables={f.id: frozenset(q.id for q in f.questions) - {q_hors} for f in FICHIER.frameworks},
+    dispenses={f.id: (frozenset({q_disp}) if f.id == "qualite_financiere" else frozenset())
+               for f in FICHIER.frameworks},
+    mandats_ouverts={}, collecte={}, genere_le=APRES, registre={}, comite=comite)
+per6 = questions_a_relancer(etat6, "qualite_financiere")
+b.check(q_att not in per6.ouvertes and per6.closes.get(q_att, "").startswith(
+            "pas encore observable jusqu'au 2027-11-15"),
+        f"§6 la relance NE recollecte PAS une attente non échue, et dit pourquoi — obtenu {per6.closes.get(q_att)}")
+b.check(q_ech in per6.ouvertes, f"§6 … mais refait une attente ÉCHUE — ouvertes {per6.ouvertes}")
+n2_6 = dresser_niveau2(etat6, "qualite_financiere")
+b.check(n2_6.synthese.n_pas_encore_observable == 1,
+        f"§6 le chapitre COMPTE ses attentes (l'abus se voit) — obtenu {n2_6.synthese.n_pas_encore_observable}")
 
 sys.exit(b.summary())

@@ -61,6 +61,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Any, Literal, Optional, Sequence
 
 from pydantic import Field, model_validator
@@ -102,7 +103,7 @@ from app.contracts.framework_definition_schema import (
     FrameworksFile,
     QuestionDefinition,
 )
-from app.contracts.readiness_report_schema import GapItem
+from app.contracts.readiness_report_schema import AttenteObservation, GapItem
 from app.knowledge.synthesis_feed import derive_synthesis_reliability
 
 __all__ = [
@@ -121,7 +122,71 @@ __all__ = [
     "reponse_non_fondable",
     "assembler_answer",
     "repondre",
+    "PAS_ENCORE_OBSERVABLE",
+    "statuts_montres",
+    "motif_refus_attente",
 ]
+
+
+# ── #138 « pas encore observable » ───────────────────────────────────────────────────────────────
+# Un statut DU MODÈLE (il juge que l'information n'est pas encore advenue), toujours montré à côté des
+# statuts ouverts par le corpus — mais jamais compté parmi eux : `aucune_reponse_possible` ne regarde
+# que ce que le corpus permet, et une question sans corpus citable n'a pas de pièce pour prouver le
+# fait déclencheur, donc pas d'attente possible (elle sort `non_fondable` à collecter, sans appel).
+PAS_ENCORE_OBSERVABLE = "pas_encore_observable"
+# Au-delà, ce n'est plus « pas encore » mais « pas dans l'horizon du dossier » : un fonds revoit une
+# ligne au moins à ce rythme, et une attente plus longue serait une question mise au placard.
+DELAI_MAX_ATTENTE = timedelta(days=3 * 365)
+
+
+def statuts_montres(ouverts: list[str]) -> list[str]:
+    """DÉTENTEUR UNIQUE du vocabulaire de statuts MONTRÉ au modèle et ACCEPTÉ de lui (#46)."""
+    return [*ouverts, PAS_ENCORE_OBSERVABLE]
+
+
+def _date_de(entry: dict[str, Any]) -> Optional[date]:
+    """La date de PUBLICATION de la pièce (#79, `date_du_document`) : un document ne peut pas prouver un
+    fait postérieur à sa parution. `source_date` en repli seulement — elle reçoit aussi la date du FAIT
+    (mesuré RVMD #1147 : conférence du 12 août, `source_date` au 5 août, date des comptes commentés)."""
+    d = entry.get("date_du_document") or entry.get("source_date")
+    if isinstance(d, date):
+        return d
+    try:
+        return date.fromisoformat(str(d)[:10]) if d else None
+    except ValueError:
+        return None
+
+
+def motif_refus_attente(
+    attente: AttenteObservation, entries: dict[int, dict[str, Any]], aujourd_hui: date,
+) -> Optional[str]:
+    """Les RELATIONS qu'une attente doit tenir, vérifiées par le code (#68 : la structure et la
+    relation, jamais le sens — le sens de la cause est jugé par le comité). Pure. None = recevable.
+
+    Chaque refus vise une façon de déguiser un défaut de recherche en attente : une pièce qui n'est
+    pas au dossier (le fait déclencheur n'est pas prouvé), une pièce antérieure au fait qu'elle
+    prouverait, un fait dans le futur, une revue déjà passée (la question est cherchable dès
+    aujourd'hui) ou au-delà de l'horizon (une mise au placard).
+    """
+    piece = entries.get(attente.piece_du_fait)
+    if piece is None:
+        return (f"la pièce du fait déclencheur #{attente.piece_du_fait} n'est pas au dossier : un fait "
+                "non prouvé par une pièce ne fonde pas une attente")
+    if attente.depuis > aujourd_hui:
+        return (f"fait déclencheur daté du {attente.depuis}, postérieur à aujourd'hui ({aujourd_hui}) : "
+                "on n'attend pas sur un fait qui n'a pas eu lieu")
+    date_piece = _date_de(piece)
+    if date_piece is not None and date_piece < attente.depuis:
+        return (f"la pièce #{attente.piece_du_fait} est publiée le {date_piece}, AVANT le fait du "
+                f"{attente.depuis} qu'elle prouverait (cite la pièce qui rapporte le fait, ou "
+                "signale-la mal datée dans `verbatim`)")
+    if attente.revoir_le <= aujourd_hui:
+        return (f"revue au {attente.revoir_le}, déjà échue (aujourd'hui {aujourd_hui}) : l'information "
+                "serait observable dès maintenant — c'est un `sans_fondement` à collecter")
+    if attente.revoir_le > aujourd_hui + DELAI_MAX_ATTENTE:
+        return (f"revue au {attente.revoir_le}, au-delà de trois ans : une attente aussi longue met la "
+                "question au placard au lieu de la reporter")
+    return None
 
 
 class AnalysteInapplicable(Exception):
@@ -153,7 +218,7 @@ class AnalysteReponse(Strict):
         comme pour le plan du traducteur (#36/#53/#57).
     """
     question_id: str = Field(min_length=1)
-    statut: Literal["repondu", "approxime", "sans_fondement"]
+    statut: Literal["repondu", "approxime", "sans_fondement", "pas_encore_observable"]
     # `verbatim` porte deux charges selon le statut : la réponse lisible, ou CE QUI MANQUE. Dans les
     # deux cas c'est du texte qu'un humain lit, jamais un code.
     verbatim: str = Field(min_length=1)
@@ -171,6 +236,8 @@ class AnalysteReponse(Strict):
     faits_posterieurs: list[FaitPosterieurLu] = Field(default_factory=list)
     # Les calculs que son texte avance, montrés (#136) — le contrôle avant comité les refait.
     calculs: list[CalculMontre] = Field(default_factory=list)
+    # #138 — la justification d'un « pas encore observable », et elle seule la porte.
+    attente: Optional[AttenteObservation] = None
 
     @model_validator(mode="after")
     def _le_statut_porte_exactement_sa_charge(self):
@@ -180,7 +247,12 @@ class AnalysteReponse(Strict):
         c'est-à-dire une réponse déguisée en manque, que le code transformerait en mandat de
         collecte pour un chiffre déjà fourni.
         """
-        if self.statut == "sans_fondement":
+        if (self.statut == PAS_ENCORE_OBSERVABLE) != (self.attente is not None):
+            raise ValueError(
+                f"statut `{self.statut}` {'sans' if self.attente is None else 'portant une'} "
+                "justification `attente` : « pas encore observable » exige sa cause, son fait daté, "
+                "sa pièce et sa date de revue, et aucun autre statut n'en porte (#138)")
+        if self.statut in ("sans_fondement", PAS_ENCORE_OBSERVABLE):
             sales = [n for n in ("sens", "approximation") if getattr(self, n) is not None]
             if self.chiffres_cles:
                 sales.append("chiffres_cles")
@@ -190,7 +262,7 @@ class AnalysteReponse(Strict):
                 sales.append("calculs")
             if sales or self.cited_entry_ids:
                 raise ValueError(
-                    f"`sans_fondement` portant {sales or 'des citations'} : un manque qui cite ses "
+                    f"`{self.statut}` portant {sales or 'des citations'} : un manque qui cite ses "
                     "sources et donne sa valeur n'est pas un manque, c'est une réponse")
             return self
         if not self.cited_entry_ids:
@@ -441,6 +513,7 @@ def contexte_analyste(
     ticker_id: str,
     entries: dict[int, dict[str, Any]],
     faits: Optional[dict[str, list[MaterialEvent]]] = None,
+    aujourd_hui: Optional[date] = None,
 ) -> dict[str, Any]:
     """CE QUE LE MODÈLE VOIT — lever-free, et sans aucune métadonnée de valeur sur les sources.
 
@@ -471,7 +544,7 @@ def contexte_analyste(
             # Vocabulaire FERMÉ de statuts, même forme que `sens_admis` : une propriété de la
             # question sur ce corpus, jamais un curseur. Le modèle ne voit toujours ni
             # `plancher_tier` ni `nature_attendue` (#59) — seulement ce qui lui reste ouvert.
-            "statuts_admis": ouverts,
+            "statuts_admis": statuts_montres(ouverts),
             "ingredients": [
                 {"id": i.id, "libelle": i.libelle, "essentiel": i.essentiel}
                 for i in q.ingredients_requis
@@ -509,6 +582,9 @@ def contexte_analyste(
         })
     return {
         "ticker": ticker_id,
+        # #138 — l'horloge (`feedback_agent_sans_horloge`) : sans elle, une date de revue se fixe à
+        # la coupure du modèle, et « pas encore observable » se juge dans un monde révolu.
+        "date_du_jour": (aujourd_hui or date.today()).isoformat(),
         "framework": {"id": fw.id, "libelle": fw.libelle, "methodologie": fw.methodologie},
         "archetype": archetype,
         "questions": questions,
@@ -570,6 +646,7 @@ def reponse_non_fondable(
     manque: str,
     citables: int,
     fournies: int,
+    attente: Optional[AttenteObservation] = None,
 ) -> FrameworkAnswer:
     """La réponse `non_fondable` et son `GapItem` — LE MANQUE DE DONNÉES, jamais une panne d'agent.
 
@@ -598,7 +675,9 @@ def reponse_non_fondable(
             coverage_actuelle=(
                 f"{citables} entry citable(s) sur {fournies} fournie(s) pour `{question.id}`"),
             origine="curator",
-            remede="collecte",
+            # #138 : une attente justifiée change le remède — on ne collecte pas ce qui n'est pas advenu.
+            remede="attente" if attente is not None else "collecte",
+            attente=attente,
         ),
     )
 
@@ -722,7 +801,24 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "  • `sans_fondement` — le corpus fourni ne permet ni de répondre ni de reconstruire. Remplis "
     "`verbatim` avec CE QUI MANQUE, précisément (quel ingrédient, pour quelle période), et rien "
     "d'autre : pas de citations, pas de valeur, pas de sens. Ce n'est pas un échec, c'est une "
-    "commande de collecte.\n\n"
+    "commande de collecte.\n"
+    "  • `pas_encore_observable` — l'information demandée N'EXISTE PAS ENCORE DANS LE MONDE, parce "
+    "qu'un fait récent vient seulement d'ouvrir la situation qu'elle mesurerait : un pouvoir de prix "
+    "ne se mesure pas sur quelques semaines de ventes, une tendance sur cinq exercices n'existe pas "
+    "pour une activité commencée il y a deux mois. LE TEST : un enquêteur qui aurait accès à TOUS "
+    "les documents du monde ne pourrait pas la trouver aujourd'hui. Si l'information existe "
+    "probablement quelque part mais n'est pas dans ton corpus, ce n'est PAS ce statut : c'est "
+    "`sans_fondement`, et une collecte ira la chercher. Ce statut ne déclenche aucune recherche "
+    "jusqu'à la date de revue, et le comité lit ta justification pour juger si la cause est réelle : "
+    "l'utiliser pour une information simplement absente du corpus est une faute grave. Remplis "
+    "`verbatim` (ce qui manque, en une phrase) et le bloc `attente` : `cause` (pourquoi cette "
+    "information n'existe pas encore, en termes d'activité de l'entreprise), `fait_declencheur` (le "
+    "fait daté qui a ouvert la situation, par exemple une approbation ou un lancement), `depuis` (sa "
+    "date, AAAA-MM-JJ), `piece_du_fait` (l'`entry_id` du corpus qui établit ce fait), "
+    "`historique_requis` (ce qu'il faudra avoir observé pour répondre, par exemple « quatre "
+    "trimestres de ventes publiés »), `revoir_le` (la date, AAAA-MM-JJ, à partir de laquelle cet "
+    "historique existera, postérieure à `date_du_jour` et à moins de trois ans). Pas de "
+    "`cited_entry_ids`, pas de valeur, pas de sens. Ce statut est toujours dans `statuts_admis`.\n\n"
     "L'ENCADRÉ DE CHIFFRES CLÉS. Chaque question porte `chiffres_cles_demandes` : les chiffres que ta "
     "réponse doit rendre, comme l'encadré qui clôt une note d'analyste. Sur `repondu` et `approxime`, "
     "`chiffres_cles` contient EXACTEMENT une ligne par chiffre demandé — ni plus, ni moins —, avec son "
@@ -822,8 +918,8 @@ def _message_analyste(contexte: dict[str, Any]) -> str:
         f"{json.dumps(contexte, ensure_ascii=False, indent=2)}\n\n"
         "Produis l'objet JSON `{\"reponses\": [ ... ]}` : une réponse par question ci-dessus, avec "
         "son `question_id` et un `statut` PRIS DANS LE `statuts_admis` DE CETTE QUESTION "
-        "(`repondu`/`approxime` avec citations, `sens` et l'encadré `chiffres_cles`, ou `sans_fondement` "
-        "avec ce qui manque). "
+        "(`repondu`/`approxime` avec citations, `sens` et l'encadré `chiffres_cles`, `sans_fondement` "
+        "avec ce qui manque, ou `pas_encore_observable` avec sa justification `attente`). "
         "Aucune question ne doit rester sans réponse."
     )
 
@@ -857,6 +953,7 @@ def _traiter_sortie(
     profils: dict[str, dict[str, Any]],
     entries: dict[int, dict[str, Any]],
     entete: dict[str, str],
+    aujourd_hui: Optional[date] = None,
 ) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     """Une sortie du modèle → une ISSUE par question interrogée (`FrameworkAnswer` ou `_Refus`), + les
     refus qui ne portent sur aucune question interrogée (question non posée, deuxième réponse). Pur."""
@@ -882,6 +979,19 @@ def _traiter_sortie(
             issues[brute.question_id] = _Refus(
                 f"statut `{brute.statut}` hors des statuts ouverts "
                 f"{admis[brute.question_id]} pour `{brute.question_id}` sur ce corpus", brute)
+            continue
+
+        if brute.statut == PAS_ENCORE_OBSERVABLE:
+            motif = motif_refus_attente(brute.attente, entries, aujourd_hui or date.today())
+            if motif is not None:
+                # Une attente mal formée est une faute d'AGENT (renvoyée une fois, #101) — jamais
+                # requalifiée par le code en collecte ou en attente : le code ne choisit pas la cause.
+                issues[brute.question_id] = _Refus(f"attente irrecevable (#138) : {motif}", brute)
+                continue
+            issues[brute.question_id] = reponse_non_fondable(
+                q, **entete, manque=brute.verbatim,
+                citables=len(corpus_citable(q, entries)), fournies=len(entries),
+                attente=brute.attente)
             continue
 
         if brute.statut == "sans_fondement":
@@ -1075,6 +1185,7 @@ async def repondre(
     agent: Optional[ResolvedAgent] = None,
     faits: Optional[dict[str, list[MaterialEvent]]] = None,
     chemises: Sequence[Any],
+    aujourd_hui: Optional[date] = None,
 ) -> ResultatAnalyste:
     """Répond à TOUTES les questions d'un (ticker × framework × archétype). Ne persiste rien.
 
@@ -1129,10 +1240,12 @@ async def repondre(
                 citables=len(citables), fournies=len(entries)))
             continue
         interrogeables[q.id] = q
-        admis[q.id] = ouverts
+        admis[q.id] = statuts_montres(ouverts)
+    aujourd_hui = aujourd_hui or date.today()
 
     if interrogeables:
-        contexte = contexte_analyste(fichier, framework_id, archetype, ticker_id, entries, faits)
+        contexte = contexte_analyste(fichier, framework_id, archetype, ticker_id, entries, faits,
+                                     aujourd_hui=aujourd_hui)
         agent = agent or await _resolve_analyste_agent()
         messages = [{"role": "user", "content": _message_analyste(contexte)}]
         # json_object=False : DeepSeek-V4-Flash est non fiable en mode json_object (cf. run_json_agent).
@@ -1149,7 +1262,7 @@ async def repondre(
             run.parsed.model_dump(mode="json"), ensure_ascii=False)
         profils = question_profiles(fichier)
         issues, hors = _traiter_sortie(run.parsed, interrogeables, admis, profils=profils,
-                                       entries=entries, entete=entete)
+                                       entries=entries, entete=entete, aujourd_hui=aujourd_hui)
         for qid, motif in refus_contrat.items():
             issues[qid] = _Refus(motif)
 
@@ -1185,7 +1298,8 @@ async def repondre(
                         cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
             else:
                 issues2, _ = _traiter_sortie(run2.parsed, {q: interrogeables[q] for q in a_reprendre},
-                                             admis, profils=profils, entries=entries, entete=entete)
+                                             admis, profils=profils, entries=entries, entete=entete,
+                                             aujourd_hui=aujourd_hui)
                 for qid, premier in a_reprendre.items():
                     second = issues2[qid]
                     issues[qid] = second if not isinstance(second, _Refus) else _Refus(
@@ -1217,7 +1331,8 @@ async def repondre(
                         cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
             else:
                 issues3, _ = _traiter_sortie(run3.parsed, {q: interrogeables[q] for q in concurrences},
-                                             admis, profils=profils, entries=entries, entete=entete)
+                                             admis, profils=profils, entries=entries, entete=entete,
+                                             aujourd_hui=aujourd_hui)
                 for qid in concurrences:
                     if not isinstance(issues3[qid], _Refus):
                         issues[qid] = issues3[qid]   # relue ; sinon la première réponse tient
@@ -1246,7 +1361,8 @@ async def repondre(
                         cost_usd=run.cost_usd + float(e.cost_usd or 0.0))
             else:
                 issues4, _ = _traiter_sortie(run4.parsed, {q: interrogeables[q] for q in defauts},
-                                             admis, profils=profils, entries=entries, entete=entete)
+                                             admis, profils=profils, entries=entries, entete=entete,
+                                             aujourd_hui=aujourd_hui)
                 for qid in defauts:
                     if not isinstance(issues4[qid], _Refus):
                         issues[qid] = issues4[qid]   # relue ; sinon la réponse d'avant tient, signalée

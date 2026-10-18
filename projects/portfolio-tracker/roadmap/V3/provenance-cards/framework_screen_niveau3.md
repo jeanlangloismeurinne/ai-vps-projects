@@ -116,6 +116,12 @@ jamais le nombre estimé comme s'il était mesuré. C'est le contrôle ④ port�
 ║  │  └─ les deux remèdes ne partagent pas leur bouton : un champ périmé se        │    ║
 ║  │     rafraîchit, un champ vide se collecte, et les confondre fait payer une    │    ║
 ║  │     recherche complète là où une date postérieure suffisait                   │    ║
+║  │  SI remède = ATTENDRE (#138) — la justification entière, que le comité juge : │    ║
+║  │  Cause        ventes depuis 8 semaines ⟦gap.attente.cause⟧                    │    ║
+║  │  Fait         approbation FDA ⟦gap.attente.fait_declencheur⟧                  │    ║
+║  │               le 2026-08-26 ⟦gap.attente.depuis⟧ pièce #1147 ⟦gap.attente.piece_du_fait⟧│
+║  │  Il faudra    4 trimestres de ventes ⟦gap.attente.historique_requis⟧          │    ║
+║  │  Revue        le 2027-11-15 ⟦gap.attente.revoir_le⟧                           │    ║
 ║  └──────────────────────────────────────────────────────────────────────────────┘    ║
 ║                                                                                      ║
 ║  ┌─ LE MANAGER ─────────────────────────────────────────────────────────────────┐    ║

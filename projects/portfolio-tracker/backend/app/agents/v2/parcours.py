@@ -25,7 +25,7 @@ reformule la question). `manque_de_la_question` est le détenteur unique de ce d
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from app.agents.v2.frameworks import _plus_faible, load_frameworks
@@ -144,6 +144,9 @@ _EXPLICATION: dict[CauseManque, str] = {
                      "écrite depuis",
     "reinitialisation": "la question a été remise à zéro ; aucune réponse n'a encore été écrite "
                         "depuis",
+    "pas_encore_observable": "l'analyste juge que l'information n'existe pas encore — aucune "
+                             "recherche n'est relancée avant la date de revue ; au comité de juger "
+                             "la cause (accepter, ou renvoyer en recherche)",
 }
 
 
@@ -184,6 +187,7 @@ def manque_de_la_question(
     mandat_ouvert_id: Optional[int],
     acceptation: Optional[AcceptationServie] = None,
     decision_ouvrante: Optional[DecisionComite] = None,
+    aujourd_hui: Optional[date] = None,
 ) -> Optional[Manque]:
     """DÉTENTEUR UNIQUE (#46) de « cette question manque-t-elle au dossier, et pourquoi ? ». Pure.
 
@@ -244,6 +248,21 @@ def manque_de_la_question(
 
     cause, ingredients = _cause_de_collecte(collecte)
     non_fondees = [r for r in reponses if r.servie.statut == "non_fondable"]
+    # #138 — une attente justifiée, et pas encore échue : la question reste à l'alerte (le comité juge
+    # la cause), sous sa propre nature, pour qu'aucune relance ne la recollecte. Échue, elle retombe
+    # dans le cas général ci-dessous : la question redevient cherchable d'elle-même, sans geste.
+    jour = aujourd_hui or date.today()
+    attentes = [r for r in non_fondees
+                if r.servie.gap is not None and r.servie.gap.attente is not None
+                and r.servie.gap.attente.revoir_le > jour]
+    if attentes:
+        r, att = attentes[0], attentes[0].servie.gap.attente
+        return Manque(nature="pas_encore_observable", cause="pas_encore_observable",
+                      answer_id=r.answer_id, attente=att,
+                      explication=(f"{_EXPLICATION['pas_encore_observable']}. Cause : {att.cause} "
+                                   f"Fait déclencheur : {att.fait_declencheur} ({att.depuis}, pièce "
+                                   f"#{att.piece_du_fait}). Il faudra : {att.historique_requis}. "
+                                   f"Revue le {att.revoir_le}."), **commun)
     if non_fondees:
         return Manque(nature="non_fondee", cause=cause, answer_id=non_fondees[0].answer_id,
                       explication=_EXPLICATION[cause], ingredients=ingredients, **commun)
@@ -279,7 +298,8 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)),
                 acceptation=position.acceptation if position else None,
                 decision_ouvrante=(position.derniere if position is not None
-                                   and position.derniere.action in ACTIONS_OUVRANTES else None))
+                                   and position.derniere.action in ACTIONS_OUVRANTES else None),
+                aujourd_hui=etat.genere_le.date())
         lignes.append(LigneQuestion(
             question_id=q.id, enonce=q.enonce, applicable=applicable,
             dispensee=q.id in dispenses, manque=manque, comite=position,
@@ -324,7 +344,13 @@ def questions_a_relancer(etat: EtatDossier, framework_id: str) -> PerimetreRelan
             "d'abord (`tools/classer_emetteur.sh`)")
     ouvertes, closes = [], {}
     for lq in _lignes(etat, f):
-        if lq.manque is not None:
+        if lq.manque is not None and lq.manque.nature == "pas_encore_observable":
+            # #138 — ouverte au comité, FERMÉE à la relance : on ne recollecte pas ce qui n'est pas
+            # advenu. Rouverte par la date de revue, un renvoi ou une remise à zéro du comité.
+            att = lq.manque.attente
+            closes[lq.question_id] = (f"pas encore observable jusqu'au {att.revoir_le} — "
+                                      f"{att.cause} (cause à juger par le comité)")
+        elif lq.manque is not None:
             ouvertes.append(lq.question_id)
         elif not lq.applicable:
             closes[lq.question_id] = "hors sujet pour cet émetteur"
@@ -358,6 +384,8 @@ def _synthese(etat: EtatDossier, f, lignes: list[LigneQuestion]) -> SyntheseFram
         n_acceptees_comite=sum(1 for lq in lignes if lq.applicable and _acceptee(lq)),
         n_standard_anterieur=sum(1 for lq in lignes for r in lq.reponses if r.standard_anterieur),
         n_chiffres_sans_piece=sum(r.n_chiffres_sans_piece for lq in lignes for r in lq.reponses),
+        n_pas_encore_observable=sum(1 for lq in lignes if lq.manque is not None
+                                    and lq.manque.nature == "pas_encore_observable"),
     )
 
 

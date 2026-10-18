@@ -690,7 +690,7 @@ check("… et le motif NOMME les questions perdues (un refus qui ne dit pas quoi
 print("\n[7 bis] une réponse refusée est renvoyée UNE fois au modèle avec son motif, jamais davantage")
 
 
-def passage_tours(tours, entries=ENTRIES, chemises=()):
+def passage_tours(tours, entries=ENTRIES, chemises=(), aujourd_hui=None):
     """`repondre` hors-ligne, le faux modèle rendant `tours[k]` au k-ième appel — et en gardant les
     messages reçus. Le nombre d'appels EST la mesure (« une fois, pas davantage »)."""
     class _Run:
@@ -709,7 +709,8 @@ def passage_tours(tours, entries=ENTRIES, chemises=()):
     try:
         return asyncio.get_event_loop().run_until_complete(
             A.repondre(TICKER, "qualite_financiere", "pre_revenus",
-                       analyste="analyste_1", entries=entries, fichier=F, chemises=chemises)), appels
+                       analyste="analyste_1", entries=entries, fichier=F, chemises=chemises,
+                       aujourd_hui=aujourd_hui)), appels
     except Exception as exc:  # noqa: BLE001
         return exc, appels
     finally:
@@ -1156,6 +1157,88 @@ _ctx13 = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", "RVMD", _e1
 _c13 = [x["entry_id"] for qq in _ctx13["questions"] if qq["id"] == "qf_7" for x in qq["corpus"]]
 check("§13 le CONTEXTE envoyé au modèle pour qf_7 ne porte que #787 (le filtre est au point de lecture)",
       _c13 == [787], f"→ {_c13}")
+
+
+# ── §14 « PAS ENCORE OBSERVABLE » (#138) : une attente se justifie, et ses relations se vérifient ──────
+# Arbitrage du 2026-10-18 : l'information qui n'existe pas encore (quelques semaines de ventes de RVMD
+# ne font pas un pouvoir de prix) ne se collecte pas ; mais la justification est OBLIGATOIRE pour que
+# le comité juge la cause, et le code refuse les attentes dont les RELATIONS ne tiennent pas (#68).
+print("\n[14] « pas encore observable » : justification obligatoire, relations vérifiées, aucune collecte")
+from datetime import date as _d14
+from app.contracts.readiness_report_schema import AttenteObservation, GapItem
+J14 = _d14(2026, 10, 18)
+ATT = dict(cause="les ventes ont commencé il y a huit semaines : aucun prix n'a encore été éprouvé",
+           fait_declencheur="approbation du produit", depuis="2025-01-15", piece_du_fait=1,
+           historique_requis="quatre trimestres de ventes publiés", revoir_le="2027-11-15")
+leve("§14 contrat : une revue AVANT le fait déclencheur est refusée",
+     lambda: AttenteObservation(**{**ATT, "revoir_le": "2025-01-01"}), ValidationError)
+_g = dict(dimension="d", champs_cibles=["qf_7"], manque="m", priorite="haute", coverage_actuelle="c")
+leve("§14 contrat : remède `attente` SANS justification refusé",
+     lambda: GapItem(**_g, remede="attente"), ValidationError)
+leve("§14 contrat : une justification d'attente sur un remède `collecte` refusée",
+     lambda: GapItem(**_g, remede="collecte", attente=AttenteObservation(**ATT)), ValidationError)
+leve("§14 sortie du modèle : `pas_encore_observable` sans bloc `attente` refusé",
+     lambda: A.AnalysteReponse(question_id="qf_7", statut="pas_encore_observable", verbatim="x"),
+     ValidationError)
+leve("§14 sortie du modèle : `pas_encore_observable` portant des citations refusé (une attente n'est pas une réponse)",
+     lambda: A.AnalysteReponse(question_id="qf_7", statut="pas_encore_observable", verbatim="x",
+                               attente=ATT, cited_entry_ids=[1]), ValidationError)
+leve("§14 sortie du modèle : un `sans_fondement` portant une attente refusé",
+     lambda: A.AnalysteReponse(question_id="qf_7", statut="sans_fondement", verbatim="x", attente=ATT),
+     ValidationError)
+
+_ctx14 = A.contexte_analyste(F, "qualite_financiere", "pre_revenus", TICKER, ENTRIES, aujourd_hui=J14)
+check("§14 le contexte porte la DATE DU JOUR (sans horloge, une revue se date à la coupure du modèle)",
+      _ctx14.get("date_du_jour") == "2026-10-18", f"→ {_ctx14.get('date_du_jour')}")
+check("§14 `pas_encore_observable` est montré dans les statuts de CHAQUE question interrogée",
+      _ctx14["questions"] and all("pas_encore_observable" in qq.get("statuts_admis", []) for qq in _ctx14["questions"]),
+      f"→ {[qq.get('statuts_admis') for qq in _ctx14['questions']]}")
+check("§14 … sans compter parmi ce que le corpus permet (`aucune_reponse_possible` inchangée)",
+      A.aucune_reponse_possible(["sans_fondement"]) and "pas_encore_observable" not in
+      A.statuts_admissibles(Q["qf_7"], A.corpus_citable(Q["qf_7"], ENTRIES))[0])
+
+
+def _tour14(**att):
+    return NOMINAL[:3] + [dict(question_id="qf_7", statut="pas_encore_observable",
+                               verbatim="la consommation sur un exercice complet n'existe pas encore",
+                               attente={**ATT, **att})]
+
+
+_R14, _ap14 = passage_tours([_tour14()], aujourd_hui=J14)
+_a14 = next((a for a in _ans(_R14) if a.question_id == "qf_7"), None)
+check("§14 une attente recevable sort `non_fondable`, remède `attente`, justification ENTIÈRE conservée",
+      _a14 is not None and _a14.statut == "non_fondable" and _a14.gap.remede == "attente"
+      and _a14.gap.attente.cause == ATT["cause"] and str(_a14.gap.attente.revoir_le) == ATT["revoir_le"]
+      and _ref(_R14) == [] and len(_ap14) == 1,
+      f"→ {_a14 and _a14.gap} refus {_ref(_R14)} appels {len(_ap14)}")
+_sf14 = next((a for a in _ans(passage_tours([NOMINAL], aujourd_hui=J14)[0])
+              if a.question_id == "qf_7" and a.gap is not None), None)
+check("§14 … et un `sans_fondement` reste un manque À COLLECTER (le remède ne change que sur justification)",
+      _sf14 is not None and _sf14.gap.remede == "collecte", f"→ {_sf14}")
+
+for _lib, _mut, _attendu in (
+        ("pièce absente du dossier", dict(piece_du_fait=999), "n'est pas au dossier"),
+        ("fait déclencheur dans le futur", dict(depuis="2026-12-01", revoir_le="2027-12-01"), "postérieur à aujourd'hui"),
+        ("pièce ANTÉRIEURE au fait qu'elle prouverait", dict(depuis="2025-06-01"), "AVANT le fait"),
+        ("revue déjà échue", dict(revoir_le="2026-10-18"), "déjà échue"),
+        ("revue au-delà de trois ans", dict(revoir_le="2029-12-01"), "au-delà de trois ans")):
+    _Rm, _apm = passage_tours([_tour14(**_mut), _tour14(**_mut)], aujourd_hui=J14)
+    _refus_qf7 = [m for q, m in _ref(_Rm) if q == "qf_7"]
+    check(f"§14 attente irrecevable — {_lib} → REFUS d'agent nommé (renvoyé une fois), jamais un manque",
+          _refus_qf7 and "#138" in _refus_qf7[0] and _attendu in _refus_qf7[0]
+          and not any(a.question_id == "qf_7" for a in _ans(_Rm)) and len(_apm) == 2,
+          f"→ refus {_refus_qf7} appels {len(_apm)}")
+check("§14 `motif_refus_attente` rend None sur une attente recevable (la garde n'est pas un refus systématique)",
+      A.motif_refus_attente(AttenteObservation(**ATT), ENTRIES, J14) is None)
+# Forme du réel : RVMD #1147, conférence du 12 août (`date_du_document`) dont la `source_date` est le 5 août.
+_e1147 = {7: {"source_date": "2026-08-05", "date_du_document": "2026-08-12", "content": "…"}}
+_att1147 = AttenteObservation(**{**ATT, "piece_du_fait": 7, "depuis": "2026-08-10"})
+check("§14 la date qui compte est la PUBLICATION de la pièce (#79) : #1147 publiée le 12/08 prouve un fait du 10/08",
+      A.motif_refus_attente(_att1147, _e1147, J14) is None,
+      f"→ {A.motif_refus_attente(_att1147, _e1147, J14)}")
+check("§14 … et une pièce publiée AVANT le fait est refusée même si sa `source_date` est postérieure",
+      "AVANT le fait" in (A.motif_refus_attente(
+          _att1147, {7: {"source_date": "2026-08-20", "date_du_document": "2026-08-05"}}, J14) or ""))
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")
