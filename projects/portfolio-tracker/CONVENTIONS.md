@@ -3419,3 +3419,34 @@ décide, date, signe et cite l'événement — et tous les analystes le voient, 
   le contrat impose un sens à tout `repondu`, le modèle l'invente quand le chiffre-objet est « non établi »
   (rejoint le point 11 de 07, « répondu sans le chiffre-objet »). Jugement instable entre passages : la
   consigne n'est pas le levier.
+
+### #139 ter — un verdict ne contredit jamais le chiffre qui le porte : « n.s. » se dit, il ne s'invente pas
+
+**Diagnostic du 2026-10-18** (RVMD reclassée, qf_3/qf_5 : texte « non mesurable », verdict « croissance
+destructrice » puis « peu capitalistique » à entrée identique). Mesuré : 6 appels à entrée identique → 5
+« non fondé », 1 « répondu » à verdict inventé, 0 « pas encore observable » (aléa 0,3). Causes : (1) le
+format imposait un verdict directionnel à tout `repondu`, sans case « n.s. », et #101 laisse passer un
+chiffre CENTRAL absent ; (2) aucun statut ne décrivait « mesure sans objet pour ce profil » ; (3) la
+prémisse « pas encore observable » était en partie fausse : le rendement est non défini parce que le
+capital employé est NÉGATIF (biotech riche en trésorerie), pas faute d'historique ; (4) l'aléa amplifie ;
+(6) la pente héritait « non établi » d'un rendement « non défini » — le code lui-même envoyait en
+collecte une propriété de l'entreprise. Comme un fonds : cellule « n.s. » ⟹ verdict « n.s. ».
+- `ratios_maison.issue_du_motif` (détenteur) : « non calculable » / « non défini » = NON SIGNIFICATIF,
+  « non établi » (ou inconnu) = MANQUE ; la série du rendement hérite du non défini.
+- `QuestionDefinition.sens_lu_sur` : le chiffre (des comptes reconstitués) qui PORTE le verdict — qf_3,
+  qf_5 ; le sens `non_significatif` est au vocabulaire ssi déclaré, jamais montré au modèle. qf_1/qf_2 n'en
+  déclarent pas (leur verdict tient sur les pertes : « détruit de la valeur », « conversion absente »).
+- `analyste.lecture_du_chiffre_du_verdict` / `statuts_ouverts` : non significatif ⟹ le CODE écrit « n.s. »
+  (motif + pièce des comptes), sans appel, même assemblage et même pont ; il lit les faits postérieurs qui
+  ne touchent pas des comptes clos (`evenements.TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS` : retraitement,
+  périmètre, existentiel, non lu — jamais déclarés lus) ; manque ⟹ `repondu`/`approxime` fermés avant
+  l'appel, la question reste posée (la porte se juge AVANT la restriction : l'attente reste possible).
+- `frameworks.motif_verdict_contredit_son_chiffre` (détenteur) : pont [S bis] à l'écriture, contrôleur ②
+  à chaque lecture — #1687/#1688 rouvertes sans geste. Clefs de profil facultatives (`CLEFS_PROFIL_FACULTATIVES`).
+- **Exécuté** : RVMD qf_3/qf_5 → « n.s. » (#1712/#1713, 0 $), chapitre qualité financière 8/8 acquitté et à
+  jour. Le texte publié des comptes (#876) garde l'ancien motif de la pente jusqu'à sa republication
+  (prochain 10-Q) — non forcée : elle remplacerait la pièce citée par tout le chapitre.
+- ⚠️ Reste : l'outil d'acceptation ne remet ni les comptes reconstitués ni les lectures de dépôts (écart
+  antérieur) — une mesure d'acceptation n'est pas la chaîne sur un chapitre qui lit le socle.
+- Preuve : `check_verdict_chiffre` (+ `negatif_verdict_chiffre`, 17 mutations), `check_ratios_maison` §3/§4,
+  `check_frameworks_definitions` §4.

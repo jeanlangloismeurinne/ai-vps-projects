@@ -32,12 +32,12 @@ jugée par le comité) ; type « changement de stade » (catalogue 1.7.0) qui ro
 RECOMMANDE le reclassement ; le comité reclasse/maintient (bloc « Classement de la société », niveau 1) ;
 la pièce du classement suit tous les chapitres. Notes relues sous 1.7.0 (RVMD #730-#739, NVDA #740-#745,
 MSFT #746-#750) : seule RVMD #731 (8-K du 26/08) est un changement de stade — recommandation affichée.
-RVMD **reclassée « commerciale »** par l'utilisateur le 2026-10-18 (pièce #944) ; qualité financière relancée
-(#1677-#1680 tiennent ; #1685-#1688 : qf_1/qf_2 défendables, **qf_3/qf_5 fautives** — sens inventé sur un
-chiffre « non établi » ; « pas encore observable » jamais choisi sur 3 passages : CONVENTIONS #139 bis).
-**PROCHAIN PAS — arbitrage utilisateur en attente** : (i) que faire de qf_3/qf_5 en vigueur (retrait ou
-remise à zéro) ; (ii) la FORME : un `repondu` dont le chiffre-objet est « non établi » ne porte pas de sens
-(garde structurelle, point 11) — et qui décide l'attente quand le modèle ne la choisit pas. Puis (b).
+RVMD **reclassée « commerciale »** par l'utilisateur le 2026-10-18 (pièce #944) ; **qualité financière RVMD
+8/8 acquittée et à jour** (#1677-#1680, #1685/#1686, « n.s. » #1712/#1713 écrits par le code — #139 ter :
+un verdict ne contredit jamais le chiffre qui le porte). Les autres chapitres RVMD attendent le 10-Q du T3.
+**PROCHAIN PAS : reprendre (b) — fraîcheur par la pièce la plus récente, sujet par sujet (15).** Dettes
+nommées : l'outil d'acceptation ne remet pas le socle ni les lectures (n'est pas la chaîne) ; autres
+questions dont le verdict lit un seul chiffre à recenser (`sens_lu_sur`, seuls qf_3/qf_5 déclarés).
 ⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`, `montrer_dossier.sh`
 ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18.
 
