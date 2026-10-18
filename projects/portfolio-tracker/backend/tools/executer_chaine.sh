@@ -33,5 +33,5 @@
 cd "$(dirname "$0")/.." || exit 2
 IMG=$(docker inspect portfolio-backend --format '{{.Config.Image}}')
 exec docker run --rm --network coolify -v "$PWD:/app:ro" \
-  -w /app -e PYTHONPATH=/app \
+  -w /app -e PYTHONPATH=/app -e CHAINE_CORPUS_MAX -e CHAINE_ANALYSTE \
   --env-file checks/env.checks --env-file .env "$IMG" python tools/executer_chaine.py "$@"

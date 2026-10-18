@@ -31,12 +31,14 @@ la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton
 construction pour « sans revenus » : ni relance ni remise à zéro ne la rouvrent. L'utilisateur ne veut PAS
 reposer sur le gérant pour ouvrir des questions hors grille (risque d'oubli) ; il penche pour ouvrir TOUTE la
 grille commerciale plus tôt (dès le fait qui change le modèle économique — l'approbation), À CONDITION que
-l'agent sache dire « pas de réponse fondée à date » plutôt que fabriquer. **Préalable, à faire AVANT le point
-(b)** : `ACCEPTATION_CAS=RVMD:<framework>:rentable bash tools/acceptation_analyste.sh` (n'écrit rien, quelques
-cents) sur les chapitres où la grille diffère, et LIRE chaque réponse : un ratio sur quelques semaines de ventes
-doit sortir « non fondable » / « non significatif », jamais « répondu ». Tient → règle générique « une
-approbation/un lancement reclasse l'émetteur », proposée au comité ; ne tient pas → c'est le défaut du point 11
-(qf_6) à corriger d'abord. Le 10-Q du T3 (début novembre) reste l'échéance.
+l'agent sache dire « pas de réponse fondée à date » plutôt que fabriquer. **Préalable MESURÉ le 2026-10-18**
+(07 point 21) : l'analyste ne fabrique pas (ratios et pouvoir de prix → « non fondable ») ; mais le manque sort
+« à collecter, priorité haute » faute d'une case « pas encore advenu » → mandats impossibles. **Arbitrage
+posé à l'utilisateur** (réponse à consigner ici) : ajouter « pas encore observable — revoir à telle date »
+avant d'adopter la règle « une approbation reclasse l'émetteur ». Le 10-Q du T3 (début novembre) reste
+l'échéance. ⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`,
+`montrer_dossier.sh` ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18 :
+une mesure lancée PAR CES LANCEURS avec `ACCEPTATION_CAS`/`CHAINE_*`/`DOSSIER_PLAFOND` a tourné sur les défauts.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 

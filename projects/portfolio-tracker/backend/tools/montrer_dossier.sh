@@ -22,5 +22,5 @@
 cd "$(dirname "$0")/.." || exit 2
 IMG=$(docker inspect portfolio-backend --format '{{.Config.Image}}')
 exec docker run --rm --network coolify -v "$PWD:/app:ro" \
-  -w /app -e PYTHONPATH=/app \
+  -w /app -e PYTHONPATH=/app -e DOSSIER_PLAFOND \
   --env-file checks/env.checks --env-file .env "$IMG" python tools/montrer_dossier.py "$@"

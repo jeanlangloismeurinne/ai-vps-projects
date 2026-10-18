@@ -100,6 +100,14 @@ role: >
     un bilan financier ; un émetteur étranger (20-F) entre-t-il dans le jalon ?
 21. **RVMD reclassée « commerciale »** [A] — proposée au comité après l'approbation : sans elle, des
     questions restent « sans objet » sur un titre qui vend.
+    *Mesure du 2026-10-18* (RVMD en grille rentable, qualité financière + défendabilité, sans écriture,
+    0,03 $) : l'analyste NE fabrique PAS — qf_1/2/3/5 (ratios sur exercices) et mo_2/mo_6 (preuve de
+    marché, pouvoir de prix) sortent toutes « non fondable ». MAIS le manque est déclaré « à collecter,
+    priorité haute » : la grille d'un manque n'a que « collecter » ou « rafraîchir », pas « pas encore
+    advenu ». Ouvrir la grille à l'approbation émettrait donc des mandats de collecte qui ne peuvent
+    pas aboutir avant plusieurs trimestres de ventes (rejoint 14, mandats jamais clos). Lu aussi :
+    mo_5 dit le concurrent « adjacent (pancréas) » alors que RASONQUE est approuvé dans le pancréas
+    (erreur de lecture, pièces 917/920/682).
 22. **L'outil du test** [C] — table de mesure par titre × chapitre, et comparaison de deux passages
     identiques (mêmes statuts, mêmes chiffres de l'encadré, écarts nommés).
 23. **Le test lui-même** [P] — note d'initiation complète sur 3-4 titres, deux passages ; le premier est
