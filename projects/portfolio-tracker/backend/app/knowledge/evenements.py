@@ -59,6 +59,10 @@ A_QUALIFIER = "a_qualifier"
 ROUTINE = "routine"
 # Le type d'un communiqué de résultats : le seul dont l'effet ne date pas du jour du dépôt (#102).
 RESULTATS = "resultats"
+# #139 ter — les types par lesquels un dépôt peut MODIFIER des comptes d'exercices CLOS (retraitement,
+# changement de périmètre, société qui n'est plus la même, ou dépôt que personne n'a lu). Tout autre fait
+# postérieur laisse intact un chiffre calculé sur des exercices clos ; ceux-ci, non — DÉTENTEUR UNIQUE.
+TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS = frozenset({"integrite_comptes", "perimetre", "existentiel", A_QUALIFIER})
 
 # Item 8-K → type, pour les seuls items dont la FORME décide la substance. Un item ABSENT de cette
 # table est `a_qualifier` — jamais ignoré (même doctrine que `ITEM_LABELS` : une table qui filtre ce

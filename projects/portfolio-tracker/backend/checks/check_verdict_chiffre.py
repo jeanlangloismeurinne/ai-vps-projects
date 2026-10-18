@@ -183,6 +183,64 @@ else:
             f"§5 le modèle ne les voit pas (questions envoyées : {vus[0] if vus else None})")
     b.check(not [x for x in r.refus if x[0] in ("qf_3", "qf_5")], f"§5 aucun refus sur qf_3/qf_5 ({r.refus})")
 
+# ══ §5 bis LES FAITS POSTÉRIEURS ════════════════════════════════════════════════════════════════
+print("[5 bis] le verdict « n.s. » lit les faits postérieurs qui ne touchent pas les comptes clos")
+# Mesuré RVMD #1703/#1704 : nées périmées par le communiqué du 05/08 (écarts d'exécution et d'allocation).
+# Copié du réel : la lecture du dépôt #1546 (adresse EDGAR du dépôt, tier A, mesure).
+from app.knowledge.material_events import MaterialEvent  # noqa: E402
+from datetime import date as _d  # noqa: E402
+ACC_T2, ACC_RT = "0001193125-26-335039", "0001193125-26-999999"
+E_FAITS = {**E_RV,
+           1546: {"reliability_tier": "A", "nature": "mesure", "title": "Lecture du dépôt 8-K du 2026-08-05",
+                  "content": "Item 2.02 Results of Operations", "source_type": "edgar_official",
+                  "source_date": "2026-08-05", "date_du_document": "2026-08-05",
+                  "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526335039/x-index.htm"},
+           1600: {"reliability_tier": "A", "nature": "mesure", "title": "Lecture du dépôt — retraitement",
+                  "content": "Item 4.02 Non-reliance", "source_type": "edgar_official",
+                  "source_date": "2026-09-01", "date_du_document": "2026-09-01",
+                  "source_url": "https://www.sec.gov/Archives/edgar/data/1628171/000119312526999999/x-index.htm"}}
+T2 = MaterialEvent(form="8-K", event_date=_d(2026, 8, 5), filing_date=_d(2026, 8, 5), items=("2.02",),
+                   accession=ACC_T2, types=("surprise_allocation", "surprise_execution"))
+RT = MaterialEvent(form="8-K", event_date=_d(2026, 9, 1), filing_date=_d(2026, 9, 1), items=("4.02",),
+                   accession=ACC_RT, types=("integrite_comptes",))
+
+
+def passage_faits(faits):
+    class _Run:
+        def __init__(self, parsed):
+            self.parsed = parsed
+
+    async def _faux_run(agent, messages, modele, **kw):
+        ctx = json.loads(messages[0]["content"].split("\n\n", 2)[1].split("\n", 1)[1].rsplit("\n\nProduis", 1)[0])
+        return _Run(modele(reponses=[A.AnalysteReponse(question_id=q["id"], statut="sans_fondement",
+                                                       verbatim="manque fictif du passage hors ligne")
+                                     for q in ctx["questions"]]))
+    vrai_run, vrai_resolve = A.run_json_agent, A._resolve_analyste_agent
+    A.run_json_agent, A._resolve_analyste_agent = _faux_run, (lambda: asyncio.sleep(0))
+    try:
+        return asyncio.run(A.repondre("RVMD", "qualite_financiere", "rentable", analyste="analyste_1",
+                                      entries=E_FAITS, fichier=F, chemises=(), faits=faits))
+    except Exception as exc:  # noqa: BLE001
+        return exc
+    finally:
+        A.run_json_agent, A._resolve_analyste_agent = vrai_run, vrai_resolve
+
+
+def ns(r, qid):
+    return None if isinstance(r, Exception) else next((a for a in r.answers if a.question_id == qid), None)
+
+
+_r1 = passage_faits({"qf_3": [T2], "qf_5": [T2]})
+_a = ns(_r1, "qf_5")
+_lus = [f.depot for f in (_a.reponse.faits_posterieurs if _a and _a.reponse else [])]
+b.check(_a is not None and _lus == [ACC_T2] and "exercices clos" in _a.reponse.faits_posterieurs[0].effet,
+        f"§5 bis un communiqué trimestriel (écarts) est LU : sans effet sur des exercices clos (→ {_lus or _r1})")
+_r2 = passage_faits({"qf_3": [RT], "qf_5": [RT]})
+_b = ns(_r2, "qf_5")
+b.check(_b is not None and _b.reponse is not None and _b.reponse.sens == SENS_NON_SIGNIFICATIF
+        and not _b.reponse.faits_posterieurs,
+        "§5 bis un RETRAITEMENT des comptes n'est jamais déclaré lu par le code : la réponse reste périmée")
+
 # ══ §6 LA GARDE ════════════════════════════════════════════════════════════════════════════════
 print("[6] la garde : pont [S bis] et contrôleur, même détenteur")
 

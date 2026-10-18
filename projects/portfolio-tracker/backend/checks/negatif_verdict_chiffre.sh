@@ -31,6 +31,8 @@ mutations=(
 "$A¦    if lecture is not None and lecture[0] == \"manque\":¦    if False:¦chiffre manquant : \`repondu\`/\`approxime\` FERMÉS"
 "$A¦        if aucune_reponse_possible(statuts_admissibles(q, citables)[0]):¦        if aucune_reponse_possible(statuts_ouverts(q, citables, entries)[0]):¦la question RESTE posée"
 "$A¦            \"sens_admis\": [s for s in q.sens_admis if s != SENS_NON_SIGNIFICATIF],¦            \"sens_admis\": list(q.sens_admis),¦n'est JAMAIS montré au modèle"
+"$A¦                if not pieces or set(e.types) & TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS:¦                if not pieces:¦un RETRAITEMENT des comptes n'est jamais déclaré lu"
+"$A¦                cited_entry_ids=[lecture[2]], faits_posterieurs=lus,¦                cited_entry_ids=[lecture[2]],¦un communiqué trimestriel (écarts) est LU"
 "$S¦        if (self.sens_lu_sur is not None) != (SENS_NON_SIGNIFICATIF in self.sens_admis):¦        if False:¦sans chiffre porteur est refusé"
 "$S¦            if lu is None or lu.socle is None:¦            if False:¦ne nomme aucun chiffre des comptes est refusé"
 )

@@ -1279,9 +1279,25 @@ async def repondre(
             # (2 ter, #139 ter) le chiffre qui PORTE le verdict est non significatif — une propriété de
             # l'entreprise, établie par le code : la note dit « n.s. », sans appel au modèle (un verdict
             # lui serait inventé). Même assemblage et même pont qu'une réponse du modèle.
+            # Les faits postérieurs qui rouvrent la question (#103) : l'issue se calcule sur des exercices
+            # CLOS, qu'un dépôt postérieur ne modifie pas — sauf retraitement, périmètre ou dépôt non lu
+            # (`TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS`) : ceux-là, le code ne les déclare pas lus, et la
+            # réponse reste périmée (ce qui est vrai). Mesuré RVMD qf_3/qf_5 #1703/#1704 : nées périmées
+            # par le communiqué du 05/08 (écarts d'exécution et d'allocation du trimestre).
+            from app.knowledge.evenements import TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS
+            lus = []
+            for e in (faits or {}).get(q.id, []):
+                pieces = sorted(i for i, x in citables.items() if provient_du_depot(x, e.accession or ""))
+                if not pieces or set(e.types) & TYPES_QUI_TOUCHENT_LES_COMPTES_CLOS:
+                    continue
+                lus.append(FaitPosterieurLu(
+                    depot=e.accession, cited_entry_ids=pieces,
+                    effet=("Sans effet sur ce chiffre : il est calculé sur des exercices clos, qu'un dépôt "
+                           f"postérieur ({', '.join(e.types) or 'fait publié'}) ne modifie pas — seuls un "
+                           "retraitement des comptes, un changement de périmètre ou un dépôt non lu le rouvrent.")))
             brute = AnalysteReponse(
                 question_id=q.id, statut="repondu", sens=SENS_NON_SIGNIFICATIF,
-                cited_entry_ids=[lecture[2]],
+                cited_entry_ids=[lecture[2]], faits_posterieurs=lus,
                 verbatim=(f"Non significatif pour cette entreprise : "
                           f"{next(c.libelle for c in q.chiffres_cles if c.id == q.sens_lu_sur).lower()} — {lecture[1]}. "
                           "Aucun verdict ne se lit sur ce chiffre ; la question se rouvrira aux comptes suivants."))
