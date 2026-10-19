@@ -32,6 +32,15 @@ LES ARBITRAGES DU COMITÉ QUI GOUVERNENT CE CONTRAT (2026-09-25)
         important déposé un jour postérieur à la décision — ou le jour même, s'il n'est pas celui que
         le PV cite — la fait tomber (`comite._fait_nouveau`).
 
+RÉTABLIR (point 13, arbitrage de l'utilisateur du 2026-10-18, migration 060). La dernière analyse
+fait foi, mais une révision À LA BAISSE (fondement COURANT strictement inférieur à sa PRÉCÉDENTE
+IMMÉDIATE — `agents/v2/revision.baisse_a_lire`) est signalée au comité, qui peut RÉTABLIR la
+précédente d'un geste signé : il désigne la précédente (`answer_id`), signe et motive. L'effet
+réécrit la précédente comme réponse NEUVE (append-only : jamais de `superseded_by` remis à NULL),
+qui supersède la courante dégradée — ce n'est PAS une acceptation, la copie repasse les contrôles et
+la fraîcheur comme toute réponse. `retablie_depuis_id` porte l'id de la précédente rétablie ;
+`answer_id` porte la COPIE (la réponse désormais en vigueur).
+
 LES ÉTATS D'UNE ACCEPTATION, SERVIS (et pourquoi quatre)
 --------------------------------------------------------
   `en_vigueur`               — la réponse acceptée est toujours la réponse courante, et aucun fait
@@ -74,14 +83,16 @@ __all__ = [
     "DemandeAcquittement",
     "DemandeRenvoi",
     "DemandeReinitialisation",
+    "DemandeClassement",
+    "DemandeRetablissement",
     "ACTIONS_OUVRANTES",
     "DecisionComite",
     "AcceptationServie",
     "PositionComite",
 ]
 
-ACTIONS_COMITE = ("acquitter", "renvoyer", "reinitialiser")
-ActionComite = Literal["acquitter", "renvoyer", "reinitialiser"]
+ACTIONS_COMITE = ("acquitter", "renvoyer", "reinitialiser", "retablir")
+ActionComite = Literal["acquitter", "renvoyer", "reinitialiser", "retablir"]
 # Les décisions qui ROUVRENT une question (#137, point 17) : tant qu'aucune réponse n'a été écrite
 # APRÈS elles, la question est ouverte, et les réponses antérieures ne la ferment plus.
 ACTIONS_OUVRANTES = ("renvoyer", "reinitialiser")
@@ -156,6 +167,15 @@ class DemandeReinitialisation(Strict):
     motif: Texte = Field(max_length=4000)
 
 
+class DemandeRetablissement(Strict):
+    """« Je rétablis la précédente. » Acte HUMAIN du comité (point 13) sur une révision à la BAISSE :
+    `answer_id` désigne la PRÉCÉDENTE IMMÉDIATE de la réponse courante dégradée — l'agent vérifie
+    cette relation, elle n'est jamais devinée. Signé et motivé comme une décision."""
+    answer_id: int
+    auteur: Texte = Field(max_length=120)
+    motif: Texte = Field(max_length=4000)
+
+
 # ── Une ligne du REGISTRE (ce que la base garde) ──────────────────────────────────────────────
 
 class DecisionComite(Strict):
@@ -170,6 +190,9 @@ class DecisionComite(Strict):
     answer_id: Optional[int] = None
     mandat_id: Optional[int] = None            # le mandat OUVERT par un renvoi
     mandat_remplace_id: Optional[int] = None   # la recherche en cours que la décision a arrêtée
+    # point 13 — la précédente RÉTABLIE (porté SSI action = `retablir` : `answer_id` porte alors la
+    # COPIE désormais en vigueur, et `retablie_depuis_id` l'id de la précédente qu'elle reprend).
+    retablie_depuis_id: Optional[int] = None
     auteur: Texte
     motif: Texte
     ancre_etat: EtatAncre
@@ -192,10 +215,20 @@ class DecisionComite(Strict):
             if self.mandat_id is not None:  # une remise à zéro n'ouvre aucune recherche
                 raise ValueError("reinitialiser avec un `mandat_id` : la question repart par la "
                                  "relance bornée de l'analyse, pas par un mandat de recherche")
+        elif self.action == "retablir":
+            if self.answer_id is None or self.retablie_depuis_id is None:
+                raise ValueError("retablir sans `answer_id` (la copie) ou `retablie_depuis_id` (la "
+                                 "précédente rétablie) : le PV doit nommer les DEUX réponses (point 13)")
+            if self.mandat_id is not None:
+                raise ValueError("retablir avec un `mandat_id` : rétablir n'ouvre aucune recherche, "
+                                 "ce n'est pas une acceptation")
         else:  # renvoyer
             if self.mandat_id is None:
                 raise ValueError("renvoyer sans `mandat_id` : un renvoi qui ne produit aucun mandat "
                                  "est l'Écart B — le comité croirait avoir relancé la recherche")
+        if self.action != "retablir" and self.retablie_depuis_id is not None:
+            raise ValueError(f"`retablie_depuis_id` porté par l'action `{self.action}` : seul "
+                             "`retablir` rétablit une précédente")
         if (self.ancre_etat == "found") != (self.fait_connu is not None):
             raise ValueError(f"ancre `{self.ancre_etat}` et fait connu = {self.fait_connu is not None}"
                              " : un fait est cité ssi l'ancre en a trouvé un")

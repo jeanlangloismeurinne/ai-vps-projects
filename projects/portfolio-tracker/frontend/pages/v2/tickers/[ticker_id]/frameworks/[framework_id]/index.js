@@ -58,6 +58,12 @@ function LigneQuestion({ lq, tickerId, frameworkId }) {
         </div>
       ))}
       {lq.manque && <ManqueBloc m={lq.manque} tickerId={tickerId} lien={false} />}
+      {lq.baisse && (
+        <p className="text-xs text-violet-300">
+          ⚠ Révisée à la baisse : réponse #{lq.baisse.courante.answer_id} (« {lq.baisse.courante.statut} »)
+          — la précédente #{lq.baisse.precedente.answer_id} était « {lq.baisse.precedente.statut} »
+        </p>
+      )}
     </div>
   )
 }

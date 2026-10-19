@@ -26,9 +26,19 @@ CE QUE FERAIT UN VRAI FONDS, ET LES CHOIX QUI EN DÉCOULENT
    archive et ne ferme plus la question (`parcours.manque_de_la_question`). Aucun mandat : la question
    repart par la relance bornée (`tools/executer_chaine.py`). Le chapitre = une ligne par question
    applicable, dans UNE transaction.
+7. RÉTABLIR (point 13, 2026-10-18) : sur une révision à la BAISSE (`agents/v2/revision.baisse_a_lire`),
+   le comité désigne la PRÉCÉDENTE IMMÉDIATE, signe et motive. Refusé si la réponse désignée n'est pas
+   cette précédente, si la courante n'est pas une baisse à lire, si la version de référentiel diffère,
+   ou si l'`answer_json` de la précédente ne valide plus contre le contrat (« réinitialiser plutôt »).
+   Effet : la précédente est réécrite comme réponse NEUVE (`framework_persist.persist_answer_detail` —
+   l'append-only tient : jamais de `superseded_by` remis à NULL, la COPIE supersède la courante
+   dégradée, et ferme d'office un mandat ouvert comme toute réponse, point 14 — c'est voulu, un
+   second mécanisme ferait doublon avec #46) ; le PV garde `answer_id` = la copie et
+   `retablie_depuis_id` = la précédente. Ce n'est PAS une acceptation : la copie repasse les contrôles
+   et la fraîcheur comme toute réponse.
 
-⚠️ ATOMICITÉ (#35). `get_db_session()` n'ouvre aucune transaction : `acquitter`/`renvoyer` ouvrent la
-leur (abandon du mandat + nouveau mandat + ligne de PV, tout ou rien).
+⚠️ ATOMICITÉ (#35). `get_db_session()` n'ouvre aucune transaction : `acquitter`/`renvoyer`/`retablir`
+ouvrent la leur (abandon du mandat + nouveau mandat/nouvelle réponse + ligne de PV, tout ou rien).
 """
 from __future__ import annotations
 
@@ -41,6 +51,7 @@ from app.contracts.comite_schema import (
     DemandeAcquittement,
     DemandeReinitialisation,
     DemandeRenvoi,
+    DemandeRetablissement,
     EtatAncre,
     FaitImportant,
     PositionComite,
@@ -58,6 +69,7 @@ __all__ = [
     "renvoyer",
     "reinitialiser",
     "reinitialiser_chapitre",
+    "retablir",
 ]
 
 
@@ -156,8 +168,8 @@ def position_du_comite(
 # ── Lecture du registre ────────────────────────────────────────────────────────────────────────
 
 _COLONNES = ("id, ticker_id, framework_id, framework_version, question_id, action, answer_id, "
-             "mandat_id, mandat_remplace_id, auteur, motif, ancre_etat, fait_connu_publie_le, "
-             "fait_connu_accession, fait_connu_resume, decide_le")
+             "mandat_id, mandat_remplace_id, retablie_depuis_id, auteur, motif, ancre_etat, "
+             "fait_connu_publie_le, fait_connu_accession, fait_connu_resume, decide_le")
 
 
 def _decision(r) -> DecisionComite:
@@ -168,7 +180,8 @@ def _decision(r) -> DecisionComite:
         id=r["id"], ticker_id=r["ticker_id"], framework_id=r["framework_id"],
         framework_version=r["framework_version"], question_id=r["question_id"],
         action=r["action"], answer_id=r["answer_id"], mandat_id=r["mandat_id"],
-        mandat_remplace_id=r["mandat_remplace_id"], auteur=r["auteur"], motif=r["motif"],
+        mandat_remplace_id=r["mandat_remplace_id"], retablie_depuis_id=r["retablie_depuis_id"],
+        auteur=r["auteur"], motif=r["motif"],
         ancre_etat=r["ancre_etat"], fait_connu=fait, decide_le=r["decide_le"])
 
 
@@ -201,16 +214,17 @@ def _question(fichier: FrameworksFile, framework_id: str, question_id: str):
 
 
 async def _inscrire(conn, *, ticker_id, framework_id, version, question_id, action, answer_id,
-                    mandat_id, mandat_remplace_id, auteur, motif, ancre) -> DecisionComite:
+                    mandat_id, mandat_remplace_id, auteur, motif, ancre,
+                    retablie_depuis_id=None) -> DecisionComite:
     etat, fait = fait_de_l_ancre(ancre)
     row = await conn.fetchrow(
         "INSERT INTO comite_decisions (ticker_id, framework_id, framework_version, question_id, "
-        "action, answer_id, mandat_id, mandat_remplace_id, auteur, motif, ancre_etat, "
-        "fait_connu_publie_le, fait_connu_accession, fait_connu_resume) "
-        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) "
+        "action, answer_id, mandat_id, mandat_remplace_id, retablie_depuis_id, auteur, motif, "
+        "ancre_etat, fait_connu_publie_le, fait_connu_accession, fait_connu_resume) "
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) "
         f"RETURNING {_COLONNES}",
         ticker_id, framework_id, version, question_id, action, answer_id, mandat_id,
-        mandat_remplace_id, auteur, motif, etat,
+        mandat_remplace_id, retablie_depuis_id, auteur, motif, etat,
         fait.publie_le if fait else None, fait.accession if fait else None,
         fait.resume if fait else None)
     return _decision(row)
@@ -360,3 +374,83 @@ async def reinitialiser_chapitre(
         return [await _reinitialiser_une(
             conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
             question_id=qid, demande=demande, ancre=ancre) for qid in questions]
+
+
+async def retablir(
+    conn, *, ticker_id: str, framework_id: str, question_id: str,
+    demande: DemandeRetablissement, ancre: Any, fichier: Optional[FrameworksFile] = None,
+) -> DecisionComite:
+    """Le comité RÉTABLIT la précédente immédiate d'une révision à la BAISSE (point 13, 2026-10-18).
+
+    Refuse (`DecisionRefusee`) si : aucune réponse courante n'existe pour cette question ; la
+    réponse désignée est introuvable, n'est pas une réponse de CE dossier (ticker/framework/version/
+    question — couvre « la version de référentiel diffère ») ou n'est pas la PRÉCÉDENTE IMMÉDIATE de
+    la courante ; la courante n'est pas une baisse à lire (`revision.baisse_a_lire`) ; l'`answer_json`
+    de la précédente ne valide plus contre le contrat EN VIGUEUR.
+
+    Effet, dans UNE transaction : la précédente est réécrite comme réponse NEUVE
+    (`framework_persist.persist_answer_detail` — append-only, jamais de `superseded_by` remis à
+    NULL ; la copie supersède la courante dégradée ; elle ferme d'office un mandat ouvert comme
+    toute réponse écrite, §14 — voulu, pas dupliqué ici) ; le PV inscrit `answer_id` = la copie,
+    `retablie_depuis_id` = la précédente rétablie. Ce n'est PAS une acceptation."""
+    from app.agents.v2.framework_persist import persist_answer_detail
+    from app.agents.v2.frameworks import load_frameworks
+    from app.agents.v2.revision import ReponsePourBaisse, baisse_a_lire, precedente_validee
+    from app.contracts.framework_answer_schema import FrameworkAnswer
+
+    fichier = fichier or load_frameworks()
+    version = fichier.schema_version
+    _question(fichier, framework_id, question_id)
+
+    # §3.4 — N analystes peuvent chacun porter une réponse courante à la MÊME question (deux
+    # réponses ne se moyennent jamais) : `max(id)` départage comme `_reponse_courante`
+    # (réinitialisation, #137) plutôt qu'une ligne arbitraire — déterministe, jamais un couple au
+    # hasard parmi plusieurs lignes `superseded_by IS NULL`.
+    precedente_row = await conn.fetchrow(
+        "SELECT id, statut, answer_json, created_at, ticker_id, framework, framework_version, "
+        "question_id, superseded_by FROM framework_answers WHERE id = $1", demande.answer_id)
+    if precedente_row is None:
+        raise DecisionRefusee(f"réponse #{demande.answer_id} introuvable")
+    if (precedente_row["ticker_id"], precedente_row["framework"], precedente_row["framework_version"],
+        precedente_row["question_id"]) != (ticker_id, framework_id, version, question_id):
+        raise DecisionRefusee(f"la réponse #{demande.answer_id} n'est pas une réponse de "
+                              f"{ticker_id} · {framework_id} {version} · {question_id} (la version "
+                              "de référentiel ou la question diffère)")
+    # La courante se lit DEPUIS la précédente (`superseded_by`) : avec plusieurs analystes sur la
+    # question, « la dernière ligne en vigueur » ne serait pas forcément celle de SA lignée.
+    # (une précédente encore en vigueur a `superseded_by` NULL : `id = NULL` ne rend aucune ligne).
+    courante_row = await conn.fetchrow(
+        "SELECT id, statut, answer_json, created_at FROM framework_answers "
+        "WHERE id = $1 AND superseded_by IS NULL", precedente_row["superseded_by"])
+    if courante_row is None:
+        raise DecisionRefusee(f"la réponse #{demande.answer_id} n'est pas la PRÉCÉDENTE IMMÉDIATE "
+                              "d'une réponse courante de cette question")
+
+    registre_question = await conn.fetch(
+        f"SELECT {_COLONNES} FROM comite_decisions WHERE ticker_id = $1 AND framework_id = $2 "
+        "AND framework_version = $3 AND question_id = $4 ORDER BY id DESC",
+        ticker_id, framework_id, version, question_id)
+    decisions_q = [_decision(r) for r in registre_question]
+    courante_rpb = ReponsePourBaisse(
+        answer_id=courante_row["id"], cree_le=courante_row["created_at"],
+        statut_brut=courante_row["statut"],
+        answer=FrameworkAnswer.model_validate(courante_row["answer_json"]))
+    precedente_rpb = ReponsePourBaisse(
+        answer_id=precedente_row["id"], cree_le=precedente_row["created_at"],
+        statut_brut=precedente_row["statut"],
+        answer=precedente_validee(precedente_row["statut"], precedente_row["answer_json"]))
+    if baisse_a_lire(courante_rpb, precedente_rpb, decisions_q) is None:
+        raise DecisionRefusee(f"la réponse courante #{courante_row['id']} n'est pas une baisse à "
+                              "lire : rien à rétablir")
+    if precedente_rpb.answer is None:
+        raise DecisionRefusee(
+            f"la réponse #{demande.answer_id} est écrite sous un contrat antérieur, ne peut être "
+            "rétablie telle quelle — réinitialiser plutôt")
+
+    async with conn.transaction():
+        copie = await persist_answer_detail(conn, precedente_rpb.answer)
+        return await _inscrire(
+            conn, ticker_id=ticker_id, framework_id=framework_id, version=version,
+            question_id=question_id, action="retablir", answer_id=copie.id,
+            mandat_id=None, mandat_remplace_id=None, retablie_depuis_id=precedente_row["id"],
+            auteur=demande.auteur, motif=demande.motif, ancre=ancre)

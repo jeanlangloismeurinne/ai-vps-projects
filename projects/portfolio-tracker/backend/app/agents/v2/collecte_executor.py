@@ -494,7 +494,10 @@ async def collecter_un(
                         ticker_id=ligne.ticker_id,
                         symbole=inventaire.symbole,
                         cik=inventaire.cik,
-                        libelle=ligne.metrique,
+                        # `libelle` (la métrique DEMANDÉE par la ligne de plan) ne traverse plus ici :
+                        # le titre et le contenu se composent depuis ce que l'expression a RÉELLEMENT
+                        # lu, jamais depuis ce qu'on lui a demandé (arbitrage du 2026-10-18, défaut
+                        # mesuré sur NVDA #1429).
                         # La période DEMANDÉE voyage avec la consigne (#113) : c'est elle, et non le
                         # jugement de l'apparieur, qui décide si un flux se lit sur douze mois.
                         consigne=consigne._replace(periode=ligne.periode),

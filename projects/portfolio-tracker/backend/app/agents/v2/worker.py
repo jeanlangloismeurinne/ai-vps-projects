@@ -384,7 +384,13 @@ def _normalise_entry(
 
     entry: dict[str, Any] = {
         "entry_type": want,
-        "title": titre_de_fiche(url) if extraits else ((raw.get("title") or "").strip() or None),
+        # Le titre dit ce que la fiche CONTIENT (son document), jamais une affirmation rédigée par le
+        # modèle (#126 : « RASolute 302 n'a PAS échoué », mesuré le 2026-10-15, que les extraits ne
+        # disaient pas). TOUJOURS `titre_de_fiche(url)`, même sans extrait (`llm_memory`, l'aveu de
+        # mémoire) : ce chemin écrit bien en base si son score passe `reliability_min` (arbitrage du
+        # 2026-10-18 — le titre dit ce qu'elle contient, jamais ce qu'on lui a demandé). L'ancien
+        # repli `raw.get("title")` laissait passer le titre du modèle dès qu'il n'y avait pas d'extrait.
+        "title": titre_de_fiche(url),
         "content": releve,
         # #126 : les valeurs structurées sont ce que le collecteur a EXTRAIT — une lecture, rangée
         # avec elle (`_lecture_du_collecteur`), jamais sous l'autorité du document.
@@ -444,7 +450,10 @@ def _lecture_du_collecteur(raw: dict[str, Any], fiche: dict[str, Any]) -> Option
     return {
         **{k: fiche[k] for k in ("entry_type", "lang", "portee_temporelle", "date_du_document",
                                  "date_du_fait", "periode_visee", "datation_motif", "fiscal_period")},
-        "title": f"Lecture du collecteur — {(raw.get('title') or '').strip() or fiche['source_url']}",
+        # Le titre nomme le DOCUMENT lu (même forme que `titre_de_fiche`, détenteur unique, #126) —
+        # jamais le titre rédigé par le modèle (une affirmation, pas un nom de document ; arbitrage
+        # du 2026-10-18 : le titre dit ce que la pièce contient, jamais ce qu'on lui a demandé).
+        "title": f"Lecture du collecteur — {titre_de_fiche(fiche['source_url'])}",
         "content": (f"Lecture du collecteur (interprétation, SANS l'autorité du document) du document "
                     f"{fiche['source_url']} :\n\n{lecture}"),
         "content_structured": raw.get("content_structured") if isinstance(raw.get("content_structured"), dict) else None,

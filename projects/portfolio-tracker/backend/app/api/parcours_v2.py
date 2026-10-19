@@ -8,6 +8,9 @@
   POST …/q/{question_id}/reinitialiser   le gérant remet UNE question à zéro, même acceptée (#137)
   POST …/frameworks/{framework_id}/reinitialiser   … ou tout un CHAPITRE (une ligne de PV par question
                                                    applicable) — rend le niveau 2 recalculé
+  POST …/q/{question_id}/retablir    le comité RÉTABLIT la précédente immédiate d'une révision à la
+                                     baisse (point 13) — PAS une acceptation, la copie repasse les
+                                     contrôles et la fraîcheur comme toute réponse
   POST /v2/tickers/{ticker_id}/classement   le comité RECLASSE ou MAINTIENT l'émetteur au vu d'un dépôt
                                             (#139) — rend le niveau 1 recalculé
 
@@ -30,12 +33,13 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.agents.v2.comite import (
-    DecisionRefusee, acquitter, reinitialiser, reinitialiser_chapitre, renvoyer)
+    DecisionRefusee, acquitter, reinitialiser, reinitialiser_chapitre, renvoyer, retablir)
 from app.agents.v2.parcours import (
     ReferenceInconnue, charger_etat_dossier, dresser_niveau1, dresser_niveau2, dresser_niveau3)
 from app.agents.v2.projection_memo import memo_de_l_etat
 from app.contracts.comite_schema import (
-    DemandeAcquittement, DemandeClassement, DemandeReinitialisation, DemandeRenvoi)
+    DemandeAcquittement, DemandeClassement, DemandeReinitialisation, DemandeRenvoi,
+    DemandeRetablissement)
 from app.contracts.parcours_schema import DossierTitre, FrameworkDuDossier, PreuvesQuestion
 from app.db.database import get_db_session
 
@@ -124,6 +128,13 @@ async def comite_renvoyer(ticker_id: str, framework_id: str, question_id: str,
 async def comite_reinitialiser(ticker_id: str, framework_id: str, question_id: str,
                                demande: DemandeReinitialisation) -> PreuvesQuestion:
     return await _decider(ticker_id, framework_id, question_id, reinitialiser, demande)
+
+
+@router.post("/v2/tickers/{ticker_id}/frameworks/{framework_id}/q/{question_id}/retablir",
+             response_model=PreuvesQuestion)
+async def comite_retablir(ticker_id: str, framework_id: str, question_id: str,
+                          demande: DemandeRetablissement) -> PreuvesQuestion:
+    return await _decider(ticker_id, framework_id, question_id, retablir, demande)
 
 
 @router.post("/v2/tickers/{ticker_id}/frameworks/{framework_id}/reinitialiser",

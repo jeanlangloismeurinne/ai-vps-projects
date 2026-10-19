@@ -40,11 +40,11 @@ mutations=(
 "$S¦            if self.ancre_etat == \"unavailable\":¦            if False:  # mutation¦sur des faits ILLISIBLES"
 # ── le branchement dans l'alerte et les décomptes ─────────────────────────────────────────────
 "$P¦    if acceptation is not None and acceptation.etat == \"en_vigueur\":¦    if acceptation is not None:  # mutation: tombée protège aussi¦une acceptation TOMBÉE remet la question"
-"$P¦                acceptation=position.acceptation if position else None)¦                acceptation=None)  # mutation: l'alerte ignore le comité¦la seule question applicable est acceptée"
+"$P¦                acceptation=position.acceptation if position else None,¦                acceptation=None,  # mutation: l'alerte ignore le comité¦la seule question applicable est acceptée"
 "$P¦                  acceptation_tombee=acceptation)¦                  acceptation_tombee=None)  # mutation: la chute est tue¦ET dit pourquoi"
 "$P¦        n_acceptees_comite=sum(1 for lq in lignes if lq.applicable and _acceptee(lq)),¦        n_acceptees_comite=sum(1 for lq in lignes if lq.comite is not None),¦une acceptation tombée n'est pas comptée"
 "$P¦        acceptees += sum(1 for lq in lignes if lq.applicable and _acceptee(lq))¦        acceptees += 0  # mutation¦repose sur le comité"
-"$P¦        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []))¦        comite=None, registre=[])  # mutation: le PV n'atteint pas l'écran¦le PV COMPLET"
+"$P¦        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []), baisse=ligne.baisse)¦        comite=None, registre=[], baisse=ligne.baisse)  # mutation: le PV n'atteint pas l'écran¦le PV COMPLET"
 # ── l'ancre du POST ───────────────────────────────────────────────────────────────────────────
 "app/api/parcours_v2.py¦        ancre = ancre_substantielle(await material_anchor_for_ticker(conn, ticker_id))¦        ancre = await material_anchor_for_ticker(conn, ticker_id)  # mutation¦l'ancre qui PÈSE"
 # ── la note de comité reprend ce que le comité a retenu (arbitrage A, 2026-09-26) ───────────────

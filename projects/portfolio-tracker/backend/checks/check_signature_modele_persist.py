@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _harness import Bilan  # noqa: E402
+from _harness import Bilan, colonne_absente  # noqa: E402
 
 b = Bilan()
 _db_url = os.environ.get("CHECK_DB_URL", "")
@@ -136,6 +136,17 @@ async def main() -> None:
                 "relue contre un dossier où une pièce est remplacée, la v1 est « à revoir », fourchette signée gardée")
 
         print("§4 le dossier réel")
+        # PRÉREQUIS DE SCHÉMA (point 13, migration 060) — `charger_etat_dossier` lit désormais
+        # `comite_decisions.retablie_depuis_id` via `lire_registre` (chemin PARTAGÉ par les 4
+        # gestes du comité, comme #139/migration 059 pour `ticker_archetypes`). Tant que la 060
+        # n'est pas appliquée (interdit explicite de cette session), §4 seul ne peut pas tourner —
+        # échec NOMMÉ ici, §1-§3 et §5 restent mesurés. Preuve par ailleurs : `negatif_060.sh`
+        # (15/0, copie avec migration appliquée).
+        if await colonne_absente(conn, "comite_decisions", "retablie_depuis_id"):
+            b.check(False, "§4 non exécutée — la migration 060 n'est PAS appliquée à cette base "
+                           "(colonne `retablie_depuis_id` absente) : `charger_etat_dossier` en "
+                           "dépend désormais via `lire_registre`. État attendu de cette session")
+            raise _Section4NonMesuree
         from app.agents.v2.parcours import charger_etat_dossier, dresser_niveau1
         from app.agents.v2.projection_memo import memo_de_l_etat
         reel = await charger_dossier_valorisation(conn, "RVMD")

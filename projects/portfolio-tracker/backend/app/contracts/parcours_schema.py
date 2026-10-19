@@ -121,6 +121,38 @@ class Manque(Strict):
         return self
 
 
+# ── Point 13 — la révision à la baisse ────────────────────────────────────────────────────────
+
+class ReponseBaisse(Strict):
+    """UNE réponse d'une lignée, telle que le comité la voit dans une `BaisseDeFondement` : un
+    fait d'historique identifié (id, statut, instant d'écriture), jamais recalculé — on ne juge pas
+    l'actualité d'une réponse PASSÉE, on l'identifie à côté de la courante."""
+    answer_id: int
+    statut: Statut
+    cree_le: datetime
+    resume: str = Field(min_length=1)   # verbatim (repondu/approxime) ou motif court (non_fondable)
+
+
+class BaisseDeFondement(Strict):
+    """Point 13 (arbitrage de l'utilisateur, 2026-10-18) : la réponse COURANTE d'une lignée a un
+    fondement strictement inférieur à sa PRÉCÉDENTE IMMÉDIATE. Signalée au comité, les deux réponses
+    côte à côte, avec la raison de l'analyste — RECALCULÉE à chaque lecture (#53/#77), jamais
+    stockée. `retablissable` dit si la précédente peut être rétablie TELLE QUELLE (son `answer_json`
+    valide encore contre le contrat en vigueur) ; sinon le motif dit pourquoi, et renvoie vers la
+    réinitialisation (#137) plutôt."""
+    precedente: ReponseBaisse
+    courante: ReponseBaisse
+    raison_analyste: str = Field(min_length=1)
+    retablissable: bool
+    motif_non_retablissable: Optional[str] = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def _motif_ssi_non_retablissable(self):
+        if self.retablissable == (self.motif_non_retablissable is not None):
+            raise ValueError("un motif de non-rétablissement est porté SSI `retablissable` est faux")
+        return self
+
+
 class PeutOnDecider(Strict):
     """La réponse en tête de la page d'un titre (arbitrage du comité n°3)."""
     etat: Literal["dossier_complet", "dossier_incomplet", "non_revalidable"]
@@ -199,6 +231,11 @@ class DossierTitre(Strict):
     memo: MemoProjete
     classement: Optional[ClassementServi] = None
     reclassement_recommande: Optional[ReclassementRecommande] = None
+    # Point 13 — les révisions à la baisse À LIRE, toutes méthodologies confondues. À CÔTÉ des
+    # `manques` de `peut_on_decider` (une baisse n'est pas forcément un manque : la question peut
+    # tenir aujourd'hui) — elles font tomber « dossier complet » SEULES quand rien d'autre ne manque
+    # déjà (`dresser_niveau1`).
+    baisses: list[BaisseDeFondement] = Field(default_factory=list)
 
 
 # ── NIVEAU 2 ───────────────────────────────────────────────────────────────────────────────────
@@ -226,6 +263,7 @@ class LigneQuestion(Strict):
     reponses: list[ReponseResumee] = Field(default_factory=list)
     manque: Optional[Manque] = None
     comite: Optional[PositionComite] = None    # la dernière décision du comité sur la question
+    baisse: Optional[BaisseDeFondement] = None  # point 13 — à lire, recalculée à chaque lecture
 
 
 class FrameworkDuDossier(Strict):
@@ -305,6 +343,7 @@ class PreuvesQuestion(Strict):
     # plus récent d'abord — relire une décision six mois plus tard dans son contexte (arbitrage n°1).
     comite: Optional[PositionComite] = None
     registre: list[DecisionComite] = Field(default_factory=list)
+    baisse: Optional[BaisseDeFondement] = None  # point 13 — à lire, recalculée à chaque lecture
 
     @model_validator(mode="after")
     def _la_position_est_la_tete_du_registre(self):

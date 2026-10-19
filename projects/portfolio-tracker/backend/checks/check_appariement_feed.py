@@ -31,6 +31,7 @@ from app.knowledge.appariement_feed import (
     TOLERANCE_ANCRE_J,
     AppariementInexecutable,
     ConsigneAppariement,
+    PointRetenu,
     ancre_commune,
     appliquer_periode,
     construire_fait_apparie,
@@ -132,7 +133,7 @@ _CONS_APPROX = ConsigneAppariement(
 def _fait(consigne, facts=None):
     """Le chemin complet de la moitié pure : résolution puis construction."""
     points, af, ab = resoudre_points(consigne, facts if facts is not None else _FACTS)
-    return construire_fait_apparie("RVMD", "RVMD", 1770561, "trésorerie par action",
+    return construire_fait_apparie("RVMD", "RVMD", 1770561,
                                    consigne, points, ancre_flux=af, ancre_bilan=ab)
 
 
@@ -408,7 +409,7 @@ _CONS_CROISSANCE = ConsigneAppariement(
 # se lit comme une absence de mesure, pas comme un échec nommé (`feedback_bilan_par_sa_forme`).
 try:
     _points_c, _af_c, _ab_c = resoudre_points(_CONS_CROISSANCE, _FACTS_CROISSANCE)
-    _f_c = construire_fait_apparie("NVDA", "NVDA", 1045810, "progression de l'activité",
+    _f_c = construire_fait_apparie("NVDA", "NVDA", 1045810,
                                    _CONS_CROISSANCE, _points_c, ancre_flux=_af_c, ancre_bilan=_ab_c)
 except AppariementInexecutable as _e:
     _points_c, _af_c, _ab_c = {}, None, None
@@ -544,7 +545,7 @@ def _fait_ttm(expr=_TTM, facts=None):
     f = facts if facts is not None else {"NetCashProvidedByUsedInOperatingActivities": _OCF_RVMD,
                                          "CashAndCashEquivalentsAtCarryingValue": _CASH_RVMD}
     pts, af, ab = resoudre_points(_cons_ttm(expr), f)
-    return construire_fait_apparie("RVMD", "RVMD", 1628171, "consommation de trésorerie",
+    return construire_fait_apparie("RVMD", "RVMD", 1628171,
                                    _cons_ttm(expr), pts, ancre_flux=af, ancre_bilan=ab)
 
 
@@ -671,7 +672,7 @@ def _exec10(consigne):
     try:
         c = appliquer_periode(consigne, _F10)
         pts, af, ab = resoudre_points(c, _F10)
-        f = construire_fait_apparie("RVMD", "RVMD", 1628171, "consommation", c, pts,
+        f = construire_fait_apparie("RVMD", "RVMD", 1628171, c, pts,
                                     ancre_flux=af, ancre_bilan=ab)
         return f.structure["value"], c, f
     except AppariementInexecutable as e:
@@ -714,6 +715,67 @@ _v, _c, _f = _exec10(ConsigneAppariement(statut="exact", expression="CashAndCash
 check("§10 un solde seul demandé « douze mois » n'est pas réécrit (il n'a pas de durée)",
       isinstance(_c, ConsigneAppariement) and _c.expression == "CashAndCashEquivalentsAtCarryingValue"
       and _c.statut == "exact", f"→ {_c!r}"[:200])
+
+
+# ── §11 LE TITRE DIT CE QUE LA FICHE CONTIENT, JAMAIS CE QU'ON LUI A DEMANDÉ (arbitrage 2026-10-18) ─
+# NVDA ma_1 #1475 a été fondée à tort sur #1429, titrée « … sur les exercices 2022 à 2026 —
+# EXERCICE CLOS LE 2026-01-25 » alors que son expression (offsets `[0]`) ne lisait qu'UN exercice :
+# le titre affirmait ce qu'on avait DEMANDÉ (`libelle` de la ligne de plan), pas ce qui avait été LU.
+print("\n[11] le titre et le contenu disent ce que la fiche CONTIENT, jamais ce qu'on lui a demandé")
+
+import inspect as _inspect  # noqa: E402
+
+check("§11(a) plus de paramètre `libelle` dans la signature : rien de ce qu'on a DEMANDÉ ne peut "
+      "plus atteindre le titre ni le contenu — l'aveuglement tient à la forme du type (même geste "
+      "que #58), pas à une discipline d'écriture",
+      "libelle" not in _inspect.signature(construire_fait_apparie).parameters,
+      f"→ {list(_inspect.signature(construire_fait_apparie).parameters)}")
+_DEMANDES = ("trésorerie par action", "progression de l'activité", "consommation de trésorerie",
+             "capital employé", "répartition des flux de trésorerie")
+_f_a = _fait(_CONS_APPROX)
+check("§11(a) aucun texte d'une métrique qu'une ligne de plan aurait pu DEMANDER n'apparaît dans le "
+      "titre ni le contenu produits pour la même consigne",
+      not any(d in (_f_a.titre + " " + _f_a.contenu) for d in _DEMANDES), f"→ {_f_a.titre!r}")
+
+# §11(b) — FIXTURE COPIÉE DE #1429 RÉELLE (`content_structured` lu en base, NVDA, relue le
+# 2026-10-18) : cinq concepts de flux, TOUS à l'offset 0, TOUS au 2026-01-25 — donc un SEUL exercice
+# réellement lu, quand bien même le libellé demandé parlait de « 2022 à 2026 ».
+_CONCEPTS_1429 = (
+    ("PaymentsForRepurchaseOfCommonStock", 40_086_000_000.0),
+    ("PaymentsOfDividends", 974_000_000.0),
+    ("PaymentsToAcquireBusinessesNetOfCashAcquired", 1_535_000_000.0),
+    ("PaymentsToAcquireProductiveAssets", 6_042_000_000.0),
+    ("RepaymentsOfDebt", 0.0),
+)
+_POINTS_1429 = {
+    (c, 0): PointRetenu(concept=c, valeur=v, unite="USD", end="2026-01-25", cadrage="flux",
+                        duree_jours=365, form="10-K", accn="0001045810-26-000021", offset=0,
+                        filed="2026-03-02")
+    for c, v in _CONCEPTS_1429
+}
+_CONS_1429 = ConsigneAppariement(
+    statut="approximation",
+    expression=" + ".join(f"{c}[0]" for c, _ in _CONCEPTS_1429),
+    hypotheses=("répartition des flux de trésorerie sur l'exercice le plus récent",),
+    deterministe=True)
+_f_1429 = construire_fait_apparie("NVDA", "NVDA", 1045810, _CONS_1429, _POINTS_1429,
+                                  ancre_flux="2026-01-25", ancre_bilan=None)
+check("§11(b) fixture RÉELLE #1429 (5 concepts à l'offset 0, un SEUL exercice LU) : le titre ne "
+      "contient ni « 2022 » ni « plusieurs »",
+      "2022" not in _f_1429.titre and "plusieurs" not in _f_1429.titre.lower(),
+      f"→ {_f_1429.titre!r}")
+check("§11(b) …et NOMME l'exercice clos le 2026-01-25, le seul réellement lu",
+      "EXERCICE CLOS LE 2026-01-25" in _f_1429.titre, f"→ {_f_1429.titre!r}")
+check("§11(b) le titre liste les postes réellement lus (3 premiers + « et N autres postes », 5 termes)",
+      "et 2 autres postes" in _f_1429.titre, f"→ {_f_1429.titre!r}")
+
+# §11(c) — une expression RÉELLEMENT lue sur DEUX exercices distincts (décalage `[-1]`, §6 : la
+# croissance NVDA 2024→2025) : les DEUX dates doivent apparaître au titre, pas seulement l'ancre de
+# base — le défaut symétrique de #1429 (ici on lit VRAIMENT deux exercices, et il faut le dire).
+_titre_c = getattr(_f_c, "titre", f"REFUSÉ — {getattr(_f_c, 'contenu', '')}")
+check("§11(c) une croissance lue sur DEUX exercices (2024-12-31 et 2025-12-31, §6) porte les DEUX "
+      "dates au titre : « EXERCICES CLOS LE 2024-12-31 ET LE 2025-12-31 »",
+      "EXERCICES CLOS LE 2024-12-31 ET LE 2025-12-31" in _titre_c, f"→ {_titre_c!r}")
 
 
 print(f"\n{'='*60}\n{ok} vérifications OK, {fail} échec(s)")

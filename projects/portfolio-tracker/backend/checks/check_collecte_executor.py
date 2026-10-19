@@ -1022,9 +1022,9 @@ class _ConnFactice:
         return self._Tx()
 
 
-async def _fake_executer(conn, *, ticker_id, symbole, cik, libelle, consigne, facts):
+async def _fake_executer(conn, *, ticker_id, symbole, cik, consigne, facts):
     _appar["n"] += 1
-    _appar["args"] = dict(ticker_id=ticker_id, symbole=symbole, cik=cik, libelle=libelle,
+    _appar["args"] = dict(ticker_id=ticker_id, symbole=symbole, cik=cik,
                           consigne=consigne, facts=facts)
     return 9001
 
@@ -1053,10 +1053,12 @@ check("§11 consigne + inventaire, aucune recette → `executer_appariement` est
       "entry est rendue : la ligne est COLLECTÉE depuis le dépôt, elle ne repart plus au web",
       _appar["n"] == 1 and _r1.entry_id == 9001 and _r1.echec is None and _web_calls == [],
       f"→ n={_appar['n']}, resultat={_r1}, web={_web_calls}")
-check("§11 l'appariement reçoit le SYMBOLE et l'inventaire DÉJÀ LU (aucune seconde lecture EDGAR), "
-      "et le LIBELLÉ de la ligne — jamais le couple question×ingrédient (#58)",
+check("§11 l'appariement reçoit le SYMBOLE et l'inventaire DÉJÀ LU (aucune seconde lecture EDGAR) — "
+      "jamais le LIBELLÉ de la ligne (ce qu'on a DEMANDÉ) ni le couple question×ingrédient (#58) : "
+      "depuis le 2026-10-18, le titre et le contenu de l'entry se composent depuis ce que l'expression "
+      "a RÉELLEMENT LU, jamais depuis ce qu'on lui a demandé (défaut mesuré sur NVDA #1429)",
       _appar["args"].get("symbole") == _SYMBOLE and _appar["args"].get("facts") is _FACTS
-      and _appar["args"].get("libelle") == "trésorerie par action"
+      and "libelle" not in _appar["args"]
       and _appar["args"].get("ticker_id") == _TICKER_ID,
       f"→ {({k: v for k, v in _appar['args'].items() if k != 'facts'})}")
 

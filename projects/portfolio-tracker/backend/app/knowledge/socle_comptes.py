@@ -46,6 +46,7 @@ le dernier instant déposé (`points_instantanes`). Aucune règle de période n'
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from datetime import date
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional
@@ -135,6 +136,26 @@ def _terme(brut: str, connues: set[str], ou: str) -> Terme:
     if nom not in connues:
         raise GabaritInvalide(f"{ou} : la ligne « {nom} » n'existe pas dans le gabarit")
     return Terme(nom, +1 if s[0] == "+" else -1)
+
+
+@lru_cache(maxsize=1)
+def _libelles_des_concepts() -> dict[str, str]:
+    """Concept déposé → libellé français de la ligne du gabarit qui le lit SEUL (recette à un
+    terme). Un concept lu par deux lignes de libellés différents n'a pas de nom unique : on ne
+    choisit pas, il garde son nom comptable."""
+    vus: dict[str, set[str]] = {}
+    for ligne in charger_gabarit().lignes.values():
+        for recette in ligne.recettes:
+            if len(recette) == 1:
+                vus.setdefault(recette[0], set()).add(ligne.libelle)
+    return {c: next(iter(ls)) for c, ls in vus.items() if len(ls) == 1}
+
+
+def libelle_du_concept(concept: str) -> Optional[str]:
+    """Le nom français d'un poste déposé, tel que le socle des comptes le lit, ou None. Lu par le
+    titre d'un relevé (`appariement_feed._postes_libelles`) : la pièce se nomme par ce qu'elle
+    contient, dans la langue du comité (arbitrage du 2026-10-18)."""
+    return _libelles_des_concepts().get(concept)
 
 
 def charger_gabarit(chemin: Path = GABARIT_YAML) -> Gabarit:

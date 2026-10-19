@@ -489,7 +489,8 @@ else:
     jsx = re.sub(r"/\*.*?\*/", "", REG.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-pv="([a-z_.]+)"', jsx))
-    b.require(attendus, 21, "§6 le PV (16 champs) et l'acceptation servie (5) ont 21 champs terminaux")
+    b.require(attendus, 22, "§6 le PV (17 champs, point 13 : `retablie_depuis_id`) et l'acceptation "
+                           "servie (5) ont 22 champs terminaux")
     b.check(not (attendus - marques),
             f"§6 tout champ du PV a son pixel — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),

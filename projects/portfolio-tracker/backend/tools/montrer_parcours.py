@@ -32,6 +32,10 @@ def _texte(n1) -> None:
     p = n1.peut_on_decider
     print(f"\n{'─' * L}\nPEUT-ON DÉCIDER ? — {n1.ticker_id} (archétype : {n1.archetype})\n{'─' * L}")
     print(f"  {p.etat.upper()} — {p.motif}")
+    for b in n1.baisses:   # point 13 — listées à côté des manques, quel que soit l'état
+        print(f"  ↘ RÉVISION À LA BAISSE à lire : #{b.courante.answer_id} `{b.courante.statut}` "
+              f"({b.courante.cree_le:%Y-%m-%d}) ← #{b.precedente.answer_id} `{b.precedente.statut}` "
+              f"— raison de l'analyste : {b.raison_analyste[:200]}")
     for m in p.manques:
         print(f"\n  ▸ {m.libelle_framework} · {m.question_id} [{m.nature}] cause = {m.cause}")
         print(f"      « {m.enonce[:120]} »")
@@ -54,7 +58,7 @@ def _texte(n1) -> None:
               f"{s.n_standard_anterieur} au standard antérieur (#127) · "
               f"{s.n_chiffres_sans_piece} chiffre(s) sans pièce (#136) · "
               f"{s.n_pas_encore_observable} pas encore observable(s) (#138)")
-    print(f"\n{'─' * L}\nBILAN — niveau 1 dressé pour {n1.ticker_id} : {len(p.manques)} manque(s)\n{'─' * L}\n")
+    print(f"\n{'─' * L}\nBILAN — niveau 1 dressé pour {n1.ticker_id} : {len(p.manques)} manque(s), {len(n1.baisses)} révision(s) à la baisse\n{'─' * L}\n")
 
 
 async def main() -> int:

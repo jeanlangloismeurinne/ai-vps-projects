@@ -326,6 +326,128 @@ function Preuve({ pr, tickerId }) {
   )
 }
 
+/**
+ * POINT 13 — « Révisée à la baisse » : la réponse COURANTE de la question a un fondement
+ * strictement inférieur à sa PRÉCÉDENTE IMMÉDIATE. Les deux réponses côte à côte, la raison de
+ * l'analyste, et le bouton « Rétablir la précédente » (auteur + motif obligatoires, comme
+ * réinitialiser) — désactivé avec son motif si la précédente n'est plus rétablissable telle quelle
+ * (écrite sous un contrat antérieur). Chaque champ de `BaisseDeFondement` a son pixel
+ * (`checks/check_parcours.py` §7).
+ */
+const CLE_AUTEUR_BAISSE = 'comite.auteur'
+function lireAuteurBaisse() {
+  try { return window.localStorage.getItem(CLE_AUTEUR_BAISSE) || '' } catch { return '' }
+}
+function retenirAuteurBaisse(v) {
+  try { window.localStorage.setItem(CLE_AUTEUR_BAISSE, v) } catch { /* navigation privée */ }
+}
+
+function BaisseEncadre({ d, onRecalcule }) {
+  const b = d.baisse
+  const [ouvert, setOuvert] = useState(false)
+  const [auteur, setAuteur] = useState('')
+  const [motif, setMotif] = useState('')
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState(null)
+  useEffect(() => { setAuteur(lireAuteurBaisse()) }, [])
+  if (!b) return null
+  const pret = auteur.trim() && motif.trim()
+
+  async function envoyer(e) {
+    e.preventDefault()
+    if (!pret) return
+    setEnvoi(true); setErreur(null)
+    try {
+      const r = await fetch(`${API}/v2/tickers/${d.ticker_id}/frameworks/${d.framework_id}/q/${d.question_id}/retablir`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer_id: b.precedente.answer_id, auteur, motif }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : `HTTP ${r.status}`)
+      retenirAuteurBaisse(auteur)
+      setOuvert(false); setMotif('')
+      onRecalcule(j)
+    } catch (e2) {
+      setErreur(String(e2.message || e2))
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-700 bg-amber-950/20 px-4 py-3 space-y-3" data-testid="baisse-de-fondement">
+      <p className="text-sm font-semibold text-amber-200">⚠ Révisée à la baisse</p>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="rounded border border-gray-800 px-2.5 py-2 space-y-1">
+          <p className="text-gray-500 uppercase text-[10px]">Précédente</p>
+          <p className="text-gray-200">
+            réponse #<span data-champ="baisse.precedente.answer_id">{b.precedente.answer_id}</span>
+            {' · '}<span data-champ="baisse.precedente.statut"><StatutBadge statut={b.precedente.statut} /></span>
+          </p>
+          <p className="text-gray-500">le <span data-champ="baisse.precedente.cree_le">{new Date(b.precedente.cree_le).toLocaleString('fr-FR')}</span></p>
+          <p className="text-gray-300" data-champ="baisse.precedente.resume">{b.precedente.resume}</p>
+        </div>
+        <div className="rounded border border-amber-900/60 px-2.5 py-2 space-y-1">
+          <p className="text-amber-400 uppercase text-[10px]">Courante (en vigueur)</p>
+          <p className="text-gray-200">
+            réponse #<span data-champ="baisse.courante.answer_id">{b.courante.answer_id}</span>
+            {' · '}<span data-champ="baisse.courante.statut"><StatutBadge statut={b.courante.statut} /></span>
+          </p>
+          <p className="text-gray-500">le <span data-champ="baisse.courante.cree_le">{new Date(b.courante.cree_le).toLocaleString('fr-FR')}</span></p>
+          <p className="text-gray-300" data-champ="baisse.courante.resume">{b.courante.resume}</p>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400">
+        Raison de l'analyste : <span data-champ="baisse.raison_analyste">{b.raison_analyste}</span>
+      </p>
+      <span className="hidden" data-champ="baisse.retablissable">{String(b.retablissable)}</span>
+
+      {!b.retablissable && (
+        <p className="text-xs text-red-300" data-champ="baisse.motif_non_retablissable">
+          Non rétablissable : {b.motif_non_retablissable}
+        </p>
+      )}
+
+      {b.retablissable && !ouvert && (
+        <button type="button" onClick={() => setOuvert(true)}
+                className="rounded-md border border-violet-600 px-3 py-1.5 text-sm text-violet-200 hover:bg-violet-900/40">
+          Rétablir la précédente
+        </button>
+      )}
+      {b.retablissable && ouvert && (
+        <form onSubmit={envoyer} className="space-y-3 rounded-lg border border-gray-800 p-3">
+          <p className="text-sm text-gray-200">
+            Rétablir : la précédente est réécrite comme réponse neuve et remplace la courante
+            dégradée. Ce n'est pas une acceptation — elle repassera les contrôles et la fraîcheur
+            comme toute réponse.
+          </p>
+          <label className="block space-y-1">
+            <span className="text-xs text-gray-400">Membre du comité</span>
+            <input className="w-full rounded-md bg-gray-950 border border-gray-700 px-2.5 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+                   value={auteur} onChange={e => setAuteur(e.target.value)}
+                   placeholder="Nom de la personne qui décide" maxLength={120} />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs text-gray-400">Pourquoi rétablir (obligatoire)</span>
+            <textarea className="w-full rounded-md bg-gray-950 border border-gray-700 px-2.5 py-1.5 text-sm text-gray-100 placeholder-gray-600 focus:border-violet-500 focus:outline-none"
+                      rows={3} value={motif} onChange={e => setMotif(e.target.value)}
+                      placeholder="Ex. : la baisse #1499 ne tient pas compte du rachat lu depuis — la précédente reste la bonne lecture." />
+          </label>
+          {erreur && <p className="text-sm text-red-300">{erreur}</p>}
+          <div className="flex gap-2">
+            <button type="submit" disabled={!pret || envoi}
+                    className="rounded-md bg-violet-700 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+              {envoi ? 'Inscription…' : 'Inscrire au procès-verbal'}
+            </button>
+            <button type="button" onClick={() => { setOuvert(false); setErreur(null) }}
+                    className="rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200">Annuler</button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+}
+
 export default function QuestionNiveau3() {
   const router = useRouter()
   const { ticker_id, framework_id, question_id } = router.query
@@ -355,6 +477,7 @@ export default function QuestionNiveau3() {
         {d.applicable === false && <Badge variant="gray">ne s'applique pas à cette société</Badge>}
       </div>
       {d.manque && <ManqueBloc m={d.manque} tickerId={d.ticker_id} lien={false} />}
+      {d.baisse && <BaisseEncadre d={d} onRecalcule={setD} />}
       {d.preuves.length === 0 && <p className="text-sm text-amber-300">Aucune réponse au dossier pour cette question.</p>}
       {d.preuves.map(pr => <Preuve key={pr.answer_id} pr={pr} tickerId={d.ticker_id} />)}
       {/* Le comité agit APRÈS avoir lu la preuve : accepter ou renvoyer, inscrit au procès-verbal. */}

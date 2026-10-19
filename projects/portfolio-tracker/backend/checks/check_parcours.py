@@ -275,6 +275,73 @@ lq7 = next(lq for lq in n2.questions if lq.question_id == "qf_7")
 b.check(lq7.manque is not None and lq7.reponses and lq7.reponses[0].verdict == "acquitte",
         "§4bis niveau 2 : la ligne porte le statut, l'avis du manager ET le manque")
 
+# ══ §4ter POINT 13 — LA RÉVISION À LA BAISSE, MÊME FORME QUE LA RECOMMANDATION DE RECLASSEMENT ══
+print("[4ter] point 13 — une baisse à lire, listée au niveau 1/2/3, nommée dans le manque")
+from dataclasses import replace as _replace  # noqa: E402
+from app.contracts.parcours_schema import BaisseDeFondement, ReponseBaisse  # noqa: E402
+
+
+def _baisse(*, courante_id=1, precedente_id=9, courante_statut="non_fondable",
+            precedente_statut="repondu", retablissable=True):
+    return BaisseDeFondement(
+        precedente=ReponseBaisse(answer_id=precedente_id, statut=precedente_statut, cree_le=T0,
+                                 resume="verbatim de la précédente"),
+        courante=ReponseBaisse(answer_id=courante_id, statut=courante_statut, cree_le=T0,
+                               resume="raison de l'analyste"),
+        raison_analyste="raison de l'analyste", retablissable=retablissable,
+        motif_non_retablissable=(None if retablissable else
+                                 "écrite sous un contrat antérieur, ne peut être rétablie telle "
+                                 "quelle — réinitialiser plutôt"))
+
+
+# Une question qui TIENT (acquittée, à jour — pas un manque) mais dont la réponse courante est une
+# baisse à lire : SEULE parmi les applicables, elle doit empêcher « dossier complet ».
+r_tient_baisse = _replace(_lue(1, "qf_7", "repondu"), baisse=_baisse(courante_statut="repondu"))
+e_b = etat([r_tient_baisse], applicables=seule_qf7)
+n1b = dresser_niveau1(e_b, memo_de(e_b))
+b.require(n1b.baisses, 1, "§4ter niveau 1 collecte la baisse, même sur une question qui TIENT")
+b.check(n1b.peut_on_decider.etat == "non_revalidable" and "révision(s) à la baisse" in
+        n1b.peut_on_decider.motif,
+        f"§4ter même forme que la recommandation de reclassement : une baisse à lire seule "
+        f"empêche « dossier complet » — obtenu {n1b.peut_on_decider.etat} / {n1b.peut_on_decider.motif!r}")
+b.check(f"#{r_tient_baisse.baisse.courante.answer_id}" in n1b.peut_on_decider.motif,
+        "§4ter le motif NOMME la première révision à lire")
+
+# Si le dossier est déjà incomplet pour une AUTRE raison, la baisse est listée À CÔTÉ, sans changer
+# l'état (point 13, point 2).
+DEUX_QF = {f.id: (frozenset({"qf_6", "qf_7"}) if f.id == "qualite_financiere" else frozenset())
+          for f in FICHIER.frameworks}
+e_bm = etat([r_tient_baisse, _lue(2, "qf_6", "non_fondable")], applicables=DEUX_QF,
+           collecte={("qualite_financiere", "qf_6"): col_mixte})
+n1bm = dresser_niveau1(e_bm, memo_de(e_bm))
+b.check(n1bm.peut_on_decider.etat == "dossier_incomplet",
+        f"§4ter un manque PAR AILLEURS prime : l'état reste `dossier_incomplet` — obtenu "
+        f"{n1bm.peut_on_decider.etat}")
+b.require(n1bm.baisses, 1, "§4ter … mais la baisse reste listée À CÔTÉ des manques")
+
+# Niveau 2 et niveau 3 : la même baisse, sur la ligne/la question concernée.
+n2b = dresser_niveau2(e_b, "qualite_financiere")
+lq7b = next(lq for lq in n2b.questions if lq.question_id == "qf_7")
+b.check(lq7b.baisse is not None and lq7b.baisse.courante.answer_id == 1,
+        "§4ter niveau 2 : la baisse est listée sur la ligne de SA question")
+n3b = dresser_niveau3(e_b, "qualite_financiere", "qf_7")
+b.check(n3b.baisse is not None and n3b.baisse.precedente.answer_id == 9,
+        "§4ter niveau 3 : la baisse porte les DEUX réponses, précédente et courante")
+
+# Le motif du MANQUE d'une question en baisse le dit (point 13, point 2) : « révisée à la baisse
+# le …, la précédente était … ».
+r_manque_baisse = _replace(_lue(3, "qf_7", "non_fondable"),
+                           baisse=_baisse(courante_id=3, precedente_id=42,
+                                         precedente_statut="repondu"))
+m_b = manque(reponses=[r_manque_baisse])
+b.check(m_b is not None and "révisée à la baisse" in m_b.explication and "#42" in m_b.explication
+        and "repondu" in m_b.explication,
+        f"§4ter le motif du manque d'une question en baisse le DIT — obtenu "
+        f"{m_b and m_b.explication!r}")
+m_sans_baisse = manque(reponses=[_lue(4, "qf_7", "non_fondable")])
+b.check(m_sans_baisse is not None and "révisée à la baisse" not in m_sans_baisse.explication,
+        "§4ter témoin : sans baisse, le motif ne mentionne rien de tel")
+
 # ══ §5 NIVEAU 3 ═══════════════════════════════════════════════════════════════════════════════
 print("[5] niveau 3 — la preuve")
 # #127 — les champs que lit la règle du standard, copiés des formes RÉELLES du 2026-10-15 : #10 est une
@@ -443,16 +510,20 @@ else:
             out += feuilles(sous[0], f"{prefixe}{nom}.") if sous else [f"{prefixe}{nom}"]
         return out
 
-    attendus = set(feuilles(FrameworkAnswerServie))
+    # Point 13 — `BaisseDeFondement` (niveau 3, `d.baisse`) est un contrat DISTINCT de
+    # `FrameworkAnswerServie`, mais rendu dans le MÊME fichier : sa bijection s'y éprouve pareil,
+    # préfixée `baisse.` (le nom du champ qui la porte sur `PreuvesQuestion`).
+    attendus = set(feuilles(FrameworkAnswerServie)) | {f"baisse.{c}" for c in feuilles(BaisseDeFondement)}
     # Les marqueurs se lisent sur le JSX DÉPOUILLÉ de ses commentaires : un chemin cité en prose
     # n'est pas un pixel (#56 — un grep de présence est satisfait par la prose).
     jsx = re.sub(r"/\*.*?\*/", "", N3.read_text(encoding="utf-8"), flags=re.S)
     jsx = re.sub(r"(?m)^\s*//.*$", "", jsx)
     marques = set(re.findall(r'data-champ="([a-z_.]+)"', jsx))
-    b.require(attendus, 57, "§7 le contrat servi a ses 57 champs terminaux (l’encadré : 5 feuilles "
+    b.require(attendus, 68, "§7 le contrat servi a ses 57 champs terminaux (l’encadré : 5 feuilles "
                             "remplacent valeur et unité ; les faits postérieurs lus : 3, #103 ; les "
                             "calculs montrés : 5 et les chiffres sans pièce : 1, #136 ; la "
-                            "justification d'une attente : 6, #138)")
+                            "justification d'une attente : 6, #138) + les 11 de `baisse` (point 13 : "
+                            "2×4 pour les deux réponses, la raison, le rétablissement et son motif)")
     b.check(not (attendus - marques),
             f"§7 tout champ du contrat a son pixel au niveau 3 — sans pixel : {sorted(attendus - marques)}")
     b.check(not (marques - attendus),
@@ -484,5 +555,10 @@ else:
                              (N2, "{s.n_chiffres_sans_piece}</p>", "2 (la synthèse)"),
                              (DOSSIER, "{s.n_chiffres_sans_piece > 0 &&", "1 (le dossier)")):
         b.check(_jeton in _code(_f), f"§7 #136 le niveau {_niv} lit les chiffres sans pièce (`{_jeton}`)")
+    # Point 13 — la révision à la baisse, listée au niveau 1 (toutes méthodologies) et au niveau 2
+    # (la ligne de SA question) ; le niveau 3 porte déjà le détail complet, pixellisé ci-dessus.
+    for _f, _jeton, _niv in ((DOSSIER, "d.baisses.length === 0", "1 (le dossier)"),
+                             (N2, "lq.baisse && (", "2 (la ligne)")):
+        b.check(_jeton in _code(_f), f"§7 point 13 le niveau {_niv} lit la baisse (`{_jeton}`)")
 
 sys.exit(b.summary())

@@ -45,6 +45,27 @@ function Alerte({ d }) {
   )
 }
 
+// Point 13 — les révisions à la baisse À LIRE, toutes méthodologies confondues : listées à côté de
+// l'alerte, qu'elle soit « complet », « incomplet » ou « non revalidable » (jamais fondues avec les
+// manques — une baisse n'en est pas forcément une : la question peut tenir aujourd'hui).
+function BaissesALire({ d }) {
+  if (!d.baisses || d.baisses.length === 0) return null
+  return (
+    <div className="rounded-xl border border-violet-800 bg-violet-950/20 px-4 py-3 space-y-2" data-testid="baisses-a-lire">
+      <p className="text-sm font-semibold text-violet-200">
+        {d.baisses.length} révision(s) à la baisse à lire par le comité
+      </p>
+      <ul className="space-y-1.5">
+        {d.baisses.map(b => (
+          <li key={b.courante.answer_id} className="text-xs text-gray-300">
+            réponse #{b.courante.answer_id} (« {b.courante.statut} ») — la précédente #{b.precedente.answer_id} était « {b.precedente.statut} »
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function NotesQualite({ d }) {
   return (
     <Card>
@@ -157,6 +178,7 @@ export default function DossierComite({ tickerId }) {
     <div className="space-y-4" data-testid="dossier-comite">
       <ClassementEmetteur d={d} onRecalcule={setD} />
       <Alerte d={d} />
+      <BaissesALire d={d} />
       <NotesQualite d={d} />
       <Conclusions d={d} />
       <p className="text-[11px] text-gray-600">

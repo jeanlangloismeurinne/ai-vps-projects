@@ -27,7 +27,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _harness import Bilan  # noqa: E402
+from _harness import Bilan, colonne_absente  # noqa: E402
 
 b = Bilan()
 _db_url = os.environ.get("CHECK_DB_URL", "")
@@ -40,14 +40,14 @@ import asyncpg  # noqa: E402
 
 from app.agents.v2.comite import (  # noqa: E402
     DecisionRefusee, acquitter, lire_registre, position_du_comite, reinitialiser,
-    reinitialiser_chapitre, renvoyer)
+    reinitialiser_chapitre, renvoyer, retablir)
 from app.agents.v2.frameworks import load_frameworks  # noqa: E402
 from app.agents.v2.manager_persist import (  # noqa: E402
     id_du_mandat_ouvert, persist_mandate, read_open_mandates)
 from app.agents.v2.parcours import (  # noqa: E402
     ReferenceInconnue, _lignes, charger_etat_dossier, questions_a_relancer)
 from app.contracts.comite_schema import (  # noqa: E402
-    DemandeAcquittement, DemandeReinitialisation, DemandeRenvoi)
+    DemandeAcquittement, DemandeReinitialisation, DemandeRenvoi, DemandeRetablissement)
 from app.contracts.framework_answer_schema import FrameworkMandate  # noqa: E402
 from app.knowledge.material_events import MaterialEvent, MaterialEventLookup  # noqa: E402
 
@@ -80,6 +80,24 @@ async def main() -> None:
     # Le décodage JSON du pool applicatif (`db/database.py`) : §6 lit le dossier par son vrai chargeur.
     for t in ("jsonb", "json"):
         await conn.set_type_codec(t, encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+    # PRÉREQUIS DE SCHÉMA (point 13, migration 060) — `_inscrire`/`lire_registre` portent désormais
+    # `retablie_depuis_id` sur TOUT geste (acquitter/renvoyer/reinitialiser/retablir : une colonne
+    # partagée, comme 059 l'a fait pour `ticker_archetypes`). Tant que la 060 n'est pas appliquée
+    # (interdit de CETTE session), §1-§7 entiers ne peuvent pas tourner contre la VRAIE base — un
+    # échec NOMMÉ ici, jamais une trace Python qui tue le script avant son bilan
+    # (`feedback_check_degrade_en_sortant_a_zero`). Prouvé PAR AILLEURS : `negatif_060.sh` (copie de
+    # la base, migration appliquée, 15/0) et un diagnostic `BEGIN … ROLLBACK` en rôle admin sur la
+    # VRAIE base, migration appliquée SEULEMENT pour la durée de la transaction (jamais committée).
+    if await colonne_absente(conn, "comite_decisions", "retablie_depuis_id"):
+        b.check(False, "§1-§7 non exécutées — la migration 060 n'est PAS appliquée à cette base "
+                       "(colonne `retablie_depuis_id` absente de `comite_decisions`) : "
+                       "`_inscrire`/`lire_registre` sont des chemins PARTAGÉS par les 4 gestes, donc "
+                       "CHAQUE écriture/lecture du comité (pas seulement `retablir`) en dépend "
+                       "désormais. C'est l'état attendu de cette session (interdit d'appliquer la "
+                       "060 à la vraie base) — voir `negatif_060.sh` et le rapport pour la preuve "
+                       "par ailleurs")
+        await conn.close()
+        sys.exit(b.summary())
     tr = conn.transaction()
     await tr.start()
     try:
@@ -275,6 +293,135 @@ async def main() -> None:
             demande=DemandeReinitialisation(auteur="gérant (check)", motif="chapitre (check)"))
         b.check([d.question_id for d in dch] == qs and all(d.action == "reinitialiser" for d in dch),
                 f"§6 le chapitre inscrit UNE ligne par question — obtenu {[d.question_id for d in dch]}")
+
+        # ══ §7 RÉTABLIR (point 13, migration 060) ═══════════════════════════════════════════════
+        print("[7] rétablir — la baisse RÉELLE de NVDA ma_1 (#1475 repondu → #1499 non_fondable)")
+        # Fixture copiée du réel (mesurée le 2026-10-18, 07 §3.13) : la SEULE baisse en vigueur
+        # aujourd'hui dans tout le corpus. Les quatre refus (a)-(d) n'écrivent RIEN dans
+        # `comite_decisions` — ils s'arrêtent à la validation, avant `_inscrire` — et tournent donc
+        # contre le schéma RÉEL, migration 060 appliquée ou non. Seul l'EFFET (e) insère au PV et
+        # exige la colonne `retablie_depuis_id` : gardé explicitement, jamais un saut muet
+        # (`feedback_check_degrade_en_sortant_a_zero`).
+        row_cour = await conn.fetchrow(
+            "SELECT id, ticker_id, framework, framework_version, question_id, statut, superseded_by "
+            "FROM framework_answers WHERE id = 1499")
+        row_prec = await conn.fetchrow(
+            "SELECT id, ticker_id, framework, framework_version, question_id, statut, superseded_by "
+            "FROM framework_answers WHERE id = 1475")
+        if row_cour is None or row_prec is None or row_cour["superseded_by"] is not None \
+                or row_prec["superseded_by"] != 1499 or row_cour["statut"] != "non_fondable" \
+                or row_prec["statut"] != "repondu":
+            b.check(False, "§7 fixture : NVDA #1475→#1499 (ma_1) n'est plus la baisse attendue — "
+                           "le réel a changé depuis le diagnostic du 2026-10-18, section non mesurée")
+        else:
+            tk7, fw7, qid7, ver7 = (row_cour["ticker_id"], row_cour["framework"],
+                                    row_cour["question_id"], row_cour["framework_version"])
+            cle7 = dict(ticker_id=tk7, framework_id=fw7, question_id=qid7)
+            print(f"  (fixture confirmée : {tk7} · {fw7} · {qid7}, #{row_prec['id']} → #{row_cour['id']})")
+
+            # (a) la réponse désignée n'est pas de CE dossier (ticker/framework/version/question).
+            autre_tuple = await conn.fetchval(
+                "SELECT id FROM framework_answers WHERE ticker_id != $1 LIMIT 1", tk7)
+            await refus(conn, "§7(a) rétablir une réponse d'un AUTRE dossier est refusé",
+                       "n'est pas une réponse de", DecisionRefusee,
+                       retablir(conn, **cle7, ancre=ANCRE, demande=DemandeRetablissement(
+                           answer_id=autre_tuple, auteur="comité", motif="x")))
+
+            # (b) la réponse désignée est DU dossier, mais n'est pas la précédente IMMÉDIATE (ici :
+            # la courante elle-même, dont `superseded_by` n'est PAS 1499).
+            await refus(conn, "§7(b) désigner une réponse qui n'est pas la précédente IMMÉDIATE "
+                              "est refusé", "PRÉCÉDENTE IMMÉDIATE", DecisionRefusee,
+                       retablir(conn, **cle7, ancre=ANCRE, demande=DemandeRetablissement(
+                           answer_id=row_cour["id"], auteur="comité", motif="x")))
+
+            # (c) une lignée réelle qui N'EST PAS une baisse : NVDA qf_7, #1197 (repondu) → #1214
+            # (repondu), fondement ÉGAL — une précédente IMMÉDIATE réelle, mais pas une dégradation.
+            # (qf_7, pas qf_1/qf_2 : §3 et §6 supersèdent déjà la réponse éprouvée et celle du
+            # chapitre réinitialisé — reprendre l'une d'elles lirait une lignée que CE check a
+            # lui-même mutée, pas le réel.)
+            row_c197 = await conn.fetchrow(
+                "SELECT id, statut, superseded_by FROM framework_answers WHERE id = 1197")
+            row_c214 = await conn.fetchrow(
+                "SELECT id, ticker_id, framework, framework_version, question_id, statut, "
+                "superseded_by FROM framework_answers WHERE id = 1214")
+            if row_c197 is None or row_c214 is None or row_c197["superseded_by"] != 1214 \
+                    or row_c214["superseded_by"] is not None or row_c197["statut"] != "repondu" \
+                    or row_c214["statut"] != "repondu":
+                b.check(False, "§7(c) fixture : NVDA qf_7 #1197→#1214 n'est plus un couple à "
+                               "fondement ÉGAL — section non mesurée")
+            else:
+                cle7c = dict(ticker_id=row_c214["ticker_id"], framework_id=row_c214["framework"],
+                            question_id=row_c214["question_id"])
+                await refus(conn, "§7(c) rétablir sur une question qui N'EST PAS une baisse (ÉGAL) "
+                                  "est refusé", "n'est pas une baisse à lire", DecisionRefusee,
+                           retablir(conn, **cle7c, ancre=ANCRE, demande=DemandeRetablissement(
+                               answer_id=row_c197["id"], auteur="comité", motif="x")))
+
+            # (d) la précédente désignée ne valide plus contre le contrat EN VIGUEUR — une lignée
+            # SYNTHÉTIQUE, isolée (analyste dédié, ET tuple DISTINCT de ma_1 pour ne pas perturber
+            # §7(e) : `max(id)` n'a rien à départager entre questions différentes), fabriquée DANS
+            # la transaction (jamais écrite pour de vrai) sur la MÊME question que §7(c) (NVDA
+            # qf_7) : une précédente au JSON tronqué (contrat antérieur), supersédée par une
+            # courante VALIDE dont le fondement a réellement baissé (`non_fondable` sous `repondu`).
+            tk_d, fw_d, qid_d, ver_d = (row_c214["ticker_id"], row_c214["framework"],
+                                        row_c214["question_id"], row_c214["framework_version"])
+            cle7d = dict(ticker_id=tk_d, framework_id=fw_d, question_id=qid_d)
+            # Objet PYTHON natif, jamais pré-sérialisé : le codec jsonb de CETTE connexion encode
+            # déjà (`json.dumps`) — lui donner une chaîne double-encoderait (bug observé : la
+            # colonne aurait porté une STRING jsonb, pas un OBJET, et `model_validate` l'aurait vu
+            # comme `input_type=str`).
+            cour_json_d = {
+                "schema_version": "v3.0.0", "framework_id": fw_d, "framework_version": ver_d,
+                "question_id": qid_d, "ticker_id": tk_d, "analyste": "analyste_test_060",
+                "statut": "non_fondable",
+                "gap": {"dimension": "d", "champs_cibles": [qid_d], "manque": "m",
+                       "priorite": "haute", "coverage_actuelle": "0/1"}}
+            prec_cassee = await conn.fetchval(
+                "INSERT INTO framework_answers (framework, framework_version, question_id, "
+                "ticker_id, analyste, statut, answer_json) VALUES ($1, $2, $3, $4, "
+                "'analyste_test_060', 'repondu', '{\"statut\": \"repondu\"}'::jsonb) RETURNING id",
+                fw_d, ver_d, qid_d, tk_d)
+            cour_synthetique = await conn.fetchval(
+                "INSERT INTO framework_answers (framework, framework_version, question_id, "
+                "ticker_id, analyste, statut, answer_json) VALUES ($1, $2, $3, $4, "
+                "'analyste_test_060', 'non_fondable', $5) RETURNING id",
+                fw_d, ver_d, qid_d, tk_d, cour_json_d)
+            await conn.execute("UPDATE framework_answers SET superseded_by = $2 WHERE id = $1",
+                              prec_cassee, cour_synthetique)
+            await refus(conn, "§7(d) une précédente écrite sous un contrat ANTÉRIEUR est refusée "
+                              "(réinitialiser plutôt)", "contrat antérieur", DecisionRefusee,
+                       retablir(conn, **cle7d, ancre=ANCRE, demande=DemandeRetablissement(
+                           answer_id=prec_cassee, auteur="comité", motif="x")))
+
+            # (e) L'EFFET — le garde-fou de tête (`colonne_absente`) a déjà arrêté le script si la
+            # colonne manquait : ici, elle existe forcément.
+            if True:
+                mandat7 = await persist_mandate(conn, FrameworkMandate(
+                    framework_id=fw7, question_id=qid7, ticker_id=tk7, origine="manager_renvoi",
+                    motif="renvoi manager (check)", mandat="re-collecter (check)", etat="ouvert"),
+                    framework_version=ver7)
+                d7 = await retablir(conn, **cle7, ancre=ANCRE, demande=DemandeRetablissement(
+                    answer_id=row_prec["id"], auteur="comité (check)",
+                    motif="rétablissement point 13 (check)"))
+                b.check(d7.action == "retablir" and d7.retablie_depuis_id == row_prec["id"]
+                        and d7.answer_id != row_prec["id"] and d7.mandat_id is None,
+                        f"§7(e) le PV porte les DEUX ids (copie + précédente rétablie) — obtenu "
+                        f"action={d7.action}/answer_id={d7.answer_id}/retablie_depuis_id="
+                        f"{d7.retablie_depuis_id}")
+                superseded = await conn.fetchval(
+                    "SELECT superseded_by FROM framework_answers WHERE id = $1", row_cour["id"])
+                b.check(superseded == d7.answer_id,
+                        f"§7(e) la COURANTE dégradée est SUPERSÉDÉE par la copie — obtenu {superseded}")
+                statut_servi = await conn.fetchval(
+                    "SELECT statut FROM framework_mandates WHERE id = $1", mandat7)
+                b.check(statut_servi == "servi",
+                        f"§7(e) un mandat ouvert est SERVI comme effet de l'écriture (§14) — "
+                        f"obtenu {statut_servi}")
+                copie_statut = await conn.fetchval(
+                    "SELECT statut FROM framework_answers WHERE id = $1", d7.answer_id)
+                b.check(copie_statut == row_prec["statut"],
+                        f"§7(e) la copie porte le STATUT de la PRÉCÉDENTE (`repondu`), jamais celui "
+                        f"de la courante dégradée — obtenu {copie_statut}")
     finally:
         await tr.rollback()
         reste = await conn.fetchval("SELECT count(*) FROM comite_decisions WHERE auteur LIKE "

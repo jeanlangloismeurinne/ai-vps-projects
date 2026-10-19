@@ -77,6 +77,22 @@ def imports_symbol(path: str | Path, symbol: str, *, from_module: str | None = N
     return False
 
 
+async def colonne_absente(conn, table: str, colonne: str) -> bool:
+    """Vrai si `colonne` n'existe PAS encore sur `table` dans la base que `conn` interroge —
+    DÉTENTEUR UNIQUE (#46) du garde-fou « cette migration additive est-elle appliquée ICI ? ».
+
+    Une migration ADDITIVE (une colonne neuve sur une table lue par un chemin PARTAGÉ, comme
+    `comite_decisions.retablie_depuis_id` au point 13) rend TOUT lecteur/écrivain de ce chemin
+    dépendant d'elle, pas seulement le geste qui l'a motivée — exactement comme #139/migration 059
+    pour `ticker_archetypes`. Tant qu'elle n'est pas appliquée (interdit explicite d'une session de
+    validation), un check qui la suppose lève une `UndefinedColumnError` brute : un script mort
+    avant son bilan, le 2ᵉ faux vert (`feedback_check_degrade_en_sortant_a_zero`). Ce garde-fou en
+    fait un échec NOMMÉ à la place — jamais un saut muet, jamais une trace Python."""
+    return not await conn.fetchval(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2",
+        table, colonne)
+
+
 class Bilan:
     """Compteur d'assertions à bilan reconnaissable. `ok`/`fail` nomment toujours le critère ;
     `require(seq, n, …)` interdit le faux-vert de la sélection vide."""

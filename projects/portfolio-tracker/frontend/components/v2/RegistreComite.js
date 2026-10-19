@@ -36,6 +36,7 @@ const ACTIONS = {
   acquitter: { label: 'Acceptée telle quelle', variant: 'emerald' },
   renvoyer: { label: 'Renvoyée en recherche', variant: 'sky' },
   reinitialiser: { label: 'Remise à zéro', variant: 'amber' },
+  retablir: { label: 'Rétablie la précédente', variant: 'violet' },
 }
 
 // Une ligne du procès-verbal — tous ses champs, toujours rendus (un « — » dit l'absence).
@@ -60,6 +61,7 @@ function LignePV({ dcs }) {
       <p className="text-gray-500">
         Recherche ouverte : <span data-pv="mandat_id">{dcs.mandat_id ? `mandat #${dcs.mandat_id}` : '—'}</span>
         {' '}· recherche arrêtée : <span data-pv="mandat_remplace_id">{dcs.mandat_remplace_id ? `mandat #${dcs.mandat_remplace_id}` : '—'}</span>
+        {' '}· rétablie depuis : <span data-pv="retablie_depuis_id">{dcs.retablie_depuis_id ? `réponse #${dcs.retablie_depuis_id}` : '—'}</span>
       </p>
       <p className="text-gray-500">
         Dernier fait important connu :{' '}
@@ -79,7 +81,9 @@ function Position({ pos }) {
   if (!pos) return <p className="text-sm text-gray-500">Le comité ne s'est pas encore prononcé sur cette question.</p>
   const acc = pos.acceptation
   if (!acc) {
-    const verbe = pos.derniere.action === 'reinitialiser' ? 'Remise à zéro' : 'Renvoyée en recherche'
+    const verbe = pos.derniere.action === 'reinitialiser' ? 'Remise à zéro'
+      : pos.derniere.action === 'retablir' ? 'Rétablie (précédente remise en vigueur)'
+      : 'Renvoyée en recherche'
     return (
       <p className="text-sm text-sky-300">
         {verbe} par {pos.derniere.auteur} le {date(pos.derniere.decide_le)}.

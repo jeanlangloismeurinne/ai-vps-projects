@@ -38,7 +38,10 @@ mutations=(
 "$W¦        if lecture is not None and lecture[\"reliability_score\"] >= req.reliability_min:¦        if lecture is not None:¦lecture sous le plancher du mandat"
 "$W¦    raw: Any, req: WorkerRequest, log: RetrievalLog¦    raw: Any, req: WorkerRequest, log: RetrievalLog = None¦\`_normalise_entry\` exige le journal"
 "$W¦        log=retrieval_log,¦        log=RetrievalLog(),¦en production, le journal du run"
-"$W¦        \"title\": titre_de_fiche(url) if extraits else ((raw.get(\"title\") or \"\").strip() or None),¦        \"title\": (raw.get(\"title\") or \"\").strip() or None,¦le titre de la fiche NOMME le document"
+"$W¦        \"title\": titre_de_fiche(url),¦        \"title\": (raw.get(\"title\") or \"\").strip() or None,  # mutation: repli sur le titre du modèle¦le titre de la fiche NOMME le document"
+# Arbitrage du 2026-10-18 : la « lecture du collecteur » redevient titrée par le modèle (son propre
+# titre, une AFFIRMATION) plutôt que par le détenteur unique du nom de document.
+"$W¦        \"title\": f\"Lecture du collecteur — {titre_de_fiche(fiche['source_url'])}\",¦        \"title\": f\"Lecture du collecteur — {(raw.get('title') or '').strip() or fiche['source_url']}\",  # mutation: titre du modèle¦titre de la LECTURE DU COLLECTEUR nomme le document"
 "$W¦        key = (entry[\"source_url\"], (entry[\"title\"] or \"\").lower(), entry[\"content\"].lower())¦        key = (entry[\"source_url\"], (entry[\"title\"] or \"\").lower())¦deux fiches d'un même document"
 # le journal, au point de récupération réel
 "$T¦        return list(self.textes.get(key, [])) if key else []¦        return [t for v in self.textes.values() for t in v]¦phrase d'un AUTRE document"

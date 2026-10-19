@@ -36,6 +36,7 @@ from app.contracts.framework_answer_schema import FrameworkAnswer, FrameworkAnsw
 from app.contracts.framework_definition_schema import FrameworksFile
 from app.knowledge.standard_collecte import COLONNES_SQL, piece_au_standard
 from app.contracts.parcours_schema import (
+    BaisseDeFondement,
     CauseManque,
     ClassementServi,
     DossierTitre,
@@ -98,6 +99,9 @@ class ReponseLue:
     # L'instant d'écriture (`framework_answers.created_at`) : une réponse écrite AVANT un renvoi ou une
     # réinitialisation du comité ne ferme plus la question (#137). Inconnu (None) = antérieure.
     cree_le: Optional[datetime] = None
+    # Point 13 — cette réponse est-elle une BAISSE à lire par le comité ? Recalculée à la lecture
+    # par `revision.baisse_a_lire`, jamais stockée (#53/#77).
+    baisse: Optional[BaisseDeFondement] = None
 
 
 @dataclass
@@ -154,6 +158,17 @@ _EXPLICATION: dict[CauseManque, str] = {
                              "recherche n'est relancée avant la date de revue ; au comité de juger "
                              "la cause (accepter, ou renvoyer en recherche)",
 }
+
+
+def _note_baisse(r: "ReponseLue") -> str:
+    """Point 13 — « le motif du manque d'une question en baisse le dit. » Un fragment à ajouter en
+    fin d'`explication` quand la réponse choisie par une branche du manque est ELLE-MÊME une baisse
+    à lire ; vide sinon. `r.baisse` est `None` pour la plupart des réponses (le cas courant)."""
+    if r.baisse is None:
+        return ""
+    b = r.baisse
+    return (f" ; révisée à la baisse le {b.courante.cree_le:%Y-%m-%d} — la précédente était "
+           f"`{b.precedente.statut}` (#{b.precedente.answer_id}) : {b.precedente.resume}")
 
 
 def _cause_de_collecte(collecte: Optional[Collecte]) -> tuple[CauseManque, list[IngredientManquant]]:
@@ -239,7 +254,8 @@ def manque_de_la_question(
     if renvoyees:
         r = renvoyees[0]
         return Manque(nature="renvoyee", cause="controle_ko", answer_id=r.answer_id,
-                      explication=f"{_EXPLICATION['controle_ko']} : {r.motif_revue}", **commun)
+                      explication=f"{_EXPLICATION['controle_ko']} : {r.motif_revue}"
+                                  f"{_note_baisse(r)}", **commun)
 
     fondees = [r for r in reponses
                if r.servie.statut in ("repondu", "approxime") and r.servie.fondation is not None]
@@ -250,7 +266,7 @@ def manque_de_la_question(
             r = vieilles[0]
             return Manque(nature="perimee", cause=cause, answer_id=r.answer_id,
                           explication=f"{_EXPLICATION[cause]} — "
-                                      f"{r.servie.fondation.motif_actualite}", **commun)
+                                      f"{r.servie.fondation.motif_actualite}{_note_baisse(r)}", **commun)
 
     cause, ingredients = _cause_de_collecte(collecte)
     non_fondees = [r for r in reponses if r.servie.statut == "non_fondable"]
@@ -268,10 +284,12 @@ def manque_de_la_question(
                       explication=(f"{_EXPLICATION['pas_encore_observable']}. Cause : {att.cause} "
                                    f"Fait déclencheur : {att.fait_declencheur} ({att.depuis}, pièce "
                                    f"#{att.piece_du_fait}). Il faudra : {att.historique_requis}. "
-                                   f"Revue le {att.revoir_le}."), **commun)
+                                   f"Revue le {att.revoir_le}.{_note_baisse(r)}"), **commun)
     if non_fondees:
-        return Manque(nature="non_fondee", cause=cause, answer_id=non_fondees[0].answer_id,
-                      explication=_EXPLICATION[cause], ingredients=ingredients, **commun)
+        r = non_fondees[0]
+        return Manque(nature="non_fondee", cause=cause, answer_id=r.answer_id,
+                      explication=f"{_EXPLICATION[cause]}{_note_baisse(r)}", ingredients=ingredients,
+                      **commun)
     return Manque(nature="sans_reponse", cause=cause, explication=_EXPLICATION[cause],
                   ingredients=ingredients, **commun)
 
@@ -306,9 +324,12 @@ def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
                 decision_ouvrante=(position.derniere if position is not None
                                    and position.derniere.action in ACTIONS_OUVRANTES else None),
                 aujourd_hui=etat.genere_le.date())
+        # Point 13 — UNE baisse par ligne (le cas courant : au plus une réponse courante en baisse
+        # par question ; la première rencontrée si plusieurs analystes en portaient une).
+        baisse = next((r.baisse for r in reps if r.baisse is not None), None)
         lignes.append(LigneQuestion(
             question_id=q.id, enonce=q.enonce, applicable=applicable,
-            dispensee=q.id in dispenses, manque=manque, comite=position,
+            dispensee=q.id in dispenses, manque=manque, comite=position, baisse=baisse,
             reponses=[ReponseResumee(
                 answer_id=r.answer_id, analyste=r.servie.analyste, statut=r.servie.statut,
                 rang_derive=r.servie.fondation.rang_derive if r.servie.fondation else None,
@@ -403,11 +424,12 @@ def _acceptee(lq: LigneQuestion) -> bool:
 
 def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
     """NIVEAU 1 : l'alerte en tête, puis la note de chaque méthodologie, puis la note de comité."""
-    syntheses, manques, acceptees = [], [], 0
+    syntheses, manques, baisses, acceptees = [], [], [], 0
     for f in etat.fichier.frameworks:
         lignes = _lignes(etat, f)
         syntheses.append(_synthese(etat, f, lignes))
         manques.extend(lq.manque for lq in lignes if lq.manque is not None)
+        baisses.extend(lq.baisse for lq in lignes if lq.baisse is not None)
         acceptees += sum(1 for lq in lignes if lq.applicable and _acceptee(lq))
 
     if etat.archetype is None:
@@ -433,6 +455,18 @@ def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
             motif=(f"toutes les questions de la grille « {r.de} » ont une réponse qui tient, mais le "
                    f"dépôt du {r.fait_du.strftime('%d/%m/%Y')} recommande de reclasser l'émetteur "
                    f"« {r.vers} » : le comité doit reclasser ou maintenir avant de conclure"))
+    elif baisses:
+        # Point 13 — même forme que la recommandation de reclassement ci-dessus : une baisse à lire
+        # empêche « dossier complet », SEULE quand rien d'autre ne manque déjà (sinon elle est
+        # listée à côté des manques, sans changer l'état — c'est `baisses` passé plus bas, toujours).
+        n = len(baisses)
+        b0 = baisses[0]
+        pod = PeutOnDecider(
+            etat="non_revalidable",
+            motif=(f"{n} révision(s) à la baisse à lire par le comité — toutes les autres questions "
+                   "applicables tiennent. La première : "
+                   f"#{b0.courante.answer_id} (`{b0.courante.statut}`), dont la précédente "
+                   f"#{b0.precedente.answer_id} était `{b0.precedente.statut}`"))
     else:
         # Le comité doit savoir que la complétude repose en partie sur SES acceptations : un dossier
         # complet « parce que le comité a passé outre » ne se lit pas comme un dossier sans faiblesse.
@@ -444,7 +478,8 @@ def dresser_niveau1(etat: EtatDossier, memo) -> DossierTitre:
                         genere_le=etat.genere_le, peut_on_decider=pod,
                         frameworks=syntheses, memo=memo,
                         classement=_classement_servi(etat.classement),
-                        reclassement_recommande=_recommandation_servie(etat.recommandation))
+                        reclassement_recommande=_recommandation_servie(etat.recommandation),
+                        baisses=baisses)
 
 
 def _classement_servi(c) -> Optional[ClassementServi]:
@@ -534,7 +569,7 @@ def dresser_niveau3(etat: EtatDossier, framework_id: str, question_id: str) -> P
         ticker_id=etat.ticker_id, framework_id=f.id, libelle_framework=f.libelle,
         framework_version=etat.fichier.schema_version, question_id=q.id, enonce=q.enonce,
         applicable=ligne.applicable, preuves=preuves, manque=ligne.manque,
-        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []))
+        comite=ligne.comite, registre=etat.registre.get((f.id, q.id), []), baisse=ligne.baisse)
 
 
 # ── La seule moitié qui lit ────────────────────────────────────────────────────────────────────
@@ -674,6 +709,7 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     from app.agents.v2.classement import recommandation_de_classement
     from app.agents.v2.manager import reviser_framework
     from app.agents.v2.manager_persist import assemble_verdict
+    from app.agents.v2.revision import ReponsePourBaisse, baisse_a_lire, precedente_validee
     from app.agents.v2.traducteur import questions_applicables
 
     fichier = load_frameworks()
@@ -743,9 +779,20 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
     durees = await contexte_durees(conn, fichier=fichier, version=version, ancre_titre=ancre,
                                    cites=cites)
 
+    # Le PV du comité — chargé ICI (avant les réponses) : le point 13 (révision à la baisse) juge
+    # chaque réponse courante contre le registre de SA question, au même titre que le reste.
+    registre = await lire_registre(conn, ticker_id=ticker_id, framework_version=version)
+
     cree_le = {r["id"]: r["created_at"] for r in await conn.fetch(
         "SELECT id, created_at FROM framework_answers WHERE id = ANY($1::int[])",
         [i for i, _a in brutes])}
+    # Point 13 — la PRÉCÉDENTE IMMÉDIATE de chaque réponse courante, en UNE requête (la table porte
+    # déjà la relation : `superseded_by` pointe de la précédente vers la courante).
+    precedentes_brutes = (await conn.fetch(
+        "SELECT id, statut, answer_json, created_at, superseded_by FROM framework_answers "
+        "WHERE superseded_by = ANY($1::int[])", [i for i, _a in brutes]) if brutes else [])
+    precedente_de = {r["superseded_by"]: r for r in precedentes_brutes}
+
     reponses: list[ReponseLue] = []
     for i, a in brutes:
         d = decisions.get(i)
@@ -761,15 +808,25 @@ async def charger_etat_dossier(conn, ticker_id: str) -> EtatDossier:
                 etat_revue = "revue"
             else:
                 etat_revue = "renvoi_a_emettre"
+        baisse = None
+        prec_row = precedente_de.get(i)
+        if prec_row is not None:
+            prec_rpb = ReponsePourBaisse(
+                answer_id=prec_row["id"], cree_le=prec_row["created_at"],
+                statut_brut=prec_row["statut"],
+                answer=precedente_validee(prec_row["statut"], prec_row["answer_json"]))
+            cour_rpb = ReponsePourBaisse(answer_id=i, cree_le=cree_le.get(i), statut_brut=a.statut,
+                                         answer=a)
+            baisse = baisse_a_lire(
+                cour_rpb, prec_rpb, registre.get((a.framework_id, a.question_id), []))
         reponses.append(ReponseLue(
             answer_id=i, servie=servir_answer(a, ancre=ancre_de(a.question_id), entries=entries,
                                               durees=durees),
             verdict=verdict, controles=controles, motif_revue=motif, etat_revue=etat_revue,
-            cree_le=cree_le.get(i)))
+            cree_le=cree_le.get(i), baisse=baisse))
 
-    # Le COMITÉ : son PV, et sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage
-    # n°2) et les réponses COURANTES (une réponse refaite n'est pas celle que le comité a lue).
-    registre = await lire_registre(conn, ticker_id=ticker_id, framework_version=version)
+    # Le COMITÉ : sa position du jour recalculée contre la MÊME ancre qui pèse (arbitrage n°2) et
+    # les réponses COURANTES (une réponse refaite n'est pas celle que le comité a lue).
     courantes: dict[tuple[str, str], frozenset[int]] = {}
     for i, a in brutes:
         cle = (a.framework_id, a.question_id)

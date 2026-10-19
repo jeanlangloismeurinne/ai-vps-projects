@@ -10,6 +10,7 @@ from datetime import date
 
 from app.agents.v2.worker import (
     _apply_deterministic_overrides, _build_user_message, _resolve_source_type, request_hash,
+    titre_de_fiche,
 )
 # Les 8 colonnes archivées par la 036, lues sur leur détenteur (#46).
 from app.db.migrations._gen_036 import COLONNES_RETIREES
@@ -330,6 +331,13 @@ check("requires_human_review forcé", e["requires_human_review"] is True)
 check("model_cutoff renseigné", bool(e["model_cutoff"]))
 check("score ramené à 0.40 / tier C", e["reliability_score"] == 0.40 and e["reliability_tier"] == "C",
       f"→ {e['reliability_score']} {e['reliability_tier']}")
+# Arbitrage du 2026-10-18 : même un aveu `llm_memory` (sans extrait, donc sans document à nommer)
+# ne garde PLUS le titre rédigé par le modèle (« De mémoire » ici) — ce chemin ÉCRIT en base dès
+# que son score passe `reliability_min` (il le fait ici), donc le repli `raw.get("title")` était
+# atteignable en production, pas seulement en théorie.
+check("même en aveu `llm_memory` (aucun extrait), le titre est TOUJOURS `titre_de_fiche(url)` — "
+      "jamais le titre rédigé par le modèle",
+      e["title"] == titre_de_fiche(None) and e["title"] != "De mémoire", f"→ {e['title']!r}")
 WorkerResponse.model_validate(out3)
 check("ProducedEntry valide (P2 satisfait)", True)
 
@@ -558,8 +566,17 @@ check("… et RIEN de la lecture du collecteur (« la demande excède l'offre »
 check("les valeurs structurées du collecteur ne sont PAS sous l'autorité du document",
       _f.get("content_structured") is None, f"→ {_f.get('content_structured')}")
 check("le titre de la fiche NOMME le document et n'affirme rien (le titre du collecteur part avec la lecture)",
-      _f.get("title") == _w.titre_de_fiche(_CFO_URL) and "CFO Commentary T2" in _l.get("title", ""),
-      f"→ {_f.get('title')!r} / {_l.get('title')!r}")
+      _f.get("title") == _w.titre_de_fiche(_CFO_URL), f"→ {_f.get('title')!r}")
+# Arbitrage du 2026-10-18 : le titre dit ce que la pièce CONTIENT, jamais ce qu'on lui a demandé —
+# même geste que #58 appliqué au worker. La « lecture du collecteur » nomme le DOCUMENT (même forme
+# que `titre_de_fiche`, détenteur unique), jamais le titre rédigé par le modèle (« CFO Commentary
+# T2 » ici) : ce titre AFFIRME, il ne nomme pas. Avant ce lot, le repli `raw.get("title")` le
+# laissait passer dès qu'un titre de modèle existait.
+check("le titre de la LECTURE DU COLLECTEUR nomme le document par le même détenteur que la fiche "
+      "(`titre_de_fiche`), jamais le titre rédigé par le modèle",
+      _l.get("title") == f"Lecture du collecteur — {_w.titre_de_fiche(_CFO_URL)}"
+      and "CFO Commentary T2" not in _l.get("title", ""),
+      f"→ {_l.get('title')!r}")
 o2b = _apply_deterministic_overrides(
     {"entries": [_fiche([_BON_1]), _fiche([_BON_2])], "uncovered_fields": []},
     req_q.model_copy(update={"max_entries": 3}), model_used="m", tokens_in=1, tokens_out=1,

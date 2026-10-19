@@ -65,7 +65,7 @@ mutations=(
 # L'IDENTITÉ DU FAIT : le `metric` cesse d'être l'expression. Deux exécutions de la même formule
 # n'écrivent plus le même `metric`, donc la seconde ne supersède plus la première : le corpus répond
 # deux choses à la même question (#43).
-"$SRC¦        metric=consigne.expression,¦        metric=libelle,  # mutation: l'identité du fait devient le libellé¦le \`metric\` du fait EST l'expression"
+"$SRC¦        metric=consigne.expression,¦        metric=titre,  # mutation: l'identité du fait devient son titre humain¦le \`metric\` du fait EST l'expression"
 # LA PROVENANCE : le tag XBRL perd son espace de noms. « NetIncomeLoss » sans `us-gaap:` n'identifie
 # plus rien d'ouvrable — la provenance redevient une promesse.
 "$SRC¦            {\"concept\": p.concept, \"offset\": p.offset, \"xbrl_tag\": f\"us-gaap:{p.concept}\",¦            {\"concept\": p.concept, \"offset\": p.offset, \"xbrl_tag\": p.concept,  # mutation¦provenance est écrite CONCEPT PAR CONCEPT"

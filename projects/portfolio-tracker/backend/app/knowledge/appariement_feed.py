@@ -208,6 +208,59 @@ def _cle_point(p: PointRetenu) -> tuple:
     return cle_de_reference((p.concept, p.offset))
 
 
+def _postes_libelles(points: dict[tuple[str, Periode], PointRetenu]) -> str:
+    """Les postes RÉELLEMENT lus par l'expression, nommés par la grammaire (`libelle_de_reference`,
+    détenteur unique, #46) — jamais ce qui a été DEMANDÉ (la métrique de la ligne de plan, #58, qui
+    n'atteint plus ce module). Les 3 premiers si la formule en lit plus, pour rester lisible ;
+    « et N autres postes » dit le reste sans l'énumérer (arbitrage du 2026-10-18)."""
+    # Import local : `socle_comptes` importe ce module. Le nom français vient du socle (la ligne qui
+    # lit ce poste) ; à défaut, le nom comptable déposé — jamais un nom inventé.
+    from app.knowledge.socle_comptes import libelle_du_concept
+
+    libelles = [libelle_de_reference(libelle_du_concept(p.concept) or p.concept, p.offset)
+                for p in sorted(points.values(), key=_cle_point)]
+    if len(libelles) > 3:
+        reste = len(libelles) - 3
+        return ", ".join(libelles[:3]) + f" et {reste} autres postes"
+    return ", ".join(libelles)
+
+
+def _periode_reellement_lue(
+    points: dict[tuple[str, Periode], PointRetenu], periode_simple: str
+) -> str:
+    """Le libellé de période à mettre au TITRE et en tête du contenu : TOUTES les dates `end`
+    RÉELLEMENT lues par l'expression, jamais seulement l'ancre de base (arbitrage du 2026-10-18 :
+    « le titre d'une pièce dit ce qu'elle CONTIENT, jamais ce qu'on lui a demandé »).
+
+    Une seule date distincte parmi les points ⟹ le libellé actuel, INCHANGÉ (`periode_simple`,
+    construit sur les ancres `EXERCICE CLOS LE …`/`DOUZE MOIS AU …`/`AU …`). Plusieurs ⟹ on les
+    NOMME TOUTES. C'est le défaut mesuré sur NVDA #1429 : une formule à offsets `[0]` (donc UN seul
+    exercice RÉELLEMENT lu) était titrée « … sur les exercices 2022 à 2026 » — ce que le `libelle`
+    de la ligne de plan (ce qui avait été DEMANDÉ) affirmait, pas ce que l'expression avait lu. Et
+    symétriquement : une formule qui lit RÉELLEMENT plusieurs exercices (un décalage `[-k]`, #74) ne
+    les affichait pas tous — seule l'ancre de BASE (offset 0) nourrissait `periode_simple`. `period`/
+    `period_end`/`fiscal_period` du structuré restent sur l'ancre de base (#113) : seule la PRÉSENTATION
+    change, pas la date qui fait foi.
+    """
+    fins = sorted({p.end for p in points.values()})
+    if len(fins) <= 1:
+        return periode_simple
+    flux_fins = sorted({p.end for p in points.values() if p.cadrage in ("flux", "glissant")})
+    instant_fins = sorted({p.end for p in points.values() if p.cadrage == "instant"})
+    morceaux = []
+    if flux_fins:
+        if len(flux_fins) == 1:
+            morceaux.append(f"EXERCICE CLOS LE {flux_fins[0]}")
+        else:
+            morceaux.append("EXERCICES CLOS LE " + " ET LE ".join(flux_fins))
+    if instant_fins:
+        if len(instant_fins) == 1:
+            morceaux.append(f"AU {instant_fins[0]}")
+        else:
+            morceaux.append("AUX " + " ET AU ".join(instant_fins))
+    return " + ".join(morceaux) if morceaux else periode_simple
+
+
 def rendre_resultat(valeur: float, dimension: tuple, devise: str) -> str:
     """Le RÉSULTAT du calcul, rendu pour être LU dans le contenu. Pur.
 
@@ -693,7 +746,6 @@ def construire_fait_apparie(
     ticker_id: str,
     symbole: str,
     cik: int,
-    libelle: str,
     consigne: ConsigneAppariement,
     points: dict[tuple[str, Periode], PointRetenu],
     *,
@@ -702,8 +754,14 @@ def construire_fait_apparie(
 ) -> FaitApparie:
     """L'expression ÉVALUÉE, et le fait qui en sort. Pur : aucune IO, aucun appel modèle.
 
-    `libelle` est la métrique de la ligne AVEUGLE (« capital employé »), du vocabulaire du plan et
-    non du framework — le même statut que celui qui traverse déjà vers le search-worker (#58).
+    Le titre et la 1ʳᵉ ligne du contenu sont composés UNIQUEMENT de ce que la fiche CONTIENT —
+    jamais de ce qu'on lui a DEMANDÉ (arbitrage du 2026-10-18). Plus de `libelle` (la métrique de la
+    ligne de plan, ce qui avait été demandé) dans la signature : NVDA #1429, titrée « Répartition des
+    flux de trésorerie … sur les exercices 2022 à 2026 » alors que son expression (offsets `[0]`) ne
+    lisait qu'UN seul exercice, a été fondée à tort sur cette confusion. Les postes RÉELLEMENT lus
+    viennent de `_postes_libelles` (donc de `libelle_de_reference`, #46) et la ou les périodes
+    RÉELLEMENT lues de `_periode_reellement_lue` — jamais du vocabulaire de la question (#58, qui
+    n'atteint toujours pas ce module : `ConsigneAppariement` ne le reçoit pas).
 
     Le `metric` du `content_structured` est l'EXPRESSION elle-même, et ce choix porte l'identité du
     fait : deux exécutions de la même formule à la même ancre écrivent le même `metric`, donc la
@@ -737,6 +795,10 @@ def construire_fait_apparie(
         periode = flux_libelle
     else:
         periode = f"AU {ancre_bilan}"
+    # Le titre et la 1ʳᵉ ligne du contenu montrent TOUTES les dates réellement lues (une formule à
+    # décalage `[-k]` en lit plusieurs) ; `periode` ci-dessus — celle du structuré — reste sur
+    # l'ancre de BASE (#113), c'est la date qui fait foi, pas la présentation.
+    periode_titre = _periode_reellement_lue(points, periode)
 
     fiabilite = _fiabilite(consigne, points)
     detail = "\n".join(_ligne_de_detail(p) for p in sorted(points.values(), key=_cle_point))
@@ -761,8 +823,13 @@ def construire_fait_apparie(
         qualif = (f"\n⚠️ Calcul NON DÉTERMINISTE sur {len(points)} concept(s) déposé(s). "
                   f"{fiabilite[2] if fiabilite else ''}")
 
+    # Le titre et la 1ʳᵉ ligne du contenu DISENT ce que la fiche contient : les postes réellement lus
+    # (`_postes_libelles`) et la ou les périodes réellement lues (`periode_titre`) — jamais ce qu'on
+    # a demandé (arbitrage du 2026-10-18, défaut mesuré sur NVDA #1429).
+    postes = _postes_libelles(points)
+    titre = f"{postes} — {periode_titre} ({symbole})"
     contenu = (
-        f"{libelle} — {ticker_id} ({symbole}), {periode} : "
+        f"{postes} — {ticker_id} ({symbole}), {periode_titre} : "
         f"{rendre_resultat(valeur, dimension, devise)}.\n"
         f"{entete}\n{detail}"
         f"{hypotheses}{qualif}"
@@ -801,7 +868,7 @@ def construire_fait_apparie(
             "sans qu'on puisse distinguer la date du fait de celle du document")
     return FaitApparie(
         metric=consigne.expression,
-        titre=f"{libelle} — {periode} ({symbole})",
+        titre=titre,
         contenu=contenu,
         structure=structure,
         tags=list(_TAGS),
@@ -824,11 +891,14 @@ async def executer_appariement(
     ticker_id: str,
     symbole: str,
     cik: int,
-    libelle: str,
     consigne: ConsigneAppariement,
     facts: dict[str, list[dict[str, Any]]],
 ) -> int:
     """Exécute UN appariement contre l'inventaire déjà lu et écrit l'entry. Rend son `id`.
+
+    Plus de `libelle` (la métrique DEMANDÉE par la ligne de plan) : le titre et le contenu sont
+    composés par `construire_fait_apparie` depuis ce que l'expression a réellement lu, jamais depuis
+    ce qu'on lui a demandé (arbitrage du 2026-10-18).
 
     La période DEMANDÉE (`consigne.periode`) est appliquée d'abord (`appliquer_periode`, #113).
 
@@ -842,7 +912,7 @@ async def executer_appariement(
     consigne = appliquer_periode(consigne, facts)
     points, ancre_flux, ancre_bilan = resoudre_points(consigne, facts)
     fait = construire_fait_apparie(
-        ticker_id, symbole, cik, libelle, consigne, points,
+        ticker_id, symbole, cik, consigne, points,
         ancre_flux=ancre_flux, ancre_bilan=ancre_bilan)
 
     prevs = await _current_fact_ids(
