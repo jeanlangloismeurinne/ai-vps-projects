@@ -3,3 +3,7 @@ dist/
 dist-review/
 .venv/
 dist-prototypes/
+art/.venv/
+art/.build/
+__pycache__/
+captures/

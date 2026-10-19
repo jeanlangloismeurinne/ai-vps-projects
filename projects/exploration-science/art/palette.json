@@ -1,0 +1,21 @@
+{
+  "$comment": "Single palette shared by the Blender scripts (material base colours) and the v2 app (UI, lines, background). Neutrals dominate; accents are functional. Colours are sRGB hex.",
+  "neutrals": {
+    "ground": { "color": "#e6e8f0", "roughness": 0.95, "metallic": 0.0 },
+    "white": { "color": "#f6f7fa", "roughness": 0.7, "metallic": 0.0 },
+    "light": { "color": "#d3d7e1", "roughness": 0.6, "metallic": 0.0 },
+    "mid": { "color": "#a2a9b8", "roughness": 0.5, "metallic": 0.0 },
+    "metal": { "color": "#8d95a5", "roughness": 0.35, "metallic": 0.8 },
+    "graphite": { "color": "#3b404c", "roughness": 0.55, "metallic": 0.0 }
+  },
+  "accents": {
+    "signal": { "color": "#3461f0", "roughness": 0.45, "metallic": 0.0 },
+    "foliage": { "color": "#8dbb9c", "roughness": 0.9, "metallic": 0.0 },
+    "warm": { "color": "#d9a877", "roughness": 0.8, "metallic": 0.0 }
+  },
+  "special": {
+    "glass": { "color": "#bcd3f2", "roughness": 0.08, "metallic": 0.0, "opacity": 0.55 },
+    "emissive": { "color": "#5b86ff", "roughness": 0.4, "metallic": 0.0, "emissive": 1.0 }
+  },
+  "background": { "top": "#f3f4f8", "bottom": "#dfe3ec" }
+}

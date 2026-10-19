@@ -18,12 +18,16 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "engine/src",
     "tests",
     "vite.config.ts",
-    "prototypes"
+    "prototypes",
+    "v2/src",
+    "scripts/v2"
   ]
 }

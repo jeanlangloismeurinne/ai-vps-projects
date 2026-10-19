@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "assets": {
+    "plinth": {
+      "main": false,
+      "airborne": false,
+      "representations": {
+        "envelope": {
+          "file": "plinth.envelope.glb",
+          "bytes": 3456,
+          "sha256": "fe61b89fb0f4bc7b3b012578281285dcaa49f4d53a8dba81b338d25d037d5aaa",
+          "parts": 1,
+          "triangles": 108,
+          "materials": [
+            "ground"
+          ]
+        }
+      }
+    },
+    "probe": {
+      "main": false,
+      "airborne": false,
+      "representations": {
+        "envelope": {
+          "file": "probe.envelope.glb",
+          "bytes": 10460,
+          "sha256": "8b09da006aa27648126394e056f29aa191ed4085108a45debe26e871719c7618",
+          "parts": 3,
+          "triangles": 324,
+          "materials": [
+            "graphite",
+            "signal",
+            "white"
+          ]
+        }
+      }
+    }
+  },
+  "totals": {
+    "bytes": 13916,
+    "triangles": 432
+  }
+}

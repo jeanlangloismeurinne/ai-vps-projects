@@ -10,7 +10,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — capacité en cours : §1 (outillage). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — capacité en cours : §2 (schémas, à soumettre). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -67,6 +67,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
   `.venv/bin/python -m xs_generator node --id starlink-phased-array --question "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?" --parent starlink-terminal:phased-array --sources content/nodes/starlink-phased-array/sources.json --runner api --profile <anthropic-opus | deepinfra-deepseek-v4.1-flash>`
 
 ## Pièges connus
+- V2 : `npm run assets` (Blender, `art/.venv` : `python3 -m venv art/.venv && art/.venv/bin/pip install -r art/requirements.txt`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only …]`. Les messages `ERROR Draco/MeshOptimizer is not available` de `bpy` sont sans effet (compression faite par gltf-transform). Ne jamais utiliser les `preset` d'environnement de drei (HDRI téléchargées) ni Draco (décodeur sur CDN).
 - Lentille Ondes : le shader travaille en unités de scène (`position * uSize`), sinon il ne marche qu'à l'échelle 1 m.
 - `engine/src/content/validation.ts` reste sans import relatif : la page de revue et `validate-node.ts` le lancent sous Node sans bundler (règle dupliquée `derivedTextKey`, testée).
 - Clés de texte : minuscules uniquement (`derived.steering-angle-deg`, pas `derived.steeringAngleDeg`).
@@ -95,7 +96,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 : `roadmap/v2.md` §1 (outillage)**, puis §2 (schémas soumis à l'utilisateur), puis §3 scène de référence itérée sur captures.
+0. **V2 : `roadmap/v2.md` §2** (schémas soumis à l'utilisateur), puis §3 scène de référence itérée sur captures.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.

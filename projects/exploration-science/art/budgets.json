@@ -1,0 +1,6 @@
+{
+  "$comment": "Budgets checked by `npm run check:assets` (roadmap v2, Mesures communes).",
+  "totalBytesMax": 5000000,
+  "sceneTrianglesMax": 300000,
+  "mainObject": { "minParts": 8, "minTriangles": 400, "maxTriangles": 60000 }
+}
