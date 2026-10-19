@@ -490,6 +490,91 @@ indépendamment.
 
 ---
 
+## 10. Limites réelles par palier de modèle (équivalent Opus / équivalent Sonnet)
+
+*Ajouté le 2026-10-19.*
+
+### 10.1 Méthode
+
+**Unité commune** : millions de tokens par semaine, cache compris. C'est l'unité que mesurent les
+compteurs des éditeurs et le seul relevé tiers disponible (Codex Quota Observatory).
+
+**Étalon** : votre Claude Pro mesuré sur le VPS.
+- Semaines pleines S36-S39 et S42 : **220 à 880 M tokens/semaine, médiane ~420 M**, dont ~90 %
+  en Opus [VPS].
+- Valeur au tarif API : **170 à 340 $/semaine** [VPS + HYP sur les prix : Opus 5.5 4 $/20 $,
+  cache 0,20 $ ; Opus 5 5 $/25 $].
+- Ce volume inclut les 5 €/mois d'extra usage et le reset gratuit du 22/09 : c'est une borne
+  haute légère de Pro seul.
+
+**Mix de tokens mesuré** sur vos transcripts : lecture de cache 97,2 %, écriture de cache 2,0 %,
+entrée fraîche 0,3 %, sortie 0,5 %. J'applique ce mix aux autres offres pour en déduire leur
+valeur en dollars.
+
+**Performance** : deux mesures **indépendantes du même laboratoire** (Artificial Analysis),
+pour éviter de mélanger des chiffres d'éditeurs :
+- Intelligence Index v4.3.2 (« II ») ;
+- Terminal-Bench 4.0 (« TB4 »), l'indicateur le plus proche de votre travail (terminal,
+  déploiement, débogage).
+
+Sources : artificialanalysis.ai 2026-09-28, comparatifs AA consultés le 2026-10-19,
+collectivebrain.de 2026-10-19, felloai.com, tech-insider.org 2026-10-18.
+
+⚠️ **Votre Sonnet réel n'est pas Sonnet « max ».** Claude Code règle Sonnet 5.5 en effort
+*Medium* par défaut [OFF : anthropic.com/claude-sonnet-5-5], et AA mesure Sonnet 5.5 *High* à
+**II 47 / TB4 44 %**, contre **56 / 64 %** en *Max*. Le palier Sonnet est donc comparé aux deux.
+
+### 10.2 Palier « Opus » (raisonnement difficile, diagnostic, gros refactor)
+
+Référence : **Claude Opus 5.5 (max), II 58, TB4 60 % (AA), 65 % (Vals)**.
+
+| Offre | Modèle équivalent | Limite publiée | Volume réel estimé / semaine | vs Claude Pro (~420 M) | Écart de performance vs Opus 5.5 |
+|---|---|---|---|---|---|
+| **Claude Pro** (réf.) | Opus 5.5 | 5 h + hebdo, pas de chiffre ; plafond Opus séparé **supprimé** le 14/09 [UTIL : isitclaudetime 2026-10-05] | **~420 M** (220-880) [VPS] | 1× | — |
+| **ChatGPT Plus** | GPT-6 Astra | 5-45 messages / 5 h + hebdo non publié [OFF] | **~45 M** (25-90) [UTIL : Observatory, 1 compte Pro 20× ÷ 20, HYP] | **~0,1×** | II **-9 %** (53) ; TB4 **≈ 0 %** (AA 60 %), **-11 %** (Vals 58,2) |
+| ↳ alternative Plus | **GPT-6.1 Sol en effort max** | 15-160 / 5 h | **~180 M** (90-360) | **~0,4×** | II **-10 %** (52) ; TB4 **-7 %** (56 %). **Presque Astra, avec ~4× plus de quota** |
+| **Google AI Pro** | Gemini 4 Argon | **hebdo seul**, compteur séparé, sans chiffre [UTIL : @antigravity 15/10] | **~10-50 M** [HYP : Ultra « vide 5 h en 30-45 min », Pro « une poignée de requêtes »] | **~0,02-0,1×** | II **-9 %** (53) ; TB4 **-5 %** (57 %) |
+| ↳ bonus AI Pro | **Claude Opus 5.5 dans Antigravity** | bucket « Claude and GPT models », 5 h + hebdo [OFF : docs/models] | **très faible** : « quota épuisé après un prompt » (17/10), modèle absent chez des Pro payants (10-14/10) [UTIL] | ~0,01-0,05× | **0 %** sur le modèle ; harnais Antigravity au lieu de Claude Code (effet non mesuré) |
+| **X Premium** | Grok 4.7 (xhigh) | pool hebdo unique « 4× Plus », sans chiffre [OFF] | **~130 M** pool total partagé, Opus et Sonnet confondus [UTIL : Super ≈ 2,1 G/mois mesuré dans Cursor ×4/15 ; HYP] | ~0,3× | II **-20 %** (46,3) ; TB4 **-50 à -75 %** (16-38 % selon les sources, 28,8 % chez Vals) |
+
+### 10.3 Palier « Sonnet » (exécution d'une spec, tests, travail courant)
+
+Référence : **Claude Sonnet 5.5**, *High* (≈ votre usage) **II 47 / TB4 44 %**, et *Max*
+**II 56 / TB4 64 %**.
+
+| Offre | Modèle équivalent | Limite publiée | Volume réel estimé / semaine | vs Claude Pro | Écart vs Sonnet 5.5 *High* | Écart vs Sonnet 5.5 *Max* |
+|---|---|---|---|---|---|---|
+| **Claude Pro** (réf.) | Sonnet 5.5 | même pool qu'Opus | Sonnet consomme « several times » moins qu'Opus [OFF : help center] → **plus de 420 M** si tout passe en Sonnet | ≥ 1× | — | — |
+| **ChatGPT Plus** | GPT-6.1 Sol (high) | 15-160 / 5 h + hebdo | **~180 M** (90-360), **pool partagé avec Astra** | ~0,4× | II **+10 %** ; TB4 **+17 %** (51,5 %) | II **-7 %** ; TB4 **-20 %** |
+| **Google AI Pro** | Gemini 3.8 Flash (high) | bucket Gemini, 5 h + hebdo, « high, generous » [OFF] | **très variable** : 5 h continues = 5 % de l'hebdo selon un témoignage (soit ~100 h/semaine) ; verrou de 51 h après 5 appels selon un autre [UTIL] | 0 à > 1× | II **-13 %** (41) ; TB4 **-55 %** (20 %) | II **-27 %** ; TB4 **-69 %** |
+| ↳ bonus AI Pro | **Claude Sonnet 5.5 dans Antigravity** | même bucket « Claude and GPT » que l'Opus ci-dessus | très faible (voir 10.2) | ~0,01-0,05× | **0 %** (même modèle) | 0 % |
+| **X Premium** | Grok 4.7 (medium/high) | même pool que le palier Opus | ~130 M partagés | ~0,3× | II **-2 %** ; TB4 **-35 %** (≈ 29 %) | II **-17 %** ; TB4 **-55 %** |
+
+### 10.4 Capacité utile, volume et performance réunis
+
+Indicateur grossier [HYP] : volume relatif × score TB4 relatif, qui pénalise le travail à
+reprendre. À lire comme un ordre de grandeur, pas comme un chiffre.
+
+| Offre | Palier Opus | Palier Sonnet | Pools |
+|---|---|---|---|
+| Claude Pro (réf.) | 1,0 | 1,0 | un seul pool |
+| **ChatGPT Plus** | 0,1 (Astra) ou **~0,37 (Sol max)** | **~0,45** (vs Sonnet High) | un seul pool : Sol **ou** Astra, pas les deux |
+| **Google AI Pro** | ~0,02-0,1 (Argon) | 0 à ~0,5 (Flash, très instable) | **trois buckets cumulables** (Gemini, Argon, Claude/GPT), chacun petit ou erratique |
+| **X Premium** | ~0,1-0,15 | ~0,2 | un seul pool, partagé avec Chat, Bot et Cursor |
+
+**Lecture** :
+- **Sur Plus, l'équivalent Opus rationnel est GPT-6.1 Sol en effort max, pas Astra.** Sol perd
+  1 point d'II sur Astra pour environ 4× plus de quota. Astra se réserve aux impasses.
+- **Le Sonnet d'OpenAI est meilleur que votre Sonnet réel** (Sol *High* contre Sonnet 5.5 en
+  effort par défaut), mais moins bon que Sonnet *Max*. Pour l'exécution d'une spec, la perte de
+  qualité est **nulle ou négative**.
+- **Google a les modèles les plus proches d'Opus** (Argon, et Claude Opus 5.5 lui-même), mais en
+  quantités symboliques sur Pro. Son vrai volume est Flash 3.8, qui perd 55 % sur TB4.
+- **Grok 4.7 se défend sur l'II mais décroche en terminal** (-35 à -75 % selon la source), ce
+  qui pèse lourd pour ce VPS.
+
+---
+
 ## Sources (consultées le 2026-10-19)
 
 **OpenAI**
