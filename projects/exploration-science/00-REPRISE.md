@@ -1,6 +1,6 @@
 ---
 project: exploration-science
-updated: 2026-10-11
+updated: 2026-10-19
 role: >
   Reprise de l'Explorateur de systèmes. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
@@ -10,10 +10,40 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous)** — reste le jalon 6 : déploiement, essai iPad, tests utilisateurs (hors de l'agent).
+> **Décidé le 2026-10-19 : on lance une V2** (section suivante). Sa première session est une session de planification ; sa roadmap n'existe pas encore.
+> **Roadmap active jusque-là : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous)** — reste le jalon 6 : déploiement, essai iPad, tests utilisateurs (hors de l'agent).
 > **En parallèle : `roadmap/phase1-generator.md`** (validée le 2026-10-11) — capacités 1 et 2 presque faites ; prochaine : **§3, banc de non-régression**.
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
+
+## V2 — décidée le 2026-10-19
+
+**Pourquoi.** Les prototypes de rendu (A à G, puis M « maquette », dans `prototypes/render/`) restent très loin de l'image visée par l'utilisateur : `docs/v2-reference-starlink.png`, une île en vue d'oiseau avec maisons, stations sol, satellites, faisceaux et Terre courbe. La cause : on cherchait un rendu que le générateur refasse à chaque question, à coût nul, entièrement calculé. Ce rendu-là demande des modèles détaillés, une lumière précalculée et une direction artistique, ce qui suppose de construire une fois et de soigner.
+
+**Principes de départ** (proposés le 2026-10-19 ; la session 1 peut les remettre en cause entièrement) :
+1. **Trois sujets distincts.**
+   - **Le monde**, scène globale construite une fois, en vue d'oiseau. Il est produit hors navigateur (Blender piloté par script, lumière précalculée), puis exporté en tuiles chargées à la demande. Contrainte : la mémoire de l'iPad dans Safari.
+   - **Les objets sur mesure**, qui peuplent ce monde dans une logique de jeu vidéo : un monde où naviguer, plein de choses à explorer. Deux niveaux par objet :
+     - l'enveloppe, vue dans le monde ; sources possibles : bibliothèques sous licence, génération 3D par IA, modelage scripté ;
+     - l'intérieur exact, qu'on explore en plongeant : composants paramétriques et phénomènes simulés comme aujourd'hui.
+   - **Le modèle de données et la narration** : un monde qui contient des systèmes, faits d'objets reliés par des flux. Chaque objet a un ancrage dans le monde et des niveaux de plongée. Les visites guidées s'appuient dessus.
+2. **Règle de récit (utilisateur)** : toujours expliquer le système global dans lequel un objet s'inscrit avant de zoomer dans l'objet.
+3. **On garde** le cœur du moteur : caméra contrainte, Play, sous-titres, lentilles, simulateurs, textes, schémas et validation, sources. **On jette** les prototypes de rendu. La session V2 ne doit pas les lire, pour ne pas être influencée.
+4. **Ne pas commencer par un monde immense** (consigne de l'utilisateur). On commence par un monde **cohérent, extensible et mesurable** : un petit morceau tenu à la qualité de la référence ; une méthode qui permet d'y ajouter un système ou un objet sans tout refaire ; des critères chiffrés pour juger la fidélité visuelle, la fluidité et la mémoire sur iPad, et le coût d'ajout d'un objet.
+
+**Session 1 de la V2 = planification**, sans rien construire :
+- remettre en cause ces principes si besoin ;
+- construire une vision claire de l'objectif ;
+- définir ce que « cohérent, extensible, mesurable » veut dire concrètement ;
+- proposer une roadmap (`roadmap/v2.md`) à faire valider par l'utilisateur.
+
+Ce qui n'est pas tranché :
+- un seul monde pour tous les sujets, ou un monde par grand thème ;
+- un budget de licences pour les modèles ;
+- Blender dans la session cloud ou sur le VPS ;
+- le coût réel de la génération 3D par IA (à vérifier, pas de chiffre de mémoire).
+
+Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
 ## Jalons Phase 0
 - [x] 1. Schémas et exemples de contenu — format `0.2` (2026-10-10)
@@ -59,7 +89,7 @@ Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Hi
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
-- **Rendu immersif — décision de l'utilisateur en attente.** Prototypes jetables dans `prototypes/render/` (`npx vite -c prototypes/render/vite.config.ts`, routes `#c-arrival`, `#e-arrival`, `#m-overview`, `#m-house`…), branchés sur la vraie scène Starlink. Pistes : A quartier stylisé, B ciel photo (déconseillé), C kit Kenney, E lieu photographié (réaliste mais seulement à hauteur d'œil), F matières photo, G rendu caméra, D tracé de rayons (écarté : lent, bruité). **Piste en tête : M « maquette miniature »** (`diorama.ts`, d'après une illustration fournie par l'utilisateur) : île procédurale, forêt dupliquée, eau par profondeur, limbe terrestre, faisceaux avec halo, effet maquette ; vue du système puis zoom sur la maison dans la même scène ; ≈ 2-3 lots pour le kit réel, génération ≈ 0 $. Principe de récit posé par l'utilisateur : toujours expliquer le système global avant de zoomer dans un objet (à inscrire dans la spec s'il valide). Pages : comparaison A/B/C https://claude.ai/artifact/UUEhsdGwK6kiPs5mY5yh6X ; D/E/F/G https://claude.ai/artifact/NCjzcU9zWWcQvnZV1QHr8C ; M https://claude.ai/artifact/2EYMUwTaxJJafeVSzdAeJV. Questions ouvertes : retenir M à la place de E ; règle de récit dans la spec ; ajouts au format (décor île, densité de forêt, style des liaisons) à soumettre avant implémentation. Textures Terre, briques, herbe (exemples three.js) à remplacer par des sources libres avant toute mise en ligne.
+- **Rendu immersif : remplacé par la V2** (section en tête). Les prototypes `prototypes/render/` et les pages de comparaison (A/B/C https://claude.ai/artifact/UUEhsdGwK6kiPs5mY5yh6X ; D/E/F/G https://claude.ai/artifact/NCjzcU9zWWcQvnZV1QHr8C ; M https://claude.ai/artifact/2EYMUwTaxJJafeVSzdAeJV) restent comme trace, à ne pas reprendre comme base.
 - **Essai iPad** (déployé le 2026-10-13 ; se connecter d'abord au hub) : avec `?perf` (viser ≥ 55 i/s, rapport de pixels ≥ 1,5) : gestes et fluidité seulement vérifiés en émulation.
 - **Runs API réels** (roadmap §2) : `anthropic-opus` puis `deepinfra-deepseek-v4.1-flash` sur `starlink-phased-array`, depuis le VPS (clés à poser). Donnent le coût réel par nœud.
 - **Banc de non-régression** (roadmap §3), puis socle backend (§4) et étapes amont (§5).
