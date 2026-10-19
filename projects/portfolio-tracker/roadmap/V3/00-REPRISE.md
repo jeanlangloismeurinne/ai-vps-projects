@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -21,24 +21,14 @@ Ordre de `07-avant-comite.md` : (1) la matière — **close** ; (2) arbitrages �
 dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
 (a) ✅ **relance bornée + réinitialisation** (fait le 2026-10-17, `c2bc1af`, migration 058 — CONVENTIONS #137
 « CONSTRUIT ») ; (b) ✅ **fraîcheur sujet par sujet (15)** (fait le 2026-10-18, `331aa7c` — CONVENTIONS #137
-« CONSTRUIT le 2026-10-18 ») ; (c) ✅ **mandats clos à la livraison (14)** (fait le 2026-10-18, `8af6f4a`) ; **ré-analyse qui dégrade (13) — EN COURS** ; (d) données : ma_2 reformulée
+« CONSTRUIT le 2026-10-18 ») ; (c) ✅ **mandats clos à la livraison (14)** (`8af6f4a`) et ✅ **ré-analyse qui dégrade (13)** (`6760090`) ; (d) données : ma_2 reformulée
 (12), taux exigé 10 % (10), me_5 → liste des marchés visés (9) ; (e) mesurer « répondu sans le chiffre-objet »
 (11, cas qf_6) ; puis (4) valorisation, (5) test. **Jalon 1 = NVDA + RVMD** ; code générique. Modèle : Opus pour
-la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée.
-**Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
-la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
-RVMD reclassée « commerciale » (pièce #944), qualité financière RVMD 8/8 à jour ; les autres chapitres RVMD
-attendent le 10-Q du T3. Récit #138/#139 et point 15 : archive, section « 2026-10-18 — sortis à la clôture du point 14 ».
-**Point 14 CONSTRUIT le 2026-10-18** (`8af6f4a`, CONVENTIONS #137) : une réponse écrite sert la demande
-ouverte de sa question ; un refus d'agent n'en ouvre plus ; rattrapage 983-986, 2849 appliqué (2918 RVMD se_3
-reste ouvert à bon droit). **PROCHAIN PAS : point 13** — causes établies (07 §3.13 : NVDA = titre de pièce qui
-promet 5 ans pour 1 exercice, défaut ACTIF ; RVMD = bug #100 corrigé par #101) ; à faire : (i) corriger le titre
-des fiches du relevé (période mesurée, jamais le libellé demandé) ; (ii) arbitrage de la règle de gouvernance
-(options posées : signaler + rétablir / même pièces = en attente / geste seul) — réponse de l'utilisateur attendue. Dettes
-nommées : l'outil d'acceptation ne remet pas le socle ni les lectures (n'est pas la chaîne) ; autres
+la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée. Récits #138/#139, points
+14/15, relance d'un chapitre : archive, section « 2026-10-19 — sortis à la clôture du point 13 ».
+**Point 13 CONSTRUIT le 2026-10-19** (`6760090`, migration 060, CONVENTIONS #137) : titre d'une pièce = ce qu'elle contient (233 retitrées, embeddings recalculés) ; une baisse de fondement est signalée au comité (niveau 1 bloqué, NVDA ma_1 #1499 ← #1475), qui peut rétablir la précédente (geste au PV). **PROCHAIN PAS : (d) données** — ma_2 reformulée (12), taux exigé 10 % (10), me_5 → liste des marchés visés (9). Le comité devra lire la baisse NVDA ma_1 (elle était juste : acquitter ou renvoyer). Dettes
+nommées : `negatif_collecte_executor.sh` 43/44 (dette antérieure : `FormuleInexecutable` non capturée autour de `recette_retenue`) ; `synthesis_feed` titré par le modèle (sans appelant V3) ; l'outil d'acceptation ne remet pas le socle ni les lectures (n'est pas la chaîne) ; autres
 questions dont le verdict lit un seul chiffre à recenser (`sens_lu_sur`, seuls qf_3/qf_5 déclarés).
-⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`, `montrer_dossier.sh`
-ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
@@ -51,14 +41,9 @@ ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-18, après le point 14 : 65 checks, 4973 assertions ; négatifs framework_persist 8/0, bouclage 12/0, executer_chaine 3/0).
-- **Périmètre d'une relance** (2026-10-17, `questions_a_relancer`, lecture seule) : NVDA 22 ouvertes (qualité
-  financière : 0, tout est à jour), RVMD 27. **RVMD qualité financière : ses 4 réponses sont désormais
-  PÉRIMÉES** (fait publié depuis — à regarder avec le point 15). PV du comité : **0 décision** en base.
-- **Chiffres sans pièce (#136)** : 19 sur les réponses en vigueur NVDA+RVMD (`montrer_parcours.sh`, colonne
-  « sans pièce ») ; NVDA me_6 refaite (#1597, 0 sans pièce — mais comptes clients cités sur la mauvaise pièce).
-- **Production** : dernier déploiement `8af6f4a` (point 14), vérifié dans le conteneur (un seul conteneur) et au dossier RVMD (plus de « repartie en recherche » sur mo_1/mo_3/mo_4). Mandats : 5 servis, 1 manager ouvert (2918).
-- **Prochaine migration : 060** (059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-19, après le point 13 : 66 checks, 5041 assertions).
+- **Production** : dernier déploiement `6760090` (point 13, backend + frontend), vérifié dans le conteneur et par l'API (baisse NVDA servie). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
+- **Prochaine migration : 061** (060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.

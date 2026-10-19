@@ -8,6 +8,31 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 
 # Archive — journal du chantier V2 (provenance cards)
 
+
+## 2026-10-19 — sortis à la clôture du point 13
+
+**Point 14 CONSTRUIT le 2026-10-18** (`8af6f4a`, CONVENTIONS #137) : une réponse écrite sert la demande
+ouverte de sa question ; un refus d'agent n'en ouvre plus ; rattrapage 983-986, 2849 appliqué (2918 RVMD se_3
+reste ouvert à bon droit). **PROCHAIN PAS : point 13** — causes établies (07 §3.13 : NVDA = titre de pièce qui
+promet 5 ans pour 1 exercice, défaut ACTIF ; RVMD = bug #100 corrigé par #101) ; à faire : (i) corriger le titre
+des fiches du relevé (période mesurée, jamais le libellé demandé) ; (ii) arbitrage de la règle de gouvernance
+(options posées : signaler + rétablir / même pièces = en attente / geste seul) — réponse de l'utilisateur attendue.
+
+**Relancer un chapitre** : `executer_chaine.sh` ne refait plus que l'ouvert (imprime ouvertes/closes et pourquoi) ;
+la reconstruction du test (#127) = remise à zéro du chapitre (niveau 2, bouton, tracée au PV) PUIS relance.
+RVMD reclassée « commerciale » (pièce #944), qualité financière RVMD 8/8 à jour ; les autres chapitres RVMD
+attendent le 10-Q du T3. Récits #138/#139, points 14/15 : archive (sections du 2026-10-18 et 2026-10-19).
+
+⚠️ Les lanceurs `acceptation_analyste.sh`, `executer_chaine.sh`, `boucler_renvois.sh`, `montrer_dossier.sh`
+ne transmettaient PAS leurs variables d'environnement au conteneur avant le 2026-10-18.
+
+- **Périmètre d'une relance** (2026-10-17, `questions_a_relancer`, lecture seule) : NVDA 22 ouvertes (qualité
+  financière : 0, tout est à jour), RVMD 27. **RVMD qualité financière : ses 4 réponses sont désormais
+  PÉRIMÉES** (fait publié depuis — à regarder avec le point 15). PV du comité : **0 décision** en base.
+
+- **Chiffres sans pièce (#136)** : 19 sur les réponses en vigueur NVDA+RVMD (`montrer_parcours.sh`, colonne
+  « sans pièce ») ; NVDA me_6 refaite (#1597, 0 sans pièce — mais comptes clients cités sur la mauvaise pièce).
+
 ## 2026-10-16 — COPIE CONFORME du 00-REPRISE.md avant son allègement (état complet, 67 Ko)
 
 > Le fichier de reprise a été réduit à l'essentiel le 2026-10-16 (demande de l'utilisateur : économiser le

@@ -70,7 +70,7 @@ role: >
 
 ## 3. La tenue du dossier : quand une réponse est-elle en vigueur
 
-13. **Ré-analyse qui dégrade une réponse** [A] — NVDA ma_1 : fondée (périmée) → « sans fondement » au
+13. ~~**Ré-analyse qui dégrade une réponse**~~ ✅ **Fait le 2026-10-19 (#137 point 13, `6760090`, migration 060)** — titre d'une pièce = ce qu'elle contient (233 pièces retitrées) ; une baisse de fondement est signalée au comité, qui peut rétablir la précédente. [A] — NVDA ma_1 : fondée (périmée) → « sans fondement » au
     passage suivant ; un refus d'agent ne doit pas devenir une demande de recherche. ⚠️ La règle proposée
     (« la nouvelle n'entre en vigueur que si au moins aussi fondée ») a été **écartée par l'utilisateur
     le 2026-10-16** : sujet laissé en dette, à repenser. Prérequis du test de reproductibilité.
@@ -81,7 +81,7 @@ role: >
     pas la période MESURÉE ; #1499 a lu juste. Défaut toujours présent (1 pièce touchée aujourd'hui).
     RVMD qf_6 (29/09) : la NOUVELLE (#897, effacée par retrait) était refusée à tort — encadré de chiffres clés
     (#100) déployé 2 min avant, « un chiffre manquant fait tomber la question », corrigé le soir même (#101,
-    mesuré 3/3) puis réémise #924 `repondu`. Arbitrage de la règle de gouvernance EN ATTENTE de l'utilisateur.
+    mesuré 3/3) puis réémise #924 `repondu`. Arbitrage rendu le 2026-10-18 : « le titre des pièces est basé sur ce qu'elle contient, jamais sur ce qu'on lui demande » + règle légère en filet de sécurité (la dernière analyse fait foi, toute baisse signalée au comité, rétablissement signé au PV).
 14. ~~**Demandes de recherche jamais closes**~~ ✅ **Fait le 2026-10-18 (#137 point 14, `8af6f4a`)** — une réponse écrite
     sert la demande ouverte de sa question ; un refus d'agent n'ouvre plus de demande ; rattrapage 983-986, 2849. [C] — mandats 983-986, 2612/2613, 2975-2977 restent
     ouverts quand la question a trouvé sa réponse.

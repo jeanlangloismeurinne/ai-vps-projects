@@ -3353,6 +3353,31 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
   (983-986, 2849 servis ; 2918 RVMD se_3 reste ouvert à bon droit). Preuve : `check_framework_persist.py`
   §6-§7 + `negatif_framework_persist.sh` (8/0), `check_bouclage.py` §7 + `negatif_bouclage.sh` (12/0),
   `check_executer_chaine.py` + `negatif_executer_chaine.sh` (3/0).
+- **La ré-analyse qui dégrade une réponse (point 13, inventaire 07 §3)** — **CONSTRUIT le 2026-10-19 (`6760090`,
+  migration 060)**. Causes établies d'abord (demande de l'utilisateur : un bug corrigé n'appelle pas la même
+  réponse qu'une instabilité du modèle) : aucune instabilité — NVDA ma_1 #1475 était fondée à tort sur une
+  pièce dont le titre promettait 5 exercices pour un seul lu ; RVMD qf_6 = bug #100 corrigé par #101.
+  Deux arbitrages de l'utilisateur (2026-10-18) : **(i) « le titre des pièces est basé sur ce qu'elle
+  contient, jamais sur ce qu'on lui demande »** — relevé des dépôts (`appariement_feed`) titré par ses postes
+  lus (libellé du gabarit, `socle_comptes.libelle_du_concept` ; 3 premiers + « et N autres postes ») et ses
+  périodes RÉELLEMENT lues ; le paramètre `libelle` (métrique de la ligne de plan) est supprimé ; la Lecture
+  du collecteur est titrée par le nom du document (`titre_de_fiche`, détenteur unique), jamais par le titre du
+  modèle. Rattrapage `tools/retitrer_pieces.sh` (à blanc par défaut) : 233 pièces en vigueur retitrées le
+  2026-10-19 (30 relevés, 203 lectures), embeddings recalculés (`backfill_embeddings`, 234/0). ⚠️ `synthesis_feed`
+  écrit encore un titre rédigé par le modèle, mais n'a aucun appelant V3 actif — à traiter s'il revit.
+  **(ii) Filet de sécurité, règle légère** — ce que ferait un fonds : un changement de recommandation
+  d'analyste est publié, le gérant voit la variation et peut la contester. La dernière analyse fait foi ;
+  une réponse courante dont le fondement BAISSE (`repondu` > `approxime` > `non_fondable`, `sans_objet` hors
+  comparaison) sur sa précédente immédiate est signalée au comité avec l'ancienne à côté et la raison de
+  l'analyste (`revision.baisse_a_lire`, PURE, recalculée à la lecture, éteinte par toute décision du comité
+  postérieure à la courante) ; une baisse à lire empêche « dossier complet » au niveau 1 (même forme que #139).
+  Geste `comite.retablir` : la précédente immédiate est réécrite comme réponse NEUVE (append-only ; ferme un
+  mandat ouvert comme toute réponse, point 14), PV `answer_id` = la copie, `retablie_depuis_id` = la
+  précédente ; refusé si la réponse désignée n'est pas la précédente immédiate d'une courante, si ce n'est pas
+  une baisse, autre dossier/version, ou contrat antérieur (« réinitialiser plutôt »). Ce n'est PAS une
+  acceptation. Mesuré : NVDA ma_1 #1499 ← #1475 seule baisse ; RVMD 0. Preuve : `check_revision.py` +
+  `negatif_revision.sh` (8/0), `check_comite_persist` §7 + négatif (14/0), `check_parcours` + négatif (42/0),
+  `check_appariement_feed` §11 + négatif (35/35), `check_search_worker` + négatif (44/44), `negatif_060.sh` (15/0).
 - **Le périmètre du test (point 20)** — jalon 1 = NVDA + RVMD jusqu'au comité ; puis une financière
   américaine, puis un émetteur étranger ; MSFT en contrôle de reproduction (tech voisine de NVDA). **Tout
   développement reste GÉNÉRIQUE** (aucune règle propre à un titre) pour que l'extension ne coûte rien.
