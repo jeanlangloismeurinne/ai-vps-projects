@@ -15,6 +15,7 @@ import { addProceduralNeighbourhood } from "./neighbourhood";
 import { buildOrbitScene } from "./orbit";
 import { addClouds, addGround, addSkyAndLight, enableShadows } from "./outdoor";
 import { addPhotographedSky, realisticMaterials } from "./photo";
+import { diorama } from "./diorama";
 import { addPhotographedPlace, cameraLook, groundAtCamera, loadPanorama, pathTrace, photographedMaterials, PANORAMAS } from "./mockups";
 
 // ?option=…&shot=… in dev; #option-shot (e.g. #c-orbit) where only the hash reaches the page (published preview).
@@ -39,7 +40,7 @@ for (const [o, s, label] of [
   ["now", "roof", "Actuel (toit)"], ["a", "roof", "A (toit)"], ["b", "roof", "B (toit)"], ["c", "roof", "C (toit)"],
   ["c", "orbit", "C · orbite"], ["now", "lab", "Labo actuel"], ["better", "lab", "Labo amélioré"],
   ["e", "arrival", "E+F+G"], ["e", "roof", "E+F+G (toit)"], ["d", "arrival", "D tracé"], ["d", "roof", "D tracé (toit)"],
-  ["studio", "lab", "Labo studio"], ["dpt", "lab", "Labo tracé"],
+  ["studio", "lab", "Labo studio"], ["dpt", "lab", "Labo tracé"], ["m", "overview", "Maquette · système"], ["m", "house", "Maquette · maison"],
 ] as const) {
   const a = Object.assign(document.createElement("a"), { href: `#${o}-${s}`, textContent: label });
   if (o === option && s === shotName) a.className = "on";
@@ -171,6 +172,7 @@ async function lab(near = false): Promise<void> {
   run(stage, () => ++frames === 40 && ready());
 }
 
-if (shotName === "orbit") orbit();
+if (option === "m") void diorama(app, shotName, ready);
+else if (shotName === "orbit") orbit();
 else if (shotName === "lab" || shotName === "labnear") void lab(shotName === "labnear");
 else void outdoor();

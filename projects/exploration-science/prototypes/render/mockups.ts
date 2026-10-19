@@ -103,7 +103,7 @@ export function groundAtCamera(stage: Stage, pano: Texture): void {
 }
 
 /** World-scale UVs (box projection), so a photo texture keeps its real size on every face. */
-function worldUVs(mesh: Mesh, tile: number): void {
+export function worldUVs(mesh: Mesh, tile: number): void {
   mesh.updateMatrixWorld(true);
   const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
   g.computeVertexNormals();
