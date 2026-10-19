@@ -600,6 +600,77 @@ reprendre. À lire comme un ordre de grandeur, pas comme un chiffre.
 
 ---
 
+## 11. Arbitrage révisé : exploration-science en projet autonome (2026-10-19)
+
+**Nouvelle donne (utilisateur)** : portfolio-tracker reste sur Claude Code. Le second abonnement
+sert à **accélérer exploration-science**, piloté en autonome. La question n'est plus « qui exécute
+des tâches que Claude délègue ? » mais « quel agent porte seul ce projet ? ».
+
+### 11.1 Ce que le projet exige [VPS]
+
+- **Pile** : React Three Fiber + drei, Blender scripté (`bpy` 5.2.2, précalcul AO en Cycles CPU),
+  JSON Schema + Ajv, Vitest, captures Playwright en 4 formats (`roadmap/v2.md`).
+- **Acceptation visuelle** : `QUALITY_BAR.md` impose le niveau « illustration 3D premium » et une
+  boucle **captures → défauts → corrections**, jugée sur images. C'est du front-end/3D itératif,
+  avec **jugement visuel** sur captures.
+- **Où il tourne aujourd'hui** : en sessions Claude Code **cloud** (88 commits signés « Claude »
+  avec un lien de session claude.ai/code). Il puise dans le quota Claude Pro sans apparaître dans
+  les transcripts du VPS. `art/.venv` (Blender) **n'existe pas sur le VPS**.
+- **Spécifique à Claude** : publication d'aperçus en Artifact, connecteur Parallel pour vérifier les
+  sources, règles dans `CLAUDE.md`. À transposer : l'aperçu passe par le déploiement existant
+  derrière le hub, la recherche web existe dans les deux CLI, les règles vont dans le fichier de
+  règles de l'autre agent (format exact à vérifier à l'installation).
+
+### 11.2 Qualité sur ce type de travail (mesures tierces, octobre 2026)
+
+| Mesure (ce qu'elle teste) | Claude Opus 5.5 | Sonnet 5.5 | GPT-6 Astra | GPT-6(.1) Sol | Gemini 4 Argon | Gemini 3.8 Flash | Grok |
+|---|---|---|---|---|---|---|---|
+| **WebDev Arena** (front-end agentique, votes humains, 16/10) | **1807** (#1) | 1712 (#3) | 1778 (#2) | 1684 (#8, 6 Sol max) | 1678 (#9) | 1585 (#31) | 1618 (#25, Grok 4.6) |
+| **Vibe Code Bench 1-100** (étendre une app requête après requête, Vals 14/10) | **30,4 %** | — | 27,6 % | 20,0 % (5.6 Sol) | 21,2 % | 18,8 % | 14,8 % (4.6) |
+| **Compréhension d'images** (Chartography, éditeur Google) | 66,3 % | — | 71,0 % | — | **71,6 %** | — | — |
+| TB4 (terminal, AA) | 60 % | 64 % (max) / 44 % (high) | 60 % | 56 % | 57 % | 20 % | 16-38 % |
+
+Lecture :
+- **Côté OpenAI**, le modèle à volume (Sol) est au niveau d'Argon en front-end. Astra se place
+  entre Sonnet et Opus, mais son quota est 4× plus petit.
+- **Côté Google**, Argon est fort, notamment sur l'image, ce qui sert la boucle de captures. Mais
+  il ne tient pas une semaine de travail sur Pro (quota hebdomadaire seul, quelques tâches).
+  Le moteur au quotidien serait **Flash 3.8 : -130 points WebDev sous Sonnet, et dernier ou
+  presque partout**. Or QUALITY_BAR refuse précisément le rendu « fonctionnel mais générique ».
+- **Grok** est hors course sur ce projet.
+
+### 11.3 Pilotage autonome et infrastructure
+
+| | **Codex (Plus)** | **Antigravity (AI Pro)** |
+|---|---|---|
+| Piloter depuis l'iPad / iPhone | **pas natif depuis le VPS** : l'app mobile se connecte à un hôte *desktop* Mac/Windows, lui-même relié en SSH au VPS [OFF : learn.chatgpt.com/docs/remote-connections]. Sinon `codex` dans tmux via Termius/a-Shell (votre schéma actuel avec Claude). Ou **Codex cloud** (dépôt GitHub, conteneurs OpenAI), qui consomme plus d'allocation | **natif** : `agy remote-control start` sur le VPS, pilotage depuis le navigateur ou le téléphone, notifications push [OFF] |
+| Où tourne Blender | VPS (2 vCPU, 3,7 Go, 2,6 Go libres : **rescale CX43 à prévoir**, script `/root/grok` réutilisable) **ou** environnement Codex cloud | **VPS uniquement** : même contrainte de rescale |
+| Captures et jugement visuel | Playwright existant + `codex --image` / lecture d'images | Playwright existant + sous-agent navigateur (DevTools, vidéo) ; meilleur modèle d'image (Argon) mais rare |
+| Volume quotidien réaliste | ~0,4× un Claude Pro, **tout pour ce projet** | Flash : volume large mais erratique ; Argon : quelques tâches par semaine |
+
+### 11.4 Verdict
+
+**L'arbitrage ne change pas : Codex reste devant**, et l'écart se creuse sur ce projet. Le travail
+d'exploration-science (front-end 3D itératif, barre visuelle « premium ») est celui où le modèle
+à volume de Google (Flash) est le plus faible, tandis que Sol et Astra s'y placent au niveau
+d'Argon ou au-dessus.
+
+**Le seul vrai avantage de Google** est le Remote Control natif sur le VPS, depuis l'iPad, sans
+machine desktop allumée. Il devient décisif si vous voulez piloter exploration-science surtout
+depuis l'iPad, sans Mac ni PC, *et* que le tmux par Termius ne vous convient pas.
+
+**Accélération attendue** [HYP] : aujourd'hui exploration-science partage le quota Claude Pro avec
+portfolio-tracker. Lui dédier Plus lui donne ~0,4× d'un Claude Pro **à lui seul**, et rend à
+portfolio-tracker la part de Claude qu'il consommait. Si ce n'est toujours pas assez, le levier
+suivant est ChatGPT Pro 100 $ (pas de fenêtre de 5 h, ~5× Plus), hors budget de 30 €.
+
+**À trancher au démarrage** :
+1. Blender sur le VPS (rescale) ou dans Codex cloud.
+2. Transposer `CLAUDE.md`, `QUALITY_BAR.md` et la règle de validation par jalons dans le fichier de
+   règles de Codex. Sans cela, l'agent ne s'arrêtera pas aux jalons de validation.
+
+---
+
 ## Sources (consultées le 2026-10-19)
 
 **OpenAI**
@@ -630,6 +701,11 @@ reprendre. À lire comme un ordre de grandeur, pas comme un chiffre.
 - [OFF] docs.x.ai/x-subscription/pricing (2026-10-11), docs.x.ai/grok/faq (2026-10-10), docs.x.ai/build/overview
 - [OFF] x.ai/news/grok-build-cli — mode headless
 - [UTIL] forum.cursor.com « Introducing The X Subscription » — pool vidé en un jour, ~2,1 G tokens sur Super (2026-10-13 à 15)
+
+**Projet autonome (§11)**
+- [UTIL] arena.ai/leaderboard/code/webdev (2026-10-16) ; vals.ai/benchmarks/vcb-1-100 (2026-10-14)
+- [OFF] deepmind.google/models/model-cards/gemini-4-argon (2026-10-13, chiffres de l'éditeur)
+- [OFF] learn.chatgpt.com/docs/remote-connections ; developers.openai.com/codex/cli ; codex-docs.com/en/docs/cloud
 
 **Benchmarks et tarifs API**
 - [UTIL] benchleader.com (GPT-6.1 Sol, Gemini 3.8 Flash, données au 2026-10-19)
