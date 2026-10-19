@@ -502,10 +502,35 @@ compteurs des éditeurs et le seul relevé tiers disponible (Codex Quota Observa
 **Étalon** : votre Claude Pro mesuré sur le VPS.
 - Semaines pleines S36-S39 et S42 : **220 à 880 M tokens/semaine, médiane ~420 M**, dont ~90 %
   en Opus [VPS].
-- Valeur au tarif API : **170 à 340 $/semaine** [VPS + HYP sur les prix : Opus 5.5 4 $/20 $,
-  cache 0,20 $ ; Opus 5 5 $/25 $].
+- Valeur au tarif API : **190 à 370 $/semaine** [VPS]. Calcul fait au prix de chaque modèle
+  (platform.claude.com, 2026-10) et avec la **durée de vie réelle du cache** relevée dans les
+  transcripts : 88 % des écritures de cache sont en **1 h** (facturées 2× l'entrée), 12 % en 5 min.
+  C'est le comportement documenté de Claude Code sur abonnement (code.claude.com/docs/prompt-caching).
+  *Correction du 2026-10-19 : la première version comptait toutes les écritures à 1,25×, d'où
+  170-340 $.*
 - Ce volume inclut les 5 €/mois d'extra usage et le reset gratuit du 22/09 : c'est une borne
   haute légère de Pro seul.
+
+**Contrôle par une unité qui ne dépend pas du cache.** 97 % du volume brut est de la relecture
+de cache, peu coûteuse pour les quotas : un ratio en tokens bruts pourrait refléter l'efficacité
+du cache de chaque harnais plutôt que le travail fait. Je recalcule donc en **tokens traités hors
+relecture** (entrée fraîche + écritures de cache + sortie), la même définition que le « fresh
+processed » du Codex Quota Observatory.
+
+| | Traité hors relecture / semaine | Taux de lecture en cache |
+|---|---|---|
+| **Claude Pro** (S36-S39, S42) [VPS] | **9-16 M, médiane ~14 M** (dont 1,3-2,7 M de sortie) | 96,4-98,7 % |
+| ChatGPT Plus, Astra [UTIL + HYP] | ~1,5 M (Pro 20× ≈ 30 M au total, ÷ 20) | ~96,7 % (échantillon Observatory) |
+| ChatGPT Plus, Sol [HYP] | ~6 M (Astra × 3,9, ratio de quota par token observé) | idem |
+
+Les ratios sont les mêmes qu'en tokens bruts : **Sol ≈ 0,4×, Astra ≈ 0,1×**. C'est cohérent,
+puisque les deux harnais atteignent un taux de cache quasi identique (~97 %). Les chiffres Google
+et xAI ci-dessous restent en tokens bruts, faute de décomposition publiée. Leur ratio n'est valable
+que si leur taux de cache est comparable, ce qui n'est pas vérifié.
+
+Point non mesurable : **la part des relectures de cache dans le quota d'un abonnement** n'est
+publiée par aucun éditeur. Au tarif API, la remise est de 95 % chez Anthropic (Opus et Sonnet 5.5)
+et chez OpenAI (Sol : 2,5 contre 50 crédits).
 
 **Mix de tokens mesuré** sur vos transcripts : lecture de cache 97,2 %, écriture de cache 2,0 %,
 entrée fraîche 0,3 %, sortie 0,5 %. J'applique ce mix aux autres offres pour en déduire leur
