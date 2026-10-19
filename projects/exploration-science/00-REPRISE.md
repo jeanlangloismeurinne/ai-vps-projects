@@ -2,7 +2,7 @@
 project: exploration-science
 updated: 2026-10-19
 role: >
-  Reprise de l'Explorateur de systèmes. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  Reprise de l'Explorateur de systèmes. V2 planifiée le 2026-10-19 (roadmap/v2.md, contrat QUALITY_BAR.md). Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -10,9 +10,8 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Décidé le 2026-10-19 : on lance une V2** (section suivante). Sa première session est une session de planification ; sa roadmap n'existe pas encore.
-> **Roadmap active jusque-là : Phase 0, jalons de `CLAUDE.md` (inline ci-dessous)** — reste le jalon 6 : déploiement, essai iPad, tests utilisateurs (hors de l'agent).
-> **En parallèle : `roadmap/phase1-generator.md`** (validée le 2026-10-11) — capacités 1 et 2 presque faites ; prochaine : **§3, banc de non-régression**.
+> **Roadmap active : `roadmap/v2.md`** — capacité en cours : §1 (outillage). Contrat d'acceptation : `QUALITY_BAR.md`.
+> En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
 
@@ -27,28 +26,12 @@ Deux autres références montrent le rendu attendu **plus près**, à l'échelle
 
 Seule la 3D compte. Les panneaux 2D par-dessus seront conçus plus tard. La cause : on cherchait un rendu que le générateur refasse à chaque question, à coût nul, entièrement calculé. Ce rendu-là demande des modèles détaillés, une lumière précalculée et une direction artistique, ce qui suppose de construire une fois et de soigner.
 
-**Principes de départ** (proposés le 2026-10-19 ; la session 1 peut les remettre en cause entièrement) :
-1. **Trois sujets distincts.**
-   - **Le monde**, scène globale construite une fois, en vue d'oiseau. Il est produit hors navigateur (Blender piloté par script, lumière précalculée), puis exporté en tuiles chargées à la demande. Contrainte : la mémoire de l'iPad dans Safari.
-   - **Les objets sur mesure**, qui peuplent ce monde dans une logique de jeu vidéo : un monde où naviguer, plein de choses à explorer. Deux niveaux par objet :
-     - l'enveloppe, vue dans le monde ; sources possibles : bibliothèques sous licence, génération 3D par IA, modelage scripté ;
-     - l'intérieur exact, qu'on explore en plongeant : composants paramétriques et phénomènes simulés comme aujourd'hui.
-   - **Le modèle de données et la narration** : un monde qui contient des systèmes, faits d'objets reliés par des flux. Chaque objet a un ancrage dans le monde et des niveaux de plongée. Les visites guidées s'appuient dessus.
-2. **Règle de récit (utilisateur)** : toujours expliquer le système global dans lequel un objet s'inscrit avant de zoomer dans l'objet.
-3. **On garde** le cœur du moteur : caméra contrainte, Play, sous-titres, lentilles, simulateurs, textes, schémas et validation, sources. **On jette** les prototypes de rendu. La session V2 ne doit pas les lire, pour ne pas être influencée.
-4. **Ne pas commencer par un monde immense** (consigne de l'utilisateur). On commence par un monde **cohérent, extensible et mesurable** : un petit morceau tenu à la qualité de la référence ; une méthode qui permet d'y ajouter un système ou un objet sans tout refaire ; des critères chiffrés pour juger la fidélité visuelle, la fluidité et la mémoire sur iPad, et le coût d'ajout d'un objet.
-
-**Session 1 de la V2 = planification**, sans rien construire :
-- remettre en cause ces principes si besoin ;
-- construire une vision claire de l'objectif ;
-- définir ce que « cohérent, extensible, mesurable » veut dire concrètement ;
-- proposer une roadmap (`roadmap/v2.md`) à faire valider par l'utilisateur.
-
-Ce qui n'est pas tranché :
-- un seul monde pour tous les sujets, ou un monde par grand thème ;
-- un budget de licences pour les modèles ;
-- Blender dans la session cloud ou sur le VPS ;
-- le coût réel de la génération 3D par IA (à vérifier, pas de chiffre de mémoire).
+**Planifiée le 2026-10-19 (session 1)** → `roadmap/v2.md`, sous contrat `QUALITY_BAR.md` (fourni par l'utilisateur). Décisions :
+- v0 = **une scène Starlink restreinte mais aboutie** (maison, antenne, satellite, station sol), style illustration isométrique éditoriale sur socle ; la photo de référence reste une référence de contenu.
+- **Aucune API externe** (génération 3D/image) : tout par Blender scripté (`bpy` 5.2.2 par pip, Cycles CPU — la session n'a pas de GPU). La piste image→3D (Tripo ≈ 0,30 $, Meshy ≈ 0,60 $ par objet, relevés le 2026-10-19) est écartée pour la v0.
+- **Pile React + React Three Fiber**, entrée `v2.html` à côté du prototype (dérogation validée au « pas de framework UI »).
+- Règle de récit (utilisateur) : toujours le système global avant l'objet — testée en §7.
+- Les prototypes `prototypes/render/` ne servent pas de base (non lus par la session 1).
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -112,6 +95,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
+0. **V2 : `roadmap/v2.md` §1 (outillage)**, puis §2 (schémas soumis à l'utilisateur), puis §3 scène de référence itérée sur captures.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
