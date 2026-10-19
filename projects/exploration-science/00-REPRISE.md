@@ -18,7 +18,14 @@ Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Hi
 
 ## V2 — décidée le 2026-10-19
 
-**Pourquoi.** Les prototypes de rendu (A à G, puis M « maquette », dans `prototypes/render/`) restent très loin de l'image visée par l'utilisateur : `docs/v2-reference-starlink.png`, une île en vue d'oiseau avec maisons, stations sol, satellites, faisceaux et Terre courbe. La cause : on cherchait un rendu que le générateur refasse à chaque question, à coût nul, entièrement calculé. Ce rendu-là demande des modèles détaillés, une lumière précalculée et une direction artistique, ce qui suppose de construire une fois et de soigner.
+**Pourquoi.** Les prototypes de rendu (A à G, puis M « maquette », dans `prototypes/render/`) restent très loin de l'image visée par l'utilisateur : `docs/v2-reference-starlink.png`, une île en vue d'oiseau avec maisons, stations sol, satellites, faisceaux et Terre courbe.
+Deux autres références montrent le rendu attendu **plus près**, à l'échelle d'un site : `docs/v2-reference-zoom-crossdock.jpg` et `docs/v2-reference-zoom-warehouse.jpg` (plateforme logistique en vue isométrique). On y voit :
+- des objets détaillés et lisibles (camions, chariots élévateurs, palettes, quais) ;
+- une palette claire et peu saturée, avec un bleu d'accent ;
+- des ombres douces et un sol neutre, l'objet sélectionné mis en évidence ;
+- des repères posés dans la scène.
+
+Seule la 3D compte. Les panneaux 2D par-dessus seront conçus plus tard. La cause : on cherchait un rendu que le générateur refasse à chaque question, à coût nul, entièrement calculé. Ce rendu-là demande des modèles détaillés, une lumière précalculée et une direction artistique, ce qui suppose de construire une fois et de soigner.
 
 **Principes de départ** (proposés le 2026-10-19 ; la session 1 peut les remettre en cause entièrement) :
 1. **Trois sujets distincts.**
