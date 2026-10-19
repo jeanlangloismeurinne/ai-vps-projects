@@ -2,7 +2,8 @@
 project: exploration-science
 updated: 2026-10-19
 role: >
-  Reprise de l'Explorateur de systèmes. V2 planifiée le 2026-10-19 (roadmap/v2.md, contrat QUALITY_BAR.md). Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage livré,
+  §2 schémas proposés et en attente de validation. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -10,28 +11,29 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — capacité en cours : §2 (schémas, à soumettre). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1 livrée ; §2 proposée (dans la roadmap), **en attente de validation de l'utilisateur** (schémas + radômes). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
 
-## V2 — décidée le 2026-10-19
+## V2 — état
 
-**Pourquoi.** Les prototypes de rendu (A à G, puis M « maquette », dans `prototypes/render/`) restent très loin de l'image visée par l'utilisateur : `docs/v2-reference-starlink.png`, une île en vue d'oiseau avec maisons, stations sol, satellites, faisceaux et Terre courbe.
-Deux autres références montrent le rendu attendu **plus près**, à l'échelle d'un site : `docs/v2-reference-zoom-crossdock.jpg` et `docs/v2-reference-zoom-warehouse.jpg` (plateforme logistique en vue isométrique). On y voit :
-- des objets détaillés et lisibles (camions, chariots élévateurs, palettes, quais) ;
-- une palette claire et peu saturée, avec un bleu d'accent ;
-- des ombres douces et un sol neutre, l'objet sélectionné mis en évidence ;
-- des repères posés dans la scène.
+Récit de la session 1 (2026-10-19 : vérifications d'environnement, prix relevés, premier plan « monde à tuiles » abandonné au profit de QUALITY_BAR) : `00-REPRISE-ARCHIVE.md`, bloc du 2026-10-19.
 
-Seule la 3D compte. Les panneaux 2D par-dessus seront conçus plus tard. La cause : on cherchait un rendu que le générateur refasse à chaque question, à coût nul, entièrement calculé. Ce rendu-là demande des modèles détaillés, une lumière précalculée et une direction artistique, ce qui suppose de construire une fois et de soigner.
+**Décisions durables**
+- Contrat d'acceptation `QUALITY_BAR.md` : une étape ne se coche que sur captures réelles du navigateur, inspectées, grille remplie.
+- v0 = **une scène Starlink restreinte mais aboutie** : maison, antenne, satellite, station sol, liaisons cohérentes.
+- **Cible de style** : `docs/v2-reference-zoom-warehouse.jpg` et `docs/v2-reference-zoom-crossdock.jpg` — isométrique éditorial, palette claire peu saturée, accent bleu, ombres douces, sol neutre, objet sélectionné mis en évidence. `docs/v2-reference-starlink.png` reste une référence de **contenu**, pas de style. Seule la 3D compte ; panneaux 2D conçus plus tard.
+- **Aucune API externe** (génération 3D/image, rendu) : tout par Blender scripté dans le dépôt.
+- **Pile** : React + React Three Fiber + drei, entrée `v2.html` à côté du prototype Phase 0 (dérogation validée au « pas de framework UI »).
+- Règle de récit (utilisateur) : toujours le système global avant l'objet — imposée par la validation de la visite.
+- `prototypes/render/` ne sert pas de base.
 
-**Planifiée le 2026-10-19 (session 1)** → `roadmap/v2.md`, sous contrat `QUALITY_BAR.md` (fourni par l'utilisateur). Décisions :
-- v0 = **une scène Starlink restreinte mais aboutie** (maison, antenne, satellite, station sol), style illustration isométrique éditoriale sur socle ; la photo de référence reste une référence de contenu.
-- **Aucune API externe** (génération 3D/image) : tout par Blender scripté (`bpy` 5.2.2 par pip, Cycles CPU — la session n'a pas de GPU). La piste image→3D (Tripo ≈ 0,30 $, Meshy ≈ 0,60 $ par objet, relevés le 2026-10-19) est écartée pour la v0.
-- **Pile React + React Three Fiber**, entrée `v2.html` à côté du prototype (dérogation validée au « pas de framework UI »).
-- Règle de récit (utilisateur) : toujours le système global avant l'objet — testée en §7.
-- Les prototypes `prototypes/render/` ne servent pas de base (non lus par la session 1).
+**Livré (§1, 2026-10-19)**
+- `art/` : `bpy` 5.2.2 (`art/.venv`), `lib/xs` (géométrie bmesh biseautée, palette, contrôles, précalcul AO Cycles CPU → couleurs de sommet, export GLB fusionné par matériau), `palette.json` (6 neutres, 3 accents, verre, émissif), `budgets.json`, `assets/` (`probe`, `plinth` : objets de test), `scenes/probe.json`, `fixtures/floating.*` (test négatif).
+- Commandes : `npm run assets` (Blender → gltf-transform meshopt → `public/v2/models/manifest.json`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only … --out …]` (4 formats, Chromium SwiftShader : juge composition et matériaux, **pas** la fluidité — iPad mesuré par l'utilisateur).
+- `v2/src/` : `App.tsx` (cadrage auto, hémisphère + directionnelle à ombre douce, `RoomEnvironment` local), `debug.ts` (`window.__xs.ready` / `renderInfo` pour les captures).
+- Tests : `tests/v2/assetChecks.test.ts` (7, dont 6 négatifs). Suite complète 123.
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -80,6 +82,10 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
+- **V2 §2 en attente** : la proposition de schémas et la question des radômes (4 dômes dont un ouvert) sont dans `roadmap/v2.md` §2 ; rien n'est implémenté.
+- **V2, pour §3** (vu sur la première capture) : le sol `ground` sort presque blanc après le mappage tonal (revoir valeurs ou exposition) ; le cadrage automatique place la scène trop bas.
+- **V2 `scripts/v2/capture.ts`** : filtre « Failed to load resource » qui masque les 404 de console (c'est le favicon) — ajouter un favicon à `v2.html` et retirer le filtre.
+- **V2** : `public/` (modèles v2) est désormais copié aussi dans le build de la Phase 0 — sans effet, à garder en tête.
 - **Rendu immersif : remplacé par la V2** (section en tête). Les prototypes `prototypes/render/` et les pages de comparaison (A/B/C https://claude.ai/artifact/UUEhsdGwK6kiPs5mY5yh6X ; D/E/F/G https://claude.ai/artifact/NCjzcU9zWWcQvnZV1QHr8C ; M https://claude.ai/artifact/2EYMUwTaxJJafeVSzdAeJV) restent comme trace, à ne pas reprendre comme base.
 - **Essai iPad** (déployé le 2026-10-13 ; se connecter d'abord au hub) : avec `?perf` (viser ≥ 55 i/s, rapport de pixels ≥ 1,5) : gestes et fluidité seulement vérifiés en émulation.
 - **Runs API réels** (roadmap §2) : `anthropic-opus` puis `deepinfra-deepseek-v4.1-flash` sur `starlink-phased-array`, depuis le VPS (clés à poser). Donnent le coût réel par nœud.
@@ -96,7 +102,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 : `roadmap/v2.md` §2** (schémas soumis à l'utilisateur), puis §3 scène de référence itérée sur captures.
+0. **V2** : (a) faire valider la proposition §2 et les radômes (`roadmap/v2.md` §2) ; (b) implémenter §2 (schémas JSON, Ajv, tests négatifs, `art/scenes` → système + `art/assets.json`) ; (c) §3 scène de référence, boucle captures → défauts → corrections, **arrêt pour validation sur images**.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.

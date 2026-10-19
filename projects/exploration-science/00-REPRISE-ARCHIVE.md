@@ -2,6 +2,13 @@
 
 Récit du travail livré, sorti de `00-REPRISE.md`. Jamais chargé au démarrage : à interroger par `grep`.
 
+## 2026-10-19 — V2, session 1 (planification puis §0–§1)
+
+- Lu sans `prototypes/render/` (consigne utilisateur). Environnement vérifié : `bpy` 5.2.2 installable par pip (wheel cp313, 401 Mo) ; pas de GPU (4 cœurs, 15 Go) → Cycles CPU ; proxy : seuls PyPI, npm et GitHub passent (Tripo, Meshy, fal, Poly Haven, Kenney, ambientCG, Sketchfab, Hugging Face en 403).
+- Prix relevés le 2026-10-19 : Tripo 1 crédit = 0,01 $, image→3D texturé 30 crédits (0,30 $), texte→3D 0,20 $ ; Meshy Pro 20 $/mois pour 1 000 crédits, image→3D texturé 30 crédits (≈ 0,60 $) ; Rodin API dès l'offre Business 120 $/mois.
+- Premier plan proposé (monde « île » hors d'échelle, plans précalculés + couche vivante, comparaison temps réel / précalculé, coût d'ajout d'objet chiffré, génération image→3D pour le décor) : **remplacé** par le contrat `QUALITY_BAR.md` fourni par l'utilisateur (pas d'API externe, React Three Fiber, scène restreinte aboutie, validation par captures). Idées gardées pour après la v0 : monde à plusieurs systèmes, recette d'ajout d'objet, ancrage de `blue-sky`.
+- §1 livrée : chaîne Blender → GLB → navigateur, contrôles et captures (voir `00-REPRISE.md`, « V2 — état »). Mesures : build de la scène test 0,1 s ; précalcul AO 0,08 s sur 1 089 sommets ; `check:assets --determinism` ≈ 3 s ; capture 4 formats ≈ 50 s.
+
 ## Instantané du 2026-10-11 (fin des jalons 1 à 6, amorce de la Phase 1)
 
 Fichier de reprise tel qu'il était avant allègement, sans modification.
