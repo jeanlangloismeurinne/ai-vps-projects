@@ -20,9 +20,13 @@ des trois offres qui réunit à la fois l'autorisation explicite du scénario vi
 qui appelle le CLI officiel), un modèle de premier plan en code agentique (GPT-6.1 Sol) et une
 sortie machine propre (`--json`, `--output-schema`).
 
-- **Google AI Pro est éliminé par les CGU, pas par la qualité.** Google interdit explicitement
-  qu'un agent tiers (Claude Code est cité nommément) pilote `agy` avec une connexion grand public,
-  et applique cette règle par des suspensions automatiques [OFF].
+- **Google AI Pro n'est pas interdit : il se pilote autrement** (correction du 2026-10-19, §9). Le
+  mode headless `agy -p` est fait pour *vos* scripts, cron et CI. Ce que la FAQ déclare « not
+  supported » sous un abonnement grand public, c'est un agent tiers (Claude Code nommément) qui
+  enveloppe `agy` [OFF]. La bonne architecture est donc un projet piloté **directement côté
+  Google** (Remote Control + scripts à vous), pas une délégation depuis Claude. Il reste second
+  derrière Codex pour une autre raison : le modèle disponible en volume (Gemini 3.8 Flash) est
+  faible en tâches terminal, et les quotas sont erratiques.
 - **X Subscription Premium (ex-SuperGrok)** est le second choix. Le CLI est déjà installé et
   l'automatisation est explicitement prévue, mais le modèle est nettement plus faible en tâches
   terminal, l'offre a été refondue il y a 7 jours et les premiers abonnés voient leur pool fondre
@@ -134,7 +138,7 @@ Lecture :
 | Limites mesurées | très dispersées : un utilisateur fait 5 h continues de Flash 3.8 pour 5 % de l'hebdo [UTIL : Reddit, ~2026-10-15] ; un autre est **verrouillé 51 h après 5 appels**, avec trois compteurs contradictoires [UTIL : forum Google 2026-10-12] ; Argon « vide 5 h en 30-45 min » même sur Ultra [UTIL : Reddit] |
 | Au dépassement | blocage, ou crédits IA au tarif Gemini Enterprise [OFF] ; signalé : verrou de **tout le compte**, Flash compris [UTIL] |
 | Mode non interactif | `agy -p`, `--output-format json`, `--model`, `--continue` ; échec franc si non authentifié [OFF : docs/cli/headless] |
-| CGU / risque de compte | **éliminatoire pour ce scénario**. CGU §6 : utiliser un logiciel tiers pour accéder au service est une violation, avec suspension possible [OFF : antigravity.google/terms]. FAQ : « Wrapping `agy` inside third-party coding agents or applications […] is not supported under consumer plans » [OFF : docs/faq]. Réponse sur le forum officiel (2026-10-07/08) : « we do not support using third-party coding agents (like Codex, **Claude Code**, …) to orchestrate or wrap `agy` under a consumer login. […] can trigger **automated ToS enforcement and account suspension** ». Vagues de bannissements documentées en février, mars et juin 2026 [UTIL : forum Google] |
+| CGU / risque de compte | **Dépend de qui tient le volant** (relu le 2026-10-19, §9). **Autorisé et prévu** : `agy -p` « intended for direct scripting and CI workflows » [OFF : docs/faq] ; « script agent tasks, integrate with CI pipelines » [OFF : docs/cli/headless]. **Interdit** : un logiciel tiers qui accède au service, avec l'exemple d'OpenClaw branché sur l'OAuth d'Antigravity (CGU §6) [OFF : /terms]. **« Not supported »** sous plan grand public : envelopper `agy` dans un agent de code tiers (FAQ, Claude Code cité dans la question voisine) [OFF]. Les « réponses Google » du forum **se contredisent** (oui le 30/09 et le 08/10, non le 08/10), et leurs auteurs **ne portent pas de badge staff** (l'un se plaint ailleurs de son abonnement) : ce ne sont **pas** des sources officielles [UTIL]. Les bannissements documentés (février, mars, juin 2026) concernent tous la **réutilisation du jeton OAuth** par OpenClaw ou OpenCode ; je n'ai trouvé **aucun cas** de bannissement pour un `agy` lancé en sous-processus [UTIL] |
 | Échappatoire | clé API AI Studio (facturée au token). AI Pro inclut 10 $/mois de crédits Cloud [UTIL : bleap.finance] : ~1 M de tokens Argon en sortie, négligeable |
 
 ### 2.3 SuperGrok → **X Subscription Premium** (Grok Build)
@@ -236,7 +240,7 @@ elles sont faites pour être réfutées par le test du §7.
 |---|---|---|
 | ChatGPT Plus | **15-25 %** | ~40 % de volume délégable × ~60-70 % d'acceptation sans reprise × plafond hebdo Plus. La revue reste chez Claude et coûte environ 10-20 % de la tâche inline. Gain net estimé de **+10 à +20 %** de capacité de développement |
 | X Premium | **5-12 %** | même volume, mais acceptation plus basse sur les tâches terminal et pool incertain |
-| Google AI Pro | **0 % dans le scénario demandé** | CGU. Hors orchestration, usage manuel séparé possible, mais ce n'est pas l'objectif |
+| Google AI Pro | **~0 % par délégation depuis Claude** (zone grise) ; **~5-15 %** en projet piloté 100 % Google (§9) | la part dépend du projet confié : portfolio-tracker représente ~80 % du volume Claude et n'est pas transférable |
 
 ---
 
@@ -249,7 +253,7 @@ elles sont faites pour être réfutées par le test du §7.
 | Valeur API équivalente | 60-240 $ | 100-400 $ (Flash) | 100-400 $ (papier) |
 | Qualité code (TB 4.0) | **~55 %** | Flash ~20 % / Argon ~57 % | ~29-38 % |
 | Friction d'intégration VPS | faible : binaire, `--device-auth`, `--json`, `--output-schema` | faible techniquement | **la plus faible** : déjà installé et connecté |
-| Risque CGU | **faible** (scripté documenté par l'éditeur) | **rédhibitoire** (orchestration par Claude Code interdite nommément, enforcement automatique) | faible à moyen |
+| Risque CGU | **faible** (scripté documenté par l'éditeur) | **faible** si piloté côté Google (Remote Control, vos scripts) ; **zone grise, « not supported »** si Claude Code enveloppe `agy` (§9) | faible à moyen |
 | Risque de dégradation de l'offre | moyen | élevé | élevé |
 | Données | désactiver l'entraînement (Data Controls) | « Interactions » relues par des humains sauf opt-out | opt-out déjà actif |
 
@@ -273,7 +277,9 @@ temps.
   délégation ne paie pas. Mieux vaut alors mettre les 23 € dans le passage à un plan Claude
   supérieur ou dans l'extra usage.
 - **Google publie une autorisation explicite** d'orchestration de `agy` par un agent tiers sous
-  abonnement → réévaluer AI Pro : Argon est le meilleur des trois sur le papier.
+  abonnement → réévaluer AI Pro en délégation : Argon est le meilleur des trois sur le papier.
+- **Vous préférez confier un projet entier à un second outil** plutôt que déléguer des tâches →
+  AI Pro devient pertinent en pilotage 100 % Google (§9), à condition que le quota d'Argon tienne.
 - OpenAI **retire la fenêtre de 5 h** ou **publie le plafond hebdo** → recalculer le §3.
 
 ### Plan de test (7 jours)
@@ -370,6 +376,120 @@ simple `Bash` avec `run_in_background`, suivi de la revue en 5 points sur `$WT`.
 
 ---
 
+## 9. Google AI Pro — ce que disent vraiment les textes, et comment le piloter
+
+*Ajouté le 2026-10-19, après relecture des textes d'origine. Corrige la première version, qui
+classait AI Pro comme « éliminé par les CGU ».*
+
+### 9.1 Ce qui est permis, interdit, ou « non supporté »
+
+| Usage | Statut | Texte |
+|---|---|---|
+| `agy` en interactif, en SSH, en tmux | **permis** | surface prévue [OFF : docs/cli/overview] |
+| `agy -p` lancé par **vos** scripts, cron, CI | **permis, c'est l'usage prévu** | « intended for direct scripting and CI workflows » [OFF : FAQ] |
+| Piloter `agy` à distance depuis un navigateur ou un téléphone | **permis, fonction officielle** | Remote Control [OFF : docs/remote-control] |
+| Brancher le jeton OAuth d'Antigravity dans un autre outil (OpenClaw, OpenCode…) | **interdit**, suspension possible | CGU §6 [OFF] |
+| Claude Code ou Codex qui **enveloppent** `agy` (lui envoient des prompts, lisent sa sortie) | **« not supported under consumer plans »** | FAQ [OFF]. Pas écrit « interdit », mais à lire avec la clause §6 « in connection with products not provided by us ». C'est une **zone grise que Google se réserve d'appliquer** |
+| Rotation automatique de comptes, contournement de quota | **non supporté / abus** | FAQ [OFF] |
+
+**Pourquoi un mode CLI existe s'il y a une restriction** : la restriction ne porte pas sur
+l'automatisation, mais sur **qui la conduit**. Google subventionne son abonnement pour son propre
+harnais (l'agent Antigravity). Il accepte qu'un script exécute ce harnais. Il refuse que
+l'abonnement devienne le moteur bon marché d'un agent concurrent, qui garderait le raisonnement
+pendant qu'Antigravity ferait l'exécution facturée au forfait. Anthropic applique la même logique
+de son côté (The Register, 2026-02-20).
+
+**Ce qui était faux dans la première version** : j'avais présenté une réponse du forum comme
+« officielle ». Ses auteurs n'ont pas de badge staff, et le même intervenant a répondu « oui » le
+30/09 puis « non supporté » le 08/10. Seuls les CGU et la FAQ font foi. Ils laissent une zone
+grise, pas une interdiction nommée de lancer `agy` en sous-processus.
+
+### 9.2 Piloter un projet 100 % Google sur ce VPS
+
+Votre intuition est juste : l'équivalent du Remote Control de Claude Code existe et tourne sur un
+serveur Linux.
+
+```
+Navigateur / téléphone ──► antigravity.google.com (Remote Control Dashboard)
+                                   │  tunnel sortant, aucun port à ouvrir
+                                   ▼
+VPS : agy remote-control start  (service systemd, démarre au boot, redémarre après crash)
+        └─ agent Antigravity sur projects/<projet-google>/  (worktrees, subagents, hooks, skills)
+VPS : cron → vos scripts → agy -p "…" --output-format json   (tâches répétitives : checks, rapports)
+```
+
+[OFF : docs/remote-control]. Le daemon :
+- se lance par `agy remote-control start --name ai-vps-jlm` ;
+- utilise la connexion du CLI (à faire une fois en SSH : URL + code collé) ;
+- démarre au boot sous Linux sans session ouverte ;
+- se diagnostique par `journalctl --user -u antigravity-cli-daemon`.
+
+Depuis le navigateur, vous voyez les conversations, lancez des tâches, approuvez les commandes et
+relisez plans et artefacts. Des notifications push sont possibles via la web app installée.
+
+Les **Scheduled Tasks** natives n'existent que dans l'application desktop Antigravity 2.0 [OFF :
+docs/features]. Sur le VPS, c'est cron + `agy -p` qui les remplace, ce qui est précisément l'usage
+« direct scripting » prévu.
+
+Règles pour rester du bon côté :
+1. **Un compte Google dédié** à AI Pro, pas le compte principal (Drive, Gmail). Une suspension
+   vise « Antigravity and/or Gemini CLI accounts » [OFF], mais un compte séparé coupe tout effet
+   de bord. Pas de bascule automatique entre comptes.
+2. **Claude ne lance pas `agy`, et `agy` ne lance pas Claude.** Les deux outils peuvent travailler
+   sur le même dépôt git : c'est vous qui lancez chacun, et ils se lisent par les commits, pas par
+   un tuyau de processus.
+3. **Les prompts des scripts cron sont écrits par vous** et versionnés, pas générés à la volée par
+   Claude. Une file d'attente où Claude déposerait des specs et qu'un cron enverrait à `agy` est
+   techniquement « votre script », mais c'est exactement le « routing third-party agent prompts »
+   que l'intervenant du forum désigne. Je le classe zone grise : **à éviter sur le compte
+   payant**.
+4. **Une tâche `agy` à la fois sur le serveur** (prudence face aux protections anti-abus ; conseil
+   non officiel, cohérent avec 2 vCPU et 3,7 Go de RAM).
+5. Désactiver la relecture des « Interactions » dans les réglages (CGU §5) si le projet le
+   justifie.
+
+### 9.3 Quel projet confier, et ce que ça rapporte
+
+Part du volume Claude (tokens de sortie) par projet, estimée par une heuristique sur les
+mentions de chemins dans 176 transcripts [VPS, approximatif] :
+
+| Projet | Part du volume Claude |
+|---|---|
+| portfolio-tracker | ~83 % |
+| hub | ~5 % |
+| newsletter-summary | ~4 % |
+| assistant-ia | ~3 % |
+| comms-gateway | ~2 % |
+| autres | ~3 % |
+
+- **portfolio-tracker ne se transfère pas.** Son fichier de reprise, son inventaire et sa
+  doctrine de tests négatifs pèsent ~30 k tokens d'ouverture, et le modèle à volume côté Google
+  (Flash 3.8 : ~20 % sur Terminal-Bench 4.0, contre ~55 % pour GPT-6.1 Sol) n'est pas à la
+  hauteur. Le quota hebdomadaire d'Argon ne tient pas un projet de cette densité.
+- **Un projet périphérique s'y prête bien** : newsletter-summary, hub, exploration-science
+  (TS/Three.js, front statique, autonome). Il libère **~5-15 % du quota Claude**, en déplaçant le
+  travail plutôt qu'en le déléguant. Le projet garde son `00-REPRISE.md` ; seul l'agent change.
+- **Coût caché** : deux outils, deux jeux de règles (`CLAUDE.md` d'un côté, règles et skills
+  Antigravity de l'autre), et la doctrine CONTROL_SYSTEM (test négatif, revue en 5 points) que
+  personne n'impose à l'agent Google si vous ne la réécrivez pas dans ses règles.
+
+### 9.4 Codex ou Google AI Pro, une fois la question des CGU levée
+
+| Critère | Codex (Plus) en délégation | AI Pro en projet 100 % Google |
+|---|---|---|
+| Gain sur le quota Claude | +10-20 % (tâches de portfolio-tracker sorties de Claude) | +5-15 % (un projet périphérique sorti de Claude) |
+| Modèle en volume | GPT-6.1 Sol (~55 % TB 4.0) | Flash 3.8 (~20 %), Argon en réserve hebdo |
+| Pilotage à distance | via Claude (Remote Control de Claude Code) | **natif** (Remote Control Antigravity) |
+| Garde-fous CONTROL_SYSTEM | appliqués par Claude à la revue | à réécrire dans les règles Antigravity |
+| Bonus | — | 5 To de stockage, Gemini dans Gmail/Docs |
+
+**La recommandation reste Codex**, parce que votre volume est concentré sur portfolio-tracker et
+que c'est là qu'il faut soulager Claude. **AI Pro devient le bon choix** si vous préférez
+confier entièrement un projet périphérique à un second agent, ou si les 5 To vous servent
+indépendamment.
+
+---
+
 ## Sources (consultées le 2026-10-19)
 
 **OpenAI**
@@ -388,7 +508,10 @@ simple `Bash` avec `run_in_background`, suivi de la revue en 5 points sur `$WT`.
 - [OFF] one.google.com/intl/fr_fr/about/google-ai-plans — 21,99 €/mois
 - [OFF] antigravity.google/docs/plans, /docs/cli/headless, /docs/cli/install, /docs/faq, /terms
 - [OFF] developers.googleblog.com — transition Gemini CLI → Antigravity CLI (2026-05-19)
-- [OFF/UTIL] discuss.ai.google.dev — t/187241 (2026-10-08, orchestration par Claude Code non supportée), t/188232 (2026-10-12, verrou après 5 appels), t/131424 (2026-03-12, bannissements)
+- [UTIL] discuss.ai.google.dev — t/187241 (2026-10-08, « not supported »), t/185992 (2026-09-30, « Yes »), t/187536 (2026-10-08, « Yes ») : réponses contradictoires, auteurs sans badge staff ; t/188232 (2026-10-12, verrou après 5 appels) ; t/131424 (2026-03-12, bannissements liés à la réutilisation OAuth)
+- [OFF] antigravity.google/docs/remote-control — daemon `agy remote-control start` (systemd, Linux)
+- [OFF] antigravity.google/docs/features — Scheduled Tasks dans l'app desktop
+- [OFF] antigravity.google/docs/sdk/overview — le SDK fonctionne avec une clé API Gemini ou Vertex, pas avec l'abonnement
 - [UTIL] pasqualepillitteri.it — quota Argon hebdo pour Pro (2026-10-16)
 - [UTIL] reddit r/google_antigravity — retours sur Flash 3.8 et Argon (~2026-10-15)
 
