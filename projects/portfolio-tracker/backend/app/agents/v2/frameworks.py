@@ -67,6 +67,7 @@ from app.contracts.framework_answer_schema import (
 from app.contracts.framework_definition_schema import (
     FRAMEWORK_DEFINITION_SCHEMA_VERSION,
     ChiffreCleDeclare,
+    ParametreDuFonds,
     FrameworksFile,
 )
 from app.contracts.memo_blocs import BLOCS_MEMO
@@ -339,7 +340,8 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
         unites = {c.id: c.unite for c in q.chiffres_cles}
         # Un chiffre LU DANS LE SOCLE (2026-10-04) se lit comme un relevé : il est établi avant tout
         # calcul et ne lit aucun autre chiffre de l'encadré.
-        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None}
+        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None
+                   or c.parametre_du_fonds is not None}
         facultatifs = {c.id for c in q.chiffres_cles if c.facultatif}
         retenus = {c.id for c in q.chiffres_cles if c.le_plus_eleve_de}
         for c in q.chiffres_cles:
@@ -415,6 +417,25 @@ def _valider_pont_definitions(fichier: FrameworksFile) -> None:
             if decales:
                 raise FrameworkDefinitionRefused(
                     f"[U] `{q.id}.{c.id}` lit {decales} : la période d'un chiffre du socle est sa `periode`")
+
+    # ── [W] — les DÉCISIONS DU FONDS (#137 point 10) ─────────────────────────────────────────────
+    #    Un chiffre posé par une décision du fonds nomme une décision QUI EXISTE, dans SON unité : un nom
+    #    inconnu rendrait le chiffre « non établi » à chaque dossier, en silence ; une unité convertie
+    #    ferait deux chiffres (#95).
+    for _f, q in toutes:
+        for c in q.chiffres_cles:
+            if c.parametre_du_fonds is None:
+                continue
+            p = fichier.parametres_du_fonds.get(c.parametre_du_fonds)
+            if p is None:
+                raise FrameworkDefinitionRefused(
+                    f"[W] `{q.id}.{c.id}` reprend la décision du fonds `{c.parametre_du_fonds}`, qui n'existe pas "
+                    f"({sorted(fichier.parametres_du_fonds)}) — le chiffre ne s'établirait jamais")
+            if p.unite != c.unite:
+                raise FrameworkDefinitionRefused(
+                    f"[W] `{q.id}.{c.id}` est déclaré en {c.unite!r}, la décision du fonds "
+                    f"`{c.parametre_du_fonds}` est en {p.unite!r} — une unité convertie en silence ferait deux "
+                    "chiffres (#95)")
 
     # ── [Q] / [R] — ce qui rouvre quoi (#89) ───────────────────────────────────────────────────
     portees = {t.id: t.portee for t in fichier.types_evenement}
@@ -844,6 +865,7 @@ def valider_pont_framework_answer(
                     c.valeur is not None and abs(c.valeur - e.valeur) > 1e-6 * max(1.0, abs(e.valeur))):
                 regle = d.calcul or ((f"socle : ratio maison {d.socle.ratio}" if d.socle.ratio else
                                       f"socle : {d.socle.formule} ({d.socle.periode})") if d.socle else
+                                     f"décision du fonds : {d.parametre_du_fonds}" if d.parametre_du_fonds else
                                      f"le plus élevé de {', '.join(d.le_plus_eleve_de)}")
                 faux.append(f"{c.id} = {c.valeur!r} au lieu de {e.valeur!r} ({regle})")
         if faux:
@@ -902,7 +924,8 @@ def socle_au_dossier(entries: dict[int, dict[str, Any]], ids: Optional[Iterable[
 
 
 def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle], *,
-                      socle: Optional[dict[str, Any]]) -> list[ChiffreCle]:
+                      socle: Optional[dict[str, Any]],
+                      fonds: Optional[dict[str, ParametreDuFonds]] = None) -> list[ChiffreCle]:
     """L'encadré COMPLÉTÉ de ses chiffres calculés (#101). DÉTENTEUR UNIQUE, lu par l'assemblage de
     l'analyste (qui écrit) et par le pont [K] (qui vérifie) — deux lectures d'une même formule
     divergeraient au premier correctif (#46). Pur.
@@ -913,6 +936,7 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     remplacée par le calcul. Trois issues, jamais un silence (#25/#44) : calculé (daté par les
     périodes de ses termes, #42), ou non établi parce qu'un terme ne l'est pas (le terme est NOMMÉ),
     ou non calculable (un dénominateur nul — une propriété de l'entreprise, pas un zéro).
+    `fonds` : les décisions du fonds (#137 point 10) ; absent, celles du référentiel en vigueur.
     """
     systeme = [d for d in declares if d.calcule_par_le_systeme]
     ids_systeme = {d.id for d in systeme}
@@ -927,6 +951,19 @@ def completer_encadre(declares: list[ChiffreCleDeclare], lignes: list[ChiffreCle
     # (`socle.formule`), en $, se rend en M$.
     from app.knowledge.ratios_maison import ratio_du_socle
     from app.knowledge.socle_comptes import valeur_du_socle
+    # Les DÉCISIONS DU FONDS (#137 point 10) : posées telles quelles, datées par la décision — un taux
+    # exigé ne se lit dans aucune pièce, et la période dit QUI l'a fixé et QUAND il se revoit.
+    for d in (x for x in systeme if x.parametre_du_fonds is not None):
+        if fonds is None:
+            fonds = load_frameworks().parametres_du_fonds
+        p = fonds.get(d.parametre_du_fonds)
+        ligne = (ChiffreCle(id=d.id, unite=d.unite, motif_absence=(
+                     f"non établi : la décision du fonds `{d.parametre_du_fonds}` n'existe pas")) if p is None else
+                 ChiffreCle(id=d.id, unite=d.unite, valeur=p.valeur, date_ou_periode=(
+                     f"décision du fonds du {p.decide_le.isoformat()} (comité), à revoir avant le "
+                     f"{p.revoir_avant.isoformat()}")))
+        sortie.append(ligne)
+        par_id[ligne.id] = ligne
     for d in (x for x in systeme if x.socle is not None):
         if socle is None:
             ligne = ChiffreCle(id=d.id, unite=d.unite, motif_absence=(

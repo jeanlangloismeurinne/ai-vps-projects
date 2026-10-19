@@ -726,6 +726,30 @@ check("… daté par la période de ses termes, formule écrite en clair (#42)",
       and "dette_brute - tresorerie" in (_enc["dette_nette"].date_ou_periode or ""),
       f"→ {_enc['dette_nette'].date_ou_periode}")
 _enc_abs = {c.id: c for c in completer_encadre(QUESTIONS["qf_calc"]["chiffres_cles"], [ChiffreCle(**_DB)], socle=None)}
+# #137 point 10 — le taux exigé est une DÉCISION DU FONDS, posée par le code et datée par la décision. Une
+# ligne fournie par le rédacteur est écartée (il ne la cherche pas chez un tiers) ; une décision inconnue
+# est NOMMÉE, jamais un zéro.
+from app.contracts.framework_definition_schema import ParametreDuFonds  # noqa: E402
+_TX = ChiffreCleDeclare(id="cout_du_capital", libelle="Taux exigé par le fonds, décision du comité", unite="%",
+                        periode="à la date de la décision", parametre_du_fonds="taux_exige")
+_FONDS = {"taux_exige": ParametreDuFonds(valeur=10, unite="%", decide_le="2026-10-17", revoir_avant="2027-10-17",
+                                         decision="Comité du 2026-10-17 : un taux unique pour le fonds")}
+_enc_tx = {c.id: c for c in completer_encadre([_TX], [ChiffreCle(id="cout_du_capital", unite="%", valeur=12.0,
+                                                                  date_ou_periode="WACC d'un agrégateur")],
+                                               socle=None, fonds=_FONDS)}
+_tx1 = _enc_tx.get("cout_du_capital")
+check("`completer_encadre` POSE la décision du fonds (10 %), datée par la décision et sa revue — la ligne de tiers "
+      "fournie (12 %) est écartée",
+      _tx1 is not None and _tx1.valeur == 10 and "2026-10-17" in (_tx1.date_ou_periode or "")
+      and "2027-10-17" in (_tx1.date_ou_periode or ""), f"→ {_tx1}")
+_enc_tx0 = {c.id: c for c in completer_encadre([_TX], [], socle=None, fonds={})}
+_tx0 = _enc_tx0.get("cout_du_capital")
+check("… une décision du fonds ABSENTE rend le chiffre non établi en la NOMMANT (jamais un zéro)",
+      _tx0 is not None and _tx0.valeur is None and "taux_exige" in (_tx0.motif_absence or ""), f"→ {_tx0}")
+_enc_txr = {c.id: c for c in completer_encadre([_TX], [], socle=None)}
+_txr = _enc_txr.get("cout_du_capital")
+check("… sans `fonds` fourni, c'est la décision du RÉFÉRENTIEL en vigueur qui est posée (10 %)",
+      _txr is not None and _txr.valeur == 10, f"→ {_txr}")
 check("… un terme ABSENT de l'encadré rend le calcul non établi, en NOMMANT le terme",
       _enc_abs["dette_nette"].valeur is None and "tresorerie" in (_enc_abs["dette_nette"].motif_absence or ""),
       f"→ {_enc_abs['dette_nette']}")

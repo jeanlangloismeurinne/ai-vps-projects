@@ -216,6 +216,9 @@ l'éprouvent en abîmant les **données** et non le code.
 > vérifiable dès maintenant : `qf_1` réclame un **coût du capital**, `essentiel: true`, et aucun
 > fait SEC n'en contient un. Le framework **doit** produire cette lacune, et le manager **doit** en
 > faire un mandat. Une v3 qui ne produirait aucun trou aurait échoué en paraissant réussir.
+> *Prédiction tenue* (mandats 108, 2443, réponses NVDA #1209 / RVMD #1685 au coût du capital vide), puis
+> lacune FERMÉE par une décision du fonds, pas par une source : le comité fixe un taux exigé unique de 10 %
+> (2026-10-17, #137 point 10, `parametres_du_fonds`), que l'encadré de qf_1 reçoit du code.
 
 ---
 
@@ -825,7 +828,7 @@ sans objet pour un émetteur sans ventes.
 | id | Question — **en substance économique** | Nature attendue | Plancher | Rouverte par (#89, #94) |
 |---|---|---|---|---|
 | `ma_1` | **Où va l'argent** que l'entreprise génère ou lève, et ce partage a-t-il créé de la valeur ? | `mesure` | A | `financement`, `resultats`, `surprise_allocation`, `changement_de_stade` |
-| `ma_2` | Les **acquisitions** passées ont-elles rapporté ce qu'elles ont coûté ? | `interpretation` | B | `resultats`, `integrite_comptes` |
+| `ma_2` | Les **acquisitions** passées ont-elles été un bon emploi du capital, au vu de ce qui s'observe — prix payé, devenir de l'activité acquise, dépréciations et abandons ? | `interpretation` | B | `resultats`, `integrite_comptes` |
 | `ma_3` | Les **rachats et émissions** d'actions se font-ils au bon prix ? | `mesure` | B+ | `financement`, `resultats` |
 | `ma_4` | Les dirigeants ont-ils **leur propre argent en jeu** — combien détiennent-ils, qu'ont-ils acheté ou vendu ? | `mesure` | A | `gouvernance` |
 | `ma_7` | La **rémunération variable** des dirigeants récompense-t-elle ce qui crée de la valeur pour l'actionnaire ? | `interpretation` | A | `gouvernance` |
@@ -847,7 +850,7 @@ méthodologique** (Greenwald, Damodaran, Mauboussin) : une fourchette, jamais un
 (va_1-3) ne bouge que sur un fait nouveau, ce que le prix suppose (va_4-6) se recalcule à la lecture
 au dernier cours coté daté (**option 1**, arbitrage du 2026-09-28 — construit en capacité 4 bis).
 **Un seul modèle** : la valorisation REPREND les réponses acquittées des autres méthodologies
-(qf_1 coût du capital et résultat normalisé — ajusté des retraitements de qf_6 —, qf_2 cash disponible,
+(qf_1 taux exigé par le fonds et résultat normalisé — ajusté des retraitements de qf_6 —, qf_2 cash disponible,
 qf_3 coût de la croissance, qf_4 dette nette et instruments dilutifs, qf_7 besoin de financement qui
 appelle la dilution, mo_4 durée, me_5 plafond, se_3 pairs ; se_4 éclaire les scénarios sans fournir de
 chiffre ; le nombre d'actions dilué se relève avec le cours coté, comme pour va_4 — liens corrigés le

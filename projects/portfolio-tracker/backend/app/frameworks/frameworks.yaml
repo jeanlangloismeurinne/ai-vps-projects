@@ -242,6 +242,27 @@ revisions_de_prevision:
     hausse: {causes: [allocation, execution], types: []}
     baisse: {causes: [allocation, execution], types: []}
 
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# DÉCISIONS DU FONDS — ce que le COMITÉ fixe pour tout le portefeuille (#137 point 10)
+#
+# Pas des pièces : jamais collectées, jamais citées. L'encadré d'une question les reçoit du code
+# (`parametre_du_fonds` d'un chiffre clé). Comme un fonds : la cohérence entre titres prime sur la
+# précision ; une estimation de tiers (coût moyen pondéré publié par un agrégateur) n'est qu'un point
+# de comparaison. Le risque propre d'un titre va dans ses scénarios et leurs probabilités, JAMAIS dans
+# une prime de taux (biotech : programmes pondérés par leur probabilité de succès — monter aussi le
+# taux compterait le risque deux fois). La note affiche la sensibilité à ±1 point (valorisation).
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+parametres_du_fonds:
+  taux_exige:
+    valeur: 10
+    unite: "%"
+    decide_le: 2026-10-17
+    revoir_avant: 2027-10-17
+    decision: >-
+      Comité du 2026-10-17 (séance d'arbitrages, #137 point 10) : un taux unique pour tout le fonds,
+      coût d'opportunité d'un investisseur en actions (taux sans risque ~4 % + prime actions 4-6
+      points), revu une fois l'an.
+
 frameworks:
 
   # ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -288,10 +309,6 @@ frameworks:
             duree_de_vie: chiffre_courant
             cadence: trimestrielle
             depuis_le_socle: true
-          - id: cout_du_capital
-            libelle: Coût moyen des ressources qui financent ce capital — rémunération exigée par les créanciers et par les actionnaires
-            essentiel: true
-            duree_de_vie: jugement
           - id: historique_cinq_exercices
             libelle: La même relation observée sur au moins cinq exercices consécutifs
             essentiel: false
@@ -305,9 +322,10 @@ frameworks:
             periode: moyenne 5 ans
             socle: {ratio: rendement_du_capital_employe_moyen}   # ratio maison lu dans les comptes reconstitués (ratios_maison)
           - id: cout_du_capital
-            libelle: Coût du capital — rémunération exigée par les créanciers et les actionnaires
+            libelle: Taux exigé par le fonds — rendement minimal attendu de tout capital investi, décision du comité
             unite: "%"
-            periode: à la date de l'analyse
+            periode: à la date de la décision du comité
+            parametre_du_fonds: taux_exige   # décision du fonds, posée par le code (#137 point 10) — jamais collectée
           - id: resultat_operationnel_apres_impot_normalise
             libelle: Résultat d'exploitation après impôt, normalisé des éléments non récurrents
             unite: "M$"
@@ -315,7 +333,7 @@ frameworks:
         variables_par_archetype:
           rentable:
             mode: variable
-            variable: Rendement du capital employé comparé au coût moyen pondéré des ressources, sur 5 ans
+            variable: Rendement du capital employé comparé au taux exigé par le fonds, sur 5 ans
           pre_revenus:
             mode: sans_objet
             motif_gabarit: >-
@@ -324,7 +342,7 @@ frameworks:
             aucun_substitut: true
           financiere:
             mode: variable
-            variable: Rendement des fonds propres réglementaires comparé au coût des fonds propres
+            variable: Rendement des fonds propres réglementaires comparé au taux exigé par le fonds
 
       - id: qf_2
         enonce: Le résultat comptable se transforme-t-il en cash ?
@@ -1540,28 +1558,31 @@ frameworks:
             variable: Partage du résultat entre croissance des encours, dividendes, rachats et renforcement des fonds propres
 
       - id: ma_2
-        enonce: Les acquisitions passées ont-elles rapporté ce qu'elles ont coûté ?
+        enonce: Les acquisitions passées ont-elles été un bon emploi du capital, au vu de ce qui s'observe — prix payé, devenir de l'activité acquise, dépréciations et abandons ?
         chemin_indexation: management_capital.bilan_des_acquisitions
         nature_attendue: interpretation
         plancher_tier: B
         motif_plancher: >-
-          Le bilan d'une acquisition se juge en confrontant la promesse au réalisé, souvent dans des
-          analyses extérieures ; le dépôt n'en porte que le prix et les dépréciations.
+          Le prix payé, les dépréciations et les ventes des segments sont déposés ; rattacher une
+          acquisition au segment ou au programme qui l'a absorbée, et juger ce qu'elle y est devenue,
+          s'appuie souvent sur des communiqués et des analyses extérieures. Personne ne publie « ce
+          qu'une acquisition a rapporté » : la question se juge sur ces indices (arbitrage du
+          2026-10-17, #137 point 12).
         rouverte_par: [resultats, integrite_comptes]
         sens_admis: [acquisitions_creatrices, acquisitions_decevantes, acquisitions_destructrices, pas_d_acquisition_significative]
         ingredients_requis:
           - id: acquisitions_realisees
-            libelle: Acquisitions significatives des dix dernières années, avec leur prix et la justification donnée à l'époque
+            libelle: Acquisitions et prises de licence significatives des dix dernières années — prix payé, ce qui a été acquis (chiffre d'affaires, produits ou programmes, trésorerie) et justification donnée à l'époque
             essentiel: true
             duree_de_vie: historique
             cadence: annuelle
-          - id: resultat_obtenu
-            libelle: Ce que chaque acquisition a effectivement rapporté au regard de ce qui avait été promis
+          - id: devenir_de_l_activite_acquise
+            libelle: Ce qu'est devenue l'activité acquise — évolution des ventes et de la marge du segment qui l'a absorbée, ou avancement des produits et programmes qui en sont issus
             essentiel: true
             duree_de_vie: historique
             cadence: annuelle
           - id: depreciations
-            libelle: Dépréciations ou cessions ultérieures des actifs acquis
+            libelle: Dépréciations de l'écart d'acquisition ou des actifs acquis, cessions et abandons ultérieurs
             essentiel: false
             duree_de_vie: historique
             cadence: trimestrielle
@@ -1569,13 +1590,13 @@ frameworks:
         variables_par_archetype:
           rentable:
             mode: variable
-            variable: Acquisitions significatives sur 10 ans, promesse au moment de l'achat et résultat obtenu
+            variable: Acquisitions significatives sur 10 ans — prix payé rapporté aux ventes acquises, évolution du segment d'accueil, dépréciations et cessions
           pre_revenus:
             mode: variable
-            variable: Molécules, technologies ou sociétés acquises ou prises en licence, et ce qu'elles sont devenues
+            variable: Molécules, technologies ou sociétés acquises ou prises en licence — prix payé, avancement des programmes qui en sont issus, abandons et dépréciations
           financiere:
             mode: variable
-            variable: Rachats d'établissements ou de portefeuilles, et leur rentabilité après intégration
+            variable: Rachats d'établissements ou de portefeuilles — prix payé rapporté aux fonds propres acquis, évolution de l'activité d'accueil, dépréciations et cessions
 
       - id: ma_3
         enonce: Les rachats et les émissions d'actions se font-ils au bon prix — racheter quand l'action est bon marché, émettre quand elle est chère ?
@@ -1787,7 +1808,7 @@ frameworks:
             duree_de_vie: reprise
             repris_de: [qf_1, qf_6]
           - id: taux_d_actualisation
-            libelle: Coût du capital servant de taux d'actualisation — repris de qf_1
+            libelle: Taux exigé par le fonds servant de taux d'actualisation — repris de qf_1
             essentiel: true
             duree_de_vie: reprise
             repris_de: [qf_1]
@@ -1808,13 +1829,13 @@ frameworks:
         variables_par_archetype:
           rentable:
             mode: variable
-            variable: Résultat normalisé capitalisé au coût du capital, ramené par action
+            variable: Résultat normalisé capitalisé au taux exigé par le fonds, ramené par action
           pre_revenus:
             mode: variable
             variable: Trésorerie nette et valeur que paierait un acquéreur pour les programmes, par action
           financiere:
             mode: variable
-            variable: Résultat normalisé capitalisé au coût des fonds propres, comparé à la valeur comptable tangible
+            variable: Résultat normalisé capitalisé au taux exigé par le fonds, comparé à la valeur comptable tangible
 
       - id: va_2
         enonce: Quelle fourchette de valeur donnent un scénario pessimiste, un central et un optimiste, et quelles hypothèses les séparent ?
@@ -1906,7 +1927,7 @@ frameworks:
             essentiel: true
             duree_de_vie: au_cours_du_jour
           - id: croissance_implicite
-            libelle: Croissance et rentabilité que le prix suppose, au coût du capital repris de qf_1
+            libelle: Croissance et rentabilité que le prix suppose, au taux exigé par le fonds repris de qf_1
             essentiel: true
             duree_de_vie: au_cours_du_jour
           - id: comparaison_aux_scenarios

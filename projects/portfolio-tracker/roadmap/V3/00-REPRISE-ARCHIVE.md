@@ -6820,3 +6820,23 @@ sont « citées comme contexte » ; interrupteur `fraicheur_par_sujet`. Mesuré 
 réponses fondées en vigueur ; NVDA ma_1 #1475 reste périmée À BON DROIT (historiques de l'allocation sans les
 10-Q T1/T2) — ce n'était pas qu'un problème de point 15. À regarder : une émission obligataire (financement)
 exige de compléter l'historique « rendement des usages » de ma_1 — vérifier que ce type doit le rouvrir.
+
+
+## 2026-10-19 — sortis de la reprise (arbitrages récents)
+
+### Arbitrages récents (tels qu'ils figuraient dans la reprise) (le détail : `CONVENTIONS.md` #129-#139 ; #129/#130 : fraîcheur par durée de vie, causes de révision, `06-regle-fraicheur.md` §8-§14)
+
+- **2026-10-18** — **changement de stade** (#139) : le système détecte et RECOMMANDE, le comité reclasse
+  ou maintient ; table de réouverture validée ; les pairs : même marché ou analogue, un changement de stade
+  pose la question sans la trancher. Seule la qualité financière RVMD se relance avant le 10-Q du T3.
+- **2026-10-17** — séance groupée (#137) : marchés visés listés, **estimation interne d'abord** (bac à
+  calcul) ; **taux exigé unique 10 %**, sensibilité ±1 pt, risque propre dans les scénarios ; défaut du comité
+  annoté, repris à la reconstruction ; ma_2 sur indices observables ; fraîcheur = pièce la plus récente par
+  sujet ; relance bornée + réinitialisation par l'utilisateur ; RVMD reclassée au 1er trimestre de ventes.
+
+- **2026-10-16** — tout chiffre renvoie à une pièce (#136) ; ma_4 scindée, mo_5/se_3 hors dérapage (#131) :
+  détail dans `CONVENTIONS.md` et l'archive (section du 2026-10-18).
+- Arbitrages plus anciens (périmètre EDGAR seul, « on rachète tout » en test, ajouter une méthodologie =
+  opération de données, valorisation option (c), encadré de chiffres clés, signature du comité…) :
+  archive, section COPIE CONFORME, « Arbitrages de l'utilisateur qui commandent la suite ».
+

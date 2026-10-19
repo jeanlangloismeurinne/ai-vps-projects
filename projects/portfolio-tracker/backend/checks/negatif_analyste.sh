@@ -70,8 +70,8 @@ mutations=(
 "$SRC¦        _, cran, _ = derive_synthesis_reliability([meilleur])¦        cran = TIER_ORDER[min(_TIER_RANK[meilleur] + 1, len(TIER_ORDER) - 1)]¦règle du cran est réellement APPELÉE"
 "$SRC¦    ouverts.append(\"sans_fondement\")¦    _cran_en_dur = \"A-\"\n    ouverts.append(\"sans_fondement\")¦aucun tier n'est écrit EN DUR"
 "$SRC¦            \"statuts_admis\": statuts_montres(ouverts),¦¦contexte porte \`statuts_admis\`"
-"$SRC¦        ouverts, _ = statuts_admissibles(q, citables)\n        if aucune_reponse_possible(ouverts):¦        ouverts, _ = statuts_admissibles(q, citables)\n        if False:¦n'est pas montrée au modèle"
-"$SRC¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if aucune_reponse_possible(ouverts):¦        ouverts, ecartes = statuts_admissibles(q, citables)\n        if False:¦SANS aucun appel modèle"
+"$SRC¦        if aucune_reponse_possible(statuts_admissibles(q, citables)[0]):¦        if False:¦n'est pas montrée au modèle"
+"$SRC¦        ouverts, ecartes = statuts_admissibles(q, citables)  # la porte : avant la relation (cf. contexte)\n        if aucune_reponse_possible(ouverts):¦        ouverts, ecartes = statuts_admissibles(q, citables)  # la porte : avant la relation (cf. contexte)\n        if False:¦SANS aucun appel modèle"
 "$SRC¦        if not citables:¦        if False:¦DEUX causes ont DEUX motifs distincts"
 "$SRC¦                manque=(f\"aucune réponse recevable n'est possible sur ce corpus pour \"¦                manque=(f\"aucune source fournie ne fonde « {q.enonce} » — pour \"¦DEUX causes ont DEUX motifs distincts"
 "$SRC¦        if brute.statut not in admis[brute.question_id]:¦        if False:¦sort en refus nommé"
@@ -138,6 +138,10 @@ mutations=(
 "$SRC¦    return [*ouverts, PAS_ENCORE_OBSERVABLE]¦    return list(ouverts)¦est montré dans les statuts de CHAQUE question"
 "$SRC¦        \"date_du_jour\": (aujourd_hui or date.today()).isoformat(),¦¦porte la DATE DU JOUR"
 "$SRC¦        if (self.statut == PAS_ENCORE_OBSERVABLE) != (self.attente is not None):¦        if False:  # mutation¦sans bloc \`attente\` refusé"
+# #137 point 10 — le taux exigé montré à l'analyste, jamais demandé ni annoncé comme calcul ; la consigne le dit
+"$SRC¦            \"chiffres_fixes_par_le_fonds\": chiffres_du_fonds(q, fichier.parametres_du_fonds),¦¦le contexte MONTRE le taux exigé par le fonds"
+"$SRC¦                if c.calcule_par_le_systeme and c.socle is None and c.parametre_du_fonds is None¦                if c.calcule_par_le_systeme and c.socle is None¦ne le DEMANDE PAS ni ne l'annonce comme un calcul"
+"$SRC¦    \"rends pas et tu ne cites aucune source pour eux : ta réponse compare l'entreprise à CE taux, jamais \"¦    \"rends pas.\"¦la consigne nomme la clef"
 )
 
 passes=0; ratees=0

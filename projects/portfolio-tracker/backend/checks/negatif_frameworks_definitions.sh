@@ -70,7 +70,7 @@ mutations=(
 "$DEF¦    nature_attendue: Literal[\"mesure\", \"evenement\", \"interpretation\"]¦    nature_attendue: Literal[\"mesure\", \"evenement\", \"interpretation\", \"rumeur\"]¦\`nature_attendue\` (contrat de définition) == \`common.NATURES\`"
 "$DEF¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\")¦PLANCHERS_DESSERRES = (\"B\", \"B-\", \"C+\", \"C\", \"D\")¦sous-ensemble STRICT de \`TIER_ORDER\`"
 # §7 — la spec et le référentiel ne divergent pas (mutation côté DONNÉES et côté SPEC)
-"$YAML¦        plancher_tier: B+\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]\n        sens_admis: [part_faible¦        plancher_tier: A\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes]\n        sens_admis: [part_faible¦nature, plancher et types qui rouvrent coïncident"
+"$YAML¦        plancher_tier: B+\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, changement_de_stade]\n        sens_admis: [part_faible¦        plancher_tier: A\n        rouverte_par: [resultats, surprise_secteur, surprise_concurrence, surprise_execution, integrite_comptes, changement_de_stade]\n        sens_admis: [part_faible¦nature, plancher et types qui rouvrent coïncident"
 # ⚠️ `V3/` dans le chemin : le lanceur copie `../roadmap` entier, la spec est donc à
 # `$tmp/roadmap/V3/…`. Écrite sans le `V3/`, la mutation ne trouvait pas son fichier et se
 # déclarait CADUQUE — l'assert « la spec et le référentiel ne divergent pas » n'avait aucun test
@@ -99,7 +99,7 @@ mutations=(
 "$YAML¦          - id: dette_nette¦          - id: dette_nette_bilan¦l'encadré instruit le 2026-09-29"
 # ── #101 : un chiffre CALCULÉ ne lit que des chiffres RELEVÉS de sa question, à une date, même unité ──
 "$PONT¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if hors:¦            hors = sorted(n for n in noms_de_la_formule(c.calcul) if n not in releves | retenus)\n            if False:¦lit un chiffre ABSENT de la question"
-"$PONT¦        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
+"$PONT¦        releves = {c.id for c in q.chiffres_cles if not c.calcule_par_le_systeme or c.socle is not None\n                   or c.parametre_du_fonds is not None}¦        releves = {c.id for c in q.chiffres_cles}¦lit un AUTRE chiffre calculé"
 "$PONT¦            if decales:¦            if False:¦à exercice DÉCALÉ"
 "$PONT¦                dimension_formule(c.calcul, unites)¦                pass¦deux unités différentes"
 "$DEF¦                analyser_formule(self.calcul)¦                pass¦hors de la grammaire fermée"
@@ -108,7 +108,7 @@ mutations=(
 "$PONT¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if hors:¦            hors = sorted(n for n in c.le_plus_eleve_de if n not in releves)\n            if False:¦retenu parmi des chiffres qui ne sont pas relevés"
 "$PONT¦            if autres:¦            if False:¦retenu entre deux unités"
 "$PONT¦            if all(n in facultatifs for n in c.le_plus_eleve_de):¦            if False:¦TOUS facultatifs"
-"$DEF¦        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None)) > 1:¦        if False:¦à la fois calculé et retenu"
+"$DEF¦        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None,\n                self.parametre_du_fonds is not None)) > 1:¦        if False:¦à la fois calculé et retenu"
 "$DEF¦        if self.facultatif and self.calcule_par_le_systeme:¦        if False:¦calculé marqué facultatif"
 "$YAML¦            facultatif: true¦            facultatif: false¦la prévision seule est facultative"
 # ── [U] le socle des comptes (2026-10-04) ──
@@ -139,7 +139,13 @@ mutations=(
 "$DEF¦        if any(t != t.lower() for t in self.termes):¦        if False:¦un terme en majuscules"
 "$YAML¦    hausse: {causes: [allocation, execution], types: []}¦    hausse: {causes: [allocation, execution, concurrence], types: []}¦ne rouvre jamais la concurrence"
 "$YAML¦    baisse: {causes: [secteur, concurrence, execution], types: [reglementaire_defavorable]}¦    baisse: {causes: [secteur, concurrence, execution], types: []}¦une BAISSE du chiffre d'affaires"
-"$YAML¦        rouverte_par: [financement, resultats, surprise_allocation]¦        rouverte_par: [financement, resultats]¦ALLOCATION rouvre ma_1"
+"$YAML¦        rouverte_par: [financement, resultats, surprise_allocation, changement_de_stade]¦        rouverte_par: [financement, resultats, changement_de_stade]¦ALLOCATION rouvre ma_1"
+# ── [W] les décisions du fonds (#137 point 10) ──
+"$PONT¦            if p is None:¦            if False:¦décision du fonds INCONNUE"
+"$PONT¦            if p.unite != c.unite:¦            if False:¦AUTRE unité que la décision du fonds"
+"$DEF¦                self.parametre_du_fonds is not None)) > 1:¦                False)) > 1:¦une décision du fonds ET un calcul"
+"$DEF¦        if self.revoir_avant <= self.decide_le:¦        if False:¦dont la revue PRÉCÈDE la décision"
+"$YAML¦            parametre_du_fonds: taux_exige   # décision du fonds¦            # parametre_du_fonds: taux_exige   # décision du fonds¦qf_1 compare au taux exigé par le fonds"
 )
 
 passes=0; ratees=0

@@ -84,6 +84,10 @@ mutations=(
 "$PONT¦if valeurs[(n, 0)] < 0]¦if valeurs[(n, 0)] > 0]¦sur une PERTE d'exploitation est « non significatif »"
 "app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` ne vaut¦sur un chiffre RELEVÉ est refusé"
 "app/contracts/framework_definition_schema.py¦raise ValueError(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦print(f\"chiffre \`{self.id}\` : \`non_significatif_si_negatif\` nomme¦nomme un terme absent du calcul"
+# #137 point 10 — la décision du fonds posée par le code, datée ; absente, nommée ; par défaut, celle du référentiel
+"$PONT¦valeur=p.valeur, date_ou_periode=(¦valeur=12.0, date_ou_periode=(¦POSE la décision du fonds"
+"$PONT¦            fonds = load_frameworks().parametres_du_fonds¦            fonds = {}¦la décision du RÉFÉRENTIEL en vigueur"
+"$PONT¦    for d in (x for x in systeme if x.parametre_du_fonds is not None):¦    for d in (x for x in systeme if x.parametre_du_fonds is not None and False):¦POSE la décision du fonds"
 )
 
 source "$(dirname "$0")/_negatif.sh"

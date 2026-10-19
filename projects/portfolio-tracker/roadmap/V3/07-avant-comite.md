@@ -58,14 +58,16 @@ role: >
 9. **D-me5 — marché adressable** [A] — NVDA me_5 chiffre un marché d'extension (processeurs centraux)
    au lieu du marché actuel (accélérateurs), et une « part prise » sur des revenus futurs. Prérequis de
    la valorisation (va_2 reprendrait ce plafond).
-10. **Coût du capital** [A] — qui le fixe ? Un fonds le fixe en interne, commun au portefeuille ; le
+10. ~~**Coût du capital**~~ ✅ **Fait le 2026-10-19** — taux exigé unique 10 %, décision du fonds au référentiel
+    (`parametres_du_fonds`), posé par le code dans l'encadré de qf_1 ; qf_1 ne collecte plus de WACC. [A] — qui le fixe ? Un fonds le fixe en interne, commun au portefeuille ; le
     système n'a que des estimations de tiers. Prérequis de la valorisation.
 11. **Réponses à relire par le comité** [A] — NVDA qf_6 (part des retraitements en solde net 2,6 % vs
     ≈ 14 % poste par poste), qf_1 (résultat « normalisé » = résultat déposé), RVMD mo_4 (« 19 ans » de
     barrière = dernière échéance de brevet, non prudent), qf_8 RVMD (classement vs son propre texte),
     MSFT note flash (nouveaux segments lus comme routine). NVDA me_6 #1597 (comptes clients 22/14/13/11/10 %
     justes mais cités sur #1013, qui parle d'autre chose — à citer sur #980/#1308 ; limite du contrôle #136).
-12. **Acquisitions passées** [A/D] — « ce qu'elles ont rapporté » n'est publié par personne ; la question
+12. ~~**Acquisitions passées**~~ ✅ **Fait le 2026-10-19** — ma_2 reformulée sur indices observables (prix payé,
+    devenir de l'activité acquise, dépréciations et abandons) ; 11 liens d'index rattachés. [A/D] — « ce qu'elles ont rapporté » n'est publié par personne ; la question
     ma_2 est-elle instruisable telle quelle, ou se juge-t-elle sur l'évolution des segments acquis ?
 
 ## 3. La tenue du dossier : quand une réponse est-elle en vigueur

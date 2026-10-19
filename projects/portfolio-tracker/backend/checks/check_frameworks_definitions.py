@@ -189,6 +189,12 @@ def _table_reelle():
     return [dict(c) for c in brut["revisions_de_prevision"]]
 
 
+def _fonds_reel():
+    """Les décisions du fonds COPIÉES du référentiel réel (même raison que le catalogue)."""
+    brut = yaml.safe_load(FRAMEWORKS_YAML.read_text(encoding="utf-8"))
+    return {k: dict(v) for k, v in brut["parametres_du_fonds"].items()}
+
+
 def fichier_base(**over):
     d = {
         "schema_version": FRAMEWORK_DEFINITION_SCHEMA_VERSION,
@@ -200,6 +206,7 @@ def fichier_base(**over):
         "fraicheur_par_sujet": True,
         "types_evenement": _catalogue_reel(),
         "revisions_de_prevision": _table_reelle(),
+        "parametres_du_fonds": _fonds_reel(),
         "frameworks": [fw_base()],
     }
     d.update(over)
@@ -528,7 +535,9 @@ check("un historique à cadence annuelle passe", QuestionDefinition.model_valida
     {"id": "x", "libelle": "Un ingrédient dont le libellé est assez long", "essentiel": True,
      "duree_de_vie": "historique", "cadence": "annuelle"}])) is not None)
 _toutes = [i for f in load_frameworks().frameworks for q in f.questions for i in q.ingredients_requis]
-check(f"le référentiel réel porte ses ingrédients ({len(_toutes)})", len(_toutes) >= 129)
+# Plancher contre un référentiel vidé, pas un décompte cible : 129 → 128 le 2026-10-19 (qf_1 ne collecte plus
+# de coût du capital, #137 point 10).
+check(f"le référentiel réel porte ses ingrédients ({len(_toutes)})", len(_toutes) >= 128)
 _durees = {i.duree_de_vie for i in _toutes}
 check(f"le référentiel réel emploie les six durées de vie (atteignabilité) : {sorted(_durees)}",
       _durees == {"chiffre_courant", "historique", "description_annuelle", "jugement", "reprise",
@@ -836,6 +845,46 @@ check("[U] la qualité financière, le modèle économique et la valorisation li
       {f for f, lit in _fw_reels.items() if lit} == {"qualite_financiere", "modele_economique", "valorisation"},
       f"→ {_fw_reels}")
 
+
+
+print("\n6 ter. [W] les DÉCISIONS DU FONDS (#137 point 10) : un chiffre qui en reprend une la nomme, dans son unité")
+_FONDS_CC = {"id": "cout_du_capital", "libelle": "Taux exigé par le fonds, décision du comité", "unite": "%",
+             "periode": "à la date de la décision", "parametre_du_fonds": "taux_exige"}
+
+
+def _avec_fonds(chiffre=None, fonds=None):
+    q = q_base(chiffres_cles=[chiffre or _FONDS_CC])
+    return fichier_base(frameworks=[fw_base(questions=[q])],
+                        **({"parametres_du_fonds": fonds} if fonds is not None else {}))
+
+
+valide("[W] un chiffre qui reprend une décision du fonds EXISTANTE, dans son unité, passe",
+       lambda: charge(_avec_fonds()))
+rejete("[W] un chiffre qui reprend une décision du fonds INCONNUE (il ne s'établirait jamais)",
+       lambda: charge(_avec_fonds({**_FONDS_CC, "parametre_du_fonds": "taux_invente"})), "qui n'existe pas")
+rejete("[W] un chiffre déclaré dans une AUTRE unité que la décision du fonds (conversion silencieuse)",
+       lambda: charge(_avec_fonds({**_FONDS_CC, "unite": "points/an"})), "une unité convertie en silence")
+rejete("une décision du fonds ET un calcul sont refusés par le CONTRAT (une seule façon d'être établi)",
+       lambda: charge(_avec_fonds({**_FONDS_CC, "calcul": "a - b"})), "deux façons d'être établi")
+rejete("une décision du fonds dont la revue PRÉCÈDE la décision est refusée par le CONTRAT",
+       lambda: charge(_avec_fonds(fonds={"taux_exige": {**_fonds_reel()["taux_exige"],
+                                                        "revoir_avant": "2026-01-01"}})), "avant ou le jour")
+rejete("un référentiel SANS décisions du fonds est refusé par le CONTRAT (chaque analyse chercherait son taux)",
+       lambda: charge({k: v for k, v in fichier_base().items() if k != "parametres_du_fonds"}),
+       "parametres_du_fonds")
+_par_fonds = {(q.id, c.id): c.parametre_du_fonds for q in _reel_q.values() for c in q.chiffres_cles
+              if c.parametre_du_fonds}
+_tx = _reel.parametres_du_fonds.get("taux_exige")
+check("[W] le référentiel réel : qf_1 compare au taux exigé par le fonds, 10 %, décidé le 2026-10-17, revu sous un an",
+      _par_fonds == {("qf_1", "cout_du_capital"): "taux_exige"} and _tx is not None and _tx.valeur == 10
+      and _tx.unite == "%" and _tx.decide_le.isoformat() == "2026-10-17"
+      and (_tx.revoir_avant - _tx.decide_le).days <= 366, f"→ {_par_fonds}, {_tx}")
+check("[W] qf_1 ne COLLECTE plus de coût du capital : aucun ingrédient ne le demande (une estimation de tiers "
+      "n'est qu'un point de comparaison)",
+      "qf_1" in _reel_q and {i.id for i in _reel_q["qf_1"].ingredients_requis} == {
+          "resultat_operationnel_apres_impot", "capital_employe", "taux_imposition_effectif",
+          "historique_cinq_exercices"},
+      f"→ {[i.id for i in _reel_q['qf_1'].ingredients_requis] if 'qf_1' in _reel_q else 'qf_1 absente'}")
 
 print("\n7. la spec et le référentiel ne divergent PAS (§4.1.1 / §4.2.1 / §4.3 …)")
 # La spec porte les mêmes tables en prose. Le YAML est le DÉTENTEUR ; la spec est PARSÉE et

@@ -346,6 +346,21 @@ check("… et ne lui DEMANDE PAS les chiffres calculés : il les voit annoncés,
       and (_calc.get("qf_4") or [{}])[0].get("formule") == "dette_brute - tresorerie_et_placements"
       and "dette_nette" not in [c["id"] for c in (_dem.get("qf_4") or [])],
       f"→ demandés {_dem.get('qf_4')} / calculés {_calc.get('qf_4')}")
+# #137 point 10 — le taux exigé est une DÉCISION DU FONDS : montré avec sa valeur et sa décision datée, jamais
+# demandé, jamais annoncé comme un calcul (il ne se cite pas).
+_CTX_R = A.contexte_analyste(F, "qualite_financiere", "rentable", TICKER, ENTRIES)
+_q1 = next((q for q in _CTX_R["questions"] if q["id"] == "qf_1"), None)
+_fonds1 = (_q1 or {}).get("chiffres_fixes_par_le_fonds") or []
+check("qf_1 : le contexte MONTRE le taux exigé par le fonds — 10 %, décision du comité du 2026-10-17 (#137 point 10)",
+      [(c.get("id"), c.get("valeur"), c.get("unite")) for c in _fonds1] == [("cout_du_capital", 10.0, "%")]
+      and "2026-10-17" in (_fonds1[0].get("decision") or ""), f"→ {_q1 and _fonds1}")
+check("… et ne le DEMANDE PAS ni ne l'annonce comme un calcul : l'analyste compare, il ne cherche pas de tiers",
+      _q1 is not None
+      and "cout_du_capital" not in [c["id"] for c in _q1.get("chiffres_cles_demandes") or []]
+      and "cout_du_capital" not in [c["id"] for c in _q1.get("chiffres_calcules_par_le_systeme") or []],
+      f"→ demandés {(_q1 or {}).get('chiffres_cles_demandes')} / calculés {(_q1 or {}).get('chiffres_calcules_par_le_systeme')}")
+check("… et la consigne nomme la clef et interdit le coût du capital d'un tiers comme base de comparaison",
+      "`chiffres_fixes_par_le_fonds`" in A._ANALYSTE_SYSTEM_PROMPT and "jamais à un coût du capital estimé par un tiers" in A._ANALYSTE_SYSTEM_PROMPT)
 _a6 = A.assembler_answer(brute(), **_asm)
 check("l'encadré du modèle entre TEL QUEL dans la réponse (aucun chiffre réécrit par le code)",
       [c.model_dump(exclude_none=True) for c in _a6.reponse.chiffres_cles

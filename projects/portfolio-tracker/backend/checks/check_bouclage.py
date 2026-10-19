@@ -189,11 +189,11 @@ b.check("bouclage.py" in _APPELANTS["id_du_mandat_ouvert"],
 # ── §5 LE MÊME PROCESSUS, SCOPÉ ─────────────────────────────────────────────────────────────────
 print("\n[5] la collecte scopée : même pont, restreint aux questions renvoyées (#46)")
 _V = FICH.schema_version
-# qf_1 sous `rentable` est `variable`, essentiels À COLLECTER : resultat_operationnel_apres_impot,
-# cout_du_capital (`capital_employe` se lit dans le socle depuis #116, il ne se collecte plus). Un plan
-# qui ne couvre QUE qf_1 doit passer quand le scope vaut {qf_1}, et échouer sans scope (les autres
-# questions ont des essentiels non couverts).
-_essentiels_qf1 = ("resultat_operationnel_apres_impot", "cout_du_capital")
+# qf_1 sous `rentable` est `variable`, essentiel À COLLECTER : resultat_operationnel_apres_impot
+# (`capital_employe` se lit dans le socle depuis #116 ; le coût du capital est une décision du fonds depuis
+# #137 point 10 — ni l'un ni l'autre ne se collecte). Un plan qui ne couvre QUE qf_1 doit passer quand le
+# scope vaut {qf_1}, et échouer sans scope (les autres questions ont des essentiels non couverts).
+_essentiels_qf1 = ("resultat_operationnel_apres_impot",)
 _items_qf1 = [CollectionPlanItem(question_id="qf_1", ingredient_id=ing, statut="traduit", periode="exercice_clos",
                                  metrique="résultat d'exploitation après impôt",
                                  source_pressentie="10-K", ancre="clôture de l'exercice")

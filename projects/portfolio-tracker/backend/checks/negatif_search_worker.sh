@@ -75,6 +75,7 @@ mutations=(
 # le câblage dans le worker : tolérance de FORME (sortie illisible toujours relevée) et #126
 # toujours vérifié même pour une entry tolérée
 "$W¦        if not lect.lisible:¦        if True:¦la bonne fiche survit, les deux fautives sont écartées"
+"$W¦        if not lect.lisible:¦        if False:¦sortie brute illisible → l'exception d'origine"
 "$W¦        manquant = extrait_introuvable(extraits, log.textes_de(url))¦        manquant = None¦entrée tolérée par #128 reste vérifiée par #126"
 # #B — la relance unique sans recherche web
 "$W¦    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦    if False:¦relance UNIQUE, le rappel est bien dans le message"

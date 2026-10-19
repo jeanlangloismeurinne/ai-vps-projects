@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,17 +18,35 @@ role: >
 ## ➜ Prochain pas
 
 Ordre de `07-avant-comite.md` : (1) la matière — **close** ; (2) arbitrages — **rendus** (#137) ; (3) **tenue du
-dossier — EN COURS**, ordre validé par l'utilisateur le 2026-10-17 :
-(a) ✅ **relance bornée + réinitialisation** (fait le 2026-10-17, `c2bc1af`, migration 058 — CONVENTIONS #137
-« CONSTRUIT ») ; (b) ✅ **fraîcheur sujet par sujet (15)** (fait le 2026-10-18, `331aa7c` — CONVENTIONS #137
-« CONSTRUIT le 2026-10-18 ») ; (c) ✅ **mandats clos à la livraison (14)** (`8af6f4a`) et ✅ **ré-analyse qui dégrade (13)** (`6760090`) ; (d) données : ma_2 reformulée
-(12), taux exigé 10 % (10), me_5 → liste des marchés visés (9) ; (e) mesurer « répondu sans le chiffre-objet »
-(11, cas qf_6) ; puis (4) valorisation, (5) test. **Jalon 1 = NVDA + RVMD** ; code générique. Modèle : Opus pour
-la conception, Sonnet délégué pour les mesures et l'exécution bien spécifiée. Récits #138/#139, points
-14/15, relance d'un chapitre : archive, section « 2026-10-19 — sortis à la clôture du point 13 ».
-**Point 13 CONSTRUIT le 2026-10-19** (`6760090`, migration 060, CONVENTIONS #137) : titre d'une pièce = ce qu'elle contient (233 retitrées, embeddings recalculés) ; une baisse de fondement est signalée au comité (niveau 1 bloqué, NVDA ma_1 #1499 ← #1475), qui peut rétablir la précédente (geste au PV). **PROCHAIN PAS : (d) données** — ma_2 reformulée (12), taux exigé 10 % (10), me_5 → liste des marchés visés (9). Le comité devra lire la baisse NVDA ma_1 (elle était juste : acquitter ou renvoyer). Dettes
-nommées : `negatif_collecte_executor.sh` 43/44 (dette antérieure : `FormuleInexecutable` non capturée autour de `recette_retenue`) ; `synthesis_feed` titré par le modèle (sans appelant V3) ; l'outil d'acceptation ne remet pas le socle ni les lectures (n'est pas la chaîne) ; autres
-questions dont le verdict lit un seul chiffre à recenser (`sens_lu_sur`, seuls qf_3/qf_5 déclarés).
+dossier** — (a) relance bornée ✅ `c2bc1af` ; (b) fraîcheur sujet par sujet ✅ `331aa7c` ; (c) mandats clos ✅
+`8af6f4a` et ré-analyse qui dégrade ✅ `6760090` ; (d) données : **ma_2 reformulée (12) ✅ et taux exigé 10 %
+(10) ✅ le 2026-10-19** (CONVENTIONS #137 « CONSTRUIT le 2026-10-19 ») ; **me_5 → tableau des marchés (9) : ABSORBÉ
+par le modèle de l'entreprise (ci-dessous)** ; (e) « répondu sans le chiffre-objet » (11) **mesuré le 2026-10-19** ; puis (4) valorisation, (5) test.
+**Jalon 1 = NVDA + RVMD** ; code générique. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et
+l'exécution bien spécifiée.
+**PROCHAIN PAS : concevoir LE MODÈLE DE L'ENTREPRISE** (orientation de l'utilisateur, 2026-10-19, qui
+englobe le point 9 — page d'analyse : https://claude.ai/artifact/54kCtG66c9i5GNjL8gDWig) : « un outil unique,
+le modèle de l'entreprise, avec autant d'onglets que nécessaire pour une modélisation complète ; chaque question
+de chaque framework y inscrit les informations pertinentes ; il sert à la fin à la valorisation ; il se remplit
+dans le BON ORDRE car les questions ultérieures dépendent de décisions de structuration prises en amont (5 blocs
+de marché ⟹ taille, croissance… par bloc ; coûts variables/marge par segment ; coûts fixes transverses) ;
+vérification qualité ad hoc à chaque étape ; puis signature globale du tableau, voire analyse de sensibilité ».
+À faire : SPEC soumise AVANT tout code — onglets et leur ordre de remplissage (structuration → données par
+segment → transverse), ce que chaque question écrit / lit, la garde qualité par étape, raccordement aux comptes
+reconstitués (socle) et aux décisions du fonds, signature globale, sensibilité (±1 pt du taux exigé déjà
+décidé). Réutiliser : contrat `modele_valorisation_schema` (segments, hypothèses à 3 origines, jugement ancré),
+bac à calcul, signature #98, socle #115, `parametres_du_fonds`.
+**Mesure (e)** (16 réponses en vigueur à encadré) : 6 chiffres absents légitimes (n.s./n.c. : RVMD qf_2-5, NVDA
+qf_7) ; 2 coûts du capital vides (fermés par le point 10 au prochain passage) ; 1 vrai cas NVDA qf_6 #1289 (« part
+faible » sans aucun chiffre) ; 1 neuf : RVMD qf_6 #1679 rend ABSENTS des retraitements qui valent ZÉRO (l'émetteur
+ne publie aucune mesure ajustée, #47). Remède à concevoir : `sens_lu_sur` ne lit aujourd'hui que des chiffres du
+socle (`chiffres_du_socle`) — qf_6 porte sur un chiffre relevé, il faudrait une garde APRÈS rédaction (pont).
+Le comité devra lire la baisse NVDA ma_1 (elle était juste : acquitter ou renvoyer). Dettes nommées :
+`negatif_collecte_executor.sh` 43/44 (`FormuleInexecutable` non capturée autour de `recette_retenue`) ;
+`synthesis_feed` titré par le modèle (sans appelant V3) ; l'outil d'acceptation ne remet pas le socle ni les
+lectures ; `tools/acceptation_frameworks.py` (hors suite) a pour témoin `qf_1.cout_du_capital`, retiré le
+2026-10-19 — choisir un nouveau témoin (un essentiel qu'aucune source déterministe ne sert) ; sensibilité ±1 pt du
+taux et alerte de décision du fonds échue : au lot de la valorisation. Récits : archive.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
@@ -48,21 +66,10 @@ questions dont le verdict lit un seul chiffre à recenser (`sens_lu_sur`, seuls 
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
 
-## Arbitrages récents (le détail : `CONVENTIONS.md` #129-#139 ; #129/#130 : fraîcheur par durée de vie, causes de révision, `06-regle-fraicheur.md` §8-§14)
+## Arbitrages récents
 
-- **2026-10-18** — **changement de stade** (#139) : le système détecte et RECOMMANDE, le comité reclasse
-  ou maintient ; table de réouverture validée ; les pairs : même marché ou analogue, un changement de stade
-  pose la question sans la trancher. Seule la qualité financière RVMD se relance avant le 10-Q du T3.
-- **2026-10-17** — séance groupée (#137) : marchés visés listés, **estimation interne d'abord** (bac à
-  calcul) ; **taux exigé unique 10 %**, sensibilité ±1 pt, risque propre dans les scénarios ; défaut du comité
-  annoté, repris à la reconstruction ; ma_2 sur indices observables ; fraîcheur = pièce la plus récente par
-  sujet ; relance bornée + réinitialisation par l'utilisateur ; RVMD reclassée au 1er trimestre de ventes.
-
-- **2026-10-16** — tout chiffre renvoie à une pièce (#136) ; ma_4 scindée, mo_5/se_3 hors dérapage (#131) :
-  détail dans `CONVENTIONS.md` et l'archive (section du 2026-10-18).
-- Arbitrages plus anciens (périmètre EDGAR seul, « on rachète tout » en test, ajouter une méthodologie =
-  opération de données, valorisation option (c), encadré de chiffres clés, signature du comité…) :
-  archive, section COPIE CONFORME, « Arbitrages de l'utilisateur qui commandent la suite ».
+Le détail : `CONVENTIONS.md` #129-#139 ; séance du 2026-10-17 : `08-seance-arbitrages.md` ; liste du 2026-10-16
+au 2026-10-18 : archive, section « 2026-10-19 — sortis de la reprise (arbitrages récents) ».
 
 ## Outils (tous dans `backend/tools/`, gratuits sauf mention)
 

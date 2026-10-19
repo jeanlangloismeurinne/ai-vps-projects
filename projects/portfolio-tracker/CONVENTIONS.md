@@ -3228,6 +3228,10 @@ rappel, le second résultat est final, les deux tours facturés (#41) ; jamais e
 `check_search_worker` §13 + `negatif_search_worker.sh` **43/0** ; `negatif_analyste.sh` **67/0** (la mutation
 « réponses conformes gardées » vise désormais l'assert « ne redemande QUE la question fautive » : l'assert
 de bout de parcours était aveugle — une réponse conforme perdue est redemandée et revient). Suite **4722/0**.
+*Contrôle du 2026-10-19* (travail délégué, relu et rejoué) : code conforme à la spec (lecture item par item,
+conformes repassées par #126, illisible ⟹ exception d'origine, relance unique facturée sur les deux tours) ;
+`check_search_worker` 139/0 ; une décision n'avait pas de mutation — « sortie illisible ⟹ l'exception
+d'origine » (A3) —, ajoutée : `negatif_search_worker.sh` **45/0**.
 
 ### #136 — tout chiffre renvoie à une pièce : renvoyé une fois, le calcul se montre, le reste est signalé
 
@@ -3292,6 +3296,24 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
   succès — monter aussi le taux compterait le risque deux fois). Logique de fonds : coût d'opportunité
   (taux sans risque ~4 % + prime actions 4-6 points) ; la cohérence entre titres prime sur la précision.
   Les estimations de tiers ne sont qu'un point de comparaison.
+  **CONSTRUIT le 2026-10-19** : la décision vit au référentiel, `parametres_du_fonds.taux_exige` (valeur 10 %,
+  `decide_le` 2026-10-17, `revoir_avant` 2027-10-17, motif ; contrat `ParametreDuFonds`, requis) ; un chiffre
+  clé la reprend par `parametre_du_fonds` — quatrième façon d'être établi par le code, exclusive des trois
+  autres, son existence et son unité gardées par le pont du référentiel ([W]). `completer_encadre` la pose,
+  datée « décision du fonds du …, à revoir avant le … », et ÉCARTE une ligne fournie par le rédacteur ;
+  l'analyste la voit avant de rédiger (`chiffres_fixes_par_le_fonds`) et la consigne lui interdit de comparer
+  à un coût du capital de tiers. qf_1 ne COLLECTE plus de coût du capital (ingrédient retiré ; va_1/va_4
+  reprennent le chiffre de qf_1). Rattrapage `tools/retraits/2026-10-19_taux_exige_qf1.sql` : 5 liens d'index
+  vers des WACC de tiers retirés (pièces intactes), mandats 108/2443 abandonnés ; #1209/#1685 restent en
+  vigueur, coût du capital vide, refaites au prochain passage. Non construit : la sensibilité ±1 point (lot de
+  la valorisation) et l'alerte d'une décision échue (l'encadré affiche sa date de revue). Preuve :
+  `check_frameworks_definitions` §6 ter + négatif, `check_framework_contract` + négatif, `check_analyste` +
+  négatif, `check_bouclage` (fixture recalée). ⚠️ Mutations CADUQUES trouvées en chemin, recalées : deux de
+  `negatif_analyste.sh` (laissées par #139 ter, `748ef4e` : la porte « aucune réponse possible » réécrite) ;
+  `negatif_frameworks_definitions.sh` qf_6 et ma_1 (laissées par #139 : `changement_de_stade` ajouté à
+  `rouverte_par`) ; et une collision créée par ce lot — la première occurrence de `par_id[d.id] = ligne` était
+  devenue la ligne du fonds, la mutation de la règle de prudence (#105) ne l'atteignait plus. Un harnais à
+  1 échec « MOTIF INTROUVABLE » n'est pas un vert : relancer les négatifs du module après tout changement.
 - **Le défaut relevé par le comité (point 11)** — il annote ; la réponse reste affichée avec la remarque ;
   l'annotation est remise à l'analyste au premier passage du test (la reconstruction, #127). Piste à
   MESURER avant de construire : une réponse ne peut être « répondue » si le chiffre sur lequel porte la
@@ -3299,6 +3321,15 @@ jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au mo
 - **Les acquisitions (point 12)** — ma_2 se juge sur des indices observables : prix payé rapporté aux
   ventes acquises, évolution du segment d'accueil, dépréciations d'écart d'acquisition, cessions ou
   abandons ; jamais sur « ce qu'elle a rapporté », que personne ne publie.
+  **CONSTRUIT le 2026-10-19** (données seules) : énoncé « Les acquisitions passées ont-elles été un bon emploi
+  du capital, au vu de ce qui s'observe — prix payé, devenir de l'activité acquise, dépréciations et
+  abandons ? » ; `resultat_obtenu` remplacé par `devenir_de_l_activite_acquise` (segment d'accueil, ou
+  programmes qui en sont issus), essentiel ; `acquisitions_realisees` dit le prix et ce qui a été acquis
+  (ventes, programmes, trésorerie) ; `depreciations` couvre cessions et abandons. Nature, plancher B et
+  `rouverte_par` inchangés (une acquisition annoncée rouvre déjà tout : `perimetre`). Rattrapage
+  `tools/retraits/2026-10-19_reformulation_ma2.sql` : les 11 liens de `resultat_obtenu` suivent leur pièce, lue
+  une à une (9 → acquisitions, 2 → devenir : RVMD T2 2026, programmes issus de Warp Drive) ; mandat 2975
+  abandonné. `framework_version` non montée (précédent #114/#131) : #1452/#1500 restent l'historique.
 - **La fraîcheur (point 15)** — sujet par sujet, seule la pièce la plus RÉCENTE juge si une réponse est à
   jour ; une pièce remplacée par une plus récente sur le même sujet reste citée comme contexte et ne périme
   rien. Cas : NVDA ma_1 #1475 (rachats 18/05 + 28/09, émission du 15/06).

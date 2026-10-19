@@ -507,6 +507,16 @@ def chiffres_du_socle(q, entries: dict[int, dict[str, Any]]) -> list[dict[str, A
             for d in declares]
 
 
+def chiffres_du_fonds(q, fonds: dict[str, Any]) -> list[dict[str, Any]]:
+    """Les chiffres de l'encadré de `q` que pose une DÉCISION DU FONDS (#137 point 10), tels que le code
+    les établira (`completer_encadre`, détenteur unique) — montrés à l'analyste AVANT qu'il rédige."""
+    declares = [c for c in q.chiffres_cles if c.parametre_du_fonds is not None]
+    lus = {c.id: c for c in completer_encadre(declares, [], socle=None, fonds=fonds)}
+    return [{"id": d.id, "libelle": d.libelle, "unite": d.unite, "valeur": lus[d.id].valeur,
+             "decision": lus[d.id].date_ou_periode or lus[d.id].motif_absence}
+            for d in declares]
+
+
 def lecture_du_chiffre_du_verdict(q, entries: dict[int, dict[str, Any]]) -> Optional[tuple[str, Optional[str], Optional[int]]]:
     """#139 ter — l'issue du chiffre qui PORTE le verdict (`sens_lu_sur`) : `(issue, motif, pièce)`, issue
     ∈ `etabli` / `manque` / `non_significatif` (`ratios_maison.issue_du_motif`, détenteur unique). `None`
@@ -600,11 +610,15 @@ def contexte_analyste(
             "chiffres_calcules_par_le_systeme": [
                 {"id": c.id, "libelle": c.libelle,
                  "formule": c.calcul or f"le plus élevé de {', '.join(c.le_plus_eleve_de)}"}
-                for c in q.chiffres_cles if c.calcule_par_le_systeme and c.socle is None
+                for c in q.chiffres_cles
+                if c.calcule_par_le_systeme and c.socle is None and c.parametre_du_fonds is None
             ],
             # Les chiffres LUS DANS LES COMPTES RECONSTITUÉS (2026-10-04), avec leur valeur : la note
             # les commente, elle ne les recopie pas — et sa prose ne peut pas en dire un autre.
             "chiffres_lus_dans_le_socle": chiffres_du_socle(q, entries),
+            # Les DÉCISIONS DU FONDS (#137 point 10) — le taux exigé : la note compare à LUI, elle ne
+            # cherche pas un coût du capital de tiers.
+            "chiffres_fixes_par_le_fonds": chiffres_du_fonds(q, fichier.parametres_du_fonds),
             # Les événements postérieurs aux derniers comptes qui rouvrent CETTE question (#103).
             "faits_posterieurs_a_lire": faits_montrables((faits or {}).get(q.id, []), lisibles, citables),
             "corpus": [
@@ -901,6 +915,11 @@ _ANALYSTE_SYSTEM_PROMPT = (
     "les arrondis pas, tu n'en cites pas un autre pour le même poste. Pour un poste des comptes, cite "
     "le socle plutôt qu'une source qui en recopie une ligne ; garde les autres sources pour ce que les "
     "comptes ne disent pas (une échéance, une clause, une prévision de la direction).\n"
+    "LES DÉCISIONS DU FONDS. `chiffres_fixes_par_le_fonds` donne les chiffres que le COMITÉ fixe pour "
+    "tout le portefeuille — le taux exigé, rendement minimal attendu de tout capital investi. Tu ne les "
+    "rends pas et tu ne cites aucune source pour eux : ta réponse compare l'entreprise à CE taux, jamais "
+    "à un coût du capital estimé par un tiers (une telle estimation n'est, au plus, qu'un point de "
+    "comparaison que tu peux mentionner).\n"
     "Forme d'une ligne : {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", "
     "\"valeur\": <nombre lu dans une source citée>, \"date_ou_periode\": \"<ce qu'il mesure>\"} — "
     "ou {\"id\": \"<id demandé>\", \"unite\": \"<unité demandée>\", \"motif_absence\": \"<ce qui "

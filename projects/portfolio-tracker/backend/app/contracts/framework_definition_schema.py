@@ -27,6 +27,7 @@ visée par un `substitut_question_id`, et l'accord avec les vocabulaires détenu
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Literal, Optional
 
 from pydantic import Field, model_validator
@@ -36,7 +37,7 @@ from .analysis_v2_schemas import Strict, Tier
 __all__ = [
     "FRAMEWORK_DEFINITION_SCHEMA_VERSION",
     "MODES_ARCHETYPE", "PLANCHERS_DESSERRES", "PORTEES_EVENEMENT",
-    "TypeEvenement", "IngredientRequis", "ChiffreCleDeclare", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
+    "TypeEvenement", "IngredientRequis", "ParametreDuFonds", "ChiffreCleDeclare", "VariableArchetype", "QuestionDefinition", "FrameworkDefinition",
     "FrameworksFile",
 ]
 
@@ -197,6 +198,25 @@ class ChiffreDuSocle(Strict):
         return self
 
 
+class ParametreDuFonds(Strict):
+    """Une DÉCISION DU FONDS, commune à tout le portefeuille (#137 point 10) : le comité la fixe, la date
+    et la revoit à échéance. Ce n'est pas une pièce — jamais collectée, jamais citée : l'encadré la reçoit
+    du code. Comme un fonds : le taux exigé est une décision maison, la cohérence entre titres prime sur
+    la précision, et une estimation de tiers n'est qu'un point de comparaison."""
+    valeur: float
+    unite: str = Field(min_length=1)
+    decide_le: date
+    revoir_avant: date
+    decision: str = Field(min_length=20)   # qui l'a décidée, et pourquoi — lu par le comité
+
+    @model_validator(mode="after")
+    def _une_revue_suit_la_decision(self):
+        if self.revoir_avant <= self.decide_le:
+            raise ValueError(f"décision du fonds : revue au {self.revoir_avant} avant ou le jour de la décision "
+                             f"({self.decide_le})")
+        return self
+
+
 class ChiffreCleDeclare(Strict):
     """Un chiffre de l'ENCADRÉ DE CHIFFRES CLÉS que toute réponse à la question doit rendre (4 bis,
     instruit avec l'utilisateur le 2026-09-29).
@@ -232,6 +252,10 @@ class ChiffreCleDeclare(Strict):
     facultatif: bool = False
     # `socle` (2026-10-04) : le chiffre est LU dans les comptes reconstitués, par le code.
     socle: Optional[ChiffreDuSocle] = None
+    # `parametre_du_fonds` (#137 point 10) : le chiffre EST une décision du fonds (`parametres_du_fonds`
+    # du référentiel), posée par le code — le taux exigé de qf_1. Son existence et son unité sont un
+    # invariant RELATIONNEL (pont du référentiel, [W]).
+    parametre_du_fonds: Optional[str] = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
     # `non_significatif_si_negatif` (2026-10-12) : les termes d'un CALCUL dont le signe négatif rend le
     # résultat non significatif — la pratique d'un analyste crédit, qui écrit « n.s. » plutôt qu'une
     # couverture des intérêts de −27,4 fois quand l'entreprise perd de l'argent en exploitation (RVMD :
@@ -242,17 +266,20 @@ class ChiffreCleDeclare(Strict):
 
     @property
     def calcule_par_le_systeme(self) -> bool:
-        """Vrai si le CODE établit ce chiffre (formule, règle de prudence ou lecture du socle) : il n'est
+        """Vrai si le CODE établit ce chiffre (formule, règle de prudence, lecture du socle ou décision du
+        fonds) : il n'est
         pas demandé au modèle, et une ligne fournie pour lui est écartée (#101). DÉTENTEUR UNIQUE de la
         distinction relevé / calculé, lue par le référentiel, le pont, l'analyste et `completer_encadre`
         (#46)."""
-        return self.calcul is not None or bool(self.le_plus_eleve_de) or self.socle is not None
+        return (self.calcul is not None or bool(self.le_plus_eleve_de) or self.socle is not None
+                or self.parametre_du_fonds is not None)
 
     @model_validator(mode="after")
     def _une_seule_facon_d_etre_etabli(self):
-        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None)) > 1:
+        if sum((self.calcul is not None, bool(self.le_plus_eleve_de), self.socle is not None,
+                self.parametre_du_fonds is not None)) > 1:
             raise ValueError(f"chiffre `{self.id}` : deux façons d'être établi (calcul, le plus élevé de, "
-                             "socle) — un chiffre s'établit d'une seule façon")
+                             "socle, décision du fonds) — un chiffre s'établit d'une seule façon")
         if self.socle is not None and self.socle.formule is not None and self.unite != "M$":
             raise ValueError(f"chiffre `{self.id}` : un montant lu dans le socle est en M$ (unité déclarée "
                              f"{self.unite!r}) — un ratio est un RATIO MAISON (`socle.ratio`), défini une fois")
@@ -520,6 +547,10 @@ class FrameworksFile(Strict):
     # sans cause ne rouvrirait rien de vérifiable. Sa cohérence avec le catalogue est un invariant
     # RELATIONNEL (pont, [S] de `frameworks.py`).
     revisions_de_prevision: list[ChiffreRevisable] = Field(min_length=1)
+    # Les DÉCISIONS DU FONDS (#137 point 10) — ce que le comité fixe pour tout le portefeuille (le taux
+    # exigé). Requises, sans défaut : un taux absent laisserait chaque analyse chercher le sien.
+    parametres_du_fonds: dict[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")], ParametreDuFonds] = Field(
+        min_length=1)
     frameworks: list[FrameworkDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")
