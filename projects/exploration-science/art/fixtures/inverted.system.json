@@ -1,0 +1,10 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "inverted",
+  "titleKey": "system.title",
+  "objects": [
+    { "id": "plinth", "role": "setting" },
+    { "id": "inverted", "role": "main", "placement": { "on": "plinth", "position": [0, 0] } }
+  ],
+  "connections": []
+}

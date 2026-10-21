@@ -22,7 +22,7 @@ describe("v2 content", () => {
 
   it("accepts the Blender test systems", async () => {
     const { readFileSync } = await import("node:fs");
-    for (const f of ["art/fixtures/probe.system.json", "art/fixtures/floating.system.json"]) {
+    for (const f of ["art/fixtures/probe.system.json", "art/fixtures/floating.system.json", "art/fixtures/inverted.system.json"]) {
       expect(systemErrors(JSON.parse(readFileSync(resolve(root, f), "utf8")))).toEqual([]);
     }
   });

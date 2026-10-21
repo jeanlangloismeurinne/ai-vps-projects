@@ -3,7 +3,7 @@
 - every part of an asset touches another part of it (no floating element);
 - every asset rests on its declared support (`on`), unless it is airborne;
 - two assets with no support relation do not interpenetrate;
-- closed parts are manifold (no missing surface).
+- closed parts are manifold (no missing surface) with outward normals.
 Tolerance: 1 mm.
 """
 
@@ -72,9 +72,12 @@ def check_asset(asset) -> list[str]:
         bm = bmesh.new()
         bm.from_mesh(p.data)
         bad = sum(1 for e in bm.edges if not e.is_manifold)
+        volume = bm.calc_volume(signed=True)
         bm.free()
         if bad:
             errors.append(f"open surface: {p.name} has {bad} non-manifold edges")
+        elif volume < 0:
+            errors.append(f"inverted normals: {p.name} faces inward (signed volume {volume:.4f})")
     return errors
 
 

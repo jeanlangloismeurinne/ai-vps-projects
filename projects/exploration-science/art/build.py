@@ -11,6 +11,7 @@ Exits 1 when a check fails: nothing is exported then.
 import argparse
 import importlib
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -22,7 +23,7 @@ import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 from xs import checks  # noqa: E402
-from xs.bake import bake_ao  # noqa: E402
+from xs.bake import bake_ao, lift_buried  # noqa: E402
 from xs.export import export_asset  # noqa: E402
 
 RAY_HEIGHT = 1000.0
@@ -89,9 +90,11 @@ def main() -> int:
     for obj in support_order(system["objects"]):
         oid = obj["id"]
         reps = obj.get("representations", ["envelope"])
+        if "envelope" not in reps:
+            return fail([f"{oid}: no envelope representation, got {reps}"])
         if reps != ["envelope"]:
-            # Representations are built one scene at a time; the detail view comes with roadmap §6.
-            return fail([f"{oid}: only the envelope representation is built for now, got {reps}"])
+            # The detail views are built one scene at a time, with roadmap §6.
+            print(f"{oid}: building the envelope only, {sorted(set(reps) - {'envelope'})} deferred", file=sys.stderr)
         entry = registry["assets"].get(oid)
         if entry is None:
             return fail([f"{oid}: no entry in art/assets.json"])
@@ -119,13 +122,16 @@ def main() -> int:
     parts = [p for a in assets.values() for p in a.parts]
     bake = registry["bake"]
     bake_ao(parts, samples=bake["samples"], distance=bake["distance"])
+    lift_buried(parts)
     baked_at = time.monotonic()
 
     report = {"system": system["id"], "assets": {}}
     for aid, asset in assets.items():
         path = out / f"{aid}.envelope.glb"
         stats = export_asset(asset, path)
-        report["assets"][aid] = {"main": asset.main, "airborne": asset.airborne, "envelope": path.name, **stats}
+        loc, rot = asset.root.matrix_world.translation, asset.root.matrix_world.to_euler()
+        world = {"position": [round(c, 6) for c in loc], "rotationZDeg": round(math.degrees(rot.z), 6)}
+        report["assets"][aid] = {"main": asset.main, "airborne": asset.airborne, "world": world, "envelope": path.name, **stats}
     report["timings_s"] = {"model_and_bake": round(baked_at - started, 2), "total": round(time.monotonic() - started, 2)}
     reports = ART / ".build"
     reports.mkdir(exist_ok=True)

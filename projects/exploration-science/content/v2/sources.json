@@ -146,6 +146,50 @@
         "card.ground-station"
       ],
       "note": "Effet bien mesuré ; sa nature exacte (changement de satellite ou réordonnancement des ressources) est discutée dans l'article. Les textes disent « réaffectation », pas « changement de satellite »."
+    },
+    {
+      "id": "satellite-dimensions",
+      "claim": "Satellite Starlink V2 Mini : caisson plat de 4,1 × 2,7 m, deux panneaux solaires de 12,8 × 4,1 m, environ 30 m d'envergure.",
+      "value": "4.1 x 2.7 m bus, 2 x 12.8 x 4.1 m arrays",
+      "status": "verified",
+      "sources": [
+        "planet4589-starsim",
+        "spaceflightnow-v2mini"
+      ],
+      "usedBy": [
+        "art/assets/satellite.py"
+      ],
+      "note": "Chiffres du dépôt FCC d'octobre 2022 repris par J. McDowell ; Spaceflight Now donne ~30 m de bout en bout. Le modèle garde les proportions du caisson et l'allongement 3,1:1 des panneaux, mais raccourcit les panneaux face au caisson pour la lisibilité (convention de maquette)."
+    },
+    {
+      "id": "gateway-radome",
+      "claim": "Antenne de passerelle Starlink : parabole sous radôme sphérique de 2,1 m de diamètre (250 kg), sur un socle béton de 1,85 × 1,85 m ; une « Community Gateway » compte quatre antennes d'environ 1,4 m.",
+      "value": "2.1 m radome, 1.85 m base, 4 antennas",
+      "status": "verified",
+      "sources": [
+        "speedcast-community-gateway",
+        "openfalklands-community-gateway"
+      ],
+      "usedBy": [
+        "art/assets/ground_station.py"
+      ],
+      "note": "Diamètre du radôme et du socle lus sur la brochure Speedcast (ouverte). Nombre d'antennes et diamètre de parabole vus seulement dans un extrait de recherche. Une passerelle complète en compte huit ou plus (annexe SpaceX à l'Ofcom, non ouverte) : la scène montre le format Community Gateway."
+    },
+    {
+      "id": "diorama-scale",
+      "claim": "Échelle de la maquette : environ 1:3,3 pour la maison et la station sol ; l'antenne est agrandie environ ×2,8 et le satellite est dessiné à part, à une altitude symbolique.",
+      "status": "order-of-magnitude",
+      "sources": [
+        "speedcast-standard",
+        "speedcast-community-gateway"
+      ],
+      "usedBy": [
+        "art/assets/house.py",
+        "art/assets/terminal.py",
+        "art/assets/ground_station.py",
+        "art/assets/satellite.py"
+      ],
+      "note": "Convention d'illustration, pas une mesure : maison de 10 × 7 m environ (non sourcée, ordre de grandeur d'une maison individuelle), antenne 594 × 383 mm (fait dish-dimensions), radôme 2,1 m (fait gateway-radome)."
     }
   ],
   "sources": [
@@ -236,6 +280,38 @@
       "publisher": "Classmethod",
       "accessed": "2026-10-11",
       "access": "opened"
+    },
+    {
+      "id": "planet4589-starsim",
+      "title": "Jonathan McDowell — Starlink Simulations (dimensions des satellites d'après le dépôt FCC d'octobre 2022)",
+      "url": "https://planet4589.org/astro/starsim/index.html",
+      "publisher": "planet4589.org",
+      "accessed": "2026-10-21",
+      "access": "opened"
+    },
+    {
+      "id": "spaceflightnow-v2mini",
+      "title": "SpaceX resumes launching upgraded Starlink satellites",
+      "url": "https://spaceflightnow.com/2023/04/19/falcon-9-starlink-6-2-coverage",
+      "publisher": "Spaceflight Now",
+      "accessed": "2026-10-21",
+      "access": "opened"
+    },
+    {
+      "id": "speedcast-community-gateway",
+      "title": "Starlink Community Gateway — brochure (Antenna Specifications)",
+      "url": "https://www.speedcast.com/wp-content/uploads/2022/09/Speedcast_Starlink_Community_Gateway-Brochure.pdf",
+      "publisher": "Speedcast",
+      "accessed": "2026-10-21",
+      "access": "opened"
+    },
+    {
+      "id": "openfalklands-community-gateway",
+      "title": "Connecting Communities: Inside Starlink's Community Gateway",
+      "url": "https://openfalklands.com/connecting-communities-inside-starlinks-community-gateway/",
+      "publisher": "OpenFalklands",
+      "accessed": "2026-10-21",
+      "access": "search-result"
     }
   ]
 }

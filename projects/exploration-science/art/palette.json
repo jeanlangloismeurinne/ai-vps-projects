@@ -1,7 +1,7 @@
 {
   "$comment": "Single palette shared by the Blender scripts (material base colours) and the v2 app (UI, lines, background). Neutrals dominate; accents are functional. Colours are sRGB hex.",
   "neutrals": {
-    "ground": { "color": "#e6e8f0", "roughness": 0.95, "metallic": 0.0 },
+    "ground": { "color": "#dcdfe9", "roughness": 0.95, "metallic": 0.0 },
     "white": { "color": "#f6f7fa", "roughness": 0.7, "metallic": 0.0 },
     "light": { "color": "#d3d7e1", "roughness": 0.6, "metallic": 0.0 },
     "mid": { "color": "#a2a9b8", "roughness": 0.5, "metallic": 0.0 },

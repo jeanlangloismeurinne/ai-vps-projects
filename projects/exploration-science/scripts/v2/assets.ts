@@ -51,6 +51,8 @@ for (const file of registry.build as string[]) {
     manifest.assets[assetId] = {
       main: a.main,
       airborne: a.airborne,
+      // Blender (x, y, z) Z-up → glTF (x, z, −y) Y-up; a turn about Blender Z is a turn about glTF Y.
+      transform: { position: [a.world.position[0], a.world.position[2], -a.world.position[1]], rotationYDeg: a.world.rotationZDeg },
       representations: {
         envelope: {
           file: a.envelope,

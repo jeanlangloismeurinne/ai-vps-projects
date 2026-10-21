@@ -1,17 +1,115 @@
 {
   "formatVersion": "v2-0.1",
   "out": "public/v2/models",
-  "bake": { "samples": 64, "distance": 0.8 },
-  "build": ["art/fixtures/probe.system.json"],
+  "bake": {
+    "samples": 64,
+    "distance": 0.8
+  },
+  "build": [
+    "content/v2/systems/starlink-home.json"
+  ],
   "assets": {
-    "plinth": { "envelope": { "script": "assets.plinth" } },
-    "probe": { "envelope": { "script": "assets.probe" } },
-    "floating": { "envelope": { "script": "fixtures.floating" } },
-    "island": { "envelope": { "script": "assets.island" } },
-    "house": { "envelope": { "script": "assets.house" } },
-    "terminal": { "envelope": { "script": "assets.terminal" }, "detail": { "script": "assets.terminal_exploded" } },
-    "satellite": { "envelope": { "script": "assets.satellite" } },
-    "ground-station": { "envelope": { "script": "assets.ground_station", "params": { "radomes": 4, "open": 1 } } },
-    "pine-01": { "envelope": { "script": "assets.pine", "params": { "seed": 1 } } }
+    "plinth": {
+      "envelope": {
+        "script": "assets.plinth"
+      }
+    },
+    "probe": {
+      "envelope": {
+        "script": "assets.probe"
+      }
+    },
+    "floating": {
+      "envelope": {
+        "script": "fixtures.floating"
+      }
+    },
+    "inverted": {
+      "envelope": {
+        "script": "fixtures.inverted"
+      }
+    },
+    "island": {
+      "envelope": {
+        "script": "assets.island"
+      }
+    },
+    "house": {
+      "envelope": {
+        "script": "assets.house"
+      }
+    },
+    "terminal": {
+      "envelope": {
+        "script": "assets.terminal"
+      },
+      "detail": {
+        "script": "assets.terminal_exploded"
+      }
+    },
+    "satellite": {
+      "envelope": {
+        "script": "assets.satellite"
+      }
+    },
+    "ground-station": {
+      "envelope": {
+        "script": "assets.ground_station",
+        "params": {
+          "radomes": 4,
+          "open": 1
+        }
+      }
+    },
+    "pine-01": {
+      "envelope": {
+        "script": "assets.pine",
+        "params": {
+          "seed": 1,
+          "id": "pine-01",
+          "height": 1.5
+        }
+      }
+    },
+    "pine-02": {
+      "envelope": {
+        "script": "assets.pine",
+        "params": {
+          "seed": 2,
+          "id": "pine-02",
+          "height": 1.3
+        }
+      }
+    },
+    "pine-03": {
+      "envelope": {
+        "script": "assets.pine",
+        "params": {
+          "seed": 3,
+          "id": "pine-03",
+          "height": 1.7
+        }
+      }
+    },
+    "pine-04": {
+      "envelope": {
+        "script": "assets.pine",
+        "params": {
+          "seed": 4,
+          "id": "pine-04",
+          "height": 1.2
+        }
+      }
+    },
+    "pine-05": {
+      "envelope": {
+        "script": "assets.pine",
+        "params": {
+          "seed": 5,
+          "id": "pine-05",
+          "height": 1.4
+        }
+      }
+    }
   }
 }

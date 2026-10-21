@@ -3,40 +3,165 @@
   "id": "starlink-home",
   "titleKey": "system.title",
   "objects": [
-    { "id": "island", "role": "setting" },
+    {
+      "id": "island",
+      "role": "setting"
+    },
     {
       "id": "house",
       "role": "main",
-      "anchors": ["roof"],
-      "placement": { "on": "island", "position": [-2, 1], "rotationZDeg": 20 }
+      "anchors": [
+        "roof"
+      ],
+      "placement": {
+        "on": "island",
+        "position": [
+          -2,
+          1
+        ],
+        "rotationZDeg": 20
+      }
     },
     {
       "id": "terminal",
       "role": "main",
-      "representations": ["envelope", "detail"],
-      "anchors": ["beam"],
-      "placement": { "on": "house", "anchor": "roof" }
+      "representations": [
+        "envelope",
+        "detail"
+      ],
+      "anchors": [
+        "beam"
+      ],
+      "placement": {
+        "on": "house",
+        "anchor": "roof",
+        "rotationZDeg": 20
+      }
     },
     {
       "id": "satellite",
       "role": "main",
-      "anchors": ["antenna"],
-      "placement": { "airborne": true, "position": [0, 0, 9] }
+      "anchors": [
+        "antenna"
+      ],
+      "placement": {
+        "airborne": true,
+        "position": [
+          0.5,
+          0.5,
+          6.5
+        ]
+      }
     },
     {
       "id": "ground-station",
       "role": "main",
-      "anchors": ["dish", "fibre"],
-      "placement": { "on": "island", "position": [3, -2] },
+      "anchors": [
+        "dish",
+        "fibre"
+      ],
+      "placement": {
+        "on": "island",
+        "position": [
+          3,
+          -2
+        ]
+      },
       "note": "Four white radomes, one of them open to show the dish (validated 2026-10-21): real gateway dishes sit under radomes."
     },
-    { "id": "pine-01", "role": "decor", "placement": { "on": "island", "position": [1, 2] } }
+    {
+      "id": "pine-01",
+      "role": "decor",
+      "placement": {
+        "on": "island",
+        "position": [
+          1.2,
+          3.2
+        ]
+      }
+    },
+    {
+      "id": "pine-02",
+      "role": "decor",
+      "placement": {
+        "on": "island",
+        "position": [
+          -5.3,
+          3.0
+        ]
+      }
+    },
+    {
+      "id": "pine-03",
+      "role": "decor",
+      "placement": {
+        "on": "island",
+        "position": [
+          5.4,
+          2.9
+        ]
+      }
+    },
+    {
+      "id": "pine-04",
+      "role": "decor",
+      "placement": {
+        "on": "island",
+        "position": [
+          -5.4,
+          -2.6
+        ]
+      }
+    },
+    {
+      "id": "pine-05",
+      "role": "decor",
+      "placement": {
+        "on": "island",
+        "position": [
+          2.1,
+          3.6
+        ]
+      }
+    }
   ],
-  "externals": [{ "id": "internet", "anchors": ["pop"] }],
+  "externals": [
+    {
+      "id": "internet",
+      "anchors": [
+        "pop"
+      ]
+    }
+  ],
   "connections": [
-    { "id": "uplink", "from": "terminal#beam", "to": "satellite#antenna", "kind": "radio" },
-    { "id": "feeder", "from": "satellite#antenna", "to": "ground-station#dish", "kind": "radio" },
-    { "id": "backhaul", "from": "ground-station#fibre", "to": "internet#pop", "kind": "fibre" }
+    {
+      "id": "uplink",
+      "from": "terminal#beam",
+      "to": "satellite#antenna",
+      "kind": "radio"
+    },
+    {
+      "id": "feeder",
+      "from": "satellite#antenna",
+      "to": "ground-station#dish",
+      "kind": "radio"
+    },
+    {
+      "id": "backhaul",
+      "from": "ground-station#fibre",
+      "to": "internet#pop",
+      "kind": "fibre"
+    }
   ],
-  "flows": [{ "id": "data-down", "path": ["backhaul", "feeder", "uplink"], "direction": "reverse" }]
+  "flows": [
+    {
+      "id": "data-down",
+      "path": [
+        "backhaul",
+        "feeder",
+        "uplink"
+      ],
+      "direction": "reverse"
+    }
+  ]
 }

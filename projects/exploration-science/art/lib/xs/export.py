@@ -6,6 +6,8 @@ from pathlib import Path
 
 import bpy
 
+from .geom import canonical_order
+
 
 def export_asset(asset, path: Path) -> dict:
     """Returns stats measured before merging: named parts and triangles."""
@@ -33,6 +35,7 @@ def export_asset(asset, path: Path) -> dict:
         target.name = f"{asset.id}.{mat_name}"
         target.data.name = target.name
         target.data.color_attributes.active_color = target.data.color_attributes["AO"]
+        canonical_order(target.data)
         merged.append(target)
 
     anchors: list[bpy.types.Object] = []
@@ -69,3 +72,4 @@ def export_asset(asset, path: Path) -> dict:
         bpy.data.objects.remove(o)
         bpy.data.objects[f"_src.{full}"].name = full
     return {"parts": len(asset.parts), "triangles": triangles, "materials": sorted(by_material), "anchors": sorted(asset.anchors)}
+

@@ -10,9 +10,15 @@ export interface Representation {
   anchors: string[];
 }
 
+/** Where the build placed the asset's root, in the glTF frame (Y up, metres). */
+export interface Transform {
+  position: [number, number, number];
+  rotationYDeg: number;
+}
+
 export interface Manifest {
   version: 1;
-  assets: Record<string, { main: boolean; airborne: boolean; representations: Record<string, Representation> & { envelope: Representation } }>;
+  assets: Record<string, { main: boolean; airborne: boolean; transform: Transform; representations: Record<string, Representation> & { envelope: Representation } }>;
   totals: { bytes: number; triangles: number };
 }
 

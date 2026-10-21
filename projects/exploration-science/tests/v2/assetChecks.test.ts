@@ -37,28 +37,28 @@ describe("v2 asset checks", () => {
 
   it("refuse a main object made of too few parts (block-like)", async () => {
     const m = load();
-    m.assets.probe!.main = true;
+    m.assets["pine-01"]!.main = true;
     const errors = await checkAssets(m, fromDisk, palette, budgets);
-    expect(errors.some((e) => e.includes("probe.envelope: 3 named parts"))).toBe(true);
+    expect(errors.some((e) => e.includes("pine-01.envelope: 2 named parts"))).toBe(true);
   });
 
   it("refuse a mesh without baked AO", async () => {
     const io = await makeIO();
-    const doc = await io.readBinary(fromDisk("probe.envelope.glb")!);
+    const doc = await io.readBinary(fromDisk("terminal.envelope.glb")!);
     for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) prim.setAttribute("COLOR_0", null);
     const stripped = await io.writeBinary(doc);
     const m = load();
-    m.assets.probe!.representations.envelope!.sha256 = sha256(stripped);
-    const read = (file: string) => (file === "probe.envelope.glb" ? stripped : fromDisk(file));
+    m.assets.terminal!.representations.envelope!.sha256 = sha256(stripped);
+    const read = (file: string) => (file === "terminal.envelope.glb" ? stripped : fromDisk(file));
     const errors = await checkAssets(m, read, palette, budgets);
     expect(errors.some((e) => e.includes("no baked AO"))).toBe(true);
   });
 
   it("refuse a declared anchor missing from the GLB", async () => {
     const m = load();
-    m.assets.probe!.representations.envelope!.anchors = ["top", "side"];
+    m.assets.terminal!.representations.envelope!.anchors = ["beam", "side"];
     const errors = await checkAssets(m, fromDisk, palette, budgets);
-    expect(errors).toEqual(["probe.envelope: anchor node probe#side missing from the GLB"]);
+    expect(errors).toEqual(["terminal.envelope: anchor node terminal#side missing from the GLB"]);
   });
 
   it("refuse an over-budget scene", async () => {
@@ -67,16 +67,24 @@ describe("v2 asset checks", () => {
   });
 
   const python = join(root, "art/.venv/bin/python");
-  it.skipIf(!existsSync(python))("Blender build refuses a floating part", () => {
+  const buildErrors = (fixture: string) => {
     let stderr = "";
-    const out = mkdtempSync(join(tmpdir(), "xs-floating-"));
+    const out = mkdtempSync(join(tmpdir(), "xs-fixture-"));
     try {
-      execFileSync(python, [join(root, "art/build.py"), "--system", join(root, "art/fixtures/floating.system.json"), "--out", out], { stdio: "pipe" });
+      execFileSync(python, [join(root, "art/build.py"), "--system", join(root, `art/fixtures/${fixture}.system.json`), "--out", out], { stdio: "pipe" });
     } catch (e) {
       stderr = String((e as { stderr: Buffer }).stderr);
     } finally {
       rmSync(out, { recursive: true, force: true });
     }
-    expect(stderr).toContain("floating part: floating.ghost");
+    return stderr;
+  };
+
+  it.skipIf(!existsSync(python))("Blender build refuses a floating part", () => {
+    expect(buildErrors("floating")).toContain("floating part: floating.ghost");
+  });
+
+  it.skipIf(!existsSync(python))("Blender build refuses inward-facing normals", () => {
+    expect(buildErrors("inverted")).toContain("inverted normals: inverted.lid");
   });
 });

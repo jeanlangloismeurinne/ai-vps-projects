@@ -2,26 +2,94 @@
   "formatVersion": "v2-0.1",
   "systemId": "starlink-home",
   "lighting": {
-    "hemisphere": { "sky": "white", "ground": "light", "intensity": 1.1 },
-    "sun": { "azimuthDeg": 56, "elevationDeg": 54, "intensity": 1.6, "shadowSoftness": 6 },
+    "hemisphere": {
+      "sky": "white",
+      "ground": "light",
+      "intensity": 1.1
+    },
+    "sun": {
+      "azimuthDeg": 56,
+      "elevationDeg": 54,
+      "intensity": 1.6,
+      "shadowSoftness": 6
+    },
     "environment": "room"
   },
   "linkStyles": {
-    "radio": { "shape": "beam-dashed", "color": "signal" },
-    "fibre": { "shape": "ground-line", "color": "signal", "width": 0.04 }
+    "radio": {
+      "shape": "beam-dashed",
+      "color": "signal"
+    },
+    "fibre": {
+      "shape": "ground-line",
+      "color": "signal",
+      "width": 0.04
+    }
   },
   "shots": {
-    "global": { "fit": ["house", "satellite", "ground-station"], "azimuthDeg": -35, "elevationDeg": 32, "margin": 0.05 },
-    "object:house": { "fit": ["house"], "azimuthDeg": -35, "elevationDeg": 28, "margin": 0.15 },
-    "object:terminal": { "fit": ["terminal"], "azimuthDeg": -30, "elevationDeg": 35, "margin": 0.2 },
-    "detail:terminal": { "fit": ["terminal"], "azimuthDeg": -20, "elevationDeg": 45, "margin": 0.1 },
-    "object:satellite": { "fit": ["satellite"], "azimuthDeg": -35, "elevationDeg": 15, "margin": 0.2 },
-    "object:ground-station": { "fit": ["ground-station"], "azimuthDeg": -40, "elevationDeg": 30, "margin": 0.15 }
+    "global": {
+      "fit": [
+        "island",
+        "satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 32,
+      "margin": 0.03
+    },
+    "object:house": {
+      "fit": [
+        "house"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 28,
+      "margin": 0.15
+    },
+    "object:terminal": {
+      "fit": [
+        "terminal"
+      ],
+      "azimuthDeg": -30,
+      "elevationDeg": 35,
+      "margin": 0.2
+    },
+    "detail:terminal": {
+      "fit": [
+        "terminal"
+      ],
+      "azimuthDeg": -20,
+      "elevationDeg": 45,
+      "margin": 0.1
+    },
+    "object:satellite": {
+      "fit": [
+        "satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 15,
+      "margin": 0.2
+    },
+    "object:ground-station": {
+      "fit": [
+        "ground-station"
+      ],
+      "azimuthDeg": -40,
+      "elevationDeg": 30,
+      "margin": 0.15
+    }
   },
   "limits": {
     "fovDeg": 20,
-    "azimuthRangeDeg": [-40, 40],
-    "elevationRangeDeg": [10, 70],
-    "zoomRange": [0.6, 1.4]
+    "azimuthRangeDeg": [
+      -40,
+      40
+    ],
+    "elevationRangeDeg": [
+      10,
+      70
+    ],
+    "zoomRange": [
+      0.6,
+      1.4
+    ]
   }
 }

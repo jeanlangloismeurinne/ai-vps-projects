@@ -21,8 +21,11 @@ export const FORMATS = {
 } as const;
 
 // View name → query string understood by the v2 app. Grows with the roadmap.
+const MAIN = ["house", "terminal", "satellite", "ground-station"];
 export const VIEWS: Record<string, string> = {
   global: "",
+  ...Object.fromEntries(MAIN.map((id) => [`object-${id}`, `shot=object:${id}`])),
+  ...Object.fromEntries(MAIN.map((id) => [`silhouette-${id}`, `shot=object:${id}&silhouette`])),
 };
 
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
@@ -45,14 +48,14 @@ try {
     const page = await browser.newPage({ viewport: FORMATS[format], deviceScaleFactor: 2, hasTouch: format !== "desktop" });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    page.on("console", (m) => m.type() === "error" && !m.text().startsWith("Failed to load resource") && errors.push(m.text()));
+    page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
     page.on("response", (r) => r.status() >= 400 && errors.push(`HTTP ${r.status()} ${r.url()}`));
     for (const [view, query] of Object.entries(VIEWS)) {
       if (only && !only.includes(view)) continue;
       await page.goto(`http://localhost:5199/v2.html${query ? `?${query}` : ""}`);
       await page.waitForFunction(() => window.__xs?.ready === true, null, { timeout: 120_000 });
       const file = `${view}-${format}.png`;
-      await page.screenshot({ path: join(out, file) });
+      await page.screenshot({ path: join(out, file), timeout: 180_000 });
       results[`${view}/${format}`] = { file, render: await page.evaluate(() => window.__xs!.renderInfo()), errors: [...errors] };
       if (errors.length) failed = true;
       errors.length = 0;
