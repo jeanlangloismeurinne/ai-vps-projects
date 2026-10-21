@@ -5,11 +5,13 @@ import {
   Box3,
   Color,
   MathUtils,
+  Mesh as MeshObj,
   MeshBasicMaterial,
   NeutralToneMapping,
   PCFShadowMap,
   PMREMGenerator,
   Raycaster,
+  SphereGeometry,
   Vector2,
   Vector3,
   type Camera,
@@ -164,6 +166,7 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
           if (SILHOUETTE) mesh.material = flat;
         }
       });
+      if (!SILHOUETTE && mainIds.includes(id)) addHitProxy(root);
       out[id] = root;
     });
     return out;
@@ -209,6 +212,7 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
           ),
         )}
       {!SILHOUETTE && <Links roots={roots} setting={setting} />}
+      {selected && roots[selected] && <SelectionPin root={roots[selected]!} />}
     </>
   );
 }
@@ -224,7 +228,7 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
   useLayoutEffect(() => {
     const points: Vector3[] = [];
     for (const id of SHOT.fit) {
-      const box = new Box3().expandByObject(roots[id]!);
+      const box = objectBox(roots[id]!);
       for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) points.push(new Vector3(x, y, z));
     }
     const area = free ?? { x: 0, y: 0, width: size.width, height: size.height };
@@ -260,28 +264,33 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
 }
 
 /** Tries points of the object's surface, from the middle of its bounding box outward,
- * until a ray from the camera hits the object first (nothing in front of it). */
+ * until rays from the camera through that point and through points 3 px around it all hit
+ * the object first: a point safely inside its silhouette (click coordinates are rounded). */
 function pickPoint(roots: Record<string, Object3D>, id: string, camera: Camera, scene: Scene3, width: number, height: number) {
   const root = roots[id];
   if (!root) return null;
-  const centre = new Box3().expandByObject(root).getCenter(new Vector3());
+  const centre = objectBox(root).getCenter(new Vector3());
   const candidates: Vector3[] = [centre];
   root.traverse((o) => {
     const mesh = o as Mesh;
-    if (!mesh.isMesh) return;
+    if (!mesh.isMesh || mesh.name === HIT_PROXY) return;
     const pos = mesh.geometry.getAttribute("position");
     for (let i = 0; i < pos.count; i += Math.max(1, Math.floor(pos.count / 40))) candidates.push(new Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld));
   });
   candidates.sort((a, b) => a.distanceTo(centre) - b.distanceTo(centre));
   const ray = new Raycaster();
-  for (const p of candidates) {
-    const ndc = p.clone().project(camera);
-    if (Math.abs(ndc.x) > 0.98 || Math.abs(ndc.y) > 0.98) continue;
-    ray.setFromCamera(new Vector2(ndc.x, ndc.y), camera);
+  const hitsObject = (x: number, y: number) => {
+    ray.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
     const hit = ray.intersectObjects(scene.children, true).find((h) => (h.object as Mesh).isMesh && h.object.visible);
     let o: Object3D | null = hit?.object ?? null;
     while (o && o !== root) o = o.parent;
-    if (o === root) return { x: ((ndc.x + 1) / 2) * width, y: ((1 - ndc.y) / 2) * height };
+    return o === root;
+  };
+  for (const p of candidates) {
+    const ndc = p.clone().project(camera);
+    if (Math.abs(ndc.x) > 0.95 || Math.abs(ndc.y) > 0.95) continue;
+    const [x, y] = [Math.round(((ndc.x + 1) / 2) * width), Math.round(((1 - ndc.y) / 2) * height)];
+    if ([[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].every(([dx, dy]) => hitsObject(x + dx!, y + dy!))) return { x, y };
   }
   return null;
 }
@@ -321,6 +330,49 @@ function useHighlight(roots: Record<string, Object3D>, selected: string | null, 
 }
 
 const flat = new MeshBasicMaterial({ color: swatch("graphite") });
+
+/** Smallest pick target of a main object, as a radius in metres: about 100 CSS px across in
+ * the global view on an iPad, well above the 44 px of a comfortable tap. */
+const MIN_HIT_RADIUS = 0.6;
+const hitMaterial = new MeshBasicMaterial({ visible: false });
+const HIT_PROXY = "hit-proxy";
+
+/** World bounding box of what is drawn of an object (its hit proxy left out). */
+function objectBox(root: Object3D): Box3 {
+  const box = new Box3();
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    const mesh = o as Mesh;
+    if (!mesh.isMesh || mesh.name === HIT_PROXY) return;
+    mesh.geometry.computeBoundingBox();
+    box.union(mesh.geometry.boundingBox!.clone().applyMatrix4(mesh.matrixWorld));
+  });
+  return box;
+}
+
+/** A small object (the terminal on its roof) gets an invisible sphere around it, so that a
+ * tap near it selects it rather than what lies behind. Not drawn, only ray-cast. */
+function addHitProxy(root: Object3D) {
+  if (root.getObjectByName(HIT_PROXY)) return;
+  const box = objectBox(root);
+  const half = box.getSize(new Vector3()).length() / 2;
+  if (half >= MIN_HIT_RADIUS) return;
+  const proxy = new MeshObj(new SphereGeometry(MIN_HIT_RADIUS, 16, 12), hitMaterial);
+  proxy.name = HIT_PROXY;
+  proxy.position.copy(root.worldToLocal(box.getCenter(new Vector3())));
+  root.add(proxy);
+}
+
+/** Marker above the selected object, in the accent of the card's own mark. */
+function SelectionPin({ root }: { root: Object3D }) {
+  const box = objectBox(root);
+  const top = new Vector3((box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2);
+  return (
+    <Html position={top} center zIndexRange={[10, 0]} className="selection-pin">
+      <span />
+    </Html>
+  );
+}
 
 const anchorPosition = (roots: Record<string, Object3D>, ref: string): Vector3 | null => {
   const [id] = ref.split("#");

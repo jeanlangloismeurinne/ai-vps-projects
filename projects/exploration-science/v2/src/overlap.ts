@@ -15,7 +15,7 @@ export function coveredShare(root: Object3D, camera: Camera, width: number, heig
   root.updateMatrixWorld(true);
   root.traverse((o) => {
     const mesh = o as Mesh;
-    if (!mesh.isMesh) return;
+    if (!mesh.isMesh || mesh.name === "hit-proxy") return;
     const pos = mesh.geometry.getAttribute("position");
     const index = mesh.geometry.getIndex();
     const n = index ? index.count : pos.count;
