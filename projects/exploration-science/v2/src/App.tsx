@@ -79,7 +79,9 @@ export function App() {
   return (
     <>
       <Canvas
-        // Always drawing: the flows are animated.
+        // Always drawing, the flows being animated; on demand when their phase is pinned
+        // (captures: software rendering would otherwise starve the browser).
+        frameloop={TIME === null ? "always" : "demand"}
         shadows={{ type: PCFShadowMap }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping }}
@@ -220,7 +222,7 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
 /** Frames the shot of the URL in the part of the screen left free by the card, and eases
  * the camera there when the card opens or closes (the first pose is taken at once). */
 function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
-  const { camera, gl, scene, size } = useThree();
+  const { camera, gl, scene, size, invalidate } = useThree();
   const goal = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
   const pose = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
   const frames = useRef(0);
@@ -236,10 +238,11 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
     if (!pose.current) pose.current = { position: goal.current.position.clone(), target: goal.current.target.clone(), offset: [...goal.current.offset] };
     debug.ready = false;
     frames.current = 0;
+    invalidate();
     exposeRenderer(gl);
     debug.overlap = () => overlapOfCard(roots, camera, size.width, size.height);
     debug.pickPoint = (id) => pickPoint(roots, id, camera, scene, size.width, size.height);
-  }, [roots, camera, gl, scene, size, free]);
+  }, [roots, camera, gl, scene, size, free, invalidate]);
 
   useFrame((_, dt) => {
     const [g, p] = [goal.current, pose.current];
@@ -260,6 +263,7 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
     camera.lookAt(p.target);
     (camera as PerspectiveCamera).setViewOffset(size.width, size.height, p.offset[0], p.offset[1], size.width, size.height);
     if (settled && ++frames.current >= 5) debug.ready = true;
+    else invalidate();
   });
 }
 
@@ -308,6 +312,7 @@ function overlapOfCard(roots: Record<string, Object3D>, camera: Camera, width: n
 /** Selected object tinted with the signal accent, hovered one more lightly. Materials that
  * already glow (status lights) keep their own emission. */
 function useHighlight(roots: Record<string, Object3D>, selected: string | null, hovered: string | null) {
+  const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
     if (SILHOUETTE) return;
     const accent = new Color(swatch("signal"));
@@ -326,7 +331,8 @@ function useHighlight(roots: Record<string, Object3D>, selected: string | null, 
         }
       });
     }
-  }, [roots, selected, hovered]);
+    invalidate();
+  }, [roots, selected, hovered, invalidate]);
 }
 
 const flat = new MeshBasicMaterial({ color: swatch("graphite") });

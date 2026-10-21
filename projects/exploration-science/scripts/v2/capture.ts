@@ -55,7 +55,7 @@ const ready = (page: Page) => page.waitForFunction(() => window.__xs?.ready === 
 async function checkSelection(page: Page, touch: boolean): Promise<{ checks: Record<string, unknown>; problems: string[] }> {
   const checks: Record<string, unknown> = {};
   const problems: string[] = [];
-  await page.goto(`http://localhost:5199/v2.html?${T}`);
+  await page.goto(`http://localhost:5199/v2.html?${T}`, { timeout: 120_000 });
   await ready(page);
   for (const id of MAIN) {
     console.log(`${new Date().toISOString().slice(11, 19)}   click ${id}`);
@@ -94,7 +94,7 @@ try {
     page.on("response", (r) => r.status() >= 400 && errors.push(`HTTP ${r.status()} ${r.url()}`));
     for (const [view, query] of Object.entries(VIEWS)) {
       if (only && !only.includes(view)) continue;
-      await page.goto(`http://localhost:5199/v2.html${query ? `?${query}` : ""}`);
+      await page.goto(`http://localhost:5199/v2.html${query ? `?${query}` : ""}`, { timeout: 120_000 });
       await page.waitForFunction(() => window.__xs?.ready === true, null, { timeout: 120_000 });
       const file = `${view}-${format}.png`;
       console.log(`${new Date().toISOString().slice(11, 19)} ${view}/${format}`);
