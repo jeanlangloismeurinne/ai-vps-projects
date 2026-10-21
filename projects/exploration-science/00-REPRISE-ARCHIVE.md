@@ -2,6 +2,18 @@
 
 Récit du travail livré, sorti de `00-REPRISE.md`. Jamais chargé au démarrage : à interroger par `grep`.
 
+## 2026-10-21 — V2, session 3 (§4 connexions vivantes et fiches)
+
+- Livré : flux animé, sélection, fiche ancrée, recadrage dans la zone libre, label « Internet », contrôles de clic et de recouvrement dans `npm run capture` (détail : `roadmap/v2.md` §4). Itérations `captures/v2/s4-it1` à `s4-it3`, final `s4-final`.
+- Défauts corrigés au fil des captures : impulsion qui flottait au-dessus d'un radôme (raccord fibre → parabole tracé en droite à travers la station → tronçon masqué) ; impulsions confondues avec les tirets (→ cœur blanc + halo) ; teinte de sélection qui dénaturait les matériaux (0,2 → 0,1, plus un repère) ; tap sur l'antenne qui ouvrait la maison en iPad (coordonnées entières du `click` + antenne vue par la tranche → `pickPoint` robuste et sphère de clic) ; capture bloquée au chargement d'une page (rendu continu en SwiftShader → rendu à la demande quand `?t` fige les flux).
+- Bloc « Livré (§1) » sorti du fichier de reprise :
+
+**Livré (§1, 2026-10-19)**
+- `art/` : `bpy` 5.2.2 (`art/.venv`), `lib/xs` (géométrie bmesh biseautée, palette, contrôles, précalcul AO Cycles CPU → couleurs de sommet, export GLB fusionné par matériau), `palette.json` (6 neutres, 3 accents, verre, émissif), `budgets.json`, `assets/` (`probe`, `plinth` : objets de test), `scenes/probe.json`, `fixtures/floating.*` (test négatif).
+- Commandes : `npm run assets` (Blender → gltf-transform meshopt → `public/v2/models/manifest.json`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only … --out …]` (4 formats, Chromium SwiftShader : juge composition et matériaux, **pas** la fluidité — iPad mesuré par l'utilisateur).
+- `v2/src/` : `App.tsx` (cadrage auto, hémisphère + directionnelle à ombre douce, `RoomEnvironment` local), `debug.ts` (`window.__xs.ready` / `renderInfo` pour les captures).
+- Tests : `tests/v2/assetChecks.test.ts` (7, dont 6 négatifs). Suite complète 123.
+
 ## 2026-10-21 — V2, session 2 (§2 schémas)
 
 - L'utilisateur valide la proposition §2 et les radômes (4 dômes, un ouvert). Implémentation : `schemas/v2/` (6 schémas), `content/v2/`, validateur et 15 tests, pipeline Blender lu depuis le système (`art/build.py --system`), anchors exportés comme nœuds vides (`prune({ keepLeaves: true })` sinon gltf-transform les supprime).
