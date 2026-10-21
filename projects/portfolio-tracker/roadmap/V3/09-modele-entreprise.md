@@ -160,7 +160,16 @@ cellules.
   (pas de segment). Il faut lire les faits dimensionnés du dépôt lui-même (XBRL du 10-K/10-Q :
   axes « segments d'activité » et « produits et services » ; IFRS 8 pour un 20-F), en extension du socle
   (#115 : le code relève, l'analyste juge). Repli : le tableau de la note sectorielle lu par le collecteur
-  (#132). **À mesurer d'abord** (Sonnet, gratuit) : pour NVDA, RVMD et une banque, ce que les dépôts portent.
+  (#132). **Mesuré le 2026-10-21 (M0, `mesures/2026-10-21/mesure_m0_ventilation.md`)** : chemin générique
+  `submissions.json` → `FilingSummary.xml` → rapports `R#.htm` du dépôt, où axes et membres XBRL sont lisibles en
+  clair (pas d'instance brute à analyser). NVDA : segments (Compute & Networking 193 479 + Graphics 22 459),
+  marchés (Data Center, Gaming, ProViz, Auto, OEM) ET calcul / réseau (162 361 + 31 376 = Data Center 193 737,
+  vérifié) et géographie — chaque axe se raccorde au CA consolidé à 0 d'écart ; segments ≠ marchés. RVMD :
+  aucune ventilation par produit ni R&D par programme (charges par nature seulement) — le gabarit pré-revenus
+  se bâtit en jugements ancrés, et son raccord porte sur la R&D et la trésorerie totales, pas sur des ventes.
+  JPM : 4 segments + réconciliation, avec produit net, coût du risque, charges, résultat, fonds propres moyens,
+  ROE, coefficient d'exploitation par segment, raccord à 0. Limites : noms de rapports non standardisés,
+  numérotation `R#` instable d'un dépôt à l'autre — repérer par les axes, jamais par le numéro.
 - **Persistance** : registres append-only (architecture et son PV ; cellules = vue sur les encadrés des
   réponses qui tiennent, recalculée à la lecture, #77 — on ne stocke pas une seconde copie du chiffre).
   Migration 061 et suivantes.
@@ -206,7 +215,8 @@ exigé du fonds.
 3. **Les chapitres de jugement dans le classeur ?** Barrière, dépendances, ruptures, gouvernance inscrivent
    leurs risques dans un onglet « risques et options » relié aux scénarios (recommandé : un risque cité qui
    ne bouge aucun chiffre est signalé) — ou restent hors du classeur, lus seulement par le comité ?
-4. **Plus fin que ce qui est publié ?** NVIDIA publie ses ventes par grand marché (centres de données, jeux…)
-   et commente calcul et réseau, pas « accélérateurs pour l'IA » contre « autres » (maille exacte : mesure M0). Un bloc plus fin que la publication est-il admis, s'il se
+4. **Plus fin que ce qui est publié ?** NVIDIA publie ses ventes par marché, et même calcul / réseau dans les
+   centres de données (mesuré), mais pas, par exemple, les grands hébergeurs contre les entreprises, ni les
+   processeurs centraux à part ; RVMD ne publie rien par programme. Un bloc plus fin que la publication est-il admis, s'il se
    raccorde à la ligne publiée qui le contient et qu'il est marqué « découpage estimé » (recommandé : c'est la
    pratique des analystes) — ou l'architecture s'arrête-t-elle à la maille publiée ?
