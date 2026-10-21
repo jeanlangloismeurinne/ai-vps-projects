@@ -111,8 +111,8 @@
       "representations": {
         "envelope": {
           "file": "satellite.envelope.glb",
-          "bytes": 50848,
-          "sha256": "f8c6bf81f2c7acbf9b5f6740de8a1c5ca33a8994ce6414d017a4ed8cf45f4cf9",
+          "bytes": 51112,
+          "sha256": "bd07e962887ef49cd040a5cacc8f8a1666e613a3536c133e57629c2277e6ab3e",
           "parts": 15,
           "triangles": 2684,
           "materials": [
@@ -294,7 +294,7 @@
     }
   },
   "totals": {
-    "bytes": 376632,
+    "bytes": 376896,
     "triangles": 31658
   }
 }
