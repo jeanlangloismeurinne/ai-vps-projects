@@ -53,7 +53,8 @@ Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'an
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
 - **Suite** `bash backend/checks/run_all.sh` verte (2026-10-21, après M1 et 061 : 68 checks, 5400 assertions ; `negatif_modele_entreprise.sh` 66/0, `negatif_061.sh` 39/0).
-- **Production** : dernier déploiement `9e68575` (C1, #141, backend), vérifié dans le conteneur (`etablir_extraits` présent, longueur absente du contrat). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
+- **Production** : dernier déploiement `4c6d37e` (M1, backend), vérifié dans le conteneur (référentiel 1.0.0 chargé, 21 fiches, seuil 10). Migration 061 appliquée. Mandats : 1 manager ouvert (2918).
+- **⚠️ À re-mesurer avant M3** : avec le catalogue 1.0.0, les questions sources d'une rentable sont me_2-me_5, mo_4, mo_6, qf_1, qf_3, qf_7, se_2-se_4 — **ma_3/ma_4 n'y sont plus** (le nombre d'actions est une entrée de la valorisation, M7). La porte de NVDA n'est donc plus tenue par le management ; refaire le décompte des questions sources sans première réponse (`montrer_parcours.sh NVDA`) avant de relancer.
 - **Prochaine migration : 062** (061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
