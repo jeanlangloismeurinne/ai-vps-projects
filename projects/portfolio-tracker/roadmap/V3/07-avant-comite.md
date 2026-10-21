@@ -56,18 +56,18 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 |---|---|---|---|
 | A1 | (ex-5) **Le cours au moment des rachats** (ma_3) : un fonds le prend dans sa base de marché. Le système doit-il avoir une source d'historique de cours, ou le web suffit-il ? Mesuré le 2026-10-21 : le collecteur TROUVE le cours au web (« $198.89 »), c'est la règle de C1 qui le refuse. | [A] | Vous |
 
-## B. La valorisation — le modèle de l'entreprise (ex-9, ex-18 ; 05 A6 et §4 bis)
+## B. La valorisation — le modèle de l'entreprise (ex-9, ex-18 ; 05 A6 et §4 bis ; spec `09-modele-entreprise.md`)
 
 | Id | Tâche | Nature | Qui |
 |---|---|---|---|
-| B1 | ⏳ **soumise le 2026-10-21** (`09-modele-entreprise.md`, 4 arbitrages en attente). **Spec du modèle de l'entreprise, soumise avant tout code** : onglets et ordre de remplissage (structuration → données par activité → transverse) DÉCRITS EN DONNÉES par méthodologie (segments pour NVDA, programmes pour RVMD, bilan pour une financière) ; ce que chaque question écrit / lit, dont un encadré pour les 24 questions qui n'en ont pas et pour va_1-va_6 ; garde qualité par étape ; raccord au socle et à `parametres_du_fonds` ; signature globale ; sensibilité. Absorbe me_5 / marché adressable (ex-9). Réutilise le contrat `ModeleValorisation`, le bac à calcul et ses 13 calculs fermés, la signature #98. | [C] | Opus → Vous |
-| B2 | **Les chiffres par activité** : relever la note sectorielle des comptes (exigée de tout émetteur : ASC 280 aux États-Unis, IFRS 8 ailleurs — donc générique) dans un gabarit commun ; NVDA en premier cas. | [C] | Sonnet sur spec B1 |
-| B3 | L'agent qui écrit le modèle à partir du dossier (méthodologie, activités, tableau d'hypothèses, mécanique). | [C] | Opus conçoit, Sonnet exécute |
-| B4 | va_4-6 recalculés à la lecture au dernier cours coté, daté (option 1, #81). | [C] | Sonnet |
-| B5 | Règle de Greenwald : la croissance ne vaut que si le capital rapporte plus que le taux exigé et que la barrière tient. | [C] | Sonnet sur spec |
-| B6 | Ordonnancement : la valorisation après les chapitres dont elle reprend ; rouvrir va_1/va_2 rouvre va_6. | [C] | Sonnet sur spec |
-| B7 | Sensibilité ±1 pt du taux exigé ; alerte quand la décision du fonds sur le taux est échue (2027-10-17). | [C] | Sonnet |
-| B8 | Acceptation (05 §4 bis) : NVDA (activités) et RVMD (programmes) donnent chacun une fourchette ; changer une hypothèse recalcule sans appel modèle ; au cours du jour, va_6 bouge sans va_2. | [P] | Sonnet lance, Opus lit |
+| B1 | ✅ **Spec v2 le 2026-10-21** après arbitrages : architecte dédié, modèle vivant, deux signatures (interrupteur, cible : une seule), scénarios construits sur un inventaire de variables, détail plus fin que la publication mais agrégé au format des comptes. Restent 2 points (§11 : seuil de matérialité, moment de l'architecte sur NVDA). | [C] | Opus → Vous |
+| B2 | (M0 ✅, M2) La ventilation publiée au socle (segments, marchés, géographie) — mesurée faisable et générique. | [C] | Sonnet sur spec |
+| B3 | (M1) Catalogue de variables, patrons de départ, format agrégé ; contrats et gardes. | [C] | Opus spec → Sonnet |
+| B4 | (M3) L'agent architecte, ses contrôles de structure, la signature de l'architecture (interrupteur). | [C] | Opus spec → Sonnet |
+| B5 | (M4, M5) Demandes ciblées par cellule ; projection des encadrés existants ; agrégé historique + projection au format du socle. | [C] | Opus spec → Sonnet |
+| B6 | (M6) Inventaire des variables de scénario, matérialité, constructeur de scénarios et son repli. | [C] | Opus spec → Sonnet |
+| B7 | (M7) L'agent de valorisation sur le classeur ; va_4-6 au dernier cours coté (#81) ; Greenwald ; ±1 pt du taux ; alerte d'échéance du taux (2027-10-17) ; rouvrir va_1/va_2 rouvre va_6. | [C] | Opus → Sonnet |
+| B8 | (M8) Acceptation : NVDA (activités) et RVMD (programmes) donnent chacun une fourchette ; changer une hypothèse recalcule sans appel modèle ; au cours du jour, va_6 bouge sans va_2. | [P] | Sonnet lance, Opus lit |
 
 ## C. Correctifs avant les relances (tous génériques)
 
@@ -85,6 +85,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 |---|---|---|---|
 | D1 | Relancer les chapitres ouverts : management (7), défendabilité (5), secteur (3), modèle économique (me_6). Ne refait que l'ouvert (#137 point 17). Après C1, C2, C5 ; ma_3 après A1. | [P] | Sonnet lance et mesure, sur accord |
 | D2 | Relire chaque réponse neuve contre ses pièces ; `recouper_nombres` sur les 12 chiffres non recoupés. | — | Opus |
+| D3 | Relances ciblées cellule par cellule une fois l'architecture signée (B5), y compris sur des questions déjà répondues. | [P] | Sonnet lance, Opus lit |
 
 ## E. Ce que le comité verra
 
@@ -101,7 +102,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 | F1 | (ex-8, #127) Passage au standard : les 11 réponses NVDA « standard antérieur » et les pièces d'héritage sans datation. Critère : `n_standard_anterieur` = 0 sur NVDA. | [P] | Sonnet lance, Opus lit |
 | F2 | Séance : lire la baisse ma_1 (#1499 juste, #1475 fondée sur une pièce mal titrée) ; relire les réponses signalées (ex-11 : NVDA qf_6, qf_1 normalisé = déposé, me_6 #1597 citée sur la mauvaise pièce) ; acquitter les chapitres ; signer le modèle ; décider. | — | Vous |
 
-**Ordre** : B1 (spec, à valider) ‖ C1-C5 → A1 → D1-D2 → B2-B7 → B8 → E1-E3 → F1 → F2.
+**Ordre** : B1 ✅ ‖ C1, C3, C4 → A1 → D1-D2 (matière de l'architecte) ‖ B2-B3 → B4 (architecte, signature) → D3 + B5 → B6-B7 → B8 → E1-E3 → F1 → F2.
 
 ## Après le premier comité (jalon élargi, 05 A8-A11)
 
@@ -152,3 +153,4 @@ de chaque sujet soldé : `00-REPRISE-ARCHIVE.md` et `CONVENTIONS.md` #132-#139.
 | 2026-10-21 | C2, C5 | Plafond de pièces lu dans le code ; crédit DeepInfra interrogé | Sonnet (C2 vérifié par Opus dans `dossier.py`) | `mesures/2026-10-21/mesure_c2_c5.md` ; C2 sans objet, C5 ✅ |
 | 2026-10-21 | B1 | Spec du modèle de l'entreprise rédigée et soumise : 6 onglets, gabarit par type d'entreprise, contrôles par étape, deux signatures ; 4 arbitrages posés | Opus | `09-modele-entreprise.md` ; page https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC ; mesure M0 (ventilation publiée) lancée |
 | 2026-10-21 | B2 (M0) | Mesure de la ventilation publiée : NVDA, RVMD, JPM | Sonnet (NVDA calcul + réseau = centres de données vérifié par Opus) | `mesures/2026-10-21/mesure_m0_ventilation.md` ; B2 faisable sans analyser d'instance XBRL ; RVMD sans ventilation (gabarit pré-revenus en jugements ancrés) |
+| 2026-10-21 | B1 | Arbitrages rendus sur la spec v1 (architecte dédié ; deux signatures, cible une ; scénarios sur inventaire ; détail fin, agrégé au format du socle) ; spec v2 | Vous, Opus | `09-modele-entreprise.md` v2 ; 2 points résiduels §11 |
