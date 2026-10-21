@@ -1,5 +1,6 @@
 """Export of one asset representation to GLB: parts merged by material (few draw calls),
-in the asset's own frame (root at the origin), with the baked AO as COLOR_0."""
+in the asset's own frame (root at the origin), with the baked AO as COLOR_0. Anchors are
+exported as empty nodes named `<id>#<anchor>`."""
 
 from pathlib import Path
 
@@ -34,8 +35,18 @@ def export_asset(asset, path: Path) -> dict:
         target.data.color_attributes.active_color = target.data.color_attributes["AO"]
         merged.append(target)
 
+    anchors: list[bpy.types.Object] = []
+    for name in sorted(asset.anchors):
+        source = asset.anchors[name]
+        full = source.name
+        source.name = f"_src.{full}"  # free the name: the exported node carries it
+        empty = bpy.data.objects.new(full, None)
+        empty.matrix_world = to_local @ source.matrix_world
+        bpy.context.scene.collection.objects.link(empty)
+        anchors.append(empty)
+
     bpy.ops.object.select_all(action="DESELECT")
-    for o in merged:
+    for o in merged + anchors:
         o.select_set(True)
     path.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(
@@ -53,4 +64,8 @@ def export_asset(asset, path: Path) -> dict:
     )
     for o in merged:
         bpy.data.meshes.remove(o.data)
-    return {"parts": len(asset.parts), "triangles": triangles, "materials": sorted(by_material)}
+    for o in anchors:
+        full = o.name
+        bpy.data.objects.remove(o)
+        bpy.data.objects[f"_src.{full}"].name = full
+    return {"parts": len(asset.parts), "triangles": triangles, "materials": sorted(by_material), "anchors": sorted(asset.anchors)}

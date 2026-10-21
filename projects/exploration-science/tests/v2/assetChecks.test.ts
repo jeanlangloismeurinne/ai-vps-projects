@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkAssets, makeIO, sha256, type Budgets, type Manifest } from "../../scripts/v2/assetChecks";
@@ -53,6 +54,13 @@ describe("v2 asset checks", () => {
     expect(errors.some((e) => e.includes("no baked AO"))).toBe(true);
   });
 
+  it("refuse a declared anchor missing from the GLB", async () => {
+    const m = load();
+    m.assets.probe!.representations.envelope!.anchors = ["top", "side"];
+    const errors = await checkAssets(m, fromDisk, palette, budgets);
+    expect(errors).toEqual(["probe.envelope: anchor node probe#side missing from the GLB"]);
+  });
+
   it("refuse an over-budget scene", async () => {
     const errors = await checkAssets(load(), fromDisk, palette, { ...budgets, totalBytesMax: 100 });
     expect(errors.some((e) => e.includes("budget 100"))).toBe(true);
@@ -61,10 +69,13 @@ describe("v2 asset checks", () => {
   const python = join(root, "art/.venv/bin/python");
   it.skipIf(!existsSync(python))("Blender build refuses a floating part", () => {
     let stderr = "";
+    const out = mkdtempSync(join(tmpdir(), "xs-floating-"));
     try {
-      execFileSync(python, [join(root, "art/build.py"), "--scene", join(root, "art/fixtures/floating.json")], { stdio: "pipe" });
+      execFileSync(python, [join(root, "art/build.py"), "--system", join(root, "art/fixtures/floating.system.json"), "--out", out], { stdio: "pipe" });
     } catch (e) {
       stderr = String((e as { stderr: Buffer }).stderr);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
     }
     expect(stderr).toContain("floating part: floating.ghost");
   });

@@ -1,9 +1,0 @@
-{
-  "id": "probe",
-  "out": "public/v2/models",
-  "bake": { "samples": 64, "distance": 0.8 },
-  "assets": [
-    { "id": "plinth", "script": "assets.plinth" },
-    { "id": "probe", "script": "assets.probe", "on": "plinth" }
-  ]
-}

@@ -1,0 +1,241 @@
+{
+  "formatVersion": "v2-0.1",
+  "systemId": "starlink-home",
+  "facts": [
+    {
+      "id": "altitude",
+      "claim": "Altitude de la couche principale de satellites Starlink : environ 480 km depuis l'abaissement de 2026 (environ 550 km auparavant).",
+      "value": 480000,
+      "unit": "m",
+      "status": "verified",
+      "sources": [
+        "nicolls-x-2026",
+        "gizmodo-lowering-2026",
+        "rcr-lowering-2026",
+        "azmth-tracker"
+      ],
+      "usedBy": [
+        "card.satellite",
+        "tour.satellite"
+      ],
+      "note": "Annonce SpaceX (janvier 2026) : ~4 400 satellites de ~550 km vers ~480 km au cours de 2026. Un traqueur tiers (CelesTrak) donne la majorité entre 450 et 490 km au 14/09/2026 ; abaissement pas forcément terminé. La spec indiquait 550 km : chiffre dépassé."
+    },
+    {
+      "id": "orbital-speed",
+      "claim": "Vitesse orbitale à 480 km : environ 7,6 km/s, soit environ 27 500 km/h (plus de 27 000 km/h).",
+      "value": 7628,
+      "unit": "m/s",
+      "status": "computed",
+      "formula": "v = sqrt(mu / (R + h)), mu = 398600.4418 km^3/s^2, R = 6371 km, h = 480 km",
+      "sources": [],
+      "usedBy": [
+        "card.satellite"
+      ],
+      "note": "À 550 km : 7,59 km/s (27 320 km/h). Le chiffre de la spec (~27 000 km/h) tient dans les deux cas. Sera vérifié par le test du simulateur orbital-pass."
+    },
+    {
+      "id": "orbital-period",
+      "claim": "Période orbitale à 480 km : environ 94 minutes (« une heure et demie »).",
+      "value": 5646,
+      "unit": "s",
+      "status": "computed",
+      "formula": "T = 2 pi sqrt((R + h)^3 / mu)",
+      "sources": [],
+      "usedBy": [
+        "card.satellite"
+      ]
+    },
+    {
+      "id": "ku-band",
+      "claim": "Terminal utilisateur : réception 10,7–12,7 GHz, émission 14,0–14,5 GHz (bande Ku).",
+      "value": "10.7-12.7 GHz / 14.0-14.5 GHz",
+      "status": "verified",
+      "sources": [
+        "fcc-ut-271541",
+        "mic-japan-spacex"
+      ],
+      "usedBy": [
+        "card.terminal"
+      ],
+      "note": "Les bornes de bande concordent entre sources ; les largeurs de canal citées par des tiers divergent et ne sont pas utilisées."
+    },
+    {
+      "id": "ka-gateway",
+      "claim": "Les liaisons satellite–passerelle utilisent la bande Ka (par exemple 17,8–18,6 GHz en descente).",
+      "value": "17.8-18.6 GHz",
+      "status": "verified",
+      "sources": [
+        "mic-japan-spacex"
+      ],
+      "usedBy": [
+        "card.ground-station",
+        "tour.ground-station"
+      ]
+    },
+    {
+      "id": "dish-dimensions",
+      "claim": "Antenne Standard (V4) : 594 × 383 × 39,7 mm, 2,9 kg.",
+      "value": "0.594 x 0.383 x 0.0397 m",
+      "status": "verified",
+      "sources": [
+        "speedcast-standard",
+        "overtons-standard"
+      ],
+      "usedBy": [
+        "card.terminal"
+      ],
+      "note": "Sources revendeurs concordantes ; la fiche officielle starlink.com n'a pas pu être ouverte."
+    },
+    {
+      "id": "field-of-view",
+      "claim": "Champ de vision de l'antenne Standard : environ 110°.",
+      "value": 110,
+      "unit": "deg",
+      "status": "verified",
+      "sources": [
+        "speedcast-standard",
+        "overtons-standard",
+        "signalboosters-standard"
+      ],
+      "usedBy": [
+        "card.terminal"
+      ],
+      "note": "Une ancienne fiche Starlink (génération motorisée) indique 100°."
+    },
+    {
+      "id": "power",
+      "claim": "Consommation moyenne de l'antenne Standard : 75 à 100 W.",
+      "value": "75-100",
+      "unit": "W",
+      "status": "verified",
+      "sources": [
+        "speedcast-standard",
+        "overtons-standard",
+        "signalboosters-standard"
+      ],
+      "usedBy": [
+        "card.house"
+      ],
+      "note": "Source revendeur ; ancienne fiche officielle : 50–75 W (génération précédente)."
+    },
+    {
+      "id": "router-wifi6",
+      "claim": "Le routeur fourni avec le kit Standard actuel est Wi-Fi 6.",
+      "value": "Wi-Fi 6",
+      "status": "verified",
+      "sources": [
+        "signalboosters-standard",
+        "overtons-standard"
+      ],
+      "usedBy": [
+        "card.house",
+        "tour.house"
+      ]
+    },
+    {
+      "id": "reallocation-15s",
+      "claim": "Starlink réaffecte les liaisons terminal–satellite–passerelle selon un cycle global de 15 secondes.",
+      "value": 15,
+      "unit": "s",
+      "status": "verified",
+      "sources": [
+        "conext23-multifaceted",
+        "classmethod-15s"
+      ],
+      "usedBy": [
+        "card.ground-station"
+      ],
+      "note": "Effet bien mesuré ; sa nature exacte (changement de satellite ou réordonnancement des ressources) est discutée dans l'article. Les textes disent « réaffectation », pas « changement de satellite »."
+    }
+  ],
+  "sources": [
+    {
+      "id": "nicolls-x-2026",
+      "title": "Michael Nicolls (VP Starlink Engineering) — annonce de l'abaissement des satellites de ~550 km à ~480 km",
+      "url": "https://x.com/michaelnicollsx/status/2006790372681220530",
+      "publisher": "X",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "gizmodo-lowering-2026",
+      "title": "SpaceX Will Move Thousands of Starlinks Closer to Earth in 2026. Here's Why",
+      "url": "https://gizmodo.com/spacex-will-move-thousands-of-starlinks-closer-to-earth-in-2026-heres-why-2000704872",
+      "publisher": "Gizmodo",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "rcr-lowering-2026",
+      "title": "Starlink to lower satellite orbit for space safety",
+      "url": "https://www.rcrwireless.com/20260106/networks/starlink-to-descend-satellites-for-space-safety",
+      "publisher": "RCR Wireless",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "azmth-tracker",
+      "title": "Starlink Tracker: Live Starlink Satellite Map in 3D",
+      "url": "https://azmth.space/tracker/starlink",
+      "publisher": "azmth.space",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "fcc-ut-271541",
+      "title": "SpaceX — FCC filing, user terminals (14.0–14.5 GHz transmit, 10.7–12.7 GHz receive)",
+      "url": "https://apps.fcc.gov/els/GetAtt.html?id=271541",
+      "publisher": "FCC",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "mic-japan-spacex",
+      "title": "SpaceX — document fourni au ministère japonais des Affaires intérieures et des Communications (bandes Ku utilisateur, Ka passerelles)",
+      "url": "https://www.soumu.go.jp/main_content/000660088.pdf",
+      "publisher": "MIC Japon",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "speedcast-standard",
+      "title": "Starlink Standard Kit — Product Specifications",
+      "url": "https://www.speedcast.com/shop/starlink-standard-4-kit/",
+      "publisher": "Speedcast",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "overtons-standard",
+      "title": "Starlink Standard Kit",
+      "url": "https://www.overtons.com/starlink-standard-kit-154373.html",
+      "publisher": "Overton's",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "signalboosters-standard",
+      "title": "Starlink Standard Kit Satellite Internet",
+      "url": "https://www.signalboosters.com/starlink-standard-kit-satellite-internet/",
+      "publisher": "SignalBoosters",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "conext23-multifaceted",
+      "title": "A Multifaceted Look at Starlink Performance (CoNEXT 2023)",
+      "url": "https://arxiv.org/pdf/2310.09242",
+      "publisher": "arXiv",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    },
+    {
+      "id": "classmethod-15s",
+      "title": "I actually tried to observe satellite handover on Starlink Mini",
+      "url": "https://dev.classmethod.jp/en/articles/starlink-mini-15-second-handover/",
+      "publisher": "Classmethod",
+      "accessed": "2026-10-11",
+      "access": "opened"
+    }
+  ]
+}

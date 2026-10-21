@@ -1,0 +1,42 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "starlink-home",
+  "titleKey": "system.title",
+  "objects": [
+    { "id": "island", "role": "setting" },
+    {
+      "id": "house",
+      "role": "main",
+      "anchors": ["roof"],
+      "placement": { "on": "island", "position": [-2, 1], "rotationZDeg": 20 }
+    },
+    {
+      "id": "terminal",
+      "role": "main",
+      "representations": ["envelope", "detail"],
+      "anchors": ["beam"],
+      "placement": { "on": "house", "anchor": "roof" }
+    },
+    {
+      "id": "satellite",
+      "role": "main",
+      "anchors": ["antenna"],
+      "placement": { "airborne": true, "position": [0, 0, 9] }
+    },
+    {
+      "id": "ground-station",
+      "role": "main",
+      "anchors": ["dish", "fibre"],
+      "placement": { "on": "island", "position": [3, -2] },
+      "note": "Four white radomes, one of them open to show the dish (validated 2026-10-21): real gateway dishes sit under radomes."
+    },
+    { "id": "pine-01", "role": "decor", "placement": { "on": "island", "position": [1, 2] } }
+  ],
+  "externals": [{ "id": "internet", "anchors": ["pop"] }],
+  "connections": [
+    { "id": "uplink", "from": "terminal#beam", "to": "satellite#antenna", "kind": "radio" },
+    { "id": "feeder", "from": "satellite#antenna", "to": "ground-station#dish", "kind": "radio" },
+    { "id": "backhaul", "from": "ground-station#fibre", "to": "internet#pop", "kind": "fibre" }
+  ],
+  "flows": [{ "id": "data-down", "path": ["backhaul", "feeder", "uplink"], "direction": "reverse" }]
+}

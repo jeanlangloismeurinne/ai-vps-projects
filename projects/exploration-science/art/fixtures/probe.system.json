@@ -1,0 +1,10 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "probe",
+  "titleKey": "system.title",
+  "objects": [
+    { "id": "plinth", "role": "setting" },
+    { "id": "probe", "role": "decor", "anchors": ["top"], "placement": { "on": "plinth", "position": [0, 0] } }
+  ],
+  "connections": []
+}

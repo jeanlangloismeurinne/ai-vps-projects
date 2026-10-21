@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/v2/render.schema.json",
+  "title": "Render and camera (V2 format v2-0.1)",
+  "description": "Lights, environment, connection styles and camera shots of one system. A shot frames a list of objects (fit), so it holds in portrait and landscape alike. Angles: azimuth around the vertical, 0° looking from the front of the system (Blender −y, glTF +z) and positive toward +x; elevation above the horizon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "systemId",
+    "lighting",
+    "linkStyles",
+    "shots",
+    "limits"
+  ],
+  "properties": {
+    "formatVersion": {
+      "const": "v2-0.1"
+    },
+    "systemId": {
+      "$ref": "#/$defs/id"
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hemisphere",
+        "sun",
+        "environment"
+      ],
+      "properties": {
+        "hemisphere": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sky",
+            "ground",
+            "intensity"
+          ],
+          "properties": {
+            "sky": {
+              "$ref": "#/$defs/swatch"
+            },
+            "ground": {
+              "$ref": "#/$defs/swatch"
+            },
+            "intensity": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "sun": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "azimuthDeg",
+            "elevationDeg",
+            "intensity",
+            "shadowSoftness"
+          ],
+          "properties": {
+            "azimuthDeg": {
+              "type": "number"
+            },
+            "elevationDeg": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 90
+            },
+            "intensity": {
+              "type": "number",
+              "minimum": 0
+            },
+            "shadowSoftness": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "environment": {
+          "enum": [
+            "room"
+          ],
+          "description": "Local environment map for metal and glass (three RoomEnvironment). Never a downloaded HDRI."
+        }
+      }
+    },
+    "linkStyles": {
+      "description": "Style of each connection kind used by the system.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shape",
+          "color"
+        ],
+        "properties": {
+          "shape": {
+            "enum": [
+              "beam-dashed",
+              "ground-line"
+            ],
+            "description": "beam-dashed: dotted beam through the air. ground-line: line drawn on the ground."
+          },
+          "color": {
+            "$ref": "#/$defs/swatch"
+          },
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "shots": {
+      "description": "Keys: `global`, `object:<id>`, `detail:<id>`.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(global|(object|detail):[a-z0-9]+(-[a-z0-9]+)*)$"
+      },
+      "required": [
+        "global"
+      ],
+      "properties": {
+        "global": {
+          "$ref": "#/$defs/shot"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/shot"
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fovDeg",
+        "azimuthRangeDeg",
+        "elevationRangeDeg",
+        "zoomRange"
+      ],
+      "properties": {
+        "fovDeg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 90
+        },
+        "azimuthRangeDeg": {
+          "$ref": "#/$defs/range",
+          "description": "Orbit allowed around the shot azimuth."
+        },
+        "elevationRangeDeg": {
+          "$ref": "#/$defs/range"
+        },
+        "zoomRange": {
+          "$ref": "#/$defs/range",
+          "description": "Distance factors relative to the shot distance."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "swatch": {
+      "type": "string",
+      "pattern": "^[a-z]+(-[a-z]+)*$",
+      "description": "Name of a swatch of art/palette.json."
+    },
+    "range": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fit",
+        "azimuthDeg",
+        "elevationDeg"
+      ],
+      "properties": {
+        "fit": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "azimuthDeg": {
+          "type": "number"
+        },
+        "elevationDeg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "margin": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Extra room around the fitted objects, as a fraction of their size."
+        }
+      }
+    }
+  }
+}

@@ -6,6 +6,8 @@ export interface Representation {
   parts: number;
   triangles: number;
   materials: string[];
+  /** Attachment points, exported as empty nodes `<id>#<anchor>`. */
+  anchors: string[];
 }
 
 export interface Manifest {

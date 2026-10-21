@@ -13,7 +13,8 @@
           "triangles": 108,
           "materials": [
             "ground"
-          ]
+          ],
+          "anchors": []
         }
       }
     },
@@ -23,21 +24,24 @@
       "representations": {
         "envelope": {
           "file": "probe.envelope.glb",
-          "bytes": 10460,
-          "sha256": "8b09da006aa27648126394e056f29aa191ed4085108a45debe26e871719c7618",
+          "bytes": 10316,
+          "sha256": "94b181a73516b67c881a1f7e685add38da1a110a0b0c032c77f034c275798a84",
           "parts": 3,
           "triangles": 324,
           "materials": [
             "graphite",
             "signal",
             "white"
+          ],
+          "anchors": [
+            "top"
           ]
         }
       }
     }
   },
   "totals": {
-    "bytes": 13916,
+    "bytes": 13772,
     "triangles": 432
   }
 }

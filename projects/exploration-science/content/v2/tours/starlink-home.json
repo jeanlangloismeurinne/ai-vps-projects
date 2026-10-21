@@ -1,0 +1,19 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "starlink-home",
+  "systemId": "starlink-home",
+  "steps": [
+    {
+      "id": "overview",
+      "shot": "global",
+      "focus": { "kind": "system" },
+      "highlight": ["house", "terminal", "satellite", "ground-station"],
+      "textKey": "tour.overview"
+    },
+    { "id": "data-path", "shot": "global", "focus": { "kind": "system" }, "flows": ["data-down"], "textKey": "tour.data-path" },
+    { "id": "ground-station", "shot": "object:ground-station", "focus": { "kind": "object", "id": "ground-station" }, "textKey": "tour.ground-station" },
+    { "id": "satellite", "shot": "object:satellite", "focus": { "kind": "object", "id": "satellite" }, "textKey": "tour.satellite" },
+    { "id": "terminal", "shot": "object:terminal", "focus": { "kind": "object", "id": "terminal" }, "textKey": "tour.terminal" },
+    { "id": "house", "shot": "object:house", "focus": { "kind": "object", "id": "house" }, "textKey": "tour.house" }
+  ]
+}

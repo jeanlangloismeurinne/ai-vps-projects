@@ -2,6 +2,12 @@
 
 Récit du travail livré, sorti de `00-REPRISE.md`. Jamais chargé au démarrage : à interroger par `grep`.
 
+## 2026-10-21 — V2, session 2 (§2 schémas)
+
+- L'utilisateur valide la proposition §2 et les radômes (4 dômes, un ouvert). Implémentation : `schemas/v2/` (6 schémas), `content/v2/`, validateur et 15 tests, pipeline Blender lu depuis le système (`art/build.py --system`), anchors exportés comme nœuds vides (`prune({ keepLeaves: true })` sinon gltf-transform les supprime).
+- Ajv strict : `required` sur une propriété non déclarée refusé (`shots.global` déclaré explicitement) ; `allowUnionTypes` nécessaire pour `value` des faits.
+- Seul `probe.envelope.glb` change (nœud `probe#top`) ; `plinth` identique au bit près ; déterminisme OK ; capture iPad paysage inchangée.
+
 ## 2026-10-19 — V2, session 1 (planification puis §0–§1)
 
 - Lu sans `prototypes/render/` (consigne utilisateur). Environnement vérifié : `bpy` 5.2.2 installable par pip (wheel cp313, 401 Mo) ; pas de GPU (4 cœurs, 15 Go) → Cycles CPU ; proxy : seuls PyPI, npm et GitHub passent (Tripo, Meshy, fal, Poly Haven, Kenney, ambientCG, Sketchfab, Hugging Face en 403).

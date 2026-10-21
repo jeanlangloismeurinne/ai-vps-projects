@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/v2/system.schema.json",
+  "title": "System (V2 format v2-0.1)",
+  "description": "What exists in one system and how it is connected. Coordinates follow Blender: metres, z up. The Blender build reads placements from this file; nothing is entered twice.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "id", "titleKey", "objects", "connections"],
+  "properties": {
+    "formatVersion": { "const": "v2-0.1" },
+    "id": { "$ref": "#/$defs/id" },
+    "titleKey": { "$ref": "#/$defs/key" },
+    "objects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/object" }
+    },
+    "externals": {
+      "description": "Endpoints outside the scene (the Internet): no model, drawn by the connection style.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "anchors"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "anchors": { "$ref": "#/$defs/anchors" }
+        }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from", "to", "kind"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "from": { "$ref": "#/$defs/endpoint" },
+          "to": { "$ref": "#/$defs/endpoint" },
+          "kind": { "$ref": "#/$defs/id", "description": "Link kind; render.json gives its style (radio, fibre…)." }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "direction"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "path": {
+            "description": "Connection ids, each sharing an endpoint object with the next one.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/id" }
+          },
+          "direction": { "enum": ["forward", "reverse"], "description": "reverse: travels each connection from `to` to `from`." }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "key": { "type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" },
+    "endpoint": {
+      "description": "<object or external id>#<anchor>",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*#[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "anchors": {
+      "description": "Named attachment points, exported as empties `<id>#<anchor>` in the GLB.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "role": {
+          "enum": ["main", "setting", "decor"],
+          "description": "main: selectable, has a card. setting: the base everything stands on (no placement). decor: not selectable."
+        },
+        "representations": {
+          "description": "Models of the object (art/assets.json). Default [\"envelope\"].",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": { "const": "envelope" },
+          "items": { "enum": ["envelope", "detail"] }
+        },
+        "anchors": { "$ref": "#/$defs/anchors" },
+        "placement": { "$ref": "#/$defs/placement" },
+        "note": { "type": "string" }
+      }
+    },
+    "placement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["on", "position"],
+          "properties": {
+            "on": { "$ref": "#/$defs/id" },
+            "position": {
+              "description": "[x, y] on the support; the height is found by casting a ray down onto it.",
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "rotationZDeg": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["on", "anchor"],
+          "properties": {
+            "on": { "$ref": "#/$defs/id" },
+            "anchor": { "$ref": "#/$defs/id", "description": "Anchor of the support the object's root is set on." },
+            "rotationZDeg": { "type": "number" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["airborne", "position"],
+          "properties": {
+            "airborne": { "const": true },
+            "position": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "rotationZDeg": { "type": "number" }
+          }
+        }
+      ]
+    }
+  }
+}

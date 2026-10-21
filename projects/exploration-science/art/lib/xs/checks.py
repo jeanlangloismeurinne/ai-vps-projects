@@ -21,7 +21,7 @@ def _world_bmesh(obj: bpy.types.Object) -> bmesh.types.BMesh:
     return bm
 
 
-class _Shape:
+class Shape:
     def __init__(self, objs: list[bpy.types.Object]):
         bm = bmesh.new()
         for obj in objs:
@@ -35,7 +35,7 @@ class _Shape:
         self.tree = BVHTree.FromBMesh(bm)
         bm.free()
 
-    def touches(self, other: "_Shape") -> bool:
+    def touches(self, other: "Shape") -> bool:
         if self.tree.overlap(other.tree):
             return True
         return any(other.tree.find_nearest(v, TOLERANCE)[0] is not None for v in self.verts) or any(
@@ -61,7 +61,7 @@ def _connected(nodes: list[str], edges: set[tuple[str, str]]) -> list[str]:
 def check_asset(asset) -> list[str]:
     errors: list[str] = []
     bpy.context.view_layer.update()
-    shapes = {p.name: _Shape([p]) for p in asset.parts}
+    shapes = {p.name: Shape([p]) for p in asset.parts}
     names = list(shapes)
     edges = {(a, b) for i, a in enumerate(names) for b in names[i + 1 :] if shapes[a].touches(shapes[b])}
     for n in _connected(names, edges):
@@ -79,10 +79,10 @@ def check_asset(asset) -> list[str]:
 
 
 def check_scene(assets: dict, placements: list[dict]) -> list[str]:
-    """`placements`: the scene file entries ({id, on?}). Support relations come from `on`."""
+    """`placements`: one {id, on} per system object. Support relations come from `on`."""
     errors: list[str] = []
     bpy.context.view_layer.update()
-    shapes = {aid: _Shape(a.parts) for aid, a in assets.items()}
+    shapes = {aid: Shape(a.parts) for aid, a in assets.items()}
     support = {(p["id"], p["on"]) for p in placements if p.get("on")}
     for p in placements:
         aid = p["id"]

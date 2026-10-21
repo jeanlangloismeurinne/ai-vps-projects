@@ -1,0 +1,50 @@
+{
+  "formatVersion": "v2-0.1",
+  "systemId": "starlink-home",
+  "lang": "fr",
+  "entries": {
+    "system.title": "Internet par satellite, de la maison à la station sol",
+    "tour.overview": "Voici le système en entier : une maison et son antenne, un satellite en orbite basse, et une station au sol reliée à Internet.",
+    "tour.data-path": "Une page web fait le chemin inverse : d'Internet à la station sol, de la station au satellite, puis du satellite jusqu'à l'antenne du toit.",
+    "tour.ground-station": "La station sol parle aux satellites avec de grandes paraboles, abritées sous des dômes blancs. Elle est reliée à Internet par fibre optique.",
+    "tour.satellite": "Le satellite tourne à environ 480 kilomètres d'altitude. Il relaie le signal entre la station sol et les antennes des abonnés.",
+    "tour.terminal": "Sur le toit, l'antenne plate suit les satellites sans bouger : elle oriente son faisceau électroniquement.",
+    "tour.house": "Dans la maison, un routeur Wi-Fi distribue la connexion reçue par l'antenne."
+  },
+  "cards": {
+    "house": {
+      "title": "La maison",
+      "summary": "La maison reçoit Internet par l'antenne du toit, puis le routeur le diffuse en Wi-Fi.",
+      "figures": [
+        { "label": "Routeur fourni", "value": "Wi-Fi 6", "spoken": "Wi-Fi six", "factId": "router-wifi6" },
+        { "label": "Consommation de l'antenne", "value": "75 à 100 W", "spoken": "de soixante-quinze à cent watts", "factId": "power" }
+      ]
+    },
+    "terminal": {
+      "title": "L'antenne Starlink",
+      "summary": "Une antenne plate qui oriente son faisceau vers le satellite sans aucune pièce mobile.",
+      "figures": [
+        { "label": "Dimensions", "value": "59 × 38 cm", "spoken": "cinquante-neuf centimètres sur trente-huit", "factId": "dish-dimensions" },
+        { "label": "Champ de vision", "value": "≈ 110°", "spoken": "environ cent dix degrés", "factId": "field-of-view" },
+        { "label": "Fréquences", "value": "10,7 à 14,5 GHz (bande Ku)", "spoken": "de dix virgule sept à quatorze virgule cinq gigahertz, la bande Ku", "factId": "ku-band" }
+      ]
+    },
+    "satellite": {
+      "title": "Le satellite",
+      "summary": "Un relais en orbite basse, qui passe au-dessus de la maison en quelques minutes.",
+      "figures": [
+        { "label": "Altitude", "value": "≈ 480 km", "spoken": "environ quatre cent quatre-vingts kilomètres", "factId": "altitude" },
+        { "label": "Vitesse", "value": "≈ 27 500 km/h", "spoken": "environ vingt-sept mille cinq cents kilomètres à l'heure", "factId": "orbital-speed" },
+        { "label": "Tour de la Terre", "value": "≈ 94 min", "spoken": "environ quatre-vingt-quatorze minutes", "factId": "orbital-period" }
+      ]
+    },
+    "ground-station": {
+      "title": "La station sol",
+      "summary": "La passerelle entre les satellites et Internet : des paraboles sous radômes, reliées par fibre.",
+      "figures": [
+        { "label": "Liaison satellite", "value": "bande Ka (≈ 18 GHz)", "spoken": "la bande Ka, autour de dix-huit gigahertz", "factId": "ka-gateway" },
+        { "label": "Réaffectation des liaisons", "value": "toutes les 15 s", "spoken": "toutes les quinze secondes", "factId": "reallocation-15s" }
+      ]
+    }
+  }
+}

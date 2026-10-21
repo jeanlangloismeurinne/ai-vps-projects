@@ -1,0 +1,17 @@
+{
+  "formatVersion": "v2-0.1",
+  "out": "public/v2/models",
+  "bake": { "samples": 64, "distance": 0.8 },
+  "build": ["art/fixtures/probe.system.json"],
+  "assets": {
+    "plinth": { "envelope": { "script": "assets.plinth" } },
+    "probe": { "envelope": { "script": "assets.probe" } },
+    "floating": { "envelope": { "script": "fixtures.floating" } },
+    "island": { "envelope": { "script": "assets.island" } },
+    "house": { "envelope": { "script": "assets.house" } },
+    "terminal": { "envelope": { "script": "assets.terminal" }, "detail": { "script": "assets.terminal_exploded" } },
+    "satellite": { "envelope": { "script": "assets.satellite" } },
+    "ground-station": { "envelope": { "script": "assets.ground_station", "params": { "radomes": 4, "open": 1 } } },
+    "pine-01": { "envelope": { "script": "assets.pine", "params": { "seed": 1 } } }
+  }
+}

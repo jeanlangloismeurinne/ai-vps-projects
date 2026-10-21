@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exploration-science/schemas/v2/tour.schema.json",
+  "title": "Guided tour (V2 format v2-0.1)",
+  "description": "Ordered steps of a tour. Narrative rule (checked beyond the schema): the first step is about the system, and an object is the subject of a step only after a system step has highlighted it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "id", "systemId", "steps"],
+  "properties": {
+    "formatVersion": { "const": "v2-0.1" },
+    "id": { "$ref": "#/$defs/id" },
+    "systemId": { "$ref": "#/$defs/id" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "shot", "focus", "textKey"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "shot": { "type": "string", "description": "Key of a shot in render.json." },
+          "focus": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind"],
+                "properties": { "kind": { "const": "system" } }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "id"],
+                "properties": { "kind": { "const": "object" }, "id": { "$ref": "#/$defs/id" } }
+              }
+            ]
+          },
+          "highlight": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+          "flows": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+          "textKey": { "type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+  }
+}

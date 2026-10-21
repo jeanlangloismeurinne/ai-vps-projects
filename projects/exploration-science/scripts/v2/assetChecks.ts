@@ -12,6 +12,8 @@ export interface Representation {
   parts: number;
   triangles: number;
   materials: string[];
+  /** Attachment points, exported as empty nodes `<id>#<anchor>`. */
+  anchors: string[];
 }
 
 export interface Manifest {
@@ -69,6 +71,8 @@ export async function checkAssets(
           if (!prim.getAttribute("COLOR_0")) errors.push(`${where}: mesh ${mesh.getName()} has no baked AO (COLOR_0)`);
         }
       }
+      const nodes = new Set(doc.getRoot().listNodes().map((n) => n.getName()));
+      for (const a of rep.anchors) if (!nodes.has(`${id}#${a}`)) errors.push(`${where}: anchor node ${id}#${a} missing from the GLB`);
       if (asset.main && kind === "envelope") {
         const b = budgets.mainObject;
         if (rep.parts < b.minParts) errors.push(`${where}: ${rep.parts} named parts, a main object needs ≥ ${b.minParts}`);

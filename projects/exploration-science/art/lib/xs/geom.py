@@ -78,6 +78,7 @@ class Asset:
         self.root = bpy.data.objects.new(asset_id, None)
         bpy.context.scene.collection.objects.link(self.root)
         self.parts: list[bpy.types.Object] = []
+        self.anchors: dict[str, bpy.types.Object] = {}
 
     def add(
         self,
@@ -112,6 +113,17 @@ class Asset:
     def repeat(self, name: str, builder, material: str, placements: list[tuple[tuple, tuple]], **kw) -> list[bpy.types.Object]:
         """The same shape at several (location, rotation) placements, each a numbered part."""
         return [self.add(f"{name}{i:02d}", builder(), material, loc, rot, **kw) for i, (loc, rot) in enumerate(placements)]
+
+    def anchor(self, name: str, location: tuple[float, float, float]) -> bpy.types.Object:
+        """A named attachment point (`<id>#<name>`): where a link starts or another object sits."""
+        if name in self.anchors:
+            raise ValueError(f"duplicate anchor: {self.id}#{name}")
+        empty = bpy.data.objects.new(f"{self.id}#{name}", None)
+        empty.parent = self.root
+        empty.location = location
+        bpy.context.scene.collection.objects.link(empty)
+        self.anchors[name] = empty
+        return empty
 
     def place(self, location: tuple[float, float, float], rotation_z_deg: float = 0.0) -> None:
         self.root.matrix_world = Matrix.Translation(Vector(location)) @ Euler((0, 0, radians(rotation_z_deg))).to_matrix().to_4x4()

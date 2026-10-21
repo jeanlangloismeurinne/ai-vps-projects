@@ -1,9 +1,9 @@
 ---
 project: exploration-science
-updated: 2026-10-19
+updated: 2026-10-21
 role: >
-  Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage livré,
-  §2 schémas proposés et en attente de validation. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage et
+  §2 schémas livrés ; prochaine : §3 scène de référence. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -11,7 +11,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — §1 livrée ; §2 proposée (dans la roadmap), **en attente de validation de l'utilisateur** (schémas + radômes). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1 et §2 livrées ; **prochaine : §3, scène de référence** (arrêt obligatoire pour validation sur captures). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -28,12 +28,16 @@ Récit de la session 1 (2026-10-19 : vérifications d'environnement, prix relev�
 - **Pile** : React + React Three Fiber + drei, entrée `v2.html` à côté du prototype Phase 0 (dérogation validée au « pas de framework UI »).
 - Règle de récit (utilisateur) : toujours le système global avant l'objet — imposée par la validation de la visite.
 - `prototypes/render/` ne sert pas de base.
+- **Format V2 `v2-0.1`** (validé le 2026-10-21, `schemas/v2/`) : une nature de données par fichier — système `content/v2/systems/<id>.json`, modèles `art/assets.json`, rendu et caméra `content/v2/render.json`, visite `content/v2/tours/<id>.json`, textes `content/v2/texts.<lang>.json` (fiches + sous-titres), `content/v2/sources.json`. Repère Blender (m, z en haut) ; placement `on`+`position [x,y]` (hauteur par lancer de rayon), `on`+`anchor`, ou `airborne`+`[x,y,z]` ; points d'attache déclarés (`anchors`), exportés en nœuds vides `<id>#<nom>` ; `externals` pour les extrémités hors scène (`internet`). Validateur : `v2/src/content/validate.ts` (règle de récit incluse).
+- **Station sol : 4 radômes blancs, dont un ouvert** qui montre la parabole (validé le 2026-10-21).
 
 **Livré (§1, 2026-10-19)**
 - `art/` : `bpy` 5.2.2 (`art/.venv`), `lib/xs` (géométrie bmesh biseautée, palette, contrôles, précalcul AO Cycles CPU → couleurs de sommet, export GLB fusionné par matériau), `palette.json` (6 neutres, 3 accents, verre, émissif), `budgets.json`, `assets/` (`probe`, `plinth` : objets de test), `scenes/probe.json`, `fixtures/floating.*` (test négatif).
 - Commandes : `npm run assets` (Blender → gltf-transform meshopt → `public/v2/models/manifest.json`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only … --out …]` (4 formats, Chromium SwiftShader : juge composition et matériaux, **pas** la fluidité — iPad mesuré par l'utilisateur).
 - `v2/src/` : `App.tsx` (cadrage auto, hémisphère + directionnelle à ombre douce, `RoomEnvironment` local), `debug.ts` (`window.__xs.ready` / `renderInfo` pour les captures).
 - Tests : `tests/v2/assetChecks.test.ts` (7, dont 6 négatifs). Suite complète 123.
+
+**Livré (§2, 2026-10-21)** : schémas et contenu ci-dessus ; `npm run assets` valide puis construit les systèmes listés dans `art/assets.json` `build` (pour l'instant le seul système de test `art/fixtures/probe.system.json` ; les scripts Starlink `assets.house`, `assets.terminal`, `assets.satellite`, `assets.ground_station`, `assets.island`, `assets.pine` sont déclarés mais à écrire en §3, puis remplacer `build` par `content/v2/systems/starlink-home.json` et retirer probe). Représentation `detail` refusée au build jusqu'à §6. `tests/v2/content.test.ts` (15) + cas « anchor absent du GLB ». Suite complète 139.
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -82,7 +86,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
-- **V2 §2 en attente** : la proposition de schémas et la question des radômes (4 dômes dont un ouvert) sont dans `roadmap/v2.md` §2 ; rien n'est implémenté.
+- **V2** : l'app (`v2/src/App.tsx`) ne lit pas encore `render.json` (FOV, angles et lumières y sont recopiés en dur) — à brancher en §3. Les textes des fiches sont des brouillons, à polir en §4/§7.
 - **V2, pour §3** (vu sur la première capture) : le sol `ground` sort presque blanc après le mappage tonal (revoir valeurs ou exposition) ; le cadrage automatique place la scène trop bas.
 - **V2 `scripts/v2/capture.ts`** : filtre « Failed to load resource » qui masque les 404 de console (c'est le favicon) — ajouter un favicon à `v2.html` et retirer le filtre.
 - **V2** : `public/` (modèles v2) est désormais copié aussi dans le build de la Phase 0 — sans effet, à garder en tête.
@@ -102,7 +106,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2** : (a) faire valider la proposition §2 et les radômes (`roadmap/v2.md` §2) ; (b) implémenter §2 (schémas JSON, Ajv, tests négatifs, `art/scenes` → système + `art/assets.json`) ; (c) §3 scène de référence, boucle captures → défauts → corrections, **arrêt pour validation sur images**.
+0. **V2 §3** : scripts Blender des objets (dimensions sourcées dans `content/v2/sources.json`), bascule de `art/assets.json` `build` sur `starlink-home`, app branchée sur `render.json`, boucle captures → défauts → corrections, **arrêt pour validation sur images**.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
