@@ -1,0 +1,52 @@
+# La VENTILATION PUBLIÉE — les axes que le fonds relève dans l'instance XBRL du dépôt, raccordés
+# au socle des comptes. Lot M2 (roadmap V3, `11-lot-M2-ventilation-publiee.md`).
+#
+# POURQUOI CETTE DONNÉE EXISTE. Un vrai fonds recopie la note sectorielle du dernier rapport annuel —
+# chiffres retraités au découpage en vigueur — et vérifie qu'elle retombe sur le total publié. Ce
+# fichier dit QUELS axes XBRL comptent comme une « ventilation publiée » (secteurs, activités,
+# géographie, clients) et comment chacun se raccorde — RIEN d'autre : les concepts eux-mêmes des axes
+# `raccord: total` sont les RECETTES du gabarit maison (`socle_comptes.yaml`, détenteur unique des
+# concepts, #46) — les lire ici les dédoublerait et les deux copies re-diverge raient au correctif
+# suivant (`feedback_correctif_regle_jumeaux`).
+#
+# DÉTENTEUR UNIQUE : ce fichier. Lu par `app/knowledge/ventilation.py::relever`.
+# CONTRAT qui le valide : `app/contracts/ventilation_schema.py::VentilationReferentiel` — garde de
+# RÉPLICABILITÉ au chargement (aucun axe ni membre hors des taxonomies standard `us-gaap:`/`srt:`).
+# CHECKS qui le gardent : `checks/check_ventilation_publiee.py` + `checks/negatif_ventilation_publiee.sh`.
+#
+# ⚠️ RÉPLICABILITÉ (07, #46). Aucun ticker, CIK, nom de segment ou de membre PROPRE À UN ÉMETTEUR ici :
+# ce référentiel se réplique sur des entreprises très différentes (NVDA, RVMD, JPM — mesuré M0/M2). Les
+# fixtures de test, elles, sont copiées du réel et nomment ces émetteurs — jamais ce fichier.
+
+version: 1.0.0
+
+# Les AXES de ventilation que le fonds relève. Un axe hors de cette liste n'est jamais lu.
+axes:
+  - id: secteurs
+    libelle: Secteurs opérationnels (information sectorielle publiée)
+    axe: us-gaap:StatementBusinessSegmentsAxis
+    raccord: total                 # la somme des membres de premier niveau se rapproche du total publié
+  - id: activites
+    libelle: Activités et marchés (chiffre d'affaires ventilé)
+    axe: srt:ProductOrServiceAxis
+    raccord: total
+  - id: geographie
+    libelle: Zones géographiques
+    axe: srt:StatementGeographicalAxis
+    raccord: total
+  - id: clients
+    libelle: Concentration des clients
+    axe: srt:MajorCustomersAxis
+    raccord: aucun                 # des parts rapportées à des bases différentes : jamais sommées
+    concepts: [us-gaap:ConcentrationRiskPercentage1]
+    qualificateurs:                # axes ADMIS en plus de l'axe principal ; leur membre devient la « base »
+      - us-gaap:ConcentrationRiskByBenchmarkAxis
+      - us-gaap:ConcentrationRiskByTypeAxis
+      - us-gaap:StatementBusinessSegmentsAxis
+
+# Un qualificateur NEUTRE ne change pas le sens d'un fait : il est ignoré pour le classement.
+qualificateurs_neutres:
+  - {axe: srt:ConsolidationItemsAxis, membre: us-gaap:OperatingSegmentsMember}
+
+# Un axe dont les seuls membres sont ceux-ci n'est pas une ventilation : la société n'a qu'un secteur.
+membres_secteur_unique: [us-gaap:OperatingSegmentsMember]

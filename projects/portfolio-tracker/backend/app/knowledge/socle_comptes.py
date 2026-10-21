@@ -681,3 +681,10 @@ def rendre_socle(structure: dict[str, Any], gabarit: Gabarit, *, raison_sociale:
                + ("aucun écart." if not ecarts else f"{len(ecarts)} écart(s) : " + " ; ".join(
                    f"{c['periode']} {c['equation']} (écart {c['ecart'] / 1e6:,.1f} M$)" for c in ecarts)))
     return "\n".join(out)
+
+
+def tolerance_bouclage(*montants: float) -> float:
+    """Accès PUBLIC à la tolérance de bouclage (`_tolerance`, détenteur unique, #46) — pour tout
+    lecteur hors de ce module qui doit juger si un reste boucle. Lu par `ventilation.py` (lot M2,
+    §4.4 : « tolérance du socle, exposée par un accès public — pas recopiée »)."""
+    return _tolerance(*montants)

@@ -213,10 +213,17 @@ les cellules.
   9 encadrés existants s'y projettent) ou une **demande ciblée** (nouvelle : variable + bloc + période + unité,
   instruite par le collecteur et l'analyste comme une question à une seule cellule). Un seul auteur par
   cellule (#99 généralisé).
-- **Ventilation publiée (B2)** — mesurée (M0) : `submissions.json` → `FilingSummary.xml` → rapports `R#.htm`,
-  axes et membres XBRL en clair ; repérer par les axes, jamais par le numéro `R#`. NVDA : segments, marchés,
-  calcul/réseau, géographie, raccord à 0. RVMD : rien par programme. JPM : 4 métiers avec produit net, coût du
-  risque, charges, résultat, fonds propres moyens. Extension du socle (#115) : le code relève.
+- **Ventilation publiée (B2)** — mesurée (M0, corrigée M2, 2026-10-21) : **l'instance XBRL du dépôt**
+  (`{prefixe}_htm.xml`) donne chaque fait exact (concept, période, membres par axe, unité, valeur) ; les
+  **étiquettes** (`{prefixe}_lab.xml`, ou l'`.xsd` quand le filer les y embarque — mesuré sur RVMD) nomment
+  les membres ; les **définitions** (`{prefixe}_def.xml`) donnent leur hiérarchie — trouvés par l'index du
+  dépôt (`.../index.json`), repérés par les AXES, jamais par `FilingSummary.xml` ni par le numéro `R#.htm`
+  (présentation humaine : en-têtes, mise à l'échelle, colonnes). NVDA : segments, marchés, calcul/réseau,
+  géographie, raccord à 0. RVMD : rien par programme. JPM : TROIS métiers tagués sur
+  `us-gaap:StatementBusinessSegmentsAxis` (mesuré M2, pas quatre : le quatrième poste du tableau,
+  « Corporate », est tagué SEUL sur `srt:ConsolidationItemsAxis = us-gaap:CorporateNonSegmentMember`, sans
+  membre de cet axe) avec produit net, coût du risque, charges, résultat, fonds propres moyens. Extension du
+  socle (#115) : le code relève (`app/knowledge/ventilation.py`, lot M2).
 - **Persistance** : registres append-only — architectures et leur PV ; demandes ciblées ; cellules = vue sur
   les écritures des réponses qui tiennent, recalculée à la lecture (#77). Migration 061 et suivantes.
 - **Ordre** : l'architecture signée (ou l'interrupteur éteint) ouvre les relances ciblées ; la valorisation
