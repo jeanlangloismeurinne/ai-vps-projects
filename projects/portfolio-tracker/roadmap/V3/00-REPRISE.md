@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-21 (plan d'action unique avant comité, cible NVDA) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -17,7 +17,7 @@ role: >
 
 ## ➜ Prochain pas
 
-Ordre de `07-avant-comite.md` : (1) la matière — **close** ; (2) arbitrages — **rendus** (#137) ; (3) **tenue du
+**2026-10-21 : `07-avant-comite.md` est désormais L'UNIQUE plan d'action** (cible : premier passage en comité de NVDA ; réplicabilité exigée ; passage au standard repoussé en ultime étape F1). Prochain pas : B1 (spec du modèle de l'entreprise) ‖ correctifs C1-C5. Historique de l'ancien ordre : (1) la matière — **close** ; (2) arbitrages — **rendus** (#137) ; (3) **tenue du
 dossier** — (a) relance bornée ✅ `c2bc1af` ; (b) fraîcheur sujet par sujet ✅ `331aa7c` ; (c) mandats clos ✅
 `8af6f4a` et ré-analyse qui dégrade ✅ `6760090` ; (d) données : **ma_2 reformulée (12) ✅ et taux exigé 10 %
 (10) ✅ le 2026-10-19** (CONVENTIONS #137 « CONSTRUIT le 2026-10-19 ») ; **me_5 → tableau des marchés (9) : ABSORBÉ
@@ -99,7 +99,7 @@ l'exigence (plancher, nature, champs requis) · dégrader le tier d'une source s
 
 ## À lire selon le besoin
 
-`05-frameworks-complets.md` (roadmap active) · `07-avant-comite.md` (inventaire) · `03-spec-frameworks.md`
+`05-frameworks-complets.md` (roadmap active) · `07-avant-comite.md` (LE plan d'action avant comité) · `03-spec-frameworks.md`
 §1/§2/§4 (spec, tableaux des questions) · `06-regle-fraicheur.md` (fraîcheur) · `04-taxonomie-evenements.md`
 · `principe-directeur.md` · `doctrine-trois-axes.md` · `METHODE-TEST.md` · `ARCHITECTURE-CIBLE.md` + les
 `ARCHITECTURE.md` de module · `00-REPRISE-ARCHIVE.md` quand le *pourquoi* manque.

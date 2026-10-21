@@ -64,8 +64,8 @@ disent le rendement. La valorisation vient en dernier, parce qu'elle consomme to
 n'éprouve qu'une fois les quatre écrits, pour mesurer l'adaptation sur l'ensemble, pas sur un
 framework isolé.
 
-> **2026-10-16** : l'ordre de la suite est à re-décider avec l'utilisateur à partir de l'inventaire
-> `07-avant-comite.md` (tous les sujets avant un système présentable au comité).
+> **2026-10-21** : l'ORDRE de la suite se lit dans `07-avant-comite.md`, plan d'action unique avant le
+> premier passage en comité (NVDA). Ce fichier garde le détail des capacités.
 
 ## 🎯 Jalon en cours — la note d'initiation sur 3-4 titres très différents (arbitrage du 2026-10-13)
 
