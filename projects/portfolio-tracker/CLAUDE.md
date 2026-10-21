@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #139) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #140) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
 > | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
@@ -188,3 +188,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #137 séance du 2026-10-17 : marchés visés (estimation interne), taux exigé unique 10 % (construit : décision du fonds au référentiel), ma_2 sur indices observables (construit), relance bornée + réinitialisation, fraîcheur sujet par sujet (construite), demandes de recherche closes à la livraison (construit), titre d'une pièce = son contenu + révision à la baisse signalée/rétablissable (construit, point 13), test NVDA+RVMD générique
 - #138 « pas encore observable » : une attente se justifie (cause, fait daté + pièce, historique, revue), le comité en juge la cause
 - #139 le changement de stade : le système recommande (catalogue 1.7.0), le comité reclasse ou maintient ; la pièce du classement suit tous les chapitres (bis : un « sans objet » d'un classement antérieur se rouvre ; ter : un verdict ne contredit jamais le chiffre qui le porte, « n.s. » écrit par le code)
+- #140 le classeur de l'entreprise : architecte dédié (catalogue de variables, porte = première réponse sur chaque question source), modèle vivant à demandes ciblées, deux signatures dont une débrayable, détail fin mais agrégé au format du socle, scénarios sur inventaire avec seuil de matérialité 10 % (À CONSTRUIRE)

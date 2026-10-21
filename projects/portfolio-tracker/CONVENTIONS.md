@@ -3536,3 +3536,31 @@ collecte une propriété de l'entreprise. Comme un fonds : cellule « n.s. » �
   antérieur) — une mesure d'acceptation n'est pas la chaîne sur un chapitre qui lit le socle.
 - Preuve : `check_verdict_chiffre` (+ `negatif_verdict_chiffre`, 17 mutations), `check_ratios_maison` §3/§4,
   `check_frameworks_definitions` §4.
+
+
+### #140 — le classeur de l'entreprise (séance du 2026-10-21, spec `roadmap/V3/09-modele-entreprise.md`)
+
+**Arbitrages rendus, À CONSTRUIRE** (rien en code à la date d'écriture). Logique de fonds : l'analyste bâtit
+le classeur propre à l'entreprise avec les briques maison, le directeur de la recherche en valide
+l'architecture, puis le classeur se complète au fil de ce qu'on apprend.
+- **Un architecte dédié** dessine le classeur de chaque entreprise (blocs, variables par bloc, passage du détail
+  à l'agrégé, cellules à remplir et leur auteur), avec en contexte la matière déjà au dossier ; il compose à
+  partir d'un **catalogue de variables** commun (définition, unité, période, origines admises, contrôle,
+  questions sources) et de **patrons de départ** par archétype, qui ne sont que des suggestions ; une variable
+  propre au titre porte la même fiche et est marquée.
+- **Porte de l'architecte** : chaque question source applicable a une première réponse instruite (statut
+  quelconque) ; échec technique ou question jamais cherchée = porte fermée, manque nommé.
+- **Modèle vivant** : après signature de l'architecture, chaque cellule vide devient une demande ciblée
+  (variable × bloc × période × unité), relancée même sur une question déjà répondue ; un fait qui change la
+  structure donne une nouvelle version, seules les cellules touchées se rouvrent.
+- **Deux signatures** (architecture, puis classeur) ; la première est un **interrupteur** (principe n° 3) —
+  cible : une seule signature finale.
+- **Deux mailles** : le détail peut être plus fin que la publication (recherche ad hoc + hypothèses,
+  « découpage estimé », raccord à la ligne publiée parente) ; l'**agrégé est à la maille des comptes
+  reconstitués** (#115), historique et projection côte à côte.
+- **Scénarios sur inventaire** : les chapitres de jugement inscrivent chaque variable qu'un risque ou une
+  option ferait bouger (sens, amplitude, pièce) ; la sensibilité de chaque variable, calculée, sert de contrôle
+  de matérialité (jamais présentée comme résultat) ; un agent construit quelques récits de risques réels ; une
+  variable au-dessus du **seuil de matérialité du fonds — 10 % de la valeur centrale**, décision du fonds au
+  référentiel, revue une fois l'an — figure dans un scénario ou est écartée avec motif ; repli : sensibilité
+  des seules variables matérielles.

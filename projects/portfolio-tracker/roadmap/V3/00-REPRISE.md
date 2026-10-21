@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-21 (plan d'action unique avant comité, cible NVDA) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -17,36 +17,22 @@ role: >
 
 ## ➜ Prochain pas
 
-**2026-10-21 : `07-avant-comite.md` est désormais L'UNIQUE plan d'action** (cible : premier passage en comité de NVDA ; réplicabilité exigée ; passage au standard repoussé en ultime étape F1). Prochain pas : B1 (spec du modèle de l'entreprise) ‖ correctifs C1-C5. Historique de l'ancien ordre : (1) la matière — **close** ; (2) arbitrages — **rendus** (#137) ; (3) **tenue du
-dossier** — (a) relance bornée ✅ `c2bc1af` ; (b) fraîcheur sujet par sujet ✅ `331aa7c` ; (c) mandats clos ✅
-`8af6f4a` et ré-analyse qui dégrade ✅ `6760090` ; (d) données : **ma_2 reformulée (12) ✅ et taux exigé 10 %
-(10) ✅ le 2026-10-19** (CONVENTIONS #137 « CONSTRUIT le 2026-10-19 ») ; **me_5 → tableau des marchés (9) : ABSORBÉ
-par le modèle de l'entreprise (ci-dessous)** ; (e) « répondu sans le chiffre-objet » (11) **mesuré le 2026-10-19** ; puis (4) valorisation, (5) test.
-**Jalon 1 = NVDA + RVMD** ; code générique. Modèle : Opus pour la conception, Sonnet délégué pour les mesures et
-l'exécution bien spécifiée.
-**PROCHAIN PAS : concevoir LE MODÈLE DE L'ENTREPRISE** (orientation de l'utilisateur, 2026-10-19, qui
-englobe le point 9 — page d'analyse : https://claude.ai/artifact/54kCtG66c9i5GNjL8gDWig) : « un outil unique,
-le modèle de l'entreprise, avec autant d'onglets que nécessaire pour une modélisation complète ; chaque question
-de chaque framework y inscrit les informations pertinentes ; il sert à la fin à la valorisation ; il se remplit
-dans le BON ORDRE car les questions ultérieures dépendent de décisions de structuration prises en amont (5 blocs
-de marché ⟹ taille, croissance… par bloc ; coûts variables/marge par segment ; coûts fixes transverses) ;
-vérification qualité ad hoc à chaque étape ; puis signature globale du tableau, voire analyse de sensibilité ».
-À faire : SPEC soumise AVANT tout code — onglets et leur ordre de remplissage (structuration → données par
-segment → transverse), ce que chaque question écrit / lit, la garde qualité par étape, raccordement aux comptes
-reconstitués (socle) et aux décisions du fonds, signature globale, sensibilité (±1 pt du taux exigé déjà
-décidé). Réutiliser : contrat `modele_valorisation_schema` (segments, hypothèses à 3 origines, jugement ancré),
-bac à calcul, signature #98, socle #115, `parametres_du_fonds`.
-**Mesure (e)** (16 réponses en vigueur à encadré) : 6 chiffres absents légitimes (n.s./n.c. : RVMD qf_2-5, NVDA
-qf_7) ; 2 coûts du capital vides (fermés par le point 10 au prochain passage) ; 1 vrai cas NVDA qf_6 #1289 (« part
-faible » sans aucun chiffre) ; 1 neuf : RVMD qf_6 #1679 rend ABSENTS des retraitements qui valent ZÉRO (l'émetteur
-ne publie aucune mesure ajustée, #47). Remède à concevoir : `sens_lu_sur` ne lit aujourd'hui que des chiffres du
-socle (`chiffres_du_socle`) — qf_6 porte sur un chiffre relevé, il faudrait une garde APRÈS rédaction (pont).
-Le comité devra lire la baisse NVDA ma_1 (elle était juste : acquitter ou renvoyer). Dettes nommées :
-`negatif_collecte_executor.sh` 43/44 (`FormuleInexecutable` non capturée autour de `recette_retenue`) ;
-`synthesis_feed` titré par le modèle (sans appelant V3) ; l'outil d'acceptation ne remet pas le socle ni les
-lectures ; `tools/acceptation_frameworks.py` (hors suite) a pour témoin `qf_1.cout_du_capital`, retiré le
-2026-10-19 — choisir un nouveau témoin (un essentiel qu'aucune source déterministe ne sert) ; sensibilité ±1 pt du
-taux et alerte de décision du fonds échue : au lot de la valorisation. Récits : archive.
+**`07-avant-comite.md` est L'UNIQUE plan d'action** jusqu'au premier comité réussi (cible : **NVDA**, six
+chapitres + classeur signé + décision au PV) ; son **journal** en fin de fichier consigne CHAQUE action (date, Id,
+qui, preuve). Réplicabilité exigée (aucun code propre à un titre). Passage au standard repoussé en ultime étape (F1).
+**Spec du modèle de l'entreprise VALIDÉE le 2026-10-21** : `09-modele-entreprise.md` (v2, arbitrages §1 et §11,
+CONVENTIONS #140) ; page de lecture https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC. Mesures du jour :
+`mesures/2026-10-21/` (inventaire de l'existant, NVDA à blanc, plafond + crédit, ventilation publiée).
+**PROCHAIN PAS — lots de construction, Opus spécifie, Sonnet exécute** :
+(1) **C1** — un extrait court légitime (cours « $198.89 », fonction « X Director ») est refusé par la règle #126
+(≥ 20 caractères) : ma_3 et ma_4 de NVDA tombent en « source indisponible », ce qui FERME la porte de
+l'architecte ; (2) **B3/M1** — catalogue de variables (fiche : définition, unité, période, origines admises,
+contrôle, questions sources), patrons de départ par archétype, format agrégé = lignes du socle ; contrats
+`Architecture` / `Cellule` ; gardes ; `parametres_du_fonds.seuil_de_materialite` (10 % de la valeur centrale) ;
+(3) **B2/M2** — ventilation publiée au socle (`submissions.json` → `FilingSummary.xml` → `R#.htm`, repérer par
+les axes) ; puis A1 (cours au moment des rachats, à poser à l'utilisateur) et la porte de l'architecte (B4).
+C2 sans objet, C5 vérifié (≈ 5,55 $ de crédit DeepInfra, à re-mesurer avant les gros passages).
+Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 

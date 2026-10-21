@@ -60,10 +60,10 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 
 | Id | Tâche | Nature | Qui |
 |---|---|---|---|
-| B1 | ✅ **Spec v2 le 2026-10-21** après arbitrages : architecte dédié, modèle vivant, deux signatures (interrupteur, cible : une seule), scénarios construits sur un inventaire de variables, détail plus fin que la publication mais agrégé au format des comptes. Restent 2 points (§11 : seuil de matérialité, moment de l'architecte sur NVDA). | [C] | Opus → Vous |
+| B1 | ✅ **Spec v2 le 2026-10-21** après arbitrages : architecte dédié, modèle vivant, deux signatures (interrupteur, cible : une seule), scénarios construits sur un inventaire de variables, détail plus fin que la publication mais agrégé au format des comptes. Arbitrages de la v2 rendus le même jour : seuil de matérialité 10 % de la valeur centrale (décision du fonds) ; l'architecte passe dès que chaque question liée à une variable du classeur a une première réponse (porte calculée, §11). | [C] | Opus → Vous |
 | B2 | (M0 ✅, M2) La ventilation publiée au socle (segments, marchés, géographie) — mesurée faisable et générique. | [C] | Sonnet sur spec |
 | B3 | (M1) Catalogue de variables, patrons de départ, format agrégé ; contrats et gardes. | [C] | Opus spec → Sonnet |
-| B4 | (M3) L'agent architecte, ses contrôles de structure, la signature de l'architecture (interrupteur). | [C] | Opus spec → Sonnet |
+| B4 | (M3) L'agent architecte, sa porte (première réponse sur chaque question source), ses contrôles de structure, la signature de l'architecture (interrupteur). | [C] | Opus spec → Sonnet |
 | B5 | (M4, M5) Demandes ciblées par cellule ; projection des encadrés existants ; agrégé historique + projection au format du socle. | [C] | Opus spec → Sonnet |
 | B6 | (M6) Inventaire des variables de scénario, matérialité, constructeur de scénarios et son repli. | [C] | Opus spec → Sonnet |
 | B7 | (M7) L'agent de valorisation sur le classeur ; va_4-6 au dernier cours coté (#81) ; Greenwald ; ±1 pt du taux ; alerte d'échéance du taux (2027-10-17) ; rouvrir va_1/va_2 rouvre va_6. | [C] | Opus → Sonnet |
@@ -102,7 +102,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 | F1 | (ex-8, #127) Passage au standard : les 11 réponses NVDA « standard antérieur » et les pièces d'héritage sans datation. Critère : `n_standard_anterieur` = 0 sur NVDA. | [P] | Sonnet lance, Opus lit |
 | F2 | Séance : lire la baisse ma_1 (#1499 juste, #1475 fondée sur une pièce mal titrée) ; relire les réponses signalées (ex-11 : NVDA qf_6, qf_1 normalisé = déposé, me_6 #1597 citée sur la mauvaise pièce) ; acquitter les chapitres ; signer le modèle ; décider. | — | Vous |
 
-**Ordre** : B1 ✅ ‖ C1, C3, C4 → A1 → D1-D2 (matière de l'architecte) ‖ B2-B3 → B4 (architecte, signature) → D3 + B5 → B6-B7 → B8 → E1-E3 → F1 → F2.
+**Ordre** : B1 ✅ ‖ C1 (ouvre la porte de l'architecte sur NVDA : ma_3, ma_4) ‖ B2-B3 → relance des questions sources sans première réponse (après A1 pour ma_3) → B4 (architecte, signature) → D1 restant + D3 + B5 → B6-B7 → B8 → E1-E3 → F1 → F2 ; C3, C4 en parallèle.
 
 ## Après le premier comité (jalon élargi, 05 A8-A11)
 
@@ -154,3 +154,4 @@ de chaque sujet soldé : `00-REPRISE-ARCHIVE.md` et `CONVENTIONS.md` #132-#139.
 | 2026-10-21 | B1 | Spec du modèle de l'entreprise rédigée et soumise : 6 onglets, gabarit par type d'entreprise, contrôles par étape, deux signatures ; 4 arbitrages posés | Opus | `09-modele-entreprise.md` ; page https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC ; mesure M0 (ventilation publiée) lancée |
 | 2026-10-21 | B2 (M0) | Mesure de la ventilation publiée : NVDA, RVMD, JPM | Sonnet (NVDA calcul + réseau = centres de données vérifié par Opus) | `mesures/2026-10-21/mesure_m0_ventilation.md` ; B2 faisable sans analyser d'instance XBRL ; RVMD sans ventilation (gabarit pré-revenus en jugements ancrés) |
 | 2026-10-21 | B1 | Arbitrages rendus sur la spec v1 (architecte dédié ; deux signatures, cible une ; scénarios sur inventaire ; détail fin, agrégé au format du socle) ; spec v2 | Vous, Opus | `09-modele-entreprise.md` v2 ; 2 points résiduels §11 |
+| 2026-10-21 | B1 | Arbitrages sur la v2 : seuil de matérialité 10 % ; porte de l'architecte = première réponse sur chaque question source. Spec validée ; convention #140 | Vous, Opus | `09-modele-entreprise.md` §11 ; `CONVENTIONS.md` #140 |

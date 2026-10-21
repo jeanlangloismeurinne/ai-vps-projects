@@ -1,6 +1,6 @@
 ---
 id: spec-modele-entreprise
-status: spec-v2-2026-10-21 (arbitrages de la v1 rendus ; 2 points résiduels en §11)
+status: spec-v2-validee-2026-10-21 (tous les arbitrages rendus)
 created: 2026-10-21
 updated: 2026-10-21 (v2 : architecte dédié, modèle vivant, deux mailles, scénarios construits sur un inventaire de variables)
 project: portfolio-tracker
@@ -234,15 +234,26 @@ les cellules.
 | M7 | L'agent de valorisation sur le classeur (B3) ; va_4-6 au cours du jour (B4) ; Greenwald (B5) ; ±1 pt ; alerte d'échéance (B7) | Opus → Sonnet |
 | M8 | Acceptation NVDA et RVMD (B8) | Sonnet lance, Opus lit |
 
-**Pour NVDA** : les relances D1 (16 questions ouvertes) passent AVANT l'architecte — elles forment sa matière ;
-les relances ciblées (M4) viennent après la signature de l'architecture.
+**Pour NVDA** : l'architecte passe dès que sa porte est ouverte (§11.2) — après C1 et la relance des questions
+sources sans première réponse ; le reste de D1 n'est pas un préalable ; les relances ciblées (M4) viennent après
+la signature de l'architecture.
 
-## 11. Points résiduels (soumis le 2026-10-21)
+## 11. Arbitrages rendus sur la v2 (2026-10-21)
 
-1. **Le seuil de matérialité** : à partir de quel effet sur la valeur centrale une variable doit-elle
-   figurer dans un scénario ? Proposition : **10 % de la valeur centrale**, décision du fonds au référentiel,
-   comme le taux exigé, revue une fois l'an. *Un fonds fixe ce seuil dans sa politique de recherche, commun au
-   portefeuille ; titre par titre, il serait arbitraire.*
-2. **Quand l'architecte passe-t-il sur NVDA ?** Proposition : après les relances D1, pour qu'il dispose des
-   réponses à jour (management, barrière, secteur) ; l'alternative est de le faire passer tout de suite sur
-   la matière actuelle, plus vite mais sur des réponses en partie périmées.
+1. **Seuil de matérialité : 10 % de la valeur centrale**, décision du fonds au référentiel (comme le taux
+   exigé : `parametres_du_fonds.seuil_de_materialite`, daté, revu une fois l'an). Une variable dont l'effet
+   dépasse ce seuil figure dans un scénario ou est écartée avec motif.
+2. **Quand passe l'architecte** : dès que **chaque question liée à une variable potentielle du classeur a
+   reçu une première réponse** (ex. les questions sur les marchés pour la partie chiffre d'affaires), pour
+   qu'il identifie le maximum de variables pertinentes avant de proposer une structure. En implémentation :
+   - chaque fiche du catalogue de variables nomme ses **questions sources** (taille du marché ← me_5, se_2 ;
+     prix et volume ← me_4, mo_6 ; probabilité de succès ← questions du stade de développement…) ; le lien
+     question → variable se lit au référentiel, jamais deviné ;
+   - **porte de l'architecte**, calculée par le code : toutes les questions sources applicables au titre ont
+     au moins une réponse instruite (quel qu'en soit le statut — « non fondable » est une information pour
+     l'architecte : la donnée n'est pas publiée) ; un échec technique (« source indisponible ») ou une
+     question jamais cherchée ferme la porte, et le manque est nommé ;
+   - le standard de collecte n'entre pas dans la porte (passage au standard en ultime étape, F1) ; la
+     péremption non plus : l'architecte reçoit la réponse périmée avec sa date, le classeur apprendra ensuite.
+   - NVDA, mesuré le 2026-10-21 : la porte est tenue par les deux échecs techniques du management (ma_3, ma_4,
+     extraits courts refusés) — d'où la priorité du correctif C1.
