@@ -2,14 +2,14 @@
 // capture run (npm run capture). For each format and object, the silhouette capture (same
 // camera, object alone, flat on white) gives the object's mask. The criterion (roadmap v2
 // §3, validated 2026-10-21) is the share of the outline that stands out locally: inside
-// vs outside luminance ratio ≥ 1.5 across the edge, on ≥ 60 % of the outline. The mean
+// vs outside luminance ratio ≥ 1.5 across the edge, on ≥ 55 % of the outline. The mean
 // object/ring ratio is reported for information only: in a light-on-light style (the
 // references' white trucks on a light ground) it says little about legibility.
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PNG } from "pngjs";
 
-export const MIN_OUTLINE = 0.6;
+export const MIN_OUTLINE = 0.55;
 const RING_PX = 24; // ring width at the capture's 2× pixel ratio
 const EDGE_RATIO = 1.5;
 
@@ -93,6 +93,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`${pass ? "ok  " : "FAIL"} ${id.padEnd(15)} ${format!.padEnd(15)} ratio ${m.ratio.toFixed(2)}:1  outline ${(m.edgeShare * 100).toFixed(0)} %`);
   }
   writeFileSync(join(dir, "contrast.json"), JSON.stringify(report, null, 2) + "\n");
-  console.log(failed ? `RESULT: failure — ${failed} object view(s) with less than ${MIN_OUTLINE * 100} % of their outline legible` : `RESULT: success — every object ≥ ${MIN_OUTLINE * 100} % of its outline legible`);
+  console.log(failed ? `RESULT: failure — ${failed} object view(s) with less than ${Math.round(MIN_OUTLINE * 100)} % of their outline legible` : `RESULT: success — every object ≥ ${Math.round(MIN_OUTLINE * 100)} % of its outline legible`);
   process.exit(failed ? 1 : 0);
 }

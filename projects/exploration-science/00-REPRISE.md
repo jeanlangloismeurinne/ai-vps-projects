@@ -2,8 +2,8 @@
 project: exploration-science
 updated: 2026-10-21
 role: >
-  Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage et
-  §2 schémas livrés ; prochaine : §3 scène de référence. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage,
+  §2 schémas et §3 scène de référence livrés ; prochaine : §4 connexions vivantes et fiches. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -11,7 +11,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — §1 et §2 livrées ; **§3 en cours** : scène construite et itérée (it14), **en attente de l'utilisateur** — validation sur captures + [A] critère de contraste (voir roadmap §3). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1, §2 et §3 livrées (scène de référence validée le 2026-10-21) ; **prochaine : §4, connexions vivantes et fiches**. Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -73,7 +73,8 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
   `.venv/bin/python -m xs_generator node --id starlink-phased-array --question "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?" --parent starlink-terminal:phased-array --sources content/nodes/starlink-phased-array/sources.json --runner api --profile <anthropic-opus | deepinfra-deepseek-v4.1-flash>`
 
 ## Pièges connus
-- V2 : `npm run assets` (Blender, `art/.venv` : `python3 -m venv art/.venv && art/.venv/bin/pip install -r art/requirements.txt`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only …]`. Les messages `ERROR Draco/MeshOptimizer is not available` de `bpy` sont sans effet (compression faite par gltf-transform). Ne jamais utiliser les `preset` d'environnement de drei (HDRI téléchargées) ni Draco (décodeur sur CDN).
+- V2 : `npm run assets` (Blender, `art/.venv` : `python3 -m venv art/.venv && art/.venv/bin/pip install -r art/requirements.txt`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only … --out …]`, `npm run contrast -- <dossier de captures>` (part du contour lisible, seuil 55 %). Les messages `ERROR Draco/MeshOptimizer is not available` de `bpy` sont sans effet (compression faite par gltf-transform). Ne jamais utiliser les `preset` d'environnement de drei (HDRI téléchargées) ni Draco (décodeur sur CDN).
+- V2, AO précalculée en couleurs de sommet : un sommet caché (sous une incrustation, sous un faîtage, noyé dans une pièce) cuit noir et bave en dents de scie. `xs/bake.py` `lift_buried` le repère par la géométrie (rayon vers le haut qui rencontre le dessous d'une autre pièce, ou AO < 0,15), candidats = sommets de toute face tournée vers le haut (pas la normale de sommet, faussée par les biseaux), et le remplit avec ses voisins visibles. Une incrustation plate sans sommets intérieurs (allée) cuit mal : la mailler avec `grid_slab`. Les pièces fines (clôture, haubans) prennent `occluder=False`.
 - Lentille Ondes : le shader travaille en unités de scène (`position * uSize`), sinon il ne marche qu'à l'échelle 1 m.
 - `engine/src/content/validation.ts` reste sans import relatif : la page de revue et `validate-node.ts` le lancent sous Node sans bundler (règle dupliquée `derivedTextKey`, testée).
 - Clés de texte : minuscules uniquement (`derived.steering-angle-deg`, pas `derived.steeringAngleDeg`).
@@ -86,9 +87,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
-- **V2** : l'app (`v2/src/App.tsx`) ne lit pas encore `render.json` (FOV, angles et lumières y sont recopiés en dur) — à brancher en §3. Les textes des fiches sont des brouillons, à polir en §4/§7.
-- **V2, pour §3** (vu sur la première capture) : le sol `ground` sort presque blanc après le mappage tonal (revoir valeurs ou exposition) ; le cadrage automatique place la scène trop bas.
-- **V2 `scripts/v2/capture.ts`** : filtre « Failed to load resource » qui masque les 404 de console (c'est le favicon) — ajouter un favicon à `v2.html` et retirer le filtre.
+- **V2, après §3** : sur téléphone en portrait la scène n'occupe que le tiers central (objets petits ; place laissée aux panneaux) ; la fibre plonge dans la tranche du socle sans aboutir (nœud « Internet » à faire en §4) ; couleur gris métal du satellite = choix de lisibilité, non sourcé ; la mesure de contour juge mal les objets fins (antenne 56–64 %, seuil fixé à 55 % par l'utilisateur).
 - **V2** : `public/` (modèles v2) est désormais copié aussi dans le build de la Phase 0 — sans effet, à garder en tête.
 - **Rendu immersif : remplacé par la V2** (section en tête). Les prototypes `prototypes/render/` et les pages de comparaison (A/B/C https://claude.ai/artifact/UUEhsdGwK6kiPs5mY5yh6X ; D/E/F/G https://claude.ai/artifact/NCjzcU9zWWcQvnZV1QHr8C ; M https://claude.ai/artifact/2EYMUwTaxJJafeVSzdAeJV) restent comme trace, à ne pas reprendre comme base.
 - **Essai iPad** (déployé le 2026-10-13 ; se connecter d'abord au hub) : avec `?perf` (viser ≥ 55 i/s, rapport de pixels ≥ 1,5) : gestes et fluidité seulement vérifiés en émulation.
@@ -106,7 +105,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 §3** : scripts Blender des objets (dimensions sourcées dans `content/v2/sources.json`), bascule de `art/assets.json` `build` sur `starlink-home`, app branchée sur `render.json`, boucle captures → défauts → corrections, **arrêt pour validation sur images**.
+0. **V2 §4** (`roadmap/v2.md`) : flux animé orienté (maison → satellite → station sol → fibre → Internet), sélection d'objet et fiche HTML intégrée ; tests « fiches justes » et recouvrement ≤ 10 % dans les 4 formats, captures de la fiche ouverte inspectées.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
