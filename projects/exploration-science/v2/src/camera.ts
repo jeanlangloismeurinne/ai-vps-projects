@@ -71,3 +71,50 @@ export function frameInWindow(points: Vector3[], azimuthDeg: number, elevationDe
   const f = frame(points, azimuthDeg, elevationDeg, fovFree, free.width / free.height, margin);
   return { ...f, offset: [width / 2 - (free.x + free.width / 2), height / 2 - (free.y + free.height / 2)] };
 }
+
+/** Camera pose as the rig moves it: interpolating angles and the logarithm of the distance
+ * flies around and toward the subject, where interpolating positions would cut through it. */
+export interface Pose {
+  target: Vector3;
+  azimuthDeg: number;
+  elevationDeg: number;
+  distance: number;
+  offset: [number, number];
+}
+
+/** Pose of a framing seen from (`azimuthDeg`, `elevationDeg`), its distance times `zoom`. */
+export function poseOf(f: WindowFraming, azimuthDeg: number, elevationDeg: number, zoom = 1): Pose {
+  return { target: f.target.clone(), azimuthDeg, elevationDeg, distance: f.position.distanceTo(f.target) * zoom, offset: [...f.offset] };
+}
+
+export const clonePose = (p: Pose): Pose => ({ ...p, target: p.target.clone(), offset: [...p.offset] });
+
+export const positionOf = (p: Pose): Vector3 => p.target.clone().addScaledVector(viewDirection(p.azimuthDeg, p.elevationDeg), p.distance);
+
+/** `a` at t = 0, `b` at t = 1. */
+export function blendPose(a: Pose, b: Pose, t: number): Pose {
+  const mix = (x: number, y: number) => x + (y - x) * t;
+  return {
+    target: a.target.clone().lerp(b.target, t),
+    azimuthDeg: mix(a.azimuthDeg, b.azimuthDeg),
+    elevationDeg: mix(a.elevationDeg, b.elevationDeg),
+    distance: Math.exp(mix(Math.log(a.distance), Math.log(b.distance))),
+    offset: [mix(a.offset[0], b.offset[0]), mix(a.offset[1], b.offset[1])],
+  };
+}
+
+/** Largest gap between two poses, in units comparable to a pixel on screen (1 = 1 px of
+ * offset, 1/1000 of the distance, 0.05° of angle): for "settled" and round-trip checks. */
+export function poseGap(a: Pose, b: Pose): number {
+  return Math.max(
+    (a.target.distanceTo(b.target) / Math.max(b.distance, 1e-6)) * 1000,
+    Math.abs(Math.log(a.distance / b.distance)) * 1000,
+    Math.abs(a.azimuthDeg - b.azimuthDeg) / 0.05,
+    Math.abs(a.elevationDeg - b.elevationDeg) / 0.05,
+    Math.abs(a.offset[0] - b.offset[0]),
+    Math.abs(a.offset[1] - b.offset[1]),
+  );
+}
+
+/** Ease-in-out (cubic): the flight leaves and lands softly. */
+export const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);

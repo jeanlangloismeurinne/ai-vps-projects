@@ -23,20 +23,24 @@ import {
   type Scene as Scene3,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { frameInWindow, viewDirection, type Rect } from "./camera";
+import { blendPose, clonePose, easeInOut, frameInWindow, poseGap, poseOf, positionOf, viewDirection, type Pose, type Rect } from "./camera";
 import { Card, dockFor } from "./Card";
 import { mainIds, render, swatch, system, texts, type Shot } from "./content/data";
 import { debug, exposeRenderer } from "./debug";
 import { FlowPulses } from "./Flows";
 import { connectionPath, flowPath, Polyline, type FlowLike, type LinkShape } from "./links";
 import { MODELS_BASE, type Manifest } from "./manifest";
+import { back, closerShot, current, enter, initialNav, orbit, select, zoom, type Entry, type NavRules } from "./nav";
 import { coveredShare } from "./overlap";
 
 const FOV = render.limits.fovDeg;
+const rules = render as unknown as NavRules;
 
 // View requested by the URL (captures, and later navigation): `?shot=object:house`,
 // `&silhouette` for the silhouette sheet (the framed objects alone, flat, no links),
-// `&select=<id>` to open a card, `&t=<seconds>` to pin the flows' phase.
+// `&select=<id>` to open a card, `&t=<seconds>` to pin the flows' phase (and the camera then
+// jumps to its poses), `&step` to draw a frame only on `__xs.advance()`, transitions going
+// by 1/30 s per frame (frame-by-frame capture of a transition).
 const params = new URLSearchParams(window.location.search);
 const SHOT_KEY = params.get("shot") ?? "global";
 const SILHOUETTE = params.has("silhouette");
@@ -45,13 +49,17 @@ if (!shots[SHOT_KEY]) throw new Error(`unknown shot: ${SHOT_KEY}`);
 const SHOT = shots[SHOT_KEY]!;
 const INITIAL_SELECTION = mainIds.includes(params.get("select") ?? "") ? params.get("select") : null;
 const TIME = params.has("t") ? Number(params.get("t")) : null;
+const STEP = params.has("step");
 
 export function App() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(INITIAL_SELECTION);
-  const [free, setFree] = useState<Rect | null>(null);
+  const [nav, setNav] = useState(() => initialNav(rules, SHOT_KEY, INITIAL_SELECTION));
+  // Part of the screen the card leaves free, for the card it was measured on.
+  const [free, setFree] = useState<{ id: string; rect: Rect } | null>(null);
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const entry = current(nav);
+  const selected = entry.selected;
 
   useEffect(() => {
     fetch(`${MODELS_BASE}/manifest.json`)
@@ -63,37 +71,67 @@ export function App() {
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  const select = useCallback((id: string | null) => {
-    setSelected((cur) => {
-      if (cur !== id) setFree(null);
-      return id;
-    });
-  }, []);
-  const close = useCallback(() => select(null), [select]);
+  const onSelect = useCallback((id: string | null) => setNav((n) => select(rules, n, id && mainIds.includes(id) ? id : null)), []);
+  const onEnter = useCallback((id: string) => setNav((n) => enter(rules, n, id)), []);
+  const onBack = useCallback(() => setNav(back), []);
+  const onOrbit = useCallback((dAz: number, dEl: number) => setNav((n) => orbit(rules, n, dAz, dEl)), []);
+  const onZoom = useCallback((factor: number) => setNav((n) => zoom(rules, n, factor)), []);
+  const onFree = useCallback((id: string, rect: Rect) => setFree({ id, rect }), []);
+  const deselect = useCallback(() => onSelect(null), [onSelect]);
+
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onBack();
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onBack]);
   useEffect(() => {
     debug.selected = selected;
-    debug.select = (id) => select(id && mainIds.includes(id) ? id : null);
-  }, [selected, select]);
+    debug.nav = { shot: entry.shot, depth: nav.stack.length, view: { ...entry.view } };
+    debug.select = onSelect;
+    debug.enter = onEnter;
+    debug.back = onBack;
+  }, [nav, entry, selected, onSelect, onEnter, onBack]);
 
   if (error) return <p className="fatal">{error}</p>;
+  const closer = selected ? closerShot(rules, nav, selected) : null;
   return (
     <>
       <Canvas
         // Always drawing, the flows being animated; on demand when their phase is pinned
         // (captures: software rendering would otherwise starve the browser).
-        frameloop={TIME === null ? "always" : "demand"}
+        frameloop={TIME === null && !STEP ? "always" : "demand"}
         shadows={{ type: PCFShadowMap }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping }}
         camera={{ fov: FOV, near: 0.5, far: 400 }}
-        onPointerMissed={close}
+        onPointerMissed={deselect}
       >
         <Environment />
         <Suspense fallback={null}>
-          {manifest && <Scene manifest={manifest} selected={selected} onSelect={select} free={selected ? free : null} />}
+          {manifest && (
+            <Scene
+              manifest={manifest}
+              entry={entry}
+              onSelect={onSelect}
+              onEnter={onEnter}
+              onOrbit={onOrbit}
+              onZoom={onZoom}
+              free={selected && free?.id === selected ? free.rect : null}
+            />
+          )}
         </Suspense>
       </Canvas>
-      {selected && !SILHOUETTE && <Card id={selected} dock={dockFor(viewport.width, viewport.height)} onClose={close} onFree={setFree} />}
+      {selected && !SILHOUETTE && (
+        <Card
+          id={selected}
+          dock={dockFor(viewport.width, viewport.height)}
+          depth={nav.stack.length}
+          closer={closer ? (closer.startsWith("detail:") ? "detail" : "object") : null}
+          onCloser={() => onEnter(selected)}
+          onBack={onBack}
+          onFree={onFree}
+        />
+      )}
     </>
   );
 }
@@ -147,7 +185,18 @@ function Sun({ bounds }: { bounds: Box3 }) {
   );
 }
 
-function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; selected: string | null; onSelect: (id: string) => void; free: Rect | null }) {
+interface SceneProps {
+  manifest: Manifest;
+  entry: Entry;
+  onSelect: (id: string) => void;
+  onEnter: (id: string) => void;
+  onOrbit: (dOrbitDeg: number, dElevationDeg: number) => void;
+  onZoom: (factor: number) => void;
+  free: Rect | null;
+}
+
+function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: SceneProps) {
+  const selected = entry.selected;
   const ids = useMemo(() => Object.keys(manifest.assets), [manifest]);
   const urls = useMemo(() => ids.map((id) => `${MODELS_BASE}/${manifest.assets[id]!.representations.envelope.file}`), [ids, manifest]);
   // No Draco (its decoder would come from a CDN); meshopt decodes locally.
@@ -186,7 +235,8 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
     document.body.style.cursor = hovered ? "pointer" : "";
   }, [hovered]);
 
-  useCameraRig(roots, free);
+  useCameraRig(roots, free, entry);
+  useGestures(onOrbit, onZoom);
 
   const interactive = (id: string) => !SILHOUETTE && mainIds.includes(id);
   return (
@@ -201,7 +251,16 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
               object={roots[id]!}
               onClick={(e: ThreeEvent<MouseEvent>) => {
                 e.stopPropagation();
-                onSelect(id);
+                const tap = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY, t: performance.now() };
+                if (e.delta > CLICK_SLOP || tap.t - gesture.endedAt < 250) return; // the end of a drag or pinch
+                // A second tap at the same place goes one view closer on the object of the
+                // first one (the camera may have moved under the finger in between).
+                const last = gesture.lastTap;
+                gesture.lastTap = { ...tap, id };
+                if (last && tap.t - last.t < DOUBLE_TAP_MS && Math.hypot(tap.x - last.x, tap.y - last.y) < 24) {
+                  gesture.lastTap = null;
+                  onEnter(last.id);
+                } else onSelect(id);
               }}
               onPointerOver={(e: ThreeEvent<PointerEvent>) => {
                 e.stopPropagation();
@@ -214,57 +273,152 @@ function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; sel
           ),
         )}
       {!SILHOUETTE && <Links roots={roots} setting={setting} />}
-      {selected && roots[selected] && <SelectionPin root={roots[selected]!} />}
+      {/* In a close view the object is the subject: no marker floating above it. */}
+      {selected && roots[selected] && entry.shot === "global" && <SelectionPin root={roots[selected]!} />}
     </>
   );
 }
 
-/** Frames the shot of the URL in the part of the screen left free by the card, and eases
- * the camera there when the card opens or closes (the first pose is taken at once). */
-function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
+/** Frames the current view (shot, plus the user's orbit and zoom) in the part of the screen
+ * left free by the card. A change of shot or of free area is a flight (eased, ~1 s); a
+ * gesture is followed closely (critically damped). The first pose is taken at once. */
+function useCameraRig(roots: Record<string, Object3D>, free: Rect | null, entry: Entry) {
   const { camera, gl, scene, size, invalidate } = useThree();
-  const goal = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
-  const pose = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
+  const goal = useRef<Pose | null>(null);
+  const pose = useRef<Pose | null>(null);
+  const flight = useRef<{ from: Pose; t: number; duration: number } | null>(null);
+  const key = useRef("");
+  const view = useRef("");
   const frames = useRef(0);
 
   useLayoutEffect(() => {
+    const shot = shots[entry.shot]!;
     const points: Vector3[] = [];
-    for (const id of SHOT.fit) {
+    for (const id of shot.fit) {
       const box = objectBox(roots[id]!);
       for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) points.push(new Vector3(x, y, z));
     }
     const area = free ?? { x: 0, y: 0, width: size.width, height: size.height };
-    goal.current = frameInWindow(points, SHOT.azimuthDeg, SHOT.elevationDeg, FOV, size.width, size.height, area, SHOT.margin ?? 0);
-    if (!pose.current) pose.current = { position: goal.current.position.clone(), target: goal.current.target.clone(), offset: [...goal.current.offset] };
+    const [az, el] = [shot.azimuthDeg + entry.view.orbitDeg, entry.view.elevationDeg];
+    goal.current = poseOf(frameInWindow(points, az, el, FOV, size.width, size.height, area, shot.margin ?? 0), az, el, entry.view.zoom);
+    const k = `${entry.shot}|${area.x},${area.y},${area.width},${area.height}|${size.width}x${size.height}`;
+    if (!pose.current) pose.current = clonePose(goal.current);
+    else if (k !== key.current) {
+      const shotChanged = !key.current.startsWith(`${entry.shot}|`);
+      flight.current = { from: clonePose(pose.current), t: 0, duration: shotChanged ? 1.1 : 0.6 };
+    } else if (JSON.stringify(entry.view) !== view.current) flight.current = null; // a gesture: follow it from where the camera is
+    key.current = k;
+    view.current = JSON.stringify(entry.view);
     debug.ready = false;
     frames.current = 0;
     invalidate();
     exposeRenderer(gl);
     debug.overlap = () => overlapOfCard(roots, camera, size.width, size.height);
     debug.pickPoint = (id) => pickPoint(roots, id, camera, scene, size.width, size.height);
-  }, [roots, camera, gl, scene, size, free, invalidate]);
+    debug.advance = () => invalidate();
+    debug.pose = () => {
+      const p = pose.current!;
+      return { position: positionOf(p).toArray(), target: p.target.toArray(), azimuthDeg: p.azimuthDeg, elevationDeg: p.elevationDeg, distance: p.distance, offset: [...p.offset] };
+    };
+  }, [roots, camera, gl, scene, size, free, entry, invalidate]);
 
-  useFrame((_, dt) => {
-    const [g, p] = [goal.current, pose.current];
-    if (!g || !p) return;
-    // Critically damped approach, ~0.5 s; snaps when close.
-    const k = TIME === null ? 1 - Math.exp(-dt * 9) : 1;
-    p.position.lerp(g.position, k);
-    p.target.lerp(g.target, k);
-    p.offset[0] += (g.offset[0] - p.offset[0]) * k;
-    p.offset[1] += (g.offset[1] - p.offset[1]) * k;
-    const settled = p.position.distanceTo(g.position) < 1e-3 && Math.abs(p.offset[0] - g.offset[0]) + Math.abs(p.offset[1] - g.offset[1]) < 0.5;
-    if (settled) {
-      p.position.copy(g.position);
-      p.target.copy(g.target);
-      p.offset = [...g.offset];
+  useFrame((_, delta) => {
+    const g = goal.current;
+    if (!g || !pose.current) return;
+    // Pinned time (captures): the camera goes straight to its pose, software rendering being
+    // too slow for a flight; with `&step`, the flight goes by fixed steps of 1/30 s.
+    const dt = STEP ? 1 / 30 : Math.min(delta, 0.1);
+    const f = flight.current;
+    if (TIME !== null && !STEP) {
+      flight.current = null;
+      pose.current = clonePose(g);
+    } else if (f) {
+      f.t = Math.min(f.t + dt / f.duration, 1);
+      pose.current = blendPose(f.from, g, easeInOut(f.t));
+      if (f.t >= 1) {
+        flight.current = null;
+        pose.current = clonePose(g);
+      }
+    } else {
+      pose.current = blendPose(pose.current, g, 1 - Math.exp(-dt * 14));
+      if (poseGap(pose.current, g) < 0.25) pose.current = clonePose(g);
     }
-    camera.position.copy(p.position);
+    const p = pose.current;
+    camera.position.copy(positionOf(p));
     camera.lookAt(p.target);
     (camera as PerspectiveCamera).setViewOffset(size.width, size.height, p.offset[0], p.offset[1], size.width, size.height);
+    const settled = !flight.current && poseGap(p, g) === 0;
     if (settled && ++frames.current >= 5) debug.ready = true;
-    else invalidate();
+    else if (!STEP) invalidate();
   });
+}
+
+/** Movement (CSS px) beyond which a press is a drag, not a click or tap. */
+const CLICK_SLOP = 6;
+const DOUBLE_TAP_MS = 400;
+/** Orbit speed: dragging across the whole height of the screen turns the view by 120°. */
+const DEG_PER_SCREEN = 120;
+const gesture = { endedAt: -Infinity, lastTap: null as { x: number; y: number; t: number; id: string } | null };
+
+/** One finger or the mouse drags to orbit; two fingers pinch, or the wheel turns, to zoom. */
+function useGestures(onOrbit: (dOrbitDeg: number, dElevationDeg: number) => void, onZoom: (factor: number) => void) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const el = gl.domElement;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let travel = 0;
+    let active = false;
+    const spread = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.hypot(a!.x - b!.x, a!.y - b!.y);
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      travel = 0;
+      active = pointers.size > 1;
+    };
+    const move = (e: PointerEvent) => {
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      const [dx, dy] = [e.clientX - p.x, e.clientY - p.y];
+      if (pointers.size === 1) {
+        travel += Math.hypot(dx, dy);
+        if (travel > CLICK_SLOP) active = true;
+        const k = DEG_PER_SCREEN / el.clientHeight;
+        if (active) onOrbit(-dx * k, dy * k);
+        p.x = e.clientX;
+        p.y = e.clientY;
+      } else if (pointers.size === 2) {
+        const before = spread();
+        p.x = e.clientX;
+        p.y = e.clientY;
+        const after = spread();
+        if (before > 0 && after > 0) onZoom(before / after);
+      }
+    };
+    const up = (e: PointerEvent) => {
+      if (!pointers.delete(e.pointerId)) return;
+      if (active) gesture.endedAt = performance.now();
+      if (pointers.size === 0) active = false;
+    };
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      onZoom(Math.exp(e.deltaY * 0.0015));
+    };
+    el.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      el.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      el.removeEventListener("wheel", wheel);
+    };
+  }, [gl, onOrbit, onZoom]);
 }
 
 /** Tries points of the object's surface, from the middle of its bounding box outward,

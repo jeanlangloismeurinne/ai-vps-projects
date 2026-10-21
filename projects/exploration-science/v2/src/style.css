@@ -150,6 +150,57 @@ body.silhouette #root {
   font-variant-numeric: tabular-nums;
 }
 
+.card__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+.card__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.card__actions svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.card__back {
+  border: 1px solid rgba(59, 64, 76, 0.14);
+  background: transparent;
+  color: var(--ink);
+  padding-left: 10px !important;
+}
+.card__closer {
+  margin-left: auto;
+  border: 0;
+  background: #3461f0;
+  color: #fff;
+  padding-right: 10px !important;
+}
+.card__back:hover,
+.card__back:focus-visible {
+  background: rgba(59, 64, 76, 0.06);
+  outline: none;
+}
+.card__closer:hover,
+.card__closer:focus-visible {
+  background: #2a52d6;
+  outline: none;
+}
+
 .card__sources {
   margin-top: 12px;
   font-size: 11.5px;

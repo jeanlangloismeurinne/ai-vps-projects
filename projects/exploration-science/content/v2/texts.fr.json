@@ -12,6 +12,9 @@
     "tour.house": "Dans la maison, un routeur Wi-Fi distribue la connexion reçue par l'antenne.",
     "external.internet": "Internet",
     "ui.close": "Fermer la fiche",
+    "ui.back": "Retour",
+    "ui.zoom-object": "Voir de près",
+    "ui.zoom-detail": "Voir en détail",
     "ui.sources": "Sources",
     "ui.computed": "certaines valeurs calculées à partir de l'altitude"
   },

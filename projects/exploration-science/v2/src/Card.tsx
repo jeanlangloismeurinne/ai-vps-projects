@@ -9,9 +9,23 @@ export const dockFor = (width: number, height: number): Dock => (width >= height
 
 const GAP = 16;
 
+interface CardProps {
+  id: string;
+  dock: Dock;
+  /** Depth of the view in the navigation (1 = global view). */
+  depth: number;
+  /** Kind of the next closer view on this object, if render.json has one. */
+  closer: "object" | "detail" | null;
+  onCloser: () => void;
+  /** Closes the card in the global view, goes back one view otherwise. */
+  onBack: () => void;
+  onFree: (id: string, free: Rect) => void;
+}
+
 /** The card of a main object, docked beside the scene. Reports the part of the screen it
- * leaves free, so that the camera frames the scene there instead of under the card. */
-export function Card({ id, dock, onClose, onFree }: { id: string; dock: Dock; onClose: () => void; onFree: (free: Rect) => void }) {
+ * leaves free, so that the camera frames the scene there instead of under the card. Its
+ * buttons lead one view closer to the object, and back. */
+export function Card({ id, dock, depth, closer, onCloser, onBack, onFree }: CardProps) {
   const ref = useRef<HTMLElement>(null);
   const card = (texts.cards as Record<string, CardText>)[id]!;
   const { publishers, computed } = cardSources(card);
@@ -21,7 +35,7 @@ export function Card({ id, dock, onClose, onFree }: { id: string; dock: Dock; on
     const report = () => {
       const r = el.getBoundingClientRect();
       const [W, H] = [window.innerWidth, window.innerHeight];
-      onFree(dock === "right" ? { x: 0, y: 0, width: Math.max(r.left - GAP, 1), height: H } : { x: 0, y: 0, width: W, height: Math.max(r.top - GAP, 1) });
+      onFree(id, dock === "right" ? { x: 0, y: 0, width: Math.max(r.left - GAP, 1), height: H } : { x: 0, y: 0, width: W, height: Math.max(r.top - GAP, 1) });
     };
     report();
     const ro = new ResizeObserver(report);
@@ -33,22 +47,18 @@ export function Card({ id, dock, onClose, onFree }: { id: string; dock: Dock; on
     };
   }, [id, dock, onFree]);
 
-  useLayoutEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [onClose]);
-
   return (
     <aside ref={ref} className={`card card--${dock}`} role="dialog" aria-labelledby="card-title" data-object={id}>
       <header>
         <span className="card__mark" aria-hidden="true" />
         <h2 id="card-title">{card.title}</h2>
-        <button type="button" className="card__close" aria-label={texts.entries["ui.close"]} onClick={onClose}>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
-        </button>
+        {depth === 1 && (
+          <button type="button" className="card__close" aria-label={texts.entries["ui.close"]} onClick={onBack}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        )}
       </header>
       <p className="card__summary">{card.summary}</p>
       <dl className="card__figures">
@@ -59,6 +69,26 @@ export function Card({ id, dock, onClose, onFree }: { id: string; dock: Dock; on
           </div>
         ))}
       </dl>
+      {(depth > 1 || closer) && (
+        <nav className="card__actions">
+          {depth > 1 && (
+            <button type="button" className="card__back" onClick={onBack}>
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M10 3.5L5.5 8l4.5 4.5" />
+              </svg>
+              {texts.entries["ui.back"]}
+            </button>
+          )}
+          {closer && (
+            <button type="button" className="card__closer" onClick={onCloser}>
+              {texts.entries[closer === "detail" ? "ui.zoom-detail" : "ui.zoom-object"]}
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M6 3.5L10.5 8 6 12.5" />
+              </svg>
+            </button>
+          )}
+        </nav>
+      )}
       <footer className="card__sources">
         {texts.entries["ui.sources"]} : {publishers.join(", ")}
         {computed && <> · {texts.entries["ui.computed"]}</>}

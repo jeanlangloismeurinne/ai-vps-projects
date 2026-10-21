@@ -12,6 +12,14 @@ export interface XsDebug {
   overlap: () => Record<string, number>;
   /** A screen point (CSS px) where the first object hit is `id`, to click it for real. */
   pickPoint: (id: string) => { x: number; y: number } | null;
+  /** Current view: its shot, how deep in the navigation stack, the user's orbit and zoom. */
+  nav: { shot: string; depth: number; view: { orbitDeg: number; elevationDeg: number; zoom: number } };
+  enter: (id: string) => void;
+  back: () => void;
+  /** Camera pose as last drawn. */
+  pose: () => { position: number[]; target: number[]; azimuthDeg: number; elevationDeg: number; distance: number; offset: number[] } | null;
+  /** With `?step`: draws one more frame. */
+  advance: () => void;
 }
 
 declare global {
@@ -27,6 +35,11 @@ export const debug: XsDebug = {
   select: () => {},
   overlap: () => ({}),
   pickPoint: () => null,
+  nav: { shot: "global", depth: 1, view: { orbitDeg: 0, elevationDeg: 0, zoom: 1 } },
+  enter: () => {},
+  back: () => {},
+  pose: () => null,
+  advance: () => {},
 };
 window.__xs = debug;
 

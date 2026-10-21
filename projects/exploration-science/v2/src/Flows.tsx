@@ -1,4 +1,4 @@
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { Color, Matrix4, Quaternion, Vector3, type InstancedMesh } from "three";
 import { Polyline } from "./links";
@@ -7,6 +7,9 @@ import { Polyline } from "./links";
 const SPACING = 1.4;
 const SPEED = 1.6;
 const UP = new Vector3(0, 1, 0);
+/** Camera distance at which pulses have their nominal radius (about the global view's). Closer,
+ * they shrink with it, so that they keep their size on screen in the close views. */
+const NOMINAL_DISTANCE = 60;
 
 /** Pulses running along a flow in its direction: elongated capsules with a white core in a
  * coloured halo, unlike the dashes of the links they run on. Two instanced draw calls per
@@ -18,7 +21,7 @@ export function FlowPulses({ path, color, radius, time }: { path: Polyline; colo
   const tmp = useMemo(() => ({ m: new Matrix4(), q: new Quaternion(), p: new Vector3(), t: new Vector3(), s: new Vector3() }), []);
   const tint = useMemo(() => new Color(color), [color]);
 
-  const place = (elapsed: number) => {
+  const place = (elapsed: number, camera: Vector3) => {
     const [mesh, glow] = [ref.current, halo.current];
     if (!mesh || !glow) return;
     const step = path.length / count;
@@ -26,7 +29,7 @@ export function FlowPulses({ path, color, radius, time }: { path: Polyline; colo
       const s = (elapsed * SPEED + i * step) % path.length;
       const { hidden } = path.at(s, tmp.p, tmp.t);
       // Grow in at the start and shrink out at the end of the path: no pop.
-      const k = hidden ? 0 : Math.min(1, Math.min(s, path.length - s) / 0.5);
+      const k = hidden ? 0 : Math.min(1, Math.min(s, path.length - s) / 0.5) * Math.min(1, tmp.p.distanceTo(camera) / NOMINAL_DISTANCE);
       tmp.q.setFromUnitVectors(UP, tmp.t);
       tmp.s.set(k, k, k);
       tmp.m.compose(tmp.p, tmp.q, tmp.s);
@@ -37,10 +40,9 @@ export function FlowPulses({ path, color, radius, time }: { path: Polyline; colo
     glow.instanceMatrix.needsUpdate = true;
   };
 
-  useLayoutEffect(() => place(time ?? 0));
-  useFrame(({ clock }) => {
-    if (time === null) place(clock.elapsedTime);
-  });
+  const camera = useThree((s) => s.camera);
+  useLayoutEffect(() => place(time ?? 0, camera.position));
+  useFrame(({ clock }) => place(time ?? clock.elapsedTime, camera.position));
 
   return (
     <>
