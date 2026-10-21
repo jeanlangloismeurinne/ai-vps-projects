@@ -52,7 +52,7 @@ Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'an
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
 - **Suite** `bash backend/checks/run_all.sh` verte (2026-10-21, après C1 : 66 checks, 5093 assertions ; `negatif_search_worker.sh` 51/0).
-- **Production** : dernier déploiement `6760090` (point 13, backend + frontend), vérifié dans le conteneur et par l'API (baisse NVDA servie). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
+- **Production** : dernier déploiement `9e68575` (C1, #141, backend), vérifié dans le conteneur (`etablir_extraits` présent, longueur absente du contrat). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
 - **Prochaine migration : 061** (060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
