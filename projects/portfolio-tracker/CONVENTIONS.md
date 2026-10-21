@@ -3564,3 +3564,44 @@ l'architecture, puis le classeur se complète au fil de ce qu'on apprend.
   variable au-dessus du **seuil de matérialité du fonds — 10 % de la valeur centrale**, décision du fonds au
   référentiel, revue une fois l'an — figure dans un scénario ou est écartée avec motif ; repli : sensibilité
   des seules variables matérielles.
+- **Commentaires du 2026-10-21 sur la page de lecture (spec §12)** :
+  (a) **un gabarit des comptes par famille** — mesuré : le gabarit 1.1.0 tient pour NVDA et RVMD (0 cellule
+  non déposée), pas pour JPM (74 non déposées ; résultat d'exploitation et capital employé non établis ;
+  charges d'intérêts « 0 » en 2024-2025 = zéro TROMPEUR). Familles `industrielle` (rentable, pré-revenus) et
+  `bancaire` (produit net, charges, coût du risque, fonds propres tangibles, actifs pondérés) ; assurance
+  quand une assurance entre. L'agrégé du classeur = gabarit de la famille du titre ; chaque variable du
+  catalogue déclare ses familles. Avant le gabarit bancaire, le socle d'une banque n'entre pas au dossier.
+  (b) **fourchettes et scénarios** — chaque variable de l'inventaire porte bas / central / haut, estimés par
+  une méthode déclarée dans sa fiche (fourchette publiée › dispersion observée › classe de référence › récit
+  chiffré d'un chapitre) ; un scénario = une liste de DÉPLACEMENTS (borne ou valeur dite, motif, pièce) d'un
+  sous-ensemble de variables matérielles, jamais une copie du classeur ; le central est un scénario sans
+  déplacement ; toute valorisation passe par `evaluer_modele(classeur, scénario)` ; l'arbre de RVMD = des
+  scénarios de nature `branche`. **v1 = central seul**, tables et contrats créés dès M1 ; le moteur (M6) après
+  le premier comité.
+
+### #141 — l'extrait court se cite par sa ligne : unique, il est remplacé par son passage ; ambigu, il tombe
+
+**Le défaut (C1 du plan avant comité ; mesuré le 2026-10-21 en base).** La règle #126 (extrait ≥ 20
+caractères) refusait d'office un cours (« $198.89 ») ou un intitulé (« X Director », « Buys 0 $0 ») :
+mandats 3029, 3030, 3033 (NVDA ma_3, ma_4, 2026-10-16 14:43-14:49) en `source_indisponible`. ⚠️ Ces trois
+échecs PRÉCÈDENT #135 (17:36 le même jour) : depuis, l'extrait court ne fait plus lever toute la réponse,
+il fait tomber la seule fiche qui porte la valeur — la question finit « non fondable » au lieu de
+« source indisponible ». La mesure du 2026-10-21 (« stable, pas une panne ») datait l'échec sans le
+dater contre l'historique des correctifs. Second défaut trouvé sur le réel (10-K NVIDIA
+0001045810-26-000021, tableau des rachats) : « $ » et le nombre sont dans deux cellules (« $ 198.89 »),
+donc même un extrait LONG citant « $198.89 » était introuvable.
+
+**La règle, comme un fonds** (on cite la ligne du tableau, pas la cellule ; `knowledge/citation.py`,
+détenteur unique `etablir_extraits`) : un extrait ≥ 20 caractères se vérifie mot pour mot comme avant ; un
+extrait plus court est REMPLACÉ par le passage du document qui le contient — sa ligne ; trop courte, avec
+ses deux voisines ; trop longue (> 300), une fenêtre de ±120 caractères coupée sur des blancs — à condition
+qu'il soit UNIQUE dans chaque texte lu de cette adresse (plusieurs textes = plusieurs vues du même
+document ; on garde le passage du plus long). Plusieurs passages distincts (« Total », « Revenue ») ⟹ fiche
+refusée, non discriminant : c'est le cas que #126 visait. Passage encore < 20 caractères ⟹ refusée.
+`normaliser` colle un symbole monétaire à son nombre (`$ 198.89` = `$198.89`) — aussi pour la note flash.
+La longueur ne se juge plus au contrat `ProducedEntry` (il valide la sortie BRUTE, sans le texte lu).
+Le prompt n'est pas modifié (il demande toujours ≥ 20 caractères ; le code est le filet).
+Coût d'erreur nommé : un nombre tronqué (« $198.8 ») se retrouve à l'intérieur de « $198.89 » — la fiche
+porte alors la ligne exacte du document, l'affirmation du collecteur reste dans sa lecture.
+Gardes : `check_search_worker` §11 (fixture copiée du 10-K réel) + `negatif_search_worker.sh` (8 mutations
+neuves chez le détenteur, celle du contrat retirée).

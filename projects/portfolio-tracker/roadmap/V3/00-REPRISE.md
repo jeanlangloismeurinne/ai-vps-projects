@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-21 (commentaires sur la page de lecture → spec v2.1 §12 ; C1 livré, #141) ; 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -23,15 +23,21 @@ qui, preuve). Réplicabilité exigée (aucun code propre à un titre). Passage a
 **Spec du modèle de l'entreprise VALIDÉE le 2026-10-21** : `09-modele-entreprise.md` (v2, arbitrages §1 et §11,
 CONVENTIONS #140) ; page de lecture https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC. Mesures du jour :
 `mesures/2026-10-21/` (inventaire de l'existant, NVDA à blanc, plafond + crédit, ventilation publiée).
+**Fait le 2026-10-21 (après-midi)** : deux commentaires de l'utilisateur sur la page intégrés (spec **v2.1, §12**,
+#140 complété) — (a) gabarit des comptes **par famille** (industrielle = rentable + pré-revenus ; bancaire à
+écrire, lot M2 bis ; mesuré : le socle de JPM est TROMPEUR, intérêts « 0 » en 2024-2025) ; (b) chaque variable
+de l'inventaire porte bas/central/haut par une méthode déclarée, un scénario = des DÉPLACEMENTS d'un
+sous-ensemble ; **v1 = central seul**, tables `Fourchette`/`Scenario`/`Deplacement` créées dès M1 ; B6 après le
+premier comité. **C1 livré** (#141 : l'extrait court remplacé par son passage unique ; « $ 198.89 »).
+**À confirmer par l'utilisateur** : au premier comité NVDA, la « fourchette » = central ± 1 pt du taux exigé.
 **PROCHAIN PAS — lots de construction, Opus spécifie, Sonnet exécute** :
-(1) **C1** — un extrait court légitime (cours « $198.89 », fonction « X Director ») est refusé par la règle #126
-(≥ 20 caractères) : ma_3 et ma_4 de NVDA tombent en « source indisponible », ce qui FERME la porte de
-l'architecte ; (2) **B3/M1** — catalogue de variables (fiche : définition, unité, période, origines admises,
-contrôle, questions sources), patrons de départ par archétype, format agrégé = lignes du socle ; contrats
-`Architecture` / `Cellule` ; gardes ; `parametres_du_fonds.seuil_de_materialite` (10 % de la valeur centrale) ;
-(3) **B2/M2** — ventilation publiée au socle (`submissions.json` → `FilingSummary.xml` → `R#.htm`, repérer par
-les axes) ; puis A1 (cours au moment des rachats, à poser à l'utilisateur) et la porte de l'architecte (B4).
-C2 sans objet, C5 vérifié (≈ 5,55 $ de crédit DeepInfra, à re-mesurer avant les gros passages).
+(1) **B3/M1** — catalogue de variables (fiche : définition, unité, période, origines admises, contrôle,
+questions sources, `familles`, `methode_de_fourchette`), patrons par archétype, format agrégé = gabarit de la
+famille du titre ; contrats `Architecture`, `Cellule`, `Fourchette`, `Scenario`, `Deplacement` (09 §12.2) ;
+gardes ; `parametres_du_fonds.seuil_de_materialite` ; (2) **B2/M2** — ventilation publiée au socle
+(`submissions.json` → `FilingSummary.xml` → `R#.htm`, repérer par les axes) ; puis relance des questions sources
+sans première réponse (ma_3, ma_4 compris ; A1 pour ma_3 : le 10-K donne le cours moyen mensuel des rachats)
+et la porte de l'architecte (B4). C2 sans objet, C5 vérifié (≈ 5,55 $ de crédit DeepInfra, à re-mesurer).
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
@@ -45,7 +51,7 @@ Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'an
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-19, après le point 13 : 66 checks, 5041 assertions).
+- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-21, après C1 : 66 checks, 5093 assertions ; `negatif_search_worker.sh` 51/0).
 - **Production** : dernier déploiement `6760090` (point 13, backend + frontend), vérifié dans le conteneur et par l'API (baisse NVDA servie). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
 - **Prochaine migration : 061** (060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.

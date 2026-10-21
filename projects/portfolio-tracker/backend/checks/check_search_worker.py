@@ -629,7 +629,73 @@ _sans = _fiche([_BON_1])
 del _sans["extraits"]
 _refusee("clef `extraits` absente → refusée (même garde que la liste vide)", _sans)
 _refusee("liste d'extraits vide sur un document → refusée", _fiche([]))
-_refusee("extrait de moins de 20 caractères (non discriminant) → refusé", _fiche(["elevated memory"]))
+
+# C1 (2026-10-21) — l'EXTRAIT COURT : un cours, un intitulé. Refusé d'office jusqu'ici, il faisait tomber
+# la seule fiche qui portait la valeur (NVDA ma_3 « $198.89 », ma_4 « X Director », 2026-10-16). Le code
+# le remplace par son passage du document s'il y est UNIQUE ; présent à plusieurs endroits, il ne désigne
+# rien et reste refusé. Fixture COPIÉE DU RÉEL : le 10-K NVIDIA 0001045810-26-000021 converti par
+# `websearch.html_to_text` (tableau des rachats, le « $ » et le nombre dans deux cellules, #132).
+_K10_URL = "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm"
+_K10_TEXTE = (
+    "The following table presents details of our share repurchase transactions during the fourth "
+    "quarter of fiscal year 2026:\n"
+    "Period\t\tTotal Number   of Shares Purchased   (In millions)\t\tAverage Price Paid per Share (1)"
+    "\t\tTotal Number of Shares Purchased as Part of Publicly Announced Program (In millions)\t\t"
+    "Approximate Dollar Value of Shares that May Yet Be Purchased Under the Program (In billions)\n"
+    "October 27, 2025 - November 23, 2025\t\t5.6\xa0\t\t\t$\t198.89\xa0\t\t\t5.6\xa0\t\t\t$\t61.1\n"
+    "November 24, 2025 - December 21, 2025\t\t6.6\xa0\t\t\t$\t179.41\xa0\t\t\t6.6\xa0\t\t\t$\t59.9\n"
+    "December 22, 2025 - January 25, 2026\t\t7.3\xa0\t\t\t$\t186.52\xa0\t\t\t7.3\xa0\t\t\t$\t58.5\n"
+    "Total\t\t19.5\xa0\t\t\t\t\t19.5\n"
+    "(1)\xa0\xa0\xa0\xa0Average price paid per share includes broker commissions, but excludes our "
+    "liability under the 1% excise tax on the net amount of our share repurchases required by the "
+    "Inflation Reduction Act of 2022.")
+_LIGNE_198 = "October 27, 2025 - November 23, 2025 5.6 $ 198.89 5.6 $ 61.1"
+log_k = RetrievalLog()
+log_k.record(_K10_URL, "full")
+log_k.record_text(_K10_URL, _K10_TEXTE)
+o = _passe(_fiche(["$198.89"], url=_K10_URL), log=log_k)
+_fk = [e for e in o["entries"] if TAG_LECTURE not in e["tags"]]
+check("extrait court UNIQUE (« $198.89 », cellule du tableau des rachats) → la fiche passe, l'extrait "
+      "remplacé par SA LIGNE du tableau, copiée du document",
+      len(_fk) == 1 and _fk[0]["extraits"] == [_LIGNE_198] and _LIGNE_198 in _fk[0]["content"],
+      f"→ {o['status']} · {[e.get('extraits') for e in _fk]}")
+check("« $ » et le nombre dans deux cellules : « $198.89 » se retrouve (espace après le symbole "
+      "monétaire normalisé)",
+      _cit.extrait_introuvable(["$198.89"], [_K10_TEXTE]) is None
+      and _cit.extrait_introuvable(["$198.90"], [_K10_TEXTE]) == "$198.90")
+_refusee("extrait court AMBIGU (« Total », trois passages du tableau) → refusé, non discriminant",
+         _fiche(["Total"], url=_K10_URL), log=log_k)
+_ets, _motif_amb = _cit.etablir_extraits(["Total"], [_K10_TEXTE])
+check("… et le motif nomme l'ambiguïté (pas « introuvable »)",
+      _ets == [] and _motif_amb is not None and "passages différents" in (_motif_amb or ""),
+      f"→ {_motif_amb!r}")
+_refusee("extrait court introuvable (« $198.90 ») → refusé", _fiche(["$198.90"], url=_K10_URL), log=log_k)
+# Deux vues du MÊME document (page entière + extrait de recherche) : une occurrence dans chacune n'est
+# pas une ambiguïté ; le passage retenu est celui du texte le plus long.
+log_k2 = RetrievalLog()
+log_k2.record(_K10_URL, "full")
+log_k2.record_text(_K10_URL, "Average Price Paid per Share $ 198.89 in the period")
+log_k2.record_text(_K10_URL, _K10_TEXTE)
+o = _passe(_fiche(["$198.89"], url=_K10_URL), log=log_k2)
+_fk2 = [e for e in o["entries"] if TAG_LECTURE not in e["tags"]]
+check("deux textes lus d'une même adresse, une occurrence dans chacun → pas ambigu, passage du texte "
+      "le plus long", len(_fk2) == 1 and _fk2[0]["extraits"] == [_LIGNE_198],
+      f"→ {o['status']} · {[e.get('extraits') for e in _fk2]}")
+# Une ligne trop courte (« Total 19.5 19.5 ») s'étend à ses voisines ; une page sans saut de ligne est
+# coupée autour de l'extrait, sur des blancs.
+_et_tot, _ = _cit.etablir_extraits(["19.5 19.5"], [_K10_TEXTE])
+check("ligne de l'extrait trop courte (« Total 19.5 19.5 ») → étendue à ses deux voisines",
+      len(_et_tot) == 1 and _et_tot[0].startswith("December 22, 2025") and "Total 19.5" in _et_tot[0]
+      and _et_tot[0].endswith("Inflation Reduction Act of 2022."), f"→ {_et_tot!r}")
+_et_seul, _motif_seul = _cit.etablir_extraits(["X Director"], ["X Director"])
+check("passage encore trop court même avec ses voisines (un document réduit à « X Director ») → refusé, "
+      "non discriminant", _et_seul == [] and "moins de" in (_motif_seul or ""), f"→ {_motif_seul!r}")
+_et_mem, _ = _cit.etablir_extraits(["elevated memory"], [_CFO_TEXTE])
+check("page sans saut de ligne → fenêtre autour de l'extrait, coupée sur des blancs, vérifiable mot "
+      "pour mot", len(_et_mem) == 1 and "elevated memory" in _et_mem[0]
+      and len(_et_mem[0]) <= _cit.CONTEXTE_MAX_CARS
+      and _cit.extrait_introuvable(_et_mem, [_CFO_TEXTE]) is None
+      and _et_mem[0].split(" ")[0] in _CFO_TEXTE.split(), f"→ {_et_mem!r}")
 
 o = _passe(_fiche(["We've partnered with our extensive network of suppliers",
                    "DATA CENTER revenue for the  second quarter was a record $89.0 billion"]))
@@ -659,8 +725,9 @@ check("contrat : une fiche de document sans extrait est refusée",
       "au moins un extrait" in _contrat(extraits=[]), f"→ {_contrat(extraits=[])[:160]}")
 check("contrat : une lecture (agent_synthesis) qui porterait un extrait est refusée",
       "aucun extrait" in _contrat(source_type="agent_synthesis", extraits=[_BON_1]))
-check("contrat : un extrait de moins de 20 caractères est refusé",
-      "non discriminant" in _contrat(extraits=["elevated memory"]))
+# C1 : la longueur ne se juge plus au contrat, qui valide aussi la sortie BRUTE (le worker établit).
+check("contrat : un extrait court n'est PAS refusé par le contrat (le worker l'établit ou refuse la fiche)",
+      _contrat(extraits=["$198.89"]) == "ACCEPTÉ", f"→ {_contrat(extraits=['$198.89'])[:160]}")
 check("contrat : `extraits` est REQUIS, sans défaut", ProducedEntry.model_fields["extraits"].is_required())
 
 # Le journal se remplit au point de récupération RÉEL : les deux exécuteurs d'outils, bouchonnés au

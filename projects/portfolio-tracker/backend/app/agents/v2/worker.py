@@ -80,7 +80,7 @@ from app.contracts import (
 from app.config import settings
 from app.db.database import get_db_session
 from app.contracts.worker_delegation_schema import TAG_LECTURE, ProducedEntry
-from app.knowledge.citation import EXTRAIT_MIN_CARS, extrait_introuvable
+from app.knowledge.citation import etablir_extraits
 from app.knowledge.standard_collecte import PREFIXE_FICHE
 from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
@@ -312,20 +312,14 @@ def _normalise_entry(
             logger.info("search-worker: fiche refusée (#126) — aucun extrait littéral (clef absente, "
                         "vide ou mal formée) (%s)", url)
             return None
-        court = next((e for e in extraits if len(e) < EXTRAIT_MIN_CARS), None)
-        if court is not None:
-            logger.info("search-worker: fiche refusée (#126) — extrait non discriminant %r (%s)",
-                        court[:80], url)
+        # Un extrait court (un cours, un intitulé) est remplacé par son passage du document s'il y
+        # est unique ; sinon il ne désigne rien et la fiche tombe (C1, détenteur : `citation`).
+        etablis, refus = etablir_extraits(extraits, log.textes_de(url))
+        if refus is not None:
+            logger.info("search-worker: fiche refusée (#126) — %s (%s ; %s)", refus, url,
+                        "aucun texte de cette adresse n'a été lu" if not log.textes_de(url) else "texte lu")
             return None
-        manquant = extrait_introuvable(extraits, log.textes_de(url))
-        if manquant is not None:
-            logger.info(
-                "search-worker: fiche refusée (#126) — extrait introuvable dans le texte rapporté pour "
-                "%s (%s) : %r", url,
-                "aucun texte de cette adresse n'a été lu" if not log.textes_de(url) else "texte lu",
-                manquant[:160],
-            )
-            return None
+        extraits = etablis
 
     releve = _contenu_du_releve(url, extraits) if extraits else content
 

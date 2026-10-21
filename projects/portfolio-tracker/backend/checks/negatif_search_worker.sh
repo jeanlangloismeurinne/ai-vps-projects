@@ -26,9 +26,17 @@ mutations=(
 # la règle, chez son détenteur
 "$CIT¦        if not any(n in c for c in corpus):¦        if False:¦paraphrase inventée"
 "$CIT¦    return re.sub(r\"\\s+\", \" \", t).strip().casefold()¦    return t.strip().casefold()¦typographie, espaces et casse normalisés"
+# C1 (2026-10-21) — l'extrait court, chez son détenteur
+"$CIT¦            if extrait_introuvable([e], textes) is not None:¦            if False:¦paraphrase inventée"
+"$CIT¦            if len(passages) > 1:¦            if False:¦extrait court AMBIGU"
+"$CIT¦        etablis.append(retenu[1])¦        etablis.append(e)¦remplacé par SA LIGNE du tableau"
+"$CIT¦    t = _DEVISE_DETACHEE.sub(r\"\\1\", _typographie(texte))¦    t = _typographie(texte)¦dans deux cellules"
+"$CIT¦        if len(retenu[1]) < EXTRAIT_MIN_CARS:¦        if False:¦passage encore trop court"
+"$CIT¦    if len(re.sub(r\"\\s+\", \" \", t[a:b]).strip()) < EXTRAIT_MIN_CARS:¦    if False:¦ligne de l'extrait trop courte"
+"$CIT¦    if b - a > CONTEXTE_MAX_CARS:¦    if False:¦page sans saut de ligne"
+"$CIT¦            if passages and (retenu is None or len(t) > retenu[0]):¦            if passages and retenu is None:¦passage du texte le plus long"
 # le câblage dans le worker
-"$W¦        manquant = extrait_introuvable(extraits, log.textes_de(url))¦        manquant = None¦extrapolation du collecteur"
-"$W¦        court = next((e for e in extraits if len(e) < EXTRAIT_MIN_CARS), None)¦        court = None¦extrait de moins de 20 caractères (non discriminant) → refusé"
+"$W¦        etablis, refus = etablir_extraits(extraits, log.textes_de(url))¦        etablis, refus = extraits, None¦extrapolation du collecteur"
 "$W¦        if not extraits:¦        if False:¦clef \`extraits\` absente"
 "$W¦        if not extraits:¦        if False:¦liste d'extraits vide sur un document"
 "$W¦        extraits = []¦        pass¦aveu llm_memory"
@@ -51,7 +59,6 @@ mutations=(
 "$C¦        n_fiches = sum(1 for e in resp.entries if not est_lecture_du_collecteur(e))¦        n_fiches = len(resp.entries)¦max_entries=1 se compte en FICHES"
 "$C¦            if not self.extraits:¦            if False:¦contrat : une fiche de document sans extrait"
 "$C¦        if sans_document and self.extraits:¦        if False:¦contrat : une lecture (agent_synthesis)"
-"$C¦            courts = [e for e in self.extraits if len(e.strip()) < EXTRAIT_MIN_CARS]¦            courts = []¦contrat : un extrait de moins de 20 caractères"
 # #132 — les tableaux, au point de conversion en texte (détenteur : websearch.html_to_text)
 "$WS¦            self.parts.append(\"\\t\")¦            pass¦les cellules d'en-tête ne sont plus collées"
 "$WS¦            self.parts.append(\" \" if self._cell else \"\\n\")¦            self.parts.append(chr(10))¦tient sur une ligne"
@@ -76,7 +83,7 @@ mutations=(
 # toujours vérifié même pour une entry tolérée
 "$W¦        if not lect.lisible:¦        if True:¦la bonne fiche survit, les deux fautives sont écartées"
 "$W¦        if not lect.lisible:¦        if False:¦sortie brute illisible → l'exception d'origine"
-"$W¦        manquant = extrait_introuvable(extraits, log.textes_de(url))¦        manquant = None¦entrée tolérée par #128 reste vérifiée par #126"
+"$W¦        etablis, refus = etablir_extraits(extraits, log.textes_de(url))¦        etablis, refus = extraits, None¦entrée tolérée par #128 reste vérifiée par #126"
 # #B — la relance unique sans recherche web
 "$W¦    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦    if False:¦relance UNIQUE, le rappel est bien dans le message"
 "$W¦    if _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦    while _doit_relancer_sans_web(corrected, retrieval_log, allow_without_web=allow_without_web):¦le second tour est aussi vide"

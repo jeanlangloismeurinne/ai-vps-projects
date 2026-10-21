@@ -62,10 +62,10 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 |---|---|---|---|
 | B1 | ✅ **Spec v2 le 2026-10-21** après arbitrages : architecte dédié, modèle vivant, deux signatures (interrupteur, cible : une seule), scénarios construits sur un inventaire de variables, détail plus fin que la publication mais agrégé au format des comptes. Arbitrages de la v2 rendus le même jour : seuil de matérialité 10 % de la valeur centrale (décision du fonds) ; l'architecte passe dès que chaque question liée à une variable du classeur a une première réponse (porte calculée, §11). | [C] | Opus → Vous |
 | B2 | (M0 ✅, M2) La ventilation publiée au socle (segments, marchés, géographie) — mesurée faisable et générique. | [C] | Sonnet sur spec |
-| B3 | (M1) Catalogue de variables, patrons de départ, format agrégé ; contrats et gardes. | [C] | Opus spec → Sonnet |
+| B3 | (M1) Catalogue de variables (fiche avec `familles` et `methode_de_fourchette`), patrons de départ, format agrégé = gabarit de la famille du titre ; contrats `Architecture`, `Cellule`, `Fourchette`, `Scenario`, `Deplacement` (central seul peuplé, 09 §12.2) ; gardes. | [C] | Opus spec → Sonnet |
 | B4 | (M3) L'agent architecte, sa porte (première réponse sur chaque question source), ses contrôles de structure, la signature de l'architecture (interrupteur). | [C] | Opus spec → Sonnet |
 | B5 | (M4, M5) Demandes ciblées par cellule ; projection des encadrés existants ; agrégé historique + projection au format du socle. | [C] | Opus spec → Sonnet |
-| B6 | (M6) Inventaire des variables de scénario, matérialité, constructeur de scénarios et son repli. | [C] | Opus spec → Sonnet |
+| B6 | (M6) **Reporté après le premier comité** (commentaire du 2026-10-21, 09 §12.2) : fourchettes bas/central/haut par méthode du catalogue, inventaire, matérialité, constructeur de scénarios et son repli. Au premier comité : scénario central + ±1 pt du taux exigé (à confirmer). | [C] | Opus spec → Sonnet |
 | B7 | (M7) L'agent de valorisation sur le classeur ; va_4-6 au dernier cours coté (#81) ; Greenwald ; ±1 pt du taux ; alerte d'échéance du taux (2027-10-17) ; rouvrir va_1/va_2 rouvre va_6. | [C] | Opus → Sonnet |
 | B8 | (M8) Acceptation : NVDA (activités) et RVMD (programmes) donnent chacun une fourchette ; changer une hypothèse recalcule sans appel modèle ; au cours du jour, va_6 bouge sans va_2. | [P] | Sonnet lance, Opus lit |
 
@@ -73,7 +73,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 
 | Id | Tâche | Nature | Qui |
 |---|---|---|---|
-| C1 | **Un extrait court légitime est refusé** (#126, ≥ 20 caractères) : un cours ou un intitulé de fonction (« $198.89 », « X Director ») fait tomber ma_3 et ma_4. Admettre une valeur ou un intitulé court sans rouvrir les citations vides que la règle visait. Stable, pas une panne. | [C] | Opus règle, Sonnet code |
+| C1 | ✅ **2026-10-21** (#141) : l'extrait court est remplacé par son passage du document s'il y est unique (sa ligne de tableau, sa phrase), refusé s'il est ambigu ; « $ 198.89 » = « $198.89 ». ⚠️ Les échecs de ma_3/ma_4 (16/10, 14:43-14:49) précédaient #135 (17:36) : depuis, l'extrait court ne faisait plus que retirer la fiche porteuse. Ancien énoncé : un cours ou un intitulé (« $198.89 », « X Director ») fait tomber ma_3 et ma_4. | [C] | Opus |
 | C2 | ✅ **2026-10-21 — sans objet** : le plafond ne coupe plus rien depuis #108 (`dossier.py:343-345`, l'alerte n'est qu'un signal) ; l'analyste reçoit les 51/66/51 pièces, à blanc comme en réel. Ancien énoncé : **Plafond de 40 pièces dépassé** pour la qualité financière (51), le secteur (66) et le management (51) : relever ce que l'analyste reçoit réellement au-delà, puis trancher (relever le plafond ou trier). | [C] | Sonnet mesure, Opus tranche |
 | C3 | Garde après rédaction sur un chiffre RELEVÉ (pas seulement ceux du socle) : NVDA qf_6 #1289 « part faible » sans chiffre ; RVMD qf_6 #1679 rend absents des retraitements qui valent zéro. | [C] | Opus spec, Sonnet code |
 | C4 | (ex-21 b) Datation d'une note de synthèse : la date du fait rapporté, pas une date voisine (#1057 daté du 5 août pour une note du 14/10). | [C] | Sonnet sur spec |
@@ -102,7 +102,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 | F1 | (ex-8, #127) Passage au standard : les 11 réponses NVDA « standard antérieur » et les pièces d'héritage sans datation. Critère : `n_standard_anterieur` = 0 sur NVDA. | [P] | Sonnet lance, Opus lit |
 | F2 | Séance : lire la baisse ma_1 (#1499 juste, #1475 fondée sur une pièce mal titrée) ; relire les réponses signalées (ex-11 : NVDA qf_6, qf_1 normalisé = déposé, me_6 #1597 citée sur la mauvaise pièce) ; acquitter les chapitres ; signer le modèle ; décider. | — | Vous |
 
-**Ordre** : B1 ✅ ‖ C1 (ouvre la porte de l'architecte sur NVDA : ma_3, ma_4) ‖ B2-B3 → relance des questions sources sans première réponse (après A1 pour ma_3) → B4 (architecte, signature) → D1 restant + D3 + B5 → B6-B7 → B8 → E1-E3 → F1 → F2 ; C3, C4 en parallèle.
+**Ordre** : B1 ✅ ‖ C1 (ouvre la porte de l'architecte sur NVDA : ma_3, ma_4) ‖ B2-B3 → relance des questions sources sans première réponse (après A1 pour ma_3) → B4 (architecte, signature) → D1 restant + D3 + B5 → B7 (sur le scénario central) → B8 → E1-E3 → F1 → F2 ; C3, C4 en parallèle.
 
 ## Après le premier comité (jalon élargi, 05 A8-A11)
 
@@ -113,6 +113,8 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
   réestime la fourchette, contraire à l'option 1 (05 §8).
 - RVMD : ses 26 questions ouvertes (la plupart après le 10-Q du T3) ; ex-11 RVMD (mo_4 « 19 ans »,
   qf_8, mo_5 pancréas).
+- (09 §12.2, ex-B6) Fourchettes, inventaire, matérialité, constructeur de scénarios — préalable à RVMD (arbre de programmes).
+- (09 §12.1, M2 bis) Gabarit bancaire du socle — préalable à l'entrée d'une financière.
 - (ex-19) MSFT de zéro (et ex-11 MSFT : note flash, nouveaux segments lus comme routine) ; (ex-20) un
   4ᵉ titre financier ; décider si un émetteur étranger (20-F) entre dans le jalon.
 - (ex-22) L'outil du test : table titre × chapitre et comparaison de deux passages identiques ;
@@ -125,7 +127,7 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 retiré) · l'outil d'acceptation ne remet pas le socle ni les lectures · `synthesis_feed` titré par
 le modèle (sans appelant V3) · (ex-1) transcription officielle NVDA chez le prestataire IR
 (`q4cdn`, domaine partagé) · estimations d'analystes (FMP 403) · coût web non instrumenté ; lignes
-web en série (~1 h par chapitre) · résidus #115/#116 (MSFT) · modèles de décision DeepInfra.
+web en série (~1 h par chapitre) · résidus #115/#116 (MSFT) · socle d'une banque TROMPEUR au gabarit industriel (JPM : charges d'intérêts « 0 » en 2024-2025, 09 §12.1) — ne pas le publier comme pièce avant M2 bis · modèles de décision DeepInfra.
 
 ## Soldé (inventaire du 2026-10-16)
 
@@ -155,3 +157,4 @@ de chaque sujet soldé : `00-REPRISE-ARCHIVE.md` et `CONVENTIONS.md` #132-#139.
 | 2026-10-21 | B2 (M0) | Mesure de la ventilation publiée : NVDA, RVMD, JPM | Sonnet (NVDA calcul + réseau = centres de données vérifié par Opus) | `mesures/2026-10-21/mesure_m0_ventilation.md` ; B2 faisable sans analyser d'instance XBRL ; RVMD sans ventilation (gabarit pré-revenus en jugements ancrés) |
 | 2026-10-21 | B1 | Arbitrages rendus sur la spec v1 (architecte dédié ; deux signatures, cible une ; scénarios sur inventaire ; détail fin, agrégé au format du socle) ; spec v2 | Vous, Opus | `09-modele-entreprise.md` v2 ; 2 points résiduels §11 |
 | 2026-10-21 | B1 | Arbitrages sur la v2 : seuil de matérialité 10 % ; porte de l'architecte = première réponse sur chaque question source. Spec validée ; convention #140 | Vous, Opus | `09-modele-entreprise.md` §11 ; `CONVENTIONS.md` #140 |
+| 2026-10-21 | B1 | Deux commentaires sur la page de lecture intégrés (spec v2.1, §12) : gabarit des comptes par famille, mesuré (JPM : 74 cellules non déposées, lignes clés vides, intérêts « 0 ») ; fourchettes bas/central/haut avec méthode, scénarios = déplacements d'un sous-ensemble, v1 = central seul, schéma prêt dès M1 ; B6 après le premier comité | Vous, Opus | `09-modele-entreprise.md` §12 ; `CONVENTIONS.md` #140 |

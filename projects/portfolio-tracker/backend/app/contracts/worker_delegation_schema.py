@@ -34,7 +34,6 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.knowledge.citation import EXTRAIT_MIN_CARS
 from app.knowledge.datation import Datation, DatationInvalide
 
 
@@ -220,10 +219,10 @@ class ProducedEntry(Strict):
             if not self.extraits:
                 raise ValueError(f"{self.source_type} : une fiche tirée d'un document porte au moins "
                                  "un extrait littéral (#126)")
-            courts = [e for e in self.extraits if len(e.strip()) < EXTRAIT_MIN_CARS]
-            if courts:
-                raise ValueError(f"extrait de moins de {EXTRAIT_MIN_CARS} caractères, non discriminant "
-                                 f"(#126) : {courts[0]!r}")
+            # La LONGUEUR d'un extrait ne se juge plus ici (C1, 2026-10-21) : ce contrat valide aussi la
+            # sortie BRUTE du modèle, et un extrait court (« $198.89 ») n'y est pas une faute — le
+            # worker le remplace par son passage du document s'il y est unique, ou refuse la fiche
+            # (`citation.etablir_extraits`, détenteur unique ; il a le texte lu, ce contrat ne l'a pas).
         # P2 (§6.4) : mémoire modèle -> revue humaine + cutoff obligatoires
         if self.source_type == "llm_memory":
             if not self.requires_human_review:
