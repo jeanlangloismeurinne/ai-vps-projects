@@ -58,6 +58,7 @@ async function checkSelection(page: Page, touch: boolean): Promise<{ checks: Rec
   await page.goto(`http://localhost:5199/v2.html?${T}`);
   await ready(page);
   for (const id of MAIN) {
+    console.log(`${new Date().toISOString().slice(11, 19)}   click ${id}`);
     const point = await page.evaluate((id) => window.__xs!.pickPoint(id), id);
     if (!point) {
       problems.push(`${id}: no visible point to click`);
@@ -96,6 +97,7 @@ try {
       await page.goto(`http://localhost:5199/v2.html${query ? `?${query}` : ""}`);
       await page.waitForFunction(() => window.__xs?.ready === true, null, { timeout: 120_000 });
       const file = `${view}-${format}.png`;
+      console.log(`${new Date().toISOString().slice(11, 19)} ${view}/${format}`);
       await page.screenshot({ path: join(out, file), timeout: 180_000 });
       const overlap = view.startsWith("card-") ? await page.evaluate(() => window.__xs!.overlap()) : undefined;
       results[`${view}/${format}`] = { file, render: await page.evaluate(() => window.__xs!.renderInfo()), overlap, errors: [...errors] };
