@@ -291,9 +291,10 @@ _RECENSES = {
     "app/agents/v2/exit.py",
     "app/knowledge/lecture_depot.py",     # lecture d'un dépôt postérieur — constat, daté par le dépôt (#106)
     "app/knowledge/socle_feed.py",        # socle des comptes — constat, daté de sa dernière clôture (2026-10-04)
+    "app/knowledge/ventilation_feed.py",  # ventilation publiée — constat, daté du fait/dépôt (lot M2, 2026-10-21)
 }
 _PRODUCTEURS = _appelants_de_store_knowledge()
-b.require(_PRODUCTEURS, 11, "les appelants de `store_knowledge` LUS dans les sources")
+b.require(_PRODUCTEURS, 12, "les appelants de `store_knowledge` LUS dans les sources")
 b.check(_PRODUCTEURS == _RECENSES,
         f"tout appelant du guichet est RECENSÉ — non recensés : {sorted(_PRODUCTEURS - _RECENSES)} "
         f"· recensés mais disparus : {sorted(_RECENSES - _PRODUCTEURS)}")
