@@ -53,6 +53,7 @@ graph LR
 | `app/contracts/` | Copies runtime des cartes figées (`provenance-cards/`) | Faire évoluer un contrat (#19) | `app/contracts/ARCHITECTURE.md` |
 | `app/api/` | Surface backend → frontend (routers `_v2`) | Exposer une info au frontend | `app/api/ARCHITECTURE.md` |
 | `app/valorisation/` | Atelier de valorisation : gabarits maison + bac à calcul où s'exécute le modèle propre à chaque entreprise (#96) | **Ajouter un gabarit maison** | `app/valorisation/ARCHITECTURE.md` |
+| `app/modele_entreprise/` | Le classeur de l'entreprise : catalogue de variables, patrons, architecture, cellule, fourchette/scénario/déplacement (lot M1, #140) | **Ajouter une variable au catalogue** | `app/modele_entreprise/ARCHITECTURE.md` |
 | `app/data_collection/` | ⚠️ **LEGACY V0/V1** — DataService marché | (pas d'extension V3) | `app/data_collection/ARCHITECTURE.md` |
 
 ## Les trois garde-fous (constitution — `principe-directeur.md`)

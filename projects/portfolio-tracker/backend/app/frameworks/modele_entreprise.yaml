@@ -1,0 +1,371 @@
+# Le CATALOGUE DE VARIABLES, les FAMILLES DE COMPTES et les PATRONS DE DÉPART du classeur de
+# l'entreprise — DÉTENTEUR UNIQUE (chantier v3, roadmap 09 §9, lot M1).
+#
+# POURQUOI UN FICHIER À PART DE `frameworks.yaml`. `schema_version` de `frameworks.yaml` clefe les
+# réponses (#64, #90) : corriger une fiche de variable ne doit invalider AUCUNE réponse. Même
+# logique que `types_evenement_version`. Ce fichier porte donc sa PROPRE `version`. Le lien aux
+# questions (`questions_sources`) se vérifie par un PONT (`app/modele_entreprise/referentiel.py`),
+# jamais par une copie des définitions de `frameworks.yaml`.
+#
+# POURQUOI DU YAML, PAS DU PYTHON (même raison que `frameworks.yaml`) : du texte inerte, écrit à la
+# main, lisible au diff ; un détenteur unique ; un contrat qui le valide
+# (`app/contracts/modele_entreprise_schema.py`) ; des checks qui le gardent
+# (`checks/check_modele_entreprise.py` + `checks/negatif_modele_entreprise.sh`).
+#
+# CE QUE FERAIT UN VRAI FONDS. Le directeur de la recherche tient UNE fiche par hypothèse maison —
+# définition, unité, période, d'où peut venir le chiffre, comment on le contrôle, comment on en
+# borne l'incertitude — et des feuilles de départ par type d'entreprise ; chaque classeur d'analyste
+# s'y réfère. Ce fichier écrit ces fiches et la forme du classeur ; il n'écrit AUCUN classeur
+# (l'architecte, dédié à chaque titre, c'est M3).
+#
+# ⚠️ RÉPLICABILITÉ. Aucun ticker, aucun nom de segment ou de produit ici : ce référentiel se
+# réplique sur des entreprises très différentes. Les fixtures de test, elles, sont copiées du réel
+# et nomment des émetteurs — mais jamais ce fichier.
+
+version: "1.0.0"
+
+# Les FAMILLES DE COMPTES (09 §12.1). Le format AGRÉGÉ du classeur EST le gabarit de la famille du
+# titre : industrielle et commerciale lisent les mêmes lignes (rentable, pré-revenus) ; une banque
+# vend son bilan, pas un compte de résultat industriel — son gabarit est encore À ÉCRIRE (M2 bis),
+# et tant qu'il l'est, une financière n'a pas de format agrégé : l'architecte ne passe pas (§11.2).
+familles_de_comptes:
+  industrielle:
+    gabarit: socle_comptes.yaml
+    motif_absence: null
+    lignes_du_business_plan:
+      [chiffre_affaires, cout_des_ventes, marge_brute, recherche_developpement,
+       frais_commerciaux_administratifs, autres_charges_exploitation, resultat_exploitation, impot,
+       amortissements, investissements_corporels, flux_exploitation, flux_de_tresorerie_disponible,
+       capital_employe]
+  bancaire:
+    gabarit: null
+    motif_absence: >-
+      Le gabarit 1.1.0 du socle des comptes est trompeur pour une banque : son bilan est l'outil de
+      production, les dépôts sa matière première, et il lit un produit net, un coût du risque, des
+      fonds propres tangibles — pas un résultat d'exploitation industriel. Mesuré (M0, 2026-10-21) :
+      une financière y voit son résultat d'exploitation non déposé, son capital employé non établi,
+      et des charges d'intérêts comptées zéro certains exercices. Gabarit bancaire à écrire (M2 bis)
+      avant l'entrée d'une financière.
+    lignes_du_business_plan: []
+
+# Chaque archétype de `frameworks.yaml` déclare UNE famille — pont [R1].
+famille_par_archetype:
+  rentable: industrielle
+  pre_revenus: industrielle
+  financiere: bancaire
+
+# Vocabulaire FERMÉ : chaque nom a sa fonction dans `app/modele_entreprise/controles.py` (pont [R4]).
+controles:
+  [positif, positif_ou_nul, proportion, probabilite, annee, part_calculee]
+
+# Vocabulaire FERMÉ (09 §12.2) : l'ordre d'une fiche, dans `methode_de_fourchette`, EST sa préférence.
+methodes_de_fourchette:
+  [fourchette_publiee, dispersion_observee, classe_de_reference, recit_chiffre]
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# LE CATALOGUE — 21 variables. `questions_sources` renvoie aux ids de `frameworks.yaml` (pont [R2]) ;
+# `familles` dit où la variable a un sens (bancaire, industrielle, ou les deux) ; `methode_de_fourchette`
+# est ordonnée par préférence (09 §12.2).
+variables:
+
+  - id: taille_du_marche
+    libelle: Taille du marché adressable par le bloc
+    definition: >-
+      Dépense annuelle des clients que l'offre du bloc peut servir telle qu'elle existe, à la
+      période dite ; un marché d'extension (offre non encore vendue) est un AUTRE bloc, de statut
+      extension, jamais un plafond du bloc actuel.
+    unite: M$
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: positif
+    questions_sources: [me_5, se_2]
+    familles: [industrielle, bancaire]
+    methode_de_fourchette: [fourchette_publiee, classe_de_reference, recit_chiffre]
+
+  - id: croissance_du_marche
+    libelle: Progression annuelle du marché adressable
+    definition: >-
+      Taux de croissance annuel du marché tel que défini par `taille_du_marche`, observé ou
+      projeté sur l'horizon de la question qui l'instruit.
+    unite: "%/an"
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: null
+    questions_sources: [se_4, se_2, me_5]
+    familles: [industrielle, bancaire]
+    methode_de_fourchette: [fourchette_publiee, dispersion_observee, recit_chiffre]
+
+  - id: part_de_marche
+    libelle: Part prise par le bloc sur son marché adressable
+    definition: >-
+      Chiffre d'affaires du bloc rapporté à la taille du marché adressable, à la même période ;
+      calculée, jamais déclarée, et jamais mesurée sur des revenus futurs (09 §6).
+    unite: "%"
+    periode: exercice
+    origines_admises: [calcul]
+    controle: part_calculee
+    questions_sources: [me_5, se_2]
+    familles: [industrielle, bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: chiffre_affaires_du_bloc
+    libelle: Chiffre d'affaires du bloc
+    definition: >-
+      Chiffre d'affaires de l'activité que couvre le bloc, à sa maille propre (publiée ou estimée),
+      avant tout retraitement d'agrégation.
+    unite: M$
+    periode: exercice
+    origines_admises: [piece, calcul]
+    controle: positif_ou_nul
+    questions_sources: [me_2, me_4]
+    familles: [industrielle]
+    methode_de_fourchette: [fourchette_publiee, dispersion_observee, recit_chiffre]
+
+  - id: volume
+    libelle: Volume d'unités vendues par le bloc
+    definition: >-
+      Nombre d'unités (ou de contrats, d'abonnements, selon le modèle économique du bloc) vendues
+      sur la période, avant tout effet de prix.
+    unite: unités
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: positif_ou_nul
+    questions_sources: [me_4]
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: prix_moyen
+    libelle: Prix moyen réalisé par unité vendue
+    definition: >-
+      Chiffre d'affaires du bloc rapporté au volume vendu sur la même période — ce que le client
+      paie effectivement, net des remises et des effets de mix.
+    unite: "$/unité"
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: positif
+    questions_sources: [me_4, me_3, mo_6]
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: part_recurrente
+    libelle: Part du chiffre d'affaires du bloc qui revient sans nouvel effort de vente
+    definition: >-
+      Fraction du chiffre d'affaires de la période qui provient d'un revenu déjà engagé (abonnement,
+      contrat reconduit, clientèle installée) et ne dépend pas d'un nouvel acte de vente.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: proportion
+    questions_sources: [me_2]
+    familles: [industrielle, bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: marge_contributive
+    libelle: Marge contributive du bloc
+    definition: >-
+      Chiffre d'affaires du bloc moins ses coûts directement variables, rapportée au chiffre
+      d'affaires du bloc — ce qu'une unité de plus rapporte avant les coûts communs du titre.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, jugement, calcul]
+    controle: proportion
+    questions_sources: [me_3, se_3]
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: couts_communs
+    libelle: Coûts communs non affectés à un bloc
+    definition: >-
+      Charges d'exploitation qui ne se rattachent à aucun bloc d'activité pris isolément (fonctions
+      support, structure) ; se lisent au socle des comptes, jamais recollectées question par
+      question.
+    unite: M$
+    periode: exercice
+    origines_admises: [piece, calcul]
+    controle: positif_ou_nul
+    questions_sources: []
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: taux_d_impot
+    libelle: Taux d'imposition effectif appliqué au résultat du titre
+    definition: >-
+      Taux d'imposition réellement supporté par le résultat d'exploitation du titre, tel que
+      mesuré par le socle des comptes.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, calcul]
+    controle: proportion
+    questions_sources: [qf_1]
+    familles: [industrielle, bancaire]
+    methode_de_fourchette: [dispersion_observee]
+
+  - id: capital_par_point_de_croissance
+    libelle: Capital supplémentaire immobilisé par point de croissance de l'activité
+    definition: >-
+      Reprend l'encadré de la question qui instruit déjà ce chiffre pour le titre (un seul chiffre
+      par dossier) ; à défaut, un jugement ancré sur un taux de base sourcé.
+    unite: M$
+    periode: exercice
+    origines_admises: [reponse_reprise, jugement]
+    controle: null
+    questions_sources: [qf_3]
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: probabilite_de_succes
+    libelle: Probabilité de succès du programme
+    definition: >-
+      Probabilité que le programme en développement du bloc atteigne son prochain jalon décisif
+      (autorisation, lancement commercial), ancrée sur une classe de référence sourcée.
+    unite: "(0-1)"
+    periode: sans_periode
+    origines_admises: [jugement]
+    controle: probabilite
+    questions_sources: [se_2, mo_4]
+    familles: [industrielle]
+    methode_de_fourchette: [classe_de_reference]
+
+  - id: annee_de_lancement
+    libelle: Année de lancement commercial visée ou observée du bloc
+    definition: >-
+      Exercice auquel le bloc est (ou serait) effectivement lancé commercialement, tel que publié
+      par l'émetteur ou estimé par jugement ancré.
+    unite: année
+    periode: sans_periode
+    origines_admises: [piece, jugement]
+    controle: annee
+    questions_sources: [se_2, me_5]
+    familles: [industrielle]
+    methode_de_fourchette: [fourchette_publiee, classe_de_reference]
+
+  - id: ventes_au_pic
+    libelle: Ventes annuelles au pic du bloc
+    definition: >-
+      Chiffre d'affaires annuel maximal attendu du bloc une fois son potentiel commercial pleinement
+      atteint, avant tout déclin lié à la concurrence ou à l'exclusivité.
+    unite: M$
+    periode: exercice
+    origines_admises: [jugement]
+    controle: positif
+    questions_sources: [me_5, me_4]
+    familles: [industrielle]
+    methode_de_fourchette: [classe_de_reference, recit_chiffre]
+
+  - id: duree_d_exclusivite
+    libelle: Durée d'exclusivité commerciale du bloc
+    definition: >-
+      Nombre d'années pendant lesquelles le bloc est protégé de la concurrence directe (brevet,
+      exclusivité réglementaire, avance technique défendable).
+    unite: années
+    periode: sans_periode
+    origines_admises: [piece, jugement]
+    controle: positif
+    questions_sources: [mo_4]
+    familles: [industrielle]
+    methode_de_fourchette: [fourchette_publiee, classe_de_reference]
+
+  - id: cout_restant_de_developpement
+    libelle: Coût restant à engager pour développer le bloc
+    definition: >-
+      Montant total encore nécessaire pour amener le programme du bloc à son prochain jalon décisif,
+      au-delà des sommes déjà dépensées.
+    unite: M$
+    periode: sans_periode
+    origines_admises: [piece, jugement]
+    controle: positif_ou_nul
+    questions_sources: [qf_7]
+    familles: [industrielle]
+    methode_de_fourchette: [fourchette_publiee, classe_de_reference]
+
+  - id: encours
+    libelle: Encours moyen porté par le bloc
+    definition: >-
+      Montant moyen des actifs ou passifs financiers (prêts, dépôts) que le bloc porte sur la
+      période, base sur laquelle se lisent la marge d'intérêt et le coût du risque.
+    unite: M$
+    periode: instant
+    origines_admises: [piece, jugement]
+    controle: positif
+    questions_sources: [me_4, me_5]
+    familles: [bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: marge_d_interet
+    libelle: Marge d'intérêt du bloc
+    definition: >-
+      Écart entre le taux servi aux clients du bloc et le taux de marché, rapporté à son encours
+      moyen sur la période.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, calcul]
+    controle: null
+    questions_sources: [me_3, me_4, mo_6]
+    familles: [bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: cout_du_risque
+    libelle: Coût du risque du bloc
+    definition: >-
+      Provisions pour pertes sur créances constatées par le bloc sur la période, rapportées à son
+      encours moyen — ce qu'une dégradation du crédit lui coûte.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, jugement]
+    controle: null
+    questions_sources: [me_3, me_4, se_4]
+    familles: [bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: coefficient_d_exploitation
+    libelle: Coefficient d'exploitation du bloc
+    definition: >-
+      Charges d'exploitation du bloc rapportées à son produit net bancaire sur la même période — la
+      part du revenu qu'absorbe le fonctionnement courant.
+    unite: "%"
+    periode: exercice
+    origines_admises: [piece, calcul]
+    controle: positif
+    questions_sources: [se_3]
+    familles: [bancaire]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
+
+  - id: fonds_propres_alloues
+    libelle: Fonds propres alloués au bloc
+    definition: >-
+      Capital réglementaire moyen que le bloc immobilise sur la période, base sur laquelle se lit
+      son rendement des fonds propres.
+    unite: M$
+    periode: instant
+    origines_admises: [piece, calcul]
+    controle: positif
+    questions_sources: [qf_1, qf_3]
+    familles: [bancaire]
+    methode_de_fourchette: [dispersion_observee]
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════
+# LES PATRONS DE DÉPART (09 §2) : une SUGGESTION de blocs et de variables que l'architecte (M3)
+# reçoit, pas une cage — il peut composer autre chose. `role` est un vocabulaire FERMÉ du contrat :
+# activite, programme, metier, commun.
+patrons:
+  rentable:
+    blocs:
+      - role: activite
+        variables: [chiffre_affaires_du_bloc, taille_du_marche, croissance_du_marche, part_de_marche,
+                    volume, prix_moyen, part_recurrente, marge_contributive]
+      - role: commun
+        variables: [couts_communs, taux_d_impot, capital_par_point_de_croissance]
+  pre_revenus:
+    blocs:
+      - role: programme
+        variables: [probabilite_de_succes, annee_de_lancement, ventes_au_pic, duree_d_exclusivite,
+                    cout_restant_de_developpement, taille_du_marche, part_de_marche, marge_contributive]
+      - role: commun
+        variables: [couts_communs]
+  financiere:
+    blocs:
+      - role: metier
+        variables: [encours, marge_d_interet, cout_du_risque, coefficient_d_exploitation,
+                    fonds_propres_alloues, part_recurrente]
+      - role: commun
+        variables: [taux_d_impot]

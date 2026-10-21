@@ -368,8 +368,7 @@ flowchart LR
 - **v1 (premier comité NVDA)** : M1 crée les contrats et tables `Fourchette`, `Scenario`, `Deplacement` et le
   champ `methode_de_fourchette` des fiches ; seul le scénario central est peuplé ; la valorisation passe par
   lui. La fourchette de valeur présentée au comité est alors le central **et sa sensibilité à ±1 point du taux
-  exigé** (décision du 2026-10-17) — *à confirmer par l'utilisateur, la cible du plan 07 parlait de
-  « fourchette » sans préciser*.
+  exigé** (décision du 2026-10-17) — **confirmé par l'utilisateur le 2026-10-21** (étiquetée « sensibilité au taux », pas « scénarios »).
 - **après le premier comité** (M6) : calcul des fourchettes par les méthodes du catalogue, inventaire écrit
   par les chapitres de jugement, matérialité, constructeur de scénarios et son repli. RVMD en a besoin pour
   son arbre : son entrée en comité suppose M6.

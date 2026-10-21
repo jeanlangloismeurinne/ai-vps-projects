@@ -29,12 +29,13 @@ CONVENTIONS #140) ; page de lecture https://claude.ai/artifact/Dx7LBBpsNAWAYzXro
 de l'inventaire porte bas/central/haut par une méthode déclarée, un scénario = des DÉPLACEMENTS d'un
 sous-ensemble ; **v1 = central seul**, tables `Fourchette`/`Scenario`/`Deplacement` créées dès M1 ; B6 après le
 premier comité. **C1 livré** (#141 : l'extrait court remplacé par son passage unique ; « $ 198.89 »).
-**À confirmer par l'utilisateur** : au premier comité NVDA, la « fourchette » = central ± 1 pt du taux exigé.
+**Confirmé le 2026-10-21** : au premier comité NVDA, la fourchette = central ± 1 pt du taux exigé, étiquetée « sensibilité au taux » (scénarios sur risques après le comité, M6).
 **PROCHAIN PAS — lots de construction, Opus spécifie, Sonnet exécute** :
-(1) **B3/M1** — catalogue de variables (fiche : définition, unité, période, origines admises, contrôle,
-questions sources, `familles`, `methode_de_fourchette`), patrons par archétype, format agrégé = gabarit de la
-famille du titre ; contrats `Architecture`, `Cellule`, `Fourchette`, `Scenario`, `Deplacement` (09 §12.2) ;
-gardes ; `parametres_du_fonds.seuil_de_materialite` ; (2) **B2/M2** — ventilation publiée au socle
+(1) ✅ **B3/M1 livré le 2026-10-21** (spec `10-lot-M1-catalogue-et-contrats.md`) : référentiel
+`app/frameworks/modele_entreprise.yaml` (version propre, 21 fiches, 2 familles, 3 patrons), contrat
+`modele_entreprise_schema.py`, module `app/modele_entreprise/` (pont, contrôles, `appliquer_scenario` NON
+branchée — M7), migration 061 appliquée, `seuil_de_materialite` au référentiel ;
+`questions_sources_applicables()` = l'entrée de la porte (M3) ; (2) **B2/M2** — PROCHAIN LOT, spec Opus à écrire — ventilation publiée au socle
 (`submissions.json` → `FilingSummary.xml` → `R#.htm`, repérer par les axes) ; puis relance des questions sources
 sans première réponse (ma_3, ma_4 compris ; A1 pour ma_3 : le 10-K donne le cours moyen mensuel des rachats)
 et la porte de l'architecte (B4). C2 sans objet, C5 vérifié (≈ 5,55 $ de crédit DeepInfra, à re-mesurer).
@@ -51,9 +52,9 @@ Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'an
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-21, après C1 : 66 checks, 5093 assertions ; `negatif_search_worker.sh` 51/0).
+- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-21, après M1 et 061 : 68 checks, 5400 assertions ; `negatif_modele_entreprise.sh` 66/0, `negatif_061.sh` 39/0).
 - **Production** : dernier déploiement `9e68575` (C1, #141, backend), vérifié dans le conteneur (`etablir_extraits` présent, longueur absente du contrat). Migration 060 appliquée. Mandats : 1 manager ouvert (2918).
-- **Prochaine migration : 061** (060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Prochaine migration : 062** (061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.

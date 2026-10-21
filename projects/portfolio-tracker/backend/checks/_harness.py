@@ -93,6 +93,18 @@ async def colonne_absente(conn, table: str, colonne: str) -> bool:
         table, colonne)
 
 
+async def table_absente(conn, table: str) -> bool:
+    """Vrai si `table` n'existe PAS encore dans la base que `conn` interroge — même rôle que
+    `colonne_absente`, pour une migration additive qui crée des TABLES plutôt qu'une colonne sur une
+    table partagée (061 : `architectures_modele` et ses trois registres). Tant qu'elle n'est pas
+    appliquée, un check qui la suppose lève une `UndefinedTableError` brute : un script mort avant
+    son bilan (2ᵉ faux vert, `feedback_check_degrade_en_sortant_a_zero`). Ce garde-fou en fait un
+    échec NOMMÉ à la place."""
+    return not await conn.fetchval(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
+        table)
+
+
 class Bilan:
     """Compteur d'assertions à bilan reconnaissable. `ok`/`fail` nomment toujours le critère ;
     `require(seq, n, …)` interdit le faux-vert de la sélection vide."""
