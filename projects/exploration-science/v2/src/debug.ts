@@ -1,10 +1,17 @@
 import type { WebGLRenderer } from "three";
 
-// Read by scripts/v2/capture.ts: the page is ready to be captured once the models are
-// in the scene and a few frames have been drawn.
+// Read by scripts/v2/capture.ts: the page is ready to be captured once the models are in
+// the scene, the camera has reached its pose and a few frames have been drawn.
 export interface XsDebug {
   ready: boolean;
   renderInfo: () => { calls: number; triangles: number; geometries: number; textures: number };
+  /** Selected main object (its card is open), or null. */
+  selected: string | null;
+  select: (id: string | null) => void;
+  /** Share of each main object's projected area under the open card (0 without card). */
+  overlap: () => Record<string, number>;
+  /** A screen point (CSS px) where the first object hit is `id`, to click it for real. */
+  pickPoint: (id: string) => { x: number; y: number } | null;
 }
 
 declare global {
@@ -13,21 +20,21 @@ declare global {
   }
 }
 
-export function exposeDebug(gl: WebGLRenderer): void {
-  let frames = 0;
-  const debug: XsDebug = {
-    ready: false,
-    renderInfo: () => ({
-      calls: gl.info.render.calls,
-      triangles: gl.info.render.triangles,
-      geometries: gl.info.memory.geometries,
-      textures: gl.info.memory.textures,
-    }),
-  };
-  window.__xs = debug;
-  const tick = () => {
-    if (++frames >= 5) debug.ready = true;
-    else requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
+export const debug: XsDebug = {
+  ready: false,
+  renderInfo: () => ({ calls: 0, triangles: 0, geometries: 0, textures: 0 }),
+  selected: null,
+  select: () => {},
+  overlap: () => ({}),
+  pickPoint: () => null,
+};
+window.__xs = debug;
+
+export function exposeRenderer(gl: WebGLRenderer): void {
+  debug.renderInfo = () => ({
+    calls: gl.info.render.calls,
+    triangles: gl.info.render.triangles,
+    geometries: gl.info.memory.geometries,
+    textures: gl.info.memory.textures,
+  });
 }

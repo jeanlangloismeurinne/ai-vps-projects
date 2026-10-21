@@ -48,3 +48,26 @@ export function frame(points: Vector3[], azimuthDeg: number, elevationDeg: numbe
   }
   return { position: target.clone().addScaledVector(dir, distance), target };
 }
+
+/** Part of the canvas left free by the panels, in CSS pixels from the top-left corner. */
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface WindowFraming extends Framing {
+  /** For `camera.setViewOffset(W, H, offset[0], offset[1], W, H)`: moves the projection
+   * centre to the centre of the free window (exact off-axis view, no parallax). */
+  offset: [number, number];
+}
+
+/** Like `frame`, but fits the points in the window `free` of a `width` × `height` canvas
+ * (the rest is under a panel). The vertical field of view `fovDeg` spans the whole canvas. */
+export function frameInWindow(points: Vector3[], azimuthDeg: number, elevationDeg: number, fovDeg: number, width: number, height: number, free: Rect, margin = 0): WindowFraming {
+  const tanFull = Math.tan(MathUtils.degToRad(fovDeg / 2));
+  const fovFree = MathUtils.radToDeg(2 * Math.atan((tanFull * free.height) / height));
+  const f = frame(points, azimuthDeg, elevationDeg, fovFree, free.width / free.height, margin);
+  return { ...f, offset: [width / 2 - (free.x + free.width / 2), height / 2 - (free.y + free.height / 2)] };
+}

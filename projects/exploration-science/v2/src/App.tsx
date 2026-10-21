@@ -1,59 +1,96 @@
-import { Canvas, useThree } from "@react-three/fiber";
-import { Line, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { Html, Line, useGLTF } from "@react-three/drei";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Box3,
+  Color,
   MathUtils,
   MeshBasicMaterial,
   NeutralToneMapping,
   PCFShadowMap,
   PMREMGenerator,
+  Raycaster,
+  Vector2,
   Vector3,
+  type Camera,
   type DirectionalLight,
   type Mesh,
+  type MeshStandardMaterial,
   type Object3D,
+  type PerspectiveCamera,
+  type Scene as Scene3,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { frame, viewDirection } from "./camera";
-import { render, swatch, system, type Shot } from "./content/data";
-import { exposeDebug } from "./debug";
+import { frameInWindow, viewDirection, type Rect } from "./camera";
+import { Card, dockFor } from "./Card";
+import { mainIds, render, swatch, system, texts, type Shot } from "./content/data";
+import { debug, exposeRenderer } from "./debug";
+import { FlowPulses } from "./Flows";
+import { connectionPath, flowPath, Polyline, type FlowLike, type LinkShape } from "./links";
 import { MODELS_BASE, type Manifest } from "./manifest";
+import { coveredShare } from "./overlap";
 
 const FOV = render.limits.fovDeg;
 
-// View requested by the URL (captures, and later navigation): `?shot=object:house`, and
-// `&silhouette` for the silhouette sheet (the framed objects alone, flat, no links).
+// View requested by the URL (captures, and later navigation): `?shot=object:house`,
+// `&silhouette` for the silhouette sheet (the framed objects alone, flat, no links),
+// `&select=<id>` to open a card, `&t=<seconds>` to pin the flows' phase.
 const params = new URLSearchParams(window.location.search);
 const SHOT_KEY = params.get("shot") ?? "global";
 const SILHOUETTE = params.has("silhouette");
 const shots = render.shots as Record<string, Shot>;
 if (!shots[SHOT_KEY]) throw new Error(`unknown shot: ${SHOT_KEY}`);
 const SHOT = shots[SHOT_KEY]!;
+const INITIAL_SELECTION = mainIds.includes(params.get("select") ?? "") ? params.get("select") : null;
+const TIME = params.has("t") ? Number(params.get("t")) : null;
 
 export function App() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(INITIAL_SELECTION);
+  const [free, setFree] = useState<Rect | null>(null);
+  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
 
   useEffect(() => {
     fetch(`${MODELS_BASE}/manifest.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`manifest: HTTP ${r.status}`))))
       .then(setManifest)
       .catch((e: Error) => setError(e.message));
+    const resize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
   }, []);
+
+  const select = useCallback((id: string | null) => {
+    setSelected((cur) => {
+      if (cur !== id) setFree(null);
+      return id;
+    });
+  }, []);
+  const close = useCallback(() => select(null), [select]);
+  useEffect(() => {
+    debug.selected = selected;
+    debug.select = (id) => select(id && mainIds.includes(id) ? id : null);
+  }, [selected, select]);
 
   if (error) return <p className="fatal">{error}</p>;
   return (
-    <Canvas
-      // Static scene for now: draw on change only (the flows of roadmap §4 will animate it).
-      frameloop="demand"
-      shadows={{ type: PCFShadowMap }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping }}
-      camera={{ fov: FOV, near: 0.5, far: 400 }}
-    >
-      <Environment />
-      <Suspense fallback={null}>{manifest && <Scene manifest={manifest} />}</Suspense>
-    </Canvas>
+    <>
+      <Canvas
+        // Always drawing: the flows are animated.
+        shadows={{ type: PCFShadowMap }}
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping }}
+        camera={{ fov: FOV, near: 0.5, far: 400 }}
+        onPointerMissed={close}
+      >
+        <Environment />
+        <Suspense fallback={null}>
+          {manifest && <Scene manifest={manifest} selected={selected} onSelect={select} free={selected ? free : null} />}
+        </Suspense>
+      </Canvas>
+      {selected && !SILHOUETTE && <Card id={selected} dock={dockFor(viewport.width, viewport.height)} onClose={close} onFree={setFree} />}
+    </>
   );
 }
 
@@ -106,7 +143,7 @@ function Sun({ bounds }: { bounds: Box3 }) {
   );
 }
 
-function Scene({ manifest }: { manifest: Manifest }) {
+function Scene({ manifest, selected, onSelect, free }: { manifest: Manifest; selected: string | null; onSelect: (id: string) => void; free: Rect | null }) {
   const ids = useMemo(() => Object.keys(manifest.assets), [manifest]);
   const urls = useMemo(() => ids.map((id) => `${MODELS_BASE}/${manifest.assets[id]!.representations.envelope.file}`), [ids, manifest]);
   // No Draco (its decoder would come from a CDN); meshopt decodes locally.
@@ -138,32 +175,149 @@ function Scene({ manifest }: { manifest: Manifest }) {
     return box;
   }, [roots]);
 
-  const { camera, gl, size, invalidate } = useThree();
-  useLayoutEffect(() => {
-    const shot = SHOT;
-    const points: Vector3[] = [];
-    for (const id of shot.fit) {
-      const box = new Box3().expandByObject(roots[id]!);
-      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) points.push(new Vector3(x, y, z));
-    }
-    const f = frame(points, shot.azimuthDeg, shot.elevationDeg, FOV, size.width / size.height, shot.margin ?? 0);
-    camera.position.copy(f.position);
-    camera.lookAt(f.target);
-    invalidate();
-    exposeDebug(gl);
-  }, [roots, camera, gl, size, invalidate]);
+  const [hovered, setHovered] = useState<string | null>(null);
+  useHighlight(roots, selected, hovered);
+  useEffect(() => {
+    document.body.style.cursor = hovered ? "pointer" : "";
+  }, [hovered]);
 
+  useCameraRig(roots, free);
+
+  const interactive = (id: string) => !SILHOUETTE && mainIds.includes(id);
   return (
     <>
       <Sun bounds={setting} />
       {ids
         .filter((id) => !SILHOUETTE || SHOT.fit.includes(id))
-        .map((id) => (
-          <primitive key={id} object={roots[id]!} />
-        ))}
+        .map((id) =>
+          interactive(id) ? (
+            <primitive
+              key={id}
+              object={roots[id]!}
+              onClick={(e: ThreeEvent<MouseEvent>) => {
+                e.stopPropagation();
+                onSelect(id);
+              }}
+              onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+                e.stopPropagation();
+                if (e.pointerType === "mouse") setHovered(id);
+              }}
+              onPointerOut={() => setHovered((h) => (h === id ? null : h))}
+            />
+          ) : (
+            <primitive key={id} object={roots[id]!} />
+          ),
+        )}
       {!SILHOUETTE && <Links roots={roots} setting={setting} />}
     </>
   );
+}
+
+/** Frames the shot of the URL in the part of the screen left free by the card, and eases
+ * the camera there when the card opens or closes (the first pose is taken at once). */
+function useCameraRig(roots: Record<string, Object3D>, free: Rect | null) {
+  const { camera, gl, scene, size } = useThree();
+  const goal = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
+  const pose = useRef<{ position: Vector3; target: Vector3; offset: [number, number] } | null>(null);
+  const frames = useRef(0);
+
+  useLayoutEffect(() => {
+    const points: Vector3[] = [];
+    for (const id of SHOT.fit) {
+      const box = new Box3().expandByObject(roots[id]!);
+      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) points.push(new Vector3(x, y, z));
+    }
+    const area = free ?? { x: 0, y: 0, width: size.width, height: size.height };
+    goal.current = frameInWindow(points, SHOT.azimuthDeg, SHOT.elevationDeg, FOV, size.width, size.height, area, SHOT.margin ?? 0);
+    if (!pose.current) pose.current = { position: goal.current.position.clone(), target: goal.current.target.clone(), offset: [...goal.current.offset] };
+    debug.ready = false;
+    frames.current = 0;
+    exposeRenderer(gl);
+    debug.overlap = () => overlapOfCard(roots, camera, size.width, size.height);
+    debug.pickPoint = (id) => pickPoint(roots, id, camera, scene, size.width, size.height);
+  }, [roots, camera, gl, scene, size, free]);
+
+  useFrame((_, dt) => {
+    const [g, p] = [goal.current, pose.current];
+    if (!g || !p) return;
+    // Critically damped approach, ~0.5 s; snaps when close.
+    const k = TIME === null ? 1 - Math.exp(-dt * 9) : 1;
+    p.position.lerp(g.position, k);
+    p.target.lerp(g.target, k);
+    p.offset[0] += (g.offset[0] - p.offset[0]) * k;
+    p.offset[1] += (g.offset[1] - p.offset[1]) * k;
+    const settled = p.position.distanceTo(g.position) < 1e-3 && Math.abs(p.offset[0] - g.offset[0]) + Math.abs(p.offset[1] - g.offset[1]) < 0.5;
+    if (settled) {
+      p.position.copy(g.position);
+      p.target.copy(g.target);
+      p.offset = [...g.offset];
+    }
+    camera.position.copy(p.position);
+    camera.lookAt(p.target);
+    (camera as PerspectiveCamera).setViewOffset(size.width, size.height, p.offset[0], p.offset[1], size.width, size.height);
+    if (settled && ++frames.current >= 5) debug.ready = true;
+  });
+}
+
+/** Tries points of the object's surface, from the middle of its bounding box outward,
+ * until a ray from the camera hits the object first (nothing in front of it). */
+function pickPoint(roots: Record<string, Object3D>, id: string, camera: Camera, scene: Scene3, width: number, height: number) {
+  const root = roots[id];
+  if (!root) return null;
+  const centre = new Box3().expandByObject(root).getCenter(new Vector3());
+  const candidates: Vector3[] = [centre];
+  root.traverse((o) => {
+    const mesh = o as Mesh;
+    if (!mesh.isMesh) return;
+    const pos = mesh.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i += Math.max(1, Math.floor(pos.count / 40))) candidates.push(new Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld));
+  });
+  candidates.sort((a, b) => a.distanceTo(centre) - b.distanceTo(centre));
+  const ray = new Raycaster();
+  for (const p of candidates) {
+    const ndc = p.clone().project(camera);
+    if (Math.abs(ndc.x) > 0.98 || Math.abs(ndc.y) > 0.98) continue;
+    ray.setFromCamera(new Vector2(ndc.x, ndc.y), camera);
+    const hit = ray.intersectObjects(scene.children, true).find((h) => (h.object as Mesh).isMesh && h.object.visible);
+    let o: Object3D | null = hit?.object ?? null;
+    while (o && o !== root) o = o.parent;
+    if (o === root) return { x: ((ndc.x + 1) / 2) * width, y: ((1 - ndc.y) / 2) * height };
+  }
+  return null;
+}
+
+/** Share of each main object under the open card (debug, captures). */
+function overlapOfCard(roots: Record<string, Object3D>, camera: Camera, width: number, height: number): Record<string, number> {
+  const el = document.querySelector(".card");
+  const out: Record<string, number> = {};
+  if (!el) return out;
+  const r = el.getBoundingClientRect();
+  for (const id of mainIds) out[id] = coveredShare(roots[id]!, camera, width, height, { x: r.left, y: r.top, width: r.width, height: r.height });
+  return out;
+}
+
+/** Selected object tinted with the signal accent, hovered one more lightly. Materials that
+ * already glow (status lights) keep their own emission. */
+function useHighlight(roots: Record<string, Object3D>, selected: string | null, hovered: string | null) {
+  useEffect(() => {
+    if (SILHOUETTE) return;
+    const accent = new Color(swatch("signal"));
+    for (const id of mainIds) {
+      const level = id === selected ? 0.1 : id === hovered ? 0.05 : 0;
+      roots[id]?.traverse((o) => {
+        const mesh = o as Mesh;
+        if (!mesh.isMesh) return;
+        for (const m of [mesh.material].flat() as MeshStandardMaterial[]) {
+          if (!m.emissive) continue;
+          m.userData.baseEmissive ??= { color: m.emissive.clone(), intensity: m.emissiveIntensity };
+          const base = m.userData.baseEmissive as { color: Color; intensity: number };
+          if (base.color.getHex() !== 0 && base.intensity > 0) continue;
+          if (level > 0) m.emissive.copy(accent);
+          m.emissiveIntensity = level;
+        }
+      });
+    }
+  }, [roots, selected, hovered]);
 }
 
 const flat = new MeshBasicMaterial({ color: swatch("graphite") });
@@ -174,42 +328,57 @@ const anchorPosition = (roots: Record<string, Object3D>, ref: string): Vector3 |
   return node ? node.getWorldPosition(new Vector3()) : null;
 };
 
-/** Connections of the system drawn in their render.json style; airborne objects get the
- * arc of their orbit. An endpoint outside the scene (`externals`) is reached by leaving
- * the setting by its nearest edge. */
+type Style = { shape: LinkShape; color: string; width?: number };
+const styles = render.linkStyles as Record<string, Style>;
+const externals = new Set((system.externals ?? []).map((e) => e.id));
+
+/** Connections of the system drawn in their render.json style, the flows running along
+ * them, the labels of the endpoints outside the scene, and the arc of each orbit. */
 function Links({ roots, setting }: { roots: Record<string, Object3D>; setting: Box3 }) {
-  const styles = render.linkStyles as Record<string, { shape: string; color: string; width?: number }>;
+  const paths = useMemo(() => {
+    const out: Record<string, Vector3[] | null> = {};
+    for (const c of system.connections) {
+      const from = anchorPosition(roots, c.from);
+      out[c.id] = from ? connectionPath(styles[c.kind]!.shape, from, anchorPosition(roots, c.to), setting) : null;
+    }
+    return out;
+  }, [roots, setting]);
+
   const drawn = system.connections.map((c) => {
     const style = styles[c.kind]!;
     const color = swatch(style.color);
-    const from = anchorPosition(roots, c.from);
-    let to = anchorPosition(roots, c.to);
-    if (!from) return null;
-    if (style.shape === "beam-dashed" && to) {
+    const path = paths[c.id];
+    if (!path) return null;
+    if (style.shape === "beam-dashed") {
       return (
         <group key={c.id}>
-          <Line points={[from, to]} color={color} lineWidth={7} transparent opacity={0.14} />
-          <Line points={[from, to]} color={color} lineWidth={2.2} dashed dashSize={0.22} gapSize={0.14} />
+          <Line points={path} color={color} lineWidth={7} transparent opacity={0.14} />
+          <Line points={path} color={color} lineWidth={2.2} dashed dashSize={0.22} gapSize={0.14} />
         </group>
       );
     }
-    // Ground line: along the ground to the target, or out of the setting for an external.
-    const y = setting.max.y + 0.006;
-    const start = new Vector3(from.x, y, from.z);
-    const path = [start];
-    if (!to) {
-      const exits = [
-        new Vector3(setting.min.x, y, from.z),
-        new Vector3(setting.max.x, y, from.z),
-        new Vector3(from.x, y, setting.min.z),
-        new Vector3(from.x, y, setting.max.z),
-      ];
-      const edge = exits.reduce((a, b) => (a.distanceTo(start) < b.distanceTo(start) ? a : b));
-      path.push(edge, new Vector3(edge.x, setting.min.y + 0.15, edge.z));
-    } else {
-      path.push(new Vector3(to.x, y, to.z));
-    }
     return <Ribbon key={c.id} points={path} width={style.width ?? 0.04} color={color} />;
+  });
+
+  const labels = system.connections.flatMap((c) => {
+    const path = paths[c.id];
+    const ext = [c.to, c.from].map((e) => e.split("#")[0]!).find((id) => externals.has(id));
+    if (!path || !ext) return [];
+    const end = c.to.startsWith(`${ext}#`) ? path[path.length - 1]! : path[0]!;
+    const text = (texts.entries as Record<string, string>)[`external.${ext}`] ?? ext;
+    return [
+      <Html key={`label-${c.id}`} position={end} center zIndexRange={[10, 0]} className="external-label">
+        <span className="external-label__dot" aria-hidden="true" />
+        {text}
+      </Html>,
+    ];
+  });
+
+  const flows = (system.flows ?? []).map((f) => {
+    const { points, hidden } = flowPath(f as FlowLike, paths);
+    const line = new Polyline(points, hidden);
+    if (line.length <= 0) return null;
+    return <FlowPulses key={`flow-${f.id}`} path={line} color={swatch("signal")} radius={0.05} time={TIME} />;
   });
 
   const orbits = system.objects
@@ -226,6 +395,8 @@ function Links({ roots, setting }: { roots: Record<string, Object3D>; setting: B
   return (
     <>
       {drawn}
+      {flows}
+      {labels}
       {orbits}
     </>
   );
