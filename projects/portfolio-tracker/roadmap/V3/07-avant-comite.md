@@ -74,10 +74,10 @@ n'a pas d'écran ; la page « décision » lit encore l'ancienne thèse V2.
 | Id | Tâche | Nature | Qui |
 |---|---|---|---|
 | C1 | **Un extrait court légitime est refusé** (#126, ≥ 20 caractères) : un cours ou un intitulé de fonction (« $198.89 », « X Director ») fait tomber ma_3 et ma_4. Admettre une valeur ou un intitulé court sans rouvrir les citations vides que la règle visait. Stable, pas une panne. | [C] | Opus règle, Sonnet code |
-| C2 | **Plafond de 40 pièces dépassé** pour la qualité financière (51), le secteur (66) et le management (51) : relever ce que l'analyste reçoit réellement au-delà, puis trancher (relever le plafond ou trier). | [C] | Sonnet mesure, Opus tranche |
+| C2 | ✅ **2026-10-21 — sans objet** : le plafond ne coupe plus rien depuis #108 (`dossier.py:343-345`, l'alerte n'est qu'un signal) ; l'analyste reçoit les 51/66/51 pièces, à blanc comme en réel. Ancien énoncé : **Plafond de 40 pièces dépassé** pour la qualité financière (51), le secteur (66) et le management (51) : relever ce que l'analyste reçoit réellement au-delà, puis trancher (relever le plafond ou trier). | [C] | Sonnet mesure, Opus tranche |
 | C3 | Garde après rédaction sur un chiffre RELEVÉ (pas seulement ceux du socle) : NVDA qf_6 #1289 « part faible » sans chiffre ; RVMD qf_6 #1679 rend absents des retraitements qui valent zéro. | [C] | Opus spec, Sonnet code |
 | C4 | (ex-21 b) Datation d'une note de synthèse : la date du fait rapporté, pas une date voisine (#1057 daté du 5 août pour une note du 14/10). | [C] | Sonnet sur spec |
-| C5 | Crédit DeepInfra vérifié par un appel minimal avant les relances. | — | Sonnet |
+| C5 | ✅ **2026-10-21** : DeepInfra répond (modèle des agents `DeepSeek-V4-Flash-0731`) ; crédit ≈ 5,55 $ sur une limite de 10 $, 3,21 $ consommés en octobre. ⚠️ À re-mesurer avant B8 et F1 (les relances D1 entament ce solde). | — | Sonnet |
 
 ## D. Relances NVDA (au nouveau standard)
 
@@ -149,3 +149,5 @@ de chaque sujet soldé : `00-REPRISE-ARCHIVE.md` et `CONVENTIONS.md` #132-#139.
 | 2026-10-21 | B1 | Inventaire de l'existant pour la spec du modèle (contrat, bac à calcul, encadrés, socle, écrans) | Sonnet (vérifié par Opus : 39 encadrés, 30 vides) | `mesures/2026-10-21/inventaire_modele_entreprise.md` ; ajout de B2 (aucun chiffre par activité) et de l'encadré des 24 questions dans B1 ; E1/E2 confirmés |
 | 2026-10-21 | C1, C2 | Mesure des échecs ma_3/ma_4 et du plafond de pièces | Sonnet (vérifié par Opus) | `mesures/2026-10-21/mesure_nvda_relance.md` ; C1 : règle #126 stable, pas une panne ; C2 : 51/66/51 pièces pour 40 |
 | 2026-10-21 | — | Arbitrages : NVDA seule d'abord ; réplicabilité exigée ; passage au standard en ultime étape (F1) ; plan unique = ce fichier | Vous | plan réécrit, reprise et 05 raccordées |
+| 2026-10-21 | C2, C5 | Plafond de pièces lu dans le code ; crédit DeepInfra interrogé | Sonnet (C2 vérifié par Opus dans `dossier.py`) | `mesures/2026-10-21/mesure_c2_c5.md` ; C2 sans objet, C5 ✅ |
+| 2026-10-21 | B1 | Spec du modèle de l'entreprise commencée | Opus | — |
