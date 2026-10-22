@@ -242,7 +242,9 @@ async function recordTransition(page: Page, dir: string) {
   }
   const frames = join(dir, "frame-%03d.png");
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "30", "-i", frames, "-vf", "scale=1366:-2", "-c:v", "libvpx-vp9", "-b:v", "2M", join(dir, "transition.webm")]);
-  execFileSync("montage", [join(dir, "frame-*.png"), "-resize", "342x", "-tile", "8x", "-geometry", "+2+2", join(dir, "contact-sheet.png")]);
+  // One frame in three, small, on a grid (ffmpeg: ImageMagick runs out of cache on full frames).
+  const rows = Math.ceil(Math.ceil(n / 3) / 6);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", frames, "-vf", `select=not(mod(n\\,3)),scale=456:-2,tile=6x${rows}:padding=4:color=white`, "-frames:v", "1", "-update", "1", join(dir, "contact-sheet.png")]);
   return n;
 }
 
@@ -281,8 +283,13 @@ try {
       errors.length = 0;
     }
     if ((!only || only.includes("transition-video")) && format === formats[0]) {
-      const frames = await recordTransition(page, join(out, "transition"));
-      results[`transition-video/${format}`] = { frames, errors: [...errors] };
+      try {
+        const frames = await recordTransition(page, join(out, "transition"));
+        results[`transition-video/${format}`] = { frames, errors: [...errors] };
+      } catch (e) {
+        results[`transition-video/${format}`] = { problems: [String(e).slice(0, 500)], errors: [...errors] };
+        failed = true;
+      }
       if (errors.length) failed = true;
       errors.length = 0;
     }

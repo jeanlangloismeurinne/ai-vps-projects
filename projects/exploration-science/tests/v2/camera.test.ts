@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MathUtils, PerspectiveCamera, Vector3 } from "three";
-import { frame } from "../../v2/src/camera";
+import { blendPose, frame, type Pose } from "../../v2/src/camera";
 
 // Corners of a wide flat plinth and a point high above it, like the global shot.
 const points = [
@@ -41,5 +41,30 @@ describe("v2 shot framing", () => {
     const d = f.position.clone().sub(f.target).normalize();
     expect(MathUtils.radToDeg(Math.asin(d.y))).toBeCloseTo(32, 5);
     expect(MathUtils.radToDeg(Math.atan2(d.x, d.z))).toBeCloseTo(-35, 5);
+  });
+});
+
+describe("v2 camera flight", () => {
+  const pose = (x: number, distance: number): Pose => ({ target: new Vector3(x, 0, 0), azimuthDeg: -35, elevationDeg: 32, distance, offset: [0, 0] });
+  // Offset of the subject from the screen centre, in units of the view's half-height.
+  const drift = (p: Pose, subject: Vector3) => p.target.distanceTo(subject) / (p.distance * Math.tan(MathUtils.degToRad(10)));
+
+  it("keeps the new subject coming steadily to the centre while flying closer", () => {
+    const [from, to] = [pose(0, 65), pose(6, 5)];
+    const start = drift(from, to.target);
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      expect(drift(blendPose(from, to, t), to.target)).toBeCloseTo(start * (1 - t), 6);
+    }
+  });
+
+  it("keeps the subject left centred while pulling back, and lands exactly", () => {
+    const [from, to] = [pose(6, 5), pose(0, 65)];
+    const end = drift(to, from.target);
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      expect(drift(blendPose(from, to, t), from.target)).toBeCloseTo(end * t, 6);
+    }
+    expect(blendPose(from, to, 1).target.toArray()).toEqual(to.target.toArray());
   });
 });

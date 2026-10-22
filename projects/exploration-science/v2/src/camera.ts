@@ -91,14 +91,21 @@ export const clonePose = (p: Pose): Pose => ({ ...p, target: p.target.clone(), o
 
 export const positionOf = (p: Pose): Vector3 => p.target.clone().addScaledVector(viewDirection(p.azimuthDeg, p.elevationDeg), p.distance);
 
-/** `a` at t = 0, `b` at t = 1. */
+/** `a` at t = 0, `b` at t = 1. The target moves at the pace of the distance: going closer,
+ * what is left of its way shrinks with the distance, so that the new subject comes to the
+ * centre steadily instead of drifting to the edge mid-flight (its offset on screen goes as
+ * (1 − t)); going back out, symmetrically, the subject left stays centred while the camera
+ * pulls back. */
 export function blendPose(a: Pose, b: Pose, t: number): Pose {
   const mix = (x: number, y: number) => x + (y - x) * t;
+  if (t >= 1) return clonePose(b);
+  const distance = Math.exp(mix(Math.log(a.distance), Math.log(b.distance)));
+  const w = b.distance < a.distance ? 1 - ((1 - t) * distance) / a.distance : (t * distance) / b.distance;
   return {
-    target: a.target.clone().lerp(b.target, t),
+    target: a.target.clone().lerp(b.target, w),
     azimuthDeg: mix(a.azimuthDeg, b.azimuthDeg),
     elevationDeg: mix(a.elevationDeg, b.elevationDeg),
-    distance: Math.exp(mix(Math.log(a.distance), Math.log(b.distance))),
+    distance,
     offset: [mix(a.offset[0], b.offset[0]), mix(a.offset[1], b.offset[1])],
   };
 }
