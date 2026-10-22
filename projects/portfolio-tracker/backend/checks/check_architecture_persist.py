@@ -107,9 +107,12 @@ async def main() -> None:
             except ActeRefuse as e:
                 b.check("déjà" in str(e), f"seconde décision sur v2 refusée côté SERVICE (409) : {e}")
             try:
-                await conn.execute(
-                    "INSERT INTO architectures_modele_decisions (architecture_id, action, auteur, motif, signaux) "
-                    "VALUES ($1, 'signer', 'x', 'Motif suffisant pour ce test de doublon.', '[]')", id2)
+                # Point de sauvegarde : le refus attendu de la base n'avorte que lui, pas la transaction
+                # englobante (sans lui, la v3 ci-dessous tombait en InFailedSQLTransactionError).
+                async with conn.transaction():
+                    await conn.execute(
+                        "INSERT INTO architectures_modele_decisions (architecture_id, action, auteur, motif, signaux) "
+                        "VALUES ($1, 'signer', 'x', 'Motif suffisant pour ce test de doublon.', '[]')", id2)
                 b.check(False, "une seconde ligne de décision pour la MÊME architecture_id : devait être refusée")
             except asyncpg.PostgresError as e:
                 b.check("architectures_modele_decisions_unique" in str(e),
