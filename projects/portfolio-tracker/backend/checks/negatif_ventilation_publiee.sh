@@ -22,8 +22,11 @@ mutations=(
 # disqualifiés — l'axe secteurs perd ses cellules.
 "$SRC¦    restants = [(a, m) for (a, m) in membres if (a, m) not in neutres]¦    restants = list(membres)¦[V1]"
 # Hiérarchie ignorée : Compute et Networking rejoignent le premier niveau de `activites` — la somme
-# dépasse le total publié, le raccord ne boucle plus.
-"$SRC¦        premier_niveau = {m for m in presents if parent_de.get(m) not in presents}¦        premier_niveau = set(presents)¦[V2]"
+# dépasse le total publié, le raccord ne boucle plus. MOTIF RÉPARÉ (lot P1) : la ligne ciblait la
+# comprehension D'AVANT la délégation à `perimetre.premier_niveau_de` (commit `c551003`, déjà
+# fusionnée) — devenue CADUQUE (motif introuvable, [V2] jamais exercée depuis). Cible désormais
+# l'APPEL du détenteur unique, même intention (aplatir au lieu de respecter la hiérarchie).
+"$SRC¦        premier_niveau = set(premier_niveau_de(presents, parent_de))¦        premier_niveau = set(presents)¦[V2]"
 # Tolérance de bouclage multipliée par 1 000 : l'écart réel de resultat_exploitation (−8 910 M$)
 # est absorbé, le raccord devient « boucle » au lieu de « non_ventile ».
 "$SRC¦                \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) else \"non_ventile\")¦                \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) * 1000 else \"non_ventile\")¦[V4]"
@@ -62,6 +65,10 @@ mutations=(
 "$SRC¦            grandeur = GRANDEURS_DE_CONCENTRATION.get(reference) if reference else None¦            grandeur = \"du chiffre d'affaires\"¦[V17]"
 "$SRC¦                    if r.get(\"statut\") == \"decoupage_change\":¦                    if False:¦[V13b] la ligne Σ du TTM"
 "$SRC¦                if c.get(\"concept\") == CONCEPT_DOUZE_MOIS:¦                if False:¦[V13b] la période des douze mois glissants"
+# Signal d'acquisition significative (§4 bis) : le chiffre d'affaires de l'exercice de référence
+# n'est plus transmis au producteur du signal — une acquisition au-dessus du seuil (part du CA) ne
+# peut plus être comparée à rien, le signal disparaît en silence.
+"$SRC¦    dernier_exercice_fin = max(fin_vers_fy, default=None)¦    dernier_exercice_fin = None¦[V18bis]"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

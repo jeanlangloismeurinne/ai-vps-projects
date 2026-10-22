@@ -38,7 +38,8 @@ import yaml
 
 from app.contracts.ventilation_schema import AxeVentilation, VentilationReferentiel
 from app.knowledge.appariement_feed import AppariementInexecutable, douze_mois_glissants
-from app.knowledge.perimetre import ordre_des_periodes, premier_niveau_de
+from app.knowledge.perimetre import SignalAcquisition, ordre_des_periodes, premier_niveau_de, \
+    signal_acquisition_significative
 from app.knowledge.socle_comptes import Gabarit, tolerance_bouclage
 from app.knowledge.ventilation_xbrl import FaitDimensionne
 
@@ -151,6 +152,10 @@ class Ventilation:
     sous_details: list[SousDetail]
     conflits: list[str]
     refus: list[str]
+    # §4 bis (lot P1) — le SIGNAL d'acquisition significative (jamais la croissance hors
+    # acquisitions, module ad hoc ultérieur), produit par `perimetre.signal_acquisition_significative`
+    # à partir des faits XBRL de regroupement d'entreprises DÉJÀ LUS avec les dépôts.
+    signaux_acquisition: list[SignalAcquisition] = field(default_factory=list)
 
 
 # ── Le classement d'un fait (§4.1) ─────────────────────────────────────────────────────────────
@@ -203,6 +208,45 @@ def _ligne_du_concept(concept: str, concepts_ligne: dict[str, str]) -> Optional[
     if not concept.startswith(_PREFIXE_GABARIT):
         return None
     return concepts_ligne.get(concept[len(_PREFIXE_GABARIT):])
+
+
+# ── §4 bis — les faits XBRL de regroupement d'entreprises, DÉJÀ LUS avec les dépôts ───────────────
+
+# Concepts us-gaap STANDARD de regroupement d'entreprises (aucun nom propre à un émetteur, #46) :
+# la contrepartie totale transférée, et — quand l'émetteur la publie — le chiffre d'affaires de
+# l'entité acquise (réel depuis la date d'acquisition, ou pro forma).
+_CONCEPT_CONTREPARTIE_REGROUPEMENT = "us-gaap:BusinessCombinationConsiderationTransferred1"
+_CONCEPTS_CA_ACQUIS = (
+    "us-gaap:BusinessCombinationsRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedRevenueOfAcquiree1",
+    "us-gaap:BusinessAcquisitionProFormaRevenue",
+)
+
+
+def faits_regroupement_de_depots(depots: list[Depot]) -> tuple[dict[str, Any], ...]:
+    """Les faits XBRL de regroupement d'entreprises, groupés PAR ACQUISITION (le membre déclaré sur
+    `us-gaap:BusinessAcquisitionAxis`, quel qu'il soit — jamais un nom propre lu en dur ; `()` si
+    l'émetteur ne tague aucune acquisition cette période-ci). Pure, aucun appel réseau : les dépôts
+    sont DÉJÀ lus (`ventilation_feed.lire_depots`). Alimente
+    `perimetre.signal_acquisition_significative`, jamais un calcul de croissance (§4 bis)."""
+    par_acquisition: dict[tuple, dict[str, Any]] = {}
+    for depot in depots:
+        for f in depot.faits:
+            if f.concept == _CONCEPT_CONTREPARTIE_REGROUPEMENT:
+                cle = f.membres
+                entree = par_acquisition.setdefault(
+                    cle, {"date": None, "contrepartie": None, "chiffre_affaires_acquis": None})
+                entree["contrepartie"] = f.valeur
+                if entree["date"] is None:
+                    entree["date"] = f.instant or f.fin
+            elif f.concept in _CONCEPTS_CA_ACQUIS:
+                cle = f.membres
+                entree = par_acquisition.setdefault(
+                    cle, {"date": None, "contrepartie": None, "chiffre_affaires_acquis": None})
+                if entree["chiffre_affaires_acquis"] is None:
+                    entree["chiffre_affaires_acquis"] = f.valeur
+                if entree["date"] is None:
+                    entree["date"] = f.instant or f.fin
+    return tuple(e for e in par_acquisition.values() if e["contrepartie"] is not None)
 
 
 # ── Le relevé (§4) ──────────────────────────────────────────────────────────────────────────────
@@ -482,9 +526,18 @@ def relever(
         else:
             statut = "sans_ventilation"
 
+    # ── §4 bis — le signal d'acquisition significative ──────────────────────────────────────────
+    dernier_exercice_fin = max(fin_vers_fy, default=None)
+    dernier_exercice_id = fin_vers_fy.get(dernier_exercice_fin) if dernier_exercice_fin else None
+    ca_exercice = ((cel_socle.get(f"chiffre_affaires|{dernier_exercice_id}") or {}).get("v")
+                  if dernier_exercice_id else None)
+    signaux_acquisition = signal_acquisition_significative(
+        faits_regroupement_de_depots(depots), chiffre_affaires_exercice=ca_exercice,
+        seuil=referentiel.seuil_acquisition_significative)
+
     return Ventilation(
         statut, axes_ventiles, list(cellules.values()), raccords, membres_nouveaux, non_rattaches,
-        sous_details, conflits, [])
+        sous_details, conflits, [], signaux_acquisition)
 
 
 # ── La forme PERSISTÉE, et sa lecture ───────────────────────────────────────────────────────────
@@ -524,6 +577,10 @@ def structure_de_ventilation(
         ],
         "conflits": list(v.conflits),
         "refus": list(v.refus),
+        "signaux_acquisition": [
+            {"date": s.date, "montant": s.montant, "base": s.base, "part_estimee": s.part_estimee}
+            for s in v.signaux_acquisition
+        ],
     }
 
 
@@ -730,4 +787,17 @@ def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
                     out.append(f"    {c['periode']} : {c['v'] * 100:.0f} %")
                 else:
                     out.append(f"    {c['periode']} : {c['v'] / 1e6:,.1f} M$".replace(",", " "))
+
+    # §4 bis — le signal d'acquisition significative (jamais la croissance hors acquisitions).
+    signaux = structure.get("signaux_acquisition") or []
+    if signaux:
+        out.append("")
+        out.append("Signal d'acquisition significative (faits XBRL de regroupement d'entreprises) :")
+        for s in signaux:
+            base_txt = ("du chiffre d'affaires acquis publié" if s["base"] == "chiffre_affaires_acquis"
+                       else "de la contrepartie rapportée à la capitalisation")
+            montant_fmt = f"{s['montant'] / 1e6:,.1f} M$".replace(",", " ")
+            out.append(
+                f"  croissance qui inclut une acquisition : {s['date'] or 'date inconnue'}, "
+                f"{montant_fmt} de contrepartie, part estimée {s['part_estimee'] * 100:.1f} % {base_txt}")
     return "\n".join(out)

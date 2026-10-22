@@ -25,6 +25,9 @@ brute avant filtrage, cf. le rapport du lot) — jamais recalculées par le modu
         de Data Center boucle au cumul du 10-Q ;
   [V16] conflits de hiérarchie filtrés aux membres EN USAGE (0 pour NVDA — le réel mesuré).
   [V17] la grandeur d'une part de concentration est celle déposée (créances clients ≠ chiffre d'affaires).
+  [V18] signal d'acquisition significative (§4 bis, lot P1) : aucun signal chez NVDA (réel) ; un
+        dépôt fictif de regroupement d'entreprises AU-DESSUS du seuil (5 % du CA) produit un signal
+        rendu EN TEXTE ; un dépôt fictif SOUS le seuil n'en produit aucun.
 
 Ces quatre assertions répondent à une revue par exécution du coordinateur (2026-10-21) sur
 `montrer_ventilation.sh NVDA` : emboîtement non rendu (premier niveau/enfants au même niveau),
@@ -399,5 +402,55 @@ b.check("du chiffre d'affaires" in ligne_rev and "créances" not in ligne_rev,
         f"[V17] « Revenue Customer 1 » rendu comme part du chiffre d'affaires ({ligne_rev.strip()!r})")
 b.check(not any("créances" in l and "chiffre d'affaires" in l for l in bloc_clients.splitlines()),
         "[V17] aucune ligne ne mêle créances et chiffre d'affaires")
+
+# ── [V18] signal d'acquisition significative (§4 bis, lot P1) ──────────────────────────────────
+print("[V18] signal d'acquisition significative — aucun chez NVDA (réel), un signal sur dépôt fictif")
+b.check(v_nv.signaux_acquisition == [],
+        f"[V18] NVDA (réel) ne dépose aucun fait de regroupement d'entreprises — aucun signal ({v_nv.signaux_acquisition})")
+
+
+def _xml_regroupement(contrepartie: float, ca_acquis: float) -> bytes:
+    texte = (
+        '<?xml version="1.0"?>\n'
+        '<xbrl xmlns="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi" '
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:us-gaap="http://fasb.org/us-gaap/2025">\n'
+        '  <context id="cI"><entity><identifier scheme="http://www.sec.gov/CIK">0000000000</identifier>'
+        '</entity><period><instant>2026-03-01</instant></period></context>\n'
+        '  <unit id="usd"><measure>iso4217:USD</measure></unit>\n'
+        f'  <us-gaap:BusinessCombinationConsiderationTransferred1 contextRef="cI" unitRef="usd" '
+        f'decimals="-6">{contrepartie}</us-gaap:BusinessCombinationConsiderationTransferred1>\n'
+        f'  <us-gaap:BusinessCombinationsRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedRevenueOfAcquiree1 '
+        f'contextRef="cI" unitRef="usd" decimals="-6">{ca_acquis}'
+        f'</us-gaap:BusinessCombinationsRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedRevenueOfAcquiree1>\n'
+        '</xbrl>'
+    )
+    return texte.encode()
+
+
+# NVDA FY2026 chiffre_affaires = 215 938 M$ (V1) ; 20 000 M$ de CA acquis ≈ 9,26 % > seuil 5 %.
+faits_acq_dessus = tuple(vx.lire_instance(_xml_regroupement(5000 * M, 20000 * M)))
+depot_acq_dessus = vt.Depot(accn="FICTIF-DESSUS-0000000001", form="8-K", filed="2026-03-05", faits=faits_acq_dessus)
+v18 = vt.relever([nv10k, nv10q, depot_acq_dessus], GAB, REF, socle_nv)
+b.require(v18.signaux_acquisition, 1, "[V18bis] une acquisition fictive au-dessus du seuil (5 % du CA) produit un signal")
+if len(v18.signaux_acquisition) == 1:
+    s18 = v18.signaux_acquisition[0]
+    b.check(s18.base == "chiffre_affaires_acquis" and proche(s18.part_estimee, 20000 * M / (215938 * M), 0.001),
+            f"[V18ter] base == chiffre_affaires_acquis, part ≈ 9,26 % ({s18.base}, {s18.part_estimee})")
+    structure_v18 = vt.structure_de_ventilation(
+        v18, version_referentiel=REF.version, version_gabarit=GAB.version,
+        depots=(nv10k, nv10q, depot_acq_dessus))
+    texte_v18 = vt.rendre_ventilation(structure_v18, raison_sociale="NVIDIA Corporation")
+    b.check("croissance qui inclut une acquisition" in texte_v18
+            and "5 000.0 M$ de contrepartie" in texte_v18
+            and "du chiffre d'affaires acquis publié" in texte_v18,
+            f"[V18quater] le signal est rendu EN TEXTE (montrer_ventilation / matière de l'architecte) "
+            f"({[l for l in texte_v18.splitlines() if 'acquisition' in l]})")
+
+# Sous le seuil (500 M$ de CA acquis ≈ 0,23 %) : rien.
+faits_acq_dessous = tuple(vx.lire_instance(_xml_regroupement(100 * M, 500 * M)))
+depot_acq_dessous = vt.Depot(accn="FICTIF-DESSOUS-0000000001", form="8-K", filed="2026-03-05", faits=faits_acq_dessous)
+v18b = vt.relever([nv10k, nv10q, depot_acq_dessous], GAB, REF, socle_nv)
+b.check(v18b.signaux_acquisition == [],
+        f"[V18quinquies] une acquisition fictive SOUS le seuil ne produit aucun signal ({v18b.signaux_acquisition})")
 
 sys.exit(b.summary())

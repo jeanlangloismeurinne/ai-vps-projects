@@ -112,6 +112,19 @@ class VentilationReferentiel(BaseModel):
     axes: tuple[AxeVentilation, ...]
     qualificateurs_neutres: tuple[QualificateurNeutre, ...] = ()
     membres_secteur_unique: tuple[str, ...] = ()
+    # Le SEUIL du signal d'acquisition significative (§4 bis, lot P1) — paramètre du FONDS, pas un
+    # seuil calé sur un émetteur : 5 % du chiffre d'affaires de l'exercice (ou, faute de chiffre
+    # d'affaires acquis publié, 5 % de la contrepartie rapportée à la capitalisation) par défaut.
+    seuil_acquisition_significative: float = 0.05
+
+    @field_validator("seuil_acquisition_significative")
+    @classmethod
+    def _seuil_acquisition_borne(cls, v: float) -> float:
+        if not (0.0 < v <= 1.0):
+            raise ValueError(
+                f"seuil_acquisition_significative = {v} hors de (0, 1] — c'est une PART du chiffre "
+                "d'affaires ou de la capitalisation, jamais un montant ni un pourcentage sur 100")
+        return v
 
     @field_validator("membres_secteur_unique")
     @classmethod

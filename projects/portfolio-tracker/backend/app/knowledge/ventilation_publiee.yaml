@@ -50,3 +50,8 @@ qualificateurs_neutres:
 
 # Un axe dont les seuls membres sont ceux-ci n'est pas une ventilation : la société n'a qu'un secteur.
 membres_secteur_unique: [us-gaap:OperatingSegmentsMember]
+
+# Le SEUIL du signal d'acquisition significative (§4 bis, lot P1) — paramètre du FONDS : 5 % du
+# chiffre d'affaires de l'exercice (ou, faute de chiffre d'affaires acquis publié, 5 % de la
+# contrepartie rapportée à la capitalisation). Jamais calé sur un émetteur.
+seuil_acquisition_significative: 0.05

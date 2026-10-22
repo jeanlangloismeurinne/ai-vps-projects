@@ -233,3 +233,44 @@ Texte des questions telles que posées :
   suivi (§2.4) et une acquisition significative est SIGNALÉE au comité (« croissance qui inclut une
   acquisition »), la croissance hors acquisitions étant reportée après le premier comité (elle exige de lire
   le chiffre d'affaires acquis dans le texte, donc un modèle). Autre : la calculer dès maintenant.
+
+## 8. Addendum du 2026-10-22 (Opus) — le cœur restant (B4c-2), conception arrêtée
+
+Deux passages de Sonnet ont livré le détenteur (`perimetre.py`), la lecture du jumeau, la délégation du
+premier niveau et de l'ordre des périodes, le signal d'acquisition et la préférence « version retraitée » des
+douze mois ; ils ont buté sur le rebranchement. **Cause mesurée par Sonnet** : l'identité d'une cellule
+relevée est `(axe, ligne, membre, période)`, SANS le dépôt — deux dépôts qui publient la même période à des
+valeurs différentes (retraitement, même nom au contenu changé) sont fusionnés en silence (« le premier dépôt
+gagne »). Tant que cette fusion existe, aucune chronique fidèle ne peut être construite.
+
+**Preuve que la fusion coûte déjà** : la lecture du jumeau (`c551003`) a fait prendre aux douze mois par pays
+de NVDA le semestre 2025 d'ORIGINE au lieu du semestre RETRAITÉ — Σ pays = 323 559 M$ pour un total de
+302 970 M$ (reste −20 589 M$) — et la suite est restée verte. Corrigé par la préférence « version la plus
+récemment déposée » (2ᵉ passage, `appariement_feed._choisir_terme`) ; le trou de contrôle est fermé par la
+garde (iv) ci-dessous.
+
+**Conception (à exécuter telle quelle)** :
+1. **Relevé brut, sans fusion** : `relever` produit les cellules PAR DÉPÔT (identité `(axe, ligne, membre,
+   période, accn)`) ; la structure persistée les garde toutes (le champ `accn` existe déjà) ; la hiérarchie est
+   persistée PAR DÉPÔT. L'empreinte change : une version neuve se publiera, sans migration.
+2. **Vue servie = chronique, calculée à la lecture** : `perimetre.vue_servie(structure, socle)` rend, par axe à
+   raccord, les séries du régime de référence (publié / passage / hypothèse), les régimes, les transitions,
+   les membres nouveaux (membres du régime de référence absents du précédent) et les raccords calculés SUR
+   LA VUE. C'est le SEUL point d'entrée des lecteurs : `rendre_ventilation`, `matiere` (structure servie à
+   l'architecte), `structure._s2_s3b`, `faits_publies`. Aucun lecteur ne lit plus les cellules brutes, sauf
+   l'audit (rendu « cellules relevées », facultatif).
+3. **Retirer de `relever`** : `membres_nouveaux`, `decoupage_change`, `_reference`, le rattrapage du parent au
+   cumul, l'exclusion des douze mois des membres nouveaux — tout passe dans `vue_servie`. Les douze mois d'un
+   membre se calculent sur la série de la vue (termes du même régime, ou passage), avec le prédicat existant.
+4. **Consigne de l'architecte** : réécrite DANS LE MÊME LOT que le rendu, jamais avant (un prompt qui annonce
+   un historique que le rendu ne montre pas ment au modèle — le 2ᵉ passage l'avait fait, Opus l'a retiré).
+5. **Gardes** : (i) [P32] étendue : aucune décision de régime hors de `perimetre.py` ; (ii) rendu NVDA réel
+   figé : Edge Computing FY2024-FY2026 = Σ des quatre anciens marchés, marqué « reconstitué par passage » ;
+   (iii) [S2] sur un bloc publié du nouveau découpage trouve ses exercices ; (iv) **invariant de l'agrégat sur
+   la vue servie** : pour chaque axe à raccord et chaque période qui a un total au socle, Σ premier niveau =
+   total à la tolérance, sinon refus NOMMÉ — la mutation « prendre le terme d'origine au lieu du retraité »
+   doit rougir sur le cas réel NVDA ; (v) `check_ventilation_publiee` : chaque attente changée justifiée une à
+   une, aucune affaiblie.
+6. **Découpage d'exécution** (pour tenir dans un passage) : tranche A = points 1 + 2 + garde (iv), rendu de
+   M2 inchangé en texte (la vue reproduit d'abord le comportement actuel quand il n'y a qu'un régime) ;
+   tranche B = 3 + rendu de la chronique + [S2]/[S3b] + `faits_publies` + consigne + gardes (i)-(iii).

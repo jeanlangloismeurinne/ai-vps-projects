@@ -364,6 +364,37 @@ def _preferer(points: list[dict[str, Any]]) -> dict[str, Any]:
                                       str(p.get("filed") or ""), str(p.get("accn") or "")))
 
 
+def _choisir_terme(role: str, groupe: list[dict[str, Any]], *, concept: str, fin: date) -> dict[str, Any]:
+    """Le point retenu pour UN terme (rôle) des douze mois glissants, parmi des lectures équivalentes
+    (même durée, même fin) — consulte le PRÉDICAT DU DÉTENTEUR (`perimetre.points_douze_mois_
+    coherents`, §2.4, lot P1) : si `groupe` ne porte qu'UNE valeur, peu importe lequel des dépôts l'a
+    publiée ; s'il en porte PLUSIEURS (un retraitement du socle), la version la plus RÉCEMMENT
+    déposée l'emporte — sinon (deux valeurs à la même date de dépôt, ambigu) refus NOMMÉ, jamais un
+    mélange silencieux d'une version retraitée et d'une version d'origine."""
+    if len(groupe) == 1:
+        return groupe[0]
+    if len({round(float(p["val"]), 6) for p in groupe}) == 1:
+        return _preferer(groupe)   # même valeur partout : pas un retraitement, choix arbitraire stable
+    # Un AMENDEMENT (10-K/A, 10-Q/A) ne l'emporte jamais sur l'affirmation d'origine, même chiffré
+    # autrement — politique déjà arbitrée de `_preferer` (#9 : « un 10-K/A sur l'exercice ne remplace
+    # pas le 10-K d'origine »). Un RETRAITEMENT (§2.4) se cherche donc seulement parmi les dépôts
+    # RÉGULIERS (un comparatif réécrit dans le 10-K/10-Q SUIVANT, jamais par un correctif formel) ;
+    # si toutes les valeurs différentes ne viennent que d'un amendement, l'origine l'emporte.
+    reguliers = [p for p in groupe if not str(p.get("form") or "").endswith("/A")]
+    candidats = reguliers if reguliers else groupe
+    if len({round(float(p["val"]), 6) for p in candidats}) == 1:
+        return _preferer(groupe)
+    # Import LOCAL (jamais au chargement du module) : `perimetre` importe `socle_comptes`, qui
+    # importe CE module (`douze_mois_glissants`) — un import en tête de fichier boucle.
+    from app.knowledge.perimetre import points_douze_mois_coherents
+    ok, motif = points_douze_mois_coherents(retraitements={role: tuple(candidats)})
+    if not ok:
+        raise AppariementInexecutable(f"`{concept}[{DOUZE_MOIS}]` ({fin.isoformat()}) : {motif}")
+    plus_recent_filed = max(str(p.get("filed") or "") for p in candidats)
+    return max((p for p in candidats if str(p.get("filed") or "") == plus_recent_filed),
+              key=lambda p: str(p.get("accn") or ""))
+
+
 def _lectures_de_flux(pts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Les points qui portent une DURÉE d'au plus un exercice (#42). Un cumul « depuis la création »
     d'une société en développement n'est ni un exercice ni un cumul de l'année : écarté."""
@@ -413,7 +444,7 @@ def douze_mois_glissants(
     a_fin = [p for p in flux if (e := _ecart_j(p["end"], fin)) is not None and e <= TOLERANCE_ANCRE_J]
     exercices = [p for p in a_fin if is_annual_flow(p)]
     if exercices:
-        ex = _preferer(exercices)
+        ex = _choisir_terme("exercice", exercices, concept=concept, fin=fin)
         return float(ex["val"]), (_composante("exercice", +1, ex),)
 
     cumuls = [p for p in a_fin if not is_annual_flow(p)]
@@ -422,7 +453,8 @@ def douze_mois_glissants(
             f"`{concept}[{DOUZE_MOIS}]` : aucune lecture de flux ne se clôt au {fin.isoformat()} "
             f"(±{TOLERANCE_ANCRE_J} j) — il n'y a pas de douze mois à lire à cette date")
     plus_long = max(duree_jours(p) or 0 for p in cumuls)
-    cumul = _preferer([p for p in cumuls if duree_jours(p) == plus_long])
+    cumul = _choisir_terme(
+        "cumul", [p for p in cumuls if duree_jours(p) == plus_long], concept=concept, fin=fin)
     debut = date.fromisoformat(str(cumul["start"]))
 
     veille = date.fromordinal(debut.toordinal() - 1)
@@ -434,7 +466,7 @@ def douze_mois_glissants(
             f"l'exercice clos vers le {veille.isoformat()} qui le précède. Les douze mois ne se "
             "reconstituent pas sans lui — et l'exercice le plus récent n'est PAS un substitut : ce "
             "serait publier une consommation de l'an passé sous le nom de douze derniers mois")
-    ex = _preferer(exercices_clos)
+    ex = _choisir_terme("exercice", exercices_clos, concept=concept, fin=fin)
 
     fin_comparable = _decaler_annees(str(cumul["end"]), -1)
     comparables = [
@@ -449,7 +481,7 @@ def douze_mois_glissants(
             f"déposé, mais pas le cumul de la même période l'an passé (clôture vers le "
             f"{fin_comparable.isoformat()}, depuis le début de l'exercice {ex['start']}). Sans lui, "
             "exercice + cumul compterait deux fois la même période : refus plutôt qu'un nombre gonflé")
-    comp = _preferer(comparables)
+    comp = _choisir_terme("comparable", comparables, concept=concept, fin=fin)
     valeur = float(ex["val"]) + float(cumul["val"]) - float(comp["val"])
     return valeur, (_composante("exercice", +1, ex), _composante("cumul", +1, cumul),
                     _composante("cumul_comparable", -1, comp))
