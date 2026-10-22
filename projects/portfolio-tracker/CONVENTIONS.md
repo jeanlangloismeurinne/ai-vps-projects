@@ -3578,6 +3578,14 @@ l'architecture, puis le classeur se complète au fil de ce qu'on apprend.
   déplacement ; toute valorisation passe par `evaluer_modele(classeur, scénario)` ; l'arbre de RVMD = des
   scénarios de nature `branche`. **v1 = central seul**, tables et contrats créés dès M1 ; le moteur (M6) après
   le premier comité.
+- **Arbitrages du 2026-10-22 (lot M3)** : (a) **horizon de projection = 10 exercices** explicites par défaut,
+  puis la valeur terminale de l'atelier (`parametres_du_fonds.horizon_de_projection`, revu une fois l'an) ;
+  (b) **une réponse refusée par le contrôle FERME la porte de l'architecte** — il ne construit que sur des
+  réponses justes ; en phase de test elle l'ouvre (interrupteur `porte_admet_reponses_refusees: true` dans
+  `modele_entreprise.yaml`, ordre 0 = `false`, À BASCULER AVANT LE PREMIER COMITÉ RÉEL), et la porte le dit.
+  Logique de fonds : le directeur de la recherche ne fait pas dessiner un classeur sur une réponse qu'il a
+  renvoyée, mais un essai à blanc peut avancer pour éprouver la mécanique. Deux interrupteurs du classeur
+  (`signature_de_l_architecture`, celui-ci) ne montent pas `version` du référentiel.
 
 ### #141 — l'extrait court se cite par sa ligne : unique, il est remplacé par son passage ; ambigu, il tombe
 

@@ -1,41 +1,133 @@
 {
-  "schema_version": "architecture-1.0.0",
+  "schema_version": "architecture-1.1.0",
   "ticker_id": "JPM",
   "version": 1,
   "archetype": "financiere",
   "famille": "bancaire",
-  "version_referentiel": "1.0.0",
+  "version_referentiel": "1.1.0",
   "blocs": [
-    {"id": "detail_et_communautes", "libelle": "Banque de détail et des communautés", "role": "metier",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "us-gaap:StatementBusinessSegmentsAxis", "membre": "jpm:ConsumerCommunityBankingMember"},
-     "variables": ["encours", "marge_d_interet", "cout_du_risque", "coefficient_d_exploitation", "fonds_propres_alloues"]},
-    {"id": "banque_entreprises_marches", "libelle": "Banque commerciale et d'investissement", "role": "metier",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "us-gaap:StatementBusinessSegmentsAxis", "membre": "jpm:CommercialAndInvestmentBankMember"},
-     "variables": ["encours", "marge_d_interet", "cout_du_risque", "coefficient_d_exploitation", "fonds_propres_alloues"]},
-    {"id": "gestion_fortune", "libelle": "Gestion d'actifs et de fortune", "role": "metier",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "us-gaap:StatementBusinessSegmentsAxis", "membre": "jpm:AssetandWealthManagementSegmentMember"},
-     "variables": ["encours", "coefficient_d_exploitation", "fonds_propres_alloues"]},
-    {"id": "fonction_corporate", "libelle": "Fonction corporate", "role": "metier",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "us-gaap:StatementBusinessSegmentsAxis", "membre": "us-gaap:CorporateNonSegmentMember"},
-     "variables": ["fonds_propres_alloues"]},
-    {"id": "elements_non_alloues", "libelle": "Éléments non alloués aux métiers", "role": "commun",
-     "statut": "metier_actuel", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "resultat_exploitation"},
-     "variables": ["taux_d_impot"]}
+    {
+      "id": "detail_et_communautes",
+      "libelle": "Banque de détail et des communautés",
+      "role": "metier",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "us-gaap:StatementBusinessSegmentsAxis",
+        "membre": "jpm:ConsumerCommunityBankingMember"
+      },
+      "variables": [
+        "encours",
+        "marge_d_interet",
+        "cout_du_risque",
+        "coefficient_d_exploitation",
+        "fonds_propres_alloues"
+      ],
+      "motif": "Motif de test (fixture JPM) pour le bloc detail_et_communautes : metier/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "banque_entreprises_marches",
+      "libelle": "Banque commerciale et d'investissement",
+      "role": "metier",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "us-gaap:StatementBusinessSegmentsAxis",
+        "membre": "jpm:CommercialAndInvestmentBankMember"
+      },
+      "variables": [
+        "encours",
+        "marge_d_interet",
+        "cout_du_risque",
+        "coefficient_d_exploitation",
+        "fonds_propres_alloues"
+      ],
+      "motif": "Motif de test (fixture JPM) pour le bloc banque_entreprises_marches : metier/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "gestion_fortune",
+      "libelle": "Gestion d'actifs et de fortune",
+      "role": "metier",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "us-gaap:StatementBusinessSegmentsAxis",
+        "membre": "jpm:AssetandWealthManagementSegmentMember"
+      },
+      "variables": [
+        "encours",
+        "coefficient_d_exploitation",
+        "fonds_propres_alloues"
+      ],
+      "motif": "Motif de test (fixture JPM) pour le bloc gestion_fortune : metier/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "fonction_corporate",
+      "libelle": "Fonction corporate",
+      "role": "metier",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "us-gaap:StatementBusinessSegmentsAxis",
+        "membre": "us-gaap:CorporateNonSegmentMember"
+      },
+      "variables": [
+        "fonds_propres_alloues"
+      ],
+      "motif": "Motif de test (fixture JPM) pour le bloc fonction_corporate : metier/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "elements_non_alloues",
+      "libelle": "Éléments non alloués aux métiers",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "resultat_exploitation"
+      },
+      "variables": [
+        "taux_d_impot"
+      ],
+      "motif": "Motif de test (fixture JPM) pour le bloc elements_non_alloues : commun/metier_actuel/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    }
   ],
   "variables_propres": [],
   "passage_a_l_agrege": [
-    {"ligne": "resultat_exploitation",
-     "formule": "detail_et_communautes__fonds_propres_alloues + banque_entreprises_marches__fonds_propres_alloues + gestion_fortune__fonds_propres_alloues + fonction_corporate__fonds_propres_alloues"}
+    {
+      "ligne": "resultat_exploitation",
+      "formule": "detail_et_communautes__fonds_propres_alloues + banque_entreprises_marches__fonds_propres_alloues + gestion_fortune__fonds_propres_alloues + fonction_corporate__fonds_propres_alloues"
+    }
   ],
   "cellules_attendues": [
-    {"bloc": "detail_et_communautes", "variable": "encours", "periodes": ["FY2025"],
-     "auteur": {"type": "question", "question_id": "me_4"}},
-    {"bloc": "elements_non_alloues", "variable": "taux_d_impot", "periodes": ["FY2025"],
-     "auteur": {"type": "question", "question_id": "qf_1"}}
+    {
+      "bloc": "detail_et_communautes",
+      "variable": "encours",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_4"
+      }
+    },
+    {
+      "bloc": "elements_non_alloues",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    }
   ]
 }

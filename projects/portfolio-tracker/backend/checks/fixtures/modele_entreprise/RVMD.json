@@ -1,43 +1,139 @@
 {
-  "schema_version": "architecture-1.0.0",
+  "schema_version": "architecture-1.1.0",
   "ticker_id": "RVMD",
   "version": 1,
   "archetype": "pre_revenus",
   "famille": "industrielle",
-  "version_referentiel": "1.0.0",
+  "version_referentiel": "1.1.0",
   "blocs": [
-    {"id": "programme_oncologie_a", "libelle": "Premier programme en développement", "role": "programme",
-     "statut": "en_developpement", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
-     "variables": ["probabilite_de_succes", "annee_de_lancement", "ventes_au_pic", "duree_d_exclusivite",
-                   "cout_restant_de_developpement"]},
-    {"id": "programme_oncologie_b", "libelle": "Deuxième programme en développement", "role": "programme",
-     "statut": "en_developpement", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
-     "variables": ["probabilite_de_succes", "annee_de_lancement", "ventes_au_pic", "duree_d_exclusivite",
-                   "cout_restant_de_developpement"]},
-    {"id": "programme_oncologie_c", "libelle": "Troisième programme en développement", "role": "programme",
-     "statut": "en_developpement", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
-     "variables": ["probabilite_de_succes", "annee_de_lancement", "ventes_au_pic", "duree_d_exclusivite",
-                   "cout_restant_de_developpement"]},
-    {"id": "frais_non_affectes", "libelle": "Frais généraux non affectés à un programme", "role": "commun",
-     "statut": "metier_actuel", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "frais_commerciaux_administratifs"},
-     "variables": ["couts_communs"]}
+    {
+      "id": "programme_oncologie_a",
+      "libelle": "Premier programme en développement",
+      "role": "programme",
+      "statut": "en_developpement",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "annee_de_lancement",
+        "ventes_au_pic",
+        "duree_d_exclusivite",
+        "cout_restant_de_developpement"
+      ],
+      "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_a : programme/en_developpement/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    },
+    {
+      "id": "programme_oncologie_b",
+      "libelle": "Deuxième programme en développement",
+      "role": "programme",
+      "statut": "en_developpement",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "annee_de_lancement",
+        "ventes_au_pic",
+        "duree_d_exclusivite",
+        "cout_restant_de_developpement"
+      ],
+      "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_b : programme/en_developpement/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    },
+    {
+      "id": "programme_oncologie_c",
+      "libelle": "Troisième programme en développement",
+      "role": "programme",
+      "statut": "en_developpement",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "annee_de_lancement",
+        "ventes_au_pic",
+        "duree_d_exclusivite",
+        "cout_restant_de_developpement"
+      ],
+      "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_c : programme/en_developpement/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    },
+    {
+      "id": "frais_non_affectes",
+      "libelle": "Frais généraux non affectés à un programme",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "frais_commerciaux_administratifs"
+      },
+      "variables": [
+        "couts_communs"
+      ],
+      "motif": "Motif de test (fixture RVMD) pour le bloc frais_non_affectes : commun/metier_actuel/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    }
   ],
   "variables_propres": [],
   "passage_a_l_agrege": [
-    {"ligne": "recherche_developpement",
-     "formule": "programme_oncologie_a__cout_restant_de_developpement + programme_oncologie_b__cout_restant_de_developpement + programme_oncologie_c__cout_restant_de_developpement"},
-    {"ligne": "frais_commerciaux_administratifs", "formule": "frais_non_affectes__couts_communs"}
+    {
+      "ligne": "recherche_developpement",
+      "formule": "programme_oncologie_a__cout_restant_de_developpement + programme_oncologie_b__cout_restant_de_developpement + programme_oncologie_c__cout_restant_de_developpement"
+    },
+    {
+      "ligne": "frais_commerciaux_administratifs",
+      "formule": "frais_non_affectes__couts_communs"
+    }
   ],
   "cellules_attendues": [
-    {"bloc": "programme_oncologie_a", "variable": "probabilite_de_succes", "periodes": ["sans_periode"],
-     "auteur": {"type": "question", "question_id": "se_2"}},
-    {"bloc": "programme_oncologie_a", "variable": "annee_de_lancement", "periodes": ["sans_periode"],
-     "auteur": {"type": "question", "question_id": "me_5"}},
-    {"bloc": "frais_non_affectes", "variable": "couts_communs", "periodes": ["FY2025"],
-     "auteur": {"type": "demande_ciblee"}}
+    {
+      "bloc": "programme_oncologie_a",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "se_2"
+      }
+    },
+    {
+      "bloc": "programme_oncologie_a",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "frais_non_affectes",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    }
   ]
 }

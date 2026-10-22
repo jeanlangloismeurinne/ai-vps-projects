@@ -1,51 +1,172 @@
 {
-  "schema_version": "architecture-1.0.0",
+  "schema_version": "architecture-1.1.0",
   "ticker_id": "NVDA",
   "version": 1,
   "archetype": "rentable",
   "famille": "industrielle",
-  "version_referentiel": "1.0.0",
+  "version_referentiel": "1.1.0",
   "blocs": [
-    {"id": "unites_calcul_ia", "libelle": "Centres de données — unités de calcul IA", "role": "activite",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "srt:ProductOrServiceAxis", "membre": "nvda:ComputeMember"},
-     "variables": ["chiffre_affaires_du_bloc", "taille_du_marche", "croissance_du_marche"]},
-    {"id": "liaison_reseau", "libelle": "Centres de données — mise en réseau", "role": "activite",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "srt:ProductOrServiceAxis", "membre": "nvda:NetworkingMember"},
-     "variables": ["chiffre_affaires_du_bloc"]},
-    {"id": "segment_jeux", "libelle": "Jeux", "role": "activite",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "srt:ProductOrServiceAxis", "membre": "nvda:GamingMember"},
-     "variables": ["chiffre_affaires_du_bloc"]},
-    {"id": "segment_visualisation_pro", "libelle": "Visualisation professionnelle", "role": "activite",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "srt:ProductOrServiceAxis", "membre": "nvda:ProfessionalVisualizationMember"},
-     "variables": ["chiffre_affaires_du_bloc"]},
-    {"id": "segment_automobile", "libelle": "Automobile", "role": "activite",
-     "statut": "metier_actuel", "maille": "publie",
-     "rattachement": {"type": "publie", "axe": "srt:ProductOrServiceAxis", "membre": "nvda:AutomotiveMember"},
-     "variables": ["chiffre_affaires_du_bloc"]},
-    {"id": "grands_hebergeurs_estimes", "libelle": "Grands hébergeurs (sous-ensemble estimé)", "role": "activite",
-     "statut": "metier_actuel", "maille": "estime",
-     "rattachement": {"type": "parent", "bloc": "unites_calcul_ia"},
-     "variables": ["chiffre_affaires_du_bloc"]},
-    {"id": "charges_non_allouees", "libelle": "Coûts communs et éléments non alloués", "role": "commun",
-     "statut": "metier_actuel", "maille": "estime",
-     "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
-     "variables": ["couts_communs", "taux_d_impot", "capital_par_point_de_croissance"]}
+    {
+      "id": "unites_calcul_ia",
+      "libelle": "Centres de données — unités de calcul IA",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "srt:ProductOrServiceAxis",
+        "membre": "nvda:ComputeMember"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc unites_calcul_ia : activite/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "liaison_reseau",
+      "libelle": "Centres de données — mise en réseau",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "srt:ProductOrServiceAxis",
+        "membre": "nvda:NetworkingMember"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc liaison_reseau : activite/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "segment_jeux",
+      "libelle": "Jeux",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "srt:ProductOrServiceAxis",
+        "membre": "nvda:GamingMember"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_jeux : activite/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "segment_visualisation_pro",
+      "libelle": "Visualisation professionnelle",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "srt:ProductOrServiceAxis",
+        "membre": "nvda:ProfessionalVisualizationMember"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_visualisation_pro : activite/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "segment_automobile",
+      "libelle": "Automobile",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "srt:ProductOrServiceAxis",
+        "membre": "nvda:AutomotiveMember"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_automobile : activite/metier_actuel/publie, rattachement publie."
+    },
+    {
+      "id": "grands_hebergeurs_estimes",
+      "libelle": "Grands hébergeurs (sous-ensemble estimé)",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "unites_calcul_ia"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc grands_hebergeurs_estimes : activite/metier_actuel/estime, rattachement parent.",
+      "pieces": [
+        1
+      ]
+    },
+    {
+      "id": "charges_non_allouees",
+      "libelle": "Coûts communs et éléments non alloués",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "autres_charges_exploitation"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "Motif de test (fixture NVDA) pour le bloc charges_non_allouees : commun/metier_actuel/estime, rattachement agrege.",
+      "pieces": [
+        1
+      ]
+    }
   ],
   "variables_propres": [],
   "passage_a_l_agrege": [
-    {"ligne": "chiffre_affaires",
-     "formule": "unites_calcul_ia__chiffre_affaires_du_bloc + liaison_reseau__chiffre_affaires_du_bloc + segment_jeux__chiffre_affaires_du_bloc + segment_visualisation_pro__chiffre_affaires_du_bloc + segment_automobile__chiffre_affaires_du_bloc"}
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "unites_calcul_ia__chiffre_affaires_du_bloc + liaison_reseau__chiffre_affaires_du_bloc + segment_jeux__chiffre_affaires_du_bloc + segment_visualisation_pro__chiffre_affaires_du_bloc + segment_automobile__chiffre_affaires_du_bloc"
+    }
   ],
   "cellules_attendues": [
-    {"bloc": "unites_calcul_ia", "variable": "chiffre_affaires_du_bloc", "periodes": ["FY2025"],
-     "auteur": {"type": "question", "question_id": "me_2"}},
-    {"bloc": "unites_calcul_ia", "variable": "taille_du_marche", "periodes": ["FY2025"],
-     "auteur": {"type": "question", "question_id": "me_5"}},
-    {"bloc": "charges_non_allouees", "variable": "taux_d_impot", "periodes": ["FY2025"],
-     "auteur": {"type": "question", "question_id": "qf_1"}}
+    {
+      "bloc": "unites_calcul_ia",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "unites_calcul_ia",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "charges_non_allouees",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2025"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    }
   ]
 }

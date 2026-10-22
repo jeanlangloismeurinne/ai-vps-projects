@@ -105,6 +105,21 @@ def _valider_pont_referentiel(ref: ReferentielModele, frameworks: "FrameworksFil
                     f"[R5] `{v.id}` admet l'origine `reponse_reprise`, mais aucune de ses questions "
                     f"sources {v.questions_sources} ne déclare d'encadré de chiffres clés")
 
+    # [R6] (lot M3, §2.3) — `somme_vers_ligne`, s'il est présent, est une ligne de
+    # `lignes_du_business_plan` de CHAQUE famille de la fiche qui a un gabarit (une famille sans
+    # gabarit, bancaire 1.0.0, n'a pas de lignes à viser : elle est ignorée ici, pas refusée).
+    for v in ref.variables:
+        if v.somme_vers_ligne is None:
+            continue
+        for nom_famille in v.familles:
+            famille = ref.familles_de_comptes.get(nom_famille)
+            if famille is None or famille.gabarit is None:
+                continue
+            if v.somme_vers_ligne not in famille.lignes_du_business_plan:
+                raise ReferentielRefuse(
+                    f"[R6] `{v.id}`.somme_vers_ligne = `{v.somme_vers_ligne}` n'est pas une ligne du "
+                    f"business plan de la famille `{nom_famille}` ({famille.lignes_du_business_plan})")
+
 
 @lru_cache(maxsize=1)
 def load_referentiel(chemin: Optional[str] = None) -> ReferentielModele:

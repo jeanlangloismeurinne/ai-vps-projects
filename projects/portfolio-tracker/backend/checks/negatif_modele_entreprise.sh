@@ -84,6 +84,10 @@ mutations=(
   "$R¦            if ligne not in lignes_gabarit:¦            if False:¦[R3] ligne absente du gabarit"
   "$R¦    if set(ref.controles) != noms_controles:¦    if False:¦[R4] contrôle sans fonction"
   "$R¦            if not porte_un_encadre:¦            if False:¦[R5] reponse_reprise sans encadré"
+  "$R¦            if v.somme_vers_ligne not in famille.lignes_du_business_plan:¦            if False:¦[R6] somme_vers_ligne hors du business plan"
+
+  # ── Bloc 1.1.0 (motif/pieces, §2.2) ────────────────────────────────────────────────────────────
+  "$S¦        if (self.maille == \"estime\" or self.statut != \"metier_actuel\") and not self.pieces:¦        if False:¦SANS pièce est refusé"
 
   # ── Le pont de l'architecture [P1]-[P5] ───────────────────────────────────────────────────────
   "$R¦    if famille_attendue is None:¦    if False:¦archétype absent du référentiel"
@@ -124,7 +128,7 @@ mutations=(
   "$SC¦            if fourchette is None:¦            if False:¦déplacement sans fourchette couvrante"
 
   # ── Réplicabilité (§9) ────────────────────────────────────────────────────────────────────────
-  "$Y¦version: \"1.0.0\"¦version: \"1.0.0\"\n# NVDA (mutation de test — la garde de réplicabilité doit rougir)¦réplicabilité"
+  "$Y¦version: \"1.1.0\"¦version: \"1.1.0\"\n# NVDA (mutation de test — la garde de réplicabilité doit rougir)¦réplicabilité"
 )
 
 source "$(dirname "$0")/_negatif.sh"

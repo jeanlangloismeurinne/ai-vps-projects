@@ -22,7 +22,26 @@
 # réplique sur des entreprises très différentes. Les fixtures de test, elles, sont copiées du réel
 # et nomment des émetteurs — mais jamais ce fichier.
 
-version: "1.0.0"
+# L'INTERRUPTEUR de la signature de l'architecture (09 §1.2, §7 ; roadmap V3 `12-lot-M3-architecte.md`
+# §2.1). true = DEUX signatures : l'architecture proposée attend la signature du comité avant d'ouvrir
+# les relances ciblées (M4). false = cible annoncée, une seule signature (celle du classeur) : la
+# dernière architecture proposée qui tient AUJOURD'HUI est en vigueur sans signature. Lu à la LECTURE
+# (`servir_architecture`) : le basculer ne réécrit rien, ne change pas `version` (aucune architecture
+# n'est invalidée) et le PV déjà écrit reste lisible.
+# ⚠️ C'est la SEULE clef de ce fichier dont le changement ne monte PAS `version` — un interrupteur de
+# lecture n'invalide aucune architecture proposée, à la différence d'une fiche ou d'une règle du pont.
+signature_de_l_architecture: true
+
+# L'INTERRUPTEUR de la phase de test de la porte (arbitrage de l'utilisateur, 2026-10-22). false =
+# ORDRE 0, la règle CIBLE : une réponse renvoyée par le contrôle ne compte pas comme première
+# réponse — il faut que la réponse soit juste pour que l'architecte construise sur une bonne base ;
+# la question FERME la porte. true = phase de test : elle ouvre la porte, et l'architecte la reçoit
+# marquée « refusée par le contrôle : motif ». À basculer à `false` avant le premier comité réel.
+# Même statut que `signature_de_l_architecture` : ne monte pas `version`, lu à la LECTURE (`porte_de_
+# l_architecte`) — le basculer ne réécrit rien et n'invalide aucune architecture déjà proposée.
+porte_admet_reponses_refusees: true
+
+version: "1.1.0"
 
 # Les FAMILLES DE COMPTES (09 §12.1). Le format AGRÉGÉ du classeur EST le gabarit de la famille du
 # titre : industrielle et commerciale lisent les mêmes lignes (rentable, pré-revenus) ; une banque
@@ -120,6 +139,11 @@ variables:
     questions_sources: [me_2, me_4]
     familles: [industrielle]
     methode_de_fourchette: [fourchette_publiee, dispersion_observee, recit_chiffre]
+    # Lot M3 (§2.1 de la spec d'exécution) : le chiffre d'affaires des blocs de PREMIER NIVEAU
+    # s'additionne en la ligne `chiffre_affaires` de l'agrégé — c'est la donnée que lit [S7]. Le code
+    # ne nomme jamais `chiffre_affaires_du_bloc` ni `chiffre_affaires` en dur (détenteur unique, #46) ;
+    # une banque déclarera la sienne en M2 bis. Aucune autre fiche ne porte ce champ en 1.1.0.
+    somme_vers_ligne: chiffre_affaires
 
   - id: volume
     libelle: Volume d'unités vendues par le bloc

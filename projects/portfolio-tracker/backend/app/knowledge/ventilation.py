@@ -551,11 +551,17 @@ def _membre_lisible(membre: Optional[str]) -> str:
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", nom) or (membre or "")
 
 
-def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str) -> str:
+def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
+                       avec_identifiants: bool = False) -> str:
     """Le texte que lit l'analyste : un tableau par axe, l'emboîtement indenté, la concentration des
     clients en phrases. Tamponné `mesure` (#110) — aucun des mots qui annoncent une dérivation
     (`derive_nature`) n'apparaît ici : un reste de raccord est dit « non ventilé », jamais
-    « calculé » ni « par différence »."""
+    « calculé » ni « par différence ».
+
+    `avec_identifiants=True` (lot M3, §3.2) : chaque membre est suivi de son adresse
+    `[axe=<id d'axe du référentiel> membre=<qname XBRL>]`, UNE FOIS par membre et par tableau — un
+    modèle ne peut citer un membre XBRL qu'on lui montre. Défaut `False` : rendu de M2 inchangé,
+    celui que lit l'analyste et que garde `tools/montrer_ventilation.sh`."""
     out = [
         f"Ventilation publiée de {raison_sociale} relevée dans l'instance XBRL des dépôts "
         f"(référentiel {structure.get('version_referentiel')}, gabarit {structure.get('version_gabarit')}). "
@@ -587,7 +593,8 @@ def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str) -> str
                 prefixe = "    " + "  " * profondeur + ("↳ " if profondeur else "")
                 marque = " (NOUVEAU)" if (axe, m) in nouveaux_set else ""
                 valeur_fmt = f"{c['v'] / 1e6:,.1f}".replace(",", " ")
-                out.append(f"{prefixe}{c['libelle']}{marque} : {valeur_fmt} M$")
+                adresse = f" [axe={axe} membre={m}]" if avec_identifiants else ""
+                out.append(f"{prefixe}{c['libelle']}{marque}{adresse} : {valeur_fmt} M$")
                 for e in sorted(x for x in presents if membres_ici[x].get("parent") == m):
                     _imprimer(e, profondeur + 1)
 

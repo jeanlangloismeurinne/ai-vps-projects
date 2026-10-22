@@ -56,8 +56,10 @@ __all__ = [
     "Fourchette", "Deplacement", "Scenario", "SCENARIO_CENTRAL",
 ]
 
-# 1.0.0 — première version du contrat (lot M1).
-ARCHITECTURE_SCHEMA_VERSION = "architecture-1.0.0"
+# 1.1.0 — lot M3 (roadmap V3 `12-lot-M3-architecte.md` §2.2) : `Bloc.motif`/`Bloc.pieces`,
+# `FicheVariable.somme_vers_ligne`, `ReferentielModele.signature_de_l_architecture`. 0 ligne en base à
+# cette date (migration 061 non appliquée) : aucune reprise à écrire.
+ARCHITECTURE_SCHEMA_VERSION = "architecture-1.1.0"
 
 def _sans_double_tiret_bas(v: str) -> str:
     # Un id ne contient JAMAIS `__` (double tiret bas) : c'est le séparateur réservé des formules
@@ -114,6 +116,10 @@ class FicheVariable(Strict):
     questions_sources: list[QuestionId] = Field(default_factory=list)
     familles: Annotated[list[str], Field(min_length=1)]
     methode_de_fourchette: Annotated[list[str], Field(min_length=1)]
+    # 1.1.0 (lot M3, §2.1) : « le chiffre d'affaires des blocs de premier niveau s'additionne en
+    # cette ligne de l'agrégé » — c'est la donnée que lit [S7] (`modele_entreprise/structure.py`).
+    # Détenteur unique (#46) : le code ne nomme jamais `chiffre_affaires_du_bloc`/`chiffre_affaires`.
+    somme_vers_ligne: Optional[Identifiant] = None
 
     @model_validator(mode="after")
     def _sans_doublons_et_calcul_coherent(self) -> "FicheVariable":
@@ -162,6 +168,16 @@ class Patron(Strict):
 class ReferentielModele(Strict):
     """Le fichier `frameworks/modele_entreprise.yaml` entier."""
     version: Annotated[str, Field(min_length=1)]
+    # 1.1.0 (lot M3, §2.1) — l'INTERRUPTEUR de la signature de l'architecture (principe fondateur
+    # n° 3) : REQUIS, sans défaut — un référentiel qui ne tranche pas explicitement ce point
+    # laisserait `servir_architecture` deviner. Lu à la LECTURE, jamais recopié (#53).
+    signature_de_l_architecture: bool
+    # 1.1.0 (arbitrage de l'utilisateur, 2026-10-22) — l'INTERRUPTEUR de la phase de test de la
+    # porte : REQUIS, sans défaut. `false` (cible) : une réponse renvoyée par le contrôle FERME la
+    # porte — l'architecte ne construit que sur des réponses justes. `true` (phase de test) :
+    # elle OUVRE la porte, marquée « refusée par le contrôle ». Lu à la LECTURE
+    # (`porte_de_l_architecte`), jamais recopié (#53).
+    porte_admet_reponses_refusees: bool
     familles_de_comptes: dict[Identifiant, FamilleDeComptes]
     famille_par_archetype: dict[str, str]
     controles: Annotated[list[Identifiant], Field(min_length=1)]
@@ -280,6 +296,12 @@ class Bloc(Strict):
     maille: Literal["publie", "estime"]
     rattachement: Rattachement
     variables: Annotated[list[Identifiant], Field(min_length=1)]
+    # 1.1.0 (lot M3, §2.2) — pourquoi ce bloc existe, à cette maille, sous ce statut : ce que le
+    # comité lit en signant l'architecture (§6).
+    motif: Annotated[str, Field(min_length=20)]
+    # Les pièces du dossier qui le fondent (ids de `knowledge_entries`, §3.3) — [S6] vérifie que
+    # chacune est dans `Matiere.pieces_citables`.
+    pieces: list[int] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _maille_correspond_au_rattachement(self) -> "Bloc":
@@ -288,6 +310,17 @@ class Bloc(Strict):
             raise ValueError(
                 f"`{self.id}` : maille `{self.maille}` incohérente avec un rattachement "
                 f"`{self.rattachement.type}` — `publie` va avec `publie`, rien d'autre")
+        return self
+
+    @model_validator(mode="after")
+    def _pieces_si_estime_ou_annonce(self) -> "Bloc":
+        # Un découpage ESTIMÉ, ou une activité qui n'est pas `metier_actuel` (annoncée, en
+        # développement), n'est qu'une opinion sans au moins une pièce qui la fonde (§2.2).
+        if (self.maille == "estime" or self.statut != "metier_actuel") and not self.pieces:
+            raise ValueError(
+                f"`{self.id}` : maille `{self.maille}`, statut `{self.statut}` — un découpage estimé "
+                "ou une activité qui n'est pas `metier_actuel` doit citer au moins une pièce "
+                "(`pieces`), sinon ce n'est qu'une opinion")
         return self
 
 
@@ -327,7 +360,7 @@ class CelluleAttendue(Strict):
 
 class Architecture(Strict):
     """Ce que l'architecte propose (M3) ; M1 n'en fixe que la FORME."""
-    schema_version: Literal["architecture-1.0.0"] = ARCHITECTURE_SCHEMA_VERSION
+    schema_version: Literal["architecture-1.1.0"] = ARCHITECTURE_SCHEMA_VERSION
     ticker_id: Annotated[str, Field(min_length=1)]
     version: Annotated[int, Field(ge=1)]
     archetype: Annotated[str, Field(min_length=1)]

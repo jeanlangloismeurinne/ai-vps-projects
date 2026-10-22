@@ -20,11 +20,24 @@ from __future__ import annotations
 from app.contracts.modele_entreprise_schema import Architecture, Fourchette, Scenario
 from app.modele_entreprise.referentiel import ReferentielModele, valider_pont_architecture
 
-__all__ = ["RegistreRefuse", "proposer_architecture", "inscrire_fourchette", "inscrire_scenario"]
+__all__ = [
+    "RegistreRefuse", "prochaine_version", "proposer_architecture", "inscrire_fourchette",
+    "inscrire_scenario",
+]
 
 
 class RegistreRefuse(ValueError):
     """Le geste n'est pas possible sur ce registre — même rôle que `valorisation.signature.ActeRefuse`."""
+
+
+async def prochaine_version(conn, ticker_id: str) -> int:
+    """La prochaine version d'architecture pour ce titre (dernière + 1, 1 si aucune) — lue hors
+    transaction par `architecte.py` (M3) pour poser l'en-tête AVANT l'appel modèle, et revérifiée
+    SOUS VERROU par `proposer_architecture` au moment d'écrire (#46 : la même requête, jamais
+    recopiée — seule la portée transactionnelle diffère)."""
+    derniere = await conn.fetchval(
+        "SELECT coalesce(max(version), 0) FROM architectures_modele WHERE ticker_id = $1", ticker_id)
+    return derniere + 1
 
 
 async def proposer_architecture(conn, arch: Architecture, ref: ReferentielModele, *, auteur: str) -> int:

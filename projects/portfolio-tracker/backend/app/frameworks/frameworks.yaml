@@ -273,6 +273,16 @@ parametres_du_fonds:
       isolé, à sa borne basse ou haute, dépasse 10 % de la valeur centrale figure dans un scénario ou
       est écartée avec motif ; revu une fois l'an, comme le taux exigé.
 
+  horizon_de_projection:
+    valeur: 10
+    unite: exercices
+    decide_le: 2026-10-22
+    revoir_avant: 2027-10-22
+    decision: >-
+      Arbitrage de l'utilisateur du 2026-10-22 : dix exercices explicites par défaut dans
+      `cellules_attendues`, puis la valeur terminale de l'atelier (M6/M7) — jamais recalculée
+      ailleurs (détenteur unique, `app/modele_entreprise/periodes.py`).
+
 frameworks:
 
   # ═══════════════════════════════════════════════════════════════════════════════════════════

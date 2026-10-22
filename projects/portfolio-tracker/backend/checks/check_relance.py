@@ -226,7 +226,15 @@ b.check("demandees & set(relance.closes)" in src_ch,
 b.check("questions=perimetre" in src_ch and src_ch.count("questions=perimetre") >= 2,
         "§4 le périmètre borne la collecte ET la préparation du dossier de l'analyste")
 lg = appels("app/agents/v2/parcours.py", "_lignes")
-b.check("manque_de_la_question" in lg, "§4 le périmètre et l'alerte lisent la MÊME règle du manque")
+mpq = appels("app/agents/v2/parcours.py", "manque_pour_question")
+# Lot M3 (`porte.py`) : `_lignes` et `porte_de_l_architecte` partagent désormais la PRÉPARATION des
+# arguments de `manque_de_la_question` via `manque_pour_question` (détenteur unique, #46) — la
+# chaîne reste directe : `_lignes` → `manque_pour_question` → `manque_de_la_question`, jamais
+# dupliquée. `#46 appliqué à l'extraction` : vérifier la chaîne ENTIÈRE, pas seulement son premier
+# maillon.
+b.check("manque_pour_question" in lg and "manque_de_la_question" in mpq,
+        "§4 le périmètre et l'alerte lisent la MÊME règle du manque (via `manque_pour_question`, "
+        "détenteur unique de la préparation d'arguments — lot M3)")
 src_lg = strip_code(Path("app/agents/v2/parcours.py").read_text(encoding="utf-8"))
 b.check("decision_ouvrante=(position.derniere" in src_lg,
         "§4 l'alerte passe la dernière décision du comité quand elle ouvre")

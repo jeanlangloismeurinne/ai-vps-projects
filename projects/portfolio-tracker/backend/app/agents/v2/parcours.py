@@ -60,6 +60,7 @@ __all__ = [
     "ReponseLue",
     "charger_etat_dossier",
     "manque_de_la_question",
+    "manque_pour_question",
     "reponse_tient",
     "PerimetreRelance",
     "EmetteurNonClasse",
@@ -304,26 +305,39 @@ def _framework(etat: EtatDossier, framework_id: str):
                             f"({[f.id for f in etat.fichier.frameworks]})")
 
 
-def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
+def manque_pour_question(etat: EtatDossier, f, q) -> tuple[Optional[bool], Optional["Manque"]]:
+    """Rend `(applicable, manque)` pour une question `q` d'un framework `f`, sur CET état de
+    dossier — la préparation des arguments de `manque_de_la_question`, DÉTENTEUR UNIQUE (#46) :
+    `_lignes` (ci-dessous) et `porte.porte_de_l_architecte` (M3) l'appellent tous deux, avec les
+    MÊMES arguments, plutôt que de dupliquer cette extraction (`feedback_correctif_regle_jumeaux`)."""
     applicables = etat.applicables.get(f.id)
+    dispenses = etat.dispenses.get(f.id, frozenset())
+    reps = [r for r in etat.reponses
+            if r.servie.framework_id == f.id and r.servie.question_id == q.id]
+    applicable = None if applicables is None else q.id in applicables
+    position = etat.comite.get((f.id, q.id))
+    if applicable is None:
+        return None, None
+    manque = manque_de_la_question(
+        framework_id=f.id, libelle_framework=f.libelle, question_id=q.id,
+        enonce=q.enonce, applicable=applicable, dispensee=q.id in dispenses,
+        reponses=reps, collecte=etat.collecte.get((f.id, q.id)),
+        mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)),
+        acceptation=position.acceptation if position else None,
+        decision_ouvrante=(position.derniere if position is not None
+                           and position.derniere.action in ACTIONS_OUVRANTES else None),
+        aujourd_hui=etat.genere_le.date())
+    return applicable, manque
+
+
+def _lignes(etat: EtatDossier, f) -> list[LigneQuestion]:
     dispenses = etat.dispenses.get(f.id, frozenset())
     lignes = []
     for q in f.questions:
         reps = [r for r in etat.reponses
                 if r.servie.framework_id == f.id and r.servie.question_id == q.id]
-        applicable = None if applicables is None else q.id in applicables
+        applicable, manque = manque_pour_question(etat, f, q)
         position = etat.comite.get((f.id, q.id))
-        manque = None
-        if applicable is not None:
-            manque = manque_de_la_question(
-                framework_id=f.id, libelle_framework=f.libelle, question_id=q.id,
-                enonce=q.enonce, applicable=applicable, dispensee=q.id in dispenses,
-                reponses=reps, collecte=etat.collecte.get((f.id, q.id)),
-                mandat_ouvert_id=etat.mandats_ouverts.get((f.id, q.id)),
-                acceptation=position.acceptation if position else None,
-                decision_ouvrante=(position.derniere if position is not None
-                                   and position.derniere.action in ACTIONS_OUVRANTES else None),
-                aujourd_hui=etat.genere_le.date())
         # Point 13 — UNE baisse par ligne (le cas courant : au plus une réponse courante en baisse
         # par question ; la première rencontrée si plusieurs analystes en portaient une).
         baisse = next((r.baisse for r in reps if r.baisse is not None), None)

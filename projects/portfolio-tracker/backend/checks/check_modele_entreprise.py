@@ -172,16 +172,19 @@ print("§3 contrat — architecture et objets du classeur")
 
 ARCH = {
     "schema_version": ARCHITECTURE_SCHEMA_VERSION, "ticker_id": "ticker_de_test", "version": 1,
-    "archetype": "rentable", "famille": "industrielle", "version_referentiel": "1.0.0",
+    "archetype": "rentable", "famille": "industrielle", "version_referentiel": "1.1.0",
     "blocs": [
         {"id": "bloc_principal", "libelle": "Bloc principal", "role": "activite",
          "statut": "metier_actuel", "maille": "publie",
          "rattachement": {"type": "publie", "axe": "axe:Test", "membre": "test:Membre"},
-         "variables": ["chiffre_affaires_du_bloc"]},
+         "variables": ["chiffre_affaires_du_bloc"],
+         "motif": "Bloc principal publié de test, motif de longueur suffisante pour le contrat."},
         {"id": "bloc_commun", "libelle": "Bloc commun", "role": "commun",
          "statut": "metier_actuel", "maille": "estime",
          "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
-         "variables": ["couts_communs"]},
+         "variables": ["couts_communs"],
+         "motif": "Bloc commun estimé de test, motif de longueur suffisante pour le contrat.",
+         "pieces": [1]},
     ],
     "variables_propres": [],
     "passage_a_l_agrege": [
@@ -204,19 +207,21 @@ cas_architecture = [
     ("deux blocs du même id",
      arch_test(blocs=ARCH["blocs"] + [ARCH["blocs"][0]]), "ids de bloc"),
     ("un bloc se rattache à lui-même",
-     arch_test(blocs=[{**ARCH["blocs"][0], "maille": "estime",
+     arch_test(blocs=[{**ARCH["blocs"][0], "maille": "estime", "pieces": [1],
                        "rattachement": {"type": "parent", "bloc": "bloc_principal"}}, ARCH["blocs"][1]]),
      "se rattache à lui-même"),
     ("un bloc parent vise un bloc non déclaré",
-     arch_test(blocs=[{**ARCH["blocs"][0], "maille": "estime",
+     arch_test(blocs=[{**ARCH["blocs"][0], "maille": "estime", "pieces": [1],
                        "rattachement": {"type": "parent", "bloc": "bloc_fantome"}}, ARCH["blocs"][1]]),
      "non déclaré"),
     ("cycle de rattachement parent",
      arch_test(blocs=[
          {"id": "bloc_a", "libelle": "A", "role": "activite", "statut": "metier_actuel", "maille": "estime",
-          "rattachement": {"type": "parent", "bloc": "bloc_b"}, "variables": ["chiffre_affaires_du_bloc"]},
+          "rattachement": {"type": "parent", "bloc": "bloc_b"}, "variables": ["chiffre_affaires_du_bloc"],
+          "motif": "Bloc A de test, motif de longueur suffisante pour satisfaire le contrat.", "pieces": [1]},
          {"id": "bloc_b", "libelle": "B", "role": "activite", "statut": "metier_actuel", "maille": "estime",
-          "rattachement": {"type": "parent", "bloc": "bloc_a"}, "variables": ["chiffre_affaires_du_bloc"]},
+          "rattachement": {"type": "parent", "bloc": "bloc_a"}, "variables": ["chiffre_affaires_du_bloc"],
+          "motif": "Bloc B de test, motif de longueur suffisante pour satisfaire le contrat.", "pieces": [1]},
      ], passage_a_l_agrege=[{"ligne": "chiffre_affaires", "formule": "bloc_a__chiffre_affaires_du_bloc"}],
         cellules_attendues=[{"bloc": "bloc_a", "variable": "chiffre_affaires_du_bloc", "periodes": ["FY2025"],
                              "auteur": {"type": "question", "question_id": "me_2"}}]),
@@ -264,6 +269,24 @@ cas_bloc = [
 for label, bloc, motif in cas_bloc:
     m = refus_objet(Architecture, arch_test(blocs=[bloc, ARCH["blocs"][1]]))
     b.check(motif in m, f"Bloc — « {label} » : motif attendu « {motif} », obtenu « {m[:200]} »")
+
+# ── 1.1.0 (lot M3, §2.2) : `Bloc.motif`/`Bloc.pieces` ───────────────────────────────────────────
+print("§3bis contrat — 1.1.0 motif/pieces")
+m = refus_objet(Architecture, arch_test(blocs=[
+    {k: v for k, v in ARCH["blocs"][1].items() if k != "pieces"}, ARCH["blocs"][0]]))
+b.check("au moins une pièce" in m,
+        f"Bloc 1.1.0 — un bloc estimé SANS pièce est refusé (obtenu « {m[:220]} »)")
+bloc_annonce_sans_pieces = {**ARCH["blocs"][0], "statut": "extension_annoncee",
+                           "motif": "Bloc annoncé de test, sans pièce, motif de longueur suffisante."}
+m = refus_objet(Architecture, arch_test(blocs=[bloc_annonce_sans_pieces, ARCH["blocs"][1]]))
+b.check("au moins une pièce" in m,
+        f"Bloc 1.1.0 — un bloc `extension_annoncee` SANS pièce est refusé (obtenu « {m[:220]} »)")
+m = refus_objet(Architecture, arch_test(
+    blocs=[{k: v for k, v in ARCH["blocs"][0].items() if k != "motif"}, ARCH["blocs"][1]]))
+b.check("motif" in m.lower() and ("missing" in m.lower() or "field required" in m.lower()),
+        f"Bloc 1.1.0 — un bloc SANS `motif` est refusé (obtenu « {m[:220]} »)")
+b.check(refus_objet(Architecture, arch_test()) == "PAS DE REFUS",
+        "Bloc 1.1.0 — re-contrôle : l'architecture de test (motif+pieces en place) tient")
 
 OC_VALIDE = {"type": "calcul", "formule": "chiffre_affaires_du_bloc / taille_du_marche"}
 b.check(refus_objet(Architecture, arch_test()) == "PAS DE REFUS", "re-contrôle : l'architecture de test tient")
@@ -375,6 +398,15 @@ variables_r5 = [v if v["id"] != "capital_par_point_de_croissance" else {**v, "qu
                 for v in REF_BRUT["variables"]]
 m = refus_pont_referentiel(modifie(REF_BRUT, variables=variables_r5))
 b.check(m.startswith("[R5]"), f"pont référentiel — [R5] reponse_reprise sans encadré refusé (obtenu « {m[:200]} »)")
+
+m = refus_pont_referentiel(modifie(
+    REF_BRUT, variables=REF_BRUT["variables"] + [variable_test(somme_vers_ligne="ligne_fantome")]))
+b.check(m.startswith("[R6]") and "ligne_fantome" in m,
+        f"pont référentiel — [R6] somme_vers_ligne hors du business plan refusé (obtenu « {m[:220]} »)")
+m = refus_pont_referentiel(modifie(
+    REF_BRUT, variables=REF_BRUT["variables"] + [variable_test(somme_vers_ligne="chiffre_affaires")]))
+b.check(m == "PAS DE REFUS",
+        f"pont référentiel — [R6] somme_vers_ligne valide (ligne du business plan) accepté (obtenu « {m[:200]} »)")
 
 REF_TEST = ReferentielModele.model_validate(REF_BRUT)
 
