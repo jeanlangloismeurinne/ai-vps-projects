@@ -3,7 +3,7 @@ project: exploration-science
 updated: 2026-10-22
 role: >
   Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage,
-  §2 schémas, §3 scène de référence, §4 connexions vivantes et fiches, §5 transitions et retour, §6 vue éclatée de l'antenne livrés ; prochaine : §7 visite guidée. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  §2 schémas, §3 scène de référence, §4 connexions vivantes et fiches, §5 transitions et retour, §6 vue éclatée de l'antenne, §7 visite guidée livrés ; prochaine : §8 robustesse, performances, déploiement. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -11,7 +11,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — §1 à §6 livrées (§6 vue éclatée de l'antenne, le 2026-10-22) ; **prochaine : §7, visite guidée, le système d'abord**. Aperçu privé pour l'utilisateur : https://claude.ai/artifact/MVYfNuQgLmkhchunWpivgo (à republier à chaque étape, voir Pièges). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1 à §7 livrées (§7 visite guidée, le 2026-10-22) ; **prochaine : §8, robustesse, performances, déploiement**. Aperçu privé pour l'utilisateur : https://claude.ai/artifact/MVYfNuQgLmkhchunWpivgo (à republier à chaque étape, voir Pièges). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -36,6 +36,8 @@ Récit de la session 1 (2026-10-19 : vérifications d'environnement, prix relev�
 **Livré (§5, 2026-10-22)** — détail dans `roadmap/v2.md` §5. Code : `v2/src/nav.ts` (pile de plans global → `object:<id>` → `detail:<id>`, orbite et zoom bornés par `render.json` `limits`, pur, testé), `camera.ts` `blendPose` (distance en log, cible menée au rythme de la distance : le sujet ne quitte pas le cadre), gestes souris/tactile dans `App.tsx`, boutons « Voir de près / Voir en détail / Retour » de la fiche. `window.__xs` : `nav`, `enter`, `back`, `pose()`, `advance()` (avec `?step`). `npm run capture -- --only transitions` (allers-retours, ε = 1e-4) et `transition-video` (images au pas + planche ; WebM avec `--video`). Suite complète 161.
 
 **Livré (§6, 2026-10-22)** — détail dans `roadmap/v2.md` §6. Code : `art/assets/terminal_exploded.py` (représentation `detail`, couches `Asset.layer`/`explode`, ancre orientée `array`), `art/build.py` `build_detail` (après l'export des enveloppes), `v2/src/beam.ts` (Δφ par axe, facteur plan, pic, lobe ; pur, testé), `v2/src/Detail.tsx` (ouverture animée, lobe à fronts d'onde, étiquettes de couches). Manifeste : `layers` (décalages, glTF) et `array` (grille) sur la représentation `detail`. Textes : clés `detail.terminal.<couche>`. Palette : teinte spéciale `ghost` (capot). Suite complète 166.
+
+**Livré (§7, 2026-10-22)** — détail dans `roadmap/v2.md` §7. Code : `v2/src/tour.ts` (durées, pur, testé), `v2/src/Subtitle.tsx`, câblage dans `App.tsx` (étape → navigation, mise en avant `highlight`, flux de l'étape seuls). **Règle de rythme (utilisateur) : une étape dure le temps de lire son sous-titre, 17 caractères/s, 2 s au moins — pas plus.** Texte ajouté : `tour.terminal-inside`, `ui.tour-skip`, `ui.tour-replay` ; textes `tour.*` resserrés. `window.__xs` : `tour`, `startTour`, `timeline()`. Suite complète 170.
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -81,6 +83,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Ne pas lancer `pkill -f vite` (ni `pkill -f capture.ts`) dans une commande qui contient elle-même ce mot : la commande se tue.
 - V2, captures : ne pas `git pull --rebase` pendant une capture (le rebase réécrit les fichiers, Vite recharge la page en pleine capture et peut la bloquer) ; si le distant ne touche pas le projet, `git merge origin/main` est sans effet sur les fichiers suivis. Captures en densité ×1 par défaut (validé par l'utilisateur le 2026-10-22, `--dpr 2` sur demande) : pas de GPU dans le conteneur cloud, tout est rendu par SwiftShader. Itérer avec `--only` et `--formats` ; vérification `transitions` 4 formats ≈ 16 min ; `transition-video` est lente (une capture par image) : un seul format ; elle produit les images et la planche `contact-sheet.png`, seule chose que l'agent inspecte (il ne lit pas de vidéo) ; le WebM n'est fait qu'avec `--video`, sur demande de l'utilisateur (décision du 2026-10-22). Une passe peut dépasser la limite d'une heure d'une tâche de fond : `captures.json` est écrit au fil de l'eau et les problèmes sont journalisés (`PROBLEM …`) dès qu'ils surviennent.
 - V2, aperçu Artifact : les Artifacts ne servent pas les `.glb`. Recette : `npx vite build --outDir <scratch>/v2site`, publier une page sans doctype qui reprend les balises de `v2.html` et un petit script qui intercepte `fetch` des `.glb` pour lire `<nom>.glb.json` (`{"base64": …}`) ; publier JS, CSS, polices Inter, `manifest.json` et les `.glb.json` en `files`. Republier au même lien (même chemin de fichier dans la session, sinon `url`).
+- V2, shaders : un `<Line>` de drei libère son matériau dès que ses `points` changent d'identité → recompilation (secondes en rendu logiciel). Mémoriser les points ; masquer (`visible`) plutôt que démonter ce qui réapparaît ; la compilation au chargement rend visible le temps de l'appel tout ce qui est masqué.
 - V2, sélection : R3F lance son rayon depuis les coordonnées **entières** de l'événement `click` ; un point visé au bord d'un objet fin peut donc le manquer. `pickPoint` exige que les points à ±3 px touchent aussi l'objet ; les objets principaux plus petits que 0,6 m (demi-diagonale) reçoivent une sphère de clic invisible `hit-proxy`, exclue des boîtes (`objectBox`) et des mesures.
 
 ## Décisions récentes (2026-10-11)
@@ -89,6 +92,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
+- **V2, ouvert après §7** : la visite dure ≈ 40 s (au-dessus des 20–30 s visés par la Phase 0 ; raccourcir les textes si l'essai le demande) ; la teinte de mise en avant de la vue d'ensemble est discrète ; le flux montant n'existe toujours pas (la visite ne raconte que le sens descendant).
 - **V2, ouvert après §6** : la fiche reste celle de l'objet en vue détail (aucun texte propre à la vue éclatée : §7 dira ce que la visite y raconte) ; pas de coloration de phase par pastille (le lobe et ses fronts d'onde portent seuls l'idée) ; en revenant vers la vue globale, le repère de sélection apparaît avant la fin du vol.
 - **V2, ouvert après §5** : planche de transition en iPad paysage seulement (coût du rendu logiciel) ; appels de dessin 95 en vue globale (93 avant §4) pour un budget de 80 → §8 ; seul le flux descendant `data-down` est animé (le sens montant n'est pas déclaré dans le système) ; sur téléphone la zone de clic de l'antenne fait ≈ 30 px (sous les 44 px recommandés) tant que la vue globale reste aussi petite ; flux toujours visibles (la visite §7 dira quand les montrer).
 - **V2, après §3** : sur téléphone en portrait la scène n'occupe que le tiers central (objets petits ; place laissée aux panneaux — la fiche en bas l'occupe désormais en partie) ; couleur gris métal du satellite = choix de lisibilité, non sourcé ; la mesure de contour juge mal les objets fins (antenne 56–64 %, seuil fixé à 55 % par l'utilisateur).
@@ -109,7 +113,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 §7** (`roadmap/v2.md`) : visite guidée, système global d'abord puis objet ; acceptation : la 1re étape cible le système, aucun objet mis en avant avant (test négatif), captures des étapes inspectées. Point d'appui : `content/v2/tours/starlink-home.json` et les textes `tour.*` existent ; la vue éclatée (§6) peut servir d'étape « antenne ».
+0. **V2 §8** (`roadmap/v2.md`) : GLB en 404 sans exception, superposition `?perf`, budget d'appels de dessin (95 pour 80), déploiement de `v2.html` ; puis mesures iPad de l'utilisateur.
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
