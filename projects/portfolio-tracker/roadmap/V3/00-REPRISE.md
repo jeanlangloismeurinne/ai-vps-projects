@@ -13,7 +13,8 @@ role: >
 # Prompt de reprise — portfolio-tracker V3
 
 > **Lire d'abord `roadmap/V3/PRINCIPES-FONDATEURS.md`** (arbitrages en termes MÉTIER ; chaque décision
-> éclairée par la pratique d'un VRAI fonds ; un raffinement se débraye vers la règle simple).
+> éclairée par la pratique d'un VRAI fonds ; un raffinement se débraye vers la règle simple ; **tout
+> développement vaut pour toutes les entreprises : on corrige la cause, jamais l'exemple**).
 
 ## ➜ Prochain pas
 
@@ -39,7 +40,7 @@ branchée — M7), migration 061 appliquée, `seuil_de_materialite` au référen
 pièce `ventilation_publiee` SANS appelant en production (son lecteur = l'architecte), outil `montrer_ventilation.sh` ;
 **déployé le 2026-10-22** (`67f7e87`, vérifié dans le conteneur). NVDA a redécoupé ses
 marchés au 10-Q (Data Center = Hyperscale + AI Clouds/Industrial/Enterprise ; Edge Computing) : matière directe pour M3 ;
-(3) ✅ **B4/M3 livré et DÉPLOYÉ le 2026-10-22** (`12-lot-M3-architecte.md`, `1d5dfbf` ; migration 062 appliquée ; `check_architecture_persist` 10/0 contre la vraie base). **PROCHAIN PAS = exécuter M3 bis** (`13-lot-M3bis-structure.md`, Sonnet exécute, Opus vérifie par exécution) : [S10] membre publié déguisé en estimé, [S11] cadrage des formules, contrat 1.2.0 (jalon des programmes, manques du dossier) ; arbitrage réservé §6 (question « inventaire des programmes », après le comité NVDA) (architecte ; arbitrés le 22/10 : horizon 10 exercices ; réponse refusée = porte fermée, sauf phase de test — interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel) — porte de NVDA **ouverte** au catalogue 1.0.0 (mesuré, voir ci-dessous) : plus de relance
+(3) ✅ **B4/M3 livré et DÉPLOYÉ le 2026-10-22** (`12-lot-M3-architecte.md`, `1d5dfbf` ; migration 062 appliquée ; `check_architecture_persist` 10/0 contre la vraie base). **PROCHAIN PAS = exécuter M3 bis v2** (`13-lot-M3bis-structure.md`, réécrite sur cinq CAUSES — principe fondateur n° 4 ; Sonnet exécute, Opus vérifie par exécution) : squelette publié construit par le code, rendu des axes, question `me_7` (ce que l'entreprise prépare, programmes futurs compris — acceptée par l'utilisateur), formules typées, origine ≠ maturité ; puis, sur accord, instruire `me_7` pour NVDA et RVMD (payant) — la porte NVDA est fermée d'ici là (architecte ; arbitrés le 22/10 : horizon 10 exercices ; réponse refusée = porte fermée, sauf phase de test — interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel) — porte de NVDA **ouverte** au catalogue 1.0.0 (mesuré, voir ci-dessous) : plus de relance
 préalable ; ma_3/ma_4/A1 restent dans D1. C2 sans objet, C5 vérifié (≈ 5,55 $, à re-mesurer).
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
 

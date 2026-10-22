@@ -11,7 +11,7 @@ role: >
 
 # Principes fondateurs — V3
 
-> **Lu à chaque reprise, avant `00-REPRISE.md`.** Ces deux principes s'appliquent à toute
+> **Lu à chaque reprise, avant `00-REPRISE.md`.** Ces principes s'appliquent à toute
 > décision et à toute question adressée à l'utilisateur pendant la construction de la V3.
 > En cas de doute entre une bonne pratique technique et ces principes, **ce sont eux qui
 > tranchent la façon de poser le problème** ; la technique décide seulement de la façon de
@@ -93,3 +93,28 @@ et qu'aucun réglage atteignable ne les corrige, on revient à l'ordre 0. (Posé
 - Ce que ferait un vrai fonds : une procédure allégée (« rappel, rien de nouveau ») n'existe que tant
   qu'elle ne fait pas rater un fait ; au premier raté, le directeur de la recherche rétablit la procédure
   complète, sans débat.
+
+## 4. Tout développement vaut pour toutes les entreprises — on corrige la cause, jamais l'exemple
+
+Posé par l'utilisateur le 2026-10-22, après la lecture des quatre premières architectures de classeur :
+**TOUS les développements doivent être réutilisables pour d'autres entreprises que celles avec lesquelles
+ils ont été testés.** NVDA et RVMD servent à VALIDER le fonctionnement sur deux entreprises très
+différentes ; elles ne sont pas la cible de la conception.
+
+- **Une difficulté rencontrée sur un exemple est le symptôme d'une cause.** Avant d'écrire un correctif,
+  on remonte à la cause profonde et on l'écrit : *qu'est-ce qui, dans le système, a permis l'erreur ?*
+  (une liberté laissée au modèle sur ce que le code sait déjà ; une information absente de ce qu'on lui
+  montre ; une règle qui ne regarde qu'un chemin ; une catégorie qui mêle deux notions). Un correctif
+  qui reconnaît l'exemple (un nom, un libellé, un seuil calé sur un cas) est refusé : il ne tiendrait
+  pas sur la société suivante.
+- **Test de la cause** : on se demande sur quelles AUTRES formes d'entreprise la même cause produirait
+  la même erreur (un conglomérat, une société découpée par pays, un laboratoire à large portefeuille, une
+  société à un seul métier) — si la réponse est « aucune », on n'a pas trouvé la cause.
+- **Valider sans multiplier les recherches** : les formes d'entreprise que NVDA et RVMD ne couvrent pas
+  s'éprouvent d'abord par des cas FICTIFS dans les contrôles (gratuits, aucune recherche web). Une autre
+  entreprise réelle n'entre dans la conception que si une question l'exige, ou si l'on constate qu'on ne
+  peut pas généraliser suffisamment sans elle — c'est alors dit et décidé, pas glissé.
+- Ce que ferait un vrai fonds : une méthode d'analyse maison s'écrit pour tout le portefeuille ; le
+  directeur de la recherche refuse une grille retouchée pour faire « passer » un titre, parce que la
+  retouche fausserait la comparaison avec les autres.
+
