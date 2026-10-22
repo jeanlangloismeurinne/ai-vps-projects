@@ -1,10 +1,10 @@
 {
-  "schema_version": "architecture-1.1.0",
+  "schema_version": "architecture-1.2.0",
   "ticker_id": "NVDA",
   "version": 1,
   "archetype": "rentable",
   "famille": "industrielle",
-  "version_referentiel": "1.1.0",
+  "version_referentiel": "1.2.0",
   "blocs": [
     {
       "id": "unites_calcul_ia",
@@ -15,14 +15,17 @@
       "rattachement": {
         "type": "publie",
         "axe": "srt:ProductOrServiceAxis",
-        "membre": "nvda:ComputeMember"
+        "membres": [
+          "nvda:ComputeMember"
+        ]
       },
       "variables": [
         "chiffre_affaires_du_bloc",
         "taille_du_marche",
         "croissance_du_marche"
       ],
-      "motif": "Motif de test (fixture NVDA) pour le bloc unites_calcul_ia : activite/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture NVDA) pour le bloc unites_calcul_ia : activite/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "liaison_reseau",
@@ -33,12 +36,15 @@
       "rattachement": {
         "type": "publie",
         "axe": "srt:ProductOrServiceAxis",
-        "membre": "nvda:NetworkingMember"
+        "membres": [
+          "nvda:NetworkingMember"
+        ]
       },
       "variables": [
         "chiffre_affaires_du_bloc"
       ],
-      "motif": "Motif de test (fixture NVDA) pour le bloc liaison_reseau : activite/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture NVDA) pour le bloc liaison_reseau : activite/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "segment_jeux",
@@ -49,12 +55,15 @@
       "rattachement": {
         "type": "publie",
         "axe": "srt:ProductOrServiceAxis",
-        "membre": "nvda:GamingMember"
+        "membres": [
+          "nvda:GamingMember"
+        ]
       },
       "variables": [
         "chiffre_affaires_du_bloc"
       ],
-      "motif": "Motif de test (fixture NVDA) pour le bloc segment_jeux : activite/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_jeux : activite/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "segment_visualisation_pro",
@@ -65,12 +74,15 @@
       "rattachement": {
         "type": "publie",
         "axe": "srt:ProductOrServiceAxis",
-        "membre": "nvda:ProfessionalVisualizationMember"
+        "membres": [
+          "nvda:ProfessionalVisualizationMember"
+        ]
       },
       "variables": [
         "chiffre_affaires_du_bloc"
       ],
-      "motif": "Motif de test (fixture NVDA) pour le bloc segment_visualisation_pro : activite/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_visualisation_pro : activite/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "segment_automobile",
@@ -81,12 +93,15 @@
       "rattachement": {
         "type": "publie",
         "axe": "srt:ProductOrServiceAxis",
-        "membre": "nvda:AutomotiveMember"
+        "membres": [
+          "nvda:AutomotiveMember"
+        ]
       },
       "variables": [
         "chiffre_affaires_du_bloc"
       ],
-      "motif": "Motif de test (fixture NVDA) pour le bloc segment_automobile : activite/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture NVDA) pour le bloc segment_automobile : activite/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "grands_hebergeurs_estimes",
@@ -104,7 +119,8 @@
       "motif": "Motif de test (fixture NVDA) pour le bloc grands_hebergeurs_estimes : activite/metier_actuel/estime, rattachement parent.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne"
     },
     {
       "id": "charges_non_allouees",
@@ -124,7 +140,8 @@
       "motif": "Motif de test (fixture NVDA) pour le bloc charges_non_allouees : commun/metier_actuel/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne"
     }
   ],
   "variables_propres": [],

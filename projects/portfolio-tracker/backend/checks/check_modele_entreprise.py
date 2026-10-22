@@ -85,7 +85,7 @@ def refus_objet(cls, payload: dict) -> str:
 # ── §1 Le référentiel réel ──────────────────────────────────────────────────────────────────────
 print("§1 référentiel réel")
 ref = load_referentiel()
-b.check(len(ref.variables) == 21, f"le catalogue porte 21 fiches (obtenu {len(ref.variables)})")
+b.check(len(ref.variables) == 22, f"le catalogue porte 22 fiches (obtenu {len(ref.variables)})")
 b.check(set(ref.patrons) == {"rentable", "pre_revenus", "financiere"},
         f"3 patrons, un par archétype (obtenu {sorted(ref.patrons)})")
 b.check(set(ref.famille_par_archetype) == {"rentable", "pre_revenus", "financiere"},
@@ -172,15 +172,15 @@ print("§3 contrat — architecture et objets du classeur")
 
 ARCH = {
     "schema_version": ARCHITECTURE_SCHEMA_VERSION, "ticker_id": "ticker_de_test", "version": 1,
-    "archetype": "rentable", "famille": "industrielle", "version_referentiel": "1.1.0",
+    "archetype": "rentable", "famille": "industrielle", "version_referentiel": "1.2.0",
     "blocs": [
         {"id": "bloc_principal", "libelle": "Bloc principal", "role": "activite",
-         "statut": "metier_actuel", "maille": "publie",
-         "rattachement": {"type": "publie", "axe": "axe:Test", "membre": "test:Membre"},
+         "statut": "metier_actuel", "origine": "interne", "maille": "publie",
+         "rattachement": {"type": "publie", "axe": "axe:Test", "membres": ["test:Membre"]},
          "variables": ["chiffre_affaires_du_bloc"],
          "motif": "Bloc principal publié de test, motif de longueur suffisante pour le contrat."},
         {"id": "bloc_commun", "libelle": "Bloc commun", "role": "commun",
-         "statut": "metier_actuel", "maille": "estime",
+         "statut": "metier_actuel", "origine": "interne", "maille": "estime",
          "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
          "variables": ["couts_communs"],
          "motif": "Bloc commun estimé de test, motif de longueur suffisante pour le contrat.",
@@ -216,10 +216,12 @@ cas_architecture = [
      "non déclaré"),
     ("cycle de rattachement parent",
      arch_test(blocs=[
-         {"id": "bloc_a", "libelle": "A", "role": "activite", "statut": "metier_actuel", "maille": "estime",
+         {"id": "bloc_a", "libelle": "A", "role": "activite", "statut": "metier_actuel",
+          "origine": "interne", "maille": "estime",
           "rattachement": {"type": "parent", "bloc": "bloc_b"}, "variables": ["chiffre_affaires_du_bloc"],
           "motif": "Bloc A de test, motif de longueur suffisante pour satisfaire le contrat.", "pieces": [1]},
-         {"id": "bloc_b", "libelle": "B", "role": "activite", "statut": "metier_actuel", "maille": "estime",
+         {"id": "bloc_b", "libelle": "B", "role": "activite", "statut": "metier_actuel",
+          "origine": "interne", "maille": "estime",
           "rattachement": {"type": "parent", "bloc": "bloc_a"}, "variables": ["chiffre_affaires_du_bloc"],
           "motif": "Bloc B de test, motif de longueur suffisante pour satisfaire le contrat.", "pieces": [1]},
      ], passage_a_l_agrege=[{"ligne": "chiffre_affaires", "formule": "bloc_a__chiffre_affaires_du_bloc"}],
@@ -263,12 +265,42 @@ cas_bloc = [
     ("maille publie avec un rattachement parent",
      {**ARCH["blocs"][0], "rattachement": {"type": "parent", "bloc": "bloc_commun"}}, "incohérente"),
     ("maille estime avec un rattachement publié",
-     {**ARCH["blocs"][1], "maille": "estime", "rattachement": {"type": "publie", "axe": "a", "membre": "m"}},
+     {**ARCH["blocs"][1], "maille": "estime",
+      "rattachement": {"type": "publie", "axe": "a", "membres": ["m"]}},
      "incohérente"),
 ]
 for label, bloc, motif in cas_bloc:
     m = refus_objet(Architecture, arch_test(blocs=[bloc, ARCH["blocs"][1]]))
     b.check(motif in m, f"Bloc — « {label} » : motif attendu « {motif} », obtenu « {m[:200]} »")
+
+# ── 1.2.0 (lot M3 bis, cause ⑤, §6) : `Bloc.origine`, `Bloc.jalon`, [S12] ───────────────────────
+print("§3ter contrat — 1.2.0 origine/jalon ([S12])")
+JALON_TEST = {"franchi": "preuve de concept de laboratoire", "franchi_le": "2026-03-01",
+             "prochain": "autorisation d'essai clinique", "attendu_vers": "2027-06-01"}
+bloc_programme = {**ARCH["blocs"][0], "statut": "en_developpement",
+                  "origine": "interne", "jalon": JALON_TEST, "pieces": [1],
+                  "motif": "Bloc programme de test, en développement, motif de longueur suffisante."}
+m = refus_objet(Architecture, arch_test(blocs=[
+    {k: v for k, v in bloc_programme.items() if k != "jalon"}, ARCH["blocs"][1]]))
+b.check("si et seulement si" in m.lower(),
+        f"Bloc 1.2.0 — `en_developpement` SANS jalon est refusé (obtenu « {m[:220]} »)")
+m = refus_objet(Architecture, arch_test(blocs=[
+    {**bloc_programme, "statut": "metier_actuel", "pieces": [1]}, ARCH["blocs"][1]]))
+b.check("si et seulement si" in m.lower(),
+        f"Bloc 1.2.0 — `metier_actuel` AVEC jalon est refusé (obtenu « {m[:220]} »)")
+b.check(refus_objet(Architecture, arch_test(blocs=[bloc_programme, ARCH["blocs"][1]])) == "PAS DE REFUS",
+        "Bloc 1.2.0 — `en_developpement` avec jalon, licence/interne : tient")
+m = refus_objet(Architecture, arch_test(blocs=[
+    {**bloc_programme, "origine": "acquisition"}, ARCH["blocs"][1]]))
+b.check("[S12]" in m, f"[S12] — acquisition `en_developpement` refusée (obtenu « {m[:220]} »)")
+b.check(refus_objet(Architecture, arch_test(blocs=[
+    {**ARCH["blocs"][0], "origine": "acquisition", "statut": "extension_annoncee", "pieces": [1],
+     "motif": "Acquisition annoncée de test, non conclue, motif de longueur suffisante."},
+    ARCH["blocs"][1]])) == "PAS DE REFUS",
+    "[S12] — acquisition `extension_annoncee` (non conclue) tient")
+b.check(refus_objet(Architecture, arch_test(blocs=[
+    {**bloc_programme, "origine": "licence"}, ARCH["blocs"][1]])) == "PAS DE REFUS",
+    "[S12] — licence `en_developpement` tient (origine ≠ acquisition, tout statut admis)")
 
 # ── 1.1.0 (lot M3, §2.2) : `Bloc.motif`/`Bloc.pieces` ───────────────────────────────────────────
 print("§3bis contrat — 1.1.0 motif/pieces")
@@ -407,6 +439,12 @@ m = refus_pont_referentiel(modifie(
     REF_BRUT, variables=REF_BRUT["variables"] + [variable_test(somme_vers_ligne="chiffre_affaires")]))
 b.check(m == "PAS DE REFUS",
         f"pont référentiel — [R6] somme_vers_ligne valide (ligne du business plan) accepté (obtenu « {m[:200]} »)")
+
+# [R7] (1.2.0, cause ④, §5) — toute fiche a une unité de la table `unites`.
+m = refus_referentiel(modifie(REF_BRUT, variables=REF_BRUT["variables"] + [variable_test(unite="unite_fantome")]))
+b.check("[R7]" in m and "unite_fantome" in m,
+        f"[R7] — une fiche d'unité absente de la table `unites` est refusée (obtenu « {m[:220]} »)")
+b.check(len(REF_BRUT["unites"]) == 8, f"la table `unites` porte 8 entrées (obtenu {len(REF_BRUT['unites'])})")
 
 REF_TEST = ReferentielModele.model_validate(REF_BRUT)
 

@@ -60,6 +60,8 @@ mutations=(
 "$SRC¦        if (m := re.match(r\"« ([^»]+) »\", c)) and m.group(1) in membres_en_usage¦        if True¦[V16]"
 # Grandeur de concentration ignorée : une part des créances redevient « du chiffre d'affaires ».
 "$SRC¦            grandeur = GRANDEURS_DE_CONCENTRATION.get(reference) if reference else None¦            grandeur = \"du chiffre d'affaires\"¦[V17]"
+"$SRC¦                    if r.get(\"statut\") == \"decoupage_change\":¦                    if False:¦[V13b] la ligne Σ du TTM"
+"$SRC¦                if c.get(\"concept\") == CONCEPT_DOUZE_MOIS:¦                if False:¦[V13b] la période des douze mois glissants"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

@@ -323,6 +323,21 @@ manquants_attendus = {"nvda:AutomotiveMember", "nvda:GamingMember", "nvda:OEMAnd
 b.check(r13 is not None and set(r13.membres_manquants) == manquants_attendus,
         f"[V13] les quatre membres absents du 10-Q sont NOMMÉS ({r13 and sorted(r13.membres_manquants)})")
 
+# ── [V13b] Le rendu de l'architecte (M3 bis, cause ②) DIT le changement de découpage, et ne compte
+# jamais une période CALCULÉE (douze mois glissants) parmi les découpages publiés ─────────────────
+print("[V13b] rendu des axes — Σ ≠ total expliqué ; le TTM n'est pas un découpage")
+texte_ids = vt.rendre_ventilation(
+    vt.structure_de_ventilation(v_nv, version_referentiel=REF.version, version_gabarit=GAB.version,
+                                depots=(nv10k, nv10q)),
+    raison_sociale="NVIDIA Corporation", avec_identifiants=True)
+ligne_ttm = next((l for l in texte_ids.splitlines() if l.strip().startswith("TTM2026-07-26 : Σ =")
+                  and "302 970.0" in l and "277 798.0" in l), "")
+b.check("le découpage a changé" in ligne_ttm,
+        f"[V13b] la ligne Σ du TTM `activites` dit pourquoi elle ne boucle pas ({ligne_ttm!r})")
+bloc_decoupages = texte_ids.split("Axe « activites » — découpages successifs", 1)[-1].split("Axe «", 1)[0]
+b.check("TTM2026-07-26" not in bloc_decoupages and "découpages successifs" in texte_ids,
+        "[V13b] la période des douze mois glissants (calculée) n'est pas listée comme un découpage")
+
 # ── [V14] Emboîtement RENDU (texte) — Compute/Networking indentés sous Data Center ────────────────
 print("[V14] rendu NVDA FY2026 — Compute et Networking indentés, pas au premier niveau")
 st_nv_rendu = vt.structure_de_ventilation(

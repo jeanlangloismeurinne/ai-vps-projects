@@ -1,0 +1,385 @@
+{
+  "schema_version": "architecture-1.2.0",
+  "ticker_id": "RVMD",
+  "version": 1,
+  "archetype": "rentable",
+  "famille": "industrielle",
+  "version_referentiel": "1.2.0",
+  "blocs": [
+    {
+      "id": "rasongue",
+      "libelle": "RASONQUE (daraxonrasib) — produit approuvé",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "chiffre_affaires"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive",
+        "ventes_au_pic",
+        "duree_d_exclusivite",
+        "annee_de_lancement"
+      ],
+      "motif": "Produit approuvé par la FDA le 2026-08-26 (pièce #944), premier et seul produit commercialisé. Bloc estimé car l'émetteur ne publie qu'un secteur unique. Rattaché à la ligne chiffre_affaires.",
+      "pieces": [
+        944
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "programmes_precliniques",
+      "libelle": "Programmes précliniques et de recherche",
+      "role": "activite",
+      "statut": "en_developpement",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "cout_restant_de_developpement",
+        "probabilite_de_succes",
+        "annee_de_lancement"
+      ],
+      "motif": "Programmes en développement (hors RASONQUE) mentionnés dans les notes flash et les réponses aux questions (se_2, qf_7). Leur coût est inclus dans la ligne recherche_developpement.",
+      "pieces": [
+        768,
+        1021
+      ],
+      "origine": "interne",
+      "jalon": {
+        "franchi": "jalon franchi de test (fixture M3 bis, conversion 1.2.0)",
+        "franchi_le": "2026-01-01",
+        "prochain": "jalon suivant de test (fixture M3 bis)",
+        "attendu_vers": "2027-01-01"
+      }
+    },
+    {
+      "id": "commun",
+      "libelle": "Frais communs non affectés",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "autres_charges_exploitation"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément (frais commerciaux, administratifs, R&D non spécifique). Rattaché à la ligne autres_charges_exploitation pour le bouclage.",
+      "pieces": [
+        768
+      ],
+      "origine": "interne"
+    }
+  ],
+  "variables_propres": [],
+  "passage_a_l_agrege": [
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "rasongue__chiffre_affaires_du_bloc"
+    },
+    {
+      "ligne": "recherche_developpement",
+      "formule": "programmes_precliniques__cout_restant_de_developpement"
+    }
+  ],
+  "cellules_attendues": [
+    {
+      "bloc": "rasongue",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "croissance_du_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "part_de_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "volume",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "prix_moyen",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "part_recurrente",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "marge_contributive",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "duree_d_exclusivite",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "mo_4"
+      }
+    },
+    {
+      "bloc": "rasongue",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "se_2"
+      }
+    },
+    {
+      "bloc": "programmes_precliniques",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "programmes_precliniques",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "programmes_precliniques",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "capital_par_point_de_croissance",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_3"
+      }
+    }
+  ],
+  "autres_axes": [],
+  "manques_du_dossier": []
+}

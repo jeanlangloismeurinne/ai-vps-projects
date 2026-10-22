@@ -1,10 +1,10 @@
 {
-  "schema_version": "architecture-1.1.0",
+  "schema_version": "architecture-1.2.0",
   "ticker_id": "RVMD",
   "version": 1,
   "archetype": "pre_revenus",
   "famille": "industrielle",
-  "version_referentiel": "1.1.0",
+  "version_referentiel": "1.2.0",
   "blocs": [
     {
       "id": "programme_oncologie_a",
@@ -26,7 +26,14 @@
       "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_a : programme/en_developpement/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne",
+      "jalon": {
+        "franchi": "franchissement de test (fixture, lot M3 bis)",
+        "franchi_le": "2026-01-01",
+        "prochain": "jalon suivant de test (fixture)",
+        "attendu_vers": "2027-01-01"
+      }
     },
     {
       "id": "programme_oncologie_b",
@@ -48,7 +55,14 @@
       "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_b : programme/en_developpement/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne",
+      "jalon": {
+        "franchi": "franchissement de test (fixture, lot M3 bis)",
+        "franchi_le": "2026-01-01",
+        "prochain": "jalon suivant de test (fixture)",
+        "attendu_vers": "2027-01-01"
+      }
     },
     {
       "id": "programme_oncologie_c",
@@ -70,7 +84,14 @@
       "motif": "Motif de test (fixture RVMD) pour le bloc programme_oncologie_c : programme/en_developpement/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne",
+      "jalon": {
+        "franchi": "franchissement de test (fixture, lot M3 bis)",
+        "franchi_le": "2026-01-01",
+        "prochain": "jalon suivant de test (fixture)",
+        "attendu_vers": "2027-01-01"
+      }
     },
     {
       "id": "frais_non_affectes",
@@ -88,7 +109,8 @@
       "motif": "Motif de test (fixture RVMD) pour le bloc frais_non_affectes : commun/metier_actuel/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne"
     }
   ],
   "variables_propres": [],

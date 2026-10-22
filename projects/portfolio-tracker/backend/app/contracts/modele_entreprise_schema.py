@@ -31,6 +31,7 @@ Cible : pydantic v2 (container). Module PUR.
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Literal, Optional, Union
 
 from pydantic import AfterValidator, Field, model_validator
@@ -43,23 +44,33 @@ __all__ = [
     "ARCHITECTURE_SCHEMA_VERSION",
     "annee_de_periode",
     # référentiel
-    "FicheVariable", "FamilleDeComptes", "BlocDePatron", "Patron", "ReferentielModele",
+    "FicheVariable", "FamilleDeComptes", "BlocDePatron", "Patron", "ReferentielModele", "UniteDimension",
     # origines d'une cellule
     "OrigineCalcul", "OrigineCellule",
     # architecture
     "VariablePropre", "RattachementPublie", "RattachementParent", "RattachementAgrege", "Rattachement",
-    "Bloc", "PassageAgrege", "AuteurQuestion", "AuteurDemande", "AuteurCellule", "CelluleAttendue",
-    "Architecture",
+    "Jalon", "BlocPropose", "Bloc", "PassageAgrege", "AuteurQuestion", "AuteurDemande", "AuteurCellule",
+    "CelluleAttendue", "AxeUsage", "ManqueDuDossier", "Architecture",
     # cellule écrite
     "AuteurQuestionEcrite", "AuteurDemandeEcrite", "AuteurCelluleEcrite", "Cellule",
     # fourchette, scénario, déplacement
     "Fourchette", "Deplacement", "Scenario", "SCENARIO_CENTRAL",
 ]
 
-# 1.1.0 — lot M3 (roadmap V3 `12-lot-M3-architecte.md` §2.2) : `Bloc.motif`/`Bloc.pieces`,
-# `FicheVariable.somme_vers_ligne`, `ReferentielModele.signature_de_l_architecture`. 0 ligne en base à
-# cette date (migration 061 non appliquée) : aucune reprise à écrire.
-ARCHITECTURE_SCHEMA_VERSION = "architecture-1.1.0"
+# 1.2.0 — lot M3 bis (roadmap V3 `13-lot-M3bis-structure.md`, principe fondateur n° 4) : traite les
+# CAUSES des erreurs des architectures à blanc du 2026-10-22, pas leurs symptômes.
+#   ① `RattachementPublie.membres` (liste, regroupement) remplace `membre` (un seul) ; `Bloc.maille`
+#     n'est plus un champ du modèle (`BlocPropose`, ce que l'agent produit) — le CODE la pose
+#     (`publie` si `RattachementPublie`, `estime` sinon, `app/modele_entreprise/faits_publies.py`) ;
+#     `ArchitecteSortie.autres_axes` (place pour le second découpage publié, hors de l'arbre).
+#   ② (rendu, `ventilation.py` — aucun champ de contrat)
+#   ③ `Bloc`/`Architecture.manques_du_dossier` (ce que le dossier ne permet pas de découper).
+#   ④ `ReferentielModele.unites` (table des dimensions physiques, `dimensions.py`, [S11]).
+#   ⑤ `Bloc.origine` (interne/acquisition/licence/partenariat), `Bloc.jalon` (requis SSI
+#     `statut == "en_developpement"`) — [S12] (ici, invariant d'un seul objet, #37).
+# 0 ligne en base à cette date (migration 061 appliquée, aucune architecture encore proposée) :
+# aucune reprise à écrire.
+ARCHITECTURE_SCHEMA_VERSION = "architecture-1.2.0"
 
 def _sans_double_tiret_bas(v: str) -> str:
     # Un id ne contient JAMAIS `__` (double tiret bas) : c'est le séparateur réservé des formules
@@ -99,6 +110,20 @@ def _sans_doublon(valeurs: list[str], ou: str) -> None:
 
 ORIGINES_CELLULE = ("piece", "reponse_reprise", "jugement", "calcul")
 ROLES_BLOC = ("activite", "programme", "metier", "commun")
+# 1.2.0 (cause ⑤, §6) — la MATURITÉ (`statut`) et l'ORIGINE d'un bloc sont deux champs disjoints :
+# une acquisition conclue est `metier_actuel`, jamais `en_developpement` ([S12] ci-dessous).
+ORIGINES_BLOC = ("interne", "acquisition", "licence", "partenariat")
+
+
+class UniteDimension(Strict):
+    """Une unité du catalogue (1.2.0, cause ④, §5) : sa dimension PHYSIQUE (exposants de montant,
+    de quantité, de temps) et son échelle par rapport à l'unité de base ($ pour un montant, une
+    unité pour une quantité, une année pour un temps). DÉTENTEUR UNIQUE : la table
+    `ReferentielModele.unites`, lue par `app/modele_entreprise/dimensions.py` — jamais recopiée."""
+    montant: int = 0
+    quantite: int = 0
+    temps: int = 0
+    echelle: Annotated[float, Field(gt=0)]
 
 
 class FicheVariable(Strict):
@@ -184,6 +209,10 @@ class ReferentielModele(Strict):
     methodes_de_fourchette: Annotated[list[Identifiant], Field(min_length=1)]
     variables: Annotated[list[FicheVariable], Field(min_length=1)]
     patrons: dict[str, Patron]
+    # 1.2.0 (cause ④, §5) — la table des UNITÉS, DÉTENTEUR UNIQUE de leur dimension physique et de
+    # leur échelle. REQUISE, sans défaut : un référentiel qui ne la porte pas laisserait
+    # `dimensions.py` deviner l'unité d'une fiche.
+    unites: Annotated[dict[str, UniteDimension], Field(min_length=1)]
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "ReferentielModele":
@@ -200,6 +229,11 @@ class ReferentielModele(Strict):
             for m in v.methode_de_fourchette:
                 if m not in self.methodes_de_fourchette:
                     raise ValueError(f"`{v.id}` déclare la méthode `{m}`, absente de `methodes_de_fourchette`")
+            # [R7] (cause ④, §5) — toute fiche a une unité de la table `unites`.
+            if v.unite not in self.unites:
+                raise ValueError(
+                    f"[R7] `{v.id}` déclare l'unité `{v.unite}`, absente de la table `unites` "
+                    f"({sorted(self.unites)})")
 
         for archetype, famille in self.famille_par_archetype.items():
             if famille not in self.familles_de_comptes:
@@ -262,11 +296,21 @@ class VariablePropre(FicheVariable):
 
 
 class RattachementPublie(Strict):
-    """Le bloc EST un fait XBRL dimensionné — axe et membre en clair (M0 ; le pont contre la
-    ventilation au socle arrive avec M2/M3)."""
+    """Le bloc EST un ou plusieurs faits XBRL dimensionnés — axe et membre(s) en clair (le pont
+    contre la ventilation au socle vérifie l'existence de chaque adresse, [S1]).
+
+    1.2.0 (cause ①, §2) — `membres` (liste) remplace `membre` (un seul) : PLUSIEURS membres publiés
+    du MÊME axe, de MÊMES parents, peuvent former UN bloc de REGROUPEMENT (ex. de forme : les
+    membres sous le seuil de matérialité réunis en un seul bloc publié) — le regroupement reste un
+    bloc PUBLIÉ, pas un estimé ([S1] vérifie que `len(membres) > 1` implique le même parent)."""
     type: Literal["publie"]
     axe: Annotated[str, Field(min_length=1)]
-    membre: Annotated[str, Field(min_length=1)]
+    membres: Annotated[list[Annotated[str, Field(min_length=1)]], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def _sans_doublon_membres(self) -> "RattachementPublie":
+        _sans_doublon(self.membres, f"le rattachement publié de l'axe `{self.axe}`")
+        return self
 
 
 class RattachementParent(Strict):
@@ -288,20 +332,66 @@ Rattachement = Annotated[
     Union[RattachementPublie, RattachementParent, RattachementAgrege], Field(discriminator="type")]
 
 
-class Bloc(Strict):
+class Jalon(Strict):
+    """Requis SSI `Bloc.statut == \"en_developpement\"`, interdit sinon (1.2.0, cause ⑤, §6).
+    `prochain` est le jalon que mesure la fiche `probabilite_de_succes` — DÉTENTEUR UNIQUE de son
+    énoncé, jamais recopié ailleurs."""
+    franchi: Annotated[str, Field(min_length=10)]
+    franchi_le: date
+    prochain: Annotated[str, Field(min_length=10)]
+    attendu_vers: Optional[date] = None
+
+
+class BlocPropose(Strict):
+    """Ce que le MODÈLE produit pour un bloc (1.2.0, cause ①, §2) — SANS `maille` : la maille
+    (`publie` si `rattachement` est `RattachementPublie`, `estime` sinon) n'est plus déclarée, le
+    CODE la pose en même temps que l'en-tête (`app/modele_entreprise/faits_publies.py`,
+    `poser_maille`) — ni `Bloc.maille` demandée au modèle, ni son emboîtement entre blocs publiés
+    (DÉRIVÉ de la hiérarchie de la ventilation, jamais déclaré pour un `RattachementPublie`)."""
     id: Identifiant
     libelle: Annotated[str, Field(min_length=1)]
     role: Literal["activite", "programme", "metier", "commun"]
     statut: Literal["metier_actuel", "extension_annoncee", "en_developpement"]
-    maille: Literal["publie", "estime"]
+    # 1.2.0 (cause ⑤, §6) — l'ORIGINE, distincte de la MATURITÉ (`statut`) : une acquisition est un
+    # fait acquis (conclue) ou en négociation (annoncée), jamais « en développement ».
+    origine: Literal["interne", "acquisition", "licence", "partenariat"]
+    jalon: Optional[Jalon] = None
     rattachement: Rattachement
     variables: Annotated[list[Identifiant], Field(min_length=1)]
-    # 1.1.0 (lot M3, §2.2) — pourquoi ce bloc existe, à cette maille, sous ce statut : ce que le
-    # comité lit en signant l'architecture (§6).
+    # pourquoi ce bloc existe, à cette maille, sous ce statut : ce que le comité lit en signant
+    # l'architecture (§6).
     motif: Annotated[str, Field(min_length=20)]
     # Les pièces du dossier qui le fondent (ids de `knowledge_entries`, §3.3) — [S6] vérifie que
     # chacune est dans `Matiere.pieces_citables`.
     pieces: list[int] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _jalon_ssi_en_developpement(self) -> "BlocPropose":
+        a_jalon = self.jalon is not None
+        if a_jalon != (self.statut == "en_developpement"):
+            raise ValueError(
+                f"`{self.id}` : `jalon` est REQUIS si et seulement si `statut == "
+                f"\"en_developpement\"` (reçu statut=`{self.statut}`, jalon {'présent' if a_jalon else 'absent'})")
+        return self
+
+    @model_validator(mode="after")
+    def _s12_acquisition_jamais_en_developpement(self) -> "BlocPropose":
+        # [S12] (1.2.0, cause ⑤, §6) — invariant d'UN SEUL objet (#37) : une acquisition est soit
+        # conclue et consolidée (`metier_actuel`), soit annoncée et non conclue
+        # (`extension_annoncee`) — jamais « en développement », qui désignerait un programme de
+        # recherche interne. `licence`/`partenariat` admettent n'importe quel statut.
+        if self.origine == "acquisition" and self.statut not in ("metier_actuel", "extension_annoncee"):
+            raise ValueError(
+                f"[S12] `{self.id}` : origine `acquisition` exige `statut` ∈ "
+                f"{{metier_actuel, extension_annoncee}}, reçu `{self.statut}` — une acquisition "
+                "conclue ou annoncée n'est jamais « en développement »")
+        return self
+
+
+class Bloc(BlocPropose):
+    """L'architecture POSÉE (après l'en-tête, §4.1 point 4) : `maille` est AJOUTÉE par le code
+    (`faits_publies.poser_maille`), jamais déclarée par le modèle (`BlocPropose` ne la porte pas)."""
+    maille: Literal["publie", "estime"]
 
     @model_validator(mode="after")
     def _maille_correspond_au_rattachement(self) -> "Bloc":
@@ -358,9 +448,26 @@ class CelluleAttendue(Strict):
     auteur: AuteurCellule
 
 
+class AxeUsage(Strict):
+    """1.2.0 (cause ①, §2) — pour CHAQUE axe de la ventilation qui ne porte AUCUN bloc publié, ce
+    que l'architecte en fait (raccord des marges, contrôle de concentration, information pour un
+    bloc…) : la case qui manquait pour le second découpage publié d'un émetteur (#69 : le rendu
+    d'un inventaire est un producteur — un axe SANS bloc et SANS usage est un oubli, [S10])."""
+    axe: Annotated[str, Field(min_length=1)]
+    usage: Annotated[str, Field(min_length=20)]
+
+
+class ManqueDuDossier(Strict):
+    """1.2.0 (cause ③, §4.4) — ce que le dossier ne permet PAS de découper (programmes non nommés,
+    dépense non affectée…), écrit plutôt que regroupé en silence : un signal pour le comité."""
+    sujet: Annotated[str, Field(min_length=20)]
+    blocs: list[Identifiant] = Field(default_factory=list)
+    consequence: Annotated[str, Field(min_length=20)]
+
+
 class Architecture(Strict):
-    """Ce que l'architecte propose (M3) ; M1 n'en fixe que la FORME."""
-    schema_version: Literal["architecture-1.1.0"] = ARCHITECTURE_SCHEMA_VERSION
+    """Ce que l'architecte propose (M3/M3 bis) ; M1 n'en fixe que la FORME."""
+    schema_version: Literal["architecture-1.2.0"] = ARCHITECTURE_SCHEMA_VERSION
     ticker_id: Annotated[str, Field(min_length=1)]
     version: Annotated[int, Field(ge=1)]
     archetype: Annotated[str, Field(min_length=1)]
@@ -370,6 +477,10 @@ class Architecture(Strict):
     variables_propres: list[VariablePropre] = Field(default_factory=list)
     passage_a_l_agrege: Annotated[list[PassageAgrege], Field(min_length=1)]
     cellules_attendues: Annotated[list[CelluleAttendue], Field(min_length=1)]
+    # 1.2.0 (cause ①, §2) — place pour le second découpage publié, hors de l'arbre ([S10]).
+    autres_axes: list[AxeUsage] = Field(default_factory=list)
+    # 1.2.0 (cause ③, §4.4) — ce que le dossier ne permet pas de découper.
+    manques_du_dossier: list[ManqueDuDossier] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "Architecture":
@@ -400,6 +511,9 @@ class Architecture(Strict):
 
         ids_vp = [v.id for v in self.variables_propres]
         _sans_doublon(ids_vp, "l'architecture (variables propres)")
+
+        axes_autres = [a.axe for a in self.autres_axes]
+        _sans_doublon(axes_autres, "l'architecture (autres_axes)")
 
         lignes_passage = [p.ligne for p in self.passage_a_l_agrege]
         _sans_doublon(lignes_passage, "l'architecture (lignes de passage à l'agrégé)")

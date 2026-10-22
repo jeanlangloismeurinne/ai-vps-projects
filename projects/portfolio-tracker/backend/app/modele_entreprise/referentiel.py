@@ -184,6 +184,16 @@ def valider_pont_architecture(arch: Architecture, ref: ReferentielModele) -> Non
             f"[P1] l'architecture cite le référentiel `{arch.version_referentiel}`, le référentiel "
             f"chargé est en `{ref.version}`")
 
+    # [R7] (lot M3 bis, cause ④, §5) — toute VARIABLE PROPRE a une unité de la table `unites` du
+    # référentiel (le catalogue, lui, est déjà vérifié à son propre chargement, #37 : un contrat
+    # valide un objet, jamais la cohérence entre deux — l'architecture et le référentiel SONT deux
+    # objets, donc ici, au pont).
+    for vp in arch.variables_propres:
+        if vp.unite not in ref.unites:
+            raise ArchitectureRefusee(
+                f"[R7] la variable propre `{vp.id}` déclare l'unité `{vp.unite}`, absente de la "
+                f"table `unites` du référentiel ({sorted(ref.unites)})")
+
     par_bloc = {b.id: b for b in arch.blocs}
     for bloc in arch.blocs:
         for vid in bloc.variables:

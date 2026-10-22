@@ -44,6 +44,9 @@ from app.knowledge.ventilation_xbrl import FaitDimensionne
 REFERENTIEL_YAML = Path(__file__).resolve().parent / "ventilation_publiee.yaml"
 
 METRIC = "ventilation_publiee"
+# Le `concept` d'une cellule CALCULÉE par le code (douze mois glissants), jamais lue au dépôt : un
+# chiffre dérivé n'est pas un découpage publié par l'émetteur.
+CONCEPT_DOUZE_MOIS = "(douze mois glissants)"
 
 
 class ReferentielVentilationInvalide(Exception):
@@ -390,7 +393,7 @@ def relever(
             accn_plus_recent = max((p["accn"] for p in pts if p.get("accn")), default="")
             cle = (axe_id, ligne, membre, periode_ttm["id"])
             cellules[cle] = CelluleVentilation(
-                axe_id, ligne, membre, periode_ttm["id"], valeur, "(douze mois glissants)",
+                axe_id, ligne, membre, periode_ttm["id"], valeur, CONCEPT_DOUZE_MOIS,
                 accn_plus_recent, etiquette.get(membre, membre), parent_de.get(membre))
 
     # Conflits de hiérarchie : seulement pour les membres RÉELLEMENT en usage (une cellule, ou un
@@ -551,6 +554,19 @@ def _membre_lisible(membre: Optional[str]) -> str:
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", nom) or (membre or "")
 
 
+_RE_DATE_RENDU = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+def _cle_periode_rendu(periode: str) -> tuple:
+    """Clef de TRI d'un id de période pour le rendu (cause ②, §3) : la date ISO qu'une période
+    contient, sinon son texte brut. Même PRINCIPE que `structure._cle_tri_periode` (#46 vaudrait
+    pour un appel commun, mais `app/knowledge/` est une couche SOUS `app/modele_entreprise/` — lui
+    faire importer ce module inverserait la dépendance ; les deux copies sont à garder synchrones
+    si l'une change)."""
+    m = _RE_DATE_RENDU.search(periode)
+    return (m.group(1) if m else "", periode)
+
+
 def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
                        avec_identifiants: bool = False) -> str:
     """Le texte que lit l'analyste : un tableau par axe, l'emboîtement indenté, la concentration des
@@ -577,6 +593,56 @@ def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
     raccords = {(r["axe"], r["ligne"], r["periode"]): r for r in (structure.get("raccords") or [])
                 if r["niveau"] == "total"}
     axes = sorted({c["axe"] for c in cellules})
+
+    if avec_identifiants and axes:
+        # Cause ② (lot M3 bis, §3) : le rendu DIT ce qu'est un axe — deux axes se croisent, ils ne
+        # s'emboîtent pas entre eux ; chacun répartit le MÊME chiffre d'affaires total. Sans cette
+        # phrase, l'emboîtement entre deux axes différents (segments × marchés) s'INFÈRE de la
+        # prose, ce qui est exactement l'erreur mesurée le 2026-10-22 (#69 : le rendu d'un
+        # inventaire est un producteur).
+        out.append("")
+        out.append(
+            "Chaque axe répartit le MÊME chiffre d'affaires total de l'émetteur selon un critère "
+            "différent. Deux axes se CROISENT : un membre d'un axe n'est JAMAIS contenu dans un "
+            "membre d'un autre axe. L'emboîtement n'existe qu'À L'INTÉRIEUR d'un axe (marqué ↳ "
+            "ci-dessous).")
+        for axe in axes:
+            sommes_axe = {k: r for k, r in raccords.items() if k[0] == axe and k[1] == "chiffre_affaires"}
+            if sommes_axe:
+                out.append(f"  Axe « {axe} » — Σ des membres de premier niveau vs. chiffre d'affaires des comptes :")
+                for (_, _, periode), r in sorted(sommes_axe.items(), key=lambda kv: _cle_periode_rendu(kv[0][2])):
+                    somme_fmt = (f"{r['somme'] / 1e6:,.1f} M$".replace(",", " ")
+                                if r.get("somme") is not None else "?")
+                    total_fmt = (f"{r['total'] / 1e6:,.1f} M$".replace(",", " ")
+                                if r.get("total") is not None else "inconnu")
+                    motif = ""
+                    if r.get("statut") == "decoupage_change":
+                        absents = ", ".join(libelle_par_membre.get(m, m) for m in r.get("membres_manquants") or [])
+                        motif = (f" — l'écart n'est pas un montant non affecté : le découpage a changé, "
+                                 f"absents de cette période : {absents}")
+                    out.append(f"    {periode} : Σ = {somme_fmt} ; chiffre d'affaires des comptes = {total_fmt}{motif}")
+            # Les découpages successifs de l'axe : ensembles DISTINCTS de membres de premier niveau,
+            # par période — une information pour CHOISIR (quel découpage retenir), pas un gabarit à
+            # reprendre tel quel.
+            presents_par_p: dict[str, dict[str, Optional[str]]] = {}
+            for c in cellules:
+                if c["axe"] != axe or c.get("ligne") != "chiffre_affaires":
+                    continue
+                if c.get("concept") == CONCEPT_DOUZE_MOIS:
+                    continue   # calculé par le code : pas un découpage que l'émetteur a publié
+                presents_par_p.setdefault(c["periode"], {})[c["membre"]] = c.get("parent")
+            decoupages: dict[frozenset, list[str]] = {}
+            for periode, parents in presents_par_p.items():
+                premier_niveau = frozenset(m for m, p in parents.items() if p not in parents)
+                decoupages.setdefault(premier_niveau, []).append(periode)
+            if len(decoupages) > 1:
+                out.append(f"  Axe « {axe} » — découpages successifs (plusieurs ensembles de membres de premier niveau observés) :")
+                for membres_set, periodes in sorted(decoupages.items(), key=lambda kv: sorted(kv[1])):
+                    depot_recent = max(
+                        (c["accn"] for c in cellules if c["axe"] == axe and c["membre"] in membres_set), default="?")
+                    out.append(f"    {sorted(libelle_par_membre.get(m, m) for m in membres_set)} — "
+                               f"périodes {sorted(periodes, key=_cle_periode_rendu)} ; dépôt le plus récent {depot_recent}")
+
     for axe in axes:
         out.append("")
         out.append(f"— Axe « {axe} » —")

@@ -18,8 +18,10 @@ from app.agents.providers import ResolvedAgent, get_agent_provider
 from app.agents.v2.runner import AgentRunResult, run_json_agent
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.modele_entreprise_schema import (
-    ARCHITECTURE_SCHEMA_VERSION, Architecture, Bloc, CelluleAttendue, PassageAgrege, VariablePropre,
+    ARCHITECTURE_SCHEMA_VERSION, Architecture, AxeUsage, BlocPropose, CelluleAttendue, ManqueDuDossier,
+    PassageAgrege, VariablePropre,
 )
+from app.modele_entreprise.faits_publies import poser_maille
 from app.modele_entreprise.matiere import Matiere, MatiereRefusee, charger_matiere, rendre_matiere
 from app.modele_entreprise.porte import Porte, porte_de_l_architecte
 from app.modele_entreprise.referentiel import (
@@ -63,11 +65,17 @@ class ArchitectureRefusee(RuntimeError):
 class ArchitecteSortie(Strict):
     """Ce que le MODÈLE produit — rien que les blocs/variables/formules/cellules. L'en-tête
     (ticker_id, version, archetype, famille, version_referentiel, schema_version) est posé par le
-    code (§4.1 point 4) : `Strict` refuse un `ticker_id` venu du modèle."""
-    blocs: list[Bloc] = Field(min_length=1)
+    code (§4.1 point 4) : `Strict` refuse un `ticker_id` venu du modèle. `blocs: list[BlocPropose]`
+    (lot M3 bis, cause ①) — SANS `maille` : le code la pose (`faits_publies.poser_maille`), en même
+    temps que l'en-tête."""
+    blocs: list[BlocPropose] = Field(min_length=1)
     variables_propres: list[VariablePropre] = Field(default_factory=list)
     passage_a_l_agrege: list[PassageAgrege] = Field(min_length=1)
     cellules_attendues: list[CelluleAttendue] = Field(min_length=1)
+    # 1.2.0 (cause ①, §2) — place pour le second découpage publié, hors de l'arbre ([S10]).
+    autres_axes: list[AxeUsage] = Field(default_factory=list)
+    # 1.2.0 (cause ③, §4.4) — ce que le dossier ne permet pas de découper.
+    manques_du_dossier: list[ManqueDuDossier] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -85,21 +93,21 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
     "blocs": [
         {
             "id": "produit_a", "libelle": "Produit A", "role": "activite",
-            "statut": "metier_actuel", "maille": "publie",
-            "rattachement": {"type": "publie", "axe": "activites", "membre": "fictif:ProduitAMember"},
+            "statut": "metier_actuel", "origine": "interne",
+            "rattachement": {"type": "publie", "axe": "activites", "membres": ["fictif:ProduitAMember"]},
             "variables": ["chiffre_affaires_du_bloc"],
             "motif": "Segment publié du 10-K, premier niveau de l'axe `activites`.",
         },
         {
             "id": "produit_b", "libelle": "Produit B", "role": "activite",
-            "statut": "metier_actuel", "maille": "publie",
-            "rattachement": {"type": "publie", "axe": "activites", "membre": "fictif:ProduitBMember"},
+            "statut": "metier_actuel", "origine": "interne",
+            "rattachement": {"type": "publie", "axe": "activites", "membres": ["fictif:ProduitBMember"]},
             "variables": ["chiffre_affaires_du_bloc"],
             "motif": "Segment publié du 10-K, premier niveau de l'axe `activites`.",
         },
         {
             "id": "produit_a_sous_segment", "libelle": "Produit A — composant estimé",
-            "role": "activite", "statut": "metier_actuel", "maille": "estime",
+            "role": "activite", "statut": "metier_actuel", "origine": "interne",
             "rattachement": {"type": "parent", "bloc": "produit_a"},
             "variables": ["chiffre_affaires_du_bloc"],
             "motif": "Découpage plus fin que la publication, hypothèse maison documentée en pièce.",
@@ -107,15 +115,25 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
         },
         {
             "id": "extension_capsules", "libelle": "Extension annoncée — capsules",
-            "role": "activite", "statut": "extension_annoncee", "maille": "estime",
+            "role": "activite", "statut": "extension_annoncee", "origine": "interne",
             "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
             "variables": ["taille_du_marche"],
             "motif": "Activité seulement annoncée par la direction — n'entre dans aucune formule.",
             "pieces": [102],
         },
         {
+            "id": "programme_x", "libelle": "Programme X en développement", "role": "programme",
+            "statut": "en_developpement", "origine": "licence",
+            "jalon": {"franchi": "preuve de concept de laboratoire", "franchi_le": "2026-03-01",
+                      "prochain": "autorisation d'essai clinique", "attendu_vers": "2027-06-01"},
+            "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
+            "variables": ["probabilite_de_succes", "cout_restant_de_developpement"],
+            "motif": "Programme en développement sous licence, décrit par `me_7` — jalon suivant daté.",
+            "pieces": [103],
+        },
+        {
             "id": "commun", "libelle": "Frais communs non affectés", "role": "commun",
-            "statut": "metier_actuel", "maille": "estime",
+            "statut": "metier_actuel", "origine": "interne",
             "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
             "variables": ["couts_communs"],
             "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément.",
@@ -126,12 +144,30 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
     "passage_a_l_agrege": [
         {"ligne": "chiffre_affaires",
          "formule": "produit_a__chiffre_affaires_du_bloc + produit_b__chiffre_affaires_du_bloc"},
+        {"ligne": "recherche_developpement", "formule": "commun__couts_communs"},
     ],
     "cellules_attendues": [
         {"bloc": "produit_a", "variable": "chiffre_affaires_du_bloc", "periodes": ["FY2026", "FY2027"],
          "auteur": {"type": "demande_ciblee"}},
         {"bloc": "produit_b", "variable": "chiffre_affaires_du_bloc", "periodes": ["FY2026", "FY2027"],
          "auteur": {"type": "demande_ciblee"}},
+        {"bloc": "programme_x", "variable": "probabilite_de_succes", "periodes": ["sans_periode"],
+         "auteur": {"type": "question", "question_id": "me_7"}},
+        {"bloc": "programme_x", "variable": "cout_restant_de_developpement", "periodes": ["sans_periode"],
+         "auteur": {"type": "question", "question_id": "me_7"}},
+        {"bloc": "commun", "variable": "couts_communs", "periodes": ["FY2026", "FY2027"],
+         "auteur": {"type": "demande_ciblee"}},
+    ],
+    # 1.2.0 — pour CHAQUE axe de la ventilation sans bloc publié, ce que l'architecte en fait.
+    "autres_axes": [
+        {"axe": "geographie", "usage": "Information de concentration géographique, hors de l'arbre "
+                                       "(raccord des marges par zone)."},
+    ],
+    "manques_du_dossier": [
+        {"sujet": "Dépense de R&D affectée par programme, non publiée séparément par l'émetteur.",
+         "blocs": ["programme_x"],
+         "consequence": "`depense_de_developpement_du_bloc` du programme X reste une demande ciblée, "
+                        "non une réponse de `me_7`."},
     ],
 }
 
@@ -140,39 +176,63 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "Tu es l'ARCHITECTE DU CLASSEUR d'un fonds d'investissement. On te confie le dossier complet "
     "d'UNE entreprise (son identité, l'horloge, son classement, les périodes du classeur, le "
     "catalogue de fiches maison, le patron de départ de son archétype, ses comptes reconstitués, sa "
-    "ventilation publiée, les réponses de ses questions sources, ses notes flash récentes). Ta "
-    "tâche : dessiner l'architecture de SON classeur — les blocs d'activité, les variables que "
-    "chaque bloc retient, la règle de passage du détail à l'agrégé, et les cellules à remplir.\n\n"
+    "ventilation publiée, les réponses de ses questions sources — dont « que prépare l'entreprise "
+    "pour ses années futures » — ses notes flash récentes). Ta tâche : dessiner l'architecture de "
+    "SON classeur — les blocs d'activité, les variables que chaque bloc retient, la règle de "
+    "passage du détail à l'agrégé, et les cellules à remplir. Tu ne déclares JAMAIS la maille d'un "
+    "bloc ni son emboîtement avec un autre bloc PUBLIÉ : le système les établit lui-même depuis la "
+    "ventilation que tu cites.\n\n"
     "PRINCIPES :\n"
     "  · tu dessines CETTE entreprise, à partir du dossier fourni — le patron de départ est une "
     "SUGGESTION, pas une cage : compose ce qui convient réellement ;\n"
     "  · une variable propre (hors catalogue) n'est déclarée que si AUCUNE fiche du catalogue ne "
     "convient, avec sa fiche complète (comme une fiche du catalogue) et son motif d'ajout ;\n"
-    "  · un bloc PUBLIÉ cite une adresse RECOPIÉE TELLE QUELLE de la ventilation (`axe`, `membre` — "
-    "jamais inventée) ; au premier niveau, un seul axe ; jamais un bloc et son propre sous-membre "
-    "côte à côte au même niveau (double compte) ; ce qu'aucun bloc publié ne couvre va dans un bloc "
+    "  · un bloc PUBLIÉ cite une adresse RECOPIÉE TELLE QUELLE de la ventilation (`axe`, `membres` — "
+    "jamais inventée) ; `membres` porte PLUSIEURS qnames SEULEMENT pour un REGROUPEMENT (membres du "
+    "même axe, du même parent — ex. les membres sous le seuil de matérialité réunis en un bloc) ; "
+    "AU PREMIER NIVEAU, un seul axe ; le système dérive lui-même l'emboîtement entre deux blocs "
+    "publiés (jamais à toi de le déclarer) ; ce qu'aucun bloc publié ne couvre va dans un bloc "
     "ESTIMÉ « reste », rattaché (agrege) à la ligne des comptes que vise le chiffre d'affaires des "
     "blocs ;\n"
-    "  · un bloc plus fin que la publication est ESTIMÉ, rattaché (parent) à son bloc parent, avec "
-    "motif et au moins une pièce du dossier ;\n"
-    "  · une activité seulement ANNONCÉE (pas encore vendue) est `extension_annoncee` : elle n'entre "
-    "dans AUCUNE formule de passage (elle ira dans les scénarios, plus tard) ; un programme EN "
-    "DÉVELOPPEMENT est `en_developpement` et PEUT entrer dans une formule (pondéré) ;\n"
+    "  · UN SEUL axe peut porter des blocs publiés de premier niveau — pour CHAQUE AUTRE axe de la "
+    "ventilation (le second découpage publié, marchés, pays, clients…), écris dans `autres_axes` ce "
+    "que tu en fais (`usage`, au moins 20 caractères : raccord des marges, contrôle de "
+    "concentration, information pour un bloc…) — NE LE FORCE PAS dans l'arbre en le déclarant "
+    "`estime` : un membre réellement publié reste `publie`, ou va dans `autres_axes`, jamais les "
+    "deux à la fois ;\n"
+    "  · un bloc plus fin que la publication (sous-détail que tu composes toi-même) est ESTIMÉ, "
+    "rattaché (parent) à son bloc parent, avec motif et au moins une pièce du dossier ;\n"
+    "  · `origine` (interne, acquisition, licence, partenariat) est DISTINCTE de `statut` (maturité) "
+    ": une ACQUISITION est `metier_actuel` (conclue) ou `extension_annoncee` (annoncée, non "
+    "conclue), JAMAIS `en_developpement` (qui désigne un programme de recherche) ;\n"
+    "  · une activité seulement ANNONCÉE (pas encore vendue, ni acquise) est `extension_annoncee` : "
+    "elle n'entre dans AUCUNE formule de passage (elle ira dans les scénarios, plus tard) ; un "
+    "programme EN DÉVELOPPEMENT est `en_developpement`, PORTE un `jalon` (dernier franchi et sa "
+    "date, prochain et sa date attendue) et PEUT entrer dans une formule (pondéré) ;\n"
     "  · si la publication a CHANGÉ de découpage (un redécoupage récent), choisis-en UN, dis LEQUEL "
     "et POURQUOI dans le motif des blocs concernés ;\n"
+    "  · quand le dossier ne permet PAS de découper (programmes non nommés individuellement, "
+    "dépense de R&D non affectée par programme…), écris-le dans `manques_du_dossier` (sujet, blocs "
+    "concernés, conséquence) PLUTÔT que de regrouper en silence ;\n"
     "  · chaque CELLULE ATTENDUE : si une question source de la variable instruit déjà cette cellule, "
     "son auteur est cette question (`{\"type\": \"question\", \"question_id\": \"...\"}`) ; sinon "
     "`{\"type\": \"demande_ciblee\"}` ; les périodes sont prises dans la liste fournie (jamais "
     "inventées) ; les variables lues par une formule de passage doivent couvrir TOUTES les périodes "
     "PROJETÉES ;\n"
+    "  · une formule de passage est HOMOGÈNE : chaque ligne du business plan est un montant en M$ ; "
+    "on n'ajoute jamais des M$ à un pourcentage, ni un STOCK (montant sans période, à un instant) à "
+    "un flux de l'exercice ; un produit change d'unité (volume × prix moyen donne des $, à ramener "
+    "en M$ par `/ 1000000` ; M$ × % se ramène par `/ 100`) ; un coefficient s'écrit en décimal "
+    "(`* 0.9`), jamais sous forme de rapport d'échelles (`* 90 / 100`) ;\n"
     "  · tout bloc ESTIMÉ, ou de statut autre que `metier_actuel`, cite AU MOINS une pièce du "
     "dossier qui le fonde (`pieces`, des ids cités dans le dossier) ;\n"
     "  · les identifiants (`id` d'un bloc, d'une variable propre) : minuscules, chiffres, `_`, "
     "jamais `__` (réservé au séparateur `bloc__variable` d'une formule de passage).\n\n"
-    "Sortie : UNIQUEMENT l'objet JSON ci-après (aucun ticker, aucun id de version, aucun archétype — "
-    "le système les pose lui-même), commençant par `{` et finissant par `}`, sans aucun texte "
-    "autour. Exemple de forme — une société FICTIVE, à deux activités publiées, un découpage estimé, "
-    "une extension annoncée, un bloc commun :\n"
+    "Sortie : UNIQUEMENT l'objet JSON ci-après (aucun ticker, aucun id de version, aucun archétype, "
+    "aucune `maille` — le système les pose lui-même), commençant par `{` et finissant par `}`, sans "
+    "aucun texte autour. Exemple de forme — une société FICTIVE, à deux activités publiées, un "
+    "découpage estimé, une extension annoncée, un programme en développement sous licence, un axe "
+    "secondaire déclaré en `autres_axes`, un manque du dossier, un bloc commun :\n"
     f"{json.dumps(_EXEMPLE_ARCHITECTURE, ensure_ascii=False, indent=2)}"
 )
 
@@ -197,11 +257,16 @@ async def _resolve_architecte_agent() -> ResolvedAgent:
 
 def _poser_entete(sortie: ArchitecteSortie, *, ticker_id: str, version: int, archetype: str,
                   famille: str, version_referentiel: str) -> Architecture:
+    # 1.2.0 (cause ①, §2) — la MAILLE est posée par le code, jamais déclarée par le modèle
+    # (`sortie.blocs: list[BlocPropose]`, sans `maille`) : `faits_publies.poser_maille`, détenteur
+    # unique de cette dérivation, en même temps que le reste de l'en-tête.
+    blocs = poser_maille(sortie.blocs)
     return Architecture(
         schema_version=ARCHITECTURE_SCHEMA_VERSION, ticker_id=ticker_id, version=version,
         archetype=archetype, famille=famille, version_referentiel=version_referentiel,
-        blocs=sortie.blocs, variables_propres=sortie.variables_propres,
-        passage_a_l_agrege=sortie.passage_a_l_agrege, cellules_attendues=sortie.cellules_attendues)
+        blocs=blocs, variables_propres=sortie.variables_propres,
+        passage_a_l_agrege=sortie.passage_a_l_agrege, cellules_attendues=sortie.cellules_attendues,
+        autres_axes=sortie.autres_axes, manques_du_dossier=sortie.manques_du_dossier)
 
 
 def juger_architecture(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> tuple[bool, str, tuple[str, ...]]:
