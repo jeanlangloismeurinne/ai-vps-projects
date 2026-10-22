@@ -1,9 +1,9 @@
 ---
 project: exploration-science
-updated: 2026-10-21
+updated: 2026-10-22
 role: >
   Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage,
-  §2 schémas, §3 scène de référence et §4 connexions vivantes et fiches livrés ; prochaine : §5 transitions et retour. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  §2 schémas, §3 scène de référence, §4 connexions vivantes et fiches, §5 transitions et retour livrés ; prochaine : §6 vue détaillée de l'antenne. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -11,7 +11,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — §1 à §4 livrées (§4 connexions vivantes et fiches, le 2026-10-21) ; **prochaine : §5, transitions et retour**. Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1 à §5 livrées (§5 transitions et retour, le 2026-10-22) ; **prochaine : §6, vue détaillée de l'antenne**. Aperçu privé pour l'utilisateur : https://claude.ai/artifact/MVYfNuQgLmkhchunWpivgo (à republier à chaque étape, voir Pièges). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -34,6 +34,8 @@ Récit de la session 1 (2026-10-19 : vérifications d'environnement, prix relev�
 **Livré (§2, 2026-10-21)** : schémas et contenu ci-dessus ; `npm run assets` valide puis construit les systèmes listés dans `art/assets.json` `build` (pour l'instant le seul système de test `art/fixtures/probe.system.json` ; les scripts Starlink `assets.house`, `assets.terminal`, `assets.satellite`, `assets.ground_station`, `assets.island`, `assets.pine` sont déclarés mais à écrire en §3, puis remplacer `build` par `content/v2/systems/starlink-home.json` et retirer probe). Représentation `detail` refusée au build jusqu'à §6. `tests/v2/content.test.ts` (15) + cas « anchor absent du GLB ». Suite complète 139.
 
 **Livré (§4, 2026-10-21)** — détail dans `roadmap/v2.md` §4. Code : `v2/src/links.ts` (chemins des liaisons et des flux, pur, testé), `Flows.tsx` (impulsions instanciées), `Card.tsx` (fiche ancrée, rapporte la zone libre), `camera.ts` `frameInWindow` (cadrage dans la zone libre par `setViewOffset`), `overlap.ts` (recouvrement par rastérisation). Paramètres d'URL : `?select=<id>` ouvre une fiche, `?t=<s>` fige la phase des flux (et passe le rendu à la demande). `window.__xs` : `select`, `selected`, `overlap()`, `pickPoint(id)`. `npm run capture` clique/tape chaque objet par format et échoue si fiche fausse ou recouvrement > 10 %. Textes ajoutés (clés libres, sans changement de schéma) : `external.internet`, `ui.close`, `ui.sources`, `ui.computed`. Tests : `tests/v2/links.test.ts` (8). Suite complète 152.
+
+**Livré (§5, 2026-10-22)** — détail dans `roadmap/v2.md` §5. Code : `v2/src/nav.ts` (pile de plans global → `object:<id>` → `detail:<id>`, orbite et zoom bornés par `render.json` `limits`, pur, testé), `camera.ts` `blendPose` (distance en log, cible menée au rythme de la distance : le sujet ne quitte pas le cadre), gestes souris/tactile dans `App.tsx`, boutons « Voir de près / Voir en détail / Retour » de la fiche. `window.__xs` : `nav`, `enter`, `back`, `pose()`, `advance()` (avec `?step`). `npm run capture -- --only transitions` (allers-retours, ε = 1e-4) et `transition-video` (images au pas, WebM + planche). Suite complète 161.
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -76,7 +78,8 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Clés de texte : minuscules uniquement (`derived.steering-angle-deg`, pas `derived.steeringAngleDeg`).
 - Générateur : SDK `anthropic` 1.x et `openai` 3.x reposent sur `httpx2` (tests : `import httpx2 as httpx`) ; URL Anthropic épinglée (`XS_ANTHROPIC_BASE_URL` pour la changer) car la session de dev exporte un `ANTHROPIC_BASE_URL` ; un nom de profil TOML qui contient un point s'écrit entre guillemets.
 - Ne pas lancer `pkill -f vite` (ni `pkill -f capture.ts`) dans une commande qui contient elle-même ce mot : la commande se tue.
-- V2, captures : ne pas `git pull --rebase` pendant une capture (le rebase réécrit les fichiers, Vite recharge la page en pleine capture et peut la bloquer) ; si le distant ne touche pas le projet, `git merge origin/main` est sans effet sur les fichiers suivis. Capture complète 4 formats ≈ 30 min en rendu logiciel.
+- V2, captures : ne pas `git pull --rebase` pendant une capture (le rebase réécrit les fichiers, Vite recharge la page en pleine capture et peut la bloquer) ; si le distant ne touche pas le projet, `git merge origin/main` est sans effet sur les fichiers suivis. Captures en densité ×1 par défaut (validé par l'utilisateur le 2026-10-22, `--dpr 2` sur demande) : pas de GPU dans le conteneur cloud, tout est rendu par SwiftShader. Itérer avec `--only` et `--formats` ; vérification `transitions` 4 formats ≈ 16 min ; la vidéo est lente (une capture par image) : un seul format. Une passe peut dépasser la limite d'une heure d'une tâche de fond : `captures.json` est écrit au fil de l'eau et les problèmes sont journalisés (`PROBLEM …`) dès qu'ils surviennent.
+- V2, aperçu Artifact : les Artifacts ne servent pas les `.glb`. Recette : `npx vite build --outDir <scratch>/v2site`, publier une page sans doctype qui reprend les balises de `v2.html` et un petit script qui intercepte `fetch` des `.glb` pour lire `<nom>.glb.json` (`{"base64": …}`) ; publier JS, CSS, polices Inter, `manifest.json` et les `.glb.json` en `files`. Republier au même lien (même chemin de fichier dans la session, sinon `url`).
 - V2, sélection : R3F lance son rayon depuis les coordonnées **entières** de l'événement `click` ; un point visé au bord d'un objet fin peut donc le manquer. `pickPoint` exige que les points à ±3 px touchent aussi l'objet ; les objets principaux plus petits que 0,6 m (demi-diagonale) reçoivent une sphère de clic invisible `hit-proxy`, exclue des boîtes (`objectBox`) et des mesures.
 
 ## Décisions récentes (2026-10-11)
@@ -85,7 +88,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
-- **V2, après §4** : appels de dessin 95 en vue globale (93 avant §4) pour un budget de 80 → §8 ; seul le flux descendant `data-down` est animé (le sens montant n'est pas déclaré dans le système) ; sur téléphone la zone de clic de l'antenne fait ≈ 30 px (sous les 44 px recommandés) tant que la vue globale reste aussi petite ; flux toujours visibles (la visite §7 dira quand les montrer).
+- **V2, ouvert après §5** : vidéo de transition en iPad paysage seulement (coût du rendu logiciel) ; appels de dessin 95 en vue globale (93 avant §4) pour un budget de 80 → §8 ; seul le flux descendant `data-down` est animé (le sens montant n'est pas déclaré dans le système) ; sur téléphone la zone de clic de l'antenne fait ≈ 30 px (sous les 44 px recommandés) tant que la vue globale reste aussi petite ; flux toujours visibles (la visite §7 dira quand les montrer).
 - **V2, après §3** : sur téléphone en portrait la scène n'occupe que le tiers central (objets petits ; place laissée aux panneaux — la fiche en bas l'occupe désormais en partie) ; couleur gris métal du satellite = choix de lisibilité, non sourcé ; la mesure de contour juge mal les objets fins (antenne 56–64 %, seuil fixé à 55 % par l'utilisateur).
 - **V2** : `public/` (modèles v2) est désormais copié aussi dans le build de la Phase 0 — sans effet, à garder en tête.
 - **Rendu immersif : remplacé par la V2** (section en tête). Les prototypes `prototypes/render/` et les pages de comparaison (A/B/C https://claude.ai/artifact/UUEhsdGwK6kiPs5mY5yh6X ; D/E/F/G https://claude.ai/artifact/NCjzcU9zWWcQvnZV1QHr8C ; M https://claude.ai/artifact/2EYMUwTaxJJafeVSzdAeJV) restent comme trace, à ne pas reprendre comme base.
@@ -104,7 +107,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 §5** (`roadmap/v2.md`) : transitions global ↔ rapproché ↔ détail, souris et tactile (tap, glisser, pincer) dans les limites de `render.json` `limits` ; acceptation : après global → objet → détail → retour ×2, pose caméra et sélection identiques à ε près, gestes émulés (`hasTouch`), vidéo de transition inspectée. Point d'appui : `useCameraRig` (`v2/src/App.tsx`) anime déjà pose et décalage de vue vers un but ; la sélection (§4) peut déclencher le plan `object:<id>`.
+0. **V2 §6** (`roadmap/v2.md`) : vue éclatée de l'antenne (capot, tuiles du réseau, circuit, puces de formation de faisceau) en représentation `detail` (`art/assets.json` ; le build refuse encore `detail` : à lever), faisceau orienté par le simulateur `phasedArrayWave` existant ; acceptation : la capture montre l'intérieur et non l'enveloppe, test de l'orientation Δφ = 2π·d·sin θ / λ. Point d'appui : le plan `detail:terminal` existe déjà (§5).
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
