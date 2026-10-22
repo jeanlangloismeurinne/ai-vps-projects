@@ -3,7 +3,7 @@ project: exploration-science
 updated: 2026-10-22
 role: >
   Reprise de l'Explorateur de systèmes. V2 en cours (roadmap/v2.md, contrat QUALITY_BAR.md) : §1 outillage,
-  §2 schémas, §3 scène de référence, §4 connexions vivantes et fiches, §5 transitions et retour livrés ; prochaine : §6 vue détaillée de l'antenne. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
+  §2 schémas, §3 scène de référence, §4 connexions vivantes et fiches, §5 transitions et retour, §6 vue éclatée de l'antenne livrés ; prochaine : §7 visite guidée. Phase 0 (prototype) construite et validée jusqu'au jalon 5 bis ;
   le jalon 6 (aperçu déployable + finitions iPad) est livré mais pas encore déployé ni essayé sur iPad.
   Phase 1 (générateur) amorcée en parallèle : socle reproductible multi-API livré, essai manuel réussi,
   restent les runs API réels (VPS) puis le banc de non-régression.
@@ -11,7 +11,7 @@ role: >
 
 # Prompt de reprise — exploration-science
 
-> **Roadmap active : `roadmap/v2.md`** — §1 à §5 livrées (§5 transitions et retour, le 2026-10-22) ; **prochaine : §6, vue détaillée de l'antenne**. Aperçu privé pour l'utilisateur : https://claude.ai/artifact/MVYfNuQgLmkhchunWpivgo (à republier à chaque étape, voir Pièges). Contrat d'acceptation : `QUALITY_BAR.md`.
+> **Roadmap active : `roadmap/v2.md`** — §1 à §6 livrées (§6 vue éclatée de l'antenne, le 2026-10-22) ; **prochaine : §7, visite guidée, le système d'abord**. Aperçu privé pour l'utilisateur : https://claude.ai/artifact/MVYfNuQgLmkhchunWpivgo (à republier à chaque étape, voir Pièges). Contrat d'acceptation : `QUALITY_BAR.md`.
 > En parallèle, inchangés : jalon 6 de la Phase 0 (essai iPad, tests utilisateurs — hors de l'agent) et `roadmap/phase1-generator.md` (prochaine : §3, banc de non-régression).
 
 Lire d'abord `CLAUDE.md` du projet, puis `docs/SPEC.md` (source de vérité). Historique détaillé (jalons 1 à 6, essais, choix d'implémentation) : `00-REPRISE-ARCHIVE.md` (instantané du 2026-10-11, à interroger par `grep`).
@@ -31,11 +31,11 @@ Récit de la session 1 (2026-10-19 : vérifications d'environnement, prix relev�
 - **Format V2 `v2-0.1`** (validé le 2026-10-21, `schemas/v2/`) : une nature de données par fichier — système `content/v2/systems/<id>.json`, modèles `art/assets.json`, rendu et caméra `content/v2/render.json`, visite `content/v2/tours/<id>.json`, textes `content/v2/texts.<lang>.json` (fiches + sous-titres), `content/v2/sources.json`. Repère Blender (m, z en haut) ; placement `on`+`position [x,y]` (hauteur par lancer de rayon), `on`+`anchor`, ou `airborne`+`[x,y,z]` ; points d'attache déclarés (`anchors`), exportés en nœuds vides `<id>#<nom>` ; `externals` pour les extrémités hors scène (`internet`). Validateur : `v2/src/content/validate.ts` (règle de récit incluse).
 - **Station sol : 4 radômes blancs, dont un ouvert** qui montre la parabole (validé le 2026-10-21).
 
-**Livré (§2, 2026-10-21)** : schémas et contenu ci-dessus ; `npm run assets` valide puis construit les systèmes listés dans `art/assets.json` `build` (pour l'instant le seul système de test `art/fixtures/probe.system.json` ; les scripts Starlink `assets.house`, `assets.terminal`, `assets.satellite`, `assets.ground_station`, `assets.island`, `assets.pine` sont déclarés mais à écrire en §3, puis remplacer `build` par `content/v2/systems/starlink-home.json` et retirer probe). Représentation `detail` refusée au build jusqu'à §6. `tests/v2/content.test.ts` (15) + cas « anchor absent du GLB ». Suite complète 139.
-
 **Livré (§4, 2026-10-21)** — détail dans `roadmap/v2.md` §4. Code : `v2/src/links.ts` (chemins des liaisons et des flux, pur, testé), `Flows.tsx` (impulsions instanciées), `Card.tsx` (fiche ancrée, rapporte la zone libre), `camera.ts` `frameInWindow` (cadrage dans la zone libre par `setViewOffset`), `overlap.ts` (recouvrement par rastérisation). Paramètres d'URL : `?select=<id>` ouvre une fiche, `?t=<s>` fige la phase des flux (et passe le rendu à la demande). `window.__xs` : `select`, `selected`, `overlap()`, `pickPoint(id)`. `npm run capture` clique/tape chaque objet par format et échoue si fiche fausse ou recouvrement > 10 %. Textes ajoutés (clés libres, sans changement de schéma) : `external.internet`, `ui.close`, `ui.sources`, `ui.computed`. Tests : `tests/v2/links.test.ts` (8). Suite complète 152.
 
 **Livré (§5, 2026-10-22)** — détail dans `roadmap/v2.md` §5. Code : `v2/src/nav.ts` (pile de plans global → `object:<id>` → `detail:<id>`, orbite et zoom bornés par `render.json` `limits`, pur, testé), `camera.ts` `blendPose` (distance en log, cible menée au rythme de la distance : le sujet ne quitte pas le cadre), gestes souris/tactile dans `App.tsx`, boutons « Voir de près / Voir en détail / Retour » de la fiche. `window.__xs` : `nav`, `enter`, `back`, `pose()`, `advance()` (avec `?step`). `npm run capture -- --only transitions` (allers-retours, ε = 1e-4) et `transition-video` (images au pas, WebM + planche). Suite complète 161.
+
+**Livré (§6, 2026-10-22)** — détail dans `roadmap/v2.md` §6. Code : `art/assets/terminal_exploded.py` (représentation `detail`, couches `Asset.layer`/`explode`, ancre orientée `array`), `art/build.py` `build_detail` (après l'export des enveloppes), `v2/src/beam.ts` (Δφ par axe, facteur plan, pic, lobe ; pur, testé), `v2/src/Detail.tsx` (ouverture animée, lobe à fronts d'onde, étiquettes de couches). Manifeste : `layers` (décalages, glTF) et `array` (grille) sur la représentation `detail`. Textes : clés `detail.terminal.<couche>`. Palette : teinte spéciale `ghost` (capot). Suite complète 166.
 
 Règles du projet inchangées : toute modification de schéma est soumise à l'utilisateur, et `docs/SPEC.md` n'est modifiée qu'après validation.
 
@@ -71,6 +71,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
   `.venv/bin/python -m xs_generator node --id starlink-phased-array --question "Comment le réseau d'antennes de Starlink oriente-t-il son faisceau ?" --parent starlink-terminal:phased-array --sources content/nodes/starlink-phased-array/sources.json --runner api --profile <anthropic-opus | deepinfra-deepseek-v4.1-flash>`
 
 ## Pièges connus
+- V2, GLB : three.js retire les points des noms de nœuds (`terminal.tiles.warm` → `terminaltileswarm`), le nom d'origine est dans `userData.name` ; la quantification meshopt place un décalage dans la position du nœud : on déplace un nœud *par rapport* à sa position chargée, jamais en l'écrasant.
 - V2 : `npm run assets` (Blender, `art/.venv` : `python3 -m venv art/.venv && art/.venv/bin/pip install -r art/requirements.txt`), `npm run check:assets [-- --determinism]`, `npm run capture [-- --formats … --only … --out …]`, `npm run contrast -- <dossier de captures>` (part du contour lisible, seuil 55 %). Les messages `ERROR Draco/MeshOptimizer is not available` de `bpy` sont sans effet (compression faite par gltf-transform). Ne jamais utiliser les `preset` d'environnement de drei (HDRI téléchargées) ni Draco (décodeur sur CDN).
 - V2, AO précalculée en couleurs de sommet : un sommet caché (sous une incrustation, sous un faîtage, noyé dans une pièce) cuit noir et bave en dents de scie. `xs/bake.py` `lift_buried` le repère par la géométrie (rayon vers le haut qui rencontre le dessous d'une autre pièce, ou AO < 0,15), candidats = sommets de toute face tournée vers le haut (pas la normale de sommet, faussée par les biseaux), et le remplit avec ses voisins visibles. Une incrustation plate sans sommets intérieurs (allée) cuit mal : la mailler avec `grid_slab`. Les pièces fines (clôture, haubans) prennent `occluder=False`.
 - Lentille Ondes : le shader travaille en unités de scène (`position * uSize`), sinon il ne marche qu'à l'échelle 1 m.
@@ -88,6 +89,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Générateur multi-API avec Anthropic pour référence ; DeepInfra / DeepSeek V4.1 Flash comme premier challenger.
 
 ## Reste à faire / dettes ouvertes
+- **V2, ouvert après §6** : la fiche reste celle de l'objet en vue détail (aucun texte propre à la vue éclatée : §7 dira ce que la visite y raconte) ; pas de coloration de phase par pastille (le lobe et ses fronts d'onde portent seuls l'idée) ; en revenant vers la vue globale, le repère de sélection apparaît avant la fin du vol.
 - **V2, ouvert après §5** : vidéo de transition en iPad paysage seulement (coût du rendu logiciel) ; appels de dessin 95 en vue globale (93 avant §4) pour un budget de 80 → §8 ; seul le flux descendant `data-down` est animé (le sens montant n'est pas déclaré dans le système) ; sur téléphone la zone de clic de l'antenne fait ≈ 30 px (sous les 44 px recommandés) tant que la vue globale reste aussi petite ; flux toujours visibles (la visite §7 dira quand les montrer).
 - **V2, après §3** : sur téléphone en portrait la scène n'occupe que le tiers central (objets petits ; place laissée aux panneaux — la fiche en bas l'occupe désormais en partie) ; couleur gris métal du satellite = choix de lisibilité, non sourcé ; la mesure de contour juge mal les objets fins (antenne 56–64 %, seuil fixé à 55 % par l'utilisateur).
 - **V2** : `public/` (modèles v2) est désormais copié aussi dans le build de la Phase 0 — sans effet, à garder en tête.
@@ -107,7 +109,7 @@ Règles du projet inchangées : toute modification de schéma est soumise à l'u
 - Format de scène v1 : à figer après les tests utilisateurs (critère de sortie de Phase 0), en tenant compte des enseignements de l'essai de génération.
 
 ## Où démarrer
-0. **V2 §6** (`roadmap/v2.md`) : vue éclatée de l'antenne (capot, tuiles du réseau, circuit, puces de formation de faisceau) en représentation `detail` (`art/assets.json` ; le build refuse encore `detail` : à lever), faisceau orienté par le simulateur `phasedArrayWave` existant ; acceptation : la capture montre l'intérieur et non l'enveloppe, test de l'orientation Δφ = 2π·d·sin θ / λ. Point d'appui : le plan `detail:terminal` existe déjà (§5).
+0. **V2 §7** (`roadmap/v2.md`) : visite guidée, système global d'abord puis objet ; acceptation : la 1re étape cible le système, aucun objet mis en avant avant (test négatif), captures des étapes inspectées. Point d'appui : `content/v2/tours/starlink-home.json` et les textes `tour.*` existent ; la vue éclatée (§6) peut servir d'étape « antenne ».
 1. Si l'utilisateur a déployé ou posé les clés : vérifier le déploiement / lancer les runs API et comparer les deux profils.
 2. Sinon : **roadmap Phase 1 §3, banc de non-régression** (autonome, ne dépend ni du VPS ni des tests).
 3. En petit lot : rendre explicite le modèle simplifié Starlink ; appliquer les corrections ciel bleu si l'utilisateur les accepte.
