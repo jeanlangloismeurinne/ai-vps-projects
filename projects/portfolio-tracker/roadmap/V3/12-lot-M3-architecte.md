@@ -103,7 +103,8 @@ appel commun dans `parcours.py` plutôt que dupliquer la préparation des argume
 | Diagnostic | La question… | Raison écrite |
 |---|---|---|
 | aucun manque (tient, acceptée, dispensée) | ouvre | « réponse #id qui tient » / « acceptée par le comité » / « dispensée par le comité » |
-| `renvoyee`, `perimee`, `pas_encore_observable` | ouvre | la réponse #id existe ; l'architecte la reçoit avec son verdict / sa date / son attente |
+| `renvoyee` | ouvre **seulement si** `porte_admet_reponses_refusees` (phase de test), sinon **ferme** | « réponse #id refusée par le contrôle : {motif} — à corriger avant de dessiner » ; ouverte, l'architecte la reçoit marquée refusée |
+| `perimee`, `pas_encore_observable` | ouvre | la réponse #id existe ; l'architecte la reçoit avec sa date / son attente |
 | `non_fondee`, cause ≠ `source_indisponible` | ouvre | « non fondable : {explication} » — l'absence de publication EST une information |
 | `non_fondee`, cause `source_indisponible` | **ferme** | échec technique : relancer avant de dessiner |
 | `sans_reponse` (toute cause) | **ferme** | aucune réponse instruite |
@@ -111,8 +112,12 @@ appel commun dans `parcours.py` plutôt que dupliquer la préparation des argume
 | question sans framework applicable (`applicables` None) | **ferme** | « émetteur non classé » |
 
 Émetteur sans archétype → `Porte(ouverte=False, archetype=None, questions=[])` avec la raison au niveau de la
-porte. **Décision d'Opus, à porter au journal** : une réponse renvoyée par le contrôle ouvre (l'arbitrage dit
-« quel qu'en soit le statut ») ; l'architecte la reçoit marquée « refusée par le contrôle : motif ».
+porte. **Arbitrage de l'utilisateur (2026-10-22)** : « il faut que la réponse soit juste pour que l'architecte ne
+construise pas sur une mauvaise base ; en phase de test on avancera y compris sur des réponses non validées ».
+→ interrupteur `porte_admet_reponses_refusees` dans `modele_entreprise.yaml` (ordre 0 = `false`, la règle cible ;
+`true` en phase de test, à basculer avant le premier comité réel ; même statut que `signature_de_l_architecture` :
+ne monte pas `version`, lu à la lecture). Quand il a servi, la porte et le BILAN le disent (« phase de test : n
+réponse(s) refusée(s) admise(s) »).
 
 ### 3.2 Le rendu de la ventilation pour l'architecte (`app/knowledge/ventilation.py`)
 
@@ -276,10 +281,9 @@ geste de l'agent (outil, §7).
 
 ## 7. Le paramètre du fonds et les outils
 
-- `frameworks.yaml`, `parametres_du_fonds` : `horizon_de_projection` (valeur `5`, unité `exercices`,
-  `decide_le: 2026-10-22`, `revoir_avant: 2027-10-22`, décision : « valeur par défaut posée par Opus le
-  2026-10-22 en attendant l'arbitrage de l'utilisateur : cinq exercices explicites, puis la valeur terminale de
-  l'atelier ») — même forme que `seuil_de_materialite`, sans montée de `schema_version`.
+- `frameworks.yaml`, `parametres_du_fonds` : `horizon_de_projection` (valeur `10`, unité `exercices`,
+  `decide_le: 2026-10-22`, `revoir_avant: 2027-10-22`, décision : « arbitrage de l'utilisateur du 2026-10-22 :
+  dix exercices explicites par défaut, puis la valeur terminale de l'atelier ») — même forme que `seuil_de_materialite`, sans montée de `schema_version`.
 - `tools/architecte.sh TICKER [--matiere-seule] [--hors-porte] [--ecrire]` (+ `.py`), instance neuve de l'image
   (jamais dans `portfolio-backend`) :
   - `--matiere-seule` (GRATUIT) : la porte question par question, puis la matière EXACTE envoyée au modèle, sa
@@ -298,7 +302,7 @@ geste de l'agent (outil, §7).
 - `checks/check_architecte.py` (sans base), fixtures **copiées du réel** (`checks/fixtures/` : la structure de
   ventilation NVDA et RVMD relevée ce jour, un état de porte NVDA à partir des statuts réels des 12 questions) :
   1. porte : une ligne du tableau §3.1 = un cas ; NVDA réelle → ouverte ;
-  2. périodes : NVDA (fins fin janvier → FY2024-FY2026 + 5 projetées), une fin au 1ᵉʳ janvier, une collision ;
+  2. périodes : NVDA (fins fin janvier → FY2024-FY2026 + 10 projetées), une fin au 1ᵉʳ janvier, une collision ;
   3. matière : contient raison sociale, CIK, date du jour, les adresses `[axe=… membre=…]` de la ventilation,
      les fiches de la famille SEULEMENT (aucune fiche bancaire pour une industrielle), le patron ; déterministe
      (deux rendus identiques) ; `secteur_unique` → la phrase du constat, aucune adresse ;

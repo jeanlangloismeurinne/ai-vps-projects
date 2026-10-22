@@ -39,7 +39,7 @@ branchée — M7), migration 061 appliquée, `seuil_de_materialite` au référen
 pièce `ventilation_publiee` SANS appelant en production (son lecteur = l'architecte), outil `montrer_ventilation.sh` ;
 **déployé le 2026-10-22** (`67f7e87`, vérifié dans le conteneur). NVDA a redécoupé ses
 marchés au 10-Q (Data Center = Hyperscale + AI Clouds/Industrial/Enterprise ; Edge Computing) : matière directe pour M3 ;
-(3) **B4/M3 — spec écrite le 2026-10-22 (`12-lot-M3-architecte.md`), exécution confiée à Sonnet, à vérifier par exécution** (architecte ; choix à confirmer : horizon 5 exercices, réponse renvoyée = instruite) — porte de NVDA **ouverte** au catalogue 1.0.0 (mesuré, voir ci-dessous) : plus de relance
+(3) **B4/M3 — spec écrite le 2026-10-22 (`12-lot-M3-architecte.md`), exécution confiée à Sonnet, à vérifier par exécution** (architecte ; arbitrés le 22/10 : horizon 10 exercices ; réponse refusée = porte fermée, sauf phase de test — interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel) — porte de NVDA **ouverte** au catalogue 1.0.0 (mesuré, voir ci-dessous) : plus de relance
 préalable ; ma_3/ma_4/A1 restent dans D1. C2 sans objet, C5 vérifié (≈ 5,55 $, à re-mesurer).
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
 
