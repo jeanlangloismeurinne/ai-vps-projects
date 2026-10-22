@@ -205,7 +205,7 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
         structure_vent, vent_id = publie_v.structure, publie_v.entry_id
     else:
         try:
-            depots = await lire_depots(emetteur.cik)
+            depots = await lire_depots(emetteur.cik, referentiel=ref_vent)
         except VentilationIndisponible as e:
             raise MatiereRefusee(f"ventilation non relevable à blanc : {e}") from e
         v = relever(depots, gabarit, ref_vent, structure_socle)

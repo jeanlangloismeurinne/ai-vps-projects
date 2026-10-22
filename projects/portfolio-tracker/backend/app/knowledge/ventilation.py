@@ -38,6 +38,7 @@ import yaml
 
 from app.contracts.ventilation_schema import AxeVentilation, VentilationReferentiel
 from app.knowledge.appariement_feed import AppariementInexecutable, douze_mois_glissants
+from app.knowledge.perimetre import ordre_des_periodes, premier_niveau_de
 from app.knowledge.socle_comptes import Gabarit, tolerance_bouclage
 from app.knowledge.ventilation_xbrl import FaitDimensionne
 
@@ -415,7 +416,7 @@ def relever(
 
     def _premier_niveau_de(axe_id: str, ligne: str, periode: str) -> set[str]:
         presents_p = groupes.get((axe_id, ligne, periode), set())
-        return {m for m in presents_p if parent_de.get(m) not in presents_p}
+        return set(premier_niveau_de(presents_p, parent_de))
 
     def _reference(axe_id: str, ligne: str) -> Optional[str]:
         """Le dernier exercice CLOS présent pour cet axe+ligne — la publication la plus récente
@@ -428,7 +429,7 @@ def relever(
         axe_def = next(a for a in referentiel.axes if a.id == axe_id)
         if axe_def.raccord != "total":
             continue
-        premier_niveau = {m for m in presents if parent_de.get(m) not in presents}
+        premier_niveau = set(premier_niveau_de(presents, parent_de))
         valeurs = {m: cellules[(axe_id, ligne, m, periode)].valeur for m in presents}
         somme = sum(valeurs[m] for m in premier_niveau)
 
@@ -554,17 +555,11 @@ def _membre_lisible(membre: Optional[str]) -> str:
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", nom) or (membre or "")
 
 
-_RE_DATE_RENDU = re.compile(r"(\d{4}-\d{2}-\d{2})")
-
-
 def _cle_periode_rendu(periode: str) -> tuple:
-    """Clef de TRI d'un id de période pour le rendu (cause ②, §3) : la date ISO qu'une période
-    contient, sinon son texte brut. Même PRINCIPE que `structure._cle_tri_periode` (#46 vaudrait
-    pour un appel commun, mais `app/knowledge/` est une couche SOUS `app/modele_entreprise/` — lui
-    faire importer ce module inverserait la dépendance ; les deux copies sont à garder synchrones
-    si l'une change)."""
-    m = _RE_DATE_RENDU.search(periode)
-    return (m.group(1) if m else "", periode)
+    """Clef de TRI d'un id de période pour le rendu (cause ②, §3) — DÉLÉGUÉE au détenteur unique
+    `perimetre.ordre_des_periodes` (lot P1, §2.5) : l'ancienne copie triait sur la PREMIÈRE date
+    rencontrée (le DÉBUT d'un cumul), ce détenteur trie sur la FIN."""
+    return ordre_des_periodes(periode)
 
 
 def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
@@ -633,7 +628,7 @@ def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
                 presents_par_p.setdefault(c["periode"], {})[c["membre"]] = c.get("parent")
             decoupages: dict[frozenset, list[str]] = {}
             for periode, parents in presents_par_p.items():
-                premier_niveau = frozenset(m for m, p in parents.items() if p not in parents)
+                premier_niveau = premier_niveau_de(parents.keys(), parents)
                 decoupages.setdefault(premier_niveau, []).append(periode)
             if len(decoupages) > 1:
                 out.append(f"  Axe « {axe} » — découpages successifs (plusieurs ensembles de membres de premier niveau observés) :")
@@ -651,7 +646,8 @@ def rendre_ventilation(structure: dict[str, Any], *, raison_sociale: str,
             membres_ici = {c["membre"]: c for c in cellules
                            if c["axe"] == axe and c["ligne"] == ligne and c["periode"] == periode}
             presents = set(membres_ici)
-            premier_niveau = sorted(m for m in presents if membres_ici[m].get("parent") not in presents)
+            parent_de_ici = {m: c.get("parent") for m, c in membres_ici.items()}
+            premier_niveau = sorted(premier_niveau_de(presents, parent_de_ici))
             out.append(f"  {ligne} — {periode} :")
 
             def _imprimer(m: str, profondeur: int) -> None:

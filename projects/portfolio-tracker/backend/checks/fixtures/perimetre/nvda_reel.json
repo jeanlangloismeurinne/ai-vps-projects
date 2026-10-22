@@ -1,0 +1,29 @@
+{
+  "_provenance": "Cas RÉEL figé (§4 de la spec lot P1) — mesuré le 2026-10-22, en direct sur data.sec.gov, par le même chemin que ventilation_feed (instance XBRL + lab + def, axe srt:ProductOrServiceAxis). Dépôt JUMEAU : NVDA 10-Q déposé le 2025-08-27 (accn 0001045810-25-000209, période rapportée close le 2025-07-27) — ancien découpage (Data Center, Gaming, Professional Visualization, Automotive, OEM and Other). Dépôt RÉCENT : NVDA 10-Q déposé le 2026-08-26 (accn 0001045810-26-000075, période close le 2026-07-26) — nouveau découpage (Data Center, Edge Computing), republiant le semestre 2025 en comparatif. Valeurs en dollars, lues telles que déposées (us-gaap:Revenues sur l'axe srt:ProductOrServiceAxis, cumuls six mois).",
+  "depots_filed": {"jumeau": "2025-08-27", "recent": "2026-08-26"},
+  "cellules": [
+    {"axe": "secteurs", "membre": "nvda:DataCenterMember", "valeur": 48835000000.0, "periode_fin": "2024-07-28", "periode_debut": "2024-01-29", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:GamingMember", "valeur": 5527000000.0, "periode_fin": "2024-07-28", "periode_debut": "2024-01-29", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:ProfessionalVisualizationMember", "valeur": 881000000.0, "periode_fin": "2024-07-28", "periode_debut": "2024-01-29", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:AutomotiveMember", "valeur": 675000000.0, "periode_fin": "2024-07-28", "periode_debut": "2024-01-29", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:OEMAndOtherMember", "valeur": 166000000.0, "periode_fin": "2024-07-28", "periode_debut": "2024-01-29", "depot": "jumeau", "parent": null},
+
+    {"axe": "secteurs", "membre": "nvda:DataCenterMember", "valeur": 80208000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:GamingMember", "valeur": 8050000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:ProfessionalVisualizationMember", "valeur": 1110000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:AutomotiveMember", "valeur": 1153000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:OEMAndOtherMember", "valeur": 284000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:ComputeMember", "valeur": 67999000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": "nvda:DataCenterMember"},
+    {"axe": "secteurs", "membre": "nvda:NetworkingMember", "valeur": 12209000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "jumeau", "parent": "nvda:DataCenterMember"},
+
+    {"axe": "secteurs", "membre": "nvda:DataCenterMember", "valeur": 80208000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "recent", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:EdgeComputingMember", "valeur": 10597000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "recent", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:HyperscaleMember", "valeur": 46428000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "recent", "parent": "nvda:DataCenterMember"},
+    {"axe": "secteurs", "membre": "nvda:AICloudsIndustrialEnterpriseMember", "valeur": 33780000000.0, "periode_fin": "2025-07-27", "periode_debut": "2025-01-27", "depot": "recent", "parent": "nvda:DataCenterMember"},
+
+    {"axe": "secteurs", "membre": "nvda:DataCenterMember", "valeur": 164269000000.0, "periode_fin": "2026-07-26", "periode_debut": "2026-01-26", "depot": "recent", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:EdgeComputingMember", "valeur": 13568000000.0, "periode_fin": "2026-07-26", "periode_debut": "2026-01-26", "depot": "recent", "parent": null},
+    {"axe": "secteurs", "membre": "nvda:HyperscaleMember", "valeur": 91761000000.0, "periode_fin": "2026-07-26", "periode_debut": "2026-01-26", "depot": "recent", "parent": "nvda:DataCenterMember"},
+    {"axe": "secteurs", "membre": "nvda:AICloudsIndustrialEnterpriseMember", "valeur": 72508000000.0, "periode_fin": "2026-07-26", "periode_debut": "2026-01-26", "depot": "recent", "parent": "nvda:DataCenterMember"}
+  ]
+}

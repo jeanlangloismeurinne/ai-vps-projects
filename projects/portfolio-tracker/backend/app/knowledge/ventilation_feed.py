@@ -19,10 +19,12 @@ from typing import Any, NamedTuple, Optional
 
 import httpx
 
+from app.contracts.ventilation_schema import VentilationReferentiel
 from app.knowledge.datation import constatee
 from app.knowledge.edgar_facts import _UA
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, filing_url, identite_de_l_emetteur
 from app.knowledge.material_events import MaterialEventsUnavailable, _submissions
+from app.knowledge.perimetre import FilingMeta, identifier_jumeau_candidat, regime_a_change
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.socle_comptes import charger_gabarit
 from app.knowledge.socle_feed import SocleIndisponible, assurer_socle
@@ -120,6 +122,41 @@ def _derniers_10k_10q(payload: dict[str, Any]) -> tuple[Optional[dict[str, str]]
     return k10, q10
 
 
+_FORMS_JUMEAU = _FORMS_10K | _FORMS_10Q
+
+
+def _tous_filings(payload: dict[str, Any]) -> tuple[FilingMeta, ...]:
+    """Tous les 10-K/10-Q du flux `submissions`, pour la recherche du JUMEAU (§5, étape 2) — pure,
+    bornée (le flux est déjà fini)."""
+    recent = ((payload or {}).get("filings") or {}).get("recent") or {}
+    formes = recent.get("form") or []
+    accns = recent.get("accessionNumber") or []
+    filed = recent.get("filingDate") or []
+    report = recent.get("reportDate") or []
+    return tuple(
+        FilingMeta(accn=accns[i], form=formes[i], filed=filed[i], report=report[i])
+        for i in range(len(formes))
+        if formes[i] in _FORMS_JUMEAU and i < len(accns) and i < len(filed) and i < len(report)
+    )
+
+
+def _premier_niveau_par_axe(depot: Depot, referentiel: VentilationReferentiel) -> dict[str, frozenset[str]]:
+    """Les membres de premier niveau d'UN dépôt, par axe à raccord `total` — approximation GRATUITE
+    (sans le retrait des qualificateurs neutres de `ventilation._classer`) qui sert UNIQUEMENT à
+    décider si le JUMEAU vaut la peine d'être lu (§5) : un faux positif coûte une lecture gratuite
+    de plus, un faux négatif ne casse rien (le jumeau reste simplement absent, comme avant ce lot)."""
+    axes_total = {a.axe for a in referentiel.axes if a.raccord == "total"}
+    membres_par_axe: dict[str, set[str]] = {a: set() for a in axes_total}
+    for f in depot.faits:
+        for a, m in f.membres:
+            if a in axes_total:
+                membres_par_axe[a].add(m)
+    return {
+        a: frozenset(m for m in ms if depot.hierarchie.get(m) not in ms)
+        for a, ms in membres_par_axe.items()
+    }
+
+
 async def _get(client: httpx.AsyncClient, url: str) -> bytes:
     await asyncio.sleep(DELAI_S)
     r = await client.get(url)
@@ -167,10 +204,18 @@ def _as_json(payload: bytes) -> dict[str, Any]:
     return json.loads(payload)
 
 
-async def lire_depots(cik: int) -> list[Depot]:
-    """Les dépôts à relever : le dernier 10-K, et le dernier 10-Q s'il est postérieur (§4). Lit le
-    flux `submissions` par le lecteur EXISTANT (`material_events._submissions`, détenteur unique,
-    cache au seul point de sortie réseau) — on n'en écrit pas un second."""
+async def lire_depots(cik: int, *, referentiel: Optional[VentilationReferentiel] = None) -> list[Depot]:
+    """Les dépôts à relever : le dernier 10-K, le dernier 10-Q s'il est postérieur (§4), et le
+    dépôt JUMEAU quand le périmètre a redécoupé (§5, étape 2 du lot P1) — celui qui a publié, dans
+    l'ANCIEN découpage, la période que le 10-Q reprend en comparatif. Lit le flux `submissions` par
+    le lecteur EXISTANT (`material_events._submissions`, détenteur unique, cache au seul point de
+    sortie réseau) — on n'en écrit pas un second.
+
+    Le jumeau n'est lu QUE si `referentiel` est fourni ET qu'un axe à raccord `total` a changé de
+    premier niveau entre le 10-K et le 10-Q (`perimetre.regime_a_change`) — jamais pour tout
+    émetteur à chaque appel (§5 : gratuit, mais pas pour rien). `referentiel=None` (défaut) :
+    comportement INCHANGÉ (deux dépôts au plus), pour tout appelant qui n'a pas encore de
+    référentiel sous la main."""
     try:
         payload = await _submissions(cik)
     except MaterialEventsUnavailable as e:
@@ -180,9 +225,21 @@ async def lire_depots(cik: int) -> list[Depot]:
         raise VentilationIndisponible(f"aucun 10-K déposé par le CIK {cik} — pas de ventilation à relever")
     async with httpx.AsyncClient(timeout=90.0, follow_redirects=True,
                                  headers={"User-Agent": _UA, "Accept": "*/*"}) as client:
-        depots = [await _lire_depot(client, cik, k10["accn"], k10["form"], k10["filed"])]
+        k10_depot = await _lire_depot(client, cik, k10["accn"], k10["form"], k10["filed"])
+        depots = [k10_depot]
         if q10 is not None:
-            depots.append(await _lire_depot(client, cik, q10["accn"], q10["form"], q10["filed"]))
+            q10_depot = await _lire_depot(client, cik, q10["accn"], q10["form"], q10["filed"])
+            depots.append(q10_depot)
+            if referentiel is not None:
+                pn_ancien = _premier_niveau_par_axe(k10_depot, referentiel)
+                pn_recent = _premier_niveau_par_axe(q10_depot, referentiel)
+                if regime_a_change(pn_ancien, pn_recent):
+                    filings = _tous_filings(payload)
+                    recent_meta = FilingMeta(q10["accn"], q10["form"], q10["filed"], q10["report"])
+                    ancien_meta = FilingMeta(k10["accn"], k10["form"], k10["filed"], k10["report"])
+                    jumeau = identifier_jumeau_candidat(filings, recent_meta, ancien_meta)
+                    if jumeau is not None:
+                        depots.append(await _lire_depot(client, cik, jumeau.accn, jumeau.form, jumeau.filed))
     return depots
 
 
@@ -200,7 +257,7 @@ async def assurer_ventilation(conn, ticker_id: str) -> VentilationPubliee:
     except Exception as e:  # référentiel du classeur absent/invalide : refus nommé, pas une panne nue
         raise VentilationIndisponible(f"famille de {ticker_id} indéterminable : {e}") from e
     try:
-        depots = await lire_depots(ident.cik)
+        depots = await lire_depots(ident.cik, referentiel=charger_referentiel())
     except VentilationIndisponible:
         raise
     except httpx.HTTPError as e:

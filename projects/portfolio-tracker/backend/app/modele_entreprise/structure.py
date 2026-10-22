@@ -20,7 +20,6 @@ publié (le contrat ne lui en laisse même plus la forme, §2 de la spec).
 from __future__ import annotations
 
 import math
-import re
 from typing import Optional
 
 from app.contracts.formule_grammaire import FormuleInexecutable, noms_de_la_formule
@@ -29,6 +28,7 @@ from app.contracts.modele_entreprise_schema import (
 )
 from app.modele_entreprise.dimensions import (
     DimensionIncoherente, UniteInfo, conversions_de, dimension_de, verifier_periode_ligne)
+from app.knowledge.perimetre import ordre_des_periodes, premier_niveau_de
 from app.modele_entreprise.faits_publies import (
     axes_sans_bloc_publie, est_premier_niveau_publie, motif_regroupement_incoherent,
 )
@@ -61,12 +61,10 @@ def _membres_nouveaux(matiere: Matiere) -> list[dict]:
     return (matiere.ventilation_structure or {}).get("membres_nouveaux") or []
 
 
-_RE_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
-
-
 def _cle_tri_periode(periode: str) -> tuple:
-    m = _RE_DATE.search(periode)
-    return (m.group(1) if m else "", periode)
+    """DÉLÉGUÉE au détenteur unique `perimetre.ordre_des_periodes` (lot P1, §2.5) — l'ancienne copie
+    triait sur la PREMIÈRE date rencontrée (le DÉBUT d'un cumul) ; ce détenteur trie sur la FIN."""
+    return ordre_des_periodes(periode)
 
 
 # ── [S1] ────────────────────────────────────────────────────────────────────────────────────────
@@ -122,8 +120,10 @@ def _s2_s3b(arch: Architecture, ref: ReferentielModele, matiere: Matiere,
     presents_par_periode: dict[str, dict[str, Optional[str]]] = {}
     for c in cellules_ca:
         presents_par_periode.setdefault(c["periode"], {})[c["membre"]] = c.get("parent")
+    # Détenteur unique `perimetre.premier_niveau_de` (#46) — même ligne que `ventilation.relever`
+    # (deux occurrences), jamais recopiée en dur ici.
     par_periode: dict[str, set[str]] = {
-        periode: {m for m, p in parents.items() if p not in parents}
+        periode: set(premier_niveau_de(parents.keys(), parents))
         for periode, parents in presents_par_periode.items()
     }
 

@@ -44,7 +44,7 @@ async def un(ticker: str, *, publier: bool) -> int:
         faits = await fetch_company_facts(identite.cik)
         socle = reconstituer(faits, gabarit, reclassements=charger_reclassements(identite.cik, gabarit))
         structure_socle = structure_du_socle(socle)
-        depots = await lire_depots(identite.cik)
+        depots = await lire_depots(identite.cik, referentiel=referentiel)
     except VentilationIndisponible as e:
         print(f"BILAN ventilation {ticker} : ÉCHEC pré-requis ({e})")
         return 1
