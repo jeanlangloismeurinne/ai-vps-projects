@@ -53,12 +53,14 @@ const SHOT = shots[SHOT_KEY]!;
 const INITIAL_SELECTION = mainIds.includes(params.get("select") ?? "") ? params.get("select") : null;
 const TIME = params.has("t") ? Number(params.get("t")) : null;
 const STEP = params.has("step");
-// Guided tour: played on arrival (bare URL), or from step `?tour=<i>`; with `t` pinned, that
+// Guided tour: played on arrival (no parameter of this app in the URL), or from step `?tour=<i>`; with `t` pinned, that
 // step is shown and held (captures).
 const steps = tourFile.steps as StepLike[];
 const entryText = (key: string) => (texts.entries as Record<string, string>)[key] ?? key;
 const line = timeline(steps, entryText);
-const TOUR_START = params.has("tour") ? Number(params.get("tour") || 0) : window.location.search === "" ? 0 : null;
+const APP_PARAMS = ["shot", "silhouette", "select", "t", "step", "tour"];
+const ARRIVAL = !APP_PARAMS.some((p) => params.has(p));
+const TOUR_START = params.has("tour") ? Number(params.get("tour") || 0) : ARRIVAL ? 0 : null;
 const TOUR_KEY = "#tour";
 /** Step on screen; `t0` (performance.now(), ms) is when the tour would have started to reach
  * it on time, so that steps keep their pace even after a slow frame. */
@@ -202,7 +204,7 @@ export function App() {
           onFree={onTourFree}
         />
       )}
-      {!step && !SILHOUETTE && TOUR_START !== null && <TourButton onPlay={() => startTour()} />}
+      {!step && !SILHOUETTE && TIME === null && !STEP && <TourButton onPlay={() => startTour()} />}
       {selected && !step && !SILHOUETTE && (
         <Card
           id={selected}
