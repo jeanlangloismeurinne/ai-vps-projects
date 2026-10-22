@@ -28,6 +28,12 @@ brute avant filtrage, cf. le rapport du lot) — jamais recalculées par le modu
   [V18] signal d'acquisition significative (§4 bis, lot P1) : aucun signal chez NVDA (réel) ; un
         dépôt fictif de regroupement d'entreprises AU-DESSUS du seuil (5 % du CA) produit un signal
         rendu EN TEXTE ; un dépôt fictif SOUS le seuil n'en produit aucun.
+  [V19] garde (iv) — l'invariant de l'agrégat SUR LA VUE SERVIE (lot P1 §8 addendum, tranche A),
+        cas RÉEL NVDA : dépôt JUMEAU lu (10-Q du 2025-08-27, `tools/extraire_fixture_ventilation.sh
+        NVDA 0001045810-25-000209`) ; la vue tient sur `geographie` (douze mois par pays, Σ =
+        302 970 M$, la version RETRAITÉE) sans faux refus sur `activites` (Edge Computing au TTM
+        : incomplet, pas une erreur). `negatif_ventilation_publiee.sh` rougit cette garde en
+        mutant `appariement_feed._choisir_terme` vers la version d'ORIGINE (Σ = 323 559 M$).
 
 Ces quatre assertions répondent à une revue par exécution du coordinateur (2026-10-21) sur
 `montrer_ventilation.sh NVDA` : emboîtement non rendu (premier niveau/enfants au même niveau),
@@ -57,6 +63,7 @@ from _harness import Bilan, imports_symbol, strip_code  # noqa: E402
 
 from app.knowledge import ventilation as vt  # noqa: E402
 from app.knowledge import ventilation_xbrl as vx  # noqa: E402
+from app.knowledge import perimetre as pe  # noqa: E402
 from app.knowledge.socle_comptes import (  # noqa: E402
     charger_gabarit, charger_reclassements, reconstituer, structure_du_socle,
 )
@@ -452,5 +459,27 @@ depot_acq_dessous = vt.Depot(accn="FICTIF-DESSOUS-0000000001", form="8-K", filed
 v18b = vt.relever([nv10k, nv10q, depot_acq_dessous], GAB, REF, socle_nv)
 b.check(v18b.signaux_acquisition == [],
         f"[V18quinquies] une acquisition fictive SOUS le seuil ne produit aucun signal ({v18b.signaux_acquisition})")
+
+# ── [V19] garde (iv) — l'invariant de l'agrégat SUR LA VUE SERVIE, cas RÉEL NVDA ───────────────
+print("[V19] NVDA — dépôt jumeau lu, invariant par pays sur la vue servie (garde iv, lot P1)")
+nv_jumeau = charger_depot("NVDA", "0001045810-25-000209")
+v_nv3 = vt.relever([nv10k, nv10q, nv_jumeau], GAB, REF, socle_nv)
+structure_nv3 = vt.structure_de_ventilation(
+    v_nv3, version_referentiel=REF.version, version_gabarit=GAB.version, depots=(nv10k, nv10q, nv_jumeau))
+vue_nv3 = pe.vue_servie(structure_nv3, socle_nv)
+refus_geo = [r for r in vue_nv3["refus"] if "geographie" in r]
+b.check(refus_geo == [],
+        f"[V19] avec le jumeau lu, l'invariant par pays tient — la version RETRAITÉE est prise ({refus_geo})")
+refus_act = [r for r in vue_nv3["refus"] if "activites" in r]
+b.check(refus_act == [],
+        f"[V19bis] aucun faux refus sur « activites » (Edge Computing au TTM : incomplet, pas une "
+        f"erreur du module — filtre de complétude, [P35]) ({refus_act})")
+cellules_geo_ttm = [c for c in vue_nv3["cellules"]
+                   if c["axe"] == "geographie" and c["ligne"] == "chiffre_affaires"
+                   and c["periode"] == "TTM2026-07-26"]
+b.require(cellules_geo_ttm, 4, "[V19ter] les quatre pays ont une cellule à la période TTM, sur la vue")
+somme_geo_ttm = sum(c["v"] for c in cellules_geo_ttm)
+b.check(proche(somme_geo_ttm, 302970 * M, 1),
+        f"[V19quater] Σ pays (vue) = 302 970 M$ — la version RETRAITÉE (mesuré, cas réel) ({somme_geo_ttm})")
 
 sys.exit(b.summary())

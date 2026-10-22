@@ -488,4 +488,98 @@ b.check(_calcule_premier_niveau_ou_compare_depots(_perimetre_source),
         "[P32bis] perimetre.py, lui, PORTE bien ce calcul (asserté en positif, #4 de la spec)")
 
 
+# ── [P33]-[P36] la vue SERVIE (lot P1 §8 addendum, tranche A, point 2 + garde (iv)) ────────────
+# Cas FICTIFS, sur la FORME de la structure persistée (celle que rend `ventilation.
+# structure_de_ventilation`) — le cas RÉEL (NVDA, douze mois par pays) est éprouvé dans
+# `check_ventilation_publiee.py`, qui seul sait lire une instance XBRL.
+
+def _cv(axe: str, ligne: str, membre: str, periode: str, v: float, accn: str,
+       parent: Optional[str] = None) -> dict:
+    d = {"axe": axe, "ligne": ligne, "membre": membre, "periode": periode, "v": v,
+        "concept": "fictif", "accn": accn, "libelle": membre}
+    if parent is not None:
+        d["parent"] = parent
+    return d
+
+
+# [P33] déduplication : deux dépôts publient la MÊME adresse logique à des valeurs différentes —
+# celui déposé le plus RÉCEMMENT fait foi, jamais le premier rencontré dans la liste.
+structure_p33 = {
+    "depots": [{"accn": "d1", "filed": "2026-01-01"}, {"accn": "d2", "filed": "2026-06-01"}],
+    "cellules": [
+        _cv("axe_p33", "chiffre_affaires", "m1", "P1", 100.0, "d1"),
+        _cv("axe_p33", "chiffre_affaires", "m1", "P1", 150.0, "d2"),
+    ],
+    "refus": [],
+}
+vue_p33 = pe.vue_servie(structure_p33, socle=None)
+b.require(vue_p33["cellules"], 1, "[P33] une seule cellule survit à la déduplication (pas de fusion ET pas de doublon)")
+if len(vue_p33["cellules"]) == 1:
+    b.check(vue_p33["cellules"][0]["v"] == 150.0 and vue_p33["cellules"][0]["accn"] == "d2",
+            f"[P33bis] le dépôt déposé le plus récemment (d2, 150) l'emporte, pas d1 ({vue_p33['cellules'][0]})")
+# Ordre INVERSE dans la liste d'entrée : même résultat — ce n'est pas l'ordre de la liste qui décide.
+structure_p33b = {**structure_p33, "cellules": list(reversed(structure_p33["cellules"]))}
+vue_p33b = pe.vue_servie(structure_p33b, socle=None)
+b.check(len(vue_p33b["cellules"]) == 1 and vue_p33b["cellules"][0]["v"] == 150.0,
+        "[P33ter] le résultat ne dépend pas de l'ordre d'arrivée des cellules")
+
+# [P34] garde (iv) : une période COMPLÈTE (tous les membres du régime de référence y ont une
+# valeur) dont la somme ne boucle PAS avec le total du socle → refus NOMMÉ.
+structure_p34 = {
+    "depots": [{"accn": "d1", "filed": "2026-01-01"}],
+    "cellules": [
+        _cv("axe_p34", "chiffre_affaires", "m1", "P1", 60.0 * M, "d1"),
+        _cv("axe_p34", "chiffre_affaires", "m2", "P1", 30.0 * M, "d1"),
+    ],
+    "refus": [],
+}
+socle_p34 = {"cellules": {"chiffre_affaires|P1": {"v": 100.0 * M}}}   # 60+30=90 ≠ 100
+vue_p34 = pe.vue_servie(structure_p34, socle=socle_p34)
+refus_p34 = [r for r in vue_p34["refus"] if "axe_p34" in r]
+b.require(refus_p34, 1, "[P34] un refus NOMMÉ apparaît (90 ≠ 100, période complète)")
+if refus_p34:
+    b.check("ERREUR" in refus_p34[0], "[P34bis] le motif dit ERREUR du module, jamais une rupture tue")
+
+# [P35] le FILTRE DE COMPLÉTUDE : un membre du régime de référence SANS AUCUNE valeur à une
+# période (ex. un membre nouveau dont les douze mois ne sont pas encore établis, §4.2) ne doit
+# JAMAIS déclencher la garde (iv) à CETTE période, même si la somme PARTIELLE est très éloignée du
+# total du socle — l'incomplétude est déjà nommée par le raccord `decoupage_change`/`non_ventile`
+# existant, ce n'est pas une faute DE CE MODULE.
+structure_p35 = {
+    "depots": [{"accn": "d1", "filed": "2025-01-01"}, {"accn": "d2", "filed": "2026-01-01"}],
+    "cellules": [
+        _cv("axe_p35", "chiffre_affaires", "m1", "P1", 10.0 * M, "d1"),
+        _cv("axe_p35", "chiffre_affaires", "m2", "P1", 20.0 * M, "d1"),
+        _cv("axe_p35", "chiffre_affaires", "m1", "P2", 70.0 * M, "d2"),   # m2 ABSENT à P2 : incomplet
+        _cv("axe_p35", "chiffre_affaires", "m2", "P4", 5.0 * M, "d2"),    # m2 n'existe qu'ICI pour d2
+    ],
+    "refus": [],
+}
+socle_p35 = {"cellules": {"chiffre_affaires|P2": {"v": 999.0 * M}}}   # 70 ≠ 999, mais P2 est INCOMPLET
+vue_p35 = pe.vue_servie(structure_p35, socle=socle_p35)
+refus_p35 = [r for r in vue_p35["refus"] if "axe_p35" in r]
+b.check(refus_p35 == [], f"[P35] aucun refus sur une période INCOMPLÈTE, même très éloignée du total ({refus_p35})")
+
+# [P36] la garde (iv) ne porte QUE sur `LIGNE_RACCORD_OBLIGATOIRE` (« chiffre_affaires ») — un
+# résultat ou un actif sectoriel qui laisse un reste non affecté (cas RÉEL NVDA resultat_
+# exploitation, [V4] de check_ventilation_publiee) n'est PAS une faute de périmètre.
+structure_p36 = {
+    "depots": [{"accn": "d1", "filed": "2026-01-01"}],
+    "cellules": [
+        _cv("axe_p36", "resultat_exploitation", "m1", "P1", 60.0 * M, "d1"),
+        _cv("axe_p36", "resultat_exploitation", "m2", "P1", 30.0 * M, "d1"),
+    ],
+    "refus": [],
+}
+socle_p36 = {"cellules": {"chiffre_affaires|P1": {"v": 100.0 * M}}}   # 90 (resultat_exploitation) ≠
+# 100 (chiffre_affaires, LIGNE_RACCORD_OBLIGATOIRE) : un chiffre du socle sur une AUTRE ligne existe
+# bien — c'est le filtre sur `c["ligne"]`, pas une coïncidence de clef absente, qui doit protéger ici.
+vue_p36 = pe.vue_servie(structure_p36, socle=socle_p36)
+refus_p36 = [r for r in vue_p36["refus"] if "axe_p36" in r]
+b.check(refus_p36 == [],
+        f"[P36] aucun refus hors de la ligne chiffre_affaires, même si la ligne ne boucle jamais ({refus_p36})")
+b.check(pe.LIGNE_RACCORD_OBLIGATOIRE == "chiffre_affaires",
+        "[P36bis] canari : la ligne gardée est bien `chiffre_affaires` (sinon adapter [P34]-[P36])")
+
+
 sys.exit(b.summary())

@@ -274,3 +274,5 @@ garde (iv) ci-dessous.
 6. **Découpage d'exécution** (pour tenir dans un passage) : tranche A = points 1 + 2 + garde (iv), rendu de
    M2 inchangé en texte (la vue reproduit d'abord le comportement actuel quand il n'y a qu'un régime) ;
    tranche B = 3 + rendu de la chronique + [S2]/[S3b] + `faits_publies` + consigne + gardes (i)-(iii).
+
+**État au soir du 2026-10-22** : tranche A livrée (points 1, garde (iv), `vue_servie` pure) ; le branchement des lecteurs passe en tranche B, qui doit aussi traiter l'axe PAYS de NVDA (redécoupé : Singapour replié dans les autres pays, mesuré sur le jumeau) et nommer les périodes que la garde (iv) ne juge pas (incomplètes) au lieu de les taire.

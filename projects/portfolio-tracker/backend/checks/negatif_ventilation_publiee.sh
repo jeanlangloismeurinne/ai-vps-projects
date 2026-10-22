@@ -15,6 +15,7 @@ CHECK="checks/check_ventilation_publiee.py"
 SRC="app/knowledge/ventilation.py"
 XBRL="app/knowledge/ventilation_xbrl.py"
 FEED="app/knowledge/ventilation_feed.py"
+APPAR="app/knowledge/appariement_feed.py"
 
 mutations=(
 # Qualificateur neutre non retiré : les faits `secteurs` (toujours qualifiés par
@@ -69,6 +70,12 @@ mutations=(
 # n'est plus transmis au producteur du signal — une acquisition au-dessus du seuil (part du CA) ne
 # peut plus être comparée à rien, le signal disparaît en silence.
 "$SRC¦    dernier_exercice_fin = max(fin_vers_fy, default=None)¦    dernier_exercice_fin = None¦[V18bis]"
+# Garde (iv), lot P1 §8 addendum : `_choisir_terme` prend le terme d'ORIGINE (le plus ANCIENNEMENT
+# déposé) au lieu du terme RETRAITÉ (le plus RÉCEMMENT déposé) — régression EXACTE de `c551003`.
+# Sur le cas réel NVDA (jumeau lu), les douze mois par pays prennent le semestre 2025 d'origine :
+# Σ pays = 323 559 M$ ≠ total socle 302 970 M$ — l'invariant de l'agrégat SUR LA VUE SERVIE doit
+# rougir NOMMÉMENT ([V19]), sans faire tomber [V19ter]/[V19quater] pour une autre raison.
+"$APPAR¦    plus_recent_filed = max(str(p.get(\"filed\") or \"\") for p in candidats)¦    plus_recent_filed = min(str(p.get(\"filed\") or \"\") for p in candidats)  # MUTATION : origine au lieu du retraité¦[V19]"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

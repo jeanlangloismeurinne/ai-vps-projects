@@ -277,7 +277,13 @@ def relever(
     membres_k10: dict[str, set[str]] = {}
     membres_par_axe: dict[str, set[str]] = {a.id: set() for a in referentiel.axes}
     etiquette: dict[str, str] = {}
+    # Hiérarchie FUSIONNÉE (pour les calculs INTERNES de premier niveau/raccord — inchangée, §8
+    # addendum : relever continue de décider son propre raccord comme avant ce lot ; c'est la vue
+    # servie, à la lecture, qui raccordera PAR RÉGIME, tranche B). Jamais utilisée pour le CHAMP
+    # `parent` persisté sur une cellule : lot P1 §8 point 1, « la hiérarchie est persistée PAR
+    # DÉPÔT » — chaque cellule reçoit la hiérarchie du dépôt qui l'a produite, `parent_de_par_depot`.
     parent_de: dict[str, str] = {}
+    parent_de_par_depot: dict[str, dict[str, str]] = {d.accn: dict(d.hierarchie) for d in depots}
     conflits: list[str] = []
     # Fenêtre (début, fin) de chaque période « cumul du … au … » (§4.3bis — membres nouveaux,
     # demande du coordinateur 2026-10-21) : un cumul du 10-Q n'a pas d'id dans le socle.
@@ -333,20 +339,28 @@ def relever(
                         if fait.concept in axe_def.concepts:
                             base_txt = ",".join(f"{a}={m}" for a, m in sorted(base.items()))
                             pid = fait.fin or fait.instant or ""
-                            cle = (axe_def.id, "__proportion__", membre, pid, base_txt)
+                            # Identité PAR DÉPÔT (lot P1 §8 point 1) : `accn` fait partie de la clef —
+                            # deux dépôts qui publient la même cellule à des valeurs différentes ne se
+                            # fusionnent JAMAIS en silence (le premier dépôt ne « gagne » plus).
+                            cle = (axe_def.id, "__proportion__", membre, pid, base_txt, depot.accn)
+                            # Pas de garde ici (comportement D'ORIGINE, non touché par ce lot) : au
+                            # sein d'un MÊME dépôt, le dernier fait rencontré gagne, comme avant.
+                            # L'accn ne protège que de la fusion ENTRE dépôts (point 1).
                             cellules[cle] = CelluleVentilation(
                                 axe_def.id, "__proportion__", membre, pid, fait.valeur, fait.concept,
-                                depot.accn, etiquette.get(membre, membre), parent_de.get(membre), base_txt)
+                                depot.accn, etiquette.get(membre, membre),
+                                parent_de_par_depot[depot.accn].get(membre), base_txt)
                     elif axe_def.raccord == "total" and fait.debut in debuts_cumul_valides and fait.fin:
                         ligne_nouv = _ligne_du_concept(fait.concept, concepts_ligne)
                         if ligne_nouv is not None:
                             pid_cumul = f"cumul du {fait.debut} au {fait.fin}"
                             cumul_fenetres[pid_cumul] = (fait.debut, fait.fin)
-                            cle_cumul = (axe_def.id, ligne_nouv, membre, pid_cumul)
+                            cle_cumul = (axe_def.id, ligne_nouv, membre, pid_cumul, depot.accn)
                             if cle_cumul not in cellules:
                                 cellules[cle_cumul] = CelluleVentilation(
                                     axe_def.id, ligne_nouv, membre, pid_cumul, fait.valeur, fait.concept,
-                                    depot.accn, etiquette.get(membre, membre), parent_de.get(membre))
+                                    depot.accn, etiquette.get(membre, membre),
+                                    parent_de_par_depot[depot.accn].get(membre))
                     continue
 
                 if axe_def.raccord == "aucun":
@@ -355,10 +369,12 @@ def relever(
                         continue
                     base_txt = ",".join(f"{a}={m}" for a, m in sorted(base.items()))
                     pid = fait.fin or fait.instant or ""
-                    cle = (axe_def.id, "__proportion__", membre, pid, base_txt)
+                    cle = (axe_def.id, "__proportion__", membre, pid, base_txt, depot.accn)
+                    # Idem : pas de garde (comportement D'ORIGINE) — l'accn protège seulement de la
+                    # fusion ENTRE dépôts, jamais de l'ordre des faits AU SEIN d'un même dépôt.
                     cellules[cle] = CelluleVentilation(
                         axe_def.id, "__proportion__", membre, pid, fait.valeur, fait.concept, depot.accn,
-                        etiquette.get(membre, membre), parent_de.get(membre), base_txt)
+                        etiquette.get(membre, membre), parent_de_par_depot[depot.accn].get(membre), base_txt)
                     continue
 
                 ligne = _ligne_du_concept(fait.concept, concepts_ligne)
@@ -373,21 +389,26 @@ def relever(
                     pid = fin_vers_fy.get(fait.fin)
                 if pid is None:
                     continue   # cumul non annuel isolé : traité par le passage « douze mois » ci-dessous
-                cle = (axe_def.id, ligne, membre, pid)
+                cle = (axe_def.id, ligne, membre, pid, depot.accn)
                 if cle not in cellules:
                     cellules[cle] = CelluleVentilation(
                         axe_def.id, ligne, membre, pid, fait.valeur, fait.concept, depot.accn,
-                        etiquette.get(membre, membre), parent_de.get(membre))
+                        etiquette.get(membre, membre), parent_de_par_depot[depot.accn].get(membre))
 
     # ── Rattraper la valeur du PARENT d'un membre nouveau, À LA MÊME FENÊTRE (§4.3bis) ─────────────
     # Sans elle, l'emboîtement ne peut jamais se juger : Data Center (préexistant) n'a sinon aucune
     # cellule au cumul du 10-Q pour s'opposer à ses enfants nouveaux (Hyperscale, AI Clouds…).
-    for cle, c in list(cellules.items()):
-        if len(cle) != 4 or not cle[3].startswith("cumul du "):
+    # Lot P1 §8 point 1 : on inspecte les CHAMPS de la cellule, jamais la FORME de la clef du dict
+    # (qui porte désormais l'accn en plus — une clef à 4 éléments n'existe plus). Le parent d'un
+    # membre nouveau se lit dans la hiérarchie DE SON PROPRE DÉPÔT (`c.accn`), jamais une hiérarchie
+    # fusionnée entre dépôts.
+    cles_logiques_connues = {(c.axe, c.ligne, c.membre, c.periode) for c in cellules.values()}
+    for c in list(cellules.values()):
+        if c.ligne == "__proportion__" or not c.periode.startswith("cumul du "):
             continue
-        axe_id, ligne, membre, pid_cumul = cle
-        parent = parent_de.get(membre)
-        if parent is None or (axe_id, ligne, parent, pid_cumul) in cellules:
+        axe_id, ligne, membre, pid_cumul = c.axe, c.ligne, c.membre, c.periode
+        parent = parent_de_par_depot.get(c.accn, {}).get(membre)
+        if parent is None or (axe_id, ligne, parent, pid_cumul) in cles_logiques_connues:
             continue
         axe_def = next(a for a in referentiel.axes if a.id == axe_id)
         debut, fin = cumul_fenetres[pid_cumul]
@@ -401,9 +422,10 @@ def relever(
                     trouve = f
                     break
             if trouve is not None:
-                cellules[(axe_id, ligne, parent, pid_cumul)] = CelluleVentilation(
+                cellules[(axe_id, ligne, parent, pid_cumul, depot.accn)] = CelluleVentilation(
                     axe_id, ligne, parent, pid_cumul, trouve.valeur, trouve.concept, depot.accn,
-                    etiquette.get(parent, parent), parent_de.get(parent))
+                    etiquette.get(parent, parent), parent_de_par_depot.get(depot.accn, {}).get(parent))
+                cles_logiques_connues.add((axe_id, ligne, parent, pid_cumul))
                 break
 
     # ── Douze mois glissants (§4.2) : l'identité comptable de `appariement_feed`, détenteur unique ──
@@ -436,10 +458,11 @@ def relever(
             except AppariementInexecutable:
                 continue
             accn_plus_recent = max((p["accn"] for p in pts if p.get("accn")), default="")
-            cle = (axe_id, ligne, membre, periode_ttm["id"])
+            cle = (axe_id, ligne, membre, periode_ttm["id"], accn_plus_recent)
             cellules[cle] = CelluleVentilation(
                 axe_id, ligne, membre, periode_ttm["id"], valeur, CONCEPT_DOUZE_MOIS,
-                accn_plus_recent, etiquette.get(membre, membre), parent_de.get(membre))
+                accn_plus_recent, etiquette.get(membre, membre),
+                parent_de_par_depot.get(accn_plus_recent, {}).get(membre))
 
     # Conflits de hiérarchie : seulement pour les membres RÉELLEMENT en usage (une cellule, ou un
     # membre nouveau) — un conflit sur une ligne de bilan ou un pays fiscal que personne ne lit
@@ -451,12 +474,19 @@ def relever(
     ]
 
     # ── Le raccord (§4.4) ───────────────────────────────────────────────────────────────────────
+    # `cellule_logique` : UNE valeur par (axe, ligne, membre, période) pour les calculs de raccord —
+    # le premier dépôt rencontré (même ordre qu'avant ce lot, reproduit à l'identique : `cellules`
+    # garde l'ordre d'insertion). `Ventilation.cellules` (rendu plus bas), lui, garde TOUTES les
+    # cellules PAR DÉPÔT sans aucune fusion (lot P1 §8 point 1) — cette table n'en est qu'une LECTURE
+    # interne, jamais la donnée persistée.
     raccords: list[Raccord] = []
     groupes: dict[tuple[str, str, str], set[str]] = {}
+    cellule_logique: dict[tuple[str, str, str, str], CelluleVentilation] = {}
     for c in cellules.values():
         if c.ligne == "__proportion__":
             continue
         groupes.setdefault((c.axe, c.ligne, c.periode), set()).add(c.membre)
+        cellule_logique.setdefault((c.axe, c.ligne, c.membre, c.periode), c)
 
     def _premier_niveau_de(axe_id: str, ligne: str, periode: str) -> set[str]:
         presents_p = groupes.get((axe_id, ligne, periode), set())
@@ -474,14 +504,14 @@ def relever(
         if axe_def.raccord != "total":
             continue
         premier_niveau = set(premier_niveau_de(presents, parent_de))
-        valeurs = {m: cellules[(axe_id, ligne, m, periode)].valeur for m in presents}
+        valeurs = {m: cellule_logique[(axe_id, ligne, m, periode)].valeur for m in presents}
         somme = sum(valeurs[m] for m in premier_niveau)
 
         total: Optional[float] = None
         est_cumul = periode in cumul_fenetres
         if est_cumul:
             debut, fin = cumul_fenetres[periode]
-            concept_use = next((cellules[(axe_id, ligne, m, periode)].concept for m in presents), None)
+            concept_use = next((cellule_logique[(axe_id, ligne, m, periode)].concept for m in presents), None)
             total = faits_sans_dim.get((concept_use, debut, fin)) if concept_use else None
         else:
             c_socle = cel_socle.get(f"{ligne}|{periode}")

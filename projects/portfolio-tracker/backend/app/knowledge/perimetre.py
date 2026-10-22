@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Literal, NamedTuple, Optional
+from typing import Any, Literal, NamedTuple, Optional
 
 from app.knowledge.socle_comptes import tolerance_bouclage
 
@@ -52,6 +52,8 @@ __all__ = [
     "regime_a_change",
     "SignalAcquisition",
     "signal_acquisition_significative",
+    "LIGNE_RACCORD_OBLIGATOIRE",
+    "vue_servie",
 ]
 
 
@@ -633,6 +635,113 @@ def verifier_invariant_agregat(
                 f"reconstituée = {somme}, ligne du socle = {total} (écart {total - somme}, "
                 f"tolérance {tol}) — ERREUR du module, jamais une rupture présentée comme normale")
     return motifs
+
+
+# ── §8 (addendum) point 2 — la vue SERVIE, calculée à la lecture ───────────────────────────────
+
+# La LIGNE dont la somme des membres de premier niveau DOIT se raccorder au total consolidé, pour
+# TOUT émetteur (ASC 280 / IFRS 8 : la ventilation du CHIFFRE D'AFFAIRES par secteur, activité ou
+# zone géographique est tenue de reconcilier à la vente consolidée — ce n'est vrai d'AUCUNE autre
+# ligne : un résultat ou un actif sectoriel laisse couramment un reste « corporate »/non affecté,
+# sans que ce soit un défaut de périmètre, cf. [V4] NVDA resultat_exploitation). La garde (iv) ne
+# porte donc QUE sur cette ligne — l'étendre à une ligne qui n'a jamais eu vocation à boucler
+# fabriquerait un faux refus, pas une garde (`feedback_garde_structure_pas_sens`). Ce n'est PAS un
+# seuil calé sur un émetteur : c'est une règle du gabarit (`socle_comptes.yaml`), valable pour tout
+# émetteur qui ventile son chiffre d'affaires.
+LIGNE_RACCORD_OBLIGATOIRE = "chiffre_affaires"
+
+
+def _depot_le_plus_recent(cles: list[tuple], depots_filed: dict[str, str]) -> tuple:
+    """Parmi des cellules candidates pour LA MÊME adresse logique (axe,ligne,membre,période[,base]),
+    celle du dépôt déposé le plus RÉCEMMENT (#133) — jamais le premier dépôt rencontré. Pure,
+    déterministe (l'accn départage une égalité de date de dépôt)."""
+    return max(cles, key=lambda c: (depots_filed.get(c[-1], ""), c[-1]))
+
+
+def vue_servie(structure: dict[str, Any], socle: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """La vue SERVIE (lot P1, §8 addendum, point 2 — tranche A) : calculée À LA LECTURE à partir de
+    la structure PERSISTÉE par `ventilation.relever` (cellules PAR DÉPÔT, point 1 — identité
+    `(axe, ligne, membre, période, accn)`, sans aucune fusion) et du socle EN VIGUEUR. Rend une
+    structure de MÊME FORME, où :
+
+      · `cellules` est DÉDUPLIQUÉE à UNE cellule par adresse logique (axe, ligne, membre, période,
+        base) : quand plusieurs dépôts publient la MÊME adresse, celui déposé le plus RÉCEMMENT
+        fait foi (#133) — jamais le premier dépôt rencontré. C'est la cause mesurée de `c551003` :
+        le jumeau avait fait prendre une version d'ORIGINE à la place d'une version RETRAITÉE sur
+        un chemin qui ne passait pas encore par ici (`appariement_feed._choisir_terme`, déjà
+        corrigé) — cette déduplication ferme le MÊME trou pour tout lecteur qui passe par la vue ;
+      · `refus` porte, EN PLUS des refus déjà portés par `structure`, la garde (iv) : pour chaque
+        axe à raccord, sur la ligne `LIGNE_RACCORD_OBLIGATOIRE`, la somme des membres de premier
+        niveau de la série reconstituée égale la ligne du socle à `tolerance_bouclage` À CHAQUE
+        période connue du socle — sinon une ERREUR du module, refus NOMMÉ
+        (`verifier_invariant_agregat`, §2.3 ter), jamais une rupture tue.
+
+    Dans CETTE tranche (A), `cellules` reste la valeur telle que DISPOSÉE par un dépôt (la
+    reconstruction par passage/hypothèse, elle, n'est pas branchée au rendu — tranche B) : pour un
+    axe à un seul régime, la déduplication ne change RIEN (une seule adresse logique, un seul
+    dépôt l'alimentant déjà) — la vue reproduit le comportement actuel à l'identique. Elle ne
+    change le texte affiché que là où une fusion silencieuse cachait auparavant un second dépôt
+    (jamais un nouveau rendu de régime)."""
+    cellules_brutes = structure.get("cellules") or []
+    depots_meta = structure.get("depots") or []
+    depots_filed = {d["accn"]: d.get("filed") or "" for d in depots_meta}
+
+    # ── Déduplication : une adresse logique, une cellule ────────────────────────────────────────
+    par_adresse: dict[tuple, list[dict]] = {}
+    for c in cellules_brutes:
+        adresse = (c["axe"], c["ligne"], c["membre"], c["periode"], c.get("base"))
+        par_adresse.setdefault(adresse, []).append(c)
+    cellules_vue: list[dict] = []
+    for adresse, candidats in par_adresse.items():
+        if len(candidats) == 1:
+            cellules_vue.append(candidats[0])
+            continue
+        cles = [(*adresse, c["accn"]) for c in candidats]
+        accn_retenu = _depot_le_plus_recent(cles, depots_filed)[-1]
+        retenue = next(c for c in candidats if c["accn"] == accn_retenu)
+        cellules_vue.append(retenue)
+
+    # ── Garde (iv) : l'invariant de l'agrégat, sur la ligne qui DOIT boucler ────────────────────
+    cel_socle = (socle or {}).get("cellules") or {}
+    refus_nouveaux: list[str] = []
+    par_axe: dict[str, list[dict]] = {}
+    for c in cellules_vue:
+        if c["ligne"] == LIGNE_RACCORD_OBLIGATOIRE:
+            par_axe.setdefault(c["axe"], []).append(c)
+    for axe, cs in par_axe.items():
+        brutes = [
+            CelluleBrute(
+                axe=axe, membre=c["membre"], valeur=float(c["v"]), periode_fin=c["periode"],
+                depot=c["accn"], parent=c.get("parent"))
+            for c in cs
+        ]
+        chronique = construire_chronique(axe, brutes, depots_filed)
+        ligne_du_socle_brut = {
+            periode.split("|", 1)[1]: float(cel["v"])
+            for periode, cel in cel_socle.items()
+            if periode.startswith(f"{LIGNE_RACCORD_OBLIGATOIRE}|") and cel.get("v") is not None
+        }
+        # Une période n'entre dans la garde que si la série RECONSTITUÉE y est COMPLÈTE (tous les
+        # membres de premier niveau du régime de référence y ont une valeur). Un membre du régime
+        # de référence sans aucune valeur à cette période (ex. un membre NOUVEAU dont les douze
+        # mois glissants ne sont pas encore établis, §4.2) est une incomplétude DÉJÀ nommée par le
+        # raccord `decoupage_change`/`non_ventile` existant — ce n'est pas la faute de ce module, et
+        # la garde (iv) ne doit porter que sur ce qu'elle peut vraiment juger, sous peine de refuser
+        # une série que personne n'a prétendu complète (`feedback_garde_structure_pas_sens`).
+        membres_par_periode: dict[str, set[str]] = {}
+        for cc in chronique.cellules:
+            if cc.membre in chronique.regime_reference.premier_niveau:
+                membres_par_periode.setdefault(cc.periode, set()).add(cc.membre)
+        periodes_completes = {
+            p for p, ms in membres_par_periode.items() if ms >= chronique.regime_reference.premier_niveau}
+        ligne_du_socle = {p: v for p, v in ligne_du_socle_brut.items() if p in periodes_completes}
+        refus_nouveaux.extend(verifier_invariant_agregat(chronique, ligne_du_socle))
+
+    return {
+        **structure,
+        "cellules": cellules_vue,
+        "refus": list(structure.get("refus") or []) + refus_nouveaux,
+    }
 
 
 # ── §2.4 — les douze mois glissants : même régime, ou retraitement cohérent ─────────────────────

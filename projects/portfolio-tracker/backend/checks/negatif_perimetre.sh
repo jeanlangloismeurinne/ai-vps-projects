@@ -69,6 +69,16 @@ mutations=(
 # [P32] garde de détention : `premier_niveau_de` cesse d'exclure les enfants dont le parent est
 # présent — un lecteur externe qui recopierait ce calcul passerait inaperçu du grep de détention.
 "$SRC¦    return frozenset(m for m in presents if parent_de.get(m) not in presents)¦    return frozenset(presents)¦[P32bis]"
+# [P33] vue_servie — déduplication : le dépôt le plus récent cesse de faire foi (min au lieu de
+# max) — le premier dépôt rencontré gagnerait, contre #133.
+"$SRC¦    return max(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦    return min(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦[P33bis]"
+# [P36] vue_servie — la garde (iv) cesse d'être bornée à `LIGNE_RACCORD_OBLIGATOIRE` : un résultat
+# ou un actif sectoriel qui laisse un reste non affecté (cas réel, jamais une faute de périmètre)
+# déclencherait un refus à tort.
+"$SRC¦        if c[\"ligne\"] == LIGNE_RACCORD_OBLIGATOIRE:¦        if True:¦[P36]"
+# [P35] vue_servie — le filtre de complétude disparaît : une période où un membre du régime de
+# référence n'a simplement AUCUNE valeur (pas encore établie) serait jugée comme si elle bouclait.
+"$SRC¦        periodes_completes = {¦        periodes_completes = set(ligne_du_socle_brut)\n        _ignore = {¦[P35]"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations
