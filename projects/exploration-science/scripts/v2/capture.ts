@@ -251,6 +251,15 @@ async function recordTransition(page: Page, dir: string) {
 const results: Record<string, unknown> = {};
 const log = (what: string) => console.log(`${new Date().toISOString().slice(11, 19)}   ${what}`);
 let failed = false;
+/** Keeps a result, reports its problems at once and saves the results so far: a run cut
+ * short (time limit) still leaves what it checked. */
+const keep = (key: string, result: Record<string, unknown> & { errors: string[]; problems?: string[] }) => {
+  results[key] = result;
+  const bad = [...(result.problems ?? []), ...result.errors];
+  if (bad.length) failed = true;
+  for (const b of bad) log(`PROBLEM ${key}: ${b}`);
+  writeFileSync(join(out, "captures.json"), JSON.stringify(results, null, 2) + "\n");
+};
 try {
   for (const format of formats) {
     const page = await browser.newPage({ viewport: FORMATS[format], deviceScaleFactor: Number(arg("dpr") ?? 2), hasTouch: format !== "desktop" });
@@ -266,31 +275,26 @@ try {
       console.log(`${new Date().toISOString().slice(11, 19)} ${view}/${format}`);
       await page.screenshot({ path: join(out, file), timeout: 180_000 });
       const overlap = view.startsWith("card-") ? await page.evaluate(() => window.__xs!.overlap()) : undefined;
-      results[`${view}/${format}`] = { file, render: await page.evaluate(() => window.__xs!.renderInfo()), overlap, errors: [...errors] };
-      if (errors.length) failed = true;
+      keep(`${view}/${format}`, { file, render: await page.evaluate(() => window.__xs!.renderInfo()), overlap, errors: [...errors] });
       errors.length = 0;
     }
     if (!only || only.includes("selection")) {
       const { checks, problems } = await checkSelection(page, format !== "desktop");
-      results[`selection/${format}`] = { checks, problems, errors: [...errors] };
-      if (problems.length || errors.length) failed = true;
+      keep(`selection/${format}`, { checks, problems, errors: [...errors] });
       errors.length = 0;
     }
     if (!only || only.includes("transitions")) {
       const { checks, problems } = await checkTransitions(page, format !== "desktop");
-      results[`transitions/${format}`] = { checks, problems, errors: [...errors] };
-      if (problems.length || errors.length) failed = true;
+      keep(`transitions/${format}`, { checks, problems, errors: [...errors] });
       errors.length = 0;
     }
     if ((!only || only.includes("transition-video")) && format === formats[0]) {
       try {
         const frames = await recordTransition(page, join(out, "transition"));
-        results[`transition-video/${format}`] = { frames, errors: [...errors] };
+        keep(`transition-video/${format}`, { frames, errors: [...errors] });
       } catch (e) {
-        results[`transition-video/${format}`] = { problems: [String(e).slice(0, 500)], errors: [...errors] };
-        failed = true;
+        keep(`transition-video/${format}`, { problems: [String(e).slice(0, 500)], errors: [...errors] });
       }
-      if (errors.length) failed = true;
       errors.length = 0;
     }
     await page.close();
