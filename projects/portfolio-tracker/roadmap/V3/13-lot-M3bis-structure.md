@@ -1,6 +1,6 @@
 ---
 id: spec-lot-m3bis
-status: spec v2 2026-10-22 (Opus) — réécrite sur les causes profondes (principe fondateur n° 4) ; à exécuter par Sonnet
+status: spec v2.1 2026-10-22 (Opus) — réécrite sur les causes profondes (principe fondateur n° 4), cause ① corrigée pour respecter l'arbitrage du 2026-10-21 (architecte libre de composer) ; à exécuter par Sonnet
 created: 2026-10-22
 project: portfolio-tracker
 role: >
@@ -10,11 +10,12 @@ role: >
   l'exemple (un libellé de marché, la seule période d'une variable) : remplacée, voir §0.2.
 ---
 
-# Lot M3 bis — ce que le code sait, il le construit ; ce que le modèle ne voit pas, il ne peut pas le découper
+# Lot M3 bis — le modèle choisit, le code établit les faits ; ce que le modèle ne voit pas, il ne peut pas le découper
 
-> **Ce que ferait un vrai fonds** : l'analyste ne redessine pas la publication de l'émetteur — il la
-> recopie telle quelle, choisit le découpage qui porte les moteurs économiques, et n'ajoute que ce qui est
-> plus fin. Il sait que les segments et les marchés d'une entreprise sont deux façons de répartir le même
+> **Ce que ferait un vrai fonds** : l'analyste compose librement son classeur — il choisit le découpage qui
+> porte les moteurs économiques, s'arrête à la maille qui lui sert, regroupe ce qui est immatériel, découpe
+> plus fin là où il a une thèse — mais il ne travestit pas un fait : un chiffre publié reste publié, et il
+> garde le second découpage de l'émetteur À CÔTÉ, pour raccorder (les marges par segment, par exemple). Il sait que les segments et les marchés d'une entreprise sont deux façons de répartir le même
 > chiffre d'affaires : ils se croisent, ils ne s'emboîtent pas. Ses formules sont homogènes (on n'ajoute
 > pas un stock à un flux, ni des dollars à des millions de dollars). Avant de valoriser, il dresse
 > l'inventaire de ce que l'entreprise PRÉPARE (programmes, prochaines générations, produits annoncés,
@@ -40,7 +41,7 @@ role: >
 
 | Cause | Symptômes | Autres formes d'entreprise où elle frapperait | Correctif |
 |---|---|---|---|
-| ① le modèle DÉCLARE ce que le code SAIT (maille publiée, emboîtement) et les contrôles lisent sa déclaration | marchés « estimés » sous un segment ; Networking frère de Data Center ; emboîtement instable | tout émetteur à deux axes (activités × pays, produits × clients) ; tout émetteur à sous-membres | §2 squelette construit par le code |
+| ① le contrat n'offre AUCUNE place au second découpage publié, et il laisse le modèle AFFIRMER deux faits que le code connaît (« ce bloc est estimé », « ce membre en contient un autre ») que les contrôles croient sur parole. Le CHOIX de composition n'est pas en cause : il reste libre (arbitrage 09 §1.1, §2 : « une suggestion, pas une cage ») | voulant les segments au premier niveau ET le détail des marchés, le modèle a forcé l'autre axe dans l'arbre (son motif le dit : « sous-détail publié dans l'axe activites ») en marquant « estimé » des membres publiés ; Networking frère de Data Center | tout émetteur à deux axes (activités × pays, produits × clients) ; tout émetteur à sous-membres | §2 : une place pour les autres axes ; maille et emboîtement entre blocs publiés établis par le code |
 | ② la matière ne dit pas ce qu'est un axe | emboîtement inféré de la prose du 10-K | idem | §3 rendu |
 | ③ aucune question n'inventorie ce que l'entreprise prépare | portefeuille regroupé ; programmes futurs absents de la valeur | laboratoire, technologie (générations suivantes), industriel (nouvelles usines), toute société qui annonce | §4 question `me_7` + manques du dossier |
 | ④ les formules ne sont pas typées | stock dans une ligne annuelle | tout classeur : % dans des M$, unités × $/unité rangé en M$ (facteur 10⁶) | §5 dimensions |
@@ -52,7 +53,7 @@ cas fictif révèle une ambiguïté qu'on ne peut pas trancher sans elle : c'est
 
 ## 1. Périmètre et interdits
 
-- **Livré** : squelettes publiés (code) ; rendu des axes ; question `me_7` (définition, table de la spec 03,
+- **Livré** : maille et emboîtement des blocs publiés établis par le code, regroupements, place des autres axes ; rendu des axes ; question `me_7` (définition, table de la spec 03,
   rattachements du catalogue) ; contrat `architecture-1.2.0` ; référentiel `1.2.0` (unités, une fiche) ; contrôle
   des dimensions ; contrôles réécrits ; prompt et exemple ; checks, négatifs, cas fictifs.
 - **Pas livré** : l'instruction de `me_7` pour NVDA et RVMD (payante, §8 étape 5, sur accord) ; M4, M5.
@@ -63,36 +64,42 @@ cas fictif révèle une ambiguïté qu'on ne peut pas trancher sans elle : c'est
   ne tient pas sur un émetteur qui nomme autrement).
 - **Ne pas committer, ne pas déployer, ne rien écrire en production.**
 
-## 2. Cause ① — le squelette publié est construit par le code (`app/modele_entreprise/squelette.py`, NOUVEAU, pur)
+## 2. Cause ① — le modèle compose, le code établit les faits (`app/modele_entreprise/faits_publies.py`, NOUVEAU, pur)
 
-`squelettes_publies(ventilation_structure) -> list[Squelette]` : pour chaque axe et chaque **découpage** de cet
-axe (ensemble distinct des membres de premier niveau du chiffre d'affaires, relevé période par période — même
-logique que `ventilation._premier_niveau_de`, appelée, jamais recopiée), un `Squelette(id, axe, periodes,
-depot_le_plus_recent, blocs)` où `blocs` = chaque membre de ce découpage ET ses descendants publiés sur le MÊME
-axe, avec un id de bloc dérivé du nom local du membre (minuscules, `_`), leur rattachement (publié + parent dérivé
-de la hiérarchie) et leurs montants de chiffre d'affaires par période. Id du squelette : `<axe>__<n>` stable (tri
-par période la plus récente puis par membres). Sans ventilation : liste vide.
+**Ce qui reste au modèle (arbitrage 09 §1.1, §2 — inchangé)** : l'axe du premier niveau, la maille à laquelle il
+s'arrête (un membre publié peut rester un seul bloc sans ses enfants), les **regroupements** (plusieurs membres
+publiés d'un même axe et d'un même niveau en un bloc — ex. de forme : les membres sous le seuil de matérialité
+réunis), les découpages plus fins que la publication (estimés, sous n'importe quel bloc publié, y compris
+autrement que l'émetteur ne le fait), les programmes, extensions et blocs communs, les variables.
 
-Le modèle **choisit** : `ArchitecteSortie.squelette: str` (un id de la liste) — et ne déclare plus aucun bloc
-publié. Pour les blocs du squelette, il fournit seulement `blocs_publies: list[CompletionBlocPublie]` =
-`{id, variables, motif}` (ensemble des id = EXACTEMENT celui du squelette, sinon refus [S1]). Le code assemble
-l'architecture (blocs publiés du squelette + blocs déclarés). Le modèle ajoute librement : blocs estimés plus
-fins, rattachés `parent` à une **feuille** du squelette (un membre sans descendant publié) ou `agrege` ; blocs
-communs ; programmes ; extensions.
+**Ce que le contrat change** :
+- `RattachementPublie` admet `membres: list[str]` (un ou plusieurs qnames du MÊME axe, mêmes parents) au lieu
+  d'un seul `membre` : le regroupement est un bloc publié, pas un estimé.
+- **La maille n'est plus déclarée** : `Bloc.maille` disparaît de la sortie du modèle ; le code la pose
+  (`publie` si le bloc cite une adresse, `estime` sinon) en même temps que l'en-tête (§4.3 de la spec M3).
+- **L'emboîtement entre blocs publiés n'est plus déclaré** : un bloc publié n'a jamais de `RattachementParent` ;
+  son parent (le bloc publié dont un membre est l'ancêtre de ses membres, sur le même axe) est DÉRIVÉ de la
+  hiérarchie de la ventilation. Un bloc estimé, lui, se rattache librement (`parent` vers tout bloc, `agrege`).
+- **Une place pour les autres axes** : `ArchitecteSortie.autres_axes: list[{axe, usage}]` — pour CHAQUE axe de la
+  ventilation qui ne porte aucun bloc, l'architecte écrit ce qu'il en fait (`usage`, min 20 : raccord des marges,
+  contrôle de concentration, information pour un bloc…). C'est la case qui manquait : le second découpage a
+  désormais un endroit où aller qui n'est pas l'arbre.
 
-Contrôles réécrits (sur l'architecture ASSEMBLÉE) :
-- [S1] l'id du squelette existe ; les id de `blocs_publies` = ceux du squelette.
-- [S2] couverture : vraie par construction pour les blocs publiés ; reste un « reste » estimé si le squelette ne
-  boucle pas sur le chiffre d'affaires du socle à sa période (écart > seuil de matérialité du référentiel).
-- [S3] un bloc estimé n'est rattaché `parent` qu'à une FEUILLE du squelette ou à un autre bloc estimé (on ne
-  découpe pas à côté de ce que l'émetteur publie déjà plus finement).
-- [S3b] signal : le squelette choisi n'est pas le découpage le plus récent de son axe (nommer le dépôt).
-- **[S10] les autres axes ne deviennent pas des blocs** : `ArchitecteSortie.autres_axes: list[{axe, usage}]` —
-  pour CHAQUE axe de la ventilation non choisi, l'architecte écrit ce qu'il en fait (`usage`, min 20 : raccord des
-  marges, contrôle de concentration…) ; un axe oublié → refus. (Troisième case qui force l'hypothèse à s'écrire,
-  `feedback_garde_structure_pas_sens` ; aucune comparaison de libellés.)
-- Signal pour le comité : chaque bloc estimé rattaché à une feuille publiée, avec son motif et ses pièces (c'est là
-  qu'un découpage d'un autre axe pourrait se glisser sous un autre nom : le comité le lit, #68).
+**Contrôles** (sur l'architecture assemblée) :
+- [S1] chaque adresse citée existe ; les membres d'un regroupement sont du même axe et ont le même parent.
+- [S2] couverture : inchangée dans son principe (membres de premier niveau non couverts → un « reste » estimé),
+  appliquée aux membres des blocs publiés, regroupements compris.
+- [S3] un seul axe pour les blocs publiés de premier niveau ; un membre n'appartient qu'à un bloc ; un bloc publié
+  et un bloc publié descendant sont parent et enfant (dérivé), jamais frères.
+- [S3b] inchangé (signal de redécoupage).
+- **[S10]** tout axe de la ventilation sans bloc a son `usage` ; un axe oublié → refus.
+- Signal pour le comité : chaque bloc estimé rattaché à un bloc publié, avec son motif et ses pièces (un découpage
+  d'un autre axe pourrait s'y glisser sous un autre nom : le comité le lit, #68 ; le raccord chiffré des
+  estimés à leur parent est M5).
+
+**Ce qui n'est PAS fait, et pourquoi** : aucun squelette imposé, aucun ensemble de blocs obligatoire, aucune
+comparaison de libellés. La v2 de cette spec imposait un squelette complet : refusé, c'était la cage que
+l'arbitrage du 2026-10-21 a écartée.
 
 ## 3. Cause ② — le rendu dit ce qu'est un axe (`ventilation.py`, rendu à identifiants seulement)
 
@@ -100,8 +107,9 @@ En tête de la section « Ventilation publiée » de la matière, une phrase fix
 d'affaires total de l'émetteur selon un critère différent. Deux axes se croisent : un membre d'un axe n'est jamais
 contenu dans un membre d'un autre axe. L'emboîtement n'existe qu'à l'intérieur d'un axe (marqué ↳). » Puis, par
 axe et par période annuelle, la somme de ses membres de premier niveau à côté du chiffre d'affaires du socle (« axe
-X, FYn : Σ = a M$ ; chiffre d'affaires des comptes = b M$ »). Puis **la liste des squelettes** (§2) avec leur id,
-leurs périodes, leur dépôt le plus récent, leurs blocs indentés. Le rendu de M2 (`montrer_ventilation.sh`) est
+X, FYn : Σ = a M$ ; chiffre d'affaires des comptes = b M$ »). Puis, par axe, **les découpages successifs** (ensembles de
+membres de premier niveau, avec leurs périodes et le dépôt le plus récent) — une information pour choisir, pas un
+gabarit à reprendre. Le rendu de M2 (`montrer_ventilation.sh`) est
 inchangé (défaut `avec_identifiants=False`).
 
 ## 4. Cause ③ — la question `me_7` : ce que l'entreprise prépare
@@ -187,8 +195,10 @@ regrouper en silence. Chaque manque est un signal servi au comité et écrit au 
 ## 7. Les gardes
 
 - **Les 4 JSON du 2026-10-22 en fixtures** (`checks/fixtures/architecte/2026-10-22/`) : rejoués sous 1.2.0, chacun
-  refusé par la règle de SA cause (NVDA 1/2 : forme 1.1.0 sans squelette → [S1] ; la conversion la plus proche —
-  segments choisis, marchés en estimés sous une feuille — refusée par [S10] (axe `activites` sans usage) ; RVMD 1/2 :
+  refusé par la règle de SA cause (NVDA 1/2 convertis au plus proche en 1.2.0 — segments choisis, marchés en
+  estimés sous un segment, aucun `autres_axes` — refusés par [S10] (axe `activites` sans usage) ; la même architecture
+  avec l'axe `activites` déclaré en raccord et les marchés RETIRÉS de l'arbre passe ; NVDA 2 (Networking et Data
+  Center frères, si cités par adresse) refusé par [S3] ; RVMD 1/2 :
   [S11] et contrat (jalon, origine)).
 - **Cas fictifs** (aucun nom réel, écrits dans le check, structure de ventilation complète) — ce sont eux qui
   éprouvent la généralité :
@@ -198,8 +208,10 @@ regrouper en silence. Chaque manque est un signal servi au comité et écrit au 
   4. **laboratoire rentable** à six programmes dont deux précoces non nommés (plateforme) et une licence ;
   5. **acquéreur** : une acquisition conclue (métier actuel), une annoncée (extension), une tentative de la
      classer en développement refusée par [S12] ;
-  6. **redécoupage** : un axe qui change de découpage en cours d'année → deux squelettes, [S3b] sur l'ancien.
-  Pour chacun : la matière (rendu des axes, squelettes) et une architecture qui passe, puis une mutation par règle.
+  6. **redécoupage** : un axe qui change de découpage en cours d'année → deux découpages, [S3b] sur l'ancien.
+  Pour chacun : la matière (rendu des axes, découpages) et **deux** architectures qui passent, de compositions
+  différentes (ex. de forme : maille fine / maille grossière avec regroupement), pour prouver que les contrôles
+  n'imposent pas une composition ; puis une mutation par règle.
 - `dimensions.py` : table de cas (somme de M$ et de %, produit volume × prix, facteur sans période, ligne instant).
 - `check_frameworks_definitions` : `me_7` conforme ; table de la spec 03 à jour (la garde §7 confronte prose et YAML).
 - `negatif_architecte.sh` : une mutation par règle et par validateur neufs, chaque mutation nomme l'assert qui
@@ -212,11 +224,11 @@ regrouper en silence. Chaque manque est un signal servi au comité et écrit au 
 
 0. Re-mesurer §0.1 (gratuit) ; rejouer les 4 JSON contre `valider_structure` actuel → « passent » (les trous existent).
 1. Référentiel 1.2.0 (unités, fiche, rattachements), `me_7` + spec 03 ; checks M1 et frameworks verts.
-2. Squelettes, rendu des axes, contrat 1.2.0, contrôles réécrits et neufs, dimensions ; prompt (§2-§6 en termes
+2. Faits publiés (maille, emboîtement dérivés ; regroupements ; autres axes), rendu des axes, contrat 1.2.0, contrôles réécrits et neufs, dimensions ; prompt (§2-§6 en termes
    d'analyste) et exemple fictif ; checks, cas fictifs, négatifs.
 3. Suite entière ; bilan par `grep -E`.
 4. `architecte.sh NVDA --matiere-seule` et `RVMD --matiere-seule` : lire en texte le rendu des axes et des
-   squelettes ; rapporter la taille ; la porte (attendu : fermée par `me_7`, et se_3 pour RVMD).
+   découpages ; rapporter la taille ; la porte (attendu : fermée par `me_7`, et se_3 pour RVMD).
 5. **Pas exécuté par Sonnet** — sur accord de l'utilisateur, par Opus : instruire `me_7` pour NVDA et RVMD
    (`executer_chaine.sh … --questions=me_7`, payant, ~1 h chacun), lire les réponses contre leurs pièces, puis
    l'acceptation à blanc (`architecte.sh` deux fois par titre, `--hors-porte` pour RVMD si se_3 la ferme encore).
