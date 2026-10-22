@@ -37,7 +37,7 @@ Z_PATCH = 0.0755
 Z_COVER = 0.0955
 
 # Offsets of the layers along the normal, exploded.
-LIFT = {"chassis": 0.0, "circuit": 0.11, "tiles": 0.22, "cover": 0.34}
+LIFT = {"chassis": 0.0, "circuit": 0.13, "tiles": 0.26, "cover": 0.4}
 
 
 def build(tiltDeg: float = 22.0, headingDeg: float = -60.0) -> Asset:

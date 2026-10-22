@@ -27,6 +27,7 @@ import { blendPose, clonePose, easeInOut, frameInWindow, poseGap, poseOf, positi
 import { Card, dockFor } from "./Card";
 import { mainIds, render, swatch, system, texts, type Shot } from "./content/data";
 import { debug, exposeRenderer } from "./debug";
+import { Beam, explosion, LayerLabels, prepareDetail, useExplosion, type DetailModel } from "./Detail";
 import { FlowPulses } from "./Flows";
 import { connectionPath, flowPath, Polyline, type FlowLike, type LinkShape } from "./links";
 import { MODELS_BASE, type Manifest } from "./manifest";
@@ -201,6 +202,12 @@ function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: Sc
   const urls = useMemo(() => ids.map((id) => `${MODELS_BASE}/${manifest.assets[id]!.representations.envelope.file}`), [ids, manifest]);
   // No Draco (its decoder would come from a CDN); meshopt decodes locally.
   const gltfs = useGLTF(urls, false, true);
+  const detailIds = useMemo(() => ids.filter((id) => manifest.assets[id]!.representations.detail), [ids, manifest]);
+  const detailGltfs = useGLTF(
+    detailIds.map((id) => `${MODELS_BASE}/${manifest.assets[id]!.representations.detail!.file}`),
+    false,
+    true,
+  );
   const roots = useMemo(() => {
     const out: Record<string, Object3D> = {};
     ids.forEach((id, i) => {
@@ -223,6 +230,40 @@ function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: Sc
     return out;
   }, [gltfs, ids, manifest]);
 
+  // Exploded views, placed like their envelope; the beam steers toward the far end of the
+  // object's radio connection.
+  const details = useMemo(() => {
+    const out: Record<string, DetailModel> = {};
+    detailIds.forEach((id, i) => {
+      const root = detailGltfs[i]!.scene;
+      const t = manifest.assets[id]!.transform;
+      root.position.set(...t.position);
+      root.rotation.set(0, MathUtils.degToRad(t.rotationYDeg), 0);
+      root.traverse((o) => {
+        const mesh = o as Mesh;
+        if (mesh.isMesh) {
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+        }
+      });
+      const link = system.connections.find((c) => c.kind === "radio" && c.from.startsWith(`${id}#`));
+      out[id] = prepareDetail(id, root, manifest.assets[id]!.representations.detail!, link ? anchorPosition(roots, link.to) : null);
+    });
+    return out;
+  }, [detailGltfs, detailIds, manifest, roots]);
+  // The exploded model in use: opening, open or closing (the envelope is hidden meanwhile).
+  const detailId = entry.shot.startsWith("detail:") ? entry.shot.slice("detail:".length) : null;
+  const [phase, setPhase] = useState<{ id: string; open: boolean } | null>(null);
+  const shownId = detailId && details[detailId] ? detailId : (phase?.id ?? null);
+  const onExplode = useCallback(
+    (t: number) => setPhase((p) => (t === 0 ? null : p && p.id === shownId && p.open === (t === 1) ? p : { id: shownId!, open: t === 1 })),
+    [shownId],
+  );
+  useExplosion(shownId ? details[shownId]! : null, !!detailId && detailId === shownId, onExplode, TIME !== null, STEP);
+  useEffect(() => {
+    for (const id of ids) roots[id]!.visible = id !== phase?.id;
+  }, [ids, roots, phase]);
+
   const setting = useMemo(() => {
     const box = new Box3();
     for (const o of system.objects) if (o.role === "setting" && roots[o.id]) box.expandByObject(roots[o.id]!);
@@ -235,7 +276,7 @@ function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: Sc
     document.body.style.cursor = hovered ? "pointer" : "";
   }, [hovered]);
 
-  useCameraRig(roots, free, entry);
+  useCameraRig(roots, details, free, entry);
   useGestures(onOrbit, onZoom);
 
   const interactive = (id: string) => !SILHOUETTE && mainIds.includes(id);
@@ -272,7 +313,18 @@ function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: Sc
             <primitive key={id} object={roots[id]!} />
           ),
         )}
-      {!SILHOUETTE && <Links roots={roots} setting={setting} />}
+      {phase && (
+        <primitive
+          object={details[phase.id]!.root}
+          onClick={(e: ThreeEvent<MouseEvent>) => {
+            e.stopPropagation(); // the opened model is the selected object: a click keeps its card
+            onSelect(phase.id);
+          }}
+        />
+      )}
+      {phase?.open && details[phase.id]!.beam && <Beam detail={details[phase.id]!} opacity={1} time={TIME} />}
+      {phase?.open && <LayerLabels detail={details[phase.id]!} />}
+      {!SILHOUETTE && !phase && <Links roots={roots} setting={setting} />}
       {/* In a close view the object is the subject: no marker floating above it. */}
       {selected && roots[selected] && entry.shot === "global" && <SelectionPin root={roots[selected]!} />}
     </>
@@ -282,7 +334,7 @@ function Scene({ manifest, entry, onSelect, onEnter, onOrbit, onZoom, free }: Sc
 /** Frames the current view (shot, plus the user's orbit and zoom) in the part of the screen
  * left free by the card. A change of shot or of free area is a flight (eased, ~1 s); a
  * gesture is followed closely (critically damped). The first pose is taken at once. */
-function useCameraRig(roots: Record<string, Object3D>, free: Rect | null, entry: Entry) {
+function useCameraRig(roots: Record<string, Object3D>, details: Record<string, DetailModel>, free: Rect | null, entry: Entry) {
   const { camera, gl, scene, size, invalidate } = useThree();
   const goal = useRef<Pose | null>(null);
   const pose = useRef<Pose | null>(null);
@@ -295,6 +347,11 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null, entry:
     const shot = shots[entry.shot]!;
     const points: Vector3[] = [];
     for (const id of shot.fit) {
+      // A detail shot frames the opened model and its beam.
+      if (entry.shot.startsWith("detail:") && details[id]) {
+        points.push(...details[id]!.fit);
+        continue;
+      }
       const box = objectBox(roots[id]!);
       for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) points.push(new Vector3(x, y, z));
     }
@@ -320,7 +377,7 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null, entry:
       const p = pose.current!;
       return { position: positionOf(p).toArray(), target: p.target.toArray(), azimuthDeg: p.azimuthDeg, elevationDeg: p.elevationDeg, distance: p.distance, offset: [...p.offset] };
     };
-  }, [roots, camera, gl, scene, size, free, entry, invalidate]);
+  }, [roots, details, camera, gl, scene, size, free, entry, invalidate]);
 
   useFrame((_, delta) => {
     const g = goal.current;
@@ -347,7 +404,7 @@ function useCameraRig(roots: Record<string, Object3D>, free: Rect | null, entry:
     camera.position.copy(positionOf(p));
     camera.lookAt(p.target);
     (camera as PerspectiveCamera).setViewOffset(size.width, size.height, p.offset[0], p.offset[1], size.width, size.height);
-    const settled = !flight.current && poseGap(p, g) === 0;
+    const settled = !flight.current && poseGap(p, g) === 0 && !explosion.busy;
     if (settled && ++frames.current >= 5) debug.ready = true;
     else if (!STEP) invalidate();
   });

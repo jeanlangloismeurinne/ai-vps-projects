@@ -242,3 +242,32 @@ body.silhouette #root {
   box-shadow: 0 0 0 5px rgba(52, 97, 240, 0.22), 0 2px 6px rgba(42, 47, 58, 0.25);
   pointer-events: none;
 }
+
+/* Names of the layers of an exploded view, left of each layer, with a short tick toward it. */
+.layer-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: #3b404c;
+  pointer-events: none;
+}
+
+.layer-label__tick {
+  width: 18px;
+  height: 1px;
+  background: #3461f0;
+}
+
+@media (max-width: 600px) {
+  .layer-label {
+    max-width: 92px;
+    white-space: normal;
+    text-align: right;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+}

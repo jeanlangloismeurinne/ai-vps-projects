@@ -37,6 +37,7 @@ export const VIEWS: Record<string, string> = {
   ...Object.fromEntries(MAIN.map((id) => [`card-${id}`, `select=${id}&${T}`])),
   ...Object.fromEntries(MAIN.map((id) => [`object-${id}`, `shot=object:${id}&${T}`])),
   ...Object.fromEntries(MAIN.map((id) => [`silhouette-${id}`, `shot=object:${id}&silhouette`])),
+  "detail-terminal": `shot=detail:terminal&select=terminal&${T}`,
 };
 
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");

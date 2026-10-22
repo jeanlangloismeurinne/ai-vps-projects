@@ -56,8 +56,8 @@
       "fit": [
         "terminal"
       ],
-      "azimuthDeg": -20,
-      "elevationDeg": 45,
+      "azimuthDeg": -40,
+      "elevationDeg": 24,
       "margin": 0.1
     },
     "object:satellite": {
