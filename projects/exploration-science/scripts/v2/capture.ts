@@ -9,9 +9,8 @@
 // in one format, saves a transition frame by frame (`transition/`: frames and a contact
 // sheet, the one inspected; `--video` adds a WebM for a person to watch) (roadmap §5).
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { readFileSync } from "node:fs";
 import { chromium, type Page } from "@playwright/test";
 import { createServer } from "vite";
 
@@ -30,6 +29,7 @@ export const FORMATS = {
 
 // View name → query string understood by the v2 app. Grows with the roadmap.
 const MAIN = ["house", "terminal", "satellite", "ground-station"];
+const TOUR_STEPS = (JSON.parse(readFileSync(join(root, "content/v2/tours/starlink-home.json"), "utf8")).steps as { id: string }[]).map((s) => s.id);
 // `t` pins the phase of the animated flows, so that captures are comparable.
 const T = "t=1.5";
 export const VIEWS: Record<string, string> = {
@@ -38,6 +38,8 @@ export const VIEWS: Record<string, string> = {
   ...Object.fromEntries(MAIN.map((id) => [`object-${id}`, `shot=object:${id}&${T}`])),
   ...Object.fromEntries(MAIN.map((id) => [`silhouette-${id}`, `shot=object:${id}&silhouette`])),
   "detail-terminal": `shot=detail:terminal&select=terminal&${T}`,
+  // Each step of the guided tour, held (roadmap §7).
+  ...Object.fromEntries(TOUR_STEPS.map((id, i) => [`tour-${i}-${id}`, `tour=${i}&${T}`])),
 };
 
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
@@ -221,6 +223,48 @@ async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: R
 
 /** Global (terminal selected) → object view → detail view, frame by frame at 30 frames per
  * second of the transition's own clock: PNG frames and a contact sheet; a WebM with `--video`. */
+/** Plays the tour from a bare URL, as on arrival: the first step is about the system with
+ * nothing selected and no card; steps follow in order at their reading pace; a tap on the
+ * scene hands over (roadmap §7). */
+async function checkTour(page: Page, touch: boolean): Promise<{ checks: Record<string, unknown>; problems: string[] }> {
+  const problems: string[] = [];
+  await page.goto("http://localhost:5199/v2.html", { timeout: 120_000 });
+  await page.waitForFunction(() => window.__xs?.tour != null, null, { timeout: 120_000 });
+  const state = () => page.evaluate(() => ({ tour: window.__xs!.tour, selected: window.__xs!.selected, card: !!document.querySelector(".card"), text: document.querySelector(".tour__text")?.textContent ?? null, t: performance.now() }));
+  const first = await state();
+  if (first.tour?.index !== 0) problems.push(`tour starts at step ${first.tour?.index}`);
+  if (first.selected !== null || first.card) problems.push(`an object is put forward on the first step (selected ${first.selected}, card ${first.card})`);
+  if (!first.text) problems.push("no subtitle on the first step");
+  const timeline = await page.evaluate(() => window.__xs!.timeline());
+  // Follow the tour through its object steps: order and timing (±1.5 s, the page being slow).
+  const seen: { index: number; at: number; selected: string | null }[] = [{ index: 0, at: 0, selected: first.selected }];
+  const until = first.t + (timeline[timeline.length - 1]!.start + 30) * 1000;
+  for (let now = first.t; now < until && seen.length < timeline.length; ) {
+    await page.waitForTimeout(150);
+    const s = await state();
+    now = s.t;
+    if (s.tour && s.tour.index !== seen[seen.length - 1]!.index) seen.push({ index: s.tour.index, at: (s.t - first.t) / 1000, selected: s.selected });
+  }
+  // Each step lasts its reading time (±1 s, sampling and a slow page); the first one counts
+  // from the scene's loading, before which its clock does not run.
+  seen.forEach((s, k) => {
+    if (s.index !== k) problems.push(`step ${k} expected, ${s.index} played`);
+    const next = seen[k + 1];
+    if (!next || k === 0) return;
+    const lasted = next.at - s.at;
+    if (Math.abs(lasted - timeline[k]!.duration) > 1) problems.push(`step ${k} lasted ${lasted.toFixed(1)} s, expected ${timeline[k]!.duration.toFixed(1)} s`);
+  });
+  if (seen.length < timeline.length) problems.push(`only ${seen.length} of ${timeline.length} steps played`);
+  // Hand over: a tap on the scene stops the tour where it is.
+  const box = page.viewportSize()!;
+  if (touch) await page.touchscreen.tap(box.width / 2, 40);
+  else await page.mouse.click(box.width / 2, 40);
+  await page.waitForTimeout(300);
+  const after = await state();
+  if (after.tour !== null) problems.push("tour still playing after a tap on the scene");
+  return { checks: { first, steps: seen, timeline, handedOver: after.tour === null }, problems };
+}
+
 async function recordTransition(page: Page, dir: string) {
   mkdirSync(dir, { recursive: true });
   await page.goto(`http://localhost:5199/v2.html?${T}&step&select=terminal`, { timeout: 120_000 });
@@ -289,6 +333,11 @@ try {
     if (!only || only.includes("transitions")) {
       const { checks, problems } = await checkTransitions(page, format !== "desktop");
       keep(`transitions/${format}`, { checks, problems, errors: [...errors] });
+      errors.length = 0;
+    }
+    if (!only || only.includes("tour")) {
+      const { checks, problems } = await checkTour(page, format !== "desktop");
+      keep(`tour/${format}`, { checks, problems, errors: [...errors] });
       errors.length = 0;
     }
     if ((!only || only.includes("transition-video")) && format === formats[0]) {

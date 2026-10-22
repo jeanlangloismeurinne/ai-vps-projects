@@ -271,3 +271,137 @@ body.silhouette #root {
     line-height: 1.25;
   }
 }
+
+/* Guided tour: subtitle at the bottom, steps as dots (the current one fills as it is read). */
+.tour {
+  position: fixed;
+  z-index: 20;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  max-width: 720px;
+  min-height: 112px;
+  margin: 0 auto;
+  padding: 16px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 64, 76, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(42, 47, 58, 0.06), 0 12px 32px rgba(42, 47, 58, 0.12);
+}
+
+.tour__text {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  animation: tour-text-in 200ms ease-out;
+}
+@keyframes tour-text-in {
+  from { opacity: 0; translate: 0 6px; }
+}
+
+.tour__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tour__steps {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tour__steps li {
+  position: relative;
+  flex: 1;
+  max-width: 40px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(59, 64, 76, 0.12);
+}
+.tour__steps li.done,
+.tour__steps li.now:not(:has(span)) {
+  background: #3461f0;
+}
+.tour__steps li span {
+  position: absolute;
+  inset: 0;
+  background: #3461f0;
+  transform-origin: left;
+  animation: tour-progress linear forwards;
+}
+@keyframes tour-progress {
+  from { transform: scaleX(0); }
+}
+
+.tour__skip,
+.tour-replay {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.tour__skip {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(59, 64, 76, 0.14);
+  background: transparent;
+  color: var(--ink);
+}
+.tour__skip:hover,
+.tour__skip:focus-visible {
+  background: rgba(59, 64, 76, 0.06);
+  outline: none;
+}
+
+.tour-replay {
+  position: fixed;
+  z-index: 15;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px 0 12px;
+  border: 1px solid rgba(59, 64, 76, 0.1);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(42, 47, 58, 0.06), 0 6px 16px rgba(42, 47, 58, 0.08);
+}
+.tour-replay svg {
+  width: 14px;
+  height: 14px;
+  fill: #3461f0;
+}
+.tour-replay:hover,
+.tour-replay:focus-visible {
+  background: #fff;
+  outline: none;
+}
+
+@media (max-width: 600px) {
+  .tour {
+    min-height: 132px;
+    padding: 14px 16px 10px;
+  }
+  .tour__text {
+    font-size: 16px;
+  }
+}

@@ -14,6 +14,7 @@
     { "id": "ground-station", "shot": "object:ground-station", "focus": { "kind": "object", "id": "ground-station" }, "textKey": "tour.ground-station" },
     { "id": "satellite", "shot": "object:satellite", "focus": { "kind": "object", "id": "satellite" }, "textKey": "tour.satellite" },
     { "id": "terminal", "shot": "object:terminal", "focus": { "kind": "object", "id": "terminal" }, "textKey": "tour.terminal" },
+    { "id": "terminal-inside", "shot": "detail:terminal", "focus": { "kind": "object", "id": "terminal" }, "textKey": "tour.terminal-inside" },
     { "id": "house", "shot": "object:house", "focus": { "kind": "object", "id": "house" }, "textKey": "tour.house" }
   ]
 }

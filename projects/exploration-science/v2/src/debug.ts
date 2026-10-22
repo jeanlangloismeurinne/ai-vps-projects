@@ -20,6 +20,11 @@ export interface XsDebug {
   pose: () => { position: number[]; target: number[]; azimuthDeg: number; elevationDeg: number; distance: number; offset: number[] } | null;
   /** With `?step`: draws one more frame. */
   advance: () => void;
+  /** Step of the guided tour on screen (null once the user has the hand). */
+  tour: { index: number; step: string; playing: boolean } | null;
+  startTour: (index?: number) => void;
+  /** Start and duration (s) of each tour step, read from its subtitle's length. */
+  timeline: () => { id: string; start: number; duration: number }[];
 }
 
 declare global {
@@ -40,6 +45,9 @@ export const debug: XsDebug = {
   back: () => {},
   pose: () => null,
   advance: () => {},
+  tour: null,
+  startTour: () => {},
+  timeline: () => [],
 };
 window.__xs = debug;
 

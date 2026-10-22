@@ -4,8 +4,9 @@ import render from "../../../content/v2/render.json";
 import sources from "../../../content/v2/sources.json";
 import system from "../../../content/v2/systems/starlink-home.json";
 import textsFr from "../../../content/v2/texts.fr.json";
+import tour from "../../../content/v2/tours/starlink-home.json";
 
-export { render, sources, system };
+export { render, sources, system, tour };
 
 /** Texts of the interface language (French only for now, the structure is per language). */
 export const texts = textsFr;
