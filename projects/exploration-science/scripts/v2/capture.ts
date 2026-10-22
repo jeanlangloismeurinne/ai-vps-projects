@@ -1,4 +1,4 @@
-// npm run capture [-- --out DIR] [-- --only global,...] [-- --formats ipad-landscape,...]
+// npm run capture [-- --out DIR] [-- --only global,...] [-- --formats ipad-landscape,...] [-- --video]
 // Starts the Vite dev server, opens v2.html in headless Chromium (software WebGL:
 // valid for composition and materials, NOT for frame rate) and saves one PNG per
 // view and screen format, plus render stats (draw calls, triangles) in captures.json.
@@ -6,8 +6,8 @@
 // right object, right title, at most 10 % of any main object under it (roadmap §4).
 // Then walks global → object → detail → back twice, twice over, with real clicks (or taps)
 // and drags / pinches (or wheel), and checks that pose and card come back as they were; and,
-// in one format, saves a transition frame by frame (`transition/`: frames, video, contact
-// sheet) for inspection (roadmap §5).
+// in one format, saves a transition frame by frame (`transition/`: frames and a contact
+// sheet, the one inspected; `--video` adds a WebM for a person to watch) (roadmap §5).
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -220,7 +220,7 @@ async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: R
 }
 
 /** Global (terminal selected) → object view → detail view, frame by frame at 30 frames per
- * second of the transition's own clock: PNG frames, a WebM video and a contact sheet. */
+ * second of the transition's own clock: PNG frames and a contact sheet; a WebM with `--video`. */
 async function recordTransition(page: Page, dir: string) {
   mkdirSync(dir, { recursive: true });
   await page.goto(`http://localhost:5199/v2.html?${T}&step&select=terminal`, { timeout: 120_000 });
@@ -242,7 +242,9 @@ async function recordTransition(page: Page, dir: string) {
     }
   }
   const frames = join(dir, "frame-%03d.png");
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "30", "-i", frames, "-vf", "scale=1366:-2", "-c:v", "libvpx-vp9", "-b:v", "2M", join(dir, "transition.webm")]);
+  if (process.argv.includes("--video")) {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "30", "-i", frames, "-vf", "scale=1366:-2", "-c:v", "libvpx-vp9", "-b:v", "2M", join(dir, "transition.webm")]);
+  }
   // One frame in three, small, on a grid (ffmpeg: ImageMagick runs out of cache on full frames).
   const rows = Math.ceil(Math.ceil(n / 3) / 6);
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", frames, "-vf", `select=not(mod(n\\,3)),scale=456:-2,tile=6x${rows}:padding=4:color=white`, "-frames:v", "1", "-update", "1", join(dir, "contact-sheet.png")]);
