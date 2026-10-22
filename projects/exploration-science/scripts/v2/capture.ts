@@ -262,7 +262,7 @@ const keep = (key: string, result: Record<string, unknown> & { errors: string[];
 };
 try {
   for (const format of formats) {
-    const page = await browser.newPage({ viewport: FORMATS[format], deviceScaleFactor: Number(arg("dpr") ?? 2), hasTouch: format !== "desktop" });
+    const page = await browser.newPage({ viewport: FORMATS[format], deviceScaleFactor: Number(arg("dpr") ?? 1), hasTouch: format !== "desktop" });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
