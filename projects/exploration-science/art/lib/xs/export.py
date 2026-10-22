@@ -1,6 +1,7 @@
 """Export of one asset representation to GLB: parts merged by material (few draw calls),
 in the asset's own frame (root at the origin), with the baked AO as COLOR_0. Anchors are
-exported as empty nodes named `<id>#<anchor>`."""
+exported as empty nodes named `<id>#<anchor>`. The parts of an exploded view are merged by
+layer and material, into nodes named `<id>.<layer>.<material>` that the app can move."""
 
 from pathlib import Path
 
@@ -13,6 +14,7 @@ def export_asset(asset, path: Path) -> dict:
     """Returns stats measured before merging: named parts and triangles."""
     to_local = asset.root.matrix_world.inverted()
     by_material: dict[str, list[bpy.types.Object]] = {}
+    layer_of: dict[str, str | None] = {}
     triangles = 0
     for part in asset.parts:
         mesh = part.data.copy()
@@ -20,11 +22,13 @@ def export_asset(asset, path: Path) -> dict:
         triangles += sum(len(p.vertices) - 2 for p in mesh.polygons)
         tmp = bpy.data.objects.new(f"_x.{part.name}", mesh)
         bpy.context.scene.collection.objects.link(tmp)
-        by_material.setdefault(mesh.materials[0].name, []).append(tmp)
+        layer = part.get("xs_layer")
+        key = f"{layer}.{mesh.materials[0].name}" if layer else mesh.materials[0].name
+        by_material.setdefault(key, []).append(tmp)
 
     merged: list[bpy.types.Object] = []
-    for mat_name in sorted(by_material):
-        objs = by_material[mat_name]
+    for key in sorted(by_material):
+        objs = by_material[key]
         bpy.ops.object.select_all(action="DESELECT")
         for o in objs:
             o.select_set(True)
@@ -32,7 +36,7 @@ def export_asset(asset, path: Path) -> dict:
         if len(objs) > 1:
             bpy.ops.object.join()
         target = bpy.context.view_layer.objects.active
-        target.name = f"{asset.id}.{mat_name}"
+        target.name = f"{asset.id}.{key}"
         target.data.name = target.name
         target.data.color_attributes.active_color = target.data.color_attributes["AO"]
         canonical_order(target.data)
@@ -71,5 +75,10 @@ def export_asset(asset, path: Path) -> dict:
         full = o.name
         bpy.data.objects.remove(o)
         bpy.data.objects[f"_src.{full}"].name = full
-    return {"parts": len(asset.parts), "triangles": triangles, "materials": sorted(by_material), "anchors": sorted(asset.anchors)}
+    materials = sorted({p.data.materials[0].name for p in asset.parts})
+    stats = {"parts": len(asset.parts), "triangles": triangles, "materials": materials, "anchors": sorted(asset.anchors)}
+    if asset.layers:
+        # Offsets are in the root frame; glTF frame of the asset: Blender (x, y, z) → (x, z, −y).
+        stats["layers"] = {n: [round(o.x, 6), round(o.z, 6), round(-o.y, 6)] for n, o in sorted(asset.layers.items())}
+    return {**stats, **asset.info}
 

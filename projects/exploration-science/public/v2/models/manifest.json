@@ -94,6 +94,54 @@
           "anchors": [
             "beam"
           ]
+        },
+        "detail": {
+          "file": "terminal.detail.glb",
+          "bytes": 233588,
+          "sha256": "d1857fd1ddb3ee171c860db0e917f314e2a6572e4fa8ce1d47f648663412efe2",
+          "parts": 20,
+          "triangles": 10168,
+          "materials": [
+            "foliage",
+            "ghost",
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "warm"
+          ],
+          "anchors": [
+            "array",
+            "beam"
+          ],
+          "layers": {
+            "chassis": [
+              0,
+              0,
+              0
+            ],
+            "circuit": [
+              0.020603,
+              0.10199,
+              0.035686
+            ],
+            "cover": [
+              0.063683,
+              0.315243,
+              0.110302
+            ],
+            "tiles": [
+              0.041207,
+              0.20398,
+              0.071372
+            ]
+          },
+          "array": {
+            "columns": 24,
+            "rows": 15,
+            "pitch": 0.02,
+            "spacingOverLambda": 0.5
+          }
         }
       }
     },
@@ -294,7 +342,7 @@
     }
   },
   "totals": {
-    "bytes": 376896,
+    "bytes": 610484,
     "triangles": 31658
   }
 }

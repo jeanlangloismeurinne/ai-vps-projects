@@ -6,6 +6,10 @@ Usage (from the project root):
 Scripts come from art/assets.json; placements, roles and anchors from the system file
 (schemas/v2/system.schema.json, validated by `npm run assets` before Blender runs).
 Exits 1 when a check fails: nothing is exported then.
+
+A `detail` representation (exploded view) is built after the envelopes have been baked and
+exported: checked assembled (no floating part), then exploded and checked against the scene
+in place of its envelope (no intersection), baked with the envelope hidden, exported.
 """
 
 import argparse
@@ -86,18 +90,18 @@ def main() -> int:
     started = time.monotonic()
 
     assets = {}
+    details: list[tuple[dict, dict]] = []
     errors: list[str] = []
     for obj in support_order(system["objects"]):
         oid = obj["id"]
         reps = obj.get("representations", ["envelope"])
         if "envelope" not in reps:
             return fail([f"{oid}: no envelope representation, got {reps}"])
-        if reps != ["envelope"]:
-            # The detail views are built one scene at a time, with roadmap §6.
-            print(f"{oid}: building the envelope only, {sorted(set(reps) - {'envelope'})} deferred", file=sys.stderr)
         entry = registry["assets"].get(oid)
         if entry is None:
             return fail([f"{oid}: no entry in art/assets.json"])
+        if "detail" in reps:
+            details.append((obj, entry))
         module = importlib.import_module(entry["envelope"]["script"])
         asset = module.build(**entry["envelope"].get("params", {}))
         if asset.id != oid:
@@ -132,12 +136,50 @@ def main() -> int:
         loc, rot = asset.root.matrix_world.translation, asset.root.matrix_world.to_euler()
         world = {"position": [round(c, 6) for c in loc], "rotationZDeg": round(math.degrees(rot.z), 6)}
         report["assets"][aid] = {"main": asset.main, "airborne": asset.airborne, "world": world, "envelope": path.name, **stats}
+    for obj, entry in details:
+        errors = build_detail(obj, entry, assets, placements, report, out, bake)
+        if errors:
+            return fail(errors)
     report["timings_s"] = {"model_and_bake": round(baked_at - started, 2), "total": round(time.monotonic() - started, 2)}
     reports = ART / ".build"
     reports.mkdir(exist_ok=True)
     (reports / f"{system['id']}.report.json").write_text(json.dumps({**report, "out": str(out)}, indent=2) + "\n")
     print(json.dumps(report["timings_s"]))
     return 0
+
+
+def build_detail(obj: dict, entry: dict, assets: dict, placements: list[dict], report: dict, out: Path, bake: dict) -> list[str]:
+    """Builds, checks, bakes and exports the exploded view of one object."""
+    oid = obj["id"]
+    envelope = assets[oid]
+    # Exported already: its names are freed for the detail's parts and anchors.
+    for o in [envelope.root, *envelope.parts, *envelope.anchors.values()]:
+        o.name = f"{o.name}~envelope"
+    module = importlib.import_module(entry["detail"]["script"])
+    detail = module.build(**entry["detail"].get("params", {}))
+    if detail.id != oid:
+        return [f"{entry['detail']['script']} built '{detail.id}', the system expects '{oid}'"]
+    detail.main, detail.airborne = envelope.main, envelope.airborne
+    for part in envelope.parts:  # out of the checks and of the bake
+        part.hide_render = True
+    error = place(detail, obj.get("placement", {}), assets)
+    if error:
+        return [error]
+    missing = sorted(set(obj.get("anchors", [])) - set(detail.anchors))
+    errors = [f"missing anchor: {oid}#{a} (detail) is declared by the system but not built" for a in missing]
+    errors += [f"{e} (detail, assembled)" for e in checks.check_asset(detail)]
+    if errors:
+        return errors
+    detail.explode()
+    scene = {**assets, oid: detail}
+    errors = [f"{e} (detail, exploded)" for e in checks.check_scene(scene, placements)]
+    if errors:
+        return errors
+    bake_ao(detail.parts, samples=bake["samples"], distance=bake["distance"])
+    lift_buried(detail.parts)
+    path = out / f"{oid}.detail.glb"
+    report["assets"][oid]["detail"] = {"file": path.name, **export_asset(detail, path)}
+    return []
 
 
 def fail(errors: list[str]) -> int:

@@ -15,7 +15,8 @@
   },
   "special": {
     "glass": { "color": "#bcd3f2", "roughness": 0.08, "metallic": 0.0, "opacity": 0.55 },
-    "emissive": { "color": "#5b86ff", "roughness": 0.4, "metallic": 0.0, "emissive": 1.0 }
+    "emissive": { "color": "#5b86ff", "roughness": 0.4, "metallic": 0.0, "emissive": 1.0 },
+    "ghost": { "color": "#f6f7fa", "roughness": 0.3, "metallic": 0.0, "opacity": 0.32 }
   },
   "background": { "top": "#f3f4f8", "bottom": "#dfe3ec" }
 }

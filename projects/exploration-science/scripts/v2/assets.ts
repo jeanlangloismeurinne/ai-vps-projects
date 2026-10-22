@@ -43,29 +43,25 @@ for (const file of registry.build as string[]) {
   const report = JSON.parse(readFileSync(join(root, "art/.build", `${id}.report.json`), "utf8"));
   console.log(`${file}: built in ${report.timings_s.total} s`);
   for (const [assetId, a] of Object.entries<any>(report.assets)) {
-    const path = join(out, a.envelope);
-    const doc = await io.read(path);
-    await doc.transform(dedup(), prune({ keepLeaves: true }), weld(), meshopt({ encoder: MeshoptEncoder, level: "medium" }));
-    const bytes = await io.writeBinary(doc);
-    writeFileSync(path, bytes);
+    const representation = async (file: string, stats: any) => {
+      const path = join(out, file);
+      const doc = await io.read(path);
+      await doc.transform(dedup(), prune({ keepLeaves: true }), weld(), meshopt({ encoder: MeshoptEncoder, level: "medium" }));
+      const bytes = await io.writeBinary(doc);
+      writeFileSync(path, bytes);
+      manifest.totals.bytes += bytes.byteLength;
+      const rep = { file, bytes: bytes.byteLength, sha256: sha256(bytes), parts: stats.parts, triangles: stats.triangles, materials: stats.materials, anchors: stats.anchors };
+      return { ...rep, ...(stats.layers && { layers: stats.layers }), ...(stats.array && { array: stats.array }) };
+    };
+    const envelope = await representation(a.envelope, a);
     manifest.assets[assetId] = {
       main: a.main,
       airborne: a.airborne,
       // Blender (x, y, z) Z-up → glTF (x, z, −y) Y-up; a turn about Blender Z is a turn about glTF Y.
       transform: { position: [a.world.position[0], a.world.position[2], -a.world.position[1]], rotationYDeg: a.world.rotationZDeg },
-      representations: {
-        envelope: {
-          file: a.envelope,
-          bytes: bytes.byteLength,
-          sha256: sha256(bytes),
-          parts: a.parts,
-          triangles: a.triangles,
-          materials: a.materials,
-          anchors: a.anchors,
-        },
-      },
+      representations: a.detail ? { envelope, detail: await representation(a.detail.file, a.detail) } : { envelope },
     };
-    manifest.totals.bytes += bytes.byteLength;
+    // The scene draws one representation at a time: the envelopes are its triangle count.
     manifest.totals.triangles += a.triangles;
   }
 }

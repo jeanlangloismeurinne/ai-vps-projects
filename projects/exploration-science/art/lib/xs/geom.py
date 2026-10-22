@@ -91,6 +91,11 @@ class Asset:
 
     `airborne` assets (a satellite) are exempt from the ground-contact check. A part
     flagged `open` is a deliberately open surface, exempt from the manifold check.
+
+    An exploded view (`detail` representation) puts its parts in named layers, each with
+    an offset in the root frame: parts are modelled assembled (where the contact checks
+    run), then `explode()` moves every layer by its offset (where the AO is baked and the
+    GLB exported). The app plays the explosion by moving the layers back and forth.
     """
 
     def __init__(self, asset_id: str, *, airborne: bool = False, main: bool = True):
@@ -101,6 +106,10 @@ class Asset:
         bpy.context.scene.collection.objects.link(self.root)
         self.parts: list[bpy.types.Object] = []
         self.anchors: dict[str, bpy.types.Object] = {}
+        self.layers: dict[str, Vector] = {}
+        # Facts about the model the app computes with (an antenna array's grid), copied to the manifest.
+        self.info: dict = {}
+        self.exploded = False
 
     def add(
         self,
@@ -113,6 +122,7 @@ class Asset:
         smooth: bool = True,
         open_surface: bool = False,
         occluder: bool = True,
+        layer: str | None = None,
     ) -> bpy.types.Object:
         full = f"{self.id}.{name}"
         if bpy.data.objects.get(full):
@@ -133,6 +143,10 @@ class Asset:
         # Thin parts (fence, struts) cast no baked occlusion: on the ground's coarse grid
         # their contact darkening turns into blotches. The real-time shadow draws them.
         obj["xs_occluder"] = occluder
+        if layer is not None:
+            if layer not in self.layers:
+                raise ValueError(f"unknown layer: {layer} (declare it with Asset.layer)")
+            obj["xs_layer"] = layer
         bpy.context.scene.collection.objects.link(obj)
         self.parts.append(obj)
         return obj
@@ -141,13 +155,34 @@ class Asset:
         """The same shape at several (location, rotation) placements, each a numbered part."""
         return [self.add(f"{name}{i:02d}", builder(), material, loc, rot, **kw) for i, (loc, rot) in enumerate(placements)]
 
-    def anchor(self, name: str, location: tuple[float, float, float]) -> bpy.types.Object:
-        """A named attachment point (`<id>#<name>`): where a link starts or another object sits."""
+    def layer(self, name: str, offset: tuple[float, float, float]) -> str:
+        """Declares a layer of an exploded view and its offset (root frame, metres)."""
+        if name in self.layers:
+            raise ValueError(f"duplicate layer: {self.id}.{name}")
+        self.layers[name] = Vector(offset)
+        return name
+
+    def explode(self) -> None:
+        """Moves every layered part (and layered anchor) by its layer's offset, once."""
+        if self.exploded:
+            raise ValueError(f"{self.id} is already exploded")
+        self.exploded = True
+        for obj in [*self.parts, *self.anchors.values()]:
+            if "xs_layer" in obj:
+                obj.location = obj.location + self.layers[obj["xs_layer"]]
+
+    def anchor(self, name: str, location: tuple[float, float, float], rotation: Matrix | None = None, *, layer: str | None = None) -> bpy.types.Object:
+        """A named attachment point (`<id>#<name>`): where a link starts or another object sits.
+        `rotation` (3×3, root frame) orients it: the app reads the array's plane from it."""
         if name in self.anchors:
             raise ValueError(f"duplicate anchor: {self.id}#{name}")
         empty = bpy.data.objects.new(f"{self.id}#{name}", None)
         empty.parent = self.root
         empty.location = location
+        if rotation is not None:
+            empty.rotation_euler = rotation.to_euler()
+        if layer is not None:
+            empty["xs_layer"] = layer
         bpy.context.scene.collection.objects.link(empty)
         self.anchors[name] = empty
         return empty
