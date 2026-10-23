@@ -266,14 +266,24 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "les programmes NON nommés individuellement (recherche amont, plateforme) se regroupent dans un "
     "bloc `plateforme: true` (`programmes` vide, `nombre_de_programmes_non_nommes` ≥ 1) — et quand "
     "le dossier COMPTE plus de programmes qu'il n'en nomme, l'écart va dans une plateforme, jamais "
-    "sous un nom inventé ; une "
-    "GÉNÉRATION SUIVANTE d'un produit déjà vendu n'est pas un programme à part — elle se rattache à "
-    "l'activité qui le porte (statut `metier_actuel`), ce n'est pas un pari binaire isolé ;\n"
-    "  · `inventaire_des_programmes` : pour CHAQUE programme que le dossier NOMME individuellement "
-    "(même ceux qu'une autre règle t'a fait omettre de l'arbre), dis ce que tu en fais — `bloc` (sa "
-    "ligne propre, `bloc` = cet id), `rattache` (génération suivante rattachée à l'activité qui le "
-    "porte, `bloc` = cette activité de statut `metier_actuel` — JAMAIS un bloc `en_developpement` "
-    "ni une plateforme, motif ≥ 20 caractères), `extension` (devient une activité "
+    "sous un nom inventé ;\n"
+    "  · LIGNE PROPRE OU RATTACHÉE (#143) — le SEUL critère : faudra-t-il aller chercher des données "
+    "de marché et de concurrence PROPRES (taille du marché visé, concurrents, part, probabilité de "
+    "succès) pour l'estimer ? OUI → sa ligne, même s'il porte la marque ou la molécule d'un produit "
+    "déjà vendu : une EXTENSION D'INDICATION (nouvelle maladie, nouvelle ligne de traitement) est un "
+    "NOUVEAU MARCHÉ, donc un bloc à elle (`en_developpement`, son jalon) ; un produit déjà vendu sur "
+    "un marché où l'activité n'était pas est un bloc ESTIMÉ à lui, enfant de l'activité qui le vend, "
+    "`metier_actuel`, avec ses variables de marché. NON → rattaché à l'activité dont il prolonge le "
+    "marché (`metier_actuel`) : la génération suivante d'un produit vendu (mêmes clients, mêmes "
+    "concurrents), un nouveau segment de clients ou une nouvelle zone pour les produits déjà vendus. "
+    "Jamais le nom ni la marque ne décident ;\n"
+    "  · `inventaire_des_programmes` : pour CHAQUE élément que `me_7` NOMME (même ceux qu'une autre "
+    "règle t'a fait omettre de l'arbre, même ceux que tu rattaches) — ni plus, ni moins : le système "
+    "compare ton décompte aux chiffres clés `nombre_de_programmes` et `nombre_de_programmes_non_nommes` "
+    "de `me_7` —, dis ce que tu en fais — `bloc` (sa "
+    "ligne propre, `bloc` = cet id), `rattache` (s'estime avec les hypothèses de marché d'une "
+    "activité vendue — `bloc` = cette activité, ou le bloc estimé à lui qui en est l'enfant, de statut "
+    "`metier_actuel` — JAMAIS un bloc `en_developpement` ni une plateforme, motif ≥ 20 caractères), `extension` (devient une activité "
     "annoncée, `bloc` = ce bloc `extension_annoncee`), `hors_modele` (abandonné, immatériel — motif "
     "≥ 20 caractères, AUCUN `bloc`) ;\n"
     "  · chaque CELLULE ATTENDUE : si une question source de la variable instruit déjà cette cellule, "
@@ -312,12 +322,20 @@ def _message_architecte(matiere_rendue: str) -> str:
     )
 
 
+# Le modèle de l'architecte vit ICI, avec son prompt (un seul détenteur) — pas celui de l'ingestion-agent.
+# Mesuré le 2026-10-23 (`roadmap/V3/mesures/2026-10-23/banc-modeles/`), même matière, mêmes contrôles,
+# noms réels ET anonymisés : V4-Pro rattache la génération suivante à son activité et donne une ligne
+# par molécule à chaque passage, y compris sans pouvoir reconnaître l'entreprise ; V4-Flash jamais.
+# Coût ≈ 0,07 $ par architecture (contre ≈ 0,01 $).
+MODELE_ARCHITECTE = "deepseek-ai/DeepSeek-V4-Pro-0813"
+
+
 async def _resolve_architecte_agent() -> ResolvedAgent:
-    """Même provider que l'ingestion-agent (config en DB), prompt système de l'architecte — même
-    montage que `traducteur._resolve_traducteur_agent` (#19/#39 au câblage runtime)."""
+    """Même provider que l'ingestion-agent (config en DB), prompt système ET modèle de l'architecte —
+    même montage que `traducteur._resolve_traducteur_agent` (#19/#39 au câblage runtime)."""
     base = await get_agent_provider("ingestion-agent", "v2")
     return ResolvedAgent(
-        agent_name="ingestion-agent", flow_version="v2", provider=base.provider, model=base.model,
+        agent_name="ingestion-agent", flow_version="v2", provider=base.provider, model=MODELE_ARCHITECTE,
         system_prompt=_ARCHITECTE_SYSTEM_PROMPT)
 
 

@@ -66,6 +66,9 @@ class Matiere:
     # dans le code. `None` si `me_7` n'a aucune réponse retenue, ou pas ce chiffre établi.
     me_7_verbatim: Optional[str] = None
     me_7_nombre_de_programmes: Optional[float] = None
+    # #143 / diagnostic du 2026-10-23 — le second chiffre clé de `me_7` : ceux que l'émetteur compte
+    # sans les nommer. Avec lui, [S15] exige un décompte EXACT ; sans lui, l'écart n'est qu'un signal.
+    me_7_nombre_non_nommes: Optional[float] = None
 
 
 def _ligne_lisible(ligne_id: str, gabarit) -> str:
@@ -138,9 +141,9 @@ def _rendre_pieces(pieces: frozenset[int], piece_meta: dict[int, dict]) -> str:
     return "pièces : " + " ; ".join(morceaux)
 
 
-def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozenset[int], Optional[str], Optional[float]]:
-    """Le bloc d'une question source. Rend `(texte, pieces_citées, verbatim, nombre_de_programmes)` —
-    les deux derniers champs ne sont renseignés (non `None`) que pour `me_7` (lot M3 ter, §4 :
+def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozenset[int], Optional[str], Optional[float], Optional[float]]:
+    """Le bloc d'une question source. Rend `(texte, pieces_citées, verbatim, nombre_de_programmes,
+    nombre_de_programmes_non_nommes)` — les trois derniers champs ne sont renseignés (non `None`) que pour `me_7` (lot M3 ter, §4 :
     [S14]/[S15] comparent au TEXTE du dossier, jamais à une liste écrite dans le code)."""
     reps = [r for r in etat.reponses
             if r.servie.framework_id == eq.framework_id and r.servie.question_id == eq.question_id]
@@ -149,7 +152,7 @@ def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozens
     r = _reponse_retenue(reps)
     if r is None:
         texte = _RE_REPONSE_DIESE.sub(r"réponse R-\1", f"{entete}\n  (aucune réponse instruite)")
-        return texte, frozenset(), None, None
+        return texte, frozenset(), None, None, None
 
     lignes = [entete,
               f"  statut {r.servie.statut} ; écrite le "
@@ -169,6 +172,7 @@ def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozens
             lignes.append(f"  actualité {r.servie.fondation.actualite} — {r.servie.fondation.motif_actualite}")
     verbatim_texte: Optional[str] = None
     nombre_de_programmes: Optional[float] = None
+    non_nommes: Optional[float] = None
     if r.servie.reponse is not None:
         verbatim_texte = r.servie.reponse.verbatim
         effets = [fp.effet for fp in r.servie.reponse.faits_posterieurs]
@@ -184,6 +188,9 @@ def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozens
             pieces |= set(fp.cited_entry_ids)
         nombre_de_programmes = next(
             (c.valeur for c in r.servie.reponse.chiffres_cles if c.id == "nombre_de_programmes"), None)
+        non_nommes = next(
+            (c.valeur for c in r.servie.reponse.chiffres_cles
+             if c.id == "nombre_de_programmes_non_nommes"), None)
     elif avertissement is not None:
         lignes.append(f"  ⚠ écrite avant un fait plus récent : {avertissement}")
     pieces_frozen = frozenset(pieces)
@@ -191,7 +198,7 @@ def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozens
     if ligne_pieces:
         lignes.append(f"  {ligne_pieces}")
     texte = _RE_REPONSE_DIESE.sub(r"réponse R-\1", "\n".join(lignes))
-    return texte, pieces_frozen, verbatim_texte, nombre_de_programmes
+    return texte, pieces_frozen, verbatim_texte, nombre_de_programmes, non_nommes
 
 
 def _piece_de_la_note(conn_rows: list[dict], accession: str) -> Optional[int]:
@@ -329,13 +336,15 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
     questions_texte = []
     me_7_verbatim: Optional[str] = None
     me_7_nombre_de_programmes: Optional[float] = None
+    me_7_nombre_non_nommes: Optional[float] = None
     for eq in porte.questions:
-        texte, pieces, verbatim, n_prog = _texte_question(eq, etat, piece_meta)
+        texte, pieces, verbatim, n_prog, n_non_nommes = _texte_question(eq, etat, piece_meta)
         questions_texte.append(texte)
         pieces_reponses |= pieces
         if eq.question_id == "me_7":
             me_7_verbatim = verbatim
             me_7_nombre_de_programmes = n_prog
+            me_7_nombre_non_nommes = n_non_nommes
 
     # ── Les notes flash depuis la dernière clôture annuelle ────────────────────────────────────
     notes_retenues = [
@@ -386,6 +395,7 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
         questions_texte=tuple(questions_texte), notes_flash_texte=notes_flash_texte,
         pieces_citables=pieces_citables, pieces_citables_texte=pieces_citables_texte,
         me_7_verbatim=me_7_verbatim, me_7_nombre_de_programmes=me_7_nombre_de_programmes,
+        me_7_nombre_non_nommes=me_7_nombre_non_nommes,
     )
 
 

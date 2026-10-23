@@ -431,9 +431,11 @@ _STATUT_ATTENDU_TRAITEMENT = {
 _REGLE_DU_TRAITEMENT = {
     "bloc": ("`bloc` = la ligne PROPRE d'un programme à réussite incertaine (un bloc `en_developpement` "
              "à lui) ; un produit déjà vendu n'est pas un programme : `rattache` vers son activité"),
-    "rattache": ("`rattache` ne vaut que pour une GÉNÉRATION SUIVANTE d'un produit déjà vendu, vers le bloc "
-                 "`metier_actuel` qui le vend ; un programme NOMMÉ dont la réussite est incertaine a SA "
-                 "ligne (traitement `bloc`) — une plateforme ne regroupe que des programmes NON nommés"),
+    "rattache": ("`rattache` ne vaut que pour ce qui s'estime avec les HYPOTHÈSES DE MARCHÉ d'une activité "
+                 "déjà vendue (génération suivante, nouveau segment de clients), vers le bloc `metier_actuel` "
+                 "qui la porte ; ce qui demande ses propres données de marché et de concurrence (programme "
+                 "nommé, extension d'indication) a SA ligne (traitement `bloc`) — une plateforme ne regroupe "
+                 "que des programmes NON nommés (#143)"),
     "extension": "`extension` désigne le bloc `extension_annoncee` de l'activité annoncée",
 }
 _CONSIGNE_NOM_LITTERAL = (
@@ -507,25 +509,48 @@ def _s14(arch: Architecture, matiere: Matiere) -> Optional[str]:
 
 
 def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]]:
-    """Le nombre d'entrées de l'inventaire est ≥ au chiffre clé `nombre_de_programmes` de `me_7`
-    quand il est établi — REFUS ; sinon, SIGNAL « inventaire non chiffré » (pas un refus : le
-    dossier ne donne simplement pas le chiffre)."""
+    """Le décompte de l'inventaire contre les DEUX chiffres clés de `me_7` : `nombre_de_programmes`
+    (tous les éléments) et `nombre_de_programmes_non_nommes` (ceux que l'émetteur compte sans les
+    nommer). Les deux établis → l'inventaire nomme EXACTEMENT la différence et les plateformes
+    portent EXACTEMENT les non nommés — REFUS sinon. Le second absent → l'écart est un SIGNAL, jamais
+    un refus : mesuré le 2026-10-23 (`mesures/2026-10-23/banc-modeles/`), un refus adossé au seul
+    total a été satisfait en INVENTANT une plateforme (RVMD : 8 comptés pour 7 nommés, un « 8ᵉ »
+    fabriqué) ou en REMPLAÇANT un programme nommé par une plateforme (NVDA anonymisé : la génération
+    suivante omise, un « cinquième, non détaillé » à sa place) — et a refusé la bonne architecture."""
     attendu = matiere.me_7_nombre_de_programmes
-    # Le chiffre clé compte TOUS les programmes, nommés ou non (mesuré le 2026-10-23 : 8 comptés, 7
-    # nommés) : les non nommés sont ceux des plateformes. Compter l'inventaire seul exigerait d'inventer
-    # un nom.
-    non_nommes = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
-    n = len(arch.inventaire_des_programmes) + non_nommes
+    declares_non_nommes = matiere.me_7_nombre_non_nommes
+    nommes = len(arch.inventaire_des_programmes)
+    en_plateforme = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
     if attendu is None:
         return None, ["[S15] inventaire non chiffré : `me_7` n'établit pas le chiffre clé "
                      "`nombre_de_programmes`"]
-    if n < int(attendu):
-        return (f"[S15] l'inventaire des programmes ({len(arch.inventaire_des_programmes)} nommé(s)) et les "
-                f"plateformes ({non_nommes} non nommé(s)) couvrent {n} programme(s), moins que le chiffre "
-                f"clé `nombre_de_programmes` = {int(attendu)} de `me_7` — un programme que le dossier compte "
-                "sans le nommer va dans un bloc `plateforme` (`nombre_de_programmes_non_nommes`), jamais "
-                "sous un nom inventé"), []
-    return None, []
+    total = int(attendu)
+    if declares_non_nommes is not None:
+        d = int(declares_non_nommes)
+        motifs = []
+        if nommes != total - d:
+            motifs.append(
+                f"l'inventaire nomme {nommes} élément(s), `me_7` en NOMME {total - d} "
+                f"(`nombre_de_programmes` = {total}, dont `nombre_de_programmes_non_nommes` = {d}) — "
+                "chaque élément nommé par `me_7` a SON entrée, sous son nom, même celui que tu rattaches "
+                "ou mets hors modèle")
+        if en_plateforme != d:
+            motifs.append(
+                f"les plateformes portent {en_plateforme} programme(s) non nommé(s), `me_7` en compte {d} "
+                "— une plateforme ne porte QUE les programmes que le dossier dit non nommés, jamais un "
+                "élément nommé qui manquerait à l'inventaire")
+        return ("[S15] " + " ; ".join(motifs) if motifs else None), []
+    signaux = []
+    if nommes + en_plateforme != total:
+        signaux.append(
+            f"[S15] écart non expliqué : `me_7` compte {total} programme(s), l'inventaire en nomme "
+            f"{nommes} et les plateformes en portent {en_plateforme} — le dossier ne dit pas combien il "
+            "en compte sans les nommer : à lire au comité")
+    if en_plateforme:
+        signaux.append(
+            f"[S15] plateforme de {en_plateforme} programme(s) non nommé(s) sans chiffre du dossier "
+            "(`nombre_de_programmes_non_nommes` absent de `me_7`) : à lire au comité")
+    return None, signaux
 
 
 def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> list[str]:

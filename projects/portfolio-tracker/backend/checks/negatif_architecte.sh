@@ -38,6 +38,7 @@ D="app/modele_entreprise/dimensions.py"
 C="app/contracts/modele_entreprise_schema.py"
 R="app/modele_entreprise/referentiel.py"
 T="tools/architecte.py"
+M="app/modele_entreprise/matiere.py"
 
 CHECK="checks/check_architecte.py"
 NET=none
@@ -97,7 +98,6 @@ mutations=(
   # ── Lot M3 ter (§10 du check) — [S13]-[S15], §3 (jamais de plantage), [S6]/[P4] enrichis ───────
   "$C¦                if len(self.programmes) != 1:¦                if False:¦deux programmes sur un bloc non plateforme devait être refusé"
   "$S¦            absents = sorted({n for n in noms_a_verifier if _forme_comparable(n) not in verbatim})¦            absents = sorted({n for n in noms_a_verifier if False})¦programme absent du verbatim de \`me_7\` refusé"
-  "$S¦    if n < int(attendu):¦    if False:¦inventaire (6) < chiffre clé (8) de \`me_7\` refusé"
   "$A¦        except ValidationError as e:¦        except ZeroDivisionError as e:¦PLANTAGE au lieu d'un refus nommé"
   "$S¦                    f\"{sorted(matiere.pieces_citables)}\")¦                    \"\")¦rappelle la liste exacte des pièces citables"
   "$R¦            attendu = (f\" ; périodes attendues : {list(periodes_projetees)}\" if periodes_projetees else \"\")¦            attendu = \"\"¦message de renvoi NOMME les périodes attendues"
@@ -109,7 +109,15 @@ mutations=(
   "$S¦                              f\"le verbatim de \`me_7\` — {_CONSIGNE_NOM_LITTERAL}\")¦                              \"le verbatim\")¦passage continu"
   "$T¦membres={b.rattachement.membres})¦membres={b.rattachement.membre})¦rendu de l'outil — exemple du prompt"
   "$S¦        if item.traitement == \"bloc\" and (bloc.plateforme or¦        if False and (bloc.plateforme or¦pas SA ligne propre, refusé"
-  "$S¦    non_nommes = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)¦    non_nommes = 0¦la plateforme couvre l'écart"
+  # Diagnostic du 2026-10-23 (`banc-modeles/`) — [S15] sur les DEUX chiffres de `me_7`, modèle, #143.
+  "$S¦        if nommes != total - d:¦        if False:¦les deux écarts dits"
+  "$S¦        if en_plateforme != d:¦        if False:¦aucune plateforme : refusé"
+  "$S¦    if declares_non_nommes is not None:¦    if False:¦6 nommés + plateforme de 2 = 8 dont 2"
+  "$S¦    if nommes + en_plateforme != total:¦    if False:¦est SIGNALÉ au comité"
+  "$S¦    if en_plateforme:¦    if False:¦signalée, jamais muette"
+  "$M¦             if c.id == \"nombre_de_programmes_non_nommes\"), None)¦             if c.id == \"autre\"), None)¦lit les DEUX chiffres clés"
+  "$A¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Pro-0813\"¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Flash-0731\"¦tourne sur V4-Pro"
+  "$A¦NOUVEAU MARCHÉ, donc un bloc à elle¦marché, donc un bloc à elle¦nomme l'extension d'indication"
   "$A¦    except AgentOutputInvalid as e:¦    except ZeroDivisionError as e:¦sortie hors contrat : PLANTAGE"
 )
 

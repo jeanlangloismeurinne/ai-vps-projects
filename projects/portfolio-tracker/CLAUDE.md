@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #142) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #143) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
 > | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
@@ -191,3 +191,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #140 le classeur de l'entreprise : architecte dédié (catalogue de variables, porte = première réponse sur chaque question source), modèle vivant à demandes ciblées, deux signatures dont une débrayable, détail fin mais agrégé au format du socle, scénarios sur inventaire avec seuil de matérialité 10 % (À CONSTRUIRE)
 - #141 l'extrait court se cite par sa ligne : unique, il est remplacé par son passage ; ambigu, il tombe
 - #142 le découpage d'une ventilation : le plus récent fait foi, son historique est publié ou additionné (addition vérifiée), jamais réparti ; détenteur unique `perimetre.py`, lecteurs par `vue_servie`
+- #143 une ligne propre se décide par le marché qu'il faudra estimer (données de marché et de concurrence ad hoc ?) : extension d'indication = ligne nouvelle, génération suivante / nouveau segment de clients = rattachée ; `me_7` déclare total ET non nommés, [S15] exige un décompte exact ; architecte sur V4-Pro

@@ -1295,12 +1295,18 @@ frameworks:
         ingredients_requis:
           - id: inventaire_des_programmes
             libelle: >-
-              Chaque programme ou projet nommé — y compris les plus précoces (découverte,
-              préclinique, prototype, génération suivante annoncée) — avec son origine (interne,
-              acquisition, licence, partenariat), son dernier jalon franchi et sa date, son
-              prochain jalon et sa date attendue, le marché ou l'indication visé ; ceux que
-              l'émetteur ne nomme pas individuellement sont décrits comme plateforme, avec leur
-              nombre
+              Chaque élément nommé, un par nom, numérotés (1), (2)… — programme ou projet, y
+              compris les plus précoces (découverte, préclinique, prototype), génération suivante
+              annoncée, extension d'indication, nouveau produit, acquisition — et pour CHACUN :
+              à quel produit DÉJÀ VENDU il succède ou qu'il étend (et s'il est déjà vendu), ou
+              « aucun » ; le marché ou l'indication visé, et si c'est un marché où l'entreprise
+              vend déjà (mêmes clients, mêmes concurrents) ou un marché NOUVEAU ; ce qui rend sa
+              réussite incertaine, ou « rien » ; son origine (interne, acquisition, licence,
+              partenariat), son dernier jalon franchi et sa date, son prochain jalon et sa date
+              attendue. Un segment de clients ou une zone pour des produits déjà vendus n'est
+              pas un élément : il se dit avec le produit qu'il achète. Ceux que l'émetteur ne
+              nomme pas individuellement sont décrits comme plateforme, avec leur nombre et la
+              pièce qui les compte
             essentiel: true
             duree_de_vie: description_annuelle
           - id: depense_par_programme
@@ -1318,7 +1324,15 @@ frameworks:
             duree_de_vie: description_annuelle
         chiffres_cles:
           - id: nombre_de_programmes
-            libelle: Nombre de programmes ou projets recensés
+            libelle: >-
+              Nombre d'éléments recensés : ceux numérotés dans l'inventaire, plus ceux que
+              l'émetteur compte sans les nommer — jamais un autre décompte
+            unite: unités
+            periode: à la date de l'analyse
+          - id: nombre_de_programmes_non_nommes
+            libelle: >-
+              Parmi eux, ceux que l'émetteur compte sans les nommer individuellement (0 s'il les
+              nomme tous)
             unite: unités
             periode: à la date de l'analyse
           - id: depense_de_developpement

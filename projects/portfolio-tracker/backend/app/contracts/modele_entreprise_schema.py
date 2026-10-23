@@ -507,8 +507,9 @@ class AxeUsage(Strict):
 
 class InventaireProgramme(Strict):
     """1.3.0 (lot M3 ter, §4) — pour CHAQUE programme que nomme la réponse de `me_7`, ce que
-    l'architecte en fait : `bloc` (sa ligne propre), `rattache` (génération suivante d'un produit
-    vendu : le bloc d'activité qui le porte), `extension` (activité annoncée), `hors_modele`
+    l'architecte en fait : `bloc` (sa ligne propre), `rattache` (s'estime avec les hypothèses de
+    marché d'une activité vendue — génération suivante, nouveau segment de clients : le bloc
+    `metier_actuel` qui la porte ; critère #143), `extension` (activité annoncée), `hors_modele`
     (abandonné, immatériel…). [S14] (`structure.py`) vérifie que `programme` figure littéralement
     dans le verbatim de `me_7`, et que `bloc` désigne un bloc existant du statut attendu par
     `traitement` ; [S15] compare le NOMBRE d'entrées au chiffre clé `nombre_de_programmes`."""

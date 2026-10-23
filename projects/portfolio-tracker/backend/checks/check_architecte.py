@@ -1228,8 +1228,8 @@ ARCH_TECH_MAUVAIS_STATUT_dict["inventaire_des_programmes"][0]["bloc"] = "extensi
 r = valide_ou_motif(Architecture.model_validate(ARCH_TECH_MAUVAIS_STATUT_dict), MATIERE_TECH)
 b.check(r.startswith("[S14]") and "metier_actuel" in r,
         f"[S14] — `rattache` vers un bloc qui n'est pas `metier_actuel` refusé : {r[:300]}")
-b.check("GÉNÉRATION SUIVANTE" in r and "SA ligne" in r,
-        f"[S14] — le motif de `rattache` mal placé dit la RÈGLE (génération suivante ; programme nommé = "
+b.check("HYPOTHÈSES DE MARCHÉ" in r and "SA ligne" in r and "#143" in r,
+        f"[S14] — le motif de `rattache` mal placé dit la RÈGLE #143 (hypothèses de marché ; programme nommé = "
         f"sa ligne), pas seulement le statut attendu : {r[:500]}")
 
 # ── [S15] ─────────────────────────────────────────────────────────────────────────────────────
@@ -1239,19 +1239,47 @@ b.check("[S15]" not in r, f"[S15] — inventaire (6) ≥ chiffre clé (6) de `me
 MATIERE_LABO_SOUS_CHIFFRE = matiere_fictive(
     ticker_id="FICTIF2", ventilation_structure=None, pieces_citables=frozenset({1}),
     me_7_verbatim=MATIERE_LABO.me_7_verbatim, me_7_nombre_de_programmes=8.0)
+# Diagnostic du 2026-10-23 (`banc-modeles/`) : sans le chiffre des NON nommés, un total plus grand que
+# l'inventaire n'est plus un refus — le refus a été satisfait en inventant une plateforme (RVMD : 8
+# comptés, 7 nommés) et a refusé la bonne architecture. L'écart se signale au comité.
 r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_SOUS_CHIFFRE)
-b.check(r.startswith("[S15]") and "8" in r,
-        f"[S15] — inventaire (6) < chiffre clé (8) de `me_7` refusé : {r[:300]}")
+b.check(r.startswith("OK"),
+        f"[S15] — 6 nommés, total 8, non nommés NON chiffrés : pas de refus (il pousserait à inventer) : {r[:300]}")
+_sig = valider_structure(ARCH_LABO, REF, MATIERE_LABO_SOUS_CHIFFRE)
+b.check(any("[S15] écart non expliqué" in x and "8" in x and "6" in x for x in _sig),
+        f"[S15] — l'écart 8 comptés / 6 nommés est SIGNALÉ au comité : {_sig}")
 
-# [S15] (2026-10-23, mesure `b4d-apres3/rvmd_2`) — le dossier COMPTE 8 programmes et en NOMME 6 : les
-# deux non nommés vont dans une plateforme, qui compte — refuser obligerait à inventer un nom.
 _PLATEFORME_LABO = {**_bloc_molecule(9, "inutilisé"), "id": "plateforme_amont", "libelle": "Recherche amont",
                     "programmes": [], "plateforme": True, "nombre_de_programmes_non_nommes": 2,
                     "motif": "Deux programmes comptés par le dossier, jamais nommés."}
 ARCH_LABO_PLATEFORME = Architecture.model_validate(_arch_labo(BLOCS_LABO + [_PLATEFORME_LABO], INVENTAIRE_LABO))
-r = valide_ou_motif(ARCH_LABO_PLATEFORME, MATIERE_LABO_SOUS_CHIFFRE)
+_sig = valider_structure(ARCH_LABO_PLATEFORME, REF, MATIERE_LABO_SOUS_CHIFFRE)
+b.check(any("plateforme de 2" in x and "sans chiffre du dossier" in x for x in _sig),
+        f"[S15] — plateforme sans chiffre des non nommés dans `me_7` : signalée, jamais muette : {_sig}")
+
+# Les DEUX chiffres établis : le décompte est EXACT.
+MATIERE_LABO_DEUX_CHIFFRES = matiere_fictive(
+    ticker_id="FICTIF2", ventilation_structure=None, pieces_citables=frozenset({1}),
+    me_7_verbatim=MATIERE_LABO.me_7_verbatim, me_7_nombre_de_programmes=8.0, me_7_nombre_non_nommes=2.0)
+r = valide_ou_motif(ARCH_LABO_PLATEFORME, MATIERE_LABO_DEUX_CHIFFRES)
 b.check("[S15]" not in r,
-        f"[S15] — 6 nommés + plateforme de 2 non nommés ≥ chiffre clé 8 : la plateforme couvre l'écart : {r[:300]}")
+        f"[S15] — 6 nommés + plateforme de 2 = 8 dont 2 non nommés : tient : {r[:300]}")
+r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_DEUX_CHIFFRES)
+b.check(r.startswith("[S15]") and "plateformes portent 0" in r,
+        f"[S15] — 2 non nommés déclarés, aucune plateforme : refusé : {r[:300]}")
+# La SUBSTITUTION (NVDA anonymisé, 2026-10-23) : un élément nommé retiré de l'inventaire, une
+# plateforme d'un programme « non détaillé » à sa place — le total tient, le décompte exact non.
+MATIERE_LABO_TOUS_NOMMES = matiere_fictive(
+    ticker_id="FICTIF2", ventilation_structure=None, pieces_citables=frozenset({1}),
+    me_7_verbatim=MATIERE_LABO.me_7_verbatim, me_7_nombre_de_programmes=6.0, me_7_nombre_non_nommes=0.0)
+_PLATEFORME_SUBSTITUT = {**_PLATEFORME_LABO, "nombre_de_programmes_non_nommes": 1}
+ARCH_LABO_SUBSTITUTION = Architecture.model_validate(
+    _arch_labo(BLOCS_LABO[:-1] + [_PLATEFORME_SUBSTITUT], INVENTAIRE_LABO[:-1]))
+r = valide_ou_motif(ARCH_LABO_SUBSTITUTION, MATIERE_LABO_TOUS_NOMMES)
+b.check(r.startswith("[S15]") and "nomme 5" in r and "NOMME 6" in r and "portent 1" in r,
+        f"[S15] — un nommé remplacé par une plateforme (total 6 tenu) : refusé, les deux écarts dits : {r[:400]}")
+r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_TOUS_NOMMES)
+b.check("[S15]" not in r, f"[S15] — 6 nommés, 0 non nommé, aucune plateforme : tient : {r[:300]}")
 
 # [S14] (2026-10-23, mesure `b4d-apres3/rvmd_1`) — les six programmes NOMMÉS mis dans UNE plateforme,
 # l'inventaire les déclarant tous « ligne propre » vers elle : le regroupement par la porte dérobée.
@@ -1379,6 +1407,10 @@ try:
     b.check(_m14 is None and _m15 is None,
             f"cas réel — RVMD acceptée le 2026-10-23 (une ligne par molécule, plateforme du 8ᵉ) : "
             f"[S13]-[S15] tiennent : {_m14} / {_m15}")
+    _sig15 = structure_mod._s15(_acc, MATIERE_RVMD_REELLE)[1]
+    b.check(any("sans chiffre du dossier" in x for x in _sig15),
+            f"cas réel — RVMD : le « 8ᵉ programme » en plateforme (le communiqué #1546 en nomme 7) n'est "
+            f"plus muet, il est signalé : {_sig15}")
 except Exception as e:  # noqa: BLE001
     b.check(False, f"cas réel — RVMD acceptée : ne se relit plus sous le contrat ({type(e).__name__}) : {e}")
 _ft = ArchitecteSortie.model_validate(
@@ -1393,7 +1425,9 @@ FaitPosterieurFake = SimpleNamespace(
          "prévu à l'horizon FY2028.",
     cited_entry_ids=[900])
 ReponseFake = SimpleNamespace(
-    verbatim="Verbatim de test, écrit avant l'événement postérieur.", chiffres_cles=[], sens=None,
+    verbatim="Verbatim de test, écrit avant l'événement postérieur.",
+    chiffres_cles=[SimpleNamespace(id="nombre_de_programmes", valeur=7.0),
+                   SimpleNamespace(id="nombre_de_programmes_non_nommes", valeur=0.0)], sens=None,
     faits_posterieurs=[FaitPosterieurFake], encadre_lisible=lambda: [])
 FondationFake = SimpleNamespace(
     cited_entry_ids=[800], actualite="perimee",
@@ -1409,10 +1443,13 @@ eq_fake = EtatQuestionSource("q1", "fw", True, "réponse #99 qui tient", answer_
 old_reponse_tient = parcours_mod.reponse_tient
 parcours_mod.reponse_tient = lambda r: True
 try:
-    texte_q, pieces_q, verbatim_q, nprog_q = matiere_mod._texte_question(eq_fake, EtatFake, {})
+    texte_q, pieces_q, verbatim_q, nprog_q, nonnommes_q = matiere_mod._texte_question(eq_fake, EtatFake, {})
 finally:
     parcours_mod.reponse_tient = old_reponse_tient
 
+b.check(nprog_q == 7.0 and nonnommes_q == 0.0,
+        f"§10 — la matière lit les DEUX chiffres clés de `me_7` (total, non nommés — un zéro est une "
+        f"valeur, #47) : {nprog_q} / {nonnommes_q}")
 b.check("réponse R-99" in texte_q and "réponse #99" not in texte_q,
         f"§2 — un numéro de RÉPONSE s'écrit `réponse R-99`, jamais `#99`, dans la matière : {texte_q!r}")
 b.check(pieces_q == frozenset({800, 900}),
@@ -1500,5 +1537,22 @@ b.check("CHAQUE exercice projeté" in txt_fiches,
         f"{txt_fiches[:400]}")
 b.check("une seule cellule, sans période" in txt_fiches,
         f"§5 — la fiche `sans_periode` dit qu'elle ne porte qu'une seule cellule : {txt_fiches[:400]}")
+
+# ── Modèle de l'architecte et critère #143 (diagnostic du 2026-10-23, `banc-modeles/`) ─────────────
+import app.modele_entreprise.architecte as _arch_mod  # noqa: E402
+from app.agents.providers.base import MODEL_COSTS  # noqa: E402
+b.check(_arch_mod.MODELE_ARCHITECTE == "deepseek-ai/DeepSeek-V4-Pro-0813",
+        f"modèle — l'architecte tourne sur V4-Pro (mesuré : seul à rattacher la génération suivante, "
+        f"anonymisé compris) : {_arch_mod.MODELE_ARCHITECTE}")
+b.check(_arch_mod.MODELE_ARCHITECTE in MODEL_COSTS,
+        "modèle — le coût de l'architecte est TABULÉ (sinon le repli prudent fausse le bilan)")
+_p = _arch_mod._ARCHITECTE_SYSTEM_PROMPT
+b.check("EXTENSION D'INDICATION" in _p and "NOUVEAU MARCHÉ" in _p and "données "
+        "de marché et de concurrence PROPRES" in _p,
+        "#143 — le prompt pose le critère unique (données de marché et de concurrence propres) et "
+        "nomme l'extension d'indication comme nouveau marché")
+b.check("GÉNÉRATION SUIVANTE d'un produit déjà vendu n'est pas un programme à part" not in _p,
+        "#143 — l'ancienne règle « génération suivante → rattachée » (en conflit sur les extensions "
+        "d'indication) est RETIRÉE du prompt")
 
 sys.exit(b.summary())

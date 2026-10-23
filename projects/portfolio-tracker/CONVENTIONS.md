@@ -3678,4 +3678,10 @@ deux règles (génération suivante / réussite incertaine) sur les extensions d
 banc-modeles/`). Conséquence sur NVDA : Vera Rubin (même marché que Data Center) se rattache ; Vera CPU
 (marché des processeurs, TAM annoncé, concurrents propres) appelle une ligne propre.
 
-**Statut.** Arbitrage acquis ; non encore construit (prompt de l'architecte, forme de `me_7`).
+**Construit (2026-10-23).** Prompt de l'architecte (critère unique, `architecte.py`) et ses jumeaux
+(motif de [S14], docstring de `InventaireProgramme`) ; `me_7` : chaque élément dit sa nature (produit vendu
+qu'il prolonge ou « aucun », marché déjà servi ou nouveau, ce qui rend sa réussite incertaine) et DEUX
+chiffres clés, `nombre_de_programmes` et `nombre_de_programmes_non_nommes` ; [S15] : les deux établis →
+décompte EXACT (inventaire = nommés, plateformes = non nommés), refus sinon ; le second absent → l'écart
+et toute plateforme sont SIGNALÉS, jamais refusés (un refus adossé au seul total a fait inventer une
+plateforme). Modèle de l'architecte : `MODELE_ARCHITECTE` (V4-Pro), dans le même module que son prompt.
