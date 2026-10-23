@@ -101,3 +101,49 @@ banc B4e décide, sur chaque entreprise, en comparant les trois).
 4. À blanc, NVDA et RVMD, une fois par mode (~0,05 $ en tout) : pièces ouvertes, itérations, coût, issue,
    et ce que l'architecte a trouvé que la matière seule ne lui donnait pas.
 5. Rendre ; ne pas committer, ne pas déployer, aucun `--ecrire`.
+
+## 8. Addendum du 2026-10-23 (Opus, après le diagnostic B4d et #143) — À LIRE AVANT L'ÉTAPE 0
+
+**Ce qui a changé depuis la v1.** L'architecte tourne sur DeepSeek-V4-Pro (`MODELE_ARCHITECTE`, ≈ 0,10 $
+par passage, pas 0,004 $ : refaire le calcul de budget §0) ; le critère #143 (une ligne propre se décide
+par les données de marché et de concurrence à aller chercher) est dans sa consigne ; `me_7` déclare
+`nombre_de_programmes` ET `nombre_de_programmes_non_nommes` ; [S15] exige un décompte exact quand les deux
+sont établis. Journal du plan : lignes « B4d (diagnostic) » et « #143 (construit, éprouvé) ».
+
+**Pourquoi ce lot est maintenant le chemin critique.** Mesuré (`mesures/2026-10-23/banc-modeles/`,
+`apres-143/`) : trois erreurs de l'architecte viennent de ce qu'il ne voit que les TITRES des pièces et le
+résumé de `me_7` — l'IA souveraine (la pièce #1012 dit : usines Vera Rubin vendues à des États = clients de
+Data Center), Vera CPU déjà vendu (#1004 : ~20 Md$ de revenus CPU visibles), et les molécules que la
+réponse `me_7` RVMD #2624 a PERDUES alors que la pièce #1546 qu'elle cite les nomme (RMC-0708, RMC-8839 ;
+essais RASolute 308, RASolve 301). L'analyste de `me_7` (Flash) est instable : mêmes pièces, 7 molécules
+le 22/10, 5 le 23/10.
+
+**Ajout au périmètre (§3 bis) — [S14]/[S15] lisent aussi ce qui a été OUVERT.** Sans cela l'explorateur
+trouverait les programmes oubliés et les contrôles les refuseraient :
+- [S14] : un nom de programme est admis s'il figure littéralement dans le verbatim de `me_7` OU dans une
+  pièce ouverte pendant le passage (et sa référence est dite dans le motif de l'entrée : « #1546 ») ; même
+  règle de passage continu ; le NOM est le passage le plus court qui désigne le programme (le motif du
+  refus le dit — mesuré : avec le format « nom — détails » de `me_7`, l'architecte recopiait des phrases
+  entières comme noms).
+- [S15] : les entrées dont le nom n'est PAS dans `me_7` mais dans une pièce ouverte s'ajoutent au décompte
+  attendu (elles ne le faussent pas) et sont SIGNALÉES au comité (« absent de `me_7`, trouvé dans #… ») —
+  c'est aussi le moyen de voir l'instabilité de l'analyste.
+- Détenteur : `structure.py` (pas un second contrôle) ; la matière porte la liste des pièces ouvertes et
+  leur texte rendu, comme `pieces_citables` (§3).
+
+**Ce que l'étape 4 doit vérifier, à la lecture (pas au code de sortie).** En mode `explorateur`, une fois
+par entreprise : (a) NVDA — l'IA souveraine n'est plus une ligne propre ni une extension (clients de Data
+Center) ; Vera CPU est une activité VENDUE à marché propre (bloc estimé `metier_actuel`, enfant de Data
+Center), pas `en_developpement` ; Vera Rubin rattachée ; (b) RVMD — les molécules et essais absents de
+#2624 réapparaissent, signalés « absent de `me_7` » ; chaque extension d'indication de daraxonrasib a sa
+ligne (#143). Noter pour chaque cas la pièce ouverte qui l'a permis. Ce qui reste faux après ouverture des
+pièces est un défaut de CONSIGNE (formulation du critère #143 — la « probabilité de succès » citée parmi
+les données propres a fait garder Vera Rubin en ligne propre) ou de MODÈLE, pas d'information : le dire.
+
+**Hors de ce lot (en attente de l'utilisateur).** Corriger la formulation du critère #143, l'élément
+« par indication » dans `me_7`, le passage de l'analyste de `me_7` sur V4-Pro : NE PAS les faire ici — la
+mesure de l'étape 4 doit d'abord dire ce que l'ouverture des pièces règle seule.
+
+**Budget.** Étape 4 : 2 passages en mode `explorateur` (≈ 0,15-0,30 $ avec V4-Pro et les pièces
+ouvertes) ; `deux_temps` et `aucun` : un passage chacun seulement si l'explorateur réussit (règle : un
+essai avant toute série, annoncer le coût avant de lancer).

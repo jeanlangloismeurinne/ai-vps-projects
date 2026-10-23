@@ -40,6 +40,9 @@ d'indication = ligne propre, critère « faut-il des données de marché et de c
 `f4a5872`, NON déployé ; me_7 réémise (#2625 NVDA, #2624 RVMD incomplète) ; architecte à blanc `apres-143/` : pas encore
 acquis (journal, ligne « #143 (construit, éprouvé) »). Prochain : formulation du critère (sans probabilité de succès),
 nom = avant « — », une extension d'indication = un élément de me_7 ; question à l'utilisateur : analyste de me_7 sur V4-Pro ?
+**Décision de l'utilisateur (2026-10-23) : AVANT ces correctifs, construire B4f** (`16-lot-B4f-explorateur.md`, LIRE le §8
+addendum : [S14]/[S15] admettent ce qui a été ouvert, cas NVDA/RVMD à vérifier à l'étape 4). Nouvelle conversation :
+Sonnet étapes 0-3, Opus étape 4 (mesure à blanc + lecture).
 **PROCHAIN PAS** : (1) poser ces deux questions à l'utilisateur ; (2) **B4f** `16-lot-B4f-explorateur.md` ;
 (3) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises) — un succès s'y juge À LA LECTURE.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`
