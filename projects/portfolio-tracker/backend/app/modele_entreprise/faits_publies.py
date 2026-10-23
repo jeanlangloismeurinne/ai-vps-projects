@@ -23,6 +23,9 @@ Détenteur unique (#46) de cette dérivation : `structure.py` ([S1]-[S3], [S7], 
 """
 from __future__ import annotations
 
+import re
+import unicodedata
+from dataclasses import dataclass
 from typing import Optional
 
 from app.contracts.modele_entreprise_schema import Bloc, BlocPropose, RattachementPublie
@@ -30,7 +33,7 @@ from app.contracts.modele_entreprise_schema import Bloc, BlocPropose, Rattacheme
 __all__ = [
     "poser_maille", "membres_du_bloc", "parent_de_membre", "parent_publie_de",
     "est_premier_niveau_publie", "motif_regroupement_incoherent", "axes_de_la_ventilation",
-    "axes_sans_bloc_publie",
+    "axes_sans_bloc_publie", "MembreImpose", "PremierNiveau", "premier_niveau_impose", "id_de_bloc",
 ]
 
 
@@ -139,3 +142,114 @@ def axes_sans_bloc_publie(blocs: list[Bloc], ventilation_structure: Optional[dic
     `usage` dans `Architecture.autres_axes`, sinon c'est un axe OUBLIÉ."""
     axes_couverts = {b.rattachement.axe for b in blocs if isinstance(b.rattachement, RattachementPublie)}
     return axes_de_la_ventilation(ventilation_structure) - axes_couverts
+
+
+# ── Le PREMIER NIVEAU IMPOSÉ (plan « découpage » B4g, étape 1, arbitrage du 2026-10-23) ─────────────
+# Ce que ferait un vrai fonds : les segments que l'entreprise publie sont la colonne vertébrale du
+# modèle — c'est à leur maille que se lisent l'historique, la prévision de la direction et le
+# consensus ; la rotation des produits vit DANS la croissance d'un segment ; seuls les paris qu'il
+# faut chiffrer à part s'en détachent. Le code établit donc le premier niveau ; l'architecte ne décide
+# plus que des exceptions. Le CHOIX de l'axe est une décision du fonds au référentiel
+# (`axes_du_premier_niveau`, par priorité) : « ce qu'on saura projeter » — le chiffre d'affaires se
+# projette par ce que l'entreprise VEND (marché × part × prix), donc l'axe des produits et services
+# d'abord ; à défaut l'information sectorielle officielle.
+
+@dataclass(frozen=True)
+class MembreImpose:
+    bloc_id: str          # identifiant posé par le CODE, que l'architecte recopie
+    membre: str           # qname du membre publié
+    libelle: str
+    montant: float        # chiffre d'affaires publié à la période de référence, unité déposée ($)
+
+
+@dataclass(frozen=True)
+class PremierNiveau:
+    """`membres` vide = RIEN d'imposé, et `axes_ecartes` dit pourquoi (l'architecte compose, le comité
+    lit la raison) — c'est le cas d'un axe prioritaire PUBLIÉ mais inexploitable."""
+    axe: Optional[str]
+    periode: Optional[str]          # l'exercice annuel de référence du découpage le plus récent
+    membres: tuple[MembreImpose, ...]
+    axes_ecartes: tuple[tuple[str, str], ...] = ()   # (axe prioritaire non retenu, pourquoi)
+
+    @property
+    def impose(self) -> bool:
+        return bool(self.membres)
+
+
+def id_de_bloc(libelle: str) -> str:
+    """Un identifiant de bloc lisible tiré du LIBELLÉ publié (jamais d'un nom écrit dans le code) :
+    minuscules ASCII, chiffres, `_` simple — le format du contrat (`^[a-z][a-z0-9_]*$`, sans `__`)."""
+    s = unicodedata.normalize("NFKD", libelle).encode("ascii", "ignore").decode().lower()
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    s = re.sub(r"_+", "_", s)[:50]
+    if not s or not s[0].isalpha():
+        s = f"segment_{s}".rstrip("_")
+    return s
+
+
+def _ids_uniques(libelles: list[str]) -> list[str]:
+    vus: dict[str, int] = {}
+    out = []
+    for lib in libelles:
+        base = id_de_bloc(lib)
+        n = vus.get(base, 0) + 1
+        vus[base] = n
+        out.append(base if n == 1 else f"{base}_{n}")
+    return out
+
+
+def _non_impose(ecartes: list[tuple[str, str]]) -> Optional[PremierNiveau]:
+    """Un axe publié mais inexploitable : rien d'imposé, la raison dite."""
+    return PremierNiveau(axe=None, periode=None, membres=(), axes_ecartes=tuple(ecartes))
+
+
+def premier_niveau_impose(ventilation_structure: Optional[dict],
+                          axes_par_priorite: list[str]) -> Optional[PremierNiveau]:
+    """Le premier axe (dans l'ordre du référentiel) dont le découpage le plus récent publié a AU MOINS
+    deux membres au premier niveau, un exercice annuel de référence établi (publié ou par addition
+    vérifiée, `perimetre.py`), et dont la somme BOUCLE avec le chiffre d'affaires des comptes à cet
+    exercice. On ne passe à l'axe SUIVANT que si l'émetteur ne publie PAS l'axe courant : un axe
+    publié mais inexploitable arrête la descente — rien n'est imposé (`membres` vide) et la raison est
+    dite. Mesuré le 2026-10-23 (frontière gratuite, `pn_temoins`) : Apple publie ses produits sur un axe
+    qui porte DEUX découpages superposés (iPhone/Mac/… et Produits/Services) ; leur somme ne boucle pas,
+    et descendre à l'axe suivant imposait ses secteurs GÉOGRAPHIQUES — inutilisables pour projeter.
+    `None` si aucun axe n'est publié (secteur unique, ventilation absente) : l'architecte compose
+    alors tout le classeur, comme avant. Pure."""
+    if not ventilation_structure:
+        return None
+    ecartes: list[tuple[str, str]] = []
+    chroniques = ventilation_structure.get("chroniques") or []
+    for axe in axes_par_priorite:
+        chron = next((c for c in chroniques if c["axe"] == axe and c["ligne"] == "chiffre_affaires"), None)
+        if chron is None:
+            ecartes.append((axe, "l'émetteur ne publie pas de chiffre d'affaires sur cet axe"))
+            continue
+        membres = list((chron.get("regime_reference") or {}).get("premier_niveau") or [])
+        periode = chron.get("periode_annuelle_reference")
+        if len(membres) < 2:
+            # Une seule activité sur cet axe n'est pas un découpage : on passe à l'axe suivant.
+            ecartes.append((axe, "un seul membre au premier niveau du découpage le plus récent"))
+            continue
+        if not periode:
+            ecartes.append((axe, "aucun exercice annuel établi dans le découpage le plus récent"))
+            return _non_impose(ecartes)
+        raccord = next((r for r in ventilation_structure.get("raccords") or []
+                        if r["axe"] == axe and r["ligne"] == "chiffre_affaires" and r["periode"] == periode
+                        and r.get("niveau") == "total"), None)
+        if raccord is None or raccord.get("statut") != "boucle":
+            ecartes.append((axe, f"la somme du premier niveau ne boucle pas avec le chiffre d'affaires "
+                                 f"des comptes à `{periode}`"))
+            return _non_impose(ecartes)
+        cellules = {c["membre"]: c for c in ventilation_structure.get("cellules") or []
+                    if c["axe"] == axe and c["ligne"] == "chiffre_affaires" and c["periode"] == periode}
+        if any(m not in cellules for m in membres):
+            ecartes.append((axe, f"un membre du premier niveau n'a pas de chiffre d'affaires à `{periode}`"))
+            return _non_impose(ecartes)
+        ordonnes = sorted(membres, key=lambda m: (-cellules[m]["v"], m))
+        libelles = [cellules[m].get("libelle") or m.split(":")[-1] for m in ordonnes]
+        return PremierNiveau(
+            axe=axe, periode=periode,
+            membres=tuple(MembreImpose(bloc_id=i, membre=m, libelle=l, montant=cellules[m]["v"])
+                          for i, m, l in zip(_ids_uniques(libelles), ordonnes, libelles)),
+            axes_ecartes=tuple(ecartes))
+    return None

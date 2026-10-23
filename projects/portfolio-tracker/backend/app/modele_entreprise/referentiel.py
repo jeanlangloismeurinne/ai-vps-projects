@@ -120,6 +120,16 @@ def _valider_pont_referentiel(ref: ReferentielModele, frameworks: "FrameworksFil
                     f"[R6] `{v.id}`.somme_vers_ligne = `{v.somme_vers_ligne}` n'est pas une ligne du "
                     f"business plan de la famille `{nom_famille}` ({famille.lignes_du_business_plan})")
 
+    # [R7] (plan « découpage » B4g, étape 1) — chaque axe de `axes_du_premier_niveau` est un axe que le
+    # fonds relève dans la ventilation publiée (`ventilation_publiee.yaml`, détenteur unique des axes).
+    from app.knowledge.ventilation import charger_referentiel as charger_referentiel_ventilation
+    axes_releves = {a.id for a in charger_referentiel_ventilation().axes}
+    inconnus = [a for a in ref.axes_du_premier_niveau if a not in axes_releves]
+    if inconnus:
+        raise ReferentielRefuse(
+            f"[R7] `axes_du_premier_niveau` cite {inconnus}, absent(s) des axes relevés de la ventilation "
+            f"publiée {sorted(axes_releves)}")
+
 
 @lru_cache(maxsize=1)
 def load_referentiel(chemin: Optional[str] = None) -> ReferentielModele:

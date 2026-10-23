@@ -50,9 +50,10 @@ https://claude.ai/artifact/38FsoJwzzM1GEYYEobQi57, 28 commentaires ; détail : l
 étape, V4-Pro et `acces_au_dossier = aucun` FIXES jusqu'à l'étape 5, appels V4-Pro limités (un passage par titre
 aux étapes intermédiaires). **0 ✅** (non déployé) : [S15] signal, [S16] double comptage, provenance #1004 en dette ;
 rejugé gratuitement sur les sorties gardées : RVMD `b4f` ACCEPTÉE (signal [S15]), RVMD `apres-143` REFUSÉE [S16].
-**1 — À FAIRE** : deux étages (premier niveau = segments publiés construits par le CODE ; l'architecte ne décide que
-des exceptions : vendu → sous-ligne + reste, non vendu → ligne additionnelle, sous-segment client si risque, émetteur
-à un segment → tout en étage 2). Puis 2 (règle en arbre, vocabulaire standard — À CO-ÉCRIRE avec l'utilisateur),
+**1 ✅** (non déployé) premier niveau imposé par le code (`axes_du_premier_niveau: [activites, secteurs]`, descente
+à l'axe suivant SEULEMENT s'il n'est pas publié), [S17], [R7] ; NVDA C1 ✅ C2 ❌ (sens : étapes 2-4), RVMD sans
+régression ; AAPL/MSFT/AMZN : rien d'imposé (axe produits à deux découpages superposés — dette périmètre).
+**2 — À FAIRE (à co-écrire)** puis 2 (règle en arbre, vocabulaire standard — À CO-ÉCRIRE avec l'utilisateur),
 3 (inventaire à cases), 4 (`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées).
 Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la
 granularité ; finesse selon la maturité (grand groupe → grands métiers, startup → produit ou thèse adossée à un

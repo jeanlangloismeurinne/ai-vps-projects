@@ -234,6 +234,14 @@ class ReferentielModele(Strict):
     # nombre de `besoins_d_information` traités en mode `deux_temps`) : décision du fonds au
     # référentiel (spec §2), REQUISE, sans défaut.
     max_iterations_explorateur: Annotated[int, Field(ge=1, le=20)]
+    # Plan « découpage » B4g, étape 1 (arbitrage du 2026-10-23) — le PREMIER NIVEAU du business plan
+    # est établi par le CODE depuis les segments publiés (`faits_publies.premier_niveau_impose`) ;
+    # l'architecte ne décide que des exceptions. INTERRUPTEUR (principe fondateur n° 3) : `false`
+    # rend l'architecte libre de composer le premier niveau, comme avant. REQUIS, sans défaut.
+    premier_niveau_impose: bool
+    # L'ordre de préférence des axes pour ce premier niveau — décision du fonds : « ce qu'on saura
+    # projeter ». Chaque id doit être un axe du référentiel de la ventilation (contrôlé au chargement).
+    axes_du_premier_niveau: Annotated[list[str], Field(min_length=1)]
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "ReferentielModele":

@@ -639,6 +639,42 @@ def _s16(arch: Architecture) -> Optional[str]:
     return ("[S16] " + " ; ".join(motifs)) if motifs else None
 
 
+# ── [S17] (plan « découpage » B4g, étape 1, 2026-10-23) ─────────────────────────────────────────
+
+def _s17(arch: Architecture, matiere: Matiere, par_bloc: dict[str, Bloc]) -> Optional[str]:
+    """Le premier niveau IMPOSÉ (`matiere.premier_niveau`, établi par `faits_publies`) est recopié tel
+    quel : chaque segment a SON bloc, sous l'id posé par le code, publié sur l'axe retenu avec ce seul
+    membre ; aucun autre bloc publié au premier niveau. Mesuré avant : deux passages V4-Pro sur le
+    MÊME dossier NVDA ont rendu deux premiers niveaux différents (`apres-143/` : quatre blocs publiés,
+    `b4f-explorateur/` : deux). Ne s'applique pas quand il n'y a pas de premier niveau imposé
+    (interrupteur éteint, secteur unique)."""
+    pn = matiere.premier_niveau
+    if pn is None or not pn.impose:
+        return None
+    attendus = {mi.bloc_id: mi for mi in pn.membres}
+    motifs: list[str] = []
+    for mi in pn.membres:
+        b = par_bloc.get(mi.bloc_id)
+        if b is None:
+            motifs.append(f"le segment « {mi.libelle} » n'a pas son bloc `{mi.bloc_id}`")
+        elif not (isinstance(b.rattachement, RattachementPublie) and b.rattachement.axe == pn.axe
+                  and list(b.rattachement.membres) == [mi.membre]):
+            motifs.append(f"le bloc `{mi.bloc_id}` doit être publié sur l'axe `{pn.axe}` avec le seul membre "
+                          f"`{mi.membre}` (ni regroupé, ni déplacé)")
+    for b in arch.blocs:
+        if (isinstance(b.rattachement, RattachementPublie) and b.id not in attendus
+                and est_premier_niveau_publie(b, par_bloc, matiere.ventilation_structure)):
+            motifs.append(
+                f"le bloc publié `{b.id}` (axe `{b.rattachement.axe}`, {list(b.rattachement.membres)}) est "
+                "au premier niveau sans être un segment imposé — un sous-détail du même axe devient l'enfant "
+                "de son segment, un autre axe va dans `autres_axes`")
+    if not motifs:
+        return None
+    imposes = ", ".join(f"`{mi.bloc_id}` ({mi.membre})" for mi in pn.membres)
+    return (f"[S17] premier niveau imposé non respecté : " + " ; ".join(motifs)
+            + f" — recopie TELS QUELS les blocs {imposes} (axe `{pn.axe}`)")
+
+
 def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> list[str]:
     """[S1]-[S11]. Rend les SIGNAUX ; lève `ArchitectureRefusee` avec TOUS les motifs réunis."""
     par_bloc = {b.id: b for b in arch.blocs}
@@ -704,6 +740,10 @@ def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matie
     m16 = _s16(arch)
     if m16:
         refus.append(m16)
+
+    m17 = _s17(arch, matiere, par_bloc)
+    if m17:
+        refus.append(m17)
 
     if refus:
         raise ArchitectureRefusee(" | ".join(refus))

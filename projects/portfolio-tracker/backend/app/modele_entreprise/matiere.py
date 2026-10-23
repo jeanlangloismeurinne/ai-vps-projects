@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
 
+from app.modele_entreprise.faits_publies import PremierNiveau, premier_niveau_impose
+
 __all__ = ["MatiereRefusee", "Matiere", "charger_matiere", "rendre_matiere"]
 
 # Un numéro de RÉPONSE change de forme dans la matière (`réponse R-1367`, jamais `#`) pour qu'aucun
@@ -76,6 +78,11 @@ class Matiere:
     # trouvé dans #… ». Même détenteur que `pieces_citables` (§3 de la spec) : `architecte.py`
     # pose ce champ par `dataclasses.replace`, jamais un second calcul.
     pieces_ouvertes_texte: dict[int, str] = field(default_factory=dict)
+    # Plan « découpage » B4g, étape 1 — le premier niveau du business plan ÉTABLI PAR LE CODE
+    # (`faits_publies.premier_niveau_impose`, détenteur unique), quand l'interrupteur
+    # `premier_niveau_impose` du référentiel est allumé et qu'un axe le permet. Rendu dans la matière
+    # ET lu par [S17] : une seule valeur, calculée à la lecture. `None` : composition libre.
+    premier_niveau: Optional["PremierNiveau"] = None
 
 
 def _ligne_lisible(ligne_id: str, gabarit) -> str:
@@ -403,7 +410,30 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
         pieces_citables=pieces_citables, pieces_citables_texte=pieces_citables_texte,
         me_7_verbatim=me_7_verbatim, me_7_nombre_de_programmes=me_7_nombre_de_programmes,
         me_7_nombre_non_nommes=me_7_nombre_non_nommes,
+        premier_niveau=(premier_niveau_impose(ventilation_structure_pour_s, ref.axes_du_premier_niveau)
+                        if ref.premier_niveau_impose else None),
     )
+
+
+def _premier_niveau_texte(pn: Optional["PremierNiveau"]) -> list[str]:
+    """La section du premier niveau imposé — vide quand il n'y en a pas (composition libre)."""
+    if pn is None:
+        return []
+    if not pn.impose:
+        return ["Premier niveau du business plan — NON imposé (compose-le toi-même) : "
+                + " ; ".join(f"axe `{axe}` publié mais inexploitable — {pourquoi}" for axe, pourquoi in pn.axes_ecartes),
+                ""]
+    lignes = [
+        f"Premier niveau du business plan — IMPOSÉ par le système : les segments que l'entreprise "
+        f"publie, axe `{pn.axe}`, découpage le plus récent, exercice de référence `{pn.periode}` (la "
+        f"somme boucle avec le chiffre d'affaires des comptes) :"]
+    for mi in pn.membres:
+        lignes.append(f"  · bloc `{mi.bloc_id}` — {mi.libelle} [axe={pn.axe} membre={mi.membre}] : "
+                      f"{mi.montant / 1_000_000:,.1f} M$".replace(",", " "))
+    for axe, pourquoi in pn.axes_ecartes:
+        lignes.append(f"  (axe `{axe}` non retenu, alors qu'il passe avant : {pourquoi})")
+    lignes.append("")
+    return lignes
 
 
 def rendre_matiere(m: Matiere) -> str:
@@ -438,6 +468,7 @@ def rendre_matiere(m: Matiere) -> str:
         "Ventilation publiée :",
         m.ventilation_texte,
         "",
+        *_premier_niveau_texte(m.premier_niveau),
         "Réponses des questions sources (ordre de la porte) :",
     ]
     out.extend(m.questions_texte)

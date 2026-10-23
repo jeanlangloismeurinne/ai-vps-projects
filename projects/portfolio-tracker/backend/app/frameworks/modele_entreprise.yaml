@@ -61,6 +61,22 @@ acces_au_dossier: aucun
 # Même statut que les deux interrupteurs ci-dessus : ne monte pas `version`.
 max_iterations_explorateur: 8
 
+# Le PREMIER NIVEAU IMPOSÉ (plan « découpage » B4g, étape 1, arbitrage du 2026-10-23). `true` : le
+# code établit le premier niveau du business plan depuis les segments publiés du découpage le plus
+# récent (`faits_publies.premier_niveau_impose`) et l'architecte ne décide que des exceptions (une
+# sous-ligne d'un segment, une ligne hors segment pour ce qui ne se vend pas encore, le bloc commun) ;
+# [S17] refuse un premier niveau recomposé. `false` : l'architecte compose librement (avant le
+# 2026-10-23). Même statut que les interrupteurs ci-dessus : ne monte pas `version`, lu à la LECTURE.
+premier_niveau_impose: true
+
+# L'axe de ce premier niveau, par priorité — « ce qu'on saura projeter » (réponse de l'utilisateur du
+# 2026-10-23) : le chiffre d'affaires se projette par ce que l'entreprise VEND (marché × part × prix),
+# donc d'abord les produits et services (`activites`), à défaut l'information sectorielle officielle
+# (`secteurs`, dont les charges publiées servent alors de base aux marges). Le premier axe qui a au
+# moins deux membres et boucle avec le chiffre d'affaires à l'exercice de référence est retenu ; les
+# autres axes vont dans `autres_axes` (information : marges par secteur, concentration, zones).
+axes_du_premier_niveau: [activites, secteurs]
+
 version: "1.2.0"
 
 # Les UNITÉS du catalogue — DÉTENTEUR UNIQUE (lot M3 bis §5, cause ④ : les formules ne sont pas

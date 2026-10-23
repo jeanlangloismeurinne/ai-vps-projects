@@ -1,0 +1,601 @@
+{
+  "schema_version": "architecture-1.3.0",
+  "ticker_id": "NVDA",
+  "version": 1,
+  "archetype": "rentable",
+  "famille": "industrielle",
+  "version_referentiel": "1.2.0",
+  "blocs": [
+    {
+      "id": "data_center",
+      "libelle": "Data Center",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:DataCenterMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié du 10-Q du 2026-08-26, premier niveau de l'axe `activites` (découpage le plus récent).",
+      "pieces": [],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "edge_computing",
+      "libelle": "Edge Computing",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:EdgeComputingMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié du 10-Q du 2026-08-26, premier niveau de l'axe `activites` (découpage le plus récent, addition vérifiée des anciens membres Automotive, Gaming, OEM and Other, Professional Visualization).",
+      "pieces": [],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "vera_cpu",
+      "libelle": "Vera CPU — premier CPU pour l'IA agentique",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "annonce du TAM CPU data center (200 Md$) et visibilité de revenus CPU",
+        "franchi_le": "2026-05-20",
+        "prochain": "lancement commercial à grande échelle",
+        "attendu_vers": "2027-01-01"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "taille_du_marche",
+        "probabilite_de_succes",
+        "annee_de_lancement",
+        "ventes_au_pic",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc"
+      ],
+      "motif": "Nouveau marché (CPU data center IA agentique, TAM 200 Md$) distinct du marché GPU/accélérateurs existant — extension d'indication, donc sa propre ligne avec jalon.",
+      "pieces": [
+        1004,
+        1012
+      ],
+      "programmes": [
+        "Vera CPU"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "hugging_face",
+      "libelle": "Acquisition Hugging Face — écosystème open-source",
+      "role": "activite",
+      "statut": "extension_annoncee",
+      "origine": "acquisition",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "taille_du_marche",
+        "annee_de_lancement"
+      ],
+      "motif": "Acquisition annoncée (accord définitif du 2026-09-02, clôture attendue S1 2027) — extension vers l'écosystème open-source, non conclue, n'entre dans aucune formule.",
+      "pieces": [
+        1010,
+        847
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "ia_souveraine",
+      "libelle": "IA souveraine — AI factories Japon et Corée",
+      "role": "activite",
+      "statut": "extension_annoncee",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "taille_du_marche",
+        "annee_de_lancement"
+      ],
+      "motif": "Déploiements nationaux annoncés (Noetra 140 MW au Japon, NAVER/Brookfield 200 MW→1 GW en Corée) — activité annoncée, pas encore vendue à grande échelle.",
+      "pieces": [
+        1012
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "commun",
+      "libelle": "Frais communs non affectés",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "R&D totale non ventilée par programme (18 497 M$ en FY2026) et charges de structure non rattachées à un bloc d'activité pris isolément.",
+      "pieces": [
+        867,
+        1650
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    }
+  ],
+  "variables_propres": [],
+  "passage_a_l_agrege": [
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "data_center__chiffre_affaires_du_bloc + edge_computing__chiffre_affaires_du_bloc"
+    },
+    {
+      "ligne": "recherche_developpement",
+      "formule": "commun__couts_communs"
+    }
+  ],
+  "cellules_attendues": [
+    {
+      "bloc": "data_center",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "data_center",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "data_center",
+      "variable": "croissance_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "data_center",
+      "variable": "marge_contributive",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "croissance_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "marge_contributive",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "hugging_face",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "hugging_face",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "ia_souveraine",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "ia_souveraine",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "capital_par_point_de_croissance",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_3"
+      }
+    }
+  ],
+  "autres_axes": [
+    {
+      "axe": "geographie",
+      "usage": "Contrôle de concentration géographique (États-Unis, Taïwan, Chine) et raccord des marges par zone, hors de l'arbre."
+    },
+    {
+      "axe": "secteurs",
+      "usage": "Raccord du résultat d'exploitation par segment (Compute & Networking vs Graphics) pour contrôler les marges des blocs d'activité, hors de l'arbre."
+    },
+    {
+      "axe": "clients",
+      "usage": "Contrôle de concentration clients (hyperscalers) et information pour le bloc Data Center, hors de l'arbre."
+    }
+  ],
+  "manques_du_dossier": [
+    {
+      "sujet": "Dépense de R&D affectée par programme, non publiée séparément par l'émetteur.",
+      "blocs": [
+        "vera_cpu"
+      ],
+      "consequence": "`depense_de_developpement_du_bloc` du bloc vera_cpu reste une demande ciblée, non une réponse de `me_7` (qui ne donne que la R&D totale de 18 497 M$)."
+    }
+  ],
+  "inventaire_des_programmes": [
+    {
+      "programme": "Vera Rubin",
+      "traitement": "rattache",
+      "bloc": "data_center",
+      "motif": "Génération suivante d'un produit déjà vendu sur le marché data center (mêmes clients, mêmes concurrents) — s'estime avec les hypothèses de marché de l'activité Data Center."
+    },
+    {
+      "programme": "Vera CPU",
+      "traitement": "bloc",
+      "bloc": "vera_cpu",
+      "motif": "Nouveau marché (CPU data center IA agentique, TAM 200 Md$) — extension d'indication, donc sa propre ligne avec jalon."
+    },
+    {
+      "programme": "Hugging Face",
+      "traitement": "extension",
+      "bloc": "hugging_face",
+      "motif": "Acquisition annoncée non conclue (accord définitif du 2026-09-02, clôture S1 2027) — devient une activité annoncée."
+    },
+    {
+      "programme": "IA souveraine",
+      "traitement": "extension",
+      "bloc": "ia_souveraine",
+      "motif": "Déploiements nationaux annoncés (Japon, Corée) — activité annoncée, pas encore vendue à grande échelle."
+    }
+  ]
+}

@@ -1590,4 +1590,124 @@ b.check("GÉNÉRATION SUIVANTE d'un produit déjà vendu n'est pas un programme 
         "#143 — l'ancienne règle « génération suivante → rattachée » (en conflit sur les extensions "
         "d'indication) est RETIRÉE du prompt")
 
+# ── §11 plan « découpage » B4g, étape 1 — le PREMIER NIVEAU IMPOSÉ (2026-10-23) ─────────────────
+print("§11 B4g étape 1 — premier niveau imposé (faits_publies.premier_niveau_impose, [S17], [R7], rendu, prompt)")
+import copy as _copy  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+from types import SimpleNamespace as _NS  # noqa: E402
+from app.modele_entreprise import faits_publies as fp_mod  # noqa: E402
+from app.modele_entreprise.referentiel import ReferentielRefuse  # noqa: E402
+
+_pn = fp_mod.premier_niveau_impose(STRUCT_NVDA, ["activites", "secteurs"])
+b.check(_pn is not None and _pn.axe == "activites" and _pn.periode == "FY2026-01-25"
+        and [m.bloc_id for m in _pn.membres] == ["data_center", "edge_computing"],
+        f"premier niveau — NVDA réel : les produits et services d'abord (Data Center, Edge Computing, "
+        f"exercice FY2026) : {_pn}")
+b.check(_pn is not None and abs(sum(m.montant for m in _pn.membres) - 215_938_000_000) < 1,
+        "premier niveau — NVDA réel : la somme des segments imposés boucle sur 215 938 M$ (FY2026)")
+_pn_s = fp_mod.premier_niveau_impose(STRUCT_NVDA, ["secteurs", "activites"])
+b.check(_pn_s is not None and _pn_s.axe == "secteurs" and len(_pn_s.membres) == 2,
+        f"premier niveau — l'ORDRE du référentiel décide (secteurs d'abord → secteurs) : {_pn_s}")
+_vs_sans_act = _copy.deepcopy(STRUCT_NVDA)
+_vs_sans_act["chroniques"] = [c for c in _vs_sans_act["chroniques"] if c["axe"] != "activites"]
+_pn_r = fp_mod.premier_niveau_impose(_vs_sans_act, ["activites", "secteurs"])
+b.check(_pn_r is not None and _pn_r.axe == "secteurs"
+        and any(a == "activites" for a, _ in _pn_r.axes_ecartes),
+        f"premier niveau — repli sur les secteurs quand l'émetteur ne publie pas ses produits, et "
+        f"l'axe écarté est DIT : {_pn_r}")
+_vs_ko = _copy.deepcopy(STRUCT_NVDA)
+for _r in _vs_ko["raccords"]:
+    if _r["axe"] == "activites" and _r["periode"] == "FY2026-01-25" and _r.get("niveau") == "total":
+        _r["statut"] = "ecart"
+_pn_ko = fp_mod.premier_niveau_impose(_vs_ko, ["activites", "secteurs"])
+b.check(_pn_ko is not None and not _pn_ko.impose and _pn_ko.axes_ecartes[0][0] == "activites"
+        and "ne boucle pas" in _pn_ko.axes_ecartes[0][1],
+        f"premier niveau — un axe prioritaire PUBLIÉ dont la somme ne boucle pas avec les comptes : rien "
+        f"d'imposé, la raison dite, et PAS de repli sur l'axe suivant (Apple : ses secteurs sont "
+        f"géographiques) : {_pn_ko}")
+_txt_ko = rendre_matiere(matiere_fictive(ventilation_structure=_vs_ko, premier_niveau=_pn_ko))
+b.check("NON imposé" in _txt_ko and "ne boucle pas" in _txt_ko,
+        "rendu — un premier niveau non imposé est DIT dans la matière, avec sa raison")
+_vs_un = _copy.deepcopy(STRUCT_NVDA)
+for _c in _vs_un["chroniques"]:
+    if _c["ligne"] == "chiffre_affaires":
+        _c["regime_reference"]["premier_niveau"] = _c["regime_reference"]["premier_niveau"][:1]
+b.check(fp_mod.premier_niveau_impose(_vs_un, ["activites", "secteurs"]) is None,
+        "premier niveau — un seul membre au premier niveau : rien d'imposé (secteur unique)")
+b.check(fp_mod.premier_niveau_impose(None, ["activites", "secteurs"]) is None,
+        "premier niveau — pas de ventilation (RVMD) : rien d'imposé, composition libre")
+b.check(fp_mod.id_de_bloc("AI Clouds, Industrial, & Enterprise") == "ai_clouds_industrial_enterprise"
+        and fp_mod.id_de_bloc("Électronique grand public") == "electronique_grand_public"
+        and fp_mod.id_de_bloc("3D Imaging") == "segment_3d_imaging",
+        "premier niveau — l'id d'un bloc se tire du LIBELLÉ publié, au format du contrat")
+b.check(fp_mod._ids_uniques(["Services", "Services"]) == ["services", "services_2"],
+        "premier niveau — deux libellés identiques donnent deux ids distincts")
+
+# [S17] — sur l'architecture NVDA réelle acceptée le 2026-10-23 (`b4f-explorateur/`, fixture copiée).
+_arch_b4f = Architecture.model_validate(json.loads(
+    (Path(__file__).resolve().parent / "fixtures" / "architecte" / "2026-10-23" / "nvda_b4f_acceptee.json")
+    .read_text(encoding="utf-8")))
+import app.modele_entreprise.structure as _st17  # noqa: E402
+_M17 = matiere_fictive(ventilation_structure=STRUCT_NVDA, premier_niveau=_pn)
+
+
+def _s17_sur(blocs) -> str:
+    return _st17._s17(_NS(blocs=blocs), _M17, {x.id: x for x in blocs}) or ""
+
+
+b.check(_s17_sur(_arch_b4f.blocs) == "", "[S17] — NVDA réel, segments recopiés tels quels : tient")
+_sans_edge = [x for x in _arch_b4f.blocs if x.id != "edge_computing"]
+_r17 = _s17_sur(_sans_edge)
+b.check(_r17.startswith("[S17]") and "n'a pas son bloc `edge_computing`" in _r17,
+        f"[S17] — un segment imposé omis : refusé : {_r17[:300]}")
+_dc = next(x for x in _arch_b4f.blocs if x.id == "data_center")
+_regroupe = [x.model_copy(update={"rattachement": x.rattachement.model_copy(
+    update={"membres": ["nvda:DataCenterMember", "nvda:EdgeComputingMember"]})}) if x.id == "data_center" else x
+             for x in _sans_edge]
+_r17 = _s17_sur(_regroupe)
+b.check("seul membre" in _r17, f"[S17] — deux segments regroupés en un bloc : refusé : {_r17[:300]}")
+_secteur_en_plus = _arch_b4f.blocs + [_dc.model_copy(update={"id": "compute_networking", "rattachement":
+    _dc.rattachement.model_copy(update={"axe": "secteurs", "membres": ["nvda:ComputeAndNetworkingSegmentMember"]})})]
+_r17 = _s17_sur(_secteur_en_plus)
+b.check("sans être un segment imposé" in _r17,
+        f"[S17] — un bloc publié d'un autre axe ajouté au premier niveau : refusé : {_r17[:300]}")
+_enfant = _arch_b4f.blocs + [_dc.model_copy(update={"id": "hyperscale", "rattachement":
+    _dc.rattachement.model_copy(update={"membres": ["nvda:HyperscaleMember"]})})]
+b.check(_s17_sur(_enfant) == "",
+        "[S17] — une sous-ligne publiée (Hyperscale, enfant de Data Center) est une exception admise")
+b.check(_st17._s17(_NS(blocs=_sans_edge), matiere_fictive(ventilation_structure=STRUCT_NVDA),
+                   {x.id: x for x in _sans_edge}) is None,
+        "[S17] — sans premier niveau imposé (interrupteur éteint), la composition reste libre")
+b.check(_st17._s17(_NS(blocs=_sans_edge), matiere_fictive(ventilation_structure=_vs_ko, premier_niveau=_pn_ko),
+                   {x.id: x for x in _sans_edge}) is None,
+        "[S17] — premier niveau NON imposé (axe inexploitable) : la composition reste libre")
+_r = valide_ou_motif(_arch_b4f, matiere_fictive(ventilation_structure=STRUCT_NVDA, premier_niveau=_pn_s))
+b.check("[S17]" in _r and "compute_networking" in _r,
+        f"[S17] — branché dans valider_structure : l'architecture sur les produits, refusée quand le "
+        f"fonds impose les secteurs, et le motif NOMME les blocs attendus : {_r[:400]}")
+
+# Rendu de la matière et prompt.
+_txt_pn = rendre_matiere(_M17)
+b.check("Premier niveau du business plan — IMPOSÉ" in _txt_pn and "bloc `data_center`" in _txt_pn
+        and "193 737.0 M$" in _txt_pn,
+        "rendu — la matière montre le premier niveau imposé, ses ids et ses montants")
+b.check("Premier niveau du business plan" not in rendre_matiere(matiere_fictive()),
+        "rendu — sans premier niveau imposé, aucune section (matière inchangée)")
+b.check("PREMIER NIVEAU IMPOSÉ : quand le dossier contient" in _arch_mod._ARCHITECTE_SYSTEM_PROMPT
+        and "n'est jamais une ligne hors des segments" in _arch_mod._ARCHITECTE_SYSTEM_PROMPT,
+        "prompt — la consigne dit de recopier le premier niveau et borne les exceptions")
+
+# Référentiel : interrupteur allumé, ordre « produits puis secteurs », [R7] sur un axe inconnu.
+b.check(REF.premier_niveau_impose is True and REF.axes_du_premier_niveau == ["activites", "secteurs"],
+        f"référentiel — premier niveau imposé, produits et services d'abord : "
+        f"{REF.premier_niveau_impose} {REF.axes_du_premier_niveau}")
+_yaml_src = (Path(__file__).resolve().parents[1] / "app" / "frameworks" / "modele_entreprise.yaml").read_text(encoding="utf-8")
+with _tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8") as _tf:
+    _tf.write(_yaml_src.replace("axes_du_premier_niveau: [activites, secteurs]", "axes_du_premier_niveau: [marches]"))
+try:
+    load_referentiel(_tf.name)
+    b.check(False, "[R7] — un axe inconnu dans `axes_du_premier_niveau` devait être refusé au chargement")
+except ReferentielRefuse as e:
+    b.check("[R7]" in str(e), f"[R7] — un axe inconnu dans `axes_du_premier_niveau` est refusé : {e}")
+
 sys.exit(b.summary())

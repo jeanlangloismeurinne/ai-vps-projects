@@ -1,0 +1,1007 @@
+{
+  "schema_version": "architecture-1.3.0",
+  "ticker_id": "RVMD",
+  "version": 1,
+  "archetype": "rentable",
+  "famille": "industrielle",
+  "version_referentiel": "1.2.0",
+  "blocs": [
+    {
+      "id": "rasonque_pdac_2l",
+      "libelle": "RASONQUE (daraxonrasib) — PDAC métastatique 2L+",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "chiffre_affaires"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive",
+        "duree_d_exclusivite"
+      ],
+      "motif": "Premier produit approuvé par la FDA le 2026-08-26, commercialisé ; l'émetteur ne publie qu'un secteur, ce bloc estimé se raccorde à la ligne chiffre_affaires.",
+      "pieces": [
+        944,
+        947,
+        949,
+        1057
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "daraxonrasib_pdac_1l",
+      "libelle": "Daraxonrasib — PDAC 1L (RASolute 303)",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "approbation FDA en PDAC 2L",
+        "franchi_le": "2026-08-26",
+        "prochain": "résultats de Phase 3 RASolute 303",
+        "attendu_vers": "2028-12-31"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Extension d'indication du daraxonrasib vers le PDAC 1L : nouveau marché, nouvelle ligne de traitement, réussite incertaine — sa propre ligne de programme.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026)"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "daraxonrasib_pdac_adjuvant",
+      "libelle": "Daraxonrasib — PDAC adjuvant (RASolute 304)",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "ouverture de l'essai RASolute 304",
+        "franchi_le": "2025-12-01",
+        "prochain": "résultats de Phase 3 RASolute 304",
+        "attendu_vers": "2029-12-31"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Extension d'indication du daraxonrasib vers le PDAC adjuvant : nouveau marché, réussite incertaine — sa propre ligne de programme.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026) et le PDAC adjuvant (RASolute 304, Phase 3, ouvert depuis décembre 2025)"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "zoldonrasib",
+      "libelle": "Zoldonrasib — PDAC 1L G12D",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "initiation de RASolute 309",
+        "franchi_le": "2026-06-30",
+        "prochain": "résultats de Phase 3 RASolute 305",
+        "attendu_vers": "2029-06-30"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Programme nommé individuellement par me_7, réussite incertaine : sa propre ligne.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "zoldonrasib — Phase 3 RASolute 305 (PDAC 1L G12D) et RASolute 309 (PDAC 1L G12D, en doublet avec RASONQUE, initié)"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "elironrasib",
+      "libelle": "Elironrasib — NSCLC 1L G12C",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "préparation de l'essai RASolve 307",
+        "franchi_le": "2026-06-30",
+        "prochain": "initiation de RASolve 307",
+        "attendu_vers": "2026-12-31"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Programme nommé individuellement par me_7, réussite incertaine : sa propre ligne.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "elironrasib — Phase 3 RASolve 307 (NSCLC 1L G12C) à initier au T4 2026"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "rmc_5127",
+      "libelle": "RMC-5127",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "Phase 1 en cours",
+        "franchi_le": "2026-06-30",
+        "prochain": "dose recommandée",
+        "attendu_vers": "2026-12-31"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Programme nommé individuellement par me_7, réussite incertaine : sa propre ligne.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "RMC-5127 — Phase 1, dose recommandée attendue au S2 2026"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "rm_055",
+      "libelle": "RM-055",
+      "role": "programme",
+      "statut": "en_developpement",
+      "origine": "interne",
+      "jalon": {
+        "franchi": "préparation de la première étude chez l'humain",
+        "franchi_le": "2026-06-30",
+        "prochain": "initiation de la première étude chez l'humain",
+        "attendu_vers": "2026-12-31"
+      },
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "cout_restant_de_developpement",
+        "depense_de_developpement_du_bloc",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "Programme nommé individuellement par me_7, réussite incertaine : sa propre ligne.",
+      "pieces": [
+        944,
+        1546
+      ],
+      "programmes": [
+        "RM-055 — première étude chez l'humain à initier au T4 2026"
+      ],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "commun",
+      "libelle": "Frais communs non affectés",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "autres_charges_exploitation"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément ; l'émetteur ne publie qu'un secteur.",
+      "pieces": [
+        876
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    }
+  ],
+  "variables_propres": [],
+  "passage_a_l_agrege": [
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "rasonque_pdac_2l__chiffre_affaires_du_bloc"
+    },
+    {
+      "ligne": "recherche_developpement",
+      "formule": "daraxonrasib_pdac_1l__depense_de_developpement_du_bloc + daraxonrasib_pdac_adjuvant__depense_de_developpement_du_bloc + zoldonrasib__depense_de_developpement_du_bloc + elironrasib__depense_de_developpement_du_bloc + rmc_5127__depense_de_developpement_du_bloc + rm_055__depense_de_developpement_du_bloc"
+    },
+    {
+      "ligne": "autres_charges_exploitation",
+      "formule": "commun__couts_communs"
+    }
+  ],
+  "cellules_attendues": [
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "croissance_du_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "part_de_marche",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "volume",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "prix_moyen",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_3"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "part_recurrente",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "marge_contributive",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rasonque_pdac_2l",
+      "variable": "duree_d_exclusivite",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "mo_4"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_1l",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_1l",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_1l",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_1l",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_1l",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "zoldonrasib",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "zoldonrasib",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "zoldonrasib",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "zoldonrasib",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "zoldonrasib",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "elironrasib",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "elironrasib",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "elironrasib",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "elironrasib",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "elironrasib",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rmc_5127",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rmc_5127",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rmc_5127",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rmc_5127",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rmc_5127",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rm_055",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rm_055",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rm_055",
+      "variable": "depense_de_developpement_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rm_055",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "rm_055",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2021",
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2021",
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "capital_par_point_de_croissance",
+      "periodes": [
+        "FY2021",
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_3"
+      }
+    }
+  ],
+  "autres_axes": [],
+  "manques_du_dossier": [
+    {
+      "sujet": "Dépense de R&D affectée par programme, non publiée séparément par l'émetteur.",
+      "blocs": [
+        "daraxonrasib_pdac_1l",
+        "daraxonrasib_pdac_adjuvant",
+        "zoldonrasib",
+        "elironrasib",
+        "rmc_5127",
+        "rm_055"
+      ],
+      "consequence": "`depense_de_developpement_du_bloc` de chaque programme reste une demande ciblée, non une réponse de me_7."
+    },
+    {
+      "sujet": "Taille et concurrence du marché visé par chaque programme en développement, non publiées par l'émetteur.",
+      "blocs": [
+        "daraxonrasib_pdac_1l",
+        "daraxonrasib_pdac_adjuvant",
+        "zoldonrasib",
+        "elironrasib",
+        "rmc_5127",
+        "rm_055"
+      ],
+      "consequence": "`taille_du_marche`, `croissance_du_marche` et `part_de_marche` de ces blocs ne peuvent pas s'estimer sans données externes."
+    }
+  ],
+  "inventaire_des_programmes": [
+    {
+      "programme": "daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026)",
+      "traitement": "bloc",
+      "bloc": "daraxonrasib_pdac_1l",
+      "motif": "Extension d'indication vers un nouveau marché, réussite incertaine : sa propre ligne."
+    },
+    {
+      "programme": "daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026) et le PDAC adjuvant (RASolute 304, Phase 3, ouvert depuis décembre 2025)",
+      "traitement": "bloc",
+      "bloc": "daraxonrasib_pdac_adjuvant",
+      "motif": "Extension d'indication vers un nouveau marché, réussite incertaine : sa propre ligne."
+    },
+    {
+      "programme": "zoldonrasib — Phase 3 RASolute 305 (PDAC 1L G12D) et RASolute 309 (PDAC 1L G12D, en doublet avec RASONQUE, initié)",
+      "traitement": "bloc",
+      "bloc": "zoldonrasib",
+      "motif": "Nommé individuellement par me_7, réussite incertaine : sa propre ligne."
+    },
+    {
+      "programme": "elironrasib — Phase 3 RASolve 307 (NSCLC 1L G12C) à initier au T4 2026",
+      "traitement": "bloc",
+      "bloc": "elironrasib",
+      "motif": "Nommé individuellement par me_7, réussite incertaine : sa propre ligne."
+    },
+    {
+      "programme": "RMC-5127 — Phase 1, dose recommandée attendue au S2 2026",
+      "traitement": "bloc",
+      "bloc": "rmc_5127",
+      "motif": "Nommé individuellement par me_7, réussite incertaine : sa propre ligne."
+    },
+    {
+      "programme": "RM-055 — première étude chez l'humain à initier au T4 2026",
+      "traitement": "bloc",
+      "bloc": "rm_055",
+      "motif": "Nommé individuellement par me_7, réussite incertaine : sa propre ligne."
+    }
+  ]
+}
