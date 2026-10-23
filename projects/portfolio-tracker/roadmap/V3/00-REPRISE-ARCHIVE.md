@@ -6877,3 +6877,28 @@ lectures ; `tools/acceptation_frameworks.py` (hors suite) a pour témoin `qf_1.c
 2026-10-19 — choisir un nouveau témoin (un essentiel qu'aucune source déterministe ne sert) ; sensibilité ±1 pt du
 taux et alerte de décision du fonds échue : au lot de la valorisation. Récits : archive.
 
+## 2026-10-23 — sorti de la reprise (« Prochain pas » du 2026-10-22 soir, copie conforme)
+
+**`07-avant-comite.md` est L'UNIQUE plan d'action** jusqu'au premier comité réussi (cible : **NVDA**, six
+chapitres + classeur signé + décision au PV) ; son **journal** en fin de fichier consigne CHAQUE action (date, Id,
+qui, preuve). Réplicabilité exigée (aucun code propre à un titre). Passage au standard repoussé en ultime étape (F1).
+**Spec du modèle de l'entreprise VALIDÉE le 2026-10-21** : `09-modele-entreprise.md` (v2, arbitrages §1 et §11,
+CONVENTIONS #140) ; page de lecture https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC. Mesures du jour :
+`mesures/2026-10-21/` (inventaire de l'existant, NVDA à blanc, plafond + crédit, ventilation publiée).
+**Fait le 2026-10-21 (après-midi)** : deux commentaires de l'utilisateur sur la page intégrés (spec **v2.1, §12**,
+#140 complété) — (a) gabarit des comptes **par famille** (industrielle = rentable + pré-revenus ; bancaire à
+écrire, lot M2 bis ; mesuré : le socle de JPM est TROMPEUR, intérêts « 0 » en 2024-2025) ; (b) chaque variable
+de l'inventaire porte bas/central/haut par une méthode déclarée, un scénario = des DÉPLACEMENTS d'un
+sous-ensemble ; **v1 = central seul**, tables `Fourchette`/`Scenario`/`Deplacement` créées dès M1 ; B6 après le
+premier comité. **C1 livré** (#141 : l'extrait court remplacé par son passage unique ; « $ 198.89 »).
+**Confirmé le 2026-10-21** : au premier comité NVDA, la fourchette = central ± 1 pt du taux exigé, étiquetée « sensibilité au taux » (scénarios sur risques après le comité, M6).
+**PROCHAIN PAS — lots de construction, Opus spécifie, Sonnet exécute** :
+(1) ✅ **B3/M1 livré le 2026-10-21** (spec `10-lot-M1-catalogue-et-contrats.md`) : référentiel
+`app/frameworks/modele_entreprise.yaml` (version propre, 21 fiches, 2 familles, 3 patrons), contrat
+`modele_entreprise_schema.py`, module `app/modele_entreprise/` (pont, contrôles, `appliquer_scenario` NON
+branchée — M7), migration 061 appliquée, `seuil_de_materialite` au référentiel ;
+`questions_sources_applicables()` = l'entrée de la porte (M3) ; (2) ✅ **B2/M2 livré le 2026-10-21** (`11-lot-M2-ventilation-publiee.md`) : `knowledge/ventilation*.py` + `ventilation_publiee.yaml`,
+pièce `ventilation_publiee` SANS appelant en production (son lecteur = l'architecte), outil `montrer_ventilation.sh` ;
+**déployé le 2026-10-22** (`67f7e87`, vérifié dans le conteneur). NVDA a redécoupé ses
+marchés au 10-Q (Data Center = Hyperscale + AI Clouds/Industrial/Enterprise ; Edge Computing) : matière directe pour M3 ;
+(3) ✅ **B4/M3 livré et DÉPLOYÉ le 2026-10-22** (`12-lot-M3-architecte.md`, `1d5dfbf` ; migration 062 appliquée ; `check_architecture_persist` 10/0 contre la vraie base). (4) ✅ **M3 bis v2.1 livré le 2026-10-22** (`13-lot-M3bis-structure.md` ; Sonnet, vérifié par Opus par exécution, 2 défauts corrigés par Opus — journal du plan) : commité, **NON déployé** (déploiement refusé par le classifieur : à lancer par l'utilisateur, `infrastructure/compose-deploy.sh portfolio-backend`, puis vérifier `me_7` dans `frameworks.yaml` DANS le conteneur). **NOUVEAU (2026-10-22, demande de l'utilisateur) — lot P1 `14-lot-P1-perimetre.md`** : les changements de découpage/périmètre sortent de l'architecte vers un détenteur unique (`app/knowledge/perimetre.py`, catalogue de cas propre) ; arbitrages rendus le 2026-10-22 (historique dans le découpage le plus récent, par passage vérifié sinon hypothèse déclarée ; agrégat sans rupture ; acquisition significative signalée, croissance hors acquisitions = module ad hoc P2 après le comité) ; exécution confiée à Sonnet, à VÉRIFIER par exécution ; gratuit, à faire AVANT l'acceptation à blanc de l'architecte, en parallèle de l'instruction de `me_7`. **ÉTAT DU SOIR (2026-10-22, fin de conversation)** : M3 bis DÉPLOYÉ ; me_7 instruite (NVDA #2292 faible, TAM mal cité ; RVMD #2304 juste) ; P1 en trois tranches commitées NON déployées — `perimetre.py` éprouvé (78→ assertions, négatif 22/22), jumeau lu, signal d'acquisition, douze mois sur la version retraitée, cellules par dépôt, `vue_servie` + garde de l'agrégat ; **reste la tranche B** (§8 de `14-lot-P1-perimetre.md` : branchement des lecteurs, rendu de la chronique, axe pays NVDA aussi redécoupé, [S2]/[S3b], `faits_publies`, consigne, périodes non jugées nommées) — **à exécuter par Opus** (Sonnet a buté trois fois sur le branchement). Puis B4d (`15-lot-M3ter-architecte.md`), B4f (`16-lot-B4f-explorateur.md`), B4e (banc séquentiel, arrêt à 2 succès consécutifs). Architecte = maillon critique. Diagnostic de la matière : `mesures/2026-10-22/matiere/`. Ancien prochain pas, FAIT :  instruire `me_7` pour NVDA puis RVMD (`executer_chaine.sh <T> modele_economique <archétype> --questions=me_7`, ~1 h chacun, APRÈS le déploiement : l'outil tourne sur l'image), lire les réponses contre leurs pièces, puis l'acceptation à blanc (`architecte.sh` deux fois par titre, `--hors-porte` pour RVMD tant que se_3 la ferme). Portes : NVDA **fermée par `me_7`** ; RVMD fermée par `me_7` et se_3. Interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1. C2 sans objet, C5 vérifié (≈ 5,55 $, à re-mesurer).
