@@ -45,11 +45,19 @@ interrupteur `acces_au_dossier` (défaut `aucun`), `--acces-au-dossier` à blanc
 `en_developpement` et IA souveraine en extension alors que #1004/#1012 sont citées (CONSIGNE) ; RVMD refusé [S15] :
 une ligne par indication de daraxonrasib sous le même nom de molécule (granularité #143 ≠ `me_7`).
 Arbitrés (2026-10-23) : les corrections différées passent APRÈS B4f — donc maintenant ; `me_7` sur V4-Pro : à décider.
-**PROCHAIN PAS** : (1) consigne #143 reformulée (ligne propre ssi données de marché/concurrence ad hoc ; incertitude →
-scénarios ; une activité VENDUE à marché propre = `metier_actuel` enfant ; un segment de clients = rattaché ; vocabulaire
-non pharmaceutique ; nom = texte avant « — ») ; (2) `me_7` : un élément par indication, [S14]/[S15] comptent par élément ;
-(3) décider `me_7` sur V4-Pro (instabilité #2304/#2624) ; (4) re-mesurer NVDA/RVMD (`aucun` puis `explorateur`, journal
-désormais rendu) ; (5) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises), succès jugé À LA LECTURE.
+**PROCHAIN PAS — plan « découpage » B4g** (arbitré le 2026-10-23 après revue de la page
+https://claude.ai/artifact/38FsoJwzzM1GEYYEobQi57, 28 commentaires ; détail : ligne B4g du plan) : un seul levier par
+étape, V4-Pro et `acces_au_dossier = aucun` FIXES jusqu'à l'étape 5, appels V4-Pro limités (un passage par titre
+aux étapes intermédiaires). **0 ✅** (non déployé) : [S15] signal, [S16] double comptage, provenance #1004 en dette ;
+rejugé gratuitement sur les sorties gardées : RVMD `b4f` ACCEPTÉE (signal [S15]), RVMD `apres-143` REFUSÉE [S16].
+**1 — À FAIRE** : deux étages (premier niveau = segments publiés construits par le CODE ; l'architecte ne décide que
+des exceptions : vendu → sous-ligne + reste, non vendu → ligne additionnelle, sous-segment client si risque, émetteur
+à un segment → tout en étage 2). Puis 2 (règle en arbre, vocabulaire standard — À CO-ÉCRIRE avec l'utilisateur),
+3 (inventaire à cases), 4 (`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées).
+Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la
+granularité ; finesse selon la maturité (grand groupe → grands métiers, startup → produit ou thèse adossée à un
+signal, santé → molécule × indication) ; probabilité de succès hors du découpage ; vocabulaire standard dans TOUS
+les prompts ; molécules précoces → plateforme sauf marché chiffrable.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`
 à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1.
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.

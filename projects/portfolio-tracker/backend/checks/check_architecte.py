@@ -1265,8 +1265,10 @@ r = valide_ou_motif(ARCH_LABO_PLATEFORME, MATIERE_LABO_DEUX_CHIFFRES)
 b.check("[S15]" not in r,
         f"[S15] — 6 nommés + plateforme de 2 = 8 dont 2 non nommés : tient : {r[:300]}")
 r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_DEUX_CHIFFRES)
-b.check(r.startswith("[S15]") and "plateformes portent 0" in r,
-        f"[S15] — 2 non nommés déclarés, aucune plateforme : refusé : {r[:300]}")
+# Étape 0 du plan « découpage » (2026-10-23) : l'écart au décompte de `me_7` est SIGNALÉ, plus refusé —
+# `me_7` est une estimation de l'analyste, pas une vérité que le contrôle connaîtrait.
+b.check(r.startswith("OK") and "[S15] décompte à lire au comité" in r and "plateformes portent 0" in r,
+        f"[S15] — 2 non nommés déclarés, aucune plateforme : signalé, plus refusé : {r[:300]}")
 # La SUBSTITUTION (NVDA anonymisé, 2026-10-23) : un élément nommé retiré de l'inventaire, une
 # plateforme d'un programme « non détaillé » à sa place — le total tient, le décompte exact non.
 MATIERE_LABO_TOUS_NOMMES = matiere_fictive(
@@ -1276,8 +1278,8 @@ _PLATEFORME_SUBSTITUT = {**_PLATEFORME_LABO, "nombre_de_programmes_non_nommes": 
 ARCH_LABO_SUBSTITUTION = Architecture.model_validate(
     _arch_labo(BLOCS_LABO[:-1] + [_PLATEFORME_SUBSTITUT], INVENTAIRE_LABO[:-1]))
 r = valide_ou_motif(ARCH_LABO_SUBSTITUTION, MATIERE_LABO_TOUS_NOMMES)
-b.check(r.startswith("[S15]") and "nomme 5" in r and "NOMME 6" in r and "portent 1" in r,
-        f"[S15] — un nommé remplacé par une plateforme (total 6 tenu) : refusé, les deux écarts dits : {r[:400]}")
+b.check(r.startswith("OK") and "nomme 5" in r and "NOMME 6" in r and "portent 1" in r,
+        f"[S15] — un nommé remplacé par une plateforme (total 6 tenu) : signalé, les deux écarts dits : {r[:400]}")
 r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_TOUS_NOMMES)
 b.check("[S15]" not in r, f"[S15] — 6 nommés, 0 non nommé, aucune plateforme : tient : {r[:300]}")
 
@@ -1289,6 +1291,38 @@ _cellule_plateforme = _arch_labo([_PLATEFORME_FOURRE_TOUT], _inv_fourre_tout)
 r = valide_ou_motif(Architecture.model_validate(_cellule_plateforme), MATIERE_LABO)
 b.check("[S14]" in r and "pas SA ligne propre" in r,
         f"[S14] — programmes nommés regroupés dans une plateforme : pas SA ligne propre, refusé : {r[:400]}")
+
+# ── [S16] — une grandeur comptée ENTIÈRE dans deux lignes sœurs d'un même total ────────────────
+def _arch_labo_passage(passages: list[dict]) -> Architecture:
+    _d = _arch_labo(BLOCS_LABO, INVENTAIRE_LABO)
+    _d["passage_a_l_agrege"] = passages
+    return Architecture.model_validate(_d)
+
+
+r = valide_ou_motif(_arch_labo_passage([
+    {"ligne": "recherche_developpement", "formule": "commun__couts_communs"},
+    {"ligne": "frais_commerciaux_administratifs", "formule": "commun__couts_communs"}]), MATIERE_LABO)
+b.check("[S16]" in r and "compté ENTIER" in r and "resultat_exploitation" in r,
+        f"[S16] — frais communs entiers dans la R&D ET les frais commerciaux : double comptage refusé : {r[:400]}")
+r = valide_ou_motif(_arch_labo_passage([
+    {"ligne": "recherche_developpement", "formule": "commun__couts_communs * 0.6"},
+    {"ligne": "frais_commerciaux_administratifs", "formule": "commun__couts_communs * 0.4"}]), MATIERE_LABO)
+b.check("[S16]" not in r, f"[S16] — une RÉPARTITION par coefficients est admise : {r[:300]}")
+r = valide_ou_motif(_arch_labo_passage([
+    {"ligne": "autres_charges_exploitation", "formule": "commun__couts_communs"},
+    {"ligne": "impot", "formule": "commun__couts_communs"}]), MATIERE_LABO)
+b.check("[S16]" not in r, f"[S16] — deux lignes qui ne sont pas sœurs d'un même total : pas de refus [S16] : {r[:300]}")
+try:
+    import app.modele_entreprise.structure as _structure_s16
+    _dc = Architecture.model_validate(json.loads(
+        (Path(__file__).resolve().parent / "fixtures" / "architecte" / "2026-10-23"
+         / "rvmd_double_comptage.json").read_text(encoding="utf-8"))["architecture"])
+    _m16 = _structure_s16._s16(_dc) or ""
+    b.check("commun__couts_communs" in _m16 and "frais_commerciaux_administratifs" in _m16,
+            f"cas réel — RVMD `apres-143/` (accepté le 2026-10-23) : frais communs comptés deux fois, refusé "
+            f"par [S16] : {_m16[:300]}")
+except Exception as e:  # noqa: BLE001
+    b.check(False, f"cas réel — RVMD double comptage : ne se relit plus sous le contrat ({type(e).__name__}) : {e}")
 
 MATIERE_LABO_SANS_CHIFFRE = matiere_fictive(
     ticker_id="FICTIF2", ventilation_structure=None, pieces_citables=frozenset({1}),

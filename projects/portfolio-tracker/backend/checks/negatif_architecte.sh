@@ -111,11 +111,16 @@ mutations=(
   "$S¦        if item.traitement == \"bloc\" and (bloc.plateforme or¦        if False and (bloc.plateforme or¦pas SA ligne propre, refusé"
   # Diagnostic du 2026-10-23 (`banc-modeles/`) — [S15] sur les DEUX chiffres de `me_7`, modèle, #143.
   "$S¦        if nommes_dans_me7 != total - d:¦        if False:¦les deux écarts dits"
-  "$S¦        if en_plateforme != d:¦        if False:¦aucune plateforme : refusé"
+  "$S¦        if en_plateforme != d:¦        if False:¦aucune plateforme : signalé"
   "$S¦    if declares_non_nommes is not None:¦    if False:¦6 nommés + plateforme de 2 = 8 dont 2"
   "$S¦    if nommes_dans_me7 + en_plateforme != total:¦    if False:¦est SIGNALÉ au comité"
   "$S¦    if en_plateforme:¦    if False:¦signalée, jamais muette"
   "$M¦             if c.id == \"nombre_de_programmes_non_nommes\"), None)¦             if c.id == \"autre\"), None)¦lit les DEUX chiffres clés"
+  # Étape 0 du plan « découpage » (2026-10-23) — [S16] double comptage dans des lignes sœurs ; et le
+  # signal [S15] qui ne doit pas redevenir muet.
+  "$S¦            if len(lignes) > 1:¦            if False:¦double comptage refusé"
+  "$S¦        signaux_ecart = ([\"[S15] décompte à lire au comité : \" + \" ; \".join(motifs)] if motifs else [])¦        signaux_ecart = []¦les deux écarts dits"
+  "$S¦    m16 = _s16(arch)¦    m16 = None¦double comptage refusé"
   "$A¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Pro-0813\"¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Flash-0731\"¦tourne sur V4-Pro"
   "$A¦NOUVEAU MARCHÉ, donc un bloc à elle¦marché, donc un bloc à elle¦nomme l'extension d'indication"
   "$A¦    except AgentOutputInvalid as e:¦    except ZeroDivisionError as e:¦sortie hors contrat : PLANTAGE"

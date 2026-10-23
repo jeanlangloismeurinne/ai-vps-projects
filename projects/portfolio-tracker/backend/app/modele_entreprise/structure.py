@@ -539,7 +539,8 @@ def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
     """Le décompte de l'inventaire contre les DEUX chiffres clés de `me_7` : `nombre_de_programmes`
     (tous les éléments) et `nombre_de_programmes_non_nommes` (ceux que l'émetteur compte sans les
     nommer). Les deux établis → l'inventaire nomme EXACTEMENT la différence et les plateformes
-    portent EXACTEMENT les non nommés — REFUS sinon. Le second absent → l'écart est un SIGNAL, jamais
+    portent EXACTEMENT les non nommés — SIGNAL sinon (refus jusqu'au 2026-10-23, étape 0 du plan
+    « découpage » : un contrôle ne connaît pas le nombre de programmes, c'est ce qu'on estime). Le second absent → l'écart est un SIGNAL, jamais
     un refus : mesuré le 2026-10-23 (`mesures/2026-10-23/banc-modeles/`), un refus adossé au seul
     total a été satisfait en INVENTANT une plateforme (RVMD : 8 comptés pour 7 nommés, un « 8ᵉ »
     fabriqué) ou en REMPLAÇANT un programme nommé par une plateforme (NVDA anonymisé : la génération
@@ -582,7 +583,12 @@ def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
                 f"les plateformes portent {en_plateforme} programme(s) non nommé(s), `me_7` en compte {d} "
                 "— une plateforme ne porte QUE les programmes que le dossier dit non nommés, jamais un "
                 "élément nommé qui manquerait à l'inventaire")
-        return ("[S15] " + " ; ".join(motifs) if motifs else None), signaux_hors_me7
+        # Étape 0 du plan « découpage » (2026-10-23, arbitrage de l'utilisateur) : un SIGNAL, plus un
+        # refus. Le décompte de `me_7` est lui-même une estimation de l'analyste — instable (RVMD : 8
+        # puis 5 sur les mêmes pièces) et à une autre unité que #143 (molécule ≠ indication) : refuser
+        # sur lui a rejeté la meilleure architecture RVMD (`b4f-explorateur/`) et accepté une pire.
+        signaux_ecart = (["[S15] décompte à lire au comité : " + " ; ".join(motifs)] if motifs else [])
+        return None, signaux_ecart + signaux_hors_me7
     signaux = list(signaux_hors_me7)
     if nommes_dans_me7 + en_plateforme != total:
         signaux.append(
@@ -594,6 +600,43 @@ def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
             f"[S15] plateforme de {en_plateforme} programme(s) non nommé(s) sans chiffre du dossier "
             "(`nombre_de_programmes_non_nommes` absent de `me_7`) : à lire au comité")
     return None, signaux
+
+
+# ── [S16] (étape 0 du plan « découpage », 2026-10-23) ──────────────────────────────────────────
+
+def _s16(arch: Architecture) -> Optional[str]:
+    """Une même grandeur ne se compte qu'UNE fois dans un même total. Pour chaque équation du gabarit
+    des comptes (`total = Σ composantes + reste`, détenteur unique : `socle_comptes.yaml`), un terme
+    additif NU `bloc__variable` (seul, au signe près, sans coefficient) ne figure que dans UNE des lignes
+    sœurs. Avec un coefficient (`commun__couts_communs * 0.6` ici, `* 0.4` là) c'est une RÉPARTITION,
+    admise ; un sous-total (`marge_brute`) n'est pas la sœur de ses composantes. Mesuré : RVMD
+    `apres-143/` — `commun__couts_communs` entier dans `recherche_developpement` ET dans
+    `frais_commerciaux_administratifs`, accepté par [S1]-[S15]."""
+    import ast
+    from app.contracts.formule_grammaire import analyser_formule
+    from app.knowledge.socle_comptes import charger_gabarit
+    from app.modele_entreprise.dimensions import _termes_additifs
+    nus_par_ligne: dict[str, set[str]] = {}
+    for p in arch.passage_a_l_agrege:
+        try:
+            termes = _termes_additifs(analyser_formule(p.formule).body)
+        except FormuleInexecutable:
+            continue  # [S11] le dit
+        nus_par_ligne.setdefault(p.ligne, set()).update(t.id for t in termes if isinstance(t, ast.Name))
+    motifs: list[str] = []
+    for eq in charger_gabarit().equations:
+        soeurs = [t.ligne for t in eq.composantes] + ([eq.reste.ligne] if eq.reste else [])
+        lignes_par_nom: dict[str, list[str]] = {}
+        for ligne in soeurs:
+            for nom in sorted(nus_par_ligne.get(ligne, ())):
+                lignes_par_nom.setdefault(nom, []).append(ligne)
+        for nom, lignes in sorted(lignes_par_nom.items()):
+            if len(lignes) > 1:
+                motifs.append(
+                    f"`{nom}` est compté ENTIER dans {lignes}, qui s'additionnent dans `{eq.total}` — "
+                    "double comptage : une grandeur va dans UNE ligne, ou se RÉPARTIT entre elles par "
+                    "des coefficients dont la somme fait 1")
+    return ("[S16] " + " ; ".join(motifs)) if motifs else None
 
 
 def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> list[str]:
@@ -657,6 +700,10 @@ def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matie
     if m15:
         refus.append(m15)
     signaux.extend(sig15)
+
+    m16 = _s16(arch)
+    if m16:
+        refus.append(m16)
 
     if refus:
         raise ArchitectureRefusee(" | ".join(refus))
