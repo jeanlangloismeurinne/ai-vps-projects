@@ -1,0 +1,431 @@
+{
+  "source": "roadmap/V3/mesures/2026-10-23/b4d-apres3/rvmd_1.json.refus2.json (sortie brute refusée, 2026-10-23)",
+  "sortie": {
+    "blocs": [
+      {
+        "id": "rasonque",
+        "libelle": "RASONQUE (daraxonrasib) — produit approuvé",
+        "role": "activite",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "chiffre_affaires"
+        },
+        "variables": [
+          "chiffre_affaires_du_bloc",
+          "taille_du_marche",
+          "croissance_du_marche",
+          "part_de_marche",
+          "volume",
+          "prix_moyen",
+          "part_recurrente",
+          "marge_contributive",
+          "annee_de_lancement",
+          "ventes_au_pic",
+          "duree_d_exclusivite"
+        ],
+        "motif": "Produit approuvé par la FDA le 2026-08-26, premier et seul produit commercialisé — bloc d'activité principal. Tous les blocs sont estimés (secteur unique publié).",
+        "pieces": [
+          944
+        ]
+      },
+      {
+        "id": "programmes_en_developpement",
+        "libelle": "Programmes en développement (portefeuille)",
+        "role": "programme",
+        "statut": "en_developpement",
+        "origine": "interne",
+        "jalon": {
+          "franchi": "approbation FDA de daraxonrasib (RASONQUE)",
+          "franchi_le": "2026-08-26",
+          "prochain": "lecture des essais de phase 3 (RASolute 305, 308, 309)",
+          "attendu_vers": "2027-12-31"
+        },
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "depense_de_developpement_du_bloc"
+        ],
+        "plateforme": true,
+        "nombre_de_programmes_non_nommes": 7,
+        "motif": "Portefeuille de programmes en développement nommés individuellement par me_7 (zoldonrasib, elironrasib, RMC-5127, RMC-0708, RMC-8839, RM-055, extensions de daraxonrasib) — regroupés en plateforme car la réussite de chacun est incertaine mais ils partagent la même ligne de R&D.",
+        "pieces": [
+          1546
+        ]
+      },
+      {
+        "id": "commun",
+        "libelle": "Frais communs non affectés",
+        "role": "commun",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "autres_charges_exploitation"
+        },
+        "variables": [
+          "couts_communs",
+          "taux_d_impot",
+          "capital_par_point_de_croissance"
+        ],
+        "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément — socle des comptes.",
+        "pieces": [
+          876
+        ]
+      }
+    ],
+    "variables_propres": [],
+    "passage_a_l_agrege": [
+      {
+        "ligne": "chiffre_affaires",
+        "formule": "rasonque__chiffre_affaires_du_bloc"
+      },
+      {
+        "ligne": "recherche_developpement",
+        "formule": "programmes_en_developpement__depense_de_developpement_du_bloc"
+      },
+      {
+        "ligne": "autres_charges_exploitation",
+        "formule": "commun__couts_communs"
+      }
+    ],
+    "cellules_attendues": [
+      {
+        "bloc": "rasonque",
+        "variable": "chiffre_affaires_du_bloc",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "taille_du_marche",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "croissance_du_marche",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "se_4"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "part_de_marche",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "volume",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "prix_moyen",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_3"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "part_recurrente",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "marge_contributive",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "annee_de_lancement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "ventes_au_pic",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "rasonque",
+        "variable": "duree_d_exclusivite",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "mo_4"
+        }
+      },
+      {
+        "bloc": "programmes_en_developpement",
+        "variable": "depense_de_developpement_du_bloc",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "couts_communs",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "taux_d_impot",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "qf_1"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "capital_par_point_de_croissance",
+        "periodes": [
+          "FY2026",
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "qf_3"
+        }
+      }
+    ],
+    "autres_axes": [
+      {
+        "axe": "geographie",
+        "usage": "Information de concentration géographique (marché américain principal) — hors de l'arbre, raccord des marges par zone."
+      }
+    ],
+    "manques_du_dossier": [
+      {
+        "sujet": "Dépense de R&D affectée par programme individuel non publiée séparément par l'émetteur.",
+        "blocs": [
+          "programmes_en_developpement"
+        ],
+        "consequence": "`depense_de_developpement_du_bloc` du portefeuille reste une demande ciblée, non une réponse de `me_7`."
+      }
+    ],
+    "inventaire_des_programmes": [
+      {
+        "programme": "daraxonrasib (RASONQUE)",
+        "traitement": "rattache",
+        "bloc": "rasonque",
+        "motif": "Produit approuvé, génération suivante (extensions d'indication) rattachée à l'activité qui le porte."
+      },
+      {
+        "programme": "zoldonrasib",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      },
+      {
+        "programme": "elironrasib",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      },
+      {
+        "programme": "RMC-5127",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      },
+      {
+        "programme": "RMC-0708",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      },
+      {
+        "programme": "RMC-8839",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      },
+      {
+        "programme": "RM-055",
+        "traitement": "bloc",
+        "bloc": "programmes_en_developpement",
+        "motif": "Programme nommé individuellement par me_7, réussite incertaine — regroupé en plateforme."
+      }
+    ]
+  }
+}

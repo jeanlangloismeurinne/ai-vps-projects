@@ -279,13 +279,16 @@ JALON_TEST = {"franchi": "preuve de concept de laboratoire", "franchi_le": "2026
              "prochain": "autorisation d'essai clinique", "attendu_vers": "2027-06-01"}
 bloc_programme = {**ARCH["blocs"][0], "statut": "en_developpement",
                   "origine": "interne", "jalon": JALON_TEST, "pieces": [1],
-                  "motif": "Bloc programme de test, en développement, motif de longueur suffisante."}
+                  "motif": "Bloc programme de test, en développement, motif de longueur suffisante.",
+                  # 1.3.0 (lot M3 ter, [S13]) — REQUIS : un bloc `en_developpement` non `plateforme`
+                  # nomme EXACTEMENT un programme.
+                  "programmes": ["Programme de test"]}
 m = refus_objet(Architecture, arch_test(blocs=[
     {k: v for k, v in bloc_programme.items() if k != "jalon"}, ARCH["blocs"][1]]))
 b.check("si et seulement si" in m.lower(),
         f"Bloc 1.2.0 — `en_developpement` SANS jalon est refusé (obtenu « {m[:220]} »)")
 m = refus_objet(Architecture, arch_test(blocs=[
-    {**bloc_programme, "statut": "metier_actuel", "pieces": [1]}, ARCH["blocs"][1]]))
+    {**bloc_programme, "statut": "metier_actuel", "pieces": [1], "programmes": []}, ARCH["blocs"][1]]))
 b.check("si et seulement si" in m.lower(),
         f"Bloc 1.2.0 — `metier_actuel` AVEC jalon est refusé (obtenu « {m[:220]} »)")
 b.check(refus_objet(Architecture, arch_test(blocs=[bloc_programme, ARCH["blocs"][1]])) == "PAS DE REFUS",

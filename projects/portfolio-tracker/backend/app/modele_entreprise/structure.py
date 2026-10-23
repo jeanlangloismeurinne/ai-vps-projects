@@ -248,8 +248,12 @@ def _s6(arch: Architecture, matiere: Matiere) -> Optional[str]:
     for b in arch.blocs:
         hors = [p for p in b.pieces if p not in matiere.pieces_citables]
         if hors:
+            # Lot M3 ter, §2 : le motif RAPPELLE la liste des pièces citables — même liste que la
+            # section « Pièces que tu peux citer » de la matière (un seul détenteur,
+            # `Matiere.pieces_citables`) — pour que le renvoi puisse corriger sans redemander le dossier.
             return (f"[S6] le bloc `{b.id}` cite les pièces {hors}, hors de `pieces_citables` du "
-                    "dossier (une justification sur une pièce hors du dossier)")
+                    "dossier (une justification sur une pièce hors du dossier) — pièces citables : "
+                    f"{sorted(matiere.pieces_citables)}")
     return None
 
 
@@ -411,6 +415,119 @@ def _s11(arch: Architecture, ref: ReferentielModele) -> Optional[str]:
     return None
 
 
+# ── [S14]/[S15] (lot M3 ter, §4 — une ligne par programme nommé) ─────────────────────────────────
+# [S13] (un bloc non plateforme couvre UN SEUL programme) est un invariant d'UN SEUL objet (#37,
+# même précédent que [S12]) : il vit dans le contrat (`BlocPropose._programmes_et_plateforme`),
+# jamais ici. [S14]/[S15] exigent de connaître la MATIÈRE (le verbatim de `me_7`, son chiffre clé
+# `nombre_de_programmes`) : ils vivent donc ici, comme tout contrôle qui compare DEUX objets.
+
+_STATUT_ATTENDU_TRAITEMENT = {
+    "bloc": "en_developpement", "rattache": "metier_actuel", "extension": "extension_annoncee",
+}
+# Ce que le renvoi dit au modèle quand le statut du bloc désigné ne va pas avec le traitement : la
+# RÈGLE à appliquer, pas seulement le statut attendu — mesuré le 2026-10-23 (`mesures/2026-10-23/
+# b4d-apres/`) : « attendu `metier_actuel` » seul a fait rattacher des programmes nommés à une
+# plateforme, deux fois de suite, au lieu de leur donner leur ligne.
+_REGLE_DU_TRAITEMENT = {
+    "bloc": ("`bloc` = la ligne PROPRE d'un programme à réussite incertaine (un bloc `en_developpement` "
+             "à lui) ; un produit déjà vendu n'est pas un programme : `rattache` vers son activité"),
+    "rattache": ("`rattache` ne vaut que pour une GÉNÉRATION SUIVANTE d'un produit déjà vendu, vers le bloc "
+                 "`metier_actuel` qui le vend ; un programme NOMMÉ dont la réussite est incertaine a SA "
+                 "ligne (traitement `bloc`) — une plateforme ne regroupe que des programmes NON nommés"),
+    "extension": "`extension` désigne le bloc `extension_annoncee` de l'activité annoncée",
+}
+_CONSIGNE_NOM_LITTERAL = (
+    "recopie pour chacun un passage CONTINU du verbatim, mot pour mot : sans précision ajoutée (marque "
+    "entre parenthèses…), sans article retiré, sans nom de regroupement inventé")
+
+
+def _forme_comparable(texte: str) -> str:
+    """Casse, espaces et apostrophes typographiques ne changent pas un nom : on compare sans eux.
+    Rien d'autre n'est normalisé — l'ordre et les mots restent ceux du dossier."""
+    texte = texte.replace("\u2019", "'").replace("\u2018", "'").replace("\u00a0", " ")
+    return " ".join(texte.split()).casefold()
+
+
+def _s14(arch: Architecture, matiere: Matiere) -> Optional[str]:
+    """Chaque nom de `programmes` et de `inventaire_des_programmes` figure LITTÉRALEMENT dans le
+    verbatim de `me_7` (comparaison sur le TEXTE du dossier, jamais une liste écrite dans le code) ;
+    chaque entrée `bloc`/`rattache`/`extension` désigne un bloc EXISTANT du BON statut ; chaque bloc
+    `en_developpement` non `plateforme` apparaît dans l'inventaire. Ce qui n'est PAS contrôlé (dit
+    au comité) : qu'un programme ait été OUBLIÉ alors que `me_7` le nomme sans le compter — hors de
+    portée sans lecture du texte par un modèle (banc B4e, explorateur B4f)."""
+    par_bloc = {b.id: b for b in arch.blocs}
+    motifs: list[str] = []
+
+    noms_a_verifier: list[str] = [nom for b in arch.blocs for nom in b.programmes]
+    noms_a_verifier += [item.programme for item in arch.inventaire_des_programmes]
+    if noms_a_verifier:
+        if matiere.me_7_verbatim is None:
+            motifs.append(
+                "[S14] un programme est nommé (`programmes` ou `inventaire_des_programmes`), mais "
+                "aucun verbatim de `me_7` n'est disponible pour vérifier qu'il y figure littéralement")
+        else:
+            verbatim = _forme_comparable(matiere.me_7_verbatim)
+            absents = sorted({n for n in noms_a_verifier if _forme_comparable(n) not in verbatim})
+            if absents:
+                motifs.append(f"[S14] les programmes {absents} ne figurent pas LITTÉRALEMENT dans "
+                              f"le verbatim de `me_7` — {_CONSIGNE_NOM_LITTERAL}")
+
+    for item in arch.inventaire_des_programmes:
+        if item.bloc is None:
+            continue
+        bloc = par_bloc.get(item.bloc)
+        if bloc is None:
+            motifs.append(f"[S14] l'entrée `{item.programme}` (traitement `{item.traitement}`) "
+                          f"désigne le bloc `{item.bloc}`, absent de l'architecture")
+            continue
+        # Une ligne PROPRE est un bloc non plateforme qui porte CE nom — mesuré le 2026-10-23
+        # (`mesures/2026-10-23/b4d-apres3/rvmd_1`) : six programmes nommés déclarés « ligne propre »
+        # et tous pointés vers UNE plateforme, ce qui contournait [S13] (une plateforme n'a pas de nom).
+        if item.traitement == "bloc" and (bloc.plateforme or [_forme_comparable(n) for n in bloc.programmes]
+                                          != [_forme_comparable(item.programme)]):
+            motifs.append(f"[S14] l'entrée `{item.programme}` (traitement `bloc`) désigne le bloc "
+                          f"`{item.bloc}`, qui n'est pas SA ligne propre (plateforme : {bloc.plateforme}, "
+                          f"programmes : {bloc.programmes}) — un programme nommé a un bloc à lui, dont "
+                          "`programmes` porte son nom ; une plateforme ne regroupe que des programmes NON "
+                          "nommés")
+            continue
+        attendu = _STATUT_ATTENDU_TRAITEMENT.get(item.traitement)
+        if attendu is not None and bloc.statut != attendu:
+            motifs.append(f"[S14] l'entrée `{item.programme}` (traitement `{item.traitement}`) "
+                          f"désigne le bloc `{item.bloc}` de statut `{bloc.statut}`, attendu `{attendu}` — "
+                          f"{_REGLE_DU_TRAITEMENT[item.traitement]}")
+
+    couverts = {item.bloc for item in arch.inventaire_des_programmes if item.bloc is not None}
+    for b in arch.blocs:
+        if b.statut == "en_developpement" and not b.plateforme and b.id not in couverts:
+            motifs.append(f"[S14] le bloc `{b.id}` (`en_developpement`, non `plateforme`) n'apparaît "
+                          "dans aucune entrée de `inventaire_des_programmes`")
+
+    return " ; ".join(motifs) if motifs else None
+
+
+def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]]:
+    """Le nombre d'entrées de l'inventaire est ≥ au chiffre clé `nombre_de_programmes` de `me_7`
+    quand il est établi — REFUS ; sinon, SIGNAL « inventaire non chiffré » (pas un refus : le
+    dossier ne donne simplement pas le chiffre)."""
+    attendu = matiere.me_7_nombre_de_programmes
+    # Le chiffre clé compte TOUS les programmes, nommés ou non (mesuré le 2026-10-23 : 8 comptés, 7
+    # nommés) : les non nommés sont ceux des plateformes. Compter l'inventaire seul exigerait d'inventer
+    # un nom.
+    non_nommes = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
+    n = len(arch.inventaire_des_programmes) + non_nommes
+    if attendu is None:
+        return None, ["[S15] inventaire non chiffré : `me_7` n'établit pas le chiffre clé "
+                     "`nombre_de_programmes`"]
+    if n < int(attendu):
+        return (f"[S15] l'inventaire des programmes ({len(arch.inventaire_des_programmes)} nommé(s)) et les "
+                f"plateformes ({non_nommes} non nommé(s)) couvrent {n} programme(s), moins que le chiffre "
+                f"clé `nombre_de_programmes` = {int(attendu)} de `me_7` — un programme que le dossier compte "
+                "sans le nommer va dans un bloc `plateforme` (`nombre_de_programmes_non_nommes`), jamais "
+                "sous un nom inventé"), []
+    return None, []
+
+
 def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> list[str]:
     """[S1]-[S11]. Rend les SIGNAUX ; lève `ArchitectureRefusee` avec TOUS les motifs réunis."""
     par_bloc = {b.id: b for b in arch.blocs}
@@ -462,6 +579,15 @@ def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matie
     m11 = _s11(arch, ref)
     if m11:
         refus.append(m11)
+
+    m14 = _s14(arch, matiere)
+    if m14:
+        refus.append(m14)
+
+    m15, sig15 = _s15(arch, matiere)
+    if m15:
+        refus.append(m15)
+    signaux.extend(sig15)
 
     if refus:
         raise ArchitectureRefusee(" | ".join(refus))

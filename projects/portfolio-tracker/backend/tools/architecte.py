@@ -52,7 +52,7 @@ def _rendre_architecture(arch) -> list[str]:
     def _ligne_bloc(b, indent=0) -> None:
         prefixe = "  " * (indent + 1)
         if b.rattachement.type == "publie":
-            ratt = f"publié (axe={b.rattachement.axe}, membre={b.rattachement.membre})"
+            ratt = f"publié (axe={b.rattachement.axe}, membres={b.rattachement.membres})"
         elif b.rattachement.type == "parent":
             ratt = f"estimé, enfant de `{b.rattachement.bloc}`"
         else:
@@ -62,6 +62,10 @@ def _rendre_architecture(arch) -> list[str]:
         if b.pieces:
             out.append(f"{prefixe}  pièces : {b.pieces}")
         out.append(f"{prefixe}  variables : {b.variables}")
+        if b.programmes:
+            out.append(f"{prefixe}  programme : {b.programmes}")
+        if b.plateforme:
+            out.append(f"{prefixe}  plateforme : {b.nombre_de_programmes_non_nommes} programme(s) non nommé(s)")
         for enfant in arch.blocs:
             if enfant.rattachement.type == "parent" and enfant.rattachement.bloc == b.id:
                 _ligne_bloc(enfant, indent + 1)
@@ -73,6 +77,11 @@ def _rendre_architecture(arch) -> list[str]:
         out.append("Variables propres :")
         for v in arch.variables_propres:
             out.append(f"  · {v.id} ({v.libelle}) — {v.motif}")
+    if arch.inventaire_des_programmes:
+        out.append("Inventaire des programmes :")
+        for item in arch.inventaire_des_programmes:
+            out.append(f"  · {item.programme} — {item.traitement}"
+                       + (f" → `{item.bloc}`" if item.bloc else "") + f" — {item.motif}")
     out.append("Passage à l'agrégé :")
     for p in arch.passage_a_l_agrege:
         out.append(f"  · {p.ligne} = {p.formule}")
@@ -151,6 +160,12 @@ async def main() -> int:
         except ArchitectureRefusee as e:
             print(f"\narchitecture refusée après renvoi : {e.motifs}")
             print(f"coût cumulé : {e.cost_usd:.4f} $ ({e.attempts} tentative(s))")
+            if args.sortie:
+                for i, (brute, motif) in enumerate(e.sorties, start=1):
+                    chemin = f"{args.sortie}.refus{i}.json"
+                    with open(chemin, "w", encoding="utf-8") as f:
+                        json.dump({"motif": motif, "sortie_brute": brute}, f, ensure_ascii=False, indent=2)
+                    print(f"Sortie refusée #{i} écrite dans {chemin}")
             print(_bilan(args.ticker, porte, "refusée", cout=e.cost_usd))
             return 1
 

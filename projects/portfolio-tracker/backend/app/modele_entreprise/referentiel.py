@@ -166,8 +166,15 @@ def _fiche_ou_propre(arch: Architecture, ref: ReferentielModele, variable_id: st
     return par_id.get(variable_id) or par_propre.get(variable_id)
 
 
-def valider_pont_architecture(arch: Architecture, ref: ReferentielModele) -> None:
-    """[P1]-[P5] — voir l'en-tête du module. [P6] délibérément absent (TODO M5)."""
+def valider_pont_architecture(arch: Architecture, ref: ReferentielModele,
+                              periodes_projetees: Optional[tuple[str, ...]] = None) -> None:
+    """[P1]-[P5] — voir l'en-tête du module. [P6] délibérément absent (TODO M5).
+
+    `periodes_projetees` (lot M3 ter, §5) : les périodes PROJETÉES du classeur de
+    CE titre, pour que le message de renvoi [P4] les NOMME plutôt que de dire seulement « refusé » —
+    une valeur reprise d'un encadré (chiffre unique) s'applique à CHAQUE exercice projeté, et c'est
+    cette liste que le modèle doit écrire. Optionnel : les appelants qui n'ont pas la matière sous
+    la main (checks, `registre.py`) gardent le message sans la liste, jamais une erreur."""
     famille_attendue = ref.famille_par_archetype.get(arch.archetype)
     if famille_attendue is None:
         raise ArchitectureRefusee(
@@ -230,9 +237,11 @@ def valider_pont_architecture(arch: Architecture, ref: ReferentielModele) -> Non
                     f"[P4] `{c.variable}` est `sans_periode` (référentiel) : la cellule attendue doit "
                     f"porter `periodes == [\"sans_periode\"]`, reçu {c.periodes}")
         elif "sans_periode" in c.periodes:
+            attendu = (f" ; périodes attendues : {list(periodes_projetees)}" if periodes_projetees else "")
             raise ArchitectureRefusee(
                 f"[P4] `{c.variable}` porte une période (`{fiche.periode}`, référentiel) : "
-                "`sans_periode` n'est pas admis pour ses cellules")
+                "`sans_periode` n'est pas admis pour ses cellules — une valeur reprise d'un encadré "
+                f"(chiffre unique) s'applique à CHAQUE exercice projeté{attendu}")
         if isinstance(c.auteur, AuteurQuestion) and c.auteur.question_id not in fiche.questions_sources:
             raise ArchitectureRefusee(
                 f"[P5] la cellule de `{c.variable}` est attribuée à la question `{c.auteur.question_id}`, "

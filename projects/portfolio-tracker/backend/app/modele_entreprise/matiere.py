@@ -7,11 +7,17 @@ jamais recalculée dans le rendu, qui ne fait qu'assembler des blocs déjà dét
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
 
 __all__ = ["MatiereRefusee", "Matiere", "charger_matiere", "rendre_matiere"]
+
+# Un numéro de RÉPONSE change de forme dans la matière (`réponse R-1367`, jamais `#`) pour qu'aucun
+# numéro de réponse ne ressemble à un numéro de PIÈCE (lot M3 ter, §2) — un numéro de pièce reste
+# `#NNN`, jamais préfixé par le mot « réponse ».
+_RE_REPONSE_DIESE = re.compile(r"réponse #(\d+)")
 
 
 class MatiereRefusee(Exception):
@@ -52,11 +58,36 @@ class Matiere:
     questions_texte: tuple[str, ...]          # une section par question, dans l'ordre de la porte
     notes_flash_texte: str
     pieces_citables: frozenset[int] = field(default_factory=frozenset)
+    # Le rendu texte de `pieces_citables`, triée, avec titre — même liste que [S6] contrôle (un
+    # seul détenteur, lot M3 ter §2). Précalculé ici (lecture) : `rendre_matiere` reste pur.
+    pieces_citables_texte: str = ""
+    # Le verbatim et le chiffre clé `nombre_de_programmes` de LA réponse retenue de `me_7` — lot
+    # M3 ter §4 ([S14]/[S15]) : comparaison sur le TEXTE du dossier, jamais sur une liste écrite
+    # dans le code. `None` si `me_7` n'a aucune réponse retenue, ou pas ce chiffre établi.
+    me_7_verbatim: Optional[str] = None
+    me_7_nombre_de_programmes: Optional[float] = None
 
 
 def _ligne_lisible(ligne_id: str, gabarit) -> str:
     l = gabarit.lignes.get(ligne_id)
     return f"{ligne_id} ({l.libelle})" if l is not None else ligne_id
+
+
+def _titre_court(titre: Optional[str]) -> str:
+    """Titre tronqué à 120 caractères (lot M3 ter, §2) — `(sans titre)` si absent."""
+    if not titre:
+        return "(sans titre)"
+    return titre if len(titre) <= 120 else titre[:120] + "…"
+
+
+def _regle_periode(v) -> str:
+    """Lot M3 ter, §5 : ce que le modèle doit faire de la période, dit au pied de CHAQUE fiche —
+    pas seulement dans le `[P4]` de renvoi, trop tard et trop loin du catalogue (une valeur reprise
+    d'un encadré pluriannuel unique est souvent lue, à tort, comme `sans_periode`)."""
+    if v.periode == "sans_periode":
+        return "une seule cellule, sans période."
+    return ("une cellule par période listée (historiques et/ou projetées) ; une valeur reprise "
+           "d'un encadré (chiffre unique) s'applique à CHAQUE exercice projeté.")
 
 
 def _fiches_texte(fiches) -> str:
@@ -66,7 +97,8 @@ def _fiches_texte(fiches) -> str:
         out.append(
             f"  · {v.id} ({v.libelle}) — unité {v.unite}, période {v.periode} ; origines admises "
             f"{v.origines_admises} ; questions sources {v.questions_sources}{somme}\n"
-            f"    {v.definition}")
+            f"    {v.definition}\n"
+            f"    période attendue : {_regle_periode(v)}")
     return "\n".join(out) if out else "  (aucune fiche dans cette famille)"
 
 
@@ -90,15 +122,34 @@ def _reponse_retenue(reps):
     return reps[0] if reps else None
 
 
-def _texte_question(eq, etat) -> tuple[str, frozenset[int]]:
-    """Le bloc d'une question source. Rend `(texte, pieces_citées)`."""
+def _rendre_pieces(pieces: frozenset[int], piece_meta: dict[int, dict]) -> str:
+    """`pièces : #867 (titre, date du fait) ; …` (lot M3 ter, §2) — même SET que `pieces_citables`
+    y verse ; `date_du_fait` fait foi, `source_date` à défaut (#48)."""
+    if not pieces:
+        return ""
+    morceaux = []
+    for pid in sorted(pieces):
+        meta = piece_meta.get(pid)
+        if meta is None:
+            morceaux.append(f"#{pid} (pièce publiée à l'écriture — non disponible à blanc)")
+            continue
+        dt = meta.get("date_du_fait") or meta.get("source_date")
+        morceaux.append(f"#{pid} ({_titre_court(meta.get('title'))}, {dt.isoformat() if dt else '?'})")
+    return "pièces : " + " ; ".join(morceaux)
+
+
+def _texte_question(eq, etat, piece_meta: dict[int, dict]) -> tuple[str, frozenset[int], Optional[str], Optional[float]]:
+    """Le bloc d'une question source. Rend `(texte, pieces_citées, verbatim, nombre_de_programmes)` —
+    les deux derniers champs ne sont renseignés (non `None`) que pour `me_7` (lot M3 ter, §4 :
+    [S14]/[S15] comparent au TEXTE du dossier, jamais à une liste écrite dans le code)."""
     reps = [r for r in etat.reponses
             if r.servie.framework_id == eq.framework_id and r.servie.question_id == eq.question_id]
     entete = f"— Question {eq.question_id} ({eq.framework_id}) — porte : " \
              f"{'ouvre' if eq.ouvre else 'ferme'} — {eq.raison}"
     r = _reponse_retenue(reps)
     if r is None:
-        return f"{entete}\n  (aucune réponse instruite)", frozenset()
+        texte = _RE_REPONSE_DIESE.sub(r"réponse R-\1", f"{entete}\n  (aucune réponse instruite)")
+        return texte, frozenset(), None, None
 
     lignes = [entete,
               f"  statut {r.servie.statut} ; écrite le "
@@ -106,18 +157,41 @@ def _texte_question(eq, etat) -> tuple[str, frozenset[int]]:
     if r.motif_revue:
         lignes.append(f"  motif du contrôle : {r.motif_revue}")
     pieces: set[int] = set()
+    # Lot M3 ter, §6 (péremption au pied du verbatim) : LU dans la même source que la ligne de
+    # porte (`fondation.actualite`/`motif_actualite`, posés par `etat_actualite_entry`) — pas de
+    # second calcul. Posé AVANT le verbatim, pour qu'on ne le lise jamais sans cet avertissement.
+    avertissement: Optional[str] = None
     if r.servie.fondation is not None:
-        lignes.append(f"  actualité {r.servie.fondation.actualite} — {r.servie.fondation.motif_actualite}")
         pieces |= set(r.servie.fondation.cited_entry_ids)
+        if r.servie.fondation.actualite != "courante":
+            avertissement = r.servie.fondation.motif_actualite
+        else:
+            lignes.append(f"  actualité {r.servie.fondation.actualite} — {r.servie.fondation.motif_actualite}")
+    verbatim_texte: Optional[str] = None
+    nombre_de_programmes: Optional[float] = None
     if r.servie.reponse is not None:
-        lignes.append(f"  verbatim : {r.servie.reponse.verbatim}")
+        verbatim_texte = r.servie.reponse.verbatim
+        effets = [fp.effet for fp in r.servie.reponse.faits_posterieurs]
+        if avertissement is not None:
+            lignes.append(f"  ⚠ écrite avant un fait plus récent : {avertissement}"
+                         + (f" ; le fait postérieur dit : {' ; '.join(effets)}" if effets else ""))
+        lignes.append(f"  verbatim : {verbatim_texte}")
         for ligne_chiffre in r.servie.reponse.encadre_lisible():
             lignes.append(f"    chiffre : {ligne_chiffre}")
         if r.servie.reponse.sens:
             lignes.append(f"  sens : {r.servie.reponse.sens}")
         for fp in r.servie.reponse.faits_posterieurs:
             pieces |= set(fp.cited_entry_ids)
-    return "\n".join(lignes), frozenset(pieces)
+        nombre_de_programmes = next(
+            (c.valeur for c in r.servie.reponse.chiffres_cles if c.id == "nombre_de_programmes"), None)
+    elif avertissement is not None:
+        lignes.append(f"  ⚠ écrite avant un fait plus récent : {avertissement}")
+    pieces_frozen = frozenset(pieces)
+    ligne_pieces = _rendre_pieces(pieces_frozen, piece_meta)
+    if ligne_pieces:
+        lignes.append(f"  {ligne_pieces}")
+    texte = _RE_REPONSE_DIESE.sub(r"réponse R-\1", "\n".join(lignes))
+    return texte, pieces_frozen, verbatim_texte, nombre_de_programmes
 
 
 def _piece_de_la_note(conn_rows: list[dict], accession: str) -> Optional[int]:
@@ -242,13 +316,26 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
     patron = ref.patrons.get(etat.archetype)
 
     # ── La porte, et les réponses des questions sources ────────────────────────────────────────
+    # Métadonnées (titre, dates) de TOUTE pièce du dossier — pour le rendu « pièces : #N (titre,
+    # date) » sous chaque réponse (§2) et pour `_piece_de_la_note` ci-dessous (mêmes lignes, plus
+    # besoin d'une seconde requête). Un seul aller-retour, qu'il y ait ou non des notes flash.
+    piece_rows = await conn.fetch(
+        "SELECT id, title, source_url, date_du_fait, source_date FROM knowledge_entries "
+        "WHERE ticker_id = $1", ticker_id)
+    piece_meta: dict[int, dict] = {r["id"]: dict(r) for r in piece_rows}
+
     porte = porte_de_l_architecte(etat, ref)
     pieces_reponses: set[int] = set()
     questions_texte = []
+    me_7_verbatim: Optional[str] = None
+    me_7_nombre_de_programmes: Optional[float] = None
     for eq in porte.questions:
-        texte, pieces = _texte_question(eq, etat)
+        texte, pieces, verbatim, n_prog = _texte_question(eq, etat, piece_meta)
         questions_texte.append(texte)
         pieces_reponses |= pieces
+        if eq.question_id == "me_7":
+            me_7_verbatim = verbatim
+            me_7_nombre_de_programmes = n_prog
 
     # ── Les notes flash depuis la dernière clôture annuelle ────────────────────────────────────
     notes_retenues = [
@@ -258,10 +345,7 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
     ]
     pieces_notes: set[int] = set()
     if notes_retenues:
-        rows_pieces = await conn.fetch(
-            "SELECT id, source_url FROM knowledge_entries WHERE ticker_id = $1 AND source_url IS NOT NULL",
-            ticker_id)
-        rows_pieces = [dict(r) for r in rows_pieces]
+        rows_pieces = list(piece_meta.values())
         lignes_notes = []
         for accn, q in sorted(notes_retenues, key=lambda x: x[1].date_evenement or date.min):
             piece_id = _piece_de_la_note(rows_pieces, accn)
@@ -278,6 +362,15 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
     pieces_citables = frozenset(
         {p for p in (socle_id, vent_id) if p is not None} | pieces_reponses | pieces_notes)
 
+    # Section finale « Pièces que tu peux citer » (§2) — la liste EXACTE de `pieces_citables`,
+    # triée, avec titre : même liste que [S6] contrôle, un seul détenteur (`Matiere.pieces_citables`).
+    if pieces_citables:
+        pieces_citables_texte = "\n".join(
+            f"  · #{pid} — {_titre_court((piece_meta.get(pid) or {}).get('title'))}"
+            for pid in sorted(pieces_citables))
+    else:
+        pieces_citables_texte = "  (aucune pièce citable à blanc)"
+
     return Matiere(
         ticker_id=ticker_id, raison_sociale=emetteur.raison_sociale, cik=emetteur.cik,
         date_du_jour=date.today(), derniere_cloture=derniere_cloture,
@@ -291,7 +384,8 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
         ventilation_texte=ventilation_texte, ventilation_piece_id=vent_id,
         ventilation_structure=ventilation_structure_pour_s,
         questions_texte=tuple(questions_texte), notes_flash_texte=notes_flash_texte,
-        pieces_citables=pieces_citables,
+        pieces_citables=pieces_citables, pieces_citables_texte=pieces_citables_texte,
+        me_7_verbatim=me_7_verbatim, me_7_nombre_de_programmes=me_7_nombre_de_programmes,
     )
 
 
@@ -333,4 +427,7 @@ def rendre_matiere(m: Matiere) -> str:
     out.append("")
     out.append("Notes flash depuis la dernière clôture annuelle :")
     out.append(m.notes_flash_texte)
+    out.append("")
+    out.append("Pièces que tu peux citer (cite UNIQUEMENT ces numéros, jamais un numéro de réponse) :")
+    out.append(m.pieces_citables_texte)
     return "\n".join(out)

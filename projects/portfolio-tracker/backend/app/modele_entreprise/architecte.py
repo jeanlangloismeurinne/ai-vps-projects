@@ -12,14 +12,14 @@ import json
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from app.agents.providers import ResolvedAgent, get_agent_provider
-from app.agents.v2.runner import AgentRunResult, run_json_agent
+from app.agents.v2.runner import AgentOutputInvalid, AgentRunResult, run_json_agent
 from app.contracts.analysis_v2_schemas import Strict
 from app.contracts.modele_entreprise_schema import (
-    ARCHITECTURE_SCHEMA_VERSION, Architecture, AxeUsage, BlocPropose, CelluleAttendue, ManqueDuDossier,
-    PassageAgrege, VariablePropre,
+    ARCHITECTURE_SCHEMA_VERSION, Architecture, AxeUsage, BlocPropose, CelluleAttendue,
+    InventaireProgramme, ManqueDuDossier, PassageAgrege, VariablePropre,
 )
 from app.modele_entreprise.faits_publies import poser_maille
 from app.modele_entreprise.matiere import Matiere, MatiereRefusee, charger_matiere, rendre_matiere
@@ -50,16 +50,22 @@ class PorteFermee(Exception):
 
 class ArchitectureRefusee(RuntimeError):
     """L'architecture proposée par le modèle ne tient pas, même après un renvoi — AVEC la
-    télémétrie cumulée des deux appels (même geste que `AgentOutputInvalid`)."""
+    télémétrie cumulée des deux appels (même geste que `AgentOutputInvalid`).
+
+    `sorties` : `(sortie_brute_du_modele, motif)` de CHAQUE tentative refusée (une ou deux, dans
+    l'ordre) — §3 de la spec `15-lot-M3ter-architecte.md` : « que tout refus se lise ». Avant ce
+    lot, cette télémétrie n'existait pas et `tools/architecte.py --sortie` n'écrivait qu'en cas de
+    succès (diagnostic impossible, §0 de la spec)."""
 
     def __init__(self, *, motifs: str, tokens_in: int, tokens_out: int, cost_usd: float,
-                attempts: int) -> None:
+                attempts: int, sorties: tuple[tuple[str, str], ...] = ()) -> None:
         super().__init__(motifs)
         self.motifs = motifs
         self.tokens_in = tokens_in
         self.tokens_out = tokens_out
         self.cost_usd = cost_usd
         self.attempts = attempts
+        self.sorties = sorties
 
 
 class ArchitecteSortie(Strict):
@@ -76,6 +82,17 @@ class ArchitecteSortie(Strict):
     autres_axes: list[AxeUsage] = Field(default_factory=list)
     # 1.2.0 (cause ③, §4.4) — ce que le dossier ne permet pas de découper.
     manques_du_dossier: list[ManqueDuDossier] = Field(default_factory=list)
+    # 1.3.0 (lot M3 ter, §4) — pour CHAQUE programme nommé par `me_7`, ce que l'architecte en fait.
+    inventaire_des_programmes: list[InventaireProgramme] = Field(default_factory=list)
+
+
+def _refus_hors_contrat(e: AgentOutputInvalid, precedentes: tuple[tuple[str, str], ...]) -> ArchitectureRefusee:
+    """Une sortie que le contrat refuse même après les réparations du runner : refus NOMMÉ
+    `[CONTRAT]`, télémétrie cumulée, sortie brute gardée (§3 de `15-lot-M3ter-architecte.md`)."""
+    motif = f"[CONTRAT] la sortie ne respecte pas le contrat de l'architecture : {e.last_error}"
+    return ArchitectureRefusee(motifs=motif, tokens_in=e.tokens_in, tokens_out=e.tokens_out,
+                               cost_usd=e.cost_usd, attempts=e.attempts,
+                               sorties=precedentes + ((e.raw_content, motif),))
 
 
 @dataclass(frozen=True)
@@ -128,7 +145,23 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
                       "prochain": "autorisation d'essai clinique", "attendu_vers": "2027-06-01"},
             "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
             "variables": ["probabilite_de_succes", "cout_restant_de_developpement"],
+            # UNE ligne par programme NOMMÉ individuellement par le dossier (`programmes`, un SEUL
+            # nom pour un bloc non plateforme, [S13]) — recopié TEL QUE `me_7` l'écrit.
+            "programmes": ["Programme X"],
             "motif": "Programme en développement sous licence, décrit par `me_7` — jalon suivant daté.",
+            "pieces": [103],
+        },
+        {
+            "id": "programmes_amont", "libelle": "Recherche amont (programmes non nommés)",
+            "role": "programme", "statut": "en_developpement", "origine": "interne",
+            "jalon": {"franchi": "validation de la plateforme", "franchi_le": "2026-01-10",
+                      "prochain": "sélection d'un candidat", "attendu_vers": "2027-09-01"},
+            "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
+            "variables": ["cout_restant_de_developpement"],
+            # Bloc PLATEFORME : regroupe des programmes que le dossier NE NOMME PAS individuellement
+            # — `programmes` reste vide, `nombre_de_programmes_non_nommes` les compte.
+            "plateforme": True, "nombre_de_programmes_non_nommes": 3,
+            "motif": "Recherche amont non nommée individuellement par `me_7` — regroupée en plateforme.",
             "pieces": [103],
         },
         {
@@ -168,6 +201,12 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
          "blocs": ["programme_x"],
          "consequence": "`depense_de_developpement_du_bloc` du programme X reste une demande ciblée, "
                         "non une réponse de `me_7`."},
+    ],
+    # 1.3.0 — pour CHAQUE programme que `me_7` NOMME individuellement, ce que l'architecte en fait.
+    # Un programme de la plateforme (non nommé) n'a PAS d'entrée ici — par construction.
+    "inventaire_des_programmes": [
+        {"programme": "Programme X", "traitement": "bloc", "bloc": "programme_x",
+         "motif": "Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne."},
     ],
 }
 
@@ -219,6 +258,24 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "  · quand le dossier ne permet PAS de découper (programmes non nommés individuellement, "
     "dépense de R&D non affectée par programme…), écris-le dans `manques_du_dossier` (sujet, blocs "
     "concernés, conséquence) PLUTÔT que de regrouper en silence ;\n"
+    "  · UNE LIGNE PAR PROGRAMME que l'émetteur NOMME individuellement ET dont la réussite est "
+    "incertaine (essai clinique, autorisation, technologie non prouvée) : `programmes` porte ce "
+    "nom unique recopié TEL QUE le dossier l'écrit — un passage CONTINU du texte de la réponse qui "
+    "nomme les programmes, mot pour mot, sans rien y ajouter (ni marque entre parenthèses, ni "
+    "précision) ni en retirer (ni article) — (un seul bloc = un seul programme nommé) ; SEULS "
+    "les programmes NON nommés individuellement (recherche amont, plateforme) se regroupent dans un "
+    "bloc `plateforme: true` (`programmes` vide, `nombre_de_programmes_non_nommes` ≥ 1) — et quand "
+    "le dossier COMPTE plus de programmes qu'il n'en nomme, l'écart va dans une plateforme, jamais "
+    "sous un nom inventé ; une "
+    "GÉNÉRATION SUIVANTE d'un produit déjà vendu n'est pas un programme à part — elle se rattache à "
+    "l'activité qui le porte (statut `metier_actuel`), ce n'est pas un pari binaire isolé ;\n"
+    "  · `inventaire_des_programmes` : pour CHAQUE programme que le dossier NOMME individuellement "
+    "(même ceux qu'une autre règle t'a fait omettre de l'arbre), dis ce que tu en fais — `bloc` (sa "
+    "ligne propre, `bloc` = cet id), `rattache` (génération suivante rattachée à l'activité qui le "
+    "porte, `bloc` = cette activité de statut `metier_actuel` — JAMAIS un bloc `en_developpement` "
+    "ni une plateforme, motif ≥ 20 caractères), `extension` (devient une activité "
+    "annoncée, `bloc` = ce bloc `extension_annoncee`), `hors_modele` (abandonné, immatériel — motif "
+    "≥ 20 caractères, AUCUN `bloc`) ;\n"
     "  · chaque CELLULE ATTENDUE : si une question source de la variable instruit déjà cette cellule, "
     "son auteur est cette question (`{\"type\": \"question\", \"question_id\": \"...\"}`) ; sinon "
     "`{\"type\": \"demande_ciblee\"}` ; les périodes sont prises dans la liste fournie (jamais "
@@ -230,14 +287,18 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "en M$ par `/ 1000000` ; M$ × % se ramène par `/ 100`) ; un coefficient s'écrit en décimal "
     "(`* 0.9`), jamais sous forme de rapport d'échelles (`* 90 / 100`) ;\n"
     "  · tout bloc ESTIMÉ, ou de statut autre que `metier_actuel`, cite AU MOINS une pièce du "
-    "dossier qui le fonde (`pieces`, des ids cités dans le dossier) ;\n"
+    "dossier qui le fonde (`pieces`) — et cite UNIQUEMENT des numéros de la section « Pièces que tu "
+    "peux citer » du dossier (jamais un numéro de RÉPONSE, qui s'écrit `réponse R-...` dans le "
+    "dossier, jamais `#...`) ;\n"
     "  · les identifiants (`id` d'un bloc, d'une variable propre) : minuscules, chiffres, `_`, "
     "jamais `__` (réservé au séparateur `bloc__variable` d'une formule de passage).\n\n"
     "Sortie : UNIQUEMENT l'objet JSON ci-après (aucun ticker, aucun id de version, aucun archétype, "
     "aucune `maille` — le système les pose lui-même), commençant par `{` et finissant par `}`, sans "
     "aucun texte autour. Exemple de forme — une société FICTIVE, à deux activités publiées, un "
-    "découpage estimé, une extension annoncée, un programme en développement sous licence, un axe "
-    "secondaire déclaré en `autres_axes`, un manque du dossier, un bloc commun :\n"
+    "découpage estimé, une extension annoncée, un programme en développement nommé (sous licence) "
+    "et une plateforme de recherche amont non nommée, un axe secondaire déclaré en `autres_axes`, "
+    "un manque du dossier, un bloc commun. Les numéros de pièces (101, 102, 103) sont FICTIFS, à "
+    "remplacer par ceux de la section « Pièces que tu peux citer » du dossier réel :\n"
     f"{json.dumps(_EXEMPLE_ARCHITECTURE, ensure_ascii=False, indent=2)}"
 )
 
@@ -271,13 +332,14 @@ def _poser_entete(sortie: ArchitecteSortie, *, ticker_id: str, version: int, arc
         archetype=archetype, famille=famille, version_referentiel=version_referentiel,
         blocs=blocs, variables_propres=sortie.variables_propres,
         passage_a_l_agrege=sortie.passage_a_l_agrege, cellules_attendues=sortie.cellules_attendues,
-        autres_axes=sortie.autres_axes, manques_du_dossier=sortie.manques_du_dossier)
+        autres_axes=sortie.autres_axes, manques_du_dossier=sortie.manques_du_dossier,
+        inventaire_des_programmes=sortie.inventaire_des_programmes)
 
 
 def juger_architecture(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> tuple[bool, str, tuple[str, ...]]:
     """`(tient, motif, signaux)`."""
     try:
-        valider_pont_architecture(arch, ref)
+        valider_pont_architecture(arch, ref, matiere.periodes_projetees)
     except PontRefuse as e:
         return False, str(e), ()
     try:
@@ -317,30 +379,54 @@ async def proposer_architecture_du_titre(
     matiere_rendue = rendre_matiere(matiere)
     agent = agent or await _resolve_architecte_agent()
     messages = [{"role": "user", "content": _message_architecte(matiere_rendue)}]
-    run = await run_json_agent(agent, messages, ArchitecteSortie, json_object=False)
+    try:
+        run = await run_json_agent(agent, messages, ArchitecteSortie, json_object=False)
+    except AgentOutputInvalid as e:
+        # §3 (jamais de plantage) : une sortie hors contrat (ex. [S13], invariant d'un seul objet,
+        # levé au DÉCODAGE) a déjà eu ses renvois dans le runner, erreurs Pydantic à l'appui — elle
+        # devient un refus NOMMÉ, sortie brute gardée, comme un refus [P]/[S].
+        raise _refus_hors_contrat(e, ()) from e
 
     def _architecture(sortie: ArchitecteSortie) -> Architecture:
         return _poser_entete(sortie, ticker_id=ticker_id, version=version, archetype=matiere.archetype,
                             famille=matiere.famille, version_referentiel=ref.version)
 
-    arch = _architecture(run.parsed)
-    tient, motif, signaux = juger_architecture(arch, ref, matiere)
+    def _construire_et_juger(sortie: ArchitecteSortie) -> tuple[bool, str, tuple[str, ...], Optional[Architecture]]:
+        """§3 de la spec (jamais de plantage) : toute erreur de contrat levée À L'ASSEMBLAGE
+        (`_poser_entete` → `faits_publies.poser_maille`, ou la validation de `Architecture` elle-
+        même — ex. [S12]/[S13] côté `Bloc`, un bloc estimé sans pièce, un cycle de rattachement…)
+        devient un refus NOMMÉ qui suit le MÊME chemin de renvoi que [P]/[S] — jamais un plantage.
+        Seule une panne d'infrastructure (réseau, base) reste une exception non rattrapée ici."""
+        try:
+            arch = _architecture(sortie)
+        except ValidationError as e:
+            return False, f"[ASSEMBLAGE] l'architecture posée (en-tête + maille) ne tient pas : {e}", (), None
+        tient, motif, signaux = juger_architecture(arch, ref, matiere)
+        return tient, motif, signaux, arch
+
+    tient, motif, signaux, arch = _construire_et_juger(run.parsed)
+    sorties_refusees: list[tuple[str, str]] = []
     if not tient:
+        sorties_refusees.append((run.raw_content, motif))
         messages = messages + [
             {"role": "assistant", "content": run.raw_content},
             {"role": "user", "content": (
                 f"Architecture refusée — {motif}\nRends l'architecture COMPLÈTE corrigée (même "
                 "format), en levant TOUS les motifs ci-dessus.")}]
-        second = await run_json_agent(agent, messages, ArchitecteSortie, json_object=False)
+        try:
+            second = await run_json_agent(agent, messages, ArchitecteSortie, json_object=False)
+        except AgentOutputInvalid as e:
+            raise _refus_hors_contrat(e.add_upstream(run.tokens_in, run.tokens_out, run.cost_usd,
+                                                     run.attempts), tuple(sorties_refusees)) from e
         run = dataclasses.replace(
             second, tokens_in=run.tokens_in + second.tokens_in, tokens_out=run.tokens_out + second.tokens_out,
             cost_usd=run.cost_usd + second.cost_usd, attempts=run.attempts + second.attempts)
-        arch = _architecture(run.parsed)
-        tient, motif, signaux = juger_architecture(arch, ref, matiere)
+        tient, motif, signaux, arch = _construire_et_juger(run.parsed)
         if not tient:
+            sorties_refusees.append((run.raw_content, motif))
             raise ArchitectureRefusee(
                 motifs=motif, tokens_in=run.tokens_in, tokens_out=run.tokens_out,
-                cost_usd=run.cost_usd, attempts=run.attempts)
+                cost_usd=run.cost_usd, attempts=run.attempts, sorties=tuple(sorties_refusees))
 
     ecrite_sous_id = None
     if ecrire:

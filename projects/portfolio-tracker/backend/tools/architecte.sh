@@ -24,7 +24,9 @@ args=("$@")
 for i in "${!args[@]}"; do
   if [[ "${args[$i]}" == "--sortie" && -n "${args[$((i+1))]:-}" ]]; then
     DEST="${args[$((i+1))]}"
-    case "$DEST" in /*) ;; *) DEST="$PWD/$DEST"; args[$i+1]="$DEST" ;; esac
+    case "$DEST" in /*) ;; *) DEST="$PWD/$DEST" ;; esac
+    # Un chemin avec `..` ne se monte pas tel quel dans le conteneur (mesuré le 2026-10-23) : forme canonique.
+    DEST=$(realpath -m "$DEST"); args[$i+1]="$DEST"
     DIR=$(dirname "$DEST")
     mkdir -p "$DIR"
     EXTRA=(-v "$DIR:$DIR")

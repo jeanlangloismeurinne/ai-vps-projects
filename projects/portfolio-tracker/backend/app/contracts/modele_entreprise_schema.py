@@ -50,7 +50,7 @@ __all__ = [
     # architecture
     "VariablePropre", "RattachementPublie", "RattachementParent", "RattachementAgrege", "Rattachement",
     "Jalon", "BlocPropose", "Bloc", "PassageAgrege", "AuteurQuestion", "AuteurDemande", "AuteurCellule",
-    "CelluleAttendue", "AxeUsage", "ManqueDuDossier", "Architecture",
+    "CelluleAttendue", "AxeUsage", "ManqueDuDossier", "InventaireProgramme", "Architecture",
     # cellule écrite
     "AuteurQuestionEcrite", "AuteurDemandeEcrite", "AuteurCelluleEcrite", "Cellule",
     # fourchette, scénario, déplacement
@@ -68,9 +68,18 @@ __all__ = [
 #   ④ `ReferentielModele.unites` (table des dimensions physiques, `dimensions.py`, [S11]).
 #   ⑤ `Bloc.origine` (interne/acquisition/licence/partenariat), `Bloc.jalon` (requis SSI
 #     `statut == "en_developpement"`) — [S12] (ici, invariant d'un seul objet, #37).
+# 1.3.0 — lot M3 ter (roadmap V3 `15-lot-M3ter-architecte.md`, principe fondateur n° 4) : UNE LIGNE
+# PAR PROGRAMME que l'émetteur NOMME individuellement ET dont la réussite est incertaine.
+#   `BlocPropose.programmes` (noms recopiés du dossier, REQUIS/interdit selon `statut`) et
+#   `.plateforme`/`.nombre_de_programmes_non_nommes` (un bloc plateforme regroupe des programmes
+#   NON nommés) — [S13] (un bloc non plateforme couvre UN SEUL programme) est un invariant d'UN
+#   SEUL objet (#37, même précédent que [S12] en 1.2.0) : posé ICI, pas dans `structure.py`.
+#   `InventaireProgramme`/`Architecture.inventaire_des_programmes` : pour CHAQUE programme nommé
+#   par `me_7`, ce que l'architecte en fait (`bloc`/`rattache`/`extension`/`hors_modele`) — vérifié
+#   par [S14]/[S15] (`structure.py`, qui connaissent la matière, #37).
 # 0 ligne en base à cette date (migration 061 appliquée, aucune architecture encore proposée) :
 # aucune reprise à écrire.
-ARCHITECTURE_SCHEMA_VERSION = "architecture-1.2.0"
+ARCHITECTURE_SCHEMA_VERSION = "architecture-1.3.0"
 
 def _sans_double_tiret_bas(v: str) -> str:
     # Un id ne contient JAMAIS `__` (double tiret bas) : c'est le séparateur réservé des formules
@@ -364,6 +373,45 @@ class BlocPropose(Strict):
     # Les pièces du dossier qui le fondent (ids de `knowledge_entries`, §3.3) — [S6] vérifie que
     # chacune est dans `Matiere.pieces_citables`.
     pieces: list[int] = Field(default_factory=list)
+    # 1.3.0 (lot M3 ter, §4) — les noms des programmes COUVERTS par ce bloc, recopiés TELS QUE
+    # `me_7` les écrit ([S14] vérifie qu'ils y figurent littéralement). REQUIS si `en_developpement`
+    # et non `plateforme` (et alors un SEUL nom, [S13]) ; interdit sinon.
+    programmes: list[Annotated[str, Field(min_length=1)]] = Field(default_factory=list)
+    # Un bloc plateforme regroupe des programmes NON nommés individuellement par l'émetteur
+    # (recherche amont) — `programmes` reste vide, `nombre_de_programmes_non_nommes` les compte.
+    plateforme: bool = False
+    nombre_de_programmes_non_nommes: Optional[Annotated[int, Field(ge=1)]] = None
+
+    @model_validator(mode="after")
+    def _programmes_et_plateforme(self) -> "BlocPropose":
+        # [S13] (invariant d'UN SEUL objet, #37 — même précédent que [S12]) : un bloc non
+        # plateforme couvre UN SEUL programme — « une ligne par programme nommé individuellement ».
+        est_dev = self.statut == "en_developpement"
+        if self.plateforme and not est_dev:
+            raise ValueError(f"`{self.id}` : `plateforme` ne concerne qu'un bloc `en_developpement`")
+        if self.plateforme:
+            if self.programmes:
+                raise ValueError(
+                    f"`{self.id}` : un bloc `plateforme` ne nomme aucun programme (`programmes` "
+                    "vide) — les programmes non nommés sont comptés par "
+                    "`nombre_de_programmes_non_nommes`")
+            if self.nombre_de_programmes_non_nommes is None:
+                raise ValueError(
+                    f"`{self.id}` : un bloc `plateforme` exige `nombre_de_programmes_non_nommes` ≥ 1")
+        else:
+            if self.nombre_de_programmes_non_nommes is not None:
+                raise ValueError(
+                    f"`{self.id}` : `nombre_de_programmes_non_nommes` est réservé à un bloc `plateforme`")
+            if est_dev:
+                if len(self.programmes) != 1:
+                    raise ValueError(
+                        f"[S13] `{self.id}` : bloc `en_developpement` non `plateforme` — UN SEUL "
+                        f"programme par bloc (reçu {len(self.programmes)} : {self.programmes})")
+            elif self.programmes:
+                raise ValueError(
+                    f"`{self.id}` : `programmes` est réservé aux blocs `en_developpement` (reçu "
+                    f"statut `{self.statut}`)")
+        return self
 
     @model_validator(mode="after")
     def _jalon_ssi_en_developpement(self) -> "BlocPropose":
@@ -457,6 +505,31 @@ class AxeUsage(Strict):
     usage: Annotated[str, Field(min_length=20)]
 
 
+class InventaireProgramme(Strict):
+    """1.3.0 (lot M3 ter, §4) — pour CHAQUE programme que nomme la réponse de `me_7`, ce que
+    l'architecte en fait : `bloc` (sa ligne propre), `rattache` (génération suivante d'un produit
+    vendu : le bloc d'activité qui le porte), `extension` (activité annoncée), `hors_modele`
+    (abandonné, immatériel…). [S14] (`structure.py`) vérifie que `programme` figure littéralement
+    dans le verbatim de `me_7`, et que `bloc` désigne un bloc existant du statut attendu par
+    `traitement` ; [S15] compare le NOMBRE d'entrées au chiffre clé `nombre_de_programmes`."""
+    programme: Annotated[str, Field(min_length=1)]
+    traitement: Literal["bloc", "rattache", "extension", "hors_modele"]
+    # Requis SSI `traitement != "hors_modele"` — un programme hors modèle n'a, par construction,
+    # aucun bloc qui le porte.
+    bloc: Optional[Identifiant] = None
+    motif: Annotated[str, Field(min_length=20)]
+
+    @model_validator(mode="after")
+    def _bloc_ssi_pas_hors_modele(self) -> "InventaireProgramme":
+        a_bloc = self.bloc is not None
+        attendu = self.traitement != "hors_modele"
+        if a_bloc != attendu:
+            raise ValueError(
+                f"`{self.programme}` (traitement `{self.traitement}`) : `bloc` est requis SSI le "
+                "traitement n'est pas `hors_modele`")
+        return self
+
+
 class ManqueDuDossier(Strict):
     """1.2.0 (cause ③, §4.4) — ce que le dossier ne permet PAS de découper (programmes non nommés,
     dépense non affectée…), écrit plutôt que regroupé en silence : un signal pour le comité."""
@@ -466,8 +539,8 @@ class ManqueDuDossier(Strict):
 
 
 class Architecture(Strict):
-    """Ce que l'architecte propose (M3/M3 bis) ; M1 n'en fixe que la FORME."""
-    schema_version: Literal["architecture-1.2.0"] = ARCHITECTURE_SCHEMA_VERSION
+    """Ce que l'architecte propose (M3/M3 bis/M3 ter) ; M1 n'en fixe que la FORME."""
+    schema_version: Literal["architecture-1.3.0"] = ARCHITECTURE_SCHEMA_VERSION
     ticker_id: Annotated[str, Field(min_length=1)]
     version: Annotated[int, Field(ge=1)]
     archetype: Annotated[str, Field(min_length=1)]
@@ -481,6 +554,8 @@ class Architecture(Strict):
     autres_axes: list[AxeUsage] = Field(default_factory=list)
     # 1.2.0 (cause ③, §4.4) — ce que le dossier ne permet pas de découper.
     manques_du_dossier: list[ManqueDuDossier] = Field(default_factory=list)
+    # 1.3.0 (lot M3 ter, §4) — pour CHAQUE programme nommé par `me_7`, ce que l'architecte en fait.
+    inventaire_des_programmes: list[InventaireProgramme] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "Architecture":

@@ -17,6 +17,15 @@
 #
 # [S12] (maturité ≠ origine, cause ⑤) n'a PAS de mutation ici : c'est un invariant d'UN SEUL objet
 # (#37), posé dans le contrat (`BlocPropose`) et gardé par `negatif_modele_entreprise.sh`.
+#
+# Lot M3 ter (`15-lot-M3ter-architecte.md`) : [S13] (un bloc non plateforme couvre UN SEUL
+# programme) est, comme [S12], un invariant d'UN SEUL objet posé dans le CONTRAT
+# (`app/contracts/modele_entreprise_schema.py`) — mais son assert de test ne vit que dans
+# `check_architecte.py` (§10), jamais dans `check_modele_entreprise.py` : sa mutation vit donc ICI
+# (« une garde déléguée se mute chez son détenteur » appliqué à l'ASSERT, pas seulement au code).
+# [S14]/[S15] (structure.py) et le refus NOMMÉ à l'assemblage (§3, architecte.py), le rappel de la
+# liste des pièces citables dans [S6] (structure.py) et les périodes attendues de [P4]
+# (referentiel.py) suivent le même geste.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
@@ -26,6 +35,9 @@ PE="app/modele_entreprise/periodes.py"
 A="app/modele_entreprise/architecte.py"
 F="app/modele_entreprise/faits_publies.py"
 D="app/modele_entreprise/dimensions.py"
+C="app/contracts/modele_entreprise_schema.py"
+R="app/modele_entreprise/referentiel.py"
+T="tools/architecte.py"
 
 CHECK="checks/check_architecte.py"
 NET=none
@@ -81,6 +93,24 @@ mutations=(
 
   # ── Réplicabilité (§9 du check — grep des `app/modele_entreprise/*.py` livrés) ─────────────────
   "$A¦__all__ = [¦_TICKER_DE_TEST = \"NVDA\"\n__all__ = [¦réplicabilité"
+
+  # ── Lot M3 ter (§10 du check) — [S13]-[S15], §3 (jamais de plantage), [S6]/[P4] enrichis ───────
+  "$C¦                if len(self.programmes) != 1:¦                if False:¦deux programmes sur un bloc non plateforme devait être refusé"
+  "$S¦            absents = sorted({n for n in noms_a_verifier if _forme_comparable(n) not in verbatim})¦            absents = sorted({n for n in noms_a_verifier if False})¦programme absent du verbatim de \`me_7\` refusé"
+  "$S¦    if n < int(attendu):¦    if False:¦inventaire (6) < chiffre clé (8) de \`me_7\` refusé"
+  "$A¦        except ValidationError as e:¦        except ZeroDivisionError as e:¦PLANTAGE au lieu d'un refus nommé"
+  "$S¦                    f\"{sorted(matiere.pieces_citables)}\")¦                    \"\")¦rappelle la liste exacte des pièces citables"
+  "$R¦            attendu = (f\" ; périodes attendues : {list(periodes_projetees)}\" if periodes_projetees else \"\")¦            attendu = \"\"¦message de renvoi NOMME les périodes attendues"
+  # Ajouts du 2026-10-23 (relecture Opus) — branches de [S14] sans mutation, refus [CONTRAT].
+  "$S¦        if attendu is not None and bloc.statut != attendu:¦        if False:¦\`rattache\` vers un bloc qui n'est pas \`metier_actuel\` refusé"
+  "$S¦        if b.statut == \"en_developpement\" and not b.plateforme and b.id not in couverts:¦        if False:¦bloc \`en_developpement\` absent de l'inventaire refusé"
+  "$S¦                          f\"{_REGLE_DU_TRAITEMENT[item.traitement]}\")¦                          \"\")¦dit la RÈGLE"
+  "$S¦    return \" \".join(texte.split()).casefold()¦    return texte¦casse et espaces différents : admis"
+  "$S¦                              f\"le verbatim de \`me_7\` — {_CONSIGNE_NOM_LITTERAL}\")¦                              \"le verbatim\")¦passage continu"
+  "$T¦membres={b.rattachement.membres})¦membres={b.rattachement.membre})¦rendu de l'outil — exemple du prompt"
+  "$S¦        if item.traitement == \"bloc\" and (bloc.plateforme or¦        if False and (bloc.plateforme or¦pas SA ligne propre, refusé"
+  "$S¦    non_nommes = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)¦    non_nommes = 0¦la plateforme couvre l'écart"
+  "$A¦    except AgentOutputInvalid as e:¦    except ZeroDivisionError as e:¦sortie hors contrat : PLANTAGE"
 )
 
 source "$(dirname "$0")/_negatif.sh"

@@ -1,5 +1,5 @@
 {
-  "schema_version": "architecture-1.2.0",
+  "schema_version": "architecture-1.3.0",
   "ticker_id": "RVMD",
   "version": 1,
   "archetype": "rentable",
@@ -61,7 +61,10 @@
         "franchi_le": "2026-01-01",
         "prochain": "jalon suivant de test (fixture M3 bis)",
         "attendu_vers": "2027-01-01"
-      }
+      },
+      "programmes": [
+        "Programme en développement X"
+      ]
     },
     {
       "id": "commun",

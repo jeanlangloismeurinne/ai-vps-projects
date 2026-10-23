@@ -111,6 +111,80 @@ Traite les CAUSES des erreurs des 4 architectures à blanc du 2026-10-22, pas le
   cohérence entre deux), et la numérotation [S1]-[S11] de `structure.py` ne saute donc pas de S11 à
   S13.
 
+## Ce qui existe (M3 ter — roadmap V3 `15-lot-M3ter-architecte.md`, principe fondateur n° 4)
+
+Traite les défauts de l'ARCHITECTE SEUL relevés par les quatre passages à blanc du 2026-10-22
+(NVDA 1/2, RVMD 1/2) : la citation de pièces invisible, le plantage au lieu d'un refus nommé, et
+« une ligne par programme » absente du contrat.
+
+- Contrat `architecture-1.3.0` : `BlocPropose.programmes` (noms recopiés du dossier, REQUIS SSI
+  `statut == "en_developpement"` et non `plateforme`, interdit sinon) et `.plateforme`/
+  `.nombre_de_programmes_non_nommes` (un bloc plateforme regroupe des programmes NON nommés
+  individuellement) — **[S13]** (un bloc non plateforme couvre UN SEUL programme) est un invariant
+  d'UN SEUL objet (#37, même précédent que [S12]), posé ICI, dans
+  `_programmes_et_plateforme` (`app/contracts/modele_entreprise_schema.py`), jamais dans
+  `structure.py` — la numérotation ne saute donc pas de S11/S12 à S14.
+  `InventaireProgramme`/`Architecture.inventaire_des_programmes` : pour CHAQUE programme nommé par
+  `me_7`, ce que l'architecte en fait (`bloc`/`rattache`/`extension`/`hors_modele`).
+- `structure.py` — **[S14]** (chaque nom de `programmes`/`inventaire_des_programmes` figure
+  LITTÉRALEMENT dans le verbatim de `me_7` — comparaison sur le TEXTE du dossier, jamais une liste
+  écrite dans le code ; chaque entrée désigne un bloc existant du bon statut ; chaque bloc
+  `en_developpement` non `plateforme` apparaît dans l'inventaire) et **[S15]** (le nombre
+  d'entrées de l'inventaire ≥ le chiffre clé `nombre_de_programmes` de `me_7` quand il est établi,
+  sinon SIGNAL « inventaire non chiffré », jamais un refus). [S6] rappelle désormais la liste
+  triée de `pieces_citables` dans son motif de refus, pour que le renvoi la revoie sans
+  redemander le dossier.
+- `matiere.py` — `Matiere.me_7_verbatim`/`.me_7_nombre_de_programmes` (lus UNE fois, à la lecture
+  de `me_7`, jamais recalculés) ; `Matiere.pieces_citables_texte` (la section finale « Pièces que
+  tu peux citer », rendue par `rendre_matiere`) ; sous chaque réponse, la ligne `pièces : #N
+  (titre tronqué à 120 caractères, date_du_fait/source_date)` (`_rendre_pieces`) ; un numéro de
+  RÉPONSE s'écrit désormais `réponse R-1367` dans la matière (jamais `#`, pour qu'aucun numéro de
+  réponse ne ressemble à un numéro de pièce) ; une réponse dont l'actualité n'est pas `courante`
+  porte, AVANT son verbatim, `⚠ écrite avant un fait plus récent : <motif_actualite> ; le fait
+  postérieur dit : <effet>` — LU dans `fondation.actualite`/`.motif_actualite` et
+  `reponse.faits_posterieurs[].effet` (déjà calculés ailleurs), jamais un second calcul.
+  `_fiches_texte` dit, au pied de CHAQUE fiche, la règle de période qu'elle attend (`exercice` :
+  une valeur reprise d'un encadré s'applique à CHAQUE exercice projeté ; `sans_periode` : une
+  seule cellule).
+- `referentiel.valider_pont_architecture` reçoit maintenant `periodes_projetees` (optionnel) : le
+  message de renvoi **[P4]** NOMME les périodes attendues quand une cellule porte `sans_periode`
+  à tort — cause mesurée sur NVDA 1 (`capital_par_point_de_croissance` en `sans_periode`, alors
+  que la fiche se lit par exercice).
+- `architecte.py` — **jamais de plantage (§3)** : toute erreur de CONTRAT levée À L'ASSEMBLAGE
+  (`_poser_entete` → `faits_publies.poser_maille`, ou la validation de `Architecture` elle-même —
+  ex. un bloc estimé sans pièce, cause du PLANTAGE de RVMD 1 le 2026-10-22) est désormais
+  rattrapée (`_construire_et_juger`, `except ValidationError`) et devient un refus NOMMÉ
+  (`[ASSEMBLAGE] ...`) qui suit le MÊME chemin de renvoi (une fois) que [P]/[S], puis
+  `ArchitectureRefusee` — qui porte maintenant `.sorties` : `(sortie_brute, motif)` de CHAQUE
+  tentative refusée. Seule une panne d'infrastructure (réseau, base) reste une exception non
+  rattrapée. `tools/architecte.py --sortie FICHIER` écrit aussi `FICHIER.refus1.json`/
+  `.refus2.json` (sortie brute + motif) sur un refus après renvoi — avant ce lot, `--sortie`
+  n'écrivait qu'en cas de succès, et aucun refus ne se relisait (§0 de la spec).
+- Prompt et exemple (`_ARCHITECTE_SYSTEM_PROMPT`/`_EXEMPLE_ARCHITECTURE`) réécrits en conséquence :
+  une ligne par programme nommé individuellement (+ un bloc `plateforme` pour la recherche amont
+  non nommée), `inventaire_des_programmes`, et la consigne de ne citer QUE les numéros de la
+  section « Pièces que tu peux citer » (jamais un numéro de réponse).
+- **Relecture et mesure du 2026-10-23** (`roadmap/V3/mesures/2026-10-23/b4d-apres*/`), corrections
+  faites après les passages à blanc :
+  - une sortie que le CONTRAT refuse au décodage (ex. [S13]) même après les réparations du runner
+    (`AgentOutputInvalid`) devient un refus NOMMÉ `[CONTRAT] …`, sortie brute gardée
+    (`_refus_hors_contrat`) — elle faisait encore tomber l'outil ;
+  - [S14] compare les noms sans casse, espaces ni apostrophes typographiques (`_forme_comparable`,
+    rien d'autre) ; ses motifs disent la RÈGLE à appliquer (`_REGLE_DU_TRAITEMENT`,
+    `_CONSIGNE_NOM_LITTERAL`) — « attendu `metier_actuel` » seul avait fait rattacher des programmes
+    nommés à une plateforme, deux fois de suite ;
+  - [S14] : une entrée `bloc` désigne la ligne PROPRE du programme (bloc non plateforme dont
+    `programmes` porte ce nom) — six programmes nommés pointés vers UNE plateforme contournaient [S13] ;
+  - [S15] compte l'inventaire PLUS les non-nommés des plateformes : le dossier peut compter plus de
+    programmes qu'il n'en nomme (RVMD : 8 comptés, 7 nommés), refuser obligeait à inventer un nom ;
+  - `tools/architecte.py` : le rendu lisait `membre` (renommé `membres` en 1.2.0) et plantait à la
+    PREMIÈRE architecture acceptée ; il affiche maintenant programmes et inventaire, et un check
+    l'exécute. `architecte.sh` rend `--sortie` canonique (un chemin avec `..` ne se montait pas).
+- **Écart assumé à la spec** : le « signal deux programmes au même prochain jalon à la même
+  échéance » nommé par la spec §4 n'est délibérément PAS codé dans ce lot — hors périmètre de B4d
+  (aucun code de jalon-à-jalon n'existe encore dans `structure.py`), à construire si le besoin se
+  confirme sur le banc séquentiel (B4e).
+
 ## Ce qui n'existe PAS encore (lots suivants)
 
 - **M2 bis** : le gabarit bancaire du socle — tant qu'il n'existe pas, `familles_de_comptes.bancaire`
