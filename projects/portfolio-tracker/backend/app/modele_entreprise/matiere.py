@@ -69,6 +69,13 @@ class Matiere:
     # #143 / diagnostic du 2026-10-23 — le second chiffre clé de `me_7` : ceux que l'émetteur compte
     # sans les nommer. Avec lui, [S15] exige un décompte EXACT ; sans lui, l'écart n'est qu'un signal.
     me_7_nombre_non_nommes: Optional[float] = None
+    # Lot B4f (roadmap V3 `16-lot-B4f-explorateur.md` §8, addendum du 2026-10-23) — le texte RENDU
+    # des pièces OUVERTES par l'explorateur pendant le passage (`numéro → texte`), en modes
+    # `deux_temps`/`explorateur` seulement (vide en mode `aucun`, ordre 0). [S14]/[S15] de
+    # `structure.py` y cherchent un nom de programme ABSENT de `me_7_verbatim` : « absent de me_7,
+    # trouvé dans #… ». Même détenteur que `pieces_citables` (§3 de la spec) : `architecte.py`
+    # pose ce champ par `dataclasses.replace`, jamais un second calcul.
+    pieces_ouvertes_texte: dict[int, str] = field(default_factory=dict)
 
 
 def _ligne_lisible(ligne_id: str, gabarit) -> str:

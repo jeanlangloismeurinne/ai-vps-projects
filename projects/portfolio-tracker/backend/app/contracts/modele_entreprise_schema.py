@@ -222,6 +222,18 @@ class ReferentielModele(Strict):
     # leur échelle. REQUISE, sans défaut : un référentiel qui ne la porte pas laisserait
     # `dimensions.py` deviner l'unité d'une fiche.
     unites: Annotated[dict[str, UniteDimension], Field(min_length=1)]
+    # 1.3.0 (lot B4f, roadmap V3 `16-lot-B4f-explorateur.md` §5) — l'INTERRUPTEUR à trois positions
+    # de l'accès au dossier par l'architecte (principe fondateur n° 3) : REQUIS, sans défaut.
+    # `aucun` (ordre 0, défaut à la livraison) : matière seule, sortie identique à avant ce lot.
+    # `deux_temps` (garde-fou F) : un premier appel SANS outil rend `besoins_d_information`, le CODE
+    # exécute `rechercher` pour chacun (sans modèle) et enrichit la matière, un second appel conclut.
+    # `explorateur` : la boucle d'outils de `app/knowledge/explorateur.py`, puis la clôture en JSON
+    # strict. Lu à la LECTURE (`proposer_architecture_du_titre`), jamais recopié (#53).
+    acces_au_dossier: Literal["aucun", "deux_temps", "explorateur"]
+    # 1.3.0 — budget d'ouvertures de la boucle d'outils (mode `explorateur` ; aussi le plafond du
+    # nombre de `besoins_d_information` traités en mode `deux_temps`) : décision du fonds au
+    # référentiel (spec §2), REQUISE, sans défaut.
+    max_iterations_explorateur: Annotated[int, Field(ge=1, le=20)]
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "ReferentielModele":

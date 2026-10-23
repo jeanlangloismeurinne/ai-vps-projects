@@ -1,0 +1,78 @@
+query_knowledge: 1 entrée(s) non embeddée(s) rattrapée(s) en texte — état transitoire anormal, lancer backfill_embeddings
+Porte : ouverte
+  me_2 (modele_economique) — OUVRE — réponse #1367 qui tient
+  me_3 (modele_economique) — OUVRE — réponse #1368 qui tient
+  me_4 (modele_economique) — OUVRE — réponse #1369 qui tient
+  me_5 (modele_economique) — OUVRE — réponse #1370 qui tient
+  me_7 (modele_economique) — OUVRE — réponse #2625 qui tient
+  mo_4 (defendabilite) — OUVRE — non fondable : la source a été lue, la donnée n'y est pas publiée
+  mo_6 (defendabilite) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  qf_1 (qualite_financiere) — OUVRE — réponse #1209 qui tient
+  qf_3 (qualite_financiere) — OUVRE — réponse #1211 qui tient
+  qf_7 (qualite_financiere) — OUVRE — réponse #1214 qui tient
+  se_2 (secteur_concurrence) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  se_3 (secteur_concurrence) — OUVRE — réponse #1447 qui tient
+  se_4 (secteur_concurrence) — OUVRE — réponse #1448 qui tient
+
+Architecture NVDA v1 (archétype rentable, famille industrielle, référentiel 1.2.0)
+  · data_center [activite/metier_actuel/publie] — publié (axe=activites, membres=['nvda:DataCenterMember'])
+    motif : Segment publié du 10-Q du 2026-08-26, premier niveau de l'axe `activites` (découpage le plus récent).
+    variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'volume', 'prix_moyen', 'part_recurrente', 'marge_contributive']
+  · edge_computing [activite/metier_actuel/publie] — publié (axe=activites, membres=['nvda:EdgeComputingMember'])
+    motif : Segment publié du 10-Q du 2026-08-26, premier niveau de l'axe `activites` (découpage le plus récent, addition vérifiée des anciens membres Automotive, Gaming, OEM and Other, Professional Visualization).
+    variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'volume', 'prix_moyen', 'part_recurrente', 'marge_contributive']
+  · vera_cpu [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Nouveau marché (CPU data center IA agentique, TAM 200 Md$) distinct du marché GPU/accélérateurs existant — extension d'indication, donc sa propre ligne avec jalon.
+    pièces : [1004, 1012]
+    variables : ['taille_du_marche', 'probabilite_de_succes', 'annee_de_lancement', 'ventes_au_pic', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc']
+    programme : ['Vera CPU']
+  · hugging_face [activite/extension_annoncee/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Acquisition annoncée (accord définitif du 2026-09-02, clôture attendue S1 2027) — extension vers l'écosystème open-source, non conclue, n'entre dans aucune formule.
+    pièces : [1010, 847]
+    variables : ['taille_du_marche', 'annee_de_lancement']
+  · ia_souveraine [activite/extension_annoncee/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Déploiements nationaux annoncés (Noetra 140 MW au Japon, NAVER/Brookfield 200 MW→1 GW en Corée) — activité annoncée, pas encore vendue à grande échelle.
+    pièces : [1012]
+    variables : ['taille_du_marche', 'annee_de_lancement']
+  · commun [commun/metier_actuel/estime] — estimé, agrégé → `recherche_developpement`
+    motif : R&D totale non ventilée par programme (18 497 M$ en FY2026) et charges de structure non rattachées à un bloc d'activité pris isolément.
+    pièces : [867, 1650]
+    variables : ['couts_communs', 'taux_d_impot', 'capital_par_point_de_croissance']
+Inventaire des programmes :
+  · Vera Rubin — rattache → `data_center` — Génération suivante d'un produit déjà vendu sur le marché data center (mêmes clients, mêmes concurrents) — s'estime avec les hypothèses de marché de l'activité Data Center.
+  · Vera CPU — bloc → `vera_cpu` — Nouveau marché (CPU data center IA agentique, TAM 200 Md$) — extension d'indication, donc sa propre ligne avec jalon.
+  · Hugging Face — extension → `hugging_face` — Acquisition annoncée non conclue (accord définitif du 2026-09-02, clôture S1 2027) — devient une activité annoncée.
+  · IA souveraine — extension → `ia_souveraine` — Déploiements nationaux annoncés (Japon, Corée) — activité annoncée, pas encore vendue à grande échelle.
+Passage à l'agrégé :
+  · chiffre_affaires = data_center__chiffre_affaires_du_bloc + edge_computing__chiffre_affaires_du_bloc
+  · recherche_developpement = commun__couts_communs
+Cellules attendues :
+  · demande ciblée :
+      data_center.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      data_center.croissance_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      data_center.marge_contributive [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      edge_computing.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      edge_computing.croissance_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      edge_computing.marge_contributive [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      vera_cpu.probabilite_de_succes [sans_periode]
+      vera_cpu.annee_de_lancement [sans_periode]
+      vera_cpu.ventes_au_pic [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      vera_cpu.cout_restant_de_developpement [sans_periode]
+      vera_cpu.depense_de_developpement_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      hugging_face.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      hugging_face.annee_de_lancement [sans_periode]
+      ia_souveraine.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      ia_souveraine.annee_de_lancement [sans_periode]
+      commun.couts_communs [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      commun.taux_d_impot [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question me_2 :
+      data_center.chiffre_affaires_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      edge_computing.chiffre_affaires_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question me_5 :
+      vera_cpu.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question qf_3 :
+      commun.capital_par_point_de_croissance [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+
+Coût : 0.4292 $ (7 tentative(s))
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-23/b4f-explorateur/nvda.json
+BILAN architecte NVDA : porte ouverte — proposée v1 — 6 blocs (2 publiés / 4 estimés), 21 cellules attendues, 0 signaux, 0.4292 $

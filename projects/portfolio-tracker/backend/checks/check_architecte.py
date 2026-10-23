@@ -1403,7 +1403,7 @@ MATIERE_RVMD_REELLE = matiere_fictive(ticker_id="RVMD", me_7_verbatim=_me7_reel[
 try:
     _acc = Architecture.model_validate(
         json.loads((FIX_ARCH_23 / "rvmd_acceptee.json").read_text(encoding="utf-8"))["architecture"])
-    _m14, (_m15, _) = structure_mod._s14(_acc, MATIERE_RVMD_REELLE), structure_mod._s15(_acc, MATIERE_RVMD_REELLE)
+    (_m14, _sig14), (_m15, _) = structure_mod._s14(_acc, MATIERE_RVMD_REELLE), structure_mod._s15(_acc, MATIERE_RVMD_REELLE)
     b.check(_m14 is None and _m15 is None,
             f"cas réel — RVMD acceptée le 2026-10-23 (une ligne par molécule, plateforme du 8ᵉ) : "
             f"[S13]-[S15] tiennent : {_m14} / {_m15}")
@@ -1415,7 +1415,8 @@ except Exception as e:  # noqa: BLE001
     b.check(False, f"cas réel — RVMD acceptée : ne se relit plus sous le contrat ({type(e).__name__}) : {e}")
 _ft = ArchitecteSortie.model_validate(
     json.loads((FIX_ARCH_23 / "rvmd_plateforme_fourre_tout.json").read_text(encoding="utf-8"))["sortie"])
-_m14 = structure_mod._s14(_ft, MATIERE_RVMD_REELLE) or ""
+_m14, _sig14_ft = structure_mod._s14(_ft, MATIERE_RVMD_REELLE)
+_m14 = _m14 or ""
 b.check("pas SA ligne propre" in _m14 and "zoldonrasib" in _m14,
         f"cas réel — RVMD, six molécules nommées dans UNE plateforme : refusé par [S14] : {_m14[:300]}")
 

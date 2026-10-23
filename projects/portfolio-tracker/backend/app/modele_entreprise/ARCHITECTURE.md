@@ -185,6 +185,42 @@ Traite les défauts de l'ARCHITECTE SEUL relevés par les quatre passages à bla
   (aucun code de jalon-à-jalon n'existe encore dans `structure.py`), à construire si le besoin se
   confirme sur le banc séquentiel (B4e).
 
+## Ce qui existe (B4f — roadmap V3 `16-lot-B4f-explorateur.md`, étapes 0-3)
+
+Branchement de l'explorateur du dossier (`app/knowledge/explorateur.py`) sur l'architecte, derrière
+l'interrupteur à trois positions `acces_au_dossier` (référentiel 1.3.0, défaut `aucun`).
+
+- `app/contracts/modele_entreprise_schema.py` → `ReferentielModele.acces_au_dossier`
+  (`aucun`/`deux_temps`/`explorateur`, REQUIS) et `.max_iterations_explorateur` (budget d'ouvertures,
+  REQUIS) — mêmes statuts que `signature_de_l_architecture`/`porte_admet_reponses_refusees` : lus à
+  la LECTURE, ne montent jamais `version`.
+- `architecte.py` — `ArchitecteSortie` gagne `demandes_de_recherche` (B′, spec §4 : ce que le
+  dossier ne contient pas, rendu dans les TROIS modes) et `besoins_d_information` (agi seulement en
+  mode `deux_temps`). Trois chemins dans `proposer_architecture_du_titre`, dispatchés sur
+  `ref.acces_au_dossier`, tous les trois rejoignant le MÊME jugement/renvoi (`_construire_et_juger`) :
+  `aucun` (chemin historique, inchangé), `_passage_deux_temps` (un premier appel sans outil, le CODE
+  exécute `rechercher` pour chaque besoin, un second appel conclut) et `_passage_explorateur` (boucle
+  d'outils `run_tool_json_agent` sur les 4 outils de `explorateur.py`, puis clôture JSON strict). Les
+  deux derniers rendent `(run, matiere)` : `matiere` revient augmentée (`pieces_citables` ∪ pièces
+  ouvertes, `pieces_ouvertes_texte`) via `explorateur.pieces_citables_effectif` — aucun second
+  détenteur, [S6] continue de ne contrôler QUE `Matiere.pieces_citables`.
+- `matiere.py` → `Matiere.pieces_ouvertes_texte: dict[int, str]` (numéro → texte rendu), vide en
+  mode `aucun`.
+- `structure.py` — addendum du 2026-10-23 (§8 de la spec) : [S14] admet un nom de programme trouvé
+  dans une pièce OUVERTE même absent du verbatim de `me_7` (signalé « absent de `me_7`, trouvé dans
+  #… », jamais un refus) ; [S15] retire ces entrées de la comparaison EXACTE contre les chiffres clés
+  de `me_7` (elles ne la faussent pas) et les signale séparément. Détenteur de la recherche :
+  `_trouve_dans_pieces_ouvertes` (partagé par [S14]/[S15], pas de second contrôle).
+- **Écart assumé au périmètre de ce lot (étapes 0-3 seulement)** : le renvoi après un refus
+  structurel ([P]/[S]) rejoue le message ORIGINAL du dossier (`messages`), pas la matière enrichie
+  par l'exploration — un renvoi en mode `deux_temps`/`explorateur` perd donc, pour ce second appel
+  seul, les résultats de `rechercher`/les pièces déjà ouvertes au premier appel. À resserrer si le
+  banc B4e (étape 4, Opus) montre que ça coûte des renvois inutiles. L'écriture des
+  `demandes_de_recherche` vers le mécanisme EXISTANT (`FrameworkMandate`/`persist_mandate`) N'EST PAS
+  branchée : seul le contrat/rendu à blanc est livré (`--ecrire` hors périmètre de l'étape 0-3).
+  `charger_dossier_explorable` (moitié IO de `explorateur.py`) n'a aucun check avec base dans ce lot
+  — `check_explorateur.py` est fictif, sans base, comme `check_architecte.py`.
+
 ## Ce qui n'existe PAS encore (lots suivants)
 
 - **M2 bis** : le gabarit bancaire du socle — tant qu'il n'existe pas, `familles_de_comptes.bancaire`

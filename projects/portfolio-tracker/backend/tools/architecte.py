@@ -107,6 +107,12 @@ def _bilan(ticker: str, porte, statut: str, *, n_blocs=0, n_publies=0, n_estimes
            f"attendues, {n_signaux} signaux, {cout:.4f} $")
 
 
+def _rendre_exploration(j) -> str:
+    appels = ", ".join(f"{k} ×{v}" for k, v in sorted(j.appels.items())) or "aucun"
+    return (f"\nExploration : appels {appels} ; pièces ouvertes ou rendues "
+            f"({len(j.pieces_ouvertes)}) : {sorted(j.pieces_ouvertes)}")
+
+
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("ticker")
@@ -114,6 +120,8 @@ async def main() -> int:
     ap.add_argument("--hors-porte", action="store_true")
     ap.add_argument("--ecrire", action="store_true")
     ap.add_argument("--sortie")
+    ap.add_argument("--acces-au-dossier", choices=["aucun", "deux_temps", "explorateur"],
+                    help="à blanc seulement : force le mode du référentiel (banc B4e)")
     args = ap.parse_args()
 
     if args.ecrire and args.hors_porte:
@@ -152,7 +160,8 @@ async def main() -> int:
 
         try:
             resultat = await proposer_architecture_du_titre(
-                args.ticker, ecrire=args.ecrire, hors_porte=args.hors_porte)
+                args.ticker, ecrire=args.ecrire, hors_porte=args.hors_porte,
+                acces_au_dossier=args.acces_au_dossier)
         except PorteFermee as e:
             print(f"\nporte fermée : {e}")
             print(_bilan(args.ticker, porte, "porte fermée"))
@@ -160,6 +169,8 @@ async def main() -> int:
         except ArchitectureRefusee as e:
             print(f"\narchitecture refusée après renvoi : {e.motifs}")
             print(f"coût cumulé : {e.cost_usd:.4f} $ ({e.attempts} tentative(s))")
+            if e.exploration is not None:
+                print(_rendre_exploration(e.exploration))
             if args.sortie:
                 for i, (brute, motif) in enumerate(e.sorties, start=1):
                     chemin = f"{args.sortie}.refus{i}.json"
@@ -175,8 +186,19 @@ async def main() -> int:
             print("\nSignaux :")
             for s in resultat.signaux:
                 print(f"  · {s}")
+        sortie = resultat.run.parsed if resultat.run else None
+        if resultat.exploration is not None:
+            print(_rendre_exploration(resultat.exploration))
+        if sortie is not None and sortie.besoins_d_information:
+            print("\nBesoins d'information :")
+            for b in sortie.besoins_d_information:
+                print(f"  · {b}")
+        if sortie is not None and sortie.demandes_de_recherche:
+            print("\nDemandes de recherche (ce que le dossier ne contient pas) :")
+            for d in sortie.demandes_de_recherche:
+                print(f"  · {d.sujet} — {d.pourquoi}" + (f" (blocs {d.blocs})" if d.blocs else ""))
         cout = resultat.run.cost_usd if resultat.run else 0.0
-        print(f"\nCoût : {cout:.4f} $ ({resultat.run.attempts if resultat.run else 0} tentative(s))")
+        print(f"\nCoût :{cout:.4f} $ ({resultat.run.attempts if resultat.run else 0} tentative(s))")
 
         if args.sortie:
             with open(args.sortie, "w", encoding="utf-8") as f:

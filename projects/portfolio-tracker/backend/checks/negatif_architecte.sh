@@ -97,7 +97,7 @@ mutations=(
 
   # ── Lot M3 ter (§10 du check) — [S13]-[S15], §3 (jamais de plantage), [S6]/[P4] enrichis ───────
   "$C¦                if len(self.programmes) != 1:¦                if False:¦deux programmes sur un bloc non plateforme devait être refusé"
-  "$S¦            absents = sorted({n for n in noms_a_verifier if _forme_comparable(n) not in verbatim})¦            absents = sorted({n for n in noms_a_verifier if False})¦programme absent du verbatim de \`me_7\` refusé"
+  "$S¦                absents.append(n)¦                pass¦programme absent du verbatim de \`me_7\` refusé"
   "$A¦        except ValidationError as e:¦        except ZeroDivisionError as e:¦PLANTAGE au lieu d'un refus nommé"
   "$S¦                    f\"{sorted(matiere.pieces_citables)}\")¦                    \"\")¦rappelle la liste exacte des pièces citables"
   "$R¦            attendu = (f\" ; périodes attendues : {list(periodes_projetees)}\" if periodes_projetees else \"\")¦            attendu = \"\"¦message de renvoi NOMME les périodes attendues"
@@ -106,14 +106,14 @@ mutations=(
   "$S¦        if b.statut == \"en_developpement\" and not b.plateforme and b.id not in couverts:¦        if False:¦bloc \`en_developpement\` absent de l'inventaire refusé"
   "$S¦                          f\"{_REGLE_DU_TRAITEMENT[item.traitement]}\")¦                          \"\")¦dit la RÈGLE"
   "$S¦    return \" \".join(texte.split()).casefold()¦    return texte¦casse et espaces différents : admis"
-  "$S¦                              f\"le verbatim de \`me_7\` — {_CONSIGNE_NOM_LITTERAL}\")¦                              \"le verbatim\")¦passage continu"
+  "$S¦                              f\"{_CONSIGNE_NOM_LITTERAL}\")¦                              \"\")¦passage continu"
   "$T¦membres={b.rattachement.membres})¦membres={b.rattachement.membre})¦rendu de l'outil — exemple du prompt"
   "$S¦        if item.traitement == \"bloc\" and (bloc.plateforme or¦        if False and (bloc.plateforme or¦pas SA ligne propre, refusé"
   # Diagnostic du 2026-10-23 (`banc-modeles/`) — [S15] sur les DEUX chiffres de `me_7`, modèle, #143.
-  "$S¦        if nommes != total - d:¦        if False:¦les deux écarts dits"
+  "$S¦        if nommes_dans_me7 != total - d:¦        if False:¦les deux écarts dits"
   "$S¦        if en_plateforme != d:¦        if False:¦aucune plateforme : refusé"
   "$S¦    if declares_non_nommes is not None:¦    if False:¦6 nommés + plateforme de 2 = 8 dont 2"
-  "$S¦    if nommes + en_plateforme != total:¦    if False:¦est SIGNALÉ au comité"
+  "$S¦    if nommes_dans_me7 + en_plateforme != total:¦    if False:¦est SIGNALÉ au comité"
   "$S¦    if en_plateforme:¦    if False:¦signalée, jamais muette"
   "$M¦             if c.id == \"nombre_de_programmes_non_nommes\"), None)¦             if c.id == \"autre\"), None)¦lit les DEUX chiffres clés"
   "$A¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Pro-0813\"¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Flash-0731\"¦tourne sur V4-Pro"

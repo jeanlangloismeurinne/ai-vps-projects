@@ -450,29 +450,56 @@ def _forme_comparable(texte: str) -> str:
     return " ".join(texte.split()).casefold()
 
 
-def _s14(arch: Architecture, matiere: Matiere) -> Optional[str]:
-    """Chaque nom de `programmes` et de `inventaire_des_programmes` figure LITTÉRALEMENT dans le
-    verbatim de `me_7` (comparaison sur le TEXTE du dossier, jamais une liste écrite dans le code) ;
-    chaque entrée `bloc`/`rattache`/`extension` désigne un bloc EXISTANT du BON statut ; chaque bloc
-    `en_developpement` non `plateforme` apparaît dans l'inventaire. Ce qui n'est PAS contrôlé (dit
-    au comité) : qu'un programme ait été OUBLIÉ alors que `me_7` le nomme sans le compter — hors de
-    portée sans lecture du texte par un modèle (banc B4e, explorateur B4f)."""
+def _trouve_dans_pieces_ouvertes(nom_comparable: str, pieces_ouvertes_texte: dict[int, str]) -> Optional[int]:
+    """Lot B4f, addendum du 2026-10-23 (§8) — la plus petite pièce OUVERTE dont le texte rendu
+    contient littéralement ce nom (même comparaison que le verbatim de `me_7`, `_forme_comparable`),
+    ou `None`. Détenteur unique de cette recherche — [S14] et [S15] l'appellent, aucun des deux ne la
+    recopie."""
+    for numero in sorted(pieces_ouvertes_texte):
+        if nom_comparable and nom_comparable in _forme_comparable(pieces_ouvertes_texte[numero]):
+            return numero
+    return None
+
+
+def _s14(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]]:
+    """Rend `(refus, signaux)`. Chaque nom de `programmes` et de `inventaire_des_programmes` figure
+    LITTÉRALEMENT dans le verbatim de `me_7` OU dans une PIÈCE OUVERTE pendant le passage (lot B4f,
+    addendum du 2026-10-23, §8 — sans quoi l'explorateur trouverait les programmes oubliés de `me_7`
+    et ce contrôle les refuserait quand même) ; chaque entrée `bloc`/`rattache`/`extension` désigne un
+    bloc EXISTANT du BON statut ; chaque bloc `en_developpement` non `plateforme` apparaît dans
+    l'inventaire. Ce qui n'est PAS contrôlé (dit au comité) : qu'un programme ait été OUBLIÉ alors que
+    ni `me_7` ni aucune pièce ouverte ne permet de le retrouver — hors de portée de ce lot."""
     par_bloc = {b.id: b for b in arch.blocs}
     motifs: list[str] = []
+    signaux: list[str] = []
 
     noms_a_verifier: list[str] = [nom for b in arch.blocs for nom in b.programmes]
     noms_a_verifier += [item.programme for item in arch.inventaire_des_programmes]
     if noms_a_verifier:
-        if matiere.me_7_verbatim is None:
+        if matiere.me_7_verbatim is None and not matiere.pieces_ouvertes_texte:
             motifs.append(
                 "[S14] un programme est nommé (`programmes` ou `inventaire_des_programmes`), mais "
-                "aucun verbatim de `me_7` n'est disponible pour vérifier qu'il y figure littéralement")
+                "aucun verbatim de `me_7` ni aucune pièce ouverte n'est disponible pour vérifier "
+                "qu'il y figure littéralement")
         else:
-            verbatim = _forme_comparable(matiere.me_7_verbatim)
-            absents = sorted({n for n in noms_a_verifier if _forme_comparable(n) not in verbatim})
+            verbatim = _forme_comparable(matiere.me_7_verbatim) if matiere.me_7_verbatim else ""
+            absents: list[str] = []
+            for n in sorted(set(noms_a_verifier)):
+                nc = _forme_comparable(n)
+                if nc and nc in verbatim:
+                    continue
+                piece = _trouve_dans_pieces_ouvertes(nc, matiere.pieces_ouvertes_texte)
+                if piece is not None:
+                    signaux.append(
+                        f"[S14] « {n} » absent de `me_7`, trouvé dans #{piece} — admis, "
+                        "signalé au comité (mesure de l'instabilité possible de l'analyste de `me_7`)")
+                    continue
+                absents.append(n)
             if absents:
-                motifs.append(f"[S14] les programmes {absents} ne figurent pas LITTÉRALEMENT dans "
-                              f"le verbatim de `me_7` — {_CONSIGNE_NOM_LITTERAL}")
+                motifs.append(f"[S14] les programmes {sorted(absents)} ne figurent pas LITTÉRALEMENT "
+                              f"dans le verbatim de `me_7` ni dans aucune pièce ouverte — "
+                              f"{_CONSIGNE_NOM_LITTERAL}")
+
 
     for item in arch.inventaire_des_programmes:
         if item.bloc is None:
@@ -505,7 +532,7 @@ def _s14(arch: Architecture, matiere: Matiere) -> Optional[str]:
             motifs.append(f"[S14] le bloc `{b.id}` (`en_developpement`, non `plateforme`) n'apparaît "
                           "dans aucune entrée de `inventaire_des_programmes`")
 
-    return " ; ".join(motifs) if motifs else None
+    return (" ; ".join(motifs) if motifs else None), signaux
 
 
 def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]]:
@@ -519,33 +546,49 @@ def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
     suivante omise, un « cinquième, non détaillé » à sa place) — et a refusé la bonne architecture."""
     attendu = matiere.me_7_nombre_de_programmes
     declares_non_nommes = matiere.me_7_nombre_non_nommes
+    verbatim = _forme_comparable(matiere.me_7_verbatim) if matiere.me_7_verbatim else ""
+    # Lot B4f, addendum du 2026-10-23 (§8) — une entrée dont le nom est ABSENT de `me_7` mais trouvé
+    # dans une pièce ouverte (admise par [S14]) s'ajoute au décompte SANS le fausser : elle est
+    # retirée de la comparaison exacte contre `me_7` (`nommes_dans_me7`), et SIGNALÉE séparément —
+    # c'est aussi le moyen de voir l'instabilité possible de l'analyste de `me_7`.
+    items_hors_me7 = [
+        item for item in arch.inventaire_des_programmes
+        if not (_forme_comparable(item.programme) and _forme_comparable(item.programme) in verbatim)
+    ]
     nommes = len(arch.inventaire_des_programmes)
+    nommes_dans_me7 = nommes - len(items_hors_me7)
     en_plateforme = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
+    signaux_hors_me7 = [
+        f"[S15] « {item.programme} » absent de `me_7`, trouvé dans #"
+        f"{_trouve_dans_pieces_ouvertes(_forme_comparable(item.programme), matiere.pieces_ouvertes_texte)} "
+        "— ajouté au décompte attendu, ne le fausse pas"
+        for item in items_hors_me7
+    ]
     if attendu is None:
         return None, ["[S15] inventaire non chiffré : `me_7` n'établit pas le chiffre clé "
-                     "`nombre_de_programmes`"]
+                     "`nombre_de_programmes`"] + signaux_hors_me7
     total = int(attendu)
     if declares_non_nommes is not None:
         d = int(declares_non_nommes)
         motifs = []
-        if nommes != total - d:
+        if nommes_dans_me7 != total - d:
             motifs.append(
-                f"l'inventaire nomme {nommes} élément(s), `me_7` en NOMME {total - d} "
-                f"(`nombre_de_programmes` = {total}, dont `nombre_de_programmes_non_nommes` = {d}) — "
-                "chaque élément nommé par `me_7` a SON entrée, sous son nom, même celui que tu rattaches "
-                "ou mets hors modèle")
+                f"l'inventaire nomme {nommes_dans_me7} élément(s) PRÉSENT(S) DANS `me_7`, `me_7` en "
+                f"NOMME {total - d} (`nombre_de_programmes` = {total}, dont "
+                f"`nombre_de_programmes_non_nommes` = {d}) — chaque élément nommé par `me_7` a SON "
+                "entrée, sous son nom, même celui que tu rattaches ou mets hors modèle")
         if en_plateforme != d:
             motifs.append(
                 f"les plateformes portent {en_plateforme} programme(s) non nommé(s), `me_7` en compte {d} "
                 "— une plateforme ne porte QUE les programmes que le dossier dit non nommés, jamais un "
                 "élément nommé qui manquerait à l'inventaire")
-        return ("[S15] " + " ; ".join(motifs) if motifs else None), []
-    signaux = []
-    if nommes + en_plateforme != total:
+        return ("[S15] " + " ; ".join(motifs) if motifs else None), signaux_hors_me7
+    signaux = list(signaux_hors_me7)
+    if nommes_dans_me7 + en_plateforme != total:
         signaux.append(
             f"[S15] écart non expliqué : `me_7` compte {total} programme(s), l'inventaire en nomme "
-            f"{nommes} et les plateformes en portent {en_plateforme} — le dossier ne dit pas combien il "
-            "en compte sans les nommer : à lire au comité")
+            f"{nommes_dans_me7} (présents dans `me_7`) et les plateformes en portent {en_plateforme} — "
+            "le dossier ne dit pas combien il en compte sans les nommer : à lire au comité")
     if en_plateforme:
         signaux.append(
             f"[S15] plateforme de {en_plateforme} programme(s) non nommé(s) sans chiffre du dossier "
@@ -605,9 +648,10 @@ def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matie
     if m11:
         refus.append(m11)
 
-    m14 = _s14(arch, matiere)
+    m14, sig14 = _s14(arch, matiere)
     if m14:
         refus.append(m14)
+    signaux.extend(sig14)
 
     m15, sig15 = _s15(arch, matiere)
     if m15:

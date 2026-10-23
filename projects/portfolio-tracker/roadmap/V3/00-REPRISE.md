@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-23 (B4d livré : architecte NVDA 2/2, RVMD 1/2 acceptés à blanc ; sens NVDA à arbitrer) ; 2026-10-23 (ventilation NVDA publiée, correctif DEF 14A d504d96) ; 2026-10-23 (P1 terminé et déployé, arbitrage Q1 révisé, #142) ; 2026-10-22 soir (M3 bis déployé, me_7 instruite, P1 partiel, architecte à blanc) ; 2026-10-22 (M3 bis v2.1 livré, vérifié, commité, NON déployé) ; 2026-10-22 (M3 déployé ; spec M3 bis écrite) ; 2026-10-22 (M2 déployé ; spec M3 écrite) ; 2026-10-21 (M2 livré, commité, non déployé ; porte NVDA ouverte) ; 2026-10-21 (commentaires sur la page de lecture → spec v2.1 §12 ; C1 livré, #141) ; 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-10-23 (B4f livré et mesuré, corrections #143/me_7 en tête) ; 2026-10-23 (B4d livré : architecte NVDA 2/2, RVMD 1/2 acceptés à blanc ; sens NVDA à arbitrer) ; 2026-10-23 (ventilation NVDA publiée, correctif DEF 14A d504d96) ; 2026-10-23 (P1 terminé et déployé, arbitrage Q1 révisé, #142) ; 2026-10-22 soir (M3 bis déployé, me_7 instruite, P1 partiel, architecte à blanc) ; 2026-10-22 (M3 bis v2.1 livré, vérifié, commité, NON déployé) ; 2026-10-22 (M3 déployé ; spec M3 bis écrite) ; 2026-10-22 (M2 déployé ; spec M3 écrite) ; 2026-10-21 (M2 livré, commité, non déployé ; porte NVDA ouverte) ; 2026-10-21 (commentaires sur la page de lecture → spec v2.1 §12 ; C1 livré, #141) ; 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -38,13 +38,18 @@ information (me_7 mal formée, comptage faux, pièces invisibles à l'architecte
 plateforme inventée. **Arbitré** : V4-Pro en architecte (accord sous réserve de qualité, mesurée) ; extension
 d'indication = ligne propre, critère « faut-il des données de marché et de concurrence ad hoc ? » (#143). **Construit**
 `f4a5872`, NON déployé ; me_7 réémise (#2625 NVDA, #2624 RVMD incomplète) ; architecte à blanc `apres-143/` : pas encore
-acquis (journal, ligne « #143 (construit, éprouvé) »). Prochain : formulation du critère (sans probabilité de succès),
-nom = avant « — », une extension d'indication = un élément de me_7 ; question à l'utilisateur : analyste de me_7 sur V4-Pro ?
-**Décision de l'utilisateur (2026-10-23) : AVANT ces correctifs, construire B4f** (`16-lot-B4f-explorateur.md`, LIRE le §8
-addendum : [S14]/[S15] admettent ce qui a été ouvert, cas NVDA/RVMD à vérifier à l'étape 4). Nouvelle conversation :
-Sonnet étapes 0-3, Opus étape 4 (mesure à blanc + lecture).
-**PROCHAIN PAS** : (1) poser ces deux questions à l'utilisateur ; (2) **B4f** `16-lot-B4f-explorateur.md` ;
-(3) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises) — un succès s'y juge À LA LECTURE.
+acquis (journal, ligne « #143 (construit, éprouvé) »).
+**B4f LIVRÉ le 2026-10-23** (commité, NON déployé) : explorateur du dossier,
+interrupteur `acces_au_dossier` (défaut `aucun`), `--acces-au-dossier` à blanc. Mesure à blanc en mode `explorateur`
+(`mesures/2026-10-23/b4f-explorateur/LECTURE.md`, 0,88 $) : l'ouverture des pièces règle PEU — NVDA accepté mais Vera CPU
+`en_developpement` et IA souveraine en extension alors que #1004/#1012 sont citées (CONSIGNE) ; RVMD refusé [S15] :
+une ligne par indication de daraxonrasib sous le même nom de molécule (granularité #143 ≠ `me_7`).
+Arbitrés (2026-10-23) : les corrections différées passent APRÈS B4f — donc maintenant ; `me_7` sur V4-Pro : à décider.
+**PROCHAIN PAS** : (1) consigne #143 reformulée (ligne propre ssi données de marché/concurrence ad hoc ; incertitude →
+scénarios ; une activité VENDUE à marché propre = `metier_actuel` enfant ; un segment de clients = rattaché ; vocabulaire
+non pharmaceutique ; nom = texte avant « — ») ; (2) `me_7` : un élément par indication, [S14]/[S15] comptent par élément ;
+(3) décider `me_7` sur V4-Pro (instabilité #2304/#2624) ; (4) re-mesurer NVDA/RVMD (`aucun` puis `explorateur`, journal
+désormais rendu) ; (5) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises), succès jugé À LA LECTURE.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`
 à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1.
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
@@ -60,7 +65,7 @@ Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'an
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-23, après B4d : 6 027 assertions ; négatifs architecte 45/45, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
+- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-23, après B4f : 6 082 assertions ; négatifs explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : B4d COMMITÉ (`7d08a6d`) mais NON DÉPLOYÉ (déploiement refusé par le classifieur le 2026-10-23 — à lancer par l’utilisateur, puis `docker exec portfolio-backend grep -c "architecture-1.3.0" /app/app/contracts/modele_entreprise_schema.py`) ; dernier déploiement `d504d96` (correctif DEF 14A) ; avant, P1 complet (`f6b5659`) ; avant, M3 bis (`1f9a364`) ; avant, `1d5dfbf` (M3) ; avant, `67f7e87` (M2) ; `4c6d37e` (M1), vérifié dans le conteneur (référentiel 1.0.0 chargé, 21 fiches, seuil 10). Migration 061 appliquée. Mandats : 1 manager ouvert (2918).
 - **Porte de l'architecte NVDA — mesurée le 2026-10-21** (`montrer_parcours.sh NVDA`) : les 12 questions sources d'une rentable (me_2-me_5, mo_4, mo_6, qf_1, qf_3, qf_7, se_2-se_4) ont toutes une première réponse instruite (mo_4 recherche épuisée, mo_6/se_2 pièces insuffisantes = information, 09 §11.2) → ouverte ; 22 manques au total, inchangés.
 - **Prochaine migration : 063** (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,

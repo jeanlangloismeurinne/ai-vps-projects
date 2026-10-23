@@ -41,6 +41,26 @@ signature_de_l_architecture: true
 # l_architecte`) — le basculer ne réécrit rien et n'invalide aucune architecture déjà proposée.
 porte_admet_reponses_refusees: true
 
+# L'INTERRUPTEUR à trois positions de l'ACCÈS AU DOSSIER par l'architecte (lot B4f, roadmap V3
+# `16-lot-B4f-explorateur.md` §5, garde-fou F). `aucun` : l'architecte actuel, matière seule — c'est
+# l'ORDRE 0, et le DÉFAUT à la livraison (le banc B4e décide, sur chaque entreprise, en comparant les
+# trois). `deux_temps` : un premier appel sans outil rend `besoins_d_information`, le CODE exécute
+# `rechercher` pour chacun (sans modèle) et enrichit la matière, un second appel conclut — coût et
+# durée bornés, besoins visibles. `explorateur` : la boucle d'outils de `app/knowledge/explorateur.py`
+# (table des matières, ouvrir une note/une pièce, rechercher), puis la clôture en JSON strict. Même
+# statut que `signature_de_l_architecture` : ne monte pas `version`, lu à la LECTURE
+# (`proposer_architecture_du_titre`) — le basculer ne réécrit rien et n'invalide aucune architecture
+# déjà proposée.
+# ⚠️ Même statut que `signature_de_l_architecture`/`porte_admet_reponses_refusees` : ne monte PAS
+# `version` — un interrupteur de lecture n'invalide aucune architecture proposée.
+acces_au_dossier: aucun
+
+# Budget d'ouvertures de la boucle d'outils (mode `explorateur`) — au-delà, clôture sur ce qui a été
+# lu, motif nommé (jamais un blocage muet, spec §2). Sert aussi de plafond au nombre de
+# `besoins_d_information` traités en mode `deux_temps`. Décision du fonds, revue au besoin.
+# Même statut que les deux interrupteurs ci-dessus : ne monte pas `version`.
+max_iterations_explorateur: 8
+
 version: "1.2.0"
 
 # Les UNITÉS du catalogue — DÉTENTEUR UNIQUE (lot M3 bis §5, cause ④ : les formules ne sont pas
